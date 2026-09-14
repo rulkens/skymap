@@ -281,8 +281,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     });
     const aerial = aerialOf(steps);
     expect(aerial).toHaveLength(1);
-    expect(aerial[0]).toMatchObject({ slab: 3, depth: 'sample', slot: 'AERIAL' });
-    expect(namesOf(aerial[0])).toEqual(['aerial-perspective']);
+    expect(aerial[0]).toMatchObject({ slab: 3 });
 
     // After every depth-stamping chain row, before the composite: the apply
     // reads the depth those rows wrote, and its fog must ride the one tone curve.

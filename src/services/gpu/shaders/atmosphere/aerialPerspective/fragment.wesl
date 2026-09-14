@@ -43,7 +43,6 @@ const FAR_DEPTH: f32 = 0.0;
 struct AerialSample {
   // The MULTIPLY pass's output: rgb scales the target per channel, alpha with it.
   transmit: vec4<f32>,
-  // The ADD pass's output.
   emission: vec4<f32>,
   hit: bool,
 };
@@ -79,9 +78,6 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
   return out;
 }
 
-// MULTIPLY strictly BEFORE ADD (the renderer pairs them in that order): the
-// multiply pass scales whatever is already in the target, so running it second
-// would attenuate this pass's own in-scatter by its own transmittance.
 @fragment
 fn fsAerialMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
   let s = aerialSample(in);

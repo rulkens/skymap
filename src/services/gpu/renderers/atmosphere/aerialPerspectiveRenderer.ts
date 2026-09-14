@@ -278,11 +278,5 @@ export function createAerialPerspectiveRenderer(
     transmittanceTex.destroy();
   }
 
-  const renderer: AerialPerspectiveRenderer = {
-    label: 'aerialPerspectiveRenderer',
-    encodeFroxel,
-    draw,
-    destroy,
-  };
-  return renderer;
+  return { label: 'aerialPerspectiveRenderer', encodeFroxel, draw, destroy };
 }

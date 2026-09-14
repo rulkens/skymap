@@ -102,8 +102,7 @@ export type AtmosphereShellRenderer = Renderer & {
   /**
    * Bake body `bodyId`'s aerial-perspective froxel volume into the same frame
    * `encoder` — delegated verbatim to the `AerialPerspectiveRenderer` this
-   * renderer owns, where the contract (the 176-byte `AtmosphereUniforms`
-   * record, the throw on an unknown id) is documented.
+   * renderer owns, where the contract is documented.
    */
   encodeFroxel(encoder: GPUCommandEncoder, bodyId: string, uniforms: Float32Array): void;
 
@@ -141,9 +140,8 @@ export type AtmosphereShellRenderer = Renderer & {
    * Apply body `bodyId`'s baked froxel volume as a full-screen pair over the
    * open pass — delegated verbatim to the `AerialPerspectiveRenderer` this
    * renderer owns, where the depth-keying contract is documented. `depthView`
-   * is `foreground:0`'s depth, bound as a sampled texture: the step that calls
-   * this opens its pass with NO depth attachment, because WebGPU forbids
-   * sampling a view attached to the same pass.
+   * is `foreground:0`'s depth, bound as a sampled texture
+   * (`aerialPerspective/fragment.wesl`'s binding 7).
    */
   drawAerialPerspective(
     pass: GPURenderPassEncoder,

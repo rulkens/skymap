@@ -1,11 +1,10 @@
 /**
  * aerialPerspectivePass — the inside-the-shell sibling of `atmosphere-shell`:
  * exactly one of the two draws per body per frame, or the in-scatter doubles.
- * Its `FRAME_ORDER` line declares `depth: 'sample'`, so this pass's step opens
- * with NO depth attachment and binds `foreground:0`'s depth as a TEXTURE
- * instead — WebGPU forbids sampling a view attached to the same pass — which is
- * what lets the fog key on scene distance rather than the ground sphere alone.
- * Argued elsewhere: this row's order in `frameOrder.ts`, the froxel volume in
+ * Its `FRAME_ORDER` line declares `depth: 'sample'` and it hands the renderer
+ * `foreground:0`'s depth as a texture instead (why: `aerialPerspective/fragment.wesl`'s
+ * binding 7), which is what lets the fog key on scene distance rather than the
+ * ground sphere alone. Argued elsewhere: this row's order in `frameOrder.ts`, the froxel volume in
  * `aerialPerspectiveRenderer`, the uniform record in `atmosphereShellUniforms`.
  */
 

@@ -9,10 +9,6 @@
 // both work in; 'scatterStep' integrates in KM like every other bake.
 // 'params.atmosphereTopKm' is the one conversion, exact because the proxy's
 // model transform is a uniform scale.
-//
-// Per-channel transmittance, never a grey scalar: a luminance-collapsed factor
-// adds blue to the ground without removing blue from it (the cyan wash
-// 'atmosphereShellRenderer's header records).
 
 import package::atmosphere::froxelSlices::froxelMaxDistance;
 import package::atmosphere::froxelSlices::froxelRayDir;

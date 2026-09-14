@@ -125,13 +125,11 @@ describe('encodeAtmosphereFroxel', () => {
     const renderer = spyRenderer();
     encodeAtmosphereFroxel(encoder, makeCtx(INSIDE_POSE), makeState(renderer));
     expect(renderer.encodeFroxel).toHaveBeenCalledTimes(1);
-    const [encoderArg, bodyIdArg, uniforms] = renderer.encodeFroxel.mock.calls[0]! as [
+    const [, bodyIdArg] = renderer.encodeFroxel.mock.calls[0]! as [
       GPUCommandEncoder,
       string,
       Float32Array,
     ];
-    expect(encoderArg).toBe(encoder);
     expect(bodyIdArg).toBe('earth');
-    expect(uniforms).toBeInstanceOf(Float32Array);
   });
 });

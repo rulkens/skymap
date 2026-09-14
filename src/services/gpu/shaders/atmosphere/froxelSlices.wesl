@@ -3,13 +3,7 @@
 // on or the volume mis-registers invisibly: the far bound, the slice<->distance
 // mapping in both directions, and the ray a screen texel stands for.
 //
-// Everything is passed, never captured — a WESL module cannot see a consumer's
-// '@group/@binding' (scattering.wesl's header states the rule). That is also
-// why the ray reconstruction lives HERE and not only in the apply's fragment:
-// "the bake's ray equals the apply's ray by construction" is reachable only as
-// one parameterised function both halves call. 'froxelSliceCoord' takes
-// sliceCount for the same reason of exactness — the texel-centre offset needs
-// N, so the spec's two-argument form would sit half a slice off its inverse.
+// Parameterised, nothing captured — see scattering.wesl.
 //
 // Radii and distances are LOCAL units: the frame where the atmosphere top
 // radius is 1, the frame the shell fragment already marches in.
@@ -22,24 +16,20 @@
 //    the far plane w -> 0 and the homogeneous form degrades gracefully to the
 //    ray's own point at infinity (docs/RENDERER.md).
 //
-// 2. 'P.xyz - camPosLocal * P.w' cancels catastrophically for a point near the
-//    camera: in f32 top-radius units (Earth's top is about 6,471 km, so one ulp
-//    of a unit coordinate is about 0.6 m) the reconstructed distance carries a
-//    ~metre ABSOLUTE error floor. Fine by construction — fog is a
-//    kilometre-scale effect, and at metre range the lookup lands in the
-//    identity slice regardless. Recorded so nobody "fixes" it into a
-//    divide-then-subtract form, which trades a harmless absolute floor for the
+// 2. 'P.xyz - camPosLocal * P.w' cancels catastrophically near the camera: one
+//    f32 ulp of a unit coordinate is about 0.6 m at Earth's top, so the
+//    reconstructed distance carries a ~metre ABSOLUTE error floor. Do not
+//    convert it to a divide-then-subtract form — that trades the floor for the
 //    far-plane blow-up the homogeneous form exists to avoid.
 
 // The longest ray that can both graze the ground and stay under the top:
-// camera-to-ground-tangent plus tangent-to-top. The max() guards the surface
-// case, where camRadius and bottomRadius differ by far less than an f32 ulp of
-// either and the difference of squares can land just below zero — a NaN here
-// would poison the whole volume.
+// camera-to-ground-tangent plus tangent-to-top. camRadius < bottomRadius
+// whenever the camera sits below the reference radius (terrain relief;
+// per-planet terrain makes that routine) and a NaN here poisons the whole
+// volume, hence the max().
 fn froxelMaxDistance(camRadius: f32, bottomRadius: f32) -> f32 {
   let groundSq = bottomRadius * bottomRadius;
-  return sqrt(max(camRadius * camRadius - groundSq, 0.0))
-       + sqrt(max(1.0 - groundSq, 0.0));
+  return sqrt(max(camRadius * camRadius - groundSq, 0.0)) + sqrt(1.0 - groundSq);
 }
 
 // Slice index -> the distance its stored integral runs to. Squared over [0, D]
@@ -61,9 +51,8 @@ fn froxelSliceCoord(distance: f32, sliceCount: f32, maxDistance: f32) -> f32 {
 }
 
 // The one numerator the direction and the distance both read, so they cannot
-// describe two different rays. Returns 'P.xyz - cam * P.w' in xyz and P.w in w,
-// for P the unprojection of 'uv' at clip depth 'clipZ'; the xy mapping inverts
-// fullscreenVertex's own ('uv = ((xy+1)*0.5, (1-xy)*0.5)').
+// describe two different rays. The xy mapping inverts fullscreenVertex's own
+// ('uv = ((xy+1)*0.5, (1-xy)*0.5)').
 fn froxelUnproject(
   invMvp: mat4x4<f32>,
   camPosLocal: vec3<f32>,

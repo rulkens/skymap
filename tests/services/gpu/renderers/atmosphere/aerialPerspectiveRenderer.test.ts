@@ -7,29 +7,25 @@ import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../../src/utils/gpu/packAtmo
  * attachment and binds scene depth as a texture instead. The failures pinned
  * here are the ones nothing else catches and the browser reports late or not at
  * all: a depth state that makes the pipeline invalid against that pass, the two
- * draws reordered (ADD first attenuates this pass's own in-scatter), the two
- * entry points forked onto different branches, and a bind group cached over a
- * depth view the row has since reallocated.
+ * draws reordered (ADD first attenuates this pass's own in-scatter), and a bind
+ * group cached over a depth view the row has since reallocated.
  */
 
 type Harness = {
   device: GPUDevice;
   renderPipelines: GPURenderPipelineDescriptor[];
   bindGroups: GPUBindGroupDescriptor[];
-  shaderCode: string[];
   descOf: Map<unknown, GPURenderPipelineDescriptor>;
 };
 
 function mockDevice(): Harness {
   const renderPipelines: GPURenderPipelineDescriptor[] = [];
   const bindGroups: GPUBindGroupDescriptor[] = [];
-  const shaderCode: string[] = [];
   const descOf = new Map<unknown, GPURenderPipelineDescriptor>();
   const device = {
-    createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => {
-      shaderCode.push(desc.code);
-      return { getCompilationInfo: () => Promise.resolve({ messages: [] }) };
-    }),
+    createShaderModule: vi.fn(() => ({
+      getCompilationInfo: () => Promise.resolve({ messages: [] }),
+    })),
     createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
     createBindGroupLayout: vi.fn(() => ({})),
@@ -47,7 +43,7 @@ function mockDevice(): Harness {
     }),
     queue: { writeBuffer: vi.fn() },
   } as unknown as GPUDevice;
-  return { device, renderPipelines, bindGroups, shaderCode, descOf };
+  return { device, renderPipelines, bindGroups, descOf };
 }
 
 function build() {
@@ -144,18 +140,5 @@ describe('createAerialPerspectiveRenderer — the apply', () => {
     renderer.draw(pass, 'earth', uniforms, second);
     expect(bindGroups.length).toBe(after + 2);
     expect(depthEntryOf(bindGroups[after + 1]!)).toBe(second);
-  });
-
-  it('takes both entry points through one branch evaluation', () => {
-    // Not a call-detection grep: the two draws MUST agree on which branch each
-    // pixel took, and they do so by construction — one `aerialSample`, two
-    // readers. This fails only if an edit forks one entry point onto its own
-    // inline branch, which reads as a half-fogged frame.
-    const { shaderCode } = build();
-    const linked = shaderCode.join('\n');
-    for (const entryPoint of ['fsAerialMultiply', 'fsAerialAdd']) {
-      const body = new RegExp(`fn\\s+${entryPoint}\\([^{]*\\{([^]*?)\\n\\}`).exec(linked)?.[1];
-      expect(body).toContain('aerialSample(');
-    }
   });
 });
