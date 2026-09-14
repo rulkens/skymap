@@ -12,10 +12,13 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { HI_RES_REQ_BY_TIER } from '../../../../src/data/hiResReqByTier';
-import { HI_RES_LAYER_COUNT } from '../../../../src/data/sources';
+import { HI_RES_LAYER_COUNT, HI_RES_LAYER_SIDE_BY_TIER } from '../../../../src/data/sources';
+import type { Tier } from '../../../../src/@types/data/Tier';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { TexturedDiskRenderer } from '../../../../src/@types/rendering/TexturedDiskRenderer';
+
+/** The hi-res row's request, mirroring `ASSET_WIRING`'s `req` for that row. */
+const reqFor = (tier: Tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] });
 
 /** Hoisted so the `vi.mock` factories (evaluated before this module's body) can reach it. */
 const shared = vi.hoisted(() => ({ calls: [] as string[], textureSeq: 0, subsystemSeq: 0 }));
@@ -85,12 +88,12 @@ describe('wireHiResFamousSlot', () => {
     const state = makeState();
     wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
 
-    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.small);
+    await state.assetSlots.hiResFamous!.load(reqFor('small'));
     expect(createHiResFamousTexture).toHaveBeenLastCalledWith(
       expect.objectContaining({ layerSide: 512, layerCount: HI_RES_LAYER_COUNT }),
     );
 
-    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+    await state.assetSlots.hiResFamous!.load(reqFor('medium'));
     expect(createHiResFamousTexture).toHaveBeenLastCalledWith(
       expect.objectContaining({ layerSide: 1024, layerCount: HI_RES_LAYER_COUNT }),
     );
@@ -100,9 +103,9 @@ describe('wireHiResFamousSlot', () => {
     const state = makeState();
     wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
 
-    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.small);
+    await state.assetSlots.hiResFamous!.load(reqFor('small'));
     shared.calls.length = 0;
-    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+    await state.assetSlots.hiResFamous!.load(reqFor('medium'));
 
     // Subsystem before texture on the teardown half: the planner holds the
     // texture's evict-handler subscription.
@@ -118,7 +121,7 @@ describe('wireHiResFamousSlot', () => {
     const state = makeState();
     wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
 
-    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+    await state.assetSlots.hiResFamous!.load(reqFor('medium'));
 
     expect(shared.calls.filter((c) => c.startsWith('destroy'))).toEqual([]);
   });
@@ -127,7 +130,7 @@ describe('wireHiResFamousSlot', () => {
     const state = makeState();
     wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
 
-    await state.assetSlots.hiResFamous!.load(HI_RES_REQ_BY_TIER.medium);
+    await state.assetSlots.hiResFamous!.load(reqFor('medium'));
 
     const committed = state.assetSlots.hiResFamous!.current()!;
     expect(state.subsystems.hiResFamous).toBe(committed.subsystem);

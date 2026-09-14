@@ -52,6 +52,9 @@ type StubSlot = AssetSlot<unknown, unknown> & {
 function stubSlot(
   initialKind: LoadState<unknown>['kind'] = 'idle',
   lastReq: unknown = null,
+  // Non-null by default: the evict edge gates on a payload being resident, and
+  // every kind this file drives past `idle` models a slot that has one.
+  committedValue: unknown = {},
 ): StubSlot {
   const load = vi.fn();
   const release = vi.fn();
@@ -60,7 +63,7 @@ function stubSlot(
     name: 'stub',
     load: load as unknown as StubSlot['load'],
     current: () => null,
-    committed: () => null,
+    committed: () => committedValue as ReturnType<AssetSlot<unknown, unknown>['committed']>,
     state: () => ({ kind }) as LoadState<unknown>,
     subscribe: () => () => {},
     // The request of the slot's last load ATTEMPT — what the drift edge compares
@@ -229,6 +232,16 @@ describe('evaluateRows', () => {
     expect(slot.load).not.toHaveBeenCalled();
   });
 
+  it('an errored slot holding a committed value is released when its release predicate fires', () => {
+    // A reload that exhausts its retries leaves the slot `error` with the OLD
+    // payload still committed and drawing. Nothing but this edge frees it, so a
+    // `ready`-only gate pins a whole-globe texture in VRAM for the session.
+    const slot = stubSlot('error');
+    const state = makeState(new Map([[Source.SDSS, slot]]));
+    evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);
+    expect(slot.release).toHaveBeenCalledTimes(1);
+  });
+
   it('does not release a ready slot whose release predicate returns false', () => {
     const slot = stubSlot('ready');
     const state = makeState(new Map([[Source.SDSS, slot]]));
@@ -245,8 +258,7 @@ describe('evaluateRows', () => {
   });
 
   it('does not release an idle slot even when the release predicate is true', () => {
-    // The evict edge is guarded on `ready` — an idle slot has nothing committed
-    // to release, and the load edge owns the idle state.
+    // The drop edge claims every idle slot before the evict edge is reached.
     const slot = stubSlot('idle');
     const state = makeState(new Map([[Source.SDSS, slot]]));
     evaluateRows(state, [row(Source.SDSS, () => false, { release: () => true })]);

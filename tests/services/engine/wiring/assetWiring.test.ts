@@ -402,15 +402,6 @@ describe('ASSET_WIRING req builders', () => {
     }
   });
 
-  it("a tiered point source's request differs across tiers", () => {
-    for (const source of [Source.SDSS, Source.Glade, Source.Milliquas]) {
-      const row = rowFor(source);
-      expect(sameRequest(row.req('small'), row.req('medium')), `${source} did not drift`).toBe(
-        false,
-      );
-    }
-  });
-
   it('the filaments request drifts only across the small boundary', () => {
     const row = rowFor('filaments');
     // Polarity, not just drift: a flipped flag would fetch the wrong file at

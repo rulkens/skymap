@@ -6,14 +6,5 @@
  * can be aborted by a superseding `load()` (the slot's second race-check
  * still applies even if commit happens to ignore the signal — the check is
  * the structural fix, the signal is the cooperative one).
- *
- * It also receives the originating `req`, so a commit can vary by what was
- * asked for.  Committers that don't need it simply omit the parameter (fewer
- * args stays assignable); `Req` defaults to `unknown` so `Committer<T>` still
- * type-checks.
  */
-export type Committer<T, Req = unknown> = (
-  value: T,
-  signal: AbortSignal,
-  req: Req,
-) => Promise<void>;
+export type Committer<T> = (value: T, signal: AbortSignal) => Promise<void>;

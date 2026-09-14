@@ -11,7 +11,7 @@
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { HI_RES_LAYER_SIDE_BY_TIER, Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
@@ -30,7 +30,6 @@ import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
 import { galaxyCatalogRequest } from './galaxyCatalogRequest';
-import { HI_RES_REQ_BY_TIER } from '../../../data/hiResReqByTier';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
@@ -392,7 +391,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: 'hiResFamous',
     built: 'external',
     factory: externalFactory,
-    req: (tier) => HI_RES_REQ_BY_TIER[tier],
+    req: (tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] }),
     demand: () => true,
     priority: 1,
   },

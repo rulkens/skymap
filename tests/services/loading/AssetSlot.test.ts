@@ -47,8 +47,7 @@ describe('AssetSlot — happy path', () => {
     });
     slot.load();
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-    // commit receives (value, signal, req); a `void`-req load() passes undefined.
-    expect(commit).toHaveBeenCalledWith('X', expect.any(AbortSignal), undefined);
+    expect(commit).toHaveBeenCalledWith('X', expect.any(AbortSignal));
   });
 });
 
@@ -126,7 +125,7 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
 
     expect(slot.current()).toBe('B');
     expect(commit).toHaveBeenCalledTimes(1);
-    expect(commit).toHaveBeenCalledWith('B', expect.any(AbortSignal), 2);
+    expect(commit).toHaveBeenCalledWith('B', expect.any(AbortSignal));
   });
 
   it('drops superseded commit result (race window 2 — async commit)', async () => {
@@ -180,7 +179,7 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(commit).toHaveBeenCalledTimes(1);
-    expect(commit).toHaveBeenCalledWith('B', expect.any(AbortSignal), 2);
+    expect(commit).toHaveBeenCalledWith('B', expect.any(AbortSignal));
   });
 });
 

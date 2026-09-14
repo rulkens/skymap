@@ -157,7 +157,11 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // from `demand` to encode hysteresis — load inside X, evict outside 2X
       // (see AssetWiringRow). It drops the slot to idle, which hands it to the
       // drop edge above on the next pass.
-      else if (kind === 'ready' && row.release?.(ctx)) {
+      else if (
+        (kind === 'ready' || kind === 'error') &&
+        slot.committed() !== null &&
+        row.release?.(ctx)
+      ) {
         slot.release();
       }
       // ── Drift edge ───────────────────────────────────────────────────────

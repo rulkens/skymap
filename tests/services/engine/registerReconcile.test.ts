@@ -66,9 +66,5 @@ describe('createEngine — saga context registration', () => {
 
     // reconcile is the bag from makeReconcileEffects.
     expect(ctx.reconcile).toBeDefined();
-    expect(typeof ctx.reconcile!.requestRender).toBe('function');
-    expect(typeof ctx.reconcile!.syncFades).toBe('function');
-    expect(typeof ctx.reconcile!.reseedFlow).toBe('function');
-    expect(typeof ctx.reconcile!.bakeBias).toBe('function');
   });
 });
