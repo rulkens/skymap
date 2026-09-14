@@ -78,6 +78,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
       })),
       createSampler: vi.fn(() => ({})),
       createBindGroupLayout: vi.fn(() => ({})),
+      createBindGroup: vi.fn(() => ({})),
       createPipelineLayout: vi.fn(() => ({})),
       createRenderPipeline: vi.fn(() => ({})),
       createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
