@@ -297,23 +297,23 @@ export function sameRequest(a: unknown, b: unknown): boolean;
 **Behaviour:** `Object.is` fast path; then both must be non-null non-array objects with equal own-key
 counts and `Object.is`-equal values at every own key; anything else is false.
 
-- [ ] Test `identical primitives and undefined compare equal` — `sameRequest(undefined, undefined)`,
+- [x] Test `identical primitives and undefined compare equal` — `sameRequest(undefined, undefined)`,
       `sameRequest(3, 3)` true; `sameRequest(undefined, {})` false.
-- [ ] Test `structurally equal flat objects compare equal across separate allocations` —
+- [x] Test `structurally equal flat objects compare equal across separate allocations` —
       two freshly built `{ source: 4, tier: 'large' }` are equal; `{ tier: 'large' }` vs
       `{ tier: 'medium' }` false.
-- [ ] Test `an extra key is a difference in both directions` — `{ a: 1 }` vs `{ a: 1, b: 2 }` false
+- [x] Test `an extra key is a difference in both directions` — `{ a: 1 }` vs `{ a: 1, b: 2 }` false
       and the reverse false (the equal-key-count leg, without which a superset compares equal).
-- [ ] Test `a nested object value is never equal across allocations` — asserts the known
+- [x] Test `a nested object value is never equal across allocations` — asserts the known
       limitation explicitly so the invariant test below reads as its guard, not as trivia.
-- [ ] Test (`assetWiringRequestShape.test.ts`) `every ASSET_WIRING row's req is undefined or a flat
+- [x] Test (`assetWiringRequestShape.test.ts`) `every ASSET_WIRING row's req is undefined or a flat
   record of primitives, at every tier` — iterate the real `ASSET_WIRING` × `['small','medium','large']`,
       assert each result is `undefined` or an object whose every own value is a `string | number |
   boolean`. Failing message must name the offending row key.
-- [ ] Test `every ASSET_WIRING row's req is stable across two calls at the same tier` — for each row
+- [x] Test `every ASSET_WIRING row's req is stable across two calls at the same tier` — for each row
       and tier, `sameRequest(row.req(t), row.req(t))` is true. This is the reload-storm guard stated
       as the property the loop actually depends on.
-- [ ] `npm test -- sameRequest assetWiringRequestShape` green. Commit.
+- [x] `npm test -- sameRequest assetWiringRequestShape` green. Commit.
 
 ## Task 2 — the slot serves its committed value
 
@@ -351,23 +351,23 @@ as their reason; rewrite both to name the drift edge and "release is distance ev
 `lastRequest()` one must also say what now separates it from `committed().req`: it is the request
 of the last load ATTEMPT, so during a reload it is already the NEW one.
 
-- [ ] Test `committed() returns the ready state itself` — including its `req`.
-- [ ] Test `committed() returns the previous ready state while a reload is in flight` — a slot with
+- [x] Test `committed() returns the ready state itself` — including its `req`.
+- [x] Test `committed() returns the previous ready state while a reload is in flight` — a slot with
       a never-resolving second fetch; the returned `req` is the PREVIOUS request, not the new one.
-- [ ] Test `committed() is null before a slot has ever committed` — idle, and a first-ever load that
+- [x] Test `committed() is null before a slot has ever committed` — idle, and a first-ever load that
       errors to exhaustion.
-- [ ] Test `committed() survives a failed reload` — second fetch rejects to exhaustion;
+- [x] Test `committed() survives a failed reload` — second fetch rejects to exhaustion;
       `state().kind` is `'error'` and `committed()` is the first ready state.
-- [ ] Test `current() returns the previous value while a reload is in flight`, and
+- [x] Test `current() returns the previous value while a reload is in flight`, and
       `current() returns the new value once the reload commits`.
-- [ ] Test `release() during a reload runs onRelease once with the committed value` — the leak this
+- [x] Test `release() during a reload runs onRelease once with the committed value` — the leak this
       change closes; assert the hook's argument is the first value and the call count is 1.
-- [ ] Test `release() drops the committed value` — after release, `committed()` and `current()` are
+- [x] Test `release() drops the committed value` — after release, `committed()` and `current()` are
       null and `state().kind` is `'idle'`.
-- [ ] Existing `AssetSlot.test.ts` cases stay green unedited except where they assert
+- [x] Existing `AssetSlot.test.ts` cases stay green unedited except where they assert
       `current() === null` mid-load on a slot that had committed before — adapt those and say so in
       the task report; a case asserting the blank is asserting the behaviour this PR changes.
-- [ ] `npm test -- AssetSlot` green. Commit.
+- [x] `npm test -- AssetSlot` green. Commit.
 
 ## Task 3 — `slotReady` and the two direct readers
 
@@ -383,14 +383,14 @@ COMMITTED request, **not** `lastRequest()`, which is set at the top of `load()`
 lie this function exists to prevent. `produceConstellationCaptions` reads `slot.committed()?.value`
 so a reload does not drop the constellation captions for the duration of a fetch.
 
-- [ ] Test `slotReady is true for a slot reloading with a previous commit` — the new leg, the one
+- [x] Test `slotReady is true for a slot reloading with a previous commit` — the new leg, the one
       the whole PR turns on.
-- [ ] Test `slotReady is false for a slot loading for the first time` — the existing
+- [x] Test `slotReady is false for a slot loading for the first time` — the existing
       `'committing'` case keeps its meaning for a never-committed slot; keep both.
-- [ ] `earthSurfaceTier` test: add `a body-texture slot reloading at a new tier keeps reporting the
+- [x] `earthSurfaceTier` test: add `a body-texture slot reloading at a new tier keeps reporting the
   committed tier` — drive the slot so `lastRequest()` and `committed().req` disagree, or the test
       passes against either read (the existing test file pins the ready and absent arms).
-- [ ] `npm test -- slotReady earthSurfaceTier produceConstellationCaptions` green. Commit.
+- [x] `npm test -- slotReady earthSurfaceTier produceConstellationCaptions` green. Commit.
 
 ## Task 4 — the audit the spec schedules (no code)
 
@@ -400,7 +400,7 @@ Spec §9(d)'s "Open at plan time" list makes P2 depend on two facts. Verify each
 record file:line evidence. The expected findings are in the Findings table above — a DIFFERENT
 finding is the interesting outcome and stops the task for a ruling.
 
-- [ ] **Every commit path overwrites in place.** Inspect and record: the galaxy point commit
+- [x] **Every commit path overwrites in place.** Inspect and record: the galaxy point commit
       (`galaxyCatalogSourceRegistry.ts:132-170` — `dissolveCatalogBuffer` at `:145` is the one
       exception, resolved by Ruling 3; `galaxyPointRenderer.upload(catalogId, cloud)` at `:150` is
       the overwrite), the body texture family (`bodyTextureSlotRegistry.ts:35-55` — `setMap`,
@@ -409,18 +409,18 @@ finding is the interesting outcome and stops the task for a ruling.
   catalog)`), and the four volume slots through `uploadVolumeField.ts:17-29` —
       `renderer.upload(id, cube)` plus an `addVolumeField` dispatch that is idempotent per id.
       For each: does a second commit for the same id replace, or append/leak?
-- [ ] **Every `slotReady` / `current()` / `state().kind === 'ready'` consumer tolerates a ready
+- [x] **Every `slotReady` / `current()` / `state().kind === 'ready'` consumer tolerates a ready
       slot that is reloading.** `rg -n "slotReady|\.current\(\)|state\(\)\.kind" src` and classify
       every hit: re-pointed in Task 3, cosmetic (the DebugPanel rows), or unaffected. Expected
       unaffected-but-worth-stating: `createSyntheticFallback.ts:104-127` (once-only gate),
       `installSlotReadyWake.ts:32` (wakes again on the reload's commit, which is correct),
       `awaitSlotReady.ts:121-126` (resolves on the first `ready`; a reload cannot un-resolve a
       settled promise).
-- [ ] **`demandTable.test.ts`'s boot set is unchanged by this PR** — read the `firedKeys`
+- [x] **`demandTable.test.ts`'s boot set is unchanged by this PR** — read the `firedKeys`
       expectation and confirm no stub slot in the fixtures reaches the drift edge, given Ruling 5
       (`lastRequest: () => null` at `demandTable.test.ts:107`). State the conclusion; Task 6 proves
       it by running the suite.
-- [ ] Report findings. No commit (or a docs-only commit if a finding lands in the PR body).
+- [x] Report findings. No commit (or a docs-only commit if a finding lands in the PR body).
 
 ## Task 5 — requests state what is fetched
 
@@ -478,21 +478,21 @@ fetcher reads the flag instead of re-deriving it from a tier. Delete the fetcher
 "Filaments don't swap on tier flip" policy paragraph (`filamentFetcher.ts:9-13`): D3 supersedes it,
 and the swap is a named behaviour change of this plan (Goal, Task 13, DoD).
 
-- [ ] Test `an untiered galaxy catalog's request names no tier` — 2MRS, Famous and the three DESI
+- [x] Test `an untiered galaxy catalog's request names no tier` — 2MRS, Famous and the three DESI
       cuts: `'tier' in req` is false, and `sameRequest(req(small), req(large))` is true.
-- [ ] Test `a tiered galaxy catalog's request carries its tier` — SDSS/GLADE/Milliquas: the request
+- [x] Test `a tiered galaxy catalog's request carries its tier` — SDSS/GLADE/Milliquas: the request
       differs across all three tiers, via `sameRequest`.
-- [ ] Test `the request agrees with the filename` — for every galaxy-catalog source with a
+- [x] Test `the request agrees with the filename` — for every galaxy-catalog source with a
       `binBaseName` and every tier pair: `tierFilenameForSource(src, a) === tierFilenameForSource(src, b)`
       iff `sameRequest(galaxyCatalogRequest(src, a), galaxyCatalogRequest(src, b))`. The invariant
       the whole drift edge rests on; derive both sides from the registry, do not restate a table.
-- [ ] `assetWiring.test.ts`: `an untiered point source's request is identical across tiers` and
+- [x] `assetWiring.test.ts`: `an untiered point source's request is identical across tiers` and
       `a tiered point source's request differs across tiers`, both via `sameRequest`.
-- [ ] Test `the filaments request drifts only across the small boundary` — `sameRequest` true for
+- [x] Test `the filaments request drifts only across the small boundary` — `sameRequest` true for
       medium vs large, false for small vs medium.
-- [ ] Test `the filament fetcher picks its file from the request flag` — the existing per-tier
+- [x] Test `the filament fetcher picks its file from the request flag` — the existing per-tier
       filename cases re-point at `{ small: true/false }`.
-- [ ] `npm test -- shipsTierVariants galaxyCatalogRequest assetWiring filamentFetcher tierTargets`
+- [x] `npm test -- shipsTierVariants galaxyCatalogRequest assetWiring filamentFetcher tierTargets`
       green. Commit.
 
 ## Task 6 — the drift edge
@@ -539,30 +539,30 @@ both now run inside the enqueued closure" (`reevaluateDemand.ts:63-68`) stops be
 drift edge calls both directly, inside the per-row `try` — so correct that paragraph in the same
 commit. Delete `staleTierEvict`'s docblock with the function; do not re-home it.
 
-- [ ] Test (`requestDrifted.test.ts`) `a null lastRequest is never drift` (Ruling 5).
-- [ ] Test `an equal request is not drift` and `a differing request is drift` — built from the real
+- [x] Test (`requestDrifted.test.ts`) `a null lastRequest is never drift` (Ruling 5).
+- [x] Test `an equal request is not drift` and `a differing request is drift` — built from the real
       `pointRow` shape via `sameRequest`.
-- [ ] `reevaluateDemand.test.ts`: `a ready slot whose request drifted is re-loaded, not released` —
+- [x] `reevaluateDemand.test.ts`: `a ready slot whose request drifted is re-loaded, not released` —
       assert `slot.load` called once with the new request AND `slot.release` never called. This is
       the headline assertion of the PR.
-- [ ] Test `an errored slot whose request drifted is re-loaded` (Ruling 1).
-- [ ] Test `a drifted slot whose demand is false is left alone` (Ruling 2) — no `load`, no
+- [x] Test `an errored slot whose request drifted is re-loaded` (Ruling 1).
+- [x] Test `a drifted slot whose demand is false is left alone` (Ruling 2) — no `load`, no
       `release`, no queue entry.
-- [ ] Test `a ready slot whose release predicate fires is released, not reloaded` — the distance
+- [x] Test `a ready slot whose release predicate fires is released, not reloaded` — the distance
       edge still wins over drift for a row that has both.
-- [ ] Test `a drifted loading slot is superseded by a direct load` (Rulings 1 and 6) — with a stub
+- [x] Test `a drifted loading slot is superseded by a direct load` (Rulings 1 and 6) — with a stub
       queue, `slot.load` is called once with the new request and NO entry reaches the batch.
-- [ ] Test `a superseded queued fetch does not surface as a queue error or retry` — a slot whose
+- [x] Test `a superseded queued fetch does not surface as a queue error or retry` — a slot whose
       first load came from the idle edge's enqueued closure (`await slot.load(...)`), then aborted
       by the drift edge's direct load. Verify how that `await` actually resolves against
       `AssetSlot.ts`'s `runLoad` before writing the assertion, and pin it: the queue must see one
       completed entry, not a rejection it re-schedules. If it rejects, stop and report.
-- [ ] Test `a body-texture slot at a stale tier reloads in place` — the generalisation of the
+- [x] Test `a body-texture slot at a stale tier reloads in place` — the generalisation of the
       deleted `staleTierEvict`; the old evict-then-reload assertions in this file are REPLACED, and
       the task report says which.
-- [ ] `npm test -- reevaluateDemand requestDrifted demandTable` green, `demandTable.test.ts`
+- [x] `npm test -- reevaluateDemand requestDrifted demandTable` green, `demandTable.test.ts`
       **unedited** (Task 4's conclusion; if it needs an edit, stop and report).
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 7 — the re-anchor capture asks the row, not a second predicate
 
@@ -581,13 +581,13 @@ The synthetic clause the old predicate carried is subsumed: `Synthetic`'s `tierT
 its request never drifts. Keep a test pinning it, because the old predicate named it explicitly and
 losing the guarantee silently would hang a `take`.
 
-- [ ] Test `a tier-agnostic source is not captured` — 2MRS and Famous, at any swap.
-- [ ] Test `synthetic is never captured`.
-- [ ] Test `a disabled source is not captured` — the existing case at
+- [x] Test `a tier-agnostic source is not captured` — 2MRS and Famous, at any swap.
+- [x] Test `synthetic is never captured`.
+- [x] Test `a disabled source is not captured` — the existing case at
       `captureGalaxyFocusIds.test.ts:194`; its comment references `makeRunTierTransition` and must
       be re-pointed at the demand rule (Ruling 2).
-- [ ] Test `a tiered enabled source is captured with its durable id`.
-- [ ] `npm test -- captureGalaxyFocusIds` green. Commit.
+- [x] Test `a tiered enabled source is captured with its durable id`.
+- [x] `npm test -- captureGalaxyFocusIds` green. Commit.
 
 ## Task 8 — the companion rides its parent's request
 
@@ -611,12 +611,12 @@ Write, in the row's comment, one sentence: **D11 (PR-C) replaces this shared cal
 That is the seam this task must not foreclose — do not add a `companionOf` field here, and do not
 add any core machinery that reads one.
 
-- [ ] Test `the famous-meta row's request equals the famous point row's request at every tier` —
+- [x] Test `the famous-meta row's request equals the famous point row's request at every tier` —
       via `sameRequest` over the real `ASSET_WIRING` rows, all three tiers. The whole point of the
       task, and the test D11 will re-point rather than delete.
-- [ ] Test `the famous-stars-meta row's request is undefined at every tier`.
-- [ ] `npm run typecheck` — the `Req` type changes are the check; no cast may appear.
-- [ ] `npm test -- assetWiring famousGalaxiesMeta famousStarsMeta` green. Commit.
+- [x] Test `the famous-stars-meta row's request is undefined at every tier`.
+- [x] `npm run typecheck` — the `Req` type changes are the check; no cast may appear.
+- [x] `npm test -- assetWiring famousGalaxiesMeta famousStarsMeta` green. Commit.
 
 ## Task 9 — the hi-res famous texture becomes a slot row
 
@@ -693,19 +693,19 @@ every download. That is acceptable because it occupies its pipe for microseconds
 multi-megabyte fetch; the alternative — a parallel "allocate now, outside the queue" path for one
 row — is the second mechanism this plan exists to remove.
 
-- [ ] Test `the slot allocates at the requested layerSide` — inject factory stubs; assert
+- [x] Test `the slot allocates at the requested layerSide` — inject factory stubs; assert
       `createHiResFamousTexture` saw `layerSide: 512` for `small` and `1024` for `medium`.
-- [ ] Test `commit binds the new view and hands over the new planner BEFORE destroying the old
+- [x] Test `commit binds the new view and hands over the new planner BEFORE destroying the old
   pair` — the ordering contract; record call order and assert the previous texture's `destroy`
       runs after `bindHiResArray`.
-- [ ] Test `commit destroys the previous subsystem before the previous texture`.
-- [ ] Test `a first commit destroys nothing` — boot, no previous pair.
-- [ ] Test `commit publishes the new pair on state.subsystems` — both fields.
-- [ ] `wireImpostorSubsystems.test.ts`: the hi-res construction and `bindHiResArray` assertions
+- [x] Test `commit destroys the previous subsystem before the previous texture`.
+- [x] Test `a first commit destroys nothing` — boot, no previous pair.
+- [x] Test `commit publishes the new pair on state.subsystems` — both fields.
+- [x] `wireImpostorSubsystems.test.ts`: the hi-res construction and `bindHiResArray` assertions
       move out to the new file; report which cases moved and which died.
-- [ ] `demandTable.test.ts` unedited — the row is `demand: () => true` but its slot is absent from
+- [x] `demandTable.test.ts` unedited — the row is `demand: () => true` but its slot is absent from
       that fixture, so `slotFor` skips it. Confirm; if the boot set changes, stop and report.
-- [ ] `npm test -- wireHiResFamousSlot wireImpostorSubsystems demandTable` green. Commit.
+- [x] `npm test -- wireHiResFamousSlot wireImpostorSubsystems demandTable` green. Commit.
 
 ## Task 10 — delete `makeRunTierTransition`, and wake on `tier/`
 
@@ -737,15 +737,15 @@ therefore wake the render loop in its own right rather than riding the incidenta
 `setMilkyWayTuning` put at `watchTierSaga.ts:73` — a `settings/` write that (e) moves out of this
 saga, which would take the wake with it.
 
-- [ ] Test (`watchWakeSaga.test.ts`) `a tier write wakes the render loop` — the same shape as the
+- [x] Test (`watchWakeSaga.test.ts`) `a tier write wakes the render loop` — the same shape as the
       existing settings/camera/time cases.
-- [ ] `rg -n "runTierTransition|RunTierTransition" src tests` returns nothing.
-- [ ] `watchTierSaga.test.ts` keeps its coverage of the surviving duties and loses only the runner
+- [x] `rg -n "runTierTransition|RunTierTransition" src tests` returns nothing.
+- [x] `watchTierSaga.test.ts` keeps its coverage of the surviving duties and loses only the runner
       assertions; `registerReconcile.test.ts`'s "the two ride one call" case narrows to `reconcile`
       or dies — say which and why in the report.
-- [ ] Manual: with the branch's dev server, flip the tier and confirm the galaxy catalogs still
+- [x] Manual: with the branch's dev server, flip the tier and confirm the galaxy catalogs still
       reload (the drift edge is now the only path). Attest in the task report, not as a gate.
-- [ ] `npm test`, `npm run typecheck` green. Commit.
+- [x] `npm test`, `npm run typecheck` green. Commit.
 
 ## Task 11 — delete `rebuildHiResFamousForTier`
 
@@ -759,10 +759,10 @@ git rm src/services/engine/helpers/rebuildHiResFamousForTier.ts \
        tests/services/engine/helpers/rebuildHiResFamousForTier.test.ts
 ```
 
-- [ ] `rg -n "rebuildHiResFamousForTier" src tests docs` returns nothing.
-- [ ] The `TexturedDiskSubsystem.setHiResFamous` docblock states the new truth: the pair is a slot
+- [x] `rg -n "rebuildHiResFamousForTier" src tests docs` returns nothing.
+- [x] The `TexturedDiskSubsystem.setHiResFamous` docblock states the new truth: the pair is a slot
       whose commit hands over a new planner; the renderer keeps drawing the old one until then.
-- [ ] `npm test`, `npm run typecheck` green. Commit.
+- [x] `npm test`, `npm run typecheck` green. Commit.
 
 ## Task 12 — delete `willSourceReload`, `loadCompanionAssets`, `CompanionAssetReq` and the dissolve
 
@@ -799,20 +799,20 @@ underscore-prefixing it, unless `Committer` requires the arity.
 `syncVisibilityFadeItem` call; if it does, that leg MOVES to `galaxyCatalogSourceRegistry.test.ts`
 rather than dying.
 
-- [ ] `rg -n "willSourceReload|dissolvePrevious|dissolveCatalogBuffer|loadCompanionAssets|CompanionAssetReq|companions" src tests` returns nothing.
-- [ ] The surviving fade behaviour (a catalog fades IN on first commit, holds through a reload) has
+- [x] `rg -n "willSourceReload|dissolvePrevious|dissolveCatalogBuffer|loadCompanionAssets|CompanionAssetReq|companions" src tests` returns nothing.
+- [x] The surviving fade behaviour (a catalog fades IN on first commit, holds through a reload) has
       a test — moved, not re-invented.
-- [ ] `npm test`, `npm run typecheck` green. Commit.
+- [x] `npm test`, `npm run typecheck` green. Commit.
 
 ## Task 13 — gate: paired perf, and the visual pass the user attests
 
-- [ ] `npm run typecheck` (both projects) — green.
-- [ ] `npm run build` — green.
-- [ ] `npm test` — green. **No pre-committed number.** Five test files die and several are adapted;
+- [x] `npm run typecheck` (both projects) — green.
+- [x] `npm run build` — green.
+- [x] `npm test` — green. **No pre-committed number.** Five test files die and several are adapted;
       report the ACTUAL delta with a reason for every difference, reconciled against Tasks 2, 6, 9,
       10 and 12's reports of which assertions moved where. An unexplained drop means coverage was
       deleted where it should have moved.
-- [ ] **Paired `npm run perf`, REQUIRED.** Read `.claude/skills/perf/SKILL.md` first. Start this
+- [x] **Paired `npm run perf`, REQUIRED.** Read `.claude/skills/perf/SKILL.md` first. Start this
       worktree's dev server and take the port from ITS `Local:` line — in a worktree Vite
       auto-increments past 5173, and omitting `--url` silently measures another branch's server.
       Baseline on a scratch worktree at `223145f68` with its own server, alternating A-B-A-B:
@@ -828,7 +828,7 @@ rather than dying.
       is looking for: the per-frame drift check must not show up at all. **A regression HALTS the
       landing** — report the numbers and hand the land/park call to the user.
 
-- [ ] **Visual pass on a tier swap, per family.** The user attests this; the agent sets it up and
+- [x] **Visual pass on a tier swap, per family.** The user attests this; the agent sets it up and
       describes what to look for. In every case the shape of the claim is the same: **the old data
       stays on screen at full brightness until the new data lands, then is replaced in one frame.
       No blank, no fade-out, no gap.**
@@ -865,34 +865,36 @@ not escalated.
 
 **Deliverable inventory**
 
-- [ ] `rg -n "makeRunTierTransition|rebuildHiResFamousForTier|willSourceReload|loadCompanionAssets|runTierTransition|staleTierEvict|dissolvePrevious|CompanionAssetReq" src tests docs`
+- [x] `rg -n "makeRunTierTransition|rebuildHiResFamousForTier|willSourceReload|loadCompanionAssets|runTierTransition|staleTierEvict|dissolvePrevious|CompanionAssetReq" src tests docs`
       returns nothing.
-- [ ] `reevaluateDemand.ts` is the ONE place a tier change starts work, and its module docblock
+- [x] `reevaluateDemand.ts` is the ONE place a tier change starts work, and its module docblock
       states the invariant once: drift reloads in place, `release()` is distance eviction only.
-- [ ] `slotReady` and `AssetSlot.current()` both read `committed()`; no consumer re-writes the
+- [x] `slotReady` and `AssetSlot.current()` both read `committed()`; no consumer re-writes the
       ready-or-last-ready two-arm test, and no `held` field was added to `LoadState`.
-- [ ] An untiered galaxy catalog's request carries no `tier` key, and one predicate
+- [x] An untiered galaxy catalog's request carries no `tier` key, and one predicate
       (`shipsTierVariants`) decides both that and the filename.
-- [ ] `src/@types/engine/state/EngineAssetSlots.d.ts` carries `hiResFamous`, and the LOD-3 pair is
+- [x] `src/@types/engine/state/EngineAssetSlots.d.ts` carries `hiResFamous`, and the LOD-3 pair is
       allocated in exactly one place — the slot's fetch.
-- [ ] The `famousGalaxiesMeta` row's `req` is the identical call the Famous point row makes, with a
+- [x] The `famousGalaxiesMeta` row's `req` is the identical call the Famous point row makes, with a
       comment naming `companionOf` (D11, PR-C) as its replacement, and NO `companionOf` field
       exists yet.
-- [ ] Every `ASSET_WIRING` row's `req` returns `undefined` or a flat record of primitives, pinned by
+- [x] Every `ASSET_WIRING` row's `req` returns `undefined` or a flat record of primitives, pinned by
       a test over the real registry.
-- [ ] `demandTable.test.ts`'s boot `firedKeys` set is byte-identical to `main`.
+- [x] `demandTable.test.ts`'s boot `firedKeys` set is byte-identical to `main`.
 
 **Named observable behaviours** (Task 13's pass, user-attested)
 
-- [ ] A galaxy-catalog tier swap replaces the points in place — no fade-out, no gap.
-- [ ] An Earth close-approach tier swap never shows the low-res atlas placeholder.
-- [ ] A star-catalog tier swap never empties the star field.
-- [ ] A hi-res famous thumbnail never drops back to its atlas tile across a 512 ↔ 1024 swap.
-- [ ] An MCPM tier swap never blanks the volume.
-- [ ] A tier flip re-fetches only the assets whose file actually differs — not 2MRS, Famous, DESI
+- [x] A galaxy-catalog tier swap replaces the points in place — no fade-out, no gap.
+- [x] An Earth close-approach tier swap never shows the low-res atlas placeholder.
+- [x] A star-catalog tier swap never empties the star field.
+- [x] A hi-res famous thumbnail never drops back to its atlas tile across a 512 ↔ 1024 swap.
+- [x] An MCPM tier swap never blanks the volume.
+- [x] A tier flip re-fetches only the assets whose file actually differs — not 2MRS, Famous, DESI
       or the famous-meta sidecar.
-- [ ] A catalog disabled across a tier flip comes back at the NEW tier when re-enabled.
-- [ ] A small↔medium flip swaps the filament skeleton file; a medium↔large flip fetches none.
+- [x] A catalog disabled across a tier flip comes back at the NEW tier when re-enabled.
+- [x] A slot that errored over a committed value is released by the distance edge like a ready
+      one (final-review I1: with in-place reloads, `error` can hold a resident texture).
+- [x] A small↔medium flip swaps the filament skeleton file; a medium↔large flip fetches none.
 
 **The deferral boundary** — nothing else. No `Layer` value, no `companionOf`, no source row moved,
 no settings type touched, no renderer moved, no change to `watchTierSaga`'s re-anchor or Milky-Way
