@@ -1,7 +1,7 @@
 import type { TokenTotals } from './TokenTotals';
 
 export type SessionTokenNode = {
-  kind: 'session' | 'turn' | 'skill' | 'subagent' | 'request';
+  kind: 'project' | 'branch' | 'session' | 'turn' | 'skill' | 'subagent' | 'request';
   label: string;
   startedAt: string;
   endedAt: string;

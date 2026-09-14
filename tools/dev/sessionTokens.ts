@@ -2,12 +2,15 @@
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { basename, dirname, join } from 'node:path';
+import { buildProjectTree } from '../utils/session/buildProjectTree';
 import { buildSessionTree } from '../utils/session/buildSessionTree';
 import type { SessionTokenNode } from '../utils/session/SessionTokenNode';
 
 // Reports where a Claude Code session's tokens went: per turn, per skill, per subagent.
-// Usage: npm run session-tokens [-- <transcript.jsonl|sessionId>] [--json] [--depth N]
-// With no argument it reads the newest transcript for the current working directory.
+// Usage: npm run session-tokens [-- <transcript.jsonl|sessionId>] [--across] [--json] [--depth N]
+// With no argument it reads the newest transcript for the current working directory;
+// --across rolls every session for this project up by git branch, for work that ran
+// over several sittings and several PRs.
 
 const projectDir = (cwd: string): string =>
   join(homedir(), '.claude', 'projects', cwd.replace(/[/.]/g, '-'));
@@ -73,11 +76,20 @@ const path = !positional
     ? positional
     : join(dir, `${positional}.jsonl`);
 
-const tree = buildSessionTree(
-  readFileSync(path, 'utf8'),
-  loadSubagents(path),
-  basename(path, '.jsonl'),
-);
+const readSession = (file: string) => ({
+  label: basename(file, '.jsonl'),
+  text: readFileSync(file, 'utf8'),
+  subagents: loadSubagents(file),
+});
+
+const tree = args.includes('--across')
+  ? buildProjectTree(
+      readdirSync(dir)
+        .filter((f) => f.endsWith('.jsonl'))
+        .map((f) => readSession(join(dir, f))),
+      basename(dir),
+    )
+  : (({ text, subagents, label }) => buildSessionTree(text, subagents, label))(readSession(path));
 
 if (args.includes('--json')) {
   console.log(JSON.stringify(tree, null, 2));
