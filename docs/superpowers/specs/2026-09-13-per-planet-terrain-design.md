@@ -85,7 +85,7 @@ export type BodySurface = {
 // CelestialBody: `radiusM` → `surface: BodySurface`.  MeshBody untouched.
 // Derived, never stored:  outerBoundRadiusM = datum + reliefM[1]   // over-estimate is safe
 //                         innerBoundRadiusM = datum + reliefM[0]   // under-estimate is safe
-// The viewer-facing radius moves to BODY_FACTS; `radiusM` ceases to exist as a name.
+// The InfoCard prints the datum (mean radius); `radiusM` ceases to exist as a name.
 
 // src/@types/data/SurfaceTileProduct.d.ts        NEW, replaces EarthTileKind
 export type SurfaceTileProduct = 'albedo' | 'height';
@@ -633,7 +633,7 @@ upward step at first load.
 | atmosphere bottom, cloud shell                               | 41    | `innerBoundRadiusM` for the march (under-estimate, so a peak is never a hole) — correct only once the composite is depth-aware, §2. Cloud deck becomes **altitude metres above `outerBoundRadiusM`**, not a ratio of the datum |
 | occlusion (trails, captions, umbra, horizon cap)             | 19    | `innerBoundRadiusM` for occluders — they must under-occlude; `boundsM(patch).max` for the occludee in the horizon cap                                                                                                          |
 | pick                                                         | 23    | `raycast` against the height field (§8.1), not `raySphereRoots` — sphere picking is off by up to 8.8 km of parallax at grazing incidence                                                                                       |
-| surface-fixed site placement, orbital elements, InfoCard     | 10    | `bestHeightM` for a rover's ground; `BODY_FACTS` for the printed radius                                                                                                                                                        |
+| surface-fixed site placement, orbital elements, InfoCard     | 10    | `bestHeightM` for a rover's ground; `datumRadiusM` for the printed radius — the datum is the mean radius                                                                                                                       |
 
 The cloud-deck shape matters more than it looks. `CLOUD_SHELL_PARAMS.radiusRatio`
 is 1.002 ≈ 12.7 km, drawn on a `uvSphereMesh(128, 64)` whose facet-centre sag
