@@ -58,7 +58,6 @@ function build() {
     'rgba16float',
     {} as GPUSampler,
     {} as GPUTextureView,
-    {} as GPUShaderModule,
     new Map([
       [
         'earth',

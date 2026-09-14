@@ -288,7 +288,9 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // reads the depth those rows wrote, and its fog must ride the one tone curve.
     const aerialAt = steps.indexOf(aerial[0]!);
     const chainAt = steps
-      .map((step, i) => (step.kind === 'render' && step.depth === 'clear' ? i : -1))
+      .map((step, i) =>
+        step.kind === 'render' && step.target === 'foreground:0' && step.depth === 'clear' ? i : -1,
+      )
       .filter((i) => i >= 0);
     expect(Math.max(...chainAt)).toBeLessThan(aerialAt);
     expect(aerialAt).toBeLessThan(

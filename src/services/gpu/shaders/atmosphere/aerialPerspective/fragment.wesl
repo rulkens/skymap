@@ -1,13 +1,13 @@
-// atmosphere/aerialPerspective/fragment.wesl — the froxel apply. One
-// full-screen pass over the body the camera is inside, branching per pixel on
-// the scene depth the foreground row already stamped: a sky ray keeps the
-// whole-column sky-view answer, a geometry ray reads the volume at its own
-// distance ('froxelLut.wesl' baked it along this same ray).
+// atmosphere/aerialPerspective/fragment.wesl — the froxel apply: one
+// full-screen pass over the body the camera is inside, branching on the scene
+// depth the foreground row stamped. A sky ray keeps the whole-column sky-view
+// answer, a geometry ray reads the volume at its own distance.
 //
-// Bindings 0-4 are the SHELL's, imported rather than redeclared, so one bind
-// group serves both halves: 'u' and 'lutSamp' by name, the three LUT/ring
-// textures implicitly with 'sampleShellRay'. Comments single-quoted, never
-// backticks. Literal 'package::' imports.
+// Bindings 0-4 are the SHELL's, so one bind group serves both halves.
+// Importing 'sampleShellRay' hoists all five into the linked module: declaring
+// any of them here again is a duplicate-binding error, and NAMING one that was
+// hoisted without being imported ('skyViewLut') fails 'unresolved identifier'.
+// Hence the two by-name imports of 'u' and 'lutSamp', the two this file reads.
 
 import package::atmosphere::froxelSlices::froxelMaxDistance;
 import package::atmosphere::froxelSlices::froxelRayDir;
@@ -17,6 +17,15 @@ import package::atmosphere::shell::fragment::lutSamp;
 import package::atmosphere::shell::fragment::sampleShellRay;
 import package::atmosphere::shell::fragment::u;
 import package::lib::fullscreenTri::FullscreenOut;
+import package::lib::fullscreenTri::fullscreenVertex;
+
+// The covering triangle. Declared here rather than imported because the linker
+// does not preserve an imported entry point's NAME for the pipeline's lookup
+// ('lib/fullscreenTri.wesl').
+@vertex
+fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
+  return fullscreenVertex(vi);
+}
 
 @group(0) @binding(5) var froxelInScatter: texture_3d<f32>;
 @group(0) @binding(6) var froxelTransmittance: texture_3d<f32>;

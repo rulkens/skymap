@@ -500,14 +500,12 @@ export function createAtmosphereShellRenderer(
 
   // The inside-the-atmosphere path rides these same bundles — one atmosphere,
   // two consumers (`aerialPerspectiveRenderer`'s header). Constructed AFTER the
-  // loop because it binds every bundle's uniform buffers and LUTs; it borrows
-  // `shellVsModule` for the covering triangle its apply draws.
+  // loop because it binds every bundle's uniform buffers and LUTs.
   const aerialPerspective = createAerialPerspectiveRenderer(
     device,
     targetFormat,
     sampler,
     placeholderRing.createView(),
-    shellVsModule,
     bundles,
   );
 

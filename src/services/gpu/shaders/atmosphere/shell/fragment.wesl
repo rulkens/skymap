@@ -280,9 +280,8 @@ fn sampleShell(in: FsIn) -> ShellSample {
   // The near wall (front-facing) renders ONLY ground-hitting rays (the disc
   // haze); the far wall (back-facing) renders ONLY ground-missing rays (the limb
   // + sky). Discard the other half on each so the pair is exhaustive AND mutually
-  // exclusive whatever the depth state (incl. the camera-inside case). Without
-  // the near-wall guard the limb would double-count -- both walls pass the depth
-  // test past the limb.
+  // exclusive whatever the depth state. Without the near-wall guard the limb
+  // would double-count -- both walls pass the depth test past the limb.
   // Wrong wall <=> facing and ground-hit disagree (the front wall owns ground
   // rays, the far wall owns the rest) -- one XOR covers both rejections.
   if (in.frontFacing != out.intersectsGround) {

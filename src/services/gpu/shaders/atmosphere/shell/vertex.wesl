@@ -46,8 +46,6 @@
 
 import package::lib::sphere::AtmosphereUniforms;
 import package::lib::sphere::clip_from_local;
-import package::lib::fullscreenTri::FullscreenOut;
-import package::lib::fullscreenTri::fullscreenVertex;
 
 @group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
 
@@ -65,16 +63,4 @@ fn vs(@location(0) position: vec3<f32>) -> VsOut {
   out.clip = clip_from_local(u.mvp, position);
   out.localPos = position;
   return out;
-}
-
-// The vertex stage of the full-screen aerial-perspective pass
-// ('aerialPerspective/fragment.wesl', a different module -- a pipeline may take
-// its two stages from different modules): no proxy mesh, no vertex buffer, just
-// the covering triangle. That fragment reconstructs the view ray by
-// unprojecting through 'u.invMvp' instead of reading an interpolated local
-// position, so nothing is forwarded but the uv. 'u' above is unread by this
-// entry point, hence absent from its pipeline's bind-group visibility.
-@vertex
-fn insideVs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
 }

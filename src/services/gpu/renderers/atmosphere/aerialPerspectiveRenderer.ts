@@ -31,15 +31,11 @@ type AtmosphereBundleResources = {
   readonly skyViewTex: GPUTexture;
 };
 
-/** `vertexModule` is the shell's `shell/vertex.wesl` module, for its `insideVs`
- *  covering triangle — a pipeline may take its two stages from different
- *  modules, and this one needs no vertex stage of its own. */
 export function createAerialPerspectiveRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   sampler: GPUSampler,
   placeholderRingView: GPUTextureView,
-  vertexModule: GPUShaderModule,
   bodies: ReadonlyMap<string, AtmosphereBundleResources>,
 ): AerialPerspectiveRenderer {
   // ONE pair for the whole renderer: only one body can be inside at a time.
@@ -102,8 +98,8 @@ export function createAerialPerspectiveRenderer(
   // Mirrors `aerialPerspective/fragment.wesl`'s `@group(0)`: bindings 0-4 are
   // the shell fragment's, imported by that module rather than redeclared, so
   // this layout is the shell's five plus the froxel volumes and scene depth.
-  // Binding 0 is FRAGMENT-only here — `insideVs` reads no uniform, so the
-  // vertex stage has no resource interface at all.
+  // Binding 0 is FRAGMENT-only here — the covering triangle reads no uniform,
+  // so the vertex stage has no resource interface at all.
   const applyBgl = device.createBindGroupLayout({
     label: 'atmosphere-aerial-bgl',
     entries: [
@@ -142,7 +138,7 @@ export function createAerialPerspectiveRenderer(
     return device.createRenderPipeline({
       label,
       layout: applyPipelineLayout,
-      vertex: { module: vertexModule, entryPoint: 'insideVs' },
+      vertex: { module: applyModule, entryPoint: 'vs' },
       fragment: { module: applyModule, entryPoint, targets: [{ format: targetFormat, blend }] },
       primitive: { topology: 'triangle-list' },
     });

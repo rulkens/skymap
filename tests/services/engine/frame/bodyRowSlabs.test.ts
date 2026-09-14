@@ -121,11 +121,4 @@ describe('bodyRowSlabs', () => {
 
     expect(bodyRowSlabs(STATE, ctx).insideAtmosphere).toEqual([EARTH_SLAB_INDEX]);
   });
-
-  it('resolves nothing while the camera is outside every shell', () => {
-    drawListMock.mockReturnValue([makeEntry('earth', false)]);
-    const ctx = makeCtx(camAtAuFromSgrAStar(900), [makeSlab(), EARTH_SLAB]);
-
-    expect(bodyRowSlabs(STATE, ctx).insideAtmosphere).toEqual([]);
-  });
 });

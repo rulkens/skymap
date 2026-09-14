@@ -195,10 +195,8 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // tie-break puts that row last in the chain. AFTER the chain so every opaque
   // row has stamped that depth; BEFORE the composite so the fog rides one curve.
   // Never `foreground:0`'s first step: it attaches no depth yet marks the target
-  // touched, which would cost the chain its colour clear. `slot` keeps its
-  // timing row apart from the chain step for that same row, whose bare group key
-  // it would otherwise share. Outside every shell the list is empty and this
-  // emits nothing.
+  // touched, which would cost the chain its colour clear.
+  // `slot` keeps its timing row apart from the chain step for that same row.
   {
     kind: 'render',
     target: 'foreground:0',

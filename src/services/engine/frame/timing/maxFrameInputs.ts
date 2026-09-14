@@ -27,9 +27,7 @@ export const MAX_FRAME_INPUTS: FrameInputs = {
     ]),
   ),
   bodyRowSlabs: {
-    // Every capacity index, for both: the lensed body's painter-order row and the
-    // enclosing body's move with the live bodies, and an unallocated slot is a
-    // missing DebugPanel / perf row.
+    // Every capacity index, for both: the two rows move with the live bodies.
     lens: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
     insideAtmosphere: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
   },

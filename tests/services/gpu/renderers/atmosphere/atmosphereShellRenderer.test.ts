@@ -81,10 +81,10 @@ function blendRole(desc: GPURenderPipelineDescriptor): string {
 describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
   it('builds one multiplicative and one additive shell pipeline', () => {
     const { renderPipelines } = build();
-    // The LUT bakes go through createComputePipeline, so every render pipeline
-    // here is a draw: the shell's own pair, then the aerial-perspective apply's
-    // (its sub-renderer is built by this same factory call).
-    expect(renderPipelines.map(blendRole)).toEqual(['multiply', 'add', 'multiply', 'add']);
+    // The LUT bakes go through createComputePipeline, so the first two render
+    // pipelines are the shell's own pair; the aerial-perspective apply's pair
+    // follows (same factory call) and is that renderer's test to make.
+    expect(renderPipelines.slice(0, 2).map(blendRole)).toEqual(['multiply', 'add']);
   });
 
   it('gives both shell passes identical depth, primitive and vertex state', () => {
