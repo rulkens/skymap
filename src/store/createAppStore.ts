@@ -18,11 +18,10 @@
  * registering a saga's runner (an engine resource the saga calls into) is a
  * DISTINCT capability, kept un-braided from the store by returning it as its own
  * value rather than bolting it onto the store object. The engine calls
- * `setSagaContext` post-construction with a bag carrying, among the rest, the
- * tier-transition runner; `getContext('runTierTransition')` inside the running
- * saga reads it back. That `setContext`/`getContext` pair is how an engine
- * resource crosses from engine-land into store-land without the saga importing
- * the engine.
+ * `setSagaContext` post-construction with a bag of its closures, and
+ * `getContext(<name>)` inside the running saga reads one back. That
+ * `setContext`/`getContext` pair is how an engine resource crosses from
+ * engine-land into store-land without the saga importing the engine.
  *
  * `setSagaContext` is the outward seam for engine-side closures. Sagas live
  * entirely in the store layer and have no compile-time access to the engine's

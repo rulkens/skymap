@@ -16,8 +16,7 @@
  * it) pointed at the container, unchanged for every consumer.
  *
  * The saga-context types describe the engine capabilities that cross into
- * store-land: `RunTierTransition` is the engine-owned runner that reacts to a
- * confirmed tier change (drive the per-source data load + famous rebuild);
+ * store-land:
  * `ReconcileEffects` (see `./effects/ReconcileEffects`) is the bag of render-wake /
  * fade / reseed / bias closures the reconcile sagas invoke; `resolveDeps` is
  * the lazy live-resource read the selection reconciler uses to turn a `SelectionRef`
@@ -54,7 +53,6 @@ import type { rootReducer } from './rootReducer';
 import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
-import type { Tier } from '../@types/data/Tier';
 import type { CameraPose } from '../@types/camera/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
@@ -66,7 +64,6 @@ export type RootState = ReturnType<typeof rootReducer>;
 export type AppStore = ReturnType<typeof createAppStore>['store'];
 export type AppDispatch = AppStore['dispatch'];
 
-export type RunTierTransition = (prevTier: Tier, nextTier: Tier) => void;
 /**
  * The live camera Resources the focus and orientation sagas read off the frame
  * loop. `watchFocusTweenSaga` seeds a camera tween from the visible `from` pose
@@ -124,8 +121,7 @@ export type ClipPathInspectSeam = {
   pinnedFrame: () => OrientationFrameId | null;
 };
 export type SagaContext = {
-  runTierTransition: RunTierTransition; // already present — drives per-source data load on tier change
-  reconcile: ReconcileEffects; // already present — provides requestRender + fade/reseed/bias
+  reconcile: ReconcileEffects; // provides requestRender + fade/reseed/bias
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
   /**

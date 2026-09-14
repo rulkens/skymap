@@ -77,7 +77,6 @@ import { uploadVolumeField } from './volume/uploadVolumeField';
 import { unloadVolumeField } from './volume/unloadVolumeField';
 import { listVolumeFields } from './handles/listVolumeFields';
 import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
-import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -443,7 +442,6 @@ export function createEngine(
   });
 
   cb.setSagaContext({
-    runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
