@@ -39,7 +39,6 @@ const STEP_FACTS: {
     captured: [],
     targets: [spec.target],
   }),
-  lens: (spec) => ({ drawn: spec.passes, captured: [], targets: [spec.target] }),
   composite: (spec) => ({ drawn: [], captured: [], targets: [spec.source, spec.dest] }),
   bloom: () => NONE,
   tonemap: (spec) => ({ drawn: [], captured: [], targets: [spec.source, spec.dest] }),

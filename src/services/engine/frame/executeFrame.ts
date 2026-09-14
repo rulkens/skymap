@@ -124,15 +124,22 @@ function colorAttachment(
 }
 
 /**
- * A render step's depth load-op. Absent `depthLoad` ⇒ the SAME first-touch
- * `touched` fact that flips the colour load-op: the frame's first pass against
- * a depth target clears, later passes load and so preserve the occlusion
- * already written. A step that declares one overrides that — depth is the only
- * attachment where sharing a target must not imply sharing its contents.
+ * A render step's depth target and load-op. Absent `depth` ⇒ the SAME
+ * first-touch `touched` fact that flips the colour load-op: the frame's first
+ * pass against a depth target clears, later passes load and so preserve the
+ * occlusion already written. A step that declares one overrides that — depth is
+ * the only attachment where sharing a target must not imply sharing its
+ * contents. `'sample'` gets none at all, so it neither clears the target's
+ * depth nor preserves it — never make it a target's first.
  */
-function depthLoadOpFor(depthLoad: 'clear' | 'load' | undefined, touched: boolean): GPULoadOp {
-  if (depthLoad) return depthLoad;
-  return touched ? 'load' : 'clear';
+function depthFor(
+  target: string,
+  depth: 'clear' | 'load' | 'sample' | undefined,
+  touched: boolean,
+): { readonly target: string; readonly loadOp: GPULoadOp } | undefined {
+  if (depth === 'sample') return undefined;
+  if (depth === 'clear' || depth === 'load') return { target, loadOp: depth };
+  return { target, loadOp: touched ? 'load' : 'clear' };
 }
 
 /**
@@ -254,10 +261,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
                   view: viewFor(step.target, ctx, swapView),
                   clearValue: ctx.renderTargets.specOf(step.target).clearValue,
                 },
-                depth: {
-                  target: step.target,
-                  loadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
-                },
+                depth: depthFor(step.target, step.depth, touched.has(step.target)),
                 touchSet: touched,
                 touchKey: step.target,
               }

@@ -18,7 +18,7 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { lensBodySlabs } from './lensBodySlabs';
+import { bodyRowSlabs } from './bodyRowSlabs';
 import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 
 /**
@@ -82,7 +82,7 @@ export function renderFrame(input: RenderFrameInput): void {
       captureFaces: new Map(
         [...captureContexts].map(([key, faces]) => [key, [...faces.keys()]] as const),
       ),
-      lensBodySlabs: lensBodySlabs(state, ctx),
+      bodyRowSlabs: bodyRowSlabs(state, ctx),
     }),
     strategy,
     timing: timingService,

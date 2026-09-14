@@ -1,5 +1,5 @@
 /**
- * lensBodySlabs — which slab rows the `lens` line expands over.
+ * bodyRowSlabs — which slab rows a `BodyRowSource` line expands over.
  *
  * The out-of-band case is the load-bearing one: an empty list is what lets
  * `mergeAdjacent` fold the two `(hdr, NEAR0)` lines back into a single render
@@ -8,7 +8,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { lensBodySlabs } from '../../../../src/services/engine/frame/lensBodySlabs';
+import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
@@ -47,18 +47,18 @@ const SGR_A_STAR_SLAB = makeSlab({
   frame: { kind: 'body-m', bodyId: SGR_A_STAR.id as BodyId },
 });
 
-describe('lensBodySlabs', () => {
+describe('bodyRowSlabs', () => {
   it("resolves Sgr A*'s body-m slab index inside the lensing band", () => {
     const ctx = makeCtx(camAtAuFromSgrAStar(120), [makeSlab(), SGR_A_STAR_SLAB]);
 
-    expect(lensBodySlabs(STATE, ctx)).toEqual([LENS_SLAB_INDEX]);
+    expect(bodyRowSlabs(STATE, ctx).lens).toEqual([LENS_SLAB_INDEX]);
   });
 
   it('resolves nothing outside the band, so the two hdr·NEAR0 lines still merge', () => {
     const ctx = makeCtx(camAtAuFromSgrAStar(900), [makeSlab(), SGR_A_STAR_SLAB]);
 
-    const slabs = lensBodySlabs(STATE, ctx);
-    expect(slabs).toEqual([]);
+    const slabs = bodyRowSlabs(STATE, ctx);
+    expect(slabs.lens).toEqual([]);
 
     const tone: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
     const program = expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
@@ -66,7 +66,7 @@ describe('lensBodySlabs', () => {
       bloomEnabled: true,
       foregroundChain: [NEAR0],
       captureFaces: new Map([['sgrAStar', []]]),
-      lensBodySlabs: slabs,
+      bodyRowSlabs: slabs,
     });
     const foregroundAt = program.findIndex(
       (step) => step.kind === 'render' && step.target === 'foreground:0',
@@ -81,6 +81,6 @@ describe('lensBodySlabs', () => {
   it('resolves nothing when the band is open but the row missed this frame', () => {
     const ctx = makeCtx(camAtAuFromSgrAStar(120), [makeSlab()]);
 
-    expect(lensBodySlabs(STATE, ctx)).toEqual([]);
+    expect(bodyRowSlabs(STATE, ctx).lens).toEqual([]);
   });
 });

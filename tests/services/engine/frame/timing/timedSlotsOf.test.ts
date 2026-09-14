@@ -24,7 +24,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
     bloomEnabled: false,
     foregroundChain: [NEAR0],
     captureFaces: new Map(),
-    lensBodySlabs: [],
+    bodyRowSlabs: { lens: [], insideAtmosphere: [] },
     ...over,
   });
 }
@@ -35,7 +35,7 @@ describe('timedSlotsOf', () => {
     // `sgrAStarLensingPass` — the pass compiled and registered but was
     // structurally unreachable. Passing a body-slab index (4, arbitrary) must
     // surface its row right after the (hdr, NEAR0) group's own slot.
-    const slots = timedSlotsOf(program({ lensBodySlabs: [4] }));
+    const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
     const rosterIdx = slots.indexOf('hdr·NEAR0');
     expect(rosterIdx).toBeGreaterThanOrEqual(0);
     expect(slots[rosterIdx + 1]).toBe('sgr-a-star-lensing·BODY[2]');
@@ -47,7 +47,7 @@ describe('timedSlotsOf', () => {
     // UNDER the lens's OVER blend. They now have their own `FRAME_ORDER` lines
     // past the lens — checked against the REAL registry, so moving either back
     // into the roster line fails this.
-    const slots = timedSlotsOf(program({ lensBodySlabs: [4] }));
+    const slots = timedSlotsOf(program({ bodyRowSlabs: { lens: [4], insideAtmosphere: [] } }));
     const lensIdx = slots.indexOf('sgr-a-star-lensing·BODY[2]');
     expect(lensIdx).toBeGreaterThanOrEqual(0);
     expect(slots.indexOf('orbit-trails')).toBeGreaterThan(lensIdx);
