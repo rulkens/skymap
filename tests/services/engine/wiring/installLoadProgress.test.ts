@@ -40,6 +40,7 @@ function stubSlot(name: string): AssetSlot<unknown, unknown> {
     name,
     load: vi.fn(),
     current: () => null,
+    committed: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: () => () => {},
     lastRequest: () => null,

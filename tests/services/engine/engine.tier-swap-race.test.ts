@@ -23,7 +23,7 @@ describe('AssetSlot tier-swap race', () => {
       fetch: fetcher,
       commit: async (val) => {
         uploaded.push(val);
-        await new Promise((r) => setTimeout(r, 5));  // simulate async GPU upload
+        await new Promise((r) => setTimeout(r, 5)); // simulate async GPU upload
       },
       retry: () => 'give-up',
     });
@@ -119,9 +119,12 @@ describe('AssetSlot tier-swap race', () => {
     await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
     slot.load({ tier: 'medium' });
 
-    await vi.waitFor(() => expect(slot.current()).toBe('MEDIUM-DATA'));
+    // The slot serves its committed medium value throughout the swap, so
+    // current() cannot mark the end of the run — wait on the side-effect.
+    await vi.waitFor(() => expect(writes).toHaveLength(3), { timeout: 2000 });
     // The user-visible side-effect ordering: medium first, then large,
     // then medium again — ending on medium, not large.
     expect(writes).toEqual(['MEDIUM-DATA', 'LARGE-DATA', 'MEDIUM-DATA']);
+    expect(slot.current()).toBe('MEDIUM-DATA');
   });
 });

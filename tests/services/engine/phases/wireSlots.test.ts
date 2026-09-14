@@ -269,6 +269,7 @@ function makeFakeSlot(name: string): FakeSlot {
     name,
     load: vi.fn(),
     current: () => null,
+    committed: () => null,
     state: () => current,
     subscribe(fn) {
       subs.add(fn);

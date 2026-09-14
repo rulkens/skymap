@@ -8,6 +8,7 @@ function fakeSlot<T>(name: string, state: LoadState<T>): AssetSlot<T, unknown> {
     name,
     load: () => Promise.resolve(),
     current: () => (state.kind === 'ready' ? state.value : null),
+    committed: () => null,
     state: () => state,
     subscribe: () => () => {},
     lastRequest: () => null,

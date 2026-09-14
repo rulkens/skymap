@@ -369,3 +369,100 @@ describe('AssetSlot — cancel and forceReload', () => {
     expect(slot.lastRequest()).toBeNull();
   });
 });
+
+describe('AssetSlot — the committed value', () => {
+  type Req = { tier: string };
+
+  /** A slot whose first fetch resolves to 'first' and whose second is a gate. */
+  function reloadingSlot(onRelease?: (v: string) => void) {
+    const second = deferred<string>();
+    let calls = 0;
+    const fetch: Fetcher<string, Req> = vi.fn(() => {
+      calls += 1;
+      return calls === 1 ? Promise.resolve('first') : second.promise;
+    });
+    const slot = createAssetSlot<string, Req>({ name: 'test', fetch, onRelease, retry: noRetry });
+    return { slot, second };
+  }
+
+  async function loadedThenReloading(onRelease?: (v: string) => void) {
+    const { slot, second } = reloadingSlot(onRelease);
+    slot.load({ tier: 'medium' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    slot.load({ tier: 'large' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('loading'));
+    return { slot, second };
+  }
+
+  it('committed() is the ready state itself, request included', async () => {
+    const fetch: Fetcher<string, Req> = vi.fn().mockResolvedValue('A');
+    const slot = createAssetSlot<string, Req>({ name: 'test', fetch, retry: noRetry });
+    slot.load({ tier: 'medium' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    expect(slot.committed()).toBe(slot.state());
+    expect(slot.committed()?.req.tier).toBe('medium');
+  });
+
+  it('committed() is null until the slot has committed once', async () => {
+    const fetch: Fetcher<string, Req> = vi.fn().mockRejectedValue(new Error('boom'));
+    const slot = createAssetSlot<string, Req>({ name: 'test', fetch, retry: noRetry });
+    expect(slot.committed()).toBeNull();
+
+    slot.load({ tier: 'medium' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
+    expect(slot.committed()).toBeNull();
+  });
+
+  it('committed() holds the previous ready state while a reload is in flight', async () => {
+    const { slot } = await loadedThenReloading();
+
+    expect(slot.committed()?.value).toBe('first');
+    // The PREVIOUS request — the new one is only visible through lastRequest().
+    expect(slot.committed()?.req.tier).toBe('medium');
+    expect(slot.lastRequest()?.tier).toBe('large');
+  });
+
+  it('committed() survives a failed reload', async () => {
+    const { slot, second } = await loadedThenReloading();
+
+    second.reject(new Error('boom'));
+    await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
+    expect(slot.committed()?.value).toBe('first');
+    expect(slot.committed()?.req.tier).toBe('medium');
+  });
+
+  it('current() serves the previous value through a reload, the new one after it commits', async () => {
+    const { slot, second } = await loadedThenReloading();
+    expect(slot.current()).toBe('first');
+
+    second.resolve('second');
+    await vi.waitFor(() => expect(slot.current()).toBe('second'));
+    expect(slot.committed()?.req.tier).toBe('large');
+  });
+
+  it('release() mid-reload runs onRelease once with the committed value', async () => {
+    const onRelease = vi.fn();
+    const { slot } = await loadedThenReloading(onRelease);
+
+    slot.release();
+
+    // The leak this closes: mid-reload the state is 'loading', so a gate on
+    // the state discriminant alone would free nothing.
+    expect(onRelease).toHaveBeenCalledTimes(1);
+    expect(onRelease).toHaveBeenCalledWith('first');
+    expect(slot.state().kind).toBe('idle');
+  });
+
+  it('release() is the only thing that drops the committed value', async () => {
+    const { slot } = reloadingSlot();
+    slot.load({ tier: 'medium' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+
+    slot.release();
+
+    expect(slot.committed()).toBeNull();
+    expect(slot.current()).toBeNull();
+    expect(slot.state().kind).toBe('idle');
+  });
+});

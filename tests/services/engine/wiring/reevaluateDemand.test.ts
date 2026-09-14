@@ -57,6 +57,7 @@ function stubSlot(
     name: 'stub',
     load: load as unknown as StubSlot['load'],
     current: () => null,
+    committed: () => null,
     state: () => ({ kind }) as LoadState<unknown>,
     subscribe: () => () => {},
     // The request the slot last committed with — the stale-tier evict edge reads
