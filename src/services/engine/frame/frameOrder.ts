@@ -22,12 +22,16 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // step contributes no timing slot.
   { kind: 'compute', name: 'flow' },
   { kind: 'compute', name: 'atmosphereSkyView' },
-  // The `sgrAStar` capture, in the compute prelude's wake and ahead of every
+  // The sky captures, in the compute prelude's wake and ahead of every
   // other render step so a same-frame lensing draw can sample a cubemap this
-  // frame actually wrote. The frame's face list for this key is empty most
+  // frame actually wrote. The frame's face list for a key is empty most
   // frames (outside the fade band, and in-band on every frame except the one
   // that re-bakes), and then this line emits nothing at all — the lens's
   // zero-dispatch guarantee, of which this is the capture half.
+  //
+  // Both rows bake the same roster from the same eye, one after the other:
+  // `solarSystem` is the star field a reflection probe is captured over, and
+  // parallax across the solar system is sub-texel on its 256² faces.
   //
   // TWO rosters because the captured content spans both slabs: the galaxy
   // billboards and textured disks project through COSMO, the survey stars
@@ -40,7 +44,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // a SYNTHETIC per-face ctx, never the frame's real camera.
   {
     kind: 'capture',
-    capture: 'sgrAStar',
+    captures: ['sgrAStar', 'solarSystem'],
     cosmoPasses: ['point-sprites', 'textured-disks'],
     near0Passes: ['star-aggregates', 'star-catalog'],
   },

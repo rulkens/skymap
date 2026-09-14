@@ -29,17 +29,28 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import {
+  ALL_CUBE_FACES,
+  CUBEMAP_CAPTURES,
+  SKY_CAPTURE_KEYS,
+} from '../../../../src/data/rendering/cubemapCaptures';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
+import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureKey';
 
-/** The `sgrAStar` row's per-face contexts as handed to `executeFrame`. */
-function handedOffContexts(): ReadonlyMap<CubeFace, ReadyFrameContext> {
+/** Every sky row's target id, so the mock serves whichever row bakes. */
+const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
+
+/** One row's per-face contexts as handed to `executeFrame`. */
+function handedOffContexts(
+  key: SkyCaptureKey = 'sgrAStar',
+): ReadonlyMap<CubeFace, ReadyFrameContext> {
   const args = executeFrameMock.mock.calls[0]![0] as { captureContexts?: CaptureFaceContexts };
-  return args.captureContexts?.get('sgrAStar') ?? new Map();
+  return args.captureContexts?.get(key) ?? new Map();
 }
 
 /**
@@ -53,15 +64,6 @@ function programFaces(): readonly CubeFace[] {
     step.kind === 'render' && step.capture?.key === 'sgrAStar' ? [step.capture.face] : [],
   );
   return [...new Set(faces)].sort();
-}
-
-/** A fresh, never-baked `cubemapCaptures` entry for the `sgrAStar` row. */
-function makeCaptureRuntime() {
-  return {
-    lastBandActive: false,
-    lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-    bakedSettings: null,
-  };
 }
 
 function makeState(overrides: Partial<EngineState> = {}): EngineState {
@@ -79,7 +81,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
       fades: { isAnyAnimating: () => false },
       texturedDisks: { hasInFlightWork: () => false },
     },
-    cubemapCaptures: { sgrAStar: makeCaptureRuntime() },
+    cubemapCaptures: makeCubemapCaptureRuntimes(),
     ...overrides,
   } as unknown as EngineState;
 }
@@ -100,14 +102,15 @@ function makeCtx(
     renderTargets: {
       reconcile: vi.fn(),
       specOf: (id: string) => {
-        if (id === 'sky-cubemap') return { fixedSizePx: { size: faceSizePx, layers: 6 } };
+        if (CAPTURE_TARGET_IDS.includes(id))
+          return { fixedSizePx: { size: faceSizePx, layers: 6 } };
         if (id === 'swap') return { format: 'bgra8unorm' };
         throw new Error(`mock renderTargets: no spec row for '${id}'`);
       },
       // The sweep reads the ALLOCATED size, not the spec's `fixedSizePx.size`
-      // (a live setting) — see `scheduleCubemapCaptures`'s `faceSizePx`.
+      // (a live setting) — see `scheduleSkyCaptures`'s `faceSizePx`.
       sizeOf: (id: string) => {
-        if (id === 'sky-cubemap') return { width: faceSizePx, height: faceSizePx };
+        if (CAPTURE_TARGET_IDS.includes(id)) return { width: faceSizePx, height: faceSizePx };
         throw new Error(`mock renderTargets: no allocated size for '${id}'`);
       },
     },
@@ -320,6 +323,29 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     state.settings = { ...state.settings };
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
 
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a row with rebakeOnSettings false bakes on band entry and ignores a settings replacement until the band re-enters', () => {
+    cubemapFaceContextMock.mockImplementation(
+      (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
+    );
+
+    // At the Sun: inside `solarSystem`'s band and far outside the lens's, so
+    // the only row sweeping here is the once-baked one.
+    const atTheSun: readonly [number, number, number] = [0, 0, 0];
+    const state = makeState();
+    renderFrame(makeInput(makeCtx(atTheSun), state));
+    expect(handedOffContexts('solarSystem').size).toBe(6);
+    cubemapFaceContextMock.mockClear();
+
+    // The settings write that would re-bake `sgrAStar` leaves this row alone.
+    state.settings = { ...state.settings };
+    renderFrame(makeInput(makeCtx(atTheSun), state));
+    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
+
+    renderFrame(makeInput(makeCtx([1000, 0, 0]), state)); // band close.
+    renderFrame(makeInput(makeCtx(atTheSun), state)); // re-entry ⇒ bakes again.
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
   });
 

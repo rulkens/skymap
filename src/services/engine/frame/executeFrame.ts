@@ -76,7 +76,7 @@ import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
-import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import { slabViewOf, groupKeyOf, passTimingSlotName, renderStepTimingSlotName } from './slabs';
 import { captureFaceAttachment } from './captureFaceAttachment';
 import { encodeFlowCompute } from './encodeFlowCompute';
@@ -276,7 +276,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           label: destination.label,
           dest: destination.dest,
           depth: destination.depth,
-          face: step.capture?.face,
+          capture: step.capture,
           group,
           view,
           groupKey,
@@ -352,7 +352,8 @@ function renderGroup(
     dest: { readonly view: GPUTextureView; readonly clearValue: GPUColor };
     /** The depth-bearing target and its load-op; absent for a depthless destination. */
     depth?: { readonly target: string; readonly loadOp: GPULoadOp };
-    face?: CubeFace;
+    /** The face this step writes, when it is a capture step — it keys the slot names. */
+    capture?: CaptureFaceRef;
     group: readonly ContentPass[];
     view: SlabView;
     groupKey: string;
@@ -367,7 +368,7 @@ function renderGroup(
     label,
     dest,
     depth,
-    face,
+    capture,
     group,
     view,
     groupKey,
@@ -406,7 +407,7 @@ function renderGroup(
   // others' timestamps (see `passTimingSlotName`'s doc, slabs.ts).
   group.forEach((contentPass, i) => {
     const touchedBefore = alreadyTouched || i > 0;
-    const slot = passTimingSlotName(contentPass.name, view.slab.index, face);
+    const slot = passTimingSlotName(contentPass.name, view.slab.index, capture);
     const pass = encoder.beginRenderPass({
       label: `render-${label}-${slot}`,
       colorAttachments: [colorAttachment(dest.view, dest.clearValue, touchedBefore)],

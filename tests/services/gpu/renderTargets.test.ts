@@ -12,6 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCaptureRuntimes';
 
 function mockDevice(): GPUDevice {
   return {
@@ -36,12 +37,13 @@ const MW_DIVISOR = 2;
 // sky-cubemap row itself.
 const SKY_CUBEMAP_RESOLUTION_PX = 256;
 
-// The production `sky-cubemap` row is lazy: its `allocateWhen` reads the
-// `sgrAStar` capture's band flag `scheduleCubemapCaptures` maintains, so every state
-// fixture carries one. Default `true` keeps the row present for the tests that
-// count textures. `lastAnchorDistanceMpc` defaults far outside the release
-// margin so the pre-existing band-closed tests (written before the row grew
-// hysteresis) keep their original "closes immediately" behaviour.
+// The production sky-capture rows are lazy: each `allocateWhen` reads its
+// capture's band flag `scheduleSkyCaptures` maintains, so every state fixture
+// carries the whole set. `sgrAStar` defaults band-ACTIVE, keeping that row
+// present for the tests that count textures, while the other rows stay closed
+// and allocate nothing. `lastAnchorDistanceMpc` defaults far outside the
+// release margin so the pre-existing band-closed tests (written before the row
+// grew hysteresis) keep their original "closes immediately" behaviour.
 function stateWithDivisor(
   aggregateDivisor: number,
   cubemapResolutionPx: number = SKY_CUBEMAP_RESOLUTION_PX,
@@ -53,7 +55,9 @@ function stateWithDivisor(
       milkyWay: { aggregateDivisor },
       sgrAStarLensingTuning: { cubemapResolutionPx },
     },
-    cubemapCaptures: { sgrAStar: { lastBandActive, lastAnchorDistanceMpc } },
+    cubemapCaptures: makeCubemapCaptureRuntimes({
+      sgrAStar: { lastBandActive, lastAnchorDistanceMpc },
+    }),
   } as unknown as EngineState;
 }
 

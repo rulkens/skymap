@@ -6,14 +6,15 @@
  *
  * The roster stays on the line rather than on the table row: order and roster
  * are the same artifact, so a capture drawing a different roster is a second
- * line naming its own key, not a field on the row.
+ * line naming its own keys, not a field on the row. Rows sharing a roster share
+ * one line, and bake in the order named.
  */
 
 import type { CubemapCaptureKey } from '../../rendering/CubemapCaptureKey';
 
 export type CaptureStepSpec = {
   readonly kind: 'capture';
-  readonly capture: CubemapCaptureKey;
+  readonly captures: readonly CubemapCaptureKey[];
   readonly cosmoPasses: readonly string[];
   readonly near0Passes: readonly string[];
 };

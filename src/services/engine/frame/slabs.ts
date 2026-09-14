@@ -10,6 +10,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
@@ -66,10 +67,15 @@ export function groupKeyOf(step: Extract<FrameStep, { kind: 'render' }>): string
 
 // Body rows and capture faces are appended because both draw the same pass more
 // than once per frame against one `(target, slab)` — without them the passes attach
-// the same query pair and the last silently overwrites the rest.
-export function passTimingSlotName(passName: string, slabIndex: number, face?: number): string {
+// the same query pair and the last silently overwrites the rest. The capture ROW
+// rides along with the face: two rows sharing a roster draw the same pass names.
+export function passTimingSlotName(
+  passName: string,
+  slabIndex: number,
+  capture?: CaptureFaceRef,
+): string {
   const base = isBodySlabIndex(slabIndex) ? `${passName}·${slabName(slabIndex)}` : passName;
-  return face === undefined ? base : `${base}·FACE[${face}]`;
+  return capture === undefined ? base : `${base}·${capture.key}·FACE[${capture.face}]`;
 }
 
 // The same disambiguation one level up, for the STEP's own slot: six capture steps

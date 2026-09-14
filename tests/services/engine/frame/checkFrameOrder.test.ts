@@ -45,7 +45,7 @@ describe('checkFrameOrder', () => {
     const order: FrameStepSpec[] = [
       {
         kind: 'capture',
-        capture: 'sgrAStar',
+        captures: ['sgrAStar'],
         cosmoPasses: ['a'],
         near0Passes: ['not-drawn'],
       },

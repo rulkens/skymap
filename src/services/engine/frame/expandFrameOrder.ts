@@ -59,20 +59,22 @@ function merge(
 const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   compute: (spec) => [{ kind: 'compute', name: spec.name }],
   capture: (spec, passes, frame) =>
-    (frame.captureFaces.get(spec.capture) ?? []).flatMap((face): readonly FrameStep[] => [
-      {
-        kind: 'render',
-        slab: COSMO,
-        capture: { key: spec.capture, face },
-        passes: resolve(spec.cosmoPasses, passes),
-      },
-      {
-        kind: 'render',
-        slab: NEAR0,
-        capture: { key: spec.capture, face },
-        passes: resolve(spec.near0Passes, passes),
-      },
-    ]),
+    spec.captures.flatMap((key) =>
+      (frame.captureFaces.get(key) ?? []).flatMap((face): readonly FrameStep[] => [
+        {
+          kind: 'render',
+          slab: COSMO,
+          capture: { key, face },
+          passes: resolve(spec.cosmoPasses, passes),
+        },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key, face },
+          passes: resolve(spec.near0Passes, passes),
+        },
+      ]),
+    ),
   render: (spec, passes) => [
     {
       kind: 'render',

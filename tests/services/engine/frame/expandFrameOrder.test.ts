@@ -150,13 +150,19 @@ describe('expandFrameOrder', () => {
 });
 
 describe('expandFrameOrder — the per-frame fan-outs', () => {
-  it('emits a COSMO capture step alongside NEAR0 per requested face', () => {
+  it('emits a COSMO capture step alongside NEAR0 per requested face, row by row', () => {
     // The fixed opt-in roster spans both slabs — `point-sprites`/
     // `textured-disks` (COSMO), `star-aggregates`/`star-catalog` (NEAR0) — and a
     // render step is the unit of pass encoding, so each requested face must get
     // ONE step per slab. A NEAR0-only step would leave the COSMO half of the
-    // roster permanently undrawn.
-    const steps = program({ captureFaces: new Map([['sgrAStar', [0, 2]]]) });
+    // roster permanently undrawn. The line names several rows, which bake one
+    // after the other in the order named.
+    const steps = program({
+      captureFaces: new Map([
+        ['sgrAStar', [0, 2]],
+        ['solarSystem', [1]],
+      ]),
+    });
     const capture = steps.filter((step) => step.kind === 'render' && step.capture !== undefined);
     expect(
       capture.map((step) =>
@@ -167,6 +173,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [NEAR0, 'sgrAStar', 0],
       [COSMO, 'sgrAStar', 2],
       [NEAR0, 'sgrAStar', 2],
+      [COSMO, 'solarSystem', 1],
+      [NEAR0, 'solarSystem', 1],
     ]);
     // Ahead of every other render step, so a same-frame lensing draw can
     // sample a cubemap this frame actually wrote.
@@ -181,7 +189,12 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     );
     // An entry present but empty is the same nothing: `renderFrame` always keys
     // the map, whether or not this frame bakes.
-    const empty = program({ captureFaces: new Map([['sgrAStar', []]]) });
+    const empty = program({
+      captureFaces: new Map([
+        ['sgrAStar', []],
+        ['solarSystem', []],
+      ]),
+    });
     expect(empty.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
   });
 

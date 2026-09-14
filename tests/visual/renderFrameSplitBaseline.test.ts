@@ -17,6 +17,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../src/data/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
+import { makeCubemapCaptureRuntimes } from '../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -503,13 +504,7 @@ describe('renderFrame visual baseline', () => {
         },
         // The cubemap-capture bookkeeping — see the matching fixture comment
         // in renderFrame.test.ts.
-        cubemapCaptures: {
-          sgrAStar: {
-            lastBandActive: false,
-            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-            bakedSettings: null,
-          },
-        },
+        cubemapCaptures: makeCubemapCaptureRuntimes(),
       } as never,
       device,
       context,

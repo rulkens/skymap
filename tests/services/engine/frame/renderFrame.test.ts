@@ -13,6 +13,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -575,13 +576,7 @@ function makeInput(
         // active. The fixture camera sits Mpc-scale away from Sgr A*, so the
         // band stays closed and nothing is scheduled; see
         // `scheduleCubemapCaptures`.
-        cubemapCaptures: {
-          sgrAStar: {
-            lastBandActive: false,
-            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-            bakedSettings: null,
-          },
-        },
+        cubemapCaptures: makeCubemapCaptureRuntimes(),
       } as never,
       device,
       context,

@@ -67,7 +67,7 @@ export function cubemapFaceContext(input: {
   readonly eyeMpc: Readonly<Vec3>;
   readonly face: CubeFace;
   readonly faceSizePx: number;
-  /** Capture-camera near plane, Mpc — `CubemapCapture.nearMpc`. */
+  /** Capture-camera near plane, Mpc — the row's `nearMpc`. */
   readonly nearMpc: number;
   /** This capture's first view slot; the face stamps `viewSlotBase + face`. */
   readonly viewSlotBase: number;
@@ -78,10 +78,16 @@ export function cubemapFaceContext(input: {
   const { state, eyeMpc, face, faceSizePx, nearMpc, viewSlotBase, nowMs } = input;
   const forward = FACE_FORWARD[face]!;
   const basis = FACE_BASES[face]!;
-  // A target one unit ahead at distance 1 puts the derived eye back on
-  // `eyeMpc` exactly, on every face.
-  const target: Vec3 = [eyeMpc[0] + forward[0], eyeMpc[1] + forward[1], eyeMpc[2] + forward[2]];
-  const pose: CameraPose = { target, yaw: 0, pitch: 0, distance: 1 };
+  // A target `nearMpc` ahead at that same distance puts the derived eye back on
+  // `eyeMpc` exactly, on every face. The distance is the row's near plane, not
+  // 1 Mpc, because body passes gate on `ctx.cam.distance` against the
+  // foreground reach: a capture at 1 Mpc would show a face no body at all.
+  const target: Vec3 = [
+    eyeMpc[0] + forward[0] * nearMpc,
+    eyeMpc[1] + forward[1] * nearMpc,
+    eyeMpc[2] + forward[2] * nearMpc,
+  ];
+  const pose: CameraPose = { target, yaw: 0, pitch: 0, distance: nearMpc };
 
   const ctx = deriveFrameContext(
     state,

@@ -17,7 +17,7 @@ export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSl
         // Row + face ride in the slot NAME so two body rows sharing one pass, or a roster pass
         // drawn per capture face, don't collide — see passTimingSlotName (slabs.ts).
         rows.push({
-          name: passTimingSlotName(contentPass.name, step.slab, step.capture?.face),
+          name: passTimingSlotName(contentPass.name, step.slab, step.capture),
           groupKey,
         });
       }

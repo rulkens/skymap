@@ -274,6 +274,23 @@ describe('cubemapFaceContext', () => {
     expect(ctx.cam.near).toBe(CAPTURE_NEAR_MPC);
   });
 
+  it("places the synthetic orbit distance at the row's near plane, under the foreground gate", () => {
+    // Body passes gate on `ctx.cam.distance` against the foreground reach, so
+    // a capture posed 1 Mpc out would draw a face with no body in it.
+    const ctx = cubemapFaceContext({
+      state: makeState(),
+      eyeMpc: EYE_MPC,
+      face: 0,
+      faceSizePx: 256,
+      nearMpc: CAPTURE_NEAR_MPC,
+      viewSlotBase: VIEW_SLOT_BASE,
+      nowMs: 0,
+    });
+    expect(ctx).not.toBeNull();
+    if (ctx === null) return;
+    expect(ctx.cam.distance).toBe(CAPTURE_NEAR_MPC);
+  });
+
   it("stamps viewSlot from the given base, so a second capture cannot share the first's slots", () => {
     const ctx = cubemapFaceContext({
       state: makeState(),

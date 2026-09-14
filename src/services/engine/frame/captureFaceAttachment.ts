@@ -12,7 +12,13 @@ export function captureFaceAttachment(
   capture: CaptureFaceRef,
   targets: RenderTargets,
 ): { readonly view: GPUTextureView; readonly clearValue: GPUColor } {
-  const { target } = CUBEMAP_CAPTURES[capture.key];
+  const row = CUBEMAP_CAPTURES[capture.key];
+  // Only a sky row's faces are layers of a render-target row; a probe's are its
+  // subject's own cube, which this table cannot name.
+  if (row.kind !== 'sky') {
+    throw new Error(`captureFaceAttachment: '${capture.key}' owns no render-target row`);
+  }
+  const { target } = row;
   return {
     // One array LAYER: `viewOf` spans all six, which WebGPU rejects as a colour attachment.
     view: targets.layerViewOf(target, capture.face),

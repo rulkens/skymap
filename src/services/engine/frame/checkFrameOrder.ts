@@ -31,7 +31,11 @@ const STEP_FACTS: {
     captured: [...spec.cosmoPasses, ...spec.near0Passes],
     // Resolved through the table so the check still proves the capture lands in
     // a declared render-target row; a bogus key is already a typecheck error.
-    targets: [CUBEMAP_CAPTURES[spec.capture].target],
+    // Only a sky row names one — a probe's faces are its subject's own cube.
+    targets: spec.captures.flatMap((key) => {
+      const row = CUBEMAP_CAPTURES[key];
+      return row.kind === 'sky' ? [row.target] : [];
+    }),
   }),
   render: (spec) => ({ drawn: spec.passes, captured: [], targets: [spec.target] }),
   foreground: (spec) => ({
