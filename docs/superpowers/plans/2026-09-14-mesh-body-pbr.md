@@ -238,15 +238,18 @@ a feature commit lands.
 
 ```python
 BAKE_PASSES = [
-    ("albedo",    dict(type="DIFFUSE", pass_filter={"COLOR"}), "sRGB",      None),
+    ("albedo",    dict(type="EMIT"),                           "sRGB",      swap_to_emission("Base Color")),
     ("normal",    dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None),
     ("roughness", dict(type="ROUGHNESS"),                      "Non-Color", None),
-    ("metallic",  dict(type="EMIT"),                           "Non-Color", swap_metallic_to_emission),
+    ("metallic",  dict(type="EMIT"),                           "Non-Color", swap_to_emission("Metallic")),
 ]
-# The fourth column is an optional (enter, exit) pair around the bake: Blender
-# has no metallic bake, so the row routes every source material's Metallic
-# input into Emission for the duration of its bake and restores it after.
-def swap_metallic_to_emission(materials) -> restore_fn
+# The fourth column is an optional enter step around the bake, paired with
+# restore_emission(undo): Cycles has no metallic bake, and its DIFFUSE colour
+# pass of a metal is zero, so both rows route the named Principled input into
+# Emission for the duration of the bake (constant → (v, v, v) colour, image
+# node → re-linked; use_pass_direct/indirect off so EMIT is unlit) and restore it after.
+def swap_to_emission(socket_name) -> enter_fn(materials) -> undo
+def restore_emission(undo)
 ```
 
 `flatten_materials(obj, key, images)` links `albedo` → Base Color,
