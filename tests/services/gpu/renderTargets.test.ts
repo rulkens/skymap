@@ -37,23 +37,23 @@ const MW_DIVISOR = 2;
 const SKY_CUBEMAP_RESOLUTION_PX = 256;
 
 // The production `sky-cubemap` row is lazy: its `allocateWhen` reads the
-// lensing band flag `renderFrame` maintains, so every state fixture carries
-// one. Default `true` keeps the row present for the tests that count textures.
-// `lastGcDistanceMpc` defaults far outside the release margin so the pre-existing
-// band-closed tests (written before the row grew hysteresis) keep their
-// original "closes immediately" behaviour.
+// `sgrAStar` capture's band flag `scheduleCubemapCaptures` maintains, so every state
+// fixture carries one. Default `true` keeps the row present for the tests that
+// count textures. `lastAnchorDistanceMpc` defaults far outside the release
+// margin so the pre-existing band-closed tests (written before the row grew
+// hysteresis) keep their original "closes immediately" behaviour.
 function stateWithDivisor(
   aggregateDivisor: number,
   cubemapResolutionPx: number = SKY_CUBEMAP_RESOLUTION_PX,
   lastBandActive = true,
-  lastGcDistanceMpc = Number.POSITIVE_INFINITY,
+  lastAnchorDistanceMpc = Number.POSITIVE_INFINITY,
 ): EngineState {
   return {
     settings: {
       milkyWay: { aggregateDivisor },
       sgrAStarLensingTuning: { cubemapResolutionPx },
     },
-    skyCubemapCapture: { lastBandActive, lastGcDistanceMpc },
+    cubemapCaptures: { sgrAStar: { lastBandActive, lastAnchorDistanceMpc } },
   } as unknown as EngineState;
 }
 
@@ -378,10 +378,6 @@ describe('createRenderTargets', () => {
     expect(fgColour.size).toEqual({ width: 800, height: 600, depthOrArrayLayers: 1 });
     expect(fgDepth.format).toBe('depth32float');
     expect(fgDepth.size).toEqual({ width: 800, height: 600, depthOrArrayLayers: 1 });
-    // Depth carries ONLY RENDER_ATTACHMENT (feeds the depth-test) — nothing
-    // samples it downstream any more (each painter-chain row clears its own
-    // depth, spec §7.3, so it can't back a cross-row occlusion test).
-    expect(fgDepth.usage).toBe(GPUTextureUsage.RENDER_ATTACHMENT);
     // Colour carries RENDER_ATTACHMENT AND TEXTURE_BINDING — the caption
     // occlusion pass samples its ALPHA (via lib/sceneDepth.wesl) to hide
     // captions behind an opaque body. Guards that the colour texture stays

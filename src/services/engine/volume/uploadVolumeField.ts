@@ -1,8 +1,8 @@
 /**
- * The ONE volume-field ingest path: every volume slot commit and the public
- * `handle.volumes.add` call this. Order is load-bearing — the settings row must
- * exist before the fade reads its intent, and the cube must be resident before
- * the fade's guard reads `listIds()`. Flow's cube (`flowFieldSlot.ts`) skips
+ * The ONE volume-field ingest path: every volume slot commit calls this. Order
+ * is load-bearing — the settings row must exist before the fade reads its
+ * intent, and the cube must be resident before the fade's guard reads
+ * `listIds()`. Flow's cube (`flowFieldSlot.ts`) skips
  * this path deliberately — different renderer/arity/fade key; see decision #14.
  */
 

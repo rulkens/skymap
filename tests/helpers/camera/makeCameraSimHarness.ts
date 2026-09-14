@@ -77,10 +77,12 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       committed: absoluteArm(neutralPose),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
-    skyCubemapCapture: {
-      lastBandActive: false,
-      lastGcDistanceMpc: Number.POSITIVE_INFINITY,
-      bakedSettings: null,
+    cubemapCaptures: {
+      sgrAStar: {
+        lastBandActive: false,
+        lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+        bakedSettings: null,
+      },
     },
   } as unknown as EngineState;
   if (realClipPlayer) {

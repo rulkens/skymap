@@ -31,7 +31,9 @@
  * is the SAME closure `deriveSlabs` built this row's `view.slab.vp` from — see
  * `composeBodySlabMvp`'s module header. `camPosLocal` (the Minnaert view
  * cosine's camera) uses the SAME `planet.radiusM` the mvp used, so both share
- * one definition of "the frame where this body is the unit sphere".
+ * one definition of "the frame where this body is the unit sphere" — and why
+ * the contact-range depth pair is composed here too (see
+ * `lib/analyticSphere.wesl`'s depth section).
  *
  * ### When it draws
  *
@@ -50,6 +52,8 @@ import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
 import { LIMB_DARKENING_PARAMS } from '../../../../data/bodies/limbDarkeningParams';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
+import { composeBodySlabCamRelVp } from '../../../../utils/camera/composeBodySlabCamRelVp';
+import { bodySlabCamAltitudeSq } from '../../../../utils/camera/bodySlabCamAltitudeSq';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { packTexturedBodyUniforms } from '../../../../utils/gpu/packTexturedBodyUniforms';
@@ -122,7 +126,7 @@ export const texturedBodiesPass: ContentPass = {
     // above used, so both share one definition of "the unit-sphere frame".
     const { strength, exponent } = limbParams(body);
     const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.radiusM);
-    // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
+    // Narrow here, at the GPU uniform write — both composes return f64.
     const uniforms = packTexturedBodyUniforms(
       narrowMat4(mvp),
       sun,
@@ -131,6 +135,8 @@ export const texturedBodiesPass: ContentPass = {
       strength,
       exponent,
       cam,
+      bodySlabCamAltitudeSq(pose.eyeRelBodyM, body.radiusM),
+      narrowMat4(composeBodySlabCamRelVp(view.slab.vp, body.radiusM)),
     );
     // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
     // `textured`, so the string id IS a BodyTextureId the renderer accepts.

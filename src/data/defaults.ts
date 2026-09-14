@@ -429,9 +429,9 @@ export const DEFAULT_ABS_MAG_LIMIT = -19;
  * Master toggle for the 3D scalar-field volume overlay defaults ON.
  *
  * The overlay renders additively into the same HDR offscreen target as the
- * galaxy points pass.  At startup no fields are registered yet (a caller
- * must load a cube via `handle.volumes.add` or a volume slot commit), so
- * this default has no visual effect until the first field arrives.
+ * galaxy points pass.  At startup no fields are registered yet (a volume
+ * slot commit must load a cube first), so this default has no visual
+ * effect until the first field arrives.
  * Defaulting to `true` means the overlay is ready to render as soon as the
  * first field is added — the user doesn't have to hunt for a master toggle
  * to see anything.

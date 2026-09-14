@@ -428,4 +428,38 @@ describe('buildMeshes()', () => {
       "path: 'meshes/testmesh.mesh'",
     );
   });
+
+  it('reports groundOffsetM as the drop from the origin to the lowest vertex', async () => {
+    // A cube spanning [-1, 1] on every axis: its area-weighted surface centroid
+    // is the origin, so the lowest vertex sits exactly 1 m below it.
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const s = 1 / Math.sqrt(3);
+    const corners = [
+      [-1, -1, -1],
+      [1, -1, -1],
+      [1, 1, -1],
+      [-1, 1, -1],
+      [-1, -1, 1],
+      [1, -1, 1],
+      [1, 1, 1],
+      [-1, 1, 1],
+    ];
+    const cube = addPrim(doc, material, {
+      positions: corners.flat(),
+      normals: corners.flat().map((c) => c * s),
+      indices: [
+        0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 3, 7, 6, 3, 6, 2, 0, 4, 7, 0, 7, 3, 1,
+        2, 6, 1, 6, 5,
+      ],
+    });
+    doc
+      .createScene('s')
+      .addChild(doc.createNode('n').setMesh(doc.createMesh('m').addPrimitive(cube)));
+
+    const row = (await run(await writeGlb(doc)))[0]!;
+
+    expect(row.groundOffsetM).toBeCloseTo(1, 5);
+  });
 });

@@ -22,7 +22,9 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/cameraFraming';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
-import type { SkyCubemapCaptureRuntime } from '../../@types/engine/state/SkyCubemapCaptureRuntime';
+import type { CubemapCaptureRuntime } from '../../@types/engine/state/CubemapCaptureRuntime';
+import type { CubemapCaptureKey } from '../../@types/rendering/CubemapCaptureKey';
+import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createEngineData } from './data/createEngineData';
 import { SCENE_STARS } from '../../data/bodies/sceneStars';
@@ -73,10 +75,6 @@ import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from './subsystems/earthTileSubsystem';
-import { uploadVolumeField } from './volume/uploadVolumeField';
-import { unloadVolumeField } from './volume/unloadVolumeField';
-import { listVolumeFields } from './handles/listVolumeFields';
-import { getVolumeFieldsState } from './handles/getVolumeFieldsState';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -118,15 +116,20 @@ export function createEngine(
     projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
-  // Sky-cubemap bake bookkeeping — false/infinity/null until the first frame
-  // the lensing band goes active; `renderFrame` is the sole writer thereafter.
-  const skyCubemapCapture: SkyCubemapCaptureRuntime = {
-    lastBandActive: false,
-    // Far outside the band pre-boot, so the row's hysteresis margin can't
-    // mistake "never measured" for "just closed".
-    lastGcDistanceMpc: Number.POSITIVE_INFINITY,
-    bakedSettings: null,
-  };
+  // One bake-bookkeeping entry per capture row — false/infinity/null until the
+  // first frame its band goes active; `scheduleCubemapCaptures` is the sole
+  // writer thereafter. Infinity, not 0: far outside every band pre-boot, so a
+  // row's hysteresis margin can't mistake "never measured" for "just closed".
+  const cubemapCaptures = Object.fromEntries(
+    (Object.keys(CUBEMAP_CAPTURES) as CubemapCaptureKey[]).map((key) => [
+      key,
+      {
+        lastBandActive: false,
+        lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+        bakedSettings: null,
+      },
+    ]),
+  ) as Record<CubemapCaptureKey, CubemapCaptureRuntime>;
 
   const store = cb.store;
 
@@ -312,7 +315,7 @@ export function createEngine(
     },
     booted: false,
     cameraRuntime,
-    skyCubemapCapture,
+    cubemapCaptures,
     // The Maps are declared up-front so consumers can reach a slot without a null
     // check, but the slots themselves are minted in `wireSlots`: their commit
     // closures re-read GPU handles at call time and null-guard, rather than assuming
@@ -584,12 +587,6 @@ export function createEngine(
       getCloud,
       getCloudObjIds,
       getStructures,
-    },
-    volumes: {
-      add: (fieldId, cube) => uploadVolumeField(state, store, fieldId, cube),
-      remove: (fieldId) => unloadVolumeField(state, store, fieldId),
-      list: () => listVolumeFields(state),
-      getState: () => getVolumeFieldsState(state),
     },
     debug: {
       // A getter, not a copied reference: initGpu assigns `state.gpu.timingService`

@@ -91,7 +91,9 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
   const slabs = deriveSlabs({
     cam,
     cosmoVp: computeViewProj(cam),
-    pivotRadiusMpc: body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
+    // Altitude over the hull — what NEAR0's near-plane floor is being tested
+    // against, and what a real frame would key off at this standoff.
+    altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
     pose: bodyPose,
     visibleBodies: [earth],
     viewportPx: VIEWPORT,

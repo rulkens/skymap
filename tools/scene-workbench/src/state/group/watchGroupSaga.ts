@@ -19,6 +19,7 @@ import { resolveAssetUrl } from '../../scene/resolveAssetUrl';
 import type { SceneSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import { groupSelected } from '../registry/registrySlice';
+import { frameCamera } from '../view/viewSlice';
 import { assetStatusChanged, manifestFailed, manifestLoaded } from './groupSlice';
 
 function* loadAssetWorker(
@@ -37,10 +38,8 @@ function* loadAssetWorker(
           if (!res.ok) throw new Error(`HTTP ${res.status} for ${asset.artifactUrl}`);
           return res.arrayBuffer();
         })
-        .then((buffer) => {
-          const uploaded = ASSET_LOADERS[asset.kind](gpu, buffer);
-          return acceptLoadedAsset(uploaded, resources, myEpoch, cancellation);
-        }),
+        .then((buffer) => ASSET_LOADERS[asset.kind](gpu, buffer))
+        .then((uploaded) => acceptLoadedAsset(uploaded, resources, myEpoch, cancellation)),
     );
     if (!built) return; // superseded while in flight — already destroyed
     resources.gpuAssets.set(asset.id, built);
@@ -79,6 +78,9 @@ function* loadGroupWorker(action: ReturnType<typeof groupSelected>) {
       }),
     );
     yield* put(manifestLoaded(manifest));
+    // Explicit put, not viewSlice extraReducers on manifestLoaded: cross-slice
+    // extraReducers have silently dropped in this project before.
+    if (manifest.boundsM) yield* put(frameCamera(manifest.boundsM));
 
     // Viewport registers the saga context only once `initGpu` has resolved, so
     // a null device here means the device was never acquired (no WebGPU).

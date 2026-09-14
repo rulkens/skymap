@@ -570,15 +570,17 @@ function makeInput(
           fades: { opacityOf: () => 1, isAnyAnimating: () => false },
           clipPlayer: { clipOpacityOf: () => 1 },
         },
-        // The sky-cubemap bake bookkeeping — the two `last*` fields update
-        // every frame; `bakedSettings` only changes while the lensing
-        // band is active. The fixture camera sits Mpc-scale away from Sgr
-        // A*, so the band stays closed and `facesToCapture` stays empty;
-        // see `renderFrame.ts`'s in-band block.
-        skyCubemapCapture: {
-          lastBandActive: false,
-          lastGcDistanceMpc: Number.POSITIVE_INFINITY,
-          bakedSettings: null,
+        // The cubemap-capture bake bookkeeping — the two `last*` fields update
+        // every frame; `bakedSettings` only changes while the row's band is
+        // active. The fixture camera sits Mpc-scale away from Sgr A*, so the
+        // band stays closed and nothing is scheduled; see
+        // `scheduleCubemapCaptures`.
+        cubemapCaptures: {
+          sgrAStar: {
+            lastBandActive: false,
+            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+            bakedSettings: null,
+          },
         },
       } as never,
       device,

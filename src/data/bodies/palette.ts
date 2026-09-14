@@ -29,3 +29,8 @@ export const TITAN_ORANGE: Vec3 = [0.5, 0.38, 0.2];
 // Hitchhiker's Guide easter egg: a sperm whale and a bowl of petunias, 400 km up.
 export const WHALE_GREY: Vec3 = [0.28, 0.32, 0.38];
 export const PETUNIA_PINK: Vec3 = [0.5, 0.22, 0.36];
+
+// Thermal-blanket gold, warm and cool so the two probes stay apart; unread
+// today — mesh bodies draw no trail.
+export const VOYAGER_1_GOLD: Vec3 = [0.5, 0.42, 0.2];
+export const VOYAGER_2_AMBER: Vec3 = [0.5, 0.36, 0.16];

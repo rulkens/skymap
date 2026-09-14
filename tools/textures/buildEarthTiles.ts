@@ -37,14 +37,15 @@ import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
-import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
 import { earthTilePath } from '../../src/utils/scene/earthTilePath';
 import { parseFlags } from '../utils/cli/args';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
+import { earthTileBounds } from '../utils/scene/earthTileBounds';
 import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
+import { colourMatchedImagerySource } from './colourMatchedImagerySource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
 import { eoxTileSource } from './eoxTileSource';
@@ -104,6 +105,12 @@ const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
  */
 const EOX_MIN_LEVEL = 8;
 
+/** Scale below which EOX's colour is pulled onto Blue Marble's, in degrees
+ *  along a meridian: 2 km is about one Blue Marble texel, so the seam is
+ *  matched at the finest scale the band underneath can resolve and everything
+ *  finer stays EOX's own. */
+const EOX_COLOUR_MATCH_SIGMA_DEG = 0.018;
+
 /** GeoDanmark's own floor: one level deeper than EOX's own max (z13), same
  *  "pick up where the shallower band stops" rule as `EOX_MIN_LEVEL` — also
  *  the level the z19 harvest bbox is snapped to (`geodanmarkTileSource`'s
@@ -124,22 +131,7 @@ const TILE_ROOT = 'earth-tiles';
  * manifest for up to a day — mismatched, not merely stale. A new version is
  * new keys, which cost nothing extra and need no purge.
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v5`;
-
-/** Geographic extent of tile `(z, x, y)`; `y` increases SOUTH, matching the
- *  raster's own north-first row order. */
-function tileBox(z: number, x: number, y: number, tilePx: number): LonLatBounds {
-  const columns = earthTileColumns(z, tilePx);
-  const rows = columns / 2;
-  const lonStep = 360 / columns;
-  const latStep = 180 / rows;
-  return {
-    west: -180 + x * lonStep,
-    east: -180 + (x + 1) * lonStep,
-    north: 90 - y * latStep,
-    south: 90 - (y + 1) * latStep,
-  };
-}
+export const TILE_PREFIX = `${TILE_ROOT}/v7`;
 
 /**
  * Encode one RGBA raster as a surface tile, creating its `z/x` directories.
@@ -173,7 +165,7 @@ async function bakeDeepestLevel(
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(source.coverage, z, tilePx)) {
-    const rgba = await source.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx);
+    const rgba = await source.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx);
     if (rgba === null) continue;
     const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
     await writeTile(rgba, tilePx, join(outDir, relPath));
@@ -256,7 +248,7 @@ export async function bakeCoarserLevel(
     // practice) falls back to the transparent canvas, no worse than today.
     const fillerRaster =
       underfill && childPaths.length < 4
-        ? await underfill.readBox(tileBox(z, x, y, tilePx), tilePx, tilePx)
+        ? await underfill.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx)
         : null;
     const canvas = fillerRaster
       ? sharp(Buffer.from(fillerRaster), { raw: { width: tilePx, height: tilePx, channels: 4 } })
@@ -515,7 +507,14 @@ async function main(): Promise<void> {
       [
         { source: bmng, minLevel: BAKE_MIN_LEVEL },
         {
-          source: await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
+          source: colourMatchedImagerySource(
+            await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
+            bmng,
+            {
+              sigmaDeg: EOX_COLOUR_MATCH_SIGMA_DEG,
+              waterMaskPath: rawDataPath('textures.earthWaterMask'),
+            },
+          ),
           minLevel: EOX_MIN_LEVEL,
           underfill: bmng,
         },

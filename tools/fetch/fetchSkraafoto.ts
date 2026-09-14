@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 /**
- * fetchSkraafoto — harvest the Søndermarken oblique frames from Dataforsyningen's
- * skråfoto STAC search into `data/raw/skraafoto/<collection>/`: the item JSON
- * verbatim plus one 1920-long-edge JPEG per photo, cut from the COG's own
- * overview pyramid (`data/raw/skraafoto/README.md` — endpoint, credential, licence).
+ * fetchSkraafoto — harvest one scene group's oblique frames from
+ * Dataforsyningen's skråfoto STAC search (`--group <id>`, default
+ * `soendermarken`): the item JSON verbatim plus one JPEG per photo, cut from
+ * the COG's own overview pyramid (`data/raw/skraafoto/README.md` — endpoint,
+ * credential, licence, and the two window recipes).
  *
  * The token is a *different* credential from `fetchDhm.ts`'s Datafordeler
  * apiKey, and travels only as a request header / `GDAL_HTTP_HEADERS` — never
@@ -14,28 +15,40 @@ import { existsSync, mkdirSync, renameSync, rmSync, writeFileSync } from 'node:f
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+import type { SceneGroupDefinition } from '../scene-recon/@types/SceneGroupDefinition';
 import type { SkraafotoStacItem } from '../scene-recon/@types/SkraafotoStacItem';
-import { SOENDERMARKEN } from '../scene-recon/groups/soendermarken';
+import { sceneGroupFromArgv } from '../scene-recon/groups/sceneGroupFromArgv';
+import {
+  frameWindow,
+  frameWindowOutputPx,
+  type FrameWindow,
+} from '../scene-recon/poses/frameWindow';
+import { spawnCct } from '../scene-recon/poses/spawnCct';
+import { topocentricPositionsM } from '../scene-recon/poses/topocentricPositionsM';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { skraafotoDownsampleScale } from '../utils/skraafoto/skraafotoDownsampleScale';
+import { skraafotoHarvestDir } from '../utils/skraafoto/skraafotoHarvestDir';
 import { readKeychainSecret } from '../utils/io/readKeychainSecret';
 import { redactSecret } from '../utils/io/redactSecret';
+import type { Vec3 } from '../../src/@types/math/Vec3';
 
 const SEARCH_ENDPOINT = 'https://api.dataforsyningen.dk/rest/skraafoto_api/v1.0/search';
 const KEYCHAIN_SERVICE = 'skymap-dataforsyningen-apikey';
 const SEARCH_LIMIT = 1000;
 
 type ItemOutcome =
-  | { readonly id: string; readonly status: 'existing' | 'fetched' }
+  | { readonly id: string; readonly status: 'existing' | 'fetched' | 'skipped' }
   | { readonly id: string; readonly status: 'failed'; readonly reason: string };
 
-async function searchItems(apiKey: string): Promise<readonly SkraafotoStacItem[]> {
-  const { west, south, east, north } = SOENDERMARKEN.bounds;
+async function searchItems(
+  group: SceneGroupDefinition,
+  apiKey: string,
+): Promise<readonly SkraafotoStacItem[]> {
+  const { west, south, east, north } = group.bounds;
   const res = await fetch(SEARCH_ENDPOINT, {
     method: 'POST',
     headers: { 'content-type': 'application/json', token: apiKey },
     body: JSON.stringify({
-      collections: [SOENDERMARKEN.skraafoto.collection],
+      collections: [group.skraafoto.collection],
       bbox: [west, south, east, north],
       limit: SEARCH_LIMIT,
     }),
@@ -47,24 +60,38 @@ async function searchItems(apiKey: string): Promise<readonly SkraafotoStacItem[]
   return body.features ?? [];
 }
 
-/** `[width, height]` in the order `-outsize` wants — see the type's `proj:shape` note. */
-function downsampledSize(item: SkraafotoStacItem): readonly [number, number] {
-  const [heightPx, widthPx] = item.properties['proj:shape'];
-  const scale = skraafotoDownsampleScale(item.properties['proj:shape']);
-  return [Math.round(widthPx * scale), Math.round(heightPx * scale)];
-}
-
-function fetchItem(item: SkraafotoStacItem, destDir: string, apiKey: string): ItemOutcome {
+function fetchItem(
+  item: SkraafotoStacItem,
+  window: FrameWindow,
+  destDir: string,
+  apiKey: string,
+): ItemOutcome {
   const jsonPath = join(destDir, `${item.id}.json`);
   const jpgPath = join(destDir, `${item.id}.jpg`);
   if (existsSync(jsonPath) && existsSync(jpgPath)) return { id: item.id, status: 'existing' };
 
-  const [outW, outH] = downsampledSize(item);
+  const [outW, outH] = frameWindowOutputPx(window);
   const tmpPath = `${jpgPath}.tmp`;
   const run = spawnSync(
     'gdal_translate',
     [
       `/vsicurl/${item.assets.data.href}`,
+      // The nadir COGs carry a fourth band; taking three writes a plain RGB
+      // JPEG, where all four make libjpeg tag the file CMYK and every reader
+      // downstream either refuses it or mis-converts it (spec §6.2).
+      '-b',
+      '1',
+      '-b',
+      '2',
+      '-b',
+      '3',
+      // GDAL picks the overview level `-outsize` implies, so a cropped window
+      // still reads the pyramid rather than the full-resolution raster.
+      '-srcwin',
+      String(window.x0),
+      String(window.y0),
+      String(window.widthPx),
+      String(window.heightPx),
       '-outsize',
       String(outW),
       String(outH),
@@ -101,15 +128,15 @@ function fetchItem(item: SkraafotoStacItem, destDir: string, apiKey: string): It
 let capturedApiKey: string | undefined;
 
 async function main(): Promise<void> {
+  const group = sceneGroupFromArgv(process.argv);
   const apiKey = readKeychainSecret(KEYCHAIN_SERVICE);
   capturedApiKey = apiKey;
 
-  const collection = SOENDERMARKEN.skraafoto.collection;
-  const destDir = join(rawDataPath('skraafoto.dir'), collection);
+  const destDir = skraafotoHarvestDir(rawDataPath('skraafoto.dir'), group);
   mkdirSync(destDir, { recursive: true });
 
-  const items = await searchItems(apiKey);
-  process.stderr.write(`fetchSkraafoto: ${items.length} item(s) in ${collection} → ${destDir}\n`);
+  const items = await searchItems(group, apiKey);
+  process.stderr.write(`fetchSkraafoto: ${items.length} item(s) for "${group.id}" → ${destDir}\n`);
   if (items.length === SEARCH_LIMIT) {
     process.stderr.write(
       `  warning: hit the ${SEARCH_LIMIT}-item search limit — harvest is short\n`,
@@ -121,11 +148,20 @@ async function main(): Promise<void> {
     return;
   }
 
+  // One `cct` for the whole batch; `bakeSplats` re-derives the same centres the
+  // same way, so the windows it recomputes match the ones fetched here.
+  const centresUtm: Vec3[] = items.map((item) => [...item.properties['pers:perspective_center']]);
+  const positions = await topocentricPositionsM(group.anchor, centresUtm, { runCct: spawnCct });
+
   const outcomes: ItemOutcome[] = [];
   for (const [index, item] of items.entries()) {
     const progress = `[${index + 1}/${items.length}]`;
     try {
-      const outcome = fetchItem(item, destDir, apiKey);
+      const window = frameWindow(item, group, positions[index]!);
+      const outcome =
+        window === null
+          ? ({ id: item.id, status: 'skipped' } as const)
+          : fetchItem(item, window, destDir, apiKey);
       outcomes.push(outcome);
       process.stderr.write(
         outcome.status === 'failed'
@@ -140,7 +176,11 @@ async function main(): Promise<void> {
   }
 
   const failed = outcomes.filter((o) => o.status === 'failed');
-  process.stderr.write(`done: ${outcomes.length - failed.length}/${outcomes.length} item(s) OK\n`);
+  const skipped = outcomes.filter((o) => o.status === 'skipped');
+  process.stderr.write(
+    `done: ${outcomes.length - failed.length - skipped.length}/${outcomes.length} item(s) OK, ` +
+      `${skipped.length} skipped (bounds off-frame or under 64 px)\n`,
+  );
   if (failed.length > 0) {
     process.stderr.write(`${failed.length} item(s) failed — re-run to retry.\n`);
     process.exitCode = 1;

@@ -24,7 +24,7 @@
 // flow: a missed lane can 'discard' immediately.
 
 import package::bodies::planet::io::VSOut;
-import package::lib::analyticSphere::fragDepthFromLocal;
+import package::lib::analyticSphere::fragDepthFromClip;
 import package::lib::analyticSphere::hitUnitSphere;
 import package::lib::bodyLighting::litShade;
 
@@ -43,7 +43,7 @@ fn fs(in: VSOut) -> FSOut {
   // Renormalize AFTER interpolation: 'in.localPos' rides the PROXY_SCALE-scaled
   // shell, so neither it nor its interpolant is unit length.
   let rd = normalize(in.localPos - ro);
-  let surface = hitUnitSphere(ro, rd);
+  let surface = hitUnitSphere(ro, rd, dot(ro, ro) - 1.0);
   if (!surface.hit) {
     discard;
   }
@@ -55,7 +55,8 @@ fn fs(in: VSOut) -> FSOut {
 
   var out: FSOut;
   out.colour = vec4<f32>(in.albedo * shade, 1.0);
-  // The SAME mvp the vertex stage used, applied to the real surface point.
-  out.depth = fragDepthFromLocal(mat4x4<f32>(in.mvp0, in.mvp1, in.mvp2, in.mvp3), n);
+  // Absolute local frame: the SAME mvp the vertex stage used, applied to the
+  // real surface point.
+  out.depth = fragDepthFromClip(mat4x4<f32>(in.mvp0, in.mvp1, in.mvp2, in.mvp3), n);
   return out;
 }

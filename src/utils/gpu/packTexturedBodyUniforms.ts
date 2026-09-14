@@ -1,5 +1,5 @@
 /**
- * packTexturedBodyUniforms — pure packer for the 112-byte
+ * packTexturedBodyUniforms — pure packer for the 176-byte
  * `TexturedBodyUniforms` struct (`shaders/lib/sphere.wesl`).
  *
  * A textured planet/moon binds the same lit prefix as Earth plus the two ring
@@ -18,6 +18,9 @@
  * is the body-local camera position the Minnaert emission-angle cosine needs
  * (view-dependent; the lit prefix carries no camera).
  *
+ * `camAltitudeSq` and `vpCamRelLocal` are the contact-range depth pair — see
+ * `lib/analyticSphere.wesl`'s depth section.
+ *
  * ## Byte layout (matches `TexturedBodyUniforms`)
  *
  *   f32 0..19   (byte 0..79):    LitBodyUniforms prefix (mvp + sunDirLocal + pad)
@@ -26,26 +29,21 @@
  *   f32 22      (byte 88..91):   limbStrength (Minnaert blend, 0 = plain Lambert)
  *   f32 23      (byte 92..95):   limbExponent (Minnaert k; 1 = plain Lambert)
  *   f32 24..26  (byte 96..107):  camPosLocal (camera in the body's local frame)
- *   f32 27      (byte 108..111): pad (zeroed; rounds the struct to 112 / 16-byte)
+ *   f32 27      (byte 108..111): camAltitudeSq (dot(camPosLocal, camPosLocal) − 1, f64-derived)
+ *   f32 28..43  (byte 112..175): vpCamRelLocal (the mvp without its eye translation)
  *
  * The ambient floor is not packed on either struct — `litShade` reads
  * `lib/bodyLighting.wesl`'s `AMBIENT` const directly (see `packLitBodyUniforms`).
  *
- * @param mvp            16-element column-major MVP (from `composeBodySlabMvp`).
- * @param sunDirLocal    Sun direction in the body's local frame.
- * @param ringInnerRatio Ring inner radius / planet radius (0 when no ring).
- * @param ringOuterRatio Ring outer radius / planet radius; 0 ⇒ no ring.
- * @param limbStrength   Minnaert blend weight (0 ⇒ plain Lambert; out[22]).
- * @param limbExponent   Minnaert exponent k (1 ⇒ plain Lambert; out[23]).
- * @param camPosLocal    Camera position in the body's local frame (out[24..26]).
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
 import { packLitBodyUniforms } from './packLitBodyUniforms';
 
 /** f32 count of `TexturedBodyUniforms` — the 20-float lit prefix + 2 ratios +
- *  2 Minnaert params + camPosLocal vec3 + 1 pad. */
-export const TEXTURED_BODY_UNIFORM_FLOATS = 28;
+ *  2 Minnaert params + camPosLocal vec3 + camAltitudeSq + the 16-float
+ *  eye-relative vp. */
+export const TEXTURED_BODY_UNIFORM_FLOATS = 44;
 
 export function packTexturedBodyUniforms(
   mvp: Float32Array,
@@ -55,6 +53,8 @@ export function packTexturedBodyUniforms(
   limbStrength: number,
   limbExponent: number,
   camPosLocal: Readonly<Vec3>,
+  camAltitudeSq: number,
+  vpCamRelLocal: Float32Array,
 ): Float32Array {
   const out = new Float32Array(TEXTURED_BODY_UNIFORM_FLOATS);
   out.set(packLitBodyUniforms(mvp, sunDirLocal), 0); // bytes 0..79
@@ -65,6 +65,7 @@ export function packTexturedBodyUniforms(
   out[24] = camPosLocal[0]; // byte 96
   out[25] = camPosLocal[1]; // byte 100
   out[26] = camPosLocal[2]; // byte 104
-  // out[27] (bytes 108..111) stays zero — the tail pad rounding to 112.
+  out[27] = camAltitudeSq; // byte 108
+  out.set(vpCamRelLocal.subarray(0, 16), 28); // bytes 112..175
   return out;
 }

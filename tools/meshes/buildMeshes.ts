@@ -54,6 +54,7 @@ type Geometry = {
   readonly uvs: Float32Array;
   readonly indices: Uint32Array;
   readonly boundingRadiusM: number;
+  readonly groundOffsetM: number;
 };
 
 /**
@@ -282,6 +283,10 @@ function windingFollowsNormal(
  * selection ring, pick sphere and caption anchor it all shares — off the
  * visible mass; weighting by triangle area keeps it on the surface instead.
  *
+ * Recentring is also why `groundOffsetM` is measured HERE: after it the origin
+ * sits inside the mesh, and this is the last place that knows how far the
+ * lowest vertex fell below it.
+ *
  * An authored `TANGENT` is used verbatim; `generateTangents` runs only when the
  * source has none on EVERY primitive, since regenerating over a good frame
  * silently breaks normal-mapped shading.
@@ -370,6 +375,7 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
 
   const centred = new Float32Array(positions.length);
   let radiusSq = 0;
+  let minZ = 0;
   for (let i = 0; i < positions.length; i += 3) {
     const x = positions[i]! - cx;
     const y = positions[i + 1]! - cy;
@@ -378,6 +384,7 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     centred[i + 1] = y;
     centred[i + 2] = z;
     radiusSq = Math.max(radiusSq, x ** 2 + y ** 2 + z ** 2);
+    minZ = Math.min(minZ, z);
   }
 
   const geometry = {
@@ -386,6 +393,9 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     uvs: new Float32Array(uvs),
     indices: new Uint32Array(indices),
     boundingRadiusM: Math.sqrt(radiusSq),
+    // Seeding minZ at 0 is the >= 0 clamp; a centroid inside the convex hull
+    // means a real minimum is never positive anyway.
+    groundOffsetM: -minZ,
   };
   return {
     ...geometry,
@@ -484,6 +494,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     key,
     path: `meshes/${key}.mesh`,
     boundingRadiusM: geometry.boundingRadiusM,
+    groundOffsetM: geometry.groundOffsetM,
     meanAlbedo: mean.map((c) => Number(c.toFixed(6))) as Vec3,
     triangleCount: geometry.indices.length / 3,
     normalMapSubstituted: normalTexture === null,
@@ -529,6 +540,7 @@ function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
         field('key', quote(row.key)),
         field('path', quote(row.path)),
         field('boundingRadiusM', String(row.boundingRadiusM)),
+        field('groundOffsetM', String(row.groundOffsetM)),
         field('meanAlbedo', `[${row.meanAlbedo.join(', ')}]`),
         field('triangleCount', String(row.triangleCount)),
         field('normalMapSubstituted', String(row.normalMapSubstituted)),
@@ -547,6 +559,10 @@ function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
     '  readonly key: string;\n' +
     '  readonly path: string;\n' +
     '  readonly boundingRadiusM: number;\n' +
+    "  /** How far the lowest vertex sits BELOW the origin along the body frame's −Z,\n" +
+    '   *  metres, ≥ 0. A surface-locked body is lifted by this so it rests on the\n' +
+    "   *  host's sphere; meaningless (but harmless) for a free-flying one. */\n" +
+    '  readonly groundOffsetM: number;\n' +
     '  readonly meanAlbedo: Vec3;\n' +
     '  readonly triangleCount: number;\n' +
     '  readonly normalMapSubstituted: boolean;\n' +
@@ -583,7 +599,8 @@ export async function buildMeshes(options: {
     const row = await bake(target, options.outDir);
     rows.push(row);
     process.stderr.write(
-      `  ok   ${row.path}  ${row.triangleCount} tris  r=${row.boundingRadiusM.toFixed(3)} m\n`,
+      `  ok   ${row.path}  ${row.triangleCount} tris  r=${row.boundingRadiusM.toFixed(3)} m  ` +
+        `ground=${row.groundOffsetM.toFixed(3)} m\n`,
     );
   }
 

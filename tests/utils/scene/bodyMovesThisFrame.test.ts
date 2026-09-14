@@ -28,4 +28,10 @@ describe('bodyMovesThisFrame', () => {
   it('the Sun does not move this frame', () => {
     expect(bodyMovesThisFrame(bodyRow('sun'))).toBe(false);
   });
+
+  // A rover has no orbital row but rides Mars's spin; a table-membership
+  // predicate called it static and the follow driver never engaged.
+  it('a surface-fixed rover moves this frame', () => {
+    expect(bodyMovesThisFrame(bodyRow('curiosity'))).toBe(true);
+  });
 });

@@ -30,7 +30,7 @@
 //
 // ## Bindings
 //
-// '@group(0) @binding(0)' holds 'TexturedBodyUniforms' (112 bytes), visible in
+// '@group(0) @binding(0)' holds 'TexturedBodyUniforms' (176 bytes), visible in
 // both stages; this one reads only 'u.mvp'. The declaration is module-local
 // (WESL has no global state), so 'u' is redeclared here and 'u.mvp' passed into
 // 'clip_from_local' -- the 'pass cam, don't capture' idiom.

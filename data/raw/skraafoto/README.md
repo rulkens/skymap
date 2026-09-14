@@ -12,20 +12,30 @@
 | Harvested   | 2026-09-10 (306 frames, `npm run fetch-skraafoto`)                         |
 
 Feeds the scene-workbench Gaussian-splat bake (`tools/fetch/fetchSkraafoto.ts`
-→ `tools/scene-recon/bakeSplats.ts`): whole downsampled frames plus their
+→ `tools/scene-recon/bakeSplats.ts`): downsampled frames plus their
 photogrammetric exterior/interior orientation, converted to a COLMAP model and
 trained by `brush-cli`.
+
+Both CLIs take `--group <id>` (default `soendermarken`); the ids live in
+`tools/scene-recon/groups/sceneGroupFromArgv.ts`.
 
 ## Layout
 
 ```
-data/raw/skraafoto/<collection>/<itemId>.json   STAC item, verbatim
-data/raw/skraafoto/<collection>/<itemId>.jpg    1920-long-edge JPEG
+data/raw/skraafoto/<collection>/<itemId>.{json,jpg}            whole-frame groups
+data/raw/skraafoto/<collection>/<groupId>/<itemId>.{json,jpg}  cropped groups
 ```
 
 Gitignored (only this README is committed). Registered as `skraafoto.dir` /
 `skraafoto.readme` in `tools/utils/io/rawDataRegistry.ts`; the collection
-subdirectory name comes from `SOENDERMARKEN.skraafoto.collection`.
+subdirectory name comes from the group's `skraafoto.collection`.
+
+A whole-frame harvest is keyed by collection alone — its pixels depend on
+nothing but the flight, so every whole-frame group shares one download. A
+**cropped** group gets its own subdirectory: its JPEGs carry the same item ids
+but hold a different part of each frame, and would otherwise overwrite the
+shared harvest. `tools/utils/skraafoto/skraafotoHarvestDir.ts` is the one place
+that rule lives.
 
 ## Collection and query
 
@@ -37,7 +47,13 @@ colorization already uses. The search body is the group's own bbox:
 ```
 
 **306 items** over that bbox (measured 2026-09-10), all dated 2025-04-27:
-70 nadir, 62 north, 60 south, 59 east, 55 west. `limit` is a flat cap, not a
+70 nadir, 62 north, 60 south, 59 east, 55 west. The `soendermarken-crop-2019`
+group searches its own small crop box against **`skraafotos2019`** instead —
+**106 items**, all dated 2019-06-23 (harvested 2026-09-11): 20 nadir, 23 north,
+24 south, 18 east, 21 west. That flight is an UltraCam Osprey at 0.10 m GSD, so
+its frames are neither the same shape nor the same size as 2025's (nadir
+13470 x 8670, obliques 7700 x 10300 against 14144 x 10560); nothing reads a
+sensor dimension that isn't the item's own. `limit` is a flat cap, not a
 page size — the fetcher warns if the result count reaches it, because a
 truncated harvest would otherwise train silently on a partial frame set.
 
@@ -81,19 +97,57 @@ line: the collection lists `KDS` (host, licensor), while each item still lists
 `SDFI` (the pre-July-2024 name for the same agency) as licensor and `AVT` as
 the flight producer.
 
-## Downsample recipe
+## Window recipes
 
 One `gdal_translate` per frame, reading the COG's own overview pyramid over
 `/vsicurl/` — no whole-file download:
 
 ```
-gdal_translate /vsicurl/<assets.data.href> -outsize <w> <h> -of JPEG <dest>
+gdal_translate /vsicurl/<assets.data.href> -srcwin <x0> <y0> <w> <h> -outsize <w'> <h'> -b 1 -b 2 -b 3 -of JPEG <dest>
 ```
 
-`<w>,<h>` scale `proj:shape` so the **long edge is 1920 px**. Measured on
-`2025_84_40_5_0052_00001969_100mm`: `proj:shape` `[14144, 10560]` → `-outsize
-1433 1920`, 710 KB, **5.6 s** — so a full 306-frame harvest is tens of minutes,
-not hours, and is bounded by request latency rather than bandwidth.
+`-b 1 -b 2 -b 3` keeps only the colour bands: harvests taken before that flag
+went in hold four-band JPEGs, which `bake-mesh`'s staging transcode re-reads
+band-wise on the way into the reconstruction.
+
+`tools/scene-recon/poses/frameWindow.ts` computes `<x0> <y0> <w> <h>` and the
+output size, and is the **only** place that decides them — `bakeSplats`
+recomputes the same window from the same STAC item to scale the pose
+intrinsics, so nothing is recorded on disk to drift.
+
+**Whole frame** (no `groundMmPerPx` on the group): the full raster, scaled so
+the **long edge is 1920 px** — ~740 mm/px on the ground, which is what makes
+those splats blurry. Measured on `2025_84_40_5_0052_00001969_100mm`:
+`proj:shape` `[14144, 10560]` → `-outsize 1433 1920`, 710 KB, **5.6 s** — so a
+full 306-frame harvest is tens of minutes, not hours, and is bounded by request
+latency rather than bandwidth.
+
+**Crop** (`groundMmPerPx` set, e.g. `soendermarken-crop`'s 200): the group's
+bounds box, swept -10..+50 m in the group's ENU frame so ground, buildings
+and treetops all fall inside, projected through the frame's own
+collinearity into native pixels; the pixel bbox padded 2%, clamped to the
+frame, and downsampled only as far as `groundMmPerPx` asks. The native
+resolution it scales from is the box's **ground diagonal over its projected
+diagonal**, not a nominal GSD — an oblique's pixels cover more ground than a
+nadir's, and both are being asked to resolve the same box. `scale` never
+exceeds 1: the COG's own pixels are the ceiling. Frames whose window lands
+off-frame, behind the camera, or under 64 px on a side are skipped and counted.
+
+On the two fixture frames, `soendermarken-crop`'s 258 x 183 m box at 100 mm/px
+comes out as:
+
+| fixture                             | `-srcwin`             | `-outsize`  | native mm/px |
+| ----------------------------------- | --------------------- | ----------- | ------------ |
+| `..._1_0049_00002495_100mm` nadir   | `9381 5346 2029 2759` | `1947 2647` | ~96          |
+| `..._5_0052_00001969_100mm` oblique | `3667 2666 2826 1861` | `2744 1807` | ~97          |
+
+Both keep ~96% of native (the ask sits just under the COG's own GSD), against
+the whole-frame recipe's 9-14%.
+
+Changing a group's `bounds` or `groundMmPerPx` invalidates its harvest.
+`bakeSplats` reads each JPEG's SOF dimensions and refuses to train if they
+disagree with the recomputed window — delete that group's harvest directory and
+re-run `npm run fetch-skraafoto -- --group <id>`.
 
 ## Landmines
 
@@ -128,3 +182,9 @@ not hours, and is bounded by request latency rather than bandwidth.
 | Tool             | Version                 |
 | ---------------- | ----------------------- |
 | `gdal_translate` | GDAL 3.13.3 "Iowa City" |
+| `cct` (PROJ)     | ships with GDAL         |
+
+`cct` is new to the harvest: the crop is computed in the group's ENU frame, so
+every camera centre goes through the same `+proj=topocentric` pipeline the bake
+uses. Homebrew's `gdal` pulls `proj` in, so a machine that can run
+`gdal_translate` already has it.

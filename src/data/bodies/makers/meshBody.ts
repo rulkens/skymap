@@ -21,6 +21,8 @@ export type MeshBodySeed = {
   readonly meshKey: string;
   /** See `MeshBody.captionRevealM` — authored per seed, optional. */
   readonly captionRevealM?: number;
+  /** Overrides `MESH_BODY_STANDOFF_RADII` where a thin boom, not the body, sets the radius. */
+  readonly standoffRadii?: number;
 };
 
 export function meshBody(seed: MeshBodySeed): MeshBody {
@@ -32,7 +34,7 @@ export function meshBody(seed: MeshBodySeed): MeshBody {
     meshKey: seed.meshKey,
     boundingRadiusM: asset.boundingRadiusM,
     albedo: asset.meanAlbedo,
-    standoffRadii: MESH_BODY_STANDOFF_RADII,
+    standoffRadii: seed.standoffRadii ?? MESH_BODY_STANDOFF_RADII,
     captionRevealM: seed.captionRevealM,
   };
 }

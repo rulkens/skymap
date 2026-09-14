@@ -10,6 +10,7 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
+import { probe } from './makers/probe';
 import { satellite } from './makers/satellite';
 import { sStar } from './makers/sStar';
 import { S_STAR_SEEDS } from './sStarElements';
@@ -34,6 +35,8 @@ import {
   TITAN_ORANGE,
   WHALE_GREY,
   PETUNIA_PINK,
+  VOYAGER_1_GOLD,
+  VOYAGER_2_AMBER,
 } from './palette';
 import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
@@ -646,6 +649,36 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     poleRaDeg: 0.0,
     poleDecDeg: 90.0,
     color: PETUNIA_PINK,
+  }),
+
+  // Voyager 1 and 2, on hyperbolic solar escapes. Columns verbatim from JPL
+  // Horizons ELEMENTS (`-31`/`-32`, CENTER='500@10', REF_PLANE='ECLIPTIC',
+  // OUT_UNITS='AU-D') at JDTDB 2461294.5 = 2026-Sep-11 00:00 TDB; the `probe`
+  // maker shifts that epoch to this table's J2000 via `Tp`. The refresh query
+  // is recorded in `data/raw/meshes/voyager/README.md`.
+  probe({
+    id: 'voyager1',
+    focusId: 'sun',
+    semiMajorAu: -3.215481966557751,
+    eccentricity: 3.703612020159509,
+    inclinationDeg: 35.76697119202111,
+    ascendingNodeDeg: 178.8798914884395,
+    argPeriapsisDeg: 338.250003369942,
+    periapsisJd: 2444233.650346363429,
+    meanMotionDegPerDay: 0.1709365587071547,
+    color: VOYAGER_1_GOLD,
+  }),
+  probe({
+    id: 'voyager2',
+    focusId: 'sun',
+    semiMajorAu: -4.020332205328676,
+    eccentricity: 6.278903766787083,
+    inclinationDeg: 78.98684868193521,
+    ascendingNodeDeg: 101.811478664204,
+    argPeriapsisDeg: 130.0227165233163,
+    periapsisJd: 2445454.392982037272,
+    meanMotionDegPerDay: 0.1222675366750901,
+    color: VOYAGER_2_AMBER,
   }),
 
   // The 39 bound S-stars are mapped rather than spelled out: their per-row facts live in

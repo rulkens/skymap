@@ -2,11 +2,14 @@ import type { BodySourceEntry } from '../../@types/data/body/BodySourceEntry';
 import { Source } from '../source';
 
 /**
- * Mesh-drawn scene bodies — the whale and the basket of petunias in Earth
- * orbit, as one row. `label`/`plural` name the CATEGORY, not the occupants,
- * because the Labels & Guides checkbox this row seeds mutes both together;
- * "Whale & Petunias" would read as a per-body toggle, which a single registry
- * row cannot be. A per-body split needs a second entry.
+ * Mesh-drawn scene bodies, as one row: lit triangle-mesh bodies rendered by
+ * the mesh-body pipeline — the whale and the basket of petunias in Earth
+ * orbit, Voyager 1/2, and the four Mars rovers (Curiosity, Perseverance,
+ * Spirit, Opportunity). `label`/`plural` name the CATEGORY, not the
+ * occupants, because the Labels & Guides checkbox this row seeds mutes every
+ * mesh body's caption together; naming any occupant would read as a
+ * per-body toggle, which a single registry row cannot be. A per-body split
+ * needs a second entry.
  */
 export const MESH_BODY_ENTRY = {
   type: 'body',

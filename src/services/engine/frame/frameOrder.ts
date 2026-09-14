@@ -22,9 +22,9 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // step contributes no timing slot.
   { kind: 'compute', name: 'flow' },
   { kind: 'compute', name: 'atmosphereSkyView' },
-  // The black-hole lens's sky-cubemap bake, in the compute prelude's wake and
-  // ahead of every other render step so a same-frame lensing draw can sample a
-  // cubemap this frame actually wrote. The frame's face list is empty most
+  // The `sgrAStar` capture, in the compute prelude's wake and ahead of every
+  // other render step so a same-frame lensing draw can sample a cubemap this
+  // frame actually wrote. The frame's face list for this key is empty most
   // frames (outside the fade band, and in-band on every frame except the one
   // that re-bakes), and then this line emits nothing at all — the lens's
   // zero-dispatch guarantee, of which this is the capture half.
@@ -40,7 +40,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // a SYNTHETIC per-face ctx, never the frame's real camera.
   {
     kind: 'capture',
-    target: 'sky-cubemap',
+    capture: 'sgrAStar',
     cosmoPasses: ['point-sprites', 'textured-disks'],
     near0Passes: ['star-aggregates', 'star-catalog'],
   },
@@ -133,7 +133,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // wrote; and BEFORE the line below, so those stay unwarped on top of it.
   // Outside the fade band the frame resolves no lensing row and this emits
   // nothing.
-  { kind: 'lens', target: 'hdr', passes: ['sgr-a-star-lensing'] },
+  { kind: 'render', target: 'hdr', slab: 'lens', passes: ['sgr-a-star-lensing'] },
   // The roster slice that draws unwarped ON TOP of the lens: the sub-pixel
   // bodies (the glints branch of the body partition) as brightness-scaled
   // additive points, sibling of `star-points`. Outside the band the lens line
@@ -163,10 +163,22 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // atmosphere are then occluded, while the limb over space passes.
   // `atmosphere-shell` trails `rings` because it is the outermost of the two.
   // `cloud-shell` is the same exception placed early, immediately after the
-  // `earth` surface it depth-tests against. `mesh-bodies` owns no slab of its
-  // own — the lit triangle meshes ride their HOST body's row, so they follow
-  // the opaque spheres to depth-test against the host's stamped z and precede
-  // those two translucent shells.
+  // `earth` surface it depth-tests against.
+  //
+  // `mesh-bodies` draws LAST, after both shells, and that is NOT the
+  // depth-tested listing choice the rest of this roster is. Inside an
+  // atmosphere the shell abandons its proxy mesh for a full-screen pass with
+  // `depthCompare: 'always'` (`atmosphereShellRenderer`), and its ray
+  // terminates on the analytic ground sphere — so an opaque mesh standing ON
+  // that ground is invisible to it, and a rover silhouetted against Mars sky
+  // was drawn over with the full camera-to-space in-scatter. Ordering after
+  // the shell is the stopgap: the shells write no depth, so a mesh drawn last
+  // still depth-tests correctly against every opaque sphere, and only the
+  // shells' own fragments are overdrawn. The cost is that mesh bodies take no
+  // aerial perspective at all — negligible at the metres-to-km range a rover
+  // is ever framed from, wrong for a mesh genuinely behind a limb (the whale's
+  // 400 km orbit crossing Earth's). The real fix is the froxel LUT, which
+  // gives the inside path scene depth and lets this line move back.
   {
     kind: 'foreground',
     target: 'foreground:0',
@@ -176,9 +188,9 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
       'cloud-shell',
       'planets',
       'textured-bodies',
-      'mesh-bodies',
       'rings',
       'atmosphere-shell',
+      'mesh-bodies',
     ],
   },
   // The bodies join the HDR accumulator in LINEAR space, before the tone-map,

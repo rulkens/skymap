@@ -51,8 +51,8 @@ const EXTRACT_ROW: {
   body: (ref, _deps, simDays) => {
     const body = SCENE_BODIES.find((b) => b.id === ref.id);
     if (!body) return null;
-    // Total: a seed is either an `ORBITAL_ELEMENTS` row or a `SCENE_ANCHORS`
-    // one, and the snapshot holds both.
+    // Total: every seed drives its position off one of the three tables the
+    // snapshot is built from, so none of them misses.
     const p = deriveBodyStates(simDays).get(body.id)!.positionMpc;
     return {
       type: 'body' as const,

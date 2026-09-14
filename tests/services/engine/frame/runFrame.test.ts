@@ -121,7 +121,9 @@ import { createStructureFocusSubsystem } from '../../../../src/services/engine/s
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
 import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
+import { earthArm } from '../../../fixtures/earthArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
@@ -131,6 +133,9 @@ import type { RootState } from '../../../../src/store/types';
 function makeStore() {
   return configureStore({ reducer: rootReducer });
 }
+
+/** `earthArm` measures in Earth radii; the scale-bar case reads back in km. */
+const EARTH_RADIUS_KM = 6371;
 
 /**
  * Build a minimal `EngineState`-shaped fixture that lets `runFrame` run the
@@ -921,6 +926,44 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     expect(typeof payload.label).toBe('string');
     expect(typeof payload.widthPx).toBe('number');
     expect(payload.widthPx).toBeGreaterThan(0);
+  });
+
+  it('reports a km-scale legend under an ENGAGED body arm', () => {
+    // The arm's world pose already ranges eye→ground, so the pre-fix subtract
+    // of Earth's radius drove the range below zero: `computeScaleInfo`
+    // short-circuited to null and the reducer held the last label — the bar
+    // froze the moment the arm engaged (0.45 R ≈ 2,870 km up).
+    const store = makeStore();
+    const spy = vi.spyOn(store, 'dispatch');
+    const state = makeCamState();
+    const deps = makeCamDeps(state, store);
+
+    const ALTITUDE_KM = 100;
+    const arm = earthArm(1 + ALTITUDE_KM / EARTH_RADIUS_KM);
+    store.dispatch(commitCameraPose(arm));
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: { type: 'body', id: 'earth', label: 'Earth', positionMpc: [0, 0, 0] },
+      }),
+    );
+    state.cameraRuntime = {
+      ...state.cameraRuntime,
+      register: { ...state.cameraRuntime.register, pose: arm },
+    };
+
+    runFrame(state, deps, 0);
+
+    const scaleCalls = spy.mock.calls.filter(
+      (call) => (call[0] as { type?: string })?.type === engineScaleChanged.type,
+    );
+    expect(scaleCalls).not.toHaveLength(0);
+    const { label } = (scaleCalls[0]![0] as ReturnType<typeof engineScaleChanged>).payload;
+    const [, magnitude, unit] = label.match(/^([0-9.]+) (m|km)$/) ?? [];
+    expect(unit).toBe('km');
+    const km = Number(magnitude);
+    expect(km).toBeGreaterThan(0);
+    expect(km).toBeLessThan(EARTH_RADIUS_KM);
   });
 
   it('does not dispatch engineScaleChanged when the canvas has zero height (degenerate viewport)', () => {

@@ -28,15 +28,15 @@ import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
+import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import { poseFromBodyArm } from '../../../utils/camera/poseFromBodyArm';
-import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { ZERO_FOCUS } from '../subsystems/structureFocusSubsystem';
 import { deriveSlabs } from './slabs';
 import { deriveBodyStates } from './deriveBodyStates';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
-import { elementsById } from '../../../data/bodies/orbitalElements';
 import { visibleStars } from './visibleStars';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
@@ -93,11 +93,15 @@ export function deriveFrameContext(
     cam.target[2] - cam.position[2],
   ]);
 
-  const { earth, planets } = state.data.bodies;
+  const { earth, planets, meshBodies } = state.data.bodies;
+  // A mesh body whose driver hangs off something with no row of its own gets
+  // one here, off the STORE roster rather than the static table, so the two
+  // stay the same list.
+  const hostlessMeshBodies = meshBodies.filter((body) => meshBodySlabHostId(body) === body.id);
   const slabBodyCandidates: readonly SceneBody[] =
     earth === null
-      ? [...planets, ...SCENE_ANCHOR_POINT_BODIES]
-      : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES];
+      ? [...planets, ...SCENE_ANCHOR_POINT_BODIES, ...hostlessMeshBodies]
+      : [earth, ...planets, ...SCENE_ANCHOR_POINT_BODIES, ...hostlessMeshBodies];
 
   const slabGate = {
     bodyStates,
@@ -108,16 +112,15 @@ export function deriveFrameContext(
     fovYRad: cam.fovYRad,
   };
   const gatedBodies = visibleSlabBodies({ ...slabGate, bodies: slabBodyCandidates });
-  // A mesh body owns no slab row — it rides its host's (`meshBodiesPass`), so
-  // the host's roster entry is what keeps it drawable. From a 400 km orbit
-  // Earth's ~70° angular radius takes it out of the frustum gate around 126°
-  // off-axis, which would blank a mesh body sitting dead centre. The SAME gate
-  // run over the mesh bodies re-admits their hosts, so there is one cull
+  // A hosted mesh body owns no slab row — it rides its host's
+  // (`meshBodiesPass`), so the host's roster entry is what keeps it drawable; a
+  // hostless one keys on itself and is already a candidate above. From a 400 km
+  // orbit Earth's ~70° angular radius takes it out of the frustum gate around
+  // 126° off-axis, which would blank a mesh body sitting dead centre. The SAME
+  // gate run over the mesh bodies re-admits their hosts, so there is one cull
   // applied twice rather than two culls to keep in step.
   const meshHostIds = new Set(
-    visibleSlabBodies({ ...slabGate, bodies: state.data.bodies.meshBodies }).map(
-      (body) => elementsById(body.id).focusId,
-    ),
+    visibleSlabBodies({ ...slabGate, bodies: meshBodies }).map(meshBodySlabHostId),
   );
   const visibleBodies = gatedBodies.concat(
     slabBodyCandidates.filter((body) => meshHostIds.has(body.id) && !gatedBodies.includes(body)),
@@ -184,12 +187,12 @@ export function deriveFrameContext(
   });
   const starRangeM = starSphereRangeM({ spheres, camPosMpc: cam.position });
 
-  // The focused pivot's radius (or null) lets the near-field row key its near
-  // plane off ALTITUDE rather than raw distance — see `slabs.ts: deriveSlabs`.
+  // Frame-aware, so an engaged body arm's eye→ground range is not decremented a
+  // second time — see `slabs.ts: deriveSlabs`.
   const slabs = deriveSlabs({
     cam,
     cosmoVp: vp,
-    pivotRadiusMpc: pivotRadiusMpc(state.selectionRows.focus),
+    altitudeMpc: pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
     pose: bodyPose,
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,
@@ -215,7 +218,7 @@ export function deriveFrameContext(
     nowMs,
     simDays,
     fovYRad: cam.fovYRad,
-    // The main view. `skyCubemapFaceContext` overrides this to `face + 1` on
+    // The main view. `cubemapFaceContext` overrides this to `viewSlotBase + face` on
     // the contexts it derives — see `ReadyFrameContext.viewSlot`'s doc.
     viewSlot: 0,
     focusBlend: 0,

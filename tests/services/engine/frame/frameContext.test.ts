@@ -90,9 +90,9 @@ function makeState(
     booted: overrides.booted ?? true,
     gpu: { galaxyPointRenderer, renderTargets, galaxyPickRenderer, compositor },
     subsystems: { texturedDisks },
-    // No focused pivot in these fixtures — `deriveSlabs` gets `pivotRadiusMpc:
-    // null`, reproducing the pre-feature (raw cam.distance) near-field bracket
-    // every arithmetic assertion below was written against.
+    // No focused pivot in these fixtures — `deriveSlabs` gets the raw
+    // cam.distance as its `altitudeMpc`, the near-field bracket every
+    // arithmetic assertion below was written against.
     selectionRows: { hover: null, select: null, focus: null },
     // No seeded bodies/stars — `visibleSlabBodies` and `visibleStars` (both
     // read unconditionally past the ready gate now) get an empty registry, so
@@ -283,12 +283,12 @@ describe('deriveFrameContext — ready branch', () => {
     if (!ctx.isReady) return;
     const cam = assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS);
     // The fixture seeds no bodies/stars, so every new deriveSlabs input beyond
-    // cam/cosmoVp/pivotRadiusMpc is inert (empty registry, no star spheres) —
+    // cam/cosmoVp/altitudeMpc is inert (empty registry, no star spheres) —
     // matching what `deriveFrameContext` itself derives from `makeState()`.
     const expected = deriveSlabs({
       cam,
       cosmoVp: computeViewProj(cam),
-      pivotRadiusMpc: null,
+      altitudeMpc: cam.distance,
       pose: () => null,
       visibleBodies: [],
       viewportPx: [1920, 1080],

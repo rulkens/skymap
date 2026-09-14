@@ -6,11 +6,11 @@ import type { SplatGpuAsset } from './renderResources';
  * Uploads a parsed `splats.bin` as the three buffers the splat pipeline binds.
  * `records`/`sh1` are views onto the downloaded buffer, so `writeBuffer` gets
  * the view (the header sits in front of it). `order` starts as the identity
- * permutation: the first frame then draws in on-disk order rather than
- * nothing, before the depth sort has ever run.
+ * permutation, and `drawCount` the full count to match: the first frame then
+ * draws in on-disk order rather than nothing, before the sort has ever run.
  */
 export function uploadGaussianSplat(gpu: GpuContext, parsed: ParsedGaussianSplats): SplatGpuAsset {
-  const { splatCount, shDegree, records, positionsM } = parsed;
+  const { splatCount, shDegree, records, positionsM, boundsM } = parsed;
 
   const data = gpu.device.createBuffer({
     label: `scene-workbench-splats-${splatCount}`,
@@ -45,6 +45,8 @@ export function uploadGaussianSplat(gpu: GpuContext, parsed: ParsedGaussianSplat
     sh1,
     order,
     positionsM,
+    boundsM,
+    drawCount: splatCount,
     splatCount,
     shDegree,
     dispose: () => {

@@ -23,6 +23,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/fra
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
@@ -85,16 +86,34 @@ function makeState(init: {
 /**
  * The minimal ReadyFrameContext the derivation reads: `drawCamPos` (per-body
  * sub-pixel distance source), `cam.distance` (the whole-list near-field cull),
- * and `canvasSize`/`fovYRad` (the sub-pixel projection). `camDistance` defaults
- * to 0 — inside the near-field edge, the common body-framed path.
+ * `canvasSize`/`fovYRad` (the sub-pixel projection), and `bodyPose` (the
+ * body-slab seam the entry's camera-local fields come from). `camDistance`
+ * defaults to 0 — inside the near-field edge, the common body-framed path.
  */
-function makeCtx(drawCamPos: Vec3, camDistance = 0): ReadyFrameContext {
+function makeCtx(
+  drawCamPos: Vec3,
+  camDistance = 0,
+  bodyPose: BodyPoseProvider = poseFrom(drawCamPos),
+): ReadyFrameContext {
   return {
     drawCamPos,
     cam: { distance: camDistance },
     canvasSize: { width: 1920, height: 1080 },
     fovYRad: 1.0,
+    bodyPose,
   } as unknown as ReadyFrameContext;
+}
+
+/**
+ * A pose stub re-expressing `drawCamPos` as Earth's body-relative metre offset,
+ * on an identity basis — so a `camRadiiOut` camera sits at the same radii in the
+ * local frame the entry's `camLocal` is built in.
+ */
+function poseFrom(drawCamPos: Vec3): BodyPoseProvider {
+  const eyeRelBodyM = drawCamPos.map(
+    (c, i) => (c - SEEDED_EARTH.positionMpc[i]!) * SCALE_UNITS.MPC_TO_M,
+  ) as Vec3;
+  return () => ({ eyeRelBodyM, basisM: [...IDENTITY_MAT3] as Mat3 });
 }
 
 /** A camera pose `radii` Earth-radii out from `body` along +x — sets the disc size. */
@@ -163,5 +182,37 @@ describe('atmosphereDrawList', () => {
     const list = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
     expect(list).toHaveLength(1);
     expect(list[0]!.body).toBe(SEEDED_EARTH);
+  });
+
+  it('flags the entry inside when the camera is within the shell handoff ratio', () => {
+    // The flag selects the shell's full-screen render path, so it must track the
+    // camera. Half an Earth radius out is 0.5 × 6371/6471 ≈ 0.49 atmosphere-top
+    // radii — under the 1.005 handoff; five radii out is ≈ 4.92, far over it.
+    const near = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 0.5)));
+    expect(near[0]!.inside).toBe(true);
+    const far = atmosphereDrawList(makeState({}), makeCtx(camRadiiOut(SEEDED_EARTH, 5)));
+    expect(far[0]!.inside).toBe(false);
+  });
+
+  it('derives one list per frame context, and re-derives for the next', () => {
+    const state = makeState({});
+    const ctxA = makeCtx(camRadiiOut(SEEDED_EARTH, 5));
+    // The identity every consumer leans on: they walk the SAME array, so a memo
+    // keyed on anything per-call would hand them separate answers.
+    expect(atmosphereDrawList(state, ctxA)).toBe(atmosphereDrawList(state, ctxA));
+    // A key outliving the frame would serve ctxA's answer to the next frame — a
+    // body the camera has since left behind, baked into that frame's LUT.
+    const ctxB = makeCtx(camRadiiOut(SEEDED_EARTH, 3000));
+    expect(atmosphereDrawList(state, ctxB)).toEqual([]);
+  });
+
+  it('excludes a body with no pose this frame', () => {
+    // The derived fields all hang off the pose, so a poseless body cannot be an
+    // entry at all — which is what lets both consumers drop their own guard.
+    const list = atmosphereDrawList(
+      makeState({}),
+      makeCtx(camRadiiOut(SEEDED_EARTH, 5), 0, () => null),
+    );
+    expect(list).toEqual([]);
   });
 });

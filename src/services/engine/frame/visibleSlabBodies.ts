@@ -42,15 +42,15 @@ const BAND_SLAB_FLOOR_MPC = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
  * `SceneBody` union arm identically, culling on `id` plus the arm-agnostic
  * `bodyFootprintRadiusM`.
  */
-export function visibleSlabBodies(input: {
-  readonly bodies: readonly SceneBody[];
+export function visibleSlabBodies<T extends SceneBody>(input: {
+  readonly bodies: readonly T[];
   readonly bodyStates: ReadonlyMap<string, BodyState>;
   readonly camPosMpc: Readonly<Vec3>;
   readonly camForwardMpc: Readonly<Vec3>;
   readonly viewportWidthPx: number;
   readonly viewportHeightPx: number;
   readonly fovYRad: number;
-}): readonly SceneBody[] {
+}): readonly T[] {
   const {
     bodies: candidates,
     bodyStates,

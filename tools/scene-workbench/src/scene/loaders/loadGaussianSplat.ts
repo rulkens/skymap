@@ -4,6 +4,9 @@ import { uploadGaussianSplat } from '../../render/uploadGaussianSplat';
 import { parseSplats } from '../parseSplats';
 
 /** The `gaussianSplat` row of `ASSET_LOADERS` — decode `splats.bin`, then upload it. */
-export function loadGaussianSplat(gpu: GpuContext, buffer: ArrayBuffer): SplatGpuAsset {
+export async function loadGaussianSplat(
+  gpu: GpuContext,
+  buffer: ArrayBuffer,
+): Promise<SplatGpuAsset> {
   return uploadGaussianSplat(gpu, parseSplats(buffer));
 }

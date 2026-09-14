@@ -29,8 +29,8 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
     tone: TONE,
     bloomEnabled: false,
     foregroundChain: [NEAR0],
-    skyCubemapFacesToCapture: [],
-    lensBodySlabs: [],
+    captureFaces: new Map(),
+    bodyRowSlabs: { lens: [], insideAtmosphere: [] },
     ...over,
   });
 }
@@ -84,9 +84,9 @@ describe('the real registry slot list', () => {
       'cloud-shell·BODY[0]',
       'planets·BODY[0]',
       'textured-bodies·BODY[0]',
-      'mesh-bodies·BODY[0]',
       'rings·BODY[0]',
       'atmosphere-shell·BODY[0]',
+      'mesh-bodies·BODY[0]',
       'foreground:0·BODY[0]',
       'star-spheres',
       'field-star-sphere',

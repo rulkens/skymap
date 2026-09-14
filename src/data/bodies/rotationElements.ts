@@ -53,4 +53,15 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // pot's pole stays DECORATIVE — off-axis and quick, a turn per 90 s, so its tumble wobbles.
   { id: 'whale', poleRaDeg: 0.0, poleDecDeg: 90.0, primeMeridianDeg: 90.0, spinRateDegPerDay: 360 / MESH_BODY_PERIOD_DAYS },
   { id: 'petunias', poleRaDeg: 198.6, poleDecDeg: -37.2, primeMeridianDeg: 0.0, spinRateDegPerDay: 345600 },
+  // Both probes keep the high-gain dish on Earth — the real pointing constraint,
+  // and the only one that stays true at any epoch as the geometry opens up.
+  { kind: 'lookAt', id: 'voyager1', targetId: 'earth' },
+  { kind: 'lookAt', id: 'voyager2', targetId: 'earth' },
+  // Rover headings are AUTHORED presentation, not surveyed landing azimuths:
+  // they only spread the four so no two face the same way, and the visual pass
+  // is their only gate.
+  { kind: 'surfaceLocked', id: 'curiosity', headingDeg: 90 },
+  { kind: 'surfaceLocked', id: 'perseverance', headingDeg: 0 },
+  { kind: 'surfaceLocked', id: 'spirit', headingDeg: 180 },
+  { kind: 'surfaceLocked', id: 'opportunity', headingDeg: 270 },
 ];

@@ -22,7 +22,7 @@ function* loadRegistryWorker() {
   try {
     yield* put(registryLoading());
     if (hasUrlGate('probe')) {
-      const entry = syntheticProbeScene();
+      const entry = yield* call(syntheticProbeScene);
       yield* put(registryLoaded([entry]));
       yield* put(groupSelected(entry.id));
       return;

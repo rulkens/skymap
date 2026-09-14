@@ -14,14 +14,11 @@
  * Taking the items Record directly (rather than the whole `EngineState`) lets
  * the React side feed it the value of `selectVolumeFieldItems(state)` through a
  * `useMemo`: the array is rebuilt exactly when the stable `items` reference
- * changes, keeping `useSyncExternalStore`'s snapshot stable. The engine-side
- * `buildVolumeFieldsSnapshot` delegates here too, so both views of the rows stay
- * one implementation.
+ * changes, keeping `useSyncExternalStore`'s snapshot stable.
  *
- * The `debug-*` fixture filter is NOT applied here — it's the React consumer's
- * concern (the panel only shows real science volumes; the dev console still
- * wants the fixtures). Callers that want the filtered view apply it on the way
- * out, exactly as the old `onFieldsChanged` subscription did.
+ * The `debug-*` fixture filter is NOT applied here — it's the consumer's
+ * concern, so the projection stays a faithful view of the items Record.
+ * Callers that want the filtered view apply it on the way out.
  */
 
 import type { VolumeFieldRowData } from '../../@types/settings/VolumeFieldRowData';

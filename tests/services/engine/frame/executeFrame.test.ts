@@ -274,7 +274,8 @@ function makeArgs(over: {
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
   ctx?: ReadyFrameContext;
-  skyCubemapFaceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
+  /** The `sgrAStar` row's faces — wrapped into the keyed `captureContexts`. */
+  faceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
 }): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
   const env = over.env ?? makeEncoderEnv();
   const args: ExecuteFrameArgs = {
@@ -285,7 +286,7 @@ function makeArgs(over: {
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
-    skyCubemapFaceContexts: over.skyCubemapFaceContexts,
+    captureContexts: over.faceContexts && new Map([['sgrAStar', over.faceContexts]]),
   };
   return { args, env };
 }
@@ -595,15 +596,15 @@ describe('executeFrame', () => {
     expect(secondDepth?.depthLoadOp).toBe('load');
   });
 
-  it("a step's explicit depthLoad overrides the first-touch rule in both directions", () => {
+  it("a step's explicit depth overrides the first-touch rule in both directions", () => {
     // Same two-step shape as above, but each step names its own depth op: the
     // first loads where the rule would clear, the second clears where the rule
     // would load (the restart a back-to-front slab run needs mid-frame).
     const env = makeEncoderEnv();
     const a = makeContentPass({ name: 'a' });
     const program: FrameStep[] = [
-      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'load', passes: [a] },
-      { kind: 'render', target: 'foreground:0', slab: COSMO, depthLoad: 'clear', passes: [a] },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'load', passes: [a] },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'clear', passes: [a] },
     ];
     const { args } = makeArgs({ program, env });
     executeFrame(args);
@@ -693,8 +694,8 @@ describe('executeFrame', () => {
   describe('sky-cubemap capture hand-off (Task 12)', () => {
     // A step carrying `face` must resolve its OWN camera (`enabled`/`draw`'s
     // `ctx`), not the frame-wide `args.ctx` — the runtime hand-off `renderFrame`
-    // derives per scheduled face via `skyCubemapFaceContext` and threads in as
-    // `skyCubemapFaceContexts`. Two distinct fixture contexts stand in for two
+    // derives per scheduled face via `cubemapFaceContext` and threads in as
+    // `faceContexts`. Two distinct fixture contexts stand in for two
     // faces' synthetic cameras; identity (`toBe`), not content, is what proves
     // routing, since a real face ctx and the frame ctx share the same shape.
     it("resolves each capture step's own face ctx, never the frame-wide ctx", () => {
@@ -702,14 +703,24 @@ describe('executeFrame', () => {
       const face0Ctx = makeCtx();
       const face1Ctx = makeCtx();
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [contentPass] },
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1, passes: [contentPass] },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [contentPass],
+        },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 1 },
+          passes: [contentPass],
+        },
       ];
-      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
         [0, face0Ctx],
         [1, face1Ctx],
       ]);
-      const { args } = makeArgs({ program, skyCubemapFaceContexts });
+      const { args } = makeArgs({ program, faceContexts });
       executeFrame(args);
 
       expect(contentPass.enabled).toHaveBeenCalledTimes(2);
@@ -724,20 +735,25 @@ describe('executeFrame', () => {
       expect(contentPass.draw.mock.calls[1]![2]).not.toBe(args.ctx);
     });
 
-    it('skips a capture step cleanly when its face has no context (skyCubemapFaceContext returned null)', () => {
+    it('skips a capture step cleanly when its face has no context (cubemapFaceContext returned null)', () => {
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 2, passes: [contentPass] },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 2 },
+          passes: [contentPass],
+        },
       ];
       // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
-      // skyCubemapFaceContext call returned null (pre-bootstrap frame).
-      const { args } = makeArgs({ program, skyCubemapFaceContexts: new Map() });
+      // cubemapFaceContext call returned null (pre-bootstrap frame).
+      const { args } = makeArgs({ program, faceContexts: new Map() });
       expect(() => executeFrame(args)).not.toThrow();
       expect(contentPass.enabled).not.toHaveBeenCalled();
       expect(contentPass.draw).not.toHaveBeenCalled();
     });
 
-    it('an ordinary (non-face) render step is unaffected by an absent skyCubemapFaceContexts map', () => {
+    it('an ordinary (non-face) render step is unaffected by an absent faceContexts map', () => {
       const contentPass = makeContentPass({ name: 'a' });
       const program: FrameStep[] = [
         { kind: 'render', target: 'hdr', slab: COSMO, passes: [contentPass] },
@@ -747,25 +763,25 @@ describe('executeFrame', () => {
       expect(contentPass.draw.mock.calls[0]![2]).toBe(args.ctx);
     });
 
-    it('resolves EACH capture face to its OWN colour-attachment view, distinct per face and from viewOf', () => {
-      // Pins the real bug: before the fix, every capture step resolved the
-      // same multi-layer `viewOf('sky-cubemap')` regardless of `step.face`,
-      // so all 6 faces wrote the same texture layer.
+    it("resolves each capture face through the capture row's target layer view, never viewOf", () => {
+      // The step names only its capture key: the row it names owns the texture,
+      // and the face is one of its array layers. `viewOf`'s multi-layer view is
+      // the failure mode — WebGPU rejects it as a colour attachment, and taking
+      // it for all six faces would write one layer six times.
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [0, 1, 2, 3, 4, 5].map(
         (face): FrameStep => ({
           kind: 'render',
-          target: 'sky-cubemap',
           slab: NEAR0,
-          face: face as CubeFace,
+          capture: { key: 'sgrAStar', face: face as CubeFace },
           passes: [contentPass],
         }),
       );
       const faceCtx = makeCtx();
-      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>(
+      const faceContexts = new Map<CubeFace, ReadyFrameContext>(
         [0, 1, 2, 3, 4, 5].map((face) => [face as CubeFace, faceCtx]),
       );
-      const { args, env } = makeArgs({ program, skyCubemapFaceContexts });
+      const { args, env } = makeArgs({ program, faceContexts });
       executeFrame(args);
 
       expect(contentPass.draw).toHaveBeenCalledTimes(6);
@@ -774,6 +790,9 @@ describe('executeFrame', () => {
       );
       for (const view of viewsPerFace) expect(view).not.toBe(SKY_CUBEMAP_VIEW);
       expect(new Set(viewsPerFace).size).toBe(6);
+      // The mock answers `layerViewOf` for 'sky-cubemap' alone, so matching it
+      // face-for-face is what pins the key→row→target resolution.
+      expect(viewsPerFace).toEqual(SKY_CUBEMAP_FACE_VIEWS);
     });
 
     it("the SECOND capture step for the SAME face loads — it must not wipe the first slab's draws", () => {
@@ -785,13 +804,23 @@ describe('executeFrame', () => {
       const cosmoPass = makeContentPass({ name: 'textured-disks' });
       const near0Pass = makeContentPass({ name: 'star-points' });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: COSMO, face: 0, passes: [cosmoPass] },
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [near0Pass] },
+        {
+          kind: 'render',
+          slab: COSMO,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [cosmoPass],
+        },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [near0Pass],
+        },
       ];
       const faceCtx = makeCtx();
       const { args, env } = makeArgs({
         program,
-        skyCubemapFaceContexts: new Map([[0, faceCtx]]),
+        faceContexts: new Map([[0, faceCtx]]),
       });
       executeFrame(args);
 
@@ -807,15 +836,25 @@ describe('executeFrame', () => {
       // over it, flickering the cubemap bright/dim by capture order.
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [contentPass] },
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1, passes: [contentPass] },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [contentPass],
+        },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 1 },
+          passes: [contentPass],
+        },
       ];
       const faceCtx = makeCtx();
-      const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
         [0, faceCtx],
         [1, faceCtx],
       ]);
-      const { args, env } = makeArgs({ program, skyCubemapFaceContexts });
+      const { args, env } = makeArgs({ program, faceContexts });
       executeFrame(args);
 
       expect(attachmentOfDraw(env, contentPass, 0).loadOp).toBe('clear');

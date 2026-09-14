@@ -1,14 +1,23 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 import { groupSelected } from '../registry/registrySlice';
+import { splatOrderWritten } from '../commands';
+import type { BoundsM } from '../../../@types/BoundsM';
 import type { SceneManifest } from '../../../@types/SceneManifest';
 
 export type AssetStatus = 'pending' | 'ready' | 'error';
 
-/** GroupSlice — the selected group's manifest and per-asset load status. */
+/** What the depth sort learned about a splat asset: its extent (the clip
+ *  box's slider range) and how many splats the last sort queued to draw. */
+export type SplatMetrics = { boundsM: BoundsM; drawCount: number; splatCount: number };
+
+/** GroupSlice — the selected group's manifest and per-asset load status.
+ *  `splatMetrics` lives here rather than in its own slice so the group
+ *  switch below is the one place any of it is cleared. */
 export type GroupSlice = {
   status: 'idle' | 'loading' | 'ready' | 'error';
   manifest: SceneManifest | null;
   assetStatus: Record<string, AssetStatus>;
+  splatMetrics: Record<string, SplatMetrics>;
   error: string | null;
 };
 
@@ -16,6 +25,7 @@ export const defaultGroupSlice: GroupSlice = {
   status: 'idle',
   manifest: null,
   assetStatus: {},
+  splatMetrics: {},
   error: null,
 };
 
@@ -48,7 +58,12 @@ export const groupSlice = createSlice({
       state.status = 'idle';
       state.manifest = null;
       state.assetStatus = {};
+      state.splatMetrics = {};
       state.error = null;
+    });
+    builder.addCase(splatOrderWritten, (state, action) => {
+      const { assetId, ...metrics } = action.payload;
+      state.splatMetrics[assetId] = metrics;
     });
   },
 });

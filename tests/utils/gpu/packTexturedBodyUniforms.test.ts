@@ -15,7 +15,7 @@
  *
  *   0..15 mvp  16..18 sunDirLocal  19 lit pad  20 ringInnerRatio
  *   21 ringOuterRatio  22 limbStrength  23 limbExponent
- *   24..26 camPosLocal  27 pad
+ *   24..26 camPosLocal  27 camAltitudeSq  28..43 vpCamRelLocal
  */
 
 import { describe, it, expect } from 'vitest';
@@ -42,6 +42,11 @@ const LIMB_STRENGTH = 0.625; // 10/16
 const LIMB_EXPONENT = 0.875; // 14/16
 // Distinct per-lane camera so a swapped component is caught.
 const CAM_LOCAL: Vec3 = [3.5, -4.25, 6.75];
+const CAM_ALTITUDE_SQ = 0.375; // 6/16
+// 101..116, so no entry collides with the mvp's 1..16 — a vp written over the
+// mvp block (or vice versa) is caught by value, not just by length.
+const CAM_REL_VP = new Float32Array(16);
+for (let i = 0; i < 16; i++) CAM_REL_VP[i] = 101 + i;
 
 describe('TexturedBodyUniforms byte offsets', () => {
   it('packs the lit prefix, ring ratios, limb fields, and camPosLocal at the fixed indices', () => {
@@ -53,10 +58,12 @@ describe('TexturedBodyUniforms byte offsets', () => {
       LIMB_STRENGTH,
       LIMB_EXPONENT,
       CAM_LOCAL,
+      CAM_ALTITUDE_SQ,
+      CAM_REL_VP,
     );
     expect(out).toHaveLength(TEXTURED_BODY_UNIFORM_FLOATS);
-    expect(out.length).toBe(28); // 112 bytes
-    expect(out.byteLength).toBe(112);
+    expect(out.length).toBe(44); // 176 bytes
+    expect(out.byteLength).toBe(176);
 
     // The 80-byte lit prefix (mvp + sunDirLocal@64 + pad@76) is identical to what
     // packLitBodyUniforms writes — proves the shared prefix is reused, not
@@ -72,15 +79,17 @@ describe('TexturedBodyUniforms byte offsets', () => {
     expect(out[23]).toBe(LIMB_EXPONENT); // byte 92
     expect([out[24], out[25], out[26]]).toEqual([CAM_LOCAL[0], CAM_LOCAL[1], CAM_LOCAL[2]]); // 96..104
 
-    // Trailing pad zeroed (bytes 108..111) — rounds the struct to 112 / 16-byte.
-    expect(out[27]).toBe(0);
+    // What used to be the trailing pad (byte 108) now carries camAltitudeSq,
+    // and the eye-relative vp occupies the fresh row at bytes 112..175.
+    expect(out[27]).toBe(CAM_ALTITUDE_SQ);
+    for (let i = 0; i < 16; i++) expect(out[28 + i]).toBe(CAM_REL_VP[i]);
   });
 
   it('defaults to plain Lambert — limbStrength 0 is the identity the absent-row data-gate relies on', () => {
     // A body with no Minnaert row packs strength 0; the limbDarkening factor
     // collapses to 1.0 regardless of exponent, so the body shades as plain
     // Lambert (limb-darkening is data, not a code path).
-    const out = packTexturedBodyUniforms(MVP, SUN_DIR, 0, 0, 0, 0, [0, 0, 0]);
+    const out = packTexturedBodyUniforms(MVP, SUN_DIR, 0, 0, 0, 0, [0, 0, 0], 0, CAM_REL_VP);
     expect(out[22]).toBe(0);
     expect(out[23]).toBe(0);
     expect([out[24], out[25], out[26]]).toEqual([0, 0, 0]);

@@ -1,7 +1,9 @@
 # Sky-cubemap face seams where the Gaia star aggregates draw
 
 **Reported:** 2026-09-03, user eyeball in the Sgr A\* lens band (branch
-worktree-s-star-analytic-lensing, PR #657).
+worktree-s-star-analytic-lensing, PR #657). **Seen again 2026-09-14** on the
+deployed build during the #697 visual pass: strafing the camera inside the band
+makes the cube-face edges appear. Pre-existing, not introduced by #697.
 
 ## Symptom
 
@@ -26,6 +28,13 @@ Second candidate, if the first does not reproduce: the per-face `frustumPlanes`
 are built from the face projection, but any glow/spread margin sized from the
 live camera's `fovYRad` or viewport (not the face's) under-estimates the
 footprint at 90°.
+
+Third candidate, from the strafing sighting: the bake is one-shot at band
+entry from the anchor-relative eye, so a strafe moves the live camera away from
+the bake eye; any per-face content that is not truly at infinity (near
+aggregates, glow margins) parallaxes differently per face and the shared edges
+stop lining up. Check whether the seams track camera offset from the bake eye
+or are fixed on the sphere.
 
 ## Investigation recipe
 
