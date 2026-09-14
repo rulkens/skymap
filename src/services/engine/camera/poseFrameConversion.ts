@@ -28,6 +28,7 @@ import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { raySphereRoots } from '../../../utils/math/raySphereRoots';
 import { surfaceFloorM } from '../../../utils/camera/surfaceFloorM';
+import { bodyStandoffRadii } from '../../../utils/scene/bodyStandoffRadii';
 import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { dot3 } from '../../../utils/math/dot3';
 import { bodyRelativePose } from './bodyRelativePose';
@@ -78,6 +79,7 @@ export function toWorldArm(
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
   bodyRadiusM: number,
+  standoffRadii: number,
 ): CameraPose {
   const { basisLocal } = pose;
   const eyeLocalM = bodyFixedEyeM(pose);
@@ -99,7 +101,7 @@ export function toWorldArm(
   // which the surface arm's descent floor already stands off from.
   const rangeM = Math.max(
     roots === null ? grazingM : roots[0],
-    Math.max(eyeMagM, surfaceFloorM(bodyRadiusM)) - bodyRadiusM,
+    Math.max(eyeMagM, surfaceFloorM(bodyRadiusM, standoffRadii)) - bodyRadiusM,
   );
   const armLocalM: Vec3 = [
     forwardLocal[0] * rangeM,
@@ -160,5 +162,12 @@ export function resolveWorldArm(
   if (bodyState === undefined || body === undefined) {
     throw new Error(`resolveWorldArm: engaged body '${bodyId}' is unresolved this instant`);
   }
-  return toWorldArm(framed.pose, bodyState, poseBasis, upBasis, body.surface.datumRadiusM);
+  return toWorldArm(
+    framed.pose,
+    bodyState,
+    poseBasis,
+    upBasis,
+    body.surface.datumRadiusM,
+    bodyStandoffRadii(body),
+  );
 }

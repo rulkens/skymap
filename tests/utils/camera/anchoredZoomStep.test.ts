@@ -16,6 +16,7 @@ import { describe, it, expect } from 'vitest';
 
 import { anchoredZoomStep } from '../../../src/utils/camera/anchoredZoomStep';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 
 const BASIS_IDENTITY: BodyFixedPose['basisLocal'] = [1, 0, 0, 0, 1, 0, 0, 0, 1];
@@ -45,10 +46,10 @@ describe('anchoredZoomStep', () => {
     const OUT_FACTOR = 1.01;
     let pose = start;
     for (let i = 0; i < 260; i++) {
-      pose = anchoredZoomStep(pose, OUT_FACTOR, null, BODY_RADIUS_M);
+      pose = anchoredZoomStep(pose, OUT_FACTOR, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     }
     for (let i = 0; i < 260; i++) {
-      pose = anchoredZoomStep(pose, 1 / OUT_FACTOR, null, BODY_RADIUS_M);
+      pose = anchoredZoomStep(pose, 1 / OUT_FACTOR, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     }
 
     const [sx, sy, sz] = eyeOf(start);
@@ -75,10 +76,10 @@ describe('anchoredZoomStep', () => {
     const subEyeM: [number, number, number] = [0, 0, BODY_RADIUS_M];
 
     const f = 0.9;
-    const inOnce = anchoredZoomStep(start, f, subEyeM, BODY_RADIUS_M);
+    const inOnce = anchoredZoomStep(start, f, subEyeM, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     expect(Math.hypot(...eyeOf(inOnce)) - BODY_RADIUS_M).toBeCloseTo(altitudeM * f, 6);
 
-    const back = anchoredZoomStep(inOnce, 1 / f, null, BODY_RADIUS_M);
+    const back = anchoredZoomStep(inOnce, 1 / f, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     const [bx, by, bz] = eyeOf(back);
     expect(bx).toBeCloseTo(0, 6);
     expect(by).toBeCloseTo(0, 6);
@@ -98,8 +99,14 @@ describe('anchoredZoomStep', () => {
       BODY_RADIUS_M * 0.9,
     ];
 
-    const first = anchoredZoomStep(pose, 0.9, cursorAnchorM, BODY_RADIUS_M);
-    const second = anchoredZoomStep(pose, 0.9, cursorAnchorM, BODY_RADIUS_M);
+    const first = anchoredZoomStep(pose, 0.9, cursorAnchorM, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
+    const second = anchoredZoomStep(
+      pose,
+      0.9,
+      cursorAnchorM,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+    );
 
     expect(second).toEqual(first);
   });
@@ -121,7 +128,13 @@ describe('anchoredZoomStep', () => {
     // dive, so the point under the cursor stays pinned in BOTH directions (GM
     // behaviour; overrules FW-H's sub-eye zoom-out). The old sub-eye value
     // (`R + f·(|eye| − R)` on the eye radial, x = y = 0) is what this pins out.
-    const withCursor = anchoredZoomStep(pose, 1.2, cursorAnchorM, BODY_RADIUS_M);
+    const withCursor = anchoredZoomStep(
+      pose,
+      1.2,
+      cursorAnchorM,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+    );
     const eyeStart = [0, 0, 20_000_000] as const;
     const [ex, ey, ez] = eyeOf(withCursor);
     expect(ex).toBeCloseTo(cursorAnchorM[0] + 1.2 * (eyeStart[0] - cursorAnchorM[0]), 6);
@@ -130,7 +143,7 @@ describe('anchoredZoomStep', () => {
   });
 
   it('an approach step never goes below the surface floor', () => {
-    const floorM = surfaceFloorM(BODY_RADIUS_M);
+    const floorM = surfaceFloorM(BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     const pose: BodyFixedPose = {
       bodyId: 'earth',
       anchorLocalM: [0, 0, 0],
@@ -138,7 +151,7 @@ describe('anchoredZoomStep', () => {
       basisLocal: BASIS_IDENTITY,
     };
 
-    const out = anchoredZoomStep(pose, 0.01, null, BODY_RADIUS_M);
+    const out = anchoredZoomStep(pose, 0.01, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
 
     expect(magnitude(eyeOf(out))).toBeGreaterThanOrEqual(floorM - 1e-6);
   });
@@ -151,12 +164,12 @@ describe('anchoredZoomStep', () => {
       basisLocal: BASIS_IDENTITY,
     };
 
-    const hugeOut1 = anchoredZoomStep(pose, 1e6, null, BODY_RADIUS_M);
-    const hugeOut2 = anchoredZoomStep(pose, 1e9, null, BODY_RADIUS_M);
+    const hugeOut1 = anchoredZoomStep(pose, 1e6, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
+    const hugeOut2 = anchoredZoomStep(pose, 1e9, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     expect(hugeOut2).toEqual(hugeOut1);
 
-    const tinyIn1 = anchoredZoomStep(pose, 1e-9, null, BODY_RADIUS_M);
-    const tinyIn2 = anchoredZoomStep(pose, 1e-12, null, BODY_RADIUS_M);
+    const tinyIn1 = anchoredZoomStep(pose, 1e-9, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
+    const tinyIn2 = anchoredZoomStep(pose, 1e-12, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     expect(tinyIn2).toEqual(tinyIn1);
 
     // And the clamp actually bites: an oversized factor doesn't move the eye
@@ -179,7 +192,7 @@ describe('anchoredZoomStep', () => {
       BODY_RADIUS_M * Math.sqrt(1 - 0.6 * 0.6 - 0.3 * 0.3),
     ];
 
-    const out = anchoredZoomStep(pose, 0.5, cursorAnchorM, BODY_RADIUS_M);
+    const out = anchoredZoomStep(pose, 0.5, cursorAnchorM, BODY_RADIUS_M, SURFACE_STANDOFF_RADII);
     const [ex, ey, ez] = eyeOf(out);
 
     // Closed-form pin: the positive assertion that this step genuinely

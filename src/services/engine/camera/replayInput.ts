@@ -22,6 +22,7 @@ import { resolveWorldArm } from './poseFrameConversion';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
+import { bodyStandoffRadii } from '../../../utils/scene/bodyStandoffRadii';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
@@ -131,6 +132,7 @@ export function replayInput(
       viewportPx: canvasPx,
       fovYRad: projection.fovYRad,
       bodyRadiusM: body.surface.datumRadiusM,
+      standoffRadii: bodyStandoffRadii(body),
       sceneUpLocal,
       tuning,
     });

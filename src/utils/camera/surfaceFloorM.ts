@@ -1,8 +1,7 @@
-/** The metre-space descent floor above a body's surface, off the ratio's one
- * Mpc-space home (`clampDistance`) so the two cannot disagree (spec §10). */
+/** The metre-space descent floor above a body's datum sphere. The standoff has
+ * no default on purpose: one would let a call site silently keep reading the
+ * Earth-tuned global past a body that overrides it (spec §3.7). */
 
-import { SURFACE_STANDOFF_RADII } from './clampDistance';
-
-export function surfaceFloorM(bodyRadiusM: number): number {
-  return bodyRadiusM * SURFACE_STANDOFF_RADII;
+export function surfaceFloorM(datumRadiusM: number, standoffRadii: number): number {
+  return datumRadiusM * standoffRadii;
 }

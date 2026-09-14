@@ -20,6 +20,7 @@ export function anchoredZoomStep(
   factor: number,
   cursorAnchorM: Vec3 | null,
   bodyRadiusM: number,
+  standoffRadii: number,
 ): BodyFixedPose {
   const clampedFactor = spentZoomFactor(factor);
   const { anchorLocalM } = pose;
@@ -48,7 +49,7 @@ export function anchoredZoomStep(
     anchorM[2] + clampedFactor * (eyeM[2] - anchorM[2]),
   ];
 
-  const floorM = surfaceFloorM(bodyRadiusM);
+  const floorM = surfaceFloorM(bodyRadiusM, standoffRadii);
   const steppedMagM = Math.hypot(steppedM[0], steppedM[1], steppedM[2]);
   const floorScale = steppedMagM < floorM ? floorM / steppedMagM : 1;
 

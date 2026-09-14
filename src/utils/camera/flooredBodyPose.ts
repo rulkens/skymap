@@ -8,10 +8,14 @@ import { surfaceFloorM } from './surfaceFloorM';
  * A tilt about a surface anchor holds `|eye − anchor|`, not `|eye|`, so without
  * this a long tilt drag walks the eye straight through the ground.
  */
-export function flooredBodyPose(pose: BodyFixedPose, bodyRadiusM: number): BodyFixedPose {
+export function flooredBodyPose(
+  pose: BodyFixedPose,
+  bodyRadiusM: number,
+  standoffRadii: number,
+): BodyFixedPose {
   const eyeM = bodyFixedEyeM(pose);
   const magM = Math.hypot(...eyeM);
-  const floorM = surfaceFloorM(bodyRadiusM);
+  const floorM = surfaceFloorM(bodyRadiusM, standoffRadii);
   // An eye exactly at the centre has no push direction; no bounded step reaches
   // it from a floored pose, and leaving it beats returning NaN.
   if (magM >= floorM || magM === 0) return pose;
