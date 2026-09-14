@@ -1144,6 +1144,16 @@ A deletion rides the PR that lands its replacement. PR-B adds mechanisms over th
 deletes only what a core-side replacement makes dead; anything replaced by galaxy Layer code (a
 galaxy fact publisher, the bias reconcile in the Layer's `frame`) is deleted in PR-D with that code.
 
+PR-D also folds the hi-res famous pair into its slot. Since PR-A the `hiResFamous` slot's committed
+value is the live pair, and `EngineSubsystemHandles.hiResFamous` / `.hiResFamousTexture` mirror it:
+written by `wireHiResFamousSlot.commit`, read by `runFrame.ts`, destroyed by `engine.ts`'s teardown.
+In PR-D the Layer's `frame` reads the pair through `slot.committed()`, its destroy runs the pair's
+ordered teardown (subsystem before texture) through the slot, and the two fields are deleted. The
+one lifecycle point the plan must schedule: `commit` destroys the previous pair after the
+hand-over and today takes it from the mirror; with the mirror gone it reads `committed()` before
+the slot swaps, or the slot hands the previous value to `commit`. Recorded here so PR-D's plan
+carries it and it is not re-found as an adjacent finding.
+
 **Open at plan time.** None of these is a decision; each is a check the plan must schedule.
 
 - Every commit path overwrites in place (the body atlas and the star upload are the ones to
