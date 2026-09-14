@@ -4,6 +4,7 @@
 > checkpoint is signed off and every ruling in §0 is binding.
 > **Scope.** One spec, two PRs: §3 (prep P1–P5, behaviour-preserving) ships
 > first and alone; §4 (feature F1–F4) ships on top. A plan is written per PR.
+> **Amended** 2026-09-14 after plan authoring (code-verified corrections).
 > **Predecessor.** [camera pivot (spec 2)](completed/2026-09-01-camera-pivot.md)
 > built the two-arm design this generalises: §4 regime-as-predicate, §5
 > conversions, §6 gesture register, §7 fold, §10 units. Its vocabulary is used
@@ -130,6 +131,12 @@ export type FramedPose<K extends RungKind = RungKind> = {
 export type FramedCameraPose = { [K in RungKind]: FramedPose<K> }[RungKind];
 ```
 
+Every listing in §2 shows the **post-feature** shape. Prep (§3) lands the ladder
+**two-kinded** — `RungKind` is `'absolute' | 'body'` and each mapped type carries
+two entries — because a third kind without a complete row fails the compiler gate
+and prep must stay behaviour-preserving; the feature (§4) adds `'site'` as the
+third entry in the same commit as its row.
+
 `rungKindOf` is the one reader of the spelling:
 
 ```ts
@@ -166,13 +173,21 @@ export function frameKey(frame: PoseFrame): string; // 'absolute' | 'body:mars' 
 export function sameFrame(a: PoseFrame, b: PoseFrame): boolean; // frameKey equality
 
 // src/services/engine/camera/rungs/isWorldArm.ts
-export function isWorldArm(frame: PoseFrame): boolean;
+export function isWorldArm(framed: FramedCameraPose): framed is FramedPose<'absolute'>;
 ```
 
 `frameKey` adopts the debug panel's grammar (`CameraStateSection.tsx:53`,
 today's only `body:<id>` spelling) and retires the second, unprefixed one
 (`evaluateClip.ts:486-487`). Key equality is the only frame comparison anywhere
-after P1; `isWorldArm` is the single boolean the absolute-only drivers keep.
+after P1; `isWorldArm` is the single predicate the absolute-only drivers keep.
+It is a **type guard on the framed value**, not on the bare tag: eight of the
+twelve gates it replaces use the tag test to narrow the _pose_ before reading it
+as a `CameraPose` (`cameraDrivers.ts:103`, `applyWheelZoom.ts:24`, …), and
+TypeScript narrows a discriminated union through a direct comparison on the
+discriminant property but never through a predicate applied to that property —
+a `(frame: PoseFrame) => boolean` spelling would force eight `as` casts that
+§2.6.3 confines to `rowFor`/`climbRowFor`. All twelve sites already hold a
+`FramedCameraPose`.
 
 ### 2.4 The row and the table
 
@@ -181,7 +196,7 @@ after P1; `isWorldArm` is the single boolean the absolute-only drivers keep.
 export type RungRow<K extends RungKind> = {
   readonly kind: K;
   /** The celestial body this rung's numbers are expressed against, or null. */
-  host(frame: FrameOf[K], ctx: RungCtx): HostBody | null;
+  host(frame: FrameOf[K], ctx: RungBasisCtx): HostBody | null;
   /** Rung-local gesture memory; the runtime wipes it when `frameKey` changes. */
   readonly emptyMemory: MemOf[K];
   step(
@@ -196,8 +211,8 @@ export type RungRow<K extends RungKind> = {
 // src/@types/camera/ClimbRow.d.ts
 export type ClimbRow<K extends ClimbableKind> = RungRow<K> & {
   readonly parent: ParentOf[K];
-  toParent(framed: FramedPose<K>, ctx: RungCtx): FramedPose<ParentOf[K]>;
-  fromParent(parent: FramedPose<ParentOf[K]>, frame: FrameOf[K], ctx: RungCtx): FramedPose<K>;
+  toParent(framed: FramedPose<K>, ctx: RungBasisCtx): FramedPose<ParentOf[K]>;
+  fromParent(parent: FramedPose<ParentOf[K]>, frame: FrameOf[K], ctx: RungBasisCtx): FramedPose<K>;
   /** Band-in against the parent, focus rule included; null = stay put. */
   engage(parent: FramedPose<ParentOf[K]>, ctx: RungCtx): FrameOf[K] | null;
   /** Band-out; wider than `engage` by construction. */
@@ -223,14 +238,19 @@ export type HostBody = {
 export type MemOf = { absolute: null; body: SurfaceGestureMemory; site: null };
 
 export type RungChannels<K extends RungKind> = {
-  encode(framed: FramedPose<K>, ctx: RungCtx): CameraPose;
-  decode(channels: CameraPose, frame: FrameOf[K], ctx: RungCtx): FramedPose<K>;
+  /** Absolute world channels → this rung's channels. */
+  encode(world: CameraPose, frame: FrameOf[K], ctx: RungBasisCtx): CameraPose;
+  /** This rung's channels → the framed pose they name. */
+  decode(channels: CameraPose, frame: FrameOf[K], ctx: RungBasisCtx): FramedPose<K>;
 };
 
-export type RungCtx = {
+export type RungBasisCtx = {
   readonly bodies: ReadonlyMap<BodyId, BodyState>;
   readonly poseBasis: Readonly<Mat3>;
   readonly upBasis: Readonly<Mat3>;
+};
+
+export type RungCtx = RungBasisCtx & {
   readonly focusBodyId: BodyId | null;
   readonly pivot: PivotFraming;
   readonly viewportPx: Readonly<Vec2>;
@@ -238,6 +258,24 @@ export type RungCtx = {
   readonly tuning: CameraTuning;
 };
 ```
+
+The ctx splits **by reader**, not by value. Four sites resolve a world arm or a
+host outside the input path and hold none of the gesture-time group — no
+viewport, pivot, focus or tuning is in scope at `liveWorldPose.ts:15`,
+`watchFlyToLonLatSaga.ts:47`, `clipFrameChannels.ts:62` or
+`frameContext.ts:146`, and fabricating a zero viewport and a default tuning
+there is the stub-the-root-cell shape §2.2 rejects. So `host`, `toParent`,
+`fromParent`, `channels` and the free readers `hostOf` / `hostOrThrow` /
+`refoldTo` / `foldToWorld` declare `ctx: RungBasisCtx`; `engage`, `release`,
+`step` and `stepRung` declare `ctx: RungCtx`. A `RungCtx` satisfies both.
+
+`channels.encode` takes the **absolute world channels**, not a `FramedPose`:
+`BodyFixedPose` carries no orbit target (`decodeBodyFixedChannels.ts:36` anchors
+at `[0,0,0]` and folds the target into `eyeRelAnchorM`), while today's
+`toBodyFixedChannels` preserves the **authored** `pose.target` through provider A
+(`clipFrameChannels.ts:40-44`). An `encode` fed only a `FramedPose<'body'>` would
+have to re-derive that target from `toWorldArm`'s graze rule, moving the
+`distance` channel on every absolute→body clip leg.
 
 The mapped type is the compiler gate: a new kind that lacks a row, a
 conversion, a `channels` codec or an `emptyMemory` fails to typecheck.
@@ -254,15 +292,15 @@ export function climbRowFor<K extends ClimbableKind>(frame: FrameOf[K]): ClimbRo
 export function refoldTo(
   framed: FramedCameraPose,
   target: PoseFrame,
-  ctx: RungCtx,
+  ctx: RungBasisCtx,
 ): FramedCameraPose;
 // src/services/engine/camera/rungs/foldToWorld.ts
-export function foldToWorld(framed: FramedCameraPose, ctx: RungCtx): CameraPose;
+export function foldToWorld(framed: FramedCameraPose, ctx: RungBasisCtx): CameraPose;
 
 // src/services/engine/camera/rungs/hostOf.ts
-export function hostOf(frame: PoseFrame, ctx: RungCtx): HostBody | null;
+export function hostOf(frame: PoseFrame, ctx: RungBasisCtx): HostBody | null;
 // src/services/engine/camera/rungs/hostOrThrow.ts
-export function hostOrThrow(frame: PoseFrame, ctx: RungCtx): HostBody;
+export function hostOrThrow(frame: PoseFrame, ctx: RungBasisCtx): HostBody;
 
 // src/services/engine/camera/rungs/stepRung.ts
 export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame;
@@ -369,6 +407,18 @@ disengage block `:127-152` (3) and engage block `:153-163` (5) become
 `toParent`/`fromParent` calls driven by `stepRung`'s answer, and the crossing
 commit `:164-170` (6) compares `frameKey`s.
 
+**`toParent` is the conversion, not the whole disengage.** `toParent` **is**
+`toWorldArm`, which ranges to the near root / grazing point on the forward ray
+(`poseFrameConversion.ts:93-103`) and runs on every world-arm resolution, so it
+must not re-aim. The body→world disengage additionally commits a **centre-looking
+absolute arm** (`projectFramePose.ts:136-149`): the pivot pin re-reads an
+absolute `target` as the body's centre one frame later, and committing
+`toWorldArm`'s on-ray surface target teleported the eye one body radius inward
+(pop-2). That normalization stays the fold's own post-step on the disengage
+direction, extracted as **`centreLookingArm`** (`src/utils/camera/`). Site→body
+is different and needs no post-step: there, the disengage _is_ `toParent`
+(§4.3, it lands anchored at the site).
+
 **Note:** the focus rule stays exactly today's "focus == the rung's id"
 (`regimeArmFor.ts:33,39`) in prep. The subtree rule is a feature commit (F2).
 
@@ -415,9 +465,11 @@ spelled in `replayInput` any more.
 
 **Re-homes:** `framedClipArm` (`cameraDrivers.ts:182-184`, 19),
 `convertChannels`'s fold (`evaluateClip.ts:543-556`, 42) — which becomes
-`decode → refoldTo → encode` — and `clipFrameChannels.ts` whole (26): its
+`decode → foldToWorld → encode`, since clip channels always bridge through the
+world arm and `refoldTo` would re-derive the target §2.4 keeps authored — and
+`clipFrameChannels.ts` whole (26): its
 `toBodyFixedChannels`/`fromBodyFixedChannels` are the body row's `encode` and
-`decode`. `evaluateClip.ts:506,509`'s absent-tag default (41) and
+`decode`. `evaluateClip.ts:508`'s absent-tag default (41) and
 `effectHelpers.ts`'s authoring DSL (46) are unchanged.
 
 **Joint:** the wire encoding of a rung's pose sits in the rung's row, so a new
@@ -466,9 +518,11 @@ north = the host pole flattened onto the horizon at `up`
 east  = north × up
 ```
 
-which is exactly `blendedEnuAt(up, 1, BODY_LOCAL_FRAME.pole, null)` — at
-`blendW = 1` that helper is the pure body ENU (`blendedEnuAt.ts:1-6,19-20`) and
-its degenerate branch already covers a polar site. Reuse it; do **not** reuse
+whose `east`/`north` are exactly `blendedEnuAt(up, 1, BODY_LOCAL_FRAME.pole,
+null)` — at `blendW = 1` that helper is the pure body ENU
+(`blendedEnuAt.ts:1-6,19-20`) and its degenerate branch already covers a polar
+site. It returns `{ east, north }` **only**; the site frame supplies its own
+`up = normalize(P)`. Reuse it; do **not** reuse
 `rotationSurfaceLocked` (`rotationSurfaceLocked.ts:24-38`), which is the same
 derivation in **world Mpc** for placing the body — routing the camera through
 it would put an Mpc↔metre conversion inside the camera path, which spec 2 §10
@@ -525,7 +579,11 @@ body pose — it projects the aim onto the site. Both are pinned as tests (§6).
 ### 4.4 Engage and release
 
 Two new `CameraTuning` fields, in **bounding radii of the site's own mesh
-body** (`MeshBody.boundingRadiusM`), not in host radii:
+body**, not in host radii. The rung reads the **scene** seed's
+`boundingRadiusM` (`src/@types/scene/MeshBody.d.ts`, the field
+`pivotRadiusMpc.ts:42-47` reads) — there is a second, bake-time
+`boundingRadiusM` on `MeshAssetRow` in `meshAssets.generated.ts`, which is
+where the seed's value comes from but is not what the rung looks up:
 
 ```ts
 // src/@types/camera/CameraTuning.d.ts (added)
@@ -543,7 +601,9 @@ Defaults `siteEngageR: 40`, `siteDisengageR: 80` in `DEFAULT_CAMERA_TUNING`
 **`engage(parentFramed, ctx)`** answers `{ site: focusBodyId }` when all hold:
 
 1. `ctx.focusBodyId` is non-null and its `PositionDriver` has
-   `kind === 'surfaceFixed'` (`positionDrivers.ts:16-28`);
+   `kind === 'surfaceFixed'` (the union is `@types/scene/PositionDriver.d.ts`;
+   the table and `positionDriverById` are `data/bodies/positionDrivers.ts`, the
+   site rows `data/bodies/surfaceFixedSites.ts`);
 2. that driver's `hostId` equals the parent body rung's id — the site hangs off
    _this_ body;
 3. `|bodyFixedEyeM(parent.pose) − P| / boundingRadiusM < ctx.tuning.siteEngageR`.
@@ -561,9 +621,15 @@ slider rows land beside the existing band sliders in
 
 ### 4.5 Floors
 
-- **Range floor:** `standoffRadii × boundingRadiusM` — the _same_ number
-  `pivotFraming` already floors the world-arm zoom on for a mesh body
-  (`pivotRadiusMpc.ts:42-47`). Curiosity: 2 × 2.479 ≈ 4.96 m.
+- **Range floor:** `standoffRadii × boundingRadiusM`, both read off the scene
+  `MeshBody` seed — the _same_ two fields `pivotFraming` already floors the
+  world-arm zoom on for a mesh body (`pivotRadiusMpc.ts:42-47`). `standoffRadii`
+  is **per-seed** (`MESH_BODY_STANDOFF_RADII = 2` unless the seed overrides it,
+  `data/bodies/makers/meshBody.ts:16`), not the Earth-tuned global
+  `SURFACE_STANDOFF_RADII`. Curiosity: 2 × 2.479 ≈ 4.96 m. `pivotFraming`'s
+  other floor, `MIN_DISTANCE_MPC` (1e-24 Mpc ≈ 3 × 10⁻⁸ m), can never bind on a
+  metre-scale body and **must not** enter the site rung's metres path — it would
+  drag an Mpc constant across the §10 seam for nothing.
 - **Elevation floor:** the eye's height above the site's tangent plane is
   `rangeM · sin(elevationRad)`, and must be at least
   `SITE_RUNG.eyeFloorBoundingRadii × boundingRadiusM` (0.2), i.e.
@@ -648,15 +714,20 @@ is no second host notion here (`utils/scene/hostBodyId` resolves a _texture_
 key's host and is unrelated).
 
 That rule alone would strand the approach. `followActive` is gated on the world
-arm (`cameraDrivers.ts:78-83`) because the ease has no meaning once the state
+arm (`cameraDrivers.ts:81-83`) because the ease has no meaning once the state
 co-rotates; a rover's framing distance is metres, so an approach with the
 subtree rule in place would cross Mars's engage band ~1500 km out, the follow
 row would go inactive mid-flight, and the camera would park there. The fix is
 uniform with the rule the fold already has for gestures: **an approach owns the
-rung while it runs.** `stepRung` is inert while a follow row is winning and its
-memory is not yet `saturated` (`FollowMemory.saturated`, set at
-`cameraDrivers.ts:163`), exactly as the fold is skipped while `intent.dragging`
+rung while it runs.** The rung step is skipped while a follow row is winning and
+its memory is not yet `saturated` (`FollowMemory.saturated`, set at
+`cameraDrivers.ts:166`), exactly as the fold is skipped while `intent.dragging`
 (`projectFramePose.ts:112-114`).
+
+The gate lives **in `projectFramePose`, beside that `intent.dragging` skip** —
+not inside `stepRung`. `RungCtx` carries no driver state, and widening it to
+carry follow memory would braid the driver table into every row's context for
+one caller's benefit; `stepRung` stays a pure function of the ladder.
 
 With both, focusing Curiosity from far away plays out as: follow approaches in
 the world arm and saturates at rover framing distance → next at-rest frame,
@@ -672,7 +743,8 @@ Mars rung co-rotates with it, so there is nothing left to follow.
 frame reads `site:curiosity`; the panel's site rows are heading, elevation and
 range plus the derived eye height above the tangent plane. Clip authoring
 accepts `frame: { site: <id> }` wherever it accepts `{ body: <id> }` today
-(`CameraAction.d.ts:72,82`, `effectHelpers.ts:86-101,122-137`) with no
+(`src/@types/animation/CameraAction.d.ts:72,82`,
+`effectHelpers.ts:86-101,122-137`) with no
 authoring-DSL change — the tag is passed through.
 
 ## 5. Consumers matrix
@@ -680,23 +752,22 @@ authoring-DSL change — the tag is passed through.
 All 46 survey sites, grouped by what they become. "P" is the prep task that
 moves them.
 
-| Sites                                      | Today                                          | Becomes                                  | P   |
-| ------------------------------------------ | ---------------------------------------------- | ---------------------------------------- | --- |
-| 1, 16, 30, 31                              | `resolveWorldArm` + its call sites             | `foldToWorld(framed, ctx)`               | P2  |
-| 26, 42                                     | the channel-space second fold                  | `decode → refoldTo → encode`             | P5  |
-| 4, 9, 11, 27, 34, 37, 38                   | host triple re-derived, 3 failure policies     | `hostOf` / `hostOrThrow`                 | P2  |
-| 6, 13, 36, 40                              | frame equality hand-rolled                     | `sameFrame` / `frameKey`                 | P1  |
-| 14, 15, 17, 18, 20, 21, 22, 23, 24, 32, 33 | `=== 'absolute'` driver/liveness gates         | `isWorldArm(frame)`                      | P1  |
-| 29, 39                                     | two display grammars for the tag               | `frameKey(frame)`                        | P1  |
-| 7                                          | `regimeArmFor` — both arms hard-coded          | `engage`/`release` cells + `stepRung`    | P3  |
-| 3, 5                                       | engage/disengage blocks in the fold            | `fromParent` / `toParent` via `stepRung` | P3  |
-| 8, 10, 12                                  | `routeToSurface` — gate, register pick, re-tag | `rowFor(frame).step`                     | P4  |
-| 2                                          | tilt-memory key, engaged body else focus       | `hostOf(frame)?.id ?? focusBodyId`       | P4  |
-| 19                                         | `framedClipArm` branches per arm               | `rowFor(frame).channels.decode`          | P5  |
-| 25                                         | per-arm meaning of `distance`                  | unchanged; reads `hostOf`                | P2  |
-| 28, 35                                     | arm construction                               | unchanged — root-rung constructors       | —   |
-| 41, 46                                     | absent-tag default, authoring DSL              | unchanged                                | —   |
-| 43, 44, 45                                 | opaque `FramedCameraPose` pass-through         | unchanged                                | —   |
+| Sites                                          | Today                                          | Becomes                                  | P   |
+| ---------------------------------------------- | ---------------------------------------------- | ---------------------------------------- | --- |
+| 1, 16, 30, 31                                  | `resolveWorldArm` + its call sites             | `foldToWorld(framed, ctx)`               | P2  |
+| 26, 42                                         | the channel-space second fold                  | `decode → foldToWorld → encode`          | P5  |
+| 4, 9, 11, 27, 34, 37, 38                       | host triple re-derived, 3 failure policies     | `hostOf` / `hostOrThrow`                 | P2  |
+| 6, 13, 36, 40                                  | frame equality hand-rolled                     | `sameFrame` / `frameKey`                 | P1  |
+| 14, 15, 17, 18, 20, 21, 22, 23, 24, 25, 32, 33 | `=== 'absolute'` driver/liveness gates         | `isWorldArm(framed)`                     | P1  |
+| 29, 39                                         | two display grammars for the tag               | `frameKey(frame)`                        | P1  |
+| 7                                              | `regimeArmFor` — both arms hard-coded          | `engage`/`release` cells + `stepRung`    | P3  |
+| 3, 5                                           | engage/disengage blocks in the fold            | `fromParent` / `toParent` via `stepRung` | P3  |
+| 8, 10, 12                                      | `routeToSurface` — gate, register pick, re-tag | `rowFor(frame).step`                     | P4  |
+| 2                                              | tilt-memory key, engaged body else focus       | `hostOf(frame)?.id ?? focusBodyId`       | P4  |
+| 19                                             | `framedClipArm` branches per arm               | `rowFor(frame).channels.decode`          | P5  |
+| 28, 35                                         | arm construction                               | unchanged — root-rung constructors       | —   |
+| 41, 46                                         | absent-tag default, authoring DSL              | unchanged                                | —   |
+| 43, 44, 45                                     | opaque `FramedCameraPose` pass-through         | unchanged                                | —   |
 
 Sites 28, 35, 41, 43, 44, 45 and 46 carry the tag without inspecting it and
 stay as they are; they are listed so the matrix accounts for all 46.
@@ -711,8 +782,10 @@ restatements, no clamp-boundary mirrors.
 
 - `driverGoldenTrace`, `settleGoldenTrace`, `poseFold` — byte-identical across
   every prep commit. These are the prep's whole safety argument.
-  `poseFold.test.ts:163-405`'s ten cases stay two-rung in prep and gain the
-  third state in the feature PR.
+  `tests/services/engine/frame/poseFold.test.ts:163-424`'s **nine** cases stay
+  two-rung in prep and gain the third state in the feature PR.
+  `settleGoldenTrace.test.ts` is under `tests/services/engine/frame/` too, not
+  under `.../camera/`.
 - `noStoredRegimeFlag` — unchanged, allow-list still empty.
 - `rowFor`/`climbRowFor` return the row whose `kind` matches `rungKindOf`, for
   one frame of each kind. This is the test that covers the two `as`
