@@ -12,8 +12,10 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MeshBodyRenderer } from '../../../../@types/rendering/MeshBodyRenderer';
 import type { MeshResources } from '../../../../@types/rendering/MeshResources';
+import type { MeshProbe } from '../../../../@types/rendering/MeshProbe';
 import type { MeshAsset } from '../../../../@types/data/mesh/MeshAsset';
 import { MESH_BODY_UNIFORM_BYTES } from '../../../../data/mesh/meshBodyUniformLayout';
+import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { MESH_TEXTURE_SLOTS } from '../../../../data/mesh/meshTextureSlots';
 import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
@@ -21,6 +23,10 @@ import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/meshBody/fragment.wesl?static';
+
+// The body's reflection probe, after the material maps; the fragment's
+// `@group(0) @binding(5)` decoration mirrors this by hand.
+const PROBE_BINDING = 5;
 
 /**
  * @param init.reversedZ selects this slab's depth convention (single-sourced in
@@ -76,6 +82,11 @@ export function createMeshBodyRenderer(init: {
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' as const },
       })),
+      {
+        binding: PROBE_BINDING,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: 'cube' },
+      },
     ],
   });
 
@@ -144,7 +155,33 @@ export function createMeshBodyRenderer(init: {
     for (const buffer of res.vertexBuffers) buffer.destroy();
     res.indexBuffer.destroy();
     for (const texture of res.textures) texture.destroy();
+    res.probe.cube.destroy();
+    res.probe.depth.destroy();
     res.uniformBuffer.destroy();
+  }
+
+  // The capture writes the cube's mip 0 face by face and `prefilterCubeGgx`
+  // renders the mips below it, so both textures are colour/depth attachments
+  // as well as sampled. The chain runs to 1 px: its last mip is the
+  // roughness-1 level the fragment's diffuse term reads.
+  const probeFaceSizePx = CUBEMAP_CAPTURES.probe.faceSizePx;
+  const probeMipLevelCount = mipLevelCount(probeFaceSizePx, probeFaceSizePx);
+
+  function mintProbe(id: string): MeshProbe {
+    const cube = device.createTexture({
+      label: `meshBody-probe-${id}`,
+      size: [probeFaceSizePx, probeFaceSizePx, 6],
+      format: 'rgba16float',
+      mipLevelCount: probeMipLevelCount,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const depth = device.createTexture({
+      label: `meshBody-probe-depth-${id}`,
+      size: [probeFaceSizePx, probeFaceSizePx, 1],
+      format: 'depth32float',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    return { cube, depth, mipLevelCount: probeMipLevelCount, faceSizePx: probeFaceSizePx };
   }
 
   function uploadTexture(id: string, field: string, format: GPUTextureFormat, src: ImageBitmap) {
@@ -204,6 +241,8 @@ export function createMeshBodyRenderer(init: {
       uploadTexture(id, slot.field, slot.format, asset[slot.field]),
     );
 
+    const probe = mintProbe(id);
+
     const uniformBuffer = device.createBuffer({
       label: `meshBody-uniform-${id}`,
       size: MESH_BODY_UNIFORM_BYTES,
@@ -215,6 +254,7 @@ export function createMeshBodyRenderer(init: {
       indexBuffer,
       indexCount: asset.indexCount,
       textures,
+      probe,
       uniformBuffer,
       bindGroup: device.createBindGroup({
         label: `meshBody-bg-${id}`,
@@ -225,9 +265,20 @@ export function createMeshBodyRenderer(init: {
             binding: slot.binding,
             resource: textures[i]!.createView(),
           })),
+          {
+            binding: PROBE_BINDING,
+            resource: probe.cube.createView({
+              label: `meshBody-probe-view-${id}`,
+              dimension: 'cube',
+            }),
+          },
         ],
       }),
     });
+  }
+
+  function probeOf(id: string): MeshProbe | null {
+    return meshes.get(id)?.probe ?? null;
   }
 
   function clearMesh(id: string): void {
@@ -268,6 +319,7 @@ export function createMeshBodyRenderer(init: {
     setMesh,
     clearMesh,
     hasMesh,
+    probeOf,
     draw,
     destroy,
   };

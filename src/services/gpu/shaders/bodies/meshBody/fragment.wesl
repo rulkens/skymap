@@ -19,6 +19,8 @@ import package::lib::pbr::pbrDirect;
 @group(0) @binding(2) var albedoTexture: texture_2d<f32>;
 @group(0) @binding(3) var metalRoughTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
+// The body's GGX-prefiltered reflection probe (roughness = mip / (levels - 1)).
+@group(0) @binding(5) var probeTexture: texture_cube<f32>;
 @group(1) @binding(0) var meshSampler: sampler;
 // Split-sum environment BRDF, read at (NoV, roughness). Its sampler is
 // clamp-to-edge: wrapping would fold grazing NoV into the NoV = 1 column.

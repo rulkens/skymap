@@ -20,11 +20,14 @@ function stubLut(): GPUTexture {
   return { createView: () => LUT_VIEW } as unknown as GPUTexture;
 }
 
+type TextureStub = { desc: GPUTextureDescriptor; destroy: ReturnType<typeof vi.fn> };
+
 function mockDevice(recorders?: {
   bindGroupLayouts?: GPUBindGroupLayoutDescriptor[];
   bindGroupDescs?: GPUBindGroupDescriptor[];
   samplers?: GPUSamplerDescriptor[];
   bindGroups?: Map<string, object>;
+  textures?: TextureStub[];
 }): GPUDevice {
   return {
     createShaderModule: vi.fn(() => ({
@@ -35,13 +38,18 @@ function mockDevice(recorders?: {
       recorders?.samplers?.push(desc);
       return {};
     }),
-    createTexture: vi.fn((desc: GPUTextureDescriptor) => ({
-      createView: () => ({}),
-      destroy: vi.fn(),
-      // generateMipChain reads mipLevelCount off the texture to size its loop.
-      mipLevelCount: desc.mipLevelCount ?? 1,
-      format: desc.format,
-    })),
+    createTexture: vi.fn((desc: GPUTextureDescriptor) => {
+      const texture = {
+        desc,
+        createView: () => ({}),
+        destroy: vi.fn(),
+        // generateMipChain reads mipLevelCount off the texture to size its loop.
+        mipLevelCount: desc.mipLevelCount ?? 1,
+        format: desc.format,
+      };
+      recorders?.textures?.push(texture);
+      return texture;
+    }),
     createBindGroupLayout: vi.fn((desc: GPUBindGroupLayoutDescriptor) => {
       recorders?.bindGroupLayouts?.push(desc);
       return {};
@@ -116,11 +124,14 @@ describe('createMeshBodyRenderer', () => {
     makeRenderer(mockDevice({ bindGroupLayouts }));
     expect(bindGroupLayouts).toHaveLength(2);
 
+    // Binding 5 is the probe cube the fragment declares after the material maps.
     const bodyEntries = Array.from(bindGroupLayouts[0]!.entries);
     expect(bodyEntries.map((e) => e.binding)).toEqual([
       0,
       ...MESH_TEXTURE_SLOTS.map((s) => s.binding),
+      5,
     ]);
+    expect(bodyEntries[bodyEntries.length - 1]!.texture!.viewDimension).toBe('cube');
     expect(bodyEntries.some((e) => e.sampler !== undefined)).toBe(false);
 
     const globalEntries = Array.from(bindGroupLayouts[1]!.entries);
@@ -149,6 +160,31 @@ describe('createMeshBodyRenderer', () => {
     const lutSampler = samplers.find((s) => s.label === 'meshBody-lut-sampler')!;
     expect(lutSampler.addressModeU).toBe('clamp-to-edge');
     expect(lutSampler.addressModeV).toBe('clamp-to-edge');
+  });
+
+  it('setMesh mints a 6-layer rgba16float probe cube with a full mip chain and a depth texture, both destroyed by clearMesh', () => {
+    const textures: TextureStub[] = [];
+    const renderer = makeRenderer(mockDevice({ textures }));
+    renderer.setMesh('a', stubAsset());
+
+    const probe = renderer.probeOf('a')!;
+    expect(probe).not.toBeNull();
+    expect(renderer.probeOf('missing')).toBeNull();
+
+    const cube = textures.find((t) => t.desc.format === 'rgba16float')!;
+    expect(cube.desc.size).toEqual([probe.faceSizePx, probe.faceSizePx, 6]);
+    expect(cube.desc.usage & GPUTextureUsage.RENDER_ATTACHMENT).toBeTruthy();
+    // Full chain: the coarsest mip is 1 px, the roughness-1 level the diffuse term reads.
+    expect(probe.faceSizePx >> (probe.mipLevelCount - 1)).toBe(1);
+    expect(cube.desc.mipLevelCount).toBe(probe.mipLevelCount);
+
+    const depth = textures.find((t) => t.desc.format === 'depth32float')!;
+    expect(depth.desc.size).toEqual([probe.faceSizePx, probe.faceSizePx, 1]);
+
+    renderer.clearMesh('a');
+    expect(cube.destroy).toHaveBeenCalledTimes(1);
+    expect(depth.destroy).toHaveBeenCalledTimes(1);
+    expect(renderer.probeOf('a')).toBeNull();
   });
 
   it("draw binds the body's own group at index 0 and the shared group at index 1", () => {
