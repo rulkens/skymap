@@ -19,7 +19,6 @@ struct PrefilterParams {
 // the SAME texture, which is legal only while the two never share a subresource.
 @group(0) @binding(0) var srcCube: texture_cube<f32>;
 @group(0) @binding(1) var srcSampler: sampler;
-// Named 'params', not 'p': the linked 'fullscreenVertex' has a local 'p'.
 @group(0) @binding(2) var<uniform> params: PrefilterParams;
 
 @vertex
@@ -51,8 +50,7 @@ fn hammersley(i: u32, n: u32) -> vec2<f32> {
   return vec2<f32>(f32(i) / f32(n), f32(reverseBits(i)) * 2.3283064365386963e-10);
 }
 
-// A GGX half-vector in tangent space for linear roughness 'alpha'. The
-// denominator is at least alpha^2 for xi.y < 1, so alpha = 0 is safe here.
+// A GGX half-vector in tangent space for linear roughness 'alpha'.
 fn ggxHalfVector(xi: vec2<f32>, alpha: f32) -> vec3<f32> {
   let phi = TAU * xi.x;
   let cosTheta = sqrt((1.0 - xi.y) / (1.0 + (alpha * alpha - 1.0) * xi.y));

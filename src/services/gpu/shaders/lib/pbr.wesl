@@ -36,12 +36,14 @@
 //   - No multi-scatter energy compensation and no metal/dielectric blend: 'f0'
 //     arrives already blended from the caller. Image-based lighting is the
 //     separate 'envSplitSum' below, fed a caller-owned probe and LUT.
-//   - No energy-conserving diffuse/specular coupling (the 'kD = 1 - F' factor).
-//     The composition is the literal 'diffuse * albedo + specular' the Earth
+//   - No energy-conserving diffuse/specular coupling in the DIRECT terms
+//     ('pbrDirect', 'pbrDirectSphere'; no 'kD = 1 - F' factor): their
+//     composition is the literal 'diffuse * albedo + specular' the Earth
 //     fragment expects. For a dielectric F0 the double-count at normal incidence
 //     is ~2-4% (invisible); the grazing-angle Fresnel behaviour that WOULD matter
 //     for a rim-lit ocean is left as a later (plan B+) refinement so this stays a
-//     small, predictable primitive.
+//     small, predictable primitive. 'envSplitSum' does couple, weighting its
+//     diffuse by the LUT's directional specular albedo.
 //
 // ## Roughness convention — perceptual vs linear
 //

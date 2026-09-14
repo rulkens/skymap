@@ -1,5 +1,6 @@
-// meshBody/io.wesl — uniform + inter-stage declarations for the lit
-// triangle-mesh body renderer.
+// meshBody/io.wesl — header exceeds the budget on purpose: it carries the byte
+// layout. Uniform + inter-stage declarations for the lit triangle-mesh body
+// renderer.
 //
 // FRAME CONTRACT: 'camPosLocal' (metres, relative to this body's centre) and
 // 'sunDirLocal' are both in the HOST body's fixed axes -- the axes the vertex

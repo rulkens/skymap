@@ -18,11 +18,8 @@ import package::lib::pbr::envSplitSum;
 @group(0) @binding(2) var albedoTexture: texture_2d<f32>;
 @group(0) @binding(3) var metalRoughTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
-// The body's GGX-prefiltered reflection probe (roughness = mip / (levels - 1)).
 @group(0) @binding(5) var probeTexture: texture_cube<f32>;
 @group(1) @binding(0) var meshSampler: sampler;
-// Split-sum environment BRDF, read at (NoV, roughness). Its sampler is
-// clamp-to-edge: wrapping would fold grazing NoV into the NoV = 1 column.
 @group(1) @binding(1) var envBrdfLut: texture_2d<f32>;
 @group(1) @binding(2) var lutSampler: sampler;
 
@@ -43,8 +40,6 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let t = normalize(in.worldTangent.xyz - ng * dot(ng, in.worldTangent.xyz));
   let b = cross(ng, t) * in.worldTangent.w;
 
-  // glTF normal maps store all three signed axes; unlike 'lib/normalMap.wesl's
-  // two-channel reconstruction, z is read, not recovered.
   let tilt = textureSample(normalTexture, meshSampler, in.uv).xyz * 2.0 - 1.0;
   let n = normalize(t * tilt.x + b * tilt.y + ng * tilt.z);
 

@@ -28,7 +28,7 @@ export function prefilterCubeGgx(device: GPUDevice, cube: GPUTexture): void {
 
   const module = createShaderModuleWithDevLog(device, prefilterCode, 'prefilterCube');
 
-  // Filtering across the source's 128 px texels is what the taps rely on:
+  // Filtering across the source's texels is what the taps rely on:
   // a nearest sampler would turn every lobe into a texel-shaped stipple.
   const sampler = device.createSampler({
     label: 'prefilterCube-sampler',

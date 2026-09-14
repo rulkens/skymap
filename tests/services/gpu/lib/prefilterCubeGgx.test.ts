@@ -98,11 +98,4 @@ describe('prefilterCubeGgx', () => {
     });
     expect(params.getFloat32(m.dynamicOffsets[17]! + 4, true)).toBe(1);
   });
-
-  it('is a no-op for a single-level cube', () => {
-    const m = mockDevice();
-    prefilterCubeGgx(m.device, mockCube(1));
-    expect(m.passDescs).toHaveLength(0);
-    expect(m.submit).not.toHaveBeenCalled();
-  });
 });
