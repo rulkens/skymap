@@ -130,7 +130,7 @@ export function replayInput(
     const { pose: next, next: memory } = surfaceStep(surface, from, step, {
       viewportPx: canvasPx,
       fovYRad: projection.fovYRad,
-      bodyRadiusM: body.radiusM,
+      bodyRadiusM: body.surface.datumRadiusM,
       sceneUpLocal,
       tuning,
     });

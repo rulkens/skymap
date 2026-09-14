@@ -78,8 +78,12 @@ export function cameraDebugSnapshotOf(input: {
     tuning,
   });
   const { bodyId, hOverR: hr } = dofs;
-  const radiusM =
-    bodyId !== null ? SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId)?.radiusM : undefined;
+  // Altitude over the datum, matching `hOverR`'s own denominator. F3 re-bases the
+  // readout on `bestHeightM` so it reads height over the ground actually drawn.
+  const datumRadiusM =
+    bodyId !== null
+      ? SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId)?.surface.datumRadiusM
+      : undefined;
 
   const engagedPose = renderedFrame !== 'absolute' ? renderedPose.pose : null;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;
@@ -92,7 +96,7 @@ export function cameraDebugSnapshotOf(input: {
     renderedFrame,
     armMismatch: !sameFrame(storedFrame, renderedFrame),
     hOverR: hr,
-    altitudeM: hr !== null && radiusM !== undefined ? hr * radiusM : null,
+    altitudeM: hr !== null && datumRadiusM !== undefined ? hr * datumRadiusM : null,
     distanceMpc: worldPose.distance,
     orientationFrame,
     bandUpWeight: hr !== null ? bodyUpWeight(hr, tuning) : null,

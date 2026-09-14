@@ -116,7 +116,7 @@ export const starSpheresPass: ContentPass = {
         view.slab.vp,
         star.positionMpc,
         RENDER_ORIGIN_MPC,
-        star.radiusM * SCALE_UNITS.M_TO_MPC,
+        star.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC,
         IDENTITY_MAT3,
         star.oblateness,
       );
@@ -166,7 +166,7 @@ export const starSpheresPass: ContentPass = {
       drawFlooredSpherePick(pickRenderer, pass, {
         vp: view.slab.vp,
         positionMpc: star.positionMpc,
-        radiusMpc: star.radiusM * SCALE_UNITS.M_TO_MPC,
+        radiusMpc: star.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC,
         camPosMpc: view.camPos,
         drawPxPerRad: ctx.drawPxPerRad,
         orientation: IDENTITY_MAT3,

@@ -135,7 +135,10 @@ function computeBodySurfaceFrame(
   // from ever drifting off the basis `view.slab.vp` was actually built from.
   const pose = ctx.bodyPose(bodyId);
   if (pose === null) return null;
-  const radiusM = body.radiusM;
+  // Datum, not a bound: tiles displace off the datum sphere, so the mvp scale and
+  // the radius the tile cut is planned against must be that same number. F2 shrinks
+  // only the BASE globe (to the inner bound) so relief cannot poke through it (§7.4).
+  const radiusM = body.surface.datumRadiusM;
   // See composeBodySlabMvp's header: the seam already rotated the camera into
   // the body's fixed axes, so view.slab.vp (built about the eye from that
   // SAME basis) is what this composes against — never the f32-narrowed view.vp.

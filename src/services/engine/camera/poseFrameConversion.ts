@@ -160,5 +160,5 @@ export function resolveWorldArm(
   if (bodyState === undefined || body === undefined) {
     throw new Error(`resolveWorldArm: engaged body '${bodyId}' is unresolved this instant`);
   }
-  return toWorldArm(framed.pose, bodyState, poseBasis, upBasis, body.radiusM);
+  return toWorldArm(framed.pose, bodyState, poseBasis, upBasis, body.surface.datumRadiusM);
 }

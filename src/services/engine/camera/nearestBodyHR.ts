@@ -28,7 +28,7 @@ export function nearestBodyHR(
     const bodyId = body.id as BodyId;
     const bodyState = bodyStates.get(bodyId);
     if (bodyState === undefined) continue;
-    const hr = hOverR(eyeMpc, bodyState, body.radiusM);
+    const hr = hOverR(eyeMpc, bodyState, body.surface.datumRadiusM);
     if (nearest === null || hr < nearest.hr) nearest = { bodyId, bodyState, hr };
   }
   return nearest;

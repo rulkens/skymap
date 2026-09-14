@@ -139,7 +139,7 @@ function BodyDetailCard({
             {seed !== undefined && !isMeshBody(seed) && (
               <CardRow
                 label={<InfoTip {...TIPS.bodyRadius!}>Radius</InfoTip>}
-                value={formatRadiusM(seed.radiusM)}
+                value={formatRadiusM(seed.surface.datumRadiusM)}
               />
             )}
             {distanceMpc != null && (

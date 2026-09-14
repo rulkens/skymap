@@ -104,11 +104,11 @@ export const planetsPass: ContentPass = {
     // sunDirLocal still reads Mpc/orientation directly; only the mvp/camLocal
     // seam moved to the metre-native body-slab primitives.
     const bodyState = sceneBodyStates(state, ctx).get(planet.id)!;
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, planet.radiusM);
+    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, planet.surface.datumRadiusM);
     const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
     // The analytic ray's ORIGIN, in the frame where this body is the unit
-    // sphere — a PAIR with the mvp above, both built from the same radiusM.
-    const cam = bodySlabCamLocal(pose.eyeRelBodyM, planet.radiusM);
+    // sphere — a PAIR with the mvp above, both built from the same datum radius.
+    const cam = bodySlabCamLocal(pose.eyeRelBodyM, planet.surface.datumRadiusM);
 
     // Narrow here, at the staging-buffer write — composeBodySlabMvp returns f64.
     staging.set(narrowMat4(mvp), 0);
@@ -147,7 +147,7 @@ export const planetsPass: ContentPass = {
     const { mvp, camPosLocal } = bodySlabFlooredPick(
       view.slab.vp,
       pose.eyeRelBodyM,
-      planet.radiusM,
+      planet.surface.datumRadiusM,
       ctx.drawPxPerRad,
     );
 
