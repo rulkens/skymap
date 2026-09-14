@@ -21,7 +21,7 @@
  * key ⇒ no-op, pending key ⇒ replaced) make this loop's per-frame re-run safe
  * with no extra bookkeeping here.
  *
- * ### Why there are THREE edges, not two
+ * ### Why there are FOUR edges, not two
  *
  * Enqueueing splits the old load edge in half. A row that is demanded enqueues;
  * a row that is NOT demanded has to DROP whatever it left pending, and that
@@ -32,6 +32,13 @@
  * `release()` on a `ready` slot reaches this same drop on the next pass, since
  * releasing returns the slot to `idle` with demand false — one drop site, two
  * ways of arriving at it.
+ *
+ * The fourth edge covers a slot that is past `idle` but loaded with a request
+ * the row no longer asks for — a tier swap, a resolution ceiling change. It
+ * reloads, it never releases: `release()` is distance eviction only, so the
+ * resident payload keeps drawing until the new one commits. The call is direct
+ * rather than queued because the queue refuses a key it already has in flight
+ * (`PriorityQueue.admit`), which is exactly the case this edge exists for.
  *
  * ### Why the idle-guard lives in the loop, not in slot.load()
  *
@@ -47,9 +54,9 @@
  * unconditionally would abort + re-fetch + re-upload already-`ready` galaxy catalogs —
  * a single checkbox flip into a multi-hundred-MB re-download storm. Guarding on
  * `slot.state().kind === 'idle'` here, rather than trusting load() to be a
- * no-op, prevents that without weakening the re-fetch primitive. Tier changes
- * (request-changing reloads) flow through `setTier`'s own `load()` path, not
- * this loop, so the idle-guard never blocks a legitimate tier reload.
+ * no-op, prevents that without weakening the re-fetch primitive. A legitimate
+ * request-changing reload is not blocked by it: that is the drift edge, gated
+ * on the slot being non-idle rather than idle.
  *
  * ### Why each row is guarded
  *
@@ -60,12 +67,12 @@
  * per row contains the blast radius to the offending asset; the rest of the
  * table still evaluates.
  *
- * The guard also covers a sync throw from `slot.release()`. A throw out of
- * `req(tier)` or `slot.load()` no longer lands here, because both now run
- * inside the enqueued closure: the queue turns that rejection into an
- * `onResult(null)` and keeps scheduling. Either way such a bug (real fetch
- * errors flow to the slot's `error` state, not a sync throw) costs one asset
- * rather than a dead load loop.
+ * The guard also covers a sync throw from `slot.release()`, and from the
+ * `req(tier)` + `slot.load()` the drift edge runs directly. The enqueued
+ * closure's copies of those two throw inside the queue instead, which turns the
+ * rejection into an `onResult(null)` and keeps scheduling. Either way such a bug
+ * (real fetch errors flow to the slot's `error` state, not a sync throw) costs
+ * one asset rather than a dead load loop.
  *
  * `evaluateRows` is factored out of `reevaluateDemand` so tests can drive the
  * loop with a stub row array — the public entry point reads the real
@@ -75,35 +82,11 @@
 import { buildDemandCtx } from './buildDemandCtx';
 import { slotFor } from './slotFor';
 import { ASSET_WIRING } from './assetWiring';
-import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { requestDrifted } from './requestDrifted';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { Tier } from '../../../@types/data/Tier';
-import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';
 import type { QueueEntry } from '../../../@types/loading/QueueEntry';
-
-/**
- * Stale-tier evict test for the `bodyTextures` family: a `ready` slot whose
- * last-committed request tier no longer matches the freshly-clamped
- * `req(state.tier)` tier is holding the wrong-resolution texture and must be
- * re-fetched at the new tier. This lives in the loop (not in a `release(ctx)`
- * predicate) because a ctx predicate cannot see the slot's committed request,
- * and only here are `slotFor` + `state.tier` both in hand. It resolves to the
- * SAME `slot.release()` → idle → re-demand machinery as the distance edge — one
- * release concept with two reasons, not a second mechanism (spec §5.4).
- */
-function staleTierEvict(
-  slot: AssetSlot<unknown, unknown>,
-  row: AssetWiringRow,
-  tier: Tier,
-): boolean {
-  if (!isBodyTextureKey(row.key)) return false;
-  const committed = (slot.lastRequest() as BodyTextureReq | null)?.tier;
-  if (committed === undefined) return false;
-  return committed !== (row.req(tier) as BodyTextureReq).tier;
-}
 
 /**
  * Evaluate a specific set of rows against `state`. The public
@@ -169,22 +152,25 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
         queue.drop(queueKey);
       }
       // ── Evict edge ───────────────────────────────────────────────────────
-      // Release a ready slot for either reason a resident asset should be
-      // dropped, unified into one `release()` call: (1) the distance edge — the
-      // optional `release` predicate (omitted ⇒ never evict, so every load-once
-      // row is untouched), separate from `demand` to encode hysteresis (load
-      // inside X, evict outside 2X — see AssetWiringRow); or (2) a stale
-      // committed tier for the bodyTextures family (spec §5.4). Both drop the
-      // slot to idle, which hands it back to one of the two idle edges above —
-      // re-enqueued at the new tier for the stale case, dropped from the queue
-      // for the distance case. The three edges partition the slot states
-      // (idle-and-demanded, idle, ready), so the else-if chain is exact.
-      else if (kind === 'ready' && (staleTierEvict(slot, row, state.tier) || row.release?.(ctx))) {
+      // Distance eviction, and only that: the optional `release` predicate
+      // (omitted ⇒ never evict, so every load-once row is untouched), separate
+      // from `demand` to encode hysteresis — load inside X, evict outside 2X
+      // (see AssetWiringRow). It drops the slot to idle, which hands it to the
+      // drop edge above on the next pass.
+      else if (kind === 'ready' && row.release?.(ctx)) {
         slot.release();
       }
+      // ── Drift edge ───────────────────────────────────────────────────────
+      // A non-idle slot loaded with a request the row no longer asks for
+      // reloads in place. Ordered after the evict edge so a row with both
+      // reasons evicts rather than re-fetching at a distance it is leaving.
+      // Called directly, not queued — see the module docstring.
+      else if (row.demand(ctx) && requestDrifted(slot, row, state.tier)) {
+        void slot.load(row.req(state.tier));
+      }
     } catch (err) {
-      // Contain the failure to this row so later rows still evaluate — the same
-      // per-row guard the load edge has always had, now covering release too.
+      // Contain the failure to this row so later rows still evaluate: a bad
+      // predicate, release or drift reload costs one asset, not the whole table.
       console.warn(`reevaluateDemand: row '${String(row.key)}' threw during evaluation`, err);
     }
   }
