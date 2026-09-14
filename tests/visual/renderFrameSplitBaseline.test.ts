@@ -428,6 +428,8 @@ describe('renderFrame visual baseline', () => {
           // atmosphereSkyView compute step early-outs, so the recorded draw
           // sequence stays the pure cosmological shape this baseline pins.
           atmosphereShellRenderer: null,
+          // Null (not absent) — scheduleProbeCapture's idle gate is `=== null`.
+          meshBodyRenderer: null,
           starPointRenderer: null,
           orbitTrailRenderer: null,
           starCatalogRenderer: null,
