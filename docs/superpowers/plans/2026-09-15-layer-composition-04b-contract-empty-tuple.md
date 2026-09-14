@@ -14,15 +14,21 @@ plan)**, PR-C (the galaxy-side un-braids), PR-D (the Layer itself).
 Branch: `worktree-layer-composition-04b` (off `854aa70d2`). One PR, 14 tasks, every commit green.
 Gate (spec PR-B row): the suite, `npm run typecheck`, and the new import-boundary ratchet. **No perf
 gate**: nothing here runs per frame that did not already, and the two per-frame additions (an empty
-hook loop, a two-field compare) are `tsc`-proven neutral over the empty tuple.
+hook loop, a two-field compare) are `tsc`-proven neutral over the empty tuple. Task 4 does add work
+off the frame: every `settings/` write now walks all `FADE_LAYERS` rows and calls `row.expand(state)`
+per row (~10 rows, ~30 items, one `targetOf` lookup each), and a slider drag dispatches at input
+rate. Bounded by the row table, and Task 3's skip is what keeps it O(rows) reads instead of O(rows)
+fade restarts — named here so the ruling is not read as "nothing changed".
 
 **Parallelism: max safe.** Every task lands in its own isolation worktree and is cherry-picked onto
-the branch, so tasks that share a file serialize. Task 1 first. Then six in parallel: 2, 3, 6, 8, 12,
-13. Chains after that: A (fades) 3→4→5; B (selection) 6→7; C (facts, handle) 8→9; D (bootstrap)
-9→10→11, with 12 before 11. Cross-chain file locks: **7 after 10** (`engine.ts`, `BootstrapDeps`);
-**11 after 12** (`shouldKeepTicking.ts`); **5 after 7 and 11** (`createTestStore.ts`, `runFrame.ts`).
-Task 14 gates. The per-task **Files** lists are the authority; a task whose set overlaps a task with
-an open review waits.
+the branch, so tasks that share a file serialize. Task 1 first. Then six in parallel: 2, 3, 6, 8, 12, 13. Chains after that: A (fades) 3→4→5; B (selection) 6→7; C (facts, handle) 8→9; D (bootstrap)
+9→10→11, with 12 before 11. Cross-chain file locks: **7 after 10** (`engine.ts`,
+`EngineState.selectionRows`); **11 after 12** (`shouldKeepTicking.ts`); **5 after 7 and 11**
+(`createTestStore.ts`, `runFrame.ts`). Task 14 gates. The per-task **Files** lists are the authority;
+a task whose set overlaps a task with an open review waits — **with one exception: chain A's 3→4 edge
+is semantic, not a file lock.** Their file sets are disjoint, but Task 4 broadens the sync to every
+settings write, so without Task 3's skip already on the branch the stack carries a visible
+fade-restart regression mid-chain. Run them in order anyway.
 
 ## Goal
 
@@ -42,10 +48,10 @@ frame that follows a `setFlow` write instead of from the saga that saw it, which
 ## Architecture
 
 - **Literal-bearing fields become type parameters (D1).** `Layer<Name, Runtime, Settings, Sources,
-  Facts>`, all but the first two defaulted to their erased bounds so `Layer<string, unknown>` keeps
+Facts>`, all but the first two defaulted to their erased bounds so `Layer<string, unknown>` keeps
   working as the composition constraint (`EngineComposition.d.ts:10`). `defineLayer` takes them as
   `const` parameters. The app's fragment tuple becomes `[...UNFORMED_SETTINGS_FRAGMENTS,
-  ...settingsOf(APP_COMPOSITION.layers)]`: the thirteen fragments that exist today are the unformed
+...settingsOf(APP_COMPOSITION.layers)]`: the thirteen fragments that exist today are the unformed
   half, and `settingsOf` is the fold PR-D's first Layer joins. `ComposedClusters` maps over
   `Fragments[number]` (`ComposedClusters.d.ts:9-13`), so `SettingsOf<Layers>` needs only the UNION
   of each Layer's fragment types, never a tuple walk: `readonly SettingsFragmentsOf<Layers[number]>[]`.
@@ -74,9 +80,10 @@ frame that follows a `setFlow` write instead of from the saga that saw it, which
   famous meta), so row order plays no part. The four tables this replaces: `RESOLVE_PICK`,
   `EXTRACT_ROW`, `FOCUS_ID_DECODERS`, `ENCODE`.
 - **Facts, and the handle shrinks (D6, D6'4, D6'5).** `factsReported({ layer, patch })` is the one
-  action; its reducer merges the patch under `state.engine[layer]`, and `EngineSliceState` becomes
-  `CoreEngineSliceState & FactsOf<AppLayers>` the way `EngineSettingsState` composes today
-  (`EngineSettingsState.d.ts:16-19`). The structure search list becomes a core fact published by
+  publish action; its reducer merges the patch under `state.engine[layer]`, and `EngineSliceState`
+  becomes `CoreEngineSliceState & FactsOf<AppLayers>` the way `EngineSettingsState` composes today
+  (`EngineSettingsState.d.ts:16-19`) — as a **type**, with `createLayers` seeding each key from
+  `layer.facts` so core never imports the composition for a value. The structure search list becomes a core fact published by
   `wireStructureProjection` on every group change, which is what lets `useStructureIndex` and
   `sources.getStructures` die now. `assetSlots` moves under `debug`; the `camera` sub-handle, whose
   `logState` has no reader, goes.
@@ -89,7 +96,7 @@ frame that follows a `setFlow` write instead of from the saga that saw it, which
   disjointness (no two rows share a `type` or a pick source code) runs here, so a bad composition
   throws at boot rather than inside a click's swallowed promise.
 - **Readiness narrows to core (D8).** `isEngineReady` becomes `booted && renderTargets &&
-  compositor`. It has two callers (`frameContext.ts:73`, `shouldKeepTicking.ts:42`); the three galaxy
+compositor`. It has two callers (`frameContext.ts:73`, `shouldKeepTicking.ts:42`); the three galaxy
   conjuncts it drops have one dependent between them, `galaxyPointSpritesPass`'s read of
   `ctx.galaxyPointRenderer` (`galaxyPointSpritesPass.ts:32,89`), which re-points at
   `state.gpu.galaxyPointRenderer` with the null guard every other pass already uses (`ContentPass.d.ts:7-9`
@@ -109,8 +116,8 @@ Binding on every task, from CLAUDE.md and the spec:
 - **One symbol per file** in `src/utils/` and `src/@types/`; filename = the exported symbol;
   `src/@types/` is one TYPE per file. Deep relative imports, no barrels. `type` aliases, never
   `interface`.
-- **Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) declare only their
-  own symbol; the purity ratchet `tests/services/engine/frame/frameFilePurity.test.ts` shrinks only.**
+- **Frame files (`src/services/engine/frame/**`, incl. `timing/`and`passes/`) declare only their
+own symbol; the purity ratchet `tests/services/engine/frame/frameFilePurity.test.ts` shrinks only.\*\*
 - **Comment budget** per [`comments.md`](../conventions/comments.md): module header ≤ 10 lines,
   comment lines ≤ half the code lines; explain why, never what. Several files this PR edits carry
   50–90-line headers written for a design that is leaving (`engineReady.ts:1-93`,
@@ -131,25 +138,31 @@ Binding on every task, from CLAUDE.md and the spec:
 Verified in this worktree while writing the plan; the spec's line references predate #703. Re-derive
 rather than trust.
 
-| Fact                                                                                                                                                                                                                                                                                                                                                             | Where                                                                                                                       | What it means                                                                                                                                                                                                                             |
-| ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `handle.camera` has **no reader**; the `l` key routes `keyboardShortcuts.ts:64` → `camera/logCameraState` → `watchLogCameraStateSaga.ts:18` → `ReconcileEffects.logCameraState` (`makeReconcileEffects.ts:27-37`). `engine.ts:480-490` is a second copy of that body.                                                                                              | `engine.ts:580-582`, `EngineCameraHandle.d.ts`                                                                              | The `camera` sub-handle, its type and `logCameraStateFn` are dead; Task 9 deletes them. The effect and saga stay.                                                                                                                         |
-| The `volumes` sub-handle is already gone (#695).                                                                                                                                                                                                                                                                                                                 | `EngineHandle.d.ts:35-38`                                                                                                   | Not scheduled.                                                                                                                                                                                                                            |
-| `ReadyFrameContext.texturedDisks` has **no src reader**. `ReadyFrameContext.galaxyPointRenderer` has exactly one: `galaxyPointSpritesPass.ts:32` (`draw`) and `:89` (`drawPick`).                                                                                                                                                                                | `frameContext.ts:76-78,227,233`; tests `frameContext.test.ts:322-343`, `passes.test.ts:101,103,444,464,540`                 | Both fields can leave in PR-B: the pass reads `state.gpu.galaxyPointRenderer` like its `drawPick` already reads `state.gpu.galaxyPickRenderer` (`:85`). Task 12.                                                                          |
-| `isEngineReady` has two callers and `ReadyEngineState` one importer.                                                                                                                                                                                                                                                                                             | `frameContext.ts:73`, `shouldKeepTicking.ts:42`, `engineReady.ts:96`                                                        | Narrowing is cheap; the `texturedDisks.hasInFlightWork()` term becomes a `?.` read.                                                                                                                                                       |
-| `settingsSlice.ts` imports the thirteen fragments **directly** (`:16-31`) for the per-fragment `liftClusterReducers` spreads, and `APP_SETTINGS_FRAGMENTS` (`:14`) only for the uniqueness assert. Nothing else under `src/state/**` or `src/services/engine/**` imports `src/layers/**`; nothing under `src/components/**` or `src/hooks/**` does either.        | `settingsSlice.ts:14-31,245-281`                                                                                            | The ratchet's one allow-list row is `state/settings/settingsSlice: 13`. The spreads need each fragment's literal type for `settingsSlice.actions`' typed exports, so the row stays until reducers compose at the type level (not this PR). |
-| The fade registry exposes `register`/`unregister`/`fadeTo`/`setImmediate`/`opacityOf`/`isAnyAnimating`/`tick`; no `targetOf`. `applyIntent` is a private function of `syncVisibilityFades.ts:16-37`, exported only as `applyIntentForTest`.                                                                                                                       | `fadeRegistry.ts:167-177`, `FadeRegistry.d.ts`, `FadeController.d.ts`                                                       | Task 3 adds `targetOf` to the controller and the registry.                                                                                                                                                                                |
-| **The sky-cubemap re-bake relies on a re-commit's `fadeTo(1)` at an opacity already 1.** `fadeController.ts:109-110` refuses an unchanged-target early return for exactly this; `scheduleCubemapCaptures.ts:52-59` keys the bake on `fades.isAnyAnimating` and says a tier swap's re-commits keep it true. The re-commit path is `syncVisibilityFadeItem` (`galaxyCatalogSourceRegistry.ts:131`). | `scheduleCubemapCaptures.ts:29-31,57-59`                                                                                    | **Ruling 1**: the idempotence guard lives in the BATCH bridge only. `syncVisibilityFadeItem` stays unguarded, and its comment names the bake key as the reason.                                                                            |
-| `flowFieldRenderer.maybeReseed()` is an unconditional `reseed.arm()`; the saga is what gates on `mode`/`count` being in the `setFlow` payload. The field's own load arms the first seed.                                                                                                                                                                          | `flowFieldRenderer.ts:293-298`, `watchFlowReseedSaga.ts:19-23`                                                              | The last-applied compare moves onto the renderer as `reconcile({ mode, count })`, the shape `milkyWayCloud.reconcile(starCount)` already has (`runFrame.ts:88`). Task 5.                                                                  |
-| `applySceneEffect` calls `syncVisibilityFades` with `only: effect.layers` and an authored `durationMs` (`:43-47,62-66`); `FADE_ROW`'s only reader is `watchFadesSaga.ts:15-23`.                                                                                                                                                                                  | `applySceneEffect.ts`, `watchFadesSaga.ts`                                                                                  | `syncVisibilityFades`' `only` option survives for the tour; only `ReconcileEffects.syncFades`' parameter goes. Task 4.                                                                                                                     |
-| `resolveDeps` has seven saga consumers plus `resolveClipFoci` and `clipFociReady`; about twenty test files build a `ResolveDeps` fixture.                                                                                                                                                                                                                         | `watchClipSaga.ts:83`, `watchClipPathInspectSaga.ts:67`, `visitBeatSaga.ts:74`, `watchTierSaga.ts:53`, `watchFocusTweenSaga.ts:67`, `resolveFocusRefDeferring.ts:20`, `watchSelectionRowsSaga.ts:46` | Task 7 re-points every consumer at `selection`; a one-line test helper (`selectionResolverOver(deps)`) keeps the fixtures.                                                                                                                |
-| `watchFocusTweenSaga.ts:89-93` probes `resolveDeps().stars.current()`; D6'1 deletes that in (e).                                                                                                                                                                                                                                                                 | `ResolveDeps.d.ts:24`                                                                                                       | `ResolveDeps` and the `resolveDeps` context entry survive PR-B whole (the core galaxy row needs `catalogs` and `famousGalaxiesMeta` too). PR-D drops the galaxy fields; (e) the rest.                                                      |
-| The seeded famous-star pick arm: `FAMOUS_STAR_ENTRY` is `type: 'starCatalog'` with `binBaseName: null` (`famous-star.ts:14,38`), and `RESOLVE_PICK.starCatalog` splits on that to return a BODY ref (`resolvePickTable.ts:56-61`).                                                                                                                              | `resolvePickTable.ts`, `data/sources/famous-star.ts`                                                                        | A row keyed by entry TYPE cannot return only its own ref type here. **Ruling 2**: `pickSources` are source CODES.                                                                                                                         |
-| `engineSourceCountReported` is dispatched from `starCatalogSlot.ts:69`, `galaxyCatalogSourceRegistry.ts:147` and `engine.ts:141`; three sagas `take` it.                                                                                                                                                                                                         | `engineSlice.ts:74`                                                                                                         | `deps.reportSourceCount` is that dispatch bound; no caller changes until their Layers form.                                                                                                                                               |
-| `state.requests` / `RequestKey` / `ctx.request`: written at `engine.ts:497` and `createSyntheticFallback.ts:158`, read by two `ASSET_WIRING` rows (`:238,:371`) through `buildDemandCtx.ts:20`.                                                                                                                                                                  | `RequestKey.d.ts`, `DemandCtx.d.ts:86`                                                                                      | Deferred to PR-D with `loadAliases` (the `pgcAlias` demand flips to `ui.paletteOpen` in the same PR as the hook that raises the key).                                                                                                      |
-| `tests/conventions/` holds the directory-sweep ratchets (`oneSymbolPerFile`, `filenameMatchesExport`); `oneMpcSeam.test.ts` is the one test that walks `getImportDeclarations()`.                                                                                                                                                                                | `tests/conventions/*.test.ts`, `tests/services/engine/camera/oneMpcSeam.test.ts:31-37`                                       | Task 2's ratchet lives in `tests/conventions/` and copies `oneMpcSeam`'s ts-morph import walk with `frameFilePurity`'s allow-list ratchet.                                                                                                |
-| `PhaseLocals` carries `device`, `context`, `unwatchHdrCapability` but not the boot `format`, which `initGpu` keeps local (`:45,74-80`). `LayerCoreDeps.ctx: GpuContext` needs it.                                                                                                                                                                                | `PhaseLocals.d.ts:12-22`, `initGpu.ts:53`                                                                                   | Task 10 adds `format` to `PhaseLocals`.                                                                                                                                                                                                   |
-| There is no `tests/compositions/` and no `tests/services/engine/layer/`; `tests/helpers/engine/stubComposition.ts` exports `STUB_COMPOSITION` (empty).                                                                                                                                                                                                           | `tests/helpers/engine/stubComposition.ts`                                                                                   | New test dirs are created where the mirror puts them; the engine-level destroy-order test builds its own one-Layer composition.                                                                                                           |
+| Fact                                                                                                                                                                                                                                                                                                                                                                                              | Where                                                                                                                                                                                                | What it means                                                                                                                                                                                                                              |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `handle.camera` has **no reader**; the `l` key routes `keyboardShortcuts.ts:64` → `camera/logCameraState` → `watchLogCameraStateSaga.ts:18` → `ReconcileEffects.logCameraState` (`makeReconcileEffects.ts:27-37`). `engine.ts:480-490` is a second copy of that body.                                                                                                                             | `engine.ts:580-582`, `EngineCameraHandle.d.ts`                                                                                                                                                       | The `camera` sub-handle, its type and `logCameraStateFn` are dead; Task 9 deletes them. The effect and saga stay.                                                                                                                          |
+| The `volumes` sub-handle is already gone (#695).                                                                                                                                                                                                                                                                                                                                                  | `EngineHandle.d.ts:35-38`                                                                                                                                                                            | Not scheduled.                                                                                                                                                                                                                             |
+| `ReadyFrameContext.texturedDisks` has **no src reader**. `ReadyFrameContext.galaxyPointRenderer` has exactly one: `galaxyPointSpritesPass.ts:32` (`draw`) and `:89` (`drawPick`).                                                                                                                                                                                                                 | `frameContext.ts:76-78,227,233`; tests `frameContext.test.ts:322-343`, `passes.test.ts:101,103,444,464,540`                                                                                          | Both fields can leave in PR-B: the pass reads `state.gpu.galaxyPointRenderer` like its `drawPick` already reads `state.gpu.galaxyPickRenderer` (`:85`). Task 12.                                                                           |
+| `isEngineReady` has two callers and `ReadyEngineState` one importer.                                                                                                                                                                                                                                                                                                                              | `frameContext.ts:73`, `shouldKeepTicking.ts:42`, `engineReady.ts:96`                                                                                                                                 | Narrowing is cheap; the `texturedDisks.hasInFlightWork()` term becomes a `?.` read.                                                                                                                                                        |
+| `settingsSlice.ts` imports the thirteen fragments **directly** (`:16-31`) for the per-fragment `liftClusterReducers` spreads, and `APP_SETTINGS_FRAGMENTS` (`:14`) only for the uniqueness assert. Nothing else under `src/state/**` or `src/services/engine/**` imports `src/layers/**`; nothing under `src/components/**` or `src/hooks/**` does either.                                        | `settingsSlice.ts:14-31,245-281`                                                                                                                                                                     | The ratchet's one allow-list row is `state/settings/settingsSlice: 13`. The spreads need each fragment's literal type for `settingsSlice.actions`' typed exports, so the row stays until reducers compose at the type level (not this PR). |
+| The fade registry exposes `register`/`unregister`/`fadeTo`/`setImmediate`/`opacityOf`/`isAnyAnimating`/`tick`; no `targetOf`. `applyIntent` is a private function of `syncVisibilityFades.ts:16-37`, exported only as `applyIntentForTest`.                                                                                                                                                       | `fadeRegistry.ts:167-177`, `FadeRegistry.d.ts`, `FadeController.d.ts`                                                                                                                                | Task 3 adds `targetOf` to the controller and the registry.                                                                                                                                                                                 |
+| **The sky-cubemap re-bake relies on a re-commit's `fadeTo(1)` at an opacity already 1.** `fadeController.ts:109-110` refuses an unchanged-target early return for exactly this; `scheduleCubemapCaptures.ts:52-59` keys the bake on `fades.isAnyAnimating` and says a tier swap's re-commits keep it true. The re-commit path is `syncVisibilityFadeItem` (`galaxyCatalogSourceRegistry.ts:131`). | `scheduleCubemapCaptures.ts:29-31,57-59`                                                                                                                                                             | **Ruling 1**: the idempotence guard lives in the BATCH bridge only. `syncVisibilityFadeItem` stays unguarded, and its comment names the bake key as the reason.                                                                            |
+| `flowFieldRenderer.maybeReseed()` is an unconditional `reseed.arm()`; the saga is what gates on `mode`/`count` being in the `setFlow` payload. The field's own load arms the first seed.                                                                                                                                                                                                          | `flowFieldRenderer.ts:293-298`, `watchFlowReseedSaga.ts:19-23`                                                                                                                                       | The last-applied compare moves onto the renderer as `reconcile({ mode, count })`, the shape `milkyWayCloud.reconcile(starCount)` already has (`runFrame.ts:88`). Task 5.                                                                   |
+| `applySceneEffect` calls `syncVisibilityFades` with `only: effect.layers` and an authored `durationMs` (`:43-47,62-66`); `FADE_ROW`'s only reader is `watchFadesSaga.ts:15-23`.                                                                                                                                                                                                                   | `applySceneEffect.ts`, `watchFadesSaga.ts`                                                                                                                                                           | `syncVisibilityFades`' `only` option survives for the tour; only `ReconcileEffects.syncFades`' parameter goes. Task 4.                                                                                                                     |
+| `resolveDeps` has seven saga consumers plus `resolveClipFoci` and `clipFociReady`; about twenty test files build a `ResolveDeps` fixture.                                                                                                                                                                                                                                                         | `watchClipSaga.ts:83`, `watchClipPathInspectSaga.ts:67`, `visitBeatSaga.ts:74`, `watchTierSaga.ts:53`, `watchFocusTweenSaga.ts:67`, `resolveFocusRefDeferring.ts:20`, `watchSelectionRowsSaga.ts:46` | Task 7 re-points every consumer at `selection`; a one-line test helper (`selectionResolverOver(deps)`) keeps the fixtures.                                                                                                                 |
+| `watchFocusTweenSaga.ts:89-93` probes `resolveDeps().stars.current()`; D6'1 deletes that in (e).                                                                                                                                                                                                                                                                                                  | `ResolveDeps.d.ts:24`                                                                                                                                                                                | `ResolveDeps` and the `resolveDeps` context entry survive PR-B whole (the core galaxy row needs `catalogs` and `famousGalaxiesMeta` too). PR-D drops the galaxy fields; (e) the rest.                                                      |
+| The seeded famous-star pick arm: `FAMOUS_STAR_ENTRY` is `type: 'starCatalog'` with `binBaseName: null` (`famous-star.ts:14,38`), and `RESOLVE_PICK.starCatalog` splits on that to return a BODY ref (`resolvePickTable.ts:56-61`).                                                                                                                                                                | `resolvePickTable.ts`, `data/sources/famous-star.ts`                                                                                                                                                 | A row keyed by entry TYPE cannot return only its own ref type here. **Ruling 2**: `pickSources` are source CODES.                                                                                                                          |
+| `engineSourceCountReported` is dispatched from `starCatalogSlot.ts:69`, `galaxyCatalogSourceRegistry.ts:147` and `engine.ts:141`; three sagas `take` it.                                                                                                                                                                                                                                          | `engineSlice.ts:74`                                                                                                                                                                                  | `deps.reportSourceCount` is that dispatch bound; no caller changes until their Layers form.                                                                                                                                                |
+| `state.requests` / `RequestKey` / `ctx.request`: written at `engine.ts:497` and `createSyntheticFallback.ts:158`, read by two `ASSET_WIRING` rows (`:238,:371`) through `buildDemandCtx.ts:20`.                                                                                                                                                                                                   | `RequestKey.d.ts`, `DemandCtx.d.ts:86`                                                                                                                                                               | Deferred to PR-D with `loadAliases` (the `pgcAlias` demand flips to `ui.paletteOpen` in the same PR as the hook that raises the key).                                                                                                      |
+| `tests/conventions/` holds the directory-sweep ratchets (`oneSymbolPerFile`, `filenameMatchesExport`); `oneMpcSeam.test.ts` is the one test that walks `getImportDeclarations()`.                                                                                                                                                                                                                 | `tests/conventions/*.test.ts`, `tests/services/engine/camera/oneMpcSeam.test.ts:31-37`                                                                                                               | Task 2's ratchet lives in `tests/conventions/` and copies `oneMpcSeam`'s ts-morph import walk with `frameFilePurity`'s allow-list ratchet.                                                                                                 |
+| `PhaseLocals` carries `device`, `context`, `unwatchHdrCapability` but not the boot `format`, which `initGpu` keeps local (`:45,74-80`). `LayerCoreDeps.ctx: GpuContext` needs it.                                                                                                                                                                                                                 | `PhaseLocals.d.ts:12-22`, `initGpu.ts:53`                                                                                                                                                            | Task 10 adds `format` to `PhaseLocals`.                                                                                                                                                                                                    |
+| There is no `tests/compositions/` and no `tests/services/engine/layer/`; `tests/helpers/engine/stubComposition.ts` exports `STUB_COMPOSITION` (empty).                                                                                                                                                                                                                                            | `tests/helpers/engine/stubComposition.ts`                                                                                                                                                            | New test dirs are created where the mirror puts them; the engine-level destroy-order test builds its own one-Layer composition.                                                                                                            |
+
+**The spec's "Open at plan time" list.** Four of the five checks belong to PR-A, PR-C or PR-D's rows
+and are not this plan's to schedule. The fifth is PR-B-adjacent and stays open on purpose: D4 rules
+settings-driven work, so a **stateless** event — a reseed die, a "re-run this now" with no settings
+delta behind it — has no ruled mechanism. Nothing in PR-B needs one (the flow reseed becomes a value
+compare, Task 5), so the plan neither invents nor waives it; the first Layer that wants one rules it.
 
 ## Rulings
 
@@ -184,8 +197,10 @@ veto and move Task 11 to PR-D's plan; nothing else here depends on it.
 **Ruling 4 — the composed resolver reads its rows lazily.** `composeSelectionRows(rowsOf)` calls
 `rowsOf()` per resolution. A body or Milky Way deep link resolves statically during the boot window
 (`wireInput.ts:138-147` relies on it to defer the Earth seed correctly), before `createLayers` has
-run, so an eagerly composed resolver built after the phase would change boot behaviour. Six or seven
-rows per call is nothing; the disjointness check runs once, in `createLayers`, not per call.
+run, so an eagerly composed resolver built after the phase would change boot behaviour. The thunk
+_reads_ one array core owns (`state.selectionRows`, seeded with the core rows and appended to once by
+`createLayers`); it does not rebuild a list, so the hover path allocates nothing. The disjointness
+check runs once, in `createLayers`, not per call.
 
 **Ruling 5 — `ResolveDeps` keeps all four fields in PR-B.** The core galaxy row needs `catalogs` and
 `famousGalaxiesMeta`; the star probe needs `stars`; the structure row needs `structures`, widened to
@@ -197,23 +212,32 @@ galaxy fields leave in PR-D with the galaxy row; the bag dies in (e) (D6'1).
 `string`; the galaxy encoder returns null when the cloud is not loaded (`focusIdOf.ts:94-98`) and
 `captureGalaxyFocusIds.ts:57-61` relies on that. The composed `focusIdOf` stays nullable.
 
-**Ruling 7 — a Layer without `facts` gets a `publish` that throws.** The reducer merges with
-`Object.assign(state[layer], patch)` and must not grow a silent-drop branch (the extraReducers
-landmine class). `createLayers` binds `publish` to a thrower for a Layer whose `facts` is undefined,
-so the programmer error surfaces at the call site, once, with the Layer's name.
+**Ruling 7 — `publish` exists only on a Layer that declares facts, and the reducer has no existence
+branch.** The `Facts` parameter already carries "this Layer declares facts", so `LayerCoreDeps<Facts>`
+adds `publish` conditionally rather than binding a thrower: calling it on a factless Layer is a `tsc`
+error at the call site, with no runtime surface and no test. The reducer half is the load-bearing
+half: `factsReported` merges with `Object.assign(state[layer], patch)` and must not grow a
+silent-drop branch (the extraReducers landmine class). `createLayers` seeds each Layer's key before
+its `create` runs (Task 10), which is what lets the reducer stay branchless — and what makes a
+dispatch under an unowned name throw loudly instead of minting a key.
 
 **Ruling 8 — `ComposedSources` is a type with no runtime consumer until PR-C.** Spec P1 lists it;
 `composeSources(layers)` is D11's and lands with the source-row move. The type is one file; the
 plan does not invent a consumer for it.
 
-**Finding for PR-D, not a ruling here — D1's runtime derivation closes an import cycle.**
-`appSettingsFragments.ts` will import `APP_COMPOSITION`; a Layer module transitively importing
-`settingsSlice` at module-init (any `src/layers/**` file that reads an action creator into a table,
-as `visibilityActionRow.ts:20-36` does) then evaluates `settingsSlice` → `appSettingsFragments` →
-`app` → the Layer → `settingsSlice`, and the second entry reads uninitialised `const` exports. Over
-the empty tuple no such edge exists, so PR-B ships D1 as ruled. PR-D's plan must carry the fix; the
-two candidates are fragments minting their own `createAction`s (so Layer code never imports the
-slice) or a type-only derivation with a boot assert. **Record in the PR body and ask.**
+**Finding — D1's runtime derivation could close an import cycle, so Task 2 makes it unauthorable.**
+`appSettingsFragments.ts` imports `APP_COMPOSITION` for the `settingsOf` fold. A Layer module that
+imports `settingsSlice` at module-init (any `src/layers/**` file reading an action creator into a
+table, as `visibilityActionRow.ts:20-36` does) would then evaluate `settingsSlice` →
+`appSettingsFragments` → `app` → the Layer → `settingsSlice`, and the second entry reads
+uninitialised `const` exports — a boot crash that reproduces only in the real module graph. Two
+things close it here rather than in PR-D: the facts derivation stays **type-only** (Task 8 keeps
+`FactsOf<typeof APP_COMPOSITION.layers>` a type import in a `.d.ts`, fully erased, because
+`createLayers` seeds the initial facts instead of the slice spreading them), so `engineSlice.ts`
+carries no runtime edge at all; and Task 2's ratchet sweeps the other direction with an empty
+allow-list, so the one import that could close the ring fails a test naming the row to edit. PR-D
+therefore mints its own `createAction`s in Layer code rather than importing the slice. **Record the
+constraint in the PR body.**
 
 ## File structure
 
@@ -228,7 +252,6 @@ src/@types/engine/layer/LayerInstance.d.ts            a Layer bound to its runti
 src/@types/engine/selection/SelectionResolver.d.ts    the composed four-method resolver
 src/@types/store/CoreEngineSliceState.d.ts            today's EngineSliceState, renamed; + structureSearchList
 src/utils/layer/settingsOf.ts                         flatMap over layers' settings
-src/utils/layer/factsOf.ts                            name → facts record over layers that declare facts
 src/utils/selection/assertSelectionRowsDisjoint.ts    throws on a repeated type or pick source code
 src/services/engine/layer/instantiateLayer.ts         create + bind, one place
 src/services/engine/phases/createLayers.ts            the new phase
@@ -259,21 +282,20 @@ src/services/engine/frame/runFrame.ts                 +flow reconcile (T5); +the
 src/services/engine/helpers/shouldKeepTicking.ts      ?. on texturedDisks (T12); +layersAnimating (T11)
 src/store/rootSaga.ts                                 −watchFlowReseedSaga
 src/store/types.ts                                    SagaContext +selection
-src/@types/engine/BootstrapDeps.d.ts                  +coreSelectionRows
 src/@types/engine/ResolveDeps.d.ts                    structures widened (Ruling 5)
 src/@types/engine/interaction/HoverPickDeps.d.ts, src/@types/engine/CreateClickResolverInput.d.ts   resolvePick fn
 src/services/engine/interaction/{hoverPickDriver,clickHandler}.ts, phases/wireInput.ts
 src/state/{camera/watchClipSaga,camera/watchClipPathInspectSaga,tour/visitBeatSaga,tour/clipFociReady,tier/watchTierSaga,selection/watchFocusTweenSaga,selection/resolveFocusRefDeferring,selection/captureGalaxyFocusIds,selectionRows/watchSelectionRowsSaga}.ts
 src/services/engine/animation/resolveClipFoci.ts
-src/state/engine/engineSlice.ts                       +factsReported, +engineStructureSearchListChanged, composed initial state
+src/state/engine/engineSlice.ts                       +factsReported, +layerFactsSeeded, +engineStructureSearchListChanged
 src/@types/store/EngineSliceState.d.ts                = CoreEngineSliceState & FactsOf<AppLayers>
 src/state/engine/selectors.ts                         +selectStructureSearchList
 src/services/engine/wiring/wireStructureProjection.ts publishes the list
 src/components/containers/CommandPaletteContainer.tsx selects it
 src/@types/engine/EngineHandle.d.ts, handles/EngineSourcesHandle.d.ts, handles/EngineDebugHandle.d.ts
 src/components/App/App.tsx:152                        debug.assetSlots
-src/services/engine/engine.ts                         handle (T9); state.layers, deps, destroy (T10); rowsOf, saga context (T7)
-src/@types/engine/state/EngineState.d.ts              +layers
+src/services/engine/engine.ts                         handle (T9); state.layers, deps, destroy (T10); selectionRows, saga context (T7)
+src/@types/engine/state/EngineState.d.ts              +layers, +selectionRows
 src/@types/engine/PhaseLocals.d.ts, phases/initGpu.ts  +format
 src/services/engine/phases/bootstrap.ts               the fifth phase
 src/services/engine/helpers/engineReady.ts, src/@types/engine/ReadyEngineState.d.ts   three conjuncts
@@ -281,6 +303,7 @@ src/services/engine/frame/frameContext.ts, src/@types/engine/frame/ReadyFrameCon
 src/services/engine/frame/passes/galaxyPointSpritesPass.ts   reads state.gpu
 src/components/SettingsPanel/SettingsPanel.tsx        composed sections first
 docs/BACKLOG.md:38                                    the D line
+docs/superpowers/specs/2026-09-09-layer-composition-design.md   §14 correction (Task 14)
 ```
 
 **Deleted**
@@ -307,7 +330,7 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 **Files:** `src/@types/engine/layer/Layer.d.ts:21-45`, `src/@types/engine/layer/LayerCoreDeps.d.ts`,
 `src/services/engine/layer/defineLayer.ts`, `src/compositions/app.ts`,
 `src/compositions/appSettingsFragments.ts` (modify); `src/@types/engine/layer/{SettingsOf,ComposedSources,FactsOf,SelectionKindRow,LayerInstance}.d.ts`,
-`src/@types/engine/selection/SelectionResolver.d.ts`, `src/utils/layer/{settingsOf,factsOf}.ts`
+`src/@types/engine/selection/SelectionResolver.d.ts`, `src/utils/layer/settingsOf.ts`
 (new); `src/@types/engine/layer/PickResolverRow.d.ts`,
 `docs/backlog/2026-09-11-layer-settings-tuple-seam.md` (delete); `docs/BACKLOG.md:38` (delete the
 line).
@@ -321,7 +344,10 @@ export type Layer<
   Name extends string,
   Runtime,
   Settings extends readonly SettingsFragmentLike[] = readonly SettingsFragmentLike[],
-  Sources extends readonly (readonly [SourceType, SourceEntry])[] = readonly (readonly [SourceType, SourceEntry])[],
+  Sources extends readonly (readonly [SourceType, SourceEntry])[] = readonly (readonly [
+    SourceType,
+    SourceEntry,
+  ])[],
   Facts = undefined,
 > = {
   readonly name: Name;
@@ -350,9 +376,13 @@ export function defineLayer<
   const Settings extends readonly SettingsFragmentLike[] = readonly [],
   const Sources extends readonly (readonly [SourceType, SourceEntry])[] = readonly [],
   const Facts = undefined,
->(layer: Layer<Name, Runtime, Settings, Sources, Facts>): Layer<Name, Runtime, Settings, Sources, Facts>;
+>(
+  layer: Layer<Name, Runtime, Settings, Sources, Facts>,
+): Layer<Name, Runtime, Settings, Sources, Facts>;
 
-// src/@types/engine/layer/LayerCoreDeps.d.ts — creation-time core objects only (D7)
+// src/@types/engine/layer/LayerCoreDeps.d.ts — creation-time core objects only (D7).
+// `publish` is conditional on the parameter that already encodes "this Layer declares facts"
+// (Ruling 7), so calling it on a factless Layer is a tsc error, not a runtime throw.
 export type LayerCoreDeps<Facts = undefined> = {
   readonly ctx: GpuContext;
   readonly fadeBgl: FadeUniformsBgl;
@@ -363,26 +393,35 @@ export type LayerCoreDeps<Facts = undefined> = {
   readonly fades: FadeRegistry;
   readonly store: AppStore;
   readonly requestRender: () => void;
-  readonly publish: (patch: Partial<Facts>) => void;
   readonly reportSourceCount: (source: SourceType, count: number) => void;
-};
+} & ([Facts] extends [undefined] ? object : { readonly publish: (patch: Partial<Facts>) => void });
 
 // src/@types/engine/layer/SettingsOf.d.ts — a union-typed array, never a tuple walk:
 // `ComposedClusters` only reads `Fragments[number]`.
-export type SettingsOf<Layers extends readonly Layer<string, unknown>[]> = readonly (Layers[number] extends infer L
-  ? L extends { readonly settings: readonly (infer F extends SettingsFragmentLike)[] } ? F : never
-  : never)[];
+export type SettingsOf<Layers extends readonly Layer<string, unknown>[]> =
+  readonly (Layers[number] extends infer L
+    ? L extends { readonly settings: readonly (infer F extends SettingsFragmentLike)[] }
+      ? F
+      : never
+    : never)[];
 
 // src/@types/engine/layer/FactsOf.d.ts
 export type FactsOf<Layers extends readonly Layer<string, unknown>[]> = {
-  [L in Layers[number] as L extends { readonly name: infer N extends string; readonly facts: object }
+  [L in Layers[number] as L extends {
+    readonly name: infer N extends string;
+    readonly facts: object;
+  }
     ? N
     : never]: L extends { readonly facts: infer F } ? F : never;
 };
 
 // src/@types/engine/layer/ComposedSources.d.ts (Ruling 8)
 export type ComposedSources<Layers extends readonly Layer<string, unknown>[]> = {
-  [E in (Layers[number] extends { readonly sources: readonly (infer E)[] } ? E : never) as E extends readonly [infer C extends SourceType, SourceEntry] ? C : never]: E extends readonly [SourceType, infer S] ? S : never;
+  [E in Layers[number] extends { readonly sources: readonly (infer E)[] }
+    ? E
+    : never as E extends readonly [infer C extends SourceType, SourceEntry]
+    ? C
+    : never]: E extends readonly [SourceType, infer S] ? S : never;
 };
 
 // src/@types/engine/layer/SelectionKindRow.d.ts (D5; Ruling 2; Ruling 6)
@@ -417,13 +456,20 @@ export type SelectionResolver = {
   focusIdOf(ref: SelectionRef): string | null;
 };
 
-// src/utils/layer/settingsOf.ts, src/utils/layer/factsOf.ts
-export function settingsOf<const Layers extends readonly Layer<string, unknown>[]>(layers: Layers): SettingsOf<Layers>;
-export function factsOf<const Layers extends readonly Layer<string, unknown>[]>(layers: Layers): FactsOf<Layers>;
+// src/utils/layer/settingsOf.ts — the only runtime fold this task ships. `FactsOf` has no runtime
+// twin: `createLayers` seeds each Layer's facts from `layer.facts` (Task 10), so nothing folds them.
+export function settingsOf<const Layers extends readonly Layer<string, unknown>[]>(
+  layers: Layers,
+): SettingsOf<Layers>;
 
 // src/compositions/appSettingsFragments.ts
-export const UNFORMED_SETTINGS_FRAGMENTS = [ /* today's thirteen, unchanged order */ ] as const;
-export const APP_SETTINGS_FRAGMENTS = [...UNFORMED_SETTINGS_FRAGMENTS, ...settingsOf(APP_COMPOSITION.layers)] as const;
+export const UNFORMED_SETTINGS_FRAGMENTS = [
+  /* today's thirteen, unchanged order */
+] as const;
+export const APP_SETTINGS_FRAGMENTS = [
+  ...UNFORMED_SETTINGS_FRAGMENTS,
+  ...settingsOf(APP_COMPOSITION.layers),
+] as const;
 ```
 
 **Behaviour:** `SettingsOf<[]>` is `readonly never[]`, so `EngineSettingsState`
@@ -446,21 +492,34 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 
 **Files:** `tests/conventions/layerImportBoundary.test.ts` (new).
 
-**Behaviour:** walk every `.ts`/`.tsx` under `src/services/engine/**` and `src/state/**` with
-ts-morph (`oneMpcSeam.test.ts:31-37` is the import-walk idiom, `frameFilePurity.test.ts:23-59,118-133`
-the exact-count ratchet and failure message). An import declaration whose specifier resolves under
-`src/layers/` counts against the importing file's `ALLOWED` row, keyed `<dir>/<file>` relative to
-`src/`; a file with no row allows zero. Exact, not a ceiling. Type-only imports count: the boundary
-is about knowledge, not bundles.
+**Behaviour:** two sweeps, one ts-morph import walk (`oneMpcSeam.test.ts:31-37` is the idiom,
+`frameFilePurity.test.ts:23-59,118-133` the exact-count ratchet and failure message). An import
+declaration counts against the importing file's row, keyed `<dir>/<file>` relative to `src/`; a file
+with no row allows zero. Exact, not a ceiling. Type-only imports count: the boundary is about
+knowledge, not bundles.
+
+Inbound — every `.ts`/`.tsx` under `src/services/engine/**` and `src/state/**`, counting specifiers
+that resolve under `src/layers/`. Outbound — every `.ts`/`.tsx` under `src/layers/**`, counting
+specifiers that resolve under `src/state/` or `src/store/`. The outbound row is free today (zero such
+imports at HEAD) and is the half that matters most: it is the one import that can close D1's
+module-init cycle (Findings, last paragraph), so writing it fails a test naming the file, instead of
+crashing boot on an uninitialised `const` in a graph no unit test builds.
 
 ```ts
-const ALLOWED: Readonly<Record<string, number>> = { 'state/settings/settingsSlice': 13 };
+const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
+  'state/settings/settingsSlice': 13,
+};
+const LAYERS_ALLOWED: Readonly<Record<string, number>> = {};
 ```
 
 - [ ] Test `every engine and state file imports nothing from src/layers beyond its ALLOWED row` —
       `it.each` over the swept files, message naming the offending specifiers and the row to edit.
-- [ ] Prove the ratchet bites: temporarily add a layers import to any `src/state/**` file, run the
-      test, see it fail, revert. Say so in the task report; no fixture file is committed for it.
+- [ ] Test `no file under src/layers imports src/state or src/store` — the same walk over
+      `LAYERS_ALLOWED`; the message says a Layer mints its own `createAction`s rather than importing
+      the slice, and names the cycle.
+- [ ] Prove both directions bite: temporarily add a layers import to any `src/state/**` file and a
+      `settingsSlice` import to any `src/layers/**` file, run the test, see each fail, revert. Say so
+      in the task report; no fixture file is committed for it.
 - [ ] `npm test -- layerImportBoundary` green. Commit.
 
 ## Task 3 — `targetOf`, and the batch bridge skips a held target
@@ -482,17 +541,22 @@ targetOf(): number;
 targetOf(id: FadeId): number | null;
 ```
 
-**Behaviour:** `syncVisibilityFades` skips an item whose `fades.targetOf(row.handle(item))` already
-equals its intent target (`row.intent(settings, item) ? 1 : 0`), before `guard`, before `fadeTo` or
-`setImmediate`, before `post`. `syncVisibilityFadeItem` does NOT skip (Ruling 1); write the reason
-in one line at `:81-90`, naming `scheduleCubemapCaptures`. The `animate: false` batch wake at `:71`
-is unchanged.
+**Behaviour:** in `syncVisibilityFades`, an item whose `fades.targetOf(row.handle(item))` already
+equals its intent target (`row.intent(settings, item) ? 1 : 0`) skips **only the `fadeTo` /
+`setImmediate` call**. `guard` and `post` stay on the normal path: they are not fade writes and they
+are not idempotent — `FADE_LAYERS`' one `post` (`fadeLayers.ts:222`) calls
+`maybeLazyLoadDebugVolume`, whose contract is _re-arm when the slot is idle_, so skipping it would
+silently strand a volume that returned to idle under unchanged settings. `syncVisibilityFadeItem`
+does not skip at all (Ruling 1); write the reason in one line at `:81-90`, naming
+`scheduleCubemapCaptures`. The `animate: false` batch wake at `:71` is unchanged.
 
 - [ ] Test (`fadeController.test.ts`) `targetOf reports the destination mid-ramp and the held value at rest`.
 - [ ] Test (`fadeRegistry.test.ts`) `targetOf is null for an unregistered id` and
       `targetOf follows fadeTo and setImmediate`.
 - [ ] Test (`syncVisibilityFades.test.ts`) `the batch bridge does not re-issue fadeTo to a target already held` —
-      registry spy, an item at target 1 with intent true: `fadeTo` not called, `post` not called.
+      registry spy, an item at target 1 with intent true: `fadeTo` not called.
+- [ ] Test `a held target still runs guard and post` — the same item: `post` called once. This is the
+      lazy volume re-arm, pinned.
 - [ ] Test `the batch bridge retargets an in-flight fade whose intent flipped` — target 1 in flight,
       intent false: `fadeTo(…, 0, …)` called once.
 - [ ] Test `the item bridge re-issues fadeTo at a held target` — the cubemap contract, pinned.
@@ -582,6 +646,9 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 **Files:** `src/services/engine/selection/{galaxyCatalogSelectionRow,structureSelectionRow,milkyWaySelectionRow,zoneOfAvoidanceSelectionRow,bodySelectionRow,starSelectionRow,coreSelectionRows,composeSelectionRows}.ts`,
 `src/utils/selection/assertSelectionRowsDisjoint.ts`, `tests/support/selectionResolverOver.ts` (new);
 `src/@types/engine/ResolveDeps.d.ts:19` (modify, Ruling 5); tests mirroring each new file.
+Read-only here, deleted in Task 7 (the cases move out of them):
+`tests/services/engine/helpers/{resolvePick,resolvePickTable,extractSelectionRow}.test.ts`,
+`tests/services/url/{resolveFocusId,focusIdOf}.test.ts`.
 
 **Produces:**
 
@@ -627,14 +694,18 @@ aliases, not as new `@types` files.)
   (`extractSelectionRow.ts:51-63`); `claims` = `BODY_FOCUS_PREFIX`; `decode` validates against
   `SCENE_BODIES` (`resolveFocusId.ts:137-143`).
 - star — `pickSources: [Source.GaiaStars]`; positional ref; `extractRow` via `deps().stars.current()`
-  + `resolveStarRecord` (`extractSelectionRow.ts:69-86`); `claims` = `STAR_FOCUS_PREFIX`; `decode` =
-  the digits-only gate (`resolveFocusId.ts:151-157`).
+  - `resolveStarRecord` (`extractSelectionRow.ts:69-86`); `claims` = `STAR_FOCUS_PREFIX`; `decode` =
+    the digits-only gate (`resolveFocusId.ts:151-157`).
 
 **The composer.** `resolvePick(null)` is null; otherwise `SOURCE_REGISTRY[pick.sourceCode]` and the
 row whose `pickSources` has the code; none → the existing warning (`resolvePick.ts:27-30`) and null.
-`extractRow` dispatches on `ref.type`; no row → null. `resolveFocusId('')` is null; otherwise the
-first claiming row's `decode`, else null. `focusIdOf` is the row's `encode`, else null.
-`rowsOf()` is called per resolution and not cached.
+`extractRow` dispatches on `ref.type`; no row → null. `resolveFocusId('')` is null; otherwise it
+collects **every** claiming row: none → null, one → its `decode` (null included, the row is
+authoritative), two or more → a throw naming the id and both rows. The throw is unconditional, not
+dev-only: overlapping claims are a boot-shape bug, and the whole point of claim-then-decode is that
+row order stopped mattering — a silent first-wins would restore order-dependence in the one mechanism
+sold as free of it. `focusIdOf` is the row's `encode`, else null. `rowsOf()` is called per resolution
+and not cached.
 
 `assertSelectionRowsDisjoint` throws when two rows share a `type` or a code. It is called by
 `createLayers` (Task 10), not by the composer.
@@ -650,9 +721,11 @@ each.
       Task 7 deletes the originals. Keep each case's assertion; drop the `:244` comment about
       iteration order, which claims are disjoint now. Report which cases moved where.
 - [ ] Test (`composeSelectionRows.test.ts`) `a claiming row is authoritative even when its decode is null` —
-      a stub row claiming `x-` with `decode: () => null` before a stub row claiming everything:
-      result null, second row's `decode` never called.
+      a stub row claiming `x-` with `decode: () => null` beside a stub row claiming `y-`: `x-1`
+      resolves null and the second row's `decode` is never called.
 - [ ] Test `an unclaimed id resolves to null without consulting any decode`.
+- [ ] Test `two rows claiming the same id throw, naming the id and both rows` — two stubs both
+      claiming `x-`; assert the throw, not a first-wins result.
 - [ ] Test `an unloaded famous id is unclaimed; a loaded one is claimed and decodes to the famous cloud index` —
       the D6'2 deferral: `famousGalaxiesMeta: []` → null; meta with `m31` and the Famous cloud
       absent → null (claimed, decode null); both present → the ref.
@@ -668,7 +741,7 @@ each.
 Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) declare only their own symbol; the purity ratchet `tests/services/engine/frame/frameFilePurity.test.ts` shrinks only.
 
 **Files:** `src/services/engine/engine.ts:412-428,448-464`, `src/store/types.ts:122-150`,
-`src/@types/engine/BootstrapDeps.d.ts`, `src/@types/engine/interaction/HoverPickDeps.d.ts:49`,
+`src/@types/engine/interaction/HoverPickDeps.d.ts:49`,
 `src/@types/engine/CreateClickResolverInput.d.ts`, `src/services/engine/interaction/hoverPickDriver.ts:96`,
 `src/services/engine/interaction/clickHandler.ts:39-58`, `src/services/engine/phases/wireInput.ts:77-89`,
 `src/state/camera/watchClipSaga.ts:83`, `src/state/camera/watchClipPathInspectSaga.ts:67`,
@@ -697,15 +770,16 @@ git rm src/services/engine/helpers/resolvePick.ts src/services/engine/helpers/re
 ```ts
 // src/store/types.ts — SagaContext gains one member; `resolveDeps` stays (Ruling 5)
 selection: SelectionResolver;
-// src/@types/engine/BootstrapDeps.d.ts — read by createLayers' disjointness check (Task 10)
-readonly coreSelectionRows: readonly SelectionKindRow[];
 // HoverPickDeps / CreateClickResolverInput — the composed method replaces the deps bag
 readonly resolvePick: SelectionResolver['resolvePick'];
 ```
 
-**Behaviour:** `engine.ts` builds `coreRows = coreSelectionRows(resolveDeps)` once, `rowsOf = () =>
-[...coreRows, ...state.layers.flatMap((i) => i.selection)]` (`state.layers` exists from Task 10),
-and `selection = composeSelectionRows(rowsOf)`; `setSagaContext` carries it; `wireInput` hands
+**Behaviour:** `engine.ts` seeds the one row array core owns — `state.selectionRows =
+coreSelectionRows(resolveDeps)`, replacing the `[]` Task 10 put there — and composes
+`selection = composeSelectionRows(() => state.selectionRows)`. Laziness is unchanged (the thunk reads
+the field, which `createLayers` appends to exactly once), so the boot-window deep link Ruling 4
+protects still resolves; nothing rebuilds a list per resolution. `setSagaContext` carries it;
+`wireInput` hands
 `selection.resolvePick` to the hover driver and the click resolver, which drop their `ResolvePickDeps`.
 Every saga call becomes the method: `extractSelectionRow(ref, resolveDeps(), simDays)` →
 `selection.extractRow(ref, simDays)`; `resolveFocusId(id, resolveDeps())` → `selection.resolveFocusId(id)`;
@@ -722,7 +796,7 @@ Module headers to rewrite in the same commit, each to budget: `hoverPickDriver.t
 - [ ] Test (`watchTierSaga.test.ts`) `re-anchors a captured galaxy ref through the composed resolver`
       — the existing re-anchor case, driven through `selection`.
 - [ ] Test (`resolveFocusRefDeferring.test.ts` or the two `watchRequest*Saga` tests) `a body deep link
-      resolves before any catalog pulse` — the boot-window contract Ruling 4 protects; if no existing
+    resolves before any catalog pulse` — the boot-window contract Ruling 4 protects; if no existing
       case pins it, add one.
 - [ ] `rg -n "ResolvePickDeps|RESOLVE_PICK|EXTRACT_ROW|FOCUS_ID_DECODERS|resolveFocusId\(|focusIdOf\(|extractSelectionRow\(" src tests`
       returns only the composed resolver's methods and the selection-row files.
@@ -741,16 +815,20 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 ```ts
 // src/@types/store/CoreEngineSliceState.d.ts — today's EngineSliceState body, renamed (Task 9 adds a field)
 export type CoreEngineSliceState = { status; scale; focusedBodyDistanceMpc; hdrCapable; sourceCounts; structureCounts; provenanceCounts; loadProgress; meta };
-// src/@types/store/EngineSliceState.d.ts
+// src/@types/store/EngineSliceState.d.ts — TYPE-only import of the composition, erased at build
 export type EngineSliceState = CoreEngineSliceState & FactsOf<typeof APP_COMPOSITION.layers>;
-// src/state/engine/engineSlice.ts — the one facts mechanism (D6)
+// src/state/engine/engineSlice.ts — the one facts mechanism (D6), plus the seed createLayers uses
 factsReported: (state, action: PayloadAction<{ layer: string; patch: Record<string, unknown> }>) => void;
+layerFactsSeeded: (state, action: PayloadAction<{ layer: string; facts: Record<string, unknown> }>) => void;
 ```
 
-**Behaviour:** the initial state is `{ ...CORE_INITIAL, ...factsOf(APP_COMPOSITION.layers) }`; the
-reducer is `Object.assign(state[action.payload.layer], action.payload.patch)` with no existence
-branch (Ruling 7). `engineSlice.ts` gains a value import of `APP_COMPOSITION`; over the empty tuple
-that edge is inert, and the PR-D cycle finding above names the day it is not. Trim the slice header
+**Behaviour:** the initial state stays `CORE_INITIAL` — the slice does **not** fold the composition's
+facts into it. `layerFactsSeeded` sets `state[layer] = facts` and `createLayers` dispatches it per
+Layer before that Layer's `create` runs (Task 10), which is what keeps `factsReported`'s reducer
+`Object.assign(state[action.payload.layer], action.payload.patch)` with no existence branch
+(Ruling 7). The point of seeding there rather than here: `engineSlice.ts` needs `FactsOf<typeof
+APP_COMPOSITION.layers>` only as a **type**, and a type import in a `.d.ts` is fully erased, so core
+carries no runtime edge to the composition at all (Findings, last paragraph). Trim the slice header
 (`:1-29`) while there.
 
 - [ ] Test `factsReported merges a patch under the layer key and leaves sibling facts` — drive the
@@ -758,6 +836,8 @@ that edge is inert, and the PR-D cycle finding above names the day it is not. Tr
       `{ a: 1, b: 3 }` and `status` untouched.
 - [ ] Test `factsReported replaces a field wholesale, it does not deep-merge` — patch `{ list: [1] }`
       over `{ list: [0, 0] }` gives `[1]`.
+- [ ] Test `layerFactsSeeded installs a Layer's key and a later patch merges into it` — seed then
+      patch, in that order, on a state that had no such key.
 - [ ] `npm test -- engineSlice selectors` green. Commit.
 
 ## Task 9 — the handle shrinks: `camera` gone, `assetSlots` under `debug`, the structure list a fact
@@ -830,6 +910,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
 // EngineState — seeded [] in engine.ts, written once by createLayers, emptied by destroy
 layers: readonly LayerInstance[];
 
+// EngineState — the one selection-row array core owns. Seeded [] here; Task 7 seeds it with the
+// core rows instead, and createLayers appends each instance's rows once.
+selectionRows: readonly SelectionKindRow[];
+
 // PhaseLocals — the boot swap format, for LayerCoreDeps.ctx
 format: GPUTextureFormat;
 ```
@@ -839,11 +923,20 @@ format: GPUTextureFormat;
 and `focusUniform` from `state.gpu` (non-null after `initGpu`, asserted with a throw naming the
 missing field, not `!`); `fades` from `state.subsystems`; `store` from `deps.cb`; `requestRender`
 through the scheduler; `publish` = `(patch) => store.dispatch(factsReported({ layer: name, patch }))`,
-or a thrower when `layer.facts` is undefined (Ruling 7); `reportSourceCount` =
-`engineSourceCountReported`. Instances are created in tuple order and assigned to `state.layers` as
-one array, then `assertSelectionRowsDisjoint([...deps.coreSelectionRows, ...instances.flatMap((i) => i.selection)])`
-runs. `runBootstrapPhases` gains the phase second; the orchestrator's header (`bootstrap.ts:1-71`)
-is rewritten to budget in the same commit.
+present only when the Layer declares `facts` (Ruling 7: the type says so, so there is nothing to
+throw); `reportSourceCount` = `engineSourceCountReported`.
+
+Per Layer, in tuple order: dispatch `layerFactsSeeded({ layer: name, facts })` when `layer.facts` is
+declared, **then** `create`, so a `publish` during `create` lands on an existing key. The keys
+therefore exist from this phase on, not from store construction — `EngineSliceState` says they are
+always there, and between the store and `createLayers` they are not. Over the empty tuple that window
+is empty; PR-D's first fact reader mounts after boot, and if one ever needs to read earlier it seeds
+earlier, it does not add a branch.
+
+Instances are assigned to `state.layers` as one array and their rows appended once —
+`state.selectionRows = [...state.selectionRows, ...instances.flatMap((i) => i.selection)]` — then
+`assertSelectionRowsDisjoint(state.selectionRows)` runs. `runBootstrapPhases` gains the phase second;
+the orchestrator's header (`bootstrap.ts:1-71`) is rewritten to budget in the same commit.
 
 `engine.destroy()` runs `for (const inst of state.layers.slice().reverse()) inst.destroy()` after
 the input detach block (`:521-529`) and before `biasCorrection.destroy()` (`:531`), then sets
@@ -859,9 +952,11 @@ before core, in reverse tuple order".
       `publish({ x: 1 })` dispatches `factsReported({ layer: 'stub', patch: { x: 1 } })`;
       `reportSourceCount(s, n)` dispatches `engineSourceCountReported({ source: s, count: n })`.
 - [ ] Test `creates in tuple order and stores instances in that order`.
-- [ ] Test `publish throws for a Layer that declares no facts` — message names the Layer.
-- [ ] Test `throws at boot when two rows share a pick source code` — one core row and one Layer row
-      claiming the same code.
+- [ ] Test `a Layer's facts are seeded before its create runs` — a stub whose `create` calls
+      `publish` immediately; the store ends with the seed merged with the patch, and the seed
+      dispatch precedes the `create` call in the dispatch log.
+- [ ] Test `throws at boot when two rows share a pick source code` — one row already on
+      `state.selectionRows` and one Layer row claiming the same code.
 - [ ] Test (`bootstrap.test.ts`) — the phase-order case gains `createLayers` between `initGpu` and
       `wireSlots`; the short-circuit cases stay.
 - [ ] Test (`engine.destroyOrder.test.ts`) `destroy runs Layers in reverse tuple order before core teardown`
@@ -881,7 +976,12 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 
 ```ts
 // shouldKeepTicking's vote bag gains one field; the predicate ORs it in
-anim: { starFadeAnimating: boolean; earthTilesAnimating: boolean; labelsAnimating: boolean; layersAnimating: boolean }
+anim: {
+  starFadeAnimating: boolean;
+  earthTilesAnimating: boolean;
+  labelsAnimating: boolean;
+  layersAnimating: boolean;
+}
 ```
 
 **Behaviour:** after `ctx.focus = focusUniforms` (`runFrame.ts:191`) and before the `hiResFamous`
@@ -961,7 +1061,8 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
       7, 9 and 12's reports of which cases moved where. An unexplained drop is coverage deleted where
       it should have moved.
 - [ ] `npm run build` green.
-- [ ] `tests/conventions/layerImportBoundary.test.ts` present, green, with exactly one `ALLOWED` row.
+- [ ] `tests/conventions/layerImportBoundary.test.ts` present, green, with exactly one row inbound
+      (`state/settings/settingsSlice: 13`) and an empty allow-list outbound.
 - [ ] `tests/services/engine/frame/frameFilePurity.test.ts` unchanged (no row went up).
 - [ ] Manual, attested by the user with the branch's dev server:
   - click a galaxy, a cluster ring, a planet, a famous star, the Milky Way: each selects (the pick
@@ -972,13 +1073,19 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
   - the `l` key logs the camera;
   - Settings › Flow: change the particle count with flow on; the field reseeds;
   - toggle any layer; the fade runs once, not restarting on a second unrelated settings write;
-  - near Sgr A* with the lens active, flip the tier: the lensed sky re-bakes after the catalogs
+  - near Sgr A\* with the lens active, flip the tier: the lensed sky re-bakes after the catalogs
     re-commit (Ruling 1's contract);
   - DebugPanel's asset-slot rows still populate.
+- [ ] Spec §14 ("Corrections to the review") gains one line: D5's sentence that the ratchet's one
+      exemption "becomes the composed-tuple import once D1 lands" is wrong. `settingsSlice.ts` keeps
+      its thirteen direct fragment imports — the `liftClusterReducers` spreads need each fragment's
+      literal type for the typed `settingsSlice.actions` exports (Findings, row 5) — so the row is
+      13, not 1, until reducers compose at the type level. 04c and 04d read the spec after this PR.
 - [ ] Spec §9(d)'s "Backlog consumption" paragraph is intact; the spec stays in `specs/` (shared with
       04c/04d), so `/feature-done` relocates only this plan.
-- [ ] The PR body carries the D1 import-cycle finding for PR-D and the two veto-able rulings (2, 3),
-      each with the user's decision recorded.
+- [ ] The PR body carries the D1 import-cycle constraint the outbound ratchet now enforces (what
+      PR-D may not write, and why) and the two veto-able rulings (2, 3), each with the user's
+      decision recorded.
 
 **Reject if:** any test count drop lacks a per-difference reason; the deep-link boot-window case
 was not pinned (Task 7); the item bridge got the idempotence guard; a `!` was used where Task 10
@@ -995,17 +1102,20 @@ says to throw; any file under `src/layers/` was created or edited.
       `Layer.pick` are gone.
 - [ ] `APP_SETTINGS_FRAGMENTS` is `[...UNFORMED_SETTINGS_FRAGMENTS, ...settingsOf(APP_COMPOSITION.layers)]`
       and `docs/backlog/2026-09-11-layer-settings-tuple-seam.md` no longer exists.
-- [ ] `LayerCoreDeps<Facts>` carries `focusUniform`, `fades`, `publish`, `reportSourceCount`, and
-      `createLayers` runs between `initGpu` and `wireSlots`; `engine.destroy()` destroys
-      `state.layers` in reverse before any core teardown.
+- [ ] `LayerCoreDeps<Facts>` carries `focusUniform`, `fades`, `reportSourceCount` and a `publish`
+      conditional on `Facts`; `createLayers` runs between `initGpu` and `wireSlots`, seeds each
+      Layer's facts before its `create`, and appends its rows to `state.selectionRows`;
+      `engine.destroy()` destroys `state.layers` in reverse before any core teardown.
 - [ ] `runFrame` calls every instance's `frame` hook after the focus uniform and folds it into
       `shouldKeepTicking`.
 - [ ] `SagaContext.selection` is the composed `SelectionResolver`; the pick path calls its
       `resolvePick`; `RESOLVE_PICK`, `EXTRACT_ROW`, `FOCUS_ID_DECODERS`, `ENCODE`, `ResolvePickDeps`
       no longer exist; `ResolveDeps` survives with four fields.
-- [ ] `tests/conventions/layerImportBoundary.test.ts` exists with the single `settingsSlice` row.
-- [ ] `factsReported` and `engineStructureSearchListChanged` exist on the engine slice;
-      `EngineSliceState` is `CoreEngineSliceState & FactsOf<AppLayers>`.
+- [ ] `tests/conventions/layerImportBoundary.test.ts` exists with the single `settingsSlice` row
+      inbound and an empty `src/layers/** → src/state|store` allow-list outbound.
+- [ ] `factsReported`, `layerFactsSeeded` and `engineStructureSearchListChanged` exist on the engine
+      slice; `EngineSliceState` is `CoreEngineSliceState & FactsOf<AppLayers>`, and `engineSlice.ts`
+      imports the composition for its type only.
 - [ ] `EngineHandle` is `{ selection, sources, debug, destroy }`, `debug.assetSlots` exists,
       `EngineSourcesHandle.getStructures` and `useStructureIndex` do not.
 - [ ] `FadeRegistry.targetOf` exists; `FADE_ROW`, `VisibilityActionRow.writes`,
@@ -1051,7 +1161,16 @@ that gates it.
 - The galaxy blocks in `runFrame` (`:207-243`), the `texturedDisks` term in `shouldKeepTicking`,
   and `PassState`'s galaxy fields.
 - The hi-res famous pair folded into its slot (spec §9(d), the PR-D paragraph).
-- The D1 import-cycle fix (Findings section, last paragraph).
+- `GpuHandleRow.constructPhase: 'wireInput'` and the two `initGpu`/`wireInput` filters that read it
+  (`initGpu.ts:84`, `wireInput.ts:68`, the rows at `gpuHandleRegistry.ts:492,505`) — D8 kills the
+  flag, but both rows are galaxy-owned, so they leave with the galaxy Layer's `create`.
+- The conditional `wireImpostorSubsystems` call in `wireSlots.ts` — same reason: the condition is the
+  galaxy Layer's to own once it constructs its own subsystems.
+- D6'2's assert that no famous id collides with the static body set — it needs the famous-meta commit
+  the galaxy Layer owns; the composer's overlap throw (Task 6) is the core-side half of the same
+  guarantee.
+- No import-cycle fix is deferred: Task 2's outbound ratchet makes the cycle unauthorable, so PR-D's
+  Layer code mints its own `createAction`s rather than importing the slice.
 
 **PR-C (P7):** `ComposedSources` gains its runtime, `composeSources(layers)`, with D11; the
 `famousGalaxiesMeta` copies with D10.
