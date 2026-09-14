@@ -5,9 +5,9 @@
 // the sun by the host is the CPU-side scalar 'u.sunVisibleFraction' and nothing
 // else, the same analytic posture every other body-lighting effect here takes.
 //
-// The bodies are dielectrics: 'pbrDirect's 'f0' is a scalar, so the mr map's
-// metallic channel is read by nobody. A metal/dielectric blend, if ever wanted,
-// is built HERE, not inside 'pbrDirect'.
+// The bodies are dielectrics: the mr map's metallic channel is read by nobody.
+// A metal/dielectric blend, if ever wanted, is built HERE and handed to
+// 'pbrDirect' as its blended 'f0'.
 
 import package::bodies::meshBody::io::MeshBodyUniforms;
 import package::bodies::meshBody::io::MeshBodyVSOut;
@@ -47,7 +47,7 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let roughness = textureSample(metalRoughTexture, meshSampler, in.uv).g;
 
   let v = normalize(u.camPosLocal - in.localPos);
-  let direct = pbrDirect(n, v, u.sunDirLocal, albedo, roughness, DIELECTRIC_F0) *
+  let direct = pbrDirect(n, v, u.sunDirLocal, albedo, roughness, vec3<f32>(DIELECTRIC_F0)) *
     SUN_IRRADIANCE * u.sunVisibleFraction;
 
   // 'u.dirToHost' is a uniform, not a varying: derived per fragment it would be

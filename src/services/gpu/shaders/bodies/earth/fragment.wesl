@@ -117,7 +117,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // GGX singularity.
   let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), u.oceanRoughness, mat.g);
 
-  let directBase = pbrDirect(n, v, l, albedo, roughness, u.f0);
+  let directBase = pbrDirect(n, v, l, albedo, roughness, vec3<f32>(u.f0));
 
   // Ground shadow (cloud deck above blocks sunlight): cast a ray from 'P', the
   // GEOMETRIC surface position (not the perturbed shading normal 'n' -- the
