@@ -476,6 +476,8 @@ function makeInput(
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
+          // No mesh renderer → the probe scheduler idles before reading `data`.
+          meshBodyRenderer: null,
           // Near-field handle null → atmosphereShellPass reports enabled=false
           // AND the atmosphereSkyView compute step early-outs, so these fixtures
           // stay a pure cosmological-frame trace (like the other body handles).

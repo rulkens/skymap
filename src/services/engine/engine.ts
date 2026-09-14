@@ -234,6 +234,7 @@ export function createEngine(
       starPointRenderer: null,
       bodyGlintRenderer: null,
       sgrAStarLensingRenderer: null,
+      cubeFaceBlitRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
       bodyPickRenderer: null,

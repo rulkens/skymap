@@ -88,7 +88,8 @@ function programFaces(): readonly CubeFace[] {
 
 function makeState(overrides: Partial<EngineState> = {}): EngineState {
   return {
-    gpu: { focusUniform: null },
+    // No mesh renderer ⇒ the probe scheduler idles; the sky sweeps are the subject here.
+    gpu: { focusUniform: null, meshBodyRenderer: null },
     settings: {
       tonemap: { exposure: 1, curve: 0 },
       hdr: { enabled: false, knee: 0, headroom: 0 },
@@ -247,29 +248,39 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   });
 
   it('runs finishCubemapCapture once per row that had faces this frame, after its faces', () => {
-    // "Had faces" means expanded STEPS: a scheduled row on no capture line
-    // (the probe, until its line lands) expands to nothing and owes nothing.
+    // "Had faces" means expanded STEPS, one finish per row however many faces
+    // it scheduled — and in the order the capture lines run, not the map's.
     const face = (): CaptureFace => ({ ctx: makeCtx([1000, 0, 0]), bodySlabs: [] });
     scheduleMock.mockReturnValueOnce(
       new Map([
-        ['sgrAStar', new Map<CubeFace, CaptureFace>([[0, face()]])],
-        ['solarSystem', new Map<CubeFace, CaptureFace>([[0, face()]])],
         ['probe', new Map<CubeFace, CaptureFace>([[0, face()]])],
+        ['sgrAStar', new Map<CubeFace, CaptureFace>([[0, face()]])],
+        [
+          'solarSystem',
+          new Map<CubeFace, CaptureFace>([
+            [0, face()],
+            [1, face()],
+          ]),
+        ],
       ]),
     );
     const state = makeState();
     const input = makeInput(makeCtx([1000, 0, 0]), state);
     renderFrame(input);
 
-    expect(finishMock.mock.calls.map((call) => call[0])).toEqual(['sgrAStar', 'solarSystem']);
+    expect(finishMock.mock.calls.map((call) => call[0])).toEqual([
+      'sgrAStar',
+      'solarSystem',
+      'probe',
+    ]);
     expect(finishMock).toHaveBeenCalledWith('solarSystem', state, input.device);
-    // Both faces' submits precede every finish; the frame's submit follows.
+    // Every face's submit precedes every finish; the frame's submit follows.
     const submit = input.device.queue.submit as unknown as ReturnType<typeof vi.fn>;
     const submitOrder = submit.mock.invocationCallOrder;
     const finishOrder = finishMock.mock.invocationCallOrder;
-    expect(submitOrder).toHaveLength(3);
-    expect(Math.max(submitOrder[0]!, submitOrder[1]!)).toBeLessThan(Math.min(...finishOrder));
-    expect(Math.max(...finishOrder)).toBeLessThan(submitOrder[2]!);
+    expect(submitOrder).toHaveLength(5);
+    expect(Math.max(...submitOrder.slice(0, 4))).toBeLessThan(Math.min(...finishOrder));
+    expect(Math.max(...finishOrder)).toBeLessThan(submitOrder[4]!);
   });
 
   it('omits a face from the hand-off map when cubemapFaceContext returns null, and leaves bakedSettings unset so the next frame retries', () => {

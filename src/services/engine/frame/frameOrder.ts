@@ -49,6 +49,22 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     near0Passes: ['star-aggregates', 'star-catalog'],
     bodyPasses: [],
   },
+  // The reflection probe of this frame's one subject mesh body, after the sky
+  // line so its blit samples a `solarSystem` bake this frame may have written.
+  // Its roster is the sky blit plus the subject's HOST body row, and no more:
+  // `mesh-bodies` is excluded because the subject would draw into its own
+  // probe; `star-spheres` / `field-star-sphere` because the Sun stays analytic
+  // (a sub-pixel Sun would smear through the prefilter into a false highlight);
+  // `body-glints` / `orbit-trails` because neither is environment a surface
+  // reflects. The NEAR0 roster is empty on purpose — the blit rides COSMO — so
+  // a probe face opens two steps, not three.
+  {
+    kind: 'capture',
+    captures: ['probe'],
+    cosmoPasses: ['sky-cubemap-blit'],
+    near0Passes: [],
+    bodyPasses: ['earth', 'cloud-shell', 'planets', 'textured-bodies', 'rings', 'atmosphere-shell'],
+  },
   // The half-res scalar-volume raymarch into its own offscreen. It is merged
   // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,
   // never by a whole-texture composite — so there is no `volume→hdr` line here,

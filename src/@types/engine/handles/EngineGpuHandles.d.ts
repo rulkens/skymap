@@ -51,6 +51,7 @@ import type { AtmosphereShellRenderer } from '../../rendering/AtmosphereShellRen
 import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { SgrAStarLensingRenderer } from '../../rendering/SgrAStarLensingRenderer';
+import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { StarCatalogRenderer } from '../../rendering/StarCatalogRenderer';
 import type { StarCatalogPickRenderer } from '../../rendering/StarCatalogPickRenderer';
 import type { BodyPickRenderer } from '../../rendering/BodyPickRenderer';
@@ -602,6 +603,14 @@ export type EngineGpuHandles = {
    * `sgrAStarLensingPass`.
    */
   sgrAStarLensingRenderer: SgrAStarLensingRenderer | null;
+  /**
+   * The covering-triangle cube blit `skyCubemapBlitPass` lays the solar-system
+   * sky under a probe capture with. Draws into a probe's own cube, whose
+   * format is `HDR_TARGET_FORMAT` (`meshBodyRenderer`'s `mintProbe`). Null
+   * until `initGpu` constructs it; excluded from `isEngineReady` and
+   * null-checked at use.
+   */
+  cubeFaceBlitRenderer: CubeFaceBlitRenderer | null;
   /**
    * The survey (Gaia bin) stars as additive point sprites into the depthless
    * HDR target — the wide-field twin of `starPointRenderer`, fed from an

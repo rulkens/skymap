@@ -111,6 +111,8 @@ export function cubemapFaceContext(input: {
 
     nowMs,
     state.cameraRuntime.outputs.simDays,
+    // The synthetic pose orbits no pivot: its altitude is its own distance.
+    nearMpc,
   );
   if (!ctx.isReady) return null;
   // In place is safe: `deriveFrameContext` freshly allocated these arrays.

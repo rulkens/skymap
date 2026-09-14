@@ -291,6 +291,43 @@ describe('cubemapFaceContext', () => {
     expect(ctx.cam.distance).toBe(CAPTURE_NEAR_MPC);
   });
 
+  it("a capture face's altitude ignores the real focus pivot radius", () => {
+    // NEAR0's bracket is sized from the eye-to-pivot-surface range; for the
+    // real camera that is the pose distance minus the focus's radius. A face's
+    // pose is synthetic and orbits no pivot: with a rover on Mars focused, the
+    // subtraction would drive a metre-scale probe altitude hugely negative.
+    const face = (focus: unknown) => {
+      const state = makeState();
+      (state as unknown as { selectionRows: { focus: unknown } }).selectionRows.focus = focus;
+      return cubemapFaceContext({
+        state,
+        eyeMpc: EYE_MPC,
+        face: 0,
+        faceSizePx: 256,
+        nearMpc: CAPTURE_NEAR_MPC,
+        viewSlotBase: VIEW_SLOT_BASE,
+        nowMs: 0,
+      });
+    };
+    // A star half the capture distance across: the subtraction, if applied,
+    // halves the altitude and with it the bracket.
+    const halfWayStar = {
+      type: 'star',
+      index: 0,
+      positionMpc: [0, 0, 0],
+      absMag: 0,
+      bpRp: 0,
+      radiusM: 0.05 * SCALE_UNITS.AU_TO_MPC * SCALE_UNITS.MPC_TO_M,
+    };
+    const focused = face(halfWayStar);
+    const unfocused = face(null);
+    expect(focused).not.toBeNull();
+    expect(unfocused).not.toBeNull();
+    if (focused === null || unfocused === null) return;
+    expect(focused.slabs[0]!.near).toBe(unfocused.slabs[0]!.near);
+    expect(focused.slabs[0]!.far).toBe(unfocused.slabs[0]!.far);
+  });
+
   it("stamps viewSlot from the given base, so a second capture cannot share the first's slots", () => {
     const ctx = cubemapFaceContext({
       state: makeState(),

@@ -57,6 +57,11 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByR
  * `arm` is the SAME framed pose `pose` was resolved from (`resolveWorldArm`,
  * called once by the caller) and serves only the pose-provider seam below
  * (spec §5.2).
+ *
+ * `altitudeMpc` is the eye-to-pivot-surface range NEAR0's bracket is sized
+ * from; absent, it is derived from `pose` and the focused pivot. A capture
+ * face passes its own: its synthetic pose orbits no pivot, and the real
+ * focus's radius taken off a metre-scale probe distance goes hugely negative.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -69,6 +74,7 @@ export function deriveFrameContext(
   visibleSourceMask: number,
   nowMs: number,
   simDays: number,
+  altitudeMpc?: number,
 ): FrameContext {
   if (!isEngineReady(state)) {
     return { isReady: false };
@@ -192,7 +198,7 @@ export function deriveFrameContext(
   const slabs = deriveSlabs({
     cam,
     cosmoVp: vp,
-    altitudeMpc: pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
+    altitudeMpc: altitudeMpc ?? pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
     pose: bodyPose,
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,

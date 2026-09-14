@@ -301,6 +301,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         earthRenderer: null,
         starRenderer: null,
         planetRenderer: null,
+        // No mesh renderer → the probe scheduler idles before reading `data`.
+        meshBodyRenderer: null,
         // Near-field handle null → atmosphereShellPass disabled AND the
         // atmosphereSkyView compute step early-outs, so it bills no work.
         atmosphereShellRenderer: null,

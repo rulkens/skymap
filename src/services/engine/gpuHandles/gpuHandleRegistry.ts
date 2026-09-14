@@ -46,6 +46,7 @@ import { createPlanetRenderer } from '../../gpu/renderers/bodies/planetRenderer'
 import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRenderer';
 import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
 import { createSgrAStarLensingRenderer } from '../../gpu/renderers/bodies/sgrAStarLensingRenderer';
+import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
@@ -380,6 +381,12 @@ export const GPU_HANDLE_ROWS = [
     key: 'sgrAStarLensingRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createSgrAStarLensingRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
+  },
+  {
+    // Draws into a probe's cube (`meshBodyRenderer` mints it in this format).
+    key: 'cubeFaceBlitRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createCubeFaceBlitRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'starCatalogRenderer',
