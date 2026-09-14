@@ -2,16 +2,16 @@
  * atmosphereShellPass — unit tests for the in-scatter atmosphere's `'body'`-
  * slab content row.
  *
- * Like the other body-slab layers, the load-bearing assertion is the f64
- * seam: the layer MUST feed `composeBodySlabMvp` the slab's `Float64Array`
- * view-projection (`view.slab.vp`), NOT the f32-narrowed `view.vp`, and MUST
- * read the pose off `ctx.bodyPose(bodyId)` rather than re-deriving it.
- * `composeBodySlabMvp` and `bodySlabCamLocal` are mocked to fixed values —
- * their own math is covered by their own test files.
+ * Like the other body-slab layers, the load-bearing assertion is the f64 seam,
+ * pinned end-to-end through the layer: the slab's `Float64Array` view-projection
+ * (`view.slab.vp`) must reach `composeBodySlabMvp`, NOT the f32-narrowed
+ * `view.vp`, and the pose must come off `ctx.bodyPose(bodyId)` rather than a
+ * re-derivation — `atmosphereShellUniforms` does both on the layer's behalf.
+ * `composeBodySlabMvp` and `bodySlabCamLocal` are mocked to fixed values; their
+ * own math is covered by their own test files.
  *
- * The layer is now invoked once PER body-m row (Task 7's frame-program
- * expansion), so the central new behaviour this suite pins is per-row
- * selection: two body-m rows (earth, mars) each draw with THEIR OWN
+ * The layer is invoked once PER body-m row, so the other thing pinned here is
+ * per-row selection: two body-m rows (earth, mars) each draw with THEIR OWN
  * `ATMOSPHERE_PARAMS` entry, and a row for a body with no atmosphere table
  * entry (the Moon) draws nothing.
  */
@@ -164,7 +164,7 @@ describe('atmosphereShellPass.enabled', () => {
 });
 
 describe('atmosphereShellPass.draw', () => {
-  it('composes mvp/camLocal from the slab f64 vp and the pose off ctx.bodyPose, never view.vp', () => {
+  it('feeds mvp/camLocal the slab f64 vp and the pose off ctx.bodyPose, never view.vp', () => {
     mvpMock.mockClear();
     camLocalMock.mockClear();
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
@@ -179,14 +179,14 @@ describe('atmosphereShellPass.draw', () => {
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     // Second arg is the pose's eyeRelBodyM, forwarded by reference — proof the
-    // layer read ctx.bodyPose rather than re-deriving a pose of its own.
+    // pose came off ctx.bodyPose rather than a re-derivation.
     expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
     // Third arg is the atmosphere-TOP radius in METRES (km → m, not km → Mpc):
     // the seam this task moved off the Mpc-based composeBodyMvp/camPosLocal.
     const expectedTopM = ATMOSPHERE_PARAMS.earth!.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
     expect(call[2]).toBeCloseTo(expectedTopM);
 
-    // The camLocal call is the draw list's now, off this same pose seam.
+    // The camLocal call is the draw list's, off this same pose seam.
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
     expect(camLocalMock.mock.calls[0]![1]).toBeCloseTo(expectedTopM);
   });

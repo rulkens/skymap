@@ -1,68 +1,18 @@
 /**
- * encodeAtmosphereSkyView — the per-frame sky-view LUT bake for the atmosphere
- * shell, a compute step recorded into the frame's single command encoder BEFORE
- * the foreground render pass opens.
- *
- * ### Why this runs in the compute prelude
- *
- * The atmosphere shell's fragment SAMPLES the sky-view LUT, which folds in this
- * frame's camera altitude + sun direction and so must be re-baked every frame
- * (the transmittance + multi-scatter LUTs are view-independent and baked once at
- * construction). If the draw ran before this bake the shell would sample a stale
- * or uninitialised table. Placing this `{ kind:'compute', name:'atmosphereSkyView' }`
- * step in the compute prelude (alongside `flow`) — well ahead of the
- * `foreground:0` render step — is what enforces the ordering: WebGPU inserts the
- * storage barrier between the compute write and the later fragment read within
- * the one encoder. Same shape as `encodeFlowCompute`.
- *
- * ### The bake reads the SAME list the draw does
- *
- * This runs inside the ready-context gate, so it always has a `ReadyFrameContext`.
- * It iterates the SAME `atmosphereDrawList` the shell draw (`atmosphereShellPass`)
- * walks — the one per-frame derivation of which seeded bodies have a live
- * atmosphere this frame (data-gate, near-field distance cull, sub-pixel disc cull).
- * So bake↔draw is equality by construction: the shell bakes this frame's LUT iff it
- * draws it, and can never draw against a LUT the bake skipped. Routing the bake
- * through the same list also keeps the 192×108×30-step march from running every
- * frame post-bootstrap (Earth is seeded unconditionally) — beyond the near-field
- * edge, or once the disc goes sub-pixel, the list is empty and the bake is a no-op,
- * so no sky-view compute burns at galaxy / cosmic zoom where the shell is culled.
- *
- * ### The sky-view uniform packing (the `SkyViewParams` contract)
- *
- * The renderer's `encodeSkyView` writes the passed 16-byte record VERBATIM into
- * its `SkyViewParams` buffer, so its layout is fixed by `AtmosphereShellRenderer`'s
- * `.d.ts` and mis-packing silently mis-indexes the LUT (the GPU would not report
- * it; on iOS it would drop the frame). Four live fields:
- *
- *   - `viewHeightKm` = |camLocal| × atmosphereTopKm. The entry's `camLocal` is the
- *     camera in atmosphere-top-radius units — the very vector
- *     `atmosphereShellPass`'s fragment marches along — so scaling its length by
- *     `atmosphereTopKm` recovers the camera radius in km, and the km-baked LUT
- *     and the local-unit fragment then agree, as the ratio-based LUT
- *     parametrisation requires.
- *   - `sunZenithCos` = dot(normalize(camLocal), sunLocal) — the cosine of
- *     the sun's zenith angle at the camera, `localUp` being the camera's radial
- *     direction in the body frame.
- *   - `twilightSoftness` — the night-limb fade width. This rides the per-frame
- *     `SkyViewParams` (not the construction-written `ScatteringParams`) alongside
- *     the view-dependent altitude + sun direction, read from the body's
- *     `AtmosphereParams` row for every body.
- *   - `twilightIntensity` — the brightness gain on the twilight band, read from
- *     the same `AtmosphereParams` row.
+ * encodeAtmosphereSkyView — the per-frame sky-view LUT bake, a compute step in
+ * the prelude of the frame's single command encoder. The shell fragment SAMPLES
+ * this LUT and it folds in the camera altitude + sun direction, so it is re-baked
+ * every frame (transmittance and multi-scatter are view-independent, baked once
+ * at construction). Prelude placement — ahead of the `foreground:0` render step —
+ * is what orders the two: WebGPU inserts the storage barrier between the compute
+ * write and the later fragment read within the one encoder. Bodies come from
+ * `atmosphereDrawList` (see its header), empty away from the near field.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { atmosphereDrawList } from './atmosphereDrawList';
 
-/**
- * Bake this frame's sky-view LUT into the atmosphere renderer's own texture for
- * each body in `atmosphereDrawList` — the shared derivation the shell draw walks
- * too, camera altitude and sun direction included (spec §5). When the list is
- * empty (Earth out of view, sub-pixel, poseless, or the handle absent) this is a
- * no-op, the common path away from the near field.
- */
 export function encodeAtmosphereSkyView(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
@@ -71,33 +21,30 @@ export function encodeAtmosphereSkyView(
   const renderer = state.gpu.atmosphereShellRenderer;
   if (renderer === null) return;
 
-  // `camLocal` and `sunLocal` are the entry's own, derived off the body-slab pose
-  // seam `atmosphereShellPass.draw` composes its MVP from — NOT a second Mpc-side
-  // re-derivation (`camPosLocal`, `ctx.drawCamPos`) — so the bake and the fragment
-  // can never read two different cameras or two different suns.
+  // The entry's OWN `camLocal`/`sunLocal`, off the body-slab pose seam the shell's
+  // MVP is composed from — never a second Mpc-side re-derivation, or bake and
+  // fragment read two different cameras.
   for (const { body, params, camLocal, sunLocal } of atmosphereDrawList(state, ctx)) {
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);
-    // |camLocal| × atmosphereTopKm recovers the camera radius in km (camLocal is
-    // in atmosphere-top-radius units), matching the km-baked LUT parametrisation.
+    // camLocal is in atmosphere-top-radius units, so this is the camera radius in
+    // km — the km-baked LUT's parametrisation.
     const viewHeightKm = radius * params.atmosphereTopKm;
-    // dot(normalize(camLocal), sun) — cos of the sun's zenith angle at the camera.
-    // radius > 0 whenever the camera is off the body centre (always, in practice);
-    // guard the divide so a degenerate centre pose bakes a defined (nadir) value.
+    // cos of the sun's zenith angle at the camera; the guard keeps a degenerate
+    // centre pose (radius 0) from baking a NaN.
     const sunZenithCos =
       radius > 0
         ? (camLocal[0] * sunLocal[0] + camLocal[1] * sunLocal[1] + camLocal[2] * sunLocal[2]) /
           radius
         : 0;
 
-    // The twilight fade width + band gain come from the body's `AtmosphereParams`
-    // row for every body. They ride the per-frame SkyViewParams (not the
-    // construction-written ScatteringParams) alongside the view-dependent altitude
-    // and sun direction, which is what keeps the LUT rebake self-contained.
+    // These ride the per-frame SkyViewParams rather than the construction-written
+    // ScatteringParams, which is what keeps the rebake self-contained.
     const twilight = params.twilightSoftness;
     const twilightIntensity = params.twilightIntensity;
 
     // f32 [viewHeightKm, sunZenithCos, twilightSoftness, twilightIntensity] — the
-    // 16-byte SkyViewParams record the renderer writes verbatim (see AtmosphereShellRenderer.d.ts).
+    // 16-byte SkyViewParams record the renderer writes VERBATIM, layout fixed by
+    // AtmosphereShellRenderer.d.ts (a mis-pack mis-indexes the LUT silently).
     renderer.encodeSkyView(
       encoder,
       body.id,

@@ -1,9 +1,9 @@
 /**
- * atmosphereShellUniforms — the shell's `AtmosphereUniforms` record, built in ONE
- * place because it is a byte layout with more than one consumer coming: a second
- * builder is the drift `packAtmosphereUniforms` exists to prevent, one level up.
- * The MVP pair rides the slab's f64 `vp` and the SAME `ctx.bodyPose` closure
- * `deriveSlabs` built that `vp` from (see `composeBodySlabMvp`).
+ * atmosphereShellUniforms — the entry→`AtmosphereUniforms` mapping, one contract
+ * shared by every consumer of that record: a second builder is the drift
+ * `packAtmosphereUniforms` exists to prevent, one level up. The MVP pair rides
+ * the slab's f64 `vp` and the SAME `ctx.bodyPose` closure `deriveSlabs` built
+ * that `vp` from (see `composeBodySlabMvp`).
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';

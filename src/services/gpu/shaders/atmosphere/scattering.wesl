@@ -342,8 +342,7 @@ fn sampleMultiScatter(
 // that agree only by inspection. The single-scatter source is weighted by the
 // REAL Rayleigh + Mie phases (this is a directional lookup, unlike the
 // isotropic multi-scatter bake); the precomputed multi-scatter is added with
-// the total scattering coefficient (it is already isotropic). Standard
-// '(S - S*T)/extinction' analytic step integral.
+// the total scattering coefficient (it is already isotropic).
 struct ScatterStep {
   // The step's source integral '(S - S*T)/extinction', BEFORE the running
   // throughput is applied. The caller accumulates 'L += throughput * inScatter'.

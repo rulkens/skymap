@@ -1,30 +1,20 @@
 /**
  * encodeAtmosphereSkyView — unit tests for the per-frame sky-view LUT bake.
  *
- * The load-bearing assertion is the `SkyViewParams` packing contract
+ * Two load-bearing assertions. First the `SkyViewParams` packing contract
  * (AtmosphereShellRenderer.d.ts): the renderer writes the 16-byte record
  * VERBATIM, so a mis-pack silently mis-indexes the LUT (the GPU never reports
- * it; on iOS it drops the frame). We pin the three live fields —
- * `viewHeightKm = |camLocal| × atmosphereTopKm` at slot 0,
- * `sunZenithCos = dot(normalize(camLocal), sunDirLocal)` at slot 1, and the
- * body's `twilightSoftness` params-row value at slot 2 — by recomputing them
- * from the contract's formula, so a slot swap, a dropped `× atmosphereTopKm`,
- * or a surface-vs-atmosphere-top radius choice lands as a failure here. Slots
- * 2 + 3 pack the body's `AtmosphereParams` twilight softness + intensity for
- * every body.
+ * it; on iOS it drops the frame). Slots 0-3 are recomputed here from the
+ * contract's own formulae, so a slot swap, a dropped `× atmosphereTopKm`, or a
+ * surface-vs-atmosphere-top radius choice fails here.
  *
- * The other load-bearing assertion is the SOURCE of the camera altitude (the
- * M1 fix): the bake packs the `camLocal` the draw list derived via
- * `bodySlabCamLocal` from `ctx.bodyPose(body.id)` — the SAME body-slab pose seam
- * `atmosphereShellPass` reads for its fragment — NOT a second Mpc-side
- * re-derivation off `ctx.drawCamPos`/`state.cam.position`. The packing test
- * recomputes it from the pose fixture directly, so any other source fails here.
+ * Second, the SOURCE of the camera altitude (the M1 fix): the bake packs the
+ * entry's `camLocal`/`sunLocal`, off the body-slab pose seam, NOT a second
+ * Mpc-side re-derivation from `ctx.drawCamPos`/`state.cam.position`. The packing
+ * test recomputes them from the pose fixture, so any other source fails here.
  *
- * The bake iterates the SAME `atmosphereDrawList` the shell draw walks, so
- * bake↔draw is equality — the shell bakes iff it draws. The bake fixture is
- * therefore sized supra-pixel (the list applies the sub-pixel disc cull) so the
- * packing case reaches an entry. We check the three no-op paths (null renderer /
- * camera beyond the near-field distance gate / unseeded Earth), each an empty list.
+ * The bake fixture is sized supra-pixel because `atmosphereDrawList` applies a
+ * sub-pixel disc cull, so the packing case reaches an entry at all.
  */
 
 import { describe, it, expect, vi } from 'vitest';

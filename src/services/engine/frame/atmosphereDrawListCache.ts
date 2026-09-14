@@ -1,10 +1,7 @@
 /**
- * atmosphereDrawListCache — `atmosphereDrawList`'s per-frame memo. It lives in
- * its own file because a module-scope const beside the derivation would be a
- * second declaration in a frame file (`frameFilePurity.test.ts`). Weak so a
- * retired frame context takes its list with it; keyed on the context alone,
- * since that is the object a frame is, while `state` is a live getter the
- * derivation reads through.
+ * atmosphereDrawListCache — `atmosphereDrawList`'s per-frame memo, keyed on the
+ * context alone: that is the object a frame IS, while `state` is a live getter
+ * the derivation reads through. Weak, so a retired context takes its list with it.
  */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';

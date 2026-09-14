@@ -4,8 +4,7 @@
  * draw order, so there is no second table for it to disagree with.
  *
  * Two kinds carry runtime expansion (`capture`, `foreground`), as does a
- * `render` line whose `slab` names a per-frame list — the lists the frame used
- * to pass as separate program parameters.
+ * `render` line whose `slab` names a per-frame list.
  */
 
 import type { BloomStepSpec } from './BloomStepSpec';

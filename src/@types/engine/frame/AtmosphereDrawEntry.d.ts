@@ -1,12 +1,9 @@
 /**
- * AtmosphereDrawEntry — one atmosphere body resolved for this frame: the seeded
- * body, its `AtmosphereParams` row, and the pose-dependent values both consumers
- * need, derived ONCE by `atmosphereDrawList`. The sky-view bake and the shell
- * draw walk the SAME entries, so they cannot disagree on which bodies have a
- * live atmosphere this frame, nor on where it is. An entry exists only because
- * `ctx.bodyPose` returned a pose for its body, so the bake reads these fields
- * unguarded. `body` is `EarthBody | PlanetBody` for its authored identity alone;
- * the derivation reads only `id` + `radiusM`.
+ * AtmosphereDrawEntry — one atmosphere body resolved for this frame by
+ * `atmosphereDrawList` (see its header): the seeded body, its
+ * `AtmosphereParams` row, and the pose-dependent values the sky-view bake and
+ * the shell draw share. An entry exists only where `ctx.bodyPose` resolved, so
+ * consumers read these fields unguarded.
  */
 
 import type { EarthBody } from '../../scene/EarthBody';

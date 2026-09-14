@@ -1,9 +1,9 @@
 /**
  * expandFrameOrder — `FRAME_ORDER` plus this frame's own lists into the step
  * sequence the executor walks. The two expanding kinds (`capture`,
- * `foreground`) plus a `render` line whose `slab` names a per-frame list are
- * what the frame used to pass as separate program parameters; each can expand
- * to nothing, which is the lens's zero-dispatch guarantee.
+ * `foreground`) and a `render` line whose `slab` names a per-frame list each
+ * expand to nothing on an empty list, which is the lens's zero-dispatch
+ * guarantee.
  */
 
 import type { BodyRowSource } from '../../../@types/engine/frame/BodyRowSource';
