@@ -32,6 +32,7 @@ import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
 import { sceneBodyStates } from '../sceneBodyStates';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
+import { outerBoundRadiusM } from '../../../../utils/scene/outerBoundRadiusM';
 
 export const meshBodiesPass: ContentPass = {
   name: 'mesh-bodies',
@@ -99,7 +100,7 @@ export const meshBodiesPass: ContentPass = {
           // there under the parity test in `shaders/constants.parity.test.ts`.
           hostShineStrength: hosted
             ? (EARTH_SURFACE_PARAMS.sunIrradiance / Math.PI) *
-              hostSkyFraction(host.radiusM, distToHostM)
+              hostSkyFraction(outerBoundRadiusM(host.surface), distToHostM)
             : 0,
           hostShineColor,
           dirToHost: [-posM[0] * invDist, -posM[1] * invDist, -posM[2] * invDist],
