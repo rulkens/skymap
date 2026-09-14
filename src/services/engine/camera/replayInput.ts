@@ -19,6 +19,7 @@ import { advanceEpoch, elapsedMs } from './cameraEpochs';
 import { frameAlignedRoll } from './frameAlignedRoll';
 import { pivotFraming } from './pivotRadiusMpc';
 import { resolveWorldArm } from './poseFrameConversion';
+import { isWorldArm } from './rungs/isWorldArm';
 import { sameFrame } from './rungs/sameFrame';
 import { zoomedDistance } from '../../../utils/camera/zoomedDistance';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
@@ -230,7 +231,7 @@ export function replayInput(
         // adopts; a second notch in the same drain resolves off the first.
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
         if (
-          camera.base.frame === 'absolute' &&
+          isWorldArm(camera.base) &&
           isFollowDriverId(winnerLastFrame) &&
           followTargetBefore !== null
         ) {
@@ -264,7 +265,7 @@ export function replayInput(
           spinElapsedMs: elapsedMs(autoRotateEpoch, nowMs),
           pivot,
         });
-        if (zoomed !== null && camera.base.frame === 'absolute') {
+        if (zoomed !== null && isWorldArm(camera.base)) {
           // `base` is centre-looking by wiring (R12-1), so the pre/post pair is
           // self-consistent under an autoRotate-owned notch too.
           const roll = frameAlignedRoll(

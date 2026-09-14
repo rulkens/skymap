@@ -5,6 +5,7 @@
  */
 
 import { cameraRoute } from '../../store/constants';
+import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
@@ -36,7 +37,7 @@ export const selectCameraActive = (state: RootState): boolean => {
     c.clip !== null ||
     c.dragging ||
     c.tween !== null ||
-    (c.autoRotate.active && c.base.frame === 'absolute') ||
+    (c.autoRotate.active && isWorldArm(c.base)) ||
     c.frameTween !== null
   );
 };

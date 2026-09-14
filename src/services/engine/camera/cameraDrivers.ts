@@ -39,6 +39,7 @@ import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
+import { isWorldArm } from './rungs/isWorldArm';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -79,7 +80,7 @@ export const NO_FOLLOW_MEMORY: FollowMemory = {
  * once the state co-rotates with the body.
  */
 function followActive(s: RootState): boolean {
-  return s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus);
+  return isWorldArm(s.camera.base) && bodyMovesThisFrame(s.selectionRows.focus);
 }
 
 /**
@@ -100,7 +101,7 @@ function followPose(
   if (focus === null || focus.type !== 'body' || livePos === null) {
     return { pose: base, memory: mem };
   }
-  if (base.frame !== 'absolute') return { pose: base, memory: mem };
+  if (!isWorldArm(base)) return { pose: base, memory: mem };
 
   // Captured ONCE per activation (`runFrame` nulls the memory on the focus
   // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
@@ -291,13 +292,13 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pivotsOnFocusedBody: true,
     // Absolute arm only (spec §7): a yaw spin about the frame pole is not a
     // thing a body-fixed arm expresses.
-    isActive: (s) => s.camera.autoRotate.active && s.camera.base.frame === 'absolute',
+    isActive: (s) => s.camera.autoRotate.active && isWorldArm(s.camera.base),
     // Spins from the FROZEN base (it only changes on a commit edge), so yaw
     // advances at the cumulative rate, not a per-frame delta off a moving base.
     pose: (ctx, mem) => {
       const base = ctx.state.camera.base;
       // The isActive gate restated as the narrowing TS needs.
-      if (base.frame !== 'absolute') return { pose: base, memory: mem };
+      if (!isWorldArm(base)) return { pose: base, memory: mem };
       return {
         pose: absoluteArm(
           spinAutoRotate(base.pose, ctx.state.camera.autoRotate.rate, ctx.elapsedMs),
