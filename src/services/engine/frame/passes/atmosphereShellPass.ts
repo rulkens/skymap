@@ -21,10 +21,10 @@
  * ground rays (haze between the camera and terrain while inside the shell) is
  * the deferred froxel upgrade, tracked as its own backlog item.
  *
- * Below `hypot(camPosLocal) < 1.005` the layer switches to a full-screen
- * covering-triangle pipeline pair instead — no wall split, `depthCompare:
- * 'always'`, the ray reconstructed per-fragment from `invMvp` via a
- * homogeneous unproject (see `shell/fragment.wesl`'s `insideRayDir`).
+ * On the entry's `inside` the layer switches to a full-screen covering-triangle
+ * pipeline pair instead — no wall split, `depthCompare: 'always'`, the ray
+ * reconstructed per-fragment from `invMvp` via a homogeneous unproject (see
+ * `shell/fragment.wesl`'s `insideRayDir`).
  *
  * ### Why it draws LAST, OVER not opaque (spec §8.3)
  *
@@ -45,12 +45,6 @@
  * clickable silhouette; clicking Earth hits the opaque surface `earthPass`
  * stamps into the pick pass), so it declares no `drawPick`.
  *
- * ### The f64 seam — `ctx.bodyPose`, not a re-derived camera basis
- *
- * Same seam as every body-slab layer: this row's `pose = ctx.bodyPose(bodyId)`
- * is the SAME closure `deriveSlabs` built this row's `view.slab.vp` from. See
- * `composeBodySlabMvp`'s module header.
- *
  * ### Which bodies draw this frame
  *
  * `enabled` and `draw` both consult `atmosphereDrawList` — the ONE per-frame
@@ -61,16 +55,14 @@
  * bake↔draw is equality by construction: a frame can never draw the shell
  * against a LUT it skipped baking. The entry also carries the pose-dependent
  * values (`atmosphereTopM`, `camLocal`, `sunLocal`, `inside`), so the fragment
- * cannot march a camera or a sun the LUT was not baked from.
+ * cannot march a camera or a sun the LUT was not baked from —
+ * `atmosphereShellUniforms` turns that entry into this row's uniform record,
+ * and carries the f64 slab seam with it.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
-import { mat4d } from 'wgpu-matrix';
-import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
-import { packAtmosphereUniforms } from '../../../../utils/gpu/packAtmosphereUniforms';
-import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { atmosphereDrawList } from '../atmosphereDrawList';
+import { atmosphereShellUniforms } from '../atmosphereShellUniforms';
 
 export const atmosphereShellPass: ContentPass = {
   name: 'atmosphere-shell',
@@ -90,55 +82,11 @@ export const atmosphereShellPass: ContentPass = {
     const bodyId = view.slab.frame.bodyId;
     const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
     if (entry === undefined) return;
-    // The SAME pose-provider closure `deriveSlabs` was fed to build this row's
-    // `view.slab.vp` — reading it here instead of re-deriving the pose is what
-    // keeps this layer's eyeRelBodyM from ever drifting off that basis.
-    const pose = ctx.bodyPose(bodyId);
-    // Non-null whenever an entry exists (same lookup, same frame) — TS narrowing.
-    if (pose === null) return;
-    const { body, params, atmosphereTopM, camLocal, sunLocal, inside } = entry;
-
-    // Scaling the unit proxy sphere by the entry's ATMOSPHERE-TOP radius (the
-    // shell's outer extent, in metres) is what puts the mesh in the body-m slab
-    // frame's own unit, and in the same units as `camLocal`.
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, atmosphereTopM);
-    // Inverted from the UN-narrowed f64 mvp (dst-last, fresh Float64Array) for
-    // the inside-shell entry points' screen→local unproject. Narrowing mvp to
-    // f32 first would reintroduce the per-element rounding the slab seam exists
-    // to avoid, here for a different consumer.
-    const invMvp = mat4d.inverse(mvp);
-    // Ground/atmosphere-top radius ratio ∈ (0,1): in the proxy's local frame the
-    // atmosphere top is the unit sphere and the ground sphere has this radius.
-    const bottomRadius = params.planetRadiusKm / params.atmosphereTopKm;
-    // Exposure resolution — the one Earth-keyed branch: Earth alone carries a
-    // live Settings → Display → Earth slider (seeded from
-    // `ATMOSPHERE_PARAMS.earth.exposure`), so it reads the store value each frame
-    // (`EngineState.settings` is a live getter — a drag overrides the limb
-    // without a reload); every other body reads its own params-row `exposure`.
-    const exposure =
-      body.id === 'earth' ? state.settings.earth.atmosphereExposure : params.exposure;
-    // The host's ring annulus in the proxy's LOCAL units (atmosphere top = 1),
-    // so the fragment can keep a ring in FRONT of the atmosphere from being
-    // darkened by the shell's over-blend. No `SCENE_RINGS` row ⇒ both ratios 0
-    // (the no-ring sentinel) — the same data-gate the ring-shadow path uses.
-    const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
-    const ringInnerRatio = ring === undefined ? 0 : ring.innerRadiusKm / params.atmosphereTopKm;
-    const ringOuterRatio = ring === undefined ? 0 : ring.outerRadiusKm / params.atmosphereTopKm;
     renderer.draw(
       pass,
-      body.id,
-      packAtmosphereUniforms(
-        // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
-        narrowMat4(mvp),
-        narrowMat4(invMvp),
-        sunLocal,
-        camLocal,
-        bottomRadius,
-        exposure,
-        ringInnerRatio,
-        ringOuterRatio,
-      ),
-      inside,
+      entry.body.id,
+      atmosphereShellUniforms(entry, view.slab, ctx, state),
+      entry.inside,
     );
   },
 };
