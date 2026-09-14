@@ -27,6 +27,7 @@ import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packMeshBodyUniforms } from '../../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../../utils/scene/bodyStateInHostFrame';
 import { hostSkyFraction } from '../../../../utils/scene/hostSkyFraction';
+import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
 import { sunVisibleFraction } from '../../../../utils/scene/sunVisibleFraction';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
@@ -84,7 +85,7 @@ export const meshBodiesPass: ContentPass = {
                 sunPosMpc: RENDER_ORIGIN_MPC,
                 hostPosMpc: hostState.positionMpc,
                 sunRadiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
-                hostRadiusM: host.radiusM,
+                hostRadiusM: innerBoundRadiusM(host.surface),
               })
             : 1,
           model: rotM,

@@ -7,15 +7,16 @@
  * themselves consume, bound exactly as those binders bind them
  * (`ctx.drawCamPos`, `ctx.canvasSize.height`, `ctx.fovYRad`). "Drawn" would be
  * the wrong fact: a 1–3 px planet is drawn, as an additive glint, and occludes
- * nothing. Radii are the bare `radiusM` — an atmosphere, ring or lens quad is
- * not opaque. For a mesh body that radius is the bake's BOUNDING sphere, so an
- * elongated silhouette (the whale) hides a little more than it covers.
+ * nothing. Radii are the INNER bound — an occluder must under-occlude; an
+ * atmosphere, ring or lens quad is not opaque. For a mesh body it is the bake's
+ * BOUNDING sphere, so the whale's elongated silhouette hides more than it covers.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
+import { innerBoundRadiusM } from '../../../utils/scene/innerBoundRadiusM';
 import { BODY_GLINT_MAX_PX } from './partitionBodiesByPresentation';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 import { positionedVisibleStars } from './positionedVisibleStars';
@@ -38,10 +39,16 @@ export function sceneOccluderBodies(
 
   const occluders: { positionMpc: Readonly<Vec3>; radiusM: number }[] = [];
   for (const body of flat) {
-    occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
+    occluders.push({
+      positionMpc: states.get(body.id)!.positionMpc,
+      radiusM: innerBoundRadiusM(body.surface),
+    });
   }
   for (const body of textured) {
-    occluders.push({ positionMpc: states.get(body.id)!.positionMpc, radiusM: body.radiusM });
+    occluders.push({
+      positionMpc: states.get(body.id)!.positionMpc,
+      radiusM: innerBoundRadiusM(body.surface),
+    });
   }
   // Mesh bodies carry a second gate `drawableMeshBodies` also applies: inside
   // the load radius but not yet decoded, the body draws nothing, and an
@@ -55,7 +62,7 @@ export function sceneOccluderBodies(
     });
   }
   for (const star of spheres) {
-    occluders.push({ positionMpc: star.positionMpc, radiusM: star.radiusM });
+    occluders.push({ positionMpc: star.positionMpc, radiusM: innerBoundRadiusM(star.surface) });
   }
 
   // Earth sits in neither partition — `earthPass` draws it alone, and it has no
@@ -65,14 +72,15 @@ export function sceneOccluderBodies(
   const earth = state.data.bodies.earth;
   if (earth !== null) {
     const positionMpc = states.get(earth.id)!.positionMpc;
+    const radiusM = innerBoundRadiusM(earth.surface);
     const diameterPx = bodyApparentDiameterPx({
       positionMpc,
-      radiusM: earth.radiusM,
+      radiusM,
       camPosMpc: ctx.drawCamPos,
       viewportHeightPx: ctx.canvasSize.height,
       fovYRad: ctx.fovYRad,
     });
-    if (diameterPx >= BODY_GLINT_MAX_PX) occluders.push({ positionMpc, radiusM: earth.radiusM });
+    if (diameterPx >= BODY_GLINT_MAX_PX) occluders.push({ positionMpc, radiusM });
   }
 
   return occluders;
