@@ -66,11 +66,12 @@ rows, new files, and one widened union.
    `max(dM - rMaxM, 0)`. Every body the camera is inside clamps to 0, ties with
    every other such row, and the stable sort then keeps input order: the inside
    body is last only by luck. The tie-break goes into that sort alone, where the
-   unclamped `dM - rMaxM` is already in scope as a row-local value: primary key
-   `distanceRangeM[0]` descending as today, secondary key the unclamped signed
-   distance descending. No `Slab` field, and `distanceRangeM` keeps its clamped
-   meaning for the overlap warn and the pick path, which read it as a bracket
-   rather than an ordering key.
+   unclamped `dM - rMaxM` is already in scope as a row-local value:
+   `bodySlabRow` returns it as `signedNearM` beside `slab` and `chainRow`, and
+   the sort reads it as its secondary key, primary key `distanceRangeM[0]`
+   descending as today, both descending. No `Slab` field, and `distanceRangeM`
+   keeps its clamped meaning for the overlap warn and the pick path, which read
+   it as a bracket rather than an ordering key.
    **Contract:** `foregroundChainOrder` is unchanged and must stay that way. It
    receives `ctx.slabs` in index order, index equals painter ordinal after
    `deriveSlabs`, and its sort is stable (ES2019), so rows tied at 0 keep the
@@ -96,7 +97,12 @@ rows, new files, and one widened union.
    frame and every consumer reads that one list. Contract: memoised on the
    `ReadyFrameContext` identity, the `WeakMap<ReadyFrameContext, T>` pattern
    `cosmoLabelProjection.ts:14` already uses (`state` is a live getter and is
-   NOT part of the key; `ctx` is the per-frame object).
+   NOT part of the key; `ctx` is the per-frame object). The map lives in its own
+   frame file, `frame/atmosphereDrawListCache.ts`, exporting
+   `atmosphereDrawListCache`: a second module-level declaration inside
+   `atmosphereDrawList.ts` would need a new `frameFilePurity` allow-list row,
+   and that list only ever shrinks (`cosmoLabelProjection`'s row is precisely
+   this debt, already booked).
    *Verdict: bolt-on.* A per-frame derivation the module header already calls
    "the ONE per-frame derivation" while the code recomputes it per caller.
 4. **One shell uniform builder.** `atmosphereShellPass.draw:100-141` composes
@@ -155,8 +161,15 @@ The apply sits between the `foreground` line and the
   slab: 'insideAtmosphere',
   depth: 'sample',
   passes: ['aerial-perspective'],
+  slot: 'AERIAL',
 },
 ```
+
+The `slot` is not decoration. Without one this step's timing key is
+`groupKeyOf('foreground:0', <the inside body's row>)`, byte-identical to the
+foreground-chain step for that same row, so `timedSlotRowsOf` would emit two
+rows under one name; `slot` is the existing separator for exactly that
+(`POST_LENSING`, `POST_FOREGROUND`).
 
 `executeFrame`'s `COMPUTE` table gains a row calling a new frame file:
 
@@ -188,8 +201,11 @@ ctx.renderTargets.depthViewOf('foreground:0'))`.
 
 `atmosphereShellPass.enabled` returns false for a body whose entry is `inside`,
 and `AtmosphereShellRenderer.draw` loses its `inside` boolean: the inside
-pipeline pair, `fsInsideMultiply`, `fsInsideAdd` and `insideRayDir` MOVE to the
-aerial-perspective module and shader. They are not duplicated. `mesh-bodies`
+pipeline pair moves to the aerial-perspective module, and `fsInsideMultiply` /
+`fsInsideAdd` move to its shader as `fsAerialMultiply` / `fsAerialAdd`.
+`insideRayDir` is the one exception: it is REPLACED, not moved, by
+`froxelSlices.wesl`'s parameterised `froxelRayDir` (identical arithmetic, §4.4),
+which the bake calls too. Nothing is duplicated. `mesh-bodies`
 stays where it is in `bodyPasses` (the outside path still wants it after the
 shells), but the #698 prose at `frameOrder.ts` and in `atmosphereShellPass.ts`'s
 header is rewritten to describe the new truth rather than the stopgap.
@@ -270,14 +286,27 @@ ray that can both graze the ground and stay under the atmosphere top. Slices
 are distributed squared over `[0, D]`, and anything beyond clamps to the last
 slice.
 
-`D` and the slice-to-distance mapping (both directions) live in ONE shared WESL
-file, `froxelSlices.wesl`, imported by the bake and the apply:
+`D`, the slice-to-distance mapping (both directions) and the ray reconstruction
+live in ONE shared WESL file, `froxelSlices.wesl`, imported by the bake and the
+apply:
 
 ```
 fn froxelMaxDistance(camRadius: f32, bottomRadius: f32) -> f32
 fn froxelSliceDistance(slice: f32, sliceCount: f32, maxDistance: f32) -> f32
-fn froxelSliceCoord(distance: f32, maxDistance: f32) -> f32
+fn froxelSliceCoord(distance: f32, sliceCount: f32, maxDistance: f32) -> f32
+fn froxelRayDir(invMvp: mat4x4<f32>, camPosLocal: vec3<f32>, uv: vec2<f32>) -> vec3<f32>
+fn froxelRayDistance(invMvp: mat4x4<f32>, camPosLocal: vec3<f32>, uv: vec2<f32>, depth: f32) -> f32
 ```
+
+`froxelSliceCoord` takes `sliceCount` because an exact inverse of
+`froxelSliceDistance` needs N for the texel-centre offset; a two-argument form
+would be off by half a slice.
+
+The two ray functions live here, parameterised, for a linker reason with teeth:
+a WESL module cannot capture a consumer's `@group`/`@binding`, so §4.3's "bake
+ray equals apply ray by construction" is achievable ONLY as one shared function
+the two consumers pass their own uniforms into. Both share one private
+numerator, so the direction and the distance can never describe different rays.
 
 No TS mirror, so there is no cross-language parity to keep. Coupling worth
 recording: per-planet 3D terrain (PR #700) lifts real geometry above `R_g`, so
@@ -291,8 +320,8 @@ blend states the shell uses today (multiply `zero`/`src`, then add `one`/`one`,
 in that order; reversing attenuates this body's own in-scatter by its own
 transmittance).
 
-Per pixel it reconstructs the ray through `u.invMvp` with the moved
-`insideRayDir`, reads `d = textureLoad(depth, pixel, 0)`, and branches:
+Per pixel it reconstructs the ray through `u.invMvp` with `froxelRayDir`, reads
+`d = textureLoad(depth, pixel, 0)`, and branches:
 
 - **`d == depthClearValueFor(reversedZ)`** (0 under the body slab's reversed-Z
   convention): SKY. Today's `sampleShellRay`, unchanged, with identical alpha
@@ -306,13 +335,13 @@ Per pixel it reconstructs the ray through `u.invMvp` with the moved
   `(inScatter.rgb * exposure, 0.0)`: alpha passes through untouched, so opaque
   ground stays opaque for the compositor.
 
-The distance reconstruction shares `insideRayDir`'s numerator so the two can
+`froxelRayDistance` shares `froxelRayDir`'s numerator (§4.4) so the two can
 never describe different rays:
 
 ```
-fn insideRayDistance(uv: vec2<f32>, depth: f32) -> f32
-// P = u.invMvp * vec4(clipXy, depth, 1.0)
-// length(P.xyz - u.camPosLocal * P.w) / abs(P.w)
+// froxelRayDistance(invMvp, camPosLocal, uv, depth):
+// P = invMvp * vec4(clipXy, depth, 1.0)
+// length(P.xyz - camPosLocal * P.w) / abs(P.w)
 ```
 
 The divide by `P.w` is safe here and only here: the geometry branch is reached
@@ -477,8 +506,10 @@ Judged by "would this fail on a real bug nothing else catches"
 
 - `src/@types/engine/frame/BodyRowSource.d.ts`
 - `src/services/engine/frame/encodeAtmosphereFroxel.ts`
+- `src/services/engine/frame/atmosphereDrawListCache.ts` (prep 3)
 - `src/services/engine/frame/atmosphereShellUniforms.ts` (prep 4)
 - `src/services/engine/frame/passes/aerialPerspectivePass.ts`
+- `src/@types/rendering/AerialPerspectiveRenderer.d.ts`
 - `src/services/gpu/renderers/atmosphere/aerialPerspectiveRenderer.ts`
 - `src/services/gpu/shaders/atmosphere/froxelLut.wesl`
 - `src/services/gpu/shaders/atmosphere/froxelSlices.wesl`
@@ -487,6 +518,35 @@ Judged by "would this fail on a real bug nothing else catches"
 **Changed API:**
 
 ```ts
+// src/@types/rendering/AerialPerspectiveRenderer.d.ts
+export type AerialPerspectiveRenderer = Renderer & {
+  encodeFroxel(encoder: GPUCommandEncoder, bodyId: string, uniforms: Float32Array): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    depthView: GPUTextureView,
+  ): void;
+};
+
+export function createAerialPerspectiveRenderer(
+  device: GPUDevice,
+  targetFormat: GPUTextureFormat,
+  sampler: GPUSampler,
+  placeholderRingView: GPUTextureView,
+  bodies: ReadonlyMap<
+    string,
+    {
+      scatteringBuffer: GPUBuffer;
+      skyViewParamsBuffer: GPUBuffer;
+      shellUniformBuffer: GPUBuffer;
+      transmittanceTex: GPUTexture;
+      multiScatterTex: GPUTexture;
+      skyViewTex: GPUTexture;
+    }
+  >,
+): AerialPerspectiveRenderer;
+
 // src/@types/rendering/AtmosphereShellRenderer.d.ts
 encodeFroxel(encoder: GPUCommandEncoder, bodyId: string, uniforms: Float32Array): void;
 drawAerialPerspective(
@@ -514,9 +574,12 @@ readonly inside: boolean;
 
 `aerialPerspectiveRenderer` is constructed by `createAtmosphereShellRenderer`,
 which passes in the per-body LUT textures, the scattering and sky-view buffers,
-and the shared sampler; the two new methods above are the shell renderer's
-delegation to it. The aerial-perspective fragment reuses the existing
-full-screen `insideVs` vertex entry point.
+and the shared sampler; `AtmosphereShellRenderer`'s two new methods are its
+delegation to it. The ring binding it receives is the shared 1x1 placeholder
+view rather than a per-body strip: inside the shell `tNear` is 0, so the
+ring-in-front branch is unreachable and no real strip can matter. The
+aerial-perspective fragment reuses the existing full-screen `insideVs` vertex
+entry point.
 
 **Deleted:** `src/@types/engine/frame/LensStepSpec.d.ts` (prep 5),
 `docs/backlog/2026-09-01-atmosphere-froxel-aerial-perspective.md` (§8).
