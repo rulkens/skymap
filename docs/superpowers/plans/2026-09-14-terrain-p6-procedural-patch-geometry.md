@@ -207,7 +207,7 @@ The other half of the contract needs no discipline and the header should say why
 | 48  | 16   | `vec4<f32>` | `fallbackRect`  | the resolved ancestor's rect, same flattening as today  |
 |     |      |             |                 | **stride 64**                                           |
 
-`fadeWeight` sits at 12 to fill the `vec3`'s alignment pad, and both `vec4`s come last: move `fadeWeight` after `dLatRad` and the first `vec4` is pushed to 48, the struct to 80 B, and every patch reads the wrong bytes with no compiler signal (spec §7's note that the field order matters).
+`fadeWeight` sits at 12 to fill the `vec3`'s alignment pad; reordering the five scalars among offsets 12–31 re-maps them silently — `albedoRect` still lands at 32 and the stride still 64, so only the layout test's per-field assertions catch it. The two `vec4`s must stay last and adjacent: a scalar placed between them is the only reorder the stride exposes, pushing `fallbackRect` to 64 and the struct to 80 B.
 
 **Writer:**
 

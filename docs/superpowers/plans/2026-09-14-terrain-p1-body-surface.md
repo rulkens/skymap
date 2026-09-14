@@ -67,7 +67,7 @@ they are spelled out here:
 - **Comments explain _why_, never _what_.** Module header ≤ 10 lines; comment lines
   ≤ half the file's code lines. A currency choice at a site is exactly the kind of
   thing a one-line comment earns its place recording — "inner: an occluder must
-  under-occlude" — but do not annotate all 43 of them; annotate the ones a reader
+  under-occlude" — but do not annotate all 45 of them; annotate the ones a reader
   would otherwise re-derive.
 - **Frame/pass-file purity.** Any file under `src/services/engine/frame/` —
   including `timing/` and `passes/` — exports the ONE symbol it is named for and
@@ -117,7 +117,7 @@ threaded through the camera and slab helpers. **None of those change.** Scalar
 parameter names stay as they are — renaming them is churn the compiler does not
 need.
 
-What changes: the 4 declarations, the write sites, and the **43 direct reads**
+What changes: the 4 declarations, the write sites, and the **45 direct reads**
 below.
 
 ### Declarations and write sites
@@ -160,7 +160,7 @@ callers — `selectionHaloTable.ts:101`, `partitionBodiesByPresentation.ts:103`,
 correct by construction once the hub returns the outer bound. Do not touch them.
 
 **DATUM** — `body.surface.datumRadiusM`. Band arithmetic, the drawn analytic
-sphere, tile geometry, site placement. 29 direct sites.
+sphere, tile geometry, site placement. 31 direct sites.
 
 | file:line                                                                           | purpose                                         |
 | ----------------------------------------------------------------------------------- | ----------------------------------------------- |
@@ -171,6 +171,7 @@ sphere, tile geometry, site placement. 29 direct sites.
 | `src/utils/camera/cameraDebugSnapshotOf.ts:82`                                      | altitude readout (F3 wants `bestHeightM`)       |
 | `src/services/engine/camera/poseFrameConversion.ts:163`                             | `toWorldArm` sphere + descent floor             |
 | `src/services/engine/camera/replayInput.ts:133`                                     | `SurfaceStepCtx.bodyRadiusM` → pick, hr, floor  |
+| `src/services/engine/camera/pivotRadiusMpc.ts:24` and `:52`                         | orbit-pivot radius (Mpc), camera framing        |
 | `src/state/camera/watchFlyToLonLatSaga.ts:53` and `:59`                             | eye-to-ground range, `lonLatFocusPose`          |
 | `src/services/engine/frame/passes/earthPass.ts:146`                                 | drawn sphere + the `cutSurfaceTiles` radius     |
 | `src/services/engine/frame/passes/planetsPass.ts:107, :111, :150`                   | mvp / cam-local / draw                          |
@@ -334,7 +335,7 @@ so the behaviour change is reviewable on its own.
 
 ### 5a — datum routing
 
-**Files:** the 29 datum sites in the census (camera arm, the draw passes,
+**Files:** the 31 datum sites in the census (camera arm, the draw passes,
 `cloudShellPass`, `deriveBodyStates`, `orbitalElements`, `BodyDetailCard`).
 
 - [ ] Point each at `body.surface.datumRadiusM`.
@@ -460,7 +461,7 @@ No code. The picture must be identical; this is the only way to know.
   `boundingRadiusM` are untouched.
 - `surfaceFloorM(datumRadiusM, standoffRadii)` — two required parameters, no
   default.
-- All 43 census read sites resolved to the currency the table names.
+- All 45 census read sites resolved to the currency the table names.
 
 ### Named observable behaviours (manual smoke, Task 7)
 
