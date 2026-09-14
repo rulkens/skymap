@@ -15,19 +15,38 @@ function tileFootprint(z: number, x: number, y: number) {
 
 describe('patchOriginRelEyeM', () => {
   it("lands on the uv corner direction the walk's own convention names", () => {
-    // A z0 tile pins the top of the pyramid; the z6 tile is what actually
-    // exercises the registration — a flipped TEXTURE_PRIME_MERIDIAN_U rotates
-    // the Earth 180° about the pole, and at v0 = 0 (z0's south-pole edge) the
-    // direction is (0, 0, -1) whatever the longitude, so z0 alone sees nothing.
+    // Levels 0 and 1 are useless here and deliberately absent: the base raster
+    // is 512 px wide, so z0 is a single column with HALF a row, and every z1
+    // tile's v0 is the south-pole edge, where the direction is (0, 0, -1)
+    // whatever the longitude — a flipped TEXTURE_PRIME_MERIDIAN_U, which
+    // rotates the Earth 180° about the pole, sails straight through.
     for (const [z, x, y] of [
-      [0, 0, 0],
-      [0, 1, 0],
+      [2, 3, 0],
       [6, 41, 17],
     ] as const) {
       const { u0, v0, u1, v1 } = tileFootprint(z, x, y);
-      const got = patchOriginRelEyeM(surfacePatchAnchor(u0, v0, u1, v1), 1, [0, 0, 0]);
-      const want = equirectUvToDirection([u0, v0]);
-      for (let c = 0; c < 3; c++) expect(Math.abs(got[c]! - want[c]!)).toBeLessThanOrEqual(1e-7);
+      const anchor = surfacePatchAnchor(u0, v0, u1, v1);
+      const origin = patchOriginRelEyeM(anchor, 1, [0, 0, 0]);
+      // The far corner walks the anchor by its two spans, so `dLonRad` and
+      // `dLatRad` are pinned against the same authority the origin is — a
+      // wrong factor has nowhere else to show up until the shader is built on
+      // it. Swapping the two is NOT catchable and needs no test: the raster is
+      // 2:1 and rows are cols/2, so every tile's two spans are equal.
+      const far = patchOriginRelEyeM(
+        {
+          ...anchor,
+          lon0Rad: anchor.lon0Rad + anchor.dLonRad,
+          lat0Rad: anchor.lat0Rad + anchor.dLatRad,
+        },
+        1,
+        [0, 0, 0],
+      );
+      const wantOrigin = equirectUvToDirection([u0, v0]);
+      const wantFar = equirectUvToDirection([u1, v1]);
+      for (let c = 0; c < 3; c++) {
+        expect(Math.abs(origin[c]! - wantOrigin[c]!)).toBeLessThanOrEqual(1e-7);
+        expect(Math.abs(far[c]! - wantFar[c]!)).toBeLessThanOrEqual(1e-7);
+      }
     }
   });
 
