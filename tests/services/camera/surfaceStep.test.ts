@@ -1093,6 +1093,7 @@ describe('surfaceStep', () => {
     );
     expect(up.pose).toBe(IN_BAND);
     expect(up.gesture).toBe(EMPTY_SURFACE_GESTURE_MEMORY);
+    expect(up.tilt).toBe(EMPTY_TILT_MEMORY);
 
     const down = surfaceStep({ gesture: 'down' }, EMPTY_TILT_MEMORY, IN_BAND, tiltDrag(15), CTX);
     expect(tiltOf(down.pose)).toBeGreaterThan(0.1);

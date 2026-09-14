@@ -49,7 +49,7 @@ const BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const START: CameraPose = { target: [0, 0, 0], yaw: 0.5, pitch: 0.2, distance: 10 };
 const CTX = { bodies: BODIES, poseBasis: BASIS, upBasis: BASIS };
 
-/** The body rung's `decode` folded back out — the inverse `toBodyFixedChannels` no longer ships. */
+/** The body rung's `decode` folded back out; production ships no such inverse. */
 function fromBodyFixedChannels(channels: CameraPose, frame: typeof EARTH): CameraPose {
   return foldToWorld(rowFor(frame).channels.decode(channels, frame, CTX), CTX);
 }

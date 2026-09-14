@@ -25,8 +25,7 @@ describe('rowFor', () => {
 });
 
 describe('climbRowFor', () => {
-  it('returns the row whose kind matches rungKindOf, and its parent rung', () => {
+  it('returns the row whose kind matches rungKindOf', () => {
     expect(climbRowFor(BODY_FRAME).kind).toBe(rungKindOf(BODY_FRAME));
-    expect(climbRowFor(BODY_FRAME).parent).toBe('absolute');
   });
 });

@@ -5,10 +5,9 @@
  * `SCENE_BODIES`' `radiusM` directly — no Earth-typed constant anywhere in
  * this file, matching the body-blind predicate under test.
  *
- * Fixture ids ('moon', 'deimos') are widened to `BodyId` the same way
- * `slabs.ts`/`resolvePickTable.ts` already do at the individual-`SceneBody`
- * boundary (`id as BodyId`): the registry type is a 5-value settings category,
- * narrower than the ~30 individual bodies `SCENE_BODIES` actually seeds.
+ * Fixture ids ('moon', 'deimos') are widened with `id as BodyId`, the same
+ * `SceneBody`-boundary cast `slabs.ts`/`resolvePickTable.ts` use: `BodyId` is a
+ * 5-value settings category, narrower than the ~30 bodies `SCENE_BODIES` seeds.
  */
 
 import { describe, it, expect } from 'vitest';

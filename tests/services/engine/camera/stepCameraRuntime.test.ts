@@ -117,9 +117,8 @@ describe('stepCameraRuntime', () => {
   });
 
   it('the rung memory is wiped when the frame key changes and kept when it does not', () => {
-    // The gesture register belongs to the arm it was taken on, so the engage
-    // voids it. The same-key half asserts IDENTITY: an envelope that re-wrapped
-    // the memory every frame would hand the drain a fresh object each time and
+    // The same-key half asserts IDENTITY: an envelope that re-wrapped the
+    // memory every frame would hand the drain a fresh object each time and
     // silently break every `!==` the surface step decides a decline by.
     const h = makeCameraSimHarness({ bootHR: 0.1 });
     const prev = {

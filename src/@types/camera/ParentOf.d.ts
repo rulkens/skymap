@@ -1,5 +1,2 @@
-/**
- * Per-kind parent rung: the body arm's parent is the world arm. The site
- * arm's entry (`site: 'body'`) lands with the feature PR, not here.
- */
+/** Per-kind parent rung: the body arm's parent is the world arm. */
 export type ParentOf = { readonly body: 'absolute' };

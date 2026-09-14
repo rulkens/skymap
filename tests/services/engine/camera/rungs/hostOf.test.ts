@@ -1,8 +1,6 @@
 /**
- * hostOf / hostOrThrow — the one host failure policy (spec §2.5). The nine
- * ad-hoc host derivations collapse here from three policies (throw, hold,
- * `!`-assert) onto one, and a silent fallback body at either end of that
- * collapse would teleport the camera.
+ * hostOf / hostOrThrow — the ladder's one host failure policy (spec §2.5):
+ * null or throw, never a fallback body, because a fallback teleports the camera.
  */
 
 import { describe, it, expect } from 'vitest';

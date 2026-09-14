@@ -1,3 +1,8 @@
+/**
+ * foldToWorld — the by-reference world-arm return (spec §7): the identity is
+ * what keeps the per-frame fold free, so it is pinned rather than reviewed.
+ */
+
 import { describe, it, expect } from 'vitest';
 
 import { foldToWorld } from '../../../../../src/services/engine/camera/rungs/foldToWorld';

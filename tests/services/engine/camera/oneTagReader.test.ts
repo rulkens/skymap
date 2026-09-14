@@ -1,9 +1,7 @@
 /**
  * oneTagReader — spec §2/§3's structural gate: `PoseFrame`'s spelling (the bare
- * `'absolute'` string, the `{ body }` object) is vocabulary, not a branch. The
- * 46 sites this PR collapsed grew back once already by one review at a time, so
- * the ban is enforced rather than reviewed: outside `rungs/`, ask
- * `rungKindOf` / `isWorldArm` / `hostOf` / `frameKey`, never the tag.
+ * `'absolute'` string, the `{ body }` object) is vocabulary, not a branch.
+ * Outside `rungs/`, ask `rungKindOf` / `isWorldArm` / `hostOf` / `frameKey`.
  * A declaration scan (ts-morph, real AST nodes) rather than a source-text grep,
  * per `conventions/testing.md`: a substring search bans nothing a comment or a
  * string literal couldn't dodge, and would trip on the unrelated `.frame.bodyId`

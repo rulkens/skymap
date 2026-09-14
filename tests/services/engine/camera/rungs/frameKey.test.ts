@@ -1,9 +1,7 @@
 /**
  * frameKey / sameFrame — the one frame-identity grammar (spec §2.1, §2.3).
- * `frameKey` is the grammar `CameraStateSection.tsx`'s `frameLabel` already
- * prints and `logCameraState` adopts from Task 2 on; `sameFrame` replaces the
- * four hand-rolled per-site equalities that existed only to compare two
- * distinct `{ body }` objects naming the same body.
+ * `frameKey` is what the debug panel and `logCameraState` print; `sameFrame`
+ * is the only equality, since two distinct `{ body }` objects can name one body.
  */
 
 import { describe, it, expect } from 'vitest';

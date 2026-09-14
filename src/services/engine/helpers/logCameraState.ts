@@ -5,15 +5,10 @@
  * (`liveRenderCamera` / `liveFocusRow`) — this module trusts them as-is.
  *
  * `JSON.stringify`'s default formatting only — no `toFixed`/`toPrecision` —
- * because scales span the observable universe (~1e2 Mpc) down to a body's
- * surface (a 50 m altitude at Earth's radius is a ~1e-6 relative offset on
- * `distance`), and digit-limited formatting rounds that to zero.
- *
- * `earthSubCamera` piggybacks off `earthTileSubsystem`'s own last-plan
- * readout rather than re-deriving lon/lat from the focused body's rotation
- * generically: it is `null` whenever Earth's virtual texture isn't engaged
- * (any other focus, or Earth too far out), which is the honest scope — this
- * blob exists to debug THAT feature.
+ * because scales span ~1e2 Mpc down to a body's surface (a 50 m altitude at
+ * Earth's radius is a ~1e-6 relative offset on `distance`), which digit-limited
+ * formatting rounds to zero. `earthSubCamera` is the tile subsystem's own
+ * last-plan readout, so it is null whenever Earth's virtual texture is idle.
  */
 
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
