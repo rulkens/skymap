@@ -48,12 +48,20 @@ function makeCtx(camPos: Vec3, distance: number): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-function makeState(opts: { layerFade: number; ready?: boolean }): EngineState {
+function makeState(opts: { layerFade: number; ready?: boolean; reloading?: boolean }): EngineState {
   return {
     assetSlots: {
       constellations:
         (opts.ready ?? true)
-          ? { state: () => ({ kind: 'ready' as const, value: CONSTELLATION_ARTIFACT }) }
+          ? {
+              state: () => ({ kind: opts.reloading ? ('loading' as const) : ('ready' as const) }),
+              committed: () => ({
+                kind: 'ready' as const,
+                req: undefined,
+                value: CONSTELLATION_ARTIFACT,
+                loadedAtMs: 0,
+              }),
+            }
           : null,
     },
     subsystems: {
@@ -109,5 +117,15 @@ describe('produceConstellationCaptions', () => {
       makeCtx([5e-4, 0, 0], 5e-4),
     );
     for (const l of out.labels) expect(l.pickId).toBeUndefined();
+  });
+
+  it('keeps emitting captions from the committed artifact while the slot reloads', () => {
+    // The live `state()` drops to `loading` on a reload; the producer must read
+    // `committed()` instead, or the figures would vanish for the fetch's duration.
+    const out = produceConstellationCaptions(
+      makeState({ layerFade: 1, reloading: true }),
+      makeCtx([5e-4, 0, 0], 5e-4),
+    );
+    expect(out.labels.length).toBe(CONSTELLATION_ARTIFACT.constellations.length);
   });
 });

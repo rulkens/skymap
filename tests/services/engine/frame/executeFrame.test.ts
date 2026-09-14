@@ -544,7 +544,9 @@ describe('executeFrame', () => {
       label: 'flowFieldRenderer',
       encodeCompute,
     };
-    const flowSlot = { state: () => ({ kind: 'ready' }) };
+    const flowSlot = {
+      committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
+    };
     const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
     const { args } = makeArgs({
       program,

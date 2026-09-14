@@ -7,10 +7,11 @@
  * commits. Deriving `baseLevel` from the request over that window would claim
  * a level the bound image doesn't carry.
  *
- * `ready` + `lastRequest()` is the committed tier: the slot only reaches
- * `ready` once its request has fetched AND committed. A slot that is not
- * `ready` is loading a first image or a replacement, neither with an honest
- * base level, so the fallback is the arriving tier.
+ * `committed().req` is the committed tier, NOT `lastRequest()`: that reports
+ * the NEW tier the instant a reload starts (`AssetSlot.ts` sets it at the top
+ * of `load()`), the exact lie this function exists to prevent. A slot with no
+ * commit yet is loading its first image, with no honest base level, so the
+ * fallback is the arriving tier.
  */
 
 import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
@@ -20,6 +21,5 @@ import type { Tier } from '../../../@types/data/Tier';
 
 export function earthSurfaceTier(state: PassState): Tier {
   const slot = state.assetSlots.bodyTextures.get(bodyTextureSlotKey('earth', 'surface'));
-  if (slot === undefined || slot.state().kind !== 'ready') return state.tier;
-  return slot.lastRequest()?.tier ?? state.tier;
+  return slot?.committed()?.req.tier ?? state.tier;
 }
