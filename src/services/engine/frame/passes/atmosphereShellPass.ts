@@ -1,35 +1,12 @@
 /**
- * atmosphereShellPass — Earth's (and any seeded planet's) physically-based
- * in-scatter atmosphere as a `'body'`-slab content row, drawn into the
- * depth-bearing `foreground:0` target (spec §8.3). A translucent proxy sphere
- * scaled to the atmosphere-TOP radius, sitting just outside the cloud shell.
- * The walls, the inside path and the fragment are `atmosphereShellRenderer`'s
- * and `shell/fragment.wesl`'s to explain; the row's place among `bodyPasses`,
- * `frameOrder.ts`'s.
- *
- * The frame program expands a `'body'` layer into one render step per body-m
- * slab row, so `enabled`/`draw` run once PER BODY, gated on
- * `view.slab.frame.bodyId` rather than looping over every atmosphere body
- * internally — and forward the entry's `inside`, which picks between the
- * renderer's two pipeline pairs. The shell draws its geometry TWICE — MULTIPLY
- * for per-channel extinction, then ADD for the in-scatter — because one alpha
- * channel cannot attenuate three wavelengths. It is non-pickable (a translucent
- * halo has no clickable silhouette; clicking Earth hits the opaque surface
- * `earthPass` stamps into the pick pass), so it declares no `drawPick`.
- *
- * ### Which bodies draw this frame
- *
- * `enabled` and `draw` both consult `atmosphereDrawList` — the ONE per-frame
- * derivation of which seeded bodies have a live atmosphere (an
- * `ATMOSPHERE_PARAMS` row, inside `FOREGROUND_MAX_DISTANCE_MPC`, above the
- * shared sub-pixel disc cull) — filtered to THIS row's `bodyId`. Because the
- * sky-view bake (`encodeAtmosphereSkyView`) reads the SAME unfiltered list,
- * bake↔draw is equality by construction: a frame can never draw the shell
- * against a LUT it skipped baking. The entry also carries the pose-dependent
- * values (`atmosphereTopM`, `camLocal`, `sunLocal`, `inside`), so the fragment
- * cannot march a camera or a sun the LUT was not baked from.
- * `atmosphereShellUniforms` turns the entry into this row's uniform record, f64
- * slab seam included.
+ * atmosphereShellPass — the in-scatter atmosphere as a `'body'`-slab row in the depth-bearing
+ * `foreground:0` target (spec §8.3): a proxy sphere at the atmosphere-TOP radius. The frame
+ * program expands it to one step per body-m row, so `enabled`/`draw` run once PER BODY on
+ * `view.slab.frame.bodyId`, forwarding the entry's `inside` to pick the renderer's pipeline
+ * pair. Non-pickable (a translucent halo has no clickable silhouette), so no `drawPick`.
+ * Argued elsewhere: bake↔draw equality in `atmosphereDrawList`, the shell itself in
+ * `atmosphereShellRenderer` + `shell/fragment.wesl`, this row's order in `frameOrder.ts`, the
+ * uniform record in `atmosphereShellUniforms`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -41,8 +18,7 @@ export const atmosphereShellPass: ContentPass = {
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;
-    // Handle first: the check short-circuits so pre-bootstrap fixtures (null
-    // renderer, bare ctx) never touch the body inputs.
+    // Handle first, so pre-bootstrap fixtures (null renderer, bare ctx) never touch body inputs.
     if (state.gpu.atmosphereShellRenderer === null) return false;
     const bodyId = view.slab.frame.bodyId;
     return atmosphereDrawList(state, ctx).some((entry) => entry.body.id === bodyId);
