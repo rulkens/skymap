@@ -700,8 +700,20 @@ describe('executeFrame', () => {
       const face0Ctx = makeCtx();
       const face1Ctx = makeCtx();
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [contentPass] },
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1, passes: [contentPass] },
+        {
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [contentPass],
+        },
+        {
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 1 },
+          passes: [contentPass],
+        },
       ];
       const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([
         [0, face0Ctx],
@@ -725,7 +737,13 @@ describe('executeFrame', () => {
     it('skips a capture step cleanly when its face has no context (skyCubemapFaceContext returned null)', () => {
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 2, passes: [contentPass] },
+        {
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 2 },
+          passes: [contentPass],
+        },
       ];
       // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
       // skyCubemapFaceContext call returned null (pre-bootstrap frame).
@@ -747,7 +765,7 @@ describe('executeFrame', () => {
 
     it('resolves EACH capture face to its OWN colour-attachment view, distinct per face and from viewOf', () => {
       // Pins the real bug: before the fix, every capture step resolved the
-      // same multi-layer `viewOf('sky-cubemap')` regardless of `step.face`,
+      // same multi-layer `viewOf('sky-cubemap')` regardless of the step's face,
       // so all 6 faces wrote the same texture layer.
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [0, 1, 2, 3, 4, 5].map(
@@ -755,7 +773,7 @@ describe('executeFrame', () => {
           kind: 'render',
           target: 'sky-cubemap',
           slab: NEAR0,
-          face: face as CubeFace,
+          capture: { key: 'sgrAStar', face: face as CubeFace },
           passes: [contentPass],
         }),
       );
@@ -783,8 +801,20 @@ describe('executeFrame', () => {
       const cosmoPass = makeContentPass({ name: 'textured-disks' });
       const near0Pass = makeContentPass({ name: 'star-points' });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: COSMO, face: 0, passes: [cosmoPass] },
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [near0Pass] },
+        {
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: COSMO,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [cosmoPass],
+        },
+        {
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [near0Pass],
+        },
       ];
       const faceCtx = makeCtx();
       const { args, env } = makeArgs({
@@ -805,8 +835,20 @@ describe('executeFrame', () => {
       // over it, flickering the cubemap bright/dim by capture order.
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 0, passes: [contentPass] },
-        { kind: 'render', target: 'sky-cubemap', slab: NEAR0, face: 1, passes: [contentPass] },
+        {
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 0 },
+          passes: [contentPass],
+        },
+        {
+          kind: 'render',
+          target: 'sky-cubemap',
+          slab: NEAR0,
+          capture: { key: 'sgrAStar', face: 1 },
+          passes: [contentPass],
+        },
       ];
       const faceCtx = makeCtx();
       const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>([

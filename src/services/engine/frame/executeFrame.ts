@@ -47,7 +47,7 @@
  * filtered to enabled layers — a non-empty group always has a first layer to
  * carry the clear.
  *
- * A capture render step (`step.face !== undefined`) is the one exception: its
+ * A capture render step (`step.capture !== undefined`) is the one exception: its
  * target ('sky-cubemap') has six LAYERS, one per face, but `touched` tracks by
  * target string alone — so it can't distinguish "this face's first pass this
  * frame" from "a DIFFERENT face already rendered this frame". Capture steps
@@ -106,7 +106,7 @@ const COMPUTE: Record<
  * site: every other id resolves through the render-target table, which throws
  * for ids it never allocated.
  *
- * `face` (present only for a sky-cubemap capture render step, `FrameStep.face`)
+ * `face` (present only for a capture render step, `FrameStep.capture`)
  * routes through `layerViewOf` instead of `viewOf` — the default view spans
  * every array layer, which WebGPU rejects as a colour attachment once a row
  * has more than one, so every capture face would otherwise write the SAME
@@ -217,16 +217,17 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         break;
       }
       case 'render': {
-        // The runtime hand-off: a step carrying `face` (the
+        // The runtime hand-off: a step carrying `capture` (the
         // black-hole lens's sky-cubemap capture) resolves EVERY per-step value
         // below — slab view, enable gate, draw ctx — from ITS OWN camera
         // (`renderFrame`'s per-face `skyCubemapFaceContext` derivation), not
         // the frame-wide `ctx`. A missing map entry (that face's
         // `skyCubemapFaceContext` returned null — e.g. a pre-bootstrap frame)
         // skips the step cleanly, the same outcome an empty group already
-        // produces below. For every ordinary step `step.face` is undefined and
+        // produces below. For every ordinary step `step.capture` is undefined and
         // `stepCtx` is just `ctx` — a no-op passthrough.
-        const stepCtx = step.face === undefined ? ctx : skyCubemapFaceContexts?.get(step.face);
+        const stepCtx =
+          step.capture === undefined ? ctx : skyCubemapFaceContexts?.get(step.capture.face);
         if (stepCtx === undefined) break;
         // The DebugPanel renderer-toggle override is one-way: it hides a pass
         // whose own `enabled()` gate returned true, and can never force-enable
@@ -237,7 +238,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // threaded into every pass in the group. Resolved BEFORE the gate: a
         // body-row pass's `enabled` reads `view.slab.frame.bodyId` off it.
         const view = slabViewOf(stepCtx, step.slab);
-        const faceKey = step.face === undefined ? null : `${step.target}:${step.face}`;
+        const faceKey = step.capture === undefined ? null : `${step.target}:${step.capture.face}`;
         const group = step.passes.filter(
           (l) => l.enabled(state, stepCtx, view) && disabledPasses[l.name] !== true,
         );
@@ -246,17 +247,13 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // comes from the shared `groupKeyOf` helper (slabs.ts) — the same
         // definition `timedSlotRowsOf` allocates the slot under — so
         // `descriptorFor(groupKey)` resolves exactly that slot.
-        // `renderStepTimingSlotName` appends `step.face` when present — the
+        // `renderStepTimingSlotName` appends the capture face when present — the
         // sky-cubemap capture's 6 faces all share `('sky-cubemap', NEAR0)`, so
         // the bare groupKey would look up the SAME slot for all 6 (see its doc,
         // slabs.ts). The authored `slot` separates the several `FRAME_ORDER`
         // lines sharing `(hdr, NEAR0)` the same way; for a line with neither
         // this is a no-op passthrough of `groupKey`.
-        const groupKey = renderStepTimingSlotName(
-          groupKeyOf(step.target, step.slab),
-          step.face,
-          step.slot,
-        );
+        const groupKey = renderStepTimingSlotName(groupKeyOf(step), step.capture?.face, step.slot);
         renderGroup(strategy, {
           encoder,
           ctx: stepCtx,
@@ -264,7 +261,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           timing,
           swapView,
           target: step.target,
-          face: step.face,
+          face: step.capture?.face,
           group,
           view,
           groupKey,

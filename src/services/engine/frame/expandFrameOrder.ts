@@ -11,14 +11,22 @@ import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
+import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
+import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 
 export type FrameInputs = {
   readonly tone: ToneMap;
   readonly bloomEnabled: boolean;
   readonly foregroundChain: readonly number[];
-  readonly skyCubemapFacesToCapture: readonly CubeFace[];
+  /**
+   * Faces each capture re-bakes this frame — empty or absent for a capture
+   * that stays cold, which is its zero-dispatch guarantee. Kept separate from
+   * the per-face context map because `MAX_FRAME_INPUTS` must enumerate every
+   * face a frame could ever step with no camera to derive one from.
+   */
+  readonly captureFaces: ReadonlyMap<CubemapCaptureKey, readonly CubeFace[]>;
   readonly lensBodySlabs: readonly number[];
 };
 
@@ -52,19 +60,19 @@ function merge(
 const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   compute: (spec) => [{ kind: 'compute', name: spec.name }],
   capture: (spec, passes, frame) =>
-    frame.skyCubemapFacesToCapture.flatMap((face): readonly FrameStep[] => [
+    (frame.captureFaces.get(spec.capture) ?? []).flatMap((face): readonly FrameStep[] => [
       {
         kind: 'render',
-        target: spec.target,
+        target: CUBEMAP_CAPTURES[spec.capture].target,
         slab: COSMO,
-        face,
+        capture: { key: spec.capture, face },
         passes: resolve(spec.cosmoPasses, passes),
       },
       {
         kind: 'render',
-        target: spec.target,
+        target: CUBEMAP_CAPTURES[spec.capture].target,
         slab: NEAR0,
-        face,
+        capture: { key: spec.capture, face },
         passes: resolve(spec.near0Passes, passes),
       },
     ]),
@@ -113,7 +121,8 @@ function sameGroup(a: FrameStep, b: FrameStep): boolean {
     b.kind === 'render' &&
     a.target === b.target &&
     a.slab === b.slab &&
-    a.face === b.face &&
+    a.capture?.key === b.capture?.key &&
+    a.capture?.face === b.capture?.face &&
     a.depthLoad === b.depthLoad
   );
 }

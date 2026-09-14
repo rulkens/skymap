@@ -16,11 +16,11 @@ export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',
   'mw-aggregate·NEAR0': 'Volumes & aggregates',
-  // The black-hole lens's sky-cubemap bake steps — 0 or 12 of them per frame
-  // (COSMO + NEAR0 per face, all six or none), so its own group rather than
-  // folding into an existing title.
-  'sky-cubemap·COSMO': 'Sky capture',
-  'sky-cubemap·NEAR0': 'Sky capture',
+  // The `sgrAStar` capture's bake steps — 0 or 12 of them per frame (COSMO +
+  // NEAR0 per face, all six or none), so its own group rather than folding into
+  // an existing title. Keyed on the CAPTURE, not its render target.
+  'sgrAStar·COSMO': 'Sky capture',
+  'sgrAStar·NEAR0': 'Sky capture',
   'hdr·COSMO': 'Cosmos · HDR',
   'hdr·NEAR0': 'Near field · HDR',
   // One `hdr·BODY[k]` row per capacity slot — today only the black-hole lens

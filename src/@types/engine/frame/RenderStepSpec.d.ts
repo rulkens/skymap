@@ -8,7 +8,7 @@ export type RenderStepSpec = {
   readonly slab: number;
   readonly passes: readonly string[];
   /**
-   * GPU-timing slot suffix, appended to `groupKeyOf(target, slab)` with the same
+   * GPU-timing slot suffix, appended to `groupKeyOf(step)` with the same
    * separator; the one line in a group without it owns the bare key. Authored
    * here so a slot's identity is a name, not an ordinal — inserting a line
    * renumbers nothing.

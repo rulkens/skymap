@@ -161,7 +161,7 @@ export function renderFrame(input: RenderFrameInput): void {
       // Painter-ordered NEAR0 + body-row indices — the chain the
       // foreground:0 line expands over, one step per entry.
       foregroundChain: foregroundChainOrder(ctx.slabs),
-      skyCubemapFacesToCapture,
+      captureFaces: new Map([['sgrAStar', skyCubemapFacesToCapture]]),
       lensBodySlabs: lensBodySlabs(state, ctx),
     }),
     strategy,
