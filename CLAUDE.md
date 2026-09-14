@@ -8,73 +8,42 @@ A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at b
 
 ## Where to look
 
+`src/` and `tools/` are mostly self-describing; the non-obvious pointers:
+
 ```
-src/
-  @types/  one type per file; deep relative imports, no barrels
-  components/  React UI shell (InfoCard, SettingsPanel, ScaleBar, StatusBar)
-  compositions/  build-time engine compositions (app; reference engines later)
-  data/  static data: sources enum, colourIndex spec, binary format
-  hooks/  React hooks (useEngine, useSplash, alias/structure indexes, …)
-  layers/  per-Layer modules — settings clusters today, whole Layers from PR (d)
-  services/
-    camera/  OrbitCamera, OrbitControls, tweens
-    engine/  engine orchestrator, autoLod, cloud loader
-      galaxyGenerator/  galaxy generation: v1/ sprite stars (to be deleted),
-                        v2/ analytic field, shared/ — READMEs in each
-    gpu/  renderers, texture atlas, image queue/fetcher, WGSL shaders
-    input/  SpaceMouse + raw input → camera deltas
-  state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)
-  store/  RTK store wiring: createAppStore, root reducer/saga, effects
-  styles/  global.css — design tokens + body/html reset only
-  utils/  pure helpers (math, format, random) — heavily tested
-tools/
-  animation/  tourLength — beat-sheet / clip-length reporting
-  catalog/  buildAllBins (pipeline entry), crossMatch dedup, subsampleByAbsMag
-  curation/  shared curation helpers (dedupeByProximity, writeMetaSidecar)
-  dev/  tmux + worktree helpers — see "Tmux workflow helpers" below
-  famous/  famous-galaxy seed expansion + image fetchers
-  famous-curator/  hand-curate Famous thumbnails (npm run curate-famous)
-  filaments/  buildFilaments — DisPerSE wrapper
-  flow/  CF4++ peculiar-velocity flow-field builder + verifier
-  flow-workbench/  WebGPU dev tool visualising the flow field
-  galaxy-renderer/  dev tool: procedural Hubble-sequence galaxy + HDR bloom
-  volumes/  scalar-field volume builders (CF-4, MCPM) + diagnostics
-  fonts/  buildFontAtlas — MSDF multi-font atlas generator
-  perf/  GPU-timing harness (npm run perf) → tools/perf/README.md
-  record/  offline tour recorder → mp4 (npm run record-tour)
-  site/  makeFavicon, makeOgImage
-  structures/  buildStructures — cluster/supercluster catalog builder
-  deploy/  syncR2 + r2Cors.json + r2-static/ static assets
-  fetch/  external-catalog fetchers with on-disk resume caches
-  parsers/  SDSS CSV, 2MRS fixed-width, GLADE fixed-width, NPY, ND-skeleton
-  utils/  tools-only helpers — one file per function, deep imports
-  vendor-types/  ambient .d.ts shims for msdf-bmfont-xml and pngjs
-data/
-  raw/  catalog sources, one subdir per source (2mrs/, glade/, hyperleda/, sdss/,
-        cf4/, mcpm/, milliquas/, filaments/, famous/, fonts/, mcxc/, mscc/).
-        VizieR ReadMes live beside their files (byte layouts!). Paths go
-        through tools/utils/io/rawDataRegistry.ts.
+src/@types/  one type per file; deep relative imports, no barrels
+src/compositions/  build-time engine compositions (app; reference engines later)
+src/layers/  per-Layer modules — settings clusters today, whole Layers from PR (d)
+src/services/engine/galaxyGenerator/  v1/ sprite stars (to be deleted),
+                                      v2/ analytic field, shared/ — READMEs in each
+src/state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)
+tools/utils/io/rawDataRegistry.ts  every path into data/raw/ goes through here;
+                                   VizieR ReadMes sit beside their files (byte layouts!)
 docs/BACKLOG.md  ground-truth list of what's next
-docs/superpowers/plans/  active implementation plans; shipped → plans/completed/
-docs/superpowers/specs/  design specs; shipped → specs/completed/
+docs/superpowers/plans/ + specs/  active plans and specs; shipped → */completed/
 tests/  Vitest suite — mirrors src/ tree
 ```
 
 ## Project conventions (these override defaults)
 
-- **Didactic but budgeted comments**: explain _why_, never _what_ the code does. A comment earns its place by recording something a reader would otherwise rediscover the hard way: a landmine (including a choice that looks wrong and would get "fixed" back), a unit, a derivation, a cross-file contract. Budget: **module header ≤ 5 lines, comment lines ≤ half the code lines in the file.** Past the budget the material is either not load-bearing, or it belongs in the spec/plan — link it rather than inlining it. Research surveys, option comparisons and "we tried X first" are plan content; history is the git log's job. (Overrides the default no-comments rule; detail in [`docs/superpowers/conventions/comments.md`](docs/superpowers/conventions/comments.md).)
+- **Didactic but budgeted comments**: explain _why_ (landmines, units, derivations, cross-file contracts), never _what_, within **module header ≤ 5 lines, comment lines ≤ half the code lines** — overrides the default no-comments rule, see [`comments.md`](docs/superpowers/conventions/comments.md).
 - **`type` aliases, never `interface`**: `export type X = { ... }` for all TS shapes.
-- **No barrel exports for components**: import React components directly from their `.tsx`. No `index.ts` re-export files in component folders.
-- **One symbol per file in `utils/` and `@types/`**: every file in `src/utils/` (and `tools/utils/`) exports exactly **one function**; every file in `src/@types/` exports exactly **one type**. Filename = the exported symbol's name (kebab/camel as the symbol dictates). No multi-export helper grab-bags — if a "data" file grows a generic pure helper, extract it to its own `utils/<area>/<fn>.ts` (math/format/color/random/gpu/…) with a focused test. Deep relative imports, no barrels.
-- **Frame files declare only their own symbol**: a file in `src/services/engine/frame/` — including its `timing/` and `passes/` subfolders — exports the one symbol it is named for and nothing else (a pass file, its `ContentPass`); helpers go to `src/utils/` or `src/services/engine/frame/`, constants to `src/data/`, one symbol per file. Enforced across all three directories by `tests/services/engine/frame/frameFilePurity.test.ts`, whose allow-list of today's offenders ratchets down, never up.
-- **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look (or describe what they should see).
-- **TDD via plans**: substantial features get a plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md` with bite-sized TDD tasks. Plans are executed via the `subagent-driven-development` workflow, but execution follows the lean protocol in [`docs/superpowers/conventions/sdd-execution.md`](docs/superpowers/conventions/sdd-execution.md) — grouped dispatches, one whole-branch review at the end, CI as the gate. Plans follow [`docs/superpowers/conventions/plan-style.md`](docs/superpowers/conventions/plan-style.md) — **contract code yes, implementation code no** (overrides the upstream `writing-plans` skill's "complete code in every step" default). When a plan ships, run the `/feature-done` audit: it gates on the DoD then relocates the plan + its spec to `plans/completed/` + `specs/completed/`.
-- **Refactor the ground before building**: any feature substantial enough for a spec/plan runs the `refactor-ground` skill **after brainstorming converges, before the spec is written**. It sketches the feature's ideal diff (data delta first), issues growth/bolt-on verdicts per touchpoint, and checkpoints the shape with the user; the spec then carries a "Ground preparation" section (filled, or "none needed — because X") and is written against the post-refactor architecture. Prep refactors are their own commits, sequenced before the feature commits; whether they land as separate PR(s) or ride one PR with the feature is an explicit ask at the checkpoint, every time — no default. `plan-style.md` gates plan authoring on that section existing.
-- **Plans coexist**: multiple in-flight plans is normal. Check the file list before starting new work to avoid stomping on something else.
-- **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work, grouped by subsystem area with a readiness tag; design-bearing items have a `docs/backlog/YYYY-MM-DD-<slug>.md` detail file linked from the index. **Keep the index line very short** — title + readiness tag + one terse clause + the `→ [details]` link. Anything longer (file lists, evidence, approach, options) goes in the detail md, NEVER inline in `BACKLOG.md`; the index is a scannable list, not a write-up. **Picking up an item removes it in the same change** — whether you implement it directly or write a spec/plan, delete its index line **and** its detail file in that commit/branch (the detail file seeds the spec; the spec/plan is then the source of truth). **Never strike through a done item** — delete it; the completion record is the git log + `*/completed/`. `/feature-done` sweeps the backlog when a plan ships; audit the whole file against the git log periodically to catch stragglers.
-- **Test what can break**: judge every test by "will it ever fail on a real bug no other test or compiler check catches?" — no runtime type tests, constant/registry restatements, clamp-boundary or mirror tests. See [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md).
-- **Simplicity over ease**: judge a design by the artifact (what runs and gets changed), not the keystrokes; un-braid concerns that could vary independently. Principles + the known-entanglements backlog live in [`docs/superpowers/conventions/simplicity.md`](docs/superpowers/conventions/simplicity.md) (Rich Hickey's _Simple Made Easy_, applied to skymap). Run the `entanglement-radar` skill to review a diff/module — **and at design time over a spec/plan**: a section that exists to teach handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal (classify essential vs accidental), not a note to write more carefully.
-- **Code is liability**: the scarce resource is the user's maintenance attention, not agent keystrokes. Prefer the smallest diff that satisfies the requirement; deletion beats addition; speculative generality, extra knobs/constants, and parallel paths are review findings, not features. A neutral-or-negative measurement **halts** a landing pipeline — land/park is the user's ruling, never process momentum. See [`simplicity.md`](docs/superpowers/conventions/simplicity.md). The `deletion-audit` skill is the standing counter-bias (leanness seat) — run it after fix waves and at `/feature-done`; findings apply per [`docs/superpowers/conventions/leanness.md`](docs/superpowers/conventions/leanness.md).
+- **No barrel exports for components**: import React components directly from their `.tsx`; no `index.ts` re-export files.
+- **One symbol per file** in `utils/` and `@types/` (`src/` and `tools/` alike): one function per `utils/` file, one type per `@types/` file, filename = the symbol's name; a generic helper growing inside another file gets extracted to `utils/<area>/<fn>.ts` with a focused test. Deep relative imports, no barrels.
+- **Frame files declare only their own symbol**: files in `src/services/engine/frame/` (incl. `timing/`, `passes/`) export the one symbol they are named for and nothing else — helpers to `src/utils/` or `frame/`, constants to `src/data/`; ratchet test `tests/services/engine/frame/frameFilePurity.test.ts` allow-lists today's offenders and only ever shrinks.
+- **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look.
+- **Plans coexist**: multiple in-flight plans is normal — check `docs/BACKLOG.md` and the plans file list before starting work, to reuse what exists and avoid stomping on it.
+- **TDD via plans**: substantial features get a bite-sized-task plan in `docs/superpowers/plans/YYYY-MM-DD-<feature>.md`, executed via the `subagent-driven-development` workflow under the lean protocol in [`sdd-execution.md`](docs/superpowers/conventions/sdd-execution.md) (grouped dispatches, one whole-branch review at the end, CI as the gate) and written per [`plan-style.md`](docs/superpowers/conventions/plan-style.md) — contract code yes, implementation code no, overriding the `writing-plans` skill; `/feature-done` gates the DoD and files plan + spec under `*/completed/`.
+- **Add a feature** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` first; if substantial, write a plan via the `writing-plans` skill rather than coding inline, and remove the matching backlog item in the same change.
+- **Refactor the ground before building**: spec/plan-sized features run the `refactor-ground` skill after brainstorming converges and **before the spec is written**, so the spec carries a "Ground preparation" section (filled, or "none needed — because X") and targets the post-refactor architecture; prep refactors are their own commits, sequenced first, and separate-PR vs riding the feature PR is an explicit ask at the checkpoint, every time.
+- **Backlog hygiene**: [`docs/BACKLOG.md`](docs/BACKLOG.md) lists only _unstarted_ work as very short index lines (title + readiness tag + one clause + `→ [details]` to `docs/backlog/YYYY-MM-DD-<slug>.md` for design-bearing items; anything longer goes in that detail file, never inline); picking an item up deletes index line **and** detail file in the same change, and done items are deleted, never struck through.
+- **Test what can break**: judge every test by "will it ever fail on a real bug no other test or compiler check catches?" — see [`testing.md`](docs/superpowers/conventions/testing.md). The 600+-file suite must stay green.
+- **Simplicity over ease**: judge a design by the artifact, not the keystrokes, and un-braid concerns that could vary independently ([`simplicity.md`](docs/superpowers/conventions/simplicity.md)); run `entanglement-radar` over a diff/module **and at design time over a spec/plan**, where a section teaching handling of an "asymmetry"/"subtlety"/"special-case" is a STOP-and-un-braid signal.
+- **Code is liability**: the scarce resource is the user's maintenance attention — smallest diff wins, deletion beats addition, speculative generality and extra knobs are review findings, and neutral-or-negative evidence **halts** a landing pipeline (land/park is the user's ruling, never process momentum); `deletion-audit` is the standing counter-bias after fix waves and at `/feature-done`, per [`leanness.md`](docs/superpowers/conventions/leanness.md).
+- **Fix a bug** → reproduce it as a failing test first, then fix.
+- **Why is this slow?** → measure first with `npm run perf`, then [docs/RENDERER.md](docs/RENDERER.md) for the CPU mental model (per-frame work scales with ~2.5M on-screen galaxies: hoist constants, gate with squared distances, no per-galaxy `Math.tan`).
+- **Move/rename/relocate a file** (incl. folder reorgs) → `npm run move-files -- <from> <to>` (or `-- --manifest <moves.json>`; `--dry` first), never `git mv` + hand-edited imports; it rewrites relative imports project-wide and drags the `tests/` mirror along, but misses `.wesl` `package::` imports and string-literal paths — grep for the old path afterwards. See `.claude/skills/refactor/SKILL.md`.
+- **Refactors keep the services/ layout**: cross-cutting helpers in `utils/`, rendering subsystems in `services/gpu/`, tests mirroring src.
 
 ## Commands
 
@@ -94,18 +63,11 @@ npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
 ```
 
-`typecheck:fast` is the inner-loop typecheck: TypeScript 7 (`tsgo`, the Go port) over the same two tsconfigs, 13.2s → 1.8s. It's an **exact-pinned dev build**, so `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug and confirm against `tsc` before acting on it.
+`typecheck:fast` is the tsgo inner loop; `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug.
 
-For `npm run perf`, read the `perf` skill (`.claude/skills/perf/SKILL.md`) first: measure **before and after** any renderer/perf change, and **in a worktree pass `--url http://localhost:<port>`** from _your_ server's `Local:` line or you silently measure another branch's server. The skill carries the flags and interpretation traps (MERGED vs PER-LAYER vs FLOOR, Apple Silicon slot-sum inflation).
+For `npm run perf`, read the `perf` skill first (measure before _and_ after any renderer/perf change); **in a worktree pass `--url http://localhost:<port>`** from _your_ server's `Local:` line or you silently measure another branch's server.
 
-The suite is large (600+ test files) and must stay green. Tests follow [`docs/superpowers/conventions/testing.md`](docs/superpowers/conventions/testing.md) — what _not_ to test matters as much as what to test.
-
-### Tmux workflow helpers
-
-- **`tools/dev/skymap-tmux.sh`** — starts/reattaches a `skymap` session, one window per `.claude/worktrees/*` plus `main` and `shell`; does not auto-start `claude`.
-- **`tools/dev/skymap-wt-clean.sh`** — interactive cleanup of merged worktrees; skips dirty ones. Closing a tmux window does **not** remove its worktree.
-
-One tmux window per worktree, rooted at the worktree path, so shell and `claude` share CWD. Use `EnterWorktree`/`ExitWorktree` only in single-window flows.
+Tmux/worktree helpers live in `tools/dev/` (`skymap-tmux.sh`, `skymap-wt-clean.sh`); closing a tmux window does **not** remove its worktree. Use `EnterWorktree`/`ExitWorktree` only in single-window flows.
 
 ## Deep docs — read before touching these areas
 
@@ -113,20 +75,7 @@ These are **mandatory pre-reading** for the task areas below, not optional backg
 
 - Touching `tools/` parsers, catalog builders, fetchers, or anything under `data/` → read [docs/DATA.md](docs/DATA.md) FIRST (pipeline model, binary format, local-volume override, data-refresh orders, MCPM, catalog gotchas, new-source checklist).
 - Any deploy, R2 sync, cache/CORS, or `.env` question → read [docs/DEPLOY.md](docs/DEPLOY.md) FIRST (Workers Assets vs R2, full deploy steps, cloudLoader/dataUrl).
-- Touching `src/services/gpu/`, `engine`, shaders, or debugging rendering → read [docs/RENDERER.md](docs/RENDERER.md) FIRST (renderer map + hard-won WebGPU landmines).
-
-## When the user asks you to…
-
-- **"add a feature"** → check `docs/BACKLOG.md` and `docs/superpowers/plans/` for an existing plan or captured issue. If it's substantial, run the `refactor-ground` skill once the shape of the ask is clear (before the spec is written — see the Refactor-the-ground convention), then write a new plan via the `writing-plans` skill rather than coding inline. If the work matches a backlog item, **remove that item (index line + `docs/backlog/` detail file) in the same change** that starts it — see the Backlog-hygiene convention.
-- **"fix this bug"** → check tests first; the project favours reproducing bugs as failing tests, then fixing.
-- **"why is this slow?"** → **measure first** with `npm run perf` (read the `perf` skill); then see [docs/RENDERER.md](docs/RENDERER.md) for the CPU-side mental model (per-frame work scales with ~2.5M on-screen galaxies; hoist constants, gate with squared distances, avoid per-galaxy `Math.tan`).
-- **"refactor X"** → keep the services/ layout. Cross-cutting helpers go in `utils/`; rendering subsystems in `services/gpu/`. Tests mirror the src tree. Any file move/rename goes through `npm run move-files` (next entry), not `git mv` + hand-edited imports.
-- **"move/rename/relocate a file"** (incl. folder reorgs) → `npm run move-files -- <from> <to>`, or `-- --manifest <moves.json>` for a batch. ts-morph rewrites every relative import project-wide and drags the `tests/` mirror along; run `--dry` first. Hand-editing import paths after a move is always the wrong plan. Not covered: `.wesl` `package::` imports + string-literal paths — grep for the old path afterwards. `npm run refactor -- move <from> <to>` is the canonical spelling. Details in `.claude/skills/refactor/SKILL.md`.
-- **"why does the renderer use index Y?"** → check `galaxyPointRenderer.ts` SLOTS_PER_GALAXY_POINT and the matching attribute layout in the shader; they must agree byte-for-byte (see [docs/RENDERER.md](docs/RENDERER.md)).
-
-## Memory
-
-The agent's auto-memory at `~/.claude/projects/-Users-rulkens-Development-js-skymap/memory/` carries cross-session context. Read `MEMORY.md` for the index; update memories whenever project state shifts (plan task completed, convention adopted, catalog re-fetched).
+- Touching `src/services/gpu/`, `engine`, shaders, or debugging rendering → read [docs/RENDERER.md](docs/RENDERER.md) FIRST (renderer map + hard-won WebGPU landmines). Attribute indices: `galaxyPointRenderer.ts` `SLOTS_PER_GALAXY_POINT` and the shader's attribute layout must agree byte-for-byte.
 
 ## Compact Instructions
 
