@@ -8,7 +8,7 @@
 
 **Tech Stack:** unchanged. TS + WebGPU + WESL (`wesl-plugin` `?static` linking), Vitest, `npm run perf` (headless Chromium GPU-timing harness).
 
-**Spec:** [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../specs/2026-09-13-per-planet-terrain-design.md) — §3.1 (deleted/added lists), §3.4d, §3.5 P6, §7 intro + `PatchInstance`, §7.1 (position derivation + the CPU/GPU fround contract), §7.4, §10 (GPU line), §11 (the position-derivation test and the perf gate). §12 puts P6 in **its own PR**.
+**Spec:** [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../../specs/2026-09-13-per-planet-terrain-design.md) — §3.1 (deleted/added lists), §3.4d, §3.5 P6, §7 intro + `PatchInstance`, §7.1 (position derivation + the CPU/GPU fround contract), §7.4, §10 (GPU line), §11 (the position-derivation test and the perf gate). §12 puts P6 in **its own PR**.
 
 **Ground preparation:** spec §3, produced by `refactor-ground` and signed off 2026-09-13. P6 **is** a prep refactor. It must not depend on P1 (`BodySurface`), which is a separate PR: read the body radius the way the code reads it today (`EarthSurfaceTileDrawArgs.radiusM`, fed from `earthPass`), and do not introduce `datumRadiusM` as a plumbed field.
 
@@ -54,10 +54,10 @@ One branch off `main`, one PR, drafted at task 1. Do not rebase onto P1.
 
 This is the baseline for the §11 gate, and it can only be taken before the code moves.
 
-- [ ] Start this worktree's dev server (`npm run dev`), note the port from its `Local:` line, and record that port at the top of the scratchpad file below — every later perf run uses it.
-- [ ] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30`, and the same for `--scenario solar-system`. Save both outputs verbatim to a scratchpad file (`perf-before.txt`); you cannot reconstruct them after editing.
-- [ ] Record the four eye-check poses as before-shots (ask the user to look, or capture with the in-app still capture — do not guess at the picture): **orbit** (whole Earth, tiles engaged), **the 300 km base-globe fade band**, **Søndermarken at z19** (the deepest GeoDanmark band), and **a limb view** (patches against the horizon, where any patch-origin drift shows as a scalloped edge).
-- [ ] Commit nothing. Report the MERGED medians for both scenarios into the ledger.
+- [x] Start this worktree's dev server (`npm run dev`), note the port from its `Local:` line, and record that port at the top of the scratchpad file below — every later perf run uses it.
+- [x] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30`, and the same for `--scenario solar-system`. Save both outputs verbatim to a scratchpad file (`perf-before.txt`); you cannot reconstruct them after editing.
+- [x] Record the four eye-check poses as before-shots (ask the user to look, or capture with the in-app still capture — do not guess at the picture): **orbit** (whole Earth, tiles engaged), **the 300 km base-globe fade band**, **Søndermarken at z19** (the deepest GeoDanmark band), and **a limb view** (patches against the horizon, where any patch-origin drift shows as a scalloped edge).
+- [x] Commit nothing. Report the MERGED medians for both scenarios into the ledger.
 
 **Interpretation rules for every perf run in this plan:** quote MERGED medians only; never quote PER-LAYER rows as real costs (each carries 1–3 ms of instrumentation overhead — use the EST. PER-PASS FLOOR section for attribution); on Apple Silicon MERGED slot-sums are ~3× inflated and per-slot ms are ordinal, never additive. Run-to-run noise is ~0.5 ms at 30 frames.
 
@@ -117,10 +117,10 @@ N̂ = (−sin lat0·cos lon0,  −sin lat0·sin lon0,  cos lat0)
 
 One fact the header must record, because it looks wrong and would get "fixed" back: `1 − cos` is algebraically equal to the haversine form and catastrophically worse in f32 at small `dlon`. (F2 adds the second: `R` and `h` distributed, never summed — spec §7.1.)
 
-- [ ] Add the test `patchVertexOffsetM matches an f64 absolute-direction reference at z19`. Reference (an independent formula, not the function under test): `R · (dir(lon0+dlon, lat0+dlat) − dir(lon0, lat0))` with `dir(lon, lat) = [cos lat·cos lon, cos lat·sin lon, sin lat]` in plain f64. Anchor: a z19 patch (`dLonRad = 2π/2^19`, `dLatRad = π/2^18`) near Søndermarken (`lon0 ≈ 12.52°`, `lat0 ≈ 55.66°`), `R = 6378137`, sampled at `(s,t) ∈ {(0,1), (1,0), (1,1), (0.5,0.5), (0.37,0.81)}`. Assert each component agrees to **≤ 1e-7 m**.
-- [ ] Add the test `patchVertexOffsetM matches an f64 absolute-direction reference at z7`, same reference and samples, `dLonRad = 2π/2^7`, `dLatRad = π/2^6`, anchor at a mid-latitude corner. Assert **≤ 1e-6 m**.
-- [ ] Add the test `patchVertexOffsetM returns exactly zero at the patch origin`: at `s = t = 0`, assert `Math.abs(c) === 0` for all three components (`toBe(0)` would reject the `−0` the `−hav_lat` term produces). This is what makes a patch corner land on the f64 origin **exactly**, which is the whole f32 argument.
-- [ ] Implement. `npm test -- patchVertexOffsetM` → green. Commit.
+- [x] Add the test `patchVertexOffsetM matches an f64 absolute-direction reference at z19`. Reference (an independent formula, not the function under test): `R · (dir(lon0+dlon, lat0+dlat) − dir(lon0, lat0))` with `dir(lon, lat) = [cos lat·cos lon, cos lat·sin lon, sin lat]` in plain f64. Anchor: a z19 patch (`dLonRad = 2π/2^19`, `dLatRad = π/2^18`) near Søndermarken (`lon0 ≈ 12.52°`, `lat0 ≈ 55.66°`), `R = 6378137`, sampled at `(s,t) ∈ {(0,1), (1,0), (1,1), (0.5,0.5), (0.37,0.81)}`. Assert each component agrees to **≤ 1e-7 m**.
+- [x] Add the test `patchVertexOffsetM matches an f64 absolute-direction reference at z7`, same reference and samples, `dLonRad = 2π/2^7`, `dLatRad = π/2^6`, anchor at a mid-latitude corner. Assert **≤ 1e-6 m**.
+- [x] Add the test `patchVertexOffsetM returns exactly zero at the patch origin`: at `s = t = 0`, assert `Math.abs(c) === 0` for all three components (`toBe(0)` would reject the `−0` the `−hav_lat` term produces). This is what makes a patch corner land on the f64 origin **exactly**, which is the whole f32 argument.
+- [x] Implement. `npm test -- patchVertexOffsetM` → green. Commit.
 
 **Why those tolerances, and what they do and do not prove.** The reference cancels two near-unit f64 vectors, so its own error floor is `2.2e-16 × R ≈ 1.4e-9 m` at any level; the thresholds sit ~70× above that floor and 50–20,000× **below** the f32 budget the spec derives for the GPU (≈ 6e-8 of patch extent: ~5 µm at z19, ~2 cm at z7). So a passing test proves the **algebraic identity** — the small-angle form is the same surface as the absolute one — and a wrong formula (a dropped `hav_lon` term, a swapped `sin lat0`, the forbidden `R + h` unit-vector shape) fails it by orders of magnitude, not by a near-miss. It does **not** prove the shader's f32 error; nothing in TS can, and simulating f32 intermediates would test a transcription rather than the shader. The shader's numerics are gated by task 9's eye-check, the limb pose in particular.
 
@@ -163,9 +163,9 @@ The other half of the contract needs no discipline and the header should say why
 
 **`SurfaceCutTile.originLocal: Vec3` → `anchor: SurfacePatchAnchor`.** The direction is now derivable from the anchor and must not survive beside it: two parallel statements of the same corner, one rounded and one not, is precisely the drift §7.1 warns about. The walk already has `u0/u1/v0/v1` at the push site (`cutSurfaceTiles.ts:133-141, 250-256`); it calls `surfacePatchAnchor` there. `equirectUvToDirection` stays — the walk still uses it for centres and corners.
 
-- [ ] Add the test `patchOriginRelEyeM lands on the uv corner direction the walk's own convention names`: for a z0 tile's `[u0, v0]`, `patchOriginRelEyeM(surfacePatchAnchor(u0, v0, u1, v1), 1, [0,0,0])` equals `equirectUvToDirection([u0, v0])` to within f32 rounding (1e-7). This is the one test standing between this rewrite and a 180°-rotated Earth — the `TEXTURE_PRIME_MERIDIAN_U` landmine, whose other three sites are listed in `src/data/bodies/texturePrimeMeridianU.ts`.
-- [ ] Add the test `patchOriginRelEyeM composes from the f32-rounded anchor, not the f64 one`: pick a `lat0`/`radiusM` that are not f32-exact, assert the result equals the composition from `Math.fround`ed inputs and **differs measurably** from the unrounded composition (the ~0.13 m coherent shift). A test that passes either way is not testing the contract.
-- [ ] Implement both utils, reshape `SurfaceCutTile`, update the walk and the four test fixtures. `npm test` → green. Commit.
+- [x] Add the test `patchOriginRelEyeM lands on the uv corner direction the walk's own convention names`: for a z0 tile's `[u0, v0]`, `patchOriginRelEyeM(surfacePatchAnchor(u0, v0, u1, v1), 1, [0,0,0])` equals `equirectUvToDirection([u0, v0])` to within f32 rounding (1e-7). This is the one test standing between this rewrite and a 180°-rotated Earth — the `TEXTURE_PRIME_MERIDIAN_U` landmine, whose other three sites are listed in `src/data/bodies/texturePrimeMeridianU.ts`.
+- [x] Add the test `patchOriginRelEyeM composes from the f32-rounded anchor, not the f64 one`: pick a `lat0`/`radiusM` that are not f32-exact, assert the result equals the composition from `Math.fround`ed inputs and **differs measurably** from the unrounded composition (the ~0.13 m coherent shift). A test that passes either way is not testing the contract.
+- [x] Implement both utils, reshape `SurfaceCutTile`, update the walk and the four test fixtures. `npm test` → green. Commit.
 
 ---
 
@@ -179,9 +179,9 @@ The other half of the contract needs no discipline and the header should say why
 
 `resolution² × 6` indices over an `(resolution+1)²` vertex grid addressed `vid = j·(resolution+1) + i`. At `n = 8` that is 81 vertices and 384 indices, so `'uint16'` is the index format (81 ≪ 65536) and the buffer is 768 B, created once and shared by every patch, level and body. The quad order is `bakeSurfaceTileMesh.ts:71-84`'s: `p00, p10, p01` then `p10, p11, p01`, which is CCW-outward for `u = east`, `v = north` and matches the pipeline's `frontFace: 'ccw'` + `cullMode: 'back'`.
 
-- [ ] Add the test `surfacePatchIndices winds every triangle CCW in the (i, j) parametric plane`: for each triangle, the z-component of `(p1 − p0) × (p2 − p0)` in `(i, j)` coordinates is `> 0`. This is the one silent failure mode — a flipped winding culls the entire cut and shows up only as "the tiles vanished", with no error anywhere.
-- [ ] Add the test `surfacePatchIndices covers the grid`: length is `6·n²` and no index exceeds `(n+1)² − 1`.
-- [ ] Implement. `npm test -- surfacePatchIndices` → green. Commit.
+- [x] Add the test `surfacePatchIndices winds every triangle CCW in the (i, j) parametric plane`: for each triangle, the z-component of `(p1 − p0) × (p2 − p0)` in `(i, j)` coordinates is `> 0`. This is the one silent failure mode — a flipped winding culls the entire cut and shows up only as "the tiles vanished", with no error anywhere.
+- [x] Add the test `surfacePatchIndices covers the grid`: length is `6·n²` and no index exceeds `(n+1)² − 1`.
+- [x] Implement. `npm test -- surfacePatchIndices` → green. Commit.
 
 ---
 
@@ -242,9 +242,9 @@ Every write stays a hand-literal `view.setFloat32(base + N, expr, true)` — the
 
 Do **not** add `heightSlotOrigin` or `edgeCoarser`. They are F2's, they have no reader in P6, and an unused field is a claim the reviewer has to check.
 
-- [ ] Rename `SurfaceTileUniforms.vertsPerTile` (u32, offset 92) to `meshResolution` — same slot, same type, new meaning: the template's `n`, which the vertex shader needs to split `vertex_index`. No byte moves. `SURFACE_TILE_UNIFORM_BYTES` stays 176.
-- [ ] Update the parity test: rename its `NodeParams` describe to `PatchInstance`, delete the `TileVertex` describe, and extend the `fieldOf` map so each writer argument maps to its struct field (`albedoUvOrigin[XY]`/`albedoUvScale[XY]` → `albedoRect`, likewise `fallbackRect`, `originRelEyeM[XYZ]` → `originRelEyeM`, `vertsPerTile` → `meshResolution`).
-- [ ] `npm test -- earthSurfaceTileLayout` → green (`PATCH_INSTANCE_BYTES === 64` falls out of the struct walk, it is not asserted as a literal). Commit.
+- [x] Rename `SurfaceTileUniforms.vertsPerTile` (u32, offset 92) to `meshResolution` — same slot, same type, new meaning: the template's `n`, which the vertex shader needs to split `vertex_index`. No byte moves. `SURFACE_TILE_UNIFORM_BYTES` stays 176.
+- [x] Update the parity test: rename its `NodeParams` describe to `PatchInstance`, delete the `TileVertex` describe, and extend the `fieldOf` map so each writer argument maps to its struct field (`albedoUvOrigin[XY]`/`albedoUvScale[XY]` → `albedoRect`, likewise `fallbackRect`, `originRelEyeM[XYZ]` → `originRelEyeM`, `vertsPerTile` → `meshResolution`).
+- [x] `npm test -- earthSurfaceTileLayout` → green (`PATCH_INSTANCE_BYTES === 64` falls out of the struct walk, it is not asserted as a literal). Commit.
 
 **Why this parity test earns its keep** (it looks like a constant restatement and is not): it is the only cross-check between a WESL declaration and a TS byte offset. A field reorder on one side alone scrambles every drawn patch, and WebKit rejects a mislaid layout that Chrome's Tint tolerates — the failure mode is "iOS presents nothing, no error".
 
@@ -270,9 +270,9 @@ Storage binding 2 (`array<TileVertex>`) is gone; binding 1 becomes `array<PatchI
 - `out.viewDirLocal`, the rects and `fadeWeight` pass through unchanged; the rects unpack from `patch.albedoRect.xy/.zw` and `patch.fallbackRect.xy/.zw`.
 - `rotCol0/1/2` stay applied and stay the identity under the body-slab frame (`io.wesl`'s `SurfaceTileUniforms` header) — this is not the task that removes them.
 
-- [ ] Rewrite the shader and cut the header down: the mesh-expansion, `vertexBase` and "instancing is impossible" paragraphs describe code that no longer exists. What replaces them is short — where `i, j` come from, that `originRelEyeM` is f64-differenced CPU-side, and that `patchVertexOffset` is the twin of `src/utils/scene/patchVertexOffsetM.ts`.
-- [ ] Single quotes in comments, imports at the top, one import per identifier, `package::` prefix.
-- [ ] `npm run typecheck` green. The shader is **not** verified here — task 7 is the first point it can be. Commit.
+- [x] Rewrite the shader and cut the header down: the mesh-expansion, `vertexBase` and "instancing is impossible" paragraphs describe code that no longer exists. What replaces them is short — where `i, j` come from, that `originRelEyeM` is f64-differenced CPU-side, and that `patchVertexOffset` is the twin of `src/utils/scene/patchVertexOffsetM.ts`.
+- [x] Single quotes in comments, imports at the top, one import per identifier, `package::` prefix.
+- [x] `npm run typecheck` green. The shader is **not** verified here — task 7 is the first point it can be. Commit.
 
 ---
 
@@ -298,10 +298,10 @@ Storage binding 2 (`array<TileVertex>`) is gone; binding 1 becomes `array<PatchI
 - `earthPass.ts`: drop `frame: ++earthFrameCounter` from the draw args and delete the module-level `earthFrameCounter` and its 7-line comment (`:102-108, :241`). A pass file declares only its own symbol.
 - `src/services/engine/gpuHandles/gpuHandleRegistry.ts:426-440`: drop the `createSurfaceTileMeshCache(...)` argument and the two now-unused imports; the row keeps `EARTH_SURFACE_TILE_MESH_RESOLUTION` as the last argument, and its "the mesh cache is constructed here" comment goes with the cache.
 
-- [ ] Rewrite the renderer's module header to the ≤ 10-line budget. Three of its five paragraphs (mesh expansion, why not instanced, the mesh cache) describe deleted code. What must survive: the `'nearer-or-equal'` tie with the base globe, and that this renderer owns neither the atlas nor the base globe's maps.
-- [ ] `npm test && npm run typecheck` green.
-- [ ] **Verify the shader actually compiles**: with the dev server running, put the camera near Earth so tiles engage, and confirm the dev console shows no `createShaderModuleWithDevLog` compile error and no `Invalid ShaderModule` / `Invalid RenderPipeline` cascade. A black or empty NEAR0 slab with a moving camera is the signature of a rejected module, not of a missing cut.
-- [ ] Commit.
+- [x] Rewrite the renderer's module header to the ≤ 10-line budget. Three of its five paragraphs (mesh expansion, why not instanced, the mesh cache) describe deleted code. What must survive: the `'nearer-or-equal'` tie with the base globe, and that this renderer owns neither the atlas nor the base globe's maps.
+- [x] `npm test && npm run typecheck` green.
+- [x] **Verify the shader actually compiles**: with the dev server running, put the camera near Earth so tiles engage, and confirm the dev console shows no `createShaderModuleWithDevLog` compile error and no `Invalid ShaderModule` / `Invalid RenderPipeline` cascade. A black or empty NEAR0 slab with a moving camera is the signature of a rejected module, not of a missing cut.
+- [x] Commit.
 
 ---
 
@@ -309,9 +309,9 @@ Storage binding 2 (`array<TileVertex>`) is gone; binding 1 becomes `array<PatchI
 
 **Files (all deletions):** `src/utils/scene/bakeSurfaceTileMesh.ts`, `src/services/gpu/resources/surfaceTileMeshCache.ts`, `src/@types/scene/SurfaceTileMesh.d.ts`, `tests/utils/scene/bakeSurfaceTileMesh.test.ts`, `tests/services/gpu/resources/surfaceTileMeshCache.test.ts`. **Modify:** `src/data/bodies/earthTileParams.ts`.
 
-- [ ] `npm run refactor -- refs bakeSurfaceTileMesh`, and the same for `createSurfaceTileMeshCache`, `SurfaceTileMesh`, `SurfaceTileMeshCache`, `EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY` — every one must report only its own definition and the sites this task deletes. Then remove the five files (`rm -f`).
-- [ ] Delete `EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY` (`earthTileParams.ts:58-66`). **Keep `EARTH_SURFACE_TILE_MESH_RESOLUTION`** — it is `n`, and F2 raises it to 64 — but rewrite its doc comment: it no longer describes a bake grid or a per-frame re-upload; it is the template's subdivision per patch edge, and geometry density is now independent of the height data's density (spec §7).
-- [ ] `npm test && npm run typecheck` green; grep the repo for `TileVertex`, `vertsPerTile`, `SurfaceTileMesh` and confirm only intentional hits remain (WESL string paths and `.wesl` text are outside the refactor CLI's reach). Commit.
+- [x] `npm run refactor -- refs bakeSurfaceTileMesh`, and the same for `createSurfaceTileMeshCache`, `SurfaceTileMesh`, `SurfaceTileMeshCache`, `EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY` — every one must report only its own definition and the sites this task deletes. Then remove the five files (`rm -f`).
+- [x] Delete `EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY` (`earthTileParams.ts:58-66`). **Keep `EARTH_SURFACE_TILE_MESH_RESOLUTION`** — it is `n`, and F2 raises it to 64 — but rewrite its doc comment: it no longer describes a bake grid or a per-frame re-upload; it is the template's subdivision per patch edge, and geometry density is now independent of the height data's density (spec §7).
+- [x] `npm test && npm run typecheck` green; grep the repo for `TileVertex`, `vertsPerTile`, `SurfaceTileMesh` and confirm only intentional hits remain (WESL string paths and `.wesl` text are outside the refactor CLI's reach). Commit.
 
 ---
 
@@ -319,11 +319,11 @@ Storage binding 2 (`array<TileVertex>`) is gone; binding 1 becomes `array<PatchI
 
 **No code changes** unless the gate fails.
 
-- [ ] Confirm the dev server picked up the shader and renderer edits (HMR line in its output, or restart it — a stale server measures the old pipeline).
-- [ ] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30` and `--scenario solar-system`, **same flags as task 1**. Save to `perf-after.txt`.
-- [ ] Compare MERGED medians against task 1. If any scenario is worse by more than run-to-run noise (~0.5 ms at 30 frames), raise `--frames` and re-measure before drawing a conclusion; if the regression holds, consider a paired-baseline A/B (alternate A-B-A-B across two dev servers) before attributing it, since thermal drift over a long task is real.
-- [ ] Eye-check the same four poses from task 1 — **orbit, the 300 km fade band, Søndermarken z19, a limb view** — against the before-shots. What to look for, in order of what this change can break: patches missing entirely (winding or index format), a 180° or hemisphere-flipped surface (the anchor convention), hairline seams between neighbouring patches at z19 (the fround contract), a scalloped or beaded limb (patch-origin drift), faceting or shading that differs from before at the fade band (the normal/tangent derivation), and the crossfade still running when a deep tile lands.
-- [ ] Report both the numbers and the eye-check verdict.
+- [x] Confirm the dev server picked up the shader and renderer edits (HMR line in its output, or restart it — a stale server measures the old pipeline).
+- [x] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30` and `--scenario solar-system`, **same flags as task 1**. Save to `perf-after.txt`.
+- [x] Compare MERGED medians against task 1. If any scenario is worse by more than run-to-run noise (~0.5 ms at 30 frames), raise `--frames` and re-measure before drawing a conclusion; if the regression holds, consider a paired-baseline A/B (alternate A-B-A-B across two dev servers) before attributing it, since thermal drift over a long task is real.
+- [x] Eye-check the same four poses from task 1 — **orbit, the 300 km fade band, Søndermarken z19, a limb view** — against the before-shots. What to look for, in order of what this change can break: patches missing entirely (winding or index format), a 180° or hemisphere-flipped surface (the anchor convention), hairline seams between neighbouring patches at z19 (the fround contract), a scalloped or beaded limb (patch-origin drift), faceting or shading that differs from before at the fade band (the normal/tangent derivation), and the crossfade still running when a deep tile lands.
+- [x] Report both the numbers and the eye-check verdict.
 
 **The halt rule, verbatim from spec §11 and §3.5:** `npm run perf` runs before and after P6, with the worktree's own `--url`. **A neutral-or-negative measurement halts the pipeline and the land/park call is the user's.** Do not land on process momentum, and do not go looking for a compensating optimization inside this PR — report and stop.
 
@@ -333,9 +333,9 @@ Storage binding 2 (`array<TileVertex>`) is gone; binding 1 becomes `array<PatchI
 
 **Files:** `docs/RENDERER.md`, `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`
 
-- [ ] `RENDERER.md`'s "Earth surface virtual texture" bullet (`:14`) and the matching "Things that have bitten us" entry (`:27`) both describe `earthSurfaceTileRenderer` as drawing "instanced, camera-relative **curved meshes**". Replace with what it does now: one shared template addressed off `vertex_index`, per-patch records off `instance_index`, one `drawIndexed` for the cut, positions derived in the vertex shader from the patch anchor, no vertex data and no per-frame vertex upload. Keep the `'nearer-or-equal'` tie sentence — it is still true and still load-bearing.
-- [ ] Spec §3.1's deleted list becomes fact for four of its five entries. Mark P6 landed in §3.5 and §12. §7 already prints this record as the first 64 B of F2's 80 B — do **not** rewrite it.
-- [ ] Commit.
+- [x] `RENDERER.md`'s "Earth surface virtual texture" bullet (`:14`) and the matching "Things that have bitten us" entry (`:27`) both describe `earthSurfaceTileRenderer` as drawing "instanced, camera-relative **curved meshes**". Replace with what it does now: one shared template addressed off `vertex_index`, per-patch records off `instance_index`, one `drawIndexed` for the cut, positions derived in the vertex shader from the patch anchor, no vertex data and no per-frame vertex upload. Keep the `'nearer-or-equal'` tie sentence — it is still true and still load-bearing.
+- [x] Spec §3.1's deleted list becomes fact for four of its five entries. Mark P6 landed in §3.5 and §12. §7 already prints this record as the first 64 B of F2's 80 B — do **not** rewrite it.
+- [x] Commit.
 
 ---
 

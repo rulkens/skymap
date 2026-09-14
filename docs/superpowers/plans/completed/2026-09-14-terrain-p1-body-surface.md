@@ -1,6 +1,6 @@
 # P1 — the `BodySurface` split
 
-**Spec:** [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../specs/2026-09-13-per-planet-terrain-design.md)
+**Spec:** [`docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md`](../../specs/2026-09-13-per-planet-terrain-design.md)
 — §3.1 (ideal shape), §3.3 joints 8 + 9, §3.4a (why the name dies), §3.5 P1, §3.7
 (the promoted adjacent finding), §8.3 (the per-purpose routing table, which is this
 plan's map).
@@ -262,13 +262,13 @@ export function outerBoundRadiusM(surface: BodySurface): number; // datum + reli
 export function innerBoundRadiusM(surface: BodySurface): number; // datum + reliefM[0]
 ```
 
-- [ ] Add the type. Header ≤ 10 lines; record **why** relief is an interval and not
+- [x] Add the type. Header ≤ 10 lines; record **why** relief is an interval and not
       a scalar (the two bounds round in opposite directions — spec §8.3) and that
       the bounds are derived, never stored.
-- [ ] Add both helpers, one symbol per file.
-- [ ] Test `outerBoundRadiusM adds the relief maximum to the datum` —
+- [x] Add both helpers, one symbol per file.
+- [x] Test `outerBoundRadiusM adds the relief maximum to the datum` —
       `{ datumRadiusM: 100, reliefM: [-5, 10] }` → `110`.
-- [ ] Test `innerBoundRadiusM adds the relief minimum to the datum` — same input →
+- [x] Test `innerBoundRadiusM adds the relief minimum to the datum` — same input →
       `95`.
       Both expectations are hand-computed and the relief interval is deliberately
       asymmetric, so a swapped tuple index fails. This is the one real bug that can
@@ -276,9 +276,9 @@ export function innerBoundRadiusM(surface: BodySurface): number; // datum + reli
       (`testing.md`, "behavioral tests of pure functions with hand-computed
       expectations"). Two files because of one-symbol-per-file; two assertions
       total, no more.
-- [ ] `npm test -- outerBoundRadiusM innerBoundRadiusM`; `npm run typecheck:fast`
+- [x] `npm test -- outerBoundRadiusM innerBoundRadiusM`; `npm run typecheck:fast`
       still green — nothing consumes the type yet.
-- [ ] Commit.
+- [x] Commit.
 
 ## Task 2 — flip the arms, the seeds and the makers (opens the red window)
 
@@ -286,22 +286,22 @@ export function innerBoundRadiusM(surface: BodySurface): number; // datum + reli
 `BodySpec.d.ts`, the three makers, `sceneEarth.ts`, `sceneSgrAStar.ts`,
 `sceneSStars.ts`, `scenePlanets.ts`.
 
-- [ ] Replace `readonly radiusM: number` with `readonly surface: BodySurface` on
+- [x] Replace `readonly radiusM: number` with `readonly surface: BodySurface` on
       `EarthBody`, `PlanetBody`, `StarBody`, `AnchorPointBody`. Fix the header prose
       in each (all four name `radiusM`), plus `CelestialBody.d.ts:1`.
       `SceneBody.d.ts:8` already routes extent readers through
       `bodyFootprintRadiusM` and never names the field — leave it.
-- [ ] Rename `BodySpec.radiusM` → `datumRadiusM` (R1) and update the 20 rows in
+- [x] Rename `BodySpec.radiusM` → `datumRadiusM` (R1) and update the 20 rows in
       `scenePlanets.ts`. This is a property rename inside authored data — hand-edit
       is fine here, `npm run refactor -- rename` targets exported symbols, not
       fields.
-- [ ] Makers and literals build `surface: { datumRadiusM: …, reliefM: [0, 0] }`.
+- [x] Makers and literals build `surface: { datumRadiusM: …, reliefM: [0, 0] }`.
       Add ONE comment, at `BodySurface`'s definition or in `heliocentricPlanet`,
       recording that `[0, 0]` is P1's placeholder and F1 compiles real extremes
       from the height grid (§3.4e) — not one comment per seed.
-- [ ] `npm run typecheck:fast 2>&1 | rg radiusM | wc -l` → record the number in the
+- [x] `npm run typecheck:fast 2>&1 | rg radiusM | wc -l` → record the number in the
       commit body. This is the worklist size for Tasks 3–6.
-- [ ] Commit (`refactor(scene): CelestialBody carries a surface, not a radius`).
+- [x] Commit (`refactor(scene): CelestialBody carries a surface, not a radius`).
 
 ## Task 3 — the outer-bound group
 
@@ -309,24 +309,24 @@ export function innerBoundRadiusM(surface: BodySurface): number; // datum + reli
 `atmosphereDrawList.ts`, `meshBodiesPass.ts:102`, `earthFlyout.ts`,
 `makeEarthLoop.ts`. Frame/pass purity applies to the two pass/frame files.
 
-- [ ] Point each at `outerBoundRadiusM(body.surface)` per the census.
-- [ ] `bodyFootprintRadiusM`'s header currently says extent readers "may not take
+- [x] Point each at `outerBoundRadiusM(body.surface)` per the census.
+- [x] `bodyFootprintRadiusM`'s header currently says extent readers "may not take
       `CelestialBody.radiusM`" — rewrite it to name the outer bound and why
       over-estimating is the safe direction. Its 11 callers stay untouched.
-- [ ] Error count strictly down. Commit.
+- [x] Error count strictly down. Commit.
 
 ## Task 4 — the inner-bound group
 
 **Files:** `atmosphereParams.ts:28-29`, `sceneOccluderBodies.ts:41/44/58/70/75`,
 `meshBodiesPass.ts:86`.
 
-- [ ] Point each at `innerBoundRadiusM(body.surface)`.
-- [ ] `sceneOccluderBodies.ts:10`'s header says radii are "the bare `radiusM`" —
+- [x] Point each at `innerBoundRadiusM(body.surface)`.
+- [x] `sceneOccluderBodies.ts:10`'s header says radii are "the bare `radiusM`" —
       rewrite: an occluder must **under**-occlude, hence the inner bound.
-- [ ] One comment at `atmosphereParams.ts:26-27`'s existing metres→km boundary note
+- [x] One comment at `atmosphereParams.ts:26-27`'s existing metres→km boundary note
       recording that the ground radius is the inner bound, and that §2's depth-aware
       composite is what makes it correct once relief is non-zero.
-- [ ] Error count strictly down. Commit.
+- [x] Error count strictly down. Commit.
 
 ## Task 5 — the datum group, and `surfaceFloorM` honours `standoffRadii`
 
@@ -338,13 +338,13 @@ so the behaviour change is reviewable on its own.
 **Files:** the 31 datum sites in the census (camera arm, the draw passes,
 `cloudShellPass`, `deriveBodyStates`, `orbitalElements`, `BodyDetailCard`).
 
-- [ ] Point each at `body.surface.datumRadiusM`.
-- [ ] Comment only where the choice is non-obvious: the drawn sphere is the datum
+- [x] Point each at `body.surface.datumRadiusM`.
+- [x] Comment only where the choice is non-obvious: the drawn sphere is the datum
       sphere and F2 shrinks the base globe to the inner bound (§7.4);
       `cloudShellPass` picks datum and F3 re-expresses the deck as an altitude
       (R3); `cameraDebugSnapshotOf`'s altitude readout wants `bestHeightM` in F3.
-- [ ] Frame/pass purity applies to every pass file in this group.
-- [ ] Commit.
+- [x] Frame/pass purity applies to every pass file in this group.
+- [x] Commit.
 
 ### 5b — the descent floor honours the override (§3.7)
 
@@ -367,84 +367,84 @@ export function bodyStandoffRadii(body: SceneBody): number;
 export function surfaceFloorM(datumRadiusM: number, standoffRadii: number): number;
 ```
 
-- [ ] Extract `bodyStandoffRadii`. `pivotFraming` (`pivotRadiusMpc.ts:55-58`)
+- [x] Extract `bodyStandoffRadii`. `pivotFraming` (`pivotRadiusMpc.ts:55-58`)
       currently inlines the `'standoffRadii' in body && typeof … === 'number'`
       widening dance; collapse it onto the new helper so there is one home for the
       fallback. Keep the `typeof` guard's rationale comment — `in` alone widens the
       absent arms to `unknown`, which is the landmine.
-- [ ] `surfaceFloorM` takes the standoff **explicitly, with no default**. A default
+- [x] `surfaceFloorM` takes the standoff **explicitly, with no default**. A default
       parameter would let a call site silently keep today's bug.
-- [ ] Thread the standoff to the three callers: `SurfaceStepCtx` gains a
+- [x] Thread the standoff to the three callers: `SurfaceStepCtx` gains a
       `standoffRadii` field (filled at `replayInput.ts:130`, which already resolves
       the body); `toWorldArm` gains a parameter (filled at `resolveWorldArm:163`,
       which already resolves the body); `flooredBodyPose`, `anchoredZoomStep` and
       their pass-through callers `surfaceZoomStep` / `settledZoomPose` gain one
       too. Nothing else in that scalar thread changes — `bodyRadiusM` stays the
       datum and keeps its name.
-- [ ] Replace `tests/utils/camera/surfaceFloorM.test.ts`'s single existing
+- [x] Replace `tests/utils/camera/surfaceFloorM.test.ts`'s single existing
       assertion (`surfaceFloorM(r) / r === SURFACE_STANDOFF_RADII` — a constant
       restatement whose currency this task changes) with: - `bodyStandoffRadii falls back to the shared constant for a body with no
-      override` — a body arm without the field returns `SURFACE_STANDOFF_RADII`.
+    override` — a body arm without the field returns `SURFACE_STANDOFF_RADII`.
       The `in` + `typeof` widening this replaces is genuinely easy to get wrong. - `the descent floor at Sgr A* matches pivotFraming's zoom floor` — assert
       `surfaceFloorM(SGR_A_STAR.surface.datumRadiusM, bodyStandoffRadii(SGR_A_STAR)) *
-      SCALE_UNITS.M_TO_MPC` equals `pivotFraming(<sgr body row>).floorMpc`. This
+    SCALE_UNITS.M_TO_MPC` equals `pivotFraming(<sgr body row>).floorMpc`. This
       is the disagreement §3.7 names, it is the whole point of the change, and it
       fails the moment either side stops reading the override.
       No test asserting `radiusM` is gone (the compiler owns that), no runtime type
       test.
-- [ ] `npm test -- surfaceFloorM pivotRadiusMpc surfaceStep poseFrameConversion`.
-- [ ] Commit (`fix(camera): the descent floor honours per-body standoffRadii`).
+- [x] `npm test -- surfaceFloorM pivotRadiusMpc surfaceStep poseFrameConversion`.
+- [x] Commit (`fix(camera): the descent floor honours per-body standoffRadii`).
 
 ## Task 6 — sweep the long tail; close the red window
 
 **Files:** whatever `npm run typecheck:fast` still names, `src/` and `tests/` both.
 Expect the bulk to be test fixtures.
 
-- [ ] Work the error list to zero. Every remaining src site is one of the census
+- [x] Work the error list to zero. Every remaining src site is one of the census
       buckets — if one is not, stop and rule on its currency explicitly in the
       commit body rather than guessing.
-- [ ] Test fixtures: replace `radiusM: X` with
+- [x] Test fixtures: replace `radiusM: X` with
       `surface: { datumRadiusM: X, reliefM: [0, 0] }` in body fixtures only. Leave
       descriptor literals (occluder spheres, slab rows, `SelectionRow` star arms,
       `boundingRadiusM`) alone — if the compiler is not complaining, it is not a
       body. Where a file has many fixtures, a file-local const is fine; no shared
       fixture factory (R4).
-- [ ] Any existing assertion that changes **currency** (rather than just shape)
+- [x] Any existing assertion that changes **currency** (rather than just shape)
       gets called out in the commit body — there should be none, since all three
       bounds are equal in P1.
-- [ ] `npm run typecheck` (`tsc`, the gate) and the full suite green.
-- [ ] Commit.
+- [x] `npm run typecheck` (`tsc`, the gate) and the full suite green.
+- [x] Commit.
 
 ## Task 7 — visual verification
 
 No code. The picture must be identical; this is the only way to know.
 
-- [ ] `npm run dev` in this worktree (leave the existing server running; use its own
+- [x] `npm run dev` in this worktree (leave the existing server running; use its own
       port). Compare against `main` at four poses: Earth from ~2 R⊕ (limb +
       atmosphere + cloud deck), Earth surface-camera at ~1 km (Søndermarken tiles),
       Mars mid-approach, and the Moon against Earth (occlusion + glints).
-- [ ] Check specifically: atmosphere limb thickness, cloud-shell standoff,
+- [x] Check specifically: atmosphere limb thickness, cloud-shell standoff,
       orbit-trail occlusion behind a planet, body glints, a pick on a body's limb,
       InfoCard's printed radius, the scale bar.
-- [ ] Ask the user to confirm the four poses; record the attestation in the PR body.
+- [x] Ask the user to confirm the four poses; record the attestation in the PR body.
       Do not self-attest a visual pass.
 
 ## Task 8 — docs
 
-- [ ] `docs/RENDERER.md:35` says a new opaque body occludes trails for free if it
+- [x] `docs/RENDERER.md:35` says a new opaque body occludes trails for free if it
       lands in a partition "as a sphere with a bare `radiusM`" — update to the inner
       bound and name why (occluders under-occlude).
-- [ ] Grep `docs/` for other `radiusM` prose; `docs/DATA.md` has none as of writing
+- [x] Grep `docs/` for other `radiusM` prose; `docs/DATA.md` has none as of writing
       — confirm, and skip the edit rather than inventing one.
-- [ ] In the spec, mark §3.3 joints **8** ("surface as bounds + field") as landed by
+- [x] In the spec, mark §3.3 joints **8** ("surface as bounds + field") as landed by
       P1 for the bounds half — the field half (`SurfaceHeightField`) is F3 — and
       leave joint **9** ("a ground-height query") open: P1 rebuilds
       `surfaceFloorM`'s joint but adds no height query. One clause each in the
       table's blocker column, or a status line under it; do not rewrite the table.
-- [ ] `docs/BACKLOG.md` needs no edit — the three items this work consumes were
+- [x] `docs/BACKLOG.md` needs no edit — the three items this work consumes were
       already deleted with the spec (`2026-09-13`), and
       `2026-09-12-rover-surface-camera-regime.md` correctly stays.
-- [ ] Commit (`docs(terrain): P1 landed — bounds routing, joint 8`).
+- [x] Commit (`docs(terrain): P1 landed — bounds routing, joint 8`).
 
 ---
 
