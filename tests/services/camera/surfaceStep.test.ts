@@ -1071,7 +1071,7 @@ describe('surfaceStep', () => {
   it('an ungestured drag never triggers enforcement (spec §12-R3)', () => {
     // No `onGestureStart`: this models a pose that has just landed in the
     // arm (a flyby, a tour keyframe) with no driven write yet — real arm
-    // ENTRY is decided in `regimeArmFor`/the fold, which this test cannot
+    // ENTRY is decided in `stepRung`/the fold, which this test cannot
     // observe; it only pins that the arm's own pointer-up
     // pass-through, the one path an entering pose could reach this file
     // through, does not smuggle enforcement in.

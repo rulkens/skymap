@@ -17,11 +17,16 @@ export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame {
   if (!isWorldArm(current)) {
     const row = climbRowFor(current.frame);
     // A parent kind reads as a frame only while the world arm is every child's
-    // parent; a rung parented on a body stops typechecking here, by design.
-    return row.release(current, ctx) ? row.parent : current.frame;
+    // parent. Falling through rather than answering `current.frame` is what
+    // lets a rung parented on THIS one engage at all (§2.6.4).
+    if (row.release(current, ctx)) return row.parent;
   }
   for (const row of Object.values(CAMERA_RUNGS)) {
-    if (!('parent' in row) || row.parent !== rungKindOf(current.frame)) continue;
+    // The world-arm narrowing TS needs, restated: today every child hangs off
+    // the world arm, so a rung parented on a body stops typechecking here.
+    if (!('parent' in row) || !isWorldArm(current) || row.parent !== rungKindOf(current.frame)) {
+      continue;
+    }
     const engaged = row.engage(current, ctx);
     if (engaged !== null) return engaged;
   }

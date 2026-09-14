@@ -22,12 +22,14 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
-import { toBodyArm } from '../camera/poseFrameConversion';
+import { climbRowFor } from '../camera/rungs/climbRowFor';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
 import { hostOf } from '../camera/rungs/hostOf';
 import { hostOrThrow } from '../camera/rungs/hostOrThrow';
-import { regimeArmFor } from '../camera/regimeArmFor';
+import { isWorldArm } from '../camera/rungs/isWorldArm';
+import { refoldTo } from '../camera/rungs/refoldTo';
 import { sameFrame } from '../camera/rungs/sameFrame';
+import { stepRung } from '../camera/rungs/stepRung';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
@@ -94,27 +96,26 @@ export function projectFramePose(args: {
   // No flip during a gesture (ruled, Q6): skipped WHOLE — not clamped, not
   // latched — and re-evaluated at gesture end.
   if (!intent.dragging) {
-    // `base.frame` IS the regime (spec §4), not the arm this frame's winner
-    // authored: `tween` and `clip` are not arm-gated, so the produced pose
-    // would re-engage every frame of an animation inside the band.
-    const eyeMpc = eyeMpcOf(world, poseBasis);
-    // The focused body constrains the regime (round 10).
-    const arm = regimeArmFor(regime, eyeMpc, bodies, ctx.focusBodyId, tuning);
-    if (arm === 'absolute') {
-      if (displayed.frame !== 'absolute') {
+    // The step is asked about the REGIME's pose, never the arm this frame's
+    // winner authored: `tween`/`clip` are not arm-gated, so reading the
+    // produced pose as the regime swaps §4's disengage test for the engage one
+    // mid-animation. Free while the two agree — `refoldTo` answers by reference.
+    const target = stepRung(refoldTo(displayed, regime, ctx), ctx);
+    if (target === 'absolute') {
+      if (!isWorldArm(displayed)) {
         // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
         const centreMpc = hostOrThrow(displayed.frame, ctx).state.positionMpc;
-        displayed = centreLookingArm(eyeMpc, centreMpc, poseBasis, world.roll ?? 0);
+        displayed = centreLookingArm(
+          eyeMpcOf(world, poseBasis),
+          centreMpc,
+          poseBasis,
+          world.roll ?? 0,
+        );
         // Centre-looking, so authored and displayed coincide.
         register = displayed;
       }
-    } else if (displayed.frame === 'absolute') {
-      // Total: `regimeArmFor` only names a body it resolved out of THIS map.
-      const host = hostOrThrow(arm, ctx);
-      displayed = {
-        frame: arm,
-        pose: toBodyArm(world, poseBasis, upBasis, arm.body, host.state),
-      };
+    } else if (isWorldArm(displayed)) {
+      displayed = climbRowFor(target).fromParent(displayed, target, ctx);
       // Engage converts the DISPLAYED pose (ruling 13); on the body arm the
       // tilt is geometry, not a projection, so the register holds it too.
       register = displayed;
@@ -122,7 +123,7 @@ export function projectFramePose(args: {
     // Once per crossing. The wake is the fold's own: `shouldKeepTicking` reads
     // the pre-fold snapshot, so a flip that quiets the last live term would
     // otherwise park the loop.
-    if (!sameFrame(arm, regime)) {
+    if (!sameFrame(target, regime)) {
       actions.push(commitCameraPose(displayed));
       requestRender = true;
     }

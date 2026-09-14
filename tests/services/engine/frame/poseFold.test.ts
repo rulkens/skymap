@@ -16,7 +16,7 @@ import { configureStore } from '@reduxjs/toolkit';
 // Spies that DELEGATE to the real modules: the fold's placement is a call-order
 // property, so the frame has to run its production path while the probe records
 // where each step landed. `state` is the live EngineState, read inside the
-// regimeArmFor spy to prove `register.pose` has not been updated yet at fold time.
+// stepRung spy to prove `register.pose` has not been updated yet at fold time.
 const probe = vi.hoisted(() => ({
   order: [] as string[],
   lastPoseAtFold: [] as unknown[],
@@ -47,15 +47,15 @@ vi.mock('../../../../src/services/engine/camera/applyFocusedBodyPivot', async (i
     },
   };
 });
-vi.mock('../../../../src/services/engine/camera/regimeArmFor', async (importOriginal) => {
+vi.mock('../../../../src/services/engine/camera/rungs/stepRung', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('../../../../src/services/engine/camera/regimeArmFor')>();
+    await importOriginal<typeof import('../../../../src/services/engine/camera/rungs/stepRung')>();
   return {
     ...actual,
-    regimeArmFor: (...args: Parameters<typeof actual.regimeArmFor>) => {
+    stepRung: (...args: Parameters<typeof actual.stepRung>) => {
       probe.order.push('fold');
       probe.lastPoseAtFold.push((probe.state as EngineState | null)?.cameraRuntime.register.pose);
-      return actual.regimeArmFor(...args);
+      return actual.stepRung(...args);
     },
   };
 });
