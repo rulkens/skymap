@@ -401,10 +401,7 @@ fn scatterStep(
 
   let sInt = (s - s * sampleTransmittance) / max(m.extinction, vec3<f32>(EXTINCTION_EPS));
 
-  var out: ScatterStep;
-  out.inScatter = sInt;
-  out.transmittance = sampleTransmittance;
-  return out;
+  return ScatterStep(sInt, sampleTransmittance);
 }
 
 // ── sky-view LUT parametrisation (Hillaire) ──────────────────────────
