@@ -38,10 +38,11 @@ is silhouetted against sky.
 
 Stopgapped by moving `mesh-bodies` after `atmosphere-shell` in `FRAME_ORDER`'s
 `bodyPasses`: the shells write no depth, so a mesh drawn last still occludes
-correctly against every opaque sphere. It costs mesh bodies all aerial
-perspective, which is negligible at rover range. The real fix is
-`2026-09-01-atmosphere-froxel-aerial-perspective.md` — it gives the inside path
-scene depth and lets that line move back. Nothing here is blocked on it.
+correctly against every opaque sphere. That ordering stands: `mesh-bodies` stays
+LAST in `FRAME_ORDER` precisely because its depth is what the aerial-perspective
+apply fogs a rover at (see the comment above `bodyPasses` in `frameOrder.ts`).
+Mesh bodies do now receive aerial perspective, from the depth-keyed froxel apply
+rather than from the shell. Nothing here is blocked.
 
 Adjacent: `docs/backlog/2026-09-12-body-bounds-vs-surface.md` (the bounds/surface
 split this regime would read from).
