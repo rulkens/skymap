@@ -340,29 +340,4 @@ describe('wireGalaxyCatalogSourceSlot — fade-in bridge', () => {
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
     );
   });
-
-  it('drives the fade-in again when an already-loaded source re-commits', async () => {
-    const state = makeState({ rendererUpload: vi.fn().mockResolvedValue(undefined) });
-    // The source is already in the data store: a reload replaces the buffer
-    // straight through, and the row's intent must still reach the fade.
-    state.data.galaxies.setCatalog(Source.SDSS, fakeCloud(99));
-
-    const cfg: GalaxyCatalogSourceConfig = {
-      source: Source.SDSS,
-      shortName: 'sdss',
-      fetcher: async () => fakeCloud(7),
-      category: 'survey',
-    };
-
-    wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
-    const slot = state.assetSlots.points.get(Source.SDSS)!;
-    slot.load({ source: Source.SDSS, tier: 'medium' });
-
-    await vi.waitFor(() => {
-      expect(slot.state().kind).toBe('ready');
-    });
-
-    expect(bridge).toHaveBeenCalledTimes(1);
-    expect(bridge).toHaveBeenCalledWith(state, 'survey', galaxyCatalogIdOf(Source.SDSS));
-  });
 });

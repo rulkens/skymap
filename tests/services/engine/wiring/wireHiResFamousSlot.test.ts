@@ -104,26 +104,19 @@ describe('wireHiResFamousSlot', () => {
     wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
 
     await state.assetSlots.hiResFamous!.load(reqFor('small'));
-    shared.calls.length = 0;
     await state.assetSlots.hiResFamous!.load(reqFor('medium'));
 
-    // Subsystem before texture on the teardown half: the planner holds the
-    // texture's evict-handler subscription.
+    // The first commit destroys nothing; on the second, subsystem before
+    // texture on the teardown half, because the planner holds the texture's
+    // evict-handler subscription.
     expect(shared.calls).toEqual([
+      'bind texture#0',
+      'setHiResFamous subsystem#0',
       'bind texture#1',
       'setHiResFamous subsystem#1',
       'destroy subsystem#0',
       'destroy texture#0',
     ]);
-  });
-
-  it('destroys nothing on the first commit', async () => {
-    const state = makeState();
-    wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
-
-    await state.assetSlots.hiResFamous!.load(reqFor('medium'));
-
-    expect(shared.calls.filter((c) => c.startsWith('destroy'))).toEqual([]);
   });
 
   it('publishes the new pair on both state.subsystems fields', async () => {

@@ -39,12 +39,9 @@ export function wireImpostorSubsystems(
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });
 
-  // The LOD-3 planner belongs to the `hiResFamous` slot; without one, every
-  // Famous-source disk carries the -1 / 0 sentinel (atlas-tile-only).
   const texturedDisks = createTexturedDiskSubsystem({
     device,
     atlas: galaxyAtlas,
-    hiResFamous: undefined,
   });
 
   // proceduralDisks depends on the atlas for the famous-WebP fade-out:

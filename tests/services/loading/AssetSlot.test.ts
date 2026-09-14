@@ -234,6 +234,7 @@ describe('AssetSlot — release (the evict edge)', () => {
 
     expect(slot.state().kind).toBe('idle');
     expect(slot.current()).toBeNull();
+    expect(slot.committed()).toBeNull();
     // The un-commit hook fires exactly once with the committed payload.
     expect(onRelease).toHaveBeenCalledTimes(1);
     expect(onRelease).toHaveBeenCalledWith('payload');
@@ -450,18 +451,6 @@ describe('AssetSlot — the committed value', () => {
     // the state discriminant alone would free nothing.
     expect(onRelease).toHaveBeenCalledTimes(1);
     expect(onRelease).toHaveBeenCalledWith('first');
-    expect(slot.state().kind).toBe('idle');
-  });
-
-  it('release() is the only thing that drops the committed value', async () => {
-    const { slot } = reloadingSlot();
-    slot.load({ tier: 'medium' });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-
-    slot.release();
-
-    expect(slot.committed()).toBeNull();
-    expect(slot.current()).toBeNull();
     expect(slot.state().kind).toBe('idle');
   });
 });

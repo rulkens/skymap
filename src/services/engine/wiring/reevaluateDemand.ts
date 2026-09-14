@@ -12,7 +12,7 @@
 import { buildDemandCtx } from './buildDemandCtx';
 import { slotFor } from './slotFor';
 import { ASSET_WIRING } from './assetWiring';
-import { requestDrifted } from './requestDrifted';
+import { sameRequest } from '../../../utils/loading/sameRequest';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -38,6 +38,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       const slot = slotFor(state, row.key);
       if (!slot) continue;
       const kind = slot.state().kind;
+      const lastRequest = slot.lastRequest();
       // The queue dedups by string key. `AssetKey` is a union of numeric
       // `Source` codes and string keys, and no string `AssetKey` is a bare
       // numeral, so stringifying cannot collide the two spaces.
@@ -100,7 +101,14 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
       // reloads in place. Ordered after the evict edge so a row with both
       // reasons evicts rather than re-fetching at a distance it is leaving.
       // Called directly, not queued — see the module docstring.
-      else if (row.demand(ctx) && requestDrifted(slot, row, state.tier)) {
+      // A null `lastRequest()` is never drift: a slot that has never loaded has
+      // nothing to have drifted from. Tested before `req(tier)`, which
+      // allocates on every row of every frame.
+      else if (
+        row.demand(ctx) &&
+        lastRequest !== null &&
+        !sameRequest(lastRequest, row.req(state.tier))
+      ) {
         void slot.load(row.req(state.tier));
       }
     } catch (err) {
