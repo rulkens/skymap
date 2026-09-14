@@ -9,6 +9,7 @@
 
 import { surfaceStep, EMPTY_SURFACE_MEMORY } from '../../../src/services/camera/surfaceStep';
 import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../../src/@types/camera/CameraTuning';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
@@ -32,6 +33,7 @@ export function makeSurfaceDriver(seed: SurfaceMemory = EMPTY_SURFACE_MEMORY) {
         viewportPx,
         fovYRad,
         bodyRadiusM,
+        standoffRadii: SURFACE_STANDOFF_RADII,
         sceneUpLocal,
         tuning,
       });

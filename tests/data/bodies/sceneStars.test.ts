@@ -9,7 +9,7 @@ const findStar = (id: string) => {
 
 describe('SCENE_STARS', () => {
   it('carries the Sun with its real radius', () => {
-    expect(findStar('sun').radiusM).toBe(696340000);
+    expect(findStar('sun').surface.datumRadiusM).toBe(696340000);
   });
 
   it('the local map covers the neighbourhood', () => {

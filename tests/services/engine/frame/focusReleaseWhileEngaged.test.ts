@@ -38,7 +38,7 @@ const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
 const EARTH = BODIES.get('earth')! as BodyState;
 const MARS = BODIES.get('mars')! as BodyState;
-const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 
 function distTo(eye: Readonly<Vec3>, body: BodyState): number {
   return Math.hypot(

@@ -24,6 +24,7 @@ import { updatePosition } from '../../../../src/utils/camera/updatePosition';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
 import { surfaceFloorM } from '../../../../src/utils/camera/surfaceFloorM';
+import { SURFACE_STANDOFF_RADII } from '../../../../src/utils/camera/clampDistance';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
 import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
@@ -218,6 +219,7 @@ describe('poseFrameConversion', () => {
         f.poseBasis,
         f.upBasis,
         f.radiusM,
+        SURFACE_STANDOFF_RADII,
       );
 
       const before = worldPoseOf(f.pose, f.poseBasis, f.upBasis);
@@ -244,6 +246,7 @@ describe('poseFrameConversion', () => {
         f.poseBasis,
         f.upBasis,
         f.radiusM,
+        SURFACE_STANDOFF_RADII,
       );
 
       const targetRelM = eyeRelM(back.target, f.positionMpc);
@@ -276,6 +279,7 @@ describe('poseFrameConversion', () => {
       IDENTITY,
       IDENTITY,
       EARTH_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
     );
 
     const before = worldPoseOf(pose, IDENTITY, IDENTITY);
@@ -309,10 +313,11 @@ describe('poseFrameConversion', () => {
       IDENTITY,
       IDENTITY,
       EARTH_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
     );
 
     expect(back.distance * SCALE_UNITS.MPC_TO_M).toBeCloseTo(
-      surfaceFloorM(EARTH_RADIUS_M) - EARTH_RADIUS_M,
+      surfaceFloorM(EARTH_RADIUS_M, SURFACE_STANDOFF_RADII) - EARTH_RADIUS_M,
       6,
     );
     expectVec3Near(
@@ -447,7 +452,14 @@ describe('toWorldArm across the limb', () => {
         ) !== null
       )
         hits++;
-      const back = toWorldArm(arm, state, IDENTITY, IDENTITY, EARTH_RADIUS_M);
+      const back = toWorldArm(
+        arm,
+        state,
+        IDENTITY,
+        IDENTITY,
+        EARTH_RADIUS_M,
+        SURFACE_STANDOFF_RADII,
+      );
       const { eye, forward } = worldPoseOf(back, IDENTITY, IDENTITY);
 
       expectVec3Near(forward, [Math.sin(tilt), 0, -Math.cos(tilt)], DIR_FLOOR, `tilt ${tilt} axis`);
@@ -478,7 +490,7 @@ describe('toWorldArm across the limb', () => {
   } {
     const state = bodyState([0, 0, 0], IDENTITY);
     const at = (tilt: number): CameraPose =>
-      toWorldArm(limbPose(tilt), state, IDENTITY, IDENTITY, EARTH_RADIUS_M);
+      toWorldArm(limbPose(tilt), state, IDENTITY, IDENTITY, EARTH_RADIUS_M, SURFACE_STANDOFF_RADII);
     const inside = at(LIMB_TANGENT_RAD - epsRad);
     const outside = at(LIMB_TANGENT_RAD + epsRad);
     const a = worldPoseOf(inside, IDENTITY, IDENTITY).forward;

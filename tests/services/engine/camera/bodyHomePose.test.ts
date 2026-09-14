@@ -16,6 +16,7 @@ import {
 import { bodyLikeFraming } from '../../../../src/services/engine/camera/bodyLikeFraming';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { updatePosition } from '../../../../src/utils/camera/updatePosition';
+import { outerBoundRadiusM } from '../../../../src/utils/scene/outerBoundRadiusM';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
@@ -53,7 +54,7 @@ describe('bodyHomePose', () => {
   });
 
   it('targets and frames Earth exactly as body focus does', () => {
-    const framing = bodyLikeFraming(earthPos, SCENE_EARTH.radiusM, FOV_Y_RAD);
+    const framing = bodyLikeFraming(earthPos, outerBoundRadiusM(SCENE_EARTH.surface), FOV_Y_RAD);
     expect(pose.target).toEqual(framing.target);
     expect(pose.distance).toBe(framing.distance);
   });
@@ -106,7 +107,9 @@ describe('bodyHomePose', () => {
 
   it('frames the requested body, not Earth', () => {
     const marsPos = deriveBodyStates(SIM_DAYS).get('mars')!.positionMpc;
-    const marsRadiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.radiusM;
+    const marsRadiusM = outerBoundRadiusM(
+      SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!.surface,
+    );
     const marsPose = bodyHomePose('mars', SIM_DAYS, FOV_Y_RAD);
     const marsFraming = bodyLikeFraming(marsPos, marsRadiusM, FOV_Y_RAD);
 

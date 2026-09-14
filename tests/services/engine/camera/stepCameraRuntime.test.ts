@@ -122,7 +122,7 @@ describe('stepCameraRuntime', () => {
     // converts the untilted image and the arm comes out looking at nadir.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
     const intent = h.store.getState().camera;
-    const rMpc = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+    const rMpc = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const render = absoluteArm({ target: [0, 0, 0], yaw: 0.3, pitch: 0.2, distance: 1.1 * rMpc });
     const project = (rememberedTiltRad: number) =>
       projectFramePose({

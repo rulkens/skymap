@@ -131,7 +131,7 @@ function makeCtx(input: {
 // centre, along +x, in Mpc (unrelated to the pose fixture below: this only
 // feeds the CULL, not the sky-view math).
 const DRAW_CAM_POS: Vec3 = [
-  SEEDED_EARTH.positionMpc[0] + 5 * SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC,
+  SEEDED_EARTH.positionMpc[0] + 5 * SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC,
   SEEDED_EARTH.positionMpc[1],
   SEEDED_EARTH.positionMpc[2],
 ];
@@ -140,7 +140,7 @@ const DRAW_CAM_POS: Vec3 = [
 // 5 Earth radii out along the body's local +x axis, in METRES — already in the
 // body-fixed frame the seam promises, so the recompute below needs no
 // orientation matrix multiply of its own.
-const EYE_REL_BODY_M: Vec3 = [5 * SEEDED_EARTH.radiusM, 0, 0];
+const EYE_REL_BODY_M: Vec3 = [5 * SEEDED_EARTH.surface.datumRadiusM, 0, 0];
 
 describe('encodeAtmosphereSkyView', () => {
   it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
@@ -219,7 +219,7 @@ describe('encodeAtmosphereSkyView', () => {
     // A different pose (20 Earth radii out, along local +z) must pack a
     // strictly different, larger view height — pins that the packed value
     // actually tracks `ctx.bodyPose`, not a fixed/ignored input.
-    const fartherPose: Vec3 = [0, 0, 20 * SEEDED_EARTH.radiusM];
+    const fartherPose: Vec3 = [0, 0, 20 * SEEDED_EARTH.surface.datumRadiusM];
     const fartherRenderer = spyRenderer();
     encodeAtmosphereSkyView(
       encoder,

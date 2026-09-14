@@ -44,6 +44,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { dollyTo, spin, all } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
+import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../scaleUnits';
 
 // The pull-back window. Longer than flyout's 22 s because this shot spans ~20
@@ -52,9 +53,9 @@ import { SCALE_UNITS } from '../../scaleUnits';
 const FLIGHT_SEC = 70;
 
 // Open with Earth's globe filling the frame: a few radii back from the surface.
-// radiusM → Mpc through the shared unit table, so this tracks whatever radius
-// the seed carries.
-const EARTH_RADIUS_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+// The outer bound through the shared unit table, so this tracks whatever radius
+// the seed carries and no peak reaches past the framing it sets.
+const EARTH_RADIUS_MPC = outerBoundRadiusM(SCENE_EARTH.surface) * SCALE_UNITS.M_TO_MPC;
 const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
 
 /**

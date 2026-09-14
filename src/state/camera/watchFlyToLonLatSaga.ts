@@ -50,13 +50,19 @@ export function* watchFlyToLonLatSaga() {
       bodyId,
       earthState,
     );
-    const rangeM = Math.hypot(...bodyFixedEyeM(here)) - SCENE_EARTH.radiusM;
+    const rangeM = Math.hypot(...bodyFixedEyeM(here)) - SCENE_EARTH.surface.datumRadiusM;
     const headingRad = eyeFrameOf(here, 1, BODY_LOCAL_FRAME.pole)?.azimuthRad ?? 0;
 
     yield* put(
       commitCameraPose({
         frame: { body: bodyId },
-        pose: lonLatFocusPose({ lonDeg, latDeg }, bodyId, SCENE_EARTH.radiusM, rangeM, headingRad),
+        pose: lonLatFocusPose(
+          { lonDeg, latDeg },
+          bodyId,
+          SCENE_EARTH.surface.datumRadiusM,
+          rangeM,
+          headingRad,
+        ),
       }),
     );
   });

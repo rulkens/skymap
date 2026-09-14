@@ -2,8 +2,8 @@
  * regimeArmFor — the regime predicate (spec §4, §12-R2). Every fixture places
  * a body at the Mpc origin with the identity orientation, so the eye's
  * distance from the body is just its own magnitude and `h/R` follows from
- * `SCENE_BODIES`' `radiusM` directly — no Earth-typed constant anywhere in
- * this file, matching the body-blind predicate under test.
+ * `SCENE_CELESTIAL_BODIES`' `surface.datumRadiusM` directly — no Earth-typed
+ * constant anywhere in this file, matching the body-blind predicate under test.
  *
  * Fixture ids ('moon', 'deimos') are widened to `BodyId` the same way
  * `slabs.ts`/`resolvePickTable.ts` already do at the individual-`SceneBody`

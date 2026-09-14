@@ -17,12 +17,13 @@ import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodySt
 import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../bodies/sceneEarth';
+import { outerBoundRadiusM } from '../../../../utils/scene/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../../scaleUnits';
 
 const FLIGHT_SEC = 70; // default one-leg pull-back window, same as earthFlyout
 const HOLD_SEC = 4;
 
-const EARTH_RADIUS_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+const EARTH_RADIUS_MPC = outerBoundRadiusM(SCENE_EARTH.surface) * SCALE_UNITS.M_TO_MPC;
 const START_DISTANCE_MPC = EARTH_RADIUS_MPC * 3;
 
 // Lift out of the ecliptic. Aiming straight along the sunward direction puts

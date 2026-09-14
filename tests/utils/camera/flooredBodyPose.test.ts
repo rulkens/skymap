@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { bodyFixedEyeM } from '../../../src/utils/camera/bodyFixedEyeM';
 import { flooredBodyPose } from '../../../src/utils/camera/flooredBodyPose';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 
@@ -19,7 +20,7 @@ describe('flooredBodyPose', () => {
       eyeRelAnchorM: [0, 0, 0],
       basisLocal: IDENTITY,
     };
-    const out = flooredBodyPose(pose, 1);
+    const out = flooredBodyPose(pose, 1, SURFACE_STANDOFF_RADII);
     expect(out).toBe(pose);
   });
 
@@ -33,9 +34,12 @@ describe('flooredBodyPose', () => {
       eyeRelAnchorM: [0, 0, -0.5],
       basisLocal: IDENTITY,
     };
-    const out = flooredBodyPose(pose, 1);
+    const out = flooredBodyPose(pose, 1, SURFACE_STANDOFF_RADII);
     // Exactly the floor radius, not merely "further out": a push that
     // overshoots or undershoots is the bug this guards.
-    expect(Math.hypot(...bodyFixedEyeM(out))).toBeCloseTo(surfaceFloorM(1), 12);
+    expect(Math.hypot(...bodyFixedEyeM(out))).toBeCloseTo(
+      surfaceFloorM(1, SURFACE_STANDOFF_RADII),
+      12,
+    );
   });
 });
