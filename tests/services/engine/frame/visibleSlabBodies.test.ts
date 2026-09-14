@@ -34,11 +34,11 @@ describe('visibleSlabBodies', () => {
     // Both bodies sit at distanceMpc = 1000, on-axis, under a 90° vertical FOV
     // and a 1000px-tall viewport, so pxPerRad = 500 and the apparent-diameter
     // formula reduces to diameterPx = diameterKpc·5e-4. The pixel floor keys
-    // on rEffM = PROXY_SCALE·datumRadiusM for a shell-less body (radar frame
-    // finding 2 — same basis the frustum cull already used), so the datum is
-    // pre-divided by PROXY_SCALE here: rEffM lands at 3e22 (≈0.972px, just
-    // under the 1px floor) and 3.2e22 (≈1.037px, just over it) — see the
-    // task-4 report for that derivation.
+    // on rEffM = PROXY_SCALE·outerBoundRadiusM for a shell-less body (radar
+    // frame finding 2 — same basis the frustum cull already used), so the
+    // outer bound is pre-divided by PROXY_SCALE here: rEffM lands at 3e22
+    // (≈0.972px, just under the 1px floor) and 3.2e22 (≈1.037px, just over
+    // it) — see the task-4 report for that derivation.
     const belowFloor: PlanetBody = {
       id: 'below',
       label: 'Below floor',
@@ -97,8 +97,8 @@ describe('visibleSlabBodies', () => {
   });
 
   it('keeps a ringed body once the ring, not the bare disc, clears the pixel floor', () => {
-    // Radar frame finding 2: the pixel floor used to key on the body's datum
-    // alone while the frustum cull (below) already used the ring-inclusive
+    // Radar frame finding 2: the pixel floor used to key on the body's outer
+    // bound alone while the frustum cull (below) already used the ring-inclusive
     // bodyDrawRadiusM — a ring could still be several px across while the
     // bare globe was sub-pixel, and the roster gate dropped the row before
     // any per-layer gate (e.g. ringsPass's own outer-diameter cull) got a
@@ -168,8 +168,9 @@ describe('visibleSlabBodies', () => {
       const distanceMpc = 10;
       const rEffMpc = distanceMpc * Math.sin((30 * Math.PI) / 180);
       const rEffM = rEffMpc / SCALE_UNITS.M_TO_MPC;
-      // bodyDrawRadiusM(body) = the datum for an unregistered id (no atmosphere/
-      // rings/cloud shell), so rEff = PROXY_SCALE·datum — invert for the datum.
+      // bodyDrawRadiusM(body) = the outer bound for an unregistered id (no
+      // atmosphere/rings/cloud shell), so rEff = PROXY_SCALE·outer bound —
+      // invert for the datum.
       const datumRadiusM = rEffM / 1.05;
       const straddling: PlanetBody = {
         id: 'straddling',

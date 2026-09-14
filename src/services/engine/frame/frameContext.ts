@@ -187,8 +187,9 @@ export function deriveFrameContext(
     fovYRad: cam.fovYRad,
   });
   const starRangeM = starSphereRangeM({
-    // Outer: NEAR0's slab has to contain every sphere it draws, and a bracket
-    // that under-reaches clips geometry while over-reaching costs nothing.
+    // Outer: distanceRangeM is the painter-sort interval and must SPAN the row's
+    // drawn content (Slab.d.ts). Body rows bracket theirs off the same outer
+    // footprint (slabs.ts:184), so the star row has to match that currency.
     spheres: spheres.map((star) => ({
       positionMpc: star.positionMpc,
       radiusM: outerBoundRadiusM(star.surface),
