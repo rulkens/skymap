@@ -29,6 +29,7 @@ import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
 import { hostOf } from '../camera/rungs/hostOf';
+import { isWorldArm } from '../camera/rungs/isWorldArm';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
 import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
@@ -152,7 +153,7 @@ export function deriveFrameContext(
     upBasis,
   });
   const bodyPose: BodyPoseProvider = (bodyId) => {
-    if (arm.frame !== 'absolute' && armHost?.id === bodyId) {
+    if (!isWorldArm(arm) && armHost?.id === bodyId) {
       return poseFromBodyArm(arm.pose);
     }
     const bodyState = bodyStates.get(bodyId);

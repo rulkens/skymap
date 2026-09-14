@@ -23,6 +23,7 @@ import { nearestBodyHR } from '../../services/engine/camera/nearestBodyHR';
 import { bandRollTarget } from '../../services/engine/camera/frameAlignedRoll';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
+import { rungKindOf } from '../../services/engine/camera/rungs/rungKindOf';
 import { blendedEnuAt } from './blendedEnuAt';
 import { bodyUpWeight } from './bodyUpWeight';
 import { eyeMpcOf } from './eyeMpcOf';
@@ -60,12 +61,10 @@ export function cameraDofAnglesOf(input: {
   // Engaged body wins outright (spec's own regime predicate: `storedFrame` IS
   // the regime); the roster-wide nearest is only a stand-in for the "where's
   // the hysteresis band?" question while flying free in the absolute arm.
-  let bodyId: BodyId | null = storedFrame !== 'absolute' ? storedFrame.body : null;
-  let hr: number | null = null;
-  if (bodyId !== null) {
-    const host = hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis });
-    if (host !== null) hr = hOverR(eyeMpc, host.state, host.radiusM);
-  } else {
+  const engaged = hostOf(storedFrame, { bodies: bodyStates, poseBasis, upBasis });
+  let bodyId: BodyId | null = engaged?.id ?? null;
+  let hr: number | null = engaged === null ? null : hOverR(eyeMpc, engaged.state, engaged.radiusM);
+  if (rungKindOf(storedFrame) === 'absolute') {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
     if (nearest !== null) {
       bodyId = nearest.bodyId;

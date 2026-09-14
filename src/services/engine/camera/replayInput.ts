@@ -130,13 +130,9 @@ export function replayInput(
       ? base
       : worldArm
         ? { frame: base.frame, pose: foldToWorld(register, ctx) }
-        : {
-            frame: base.frame,
-            pose:
-              register.frame !== 'absolute' && register.frame.body === base.frame.body
-                ? register.pose
-                : base.pose,
-          };
+        : sameFrame(register.frame, base.frame)
+          ? register
+          : base;
     let stepped: FramedCameraPose;
     if (isWorldArm(from)) {
       const next = stepRow<'absolute'>(from, null, step);

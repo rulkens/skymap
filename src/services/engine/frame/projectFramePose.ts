@@ -22,12 +22,12 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
-import { climbRowFor } from '../camera/rungs/climbRowFor';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
 import { hostOf } from '../camera/rungs/hostOf';
 import { hostOrThrow } from '../camera/rungs/hostOrThrow';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
 import { refoldTo } from '../camera/rungs/refoldTo';
+import { rungKindOf } from '../camera/rungs/rungKindOf';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { stepRung } from '../camera/rungs/stepRung';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
@@ -101,7 +101,7 @@ export function projectFramePose(args: {
     // produced pose as the regime swaps §4's disengage test for the engage one
     // mid-animation. Free while the two agree — `refoldTo` answers by reference.
     const target = stepRung(refoldTo(displayed, regime, ctx), ctx);
-    if (target === 'absolute') {
+    if (rungKindOf(target) === 'absolute') {
       if (!isWorldArm(displayed)) {
         // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
         const centreMpc = hostOrThrow(displayed.frame, ctx).state.positionMpc;
@@ -115,7 +115,7 @@ export function projectFramePose(args: {
         register = displayed;
       }
     } else if (isWorldArm(displayed)) {
-      displayed = climbRowFor(target).fromParent(displayed, target, ctx);
+      displayed = refoldTo(displayed, target, ctx);
       // Engage converts the DISPLAYED pose (ruling 13); on the body arm the
       // tilt is geometry, not a projection, so the register holds it too.
       register = displayed;
