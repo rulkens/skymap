@@ -107,9 +107,9 @@ Binding on every task; do not restate them in commit messages.
   are a **different `frame`** (the slab's, not the pose's) and are out of scope
   everywhere — the Task 17 ratchet included.
 
-## Four corrections, now carried by the spec
+## Five corrections, now carried by the spec
 
-Four places where §2/§3 **as first drafted** could not be implemented
+Five places where §2/§3 **as first drafted** could not be implemented
 behaviour-preservingly, or at all. The spec's 2026-09-14 amendment adopted every
 one of them, so these are no longer deviations — the signatures below **are** the
 spec's, and the parallel site-rung plan consumes them. They stay here because the
@@ -215,6 +215,28 @@ export function isWorldArm(framed: FramedCameraPose): framed is FramedPose<'abso
 
 The narrowing survives, no `as` appears, and the feature plan's `followActive`
 gate (§4.8) reads the same way.
+
+### D5 — the `step` cell threads the host-keyed tilt memory
+
+§2.4 spells `step(memory, framed, input, ctx) => { pose, memory }`, which assumes
+everything a step reads and writes rides `MemOf[K]`. `surfaceStep` both reads and
+writes the `TiltMemory`, and that memory is keyed by **host**, not by frame: the
+world arm reads it after a disengage, so carrying it inside the rung's own memory
+would wipe it at every crossing (the ruling-12 tilt would not survive the flip).
+
+**Resolution.** The tilt rides beside the rung memory as its own slot; a row that
+does not author tilt returns it unchanged.
+
+```ts
+// src/@types/camera/RungRow.d.ts
+step(
+  memory: MemOf[K],
+  tilt: TiltMemory,
+  framed: FramedPose<K>,
+  input: InputStep,
+  ctx: RungCtx,
+): { readonly pose: PoseOf[K]; readonly memory: MemOf[K]; readonly tilt: TiltMemory };
+```
 
 ### Boundary note (not a deviation)
 
