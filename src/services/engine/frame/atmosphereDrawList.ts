@@ -46,7 +46,7 @@ export function atmosphereDrawList(
     earth === null ? state.data.bodies.planets : [earth, ...state.data.bodies.planets];
 
   // Live position + orientation from the per-frame snapshot, not the baked record
-  // fields; each entry carries its pairing so both consumers read one position.
+  // fields — the sun direction and the distance culls below are derived off them.
   const states = sceneBodyStates(state, ctx);
 
   for (const body of candidates) {
@@ -56,7 +56,7 @@ export function atmosphereDrawList(
     const bodyState = states.get(body.id)!;
     // The body-slab pose seam `deriveSlabs` built this body's row from. Every
     // derived field below hangs off it, so a poseless body is no entry at all —
-    // which is what lets both consumers read an entry without a guard.
+    // which is what lets the bake read an entry's fields unguarded.
     const pose = ctx.bodyPose(body.id as BodyId);
     if (pose === null) continue;
     const atmosphereTopM = params.atmosphereTopKm * SCALE_UNITS.KM_TO_M;
@@ -65,8 +65,6 @@ export function atmosphereDrawList(
     const entry: AtmosphereDrawEntry = {
       body,
       params,
-      positionMpc: bodyState.positionMpc,
-      orientation: bodyState.orientation,
       atmosphereTopM,
       camLocal,
       sunLocal: sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation),

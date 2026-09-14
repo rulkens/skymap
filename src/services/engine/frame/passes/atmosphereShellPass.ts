@@ -94,6 +94,7 @@ export const atmosphereShellPass: ContentPass = {
     // `view.slab.vp` — reading it here instead of re-deriving the pose is what
     // keeps this layer's eyeRelBodyM from ever drifting off that basis.
     const pose = ctx.bodyPose(bodyId);
+    // Non-null whenever an entry exists (same lookup, same frame) — TS narrowing.
     if (pose === null) return;
     const { body, params, atmosphereTopM, camLocal, sunLocal, inside } = entry;
 

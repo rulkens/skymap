@@ -3,25 +3,20 @@
  * body, its `AtmosphereParams` row, and the pose-dependent values both consumers
  * need, derived ONCE by `atmosphereDrawList`. The sky-view bake and the shell
  * draw walk the SAME entries, so they cannot disagree on which bodies have a
- * live atmosphere this frame, nor on where it is. A body with no pose this frame
- * is absent from the list — which is why neither consumer guards for one. `body`
- * is `EarthBody | PlanetBody` for its authored identity alone; the derivation
- * reads only `id` + `radiusM`.
+ * live atmosphere this frame, nor on where it is. An entry exists only because
+ * `ctx.bodyPose` returned a pose for its body, so the bake reads these fields
+ * unguarded. `body` is `EarthBody | PlanetBody` for its authored identity alone;
+ * the derivation reads only `id` + `radiusM`.
  */
 
 import type { EarthBody } from '../../scene/EarthBody';
 import type { PlanetBody } from '../../scene/PlanetBody';
 import type { AtmosphereParams } from '../../scene/AtmosphereParams';
 import type { Vec3 } from '../../math/Vec3';
-import type { Mat3 } from '../../math/Mat3';
 
 export type AtmosphereDrawEntry = {
   readonly body: EarthBody | PlanetBody;
   readonly params: AtmosphereParams;
-  /** Live heliocentric position, in Mpc — resolved from the per-frame snapshot. */
-  readonly positionMpc: Vec3;
-  /** Live local → equatorial-world rotation — resolved from the per-frame snapshot. */
-  readonly orientation: Mat3;
   /** Atmosphere-top radius in METRES (params.atmosphereTopKm × KM_TO_M). */
   readonly atmosphereTopM: number;
   /** Camera in body-local ATMOSPHERE-TOP-RADIUS units (bodySlabCamLocal). */
