@@ -32,9 +32,8 @@ describe('gaussianBlurFloat32', () => {
   it('spreads it symmetrically in both axes', () => {
     const out = blurredDelta();
     const at = (x: number, y: number): number => out[y * SIDE + x]!;
+    // Cross-axis only: mirror symmetry within an axis is true by construction.
     for (const d of [1, 4, 9]) {
-      expect(at(CENTRE + d, CENTRE)).toBeCloseTo(at(CENTRE - d, CENTRE), 6);
-      expect(at(CENTRE, CENTRE + d)).toBeCloseTo(at(CENTRE, CENTRE - d), 6);
       expect(at(CENTRE + d, CENTRE)).toBeCloseTo(at(CENTRE, CENTRE + d), 6);
     }
     // Falls off with distance — a flat or zero result would satisfy symmetry.

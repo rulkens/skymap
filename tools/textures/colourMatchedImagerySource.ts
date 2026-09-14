@@ -176,6 +176,8 @@ export function colourMatchedImagerySource(
             referenceRgb[to * 3] = raster[from]!;
             referenceRgb[to * 3 + 1] = raster[from + 1]!;
             referenceRgb[to * 3 + 2] = raster[from + 2]!;
+            // Zero for a declined or transparent reference pixel: the canvas is
+            // grown to tile bounds, and an unweighted gap would measure as black.
             referenceWeight[to] = raster[from + 3]! / 255;
           }
         }
