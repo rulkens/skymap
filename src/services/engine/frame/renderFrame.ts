@@ -1,57 +1,16 @@
 /**
- * renderFrame — owns the per-frame WebGPU command-encoder lifecycle, and
- * runs the FRAME program into it.
+ * renderFrame — the per-frame WebGPU command-encoder lifecycle: the
+ * once-per-frame focus-uniform write, encoder create + swap-view acquire +
+ * submit, the timing frame window, and the one call into
+ * `scheduleCubemapCaptures`.
  *
- * Before the renderer unification, ~140 lines of imperative GPU plumbing
- * sprawled here: a two-way HDR-encoder branch, a tone-map blit, and a
- * post-tone-map UI overlay, each a hand-wired call whose order was implicit
- * in which function called which. That order is now DATA — `FRAME_ORDER`, whose
- * expansion is the ordered
- * `FrameStep[]`, and `executeFrame` is the single imperative site that walks
- * it into one encoder. This module shrank to three responsibilities: the
- * once-per-frame focus-uniform write, the encoder lifecycle (create + swap-view
- * acquire + submit), and the timing frame window.
- *
- * ### What this function does, in order
- *
- *   1. Write the shared cluster-focus uniform once, before any pass reads it.
- *   2. Create the frame's single command encoder + acquire the swap-chain view.
- *   3. Open the timing frame (`beginFrame`) and pick the render strategy:
- *      `'perLayerTimed'` when timing is enabled (one pass per layer so each can
- *      carry its own `timestampWrites`), else `'merged'` (one pass per target
- *      group — the tile-local production path OVER blends need).
- *   4. `executeFrame` walks `expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, …)`:
- *      the flow compute, the scalar-volume render, the HDR render, the
- *      `hdr→swap` tone-map composite, then the swap-chain overlay render.
- *   5. Record the timing resolve/copy (`endFrame`) and submit.
- *
- * The strategy fork, the tile-local coherency rationale, the first-touch clear,
- * and the single slab resolution per render step all now live in `executeFrame`
- * — see its module header. `renderFrame` no longer knows about individual
- * passes; adding, removing, or reordering one is a registry / program edit.
- *
- * ### Why pass an explicit input bag instead of capturing closure?
- *
- * This module owns no cross-frame state of its OWN — every local value it
- * computes is recomputed each frame. It DOES read/write one Resource,
- * `state.skyCubemapCapture` (the black-hole lens's amortized sky-capture
- * bookkeeping). A free function taking a struct of inputs bounds the encoder
- * lifetime to the function body.
- *
- * ### What stays in `runFrame()` (NOT here)
- *
- *   - `drawPickDebugOverlay` — composites the pick-buffer debug overlay over the
- *     swap chain using its own encoder/submit (AFTER this function's submit); it
- *     rebuilds the pick uniform bytes at pick time from the slab view (see
- *     `pickUniformBytesOf`).
- *   - The render-on-demand scheduler decision.
- *   - Camera state mutation (resize, tween advance, auto-rotate yaw bump).
+ * Order of operations is DATA (`FRAME_ORDER` walked by `executeFrame`), so this
+ * module knows no individual pass. The pick-debug overlay, the render-on-demand
+ * decision and camera mutation stay in `runFrame`.
  */
 
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
-import type { CubeFace } from '../../../@types/rendering/CubeFace';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { executeFrame } from './executeFrame';
 import { expandFrameOrder } from './expandFrameOrder';
 import { FRAME_ORDER } from './frameOrder';
@@ -59,26 +18,13 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { skyCubemapFaceContext } from './skyCubemapFaceContext';
-import { sceneBodyStates } from './sceneBodyStates';
-import { regionById } from '../../../utils/scene/regionById';
-import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
-import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
-import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
-
-// Hoisted rather than resolved per frame (a linear `.find` over `BODY_REGIONS`),
-// matching the other two consumers of the same lookup — `sgrAStarLensingPass`
-// and `bodyGlintsPass`.
-const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
-
-const ALL_CUBE_FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
+import { bodyRowSlabs } from './bodyRowSlabs';
+import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 
 /**
  * Encode and submit one frame. Synchronous: by the time it returns, the GPU
  * has the buffer queued. Order of operations is `FRAME_ORDER`'s expansion,
- * walked by `executeFrame`; the visual output is identical to the
- * pre-unification inline body.
+ * walked by `executeFrame`.
  */
 export function renderFrame(input: RenderFrameInput): void {
   const { ctx, state, device, context, timingService } = input;
@@ -112,94 +58,7 @@ export function renderFrame(input: RenderFrameInput): void {
   const hdrActive = hdrActiveOf(ctx.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
 
-  // The black-hole lens's sky-cubemap bake. The band keys on the CAMERA's
-  // distance from the galactic-centre anchor, the same quantity + region
-  // every `sgrAStarLensing`-band consumer reads. See
-  // `SkyCubemapCaptureRuntime`.
-  const captureRuntime = state.skyCubemapCapture;
-  const gcDistanceMpc = regionRelativeDistanceMpc(
-    ctx.drawCamPos,
-    GALACTIC_CENTRE_REGION,
-    sceneBodyStates(state, ctx),
-  );
-  // Recorded unconditionally (not just while the band is active) — the
-  // `sky-cubemap` row's release-margin check needs the distance on the very
-  // frame the band closes, not one frame later.
-  captureRuntime.lastGcDistanceMpc = gcDistanceMpc;
-  const bandActive = fadeBand(SCALE_FADE_BANDS.sgrAStarLensing, gcDistanceMpc) > 0;
-
-  // The `sky-cubemap` row's 50 MB exists only while the band does (its
-  // `allocateWhen`, renderTargets.ts). `runFrame`'s per-frame `reconcile`
-  // runs BEFORE this frame's camera pose is produced, so it cannot see the
-  // band open; the edge reconciles here instead. `bakedSettings` is `null`
-  // whenever the band is inactive (seeded null, reset null on close below),
-  // so the band-entry frame always finds nothing baked and sweeps all six
-  // faces — it needs the row to already exist.
-  if (bandActive !== captureRuntime.lastBandActive) {
-    captureRuntime.lastBandActive = bandActive;
-    ctx.renderTargets.reconcile(state, ctx.canvasSize);
-    if (!bandActive) captureRuntime.bakedSettings = null;
-  }
-
-  // The captured "sky" is kpc away and static: a 1024² face covers 90°, so
-  // one texel is ~1.5 mrad, and shifting content at 8 kpc by a texel needs
-  // ~12 pc of camera travel — the whole lens band is 500 AU. One bake is
-  // texel-exact for the entire band; the lens shader already samples the
-  // cubemap as at-infinity, so there is no pinned-eye tracking to do.
-  //
-  // A settings-reference change re-bakes. Dropped from the key on purpose:
-  // `tier` — a tier swap dissolves through `fades.fadeTo` (`dissolveCatalogBuffer.ts`),
-  // so `rosterSettling` already catches it; `faceSizePx` — the resolution
-  // knob is a settings write, and `reconcile` (above) reallocates the row
-  // earlier in the same `runFrame`, so the settings-ref bake lands in the
-  // new texture; `selection` — a stale selection halo in the lensed sky is
-  // accepted.
-  const skyCubemapFaceContexts = new Map<CubeFace, ReadyFrameContext>();
-  let skyCubemapFacesToCapture: readonly CubeFace[] = [];
-  // Sgr A*'s own body-m slab row this frame: the `slab: 'lens'` line expands
-  // to the (hdr, BODY[k]) step off it. Resolved here, not in the expansion,
-  // because the row's painter-order index comes from `deriveSlabs` (computed
-  // upstream of this function) — the same "resolve here, hand data down"
-  // split `earthSlab` in `runFrame.ts` already follows for the identical
-  // `frame.kind === 'body-m'` lookup. Stays `null` when the row isn't in
-  // `ctx.slabs` this frame (e.g. frustum-culled despite the distance band).
-  let sgrAStarBodySlab: number | null = null;
-  if (bandActive) {
-    sgrAStarBodySlab =
-      ctx.slabs.find((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id)
-        ?.index ?? null;
-
-    // Two roster inputs move without a settings write: a source-visibility
-    // ramp (settings write fires once, at the ramp's START), and a
-    // famous-galaxy thumbnail's atlas upload + 400 ms load fade (arrives
-    // async, after the ramp has already settled).
-    const rosterSettling =
-      state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
-      (state.subsystems.texturedDisks?.hasInFlightWork() ?? false);
-    if (rosterSettling || captureRuntime.bakedSettings !== state.settings) {
-      const faceSizePx = ctx.renderTargets.sizeOf('sky-cubemap').width;
-      for (const face of ALL_CUBE_FACES) {
-        const faceCtx = skyCubemapFaceContext({
-          state,
-          eyeMpc: ctx.drawCamPos,
-          face,
-          faceSizePx,
-          nowMs: ctx.nowMs,
-        });
-        if (faceCtx !== null) skyCubemapFaceContexts.set(face, faceCtx);
-      }
-      // Pre-bootstrap: a face's context can come back null before the first
-      // real camera pose exists. Leave `bakedSettings` untouched so the next
-      // frame retries the full sweep rather than caching a partial bake.
-      if (skyCubemapFaceContexts.size === ALL_CUBE_FACES.length) {
-        skyCubemapFacesToCapture = ALL_CUBE_FACES;
-        // Recorded only for a settled bake: while the roster is still moving,
-        // null keeps the next frame baking, and the first settled frame
-        // bakes once more.
-        captureRuntime.bakedSettings = rosterSettling ? null : state.settings;
-      }
-    }
-  }
+  const captureContexts = scheduleCubemapCaptures({ state, ctx });
 
   executeFrame({
     encoder,
@@ -218,16 +77,17 @@ export function renderFrame(input: RenderFrameInput): void {
       // Painter-ordered NEAR0 + body-row indices — the chain the
       // foreground:0 line expands over, one step per entry.
       foregroundChain: foregroundChainOrder(ctx.slabs),
-      skyCubemapFacesToCapture,
-      bodyRowSlabs: {
-        lens: sgrAStarBodySlab === null ? [] : [sgrAStarBodySlab],
-        insideAtmosphere: [],
-      },
+      // Derived from the one map, so the step list and the per-face cameras
+      // cannot drift: a face is expanded iff it has a context.
+      captureFaces: new Map(
+        [...captureContexts].map(([key, faces]) => [key, [...faces.keys()]] as const),
+      ),
+      bodyRowSlabs: bodyRowSlabs(state, ctx),
     }),
     strategy,
     timing: timingService,
     swapView,
-    skyCubemapFaceContexts,
+    captureContexts,
   });
   timingService.endFrame(timingCtx, encoder);
 

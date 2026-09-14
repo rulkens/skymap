@@ -44,19 +44,18 @@ export const starAggregatesPass: ContentPass = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
 
-    // Viewport is the DESTINATION target's allocated size (see `sizeOf`), not
-    // the canvas: STAR_GLOW_MIN_PX floors the glow radius in pixels OF THE
-    // TARGET BEING RASTERISED, so the canvas size would make the floor 0.75
-    // texels here and land floor-clamped aggregates sub-texel (dropout and
-    // flicker, not wrong brightness — `toRefPx` keeps the photometry
-    // viewport-independent). `viewSlot !== 0` marks a sky-cubemap capture draw
-    // (this pass is on `FRAME_ORDER`'s capture roster — see
-    // `ReadyFrameContext.viewSlot`'s doc), which targets the `sky-cubemap`
-    // face — its own declared size (a live setting), not this row's. The view
-    // is COPIED rather than mutated: one `SlabView` is shared by every pass in
-    // the render step.
-    const destTarget = ctx.viewSlot !== 0 ? 'sky-cubemap' : 'star-aggregates';
-    const { width: vw, height: vh } = ctx.renderTargets.sizeOf(destTarget);
+    // Viewport is the DESTINATION target's allocated size, not the canvas:
+    // STAR_GLOW_MIN_PX floors the glow radius in pixels OF THE TARGET BEING
+    // RASTERISED, so the canvas size would make the floor 0.75 texels here and
+    // land floor-clamped aggregates sub-texel (dropout and flicker, not wrong
+    // brightness — `toRefPx` keeps the photometry viewport-independent).
+    // `viewSlot !== 0` marks a capture draw (see `ReadyFrameContext.viewSlot`),
+    // whose destination is the capture face: `cubemapFaceContext` builds the
+    // synthetic ctx at the row's declared face size, so `canvasSize` already IS
+    // that size. The view is COPIED rather than mutated: one `SlabView` is
+    // shared by every pass in the render step.
+    const { width: vw, height: vh } =
+      ctx.viewSlot !== 0 ? ctx.canvasSize : ctx.renderTargets.sizeOf('star-aggregates');
 
     drawStream(
       renderer,

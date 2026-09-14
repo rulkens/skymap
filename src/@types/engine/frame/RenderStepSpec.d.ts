@@ -14,7 +14,7 @@ export type RenderStepSpec = {
   /** See `FrameStep`'s `depth`. */
   readonly depth?: 'clear' | 'load' | 'sample';
   /**
-   * GPU-timing slot suffix, appended to `groupKeyOf(target, slab)` with the same
+   * GPU-timing slot suffix, appended to `groupKeyOf(step)` with the same
    * separator; the one line in a group without it owns the bare key. A name, not
    * an ordinal — inserting a line renumbers nothing.
    */

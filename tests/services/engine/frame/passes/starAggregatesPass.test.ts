@@ -37,19 +37,20 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 
 // The layer reads its viewport via `sizeOf('star-aggregates')` — the fixture
 // hardcodes the size the production table's scale: 2 implies for the 1280x720
-// canvas below (floor(1280 / 2), floor(720 / 2)) — or, during a capture draw
-// (`viewSlot !== 0`), `sizeOf('sky-cubemap')`'s fixed 256px face.
+// canvas below (floor(1280 / 2), floor(720 / 2)). During a capture draw
+// (`viewSlot !== 0`) the ctx IS the synthetic face camera `cubemapFaceContext`
+// builds, whose `canvasSize` is the row's 256 px face; `sizeOf` has no row for
+// it, so a layer that reached for the capture target instead would throw here.
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): ReadyFrameContext {
   return {
     drawCamPos: camPos,
     nowMs,
     viewSlot,
-    canvasSize: { width: 1280, height: 720 },
+    canvasSize: viewSlot === 0 ? { width: 1280, height: 720 } : { width: 256, height: 256 },
     renderTargets: {
       specs: [{ id: 'star-aggregates', scale: 2 }],
       sizeOf: (id: string) => {
         if (id === 'star-aggregates') return { width: 640, height: 360 };
-        if (id === 'sky-cubemap') return { width: 256, height: 256 };
         throw new Error(`fixture renderTargets: no size for '${id}'`);
       },
     },
@@ -135,7 +136,7 @@ describe('starAggregatesPass', () => {
     expect(view.viewportPx).toEqual([1280, 720]);
   });
 
-  it('sizes sprites against the sky-cubemap face during a capture draw (viewSlot !== 0), not star-aggregates', () => {
+  it('sizes sprites against the capture face during a capture draw (viewSlot !== 0), not star-aggregates', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
     const view = makeNear0View(camPos);

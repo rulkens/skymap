@@ -9,6 +9,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
+import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 
 type StepFacts = {
   /** Names this line draws for the real view — the "exactly once" domain. */
@@ -28,7 +29,9 @@ const STEP_FACTS: {
   capture: (spec) => ({
     drawn: [],
     captured: [...spec.cosmoPasses, ...spec.near0Passes],
-    targets: [spec.target],
+    // Resolved through the table so the check still proves the capture lands in
+    // a declared render-target row; a bogus key is already a typecheck error.
+    targets: [CUBEMAP_CAPTURES[spec.capture].target],
   }),
   render: (spec) => ({ drawn: spec.passes, captured: [], targets: [spec.target] }),
   foreground: (spec) => ({

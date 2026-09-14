@@ -23,7 +23,7 @@ function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
     tone: TONE,
     bloomEnabled: false,
     foregroundChain: [NEAR0],
-    skyCubemapFacesToCapture: [],
+    captureFaces: new Map(),
     bodyRowSlabs: { lens: [], insideAtmosphere: [] },
     ...over,
   });
