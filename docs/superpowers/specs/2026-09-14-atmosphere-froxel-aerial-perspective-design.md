@@ -62,14 +62,20 @@ special case. After them the feature lands as growth: two new `FRAME_ORDER`
 rows, new files, and one widened union.
 
 1. **Painter order must put the inside body last.** `deriveSlabs`'s body-row
-   sort (`slabs.ts:319`) and `foregroundChainOrder` (`:341-346`) both key on
-   `distanceRangeM[0]`, which is `max(dM - rMaxM, 0)`. Every body the camera is
-   inside clamps to 0, ties with every other such row, and the stable sort then
-   keeps input order: the inside body is last only by luck. `Slab` gains
-   `readonly nearestSignedM: number` (metres, the UNCLAMPED `dM - rMaxM`, so
-   negative inside a body) and both sorts key on it descending.
-   `distanceRangeM` keeps its clamped meaning for the overlap warn and the pick
-   path, which read it as a bracket rather than an ordering key.
+   sort (`slabs.ts:319`) keys on `distanceRangeM[0]`, which is
+   `max(dM - rMaxM, 0)`. Every body the camera is inside clamps to 0, ties with
+   every other such row, and the stable sort then keeps input order: the inside
+   body is last only by luck. The tie-break goes into that sort alone, where the
+   unclamped `dM - rMaxM` is already in scope as a row-local value: primary key
+   `distanceRangeM[0]` descending as today, secondary key the unclamped signed
+   distance descending. No `Slab` field, and `distanceRangeM` keeps its clamped
+   meaning for the overlap warn and the pick path, which read it as a bracket
+   rather than an ordering key.
+   **Contract:** `foregroundChainOrder` is unchanged and must stay that way. It
+   receives `ctx.slabs` in index order, index equals painter ordinal after
+   `deriveSlabs`, and its sort is stable (ES2019), so rows tied at 0 keep the
+   order `deriveSlabs` established; re-sorting or reordering its input discards
+   the tie-break silently.
    *Verdict: bolt-on.* The feature's correctness rests on "the last foreground
    row is the inside body", which today is an accident.
 2. **`AtmosphereDrawEntry` carries its own derivations.**
@@ -393,10 +399,12 @@ Judged by "would this fail on a real bug nothing else catches"
 
 **Prep:**
 
-- `tests/services/engine/frame/slabs.test.ts`: `deriveSlabs orders a body the
-  camera is inside last in the foreground chain`, built from two body rows whose
-  clamped near distance both land at 0, ordered so the pre-prep stable sort puts
-  the inside body first.
+- `tests/services/engine/frame/slabs.test.ts`: `the body the camera is inside is
+  the last foreground chain row`, asserting on
+  `foregroundChainOrder(deriveSlabs(...))` rather than on `deriveSlabs` alone,
+  since the carry-through (stable sort over index order) is half of what prep 1
+  guarantees. Built from two body rows whose clamped near distance both land at
+  0, ordered so the pre-prep sort puts the inside body first.
 - `tests/services/engine/frame/expandFrameOrder.test.ts`: `a render line with a
   BodyRowSource slab expands once per resolved row`, and `a render line with an
   empty BodyRowSource list emits no step`.
@@ -442,7 +450,8 @@ Judged by "would this fail on a real bug nothing else catches"
 - `frame/frameOrder.ts`: the two new lines, and the #698 prose §4.1 rewrites.
 - `frame/expandFrameOrder.ts`, `frame/checkFrameOrder.ts`: prep 5's tables.
 - `frame/executeFrame.ts`: the `COMPUTE` table and `depthAttachment`.
-- `frame/slabs.ts:300-353`: prep 1's two sorts.
+- `frame/slabs.ts:300-353`: prep 1's sort, and the `foregroundChainOrder` it
+  deliberately leaves alone.
 - `frame/atmosphereDrawList.ts`: prep 2's derivation site, prep 3's memo site.
 - `frame/cosmoLabelProjection.ts:14`: the `WeakMap<ReadyFrameContext, T>`
   pattern prep 3 follows.
