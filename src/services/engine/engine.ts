@@ -191,6 +191,7 @@ export function createEngine(
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
       fontAtlases: null,
+      envBrdfLut: null,
       uiCtx: null,
       labelRenderer: null,
       markerLineRenderer: null,
@@ -564,6 +565,9 @@ export function createEngine(
     // fontAtlases/uiCtx own no GPU resource — re-nulled for lifecycle symmetry.
     state.gpu.fontAtlases = null;
     state.gpu.uiCtx = null;
+    // The LUT does own one, and it is no row, so nothing else releases it.
+    state.gpu.envBrdfLut?.destroy();
+    state.gpu.envBrdfLut = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
 

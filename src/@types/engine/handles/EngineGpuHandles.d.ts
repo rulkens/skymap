@@ -5,7 +5,7 @@
  * every HDR toggle). Add a field here AND a row to `GPU_HANDLE_ROWS`
  * (`gpuHandles/gpuHandleRegistry.ts`) — the totality check fails `tsc` until
  * both exist — unless it belongs in `GpuHandleKey`'s Exclude list
- * (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `uiCtx`,
+ * (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `envBrdfLut`, `uiCtx`,
  * `timingService`). `galaxyPickRenderer`/`pickProgram` are rows too, built
  * from `wireInput.ts`. Flag `rebuildOnSwapFormat: true` if the new row
  * bakes the swap format, or it silently goes stale on the first HDR toggle.
@@ -167,6 +167,14 @@ export type EngineGpuHandles = {
    * data, not a GPU resource.
    */
   fontAtlases: LoadedFontAtlases | null;
+  /**
+   * The split-sum environment BRDF (`public/lut/envBrdf.bin`), uploaded once at
+   * boot and handed to `meshBodyRenderer` as a construction input. Not a
+   * `GPU_HANDLE_ROWS` row for the same reason as `fontAtlases` — a row's
+   * `construct` is synchronous, this arrives from a fetch — but unlike
+   * `fontAtlases` it IS a GPU resource, so `destroy()` releases it.
+   */
+  envBrdfLut: GPUTexture | null;
   /**
    * `device` + `context` + `canvas` for every renderer that targets the swap
    * chain, retained here for the same reason as `fontAtlases`:

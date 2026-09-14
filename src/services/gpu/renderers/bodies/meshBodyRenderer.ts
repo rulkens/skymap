@@ -23,16 +23,21 @@ import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/meshBody/fragment.wesl?static';
 
 /**
- * @param reversedZ selects this slab's depth convention (single-sourced in
+ * @param init.reversedZ selects this slab's depth convention (single-sourced in
  *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
  *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ * @param init.envBrdfLut the split-sum LUT loaded once at boot
+ *   (`resources/loadEnvBrdfLut.ts`) and shared by every mesh body.
  */
-export function createMeshBodyRenderer(
-  device: GPUDevice,
-  targetFormat: GPUTextureFormat,
-  depthFormat: GPUTextureFormat,
-  reversedZ: boolean,
-): MeshBodyRenderer {
+export function createMeshBodyRenderer(init: {
+  readonly device: GPUDevice;
+  readonly targetFormat: GPUTextureFormat;
+  readonly depthFormat: GPUTextureFormat;
+  readonly reversedZ: boolean;
+  readonly envBrdfLut: GPUTexture;
+}): MeshBodyRenderer {
+  const { device, targetFormat, depthFormat, reversedZ, envBrdfLut } = init;
+
   const sampler = device.createSampler({
     label: 'meshBody-sampler',
     magFilter: 'linear',
@@ -40,6 +45,17 @@ export function createMeshBodyRenderer(
     mipmapFilter: 'linear',
     addressModeU: 'repeat',
     addressModeV: 'repeat',
+  });
+
+  // Clamp-to-edge is load-bearing, not a default: the LUT is read at
+  // (NoV, roughness), and a wrapping sampler turns grazing NoV → 0 into the
+  // NoV = 1 column — a bright rim exactly where the Fresnel term should peak.
+  const lutSampler = device.createSampler({
+    label: 'meshBody-lut-sampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'clamp-to-edge',
   });
 
   // Group 0 holds what a body owns, group 1 what the renderer owns. Binding 1
@@ -65,13 +81,21 @@ export function createMeshBodyRenderer(
 
   const globalBindGroupLayout = device.createBindGroupLayout({
     label: 'meshBody-global-bgl',
-    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } }],
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
   });
 
   const globalBindGroup = device.createBindGroup({
     label: 'meshBody-global-bg',
     layout: globalBindGroupLayout,
-    entries: [{ binding: 0, resource: sampler }],
+    entries: [
+      { binding: 0, resource: sampler },
+      { binding: 1, resource: envBrdfLut.createView({ label: 'meshBody-envBrdf-view' }) },
+      { binding: 2, resource: lutSampler },
+    ],
   });
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'meshBody.vertex');

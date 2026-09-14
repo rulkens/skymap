@@ -20,6 +20,10 @@ import package::lib::pbr::pbrDirect;
 @group(0) @binding(3) var metalRoughTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
 @group(1) @binding(0) var meshSampler: sampler;
+// Split-sum environment BRDF, read at (NoV, roughness). Its sampler is
+// clamp-to-edge: wrapping would fold grazing NoV into the NoV = 1 column.
+@group(1) @binding(1) var envBrdfLut: texture_2d<f32>;
+@group(1) @binding(2) var lutSampler: sampler;
 
 // Normal-incidence reflectance of a non-metal (~4%), 'lib/pbr.wesl's rock value.
 const DIELECTRIC_F0: f32 = 0.04;
