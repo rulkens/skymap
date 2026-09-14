@@ -1,6 +1,6 @@
 # Froxel aerial perspective — prep: the seven ground refactors
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Seven behaviour-preserving refactors that open the joints the froxel
 aerial-perspective feature needs — painter order that puts the inside body
@@ -114,7 +114,7 @@ readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the dr
   last.
 - `foregroundChainOrder` is **unchanged** and must stay that way.
 
-- [ ] **Step 1: Write the failing test** in
+- [x] **Step 1: Write the failing test** in
       `tests/services/engine/frame/slabs.test.ts`, named `the body the camera is
       inside is the last foreground chain row`. Build two planets via the file's
       `makePlanet` helper whose clamped near distance both land at 0 — e.g.
@@ -132,32 +132,32 @@ readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the dr
       there, and ES2019 stable sort is what preserves the order `deriveSlabs`
       established.
 
-- [ ] **Step 2: Run it and watch it fail.**
+- [x] **Step 2: Run it and watch it fail.**
       `npx vitest run tests/services/engine/frame/slabs.test.ts`
       Expected: FAIL — the deeply-inside body comes back at chain position 1.
 
-- [ ] **Step 3: Return `signedNearM` from `bodySlabRow`** — the unclamped value
+- [x] **Step 3: Return `signedNearM` from `bodySlabRow`** — the unclamped value
       is already in scope at `:224` where `distanceRangeM` clamps it. Widen the
       return type per Interfaces; no other field changes.
 
-- [ ] **Step 4: Add the secondary key** to the sort at `:319`. One comparator,
+- [x] **Step 4: Add the secondary key** to the sort at `:319`. One comparator,
       two keys, no new helper (this file's `ALLOWED` purity row stays 18).
       Comment it with the fact a reader cannot see: every row the camera is
       inside ties at 0 on the primary key, so the unclamped signed distance is
       what orders them.
 
-- [ ] **Step 5: Write the carry-through contract** at `foregroundChainOrder`
+- [x] **Step 5: Write the carry-through contract** at `foregroundChainOrder`
       (`:338-340`, extending the existing comment by at most two lines): it
       receives `ctx.slabs` in index order, index equals painter ordinal, and its
       sort is stable — so rows tied at 0 keep the order `deriveSlabs`
       established. Re-sorting or reordering its input discards the tie-break
       silently.
 
-- [ ] **Step 6: Verify.**
+- [x] **Step 6: Verify.**
       `npx vitest run tests/services/engine/frame tests/services/engine/camera`
       → green, every pre-existing assertion unedited. Then `npx tsc --noEmit`.
 
-- [ ] **Step 7: Commit** (stage the listed paths only), with the line-diff
+- [x] **Step 7: Commit** (stage the listed paths only), with the line-diff
       breakdown in the report.
 
 ```
@@ -219,7 +219,7 @@ readonly inside: boolean;
   `sunZenithCos` arithmetic (that packing is the `SkyViewParams` contract, not a
   shared derivation).
 
-- [ ] **Step 1: Write the failing tests** in
+- [x] **Step 1: Write the failing tests** in
       `tests/services/engine/frame/atmosphereDrawList.test.ts`:
       - `entries carry inside=true when the camera is within the handoff ratio` —
         the existing `camRadiiOut(SEEDED_EARTH, 0.5)` case, extended to assert
@@ -232,22 +232,22 @@ readonly inside: boolean;
       fixed `{ eyeRelBodyM, basisM }` derived from the requested camera offset;
       every existing case keeps its current assertions.
 
-- [ ] **Step 2: Run them and watch them fail.**
+- [x] **Step 2: Run them and watch them fail.**
       `npx vitest run tests/services/engine/frame/atmosphereDrawList.test.ts`
       Expected: FAIL — `inside` does not exist; the null-pose case returns one entry.
 
-- [ ] **Step 3: Widen the type** (four fields, with the units comments above)
+- [x] **Step 3: Widen the type** (four fields, with the units comments above)
       and trim the `.d.ts` header to ≤ 10 lines — its current 20-line essay
       restates what the fields now say.
 
-- [ ] **Step 4: Derive in `atmosphereDrawList`.** One `ctx.bodyPose` read per
+- [x] **Step 4: Derive in `atmosphereDrawList`.** One `ctx.bodyPose` read per
       candidate, `continue` on null, the four fields on both push sites (the
       zero-distance branch at `:50-58` and the sub-pixel branch at `:65-71`).
       Hoist the entry construction so the two branches cannot drift — but keep
       the file at ONE declaration (purity ratchet): the shared construction is an
       inline object literal built before the branch, not a local helper function.
 
-- [ ] **Step 5: Delete the duplicates** in `atmosphereShellPass.draw` (the
+- [x] **Step 5: Delete the duplicates** in `atmosphereShellPass.draw` (the
       `atmosphereTopM` at `:107`, `sunDirLocal` at `:116`, `bodySlabCamLocal` at
       `:120`, `isInsideAtmosphereShell` at `:141`, and their now-unused imports)
       and in `encodeAtmosphereSkyView` (`:90-96` plus the `bodySlabCamLocal` /
@@ -255,10 +255,10 @@ readonly inside: boolean;
       three comment blocks the deletions falsify — each should now say the fact
       that survives: the entry is the one resolved pairing both read.
 
-- [ ] **Step 6: Verify.**
+- [x] **Step 6: Verify.**
       `npx vitest run tests/services/engine/frame` → green; then `npx tsc --noEmit`.
 
-- [ ] **Step 7: Commit** + line-diff breakdown.
+- [x] **Step 7: Commit** + line-diff breakdown.
 
 ```
 refactor(atmosphere): derive the draw entry's pose-dependent fields once
@@ -306,7 +306,7 @@ down — `cosmoLabelProjection`'s row 1 is exactly this debt). One file, one
 symbol, filename = symbol, no allow-list row. Spec §9's "unchanged allow-list"
 holds because of this split.
 
-- [ ] **Step 1: Write the failing test** in
+- [x] **Step 1: Write the failing test** in
       `tests/services/engine/frame/atmosphereDrawList.test.ts`:
       `a second ctx re-derives the list` — call with `ctxA`, then with a `ctxB`
       built at a DIFFERENT camera position that lands the body outside the
@@ -317,23 +317,23 @@ holds because of this split.
       it is the property the four consumers rely on, and it fails loudly if the
       cache is keyed on something per-call.
 
-- [ ] **Step 2: Run it and watch it fail.**
+- [x] **Step 2: Run it and watch it fail.**
       `npx vitest run tests/services/engine/frame/atmosphereDrawList.test.ts`
       Expected: FAIL on the identity assertion (two fresh arrays today).
 
-- [ ] **Step 3: Create the cache file** and read/populate it at the top and
+- [x] **Step 3: Create the cache file** and read/populate it at the top and
       bottom of `atmosphereDrawList`. The early `FOREGROUND_MAX_DISTANCE_MPC`
       return caches too — an empty list is a per-frame answer like any other.
 
-- [ ] **Step 4: Rewrite the module header** (≤ 10 lines): one derivation per
+- [x] **Step 4: Rewrite the module header** (≤ 10 lines): one derivation per
       frame context, every consumer reads that one list, and the key is `ctx`
       because `state` is a live getter.
 
-- [ ] **Step 5: Verify.** `npx vitest run tests/services/engine/frame` (the
+- [x] **Step 5: Verify.** `npx vitest run tests/services/engine/frame` (the
       purity test included — it must stay green with NO new `ALLOWED` row), then
       `npx tsc --noEmit`.
 
-- [ ] **Step 6: Commit** + line-diff breakdown.
+- [x] **Step 6: Commit** + line-diff breakdown.
 
 ```
 perf(atmosphere): memoise the atmosphere draw list per frame context
@@ -387,7 +387,7 @@ export function atmosphereShellUniforms(
   builder; it does not stay duplicated in the pass.
 - The ring-ratio lookup (`SCENE_RINGS`) moves with it.
 
-- [ ] **Step 1: Extract with the refactor CLI**, not by hand:
+- [x] **Step 1: Extract with the refactor CLI**, not by hand:
       `npm run refactor -- extract src/services/engine/frame/passes/atmosphereShellPass.ts <symbol> src/services/engine/frame/atmosphereShellUniforms.ts`
       if the CLI can lift the block; otherwise create the file and move the
       lines, then `npm run refactor -- refs atmosphereShellUniforms` to confirm
@@ -397,25 +397,25 @@ export function atmosphereShellUniforms(
       the existing `tests/utils/gpu/atmosphereUniformsLayout.parity.test.ts` and
       by Task 8's visual attestation.
 
-- [ ] **Step 2: Point the pass at it.** `atmosphereShellPass.draw` becomes: find
+- [x] **Step 2: Point the pass at it.** `atmosphereShellPass.draw` becomes: find
       the entry, call `atmosphereShellUniforms(entry, view.slab, ctx, state)`,
       call `renderer.draw(pass, entry.body.id, uniforms, entry.inside)`. The
       `mat4d`, `composeBodySlabMvp`, `packAtmosphereUniforms`, `narrowMat4`,
       `SCENE_RINGS`, `RENDER_ORIGIN_MPC`, `SCALE_UNITS` imports leave the pass
       file with the code that used them.
 
-- [ ] **Step 3: Split the comments with the code.** The derivation notes (the
+- [x] **Step 3: Split the comments with the code.** The derivation notes (the
       f64 invert, the atmosphere-top unit convention, the exposure branch, the
       ring ratios) travel to the new file's ≤ 10-line header and its inline
       comments; the pass header keeps only what it still explains (the pass's
       position in `bodyPasses`, the two-draw multiply-then-add, the f64 seam).
 
-- [ ] **Step 4: Verify.**
+- [x] **Step 4: Verify.**
       `npx vitest run tests/services/engine/frame tests/utils/gpu` → green
       (`frameFilePurity` must pass with no new `ALLOWED` row: the new file
       declares one symbol), then `npx tsc --noEmit`.
 
-- [ ] **Step 5: Commit** + line-diff breakdown.
+- [x] **Step 5: Commit** + line-diff breakdown.
 
 ```
 refactor(atmosphere): extract atmosphereShellUniforms into its own frame file
@@ -519,7 +519,7 @@ bodyRowSlabs: {
   `insideAtmosphere` is `[]` for now (the feature plan fills it — an unallocated
   timing slot is a missing DebugPanel row, so this is the file that must follow).
 
-- [ ] **Step 1: Write the failing tests** in
+- [x] **Step 1: Write the failing tests** in
       `tests/services/engine/frame/expandFrameOrder.test.ts`:
       - `a render line with a BodyRowSource slab expands once per resolved row` —
         a hand-built two-line order with `slab: 'lens'` and
@@ -530,22 +530,22 @@ bodyRowSlabs: {
       The existing lens cases (`:222-238`) stay, with their `FrameInputs`
       literals rewritten to the new shape — assertions untouched.
 
-- [ ] **Step 2: Run them and watch them fail.**
+- [x] **Step 2: Run them and watch them fail.**
       `npx vitest run tests/services/engine/frame/expandFrameOrder.test.ts`
       Expected: FAIL — `bodyRowSlabs` is not a `FrameInputs` field.
 
-- [ ] **Step 3: Add the type, delete `LensStepSpec`.** Create
+- [x] **Step 3: Add the type, delete `LensStepSpec`.** Create
       `BodyRowSource.d.ts`; then
       `npm run refactor -- delete src/@types/engine/frame/LensStepSpec.d.ts`
       (or `npm run move-files` if the CLI's delete does not rewrite the
       `FrameStepSpec` import) — never a hand-edited import sweep.
 
-- [ ] **Step 4: Rename `depthLoad` → `depth`** across the type and its readers:
+- [x] **Step 4: Rename `depthLoad` → `depth`** across the type and its readers:
       `npm run refactor -- rename src/@types/engine/frame/FrameStep.d.ts depthLoad depth`,
       then widen it to include `'sample'`. Verify the rename reached
       `expandFrameOrder.ts:85,117`, `executeFrame.ts:277` and the two tests.
 
-- [ ] **Step 5: Fold the expansion.** `EXPAND_STEP.render` handles both slab
+- [x] **Step 5: Fold the expansion.** `EXPAND_STEP.render` handles both slab
       shapes, `EXPAND_STEP.lens` and `STEP_FACTS.lens` go, `sameGroup` keys on
       `depth`. The module headers of `expandFrameOrder.ts` (`:1-7`) and
       `FrameStepSpec.d.ts` (`:6-7`) both name three expanding kinds — rewrite to
@@ -553,22 +553,22 @@ bodyRowSlabs: {
       per-frame list". `expandFrameOrder`'s `ALLOWED` purity row stays 6 and
       `executeFrame`'s stays 7: no declaration is added or removed in either.
 
-- [ ] **Step 6: Thread `'sample'` through `executeFrame`** per the Interfaces
+- [x] **Step 6: Thread `'sample'` through `executeFrame`** per the Interfaces
       block, and rewrite the `depthLoadOpFor` / `depthAttachment` doc comments to
       state the three-way fact rather than the two-way one.
 
-- [ ] **Step 7: Update the callers** — `frameOrder.ts`'s lens line (its
+- [x] **Step 7: Update the callers** — `frameOrder.ts`'s lens line (its
       surrounding rationale comment stays; only the kind changes),
       `renderFrame.ts`, `maxFrameInputs.ts`, and the `FrameInputs` literals in
       the four timing tests.
 
-- [ ] **Step 8: Verify.**
+- [x] **Step 8: Verify.**
       `npx vitest run tests/services/engine/frame` → green, including
       `frameOrderBoot` (the real order still passes the boot check) and the
       timing suite (slot names byte-identical: the lens step's group key is
       still `hdr·BODY[k]`), then `npx tsc --noEmit`.
 
-- [ ] **Step 9: Commit** + line-diff breakdown.
+- [x] **Step 9: Commit** + line-diff breakdown.
 
 ```
 refactor(frame): fold the lens step kind into render
@@ -634,7 +634,7 @@ fn scatterStep(
 parameters are the module's existing idiom (`sampleTransmittanceToTop`,
 `sampleMultiScatter`).
 
-- [ ] **Step 1: Move the loop body verbatim.** `skyViewLut.wesl:138-166` becomes
+- [x] **Step 1: Move the loop body verbatim.** `skyViewLut.wesl:138-166` becomes
       `scatterStep`'s body — medium sample, sample transmittance, sun
       transmittance, multi-scatter, the twilight fade and gain, the analytic
       `(s - s*T)/extinction` step. `EXTINCTION_EPS` is already local to
@@ -643,20 +643,20 @@ parameters are the module's existing idiom (`sampleTransmittanceToTop`,
       **pixel-identical by construction**, and any expression rewrite forfeits
       that claim.
 
-- [ ] **Step 2: Call it from the march.** `raymarchInScatter`'s loop keeps
+- [x] **Step 2: Call it from the march.** `raymarchInScatter`'s loop keeps
       `tNear`/`tFar`/`dt`, the position and the two accumulators, and becomes
       four lines: sample the step, `L += throughput * step.inScatter`,
       `throughput *= step.transmittance`, advance. `r`, `up` and `sunCosZenith`
       move into `scatterStep` with the body that used them.
 
-- [ ] **Step 3: Move the comments with the code.** The twilight derivation
+- [x] **Step 3: Move the comments with the code.** The twilight derivation
       (`:146-163`) belongs to `scatterStep`; `raymarchInScatter` keeps the march
       bound and the from-space clamp. `scattering.wesl`'s header already states
       the unit-agnostic ratio property the froxel bake will rely on — leave it,
       and keep the file's comment budget from growing (it is a derivation file,
       already over the default budget by sanctioned exception).
 
-- [ ] **Step 4: Verify pixel-identity by eye, with the dev server.**
+- [x] **Step 4: Verify pixel-identity by eye, with the dev server.**
       `npm test` covers no shader; the gate here is the visual pass in Task 8
       plus this task's own check: with the dev server on this worktree's port,
       Earth from space at a terminator-crossing pose looks unchanged — no shift
@@ -665,7 +665,7 @@ parameters are the module's existing idiom (`sampleTransmittanceToTop`,
       (`createShaderModuleWithDevLog` prints it; line numbers refer to the
       linked WGSL, not the source `.wesl`).
 
-- [ ] **Step 5: Paired A/B on `npm run perf`.** Read `.claude/skills/perf/SKILL.md`
+- [x] **Step 5: Paired A/B on `npm run perf`.** Read `.claude/skills/perf/SKILL.md`
       first. Baseline the BASE commit and the extracted commit alternately
       (A-B-A-B across two dev servers, per the skill's paired-baseline recipe),
       `--scenario earth-surface --frames 30`, and **pass `--url http://localhost:<port>`
@@ -680,7 +680,7 @@ parameters are the module's existing idiom (`sampleTransmittanceToTop`,
       regression outside the ~0.5 ms run-to-run noise **halts this task** and is
       reported, not worked around.
 
-- [ ] **Step 6: Commit** + line-diff breakdown.
+- [x] **Step 6: Commit** + line-diff breakdown.
 
 ```
 refactor(atmosphere): extract the per-step scattering integrand
@@ -711,18 +711,18 @@ signature, no type, no test: a usage flag is a capability, and a test asserting
 it back would be a constant restatement
 (`docs/superpowers/conventions/testing.md`).
 
-- [ ] **Step 1: Add the flag** and rewrite the comment at `:421-427` to the fact
+- [x] **Step 1: Add the flag** and rewrite the comment at `:421-427` to the fact
       that survives: the buffer holds the LAST painter-chain row's depth because
       each row clears its own, which is why the caption occlusion path reads the
       colour texture's alpha instead — and why a sampler of this texture can only
       ever be asking about that last row.
 
-- [ ] **Step 2: Verify.** `npx vitest run tests/services/gpu` → green; then
+- [x] **Step 2: Verify.** `npx vitest run tests/services/gpu` → green; then
       `npx tsc --noEmit`. Confirm on the dev server that the scene still
       presents (a rejected texture descriptor is a boot-time device error, and
       on iOS a silently dropped frame).
 
-- [ ] **Step 3: Commit** + line-diff breakdown.
+- [x] **Step 3: Commit** + line-diff breakdown.
 
 ```
 refactor(gpu): make the foreground:0 depth texture sampleable
@@ -739,15 +739,15 @@ per-row depth clear is still the reason it holds only the last row.
 
 **Depends on Tasks 1–7.**
 
-- [ ] **Step 1: Whole suite.** `npm test` → green. 600+ files; a prep that
+- [x] **Step 1: Whole suite.** `npm test` → green. 600+ files; a prep that
       breaks a distant test has drifted.
-- [ ] **Step 2: Typecheck.** `npm run typecheck` (both projects). **Not**
+- [x] **Step 2: Typecheck.** `npm run typecheck` (both projects). **Not**
       `typecheck:fast` — tsgo is not installed in worktrees.
-- [ ] **Step 3: Comment audit.** Every file this PR touched, against the comment
+- [x] **Step 3: Comment audit.** Every file this PR touched, against the comment
       budget (`docs/superpowers/conventions/comments.md`): module header ≤ 10
       lines, comment lines ≤ half the code lines, nothing describing the diff.
       Four headers were rewritten by design (Tasks 2, 3, 5, 7) — check the rest.
-- [ ] **Step 4: Visual attestation — ASK THE USER TO LOOK.** Do not claim it.
+- [x] **Step 4: Visual attestation — ASK THE USER TO LOOK.** Do not claim it.
       Dev server on this worktree's own port; the claim is
       **pixel-identical to `main`**, so name the three poses and ask for a
       same-pose comparison against a second dev server on `main`:
@@ -758,7 +758,7 @@ per-row depth clear is still the reason it holds only the last row.
          there (it is the feature's job to fix, not this PR's).
       3. **Sgr A\* lensing band** — the lensed sky still draws, in the same place
          in the frame, with the unwarped body-glints on top of it (Task 5).
-- [ ] **Step 5: PR — #702 already exists.** The seven prep commits land on
+- [x] **Step 5: PR — #702 already exists.** The seven prep commits land on
       `worktree-atmosphere-froxel-aerial-perspective`, which already carries the
       spec commits and already has draft PR #702 open against `main`. Do NOT open
       a second PR: **#702 becomes the prep PR.** Retitle it
@@ -769,7 +769,7 @@ per-row depth clear is still the reason it holds only the last row.
       per `docs/superpowers/conventions/sdd-execution.md` and the project's git
       conventions. **No `Co-Authored-By` trailer**, and the PR body ends with the
       standard generated-with line.
-- [ ] **Step 6: Relocate this plan and archive its ledger** in the final commit,
+- [x] **Step 6: Relocate this plan and archive its ledger** in the final commit,
       before deleting the SDD workspace (sdd-execution Rule 3): copy
       `<workspace>/progress.md` to
       `docs/superpowers/plans/completed/2026-09-14-atmosphere-froxel-prep.ledger.md`,
