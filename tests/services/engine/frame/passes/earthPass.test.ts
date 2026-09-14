@@ -594,7 +594,7 @@ describe('earthPass.draw — detail tiles', () => {
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
-      originLocal: [1, 0, 0],
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
       resident: {
         slot: 0,
         atlasUvOrigin: [0, 0],
@@ -705,7 +705,7 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
-      originLocal: [1, 0, 0],
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
       resident: {
         slot: 0,
         atlasUvOrigin: [0, 0],

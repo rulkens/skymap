@@ -10,6 +10,7 @@ import { earthTileColumns } from './earthTileColumns';
 import { earthTileBandRefineAllowed } from './earthTileBandRefineAllowed';
 import { earthTileBandRequestAllowed } from './earthTileBandRequestAllowed';
 import { equirectUvToDirection } from '../math/equirectUvToDirection';
+import { surfacePatchAnchor } from './surfacePatchAnchor';
 
 type ResidentLookupResult = {
   readonly slot: number;
@@ -249,10 +250,7 @@ export function cutSurfaceTiles(input: {
     if (resolved !== null) {
       cut.push({
         id: { z, x, y },
-        // Direction of the tile's uv-origin corner `[u0, v0]` — the same
-        // convention Task 3's mesh baker uses (binding cross-task contract,
-        // see the Task 2 brief).
-        originLocal: equirectUvToDirection([u0, v0]),
+        anchor: surfacePatchAnchor(u0, v0, u1, v1),
         resident: resolved,
       });
     }

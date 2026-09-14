@@ -22,7 +22,7 @@
  * f32-safe with no separate origin-direction field. Both are body-fixed-axes
  * quantities now, not world-axes: the body-slab pose seam (`bodyRelativePose`)
  * already rotated the camera into Earth's own fixed frame, the SAME frame
- * `tile.originLocal`/the baked mesh live in, so no orientation rotation is
+ * the tile anchor/the baked mesh live in, so no orientation rotation is
  * applied here -- `SurfaceTileUniforms.rotCol0/1/2` are fed the identity
  * (kept only for the struct's parity-tested byte layout).
  *
@@ -266,16 +266,23 @@ export function createEarthSurfaceTileRenderer(
           ? 1
           : Math.min(1, Math.max(0, (nowMs - tile.resident.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
 
-      // Body-fixed axes throughout (no orientation rotation): tile.originLocal
-      // is already the frame composeBodySlabMvp's model factor places bodies
-      // in, so the tile origin relative to the eye is a direct
+      // Body-fixed axes throughout (no orientation rotation): the anchor's
+      // corner is already the frame composeBodySlabMvp's model factor places
+      // bodies in, so the tile origin relative to the eye is a direct
       // radius-scale-then-subtract, mirroring that same model.
+      //
+      // Spelled out here rather than through `patchOriginRelEyeM` on purpose:
+      // that util f32-rounds the anchor first (spec §7.1), and the baked
+      // meshes this path still draws are rooted at the UNROUNDED corner —
+      // rounding only one of the pair would open ~0.13 m cracks. The two move
+      // together when task 7 retires the bake.
+      const cosLat0 = Math.cos(tile.anchor.lat0Rad);
       writeSurfaceTileNodeParams(
         nodeScratchView,
         i * NODE_PARAMS_BYTES,
-        radiusM * tile.originLocal[0] - eyeRelBodyM[0],
-        radiusM * tile.originLocal[1] - eyeRelBodyM[1],
-        radiusM * tile.originLocal[2] - eyeRelBodyM[2],
+        radiusM * (cosLat0 * Math.cos(tile.anchor.lon0Rad)) - eyeRelBodyM[0],
+        radiusM * (cosLat0 * Math.sin(tile.anchor.lon0Rad)) - eyeRelBodyM[1],
+        radiusM * Math.sin(tile.anchor.lat0Rad) - eyeRelBodyM[2],
         vertexBase,
         tile.resident.atlasUvOrigin[0],
         tile.resident.atlasUvOrigin[1],

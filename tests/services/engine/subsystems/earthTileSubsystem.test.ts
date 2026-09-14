@@ -289,8 +289,14 @@ describe('earthTileSubsystem debug snapshot', () => {
     subsystem.setLastCut([
       {
         id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
-        originLocal: [1, 0, 0],
-        resident: { slot: 0, atlasUvOrigin: [0, 0], atlasUvScale: [1, 1], readyAtMs: 0, fallback: null },
+        anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
+        resident: {
+          slot: 0,
+          atlasUvOrigin: [0, 0],
+          atlasUvScale: [1, 1],
+          readyAtMs: 0,
+          fallback: null,
+        },
       },
     ]);
     expect(subsystem.getDebugSnapshot().plan?.cutCount).toBe(1);
@@ -412,7 +418,7 @@ describe('earthTileSubsystem lastCut', () => {
     const cut: readonly SurfaceCutTile[] = [
       {
         id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
-        originLocal: [1, 0, 0],
+        anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
         resident: {
           slot: 0,
           atlasUvOrigin: [0, 0],
