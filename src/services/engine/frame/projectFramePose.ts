@@ -29,10 +29,8 @@ import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { resolveWorldArm, toBodyArm } from '../camera/poseFrameConversion';
 import { regimeArmFor } from '../camera/regimeArmFor';
 import { sameFrame } from '../camera/rungs/sameFrame';
-import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
-import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
-import { normalize3 } from '../../../utils/math/normalize3';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
 
 /** The pin's strafe while no follow memory exists. */
@@ -127,27 +125,9 @@ export function projectFramePose(args: {
     );
     if (arm === 'absolute') {
       if (displayed.frame !== 'absolute') {
-        // Disengage commits target-at-centre, eye preserved: the pivot pin
-        // re-reads an absolute `target` as the body's centre one frame later
-        // and rebuilds the eye from `target + dir·distance`, so committing
-        // `world`'s on-ray surface target verbatim teleported the eye one body
-        // radius inward (pop-2). Zoom-driven recessions cross at tilt 0, so
-        // this is view-exact; other crossings re-aim by at most the remaining
-        // tilt on the flip frame.
+        // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
         const centreMpc = bodies.get(displayed.frame.body)!.positionMpc;
-        const toCentre: Vec3 = [
-          centreMpc[0] - eyeMpc[0],
-          centreMpc[1] - eyeMpc[1],
-          centreMpc[2] - eyeMpc[2],
-        ];
-        const { yaw, pitch } = orbitAnglesLookingAlong(normalize3(toCentre), poseBasis);
-        displayed = absoluteArm({
-          target: [centreMpc[0], centreMpc[1], centreMpc[2]],
-          yaw,
-          pitch,
-          distance: Math.hypot(toCentre[0], toCentre[1], toCentre[2]),
-          roll: world.roll,
-        });
+        displayed = centreLookingArm(eyeMpc, centreMpc, poseBasis, world.roll ?? 0);
         // Centre-looking, so authored and displayed coincide.
         register = displayed;
       }
