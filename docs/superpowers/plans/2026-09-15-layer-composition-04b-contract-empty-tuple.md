@@ -1140,7 +1140,7 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 - [ ] Manual, attested by the user with the branch's dev server:
   - click a galaxy, a cluster ring, a planet, a famous star, the Milky Way: each selects (the pick
     path is the composed resolver);
-  - `#focus=body-earth`, `#focus=cluster-virgo`, `#focus=m31`, `#focus=star-42` deep links each
+  - `#focus=body-earth`, `#focus=cluster-virgo-m87`, `#focus=m31`, `#focus=star-42` deep links each
     land, the body one before any catalog has arrived;
   - Cmd+K structure search is populated on first open;
   - the `l` key logs the camera;
