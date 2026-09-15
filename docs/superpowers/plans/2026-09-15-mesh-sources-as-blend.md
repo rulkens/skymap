@@ -89,9 +89,9 @@ rewrite):
 
 Log one line per pass with the same counts the prebake logs today.
 
-- [ ] Write the script; module header ≤ 5 lines naming the split rule ("scene content is
+- [x] Write the script; module header ≤ 5 lines naming the split rule ("scene content is
       saved here; bake artefacts stay in meshPrebake.py") and the Blender 5.2 LTS run.
-- [ ] Add the npm script. No test (Blender; Task 3 is the test).
+- [x] Add the npm script. No test (Blender; Task 3 is the test).
 
 ### Task 2: slim `meshPrebake.py` to load → bake
 
@@ -126,7 +126,7 @@ SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance", trian
   imported `<key>.blend` (≤ 5 lines).
 - `select()` keeps its un-hiding: operator polls need it regardless of the file.
 
-- [ ] Apply the deletions and changes. No test (Task 3 is the test).
+- [x] Apply the deletions and changes. No test (Task 3 is the test).
 
 ### Task 3: round trip — the generated file does not move
 
@@ -135,15 +135,23 @@ commits.
 
 **Files:** `data/raw/meshes/meshes.sha256` (modify)
 
-- [ ] **User:** `npm run import-mesh -- <key>` for voyager, perseverance, curiosity, mer.
+- [x] **User:** `npm run import-mesh -- <key>` for voyager, perseverance, curiosity, mer.
       Open one `.blend` in the GUI: deployed pose at any timeline frame, colour maps sRGB.
-- [ ] **User:** `npm run prebake-mesh -- <key>` for the same four, then
+- [x] **User:** `npm run prebake-mesh -- <key>` for the same four, then
       `npm run build-meshes`.
-- [ ] **Gate:** `git diff src/data/bodies/meshAssets.generated.ts` is **empty** (same
+- [x] **Gate:** `git diff src/data/bodies/meshAssets.generated.ts` is **empty** (same
       `meanAlbedo`, `triangleCount`, `boundingRadiusM`, `groundOffsetM`). A non-empty diff
       **halts the plan** and goes to the user with the diff; do not commit a changed
       generated file, do not tune the importer to chase digits without a ruling.
-- [ ] **Controller:** append four lines to `meshes.sha256` in its existing format
+      **Outcome (2026-09-15):** voyager, perseverance, mer identical. Curiosity drifted —
+      `boundingRadiusM`/`groundOffsetM` at 1e-9, `meanAlbedo` by 0.15% — because the 13
+      unparented marker children take a loc/rot/scale rewrite of their world matrix
+      (2.4e-7 m worst vertex) and the smart-project unwrap repacks its islands on that.
+      The bit-identical alternative (strip the markers' geometry, keep them parented) was
+      measured; the user ruled **accept the new Curiosity numbers** as the reference, so
+      the generated file is committed with this task. Earlier "identical" claims compared
+      bounding-box corners only.
+- [x] **Controller:** append four lines to `meshes.sha256` in its existing format
       (`<sha256>  <key>/<key>.blend`), from `shasum -a 256` run in `data/raw/meshes/`;
       `shasum -a 256 -c meshes.sha256` passes. Commit.
 
@@ -202,7 +210,7 @@ cache paragraph (`:63`): the `Mesh sources` group backs up `meshes.sha256`'s lis
 `data/raw/meshes/`, `no-cache` because a `.blend` is re-saved under its key, never purged,
 restore in `data/raw/meshes/README.md`.
 
-- [ ] Rows, READMEs, DEPLOY.md. `npm run format` on touched files only.
+- [x] Rows, READMEs, DEPLOY.md. `npm run format` on touched files only.
 
 ### Task 5: `Mesh sources` R2 group
 
@@ -232,13 +240,13 @@ parentheses, which the unquoted string turns into a shell syntax error. Same fla
 order, `stdio: 'inherit'`. No test: the change is a call-shape swap with no branch, and it
 fails loudly on first use.
 
-- [ ] Test `collectMeshSources keeps a filename with spaces and parentheses as one key`:
+- [x] Test `collectMeshSources keeps a filename with spaces and parentheses as one key`:
       fixture dir with `meshes.sha256` holding `<hex>  voyager/Voyager Probe (B).glb` and
       `<hex>  voyager/voyager.blend`, both files written; asserts the two r2Keys are
       `data/raw/meshes/voyager/Voyager Probe (B).glb` and `data/raw/meshes/voyager/voyager.blend`.
       (A whitespace split is the bug this catches; the sync runs post-merge, so nothing
       else would see it before the backup silently misses files.)
-- [ ] Implement, wire the group, swap the spawn. `npm test -- collectMeshSources` passes.
+- [x] Implement, wire the group, swap the spawn. `npm test -- collectMeshSources` passes.
 
 ---
 
