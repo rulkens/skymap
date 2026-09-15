@@ -115,11 +115,7 @@ def log(msg):
 
 def load(cfg):
     bpy.ops.wm.open_mainfile(filepath=cfg["src"])
-    scene = bpy.context.scene
-    # A headless open does not evaluate animation, so non-object channels the
-    # import left at the stow frame would read their frame-0 values.
-    scene.frame_set(scene.frame_current)
-    return scene
+    return bpy.context.scene
 
 
 def keepers(scene):
@@ -168,8 +164,6 @@ def join_meshes(scene, meshes):
     if len(meshes) > 1:
         bpy.ops.object.join()
     joined = bpy.context.view_layer.objects.active
-    # Live F-curves would re-apply the pose `transform_apply` bakes in, exporting it twice.
-    joined.animation_data_clear()
     bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     for obj in [o for o in scene.objects if o is not joined]:

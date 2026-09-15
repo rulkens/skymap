@@ -19,7 +19,7 @@ them is what `npm run build-meshes` reads.
 
 The archive holds one file, `Curiosity Rover (MSL) (Clean).blend` (10,231,670
 bytes, sha256 `77fe6665223e38972728af404f1a277f0b0ab467fce5cc0aed6eba93488b74e2`),
-which is what the pre-bake opens. A "(Dirty)" dust-weathered variant exists on
+which is what the importer opens. A "(Dirty)" dust-weathered variant exists on
 the same page; the clean one is what ships.
 
 ## How to obtain
@@ -39,15 +39,14 @@ Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 the zip's own `Curiosity Rover (MSL) (Clean).blend`, which the importer reads
 and never writes back to. Written by Blender 5.2 LTS, it does not open in
 older versions. Re-import it at any time with `npm run import-mesh --
-curiosity` (Blender 5.2 LTS, not run in CI) — this **overwrites any edits**
-made since the last import.
+curiosity` — this **overwrites any edits** made since the last import.
 
 The download is a 106-object Blender scene with 18 materials, nine cameras
 and two lights. `tools/meshes/prebake/importMesh.py` evaluates it at **frame
 206**, applies the geometry-nodes modifiers hanging off a dozen parts, and
-freezes every remaining part's world transform (dropping the marker-cube rig,
-so the pre-bake's `join` needs no parenting). It also repairs three source
-defects:
+freezes every remaining part's world transform, first unparenting the 13
+direct children of the `pivot`/`shadow2` markers so deleting those markers
+moves nothing. It also repairs three source defects:
 
 - **The helper geometry is not cosmetic.** `_root_p` is a 1 m cube at the
   origin and `shadow_arm` a 2 m ground plane; both carry a material, so a
@@ -61,14 +60,14 @@ defects:
   resolves to nothing and would bake black over twelve parts. The importer
   re-points it at the packed original.
 
-It also collapses the mixed UV-layer names onto one shared layer and
-re-points every Normal Map node at it, and drops seven rival Material Output
-nodes — targeted at Cycles and each fed by a bare Diffuse BSDF, they win over
-the Principled the file renders with; left in, those parts would bake black
-albedo (a Diffuse node emits nothing) and roughness 1.
+It also collapses the mixed UV-layer names onto one shared layer, and drops
+seven rival Material Output nodes — targeted at Cycles and each fed by a bare
+Diffuse BSDF, they win over the Principled the file renders with; left in,
+those parts would bake black albedo (a Diffuse node emits nothing) and
+roughness 1.
 
-To edit the model: open `curiosity.blend` in Blender 5.2 LTS at frame 206,
-change materials, save, update this file's line in `../meshes.sha256`, then
+To edit the model: open `curiosity.blend` in Blender 5.2 LTS, change
+materials, save, update this file's line in `../meshes.sha256`, then
 `npm run prebake-mesh -- curiosity` and `npm run build-meshes`.
 
 ## The pre-bake — what `build-meshes` actually reads

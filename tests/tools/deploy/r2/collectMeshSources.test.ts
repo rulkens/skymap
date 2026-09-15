@@ -1,12 +1,4 @@
-/**
- * Contract test for the mesh-sources R2 inventory helper.
- *
- * `meshes.sha256` lines are fixed-width (`shasum -a 256` text-mode output):
- * 64 hex chars, two spaces, then the path verbatim. Every NASA source
- * filename in that list carries spaces and parentheses (e.g.
- * "Voyager Probe (B).glb"), so a naive whitespace split would truncate the
- * key at the first space — this pins the fixed-offset parse instead.
- */
+/** Pins the fixed-offset parse: NASA filenames carry spaces and parentheses. */
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';

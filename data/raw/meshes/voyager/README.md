@@ -29,18 +29,12 @@ Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
 `voyager.blend` is what the pre-bake opens, not the download above. Written by
 Blender 5.2 LTS, it does not open in older versions. Re-import it from the
-pristine download at any time with `npm run import-mesh -- voyager` (Blender
-5.2 LTS, not run in CI) — this **overwrites any edits** made since the last
-import.
+pristine download at any time with `npm run import-mesh -- voyager` — this
+**overwrites any edits** made since the last import.
 
-`tools/meshes/prebake/importMesh.py` applies every part's modifiers, then
-freezes its world transform (dropping the rig, so the pre-bake's `join` needs
-no parenting), collapses the mixed UV-layer names onto one shared layer and
-re-points every Normal Map node at it, re-flags any Base Color texture the
-source left as Non-Color so it decodes sRGB, and collapses rival Material
-Output nodes onto the one the file renders with. The download has no
-animation and none of the defects these last three passes exist for, so they
-are no-ops here; the importer runs them uniformly over every source.
+`tools/meshes/prebake/importMesh.py` renames each part's single UV layer to
+the one shared name and saves; the download has no animation, modifiers or
+material defects.
 
 To edit the model: open `voyager.blend` in Blender 5.2 LTS, change materials,
 save, update this file's line in `../meshes.sha256`, then

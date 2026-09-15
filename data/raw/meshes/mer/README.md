@@ -33,27 +33,29 @@ Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
 `mer.blend` is what the pre-bake opens, not the download above. Written by
 Blender 5.2 LTS, it does not open in older versions. Re-import it at any time
-with `npm run import-mesh -- mer` (Blender 5.2 LTS, not run in CI) — this
-**overwrites any edits** made since the last import.
+with `npm run import-mesh -- mer` — this **overwrites any edits** made since
+the last import.
 
 `tools/meshes/prebake/importMesh.py` evaluates the 63-object scene at **frame
 1325** before saving. The frame is load-bearing: the deploy animation starts
 with the rover in its folded landing configuration (solar panels shut, 1.28 m
 wide, mast down) and only reaches the deployed rover — panels out to 2.28 m,
 Pancam mast at 1.58 m — past frame ~530; saving frame 0 would ship a folded
-rover. The importer then freezes every part's world transform at that frame
-and clears its parenting, which is what lets the pre-bake later drop the
-material-less marker cubes every joint hangs off of without detaching the
-wheels and panels they carry — deleting the cubes before freezing the
-transforms would scatter the model. It also collapses the mixed UV-layer
-names onto one shared layer, re-flags all seven colour maps (which arrive
-flagged Non-Color) as sRGB so the bake doesn't wash out, and drops two rival
-Material Output nodes — targeted at Cycles and each fed by a bare Diffuse
-BSDF, they win over the Principled the file renders with; left in, those
-parts would bake black albedo (a Diffuse node emits nothing) and roughness 1.
+rover. The importer then freezes every part's world transform at that frame;
+parenting is untouched. It also renames each part's UV layer onto the shared
+layer name, re-flags all seven colour maps (which arrive flagged Non-Color)
+as sRGB so the bake doesn't wash out, and drops two rival Material Output
+nodes — targeted at Cycles and each fed by a bare Diffuse BSDF, they win over
+the Principled the file renders with; left in, those parts would bake black
+albedo (a Diffuse node emits nothing) and roughness 1.
 
-To edit the model: open `mer.blend` in Blender 5.2 LTS at frame 1325, change
-materials, save, update this file's line in `../meshes.sha256`, then
+Every joint hangs off a material-less marker cube, and those cubes stay in
+the file as parents: the pre-bake omits them from the join, and its
+`parent_clear` keeps each freed part's transform — which is what lets the
+cubes go without detaching the wheels and panels they carry.
+
+To edit the model: open `mer.blend` in Blender 5.2 LTS, change materials,
+save, update this file's line in `../meshes.sha256`, then
 `npm run prebake-mesh -- mer` and `npm run build-meshes`.
 
 ## The pre-bake — what `build-meshes` actually reads

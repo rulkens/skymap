@@ -30,8 +30,7 @@ Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 `perseverance.blend` is what the pre-bake opens, not the download above.
 Written by Blender 5.2 LTS, it does not open in older versions. Re-import it
 from the pristine download at any time with `npm run import-mesh --
-perseverance` (Blender 5.2 LTS, not run in CI) — this **overwrites any edits**
-made since the last import.
+perseverance` — this **overwrites any edits** made since the last import.
 
 `tools/meshes/prebake/importMesh.py` evaluates the scene at **frame 120**
 before saving. The frame is load-bearing: the file's saved transforms park the
@@ -39,17 +38,12 @@ rover with its remote-sensing mast folded flat on the deck (bbox tops out at
 1.85 m); the deploy animation raises it over frames 0→48 and re-stows it after
 ~338, so any frame in 48–290 gives the mast-up rover at its real 2.23 m
 height, while saving the default pose would ship a headless rover. The
-importer then applies the armature deform on every part, freezes each part's
-world transform at that frame (dropping the rig, so the pre-bake's `join`
-needs no parenting), collapses the mixed UV-layer names onto one shared layer
-and re-points every Normal Map node at it, re-flags any Base Color texture the
-source left as Non-Color so it decodes sRGB, and collapses rival Material
-Output nodes onto the one the file renders with. This download has none of
-the defects these last three passes exist for, so they are no-ops here; the
-importer runs them uniformly over every source.
+importer applies the armature deform at that frame, clears the animation, and
+collapses the parts' UV layers onto one shared name, re-pointing the 11
+Normal Map nodes that named the old one.
 
-To edit the model: open `perseverance.blend` in Blender 5.2 LTS at frame 120,
-change materials, save, update this file's line in `../meshes.sha256`, then
+To edit the model: open `perseverance.blend` in Blender 5.2 LTS, change
+materials, save, update this file's line in `../meshes.sha256`, then
 `npm run prebake-mesh -- perseverance` and `npm run build-meshes`.
 
 ## The pre-bake — what `build-meshes` actually reads
@@ -89,7 +83,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 glTF 2.0, Draco-compressed: 69 mesh nodes, 199,601 tris, 47 materials, 22 packed
 textures (1024²/512²/256²), an armature and 23 animation actions (mast deploy
 plus cover releases). Authored normal maps reach the normal atlas only because
-the pre-bake re-points the 11 Normal Map nodes that name a UV layer at the
+the importer re-points the 11 Normal Map nodes that name a UV layer at the
 renamed one; a dangling name bakes flat in silence. Roughness spans 0.2–1.0 and
 about half the baked surface is fully metallic (aluminium, brass, gold foil,
 gunmetal). Their tint reaches the albedo atlas only because that row bakes Base

@@ -113,8 +113,9 @@ SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance", trian
 
 **Keep / change:**
 
-- `load(cfg)`: `open_mainfile(cfg["src"])`, then `scene.frame_set(scene.frame_current)`
-  (headless load does not evaluate animation on its own).
+- `load(cfg)`: `open_mainfile(cfg["src"])`. No `frame_set`: the importer leaves no animation
+  or drivers in any source (final review, measured), and the depsgraph evaluates at the saved
+  `frame_current` regardless.
 - `keepers(scene) -> (keep, dropped)`: meshes with faces and materials; the marker branch
   and its raise go.
 - `source_uv(meshes) -> str`: the name of the single UV layer every keeper shares; raises

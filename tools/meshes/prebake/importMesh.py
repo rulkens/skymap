@@ -154,15 +154,13 @@ def freeze_pose(scene, doomed):
     """After `frame_set` the evaluated F-curve values sit in each object's own
     loc/rot/scale, so clearing animation alone keeps the pose. Only children of
     a doomed marker are unparented: writing `matrix_world` back into float32
-    loc/rot/scale drifts ~1e-7, enough to move the decimation. Their constraints
-    go too, or they would apply on top of the restored world matrix."""
+    loc/rot/scale drifts ~1e-7, enough to move the decimation."""
     bpy.context.view_layer.update()
     world = {obj: obj.matrix_world.copy() for obj in scene.objects}
     for obj in world:
         obj.animation_data_clear()
     orphans = [obj for obj in world if obj.parent in doomed]
     for obj in orphans:
-        obj.constraints.clear()
         obj.parent = None
         obj.matrix_world = world[obj]
     return len(world), len(orphans)
