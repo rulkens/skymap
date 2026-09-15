@@ -34,6 +34,7 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
+import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
@@ -163,10 +164,17 @@ export const earthPass: ContentPass = {
 
     const prepared = prepareBodySurfaceFrame(state, ctx, view);
     if (prepared === null) return;
-    const { bodyState: earthState, radiusM, mvpLocal, camLocal } = prepared;
-    // Narrow HERE, at the GPU-upload boundary — `prepared.mvpLocal` stays f64
-    // for the tile planner's own read of it (see PreparedBodySurfaceFrame's doc).
-    const mvp = narrowMat4(mvpLocal);
+    const { body, bodyState: earthState, radiusM } = prepared;
+    // The base globe alone draws at the INNER bound (datum + reliefM[0], never
+    // positive) so a below-datum trench can never be occluded by it (§7.4,
+    // F2-R5) — its own frame, recomposed here at the GPU-upload boundary.
+    // `prepared.mvpLocal`/`camLocal` stay on the datum for the tile planner
+    // and drawPick, which read the same memo.
+    const baseGlobeRadiusM = innerBoundRadiusM(body.surface);
+    const mvp = narrowMat4(
+      composeBodySlabMvp(view.slab.vp, prepared.pose.eyeRelBodyM, baseGlobeRadiusM),
+    );
+    const camLocal = bodySlabCamLocal(prepared.pose.eyeRelBodyM, baseGlobeRadiusM);
     const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
 
     // Sun direction rotated into Earth's local frame (orientation carries the

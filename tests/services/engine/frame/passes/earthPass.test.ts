@@ -44,6 +44,7 @@ import { frameUp } from '../../../../../src/utils/camera/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
+import { innerBoundRadiusM } from '../../../../../src/utils/scene/innerBoundRadiusM';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
@@ -454,17 +455,23 @@ describe('earthPass.draw', () => {
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     earthPass.draw(PASS_STUB, view, ctx, state);
 
-    // Exactly one MVP composed for the single Earth body.
-    expect(mvpMock).toHaveBeenCalledTimes(1);
+    // Two MVPs composed: prepareBodySurfaceFrame's (the datum, memoised for
+    // the tile planner/drawPick) and the base globe's own, at the inner
+    // bound (F2-R5) so relief can never be occluded by it (§7.4).
+    expect(mvpMock).toHaveBeenCalledTimes(2);
     const call = mvpMock.mock.calls[0]!;
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     // The body's true equatorial radius in metres, not an Mpc conversion.
     expect(call[2]).toBe(SEEDED_EARTH.surface.datumRadiusM);
+    // The base globe's own compose, at the inner bound — never the datum.
+    const baseGlobeCall = mvpMock.mock.calls[1]!;
+    expect(baseGlobeCall[2]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
 
-    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    expect(camLocalMock).toHaveBeenCalledTimes(2);
     expect(camLocalMock.mock.calls[0]![1]).toBe(SEEDED_EARTH.surface.datumRadiusM);
+    expect(camLocalMock.mock.calls[1]![1]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
 
     // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
