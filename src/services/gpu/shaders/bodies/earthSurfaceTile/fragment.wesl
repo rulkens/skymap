@@ -152,9 +152,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;
 
   let nightColour = textureSample(nightTexture, baseSampler, equirectUv).rgb;
-  let NoL = max(dot(n, l), 0.0);
+  // Whether the sun is up is the DATUM's cosine, not the terrain's: keyed on
+  // 'n', every slope facing away from the sun at noon read as night and lit up
+  // with the city's Black Marble glow (Søndermarken's banks turned cream).
+  let sunUp = max(dot(Ng, l), 0.0);
   let cloudAlphaHere = textureSample(cloudTexture, baseSampler, equirectUv).a;
-  let emissive = nightLights(nightColour, NoL, cloudAlphaHere);
+  let emissive = nightLights(nightColour, sunUp, cloudAlphaHere);
 
   var finalColour = colour + emissive;
   // Earth LOD overlay ('u.debugLodOverlay' > 0.5) -- a runtime, not
