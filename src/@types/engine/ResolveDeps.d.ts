@@ -1,7 +1,7 @@
 import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
-import type { StructureInfo } from '../data/structure/StructureInfo';
+import type { StructureStore } from './data/StructureStore';
 import type { StarCatalog } from '../data/starCatalog/StarCatalog';
 
 /**
@@ -16,7 +16,9 @@ import type { StarCatalog } from '../data/starCatalog/StarCatalog';
 export type ResolveDeps = {
   readonly catalogs: { get(source: GalaxyCatalogSourceType): GalaxyCatalog | undefined };
   readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
-  readonly structures: { byId(id: string): StructureInfo | null };
+  // Widened to the two methods the structure selection row needs (Ruling 5):
+  // `resolveStructureFromPick` reads `byCategory`, `extractRow` reads `byId`.
+  readonly structures: Pick<StructureStore, 'byId' | 'byCategory'>;
   // The sole loaded star catalog (v1 ships one starCatalog source, the Gaia
   // bin). Reads LIVE engine state each call like the other getters — null
   // before the star cloud lands, so a star deep-link retries rather than

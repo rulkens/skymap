@@ -1,0 +1,51 @@
+/**
+ * composeSelectionRows — the one `SelectionResolver` the saga context and the
+ * pick path both read (D5, Ruling 4). `rowsOf` is called per resolution, not
+ * cached, so a Layer row `createLayers` appends after this resolver is built
+ * is visible immediately. Focus ids resolve by claim-then-decode: the one
+ * claiming row is authoritative even when its `decode` returns null; two or
+ * more claims is a boot-shape bug and throws rather than picking a winner.
+ */
+
+import { SOURCE_REGISTRY } from '../../../data/sources';
+import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
+import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
+
+export function composeSelectionRows(rowsOf: () => readonly SelectionKindRow[]): SelectionResolver {
+  return {
+    resolvePick(pick) {
+      if (pick === null) return null;
+      const row = rowsOf().find((r) => r.pickSources.includes(pick.sourceCode));
+      if (!row) {
+        console.warn(`resolvePick: source code ${pick.sourceCode} is not a pickable surface`);
+        return null;
+      }
+      return row.resolvePick(SOURCE_REGISTRY[pick.sourceCode], pick);
+    },
+
+    extractRow(ref, simDays) {
+      if (ref === null) return null;
+      const row = rowsOf().find((r) => r.type === ref.type);
+      return row ? row.extractRow(ref, simDays) : null;
+    },
+
+    resolveFocusId(focusId) {
+      if (!focusId) return null;
+      const claiming = rowsOf().filter((r) => r.focusId?.claims(focusId));
+      if (claiming.length === 0) return null;
+      if (claiming.length > 1) {
+        throw new Error(
+          `composeSelectionRows: focus id "${focusId}" is claimed by more than one row (${claiming
+            .map((r) => r.type)
+            .join(', ')})`,
+        );
+      }
+      return claiming[0]!.focusId!.decode(focusId);
+    },
+
+    focusIdOf(ref) {
+      const row = rowsOf().find((r) => r.type === ref.type);
+      return row?.focusId ? row.focusId.encode(ref) : null;
+    },
+  };
+}
