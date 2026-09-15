@@ -11,7 +11,6 @@
 
 import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineComposition } from '../../@types/engine/EngineComposition';
@@ -54,7 +53,6 @@ import { selectTimeState } from '../../state/time/selectors';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyState } from '../../@types/scene/BodyState';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
-import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
 import type { RequestKey } from '../../@types/loading/RequestKey';
@@ -156,9 +154,6 @@ export function createEngine(
     },
     get selectionRows() {
       return store.getState().selectionRows;
-    },
-    get famousGalaxiesMeta() {
-      return selectFamousGalaxiesMeta(store.getState());
     },
     data: engineData,
     picking: {
@@ -409,10 +404,7 @@ export function createEngine(
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
   const resolveDeps = (): ResolveDeps => ({
-    catalogs: {
-      get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
-    },
-    famousGalaxiesMeta: state.famousGalaxiesMeta,
+    catalogs: state.data.galaxies,
     structures: {
       byId: (id) => state.data.structures.byId(id),
       byCategory: (cat) => state.data.structures.byCategory(cat),

@@ -138,7 +138,7 @@ function makeState(): EngineState {
     // never invoked — an empty galaxies/structures stub is enough.
     data: {
       structures: { byCategory: () => [] },
-      galaxies: { get: () => undefined, famousGalaxiesMeta: [] },
+      galaxies: { get: () => undefined, famousMeta: [] },
     } as never,
     gpu: {
       galaxyPointRenderer: {

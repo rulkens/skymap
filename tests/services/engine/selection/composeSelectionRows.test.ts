@@ -73,10 +73,10 @@ const deps: ResolveDeps = {
       if (s === Source.FamousGalaxy) return makeCloud(0n, [1, 0, 0]);
       return undefined;
     },
+    famousMeta: [
+      { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
+    ],
   },
-  famousGalaxiesMeta: [
-    { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
-  ],
   structures: {
     byId: (id) => (id === 'virgo' ? virgo : null),
     byCategory: (cat) => (cat === 'cluster' ? [virgo] : []),
@@ -248,7 +248,10 @@ describe('resolveFocusId, composed', () => {
       index: 0,
     });
     expect(resolver.resolveFocusId('sdss-9999')).toBeNull();
-    const noSdss = selectionResolverOver({ ...deps, catalogs: { get: () => undefined } });
+    const noSdss = selectionResolverOver({
+      ...deps,
+      catalogs: { ...deps.catalogs, get: () => undefined },
+    });
     expect(noSdss.resolveFocusId('sdss-1237668393006604288')).toBeNull();
   });
 
@@ -280,7 +283,10 @@ describe('resolveFocusId, composed', () => {
     // deferral, not an unclaimed miss.
     const noCloud = selectionResolverOver({
       ...deps,
-      catalogs: { get: (s) => (s === Source.FamousGalaxy ? undefined : deps.catalogs.get(s)) },
+      catalogs: {
+        ...deps.catalogs,
+        get: (s) => (s === Source.FamousGalaxy ? undefined : deps.catalogs.get(s)),
+      },
     });
     expect(noCloud.resolveFocusId('m31')).toBeNull();
   });
@@ -323,6 +329,7 @@ describe('resolveFocusId, composed', () => {
     const posOnly = selectionResolverOver({
       ...deps,
       catalogs: {
+        ...deps.catalogs,
         get: (s) => (s === Source.SDSS ? makeCloud(1237668393006604288n, [1, 0, 0]) : undefined),
       },
     });
@@ -347,7 +354,10 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   it('GLADE ref (objId 0n) → pos@ra,dec → same ref', () => {
     const posDeps = selectionResolverOver({
       ...deps,
-      catalogs: { get: (s) => (s === Source.Glade ? makeCloud(0n, [1, 0, 0]) : undefined) },
+      catalogs: {
+        ...deps.catalogs,
+        get: (s) => (s === Source.Glade ? makeCloud(0n, [1, 0, 0]) : undefined),
+      },
     });
     const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
     const id = posDeps.focusIdOf(ref);

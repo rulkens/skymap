@@ -54,8 +54,7 @@ const M81_GROUP: StructureInfo = {
 } as StructureInfo;
 
 const DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: {
     byId: (id) =>
       id === 'group-local-group' ? LOCAL_GROUP : id === 'group-m81-group' ? M81_GROUP : null,

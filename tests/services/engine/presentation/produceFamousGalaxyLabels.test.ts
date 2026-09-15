@@ -39,12 +39,12 @@ const MEASURED_BBOX: LabelBBox = { minX: -50, minY: -30, maxX: 50, maxY: 12 };
 const TEXT_BOTTOM_BELOW_ANCHOR_PX =
   MEASURED_BBOX.maxY * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
-// produceFamousGalaxyLabels reads `state.famousGalaxiesMeta` for the sidecar records and
-// `state.data.galaxies` for the positional catalog, `state.subsystems.fades`
-// for the `galaxy` layer opacity (read-only),
+// produceFamousGalaxyLabels reads `state.data.galaxies` for the sidecar records
+// and the positional catalog, `state.subsystems.fades` for the `galaxy` layer
+// opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
 // visibility gate, and `state.gpu.labelRenderer.measure` for the caption's ink
-// bbox (which places the leader-line top). The fixture supplies all five; the
+// bbox (which places the leader-line top). The fixture supplies all four; the
 // `galaxy` handle is registered at 1 so the at-rest opacity is 1. The
 // famous label gate defaults visible.
 function makeState(
@@ -60,7 +60,6 @@ function makeState(
   const bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     data: createEngineData(),
-    famousGalaxiesMeta: [],
     gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades,
@@ -127,26 +126,13 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
     diameterKpc: new Float32Array(diameters),
   }) as unknown as GalaxyCatalog;
 
-// `famousGalaxiesMeta` is readonly on `EngineState` (the getter delegates to
-// the Redux store in the real engine); the fixture is a plain object
-// literal, so writing through a mutable-view cast is the direct way to seed
-// it here.
-function setFamousGalaxiesMeta(
-  state: EngineState,
-  entries: Partial<FamousGalaxyMetaEntry>[],
-): void {
-  (state as unknown as { famousGalaxiesMeta: FamousGalaxyMetaEntry[] }).famousGalaxiesMeta = meta(
-    ...entries,
-  );
-}
-
 function seed(
   state: EngineState,
   entries: Partial<FamousGalaxyMetaEntry>[],
   positions: number[],
   diameters: number[],
 ): void {
-  setFamousGalaxiesMeta(state, entries);
+  state.data.galaxies.setFamousMeta(meta(...entries));
   state.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog(positions, diameters));
 }
 
@@ -300,7 +286,7 @@ describe('produceFamousGalaxyLabels', () => {
 
   it('emits nothing when the famous catalog is absent or meta is empty', () => {
     const noCatalog = makeState();
-    setFamousGalaxiesMeta(noCatalog, [{ id: 'm31', names: ['M31'] }]);
+    noCatalog.data.galaxies.setFamousMeta(meta({ id: 'm31', names: ['M31'] }));
     expect(produceFamousGalaxyLabels(noCatalog, makeCtx()).labels).toEqual([]);
 
     const noMeta = makeState();
@@ -411,7 +397,9 @@ describe('produceFamousGalaxyLabels', () => {
     for (const label of labels) {
       const pick = unpackPick(label.pickId!)!;
       expect(pick.sourceCode).toBe(Source.FamousGalaxy);
-      expect(state.famousGalaxiesMeta[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
+      expect(state.data.galaxies.famousMeta[pick.localIdx]!.id).toBe(
+        label.id.replace('famous-', ''),
+      );
     }
   });
 });

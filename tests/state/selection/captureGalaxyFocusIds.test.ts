@@ -56,8 +56,8 @@ function makeSdssResolveDeps(objId: bigint): ResolveDeps {
   return {
     catalogs: {
       get: (src) => (src === Source.SDSS ? cloud : undefined),
+      famousMeta: [],
     },
-    famousGalaxiesMeta: [],
     structures: { byId: () => null, byCategory: () => [] },
     stars: { current: () => null },
   };
@@ -128,8 +128,7 @@ describe('captureGalaxyFocusIds', () => {
     // 2MRS and Famous have empty tierTargets, so galaxyCatalogRequest names the
     // same request for every tier — every swap, not just one pair, must skip.
     const resolveDeps: ResolveDeps = {
-      catalogs: { get: () => undefined },
-      famousGalaxiesMeta: [],
+      catalogs: { get: () => undefined, famousMeta: [] },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
@@ -175,8 +174,7 @@ describe('captureGalaxyFocusIds', () => {
     store.dispatch(updateSelectionSelect(SDSS_REF));
 
     const emptyDeps: ResolveDeps = {
-      catalogs: { get: () => undefined }, // SDSS cloud absent
-      famousGalaxiesMeta: [],
+      catalogs: { get: () => undefined, famousMeta: [] }, // SDSS cloud absent
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };

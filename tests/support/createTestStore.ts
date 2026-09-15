@@ -59,8 +59,7 @@ export const NOOP_RECONCILE: ReconcileEffects = {
 // store with no data behind it, and the difference between a deferred deep link
 // and a TypeError that cancels the root saga.
 const EMPTY_RESOLVE_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };

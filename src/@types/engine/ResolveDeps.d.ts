@@ -1,20 +1,18 @@
-import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogSourceType } from '../data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
+import type { GalaxyStore } from './data/GalaxyStore';
 import type { StructureStore } from './data/StructureStore';
 import type { StarCatalog } from '../data/starCatalog/StarCatalog';
 
 /**
  * ResolveDeps — the engine resources the six core `SelectionKindRow`s close
- * over: live catalog lookup, the famous-galaxies meta sidecar, the structure
- * store, and the loaded star catalog. Bundled (not threaded individually) so
- * the saga gets the whole bag from `getContext('resolveDeps')()`. The getters
- * read LIVE engine state each call (the catalogs/structures change as clouds
- * load), so a row always sees current data.
+ * over: the galaxy store view (catalog lookup plus the famous sidecar), the
+ * structure store, and the loaded star catalog. Bundled (not threaded
+ * individually) so the saga gets the whole bag from
+ * `getContext('resolveDeps')()`. The getters read LIVE engine state each call
+ * (the catalogs/structures change as clouds load), so a row always sees
+ * current data.
  */
 export type ResolveDeps = {
-  readonly catalogs: { get(source: GalaxyCatalogSourceType): GalaxyCatalog | undefined };
-  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
+  readonly catalogs: Pick<GalaxyStore, 'get' | 'famousMeta'>;
   // Widened to the two methods the structure selection row needs (Ruling 5):
   // `resolveStructureFromPick` reads `byCategory`, `extractRow` reads `byId`.
   // `loaded` is OPTIONAL rather than folded into the Pick: it exists only for
