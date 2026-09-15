@@ -14,15 +14,15 @@
 
 ## Rulings made at plan time (do not re-open; the final review checks against these)
 
-| #     | Ruling                                                                                                                                                                                                                                                                                                                                                                                                | Why                                                                                                                                                                                                                                                                             |
-| ----- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F2-R1 | **One 3-valued code per edge, in the existing `edgeCoarser` field** — `0` neighbour at the same level or finer or absent, `1` exactly one level coarser (collapse), `2` coarser by more than one level (skirt) — packed 2 bits per edge into the record's `u32`. NOT a second `edgeSeam` bit field. **Flagged for the user.**                                                                            | Two parallel bit arrays admit a state that cannot exist (collapse AND skirt on one edge) and split one fact — how far the neighbour steps up — across two fields the shader would have to keep consistent. Cost if wrong: one element type and ~20 lines in `balanceSurfaceCut`. |
-| F2-R2 | **The skirt is fine-side-only and always present in the geometry**: the template carries a `4·(n+1)`-vertex ring whose depth is zero unless that edge's code is `2`. One index buffer, one draw, one pipeline for every patch.                                                                                                                                                                         | A per-patch index-buffer choice means a draw call per patch, which is exactly what P6 deleted. Zero-depth quads are degenerate and cost a cull. The coarse side sees the fine side as "finer" (code 0), so only the fine side ever draws a skirt — no double wall.                |
-| F2-R3 | **Skirt depth = `SURFACE_TILE_SKIRT_DEPTH_FRACTION` (0.05) × the patch's north–south extent** (`radiusM · dLatRad`): 15.6 km at z7, 245 m at z13, 3.8 m at z19. Applied as `h − depth` at the ring's boundary post, so the skirt hangs radially inward and is the same position formula, not a second one. **Flagged for the user** (tunable at the eye-check).                                          | The true gap is the coarse neighbour's `geometricResidualM`, which the fine side cannot read — F2 carries no neighbour data beyond the edge code. A constant, so tuning it is neither a re-bake nor a format change.                                                             |
-| F2-R4 | **Earth's `reliefM` becomes `[-430, 8849]`** — a literal in `sceneEarth.ts` carrying a "F3 replaces this from the compiled §3.4e grid" line. **Flagged for the user**; the alternative, if zero change outside §7.4 is wanted, is `[-430, 0]`.                                                                                                                                                          | §7.4 needs `reliefM[0]`; a `[-430, 0]` half-truth is the same lie F3's horizon cap would then inherit. Blast radius is every reader of the two bounds, all under 0.15 % — named in Task 7 so the reviewer can check each.                                                        |
-| F2-R5 | **Only the BASE globe shrinks.** The tile draw's `radiusM` uniform, the tile planner's `mvpLocal`, and the body-slab pick sphere all stay on `datumRadiusM`.                                                                                                                                                                                                                                           | Heights are defined against the datum (§5.3) — a tile drawn against any other radius displaces off the wrong sphere. F3's `raycast` replaces the pick sphere anyway.                                                                                                             |
-| F2-R6 | **`npm run perf` is a USER-RUN step (Task 9).** No agent runs the harness, before or after.                                                                                                                                                                                                                                                                                                            | The user's standing instruction. §11 still wants the measurement after displacement lands; the user runs it in this worktree with its own `--url`.                                                                                                                               |
-| F2-R7 | **The three TS twins (`surfacePatchPostIndex`, `collapseTemplateIndex`, `surfaceNormalFromHeightCell`) have no production caller by design** and exist as the testable statement of a WGSL contract, each named in its WESL counterpart's comment as the twin.                                                                                                                                          | P6's `patchVertexOffsetM` set the precedent and the bug class is real: an index flip or a sign flip in these three is silent in a screenshot and structural in the picture. A deletion audit must not read them as dead.                                                         |
+| #     | Ruling                                                                                                                                                                                                                                                                                                                                                          | Why                                                                                                                                                                                                                                                                              |
+| ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F2-R1 | **One 3-valued code per edge, in the existing `edgeCoarser` field** — `0` neighbour at the same level or finer or absent, `1` exactly one level coarser (collapse), `2` coarser by more than one level (skirt) — packed 2 bits per edge into the record's `u32`. NOT a second `edgeSeam` bit field. **Flagged for the user.**                                   | Two parallel bit arrays admit a state that cannot exist (collapse AND skirt on one edge) and split one fact — how far the neighbour steps up — across two fields the shader would have to keep consistent. Cost if wrong: one element type and ~20 lines in `balanceSurfaceCut`. |
+| F2-R2 | **The skirt is fine-side-only and always present in the geometry**: the template carries a `4·(n+1)`-vertex ring whose depth is zero unless that edge's code is `2`. One index buffer, one draw, one pipeline for every patch.                                                                                                                                  | A per-patch index-buffer choice means a draw call per patch, which is exactly what P6 deleted. Zero-depth quads are degenerate and cost a cull. The coarse side sees the fine side as "finer" (code 0), so only the fine side ever draws a skirt — no double wall.               |
+| F2-R3 | **Skirt depth = `SURFACE_TILE_SKIRT_DEPTH_FRACTION` (0.05) × the patch's north–south extent** (`radiusM · dLatRad`): 15.6 km at z7, 245 m at z13, 3.8 m at z19. Applied as `h − depth` at the ring's boundary post, so the skirt hangs radially inward and is the same position formula, not a second one. **Flagged for the user** (tunable at the eye-check). | The true gap is the coarse neighbour's `geometricResidualM`, which the fine side cannot read — F2 carries no neighbour data beyond the edge code. A constant, so tuning it is neither a re-bake nor a format change.                                                             |
+| F2-R4 | **Earth's `reliefM` becomes `[-430, 8849]`** — a literal in `sceneEarth.ts` carrying a "F3 replaces this from the compiled §3.4e grid" line. **Flagged for the user**; the alternative, if zero change outside §7.4 is wanted, is `[-430, 0]`.                                                                                                                  | §7.4 needs `reliefM[0]`; a `[-430, 0]` half-truth is the same lie F3's horizon cap would then inherit. Blast radius is every reader of the two bounds, all under 0.15 % — named in Task 7 so the reviewer can check each.                                                        |
+| F2-R5 | **Only the BASE globe shrinks.** The tile draw's `radiusM` uniform, the tile planner's `mvpLocal`, and the body-slab pick sphere all stay on `datumRadiusM`.                                                                                                                                                                                                    | Heights are defined against the datum (§5.3) — a tile drawn against any other radius displaces off the wrong sphere. F3's `raycast` replaces the pick sphere anyway.                                                                                                             |
+| F2-R6 | **`npm run perf` is a USER-RUN step (Task 9).** No agent runs the harness, before or after.                                                                                                                                                                                                                                                                     | The user's standing instruction. §11 still wants the measurement after displacement lands; the user runs it in this worktree with its own `--url`.                                                                                                                               |
+| F2-R7 | **The three TS twins (`surfacePatchPostIndex`, `collapseTemplateIndex`, `surfaceNormalFromHeightCell`) have no production caller by design** and exist as the testable statement of a WGSL contract, each named in its WESL counterpart's comment as the twin.                                                                                                  | P6's `patchVertexOffsetM` set the precedent and the bug class is real: an index flip or a sign flip in these three is silent in a screenshot and structural in the picture. A deletion audit must not read them as dead.                                                         |
 
 ## Branch and PR
 
@@ -30,12 +30,12 @@ Branch `terrain-f2-displacement` off **`terrain-f1-height-products`** (F1, in re
 
 ## Dispatch grouping (controller)
 
-| Dispatch | Tasks | Model  | Why grouped                                                                                                    |
-| -------- | ----- | ------ | -------------------------------------------------------------------------------------------------------------- |
-| D1       | 1–2   | Opus   | the contract the shader will read: the cut's edge code and the 80-byte record. No picture change lands in D1.  |
+| Dispatch | Tasks | Model  | Why grouped                                                                                                     |
+| -------- | ----- | ------ | --------------------------------------------------------------------------------------------------------------- |
+| D1       | 1–2   | Opus   | the contract the shader will read: the cut's edge code and the 80-byte record. No picture change lands in D1.   |
 | D2       | 3–6   | Opus   | the shader itself — one file set (`vertex.wesl`, `fragment.wesl`, `io.wesl`, the three twins), one mental model |
-| D3       | 7–8   | Sonnet | base globe + docs; touches neither the shader nor the cut                                                      |
-| —        | 9     | user   | eye-check at four poses + the perf measurement (F2-R6)                                                         |
+| D3       | 7–8   | Sonnet | base globe + docs; touches neither the shader nor the cut                                                       |
+| —        | 9     | user   | eye-check at four poses + the perf measurement (F2-R6)                                                          |
 
 Every task in D1 and D2 is tagged `review: yes`; those tags **collapse to one review per dispatch** (the dispatch's whole diff, given the tasks' contracts and the named spec sections), not one per task — then one final whole-branch review after D3. Two mid-branch reviews, one final, no re-reviews.
 
@@ -76,13 +76,13 @@ readonly edgeCoarser: readonly [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2];
 
 The fill loop at `balanceSurfaceCut.ts:106-128` already has everything: `coveringLeaf` returns the leaf covering the neighbour cell, `null` when something **finer** covers it — so the coarse side of any step keeps `0` and only the fine side carries a code. Replace the `other.id.z === z - 1` test with `other.id.z < z ? (z - other.id.z === 1 ? 1 : 2) : 0`, and widen the "nothing to change" fast path accordingly.
 
-- [ ] Update the existing expectations rather than adding tests — they are the coverage:
+- [x] Update the existing expectations rather than adding tests — they are the coverage:
       `tests/utils/scene/balanceSurfaceCut.test.ts:177` (the deep-band island's NW leaf, ringed by z7 leaves six levels coarser) becomes `[2, 0, 0, 2]` — west and north, since the template's north edge faces the ring tile at `y − 1`;
       `:194` and `:195` (collapse refused for want of a parent, a two-level step) become `[2, 0, 0, 0]`;
       `:173` (the coarse ring itself), `:127`, `:128`, `:131`, `:132`, `:212`, `:213` are unchanged — a one-level step is still `1`, and the coarse side still carries nothing.
-- [ ] Rewrite the field's doc comment on `SurfaceCutTile` (it currently promises one bit) and the sentence in `balanceSurfaceCut`'s header that says "one bit per edge".
-- [ ] `npm run typecheck:fast`; `npm test -- balanceSurfaceCut cutSurfaceTiles`.
-- [ ] Commit `feat(terrain): per-edge coarseness code, band seams distinguishable from one-level steps`.
+- [x] Rewrite the field's doc comment on `SurfaceCutTile` (it currently promises one bit) and the sentence in `balanceSurfaceCut`'s header that says "one bit per edge".
+- [x] `npm run typecheck:fast`; `npm test -- balanceSurfaceCut cutSurfaceTiles`.
+- [x] Commit `feat(terrain): per-edge coarseness code, band seams distinguishable from one-level steps`.
 
 ### Task 2: `PatchInstance` at its full 80 bytes; the height atlas bound
 
@@ -119,10 +119,10 @@ Pipeline and pass wiring:
 - `earthPass.ts:196-200`: read `earthTiles?.getHeightAtlasView() ?? null` and add it to the `tilesLive` conjunction. **A cut must never draw without the height atlas** — from Task 3 on, every vertex position reads it.
 - The layout entry may legally exceed what the shader uses, so this task lands with the WGSL reading neither new field: **no picture change**, and the next tasks change only shader code.
 
-- [ ] Extend `earthSurfaceTileLayout.test.ts`'s struct parser to the `vec2u` / `u32` kinds (it parses `io.wesl` field by field) and assert `PATCH_INSTANCE_BYTES === 80` with `heightSlotOrigin` at 64 and `edgeCoarser` at 72.
-- [ ] `writePatchInstance` gains `heightSlotOriginX/Y` (`setUint32`) and `edgeCoarser` (`setUint32`) in declaration order; the renderer packs the code as `c0 | c1 << 2 | c2 << 4 | c3 << 6`.
-- [ ] `npm test -- earthSurfaceTileLayout`; probe the shader after the `io.wesl` edit.
-- [ ] Commit `feat(terrain): 80-byte PatchInstance and the height atlas binding`.
+- [x] Extend `earthSurfaceTileLayout.test.ts`'s struct parser to the `vec2u` / `u32` kinds (it parses `io.wesl` field by field) and assert `PATCH_INSTANCE_BYTES === 80` with `heightSlotOrigin` at 64 and `edgeCoarser` at 72.
+- [x] `writePatchInstance` gains `heightSlotOriginX/Y` (`setUint32`) and `edgeCoarser` (`setUint32`) in declaration order; the renderer packs the code as `c0 | c1 << 2 | c2 << 4 | c3 << 6`.
+- [x] `npm test -- earthSurfaceTileLayout`; probe the shader after the `io.wesl` edit.
+- [x] Commit `feat(terrain): 80-byte PatchInstance and the height atlas binding`.
 
 ### Task 3: vertex displacement at `n = 64`
 
@@ -146,7 +146,11 @@ export function surfacePatchPostIndex(i: number, j: number, n: number): readonly
 
 // patchVertexOffsetM gains the height, LAST parameter, metres above the datum:
 export function patchVertexOffsetM(
-  anchor: Readonly<SurfacePatchAnchor>, radiusM: number, s: number, t: number, heightM: number,
+  anchor: Readonly<SurfacePatchAnchor>,
+  radiusM: number,
+  s: number,
+  t: number,
+  heightM: number,
 ): Vec3;
 ```
 
@@ -175,12 +179,12 @@ let h = textureLoad(heightAtlas, inst.heightSlotOrigin + post, 0).r;
 
 `textureLoad` with an integer post, never a sampler: `textureSample` is illegal in the vertex stage, `r32float` is not guaranteed filterable, and hardware bilinear in a slot atlas bleeds the neighbouring slot in along every patch edge (§5.5, all three independent).
 
-- [ ] Extend `tests/utils/scene/patchVertexOffsetM.test.ts`: the existing z7 and z19 cases get a displaced twin each (`h = 8000` at z7, `h = 37` at z19) against the file's own f64 reference extended to `(R + h)·dir(lon, lat) − R·dir(lon0, lat0)`. The reference **may** use `R + h`: the ban is an f32 ban, and f64's ulp at 6.4e6 m is 1e-9 m. Keep the existing tolerances (1e-6 m at z7, 1e-7 m at z19) — the reference's own cancellation floor is ~1.4e-9 m.
-- [ ] Add `at s = t = 0 the offset is exactly h along the anchor's up`: the result must equal `h · (cos lat0 · cos lon0, cos lat0 · sin lon0, sin lat0)` to within 1e-9 m — the §7.1 corner property with height, and the reason patch corners still land on the f64 origin.
-- [ ] Add `tests/utils/scene/surfacePatchPostIndex.test.ts` with hand-computed pairs: `(0, 0, 64) → [0, 128]`, `(64, 64, 64) → [128, 0]`, `(1, 1, 64) → [2, 126]`, `(1, 0, 8) → [16, 128]`.
-- [ ] Add a `HEIGHT_POSTS_PER_TILE parity` describe to `constants.parity.test.ts` covering `vertex.wesl` (and, after Task 6, `fragment.wesl`) against the TS export, plus the one invariant that makes the stride integral: `(HEIGHT_POSTS_PER_TILE - 1) % EARTH_SURFACE_TILE_MESH_RESOLUTION === 0`.
-- [ ] Probe the shader. `npm test -- patchVertexOffsetM surfacePatchPostIndex constants.parity`.
-- [ ] Commit `feat(terrain): vertex displacement from the height atlas at mesh resolution 64`.
+- [x] Extend `tests/utils/scene/patchVertexOffsetM.test.ts`: the existing z7 and z19 cases get a displaced twin each (`h = 8000` at z7, `h = 37` at z19) against the file's own f64 reference extended to `(R + h)·dir(lon, lat) − R·dir(lon0, lat0)`. The reference **may** use `R + h`: the ban is an f32 ban, and f64's ulp at 6.4e6 m is 1e-9 m. Keep the existing tolerances (1e-6 m at z7, 1e-7 m at z19) — the reference's own cancellation floor is ~1.4e-9 m.
+- [x] Add `at s = t = 0 the offset is exactly h along the anchor's up`: the result must equal `h · (cos lat0 · cos lon0, cos lat0 · sin lon0, sin lat0)` to within 1e-9 m — the §7.1 corner property with height, and the reason patch corners still land on the f64 origin.
+- [x] Add `tests/utils/scene/surfacePatchPostIndex.test.ts` with hand-computed pairs: `(0, 0, 64) → [0, 128]`, `(64, 64, 64) → [128, 0]`, `(1, 1, 64) → [2, 126]`, `(1, 0, 8) → [16, 128]`.
+- [x] Add a `HEIGHT_POSTS_PER_TILE parity` describe to `constants.parity.test.ts` covering `vertex.wesl` (and, after Task 6, `fragment.wesl`) against the TS export, plus the one invariant that makes the stride integral: `(HEIGHT_POSTS_PER_TILE - 1) % EARTH_SURFACE_TILE_MESH_RESOLUTION === 0`.
+- [x] Probe the shader. `npm test -- patchVertexOffsetM surfacePatchPostIndex constants.parity`.
+- [x] Commit `feat(terrain): vertex displacement from the height atlas at mesh resolution 64`.
 
 ### Task 4: edge collapse on one-level steps
 
@@ -197,26 +201,28 @@ let h = textureLoad(heightAtlas, inst.heightSlotOrigin + post, 0).r;
  *  north]; in the TEMPLATE that is i = 0, i = n, j = 0, j = n, because the
  *  anchor's lat0 is the patch's SOUTH edge and t increases north. */
 export function collapseTemplateIndex(
-  i: number, j: number, n: number,
+  i: number,
+  j: number,
+  n: number,
   edgeCoarser: readonly [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2],
 ): readonly [number, number];
 ```
 
 Rule: code `1` only — code `2` never collapses, since the coarse side is more than one level away and has no post at the even index either.
 
-| code 1 on | applies when | snap                 |
-| --------- | ------------ | -------------------- |
-| west      | `i === 0`    | odd `j` → `j − 1`    |
-| east      | `i === n`    | odd `j` → `j − 1`    |
-| south     | `j === 0`    | odd `i` → `i − 1`    |
-| north     | `j === n`    | odd `i` → `i − 1`    |
+| code 1 on | applies when | snap              |
+| --------- | ------------ | ----------------- |
+| west      | `i === 0`    | odd `j` → `j − 1` |
+| east      | `i === n`    | odd `j` → `j − 1` |
+| south     | `j === 0`    | odd `i` → `i − 1` |
+| north     | `j === n`    | odd `i` → `i − 1` |
 
 The two axes are independent, so a corner vertex on two collapsed edges snaps on both. The snapped `(i, j)` feeds **both** `(s, t)` and the post index — one call, before either — which is what makes the two sides of the edge name the same lattice point and read the same post value. Why it is exactly zero crack: our vertices sit at `Δ/64` along the shared edge, the coarse neighbour's at `Δ/32`, so our even indices are its vertices; and the coarse tile's post there is the strict decimation of ours, bit-identical by §5.4.3 (R1). What is left is f32 residue from two different patch origins, ~µm (§7.3 row 4).
 
-- [ ] Tests, hand-computed: `an odd vertex on a collapsed west edge snaps toward the south` — `(0, 3, 64, [1,0,0,0]) → [0, 2]`; `an interior vertex never moves` — `(1, 3, 64, [1,1,1,1]) → [1, 3]`; `a vertex on two collapsed edges snaps on both axes` — `(3, 64, 64, [1,0,0,1]) → [2, 64]`; `a band-seam edge does not collapse` — `(0, 3, 64, [2,0,0,0]) → [0, 3]`.
-- [ ] Mirror the snap in `vertex.wesl` reading `(inst.edgeCoarser >> (2u * e)) & 3u` per edge, before `s`/`t` and the post lookup are computed.
-- [ ] Probe the shader. `npm test -- collapseTemplateIndex`.
-- [ ] Commit `feat(terrain): edge collapse onto one-level-coarser neighbours`.
+- [x] Tests, hand-computed: `an odd vertex on a collapsed west edge snaps toward the south` — `(0, 3, 64, [1,0,0,0]) → [0, 2]`; `an interior vertex never moves` — `(1, 3, 64, [1,1,1,1]) → [1, 3]`; `a vertex on two collapsed edges snaps on both axes` — `(3, 64, 64, [1,0,0,1]) → [2, 64]`; `a band-seam edge does not collapse` — `(0, 3, 64, [2,0,0,0]) → [0, 3]`.
+- [x] Mirror the snap in `vertex.wesl` reading `(inst.edgeCoarser >> (2u * e)) & 3u` per edge, before `s`/`t` and the post lookup are computed.
+- [x] Probe the shader. `npm test -- collapseTemplateIndex`.
+- [x] Commit `feat(terrain): edge collapse onto one-level-coarser neighbours`.
 
 ### Task 5: the skirt ring, on band-seam edges only
 
@@ -253,11 +259,11 @@ west (outward −Ê) and north (outward +N̂):  [b(k), b(k+1), s(k)]  and  [b(k+
 east (outward +Ê) and south (outward −N̂):  [b(k+1), b(k), s(k+1)] and  [b(k), s(k), s(k+1)]
 ```
 
-- [ ] `surfacePatchIndices(resolution)` appends the four edges' `6n` indices after the grid's `6n²`, in R9 edge order.
-- [ ] Test `skirt quads wind outward on all four edges`: lay the template flat — grid vertex `(i, j)` at `(i, j, 0)`, skirt vertex at its boundary post with `z = −1` — and assert every skirt triangle's `(B−A)×(C−A)` points along that edge's outward direction (`−x`, `+x`, `−y`, `+y`). This is the one bug class here that no screenshot at an ordinary pose reveals.
-- [ ] `vertex.wesl` maps the skirt id range and applies the depth; interpolants (`uv`, `tangent`, the atlas rects) are the boundary post's, unchanged.
-- [ ] Probe the shader. `npm test -- surfacePatchIndices`.
-- [ ] Commit `feat(terrain): band-seam skirts from a shared template ring`.
+- [x] `surfacePatchIndices(resolution)` appends the four edges' `6n` indices after the grid's `6n²`, in R9 edge order.
+- [x] Test `skirt quads wind outward on all four edges`: lay the template flat — grid vertex `(i, j)` at `(i, j, 0)`, skirt vertex at its boundary post with `z = −1` — and assert every skirt triangle's `(B−A)×(C−A)` points along that edge's outward direction (`−x`, `+x`, `−y`, `+y`). This is the one bug class here that no screenshot at an ordinary pose reveals.
+- [x] `vertex.wesl` maps the skirt id range and applies the depth; interpolants (`uv`, `tangent`, the atlas rects) are the boundary post's, unchanged.
+- [x] Probe the shader. `npm test -- surfacePatchIndices`.
+- [x] Commit `feat(terrain): band-seam skirts from a shared template ring`.
 
 ### Task 6: fragment normals from the height cell
 
@@ -275,9 +281,14 @@ east (outward +Ê) and south (outward −N̂):  [b(k+1), b(k), s(k+1)] and  [b(k
  *  an (i, j) spelling of this is one sign flip from lighting every slope
  *  backwards. `u` runs east across the cell, `v` runs SOUTH; both in [0, 1). */
 export function surfaceNormalFromHeightCell(
-  hNW: number, hNE: number, hSW: number, hSE: number,
-  u: number, v: number,
-  postSpacingEM: number, postSpacingNM: number,
+  hNW: number,
+  hNE: number,
+  hSW: number,
+  hSE: number,
+  u: number,
+  v: number,
+  postSpacingEM: number,
+  postSpacingNM: number,
 ): Vec3; // (E, N, U) components, unit length
 //   dhdE = ((hNE − hNW)·(1 − v) + (hSE − hSW)·v) / postSpacingEM
 //   dhdN = ((hNW − hSW)·(1 − u) + (hNE − hSE)·u) / postSpacingNM
@@ -294,9 +305,9 @@ Fragment-side plumbing:
 - frame: `Û = Ng`, `Ê = normalize(in.tangent)` (already carried), `N̂ = cross(Ng, Ê)`. The shading normal is `normalize(Û − dhdE·Ê − dhdN·N̂)`, replacing `perturbNormal(Ng, in.tangent, nEnc)`.
 - **delete** from the tile path: the `normalTexture` binding (8) and its layout entry, the `perturbNormal` import, `normalView` from `EarthSurfaceTileDrawArgs`, and `normalView: renderer.getMapView('normal')` from `earthPass`'s tile draw. The base globe keeps its own normal map — compositing both would shade the same relief twice (§7.2). `in.tangent` stays; it is now `Ê`.
 
-- [ ] Tests, hand-computed: `a flat cell is up` → `[0, 0, 1]`; `a 1:1 east slope tilts west` — `hNE − hNW = hSE − hSW = spacingE` → `[−√½, 0, √½]`; `a 1:1 north slope tilts south` — `hNW − hSW = hNE − hSE = spacingN` → `[0, −√½, √½]`; `the cell's interior interpolates between its two edge gradients` — an east slope that doubles from the north row to the south row reads its north-row value at `v = 0` and the mean at `v = 0.5`.
-- [ ] Probe the shader after each of `io.wesl`, `vertex.wesl`, `fragment.wesl`. `npm test -- surfaceNormalFromHeightCell earthSurfaceTileLayout constants.parity`.
-- [ ] Commit `feat(terrain): fragment normals from the height cell, whole-globe normal map off the tiles`.
+- [x] Tests, hand-computed: `a flat cell is up` → `[0, 0, 1]`; `a 1:1 east slope tilts west` — `hNE − hNW = hSE − hSW = spacingE` → `[−√½, 0, √½]`; `a 1:1 north slope tilts south` — `hNW − hSW = hNE − hSE = spacingN` → `[0, −√½, √½]`; `the cell's interior interpolates between its two edge gradients` — an east slope that doubles from the north row to the south row reads its north-row value at `v = 0` and the mean at `v = 0.5`.
+- [x] Probe the shader after each of `io.wesl`, `vertex.wesl`, `fragment.wesl`. `npm test -- surfaceNormalFromHeightCell earthSurfaceTileLayout constants.parity`.
+- [x] Commit `feat(terrain): fragment normals from the height cell, whole-globe normal map off the tiles`.
 
 ### Task 7: the base globe at `datumRadiusM + reliefM[0]`
 
@@ -321,17 +332,17 @@ The fade band and the `'nearer-or-equal'` compare do not move (§7.4). `CLOUD_SH
 - inner bound: `atmosphereParams.ts:34` (`EARTH_RADIUS_KM` 6371 → 6370.57), `sceneOccluderBodies.ts:75`, `meshBodiesPass.ts:88`.
 - outer bound: `earthFlyout.ts:58` and `makeEarthLoop.ts:26` (clip radii), `bodyTextureLoadRadius.ts:20`, `atmosphereDrawList.ts:88`, `bodyFootprintRadiusM.ts:15` — all +8.8 km on 6371 km, 0.14 %.
 
-- [ ] No new test: this is a constant and two call-site radii. Existing fixtures that pin an Earth-derived radius will move — update them to the new derivation, never to a hard-coded number.
-- [ ] `npm run typecheck:fast`; run the tests for the six files above plus `earthPass`; CI covers the rest.
-- [ ] Commit `feat(terrain): base globe drawn at the inner bound so relief cannot be occluded`.
+- [x] No new test: this is a constant and two call-site radii. Existing fixtures that pin an Earth-derived radius will move — update them to the new derivation, never to a hard-coded number.
+- [x] `npm run typecheck:fast`; run the tests for the six files above plus `earthPass`; CI covers the rest.
+- [x] Commit `feat(terrain): base globe drawn at the inner bound so relief cannot be occluded`.
 
 ### Task 8: docs
 
 **Files:** `docs/RENDERER.md`.
 
-- [ ] Update the Earth-surface bullet (`:14`) and the "no page table" landmine (`:27`): patches are displaced off the height atlas, geometry is `n = 64` while shading reads all 129 posts, and the module names there are F1's (`surfaceTileSubsystem.ts`, not `earthTileSubsystem.ts`) — fix any stale name in the lines you touch, nowhere else.
-- [ ] Add the F2 landmines beside the existing `textureSampleLevel` one (`:29`), one line each, no essay: `r32float` needs `sampleType: 'unfilterable-float'` and `textureLoad` (a sampler is illegal in the vertex stage and unguaranteed in the fragment); the height tile's row 0 is NORTH while the template's `j` counts north from the anchor's south edge; the per-edge code is 2 bits and a band seam (`2`) is skirted, never collapsed; the three TS twins are the only testable statement of the WGSL contracts and are not dead code.
-- [ ] No test. Commit `docs(renderer): displaced surface patches, height atlas, edge stitching`.
+- [x] Update the Earth-surface bullet (`:14`) and the "no page table" landmine (`:27`): patches are displaced off the height atlas, geometry is `n = 64` while shading reads all 129 posts, and the module names there are F1's (`surfaceTileSubsystem.ts`, not `earthTileSubsystem.ts`) — fix any stale name in the lines you touch, nowhere else.
+- [x] Add the F2 landmines beside the existing `textureSampleLevel` one (`:29`), one line each, no essay: `r32float` needs `sampleType: 'unfilterable-float'` and `textureLoad` (a sampler is illegal in the vertex stage and unguaranteed in the fragment); the height tile's row 0 is NORTH while the template's `j` counts north from the anchor's south edge; the per-edge code is 2 bits and a band seam (`2`) is skirted, never collapsed; the three TS twins are the only testable statement of the WGSL contracts and are not dead code.
+- [x] No test. Commit `docs(renderer): displaced surface patches, height atlas, edge stitching`.
 
 ### Task 9: eye-check and perf (controller + user)
 

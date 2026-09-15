@@ -28,7 +28,7 @@ const seededPlanet = (id: string): PlanetBody => {
 // authored in metres. The boundary is crossed here and nowhere else.
 // The ground sphere is the INNER bound: a floor above a peak would leave that
 // peak outside its own atmosphere. That only composites correctly once §2's
-// depth-aware shell lands; with today's zero relief it is the datum exactly.
+// depth-aware shell lands.
 const seededRadiusKm = (id: string): number =>
   innerBoundRadiusM(seededPlanet(id).surface) * SCALE_UNITS.M_TO_KM;
 const EARTH_RADIUS_KM = innerBoundRadiusM(SCENE_EARTH.surface) * SCALE_UNITS.M_TO_KM;

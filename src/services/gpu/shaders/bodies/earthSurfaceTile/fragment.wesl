@@ -1,18 +1,8 @@
-// earthSurfaceTile/fragment.wesl — shading maths, over budget on that
-// basis. Mirrors earth/fragment.wesl's composition ('lib/pbr.wesl'
-// 'pbrDirect', the ocean/land roughness split, cloud ground-shadow,
-// night-lights) so a resident tile reads as a seamless closeup of the same
-// globe -- see that file's header for the physical derivation of each
-// term, not repeated here. Differs only in addressing: 'surfaceTexture' is
-// the surfaceTileSubsystem ATLAS, sampled at the CPU-RESOLVED rect
-// ('atlasUvOrigin + uv * atlasUvScale') in place of the base globe's
-// per-fragment page-table lookup (Task 2's 'cutSurfaceTiles' already
-// resolved it once per LEAF); 'material'/'night'/'clouds' stay the SAME
-// whole-globe textures, sampled at an equirect uv reconstructed from the
-// interpolated local normal (this mesh carries only intra-tile uv -- see
-// io.wesl). The whole-globe NORMAL map is deliberately absent: patches take
-// their normal from the height field alone, since compositing both would
-// shade the same relief twice (spec section 7.2).
+// earthSurfaceTile/fragment.wesl — mirrors earth/fragment.wesl's shading
+// ('lib/pbr.wesl' 'pbrDirect', roughness split, cloud shadow, night-lights);
+// see that file's header for the derivation. Differs only in addressing
+// ('surfaceTexture' is the CPU-resolved atlas rect) and skips the whole-globe
+// NORMAL map: patches shade from the height field alone (spec section 7.2).
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;

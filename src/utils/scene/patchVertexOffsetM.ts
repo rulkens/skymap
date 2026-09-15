@@ -17,9 +17,7 @@ export function patchVertexOffsetM(
   radiusM: number,
   s: number,
   t: number,
-  /** Metres above the datum, DISTRIBUTED below rather than summed into the
-   *  radius: the f32 sum `radiusM + heightM` quantizes to 0.5 m at Earth's
-   *  radius and terraces every patch (spec §7.1). */
+  /** Metres above the datum; distributed, never summed into `radiusM` — see vertex.wesl. */
   heightM: number,
 ): Vec3 {
   const { lon0Rad, lat0Rad } = anchor;

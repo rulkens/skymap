@@ -1,16 +1,11 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 
-/**
- * surfaceNormalFromHeightCell — the unit normal of the bilinear cell a fragment
- * lies in, from that cell's own four posts, in the local (Ê, N̂, Û) frame. TWIN
- * of the gradient in `earthSurfaceTile/fragment.wesl`, with no production caller
- * by design. Spec §7.2's FORWARD difference: a central one goes one-sided at the
- * 129th post and draws a seam along every tile edge.
- */
+/** surfaceNormalFromHeightCell — unit normal of the bilinear cell a fragment
+ *  lies in, in the local (Ê, N̂, Û) frame. TWIN of the gradient in
+ *  `earthSurfaceTile/fragment.wesl`. */
 export function surfaceNormalFromHeightCell(
-  /** Posts by compass corner, never by index: the atlas's row index increases
-   *  SOUTHWARD, and an `(i, j)` spelling is one flip from lighting every slope
-   *  backwards. `u` runs east across the cell, `v` runs SOUTH; both in [0, 1). */
+  /** By compass corner, never by index: the atlas's row index increases
+   *  SOUTHWARD, so an `(i, j)` spelling is one flip from lighting every slope backwards. */
   hNW: number,
   hNE: number,
   hSW: number,

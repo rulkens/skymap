@@ -46,13 +46,13 @@ describe('surfacePatchIndices', () => {
   it('covers the grid and the skirt ring', () => {
     const indices = surfacePatchIndices(RESOLUTION);
     const row = RESOLUTION + 1;
-    expect(indices.length).toBe(6 * RESOLUTION * RESOLUTION + 24 * RESOLUTION);
     for (const vid of indices) expect(vid).toBeLessThan(row * row + 4 * row);
   });
 
   it('keeps the n = 64 template inside uint16', () => {
     const indices = surfacePatchIndices(64);
     expect(indices.length).toBe(26112);
+    expect(Math.max(...indices)).toBeLessThan(65536);
   });
 
   /**
