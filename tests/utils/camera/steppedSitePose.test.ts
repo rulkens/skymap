@@ -37,8 +37,7 @@ function drag(dx: number, dy: number): InputStep {
 }
 
 function step(pose: SitePose, input: InputStep): SitePose {
-  // Host floor below the site: `clampedSitePose` owns that rule, not this one.
-  return steppedSitePose(pose, input, ROVER, VIEWPORT, FOV_Y_RAD, -1);
+  return steppedSitePose(pose, input, ROVER, VIEWPORT, FOV_Y_RAD);
 }
 
 describe('steppedSitePose', () => {
@@ -62,6 +61,19 @@ describe('steppedSitePose', () => {
     const out = step(POSE, drag(60, 30));
     expect(out.headingRad).toBeGreaterThan(POSE.headingRad);
     expect(out.elevationRad).toBeGreaterThan(POSE.elevationRad);
+  });
+
+  it('a lowering drag at the range floor reaches the ground, not the ceiling', () => {
+    // The rung EXISTS to get under its host's standoff, so only the site's own
+    // floor may bind here: fold the host's in and `eyeFloorM / rangeM > 1` at
+    // close range, `asin` saturates, and every pose pins at the ceiling —
+    // top-down, tilt dead, which is what the eye check reported.
+    const rangeFloorM = ROVER.standoffRadii * ROVER.boundingRadiusM;
+    const out = step({ ...POSE, rangeM: rangeFloorM, elevationRad: 1.2 }, drag(0, -600));
+    expect(out.elevationRad).toBeCloseTo(
+      Math.asin((SITE_RUNG.eyeFloorBoundingRadii * ROVER.boundingRadiusM) / rangeFloorM),
+      12,
+    );
   });
 
   it('keeps the eye above the ground through a mixed sequence', () => {

@@ -20,7 +20,6 @@ export function sitePoseFromBodyArm(
   site: SurfaceFixedSite,
   hostRadiusM: number,
   body: MeshBody,
-  hostFloorAboveSiteM: number,
 ): SitePose {
   const p = sitePointBodyFixed(site, hostRadiusM);
   const { east, north, localUp } = siteEyeFrame(p);
@@ -39,6 +38,5 @@ export function sitePoseFromBodyArm(
       rangeM,
     },
     body,
-    hostFloorAboveSiteM,
   );
 }

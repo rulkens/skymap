@@ -13,7 +13,6 @@ import { positionDriverById } from '../../../../data/bodies/positionDrivers';
 import { bodyFixedEyeM } from '../../../../utils/camera/bodyFixedEyeM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
-import { hostFloorAboveSiteM } from '../../../../utils/camera/hostFloorAboveSiteM';
 import { sitePointBodyFixed } from '../../../../utils/camera/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from '../../../../utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../../utils/camera/sitePoseToBodyArm';
@@ -79,7 +78,6 @@ export const siteRung: ClimbRow<'site'> = {
   },
 
   step(memory, tilt, framed, input, ctx) {
-    const site = siteRowOrThrow(framed.frame.site);
     return {
       pose: steppedSitePose(
         framed.pose,
@@ -87,7 +85,6 @@ export const siteRung: ClimbRow<'site'> = {
         meshBodyOf(framed.frame.site),
         ctx.viewportPx,
         ctx.fovYRad,
-        hostFloorAboveSiteM(site, hostOrThrow(framed.frame, ctx)),
       ),
       memory,
       // Keyed by HOST, and this rung authors no tilt: the slot rides through.
@@ -105,15 +102,13 @@ export const siteRung: ClimbRow<'site'> = {
 
   fromParent(parent, frame, ctx) {
     const host = hostOrThrow(frame, ctx);
-    const site = siteRowOrThrow(frame.site);
     return {
       frame,
       pose: sitePoseFromBodyArm(
         parent.pose,
-        site,
+        siteRowOrThrow(frame.site),
         host.radiusM,
         meshBodyOf(frame.site),
-        hostFloorAboveSiteM(site, host),
       ),
     };
   },
