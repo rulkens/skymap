@@ -1,8 +1,8 @@
 /**
- * engineSliceDispatches — verifies that every engine wiring site dispatches
- * the matching engineSlice action to the store alongside its existing callback.
- * Spin up a real Redux store, spy on `dispatch`, drive the wiring function,
- * assert the matching action creator was called.
+ * engineSliceDispatches — the core wiring sites that still dispatch an
+ * engineSlice action of their own: `wireStructureProjection` and
+ * `installLoadProgress`. Spin up a real Redux store, spy on `dispatch`, drive
+ * the wiring function, assert the matching action creator was called.
  *
  * `wireSlots`'s `loading` emission and `engine.ts`'s `initializing`/`error`
  * emissions are integration-level, exercised by `wireSlots.test.ts` and
@@ -12,17 +12,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import {
-  engineSourceCountReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
-  engineStatusChanged,
 } from '../../../../src/state/engine/engineSlice';
-import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { Source } from '../../../../src/data/sources';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import type { EngineAssetSlots } from '../../../../src/@types/engine/state/EngineAssetSlots';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
@@ -30,27 +29,7 @@ import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgr
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
-// The `survey`-category codes — a fixture built the same way the fallback
-// gate derives its own private list, not an assertion on it.
-const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCES.filter(
-  (code) => SOURCE_REGISTRY[code].category === 'survey',
-);
-
 // ── Module mocks needed for wiring helpers ──────────────────────────────────
-
-// syncVisibilityFadeItem is called from the slot commit body — mock it so
-// these dispatch tests don't need a seeded FadeRegistry.
-vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
-  syncVisibilityFades: vi.fn(),
-  syncVisibilityFadeItem: vi.fn(),
-}));
-
-// The mint helper picks this fetcher for every non-synthetic entry; stub it
-// so the one test driving a real wireGalaxyCatalogSourceSlot call controls
-// the resolved catalog instead of hitting the network.
-vi.mock('../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher', () => ({
-  galaxyCatalogFetcher: vi.fn(),
-}));
 
 // buildStaticAnchorStructures + structureCatalogToStructures: deterministic
 // minimal lists for wireStructureProjection tests.
@@ -142,7 +121,7 @@ function makeStructureState(): {
 }
 
 function makeProgressState(): EngineState {
-  const stubSlot = (name: string): AssetSlot<unknown, unknown> => ({
+  const stubSlot = <T, Req>(name: string): AssetSlot<T, Req> => ({
     name,
     load: vi.fn(),
     current: () => null,
@@ -155,24 +134,28 @@ function makeProgressState(): EngineState {
     cancel: () => {},
     release: () => {},
   });
+  // Typed as the real bag, not cast: `isCoreSlotFieldKey` tests `key in slots`
+  // at RUNTIME, so a fixture carrying fields production dropped would still walk
+  // — and pin a shape that no longer exists.
+  const assetSlots: EngineAssetSlots = {
+    // A keyed family with a member, so the per-source map walk is exercised.
+    starCatalogs: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
+    filaments: stubSlot('filaments'),
+    famousStarsMeta: stubSlot('famous-stars-meta'),
+    structureCatalog: stubSlot('structure-catalog'),
+    cf4Density: stubSlot('cf4Density'),
+    mcpm: stubSlot('mcpm'),
+    flow: stubSlot('flow'),
+    polyphorm2Mrs: stubSlot('polyphorm-2mrs'),
+    mcpmWorkbench: stubSlot('mcpm-workbench'),
+    constellations: stubSlot('constellations'),
+    bodyTextureAtlas: stubSlot('body-texture-atlas'),
+    // Empty keyed families: installLoadProgress walks them like starCatalogs.
+    bodyTextures: new Map(),
+    meshBodies: new Map(),
+  };
   return {
-    assetSlots: {
-      points: new Map<SourceType, AssetSlot<unknown, unknown>>([
-        [Source.SDSS, stubSlot('sdss-points')],
-      ]),
-      // Real (empty) map: installLoadProgress walks it like points.
-      starCatalogs: new Map<SourceType, AssetSlot<unknown, unknown>>(),
-      filaments: stubSlot('filaments'),
-      famousGalaxiesMeta: stubSlot('famous-galaxies-meta'),
-      structureCatalog: stubSlot('structure-catalog'),
-      pgcAlias: stubSlot('pgc-aliases'),
-      cf4Density: stubSlot('cf4Density'),
-      mcpm: stubSlot('mcpm'),
-      flow: stubSlot('flow'),
-      // Empty keyed family: installLoadProgress walks it like points.
-      bodyTextures: new Map(),
-      meshBodies: new Map(),
-    },
+    assetSlots,
     subsystems: { loadProgress: null },
     // The composed lists `createLayers` would have written; over an empty layer
     // tuple they are core's own registry, and no Layer owns a slot.
