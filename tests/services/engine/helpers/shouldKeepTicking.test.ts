@@ -61,6 +61,7 @@ const NO_ANIM = {
   earthTilesAnimating: false,
   labelsAnimating: false,
   probeDue: false,
+  layersAnimating: false,
 };
 
 /**
@@ -211,5 +212,15 @@ describe('shouldKeepTicking', () => {
     expect(
       shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, starFadeAnimating: true }),
     ).toBe(true);
+  });
+
+  it('layersAnimating is a keep-alive term — true even with everything else at rest', () => {
+    // A Layer's frame hook voted true this frame (D2); runFrame folds every
+    // hook's return into this one bag entry, so the predicate need not know
+    // anything about Layers itself — just this bit.
+    const state = makeState({});
+    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAnimating: true })).toBe(
+      true,
+    );
   });
 });

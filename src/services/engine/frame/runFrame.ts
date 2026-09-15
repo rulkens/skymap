@@ -191,6 +191,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   ctx.focusBlend = focusUniforms.blend;
   ctx.focus = focusUniforms;
 
+  // Each Layer's `frame` hook, in tuple order, right after the focus uniform
+  // and before any planner (D2). No short-circuit: every hook runs every
+  // frame, so a later Layer's vote is never skipped by an earlier `true`.
+  // Empty over the empty composition today; PR-D's first Layer is the first
+  // caller.
+  let layersAnimating = false;
+  for (const layer of state.layers) {
+    if (layer.frame !== null && layer.frame(ctx, state)) layersAnimating = true;
+  }
+
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
   // frame's snapshot is focused.
@@ -337,6 +347,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     earthTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,
+    layersAnimating,
   });
 
   if (keepTicking) {

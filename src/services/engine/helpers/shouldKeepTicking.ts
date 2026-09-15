@@ -39,6 +39,7 @@ export function shouldKeepTicking(
     earthTilesAnimating: boolean;
     labelsAnimating: boolean;
     probeDue: boolean;
+    layersAnimating: boolean;
   },
 ): boolean {
   return (
@@ -52,6 +53,7 @@ export function shouldKeepTicking(
     anim.starFadeAnimating ||
     anim.earthTilesAnimating ||
     anim.labelsAnimating ||
-    anim.probeDue
+    anim.probeDue ||
+    anim.layersAnimating
   );
 }
