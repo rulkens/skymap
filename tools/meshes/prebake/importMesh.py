@@ -14,9 +14,17 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 SOURCE_UV = "source"
 
 
-def source(filename, frame=None, drop_materials=()):
+def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None):
     return {
         "filename": filename,
+        # Modellers author in whatever unit suits them — Hubble in inches — and
+        # everything downstream reads metres.
+        "scale": scale,
+        # NASA's documentary models type every surface matte whatever it is
+        # made of. Per-material `metallic` / `roughness` / `gain` (Base Color
+        # multiplier) / `bump` (metres of relief per unit of the colour map's
+        # luminance, for a source with no normal map) Principled overrides.
+        "materials": materials or {},
         # None = the file's saved transforms; an int = that animation frame. The
         # deploy animations park the rover STOWED at their own frame 0, so a
         # source with actions must name a frame or risk saving a folded rover.
@@ -34,6 +42,18 @@ SOURCES = {
     "curiosity": source("Curiosity Rover (MSL) (Clean).blend", frame=206,
                         drop_materials=("pivot", "shadow2")),
     "mer": source("Mars Exploration Rover - Spirit and Opportunity.blend", frame=1325),
+    # Aluminised MLI on the aft shroud and equipment section (hbltel_1), the
+    # light shield and forward shell (hbltel_4), the aperture door, bulkhead
+    # and dishes (hbltel_2); hbltel_1's mid grey is a metal's REFLECTANCE once
+    # metallic, hence its gain. Foil is locally a mirror — its crinkle is the
+    # bump's job, not roughness's. The arrays (hbltel_3) are cells on
+    # aluminised copper Kapton, a tinted mirror; the instrument box as authored.
+    "hubble": source("Hubble Space Telescope (A).glb", scale=0.0254, materials={
+        "hbltel_1": dict(metallic=1.0, roughness=0.2, gain=2.0, bump=0.08),
+        "hbltel_2": dict(metallic=1.0, roughness=0.2, bump=0.08),
+        "hbltel_4": dict(metallic=1.0, roughness=0.2, bump=0.08),
+        "hbltel_3": dict(metallic=0.8, roughness=0.35, bump=0.04),
+    }),
 }
 
 
@@ -111,6 +131,70 @@ def unify_shader_outputs():
             tree.nodes.remove(node)
             dropped += 1
     return dropped
+
+
+def override_materials(cfg):
+    """A missing name raises: the override is the whole point of the row, and a
+    renamed upstream material would otherwise bake matte without a word."""
+    applied = 0
+    for name, values in cfg["materials"].items():
+        mat = bpy.data.materials.get(name)
+        if mat is None or not mat.use_nodes:
+            raise RuntimeError("import: no material '%s' to override" % name)
+        tree = mat.node_tree
+        for node in [n for n in tree.nodes if n.type == "BSDF_PRINCIPLED"]:
+            for socket_name in ("Metallic", "Roughness"):
+                if socket_name.lower() in values:
+                    socket = node.inputs[socket_name]
+                    for link in list(socket.links):
+                        tree.links.remove(link)
+                    socket.default_value = values[socket_name.lower()]
+            if "bump" in values:
+                bump_from_base_colour(tree, node, values["bump"])
+            if "gain" in values:
+                multiply_base_colour(tree, node, values["gain"])
+            applied += 1
+    return applied
+
+
+def bump_from_base_colour(tree, principled, relief_m):
+    """A source with no normal map bakes a FLAT normal atlas; foil crinkle and
+    panel seams are then only in the albedo. The colour map's luminance stands
+    in for height, `relief_m` metres per unit of it. A low-contrast texture
+    needs centimetres before a texel-to-texel step tilts the normal visibly."""
+    base = principled.inputs["Base Color"]
+    if not base.links:
+        raise RuntimeError("import: bump needs a Base Color texture to read height from")
+    bump = tree.nodes.new("ShaderNodeBump")
+    bump.inputs["Distance"].default_value = relief_m
+    tree.links.new(bump.inputs["Height"], base.links[0].from_socket)
+    tree.links.new(principled.inputs["Normal"], bump.outputs["Normal"])
+
+
+def multiply_base_colour(tree, principled, gain):
+    # ShaderNodeMix carries one socket set per data type; the RGBA pair is
+    # inputs 6/7 and output 2, unreachable by name because every type's is "A".
+    base = principled.inputs["Base Color"]
+    mix = tree.nodes.new("ShaderNodeMix")
+    mix.data_type = "RGBA"
+    mix.blend_type = "MULTIPLY"
+    mix.inputs[0].default_value = 1.0
+    mix.inputs[7].default_value = (gain, gain, gain, 1.0)
+    if base.links:
+        tree.links.new(mix.inputs[6], base.links[0].from_socket)
+        tree.links.remove(base.links[0])
+    else:
+        mix.inputs[6].default_value = base.default_value
+    tree.links.new(base, mix.outputs[2])
+
+
+def scale_roots(scene, factor):
+    """On the parentless objects only, so a hierarchy scales once; the prebake's
+    join applies it into the vertices before anything measures them."""
+    roots = [obj for obj in scene.objects if obj.parent is None]
+    for obj in roots:
+        obj.scale = obj.scale * factor
+    return len(roots)
 
 
 def materials_of(obj):
@@ -231,6 +315,7 @@ def main():
     log("%s: loaded %s at frame %s" % (key, cfg["filename"], cfg["frame"]))
     log("colour management: %d images decoded as sRGB, %d relinked" % fix_colour_management())
     log("dropped %d rival material outputs" % unify_shader_outputs())
+    log("overrode %d materials" % override_materials(cfg))
 
     meshes = surfaces(scene)
     apply_modifiers(meshes)
@@ -240,6 +325,8 @@ def main():
     for obj in doomed:
         bpy.data.objects.remove(obj, do_unlink=True)
     log("deleted %d marker objects" % len(doomed))
+    if cfg["scale"] != 1.0:
+        log("scaled %d root objects by %g -> metres" % (scale_roots(scene, cfg["scale"]), cfg["scale"]))
     unify_source_uvs(surfaces(scene))
 
     log("packed images (%d missing images removed)" % pack_images())

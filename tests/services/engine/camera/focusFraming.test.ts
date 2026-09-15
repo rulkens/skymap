@@ -117,7 +117,9 @@ describe('focusFraming', () => {
 
   // ── body arm ───────────────────────────────────────────────────────────────
 
-  const EARTH_RADIUS_M = 6_371_000;
+  // The derivation focusFraming's body arm actually reads (outer bound, F2's
+  // Earth relief), never a restated literal — see bodyFootprintRadiusM.
+  const EARTH_RADIUS_M = bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'earth', 'test'));
   const bodyRow = (over: Partial<BodyRow> = {}): BodyRow => ({
     type: 'body',
     id: 'earth',

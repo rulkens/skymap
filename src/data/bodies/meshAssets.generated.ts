@@ -63,6 +63,20 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     attribution:
       'NASA / Michael D. Carbajal (NASA Headquarters), "Voyager Probe (B)" (https://science.nasa.gov/3d-resources/voyager-probe-b/)',
   },
+  hubble: {
+    key: 'hubble',
+    path: 'meshes/hubble.mesh',
+    boundingRadiusM: 8.786712680737544,
+    groundOffsetM: 6.5379468441961155,
+    meanAlbedo: [0.168474, 0.155995, 0.134209],
+    triangleCount: 7672,
+    substituted: [],
+    source:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    licence: 'Public domain (NASA)',
+    attribution:
+      'NASA, "Hubble Space Telescope (A)" — NASA 3D Resources (https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A))',
+  },
   perseverance: {
     key: 'perseverance',
     path: 'meshes/perseverance.mesh',

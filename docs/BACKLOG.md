@@ -71,6 +71,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`bodyLikeFraming` ⇄ `focusFraming` import cycle** `ready` — a type-only back-edge; extract the type. → [details](backlog/2026-09-11-framing-import-cycle-bodyLikeFraming-focusFraming.md)
 - [ ] **Camera radar residuals: wake vote, channel expiry, authoredOverride** `ready` — three hand-restated facts from the wave-end radar. → [details](backlog/2026-09-11-camera-radar-residuals-h3-m4-m5.md)
 - [ ] **Camera pose in the URL hash** `needs-design` — no pose codec exists; a rung-generic one would key on `frameKey`. → [details](backlog/2026-09-14-camera-pose-url-hash.md)
+- [ ] **Earth point in the URL hash** `needs-design` — `#site=lon,lat[,alt]` snapping over a coordinate via the existing `flyToLonLat` saga; the typable subset of the pose codec. → [details](backlog/2026-09-15-earth-point-url-hash.md)
 
 ## Rendering
 
@@ -102,6 +103,10 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Earth tile uv-conversion functions have no production caller** `needs-design` — `earthTileXyForUv`/`earthTileCentreUv` are referenced only by each other's test; the flip and wrap are re-implemented inline at six live sites instead. → [details](backlog/2026-07-30-earth-tile-uv-conversion-dead-home.md)
 - [ ] **Søndermarken z14–19 tiles from the 2019 skråfoto frames** `needs-design` — GeoDanmark forår-2025 reads bright/hazy next to corrected EOX; source from the 2019 leaf-on skråfoto instead. → [details](backlog/2026-09-14-soendermarken-tiles-from-2019-frames.md)
 - [ ] **Earth tile crossfade on zoom-out** `needs-design` — the load crossfade only runs zoom-in; coarsening still pops at band boundaries; agreed shape = retiring set + blended pipeline variant. → [details](backlog/2026-08-20-earth-tile-zoom-out-crossfade.md)
+- [ ] **Terrain grey holes at sea-level camera + high tilt (z13)** `needs-debug` — near leaves absent from the cut with 0 misses; horizon-cap relief fix d8636f2f1 landed but did not change it; next = in-browser cut diff + "dropped: N (reason)" readout. → [details](backlog/2026-09-15-terrain-grey-holes-high-tilt.md)
+- [ ] **Terrain relief LOD lower than expected (nadir and high tilt)** `needs-debug` — low over Søndermarken relief detail is too coarse at 0–4° tilt and drops further as tilt rises; ancestor height sub-rect vs foreshortened refine suspected. → [details](backlog/2026-09-15-terrain-relief-coarsens-under-tilt.md)
+- [ ] **Terrain height-LOD debug overlay** `ready` — the LOD overlay tints by albedo rect only; tint by `heightLattice.z` cell count too, so texture-LOD and relief-LOD can be told apart in an eye-check. → [details](backlog/2026-09-15-terrain-relief-coarsens-under-tilt.md)
+- [ ] **Terrain mesh resolution 128** `needs-perf` — `EARTH_SURFACE_TILE_MESH_RESOLUTION` 64 → 128 to match the 129-post height tiles; deferred from F2, perf A-B gated.
 - [ ] **Earth tile descent "island in stars"** `needs-debug` — below the base-globe fade only the deepest resident tiles render; planner + projection exonerated with hard evidence; shipped known-issue with #617, re-check after Plan 2. → [details](backlog/2026-08-21-earth-tile-descent-island.md)
 - [ ] **`TextureAtlas` eviction is flat LRU** `needs-design` — van Waveren's finest-mip-first-then-LRU would let coarse, widely-depended-on pages survive over finer ones instead of evicting by recency alone.
 - [ ] **Earth tile `tilePx` can only ever hold one value** `ready` — `derivePlannerParams` refuses any manifest value but the constant, yet it's threaded through six functions and three docstrings promise a re-bake at a different edge is "a data change."

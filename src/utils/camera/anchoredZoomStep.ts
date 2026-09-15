@@ -7,20 +7,24 @@
  * an altitude scale. With `eye·Â ≥ |A|` — which the floor below guarantees —
  * `eye′·Â = |A| + f·(eye·Â − |A|) ≥ |A|` for all `f ≥ 0`, so no tangent-plane
  * overshoot guard is needed. `factor` is centre-measured, never `|eye − A|`.
+ * The floor is `flooredBodyPose`'s, so a notch serving a focus lifts the eye
+ * about that point rather than radially off its sightline.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
+import { flooredBodyPose } from './flooredBodyPose';
 import { spentZoomFactor } from './spentZoomFactor';
-import { surfaceFloorM } from './surfaceFloorM';
 
 export function anchoredZoomStep(
   pose: BodyFixedPose,
   factor: number,
-  cursorAnchorM: Vec3 | null,
+  cursorAnchorM: Readonly<Vec3> | null,
   bodyRadiusM: number,
   standoffRadii: number,
+  /** The point the notch SERVES (a focused rover), which the floor turns about. */
+  floorPivotM: Readonly<Vec3> | null,
 ): BodyFixedPose {
   const clampedFactor = spentZoomFactor(factor);
   const { anchorLocalM } = pose;
@@ -32,7 +36,7 @@ export function anchoredZoomStep(
   // undo one notch in near the ground. An eye exactly at the centre has no
   // radial, so the centre is the only answer there.
   const eyeMagM = Math.hypot(eyeM[0], eyeM[1], eyeM[2]);
-  const anchorM: Vec3 =
+  const anchorM: Readonly<Vec3> =
     cursorAnchorM !== null
       ? cursorAnchorM
       : eyeMagM === 0
@@ -49,22 +53,17 @@ export function anchoredZoomStep(
     anchorM[2] + clampedFactor * (eyeM[2] - anchorM[2]),
   ];
 
-  const floorM = surfaceFloorM(bodyRadiusM, standoffRadii);
-  const steppedMagM = Math.hypot(steppedM[0], steppedM[1], steppedM[2]);
-  const floorScale = steppedMagM < floorM ? floorM / steppedMagM : 1;
-
-  const eyeNewM: Vec3 = [
-    steppedM[0] * floorScale,
-    steppedM[1] * floorScale,
-    steppedM[2] * floorScale,
-  ];
-
-  return {
-    ...pose,
-    eyeRelAnchorM: [
-      eyeNewM[0] - anchorLocalM[0],
-      eyeNewM[1] - anchorLocalM[1],
-      eyeNewM[2] - anchorLocalM[2],
-    ],
-  };
+  return flooredBodyPose(
+    {
+      ...pose,
+      eyeRelAnchorM: [
+        steppedM[0] - anchorLocalM[0],
+        steppedM[1] - anchorLocalM[1],
+        steppedM[2] - anchorLocalM[2],
+      ],
+    },
+    bodyRadiusM,
+    standoffRadii,
+    floorPivotM,
+  );
 }

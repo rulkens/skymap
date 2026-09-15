@@ -23,7 +23,7 @@ import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
@@ -51,7 +51,7 @@ const LOAD_FADE_MS = 400;
 
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;
-  readonly atlas: BitmapStreamSubsystem;
+  readonly atlas: TileStreamSubsystem<ImageBitmap>;
   /** For tests.  Defaults to fetchGalaxyBitmap. */
   readonly fetcher?: (args: {
     ra: number;
@@ -211,8 +211,8 @@ export function createTexturedDiskSubsystem(
               // The walk is decimated, so the slot allocated above may sit
               // unrevisited long enough for the LRU to hand it to another
               // galaxy mid-fetch — resolve by the key's CURRENT slot instead.
-              const uploaded = atlas.uploadBitmap(key, bitmap) !== null;
-              bitmap.close();
+              // `upload` closes `bitmap` either way (uploaded or recycled).
+              const uploaded = atlas.upload(key, bitmap) !== null;
               // Arrival stamps quantize to the frame clock so crossfade
               // alphas are a pure function of stamped time (deterministic
               // under a stepped recorder clock); sub-frame precision is

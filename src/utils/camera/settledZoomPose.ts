@@ -21,18 +21,19 @@ import { wrapRad } from '../math/wrapRad';
 /**
  * The zoom path's orientation settle (R1 + rulings 5-12): every notch, both
  * directions — heading → north of the band-blended reference, tilt → the
- * remembered mapping, roll → level. `diveAnchorM !== null` IS the dive: its
- * turns pivot about the anchor so the dived-on point stays pixel-locked
- * (Q4c); a recession turns about the eye (anchor-pivoting there cancels
- * ~h/(R+h) of every correction, measured). `northUp` (ruling 11) gates
- * heading + roll only: the tilt term's 0-at-disengage is what keeps the
+ * remembered mapping, roll → level. All three turn about `pivotM`, the point
+ * the zoom holds, so it stays pixel-locked (Q4c); `null` — no focus, no dive
+ * anchor — turns about the eye instead. `diving` is the DIRECTION, and only
+ * the heading term's ride/decay discipline reads it. `northUp` (ruling 11)
+ * gates heading + roll only: the tilt term's 0-at-disengage is what keeps the
  * fold's retarget view-exact, toggle or no toggle. Every settle amount here is
  * priced in `logZoom` (`|ln factor|`), so a trackpad twitch and a mouse notch
  * of equal total zoom converge on the same orientation (`ORIENT_DECAY`).
  */
 export function settledZoomPose(
   pose: BodyFixedPose,
-  diveAnchorM: Readonly<Vec3> | null,
+  pivotM: Readonly<Vec3> | null,
+  diving: boolean,
   bodyRadiusM: number,
   standoffRadii: number,
   preTiltDevRad: number | null,
@@ -58,7 +59,7 @@ export function settledZoomPose(
     // the zoom did not author (`preBlendAzimuthRad`, measured at the
     // pre-notch pose against ITS reference) decays.
     const dPre = preBlendAzimuthRad ?? f0.azimuthRad;
-    const dPsi = diveAnchorM
+    const dPsi = diving
       ? orientStepRad(f0.azimuthRad, logZoom)
       : riddenOrientStepRad(
           dPre,
@@ -67,12 +68,8 @@ export function settledZoomPose(
           logZoom,
         );
     if (dPsi !== 0) {
-      out = diveAnchorM
-        ? turnedPose(
-            out,
-            quatFromAxisAngle(normalize3(diveAnchorM), dPsi),
-            BODY_LOCAL_FRAME.centreM,
-          )
+      out = pivotM
+        ? turnedPose(out, quatFromAxisAngle(normalize3(pivotM), dPsi), BODY_LOCAL_FRAME.centreM)
         : turnedPose(out, quatFromAxisAngle(f0.localUp, dPsi), null);
     }
   }
@@ -91,7 +88,7 @@ export function settledZoomPose(
     out = tiltTurnedPose(
       out,
       -riddenOrientStepRad(devPre, devNew - devPre, Infinity, logZoom),
-      diveAnchorM,
+      pivotM,
     );
   }
 
@@ -100,10 +97,11 @@ export function settledZoomPose(
       blendW,
       sceneUpLocal,
       heldAzimuthRad: null,
-      pivotM: diveAnchorM,
+      pivotM,
       capRad: ORIENT_DECAY.capRadPerLogZoom * Math.abs(logZoom),
     });
   }
-  // A tilt about a surface anchor holds |eye − anchor|, not |eye|.
-  return flooredBodyPose(out, bodyRadiusM, standoffRadii);
+  // A tilt about a surface anchor holds |eye − anchor|, not |eye| — so the
+  // floor undoes it about the same pivot, which is what keeps the lock.
+  return flooredBodyPose(out, bodyRadiusM, standoffRadii, pivotM);
 }

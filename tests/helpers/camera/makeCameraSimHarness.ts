@@ -163,5 +163,21 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     frame(2);
   };
 
-  return { store, state, deps, bodies, radiusM, seedPose, focus, tick, frame, push, wheel };
+  /** The wall clock of the last frame run — what a hand-built next frame dates itself from. */
+  const nowMs = (): number => now;
+
+  return {
+    store,
+    state,
+    deps,
+    bodies,
+    radiusM,
+    seedPose,
+    focus,
+    tick,
+    frame,
+    push,
+    wheel,
+    nowMs,
+  };
 }

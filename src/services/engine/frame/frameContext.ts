@@ -30,7 +30,9 @@ import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
 import { hostOf } from '../camera/rungs/hostOf';
+import { isBodyArm } from '../camera/rungs/isBodyArm';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
+import { refoldTo } from '../camera/rungs/refoldTo';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
 import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
@@ -148,14 +150,19 @@ export function deriveFrameContext(
   // pose — no Mpc round trip. Every other body, and the whole absolute arm,
   // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Gated on the
   // HOST, not the frame: a rung not its own host must still fall through here.
-  const armHost = hostOf(arm.frame, {
+  const armBasisCtx = {
     bodies: bodyStates as ReadonlyMap<BodyId, BodyState>,
     poseBasis,
     upBasis,
-  });
+  };
+  const armHost = hostOf(arm.frame, armBasisCtx);
   const bodyPose: BodyPoseProvider = (bodyId) => {
     if (!isWorldArm(arm) && armHost?.id === bodyId) {
-      return poseFromBodyArm(arm.pose);
+      // A rung BELOW its host (a site on its planet) folds up to the host's own
+      // arm first — by reference when the arm already is one, so the body arm's
+      // path is unchanged and neither crosses the Mpc seam.
+      const onHost = refoldTo(arm, { body: bodyId }, armBasisCtx);
+      if (isBodyArm(onHost)) return poseFromBodyArm(onHost.pose);
     }
     const bodyState = bodyStates.get(bodyId);
     if (bodyState === undefined) return null;

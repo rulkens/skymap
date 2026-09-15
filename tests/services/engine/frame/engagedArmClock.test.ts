@@ -41,6 +41,7 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
   };
 });
 
+import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
@@ -84,7 +85,7 @@ function raceClock(h: ReturnType<typeof makeCameraSimHarness>, nowMs: number): v
 
 function bodyFixedPose(h: ReturnType<typeof makeCameraSimHarness>): BodyFixedPose {
   const framed = h.state.cameraRuntime.register.pose;
-  if (framed.frame === 'absolute') throw new Error('expected an engaged body arm');
+  if (!isBodyArm(framed)) throw new Error('expected an engaged body arm');
   return framed.pose;
 }
 

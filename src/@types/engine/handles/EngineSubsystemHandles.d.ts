@@ -18,7 +18,7 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { EarthTileSubsystem } from '../subsystems/EarthTileSubsystem';
+import type { SurfaceTileSubsystem } from '../subsystems/SurfaceTileSubsystem';
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
@@ -39,7 +39,7 @@ export type EngineSubsystemHandles = {
    * the planner says the base texture has started magnifying, so a session
    * that never approaches Earth pays nothing. Null before `wireSlots` runs.
    */
-  earthTiles: EarthTileSubsystem | null;
+  surfaceTiles: SurfaceTileSubsystem | null;
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   /**

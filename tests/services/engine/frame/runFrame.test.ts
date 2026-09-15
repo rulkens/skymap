@@ -122,7 +122,6 @@ import { createInputAggregator } from '../../../../src/services/engine/subsystem
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
@@ -969,12 +968,9 @@ describe('runFrame — engineScaleChanged dispatch', () => {
     const ALTITUDE_KM = 100;
     const arm = earthArm(1 + ALTITUDE_KM / EARTH_RADIUS_KM);
     store.dispatch(commitCameraPose(arm));
-    store.dispatch(
-      setSelectionRow({
-        slot: 'focus',
-        row: { type: 'body', id: 'earth', label: 'Earth', positionMpc: [0, 0, 0] },
-      }),
-    );
+    // No focus row: nothing constrains a rung, so the arm holds at rest and
+    // the legend — this fixture's whole subject — is read off it. A focus here
+    // would owe an approach that flies the range straight out of the km band.
     state.cameraRuntime = {
       ...state.cameraRuntime,
       register: { ...state.cameraRuntime.register, pose: arm },
@@ -1086,7 +1082,7 @@ describe('runFrame — the label-director wake fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        earthTiles: null,
+        surfaceTiles: null,
         structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
         cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },

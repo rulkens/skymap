@@ -12,10 +12,11 @@
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
+import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { frameKey } from '../camera/rungs/frameKey';
-import { isWorldArm } from '../camera/rungs/isWorldArm';
+import { isBodyArm } from '../camera/rungs/isBodyArm';
+import { isSiteArm } from '../camera/rungs/isSiteArm';
 import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -25,7 +26,7 @@ export function logCameraState(
   canvas: HTMLCanvasElement,
   focusRow: SelectionRow | null,
   simDays: number,
-  earthSubCamera: EarthTileDebugSnapshot['subCamera'] = null,
+  earthSubCamera: SurfaceTileDebugSnapshot['subCamera'] = null,
   framed: FramedCameraPose | null = null,
 ): void {
   if (!cam) {
@@ -53,7 +54,8 @@ export function logCameraState(
   // The stored arm, named (spec §8): a body arm's numbers are body-FIXED
   // metres, so reading the Mpc rows above as the whole truth would mislead.
   // Absent ⇒ absolute, the same rule untagged serialized input parses under.
-  const bodyArm = framed !== null && !isWorldArm(framed) ? framed.pose : null;
+  const bodyArm = framed !== null && isBodyArm(framed) ? framed.pose : null;
+  const siteArm = framed !== null && isSiteArm(framed) ? framed.pose : null;
 
   const out = {
     frame: framed === null ? 'absolute' : frameKey(framed.frame),
@@ -65,6 +67,17 @@ export function logCameraState(
             eyeRelAnchorM: bodyArm.eyeRelAnchorM,
             eyeFromCentreM: Math.hypot(...bodyFixedEyeM(bodyArm)),
             basisLocal: bodyArm.basisLocal,
+          },
+    // `eyeHeightM` is metres above the site's tangent plane (spec §4.9) — the
+    // one number that shows whether `clampedSitePose`'s floor is doing its job.
+    siteArmPose:
+      siteArm === null
+        ? null
+        : {
+            headingRad: siteArm.headingRad,
+            elevationRad: siteArm.elevationRad,
+            rangeM: siteArm.rangeM,
+            eyeHeightM: siteArm.rangeM * Math.sin(siteArm.elevationRad),
           },
     target: cam.target,
     yaw: cam.yaw,

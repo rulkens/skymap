@@ -44,13 +44,10 @@ import { frameUp } from '../../../../../src/utils/camera/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
+import { innerBoundRadiusM } from '../../../../../src/utils/scene/innerBoundRadiusM';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
-import {
-  EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM,
-  EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM,
-} from '../../../../../src/data/bodies/earthTileParams';
 import { Source } from '../../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
@@ -238,7 +235,7 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
     // that never approaches Earth never engages it — so `null` here is the
     // shipped identity case, in which the packed page-table window is all-zero
     // and the fragment reads the whole-globe base texture alone.
-    subsystems: { earthTiles: null },
+    subsystems: { surfaceTiles: null },
     // earthPass.draw reads the live night-side floor + ocean-glint roughness
     // from settings.earth each frame; seed both from EARTH_SURFACE_PARAMS so the
     // packed tail slots equal the authored defaults (a no-op override, exactly
@@ -256,16 +253,21 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
   } as unknown as EngineState;
 }
 
+const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
+
 /**
  * `makeState`'s tile-draw variant: adds the `earthSurfaceTileRenderer` GPU
- * handle and an `earthTiles` subsystem stub whose `getLastCut`/`getAtlasView`
- * are caller-controlled — the instanced-draw gate's three inputs
- * (`state.gpu.earthSurfaceTileRenderer`, `getAtlasView()`, `getLastCut()`).
+ * handle and a `surfaceTiles` subsystem stub whose cut and two atlas views are
+ * caller-controlled — the instanced-draw gate's four inputs
+ * (`state.gpu.earthSurfaceTileRenderer`, `getAtlasView()`,
+ * `getHeightAtlasView()`, `getLastCut()`).
  */
 function makeTileDrawState(input: {
   readonly tileRenderer: unknown;
   readonly cut: readonly unknown[];
   readonly atlasView: GPUTextureView | null;
+  /** Defaults to engaged: only the gate case below cares that it can be null. */
+  readonly heightAtlasView?: GPUTextureView | null;
 }): EngineState {
   const base = makeState(
     { draw: vi.fn(), getMapView: vi.fn(() => ({}) as GPUTextureView) },
@@ -278,9 +280,11 @@ function makeTileDrawState(input: {
       earthSurfaceTileRenderer: input.tileRenderer,
     },
     subsystems: {
-      earthTiles: {
+      surfaceTiles: {
         getLastCut: () => input.cut,
         getAtlasView: () => input.atlasView,
+        getHeightAtlasView: () =>
+          input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
       },
     },
   } as unknown as EngineState;
@@ -447,17 +451,23 @@ describe('earthPass.draw', () => {
     const ctx = makeCtx(FOREGROUND_MAX_DISTANCE_MPC / 2);
     earthPass.draw(PASS_STUB, view, ctx, state);
 
-    // Exactly one MVP composed for the single Earth body.
-    expect(mvpMock).toHaveBeenCalledTimes(1);
+    // Two MVPs composed: prepareBodySurfaceFrame's (the datum, memoised for
+    // the tile planner/drawPick) and the base globe's own, at the inner
+    // bound (F2-R5) so relief can never be occluded by it (§7.4).
+    expect(mvpMock).toHaveBeenCalledTimes(2);
     const call = mvpMock.mock.calls[0]!;
     // The load-bearing seam: first arg is the slab's Float64Array vp, NOT view.vp.
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     // The body's true equatorial radius in metres, not an Mpc conversion.
     expect(call[2]).toBe(SEEDED_EARTH.surface.datumRadiusM);
+    // The base globe's own compose, at the inner bound — never the datum.
+    const baseGlobeCall = mvpMock.mock.calls[1]!;
+    expect(baseGlobeCall[2]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
 
-    expect(camLocalMock).toHaveBeenCalledTimes(1);
+    expect(camLocalMock).toHaveBeenCalledTimes(2);
     expect(camLocalMock.mock.calls[0]![1]).toBe(SEEDED_EARTH.surface.datumRadiusM);
+    expect(camLocalMock.mock.calls[1]![1]).toBe(innerBoundRadiusM(SEEDED_EARTH.surface));
 
     // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
@@ -626,6 +636,7 @@ describe('earthPass.draw — detail tiles', () => {
     expect(pass).toBe(PASS_STUB);
     expect(args.tiles).toBe(STUB_CUT);
     expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
+    expect(args.heightAtlasView).toBe(HEIGHT_ATLAS_VIEW);
     // No rebase: the tile draw's vp is the slab's own already-eye-relative
     // f32 view (view.vp), never a freshly narrowed/rebased copy.
     expect(args.vp).toBe(view.vp);
@@ -684,9 +695,26 @@ describe('earthPass.draw — detail tiles', () => {
 
     expect(tileDraw).not.toHaveBeenCalled();
   });
+
+  it('does not draw the tile renderer when the HEIGHT atlas has not engaged yet', () => {
+    // Every vertex position reads it — a cut drawn without it is not a
+    // degraded picture, it is undefined geometry.
+    const tileDraw = vi.fn();
+    const view = makeEarthBodyView('earth');
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+      heightAtlasView: null,
+    });
+
+    earthPass.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(tileDraw).not.toHaveBeenCalled();
+  });
 });
 
-describe('earthPass.draw — base globe fade under the tile cut', () => {
+describe('earthPass.draw — the base globe is always drawn', () => {
   // A minimal stand-in cut, reused from the detail-tiles suite above.
   const STUB_CUT = [
     {
@@ -703,8 +731,7 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
   ];
   const ATLAS_VIEW = {} as GPUTextureView;
 
-  /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along
-   *  +x — the shared fixture for the fade tests below. */
+  /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along +x. */
   function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
     const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
@@ -735,26 +762,10 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
     return baseDraw;
   }
 
-  it('forwards alpha 1 when the cut is empty, regardless of altitude', () => {
-    const view = makeEarthBodyView('earth');
-    const state = makeTileDrawState({
-      tileRenderer: { draw: vi.fn() },
-      cut: [],
-      atlasView: ATLAS_VIEW,
-    });
-    const baseDraw = spyOnBaseDraw(state);
-
-    // Deep inside what would be the alpha-0 band if the fade engaged — the
-    // empty cut must keep the base globe at the alpha-1 failure floor.
-    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
-    earthPass.draw(PASS_STUB, view, ctx, state);
-
-    expect(baseDraw).toHaveBeenCalledTimes(1);
-    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
-    expect(uniforms[29]).toBe(1);
-  });
-
-  it('skips the base-globe draw call at alpha 0 with a non-empty cut', () => {
+  it('draws the base globe at low altitude under a full cut', () => {
+    // The globe used to fade out below 300 km, so a leaf with no resident
+    // ancestor showed the stars. It sits at the datum's inner bound now
+    // (§7.4) and is what covers whatever the cut does not.
     const view = makeEarthBodyView('earth');
     const tileDraw = vi.fn();
     const state = makeTileDrawState({
@@ -764,31 +775,10 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
     });
     const baseDraw = spyOnBaseDraw(state);
 
-    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
-    earthPass.draw(PASS_STUB, view, ctx, state);
-
-    expect(baseDraw).not.toHaveBeenCalled();
-    // The tiles cover the whole cap by now — they must still draw.
-    expect(tileDraw).toHaveBeenCalledTimes(1);
-  });
-
-  it('forwards a fractional alpha at the fade band midpoint', () => {
-    const view = makeEarthBodyView('earth');
-    const state = makeTileDrawState({
-      tileRenderer: { draw: vi.fn() },
-      cut: STUB_CUT,
-      atlasView: ATLAS_VIEW,
-    });
-    const baseDraw = spyOnBaseDraw(state);
-
-    const midAltitudeKm =
-      (EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM + EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM) / 2;
-    earthPass.draw(PASS_STUB, view, makeAltitudeCtx(midAltitudeKm), state);
+    earthPass.draw(PASS_STUB, view, makeAltitudeCtx(1), state);
 
     expect(baseDraw).toHaveBeenCalledTimes(1);
-    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
-    expect(uniforms[29]).toBeGreaterThan(0);
-    expect(uniforms[29]).toBeLessThan(1);
+    expect(tileDraw).toHaveBeenCalledTimes(1);
   });
 });
 

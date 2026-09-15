@@ -37,7 +37,23 @@ function pixelAt(
 }
 
 describe('underfillImagerySource', () => {
-  it('declines without ever calling filler.readBox when primary declines', async () => {
+  it('serves a halo box outside the primary coverage from the filler alone', async () => {
+    // R11's sibling closure asks the bake for tiles beyond the band's own
+    // boxes; the primary has nothing there by definition, so a decline that
+    // stayed a decline would leave the ring unbaked and stall the refinement
+    // of the quad on the band's edge.
+    const primary = stubSource('primary', async () => null);
+    const BLUE: readonly [number, number, number, number] = [0, 0, 255, 255];
+    const filler = stubSource('filler', async () => solid(BLUE));
+    const halo: LonLatBounds = { west: 13, east: 14, south: 55, north: 56 };
+
+    const result = await underfillImagerySource(primary, filler).readBox(halo, WIDTH, HEIGHT);
+
+    expect(result).not.toBeNull();
+    expect(pixelAt(result!, 0, 0)).toEqual(BLUE);
+  });
+
+  it('declines without ever calling filler.readBox when primary declines INSIDE its coverage', async () => {
     const primary = stubSource('primary', async () => null);
     const fillerReadBox = vi.fn<EarthImagerySource['readBox']>(async () => solid([0, 0, 255, 255]));
     const filler = stubSource('filler', fillerReadBox);

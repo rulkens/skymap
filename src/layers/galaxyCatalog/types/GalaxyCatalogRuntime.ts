@@ -15,7 +15,7 @@ import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxy
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { HiResFamousReq } from '../../../@types/loading/HiResFamousReq';
 import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';
-import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
@@ -44,7 +44,7 @@ export type GalaxyCatalogRuntime = GalaxyCatalogBridge & {
   readonly proceduralDiskRenderer: ProceduralDiskRenderer;
   readonly diskRadiusRing: DiskRadiusRing;
 
-  readonly galaxyAtlas: BitmapStreamSubsystem;
+  readonly galaxyAtlas: TileStreamSubsystem<ImageBitmap>;
   readonly texturedDisks: TexturedDiskSubsystem;
   readonly proceduralDisks: ProceduralDiskSubsystem;
   readonly diskPlannerWalk: DiskPlannerWalk;

@@ -1,6 +1,6 @@
 /**
  * `BMNG_QUADRANT_KEYS` — the raw-data key of each Blue Marble quadrant, keyed
- * by the quadrant's own name. `buildEarthTiles` reads their pixels and
+ * by the quadrant's own name. `buildSurfaceTiles` reads their pixels and
  * `fetchTextures` downloads them; both derive from this one enumeration
  * rather than each naming the eight files separately (which is exactly how
  * they once went unfetched — the bake named keys, the fetcher named none).

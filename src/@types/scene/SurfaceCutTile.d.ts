@@ -1,9 +1,10 @@
 import type { SurfacePatchAnchor } from './SurfacePatchAnchor';
+import type { ResolvedTileResidency } from './ResolvedTileResidency';
 
 /**
  * SurfaceCutTile — one leaf of `cutSurfaceTiles`'s walk that is actually
- * resident this frame (a leaf with no resident tile anywhere in its
- * ancestor chain is dropped; the base globe covers it instead).
+ * drawable this frame: some albedo AND some height in its ancestor chain (a
+ * leaf missing either is dropped; the base globe covers it).
  *
  * `anchor` carries the leaf's angular footprint, not a corner DIRECTION: the
  * direction is derivable from it via `patchOriginRelEyeM`, and two parallel
@@ -13,31 +14,22 @@ import type { SurfacePatchAnchor } from './SurfacePatchAnchor';
 export type SurfaceCutTile = {
   readonly id: { readonly z: number; readonly x: number; readonly y: number };
   readonly anchor: SurfacePatchAnchor;
-  readonly resident: {
+  /** May be an ancestor's texels, flattened into this leaf's sub-rect. */
+  readonly albedo: ResolvedTileResidency;
+  /** The height lattice this leaf samples: the deepest resident tile in its own
+   *  ancestor chain, `levelDelta` levels above `id.z` (0 = its own tile), and
+   *  the origin in posts of the leaf's sub-rect inside that slot. `cells` is
+   *  `128 >> levelDelta`. Balance may raise `levelDelta` (never lower it). */
+  readonly height: {
     readonly slot: number;
-    /** This leaf's OWN atlas rect, already flattened by
-     *  `cutSurfaceTiles.ts`'s `resolveCutResidency` to the resolved
-     *  ancestor's `1 / 2^levelDelta` sub-rect — never the ancestor's raw
-     *  slot rect. There is no `levelDelta` to apply downstream; a
-     *  flattened rect is the only fact a consumer needs. */
-    readonly atlasUvOrigin: readonly [number, number];
-    readonly atlasUvScale: readonly [number, number];
-    /** `performance.now()` (REAL time) when the resolved tile's bitmap
-     *  uploaded — stamped at `earthTileSubsystem`'s `uploadBitmap` site.
-     *  Drives the renderer's fade-in weight; never sim time, so a fade runs
-     *  even while the sim clock is paused or scaled. */
-    readonly readyAtMs: number;
-    /** The next resident ancestor strictly ABOVE the resolved tile (a
-     *  shallower level, further up the same walk `resolveCutResidency`
-     *  already does), flattened into this leaf's own sub-rect the same way
-     *  `atlasUvOrigin`/`atlasUvScale` are — the coarser imagery the
-     *  renderer fades FROM. `null` when no deeper resident ancestor exists
-     *  (the resolved tile IS the shallowest resident one), which the
-     *  renderer reads as "nothing to fade from" — full weight, no second
-     *  sample needed. */
-    readonly fallback: {
-      readonly atlasUvOrigin: readonly [number, number];
-      readonly atlasUvScale: readonly [number, number];
-    } | null;
+    readonly levelDelta: number;
+    readonly originPosts: readonly [number, number];
   };
+  /** Per edge, in R9 order `[west, east, south, north]`: 1 when the
+   *  neighbouring leaf's HEIGHT level is exactly one coarser, which F2 samples
+   *  at doubled stride — that neighbour's own lattice. 0 otherwise, a step of
+   *  two or more (R12's band seam) included: no stride meets it, and F2's
+   *  skirt — drawn on every edge — is what hides it. `balanceSurfaceCut` fills
+   *  it; only the fine side of a pair carries a bit. */
+  readonly edgeCoarser: readonly [0 | 1, 0 | 1, 0 | 1, 0 | 1];
 };

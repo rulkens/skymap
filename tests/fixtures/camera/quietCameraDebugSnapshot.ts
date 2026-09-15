@@ -33,6 +33,7 @@ export const QUIET_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   epochMismatch: false,
   anchorLocalM: null,
   eyeRelAnchorMagM: null,
+  sitePose: null,
   activeDriverId: 'resting',
   gestureMode: null,
   gestureCursorHit: null,

@@ -1,34 +1,29 @@
-// earthSurfaceTile/fragment.wesl — shading maths, over budget on that
-// basis. Mirrors earth/fragment.wesl's composition ('lib/pbr.wesl'
-// 'pbrDirect', the ocean/land roughness split, cloud ground-shadow,
-// night-lights) so a resident tile reads as a seamless closeup of the same
-// globe -- see that file's header for the physical derivation of each
-// term, not repeated here. Differs only in addressing: 'surfaceTexture' is
-// the earthTileSubsystem ATLAS, sampled at the CPU-RESOLVED rect
-// ('atlasUvOrigin + uv * atlasUvScale') in place of the base globe's
-// per-fragment page-table lookup (Task 2's 'cutSurfaceTiles' already
-// resolved it once per LEAF); 'material'/'night'/'normal'/'clouds' stay
-// the SAME whole-globe textures, sampled at an equirect uv reconstructed
-// from the interpolated local normal (this mesh carries only intra-tile
-// uv -- see io.wesl).
+// earthSurfaceTile/fragment.wesl — mirrors earth/fragment.wesl's shading
+// ('lib/pbr.wesl' 'pbrDirect', roughness split, cloud shadow, night-lights);
+// see that file's header for the derivation. Differs only in addressing
+// ('surfaceTexture' is the CPU-resolved atlas rect) and skips the whole-globe
+// NORMAL map: patches shade from the height field alone (spec section 7.2).
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
+import package::bodies::earthSurfaceTile::lattice::latticePostGradient;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::nightLights::nightLights;
-import package::lib::normalMap::perturbNormal;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
 import package::lib::math::TAU;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
+// The same r32float height atlas the vertex stage displaces from, read the same
+// way: 'textureLoad' at an integer post, never a sampler (spec section 5.5).
+@group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(3) var baseSampler: sampler;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
 @group(0) @binding(6) var materialTexture: texture_2d<f32>;
 @group(0) @binding(7) var nightTexture: texture_2d<f32>;
-@group(0) @binding(8) var normalTexture: texture_2d<f32>;
+// Binding 8 was the whole-globe normal map; it is the base globe's alone now.
 @group(0) @binding(9) var cloudTexture: texture_2d<f32>;
 
 // Mirrored from 'EARTH_TILE_ATLAS_SIDE' (earthTileParams.ts) -- parity-tested
@@ -105,8 +100,41 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let baseAlbedo = mix(fallbackAlbedo, primaryAlbedo, in.fadeWeight);
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;
 
-  let nEnc = textureSample(normalTexture, baseSampler, equirectUv).rg;
-  let n = perturbNormal(Ng, in.tangent, nEnc);
+  // Normal from the four posts of the height cell this fragment lies in:
+  // each post's own slope, interpolated across the cell, so the normal is
+  // continuous over a post line where the drawn surface only bends (the
+  // bilinear cell's own gradient was not, and drew every cell as a facet).
+  // Twin: src/utils/scene/surfaceNormalFromHeightCell.ts. 'in.uv.y' already
+  // runs 0 at the patch's NORTH edge (vertex.wesl's 'uv = (s, 1 - t)'), the
+  // lattice's own row order. Cells are the LEAF's (R14), not a fixed 128.
+  let cellsU = in.heightLattice.z;
+  let cells = f32(cellsU);
+  let col = in.uv.x * cells;
+  let rowF = in.uv.y * cells;
+  let i0 = clamp(floor(col), 0.0, cells - 1.0);
+  let j0 = clamp(floor(rowF), 0.0, cells - 1.0);
+  let cellU = col - i0;
+  let cellV = rowF - j0;
+  let nwPost = vec2<u32>(u32(i0), u32(j0));
+  let gNW = latticePostGradient(heightAtlas, in.heightLattice.xy, nwPost, cellsU);
+  let gNE = latticePostGradient(heightAtlas, in.heightLattice.xy, nwPost + vec2<u32>(1u, 0u), cellsU);
+  let gSW = latticePostGradient(heightAtlas, in.heightLattice.xy, nwPost + vec2<u32>(0u, 1u), cellsU);
+  let gSE = latticePostGradient(heightAtlas, in.heightLattice.xy, nwPost + vec2<u32>(1u, 1u), cellsU);
+  let g = mix(mix(gNW, gNE, cellU), mix(gSW, gSE, cellU), cellV);
+
+  // The 'max' is the polar guard: cos(lat) reaches 0 on the pole row and the
+  // east gradient would divide by zero.
+  let lat = asin(clamp(Ng.z, -1.0, 1.0));
+  let postSpacingNM = u.radiusM * in.patchSpanRad.y / cells;
+  let postSpacingEM = max(u.radiusM * cos(lat) * in.patchSpanRad.x / cells, 1e-3);
+  let dhdE = g.x / postSpacingEM;
+  let dhdN = g.y / postSpacingNM;
+  // Re-orthogonalized against Ng and re-normalized -- 'in.tangent' survives an
+  // interpolation across the patch and is no longer guaranteed either, the
+  // same treatment perturbNormal (lib/normalMap.wesl) gives it.
+  let eHat = normalize(in.tangent - Ng * dot(Ng, in.tangent));
+  let nHat = normalize(cross(Ng, eHat));
+  let n = normalize(Ng - dhdE * eHat - dhdN * nHat);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
   let v = normalize(in.viewDirLocal);
   let l = u.sunDirLocal;
@@ -124,9 +152,12 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let colour = direct * u.sunIrradiance + u.ambientLight * baseAlbedo;
 
   let nightColour = textureSample(nightTexture, baseSampler, equirectUv).rgb;
-  let NoL = max(dot(n, l), 0.0);
+  // Whether the sun is up is the DATUM's cosine, not the terrain's: keyed on
+  // 'n', every slope facing away from the sun at noon read as night and lit up
+  // with the city's Black Marble glow (Søndermarken's banks turned cream).
+  let sunUp = max(dot(Ng, l), 0.0);
   let cloudAlphaHere = textureSample(cloudTexture, baseSampler, equirectUv).a;
-  let emissive = nightLights(nightColour, NoL, cloudAlphaHere);
+  let emissive = nightLights(nightColour, sunUp, cloudAlphaHere);
 
   var finalColour = colour + emissive;
   // Earth LOD overlay ('u.debugLodOverlay' > 0.5) -- a runtime, not

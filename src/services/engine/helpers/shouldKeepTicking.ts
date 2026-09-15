@@ -36,7 +36,7 @@ export function shouldKeepTicking(
   nowMs: number,
   anim: {
     starFadeAnimating: boolean;
-    earthTilesAnimating: boolean;
+    surfaceTilesAnimating: boolean;
     labelsAnimating: boolean;
     probeDue: boolean;
     layersAnimating: boolean;
@@ -50,7 +50,7 @@ export function shouldKeepTicking(
     selectIsManualPlaying(s) ||
     followApproachEaseActive(state) ||
     anim.starFadeAnimating ||
-    anim.earthTilesAnimating ||
+    anim.surfaceTilesAnimating ||
     anim.labelsAnimating ||
     anim.probeDue ||
     anim.layersAnimating

@@ -41,6 +41,7 @@ export function makeSurfaceDriver() {
         bodyRadiusM,
         standoffRadii: SURFACE_STANDOFF_RADII,
         sceneUpLocal,
+        focusPivotM: null,
         tuning,
       });
       memory = out.gesture;

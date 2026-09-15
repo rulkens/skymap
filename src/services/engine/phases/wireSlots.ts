@@ -13,7 +13,7 @@
  *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
  *   4. DEV synthetic-volume fixtures — minted + installed here (not a wiring
  *      row; tree-shaken from production).
- *   5. `createEarthTileSubsystem` / `seedFades` / `wireStructureProjection` —
+ *   5. `createSurfaceTileSubsystem` / `seedFades` / `wireStructureProjection` —
  *      Earth's surface virtual texture, the whole fade-ownership manifest
  *      (every composed fade handle, seeded), and the structure-store anchor +
  *      bulk projection.
@@ -42,7 +42,7 @@
  *   - `state.assetSlots.{filaments,structureCatalog,cf4Density,mcpm,flow,…}`
  *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
  *     `.meshBodies` (via `wireMeshBodySlots`) + `.syntheticVolumes` (DEV).
- *   - `state.subsystems.{loadProgress, structures, earthTiles}`.
+ *   - `state.subsystems.{loadProgress, structures, surfaceTiles}`.
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
  *     `installFormatVersionAlert` subscriber; the latter may later dispatch
@@ -62,7 +62,7 @@ import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
-import { createEarthTileSubsystem } from '../subsystems/earthTileSubsystem';
+import { createSurfaceTileSubsystem } from '../subsystems/surfaceTileSubsystem';
 import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
@@ -101,7 +101,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Construction is free (no GPU memory, no fetch until the tile planner
   // engages), and kept out of `wireImpostorSubsystems` since it shares nothing
   // with that dependency-ordered cluster but the device.
-  state.subsystems.earthTiles = createEarthTileSubsystem({
+  state.subsystems.surfaceTiles = createSurfaceTileSubsystem({
     device: deps.phaseLocals!.device,
     requestRender: () => state.subsystems.scheduler.requestRender(),
   });

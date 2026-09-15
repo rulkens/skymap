@@ -156,7 +156,7 @@ export class TextureAtlas {
    *
    * The slot is taken on trust — nothing here can tell a deliberate write from
    * a stale index. A caller holding a KEY resolves it through `slotOf`
-   * immediately before calling this (see `bitmapStreamSubsystem.uploadBitmap`).
+   * immediately before calling this (see `tileStreamSubsystem.upload`).
    *
    * Why `copyExternalImageToTexture` rather than `writeTexture`?  The
    * former takes an ImageBitmap directly without us having to read the
@@ -177,6 +177,25 @@ export class TextureAtlas {
       { source: bitmap, flipY: false },
       { texture: this.texture, origin: [col * this.slotSide, row * this.slotSide, 0] },
       [this.slotSide, this.slotSide, 1],
+    );
+  }
+
+  /**
+   * Upload raw texel bytes (e.g. an `r32float` height tile) into the given
+   * slot via `writeTexture` — no CPU→GPU decode step, unlike `uploadBitmap`'s
+   * `copyExternalImageToTexture`, since there's no `ImageBitmap` to source
+   * from. `rows` lets a caller write fewer than a full slot's rows; `bytesPerRow`
+   * is the caller's own payload stride, not derived from `slotSide`.
+   */
+  uploadTexels(slotIdx: number, data: ArrayBufferView, bytesPerRow: number, rows: number): void {
+    if (!this.texture) throw new Error('TextureAtlas: call initTexture() first.');
+    const col = slotIdx % this.slotsPerRow;
+    const row = Math.floor(slotIdx / this.slotsPerRow);
+    this.device.queue.writeTexture(
+      { texture: this.texture, origin: [col * this.slotSide, row * this.slotSide, 0] },
+      data,
+      { bytesPerRow, rowsPerImage: rows },
+      [this.slotSide, rows, 1],
     );
   }
 

@@ -20,6 +20,10 @@ export type CameraDriver = {
   // This row authors ORBIT terms, so `applyFocusedBodyPivot` re-centres its `target`
   // on the focused body; clip / tween keyframe a target of their own and leave it unset.
   readonly pivotsOnFocusedBody?: boolean;
+  // This row DELIVERS the framing a focus asks for (it keyframes the whole
+  // pose), so it settles the follow approach's debt instead of leaving it owed
+  // for the approach to undo at the row's exit.
+  readonly deliversFraming?: boolean;
   // `approachDone` = the follow memory saturated last frame; only `followApproach` reads it.
   isActive(s: RootState, approachDone?: boolean): boolean;
   // A row that owns no memory hands `mem` back, so the winner's adoption needs no branch.

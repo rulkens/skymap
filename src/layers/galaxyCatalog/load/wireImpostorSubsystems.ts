@@ -10,7 +10,7 @@ import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsy
 import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
 import { createDiskPlannerWalk } from '../subsystems/diskPlannerWalk';
 
-import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
@@ -21,7 +21,7 @@ export function wireImpostorSubsystems(deps: {
   readonly requestRender: () => void;
   readonly texturedDiskRenderer: TexturedDiskRenderer;
 }): {
-  readonly galaxyAtlas: BitmapStreamSubsystem;
+  readonly galaxyAtlas: TileStreamSubsystem<ImageBitmap>;
   readonly texturedDisks: TexturedDiskSubsystem;
   readonly proceduralDisks: ProceduralDiskSubsystem;
   readonly diskPlannerWalk: DiskPlannerWalk;

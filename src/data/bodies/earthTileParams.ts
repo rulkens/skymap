@@ -8,8 +8,10 @@
  * (2048=z2, 4096=z3, 8192=z4) and matches the WGS84/EOX ladder verbatim.
  * Three floors, none a constant here: BASE (`earthBaseLevelForTier`) is
  * the walk floor; REQUEST (`derivePlannerParams`) and BAKE
- * (`tools/textures/buildEarthTiles.ts`) are the fetch/bake floors.
+ * (`tools/textures/buildSurfaceTiles.ts`) are the fetch/bake floors.
  */
+
+import { HEIGHT_POSTS_PER_TILE } from '../scene/heightTileFormat';
 
 /** Full equirectangular width, in texels, of pyramid level 0. Level `z` is
  *  `EARTH_EQUIRECT_BASE_WIDTH_PX << z` wide and half that tall, so `z = 4` is
@@ -27,6 +29,20 @@ export const EARTH_TILE_PX = 512;
  *  working set past the old 64-slot ceiling; 8192 is also WebGPU's baseline
  *  maxTextureDimension2D, so no limit request is needed. (Design 6.) */
 export const EARTH_TILE_ATLAS_SIDE = 8192;
+
+/** Physical edge of the HEIGHT atlas: 32 x 32 = 1024 slots at the height
+ *  tile's 129-post stride, so 4128 px of `r32float`, 68 MB — under the 8192
+ *  baseline `maxTextureDimension2D`. Four times the albedo atlas's slot count
+ *  because a miss costs more: albedo inherits an ancestor's texels and blurs,
+ *  height inherits a coarser lattice and flattens. A tilted view's working set
+ *  runs to ~1800 tiles (R14's measurement), so the cut is not 1:1 with albedo's
+ *  256 and sizing this by that count was what starved it. (Spec §5.5.) */
+export const HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE;
+
+/** Slots per row of the height atlas, row-major like `TextureAtlas`'s own
+ *  layout — the one derivation both the renderer's slot→texel packing and the
+ *  subsystem's capacity math must share. */
+export const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than
  *  the asset queue's: many small streaming fetches during flight (~33 KB each),
@@ -47,26 +63,20 @@ export const EARTH_EQUATORIAL_CIRCUMFERENCE_M = 40075016.686;
  */
 export const EARTH_TILE_LOD_BIAS = 1;
 
-/** Subdivision `n` per patch edge of the shared vertex-shader template.
- *  Independent of the height data's post spacing -- surplus height detail
- *  reaches the picture through the fragment-stage normal -- so raising this
- *  to 64 for displacement is a constant change, not a re-bake (spec §7). */
-export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 8;
+/** Subdivision `n` per patch edge of the shared vertex-shader template: 1.19 m
+ *  geometric post spacing at z19. Deliberately half the height tile's 128 cells
+ *  — geometry LOD and shading LOD are separate budgets, and the surplus height
+ *  detail reaches the picture through the fragment-stage normal (spec §7, §10).
+ *  `(HEIGHT_POSTS_PER_TILE - 1)` must stay divisible by it (parity-tested). */
+export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 64;
 
-/**
- * Base-globe descent-fade band, in camera altitude above the surface (km).
- * The detail-tile mesh fully covers the visible cap once resident, and the
- * base globe's non-RTC f32 depth jitters at low altitude, stochastically
- * punching through the tiles — so the globe fades out ahead of that fight.
- * 300 km completes the fade far above the few-km altitudes where the jitter
- * becomes visible; 150 km sits far below tile engagement, so tiles are
- * always resident by the time the globe is gone. See `baseGlobeFadeAlpha`.
- */
-export const EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM = 300;
-
-/** Lower edge (alpha 0) of the base-globe fade band — see
- *  `EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM`. */
-export const EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM = 150;
+/** Skirt depth as a fraction of the patch's north-south extent
+ *  (`radiusM · dLatRad`): 15.6 km at z7, 245 m at z13, 3.8 m at z19. The gap a
+ *  seam opens is the coarse neighbour's geometric residual, which the fine side
+ *  cannot read — this is the heuristic that stands in for it (F2-R3), on every
+ *  edge of every patch (R15).
+ *  Mirrored into `earthSurfaceTile/vertex.wesl`, parity-tested. */
+export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
 
 /**
  * Crossfade duration, in milliseconds of REAL time (`performance.now()`,

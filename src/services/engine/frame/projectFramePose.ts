@@ -21,6 +21,8 @@ import type { TiltMemory } from '../../../@types/camera/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { hOverR } from '../camera/hOverR';
+import { liveBodyPosition } from '../camera/liveBodyPosition';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
 import { hostOf } from '../camera/rungs/hostOf';
@@ -31,8 +33,12 @@ import { rungKindOf } from '../camera/rungs/rungKindOf';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { stepRung } from '../camera/rungs/stepRung';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
+import { focusInSubtree } from '../../../utils/camera/focusInSubtree';
+import { surfaceFixedChain } from '../../../utils/camera/surfaceFixedChain';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
+import { releasedWorldRoll } from '../../../utils/camera/releasedWorldRoll';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
+import { addVec3 } from '../../../utils/math/addVec3';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
 
 /** The pin's strafe while no follow memory exists. */
@@ -74,9 +80,12 @@ export function projectFramePose(args: {
   // Post-pin, PRE-projection (R12b-1).
   let register = authoredOverride ?? displayed;
   // The body the tilt memory belongs to: the ENGAGED rung's host while a body
-  // arm holds (a differing focus has already released it), else the FOCUSED body.
+  // arm holds (a differing focus has already released it), else the SURFACE the
+  // focus stands on. Keying a rover's own id would wipe its planet's tilt one
+  // frame before `siteRung.host` — whose stated job is to keep it — can run.
   const regime = intent.base.frame;
-  const noted = notedTiltMemory(tilt, hostOf(regime, ctx)?.id ?? ctx.focusBodyId);
+  const tiltHostId = hostOf(regime, ctx)?.id ?? surfaceFixedChain(ctx.focusBodyId).at(-1) ?? null;
+  const noted = notedTiltMemory(tilt, tiltHostId);
   displayed = approachTiltedPose(
     displayed,
     pivotsOnFocusedBody,
@@ -93,37 +102,62 @@ export function projectFramePose(args: {
 
   const actions: UnknownAction[] = [];
   let requestRender = false;
-  // No flip during a gesture (ruled, Q6): skipped WHOLE — not clamped, not
-  // latched — and re-evaluated at gesture end.
+  // The step is asked about the REGIME's pose, never the arm this frame's
+  // winner authored: `tween`/`clip` are not arm-gated, so reading the produced
+  // pose as the regime swaps §4's disengage test for the engage one
+  // mid-animation. Free while the two agree — `refoldTo` answers by reference.
+  const target = intent.dragging ? regime : stepRung(refoldTo(displayed, regime, ctx), ctx);
+  // One whole skip, never a clamp or a latch, retried next frame: a live gesture
+  // (ruled, Q6).
   if (!intent.dragging) {
-    // The step is asked about the REGIME's pose, never the arm this frame's
-    // winner authored: `tween`/`clip` are not arm-gated, so reading the
-    // produced pose as the regime swaps §4's disengage test for the engage one
-    // mid-animation. Free while the two agree — `refoldTo` answers by reference.
-    const target = stepRung(refoldTo(displayed, regime, ctx), ctx);
+    // The arm being LEFT, not the arm the winner happened to author in: an
+    // approach owed from inside an arm produces a world pose there, and reading
+    // `displayed` would skip the normalisation on exactly those crossings.
     if (rungKindOf(target) === 'absolute') {
-      if (!isWorldArm(displayed)) {
-        // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
-        const centreMpc = hostOrThrow(displayed.frame, ctx).state.positionMpc;
+      if (rungKindOf(regime) !== 'absolute') {
+        // Disengage normalization (pop-2 fix) — see `centreLookingArm`. The
+        // centre is the FOCUSED body when it merely hangs off the arm's host
+        // (a rover keeps its planet's arm, §4.8): the pin and the follow rows
+        // re-read an absolute `target` as the focus, so committing the host's
+        // centre leaves them a body radius to close as an eye teleport (pop-3).
+        // `panOffset` rides along for the same reason — the pin re-reads it
+        // too, so a commit without it is a |pan| teleport on the quiet frame.
+        const host = hostOrThrow(regime, ctx);
+        const focused = focusInSubtree(ctx.focusBodyId, host.id)
+          ? liveBodyPosition(focus, bodies)
+          : null;
+        const centreMpc = addVec3(focused ?? host.state.positionMpc, follow?.panOffset ?? NO_PAN);
+        const eyeMpc = eyeMpcOf(world, poseBasis);
         displayed = centreLookingArm(
-          eyeMpcOf(world, poseBasis),
+          eyeMpc,
           centreMpc,
           poseBasis,
-          world.roll ?? 0,
+          // The world arm's up is the frame pole's: a cut out of the band may
+          // not hand it the host's local horizon (see `releasedWorldRoll`).
+          releasedWorldRoll(world.roll ?? 0, hOverR(eyeMpc, host.state, host.radiusM), tuning),
         );
         // Centre-looking, so authored and displayed coincide.
         register = displayed;
       }
-    } else if (isWorldArm(displayed)) {
+    } else if (
+      !sameFrame(displayed.frame, target) &&
+      // The pose being crossed must be the one the step judged — the world arm
+      // on an engage, the regime's own rung on a descent between two of them.
+      // A produced pose in some THIRD frame (a clip leg's) is not this crossing's.
+      (isWorldArm(displayed) || sameFrame(displayed.frame, regime))
+    ) {
       displayed = refoldTo(displayed, target, ctx);
-      // Engage converts the DISPLAYED pose (ruling 13); on the body arm the
+      // Engage converts the DISPLAYED pose (ruling 13); below the world arm the
       // tilt is geometry, not a projection, so the register holds it too.
       register = displayed;
     }
-    // Once per crossing. The wake is the fold's own: `shouldKeepTicking` reads
-    // the pre-fold snapshot, so a flip that quiets the last live term would
-    // otherwise park the loop.
-    if (!sameFrame(target, regime)) {
+    // Once per crossing, and only of a pose in the crossing's TARGET frame:
+    // where the refold above declined a third frame, committing anyway would
+    // publish that third frame as the regime — a site-framed clip leg over an
+    // absolute base jumped two rungs in one frame. The wake is the fold's own:
+    // `shouldKeepTicking` reads the pre-fold snapshot, so a flip that quiets
+    // the last live term would otherwise park the loop.
+    if (!sameFrame(target, regime) && sameFrame(displayed.frame, target)) {
       actions.push(commitCameraPose(displayed));
       requestRender = true;
     }

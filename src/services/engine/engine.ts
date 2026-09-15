@@ -47,7 +47,6 @@ import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { deriveBodyStates } from './frame/deriveBodyStates';
-import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -69,7 +68,7 @@ import { updateFrameStats, IDLE_GAP_MS } from '../../utils/perf/updateFrameStats
 import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
-import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from './subsystems/earthTileSubsystem';
+import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from './subsystems/surfaceTileSubsystem';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -236,7 +235,7 @@ export function createEngine(
     subsystems: {
       // Holds no GPU memory even once constructed — the atlas is allocated by the
       // first frame the tile planner engages on.
-      earthTiles: null,
+      surfaceTiles: null,
 
       // The directors own the label/marker-line uploads and declutter across every
       // registered producer; the layers only issue draws against what was flushed.
@@ -513,8 +512,8 @@ export function createEngine(
     state.subsystems.structureFocus.destroy();
     // Owns a 67 MB atlas and a page-table texture once engaged, neither of which
     // WebGPU releases on GC.
-    state.subsystems.earthTiles?.destroy();
-    state.subsystems.earthTiles = null;
+    state.subsystems.surfaceTiles?.destroy();
+    state.subsystems.surfaceTiles = null;
     state.subsystems.clickResolver?.destroy();
     state.subsystems.clickResolver = null;
     state.subsystems.loadProgress?.destroy();
@@ -579,8 +578,8 @@ export function createEngine(
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.
       assetPriorities: () => assetPriorityBySlotName(state),
-      earthTiles: () =>
-        state.subsystems.earthTiles?.getDebugSnapshot() ?? EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+      surfaceTiles: () =>
+        state.subsystems.surfaceTiles?.getDebugSnapshot() ?? EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
       // An off-frame read that never writes camera state, so it goes through
       // `liveWorldPose` + `deriveBodyStates` at `outputs.simDays`. `liveSimDays`
       // alone resolves fresh — it is what the epoch-mismatch check compares against.

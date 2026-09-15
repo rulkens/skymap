@@ -11,9 +11,12 @@
 // cross-check: a field reorder on one side alone scrambles every drawn
 // patch with no compiler signal.
 //
-// The two vec4s must stay last and adjacent. Reordering the five scalars
-// keeps the 64-byte stride but re-maps offsets 12..31 with no compiler
-// signal -- the layout test's per-field assertions are the only guard.
+// The two vec4s must stay BEFORE 'heightSlotOrigin': a vec2<u32> declared
+// earlier pads the record past its 80-byte stride (spec section 7's
+// field-order note). Reordering the five scalars keeps the stride but
+// re-maps offsets 12..31 with no compiler signal -- the layout test's
+// per-field assertions are the only guard. 'heightCells' at 76 fills what
+// was the struct's trailing pad, so the stride is still 80.
 //
 // 'datumRadiusM' is deliberately absent: it is the per-draw uniform
 // 'SurfaceTileUniforms.radiusM' (offset 76), since one body is engaged per
@@ -35,16 +38,31 @@ struct PatchInstance {
   lat0Rad: f32,
   dLonRad: f32,
   dLatRad: f32,
-  // This tile's already-resolved atlas rect ('SurfaceCutTile.resident'),
+  // This tile's already-resolved atlas rect ('SurfaceCutTile.albedo'),
   // flattened as (origin.xy, scale.xy) -- no page-table indirection.
   albedoRect: vec4<f32>,
   // The next resident ancestor strictly above the resolved tile, flattened
   // the same way -- the coarser imagery the fragment crossfades FROM
   // (fragment.wesl samples both). Equal to albedoRect (and fadeWeight
   // forced to 1) when no deeper resident ancestor exists --
-  // 'SurfaceCutTile.resident.fallback === null's CPU-side encoding, so the
+  // 'SurfaceCutTile.albedo.fallback === null's CPU-side encoding, so the
   // fragment always has a valid second rect to sample.
   fallbackRect: vec4<f32>,
+  // Post origin of this leaf's SUB-RECT in the r32float atlas: its resident
+  // height tile's slot origin plus 'SurfaceCutTile.height.originPosts', so a
+  // leaf flattened into an ancestor's slot (R14) needs no second field. Posts
+  // are read with 'textureLoad' -- never a sampler, which would bleed the
+  // neighbouring slot in along every patch edge.
+  heightSlotOrigin: vec2<u32>,
+  // One bit per edge in R9 order (west | east << 1 | south << 2 |
+  // north << 3), set when that neighbouring leaf's HEIGHT LEVEL is exactly
+  // one coarser: the vertex stage then samples that edge at doubled stride,
+  // which IS the neighbour's own lattice. A step of two or more carries no
+  // bit -- no stride meets it, and the skirt (on every edge, R15) hides it.
+  edgeCoarser: u32,
+  // Cells across the sub-rect above: 128 >> levelDelta, so 128 on a leaf
+  // drawing its own tile. Fills what was the record's trailing pad.
+  heightCells: u32,
 };
 
 // VSOut mirrors the shape of bodies/earth/io.wesl: clip position, an
@@ -73,6 +91,13 @@ struct VSOut {
   @location(6) @interpolate(flat) fallbackUvOrigin: vec2<f32>,
   @location(7) @interpolate(flat) fallbackUvScale: vec2<f32>,
   @location(8) @interpolate(flat) fadeWeight: f32,
+  // What the fragment needs to take its normal from the height cell it lies
+  // in: the leaf's lattice as (origin.xy, cells) -- one location rather than
+  // two, since a sub-rect origin without its cell count addresses nothing --
+  // and the patch's (dLon, dLat) to turn a cell step into metres. Per-tile
+  // constants, so flat; a u32 cannot interpolate at all.
+  @location(9) @interpolate(flat) heightLattice: vec3<u32>,
+  @location(10) @interpolate(flat) patchSpanRad: vec2<f32>,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance

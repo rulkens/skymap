@@ -10,7 +10,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
 // Spies that DELEGATE to the real modules: the fold's placement is a call-order
 // property, so the frame has to run its production path while the probe records
@@ -72,9 +71,23 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { isSiteArm } from '../../../../src/services/engine/camera/rungs/isSiteArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
+import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
+import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
+import { tiltFromNadirRad } from '../../../../src/utils/camera/tiltFromNadirRad';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
+import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
+import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { SITE_RUNG } from '../../../../src/data/camera/siteRung';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import {
   beginDrag,
@@ -82,7 +95,8 @@ import {
   commitCameraPose,
   startCameraTween,
 } from '../../../../src/state/camera/cameraSlice';
-import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
+import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
@@ -93,7 +107,6 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
-import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -140,10 +153,54 @@ function seedPose(
   };
 }
 
+/**
+ * The wheel's cursor pixel for every crossing case below. OFF centre on
+ * purpose: a focused body sits at screen centre, so a cursor there makes the
+ * cursor pick and the focus coincide and hides every pivot defect they exist
+ * for — the fixtures would be choosing the one input the bug cannot occur on.
+ */
+const WHEEL_PX = { xPx: 70, yPx: 30 } as const;
+
+/** Angle between the last DRAWN sightline and the rover — off screen centre. */
+function offRoverRad(rover: BodyState): number {
+  const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+  const toRover = normalize3([
+    rover.positionMpc[0]! - drawn.eye[0]!,
+    rover.positionMpc[1]! - drawn.eye[1]!,
+    rover.positionMpc[2]! - drawn.eye[2]!,
+  ] as Vec3);
+  return Math.acos(
+    Math.min(
+      1,
+      drawn.forward[0]! * toRover[0]! +
+        drawn.forward[1]! * toRover[1]! +
+        drawn.forward[2]! * toRover[2]!,
+    ),
+  );
+}
+
 /** Geocentric range of a body-arm pose, metres — the anchor is the centre. */
 function rangeOf(framed: FramedCameraPose): number {
-  if (framed.frame === 'absolute') throw new Error('rangeOf: not a body arm');
+  if (!isBodyArm(framed)) throw new Error('rangeOf: not a body arm');
   return Math.hypot(...framed.pose.eyeRelAnchorM);
+}
+
+/**
+ * Park in Curiosity's site arm with the rover focused and the approach
+ * saturated — the two frames a follow-tween apart are what captures the follow
+ * memory's distance, which the hand-back cases below need (a memory taken
+ * fresh at a flip is eye-preserving by construction and hides them).
+ */
+function parkAtCuriositySite(h: ReturnType<typeof makeHarness>): void {
+  const site = { site: 'curiosity' as BodyId } as const;
+  const parked = foldToWorld(
+    { frame: site, pose: { siteId: site.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 2e5 } },
+    { bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B },
+  );
+  h.seedPose(absoluteArm(parked));
+  h.focus('curiosity');
+  h.tick(0);
+  h.tick(FOCUS_TWEEN_MS + 16);
 }
 
 function commitCalls(spy: { mock: { calls: readonly (readonly unknown[])[] } }): unknown[] {
@@ -262,57 +319,447 @@ describe('runFrame — the regime fold', () => {
     // render continuously while the NEXT frame's pin re-read `target` as the
     // centre and rebuilt the eye from `target + dir·distance`: a one-body-
     // radius (6,371 km) eye teleport on the first at-rest frame after the flip.
-    const { store, state, deps } = makeHarness();
-    probe.state = state;
-    // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
-    // every driven recession reaches the boundary with. A tenth of the edge
-    // below it, derived so a band re-tune keeps the premise.
-    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, TUNING.disengageHR * 0.9);
-    const arm = {
-      frame: EARTH_ARM,
-      pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),
-    } as const;
-    store.dispatch(commitCameraPose(arm));
-    state.cameraRuntime = {
-      ...state.cameraRuntime,
-      register: { ...state.cameraRuntime.register, pose: arm },
-    };
     // Earth focused and MOVING (in ORBITAL_ELEMENTS): the pin fires at rest.
-    store.dispatch(
-      setSelectionRow({
-        slot: 'focus',
-        row: {
-          type: 'body',
-          id: 'earth',
-          label: 'Earth',
-          positionMpc: [EARTH.positionMpc[0]!, EARTH.positionMpc[1]!, EARTH.positionMpc[2]!],
-        },
-      }),
-    );
+    // Settled in the arm the way the app settles — the focus's approach flown
+    // to saturation, then dived in — because a fresh focus owes an approach
+    // from inside the band too, and its ease would be read as the pop.
+    const h = makeHarness();
+    probe.state = h.state;
+    h.seedPose(absoluteArm(poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 10)));
+    h.focus('earth');
+    h.frame(60);
+    diveUntilEngaged(h, { body: 'earth' });
+    expect(h.state.cameraRuntime.register.pose.frame).toEqual(EARTH_ARM);
 
-    // One wheel notch out: factor e^0.24 ≈ 1.27 on the ALTITUDE (the anchor is
-    // the sub-eye footprint), so 0.9 of the edge clears it with margin.
-    state.subsystems.inputAggregator.push({
-      kind: 'wheel',
-      deltaY: 240,
-      duringGesture: false,
-      xPx: 50,
-      yPx: 50,
-    });
-    runFrame(state, deps, 0); // frame N: the zoom lands, the fold flips
-    runFrame(state, deps, 16); // frame N+1: at rest, the pin re-reads the target
+    // Notches out (factor e^0.24 ≈ 1.27 on the ALTITUDE, the anchor being the
+    // sub-eye footprint) until the band's far edge hands the arm back.
+    let flipAt = -1;
+    for (let i = 0; i < 12 && flipAt < 0; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.frame(1); // the zoom lands, and on the last of these the fold flips
+      if (h.state.cameraRuntime.register.pose.frame === 'absolute') {
+        flipAt = probe.drawnPoses.length - 1;
+      }
+    }
+    expect(flipAt).toBeGreaterThan(0); // not vacuous: the climb really crossed
+    h.frame(1); // at rest, the pin re-reads the target
 
-    expect(state.cameraRuntime.register.pose.frame).toBe('absolute');
-    const flip = renderedCamera(probe.drawnPoses[0] as CameraPose);
-    const pinned = renderedCamera(probe.drawnPoses[1] as CameraPose);
+    const flip = renderedCamera(probe.drawnPoses[flipAt] as CameraPose);
+    const pinned = renderedCamera(probe.drawnPoses[flipAt + 1] as CameraPose);
     for (let i = 0; i < 3; i++) {
       // The same conversion-floor bound the engage no-snap test uses; the bug
       // this pins was a 6.4e6 m jump, eleven decades above it.
       const eyeDriftM = Math.abs(pinned.eye[i]! - flip.eye[i]!) * SCALE_UNITS.MPC_TO_M;
       expect(eyeDriftM).toBeLessThan(5e-5);
-      // Tilt 0 at the crossing ⇒ the retarget is view-exact too.
-      expect(Math.abs(pinned.forward[i]! - flip.forward[i]!)).toBeLessThan(1e-9);
     }
+    // Tilt ~0 at the crossing ⇒ the retarget is view-exact too. In RADIANS,
+    // not per component: a sightline flown in over ~40 folded frames at
+    // heliocentric magnitude carries the cancellation of every one of them
+    // (measured 2.5e-8 rad), four decades below this fixture's one pixel
+    // (1.05e-2 rad) and further still below the whole-radius retarget it pins.
+    const sightlineRad = Math.acos(
+      Math.min(
+        1,
+        flip.forward[0]! * pinned.forward[0]! +
+          flip.forward[1]! * pinned.forward[1]! +
+          flip.forward[2]! * pinned.forward[2]!,
+      ),
+    );
+    expect(sightlineRad).toBeLessThan(1e-6);
+  });
+
+  it('disengaging from a body that only HOSTS the focus keeps the eye continuous', () => {
+    // Pop-3, pop-2's sibling under §4.8: a rover focus KEEPS its planet's arm,
+    // so the arm's host (Mars) and the body an absolute `target` means to the
+    // rows that re-read it (Curiosity) differ. Normalizing the disengage onto
+    // the host committed a Mars-centre distance that the next frame re-applied
+    // from the rover, teleporting the eye one Mars radius (3,390 km) out.
+    //
+    // The wheel-out is run from the site arm rather than seeded at the band
+    // edge because the pop needs a follow memory with a captured distance: a
+    // memory taken fresh at the flip is eye-preserving by construction and
+    // hides it, exactly as the user's approach-then-zoom-out does not.
+    const h = makeHarness();
+    parkAtCuriositySite(h);
+
+    let crossing = -1;
+    for (let i = 0; i < 80 && crossing < 0; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+      if (h.store.getState().camera.base.frame === 'absolute') {
+        crossing = probe.drawnPoses.length - 1;
+      }
+    }
+    expect(crossing).toBeGreaterThan(0);
+    h.frame(1); // quiet: no notch, so any eye motion here is the hand-back's
+
+    // The eye keeps pop-2's conversion floor (0 m measured; the bug was 3.4e6 m).
+    // The sightline's bound is ONE PIXEL of the fixture's viewport, 1.0e-2 rad
+    // against 8.6e-13 measured — the hand-back's arm holds the rover on its
+    // sightline (the case below), so the normalization's re-aim is a no-op.
+    const onePixelRad =
+      h.state.cameraRuntime.outputs.projection.fovYRad /
+      (h.deps.canvas as { height: number }).height;
+    const flip = renderedCamera(probe.drawnPoses[crossing] as CameraPose);
+    const settled = renderedCamera(probe.drawnPoses[crossing + 1] as CameraPose);
+    for (let i = 0; i < 3; i++) {
+      const eyeDriftM = Math.abs(settled.eye[i]! - flip.eye[i]!) * SCALE_UNITS.MPC_TO_M;
+      expect(eyeDriftM).toBeLessThan(5e-5);
+      expect(Math.abs(settled.forward[i]! - flip.forward[i]!)).toBeLessThan(onePixelRad);
+    }
+  });
+
+  it('disengaging after a pan keeps the eye continuous — the pin re-reads panOffset', () => {
+    // Pop-2's third sibling: the pan strafe lives on the follow memory's
+    // `panOffset`, and the pin re-reads an absolute target as `focus +
+    // panOffset`. Normalizing the disengage onto the bare focus centre left
+    // the pin a whole `panOffset` to close on the next QUIET frame — a 6.4e5 m
+    // eye teleport for a two-pixel drag at h/R 2, and it scales with the pan.
+    const h = makeCameraSimHarness({ focusBody: 'earth', bootHR: 2 });
+    probe.state = h.state;
+    // The approach must be saturated before the pan: a live ease writes the
+    // eye every frame and the quiet frame would have no baseline of its own.
+    h.frame(40);
+    h.store.dispatch(beginDrag());
+    h.push({ kind: 'gestureStart' });
+    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+    h.push({ kind: 'dragMove', mode: 'pan', xPx: 52, yPx: 50 });
+    h.frame(1);
+    h.push({ kind: 'gestureEnd' });
+    h.store.dispatch(endDrag());
+    h.frame(2);
+    const panOffset = h.state.cameraRuntime.follow?.panOffset ?? [0, 0, 0];
+    const panM = Math.hypot(...panOffset) * SCALE_UNITS.MPC_TO_M;
+    // Non-vacuity: a pan the fold could not see would pass the bound for free.
+    expect(panM).toBeGreaterThan(1e5);
+
+    // In past the engage edge, then back out through `disengageHR`. Two frames
+    // per notch so each one is fully folded before the next arrives.
+    for (let i = 0; i < 60 && h.store.getState().camera.base.frame === 'absolute'; i++) {
+      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+      h.frame(2);
+    }
+    expect(h.store.getState().camera.base.frame).toEqual(EARTH_ARM);
+    let crossing = -1;
+    for (let i = 0; i < 80 && crossing < 0; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+      if (h.store.getState().camera.base.frame === 'absolute') {
+        crossing = probe.drawnPoses.length - 1;
+      }
+    }
+    expect(crossing).toBeGreaterThan(0);
+    h.frame(1); // quiet: no notch, so any eye motion here is the hand-back's
+
+    const flip = renderedCamera(probe.drawnPoses[crossing] as CameraPose);
+    const settled = renderedCamera(probe.drawnPoses[crossing + 1] as CameraPose);
+    for (let i = 0; i < 3; i++) {
+      // Pop-2's conversion floor again; the bug measured 6.371e5 m, matching
+      // `|panOffset|` to every digit.
+      expect(Math.abs(settled.eye[i]! - flip.eye[i]!) * SCALE_UNITS.MPC_TO_M).toBeLessThan(5e-5);
+    }
+  });
+
+  it('the site hand-back keeps the focused rover on the sightline as the tilt ramps out', () => {
+    // The adverse eye check: zooming out from Opportunity, the rover left the
+    // frame the moment the site arm handed back to Mars's. The ramp itself is
+    // right (ruling 12: the body arm's display tilt settles to the remembered
+    // 0, so the disengage is view-exact) — but `settledZoomPose` turned the
+    // basis about the EYE on a recession, and the arm the hand-back builds is
+    // anchored AT the rover with the rover on its sightline. Tilt and heading
+    // each spent their 0.1-rad-per-log-zoom cap per notch, swinging the rover
+    // 0.31 → 0.74 rad off centre — 1.4 half-FOVs, off screen — before the
+    // recession's own geometry walked it back.
+    //
+    // The bound: a settle that turns about the rover cannot move the rover off
+    // the sightline AT ALL, so this is the fixture's own ONE PIXEL
+    // (fovY/height, 1.0e-2 rad) against 2.1e-8 measured.
+    //
+    // The residual the first fix left: the turns pivoted about the rover while
+    // the eye still TRANSLATED about the cursor pick, so the rover walked off
+    // by the parallax between them — 0.32 rad at this cursor, 0.46 at (80,20),
+    // 0 only when the cursor sits on the rover. Six resting frames mid-ramp
+    // pin the other half: nothing moves a body arm without an input step.
+    const h = makeHarness();
+    parkAtCuriositySite(h);
+    const rover = h.bodies.get('curiosity')!;
+
+    const offRover: number[] = [];
+    const tiltRad: number[] = [];
+    let restedTilt: number[] = [];
+    let crossed = false;
+    for (let i = 0; i < 80 && !crossed; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+      const arm = h.state.cameraRuntime.register.pose;
+      if (isBodyArm(arm)) {
+        const eyeM = bodyFixedEyeM(arm.pose);
+        const b = arm.pose.basisLocal;
+        tiltRad.push(tiltFromNadirRad([b[6]!, b[7]!, b[8]!], eyeM));
+        offRover.push(offRoverRad(rover));
+        if (tiltRad.length === 3) {
+          for (let r = 0; r < 6; r++) {
+            h.frame(1);
+            const rested = h.state.cameraRuntime.register.pose;
+            if (!isBodyArm(rested)) throw new Error('a resting frame changed the arm');
+            const rb = rested.pose.basisLocal;
+            restedTilt.push(tiltFromNadirRad([rb[6]!, rb[7]!, rb[8]!], bodyFixedEyeM(rested.pose)));
+            offRover.push(offRoverRad(rover));
+          }
+        }
+      }
+      crossed = h.store.getState().camera.base.frame === 'absolute';
+    }
+    expect(crossed).toBe(true);
+
+    const onePixelRad =
+      h.state.cameraRuntime.outputs.projection.fovYRad /
+      (h.deps.canvas as { height: number }).height;
+    for (const off of offRover) expect(off).toBeLessThan(onePixelRad);
+    // A frame with no input steps no rung, so the ramp cannot advance on one —
+    // the clock alone must not move the pose by so much as an ulp.
+    restedTilt = [...new Set(restedTilt)];
+    expect(restedTilt).toHaveLength(1);
+    // Not vacuous: the ramp still runs its whole course — 45° of pose tilt
+    // spent down to nothing — or holding the rover centred by freezing the
+    // settle would pass all of the above too.
+    expect(tiltRad[0]!).toBeGreaterThan(0.7);
+    expect(tiltRad[tiltRad.length - 1]!).toBeLessThan(onePixelRad);
+  });
+
+  it('focusing a rover from the world arm keeps its PLANET’s remembered tilt', () => {
+    // The tilt belongs to the surface the focus stands on, so its key is the
+    // focus's surface-fixed ROOT. Keyed on the focus's own id, selecting
+    // Curiosity from Mars orbit re-keyed {mars, 0.8} to {curiosity, 0} on the
+    // very next frame — one frame before the descent reaches `siteRung.host`,
+    // whose stated job is to keep exactly that tilt alive.
+    const h = makeHarness();
+    h.seedPose(absoluteArm(poseAtHR(h.bodies.get('mars')!, h.radiusM('mars'), 2)));
+    const seeded = { hostId: 'mars' as BodyId, rememberedTiltRad: 0.8 };
+    h.state.cameraRuntime = { ...h.state.cameraRuntime, tilt: seeded };
+    h.focus('curiosity');
+
+    h.frame(1);
+
+    expect(h.state.cameraRuntime.tilt).toEqual(seeded);
+  });
+
+  it('the hand-back from a ground-level site view keeps the rover centred', () => {
+    // The site rung rates its ground in the ROVER's bounding radii (0.5 m over
+    // Curiosity's tangent plane) and the body arm that receives the hand-back
+    // floors the eye at Mars's descent standoff (8.1 m over the datum), so a
+    // view from rover height lands UNDER the receiving arm's floor — by design,
+    // the rung exists to get there. The first body-arm notch used to spend the
+    // difference as a RADIAL shove, and the settle pivoting about the rover
+    // while the shove did not, the rover left centre by 0.030 rad (3 px here,
+    // ~31 px at 1080p) and STAYED there for every later notch.
+    const h = makeHarness();
+    const rover = h.bodies.get('curiosity')!;
+    const roverR = findByIdOrThrow(SCENE_MESH_BODIES, 'curiosity', 'poseFold').boundingRadiusM;
+    const RANGE_M = 150;
+    h.seedPose({
+      frame: { site: 'curiosity' as BodyId },
+      pose: {
+        siteId: 'curiosity' as BodyId,
+        headingRad: 0.4,
+        elevationRad: Math.asin((SITE_RUNG.eyeFloorBoundingRadii * roverR) / RANGE_M),
+        rangeM: RANGE_M,
+      },
+    });
+    h.focus('curiosity');
+    // Settled, not two frames in: the focus owes an approach, and the climb
+    // measured below is the WHEEL's — a notch drained while the debt is still
+    // owed rides the follow target instead of the rung. The settle leaves the
+    // eye at the rover's framing (10.73 m), hence the longer climb.
+    h.tick(0);
+    h.tick(FOCUS_TWEEN_MS + 16);
+
+    const eyeStepM: number[] = [];
+    const offRover: number[] = [];
+    let prev = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+    let handedBack = -1;
+    for (let i = 0; i < 60; i++) {
+      // A quarter of the usual notch: the review's fixture, and a small step
+      // makes the floor's shove stand out against its neighbours. 60 of them
+      // because the settle starts the climb at 10.73 m, not the seed's 150 —
+      // the site band's far edge is 80 of the rover's bounding radii away.
+      h.push({ kind: 'wheel', deltaY: 60, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+      const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+      eyeStepM.push(
+        Math.hypot(
+          drawn.eye[0]! - prev.eye[0]!,
+          drawn.eye[1]! - prev.eye[1]!,
+          drawn.eye[2]! - prev.eye[2]!,
+        ) * SCALE_UNITS.MPC_TO_M,
+      );
+      offRover.push(offRoverRad(rover));
+      prev = drawn;
+      if (handedBack < 0 && isBodyArm(h.state.cameraRuntime.register.pose)) {
+        handedBack = eyeStepM.length - 1;
+      }
+    }
+    // Not vacuous: the climb really crosses, with notches left to measure after.
+    expect(handedBack).toBeGreaterThan(0);
+    expect(handedBack).toBeLessThan(eyeStepM.length - 3);
+
+    const onePixelRad =
+      h.state.cameraRuntime.outputs.projection.fovYRad /
+      (h.deps.canvas as { height: number }).height;
+    for (const off of offRover) expect(off).toBeLessThan(onePixelRad);
+    // Every post-hand-back notch within twice its predecessor: a zoom-out's
+    // steps grow geometrically, so a doubling is already far outside the law.
+    for (let i = handedBack + 1; i < eyeStepM.length; i++) {
+      expect(eyeStepM[i]!).toBeLessThan(2 * eyeStepM[i - 1]!);
+    }
+  });
+
+  it('diving back into the site arm engages with nothing to re-aim', () => {
+    // The adverse eye check's other half: zooming back IN from Mars's arm to
+    // the rover popped. `sitePoseFromBodyArm` DISCARDS the incoming basis (the
+    // rung looks at the site by construction), so whatever the body arm's
+    // sightline missed the rover by is spent in the engage frame — 0.63 rad
+    // (36°) against neighbouring notches at 1.9e-6, because the dive pivoted
+    // about the cursor pick. The eye is continuous across it either way, so
+    // this bound is on the sightline alone.
+    const h = makeHarness();
+    parkAtCuriositySite(h);
+    const rover = h.bodies.get('curiosity')!;
+
+    // Out of the site arm first — the park's own frame is what engages it, so
+    // the test is AFTER the frame, never before it.
+    for (let i = 0; i < 40; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+      if (!isSiteArm(h.state.cameraRuntime.register.pose)) break;
+    }
+    for (let i = 0; i < 12; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+    }
+    expect(isBodyArm(h.state.cameraRuntime.register.pose)).toBe(true);
+
+    const fwdStep: number[] = [];
+    const offRover: number[] = [];
+    let prev = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+    let engaged = 0;
+    for (let i = 0; i < 60 && engaged < 3; i++) {
+      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+      const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+      fwdStep.push(
+        Math.hypot(
+          drawn.forward[0]! - prev.forward[0]!,
+          drawn.forward[1]! - prev.forward[1]!,
+          drawn.forward[2]! - prev.forward[2]!,
+        ),
+      );
+      offRover.push(offRoverRad(rover));
+      prev = drawn;
+      if (isSiteArm(h.state.cameraRuntime.register.pose)) engaged += 1;
+    }
+    expect(engaged).toBe(3);
+
+    const onePixelRad =
+      h.state.cameraRuntime.outputs.projection.fovYRad /
+      (h.deps.canvas as { height: number }).height;
+    for (const step of fwdStep) expect(step).toBeLessThan(onePixelRad);
+    for (const off of offRover) expect(off).toBeLessThan(onePixelRad);
+    // Not vacuous: the descent really closed, three orders of magnitude of it.
+    const range = h.state.cameraRuntime.register.pose;
+    if (!isSiteArm(range)) throw new Error('the dive did not engage the site arm');
+    expect(range.pose.rangeM).toBeLessThan(1e2);
+  });
+
+  it('two engages from the same climb land the rover the same way up', () => {
+    // Adverse 8, the user's words: "when I zoom in and out, Opportunity ends up
+    // in a different orientation every time". The engage lands at the remembered
+    // top-down tilt, where the eye's azimuth about the site is float noise, so a
+    // heading read off the eye spun the turntable by a different angle per pass.
+    const h = makeHarness();
+    parkAtCuriositySite(h);
+
+    const screenUp: Vec3[] = [];
+    for (let cycle = 0; cycle < 2; cycle++) {
+      for (let i = 0; i < 60; i++) {
+        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.frame(1);
+        if (!isSiteArm(h.state.cameraRuntime.register.pose)) break;
+      }
+      for (let i = 0; i < 12; i++) {
+        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.frame(1);
+      }
+      expect(isBodyArm(h.state.cameraRuntime.register.pose)).toBe(true);
+      for (let i = 0; i < 80; i++) {
+        h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+        h.frame(1);
+        if (isSiteArm(h.state.cameraRuntime.register.pose)) break;
+      }
+      expect(isSiteArm(h.state.cameraRuntime.register.pose)).toBe(true);
+      // One frame PAST the crossing: the engage frame still draws the pre-fold
+      // world pose (that is what keeps the crossing continuous), so the site
+      // arm's own orientation only reaches the screen on the frame after it.
+      h.frame(1);
+      screenUp.push(renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose).up);
+    }
+
+    // Time is paused, so the site's own axes are the same on both passes and the
+    // drawn screen-up is directly comparable. One pixel here is 1.05e-2 rad.
+    const [first, second] = screenUp as [Vec3, Vec3];
+    const spreadRad = Math.acos(
+      Math.min(1, first[0] * second[0] + first[1] * second[1] + first[2] * second[2]),
+    );
+    expect(spreadRad).toBeLessThan(1e-4);
+  });
+
+  it('a site-framed clip leg over an absolute base cannot jump two rungs', () => {
+    // S1: the clip authors `{ site: curiosity }` while the regime is still
+    // `absolute`. `stepRung` answers `body:mars` (the engage band), the flip
+    // branch rightly declines to refold a pose in a THIRD frame — and the
+    // commit below it then published that third frame anyway, so `camera.base`
+    // went absolute → site:curiosity → body:mars in three frames, skipping a
+    // rung on the way down and climbing back on the next frame.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
+    const SITE = { site: 'curiosity' as BodyId };
+    const near = foldToWorld(
+      { frame: SITE, pose: { siteId: SITE.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 3e5 } },
+      { bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B },
+    );
+    h.seedPose(absoluteArm(near));
+    h.store.dispatch(
+      clipStarted({
+        data: resolveClipStart(
+          {
+            timeline: [
+              all([
+                tween('yaw', { to: 0.7, over: 4, frame: SITE }),
+                tween('pitch', { to: 0.2, over: 4, frame: SITE }),
+                tween('distance', { to: 12, over: 4, frame: SITE }),
+              ]),
+            ],
+          },
+          near,
+        ),
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+
+    const drawn = probe.drawnPoses.length;
+    const regimes: string[] = [];
+    for (let i = 0; i < 8; i++) {
+      h.frame(1);
+      regimes.push(frameKey(h.store.getState().camera.base.frame));
+    }
+
+    // The clip owns the rung while it plays, so the regime holds where it was.
+    expect(new Set(regimes)).toEqual(new Set(['absolute']));
+    // Not vacuous: the leg really is driving the camera through those frames.
+    const first = renderedCamera(probe.drawnPoses[drawn] as CameraPose);
+    const last = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+    expect(Math.hypot(last.eye[0]! - first.eye[0]!, last.eye[1]! - first.eye[1]!)).toBeGreaterThan(
+      0,
+    );
   });
 
   it('a gesture in flight cannot change the arm', () => {
@@ -363,35 +810,74 @@ describe('runFrame — the regime fold', () => {
     }
   });
 
-  it('the pivot pin and the follow driver are inert in a body arm', () => {
+  it('the pivot pin and the follow HOLD are inert in a body arm', () => {
     // Spec §7 step 4: a body arm co-rotates, so "keep the moving body centred"
-    // is structurally satisfied — the pin has nothing to do and the follow
-    // driver's approach ease and idle hold have no meaning.
-    const { store, state, deps } = makeHarness();
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1));
-    store.dispatch(
-      setSelectionRow({
-        slot: 'focus',
-        row: {
-          type: 'body',
-          id: 'earth',
-          label: 'Earth',
-          positionMpc: [0, 0, 0],
-        },
-      }),
-    );
+    // is structurally satisfied — the pin has nothing to do and the hold's
+    // re-assertion of the body's own target no meaning. The APPROACH is not
+    // inert there: a fresh focus owes its framing from wherever the eye is,
+    // which is what frame 1 shows, so the arm's rest is reached by flying that
+    // debt out and diving back in.
+    const h = makeHarness();
+    h.seedPose(absoluteArm(poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1)));
+    h.focus('earth');
 
-    // Frame 1: the absolute arm, so the follow approach wins and the fold engages.
-    runFrame(state, deps, 0);
-    expect(state.cameraRuntime.register.winner).toBe('followApproach');
-    const engaged = state.cameraRuntime.register.pose;
+    h.frame(1);
+    expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
+
+    h.frame(60); // past FOCUS_TWEEN_MS: the debt is settled at Earth's framing
+    diveUntilEngaged(h, { body: 'earth' });
+    const engaged = h.state.cameraRuntime.register.pose;
     expect(engaged.frame).toEqual(EARTH_ARM);
 
-    runFrame(state, deps, 16);
+    h.frame(1);
 
-    expect(state.cameraRuntime.register.winner).toBe('resting');
+    expect(h.state.cameraRuntime.register.winner).toBe('resting');
     // Untouched by reference: the pin rebuilds the pose whenever it applies.
-    expect(state.cameraRuntime.register.pose).toBe(engaged);
+    expect(h.state.cameraRuntime.register.pose).toBe(engaged);
+  });
+
+  it('an approach that starts inside the site band still lands the framing', () => {
+    // What the deleted §4.8 gate guarded against: PARKING SHORT. The approach
+    // now runs in whatever arm the camera is in and the rungs release and
+    // engage on geometry alone, so the descent happens up front — but the
+    // arrival is still the rover's own framing distance, not the site band it
+    // fell through on the way.
+    const h = makeHarness();
+    const site = { site: 'curiosity' as BodyId } as const;
+    const ctx = {
+      bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+      poseBasis: B,
+      upBasis: B,
+    };
+    // 30 m out at 0.5 rad elevation: inside the site band, above its floors.
+    const parked = foldToWorld(
+      { frame: site, pose: { siteId: site.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 30 } },
+      ctx,
+    );
+    h.seedPose(absoluteArm(parked));
+    h.focus('curiosity');
+
+    const frames = [0, FOCUS_TWEEN_MS, FOCUS_TWEEN_MS + 16, FOCUS_TWEEN_MS + 32].map((nowMs) => {
+      h.tick(nowMs);
+      return frameKey(h.store.getState().camera.base.frame);
+    });
+
+    expect(frames).toEqual(['body:mars', 'site:curiosity', 'site:curiosity', 'site:curiosity']);
+    const rover = h.bodies.get('curiosity')!;
+    const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+    const arrivalM =
+      Math.hypot(
+        drawn.eye[0]! - rover.positionMpc[0]!,
+        drawn.eye[1]! - rover.positionMpc[1]!,
+        drawn.eye[2]! - rover.positionMpc[2]!,
+      ) * SCALE_UNITS.MPC_TO_M;
+    const framingM =
+      bodyFocusDistance(
+        bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, 'curiosity', 'poseFold')) *
+          SCALE_UNITS.M_TO_MPC,
+        h.state.cameraRuntime.outputs.projection.fovYRad,
+      ) * SCALE_UNITS.MPC_TO_M;
+    expect(arrivalM).toBeCloseTo(framingM, 2);
   });
 
   it('the wheel does not route through applyWheelZoom in a body arm', () => {

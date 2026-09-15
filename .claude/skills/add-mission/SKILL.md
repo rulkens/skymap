@@ -17,9 +17,8 @@ recomputed.
 
 Read `docs/DATA.md` "Adding a new raw data source" first if `data/raw/` is new
 to you. The reference implementations are `voyager1` (escape probe) and
-`curiosity` (landing site); `hubble` (Earth orbiter) and `apollo11` are on
-PR #718, together with the `orbiter()` maker — until it merges an orbiter
-cannot land.
+`curiosity` (landing site); `hubble` (Earth orbiter) is on PR #718, together
+with the `orbiter()` maker — until it merges an orbiter cannot land.
 
 ## Input
 
@@ -90,14 +89,12 @@ Read MATERIALS, TEXTURES, ANIMATIONS and the scene bbox. No materials or no
 textures = an untextured print model; it bakes flat grey — find another source
 or stop. Extents tell you the **units**: compare the longest axis with the fact
 sheet (Hubble: 13.2 m; if the bbox reads 525, it is inches). Units off by a
-constant are a scale edit in the imported `.blend` (step 3), never a hand
-rescale of the download. Then dump each material's Principled values
-(`metallic`, `roughness`) — NASA's models type every surface matte whatever it
-is made of, and the bake copies that verbatim. Foil, polished metal and glass
-get their metallic and roughness set in the `.blend`, plus a Bump node driven
-by the colour map when the source has no normal map (a low-contrast texture
-needs several centimetres of relief); the mesh's `README.md` says which
-material is which surface.
+constant get a `scale=` on the importer row (step 3), never a hand rescale of
+the download. Then dump each material's Principled values (`metallic`,
+`roughness`) — NASA's models type every surface matte whatever it is made of,
+and the bake copies that verbatim. Foil, polished metal and glass get a
+per-material `materials=` override on the same row; the mesh's `README.md`
+says which material is which surface.
 
 Then find the **axes** — which source axis is the boresight/dish/forward and
 which is up — by rendering the source down all six axes and looking:
@@ -124,21 +121,25 @@ Every step is a literal edit site. Tick them all.
    edited source" listing every hand edit, "what the pre-bake does", attribution
    string, "as inspected" units + axes, and the Horizons refresh query for an
    orbit row), and a line in `data/raw/meshes/meshes.sha256` for the download.
-   The directory is named for the mesh key, which names the MODEL (`mer`,
-   `lunar-module`), not the mission that flew it.
+   The directory is named for the mesh key, which names the MODEL (`mer`, not
+   `spirit`), not the mission that flew it.
 2. **Registry** — `tools/utils/io/rawDataRegistry.ts`: four rows
    `meshes.<key>Source` (the download, `upstream:` the model page),
    `meshes.<key>Blend` (`<key>.blend`, `fetcher:` the import script),
    `meshes.<key>` (the `<key>.prebaked.glb`, `fetcher:` the prebake script) and
    `meshes.<key>.readme`, copied from the voyager quartet.
 3. **Import** — `tools/meshes/prebake/importMesh.py` `SOURCES`: one
-   `"<key>": source("<file>", frame=…, drop_materials=…)` row; `frame` only for
-   a source with deploy animations, `drop_materials` for rig-pivot and fake
-   shadow materials. `npm run import-mesh -- <key>` writes `<key>.blend`. Open
-   it in Blender 5.2 LTS for the edits the inspection called for — scale for
-   the units, metallic/roughness and a Bump node for foil — save, and add its
-   line to `meshes.sha256`. A re-import overwrites every edit, so the README
-   lists each one.
+   `"<key>": source("<file>", frame=…, drop_materials=…, scale=…, materials=…)`
+   row. `frame` only for a source with deploy animations; `drop_materials` for
+   rig-pivot and fake shadow materials; `scale` multiplies the root objects
+   (the join applies it before anything measures); `materials` maps a source
+   material name to `metallic` / `roughness` / `gain` (Base Color multiplier —
+   a mid-grey texture becomes a metal's reflectance once metallic, so foil
+   wants ~2) / `bump` (metres of relief per unit of the colour map's luminance,
+   for a source with no normal map; a low-contrast texture needs several
+   centimetres). `npm run import-mesh -- <key>` writes `<key>.blend`; add its
+   line to `meshes.sha256`. Edits the row cannot express are hand edits in
+   Blender 5.2 LTS that a re-import overwrites, so the README lists each one.
 4. **Prebake** — `tools/meshes/prebake/meshPrebake.py` `SOURCES`: one
    `source("<key>", triangles=…)` row, `triangles` when over the 150k budget.
    Run `npm run prebake-mesh -- <key>` (Blender 5.2, ~10–30 s) and read the
@@ -154,8 +155,11 @@ Every step is a literal edit site. Tick them all.
    `groundOffsetM` for a lander. In a worktree every OTHER key's prebaked GLB
    must be copied in from the main checkout first, or this step DELETES their
    generated rows; and with `/link-data` the `.mesh` output lands in main's
-   `public/data` — harmless (gitignored, and main re-bakes) but restart any dev
-   server reading it.
+   `public/data` — but the browser resolves logical names through
+   `manifest.json`, which `build-data-manifest` REFUSES to rebuild through a
+   symlink, so every rebake is invisible until you run it against main's tree:
+   `npx tsx -e "import { buildDataManifest } from './tools/deploy/buildDataManifest.ts'; buildDataManifest('<main>/public/data');"`
+   then hard-refresh.
 7. **Seed** — `src/data/bodies/sceneMeshBodies.ts`: `{ id, label, meshKey }`.
    `standoffRadii` only when a boom or array sets the bounding sphere; no
    `captionRevealM` for a real object.

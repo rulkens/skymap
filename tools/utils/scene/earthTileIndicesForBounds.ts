@@ -1,5 +1,5 @@
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
+import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
 import type { TileIndexRect } from './TileIndexRect';
 
 /**
@@ -15,7 +15,7 @@ export function earthTileIndicesForBounds(
   z: number,
   tilePx: number,
 ): TileIndexRect {
-  const columns = earthTileColumns(z, tilePx);
+  const columns = surfaceTileColumns(z, tilePx);
   const rows = columns / 2;
   const lonStep = 360 / columns;
   const latStep = 180 / rows;

@@ -54,7 +54,7 @@
  * `screenPx <= 2 · tilePx` (that threshold falls out of
  * `EARTH_TILE_LOD_BIAS = 1`: the planner refines while
  * `ceil(log2(screenPx / tilePx)) - lodBias > 0`). A level-`z` tile spans
- * `2πR / 2^z` of ground (`earthTileColumns` puts `2^z` tiles around the
+ * `2πR / 2^z` of ground (`surfaceTileColumns` puts `2^z` tiles around the
  * equator), and at altitude `h` a viewport `H` px tall spans `2h·tan(fovY/2)`
  * of world, so `screenPx = (2πR / 2^z) · H / (2h·tan(fovY/2))`. Solving for the
  * altitude at which a level settles:

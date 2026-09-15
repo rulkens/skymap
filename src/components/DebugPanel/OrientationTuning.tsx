@@ -84,6 +84,26 @@ function OrientationTuning({
         onChange={(v) => dispatch(setCameraTuning({ disengageHR: v }))}
       />
       <DebugSlider
+        label="site engage R"
+        value={tuning.siteEngageR}
+        min={limits.siteEngageMin}
+        max={limits.siteEngageMax}
+        step={1}
+        readout={tuning.siteEngageR.toFixed(0)}
+        title="range, in the SITE body's bounding radii, at which the site rung takes over (disengage kept > this × 1.1)"
+        onChange={(v) => dispatch(setCameraTuning({ siteEngageR: v }))}
+      />
+      <DebugSlider
+        label="site disengage R"
+        value={tuning.siteDisengageR}
+        min={limits.siteDisengageMin}
+        max={limits.siteDisengageMax}
+        step={1}
+        readout={tuning.siteDisengageR.toFixed(0)}
+        title="range, in the SITE body's bounding radii, at which it hands back (kept > site engage × 1.1)"
+        onChange={(v) => dispatch(setCameraTuning({ siteDisengageR: v }))}
+      />
+      <DebugSlider
         label="tilt-blend full h/R"
         value={tuning.tiltFullHR}
         min={limits.tiltFullMin}
