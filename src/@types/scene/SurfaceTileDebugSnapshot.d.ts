@@ -1,13 +1,13 @@
 import type { LonLatDeg } from './LonLatDeg';
 
 /**
- * EarthTileDebugSnapshot — a cheap, on-demand read of `earthTileSubsystem`'s
+ * SurfaceTileDebugSnapshot — a cheap, on-demand read of `surfaceTileSubsystem`'s
  * residency for the DebugPanel. Built fresh per call (not pushed per-frame),
  * so the panel polls it at a human-readable rate instead of every render.
  * `engaged: false` (atlas never allocated, or destroyed) means every other
  * field is a quiet zero/empty — see `emptyEarthTileDebugSnapshot`.
  */
-export type EarthTileDebugSnapshot = {
+export type SurfaceTileDebugSnapshot = {
   readonly engaged: boolean;
   /** Atlas slot count: `(EARTH_TILE_ATLAS_SIDE / tilePx) ** 2`. */
   readonly capacity: number;

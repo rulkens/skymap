@@ -1053,7 +1053,7 @@ describe('runFrame — the label-director wake fold', () => {
         proceduralDisks: null,
         diskPlannerWalk: null,
         hiResFamous: null,
-        earthTiles: null,
+        surfaceTiles: null,
         structureFocus: createStructureFocusSubsystem({ requestRender: vi.fn() }),
         fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
         cosmoLabelDirector: { runFrame: vi.fn(cosmoRunFrame) },

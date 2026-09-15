@@ -5,7 +5,7 @@
  * last plan's shape, and the deepest level's resident tile keys.
  *
  * No visualization — this is for reading numbers against
- * `earthTileSubsystem.ts`'s `resident` map and page-table window while
+ * `surfaceTileSubsystem.ts`'s `resident` map and page-table window while
  * chasing a tile-residency bug, not for a first look at the feature.
  *
  * ### Why poll, not subscribe
@@ -18,13 +18,13 @@
  */
 
 import { Fragment, useEffect, useState, type FormEvent, type ReactElement } from 'react';
-import type { EarthTileDebugSnapshot } from '../../@types/scene/EarthTileDebugSnapshot';
+import type { SurfaceTileDebugSnapshot } from '../../@types/scene/SurfaceTileDebugSnapshot';
 import { parseLonLatInput } from '../../utils/scene/parseLonLatInput';
 import DebugSection from './DebugSection';
 import styles from './EarthTileAtlasSection.module.css';
 
 export type EarthTileAtlasSectionProps = {
-  earthTileDebug: () => EarthTileDebugSnapshot;
+  earthTileDebug: () => SurfaceTileDebugSnapshot;
   /** Fly-to-coordinates debug instrument, from the engine handle's `debug.flyToLonLat`. */
   flyToLonLat: (lonDeg: number, latDeg: number) => void;
 };
@@ -35,7 +35,7 @@ function EarthTileAtlasSection({
   earthTileDebug,
   flyToLonLat,
 }: EarthTileAtlasSectionProps): ReactElement {
-  const [snap, setSnap] = useState<EarthTileDebugSnapshot>(earthTileDebug);
+  const [snap, setSnap] = useState<SurfaceTileDebugSnapshot>(earthTileDebug);
   // Uncontrolled-feeling text box: the panel never reformats what the user
   // typed, so an in-progress edit ("12.53, 5") isn't clobbered by the 4 Hz
   // poll — this state is local and update-on-submit only.

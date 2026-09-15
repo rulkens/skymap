@@ -50,7 +50,7 @@
  * This renderer no longer binds the surface virtual texture (the page table
  * + atlas that used to occupy bindings 7–9) — `earthSurfaceTileRenderer`
  * draws the resolved detail patches directly over this base globe instead,
- * reading `earthTileSubsystem`'s atlas view and this renderer's own
+ * reading `surfaceTileSubsystem`'s atlas view and this renderer's own
  * `getMapView` for the material/night/normal/cloud maps it shares. Every
  * failure path in that other renderer (no manifest, no atlas, a 404 on
  * every tile) simply draws nothing, leaving this base globe's picture as

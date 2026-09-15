@@ -1,5 +1,5 @@
 /**
- * EarthTileSubsystem — residency for Earth's surface virtual texture. A
+ * SurfaceTileSubsystem — residency for Earth's surface virtual texture. A
  * third layer above the two the Earth renderer already has: base texture
  * and placeholder are untouched, so every failure path falls back to
  * today's picture rather than a hole. Owns the `BitmapStreamSubsystem` and
@@ -10,21 +10,21 @@
  * Rationale: docs/superpowers/plans/completed/2026-07-29-earth-surface-virtual-texture-a-to-d.md
  */
 
-import type { EarthTileId } from '../../data/EarthTileId';
-import type { EarthTilePlan } from '../../scene/EarthTilePlan';
-import type { EarthTilePlannerParams } from '../../scene/EarthTilePlannerParams';
-import type { EarthTileDebugSnapshot } from '../../scene/EarthTileDebugSnapshot';
+import type { SurfaceTileId } from '../../data/SurfaceTileId';
+import type { SurfaceTilePlan } from '../../scene/SurfaceTilePlan';
+import type { SurfaceTilePlannerParams } from '../../scene/SurfaceTilePlannerParams';
+import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnapshot';
 import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { Tier } from '../../data/Tier';
 
-export type EarthTileSubsystem = Destroyable & {
+export type SurfaceTileSubsystem = Destroyable & {
   /**
    * The pyramid facts `cutSurfaceTiles` needs, or `null` before the
    * manifest lands (first call triggers the one-shot fetch). `tier` fixes
    * `baseLevel` (three tiers, three base images z2/z3/z4).
    */
-  plannerParams(tier: Tier): EarthTilePlannerParams | null;
+  plannerParams(tier: Tier): SurfaceTilePlannerParams | null;
 
   /**
    * Drive one frame's fetch demand; call every frame Earth's layer draws.
@@ -32,7 +32,7 @@ export type EarthTileSubsystem = Destroyable & {
    * LRU-touches every planned tile largest-first, enqueues anything missing
    * — allocating the atlas on first engage.
    */
-  update(input: { readonly plan: EarthTilePlan }): void;
+  update(input: { readonly plan: SurfaceTilePlan }): void;
 
   /**
    * Resolve one exact tile's atlas residency, or `null` if it is not
@@ -40,7 +40,7 @@ export type EarthTileSubsystem = Destroyable & {
    * per candidate tile — keyed the same `earthTilePath(tile, prefix)` way
    * the internal `resident` map is.
    */
-  residentSlot(tile: EarthTileId): {
+  residentSlot(tile: SurfaceTileId): {
     readonly slot: number;
     readonly atlasUvOrigin: readonly [number, number];
     readonly atlasUvScale: readonly [number, number];
@@ -82,5 +82,5 @@ export type EarthTileSubsystem = Destroyable & {
    * see `EarthTileDebugSnapshot`. Never call this from a render path; it
    * exists for a low-rate poll, not the frame loop.
    */
-  getDebugSnapshot(): EarthTileDebugSnapshot;
+  getDebugSnapshot(): SurfaceTileDebugSnapshot;
 };

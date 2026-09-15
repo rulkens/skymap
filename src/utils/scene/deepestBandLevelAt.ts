@@ -1,4 +1,4 @@
-import type { EarthTileBand } from '../../@types/scene/EarthTileBand';
+import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
 import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
 
 /**
@@ -9,7 +9,7 @@ import type { LonLatDeg } from '../../@types/scene/LonLatDeg';
  * `v=(lat+90)/180`) rather than inverting `uBounds`/`vBounds` back to degrees.
  */
 export function deepestBandLevelAt(
-  bands: readonly EarthTileBand[],
+  bands: readonly SurfaceTileBand[],
   point: LonLatDeg,
 ): number | null {
   const u = point.lonDeg / 360 + 0.5;

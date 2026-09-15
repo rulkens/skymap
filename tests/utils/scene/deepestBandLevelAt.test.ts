@@ -8,11 +8,17 @@
 import { describe, it, expect } from 'vitest';
 
 import { deepestBandLevelAt } from '../../../src/utils/scene/deepestBandLevelAt';
-import type { EarthTileBand } from '../../../src/@types/scene/EarthTileBand';
+import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 
 /** uBounds/vBounds built the same way `derivePlannerParams` builds them from
  *  a `LonLatBounds`, so the fixture matches the real manifest shape. */
-function band(west: number, east: number, south: number, north: number, max: number): EarthTileBand {
+function band(
+  west: number,
+  east: number,
+  south: number,
+  north: number,
+  max: number,
+): SurfaceTileBand {
   return {
     uBounds: [(west + 180) / 360, (east + 180) / 360],
     vBounds: [(south + 90) / 180, (north + 90) / 180],
@@ -28,16 +34,16 @@ const SONDERMARKEN = band(12.51, 12.55, 55.662, 55.678, 19);
 
 describe('deepestBandLevelAt', () => {
   it('reports the deepest band covering a point inside the demo patch', () => {
-    expect(
-      deepestBandLevelAt([WHOLE_GLOBE, SONDERMARKEN], { lonDeg: 12.53, latDeg: 55.67 }),
-    ).toBe(19);
+    expect(deepestBandLevelAt([WHOLE_GLOBE, SONDERMARKEN], { lonDeg: 12.53, latDeg: 55.67 })).toBe(
+      19,
+    );
   });
 
   it('falls back to the shallower band just outside the demo patch', () => {
     // A few km away — inside the whole-globe band but outside the deep patch.
-    expect(
-      deepestBandLevelAt([WHOLE_GLOBE, SONDERMARKEN], { lonDeg: 12.6, latDeg: 55.67 }),
-    ).toBe(13);
+    expect(deepestBandLevelAt([WHOLE_GLOBE, SONDERMARKEN], { lonDeg: 12.6, latDeg: 55.67 })).toBe(
+      13,
+    );
   });
 
   it('returns null when no band covers the point', () => {

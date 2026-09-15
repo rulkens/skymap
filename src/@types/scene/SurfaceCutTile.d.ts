@@ -23,7 +23,7 @@ export type SurfaceCutTile = {
     readonly atlasUvOrigin: readonly [number, number];
     readonly atlasUvScale: readonly [number, number];
     /** `performance.now()` (REAL time) when the resolved tile's bitmap
-     *  uploaded — stamped at `earthTileSubsystem`'s `uploadBitmap` site.
+     *  uploaded — stamped at `surfaceTileSubsystem`'s `uploadBitmap` site.
      *  Drives the renderer's fade-in weight; never sim time, so a fade runs
      *  even while the sim clock is paused or scaled. */
     readonly readyAtMs: number;

@@ -5,7 +5,7 @@
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fetchEarthTileManifest } from '../../../src/utils/scene/fetchEarthTileManifest';
+import { fetchSurfaceTileManifest } from '../../../src/utils/scene/fetchSurfaceTileManifest';
 
 let originalFetch: typeof fetch | undefined;
 
@@ -38,7 +38,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchEarthTileManifest()).toEqual(manifest);
+    expect(await fetchSurfaceTileManifest()).toEqual(manifest);
   });
 
   it('returns null for a manifest with no prefix', async () => {
@@ -47,7 +47,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchEarthTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest()).toBeNull();
   });
 
   it('returns null for a manifest with an empty prefix', async () => {
@@ -56,7 +56,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchEarthTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest()).toBeNull();
   });
 
   it('returns null for a v1-shaped (pre-band-list) manifest', async () => {
@@ -69,7 +69,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchEarthTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest()).toBeNull();
   });
 
   it('returns null on a non-ok response', async () => {
@@ -77,6 +77,6 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response('not found', { status: 404 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchEarthTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest()).toBeNull();
   });
 });

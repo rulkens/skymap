@@ -3,7 +3,7 @@
  * surfaces the React shell reads.
  *
  * Every member is a getter, never a copied reference. The things behind them
- * (`timingService`, the asset slots, `earthTiles`, `cameraRuntime`) are
+ * (`timingService`, the asset slots, `surfaceTiles`, `cameraRuntime`) are
  * reassigned or minted by the async bootstrap that runs AFTER `createEngine`
  * returns, so a reference captured at handle construction would point at an
  * eager stub — or at nothing — forever.
@@ -11,7 +11,7 @@
 
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { FrameStats } from '../FrameStats';
-import type { EarthTileDebugSnapshot } from '../../scene/EarthTileDebugSnapshot';
+import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnapshot';
 import type { CameraDebugSnapshot } from '../../camera/CameraDebugSnapshot';
 
 /**
@@ -41,7 +41,7 @@ export type EngineDebugHandle = {
    * (`engaged: false`) rather than `null` after destroy, so the panel never
    * needs its own absent-subsystem branch.
    */
-  readonly earthTiles: () => EarthTileDebugSnapshot;
+  readonly surfaceTiles: () => SurfaceTileDebugSnapshot;
   /**
    * Camera-pivot readout for the DebugPanel's "Camera" section. A fresh
    * derivation off live Resources at call time, never a per-frame write, so an

@@ -1,5 +1,5 @@
 /**
- * EarthTileId — one tile of Earth's virtual surface texture: which map,
+ * SurfaceTileId — one tile of Earth's virtual surface texture: which map,
  * pyramid level, and cell (geographic, plate carrée / EPSG:4326). Level
  * `z`'s equirectangular width is `512 << z` texels (`z = 4` is today's
  * 8192x4096 base). `x` counts east from -180, `y` counts south from +90 —
@@ -11,7 +11,7 @@
 
 import type { EarthTileKind } from './EarthTileKind';
 
-export type EarthTileId = {
+export type SurfaceTileId = {
   readonly kind: EarthTileKind;
   readonly z: number;
   readonly x: number;

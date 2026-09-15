@@ -1,5 +1,5 @@
 import type { Vec2 } from '../../@types/math/Vec2';
-import { earthTileColumns } from './earthTileColumns';
+import { surfaceTileColumns } from './surfaceTileColumns';
 
 /**
  * earthTileCentreUv — the mesh uv at the centre of tile `[x, y]` of level `z`.
@@ -10,8 +10,8 @@ import { earthTileColumns } from './earthTileColumns';
  * tiles, where `floor` picks one by tie-break and float wobble can pick the
  * other; the centre is unambiguously inside its tile.
  */
-export function earthTileCentreUv(xy: Readonly<Vec2>, z: number, tilePx: number): Vec2 {
-  const cols = earthTileColumns(z, tilePx);
+export function surfaceTileCentreUv(xy: Readonly<Vec2>, z: number, tilePx: number): Vec2 {
+  const cols = surfaceTileColumns(z, tilePx);
   const rows = cols / 2;
   return [(xy[0] + 0.5) / cols, 1 - (xy[1] + 0.5) / rows];
 }

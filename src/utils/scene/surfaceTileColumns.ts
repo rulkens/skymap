@@ -9,6 +9,6 @@ import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams'
  * At the shipped 512 px edge, level `z` is simply `2^z` columns — why a
  * 512 px tile is the exact 2×2 union of four 256 px source tiles.
  */
-export function earthTileColumns(z: number, tilePx: number): number {
+export function surfaceTileColumns(z: number, tilePx: number): number {
   return (EARTH_EQUIRECT_BASE_WIDTH_PX << z) / tilePx;
 }

@@ -9,7 +9,7 @@
  * surface (a 50 m altitude at Earth's radius is a ~1e-6 relative offset on
  * `distance`), and digit-limited formatting rounds that to zero.
  *
- * `earthSubCamera` piggybacks off `earthTileSubsystem`'s own last-plan
+ * `earthSubCamera` piggybacks off `surfaceTileSubsystem`'s own last-plan
  * readout rather than re-deriving lon/lat from the focused body's rotation
  * generically: it is `null` whenever Earth's virtual texture isn't engaged
  * (any other focus, or Earth too far out), which is the honest scope — this
@@ -19,7 +19,7 @@
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
+import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
@@ -30,7 +30,7 @@ export function logCameraState(
   canvas: HTMLCanvasElement,
   focusRow: SelectionRow | null,
   simDays: number,
-  earthSubCamera: EarthTileDebugSnapshot['subCamera'] = null,
+  earthSubCamera: SurfaceTileDebugSnapshot['subCamera'] = null,
   framed: FramedCameraPose | null = null,
 ): void {
   if (!cam) {

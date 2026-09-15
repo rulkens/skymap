@@ -1,14 +1,14 @@
 import type { EarthTileKind } from '../../@types/data/EarthTileKind';
-import type { EarthTileId } from '../../@types/data/EarthTileId';
-import type { EarthTileBand } from '../../@types/scene/EarthTileBand';
-import type { EarthTilePlan } from '../../@types/scene/EarthTilePlan';
-import type { EarthTileRequest } from '../../@types/scene/EarthTileRequest';
+import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
+import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
+import type { SurfaceTilePlan } from '../../@types/scene/SurfaceTilePlan';
+import type { SurfaceTileRequest } from '../../@types/scene/SurfaceTileRequest';
 import type { SurfaceCutTile } from '../../@types/scene/SurfaceCutTile';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { earthTileColumns } from './earthTileColumns';
-import { earthTileBandRefineAllowed } from './earthTileBandRefineAllowed';
-import { earthTileBandRequestAllowed } from './earthTileBandRequestAllowed';
+import { surfaceTileColumns } from './surfaceTileColumns';
+import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
+import { surfaceTileBandRequestAllowed } from './surfaceTileBandRequestAllowed';
 import { equirectUvToDirection } from '../math/equirectUvToDirection';
 import { surfacePatchAnchor } from './surfacePatchAnchor';
 
@@ -26,7 +26,7 @@ type ResidentLookupResult = {
  * `cut` is what to draw: each leaf resolved in the same pass via the
  * injected `residentSlot` ancestor-fallback lookup. Two walks re-deriving
  * the same horizon/frustum/refine logic would eventually desync; one walk
- * can't. `requests` IS an `EarthTilePlan` — Task 5 dropped the page-table
+ * can't. `requests` IS a `SurfaceTilePlan` — Task 5 dropped the page-table
  * window fields from that type, so no reshaping seam is needed here.
  */
 export function cutSurfaceTiles(input: {
@@ -50,22 +50,22 @@ export function cutSurfaceTiles(input: {
   readonly baseLevel: number;
   /** The manifest's geographic depth bands for this kind; a leaf outside every
    *  overlapping band's `[min, max]` has no file and is not requested. */
-  readonly bands: readonly EarthTileBand[];
+  readonly bands: readonly SurfaceTileBand[];
   readonly tilePx: number;
   /** Levels coarser than one texel per screen pixel to settle for; see
    *  `EARTH_TILE_LOD_BIAS`. */
   readonly lodBias: number;
   /** Resolve one exact tile's atlas residency, or null if it is not
    *  resident. Injected so this stays a pure function testable without a
-   *  real GPU/atlas — Task 5 wires the real `earthTileSubsystem.residentSlot`
-   *  query in. Takes the full `EarthTileId` (carries `kind`, unlike
+   *  real GPU/atlas — Task 5 wires the real `surfaceTileSubsystem.residentSlot`
+   *  query in. Takes the full `SurfaceTileId` (carries `kind`, unlike
    *  `SurfaceCutTile.id`) because it must key the same
-   *  `earthTilePath(tile, prefix)` lookup `earthTileSubsystem` already uses
+   *  `surfaceTilePath(tile, prefix)` lookup `surfaceTileSubsystem` already uses
    *  for its resident map. */
-  readonly residentSlot: (tile: EarthTileId) => ResidentLookupResult;
+  readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
 }): {
   readonly cut: readonly SurfaceCutTile[];
-  readonly requests: EarthTilePlan;
+  readonly requests: SurfaceTilePlan;
 } {
   const {
     kind,
@@ -113,13 +113,13 @@ export function cutSurfaceTiles(input: {
   const mw2 = viewProjLocal[11]!;
   const mw3 = viewProjLocal[15]!;
 
-  const requests: EarthTileRequest[] = [];
+  const requests: SurfaceTileRequest[] = [];
   const cut: SurfaceCutTile[] = [];
   let zWin = baseLevel;
 
   // Explicit stack, not recursion: allocation-free in a per-frame path.
   const stack: number[] = [];
-  const rootCols = earthTileColumns(baseLevel, tilePx);
+  const rootCols = surfaceTileColumns(baseLevel, tilePx);
   for (let y = 0; y < rootCols / 2; y++) {
     for (let x = 0; x < rootCols; x++) stack.push(baseLevel, x, y);
   }
@@ -129,7 +129,7 @@ export function cutSurfaceTiles(input: {
     const x = stack.pop()!;
     const z = stack.pop()!;
 
-    const cols = earthTileColumns(z, tilePx);
+    const cols = surfaceTileColumns(z, tilePx);
     const rows = cols / 2;
     const u0 = x / cols;
     const u1 = (x + 1) / cols;
@@ -219,10 +219,10 @@ export function cutSurfaceTiles(input: {
           maxTileLevel,
           Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
         );
-    if (required > z && earthTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
+    if (required > z && surfaceTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
       // Same band-request gate as the leaf branch: a would-be ancestor no
       // band bakes at this z has no file to fetch either.
-      if (earthTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
+      if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
         requests.push({ tile: { kind, z, x, y }, screenPx });
       stack.push(z + 1, x * 2, y * 2);
       stack.push(z + 1, x * 2 + 1, y * 2);
@@ -238,7 +238,7 @@ export function cutSurfaceTiles(input: {
     // under a shallower global band) with no file of its OWN to fetch, yet
     // still have a resident ANCESTOR to draw — skip only the fetch, not the
     // residency lookup below, or a band-edge ring never gets ancestor pixels.
-    if (earthTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
+    if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
       requests.push({ tile: { kind, z, x, y }, screenPx });
 
     // Ancestor-fallback residency: the leaf's own tile if resident, else the
@@ -291,7 +291,7 @@ function resolveCutResidency(input: {
   readonly x: number;
   readonly y: number;
   readonly baseLevel: number;
-  readonly residentSlot: (tile: EarthTileId) => ResidentLookupResult;
+  readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
 }): SurfaceCutTile['resident'] | null {
   const { kind, z, x, y, baseLevel, residentSlot } = input;
 

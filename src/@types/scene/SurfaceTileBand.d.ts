@@ -5,7 +5,7 @@
  * see `derivePlannerParams`'s conversion and `buildEarthTiles.ts`'s `tileBox`
  * for the inverse direction of the same mapping.
  */
-export type EarthTileBand = {
+export type SurfaceTileBand = {
   readonly uBounds: readonly [number, number];
   readonly vBounds: readonly [number, number];
   readonly min: number;

@@ -1,5 +1,5 @@
 /**
- * earthTileSubsystem — the residency half of Earth's surface virtual texture.
+ * surfaceTileSubsystem — the residency half of Earth's surface virtual texture.
  * `cutSurfaceTiles` (pure, tested) decides which tiles a frame wants and
  * resolves each visible leaf's atlas residency; `bitmapStreamSubsystem` owns
  * the atlas, LRU clock and fetch queue. This file turns a fetch demand
@@ -14,25 +14,25 @@
  * created by the first engaged `update()`.
  */
 
-import type { EarthTileId } from '../../../@types/data/EarthTileId';
+import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
 import type { EarthTileKind } from '../../../@types/data/EarthTileKind';
 import type { Tier } from '../../../@types/data/Tier';
-import type { EarthTileManifest } from '../../../@types/scene/EarthTileManifest';
-import type { EarthTileBand } from '../../../@types/scene/EarthTileBand';
-import type { EarthTilePlan } from '../../../@types/scene/EarthTilePlan';
-import type { EarthTilePlannerParams } from '../../../@types/scene/EarthTilePlannerParams';
-import type { EarthTileRequest } from '../../../@types/scene/EarthTileRequest';
-import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
+import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
+import type { SurfaceTileBand } from '../../../@types/scene/SurfaceTileBand';
+import type { SurfaceTilePlan } from '../../../@types/scene/SurfaceTilePlan';
+import type { SurfaceTilePlannerParams } from '../../../@types/scene/SurfaceTilePlannerParams';
+import type { SurfaceTileRequest } from '../../../@types/scene/SurfaceTileRequest';
+import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
-import type { EarthTileSubsystem } from '../../../@types/engine/subsystems/EarthTileSubsystem';
+import type { SurfaceTileSubsystem } from '../../../@types/engine/subsystems/SurfaceTileSubsystem';
 import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createBitmapStreamSubsystem } from './bitmapStreamSubsystem';
 import { earthBaseLevelForTier } from '../../../utils/scene/earthBaseLevelForTier';
-import { earthTilePath } from '../../../utils/scene/earthTilePath';
-import { fetchEarthTileManifest } from '../../../utils/scene/fetchEarthTileManifest';
-import { fetchEarthTileBitmap } from '../../../utils/network/fetchEarthTileBitmap';
+import { surfaceTilePath } from '../../../utils/scene/surfaceTilePath';
+import { fetchSurfaceTileManifest } from '../../../utils/scene/fetchSurfaceTileManifest';
+import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileBitmap';
 import { directionToLonLatDeg } from '../../../utils/scene/directionToLonLatDeg';
 import { deepestBandLevelAt } from '../../../utils/scene/deepestBandLevelAt';
 import {
@@ -49,10 +49,10 @@ const TILED_KIND: EarthTileKind = 'surface';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
 
-/** The "nothing here yet" snapshot — atlas never allocated, or `state.subsystems.earthTiles`
+/** The "nothing here yet" snapshot — atlas never allocated, or `state.subsystems.surfaceTiles`
  *  itself is null. Exported so `engine.ts`'s debug handle shares this shape instead of
  *  restating it. */
-export const EMPTY_EARTH_TILE_DEBUG_SNAPSHOT: EarthTileDebugSnapshot = {
+export const EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT: SurfaceTileDebugSnapshot = {
   engaged: false,
   capacity: 0,
   used: 0,
@@ -66,31 +66,33 @@ export const EMPTY_EARTH_TILE_DEBUG_SNAPSHOT: EarthTileDebugSnapshot = {
 /** One atlas-resident tile: which tile, which slot, and when its bitmap
  *  landed (REAL time — see `residentSlot`'s doc comment). */
 type ResidentTile = {
-  readonly tile: EarthTileId;
+  readonly tile: SurfaceTileId;
   readonly slot: number;
   readonly readyAtMs: number;
 };
 
-export type EarthTileDeps = {
+export type SurfaceTileDeps = {
   readonly device: GPUDevice;
   /** Wakes the render loop; passed through to the stream subsystem. This file
    *  surfaces its own state through `isAnimating()` instead. */
   readonly requestRender: () => void;
 };
 
-export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsystem {
+export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSubsystem {
   const { device, requestRender } = deps;
 
   // Fetched once, on the first `plannerParams()` call — earlier than
   // engagement, since the engage rule needs the manifest's `zWin`.
   let manifestRequested = false;
   let manifestPending = false;
-  let manifest: EarthTileManifest | null = null;
+  let manifest: SurfaceTileManifest | null = null;
 
   // The one writer is `refreshParams` — keeping the pair in one record means
   // the two can never describe different tiers (see its doc comment).
-  let paramsState: { readonly params: EarthTilePlannerParams | null; readonly tier: Tier | null } =
-    { params: null, tier: null };
+  let paramsState: {
+    readonly params: SurfaceTilePlannerParams | null;
+    readonly tier: Tier | null;
+  } = { params: null, tier: null };
 
   // Set together by `engage()`, cleared together by `destroy()` — the atlas
   // and its row geometry have one lifecycle, so one nullable record replaces
@@ -107,7 +109,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
   // `plan` omits `cutCount`: `getDebugSnapshot` fills that in from `lastCut`
   // at READ time (see its own comment for why `update()` time is too early).
   let lastEngaged: {
-    readonly plan: Omit<NonNullable<EarthTileDebugSnapshot['plan']>, 'cutCount'>;
+    readonly plan: Omit<NonNullable<SurfaceTileDebugSnapshot['plan']>, 'cutCount'>;
     readonly droppedAllocations: number;
     readonly subCameraDirLocal: Vec3;
   } | null = null;
@@ -132,15 +134,15 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
    * identity that holds only at the shipped 512 px edge.
    */
   function derivePlannerParams(
-    fetched: EarthTileManifest,
+    fetched: SurfaceTileManifest,
     tier: Tier,
-  ): EarthTilePlannerParams | null {
+  ): SurfaceTilePlannerParams | null {
     const levels = fetched.levels?.[TILED_KIND];
     if (!levels || levels.length === 0) return null;
     const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
     if (tilePx !== EARTH_TILE_PX) return null;
     const baseLevel = earthBaseLevelForTier(tier);
-    const bands: EarthTileBand[] = [];
+    const bands: SurfaceTileBand[] = [];
     for (const level of levels) {
       // A structurally-wrong manifest entry (missing/malformed `bounds`)
       // degrades by skipping it, matching this function's whole stance —
@@ -175,11 +177,11 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     paramsState = { tier, params: manifest === null ? null : derivePlannerParams(manifest, tier) };
   }
 
-  function plannerParams(tier: Tier): EarthTilePlannerParams | null {
+  function plannerParams(tier: Tier): SurfaceTilePlannerParams | null {
     if (!manifestRequested) {
       manifestRequested = true;
       manifestPending = true;
-      void fetchEarthTileManifest().then((fetched) => {
+      void fetchSurfaceTileManifest().then((fetched) => {
         manifestPending = false;
         if (destroyed || fetched === null) return;
         manifest = fetched;
@@ -213,7 +215,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     return created;
   }
 
-  function update(input: { readonly plan: EarthTilePlan }): void {
+  function update(input: { readonly plan: SurfaceTilePlan }): void {
     if (destroyed) return;
     const active = paramsState.params;
     // `refreshParams` is the sole writer of `paramsState`, and only ever
@@ -241,12 +243,12 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     // looked stale (and losing its pixels cascaded into evicting the next
     // untouched one). Pass 1 stamps every resident first; only genuine misses
     // reach pass 2's allocator.
-    const misses: EarthTileRequest[] = [];
+    const misses: SurfaceTileRequest[] = [];
     // Debug-only tally: planned tiles whose bitmap hasn't landed in `resident`
     // yet, whatever the atlas's own slot state — see `EarthTileDebugSnapshot`.
     let notResidentCount = 0;
     for (const request of plan.requests) {
-      const key = earthTilePath(request.tile, prefix);
+      const key = surfaceTilePath(request.tile, prefix);
       if (!resident.has(key)) notResidentCount++;
       // Checked BEFORE touching: a touched failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
@@ -256,7 +258,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
     let droppedAllocations = 0;
     for (const request of misses) {
-      const key = earthTilePath(request.tile, prefix);
+      const key = surfaceTilePath(request.tile, prefix);
 
       // Null means the atlas is already full this frame.
       if (stream.allocate(key, frameCounter) === null) {
@@ -269,7 +271,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
         key,
         // Highest-priority-first queue.
         priority: request.screenPx,
-        fetcher: () => fetchEarthTileBitmap(request.tile, prefix),
+        fetcher: () => fetchSurfaceTileBitmap(request.tile, prefix),
         onResult: (bitmap) => {
           if (destroyed || bitmap === null) {
             pendingLevelOf.delete(key);
@@ -302,14 +304,14 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
    * walks ancestors through. Reuses `TextureAtlas.slotUv` (via the stream's
    * own `slotUv`) rather than re-deriving the slot-rect math.
    */
-  function residentSlot(tile: EarthTileId): {
+  function residentSlot(tile: SurfaceTileId): {
     slot: number;
     atlasUvOrigin: readonly [number, number];
     atlasUvScale: readonly [number, number];
     readyAtMs: number;
   } | null {
     if (manifest === null || atlas === null) return null;
-    const key = earthTilePath(tile, manifest.prefix);
+    const key = surfaceTilePath(tile, manifest.prefix);
     const entry = resident.get(key);
     if (entry === undefined) return null;
     const [u0, v0, u1, v1] = atlas.stream.slotUv(entry.slot);
@@ -328,8 +330,8 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
   /** See `EarthTileDebugSnapshot`. Built on demand for a low-rate DebugPanel
    *  poll — never called from a render path, so an O(resident) scan is fine. */
-  function getDebugSnapshot(): EarthTileDebugSnapshot {
-    if (atlas === null) return EMPTY_EARTH_TILE_DEBUG_SNAPSHOT;
+  function getDebugSnapshot(): SurfaceTileDebugSnapshot {
+    if (atlas === null) return EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT;
 
     const byLevel = new Map<number, { resident: number; pending: number }>();
     const rowFor = (z: number) => {
@@ -355,7 +357,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
 
     // `paramsState.params` (the last tier's bands) is set together with
     // `lastEngaged` by `refreshParams`/`update`.
-    let subCamera: EarthTileDebugSnapshot['subCamera'] = null;
+    let subCamera: SurfaceTileDebugSnapshot['subCamera'] = null;
     if (lastEngaged !== null && paramsState.params !== null) {
       const lonLat = directionToLonLatDeg(lastEngaged.subCameraDirLocal);
       subCamera = {
@@ -394,7 +396,7 @@ export function createEarthTileSubsystem(deps: EarthTileDeps): EarthTileSubsyste
     lastCut = [];
   }
 
-  const subsystem: EarthTileSubsystem = {
+  const subsystem: SurfaceTileSubsystem = {
     plannerParams,
     update,
     residentSlot,

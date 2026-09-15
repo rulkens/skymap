@@ -33,11 +33,11 @@ import { fileURLToPath } from 'node:url';
 import sharp from 'sharp';
 
 import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
-import type { EarthTileManifest } from '../../src/@types/scene/EarthTileManifest';
+import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
-import { earthTilePath } from '../../src/utils/scene/earthTilePath';
+import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
 import { parseFlags } from '../utils/cli/args';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
@@ -167,7 +167,7 @@ async function bakeDeepestLevel(
   for (const { x, y } of candidateTileIndices(source.coverage, z, tilePx)) {
     const rgba = await source.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx);
     if (rgba === null) continue;
-    const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
+    const relPath = surfaceTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
     await writeTile(rgba, tilePx, join(outDir, relPath));
     written.push(relPath);
   }
@@ -220,7 +220,7 @@ export async function bakeCoarserLevel(
       .map(({ i, j }) => ({
         input: join(
           outDir,
-          earthTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
+          surfaceTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
         ),
         left: i * halfPx,
         top: j * halfPx,
@@ -239,7 +239,7 @@ export async function bakeCoarserLevel(
       })),
     );
 
-    const relPath = earthTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
+    const relPath = surfaceTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
     const outPath = join(outDir, relPath);
     mkdirSync(dirname(outPath), { recursive: true });
 
@@ -369,7 +369,7 @@ export async function bakeAll(
 ): Promise<void> {
   const tilePx = EARTH_TILE_PX;
   const written: string[] = [];
-  const bandEntries: NonNullable<EarthTileManifest['levels'][typeof KIND]>[number][] = [];
+  const bandEntries: NonNullable<SurfaceTileManifest['levels'][typeof KIND]>[number][] = [];
 
   if (opts?.only !== undefined && !bands.some((band) => band.source.id === opts.only)) {
     throw new Error(
@@ -425,7 +425,7 @@ export async function bakeAll(
     }
   }
 
-  const manifest: EarthTileManifest = {
+  const manifest: SurfaceTileManifest = {
     prefix: TILE_PREFIX,
     tilePx,
     levels: { [KIND]: bandEntries },

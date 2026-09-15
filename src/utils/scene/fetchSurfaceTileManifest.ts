@@ -1,4 +1,4 @@
-import type { EarthTileManifest } from '../../@types/scene/EarthTileManifest';
+import type { SurfaceTileManifest } from '../../@types/scene/SurfaceTileManifest';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
 
 /**
@@ -14,11 +14,11 @@ import { dataUrl } from '../../services/loading/fetchWithProgress';
  * `public/images/` tree. Not cached here: a module-level promise cache would
  * make behaviour depend on whether some earlier call happened.
  */
-export async function fetchEarthTileManifest(): Promise<EarthTileManifest | null> {
+export async function fetchSurfaceTileManifest(): Promise<SurfaceTileManifest | null> {
   try {
     const res = await fetch(dataUrl('images/earth-tiles/manifest.json'));
     if (!res.ok) return null;
-    const parsed = (await res.json()) as EarthTileManifest;
+    const parsed = (await res.json()) as SurfaceTileManifest;
     // A pre-versioning bake has no prefix; taking it on trust would build
     // every tile URL as "undefined/surface/…" and 404-storm. Folding it into
     // the null case degrades to base-only instead.

@@ -19,7 +19,7 @@ import sharp from 'sharp';
 import type { EarthImagerySource } from './EarthImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
-import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
+import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
 
 /** Deepest (and only) level the Søndermarken harvest reaches — the WMS
  *  server rendered z19 natively; every coarser level is a bake-time 2x2
@@ -37,7 +37,7 @@ const GEODANMARK_PROVENANCE = {
  *  edge — the same ladder `tileBox`/`earthTileIndicesForBounds` use, so a
  *  box this source is handed always lands on an exact multiple. */
 function tileDeg(z: number): number {
-  return 360 / earthTileColumns(z, EARTH_TILE_PX);
+  return 360 / surfaceTileColumns(z, EARTH_TILE_PX);
 }
 
 /**

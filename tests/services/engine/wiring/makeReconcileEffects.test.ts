@@ -164,12 +164,12 @@ describe('makeReconcileEffects', () => {
     );
   });
 
-  it("logCameraState forwards the earthTiles subsystem's sub-camera readout when engaged", () => {
+  it("logCameraState forwards the surfaceTiles subsystem's sub-camera readout when engaged", () => {
     const getDebugSnapshot = vi.fn(() => ({
       subCamera: { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
     }));
     const { state } = makeState();
-    (state as unknown as { subsystems: { earthTiles: unknown } }).subsystems.earthTiles = {
+    (state as unknown as { subsystems: { surfaceTiles: unknown } }).subsystems.surfaceTiles = {
       getDebugSnapshot,
     };
     const effects = makeReconcileEffects(state, CANVAS);

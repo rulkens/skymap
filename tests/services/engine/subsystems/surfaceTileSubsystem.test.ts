@@ -31,23 +31,23 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../src/utils/scene/fetchEarthTileManifest', () => ({
-  fetchEarthTileManifest: vi.fn(),
+vi.mock('../../../../src/utils/scene/fetchSurfaceTileManifest', () => ({
+  fetchSurfaceTileManifest: vi.fn(),
 }));
-vi.mock('../../../../src/utils/network/fetchEarthTileBitmap', () => ({
-  fetchEarthTileBitmap: vi.fn(),
+vi.mock('../../../../src/utils/network/fetchSurfaceTileBitmap', () => ({
+  fetchSurfaceTileBitmap: vi.fn(),
 }));
 
-import type { EarthTileManifest } from '../../../../src/@types/scene/EarthTileManifest';
-import type { EarthTilePlan } from '../../../../src/@types/scene/EarthTilePlan';
+import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTilePlan } from '../../../../src/@types/scene/SurfaceTilePlan';
 import type { SurfaceCutTile } from '../../../../src/@types/scene/SurfaceCutTile';
 import type { Tier } from '../../../../src/@types/data/Tier';
 import {
-  createEarthTileSubsystem,
-  EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
-} from '../../../../src/services/engine/subsystems/earthTileSubsystem';
-import { fetchEarthTileManifest } from '../../../../src/utils/scene/fetchEarthTileManifest';
-import { fetchEarthTileBitmap } from '../../../../src/utils/network/fetchEarthTileBitmap';
+  createSurfaceTileSubsystem,
+  EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
+} from '../../../../src/services/engine/subsystems/surfaceTileSubsystem';
+import { fetchSurfaceTileManifest } from '../../../../src/utils/scene/fetchSurfaceTileManifest';
+import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfaceTileBitmap';
 import { earthBaseLevelForTier } from '../../../../src/utils/scene/earthBaseLevelForTier';
 import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
 
@@ -60,7 +60,7 @@ const MIN_TILE_LEVEL = BASE_LEVEL + 1;
  *  caller — `undefined` standing in for a bake that omitted the field. */
 const WORLD_BOUNDS = { west: -180, south: -90, east: 180, north: 90 };
 
-function surfaceManifest(tilePx: number | undefined): EarthTileManifest {
+function surfaceManifest(tilePx: number | undefined): SurfaceTileManifest {
   return {
     prefix: 'earth-tiles/v1',
     tilePx,
@@ -74,15 +74,15 @@ function surfaceManifest(tilePx: number | undefined): EarthTileManifest {
         },
       ],
     },
-  } as unknown as EarthTileManifest;
+  } as unknown as SurfaceTileManifest;
 }
 
 /** A subsystem with the manifest landed, on a device that answers nothing —
  *  enough for every question about params, since construction and a disengaged
  *  frame allocate nothing. */
-async function subsystemWithManifest(manifest: EarthTileManifest) {
-  vi.mocked(fetchEarthTileManifest).mockResolvedValue(manifest);
-  const subsystem = createEarthTileSubsystem({
+async function subsystemWithManifest(manifest: SurfaceTileManifest) {
+  vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(manifest);
+  const subsystem = createSurfaceTileSubsystem({
     device: {} as unknown as GPUDevice,
     requestRender: () => {},
   });
@@ -92,7 +92,7 @@ async function subsystemWithManifest(manifest: EarthTileManifest) {
   return subsystem;
 }
 
-async function plannerParamsFor(manifest: EarthTileManifest, tier: Tier = 'large') {
+async function plannerParamsFor(manifest: SurfaceTileManifest, tier: Tier = 'large') {
   return (await subsystemWithManifest(manifest)).plannerParams(tier);
 }
 
@@ -168,8 +168,8 @@ function recordingDevice(): GPUDevice {
 const TILE = { kind: 'surface', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
 // Sub-camera on the prime meridian/equator — an arbitrary but exactly
 // predictable direction (lonDeg 0, latDeg 0) for the debug-snapshot test below.
-const SUB_CAMERA_EQUATOR_PRIME: EarthTilePlan['subCameraDirLocal'] = [1, 0, 0];
-const ENGAGED: EarthTilePlan = {
+const SUB_CAMERA_EQUATOR_PRIME: SurfaceTilePlan['subCameraDirLocal'] = [1, 0, 0];
+const ENGAGED: SurfaceTilePlan = {
   zWin: MIN_TILE_LEVEL,
   requests: [{ tile: TILE, screenPx: EARTH_TILE_PX }],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
@@ -178,7 +178,7 @@ const ENGAGED: EarthTilePlan = {
  *  texture already carries, so there is nothing a tile could add — and one level
  *  MORE than a `medium` session's base carries, which is what the engage-gate
  *  test below turns on. */
-const DISENGAGED: EarthTilePlan = {
+const DISENGAGED: SurfaceTilePlan = {
   zWin: BASE_LEVEL,
   requests: [],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
@@ -190,12 +190,12 @@ const DISENGAGED: EarthTilePlan = {
  * assertions exercise the real post-fetch state.
  */
 async function engagedSubsystem() {
-  vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
-  vi.mocked(fetchEarthTileBitmap).mockResolvedValue({
+  vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+  vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
     close: () => {},
   } as unknown as ImageBitmap);
 
-  const subsystem = createEarthTileSubsystem({
+  const subsystem = createSurfaceTileSubsystem({
     device: recordingDevice(),
     requestRender: () => {},
   });
@@ -217,9 +217,9 @@ async function engagedSubsystem() {
  * `tier`. The atlas is allocated by the first ENGAGED frame and by nothing
  * else, so `getAtlasView()` going non-null IS the gate's answer.
  */
-async function engagesAt(plan: EarthTilePlan, tier: Tier): Promise<boolean> {
-  vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
-  const subsystem = createEarthTileSubsystem({
+async function engagesAt(plan: SurfaceTilePlan, tier: Tier): Promise<boolean> {
+  vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+  const subsystem = createSurfaceTileSubsystem({
     device: recordingDevice(),
     requestRender: () => {},
   });
@@ -250,13 +250,13 @@ describe('earthTileSubsystem engage gate', () => {
     // itself survives a disengage/re-engage cycle — a resident tile the camera
     // still wants must not re-fetch.
     const subsystem = await engagedSubsystem();
-    const fetchesAfterFirstLand = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
+    const fetchesAfterFirstLand = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
 
     subsystem.update({ plan: DISENGAGED });
     subsystem.update({ plan: ENGAGED });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length).toBe(fetchesAfterFirstLand);
+    expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length).toBe(fetchesAfterFirstLand);
     expect(subsystem.residentSlot(TILE)).not.toBeNull();
   });
 });
@@ -271,7 +271,7 @@ describe('earthTileSubsystem engage gate', () => {
 describe('earthTileSubsystem debug snapshot', () => {
   it('is the quiet empty snapshot before the atlas ever engages', async () => {
     const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
-    expect(subsystem.getDebugSnapshot()).toEqual(EMPTY_EARTH_TILE_DEBUG_SNAPSHOT);
+    expect(subsystem.getDebugSnapshot()).toEqual(EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT);
   });
 
   it('reports resident counts, the last plan shape and the deepest keys once engaged', async () => {
@@ -320,15 +320,15 @@ describe('earthTileSubsystem debug snapshot', () => {
 
 describe('earthTileSubsystem residency readiness', () => {
   it('stamps a resident entry with the real-time moment its bitmap uploaded', async () => {
-    vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
-    vi.mocked(fetchEarthTileBitmap).mockResolvedValue({
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
       close: () => {},
     } as unknown as ImageBitmap);
     // performance.now(), not Date.now()/a sim clock — real time, per the
     // design contract, so a fade runs even while the sim clock is paused.
     const nowSpy = vi.spyOn(performance, 'now').mockReturnValue(54_321);
 
-    const subsystem = createEarthTileSubsystem({
+    const subsystem = createSurfaceTileSubsystem({
       device: recordingDevice(),
       requestRender: () => {},
     });
@@ -438,7 +438,7 @@ describe('earthTileSubsystem lastCut', () => {
 
 describe('earthTileSubsystem stand-down', () => {
   it('allocates nothing when a session never engages', async () => {
-    vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
     let touched = false;
     const device = new Proxy({} as GPUDevice, {
       get: () => {
@@ -447,7 +447,7 @@ describe('earthTileSubsystem stand-down', () => {
       },
     });
 
-    const subsystem = createEarthTileSubsystem({ device, requestRender: () => {} });
+    const subsystem = createSurfaceTileSubsystem({ device, requestRender: () => {} });
     subsystem.plannerParams('large');
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let frame = 0; frame < 3; frame++) {
@@ -465,9 +465,9 @@ describe('earthTileSubsystem stand-down', () => {
     // resolves null and `params` must stay null regardless of what the
     // camera is doing. Cleared first: neither mock resets its call history
     // between tests in this file, and both were driven by earlier cases above.
-    vi.mocked(fetchEarthTileManifest).mockClear();
-    vi.mocked(fetchEarthTileBitmap).mockClear();
-    vi.mocked(fetchEarthTileManifest).mockResolvedValue(null);
+    vi.mocked(fetchSurfaceTileManifest).mockClear();
+    vi.mocked(fetchSurfaceTileBitmap).mockClear();
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(null);
     let touched = false;
     const device = new Proxy({} as GPUDevice, {
       get: () => {
@@ -476,7 +476,7 @@ describe('earthTileSubsystem stand-down', () => {
       },
     });
 
-    const subsystem = createEarthTileSubsystem({ device, requestRender: () => {} });
+    const subsystem = createSurfaceTileSubsystem({ device, requestRender: () => {} });
     expect(subsystem.plannerParams('large')).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
@@ -489,10 +489,10 @@ describe('earthTileSubsystem stand-down', () => {
 
     expect(touched).toBe(false);
     expect(subsystem.getAtlasView()).toBeNull();
-    expect(fetchEarthTileBitmap).not.toHaveBeenCalled();
+    expect(fetchSurfaceTileBitmap).not.toHaveBeenCalled();
     // The one property that actually regresses if this path breaks: a 404
     // must not re-arm and re-fetch on every subsequent frame.
-    expect(fetchEarthTileManifest).toHaveBeenCalledTimes(1);
+    expect(fetchSurfaceTileManifest).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -525,12 +525,12 @@ describe('earthTileSubsystem full-atlas allocation', () => {
   }
 
   it('does not evict a planned resident to make room for a new higher-priority tile', async () => {
-    vi.mocked(fetchEarthTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
-    vi.mocked(fetchEarthTileBitmap).mockResolvedValue({
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
       close: () => {},
     } as unknown as ImageBitmap);
 
-    const subsystem = createEarthTileSubsystem({
+    const subsystem = createSurfaceTileSubsystem({
       device: recordingDevice(),
       requestRender: () => {},
     });
@@ -538,35 +538,35 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const resident = fillingRequests();
-    const fillPlan: EarthTilePlan = {
+    const fillPlan: SurfaceTilePlan = {
       zWin: MIN_TILE_LEVEL,
       requests: resident,
       subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
     };
 
-    const callsBeforeFill = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
+    const callsBeforeFill = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
     subsystem.update({ plan: fillPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
     // The atlas is now genuinely full — every one of its slots resident.
-    expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length - callsBeforeFill).toBe(SLOT_COUNT);
+    expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length - callsBeforeFill).toBe(SLOT_COUNT);
 
     // A new tile, off the 8x8 grid the fill used, sorted first (highest
     // screenPx) — the priority order that let a single evicting pass reach
     // it before the plan's own residents.
     const newTile = { kind: 'surface', z: MIN_TILE_LEVEL, x: 99, y: 99 } as const;
-    const nextPlan: EarthTilePlan = {
+    const nextPlan: SurfaceTilePlan = {
       zWin: MIN_TILE_LEVEL,
       requests: [{ tile: newTile, screenPx: SLOT_COUNT + 1 }, ...resident],
       subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
     };
 
-    const callsBeforeNext = vi.mocked(fetchEarthTileBitmap).mock.calls.length;
+    const callsBeforeNext = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
     subsystem.update({ plan: nextPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Nothing resident got evicted-and-refetched, and the full atlas made the
     // new tile wait rather than bump a resident out.
-    expect(vi.mocked(fetchEarthTileBitmap).mock.calls.length - callsBeforeNext).toBe(0);
+    expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length - callsBeforeNext).toBe(0);
     // The debug snapshot's other half of the same story: the refused
     // allocation attempt is counted, not silently swallowed.
     expect(subsystem.getDebugSnapshot().droppedAllocations).toBe(1);

@@ -6,9 +6,9 @@ import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 
 import { bakeAll, bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
-import { earthTilePath } from '../../../src/utils/scene/earthTilePath';
+import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
 import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
-import type { EarthTileManifest } from '../../../src/@types/scene/EarthTileManifest';
+import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 const TILE_PX = 512;
@@ -31,7 +31,7 @@ async function writeChild(
   y: number,
   rgba: readonly [number, number, number, number],
 ): Promise<void> {
-  const path = join(outDir, earthTilePath({ kind: 'surface', z, x, y }, TILE_PREFIX));
+  const path = join(outDir, surfaceTilePath({ kind: 'surface', z, x, y }, TILE_PREFIX));
   mkdirSync(dirname(path), { recursive: true });
   await sharp({
     create: {
@@ -98,7 +98,10 @@ describe('bakeCoarserLevel', () => {
 
     await bakeCoarserLevel(1, TILE_PX, dir);
 
-    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX));
+    const parentPath = join(
+      dir,
+      surfaceTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+    );
     const { data } = await sharp(parentPath)
       .ensureAlpha()
       .raw()
@@ -125,7 +128,10 @@ describe('bakeCoarserLevel', () => {
 
     await bakeCoarserLevel(1, TILE_PX, dir);
 
-    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX));
+    const parentPath = join(
+      dir,
+      surfaceTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+    );
     const { data } = await sharp(parentPath)
       .ensureAlpha()
       .raw()
@@ -174,7 +180,10 @@ describe('bakeCoarserLevel', () => {
 
     await bakeCoarserLevel(1, TILE_PX, dir, filler);
 
-    const parentPath = join(dir, earthTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX));
+    const parentPath = join(
+      dir,
+      surfaceTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+    );
     const { data } = await sharp(parentPath)
       .ensureAlpha()
       .raw()
@@ -271,7 +280,7 @@ describe('bakeAll', () => {
 
     const tilePath = join(
       dir,
-      earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+      surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
     );
     const { data, info } = await sharp(tilePath)
       .ensureAlpha()
@@ -406,7 +415,7 @@ describe('bakeAll', () => {
 
     const manifest = JSON.parse(
       readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
-    ) as EarthTileManifest;
+    ) as SurfaceTileManifest;
     const bands = manifest.levels.surface;
     expect(bands).toHaveLength(2);
     expect(bands?.[0]?.bounds).toEqual(BOX_WEST);
@@ -418,8 +427,12 @@ describe('bakeAll', () => {
     expect(bands?.[1]?.builtFrom).toEqual(east.provenance);
 
     const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
-    expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX));
-    expect(index).toContain(earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX));
+    expect(index).toContain(
+      surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    expect(index).toContain(
+      surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+    );
   });
 
   describe('--only', () => {
@@ -464,10 +477,10 @@ describe('bakeAll', () => {
       const westIndex = readFileSync(join(dir, 'earth-tiles/index-stub-west.txt'), 'utf8');
       const eastIndex = readFileSync(join(dir, 'earth-tiles/index-stub-east.txt'), 'utf8');
       expect(westIndex).toContain(
-        earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
       );
       expect(eastIndex).toContain(
-        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
     });
 
@@ -482,7 +495,7 @@ describe('bakeAll', () => {
       await bakeAll(bands, dir);
       const eastTilePath = join(
         dir,
-        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
       const beforeMtime = statSync(eastTilePath).mtimeMs;
       east.readBoxCalls = 0;
@@ -494,15 +507,15 @@ describe('bakeAll', () => {
 
       const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
       expect(index).toContain(
-        earthTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
       );
       expect(index).toContain(
-        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
 
       const manifest = JSON.parse(
         readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
-      ) as EarthTileManifest;
+      ) as SurfaceTileManifest;
       expect(manifest.levels.surface).toHaveLength(2);
     });
 
@@ -517,7 +530,7 @@ describe('bakeAll', () => {
       await bakeAll(bands, dir);
       const eastTilePath = join(
         dir,
-        earthTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
       rmSync(eastTilePath);
 

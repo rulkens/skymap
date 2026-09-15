@@ -245,7 +245,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The tile planner keys off Earth's OWN slab row (no row = already culled)
   // and the layer's own `enabled`, so tiles and layer never disagree about
   // whether Earth is on screen.
-  const earthTiles = state.subsystems.earthTiles;
+  const earthTiles = state.subsystems.surfaceTiles;
   const earth = state.data.bodies.earth;
   const earthSlab = ctx.slabs.find(
     (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth',

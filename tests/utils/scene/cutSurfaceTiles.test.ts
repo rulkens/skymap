@@ -17,9 +17,9 @@ import { mat4 } from 'wgpu-matrix';
 import { cutSurfaceTiles } from '../../../src/utils/scene/cutSurfaceTiles';
 import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelForTier';
 import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
-import { earthTileXyForUv } from '../../../src/utils/scene/earthTileXyForUv';
-import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
-import { earthTileBandRequestAllowed } from '../../../src/utils/scene/earthTileBandRequestAllowed';
+import { surfaceTileXyForUv } from '../../../src/utils/scene/surfaceTileXyForUv';
+import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
+import { surfaceTileBandRequestAllowed } from '../../../src/utils/scene/surfaceTileBandRequestAllowed';
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
@@ -27,7 +27,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../src/utils/camera/foregroundFrustum';
-import type { EarthTileId } from '../../../src/@types/data/EarthTileId';
+import type { SurfaceTileId } from '../../../src/@types/data/SurfaceTileId';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const BASE_LEVEL = earthBaseLevelForTier('large');
@@ -144,7 +144,7 @@ function angleBetween(a: Vec3, b: Vec3): number {
  *  tile `z`/`x`/`y`, recomputed here so the horizon-cull fixture below
  *  derives its numbers rather than hard-coding them. */
 function tileGeometry(z: number, x: number, y: number) {
-  const cols = earthTileColumns(z, EARTH_TILE_PX);
+  const cols = surfaceTileColumns(z, EARTH_TILE_PX);
   const rows = cols / 2;
   const u0 = x / cols;
   const u1 = (x + 1) / cols;
@@ -251,7 +251,11 @@ describe('cutSurfaceTiles', () => {
 
     it('still culls a tile well beyond the horizon at the same pose (no regression to the cull itself)', () => {
       const { altitudeKm, target } = horizonFixture();
-      const [antiX, antiY] = earthTileXyForUv([175 / 360 + 0.5, -55 / 180 + 0.5], Z, EARTH_TILE_PX);
+      const [antiX, antiY] = surfaceTileXyForUv(
+        [175 / 360 + 0.5, -55 / 180 + 0.5],
+        Z,
+        EARTH_TILE_PX,
+      );
       const result = cutSurfaceTiles(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
       expect(
         result.requests.requests.some(
@@ -273,8 +277,8 @@ describe('cutSurfaceTiles', () => {
 
     it('resolves an exactly resident leaf to the ancestor rect unchanged (levelDelta 0)', () => {
       const z = expectedLevel(1000);
-      const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
-      const residentSlot = (tile: EarthTileId) =>
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const residentSlot = (tile: SurfaceTileId) =>
         tile.z === z && tile.x === x && tile.y === y
           ? {
               slot: 7,
@@ -299,7 +303,7 @@ describe('cutSurfaceTiles', () => {
 
     it("carries the z-1 ancestor's flattened rect as fallback, and the leaf's own readyAt, when both are resident", () => {
       const z = expectedLevel(1000);
-      const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const parentZ = z - 1;
       const parentX = x >> 1;
       const parentY = y >> 1;
@@ -311,7 +315,7 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.0, 0.25] as const,
         atlasUvScale: [0.25, 0.25] as const,
       };
-      const residentSlot = (tile: EarthTileId) => {
+      const residentSlot = (tile: SurfaceTileId) => {
         if (tile.z === z && tile.x === x && tile.y === y)
           return { slot: 7, ...leafRect, readyAtMs: 5_000 };
         if (tile.z === parentZ && tile.x === parentX && tile.y === parentY)
@@ -359,14 +363,14 @@ describe('cutSurfaceTiles', () => {
       const z = expectedLevel(1000);
       const levelDelta = 2;
       const ancestorZ = z - levelDelta;
-      const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const ancX = x >> levelDelta;
       const ancY = y >> levelDelta;
       const ancestorRect = {
         atlasUvOrigin: [0.25, 0.5] as const,
         atlasUvScale: [0.5, 0.5] as const,
       };
-      const residentSlot = (tile: EarthTileId) =>
+      const residentSlot = (tile: SurfaceTileId) =>
         tile.z === ancestorZ && tile.x === ancX && tile.y === ancY
           ? { slot: 3, ...ancestorRect, readyAtMs: 9_000 }
           : null;
@@ -405,7 +409,7 @@ describe('cutSurfaceTiles', () => {
       // Resident everywhere AT baseLevel — if the walk ever queried down that
       // far, every leaf would resolve. None should: nothing else is resident,
       // so `cut` must still come back empty.
-      const residentSlot = (tile: EarthTileId) =>
+      const residentSlot = (tile: SurfaceTileId) =>
         tile.z === BASE_LEVEL
           ? {
               slot: 0,
@@ -422,17 +426,17 @@ describe('cutSurfaceTiles', () => {
     it("draws a band-edge leaf outside every band's request range from a resident ancestor rect", () => {
       // Reproduces the "hole ring" bug: a global band caps at z7, a deep band
       // only bakes z8-13 over a small bbox, and the z7 parent straddles that
-      // bbox's edge — `earthTileBandRefineAllowed` lets it refine (the deep
+      // bbox's edge — `surfaceTileBandRefineAllowed` lets it refine (the deep
       // band overlaps SOME of it), but three of its four z8 children land
       // OUTSIDE the deep band's bbox with no band requestable at z8 there.
       const z7 = 7;
       const z8 = 8;
       const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
-      const [z7x, z7y] = earthTileXyForUv(subUv, z7, EARTH_TILE_PX);
-      const [z8x, z8y] = earthTileXyForUv(subUv, z8, EARTH_TILE_PX);
+      const [z7x, z7y] = surfaceTileXyForUv(subUv, z7, EARTH_TILE_PX);
+      const [z8x, z8y] = surfaceTileXyForUv(subUv, z8, EARTH_TILE_PX);
 
       const tileBounds = (z: number, x: number, y: number) => {
-        const cols = earthTileColumns(z, EARTH_TILE_PX);
+        const cols = surfaceTileColumns(z, EARTH_TILE_PX);
         const rows = cols / 2;
         return {
           uBounds: [x / cols, (x + 1) / cols] as const,
@@ -449,7 +453,7 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.25, 0.5] as const,
         atlasUvScale: [0.5, 0.5] as const,
       };
-      const residentSlot = (tile: EarthTileId) =>
+      const residentSlot = (tile: SurfaceTileId) =>
         tile.z === z7 && tile.x === z7x && tile.y === z7y
           ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
           : null;
@@ -498,7 +502,7 @@ describe('cutSurfaceTiles', () => {
       const deep = bare.requests.requests.find((r) => r.tile.z === maxLevel);
       expect(deep, `a z${maxLevel} request`).toBeDefined();
 
-      const residentSlot = (tile: EarthTileId) =>
+      const residentSlot = (tile: SurfaceTileId) =>
         tile.z === deep!.tile.z && tile.x === deep!.tile.x && tile.y === deep!.tile.y
           ? {
               slot: 1,
@@ -525,8 +529,8 @@ describe('cutSurfaceTiles', () => {
       const keys = new Set(
         result.requests.requests.map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`),
       );
-      const subCamera = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
-      const antipode = earthTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const subCamera = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const antipode = surfaceTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], z, EARTH_TILE_PX);
 
       expect(keys.has(`${z}/${subCamera[0]}/${subCamera[1]}`), 'sub-camera tile').toBe(true);
       expect(keys.has(`${z}/${antipode[0]}/${antipode[1]}`), 'antipodal tile').toBe(false);
@@ -640,7 +644,8 @@ describe('cutSurfaceTiles', () => {
       // assertions (`winX0`/`winY0`/`EARTH_TILE_WINDOW_SIDE` wrap) are
       // dropped: `cutSurfaceTiles` has no window to be inside of.
       const result = cutSurfaceTiles(nadirAt(1000, 180.5, 5));
-      const xFrac = ({ z, x }: { z: number; x: number }) => x / earthTileColumns(z, EARTH_TILE_PX);
+      const xFrac = ({ z, x }: { z: number; x: number }) =>
+        x / surfaceTileColumns(z, EARTH_TILE_PX);
       expect(
         result.requests.requests.some((r) => xFrac(r.tile) < 0.1),
         'tile east of the seam',
@@ -696,7 +701,7 @@ describe('cutSurfaceTiles', () => {
       // predicts at this coarse a level (the reason the four-corner test
       // above measures every corner, not just the centre).
       const Z = MIN_TILE_LEVEL;
-      const [TX, TY] = earthTileXyForUv([0 / 360 + 0.5, 40 / 180 + 0.5], Z, EARTH_TILE_PX);
+      const [TX, TY] = surfaceTileXyForUv([0 / 360 + 0.5, 40 / 180 + 0.5], Z, EARTH_TILE_PX);
       const CAM_LAT_DEG = 10;
       const geo = tileGeometry(Z, TX, TY);
 
@@ -804,7 +809,7 @@ describe('cutSurfaceTiles', () => {
     ];
 
     function tileUvBounds(z: number, x: number, y: number) {
-      const cols = earthTileColumns(z, EARTH_TILE_PX);
+      const cols = surfaceTileColumns(z, EARTH_TILE_PX);
       const rows = cols / 2;
       const vNorth = 1 - y / rows;
       const vSouth = 1 - (y + 1) / rows;
@@ -814,9 +819,9 @@ describe('cutSurfaceTiles', () => {
     // Full-residency mock: anything the walk is allowed to request resolves —
     // isolates the walk's cull/refine logic (under test) from any residency-
     // race concern (the exact-repro report's §1 already ruled that out).
-    function mockResidentSlot(tile: EarthTileId) {
+    function mockResidentSlot(tile: SurfaceTileId) {
       const { u0, u1, v0, v1 } = tileUvBounds(tile.z, tile.x, tile.y);
-      if (earthTileBandRequestAllowed(bands, tile.z, u0, u1, v0, v1)) {
+      if (surfaceTileBandRequestAllowed(bands, tile.z, u0, u1, v0, v1)) {
         return {
           slot: 0,
           atlasUvOrigin: [0, 0] as const,

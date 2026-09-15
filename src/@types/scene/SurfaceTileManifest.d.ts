@@ -1,5 +1,5 @@
 /**
- * EarthTileManifest — what the bake wrote, read once by the runtime before
+ * SurfaceTileManifest — what the bake wrote, read once by the runtime before
  * requesting a tile: tile edge, per-kind bake depth, and source imagery.
  * The planner clamps against the first two — a level never baked is a
  * sustained 404 storm. A fetched JSON, not codegen: the feature engages
@@ -12,10 +12,10 @@
  */
 
 import type { EarthTileKind } from '../data/EarthTileKind';
-import type { EarthTileProvenance } from './EarthTileProvenance';
+import type { SurfaceTileProvenance } from './SurfaceTileProvenance';
 import type { LonLatBounds } from './LonLatBounds';
 
-export type EarthTileManifest = {
+export type SurfaceTileManifest = {
   /**
    * Key prefix the tiles hang off, e.g. `earth-tiles/v3`. Versioned, so a
    * re-bake writes new keys: the old ones keep serving whatever the CDN
@@ -31,7 +31,7 @@ export type EarthTileManifest = {
         readonly bounds: LonLatBounds;
         readonly min: number;
         readonly max: number;
-        readonly builtFrom: EarthTileProvenance;
+        readonly builtFrom: SurfaceTileProvenance;
       }>
     >
   >;

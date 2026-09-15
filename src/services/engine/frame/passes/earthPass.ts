@@ -193,7 +193,7 @@ export const earthPass: ContentPass = {
     // nothing covering the cap would punch a hole through to whatever is
     // behind Earth.
     const tileRenderer = state.gpu.earthSurfaceTileRenderer;
-    const earthTiles = state.subsystems.earthTiles;
+    const earthTiles = state.subsystems.surfaceTiles;
     const tiles = earthTiles?.getLastCut() ?? [];
     const surfaceAtlasView = earthTiles?.getAtlasView() ?? null;
     const tilesLive = tileRenderer !== null && surfaceAtlasView !== null && tiles.length > 0;

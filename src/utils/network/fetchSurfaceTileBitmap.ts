@@ -1,5 +1,5 @@
-import type { EarthTileId } from '../../@types/data/EarthTileId';
-import { earthTilePath } from '../scene/earthTilePath';
+import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
+import { surfaceTilePath } from '../scene/surfaceTilePath';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
 
 // An in-flight fetch pins a queue pipe and keeps the render-on-demand loop
@@ -21,11 +21,11 @@ const FETCH_DEADLINE_MS = 10_000;
  * fragment multiplies it into the blend weight itself, so premultiplied RGB
  * would darken coastal pixels toward black first.
  */
-export async function fetchEarthTileBitmap(
-  tile: EarthTileId,
+export async function fetchSurfaceTileBitmap(
+  tile: SurfaceTileId,
   prefix: string,
 ): Promise<ImageBitmap | null> {
-  const url = dataUrl(`images/${earthTilePath(tile, prefix)}`);
+  const url = dataUrl(`images/${surfaceTilePath(tile, prefix)}`);
   try {
     const res = await fetch(url, {
       mode: 'cors',

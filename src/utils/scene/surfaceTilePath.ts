@@ -1,4 +1,4 @@
-import type { EarthTileId } from '../../@types/data/EarthTileId';
+import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
 
 /**
  * earthTilePath — the single home for a virtual-texture tile's path, called
@@ -9,6 +9,6 @@ import type { EarthTileId } from '../../@types/data/EarthTileId';
  * `prefix` comes from the manifest rather than a constant here, so a re-bake
  * under a new version is a data change on both sides at once.
  */
-export function earthTilePath(tile: EarthTileId, prefix: string): string {
+export function surfaceTilePath(tile: SurfaceTileId, prefix: string): string {
   return `${prefix}/${tile.kind}/${tile.z}/${tile.x}/${tile.y}.webp`;
 }

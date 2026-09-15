@@ -1,4 +1,4 @@
-import type { EarthTileProvenance } from '../../src/@types/scene/EarthTileProvenance';
+import type { SurfaceTileProvenance } from '../../src/@types/scene/SurfaceTileProvenance';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /**
@@ -34,7 +34,7 @@ export type EarthImagerySource = {
   readonly coverage: ReadonlyArray<LonLatBounds>;
   /** This source's own identity, stamped onto every manifest band it bakes —
    *  read verbatim by `bakeAll`, never assumed from a module-level constant. */
-  readonly provenance: EarthTileProvenance;
+  readonly provenance: SurfaceTileProvenance;
   /** Sample a lon/lat box into an RGBA raster of exactly widthPx x heightPx, graded and
    *  sRGB-encoded, alpha 0 where the source has no land data. Null when the box is
    *  entirely outside coverage, so the caller emits no tile at all. */
