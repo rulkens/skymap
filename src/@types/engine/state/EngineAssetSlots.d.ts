@@ -10,7 +10,7 @@
  */
 
 import type { AssetSlot } from '../../loading/AssetSlot';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 import type { FilamentCloud } from '../../data/filament/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';

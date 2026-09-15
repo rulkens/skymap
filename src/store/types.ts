@@ -52,6 +52,7 @@ import type { rootReducer } from './rootReducer';
 import type { createAppStore } from './createAppStore';
 import type { ReconcileEffects } from './effects/ReconcileEffects';
 import type { ResolveDeps } from '../@types/engine/ResolveDeps';
+import type { SelectionResolver } from '../@types/engine/selection/SelectionResolver';
 import type { CameraPose } from '../@types/camera/CameraPose';
 import type { Vec4 } from '../@types/math/Vec4';
 import type { ClipData } from '../@types/animation/ClipData';
@@ -123,6 +124,14 @@ export type SagaContext = {
   reconcile: ReconcileEffects; // provides requestRender + fade/reseed/bias
   /** Live engine resources the selection reconciler reads to turn a SelectionRef into a SelectionRow. */
   resolveDeps: () => ResolveDeps;
+  /**
+   * The composed `SelectionResolver` (D5) — the one object the pick path and
+   * every selection-reconciling saga read for pick resolution, row extraction,
+   * and focus-id encode/decode. Reads `state.selectionKindRows` lazily, so a
+   * Layer row `createLayers` appends after registration is visible on the very
+   * next call.
+   */
+  selection: SelectionResolver;
   /**
    * The live camera resources `watchFocusTweenSaga` and `watchOrientationChangeSaga`
    * read to seed their tweens, or null when the camera is not ready

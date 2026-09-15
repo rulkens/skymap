@@ -1,7 +1,7 @@
 /**
  * BODY_PICK_ROWS — each body's DURABLE seed table, the array a pick tagged
  * with that row's source code indexes into. Total over `BodyId`. Pack side:
- * `sceneBodyPickId`; unpack: `resolvePickTable`'s `body` arm. The Sun's row
+ * `sceneBodyPickId`; unpack: `bodySelectionRow`'s `resolvePick`. The Sun's row
  * is unreachable — its dot is drawn by the STAR layers under `Source.FamousStar`.
  */
 

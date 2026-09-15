@@ -1172,6 +1172,45 @@ export const RAW_DATA = {
     description:
       'Provenance for the Voyager model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and what the pre-bake does to it.',
   },
+  'meshes.hubbleSource': {
+    path: 'data/raw/meshes/hubble/Hubble Space Telescope (A).glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Hubble Space Telescope (A)" (public domain) — the untouched download. Only the GitHub mirror carries this textured variant; the model on NASA\'s own page is the untextured printable. buildMeshes never reads it: five materials and inch units go through the Blender import and pre-bake first.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubbleBlend': {
+    path: 'data/raw/meshes/hubble/hubble.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'hubble.blend — the edited source the pre-bake opens: the download scaled from inches to metres with the foil materials made metallic and bumped, all by `npm run import-mesh -- hubble` (Blender 5.2 LTS; older versions cannot open it), which regenerates it from the pristine download.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubble': {
+    path: 'data/raw/meshes/hubble/hubble.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Hubble model flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.hubble actually points at. Baked from `hubble.blend`; regenerate with `npm run prebake-mesh -- hubble` (Blender, not CI), never by hand.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubble.readme': {
+    path: 'data/raw/meshes/hubble/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Hubble model — source mirror, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, the material overrides and the Horizons refresh query behind the orbit row.',
+  },
   'meshes.perseveranceSource': {
     path: 'data/raw/meshes/perseverance/Mars 2020 Perseverance Rover.glb',
     kind: 'file',

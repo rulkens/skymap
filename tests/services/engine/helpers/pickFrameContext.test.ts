@@ -113,11 +113,13 @@ function makeCanvas(width = 1920, height = 1080): HTMLCanvasElement {
 
 describe('pickFrameContext', () => {
   it('returns null before the engine is ready', () => {
-    // Any missing bootstrap-gate handle → `deriveFrameContext` reports
+    // Missing one of the two core gate handles → `deriveFrameContext` reports
     // not-ready → `pickFrameContext` returns null (not a not-ready context).
+    // The galaxy/pick renderers are no longer part of the gate (D13) — a null
+    // `galaxyPointRenderer` alone no longer blocks the pick context.
     expect(pickFrameContext(makeState({ booted: false }), makeCanvas())).toBeNull();
-    expect(pickFrameContext(makeState({ galaxyPointRenderer: null }), makeCanvas())).toBeNull();
-    expect(pickFrameContext(makeState({ galaxyPickRenderer: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ renderTargets: null }), makeCanvas())).toBeNull();
+    expect(pickFrameContext(makeState({ compositor: null }), makeCanvas())).toBeNull();
   });
 
   it('reproduces the frame’s camera from register.pose + projection', () => {
@@ -140,7 +142,7 @@ describe('pickFrameContext', () => {
       // same pole and their vp matches.
       ORIENTATION_FRAMES[state.settings.orientation],
       ORIENTATION_FRAMES[state.settings.orientation],
-      deriveSourceMasks(state).pick,
+      deriveSourceMasks(state, 0).pick,
       0,
       // simDays does not affect the view-projection this test compares; any
       // valid epoch reproduces the same vp.
@@ -176,6 +178,6 @@ describe('pickFrameContext', () => {
     const ctx = pickFrameContext(state, makeCanvas());
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).pick);
+    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state, 0).pick);
   });
 });

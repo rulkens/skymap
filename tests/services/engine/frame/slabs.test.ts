@@ -639,9 +639,7 @@ describe('slabViewOf', () => {
       focusBlend: 0,
       visibleSourceMask: 0xffffffff,
       focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
-      galaxyPointRenderer: {} as unknown as ReadyFrameContext['galaxyPointRenderer'],
       renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
-      texturedDisks: {} as unknown as ReadyFrameContext['texturedDisks'],
       slabs,
       // Nothing in this file reads bodyPose — a stub that never resolves a
       // body is a safe default, overridable like every other field.

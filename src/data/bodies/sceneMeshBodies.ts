@@ -22,12 +22,13 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
     meshKey: 'petunias',
     captionRevealM: 60,
   },
-  // The two Voyagers and the four Mars rovers. No `captionRevealM`: these are
+  // The real missions. No `captionRevealM`: these are
   // real objects on the default caption reach, not easter eggs to stumble on.
   // Half a radius: the 13 m magnetometer boom sets the bounding sphere, so two
   // radii would park the camera 29 m from a 4 m bus.
   { id: 'voyager1', label: 'Voyager 1', meshKey: 'voyager', standoffRadii: 0.5 },
   { id: 'voyager2', label: 'Voyager 2', meshKey: 'voyager', standoffRadii: 0.5 },
+  { id: 'hubble', label: 'Hubble', meshKey: 'hubble' },
   { id: 'curiosity', label: 'Curiosity', meshKey: 'curiosity' },
   { id: 'perseverance', label: 'Perseverance', meshKey: 'perseverance' },
   { id: 'spirit', label: 'Spirit', meshKey: 'mer' },

@@ -414,9 +414,7 @@ function makeInput(
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer,
     renderTargets,
-    texturedDisks: thumbnails,
   };
 
   return {
@@ -498,6 +496,7 @@ function makeInput(
           // `state.gpu.*` — this is the ONLY place these mock instances are
           // wired in (no top-level `input.*` duplication; see
           // `RenderFrameInput`'s slimmed shape).
+          galaxyPointRenderer,
           milkyWayCloudRenderer,
           horizonShellRenderer,
           texturedDiskRenderer,

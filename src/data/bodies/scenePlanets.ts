@@ -100,7 +100,7 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
   }),
   // Appended after Iapetus rather than filed with the other heliocentric bodies:
   // SCENE_PLANETS is append-only, because a pick decodes to a body by array
-  // position (see the `body` arm of `resolvePickTable.ts`).
+  // position (see `bodySelectionRow.ts`'s `resolvePick`).
   heliocentricPlanet({
     id: 'pluto',
     label: 'Pluto',

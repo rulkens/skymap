@@ -43,6 +43,7 @@ import {
 } from '../../../src/state/settings/settingsSlice';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -62,9 +63,8 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 // Deps for narration clips — no id-bearing cues, so clipFociReady is trivially
 // true and waitUntil exits on the first synchronous check.
 const immediateDeps: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  catalogs: { get: () => undefined, famousMeta: [] },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 
@@ -96,6 +96,7 @@ function buildStore(opts: {
 
   sagaMiddleware.setContext({
     resolveDeps: () => deps,
+    selection: selectionResolverOver(deps),
     cameraRuntime: () => cam,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
@@ -553,6 +554,7 @@ describe('guidedTourSaga', () => {
     });
     sagaMiddleware.setContext({
       resolveDeps: () => immediateDeps,
+      selection: selectionResolverOver(immediateDeps),
       cameraRuntime: () => CAMERA_RUNTIME,
       playClip: makeAutoFlyStub(),
     });

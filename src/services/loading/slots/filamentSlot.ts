@@ -24,7 +24,7 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
       if (!state.gpu.filamentRenderer) return;
       // upload() is synchronous (returns void); no await needed today.
       // Kept inside the async commit body for symmetry with the
-      // galaxyCatalogSourceRegistry slot, whose upload is async.
+      // galaxy-catalog point slot, whose upload is async.
       state.gpu.filamentRenderer.upload(cloud);
       // Drive the first-load fade through the intent → fade bridge: the
       // filaments row owns the intent gate (reads settings.filaments.enabled), so

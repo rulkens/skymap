@@ -3,9 +3,8 @@
  * `setHdrEnabled` and `engineHdrCapabilityChanged`: capability can drop with
  * the setting untouched (an SDR-monitor move) — a settings-only watch misses it.
  *
- * No payload guard, unlike the model `watchFlowReseedSaga`: both triggers are
- * meaningful, and the no-op-if-unchanged guard already lives in
- * `applySwapFormat`, which sees the live format.
+ * No payload guard: both triggers are meaningful, and the no-op-if-unchanged
+ * guard already lives in `applySwapFormat`, which sees the live format.
  */
 
 import { takeEvery, getContext, select } from 'typed-redux-saga';

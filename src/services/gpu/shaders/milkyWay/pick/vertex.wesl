@@ -8,18 +8,17 @@
 // SAME derivation points/vertex.wesl applies per galaxy —
 //
 //   apparentPxRadius = (radiusMpc / distance(camPosWorld, centre)) * pxPerRad
-//   halfExtentPx     = max(u.pointSizePx, apparentPxRadius)
+//   halfExtentPx     = max(mw.minSizePx, apparentPxRadius)
 //
 // Computing the size here rather than on the CPU means the hit target
 // can never disagree with the rendered frame: the @group(0) bytes are
-// built at pick time from the slab view (pickUniformBytesOf), already
-// pick-shaped, and the camera facts this projection reads (camPosWorld,
-// pxPerRad) are the same ones that sized the glow the user sees.  The CPU
-// keeps only the visibility gate — the pick program's 'enabled' filter,
-// i.e. 'milkyWayPass.enabled' against the pick-time camera.  The
-// 'u.pointSizePx' floor is already the pick-widened value — the pick pack
-// bakes (sizePx + PICK_PADDING_PX) into that slot (pickUniformBytesOf) — so
-// the MW floor matches the padded floor every pick point gets.
+// packed at pick time from the slab view, and the camera facts this
+// projection reads (camPosWorld, pxPerRad) are the same ones that sized
+// the glow the user sees.  The CPU keeps only the visibility gate — the
+// pick program's 'enabled' filter, i.e. 'milkyWayPass.enabled' against the
+// pick-time camera.  The floor 'mw.minSizePx' is a scene constant in the
+// static @group(2) uniform, so the MW's hit target does not follow the
+// galaxy size slider.
 //
 // The packed pick identity is composed in the vertex stage (mirroring
 // points/vertex.wesl's 'packSelection(source.sourceCode, ii)') and
@@ -38,14 +37,14 @@ import package::lib::selectionEncoding::packSelection;
 import package::lib::selectionEncoding::PICK_SENTINEL_OFFSET;
 import package::lib::pickDepthBands::PICK_BAND_BACKDROP_EPS;
 
-// @group(0) points-pick uniform mirror — bound by pickMilkyWay itself
-// from its own buffer. Reads extend through 'pxPerRad' at byte 108 of the
-// points pick image — see io.wesl for the mirrored prefix layout.
+// @group(0) Uniforms — the 96-byte camera image pickMilkyWay packs and
+// binds from its own buffer; see io.wesl for the byte layout.
 @group(0) @binding(0) var<uniform> u: Uniforms;
 
 // @group(2) MilkyWayPickUniforms — world centre + source code + disc
-// world radius, all written once at construction (the uniform is fully
-// static; the apparent size is derived above from @group(0)).
+// world radius + apparent-size floor, all written once at construction
+// (the uniform is fully static; the apparent size is derived above from
+// @group(0)).
 @group(2) @binding(0) var<uniform> mw: MilkyWayPickUniforms;
 
 @vertex
@@ -60,7 +59,7 @@ fn vs(@builtin(vertex_index) vi: u32) -> VsOut {
   let toCenter = mw.centerWorld - u.camPosWorld;
   let safeDist = max(length(toCenter), 0.001);
   let apparentPxRadius = (mw.radiusMpc / safeDist) * u.pxPerRad;
-  let halfExtentPx = max(u.pointSizePx, apparentPxRadius);
+  let halfExtentPx = max(mw.minSizePx, apparentPxRadius);
 
   let offset = expandBillboardScreen(u.cam, centerClip, halfExtentPx, corner);
 

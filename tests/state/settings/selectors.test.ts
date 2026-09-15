@@ -32,7 +32,7 @@ function deriveMasks(
       fades: { opacityOf: (h: { id: GalaxyCatalogId }) => opacityFor(h.id) },
     },
   };
-  return deriveSourceMasks(state as never);
+  return deriveSourceMasks(state as never, 0);
 }
 
 describe('selectVisibleSourceMask', () => {

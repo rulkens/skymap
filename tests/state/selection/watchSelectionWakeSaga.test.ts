@@ -28,7 +28,6 @@ describe('watchSelectionWakeSaga', () => {
     const reconcile: ReconcileEffects = {
       requestRender,
       syncFades: vi.fn(),
-      reseedFlow: vi.fn(),
       bakeBias: vi.fn(),
       logCameraState: vi.fn(),
       applySwapFormat: vi.fn(),

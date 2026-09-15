@@ -44,7 +44,7 @@
  *
  *   - `focusId(id)` or `focusId(null)` → `{ kind: 'focus', ref }`
  *     `null` maps to `{ kind: 'focus', ref: null }`.  A non-null id resolves
- *     through `resolveFocusId` to a `SelectionRef`.  There is no `focus()`
+ *     through `resolve.resolveFocusId` to a `SelectionRef`.  There is no `focus()`
  *     helper that builds the resolved arm — `focus()` in `effectHelpers.ts`
  *     builds the UNRESOLVED `kind:'focusId'` arm.
  *
@@ -73,14 +73,12 @@
 
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { Effect } from '../../../@types/animation/Effect';
-import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
+import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
 import type { SceneEffect } from '../../../@types/animation/SceneEffect';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import { moveTarget, dollyTo, aimAt, spin } from './effectHelpers';
-import { resolveFocusId } from '../../url/resolveFocusId';
-import { extractSelectionRow } from '../helpers/extractSelectionRow';
 import { focusFraming } from '../camera/focusFraming';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -89,13 +87,13 @@ import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 
 /**
  * Rewrite every id-bearing leaf in `data` to its concrete equivalent, given
- * the live catalog state in `deps`, the camera's current vertical FOV in
+ * the composed resolver `resolve`, the camera's current vertical FOV in
  * radians, and the live camera pose (`lookAtId` bearings are measured from
  * its target; `strafeId` scales degrees into Mpc by its distance; `spinToId`
  * measures its bearing from the same target and its yaw delta from `from.yaw`
  * — callers pass `cameraRuntime.from`).
  *
- * `simDays` is the live sim instant, threaded into `extractSelectionRow`'s
+ * `simDays` is the live sim instant, threaded into `resolve.extractRow`'s
  * body arm so an id-bearing effect that targets a scene body (Earth, a planet,
  * an S-star) resolves to where it is drawn NOW, not a fixed epoch — callers
  * derive it the same way `runFrame`/`watchGoHomeSaga` do.
@@ -116,7 +114,7 @@ import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
  */
 export function resolveClipFoci(
   data: ClipData,
-  deps: ResolveDeps,
+  resolve: SelectionResolver,
   fovYRad: number,
   from: CameraPose,
   simDays: number,
@@ -124,7 +122,7 @@ export function resolveClipFoci(
 ): ClipData {
   return {
     ...data,
-    timeline: data.timeline.map((e) => walkEffect(e, deps, fovYRad, from, simDays, frameBasis)),
+    timeline: data.timeline.map((e) => walkEffect(e, resolve, fovYRad, from, simDays, frameBasis)),
   };
 }
 
@@ -138,7 +136,7 @@ export function resolveClipFoci(
  */
 function walkEffect(
   effect: Effect,
-  deps: ResolveDeps,
+  resolve: SelectionResolver,
   fovYRad: number,
   from: CameraPose,
   simDays: number,
@@ -149,26 +147,30 @@ function walkEffect(
     case 'seq':
       return {
         kind: 'seq',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, simDays, frameBasis)),
+        children: effect.children.map((c) =>
+          walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
+        ),
       };
     case 'all':
       return {
         kind: 'all',
-        children: effect.children.map((c) => walkEffect(c, deps, fovYRad, from, simDays, frameBasis)),
+        children: effect.children.map((c) =>
+          walkEffect(c, resolve, fovYRad, from, simDays, frameBasis),
+        ),
       };
     case 'fork':
       return {
         kind: 'fork',
-        child: walkEffect(effect.child, deps, fovYRad, from, simDays, frameBasis),
+        child: walkEffect(effect.child, resolve, fovYRad, from, simDays, frameBasis),
       };
 
     // ── Id-bearing leaves — rewrite ─────────────────────────────────────────
     case 'moveTargetId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       return moveTarget(target, effect.over, effect.ease);
     }
     case 'dollyToId': {
-      const { distance } = resolveFraming(effect.id, deps, fovYRad, simDays);
+      const { distance } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       // `scale` multiplies the DERIVED framing distance — the author's
       // tighter/looser knob that survives framing-math and catalog changes.
       return dollyTo(distance * (effect.scale ?? 1), effect.over, effect.ease);
@@ -177,7 +179,7 @@ function walkEffect(
     // target — baked here, so a lookAtId is only valid before the target
     // moves (see the `lookAtId` helper docstring).
     case 'lookAtId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -203,7 +205,7 @@ function walkEffect(
     // the live camera distance, so the anchor slides ~byDeg degrees across the
     // frame regardless of scale.
     case 'strafeId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -234,7 +236,7 @@ function walkEffect(
     // `lerpAngleShortest`'s fold (its result at t=1 IS `from.yaw` plus the
     // shortest delta) avoids re-deriving the mod-2π formula a second time.
     case 'spinToId': {
-      const { target } = resolveFraming(effect.id, deps, fovYRad, simDays);
+      const { target } = resolveFraming(effect.id, resolve, fovYRad, simDays);
       const forward: Vec3 = [
         target[0] - from.target[0],
         target[1] - from.target[1],
@@ -257,7 +259,7 @@ function walkEffect(
     case 'flyPath': {
       const waypoints = effect.waypoints.map((w) => {
         if (!('id' in w)) return w; // already concrete
-        const { target, distance, radius } = resolveFraming(w.id, deps, fovYRad, simDays);
+        const { target, distance, radius } = resolveFraming(w.id, resolve, fovYRad, simDays);
         return {
           at: target,
           distance,
@@ -288,7 +290,7 @@ function walkEffect(
         const focusClear: SceneEffect & { kind: 'focus' } = { kind: 'focus', ref: null };
         return focusClear;
       }
-      const ref = resolveFocusId(effect.id, deps);
+      const ref = resolve.resolveFocusId(effect.id);
       if (ref === null) {
         throw new Error(
           `resolveClipFoci: could not resolve focusId '${effect.id}'. ` +
@@ -310,28 +312,28 @@ function walkEffect(
 /**
  * Resolve a `FocusId` to a `{ target, distance }` framing pose.
  *
- * The chain is: `resolveFocusId` → `extractSelectionRow` → `focusFraming`.
+ * The chain is: `resolve.resolveFocusId` → `resolve.extractRow` → `focusFraming`.
  * Each step can return null only if the id is unknown or the catalog isn't
  * loaded; the readiness gate guarantees neither happens at call time, so a
  * null here is a programming error — we throw with a descriptive message.
  */
 function resolveFraming(
   id: string,
-  deps: ResolveDeps,
+  resolve: SelectionResolver,
   fovYRad: number,
   simDays: number,
 ): ReturnType<typeof focusFraming> {
-  const ref = resolveFocusId(id, deps);
+  const ref = resolve.resolveFocusId(id);
   if (ref === null) {
     throw new Error(
       `resolveClipFoci: could not resolve id '${id}' to a SelectionRef. ` +
         `Ensure the readiness gate (clipFociReady) cleared before calling resolveClipFoci.`,
     );
   }
-  const row = extractSelectionRow(ref, deps, simDays);
+  const row = resolve.extractRow(ref, simDays);
   if (row === null) {
     throw new Error(
-      `resolveClipFoci: id '${id}' resolved to a ref but extractSelectionRow returned null. ` +
+      `resolveClipFoci: id '${id}' resolved to a ref but resolve.extractRow returned null. ` +
         `The catalog row may have unloaded between the readiness check and resolution.`,
     );
   }

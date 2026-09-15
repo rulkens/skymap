@@ -15,6 +15,7 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -36,6 +37,7 @@ import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
@@ -75,8 +77,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
   // The masks are a per-frame projection of settings + fade opacity, never a
-  // hand-maintained mirror; demand itself reads settings directly.
-  const masks = deriveSourceMasks(state);
+  // hand-maintained mirror; demand itself reads settings directly. Sampled at
+  // THIS frame's nowMs — not the registry's last-ticked clock, which the frame
+  // tail's `fades.tick(nowMs)` (below) only advances to AFTER this call.
+  const masks = deriveSourceMasks(state, nowMs);
   reevaluateDemand(state);
 
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale
@@ -90,6 +94,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   });
 
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
+  state.gpu.flowFieldRenderer?.reconcile(state.settings.flow);
 
   // The frame's ONE store snapshot. The camera step runs before
   // `deriveFrameContext` so a camera-only-ready frame still makes motion
@@ -194,6 +199,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   ctx.focusBlend = focusUniforms.blend;
   ctx.focus = focusUniforms;
 
+  // Each Layer's `frame` hook, in tuple order, right after the focus uniform
+  // and before any planner (D2). No short-circuit: every hook runs every
+  // frame, so a later Layer's vote is never skipped by an earlier `true`.
+  // Empty over the empty composition today; PR-D's first Layer is the first
+  // caller.
+  let layersAnimating = false;
+  for (const layer of state.layers) {
+    if (layer.frame !== null && layer.frame(ctx, state)) layersAnimating = true;
+  }
+
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
   // frame's snapshot is focused.
@@ -217,7 +232,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
-      famousGalaxiesMeta: state.famousGalaxiesMeta,
+      famousGalaxiesMeta: state.data.galaxies.famousMeta,
     });
   }
   // ONE catalog walk feeds both disk planners (LOD-1 procedural, then LOD-2
@@ -229,6 +244,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
+      // Both LOD disk bodies fold this into their emitted alpha/brightness so a
+      // hidden catalog's disks fade out with the point sprites instead of
+      // popping once `deriveSourceMasks` drops the source from the mask.
+      sourceOpacity: (source: SourceType) =>
+        state.subsystems.fades.opacityOf(
+          { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) },
+          ctx.nowMs,
+        ),
     };
     diskPlannerWalk.runFrame(
       sharedInput,
@@ -240,7 +263,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       }),
       texturedDisks.beginFrame({
         ...sharedInput,
-        famousGalaxiesMeta: state.famousGalaxiesMeta,
+        famousGalaxiesMeta: state.data.galaxies.famousMeta,
         nowMs: ctx.nowMs,
       }),
     );
@@ -345,6 +368,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,
+    layersAnimating,
   });
 
   if (keepTicking) {

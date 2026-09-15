@@ -1,5 +1,6 @@
 import type { SourceType } from '../../data/SourceType';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
+import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
 
 /**
  * GalaxyStore — the authoritative app-side home for galaxy data.
@@ -25,4 +26,10 @@ export type GalaxyStore = {
   removeCatalog(source: SourceType): void;
   /** Look up a source's catalog, or undefined if not loaded. */
   get(source: SourceType): GalaxyCatalog | undefined;
+  /**
+   * Famous-galaxy sidecar records, aligned with the famous catalog's rows.
+   * `[]` until the sidecar settles, and `[]` again after a failed fetch.
+   */
+  readonly famousMeta: readonly FamousGalaxyMetaEntry[];
+  setFamousMeta(meta: readonly FamousGalaxyMetaEntry[]): void;
 };

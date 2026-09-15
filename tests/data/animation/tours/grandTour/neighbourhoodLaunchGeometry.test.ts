@@ -16,6 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { resolveClipFoci } from '../../../../../src/services/engine/animation/resolveClipFoci';
+import { selectionResolverOver } from '../../../../support/selectionResolverOver';
 import { localGroupDwell } from '../../../../../src/data/animation/tours/grandTour/localGroup';
 import { neighbourhoodReveal } from '../../../../../src/data/animation/tours/grandTour/neighbourhoodReveal';
 import { orbitAnglesLookingAlong } from '../../../../../src/utils/camera/orbitAnglesLookingAlong';
@@ -53,14 +54,15 @@ const M81_GROUP: StructureInfo = {
 } as StructureInfo;
 
 const DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: {
     byId: (id) =>
       id === 'group-local-group' ? LOCAL_GROUP : id === 'group-m81-group' ? M81_GROUP : null,
+    byCategory: () => [],
   },
   stars: { current: () => null },
 };
+const RESOLVER = selectionResolverOver(DEPS);
 
 /**
  * Find the yaw `spin` node's `by` anywhere in a resolved clip's timeline.
@@ -98,7 +100,7 @@ describe('neighbourhoodReveal lands the flythrough launch bearing, not localGrou
     };
     const resolvedLocalGroupDwell = resolveClipFoci(
       localGroupDwell,
-      DEPS,
+      RESOLVER,
       FOV_Y,
       fromEnteringLocalGroupDwell,
       SIM_DAYS,
@@ -126,7 +128,7 @@ describe('neighbourhoodReveal lands the flythrough launch bearing, not localGrou
     };
     const resolvedReveal = resolveClipFoci(
       neighbourhoodReveal,
-      DEPS,
+      RESOLVER,
       FOV_Y,
       fromEnteringReveal,
       SIM_DAYS,

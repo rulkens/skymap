@@ -128,6 +128,7 @@ function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) 
     sbScale: 5,
     sbMax: 30,
     brightness: 1,
+    sourceOpacity: () => 1,
   };
 }
 

@@ -61,16 +61,16 @@ const NO_ANIM = {
   surfaceTilesAnimating: false,
   labelsAnimating: false,
   probeDue: false,
+  layersAnimating: false,
 };
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default
  * to their AT-REST value (nothing animating); each test flips exactly one.
  *
- * `isEngineReady` is left false (null GPU handles), so the textured-disk term
- * short-circuits to false without needing a thumbnail subsystem — the tests
- * that care about flow/fades/focus don't depend on it. The one test that
- * exercises the in-flight-thumbnail term builds a ready state explicitly.
+ * `subsystems.texturedDisks` is left null (D13: the term reads it directly,
+ * `?.hasInFlightWork() ?? false`, with no bootstrap gate), so it short-
+ * circuits to false without needing a thumbnail subsystem.
  */
 function makeState(over: {
   flowEnabled?: boolean;
@@ -212,5 +212,15 @@ describe('shouldKeepTicking', () => {
     expect(
       shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, starFadeAnimating: true }),
     ).toBe(true);
+  });
+
+  it('layersAnimating is a keep-alive term — true even with everything else at rest', () => {
+    // A Layer's frame hook voted true this frame (D2); runFrame folds every
+    // hook's return into this one bag entry, so the predicate need not know
+    // anything about Layers itself — just this bit.
+    const state = makeState({});
+    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAnimating: true })).toBe(
+      true,
+    );
   });
 });

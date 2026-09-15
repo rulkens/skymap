@@ -27,7 +27,7 @@
  * which is simpler and faster than running the full saga: the resolved clip is
  * plain data whose structure we can inspect without any async machinery. The
  * deps stub is minimal — Virgo resolves via `structures.byId`, M87 resolves
- * via `famousGalaxiesMeta` + a one-row FamousGalaxy cloud.
+ * via `famousMeta` + a one-row FamousGalaxy cloud.
  *
  * Assertion 3 wires `watchFocusTweenSaga` into a real Redux store via
  * `sagaMiddleware`, then uses `clipStarted` to activate a clip and
@@ -50,6 +50,7 @@ import { watchFocusTweenSaga } from '../../../src/state/selection/watchFocusTwee
 import { Source } from '../../../src/data/source';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
@@ -94,21 +95,21 @@ const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
 
 /**
  * ResolveDeps stub: Virgo resolves via `structures.byId`, M87 via
- * `famousGalaxiesMeta` + the one-row FamousGalaxy cloud. All other catalogs
- * return undefined.
+ * `famousMeta` + the one-row FamousGalaxy cloud. All other catalogs return
+ * undefined.
  */
 const DIVE_DEPS: ResolveDeps = {
   catalogs: {
     get: (source) => (source === Source.FamousGalaxy ? M87_CLOUD : undefined),
+    famousMeta: [
+      {
+        id: 'm87',
+        names: ['M87', 'Virgo A', 'NGC 4486'],
+        description: 'Giant elliptical',
+        type: 'galaxy',
+      },
+    ],
   },
-  famousGalaxiesMeta: [
-    {
-      id: 'm87',
-      names: ['M87', 'Virgo A', 'NGC 4486'],
-      description: 'Giant elliptical',
-      type: 'galaxy',
-    },
-  ],
   stars: { current: () => null },
   structures: {
     byId: (id) =>
@@ -122,8 +123,11 @@ const DIVE_DEPS: ResolveDeps = {
         apparentRadiusMpc: 4,
         featured: true,
       }) as const,
+    byCategory: () => [],
   },
 };
+
+const DIVE_SELECTION = selectionResolverOver(DIVE_DEPS);
 
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
@@ -153,7 +157,7 @@ describe('webShowcase dive invariants', () => {
     const beat2Clip: ClipData = webShowcase.beats[1]!.enterClip!;
     const resolved = resolveClipFoci(
       beat2Clip,
-      DIVE_DEPS,
+      DIVE_SELECTION,
       CAMERA_RUNTIME.fovYRad,
       CAMERA_RUNTIME.from,
       SIM_DAYS,
@@ -181,7 +185,7 @@ describe('webShowcase dive invariants', () => {
     const beat3Clip: ClipData = webShowcase.beats[2]!.enterClip!;
     const resolved = resolveClipFoci(
       beat3Clip,
-      DIVE_DEPS,
+      DIVE_SELECTION,
       CAMERA_RUNTIME.fovYRad,
       CAMERA_RUNTIME.from,
       SIM_DAYS,
@@ -209,6 +213,7 @@ describe('webShowcase dive invariants', () => {
     // it needs — if suspendDuringClip did NOT guard, these would be used.
     sagaMiddleware.setContext({
       resolveDeps: () => DIVE_DEPS,
+      selection: DIVE_SELECTION,
       cameraRuntime: () => CAMERA_RUNTIME,
       playClip: vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined),
     });

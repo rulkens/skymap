@@ -11,13 +11,5 @@ import type { EngineState } from '../state/EngineState';
 
 export type PassState = Pick<
   EngineState,
-  | 'settings'
-  | 'tier'
-  | 'selection'
-  | 'selectionRows'
-  | 'famousGalaxiesMeta'
-  | 'data'
-  | 'gpu'
-  | 'subsystems'
-  | 'assetSlots'
+  'settings' | 'tier' | 'selection' | 'selectionRows' | 'data' | 'gpu' | 'subsystems' | 'assetSlots'
 >;

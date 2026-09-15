@@ -40,16 +40,20 @@ function makeState(): {
   state: ApplyIntentState;
   fadeTo: ReturnType<typeof vi.fn<(id: FadeId, target: number, dur?: number) => Promise<void>>>;
   setImmediate: ReturnType<typeof vi.fn<(id: FadeId, v: number) => void>>;
+  targetOf: ReturnType<typeof vi.fn<(id: FadeId) => number | null>>;
 } {
   const fadeTo = vi.fn<(id: FadeId, target: number, dur?: number) => Promise<void>>(() =>
     Promise.resolve(),
   );
   const setImmediate = vi.fn<(id: FadeId, v: number) => void>();
+  // null never matches a real 0/1 target, so existing tests (which don't care
+  // about the skip) keep seeing every fadeTo/setImmediate call fire.
+  const targetOf = vi.fn<(id: FadeId) => number | null>(() => null);
   const state = {
     settings: {} as EngineSettingsState,
-    subsystems: { fades: { fadeTo, setImmediate } },
+    subsystems: { fades: { fadeTo, setImmediate, targetOf } },
   } as unknown as ApplyIntentState;
-  return { state, fadeTo, setImmediate };
+  return { state, fadeTo, setImmediate, targetOf };
 }
 
 // A handle the rows return; the concrete value is irrelevant to applyIntent.
@@ -136,6 +140,52 @@ describe('applyIntent', () => {
     expect(fadeTo).toHaveBeenCalledWith(HANDLE, 0, 1234);
     expect(1234).not.toBe(FADE_OUT_DURATION_MS);
   });
+
+  it('does not re-issue fadeTo to a target already held', () => {
+    const { state, fadeTo, targetOf } = makeState();
+    targetOf.mockReturnValue(1);
+
+    const row = makeRow({ intent: () => true });
+    applyIntentForTest(state, row, undefined, { animate: true });
+
+    expect(fadeTo).not.toHaveBeenCalled();
+  });
+
+  it('does not re-issue setImmediate to a target already held', () => {
+    const { state, setImmediate, targetOf } = makeState();
+    targetOf.mockReturnValue(0);
+
+    const row = makeRow({ intent: () => false });
+    applyIntentForTest(state, row, undefined, { animate: false });
+
+    expect(setImmediate).not.toHaveBeenCalled();
+  });
+
+  it('a held target still runs guard and post', () => {
+    // This is the lazy-volume re-arm, pinned: `maybeLazyLoadDebugVolume` (the
+    // volumeField row's `post`) must re-run every sync even when the fade
+    // write itself is skipped, or a volume that idled back out under
+    // unchanged settings never gets re-armed.
+    const { state, targetOf } = makeState();
+    targetOf.mockReturnValue(1);
+    const post = vi.fn<(state: EngineState, item: undefined) => void>();
+
+    const row = makeRow({ intent: () => true, post });
+    applyIntentForTest(state, row, undefined, { animate: true });
+
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
+  it('retargets an in-flight fade whose intent flipped', () => {
+    const { state, fadeTo, targetOf } = makeState();
+    targetOf.mockReturnValue(1); // in flight toward / holding 1
+
+    const row = makeRow({ intent: () => false }); // this sync's intent flipped to off
+    applyIntentForTest(state, row, undefined, { animate: true });
+
+    expect(fadeTo).toHaveBeenCalledTimes(1);
+    expect(fadeTo).toHaveBeenCalledWith(HANDLE, 0, FADE_OUT_DURATION_MS);
+  });
 });
 
 // ── syncVisibilityFades (public bridge over the REAL FADE_LAYERS) ──────
@@ -158,6 +208,7 @@ function makeBridgeState(): {
   state: BridgeState;
   fadeTo: ReturnType<typeof vi.fn<(id: FadeId, target: number, dur?: number) => Promise<void>>>;
   setImmediate: ReturnType<typeof vi.fn<(id: FadeId, v: number) => void>>;
+  targetOf: ReturnType<typeof vi.fn<(id: FadeId) => number | null>>;
   requestRender: ReturnType<typeof vi.fn<() => void>>;
   settings: EngineSettingsState;
 } {
@@ -165,6 +216,9 @@ function makeBridgeState(): {
     Promise.resolve(),
   );
   const setImmediate = vi.fn<(id: FadeId, v: number) => void>();
+  // null never matches a real 0/1 target — every existing bridge test keeps
+  // seeing its fadeTo/setImmediate calls fire unless a test overrides this.
+  const targetOf = vi.fn<(id: FadeId) => number | null>(() => null);
   const requestRender = vi.fn<() => void>();
 
   const galaxyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
@@ -207,12 +261,12 @@ function makeBridgeState(): {
       volumeFieldRenderer: { listIds: () => [] },
     },
     subsystems: {
-      fades: { fadeTo, setImmediate },
+      fades: { fadeTo, setImmediate, targetOf },
       scheduler: { requestRender },
     },
   } as unknown as BridgeState;
 
-  return { state, fadeTo, setImmediate, requestRender, settings };
+  return { state, fadeTo, setImmediate, targetOf, requestRender, settings };
 }
 
 // The intent keys whose handles a full (no-`only`) sync must drive…
@@ -357,5 +411,28 @@ describe('syncVisibilityFadeItem', () => {
     expect(fadeTo).toHaveBeenCalledWith({ kind: 'structure', id: idA }, 1, FADE_IN_DURATION_MS);
     // The sibling structure id was never touched.
     expect(fadedHandle(fadeTo, { kind: 'structure', id: idB })).toBe(false);
+  });
+});
+
+// Ruling 1: the contentVersion bake key is what makes it safe for the item
+// bridge to stop re-issuing fadeTo on every re-commit — this pins that the
+// skip covers both public entry points identically.
+describe('applyIntent does not re-issue fadeTo to a target already held, through either bridge', () => {
+  it('via syncVisibilityFades', () => {
+    const { state, fadeTo, targetOf } = makeBridgeState();
+    targetOf.mockReturnValue(1); // every row here has intent true → target 1
+
+    syncVisibilityFades(state, { animate: true, only: ['structureRing'] });
+
+    expect(fadeTo).not.toHaveBeenCalled();
+  });
+
+  it('via syncVisibilityFadeItem', () => {
+    const { state, fadeTo, targetOf } = makeBridgeState();
+    targetOf.mockReturnValue(1);
+
+    syncVisibilityFadeItem(state, 'structureRing', STRUCTURE_IDS[0]!);
+
+    expect(fadeTo).not.toHaveBeenCalled();
   });
 });

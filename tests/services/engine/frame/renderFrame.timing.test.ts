@@ -254,11 +254,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     // to 0 in frameContext, and an absent one yields NaN alphas here.
     focusBlend: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
-    galaxyPointRenderer,
     renderTargets,
-    // texturedDisks slot is referenced from frameContext shape;
-    // we'll null the matching subsystem on `state` so the pass skips.
-    texturedDisks: null,
   } as never;
 
   const settings = {
@@ -322,6 +318,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // Every `ContentPass.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
         // wired in (no top-level `input.*` duplication).
+        galaxyPointRenderer,
         milkyWayCloudRenderer,
         horizonShellRenderer,
         texturedDiskRenderer,

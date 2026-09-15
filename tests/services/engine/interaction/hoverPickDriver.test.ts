@@ -33,6 +33,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { createHoverPickDriver } from '../../../../src/services/engine/interaction/hoverPickDriver';
 import { updateSelectionHover } from '../../../../src/state/selection/selectionSlice';
+import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { HoverPickDeps } from '../../../../src/@types/engine/interaction/HoverPickDeps';
 import type { PickResult } from '../../../../src/@types/data/PickResult';
 import type { CssPx } from '../../../../src/@types/input/CssPx';
@@ -84,8 +85,13 @@ function makeFakePicker(): {
   };
 }
 
-// A reusable PickStructureStore stub (resolvePick only needs `byCategory`).
-const emptyStructures = { byCategory: () => [] };
+// An empty composed resolver — every pick decodes to null (no rows), which is
+// all these scheduling tests need: (e) only checks the null-decode dispatch.
+const emptyResolver = selectionResolverOver({
+  catalogs: { get: () => undefined, famousMeta: [] },
+  structures: { byId: () => null, byCategory: () => [] },
+  stars: { current: () => null },
+});
 
 // Pointer positions for tests.
 const posA: CssPx = { x: 100, y: 200 };
@@ -122,7 +128,7 @@ beforeEach(() => {
       destroy: vi.fn<() => void>(),
     },
     store: { dispatch: dispatchSpy },
-    resolveDeps: { structures: emptyStructures },
+    resolvePick: emptyResolver.resolvePick,
   };
 });
 

@@ -53,6 +53,15 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     // antenna boresight on +X and reference up on +Z, so +X → -Y closes det +1.
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
+  hubble: {
+    native: 'meshes.hubble',
+    licence: 'Public domain (NASA)',
+    attribution:
+      'NASA, "Hubble Space Telescope (A)" — NASA 3D Resources (https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A))',
+    // Modelled aperture +Y, solar-array panels long along +Z; same frame as the
+    // Voyager dish, so the same remap puts the boresight on body +X.
+    bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
+  },
   perseverance: {
     native: 'meshes.perseverance',
     licence: 'Public domain (NASA)',

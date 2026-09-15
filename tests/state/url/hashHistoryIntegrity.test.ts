@@ -112,10 +112,10 @@ describe('hash history integrity', () => {
   /**
    * The real store, the real root saga, the real URL seam — and `createTestStore`
    * rather than a hand-built harness precisely because registering the context is
-   * what releases the hash bridge, so this call IS the arrival read. Its inert bag
-   * is all a body deep link needs: `resolveFocusId` and `extractSelectionRow` both
-   * resolve a scene body off the static `SCENE_BODIES` import, with no engine
-   * resource in the path.
+   * what releases the hash bridge, so this call IS the arrival read.
+   * `NOOP_SAGA_CONTEXT.selection` composes the real core rows over an empty
+   * `ResolveDeps`, so a body deep link resolves off the static `SCENE_BODIES`
+   * table through that resolver, with no engine resource in the path.
    */
   const boot = () => createTestStore();
 

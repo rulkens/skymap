@@ -1,4 +1,4 @@
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 
 /**

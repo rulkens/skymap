@@ -25,7 +25,11 @@ import {
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
 import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
-import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
+import {
+  engineSourceCountReported,
+  engineStructureCountsChanged,
+} from '../../../src/state/engine/engineSlice';
+import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import { setSimDays, pause } from '../../../src/state/time/timeSlice';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
@@ -41,6 +45,7 @@ import {
   encodeStarCatalog,
   decodeStarCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
@@ -83,6 +88,7 @@ describe('watchSelectionRowsSaga', () => {
   let cloudPresent = false;
   // Mutable star catalog: null until the star bin commits (deep-link race).
   let starCatalog: StarCatalog | null = null;
+  let structure: StructureInfo | null = null;
 
   function build() {
     const sagaMiddleware = createSagaMiddleware();
@@ -91,13 +97,15 @@ describe('watchSelectionRowsSaga', () => {
       middleware: (g) => g().concat(sagaMiddleware),
     });
     const deps: ResolveDeps = {
-      catalogs: { get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined) },
-      famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      catalogs: {
+        get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined),
+        famousMeta: [],
+      },
+      structures: { byId: () => structure, byCategory: () => [] },
       stars: { current: () => starCatalog },
     };
     sagaMiddleware.run(watchSelectionRowsSaga);
-    sagaMiddleware.setContext({ resolveDeps: () => deps });
+    sagaMiddleware.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps) });
     return s;
   }
 
@@ -170,6 +178,18 @@ describe('watchSelectionRowsSaga', () => {
       type: 'star',
       index: 0,
     });
+  });
+
+  it('a structure deep link fills on engineStructureCountsChanged (the structure store pulses neither catalog signal)', async () => {
+    structure = null;
+    store.dispatch(updateSelectionFocus({ type: 'structure', id: 'cluster-virgo-m87' }));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focus).toBeNull();
+
+    structure = { id: 'cluster-virgo-m87', category: 'cluster' } as unknown as StructureInfo;
+    store.dispatch(engineStructureCountsChanged({ cluster: 1 }));
+    await flush();
+    expect(store.getState()[selectionRowsRoute].focus).toMatchObject({ id: 'cluster-virgo-m87' });
   });
 
   it('a body ref resolves its position at the LIVE sim instant, not a fixed epoch', async () => {

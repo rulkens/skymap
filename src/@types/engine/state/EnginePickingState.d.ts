@@ -14,8 +14,9 @@
  *
  * Nothing camera-shaped lives here anymore.  The point pick pass rebuilds
  * its own uniform bytes from plain values at pick time (see
- * `pickUniformBytesOf`), and the Milky-Way pick gate reads the pick-time
- * camera directly through `milkyWayPass.enabled(state, pickCtx)` — so no
+ * `pickUniformBytesOf`), the Milky-Way and structure-ring picks pack their
+ * camera from the pick-time slab view, and the Milky-Way pick gate reads
+ * that camera through `milkyWayPass.enabled(state, pickCtx)` — so no
  * frame→pick camera mirror is stashed on this bag.
  *
  * ### What used to live here but doesn't anymore

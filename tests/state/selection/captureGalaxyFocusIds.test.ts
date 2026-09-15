@@ -28,6 +28,7 @@ import {
 import { setGalaxyCatalogVisible } from '../../../src/state/settings/settingsSlice';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -55,9 +56,9 @@ function makeSdssResolveDeps(objId: bigint): ResolveDeps {
   return {
     catalogs: {
       get: (src) => (src === Source.SDSS ? cloud : undefined),
+      famousMeta: [],
     },
-    famousGalaxiesMeta: [],
-    structures: { byId: () => null },
+    structures: { byId: () => null, byCategory: () => [] },
     stars: { current: () => null },
   };
 }
@@ -80,7 +81,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const result = captureGalaxyFocusIds(
       store.getState(),
-      makeSdssResolveDeps(SDSS_OBJ_ID),
+      selectionResolverOver(makeSdssResolveDeps(SDSS_OBJ_ID)),
       'medium',
       'large',
     );
@@ -99,7 +100,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const result = captureGalaxyFocusIds(
       store.getState(),
-      makeSdssResolveDeps(SDSS_OBJ_ID),
+      selectionResolverOver(makeSdssResolveDeps(SDSS_OBJ_ID)),
       'medium',
       'large',
     );
@@ -115,7 +116,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const result = captureGalaxyFocusIds(
       store.getState(),
-      makeSdssResolveDeps(SDSS_OBJ_ID),
+      selectionResolverOver(makeSdssResolveDeps(SDSS_OBJ_ID)),
       'large',
       'large',
     );
@@ -127,9 +128,8 @@ describe('captureGalaxyFocusIds', () => {
     // 2MRS and Famous have empty tierTargets, so galaxyCatalogRequest names the
     // same request for every tier — every swap, not just one pair, must skip.
     const resolveDeps: ResolveDeps = {
-      catalogs: { get: () => undefined },
-      famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      catalogs: { get: () => undefined, famousMeta: [] },
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
 
@@ -141,7 +141,12 @@ describe('captureGalaxyFocusIds', () => {
         const store = buildStore();
         store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source, index: 0 }));
 
-        const result = captureGalaxyFocusIds(store.getState(), resolveDeps, prevTier, nextTier);
+        const result = captureGalaxyFocusIds(
+          store.getState(),
+          selectionResolverOver(resolveDeps),
+          prevTier,
+          nextTier,
+        );
 
         expect(result).toHaveLength(0);
       }
@@ -154,7 +159,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const result = captureGalaxyFocusIds(
       store.getState(),
-      makeSdssResolveDeps(1n),
+      selectionResolverOver(makeSdssResolveDeps(1n)),
       'medium',
       'large',
     );
@@ -169,13 +174,17 @@ describe('captureGalaxyFocusIds', () => {
     store.dispatch(updateSelectionSelect(SDSS_REF));
 
     const emptyDeps: ResolveDeps = {
-      catalogs: { get: () => undefined }, // SDSS cloud absent
-      famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      catalogs: { get: () => undefined, famousMeta: [] }, // SDSS cloud absent
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
 
-    const result = captureGalaxyFocusIds(store.getState(), emptyDeps, 'medium', 'large');
+    const result = captureGalaxyFocusIds(
+      store.getState(),
+      selectionResolverOver(emptyDeps),
+      'medium',
+      'large',
+    );
 
     expect(result).toHaveLength(0);
   });
@@ -191,7 +200,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const result = captureGalaxyFocusIds(
       store.getState(),
-      makeSdssResolveDeps(SDSS_OBJ_ID),
+      selectionResolverOver(makeSdssResolveDeps(SDSS_OBJ_ID)),
       'medium',
       'large',
     );
@@ -208,7 +217,7 @@ describe('captureGalaxyFocusIds', () => {
 
     const result = captureGalaxyFocusIds(
       store.getState(),
-      makeSdssResolveDeps(SDSS_OBJ_ID),
+      selectionResolverOver(makeSdssResolveDeps(SDSS_OBJ_ID)),
       'medium',
       'large',
     );

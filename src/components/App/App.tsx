@@ -149,7 +149,7 @@ export function App(): React.ReactElement {
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (
           <DebugPanel
-            slots={handleRef.current.assetSlots}
+            slots={handleRef.current.debug.assetSlots}
             timingService={handleRef.current.debug.timingService}
             frameStats={handleRef.current.debug.frameStats}
             passNames={handleRef.current.debug.passOverrides.allNames}

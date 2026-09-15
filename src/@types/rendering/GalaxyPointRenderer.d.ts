@@ -11,7 +11,7 @@
 
 import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../data/SourceType';
-import type { GalaxyCatalog } from '../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogId } from '../data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyPointDrawSettings } from './GalaxyPointDrawSettings';
 import type { Vec2 } from '../math/Vec2';

@@ -8,8 +8,9 @@
  * `services/engine/wiring/wireStructureProjection.ts` writes the result into the
  * engine's structure store, where the label/ring overlays read it to know where
  * to draw. It is the only importer, but the mapping it performs is a shared
- * contract with the URL: `resolveFocusId` decodes `#focus=cluster-virgo-m87`
- * into `{ type: 'structure', id }` on the id STRING alone, without consulting
+ * contract with the URL: the composed resolver's `resolveFocusId` decodes
+ * `#focus=cluster-virgo-m87` into `{ type: 'structure', id }` on the id STRING
+ * alone, without consulting
  * any table, so the ref a deep link produces only names a real anchor while the
  * id rule here stays put. Isolating the mapping in one pure module is what makes
  * that rule inspectable and testable rather than buried in a bootstrap phase.

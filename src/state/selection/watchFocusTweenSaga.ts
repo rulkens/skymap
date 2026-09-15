@@ -2,38 +2,9 @@
  * watchFocusTweenSaga — the camera-tween EFFECT of a focus gesture. A focus writes
  * the focus ref (updateSelectionFocus); the camera flying to that target is an
  * effect of that Intent, so it lives here as a saga — symmetric with
- * watchSelectionWakeSaga (render-wake).
- *
- * The saga is a thin resolve→build→dispatch shell:
- *   1. re-resolve the ref to a row via the live `resolveDeps` (firing on the REF,
- *      not the reconciled row, keeps the tween a response to the Intent and free
- *      of any dependence on watchSelectionRowsSaga running first). A STAR deep
- *      link races the Gaia bin the way a body deep link races the camera: its id
- *      resolves statically (index-based), so `updateSelectionFocus` fires at
- *      bootstrap, but `extractSelectionRow`'s star arm returns null until the
- *      star catalog commits. So the row resolve DEFERS, symmetric with the camera
- *      wait below: while the row is null AND the ref is a still-unloaded star, it
- *      waits on `engineSourceCountReported` — the pulse each catalog (star
- *      included) dispatches the instant it commits, by when `stars.current()` is
- *      non-null — and re-extracts. The guard is catalog PRESENCE, not row-ness:
- *      a null row with the catalog loaded is a stale/garbage index, which drops
- *      to the no-op below rather than waiting for a report that never recurs.
- *      Galaxy deep links never reach here null (their `updateSelectionFocus` is
- *      itself deferred on `catalogLoaded`), so this loop is star-specific by its
- *      guard. The star catalog is already demanded at boot (its source ships
- *      `visible: true`), so nothing here has to trigger the load — only await it;
- *   2. read the live camera Resources (`cameraRuntime`) — the visible from-pose
- *      and the lens FOV. When the camera is not ready yet the saga DEFERS on the
- *      `engineStatusChanged` pulse rather than dropping the tween: a deep-link
- *      focus whose id resolves statically (a scene body, the Milky Way, a star)
- *      fires `updateSelectionFocus` during bootstrap, before `initGpu` has built
- *      the camera, so `cameraRuntime()` is momentarily null. Galaxy deep links
- *      dodge this because their `updateSelectionFocus` is itself deferred on
- *      `catalogLoaded`, which only fires after the camera exists. `takeLatest`
- *      (not `takeEvery`) aborts a still-waiting worker if a newer focus arrives,
- *      exactly as `watchRequestFocusSaga` aborts a stale ref deferral;
- *   3. build the `startCameraTween` payload with the pure `focusTweenDescriptor`
- *      table and dispatch it.
+ * watchSelectionWakeSaga (render-wake). The saga is a thin resolve→build→dispatch
+ * shell: it builds the `startCameraTween` payload with the pure
+ * `focusTweenDescriptor` table and dispatches it.
  *
  * The dispatch alone wakes the render loop: `startCameraTween` is a `camera/*`
  * write, which `watchWakeSaga`/WAKE_ROUTES turns into a render request — so there is
@@ -50,11 +21,14 @@ import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
-import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
-import { engineStatusChanged, engineSourceCountReported } from '../engine/engineSlice';
+import {
+  engineStatusChanged,
+  engineSourceCountReported,
+  engineStructureCountsChanged,
+} from '../engine/engineSlice';
 import { selectOrientation } from '../settings/selectors';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -65,36 +39,53 @@ export function* watchFocusTweenSaga() {
     updateSelectionFocus,
     suspendDuringClip(function* (action) {
       const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+      const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
-      // A star deep link resolves its ref statically at bootstrap, before the
-      // Gaia bin commits, so the star arm returns null until the catalog lands.
-      // Defer on the per-source count report (fired the instant a catalog
-      // commits, by when `stars.current()` is non-null) and re-extract — but
-      // only while the star catalog is genuinely absent, so a garbage index
-      // (row null with the catalog present) falls through to the no-op rather
-      // than waiting forever. `takeLatest` discards this waiter if a newer focus
-      // supersedes it.
+      // A star or structure deep link resolves its ref statically at bootstrap
+      // (index-based / a durable id), before its backing store is fed, so the
+      // row comes back null until that store's first commit. `NOT_YET_LOADED`
+      // states the one rule ("is this ref's store still empty?") once, keyed on
+      // `ref.type`, rather than a second `type === 'structure'` arm bolted onto
+      // the star check below — each entry pairs the store-empty predicate with
+      // the action that pulses the instant the store is fed, so the loop stays
+      // a single generic shape. A garbage id/index (row null with the store
+      // already fed) falls through to the no-op below rather than waiting for a
+      // pulse that never recurs. `takeLatest` discards this waiter if a newer
+      // focus supersedes it.
+      type Deferral = {
+        empty(): boolean;
+        pulse: typeof engineSourceCountReported | typeof engineStructureCountsChanged;
+      };
+      const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
+        {
+          star: {
+            empty: () => resolveDeps().stars.current() === null,
+            pulse: engineSourceCountReported,
+          },
+          structure: {
+            empty: () => resolveDeps().structures.loaded?.() === false,
+            pulse: engineStructureCountsChanged,
+          },
+        };
+      // `ref.type` never changes across retries, so the deferral (if any) is
+      // looked up once; only `empty()` is re-polled per pulse.
+      const deferral = action.payload ? NOT_YET_LOADED[action.payload.type] : undefined;
+
       // Off-frame resolve — same `deriveSimDays(time, nowMs)` derivation
       // `watchGoHomeSaga` uses, so a body row's position matches where the
       // render path draws it. Re-derived on each retry below: the wait can
-      // span real time (a star catalog landing), so a stale sample would only
+      // span real time (a catalog landing), so a stale sample would only
       // matter for the (currently impossible) case of a body ref racing a
       // catalog — re-selecting keeps it correct regardless.
-      let row = extractSelectionRow(
+      let row = selection.extractRow(
         action.payload,
-        resolveDeps(),
         deriveSimDays(yield* select(selectTimeState), performance.now()),
       );
-      while (
-        row === null &&
-        action.payload?.type === 'star' &&
-        resolveDeps().stars.current() === null
-      ) {
-        yield* take(engineSourceCountReported);
-        row = extractSelectionRow(
+      while (row === null && deferral?.empty()) {
+        yield* take(deferral.pulse);
+        row = selection.extractRow(
           action.payload,
-          resolveDeps(),
           deriveSimDays(yield* select(selectTimeState), performance.now()),
         );
       }

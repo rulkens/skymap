@@ -97,6 +97,8 @@ function makeInput(
   catalogs: Map<SourceType, GalaxyCatalog>,
   mask = 0xffffffff,
   famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[] = [],
+  nowMs = 0,
+  sourceOpacity: (source: SourceType) => number = () => 1,
 ) {
   const cam = makeCam();
   return {
@@ -105,7 +107,8 @@ function makeInput(
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousGalaxiesMeta,
-    nowMs: 0,
+    nowMs,
+    sourceOpacity,
   };
 }
 
@@ -130,6 +133,36 @@ describe('createTexturedDiskSubsystem', () => {
     await new Promise((r) => setTimeout(r, 0));
     const out = runTexturedSolo(walk, sys, makeInput(clouds));
     expect(out.disks.length).toBe(2);
+  });
+
+  // Survey-fade regression: a disk for a source whose live opacity is 0.25
+  // (mid fade-out, or a catalog toggled off) must scale `fadeAlpha` by 0.25
+  // — before this fix the planner ignored source visibility entirely and the
+  // textured disk stayed at full alpha through the whole fade.
+  it('scales fadeAlpha by the source opacity sampled via sourceOpacity', async () => {
+    async function runToSettledDisk(sourceOpacity: () => number) {
+      const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+      const sys = createTexturedDiskSubsystem({
+        device,
+        atlas,
+        fetcher: async () => makeFakeBitmap(),
+      });
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+      // Frame 1 (nowMs=0): enqueues the fetch.
+      runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 0, sourceOpacity));
+      await new Promise((r) => setTimeout(r, 0));
+      // Frame 2, well past LOAD_FADE_MS (400 ms) so loadFade saturates to 1 —
+      // isolates the assertion to the sourceOpacity term.
+      const out = runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 1000, sourceOpacity));
+      return out.disks[0]!.fadeAlpha;
+    }
+
+    const fullOpacity = await runToSettledDisk(() => 1);
+    const quarterOpacity = await runToSettledDisk(() => 0.25);
+
+    expect(fullOpacity).toBeGreaterThan(0);
+    expect(quarterOpacity).toBeCloseTo(fullOpacity * 0.25, 5);
   });
 
   it('hasInFlightWork is true during fetch and false after it settles', async () => {

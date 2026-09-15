@@ -13,6 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { flyPathDemo } from '../../../../src/data/animation/clips/flyPathDemo';
 import { resolveClipFoci } from '../../../../src/services/engine/animation/resolveClipFoci';
+import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import { resolveClipStart } from '../../../../src/state/camera/cameraSlice';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
 import { evaluateClip } from '../../../../src/services/engine/camera/evaluateClip';
@@ -72,15 +73,15 @@ const GROUPS: Record<string, StructureInfo> = {
 };
 
 const DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
-  structures: { byId: (id) => GROUPS[id] ?? null },
+  catalogs: { get: () => undefined, famousMeta: [] },
+  structures: { byId: (id) => GROUPS[id] ?? null, byCategory: () => [] },
   stars: { current: () => null },
 };
+const RESOLVER = selectionResolverOver(DEPS);
 
 /** Resolve foci + live start, then compile — the play-time pipeline. */
 function prepared() {
-  const foci = resolveClipFoci(flyPathDemo.data, DEPS, FOV_Y, TEST_POSE, SIM_DAYS);
+  const foci = resolveClipFoci(flyPathDemo.data, RESOLVER, FOV_Y, TEST_POSE, SIM_DAYS);
   return resolveClipStart(foci, TEST_POSE);
 }
 

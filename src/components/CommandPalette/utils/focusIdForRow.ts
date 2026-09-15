@@ -9,17 +9,18 @@
  * "single command->ref bridge" the saga documents, instead of two of the three
  * rows (alias, Milky Way) bypassing it with a pre-built ref.
  *
- *   - famous   → the curated seed id ('m31'); `resolveFocusId` scans famousGalaxiesMeta.
+ *   - famous   → the curated seed id ('m31'); the resolver's `resolveFocusId`
+ *                scans the galaxy store's famous meta rows.
  *   - alias    → the shared galaxy-id ladder (`encodeGalaxyId`), which yields
  *                'pgc-<n>' for the GLADE/2MRS PGC the alias row carries. We reuse
  *                that encoder rather than re-spell the 'pgc-' grammar here so the
  *                encode↔decode round-trip keeps one home.
  *   - structure→ the record's own durable `${category}-${seedId}` id, which
- *                `resolveFocusId` accepts and `structures.byId` resolves. No
- *                re-encoding — the store already holds the canonical id.
+ *                the resolver's `resolveFocusId` accepts and `structures.byId`
+ *                resolves. No re-encoding — the store already holds the id.
  *   - milkyWay → the fixed singleton literal `MILKY_WAY_FOCUS_ID`.
  *   - body     → the seed id under the shared `BODY_FOCUS_PREFIX` (`body-earth`),
- *                which `resolveFocusId` strips back to a body ref.
+ *                which the resolver's `resolveFocusId` strips back to a body ref.
  *
  * TABLE-DISPATCH on `row.kind` (simplicity convention item 7): a new row kind is
  * one row here, not a new predicate branch. The fallback arms are unreachable —

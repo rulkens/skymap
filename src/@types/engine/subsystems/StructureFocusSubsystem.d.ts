@@ -1,4 +1,4 @@
-import type { StructureInfo } from '../data/StructureInfo';
+import type { StructureInfo } from '../../data/structure/StructureInfo';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Destroyable } from '../../rendering/Destroyable';
 

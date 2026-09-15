@@ -2,36 +2,24 @@
  * engineSlice — observable runtime state reported by the engine, stored as a
  * Redux Toolkit slice with inline-Immer case reducers.
  *
- * The engine is a non-React, non-Redux imperative module: it owns the WebGPU
- * device, the per-frame render loop, and all catalog loading. The alternative
- * to a Redux slice would be React `useState` slots fed by per-event engine
- * callbacks (the old model), which worked
- * fine for a handful of independent flags but fractured the observable surface
- * across multiple unrelated `useState` slots — each one a separate re-render
- * trigger with its own staleness window. Moving the engine's emitted state into
- * a single Redux slice gives every subscriber (React UI, tour sagas, keyboard
- * shortcuts) a consistent snapshot addressable via selectors, without any
- * additional prop-threading.
+ * `CORE_INITIAL` is NOT `EngineSliceState`: the slice does not fold each
+ * Layer's facts into its initial value (that would need a runtime import of
+ * the composition, closing the D1 module-init cycle the import-boundary
+ * ratchet keeps shut). `createLayers` seeds each Layer's key via
+ * `layerFactsSeeded` before that Layer's `create` runs, so `factsReported`'s
+ * merge below never needs an existence branch — a patch under an unseeded key
+ * throws rather than silently minting one.
  *
- * `engineScaleChanged` uses DEDUP-ON-WRITE: it only assigns when either scalar
- * field changes. The engine dispatches this action every frame during camera
- * movement (Task 3), so without the guard every autorotate frame would produce
- * a new `scale` object reference, re-firing `useSelector(selectScale)` in the
- * ScaleBar even when the displayed label hasn't changed. The guard is modelled
- * on `setIfChanged` in `selectionSlice.ts`, specialised to the two `ScaleInfo`
- * primitive fields rather than a generic shallowEqual over ref objects.
- *
- * `engineSourceCountReported` accumulates: each call writes one source's count
- * without disturbing the others. The engine reports counts one source at a time
- * as each catalog finishes loading; accumulation in the reducer mirrors the old
- * `setSourceCounts((p) => ({ ...p, [source]: count }))` functional-updater
- * pattern from `useEngine.ts` without the stale-closure risk.
+ * `engineScaleChanged`/`engineBodyDistanceReported` use DEDUP-ON-WRITE:
+ * skipping the mutation when the value is unchanged keeps the same Immer
+ * draft reference, so a per-frame dispatch during camera movement doesn't
+ * re-fire `useSelector` for a stable displayed value.
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { engineRoute } from '../../store/constants';
-import type { EngineSliceState } from '../../@types/store/EngineSliceState';
+import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceState';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
@@ -40,6 +28,7 @@ import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
+import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -47,7 +36,7 @@ import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEnt
  */
 const INITIAL_SCALE: ScaleInfo = { label: '…', widthPx: 100 };
 
-const initialState: EngineSliceState = {
+const CORE_INITIAL: CoreEngineSliceState = {
   status: { kind: 'initializing' },
   scale: INITIAL_SCALE,
   focusedBodyDistanceMpc: null,
@@ -56,12 +45,13 @@ const initialState: EngineSliceState = {
   structureCounts: {},
   provenanceCounts: {},
   loadProgress: null,
+  structureSearchList: [],
   meta: { famousGalaxies: [], famousStars: [] },
 };
 
 const engineSlice = createSlice({
   name: engineRoute,
-  initialState,
+  initialState: CORE_INITIAL,
   reducers: {
     // ── lifecycle ────────────────────────────────────────────────────────────
     engineStatusChanged: (state, action: PayloadAction<EngineStatus>) => {
@@ -104,6 +94,16 @@ const engineSlice = createSlice({
     // ── load progress ────────────────────────────────────────────────────────
     engineLoadProgressChanged: (state, action: PayloadAction<LoadProgressState | null>) => {
       state.loadProgress = action.payload;
+    },
+
+    // ── structure search index ───────────────────────────────────────────────
+    // Whole-array replace, dispatched by `wireStructureProjection` at boot and
+    // on every later group change — the same schedule as its counts dispatch.
+    engineStructureSearchListChanged: (
+      state,
+      action: PayloadAction<readonly StructureSearchEntry[]>,
+    ) => {
+      state.structureSearchList = [...action.payload];
     },
 
     // ── curated metadata sidecars ────────────────────────────────────────────
@@ -165,6 +165,26 @@ const engineSlice = createSlice({
     engineHdrCapabilityChanged: (state, action: PayloadAction<boolean>) => {
       state.hdrCapable = action.payload;
     },
+
+    // ── Layer facts (D6) ─────────────────────────────────────────────────────
+    // No existence branch: `createLayers` seeds a Layer's key via
+    // `layerFactsSeeded` before its `create` (the only source of `publish`)
+    // runs, so `Object.assign` on an unseeded key throws instead of silently
+    // minting one — the extraReducers "unknown key" landmine, refused here.
+    factsReported: (
+      state,
+      action: PayloadAction<{ layer: string; patch: Record<string, unknown> }>,
+    ) => {
+      const facts = state as unknown as Record<string, Record<string, unknown> | undefined>;
+      Object.assign(facts[action.payload.layer]!, action.payload.patch);
+    },
+
+    layerFactsSeeded: (
+      state,
+      action: PayloadAction<{ layer: string; facts: Record<string, unknown> }>,
+    ) => {
+      (state as unknown as Record<string, unknown>)[action.payload.layer] = action.payload.facts;
+    },
   },
 });
 
@@ -174,11 +194,14 @@ export const {
   engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
+  engineStructureSearchListChanged,
   engineFamousGalaxiesMetaReported,
   engineFamousStarsMetaReported,
   engineScaleChanged,
   engineBodyDistanceReported,
   engineHdrCapabilityChanged,
+  factsReported,
+  layerFactsSeeded,
 } = engineSlice.actions;
 
 export default engineSlice.reducer;

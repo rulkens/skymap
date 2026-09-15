@@ -11,10 +11,10 @@
  * `resolveClipFoci` — `seq`/`all` recurse into `children`, `fork` recurses into
  * `child`, everything else is a leaf. At id-bearing leaves:
  *
- *   - `moveTargetId(id)` and `dollyToId(id)`: call `resolveFocusId(id, deps)`;
+ *   - `moveTargetId(id)` and `dollyToId(id)`: call `resolve.resolveFocusId(id)`;
  *     return false if null.
  *   - `focusId(null)`: a focus-clear cue — always ready (no data needed).
- *   - `focusId(id)`: call `resolveFocusId(id, deps)`; return false if null.
+ *   - `focusId(id)`: call `resolve.resolveFocusId(id)`; return false if null.
  *
  * ### Why a short-circuit walk instead of `collectFocusIds` + a batch check?
  *
@@ -30,7 +30,7 @@
  *
  * ### Structure and milkyWay ids are always ready
  *
- * `resolveFocusId` returns a non-null `SelectionRef` for structure-prefixed ids
+ * The composed resolver's `resolveFocusId` returns a non-null `SelectionRef` for structure-prefixed ids
  * (e.g. `cluster-virgo-m87`) and for `milkyWay` without consulting the catalog
  * map — the resolution is by id format alone. So structure and milkyWay ids in
  * a clip never block the readiness gate.
@@ -38,8 +38,7 @@
 
 import type { ClipData } from '../../@types/animation/ClipData';
 import type { Effect } from '../../@types/animation/Effect';
-import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
-import { resolveFocusId } from '../../services/url/resolveFocusId';
+import type { SelectionResolver } from '../../@types/engine/selection/SelectionResolver';
 
 /**
  * Returns true when every id-bearing focus effect in `data` resolves against
@@ -49,8 +48,8 @@ import { resolveFocusId } from '../../services/url/resolveFocusId';
  *
  * A clip with no id-bearing effects is trivially ready.
  */
-export function clipFociReady(data: ClipData, deps: ResolveDeps): boolean {
-  return data.timeline.every((e) => walkEffect(e, deps));
+export function clipFociReady(data: ClipData, resolve: SelectionResolver): boolean {
+  return data.timeline.every((e) => walkEffect(e, resolve));
 }
 
 // ─── Walk ────────────────────────────────────────────────────────────────────
@@ -60,18 +59,18 @@ export function clipFociReady(data: ClipData, deps: ResolveDeps): boolean {
  * leaf fails to resolve, short-circuiting the rest of the tree.
  *
  * Structural nodes (`seq`, `all`, `fork`) recurse into their children.
- * Id-bearing leaves are checked via `resolveFocusId`. All other leaves pass
+ * Id-bearing leaves are checked via `resolve.resolveFocusId`. All other leaves pass
  * through unchanged — they carry no focus ids and are always ready.
  */
-function walkEffect(effect: Effect, deps: ResolveDeps): boolean {
+function walkEffect(effect: Effect, resolve: SelectionResolver): boolean {
   switch (effect.kind) {
     // ── Structural nodes — recurse ──────────────────────────────────────────
     case 'seq':
-      return effect.children.every((c) => walkEffect(c, deps));
+      return effect.children.every((c) => walkEffect(c, resolve));
     case 'all':
-      return effect.children.every((c) => walkEffect(c, deps));
+      return effect.children.every((c) => walkEffect(c, resolve));
     case 'fork':
-      return walkEffect(effect.child, deps);
+      return walkEffect(effect.child, resolve);
 
     // ── Id-bearing leaves — check resolvability ─────────────────────────────
     case 'moveTargetId':
@@ -79,16 +78,16 @@ function walkEffect(effect: Effect, deps: ResolveDeps): boolean {
     case 'lookAtId':
     case 'strafeId':
     case 'spinToId':
-      return resolveFocusId(effect.id, deps) !== null;
+      return resolve.resolveFocusId(effect.id) !== null;
     case 'focusId':
       // null is a focus-clear cue: always ready, no data needed.
       if (effect.id === null) return true;
-      return resolveFocusId(effect.id, deps) !== null;
+      return resolve.resolveFocusId(effect.id) !== null;
 
     // A flyPath carries id-bearing waypoints; each `atFocus` (id-form) must
     // resolve. Concrete `atPoint` waypoints need no data.
     case 'flyPath':
-      return effect.waypoints.every((w) => !('id' in w) || resolveFocusId(w.id, deps) !== null);
+      return effect.waypoints.every((w) => !('id' in w) || resolve.resolveFocusId(w.id) !== null);
 
     // ── Pass-through — camera actions, scene effects, hold/wait ────────────
     default:

@@ -115,6 +115,8 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraDriver } from '../../../../src/@types/engine/camera/CameraDriver';
 import type { DriverId } from '../../../../src/@types/engine/camera/DriverId';
 import type { ClipPlayer } from '../../../../src/@types/engine/subsystems/ClipPlayer';
+import type { LayerInstance } from '../../../../src/@types/engine/layer/LayerInstance';
+import type { FocusUniformsValue } from '../../../../src/@types/rendering/FocusUniformsValue';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
@@ -905,6 +907,31 @@ describe('runFrame — milky-way star count', () => {
   });
 });
 
+describe('runFrame — flow field reconcile', () => {
+  it('calls flowFieldRenderer.reconcile with the live flow settings, every frame', () => {
+    // The flow field's own reseed-on-switch is a value compare (Task 6); this
+    // only pins that runFrame feeds it the settings every frame, the way
+    // milkyWayCloud.reconcile is fed starCount every frame above.
+    const store = makeStore();
+    const state = makeState();
+    const deps = makeDeps(store);
+
+    const reconcile = vi.fn<(seed: { mode: string; count: number }) => void>();
+    state.gpu.flowFieldRenderer = {
+      reconcile,
+    } as unknown as EngineState['gpu']['flowFieldRenderer'];
+    (state.settings as unknown as { flow: { mode: string; count: number } }).flow = {
+      mode: 'advect',
+      count: 40000,
+    };
+
+    runFrame(state, deps, 0);
+
+    expect(reconcile).toHaveBeenCalledTimes(1);
+    expect(reconcile).toHaveBeenCalledWith(state.settings.flow);
+  });
+});
+
 describe('runFrame — engineScaleChanged dispatch', () => {
   // The scale-dispatch block fires inside the `if (state.booted)` guard —
   // the same guard that emits `onCameraChange`. `makeCamState()` is booted;
@@ -1040,6 +1067,9 @@ describe('runFrame — the label-director wake fold', () => {
       },
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
+      // Empty over the empty composition — runFrame's Layer-hook loop
+      // iterates this every ready frame (04b Task 12).
+      layers: [],
       // Read past the (mocked) renderFrame for the probe's wake vote.
       cubemapCaptures: makeCubemapCaptureRuntimes(),
       gpu: {
@@ -1084,6 +1114,119 @@ describe('runFrame — the label-director wake fold', () => {
     expect(state.subsystems.cosmoLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.subsystems.foregroundLabelDirector.runFrame).toHaveBeenCalledTimes(1);
     expect(state.gpu.label3DRenderer!.setLabels).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
+  /**
+   * A fully READY fixture, mirroring the label-director block's shape, plus
+   * a spy'd `structureFocus` whose `produceFocusUniforms` returns a distinct
+   * sentinel object — so a hook's captured `ctx.focus` can be checked for
+   * reference equality against it, proving the hook runs AFTER the
+   * `ctx.focus = focusUniforms` assignment, not before.
+   */
+  const SENTINEL_FOCUS: FocusUniformsValue = {
+    center: [1, 2, 3],
+    apparentRadiusMpc: 1,
+    physicalRadiusMpc: 1,
+    blend: 0.5,
+  };
+
+  function makeLayerState(layers: readonly LayerInstance[]): EngineState {
+    const base = makeCamState();
+    return {
+      ...base,
+      settings: {
+        ...base.settings,
+        flow: { enabled: false },
+        starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
+        bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
+      },
+      data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
+      selectionRows: { focus: null },
+      layers,
+      cubemapCaptures: makeCubemapCaptureRuntimes(),
+      gpu: {
+        ...base.gpu,
+        galaxyPointRenderer: {},
+        galaxyPickRenderer: {},
+        renderTargets: { reconcile: vi.fn() },
+        compositor: {},
+        starCatalogRenderer: null,
+        structureMarkerRenderer: null,
+        label3DRenderer: { setLabels: vi.fn() },
+      },
+      subsystems: {
+        ...base.subsystems,
+        // At rest, keepTicking is false and the still-live sim clock falls
+        // through to the idle-tick arm — the label-director block's fixture
+        // never reaches it (one of its two tests always votes true).
+        scheduler: { requestRender: vi.fn(), requestIdleFrame: vi.fn() },
+        texturedDisks: { hasInFlightWork: () => false },
+        proceduralDisks: null,
+        diskPlannerWalk: null,
+        hiResFamous: null,
+        earthTiles: null,
+        structureFocus: {
+          update: vi.fn(),
+          produceFocusUniforms: vi.fn(() => SENTINEL_FOCUS),
+          isAwake: () => false,
+        },
+        fades: { tick: vi.fn(), opacityOf: () => 0, isAnyAnimating: () => false },
+        cosmoLabelDirector: { runFrame: () => false },
+        foregroundLabelDirector: { runFrame: () => false },
+      },
+    } as unknown as EngineState;
+  }
+
+  function makeLayer(name: string, frame: NonNullable<LayerInstance['frame']>): LayerInstance {
+    return { name, selection: [], frame, destroy: () => {} };
+  }
+
+  it("every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform", () => {
+    const order: string[] = [];
+    const focusSeenByA: { current: unknown } = { current: undefined };
+    const layerA = makeLayer('a', (ctx) => {
+      order.push('a');
+      focusSeenByA.current = ctx.focus;
+      return false;
+    });
+    const layerB = makeLayer('b', () => {
+      order.push('b');
+      return false;
+    });
+    const state = makeLayerState([layerA, layerB]);
+    const deps = makeCamDeps(state);
+
+    runFrame(state, deps, 0);
+
+    expect(order).toEqual(['a', 'b']);
+    expect(focusSeenByA.current).toBe(SENTINEL_FOCUS);
+  });
+
+  it('a hook returning true keeps the loop ticking; a Layer-free frame with everything else at rest does not', () => {
+    const stillState = makeLayerState([]);
+    runFrame(stillState, makeCamDeps(stillState), 0);
+    expect(stillState.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
+
+    const wakingLayer = makeLayer('wakes', () => true);
+    const wakingState = makeLayerState([wakingLayer]);
+    runFrame(wakingState, makeCamDeps(wakingState), 0);
+    expect(wakingState.subsystems.scheduler.requestRender).toHaveBeenCalled();
+  });
+
+  it('a second hook still runs when the first returned true — no short-circuit', () => {
+    const secondCalled = { value: false };
+    const layerA = makeLayer('a', () => true);
+    const layerB = makeLayer('b', () => {
+      secondCalled.value = true;
+      return false;
+    });
+    const state = makeLayerState([layerA, layerB]);
+
+    runFrame(state, makeCamDeps(state), 0);
+
+    expect(secondCalled.value).toBe(true);
   });
 });
 

@@ -1,44 +1,28 @@
 /**
- * Public handle returned by `createMilkyWayPickRenderer`.
- *
- * The Milky Way's visible form is the star/dust point cloud
- * (`milkyWayCloudRenderer`), which owns no pick pipeline. To make it
- * clickable we stamp a pick billboard at the galactic centre into the
- * r32uint pick texture — invisible, pick-only, sized in the vertex shader
- * from the pick camera uniforms (the disc's world radius projected to
- * apparent pixels, floored at the pick-widened point size — the same
- * derivation galaxy points use, so the hit target always agrees with the
- * rendered frame). The identity it writes is
- * `(Source.MilkyWay << 26) | (0 + PICK_SENTINEL_OFFSET)`; the MW carries
- * no per-record `localIdx`, so it is always 0.
- *
- * The caller hands the complete pick-uniform bytes per call (built via
- * `pickUniformBytesOf` against the NEAR0 slab view); the renderer uploads
- * them to its own buffer, binds `@group(0)` (camera) + `@group(1)` (a dummy
- * zeroed FadeUniforms) + `@group(2)` (the static MW pick uniform carrying
- * the source code + world centre + disc radius), and emits one `draw(6, 1)`.
+ * Public handle returned by `createMilkyWayPickRenderer`: the visible cloud has no
+ * pick pipeline, so this stamps one invisible billboard at the galactic centre into
+ * the r32uint pick texture, identity `(Source.MilkyWay << 26) | PICK_SENTINEL_OFFSET`.
  */
 
+import type { Vec2 } from '../math/Vec2';
+import type { Vec3 } from '../math/Vec3';
+
 export type MilkyWayPickRenderer = {
-  /** Human-readable identifier — `'milkyWayPickRenderer'`. */
   readonly label: string;
   /**
-   * Record ONE pick billboard at `MILKY_WAY_CENTER_WORLD` into the
-   * caller-supplied pick pass. `uniformBytes` is the COMPLETE points-pick
-   * uniform image for this pick's NEAR0 slab view (see
-   * `pickUniformBytesOf`) — uploaded verbatim to the renderer's own
-   * `@group(0)` buffer, then `@group(1)` (dummy fade) + `@group(2)` (the
-   * static MW pick uniform) are bound and one `draw(6, 1)` is emitted.
-   * No-op when constructed with a null device.
-   *
-   * Sizing happens on the GPU: the vertex shader projects the disc's
-   * world radius to its apparent on-screen half-extent using the camera
-   * facts in `uniformBytes`, so no per-pick size argument exists. Gating
-   * on disc visibility is the CALLER's job — the pick program only invokes
-   * this row when `milkyWayPass.enabled` passes against the pick-time
-   * camera — so this renderer is deliberately dumb and draws whenever told.
+   * Record ONE pick billboard at `MILKY_WAY_CENTER_WORLD`, sized in the vertex
+   * shader from the camera facts; gating on disc visibility is the caller's. The
+   * camera arguments pack into this renderer's OWN 96-byte `@group(0)` buffer, never
+   * the draw-time uniform, which holds the last visual frame's stale pose.
+   * `@group(1)` takes a dummy zeroed FadeUniforms: every declared group must be bound.
    */
-  pickMilkyWay(pass: GPURenderPassEncoder, uniformBytes: ArrayBuffer): void;
+  pickMilkyWay(
+    pass: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+    camPosWorld: Readonly<Vec3>,
+    pxPerRad: number,
+  ): void;
   /** Release GPU resources. No-op under a null device. */
   destroy(): void;
 };

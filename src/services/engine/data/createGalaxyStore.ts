@@ -1,6 +1,7 @@
 import type { GalaxyStore } from '../../../@types/engine/data/GalaxyStore';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
+import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 
 /**
  * createGalaxyStore — factory for the galaxy data store.
@@ -18,6 +19,9 @@ import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCat
  */
 export function createGalaxyStore(): GalaxyStore {
   const catalogs = new Map<SourceType, GalaxyCatalog>();
+  // Held by reference: the sidecar payload is already a fresh array per fetch,
+  // and no writer mutates it after the slot hands it over.
+  let famousMeta: readonly FamousGalaxyMetaEntry[] = [];
 
   return Object.freeze({
     get catalogs(): ReadonlyMap<SourceType, GalaxyCatalog> {
@@ -31,6 +35,12 @@ export function createGalaxyStore(): GalaxyStore {
     },
     get(source: SourceType): GalaxyCatalog | undefined {
       return catalogs.get(source);
+    },
+    get famousMeta(): readonly FamousGalaxyMetaEntry[] {
+      return famousMeta;
+    },
+    setFamousMeta(meta: readonly FamousGalaxyMetaEntry[]): void {
+      famousMeta = meta;
     },
   });
 }

@@ -24,12 +24,14 @@ import { resolveLayerOpacity } from '../../presentation/focusRecession';
 export const galaxyPointSpritesPass: ContentPass = {
   name: 'point-sprites',
 
-  enabled(_state, _ctx, _view) {
-    return true;
+  enabled(state, _ctx, _view) {
+    return state.gpu.galaxyPointRenderer !== null;
   },
 
   draw(pass, view, ctx, state) {
-    const { galaxyPointRenderer, drawPxPerRad } = ctx;
+    const galaxyPointRenderer = state.gpu.galaxyPointRenderer;
+    if (galaxyPointRenderer === null) return;
+    const { drawPxPerRad } = ctx;
 
     // Deep-zoom survey fade, keyed on distance from the heliocentric render origin
     // — NOT `cam.distance`, the orbit-to-focus radius. Spatial, so it is identical
@@ -82,11 +84,11 @@ export const galaxyPointSpritesPass: ContentPass = {
   // follows intent, not pixels (`deriveSourceMasks.ts:25-27`, #18 D8), so a clip
   // `fade()` dims these points without revoking their click target.
   drawPick(pass, view, ctx, state) {
-    if (state.gpu.galaxyPickRenderer === null) return;
+    if (state.gpu.galaxyPickRenderer === null || state.gpu.galaxyPointRenderer === null) return;
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
     const fades = state.subsystems.fades;
-    const sources = Array.from(ctx.galaxyPointRenderer.loadedSources()).filter((s) => {
+    const sources = Array.from(state.gpu.galaxyPointRenderer.loadedSources()).filter((s) => {
       if (((ctx.visibleSourceMask >> s.source) & 1) === 0) return false;
       const opacity =
         fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) }, ctx.nowMs) *

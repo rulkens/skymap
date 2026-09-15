@@ -10,6 +10,7 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
+import { orbiter } from './makers/orbiter';
 import { probe } from './makers/probe';
 import { satellite } from './makers/satellite';
 import { sStar } from './makers/sStar';
@@ -37,6 +38,7 @@ import {
   PETUNIA_PINK,
   VOYAGER_1_GOLD,
   VOYAGER_2_AMBER,
+  HUBBLE_SILVER,
 } from './palette';
 import { degToRad } from '../../utils/math/degToRad';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
@@ -679,6 +681,29 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     periapsisJd: 2445454.392982037272,
     meanMotionDegPerDay: 0.1222675366750901,
     color: VOYAGER_2_AMBER,
+  }),
+
+  // Hubble, geocentric. Columns verbatim from JPL Horizons ELEMENTS (`-48`,
+  // CENTER='500@399', REF_PLANE='FRAME', OUT_UNITS='KM-D') at JDTDB 2461298.5 =
+  // 2026-Sep-15 00:00 TDB, and the node rate is the mean of two 5-day `OM`
+  // steps over the same span. The refresh query is recorded in
+  // `data/raw/meshes/hubble/README.md`.
+  orbiter({
+    id: 'hubble',
+    focusId: 'earth',
+    epochJd: 2461298.5,
+    semiMajorKm: 6852.132959105691,
+    eccentricity: 2.423931415351075e-4,
+    inclinationDeg: 28.45103713579995,
+    ascendingNodeDeg: 185.7242679199093,
+    argPeriapsisDeg: 189.2459336243418,
+    meanAnomalyDeg: 51.61232139214808,
+    meanMotionDegPerDay: 5510.190163541656,
+    // OM 185.7242679 → 151.4846789 → 117.4543700 over 2026-09-15/20/25.
+    nodeRateDegPerDay: -6.827,
+    poleRaDeg: 270,
+    poleDecDeg: 90,
+    color: HUBBLE_SILVER,
   }),
 
   // The 39 bound S-stars are mapped rather than spelled out: their per-row facts live in

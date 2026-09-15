@@ -25,6 +25,7 @@ import { deriveSimDays } from '../../../src/utils/time/deriveSimDays';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
@@ -54,9 +55,8 @@ function blockingSeam(onCancel: () => void): PlayClipStub {
 
 // Default deps resolve nothing — fine for focus-free clips like flyout.
 const EMPTY_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  catalogs: { get: () => undefined, famousMeta: [] },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 
@@ -75,6 +75,7 @@ function buildHarness(seam: PlayClipStub, resolveDeps: ResolveDeps = EMPTY_DEPS)
   sagaMiddleware.setContext({
     playClip: (clip: ClipData) => seam(clip),
     resolveDeps: () => resolveDeps,
+    selection: selectionResolverOver(resolveDeps),
     cameraRuntime: () => RUNTIME,
   });
   sagaMiddleware.run(watchClipSaga);
@@ -154,9 +155,8 @@ describe('watchClipSaga', () => {
       } as StructureInfo,
     };
     const deps: ResolveDeps = {
-      catalogs: { get: () => undefined },
-      famousGalaxiesMeta: [],
-      structures: { byId: (id) => groups[id] ?? null },
+      catalogs: { get: () => undefined, famousMeta: [] },
+      structures: { byId: (id) => groups[id] ?? null, byCategory: () => [] },
       stars: { current: () => null },
     };
 

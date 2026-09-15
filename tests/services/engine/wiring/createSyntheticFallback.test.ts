@@ -19,11 +19,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/sources';
+import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { FormatVersionError } from '../../../../src/data/formatVersionError';
 import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
-import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
@@ -114,6 +113,12 @@ function formatVersionErrored(): LoadState<GalaxyCatalog> {
     finalAttempt: 1,
   };
 }
+
+// The `survey`-category codes — a fixture built the same way the gate derives
+// its own private list, not an assertion on the production list itself.
+const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCES.filter(
+  (code) => SOURCE_REGISTRY[code].category === 'survey',
+);
 
 // ── State + callbacks builders ───────────────────────────────────────────────
 

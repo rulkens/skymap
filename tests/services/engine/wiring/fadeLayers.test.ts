@@ -282,13 +282,18 @@ describe('FADE_LAYERS intent subset', () => {
     // FADE_LAYERS and VISIBILITY_ACTION_ROW deliberately don't merge (they
     // close over different domains — EngineState vs settings-item id lists),
     // but they agree on one thing: a row exposes `intent` exactly when its
-    // VISIBILITY_ACTION_ROW counterpart has a real settings write. Derived
-    // from both tables so a future row can't silently drift out of either
-    // list the way the old hand-listed INTENT_KEYS/REGISTRATION_ONLY_KEYS
-    // arrays did (they stopped covering four rows).
+    // VISIBILITY_ACTION_ROW counterpart has a real settings write. `actions`
+    // is the surviving shared truth after `writes` (Task 5) went: total, and
+    // `[]` unconditionally for the three registration-only layers, non-empty
+    // for every real write given a settings fixture whose per-item records
+    // are populated (volumeField's fan-out needs at least one item id).
+    const settings = makeSettings();
+    settings.volumes.items = {
+      'debug-gaussian': { enabled: true },
+    } as unknown as EngineSettingsState['volumes']['items'];
     for (const row of FADE_LAYERS) {
-      const { writes } = VISIBILITY_ACTION_ROW[row.key];
-      expect(row.intent === undefined, `${row.key}: intent vs writes`).toBe(writes === null);
+      const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
+      expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);
     }
   });
 
