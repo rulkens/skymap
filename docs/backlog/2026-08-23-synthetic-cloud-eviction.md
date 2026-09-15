@@ -7,19 +7,15 @@ just happened to exercise the disable-then-re-enable path.
 ## What it is
 
 The ~100k-point synthetic procedural cloud is the "no real data, show
-_something_" backstop (`src/services/engine/wiring/createSyntheticFallback.ts`).
-It arms via a one-way request flag: `state.requests.add('syntheticFallback')`
-(`createSyntheticFallback.ts:158`) is only ever added, never removed —
-confirmed by grep, no call site clears it. The `Synthetic` row in
-`ASSET_WIRING` (`src/services/engine/wiring/assetWiring.ts:196-207`) reads
-that flag as its whole `demand` predicate and declares no `release` field at
-all, unlike the sibling per-body row a few lines above it
-(`assetWiring.ts:154-160`) which pairs `demand`/`release` symmetrically.
+_something_" backstop. Its arming half is fixed: plan 04d replaced the one-way
+`'syntheticFallback'` request flag with `syntheticShouldArm`, a pure predicate
+over the galaxyCatalog Layer's own slots, so the row's `demand` goes false again
+the moment a real survey catalog lands with data.
 
-So once every real galaxy catalog has settled without producing data and the
-synthetic cloud loads, nothing turns it back off — not the request flag
-(never cleared) and not the demand predicate (no release counterpart to
-evaluate).
+What is unfixed is eviction. The row (`galaxyCatalogAssetRows.ts`) still declares
+no `release` field, and `reevaluateDemand` treats an omitted `release` as "never
+evict" — so demand going false does not unload what is already resident, unlike
+the sibling per-body row that pairs `demand`/`release` symmetrically.
 
 ## Why it matters
 
@@ -45,9 +41,6 @@ If reachable this way in plain 2D `main`, it is a real bug, not spike-only.
 
 ## Approach (once verified)
 
-Add a `release` predicate to the `Synthetic` row mirroring its `demand`:
-release once any real galaxy catalog's slot reaches `ready` with
-`count > 0` (the same `anyRealReady` condition `createSyntheticFallback.ts`
-already tracks internally — surface it as read-able state, or clear the
-`'syntheticFallback'` request flag from the same real-catalog-ready
-subscriber that currently only sets `anyRealReady`).
+Add a `release` predicate to the synthetic row: the negation of
+`syntheticShouldArm`, which already answers "has a real survey catalog landed
+with data" over the Layer's slots.
