@@ -79,9 +79,9 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   curiosity: {
     key: 'curiosity',
     path: 'meshes/curiosity.mesh',
-    boundingRadiusM: 2.478983700137988,
-    groundOffsetM: 0.8980751155787591,
-    meanAlbedo: [0.07811, 0.076507, 0.075141],
+    boundingRadiusM: 2.4789837008600912,
+    groundOffsetM: 0.8980751162248013,
+    meanAlbedo: [0.077987, 0.076399, 0.075039],
     triangleCount: 48384,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
