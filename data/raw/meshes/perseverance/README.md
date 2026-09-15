@@ -25,32 +25,54 @@ curl -L -o "data/raw/meshes/perseverance/Mars 2020 Perseverance Rover.glb" \
 
 Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
+## The `.blend` — the edited source
+
+`perseverance.blend` is what the pre-bake opens, not the download above.
+Written by Blender 5.2 LTS, it does not open in older versions. Re-import it
+from the pristine download at any time with `npm run import-mesh --
+perseverance` (Blender 5.2 LTS, not run in CI) — this **overwrites any edits**
+made since the last import.
+
+`tools/meshes/prebake/importMesh.py` evaluates the scene at **frame 120**
+before saving. The frame is load-bearing: the file's saved transforms park the
+rover with its remote-sensing mast folded flat on the deck (bbox tops out at
+1.85 m); the deploy animation raises it over frames 0→48 and re-stows it after
+~338, so any frame in 48–290 gives the mast-up rover at its real 2.23 m
+height, while saving the default pose would ship a headless rover. The
+importer then applies the armature deform on every part, freezes each part's
+world transform at that frame (dropping the rig, so the pre-bake's `join`
+needs no parenting), collapses the mixed UV-layer names onto one shared layer
+and re-points every Normal Map node at it, re-flags any Base Color texture the
+source left as Non-Color so it decodes sRGB, and collapses rival Material
+Output nodes onto the one the file renders with. This download has none of
+the defects these last three passes exist for, so they are no-ops here; the
+importer runs them uniformly over every source.
+
+To edit the model: open `perseverance.blend` in Blender 5.2 LTS at frame 120,
+change materials, save, update this file's line in `../meshes.sha256`, then
+`npm run prebake-mesh -- perseverance` and `npm run build-meshes`.
+
 ## The pre-bake — what `build-meshes` actually reads
 
-`MESH_SOURCES.perseverance` points at `perseverance.prebaked.glb`, **not** the
-download: the source carries 47 materials, is over the triangle budget, and
-ships **stowed**. `buildMeshes` refuses multi-material input by design, so the
+`MESH_SOURCES.perseverance` points at `perseverance.prebaked.glb`, **not**
+`perseverance.blend`: the source carries 47 materials and is over the
+triangle budget. `buildMeshes` refuses multi-material input by design, so the
 flattening happens upstream, once:
 
 ```
 npm run prebake-mesh -- perseverance    # Blender 5.2 LTS; ~20 s, not run in CI
 ```
 
-`tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 120**,
-drops the `Icosphere` ground helper, joins the 68 remaining parts, decimates
-199,482 → 100,000 tris, smart-UV-projects and bakes all 47 materials into one
-2048² atlas per `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its
-output and the four loose `perseverance.prebaked.*.png` atlases beside it are
-gitignored build products — regenerate them, don't archive them. The GLB carries
-the normal atlas and the metallicRoughness pair the glTF exporter packs from the
-last two; `substituted: []` on the generated row is the check that the exporter
-still packs them.
-
-**The frame is load-bearing.** The file's saved transforms park the rover with
-its remote-sensing mast folded flat on the deck (bbox tops out at 1.85 m). The
-deploy animation raises it over frames 0→48 and re-stows it after ~338, so any
-frame in 48–290 gives the mast-up rover at its real 2.23 m height. Baking the
-saved pose would ship a headless rover.
+`tools/meshes/prebake/meshPrebake.py` joins the 68 remaining parts (leaving
+behind any face-less/materialless leftovers, such as the `Icosphere` ground
+helper), decimates 199,482 → 100,000 tris, smart-UV-projects and bakes all 47
+materials into one 2048² atlas per `BAKE_PASSES` row — albedo, normal,
+roughness and metallic. Its output and the four loose
+`perseverance.prebaked.*.png` atlases beside it are gitignored build products
+— regenerate them, don't archive them. The GLB carries the normal atlas and
+the metallicRoughness pair the glTF exporter packs from the last two;
+`substituted: []` on the generated row is the check that the exporter still
+packs them.
 
 ## Attribution
 

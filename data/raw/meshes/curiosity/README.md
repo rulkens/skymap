@@ -33,45 +33,65 @@ unzip -o "data/raw/meshes/curiosity/Curiosity Rover (MSL) (Clean).zip" \
 
 Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
+## The `.blend` — the edited source
+
+`curiosity.blend` is what the pre-bake opens — not the download above, nor
+the zip's own `Curiosity Rover (MSL) (Clean).blend`, which the importer reads
+and never writes back to. Written by Blender 5.2 LTS, it does not open in
+older versions. Re-import it at any time with `npm run import-mesh --
+curiosity` (Blender 5.2 LTS, not run in CI) — this **overwrites any edits**
+made since the last import.
+
+The download is a 106-object Blender scene with 18 materials, nine cameras
+and two lights. `tools/meshes/prebake/importMesh.py` evaluates it at **frame
+206**, applies the geometry-nodes modifiers hanging off a dozen parts, and
+freezes every remaining part's world transform (dropping the marker-cube rig,
+so the pre-bake's `join` needs no parenting). It also repairs three source
+defects:
+
+- **The helper geometry is not cosmetic.** `_root_p` is a 1 m cube at the
+  origin and `shadow_arm` a 2 m ground plane; both carry a material, so a
+  "drop meshes with no material" rule misses them and they would bake into the
+  rover. The importer drops them by material name (`pivot`, `shadow2`)
+  instead, leaving 16 materials.
+- **Two colour maps arrive flagged Non-Color**, so the renderer skips the sRGB
+  decode and the bake would come out washed to white. The importer re-flags
+  anything feeding Base Color as sRGB.
+- **One texture reference is dangling** — a duplicate `tex_03.png` that
+  resolves to nothing and would bake black over twelve parts. The importer
+  re-points it at the packed original.
+
+It also collapses the mixed UV-layer names onto one shared layer and
+re-points every Normal Map node at it, and drops seven rival Material Output
+nodes — targeted at Cycles and each fed by a bare Diffuse BSDF, they win over
+the Principled the file renders with; left in, those parts would bake black
+albedo (a Diffuse node emits nothing) and roughness 1.
+
+To edit the model: open `curiosity.blend` in Blender 5.2 LTS at frame 206,
+change materials, save, update this file's line in `../meshes.sha256`, then
+`npm run prebake-mesh -- curiosity` and `npm run build-meshes`.
+
 ## The pre-bake — what `build-meshes` actually reads
 
-`MESH_SOURCES.curiosity` points at `curiosity.prebaked.glb`, **not** the
-download: the source is a 106-object Blender scene with 18 materials, nine
-cameras and two lights, and `buildMeshes` reads GLB with one material. The
-flattening happens upstream, once:
+`MESH_SOURCES.curiosity` points at `curiosity.prebaked.glb`, **not**
+`curiosity.blend`: the source carries 16 materials and `buildMeshes` reads GLB
+with one material. The flattening happens upstream, once:
 
 ```
 npm run prebake-mesh -- curiosity    # Blender 5.2 LTS; ~10 s, not run in CI
 ```
 
-`tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 206**,
-drops the camera markers and the `pivot` / `shadow2` helper geometry, joins the
-73 remaining parts, applies their geometry-nodes modifiers, smart-UV-projects
-and bakes all 16 surviving materials into one 2048² atlas per `BAKE_PASSES` row
-— albedo, normal, roughness and metallic. Its output and the four loose
-`curiosity.prebaked.*.png` atlases beside it are gitignored build products —
-regenerate them, don't archive them. The GLB carries the normal atlas and the
-metallicRoughness pair the glTF exporter packs from the last two;
-`substituted: []` on the generated row is the check that the exporter still
-packs them. Every material authors metallic 0, so that atlas bakes flat black.
-Roughness is 0.5 over 83 % of the baked texels, 0.1–0.4 over most of the rest,
-and 1.0 on a sliver of about 10,800 texels. Seven rival Material Output nodes,
-targeted at Cycles and each fed by a bare Diffuse BSDF, win over the Principled
-the file renders with, so the pre-bake drops them — left in, those parts bake
-black albedo (a Diffuse node emits nothing) and roughness 1.
-
-Three things about this file bite:
-
-- **The helper geometry is not cosmetic.** `_root_p` is a 1 m cube at the origin
-  and `shadow_arm` a 2 m ground plane; both carry a material, so a "drop meshes
-  with no material" rule misses them and they end up baked into the rover.
-  They go by material name (`pivot`, `shadow2`) instead.
-- **Two colour maps arrive flagged Non-Color**, so the renderer skips the sRGB
-  decode and the rover bakes out washed to white. The pre-bake re-flags anything
-  feeding Base Color as sRGB.
-- **One texture reference is dangling** — a duplicate `tex_03.png` that resolves
-  to nothing and would bake black over twelve parts. The pre-bake re-points it
-  at the packed original.
+`tools/meshes/prebake/meshPrebake.py` joins the 73 remaining parts (leaving
+behind any face-less/materialless leftovers, such as the camera markers),
+smart-UV-projects and bakes all 16 materials into one 2048² atlas per
+`BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output and the
+four loose `curiosity.prebaked.*.png` atlases beside it are gitignored build
+products — regenerate them, don't archive them. The GLB carries the normal
+atlas and the metallicRoughness pair the glTF exporter packs from the last
+two; `substituted: []` on the generated row is the check that the exporter
+still packs them. Every material authors metallic 0, so that atlas bakes flat
+black. Roughness is 0.5 over 83 % of the baked texels, 0.1–0.4 over most of
+the rest, and 1.0 on a sliver of about 10,800 texels.
 
 ## Attribution
 
