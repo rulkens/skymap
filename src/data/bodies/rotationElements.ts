@@ -159,6 +159,17 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
   // and the only one that stays true at any epoch as the geometry opens up.
   { kind: 'lookAt', id: 'voyager1', targetId: 'earth' },
   { kind: 'lookAt', id: 'voyager2', targetId: 'earth' },
+  // Hubble holds an inertial attitude, but WHICH one is the observing schedule's
+  // business, so this one is authored: aperture (+X) on the celestial north pole
+  // — the one direction a 28.5°-inclined orbit never puts the Earth in front of
+  // — and the solar-array long axis (+Z, the pole here) on the equinox. Ẇ = 0.
+  {
+    id: 'hubble',
+    poleRaDeg: 0.0,
+    poleDecDeg: 0.0,
+    primeMeridianDeg: 90.0,
+    spinRateDegPerDay: 0,
+  },
   // Rover headings are AUTHORED presentation, not surveyed landing azimuths:
   // they only spread the four so no two face the same way, and the visual pass
   // is their only gate.
