@@ -23,7 +23,7 @@ import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import { isBodyArm } from '../../services/engine/camera/rungs/isBodyArm';
 import { sameFrame } from '../../services/engine/camera/rungs/sameFrame';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
@@ -82,7 +82,7 @@ export function cameraDebugSnapshotOf(input: {
       ? hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis })?.radiusM
       : undefined;
 
-  const engagedPose = isWorldArm(renderedPose) ? null : renderedPose.pose;
+  const engagedPose = isBodyArm(renderedPose) ? renderedPose.pose : null;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;
   const epochDeltaEpsDays = Math.abs(
     deriveSimDays(time, EPOCH_DELTA_TOLERANCE_MS) - deriveSimDays(time, 0),

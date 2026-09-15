@@ -20,6 +20,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
+import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { driveWheelEvents } from '../../../helpers/camera/driveWheelEvents';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
@@ -145,7 +146,7 @@ describe('focus release while engaged (round 10)', () => {
     // A cut, not a flight: the reseed's fresh epochs and memory are intended.
     h.seedPose(absoluteArm(MARS_PARK));
     h.tick(64);
-    const frame = h.state.cameraRuntime.register.pose.frame;
-    expect(frame !== 'absolute' && frame.body).toBe('mars');
+    const framed = h.state.cameraRuntime.register.pose;
+    expect(isBodyArm(framed) && framed.frame.body).toBe('mars');
   });
 });

@@ -73,6 +73,7 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
 });
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
+import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
@@ -143,7 +144,7 @@ function seedPose(
 
 /** Geocentric range of a body-arm pose, metres — the anchor is the centre. */
 function rangeOf(framed: FramedCameraPose): number {
-  if (framed.frame === 'absolute') throw new Error('rangeOf: not a body arm');
+  if (!isBodyArm(framed)) throw new Error('rangeOf: not a body arm');
   return Math.hypot(...framed.pose.eyeRelAnchorM);
 }
 

@@ -26,6 +26,7 @@ import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { selectFocusRow } from '../../../state/selection/selectors';
 import cameraReducer, { endDrag, commitCameraPose } from '../../../state/camera/cameraSlice';
 
+import type { ClimbableKind } from '../../../@types/camera/ClimbableKind';
 import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { Epoch } from '../../../@types/engine/camera/Epoch';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
@@ -155,9 +156,9 @@ export function replayInput(
       stepped = next;
     } else {
       // A memory taken on another rung is not this one's: it enters as its empty.
-      stepped = stepRow<'body'>(
+      stepped = stepRow<ClimbableKind>(
         from,
-        gestureMemory ?? rowFor<'body'>(from.frame).emptyMemory,
+        gestureMemory ?? rowFor<ClimbableKind>(from.frame).emptyMemory,
         step,
       );
     }

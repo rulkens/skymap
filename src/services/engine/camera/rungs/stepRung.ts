@@ -4,7 +4,11 @@
  * encodes which side of the band the camera is on.
  */
 
+import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
+import type { ClimbableKind } from '../../../../@types/camera/ClimbableKind';
 import type { FramedCameraPose } from '../../../../@types/camera/FramedCameraPose';
+import type { FramedPose } from '../../../../@types/camera/FramedPose';
+import type { ParentOf } from '../../../../@types/camera/ParentOf';
 import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
 import type { RungCtx } from '../../../../@types/camera/RungCtx';
 import { CAMERA_RUNGS } from './cameraRungs';
@@ -15,19 +19,18 @@ import { rungKindOf } from './rungKindOf';
 export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame {
   if (!isWorldArm(current)) {
     const row = climbRowFor(current.frame);
-    // A parent kind reads as a frame only while the world arm is every child's
-    // parent; on release control falls to the loop, which SKIPS a rung parented
-    // on this one rather than engaging it (§2.6.4).
-    if (row.release(current, ctx)) return row.parent;
+    // The parent FRAME, not the parent kind: a site's parent names its host
+    // planet, which only the row can resolve. The conversion is the disengage.
+    if (row.release(current, ctx)) return row.toParent(current, ctx).frame;
   }
   for (const row of Object.values(CAMERA_RUNGS)) {
-    // The world-arm narrowing TS needs: add a rung parented on a body and
-    // `row.engage` stops typechecking — revisit this loop then, it is the
-    // descent's only guard, not a sign the descent is already wired.
-    if (!('parent' in row) || !isWorldArm(current) || row.parent !== rungKindOf(current.frame)) {
-      continue;
-    }
-    const engaged = row.engage(current, ctx);
+    if (!('parent' in row) || row.parent !== rungKindOf(current.frame)) continue;
+    // The guard above IS the proof the loop value cannot carry: `current` sits
+    // in this row's parent frame, which is what `engage` declares (§2.6.3).
+    const engaged = (row as ClimbRow<ClimbableKind>).engage(
+      current as FramedPose<ParentOf[ClimbableKind]>,
+      ctx,
+    );
     if (engaged !== null) return engaged;
   }
   return current.frame;
