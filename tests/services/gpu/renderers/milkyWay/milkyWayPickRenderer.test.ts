@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createMilkyWayPickRenderer } from '../../../../../src/services/gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { MILKY_WAY_CENTER_WORLD } from '../../../../../src/data/milkyWay/galacticCenter';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
+import { MILKY_WAY_PICK_MIN_SIZE_PX } from '../../../../../src/data/milkyWay/milkyWayPickMinSizePx';
 import { Source } from '../../../../../src/data/sources';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
 
@@ -68,14 +69,20 @@ describe('milkyWayPickRenderer (null device)', () => {
     expect(r).toBeDefined();
     // pickMilkyWay / destroy are callable no-ops with no GPU device.
     expect(() =>
-      r.pickMilkyWay(null as unknown as GPURenderPassEncoder, new ArrayBuffer(176)),
+      r.pickMilkyWay(
+        null as unknown as GPURenderPassEncoder,
+        new Float32Array(16),
+        [1280, 720],
+        [0, 0, 0],
+        500,
+      ),
     ).not.toThrow();
     expect(() => r.destroy()).not.toThrow();
   });
 });
 
 describe('milkyWayPickRenderer (stub device)', () => {
-  it('writes the FULLY STATIC uniform once at construction: centre + source code + radiusMpc', () => {
+  it('writes the FULLY STATIC uniform once at construction: centre + source code + radiusMpc + minSizePx', () => {
     // The @group(2) uniform carries only physical scene constants — the
     // apparent size is derived in the vertex shader from the caller's
     // camera uniforms — so ONE construction-time write must cover the
@@ -107,13 +114,16 @@ describe('milkyWayPickRenderer (stub device)', () => {
     // f32 disc world radius at byte 16 — the value the vertex shader
     // projects to apparent pixels.
     expect(f32[4]).toBeCloseTo(MILKY_WAY_RADIUS_MPC);
+    // f32 apparent-size floor at byte 20 — the scene constant that replaced
+    // the galaxy size slider's pick-widened point size.
+    expect(f32[5]).toBe(MILKY_WAY_PICK_MIN_SIZE_PX);
   });
 
-  it('pickMilkyWay self-binds @group(0): uploads the caller bytes to its OWN camera buffer', () => {
-    // pickMilkyWay must upload the caller's complete pick image to its own
-    // buffer and bind @group(0) itself. Dropping the upload + slot-0 bind
-    // leaves the pass with an unbound camera group — a validation error that
-    // silently drops the whole pick submit.
+  it('pickMilkyWay self-binds @group(0): packs the camera into its OWN buffer', () => {
+    // pickMilkyWay must pack the pick-time camera into its own buffer and
+    // bind @group(0) itself. Dropping the upload + slot-0 bind leaves the
+    // pass with an unbound camera group — a validation error that silently
+    // drops the whole pick submit.
     const { device, writeBufferCalls } = makeStubDevice();
     const ctx = {
       device,
@@ -126,13 +136,12 @@ describe('milkyWayPickRenderer (stub device)', () => {
 
     writeBufferCalls.length = 0; // discard the construction write
     const pass = makeStubPass();
-    const uniformBytes = new ArrayBuffer(176);
-    r.pickMilkyWay(pass, uniformBytes);
+    r.pickMilkyWay(pass, new Float32Array(16), [1280, 720], [1, 2, 3], 500);
 
-    // Exactly one upload — the caller's bytes, verbatim, at offset 0.
+    // Exactly one upload — the packed 96-byte camera image, at offset 0.
     expect(writeBufferCalls).toHaveLength(1);
     expect(writeBufferCalls[0]!.offset).toBe(0);
-    expect(writeBufferCalls[0]!.data).toBe(uniformBytes);
+    expect((writeBufferCalls[0]!.data as ArrayBufferView).byteLength).toBe(96);
 
     // Slot 0 is bound by THIS draw (self-bind), alongside the dummy fade (1)
     // and the static MW uniform (2).
