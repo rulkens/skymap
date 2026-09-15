@@ -1,7 +1,9 @@
 /**
  * The Layer settings clusters this app composes in — authority for the seed and
  * the slice's spreads. `settingsSlice` asserts the reducer keys are unique, against
- * the core namespace too.
+ * the core namespace too. `UNFORMED_SETTINGS_FRAGMENTS` is the thirteen clusters that
+ * predate `Layer.settings`; `settingsOf` folds in every Layer's own fragments (empty
+ * today — `APP_COMPOSITION.layers` is `[]`).
  */
 
 import { bodiesSettingsFragment } from '../layers/body/settings/bodiesSettings';
@@ -17,8 +19,10 @@ import { starCatalogsSettingsFragment } from '../layers/starCatalog/settings/sta
 import { structuresSettingsFragment } from '../layers/structure/settings/structuresSettings';
 import { volumesSettingsFragment } from '../layers/volume/settings/volumesSettings';
 import { zoneOfAvoidanceSettingsFragment } from '../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSettings';
+import { settingsOf } from '../utils/layer/settingsOf';
+import { APP_COMPOSITION } from './app';
 
-export const APP_SETTINGS_FRAGMENTS = [
+export const UNFORMED_SETTINGS_FRAGMENTS = [
   galaxyCatalogsSettingsFragment,
   starCatalogsSettingsFragment,
   structuresSettingsFragment,
@@ -32,4 +36,9 @@ export const APP_SETTINGS_FRAGMENTS = [
   filamentsSettingsFragment,
   constellationsSettingsFragment,
   flowSettingsFragment,
+] as const;
+
+export const APP_SETTINGS_FRAGMENTS = [
+  ...UNFORMED_SETTINGS_FRAGMENTS,
+  ...settingsOf(APP_COMPOSITION.layers),
 ] as const;

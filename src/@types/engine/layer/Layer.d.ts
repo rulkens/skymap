@@ -1,8 +1,9 @@
 /**
- * Layer — one self-contained slice of the scene, stating everything core needs to know
- * about it: static contributions as plain data, and runtime-bound ones as closures over
- * the private `Runtime` its own `create` mints. `Runtime` is opaque to core, which only
- * ever hands it back to the same Layer's own methods.
+ * Layer — one self-contained slice of the scene: static contributions as plain data,
+ * runtime-bound ones as closures over the private `Runtime` its own `create` mints
+ * (opaque to core, which only hands it back to the same Layer's methods). The trailing
+ * type parameters default to their erased bounds, so `Layer<string, unknown>` still
+ * works as the composition constraint (`EngineComposition.d.ts`).
  */
 
 import type { SettingsFragmentLike } from '../../settings/SettingsFragmentLike';
@@ -16,24 +17,37 @@ import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerUiSection } from './LayerUiSection';
 import type { SagaFactory } from './SagaFactory';
-import type { PickResolverRow } from './PickResolverRow';
+import type { SelectionKindRow } from './SelectionKindRow';
+import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
+import type { PassState } from '../frame/PassState';
 
-export type Layer<Name extends string, Runtime> = {
+export type Layer<
+  Name extends string,
+  Runtime,
+  Settings extends readonly SettingsFragmentLike[] = readonly SettingsFragmentLike[],
+  Sources extends readonly (readonly [SourceType, SourceEntry])[] = readonly (readonly [
+    SourceType,
+    SourceEntry,
+  ])[],
+  Facts = undefined,
+> = {
   readonly name: Name;
 
   /** This Layer's settings clusters. Absent = no knobs. */
-  readonly settings?: readonly SettingsFragmentLike[];
+  readonly settings?: Settings;
 
   // Static contributions: plain data, readable without booting anything.
   readonly targets?: readonly RenderTargetSpec[];
   readonly sagas?: readonly SagaFactory[];
   /** This Layer's `SOURCE_REGISTRY` rows, keyed by their global `Source` code. */
-  readonly sources?: readonly (readonly [SourceType, SourceEntry])[];
+  readonly sources?: Sources;
+  /** Initial value, const-inferred; `FactsOf<Layers>` types `state.engine[name]`. */
+  readonly facts?: Facts;
   /** The SettingsPanel section: a hand-written component, never generated. */
   readonly ui?: LayerUiSection;
 
   // Lifecycle: this Layer's private renderers, subsystems, data store and asset slots.
-  create(deps: LayerCoreDeps): Runtime;
+  create(deps: LayerCoreDeps<Facts>): Runtime;
   destroy(runtime: Runtime): void;
 
   // Runtime-bound contributions: closures over the Layer's own state.
@@ -41,5 +55,7 @@ export type Layer<Name extends string, Runtime> = {
   assets?(runtime: Runtime): readonly AssetWiringRow[];
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
   labels?(runtime: Runtime): readonly Label2DProducer[];
-  pick?(runtime: Runtime): readonly PickResolverRow[];
+  selection?(runtime: Runtime): readonly SelectionKindRow[];
+  /** Once per frame, after the focus uniform, before any pass; `true` keeps the loop awake. */
+  frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => boolean;
 };
