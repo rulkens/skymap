@@ -44,8 +44,8 @@ slot's debug-panel label reads `famousGalaxy-points` instead of `famous-points` 
 - **One declaration per source (D11).** The nine galaxy entry modules move from `src/data/sources/`
   to `src/layers/galaxyCatalog/sources/` and absorb the four facts
   `GALAXY_CATALOG_SOURCE_REGISTRY` (`galaxyCatalogSourceRegistry.ts:32-74`) and the `ASSET_WIRING`
-  point rows (`assetWiring.ts:222-241`) hold beside them today: `category`, the fetcher **kind**,
-  and the fetch `priority`. `GALAXY_CATALOG_SOURCE_ROWS`, a `readonly [code, entry]` tuple in the
+  point rows (`assetWiring.ts:222-241`) hold beside them today: `category` and the fetch `priority` (the fetcher is chosen by
+  `category`, Ruling 8). `GALAXY_CATALOG_SOURCE_ROWS`, a `readonly [code, entry]` tuple in the
   `Sources` shape 04b declared, is the Layer's future `sources` field and today's only authority:
   `SOURCE_REGISTRY` becomes the 24 unformed entries plus `sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS)`,
   `GALAXY_CATALOG_SOURCES` (the code list every consumer iterates) and `GalaxyCatalogId` derive from
@@ -105,11 +105,11 @@ Verified in this worktree while writing the plan; the spec's line references pre
 | 1   | `Sources` IS threaded: `Layer.sources?: Sources` with the `readonly (readonly [SourceType, SourceEntry])[]` bound, `defineLayer` takes it `const`. `ComposedSources<Layers>` exists, type-only, no consumer (04b Ruling 8).                                                                                                                                                                                                                      | `Layer.d.ts:28-31,43`, `defineLayer.ts:16`, `ComposedSources.d.ts`                                                                                                                                                  | The tuple this plan mints is already the right shape for PR-D's `sources:` field; `ComposedSources` is untouched here.                                                                                                                                                               |
 | 2   | The ratchet sweeps `src/services/engine/**` and `src/state/**` inbound (type-only imports count) and `src/layers/**` outbound; `src/data/**`, `src/@types/**`, `src/utils/**` are outside both sweeps.                                                                                                                                                                                                                                           | `layerImportBoundary.test.ts:79-114`                                                                                                                                                                                | Ruling 1: the tuple is reached through `src/data/sources.ts`; wiring never imports `src/layers/`.                                                                                                                                                                                    |
 | 3   | `GALAXY_CATALOG_SOURCES` (UI/draw order: Synthetic, Famous, 2MRS, SDSS, GLADE, Milliquas, DesiDeep, DesiWedge, DesiSgw) has fourteen importers and its order is load-bearing for `catalogStore`'s back-to-front draw iteration; `GALAXY_CATALOG_SOURCE_REGISTRY` (enum order) has three: the mint loop, the two derived lists, and their tests. The brief's suggested tuple name `GALAXY_CATALOG_SOURCES` is therefore taken.                    | `sources.ts:213-223`, `catalogStore.ts:38,117-125`, `wireSlots.ts:110-112`, `galaxyCatalogSourceRegistry.ts:83-89`                                                                                                  | The tuple is `GALAXY_CATALOG_SOURCE_ROWS` in `GALAXY_CATALOG_SOURCES`' order; the code list derives from it, so one order survives and `catalogStore.test.ts:169-190` pins it unchanged. The enum-order test (`galaxyCatalogSourceRegistry.test.ts:123-138`) dies with the registry. |
-| 4   | The registry's `fetcher` is a FUNCTION reference; `galaxyCatalogFetcher` imports `data/tierTargets` → `data/sources`.                                                                                                                                                                                                                                                                                                                            | `galaxyCatalogSourceRegistry.ts:19-20,33-73`, `galaxyCatalogFetcher.ts:42`                                                                                                                                          | An entry cannot hold the function without a `data → services` edge and a module-init cycle through `sources.ts`; the entry holds a KIND, the mint helper maps kind → function (Task 2).                                                                                              |
+| 4   | The registry's `fetcher` is a FUNCTION reference; `galaxyCatalogFetcher` imports `data/tierTargets` → `data/sources`.                                                                                                                                                                                                                                                                                                                            | `galaxyCatalogSourceRegistry.ts:19-20,33-73`, `galaxyCatalogFetcher.ts:42`                                                                                                                                          | An entry cannot hold the function without a `data → services` edge and a module-init cycle through `sources.ts`; the mint helper picks the function from `entry.category` (Ruling 8, Task 2).                                                                                        |
 | 5   | `shortName` equals `id` for eight of nine sources; only Famous differs (`famous` vs `famousGalaxy`). Slot names `${shortName}-points` key `deps.allSlots` and the debug panel; nothing else reads them.                                                                                                                                                                                                                                          | `galaxyCatalogSourceRegistry.ts:33-73,104`, `installLoadProgress.ts:43-91`; `sources/*.ts:7`                                                                                                                        | Ruling 3: `shortName` is not absorbed; `id` names the slot.                                                                                                                                                                                                                          |
 | 6   | The Synthetic point row demands on `ctx.request('syntheticFallback')`, not the settings toggle; every other point row demands on `settings.galaxyCatalogs.items[id].enabled`. D6 replaces the request flag with a slot-state predicate in PR-D.                                                                                                                                                                                                  | `assetWiring.ts:79-91,231-241`, `createSyntheticFallback.ts:158`                                                                                                                                                    | The derived row branches on `entry.category === 'synthetic'` (Ruling 2); PR-D changes the branch's body, not its existence.                                                                                                                                                          |
 | 7   | The structure ring vertex stage declares `Uniforms { cam: CameraUniforms }` — 80 bytes, nothing else; the renderer's pick buffer is 192 bytes only because `pickRing` uploads the whole `pickUniformBytesOf` image. The Milky Way pick vertex reads `cam`, `pointSizePx`, `camPosWorld`, `pxPerRad` through a 112-byte prefix mirror of the points struct.                                                                                       | `structureMarker/io.wesl:35-39`, `structureMarkerRenderer.ts:354-366`, `milkyWay/pick/io.wesl:67-75`, `vertex.wesl:53-63`                                                                                           | The spec's "WESL struct sizes match the 80-byte prefix" check passes for structures with no shader edit; the Milky Way needs its own struct (Task 5).                                                                                                                                |
-| 8   | The Milky Way floor is `u.pointSizePx` = `settings.galaxyCatalogs.sizePx + PICK_PADDING_PX`; at the default slider that is `2.5 + 4 = 6.5` px.                                                                                                                                                                                                                                                                                                   | `pickUniformBytesOf.ts:65`, `defaults.ts:35`, `pickPaddingPx.ts:15`                                                                                                                                                 | `MILKY_WAY_PICK_MIN_SIZE_PX = DEFAULT_POINT_SIZE_PX + PICK_PADDING_PX` reproduces today's default-slider bytes exactly; only a moved slider observes the change.                                                                                                                     |
+| 8   | The Milky Way floor is `u.pointSizePx` = `settings.galaxyCatalogs.sizePx + PICK_PADDING_PX`; at the default slider that is `2.5 + 4 = 6.5` px.                                                                                                                                                                                                                                                                                                   | `pickUniformBytesOf.ts:65`, `defaults.ts:35`, `pickPaddingPx.ts:15`                                                                                                                                                 | `MILKY_WAY_PICK_MIN_SIZE_PX = 6.5` (a literal, Ruling 9) reproduces today's default-slider bytes exactly; only a moved slider observes the change.                                                                                                                                   |
 | 9   | Shell readers of the famous meta: exactly one, `CommandPaletteContainer` via `selectFamousGalaxiesMeta`; no hook, no other component, no saga selects it (sagas read it through `ResolveDeps`, engine-side). The redux copy is written only by the sidecar slot.                                                                                                                                                                                 | `CommandPaletteContainer.tsx:32,48,53`, `selectors.ts:70-71`, `engineSlice.ts:117-121`, `famousGalaxiesMetaSlot.ts:44,50`; tests `engineSlice.test.ts:43`                                                           | Ruling 4: the redux copy (`engineFamousGalaxiesMetaReported`, `engine.meta.famousGalaxies`, `selectFamousGalaxiesMeta`) stays until PR-D publishes the `famousMeta` fact — the shell has no other channel, and "a deletion rides the PR that lands its replacement".                 |
 | 10  | Engine-side readers of `state.famousGalaxiesMeta` / `ResolveDeps.famousGalaxiesMeta`: `engine.ts:415` (resolveDeps), `runFrame.ts:231,262`, `produceFamousGalaxyLabels.ts:181`, `diskRadiusRingPass.ts:79`, `galaxyCatalogSelectionRow.ts:40,48,75-76,148`. The subsystem INPUT fields named `famousGalaxiesMeta` (`HiResFamousSubsystem.d.ts:36`, `TexturedDiskSubsystem.d.ts:32`) are values `runFrame` passes, not reads of the engine state. | as listed                                                                                                                                                                                                           | Task 6 re-points the six; the subsystem input names are untouched.                                                                                                                                                                                                                   |
 | 11  | About eleven test fixtures build a `ResolveDeps` with `famousGalaxiesMeta`; the label-producer test writes the `EngineState` getter through a cast.                                                                                                                                                                                                                                                                                              | `createTestStore.ts:61-66`, `hoverPickDriver.test.ts:90-95`, `coreSelectionRows.test.ts:7`, `composeSelectionRows.test.ts:68-86`, `tests/state/**` (Task 6 lists them), `produceFamousGalaxyLabels.test.ts:130-138` | Fixture sweep, no new assertion.                                                                                                                                                                                                                                                     |
@@ -132,7 +132,7 @@ file that must import the tuple anyway to assemble `SOURCE_REGISTRY` — is the 
 codes and the entries, which it already reads as `GALAXY_CATALOG_SOURCES` and `SOURCE_REGISTRY[code]`
 from `data/sources`; both stay exported there, the first now derived from the tuple. Cost: a
 `data → layers` edge, safe only while the entry modules stay leaves (they import `data/source.ts`
-and types, nothing else — Finding row 4 is why the fetcher is a kind). PR-D must re-home the composed
+and types, nothing else — Finding row 4 is why no entry holds a fetcher). PR-D must re-home the composed
 `SOURCE_REGISTRY` outside `src/data/` when it takes `composeSources(APP_COMPOSITION.layers)`: that
 import pulls the Layer's renderers, which import `data/sources` (a module-init cycle) and are
 `services/` (which `data/` may not import). Recorded under Deferred. The alternative — an allow-list
@@ -176,6 +176,17 @@ seeing plain rows; the table that is read is the table that runs. A parent that 
 companion, or absent, throws at module init — a chain would otherwise surface as a `TypeError` in a
 demand predicate, swallowed by the per-row guard, starving one asset silently.
 
+**Ruling 8 — no `fetcher` field on the entry (design-time radar).** The fetcher kind would be
+`'synthetic'` exactly when `category` is `'synthetic'`: one fact in two fields, and an entry with
+`category: 'synthetic', fetcher: 'catalog'` would be representable. The mint helper chooses the
+fetcher from `category`; `GalaxyCatalogFetcherKind` is not minted. The spec's "fetcher kind" is
+absorbed as a derivation, not a field.
+
+**Ruling 9 — the Milky Way floor is a literal, not `DEFAULT_POINT_SIZE_PX + PICK_PADDING_PX`
+(design-time radar).** D12 un-braids the Milky Way's hit target from the galaxy size setting;
+deriving the constant from that setting's default would re-braid it one level down (a changed
+default moves the Milky Way floor). `6.5` with a comment naming where it came from.
+
 **Ruling 7 — the Milky Way's minimum pick size rides the static `@group(2)` uniform.** It is a
 scene constant like the centre and the radius already there; the 32-byte struct has room at byte 20. The per-pick `@group(0)` struct is then exactly the prefix plus the two camera facts the sizing
 reads: 96 bytes. The spec does not say which group carries the constant.
@@ -197,7 +208,6 @@ src/layers/galaxyCatalog/sources/galaxyCatalogSourceRows.ts     GALAXY_CATALOG_S
 src/@types/data/SourceRecordOf.d.ts                              { [R in Rows[number] as R[0]]: R[1] }
 src/utils/data/sourceRecordOf.ts                                 Object.fromEntries + the cast §4.7 calls unavoidable
 src/@types/data/galaxyCatalog/GalaxyCatalogSourceCategory.d.ts   'survey' | 'curated' | 'synthetic' (out of GalaxyCatalogSourceConfig.d.ts)
-src/@types/data/galaxyCatalog/GalaxyCatalogFetcherKind.d.ts      'catalog' | 'synthetic'
 src/@types/loading/CompanionAssetRow.d.ts                        { key, factory, companionOf }
 src/utils/loading/expandCompanionRows.ts                         the fold (Ruling 6)
 src/data/milkyWay/milkyWayPickMinSizePx.ts                       MILKY_WAY_PICK_MIN_SIZE_PX
@@ -212,7 +222,7 @@ src/data/sources.ts                                              UNFORMED_SOURCE
 src/@types/data/galaxyCatalog/GalaxyCatalogId.d.ts               derived from the tuple
 src/@types/data/galaxyCatalog/GalaxyCatalogSourceEntry.d.ts      +category, +fetcher, +priority
 src/layers/galaxyCatalog/sources/*.ts (nine)                     the three absorbed fields
-src/services/engine/wiring/wireGalaxyCatalogSourceSlot.ts        takes the entry; kind → fetcher map; −registry, −derived lists
+src/services/engine/wiring/wireGalaxyCatalogSourceSlot.ts        takes the entry; fetcher chosen by category; −registry, −derived lists
 src/services/engine/phases/wireSlots.ts                          mints over GALAXY_CATALOG_SOURCES
 src/services/engine/wiring/createSyntheticFallback.ts            derives its two lists locally
 src/services/engine/wiring/assetWiring.ts                        derived point rows; companion row; expandCompanionRows
@@ -322,8 +332,7 @@ tuple, not a barrel: it re-exports nothing. `docs/DATA.md:57` names the galaxy e
 `src/layers/galaxyCatalog/sources/*.ts` (nine), `src/services/engine/wiring/galaxyCatalogSourceRegistry.ts`
 → `wireGalaxyCatalogSourceSlot.ts` (move-files; edits at old `:1-9,32-89,97-104,137-139`),
 `src/services/engine/phases/wireSlots.ts:78-81,105-112`, `src/services/engine/wiring/createSyntheticFallback.ts:55-61,82-84,90`
-(modify); `src/@types/data/galaxyCatalog/GalaxyCatalogSourceCategory.d.ts`,
-`src/@types/data/galaxyCatalog/GalaxyCatalogFetcherKind.d.ts` (new); `src/@types/engine/wiring/GalaxyCatalogSourceConfig.d.ts`
+(modify); `src/@types/data/galaxyCatalog/GalaxyCatalogSourceCategory.d.ts` (new); `src/@types/engine/wiring/GalaxyCatalogSourceConfig.d.ts`
 (delete); tests `tests/services/engine/wiring/galaxyCatalogSourceRegistry.test.ts` (dragged by the
 move; edits at `:1-32,52-58,123-138,147-157`), `tests/services/engine/wiring/createSyntheticFallback.test.ts:26,210,269`,
 `tests/services/engine/wiring/engineSliceDispatches.test.ts:35,449`, `tests/services/engine/phases/wireSlots.test.ts:200-215`.
@@ -331,9 +340,8 @@ move; edits at `:1-32,52-58,123-138,147-157`), `tests/services/engine/wiring/cre
 **Produces:**
 
 ```ts
-// GalaxyCatalogSourceEntry — three fields added; every existing field unchanged.
+// GalaxyCatalogSourceEntry — two fields added; every existing field unchanged.
 readonly category: GalaxyCatalogSourceCategory;   // survey ×7 · curated: Famous · synthetic: Synthetic
-readonly fetcher: GalaxyCatalogFetcherKind;       // 'synthetic' for Synthetic, 'catalog' otherwise
 readonly priority: number;                        // the ASSET_WIRING ranks, verbatim: Synthetic 5, Famous 20,
                                                   // TwoMRS 40, SDSS 60, Milliquas 61, Glade 62, DesiDeep 63,
                                                   // DesiSgw 64, DesiWedge 65
@@ -346,9 +354,9 @@ export function wireGalaxyCatalogSourceSlot(
 ): void;
 ```
 
-**Behaviour:** the mint helper reads `entry.code`, `entry.id`, `entry.fetcher` and maps the kind
-through a module-private `{ catalog: galaxyCatalogFetcher, synthetic: syntheticPointFetcher }`
-(Finding row 4 is why the entry cannot hold the function). Slot name `${entry.id}-points`; the
+**Behaviour:** the mint helper reads `entry.code`, `entry.id`, `entry.category` and picks
+`syntheticPointFetcher` for `'synthetic'`, `galaxyCatalogFetcher` otherwise (Finding row 4 is why
+the entry cannot hold the function; Ruling 8 is why it holds no kind either). Slot name `${entry.id}-points`; the
 log line at old `:137-139` uses `galaxyCatalogIdOf(e.source)` and `SHORT_NAME_BY_SOURCE` goes
 (Ruling 3). `GALAXY_CATALOG_SOURCE_REGISTRY`, `GALAXY_CATALOG_POINT_SOURCES` and
 `TIER_FETCHED_POINT_SOURCES` are deleted; `wireSlots.ts:110-112` becomes
@@ -372,8 +380,8 @@ stubbing `wireGalaxyCatalogSourceSlot`.
       sweep `tests/` for the old basename in `vi.mock` string paths (`wireSlots.test.ts:211`,
       `createSyntheticFallback.test.ts`, `engineSliceDispatches.test.ts`) — ts-morph does not rewrite
       string literals.
-- [ ] No new test: three literal fields per entry are a registry restatement; the kind → fetcher map
-      is total by its record type.
+- [ ] No new test: two literal fields per entry are a registry restatement; the category → fetcher
+      choice is a two-arm conditional the synthetic-fallback tests already exercise.
 - [ ] `npm run typecheck:fast`; `npm test -- wireGalaxyCatalogSourceSlot createSyntheticFallback engineSliceDispatches wireSlots` green. Commit.
 
 ## Task 3 — derived point rows and `companionOf`; backlog B, C consumed, A rewritten
@@ -516,7 +524,7 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 ```ts
 // src/data/milkyWay/milkyWayPickMinSizePx.ts — the padded floor every pick point gets at the
 // default slider; a constant, so the Milky Way's hit target no longer follows the galaxy size knob.
-export const MILKY_WAY_PICK_MIN_SIZE_PX = DEFAULT_POINT_SIZE_PX + PICK_PADDING_PX; // 6.5
+export const MILKY_WAY_PICK_MIN_SIZE_PX = 6.5; // today's default slider (2.5) + PICK_PADDING_PX (4); a literal on purpose (Ruling 9)
 
 // MilkyWayPickRenderer — the camera facts the vertex stage reads, by value; the renderer packs.
 pickMilkyWay(
@@ -589,7 +597,7 @@ minimum hit target no longer moves with it. At the default slider the packed flo
       sentinel values and reading the captured `writeBuffer` payload. Cases:
       `Uniforms is the 80-byte CameraUniforms prefix, then camPosWorld at 80 and pxPerRad at 92, 96 bytes total`
       (WESL offsets + size); `pickMilkyWay uploads the prefix, camPosWorld and pxPerRad where the WESL
-  struct reads them, and nothing longer` (sentinel `viewportPx.x`, three `camPosWorld` lanes and
+struct reads them, and nothing longer` (sentinel `viewportPx.x`, three `camPosWorld` lanes and
       `pxPerRad` found at the WESL offsets; `byteLength === 96`);
       `MilkyWayPickUniforms places minSizePx at byte 20 in a 32-byte struct`. Real bug class: a
       reordered field or a dropped pad on either side — invisible to both compilers, a silent
@@ -685,7 +693,7 @@ state.data.galaxies.famousMeta` — a `state` with `createEngineData()`, a store
       else; `GALAXY_CATALOG_SOURCE_ROWS` is exported from `galaxyCatalogSourceRows.ts` and is the
       only place the nine are listed; `SOURCE_REGISTRY` is `{ ...UNFORMED_SOURCE_REGISTRY, ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS) }`;
       `GALAXY_CATALOG_SOURCES` and `GalaxyCatalogId` derive from the tuple.
-- [ ] `GalaxyCatalogSourceEntry` carries `category`, `fetcher` (a kind) and `priority`;
+- [ ] `GalaxyCatalogSourceEntry` carries `category` and `priority` (no fetcher field);
       `GALAXY_CATALOG_SOURCE_REGISTRY`, `GALAXY_CATALOG_POINT_SOURCES`, `TIER_FETCHED_POINT_SOURCES`,
       `GalaxyCatalogSourceConfig` and `galaxyCatalogSourceRegistry.ts` do not exist;
       `wireGalaxyCatalogSourceSlot.ts` does and takes an entry.
@@ -738,7 +746,7 @@ pass moves; `state.layers` is still `[]`.
   `services/`). `GalaxyCatalogId` / `GalaxyCatalogSourceType` to `src/layers/galaxyCatalog/types/`
   once their swept importers (`assetWiring.ts`, `state/settings/selectors.ts`) leave core.
 - `assets(runtime)` taking over the derived point rows and the companion row;
-  `wireGalaxyCatalogSourceSlot` and its kind → fetcher map into `create`; the Synthetic branch's
+  `wireGalaxyCatalogSourceSlot` and its category → fetcher choice into `create`; the Synthetic branch's
   body (`ctx.request` → a point-slot-state predicate, D6).
 - `pickUniformBytesOf`, `packGalaxyPointUniforms`' 192-byte image and `galaxyPointVertexLayout`'s
   `UNIFORM_BYTES` re-export into the Layer (the one remaining reader is `frame/passes/galaxyPointSpritesPass.ts`,
