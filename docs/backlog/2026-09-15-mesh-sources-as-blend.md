@@ -40,3 +40,9 @@ Rebake after an edit stays user-run: `npm run prebake-mesh -- <key>` then
 `npm run build-meshes`.
 
 Sequencing: after the PBR feature lands — it edits the same Python.
+
+Note (deletion audit at /feature-done, 2026-09-15): the solar-system sky under the
+probe (`cubeFaceBlitRenderer`, `skyCubemapBlitPass`, the `solarSystem` capture row,
+~300 src / 100 test lines) has no visible payoff until a material is made metallic;
+the user kept it for this edit path. If the edit never happens, that bundle is the
+first thing to delete.
