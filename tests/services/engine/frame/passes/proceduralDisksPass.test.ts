@@ -45,12 +45,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: { draw: vi.fn() } as any,
     renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
-    texturedDisks: {
-      lastOutput: { quads: [], disks: [] },
-      hasInFlightWork: () => false,
-    } as any,
     // Nothing in this file reads bodyPose — a stub that never resolves a
     // body is a safe default, overridable like every other field.
     bodyPose: () => null,

@@ -67,10 +67,9 @@ const NO_ANIM = {
  * Minimal state covering every term shouldKeepTicking reads. All terms default
  * to their AT-REST value (nothing animating); each test flips exactly one.
  *
- * `isEngineReady` is left false (null GPU handles), so the textured-disk term
- * short-circuits to false without needing a thumbnail subsystem — the tests
- * that care about flow/fades/focus don't depend on it. The one test that
- * exercises the in-flight-thumbnail term builds a ready state explicitly.
+ * `subsystems.texturedDisks` is left null (D13: the term reads it directly,
+ * `?.hasInFlightWork() ?? false`, with no bootstrap gate), so it short-
+ * circuits to false without needing a thumbnail subsystem.
  */
 function makeState(over: {
   flowEnabled?: boolean;

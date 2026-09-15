@@ -84,9 +84,7 @@ export function deriveFrameContext(
   if (!isEngineReady(state)) {
     return { isReady: false };
   }
-  const galaxyPointRenderer = state.gpu.galaxyPointRenderer;
   const renderTargets = state.gpu.renderTargets;
-  const texturedDisks = state.subsystems.texturedDisks;
 
   const cam = assembleOrbitCamera(pose, projection, poseBasis, upBasis);
 
@@ -246,12 +244,10 @@ export function deriveFrameContext(
     focusBlend: 0,
     visibleSourceMask,
     focus: ZERO_FOCUS,
-    galaxyPointRenderer,
     renderTargets,
     // The executor populates this as it opens the first pass against each target;
     // a later pass sampling an earlier target's texture reads it to know whether
     // that target actually rendered this frame.
     renderedTargets: new Set<string>(),
-    texturedDisks,
   };
 }

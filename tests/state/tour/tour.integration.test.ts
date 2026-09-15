@@ -225,10 +225,10 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   const FOV_Y_RAD = (60 * Math.PI) / 180;
   const CANVAS = { width: 1280, height: 720 };
 
+  // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
   function makeDrawCtx(
     nowMs: number,
     camPos: Readonly<[number, number, number]>,
-    drawSpy: ReturnType<typeof vi.fn>,
   ): ReadyFrameContext {
     return {
       nowMs,
@@ -238,7 +238,6 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       canvasSize: CANVAS,
       drawPxPerRad: CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2)),
       visibleSourceMask: 0xffffffff,
-      galaxyPointRenderer: { draw: drawSpy },
     } as unknown as ReadyFrameContext;
   }
 
@@ -254,7 +253,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
         bias: {},
       },
       selection: { select: null, hover: null, focus: null },
-      gpu: { focusUniform: { bindGroup: {} } },
+      gpu: { focusUniform: { bindGroup: {} }, galaxyPointRenderer: null },
     } as unknown as EngineState;
   }
 
@@ -262,13 +261,24 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // shader multiplies into every point's alpha.
   function drawnSurveyOpacity(state: EngineState, nowMs: number): number {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
-    const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS, drawSpy);
+    // galaxyPointSpritesPass reads its renderer off `state.gpu` (D13), so the
+    // spy rides a state copy rather than the ctx `makeDrawCtx` builds.
+    const stateWithRenderer = {
+      ...state,
+      gpu: { ...state.gpu, galaxyPointRenderer: { draw: drawSpy } },
+    } as unknown as EngineState;
+    const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);
     const view = {
       vp: new Float32Array(16),
       viewportPx: [CANVAS.width, CANVAS.height],
       camPos: SURVEY_CAM_POS,
     } as unknown as SlabView;
-    galaxyPointSpritesPass.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
+    galaxyPointSpritesPass.draw(
+      {} as unknown as GPURenderPassEncoder,
+      view,
+      ctx,
+      stateWithRenderer,
+    );
     const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
     return settings.fadeOpacityOf(Source.SDSS);
   }
@@ -306,13 +316,13 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
 
     const unmasked = deriveMilkyWayCloudAlpha(
       makeDrawState(fades, makeClipStub(1)),
-      makeDrawCtx(0, MW_CAM_POS, vi.fn()),
+      makeDrawCtx(0, MW_CAM_POS),
     );
     expect(unmasked).toBe(1);
 
     const masked = deriveMilkyWayCloudAlpha(
       makeDrawState(fades, makeClipStub(0.4)),
-      makeDrawCtx(0, MW_CAM_POS, vi.fn()),
+      makeDrawCtx(0, MW_CAM_POS),
     );
     expect(masked).toBeCloseTo(0.4, 6);
   });

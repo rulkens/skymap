@@ -13,7 +13,6 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RootState } from '../../../store/types';
 import { selectCameraActive } from '../../../state/camera/selectors';
 import { selectIsManualPlaying } from '../../../state/time/selectors';
-import { isEngineReady } from './engineReady';
 import { slotReady } from '../../loading/slotReady';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 
@@ -44,7 +43,7 @@ export function shouldKeepTicking(
 ): boolean {
   return (
     selectCameraActive(s) ||
-    (isEngineReady(state) && state.subsystems.texturedDisks.hasInFlightWork()) ||
+    (state.subsystems.texturedDisks?.hasInFlightWork() ?? false) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
     (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||

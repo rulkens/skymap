@@ -147,9 +147,11 @@ describe('cubemapFaceContext', () => {
         nowMs: 0,
       }),
     ).toBeNull();
+    // D13: the galaxy/pick renderers are no longer part of isEngineReady's
+    // gate — only the two core handles (renderTargets, compositor) block.
     expect(
       cubemapFaceContext({
-        state: makeState({ galaxyPointRenderer: null }),
+        state: makeState({ renderTargets: null }),
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,
@@ -160,7 +162,7 @@ describe('cubemapFaceContext', () => {
     ).toBeNull();
     expect(
       cubemapFaceContext({
-        state: makeState({ galaxyPickRenderer: null }),
+        state: makeState({ compositor: null }),
         eyeMpc: EYE_MPC,
         face: 0,
         faceSizePx: 256,

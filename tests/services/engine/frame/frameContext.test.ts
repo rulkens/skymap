@@ -59,13 +59,14 @@ const RESTING_ARM: FramedCameraPose = absoluteArm(RESTING_POSE);
 const BASIS: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 /**
- * Build an `EngineState`-shaped fixture with the guard fields
- * (`booted`, `gpu.galaxyPointRenderer`, `gpu.renderTargets`,
- * `gpu.galaxyPickRenderer`, `gpu.compositor`, `subsystems.texturedDisks`)
- * populated by default. Each test can clear any one to exercise the not-ready
- * branch. The rendered camera comes from
- * `assembleOrbitCamera(pose, projection, poseBasis, upBasis)` passed as
- * arguments.
+ * Build an `EngineState`-shaped fixture with the two `isEngineReady` guard
+ * fields (`gpu.renderTargets`, `gpu.compositor`) plus `booted` populated by
+ * default. Each test can clear any one to exercise the not-ready branch. The
+ * `galaxyPointRenderer`/`galaxyPickRenderer`/`texturedDisks` fields are
+ * ordinary (non-gating, D13) `EngineState` shape, kept here only because
+ * `deriveSlabs`/`visibleSlabBodies` read past them unconditionally. The
+ * rendered camera comes from `assembleOrbitCamera(pose, projection,
+ * poseBasis, upBasis)` passed as arguments.
  */
 function makeState(
   overrides: {
@@ -130,6 +131,22 @@ describe('deriveFrameContext — not-ready branch', () => {
   it('returns isReady:false when gpu.renderTargets is null', () => {
     const ctx = deriveFrameContext(
       makeState({ renderTargets: null }),
+      makeCanvas(),
+      RESTING_POSE,
+      RESTING_ARM,
+      PROJECTION,
+      BASIS,
+      BASIS,
+      0xffffffff,
+      0,
+      CONST_J2000,
+    );
+    expect(ctx.isReady).toBe(false);
+  });
+
+  it('returns isReady:false when gpu.compositor is null', () => {
+    const ctx = deriveFrameContext(
+      makeState({ compositor: null }),
       makeCanvas(),
       RESTING_POSE,
       RESTING_ARM,
