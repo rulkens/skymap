@@ -17,7 +17,7 @@
  *     of sunlight surviving from a point `(r, mu)` to the top of atmosphere.
  *   - **Multi-scatter** (32×32) — baked ONCE at construction, AFTER transmittance
  *     (it samples it). Hillaire's isotropic higher-order estimate.
- *   - **Sky-view** (192×108) — baked EVERY FRAME (`encodeSkyView`), because it
+ *   - **Sky-view** (192×108) — baked EVERY FRAME (`dispatchSkyView`), because it
  *     folds in the current camera altitude + sun direction. Samples both startup
  *     LUTs and composes the final in-scattered sky radiance.
  *
@@ -70,12 +70,17 @@ import type { Renderer } from './Renderer';
 
 export type AtmosphereShellRenderer = Renderer & {
   /**
-   * Regenerate body `bodyId`'s per-frame sky-view LUT into its own texture via a
-   * compute pass recorded into the SAME frame `encoder` (before the foreground
-   * render pass opens). Writes `skyViewUniforms` to that body's `SkyViewParams`
-   * buffer first, then dispatches. THROWS on an unknown `bodyId` (a programming
-   * error — callers only pass `atmosphereDrawList` ids, which come from the same
-   * table this renderer bundles). Modeled on `flowFieldRenderer.encodeCompute`.
+   * Regenerate body `bodyId`'s per-frame sky-view LUT into its own texture, as
+   * one dispatch into the CALLER's open compute pass (`encodeAtmosphereSkyView`
+   * opens it in the frame's prelude, before the foreground render pass). Writes
+   * `skyViewUniforms` to that body's `SkyViewParams` buffer first, then
+   * dispatches. THROWS on an unknown `bodyId` (a programming error — callers
+   * only pass `atmosphereDrawList` ids, which come from the same table this
+   * renderer bundles).
+   *
+   * The caller owns the pass, not this method, so the whole bake bills ONE
+   * GPU-timing slot however many bodies it covers; each body's own params
+   * buffer and output LUT are what make sharing a pass hazard-free.
    *
    * `skyViewUniforms` is the 16-byte (4 × f32) `SkyViewParams` record the caller
    * (Task 6) packs — written to the internal buffer VERBATIM, so its layout is
@@ -97,7 +102,11 @@ export type AtmosphereShellRenderer = Renderer & {
    *           alongside `twilightSoftness`, likewise sourced from the body's
    *           `AtmosphereParams` row.
    */
-  encodeSkyView(encoder: GPUCommandEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
+  dispatchSkyView(
+    pass: GPUComputePassEncoder,
+    bodyId: string,
+    skyViewUniforms: Float32Array,
+  ): void;
 
   /**
    * Upload the host body's ring-alpha strip and rebind it at the shell's
@@ -132,4 +141,16 @@ export type AtmosphereShellRenderer = Renderer & {
    * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
    */
   draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array, inside: boolean): void;
+
+  /**
+   * Called once per frame with the live tier's sky-view LUT texel size
+   * (mirrors `flowFieldRenderer.reconcile(seed)` — an object param, not
+   * positionals). A no-op when `skyViewLutSize` matches the size last built
+   * (the common case, every frame); on a change, every bundle's `skyViewTex`
+   * is destroyed and recreated at the new size and both bind groups that
+   * reference it (`skyViewBindGroup`, `shellBindGroup`) are rebuilt. The
+   * shader itself needs no change — `skyViewLut.wesl` derives its bounds from
+   * `textureDimensions(outTex)`.
+   */
+  reconcile(config: { readonly skyViewLutSize: readonly [number, number] }): void;
 };

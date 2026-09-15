@@ -430,6 +430,13 @@ export function createAtmosphereShellRenderer(
   // groups wiring those to the shared pipelines. Built here, stored by id.
   const bundles = new Map<string, AtmosphereBundle>();
 
+  /** The sky-view LUT size actually built right now, distinct from the
+   *  construction-time default above — `reconcile` (tier-switchable size,
+   *  see `skyViewLutSizeByTier.ts`) rewrites this, and `dispatchSkyView`'s
+   *  dispatch grid tracks it so a shrunk texture is not still dispatched at
+   *  the old, larger workgroup count. */
+  let currentSkyViewLutSize: readonly [number, number] = SKY_VIEW_LUT_SIZE;
+
   function createLut(label: string, size: readonly [number, number]): GPUTexture {
     return device.createTexture({
       label,
@@ -452,7 +459,6 @@ export function createAtmosphereShellRenderer(
 
     const transmittanceView = transmittanceTex.createView();
     const multiScatterView = multiScatterTex.createView();
-    const skyViewView = skyViewTex.createView();
 
     // ScatteringParams: written once (the baked constants never change).
     const scatteringBuffer = device.createBuffer({
@@ -494,17 +500,12 @@ export function createAtmosphereShellRenderer(
       ],
     });
 
-    const skyViewBindGroup = device.createBindGroup({
-      label: `atmosphere-skyview-bg-${bodyId}`,
-      layout: skyViewBgl,
-      entries: [
-        { binding: 0, resource: { buffer: scatteringBuffer } },
-        { binding: 1, resource: { buffer: skyViewParamsBuffer } },
-        { binding: 2, resource: transmittanceView },
-        { binding: 3, resource: multiScatterView },
-        { binding: 4, resource: sampler },
-        { binding: 5, resource: skyViewView },
-      ],
+    const skyViewBindGroup = buildSkyViewBindGroup(bodyId, {
+      scatteringBuffer,
+      skyViewParamsBuffer,
+      transmittanceTex,
+      multiScatterTex,
+      skyViewTex,
     });
 
     const shellBindGroup = buildShellBindGroup(bodyId, {
@@ -527,6 +528,34 @@ export function createAtmosphereShellRenderer(
       skyViewBindGroup,
       shellBindGroup,
     };
+  }
+
+  /** (Re)build a body's sky-view bind group. Split out (mirrors
+   *  `buildShellBindGroup` below) so `reconcile` can rebind binding 5 to a
+   *  resized `skyViewTex` without re-deriving the other four entries. */
+  function buildSkyViewBindGroup(
+    bodyId: string,
+    res: Pick<
+      AtmosphereBundle,
+      | 'scatteringBuffer'
+      | 'skyViewParamsBuffer'
+      | 'transmittanceTex'
+      | 'multiScatterTex'
+      | 'skyViewTex'
+    >,
+  ): GPUBindGroup {
+    return device.createBindGroup({
+      label: `atmosphere-skyview-bg-${bodyId}`,
+      layout: skyViewBgl,
+      entries: [
+        { binding: 0, resource: { buffer: res.scatteringBuffer } },
+        { binding: 1, resource: { buffer: res.skyViewParamsBuffer } },
+        { binding: 2, resource: res.transmittanceTex.createView() },
+        { binding: 3, resource: res.multiScatterTex.createView() },
+        { binding: 4, resource: sampler },
+        { binding: 5, resource: res.skyViewTex.createView() },
+      ],
+    });
   }
 
   /** (Re)build a body's shell bind group. Split out so `setRingTexture` can swap
@@ -565,7 +594,7 @@ export function createAtmosphereShellRenderer(
   // submit (the two-pass encoder lesson `flowFieldRenderer` documents). The loop
   // repeats the pair per body inside the same encoder; do NOT submit per body. The
   // sky-view LUT is NOT baked here — it depends on the per-frame camera + sun state
-  // (`encodeSkyView`).
+  // (`dispatchSkyView`).
   {
     const encoder = device.createCommandEncoder({ label: 'atmosphere-startup-bake' });
 
@@ -607,26 +636,45 @@ export function createAtmosphereShellRenderer(
     return bundle;
   }
 
-  // ── encodeSkyView (per frame) ──────────────────────────────────────────────
+  // ── dispatchSkyView (per frame) ────────────────────────────────────────────
 
-  function encodeSkyView(
-    encoder: GPUCommandEncoder,
+  function dispatchSkyView(
+    pass: GPUComputePassEncoder,
     bodyId: string,
     skyViewUniforms: Float32Array,
   ): void {
     // Write THIS body's per-frame camera + sun state, then dispatch the sky-view
-    // bake into `encoder` (the same frame encoder, submitted downstream). One write
-    // + one dispatch per body → no writeBuffer/submit race (the flow precedent).
+    // bake into the CALLER's pass. Each body owns its own params buffer and its
+    // own output LUT, so several bodies share one pass with no hazard between
+    // them — and the caller keeps the pass, hence the step's one timing slot.
+    // The write rides the queue timeline (ordered ahead of the submit) even
+    // though the pass is already open — no writeBuffer/submit race, as for flow.
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.skyViewParamsBuffer, 0, skyViewUniforms);
-    const pass = encoder.beginComputePass({ label: 'atmosphere-skyview-pass' });
     pass.setPipeline(skyViewPipeline);
     pass.setBindGroup(0, bundle.skyViewBindGroup);
     pass.dispatchWorkgroups(
-      dispatchCount(SKY_VIEW_LUT_SIZE[0]),
-      dispatchCount(SKY_VIEW_LUT_SIZE[1]),
+      dispatchCount(currentSkyViewLutSize[0]),
+      dispatchCount(currentSkyViewLutSize[1]),
     );
-    pass.end();
+  }
+
+  // ── reconcile (per frame) ──────────────────────────────────────────────────
+
+  function reconcile(config: { readonly skyViewLutSize: readonly [number, number] }): void {
+    const [width, height] = config.skyViewLutSize;
+    // The common case, every frame: same tier as last frame, nothing to do.
+    if (width === currentSkyViewLutSize[0] && height === currentSkyViewLutSize[1]) return;
+    currentSkyViewLutSize = config.skyViewLutSize;
+    for (const [bodyId, bundle] of bundles) {
+      bundle.skyViewTex.destroy();
+      bundle.skyViewTex = createLut(`atmosphere-skyview-lut-${bodyId}`, currentSkyViewLutSize);
+      // Both bind groups that reference the texture must be rebuilt — a
+      // GPUBindGroup binds a specific GPUTextureView, not the JS variable, so
+      // it keeps pointing at the destroyed texture until replaced.
+      bundle.skyViewBindGroup = buildSkyViewBindGroup(bodyId, bundle);
+      bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle);
+    }
   }
 
   // ── setRingTexture ─────────────────────────────────────────────────────────
@@ -711,10 +759,11 @@ export function createAtmosphereShellRenderer(
 
   const renderer: AtmosphereShellRenderer = {
     label: 'atmosphereShellRenderer',
-    encodeSkyView,
+    dispatchSkyView,
     setRingTexture,
     draw,
     destroy,
+    reconcile,
   };
   renderer satisfies Renderer;
   return renderer;

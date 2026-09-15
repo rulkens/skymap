@@ -573,6 +573,44 @@ describe('executeFrame', () => {
     expect(encodeCompute.mock.calls[0]![0]).toBe(args.encoder);
   });
 
+  // A compute step's prelude dispatch is GPU work no render toggle can reach, so
+  // it gets its own — keyed on the SUFFIXED slot name, because the bare 'flow'
+  // is the ribbon pass's toggle and one checkbox must not disable both.
+  it('a compute step toggles under its own suffixed name, not the bare step name', () => {
+    const flowSlot = {
+      committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
+    };
+    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
+    const run = (disabledPasses: Record<string, boolean>): ReturnType<typeof vi.fn> => {
+      const encodeCompute = vi.fn();
+      const { args } = makeArgs({
+        program,
+        state: makeState({
+          flowFieldRenderer: { label: 'flowFieldRenderer', encodeCompute },
+          flowEnabled: true,
+          flowSlot,
+          disabledPasses,
+        }),
+      });
+      executeFrame(args);
+      return encodeCompute;
+    };
+    expect(run({ 'flow-compute': true })).not.toHaveBeenCalled();
+    expect(run({ flow: true })).toHaveBeenCalledTimes(1);
+  });
+
+  // `descriptorFor` marks a slot live for the frame, and the query set keeps its
+  // last write — so claiming for a step that then dispatches nothing would make
+  // the panel report stale ticks as a live reading.
+  it('claims a compute step’s timing slot only when the row actually dispatches', () => {
+    const descriptorFor = vi.fn(() => undefined);
+    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
+    // flow off ⇒ encodeFlowCompute returns before the renderer opens a pass.
+    const { args } = makeArgs({ program, state: makeState({ flowEnabled: false }) });
+    executeFrame({ ...args, timing: { ...args.timing, descriptorFor } });
+    expect(descriptorFor).not.toHaveBeenCalled();
+  });
+
   it("attaches a clearing depth attachment on a depth target's first pass and loads on later passes", () => {
     // Two render steps against foreground:0 (the one depth-declaring row).
     // The first pass clears depth to the far plane (1.0); the second — target

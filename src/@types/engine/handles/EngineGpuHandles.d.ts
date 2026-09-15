@@ -520,7 +520,7 @@ export type EngineGpuHandles = {
    * atmosphere-top radius drawn AFTER every opaque sphere and the rings/cloud
    * shell, depth-tested but writing no depth, straight-alpha OVER. It owns three
    * LUT textures — transmittance + multi-scatter baked once at construction,
-   * sky-view re-baked each frame by the `atmosphereSkyView` compute step.
+   * sky-view re-baked each frame by the `sky-view` compute step.
    * Non-pickable: a translucent halo has no clickable silhouette. Excluded from
    * `isEngineReady`.
    */

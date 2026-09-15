@@ -41,6 +41,7 @@ import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
+import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
@@ -561,16 +562,23 @@ export function createEngine(
         idle:
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
-      // Every AUTHORED pass except the volume-target raymarch, which has no
-      // user toggle — the frame order is what says which pass that is.
+      // The prelude's compute steps first (they run first, and their dispatches
+      // are GPU work no render toggle could reach), then every composed pass
+      // except the volume-target raymarch, which has no user toggle — the frame
+      // order is what says which pass that is.
       passOverrides: {
-        allNames: FRAME_ORDER_PASS_NAMES.filter(
-          (name) =>
-            !FRAME_ORDER.some(
-              (step) =>
-                step.kind === 'render' && step.target === 'volume' && step.passes.includes(name),
-            ),
-        ),
+        allNames: [
+          ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
+            computeTimingSlotName(step.name),
+          ),
+          ...FRAME_ORDER_PASS_NAMES.filter(
+            (name) =>
+              !FRAME_ORDER.some(
+                (step) =>
+                  step.kind === 'render' && step.target === 'volume' && step.passes.includes(name),
+              ),
+          ),
+        ],
       },
       // Re-derived per call, not snapshotted: the slots this joins against are
       // minted by the async bootstrap.
