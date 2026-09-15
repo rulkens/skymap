@@ -35,6 +35,11 @@ export const EARTH_TILE_ATLAS_SIDE = 8192;
  *  tile's 129-post stride, so 2064 px of `r32float`, 17.0 MB. (Spec §5.5.) */
 export const HEIGHT_TILE_ATLAS_SIDE = 16 * HEIGHT_POSTS_PER_TILE;
 
+/** Slots per row of the height atlas, row-major like `TextureAtlas`'s own
+ *  layout — the one derivation both the renderer's slot→texel packing and the
+ *  subsystem's capacity math must share. */
+export const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
+
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than
  *  the asset queue's: many small streaming fetches during flight (~33 KB each),
  *  not a handful of big one-shot boot fetches. (Design 4.) */

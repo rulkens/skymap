@@ -141,8 +141,11 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   );
   let dhdE = ((hNE - hNW) * (1.0 - cellV) + (hSE - hSW) * cellV) / postSpacingEM;
   let dhdN = ((hNW - hSW) * (1.0 - cellU) + (hNE - hSE) * cellU) / postSpacingNM;
-  let eHat = normalize(in.tangent);
-  let nHat = cross(Ng, eHat);
+  // Re-orthogonalized against Ng and re-normalized -- 'in.tangent' survives an
+  // interpolation across the patch and is no longer guaranteed either, the
+  // same treatment perturbNormal (lib/normalMap.wesl) gives it.
+  let eHat = normalize(in.tangent - Ng * dot(Ng, in.tangent));
+  let nHat = normalize(cross(Ng, eHat));
   let n = normalize(Ng - dhdE * eHat - dhdN * nHat);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
   let v = normalize(in.viewDirLocal);

@@ -32,13 +32,9 @@ import {
 } from './earthSurfaceTileLayout';
 import {
   EARTH_TILE_CROSSFADE_MS,
-  HEIGHT_TILE_ATLAS_SIDE,
+  HEIGHT_ATLAS_SLOTS_PER_ROW,
 } from '../../../../data/bodies/earthTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
-
-/** Mirrors `TextureAtlas`'s own row-major slot layout (`textureAtlas.ts`'s
- *  `slotUv`); the height stream hands out slot indices in the same space. */
-const HEIGHT_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and
@@ -257,8 +253,8 @@ export function createEarthSurfaceTileRenderer(
         fallback.atlasUvOrigin[1],
         fallback.atlasUvScale[0],
         fallback.atlasUvScale[1],
-        (tile.heightSlot % HEIGHT_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
-        Math.floor(tile.heightSlot / HEIGHT_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
+        (tile.heightSlot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
+        Math.floor(tile.heightSlot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
         tile.edgeCoarser[0] |
           (tile.edgeCoarser[1] << 2) |
           (tile.edgeCoarser[2] << 4) |

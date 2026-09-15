@@ -1,15 +1,7 @@
-// earthSurfaceTile/vertex.wesl — every patch's geometry from nothing but an
-// 80-byte 'PatchInstance', the height atlas and the two draw builtins:
-// '@builtin(instance_index)' picks the patch, '@builtin(vertex_index)' is the
-// shared template's vertex id: (i, j) over the (n+1)^2 grid below (n+1)^2, a
-// skirt-ring post above it (surfacePatchIndices.ts owns the same id space).
-// The record is 'inst' -- 'patch' is a WGSL RESERVED WORD.
-//
-// 'patchVertexOffset' is the twin of src/utils/scene/patchVertexOffsetM.ts and
-// the post lookup that of surfacePatchPostIndex.ts -- same names, same order,
-// changed together; the f64 ground truth is tested there. 'originRelEyeM' was
-// differenced in f64 CPU-side from the SAME f32-rounded anchor read here, so
-// s = t = 0 lands on it exactly: no cracks.
+// earthSurfaceTile/vertex.wesl — every patch's geometry from an 80-byte
+// 'PatchInstance' and the height atlas. The record is 'inst' -- 'patch' is a
+// WGSL RESERVED WORD. 'originRelEyeM' was differenced CPU-side from the SAME
+// f32-rounded anchor rebuilt here, so s = t = 0 lands on it exactly: no cracks.
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::PatchInstance;

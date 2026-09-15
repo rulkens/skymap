@@ -49,13 +49,13 @@ import {
   EARTH_TILE_LOD_BIAS,
   EARTH_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
+  HEIGHT_ATLAS_SLOTS_PER_ROW,
 } from '../../../data/bodies/earthTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
 /** Raw metres above the datum, never an encoding — see `heightTileFormat`. */
 const HEIGHT_ATLAS_FORMAT: GPUTextureFormat = 'r32float';
-const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /** The "nothing here yet" snapshot — atlas never allocated, or `state.subsystems.surfaceTiles`
  *  itself is null. Exported so `engine.ts`'s debug handle shares this shape instead of
