@@ -1,9 +1,10 @@
 /**
  * ResolvedTileResidency — one leaf's resolved ALBEDO texels, as
  * `cutSurfaceTiles`'s ancestor-fallback climb leaves them. Its own type since
- * the cut went two-product: height is never resolved this way (a leaf samples
- * its OWN height tile or is not drawn at all, spec §5.2), so the climb-and-
- * flatten shape below belongs to albedo alone.
+ * the cut went two-product: height is climbed and flattened the same way by
+ * `resolveHeightLattice` (R14, spec §5.2), but into a slimmer posts-only
+ * shape — no crossfade `fallback`, F1 draws nothing from it yet — so the two
+ * products don't share one type despite the shared climb.
  */
 export type ResolvedTileResidency = {
   readonly slot: number;
