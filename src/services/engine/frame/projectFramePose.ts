@@ -108,10 +108,7 @@ export function projectFramePose(args: {
   // mid-animation. Free while the two agree — `refoldTo` answers by reference.
   const target = intent.dragging ? regime : stepRung(refoldTo(displayed, regime, ctx), ctx);
   // One whole skip, never a clamp or a latch, retried next frame: a live gesture
-  // (ruled, Q6). An in-flight approach used to skip here too, because it went
-  // inactive the moment the ladder descended into a rung its focus merely hangs
-  // off; the approach row is no longer arm-gated, so the descent costs it
-  // nothing and the ladder crosses on geometry alone.
+  // (ruled, Q6).
   if (!intent.dragging) {
     // The arm being LEFT, not the arm the winner happened to author in: an
     // approach owed from inside an arm produces a world pose there, and reading
@@ -125,8 +122,6 @@ export function projectFramePose(args: {
         // centre leaves them a body radius to close as an eye teleport (pop-3).
         // `panOffset` rides along for the same reason — the pin re-reads it
         // too, so a commit without it is a |pan| teleport on the quiet frame.
-        // `liveBodyPosition` IS the pin's own resolver, and `focusInSubtree`
-        // alone answers "no focus", so neither question gets a second spelling.
         const host = hostOrThrow(regime, ctx);
         const focused = focusInSubtree(ctx.focusBodyId, host.id)
           ? liveBodyPosition(focus, bodies)

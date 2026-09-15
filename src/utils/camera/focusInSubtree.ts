@@ -1,8 +1,7 @@
 /**
  * Does a focus keep this rung? True when `focusId` IS `rungId` or reaches it up
- * the SURFACE-FIXED chain — a rover keeps its planet's arm (spec §4.8). An
- * orbiting focus stops the walk: it leaves a body-fixed arm behind rather than
- * riding it. No focus constrains no rung, hence null ⇒ true.
+ * the SURFACE-FIXED chain — a rover keeps its planet's arm (spec §4.8). No focus
+ * constrains no rung, hence null ⇒ true.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';

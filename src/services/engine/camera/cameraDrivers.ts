@@ -75,17 +75,12 @@ export const NO_FOLLOW_MEMORY: FollowMemory = {
   saturated: false,
 };
 
-/**
- * A DEBT already paid: the framing this focus asked for was delivered by
- * something other than the approach — a seeded pose, a clip or a tween leg.
- * Carrying no capture, so the first produce reads the delivered pose itself.
- */
-export const SETTLED_FOLLOW_MEMORY: FollowMemory = { ...NO_FOLLOW_MEMORY, saturated: true };
-
-/** The same debt paid over a memory that already exists — a pan strafe and a
- * committed zoom are the focus row's, not the delivering driver's, so they ride. */
+/** A debt paid by a row that DELIVERS the framing: the capture rides where one
+ * exists — a pan strafe and a committed zoom are the focus row's, not the
+ * delivering driver's — and a fresh memory carries none, so the first produce
+ * reads the delivered pose itself. */
 function settledMemory(mem: FollowMemory | null): FollowMemory {
-  return mem === null ? SETTLED_FOLLOW_MEMORY : { ...mem, saturated: true };
+  return { ...(mem ?? NO_FOLLOW_MEMORY), saturated: true };
 }
 
 /**
@@ -174,9 +169,7 @@ function followPose(
   }
 
   // The debt, not the clock, decides the ease is over: settled means the framing
-  // was delivered, whatever the epoch reads. (An ease that reached 1 never
-  // un-reaches it, so this is the incumbent's own value for every path that
-  // saturated by easing.)
+  // was delivered, whatever the epoch reads.
   const t = memory.saturated ? 1 : easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
   return {
     pose: absoluteArm({
@@ -190,12 +183,7 @@ function followPose(
       // to scene-frame up until the engage edge.
       roll: lerp(from.roll ?? 0, committed.roll ?? 0, t),
     }),
-    memory: {
-      from,
-      distanceTarget,
-      panOffset: memory.panOffset,
-      saturated: memory.saturated || t >= 1,
-    },
+    memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
   };
 }
 

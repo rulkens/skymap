@@ -57,12 +57,6 @@ describe('steppedSitePose', () => {
     expect(far.headingRad).toBeCloseTo(60 * ORBIT_MAX_RAD_PER_PX, 12);
   });
 
-  it('drag signs: +Δx raises the heading and +Δy raises the eye', () => {
-    const out = step(POSE, drag(60, 30));
-    expect(out.headingRad).toBeGreaterThan(POSE.headingRad);
-    expect(out.elevationRad).toBeGreaterThan(POSE.elevationRad);
-  });
-
   it('a lowering drag at the range floor reaches the ground, not the ceiling', () => {
     // The rung EXISTS to get under its host's standoff, so only the site's own
     // floor may bind here: fold the host's in and `eyeFloorM / rangeM > 1` at

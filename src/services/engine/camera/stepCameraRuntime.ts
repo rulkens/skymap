@@ -24,7 +24,6 @@ import { pickWinner, elapsedForWinner } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
-import { foldToWorld } from './rungs/foldToWorld';
 import { releasedWorldArm } from './releasedWorldArm';
 import { frameKey } from './rungs/frameKey';
 import { rowFor } from './rungs/rowFor';

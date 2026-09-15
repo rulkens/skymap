@@ -124,12 +124,11 @@ export const bodyRung: ClimbRow<'body'> = {
     // The horizon test from the parent side, so an arm `release` would hand back
     // next frame is never entered: an approach to a rover on the far side crosses
     // this band, and without this it flips regime on every frame of the crossing.
-    const host = hostOf({ body: nearest.bodyId }, ctx);
-    if (host !== null) {
-      const arm = toBodyArm(parent.pose, ctx.poseBasis, ctx.upBasis, host.id, host.state);
-      if (hostedFocusOverHorizon(bodyFixedEyeM(arm), ctx.focusBodyId, host)) return null;
-    }
-    return { body: nearest.bodyId };
+    const host = hostOrThrow({ body: nearest.bodyId }, ctx);
+    const arm = toBodyArm(parent.pose, ctx.poseBasis, ctx.upBasis, host.id, host.state);
+    return hostedFocusOverHorizon(bodyFixedEyeM(arm), ctx.focusBodyId, host)
+      ? null
+      : { body: nearest.bodyId };
   },
 
   release(framed, ctx) {
