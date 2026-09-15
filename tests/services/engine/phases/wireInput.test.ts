@@ -44,7 +44,7 @@ vi.mock('../../../../src/services/camera/orbitControls', () => ({
   attachOrbitControls: (...args: unknown[]) => attachOrbitControlsSpy(...args),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer', () => ({
   createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 

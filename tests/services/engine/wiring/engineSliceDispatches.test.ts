@@ -54,7 +54,7 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
 // The mint helper picks this fetcher for every non-synthetic entry; stub it
 // so the one test driving a real wireGalaxyCatalogSourceSlot call controls
 // the resolved catalog instead of hitting the network.
-vi.mock('../../../../src/services/loading/fetchers/galaxyCatalogFetcher', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher', () => ({
   galaxyCatalogFetcher: vi.fn(),
 }));
 
@@ -109,7 +109,7 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 // ── Post-mock imports ───────────────────────────────────────────────────────
 
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/wireGalaxyCatalogSourceSlot';
-import { galaxyCatalogFetcher } from '../../../../src/services/loading/fetchers/galaxyCatalogFetcher';
+import { galaxyCatalogFetcher } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher';
 import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';

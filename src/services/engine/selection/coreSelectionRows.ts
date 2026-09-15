@@ -4,7 +4,7 @@
  * called here, so a boot-window deep link resolves before any cloud lands.
  */
 
-import { galaxyCatalogSelectionRow } from './galaxyCatalogSelectionRow';
+import { galaxyCatalogSelectionRow } from '../../../layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { structureSelectionRow } from './structureSelectionRow';
 import { milkyWaySelectionRow } from './milkyWaySelectionRow';
 import { zoneOfAvoidanceSelectionRow } from './zoneOfAvoidanceSelectionRow';

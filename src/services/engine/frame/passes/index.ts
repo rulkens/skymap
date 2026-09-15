@@ -7,9 +7,9 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { scalarVolumePass } from './scalarVolumePass';
-import { galaxyPointSpritesPass } from './galaxyPointSpritesPass';
-import { proceduralDisksPass } from './proceduralDisksPass';
-import { texturedDisksPass } from './texturedDisksPass';
+import { galaxyPointSpritesPass } from '../../../../layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import { proceduralDisksPass } from '../../../../layers/galaxyCatalog/passes/proceduralDisksPass';
+import { texturedDisksPass } from '../../../../layers/galaxyCatalog/passes/texturedDisksPass';
 import { filamentsPass } from './filamentsPass';
 import { flowFieldPass } from './flowFieldPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
@@ -22,7 +22,7 @@ import { zoneOfAvoidanceUpsamplePass } from './zoneOfAvoidanceUpsamplePass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
-import { diskRadiusRingPass } from './diskRadiusRingPass';
+import { diskRadiusRingPass } from '../../../../layers/galaxyCatalog/passes/diskRadiusRingPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 import { clipPathDebugPass } from './clipPathDebugPass';

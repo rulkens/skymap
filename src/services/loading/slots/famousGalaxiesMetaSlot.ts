@@ -7,7 +7,7 @@
  */
 
 import { createAssetSlot } from '../AssetSlot';
-import { famousGalaxiesMetaFetcher } from '../fetchers/famousGalaxiesMetaFetcher';
+import { famousGalaxiesMetaFetcher } from '../../../layers/galaxyCatalog/load/famousGalaxiesMetaFetcher';
 import { engineFamousGalaxiesMetaReported } from '../../../state/engine/engineSlice';
 import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';

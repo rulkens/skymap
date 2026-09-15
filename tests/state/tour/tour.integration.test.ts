@@ -20,7 +20,7 @@ import { resolveLayerOpacity } from '../../../src/services/engine/presentation/f
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../src/services/engine/frame/passes/galaxyPointSpritesPass';
+import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/sources';
 

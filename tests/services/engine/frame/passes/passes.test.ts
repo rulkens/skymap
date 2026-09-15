@@ -14,7 +14,7 @@ import { Source } from '../../../../../src/data/sources';
 import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../../../src/services/engine/frame/passes/galaxyPointSpritesPass';
+import { galaxyPointSpritesPass } from '../../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';

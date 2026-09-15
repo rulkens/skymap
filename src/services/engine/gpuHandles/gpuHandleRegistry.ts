@@ -8,12 +8,12 @@
  * `buildSwapRenderers.ts` rebuilds on a format change.
  */
 
-import { createGalaxyPointRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPointRenderer';
-import { createGalaxyPickRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPickRenderer';
+import { createGalaxyPointRenderer } from '../../../layers/galaxyCatalog/render/galaxyPointRenderer';
+import { createGalaxyPickRenderer } from '../../../layers/galaxyCatalog/render/galaxyPickRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
-import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
-import { createProceduralDiskRenderer } from '../../gpu/renderers/galaxyCatalog/proceduralDiskRenderer';
+import { createTexturedDiskRenderer } from '../../../layers/galaxyCatalog/render/texturedDiskRenderer';
+import { createProceduralDiskRenderer } from '../../../layers/galaxyCatalog/render/proceduralDiskRenderer';
 import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
@@ -59,7 +59,7 @@ import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineR
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
+import { createDiskRadiusRing } from '../../../layers/galaxyCatalog/render/diskRadiusRing';
 import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';

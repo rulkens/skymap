@@ -49,12 +49,12 @@ vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
 // The mint helper picks this fetcher for every non-synthetic entry (every
 // source this suite exercises); stub it so each test controls the resolved
 // catalog instead of hitting the network.
-vi.mock('../../../../src/services/loading/fetchers/galaxyCatalogFetcher', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher', () => ({
   galaxyCatalogFetcher: vi.fn(),
 }));
 
 import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/wireGalaxyCatalogSourceSlot';
-import { galaxyCatalogFetcher } from '../../../../src/services/loading/fetchers/galaxyCatalogFetcher';
+import { galaxyCatalogFetcher } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher';
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { syncVisibilityFadeItem } from '../../../../src/services/engine/wiring/syncVisibilityFades';

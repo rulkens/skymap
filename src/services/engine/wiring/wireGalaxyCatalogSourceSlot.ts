@@ -12,8 +12,8 @@ import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCata
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { createAssetSlot } from '../../loading/AssetSlot';
-import { galaxyCatalogFetcher } from '../../loading/fetchers/galaxyCatalogFetcher';
-import { syntheticPointFetcher } from '../../loading/fetchers/syntheticPointFetcher';
+import { galaxyCatalogFetcher } from '../../../layers/galaxyCatalog/load/galaxyCatalogFetcher';
+import { syntheticPointFetcher } from '../../../layers/galaxyCatalog/load/syntheticPointFetcher';
 import { syncVisibilityFadeItem } from './syncVisibilityFades';
 import { dispatchCatalogLoaded } from './dispatchCatalogLoaded';
 import {

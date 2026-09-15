@@ -68,7 +68,7 @@ vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher', () => ({
   famousGalaxiesMetaFetcher: vi.fn(async () => ({ meta: [] })),
 }));
 
@@ -97,7 +97,7 @@ vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () 
   })),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/load/pgcAliasFetcher', () => ({
   pgcAliasFetcher: vi.fn(async () => new Map()),
 }));
 
@@ -148,20 +148,20 @@ vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () =
 // proceduralDisk, texturedDisk), each carrying a GPU-device dependency.
 // Hollow factories that satisfy the call sites without touching the
 // stubbed device.
-vi.mock('../../../../src/services/engine/subsystems/galaxyAtlasSubsystem', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem', () => ({
   createGalaxyAtlasSubsystem: vi.fn(() => ({
     getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
     destroy: vi.fn(),
   })),
 }));
-vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem', () => ({
   createProceduralDiskSubsystem: vi.fn(() => ({
     runFrame: vi.fn(),
     lastOutput: { instances: [] },
     destroy: vi.fn(),
   })),
 }));
-vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem', () => ({
   createTexturedDiskSubsystem: vi.fn(() => ({
     runFrame: vi.fn(),
     lastOutput: { quads: [], disks: [] },
@@ -190,7 +190,7 @@ vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
     destroy: vi.fn(),
   })),
 }));
-vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/subsystems/hiResFamousSubsystem', () => ({
   createHiResFamousSubsystem: vi.fn(() => ({
     runFrame: vi.fn(),
     lastOutput: { byFamousIdx: new Map() },
@@ -227,12 +227,12 @@ import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { famousGalaxiesMetaFetcher } from '../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher';
+import { famousGalaxiesMetaFetcher } from '../../../../src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
-import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
+import { pgcAliasFetcher } from '../../../../src/layers/galaxyCatalog/load/pgcAliasFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';

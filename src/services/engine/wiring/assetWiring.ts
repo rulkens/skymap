@@ -28,7 +28,7 @@ import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
-import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
+import { createPgcAliasSlot } from '../../../layers/galaxyCatalog/load/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';

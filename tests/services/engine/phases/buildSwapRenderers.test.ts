@@ -31,7 +31,7 @@ vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRende
 vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub()),
 }));
-vi.mock('../../../../src/services/gpu/renderers/devTools/diskRadiusRing', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/render/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub()),
 }));
 

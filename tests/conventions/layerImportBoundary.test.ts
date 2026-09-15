@@ -67,13 +67,25 @@ function assertSweep(
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
-// The one row Findings records: `settingsSlice.ts` imports the thirteen
-// pre-Layer fragments directly for `liftClusterReducers`'s per-fragment
-// spreads, which need each literal fragment type — this stays until reducers
-// compose at the type level, not this PR. Every other engine/state file
-// allows zero.
+// `settingsSlice.ts` imports the thirteen pre-Layer fragments directly for
+// `liftClusterReducers`'s per-fragment spreads, which need each literal fragment
+// type — this stays until reducers compose at the type level, not this PR.
+//
+// The seven rows below are the galaxy family's core call sites, carried between
+// the move that relocated the modules and the wiring that hands each job to the
+// Layer's own `create` / `passes` / `assets`: a pure move cannot delete a call
+// site and the wiring cannot move a file, so one commit holds both counted. Each
+// goes to zero in the same PR; the row is the worklist, and a row that outlives
+// it is the bug.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'state/settings/settingsSlice': 13,
+  'services/engine/engine': 2,
+  'services/engine/frame/passes/index': 4,
+  'services/engine/gpuHandles/gpuHandleRegistry': 5,
+  'services/engine/phases/wireSlots': 2,
+  'services/engine/selection/coreSelectionRows': 1,
+  'services/engine/wiring/assetWiring': 1,
+  'services/engine/wiring/wireGalaxyCatalogSourceSlot': 2,
 };
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {

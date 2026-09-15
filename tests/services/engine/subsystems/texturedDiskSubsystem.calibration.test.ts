@@ -17,10 +17,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
-import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
-import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import { createDiskPlannerWalk } from '../../../../src/services/engine/subsystems/diskPlannerWalk';
+import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
+import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
+import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';
+import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
 import { runProceduralSolo, runTexturedSolo } from './diskWalkHarness';
 import { paddedRadiusMpc } from '../../../../src/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';

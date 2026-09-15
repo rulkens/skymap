@@ -87,7 +87,7 @@ import package::lib::camera::CameraUniforms;
 //   offset 184..191 : _padU0, _padU1 (two pad words)
 //   total: 192 bytes.
 //
-// 'src/utils/gpu/packGalaxyPointUniforms.ts' is the CPU mirror of this table —
+// 'src/layers/galaxyCatalog/render/packGalaxyPointUniforms.ts' is the CPU mirror of this table —
 // it writes f32[43] / f32[44] / f32[45] at bytes 172 / 176 / 180 and sizes
 // the buffer at UNIFORM_BYTES = 192. Any edit here is an edit there.
 //

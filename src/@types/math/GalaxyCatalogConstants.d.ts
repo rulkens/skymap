@@ -2,7 +2,7 @@
  * GalaxyCatalogConstants — pure-function-of-Source cached values used by the
  * bias-correction subsystem and the renderer.
  *
- * See `src/services/biasCorrection/galaxyCatalogConstants.ts` for the runtime
+ * See `src/layers/galaxyCatalog/subsystems/galaxyCatalogConstants.ts` for the runtime
  * table (built eagerly at module init) and the rationale behind eager
  * pre-computation of `nRef`.
  */

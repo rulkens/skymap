@@ -11,7 +11,7 @@ import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/Famou
 
 const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
 
-vi.mock('../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher', () => ({
   famousGalaxiesMetaFetcher: mockFetch,
 }));
 

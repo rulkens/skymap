@@ -19,10 +19,10 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { Source } from '../../../../src/data/sources';
-import { createProceduralDiskSubsystem } from '../../../../src/services/engine/subsystems/proceduralDiskSubsystem';
-import { createTexturedDiskSubsystem } from '../../../../src/services/engine/subsystems/texturedDiskSubsystem';
-import { createGalaxyAtlasSubsystem } from '../../../../src/services/engine/subsystems/galaxyAtlasSubsystem';
-import { createDiskPlannerWalk } from '../../../../src/services/engine/subsystems/diskPlannerWalk';
+import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';
+import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
+import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
+import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
 import { runProceduralSolo, runTexturedSolo } from './diskWalkHarness';
 import { cartesianToRaDec } from '../../../../src/utils/math';
 import { galaxyCacheKey } from '../../../../src/utils/render/disk/galaxyCacheKey';
