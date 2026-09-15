@@ -253,8 +253,8 @@ export function createEarthSurfaceTileRenderer(
         fallback.atlasUvOrigin[1],
         fallback.atlasUvScale[0],
         fallback.atlasUvScale[1],
-        (tile.heightSlot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
-        Math.floor(tile.heightSlot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
+        (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
+        Math.floor(tile.height.slot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
         tile.edgeCoarser[0] |
           (tile.edgeCoarser[1] << 2) |
           (tile.edgeCoarser[2] << 4) |

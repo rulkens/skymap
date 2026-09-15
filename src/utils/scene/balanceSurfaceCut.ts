@@ -5,35 +5,46 @@ import { surfaceTileColumns } from './surfaceTileColumns';
 import { surfaceTileInBand } from './surfaceTileInBand';
 
 /**
- * balanceSurfaceCut — coarsens leaves, never refines, until no two
- * edge-neighbouring leaves differ by more than one level, then fills
- * `edgeCoarser`. A neighbour that cannot refine (no band bakes under it) is
- * exempt: a band ceiling is a permanent step, and coarsening against it would
- * walk the whole cut back up. Longitude wraps; the poles have no N/S edge.
+ * balanceSurfaceCut — steps edge-neighbouring leaves onto HEIGHT levels no
+ * more than one apart (R14) by climbing the finer side's lattice; leaves are
+ * never added or removed. Meeting a neighbour AT its band ceiling (no tile
+ * one level finer than its CURRENT height) is skipped — a permanent step
+ * (R12) — but its edge bit is still set. Longitude wraps.
  */
 export function balanceSurfaceCut(
   cut: readonly SurfaceCutTile[],
   tilePx: number,
   bands: readonly SurfaceTileBand[],
-  resolveParent: (z: number, x: number, y: number) => SurfaceCutTile | null,
+  resolveHeight: (
+    z: number,
+    x: number,
+    y: number,
+    minLevelDelta: number,
+  ) => SurfaceCutTile['height'] | null,
 ): SurfaceCutTile[] {
   if (cut.length === 0) return [];
 
-  const leaves = new Map<number, SurfaceCutTile>();
+  const indexOf = new Map<number, number>();
   let minZ = Infinity;
-  for (const leaf of cut) {
-    leaves.set(packTile(leaf.id.z, leaf.id.x, leaf.id.y), leaf);
-    if (leaf.id.z < minZ) minZ = leaf.id.z;
+  for (let i = 0; i < cut.length; i++) {
+    const { z, x, y } = cut[i]!.id;
+    indexOf.set(packTile(z, x, y), i);
+    if (z < minZ) minZ = z;
   }
+  const heights = cut.map((leaf) => leaf.height);
+  const edges: Array<[0 | 1, 0 | 1, 0 | 1, 0 | 1]> = cut.map(() => [0, 0, 0, 0]);
 
-  /** The leaf covering cell `(z, x, y)` — itself or the nearest leaf ancestor.
-   *  `null` when something FINER covers it, or nothing does (off the cut). */
-  function coveringLeaf(z: number, x: number, y: number): SurfaceCutTile | null {
+  const heightLevel = (i: number): number => cut[i]!.id.z - heights[i]!.levelDelta;
+
+  /** Index of the leaf covering cell `(z, x, y)` — itself or the nearest leaf
+   *  ancestor. `-1` when something FINER covers it (that leaf finds this pair
+   *  from its own side) or nothing does. */
+  function coveringLeaf(z: number, x: number, y: number): number {
     for (let az = z; az >= minZ; az--) {
-      const found = leaves.get(packTile(az, x >> (z - az), y >> (z - az)));
+      const found = indexOf.get(packTile(az, x >> (z - az), y >> (z - az)));
       if (found !== undefined) return found;
     }
-    return null;
+    return -1;
   }
 
   /** Cell across `edge` (0..3 = west, east, south, north — R9) at the same
@@ -55,75 +66,78 @@ export function balanceSurfaceCut(
   }
 
   const cell = [0, 0];
-  /** The coarsest edge neighbour this leaf could ever meet halfway, or null.
-   *  A neighbour sitting on its own band's ceiling is skipped: nothing exists
-   *  under it to refine INTO, so the step it makes is permanent (R12). */
-  function coarsestNeighbourLevel(z: number, x: number, y: number): number | null {
-    let coarsest: number | null = null;
-    for (let edge = 0; edge < 4; edge++) {
-      if (!neighbourCell(edge, z, x, y, cell)) continue;
-      const other = coveringLeaf(z, cell[0]!, cell[1]!);
-      if (other === null || other.id.z >= z) continue;
-      if (!surfaceTileInBand(bands, tilePx, other.id.z + 1, other.id.x * 2, other.id.y * 2))
-        continue;
-      if (coarsest === null || other.id.z < coarsest) coarsest = other.id.z;
-    }
-    return coarsest;
-  }
-
-  // Fixpoint, finest offender first: one collapse can put its new parent two
-  // levels from a neighbour that was in balance a moment ago, and only a
-  // re-scan sees that. Each collapse strictly lowers the level sum, so this
-  // terminates; in a cut the walk produced there is usually nothing to do.
-  let coarsened = true;
-  while (coarsened) {
-    coarsened = false;
-    const ordered = [...leaves.values()].sort((a, b) => b.id.z - a.id.z);
-    for (const leaf of ordered) {
-      const { z, x, y } = leaf.id;
-      if (z <= minZ || leaves.get(packTile(z, x, y)) !== leaf) continue;
-      const coarsest = coarsestNeighbourLevel(z, x, y);
-      if (coarsest === null || z - coarsest < 2) continue;
-
-      const parentZ = z - 1;
-      const parentX = x >> 1;
-      const parentY = y >> 1;
-      const parent = resolveParent(parentZ, parentX, parentY);
-      // Nothing drawable one level up: leave the step rather than punch a
-      // hole. F2 reads `edgeCoarser`, so an unstitched edge is a seam, not a
-      // missing patch.
-      if (parent === null) continue;
-      for (const [key, tile] of leaves) {
-        const delta = tile.id.z - parentZ;
-        if (delta > 0 && tile.id.x >> delta === parentX && tile.id.y >> delta === parentY)
-          leaves.delete(key);
+  /** Every adjacent pair, visited once, from the finer-or-equal LEAF side: the
+   *  coarser leaf of a pair never finds the finer one, so `visit` gets both
+   *  indices and `edge` as seen from `i`. Ceiling exemption (R12) is decided
+   *  per-comparison by the caller, not here — it keys on HEIGHT level, which
+   *  a pair's leaf adjacency does not determine. */
+  function eachPair(visit: (i: number, j: number, edge: number) => void): void {
+    for (let i = 0; i < cut.length; i++) {
+      const { z, x, y } = cut[i]!.id;
+      for (let edge = 0; edge < 4; edge++) {
+        if (!neighbourCell(edge, z, x, y, cell)) continue;
+        const j = coveringLeaf(z, cell[0]!, cell[1]!);
+        if (j < 0 || j === i) continue;
+        visit(i, j, edge);
       }
-      leaves.set(packTile(parentZ, parentX, parentY), parent);
-      coarsened = true;
     }
   }
 
-  const balanced: SurfaceCutTile[] = [];
-  for (const leaf of leaves.values()) {
-    const { z, x, y } = leaf.id;
-    const edgeCoarser: [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2] = [0, 0, 0, 0];
-    let anyCoarser = false;
-    for (let edge = 0; edge < 4; edge++) {
-      if (!neighbourCell(edge, z, x, y, cell)) continue;
-      const other = coveringLeaf(z, cell[0]!, cell[1]!);
-      if (other === null || other.id.z >= z) continue;
-      // Exactly one level collapses; anything deeper — a band ceiling or an
-      // unresolvable parent — is a seam F2 skirts, because the coarse side has
-      // no post at the even index to pull the edge onto.
-      edgeCoarser[edge] = z - other.id.z === 1 ? 1 : 2;
-      anyCoarser = true;
-    }
-    const e = leaf.edgeCoarser;
-    balanced.push(
-      !anyCoarser && e[0] === 0 && e[1] === 0 && e[2] === 0 && e[3] === 0
-        ? leaf
-        : { ...leaf, edgeCoarser },
-    );
+  /** True when leaf `k`'s cell has no tile one level FINER than its CURRENT
+   *  height level (not its leaf level, which streaming can leave stale) — a
+   *  permanent band ceiling (R12), not a resident tile just not landed yet. */
+  function atHeightCeiling(k: number): boolean {
+    const { z, x, y } = cut[k]!.id;
+    const hz = heightLevel(k);
+    const shift = z - hz;
+    return !surfaceTileInBand(bands, tilePx, hz + 1, (x >> shift) * 2, (y >> shift) * 2);
   }
-  return balanced;
+
+  /** Climb leaf `i`'s lattice to `targetLevel` or the next resident level
+   *  above it. False when nothing coarser is resident — the step survives
+   *  rather than the leaf, which F2 reads as a seam. */
+  function coarsenTo(i: number, targetLevel: number): boolean {
+    const { z, x, y } = cut[i]!.id;
+    const next = resolveHeight(z, x, y, z - targetLevel);
+    if (next === null || next.levelDelta <= heights[i]!.levelDelta) return false;
+    heights[i] = next;
+    return true;
+  }
+
+  // Fixpoint: one climb can put its leaf two levels from a neighbour that was
+  // in balance a moment ago. `levelDelta` only ever grows and is bounded by the
+  // base level, so this terminates. Coarsening the fine side toward a coarse
+  // one AT its ceiling would throw away resolution the ring can never meet
+  // halfway (Søndermarken), so that side alone is exempt — the step survives.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    eachPair((i, j) => {
+      const a = heightLevel(i);
+      const b = heightLevel(j);
+      if (a - b >= 2) {
+        if (!atHeightCeiling(j) && coarsenTo(i, b + 1)) changed = true;
+      } else if (b - a >= 2) {
+        if (!atHeightCeiling(i) && coarsenTo(j, a + 1)) changed = true;
+      }
+    });
+  }
+
+  // `edge ^ 1` is the same edge from the neighbour's side (west↔east,
+  // south↔north), which is how the coarser-id leaf of a pair gets its bit.
+  eachPair((i, j, edge) => {
+    const a = heightLevel(i);
+    const b = heightLevel(j);
+    if (a === b + 1) edges[i]![edge] = 1;
+    else if (b === a + 1) edges[j]![edge ^ 1] = 1;
+  });
+
+  // Most leaves clear balance untouched every frame; returning the SAME
+  // object then (not a spread copy) skips ~900 allocations per frame.
+  return cut.map((leaf, i) => {
+    const e = edges[i]!;
+    if (heights[i] === leaf.height && e[0] === 0 && e[1] === 0 && e[2] === 0 && e[3] === 0)
+      return leaf;
+    return { ...leaf, height: heights[i]!, edgeCoarser: e };
+  });
 }

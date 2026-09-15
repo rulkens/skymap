@@ -411,7 +411,7 @@ No code. Runs from **main** after merge, or from this worktree with `data/raw` s
 - [ ] Downloads complete: `data/raw/etopo/*.tif` = 1,585,813,987 B; 47 skadi cells present; write `.sha256` sidecars; `data/raw/mola/*.tif` (11.4 GB) is for F4 and is not used here.
 - [ ] DHM/Terræn tiles fetched (`npm run fetch-height -- --dhm-terraen`, ~25 tiles, ~325 MB). If that fetch fails, the Søndermarken band bakes **later** (P5 makes that a re-run) and the manifest for now carries only the global and EOX bands — which also drops the GeoDanmark **albedo** band until then (bands are shared). State this to the user before baking; it is their call.
 - [ ] Relayout: `cp -R public/data/images/earth-tiles/v7/surface public/data/images/earth-tiles/v8/albedo` (bytes identical, no re-encode), then `npm run build-surface-tiles` — albedo tiles are skipped as existing, height tiles bake, the manifest is written once both products are complete. Expect ~19.7k height tiles, ~1.3 GB (§10).
-- [ ] Eye-check on this worktree's dev server: orbit (tiles engaged, picture identical to main), the 300 km fade band, Søndermarken z19 (or z13 if the DHM band is deferred), a limb view. Debug panel shows `height n/256` climbing with residency. Refinement depth reaches the band ceiling once heights land.
+- [ ] Eye-check on this worktree's dev server: orbit (tiles engaged, picture identical to main), the 300 km fade band, Søndermarken z19 (or z13 if the DHM band is deferred), a limb view. Debug panel shows `height n/1024` climbing with residency. Refinement depth reaches the band ceiling regardless of residency (R14).
 - [ ] Deploy note for `docs/DEPLOY.md`: R2 server-side copy `earth-tiles/v7/surface → v8/albedo`, upload `v8/height`, manifest last. The prune of v5–v7 is the existing open item.
 
 ---
@@ -425,14 +425,76 @@ No code. Runs from **main** after merge, or from this worktree with `data/raw` s
 - `createTileStreamSubsystem<T>` + `TextureAtlas.uploadTexels`; no `ImageBitmap` in the stream module.
 - `buildSurfaceTiles.ts` idempotent, per-product, `--only` gone; manifest written only from a complete band table.
 - `heightTileFormat.ts`, `decodeHeightTile`, `encodeHeightTile`, `fetchHeightTile`, `HeightSource` + three sources, `fetchHeightSources.ts`, `bakeHeightLevel`, registry rows + READMEs.
-- Height stream (`r32float`, 2064², 256 slots) inside the surface-tile subsystem; `getHeightAtlasView()`.
-- `SurfaceCutTile { albedo, heightSlot, edgeCoarser }`; refinement gated on own height residency; 2:1 balance.
+- Height stream (`r32float`, 4128², 1024 slots — R14) inside the surface-tile subsystem; `getHeightAtlasView()`.
+- `SurfaceCutTile { albedo, height, edgeCoarser }`; refinement residency-blind, height inheriting from the deepest resident ancestor (R14); balance on the height level.
 
 **Observable behaviours (manual smoke)**
 
 - Picture identical to `main` at the four poses (no shader or record change).
-- Debug panel: albedo and height residency counts both climb on approach; height count never exceeds albedo count for the same level.
-- With height tiles deleted from disk, refinement stops at the base level + 0 (no patch is drawn) — the gate is real.
+- Debug panel: albedo and height residency counts both climb on approach (`height n/1024`).
+- With height tiles deleted from disk, nothing is drawn at all (no leaf resolves a height ancestor) — but refinement depth and the request set are unchanged, because the walk no longer reads residency (R14).
 - Bake: a second `npm run build-surface-tiles` run over the same output finishes in seconds and rewrites nothing.
 
 **Deferral boundary** — out of scope here, explicitly: displacement, normals, edge collapse, base-globe shrink (F2); `SurfaceHeightField`, `ceilingHeightM`, `raycast`, horizon cap, compiled min/max grid, `reliefM`, cloud clearance (F3); Mars rows, imagery and rover sites (F4); renaming the draw side (R6); the `geometricResidualM` refinement term (§6, deferred); the `tilePx` / polar-refinement / uv-conversion / "island in stars" backlog items (§3.7).
+
+---
+
+## Amendment R14 — height inherits like albedo; the cut never drops a leaf
+
+**Ruled 2026-09-15 after the F1 eye-check** (holes to the stars, tiles flipping coarser in a zoom range). Two measured causes: (1) §5.2 dropped any leaf without its OWN height tile, and below 150 km the base globe is faded out, so a dropped leaf is a hole; (2) the 256-slot atlases are far below the walk's working set in tilted views (300 km/60° tilt: 930 leaves, 1848 height slots asked; 10 km/60°: 405), the allocator refuses once full, and the excess is never fetched — permanent holes (height) and permanent ancestor fallback (albedo, "coarser tiles in a zoom range"). Contributing: `probe` sizes a tile by the MAX of its screen extents, so foreshortened horizon slivers refine to z13 (876 of those 930 leaves). Cesium/Maps model adopted: refine by screen error alone, request all needed levels at once, render the best loaded ancestor for anything still loading, never a hole.
+
+**Rules (replace §5.2's "own tile or nothing" and §6's refine gate; R11 sibling closure, R12 band ceilings and R13 are subsumed):**
+
+- **Refinement is residency-blind**: a node refines iff `required > z` and the band allows it. Every node on the path is requested in both products (unchanged).
+- **A leaf always emits** when any albedo ancestor is resident (as today). Its height is the DEEPEST resident tile in its own ancestor chain, `id.z` downward to `baseLevel + 1`, flattened into the leaf's sub-rect: `levelDelta = id.z − heightLevel`, sub-rect origin in posts `(x mod 2^d) · (128 >> d), (y mod 2^d) · (128 >> d)` (rows count south = atlas rows, no flip), `cells = 128 >> d`. R1's strict decimation makes that sub-rect exactly the lattice the ancestor itself draws, so a fallback leaf and its ancestor never disagree. The climb is capped at seven levels (`cells = 128 >> d` would reach 0 past it); a leaf whose only resident ancestor is deeper than that is dropped, exactly as a leaf with no resident ancestor at all is — one round trip while the shallower chain lands.
+- **Balance and edge codes work on the height level, not the leaf level.** `balanceSurfaceCut` never removes a leaf; it lowers `height.levelDelta` (climbing to the next resident ancestor) until no two edge-neighbouring leaves differ by more than one in `heightLevel = id.z − levelDelta`; `edgeCoarser[e] = 1` iff the neighbour's `heightLevel` is exactly one coarser. R12 stays: a neighbour at its band ceiling (`surfaceTileInBand(z+1, 2x, 2y)` false for the NEIGHBOUR's `id`) is exempt — that step is permanent, F2's skirt owns it. Both products' cuts are one cut; only the height lattice varies.
+- **Screen error is isotropic**: `screenPx = sqrt(widthPx · heightPx)` of the projected bbox, not the max. Nadir tiles are square, unchanged; horizon slivers stop demanding the deepest level.
+- **Height atlas 32 slots per row** (`HEIGHT_TILE_ATLAS_SIDE = 32 · 129 = 4128`, 1024 slots, 68 MB `r32float`; under the 8192 baseline limit). Albedo stays at 256: a miss there is blur, as in v7.
+- F1 keeps the base-globe fade (flat patches at the datum would fight the globe); F2 drops it (its globe sits at the inner bound), so a leaf with no resident ancestor at all — one round trip for a brand-new root child — shows the base globe, not stars. Recorded in the F2 plan.
+
+**Contract (`src/@types/scene/SurfaceCutTile.d.ts`):**
+
+```ts
+export type SurfaceCutTile = {
+  readonly id: { readonly z: number; readonly x: number; readonly y: number };
+  readonly anchor: SurfacePatchAnchor;
+  readonly albedo: ResolvedTileResidency;
+  /** The height lattice this leaf samples: the deepest resident tile in its own
+   *  ancestor chain, `levelDelta` levels above `id.z` (0 = its own tile), and the
+   *  origin in posts of the leaf's sub-rect inside that slot. `cells` is
+   *  `128 >> levelDelta`. Balance may raise `levelDelta` (never lower it). */
+  readonly height: {
+    readonly slot: number;
+    readonly levelDelta: number;
+    readonly originPosts: readonly [number, number];
+  };
+  readonly edgeCoarser: readonly [0 | 1, 0 | 1, 0 | 1, 0 | 1];
+};
+```
+
+`resolveCutResidency` stays albedo's; a sibling `resolveHeightLattice(z, x, y, baseLevel, maxLevelDelta, residentSlot)` in its own `utils/scene/` file returns `SurfaceCutTile['height'] | null` (null only when NO ancestor above `baseLevel` is resident — the leaf is then dropped, exactly as an albedo-less leaf is today). `balanceSurfaceCut(cut, tilePx, bands, resolveHeight)` takes that resolver instead of `resolveParent` and returns leaves with `height` and `edgeCoarser` rewritten; its fixpoint terminates because `levelDelta` only grows.
+
+### Task A1: residency-blind walk, height fallback, level-balanced stitching
+
+**Files:** modify `src/utils/scene/cutSurfaceTiles.ts`, `src/utils/scene/balanceSurfaceCut.ts`, `src/@types/scene/SurfaceCutTile.d.ts`; create `src/utils/scene/resolveHeightLattice.ts`; tests `tests/utils/scene/{cutSurfaceTiles,balanceSurfaceCut,resolveHeightLattice}.test.ts`; `src/services/gpu/renderers/bodies/earthSurfaceTileRenderer.ts` + `earthPass` read `tile.height.slot` where they read `heightSlot` (F1 draws nothing from it; keep the field plumbed, F2 consumes `originPosts`/`levelDelta`).
+
+- [x] Delete the `heightsReady`/`readyChildren`/`childReady` machinery and the `withinBalancedDepth` filter (requests no longer outrun a residency-gated cut; keep the largest-first sort). Refine on `required > z` + band alone.
+- [x] Leaf emission: `albedo = resolveCutResidency(...)`, `height = resolveHeightLattice(...)`; drop the leaf iff either is null.
+- [x] `balanceSurfaceCut`: rewrite per the rule above. Tests: (a) two leaves at z13 next to a z13 leaf whose height is at z11 → the z13 pair's `levelDelta` becomes 1 and `edgeCoarser` set toward it; (b) fixpoint across three leaves in a row (13 own / 13 with height 11 / 13 own) leaves no >1 step; (c) R12 exemption unchanged — a neighbour at its band ceiling never coarsens the fine side; (d) `resolveHeight` returning null for the requested level climbs further (levels 13→12 missing→11 resident); (e) balance never adds or removes a leaf (`ids` before === after).
+- [x] `cutSurfaceTiles` tests: replace the three height-gate tests (`never emits a leaf deeper than…`, `requests the blocking children…`, R13's `refines onto the ready children…`) and the pan-survival test with: (a) `refines to the screen-error level with no height resident at all` (only albedo resident → cut reaches `expectedLevel`, every leaf `height === null`-dropped is NOT the case: with albedo everywhere and height only at z5, every leaf carries `height.levelDelta = id.z − 5` and `originPosts` hand-derived for one z7 leaf); (b) `a leaf with no height ancestor is dropped` (height nowhere, albedo everywhere → empty cut, requests still run to the required level in both products); (c) the pan test kept as-is (it passes trivially now; it is the regression guard for the flicker); (d) `screen error is the geometric mean of the bbox extents` — the horizon fixture from `tests/utils/scene/cutSurfaceTiles.test.ts`'s `metres vs radii` block: at 300 km / 60° tilt the walk requests fewer than 300 height tiles (was 1848; record the exact number in the test comment).
+- [x] Commit `feat(terrain): R14 — height inherits from the deepest resident ancestor; balance on height level`.
+
+### Task A2: isotropic screen error and the 1024-slot height atlas
+
+**Files:** `src/utils/scene/cutSurfaceTiles.ts` (`probe`), `src/data/bodies/earthTileParams.ts`, `src/services/engine/subsystems/surfaceTileSubsystem.ts` (nothing hard-codes 16 — verify), `tests/data/bodies/earthTileParams.test.ts` if a parity test pins the side, `src/components/DebugPanel/EarthTileAtlasSection.tsx` (reads capacity from the snapshot — verify no literal).
+
+- [x] `screenPx = Math.sqrt(wPx · hPx)`; the near-plane-straddler path unchanged. Existing level tests at nadir must not move (square tiles).
+- [x] `HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE`; fix the constant's comment (68 MB, 1024 slots, why: measured working set at 60° tilt after A1's isotropic error — put the number from A1(d) in the comment).
+- [x] Commit `feat(terrain): isotropic tile screen error; 1024-slot height atlas`.
+
+**Measured:** at 300 km / 60° tilt with one whole-globe band to z13, the isotropic screen error alone took the height-request count only from 1855 to 1819 — the rest was the strip of ground BEHIND the camera, which straddles the eye plane and used to skip the frustum cull entirely, refining to z13 with nothing on screen. `probe` now culls every patch with a bounding sphere against the frustum's side planes first (the only test a straddler gets, and a conservative one: the sphere contains the whole patch plus skirt/relief headroom), which brings the pose to **39** and the ~50 m-altitude fixture from ~1100 leaves to ~20. That fixture's old `> 200` floor and its two "edge ancestors" (eye-plane straddlers 7 km from the camera, projecting hundreds of viewport-widths off screen) asserted the inflation; replaced by an independent on-screen coverage oracle.
+
+### Task A3: docs
+
+- [x] Spec: §5.2 (own-tile-or-nothing → deepest resident ancestor, strict decimation is what makes it crack-free), §5.4 item 4 (R11 stays as a bake property; its "what makes the refine rule satisfiable" clause goes), §5.5 atlas size, §6 items 1–2 (refine gate gone; balance on height level; R12 kept; R13 struck), Drawability paragraph. `docs/RENDERER.md` surface-tile bullets. Plan `Definition of Done`: `SurfaceCutTile { albedo, height, edgeCoarser }`, "refinement gated on own height residency" struck, atlas 1024. Module headers of `cutSurfaceTiles.ts`/`balanceSurfaceCut.ts` ≤ 5 lines.
+- [x] Commit `docs(terrain): R14 in spec, renderer map and plan`.

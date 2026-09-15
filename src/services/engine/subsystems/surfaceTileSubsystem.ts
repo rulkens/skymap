@@ -169,8 +169,9 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     for (const band of fetched.bands) {
       // Not baked for the albedo product (e.g. a height-only row, once those
       // exist) — this planner only ever requests albedo tiles. Not baked for
-      // height either: a leaf draws only with its OWN height tile (§5.2), so
-      // an albedo-only band would request tiles that 404 and never refine.
+      // height either: height inherits from the deepest resident ancestor
+      // (R14), but a band missing its own height coverage would still 404
+      // every height request in its range — wasted fetches that never land.
       if (band?.builtFrom?.albedo === undefined || band?.builtFrom?.height === undefined) continue;
       // A structurally-wrong manifest entry (missing/malformed `bounds`)
       // degrades by skipping it, matching this function's whole stance —
@@ -329,8 +330,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     const misses: SurfaceTileRequest[] = [];
     // Debug-only tally: planned tiles whose payload hasn't landed yet,
     // whatever the atlas's own slot state — see `SurfaceTileDebugSnapshot`.
-    // BOTH products: height is the one that gates refinement, so an
-    // albedo-only count reads zero while the cut is stuck.
+    // BOTH products: a stream stalled in only one of them would otherwise
+    // read as zero misses, since neither gates refinement any more (R14).
     let notResidentCount = 0;
     for (const request of plan.requests) {
       const key = surfaceTilePath(request.tile, prefix);
@@ -364,8 +365,9 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
             const slot = streams.heightStream.upload(key, tile);
             if (slot === null) return;
             // `readyAtMs` is the albedo crossfade's clock; height has no fade
-            // (a leaf without its own height tile is not drawn at all), but
-            // the residency record is shared, so it is stamped the same way.
+            // in F1 (the renderer doesn't sample the atlas yet, and R14's
+            // ancestor fallback makes one tile's stamp meaningless anyway),
+            // but the residency record is shared, so it is stamped the same way.
             heightResident.set(key, { tile: request.tile, slot, readyAtMs: performance.now() });
           },
         });

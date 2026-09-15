@@ -11,8 +11,8 @@ import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
 import { surfaceTileInBand } from './surfaceTileInBand';
 import { equirectUvToDirection } from '../math/equirectUvToDirection';
 import { surfacePatchAnchor } from './surfacePatchAnchor';
-import { packSurfaceTileKey } from './packSurfaceTileKey';
 import { balanceSurfaceCut } from './balanceSurfaceCut';
+import { resolveHeightLattice } from './resolveHeightLattice';
 
 type ResidentLookupResult = {
   readonly slot: number;
@@ -21,15 +21,15 @@ type ResidentLookupResult = {
   readonly readyAtMs: number;
 } | null;
 
-/** Shared by every leaf; `balanceSurfaceCut` hands the leaf back untouched
- *  when nothing coarsens against it, so this array is the common case. */
+/** Placeholder until `balanceSurfaceCut` fills the real bits in. */
 const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
 
 /**
  * cutSurfaceTiles — one quadtree walk, two products: `requests` is what to
- * fetch, `cut` what to draw. A leaf's height is strictly its OWN (spec §5.2),
- * so height residency gates REFINEMENT, not just drawing — which is why a
- * node's cull is computed by its PARENT (`probe`) and rides the stack.
+ * fetch, `cut` what to draw. Refinement is residency-blind (R14) — screen
+ * error and the bands alone — and a leaf whose own height has not landed
+ * inherits the deepest resident ancestor's lattice, so nothing is ever a hole.
+ * A node's cull is computed by its PARENT (`probe`) and rides the stack.
  */
 export function cutSurfaceTiles(input: {
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
@@ -113,6 +113,14 @@ export function cutSurfaceTiles(input: {
   const mw1 = viewProjLocal[7]!;
   const mw2 = viewProjLocal[11]!;
   const mw3 = viewProjLocal[15]!;
+  // The four side planes of the frustum in the walk's own frame (the rows of
+  // the vp, Gribb–Hartmann): inside is `w ± x >= 0`, `w ± y >= 0`. Normalised
+  // so a signed distance compares against a bounding radius.
+  const planeA = [mw0 + mx0, mw0 - mx0, mw0 + my0, mw0 - my0];
+  const planeB = [mw1 + mx1, mw1 - mx1, mw1 + my1, mw1 - my1];
+  const planeC = [mw2 + mx2, mw2 - mx2, mw2 + my2, mw2 - my2];
+  const planeD = [mw3 + mx3, mw3 - mx3, mw3 + my3, mw3 - my3];
+  const planeInvLen = planeA.map((a, k) => 1 / Math.hypot(a, planeB[k]!, planeC[k]!));
 
   const requests: SurfaceTileRequest[] = [];
   const cut: SurfaceCutTile[] = [];
@@ -159,7 +167,20 @@ export function cutSurfaceTiles(input: {
     );
     if (centreAngle - patchAngle > capAngle) return null;
 
-    // 2. Frustum, and the projected extent that drives everything else
+    // 2. Frustum, conservatively: a sphere about the patch centre, radius to
+    // the farthest corner plus headroom for skirts/relief (no per-tile height
+    // bounds exist yet). The only test a near-plane straddler gets — its
+    // projected bbox below is meaningless — and it also catches points
+    // entirely behind the eye, which fail every plane test at once.
+    const boundRadius = 1.5 * Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
+    for (let k = 0; k < 4; k++) {
+      const dist =
+        (planeA[k]! * centre[0] + planeB[k]! * centre[1] + planeC[k]! * centre[2] + planeD[k]!) *
+        planeInvLen[k]!;
+      if (dist < -boundRadius) return null;
+    }
+
+    // 3. The projected extent that drives everything else
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -181,20 +202,18 @@ export function cutSurfaceTiles(input: {
       if (ndcY > maxY) maxY = ndcY;
     }
     if (nInFront === 0) return null;
-    // A sample past the near plane is dropped before it can corrupt the
-    // bbox, but a STRADDLING patch's bbox is still meaningless: the true
-    // footprint sweeps toward infinity as a sample nears w=0, so the
-    // surviving corners alone can land anywhere, including a false reject
-    // that prunes the whole subtree. Trust the bbox only when nothing was
-    // dropped; otherwise treat the patch as screen-filling and force it to
-    // the deepest level any band offers here.
+    // A sample past the near plane is dropped before it can corrupt the bbox,
+    // but a straddler's bbox stays meaningless regardless (its footprint
+    // sweeps toward infinity as w→0): trust it only when nothing was dropped,
+    // else treat the patch as screen-filling at the deepest level.
     const straddlesNearPlane = nInFront < 9;
     if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) return null;
 
-    // NDC spans 2 units across the viewport, hence the halving.
+    // NDC spans 2 units, hence the halving. GEOMETRIC MEAN, not max — sizing
+    // a foreshortened sliver by its width alone over-refines it for its area.
     const screenPx = straddlesNearPlane
       ? Math.max(viewportPx[0], viewportPx[1])
-      : Math.max(((maxX - minX) / 2) * viewportPx[0], ((maxY - minY) / 2) * viewportPx[1]);
+      : Math.sqrt(((maxX - minX) / 2) * viewportPx[0] * (((maxY - minY) / 2) * viewportPx[1]));
     if (!(screenPx > 0)) return null;
 
     // `lodBias` is subtracted AFTER the ceil, not folded into the log
@@ -215,20 +234,20 @@ export function cutSurfaceTiles(input: {
     requests.push({ tile: { product: 'height', z, x, y }, screenPx });
   }
 
-  /** This exact tile's height slot, or null. No ancestor climb, ever: §5.2. */
-  function heightSlotOf(z: number, x: number, y: number): number | null {
-    return residentSlot({ product: 'height', z, x, y })?.slot ?? null;
+  /** The lattice a leaf at `(z, x, y)` samples, `minLevelDelta` levels up or
+   *  coarser; also `balanceSurfaceCut`'s resolver. */
+  function heightOf(
+    z: number,
+    x: number,
+    y: number,
+    minLevelDelta: number,
+  ): SurfaceCutTile['height'] | null {
+    return resolveHeightLattice({ z, x, y, baseLevel, minLevelDelta, residentSlot });
   }
 
   // Explicit stack, not recursion: allocation-free in a per-frame path. Five
   // numbers per node — its id plus `probe`'s two results, unpaid for twice.
   const stack: number[] = [];
-  // Hoisted scratch for the four children's probe results.
-  const childX = [0, 0, 0, 0];
-  const childY = [0, 0, 0, 0];
-  const childScreenPx = [0, 0, 0, 0];
-  const childRequired = [0, 0, 0, 0];
-  const childReady = [false, false, false, false];
 
   const rootCols = surfaceTileColumns(baseLevel, tilePx);
   for (let y = 0; y < rootCols / 2; y++) {
@@ -255,56 +274,29 @@ export function cutSurfaceTiles(input: {
 
     // 3 & 4. Refine or emit
     if (required > z && surfaceTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
+      // Residency-blind (R14): every visible child is descended into, and each
+      // requests itself when popped. Holding the parent until a child's height
+      // landed was what turned an atlas miss into a permanent hole, since the
+      // refused allocation is never retried.
       let visibleChildren = 0;
-      let readyChildren = 0;
       for (let q = 0; q < 4; q++) {
         const cx = x * 2 + (q & 1);
         const cy = y * 2 + (q >> 1);
         const probed = probe(z + 1, cx, cy);
         if (probed === null) continue;
-        childX[visibleChildren] = cx;
-        childY[visibleChildren] = cy;
-        childScreenPx[visibleChildren] = probed.screenPx;
-        childRequired[visibleChildren] = probed.required;
-        // Every visible child is asked: R11's sibling-closed bake means a
-        // child the walk can descend to always has a file.
-        childReady[visibleChildren] = heightSlotOf(z + 1, cx, cy) !== null;
-        if (childReady[visibleChildren]) readyChildren++;
         visibleChildren++;
+        stack.push(z + 1, cx, cy, probed.screenPx, probed.required);
       }
 
-      // Same existence gate as the leaf branch: a would-be ancestor no band
-      // bakes at this z has no file to fetch either.
-      const requestable = surfaceTileInBand(bands, tilePx, z, x, y);
-      if (readyChildren > 0) {
-        // Refine onto the children whose OWN height has landed (R13). A child
-        // still in flight is a hole the base globe fills for one round trip —
-        // never a reason to hold the parent as the leaf: that discarded every
-        // settled subtree each time a culled sibling scrolled into view, and
-        // under a base-level parent (never resident) a whole root quad
-        // vanished to the base globe. §5.2 still holds: nothing draws on an
-        // ancestor's heights. The missing children are requested in both
-        // products below, alongside the ready ones — a request is also the LRU
-        // touch that keeps a resident sibling alive while the last is in flight.
-        if (requestable) request(z, x, y, screenPx);
-        for (let c = 0; c < visibleChildren; c++) {
-          if (childReady[c]) {
-            stack.push(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!, childRequired[c]!);
-          } else if (surfaceTileInBand(bands, tilePx, z + 1, childX[c]!, childY[c]!)) {
-            request(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!);
-          }
-        }
+      if (visibleChildren > 0) {
+        // The ancestor chain is fetched alongside the leaves: albedo inherits
+        // from it, and a request is also the LRU touch that keeps it alive.
+        if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
         continue;
       }
-
-      // No child can be drawn yet, so this node stays the leaf and its
-      // children are fetched instead.
-      for (let c = 0; c < visibleChildren; c++) {
-        if (surfaceTileInBand(bands, tilePx, z + 1, childX[c]!, childY[c]!))
-          request(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!);
-      }
-      // Demand, not residency: `zWin` is the subsystem's engage gate, so a cold
-      // start that cannot refine must still name the level it is asking for.
+      // Every child culled, so this node is the leaf after all. Demand, not
+      // residency: `zWin` is the subsystem's engage gate, so it names the level
+      // asked for rather than the one drawn.
       if (z + 1 > zWin) zWin = z + 1;
     } else if (z > zWin) {
       // `zWin` is the finest level the walk REACHED, counting leaves no bake
@@ -319,12 +311,10 @@ export function cutSurfaceTiles(input: {
     // residency lookup below, or a band-edge ring never gets ancestor pixels.
     if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
 
-    // §5.2: a leaf draws from its OWN height tile or not at all. Inheriting an
-    // ancestor's posts would make neighbouring patches sample different height
-    // levels as tiles arrive, and the cracks would flicker. Covers
-    // `z <= baseLevel` too — nothing is atlas-resident there, in either product.
-    const heightSlot = heightSlotOf(z, x, y);
-    if (heightSlot === null) continue;
+    // Height inherits exactly as albedo does (R14); `balanceSurfaceCut` then
+    // stitches the levels the two neighbours ended up on.
+    const height = heightOf(z, x, y, 0);
+    if (height === null) continue;
 
     // Ancestor-fallback residency: the leaf's own tile if resident, else the
     // nearest resident ancestor strictly deeper than `baseLevel` (that level
@@ -337,50 +327,20 @@ export function cutSurfaceTiles(input: {
         id: { z, x, y },
         anchor: surfacePatchAnchor(u0, v0, u1, v1),
         albedo: resolved,
-        heightSlot,
+        height,
         edgeCoarser: NO_COARSER_EDGES,
       });
     }
   }
 
-  // 2:1 balance over the finished cut: a neighbour relation only exists once
-  // every leaf is known, and coarsening one quad can unbalance another.
-  const balanced = balanceSurfaceCut(cut, tilePx, bands, (pz, px, py) => {
-    const heightSlot = heightSlotOf(pz, px, py);
-    if (heightSlot === null) return null;
-    const albedo = resolveCutResidency({ z: pz, x: px, y: py, baseLevel, residentSlot });
-    if (albedo === null) return null;
-    const cols = surfaceTileColumns(pz, tilePx);
-    const rows = cols / 2;
-    return {
-      id: { z: pz, x: px, y: py },
-      anchor: surfacePatchAnchor(px / cols, 1 - (py + 1) / rows, (px + 1) / cols, 1 - py / rows),
-      albedo,
-      heightSlot,
-      edgeCoarser: NO_COARSER_EDGES,
-    };
-  });
-
-  const leafKeys = new Set<number>();
-  for (const leaf of balanced) leafKeys.add(packSurfaceTileKey(leaf.id.z, leaf.id.x, leaf.id.y));
-
-  /** One level past the leaf covering it is as deep as a request may go —
-   *  §6.1's "requests run one level ahead of the cut". Anything deeper is a
-   *  level the balance discarded, and fetching it pins an atlas slot this cut
-   *  can never draw. A tile no leaf covers (its leaf dropped for want of
-   *  height) keeps its request: that is the cold-start path. */
-  function withinBalancedDepth(z: number, x: number, y: number): boolean {
-    for (let az = z; az >= baseLevel; az--) {
-      if (leafKeys.has(packSurfaceTileKey(az, x >> (z - az), y >> (z - az)))) return z <= az + 1;
-    }
-    return true;
-  }
+  // Level balance over the finished cut: a neighbour relation only exists once
+  // every leaf is known, and coarsening one lattice can unbalance another.
+  const balanced = balanceSurfaceCut(cut, tilePx, bands, heightOf);
 
   // Largest-on-screen-first: residency walk order and fetch queue pop order.
-  const kept = requests.filter((r) => withinBalancedDepth(r.tile.z, r.tile.x, r.tile.y));
-  kept.sort((a, b) => b.screenPx - a.screenPx);
+  requests.sort((a, b) => b.screenPx - a.screenPx);
 
-  return { cut: balanced, requests: { zWin, requests: kept, subCameraDirLocal: camDir } };
+  return { cut: balanced, requests: { zWin, requests, subCameraDirLocal: camDir } };
 }
 
 /**
