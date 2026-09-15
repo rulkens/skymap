@@ -76,13 +76,24 @@ export const NO_FOLLOW_MEMORY: FollowMemory = {
 };
 
 /**
- * The follow conditions both follow rows share. Active only for a body the sim
- * clock MOVES: a static focus (a famous star, the Sun) carries a position but is
- * not followed. Gated on the absolute arm (spec §7): the ease has no meaning
- * once the state co-rotates with the body.
+ * A DEBT already paid: the framing this focus asked for was delivered by
+ * something other than the approach — a seeded pose, a clip or a tween leg.
+ * Carrying no capture, so the first produce reads the delivered pose itself.
  */
-function followActive(s: RootState): boolean {
-  return isWorldArm(s.camera.base) && bodyMovesThisFrame(s.selectionRows.focus);
+export const SETTLED_FOLLOW_MEMORY: FollowMemory = { ...NO_FOLLOW_MEMORY, saturated: true };
+
+/** The same debt paid over a memory that already exists — a pan strafe and a
+ * committed zoom are the focus row's, not the delivering driver's, so they ride. */
+function settledMemory(mem: FollowMemory | null): FollowMemory {
+  return mem === null ? SETTLED_FOLLOW_MEMORY : { ...mem, saturated: true };
+}
+
+/**
+ * Both follow rows want a body the sim clock MOVES: a static focus (a famous
+ * star, the Sun) carries a position but is not followed.
+ */
+function followsFocus(s: RootState): boolean {
+  return bodyMovesThisFrame(s.selectionRows.focus);
 }
 
 /**
@@ -97,13 +108,17 @@ function followPose(
 ): { readonly pose: FramedCameraPose; readonly memory: FollowMemory | null } {
   const s = ctx.state;
   const focus = s.selectionRows.focus;
-  const base = s.camera.base;
   const livePos = liveBodyPosition(focus, ctx.bodies);
   // Null-guard keeps the arm total; isActive already proved a moving body.
   if (focus === null || focus.type !== 'body' || livePos === null) {
-    return { pose: base, memory: mem };
+    return { pose: s.camera.base, memory: mem };
   }
-  if (!isWorldArm(base)) return { pose: base, memory: mem };
+  // The pose eased TOWARD, in world terms whatever arm the regime is in — by
+  // reference in the world arm, so its numbers are untouched. The produce stays
+  // a world pose below it too: the fold refolds it into the arm geometry picks,
+  // which is how an approach that starts inside an arm the focus hosts gets to
+  // fly at all.
+  const committed = ctx.committedWorld;
 
   // Captured ONCE per activation (`runFrame` nulls the memory on the focus
   // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
@@ -143,30 +158,44 @@ function followPose(
   // a follow row winning last frame, so the three sources never compete.
   let distanceTarget = memory.distanceTarget;
   if (distanceTarget === null) {
-    const radiusMpc =
-      bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, focus.id, 'cameraDrivers')) *
-      SCALE_UNITS.M_TO_MPC;
-    distanceTarget = bodyFocusDistance(radiusMpc, ctx.projection.fovYRad);
+    // A SETTLED debt is already framed — hold what the delivering driver left;
+    // only an owed one seeds the framing distance.
+    distanceTarget = memory.saturated
+      ? committed.distance
+      : bodyFocusDistance(
+          bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, focus.id, 'cameraDrivers')) *
+            SCALE_UNITS.M_TO_MPC,
+          ctx.projection.fovYRad,
+        );
   } else if (!isFollowDriverId(ctx.winnerLastFrame)) {
-    distanceTarget = base.pose.distance;
+    distanceTarget = committed.distance;
   } else if (ctx.followDistanceTarget !== null) {
     distanceTarget = ctx.followDistanceTarget;
   }
 
-  const t = easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
+  // The debt, not the clock, decides the ease is over: settled means the framing
+  // was delivered, whatever the epoch reads. (An ease that reached 1 never
+  // un-reaches it, so this is the incumbent's own value for every path that
+  // saturated by easing.)
+  const t = memory.saturated ? 1 : easeOutCubic(ctx.elapsedMs / FOCUS_TWEEN_MS);
   return {
     pose: absoluteArm({
       target: livePos,
-      // Eases toward the committed `base`: honours a post-follow drag, keeps heading when un-dragged.
-      yaw: lerp(from.yaw, base.pose.yaw, t),
-      pitch: lerp(from.pitch, base.pose.pitch, t),
+      // Eases toward the committed base: honours a post-follow drag, keeps heading when un-dragged.
+      yaw: lerp(from.yaw, committed.yaw, t),
+      pitch: lerp(from.pitch, committed.pitch, t),
       distance: lerp(from.distance, distanceTarget, t),
       // Roll rides like yaw/pitch: the approach frame-alignment (ruling 8)
       // lands per wheel notch, and dropping it pinned a followed approach
       // to scene-frame up until the engage edge.
-      roll: lerp(from.roll ?? 0, base.pose.roll ?? 0, t),
+      roll: lerp(from.roll ?? 0, committed.roll ?? 0, t),
     }),
-    memory: { from, distanceTarget, panOffset: memory.panOffset, saturated: t >= 1 },
+    memory: {
+      from,
+      distanceTarget,
+      panOffset: memory.panOffset,
+      saturated: memory.saturated || t >= 1,
+    },
   };
 }
 
@@ -200,6 +229,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     id: 'clip',
     priority: 95,
     epoch: 'clip',
+    deliversFraming: true,
     // Holds the camera above orbitDrag in EITHER arm: a gesture handed back
     // to a clip whose commit-on-edge bakes its own final pose would be
     // discarded at pointerup (`replayInput` swallows the steps too).
@@ -222,7 +252,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       });
       return {
         pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
-        memory: mem,
+        memory: settledMemory(mem),
       };
     },
   },
@@ -253,7 +283,11 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     commitsOnEdge: true,
     // Idempotent (the pose already targets the body); keeps the pin's rule uniform.
     pivotsOnFocusedBody: true,
-    isActive: (s, approachDone = false) => followActive(s) && !approachDone,
+    // NOT arm-gated: the approach's job — ease from where the eye is to the
+    // focus's framing pose — is stated in world terms and the fold refolds it
+    // into whatever arm geometry picks, so an approach owed from inside an arm
+    // the focus HOSTS (standing at a rover, focusing its planet) can fly.
+    isActive: (s, approachDone = false) => followsFocus(s) && !approachDone,
     pose: followPose,
   },
   {
@@ -265,13 +299,17 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     epoch: 'follow',
     commitsOnEdge: true,
     pivotsOnFocusedBody: true,
-    isActive: followActive,
+    // Arm-gated where the approach is not (spec §7): the ARM is the hold — a
+    // state that co-rotates with the body keeps it centred structurally, and a
+    // world pose re-asserted over it would only fight the arm's own channels.
+    isActive: (s) => isWorldArm(s.camera.base) && followsFocus(s),
     pose: followPose,
   },
   {
     id: 'tween',
     priority: 60,
     epoch: 'tween',
+    deliversFraming: true,
     // Bakes the final pose on deactivation; it is already in the CURRENT
     // frame, so the commit never bakes a stale pinned-frame reading.
     commitsOnEdge: true,
@@ -290,7 +328,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
       });
       return {
         pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
-        memory: mem,
+        memory: settledMemory(mem),
       };
     },
   },

@@ -103,8 +103,9 @@ arm's, and there is no ground plane anywhere in that path.
   the world arm; a site rung needs a `surfaceFixed` driver row.
 - **Terrain.** Bodies stay analytic spheres, so the floors below are sphere
   floors. A future DEM changes the floor's input, not the rung.
-- **Rung-generic follow/approach drivers.** The approach stays absolute-arm
-  only; §4.8 keeps the descent from stranding it instead.
+- **Rung-generic follow/approach drivers.** The HOLD row stays absolute-arm
+  only; the approach row is arm-free (§4.8), which is what keeps a descent —
+  or an arm the focus hosts — from stranding it.
 
 ## 2. The ladder model
 
@@ -825,47 +826,35 @@ disengage** — carry through the band, level on a cut, and with `northUp` off
 (ruling 11) carry either way. Nothing downstream resets roll, so nothing
 downstream can forget to.
 
-That rule alone would strand the approach. `followActive` is gated on the world
-arm (`cameraDrivers.ts:81-83`) because the ease has no meaning once the state
-co-rotates; a rover's framing distance is metres, so an approach with the
-subtree rule in place would cross Mars's engage band ~1500 km out, the follow
-row would go inactive mid-flight, and the camera would park there. The fix is
-uniform with the rule the fold already has for gestures: **an approach owns the
-rung until it reaches its focus.** While a follow row is winning and its memory
-is not yet `saturated` (`FollowMemory.saturated`, set at
-`cameraDrivers.ts:166`), the rung step is skipped — exactly as the fold is
-skipped while `intent.dragging` (`projectFramePose.ts:112-114`) — **for a
-descent into a rung the focus merely hangs off**, and only for that:
+That rule alone would strand the approach. A focus dispatch creates a **framing
+debt** — `FollowMemory` for that focus row, unsaturated — and only the follow
+approach pays it. Gating the approach on the world arm made the arm's hold do
+double duty as "suppress the fresh approach", so an approach owed from inside an
+arm the focus HOSTS (standing at a rover, focusing its planet; parked at h/R 0.1
+over Mars with Mars focused) could never fly and the camera sat where it was
+(adverse 10). So the rows split: **the APPROACH row is arm-free** — its job, ease
+from where the eye is to the focus's framing pose, is stated in world terms, and
+the fold refolds its world pose into whatever arm geometry picks, so the arms
+release and engage on geometry alone — while **the HOLD row stays world-arm
+gated**, because below the world arm the arm IS the hold (spec §7: the state
+co-rotates, so "keep the body centred" is structural). Both rows ease toward
+`releasedWorldArm(base)` — the world arm a hand-back would land on, by reference
+where the base already is the world arm, so world-arm numbers are unchanged, and
+carrying `releasedWorldRoll` below it so an approach out of an arm cannot ride
+the local horizon out as permanent image roll. The debt is settled by the ease
+saturating, or by a driver that DELIVERS the framing itself: `clip` and `tween`
+declare `deliversFraming`, which both settles their memory and advances the
+follow epoch's row, so a tour landing is not undone by an approach at the clip's
+exit.
 
-```ts
-approaching && frameBodyId(target) !== ctx.focusBodyId;
-```
-
-A descent into the focus's **own** rung is the arrival, and it must land. A body
-focused from inside its own band — the ordinary tour landing, parked at h/R 0.1
-over Mars with Mars focused — engages on the next fold today, and that engage is
-what cuts the fresh approach short. Defer it and the approach's `distanceTarget`
-is `bodyFocusDistance`, h/R ≈ 3.3: the ease spends its whole duration pulling the
-camera **out** of the band, and when the gate finally opens the camera is outside
-`engageHR` and never engages again. Gating only the hangs-off case closes the
-rover strand without reopening that one; both are the same predicate read from
-the two sides, so there is no second rule to keep in step.
-
-The gate lives **in `projectFramePose`, beside that `intent.dragging` skip** —
-not inside `stepRung`. `RungCtx` carries no driver state, and widening it to
-carry follow memory would braid the driver table into every row's context for
-one caller's benefit; `stepRung` stays a pure function of the ladder. What the
-fold needs instead is the one boolean "an approach is in flight and has not
-saturated", which `stepCameraRuntime` computes from its existing `winnerId` and
-follow memory and passes in as `approaching`.
-
-With both, focusing Curiosity from far away plays out as: follow approaches in
-the world arm and saturates at rover framing distance → next at-rest frame,
-`absolute → { body: 'mars' }` (h/R over Mars ≈ 1e-6, focus in Mars's subtree) →
-the frame after, `{ body: 'mars' } → { site: 'curiosity' }` (range in metres,
-well inside 40 R). Two invisible frames, one rung each. Follow stays inactive
-from then on and nothing is lost by it: the rover is body-fixed on Mars and the
-Mars rung co-rotates with it, so there is nothing left to follow.
+With the split, focusing Curiosity from far away plays out as: follow approaches
+in the world arm, crosses `absolute → { body: 'mars' }` on geometry as it enters
+Mars's band, keeps easing there (the descent costs it nothing now), and lands
+`{ body: 'mars' } → { site: 'curiosity' }` at rover framing distance. Focusing
+Mars from `site:curiosity` is the mirror: the subtree rule hands back to
+`{ body: 'mars' }`, the owed approach flies the eye out through Mars's band, the
+`disengageHR` edge hands back to `absolute`, and the ease saturates at
+`bodyFocusDistance` — a framing move, which is what a focus dispatch is.
 
 ### 4.9 Displays
 
@@ -972,10 +961,10 @@ restatements, no clamp-boundary mirrors.
    mid-flight — a latent stranding bug, not a feature, but a behaviour change
    all the same. _Recommend:_ adopt it in the feature PR (never in prep), and
    check `driverGoldenTrace` for a trace that engages mid-approach; if one
-   exists, re-record it with the diff justified. _Settled:_ adopted in the
-   narrowed form §4.8 now states — the literal predicate breaks arrival into a
-   focus's own band. No recorded step engages mid-approach, so the three golden
-   traces stay byte-identical.
+   exists, re-record it with the diff justified. _Settled:_ the gate is gone
+   (adverse 10). An arm-free approach row makes a mid-flight descent harmless,
+   so the crossing needs no suppressing; the three golden traces stay
+   byte-identical because no recorded step engages mid-approach.
 2. **Are 40 R / 80 R the right edges?** _Recommend:_ ship them as the defaults
    with sliders; the sliders make a re-tune a one-line data change, and the
    eye-check settles it faster than analysis does.

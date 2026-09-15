@@ -25,7 +25,6 @@ import { hOverR } from '../camera/hOverR';
 import { liveBodyPosition } from '../camera/liveBodyPosition';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
-import { frameBodyId } from '../camera/rungs/frameBodyId';
 import { hostOf } from '../camera/rungs/hostOf';
 import { hostOrThrow } from '../camera/rungs/hostOrThrow';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
@@ -51,8 +50,6 @@ export function projectFramePose(args: {
   readonly pivotsOnFocusedBody: boolean;
   readonly focus: SelectionRow | null;
   readonly follow: FollowMemory | null;
-  /** A follow approach is in flight and has not saturated — the §4.8 gate's half. */
-  readonly approaching: boolean;
   readonly tilt: TiltMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime, `dragging` skips the fold. */
   readonly intent: CameraState;
@@ -66,17 +63,7 @@ export function projectFramePose(args: {
   readonly actions: readonly UnknownAction[];
   readonly requestRender: boolean;
 } {
-  const {
-    render,
-    authoredOverride,
-    pivotsOnFocusedBody,
-    focus,
-    follow,
-    approaching,
-    tilt,
-    intent,
-    ctx,
-  } = args;
+  const { render, authoredOverride, pivotsOnFocusedBody, focus, follow, tilt, intent, ctx } = args;
   const { bodies, poseBasis, upBasis, tuning } = ctx;
 
   // The pin SETS the target (never adds), so baking the displayed pose into
@@ -120,17 +107,17 @@ export function projectFramePose(args: {
   // pose as the regime swaps §4's disengage test for the engage one
   // mid-animation. Free while the two agree — `refoldTo` answers by reference.
   const target = intent.dragging ? regime : stepRung(refoldTo(displayed, regime, ctx), ctx);
-  // Two whole skips, never a clamp or a latch, both retried next frame: a live
-  // gesture (ruled, Q6), and an approach that has not reached its FOCUS (§4.8).
-  // `followActive` is gated on the world arm, so descending into a rung the
-  // focus merely hangs off — Mars, under a rover focus — goes inactive
-  // mid-flight and parks the camera ~1500 km short. A descent into the focus's
-  // OWN rung is the arrival and must still land, or the ease yanks a camera
-  // already inside its focus's band out to framing distance and it never
-  // engages again.
-  if (!intent.dragging && !(approaching && frameBodyId(target) !== ctx.focusBodyId)) {
+  // One whole skip, never a clamp or a latch, retried next frame: a live gesture
+  // (ruled, Q6). An in-flight approach used to skip here too, because it went
+  // inactive the moment the ladder descended into a rung its focus merely hangs
+  // off; the approach row is no longer arm-gated, so the descent costs it
+  // nothing and the ladder crosses on geometry alone.
+  if (!intent.dragging) {
+    // The arm being LEFT, not the arm the winner happened to author in: an
+    // approach owed from inside an arm produces a world pose there, and reading
+    // `displayed` would skip the normalisation on exactly those crossings.
     if (rungKindOf(target) === 'absolute') {
-      if (!isWorldArm(displayed)) {
+      if (rungKindOf(regime) !== 'absolute') {
         // Disengage normalization (pop-2 fix) — see `centreLookingArm`. The
         // centre is the FOCUSED body when it merely hangs off the arm's host
         // (a rover keeps its planet's arm, §4.8): the pin and the follow rows
@@ -140,7 +127,7 @@ export function projectFramePose(args: {
         // too, so a commit without it is a |pan| teleport on the quiet frame.
         // `liveBodyPosition` IS the pin's own resolver, and `focusInSubtree`
         // alone answers "no focus", so neither question gets a second spelling.
-        const host = hostOrThrow(displayed.frame, ctx);
+        const host = hostOrThrow(regime, ctx);
         const focused = focusInSubtree(ctx.focusBodyId, host.id)
           ? liveBodyPosition(focus, bodies)
           : null;

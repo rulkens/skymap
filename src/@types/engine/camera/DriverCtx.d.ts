@@ -20,6 +20,13 @@ export type DriverCtx = {
   readonly register: FramedCameraPose;
   /** World arm of `register`; the follow capture reads its eye. */
   readonly authoredWorld: CameraPose;
+  /**
+   * World arm of `camera.base` — BY REFERENCE while the base already is the
+   * world arm, so a world-arm reader is unchanged bit for bit. The follow rows
+   * ease toward it: below the world arm `base.pose` speaks the arm's own
+   * channels, and the approach's job is stated in world terms.
+   */
+  readonly committedWorld: CameraPose;
   readonly winnerLastFrame: DriverId;
   /** The frame's COMMITTED orientation basis (`stepCameraRuntime`); the live
    * `upBasis` is the fold's, and no driver reads it. `Readonly` because it
