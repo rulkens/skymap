@@ -73,8 +73,7 @@ describe('URL_HASH_FOR', () => {
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
     const resolver = selectionResolverOver({
-      catalogs: { get: () => undefined },
-      famousGalaxiesMeta: [],
+      catalogs: { get: () => undefined, famousMeta: [] },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     });

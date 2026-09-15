@@ -10,7 +10,7 @@
  * rows (alias, Milky Way) bypassing it with a pre-built ref.
  *
  *   - famous   → the curated seed id ('m31'); the resolver's `resolveFocusId`
- *                scans famousGalaxiesMeta.
+ *                scans the galaxy store's famous meta rows.
  *   - alias    → the shared galaxy-id ladder (`encodeGalaxyId`), which yields
  *                'pgc-<n>' for the GLADE/2MRS PGC the alias row carries. We reuse
  *                that encoder rather than re-spell the 'pgc-' grammar here so the

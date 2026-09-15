@@ -95,8 +95,7 @@ const VIRGO: StructureInfo = {
  * are needed because no galaxy ids are tested here — only structures.
  */
 const DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: (id) => (id === 'cluster-virgo' ? VIRGO : null), byCategory: () => [] },
   stars: { current: () => null },
 };
@@ -325,7 +324,7 @@ describe('resolveClipFoci rewrites strafeId to a lateral moveTarget', () => {
 describe('resolveClipFoci throws on unresolvable id', () => {
   it('throws when a non-null focusId does not resolve', () => {
     // 'no-such-object' passes the [a-z0-9_-]+ char-class gate and routes to
-    // resolveFamous, which scans famousGalaxiesMeta (empty in DEPS) and returns null —
+    // resolveFamous, which scans famousMeta (empty in DEPS) and returns null —
     // the only id format for which resolveFocusId itself returns null against
     // this fixture. Structure-prefixed ids (cluster-*, etc.) return a non-null
     // phantom ref without any existence check, so they would not trigger the throw.

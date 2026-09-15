@@ -75,10 +75,8 @@ import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
-import {
-  GALAXY_CATALOG_SOURCE_REGISTRY,
-  wireGalaxyCatalogSourceSlot,
-} from '../wiring/galaxyCatalogSourceRegistry';
+import { wireGalaxyCatalogSourceSlot } from '../wiring/wireGalaxyCatalogSourceSlot';
+import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
 import { wireHiResFamousSlot } from '../wiring/wireHiResFamousSlot';
@@ -107,8 +105,8 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // they're minted here directly. Must run before `createSyntheticFallback`
   // (subscribes to the points slots), `installLoadProgress` (enumerates both
   // families into `allSlots`), and `reevaluateDemand` (triggers their loads).
-  for (const cfg of GALAXY_CATALOG_SOURCE_REGISTRY) {
-    wireGalaxyCatalogSourceSlot(state, cfg, { cb });
+  for (const code of GALAXY_CATALOG_SOURCES) {
+    wireGalaxyCatalogSourceSlot(state, SOURCE_REGISTRY[code], { cb });
   }
   wireBodyTextureSlots(state);
   wireMeshBodySlots(state);

@@ -1,5 +1,5 @@
-import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../source';
+import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import { Source } from '../../../data/source';
 
 export const TWOMRS_ENTRY = {
   type: 'galaxyCatalog',
@@ -29,4 +29,7 @@ export const TWOMRS_ENTRY = {
   // Per-source SB boost — 1.0 = no boost.
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
+  category: 'survey',
+  // Ahead of the star catalog (50): resident local structure beats a second of stars.
+  priority: 40,
 } as const satisfies GalaxyCatalogSourceEntry;

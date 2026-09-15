@@ -86,8 +86,7 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 
 // Structure resolved by id immediately — no catalog needed.
 const STRUCTURE_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   stars: { current: () => null },
   structures: {
     byId: (id) =>
@@ -202,8 +201,10 @@ describe('visitBeatSaga', () => {
     });
 
     const lazyDeps: ResolveDeps = {
-      catalogs: { get: () => (cloudLoaded ? CLOUD : undefined) },
-      famousGalaxiesMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
+      catalogs: {
+        get: () => (cloudLoaded ? CLOUD : undefined),
+        famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
+      },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };

@@ -16,7 +16,7 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 
 type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;
-type Deps = Pick<ResolveDeps, 'catalogs' | 'famousGalaxiesMeta'>;
+type Deps = Pick<ResolveDeps, 'catalogs'>;
 
 /** Strict pos@ form, anchored at both ends — matches focusUrl.ts. */
 const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/;
@@ -37,7 +37,7 @@ export function galaxyCatalogSelectionRow(deps: () => Deps): SelectionKindRow<Ga
         d.catalogs.get(ref.source),
         ref.index,
         ref.source,
-        d.famousGalaxiesMeta,
+        d.catalogs.famousMeta,
       );
     },
     focusId: {
@@ -45,7 +45,7 @@ export function galaxyCatalogSelectionRow(deps: () => Deps): SelectionKindRow<Ga
         id.startsWith('pgc-') ||
         id.startsWith('sdss-') ||
         id.startsWith('pos@') ||
-        deps().famousGalaxiesMeta.some((m) => m.id === id),
+        deps().catalogs.famousMeta.some((m) => m.id === id),
       decode: (id) => {
         if (id.startsWith('pgc-')) {
           const n = id.slice(4);
@@ -72,8 +72,8 @@ export function galaxyCatalogSelectionRow(deps: () => Deps): SelectionKindRow<Ga
 }
 
 function resolveFamous(id: string, deps: Deps): GalaxyCatalogRef | null {
-  for (let i = 0; i < deps.famousGalaxiesMeta.length; i++) {
-    if (deps.famousGalaxiesMeta[i]!.id === id) {
+  for (let i = 0; i < deps.catalogs.famousMeta.length; i++) {
+    if (deps.catalogs.famousMeta[i]!.id === id) {
       if (!deps.catalogs.get(Source.FamousGalaxy)) return null;
       return { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: i };
     }
@@ -109,7 +109,7 @@ function resolvePos(raDegT: number, decDegT: number, deps: Deps): GalaxyCatalogR
   let bestIdx = -1;
 
   for (const source of GALAXY_CATALOG_SOURCES) {
-    const cloud = deps.catalogs.get(source as GalaxyCatalogSourceType);
+    const cloud = deps.catalogs.get(source);
     if (!cloud) continue;
     const positions = cloud.positions;
     for (let i = 0; i < cloud.count; i++) {
@@ -122,7 +122,7 @@ function resolvePos(raDegT: number, decDegT: number, deps: Deps): GalaxyCatalogR
       const sqArcsec = (ddec * ddec + dra * dra) * 3600 * 3600;
       if (sqArcsec < bestSqArcsec) {
         bestSqArcsec = sqArcsec;
-        bestSource = source as GalaxyCatalogSourceType;
+        bestSource = source;
         bestIdx = i;
       }
     }
@@ -145,7 +145,7 @@ function encodeGalaxy(ref: GalaxyCatalogRef, deps: Deps): string | null {
     deps.catalogs.get(ref.source),
     ref.index,
     ref.source,
-    deps.famousGalaxiesMeta,
+    deps.catalogs.famousMeta,
   );
   if (!row) return null;
   const [ra, dec] = cartesianToRaDec(row.x, row.y, row.z);

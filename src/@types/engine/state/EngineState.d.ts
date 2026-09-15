@@ -19,7 +19,6 @@ import type { CameraRuntime } from './CameraRuntime';
 import type { CubemapCaptureRuntimes } from './CubemapCaptureRuntimes';
 import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
-import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
 import type { LayerInstance } from '../layer/LayerInstance';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 
@@ -31,8 +30,6 @@ export type EngineState = {
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
   selectionRows: SelectionRowsState;
-  /** A getter onto `store.getState().engine.meta.famousGalaxies`. */
-  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
   /** Per-type data stores — the authoritative app-side home for each. See `EngineData`. */
   data: EngineData;
   picking: EnginePickingState;
@@ -54,7 +51,7 @@ export type EngineState = {
    */
   cubemapCaptures: CubemapCaptureRuntimes;
   /**
-   * Bumped once per successful galaxy-catalog commit (`galaxyCatalogSourceRegistry`'s
+   * Bumped once per successful galaxy-catalog commit (`wireGalaxyCatalogSourceSlot`'s
    * single writer). A scalar, not per-row: it counts catalog content changes, not
    * settings, and is read by `scheduleSkyCaptures`' re-bake key.
    */

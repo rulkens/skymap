@@ -1,8 +1,7 @@
 /**
  * produceFamousGalaxyLabels — per-frame text labels for the curated famous galaxies,
- * derived from the famous `.bin` catalog in `galaxyStore` joined with the
- * famous-galaxies meta sidecar read off `state.famousGalaxiesMeta` (the
- * engine slice).
+ * derived from the famous `.bin` catalog in the galaxy store joined with the
+ * famous-galaxies meta sidecar the same store holds.
  *
  * Famous galaxies are galaxy data, not structures — their anchor is the galaxy
  * point itself, they emit no ring/halo marker, and their label visibility lives
@@ -178,7 +177,7 @@ export function produceFamousGalaxyLabels(
     return empty;
   }
 
-  const meta = state.famousGalaxiesMeta;
+  const meta = galaxies.famousMeta;
   const catalog = galaxies.get(Source.FamousGalaxy);
   if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 

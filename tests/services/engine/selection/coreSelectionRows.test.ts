@@ -3,8 +3,7 @@ import { coreSelectionRows } from '../../../../src/services/engine/selection/cor
 import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 
 const EMPTY_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };

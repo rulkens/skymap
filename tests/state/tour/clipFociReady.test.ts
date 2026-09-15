@@ -38,18 +38,17 @@ import type { FocusId } from '../../../src/@types/animation/FocusId';
 // Brand a string as FocusId for authoring use in tests.
 const id = (s: string): FocusId => s as FocusId;
 
-// Deps where no catalog is loaded and famousGalaxiesMeta is empty — any
+// Deps where no catalog is loaded and famousMeta is empty — any
 // famous or galaxy id resolves to null.
 const emptyDeps: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 const emptyResolver = selectionResolverOver(emptyDeps);
 
 // FamousGalaxyMetaEntry stub for 'm87'. The famous branch of resolveFocusId
-// scans famousGalaxiesMeta for .id === 'm87'; if found AND the FamousGalaxy
+// scans famousMeta for .id === 'm87'; if found AND the FamousGalaxy
 // cloud is loaded, it returns a ref. With no cloud loaded, it returns null.
 // Only the `id` field is consulted by resolveFocusId; the other required fields
 // are stubbed with minimal values so the type cast is safe.
@@ -60,11 +59,10 @@ const m87Meta: FamousGalaxyMetaEntry = {
   type: 'elliptical',
 };
 
-// Deps with m87 in famousGalaxiesMeta but NO FamousGalaxy cloud loaded.
+// Deps with m87 in famousMeta but NO FamousGalaxy cloud loaded.
 // resolveFocusId returns null for 'm87' — the catalog is absent.
 const depsM87NotLoaded: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [m87Meta],
+  catalogs: { get: () => undefined, famousMeta: [m87Meta] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
@@ -89,7 +87,7 @@ const m87FlyClip: ClipData = {
 
 describe('clipFociReady', () => {
   it('clipFociReady is false when a famous id is not yet loaded', () => {
-    // m87 appears in famousGalaxiesMeta but the FamousGalaxy cloud is absent.
+    // m87 appears in famousMeta but the FamousGalaxy cloud is absent.
     // resolveFocusId returns null for 'm87', so the predicate must return false.
     expect(clipFociReady(m87FlyClip, m87NotLoadedResolver)).toBe(false);
   });
@@ -128,7 +126,7 @@ describe('clipFociReady', () => {
 
   it('clipFociReady is true for a structure id', () => {
     // Structure ids resolve by format alone — resolveFocusId returns a
-    // SelectionRef without consulting catalogs or famousGalaxiesMeta. The
+    // SelectionRef without consulting catalogs or famousMeta. The
     // readiness gate must return true regardless of what deps contains.
     const structureClip: ClipData = {
       start: 'live',
@@ -140,7 +138,7 @@ describe('clipFociReady', () => {
         ]),
       ],
     };
-    // emptyDeps has no catalogs or famousGalaxiesMeta, but structure ids bypass both.
+    // emptyDeps has no catalogs or famousMeta, but structure ids bypass both.
     expect(clipFociReady(structureClip, emptyResolver)).toBe(true);
   });
 

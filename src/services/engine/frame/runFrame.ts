@@ -228,7 +228,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
-      famousGalaxiesMeta: state.famousGalaxiesMeta,
+      famousGalaxiesMeta: state.data.galaxies.famousMeta,
     });
   }
   // ONE catalog walk feeds both disk planners (LOD-1 procedural, then LOD-2
@@ -259,7 +259,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       }),
       texturedDisks.beginFrame({
         ...sharedInput,
-        famousGalaxiesMeta: state.famousGalaxiesMeta,
+        famousGalaxiesMeta: state.data.galaxies.famousMeta,
         nowMs: ctx.nowMs,
       }),
     );

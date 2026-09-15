@@ -21,7 +21,7 @@
  */
 
 import type { Vec3 } from '../../math/Vec3';
-import type { ScalarFieldFrameKind } from '../ScalarFieldFrameKind';
+import type { ScalarFieldFrameKind } from '../volume/ScalarFieldFrameKind';
 
 export type FlowFieldMeta = {
   /** Cube edge length in voxels; the cube is N³ (`dims[0]`). */

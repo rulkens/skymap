@@ -1,5 +1,5 @@
-import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../source';
+import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import { Source } from '../../../data/source';
 
 export const SDSS_ENTRY = {
   type: 'galaxyCatalog',
@@ -35,4 +35,6 @@ export const SDSS_ENTRY = {
   // Per-source SB boost — 1.0 = no boost.
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
+  category: 'survey',
+  priority: 60,
 } as const satisfies GalaxyCatalogSourceEntry;

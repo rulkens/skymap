@@ -1,5 +1,5 @@
-import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../source';
+import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import { Source } from '../../../data/source';
 
 export const DESI_WEDGE_ENTRY = {
   type: 'galaxyCatalog',
@@ -68,4 +68,6 @@ export const DESI_WEDGE_ENTRY = {
   // and the default ~1000 Mpc fade half-distance would extinguish it long
   // before the camera gets there. Same rationale as the deep cone.
   falloffHalfMpc: 1e30,
+  category: 'survey',
+  priority: 65,
 } as const satisfies GalaxyCatalogSourceEntry;

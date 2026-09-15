@@ -16,8 +16,7 @@ import { Source } from '../../../src/data/sources';
 
 /** The body arms read no store data, so an empty ResolveDeps fixture suffices. */
 const resolver = selectionResolverOver({
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 });

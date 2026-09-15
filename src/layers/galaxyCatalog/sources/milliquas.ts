@@ -1,5 +1,5 @@
-import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../source';
+import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import { Source } from '../../../data/source';
 
 export const MILLIQUAS_ENTRY = {
   type: 'galaxyCatalog',
@@ -54,4 +54,6 @@ export const MILLIQUAS_ENTRY = {
   // model; lift them.
   sbBoost: 3.0,
   falloffHalfMpc: 1e30,
+  category: 'survey',
+  priority: 61,
 } as const satisfies GalaxyCatalogSourceEntry;

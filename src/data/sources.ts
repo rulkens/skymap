@@ -1,60 +1,10 @@
 /**
  * `Source` enum + `SOURCE_REGISTRY`.
  *
- * The single registry of every data source skymap loads. Ten kinds,
- * discriminated by `type`:
- *
- *   'galaxyCatalog' — per-point galaxy catalogs (SDSS, GLADE, 2MRS, Famous,
- *                     Milliquas, DESI Deep, Synthetic).  Codes are baked
- *                     into the `.bin` point-cloud format and packed into
- *                     the pick texture.
- *   'structure'     — galaxy-cluster / supercluster / void / group marker rings.
- *                     Codes are also packed into the pick texture (upper 6 bits).
- *   'filament'      — derived line-strip geometry (DisPerSE skeleton).
- *                     Single global asset; no per-record identity.
- *   'volume'        — scalar-field cubes (CF-4 DM density, MCPM cosmic web).
- *                     Each volume carries its own presentation defaults
- *                     (palette, contrast, exposure, …).
- *   'milkyWay'      — procedural galactic-disk overlay. Single global
- *                     overlay; no asset, no per-record identity.
- *   'flow'          — CF4++ peculiar-velocity field overlay (single
- *                     flowfield.scfd cube). No per-record identity; carries
- *                     its own look/motion defaults.
- *   'body'          — true-scale scene bodies (Earth, the Solar-System
- *                     planets, the Sun, Sgr A*, the S-stars, the mesh
- *                     bodies). Seeded records drawn by their own
- *                     content-layer; not persisted (a body's identity is its
- *                     stable seed id) and captioned through the
- *                     foreground-labels layer. Earth and the planets are
- *                     pickable on the NEAR0 pick pass via `drawPick`; the Sun's
- *                     dot is drawn by the star layers, so its picks carry the
- *                     famousStar code.
- *   'starCatalog'   — stellar point sets the user toggles as a unit. Two
- *                     variants, split by `binBaseName`: the SURVEY-wide Gaia bin
- *                     streams tiered `.bin` clouds from disk, while the curated
- *                     famous-star map is SEEDED in code from the body store
- *                     (`binBaseName: null`). Both are pickable on the NEAR0 pick
- *                     pass — a survey star's identity is its record index, a
- *                     seeded star's is its stable seed id — and neither is
- *                     persisted to a `.bin`.
- *   'zoneOfAvoidance' — the dust-obscured guide band along the galactic
- *                     plane. Single global overlay, closed-form shape (no
- *                     asset, no per-record identity); unlike `'milkyWay'`
- *                     it is pickable — clicking the band opens its InfoCard.
- *
- * Only `'galaxyCatalog'` and `'structure'` codes are persisted to disk / packed into
- * GPU buffers; `'filament'`, `'volume'`, `'milkyWay'`, `'flow'`, `'starCatalog'`,
- * `'body'` and `'zoneOfAvoidance'` exist
- * solely so every data source has one place to look. The visibility-bitmask helpers
- * (`utils/maskHas`, `utils/maskWith`, `utils/maskWithout`) operate on
- * galaxy catalog codes only.
- *
- * The `Source` enum lives in `./source` (the leaf, so the per-source entry
- * modules can import it without cycling back through this barrel). Each
- * registry row lives in its own `./sources/<id>.ts` module — this file is
- * the assembler that imports every `*_ENTRY` and stitches them into the
- * keyed `SOURCE_REGISTRY`, then re-exports `Source` so existing importers
- * are unchanged.
+ * The registry of every data source skymap loads, keyed by `Source` code;
+ * see `SourceEntry.d.ts` for the ten `type` kinds it discriminates over.
+ * `Source` lives in `./source`; each row lives in its own `./sources/<id>.ts`
+ * (the nine galaxy-catalog rows: `layers/galaxyCatalog/sources/`).
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
@@ -62,16 +12,12 @@ import type { SourceType } from '../@types/data/SourceType';
 import type { Tier } from '../@types/data/Tier';
 
 import { Source } from './source';
-import { SYNTHETIC_ENTRY } from './sources/synthetic';
-import { SDSS_ENTRY } from './sources/sdss';
-import { TWOMRS_ENTRY } from './sources/twomrs';
-import { GLADE_ENTRY } from './sources/glade';
-import { FAMOUS_GALAXY_ENTRY } from './sources/famous-galaxy';
+import { GALAXY_CATALOG_SOURCE_ROWS } from '../layers/galaxyCatalog/sources/galaxyCatalogSourceRows';
+import { sourceRecordOf } from '../utils/data/sourceRecordOf';
 import { CLUSTER_ENTRY } from './sources/cluster';
 import { SUPERCLUSTER_ENTRY } from './sources/supercluster';
 import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
-import { MILLIQUAS_ENTRY } from './sources/milliquas';
 import { FILAMENTS_ENTRY } from './sources/filaments';
 import { CONSTELLATIONS_ENTRY } from './sources/constellations';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
@@ -83,9 +29,6 @@ import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { FLOW_ENTRY } from './sources/flow';
-import { DESI_DEEP_ENTRY } from './sources/desiDeep';
-import { DESI_WEDGE_ENTRY } from './sources/desiWedge';
-import { DESI_SGW_ENTRY } from './sources/desiSgw';
 import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
@@ -131,17 +74,11 @@ export { Source } from './source';
  * either renumbering codes (forbidden — codes are append-only by value) or a
  * separate display-order mechanism; neither is a decision this file makes.
  */
-export const SOURCE_REGISTRY = {
-  [Source.Synthetic]: SYNTHETIC_ENTRY,
-  [Source.SDSS]: SDSS_ENTRY,
-  [Source.TwoMRS]: TWOMRS_ENTRY,
-  [Source.Glade]: GLADE_ENTRY,
-  [Source.FamousGalaxy]: FAMOUS_GALAXY_ENTRY,
+const UNFORMED_SOURCE_REGISTRY = {
   [Source.Cluster]: CLUSTER_ENTRY,
   [Source.Supercluster]: SUPERCLUSTER_ENTRY,
   [Source.Void]: VOID_ENTRY,
   [Source.Group]: GROUP_ENTRY,
-  [Source.Milliquas]: MILLIQUAS_ENTRY,
   [Source.Filaments]: FILAMENTS_ENTRY,
   [Source.Cf4Density]: CF4_DENSITY_ENTRY,
   [Source.Mcpm]: MCPM_ENTRY,
@@ -150,9 +87,6 @@ export const SOURCE_REGISTRY = {
   [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Flow]: FLOW_ENTRY,
-  [Source.DesiDeep]: DESI_DEEP_ENTRY,
-  [Source.DesiWedge]: DESI_WEDGE_ENTRY,
-  [Source.DesiSgw]: DESI_SGW_ENTRY,
   [Source.FamousStar]: FAMOUS_STAR_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
@@ -165,7 +99,15 @@ export const SOURCE_REGISTRY = {
   [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
   [Source.McpmWorkbench]: MCPM_WORKBENCH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,
+} as const;
+
+export const SOURCE_REGISTRY = {
+  ...UNFORMED_SOURCE_REGISTRY,
+  ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
+// `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
+// code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every
+// iterating site — `.category` and `.priority` read off it without a cast.
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
 
@@ -201,23 +143,6 @@ export const HI_RES_LAYER_SIDE_BY_TIER: Readonly<Record<Tier, number>> = {
 
 // ─── Iteration order ────────────────────────────────────────────────────────
 
-/**
- * Galaxy catalog sources in UI presentation order — smallest catalogue → largest
- * (Famous → 2MRS → SDSS → GLADE, ~20 → 38 k → 500 k → 2 M rows). Synthetic
- * leads as the procedural-fallback cloud, hidden from user-facing lists.
- *
- * Listed explicitly rather than `Object.values(Source)` so adding a source
- * to the file-format enum doesn't silently promote it into the UI and the
- * visibility bitmask.
- */
-export const GALAXY_CATALOG_SOURCES: readonly SourceType[] = [
-  Source.Synthetic,
-  Source.FamousGalaxy,
-  Source.TwoMRS,
-  Source.SDSS,
-  Source.Glade,
-  Source.Milliquas,
-  Source.DesiDeep,
-  Source.DesiWedge,
-  Source.DesiSgw,
-];
+/** Galaxy catalog codes, `GALAXY_CATALOG_SOURCE_ROWS` order — see that file. */
+export const GALAXY_CATALOG_SOURCES: readonly (typeof GALAXY_CATALOG_SOURCE_ROWS)[number][0][] =
+  GALAXY_CATALOG_SOURCE_ROWS.map(([code]) => code);

@@ -23,7 +23,7 @@
  * the call site megamorphic across the two hidden classes).
  */
 
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 
 export type DiskRowVisitor = {

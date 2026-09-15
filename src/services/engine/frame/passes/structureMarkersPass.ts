@@ -26,7 +26,6 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
-import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 
 export const structureMarkersPass: ContentPass = {
   name: 'structure-markers',
@@ -66,12 +65,12 @@ export const structureMarkersPass: ContentPass = {
   // the packed identity via its own @group(2). Same non-null shape as
   // `draw` — the pick program's `enabled` gate (`markerCount() > 0`) already
   // narrowed the renderer.
-  drawPick(pass, view, ctx, state) {
+  drawPick(pass, view, _ctx, state) {
     // Invisible → unpickable: past the surveyDeepZoom band's goneAt edge
     // the rings no longer draw (see `draw`), so they must not claim pick
     // hits either.
     const camDistMpc = Math.hypot(view.camPos[0], view.camPos[1], view.camPos[2]);
     if (fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc) === 0) return;
-    state.gpu.structureMarkerRenderer!.pickRing(pass, pickUniformBytesOf(view, ctx, state));
+    state.gpu.structureMarkerRenderer!.pickRing(pass, view.vp, view.viewportPx);
   },
 };

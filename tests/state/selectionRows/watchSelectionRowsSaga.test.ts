@@ -97,8 +97,10 @@ describe('watchSelectionRowsSaga', () => {
       middleware: (g) => g().concat(sagaMiddleware),
     });
     const deps: ResolveDeps = {
-      catalogs: { get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined) },
-      famousGalaxiesMeta: [],
+      catalogs: {
+        get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined),
+        famousMeta: [],
+      },
       structures: { byId: () => structure, byCategory: () => [] },
       stars: { current: () => starCatalog },
     };

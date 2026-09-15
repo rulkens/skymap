@@ -54,8 +54,7 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 // No source selected: the re-anchor capture skips both slots without ever
 // dereferencing this — the default for tests that never seed a galaxy ref.
 const EMPTY_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
@@ -148,8 +147,7 @@ describe('watchTierSaga', () => {
     let currentCloud = makeCloud(SDSS_OBJ_ID, 0, 1);
 
     const resolveDeps = (): ResolveDeps => ({
-      catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousGalaxiesMeta: [],
+      catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined), famousMeta: [] },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     });
@@ -195,8 +193,7 @@ describe('watchTierSaga', () => {
 
     let currentCloud = buildCloud(objIDsOld);
     const resolveDeps = (): ResolveDeps => ({
-      catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousGalaxiesMeta: [],
+      catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined), famousMeta: [] },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     });

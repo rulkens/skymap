@@ -25,7 +25,7 @@
  * per-row loop scales with ~2.5M rows).
  */
 
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { SourceType } from '../../data/SourceType';
 

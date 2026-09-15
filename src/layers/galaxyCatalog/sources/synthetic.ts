@@ -1,5 +1,5 @@
-import type { GalaxyCatalogSourceEntry } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import { Source } from '../source';
+import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import { Source } from '../../../data/source';
 
 export const SYNTHETIC_ENTRY = {
   type: 'galaxyCatalog',
@@ -24,4 +24,7 @@ export const SYNTHETIC_ENTRY = {
   // Per-source SB boost — 1.0 = no boost.
   sbBoost: 1.0,
   falloffHalfMpc: 1e30,
+  category: 'synthetic',
+  // Ahead of everything real: only demanded when the real catalogs failed.
+  priority: 5,
 } as const satisfies GalaxyCatalogSourceEntry;

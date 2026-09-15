@@ -44,8 +44,8 @@ describe('watchRequestFocusSaga', () => {
       catalogs: {
         get: (src) =>
           cloudPresent && src === Source.SDSS ? makeCloud(1237668393006604288n) : undefined,
+        famousMeta: [],
       },
-      famousGalaxiesMeta: [],
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
