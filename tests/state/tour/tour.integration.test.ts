@@ -67,6 +67,9 @@ function makeEngineState(settings: EngineSettingsState): EngineState {
       fades: {
         fadeTo: vi.fn<() => Promise<void>>(() => Promise.resolve()),
         setImmediate: vi.fn<() => void>(),
+        // null never matches a real 0/1 target, so applyIntent's skip never
+        // spuriously fires here — every call in this suite drives a fresh fade.
+        targetOf: vi.fn<() => number | null>(() => null),
       },
       scheduler: { requestRender: vi.fn<() => void>() },
     },
