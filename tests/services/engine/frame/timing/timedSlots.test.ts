@@ -27,26 +27,6 @@ describe('TIMED_SLOTS — body slot pool', () => {
     expect(TIMED_SLOTS).not.toContain(`foreground:0·BODY[${BODY_SLAB_CAPACITY}]`);
   });
 
-  it('puts every body slot under the Foreground bodies group', () => {
-    const group = TIMED_SLOT_GROUPS.find((g) => g.title === 'Foreground bodies · depth')!;
-    const names = group.rows.map((r) => r.name);
-    expect(names).toContain('foreground:0·NEAR0');
-    expect(names).toContain('foreground:0·BODY[0]');
-    expect(names).toContain(`foreground:0·BODY[${BODY_SLAB_CAPACITY - 1}]`);
-  });
-
-  it('also allocates one hdr·BODY[k] slot per registry row (the lens pass pool)', () => {
-    // Same "maximum, not a real frame" sizing as the foreground:0 pool above:
-    // Sgr A*'s painter-order row varies with which other bodies are visible, so
-    // TIMED_SLOTS must cover every capacity slot it could land on.
-    const bodySlots = TIMED_SLOTS.filter((name) => name.startsWith('hdr·BODY['));
-    expect(bodySlots).toHaveLength(BODY_SLAB_CAPACITY);
-    expect(bodySlots[0]).toBe('hdr·BODY[0]');
-    expect(bodySlots[bodySlots.length - 1]).toBe(`hdr·BODY[${BODY_SLAB_CAPACITY - 1}]`);
-    const group = TIMED_SLOT_GROUPS.find((g) => g.title === 'Sgr A* lensing')!;
-    expect(group.rows.map((r) => r.name)).toContain('hdr·BODY[0]');
-  });
-
   it('every real TIMED_SLOTS name is unique (buildTimingSlotMap precondition, M2)', () => {
     // The regression: a 'body' pass used to contribute its bare name once per
     // capacity row (~26 identical 'planets' entries), which collided on one

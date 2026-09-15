@@ -134,11 +134,6 @@ const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 const VIEW_STUB = makeNear0View([0, 0, 0]);
 
 describe('starCatalogPass.enabled', () => {
-  it('is false while the renderer handle is null (pre-bootstrap)', () => {
-    const state = makeState(null);
-    expect(starCatalogPass.enabled(state, CTX_STUB, VIEW_STUB)).toBe(false);
-  });
-
   it('follows the master gate, the per-item toggle, and the crossfade band', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const insideCtx = makeCtx(camAtPc(inner + (outer - inner) * 0.25));

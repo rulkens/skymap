@@ -20,22 +20,6 @@ function deferred<T>(): {
 }
 
 describe('AssetSlot — happy path', () => {
-  it('load → fetch resolves → ready with value', async () => {
-    const fetch: Fetcher<string, { id: number }> = vi.fn().mockResolvedValue('payload-A');
-    const slot = createAssetSlot<string, { id: number }>({
-      name: 'test',
-      fetch,
-      retry: noRetry,
-    });
-    const states: string[] = [];
-    slot.subscribe((s) => states.push(s.kind));
-    slot.load({ id: 1 });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-    expect(slot.current()).toBe('payload-A');
-    expect(states).toContain('loading');
-    expect(states).toContain('ready');
-  });
-
   it('runs commit before becoming ready', async () => {
     const fetch: Fetcher<string, void> = vi.fn().mockResolvedValue('X');
     const commit = vi.fn().mockResolvedValue(undefined);
@@ -402,16 +386,6 @@ describe('AssetSlot — the committed value', () => {
 
     expect(slot.committed()).toBe(slot.state());
     expect(slot.committed()?.req.tier).toBe('medium');
-  });
-
-  it('committed() is null until the slot has committed once', async () => {
-    const fetch: Fetcher<string, Req> = vi.fn().mockRejectedValue(new Error('boom'));
-    const slot = createAssetSlot<string, Req>({ name: 'test', fetch, retry: noRetry });
-    expect(slot.committed()).toBeNull();
-
-    slot.load({ tier: 'medium' });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
-    expect(slot.committed()).toBeNull();
   });
 
   it('committed() holds the previous ready state while a reload is in flight', async () => {

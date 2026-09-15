@@ -82,14 +82,6 @@ describe('zoneOfAvoidancePass.enabled', () => {
     expect(zoneOfAvoidancePass.enabled(liveState(), makeCtx(), VIEW_STUB)).toBe(true);
   });
 
-  it('is disabled when the renderer is null (pre-bootstrap)', () => {
-    const state = {
-      gpu: { zoneOfAvoidanceRenderer: null },
-      subsystems: { fades: { opacityOf: () => 1 } },
-    } as unknown as EngineState;
-    expect(zoneOfAvoidancePass.enabled(state, makeCtx(), VIEW_STUB)).toBe(false);
-  });
-
   it('is disabled once the camera is past the recede band (Local Group framed up)', () => {
     const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
     const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });

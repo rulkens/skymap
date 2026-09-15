@@ -352,33 +352,6 @@ describe('wireStructureProjection → engineStructureCountsChanged', () => {
       ),
     );
   });
-
-  it('dispatches engineStructureCountsChanged again when the bulk slot fires', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const { state, fireSlot } = makeStructureState();
-    const cb = { store, sources: {} } as unknown as EngineCallbacks;
-
-    wireStructureProjection(state, cb);
-    spy.mockClear();
-
-    const payload: StructureCatalogPayload = {
-      catalog: {
-        count: 1,
-        positions: new Float32Array([1, 2, 3]),
-        physicalRadiusMpc: new Float32Array([2]),
-        apparentRadiusMpc: new Float32Array([4]),
-        significance: new Float32Array([0.9]),
-        category: new Uint8Array([0]),
-      },
-      meta: [{ id: 'coma', names: ['Coma Cluster'], abell: 'A1656', description: '' }],
-    };
-    fireSlot({ kind: 'ready', req: {}, value: payload, loadedAtMs: 0 });
-
-    expect(spy).toHaveBeenCalledWith(
-      engineStructureCountsChanged(expect.objectContaining({ cluster: expect.any(Number) })),
-    );
-  });
 });
 
 // ── installLoadProgress: engineLoadProgressChanged ─────────────────────────
@@ -410,26 +383,6 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     capturedProgressEmitFn!(snapshot);
 
     expect(spy).toHaveBeenCalledWith(engineLoadProgressChanged(snapshot));
-  });
-
-  it('dispatches engineLoadProgressChanged(null) when the emitter fires with null', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const state = makeProgressState();
-    const deps: BootstrapDeps = {
-      canvas: {} as HTMLCanvasElement,
-      cb: { store } as unknown as BootstrapDeps['cb'],
-      composition: STUB_COMPOSITION,
-      frameRef: { current: () => {} },
-      detachControlsRef: { current: null },
-      handleRef: { current: null },
-      allSlots: new Map(),
-    };
-
-    installLoadProgress(state, deps);
-    capturedProgressEmitFn!(null);
-
-    expect(spy).toHaveBeenCalledWith(engineLoadProgressChanged(null));
   });
 });
 

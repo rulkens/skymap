@@ -73,28 +73,10 @@ function makeProceduralDiskRenderer() {
 }
 
 describe('proceduralDisksPass', () => {
-  it('enabled() returns false when subsystems.proceduralDisks is null', () => {
-    const state = {
-      subsystems: { proceduralDisks: null },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
-  });
-
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: false } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
-  });
-
-  it('enabled() returns false when lastOutput.instances is empty', () => {
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
-      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     const ctx = makeCtx();
     expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);

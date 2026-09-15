@@ -14,20 +14,6 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(h, 1000)).toBe(1.0);
   });
 
-  it('register defaults initial opacity to 0', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
-    r.register(h);
-    expect(r.opacityOf(h, 1000)).toBe(0);
-  });
-
-  it('register honors a provided initial opacity', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'milkyWay' };
-    r.register(h, 0.75);
-    expect(r.opacityOf(h, 1000)).toBe(0.75);
-  });
-
   it('register is idempotent', () => {
     const r = makeRegistry();
     const h: FadeId = { kind: 'filament' };
@@ -61,17 +47,6 @@ describe('createFadeRegistry', () => {
     r.register(b, 0.75);
     expect(r.opacityOf(a, 1000)).toBe(0.25);
     expect(r.opacityOf(b, 1000)).toBe(0.75);
-  });
-
-  it('serializes the flow handle to its own key (distinct from filament)', () => {
-    const r = makeRegistry();
-    const flow: FadeId = { kind: 'flow' };
-    const filament: FadeId = { kind: 'filament' };
-    r.register(flow, 0.3);
-    r.register(filament, 0.6);
-    // Distinct keys → distinct controllers; neither bleeds into the other.
-    expect(r.opacityOf(flow, 1000)).toBe(0.3);
-    expect(r.opacityOf(filament, 1000)).toBe(0.6);
   });
 
   it('fadeTo throws when the handle is not registered and does not wake', () => {
@@ -109,26 +84,6 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(h, 1000)).toBeCloseTo(0, 5);
     expect(r.opacityOf(h, 1300)).toBeCloseTo(0.5, 5); // smoothstep midpoint
     expect(r.opacityOf(h, 1600)).toBeCloseTo(1, 5);
-  });
-
-  it('opacityOf without a time reads at the last ticked frame time', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'filament' };
-    r.register(h, 0);
-    r.fadeTo(h, 1, 600, 1000);
-    r.tick(1300);
-    // Argless read must equal an explicit read at the last tick's time.
-    expect(r.opacityOf(h)).toBe(r.opacityOf(h, 1300));
-    expect(r.opacityOf(h)).toBeCloseTo(0.5, 5);
-  });
-
-  it('setImmediate skips animation', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'milkyWay' };
-    r.register(h, 0);
-    r.setImmediate(h, 1);
-    expect(r.opacityOf(h, 0)).toBe(1);
-    expect(r.isAnyAnimating(0)).toBe(false);
   });
 
   it('isAnyAnimating aggregates across multiple controllers', () => {

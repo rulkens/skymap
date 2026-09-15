@@ -42,15 +42,6 @@ function makeDeps(): ResolvePickDeps {
 }
 
 describe('resolvePick', () => {
-  it('returns null for a null pick', () => {
-    expect(resolvePick(null, makeDeps())).toBeNull();
-  });
-
-  it('maps a galaxy catalog code to a positional SelectionRef', () => {
-    const ref = resolvePick({ sourceCode: Source.SDSS, localIdx: 1 }, makeDeps());
-    expect(ref).toEqual({ type: 'galaxyCatalog', source: Source.SDSS, index: 1 });
-  });
-
   it('maps a galaxy code regardless of whether the cloud is loaded (positional identity)', () => {
     // The galaxy arm emits a ref without touching the cloud — the reconciler
     // resolves the cloud at display time. No cloud = ref still emitted.

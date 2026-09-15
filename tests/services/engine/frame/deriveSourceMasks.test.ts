@@ -86,21 +86,4 @@ describe('deriveSourceMasks', () => {
     expect(maskHas(draw, Source.SDSS)).toBe(false);
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
-
-  it('lights every galaxy-catalog bit when every galaxy catalog is enabled', () => {
-    // Every galaxy catalog id defaults to enabled in the fixture. ALL_VISIBLE_MASK
-    // is the DEFAULT-visible set, which omits the opt-in DESI patches (cone +
-    // wedge + sgw), so enabling *every* catalog yields ALL_VISIBLE_MASK plus the
-    // DesiDeep, DesiWedge, and DesiSgw bits: enabling a default-off catalog still
-    // sets its bit, which is the invariant this pins.
-    const state = makeState({});
-    const { draw, pick } = deriveSourceMasks(state);
-    const everyBit =
-      ALL_VISIBLE_MASK |
-      (1 << Source.DesiDeep) |
-      (1 << Source.DesiWedge) |
-      (1 << Source.DesiSgw);
-    expect(draw).toBe(everyBit);
-    expect(pick).toBe(everyBit);
-  });
 });

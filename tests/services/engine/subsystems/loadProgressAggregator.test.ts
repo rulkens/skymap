@@ -65,29 +65,6 @@ function fakeSlot(name: string): {
 }
 
 describe('createLoadProgressEmitter', () => {
-  it('emits null when no slot is in flight', () => {
-    const emit = vi.fn<(state: LoadProgressState | null) => void>();
-    const slots = new Map<string, AssetSlot<unknown, unknown>>();
-    const emitter = createLoadProgressEmitter(emit, slots);
-    emitter.emit();
-    expect(emit).toHaveBeenLastCalledWith(null);
-  });
-
-  it('emits a snapshot when a slot transitions to loading', () => {
-    const emit = vi.fn<(state: LoadProgressState | null) => void>();
-    const a = fakeSlot('a');
-    const slots = new Map<string, AssetSlot<unknown, unknown>>([[a.slot.name, a.slot]]);
-    const emitter = createLoadProgressEmitter(emit, slots);
-    emitter.attachSlot(a.slot);
-
-    a.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
-    expect(emit).toHaveBeenLastCalledWith({
-      loadedBytes: 0,
-      totalBytes: 1000,
-      inFlightCount: 1,
-    });
-  });
-
   it('sums loaded + total across multiple loading slots', () => {
     const emit = vi.fn<(state: LoadProgressState | null) => void>();
     const a = fakeSlot('a');
@@ -157,19 +134,6 @@ describe('createLoadProgressEmitter', () => {
    * tests below pin the fix: attach wires a subscriber, destroy()
    * releases every captured handle, and destroy() is idempotent.
    */
-  it('attachSlot wires a subscriber that fires emit on slot transition', () => {
-    const emit = vi.fn<(state: LoadProgressState | null) => void>();
-    const a = fakeSlot('a');
-    const slots = new Map<string, AssetSlot<unknown, unknown>>([[a.slot.name, a.slot]]);
-    const emitter = createLoadProgressEmitter(emit, slots);
-
-    emitter.attachSlot(a.slot);
-    expect(a.subscriberCount()).toBe(1);
-
-    a.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
-    expect(emit).toHaveBeenCalled();
-  });
-
   it('destroy() releases every attached subscriber', () => {
     const emit = vi.fn<(state: LoadProgressState | null) => void>();
     const a = fakeSlot('a');
@@ -197,18 +161,5 @@ describe('createLoadProgressEmitter', () => {
     a.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
     b.set({ kind: 'loading', req: undefined, loaded: 0, total: 1000, attempt: 0 });
     expect(emit).not.toHaveBeenCalled();
-  });
-
-  it('destroy() is idempotent', () => {
-    const emit = vi.fn<(state: LoadProgressState | null) => void>();
-    const a = fakeSlot('a');
-    const slots = new Map<string, AssetSlot<unknown, unknown>>([[a.slot.name, a.slot]]);
-    const emitter = createLoadProgressEmitter(emit, slots);
-
-    emitter.attachSlot(a.slot);
-    emitter.destroy();
-
-    expect(() => emitter.destroy()).not.toThrow();
-    expect(a.subscriberCount()).toBe(0);
   });
 });

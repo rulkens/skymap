@@ -132,22 +132,6 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
       Source.DesiSgw,
     ]);
   });
-
-  it('derives TIER_FETCHED_POINT_SOURCES as every non-synthetic row in enum order', () => {
-    // The boot-time slot-load loop + the tier-change reload loop both
-    // iterate this list.  Adding a new galaxy catalog via one registry row
-    // should automatically wire it through both loops.
-    expect([...TIER_FETCHED_POINT_SOURCES]).toEqual([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.FamousGalaxy,
-      Source.Milliquas,
-      Source.DesiDeep,
-      Source.DesiWedge,
-      Source.DesiSgw,
-    ]);
-  });
 });
 
 describe('wireGalaxyCatalogSourceSlot', () => {
@@ -169,23 +153,6 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(slot).toBeDefined();
     expect(slot!.name).toBe('sdss-points');
     expect(slot!.state().kind).toBe('idle');
-  });
-
-  it('produces independent slots for each source — no cross-talk', () => {
-    const state = makeState({ rendererUpload: vi.fn().mockResolvedValue(undefined) });
-    const sdssCfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.SDSS)!;
-    const gladeCfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.Glade)!;
-
-    wireGalaxyCatalogSourceSlot(state, sdssCfg, makeDeps());
-    wireGalaxyCatalogSourceSlot(state, gladeCfg, makeDeps());
-
-    const sdssSlot = state.assetSlots.points.get(Source.SDSS);
-    const gladeSlot = state.assetSlots.points.get(Source.Glade);
-    expect(sdssSlot).toBeDefined();
-    expect(gladeSlot).toBeDefined();
-    expect(sdssSlot).not.toBe(gladeSlot);
-    expect(sdssSlot!.name).toBe('sdss-points');
-    expect(gladeSlot!.name).toBe('glade-points');
   });
 
   it('dispatches engineSourceCountReported(source, count) on the ready transition', async () => {

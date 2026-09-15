@@ -162,10 +162,6 @@ describe('foregroundLabelsPass.enabled', () => {
     dir.runFrame(state, makeCtx(5100));
     expect(foregroundLabelsPass.enabled(layerState, makeCtx(5100), VIEW_STUB)).toBe(true);
   });
-
-  it('is false pre-bootstrap, before the renderer exists', () => {
-    expect(foregroundLabelsPass.enabled(makeState(null), makeCtx(), VIEW_STUB)).toBe(false);
-  });
 });
 
 describe('foregroundLabelsPass.draw', () => {

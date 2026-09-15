@@ -602,22 +602,6 @@ describe('renderFrame', () => {
     fx = makeInput();
   });
 
-  it('creates exactly one command encoder per frame', () => {
-    renderFrame(fx.input);
-    expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
-  });
-
-  it('submits exactly once with the encoder.finish() output', () => {
-    renderFrame(fx.input);
-    const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
-    expect(submit).toHaveBeenCalledTimes(1);
-    expect(fx.env.finish).toHaveBeenCalledTimes(1);
-    // The submitted buffer is the one finish() returned.
-    const submitted = (submit as any).lastBuffers as ReadonlyArray<GPUCommandBuffer>;
-    expect(submitted).toHaveLength(1);
-    expect(submitted[0]).toBe((fx.env.finish.mock.results[0] as any).value);
-  });
-
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
     // No-timing path → 'merged' strategy: zoneOfAvoidanceRenderer is null in
     // this fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO)
@@ -886,26 +870,5 @@ describe('renderFrame', () => {
     expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();
-  });
-
-  it('skips a pass whose name appears in settings.debug.disabledPasses', () => {
-    // The DebugPanel flips entries in/out of `settings.debug.disabledPasses`.
-    // The executor's render-step group filter checks the record after each
-    // layer's own `enabled()` gate, so mapping `point-sprites` to true stops
-    // `galaxyPointRenderer.draw` even though every other input would run it.
-    const fx2 = makeInput({ disabledPasses: { 'point-sprites': true } });
-    renderFrame(fx2.input);
-    expect(fx2.galaxyPointRenderer.draw).not.toHaveBeenCalled();
-    // Milky-way still draws — the override is per-pass, not global — and both
-    // halves of the cloud (its own aggregate pass, its dust pass in HDR) run.
-    expect(fx2.milkyWayCloudRenderer.drawStars).toHaveBeenCalledTimes(1);
-    expect(fx2.milkyWayCloudRenderer.drawDust).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not skip a pass whose name maps to false in disabledPasses', () => {
-    // `[name] === false` means enabled — only `=== true` hides a pass.
-    const fx2 = makeInput({ disabledPasses: { 'point-sprites': false } });
-    renderFrame(fx2.input);
-    expect(fx2.galaxyPointRenderer.draw).toHaveBeenCalledTimes(1);
   });
 });

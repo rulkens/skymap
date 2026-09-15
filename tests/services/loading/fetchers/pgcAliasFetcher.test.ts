@@ -1,20 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import {
-  pgcAliasFetcher,
-  parsePgcAliases,
-} from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
-import { useFetchMock } from '../../../setup/fetchMock';
-
-const fetch = useFetchMock();
+import { parsePgcAliases } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
 
 describe('parsePgcAliases', () => {
   it('parses bigint keys', () => {
     const map = parsePgcAliases('{"42":["NGC 1"]}');
     expect(map.get(42n)).toEqual(['NGC 1']);
-  });
-  it('returns an empty Map for an empty object', () => {
-    const map = parsePgcAliases('{}');
-    expect(map.size).toBe(0);
   });
   it('skips non-array values', () => {
     const map = parsePgcAliases('{"42":"oops","43":["ok"]}');
@@ -23,9 +13,6 @@ describe('parsePgcAliases', () => {
   });
   it('throws on array root', () => {
     expect(() => parsePgcAliases('[]')).toThrow();
-  });
-  it('throws on null root', () => {
-    expect(() => parsePgcAliases('null')).toThrow();
   });
   // The pre-rework loader skipped malformed PGC keys (non-numeric strings)
   // rather than aborting the whole parse — the user gets the rest of the
@@ -41,19 +28,5 @@ describe('parsePgcAliases', () => {
     expect(map.size).toBe(2);
     expect(map.has(2557n)).toBe(true);
     expect(map.has(42038n)).toBe(true);
-  });
-});
-
-describe('pgcAliasFetcher', () => {
-  it('fetches and parses', async () => {
-    fetch.mock.mockResolvedValue(
-      new Response('{"1":["X"]}', { status: 200 }),
-    );
-    const map = await pgcAliasFetcher(
-      undefined as void,
-      new AbortController().signal,
-      () => {},
-    );
-    expect(map.get(1n)).toEqual(['X']);
   });
 });

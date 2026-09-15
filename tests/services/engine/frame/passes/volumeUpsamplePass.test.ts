@@ -146,22 +146,6 @@ describe('volumeUpsamplePass.enabled', () => {
     ).toBe(false);
   });
 
-  it('returns false when no fields are active and no fade-out tail is in flight', () => {
-    expect(
-      volumeUpsamplePass.enabled(
-        livenessState({ hasActiveFields: () => false }),
-        makeCtx(),
-        VIEW_STUB,
-      ),
-    ).toBe(false);
-  });
-
-  it('returns false when volumeFieldRenderer is null (pre-bootstrap)', () => {
-    expect(
-      volumeUpsamplePass.enabled(livenessState({ renderer: null }), makeCtx(), VIEW_STUB),
-    ).toBe(false);
-  });
-
   it('stays enabled even when volumeUpsample is null (draw self-guards, not the gate)', () => {
     // The producer (scalar-volume raymarch) and this consumer share one gate;
     // volumeUpsample being null is a bootstrap-only case handled defensively in

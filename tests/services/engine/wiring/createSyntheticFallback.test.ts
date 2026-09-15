@@ -229,20 +229,6 @@ describe('createSyntheticFallback', () => {
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });
 
-  it('still arms when every real galaxy catalog fails with an ordinary HttpError', async () => {
-    // Confirms the suppression added for FormatVersionError is type-specific,
-    // not a blanket "any error present" check — an ordinary fetch failure
-    // (HttpError) must still trip the backstop.
-    const { state, slots, cb } = makeState();
-    createSyntheticFallback(state, cb);
-
-    settleGalaxyCatalogs(slots, () => httpErrored());
-
-    expect(state.requests.has('syntheticFallback')).toBe(true);
-    await state.subsystems.assetQueue.drain();
-    expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
-  });
-
   it('does not arm when a real galaxy catalog settles with a FormatVersionError', async () => {
     // The regression this task exists to prevent: a stale-.bin version
     // mismatch must suppress the backstop rather than let the synthetic

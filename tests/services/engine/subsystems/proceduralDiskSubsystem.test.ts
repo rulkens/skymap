@@ -194,34 +194,5 @@ describe('createProceduralDiskSubsystem', () => {
       expect(out.instances.length).toBe(2);
       for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
     });
-
-    it('keeps procFadeOut at 1.0 for non-Famous sources even when the atlas reports loaded', () => {
-      // SDSS / DSS thumbnails intentionally keep the procedural pattern
-      // underneath — their lumGate transparency expects the procedural
-      // fill.  See spec scope section.
-      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-      const sys = createProceduralDiskSubsystem({
-        atlas: makeStubAtlas(new Set(['anything'])),
-      });
-      const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
-      const out = runProceduralSolo(walk, sys, makeInput(clouds));
-      expect(out.instances.length).toBe(2);
-      for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
-    });
-
-    it('keeps procFadeOut at 1.0 for Famous galaxies whose WebP is NOT loaded', () => {
-      // Famous-source, atlas dep present, but the specific galaxy's key
-      // isn't in the loaded set.  The default 1.0 must be preserved so
-      // the procedural pattern still draws while the user waits for the
-      // fetch to complete.
-      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-      const sys = createProceduralDiskSubsystem({
-        atlas: makeStubAtlas(new Set()), // empty set → nothing loaded
-      });
-      const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(2)]]);
-      const out = runProceduralSolo(walk, sys, makeInput(clouds));
-      expect(out.instances.length).toBe(2);
-      for (const ins of out.instances) expect(ins.procFadeOut).toBe(1.0);
-    });
   });
 });

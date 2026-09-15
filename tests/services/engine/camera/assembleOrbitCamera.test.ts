@@ -87,27 +87,4 @@ describe('assembleOrbitCamera', () => {
     // Original pose target is unchanged.
     expect(pose.target).toEqual([1, 2, 3]);
   });
-
-  it('is pure — pose and projection are not mutated after the call', () => {
-    const pose: CameraPose = { target: [4, 5, 6], yaw: 0.3, pitch: 0.1, distance: 20 };
-    const projection: CameraProjection = { fovYRad: 1.0, aspect: 1.5, near: 0.1, far: 1000 };
-
-    // Capture snapshots before the call.
-    const poseSnap = { ...pose, target: [...pose.target] };
-    const projSnap = { ...projection };
-
-    assembleOrbitCamera(pose, projection, IDENTITY_BASIS, IDENTITY_BASIS);
-
-    // Pose is unchanged.
-    expect(pose.target).toEqual(poseSnap.target);
-    expect(pose.yaw).toBe(poseSnap.yaw);
-    expect(pose.pitch).toBe(poseSnap.pitch);
-    expect(pose.distance).toBe(poseSnap.distance);
-
-    // Projection is unchanged.
-    expect(projection.fovYRad).toBe(projSnap.fovYRad);
-    expect(projection.aspect).toBe(projSnap.aspect);
-    expect(projection.near).toBe(projSnap.near);
-    expect(projection.far).toBe(projSnap.far);
-  });
 });

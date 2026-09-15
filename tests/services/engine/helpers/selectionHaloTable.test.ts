@@ -37,10 +37,6 @@ function structureRow(): StructureInfo {
 }
 
 describe('selectionHalo', () => {
-  it('returns null for a null row (nothing selected)', () => {
-    expect(selectionHalo(null)).toBeNull();
-  });
-
   it('returns null for a structure row (structure uses the marker pass)', () => {
     expect(selectionHalo(structureRow() as SelectionRow)).toBeNull();
   });

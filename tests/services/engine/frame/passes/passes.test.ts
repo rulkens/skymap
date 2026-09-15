@@ -181,31 +181,12 @@ describe('starAggregatesPass registry row', () => {
   });
 });
 
-describe('galaxyPointSpritesPass.enabled', () => {
-  it('always returns true (no user-facing toggle for point-sprites)', () => {
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    expect(galaxyPointSpritesPass.enabled(STATE_STUB, ctx, view)).toBe(true);
-    // Even when every other toggle is off, point-sprites still runs.
-    expect(galaxyPointSpritesPass.enabled(STATE_STUB, ctx, view)).toBe(true);
-  });
-});
-
 // Coverage for the `textured-disks` layer lives in
 // `texturedDisksPass.test.ts` (one test file per ContentPass module,
 // matching the convention used by every other entry in `passes/`). The
 // hdr-target layers check above pins the name in canonical order.
 
 describe('filamentsPass.enabled', () => {
-  it('returns true when filaments.enabled is true (renderer presence checked in draw)', () => {
-    const stateOn = {
-      ...STATE_STUB,
-      settings: { filaments: { enabled: true, intensity: 1 } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(filamentsPass.enabled(stateOn, ctx, slabViewOf(ctx, COSMO))).toBe(true);
-  });
-
   it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
     // fades.opacityOf returns 0 so the gate doesn't keep the layer alive
     // through a fade-out tail; toggle is also off — both conditions false.

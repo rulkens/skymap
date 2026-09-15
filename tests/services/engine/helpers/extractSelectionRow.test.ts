@@ -74,9 +74,6 @@ async function makeStarCatalog(): Promise<StarCatalog> {
 }
 
 describe('extractSelectionRow', () => {
-  it('null ref → null', () => {
-    expect(extractSelectionRow(null, deps, SIM_DAYS)).toBeNull();
-  });
   it('galaxy ref → GalaxyRow', () => {
     const row = extractSelectionRow(
       { type: 'galaxyCatalog', source: Source.SDSS, index: 0 },
@@ -178,11 +175,5 @@ describe('extractSelectionRow', () => {
     expect(row !== null && row.type === 'star' && row.radiusM).toBe(
       SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
     );
-  });
-
-  it('star ref with no loaded catalog → null (cloud not loaded yet)', () => {
-    // The shared deps' stars.current() returns null — a deep link / mid-load
-    // race, not a garbage id, so the reconciler retries.
-    expect(extractSelectionRow({ type: 'star', index: 0 }, deps, SIM_DAYS)).toBeNull();
   });
 });

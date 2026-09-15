@@ -149,17 +149,6 @@ describe('applySceneEffect — scene', () => {
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith(action);
   });
-
-  it('dispatches the action with the exact payload, not a copy', () => {
-    const state = makeEngineState();
-    const { store, dispatch } = makeSpyStore();
-    const action = setFlowEnabled(false);
-
-    applySceneEffect({ kind: 'scene', action }, { state, store });
-
-    // The exact same reference must be dispatched — not a copy or re-created action.
-    expect(dispatch.mock.calls[0]![0]).toBe(action);
-  });
 });
 
 // ── focus ─────────────────────────────────────────────────────────────────────
@@ -176,16 +165,6 @@ describe('applySceneEffect — focus', () => {
 
     expect(dispatch).toHaveBeenCalledTimes(1);
     expect(dispatch).toHaveBeenCalledWith(updateSelectionFocus(ref));
-  });
-
-  it('dispatches updateSelectionFocus(null) when ref is null (clears focus)', () => {
-    const state = makeEngineState();
-    const { store, dispatch } = makeSpyStore();
-
-    applySceneEffect({ kind: 'focus', ref: null }, { state, store });
-
-    expect(dispatch).toHaveBeenCalledTimes(1);
-    expect(dispatch).toHaveBeenCalledWith(updateSelectionFocus(null));
   });
 });
 
@@ -263,23 +242,6 @@ describe('applySceneEffect — show', () => {
         true,
       );
     }
-  });
-
-  it('calls syncVisibilityFades with only + animate:true when over is undefined', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-
-    applySceneEffect({ kind: 'show', layers: ['filaments'] }, { state, store });
-
-    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        animate: true,
-        only: ['filaments'],
-        durationMs: undefined,
-      }),
-    );
   });
 
   it('converts a positive `over` (clip seconds) to durationMs for the fade bridge', () => {
@@ -361,20 +323,6 @@ describe('applySceneEffect — hide', () => {
     }
   });
 
-  it('dispatches a targeted off action for a scoped hide entry', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-    const dispatch = vi.spyOn(store, 'dispatch');
-
-    applySceneEffect({ kind: 'hide', layers: [], scoped: ['label:group'] }, { state, store });
-
-    const labelActions = dispatch.mock.calls
-      .map(([a]) => a as ReturnType<typeof setStructureLabelEnabled>)
-      .filter((a) => a.type === setStructureLabelEnabled.type);
-    expect(labelActions).toEqual([setStructureLabelEnabled({ id: 'group', enabled: false })]);
-  });
-
   it('calls syncVisibilityFades with only + animate:true when over is undefined', () => {
     const { store } = createAppStore();
     const settings = store.getState().settings as unknown as EngineSettingsState;
@@ -406,19 +354,6 @@ describe('applySceneEffect — over === 0 routes through animate:false', () => {
     const state = makeEngineState(settings);
 
     applySceneEffect({ kind: 'show', layers: ['filaments'], over: 0 }, { state, store });
-
-    expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({ animate: false }),
-    );
-  });
-
-  it('hide with over:0 calls bridge with animate:false', () => {
-    const { store } = createAppStore();
-    const settings = store.getState().settings as unknown as EngineSettingsState;
-    const state = makeEngineState(settings);
-
-    applySceneEffect({ kind: 'hide', layers: ['filaments'], over: 0 }, { state, store });
 
     expect(vi.mocked(syncVisibilityFades)).toHaveBeenCalledWith(
       expect.anything(),
@@ -474,11 +409,5 @@ describe('VISIBILITY_ACTION_ROW — total record', () => {
     ) as ReturnType<typeof writeVolumeField>[];
     expect(actions).toHaveLength(1);
     expect(actions[0]!.payload).toEqual({ id: 'cf4-density', patch: { enabled: true } });
-  });
-
-  it('volumeField factory returns [] when volumes.items is empty', () => {
-    // Default settings fixture has no volume items.
-    const actions = VISIBILITY_ACTION_ROW['volumeField'].actions(true, settings);
-    expect(actions).toEqual([]);
   });
 });

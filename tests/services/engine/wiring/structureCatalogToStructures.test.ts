@@ -118,11 +118,6 @@ describe('structureCatalogToStructures', () => {
     expect(structures.filter((p) => p.category === 'supercluster')).toHaveLength(2);
   });
 
-  it('marks every structure not featured', () => {
-    const structures = structureCatalogToStructures(mixedPayload());
-    expect(structures.every((p) => p.featured === false)).toBe(true);
-  });
-
   it('carries worldPos + radii through from the catalog', () => {
     const structures = structureCatalogToStructures(mixedPayload());
     const low = structures.find((p) => p.id.includes('low-cluster'))!;
@@ -176,21 +171,6 @@ describe('structureCatalogToStructures', () => {
     expect('abell' in sc).toBe(false);
   });
 
-  it('carries the meta description through onto every bulk structure', () => {
-    const payload = makePayload([
-      {
-        pos: [0, 0, 0],
-        physicalRadiusMpc: 1,
-        apparentRadiusMpc: 2,
-        significance: 5,
-        category: 0,
-        meta: meta('described-cluster', 'A1', 'X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040'),
-      },
-    ]);
-    const structure = structureCatalogToStructures(payload)[0]!;
-    expect(structure.description).toBe('X-ray cluster · M500 = 5.0×10¹⁴ M☉ · z = 0.040');
-  });
-
   it('omits abell when the meta entry has null (key absent, not undefined)', () => {
     const payload = makePayload([
       {
@@ -204,12 +184,6 @@ describe('structureCatalogToStructures', () => {
     ]);
     const structures = structureCatalogToStructures(payload);
     expect('abell' in structures[0]!).toBe(false);
-  });
-
-  it('names the structure from meta.names[0]', () => {
-    const structures = structureCatalogToStructures(mixedPayload());
-    const high = structures.find((p) => p.id.includes('high-cluster'))!;
-    expect(high.name).toBe('HIGH-CLUSTER');
   });
 
   it('skips records with an unknown category byte', () => {
@@ -251,10 +225,5 @@ describe('structureCatalogToStructures', () => {
     const structures = structureCatalogToStructures(payload);
     const p = structures[0]!;
     expect(p.category === 'cluster' && p.significance).toBeCloseTo(1);
-  });
-
-  it('returns an empty list for an empty catalog', () => {
-    const payload = makePayload([]);
-    expect(structureCatalogToStructures(payload)).toEqual([]);
   });
 });

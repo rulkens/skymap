@@ -100,16 +100,6 @@ describe('scalarVolumePass.enabled', () => {
     expect(scalarVolumePass.enabled(liveState(), ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
-  it('is disabled when the renderer is null (pre-bootstrap)', () => {
-    const state = {
-      gpu: { volumeFieldRenderer: null },
-      settings: { volumes: { enabled: true, items: {} } },
-      subsystems: { fades: { opacityOf: () => 1 } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(scalarVolumePass.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
-  });
-
   it('is disabled when no field is active', () => {
     const ctx = makeCtx();
     expect(

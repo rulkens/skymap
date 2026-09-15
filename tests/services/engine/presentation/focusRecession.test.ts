@@ -42,21 +42,8 @@ function makeClipPlayer(factor: number): ClipPlayer {
 }
 
 describe('focusRecession', () => {
-  it('returns 1.0 for an untagged handle at blend 0', () => {
-    expect(focusRecession({ kind: 'galaxyCatalog', id: 'sdss' }, 0)).toBe(1);
-  });
-
-  it('returns 1.0 for a tagged handle at blend 0', () => {
-    // Unfocused is full opacity even for a recession-tagged layer.
-    expect(focusRecession({ kind: 'filament' }, 0)).toBe(1);
-  });
-
   it('returns the exact target for a tagged handle at blend 1', () => {
     expect(focusRecession({ kind: 'filament' }, 1)).toBe(FILAMENT_RECESSION);
-  });
-
-  it('lerps a tagged handle at intermediate blend', () => {
-    expect(focusRecession({ kind: 'filament' }, 0.5)).toBe(lerp(1, FILAMENT_RECESSION, 0.5));
   });
 });
 

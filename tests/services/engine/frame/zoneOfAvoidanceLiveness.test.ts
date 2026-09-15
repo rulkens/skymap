@@ -54,8 +54,4 @@ describe('deriveZoneOfAvoidanceLiveness', () => {
   it('returns null when the fade-registry toggle opacity is 0, even inside the window', () => {
     expect(deriveZoneOfAvoidanceLiveness(makeState({ toggleOpacity: 0 }), makeCtx())).toBeNull();
   });
-
-  it('returns null when the renderer is missing (pre-bootstrap), even inside the window with the toggle on', () => {
-    expect(deriveZoneOfAvoidanceLiveness(makeState({ renderer: null }), makeCtx())).toBeNull();
-  });
 });

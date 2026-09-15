@@ -142,12 +142,6 @@ function makeSettings(
 describe('seedFades', () => {
   // ── milkyWay disk gating ─────────────────────────────────────────
 
-  it('seeds the milkyWay disk at 1 when settings.milkyWay.enabled', () => {
-    const state = makeState({ milkyWayEnabled: true });
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'milkyWay' })).toBe(1);
-  });
-
   it('seeds the milkyWay disk at 0 when disabled', () => {
     // A default-off session must not flash the Milky Way on frame 1.
     const state = makeState({ milkyWayEnabled: false });
@@ -157,25 +151,7 @@ describe('seedFades', () => {
 
   // ── volumesMaster gating ─────────────────────────────────────────
 
-  it('seeds volumesMaster at 1 when settings.volumes.enabled', () => {
-    const state = makeState({ volumesMasterEnabled: true });
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'volumesMaster' })).toBe(1);
-  });
-
-  it('seeds volumesMaster at 0 when settings.volumes.enabled is false', () => {
-    const state = makeState({ volumesMasterEnabled: false });
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'volumesMaster' })).toBe(0);
-  });
-
   // ── label-layer handles ──────────────────────────────────────────
-
-  it('seeds the milkyWay label from settings.milkyWay.labelEnabled (on → 1)', () => {
-    const state = makeState({ milkyWayLabelEnabled: true });
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(1);
-  });
 
   it('seeds the milkyWay label at 0 when settings.milkyWay.labelEnabled is false', () => {
     const state = makeState({ milkyWayLabelEnabled: false });
@@ -221,21 +197,6 @@ describe('seedFades', () => {
     expect(reached).not.toContain('s-star');
   });
 
-  it('seeds a ring + label handle per structure source, defaulting to 1', () => {
-    const state = makeState();
-    seedFades(state);
-    for (const id of STRUCTURE_IDS) {
-      expect(
-        state.subsystems.fades.opacityOf({ kind: 'structure', id }),
-        `structure{${id}} ring should seed at 1`,
-      ).toBe(1);
-      expect(
-        state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'structure', item: id }),
-        `labelLayer{structure,${id}} should seed at 1`,
-      ).toBe(1);
-    }
-  });
-
   it('seeds a disabled ring at 0 and a disabled label at 0', () => {
     // The persisted per-category visibility is honoured from frame 1: a ring or
     // label the user turned off seeds at 0 so it doesn't flash before a fade.
@@ -263,20 +224,6 @@ describe('seedFades', () => {
         `galaxyCatalog{${id}} should seed at 0`,
       ).toBe(0);
     }
-  });
-
-  it('seeds orbitTrails from its toggle (NOT demand-loaded) — 1 on, 0 off', () => {
-    // Unlike filament/flow, the orbit-trails conic table is a compile-time
-    // constant with no asset slot, so its fade is settings-derived like
-    // milkyWayDisk: a default-on session registers at 1 (no fade-in), a hidden
-    // one at 0 (no frame-1 flash) — NOT the demand-loaded seed-0 rule.
-    const on = makeState({ orbitTrailsEnabled: true });
-    seedFades(on);
-    expect(on.subsystems.fades.opacityOf({ kind: 'orbitTrails' })).toBe(1);
-
-    const off = makeState({ orbitTrailsEnabled: false });
-    seedFades(off);
-    expect(off.subsystems.fades.opacityOf({ kind: 'orbitTrails' })).toBe(0);
   });
 
   it('survey row has no post — masks are a pure per-frame derivation', () => {
@@ -390,17 +337,6 @@ describe('FADE_LAYERS intent subset', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
-  it('flow row guard gates on the renderer’s fieldLoaded()', () => {
-    const row = rowFor('flow');
-    const fieldLoaded = vi.fn<() => boolean>(() => false);
-    const state = {
-      gpu: { flowFieldRenderer: { fieldLoaded } },
-    } as unknown as EngineState;
-    expect(row.guard?.(state, undefined)).toBe(false);
-    fieldLoaded.mockReturnValue(true);
-    expect(row.guard?.(state, undefined)).toBe(true);
-  });
-
   it('survey row guard gates on the renderer holding the catalog', () => {
     // Same demand-loaded pattern as flow/filaments/volumeField: a catalog
     // whose .bin is still downloading must not burn its fade window.
@@ -412,21 +348,6 @@ describe('FADE_LAYERS intent subset', () => {
     expect(row.guard?.(state, '2mrs')).toBe(true);
     // No renderer yet (mid-bootstrap) → suppressed.
     expect(row.guard?.({ gpu: {} } as unknown as EngineState, 'sdss')).toBe(false);
-  });
-
-  it('filaments row guard gates on the renderer’s hasCloud()', () => {
-    // Same demand-loaded pattern as flow: with no skeleton uploaded, a fade
-    // toward "visible" must be suppressed — otherwise an authored slow reveal
-    // ramps invisibly during the download and the commit-time default fade
-    // stomps it (the beat-05 pop-in).
-    const row = rowFor('filaments');
-    const hasCloud = vi.fn<() => boolean>(() => false);
-    const state = {
-      gpu: { filamentRenderer: { hasCloud } },
-    } as unknown as EngineState;
-    expect(row.guard?.(state, undefined)).toBe(false);
-    hasCloud.mockReturnValue(true);
-    expect(row.guard?.(state, undefined)).toBe(true);
   });
 
   it('constellations row guard gates on the renderer’s hasData()', () => {

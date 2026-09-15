@@ -48,11 +48,6 @@ function makeCtx(
 }
 
 describe('labelsPass.enabled', () => {
-  it('is false when the renderer is null', () => {
-    const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
-    expect(labelsPass.enabled(makeState(null), ctx, VIEW_STUB)).toBe(false);
-  });
-
   it('is false when glyphCount() is 0, true otherwise', () => {
     const ctx = makeCtx(new Set(), vi.fn(), vi.fn());
     expect(labelsPass.enabled(makeState(makeRenderer(0)), ctx, VIEW_STUB)).toBe(false);

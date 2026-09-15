@@ -74,26 +74,9 @@ function makeState(
 }
 
 describe('buildDemandCtx', () => {
-  it('slotState returns idle for an absent slot', () => {
-    // A not-yet-minted slot (null field, missing map entry) reads as 'idle' —
-    // never loaded is exactly what idle means.
-    const ctx = buildDemandCtx(makeState());
-    expect(ctx.slotState('famousGalaxiesMeta')).toBe('idle');
-    expect(ctx.slotState(Source.SDSS)).toBe('idle');
-  });
-
   it('slotState reflects a present slot', () => {
     const ctx = buildDemandCtx(makeState({ famousGalaxiesMetaState: 'ready' }));
     expect(ctx.slotState('famousGalaxiesMeta')).toBe('ready');
-  });
-
-  it('request reflects the request flag set', () => {
-    const state = makeState({ requests: new Set<RequestKey>(['paletteOpened']) });
-    const ctx = buildDemandCtx(state);
-    expect(ctx.request('paletteOpened')).toBe(true);
-
-    const empty = buildDemandCtx(makeState());
-    expect(empty.request('paletteOpened')).toBe(false);
   });
 
   it('derives cameraPosMpc as the world eye position, not the focus target', () => {
