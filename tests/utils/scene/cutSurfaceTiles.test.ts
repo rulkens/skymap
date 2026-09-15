@@ -629,13 +629,14 @@ describe('cutSurfaceTiles', () => {
         );
     });
 
-    it('holds the height working set at a 60 degree tilt to what the atlas can hold', () => {
-      // The measured cause of the permanent holes: a tilted view's foreshortened
-      // horizon slivers each demanded the deepest level, so the walk asked for
-      // far more height tiles than the atlas has slots and the allocator refused
-      // the excess for good. At 300 km / 60 deg tilt with the shipped lod bias
-      // this fixture asks for 1855 height tiles under the max-extent screen
-      // error (the live app measured 1848 at that pose).
+    it('sizes a tilted view by the geometric mean of the bbox extents', () => {
+      // The tilted-view working set, measured: 300 km / 60 deg, the shipped lod
+      // bias, one whole-globe band to z13 (the deepest shape any pose can meet).
+      // 1855 height tiles under the max-extent screen error — the live app
+      // measured 1848 at this pose — against 1819 under the geometric mean.
+      // The remainder is NOT anisotropy: the horizon ring straddles the eye
+      // plane, and a straddler is treated as screen-filling and forced to the
+      // deepest band level (see `probe`). Fixing that is its own change.
       const result = cutSurfaceTiles({
         ...tiltedAt(300_000, 60),
         bands: GLOBAL_BANDS,
@@ -644,7 +645,7 @@ describe('cutSurfaceTiles', () => {
       });
 
       const heightRequests = result.requests.requests.filter((r) => r.tile.product === 'height');
-      expect(heightRequests.length).toBe(1855);
+      expect(heightRequests.length).toBe(1819);
     });
 
     it('a pan that scrolls an unfetched sibling into view keeps every settled leaf', () => {

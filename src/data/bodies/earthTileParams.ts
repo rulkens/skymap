@@ -30,10 +30,14 @@ export const EARTH_TILE_PX = 512;
  *  maxTextureDimension2D, so no limit request is needed. (Design 6.) */
 export const EARTH_TILE_ATLAS_SIDE = 8192;
 
-/** Physical edge of the HEIGHT atlas: the same 16 x 16 = 256 slots as the
- *  albedo atlas — the cut is 1:1 between the two products — at the height
- *  tile's 129-post stride, so 2064 px of `r32float`, 17.0 MB. (Spec §5.5.) */
-export const HEIGHT_TILE_ATLAS_SIDE = 16 * HEIGHT_POSTS_PER_TILE;
+/** Physical edge of the HEIGHT atlas: 32 x 32 = 1024 slots at the height
+ *  tile's 129-post stride, so 4128 px of `r32float`, 68 MB — under the 8192
+ *  baseline `maxTextureDimension2D`. Four times the albedo atlas's slot count
+ *  because a miss costs more: albedo inherits an ancestor's texels and blurs,
+ *  height inherits a coarser lattice and flattens. A tilted view's working set
+ *  runs to ~1800 tiles (R14's measurement), so the cut is not 1:1 with albedo's
+ *  256 and sizing this by that count was what starved it. (Spec §5.5.) */
+export const HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than
  *  the asset queue's: many small streaming fetches during flight (~33 KB each),

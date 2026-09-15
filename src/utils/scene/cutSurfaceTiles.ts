@@ -191,10 +191,14 @@ export function cutSurfaceTiles(input: {
     const straddlesNearPlane = nInFront < 9;
     if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) return null;
 
-    // NDC spans 2 units across the viewport, hence the halving.
+    // NDC spans 2 units across the viewport, hence the halving. The GEOMETRIC
+    // MEAN of the two extents, not the max: a foreshortened horizon sliver is
+    // wide and a few pixels tall, and sizing it by its width demanded the
+    // deepest level for tiles covering almost no area — 876 of the 930 leaves
+    // at a 60 degree tilt, far past what the atlases can hold.
     const screenPx = straddlesNearPlane
       ? Math.max(viewportPx[0], viewportPx[1])
-      : Math.max(((maxX - minX) / 2) * viewportPx[0], ((maxY - minY) / 2) * viewportPx[1]);
+      : Math.sqrt(((maxX - minX) / 2) * viewportPx[0] * (((maxY - minY) / 2) * viewportPx[1]));
     if (!(screenPx > 0)) return null;
 
     // `lodBias` is subtracted AFTER the ceil, not folded into the log

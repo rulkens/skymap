@@ -488,9 +488,11 @@ export type SurfaceCutTile = {
 
 **Files:** `src/utils/scene/cutSurfaceTiles.ts` (`probe`), `src/data/bodies/earthTileParams.ts`, `src/services/engine/subsystems/surfaceTileSubsystem.ts` (nothing hard-codes 16 — verify), `tests/data/bodies/earthTileParams.test.ts` if a parity test pins the side, `src/components/DebugPanel/EarthTileAtlasSection.tsx` (reads capacity from the snapshot — verify no literal).
 
-- [ ] `screenPx = Math.sqrt(wPx · hPx)`; the near-plane-straddler path unchanged. Existing level tests at nadir must not move (square tiles).
-- [ ] `HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE`; fix the constant's comment (68 MB, 1024 slots, why: measured working set at 60° tilt after A1's isotropic error — put the number from A1(d) in the comment).
-- [ ] Commit `feat(terrain): isotropic tile screen error; 1024-slot height atlas`.
+- [x] `screenPx = Math.sqrt(wPx · hPx)`; the near-plane-straddler path unchanged. Existing level tests at nadir must not move (square tiles).
+- [x] `HEIGHT_TILE_ATLAS_SIDE = 32 * HEIGHT_POSTS_PER_TILE`; fix the constant's comment (68 MB, 1024 slots, why: measured working set at 60° tilt after A1's isotropic error — put the number from A1(d) in the comment).
+- [x] Commit `feat(terrain): isotropic tile screen error; 1024-slot height atlas`.
+
+**Measured, and NOT what R14 predicted:** at 300 km / 60° tilt with one whole-globe band to z13, the height-request count goes 1855 → **1819**, not under 300. The horizon ring straddles the EYE plane, and `probe` treats any near-plane straddler as screen-filling and forces it to the deepest band level — that, not anisotropy, is what refines the ring (887 of the 1819 sit at z13). With a shipped-manifest shape (global band capped at z7, deep bands over small boxes) the same pose asks for only 53 height tiles, so the exposure is poses whose horizon ring lies inside an EOX z8–13 region. Capping the straddler path is its own change; the f64-precision test at ~50 m altitude depends on straddlers refining deep, so it is not a one-liner.
 
 ### Task A3: docs
 
