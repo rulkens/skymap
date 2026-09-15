@@ -408,3 +408,23 @@ Ruled 2026-09-15 with F1's R14 (see the F1 plan's `## Amendment R14`): a leaf's 
 ### Task B4: frustum-cull headroom for displaced patches (from the F1 R14 review)
 
 F1's `probe` culls with a sphere of radius 1.5× the corner chord about the patch centre — vertical headroom ≈ 1.1× the half-diagonal (≈ 3.9 km at z13, ≈ 60 m at z19). Once F2 displaces geometry, a summit near a side plane can be on screen while its datum patch is culled. A CONSTANT relief margin is wrong (it turns every tile within that many metres of the camera on the eye-plane line into a screen-filling straddler at ground level — the inflation R14 just removed). Use the per-tile `subtreeMinM/MaxM` the bake already writes in every height tile header: `residentSlot` for height returns the resident ancestor's range, which bounds every descendant by construction, and `probe` adds `max(|min|, |max|) / radiusM` to the sphere radius for that node (0 when nothing is resident — the datum, as F1). Test: a z13 patch whose subtree max is 8 km, centred 5 km outside a side plane's datum footprint, is NOT culled; with a 0 m range it is.
+
+---
+
+## Amendment R15 — skirts on every edge; the edge code is the lattice step only
+
+**Ruled by the controller 2026-09-15 after the final review of the R14 half (user to confirm at the eye-check).** R14 balances HEIGHT levels and never removes a leaf, so the cut's MESH levels are no longer 2:1: a z13 leaf on its own tile beside a z12 leaf on its own tile has 64 vertices where the neighbour has 32, and the doubled-stride sample (which is exact for a lattice step) does nothing for that T-junction — the z13 vertex at post 4m+2 keeps its own height where the neighbour draws the chord. The old `collapseTemplateIndex` handled a one-level mesh step only because the old balance bounded it; re-bounding the mesh (refine-to-balance in the walk) would put residency-blind refinement back under a neighbour's control. Cesium and Google Earth do not balance at all: every tile carries a skirt and every seam is hidden by it.
+
+**Rules:**
+
+- Every patch draws its skirt ring on all four edges, unconditionally (F2-R3's "band seams only" struck; depth stays `SURFACE_TILE_SKIRT_DEPTH_FRACTION` of the patch's N–S extent). A skirt hides a gap where the finer mesh dips below the coarser chord; where it rises above, it overlaps. No code is needed to trigger it.
+- `edgeCoarser` returns to one bit per edge (`0 | 1`), meaning exactly R14's rule: the neighbour's HEIGHT level is one coarser, so this edge samples at doubled stride — the coarse neighbour's own lattice — and the two lattices agree bit-for-bit (R1). `balanceSurfaceCut`'s code-2 emission and the 3-valued type (F2-R1) go; `PatchInstance.edgeCoarser` packs four bits.
+- The doubled stride is clamped to the leaf's `cells` (`stride = min(2, cells)`), so a `levelDelta = 7` leaf never reads outside its one-cell sub-rect; the seam that remains there is skirted like any other.
+- Frustum headroom (B4) is clamped to the patch's own corner chord: `headroom = min(subtreeRangeM / radiusM, chord)`. Before deep tiles land the resident ancestor is the base level, whose subtree range is the Earth-wide relief, and an unclamped 8.8 km margin on every z19 node at ground level is exactly the eye-plane inflation R14's sphere removed. The B4 test pins one specific node that a known range flips from culled to kept, and asserts the unit-sphere division (a range passed in metres, undivided, must cull nothing extra).
+- `surfaceNormalFromHeightCell` keeps its two-spacing signature (the twin mirrors the WGSL expression for expression; the `/ cells` lives at both call sites).
+
+### Task B5: R15
+
+**Files:** `src/services/gpu/shaders/bodies/earthSurfaceTile/{vertex,io}.wesl` (skirt ring unconditional; `collapseStride` for mesh steps deleted; stride clamp), `src/@types/scene/SurfaceCutTile.d.ts`, `src/utils/scene/balanceSurfaceCut.ts` + test (code 2 gone), `src/services/gpu/renderers/bodies/earthSurfaceTileRenderer.ts` (bit packing) + layout test, `src/utils/scene/cutSurfaceTiles.ts` (`reliefHeadroom` clamp) + test, `src/utils/scene/latticeHeightSample.ts` + test (a `cells = 128` stride-2 case at an even post is a no-op — that is the correct answer, since the neighbour's coarser lattice already sits on the even posts; and the clamp at `cells = 1`), `surfaceNormalFromHeightCell.ts` + test + `fragment.wesl`, spec §7.3 (the "same vertex count per edge" premise is false across a cut-level step; skirts own those seams) / §7.4 / F2-R1 / F2-R3, `docs/RENDERER.md`, this plan's DoD.
+
+- [ ] Commit `feat(terrain): R15 — skirts on every edge; edge code is the lattice step only`.
