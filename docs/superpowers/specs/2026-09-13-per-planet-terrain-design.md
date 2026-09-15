@@ -1,8 +1,12 @@
 # Per-planet 3D terrain — Earth and Mars — design
 
-**Status:** F1 in execution (plan `2026-09-15-terrain-f1-height-products.md`). Written
+**Status:** F1 and F2 landed (`main` 343fd14c0, 2026-09-15 — plans archived at
+[`plans/completed/2026-09-15-terrain-f1-height-products.md`](../plans/completed/2026-09-15-terrain-f1-height-products.md)
+and [`plans/completed/2026-09-15-terrain-f2-displacement.md`](../plans/completed/2026-09-15-terrain-f2-displacement.md)).
+F3 (ground truth) and F4 (Mars) are unstarted — this spec stays open for them. Written
 against `main` at `be13f9dc7`; amended 2026-09-15 from the F1 plan's rulings R1, R3,
-R11, R12, R14 and the data rulings in §4.2 — each amendment is marked in place.
+R11, R12, R14, F2's F2-R1–R7 and R15, and the data rulings in §4.2 — each amendment is
+marked in place.
 
 **As built:** [`specs/completed/2026-07-28-earth-surface-virtual-texture.md`](completed/2026-07-28-earth-surface-virtual-texture.md)
 — the quadtree, the atlas, the band manifest and the residency walk this spec
@@ -823,14 +827,14 @@ land/park call is the user's.
 
 ## 12. Sequence
 
-|     |                                                                                                    | PR                          |
-| --- | -------------------------------------------------------------------------------------------------- | --------------------------- |
-| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                                | #704 — landed               |
-| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                       | #705 — landed, perf NEUTRAL |
-| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                    | #713 closed superseded, landed via #719 |
+|     |                                                                                                    | PR                                                      |
+| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                                | #704 — landed                                           |
+| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                       | #705 — landed, perf NEUTRAL                             |
+| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                    | #713 closed superseded, landed via #719                 |
 | F2  | Displacement, normals, edge collapse, base-globe shrink                                            | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
-| F3  | Ground truth: height field, `ceilingHeightM` routing, `raycast` pick, horizon cap, cloud clearance | one PR                      |
-| F4  | Mars: imagery bake, global height, four rover-site bands                                           | one PR                      |
+| F3  | Ground truth: height field, `ceilingHeightM` routing, `raycast` pick, horizon cap, cloud clearance | one PR                                                  |
+| F4  | Mars: imagery bake, global height, four rover-site bands                                           | one PR                                                  |
 
 F3's atmosphere row waits on the depth-aware composite (§2); everything else in F3
 is independent of it.
