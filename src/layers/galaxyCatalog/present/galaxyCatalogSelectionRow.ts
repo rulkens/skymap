@@ -1,5 +1,5 @@
 /**
- * galaxyCatalogSelectionRow — the core `SelectionKindRow` for per-point galaxy
+ * galaxyCatalogSelectionRow — the Layer's `SelectionKindRow` for per-point galaxy
  * catalogs. Pick identity is positional (index drifts on a tier swap; the
  * tier saga re-anchors by durable id). Focus-id decode dispatches over the
  * pgc-/sdss-/pos@/famous branches; order doesn't matter because `claims`
@@ -10,19 +10,20 @@ import { Source, GALAXY_CATALOG_SOURCES } from '../../../data/sources';
 import { extractGalaxyRow } from './extractGalaxyRow';
 import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
-import type { ResolveDeps } from '../../../@types/engine/ResolveDeps';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
+import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
 
 type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;
-type Deps = Pick<ResolveDeps, 'catalogs'>;
+/** The two live reads every branch here makes; the runtime satisfies it. */
+type Catalogs = Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
 
 /** Strict pos@ form, anchored at both ends — matches focusUrl.ts. */
 const POS_RE = /^pos@(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)$/;
 const POS_THRESHOLD_SQ_ARCSEC = 30 * 30;
 
-export function galaxyCatalogSelectionRow(deps: () => Deps): SelectionKindRow<GalaxyCatalogRef> {
+export function galaxyCatalogSelectionRow(runtime: Catalogs): SelectionKindRow<GalaxyCatalogRef> {
   return {
     type: 'galaxyCatalog',
     pickSources: GALAXY_CATALOG_SOURCES,
@@ -31,29 +32,22 @@ export function galaxyCatalogSelectionRow(deps: () => Deps): SelectionKindRow<Ga
       source: pick.sourceCode as GalaxyCatalogSourceType,
       index: pick.localIdx,
     }),
-    extractRow: (ref) => {
-      const d = deps();
-      return extractGalaxyRow(
-        d.catalogs.get(ref.source),
-        ref.index,
-        ref.source,
-        d.catalogs.famousMeta,
-      );
-    },
+    extractRow: (ref) =>
+      extractGalaxyRow(runtime.catalogs.get(ref.source), ref.index, ref.source, runtime.famousMeta),
     focusId: {
       claims: (id) =>
         id.startsWith('pgc-') ||
         id.startsWith('sdss-') ||
         id.startsWith('pos@') ||
-        deps().catalogs.famousMeta.some((m) => m.id === id),
+        runtime.famousMeta.some((m) => m.id === id),
       decode: (id) => {
         if (id.startsWith('pgc-')) {
           const n = id.slice(4);
-          return /^\d+$/.test(n) ? resolvePgc(BigInt(n), deps()) : null;
+          return /^\d+$/.test(n) ? resolvePgc(BigInt(n), runtime) : null;
         }
         if (id.startsWith('sdss-')) {
           const n = id.slice(5);
-          return /^\d+$/.test(n) ? resolveSdss(BigInt(n), deps()) : null;
+          return /^\d+$/.test(n) ? resolveSdss(BigInt(n), runtime) : null;
         }
         if (id.startsWith('pos@')) {
           const m = POS_RE.exec(id);
@@ -61,19 +55,19 @@ export function galaxyCatalogSelectionRow(deps: () => Deps): SelectionKindRow<Ga
           const raDeg = parseFloat(m[1]!);
           const decDeg = parseFloat(m[2]!);
           return Number.isFinite(raDeg) && Number.isFinite(decDeg)
-            ? resolvePos(raDeg, decDeg, deps())
+            ? resolvePos(raDeg, decDeg, runtime)
             : null;
         }
-        return resolveFamous(id, deps());
+        return resolveFamous(id, runtime);
       },
-      encode: (ref) => encodeGalaxy(ref, deps()),
+      encode: (ref) => encodeGalaxy(ref, runtime),
     },
   };
 }
 
-function resolveFamous(id: string, deps: Deps): GalaxyCatalogRef | null {
-  for (let i = 0; i < deps.catalogs.famousMeta.length; i++) {
-    if (deps.catalogs.famousMeta[i]!.id === id) {
+function resolveFamous(id: string, deps: Catalogs): GalaxyCatalogRef | null {
+  for (let i = 0; i < deps.famousMeta.length; i++) {
+    if (deps.famousMeta[i]!.id === id) {
       if (!deps.catalogs.get(Source.FamousGalaxy)) return null;
       return { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: i };
     }
@@ -81,7 +75,7 @@ function resolveFamous(id: string, deps: Deps): GalaxyCatalogRef | null {
   return null;
 }
 
-function resolvePgc(pgc: bigint, deps: Deps): GalaxyCatalogRef | null {
+function resolvePgc(pgc: bigint, deps: Catalogs): GalaxyCatalogRef | null {
   for (const source of [Source.Glade, Source.TwoMRS] as const) {
     const cloud = deps.catalogs.get(source);
     if (!cloud) continue;
@@ -91,7 +85,7 @@ function resolvePgc(pgc: bigint, deps: Deps): GalaxyCatalogRef | null {
   return null;
 }
 
-function resolveSdss(objID: bigint, deps: Deps): GalaxyCatalogRef | null {
+function resolveSdss(objID: bigint, deps: Catalogs): GalaxyCatalogRef | null {
   const cloud = deps.catalogs.get(Source.SDSS);
   if (!cloud) return null;
   const idx = findObjId(cloud.objIDs, objID);
@@ -102,7 +96,7 @@ function resolveSdss(objID: bigint, deps: Deps): GalaxyCatalogRef | null {
  * Nearest-neighbour search across every galaxy catalog source within 30
  * arcsec (the `buildFamous.ts` cross-match envelope).
  */
-function resolvePos(raDegT: number, decDegT: number, deps: Deps): GalaxyCatalogRef | null {
+function resolvePos(raDegT: number, decDegT: number, deps: Catalogs): GalaxyCatalogRef | null {
   const cosDecT = Math.cos((decDegT * Math.PI) / 180);
   let bestSqArcsec = Infinity;
   let bestSource: GalaxyCatalogSourceType | null = null;
@@ -140,12 +134,12 @@ function findObjId(haystack: BigUint64Array, needle: bigint): number {
   return -1;
 }
 
-function encodeGalaxy(ref: GalaxyCatalogRef, deps: Deps): string | null {
+function encodeGalaxy(ref: GalaxyCatalogRef, deps: Catalogs): string | null {
   const row = extractGalaxyRow(
     deps.catalogs.get(ref.source),
     ref.index,
     ref.source,
-    deps.catalogs.famousMeta,
+    deps.famousMeta,
   );
   if (!row) return null;
   const [ra, dec] = cartesianToRaDec(row.x, row.y, row.z);

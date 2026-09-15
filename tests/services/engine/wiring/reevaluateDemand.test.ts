@@ -13,7 +13,7 @@
  *   - a non-idle slot whose request drifted reloads in place, never releases,
  *   - a throwing demand predicate is caught and does not stop later rows.
  *
- * Mocking strategy: stub slots live in `state.assetSlots.points` keyed by a
+ * Mocking strategy: stub slots live in `state.layerSlots` keyed by a
  * numeric SourceType; `slot.load` is a vi.fn so calls are assertable. Rows
  * carry numeric keys so `slotFor` resolves them through the points map.
  */
@@ -100,7 +100,7 @@ function makeState(
     tier: 'medium',
     settings: {},
     requests: new Set(),
-    assetSlots: { points },
+    assetSlots: {},
     subsystems: { assetQueue },
     // buildDemandCtx assembles the camera eye from pose + projection, so both
     // must be present. A far resting pose keeps the proximity-gated body-texture
@@ -114,8 +114,8 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
-    // `slotFor` consults the Layer-owned slots first; none here.
-    layerSlots: new Map(),
+    // The stub slots live where a Layer's do: `slotFor` consults this map first.
+    layerSlots: points,
   } as unknown as EngineState;
 }
 

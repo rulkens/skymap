@@ -51,6 +51,7 @@ import { Source } from '../../../src/data/source';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
+import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../src/@types/animation/Effect';
@@ -99,17 +100,6 @@ const M87_CLOUD: GalaxyCatalog = makeGalaxyCatalog(1, {
  * undefined.
  */
 const DIVE_DEPS: ResolveDeps = {
-  catalogs: {
-    get: (source) => (source === Source.FamousGalaxy ? M87_CLOUD : undefined),
-    famousMeta: [
-      {
-        id: 'm87',
-        names: ['M87', 'Virgo A', 'NGC 4486'],
-        description: 'Giant elliptical',
-        type: 'galaxy',
-      },
-    ],
-  },
   stars: { current: () => null },
   structures: {
     byId: (id) =>
@@ -127,7 +117,20 @@ const DIVE_DEPS: ResolveDeps = {
   },
 };
 
-const DIVE_SELECTION = selectionResolverOver(DIVE_DEPS);
+/** The galaxyCatalog Layer's slice: the one-row M87 famous cloud + its sidecar. */
+const DIVE_GALAXIES = {
+  catalogs: new Map([[Source.FamousGalaxy, M87_CLOUD]]),
+  famousMeta: [
+    {
+      id: 'm87',
+      names: ['M87', 'Virgo A', 'NGC 4486'],
+      description: 'Giant elliptical',
+      type: 'galaxy',
+    },
+  ],
+} as unknown as GalaxyRowFixture;
+
+const DIVE_SELECTION = selectionResolverOver(DIVE_DEPS, DIVE_GALAXIES);
 
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },

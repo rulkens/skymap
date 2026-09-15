@@ -10,16 +10,9 @@
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import {
-  HI_RES_LAYER_SIDE_BY_TIER,
-  Source,
-  SOURCE_REGISTRY,
-  GALAXY_CATALOG_SOURCES,
-} from '../../../data/sources';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
-import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
@@ -28,14 +21,12 @@ import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
-import { createPgcAliasSlot } from '../../../layers/galaxyCatalog/load/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
-import { galaxyCatalogRequest } from './galaxyCatalogRequest';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
@@ -73,30 +64,9 @@ const MCPM_WORKBENCH_FIELD = SOURCE_REGISTRY[Source.McpmWorkbench].id;
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
   throw new Error(
-    'assetWiring: externally-built rows (built: "external" — point sources, body textures) are minted outside this registry; the construction pass must not build them',
+    'assetWiring: externally-built rows (built: "external" — body textures, mesh bodies) are minted outside this registry; the construction pass must not build them',
   );
 };
-
-/**
- * One demand+req row per galaxy-catalog entry, derived from the fields it
- * already carries: `category === 'synthetic'` reads the fallback request
- * flag, everything else reads its settings toggle.
- */
-function pointRow(entry: GalaxyCatalogRegistryEntry): AssetWiringRow {
-  const source = entry.code;
-  const id = entry.id;
-  return {
-    key: source,
-    built: 'external',
-    factory: externalFactory,
-    req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: (ctx) =>
-      entry.category === 'synthetic'
-        ? ctx.request('syntheticFallback')
-        : ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
-    priority: entry.priority,
-  };
-}
 
 /**
  * Star-catalog sources that actually ship an asset. A SEEDED catalog
@@ -216,19 +186,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     priority: 0,
   },
 
-  // ── Point sources, Synthetic included — one row per
-  // GALAXY_CATALOG_SOURCES code, demand+req only; slots minted in wireSlots ──
-  ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(SOURCE_REGISTRY[code])),
-
-  // ── Famous-galaxy meta sidecar ───────────────────────────────────
-  // Loads once the Famous slot leaves `idle`, so the InfoCard text rides in
-  // alongside the binary rather than racing ahead of it.
-  {
-    key: 'famousGalaxiesMeta',
-    factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),
-    companionOf: Source.FamousGalaxy,
-  },
-
   // ── Famous-star meta sidecar ──────────────────────────────────────
   // Unconditional rather than a companion join: the famous stars are a seeded
   // catalog compiled into the bundle, so there is no sibling `.bin` to key demand off,
@@ -337,16 +294,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     priority: 30, // a small .ccat that draws across many rungs at once — high value per byte
   },
 
-  // ── PGC alias map ────────────────────────────────────────────────
-  // Lazy: only the one-shot `paletteOpened` request triggers it.
-  {
-    key: 'pgcAlias',
-    factory: (deps) => createPgcAliasSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.request('paletteOpened'),
-    priority: 90, // last: nothing renders from it, and its one-shot trigger tolerates a wait
-  },
-
   // ── Body-surface textures (proximity-demanded + released) ────────
   ...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow),
 
@@ -356,18 +303,4 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   // ── Survey star catalogs ─────────────────────────────────────────
   // One row per `type: 'starCatalog'` entry, so a new catalog joins with no edit here.
   ...STAR_CATALOG_SOURCES.map(starCatalogRow),
-
-  // ── LOD-3 hi-res famous-galaxy array ─────────────────────────────
-  // Externally built: the allocation needs a GPUDevice, which `SlotDeps` does not
-  // carry. `priority: 1` puts a synchronous allocation at the head of the bounded
-  // queue ahead of every download — it holds its pipe for microseconds, and the
-  // alternative is a second "allocate outside the queue" mechanism for one row.
-  {
-    key: 'hiResFamous',
-    built: 'external',
-    factory: externalFactory,
-    req: (tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] }),
-    demand: () => true,
-    priority: 1,
-  },
 ];

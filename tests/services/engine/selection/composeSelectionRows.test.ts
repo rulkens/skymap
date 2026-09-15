@@ -11,6 +11,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
+import type { GalaxyRowFixture } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
 import { Source } from '../../../../src/data/sources';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
@@ -64,19 +65,28 @@ function makeCloud(objId: bigint, pos: [number, number, number] = [1, 0, 0]): Ga
   });
 }
 
+/** The galaxyCatalog Layer's slice of the composed resolver — its own two live reads. */
+const galaxies: GalaxyRowFixture = {
+  catalogs: new Map([
+    [Source.SDSS, makeCloud(1237668393006604288n, [1, 0, 0])],
+    [Source.Glade, makeCloud(99n, [1, 0, 0])],
+    [Source.TwoMRS, makeCloud(2789n, [0, 1, 0])],
+    [Source.FamousGalaxy, makeCloud(0n, [1, 0, 0])],
+  ]),
+  famousMeta: [
+    { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
+  ],
+} as GalaxyRowFixture;
+
+/** The same fixture with only the named sources loaded. */
+function galaxiesWith(...sources: readonly SourceType[]): GalaxyRowFixture {
+  return {
+    ...galaxies,
+    catalogs: new Map([...galaxies.catalogs].filter(([code]) => sources.includes(code))),
+  } as GalaxyRowFixture;
+}
+
 const deps: ResolveDeps = {
-  catalogs: {
-    get: (s) => {
-      if (s === Source.SDSS) return makeCloud(1237668393006604288n, [1, 0, 0]);
-      if (s === Source.Glade) return makeCloud(99n, [1, 0, 0]);
-      if (s === Source.TwoMRS) return makeCloud(2789n, [0, 1, 0]);
-      if (s === Source.FamousGalaxy) return makeCloud(0n, [1, 0, 0]);
-      return undefined;
-    },
-    famousMeta: [
-      { id: 'm31', names: ['M31', 'Andromeda'], description: 'The Andromeda Galaxy', type: 'Sb' },
-    ],
-  },
   structures: {
     byId: (id) => (id === 'virgo' ? virgo : null),
     byCategory: (cat) => (cat === 'cluster' ? [virgo] : []),
@@ -84,7 +94,7 @@ const deps: ResolveDeps = {
   stars: { current: () => null },
 };
 
-const resolver = selectionResolverOver(deps);
+const resolver = selectionResolverOver(deps, galaxies);
 
 // ─── resolvePick dispatch (was resolvePick.test.ts / resolvePickTable.test.ts) ──
 
@@ -206,7 +216,10 @@ describe('extractRow, composed', () => {
 
   it('star ref resolves against the loaded catalog', async () => {
     const catalog = await makeStarCatalog();
-    const starResolver = selectionResolverOver({ ...deps, stars: { current: () => catalog } });
+    const starResolver = selectionResolverOver(
+      { ...deps, stars: { current: () => catalog } },
+      galaxies,
+    );
     const record = resolveStarRecord(catalog, 1)!;
     expect(starResolver.extractRow({ type: 'star', index: 1 }, SIM_DAYS)).toEqual({
       type: 'star',
@@ -248,10 +261,7 @@ describe('resolveFocusId, composed', () => {
       index: 0,
     });
     expect(resolver.resolveFocusId('sdss-9999')).toBeNull();
-    const noSdss = selectionResolverOver({
-      ...deps,
-      catalogs: { ...deps.catalogs, get: () => undefined },
-    });
+    const noSdss = selectionResolverOver(deps, galaxiesWith());
     expect(noSdss.resolveFocusId('sdss-1237668393006604288')).toBeNull();
   });
 
@@ -281,13 +291,10 @@ describe('resolveFocusId, composed', () => {
     // Meta present but the FamousGalaxy cloud absent: claimed (matches the
     // permissive id class + meta scan) but decode returns null — D6'2's
     // deferral, not an unclaimed miss.
-    const noCloud = selectionResolverOver({
-      ...deps,
-      catalogs: {
-        ...deps.catalogs,
-        get: (s) => (s === Source.FamousGalaxy ? undefined : deps.catalogs.get(s)),
-      },
-    });
+    const noCloud = selectionResolverOver(
+      deps,
+      galaxiesWith(Source.SDSS, Source.Glade, Source.TwoMRS),
+    );
     expect(noCloud.resolveFocusId('m31')).toBeNull();
   });
 
@@ -326,13 +333,7 @@ describe('resolveFocusId, composed', () => {
   });
 
   it('pos@ra,dec → nearest galaxy ref within 30 arcsec; beyond it and malformed → null', () => {
-    const posOnly = selectionResolverOver({
-      ...deps,
-      catalogs: {
-        ...deps.catalogs,
-        get: (s) => (s === Source.SDSS ? makeCloud(1237668393006604288n, [1, 0, 0]) : undefined),
-      },
-    });
+    const posOnly = selectionResolverOver(deps, galaxiesWith(Source.SDSS));
     expect(posOnly.resolveFocusId('pos@0.0000,0.0000')).toEqual({
       type: 'galaxyCatalog',
       source: Source.SDSS,
@@ -352,13 +353,12 @@ describe('focusIdOf ∘ resolveFocusId round-trip', () => {
   });
 
   it('GLADE ref (objId 0n) → pos@ra,dec → same ref', () => {
-    const posDeps = selectionResolverOver({
-      ...deps,
-      catalogs: {
-        ...deps.catalogs,
-        get: (s) => (s === Source.Glade ? makeCloud(0n, [1, 0, 0]) : undefined),
-      },
-    });
+    // objId 0 is the "no durable id" sentinel, so the encoder falls back to
+    // the positional form — only GLADE is loaded, and with that objId.
+    const posDeps = selectionResolverOver(deps, {
+      ...galaxies,
+      catalogs: new Map([[Source.Glade, makeCloud(0n, [1, 0, 0])]]),
+    } as GalaxyRowFixture);
     const ref: SelectionRef = { type: 'galaxyCatalog', source: Source.Glade, index: 0 };
     const id = posDeps.focusIdOf(ref);
     expect(id).toBe('pos@0.0000,0.0000');

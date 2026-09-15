@@ -9,6 +9,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { FRAME_ORDER_PASS_NAMES } from '../../../../src/services/engine/frame/frameOrderPassNames';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
 import type { CaptureFaceInput } from '../../../../src/@types/engine/frame/CaptureFaceInput';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
@@ -45,9 +46,21 @@ function fakePass(name: string): ContentPass {
   };
 }
 
-/** The real order + registry, with only the per-frame lists varied. */
+/**
+ * The COMPOSED pass list `createLayers` writes: core's registry plus a name-only
+ * stub for every authored name a Layer contributes (Ruling 2). Expansion reads
+ * only `name`, so the stubs are enough to exercise the roster.
+ */
+const COMPOSED_PASSES: readonly ContentPass[] = [
+  ...CONTENT_PASSES,
+  ...FRAME_ORDER_PASS_NAMES.filter((name) => !CONTENT_PASSES.some((p) => p.name === name)).map(
+    fakePass,
+  ),
+];
+
+/** The real order + composed registry, with only the per-frame lists varied. */
 function program(over: Partial<FrameInputs> = {}): readonly FrameStep[] {
-  return expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+  return expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
     tone: TONE,
     bloomEnabled: false,
     foregroundChain: [NEAR0],
@@ -73,7 +86,7 @@ function makeCam(): OrbitCamera {
 
 describe('expandFrameOrder', () => {
   it('merges the split hdr roster when the lens emits nothing', () => {
-    const program = expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+    const program = expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
       tone: TONE,
       bloomEnabled: true,
       foregroundChain: [NEAR0],
@@ -109,7 +122,7 @@ describe('expandFrameOrder', () => {
     // appends these to the group key, and the perf harness + DebugPanel look
     // the result up byte-for-byte. A merge would drop the second line's slot,
     // so the lensing list is non-empty here to keep the three lines apart.
-    const program = expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+    const program = expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
       tone: TONE,
       bloomEnabled: true,
       foregroundChain: [NEAR0],
@@ -124,7 +137,7 @@ describe('expandFrameOrder', () => {
   });
 
   it('drops a render step whose every pass name is absent', () => {
-    const withoutZoa = CONTENT_PASSES.filter((p) => p.name !== 'zone-of-avoidance');
+    const withoutZoa = COMPOSED_PASSES.filter((p) => p.name !== 'zone-of-avoidance');
     const program = expandFrameOrder(FRAME_ORDER, withoutZoa, {
       tone: TONE,
       bloomEnabled: true,
@@ -156,10 +169,12 @@ describe('expandFrameOrder', () => {
     expect(namesOf(program[0])).toEqual(['b', 'a']);
   });
 
-  it('every capture-line pass name is a CONTENT_PASSES name', () => {
+  it('every capture-line pass name is an AUTHORED frame-order name', () => {
     // `resolve` drops unknown names silently, and no render line counts a
-    // capture-only pass, so a rename missed on a capture line fails nowhere else.
-    const known = new Set(CONTENT_PASSES.map((p) => p.name));
+    // capture-only pass, so a rename missed on a capture line fails nowhere
+    // else. The roster is the authored names (Ruling 2), not core's own
+    // implementations: a Layer contributes some of these at runtime.
+    const known = new Set(FRAME_ORDER_PASS_NAMES);
     const captureNames = FRAME_ORDER.flatMap((line) =>
       line.kind === 'capture' ? [...line.cosmoPasses, ...line.near0Passes, ...line.bodyPasses] : [],
     );

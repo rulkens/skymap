@@ -30,7 +30,6 @@ const STATES = deriveBodyStates(CONST_J2000);
 // The body decoder resolves against the static SCENE_BODIES import and reads
 // nothing off the live engine resources, so there is no catalog to stub.
 const resolver = selectionResolverOver({
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 });

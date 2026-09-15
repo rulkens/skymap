@@ -13,7 +13,6 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { SourceType } from '../../../@types/data/SourceType';
 
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -33,7 +32,6 @@ import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
-import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
@@ -204,6 +202,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   for (const layer of state.layers) {
     if (layer.frame !== null && layer.frame(ctx, state)) layersAnimating = true;
   }
+  // Published on the ctx so the sky-capture scheduler can read "a Layer's
+  // content is still settling" without reaching into a Layer's subsystems.
+  ctx.layersAnimating = layersAnimating;
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
@@ -217,52 +218,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       }
     }
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
-  }
-
-  // hiResFamous must run BEFORE the shared disk walk: the textured-disk body
-  // folds `hiResFamous.lastOutput.byFamousIdx` into the instances it emits;
-  // after would lag a frame and flicker on close approach.
-  if (state.subsystems.hiResFamous !== null) {
-    state.subsystems.hiResFamous.runFrame({
-      cam: ctx.cam,
-      catalogs: state.data.galaxies.catalogs,
-      visibleSourceMask: masks.draw,
-      pxPerRad: ctx.drawPxPerRad,
-      famousGalaxiesMeta: state.data.galaxies.famousMeta,
-    });
-  }
-  // ONE catalog walk feeds both disk planners (LOD-1 procedural, then LOD-2
-  // textured); each `beginFrame` returns the visitor the walk drives.
-  const { proceduralDisks, texturedDisks, diskPlannerWalk } = state.subsystems;
-  if (proceduralDisks !== null && texturedDisks !== null && diskPlannerWalk !== null) {
-    const sharedInput = {
-      cam: ctx.cam,
-      catalogs: state.data.galaxies.catalogs,
-      visibleSourceMask: masks.draw,
-      pxPerRad: ctx.drawPxPerRad,
-      // Both LOD disk bodies fold this into their emitted alpha/brightness so a
-      // hidden catalog's disks fade out with the point sprites instead of
-      // popping once `deriveSourceMasks` drops the source from the mask.
-      sourceOpacity: (source: SourceType) =>
-        state.subsystems.fades.opacityOf(
-          { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) },
-          ctx.nowMs,
-        ),
-    };
-    diskPlannerWalk.runFrame(
-      sharedInput,
-      proceduralDisks.beginFrame({
-        ...sharedInput,
-        sbScale: state.settings.galaxyCatalogs.sbScale,
-        sbMax: state.settings.galaxyCatalogs.sbMax,
-        brightness: state.settings.galaxyCatalogs.brightness,
-      }),
-      texturedDisks.beginFrame({
-        ...sharedInput,
-        famousGalaxiesMeta: state.data.galaxies.famousMeta,
-        nowMs: ctx.nowMs,
-      }),
-    );
   }
 
   // The tile planner keys off Earth's OWN slab row (no row = already culled)

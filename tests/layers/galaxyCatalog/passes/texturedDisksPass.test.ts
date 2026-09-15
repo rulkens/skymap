@@ -39,6 +39,7 @@ function makeCtx(): ReadyFrameContext {
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    layersAnimating: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -67,32 +68,28 @@ function makeTexturedDiskRenderer() {
 
 describe('texturedDisksPass', () => {
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
-    const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } },
-      settings: { thumbnails: { enabled: false } },
-    } as unknown as EngineState;
+    const state = { settings: { thumbnails: { enabled: false } } } as unknown as EngineState;
+    const runtime = { texturedDisks: { lastOutput: { disks: [{}], quads: [] } } } as never;
     const ctx = makeCtx();
-    expect(texturedDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
+    expect(texturedDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns true when disks array is non-empty', () => {
-    const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks: [{}] } } },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
+    const state = { settings: { thumbnails: { enabled: true } } } as unknown as EngineState;
+    const runtime = { texturedDisks: { lastOutput: { disks: [{}] } } } as never;
     const ctx = makeCtx();
-    expect(texturedDisksPass.enabled(state, ctx, makeView(ctx))).toBe(true);
+    expect(texturedDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(true);
   });
 
   it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 7th arg', () => {
     const disks = [{ x: 1 }];
     const texturedDiskRenderer = makeTexturedDiskRenderer();
     const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, texturedDiskRenderer },
+      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup } },
     } as unknown as EngineState;
+    const runtime = { texturedDisks: { lastOutput: { disks } }, texturedDiskRenderer } as never;
     const ctx = { ...makeCtx(), viewSlot: 3 };
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
+    texturedDisksPass(runtime).draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
     expect(texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
     const call = texturedDiskRenderer.draw.mock.calls[0]!;
     expect(call[6]).toBe(3);

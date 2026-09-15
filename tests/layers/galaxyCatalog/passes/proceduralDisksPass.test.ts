@@ -38,6 +38,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    layersAnimating: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -69,34 +70,33 @@ function makeProceduralDiskRenderer() {
 
 describe('proceduralDisksPass', () => {
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
-      settings: { thumbnails: { enabled: false } },
-    } as unknown as EngineState;
+    const state = { settings: { thumbnails: { enabled: false } } } as unknown as EngineState;
+    const runtime = { proceduralDisks: { lastOutput: { instances: [{}] } } } as never;
     const ctx = makeCtx();
-    expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
+    expect(proceduralDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
   it('enabled() returns true with a non-empty lastOutput', () => {
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
+    const state = { settings: { thumbnails: { enabled: true } } } as unknown as EngineState;
+    const runtime = { proceduralDisks: { lastOutput: { instances: [{}] } } } as never;
     const ctx = makeCtx();
-    expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(true);
+    expect(proceduralDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(true);
   });
 
-  it('draw() forwards instances to state.gpu.proceduralDiskRenderer.draw', () => {
+  it('draw() forwards the planner instances to the runtime renderer', () => {
     const instances = [{ x: 1 }, { x: 2 }];
     const focusBindGroup = {} as GPUBindGroup;
     const proceduralDiskRenderer = makeProceduralDiskRenderer();
     const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances } } },
-      gpu: { focusUniform: { bindGroup: focusBindGroup }, proceduralDiskRenderer },
+      gpu: { focusUniform: { bindGroup: focusBindGroup } },
     } as unknown as EngineState;
+    const runtime = {
+      proceduralDisks: { lastOutput: { instances } },
+      proceduralDiskRenderer,
+    } as never;
     const pass = {} as GPURenderPassEncoder;
     const ctx = makeCtx();
-    proceduralDisksPass.draw(pass, makeView(ctx), ctx, state);
+    proceduralDisksPass(runtime).draw(pass, makeView(ctx), ctx, state);
     expect(proceduralDiskRenderer.draw).toHaveBeenCalledTimes(1);
     const call = (proceduralDiskRenderer.draw as any).mock.calls[0];
     // Args: (pass, vp, viewport, camPos, pxPerRad, focusBindGroup, instances).

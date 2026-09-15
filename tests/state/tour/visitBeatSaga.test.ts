@@ -42,6 +42,8 @@ import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
+import { Source } from '../../../src/data/sources';
+import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -86,7 +88,6 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 
 // Structure resolved by id immediately — no catalog needed.
 const STRUCTURE_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   stars: { current: () => null },
   structures: {
     byId: (id) =>
@@ -201,13 +202,16 @@ describe('visitBeatSaga', () => {
     });
 
     const lazyDeps: ResolveDeps = {
-      catalogs: {
-        get: () => (cloudLoaded ? CLOUD : undefined),
-        famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
-      },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
+    // Read LIVE: the beat's readiness gate must clear only once the cloud lands.
+    const lazyGalaxies = {
+      get catalogs() {
+        return cloudLoaded ? new Map([[Source.FamousGalaxy, CLOUD]]) : new Map();
+      },
+      famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 }],
+    } as unknown as GalaxyRowFixture;
 
     const famousBeat: BeatData = {
       enterClip: flyAndFocusOnClip(focusId(FAMOUS_ID)),
@@ -222,7 +226,7 @@ describe('visitBeatSaga', () => {
     let currentRuntime: LiveCameraRuntime | null = null;
     sagaMiddleware.setContext({
       resolveDeps: () => lazyDeps,
-      selection: selectionResolverOver(lazyDeps),
+      selection: selectionResolverOver(lazyDeps, lazyGalaxies),
       cameraRuntime: () => currentRuntime,
       playClip: (clip: ClipData) => playClipMock(clip),
     });

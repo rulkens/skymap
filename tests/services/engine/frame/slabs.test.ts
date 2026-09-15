@@ -637,6 +637,7 @@ describe('slabViewOf', () => {
       simDays: 0,
       fovYRad: cam.fovYRad,
       focusBlend: 0,
+      layersAnimating: false,
       visibleSourceMask: 0xffffffff,
       focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
       renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],

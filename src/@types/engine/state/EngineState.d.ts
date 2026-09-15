@@ -26,6 +26,7 @@ import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
+import type { GalaxyCatalogBridge } from '../layer/GalaxyCatalogBridge';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -88,6 +89,14 @@ export type EngineState = {
   assetRows: readonly AssetWiringRow[];
   fadeRows: readonly FadeLayer<unknown>[];
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
+  /**
+   * TEMPORARY (Ruling 5, deleted in 04e): the galaxy runtime, reached by
+   * `EngineHandle.sources` / `.selection` for one PR. Written once by
+   * `createLayers` from the instance whose Layer declared it; `null` in a
+   * composition without that Layer, and before `createLayers` runs — the same
+   * "no cloud yet" answer the shell already tolerates.
+   */
+  galaxyBridge: GalaxyCatalogBridge | null;
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

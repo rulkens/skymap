@@ -27,26 +27,6 @@
  * tier-swap generation counter.  The `fast_toggle_race` test is the
  * regression-suite anchor.
  *
- * ### Why the renderer ref is null at construction
- *
- * The subsystem is constructed eagerly in the engine state literal
- * (alongside `selection`, `tweens`, `scheduler`) — at that point the
- * GPU device hasn't been acquired yet, so `state.gpu.galaxyPointRenderer` is
- * null.  `attachRenderer(renderer)` is called from `phases/initGpu.ts`
- * once the renderer exists.  In the brief pre-attach window:
- *
- *   - `setMode(...)` runs the bakes anyway and stores the resolved
- *     ratios/weights in `cachedSchechter` / `cachedAngular`.  When
- *     `attachRenderer` lands, the cached results splice immediately
- *     so the next render frame sees them.
- *   - `onSourceUploaded(...)` no-ops — the renderer's upload callback
- *     can't have fired yet (the renderer doesn't exist).
- *
- * The "no-op when no renderer" pre-attach behaviour is what eager
- * construction requires: any consumer capturing
- * `state.subsystems.biasCorrection` from t=0 onwards gets the live
- * subsystem.
- *
  * ### Why the worker runner is a factory parameter
  *
  * Test injection.  The alternative — a mutable static setter on the
@@ -56,12 +36,11 @@
  * the param and gets the default Vite `?worker` runner declared as
  * `defaultSchechterRunner` / `defaultAngularRunner` in this module.
  *
- * ### Why `state.settings.bias.mode` stays separate
+ * ### Why the bias mode stays separate
  *
- * The subsystem mirrors `state.settings.bias.mode` internally (`mode`
- * field here) but doesn't own it.  The UI-facing knob bag stays on
- * `EngineState` so every reader (URL hash, InfoCard, SettingsPanel
- * echo) reads the one canonical place.
+ * The subsystem mirrors the settings mode internally (`mode` field here) but
+ * doesn't own it.  The UI-facing knob bag stays in settings so every reader
+ * (URL hash, InfoCard, SettingsPanel echo) reads the one canonical place.
  *
  * ### Wake contract
  *
@@ -79,10 +58,11 @@
  *
  * ### Production wiring
  *
- * The reconcile saga drives bake state via the bias.mode reconcile row.
- * The renderer reads `state.settings.bias.mode` per-frame for the
- * uniform write; this subsystem owns the splice pipeline that lays
- * per-galaxy ratios/weights into the per-source vertex buffers.
+ * The Layer's `frame` hook drives bake state: it compares the settings mode with
+ * the runtime's `biasLastApplied` and calls `setMode` on a change.  The points
+ * pass reads the settings mode per-frame for the uniform write; this subsystem
+ * owns the splice pipeline that lays per-galaxy ratios/weights into the
+ * per-source vertex buffers.
  *
  * @module
  */
@@ -172,19 +152,14 @@ function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float3
 }
 
 export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCorrectionSubsystem {
-  const { getMode, getLoadedClouds, requestRender } = deps;
+  const { renderer, getMode, getLoadedClouds, requestRender } = deps;
   const schechterRunner: SchechterRunner = deps.schechterRunner ?? defaultSchechterRunner;
   const angularRunner: AngularRunner = deps.angularRunner ?? defaultAngularRunner;
 
   // Internal mutable state.  Closure-captured `let`s so they're
   // genuinely inaccessible from outside (no `this.mode` for a future
-  // caller to reach in and poke).
-  let renderer: GalaxyPointRenderer | null = null;
-  // Initialise from the live state at first read time, not at
-  // construction (the engine state literal hasn't been assigned to its
-  // variable when `createBiasCorrectionSubsystem` is called from inside
-  // it).  Lazy init also doubles as a trivial sync between
-  // `state.settings.bias.mode` and our internal `mode` mirror at startup.
+  // caller to reach in and poke). `mode` initialises from the live setting at
+  // first READ, so the mirror starts in sync without a construction-time read.
   let mode: BiasModeT | null = null;
   const cachedSchechter = new Map<SourceType, Float32Array>();
   const cachedAngular = new Map<SourceType, Float32Array>();
@@ -232,20 +207,16 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const ratios = await schechterRunner({ cloud, source });
     if (myGen !== generation) return; // stale — superseded by a newer setMode
     cachedSchechter.set(source, ratios);
-    // If the renderer is attached, splice immediately AND wake the loop.  The
-    // bake is async, so by the time it resolves the render-on-demand loop may
-    // have gone to sleep (the boot fade-in already settled).  The splice mutates
-    // the per-source vertex buffer, so without a wake the reweight sits in the
-    // GPU buffer unshown until the next unrelated input — the AngularReweight-
-    // on-boot "galaxies dim on first mouse move" strand.  The wake is at the
-    // splice site so it covers BOTH callers (setMode's bake AND the
-    // onSourceUploaded re-bake), not just the manual mode toggle.  If no
-    // renderer is attached yet, the cached entry splices on attachRenderer
-    // instead — no wake here, the bootstrap loop is starting anyway.
-    if (renderer) {
-      renderer.spliceSchechterRatios(source, ratios);
-      requestRender();
-    }
+    // Splice immediately AND wake the loop.  The bake is async, so by the time
+    // it resolves the render-on-demand loop may have gone to sleep (the boot
+    // fade-in already settled).  The splice mutates the per-source vertex
+    // buffer, so without a wake the reweight sits in the GPU buffer unshown
+    // until the next unrelated input — the AngularReweight-on-boot "galaxies
+    // dim on first mouse move" strand.  The wake is at the splice site so it
+    // covers BOTH callers (setMode's bake AND the onSourceUploaded re-bake),
+    // not just the manual mode toggle.
+    renderer.spliceSchechterRatios(source, ratios);
+    requestRender();
   }
 
   async function bakeAngularFor(
@@ -259,10 +230,8 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     // See bakeSchechterFor: wake at the splice site so an onSourceUploaded
     // re-bake (the boot path, AngularReweight being the default mode) isn't
     // stranded in the GPU buffer until the next input.
-    if (renderer) {
-      renderer.spliceAngularWeights(source, weights);
-      requestRender();
-    }
+    renderer.spliceAngularWeights(source, weights);
+    requestRender();
   }
 
   async function setMode(next: BiasModeT): Promise<void> {
@@ -280,7 +249,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
       // slot, so the slot's value is irrelevant — but we clear for
       // diagnostic cleanliness (a future debug overlay can recognise
       // 0.0 as "not active").  No bake, so this resolves synchronously.
-      renderer?.clearBiasOverlays();
+      renderer.clearBiasOverlays();
       return;
     }
 
@@ -329,35 +298,18 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     cachedAngular.delete(source);
   }
 
-  function attachRenderer(r: GalaxyPointRenderer): void {
-    renderer = r;
-    // Install the upload/unload callbacks so the renderer can notify
-    // us mid-mode when a source arrives/leaves.  Uni-directional
-    // coupling — the renderer doesn't import or know about this
-    // subsystem; the subsystem reaches in via these setters.
-    r.setBiasUploadCallback((source, cloud) => onSourceUploaded(source, cloud));
-    r.setBiasUnloadCallback((source) => onSourceUnloaded(source));
-    // Apply any cached results that resolved before attach (the
-    // attach_after_setMode_completes test).  Mode-coherent: only
-    // splice the family that matches the current mode.
-    const m = currentMode();
-    if (m === BiasMode.Schechter) {
-      for (const [source, ratios] of cachedSchechter) {
-        r.spliceSchechterRatios(source, ratios);
-      }
-    } else if (m === BiasMode.AngularReweight) {
-      for (const [source, weights] of cachedAngular) {
-        r.spliceAngularWeights(source, weights);
-      }
-    }
-  }
+  // Install the upload/unload callbacks so the renderer can notify us mid-mode
+  // when a source arrives/leaves.  Uni-directional coupling — the renderer
+  // doesn't import or know about this subsystem; the subsystem reaches in via
+  // these setters.
+  renderer.setBiasUploadCallback((source, cloud) => onSourceUploaded(source, cloud));
+  renderer.setBiasUnloadCallback((source) => onSourceUnloaded(source));
 
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the bias-correction subsystem
   // is one of the engine's ~13 teardown targets, and the shared shape
   // lets engine.destroy() iterate uniformly across the bag.
   const subsystem: BiasCorrectionSubsystem = {
-    attachRenderer,
     setMode,
     onSourceUploaded,
     onSourceUnloaded,

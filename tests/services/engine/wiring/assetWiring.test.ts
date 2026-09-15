@@ -35,9 +35,8 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-// The rows as the demand loop sees them: `createLayers` folds companions over
-// core's authored table plus every Layer's, and over an empty tuple that fold
-// is exactly this one.
+// Core's half of the rows as the demand loop sees them; each Layer's own are
+// folded in beside these by `createLayers`, and tested beside their Layer.
 const EXPANDED_ROWS = expandCompanionRows(ASSET_WIRING);
 
 /** Find the single row for an asset key (throws if absent — keeps tests crisp). */
@@ -96,39 +95,9 @@ describe('ASSET_WIRING membership', () => {
       expect(row.req('large')).toMatchObject({ bodyId: entry.bodyId, kind: entry.kind });
     }
   });
-
-  it('external point rows carry a factory that throws if the builder calls it', () => {
-    // The throw is the runtime enforcement of the build-skip contract: the
-    // slot builder must skip `built: 'external'` rows. If it ever calls the
-    // factory anyway, this surfaces the wiring bug loudly rather than minting
-    // a duplicate point slot.
-    const sdss = rowFor(Source.SDSS);
-    expect(() => sdss.factory({} as never)).toThrow(/externally-built rows/);
-  });
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it("galaxy catalog rows demand the galaxy catalog's enabled settings bit", () => {
-    const sdss = rowFor(Source.SDSS);
-    expect(
-      sdss.demand(
-        makeCtx({ settings: { galaxyCatalogs: { items: { sdss: { enabled: true } } } } }),
-      ),
-    ).toBe(true);
-    // Absent items row (or disabled bit) ⇒ not demanded.
-    expect(sdss.demand(makeCtx({ settings: { galaxyCatalogs: { items: {} } } }))).toBe(false);
-  });
-
-  it('famousGalaxiesMeta demands when the Famous slot is not idle', () => {
-    const famousGalaxiesMeta = rowFor('famousGalaxiesMeta');
-    expect(
-      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'loading' } })),
-    ).toBe(true);
-    expect(
-      famousGalaxiesMeta.demand(makeCtx({ slotStates: { [Source.FamousGalaxy]: 'idle' } })),
-    ).toBe(false);
-  });
-
   it('filaments demand follows settings.filaments.enabled (bug-fix pin)', () => {
     const filaments = rowFor('filaments');
     expect(filaments.demand(makeCtx({ settings: { filaments: { enabled: true } } }))).toBe(true);
@@ -262,49 +231,9 @@ describe('ASSET_WIRING demand predicates', () => {
     // arc away ⇒ NOT demanded. Passing the live simDays is what makes it fire.
     expect(earth.demand(makeCtx({ cameraPosMpc: [...j2000Pos] as Vec3, simDays }))).toBe(false);
   });
-
-  it('pgcAlias demands only when the paletteOpened request is set', () => {
-    const pgc = rowFor('pgcAlias');
-    expect(pgc.demand(makeCtx({ requests: new Set(['paletteOpened']) }))).toBe(true);
-    expect(pgc.demand(makeCtx({ requests: new Set() }))).toBe(false);
-  });
-
-  it("Synthetic demands only when the 'syntheticFallback' request is armed", () => {
-    // The precise gate (count-aware, hidden-at-boot-aware) lives in
-    // createSyntheticFallback, which trips this request flag. The row's
-    // predicate is now a plain flag read; slot states are irrelevant to it.
-    const synth = rowFor(Source.Synthetic);
-    expect(synth.demand(makeCtx({ requests: new Set(['syntheticFallback']) }))).toBe(true);
-    expect(synth.demand(makeCtx({ requests: new Set() }))).toBe(false);
-    // Galaxy catalog slot states don't move the predicate any more.
-    expect(
-      synth.demand(
-        makeCtx({
-          slotStates: {
-            [Source.SDSS]: 'error',
-            [Source.TwoMRS]: 'error',
-            [Source.Glade]: 'error',
-            [Source.Milliquas]: 'error',
-          },
-        }),
-      ),
-    ).toBe(false);
-  });
 });
 
 describe('ASSET_WIRING req builders', () => {
-  it('a tiered row carries its tier; an untiered one carries only its source', () => {
-    expect(rowFor(Source.SDSS).req('medium')).toEqual({ source: Source.SDSS, tier: 'medium' });
-    expect(rowFor(Source.Synthetic).req('large')).toEqual({ source: Source.Synthetic });
-  });
-
-  it("an untiered point source's request is identical across tiers", () => {
-    for (const source of [Source.TwoMRS, Source.FamousGalaxy, Source.Synthetic]) {
-      const row = rowFor(source);
-      expect(sameRequest(row.req('small'), row.req('large')), `${source} drifted`).toBe(true);
-    }
-  });
-
   it('the filaments request drifts only across the small boundary', () => {
     const row = rowFor('filaments');
     // Polarity, not just drift: a flipped flag would fetch the wrong file at
@@ -313,14 +242,6 @@ describe('ASSET_WIRING req builders', () => {
     expect(row.req('large')).toEqual({ small: false });
     expect(sameRequest(row.req('medium'), row.req('large'))).toBe(true);
     expect(sameRequest(row.req('small'), row.req('medium'))).toBe(false);
-  });
-
-  it("the famous-meta row's request equals the famous point row's request at every tier", () => {
-    const meta = rowFor('famousGalaxiesMeta');
-    const point = rowFor(Source.FamousGalaxy);
-    for (const tier of ['small', 'medium', 'large'] as const) {
-      expect(sameRequest(meta.req(tier), point.req(tier)), `drifted at ${tier}`).toBe(true);
-    }
   });
 
   it("the famous-stars-meta row's request is undefined at every tier", () => {

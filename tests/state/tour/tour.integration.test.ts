@@ -255,7 +255,7 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
         bias: {},
       },
       selection: { select: null, hover: null, focus: null },
-      gpu: { focusUniform: { bindGroup: {} }, galaxyPointRenderer: null },
+      gpu: { focusUniform: { bindGroup: {} } },
       // The fade bridge walks the COMPOSED rows; over an empty layer tuple
       // that is core's own manifest.
       fadeRows: FADE_LAYERS,
@@ -266,24 +266,16 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // shader multiplies into every point's alpha.
   function drawnSurveyOpacity(state: EngineState, nowMs: number): number {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
-    // galaxyPointSpritesPass reads its renderer off `state.gpu` (D13), so the
-    // spy rides a state copy rather than the ctx `makeDrawCtx` builds.
-    const stateWithRenderer = {
-      ...state,
-      gpu: { ...state.gpu, galaxyPointRenderer: { draw: drawSpy } },
-    } as unknown as EngineState;
+    // The pass closes over its Layer's runtime, so the spy rides a stub runtime
+    // rather than `state.gpu`.
+    const runtime = { pointRenderer: { draw: drawSpy } } as never;
     const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);
     const view = {
       vp: new Float32Array(16),
       viewportPx: [CANVAS.width, CANVAS.height],
       camPos: SURVEY_CAM_POS,
     } as unknown as SlabView;
-    galaxyPointSpritesPass.draw(
-      {} as unknown as GPURenderPassEncoder,
-      view,
-      ctx,
-      stateWithRenderer,
-    );
+    galaxyPointSpritesPass(runtime).draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
     const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
     return settings.fadeOpacityOf(Source.SDSS);
   }

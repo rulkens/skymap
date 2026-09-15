@@ -12,13 +12,13 @@
  * `axisRatio`), "does the disk fill the ring?" is an apples-to-apples
  * comparison.
  *
- * ### Why a `(device, swapChainFormat)` factory (not GpuContext)
+ * ### Why a `(device)` factory and a per-draw format
  *
  * Matches the `passes/pickDebugOverlay` shape — a self-contained
  * overlay that takes only what it needs and returns `{ draw, destroy }`.
- * (The older `selectionRingRenderer` takes a full `GpuContext` + a
- * `device: null` testability cast; this pass's contract pins a non-null
- * `device`, so it skips that and stays simpler.)
+ * The target format arrives at DRAW time and the pipeline is re-keyed on a
+ * change, so an HDR swap needs no external rebuild walk (D9): the one handle
+ * that knows the blend also owns the format it blends into.
  *
  * ### Two uniform bindings
  *
@@ -64,10 +64,7 @@ const RING_UNIFORM_BYTES = 32;
  */
 const SEGMENTS_PLUS_ONE = 97;
 
-export function createDiskRadiusRing(
-  device: GPUDevice,
-  swapChainFormat: GPUTextureFormat,
-): DiskRadiusRing {
+export function createDiskRadiusRing(device: GPUDevice): DiskRadiusRing {
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'disk-radius-ring-bgl',
     entries: [
@@ -79,27 +76,38 @@ export function createDiskRadiusRing(
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'diskRadiusRing.vertex');
   const fsModule = createShaderModuleWithDevLog(device, fsCode, 'diskRadiusRing.fragment');
 
-  const pipeline = device.createRenderPipeline({
-    label: 'disk-radius-ring-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'disk-radius-ring-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
-    }),
-    vertex: { module: vsModule, entryPoint: 'vs' },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      targets: [
-        {
-          format: swapChainFormat,
-          // Premultiplied-alpha OVER — a UI overlay drawn post-tone-map;
-          // the fragment emits 'rgb * alpha, alpha' (see module header).
-          blend: PREMULTIPLIED_OVER_BLEND,
-        },
-      ],
-    },
-    primitive: { topology: 'line-strip' },
-  });
+  // Built on the first draw and rebuilt only when the target format changes —
+  // an HDR toggle reconfigures the canvas, and a pipeline baked for the old
+  // format would fail validation on the next draw.
+  let pipeline: GPURenderPipeline | null = null;
+  let pipelineFormat: GPUTextureFormat | null = null;
+
+  function pipelineFor(format: GPUTextureFormat): GPURenderPipeline {
+    if (pipeline !== null && pipelineFormat === format) return pipeline;
+    pipeline = device.createRenderPipeline({
+      label: 'disk-radius-ring-pipeline',
+      layout: device.createPipelineLayout({
+        label: 'disk-radius-ring-pipeline-layout',
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+      vertex: { module: vsModule, entryPoint: 'vs' },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fs',
+        targets: [
+          {
+            format,
+            // Premultiplied-alpha OVER — a UI overlay drawn post-tone-map;
+            // the fragment emits 'rgb * alpha, alpha' (see module header).
+            blend: PREMULTIPLIED_OVER_BLEND,
+          },
+        ],
+      },
+      primitive: { topology: 'line-strip' },
+    });
+    pipelineFormat = format;
+    return pipeline;
+  }
 
   const cameraBuffer = device.createBuffer({
     label: 'disk-radius-ring-camera',
@@ -125,6 +133,7 @@ export function createDiskRadiusRing(
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
+    targetFormat: GPUTextureFormat,
     args: { center: Vec3; radiusWorld: number; axisRatioForTilt: number; paDeg: number },
   ): void {
     // Camera UBO: viewProj at floats [0..15]. viewportPx ([16..17]) is
@@ -149,7 +158,7 @@ export function createDiskRadiusRing(
     ringUni[5] = args.axisRatioForTilt;
     device.queue.writeBuffer(ringBuffer, 0, ringUni);
 
-    pass.setPipeline(pipeline);
+    pass.setPipeline(pipelineFor(targetFormat));
     pass.setBindGroup(0, bindGroup);
     // SEGMENTS_PLUS_ONE (97) MUST equal the shader's SEGMENTS (96) + 1 —
     // see the const docblock above.

@@ -24,7 +24,6 @@ import {
   updateSelectionFocus,
   clearSelection,
 } from '../../../src/state/selection/selectionSlice';
-import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import {
   engineSourceCountReported,
   engineStructureCountsChanged,
@@ -46,6 +45,7 @@ import {
   decodeStarCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
+import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
@@ -96,16 +96,23 @@ describe('watchSelectionRowsSaga', () => {
       reducer: rootReducer,
       middleware: (g) => g().concat(sagaMiddleware),
     });
-    const deps: ResolveDeps = {
-      catalogs: {
-        get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined),
-        famousMeta: [],
+    // The galaxyCatalog Layer's slice of the composed resolver, read LIVE so
+    // the deferral cases can land the cloud mid-test.
+    const galaxies = {
+      get catalogs() {
+        return cloudPresent ? new Map([[Source.SDSS, makeCloud()]]) : new Map();
       },
+      famousMeta: [],
+    } as unknown as GalaxyRowFixture;
+    const deps: ResolveDeps = {
       structures: { byId: () => structure, byCategory: () => [] },
       stars: { current: () => starCatalog },
     };
     sagaMiddleware.run(watchSelectionRowsSaga);
-    sagaMiddleware.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps) });
+    sagaMiddleware.setContext({
+      resolveDeps: () => deps,
+      selection: selectionResolverOver(deps, galaxies),
+    });
     return s;
   }
 
@@ -145,14 +152,14 @@ describe('watchSelectionRowsSaga', () => {
     expect(store.getState()[selectionRowsRoute].hover).not.toBeNull();
   });
 
-  it('a deep link defers: ref present but cloud absent → null row; catalogLoaded fills it', async () => {
+  it('a deep link defers: ref present but cloud absent → null row; the count pulse fills it', async () => {
     cloudPresent = false;
     store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(catalogLoaded({ source: Source.SDSS }));
+    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
       type: 'galaxyCatalog',
@@ -160,7 +167,7 @@ describe('watchSelectionRowsSaga', () => {
     });
   });
 
-  it('a star deep link fills on engineSourceCountReported (the star bin never fires catalogLoaded)', async () => {
+  it('a star deep link fills on engineSourceCountReported (every source reports the same one pulse)', async () => {
     // The Gaia star bin commits by dispatching engineSourceCountReported, NOT
     // catalogLoaded (that pulse is galaxy-cloud-only). A star deep link resolves
     // its ref at bootstrap, before the bin loads → null row. The gap-fill must

@@ -30,10 +30,9 @@ export function scheduleSkyCaptures(input: {
   const { state, ctx } = input;
   const bodyStates = sceneBodyStates(state, ctx);
   // Two roster inputs move with no settings write: a source-visibility ramp
-  // (the write fires at its START) and a thumbnail's async 400 ms load fade.
-  const rosterSettling =
-    state.subsystems.fades.isAnyAnimating(ctx.nowMs) ||
-    (state.subsystems.texturedDisks?.hasInFlightWork() ?? false);
+  // (the write fires at its START) and a Layer still settling — a thumbnail's
+  // async 400 ms load fade is the one that motivated this.
+  const rosterSettling = state.subsystems.fades.isAnyAnimating(ctx.nowMs) || ctx.layersAnimating;
 
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
   for (const key of SKY_CAPTURE_KEYS) {

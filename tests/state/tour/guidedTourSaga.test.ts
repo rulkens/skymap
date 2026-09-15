@@ -63,7 +63,6 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 // Deps for narration clips — no id-bearing cues, so clipFociReady is trivially
 // true and waitUntil exits on the first synchronous check.
 const immediateDeps: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };

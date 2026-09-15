@@ -31,6 +31,7 @@
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
 import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
@@ -62,6 +63,9 @@ export function installSlots(
     // hands them here — the guards are a defensive skip that also narrows
     // `key` off the family members so the named-field index below typechecks.
     if (isBodyTextureKey(key) || isMeshBodyKey(key)) continue;
+    // Total by construction: the build pass skips both the external families and
+    // every Layer-owned key, so anything reaching here names a core field.
+    if (!isCoreSlotFieldKey(state.assetSlots, key)) continue;
     state.assetSlots[key] = slot as never;
   }
 }

@@ -95,7 +95,6 @@ const VIRGO: StructureInfo = {
  * are needed because no galaxy ids are tested here — only structures.
  */
 const DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: (id) => (id === 'cluster-virgo' ? VIRGO : null), byCategory: () => [] },
   stars: { current: () => null },
 };

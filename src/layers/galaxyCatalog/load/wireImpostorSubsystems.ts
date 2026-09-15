@@ -1,11 +1,8 @@
 /**
- * wireImpostorSubsystems — constructs the galaxy-thumbnail GPU subsystems
- * and wires them into the textured-disk renderer. Called from `wireSlots`,
- * the one call site, which narrows the disk renderer non-null before
- * calling — it exists as a compile-time fact here, not a runtime check.
- *
- * Construction order: galaxyAtlas must exist before texturedDisks, which
- * depends on it; proceduralDisks is independent.
+ * wireImpostorSubsystems — builds the four galaxy-thumbnail subsystems and
+ * binds the atlas view into the textured-disk renderer, returning the cluster
+ * for `create` to park on the runtime. Construction order is a dependency
+ * order, not a preference: see the comments at each step.
  */
 
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
@@ -13,42 +10,35 @@ import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsy
 import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
 import { createDiskPlannerWalk } from '../subsystems/diskPlannerWalk';
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
+import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 
-/**
- * Build the four impostor subsystems and assign them onto
- * `state.subsystems.*`.  Also binds the atlas view into the textured-disk
- * renderer so the LOD-2 pass can draw.
- */
-export function wireImpostorSubsystems(
-  state: EngineState,
-  device: GPUDevice,
-  disks: {
-    readonly texturedDiskRenderer: TexturedDiskRenderer;
-  },
-): void {
-  const { texturedDiskRenderer } = disks;
-
-  // ── Dependency-ordered construction ──────────────────────────────────
-  //
+export function wireImpostorSubsystems(deps: {
+  readonly device: GPUDevice;
+  readonly requestRender: () => void;
+  readonly texturedDiskRenderer: TexturedDiskRenderer;
+}): {
+  readonly galaxyAtlas: BitmapStreamSubsystem;
+  readonly texturedDisks: TexturedDiskSubsystem;
+  readonly proceduralDisks: ProceduralDiskSubsystem;
+  readonly diskPlannerWalk: DiskPlannerWalk;
+} {
   // galaxyAtlas first: the texturedDisk planner subscribes to its eviction
   // notifications and uses it for slot allocation.
   const galaxyAtlas = createGalaxyAtlasSubsystem({
-    device,
-    requestRender: () => state.subsystems.scheduler.requestRender(),
+    device: deps.device,
+    requestRender: deps.requestRender,
   });
 
-  const texturedDisks = createTexturedDiskSubsystem({
-    device,
-    atlas: galaxyAtlas,
-  });
+  const texturedDisks = createTexturedDiskSubsystem({ device: deps.device, atlas: galaxyAtlas });
 
-  // proceduralDisks depends on the atlas for the famous-WebP fade-out:
-  // for Famous-source galaxies whose curated WebP has loaded into the atlas,
-  // the procedural pattern crossfades out across the textured-disk fade-IN
-  // band so it doesn't bleed through the photo.  Non-famous galaxies and
-  // tests that omit the atlas keep procFadeOut at 1.0.
+  // proceduralDisks depends on the atlas for the famous-WebP fade-out: for
+  // Famous-source galaxies whose curated WebP has loaded into the atlas, the
+  // procedural pattern crossfades out across the textured-disk fade-IN band so
+  // it doesn't bleed through the photo.
   const proceduralDisks = createProceduralDiskSubsystem({ atlas: galaxyAtlas });
 
   // The single shared catalog walk that drives BOTH planners' visitors each
@@ -57,16 +47,10 @@ export function wireImpostorSubsystems(
   // planners' sticky maps carry the rest.
   const diskPlannerWalk = createDiskPlannerWalk({});
 
-  // ── Renderer bind wires ───────────────────────────────────────────────
-  //
   // Half of the renderer's `composeAtlasBindGroup()` gate — the `hiResFamous`
   // slot's commit fires the other half, and until both land the textured-disk
   // pipeline has no bind group and skips every draw call.
-  texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
+  deps.texturedDiskRenderer.bindAtlas(galaxyAtlas.getTextureView());
 
-  // ── State writes ──────────────────────────────────────────────────────
-  state.subsystems.galaxyAtlas = galaxyAtlas;
-  state.subsystems.texturedDisks = texturedDisks;
-  state.subsystems.proceduralDisks = proceduralDisks;
-  state.subsystems.diskPlannerWalk = diskPlannerWalk;
+  return { galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk };
 }

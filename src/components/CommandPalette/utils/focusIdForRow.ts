@@ -4,7 +4,7 @@
  *
  * Every palette pick routes through the ONE selection command, `requestFocus`,
  * whose saga (`watchRequestFocusSaga`) resolves a durable id to a `SelectionRef`
- * — deferring on `catalogLoaded` until the cloud is in. The palette therefore
+ * — deferring on the catalog-landed count pulse until the cloud is in. The palette therefore
  * never resolves a ref itself; it only names the thing. That keeps React on the
  * "single command->ref bridge" the saga documents, instead of two of the three
  * rows (alias, Milky Way) bypassing it with a pre-built ref.

@@ -13,11 +13,6 @@
  *   3. multi_source_completion_ordering — each source's splice fires
  *                                    in resolution order; one
  *                                    requestRender at the end.
- *   4. attach_before_setMode       — setMode before attachRenderer:
- *                                    bake runs, splice happens at
- *                                    attach time.
- *   5. attach_after_setMode_completes — bake resolves before attach;
- *                                    cached results splice on attach.
  *
  * Stub renderer captures every spliceSchechterRatios / spliceAngular-
  * Weights / clearBiasOverlays / setBiasUploadCallback /
@@ -43,9 +38,9 @@ type SpliceCall =
 type StubRenderer = {
   renderer: GalaxyPointRenderer;
   calls: SpliceCall[];
-  /** Read the most-recently-installed upload callback (post-attachRenderer). */
+  /** Read the upload callback the subsystem installs at construction. */
   getUploadCb(): ((source: SourceType, cloud: GalaxyCatalog) => void) | null;
-  /** Read the most-recently-installed unload callback (post-attachRenderer). */
+  /** Read the unload callback the subsystem installs at construction. */
   getUnloadCb(): ((source: SourceType) => void) | null;
 };
 
@@ -126,8 +121,7 @@ describe('createBiasCorrectionSubsystem', () => {
   it('setMode(None) on a no-source state resolves cleanly with a clearBiasOverlays call', async () => {
     const stub = makeStubRenderer();
     const { deps } = makeDeps(new Map());
-    const sub = createBiasCorrectionSubsystem(deps);
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({ ...deps, renderer: stub.renderer });
 
     await sub.setMode(BiasMode.None);
     expect(stub.calls.filter((c) => c.kind === 'clear').length).toBe(1);
@@ -146,8 +140,11 @@ describe('createBiasCorrectionSubsystem', () => {
       return new Float32Array(input.cloud.count);
     });
 
-    const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({
+      ...deps,
+      renderer: stub.renderer,
+      schechterRunner,
+    });
 
     await sub.setMode(BiasMode.Schechter);
     expect(callsLog.length).toBe(2);
@@ -168,8 +165,11 @@ describe('createBiasCorrectionSubsystem', () => {
         }),
     );
 
-    const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({
+      ...deps,
+      renderer: stub.renderer,
+      schechterRunner,
+    });
 
     // 1. setMode(None) — synchronously clears.
     await sub.setMode(BiasMode.None);
@@ -201,8 +201,11 @@ describe('createBiasCorrectionSubsystem', () => {
       return new Float32Array(input.cloud.count);
     });
 
-    const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({
+      ...deps,
+      renderer: stub.renderer,
+      schechterRunner,
+    });
 
     // Start the multi-source bake (don't await yet).
     const setModePromise = sub.setMode(BiasMode.Schechter);
@@ -240,8 +243,11 @@ describe('createBiasCorrectionSubsystem', () => {
         }),
     );
 
-    const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({
+      ...deps,
+      renderer: stub.renderer,
+      schechterRunner,
+    });
 
     const setModePromise = sub.setMode(BiasMode.Schechter);
 
@@ -279,11 +285,10 @@ describe('createBiasCorrectionSubsystem', () => {
       async (input: { source: SourceType; cloud: GalaxyCatalog }) =>
         new Float32Array(input.cloud.count),
     );
-    // Mirror AngularReweight BEFORE attach: attachRenderer reads currentMode(),
-    // which memoizes on first call, so the mode must be set before then.
+    // Mirror AngularReweight BEFORE construction: `currentMode()` memoizes on
+    // first call, so the mode must be set before the subsystem reads it.
     setMode(BiasMode.AngularReweight);
-    const sub = createBiasCorrectionSubsystem({ ...deps, angularRunner });
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({ ...deps, renderer: stub.renderer, angularRunner });
     requestRender.mockClear();
 
     sub.onSourceUploaded(Source.Glade, clouds.get(Source.Glade)!);
@@ -295,57 +300,6 @@ describe('createBiasCorrectionSubsystem', () => {
     expect(requestRender).toHaveBeenCalled();
   });
 
-  it('attach_before_setMode — setMode without attachRenderer; splice fires at attach time', async () => {
-    const stub = makeStubRenderer();
-    const clouds = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
-    const { deps } = makeDeps(clouds);
-    const schechterRunner = vi.fn(
-      async (input: { source: SourceType; cloud: GalaxyCatalog }) =>
-        new Float32Array(input.cloud.count),
-    );
-
-    const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
-
-    // setMode WITHOUT attachRenderer — bake should run; splice deferred.
-    await sub.setMode(BiasMode.Schechter);
-    expect(stub.calls.length).toBe(0);
-
-    // attachRenderer fires the deferred splices.
-    sub.attachRenderer(stub.renderer);
-    const splices = stub.calls.filter((c) => c.kind === 'schechter');
-    expect(splices.length).toBe(1);
-    expect(splices[0]!.source).toBe(Source.SDSS);
-  });
-
-  it('attach_after_setMode_completes — bake resolves before attach; cached results splice on attach', async () => {
-    // Same shape as attach_before_setMode but with explicit ordering:
-    // bake completes BEFORE attachRenderer is called.  (The previous
-    // test already exercises this via `await sub.setMode(...)`, but
-    // making the assertion explicit guards against future refactors
-    // that might short-circuit the cache when no renderer is wired.)
-    const stub = makeStubRenderer();
-    const clouds = new Map<SourceType, GalaxyCatalog>([
-      [Source.SDSS, makeCloud(2)],
-      [Source.Glade, makeCloud(3)],
-    ]);
-    const { deps } = makeDeps(clouds);
-    const schechterRunner = vi.fn(
-      async (input: { source: SourceType; cloud: GalaxyCatalog }) =>
-        new Float32Array(input.cloud.count),
-    );
-
-    const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
-    await sub.setMode(BiasMode.Schechter);
-    // Subsystem state should now show two cached entries.
-    expect(sub.state().sourcesWithSchechter.length).toBe(2);
-    // No splice yet — no renderer.
-    expect(stub.calls.filter((c) => c.kind === 'schechter').length).toBe(0);
-
-    // Attach: cached results splice immediately.
-    sub.attachRenderer(stub.renderer);
-    expect(stub.calls.filter((c) => c.kind === 'schechter').length).toBe(2);
-  });
-
   it('onSourceUnloaded — drops cached ratios + weights for that source', async () => {
     const stub = makeStubRenderer();
     const clouds = new Map<SourceType, GalaxyCatalog>([[Source.SDSS, makeCloud(3)]]);
@@ -355,8 +309,11 @@ describe('createBiasCorrectionSubsystem', () => {
         new Float32Array(input.cloud.count),
     );
 
-    const sub = createBiasCorrectionSubsystem({ ...deps, schechterRunner });
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({
+      ...deps,
+      renderer: stub.renderer,
+      schechterRunner,
+    });
     await sub.setMode(BiasMode.Schechter);
     expect(sub.state().sourcesWithSchechter).toContain(Source.SDSS);
 
@@ -369,8 +326,7 @@ describe('createBiasCorrectionSubsystem', () => {
     // (None, VolumeLimited, VMax), which fire no bake.
     const stub = makeStubRenderer();
     const { deps, requestRender } = makeDeps(new Map());
-    const sub = createBiasCorrectionSubsystem(deps);
-    sub.attachRenderer(stub.renderer);
+    const sub = createBiasCorrectionSubsystem({ ...deps, renderer: stub.renderer });
 
     await sub.setMode(BiasMode.None);
     // On-entry wake fires for identity mode.
@@ -385,15 +341,14 @@ describe('createBiasCorrectionSubsystem', () => {
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it('attachRenderer wires the upload/unload callbacks on the renderer', () => {
+  it('wires the upload/unload callbacks on the renderer at construction', () => {
     const stub = makeStubRenderer();
     const { deps } = makeDeps(new Map());
-    const sub = createBiasCorrectionSubsystem(deps);
 
     expect(stub.getUploadCb()).toBeNull();
     expect(stub.getUnloadCb()).toBeNull();
 
-    sub.attachRenderer(stub.renderer);
+    createBiasCorrectionSubsystem({ ...deps, renderer: stub.renderer });
 
     expect(typeof stub.getUploadCb()).toBe('function');
     expect(typeof stub.getUnloadCb()).toBe('function');

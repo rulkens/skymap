@@ -1,5 +1,4 @@
 import type { EngineData } from '../../../@types/engine/data/EngineData';
-import { createGalaxyStore } from './createGalaxyStore';
 import { createStructureStore } from './createStructureStore';
 import { createBodyStore } from './createBodyStore';
 import { SCENE_EARTH } from '../../../data/bodies/sceneEarth';
@@ -10,10 +9,10 @@ import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 
 /**
  * createEngineData — assemble the per-type stores into the `EngineData` bag
- * installed on `EngineState` at engine construction. Three types get a store:
- * galaxies and structures (the app CPU-queries them through transformed/indexed
- * data the slot can't supply) and bodies (the true-scale foreground, whose
- * authored constants have no fetched asset behind them).
+ * installed on `EngineState` at engine construction. Two types get a store:
+ * structures (the app CPU-queries them through transformed/indexed data the slot
+ * can't supply) and bodies (the true-scale foreground, whose authored constants
+ * have no fetched asset behind them).
  *
  * Bodies are seeded here, at construction — the project's seed-data-early
  * convention: real data flows in the moment the store exists, not at a later
@@ -36,7 +35,6 @@ export function createEngineData(): EngineData {
   bodies.setPlanets(SCENE_PLANETS);
   bodies.setMeshBodies(SCENE_MESH_BODIES);
   return {
-    galaxies: createGalaxyStore(),
     structures: createStructureStore(),
     bodies,
   };

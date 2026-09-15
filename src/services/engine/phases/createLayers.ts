@@ -13,6 +13,7 @@ import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { GalaxyCatalogBridge } from '../../../@types/engine/layer/GalaxyCatalogBridge';
 
 import { instantiateLayer } from '../layer/instantiateLayer';
 import {
@@ -100,11 +101,29 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
             deps.cb.store.dispatch(factsReported({ layer: layer.name, patch })),
         }
       : common;
-    return instantiateLayer(layer, coreDeps as LayerCoreDeps<undefined>);
+    return instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>, (runtime) => {
+      // TEMPORARY (Ruling 5): the galaxy runtime, parked for `EngineHandle`'s two
+      // remaining galaxy reads. 04e deletes this block with the field.
+      if (layer.name === 'galaxyCatalog') state.galaxyBridge = runtime as GalaxyCatalogBridge;
+    });
   });
 
   state.layers = instances;
   state.passes = [...CONTENT_PASSES, ...instances.flatMap((instance) => instance.passes)];
+  // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass that
+  // answers to it, and `checkFrameOrder` counts order lines rather than passes —
+  // so a core pass left behind under a name a Layer now contributes would keep
+  // drawing, silently, with the Layer's own version never reached.
+  const passNames = new Set<string>();
+  for (const pass of state.passes) {
+    if (passNames.has(pass.name)) {
+      throw new Error(
+        `createLayers: two composed passes are named '${pass.name}'; ` +
+          'the frame order resolves a name to one pass, so the second never draws',
+      );
+    }
+    passNames.add(pass.name);
+  }
   // One fold over the whole list: a companion's parent may sit in the other
   // half, and `expandCompanionRows` is only correct over a list holding both.
   state.assetRows = expandCompanionRows([
@@ -127,7 +146,8 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
         );
       }
       // Once, here — not per frame: the slot IS the Layer's runtime-owned
-      // object, and a second call would mint a second subscriber.
+      // object, and a second call would mint a second subscriber. `SlotDeps` is
+      // passed for signature parity; a Layer row's factory ignores it.
       layerSlots.set(row.key, row.factory({ state, cb: deps.cb }) as AssetSlot<unknown, unknown>);
     }
     // The COSMO slab is the only director a Layer contributes to in (d); NEAR0's

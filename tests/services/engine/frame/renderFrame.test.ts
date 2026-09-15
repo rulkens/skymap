@@ -12,6 +12,10 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
+import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
@@ -323,6 +327,15 @@ function makeInput(
   const context = makeFakeContext(swapView, callLog);
   const hdrTargetView = makeFakeHdrView();
   const galaxyPointRenderer = makeMockGalaxyPointRenderer(callLog);
+  // The galaxy passes close over their Layer's runtime, so the same mocks the
+  // state stub used to carry ride this instead.
+  // Empty planner outputs ⇒ both disk passes report `enabled: false`, keeping
+  // these fixtures on the point + milky-way ordering they assert.
+  const galaxyRuntime = {
+    pointRenderer: galaxyPointRenderer,
+    proceduralDisks: { lastOutput: { instances: [] } },
+    texturedDisks: { lastOutput: { disks: [] } },
+  } as unknown as GalaxyCatalogRuntime;
   const milkyWayCloudRenderer = makeMockMilkyWayCloudRenderer(callLog);
   const milkyWayCloud = makeMockMilkyWayCloud();
   const horizonShellRenderer = makeMockHorizonShellRenderer(callLog);
@@ -392,6 +405,8 @@ function makeInput(
   });
   const ctx = {
     isReady: true as const,
+    // `runFrame` stamps this after every Layer's frame hook has voted.
+    layersAnimating: false,
     viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
@@ -579,9 +594,15 @@ function makeInput(
         // band stays closed and nothing is scheduled; see
         // `scheduleCubemapCaptures`.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
-        // `renderFrame` expands FRAME_ORDER over the COMPOSED pass list; over an
-        // empty layer tuple that is core's own registry.
-        passes: CONTENT_PASSES,
+        // `renderFrame` expands FRAME_ORDER over the COMPOSED pass list:
+        // core's registry plus the galaxyCatalog Layer's, which is what
+        // `createLayers` writes and what these ordering assertions exercise.
+        passes: [
+          ...CONTENT_PASSES,
+          galaxyPointSpritesPass(galaxyRuntime),
+          proceduralDisksPass(galaxyRuntime),
+          texturedDisksPass(galaxyRuntime),
+        ],
       } as never,
       device,
       context,

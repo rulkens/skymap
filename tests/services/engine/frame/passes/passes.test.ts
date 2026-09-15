@@ -15,6 +15,7 @@ import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
 import { galaxyPointSpritesPass } from '../../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import type { GalaxyCatalogRuntime } from '../../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
@@ -84,6 +85,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    layersAnimating: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -377,49 +379,46 @@ const POINT_SPRITES_SETTINGS_STUB = {
   },
 } as unknown as EngineState['settings'];
 
-// galaxyPointSpritesPass now reads its renderer off `state.gpu` (D8), not
-// `ctx` — this builds a state whose `gpu.galaxyPointRenderer` is a fresh
-// draw spy, alongside the other galaxyPointSpritesPass.draw() reads.
-function makeStateWithRenderer(overrides: Partial<EngineState> = {}): {
+// The pass closes over its Layer's runtime, so the draw spy rides a runtime
+// stub while the settings/selection reads stay on the `state` argument.
+function makeStateWithRenderer(
+  overrides: Partial<EngineState> = {},
+  loadedSources: readonly unknown[] = [],
+): {
   state: EngineState;
+  runtime: GalaxyCatalogRuntime;
   drawSpy: ReturnType<typeof vi.fn>;
+  drawPointsSpy: ReturnType<typeof vi.fn>;
 } {
   const drawSpy = vi.fn();
+  const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
   const state = {
     ...STATE_STUB,
     selection: { select: null, hover: null, focus: null },
     settings: POINT_SPRITES_SETTINGS_STUB,
     ...overrides,
-    gpu: { ...STATE_STUB.gpu, galaxyPointRenderer: { draw: drawSpy }, ...overrides.gpu },
+    gpu: { ...STATE_STUB.gpu, ...overrides.gpu },
   } as unknown as EngineState;
-  return { state, drawSpy };
+  const runtime = {
+    pointRenderer: { draw: drawSpy, loadedSources: () => loadedSources },
+    pickRenderer: { drawPoints: drawPointsSpy },
+  } as unknown as GalaxyCatalogRuntime;
+  return { state, runtime, drawSpy, drawPointsSpy };
 }
-
-describe('galaxyPointSpritesPass.enabled', () => {
-  it('is disabled while the point renderer is absent, enabled once it lands', () => {
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    const absent = { ...STATE_STUB, gpu: { ...STATE_STUB.gpu, galaxyPointRenderer: null } };
-    expect(galaxyPointSpritesPass.enabled(absent as unknown as EngineState, ctx, view)).toBe(false);
-
-    const { state } = makeStateWithRenderer();
-    expect(galaxyPointSpritesPass.enabled(state, ctx, view)).toBe(true);
-  });
-});
 
 describe('galaxyPointSpritesPass.draw', () => {
   it('packs (source, index) into the selectedPacked u32', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
     // Selection is sourced from state.selection.select, not makeSettings.
-    const { state, drawSpy } = makeStateWithRenderer({
+    const { state, runtime, drawSpy } = makeStateWithRenderer({
       selection: {
         select: { type: 'galaxyCatalog', source: Source.SDSS, index: 42 } as SelectionRef,
         hover: null,
         focus: null,
       } as unknown as EngineState['selection'],
     });
-    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
     // record).
@@ -431,8 +430,8 @@ describe('galaxyPointSpritesPass.draw', () => {
   it('translates null selection to the 0xFFFFFFFF sentinel', () => {
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    const { state, drawSpy } = makeStateWithRenderer();
-    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, state);
+    const { state, runtime, drawSpy } = makeStateWithRenderer();
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
     const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
   });
@@ -446,7 +445,12 @@ describe('galaxyPointSpritesPass.draw', () => {
     // unchanged; a camera mid-band must scale it to a strict fraction.
     const far = makeStateWithRenderer();
     const farCtx = makeCtx();
-    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, far.state);
+    galaxyPointSpritesPass(far.runtime).draw(
+      PASS_STUB,
+      slabViewOf(farCtx, COSMO),
+      farCtx,
+      far.state,
+    );
     const farSettings = far.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
     expect(farFadeOf(Source.SDSS)).toBe(1);
@@ -459,7 +463,12 @@ describe('galaxyPointSpritesPass.draw', () => {
     const midCtx = makeCtx({
       drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]>,
     });
-    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, mid.state);
+    galaxyPointSpritesPass(mid.runtime).draw(
+      PASS_STUB,
+      slabViewOf(midCtx, COSMO),
+      midCtx,
+      mid.state,
+    );
     const midSettings = mid.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
     const midFade = midFadeOf(Source.SDSS);
@@ -473,11 +482,11 @@ describe('galaxyPointSpritesPass.draw', () => {
     // keeps its raw registry opacity — its curated galaxies stay visible
     // inside the Milky Way and near Earth as reference points. The layer
     // still calls renderer.draw: famous may be loaded.
-    const { state, drawSpy } = makeStateWithRenderer();
+    const { state, runtime, drawSpy } = makeStateWithRenderer();
     const deepCtx = makeCtx({
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
-    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
     const deepSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
     const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
     expect(deepFadeOf(Source.SDSS)).toBe(0);
@@ -490,8 +499,8 @@ describe('galaxyPointSpritesPass.draw', () => {
     // it must forward the resolved SlabView, not ctx.vp/ctx.canvasSize.
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    const { state, drawSpy } = makeStateWithRenderer();
-    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, state);
+    const { state, runtime, drawSpy } = makeStateWithRenderer();
+    galaxyPointSpritesPass(runtime).draw(PASS_STUB, view, ctx, state);
     const call = drawSpy.mock.calls[0]!;
     expect(call[0]).toBe(PASS_STUB);
     expect(call[1]).toBe(view.vp);
@@ -525,7 +534,6 @@ describe('galaxyPointSpritesPass.drawPick', () => {
     // The pick ctx's `visibleSourceMask` IS the pick mask, so a catalog whose
     // bit is clear (toggled off / fading out) is dropped before the picker
     // draws it.
-    const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
     // renderer.loadedSources yields SDSS + 2MRS + GLADE; only SDSS + GLADE
     // bits are set in the mask.
     const loaded = [Source.SDSS, Source.TwoMRS, Source.Glade].map((source) => ({
@@ -538,18 +546,9 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       visibleSourceMask: (1 << Source.SDSS) | (1 << Source.Glade),
     });
     const view = slabViewOf(ctx, COSMO);
-    const state = {
-      ...STATE_STUB,
-      selection: { select: null, hover: null, focus: null },
-      settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: {
-        ...STATE_STUB.gpu,
-        galaxyPointRenderer: { draw: vi.fn(), loadedSources: () => loaded },
-        galaxyPickRenderer: { drawPoints: drawPointsSpy },
-      },
-    } as unknown as EngineState;
+    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
 
-    galaxyPointSpritesPass.drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state);
 
     expect(drawPointsSpy).toHaveBeenCalledTimes(1);
     // arg[1] is the filtered `sources` list handed to drawPoints.
@@ -563,7 +562,6 @@ describe('galaxyPointSpritesPass.drawPick', () => {
     // hits. Famous rides its exemption (still pickable). drawPoints is called
     // regardless — its @group(0) pick-camera bind is the prefix contract the
     // ring / disk / Milky-Way pick pipelines depend on.
-    const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
     const loaded = [Source.SDSS, Source.FamousGalaxy].map((source) => ({
       source,
       vertexBuffer: {} as GPUBuffer,
@@ -575,18 +573,9 @@ describe('galaxyPointSpritesPass.drawPick', () => {
       drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
     });
     const view = slabViewOf(ctx, COSMO);
-    const state = {
-      ...STATE_STUB,
-      selection: { select: null, hover: null, focus: null },
-      settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: {
-        ...STATE_STUB.gpu,
-        galaxyPointRenderer: { draw: vi.fn(), loadedSources: () => loaded },
-        galaxyPickRenderer: { drawPoints: drawPointsSpy },
-      },
-    } as unknown as EngineState;
+    const { state, runtime, drawPointsSpy } = makeStateWithRenderer({}, loaded);
 
-    galaxyPointSpritesPass.drawPick!(PASS_STUB, view, ctx, state);
+    galaxyPointSpritesPass(runtime).drawPick!(PASS_STUB, view, ctx, state);
 
     expect(drawPointsSpy).toHaveBeenCalledTimes(1);
     const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;

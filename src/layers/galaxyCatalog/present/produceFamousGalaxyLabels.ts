@@ -61,7 +61,9 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
+import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';
@@ -160,163 +162,163 @@ function deriveFamousLabelInputs(
 }
 
 export function produceFamousGalaxyLabels(
-  state: EngineState,
-  ctx: ReadyFrameContext,
-): Label2DProducerOutput {
-  const galaxies = state.data.galaxies;
-  const fades = state.subsystems.fades;
-  const now = ctx.nowMs;
-  const empty: Label2DProducerOutput = { labels: [], awake: false };
-  // Render while the user wants famous labels OR the `galaxy` fade-out
-  // tail is still non-zero — so a toggle-off fades out smoothly instead of
-  // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
-  if (
-    !state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled &&
-    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) === 0
-  ) {
-    return empty;
-  }
+  runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>,
+): Label2DProducer['produceLabels'] {
+  return (state: EngineState, ctx: ReadyFrameContext): Label2DProducerOutput => {
+    const fades = state.subsystems.fades;
+    const now = ctx.nowMs;
+    const empty: Label2DProducerOutput = { labels: [], awake: false };
+    // Render while the user wants famous labels OR the `galaxy` fade-out
+    // tail is still non-zero — so a toggle-off fades out smoothly instead of
+    // popping (mirrors `filamentsPass.enabled`). Once opacity hits 0 we stop.
+    if (
+      !state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled &&
+      fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) === 0
+    ) {
+      return empty;
+    }
 
-  const meta = galaxies.famousMeta;
-  const catalog = galaxies.get(Source.FamousGalaxy);
-  if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
+    const meta = runtime.famousMeta;
+    const catalog = runtime.catalogs.get(Source.FamousGalaxy);
+    if (meta.length === 0 || catalog === undefined || catalog.count === 0) return empty;
 
-  // focusedOnly mode: only the focused subject's label draws. A famous focus
-  // is a positional catalog ref; anything else focused (a structure, the
-  // Milky Way, another catalog's galaxy, nothing) silences this producer.
-  const focusedIdx = state.settings.labels.focusedOnly
-    ? focusedFamousIndex(state.selection.focus)
-    : null;
-  if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
+    // focusedOnly mode: only the focused subject's label draws. A famous focus
+    // is a positional catalog ref; anything else focused (a structure, the
+    // Milky Way, another catalog's galaxy, nothing) silences this producer.
+    const focusedIdx = state.settings.labels.focusedOnly
+      ? focusedFamousIndex(state.selection.focus)
+      : null;
+    if (state.settings.labels.focusedOnly && focusedIdx === null) return empty;
 
-  const inputs = deriveFamousLabelInputs(meta, catalog);
-  if (inputs.length === 0) return empty;
+    const inputs = deriveFamousLabelInputs(meta, catalog);
+    if (inputs.length === 0) return empty;
 
-  const labels: Label2D[] = [];
+    const labels: Label2D[] = [];
 
-  const fovYRad = ctx.fovYRad;
-  const [cx, cy, cz] = ctx.drawCamPos;
-  const style = FAMOUS_LABEL_STYLE;
-  // Hoisted once — every label this frame lifts through the same vp/viewport.
-  const vp: Float32Array = ctx.vp;
-  const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
-  // The renderer owns the font metrics, so its memoized `measure` is the one
-  // source for the caption's true ink bbox (which places the line top). Null
-  // only during bootstrap, when the director isn't flushing anyway — the
-  // chain then degrades to a bottom at the label anchor.
-  const labelRenderer = state.gpu.labelRenderer;
+    const fovYRad = ctx.fovYRad;
+    const [cx, cy, cz] = ctx.drawCamPos;
+    const style = FAMOUS_LABEL_STYLE;
+    // Hoisted once — every label this frame lifts through the same vp/viewport.
+    const vp: Float32Array = ctx.vp;
+    const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
+    // The renderer owns the font metrics, so its memoized `measure` is the one
+    // source for the caption's true ink bbox (which places the line top). Null
+    // only during bootstrap, when the director isn't flushing anyway — the
+    // chain then degrades to a bottom at the label anchor.
+    const labelRenderer = state.gpu.labelRenderer;
 
-  // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
-  // identical for every famous label (the `galaxy` handle is shared, and
-  // there is no per-member focus exemption here). Folded into each label +
-  // anchor-line fadeAlpha below. `fades`/`now` were snapshotted at the top for
-  // the opacity-aware visibility gate; reuse them rather than re-reading the clock.
-  // The clip factor addresses the `'surveyLabel'` key — the VisibilityLayerKey
-  // that `fadeIdToVisibilityKey` maps `galaxy` to.
-  const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('surveyLabel', now);
-  const layerAlpha =
-    fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) *
-    focusRecession({ kind: 'labelLayer', layer: 'galaxy' }, ctx.focusBlend) *
-    clipFactor;
+    // Snapshot the layer opacity × uniform recession × clip factor ONCE — it's
+    // identical for every famous label (the `galaxy` handle is shared, and
+    // there is no per-member focus exemption here). Folded into each label +
+    // anchor-line fadeAlpha below. `fades`/`now` were snapshotted at the top for
+    // the opacity-aware visibility gate; reuse them rather than re-reading the clock.
+    // The clip factor addresses the `'surveyLabel'` key — the VisibilityLayerKey
+    // that `fadeIdToVisibilityKey` maps `galaxy` to.
+    const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('surveyLabel', now);
+    const layerAlpha =
+      fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) *
+      focusRecession({ kind: 'labelLayer', layer: 'galaxy' }, ctx.focusBlend) *
+      clipFactor;
 
-  for (let i = 0; i < inputs.length; i += 1) {
-    const p = inputs[i]!;
-    // Input i maps to catalog row i (the meta ⋈ catalog join is index-aligned),
-    // so the positional focus ref selects by loop index.
-    if (focusedIdx !== null && i !== focusedIdx) continue;
-    const dx = p.worldPos[0] - cx;
-    const dy = p.worldPos[1] - cy;
-    const dz = p.worldPos[2] - cz;
-    const distanceMpc = Math.hypot(dx, dy, dz);
+    for (let i = 0; i < inputs.length; i += 1) {
+      const p = inputs[i]!;
+      // Input i maps to catalog row i (the meta ⋈ catalog join is index-aligned),
+      // so the positional focus ref selects by loop index.
+      if (focusedIdx !== null && i !== focusedIdx) continue;
+      const dx = p.worldPos[0] - cx;
+      const dy = p.worldPos[1] - cy;
+      const dz = p.worldPos[2] - cz;
+      const distanceMpc = Math.hypot(dx, dy, dz);
 
-    // Apparent-size gate: skip below the threshold, smoothstep fade in the
-    // band above. `prominencePx` (the declutter sort key) is the galaxy's
-    // apparent diameter.
-    const sizePx = apparentSizePx({
-      diameterKpc: p.apparentDiameterKpc,
-      distanceMpc,
-      viewportHeightPx: ctx.canvasSize.height,
-      fovYRad,
-    });
-    if (sizePx < p.minApparentSizePx) continue;
-    const prominencePx = sizePx;
-    // Distance-scaled ceiling — see `famousLabelMaxPx`'s docblock for why the
-    // category's flat 150 px cap can't stand for permanently-near companions
-    // like the LMC/SMC. Computed once and reused by both the label object and
-    // the placement call below.
-    const maxPixelSize = famousLabelMaxPx(distanceMpc);
-    let fadeAlpha = 1;
-    const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
-    fadeAlpha = t * t * (3 - 2 * t); // smoothstep
-    // No `awake` signal: fadeAlpha is a pure function of camera distance, and
-    // camera motion already wakes the loop. Pinning awake mid-band would keep
-    // the loop on whenever a galaxy is fading.
+      // Apparent-size gate: skip below the threshold, smoothstep fade in the
+      // band above. `prominencePx` (the declutter sort key) is the galaxy's
+      // apparent diameter.
+      const sizePx = apparentSizePx({
+        diameterKpc: p.apparentDiameterKpc,
+        distanceMpc,
+        viewportHeightPx: ctx.canvasSize.height,
+        fovYRad,
+      });
+      if (sizePx < p.minApparentSizePx) continue;
+      const prominencePx = sizePx;
+      // Distance-scaled ceiling — see `famousLabelMaxPx`'s docblock for why the
+      // category's flat 150 px cap can't stand for permanently-near companions
+      // like the LMC/SMC. Computed once and reused by both the label object and
+      // the placement call below.
+      const maxPixelSize = famousLabelMaxPx(distanceMpc);
+      let fadeAlpha = 1;
+      const t = Math.min(1, (sizePx - p.minApparentSizePx) / style.fadeBandPx);
+      fadeAlpha = t * t * (3 - 2 * t); // smoothstep
+      // No `awake` signal: fadeAlpha is a pure function of camera distance, and
+      // camera motion already wakes the loop. Pinning awake mid-band would keep
+      // the loop on whenever a galaxy is fading.
 
-    // Fold the layer opacity × recession into the distance fade. The same
-    // `labelAlpha` drives both the label and its anchor line so the connector
-    // fades in lockstep with its label.
-    const labelAlpha = fadeAlpha * layerAlpha;
+      // Fold the layer opacity × recession into the distance fade. The same
+      // `labelAlpha` drives both the label and its anchor line so the connector
+      // fades in lockstep with its label.
+      const labelAlpha = fadeAlpha * layerAlpha;
 
-    // Build the label BEFORE its geometry so `measure` reads the same font /
-    // text / alignment fields the final label carries — the measured ink
-    // bottom that positions the line top can never drift from what is drawn.
-    // `worldPos` here is provisional (the dot); the push below replaces it
-    // with the lifted anchor.
-    const label: Label2D = {
-      id: p.id,
-      // Byte-identical to what the famous point batch's pick fragment writes:
-      // the meta ⋈ catalog join is index-aligned, so this loop index IS the
-      // catalog row the GPU stamps as `@builtin(instance_index)`.
-      pickId: packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET),
-      worldPos: p.worldPos,
-      text: p.name,
-      font: 'cormorant',
-      pixelSize: 0, // unused — superseded by the worldEm sizing model
-      color: [...style.labelColor],
-      worldEmMpc: p.labelWorldEmMpc,
-      minPixelSize: style.minPixelSize,
-      maxPixelSize,
-      fadeAlpha: labelAlpha,
-      alignX: 'center',
-      alignY: 'baseline',
-      outlineColor: [...style.outlineColor],
-      outlineEmFrac: style.outlineEmFrac,
-      prominencePx,
-    };
+      // Build the label BEFORE its geometry so `measure` reads the same font /
+      // text / alignment fields the final label carries — the measured ink
+      // bottom that positions the line top can never drift from what is drawn.
+      // `worldPos` here is provisional (the dot); the push below replaces it
+      // with the lifted anchor.
+      const label: Label2D = {
+        id: p.id,
+        // Byte-identical to what the famous point batch's pick fragment writes:
+        // the meta ⋈ catalog join is index-aligned, so this loop index IS the
+        // catalog row the GPU stamps as `@builtin(instance_index)`.
+        pickId: packSelection(Source.FamousGalaxy, i + PICK_SENTINEL_OFFSET),
+        worldPos: p.worldPos,
+        text: p.name,
+        font: 'cormorant',
+        pixelSize: 0, // unused — superseded by the worldEm sizing model
+        color: [...style.labelColor],
+        worldEmMpc: p.labelWorldEmMpc,
+        minPixelSize: style.minPixelSize,
+        maxPixelSize,
+        fadeAlpha: labelAlpha,
+        alignX: 'center',
+        alignY: 'baseline',
+        outlineColor: [...style.outlineColor],
+        outlineEmFrac: style.outlineEmFrac,
+        prominencePx,
+      };
 
-    // Single derivation chain (see `liftedLabelPlacement`): the lift is
-    // screen-space (world +Y offsets foreshorten or fall over the text), the
-    // line top derives from the measured text bottom minus the shared
-    // padding, and the line vanishes when no room remains. The endpoints are
-    // camera-derived per frame — safe because the cosmoLabelDirector's re-upload
-    // signature keys on the label's `leader.toWorld`, so moved geometry
-    // re-uploads instead of freezing at first-visible distance.
-    const placement = liftedLabelPlacement({
-      anchorWorldPos: p.worldPos,
-      vp,
-      viewportPx,
-      subjectSizePx: sizePx,
-      textBbox: labelRenderer?.measure(label) ?? null,
-      worldEmMpc: p.labelWorldEmMpc,
-      minPixelSize: style.minPixelSize,
-      maxPixelSize,
-    });
-    // Behind the camera the projection is undefined — nothing visible to label.
-    if (placement === null) continue;
+      // Single derivation chain (see `liftedLabelPlacement`): the lift is
+      // screen-space (world +Y offsets foreshorten or fall over the text), the
+      // line top derives from the measured text bottom minus the shared
+      // padding, and the line vanishes when no room remains. The endpoints are
+      // camera-derived per frame — safe because the cosmoLabelDirector's re-upload
+      // signature keys on the label's `leader.toWorld`, so moved geometry
+      // re-uploads instead of freezing at first-visible distance.
+      const placement = liftedLabelPlacement({
+        anchorWorldPos: p.worldPos,
+        vp,
+        viewportPx,
+        subjectSizePx: sizePx,
+        textBbox: labelRenderer?.measure(label) ?? null,
+        worldEmMpc: p.labelWorldEmMpc,
+        minPixelSize: style.minPixelSize,
+        maxPixelSize,
+      });
+      // Behind the camera the projection is undefined — nothing visible to label.
+      if (placement === null) continue;
 
-    labels.push({
-      ...label,
-      worldPos: placement.labelWorldPos,
-      ...(placement.line !== null && {
-        leader: {
-          fromWorld: placement.line.fromWorld,
-          toWorld: placement.line.toWorld,
-          pixelWidth: style.pixelWidth,
-          color: [...style.lineColor],
-        },
-      }),
-    });
-  }
+      labels.push({
+        ...label,
+        worldPos: placement.labelWorldPos,
+        ...(placement.line !== null && {
+          leader: {
+            fromWorld: placement.line.fromWorld,
+            toWorld: placement.line.toWorld,
+            pixelWidth: style.pixelWidth,
+            color: [...style.lineColor],
+          },
+        }),
+      });
+    }
 
-  return { labels, awake: false };
+    return { labels, awake: false };
+  };
 }

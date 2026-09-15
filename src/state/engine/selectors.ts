@@ -35,7 +35,19 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
-const selectEngine = (state: RootState): EngineSliceState => state[engineRoute];
+const selectEngine = (state: RootState): EngineSliceState => state[engineRoute] as EngineSliceState;
+
+/**
+ * The same slice, typed for the BOOT WINDOW: each Layer's facts key is seeded by
+ * `createLayers` when the engine bootstraps, so it is absent for the first
+ * frames the shell renders. The reducer cannot seed it (that import closes D1's
+ * module cycle), so the absence is read here rather than asserted away.
+ */
+const selectEngineFacts = (state: RootState): Partial<EngineSliceState> => selectEngine(state);
+
+/** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */
+const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
+const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
 
 export const selectEngineStatus = (state: RootState): EngineStatus => selectEngine(state).status;
 
@@ -47,9 +59,11 @@ export const selectSourceCounts = (state: RootState): Partial<Record<SourceType,
 export const selectStructureCounts = (state: RootState): Partial<Record<StructureId, number>> =>
   selectEngine(state).structureCounts;
 
+/** The galaxyCatalog Layer's published tally (Ruling 12), empty until its first catalog lands. */
 export const selectProvenanceCounts = (
   state: RootState,
-): Partial<Record<SourceType, ProvenanceCounts>> => selectEngine(state).provenanceCounts;
+): Partial<Record<SourceType, ProvenanceCounts>> =>
+  selectEngineFacts(state).galaxyCatalog?.provenanceCounts ?? NO_PROVENANCE;
 
 export const selectLoadProgress = (state: RootState): LoadProgressState | null =>
   selectEngine(state).loadProgress;
@@ -63,12 +77,13 @@ export const selectStructureSearchList = (state: RootState): readonly StructureS
   selectEngine(state).structureSearchList;
 
 /**
- * Famous-galaxy metadata sidecar, empty until its asset slot settles (and after
- * a failed fetch). An object-reference read: the slot dispatches once, so the
- * array identity is stable and a subscriber sees a single change.
+ * Famous-galaxy metadata sidecar, published as a galaxyCatalog fact (Ruling 6):
+ * empty until its asset slot settles, and after a failed fetch. The slot
+ * publishes once, so the array identity is stable and a subscriber sees a
+ * single change.
  */
 export const selectFamousGalaxiesMeta = (state: RootState): readonly FamousGalaxyMetaEntry[] =>
-  selectEngine(state).meta.famousGalaxies;
+  selectEngineFacts(state).galaxyCatalog?.famousMeta ?? NO_FAMOUS_META;
 
 /**
  * Famous-star metadata sidecar, on the same contract as

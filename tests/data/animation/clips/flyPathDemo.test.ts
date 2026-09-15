@@ -73,7 +73,6 @@ const GROUPS: Record<string, StructureInfo> = {
 };
 
 const DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: (id) => GROUPS[id] ?? null, byCategory: () => [] },
   stars: { current: () => null },
 };

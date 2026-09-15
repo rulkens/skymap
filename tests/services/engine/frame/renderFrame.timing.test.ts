@@ -16,6 +16,8 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
@@ -319,11 +321,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // Every `ContentPass.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
         // wired in (no top-level `input.*` duplication).
-        galaxyPointRenderer,
         milkyWayCloudRenderer,
         horizonShellRenderer,
-        texturedDiskRenderer,
-        proceduralDiskRenderer,
         filamentRenderer: null,
         // The FRAME program's hdr→swap composite reads state.gpu.compositor.
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
@@ -379,7 +378,15 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // The cubemap-capture bookkeeping — see the matching fixture comment in
       // renderFrame.test.ts.
       cubemapCaptures: makeCubemapCaptureRuntimes(),
-      passes: CONTENT_PASSES,
+      // The COMPOSED list `createLayers` writes: core's registry plus the
+      // galaxyCatalog Layer's pass, which bills the `point-sprites` timed slot
+      // this suite asserts.
+      passes: [
+        ...CONTENT_PASSES,
+        galaxyPointSpritesPass({
+          pointRenderer: galaxyPointRenderer,
+        } as unknown as GalaxyCatalogRuntime),
+      ],
     } as never,
     device,
     context,

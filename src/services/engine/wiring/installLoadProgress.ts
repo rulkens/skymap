@@ -27,6 +27,7 @@
 
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
 import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
 import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
 import { engineLoadProgressChanged } from '../../../state/engine/engineSlice';
 
@@ -36,11 +37,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 export function installLoadProgress(state: EngineState, deps: BootstrapDeps): void {
   const { cb, allSlots } = deps;
-
-  // Point slots (minted earlier in wireSlots, keyed by Source in the points map).
-  for (const [, slot] of state.assetSlots.points) {
-    allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
-  }
 
   // Star-catalog slots (registry-built, keyed by Source in the starCatalogs
   // map). Their wiring rows carry NUMERIC keys, so the string-keyed sidecar
@@ -80,6 +76,9 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   for (const row of state.assetRows) {
     if (typeof row.key !== 'string' || isBodyTextureKey(row.key) || isMeshBodyKey(row.key))
       continue;
+    // A Layer's rows name slots the Layer owns; they have no `assetSlots` field
+    // and are gathered from `layerSlots` below.
+    if (!isCoreSlotFieldKey(state.assetSlots, row.key)) continue;
     const slot = state.assetSlots[row.key];
     if (slot) allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
   }

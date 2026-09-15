@@ -47,12 +47,11 @@
  *
  * ### Synthetic fallback gate
  *
- * The Synthetic row's demand is a plain `ctx.request('syntheticFallback')`
- * read. The precise gate (count-aware, hidden-at-boot-aware) lives in
- * `createSyntheticFallback` and trips that flag; this regression net only
- * models the armed state by seeding the request set. Synthetic starts idle, so
- * the loop's idle-guard lets it load when armed; the errored galaxy catalog slots that
- * triggered the fallback stay non-idle and are deliberately NOT re-loaded.
+ * The Synthetic row's demand IS the arming predicate (`syntheticShouldArm`)
+ * over the Layer runtime's own point slots — count-aware and
+ * disabled-catalog-aware, which is why it needs no request flag. Synthetic
+ * starts idle, so the loop's idle-guard lets it load once armed; the errored
+ * galaxy catalog slots that armed it stay non-idle and are NOT re-loaded.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -74,6 +73,8 @@ import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 
 // ── Stub slot factory ────────────────────────────────────────────────────────
 
@@ -255,6 +256,22 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       (pointSlots[src] ?? stubSlot()) as AssetSlot<unknown, unknown>,
     ]),
   );
+  // The Layer's own slots, in the one map `createLayers` fills.
+  const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>(points);
+  layerSlots.set(
+    'famousGalaxiesMeta',
+    (namedSlots.famousGalaxiesMeta ?? stubSlot()) as AssetSlot<unknown, unknown>,
+  );
+  layerSlots.set('pgcAlias', (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown>);
+  layerSlots.set('hiResFamous', stubSlot() as AssetSlot<unknown, unknown>);
+  // The Layer's rows read `points` (the synthetic backstop's arming predicate)
+  // and hand back these same slots from their factories.
+  const galaxyRuntime = {
+    points,
+    famousGalaxiesMeta: layerSlots.get('famousGalaxiesMeta'),
+    pgcAlias: layerSlots.get('pgcAlias'),
+    hiResFamous: layerSlots.get('hiResFamous'),
+  } as unknown as GalaxyCatalogRuntime;
 
   return {
     // tier feeds `req(state.tier)`; it lives in its own root field on EngineState.
@@ -283,17 +300,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       },
     },
     assetSlots: {
-      points,
       filaments: (namedSlots.filaments ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
-      famousGalaxiesMeta: (namedSlots.famousGalaxiesMeta ?? stubSlot()) as AssetSlot<
-        unknown,
-        unknown
-      > as never,
       structureCatalog: (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<
         unknown,
         unknown
       > as never,
-      pgcAlias: (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       cf4Density: (namedSlots.cf4Density ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       mcpm: (namedSlots.mcpm ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       // Empty keyed family: the body-texture rows resolve to undefined slots
@@ -305,10 +316,11 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // directly. Per state so no pending entry survives into the next case, and
     // at the production concurrency so `firedKeys` exercises the real bound.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
-    // The composed lists `createLayers` would have written; over an empty layer
-    // tuple they are core's own registry, and no Layer owns a slot.
-    assetRows: expandCompanionRows(ASSET_WIRING),
-    layerSlots: new Map(),
+    // The composed lists `createLayers` would have written: core's authored
+    // registry plus the galaxyCatalog Layer's, folded once, with that Layer's
+    // slots in the map `slotFor` consults first.
+    assetRows: expandCompanionRows([...ASSET_WIRING, ...galaxyCatalogAssetRows(galaxyRuntime)]),
+    layerSlots,
   } as unknown as EngineState;
 }
 
@@ -322,21 +334,13 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
 function collectFired(state: EngineState): Set<AssetKey> {
   const fired = new Set<AssetKey>();
 
-  // Point slots — check each source we put in the map.
-  for (const src of ALL_POINT_SOURCES) {
-    const slot = state.assetSlots.points.get(src) as StubSlot | undefined;
-    if (slot?.load.mock.calls.length) fired.add(src);
+  // The Layer's slots — point sources plus its two sidecars.
+  for (const [key, slot] of state.layerSlots) {
+    if ((slot as StubSlot).load.mock.calls.length) fired.add(key);
   }
 
-  // Named slots — check the ones that might have fired.
-  const namedKeys = [
-    'famousGalaxiesMeta',
-    'filaments',
-    'structureCatalog',
-    'pgcAlias',
-    'cf4Density',
-    'mcpm',
-  ] as const;
+  // Core's named slots — the ones that might have fired.
+  const namedKeys = ['filaments', 'structureCatalog', 'cf4Density', 'mcpm'] as const;
   for (const key of namedKeys) {
     const slot = state.assetSlots[key] as StubSlot | null | undefined;
     if (slot?.load.mock.calls.length) fired.add(key);
@@ -397,9 +401,10 @@ describe('reevaluateDemand demand-table regression', () => {
    * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
    * which the construction seed lands as true (registry visible:true). cf4Density
    * is NOT (seeded enabled:false). filaments: off. pgcAlias: no request.
-   * Synthetic: galaxy catalogs not errored.
+   * Synthetic: galaxy catalogs not errored. `hiResFamous` demands
+   * unconditionally — its "fetch" is a GPU allocation, not a download.
    */
-  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', async () => {
+  it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + hiResFamous + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', async () => {
     // Famous starts idle: its point row loads it (idle-guard passes), flipping
     // the stub to 'loading', so the later famousGalaxiesMeta row sees Famous non-idle
     // and demands. This is the honest two-phase boot model.
@@ -415,6 +420,7 @@ describe('reevaluateDemand demand-table regression', () => {
         Source.FamousGalaxy,
         Source.Milliquas,
         'famousGalaxiesMeta',
+        'hiResFamous',
         'structureCatalog',
         'mcpm',
       ]),
@@ -457,9 +463,8 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * Synthetic fallback armed: the `'syntheticFallback'` request flag is set
-   * (the precise gate in createSyntheticFallback owns the decision to arm it;
-   * here we just model the armed state), so the Synthetic row is demanded.
+   * Synthetic fallback armed: every enabled survey catalog has settled without
+   * data, which IS the Synthetic row's demand predicate (Ruling 13).
    *
    * The galaxy catalog slots are driven to 'error' to mirror a realistic all-failed
    * boot. Synthetic starts idle (never loaded), so the idle-guard lets it load
@@ -479,8 +484,9 @@ describe('reevaluateDemand demand-table regression', () => {
       // famousGalaxiesMeta demands because Famous slot !== 'idle'.
       [Source.FamousGalaxy]: stubSlot('error'),
     };
-    const namedSlots: NamedSlotOverrides = {};
-    const state = makeState({ requests: new Set(['syntheticFallback']), pointSlots, namedSlots });
+    // No request flag any more: the backstop's demand IS the arming predicate
+    // over these very slots (Ruling 13) — every enabled survey catalog errored.
+    const state = makeState({ pointSlots });
 
     const fired = await firedKeys(state);
 
@@ -540,6 +546,17 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = await firedKeys(state);
 
-    expect(fired).toEqual(new Set<AssetKey>([Source.FamousGalaxy, 'famousGalaxiesMeta']));
+    // Synthetic rides along: every SURVEY catalog is disabled, so each counts as
+    // settled with no data and the backstop arms — the same verdict the
+    // imperative gate reached at boot for a hidden-everything session. Famous
+    // is curated and moves neither way. `hiResFamous` demands unconditionally.
+    expect(fired).toEqual(
+      new Set<AssetKey>([
+        Source.FamousGalaxy,
+        Source.Synthetic,
+        'famousGalaxiesMeta',
+        'hiResFamous',
+      ]),
+    );
   });
 });

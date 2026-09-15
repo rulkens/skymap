@@ -44,7 +44,6 @@ export function shouldKeepTicking(
 ): boolean {
   return (
     selectCameraActive(s) ||
-    (state.subsystems.texturedDisks?.hasInFlightWork() ?? false) ||
     state.subsystems.fades.isAnyAnimating(nowMs) ||
     state.subsystems.structureFocus.isAwake(nowMs) ||
     (state.settings.flow.enabled && slotReady(state.assetSlots.flow)) ||

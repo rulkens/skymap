@@ -19,10 +19,10 @@
  * ### Re-anchor tests
  *
  * The re-anchor suite seeds a galaxy select/focus ref BEFORE dispatching
- * `requestTier`, then simulates the new cloud arriving via `catalogLoaded`.
+ * `requestTier`, then simulates the new cloud arriving via the count pulse.
  * The `resolveDeps` closure is mutable: before the swap the cloud holds
  * objID at index 0; after the swap the new cloud has the same objID at index 3.
- * Asserting `select.index === 3` after `catalogLoaded` proves the saga re-anchored
+ * Asserting `select.index === 3` after the count pulse proves the saga re-anchored
  * via the durable id rather than preserving the stale positional index.
  */
 
@@ -32,6 +32,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTierSaga } from '../../../src/state/tier/watchTierSaga';
+import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { requestTier } from '../../../src/state/tier/requestTier';
 import { selectTier } from '../../../src/state/tier/selectors';
 import {
@@ -39,12 +40,13 @@ import {
   updateSelectionFocus,
   updateSelectionHover,
 } from '../../../src/state/selection/selectionSlice';
-import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
+import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -53,8 +55,11 @@ const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
 
 // No source selected: the re-anchor capture skips both slots without ever
 // dereferencing this — the default for tests that never seed a galaxy ref.
+/** The galaxyCatalog Layer's slice with nothing loaded — the default for the
+ * cases that never seed a galaxy ref. */
+const NO_GALAXIES = { catalogs: new Map(), famousMeta: [] } as unknown as GalaxyRowFixture;
+
 const EMPTY_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
@@ -84,7 +89,10 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
 describe('watchTierSaga', () => {
   let store: ReturnType<typeof buildStore>;
 
-  function buildStore(resolveDeps: () => ResolveDeps = () => EMPTY_DEPS) {
+  function buildStore(
+    resolveDeps: () => ResolveDeps = () => EMPTY_DEPS,
+    galaxies: GalaxyRowFixture = NO_GALAXIES,
+  ) {
     const sagaMiddleware = createSagaMiddleware();
     const built = configureStore({
       reducer: rootReducer,
@@ -92,7 +100,10 @@ describe('watchTierSaga', () => {
     });
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
-      selection: composeSelectionRows(() => coreSelectionRows(resolveDeps)),
+      selection: composeSelectionRows(() => [
+        ...coreSelectionRows(resolveDeps),
+        galaxyCatalogSelectionRow(galaxies),
+      ]),
     });
     return built;
   }
@@ -147,12 +158,19 @@ describe('watchTierSaga', () => {
     let currentCloud = makeCloud(SDSS_OBJ_ID, 0, 1);
 
     const resolveDeps = (): ResolveDeps => ({
-      catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined), famousMeta: [] },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     });
+    // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
+    // cloud in place and the re-anchor must resolve against the NEW one.
+    const galaxies = {
+      get catalogs() {
+        return new Map([[Source.SDSS, currentCloud]]);
+      },
+      famousMeta: [],
+    } as unknown as GalaxyRowFixture;
 
-    store = buildStore(resolveDeps);
+    store = buildStore(resolveDeps, galaxies);
     store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
 
     store.dispatch(requestTier('large'));
@@ -160,7 +178,7 @@ describe('watchTierSaga', () => {
 
     // New cloud: objID 99n is absent — a cloud with a different objID.
     currentCloud = makeCloud(1n, 0, 1);
-    store.dispatch(catalogLoaded({ source: Source.SDSS }));
+    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
     await flush();
 
     const selectRef = store.getState()[selectionRoute].select;
@@ -193,12 +211,19 @@ describe('watchTierSaga', () => {
 
     let currentCloud = buildCloud(objIDsOld);
     const resolveDeps = (): ResolveDeps => ({
-      catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined), famousMeta: [] },
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     });
+    // The galaxyCatalog Layer's slice, read LIVE: the tier swap replaces the
+    // cloud in place and the re-anchor must resolve against the NEW one.
+    const galaxies = {
+      get catalogs() {
+        return new Map([[Source.SDSS, currentCloud]]);
+      },
+      famousMeta: [],
+    } as unknown as GalaxyRowFixture;
 
-    store = buildStore(resolveDeps);
+    store = buildStore(resolveDeps, galaxies);
     // select → objID_A at old index 0; focus → objID_B at old index 1.
     store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
     store.dispatch(updateSelectionFocus({ type: 'galaxyCatalog', source: Source.SDSS, index: 1 }));
@@ -208,11 +233,11 @@ describe('watchTierSaga', () => {
 
     // New cloud: objIDs swapped — A is now at index 1, B at index 0.
     currentCloud = buildCloud(objIDsNew);
-    // The saga awaits two catalogLoaded events (one per captured slot × same source).
+    // The saga awaits two count pulses (one per captured slot × same source).
     // Dispatch twice: the saga's for-loop takes one event per re-anchor.
-    store.dispatch(catalogLoaded({ source: Source.SDSS }));
+    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
     await flush();
-    store.dispatch(catalogLoaded({ source: Source.SDSS }));
+    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
     await flush();
 
     const state = store.getState()[selectionRoute];
@@ -243,7 +268,7 @@ describe('watchTierSaga', () => {
     store.dispatch(requestTier('large'));
     await flush();
 
-    // No catalogLoaded needed — structure refs don't need re-anchoring.
+    // No count pulse needed — structure refs don't need re-anchoring.
     expect(store.getState()[selectionRoute].select).toEqual(structureRef);
   });
 });

@@ -27,6 +27,10 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
+import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
+import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
+import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
+import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -349,8 +353,19 @@ describe('renderFrame visual baseline', () => {
       hasInFlightWork: () => false,
     };
 
+    // The galaxy passes close over their Layer's runtime, so the same logging
+    // renderers and planner stubs ride it instead of `state.gpu`/`state.subsystems`.
+    const galaxyRuntime = {
+      pointRenderer: galaxyPointRenderer,
+      proceduralDiskRenderer,
+      texturedDiskRenderer,
+      proceduralDisks: proceduralDisksSubsystem,
+      texturedDisks: texturedDisksSubsystem,
+    } as unknown as GalaxyCatalogRuntime;
+
     const ctx = {
       isReady: true as const,
+      layersAnimating: false,
       // executor populates this as targets render; a later pass reads which rendered this frame.
       renderedTargets: new Set<string>(),
       cam,
@@ -445,12 +460,9 @@ describe('renderFrame visual baseline', () => {
           // `proceduralDiskRenderer`, `texturedDiskRenderer`,
           // `filamentRenderer`) are the same logging-renderer instances
           // declared above, so their `argShape` entries land in `records`.
-          galaxyPointRenderer,
           milkyWayCloudRenderer,
           milkyWayAggregateUpsample,
           horizonShellRenderer,
-          proceduralDiskRenderer,
-          texturedDiskRenderer,
           filamentRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
@@ -489,8 +501,6 @@ describe('renderFrame visual baseline', () => {
           pointerDown: false,
         },
         subsystems: {
-          proceduralDisks: proceduralDisksSubsystem,
-          texturedDisks: texturedDisksSubsystem,
           fades: {
             register: vi.fn(),
             unregister: vi.fn(),
@@ -507,7 +517,14 @@ describe('renderFrame visual baseline', () => {
         // The cubemap-capture bookkeeping — see the matching fixture comment
         // in renderFrame.test.ts.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
-        passes: CONTENT_PASSES,
+        // The COMPOSED list `createLayers` writes: core's registry plus the
+        // galaxyCatalog Layer's passes, whose draws this baseline records.
+        passes: [
+          ...CONTENT_PASSES,
+          galaxyPointSpritesPass(galaxyRuntime),
+          proceduralDisksPass(galaxyRuntime),
+          texturedDisksPass(galaxyRuntime),
+        ],
       } as never,
       device,
       context,

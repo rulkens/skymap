@@ -16,6 +16,7 @@ import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
@@ -39,7 +40,7 @@ const MEASURED_BBOX: LabelBBox = { minX: -50, minY: -30, maxX: 50, maxY: 12 };
 const TEXT_BOTTOM_BELOW_ANCHOR_PX =
   MEASURED_BBOX.maxY * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
-// produceFamousGalaxyLabels reads `state.data.galaxies` for the sidecar records
+// produceFamousGalaxyLabels reads its Layer's runtime for the sidecar records
 // and the positional catalog, `state.subsystems.fades` for the `galaxy` layer
 // opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
@@ -126,14 +127,19 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
     diameterKpc: new Float32Array(diameters),
   }) as unknown as GalaxyCatalog;
 
+/**
+ * The runtime slice the producer closes over — its catalog map and the famous
+ * sidecar. `seed` returns it; every call site hands it to the producer factory.
+ */
 function seed(
-  state: EngineState,
   entries: Partial<FamousGalaxyMetaEntry>[],
   positions: number[],
   diameters: number[],
-): void {
-  state.data.galaxies.setFamousMeta(meta(...entries));
-  state.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog(positions, diameters));
+): Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'> {
+  return {
+    catalogs: new Map([[Source.FamousGalaxy, famousCatalog(positions, diameters)]]),
+    famousMeta: meta(...entries),
+  } as Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
 }
 
 describe('produceFamousGalaxyLabels', () => {
@@ -143,8 +149,8 @@ describe('produceFamousGalaxyLabels', () => {
     // 6 px gate AND in the proportional-lift regime (1.5 × 22.4 ≈ 33.7 px sits
     // above the clearance-raised floor of 28 + ~4.3 px ink drop, so neither
     // floor bites in this test).
-    seed(state, [{ id: 'm31', names: ['M31'] }], [5, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
+    const runtime = seed([{ id: 'm31', names: ['M31'] }], [5, 0, 0], [120]);
+    const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
 
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     const label = out.labels[0]!;
@@ -181,8 +187,8 @@ describe('produceFamousGalaxyLabels', () => {
     // coincidence.
     for (const distanceMpc of [5, 4]) {
       const state = makeState();
-      seed(state, [{ id: 'm31', names: ['M31'] }], [distanceMpc, 0, 0], [120]);
-      const out = produceFamousGalaxyLabels(state, makeCtx());
+      const runtime = seed([{ id: 'm31', names: ['M31'] }], [distanceMpc, 0, 0], [120]);
+      const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
 
       const anchor = screenOf(out.labels[0]!.worldPos);
       const tip = screenOf(out.labels[0]!.leader!.toWorld);
@@ -203,8 +209,8 @@ describe('produceFamousGalaxyLabels', () => {
     // derives from the text bottom, so the padding invariant holds under the
     // floor too.
     const state = makeState();
-    seed(state, [{ id: 'm110', names: ['M110'] }], [17, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
+    const runtime = seed([{ id: 'm110', names: ['M110'] }], [17, 0, 0], [120]);
+    const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
 
     const dot = screenOf([17, 0, 0]);
     const anchor = screenOf(out.labels[0]!.worldPos);
@@ -224,8 +230,8 @@ describe('produceFamousGalaxyLabels', () => {
     // the dot, and the line is present with the exact padding gap.
     const inkDropPx = 70 * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
     const state = makeState({ bbox: { minX: -50, minY: -30, maxX: 50, maxY: 70 } });
-    seed(state, [{ id: 'm31', names: ['M31'] }], [17, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
+    const runtime = seed([{ id: 'm31', names: ['M31'] }], [17, 0, 0], [120]);
+    const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
 
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     const dot = screenOf([17, 0, 0]);
@@ -241,8 +247,8 @@ describe('produceFamousGalaxyLabels', () => {
 
   it('skips a galaxy whose apparent size is below the threshold', () => {
     const state = makeState();
-    seed(state, [{ id: 'far', names: ['Far'] }], [100000, 0, 0], [40]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
+    const runtime = seed([{ id: 'far', names: ['Far'] }], [100000, 0, 0], [40]);
+    const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
     expect(out.labels).toEqual([]);
   });
 
@@ -254,9 +260,9 @@ describe('produceFamousGalaxyLabels', () => {
     fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0);
     const state = makeState({ fades });
-    seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    const runtime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
-    expect(produceFamousGalaxyLabels(state, makeCtx()).labels).toEqual([]);
+    expect(produceFamousGalaxyLabels(runtime)(state, makeCtx()).labels).toEqual([]);
   });
 
   it('keeps emitting while the galaxy-layer fade-out tail is non-zero (no pop on toggle-out)', () => {
@@ -267,9 +273,9 @@ describe('produceFamousGalaxyLabels', () => {
     midFade.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
     midFade.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
     const fading = makeState({ fades: midFade });
-    seed(fading, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    const fadingRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     fading.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
-    const out = produceFamousGalaxyLabels(fading, makeCtx());
+    const out = produceFamousGalaxyLabels(fadingRuntime)(fading, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m31']);
     // Emitted at the half opacity (full distance-fade alpha here is 1 × 0.5).
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(0.5, 6);
@@ -279,42 +285,49 @@ describe('produceFamousGalaxyLabels', () => {
     done.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
     done.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0);
     const settled = makeState({ fades: done });
-    seed(settled, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    const settledRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
     settled.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled = false;
-    expect(produceFamousGalaxyLabels(settled, makeCtx()).labels).toEqual([]);
+    expect(produceFamousGalaxyLabels(settledRuntime)(settled, makeCtx()).labels).toEqual([]);
   });
 
   it('emits nothing when the famous catalog is absent or meta is empty', () => {
     const noCatalog = makeState();
-    noCatalog.data.galaxies.setFamousMeta(meta({ id: 'm31', names: ['M31'] }));
-    expect(produceFamousGalaxyLabels(noCatalog, makeCtx()).labels).toEqual([]);
+    const noCatalogRuntime = {
+      catalogs: new Map(),
+      famousMeta: meta({ id: 'm31', names: ['M31'] }),
+    } as Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
+    expect(produceFamousGalaxyLabels(noCatalogRuntime)(noCatalog, makeCtx()).labels).toEqual([]);
 
     const noMeta = makeState();
-    noMeta.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog([10, 0, 0], [120]));
-    expect(produceFamousGalaxyLabels(noMeta, makeCtx()).labels).toEqual([]);
+    const noMetaRuntime = {
+      catalogs: new Map([[Source.FamousGalaxy, famousCatalog([10, 0, 0], [120])]]),
+      famousMeta: [],
+    } as Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>;
+    expect(produceFamousGalaxyLabels(noMetaRuntime)(noMeta, makeCtx()).labels).toEqual([]);
   });
 
   it('scales worldEmMpc with diameter (40 kpc anchors the category default)', () => {
     const state = makeState();
     // 40 kpc galaxy at 3 Mpc → ~12.5 px (full alpha); worldEm == reference.
-    seed(state, [{ id: 'ref', names: ['Ref'] }], [3, 0, 0], [40]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
+    const runtime = seed([{ id: 'ref', names: ['Ref'] }], [3, 0, 0], [40]);
+    const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
     expect(out.labels[0]!.worldEmMpc).toBeCloseTo(0.0125, 6);
   });
 
   it('bakes galaxy-layer opacity into famous label fadeAlpha', () => {
     // At-rest (galaxy layer at 1) → full distance-fade alpha.
     const atRest = makeState();
-    seed(atRest, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const atRestAlpha = produceFamousGalaxyLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
+    const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    const atRestAlpha = produceFamousGalaxyLabels(atRestRuntime)(atRest, makeCtx()).labels[0]!
+      .fadeAlpha!;
 
     // galaxy layer at 0.5 → half the at-rest alpha for label AND its anchor line.
     const fades = makeRegistry();
     fades.register({ kind: 'labelLayer', layer: 'galaxy' }, 1);
     fades.setImmediate({ kind: 'labelLayer', layer: 'galaxy' }, 0.5);
     const dimmed = makeState({ fades });
-    seed(dimmed, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(dimmed, makeCtx());
+    const dimmedRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    const out = produceFamousGalaxyLabels(dimmedRuntime)(dimmed, makeCtx());
 
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(atRestAlpha * 0.5, 6);
   });
@@ -323,13 +336,16 @@ describe('produceFamousGalaxyLabels', () => {
     // No per-member exemption: every famous label is scaled by LABEL_RECESSION
     // at full blend (there is no focused-famous-structure path here).
     const atRest = makeState();
-    seed(atRest, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const atRestAlpha = produceFamousGalaxyLabels(atRest, makeCtx()).labels[0]!.fadeAlpha!;
+    const atRestRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    const atRestAlpha = produceFamousGalaxyLabels(atRestRuntime)(atRest, makeCtx()).labels[0]!
+      .fadeAlpha!;
 
     const focused = makeState();
-    seed(focused, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const recededAlpha = produceFamousGalaxyLabels(focused, makeCtx({ focusBlend: 1 })).labels[0]!
-      .fadeAlpha!;
+    const focusedRuntime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+    const recededAlpha = produceFamousGalaxyLabels(focusedRuntime)(
+      focused,
+      makeCtx({ focusBlend: 1 }),
+    ).labels[0]!.fadeAlpha!;
 
     expect(recededAlpha).toBeCloseTo(atRestAlpha * LABEL_RECESSION, 6);
   });
@@ -342,8 +358,7 @@ describe('produceFamousGalaxyLabels', () => {
       focusedOnly: true,
       focus: { type: 'galaxyCatalog', source: Source.FamousGalaxy, index: 1 },
     });
-    seed(
-      state,
+    const runtime = seed(
       [
         { id: 'm31', names: ['M31'] },
         { id: 'm87', names: ['M87'] },
@@ -351,7 +366,7 @@ describe('produceFamousGalaxyLabels', () => {
       [10, 0, 0, 10, 1, 0],
       [120, 120],
     );
-    const out = produceFamousGalaxyLabels(state, makeCtx());
+    const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
     expect(out.labels.map((l) => l.id)).toEqual(['famous-m87']);
     expect(out.labels[0]!.leader).toBeDefined();
   });
@@ -365,8 +380,8 @@ describe('produceFamousGalaxyLabels', () => {
     ];
     for (const focus of cases) {
       const state = makeState({ focusedOnly: true, focus });
-      seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-      expect(produceFamousGalaxyLabels(state, makeCtx()).labels).toEqual([]);
+      const runtime = seed([{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
+      expect(produceFamousGalaxyLabels(runtime)(state, makeCtx()).labels).toEqual([]);
     }
   });
 
@@ -376,8 +391,8 @@ describe('produceFamousGalaxyLabels', () => {
     // bug this fixes: a fixed 150 px ceiling let the LMC/SMC tower over the
     // view from inside the Milky Way.
     const state = makeState();
-    seed(state, [{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
+    const runtime = seed([{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
+    const out = produceFamousGalaxyLabels(runtime)(state, makeCtx());
     expect(out.labels[0]!.maxPixelSize).toBe(60);
   });
 
@@ -386,20 +401,17 @@ describe('produceFamousGalaxyLabels', () => {
     // that skipped a row below the size gate and then numbered its own output
     // would resolve every later label to the previous galaxy.
     const state = makeState();
-    seed(
-      state,
+    const runtime = seed(
       [{ id: 'a' }, { id: 'tiny' }, { id: 'c' }],
       [5, 0, 0, 5, 0, 0, 5, 0, 0],
       [120, 0.001, 120],
     );
-    const labels = produceFamousGalaxyLabels(state, makeCtx()).labels;
+    const labels = produceFamousGalaxyLabels(runtime)(state, makeCtx()).labels;
     expect(labels.map((l) => l.id)).toEqual(['famous-a', 'famous-c']);
     for (const label of labels) {
       const pick = unpackPick(label.pickId!)!;
       expect(pick.sourceCode).toBe(Source.FamousGalaxy);
-      expect(state.data.galaxies.famousMeta[pick.localIdx]!.id).toBe(
-        label.id.replace('famous-', ''),
-      );
+      expect(runtime.famousMeta[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
     }
   });
 });

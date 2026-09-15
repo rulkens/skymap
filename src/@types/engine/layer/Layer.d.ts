@@ -3,7 +3,8 @@
  * runtime-bound ones as closures over the private `Runtime` its own `create` mints
  * (opaque to core, which only hands it back to the same Layer's methods). The trailing
  * type parameters default to their erased bounds, so `Layer<string, unknown>` still
- * works as the composition constraint (`EngineComposition.d.ts`).
+ * works as the composition constraint (`EngineComposition.d.ts`) — `Facts` defaults
+ * to `unknown` for the same reason, so a Layer that publishes facts still satisfies it.
  */
 
 import type { SettingsFragmentLike } from '../../settings/SettingsFragmentLike';
@@ -30,7 +31,7 @@ export type Layer<
     SourceType,
     SourceEntry,
   ])[],
-  Facts = undefined,
+  Facts = unknown,
 > = {
   readonly name: Name;
 

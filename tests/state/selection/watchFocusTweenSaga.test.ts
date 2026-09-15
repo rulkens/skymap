@@ -57,7 +57,6 @@ let structuresLoadedStub = false;
 // catalog online between dispatches.
 const resolveDeps = (): ResolveDeps =>
   ({
-    catalogs: { get: () => undefined, famousMeta: undefined },
     structures: {
       byId: (id: string) => structureById[id] ?? null,
       byCategory: () => [],

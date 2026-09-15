@@ -5,7 +5,7 @@
  *
  * LANDMINE: capture only sources whose request drifts across the swap — a
  * tier-agnostic source keeps its request, never reloads, and would block the
- * consumer's `take(catalogLoaded)` forever. Capture and the demand loop both
+ * consumer's `take(engineSourceCountReported)` forever. Capture and the demand loop both
  * derive the request from `galaxyCatalogRequest`, so they cannot disagree.
  */
 
@@ -21,7 +21,7 @@ import type { Tier } from '../../@types/data/Tier';
 
 /**
  * A captured galaxy ref that needs re-anchoring after the tier swap.
- * `source` is carried so the consumer can filter `catalogLoaded` to the right
+ * `source` is carried so the consumer can filter the count pulse to the right
  * source and avoid waiting for an unrelated catalog's load event.
  */
 export type GalaxyReanchor = {
@@ -45,7 +45,7 @@ export function captureGalaxyFocusIds(
     if (!ref || ref.type !== 'galaxyCatalog') continue;
     // Capture only when the demand loop will actually reload this source: its
     // request drifts across the swap, and the catalog is enabled (a disabled
-    // source's slot is never demanded, so no `catalogLoaded` fires for it).
+    // source's slot is never demanded, so no count pulse fires for it).
     const drifts = !sameRequest(
       galaxyCatalogRequest(ref.source, prevTier),
       galaxyCatalogRequest(ref.source, nextTier),

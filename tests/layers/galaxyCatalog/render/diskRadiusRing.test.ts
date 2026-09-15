@@ -38,7 +38,7 @@ describe('diskRadiusRing', () => {
   it('packs the ring uniform in the layout the WESL struct reads', () => {
     const writes: Write[] = [];
     const device = newStubDevice(writes);
-    const ring = createDiskRadiusRing(device, 'bgra8unorm');
+    const ring = createDiskRadiusRing(device);
 
     const pass = {
       setPipeline: vi.fn(),
@@ -47,7 +47,7 @@ describe('diskRadiusRing', () => {
     } as unknown as GPURenderPassEncoder;
 
     const viewProj = new Float32Array(16).map((_, i) => i + 1);
-    ring.draw(pass, viewProj, {
+    ring.draw(pass, viewProj, 'bgra8unorm', {
       center: [10, 20, 30],
       radiusWorld: 0.5,
       // paDeg and axisRatio are adjacent floats of the same type — swapping

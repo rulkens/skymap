@@ -20,21 +20,17 @@ import {
   engineStatusChanged,
 } from '../../../../src/state/engine/engineSlice';
 import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
+import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
+import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
-import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
-import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
-import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
-import type { SourceType } from '../../../../src/@types/data/SourceType';
-import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
-import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
-import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
 
 // The `survey`-category codes — a fixture built the same way the fallback
 // gate derives its own private list, not an assertion on it.
@@ -108,45 +104,11 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // ── Post-mock imports ───────────────────────────────────────────────────────
 
-import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/wireGalaxyCatalogSourceSlot';
-import { galaxyCatalogFetcher } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher';
 import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
-import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
-import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
-import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
-
-function makeGalaxyState(opts: { rendererUpload: ReturnType<typeof vi.fn> }): EngineState {
-  return {
-    gpu: {
-      galaxyPointRenderer: {
-        upload: opts.rendererUpload,
-        loadedSources: () => [],
-        totalCount: () => 0,
-      },
-    },
-    data: createEngineData(),
-    subsystems: {
-      fades: {
-        register: vi.fn(),
-        unregister: vi.fn(),
-        fadeTo: vi.fn(() => Promise.resolve()),
-        setImmediate: vi.fn(),
-        opacityOf: vi.fn(() => 1),
-        isAnyAnimating: vi.fn(() => false),
-        tick: vi.fn(),
-        destroy: vi.fn(),
-        label: 'fadeRegistry',
-      },
-    },
-    assetSlots: { points: new Map() },
-  } as unknown as EngineState;
-}
 
 function makeStructureState(): {
   state: EngineState;
@@ -221,126 +183,6 @@ function makeProgressState(): EngineState {
   } as unknown as EngineState;
 }
 
-function makeSyntheticFallbackState(): {
-  state: EngineState;
-  slots: Map<
-    SourceType,
-    { emit: (s: LoadState<GalaxyCatalog>) => void; load: ReturnType<typeof vi.fn> }
-  >;
-} {
-  const disabled = new Set<SourceType>();
-  const items: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const src of [
-    Source.SDSS,
-    Source.TwoMRS,
-    Source.Glade,
-    Source.Milliquas,
-    Source.FamousGalaxy,
-    Source.DesiDeep,
-    Source.DesiWedge,
-    Source.DesiSgw,
-  ]) {
-    items[galaxyCatalogIdOf(src)] = { enabled: !disabled.has(src), labelEnabled: true };
-  }
-
-  type SlotStub = {
-    emit: (s: LoadState<GalaxyCatalog>) => void;
-    load: ReturnType<typeof vi.fn>;
-  };
-  const slots = new Map<SourceType, SlotStub>();
-  const assetSlotPoints = new Map<SourceType, AssetSlot<GalaxyCatalog, unknown>>();
-
-  for (const src of [
-    Source.SDSS,
-    Source.TwoMRS,
-    Source.Glade,
-    Source.Milliquas,
-    Source.FamousGalaxy,
-    Source.DesiDeep,
-    Source.DesiWedge,
-    Source.DesiSgw,
-    Source.Synthetic,
-  ]) {
-    const listeners = new Set<(s: LoadState<GalaxyCatalog>) => void>();
-    const load = vi.fn();
-    const stub: SlotStub = {
-      emit: (s) => {
-        for (const fn of [...listeners]) fn(s);
-      },
-      load,
-    };
-    slots.set(src, stub);
-    assetSlotPoints.set(src, {
-      name: `${src}-points`,
-      load: load as unknown as AssetSlot<GalaxyCatalog, unknown>['load'],
-      current: () => null,
-      committed: () => null,
-      state: () => ({ kind: 'idle' }),
-      subscribe: (fn) => {
-        listeners.add(fn);
-        return () => listeners.delete(fn);
-      },
-      lastRequest: () => null,
-      startedAtMs: () => null,
-      forceReload: () => {},
-      cancel: () => {},
-      release: () => {},
-    });
-  }
-
-  const state = {
-    tier: 'medium',
-    settings: { galaxyCatalogs: { items } } as never,
-    requests: new Set<string>(),
-    gpu: { galaxyPointRenderer: { totalCount: () => 99 } },
-    assetSlots: { points: assetSlotPoints, bodyTextures: new Map(), meshBodies: new Map() },
-    // `createSyntheticFallback` calls `reevaluateDemand`, which enqueues onto
-    // this rather than calling `slot.load()` directly.
-    subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
-    // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
-    // so both must be present; a far resting pose keeps the proximity-gated
-    // body-texture rows out of the demand set.
-    cameraRuntime: {
-      register: {
-        pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
-      },
-      outputs: {
-        displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: Infinity }),
-        projection: { fovYRad: 1, aspect: 1, near: 0.01, far: 1e7 },
-        simDays: CONST_J2000,
-        upBasis: ORIENTATION_FRAMES.ecliptic,
-      },
-    },
-    assetRows: expandCompanionRows(ASSET_WIRING),
-    layerSlots: new Map(),
-  } as unknown as EngineState;
-
-  return { state, slots };
-}
-
-// ── wireGalaxyCatalogSourceSlot: engineSourceCountReported ─────────────────
-
-describe('wireGalaxyCatalogSourceSlot → engineSourceCountReported', () => {
-  it('dispatches engineSourceCountReported({ source, count }) when the slot reaches ready', async () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-
-    const state = makeGalaxyState({ rendererUpload: vi.fn().mockResolvedValue(undefined) });
-    vi.mocked(galaxyCatalogFetcher).mockResolvedValue({ count: 42 } as GalaxyCatalog);
-    const deps: WirePointSourceDeps = {
-      cb: { store, sources: {} } as unknown as EngineCallbacks,
-    };
-
-    wireGalaxyCatalogSourceSlot(state, SOURCE_REGISTRY[Source.SDSS], deps);
-    const slot = state.assetSlots.points.get(Source.SDSS)!;
-    slot.load({ source: Source.SDSS, tier: 'medium' });
-
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-
-    expect(spy).toHaveBeenCalledWith(engineSourceCountReported({ source: Source.SDSS, count: 42 }));
-  });
-});
-
 // ── wireStructureProjection: engineStructureCountsChanged ──────────────────
 
 describe('wireStructureProjection → engineStructureCountsChanged', () => {
@@ -406,77 +248,5 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     capturedProgressEmitFn!(snapshot);
 
     expect(spy).toHaveBeenCalledWith(engineLoadProgressChanged(snapshot));
-  });
-});
-
-// ── createSyntheticFallback: engineStatusChanged (ready) ───────────────────
-
-describe('createSyntheticFallback → engineStatusChanged({ kind: "ready" })', () => {
-  it('dispatches engineStatusChanged ready when a real galaxy catalog slot fires ready with count > 0', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const { state, slots } = makeSyntheticFallbackState();
-    const cb = { store } as unknown as EngineCallbacks;
-
-    createSyntheticFallback(state, cb);
-
-    slots.get(Source.Glade)?.emit({
-      kind: 'ready',
-      req: {},
-      value: { count: 7 } as GalaxyCatalog,
-      loadedAtMs: 0,
-    });
-
-    expect(spy).toHaveBeenCalledWith(
-      engineStatusChanged({ kind: 'ready', count: 99, source: Source.Glade }),
-    );
-  });
-
-  it('does not dispatch ready when a slot fires ready with count === 0', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const { state, slots } = makeSyntheticFallbackState();
-    const cb = { store } as unknown as EngineCallbacks;
-
-    createSyntheticFallback(state, cb);
-
-    slots
-      .get(Source.SDSS)
-      ?.emit({ kind: 'ready', req: {}, value: { count: 0 } as GalaxyCatalog, loadedAtMs: 0 });
-
-    // count=0 must NOT trigger a ready dispatch (the gate treats it as no data).
-    const readyDispatches = spy.mock.calls.filter((call) => {
-      const action = call[0] as { payload?: { kind?: string } };
-      return action?.payload?.kind === 'ready';
-    });
-    expect(readyDispatches).toHaveLength(0);
-  });
-
-  it('dispatches engineStatusChanged ready for the synthetic slot when it fires', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const { state, slots } = makeSyntheticFallbackState();
-    const cb = { store } as unknown as EngineCallbacks;
-
-    createSyntheticFallback(state, cb);
-
-    // Arm the fallback: all real galaxy catalogs error out.
-    for (const src of GALAXY_CATALOG_POINT_SOURCES) {
-      slots.get(src)?.emit({ kind: 'error', req: {}, error: new Error('fail'), finalAttempt: 1 });
-    }
-
-    spy.mockClear();
-
-    // Synthetic slot fires ready.
-    slots.get(Source.Synthetic)?.emit({
-      kind: 'ready',
-      req: {},
-      value: { count: 5 } as GalaxyCatalog,
-      loadedAtMs: 0,
-    });
-
-    expect(spy).toHaveBeenCalledWith(
-      engineStatusChanged({ kind: 'ready', count: 99, source: Source.Synthetic }),
-    );
   });
 });

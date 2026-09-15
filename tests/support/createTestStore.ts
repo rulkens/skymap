@@ -43,12 +43,11 @@ import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 
 // The narrow engine surface `watchWakeSaga` (and its sibling reconcile watchers)
 // reach for. Every method is a no-op: a test store has no scheduler, fade
-// registry or bias LUT to drive, and no assertion here inspects these — they
+// registry to drive, and no assertion here inspects these — they
 // exist only so `getContext('reconcile')` resolves.
 export const NOOP_RECONCILE: ReconcileEffects = {
   requestRender: () => {},
   syncFades: () => {},
-  bakeBias: () => {},
   logCameraState: () => {},
   applySwapFormat: () => {},
 };
@@ -59,7 +58,6 @@ export const NOOP_RECONCILE: ReconcileEffects = {
 // store with no data behind it, and the difference between a deferred deep link
 // and a TypeError that cancels the root saga.
 const EMPTY_RESOLVE_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };

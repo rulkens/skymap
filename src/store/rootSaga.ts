@@ -13,7 +13,6 @@ import { all } from 'typed-redux-saga';
 import { watchTierSaga } from '../state/tier/watchTierSaga';
 import { watchWakeSaga } from './effects/watchWakeSaga';
 import { watchSwapFormatSaga } from './effects/watchSwapFormatSaga';
-import { watchBiasBakeSaga } from './effects/watchBiasBakeSaga';
 import { watchFadesSaga } from './effects/watchFadesSaga';
 import { watchSelectionRowsSaga } from '../state/selectionRows/watchSelectionRowsSaga';
 import { watchSelectionWakeSaga } from '../state/selection/watchSelectionWakeSaga';
@@ -36,7 +35,6 @@ export function* mainSaga() {
     watchTierSaga(),
     watchWakeSaga(),
     watchSwapFormatSaga(),
-    watchBiasBakeSaga(),
     watchFadesSaga(),
     watchSelectionRowsSaga(),
     watchSelectionWakeSaga(),

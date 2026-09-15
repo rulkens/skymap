@@ -1,10 +1,10 @@
 /**
- * coreSelectionRows — the six rows core owns, one per `SelectionRef['type']`.
- * `deps` is read lazily by each row (a thunk over live engine resources), not
- * called here, so a boot-window deep link resolves before any cloud lands.
+ * coreSelectionRows — the five rows core owns; `createLayers` appends each
+ * Layer's. `deps` is read lazily by each row (a thunk over live engine
+ * resources), not called here, so a boot-window deep link resolves before any
+ * cloud lands.
  */
 
-import { galaxyCatalogSelectionRow } from '../../../layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import { structureSelectionRow } from './structureSelectionRow';
 import { milkyWaySelectionRow } from './milkyWaySelectionRow';
 import { zoneOfAvoidanceSelectionRow } from './zoneOfAvoidanceSelectionRow';
@@ -15,7 +15,6 @@ import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKin
 
 export function coreSelectionRows(deps: () => ResolveDeps): readonly SelectionKindRow[] {
   return [
-    galaxyCatalogSelectionRow(deps),
     structureSelectionRow(deps),
     milkyWaySelectionRow(),
     zoneOfAvoidanceSelectionRow(),

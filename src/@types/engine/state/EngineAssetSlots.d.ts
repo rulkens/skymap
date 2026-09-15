@@ -10,13 +10,9 @@
  */
 
 import type { AssetSlot } from '../../loading/AssetSlot';
-import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogReq } from '../../loading/GalaxyCatalogReq';
 import type { FilamentCloud } from '../../data/filament/FilamentCloud';
 import type { FilamentReq } from '../../loading/FilamentReq';
-import type { FamousGalaxiesPayload } from '../../loading/FamousGalaxiesPayload';
 import type { FamousStarsPayload } from '../../loading/FamousStarsPayload';
-import type { PgcAliasMap } from '../../loading/PgcAliasMap';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
@@ -31,28 +27,21 @@ import type { BodyTextureReq } from '../../loading/BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 import type { MeshAsset } from '../../data/mesh/MeshAsset';
 import type { MeshReq } from '../../loading/MeshReq';
-import type { HiResFamousPair } from '../subsystems/HiResFamousPair';
-import type { HiResFamousReq } from '../../loading/HiResFamousReq';
 
 export type EngineAssetSlots = {
-  points: Map<SourceType, AssetSlot<GalaxyCatalog, GalaxyCatalogReq>>;
   /**
-   * Star twin of `points`, separate because one shared map erases both payload
-   * pairs to a union every consumer re-narrows. Registry-built: `installSlots`
-   * routes numeric keys whose entry is `type: 'starCatalog'` here, so the commit
-   * null-guards `state.gpu.starCatalogRenderer` instead of closing over it.
+   * The per-source star slots. Registry-built: `installSlots` routes numeric keys
+   * whose entry is `type: 'starCatalog'` here, so the commit null-guards
+   * `state.gpu.starCatalogRenderer` instead of closing over it. Its galaxy twin
+   * lives on the galaxyCatalog Layer's runtime.
    */
   starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
   /** Two files across the three tiers, so it reloads only across the small boundary. */
   filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
-  /** Eager at boot; no `commit` — the subscriber dispatches the parsed array into the `engine` slice. */
-  famousGalaxiesMeta: AssetSlot<FamousGalaxiesPayload, GalaxyCatalogReq> | null;
   /** Eager because famous stars are a seeded catalog — no sibling `.bin`, and no tier, to key demand off. */
   famousStarsMeta: AssetSlot<FamousStarsPayload, void> | null;
   /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
-  /** ~1.7 MB and lazy: only the public handle's `loadPgcAliases()` calls `.load()`, on first palette open. */
-  pgcAlias: AssetSlot<PgcAliasMap, void> | null;
   /** Valade 2024 256³ HAMLET cube, ~32 MB decoded — default-off, so that cost is opt-in only. */
   cf4Density: AssetSlot<ScalarCube, void> | null;
   /**
@@ -101,13 +90,6 @@ export type EngineAssetSlots = {
    * in either order with no check.
    */
   bodyTextureAtlas: AssetSlot<ImageBitmap, void> | null;
-  /**
-   * The LOD-3 hi-res famous-galaxy `texture_2d_array` + its planner, held as one pair
-   * because the planner subscribes to the texture's evict handler. No network: the
-   * "fetch" is the GPU allocation, whose shape is the request. Null until `wireSlots`
-   * runs, and absent entirely in a composition without the disk renderers.
-   */
-  hiResFamous: AssetSlot<HiResFamousPair, HiResFamousReq> | null;
   /**
    * Dev-only synthetic test cubes, keyed by the in-engine handle the commit
    * registers. `undefined` rather than null in production: `wireSlots` mints them

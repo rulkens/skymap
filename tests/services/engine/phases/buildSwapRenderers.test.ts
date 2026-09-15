@@ -86,7 +86,6 @@ describe('buildSwapRenderers', () => {
       debugLineRenderer: state.gpu.debugLineRenderer,
       selectionRingRenderer: state.gpu.selectionRingRenderer,
       pickDebugOverlay: state.gpu.pickDebugOverlay,
-      diskRadiusRing: state.gpu.diskRadiusRing,
       foregroundLabelRenderer: state.gpu.foregroundLabelRenderer,
       foregroundMarkerLineRenderer: state.gpu.foregroundMarkerLineRenderer,
     } as const;

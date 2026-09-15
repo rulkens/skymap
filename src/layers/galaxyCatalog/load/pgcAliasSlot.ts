@@ -8,21 +8,17 @@
  * `loadPgcAliases()` shim on first palette open.
  *
  * No `commit` — the resolved Map is consumed by the React layer via the
- * Promise the shim returns; nothing engine-side to mutate.
- *
- * Construction-pure: builds + RETURNS the slot; `installSlots` owns the
- * write to `state.assetSlots`.
+ * Promise the shim returns; nothing engine-side to mutate, and so no deps.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { pgcAliasFetcher } from './pgcAliasFetcher';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
-import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createPgcAliasSlot: SlotFactory<PgcAliasMap, void> = (state, _cb) => {
-  const slot = createAssetSlot({
+export function createPgcAliasSlot(): AssetSlot<PgcAliasMap, void> {
+  return createAssetSlot<PgcAliasMap, void>({
     name: 'pgc-aliases',
     fetch: pgcAliasFetcher,
   });
-  return slot;
-};
+}

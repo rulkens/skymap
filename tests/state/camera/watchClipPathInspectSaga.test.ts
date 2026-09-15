@@ -40,7 +40,6 @@ const EXPECTED = clipRegistry[CLIP_ID].data;
 const EXPECTED_FRAME_BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 
 const EMPTY_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };

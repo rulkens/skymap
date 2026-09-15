@@ -120,10 +120,8 @@ describe('createLayers composition', () => {
   it('throws at boot when a Layer mints a slot key core already owns', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
-    const layer = contributingLayer('a', 'famousGalaxiesMeta', () => ({}));
+    const layer = contributingLayer('a', 'filaments', () => ({}));
 
-    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(
-      /famousGalaxiesMeta/,
-    );
+    await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/filaments/);
   });
 });

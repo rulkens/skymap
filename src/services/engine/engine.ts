@@ -28,13 +28,11 @@ import { SCENE_STARS } from '../../data/bodies/sceneStars';
 import { Source } from '../../data/source';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
-import { createBiasCorrectionSubsystem } from '../../layers/galaxyCatalog/subsystems/biasCorrectionSubsystem';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
 import { COSMO_LABEL_DIRECTOR } from '../../data/labels/cosmoLabelDirectorConfig';
 import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDirectorConfig';
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
-import { produceFamousGalaxyLabels } from '../../layers/galaxyCatalog/present/produceFamousGalaxyLabels';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
 import { produceConstellationCaptions } from './presentation/produceConstellationCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
@@ -170,8 +168,6 @@ export function createEngine(
       // released in `destroy()`. Only the `isEngineReady` members are relied on
       // downstream; the rest are optional and null-checked at their use site. See
       // `@types/EngineGpuHandles.d.ts` for the lifecycle.
-      galaxyPointRenderer: null,
-      galaxyPickRenderer: null,
       pickProgram: null,
       milkyWayPickRenderer: null,
       // Canonical bind-group layouts, threaded into every renderer's
@@ -199,8 +195,6 @@ export function createEngine(
       debugLineRenderer: null,
       selectionRingRenderer: null,
       structureMarkerRenderer: null,
-      texturedDiskRenderer: null,
-      proceduralDiskRenderer: null,
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
@@ -216,7 +210,6 @@ export function createEngine(
       // so a null handle silently drops the whole bloom sub-program.
       bloomPyramid: null,
       pickDebugOverlay: null,
-      diskRadiusRing: null,
       earthRenderer: null,
       earthSurfaceTileRenderer: null,
       starRenderer: null,
@@ -241,25 +234,9 @@ export function createEngine(
       timingService: createDisabledGpuTimingService(),
     },
     subsystems: {
-      // The impostor planners are null until `wireSlots` constructs them post-GPU
-      // init. The hi-res pair (LOD-3) is rebuilt per-tier so its `texture_2d_array`
-      // layerSide matches the active tier; the others persist across tier changes.
-      galaxyAtlas: null,
-      proceduralDisks: null,
-      texturedDisks: null,
-      diskPlannerWalk: null,
-      hiResFamous: null,
-      hiResFamousTexture: null,
-
       // Holds no GPU memory even once constructed — the atlas is allocated by the
       // first frame the tile planner engages on.
       earthTiles: null,
-
-      biasCorrection: createBiasCorrectionSubsystem({
-        getMode: () => state.settings.bias.mode,
-        getLoadedClouds: () => state.data.galaxies.catalogs,
-        requestRender: () => state.subsystems.scheduler.requestRender(),
-      }),
 
       // The directors own the label/marker-line uploads and declutter across every
       // registered producer; the layers only issue draws against what was flushed.
@@ -323,13 +300,10 @@ export function createEngine(
     // closures re-read GPU handles at call time and null-guard, rather than assuming
     // `initGpu` already assigned them.
     assetSlots: {
-      points: new Map(),
       starCatalogs: new Map(),
       filaments: null,
-      famousGalaxiesMeta: null,
       famousStarsMeta: null,
       structureCatalog: null,
-      pgcAlias: null,
       cf4Density: null,
       // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
       // when the tier changes.
@@ -346,9 +320,6 @@ export function createEngine(
       // One boot fetch seeding every body's placeholder, so no body ever draws
       // untextured while its own map loads.
       bodyTextureAtlas: null,
-      // Stays null in a composition without the disk renderers — `wireSlots`
-      // mints it only inside that guard.
-      hiResFamous: null,
     },
     // Edge-triggered UI events driving demand predicates. The wiring layer sets a
     // key and leaves it set — the demand loop's idle-guard prevents a re-fetch.
@@ -358,6 +329,9 @@ export function createEngine(
     // the unrelated saga display cache).
     layers: [],
     selectionKindRows: [],
+    // TEMPORARY (Ruling 5): written by `createLayers` from the Layer that
+    // declares it; the two `EngineHandle` galaxy reads below go through it.
+    galaxyBridge: null,
     // Core's halves, until `createLayers` replaces each with the composed list.
     passes: CONTENT_PASSES,
     assetRows: expandCompanionRows(ASSET_WIRING),
@@ -377,10 +351,6 @@ export function createEngine(
   state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'structureLabels',
     produceLabels: produceStructureLabels,
-  });
-  state.subsystems.cosmoLabelDirector.registerProducer({
-    id: 'famousLabels',
-    produceLabels: produceFamousGalaxyLabels,
   });
 
   // Scene-body captions first so an equal-prominence tiebreak favours the
@@ -413,7 +383,6 @@ export function createEngine(
   // GPU bootstrap finishes, which is safe only because each closure dereferences
   // its engine resources lazily, at call time.
   const resolveDeps = (): ResolveDeps => ({
-    catalogs: state.data.galaxies,
     structures: {
       byId: (id) => state.data.structures.byId(id),
       byCategory: (cat) => state.data.structures.byCategory(cat),
@@ -506,15 +475,15 @@ export function createEngine(
     // `awaitSlotReady` then yields the empty-map fallback.
     state.requests.add('paletteOpened');
     state.subsystems.scheduler.requestRender();
-    return awaitSlotReady(state.assetSlots.pgcAlias, new Map() as PgcAliasMap);
+    return awaitSlotReady(state.galaxyBridge?.pgcAlias ?? null, new Map() as PgcAliasMap);
   }
 
   function getCloud(source: SourceType): GalaxyCatalog | undefined {
-    return state.data.galaxies.catalogs.get(source);
+    return state.galaxyBridge?.catalogs.get(source);
   }
 
   function getCloudObjIds(source: SourceType): BigUint64Array | undefined {
-    return state.data.galaxies.catalogs.get(source)?.objIDs;
+    return state.galaxyBridge?.catalogs.get(source)?.objIDs;
   }
 
   function destroy(): void {
@@ -539,26 +508,9 @@ export function createEngine(
     for (const instance of state.layers.slice().reverse()) instance.destroy();
     state.layers = [];
 
-    state.subsystems.biasCorrection.destroy();
     state.subsystems.cosmoLabelDirector.destroy();
     state.subsystems.foregroundLabelDirector.destroy();
     state.subsystems.structureFocus.destroy();
-    // Impostor teardown order matters: texturedDisks subscribes to
-    // galaxyAtlas's eviction handler (destroy it first); hiResFamous
-    // subscribes to its texture's evict handler (destroy the planner before
-    // the texture); galaxyAtlas releases its GPU texture last.
-    state.subsystems.texturedDisks?.destroy();
-    state.subsystems.texturedDisks = null;
-    state.subsystems.hiResFamous?.destroy();
-    state.subsystems.hiResFamous = null;
-    state.subsystems.hiResFamousTexture?.destroy();
-    state.subsystems.hiResFamousTexture = null;
-    state.subsystems.proceduralDisks?.destroy();
-    state.subsystems.proceduralDisks = null;
-    state.subsystems.diskPlannerWalk?.destroy();
-    state.subsystems.diskPlannerWalk = null;
-    state.subsystems.galaxyAtlas?.destroy();
-    state.subsystems.galaxyAtlas = null;
     // Owns a 67 MB atlas and a page-table texture once engaged, neither of which
     // WebGPU releases on GC.
     state.subsystems.earthTiles?.destroy();
@@ -582,9 +534,7 @@ export function createEngine(
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
 
-    for (const source of [...state.data.galaxies.catalogs.keys()]) {
-      state.data.galaxies.removeCatalog(source);
-    }
+    state.galaxyBridge = null;
     state.booted = false;
   }
 

@@ -242,6 +242,8 @@ export function deriveFrameContext(
     // the contexts it derives — see `ReadyFrameContext.viewSlot`'s doc.
     viewSlot: 0,
     focusBlend: 0,
+    // Stamped by `runFrame` once every Layer's frame hook has voted.
+    layersAnimating: false,
     visibleSourceMask,
     focus: ZERO_FOCUS,
     renderTargets,

@@ -22,6 +22,13 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
+import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+
+/** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
+const GALAXY_RUNTIME = {
+  pointRenderer: { hasCatalog: () => true },
+} as unknown as GalaxyCatalogRuntime;
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -162,19 +169,6 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(0);
   });
 
-  it('seeds the surveyLabel (galaxy) handle from famousGalaxy.labelEnabled', () => {
-    // Wired THROUGH seedFades (not just the row.seed unit call): the galaxy
-    // layer's frame-1 opacity must honour the persisted famous-label toggle so a
-    // labels-off session doesn't flash them on.
-    const off = makeState({ surveyLabelEnabled: false });
-    seedFades(off);
-    expect(off.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(0);
-
-    const on = makeState();
-    seedFades(on);
-    expect(on.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(1);
-  });
-
   // ── per-structure ring + label handles ───────────────────────────
 
   // ── the body caption domain ──────────────────────────────────────
@@ -217,27 +211,6 @@ describe('seedFades', () => {
   });
 
   // ── demand-loaded sets (seed 0 so first-load fade-in isn't lost) ──
-
-  it('seeds every galaxy catalog at 0', () => {
-    const state = makeState();
-    seedFades(state);
-    for (const id of GALAXY_CATALOG_IDS) {
-      expect(
-        state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }),
-        `galaxyCatalog{${id}} should seed at 0`,
-      ).toBe(0);
-    }
-  });
-
-  it('survey row has no post — masks are a pure per-frame derivation', () => {
-    // The draw/pick bitmasks are no longer cached state recomputed on toggle;
-    // `deriveSourceMasks` projects them on read (per-frame in `runFrame`, fresh
-    // at click time). So the survey row carries NO `post` — a toggle just fades
-    // the catalog handle, and the next frame's derivation picks up the new
-    // enabled set on its own.
-    const surveyRow = rowFor('survey');
-    expect(surveyRow.post).toBeUndefined();
-  });
 
   it('seeds EVERY volume field at 0, including DEV debug fixtures', () => {
     const state = makeState();
@@ -294,22 +267,10 @@ describe('FADE_LAYERS intent subset', () => {
     settings.volumes.items = {
       'debug-gaussian': { enabled: true },
     } as unknown as EngineSettingsState['volumes']['items'];
-    for (const row of FADE_LAYERS) {
+    for (const row of [...FADE_LAYERS, ...galaxyCatalogFadeRows(GALAXY_RUNTIME)]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
       expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);
     }
-  });
-
-  it('survey row intent reads galaxyCatalogs.items[id].enabled', () => {
-    const row = rowFor('survey');
-    expect(row.intent?.(makeSettings({ sdssEnabled: false }), 'sdss')).toBe(false);
-    expect(row.intent?.(makeSettings({ sdssEnabled: true }), 'sdss')).toBe(true);
-  });
-
-  it('surveyLabel row intent reads famousGalaxy.labelEnabled', () => {
-    const row = rowFor('surveyLabel');
-    expect(row.intent?.(makeSettings({ famousLabelEnabled: false }), undefined)).toBe(false);
-    expect(row.intent?.(makeSettings({ famousLabelEnabled: true }), undefined)).toBe(true);
   });
 
   it('orbitTrails row intent + seed follow settings.orbitTrails.enabled', () => {
@@ -343,19 +304,6 @@ describe('FADE_LAYERS intent subset', () => {
     load.mockClear();
     row.post?.(makeVolumeState(false), 'debug-gaussian');
     expect(load).not.toHaveBeenCalled();
-  });
-
-  it('survey row guard gates on the renderer holding the catalog', () => {
-    // Same demand-loaded pattern as flow/filaments/volumeField: a catalog
-    // whose .bin is still downloading must not burn its fade window.
-    const row = rowFor('survey');
-    const state = {
-      gpu: { galaxyPointRenderer: { hasCatalog: (id: string) => id === '2mrs' } },
-    } as unknown as EngineState;
-    expect(row.guard?.(state, 'sdss')).toBe(false);
-    expect(row.guard?.(state, '2mrs')).toBe(true);
-    // No renderer yet (mid-bootstrap) → suppressed.
-    expect(row.guard?.({ gpu: {} } as unknown as EngineState, 'sdss')).toBe(false);
   });
 
   it('constellations row guard gates on the renderer’s hasData()', () => {

@@ -23,6 +23,13 @@ import {
   syncVisibilityFadeItem,
 } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
+import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+
+/** Every catalog committed, so the `survey` row's demand-loaded guard passes. */
+const GALAXY_RUNTIME = {
+  pointRenderer: { hasCatalog: () => true },
+} as unknown as GalaxyCatalogRuntime;
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
@@ -269,9 +276,10 @@ function makeBridgeState(): {
       fades: { fadeTo, setImmediate, targetOf },
       scheduler: { requestRender },
     },
-    // The bridge walks the COMPOSED rows; over an empty layer tuple that is
-    // exactly the core manifest these tests are written against.
-    fadeRows: FADE_LAYERS,
+    // The bridge walks the COMPOSED rows — core's manifest plus the
+    // galaxyCatalog Layer's, which is what `createLayers` writes and what the
+    // `survey` / `surveyLabel` assertions below exercise.
+    fadeRows: [...FADE_LAYERS, ...galaxyCatalogFadeRows(GALAXY_RUNTIME)],
   } as unknown as BridgeState;
 
   return { state, fadeTo, setImmediate, targetOf, requestRender, settings };

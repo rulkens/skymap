@@ -18,7 +18,6 @@ import { unpackPick } from '../../../src/data/selectionEncoding';
 import { Source } from '../../../src/data/sources';
 
 const resolver = selectionResolverOver({
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 });
