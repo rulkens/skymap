@@ -13,6 +13,7 @@ import { EMPTY_SURFACE_GESTURE_MEMORY, surfaceStep } from '../../../camera/surfa
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { decodeBodyFixedChannels } from '../../../../utils/camera/decodeBodyFixedChannels';
 import { eyeMpcOf } from '../../../../utils/camera/eyeMpcOf';
+import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
 import { frameUp } from '../../../../utils/camera/frameUp';
 import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
@@ -109,14 +110,15 @@ export const bodyRung: ClimbRow<'body'> = {
     // the first at-rest frame's pivot pin re-targets the FOCUSED body.
     return nearest !== null &&
       nearest.hr < ctx.tuning.engageHR &&
-      (ctx.focusBodyId === null || ctx.focusBodyId === nearest.bodyId)
+      focusInSubtree(ctx.focusBodyId, nearest.bodyId)
       ? { body: nearest.bodyId }
       : null;
   },
 
   release(framed, ctx) {
-    // A differing body focus releases the arm so follow can take over next frame.
-    if (ctx.focusBodyId !== null && ctx.focusBodyId !== framed.frame.body) return true;
+    // A focus OUTSIDE this body's subtree releases the arm so follow can take
+    // over next frame; one hosted on it — a rover — keeps it (§4.8).
+    if (!focusInSubtree(ctx.focusBodyId, framed.frame.body)) return true;
     // Unresolved this frame: hold rather than guess — the caller's next frame retries.
     const host = hostOf(framed.frame, ctx);
     if (host === null) return false;

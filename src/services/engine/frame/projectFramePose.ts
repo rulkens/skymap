@@ -13,6 +13,7 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraState } from '../../../@types/camera/CameraState';
+import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
@@ -23,6 +24,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
+import { frameBodyId } from '../camera/rungs/frameBodyId';
 import { hostOf } from '../camera/rungs/hostOf';
 import { hostOrThrow } from '../camera/rungs/hostOrThrow';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
@@ -31,6 +33,7 @@ import { rungKindOf } from '../camera/rungs/rungKindOf';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { stepRung } from '../camera/rungs/stepRung';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
+import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
@@ -44,6 +47,8 @@ export function projectFramePose(args: {
   readonly pivotsOnFocusedBody: boolean;
   readonly focus: SelectionRow | null;
   readonly follow: FollowMemory | null;
+  /** This frame's winning driver — read only to know an approach is in flight. */
+  readonly winner: DriverId;
   readonly tilt: TiltMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime, `dragging` skips the fold. */
   readonly intent: CameraState;
@@ -57,7 +62,17 @@ export function projectFramePose(args: {
   readonly actions: readonly UnknownAction[];
   readonly requestRender: boolean;
 } {
-  const { render, authoredOverride, pivotsOnFocusedBody, focus, follow, tilt, intent, ctx } = args;
+  const {
+    render,
+    authoredOverride,
+    pivotsOnFocusedBody,
+    focus,
+    follow,
+    winner,
+    tilt,
+    intent,
+    ctx,
+  } = args;
   const { bodies, poseBasis, upBasis, tuning } = ctx;
 
   // The pin SETS the target (never adds), so baking the displayed pose into
@@ -93,14 +108,21 @@ export function projectFramePose(args: {
 
   const actions: UnknownAction[] = [];
   let requestRender = false;
-  // No flip during a gesture (ruled, Q6): skipped WHOLE — not clamped, not
-  // latched — and re-evaluated at gesture end.
-  if (!intent.dragging) {
-    // The step is asked about the REGIME's pose, never the arm this frame's
-    // winner authored: `tween`/`clip` are not arm-gated, so reading the
-    // produced pose as the regime swaps §4's disengage test for the engage one
-    // mid-animation. Free while the two agree — `refoldTo` answers by reference.
-    const target = stepRung(refoldTo(displayed, regime, ctx), ctx);
+  const approaching = isFollowDriverId(winner) && follow !== null && !follow.saturated;
+  // The step is asked about the REGIME's pose, never the arm this frame's
+  // winner authored: `tween`/`clip` are not arm-gated, so reading the produced
+  // pose as the regime swaps §4's disengage test for the engage one
+  // mid-animation. Free while the two agree — `refoldTo` answers by reference.
+  const target = intent.dragging ? regime : stepRung(refoldTo(displayed, regime, ctx), ctx);
+  // Two whole skips, never a clamp or a latch, both retried next frame: a live
+  // gesture (ruled, Q6), and an approach that has not reached its FOCUS yet
+  // (§4.8). `followActive` is gated on the world arm, so a descent into a rung
+  // the focus merely hangs off — Mars, under a rover focus — goes inactive
+  // mid-flight and parks the camera ~1500 km short. A descent into the focus's
+  // OWN rung is the arrival and must still land: gating that one lets the ease
+  // yank a camera already inside its focus's band out to framing distance,
+  // where it never engages again (the ordinary tour landing).
+  if (!intent.dragging && !(approaching && frameBodyId(target) !== ctx.focusBodyId)) {
     if (rungKindOf(target) === 'absolute') {
       if (!isWorldArm(displayed)) {
         // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
@@ -114,9 +136,15 @@ export function projectFramePose(args: {
         // Centre-looking, so authored and displayed coincide.
         register = displayed;
       }
-    } else if (isWorldArm(displayed)) {
+    } else if (
+      !sameFrame(displayed.frame, target) &&
+      // The pose being crossed must be the one the step judged — the world arm
+      // on an engage, the regime's own rung on a descent between two of them.
+      // A produced pose in some THIRD frame (a clip leg's) is not this crossing's.
+      (isWorldArm(displayed) || sameFrame(displayed.frame, regime))
+    ) {
       displayed = refoldTo(displayed, target, ctx);
-      // Engage converts the DISPLAYED pose (ruling 13); on the body arm the
+      // Engage converts the DISPLAYED pose (ruling 13); below the world arm the
       // tilt is geometry, not a projection, so the register holds it too.
       register = displayed;
     }

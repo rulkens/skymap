@@ -198,6 +198,7 @@ export function stepCameraRuntime(
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
     follow: memory,
+    winner: winnerId,
     tilt: drained.tilt,
     intent: rootState.camera,
     ctx: foldCtx,

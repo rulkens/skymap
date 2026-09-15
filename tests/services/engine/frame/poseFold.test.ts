@@ -74,6 +74,9 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
 
 import { runFrame } from '../../../../src/services/engine/frame/runFrame';
 import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
+import { FOCUS_TWEEN_MS } from '../../../../src/services/engine/camera/focusTweenDuration';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
@@ -394,6 +397,46 @@ describe('runFrame — the regime fold', () => {
     expect(state.cameraRuntime.register.winner).toBe('resting');
     // Untouched by reference: the pin rebuilds the pose whenever it applies.
     expect(state.cameraRuntime.register.pose).toBe(engaged);
+  });
+
+  it('an approach owns the rung until it reaches its focus, then descends one rung per frame', () => {
+    // §4.8, both halves at once. `followActive` is gated on the world arm, so
+    // engaging Mars mid-approach would kill the ease at Mars's engage band —
+    // ~1500 km short of a rover whose framing distance is metres. And the
+    // descent that follows is TWO frames, one rung each: a single-frame
+    // teleport would skip the frame the crossing commit is drawn on.
+    const { store, state, deps } = makeHarness();
+    const site = { site: 'curiosity' as BodyId } as const;
+    const ctx = {
+      bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+      poseBasis: B,
+      upBasis: B,
+    };
+    // 30 m out at 0.5 rad elevation: inside the site band, above its floors.
+    const parked = foldToWorld(
+      { frame: site, pose: { siteId: site.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 30 } },
+      ctx,
+    );
+    seedPose(store, state, parked);
+    const rover = deriveBodyStates(SIM).get('curiosity')!;
+    store.dispatch(
+      setSelectionRow({
+        slot: 'focus',
+        row: {
+          type: 'body',
+          id: 'curiosity',
+          label: 'Curiosity',
+          positionMpc: [rover.positionMpc[0]!, rover.positionMpc[1]!, rover.positionMpc[2]!],
+        },
+      }),
+    );
+
+    const frames = [0, FOCUS_TWEEN_MS, FOCUS_TWEEN_MS + 16, FOCUS_TWEEN_MS + 32].map((nowMs) => {
+      runFrame(state, deps, nowMs);
+      return frameKey(store.getState().camera.base.frame);
+    });
+
+    expect(frames).toEqual(['absolute', 'body:mars', 'site:curiosity', 'site:curiosity']);
   });
 
   it('the wheel does not route through applyWheelZoom in a body arm', () => {

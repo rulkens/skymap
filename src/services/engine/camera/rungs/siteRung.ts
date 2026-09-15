@@ -15,6 +15,7 @@ import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
 import { positionDriverById } from '../../../../data/bodies/positionDrivers';
 import { bodyFixedEyeM } from '../../../../utils/camera/bodyFixedEyeM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
+import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
 import { sitePointBodyFixed } from '../../../../utils/camera/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from '../../../../utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../../utils/camera/sitePoseToBodyArm';
@@ -136,6 +137,9 @@ export const siteRung: ClimbRow<'site'> = {
   },
 
   release(framed, ctx) {
+    // Nothing is hosted on a site, so its subtree is the site itself: any other
+    // focus hands back to the host arm (§4.8), as the band edge does.
+    if (!focusInSubtree(ctx.focusBodyId, framed.frame.site)) return true;
     const rangeR = framed.pose.rangeM / meshBodyOf(framed.frame.site).boundingRadiusM;
     return rangeR > ctx.tuning.siteDisengageR;
   },

@@ -17,6 +17,7 @@ import { climbRowFor } from '../../../../../src/services/engine/camera/rungs/cli
 import { rungKindOf } from '../../../../../src/services/engine/camera/rungs/rungKindOf';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../../src/data/camera/cameraTuning';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
+import { SCENE_CELESTIAL_BODIES } from '../../../../../src/data/bodies/sceneCelestialBodies';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -197,6 +198,22 @@ describe('stepRung', () => {
     expect(stepRung(worldArm(eye), ctxFor(bodyStates, bodyId('earth')))).toEqual({
       body: 'earth',
     });
+  });
+
+  it("a focus in the rung's host subtree keeps the rung", () => {
+    // Spec §0's premise correction as a test: today's chooser released on any
+    // differing focus, so with a rover focused the Mars arm was unreachable and
+    // the rover was orbited from the world arm — rolling horizon and all. The
+    // site rung is far out of its own band here (the eye is a planet radius up),
+    // so this pins the MARS rung holding, not a descent past it.
+    const marsRadiusM = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'test').surface
+      .datumRadiusM;
+    const bodyStates = new Map<BodyId, BodyState>([[bodyId('mars'), bodyStateAtOrigin()]]);
+    const current = { body: bodyId('mars') };
+    const ctx = ctxFor(bodyStates, bodyId('curiosity'));
+    expect(stepRung(bodyArm(current.body, marsRadiusM, TUNING.engageHR * 0.5), ctx)).toEqual(
+      current,
+    );
   });
 
   it('a mesh body never engages, even with the eye inside its bounding sphere', () => {
