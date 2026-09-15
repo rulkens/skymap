@@ -6,7 +6,6 @@
 
 import type { BodyId } from '../../../../@types/data/body/BodyId';
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
-import type { FrameOf } from '../../../../@types/camera/FrameOf';
 import type { MeshBody } from '../../../../@types/scene/MeshBody';
 import type { SurfaceFixedSite } from '../../../../@types/scene/SurfaceFixedSite';
 import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
@@ -18,9 +17,10 @@ import { sitePointBodyFixed } from '../../../../utils/camera/sitePointBodyFixed'
 import { sitePoseFromBodyArm } from '../../../../utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../../utils/camera/sitePoseToBodyArm';
 import { steppedSitePose } from '../../../../utils/camera/steppedSitePose';
-import { climbRowFor } from './climbRowFor';
 import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
+import { isSiteArm } from './isSiteArm';
+import { refoldTo } from './refoldTo';
 
 function siteRowOf(id: BodyId): SurfaceFixedSite | null {
   const driver = positionDriverById(id);
@@ -45,16 +45,12 @@ export const siteRung: ClimbRow<'site'> = {
   emptyMemory: null,
 
   channels: {
-    // World channels in, per prep's signature, so the fold down to the site is
-    // this cell's own business.
+    // World channels in, per prep's signature; the descent is the ladder's own,
+    // so a rung inserted between body and site is picked up here for free.
     encode: (world, frame, ctx) => {
-      const hostFrame: FrameOf['body'] = { body: hostOrThrow(frame, ctx).id };
-      const arm = climbRowFor<'body'>(hostFrame).fromParent(
-        { frame: 'absolute', pose: world },
-        hostFrame,
-        ctx,
-      );
-      const pose = siteRung.fromParent(arm, frame, ctx).pose;
+      const framed = refoldTo({ frame: 'absolute', pose: world }, frame, ctx);
+      if (!isSiteArm(framed)) throw new Error('siteRung: refoldTo did not land the site frame');
+      const pose = framed.pose;
       return {
         target: [0, 0, 0],
         yaw: pose.headingRad,

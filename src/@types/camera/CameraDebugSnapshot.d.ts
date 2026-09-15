@@ -1,6 +1,7 @@
 import type { CameraDofAngles } from './CameraDofAngles';
 import type { OrientDeltas } from './OrientDeltas';
 import type { PoseFrame } from './PoseFrame';
+import type { SitePose } from './SitePose';
 import type { Vec3 } from '../math/Vec3';
 
 /** The DebugPanel's "Camera" section readout (spec 2026-09-01-camera-pivot §4/§6). */
@@ -36,12 +37,8 @@ export type CameraDebugSnapshot = {
   readonly anchorLocalM: Vec3 | null;
   /** `|eyeRelAnchorM|`, metres, when `renderedFrame` is a body arm; else null. */
   readonly eyeRelAnchorMagM: number | null;
-  /** Site turntable heading, radians, when `renderedFrame` is a site arm; else null. */
-  readonly siteHeadingRad: number | null;
-  /** Site turntable elevation, radians; null alongside `siteHeadingRad`. */
-  readonly siteElevationRad: number | null;
-  /** Eye←site range, metres; null alongside `siteHeadingRad`. */
-  readonly siteRangeM: number | null;
+  /** The turntable's whole state when `renderedFrame` is a site arm; else null. */
+  readonly sitePose: SitePose | null;
   /** `cameraRuntime.register.winner` — last frame's driver-table winner. */
   readonly activeDriverId: string;
   /** Latched gesture mode; 'down (unlatched)' between press and first step; null at rest. */

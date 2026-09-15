@@ -153,7 +153,7 @@ describe('stepCameraRuntime', () => {
         pivotsOnFocusedBody: true,
         focus: EARTH_ROW,
         follow: null,
-        winner: 'resting',
+        approaching: false,
         tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: 'earth' },
         intent,
         ctx: {

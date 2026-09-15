@@ -1,7 +1,4 @@
-/**
- * The site rung's fixed floors (spec §4.5). Deliberately sliderless — only the
- * band edges are tunable, in `CameraTuning`.
- */
+/** The site rung's fixed floors (spec §4.5); deliberately sliderless. */
 
 export const SITE_RUNG: {
   readonly eyeFloorBoundingRadii: number;

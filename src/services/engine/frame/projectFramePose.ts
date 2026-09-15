@@ -13,7 +13,6 @@ import type { UnknownAction } from '@reduxjs/toolkit';
 
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraState } from '../../../@types/camera/CameraState';
-import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { FollowMemory } from '../../../@types/engine/camera/FollowMemory';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
@@ -33,7 +32,6 @@ import { rungKindOf } from '../camera/rungs/rungKindOf';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { stepRung } from '../camera/rungs/stepRung';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
-import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
@@ -47,8 +45,8 @@ export function projectFramePose(args: {
   readonly pivotsOnFocusedBody: boolean;
   readonly focus: SelectionRow | null;
   readonly follow: FollowMemory | null;
-  /** This frame's winning driver — read only to know an approach is in flight. */
-  readonly winner: DriverId;
+  /** A follow approach is in flight and has not saturated — the §4.8 gate's half. */
+  readonly approaching: boolean;
   readonly tilt: TiltMemory;
   /** The frame's effective camera intent: `base.frame` IS the regime, `dragging` skips the fold. */
   readonly intent: CameraState;
@@ -68,7 +66,7 @@ export function projectFramePose(args: {
     pivotsOnFocusedBody,
     focus,
     follow,
-    winner,
+    approaching,
     tilt,
     intent,
     ctx,
@@ -108,7 +106,6 @@ export function projectFramePose(args: {
 
   const actions: UnknownAction[] = [];
   let requestRender = false;
-  const approaching = isFollowDriverId(winner) && follow !== null && !follow.saturated;
   // The step is asked about the REGIME's pose, never the arm this frame's
   // winner authored: `tween`/`clip` are not arm-gated, so reading the produced
   // pose as the regime swaps §4's disengage test for the engage one

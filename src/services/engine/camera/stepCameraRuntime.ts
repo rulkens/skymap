@@ -30,6 +30,7 @@ import { rowFor } from './rungs/rowFor';
 import { resolveFrameBasis } from './resolveFrameBasis';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
+import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import cameraReducer, {
   cancelCameraTween,
@@ -198,7 +199,7 @@ export function stepCameraRuntime(
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
     follow: memory,
-    winner: winnerId,
+    approaching: isFollowDriverId(winnerId) && memory !== null && !memory.saturated,
     tilt: drained.tilt,
     intent: rootState.camera,
     ctx: foldCtx,

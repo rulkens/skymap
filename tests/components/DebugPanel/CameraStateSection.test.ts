@@ -87,9 +87,12 @@ describe('CameraStateSection', () => {
     const siteSnap: CameraDebugSnapshot = {
       ...SNAP,
       renderedFrame: { site: 'curiosity' as BodyId },
-      siteHeadingRad: 0.7,
-      siteElevationRad: 0.2,
-      siteRangeM: 12,
+      sitePose: {
+        siteId: 'curiosity' as BodyId,
+        headingRad: 0.7,
+        elevationRad: 0.2,
+        rangeM: 12,
+      },
     };
     const { container } = render(
       createElement(CameraStateSection, { cameraDebug: () => siteSnap }),
