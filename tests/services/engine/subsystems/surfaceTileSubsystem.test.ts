@@ -59,6 +59,7 @@ import {
   EARTH_TILE_ATLAS_SIDE,
   EARTH_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
+  MIN_SURFACE_TILE_REQUEST_LEVEL,
 } from '../../../../src/data/bodies/earthTileParams';
 import {
   HEIGHT_POSTS_PER_TILE,
@@ -202,6 +203,43 @@ describe('surfaceTileSubsystem base level', () => {
     expect(subsystem.plannerParams('earth', earthBaseLevelForTier('large'))!.baseLevel).toBe(
       before,
     );
+  });
+});
+
+describe('surfaceTileSubsystem request floor', () => {
+  it('floors a shallow band at MIN_SURFACE_TILE_REQUEST_LEVEL, not just baseLevel + 1', async () => {
+    // A BMNG-derived global band bakes from z3: baseLevel + 1 alone would let
+    // `small` (baseLevel 2) and `medium` (baseLevel 3) request z3/z4 tiles as
+    // displacement geometry, where one coarse tile's own bilinear-vs-finest
+    // error can exceed its whole height range and draws as a floating slab
+    // (MIN_SURFACE_TILE_REQUEST_LEVEL's doc comment has the measured numbers).
+    const shallow = surfaceManifest(EARTH_TILE_PX);
+    const shallowGlobal: SurfaceTileManifest = {
+      ...shallow,
+      bands: [{ ...shallow.bands[0]!, min: 1, max: 7 }],
+    };
+
+    const small = await plannerParamsFor(shallowGlobal, 'small');
+    const medium = await plannerParamsFor(shallowGlobal, 'medium');
+    const large = await plannerParamsFor(shallowGlobal, 'large');
+
+    expect(small!.bands[0]!.min).toBe(MIN_SURFACE_TILE_REQUEST_LEVEL);
+    expect(medium!.bands[0]!.min).toBe(MIN_SURFACE_TILE_REQUEST_LEVEL);
+    // Unaffected where baseLevel + 1 already clears the floor.
+    expect(large!.baseLevel + 1).toBeGreaterThanOrEqual(MIN_SURFACE_TILE_REQUEST_LEVEL);
+    expect(large!.bands[0]!.min).toBe(large!.baseLevel + 1);
+  });
+
+  it("leaves a band whose own min already clears the floor untouched (e.g. a regional band)", async () => {
+    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const regional: SurfaceTileManifest = {
+      ...manifest,
+      bands: [{ ...manifest.bands[0]!, min: 8, max: 13 }],
+    };
+
+    const small = await plannerParamsFor(regional, 'small');
+
+    expect(small!.bands[0]!.min).toBe(8);
   });
 });
 

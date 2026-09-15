@@ -6,8 +6,9 @@
  * Level `z`'s equirectangular width is `EARTH_EQUIRECT_BASE_WIDTH_PX << z`
  * texels; anchoring on 512 puts the three whole-globe tiers on the ladder
  * (2048=z2, 4096=z3, 8192=z4) and matches the WGS84/EOX ladder verbatim.
- * Three floors, none a constant here: BASE (`earthBaseLevelForTier`) is
- * the walk floor; REQUEST (`derivePlannerParams`) and BAKE
+ * Three floors: BASE (`earthBaseLevelForTier`) is the walk floor; REQUEST
+ * (`derivePlannerParams`, deeper of `baseLevel + 1` and
+ * `MIN_SURFACE_TILE_REQUEST_LEVEL` below) and BAKE
  * (`tools/textures/buildSurfaceTiles.ts`) are the fetch/bake floors.
  */
 
@@ -62,6 +63,23 @@ export const EARTH_EQUATORIAL_CIRCUMFERENCE_M = 40075016.686;
  * the pyramid is one level deep.
  */
 export const EARTH_TILE_LOD_BIAS = 1;
+
+/**
+ * REQUEST floor, deeper of this and `baseLevel + 1` (Design doc's third
+ * floor, now named): one BMNG-derived global tile at z3/z4 spans up to
+ * 45°×45° and can straddle sea level and a mountain range in the same
+ * 129-post lattice — the Denmark/Scandinavia z3 tile measured
+ * `subtreeMinM -997`, `subtreeMaxM 4247`, `geometricResidualM 6966` (its OWN
+ * bilinear-vs-finest error, bigger than the tile's whole height range). Used
+ * as vertex displacement (not just texture), that error draws as a
+ * flat-shaded slab standing proud of or sunk into the true ground — sharp
+ * tile-sized edges on Android/Adreno, whole patches floating a few hundred
+ * metres up. `baseLevel + 1` alone lets `small`/`medium` (baseLevel 2/3)
+ * request this band from z3/z4; `large` (baseLevel 4) only ever reaches z5+
+ * there by accident of its own floor. 5 is that same accidental floor, made
+ * unconditional for every tier.
+ */
+export const MIN_SURFACE_TILE_REQUEST_LEVEL = 5;
 
 /** Subdivision `n` per patch edge of the shared vertex-shader template: 1.19 m
  *  geometric post spacing at z19. Deliberately half the height tile's 128 cells

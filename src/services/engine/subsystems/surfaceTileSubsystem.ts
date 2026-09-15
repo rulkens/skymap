@@ -50,6 +50,7 @@ import {
   EARTH_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
+  MIN_SURFACE_TILE_REQUEST_LEVEL,
 } from '../../../data/bodies/earthTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 
@@ -180,9 +181,12 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       // degrades by skipping it, matching this function's whole stance —
       // never throw out of `refreshParams` over one bad band.
       if (typeof band?.bounds?.west !== 'number') continue;
-      // Deeper of the band's own min and base+1: at/above base would
-      // re-download detail the whole-globe base already delivers.
-      const min = Math.max(band.min, baseLevel + 1);
+      // Deepest of the band's own min, base+1 (at/above base would
+      // re-download detail the whole-globe base already delivers), and the
+      // request floor (MIN_SURFACE_TILE_REQUEST_LEVEL's doc comment: below
+      // it, a global tile's own bilinear-vs-finest error can exceed its
+      // whole height range — displaced, that draws as a floating slab).
+      const min = Math.max(band.min, baseLevel + 1, MIN_SURFACE_TILE_REQUEST_LEVEL);
       // A band clamped past its own depth at this base level bakes nothing usable.
       if (!(band.max >= min)) continue;
       bands.push(surfaceTileBandFromBounds(band.bounds, min, band.max));
