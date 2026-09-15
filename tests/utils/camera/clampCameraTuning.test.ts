@@ -42,6 +42,17 @@ describe('clampCameraTuning', () => {
     expect(next.tiltFullHR).toBeCloseTo(0.045454545454545456, 12);
   });
 
+  it('keeps the site band hysteretic from either side', () => {
+    // A band with no hysteresis thrashes the rung every frame — the real bug.
+    const pulled = clampCameraTuning({ siteDisengageR: 22 }, DEFAULT_CAMERA_TUNING);
+    expect(pulled.siteDisengageR).toBe(22);
+    expect(pulled.siteEngageR).toBeCloseTo(20, 12);
+
+    const pushed = clampCameraTuning({ siteEngageR: 100 }, DEFAULT_CAMERA_TUNING);
+    expect(pushed.siteEngageR).toBe(100);
+    expect(pushed.siteDisengageR).toBeCloseTo(110, 12);
+  });
+
   it('makes the disengage cap outrank a tilt-full patch', () => {
     // 0.85 × 1.1 = 0.935 would need a tilt-zero above disengage (0.9), so the
     // caller's own knob yields instead — the one asymmetry between the pairs.

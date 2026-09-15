@@ -7,6 +7,10 @@ export type CameraTuning = {
   readonly engageHR: number;
   /** h/R at which it hands back (hysteresis). */
   readonly disengageHR: number;
+  /** eye→site range, in the site body's bounding radii, at which the site rung takes over. */
+  readonly siteEngageR: number;
+  /** …and at which it hands back (hysteresis). */
+  readonly siteDisengageR: number;
   /** h/R at or below which the reference up is the pure body ENU (full tilt). */
   readonly tiltFullHR: number;
   /** h/R at or above which it is the scene up (zero tilt). */
