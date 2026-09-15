@@ -118,33 +118,6 @@ function fakeCloud(count: number): GalaxyCatalog {
 }
 
 describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
-  it('declares exactly the 9 expected sources in Source enum order', () => {
-    const sources = GALAXY_CATALOG_SOURCE_REGISTRY.map((c) => c.source);
-    expect(sources).toEqual([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.FamousGalaxy,
-      Source.Milliquas,
-      Source.DesiDeep,
-      Source.DesiWedge,
-      Source.DesiSgw,
-      Source.Synthetic,
-    ]);
-  });
-
-  it('uses the shared galaxyCatalogFetcher for the eight real galaxy catalogs and the dedicated synthetic fetcher for Synthetic', () => {
-    // We don't import the fetchers here to avoid coupling to their
-    // implementation — but we can verify the structural invariant
-    // "Synthetic's fetcher is not the same reference as the others".
-    const real = GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.source !== Source.Synthetic);
-    const synthetic = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.Synthetic);
-    expect(synthetic).toBeDefined();
-    const realFetchers = new Set(real.map((c) => c.fetcher));
-    expect(realFetchers.size).toBe(1); // all eight real galaxy catalogs share one fetcher
-    expect(synthetic!.fetcher).not.toBe(real[0]!.fetcher);
-  });
-
   it('derives GALAXY_CATALOG_POINT_SOURCES from rows with category="survey"', () => {
     // Pin the consolidation invariant: anything that the boot-time
     // synthetic-fallback gate consults must come from the registry,

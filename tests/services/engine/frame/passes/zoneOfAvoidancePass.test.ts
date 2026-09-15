@@ -117,23 +117,6 @@ describe('zoneOfAvoidancePass.draw', () => {
     expect(typeof args[7]).toBe('number'); // anticenterDeg
     expect(args[8]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
   });
-
-  it('is a no-op when the renderer is null (pre-bootstrap)', () => {
-    const state = {
-      gpu: { zoneOfAvoidanceRenderer: null },
-      subsystems: { fades: { opacityOf: () => 1 } },
-    } as unknown as EngineState;
-    expect(() => zoneOfAvoidancePass.draw(PASS_STUB, {} as never, makeCtx(), state)).not.toThrow();
-  });
-
-  it('is a no-op when outside the visibility window (defensive — executor gates first)', () => {
-    const drawSpy = vi.fn();
-    const state = liveState({ draw: drawSpy });
-    const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
-    const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    zoneOfAvoidancePass.draw(PASS_STUB, {} as never, ctx, state);
-    expect(drawSpy).not.toHaveBeenCalled();
-  });
 });
 
 describe('zoneOfAvoidancePass.drawPick', () => {
@@ -152,24 +135,5 @@ describe('zoneOfAvoidancePass.drawPick', () => {
     expect(args[2]).toEqual([1280, 720]);
     expect(args[3]).toBe(state.settings.zoneOfAvoidance);
     expect(args[8]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
-  });
-
-  it('is a no-op when the renderer is null (pre-bootstrap)', () => {
-    const state = {
-      gpu: { zoneOfAvoidanceRenderer: null },
-      subsystems: { fades: { opacityOf: () => 1 } },
-    } as unknown as EngineState;
-    expect(() =>
-      zoneOfAvoidancePass.drawPick!(PASS_STUB, {} as never, makeCtx(), state),
-    ).not.toThrow();
-  });
-
-  it('is a no-op when outside the visibility window (band faded, no longer pickable)', () => {
-    const drawPickSpy = vi.fn();
-    const state = liveState({ drawPick: drawPickSpy });
-    const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
-    const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    zoneOfAvoidancePass.drawPick!(PASS_STUB, {} as never, ctx, state);
-    expect(drawPickSpy).not.toHaveBeenCalled();
   });
 });

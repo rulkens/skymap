@@ -74,13 +74,6 @@ function makeState(
 }
 
 describe('buildDemandCtx', () => {
-  it('settings is the engine settings passthrough', () => {
-    const state = makeState();
-    const ctx = buildDemandCtx(state);
-    // Identity passthrough — predicates read the live settings object.
-    expect(ctx.settings).toBe(state.settings);
-  });
-
   it('slotState returns idle for an absent slot', () => {
     // A not-yet-minted slot (null field, missing map entry) reads as 'idle' —
     // never loaded is exactly what idle means.

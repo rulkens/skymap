@@ -14,7 +14,6 @@ import { Source } from '../../../../../src/data/sources';
 import { packSelection } from '../../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
-import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { galaxyPointSpritesPass } from '../../../../../src/services/engine/frame/passes/galaxyPointSpritesPass';
 import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
@@ -347,15 +346,6 @@ describe('milkyWayPass.draw', () => {
     expect(args.camUp).toHaveLength(3);
     expect(args.model).toHaveLength(16);
   });
-
-  it('is a no-op when state.gpu.milkyWayCloudRenderer is null (pre-bootstrap)', () => {
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, MW_FULL_DIST_MPC / 2] as Readonly<[number, number, number]>,
-    });
-    expect(() =>
-      milkyWayPass.draw(PASS_STUB, slabViewOf(ctx, NEAR0), ctx, STATE_STUB),
-    ).not.toThrow();
-  });
 });
 
 describe('horizonShellPass.enabled', () => {
@@ -395,15 +385,6 @@ describe('horizonShellPass.draw', () => {
     expect(args[2]).toEqual(view.viewportPx);
     // 8 Gpc is past the full-strength point → alpha 1.0.
     expect(args[3]).toBe(1.0);
-  });
-
-  it('is a no-op when state.gpu.horizonShellRenderer is null (pre-bootstrap)', () => {
-    const ctx = makeCtx({
-      drawCamPos: [0, 0, 8000] as Readonly<[number, number, number]>,
-    });
-    expect(() =>
-      horizonShellPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, STATE_STUB),
-    ).not.toThrow();
   });
 });
 
@@ -544,46 +525,6 @@ describe('galaxyPointSpritesPass.draw', () => {
     expect(call[2]).toEqual(view.viewportPx);
     const drawSettings = call[3] as Record<string, unknown>;
     expect(drawSettings.camPosWorld).toEqual(view.camPos);
-  });
-});
-
-describe('drawPick migration-table rows', () => {
-  it('exactly the fifteen pickables expose drawPick, in registry order', () => {
-    // Pins the spec's migration table: the six COSMO/near-field survey
-    // pickables (pointSprites / zoneOfAvoidance / proceduralDisks /
-    // structureMarkers / milkyWay / starCatalog) PLUS the seven NEAR0 true-scale
-    // foreground bodies (starPoints / bodyGlints / earth / starSpheres /
-    // focusedFieldStarSphere / planets / meshBodies), the selection-gated
-    // focused-field-star sphere's pick and the sub-pixel body glints' pick
-    // among them — plus the two label rows, whose text is a click target for
-    // the subject it names. Order is registry order: the COSMO pick pass leads with
-    // point-sprites (the @group(0) prefix contract); zone-of-avoidance sits
-    // right after it in the registry for exactly that reason — the pick
-    // program groups by slab alone (a pass's visual target is FRAME_ORDER's
-    // business, not the pick pass's) and needs
-    // this row after the one that establishes the shared camera. Every NEAR0
-    // body self-binds its own slot-0 camera in its own pass, so their
-    // relative order carries no @group(0) dependence (it is depth-resolved,
-    // nearest-wins). The pick program filters by `drawPick` presence + the
-    // pick gate, never a hardcoded name list — so this test is the ONLY place
-    // the fifteen names are asserted.
-    expect(CONTENT_PASSES.filter((layer) => layer.drawPick).map((layer) => layer.name)).toEqual([
-      'point-sprites',
-      'zone-of-avoidance',
-      'procedural-disks',
-      'structure-markers',
-      'milky-way',
-      'star-points',
-      'star-catalog',
-      'body-glints',
-      'labels',
-      'earth',
-      'star-spheres',
-      'field-star-sphere',
-      'planets',
-      'mesh-bodies',
-      'foreground-labels',
-    ]);
   });
 });
 

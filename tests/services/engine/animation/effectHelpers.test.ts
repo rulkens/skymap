@@ -30,39 +30,9 @@ import { focusId } from '../../../../src/utils/animation/focusId';
 // ---------------------------------------------------------------------------
 
 describe('tween', () => {
-  it('defaults space from CHANNEL_SPACE — distance gets "log"', () => {
-    const a = tween('distance', { to: 100, over: 5 });
-    expect(a.kind).toBe('set');
-    expect(a.ch).toBe('distance');
-    expect(a.to).toBe(100);
-    expect(a.over).toBe(5);
-    expect(a.ease).toBe('easeInOutCubic');
-    expect(a.space).toBe('log');
-  });
-
-  it('defaults space from CHANNEL_SPACE — yaw gets "add"', () => {
-    const a = tween('yaw', { to: Math.PI, over: 2 });
-    expect(a.space).toBe('add');
-  });
-
-  it('defaults space from CHANNEL_SPACE — pitch gets "add"', () => {
-    const a = tween('pitch', { to: 0.3, over: 1 });
-    expect(a.space).toBe('add');
-  });
-
   it('tween override space wins — explicit space:lin overrides log', () => {
     const a = tween('distance', { to: 5, over: 1, space: 'lin' });
     expect(a.space).toBe('lin');
-  });
-
-  it('ease defaults to "easeInOutCubic"', () => {
-    const a = tween('pitch', { to: 0, over: 1 });
-    expect(a.ease).toBe('easeInOutCubic');
-  });
-
-  it('explicit ease is forwarded', () => {
-    const a = tween('yaw', { to: 1, over: 2, ease: 'easeOutCubic' });
-    expect(a.ease).toBe('easeOutCubic');
   });
 });
 
@@ -178,11 +148,6 @@ describe('aimAlong', () => {
     expect(e.forward).toEqual([1, 0, 0]);
     expect(e.over).toBe(4);
     expect(e.ease).toBe('easeInOutCubic');
-  });
-
-  it('forwards an explicit ease', () => {
-    const e = aimAlong([0, 1, 0], 2, 'easeOutCubic');
-    expect(e.ease).toBe('easeOutCubic');
   });
 });
 

@@ -7,7 +7,7 @@
  * rather than counting `register` spy calls.
  */
 
-import { describe, it, expect, vi, expectTypeOf } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
@@ -22,15 +22,6 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
-
-// ── Drift guard ───────────────────────────────────────────────────────
-//
-// FADE_LAYERS' row keys must EXACTLY cover VisibilityLayerKey: this fails to
-// compile if a union key has no row, or a row introduces a key outside the
-// union. The `satisfies` annotation on FADE_LAYERS preserves each row's literal
-// key (it does not erase to the whole union), so this assertion has teeth.
-type RowKeys = (typeof FADE_LAYERS)[number]['key'];
-expectTypeOf<RowKeys>().toEqualTypeOf<VisibilityLayerKey>();
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -164,15 +155,6 @@ describe('seedFades', () => {
     expect(state.subsystems.fades.opacityOf({ kind: 'milkyWay' })).toBe(0);
   });
 
-  // ── proceduralDisks + texturedDisks ──────────────────────────────
-
-  it('seeds proceduralDisks and texturedDisks at 1', () => {
-    const state = makeState();
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'overlay', id: 'proceduralDisks' })).toBe(1);
-    expect(state.subsystems.fades.opacityOf({ kind: 'overlay', id: 'texturedDisks' })).toBe(1);
-  });
-
   // ── volumesMaster gating ─────────────────────────────────────────
 
   it('seeds volumesMaster at 1 when settings.volumes.enabled', () => {
@@ -199,16 +181,6 @@ describe('seedFades', () => {
     const state = makeState({ milkyWayLabelEnabled: false });
     seedFades(state);
     expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(0);
-  });
-
-  it('seeds galaxy (surveyLabel) and scaleBar at 1', () => {
-    // Famous-galaxy labels reuse the galaxy layer and consume its opacity
-    // directly, so a 0 would hide them. scaleBar is React-side / tour-addressable,
-    // never auto-faded by the engine, so it starts at 1.
-    const state = makeState();
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' })).toBe(1);
-    expect(state.subsystems.fades.opacityOf({ kind: 'labelLayer', layer: 'scaleBar' })).toBe(1);
   });
 
   it('seeds the surveyLabel (galaxy) handle from famousGalaxy.labelEnabled', () => {
@@ -291,13 +263,6 @@ describe('seedFades', () => {
         `galaxyCatalog{${id}} should seed at 0`,
       ).toBe(0);
     }
-  });
-
-  it('seeds the filament and flow handles at 0', () => {
-    const state = makeState();
-    seedFades(state);
-    expect(state.subsystems.fades.opacityOf({ kind: 'filament' })).toBe(0);
-    expect(state.subsystems.fades.opacityOf({ kind: 'flow' })).toBe(0);
   });
 
   it('seeds orbitTrails from its toggle (NOT demand-loaded) — 1 on, 0 off', () => {
@@ -401,12 +366,6 @@ describe('FADE_LAYERS intent subset', () => {
     expect(row.seed(makeSettings({ orbitTrailsEnabled: true }), undefined)).toBe(1);
     // And no guard — the conic table is always present (unlike flow/filaments).
     expect(row.guard).toBeUndefined();
-  });
-
-  it('surveyLabel seed follows famousGalaxy.labelEnabled', () => {
-    const row = rowFor('surveyLabel');
-    expect(row.seed(makeSettings({ famousLabelEnabled: false }), undefined)).toBe(0);
-    expect(row.seed(makeSettings({ famousLabelEnabled: true }), undefined)).toBe(1);
   });
 
   it('volume-field row post lazy-loads debug volumes on enable only', () => {

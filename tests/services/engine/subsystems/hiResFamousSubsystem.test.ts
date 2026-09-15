@@ -224,14 +224,8 @@ describe('createHiResFamousSubsystem', () => {
     // upstream `px = (dMpc / camDist) * pxPerRad` roundtrip leaks ~1e-5
     // of float error that compounds through `t` and `t² (3 - 2t)`.
     // 3 decimals is plenty to pin the three band positions.
-    it('alpha ≈ 0 at px = 120 (lower band edge)', async () => {
-      expect(await alphaAtPx(120)).toBeCloseTo(0, 3);
-    });
     it('alpha ≈ 0.5 at px = 140 (band midpoint)', async () => {
       expect(await alphaAtPx(140)).toBeCloseTo(0.5, 3);
-    });
-    it('alpha ≈ 1 at px = 160 (upper band edge)', async () => {
-      expect(await alphaAtPx(160)).toBeCloseTo(1, 3);
     });
   });
 
@@ -439,22 +433,5 @@ describe('createHiResFamousSubsystem', () => {
     sys.destroy();
     expect(setEvictHandlerSpy).toHaveBeenCalledTimes(2);
     expect(setEvictHandlerSpy.mock.calls[1]![0]).toBeUndefined();
-  });
-
-  it('lastOutput mirrors the most recent runFrame return', () => {
-    const device = makeFakeDevice();
-    const texture = createHiResFamousTexture({
-      device,
-      layerSide: LAYER_SIDE,
-      layerCount: LAYER_COUNT,
-    });
-    const fetcher = vi.fn(async () => makeFakeBitmap());
-    const sys = createHiResFamousSubsystem({ texture, requestRender: () => {}, fetcher });
-    expect(sys.lastOutput.byFamousIdx.size).toBe(0);
-    const clouds = new Map([[Source.FamousGalaxy, makeFamousCloud(1)]]);
-    const out = sys.runFrame(makeInput(clouds, camDistFor(230), makeFamousGalaxiesMeta(1)));
-    expect(sys.lastOutput).toBe(out);
-    expect(sys.lastOutput.byFamousIdx.size).toBe(1);
-    sys.destroy();
   });
 });

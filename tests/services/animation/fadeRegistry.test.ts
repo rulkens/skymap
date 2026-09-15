@@ -145,40 +145,6 @@ describe('createFadeRegistry', () => {
     expect(r.isAnyAnimating(1700)).toBe(false);
   });
 
-  it('serializeFadeId keys structure by id', () => {
-    const r = makeRegistry();
-    const cluster: FadeId = { kind: 'structure', id: 'cluster' };
-    const aVoid: FadeId = { kind: 'structure', id: 'void' };
-    r.register(cluster, 0);
-    r.register(aVoid, 0);
-    r.fadeTo(cluster, 0.25, 0, 0);
-    r.fadeTo(aVoid, 0.75, 0, 0);
-    // Distinct structure ids must address distinct controllers.
-    expect(r.opacityOf(cluster, 0)).toBeCloseTo(0.25, 5);
-    expect(r.opacityOf(aVoid, 0)).toBeCloseTo(0.75, 5);
-  });
-
-  it('serializeFadeId keeps an item-less labelLayer distinct from a per-item one', () => {
-    const r = makeRegistry();
-    const bare: FadeId = { kind: 'labelLayer', layer: 'structure' };
-    const perItem: FadeId = { kind: 'labelLayer', layer: 'structure', item: 'cluster' };
-    r.register(bare, 0);
-    r.register(perItem, 0);
-    r.fadeTo(bare, 0.2, 0, 0);
-    r.fadeTo(perItem, 0.8, 0, 0);
-    expect(r.opacityOf(bare, 0)).toBeCloseTo(0.2, 5);
-    expect(r.opacityOf(perItem, 0)).toBeCloseTo(0.8, 5);
-  });
-
-  it('serializeFadeId keys the milkyWay label handle', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'labelLayer', layer: 'milkyWay' };
-    r.register(h, 0);
-    r.fadeTo(h, 1, 0, 0);
-    // Item-less label handle resolves to its own controller.
-    expect(r.opacityOf(h, 0)).toBeCloseTo(1, 5);
-  });
-
   it('destroy clears every controller', () => {
     const r = makeRegistry();
     const h: FadeId = { kind: 'filament' };

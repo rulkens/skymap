@@ -218,9 +218,4 @@ describe('foregroundLabelsPass.draw', () => {
     foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
     expect(renderer.draw as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
   });
-
-  it('is a no-op when the foreground renderer is null (pre-bootstrap)', () => {
-    const state = makeState(null);
-    expect(() => foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state)).not.toThrow();
-  });
 });

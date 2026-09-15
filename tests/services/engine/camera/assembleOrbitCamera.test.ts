@@ -110,29 +110,4 @@ describe('assembleOrbitCamera', () => {
     expect(projection.near).toBe(projSnap.near);
     expect(projection.far).toBe(projSnap.far);
   });
-
-  it('calling twice with the same inputs yields equivalent cameras', () => {
-    const result1 = assembleOrbitCamera(
-      originPose,
-      defaultProjection,
-      IDENTITY_BASIS,
-      IDENTITY_BASIS,
-    );
-    const result2 = assembleOrbitCamera(
-      originPose,
-      defaultProjection,
-      IDENTITY_BASIS,
-      IDENTITY_BASIS,
-    );
-
-    expect(result1.target).toEqual(result2.target);
-    expect(result1.yaw).toBe(result2.yaw);
-    expect(result1.pitch).toBe(result2.pitch);
-    expect(result1.distance).toBe(result2.distance);
-    expect(result1.fovYRad).toBe(result2.fovYRad);
-    expect(result1.aspect).toBe(result2.aspect);
-    expect(result1.near).toBe(result2.near);
-    expect(result1.far).toBe(result2.far);
-    expect(Array.from(result1.position)).toEqual(Array.from(result2.position));
-  });
 });

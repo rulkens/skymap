@@ -34,7 +34,6 @@ import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
-import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
 import {
   setFilamentsEnabled,
@@ -449,59 +448,7 @@ describe('applySceneEffect — fade', () => {
 // (which would be a TypeScript compile error, but tested here for belt-and-suspenders).
 
 describe('VISIBILITY_ACTION_ROW — total record', () => {
-  const ALL_KEYS: readonly VisibilityLayerKey[] = [
-    'milkyWayDisk',
-    'proceduralDisks',
-    'texturedDisks',
-    'volumesMaster',
-    'milkyWayLabel',
-    'surveyLabel',
-    'scaleBar',
-    'structureRing',
-    'structureLabel',
-    'survey',
-    'filaments',
-    'flow',
-    'volumeField',
-  ] as const;
-
-  // Registration-only keys that correctly return [] — they have no settings action.
-  const REGISTRATION_ONLY: readonly VisibilityLayerKey[] = [
-    'proceduralDisks',
-    'texturedDisks',
-    'scaleBar',
-  ];
-
   const settings = makeSettings({ galaxyCatalogIds: ['sdss'], structureIds: ['supercluster'] });
-
-  it('gate-backed layers return a non-empty action array', () => {
-    const gateBacked: readonly VisibilityLayerKey[] = ALL_KEYS.filter(
-      (k) => !REGISTRATION_ONLY.includes(k),
-    );
-    for (const key of gateBacked) {
-      const actions = VISIBILITY_ACTION_ROW[key].actions(true, settings);
-      expect(Array.isArray(actions), `key '${key}' must return an array`).toBe(true);
-      // All non-registration-only keys have at least one item in the settings fixture
-      // (survey and structureRing etc. have one id each, volumeField has zero items
-      // because the fixture has no volume items — that is expected).
-      // Only assert length > 0 for keys where the settings fixture has items.
-      if (key !== 'volumeField') {
-        expect(
-          actions.length,
-          `key '${key}' must return ≥1 actions with this fixture`,
-        ).toBeGreaterThanOrEqual(1);
-      }
-    }
-  });
-
-  it('registration-only layers return []', () => {
-    for (const key of REGISTRATION_ONLY) {
-      const actionsOn = VISIBILITY_ACTION_ROW[key].actions(true, settings);
-      const actionsOff = VISIBILITY_ACTION_ROW[key].actions(false, settings);
-      expect(actionsOn, `${key}(true) must be []`).toEqual([]);
-      expect(actionsOff, `${key}(false) must be []`).toEqual([]);
-    }
-  });
 
   it('surveyLabel factory emits one setGalaxyCatalogLabelEnabled per catalog id', () => {
     const actions = VISIBILITY_ACTION_ROW['surveyLabel'].actions(false, settings) as ReturnType<

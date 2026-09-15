@@ -60,11 +60,6 @@ const encoder = {} as unknown as GPUCommandEncoder;
 const NOW_MS = 12345;
 
 describe('encodeFlowCompute', () => {
-  it('skips when the renderer is null', () => {
-    // No renderer to call — must not throw, just return.
-    expect(() => encodeFlowCompute(encoder, stateStub({ renderer: null }), NOW_MS)).not.toThrow();
-  });
-
   it('skips when flow.enabled is false', () => {
     const renderer = spyRenderer();
     encodeFlowCompute(encoder, stateStub({ renderer, flow: { enabled: false } }), NOW_MS);

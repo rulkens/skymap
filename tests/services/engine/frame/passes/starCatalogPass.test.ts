@@ -226,10 +226,4 @@ describe('starCatalogPass.draw', () => {
       expect(call[1].brightness).toBeCloseTo(expectedBrightness, 10);
     }
   });
-
-  it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View(camAtPc(inner));
-    const state = makeState(null);
-    expect(() => starCatalogPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
 });

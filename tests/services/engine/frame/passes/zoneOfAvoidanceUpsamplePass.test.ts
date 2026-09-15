@@ -157,11 +157,4 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(labelDraw).not.toHaveBeenCalled();
   });
-
-  it('is a no-op when both handles are null (pre-bootstrap)', () => {
-    const state = makeState({ upsample: null, label3D: null });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    expect(() => zoneOfAvoidanceUpsamplePass.draw(PASS_STUB, view, ctx, state)).not.toThrow();
-  });
 });

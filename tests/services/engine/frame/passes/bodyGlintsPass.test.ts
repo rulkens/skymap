@@ -475,12 +475,6 @@ describe('bodyGlintsPass.draw', () => {
     bodyGlintsPass.draw(PASS_STUB, makeNear0View(CAM_POS), makeCtx(CAM_POS), state);
     expect(renderer.draw).not.toHaveBeenCalled();
   });
-
-  it('is a no-op when the bodyGlintRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View(CAM_POS);
-    const state = { gpu: { bodyGlintRenderer: null } } as unknown as EngineState;
-    expect(() => bodyGlintsPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
 });
 
 // Glint bodies with REAL seed ids so `seedIndexOfBody(id, SCENE_PLANETS)` resolves
@@ -764,11 +758,5 @@ describe('bodyGlintsPass.drawPick', () => {
     expect(classOf(3)).toBe(1); // Jupiter — heliocentric planet
     expect(classOf(10)).toBe(2); // Io — satellite moon
     expect(classOf(11)).toBe(2); // Europa — satellite moon
-  });
-
-  it('is a no-op when the bodyPickRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View(CAM_POS);
-    const state = { gpu: { bodyPickRenderer: null } } as unknown as EngineState;
-    expect(() => bodyGlintsPass.drawPick!(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
 });

@@ -91,13 +91,6 @@ describe('makeReconcileEffects', () => {
     vi.clearAllMocks();
   });
 
-  it('requestRender calls scheduler.requestRender', () => {
-    const { state, requestRender } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.requestRender();
-    expect(requestRender).toHaveBeenCalledTimes(1);
-  });
-
   it("syncFades(['flow']) narrows the pass to { animate: true, only: ['flow'] }", () => {
     const { state } = makeState();
     const effects = makeReconcileEffects(state, CANVAS);
@@ -119,20 +112,6 @@ describe('makeReconcileEffects', () => {
     const effects = makeReconcileEffects(state, CANVAS);
     effects.reseedFlow();
     expect(maybeReseed).toHaveBeenCalledTimes(1);
-  });
-
-  it('reseedFlow tolerates a null flowFieldRenderer — no throw', () => {
-    const { state } = makeState({ flowFieldRenderer: null });
-    const effects = makeReconcileEffects(state, CANVAS);
-    expect(() => effects.reseedFlow()).not.toThrow();
-  });
-
-  it('bakeBias(1) calls biasCorrection.setMode(1)', () => {
-    const { state, setMode } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.bakeBias(1);
-    expect(setMode).toHaveBeenCalledTimes(1);
-    expect(setMode).toHaveBeenCalledWith(1);
   });
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {

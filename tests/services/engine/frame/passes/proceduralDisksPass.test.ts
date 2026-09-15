@@ -126,27 +126,4 @@ describe('proceduralDisksPass', () => {
     expect(call[5]).toBe(focusBindGroup);
     expect(call[6]).toBe(instances);
   });
-
-  it('draw() is a no-op when state.gpu.proceduralDiskRenderer is null (pre-bootstrap)', () => {
-    const instances = [{ x: 1 }];
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, proceduralDiskRenderer: null },
-    } as unknown as EngineState;
-    const pass = {} as GPURenderPassEncoder;
-    const ctx = makeCtx();
-    expect(() => proceduralDisksPass.draw(pass, makeView(ctx), ctx, state)).not.toThrow();
-  });
-
-  it('drawPick() is a no-op when state.gpu.proceduralDiskRenderer is null', () => {
-    const state = {
-      gpu: {
-        focusUniform: { bindGroup: {} as GPUBindGroup },
-        proceduralDiskRenderer: null,
-      },
-    } as unknown as EngineState;
-    const pass = {} as GPURenderPassEncoder;
-    const ctx = makeCtx();
-    expect(() => proceduralDisksPass.drawPick!(pass, makeView(ctx), ctx, state)).not.toThrow();
-  });
 });

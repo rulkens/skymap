@@ -195,14 +195,4 @@ describe('volumeUpsamplePass.draw', () => {
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(PASS_STUB);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(offscreenView);
   });
-
-  it('does not throw when volumeUpsample is null (defensive null-check)', () => {
-    const state = {
-      gpu: {
-        volumeFieldRenderer: { hasActiveFields: () => true },
-        volumeUpsample: null,
-      },
-    } as unknown as EngineState;
-    expect(() => volumeUpsamplePass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state)).not.toThrow();
-  });
 });

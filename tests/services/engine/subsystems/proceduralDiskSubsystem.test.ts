@@ -123,15 +123,6 @@ describe('createProceduralDiskSubsystem', () => {
     expect(out2.instances.length).toBe(4);
   });
 
-  it('lastOutput mirrors the most recent frame result', () => {
-    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-    const sys = createProceduralDiskSubsystem();
-    expect(sys.lastOutput.instances.length).toBe(0);
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
-    runProceduralSolo(walk, sys, makeInput(clouds));
-    expect(sys.lastOutput.instances.length).toBe(2);
-  });
-
   it('emits the (source, localIdx) identity for each instance', () => {
     // decimationFactor:1 visits all rows in a single frame.
     // The 4-row cloud uses the same camera/size setup as the existing

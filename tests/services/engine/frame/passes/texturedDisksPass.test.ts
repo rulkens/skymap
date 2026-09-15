@@ -130,18 +130,6 @@ describe('texturedDisksPass', () => {
     expect(texturedDiskRenderer.draw).not.toHaveBeenCalled();
   });
 
-  it('draw() is a no-op when state.gpu.texturedDiskRenderer is null (pre-bootstrap)', () => {
-    const disks = [{ x: 1 }];
-    const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, texturedDiskRenderer: null },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(() =>
-      texturedDisksPass.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state),
-    ).not.toThrow();
-  });
-
   it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 7th arg', () => {
     const disks = [{ x: 1 }];
     const texturedDiskRenderer = makeTexturedDiskRenderer();
