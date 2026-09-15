@@ -22,7 +22,7 @@ import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns'
 import { surfaceTileInBand } from '../../../src/utils/scene/surfaceTileInBand';
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
-import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
+import { EARTH_TILE_LOD_BIAS, EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
@@ -53,11 +53,10 @@ const GLOBAL_BANDS: readonly SurfaceTileBand[] = [
 ];
 
 /** Height residency IS the bake's own tile set (`surfaceTileInBand` over the
- *  bands), never "everywhere": the complete pyramid the bake owes the walk,
- *  and the only state in which the refine rule's "every visible child" is
- *  satisfiable at all. Height gates refinement (§5.2), so a stub resolving
- *  nothing would pin every walk at the base level and say nothing about the
- *  cull and refine rules these fixtures exist for. */
+ *  bands), never "everywhere": the complete pyramid the bake owes the walk.
+ *  A leaf with no height ancestor is dropped, so a stub resolving nothing
+ *  would empty every `cut` and say nothing about the rules these fixtures
+ *  exist for. */
 function heightFrom(bands: readonly SurfaceTileBand[]) {
   return (tile: SurfaceTileId) =>
     tile.product === 'height' && surfaceTileInBand(bands, EARTH_TILE_PX, tile.z, tile.x, tile.y)
@@ -70,7 +69,7 @@ function heightFrom(bands: readonly SurfaceTileBand[]) {
 const HEIGHT_ONLY = heightFrom(GLOBAL_BANDS);
 
 /** Wraps an albedo-only stub so height resolves around it, so these fixtures
- *  go on testing albedo resolution rather than the refinement gate. */
+ *  go on testing albedo resolution rather than height inheritance. */
 function withHeight<T>(
   albedo: (tile: SurfaceTileId) => T,
   bands: readonly SurfaceTileBand[] = GLOBAL_BANDS,
@@ -570,141 +569,88 @@ describe('cutSurfaceTiles', () => {
   });
 
   /**
-   * Spec §5.2, the invariant the whole crack argument rests on: a leaf draws
-   * from its OWN height tile, never an ancestor's — so height residency gates
-   * REFINEMENT, and the height level the cut samples is a function of the cut
-   * alone. Broken, this is silent until F2 displaces geometry, and then it is
-   * cracks that flicker while tiles stream rather than a stable seam.
+   * R14: refinement is residency-blind and a leaf inherits the deepest
+   * resident height ancestor, so a tile still in flight is a coarser lattice
+   * rather than a hole. The old rule (own tile or nothing) put holes through
+   * to the stars below 150 km, where the base globe is already faded out.
    */
-  describe('height-gated refinement', () => {
-    /** Albedo resolvable everywhere, height only down to `deepestZ` — the
-     *  streaming state where the next level's height tiles have not landed. */
-    function heightTo(deepestZ: number) {
-      return (tile: SurfaceTileId) =>
-        tile.product === 'height' && tile.z > deepestZ ? null : WHOLE_ATLAS;
-    }
+  describe('inherited height lattice', () => {
+    const SUB_CAMERA_UV: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
 
-    /** Deep enough that only the height gate can be what stops the walk. */
-    const HEIGHT_CEILING = BASE_LEVEL + 2;
-
-    it('never emits a leaf deeper than the level whose height tiles are resident', () => {
-      expect(expectedLevel(1000)).toBeGreaterThan(HEIGHT_CEILING);
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot: heightTo(HEIGHT_CEILING) });
-
-      expect(result.cut.length).toBeGreaterThan(0);
-      expect(result.cut.every((t) => t.id.z <= HEIGHT_CEILING)).toBe(true);
-      // And it does reach that level: a gate that dropped everything would
-      // satisfy the line above while saying nothing.
-      expect(result.cut.some((t) => t.id.z === HEIGHT_CEILING)).toBe(true);
-    });
-
-    it('requests the blocking children in both products, one level ahead of the cut', () => {
-      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot: heightTo(HEIGHT_CEILING) });
-      const [px, py] = surfaceTileXyForUv(
-        [20 / 360 + 0.5, 15 / 180 + 0.5],
-        HEIGHT_CEILING,
-        EARTH_TILE_PX,
-      );
-      expect(
-        result.cut.some((t) => t.id.z === HEIGHT_CEILING && t.id.x === px && t.id.y === py),
-        `the sub-camera tile is the cut's leaf at z${HEIGHT_CEILING}`,
-      ).toBe(true);
-
-      const keys = new Set(
-        result.requests.requests.map(
-          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
-        ),
-      );
-      for (let q = 0; q < 4; q++) {
-        const cx = px * 2 + (q & 1);
-        const cy = py * 2 + (q >> 1);
-        for (const product of ['albedo', 'height']) {
-          expect(
-            keys.has(`${product}/${HEIGHT_CEILING + 1}/${cx}/${cy}`),
-            `${product} child ${cx},${cy}`,
-          ).toBe(true);
-        }
-      }
-      // `zWin` reports DEMAND, not residency: it is the subsystem's engage
-      // gate, so a cold start that cannot refine must still ask for the level
-      // that would unblock it, or nothing is ever fetched.
-      expect(result.requests.zWin).toBe(HEIGHT_CEILING + 1);
-    });
-
-    it("refines onto the ready children while one visible child's height is missing", () => {
-      // R13. Three of a quad's height tiles have landed and the fourth has
-      // not. Holding the PARENT as the leaf would discard the three ready
-      // subtrees every time a culled sibling scrolls into view (a base-level
-      // parent is never resident, so a whole root quad would vanish to the
-      // base globe); instead the ready children are drawn and the missing
-      // one is a hole the base globe fills for one round trip. §5.2 holds:
-      // nothing is ever drawn on an ancestor's heights.
-      const z = BASE_LEVEL + 1;
-      const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
-      const [px, py] = surfaceTileXyForUv(subUv, z, EARTH_TILE_PX);
-      // The quadrant of (px, py) that is NOT the sub-camera child, so the
-      // blocked child is one the walk definitely sees.
-      const [cx0, cy0] = surfaceTileXyForUv(subUv, z + 1, EARTH_TILE_PX);
-      const missingX = cx0 === px * 2 ? px * 2 + 1 : px * 2;
-      const missingY = cy0;
-
-      const baked = heightFrom(GLOBAL_BANDS);
-      const residentSlot = (tile: SurfaceTileId) => {
-        if (tile.product !== 'height') return WHOLE_ATLAS;
-        if (tile.z === z + 1 && tile.x === missingX && tile.y === missingY) return null;
-        return baked(tile);
-      };
+    it('refines to the screen-error level on an ancestor height tile', () => {
+      // Height resident only at MIN_TILE_LEVEL; albedo everywhere.
+      const HEIGHT_LEVEL = MIN_TILE_LEVEL;
+      const residentSlot = (tile: SurfaceTileId) =>
+        tile.product !== 'height'
+          ? WHOLE_ATLAS
+          : tile.z === HEIGHT_LEVEL
+            ? { ...WHOLE_ATLAS, slot: 9 }
+            : null;
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
 
-      const under = (
-        t: { id: { z: number; x: number; y: number } },
-        tz: number,
-        tx: number,
-        ty: number,
-      ) => t.id.z >= tz && t.id.x >> (t.id.z - tz) === tx && t.id.y >> (t.id.z - tz) === ty;
+      const z = expectedLevel(1000);
+      expect(z).toBeGreaterThan(HEIGHT_LEVEL);
       expect(
-        result.cut.some((t) => t.id.z === z && t.id.x === px && t.id.y === py),
-        'the parent is not the leaf',
-      ).toBe(false);
-      expect(
-        result.cut.some((t) => under(t, z + 1, missingX, missingY)),
-        'nothing is drawn under the missing child',
-      ).toBe(false);
-      for (let q = 0; q < 4; q++) {
-        const cx = px * 2 + (q & 1);
-        const cy = py * 2 + (q >> 1);
-        if (cx === missingX && cy === missingY) continue;
-        expect(
-          result.cut.some((t) => under(t, z + 1, cx, cy)),
-          `ready child ${q} is drawn`,
-        ).toBe(true);
-      }
+        result.cut.some((t) => t.id.z === z),
+        'the cut reaches the screen-error level',
+      ).toBe(true);
+      expect(result.cut.every((t) => t.id.z - t.height.levelDelta === HEIGHT_LEVEL)).toBe(true);
 
-      // All four children are still fetched, the resident three included: a
-      // request is also the LRU touch that keeps them alive while the fourth
-      // is in flight.
+      // Hand-derived sub-rect: the leaf's low `z - HEIGHT_LEVEL` bits index its
+      // block of the ancestor's 128 cells, rows north-first on both sides.
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, EARTH_TILE_PX);
+      const leaf = result.cut.find((t) => t.id.z === z && t.id.x === x && t.id.y === y);
+      expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
+      const span = 1 << (z - HEIGHT_LEVEL);
+      const cells = 128 >> (z - HEIGHT_LEVEL);
+      expect(leaf!.height.slot).toBe(9);
+      expect(leaf!.height.levelDelta).toBe(z - HEIGHT_LEVEL);
+      expect(leaf!.height.originPosts).toEqual([(x % span) * cells, (y % span) * cells]);
+    });
+
+    it('drops a leaf with no height ancestor at all, and still requests both products', () => {
+      const residentSlot = (tile: SurfaceTileId) =>
+        tile.product === 'height' ? null : WHOLE_ATLAS;
+
+      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+
+      expect(result.cut).toEqual([]);
       const keys = new Set(
         result.requests.requests.map(
           (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
         ),
       );
-      for (let q = 0; q < 4; q++) {
-        for (const product of ['albedo', 'height']) {
-          expect(
-            keys.has(`${product}/${z + 1}/${px * 2 + (q & 1)}/${py * 2 + (q >> 1)}`),
-            `${product} child ${q}`,
-          ).toBe(true);
-        }
-      }
+      const z = expectedLevel(1000);
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, EARTH_TILE_PX);
+      for (const product of ['albedo', 'height'])
+        expect(keys.has(`${product}/${z}/${x}/${y}`), `${product} at the required level`).toBe(
+          true,
+        );
+    });
+
+    it('holds the height working set at a 60 degree tilt to what the atlas can hold', () => {
+      // The measured cause of the permanent holes: a tilted view's foreshortened
+      // horizon slivers each demanded the deepest level, so the walk asked for
+      // far more height tiles than the atlas has slots and the allocator refused
+      // the excess for good. At 300 km / 60 deg tilt with the shipped lod bias
+      // this fixture asks for 1855 height tiles under the max-extent screen
+      // error (the live app measured 1848 at that pose).
+      const result = cutSurfaceTiles({
+        ...tiltedAt(300_000, 60),
+        bands: GLOBAL_BANDS,
+        lodBias: EARTH_TILE_LOD_BIAS,
+        residentSlot: HEIGHT_ONLY,
+      });
+
+      const heightRequests = result.requests.requests.filter((r) => r.tile.product === 'height');
+      expect(heightRequests.length).toBe(1855);
     });
 
     it('a pan that scrolls an unfetched sibling into view keeps every settled leaf', () => {
-      // The flicker the eye-check found: with residency settled for one pose,
-      // a small pan brings one z5 child of a base-level root into the frustum
-      // with no height tile. The root must not fall back to being the leaf
-      // (it is never atlas-resident, so its 12 settled z7 leaves would vanish
-      // to the base globe until three sequential height round trips landed).
+      // The flicker the eye-check found, now a regression guard: with residency
+      // settled for one pose, a small pan brings tiles with no height into the
+      // frustum. Nothing already on screen may vanish while they stream.
       const key = (t: SurfaceTileId) => `${t.product}/${t.z}/${t.x}/${t.y}`;
       const resident = new Set<string>();
       const residentSlot = (t: SurfaceTileId) => (resident.has(key(t)) ? WHOLE_ATLAS : null);

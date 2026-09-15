@@ -366,7 +366,7 @@ describe('surfaceTileSubsystem debug snapshot', () => {
           readyAtMs: 0,
           fallback: null,
         },
-        heightSlot: 0,
+        height: { slot: 0, levelDelta: 0, originPosts: [0, 0] },
         edgeCoarser: [0, 0, 0, 0],
       },
     ]);
@@ -604,7 +604,7 @@ describe('surfaceTileSubsystem lastCut', () => {
           readyAtMs: 0,
           fallback: null,
         },
-        heightSlot: 0,
+        height: { slot: 0, levelDelta: 0, originPosts: [0, 0] },
         edgeCoarser: [0, 0, 0, 0],
       },
     ];
