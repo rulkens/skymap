@@ -374,3 +374,37 @@ No code. Runs on **this worktree's own dev server** — note its port from the `
 - Debug panel's `height n/256` still climbs on approach, unchanged from F1.
 
 **Deferral boundary** — out of scope here, explicitly: `SurfaceHeightField`, `ceilingHeightM`, `raycast` picking, the terrain-aware horizon cap, the compiled 64×32 min/max grid (and `reliefM` derived from it), cloud clearance (all F3); Mars rows, imagery and rover sites (F4); the `geometricResidualM` refinement term (§6, deferred); renaming the draw side (F1's R6); any re-bake, manifest or `public/data` change.
+
+---
+
+## Amendment R14 (F2 half) — sample the inherited lattice; base globe always drawn
+
+Ruled 2026-09-15 with F1's R14 (see the F1 plan's `## Amendment R14`): a leaf's height is the deepest resident tile in its ancestor chain, flattened into the leaf's sub-rect (`SurfaceCutTile.height = { slot, levelDelta, originPosts }`, `cells = 128 >> levelDelta`), and balance/edge codes work on the height level. R1's strict decimation makes the sub-rect exactly the lattice the ancestor draws, so the collapse rule generalises to "sample at doubled stride" and no new crack appears. Code 2 (band seam) is now simply "the neighbour's height level is two or more coarser after balance" — balance leaves such a step only under R12's band-ceiling exemption.
+
+**Contract (`PatchInstance`, still 80 B):** `heightSlotOrigin: vec2u @64` becomes the leaf's sub-rect origin in ATLAS posts (slot origin + `originPosts`); `edgeCoarser: u32 @72` unchanged; `heightCells: u32 @76` (was padding) = `128 >> levelDelta`. Parity-tested in the existing layout test.
+
+**Lattice sampler (`vertex.wesl` + `fragment.wesl`, one shared function in the tile shader's lib):** `latticeHeightM(origin: vec2u, p: vec2f, stride: f32) -> f32` — `q = stride * floor(p / stride)`, `f = fract(p / stride)`, four `textureLoad`s at `origin + q + {0, stride}²`, bilinear. A vertex at patch uv `(s, t)` samples `p = uv * cells` at `stride = 1` (own tile: `cells = 128`, `n = 64`, so `p` lands on even posts and the load is exact, as today). A vertex on an edge whose code is 1 samples at `stride = 2` — that IS the coarse neighbour's lattice along that edge (its posts are our even posts), so the edge is crack-free by construction; `collapseTemplateIndex` and its TS twin go. The fragment normal takes forward differences of the same sampler at `stride = 1` around `floor(p)`, with post spacing `patchExtent / cells` in metres — the cell of the lattice actually sampled, not a fixed 1/128.
+
+### Task B1: PatchInstance `heightCells`, lattice sampler, generalised collapse
+
+**Files:** `src/services/gpu/shaders/bodies/earthSurfaceTile/{io,vertex,fragment}.wesl`, `src/services/gpu/renderers/bodies/earthSurfaceTileRenderer.ts` (`writePatchInstance`), `src/utils/gpu/surfacePatchPostIndex.ts` → replaced by `src/utils/gpu/latticeHeightSample.ts` (TS twin of the sampler, f64 reference), delete `src/utils/gpu/collapseTemplateIndex.ts` + test, `src/utils/gpu/surfaceNormalFromHeightCell.ts` gains `cells`; tests mirror.
+
+- [ ] Layout test: `heightCells` at 76, record 80 B.
+- [ ] TS twin tests: own tile stride 1 at even posts returns the post exactly; a `levelDelta = 2` leaf (`cells = 32`) at `n = 64` returns the bilinear midpoint between two ancestor posts, hand-computed; stride 2 on an edge returns the average of the two even posts around an odd post (the old collapse result, bit-for-bit).
+- [ ] WGSL validated with `wesl link` + `naga` (no tint on this machine); `npm run build`.
+- [ ] Commit `feat(terrain): sample the inherited height lattice; edge collapse as a doubled-stride sample`.
+
+### Task B2: base globe always drawn
+
+**Files:** delete `src/utils/scene/baseGlobeFadeAlpha.ts` + test, `EARTH_BASE_GLOBE_FADE_*` in `earthTileParams.ts`, the `baseGlobeAlpha` uniform path in `earthRenderer.ts`/`earth/fragment.wesl`/`earthPass` (grep `baseGlobeAlpha`, `baseGlobeFadeAlpha`); `atmosphereParams`/cloud shells if they read the constants (grep).
+
+- [ ] The globe sits at `innerBoundRadiusM` (T7), so the depth fight the fade was for is gone; alpha is 1 always. A leaf with no resident ancestor (one round trip for a brand-new root child) now shows the base globe, not stars.
+- [ ] Commit `feat(terrain): base globe always drawn — the inner-bound globe fills what no tile covers yet`.
+
+### Task B3: docs
+
+- [ ] Spec §7.3 (crack accounting: collapse = doubled-stride sample; code 2 = post-balance step ≥ 2), §7.4 (fade gone), F2-R1/R2/R7 notes; `docs/RENDERER.md`; this plan's DoD (`heightCells`, twins list, no fade). Commit `docs(terrain): R14 F2 half`.
+
+### Task B4: frustum-cull headroom for displaced patches (from the F1 R14 review)
+
+F1's `probe` culls with a sphere of radius 1.5× the corner chord about the patch centre — vertical headroom ≈ 1.1× the half-diagonal (≈ 3.9 km at z13, ≈ 60 m at z19). Once F2 displaces geometry, a summit near a side plane can be on screen while its datum patch is culled. A CONSTANT relief margin is wrong (it turns every tile within that many metres of the camera on the eye-plane line into a screen-filling straddler at ground level — the inflation R14 just removed). Use the per-tile `subtreeMinM/MaxM` the bake already writes in every height tile header: `residentSlot` for height returns the resident ancestor's range, which bounds every descendant by construction, and `probe` adds `max(|min|, |max|) / radiusM` to the sphere radius for that node (0 when nothing is resident — the datum, as F1). Test: a z13 patch whose subtree max is 8 km, centred 5 km outside a side plane's datum footprint, is NOT culled; with a 0 m range it is.
