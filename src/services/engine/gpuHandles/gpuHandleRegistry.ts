@@ -30,11 +30,7 @@ import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsam
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createEarthSurfaceTileRenderer } from '../../gpu/renderers/bodies/earthSurfaceTileRenderer';
-import { createSurfaceTileMeshCache } from '../../gpu/resources/surfaceTileMeshCache';
-import {
-  EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY,
-  EARTH_SURFACE_TILE_MESH_RESOLUTION,
-} from '../../../data/bodies/earthTileParams';
+import { EARTH_SURFACE_TILE_MESH_RESOLUTION } from '../../../data/bodies/earthTileParams';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
 import { createRingRenderer } from '../../gpu/renderers/bodies/ringRenderer';
@@ -428,9 +424,6 @@ export const GPU_HANDLE_ROWS = [
       ),
   },
   {
-    // The mesh cache is constructed here, alongside the one renderer that
-    // reads it — a plain CPU-side LRU (see surfaceTileMeshCache.ts), not a
-    // GPU handle of its own, so it needs no row here beyond this closure.
     key: 'earthSurfaceTileRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createEarthSurfaceTileRenderer(
@@ -438,10 +431,6 @@ export const GPU_HANDLE_ROWS = [
         HDR_TARGET_FORMAT,
         FOREGROUND_DEPTH_FORMAT,
         SLAB_REVERSED_Z[NEAR0]!,
-        createSurfaceTileMeshCache(
-          EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY,
-          EARTH_SURFACE_TILE_MESH_RESOLUTION,
-        ),
         EARTH_SURFACE_TILE_MESH_RESOLUTION,
       ),
   },

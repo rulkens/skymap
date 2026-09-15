@@ -17,20 +17,19 @@ export type FrameStep =
   | ({
       kind: 'render';
       slab: number;
-      /** The passes this step draws, in draw order. */
       passes: readonly ContentPass[];
       /**
-       * Depth load-op for this step's pass. Absent ⇒ the same first-touch rule
-       * the colour attachment follows (clear on the frame's first pass against
-       * the target, load after). Steps that SHARE a depth target but must not
-       * share its depth — successive slabs drawn back-to-front into one
-       * foreground row — declare `'clear'` to restart depth mid-frame.
+       * How this step treats the target row's depth. Absent ⇒ the colour
+       * attachment's first-touch rule (clear on the frame's first pass against
+       * the target, load after). `'clear'` restarts depth mid-frame, for
+       * successive slabs drawn back-to-front into one foreground row.
+       * `'sample'` attaches no depth at all — WebGPU forbids binding a view as
+       * a texture while it is attached to the same pass.
        */
-      depthLoad?: 'clear' | 'load';
+      depth?: 'clear' | 'load' | 'sample';
       /**
-       * Authored GPU-timing slot suffix (`RenderStepSpec.slot`), carried
-       * through expansion so a merged step keeps the FIRST line's slot name.
-       * Absent ⇒ this step bills the bare `groupKeyOf(step)`.
+       * Authored GPU-timing slot suffix (`RenderStepSpec.slot`); a merged step
+       * keeps the FIRST line's. Absent ⇒ bills the bare `groupKeyOf(step)`.
        */
       slot?: string;
     } & (

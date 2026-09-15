@@ -27,9 +27,10 @@ registered twice:
   the first registry already owns.
 
 This is listed in `subsystem-sweep.md`'s vocabulary anchors alongside other
-named collisions: "`SOURCE_REGISTRY`/`SOURCE_ENTRIES`, `GALAXY_CATALOG_SOURCE_REGISTRY`
-(+companions/`CompanionAssetReq`; **COLLISION**: point sources declared in
-both this and `ASSET_WIRING`)."
+named collisions: `SOURCE_REGISTRY`/`SOURCE_ENTRIES`,
+`GALAXY_CATALOG_SOURCE_REGISTRY`, and the **COLLISION** itself — "point
+sources declared in both this and `ASSET_WIRING`". (That sweep predates the
+demand loop, so its companion-asset vocabulary has no code behind it.)
 
 ## Why it matters
 
@@ -54,7 +55,7 @@ No design done. The shape to investigate:
   entry) is ever picked up — that item's scope is wider (all sources, not
   just galaxy points) and could subsume this fix, but is `needs-design` and
   not currently scheduled, so this item should not wait on it.
-- Confirm at pickup time whether `willSourceReload.ts` or
-  `makeRunTierTransition.ts` (both reference
-  `GALAXY_CATALOG_SOURCE_REGISTRY`) encode any assumption about the two
-  registries staying separate before collapsing them.
+- Confirm at pickup time whether `wireSlots.ts:110` (the slot-mint loop, the
+  only iterator of `GALAXY_CATALOG_SOURCE_REGISTRY`) or the two lists derived
+  from the registry in `galaxyCatalogSourceRegistry.ts` encode any assumption
+  about the two registries staying separate before collapsing them.

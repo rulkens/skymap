@@ -445,8 +445,10 @@ describe('produceSceneBodyCaptions', () => {
     const state = {
       assetSlots: {
         constellations: {
-          state: () => ({
+          committed: () => ({
             kind: 'ready' as const,
+            req: undefined,
+            loadedAtMs: 0,
             value: {
               version: 1 as const,
               constellations: [{ name: 'Orion', labelAnchorPc: [1, 2, 3] as Vec3, segments: [] }],

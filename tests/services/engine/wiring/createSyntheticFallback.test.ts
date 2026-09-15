@@ -60,6 +60,7 @@ function stubSlot(): StubSlot {
     name: 'stub',
     load: load as unknown as StubSlot['load'],
     current: () => null,
+    committed: () => null,
     state: () => ({ kind: 'idle' }),
     subscribe: (fn) => {
       listeners.add(fn as Listener);

@@ -20,7 +20,7 @@ import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
 import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
-import { lensBodySlabs } from './lensBodySlabs';
+import { bodyRowSlabs } from './bodyRowSlabs';
 import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 
 export function renderFrame(input: RenderFrameInput): void {
@@ -71,7 +71,7 @@ export function renderFrame(input: RenderFrameInput): void {
           [key, [...faces].map(([face, { bodySlabs }]) => ({ face, bodySlabs }))] as const,
       ),
     ),
-    lensBodySlabs: lensBodySlabs(state, ctx),
+    bodyRowSlabs: bodyRowSlabs(state, ctx),
   });
   const { faces, frame } = partitionCaptureSteps(program);
   const shared = { ctx, state, strategy, timing: timingService, swapView, captureContexts };

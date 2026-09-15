@@ -15,7 +15,8 @@ if (marsRow === null || (marsRow.kind !== undefined && marsRow.kind !== 'iau-pol
 }
 /** Mars's SIDEREAL day, from its own Ẇ — never the orbital period (spec ruling 24). */
 const MARS_SIDEREAL_DAYS = 360 / marsRow.spinRateDegPerDay;
-const MARS_RADIUS_M = findByIdOrThrow(SCENE_PLANETS, 'mars', 'surfaceFixedSites.test').radiusM;
+const MARS_RADIUS_M = findByIdOrThrow(SCENE_PLANETS, 'mars', 'surfaceFixedSites.test').surface
+  .datumRadiusM;
 
 function offsetFromMarsMpc(simDays: number): readonly number[] {
   const states = deriveBodyStates(simDays);

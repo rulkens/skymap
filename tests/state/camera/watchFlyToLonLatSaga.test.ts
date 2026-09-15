@@ -37,7 +37,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 // Earth's derived position isn't the degenerate J2000 special case.
 const SIM_DAYS = CONST_J2000 + 9727.95;
 const EARTH = SCENE_EARTH.id as BodyId;
-const R = SCENE_EARTH.radiusM;
+const R = SCENE_EARTH.surface.datumRadiusM;
 
 describe('watchFlyToLonLatSaga', () => {
   let store: ReturnType<typeof build>;

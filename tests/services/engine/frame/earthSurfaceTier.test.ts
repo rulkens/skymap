@@ -23,13 +23,27 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { Tier } from '../../../../src/@types/data/Tier';
 
 /** An engine state whose `earth:surface` slot is in `kind` holding a request for
- *  `requestTier`, under an app-wide `tier`. */
-function stateWith(input: { tier: Tier; slot?: { kind: string; requestTier: Tier } }): EngineState {
+ *  `requestTier`, with a committed request of `committedTier` (defaults to
+ *  `requestTier`, i.e. no reload in flight), under an app-wide `tier`. */
+function stateWith(input: {
+  tier: Tier;
+  slot?: { kind: string; requestTier: Tier; committedTier?: Tier };
+}): EngineState {
   const bodyTextures = new Map<string, unknown>();
   if (input.slot) {
+    const committedTier = input.slot.committedTier;
     bodyTextures.set(bodyTextureSlotKey('earth', 'surface'), {
       state: () => ({ kind: input.slot!.kind }),
       lastRequest: () => ({ bodyId: 'earth', kind: 'surface', tier: input.slot!.requestTier }),
+      committed: () =>
+        committedTier === undefined
+          ? null
+          : {
+              kind: 'ready',
+              req: { bodyId: 'earth', kind: 'surface', tier: committedTier },
+              value: {} as ImageBitmap,
+              loadedAtMs: 0,
+            },
     });
   }
   return { tier: input.tier, assetSlots: { bodyTextures } } as unknown as EngineState;
@@ -41,7 +55,10 @@ describe('earthSurfaceTier', () => {
     // and its level is the one the tiles have to refine on top of.
     expect(
       earthSurfaceTier(
-        stateWith({ tier: 'large', slot: { kind: 'ready', requestTier: 'medium' } }),
+        stateWith({
+          tier: 'large',
+          slot: { kind: 'ready', requestTier: 'medium', committedTier: 'medium' },
+        }),
       ),
     ).toBe('medium');
   });
@@ -57,5 +74,20 @@ describe('earthSurfaceTier', () => {
         stateWith({ tier: 'small', slot: { kind: 'loading', requestTier: 'large' } }),
       ),
     ).toBe('small');
+  });
+
+  it('a body-texture slot reloading at a new tier keeps reporting the committed tier', () => {
+    // `lastRequest()` already reports the NEW tier the instant a reload starts
+    // (`AssetSlot.ts` sets it at the top of `load()`), so reading it here would
+    // claim a level the bound image doesn't carry yet. `committed()` still holds
+    // the previous ready state until the reload's commit lands.
+    expect(
+      earthSurfaceTier(
+        stateWith({
+          tier: 'large',
+          slot: { kind: 'loading', requestTier: 'large', committedTier: 'medium' },
+        }),
+      ),
+    ).toBe('medium');
   });
 });

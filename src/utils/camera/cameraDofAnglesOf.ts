@@ -65,7 +65,9 @@ export function cameraDofAnglesOf(input: {
   if (bodyId !== null) {
     const engaged = bodyStates.get(bodyId);
     const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId);
-    if (engaged !== undefined && body !== undefined) hr = hOverR(eyeMpc, engaged, body.radiusM);
+    if (engaged !== undefined && body !== undefined) {
+      hr = hOverR(eyeMpc, engaged, body.surface.datumRadiusM);
+    }
   } else {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
     if (nearest !== null) {

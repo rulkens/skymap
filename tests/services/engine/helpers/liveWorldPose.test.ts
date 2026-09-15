@@ -34,7 +34,7 @@ const EARTH_ARM: FramedCameraPose = {
   pose: {
     bodyId: SCENE_EARTH.id as BodyId,
     anchorLocalM: [0, 0, 0],
-    eyeRelAnchorM: [SCENE_EARTH.radiusM + ALTITUDE_M, 0, 0],
+    eyeRelAnchorM: [SCENE_EARTH.surface.datumRadiusM + ALTITUDE_M, 0, 0],
     // right | up | forward as columns: right × up = forward = −x.
     basisLocal: [0, 0, 1, 0, 1, 0, -1, 0, 0],
   },
@@ -60,7 +60,7 @@ function distanceMpc(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
 
 describe('liveWorldPose', () => {
   it('resolves a body arm at the last RENDERED sim epoch, not the current one', () => {
-    const radiusMpc = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+    const radiusMpc = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const earthRendered = deriveBodyStates(RENDERED_SIM_DAYS).get(SCENE_EARTH.id)!;
     const earthMovedOn = deriveBodyStates(MOVED_ON_SIM_DAYS).get(SCENE_EARTH.id)!;
     // Precondition: the two epochs put Earth somewhere genuinely different.

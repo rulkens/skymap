@@ -335,6 +335,75 @@ fn sampleMultiScatter(
   return textureSampleLevel(lut, samp, uv, 0.0).rgb;
 }
 
+// ── the per-step scattering integrand ────────────────────────────────
+//
+// One march step's contribution, split from whatever accumulates it, so every
+// integrator shares ONE integrand rather than agreeing only by inspection.
+// The single-scatter source is weighted by the REAL Rayleigh + Mie phases
+// (this is a directional lookup, unlike the isotropic multi-scatter bake);
+// the precomputed multi-scatter is added with the total scattering
+// coefficient (it is already isotropic).
+struct ScatterStep {
+  // The step's source integral '(S - S*T)/extinction', BEFORE the running
+  // throughput is applied. The caller accumulates 'L += throughput * inScatter'.
+  inScatter: vec3<f32>,
+  // This step's own transmittance 'exp(-extinction * dt)'. The caller
+  // accumulates 'throughput *= transmittance'.
+  transmittance: vec3<f32>,
+};
+
+fn scatterStep(
+  params: ScatteringParams,
+  transmittanceLut: texture_2d<f32>,
+  multiScatterLut: texture_2d<f32>,
+  lutSamp: sampler,
+  pos: vec3<f32>,          // sample position, km, planet centre at the origin
+  sunDir: vec3<f32>,       // unit, same frame as 'pos'
+  cosTheta: f32,           // dot(viewDir, sunDir) — the phase argument
+  dt: f32,                 // step length, km
+  twilightSoftness: f32,
+  twilightIntensity: f32,
+) -> ScatterStep {
+  let bottom = params.planetRadiusKm;
+  let topRadius = params.atmosphereTopKm;
+
+  let r = length(pos);
+  let up = pos / r;
+  let sunCosZenith = dot(up, sunDir);
+
+  let m = sampleMedium(params, pos, cosTheta);
+  let sampleTransmittance = exp(-m.extinction * dt);
+  let sunTransmittance = sampleTransmittanceToTop(transmittanceLut, lutSamp, bottom, topRadius, r, sunCosZenith);
+  let psiMultiScatter = sampleMultiScatter(multiScatterLut, lutSamp, bottom, topRadius, r, sunCosZenith);
+
+  // Phase-weighted single-scatter source + isotropic multi-scatter source.
+  let scatterPhased = m.scatterPhased;
+  let scatterTotal = m.scatterTotal;
+  // twilightSoftness: fade the WHOLE in-scatter source (single + multi) across the
+  // terminator so deep planet shadow goes black instead of clamping to the LUTs'
+  // grazing-edge rows. 'muHorizon' is the sun-zenith cosine at which the sun grazes
+  // this sample's local horizon. The multi-scatter term MUST be inside the fade: its
+  // LUT shares the same below-horizon edge clamp, and at the night limb that ambient
+  // floor dominates the grazing-attenuated single scatter by orders of magnitude —
+  // gating single scatter alone leaves the knob modulating a sub-percent component.
+  let muHorizon = -sqrt(max(0.0, r * r - bottom * bottom)) / r;
+  // Clamp the fade width to a tiny epsilon: a zero width collides smoothstep's two edges
+  // (its internal divide-by-(edge1-edge0) goes 0/0), so the hard-shadow limit is a near-step.
+  let fadeWidth = max(twilightSoftness, 1e-4);
+  let sunVis = smoothstep(muHorizon - fadeWidth, muHorizon, sunCosZenith);
+  // twilightIntensity: a brightness gain applied ONLY across the fade band. The
+  // gain is identity where the sun is above the local horizon (sunVis = 1 ->
+  // gain = 1, so the day side is untouched); at intensity 1 the whole thing is
+  // the physical result; > 1 amplifies only the twilight band. Deep night stays
+  // black at any intensity because sunVis -> 0 dominates the product.
+  let twilightGain = mix(1.0, twilightIntensity, 1.0 - sunVis);
+  let s = sunVis * twilightGain * (sunTransmittance * scatterPhased + psiMultiScatter * scatterTotal);
+
+  let sInt = (s - s * sampleTransmittance) / max(m.extinction, vec3<f32>(EXTINCTION_EPS));
+
+  return ScatterStep(sInt, sampleTransmittance);
+}
+
 // ── sky-view LUT parametrisation (Hillaire) ──────────────────────────
 //
 // The sky-view LUT is view-DEPENDENT and rebaked per frame at the camera's

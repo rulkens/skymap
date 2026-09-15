@@ -1,4 +1,4 @@
-/** CelestialBody — every `SceneBody` arm with a ground `radiusM`, i.e. all but
+/** CelestialBody — every `SceneBody` arm with a ground `surface`, i.e. all but
  *  `MeshBody` (see its `boundingRadiusM` for why a hull doesn't count). */
 
 import type { SceneBody } from './SceneBody';

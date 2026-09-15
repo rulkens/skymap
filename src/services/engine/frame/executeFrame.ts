@@ -131,14 +131,20 @@ function colorAttachment(
 }
 
 /**
- * A render step's depth load-op. Absent `depthLoad` ⇒ the SAME first-touch
+ * A render step's depth load-op. Absent `depth` ⇒ the SAME first-touch
  * `touched` fact that flips the colour load-op: the frame's first pass against
  * a depth target clears, later passes load and so preserve the occlusion
  * already written. A step that declares one overrides that — depth is the only
  * attachment where sharing a target must not imply sharing its contents.
+ * `'sample'` gets none at all, so it neither clears the target's depth nor
+ * preserves it — never make it a target's first.
  */
-function depthLoadOpFor(depthLoad: 'clear' | 'load' | undefined, touched: boolean): GPULoadOp {
-  if (depthLoad) return depthLoad;
+function depthLoadOpFor(
+  depth: 'clear' | 'load' | 'sample' | undefined,
+  touched: boolean,
+): GPULoadOp | undefined {
+  if (depth === 'sample') return undefined;
+  if (depth === 'clear' || depth === 'load') return depth;
   return touched ? 'load' : 'clear';
 }
 
@@ -252,32 +258,29 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         let destination: Destination;
         if (step.capture === undefined) {
           const spec = ctx.renderTargets.specOf(step.target);
+          const loadOp = depthLoadOpFor(step.depth, touched.has(step.target));
           destination = {
             label: step.target,
             dest: { view: viewFor(step.target, ctx, swapView), clearValue: spec.clearValue },
-            depth: spec.depth
-              ? {
-                  view: ctx.renderTargets.depthViewOf(step.target),
-                  loadOp: depthLoadOpFor(step.depthLoad, touched.has(step.target)),
-                }
-              : undefined,
+            depth:
+              spec.depth && loadOp !== undefined
+                ? { view: ctx.renderTargets.depthViewOf(step.target), loadOp }
+                : undefined,
             touchSet: touched,
             touchKey: step.target,
           };
         } else {
           const face = captureFaceAttachment(step.capture, ctx, state);
           const touchKey = `${step.capture.key}:${step.capture.face}`;
+          const loadOp = depthLoadOpFor(step.depth, touchedFaces.has(touchKey));
           destination = {
             label: step.capture.key,
             dest: face,
             // The row's depth is for its body-slab steps alone: the COSMO/NEAR0
             // pair draws the depthless sky the body then stands in front of.
             depth:
-              face.depthView !== null && isBodySlabIndex(step.slab)
-                ? {
-                    view: face.depthView,
-                    loadOp: depthLoadOpFor(step.depthLoad, touchedFaces.has(touchKey)),
-                  }
+              face.depthView !== null && isBodySlabIndex(step.slab) && loadOp !== undefined
+                ? { view: face.depthView, loadOp }
                 : undefined,
             touchSet: touchedFaces,
             touchKey,

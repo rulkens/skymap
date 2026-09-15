@@ -7,7 +7,7 @@
  * A galaxy uses its catalog diameter (with a synthetic-fallback floor); the
  * Milky Way its disc radius anchored at the galactic centre; a scene body (a
  * planet, a famous star, Earth) and a survey star each carry a REAL physical
- * radius — `radiusM` converted to Mpc — so the NEAR0 ring layer can wrap the
+ * radius (converted to Mpc) — so the NEAR0 ring layer can wrap the
  * rendered sphere on close approach instead of floating a fixed-px dot inside
  * it (`near0RingRadiusPx` floors to a px minimum far away, then tracks 1.5× the
  * sphere's apparent radius once it resolves). A structure returns null because
@@ -91,7 +91,7 @@ const SELECTION_HALO_TABLE: {
   // galactic plane, not a point selection.
   zoneOfAvoidance: (_row) => null,
   // A scene body (planet / famous star / Earth) is drawn as a real sphere, so
-  // its ring rides its true physical radius — `radiusM` → Mpc — letting the
+  // its ring rides its true physical radius — the outer bound → Mpc — letting the
   // NEAR0 ring layer (§9) wrap the sphere on close approach (far away
   // `near0RingRadiusPx` floors it to a px minimum). The NEAR0 slab tag routes
   // it through `near0SelectionRingPass` (not the COSMO layer), so the two

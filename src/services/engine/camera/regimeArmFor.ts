@@ -42,5 +42,7 @@ export function regimeArmFor(
   const row = SCENE_CELESTIAL_BODIES.find((body) => body.id === current.body);
   const bodyState = bodyStates.get(current.body);
   if (row === undefined || bodyState === undefined) return current;
-  return hOverR(eyeMpc, bodyState, row.radiusM) > tuning.disengageHR ? 'absolute' : current;
+  return hOverR(eyeMpc, bodyState, row.surface.datumRadiusM) > tuning.disengageHR
+    ? 'absolute'
+    : current;
 }

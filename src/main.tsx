@@ -41,7 +41,7 @@
  * of the store rather than part of it. It reaches the engine through its own
  * `SagaContextProvider` context (mirroring the store's `<Provider>`) rather than
  * a prop on `<App>`, keeping `<App>` prop-less; the engine uses it to register
- * its `runTierTransition` saga runner.
+ * the closures its sagas call into.
  */
 
 import { createRoot } from 'react-dom/client';

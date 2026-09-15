@@ -48,7 +48,7 @@ import type { OrbitalElements } from '../../@types/scene/OrbitalElements';
 // 40 m behind along the track, converted to mean-anomaly degrees by arc
 // length: 40 / (2π·a) × 360. The period is exported because the whale's
 // orbit lock reads it a second time, as a spin rate (`rotationElements.ts`).
-const MESH_BODY_SEMI_MAJOR_KM = SCENE_EARTH.radiusM / 1000 + 400;
+const MESH_BODY_SEMI_MAJOR_KM = SCENE_EARTH.surface.datumRadiusM / 1000 + 400;
 export const MESH_BODY_PERIOD_DAYS = periodDaysFromSemiMajorKm(MESH_BODY_SEMI_MAJOR_KM);
 const PETUNIA_TRAIL_OFFSET_DEG =
   (40 / (2 * Math.PI * MESH_BODY_SEMI_MAJOR_KM * SCALE_UNITS.KM_TO_M)) * 360;

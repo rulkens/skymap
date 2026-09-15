@@ -18,7 +18,6 @@
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { FamousStarMetaEntry } from '../../../@types/loading/FamousStarMetaEntry';
 import type { FamousStarsPayload } from '../../../@types/loading/FamousStarsPayload';
-import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
 import { HttpError, dataUrl } from '../fetchWithProgress';
 
 /**
@@ -33,14 +32,9 @@ export function parseFamousStarsMeta(rawJson: string): FamousStarMetaEntry[] {
   return parsed as FamousStarMetaEntry[];
 }
 
-// The `tier` field on the request is ignored — famous_stars_meta.json is a
-// tier-agnostic resource. The uniform `CompanionAssetReq` shape lets
-// `loadCompanionAssets` dispatch generically across every companion
-// slot without a per-key switch.
-export const famousStarsMetaFetcher: Fetcher<FamousStarsPayload, CompanionAssetReq> = async (
-  _req,
-  signal,
-) => {
+// No parent slot and no tier: famous_stars_meta.json is a seeded catalog
+// compiled into the bundle, so the request is always `undefined`.
+export const famousStarsMetaFetcher: Fetcher<FamousStarsPayload, void> = async (_req, signal) => {
   const res = await fetch(dataUrl('famous_stars_meta.json'), { signal });
   if (!res.ok) throw new HttpError(res.status, dataUrl('famous_stars_meta.json'));
   const text = await res.text();

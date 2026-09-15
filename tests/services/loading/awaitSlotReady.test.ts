@@ -43,6 +43,7 @@ function makeFakeSlot<T>(initial: LoadState<T>): {
     name: 'fake',
     load: vi.fn(),
     current: () => (current.kind === 'ready' ? current.value : null),
+    committed: () => (current.kind === 'ready' ? current : null),
     state: () => current,
     subscribe: (fn) => {
       // Wrap the helper's subscriber so we can spy on every delivery

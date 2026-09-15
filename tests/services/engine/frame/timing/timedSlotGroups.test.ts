@@ -15,7 +15,7 @@ describe('TIMED_SLOT_GROUPS', () => {
     // through execution order — collapse into the trailing "Composites & pick".
     // "Sky capture" is TIMED_SLOTS' 6 capture steps (one row per face); "Probe
     // capture" the probe's faces plus a body pool per face; "Sgr A* lensing" is
-    // the lens pool, sized off `MAX_FRAME_INPUTS.lensBodySlabs` the same way
+    // the lens pool, sized off `MAX_FRAME_INPUTS.bodyRowSlabs.lens` the same way
     // "Foreground bodies" is sized off its `foregroundChain`.
     expect(TIMED_SLOT_GROUPS.map((g) => g.title)).toEqual([
       'Volumes & aggregates',

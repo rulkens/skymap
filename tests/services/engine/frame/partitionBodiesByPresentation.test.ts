@@ -45,7 +45,7 @@ function bodyAt(id: string, radiusM: number, distanceM: number): SeededPlanet {
     id,
     label: id,
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
-    radiusM,
+    surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.5, 0.5],
     orientation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
   };

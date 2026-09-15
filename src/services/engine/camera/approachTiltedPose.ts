@@ -55,7 +55,7 @@ export function approachTiltedPose(
   const eye = eyeMpcOf(pose, poseBasis);
   const rel: Vec3 = [eye[0] - centreMpc[0], eye[1] - centreMpc[1], eye[2] - centreMpc[2]];
   if (Math.hypot(...rel) === 0) return framed;
-  const hr = hOverR(eye, bodyState, body.radiusM);
+  const hr = hOverR(eye, bodyState, body.surface.datumRadiusM);
   const tau = mappedTiltRad(rememberedTiltRad, hr, tuning);
   if (tau < 1e-12) return framed; // at/above the band top — inert, by reference
 

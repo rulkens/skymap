@@ -61,7 +61,7 @@ function makeView(): SlabView {
  * (the draw delegation folds it in; the enabled gate reads it for fade-out).
  *
  * The gate reads `slotReady(assetSlots.flow)`, so `loaded` is modelled as the
- * flow slot's `state().kind` ('ready' when loaded, else 'idle').
+ * flow slot's `committed()` ('ready' when loaded, else `null`).
  */
 function makeState(
   over: { enabled?: boolean; loaded?: boolean; opacity?: number; flowFieldRenderer?: unknown } = {},
@@ -70,7 +70,10 @@ function makeState(
   return {
     settings: { flow: { enabled: over.enabled ?? true } },
     assetSlots: {
-      flow: { state: () => ({ kind: ready ? 'ready' : 'idle' }) },
+      flow: {
+        committed: () =>
+          ready ? { kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 } : null,
+      },
     },
     subsystems: {
       fades: { opacityOf: vi.fn(() => over.opacity ?? 0.42) },

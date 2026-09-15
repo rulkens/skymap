@@ -56,7 +56,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
 
   const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
   const radiusM = (id: SimBodyId): number =>
-    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.radiusM;
+    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
 
   const neutralPose: CameraPose = {
     target: [0, 0, 0],

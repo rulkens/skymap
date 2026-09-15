@@ -10,20 +10,22 @@
  * `color` exist to feed the star layers — filling those in for a body no layer
  * draws would be an invented measurement, and the next reader would trust it.
  *
- * `radiusM` is the body's real physical scale (for Sgr A*, the Schwarzschild
- * radius) rather than a draw size: the caption sizes its em from it and the
- * InfoCard prints it.
+ * The `surface` datum is the body's real physical scale (for Sgr A*, the
+ * Schwarzschild radius) rather than a draw size: the caption sizes its em from
+ * it and the InfoCard prints it.
  */
+
+import type { BodySurface } from './BodySurface';
 
 export type AnchorPointBody = {
   readonly id: string;
   readonly label: string;
-  readonly radiusM: number;
-  /** Per-body override of `clampDistance`'s Earth-tuned `SURFACE_STANDOFF_RADII` — e.g. Sgr A*'s Q10 floor of 2 r_s. */
+  readonly surface: BodySurface;
+  /** Per-body override of `clampDistance`'s Earth-tuned `SURFACE_STANDOFF_RADII`, in datum radii — e.g. Sgr A*'s Q10 floor of 2 r_s. */
   readonly standoffRadii?: number;
   /**
    * Per-body override of `bodyFocusDistance`'s screen-fill arrival distance, as
-   * a multiple of `radiusM` — e.g. Sgr A*'s ~30.4 r_s. See `focusFraming`.
+   * a multiple of the datum — e.g. Sgr A*'s ~30.4 r_s. See `focusFraming`.
    */
   readonly focusDistanceRadii?: number;
 };

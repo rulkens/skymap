@@ -4,18 +4,17 @@
  *
  * Two invariants targeted:
  *
- *   1. All five subsystem handles are assigned to `state.subsystems.*`
+ *   1. All four subsystem handles are assigned to `state.subsystems.*`
  *      after the call (galaxyAtlas, texturedDisks, proceduralDisks,
- *      hiResFamous, hiResFamousTexture).
+ *      diskPlannerWalk).
  *
- *   2. The textured-disk renderer is bound to both the atlas view and the
- *      hi-res texture_2d_array view — without both, the renderer's
- *      `composeAtlasBindGroup()` gate never fires and the LOD-2/LOD-3
- *      pass is permanently dark.
+ *   2. The textured-disk renderer is bound to the atlas view — the other
+ *      half of its `composeAtlasBindGroup()` gate, `bindHiResArray`, is the
+ *      `hiResFamous` slot's job (see `wireHiResFamousSlot.test.ts`).
  *
- * Mocking strategy: stub the five GPU-bearing factory functions so no
- * real GPUDevice is needed; inject a stub `texturedDiskRenderer` with
- * spied bind methods to verify the bind contract.
+ * Mocking strategy: stub the GPU-bearing factory functions so no real
+ * GPUDevice is needed; inject a stub `texturedDiskRenderer` with spied bind
+ * methods to verify the bind contract.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -30,32 +29,6 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 vi.mock('../../../../src/services/engine/subsystems/galaxyAtlasSubsystem', () => ({
   createGalaxyAtlasSubsystem: vi.fn(() => ({
     getTextureView: vi.fn(() => ({ __atlas: true }) as unknown as GPUTextureView),
-    destroy: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
-  createHiResFamousTexture: vi.fn(() => ({
-    initTexture: vi.fn(),
-    getTextureView: vi.fn(() => ({ __hiRes: true }) as unknown as GPUTextureView),
-    getLayerSide: vi.fn(() => 1024),
-    allocate: vi.fn(() => -1),
-    touch: vi.fn(),
-    release: vi.fn(),
-    isLoaded: vi.fn(() => false),
-    isFailed: vi.fn(() => false),
-    markFailed: vi.fn(),
-    layerForKey: vi.fn(() => undefined),
-    uploadBitmap: vi.fn(),
-    setEvictHandler: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-
-vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () => ({
-  createHiResFamousSubsystem: vi.fn(() => ({
-    runFrame: vi.fn(),
-    lastOutput: { byFamousIdx: new Map() },
     destroy: vi.fn(),
   })),
 }));
@@ -117,8 +90,8 @@ describe('wireImpostorSubsystems', () => {
     vi.clearAllMocks();
   });
 
-  it('assigns galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk, hiResFamous, hiResFamousTexture onto state.subsystems', () => {
-    // All six subsystem handles must be non-null after the call.
+  it('assigns galaxyAtlas, texturedDisks, proceduralDisks, diskPlannerWalk onto state.subsystems', () => {
+    // All four subsystem handles must be non-null after the call.
     // The test verifies assignment without caring about the specific
     // objects returned by the (mocked) factories.
     const state = makeState();
@@ -129,14 +102,9 @@ describe('wireImpostorSubsystems', () => {
     expect(state.subsystems.texturedDisks).not.toBeNull();
     expect(state.subsystems.proceduralDisks).not.toBeNull();
     expect(state.subsystems.diskPlannerWalk).not.toBeNull();
-    expect(state.subsystems.hiResFamous).not.toBeNull();
-    expect(state.subsystems.hiResFamousTexture).not.toBeNull();
   });
 
-  it('binds the atlas and hi-res views into the textured-disk renderer', () => {
-    // The textured-disk renderer's `composeAtlasBindGroup()` gate requires
-    // BOTH `bindAtlas` and `bindHiResArray` to have fired before any draw
-    // occurs.  Without this wire the LOD-2/LOD-3 pass is permanently dark.
+  it('binds the atlas view into the textured-disk renderer', () => {
     const bindAtlas = vi.fn();
     const bindHiResArray = vi.fn();
     const state = makeState();
@@ -144,9 +112,8 @@ describe('wireImpostorSubsystems', () => {
     wireImpostorSubsystems(state, {} as GPUDevice, makeDisks({ bindAtlas, bindHiResArray }));
 
     expect(bindAtlas).toHaveBeenCalledTimes(1);
-    expect(bindHiResArray).toHaveBeenCalledTimes(1);
-    // Each bind call receives the texture view from the matching factory.
     expect(bindAtlas).toHaveBeenCalledWith(expect.objectContaining({ __atlas: true }));
-    expect(bindHiResArray).toHaveBeenCalledWith(expect.objectContaining({ __hiRes: true }));
+    // The hi-res half of the `composeAtlasBindGroup()` gate belongs to the slot.
+    expect(bindHiResArray).not.toHaveBeenCalled();
   });
 });

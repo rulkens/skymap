@@ -24,13 +24,9 @@ import { createAssetSlot } from '../AssetSlot';
 import { famousStarsMetaFetcher } from '../fetchers/famousStarsMetaFetcher';
 import { engineFamousStarsMetaReported } from '../../../state/engine/engineSlice';
 import type { FamousStarsPayload } from '../../../@types/loading/FamousStarsPayload';
-import type { CompanionAssetReq } from '../../../@types/loading/CompanionAssetReq';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
-export const createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, CompanionAssetReq> = (
-  _state,
-  cb,
-) => {
+export const createFamousStarsMetaSlot: SlotFactory<FamousStarsPayload, void> = (_state, cb) => {
   const slot = createAssetSlot({
     name: 'famous-stars-meta',
     fetch: famousStarsMetaFetcher,

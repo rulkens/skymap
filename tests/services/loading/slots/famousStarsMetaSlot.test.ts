@@ -50,7 +50,7 @@ describe('createFamousStarsMetaSlot', () => {
     );
     const { cb, dispatch } = fakeCb();
     const slot = createFamousStarsMetaSlot(fakeState, cb);
-    await slot.load({ tier: 'medium' });
+    await slot.load(undefined);
 
     expect(dispatch).toHaveBeenCalledWith(
       engineFamousStarsMetaReported(
@@ -63,7 +63,7 @@ describe('createFamousStarsMetaSlot', () => {
     fetch.mock.mockResolvedValue(new Response('not found', { status: 404 }));
     const { cb, dispatch } = fakeCb();
     const slot = createFamousStarsMetaSlot(fakeState, cb);
-    await slot.load({ tier: 'medium' }).catch(() => {});
+    await slot.load(undefined).catch(() => {});
 
     expect(dispatch).toHaveBeenCalledWith(engineFamousStarsMetaReported([]));
   });

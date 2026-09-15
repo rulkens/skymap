@@ -36,6 +36,15 @@ describe('createFadeController', () => {
     expect(c.isAnimating(1600)).toBe(false);
   });
 
+  it('a fade to the opacity already held still reports animating', () => {
+    // renderFrame's sky-cubemap bake key reads `isAnyAnimating` to hold off
+    // baking while a re-committed catalog fades in. An unchanged-target early
+    // return here would stale the lensed sky across a tier swap, suite green.
+    const c = createFadeController(1, 1000);
+    c.fadeTo(1, 800, 1000);
+    expect(c.isAnimating(1400)).toBe(true);
+  });
+
   it('mid-flight retarget picks up from the current value', () => {
     const c = createFadeController(0, 1000);
     c.fadeTo(1, 600, 1000); // start fade-in
@@ -63,7 +72,9 @@ describe('createFadeController', () => {
   it('fadeTo Promise resolves only after tick observes !isAnimating', async () => {
     const c = createFadeController(0, 1000);
     let resolved = false;
-    c.fadeTo(1, 600, 1000).then(() => { resolved = true; });
+    c.fadeTo(1, 600, 1000).then(() => {
+      resolved = true;
+    });
     // Tick before the ramp ends — should NOT resolve.
     c.tick(1300);
     await Promise.resolve();
@@ -77,7 +88,9 @@ describe('createFadeController', () => {
   it('Promise also resolves when fade target is reached via setImmediate', async () => {
     const c = createFadeController(0, 1000);
     let resolved = false;
-    c.fadeTo(1, 600, 1000).then(() => { resolved = true; });
+    c.fadeTo(1, 600, 1000).then(() => {
+      resolved = true;
+    });
     c.setImmediate(1);
     c.tick(1000);
     await Promise.resolve();
@@ -86,9 +99,14 @@ describe('createFadeController', () => {
 
   it('multiple concurrent fadeTo Promises each resolve at their own deadline', async () => {
     const c = createFadeController(0, 1000);
-    let a = false, b = false;
-    c.fadeTo(1, 600, 1000).then(() => { a = true; });
-    c.fadeTo(0.5, 200, 1100).then(() => { b = true; });
+    let a = false,
+      b = false;
+    c.fadeTo(1, 600, 1000).then(() => {
+      a = true;
+    });
+    c.fadeTo(0.5, 200, 1100).then(() => {
+      b = true;
+    });
     c.tick(1200);
     await Promise.resolve();
     expect(a).toBe(false);

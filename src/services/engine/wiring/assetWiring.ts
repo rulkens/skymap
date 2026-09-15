@@ -11,7 +11,7 @@
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { HI_RES_LAYER_SIDE_BY_TIER, Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
@@ -29,6 +29,7 @@ import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
+import { galaxyCatalogRequest } from './galaxyCatalogRequest';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
@@ -83,7 +84,7 @@ function pointRow(source: SourceType, priority: number): AssetWiringRow {
     key: source,
     built: 'external',
     factory: externalFactory,
-    req: (tier) => ({ source, tier }),
+    req: (tier) => galaxyCatalogRequest(source, tier),
     demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
     priority,
   };
@@ -233,7 +234,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     key: Source.Synthetic,
     built: 'external',
     factory: externalFactory,
-    req: (tier) => ({ source: Source.Synthetic, tier }),
+    req: (tier) => galaxyCatalogRequest(Source.Synthetic, tier),
     demand: (ctx) => ctx.request('syntheticFallback'),
     // Ahead of everything real: only demanded when the real catalogs failed.
     priority: 5,
@@ -241,22 +242,26 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
 
   // ── Famous-galaxy meta sidecar ───────────────────────────────────
   // Companion join: loads once the Famous slot leaves `idle`, so the InfoCard text
-  // rides in alongside the binary rather than racing ahead of it.
+  // rides in alongside the binary rather than racing ahead of it. The request is
+  // the identical call the Famous point row makes, so the two cannot disagree by
+  // construction. D11 (PR-C) replaces this shared call with `companionOf` on the
+  // row, from which core derives the companion's demand, priority and request.
   {
     key: 'famousGalaxiesMeta',
     factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
+    req: (tier) => galaxyCatalogRequest(Source.FamousGalaxy, tier),
     demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle',
     priority: 21, // immediately behind its .bin (20), never overtaking it
   },
 
   // ── Famous-star meta sidecar ──────────────────────────────────────
   // Unconditional rather than a companion join: the famous stars are a seeded
-  // catalog compiled into the bundle, so there is no sibling `.bin` to key demand off.
+  // catalog compiled into the bundle, so there is no sibling `.bin` to key demand off,
+  // and no tier to embed in the request either.
   {
     key: 'famousStarsMeta',
     factory: (deps) => createFamousStarsMetaSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
+    req: () => undefined,
     demand: () => true,
     priority: 22, // right behind famousGalaxiesMeta; both are tiny and wanted early
   },
@@ -265,7 +270,7 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   {
     key: 'filaments',
     factory: (deps) => createFilamentSlot(deps.state, deps.cb),
-    req: (tier) => ({ tier }),
+    req: (tier) => ({ small: tier === 'small' }),
     demand: (ctx) => ctx.settings.filaments.enabled,
     priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
   },
@@ -376,4 +381,18 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
   // ── Survey star catalogs ─────────────────────────────────────────
   // One row per `type: 'starCatalog'` entry, so a new catalog joins with no edit here.
   ...STAR_CATALOG_SOURCES.map(starCatalogRow),
+
+  // ── LOD-3 hi-res famous-galaxy array ─────────────────────────────
+  // Externally built: the allocation needs a GPUDevice, which `SlotDeps` does not
+  // carry. `priority: 1` puts a synchronous allocation at the head of the bounded
+  // queue ahead of every download — it holds its pipe for microseconds, and the
+  // alternative is a second "allocate outside the queue" mechanism for one row.
+  {
+    key: 'hiResFamous',
+    built: 'external',
+    factory: externalFactory,
+    req: (tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] }),
+    demand: () => true,
+    priority: 1,
+  },
 ];

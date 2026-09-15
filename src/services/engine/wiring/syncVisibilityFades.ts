@@ -75,7 +75,7 @@ export function syncVisibilityFades(
  * Apply ONE row's intent to ONE item. The batch bridge's `only` narrows by ROW, so
  * `only: ['survey']` still drives ALL survey catalogs; a galaxy-catalog slot commit
  * must fade in just the catalog it uploaded, or a concurrent tier swap has source A's
- * commit re-drive B's mid-dissolve fade (last-issued wins) and B flickers up then down.
+ * commit re-drive B's in-flight fade (last-issued wins) and B restarts its ramp.
  * `item` is `unknown` because FADE_LAYERS erases rows to `FadeLayer<unknown>`.
  */
 export function syncVisibilityFadeItem(

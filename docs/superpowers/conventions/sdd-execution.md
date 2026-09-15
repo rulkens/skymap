@@ -4,55 +4,122 @@
 > `superpowers:subagent-driven-development` skill.
 >
 > **Status.** Skymap-specific addendum to that upstream skill. Where this doc
-> and the upstream skill disagree, **this doc wins** — the upstream skill
-> serializes strictly and deletes its own progress ledger on Finish, both of
-> which cost real time and real history on skymap-sized plans.
+> and the upstream skill disagree, **this doc wins** — it replaces upstream's
+> Model Selection, its Task Loop (per-task review + fix loop), its Final
+> Review, its Finish step and its `implementer-prompt.md` template. Upstream's
+> worktree + ledger recovery discipline stands.
+>
+> Derived from the P1/P6 retrospective,
+> [`lean-sdd-process-2026-09-15.md`](../../grill-sessions/lean-sdd-process-2026-09-15.md):
+> 61 agents, 3,295 turns, ~$270, sixteen reviews that found zero behaviour bugs.
 
-## Rule 1 — Task list before Task 1
+## Ask two questions before Task 1
 
-Before dispatching any implementer, create one visible task per plan task —
-the harness task list the user can see, not a note buried in a ledger. After
-a compaction, rebuild the list from the ledger + `git log` before resuming
-dispatch.
+Parallelism (how many plans/PRs run at once) and whether the perf gate runs —
+one message, at plan start, answers recorded in the ledger. Why: both were
+inferred from the spec last run, and an inferred perf gate is a gate nobody
+chose to pay for.
 
-This is a hard gate, not a suggestion. The upstream skill's Setup section
-asks for this todo-per-task but it demonstrably doesn't stick — an execution
-session with no task list is mis-following this doc, full stop.
+## One worktree per PR
 
-## Rule 2 — Pipelined reviews
+The controller works inside it; implementers are plain agents in that same
+tree, dispatched serially. Isolation worktrees only when two plans run
+concurrently — one per plan, never one per task. Edits under ~50 lines the
+controller makes inline. Why: 33 isolation agents spent 12% of all turns on
+git/npm plumbing and 22 GB of disk for parallelism that 2–4 dispatches per plan
+cannot use, and delegation only breaks even at ~2 turns.
 
-Upstream serializes implement → review → next implement. Override: when
-implementer N reports DONE, record HEAD, generate the review package, then
-dispatch reviewer N **and** implementer N+1 in the same breath — provided
-task N+1's **Files** set is disjoint from every task whose review is still
-open.
+## Group consecutive tasks into 2–4 dispatches
 
-This is always read-safe: the reviewer's input is the frozen review-package
-diff, so later tree edits cannot affect it. Implementers themselves remain
-strictly serial — the upstream ban on parallel implementers stands, same
-working tree.
+The plan stays task-shaped — tasks are the unit of thinking and testing. The
+controller does the grouping, by **cognitive locality**: consecutive tasks that
+share files, a subsystem, or one mental model go to one agent, worked as a
+checklist with **one commit per task**.
 
-Freeze rule: any Critical/Important finding (or spec ❌) pauses dispatch of
-new implementers until that task's fix loop closes. The in-flight
-implementer runs to completion; fix dispatches queue behind it, since fixes
-edit the tree.
+Why: a subagent turn costs exactly a main-loop turn at equal context, so a fresh
+agent on the same files re-pays orientation and loses cache share (93% vs 98%).
 
-Completion bookkeeping is unchanged: a task is complete only when its review
-is clean. Reviews may close out of task order — ledger lines already carry
-task numbers, so this doesn't lose track of anything.
+## Briefs are pointers, precise not short
 
-## Rule 3 — Ledger archiving
+A brief carries: the plan path plus the exact task headings; spec section
+headings with line ranges when the recipient is a reviewer; interfaces and
+decisions produced by earlier dispatches; the reply contract. No pasted task
+text, no extraction scripts, no packaged diffs. Why: brief length is free — the
+first-turn cache write was 25–30k tokens for every agent regardless — but
+vagueness costs turns, and re-reading the spec 7.6× per agent cost ~$30 against
+~$10 of content.
 
-The Finish step's workspace deletion is amended: **before** `rm -rf
-<workspace>`, copy `<workspace>/progress.md` to
-`docs/superpowers/plans/completed/<plan-basename>.ledger.md` and commit it
-with the completion moves. Never delete a workspace whose ledger is not
-archived.
+## Agent protocol
 
-Why: the ledger is the only record of how a plan actually ran — dispatch
-waves, fix rounds, mid-flight pivots. Without it, questions like "did
-pipelining cost extra fix rounds" are unanswerable.
+Paste this verbatim into every implementer dispatch; it replaces the upstream
+per-session protocol file.
 
-See also: [`plan-style.md`](plan-style.md) for how plans are written (the
-Definition of Done section it mandates is what `/feature-done` audits at
-the other end of this execution).
+```text
+- Work on the current branch in this worktree. One commit per plan task,
+  message in the plan's voice. Never rebase, never force-push, never merge.
+- Verify with `npm run typecheck:fast` and the targeted tests for the files
+  you touched. CI is the gate: no full-suite run, and no verification agent
+  after you push.
+- `npx prettier --write` the files you touched. Stage by path — never `git add -A`.
+- Reply in 8 lines or fewer: status, HEAD sha, which tests you ran, and any
+  deviation from the plan (name it, don't hide it).
+- Write a report file only if you have a concern the reply cannot hold.
+- Every message you send either calls a tool or is your final reply.
+```
+
+## One review, at the end
+
+One whole-branch review when the last dispatch lands. Its mandate is **spec
+fidelity and slop** — surplus helpers, dead paths, tests that restate code,
+comments over budget. One fix round, run by the branch's own implementer. No
+re-review.
+
+Exception: a task the plan tags `review: yes` gets one mid-branch review,
+given the diff **and** the task contract **and** the named spec section — a
+diff alone produces confident spec verdicts that quietly redefine the spec.
+One round, no re-review. The trigger list for the tag lives in
+[`plan-style.md`](plan-style.md).
+
+Why: the two-stage per-task chain cost ~$110 and ~20 min of latency per task
+and found only comment-level issues across sixteen reviews.
+
+## Models
+
+Planning, spec-writing, the final review and rulings run on the top tier.
+Implementers default to Sonnet; tasks tagged `review: yes` get Opus. Never
+Haiku for multi-step work. No thinking caps, no tool-call budgets. Log the
+model and the turn count for every dispatch in the ledger.
+
+Why: the Sonnet default is a measured bet — last run's tier data was confounded
+by a protocol that forced install, full suite and rebase on every agent — and
+the log is what decides it after two plans. Caps and budgets cost turns, and
+turns are the bill.
+
+## Ledger
+
+One line per dispatch — tasks, model, BASE→HEAD, status, turn count — and one
+per landing. Rulings only when one is made, in the existing
+`Ruling: <decision> — <why> — <cost if wrong>` form. The pre-flight conflict
+table is written only when the scan finds a conflict. The task-list artifact is
+published at start and at end, not on every status change. The diff breakdown
+(code / comment / test / doc lines) is produced once per PR, at landing. Why:
+controller bookkeeping was $74 and 436 turns, most of it re-reading its own
+records.
+
+## Archive the ledger before deleting the workspace
+
+**Before** `rm -rf <workspace>`, copy `<workspace>/progress.md` to
+`docs/superpowers/plans/completed/<plan-basename>.ledger.md` and commit it with
+the completion moves. Never delete a workspace whose ledger is not archived.
+Why: it is the only record of how a plan actually ran, and the only way to
+answer "did Sonnet implementers cost extra fix rounds".
+
+## Landing
+
+`gh pr checks`, then squash-merge on the user's explicit word. The DoD audit,
+the plan + spec move and the ledger archive are done inline by the controller —
+no verification agents. Agent worktrees, their branches and the dev servers
+started for this plan are cleaned up in the same step, not deferred.
+
+See also: [`plan-style.md`](plan-style.md) for how plans are written — the
+Definition of Done it mandates is what `/feature-done` audits here.

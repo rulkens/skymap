@@ -10,10 +10,11 @@
  * absolute-magnitude quantity the catalogue point cloud uses, so the LOD
  * crossover speaks one language — tinted by `color`, the blackbody colour of
  * `temperatureK` in linear RGB so it composites in the HDR pass. Up close the
- * star resolves into a lit sphere sized from `radiusM` (SI metres), converted
- * to draw space at render time.
+ * star resolves into a lit sphere sized from its `surface` datum (SI metres),
+ * converted to draw space at render time.
  */
 
+import type { BodySurface } from './BodySurface';
 import type { Vec3 } from '../math/Vec3';
 
 export type StarBody = {
@@ -21,6 +22,6 @@ export type StarBody = {
   readonly label: string;
   readonly absMag: number; // drives point brightness/size + LOD
   readonly color: Vec3; // blackbody colour from temperatureK, linear RGB
-  readonly radiusM: number; // used once resolved to a sphere (the Sun)
+  readonly surface: BodySurface; // used once resolved to a sphere (the Sun)
   readonly oblateness?: number; // flattening (a−c)/a; absent ⇒ spherical; feeds per-axis MVP scale
 };

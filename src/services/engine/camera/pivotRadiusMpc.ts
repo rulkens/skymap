@@ -11,6 +11,7 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { MIN_DISTANCE_MPC, SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
+import { bodyStandoffRadii } from '../../../utils/scene/bodyStandoffRadii';
 import { isMeshBody } from '../../../utils/scene/isMeshBody';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';
@@ -21,7 +22,7 @@ export function pivotRadiusMpc(row: SelectionRow | null): number | null {
   if (row.type !== 'body') return null;
   // A mesh body has nothing to report here (see MeshBody.boundingRadiusM).
   const body = findByIdOrThrow(SCENE_BODIES, row.id, 'pivotRadiusMpc');
-  return isMeshBody(body) ? null : body.radiusM * SCALE_UNITS.M_TO_MPC;
+  return isMeshBody(body) ? null : body.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 }
 
 /**
@@ -48,14 +49,10 @@ export function pivotFraming(row: SelectionRow | null): PivotFraming {
   }
   // `body` is already resolved above for the body arm — reuse it instead of a
   // second `findByIdOrThrow` scan; the star/null arms still go through `pivotRadiusMpc`.
-  const radiusMpc = body !== null ? body.radiusM * SCALE_UNITS.M_TO_MPC : pivotRadiusMpc(row);
+  const radiusMpc =
+    body !== null ? body.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC : pivotRadiusMpc(row);
   if (radiusMpc === null) return { radiusMpc, floorMpc: SURFACELESS_FLOOR_MPC };
-  // Only `AnchorPointBody` opts out of the Earth-tuned default (Sgr A*'s Q10
-  // floor); `in` alone widens the absent arms to `unknown`, hence the typeof.
-  const standoffRadii =
-    body !== null && 'standoffRadii' in body && typeof body.standoffRadii === 'number'
-      ? body.standoffRadii
-      : SURFACE_STANDOFF_RADII;
+  const standoffRadii = body !== null ? bodyStandoffRadii(body) : SURFACE_STANDOFF_RADII;
   return {
     radiusMpc,
     floorMpc: Math.max(MIN_DISTANCE_MPC, radiusMpc * standoffRadii),

@@ -14,7 +14,7 @@
  *      prevent.
  *   3. The MVP / `bodySlabCamLocal` pairing — the renderer ray-traces its
  *      silhouette from the packed camera, so it must be measured in the frame
- *      the packed MVP's model scale (`radiusM`) defines.
+ *      the packed MVP's model scale (`datumRadiusM`) defines.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -81,7 +81,7 @@ function bodyAt(id: string, radiusM: number): SeededPlanet {
   return {
     id,
     label: id,
-    radiusM,
+    surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.3, 0.2],
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
     orientation: IDENTITY_MAT3,
@@ -243,11 +243,11 @@ describe('planetsPass.draw — the f64 seam and packed record layout', () => {
     // Second arg is the pose's eyeRelBodyM, forwarded by reference — proof the
     // layer read ctx.bodyPose rather than re-deriving a pose of its own.
     expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
-    expect(call[2]).toBe(mercury.radiusM);
+    expect(call[2]).toBe(mercury.surface.datumRadiusM);
 
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
-    expect(camLocalMock.mock.calls[0]![1]).toBe(mercury.radiusM);
+    expect(camLocalMock.mock.calls[0]![1]).toBe(mercury.surface.datumRadiusM);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
   });

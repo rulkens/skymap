@@ -36,7 +36,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
 const EARTH = BODIES.get('earth')!;
-const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 const UP_REF = frameUp(B);
 
 /** Nadir view from h/R over Earth; the standpoint comes from yaw/pitch. */

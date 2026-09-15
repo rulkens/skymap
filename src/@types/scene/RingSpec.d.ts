@@ -18,7 +18,7 @@ import type { RingTextureId } from '../data/RingTextureId';
  *
  * `innerRadiusKm` / `outerRadiusKm` are the annulus edges in kilometres — the
  * native unit the ring system is quoted in — resolved to Mpc at draw time the
- * same way a body's `radiusM` (metres) is, so the authored numbers stay
+ * same way a body's `datumRadiusM` (metres) is, so the authored numbers stay
  * human-readable and match the published Saturn ring dimensions.
  */
 
