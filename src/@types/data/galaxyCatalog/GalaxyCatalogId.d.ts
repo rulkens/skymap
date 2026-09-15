@@ -1,4 +1,4 @@
-import type { GalaxyCatalogRowEntry } from './GalaxyCatalogRowEntry';
+import type { GalaxyCatalogRegistryEntry } from './GalaxyCatalogRegistryEntry';
 
 /**
  * The closed set of galaxy-catalog ids — the key domain for
@@ -6,4 +6,4 @@ import type { GalaxyCatalogRowEntry } from './GalaxyCatalogRowEntry';
  * widens the union automatically; the runtime iterable companion is
  * `GALAXY_CATALOG_IDS` in `data/galaxyCatalog/galaxyCatalogIds`.
  */
-export type GalaxyCatalogId = GalaxyCatalogRowEntry['id'];
+export type GalaxyCatalogId = GalaxyCatalogRegistryEntry['id'];

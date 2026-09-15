@@ -8,7 +8,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type { GalaxyCatalogRowEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRowEntry';
+import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { createAssetSlot } from '../../loading/AssetSlot';
@@ -30,7 +30,7 @@ import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenanc
  */
 export function wireGalaxyCatalogSourceSlot(
   state: EngineState,
-  entry: GalaxyCatalogRowEntry,
+  entry: GalaxyCatalogRegistryEntry,
   deps: WirePointSourceDeps,
 ): void {
   const source = entry.code;

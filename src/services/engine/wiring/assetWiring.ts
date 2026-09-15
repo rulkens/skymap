@@ -10,7 +10,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { GalaxyCatalogRowEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRowEntry';
+import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import {
   HI_RES_LAYER_SIDE_BY_TIER,
@@ -83,7 +83,7 @@ const externalFactory = (): never => {
  * already carries: `category === 'synthetic'` reads the fallback request
  * flag, everything else reads its settings toggle.
  */
-function pointRow(entry: GalaxyCatalogRowEntry): AssetWiringRow {
+function pointRow(entry: GalaxyCatalogRegistryEntry): AssetWiringRow {
   const source = entry.code;
   const id = entry.id;
   return {
