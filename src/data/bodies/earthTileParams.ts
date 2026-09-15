@@ -61,6 +61,13 @@ export const EARTH_TILE_LOD_BIAS = 1;
  *  `(HEIGHT_POSTS_PER_TILE - 1)` must stay divisible by it (parity-tested). */
 export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 64;
 
+/** Skirt depth as a fraction of the patch's north-south extent
+ *  (`radiusM · dLatRad`): 15.6 km at z7, 245 m at z13, 3.8 m at z19. The gap a
+ *  band seam opens is the coarse neighbour's geometric residual, which the fine
+ *  side cannot read — this is the heuristic that stands in for it (F2-R3).
+ *  Mirrored into `earthSurfaceTile/vertex.wesl`, parity-tested. */
+export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
+
 /**
  * Base-globe descent-fade band, in camera altitude above the surface (km).
  * The detail-tile mesh fully covers the visible cap once resident, and the

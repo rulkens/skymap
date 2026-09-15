@@ -29,6 +29,7 @@ import {
   EARTH_SURFACE_TILE_MESH_RESOLUTION,
   EARTH_TILE_ATLAS_SIDE,
   EARTH_TILE_PX,
+  SURFACE_TILE_SKIRT_DEPTH_FRACTION,
 } from '../../../../src/data/bodies/earthTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
@@ -292,6 +293,23 @@ describe('HEIGHT_POSTS_PER_TILE parity (heightTileFormat.ts ↔ earthSurfaceTile
 
   it('the post stride per template cell is integral', () => {
     expect((HEIGHT_POSTS_PER_TILE - 1) % EARTH_SURFACE_TILE_MESH_RESOLUTION).toBe(0);
+  });
+});
+
+/**
+ * SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts) is the eye-check's one
+ * tuning knob for band-seam skirts (F2-R3), and the vertex stage is its only
+ * consumer — so without this guard the TS export is a knob that turns nothing.
+ */
+describe('SURFACE_TILE_SKIRT_DEPTH_FRACTION parity (earthTileParams.ts ↔ earthSurfaceTile/vertex.wesl)', () => {
+  it("vertex.wesl's SURFACE_TILE_SKIRT_DEPTH_FRACTION equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl';
+    const weslValue = readWeslConst(file, 'SURFACE_TILE_SKIRT_DEPTH_FRACTION');
+    expect(weslValue, `SURFACE_TILE_SKIRT_DEPTH_FRACTION is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL SURFACE_TILE_SKIRT_DEPTH_FRACTION (${weslValue}) does not match TS SURFACE_TILE_SKIRT_DEPTH_FRACTION (${SURFACE_TILE_SKIRT_DEPTH_FRACTION})`,
+    ).toBe(SURFACE_TILE_SKIRT_DEPTH_FRACTION);
   });
 });
 

@@ -1,8 +1,9 @@
 // earthSurfaceTile/vertex.wesl — every patch's geometry from nothing but an
 // 80-byte 'PatchInstance', the height atlas and the two draw builtins:
 // '@builtin(instance_index)' picks the patch, '@builtin(vertex_index)' is the
-// shared template's vertex id, split into (i, j) over the (n+1)^2 grid by
-// 'u.meshResolution'. The record is 'inst' -- 'patch' is a WGSL RESERVED WORD.
+// shared template's vertex id: (i, j) over the (n+1)^2 grid below (n+1)^2, a
+// skirt-ring post above it (surfacePatchIndices.ts owns the same id space).
+// The record is 'inst' -- 'patch' is a WGSL RESERVED WORD.
 //
 // 'patchVertexOffset' is the twin of src/utils/scene/patchVertexOffsetM.ts and
 // the post lookup that of surfacePatchPostIndex.ts -- same names, same order,
@@ -25,6 +26,10 @@ import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
 // Mirrors src/data/scene/heightTileFormat.ts -- parity-tested in
 // constants.parity.test.ts, '?static' linking does no value injection.
 const HEIGHT_POSTS_PER_TILE: u32 = 129u;
+
+// Mirrors SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts), likewise
+// parity-tested -- it is the eye-check's one tuning knob (F2-R3).
+const SURFACE_TILE_SKIRT_DEPTH_FRACTION: f32 = 0.05;
 
 // Offset from the patch's origin corner, in the body's fixed axes, metres.
 // '2*sin^2(x/2)' is algebraically '1 - cos x' and NOT interchangeable with it:
@@ -88,27 +93,46 @@ fn vs(
   @builtin(instance_index) instanceIndex: u32,
 ) -> VSOut {
   let inst = patches[instanceIndex];
-  let row = u.meshResolution + 1u;
+  let n = u.meshResolution;
+  let row = n + 1u;
+  let gridCount = row * row;
+  let isSkirt = vertexIndex >= gridCount;
+  // A skirt vertex IS its boundary post -- same collapse, same post index, same
+  // interpolants; only the height it is placed at differs (depthM below).
+  var edge = 0u;
+  var rawI = vertexIndex % row;
+  var rawJ = vertexIndex / row;
+  if (isSkirt) {
+    let sid = vertexIndex - gridCount;
+    edge = sid / row;
+    let k = sid % row;
+    if (edge == 0u) { rawI = 0u; rawJ = k; }
+    else if (edge == 1u) { rawI = n; rawJ = k; }
+    else if (edge == 2u) { rawI = k; rawJ = 0u; }
+    else { rawI = k; rawJ = n; }
+  }
   // The snapped pair feeds BOTH (s, t) and the post index, so the two sides of
   // a collapsed edge name the same lattice point and read the same post.
-  let ij = collapseTemplateIndex(
-    vertexIndex % row,
-    vertexIndex / row,
-    u.meshResolution,
-    inst.edgeCoarser,
-  );
+  let ij = collapseTemplateIndex(rawI, rawJ, n, inst.edgeCoarser);
   let i = ij.x;
   let j = ij.y;
-  let s = f32(i) / f32(u.meshResolution);
-  let t = f32(j) / f32(u.meshResolution);
+  let s = f32(i) / f32(n);
+  let t = f32(j) / f32(n);
 
   // The row flip: the anchor's lat0 is the patch's SOUTH edge and j counts
   // north, while a height tile's row 0 is its NORTH row.
-  let stride = (HEIGHT_POSTS_PER_TILE - 1u) / u.meshResolution;
+  let stride = (HEIGHT_POSTS_PER_TILE - 1u) / n;
   let post = vec2<u32>(i * stride, (HEIGHT_POSTS_PER_TILE - 1u) - j * stride);
   let h = textureLoad(heightAtlas, inst.heightSlotOrigin + post, 0).r;
 
-  let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(inst, u.radiusM, s, t, h);
+  // Zero on every edge but a band seam (code 2), where the ring becomes a wall
+  // hanging radially inward -- at zero the quads are degenerate and cost a cull.
+  var depthM = 0.0;
+  if (isSkirt && ((inst.edgeCoarser >> (2u * edge)) & 3u) == 2u) {
+    depthM = SURFACE_TILE_SKIRT_DEPTH_FRACTION * u.radiusM * inst.dLatRad;
+  }
+
+  let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(inst, u.radiusM, s, t, h - depthM);
 
   var out: VSOut;
   out.clip = u.vp * vec4<f32>(worldPosRelCam, 1.0);
