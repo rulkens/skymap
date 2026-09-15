@@ -21,4 +21,6 @@ export type CubemapCaptureRuntime = {
    * the roster was still settling.
    */
   bakedSettings: EngineSettingsState | null;
+  /** The row's own memory of `state.contentVersion` at its last bake; same null sentinel. */
+  bakedContentVersion: number | null;
 };

@@ -127,6 +127,7 @@ export function createEngine(
         lastBandActive: false,
         lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
         bakedSettings: null,
+        bakedContentVersion: null,
       },
     ]),
   ) as Record<CubemapCaptureKey, CubemapCaptureRuntime>;
@@ -316,6 +317,7 @@ export function createEngine(
     booted: false,
     cameraRuntime,
     cubemapCaptures,
+    contentVersion: 0,
     // The Maps are declared up-front so consumers can reach a slot without a null
     // check, but the slots themselves are minted in `wireSlots`: their commit
     // closures re-read GPU handles at call time and null-guard, rather than assuming

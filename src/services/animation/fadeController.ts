@@ -106,9 +106,12 @@ export function createFadeController(
     durationMs: number,
     now: number = performance.now(),
   ): Promise<void> {
-    // No unchanged-target early return: `renderFrame`'s sky-cubemap bake key
-    // reads `isAnyAnimating` to see a re-commit's fade at an opacity it already held.
-    //
+    // Already there: resolve without touching the ramp, so a re-sync of an
+    // unchanged intent can't restart an in-flight fade or mint a new pending
+    // entry (`syncVisibilityFades`' `applyIntent` relies on this being safe
+    // to call unconditionally).
+    if (target === targetOpacity) return Promise.resolve();
+
     // Capture the current opacity BEFORE updating the source, so mid-
     // flight retargeting picks up from wherever the previous ramp reached
     // rather than snapping back to the previous source.

@@ -119,6 +119,8 @@ export function wireGalaxyCatalogSourceSlot(
       // GalaxyPointRenderer keys its catalogs by the string id, not the source code.
       await state.gpu.galaxyPointRenderer.upload(catalogId, cloud);
       state.data.galaxies.setCatalog(source, cloud);
+      // One bump per catalog commit — the sky-cubemap re-bake key's content term.
+      state.contentVersion += 1;
 
       // Lets the selection reconciler and the tier-reanchor saga re-resolve refs
       // whose cloud just landed.

@@ -29,6 +29,11 @@ export type FadeController = {
    * destination in the meantime). If a caller wants strict
    * cancel-on-retarget semantics, they should await the previous
    * fadeTo before issuing a new one.
+   *
+   * A call whose `target` already equals the held/heading-for target is a
+   * no-op: it resolves immediately without touching the ramp or minting a
+   * pending entry, so a re-sync of an unchanged intent can't restart an
+   * in-flight fade.
    */
   fadeTo(target: number, durationMs: number, nowMs?: number): Promise<void>;
 

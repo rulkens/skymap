@@ -61,6 +61,7 @@ function makeCaptureRuntime() {
     lastBandActive: false,
     lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
     bakedSettings: null,
+    bakedContentVersion: null,
   };
 }
 
@@ -80,6 +81,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
       texturedDisks: { hasInFlightWork: () => false },
     },
     cubemapCaptures: { sgrAStar: makeCaptureRuntime() },
+    contentVersion: 0,
     ...overrides,
   } as unknown as EngineState;
 }
@@ -318,6 +320,21 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     // Same contents, new reference — mirrors a real store write replacing
     // the settings slice wholesale.
     state.settings = { ...state.settings };
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a content-version bump alone triggers a full six-face sweep', () => {
+    cubemapFaceContextMock.mockImplementation(
+      (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
+    );
+
+    const state = makeState();
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    cubemapFaceContextMock.mockClear();
+
+    state.contentVersion += 1;
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
 
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);

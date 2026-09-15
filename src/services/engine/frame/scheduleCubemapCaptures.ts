@@ -46,17 +46,23 @@ export function scheduleCubemapCaptures(input: {
     if (bandActive !== runtime.lastBandActive) {
       runtime.lastBandActive = bandActive;
       ctx.renderTargets.reconcile(state, ctx.canvasSize);
-      if (!bandActive) runtime.bakedSettings = null;
+      if (!bandActive) {
+        runtime.bakedSettings = null;
+        runtime.bakedContentVersion = null;
+      }
     }
     if (!bandActive) continue;
-    if (!rosterSettling && runtime.bakedSettings === state.settings) continue;
+    if (
+      !rosterSettling &&
+      runtime.bakedSettings === state.settings &&
+      runtime.bakedContentVersion === state.contentVersion
+    )
+      continue;
 
     // One bake covers the band: a 1024² face's texel is ~1.5 mrad, so content
     // at 8 kpc shifts by a texel only after ~12 pc of travel, against a 500 AU
     // band — and the lens samples the cubemap at infinity, so no eye to pin.
-    // Absent from the settings-ref re-bake key on purpose: `tier` (a swap
-    // re-commits every visible catalog, and each commit's fade-in keeps
-    // `rosterSettling` true across it),
+    // Absent from the settings-ref re-bake key on purpose:
     // `faceSizePx` (its knob IS a settings write, reconciled above first),
     // `selection` (a stale halo in the lensed sky is accepted).
     const faces = new Map<CubeFace, ReadyFrameContext>();
@@ -80,6 +86,7 @@ export function scheduleCubemapCaptures(input: {
     // Only a settled bake is recorded: while the roster moves, null keeps the
     // next frame baking, and the first settled frame bakes once more.
     runtime.bakedSettings = rosterSettling ? null : state.settings;
+    runtime.bakedContentVersion = rosterSettling ? null : state.contentVersion;
   }
   return scheduled;
 }

@@ -52,6 +52,12 @@ export type EngineState = {
    * read is a plain property access; entries are mutated in place.
    */
   cubemapCaptures: Readonly<Record<CubemapCaptureKey, CubemapCaptureRuntime>>;
+  /**
+   * Bumped once per successful galaxy-catalog commit (`galaxyCatalogSourceRegistry`'s
+   * single writer). A scalar, not per-row: it counts catalog content changes, not
+   * settings, and is read by `scheduleCubemapCaptures`' re-bake key.
+   */
+  contentVersion: number;
   assetSlots: EngineAssetSlots;
   /**
    * One-shot transient request flags read by demand predicates via
