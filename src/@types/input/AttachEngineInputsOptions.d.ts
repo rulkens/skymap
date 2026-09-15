@@ -7,7 +7,7 @@
  * events (see its module header for the contract).
  */
 
-import type { RenderScheduler } from '../../services/engine/subsystems/renderScheduler';
+import type { RenderScheduler } from '../engine/subsystems/RenderScheduler';
 import type { CssPx } from './CssPx';
 
 export type AttachEngineInputsOptions = {

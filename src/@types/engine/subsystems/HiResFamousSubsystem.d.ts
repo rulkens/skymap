@@ -23,7 +23,7 @@
  */
 
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
 import type { SourceType } from '../../data/SourceType';
