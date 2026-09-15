@@ -92,6 +92,19 @@ describe('steppedSitePose', () => {
     expect(pose.rangeM).toBeCloseTo(ROVER.standoffRadii * ROVER.boundingRadiusM, 12);
   });
 
+  it('a zoom the floors decline returns its pose by reference', () => {
+    // `replayInput`'s identity check (`stepped.pose !== from.pose`) is what
+    // stops a declined input committing to the store; a fresh allocation per
+    // notch defeated it, so every wheel notch at the floor wrote a no-op pose.
+    let pinned: SitePose = { ...POSE, rangeM: 100 };
+    for (let i = 0; i < 10; i += 1) {
+      pinned = step(pinned, { kind: 'zoom', factor: 0.01, duringGesture: false, cursorPx: null });
+    }
+    expect(step(pinned, { kind: 'zoom', factor: 0.5, duringGesture: false, cursorPx: null })).toBe(
+      pinned,
+    );
+  });
+
   it('a non-drag, non-zoom input returns its pose by reference', () => {
     expect(step(POSE, { kind: 'gestureStart' })).toBe(POSE);
     expect(step(POSE, { kind: 'gestureEnd' })).toBe(POSE);

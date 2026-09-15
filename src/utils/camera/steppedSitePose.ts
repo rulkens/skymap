@@ -40,11 +40,16 @@ export function steppedSitePose(
   }
   // No cursor anchoring: the turntable's pivot is the site, by definition.
   if (input.kind === 'zoom') {
-    return clampedSitePose(
+    const zoomed = clampedSitePose(
       { ...pose, rangeM: pose.rangeM * spentZoomFactor(input.factor) },
       body,
       hostFloorAboveSiteM,
     );
+    // A notch the floors eat whole is a DECLINED input, and `replayInput` tells
+    // declined from accepted by identity — a fresh object commits a no-op pose.
+    return zoomed.rangeM === pose.rangeM && zoomed.elevationRad === pose.elevationRad
+      ? pose
+      : zoomed;
   }
   // The gesture edges move nothing, and an arithmetic identity is not an
   // identity for the full-pose byte bar.

@@ -21,6 +21,7 @@ import type { TiltMemory } from '../../../@types/camera/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { liveBodyPosition } from '../camera/liveBodyPosition';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
 import { frameBodyId } from '../camera/rungs/frameBodyId';
@@ -135,12 +136,13 @@ export function projectFramePose(args: {
         // centre leaves them a body radius to close as an eye teleport (pop-3).
         // `panOffset` rides along for the same reason — the pin re-reads it
         // too, so a commit without it is a |pan| teleport on the quiet frame.
+        // `liveBodyPosition` IS the pin's own resolver, and `focusInSubtree`
+        // alone answers "no focus", so neither question gets a second spelling.
         const host = hostOrThrow(displayed.frame, ctx);
-        const focused =
-          ctx.focusBodyId !== null && focusInSubtree(ctx.focusBodyId, host.id)
-            ? bodies.get(ctx.focusBodyId)
-            : undefined;
-        const centreMpc = addVec3((focused ?? host.state).positionMpc, follow?.panOffset ?? NO_PAN);
+        const focused = focusInSubtree(ctx.focusBodyId, host.id)
+          ? liveBodyPosition(focus, bodies)
+          : null;
+        const centreMpc = addVec3(focused ?? host.state.positionMpc, follow?.panOffset ?? NO_PAN);
         displayed = centreLookingArm(
           eyeMpcOf(world, poseBasis),
           centreMpc,
