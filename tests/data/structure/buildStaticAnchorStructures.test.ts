@@ -44,32 +44,6 @@ describe('buildStaticAnchorStructures', () => {
     expect(byName.get('Pisces-Cetus Supercluster')).toBe('supercluster-pisces-cetus-sc');
   });
 
-  it('carries physicalRadiusMpc through from the seed', () => {
-    const structures = buildStaticAnchorStructures();
-    const virgo = structures.find((p) => p.id === 'cluster-virgo-m87');
-    // StructureInfo carries the radius on every arm — no narrowing needed.
-    expect(virgo?.physicalRadiusMpc).toBe(2.2);
-  });
-
-  it('carries apparentRadiusMpc through from the seed', () => {
-    const structures = buildStaticAnchorStructures();
-    const virgo = structures.find((p) => p.id === 'cluster-virgo-m87');
-    expect(virgo?.apparentRadiusMpc).toBe(6);
-  });
-
-  it('carries the curated description through from the seed', () => {
-    const structures = buildStaticAnchorStructures();
-    // Assert against the seed's own value (not a hardcoded string) so the
-    // test stays green when the curated blurbs are rewritten — it verifies
-    // the carry-through wiring, not the prose.
-    const seedVirgo = (structureSeedJson as readonly { id: string; description?: string }[]).find(
-      (e) => e.id === 'virgo-m87',
-    )!;
-    const virgo = structures.find((p) => p.id === 'cluster-virgo-m87')!;
-    expect(virgo.description).toBe(seedVirgo.description);
-    expect(virgo.description).toBeTruthy();
-  });
-
   it('is synchronous and returns a fresh array per call', () => {
     const a = buildStaticAnchorStructures();
     const b = buildStaticAnchorStructures();

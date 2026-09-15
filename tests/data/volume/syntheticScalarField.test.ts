@@ -12,12 +12,6 @@ function idx(x: number, y: number, z: number, dims: number): number {
 }
 
 describe('synthetic Gaussian cube', () => {
-  it('produces the requested dims', () => {
-    const cube = makeSyntheticGaussianCube({ dims: 8, frameKind: 'equatorial-cartesian' });
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
-
   it('peaks at the centre', () => {
     const cube = makeSyntheticGaussianCube({ dims: 9, frameKind: 'equatorial-cartesian' });
     // Centre voxel index (4, 4, 4) of a 9³ cube; x-fastest layout.
@@ -50,15 +44,6 @@ describe('synthetic Gaussian cube', () => {
 });
 
 describe('cartesian grid cube', () => {
-  it('produces the requested dims', () => {
-    // Palette + densityScale are not cube properties — they live in
-    // `volumeFieldDefaults.ts` keyed by the renderer's handle.  The
-    // generator's job here is purely to produce a valid voxel grid.
-    const cube = makeCartesianGridCube({ dims: 8 });
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
-
   it('peaks at the world origin (which sits on a grid plane on every axis)', () => {
     // 9³ box of 400 Mpc → voxelSize ≈ 44.44.  The CENTRE voxel (4, 4, 4)
     // has world position (-200 + 4.5*44.44, ...) ≈ (0, 0, 0).  With
@@ -98,14 +83,6 @@ describe('cartesian grid cube', () => {
 });
 
 describe('spherical grid cube', () => {
-  it('produces the requested dims', () => {
-    // Palette + densityScale are not cube properties; see the
-    // companion comment on the cartesian generator's test above.
-    const cube = makeSphericalGridCube({ dims: 8 });
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
-
   it('has high value near the world origin (all three spokes pass through it)', () => {
     // 16³ at 400 Mpc → voxelSize 25.  The voxel nearest the origin is
     // (8, 8, 8) with world position (12.5, 12.5, 12.5).

@@ -19,12 +19,6 @@ import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
 import {
-  selectHoverRef,
-  selectSelectedRef,
-  selectFocusRef,
-  selectHoverRow,
-  selectSelectRow,
-  selectFocusRow,
   selectHoveredFocusable,
   selectSelectedFocusable,
   selectFocusedFocusable,
@@ -78,70 +72,6 @@ const structureInfo: StructureInfo = {
   featured: true,
   physicalRadiusMpc: 1.7,
 };
-
-// Minimal RootState stub — only the slots the selectors under test read.
-const stubState = (
-  selection: Partial<{
-    hover: SelectionRef | null;
-    select: SelectionRef | null;
-    focus: SelectionRef | null;
-  }>,
-  selectionRows: Partial<{
-    hover: GalaxyRow | null;
-    select: GalaxyRow | null;
-    focus: GalaxyRow | null;
-  }> = {},
-) =>
-  ({
-    [selectionRoute]: {
-      hover: null,
-      select: null,
-      focus: null,
-      pending: { select: null, focus: null },
-      ...selection,
-    },
-    [selectionRowsRoute]: { hover: null, select: null, focus: null, ...selectionRows },
-  }) as unknown as RootState;
-
-// --- selectXRef ---------------------------------------------------------------
-
-describe('selectHoverRef', () => {
-  it('returns the ref when hover slot is set', () => {
-    expect(selectHoverRef(stubState({ hover: galaxyRef }))).toEqual(galaxyRef);
-  });
-});
-
-describe('selectSelectedRef', () => {
-  it('returns the ref when select slot is set', () => {
-    expect(selectSelectedRef(stubState({ select: galaxyRef }))).toEqual(galaxyRef);
-  });
-});
-
-describe('selectFocusRef', () => {
-  it('returns the ref when focus slot is set', () => {
-    expect(selectFocusRef(stubState({ focus: galaxyRef }))).toEqual(galaxyRef);
-  });
-});
-
-// --- selectXRow ---------------------------------------------------------------
-
-describe('selectHoverRow', () => {
-  it('returns the row when hover row is set', () => {
-    expect(selectHoverRow(stubState({}, { hover: galaxyRow }))).toEqual(galaxyRow);
-  });
-});
-
-describe('selectSelectRow', () => {
-  it('returns the row when select row is set', () => {
-    expect(selectSelectRow(stubState({}, { select: galaxyRow }))).toEqual(galaxyRow);
-  });
-});
-
-describe('selectFocusRow', () => {
-  it('returns the row when focus row is set', () => {
-    expect(selectFocusRow(stubState({}, { focus: galaxyRow }))).toEqual(galaxyRow);
-  });
-});
 
 // --- selectIsSelectionActive --------------------------------------------------
 

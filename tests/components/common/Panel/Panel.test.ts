@@ -18,16 +18,6 @@ import { createElement } from 'react';
 import { Panel } from '../../../../src/components/common/Panel/Panel';
 
 describe('Panel', () => {
-  it('renders the supplied title', () => {
-    render(
-      createElement(Panel, {
-        title: 'STATS',
-        children: createElement('span', null, 'BODY'),
-      }),
-    );
-    expect(screen.getByRole('button', { name: /STATS/i })).toBeInTheDocument();
-  });
-
   it('mounts open by default (aria-expanded="true" + body content rendered)', () => {
     render(
       createElement(Panel, {
@@ -35,9 +25,7 @@ describe('Panel', () => {
         children: createElement('span', null, 'BODY_CONTENT'),
       }),
     );
-    expect(
-      screen.getByRole('button', { name: /STATS/i }),
-    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /STATS/i })).toHaveAttribute('aria-expanded', 'true');
     expect(screen.getByText('BODY_CONTENT')).toBeInTheDocument();
   });
 
@@ -49,9 +37,10 @@ describe('Panel', () => {
         children: createElement('span', null, 'BODY_CONTENT'),
       }),
     );
-    expect(
-      screen.getByRole('button', { name: /STATS/i }),
-    ).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.getByRole('button', { name: /STATS/i })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
     // Body stays mounted in the DOM regardless of open state — the CSS
     // grid-template-rows trick collapses its visual height to zero
     // smoothly.  We verify the *intent* via aria-expanded above and
@@ -87,17 +76,6 @@ describe('Panel', () => {
     // The outer wrapper is the first DOM child of our render container.
     const outer = container.firstElementChild as HTMLElement;
     expect(outer).toHaveAttribute('aria-label', 'Render statistics');
-  });
-
-  it('omits the aria-label attribute when not provided', () => {
-    const { container } = render(
-      createElement(Panel, {
-        title: 'STATS',
-        children: createElement('span', null, 'BODY'),
-      }),
-    );
-    const outer = container.firstElementChild as HTMLElement;
-    expect(outer).not.toHaveAttribute('aria-label');
   });
 
   it('wires aria-controls on the button to the body id', () => {

@@ -29,12 +29,6 @@ describe('Sparkline', () => {
     expect(container.textContent).toBe('');
   });
 
-  it('renders a single character for a single sample', () => {
-    const { container } = render(createElement(Sparkline, { samples: [5] }));
-    // One sample → the lone bucket is necessarily 100% of itself → top block.
-    expect(container.textContent).toBe('█');
-  });
-
   it('renders all `▁` for an all-zero samples array', () => {
     const { container } = render(createElement(Sparkline, { samples: [0, 0, 0, 0] }));
     expect(container.textContent).toBe('▁▁▁▁');

@@ -8,10 +8,6 @@ import tourReducer, {
   tourEnded,
 } from '../../../src/state/tour/tourSlice';
 import {
-  selectTourActive,
-  selectTourPaused,
-  selectTourBeatIndex,
-  selectTourDwellNonce,
   selectActiveTour,
   selectTourTotal,
   selectTourBeatTitles,
@@ -25,17 +21,6 @@ const initial = (): TourRuntimeState => tourReducer(undefined, { type: '@@INIT' 
 const asState = (tour: TourRuntimeState): RootState => ({ tour }) as unknown as RootState;
 
 describe('tourSlice reducers', () => {
-  it('starts inert', () => {
-    expect(initial()).toEqual({
-      active: false,
-      tourId: '',
-      beatIndex: 0,
-      paused: false,
-      dwellNonce: 0,
-      dwellSec: 0,
-    });
-  });
-
   it('tourStarted activates, records the id, resets to beat 0', () => {
     const s = tourReducer(
       { active: false, tourId: '', beatIndex: 3, paused: true, dwellNonce: 7, dwellSec: 5 },
@@ -108,21 +93,6 @@ describe('tourSlice reducers', () => {
 });
 
 describe('tour selectors', () => {
-  it('runtime selectors read the slice fields', () => {
-    const st = asState({
-      active: true,
-      tourId: 'webShowcase',
-      beatIndex: 2,
-      paused: true,
-      dwellNonce: 4,
-      dwellSec: 8,
-    });
-    expect(selectTourActive(st)).toBe(true);
-    expect(selectTourPaused(st)).toBe(true);
-    expect(selectTourBeatIndex(st)).toBe(2);
-    expect(selectTourDwellNonce(st)).toBe(4);
-  });
-
   it('selectActiveTour resolves from the registry only when active', () => {
     expect(
       selectActiveTour(

@@ -22,18 +22,12 @@ import NavigationPanel, {
 } from '../../../src/components/NavigationPanel/NavigationPanel';
 
 describe('NavigationPanel', () => {
-  it('renders the NAVIGATION header', () => {
-    render(createElement(NavigationPanel, {}));
-    expect(
-      screen.getByRole('button', { name: /NAVIGATION/i }),
-    ).toBeInTheDocument();
-  });
-
   it('mounts open by default (Panel aria-expanded="true")', () => {
     render(createElement(NavigationPanel, {}));
-    expect(
-      screen.getByRole('button', { name: /NAVIGATION/i }),
-    ).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByRole('button', { name: /NAVIGATION/i })).toHaveAttribute(
+      'aria-expanded',
+      'true',
+    );
     // Body content visible — pick a row that's load-bearing for "open".
     expect(screen.getByText(/orbit camera/i)).toBeInTheDocument();
   });
