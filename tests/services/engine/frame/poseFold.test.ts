@@ -81,6 +81,9 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
 import { tiltFromNadirRad } from '../../../../src/utils/camera/tiltFromNadirRad';
+import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
+import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
+import { SITE_RUNG } from '../../../../src/data/camera/siteRung';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import {
@@ -522,6 +525,69 @@ describe('runFrame — the regime fold', () => {
     // settle would pass all of the above too.
     expect(tiltRad[0]!).toBeGreaterThan(0.7);
     expect(tiltRad[tiltRad.length - 1]!).toBeLessThan(onePixelRad);
+  });
+
+  it('the hand-back from a ground-level site view lands above the host arm’s own floor', () => {
+    // The site rung's ground was rated in the ROVER's bounding radii (0.5 m over
+    // Curiosity's tangent plane) while the body arm that receives the hand-back
+    // floors the eye at Mars's descent standoff (8.1 m over the datum). A view
+    // from rover height therefore handed back UNDER the host's floor, and the
+    // first body-arm notch spent the difference as a radial shove: eye step
+    // 25.9 m against neighbours at 11-12 m, and — the shove being radial while
+    // the settle pivots about the rover — the rover left centre by 0.030 rad
+    // (3 px here, ~31 px at 1080p) and STAYED there for every later notch.
+    const h = makeHarness();
+    const rover = h.bodies.get('curiosity')!;
+    const roverR = findByIdOrThrow(SCENE_MESH_BODIES, 'curiosity', 'poseFold').boundingRadiusM;
+    const RANGE_M = 150;
+    h.seedPose({
+      frame: { site: 'curiosity' as BodyId },
+      pose: {
+        siteId: 'curiosity' as BodyId,
+        headingRad: 0.4,
+        elevationRad: Math.asin((SITE_RUNG.eyeFloorBoundingRadii * roverR) / RANGE_M),
+        rangeM: RANGE_M,
+      },
+    });
+    h.focus('curiosity');
+    h.frame(2);
+
+    const eyeStepM: number[] = [];
+    const offRover: number[] = [];
+    let prev = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+    let handedBack = -1;
+    for (let i = 0; i < 20; i++) {
+      // A quarter of the usual notch: the review's fixture, and a small step
+      // makes the floor's shove stand out against its neighbours.
+      h.push({ kind: 'wheel', deltaY: 60, duringGesture: false, ...WHEEL_PX });
+      h.frame(1);
+      const drawn = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+      eyeStepM.push(
+        Math.hypot(
+          drawn.eye[0]! - prev.eye[0]!,
+          drawn.eye[1]! - prev.eye[1]!,
+          drawn.eye[2]! - prev.eye[2]!,
+        ) * SCALE_UNITS.MPC_TO_M,
+      );
+      offRover.push(offRoverRad(rover));
+      prev = drawn;
+      if (handedBack < 0 && isBodyArm(h.state.cameraRuntime.register.pose)) {
+        handedBack = eyeStepM.length - 1;
+      }
+    }
+    // Not vacuous: the climb really crosses, with notches left to measure after.
+    expect(handedBack).toBeGreaterThan(0);
+    expect(handedBack).toBeLessThan(eyeStepM.length - 3);
+
+    const onePixelRad =
+      h.state.cameraRuntime.outputs.projection.fovYRad /
+      (h.deps.canvas as { height: number }).height;
+    for (const off of offRover) expect(off).toBeLessThan(onePixelRad);
+    // Every post-hand-back notch within twice its predecessor: a zoom-out's
+    // steps grow geometrically, so a doubling is already far outside the law.
+    for (let i = handedBack + 1; i < eyeStepM.length; i++) {
+      expect(eyeStepM[i]!).toBeLessThan(2 * eyeStepM[i - 1]!);
+    }
   });
 
   it('diving back into the site arm engages with nothing to re-aim', () => {

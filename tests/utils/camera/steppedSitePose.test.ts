@@ -37,7 +37,8 @@ function drag(dx: number, dy: number): InputStep {
 }
 
 function step(pose: SitePose, input: InputStep): SitePose {
-  return steppedSitePose(pose, input, ROVER, VIEWPORT, FOV_Y_RAD);
+  // Host floor below the site: `clampedSitePose` owns that rule, not this one.
+  return steppedSitePose(pose, input, ROVER, VIEWPORT, FOV_Y_RAD, -1);
 }
 
 describe('steppedSitePose', () => {

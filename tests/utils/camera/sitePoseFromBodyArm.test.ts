@@ -56,7 +56,14 @@ const POSES: readonly SitePose[] = [
 ];
 
 function expectRoundTrip(s: SurfaceFixedSite, hostRadiusM: number, pose: SitePose): void {
-  const back = sitePoseFromBodyArm(sitePoseToBodyArm(pose, s, hostRadiusM), s, hostRadiusM, ROVER);
+  // Host floor below the site: the round trip is the conversion's, not a floor's.
+  const back = sitePoseFromBodyArm(
+    sitePoseToBodyArm(pose, s, hostRadiusM),
+    s,
+    hostRadiusM,
+    ROVER,
+    -1,
+  );
   expect(back.siteId).toBe(pose.siteId);
   expect(back.headingRad).toBeCloseTo(pose.headingRad, 9);
   expect(back.elevationRad).toBeCloseTo(pose.elevationRad, 9);
@@ -96,7 +103,7 @@ describe('sitePoseFromBodyArm', () => {
     };
 
     const reEntered = sitePoseToBodyArm(
-      sitePoseFromBodyArm(aimedAway, s, HOST_RADIUS_M, ROVER),
+      sitePoseFromBodyArm(aimedAway, s, HOST_RADIUS_M, ROVER, -1),
       s,
       HOST_RADIUS_M,
     );

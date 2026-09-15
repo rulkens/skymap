@@ -685,11 +685,17 @@ slider rows land beside the existing band sliders in
   metre-scale body and **must not** enter the site rung's metres path — it would
   drag an Mpc constant across the §10 seam for nothing.
 - **Elevation floor:** the eye's height above the site's tangent plane is
-  `rangeM · sin(elevationRad)`, and must be at least
-  `SITE_RUNG.eyeFloorBoundingRadii × boundingRadiusM` (0.2), i.e.
-  `elevationRad ≥ asin(min(1, 0.2 · boundingRadiusM / rangeM))`. At the range
-  floor that is ≈ 5.7°. This is the rung's ground: the eye cannot reach the
-  horizon plane and cannot pass under it, at any range.
+  `rangeM · sin(elevationRad)`, and must be at least the HIGHER of the site's
+  own floor, `SITE_RUNG.eyeFloorBoundingRadii × boundingRadiusM` (0.2), and its
+  host's descent floor expressed at the site, `hostFloorAboveSiteM` =
+  `surfaceFloorM(hostRadiusM, hostStandoffRadii) − |siteP|` — i.e.
+  `elevationRad ≥ asin(min(1, max(the two) / rangeM))`. On Curiosity the site's
+  own is 0.50 m and Mars's is 8.1 m over the datum, so the host's binds. The
+  host term is what keeps the hand-back legal: land the body arm under the floor
+  that arm itself enforces and its first notch shoves the eye radially out to
+  it, off the settle's pivot, and the rover walks off centre for the rest of the
+  climb. This is the rung's ground: the eye cannot reach the horizon plane and
+  cannot pass under it, at any range.
 - **Elevation ceiling:** `SITE_RUNG.elevationCeilRad`, π/2 minus 1e-3. At
   exactly π/2 the heading has nowhere to go — the same degeneracy
   `CameraPose.roll` documents at nadir (`CameraPose.d.ts:15-21`).

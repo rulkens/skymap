@@ -21,6 +21,7 @@ export function steppedSitePose(
   body: MeshBody,
   viewportPx: Readonly<Vec2>,
   fovYRad: number,
+  hostFloorAboveSiteM: number,
 ): SitePose {
   if (input.kind === 'drag') {
     const gain = Math.min(
@@ -34,11 +35,16 @@ export function steppedSitePose(
         elevationRad: pose.elevationRad + (input.endPx[1] - input.startPx[1]) * gain,
       },
       body,
+      hostFloorAboveSiteM,
     );
   }
   // No cursor anchoring: the turntable's pivot is the site, by definition.
   if (input.kind === 'zoom') {
-    return clampedSitePose({ ...pose, rangeM: pose.rangeM * spentZoomFactor(input.factor) }, body);
+    return clampedSitePose(
+      { ...pose, rangeM: pose.rangeM * spentZoomFactor(input.factor) },
+      body,
+      hostFloorAboveSiteM,
+    );
   }
   // The gesture edges move nothing, and an arithmetic identity is not an
   // identity for the full-pose byte bar.
