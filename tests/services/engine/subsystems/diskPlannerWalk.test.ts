@@ -73,7 +73,13 @@ function makeCatalog(rows: readonly { distMpc: number; diameterKpc: number }[]):
 const PX_PER_RAD = 600;
 
 function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
-  return { cam: makeCam(), catalogs, visibleSourceMask: mask, pxPerRad: PX_PER_RAD };
+  return {
+    cam: makeCam(),
+    catalogs,
+    visibleSourceMask: mask,
+    pxPerRad: PX_PER_RAD,
+    sourceOpacity: () => 1,
+  };
 }
 
 type WalkEvent = readonly (string | number)[];

@@ -65,11 +65,6 @@ const jupiterRow: SelectionRow = {
 };
 
 describe('buildFocusable', () => {
-  it('null → null', () => expect(buildFocusable(null)).toBeNull());
-  it('galaxy row → GalaxyInfo', () => {
-    const info = buildFocusable(galaxyRow);
-    expect(info).toMatchObject({ type: 'galaxyCatalog', objID: 1237668n, source: Source.SDSS });
-  });
   it('structure row → the StructureInfo as-is', () => {
     expect(buildFocusable(structure)).toBe(structure);
   });

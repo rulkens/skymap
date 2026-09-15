@@ -336,7 +336,7 @@ describe('prepareStarCut per-node LOD fades', () => {
 });
 
 describe('prepareStarCut stream aliasing across views (regression)', () => {
-  // Up to six capture-face walks (viewSlot 1..6) run AFTER the main view's own
+  // Capture-face walks (viewSlot ≥ 1) run AFTER the main view's own
   // prime but BEFORE its draw (see runFrame/FRAME_ORDER ordering). If the
   // persistent leaf/aggregate streams were keyed by catalog alone, a capture
   // face's walk would reset+refill the SAME stream objects the main view's

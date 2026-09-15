@@ -70,9 +70,7 @@ function makeCtx(): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
-    texturedDisks: {} as never,
   };
 }
 
@@ -114,12 +112,6 @@ function makeState(opts: {
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
 describe('clipPathDebugPass.enabled', () => {
-  it('is false when the renderer is null', () => {
-    const state = makeState({ renderer: null, snapshot: SNAPSHOT });
-    const ctx = makeCtx();
-    expect(clipPathDebugPass.enabled(state, ctx, slabViewOf(ctx, NEAR0))).toBe(false);
-  });
-
   it('is false when there is no snapshot', () => {
     const state = makeState({ renderer: makeRendererSpy(), snapshot: null });
     const ctx = makeCtx();

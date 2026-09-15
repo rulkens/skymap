@@ -1,6 +1,12 @@
 # Per-planet 3D terrain — Earth and Mars — design
 
-**Status:** Draft (2026-09-13), awaiting plans. Written against `main` at `be13f9dc7`.
+**Status:** F1 and F2 landed (`main` 343fd14c0, 2026-09-15 — plans archived at
+[`plans/completed/2026-09-15-terrain-f1-height-products.md`](../plans/completed/2026-09-15-terrain-f1-height-products.md)
+and [`plans/completed/2026-09-15-terrain-f2-displacement.md`](../plans/completed/2026-09-15-terrain-f2-displacement.md)).
+F3 (ground truth) and F4 (Mars) are unstarted — this spec stays open for them. Written
+against `main` at `be13f9dc7`; amended 2026-09-15 from the F1 plan's rulings R1, R3,
+R11, R12, R14, F2's F2-R1–R7 and R15, and the data rulings in §4.2 — each amendment is
+marked in place.
 
 **As built:** [`specs/completed/2026-07-28-earth-surface-virtual-texture.md`](completed/2026-07-28-earth-surface-virtual-texture.md)
 — the quadtree, the atlas, the band manifest and the residency walk this spec
@@ -112,9 +118,9 @@ export type SurfaceHeightField = {
 // 215 call sites grow `?? radiusM` and the scalar is back wearing a new costume.
 
 // SurfaceCutTile:  resident: {…}  →  albedo: ResolvedTileResidency;
-//                                    heightSlot: AtlasSlot;   // the leaf's OWN (z,x,y), never inherited
+//                                    height: { slot, levelDelta, originPosts };  // inherits like albedo (R14)
 //                                  + heightBoundsM; + edgeCoarser: [0|1, 0|1, 0|1, 0|1]
-
+//   (amended, R15: one bit per edge = the neighbour's height level is one coarser; a step of two or more carries no bit, the skirt owns it)
 // deleted (P6, #705): bakeSurfaceTileMesh.ts · surfaceTileMeshCache.ts ·
 //          SurfaceTileMesh.d.ts and both their tests ·
 //          EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY ·
@@ -149,7 +155,7 @@ never pushed — only ever permitted lower as finer data lands.
 | 4   | A bake that merges products                                                     | bolt-on         | `buildEarthTiles.ts:445,450` overwrite `index.txt` / `manifest.json` outright                                                                                                                                                                                                                                                                                                                                                                              |
 | 5   | Per-product downsample strategy                                                 | bolt-on         | `buildEarthTiles.ts:211-276` gamma-space 2×2 average — right for imagery, destroys cross-level height identity                                                                                                                                                                                                                                                                                                                                             |
 | 6   | Height residency gating refinement, not selecting a level                       | bolt-on         | `cutSurfaceTiles.ts:290-335` `resolveCutResidency` climbs until resident: residency must gate refinement for height, not select the sampled level; the climb is albedo-only                                                                                                                                                                                                                                                                                |
-| 7   | 2:1-balanced refine, so `edgeCoarser` is one bit per edge                       | growth          | `cutSurfaceTiles.ts:212-231` has no balance constraint                                                                                                                                                                                                                                                                                                                                                                                                     |
+| 7   | Height levels balanced 2:1, so `edgeCoarser` is one bit per edge (amended, R15) | growth          | `cutSurfaceTiles.ts:212-231` has no balance constraint                                                                                                                                                                                                                                                                                                                                                                                                     |
 | 8   | Surface as bounds + field, not one scalar                                       | bolt-on         | 215 read sites through ~10 hubs: `bodyFootprintRadiusM.ts:13`, `bodyDrawRadiusM.ts:18`, `hOverR.ts:20`, `pivotRadiusMpc.ts:24`, `surfaceFloorM.ts:7`, `sceneOccluderBodies.ts:41`, `cutSurfaceTiles.ts:95`, `pickOnBody.ts:10`, `atmosphereParams.ts:28`, `cloudShellParams.radiusRatio`. Bounds half landed by P1 (#704): `BodySurface { datumRadiusM, reliefM }`, `outerBoundRadiusM` / `innerBoundRadiusM`; the field half (`SurfaceHeightField`) is F3 |
 | 9   | A ground-height query                                                           | absent entirely | `surfaceFloorM.ts:7` is `bodyRadiusM * SURFACE_STANDOFF_RADII`. P1 rebuilt this exact joint as `surfaceFloorM(datumRadiusM, standoffRadii)` but added no height query — still absent entirely                                                                                                                                                                                                                                                              |
 | 10  | Depth-aware inside-atmosphere                                                   | external        | §2                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
@@ -160,7 +166,7 @@ never pushed — only ever permitted lower as finer data lands.
 | --- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | a   | **Delete the name `radiusM`.** Every one of the 215 sites fails to compile and picks one of five currencies, legibly, in the diff | one mechanical PR over ~10 hubs. The alternative — keeping `radiusM` as the datum with bounds beside it — leaves R1/R4/R5 silently holding the wrong currency and removes the compiler from the loop, which is the entire value                                                                                                                                                            |
 | b   | **Break the manifest shape** (`levels` → `bands`)                                                                                 | `fetchEarthTileManifest`'s guard rejects unknown shapes, so tiles are OFF in production between merge and R2 sync (`docs/DEPLOY.md:47`). Accepted: the bake must re-run for height anyway, and `prefix` versioning already isolates the CDN. Compat — both keys read forever — was rejected                                                                                                |
-| c   | **Nested point decimation** for the height pyramid, not filtering                                                                 | coarse levels are point-sampled, so a peak can survive into a level where its neighbours averaged away. Bought: level _L_ is a bit-identical subset of _L+1_, making cross-level cracks structurally zero instead of skirt-hidden. Softened by choosing, among each coarse post's four candidates, the one nearest the local mean — still nested                                           |
+| c   | **Nested point decimation** for the height pyramid, not filtering                                                                 | coarse levels are point-sampled, so a peak can survive into a level where its neighbours averaged away. Bought: level _L_ is a bit-identical subset of _L+1_, making cross-level cracks structurally zero instead of skirt-hidden. **Amended (R1):** strict decimation — the coarse post _is_ the coincident fine post, no candidate choice, so §5.4.3's identity holds by construction    |
 | d   | **Procedural vertex-shader geometry** (user's choice at the checkpoint)                                                           | replaces exact f64 CPU-baked positions with f32 small-angle trig on the _existing_ Earth path. Bought: deletes three modules and the per-frame vertex upload, and makes real instancing possible for the first time — one draw call, ≤ 80 B per patch. Requires a numeric test against f64 ground truth and its own perf measurement (P6)                                                  |
 | e   | **A compiled coarse min/max height grid** (64×32 int16 pairs, 8 KB/body) in the bundle                                            | 8 KB of bundle per body. Bought: `ceilingHeightM` has a bound at boot with zero network, so the floor never steps _up_ when the first tiles land — which happens on close approach, exactly when the camera is near the ground. It is the z6 layer of the bound the tile headers carry, and it is the one compiled home for relief: `reliefM` is its extremes, not a second compiled tuple |
 | f   | **One shared atlas, at most one engaged body**                                                                                    | a hypothetical pose close to two planets at once gets tiles on neither. Bought: 268 MB instead of 536 MB. Tiles engage only on close approach, and no pose is close to two planets                                                                                                                                                                                                         |
@@ -185,10 +191,9 @@ P1 and P6 each get their own PR. P2–P5 ride the first feature PR as separate
 commits. Prep, adjacent cleanup and feature are three different diffs whatever PR
 they ride.
 
-Sequencing conflict to resolve first: `TILE_PREFIX` is `earth-tiles/v5` on `main`
-(`buildEarthTiles.ts:127`) but the on-disk bake is `v6` from the unmerged
-`eox-2025` worktree. That must land or be abandoned before the height bake bumps
-the prefix again.
+The `eox-2025` sequencing conflict is resolved: it landed as `v7` (#662). F1 bumps
+`TILE_PREFIX` to `earth-tiles/v8` with a per-product segment (`albedo/`, `height/`);
+the albedo relayout is a byte-identical copy of `v7/surface`, never a re-encode.
 
 ### 3.7 Adjacent findings
 
@@ -240,23 +245,32 @@ therefore have identical band boxes at identical levels, on every body.
 
 Heights are only needed where bands exist, which makes acquisition modest.
 
-- **Earth global:** ETOPO 2022 30″ (~1.9 GB, one download, geographic grid,
-  includes bathymetry). Bathymetry is clamped to 0 at bake time — the ocean is a
-  flat sea at the datum, not a hole (§4.4).
+- **Earth global:** ETOPO 2022 30″ surface GeoTIFF (1,585,813,987 B, one download,
+  geographic grid, includes bathymetry) from
+  `ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/30s/30s_surface_elev_gtif/` — the
+  thredds path first quoted here 404s. Water is flattened at bake time per §4.4 (R3),
+  not clamped.
 - **Earth deep bands:** the `skadi` product in `s3://elevation-tiles-prod`, which
   is SRTM-format 1°×1° 3601² int16 **in geographic coordinates** — no reprojection,
   unlike the terrarium PNGs in the same bucket, which are WebMercator. Verified
   live: `skadi/N55/N55E012.hgt.gz` → 200, 2.1 MB, 3601², min −60 / max 129. The 19
   EOX boxes need ~30 cells.
-- **Søndermarken (z14–19 albedo):** DHM/Terræn 0.4 m raster via the Dataforsyningen
-  WCS `dhm_terraen` coverage (token required). Note the repo's existing
+- **Søndermarken (z14–19 albedo):** DHM/Terræn 0.4 m as 1 km GeoTIFF tiles
+  (`DTM_1km_<N>_<E>.tif`, EPSG:25832) from the Datafordeler `GetRasterFile`
+  endpoint with the keychain key `skymap-datafordeler-apikey`, read in-process and
+  never logged (`npm run fetch-height -- --dhm-terraen`). Note the repo's existing
   `npm run fetch-dhm` pulls DHM _point clouds_ for the scene-workbench LiDAR bake —
   a different endpoint and a different product.
-- **Mars global:** MOLA–HRSC blended DEM 200 m v2 (USGS Astrogeology, 106,694 ×
-  53,347 int16, simple cylindrical, sphere radius 3,396,190 m — note this differs
-  from the scene's 3,390,000 m Mars radius; see §4.3). Imagery: Viking MDIM21.
-- **Mars rover sites:** HiRISE DTM mosaics at ~1 m with 25 cm orthoimages (Jezero
-  has the USGS Mars 2020 TRN products; the 2024 MSR TRN release is a 5.3 GB zip).
+- **Mars global:** **amended (user ruling 2026-09-15):** MOLA 463 m DEM
+  (`Mars_MGS_MOLA_DEM_mosaic_global_463m.tif`, 2.1 GB) replaces the 200 m MOLA–HRSC
+  blend — z7 is the only global level wanted, and 463 m posts already sit inside
+  z7's 1,300 m. Reference sphere 3,396,190 m, so the §4.3 rebase still applies.
+  Imagery: Viking MDIM21 232 m (12.7 GB).
+- **Mars rover sites:** Gale and Jezero have USGS HiRISE DTM mosaics at ~1 m with
+  25 cm orthoimages (the 2024 MSR TRN release is a 5.5 GB zip). Gusev and Meridiani
+  have no mosaic: they use controlled HiRISE stereo-pair DTM + ortho COGs from the
+  public `astrogeo-ard` bucket, whose orthos are single-band RED — colour for those
+  two sites comes from tinting with the global base (F4).
 
 All fetchers register in `tools/utils/io/rawDataRegistry.ts` with provenance
 READMEs, per `docs/DATA.md:214-222`.
@@ -277,12 +291,21 @@ reference sphere and any areoid correction are named in the provenance README.
 ### 4.4 Water
 
 Copernicus and SRTM are hydro-flattened (water at ~0), so no extra work there.
-ETOPO carries real bathymetry, which would make every ocean a 4 km pit. The bake
-clamps **marine** bathymetry to 0 — negative posts under the source's ocean mask.
-Land below sea level is not water and keeps its value: the Dead Sea at −430 m and the
-Caspian shore are terrain, which is why Earth's `reliefM[0]` is ≈ −430 m and not 0.
-Coastal cliffs are not introduced: the clamp matches what the hydro-flattened deep
-sources already do, so the two agree at band boundaries.
+ETOPO carries real bathymetry, which would make every ocean a 4 km pit. **Amended
+(R3):** the bake flattens water by connected component over the whole level grid
+(NASA water mask, 4-connected, longitude-wrapped): the largest component — the world
+ocean — goes to 0, every other component to the lowest post on its own shore. Land
+below sea level is not water and keeps its value: the Dead Sea at −430 m is terrain,
+which is why Earth's `reliefM[0]` is ≈ −430 m and not 0. Coastal cliffs are not
+introduced: the flattening matches what the hydro-flattened deep sources already do,
+so the two agree at band boundaries.
+
+_Open after the first real bake (2026-09-15):_ where the mask says land but ETOPO
+30″ puts the post under deep water — atolls, the Antarctic coast, the Caspian and
+Black Sea shores — those posts escape flattening (single-post needles to −4.9 km at
+z7) and donate their depth as a basin's "lowest shore" (Caspian −131 m instead of
+≈ −28, Black Sea −541 instead of 0). Candidate rule for the user: a land post below a
+threshold that touches water adopts the water level and is ignored as a shore.
 
 ## 5. The tiled products
 
@@ -321,15 +344,19 @@ export type CoverageIndex = {
 };
 ```
 
-**The invariant that makes crack-freedom hold:** a leaf's height tile is its own
-`(z, x, y)` tile, always — never an ancestor's. The walk emits a leaf only when that
-height tile is resident; otherwise the parent stays the leaf. Albedo may still inherit
-an ancestor's texels, as it does today: it is only a texture. So residency gates
-_refinement_, and the sampled height level is a function of the cut alone — which is
-what keeps neighbours on nested lattices at every moment of streaming. Reusing the
-incumbent `resolveCutResidency` climb for height is the tempting mistake (joint 6):
-it makes neighbouring patches sample different height levels as tiles arrive, and
-the cracks flicker.
+**The invariant that makes crack-freedom hold (amended, R14):** a leaf samples the
+deepest resident tile in its OWN ancestor chain, flattened into its sub-rect of that
+tile's posts — the same climb albedo already does, and the same one `resolveHeightLattice`
+now performs beside `resolveCutResidency`. Strict decimation (§5.4.3, R1) is what makes
+that safe: the sub-rect IS the lattice the ancestor itself draws, so a leaf on inherited
+posts and its ancestor agree bit-for-bit, and only the LEVEL varies while tiles stream.
+Neighbouring levels are then stepped to within one of each other by `balanceSurfaceCut`
+(§6), which is what F2's one-bit edge collapse needs. The original rule — own tile or
+nothing, residency gating refinement — was measured as holes: the atlas allocator
+refuses when full and never retries, and below 150 km the base globe has faded out, so
+every refused tile was a hole to the stars for as long as the pose held. The climb is
+capped at seven levels; deeper falls back to a dropped leaf, the same as no resident
+ancestor at all.
 
 ### 5.3 Height tile format — `shgt1`
 
@@ -382,6 +409,12 @@ Three structural properties, none a convention:
    produce exactly zero crack even where a z patch meets a z+1 patch sampling a
    different height level.
 
+4. **Sibling-closed tile sets** (amended, R11). A band bakes tile `(L, x, y)` iff
+   its _parent's_ box overlaps the band bounds and `min ≤ L ≤ max`, so every baked
+   tile's three siblings exist; the halo tiles outside the bounds come from the
+   band's underfill. It applies to both products through one shared existence
+   helper that the bake and the walk both call.
+
 **Voids** are filled from the coarser level at bake time, and the bake asserts every
 post is finite. The loader rejects a payload carrying a non-finite value — one check,
 no flag. A NaN reaching the runtime propagates into vertex positions; a `−9999`
@@ -390,8 +423,10 @@ sentinel reaches the GPU as a 10 km pit. The runtime sees neither.
 ### 5.5 The height atlas
 
 A second atlas instance, `r32float`, slot stride **129**: a row is 516 B, already
-4-aligned, and no WebGPU constraint asks for more. 16×16 = 256 slots in a 2064²
-texture, 17.0 MB — the same slot count as the albedo atlas, because the cut is 1:1.
+4-aligned, and no WebGPU constraint asks for more. 32×32 = 1024 slots in a 4128²
+texture, 68 MB (amended, R14). Not the albedo atlas's 256: a tilted view's working
+set runs to ~1800 tiles, and where albedo's miss is blur, height's is a flattened
+lattice, so the two products are sized by what a miss costs, not by the cut's 1:1.
 
 Sampled with `textureLoad` and **manual bilinear**, clamped to the slot rect. Three
 independent reasons, any one sufficient: `textureSample` is illegal in the vertex
@@ -405,15 +440,29 @@ slot in as a one-texel ridge along every patch edge regardless of format.
 `cutSurfaceTiles` keeps its shape — one pure per-frame quadtree walk resolving both
 `requests` and `cut` — and gains three things.
 
-1. **Two products resolved per leaf.** `SurfaceCutTile` carries an `albedo`
-   `ResolvedTileResidency` (the inline shape today, extracted to its own type) and a
-   `heightSlot` — a plain slot reference, not a resolved residency, because a leaf's
-   height tile is its own `(z, x, y)` and never an ancestor's (§5.2). Requests
-   therefore run one level ahead of the cut: where screen error wants a deeper leaf,
-   the walk requests the children's height tiles and emits the parent until they land.
-2. **A 2:1 balance constraint**, so a leaf never neighbours a leaf more than one
-   level away. This is what bounds `edgeCoarser` to one bit per edge and lets §7's
-   stitching be a vertex-shader decision needing no neighbour data beyond four bits.
+1. **Two products resolved per leaf** (amended, R14; R13 struck). `SurfaceCutTile`
+   carries an `albedo` `ResolvedTileResidency` and a `height` record (slot,
+   `levelDelta`, `originPosts`) — the deepest resident tile in the leaf's own
+   ancestor chain and the leaf's sub-rect inside it (§5.2). Refinement is
+   **residency-blind**: a node refines iff screen error wants it and the band
+   allows it, every node on the path is requested in both products, and anything
+   still loading draws on the best loaded ancestor. Nothing is ever a hole. Screen error is **isotropic** — the
+   geometric mean of the projected bbox's extents, not the max — so a foreshortened
+   horizon sliver no longer demands the level its width alone would.
+2. **A balance constraint on the HEIGHT level** (amended, R14, R12 kept), so no two
+   edge-neighbouring leaves sample height levels more than one apart. This is what
+   makes `edgeCoarser` one bit per edge (amended R15: set = exactly one level
+   coarser, sampled at doubled stride; a step of two or more, left by R12's
+   band-ceiling exemption, carries no bit at all — no stride meets it and F2's
+   skirt hides it) and lets §7's stitching be a vertex-shader decision needing no
+   neighbour data beyond one `u32`.
+   `balanceSurfaceCut` never adds or removes a leaf — it raises the finer side's
+   `levelDelta`, climbing to the next resident ancestor — so a cut that is already
+   drawn cannot lose patches to it. The balance holds _within a band's reach_ only:
+   it never coarsens against a neighbour that cannot refine (no tile exists under it at the next level), or a deep band ringed by band-capped coarse leaves would
+   collapse to the coarse level. A band boundary therefore keeps a multi-level step,
+   which no edge bit describes (amended, R15: skirted, never collapsed); §7.3 says
+   how F2 hides it.
 3. **A terrain-aware horizon cap.** Today `capAngle = acos(radiusM / camLen)` with
    a hard `camLen > radiusM` early-return of an empty cut. Both are mean-sphere
    facts and both are wrong with terrain: on Mars a 9 km peak is geometrically visible
@@ -431,11 +480,12 @@ refinement — mountains pulled in earlier from orbit — so it is deferred to a
 after the eye-check. The field stays in the header, so adding the term is a walk
 change and not a re-bake.
 
-**Drawability.** A leaf's own height tile is resident by construction: that residency
-is what let the walk refine to it. Albedo then resolves to some resident ancestor, and
-that inheritance covers the streaming case — a deeper tile in flight — plus the
-base-level boundary. A patch with no albedo ancestor stays dropped from the cut; the
-base globe covers it, exactly as today.
+**Drawability** (amended, R14). Both products inherit: a leaf draws on the deepest
+resident ancestor of each, which covers the streaming case — a deeper tile in flight
+— plus the base-level boundary. A leaf with NO resident ancestor in either product
+stays dropped from the cut, and the base globe covers it; that is one round trip for
+a brand-new root child, and F2 (whose globe sits at the inner bound rather than
+fading out) is what stops it showing stars instead.
 
 ## 7. Displaced geometry
 
@@ -471,8 +521,9 @@ struct PatchInstance {
   dLatRad          : f32,
   albedoRect       : vec4f, // at offset 32: every vec4 must precede the vec2u or
   fallbackRect     : vec4f, // WGSL alignment pads the record past 80 B
-  heightSlotOrigin : vec2u, // F2
-  edgeCoarser      : u32,   // F2: 4 × 1 bit
+  heightSlotOrigin : vec2u, // F2: the leaf's SUB-RECT origin in atlas posts (R14)
+  edgeCoarser      : u32,   // F2: 4 × 1 bit (amended, R15 — the lattice step alone)
+  heightCells      : u32,   // F2 (R14): 128 >> levelDelta — was the trailing pad
 }                           // 80 B; P6 lands the first 64 B
 ```
 
@@ -518,40 +569,66 @@ parallel to it.
 
 ### 7.2 Normals
 
-In the fragment shader, the normal is the gradient of the bilinear cell the fragment
-lies in, from that cell's own four posts, in the local `(Ê, N̂, Û)` frame at the
-**source level's** post spacing. With `(u, v)` the fragment's position inside cell
-`(i, j)`:
+**Amended after the eye-check (spike `b95d565ac`, kept — this supersedes the
+bilinear-cell-gradient design below the eye-check found).** A gradient constant across
+the whole cell drew visible facets ("quilting") at coarse levels: shading stepped
+between posts instead of blending. The shipped normal instead interpolates a
+**per-post central-difference gradient** across the cell: at each of the cell's four
+corner posts, take the central difference against that post's own four neighbours
+(`lattice.wesl`'s `latticePostGradient` — **16 `textureLoad`s** per fragment, four per
+post, one-sided/clamped where a post sits on the sub-rect's own edge — **no apron**,
+the tile carries no halo row), then bilinear-blend the four post gradients by the
+fragment's position `(u, v)` inside the cell, in the local `(Ê, N̂, Û)` frame at the
+**source level's** post spacing — `patchExtent / heightCells` (R14), the lattice
+actually sampled, never a fixed 128:
 
 ```
-dhdE = ((h(i+1,j) − h(i,j))·(1−v) + (h(i+1,j+1) − h(i,j+1))·v) / postSpacingE_M
-dhdN = ((h(i,j+1) − h(i,j))·(1−u) + (h(i+1,j+1) − h(i+1,j))·u) / postSpacingN_M
-n    = normalize(Û − dhdE·Ê − dhdN·N̂)
+g(post) = ((h(post.x+1) − h(post.x−1)) / spacingE, (h(post.y+1) − h(post.y−1)) / spacingN)   // central, clamped at the sub-rect edge
+g       = mix(mix(g(NW), g(NE), u), mix(g(SW), g(SE), u), v)
+n       = normalize(Û − g.E·Ê − g.N·N̂)
 ```
 
-This is exact for the surface actually being drawn, it reads no post outside the tile,
-and across a tile edge both sides read the same bit-identical shared column (§5.4.1),
-so neither can disagree with the other. A central difference would go one-sided at the
-129th post and draw a seam along every tile edge. Shading resolution decouples from
-tessellation, and a coarse patch and a fine patch sampling the same height level
-produce **identical** normals — no shading seam at an LOD boundary even though the
-geometry densities differ. If the eye-check shows cell quilting at coarse levels, the
-escalation is a one-post apron in the tile, not a clamp.
+No apron means a post's central difference is one-sided at the sub-rect's own edge
+(clamped to the post itself rather than reading a neighbouring leaf's ground), so two
+patches sharing an edge take one-sided slopes from opposite sides of the same shared
+post — a second-order disagreement one post wide, five orders below anything §7.3's
+crack argument is about (position, not shading). If a future eye-check finds a
+residual seam there, the escalation is a one-post apron in the tile format (a
+re-bake), not a shader clamp.
+
+Shading resolution still decouples from tessellation, and a coarse patch and a fine
+patch sampling the same height level still produce **identical** normals — no shading
+seam at an LOD boundary even though the geometry densities differ.
 
 Patches take their normal from the height field alone. The whole-globe tangent-space
 normal map that the tile shader samples today (`fragment.wesl:109-110`) stays on the
 base globe only — compositing both would shade the same relief twice.
 
+**Night lights gate on the datum normal, not this one.** The emissive city-lights term
+(§8's `nightLights`) keys "is the sun up" on `dot(Ng, l)` — `Ng` the un-displaced datum
+normal, not the terrain-shaded `n` above. Keying it on `n` turned every slope facing
+away from the sun at local noon into "night" and lit it with the Black Marble glow
+(found at Søndermarken during the eye-check, fixed `ad7ab0f69`).
+
 ### 7.3 Crack accounting
 
-| mismatch                                         | resolved by                                                                                                                                                                                                                                                    |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| different vertex counts along a shared edge      | **edge collapse**: where `edgeCoarser` is set, odd template indices snap to the adjacent even index in the parametric domain, so the fine polyline becomes exactly the coarse one. Costs 32 degenerate triangles per collapsed edge. Requires §6's 2:1 balance |
-| different height _tiles_ across a tile boundary  | the duplicated 129th post, bit-identical by §5.4.2                                                                                                                                                                                                             |
-| different height _levels_ across an LOD boundary | bit-identical at shared lattice points by §5.4.3                                                                                                                                                                                                               |
-| f32 arithmetic from two different patch origins  | ~µm residue, five orders below a 0.149 m texel. Acceptable _only because_ the data and the topology are exact; it cannot be relied on to hide either                                                                                                           |
+| mismatch                                         | resolved by                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| different height LEVELS along a shared edge      | **doubled-stride sample (amended, R14/R15)**: where `edgeCoarser`'s bit is set, that edge samples the lattice at DOUBLED stride, which by R1's strict decimation IS the coarse neighbour's own posts — so both sides compute the same height at the same parametric position, whatever their vertex counts. No index snapping, no degenerate triangles; the stride is clamped to the leaf's own `cells`. Requires §6's height-level balance, and covers a one-level step only: two or more carries no bit, and the skirt below owns it |
+| different MESH densities across a cut-level step | **the skirt (amended, R15)**: the balance works on HEIGHT levels and never removes a leaf, so a z13 leaf drawing its own tile can sit beside a z12 one with half its vertices along the shared edge — a T-junction no sampling rule reaches, since the coarse side draws a chord where the fine side has a post. Every patch therefore draws its skirt ring on all four edges unconditionally. Cesium and Google Earth do not balance at all and hide every seam exactly this way                                                      |
+| different height _tiles_ across a tile boundary  | the duplicated 129th post, bit-identical by §5.4.2                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| different height _levels_ across an LOD boundary | bit-identical at shared lattice points by §5.4.3                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| f32 arithmetic from two different patch origins  | ~µm residue, five orders below a 0.149 m texel. Acceptable _only because_ the data and the topology are exact; it cannot be relied on to hide either                                                                                                                                                                                                                                                                                                                                                                                   |
 
-No skirts. A skirt is what you build when the heights disagree; these do not.
+**Amended (R15): the skirt is unconditional, on every edge of every patch.** The
+earlier rule — no skirts inside a band, since within one source pyramid the
+heights agree — assumed the refine rule kept MESH levels 2:1. It does not: R14
+balances height levels and never removes a leaf, so agreeing heights are not
+agreeing geometry. The ring hangs inward by `SURFACE_TILE_SKIRT_DEPTH_FRACTION`
+(0.05) of the patch's north–south extent and costs one draw call and no branch —
+`4(n+1)` vertices on a template already shared by every patch. The band seam R12
+leaves standing (a source seam: skadi beside ETOPO, DHM beside skadi) is then one
+more case the ring covers, not a case of its own.
 
 ### 7.4 The base globe
 
@@ -564,8 +641,15 @@ the 300→150 km band.
 Fix: draw the base globe at `datumRadiusM + reliefM[0]` — shrunk by maximum
 depression, 430 m on Earth, 0.007 % (§4.4) — so resident patches always cover it.
 Where no patch is resident the globe reads 430 m small, sub-pixel at any range the
-base globe is visible at. The fade band and the
-`'nearer-or-equal'` compare both stay as they are.
+base globe is visible at. The `'nearer-or-equal'` compare stays.
+
+**Amended (R14): the descent fade is gone.** It existed for the depth fight an
+un-shrunk globe had with the patches, and the inner bound removes that fight. It
+also made the R14 hole worse: below 150 km a leaf with no resident ancestor — one
+round trip for a brand-new root child — showed stars rather than ground. The globe
+is now drawn at every altitude at alpha 1, opaque, and is what covers whatever the
+cut does not (`baseGlobeFadeAlpha`, `EARTH_BASE_GLOBE_FADE_*` and the
+`baseGlobeAlpha` uniform slot are deleted).
 
 ## 8. Terrain as ground truth
 
@@ -654,8 +738,8 @@ Mars needs the imagery path it does not have: today it is one whole-globe
 `mars-8192.jpg` at 2.6 km/texel, no tiles, no DEM, no normal map.
 
 - **Global albedo:** Viking MDIM21 → z3–z7, mirroring Earth's BMNG band.
-- **Global height:** MOLA–HRSC 200 m → z3–z7 (1,300 m posts), matching the albedo
-  band level for level. Mars relief is ±21 km on a 3,390 km radius — 0.6 %, four
+- **Global height:** MOLA 463 m (amended, §4.2) → z3–z7 (1,300 m posts), matching
+  the albedo band level for level. Mars relief is ±21 km on a 3,390 km radius — 0.6 %, four
   times Earth's — so Olympus Mons and Valles Marineris are visible from orbit in a
   way Earth's relief is not, which is the case for matching rather than trailing the
   imagery. The source supports z9.7, so z7 is a re-bake away from deeper if wanted.
@@ -687,7 +771,9 @@ Height bytes are 66,588 per tile (§5.3); a full pyramid to level `L` costs roug
 | Mars rover sites height (4×) | z10–z17 | = albedo count | 1.27 m       | count × 66.6 KB |
 
 Height bands equal albedo bands (§4.1), so on Earth the height pyramid mirrors the
-albedo pyramid tile for tile, 19,701 each. Each ceiling is source-clean, not
+albedo pyramid tile for tile, 19,701 each (the first real bake, 2026-09-15, landed on
+exactly that count at 1.3 GB), plus the one-parent-wide halo per level that §5.4.4's
+sibling closure adds to both products. Each ceiling is source-clean, not
 interpolated: global z7's 2,446 m posts sit inside ETOPO 30″'s 926 m; the EOX boxes'
 z13 38.2 m posts inside skadi 1″'s 30 m; Søndermarken's z19 0.597 m posts inside DHM's
 0.4 m. Nothing is invented anywhere real data exists — the requirement in §1, and the
@@ -731,7 +817,8 @@ fail on a real bug nothing else catches.
   holds — the property that makes eviction unable to raise the floor (§8.2).
 - **Horizon cap**: a patch containing a peak at `boundsM.max` is _not_ culled from a
   distance where the mean-sphere cap would cull it.
-- **2:1 balance**: the walk never emits neighbouring leaves more than one level apart.
+- **Level balance** (R14): neighbouring leaves never sample height levels more than
+  one apart, and the balance never adds or removes a leaf.
 - Not tested: constant restatements, the registry's contents, clamp boundaries.
 
 `npm run perf` before and after P6, and again after displacement lands, with the
@@ -740,14 +827,14 @@ land/park call is the user's.
 
 ## 12. Sequence
 
-|     |                                                                                                    | PR                          |
-| --- | -------------------------------------------------------------------------------------------------- | --------------------------- |
-| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                                | #704 — landed               |
-| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                       | #705 — landed, perf NEUTRAL |
-| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                    | one PR                      |
-| F2  | Displacement, normals, edge collapse, base-globe shrink                                            | one PR                      |
-| F3  | Ground truth: height field, `ceilingHeightM` routing, `raycast` pick, horizon cap, cloud clearance | one PR                      |
-| F4  | Mars: imagery bake, global height, four rover-site bands                                           | one PR                      |
+|     |                                                                                                    | PR                                                      |
+| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                                | #704 — landed                                           |
+| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                       | #705 — landed, perf NEUTRAL                             |
+| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                    | #713 closed superseded, landed via #719                 |
+| F2  | Displacement, normals, edge collapse, base-globe shrink                                            | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
+| F3  | Ground truth: height field, `ceilingHeightM` routing, `raycast` pick, horizon cap, cloud clearance | one PR                                                  |
+| F4  | Mars: imagery bake, global height, four rover-site bands                                           | one PR                                                  |
 
 F3's atmosphere row waits on the depth-aware composite (§2); everything else in F3
 is independent of it.

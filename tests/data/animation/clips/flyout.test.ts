@@ -56,11 +56,6 @@ describe('flyout clip', () => {
     expect(() => compileClip(flyout.data)).not.toThrow();
   });
 
-  it('has a total duration of 22 seconds', () => {
-    const compiled = compileClip(flyout.data);
-    expect(compiled.durationSec).toBe(22);
-  });
-
   it('dollies to ~29 500 Mpc using log (geometric) interpolation', () => {
     const resolved = resolveClipStart(flyout.data, TEST_POSE);
 

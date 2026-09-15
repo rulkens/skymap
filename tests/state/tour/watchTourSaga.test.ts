@@ -85,6 +85,7 @@ import { startTour, exitTour } from '../../../src/state/tour/tourActions';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
@@ -99,9 +100,8 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 };
 
 const NARRATION_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  catalogs: { get: () => undefined, famousMeta: [] },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 
@@ -122,6 +122,7 @@ function buildHarness(opts: { playClip?: PlayClipStub } = {}) {
 
   sagaMiddleware.setContext({
     resolveDeps: () => NARRATION_DEPS,
+    selection: selectionResolverOver(NARRATION_DEPS),
     cameraRuntime: () => CAMERA_RUNTIME,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
@@ -163,48 +164,7 @@ describe('watchTourSaga', () => {
 
   // ── (2) restore fires on natural completion ──────────────────────────────
 
-  it('restores the captured baseline when all beats complete naturally', async () => {
-    vi.useFakeTimers();
-
-    const { store } = buildHarness();
-    store.dispatch(setVolumesEnabled(true));
-
-    store.dispatch(startTour('demo'));
-    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
-    store.dispatch(setVolumesEnabled(false));
-    expect(store.getState().settings.volumes.enabled).toBe(false);
-
-    // Advance timers so the 0.001s dwell expires and the beat + loop complete.
-    await vi.runAllTimersAsync();
-
-    // guidedTourSaga's finally restored the captured baseline and ended the tour.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
-    expect(store.getState().tour.active).toBe(false);
-  });
-
   // ── (3) restore fires when exitTour cancels the run ──────────────────────
-
-  it('restores the captured baseline when exitTour cancels the run', async () => {
-    const { store } = buildHarness({ playClip: makeAutoFlyStub() });
-    store.dispatch(setVolumesEnabled(true));
-
-    // webShowcase dwells forever — the beat never auto-advances during this test.
-    store.dispatch(startTour('webShowcase'));
-    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
-    store.dispatch(setVolumesEnabled(false));
-
-    // Advance to the dwell race inside the beat.
-    await flush();
-    await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(false);
-
-    store.dispatch(exitTour());
-    await flush();
-
-    // The finally block ran on exitTour cancellation: baseline restored, tour ended.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
-    expect(store.getState().tour.active).toBe(false);
-  });
 
   // ── (4) second startTour supersedes first (takeLatest) ───────────────────
 

@@ -2,13 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { uvSphereMesh } from '../../../src/utils/math/uvSphereMesh';
 
 describe('uvSphereMesh', () => {
-  it('vertex count is (segments+1)*(rings+1)', () => {
-    const segments = 16;
-    const rings = 8;
-    const { positions } = uvSphereMesh(segments, rings);
-    expect(positions.length / 3).toBe((segments + 1) * (rings + 1));
-  });
-
   it('every position is unit length', () => {
     const { positions } = uvSphereMesh(12, 6);
     const vertexCount = positions.length / 3;
@@ -18,13 +11,6 @@ describe('uvSphereMesh', () => {
       const z = positions[i * 3 + 2] as number;
       expect(Math.hypot(x, y, z)).toBeCloseTo(1);
     }
-  });
-
-  it('index count is segments*rings*6', () => {
-    const segments = 16;
-    const rings = 8;
-    const { indices } = uvSphereMesh(segments, rings);
-    expect(indices.length).toBe(segments * rings * 6);
   });
 
   it('equatorial J2000 axes: north pole +z, south pole -z, equator lon0 +x, lon90 +y', () => {

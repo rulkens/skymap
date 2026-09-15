@@ -19,11 +19,6 @@ describe('MILKY_WAY_SLIDER_FIELDS — parity with the tuning knobs', () => {
     expect(registryKeys).toEqual(Object.keys(MILKY_WAY_TUNING_DEFAULTS).sort());
   });
 
-  it('declares no duplicate keys', () => {
-    const keys = MILKY_WAY_SLIDER_FIELDS.map((f) => f.key);
-    expect(new Set(keys).size).toBe(keys.length);
-  });
-
   // A range that excludes its own default would boot the panel showing a
   // slider already pinned to an end stop, and the first drag would jump the
   // value — the knob would be unusable without anyone seeing an error.

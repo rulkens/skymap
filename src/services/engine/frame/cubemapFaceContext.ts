@@ -3,7 +3,10 @@
  * Mirrors `pickFrameContext.ts`: roster layers read `ctx.fovYRad`/
  * `canvasSize`/`drawPxPerRad` as frame-globals, not just `viewProj`, so a
  * whole synthetic `ReadyFrameContext` is cheaper than threading a swapped
- * vp through every consumer.
+ * vp through every consumer. The row's `nearMpc` is the near plane and the
+ * altitude NEAR0's bracket is sized from. The face's forward is its basis,
+ * decoded by `orbitForwardOf` — never `target − eye`, which a 1 m probe near
+ * rounds away at a far eye.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -16,6 +19,8 @@ import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { cross3 } from '../../../utils/math/cross3';
+import { multiply3x3 } from '../../../utils/math/multiply3x3';
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 
 /**
  * Forward axis per `CubeFace` (±X/±Y/±Z) and the `texture_cube` convention's
@@ -67,21 +72,30 @@ export function cubemapFaceContext(input: {
   readonly eyeMpc: Readonly<Vec3>;
   readonly face: CubeFace;
   readonly faceSizePx: number;
-  /** Capture-camera near plane, Mpc — `CubemapCapture.nearMpc`. */
+  /** Capture-camera near plane, Mpc — the row's `nearMpc`. */
   readonly nearMpc: number;
   /** This capture's first view slot; the face stamps `viewSlotBase + face`. */
   readonly viewSlotBase: number;
   /** The FRAME's clock, so a `nowMs`-animated roster layer ticks identically
    *  on a captured face and in the direct view. */
   readonly nowMs: number;
+  /** World-from-cube axes; omitted = world axes. A probe passes its shading
+   *  host's orientation, because the fragment samples the cube along host-axis
+   *  `n`/`r` — a world-axis probe reads back rotated by the host's spin. */
+  readonly axes?: Readonly<Mat3>;
 }): ReadyFrameContext | null {
-  const { state, eyeMpc, face, faceSizePx, nearMpc, viewSlotBase, nowMs } = input;
-  const forward = FACE_FORWARD[face]!;
-  const basis = FACE_BASES[face]!;
-  // A target one unit ahead at distance 1 puts the derived eye back on
-  // `eyeMpc` exactly, on every face.
-  const target: Vec3 = [eyeMpc[0] + forward[0], eyeMpc[1] + forward[1], eyeMpc[2] + forward[2]];
-  const pose: CameraPose = { target, yaw: 0, pitch: 0, distance: 1 };
+  const { state, eyeMpc, face, faceSizePx, nearMpc, viewSlotBase, nowMs, axes } = input;
+  const forward = rotateVec3ByTightMat3(FACE_FORWARD[face]!, axes);
+  const basis =
+    axes === undefined ? FACE_BASES[face]! : multiply3x3(axes as Mat3, FACE_BASES[face]!);
+  // The distance stays under the foreground reach body passes gate
+  // `ctx.cam.distance` on: a capture posed 1 Mpc out would draw no body at all.
+  const target: Vec3 = [
+    eyeMpc[0] + forward[0] * nearMpc,
+    eyeMpc[1] + forward[1] * nearMpc,
+    eyeMpc[2] + forward[2] * nearMpc,
+  ];
+  const pose: CameraPose = { target, yaw: 0, pitch: 0, distance: nearMpc };
 
   const ctx = deriveFrameContext(
     state,
@@ -101,10 +115,15 @@ export function cubemapFaceContext(input: {
     },
     basis,
     basis,
-    deriveSourceMasks(state).draw, // draw mask: a capture, not a click target
+    // draw mask: a capture, not a click target. Sampled at the FRAME's nowMs
+    // (not the registry's last-ticked clock) so a just-settled fade-out never
+    // gets baked into the capture — see deriveSourceMasks's nowMs docblock.
+    deriveSourceMasks(state, nowMs).draw,
 
     nowMs,
     state.cameraRuntime.outputs.simDays,
+    // The synthetic pose orbits no pivot: its altitude is its own distance.
+    nearMpc,
   );
   if (!ctx.isReady) return null;
   // In place is safe: `deriveFrameContext` freshly allocated these arrays.

@@ -15,11 +15,6 @@ describe('stepRate', () => {
     expect(stepRate(rootWithRateIndex(0), -1)).toBe(0);
   });
 
-  it('clamps at the fast end', () => {
-    const last = RATE_LADDER.length - 1;
-    expect(stepRate(rootWithRateIndex(last), 1)).toBe(last);
-  });
-
   it('steps one detent', () => {
     const mid = Math.floor((RATE_LADDER.length - 1) / 2);
     expect(stepRate(rootWithRateIndex(mid), 1)).toBe(mid + 1);

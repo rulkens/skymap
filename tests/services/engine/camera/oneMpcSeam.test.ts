@@ -27,19 +27,12 @@
  * appear in a shader source at all.
  */
 import { describe, it, expect } from 'vitest';
-import { Project, SyntaxKind } from 'ts-morph';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { SyntaxKind } from 'ts-morph';
+import { readFileSync } from 'node:fs';
+import { parseOnlyProject } from '../../../helpers/conventions/parseOnlyProject';
+import { walkFiles } from '../../../helpers/conventions/walkFiles';
 
 const FORBIDDEN_MEMBERS = ['MPC_TO_M', 'M_TO_MPC'];
-
-function walk(dir: string, extensions: readonly string[]): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) return walk(p, extensions);
-    return extensions.some((ext) => p.endsWith(ext)) ? [p] : [];
-  });
-}
 
 // The two seams themselves: deliberately excluded from TS_FILES below (they
 // ARE the allowed conversion sites), documented instead in the first `it`.
@@ -58,11 +51,11 @@ const SEAM_FILES: readonly string[] = [
 // stay named (a rename/move of one of them is then a deliberate edit here,
 // not a silent drop from the gate).
 const TS_FILES: readonly string[] = [
-  ...walk('src/services/engine/frame', ['.ts']),
-  ...walk('src/services/gpu/renderers/bodies', ['.ts']),
-  ...walk('src/services/engine/camera', ['.ts']),
-  ...walk('src/services/camera', ['.ts']),
-  ...walk('src/utils/camera', ['.ts']),
+  ...walkFiles('src/services/engine/frame', ['.ts']),
+  ...walkFiles('src/services/gpu/renderers/bodies', ['.ts']),
+  ...walkFiles('src/services/engine/camera', ['.ts']),
+  ...walkFiles('src/services/camera', ['.ts']),
+  ...walkFiles('src/utils/camera', ['.ts']),
   'src/utils/scene/cutSurfaceTiles.ts',
   'src/utils/scene/starSphereRangeM.ts',
 ].filter((f) => !SEAM_FILES.includes(f));
@@ -80,7 +73,7 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/utils/camera/computeViewProj.ts',
 ];
 
-const WESL_FILES: readonly string[] = walk('src/services/gpu/shaders/bodies', ['.wesl']);
+const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies', ['.wesl']);
 
 // The ONE table of "files on the body-slab path or the engaged camera path
 // allowed to bridge Mpc<->m outside the two seams (bodyRelativePose.ts,
@@ -91,7 +84,7 @@ const WESL_FILES: readonly string[] = walk('src/services/gpu/shaders/bodies', ['
 const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   [
     'src/services/engine/frame/passes/earthPass.ts',
-    'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and baseGlobeFadeAlpha (both outside the body-slab path, both Mpc-shaped APIs)',
+    'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and cloudDeckFade (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [
     'src/services/engine/frame/passes/cloudShellPass.ts',
@@ -151,10 +144,8 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   ],
 ]);
 
-const project = new Project({ useInMemoryFileSystem: false });
-
 function scaleUnitsMembersUsed(file: string): string[] {
-  const sourceFile = project.addSourceFileAtPath(file);
+  const sourceFile = parseOnlyProject.addSourceFileAtPath(file);
   const scaleUnitsImport = sourceFile
     .getImportDeclarations()
     .find((decl) => decl.getModuleSpecifierValue().endsWith('data/scaleUnits'));

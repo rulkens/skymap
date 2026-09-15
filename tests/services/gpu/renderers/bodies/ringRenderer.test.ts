@@ -20,7 +20,6 @@ import {
   packRingUniforms,
   RING_UNIFORM_FLOATS,
 } from '../../../../../src/utils/gpu/packRingUniforms';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(recorders?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
@@ -70,20 +69,6 @@ function stubPass(): GPURenderPassEncoder & { drawIndexed: ReturnType<typeof vi.
 }
 
 describe('createRingRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    expect(() =>
-      createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
-    ).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
   it('setTexture / draw are callable with the right arity', () => {
     const renderer = createRingRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
     expect(typeof renderer.setTexture).toBe('function');

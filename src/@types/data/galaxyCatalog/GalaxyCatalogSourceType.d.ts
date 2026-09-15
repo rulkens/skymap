@@ -1,11 +1,7 @@
-import type { SOURCE_REGISTRY } from '../../../data/sources';
-
-type AnyEntry = (typeof SOURCE_REGISTRY)[keyof typeof SOURCE_REGISTRY];
+import type { GalaxyCatalogRegistryEntry } from './GalaxyCatalogRegistryEntry';
 
 /**
- * Source CODES whose registry entry has `type: 'galaxyCatalog'` — the numeric
- * twin of `GalaxyCatalogId`, the same way `SourceType` is the code twin of
- * `SourceId`. Derived from the registry, so adding a galaxy catalog widens the
- * union automatically (no exclusion list to maintain).
+ * Source CODES of the galaxy catalogs — the numeric twin of `GalaxyCatalogId`,
+ * the same way `SourceType` is the code twin of `SourceId`.
  */
-export type GalaxyCatalogSourceType = Extract<AnyEntry, { readonly type: 'galaxyCatalog' }>['code'];
+export type GalaxyCatalogSourceType = GalaxyCatalogRegistryEntry['code'];

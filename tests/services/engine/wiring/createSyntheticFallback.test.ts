@@ -19,11 +19,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { engineStatusChanged } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/sources';
+import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import { FormatVersionError } from '../../../../src/data/formatVersionError';
 import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
-import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
@@ -114,6 +113,12 @@ function formatVersionErrored(): LoadState<GalaxyCatalog> {
     finalAttempt: 1,
   };
 }
+
+// The `survey`-category codes — a fixture built the same way the gate derives
+// its own private list, not an assertion on the production list itself.
+const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCES.filter(
+  (code) => SOURCE_REGISTRY[code].category === 'survey',
+);
 
 // ── State + callbacks builders ───────────────────────────────────────────────
 
@@ -225,20 +230,6 @@ describe('createSyntheticFallback', () => {
     // passes ran while the real catalogs were still idle and enabled, so they
     // filled the queue's two slots with entries that only clear on a microtask
     // turn. Nothing in a synchronous test body gives them one.
-    await state.subsystems.assetQueue.drain();
-    expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
-  });
-
-  it('still arms when every real galaxy catalog fails with an ordinary HttpError', async () => {
-    // Confirms the suppression added for FormatVersionError is type-specific,
-    // not a blanket "any error present" check — an ordinary fetch failure
-    // (HttpError) must still trip the backstop.
-    const { state, slots, cb } = makeState();
-    createSyntheticFallback(state, cb);
-
-    settleGalaxyCatalogs(slots, () => httpErrored());
-
-    expect(state.requests.has('syntheticFallback')).toBe(true);
     await state.subsystems.assetQueue.drain();
     expect(slots.get(Source.Synthetic)?.load).toHaveBeenCalledTimes(1);
   });

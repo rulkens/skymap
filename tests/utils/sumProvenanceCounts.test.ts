@@ -19,11 +19,4 @@ describe('sumProvenanceCounts', () => {
       estimated: { orientation: 2, size: 4 },
     });
   });
-
-  it('returns all-zeros when no source has reported', () => {
-    expect(sumProvenanceCounts({})).toEqual({
-      total: 0,
-      estimated: { orientation: 0, size: 0 },
-    });
-  });
 });

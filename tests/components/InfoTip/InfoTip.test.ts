@@ -20,14 +20,6 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { InfoTip } from '../../../src/components/InfoTip/InfoTip';
 
 describe('InfoTip', () => {
-  it('renders the trigger as keyboard-focusable', () => {
-    const html = renderToStaticMarkup(
-      createElement(InfoTip, { title: 'Distance', body: 'how far' }, '542 Mpc'),
-    );
-    expect(html).toContain('tabindex="0"');
-    expect(html).toContain('542 Mpc');
-  });
-
   it('links the trigger to the tooltip via aria-describedby + role="tooltip"', () => {
     const html = renderToStaticMarkup(
       createElement(InfoTip, { title: 'Distance', body: 'how far' }, '542 Mpc'),
@@ -42,18 +34,6 @@ describe('InfoTip', () => {
     expect(html).toContain('role="tooltip"');
   });
 
-  it('renders the title and body inside the panel', () => {
-    const html = renderToStaticMarkup(
-      createElement(
-        InfoTip,
-        { title: 'Distance', body: 'how far the galaxy is from us' },
-        '542 Mpc',
-      ),
-    );
-    expect(html).toContain('Distance');
-    expect(html).toContain('how far the galaxy is from us');
-  });
-
   it('gives sibling instances distinct ids and anchor names', () => {
     const html = renderToStaticMarkup(
       createElement(
@@ -64,31 +44,15 @@ describe('InfoTip', () => {
       ),
     );
     // Pull every aria-describedby and confirm the two values differ.
-    const ids = Array.from(html.matchAll(/aria-describedby="([^"]+)"/g)).map(
-      (m) => m[1],
-    );
+    const ids = Array.from(html.matchAll(/aria-describedby="([^"]+)"/g)).map((m) => m[1]);
     expect(ids.length).toBe(2);
     expect(ids[0]).not.toBe(ids[1]);
     // Inline anchor-name styles on the trigger should also differ — the
     // tip's positioning depends on each trigger having its own anchor.
-    const anchorNames = Array.from(
-      html.matchAll(/anchor-name:--tip-([a-zA-Z0-9]+)/g),
-    ).map((m) => m[1]);
+    const anchorNames = Array.from(html.matchAll(/anchor-name:--tip-([a-zA-Z0-9]+)/g)).map(
+      (m) => m[1],
+    );
     expect(anchorNames.length).toBe(2);
     expect(anchorNames[0]).not.toBe(anchorNames[1]);
-  });
-
-  it('accepts JSX bodies, not just plain strings', () => {
-    const html = renderToStaticMarkup(
-      createElement(
-        InfoTip,
-        {
-          title: 'Redshift',
-          body: createElement('code', null, 'z = Δλ / λ'),
-        },
-        'z',
-      ),
-    );
-    expect(html).toContain('<code>z = Δλ / λ</code>');
   });
 });

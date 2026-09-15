@@ -18,5 +18,7 @@ import type { EarthBody } from '../../@types/scene/EarthBody';
 export const SCENE_EARTH: EarthBody = {
   id: 'earth',
   label: 'Earth',
-  surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
+  // Mariana Trench to Everest, against the WGS84-ish datum above (spec §7.4).
+  // F3 replaces this from the compiled §3.4e grid.
+  surface: { datumRadiusM: 6371000, reliefM: [-430, 8849] },
 };

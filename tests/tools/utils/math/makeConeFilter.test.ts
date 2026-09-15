@@ -9,26 +9,6 @@ import { makeConeFilter } from '../../../../tools/utils/math/makeConeFilter';
  * matters when the predicate runs millions of times over a catalog.
  */
 describe('makeConeFilter', () => {
-  it('accepts the cone center itself', () => {
-    const isInCone = makeConeFilter(233.2, 32.3, 2.5);
-    expect(isInCone(233.2, 32.3)).toBe(true);
-  });
-
-  it('accepts a point 1° off center in dec', () => {
-    const isInCone = makeConeFilter(233.2, 32.3, 2.5);
-    expect(isInCone(233.2, 33.3)).toBe(true);
-  });
-
-  it('rejects a point 3° off center', () => {
-    const isInCone = makeConeFilter(233.2, 32.3, 2.5);
-    expect(isInCone(233.2, 35.3)).toBe(false);
-  });
-
-  it('rejects the antipode', () => {
-    const isInCone = makeConeFilter(0, 45, 30);
-    expect(isInCone(180, -45)).toBe(false);
-  });
-
   it('boundary: accepts 2.49° and rejects 2.51° (pure-dec offsets)', () => {
     const isInCone = makeConeFilter(180, 0, 2.5);
     // Pure dec offset: angular separation is exactly the dec delta

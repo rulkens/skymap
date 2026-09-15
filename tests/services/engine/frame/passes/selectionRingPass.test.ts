@@ -47,9 +47,7 @@ function makeCtx(): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
-    texturedDisks: {} as never,
   };
 }
 
@@ -135,15 +133,6 @@ function makeStateWithSelection(row: SelectionRow | null): EngineState {
 // ── enabled() ─────────────────────────────────────────────────────
 
 describe('selectionRingPass.enabled', () => {
-  it('returns false when renderer is null', () => {
-    const state = {
-      gpu: { selectionRingRenderer: null },
-      selectionRows: { select: null, focus: null, hover: null },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(selectionRingPass.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
-  });
-
   it('returns false when nothing is selected', () => {
     const state = makeStateWithSelection(null);
     const ctx = makeCtx();

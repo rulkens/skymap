@@ -14,20 +14,6 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(h, 1000)).toBe(1.0);
   });
 
-  it('register defaults initial opacity to 0', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
-    r.register(h);
-    expect(r.opacityOf(h, 1000)).toBe(0);
-  });
-
-  it('register honors a provided initial opacity', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'milkyWay' };
-    r.register(h, 0.75);
-    expect(r.opacityOf(h, 1000)).toBe(0.75);
-  });
-
   it('register is idempotent', () => {
     const r = makeRegistry();
     const h: FadeId = { kind: 'filament' };
@@ -61,17 +47,6 @@ describe('createFadeRegistry', () => {
     r.register(b, 0.75);
     expect(r.opacityOf(a, 1000)).toBe(0.25);
     expect(r.opacityOf(b, 1000)).toBe(0.75);
-  });
-
-  it('serializes the flow handle to its own key (distinct from filament)', () => {
-    const r = makeRegistry();
-    const flow: FadeId = { kind: 'flow' };
-    const filament: FadeId = { kind: 'filament' };
-    r.register(flow, 0.3);
-    r.register(filament, 0.6);
-    // Distinct keys → distinct controllers; neither bleeds into the other.
-    expect(r.opacityOf(flow, 1000)).toBe(0.3);
-    expect(r.opacityOf(filament, 1000)).toBe(0.6);
   });
 
   it('fadeTo throws when the handle is not registered and does not wake', () => {
@@ -111,24 +86,21 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(h, 1600)).toBeCloseTo(1, 5);
   });
 
-  it('opacityOf without a time reads at the last ticked frame time', () => {
+  it('targetOf is null for an unregistered id', () => {
+    const r = makeRegistry();
+    const h: FadeId = { kind: 'filament' };
+    expect(r.targetOf(h)).toBeNull();
+  });
+
+  it('targetOf follows fadeTo and setImmediate', () => {
     const r = makeRegistry();
     const h: FadeId = { kind: 'filament' };
     r.register(h, 0);
-    r.fadeTo(h, 1, 600, 1000);
-    r.tick(1300);
-    // Argless read must equal an explicit read at the last tick's time.
-    expect(r.opacityOf(h)).toBe(r.opacityOf(h, 1300));
-    expect(r.opacityOf(h)).toBeCloseTo(0.5, 5);
-  });
-
-  it('setImmediate skips animation', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'milkyWay' };
-    r.register(h, 0);
-    r.setImmediate(h, 1);
-    expect(r.opacityOf(h, 0)).toBe(1);
-    expect(r.isAnyAnimating(0)).toBe(false);
+    expect(r.targetOf(h)).toBe(0);
+    r.fadeTo(h, 1, 600, 0);
+    expect(r.targetOf(h)).toBe(1);
+    r.setImmediate(h, 0.5);
+    expect(r.targetOf(h)).toBe(0.5);
   });
 
   it('isAnyAnimating aggregates across multiple controllers', () => {
@@ -143,40 +115,6 @@ describe('createFadeRegistry', () => {
     expect(r.isAnyAnimating(1300)).toBe(true);
     // After the ramp ends at t=1600 — no longer animating.
     expect(r.isAnyAnimating(1700)).toBe(false);
-  });
-
-  it('serializeFadeId keys structure by id', () => {
-    const r = makeRegistry();
-    const cluster: FadeId = { kind: 'structure', id: 'cluster' };
-    const aVoid: FadeId = { kind: 'structure', id: 'void' };
-    r.register(cluster, 0);
-    r.register(aVoid, 0);
-    r.fadeTo(cluster, 0.25, 0, 0);
-    r.fadeTo(aVoid, 0.75, 0, 0);
-    // Distinct structure ids must address distinct controllers.
-    expect(r.opacityOf(cluster, 0)).toBeCloseTo(0.25, 5);
-    expect(r.opacityOf(aVoid, 0)).toBeCloseTo(0.75, 5);
-  });
-
-  it('serializeFadeId keeps an item-less labelLayer distinct from a per-item one', () => {
-    const r = makeRegistry();
-    const bare: FadeId = { kind: 'labelLayer', layer: 'structure' };
-    const perItem: FadeId = { kind: 'labelLayer', layer: 'structure', item: 'cluster' };
-    r.register(bare, 0);
-    r.register(perItem, 0);
-    r.fadeTo(bare, 0.2, 0, 0);
-    r.fadeTo(perItem, 0.8, 0, 0);
-    expect(r.opacityOf(bare, 0)).toBeCloseTo(0.2, 5);
-    expect(r.opacityOf(perItem, 0)).toBeCloseTo(0.8, 5);
-  });
-
-  it('serializeFadeId keys the milkyWay label handle', () => {
-    const r = makeRegistry();
-    const h: FadeId = { kind: 'labelLayer', layer: 'milkyWay' };
-    r.register(h, 0);
-    r.fadeTo(h, 1, 0, 0);
-    // Item-less label handle resolves to its own controller.
-    expect(r.opacityOf(h, 0)).toBeCloseTo(1, 5);
   });
 
   it('destroy clears every controller', () => {

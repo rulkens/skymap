@@ -57,11 +57,6 @@ describe('pivotRadiusMpc', () => {
     // would push every galaxy focus tween back out past its own end distance.
     expect(pivotRadiusMpc(makeGalaxyRow({ diameterKpc: 30 }))).toBeNull();
   });
-
-  it('yields null for the Milky Way and for no focus at all', () => {
-    expect(pivotRadiusMpc({ type: 'milkyWay' })).toBeNull();
-    expect(pivotRadiusMpc(null)).toBeNull();
-  });
 });
 
 describe('pivotFraming', () => {

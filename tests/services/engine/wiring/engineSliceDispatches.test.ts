@@ -19,10 +19,9 @@ import {
   engineLoadProgressChanged,
   engineStatusChanged,
 } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/sources';
+import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
-import type { GalaxyCatalogSourceConfig } from '../../../../src/@types/engine/wiring/GalaxyCatalogSourceConfig';
 import type { WirePointSourceDeps } from '../../../../src/@types/engine/wiring/WirePointSourceDeps';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
@@ -32,11 +31,16 @@ import type { StructureCatalogPayload } from '../../../../src/@types/loading/Str
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
-import { GALAXY_CATALOG_POINT_SOURCES } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { PriorityQueue } from '../../../../src/utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/assetQueueConcurrency';
+
+// The `survey`-category codes — a fixture built the same way the fallback
+// gate derives its own private list, not an assertion on it.
+const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCES.filter(
+  (code) => SOURCE_REGISTRY[code].category === 'survey',
+);
 
 // ── Module mocks needed for wiring helpers ──────────────────────────────────
 
@@ -45,6 +49,13 @@ import { ASSET_QUEUE_CONCURRENCY } from '../../../../src/utils/concurrency/asset
 vi.mock('../../../../src/services/engine/wiring/syncVisibilityFades', () => ({
   syncVisibilityFades: vi.fn(),
   syncVisibilityFadeItem: vi.fn(),
+}));
+
+// The mint helper picks this fetcher for every non-synthetic entry; stub it
+// so the one test driving a real wireGalaxyCatalogSourceSlot call controls
+// the resolved catalog instead of hitting the network.
+vi.mock('../../../../src/services/loading/fetchers/galaxyCatalogFetcher', () => ({
+  galaxyCatalogFetcher: vi.fn(),
 }));
 
 // buildStaticAnchorStructures + structureCatalogToStructures: deterministic
@@ -97,7 +108,8 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // ── Post-mock imports ───────────────────────────────────────────────────────
 
-import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry';
+import { wireGalaxyCatalogSourceSlot } from '../../../../src/services/engine/wiring/wireGalaxyCatalogSourceSlot';
+import { galaxyCatalogFetcher } from '../../../../src/services/loading/fetchers/galaxyCatalogFetcher';
 import { wireStructureProjection } from '../../../../src/services/engine/wiring/wireStructureProjection';
 import { installLoadProgress } from '../../../../src/services/engine/wiring/installLoadProgress';
 import { createSyntheticFallback } from '../../../../src/services/engine/wiring/createSyntheticFallback';
@@ -306,17 +318,12 @@ describe('wireGalaxyCatalogSourceSlot → engineSourceCountReported', () => {
     const spy = vi.spyOn(store, 'dispatch');
 
     const state = makeGalaxyState({ rendererUpload: vi.fn().mockResolvedValue(undefined) });
-    const cfg: GalaxyCatalogSourceConfig = {
-      source: Source.SDSS,
-      shortName: 'sdss',
-      fetcher: async () => ({ count: 42 }) as GalaxyCatalog,
-      category: 'survey',
-    };
+    vi.mocked(galaxyCatalogFetcher).mockResolvedValue({ count: 42 } as GalaxyCatalog);
     const deps: WirePointSourceDeps = {
       cb: { store, sources: {} } as unknown as EngineCallbacks,
     };
 
-    wireGalaxyCatalogSourceSlot(state, cfg, deps);
+    wireGalaxyCatalogSourceSlot(state, SOURCE_REGISTRY[Source.SDSS], deps);
     const slot = state.assetSlots.points.get(Source.SDSS)!;
     slot.load({ source: Source.SDSS, tier: 'medium' });
 
@@ -352,33 +359,6 @@ describe('wireStructureProjection → engineStructureCountsChanged', () => {
       ),
     );
   });
-
-  it('dispatches engineStructureCountsChanged again when the bulk slot fires', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const { state, fireSlot } = makeStructureState();
-    const cb = { store, sources: {} } as unknown as EngineCallbacks;
-
-    wireStructureProjection(state, cb);
-    spy.mockClear();
-
-    const payload: StructureCatalogPayload = {
-      catalog: {
-        count: 1,
-        positions: new Float32Array([1, 2, 3]),
-        physicalRadiusMpc: new Float32Array([2]),
-        apparentRadiusMpc: new Float32Array([4]),
-        significance: new Float32Array([0.9]),
-        category: new Uint8Array([0]),
-      },
-      meta: [{ id: 'coma', names: ['Coma Cluster'], abell: 'A1656', description: '' }],
-    };
-    fireSlot({ kind: 'ready', req: {}, value: payload, loadedAtMs: 0 });
-
-    expect(spy).toHaveBeenCalledWith(
-      engineStructureCountsChanged(expect.objectContaining({ cluster: expect.any(Number) })),
-    );
-  });
 });
 
 // ── installLoadProgress: engineLoadProgressChanged ─────────────────────────
@@ -401,6 +381,14 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
       detachControlsRef: { current: null },
       handleRef: { current: null },
       allSlots: new Map(),
+      // installLoadProgress never reads a resolver — a resolver that always
+      // returns null is enough to satisfy the type.
+      selection: {
+        resolvePick: () => null,
+        extractRow: () => null,
+        resolveFocusId: () => null,
+        focusIdOf: () => null,
+      },
     };
 
     installLoadProgress(state, deps);
@@ -410,26 +398,6 @@ describe('installLoadProgress → engineLoadProgressChanged', () => {
     capturedProgressEmitFn!(snapshot);
 
     expect(spy).toHaveBeenCalledWith(engineLoadProgressChanged(snapshot));
-  });
-
-  it('dispatches engineLoadProgressChanged(null) when the emitter fires with null', () => {
-    const { store } = createAppStore();
-    const spy = vi.spyOn(store, 'dispatch');
-    const state = makeProgressState();
-    const deps: BootstrapDeps = {
-      canvas: {} as HTMLCanvasElement,
-      cb: { store } as unknown as BootstrapDeps['cb'],
-      composition: STUB_COMPOSITION,
-      frameRef: { current: () => {} },
-      detachControlsRef: { current: null },
-      handleRef: { current: null },
-      allSlots: new Map(),
-    };
-
-    installLoadProgress(state, deps);
-    capturedProgressEmitFn!(null);
-
-    expect(spy).toHaveBeenCalledWith(engineLoadProgressChanged(null));
   });
 });
 

@@ -27,7 +27,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAppStore } from '../../../../src/store/createAppStore';
-import { engineStructureCountsChanged } from '../../../../src/state/engine/engineSlice';
+import {
+  engineStructureCountsChanged,
+  engineStructureSearchListChanged,
+} from '../../../../src/state/engine/engineSlice';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
@@ -219,6 +222,27 @@ describe('wireStructureProjection', () => {
     expect(state.data.structures.byId('cluster-bulk-coma')).toBeNull();
     // The error path re-emits counts (a fresh dispatch beyond those before it).
     expect(structureCountsCalls().length).toBeGreaterThan(beforeError);
+  });
+
+  it('publishes the structure search list with the counts, at boot and when the bulk group lands', () => {
+    const { state, structureCatalogSlot } = makeState();
+    const { cb } = makeCb();
+    const dispatchSpy = vi.spyOn(cb.store, 'dispatch');
+
+    wireStructureProjection(state, cb);
+    const bootIds = dispatchSpy.mock.calls
+      .map((c) => c[0] as ReturnType<typeof engineStructureSearchListChanged>)
+      .filter((a) => a.type === engineStructureSearchListChanged.type)
+      .flatMap((a) => a.payload.map((e) => e.id));
+    expect(bootIds).toEqual(state.data.structures.all().map((s) => s.id));
+
+    structureCatalogSlot.fire(readyState(clusterPayload));
+    const afterIds = dispatchSpy.mock.calls
+      .map((c) => c[0] as ReturnType<typeof engineStructureSearchListChanged>)
+      .filter((a) => a.type === engineStructureSearchListChanged.type)
+      .at(-1)!
+      .payload.map((e) => e.id);
+    expect(afterIds).toEqual(state.data.structures.all().map((s) => s.id));
   });
 
   it('dispatches engineStructureCountsChanged with per-category counts after a group change', () => {

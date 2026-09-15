@@ -10,6 +10,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
@@ -35,6 +36,7 @@ import { PROXY_SCALE } from '../../../utils/scene/proxyScale';
 import { nearestSphereFaceM } from '../../../utils/scene/nearestSphereFaceM';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
 import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 
 /** Near-field slab: origin-relative near-Earth bodies (Sun, Earth), drawn in f64. */
 export const NEAR0 = 0;
@@ -66,10 +68,15 @@ export function groupKeyOf(step: Extract<FrameStep, { kind: 'render' }>): string
 
 // Body rows and capture faces are appended because both draw the same pass more
 // than once per frame against one `(target, slab)` — without them the passes attach
-// the same query pair and the last silently overwrites the rest.
-export function passTimingSlotName(passName: string, slabIndex: number, face?: number): string {
+// the same query pair and the last silently overwrites the rest. The capture ROW
+// rides along with the face: two rows sharing a roster draw the same pass names.
+export function passTimingSlotName(
+  passName: string,
+  slabIndex: number,
+  capture?: CaptureFaceRef,
+): string {
   const base = isBodySlabIndex(slabIndex) ? `${passName}·${slabName(slabIndex)}` : passName;
-  return face === undefined ? base : `${base}·FACE[${face}]`;
+  return capture === undefined ? base : `${base}·${capture.key}·FACE[${capture.face}]`;
 }
 
 // The same disambiguation one level up, for the STEP's own slot: six capture steps
@@ -257,13 +264,7 @@ export function deriveSlabs(input: {
   const { cam, cosmoVp, altitudeMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
     input;
   const { near, far } = foregroundFrustum(altitudeMpc);
-  const fx = cam.target[0] - cam.position[0];
-  const fy = cam.target[1] - cam.position[1];
-  const fz = cam.target[2] - cam.position[2];
-  const flen = Math.hypot(fx, fy, fz) || 1;
-  forwardScratch[0] = fx / flen;
-  forwardScratch[1] = fy / flen;
-  forwardScratch[2] = fz / flen;
+  orbitForwardOf(cam, forwardScratch);
   const { rolledUp } = imagePlaneBasis(
     forwardScratch,
     cam.roll ?? 0,
@@ -272,7 +273,12 @@ export function deriveSlabs(input: {
   );
   const nearFieldVp = computeForegroundViewProj({
     eyeMpc: cam.position,
-    targetMpc: cam.target,
+    // Aimed along the decoded forward, not at `cam.target` — see `orbitForwardOf`.
+    targetMpc: [
+      cam.position[0] + forwardScratch[0],
+      cam.position[1] + forwardScratch[1],
+      cam.position[2] + forwardScratch[2],
+    ],
     up: rolledUp,
     renderOrigin: RENDER_ORIGIN_MPC,
     fovYRad: cam.fovYRad,

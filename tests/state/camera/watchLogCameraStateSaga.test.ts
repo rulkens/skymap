@@ -20,7 +20,10 @@ describe('watchLogCameraStateSaga', () => {
   it('calls the reconcile log-camera effect once when logCameraState is dispatched', async () => {
     const logCameraStateFx = vi.fn<() => void>();
     const sagaMiddleware = createSagaMiddleware();
-    const store = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(sagaMiddleware) });
+    const store = configureStore({
+      reducer: rootReducer,
+      middleware: (g) => g().concat(sagaMiddleware),
+    });
     sagaMiddleware.setContext({ reconcile: { logCameraState: logCameraStateFx } });
     sagaMiddleware.run(watchLogCameraStateSaga);
 

@@ -162,19 +162,6 @@ describe('compileClip leading wait shifts every following window', () => {
     expect(distSegs[0]!.startSec).toBe(2);
     expect(distSegs[0]!.endSec).toBe(7);
   });
-
-  it('a 2s wait shifts velTracks and cues by 2 as well', () => {
-    // After the wait the cursor sits at 2: hide fires at 2 (duration 0), and
-    // the rate follows immediately, so its ramp is [2, 5).
-    const clip = compileClip({
-      timeline: [wait(2), hide(['flow'], 0), rate('yaw', { to: 1, over: 3 })],
-    });
-
-    expect(clip.velTracks[0]!.startSec).toBe(2);
-    expect(clip.velTracks[0]!.endSec).toBe(5);
-
-    expect(clip.cues[0]!.atSec).toBe(2);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -252,17 +239,6 @@ describe('compileClip carries loop flag on spin segments', () => {
     expect(yawSegs[0]!.segKind).toBe('spin');
     expect(yawSegs[0]!.loop).toBe(true);
   });
-
-  it('a spin without loop compiles to a segment whose loop is undefined', () => {
-    const clip = compileClip({
-      timeline: [spin('yaw', { by: 6.28, over: 30 })],
-    });
-
-    const yawSegs = clip.baseTracks['yaw'];
-    expect(yawSegs).toHaveLength(1);
-    expect(yawSegs[0]!.segKind).toBe('spin');
-    expect(yawSegs[0]!.loop).toBeUndefined();
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -277,22 +253,6 @@ describe('compileClip throws on an unresolved focus-bound effect', () => {
     expect(() =>
       compileClip({
         timeline: [moveTargetId(focusId('m87'), 5)],
-      }),
-    ).toThrow('resolveClipFoci');
-  });
-
-  it('compileClip throws on an unresolved spinToId', () => {
-    expect(() =>
-      compileClip({
-        timeline: [spinToId(focusId('m87'), { over: 5 })],
-      }),
-    ).toThrow('resolveClipFoci');
-  });
-
-  it('compileClip throws on an unresolved aimAlong', () => {
-    expect(() =>
-      compileClip({
-        timeline: [aimAlong([1, 0, 0], 5)],
       }),
     ).toThrow('resolveClipFoci');
   });

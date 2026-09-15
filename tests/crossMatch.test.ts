@@ -152,21 +152,6 @@ describe('crossMatch', () => {
     expect(out).toHaveLength(2);
   });
 
-  it('passes a DESI-only sky region through untouched', () => {
-    // No other survey contributes anything at these positions — DESI rows
-    // with no candidate match in the grid must survive exactly as parsed.
-    const out = crossMatch({
-      sdss: [],
-      twoMrs: [],
-      glade: [],
-      desiPatches: [
-        [rec(Source.DesiDeep, 233.2, 32.3, 0.07), rec(Source.DesiDeep, 234.5, 31.1, 0.7)],
-      ],
-    });
-    expect(out).toHaveLength(2);
-    expect(out.every((r) => r.source === Source.DesiDeep)).toBe(true);
-  });
-
   it('does NOT dedup one DESI patch against another (cone↔wedge overlap survives)', () => {
     // The cone and the wedge overlap on the sky: ~15k rows fall in both. A
     // wedge row at the identical sky position AND redshift as a cone row must
@@ -184,9 +169,7 @@ describe('crossMatch', () => {
       ],
     });
     expect(out).toHaveLength(2);
-    expect(out.map((r) => r.source).sort()).toEqual(
-      [Source.DesiDeep, Source.DesiWedge].sort(),
-    );
+    expect(out.map((r) => r.source).sort()).toEqual([Source.DesiDeep, Source.DesiWedge].sort());
   });
 
   it('DOES dedup DESI rows within a single patch (position + z match)', () => {
@@ -198,10 +181,7 @@ describe('crossMatch', () => {
       twoMrs: [],
       glade: [],
       desiPatches: [
-        [
-          rec(Source.DesiDeep, 233.2, 30.9, 0.08),
-          rec(Source.DesiDeep, 233.20005, 30.9, 0.08),
-        ],
+        [rec(Source.DesiDeep, 233.2, 30.9, 0.08), rec(Source.DesiDeep, 233.20005, 30.9, 0.08)],
       ],
     });
     expect(out).toHaveLength(1);

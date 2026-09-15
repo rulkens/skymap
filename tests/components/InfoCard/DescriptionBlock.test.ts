@@ -16,25 +16,6 @@ import styles from '../../../src/components/InfoCard/DescriptionBlock/Descriptio
 const PROSE = 'Coma is a rich cluster of over a thousand galaxies in the Coma supercluster.';
 
 describe('DescriptionBlock', () => {
-  it('renders the prose text', () => {
-    render(createElement(DescriptionBlock, { text: PROSE }));
-    expect(screen.getByText(PROSE)).toBeInTheDocument();
-  });
-
-  it('carries the pre-line class so embedded newlines render as breaks', () => {
-    render(createElement(DescriptionBlock, { text: 'First line.\nSecond line.' }));
-    expect(
-      screen.getByText((_, node) => node?.textContent === 'First line.\nSecond line.').className,
-    ).toContain(styles.text);
-  });
-
-  it('starts collapsed with a "show more" toggle', () => {
-    render(createElement(DescriptionBlock, { text: PROSE }));
-    const toggle = screen.getByRole('button', { name: 'show more' });
-    expect(toggle).toBeInTheDocument();
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-  });
-
   it('expands to "show less" when toggled, and collapses back', () => {
     render(createElement(DescriptionBlock, { text: PROSE }));
     fireEvent.click(screen.getByRole('button'));

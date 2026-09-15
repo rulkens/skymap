@@ -33,14 +33,17 @@
 //     here means the one ambient constant stays the single source of truth (the
 //     same discipline 'bodyLighting.wesl' documents), and the night hemisphere's
 //     lift is decided in one place for every body.
-//   - No image-based lighting (IBL), no multi-scatter energy compensation, and
-//     no metal/dielectric blend: 'f0' arrives already blended from the caller.
-//   - No energy-conserving diffuse/specular coupling (the 'kD = 1 - F' factor).
-//     The composition is the literal 'diffuse * albedo + specular' the Earth
+//   - No multi-scatter energy compensation and no metal/dielectric blend: 'f0'
+//     arrives already blended from the caller. Image-based lighting is the
+//     separate 'envSplitSum' below, fed a caller-owned probe and LUT.
+//   - No energy-conserving diffuse/specular coupling in the DIRECT terms
+//     ('pbrDirect', 'pbrDirectSphere'; no 'kD = 1 - F' factor): their
+//     composition is the literal 'diffuse * albedo + specular' the Earth
 //     fragment expects. For a dielectric F0 the double-count at normal incidence
 //     is ~2-4% (invisible); the grazing-angle Fresnel behaviour that WOULD matter
 //     for a rim-lit ocean is left as a later (plan B+) refinement so this stays a
-//     small, predictable primitive.
+//     small, predictable primitive. 'envSplitSum' does couple, weighting its
+//     diffuse by the LUT's directional specular albedo.
 //
 // ## Roughness convention — perceptual vs linear
 //
@@ -296,4 +299,81 @@ fn pbrDirect(
   let diffuse = orenNayarDiffuse(n, v, l, roughness) * albedo;
 
   return (diffuse + specular) * NoL;
+}
+
+// ── pbrDirectSphere — the Sun as a sphere light ──────────────────────
+//
+// Karis 2013 'representative point': the specular lobe is evaluated against the
+// point of the Sun's disc closest to the reflection ray, and D is renormalised
+// by (alpha / alpha')^2 with alpha' = saturate(alpha + 0.5 * sinAngularRadius)
+// so the widened light gains no energy. Diffuse sees the true 'l'.
+// 'sinAngularRadius' = R_sun / d; alpha comes from the floored roughness,
+// which is what keeps alpha' (and the ratio) off zero.
+
+fn pbrDirectSphere(
+  n: vec3<f32>,
+  v: vec3<f32>,
+  l: vec3<f32>,
+  albedo: vec3<f32>,
+  roughness: f32,
+  f0: vec3<f32>,
+  sinAngularRadius: f32,
+) -> vec3<f32> {
+  let r = reflect(-v, n);
+  let centreToRay = r * dot(l, r) - l;
+  let reach = clamp(sinAngularRadius / max(length(centreToRay), 1e-6), 0.0, 1.0);
+  let ls = normalize(l + centreToRay * reach);
+
+  let h = normalize(v + ls);
+  let NoL = max(dot(n, l), 0.0);
+  let NoLs = max(dot(n, ls), 0.0);
+  let NoV = max(dot(n, v), 0.0);
+  let NoH = max(dot(n, h), 0.0);
+  let VoH = max(dot(v, h), 0.0);
+
+  let a = max(roughness, MIN_ROUGHNESS);
+  let alpha = a * a;
+  let alphaPrime = clamp(alpha + 0.5 * sinAngularRadius, alpha, 1.0);
+  let ratio = alpha / alphaPrime;
+
+  let D = distributionGGX(NoH, roughness) * ratio * ratio;
+  let G = geometrySmithGGX(NoV, NoLs, roughness);
+  let F = fresnelSchlick(VoH, f0);
+  let specular = (D * G) * F / max(4.0 * NoV * NoLs, 1e-4);
+
+  let diffuse = orenNayarDiffuse(n, v, l, roughness) * albedo;
+
+  return diffuse * NoL + specular * NoLs;
+}
+
+// ── envSplitSum — the probe as environment light ─────────────────────
+//
+// Karis 2013 split-sum: the specular integral factors into the prefiltered
+// radiance along R at the roughness mip (roughness = mip / (levels - 1)) times
+// the LUT's 'f0 * scale + bias' at (NoV, roughness). That product is also the
+// directional albedo the specular took, so the diffuse -- the coarsest mip, the
+// roughness-1 lobe standing in for the cosine hemisphere -- gets the remainder.
+
+fn envSplitSum(
+  n: vec3<f32>,
+  v: vec3<f32>,
+  diffuseAlbedo: vec3<f32>,
+  roughness: f32,
+  f0: vec3<f32>,
+  probe: texture_cube<f32>,
+  probeSampler: sampler,
+  lut: texture_2d<f32>,
+  lutSampler: sampler,
+) -> vec3<f32> {
+  let NoV = max(dot(n, v), 0.0);
+  let r = reflect(-v, n);
+  let topMip = f32(textureNumLevels(probe) - 1u);
+  let prefiltered = textureSampleLevel(probe, probeSampler, r, roughness * topMip).rgb;
+  let irradiance = textureSampleLevel(probe, probeSampler, n, topMip).rgb;
+  let ab = textureSampleLevel(lut, lutSampler, vec2<f32>(NoV, roughness), 0.0).rg;
+
+  let specularAlbedo = f0 * ab.x + ab.y;
+  let specular = prefiltered * specularAlbedo;
+  let diffuse = (vec3<f32>(1.0) - specularAlbedo) * diffuseAlbedo * irradiance;
+  return diffuse + specular;
 }

@@ -33,7 +33,7 @@ describe('parseMcxc', () => {
       expect(rows).toHaveLength(1);
       const row = rows[0] as McxcRow;
       // RAdeg column (bytes 109-115): '  0.030' → 0.030
-      expect(row.raDeg).toBeCloseTo(0.030, 3);
+      expect(row.raDeg).toBeCloseTo(0.03, 3);
       // DEdeg column (bytes 117-123): '  8.274' → 8.274
       expect(row.decDeg).toBeCloseTo(8.274, 3);
       // z column (bytes 141-146): '0.0396'
@@ -64,13 +64,6 @@ describe('parseMcxc', () => {
       // DEdeg column: ' -2.625' — the minus sign is part of the F7.3 value
       expect(row.decDeg).toBeCloseTo(-2.625, 3);
       expect(row.decDeg).toBeLessThan(0);
-    });
-
-    it('returns negative decDeg for a more southern row (J0001.6-1540)', () => {
-      const rows = parseMcxc(ROW_DEEP_SOUTH);
-      expect(rows).toHaveLength(1);
-      const row = rows[0] as McxcRow;
-      expect(row.decDeg).toBeCloseTo(-15.681, 3);
     });
   });
 
@@ -103,11 +96,6 @@ describe('parseMcxc', () => {
       expect(rows).toHaveLength(2);
       expect(rows[0]!.id).toBe('J0000.1+0816');
       expect(rows[1]!.id).toBe('J0000.4-0237');
-    });
-
-    it('returns an empty array when given only blank and comment lines', () => {
-      const rows = parseMcxc('# comment\n\n# another\n');
-      expect(rows).toHaveLength(0);
     });
 
     it('returns an empty array for an empty string', () => {

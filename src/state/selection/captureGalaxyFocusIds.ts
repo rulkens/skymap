@@ -9,13 +9,12 @@
  * derive the request from `galaxyCatalogRequest`, so they cannot disagree.
  */
 
-import { focusIdOf } from '../../services/url/focusIdOf';
 import { selectSelectedRef, selectFocusRef } from './selectors';
 import { galaxyCatalogRequest } from '../../services/engine/wiring/galaxyCatalogRequest';
 import { sameRequest } from '../../utils/loading/sameRequest';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
 import type { RootState } from '../../store/types';
-import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
+import type { SelectionResolver } from '../../@types/engine/selection/SelectionResolver';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { Tier } from '../../@types/data/Tier';
@@ -33,7 +32,7 @@ export type GalaxyReanchor = {
 
 export function captureGalaxyFocusIds(
   state: RootState,
-  deps: ResolveDeps,
+  resolve: SelectionResolver,
   prevTier: Tier,
   nextTier: Tier,
 ): GalaxyReanchor[] {
@@ -57,7 +56,7 @@ export function captureGalaxyFocusIds(
     // focusIdOf returns null when the cloud is absent or the ref has no durable
     // representation (Milky Way, already guarded above). Skip nulls so the
     // return type carries only resolvable ids.
-    const focusId = focusIdOf(ref, deps);
+    const focusId = resolve.focusIdOf(ref);
     if (focusId !== null) out.push({ slot, source: ref.source, focusId });
   }
   return out;

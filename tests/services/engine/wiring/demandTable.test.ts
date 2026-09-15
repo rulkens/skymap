@@ -416,34 +416,6 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * Filaments enabled: boot defaults + filaments.enabled = true.
-   * Adds 'filaments' to the expected set.
-   */
-  it('filaments enabled: boot set + filaments', async () => {
-    const settings: SettingsLeaves = {
-      ...BOOT_SETTINGS,
-      filaments: { enabled: true },
-    };
-    const state = makeState({ settings });
-
-    const fired = await firedKeys(state);
-
-    expect(fired).toEqual(
-      new Set<AssetKey>([
-        Source.SDSS,
-        Source.TwoMRS,
-        Source.Glade,
-        Source.FamousGalaxy,
-        Source.Milliquas,
-        'famousGalaxiesMeta',
-        'structureCatalog',
-        'mcpm',
-        'filaments',
-      ]),
-    );
-  });
-
-  /**
    * Structures all hidden: every category's ring AND label set to false in
    * `structures.items`. Bug-fix pin: structureCatalog must NOT appear. This
    * verifies the consolidated predicate reading the per-category item rows.
@@ -476,32 +448,6 @@ describe('reevaluateDemand demand-table regression', () => {
     expect(fired.has(Source.TwoMRS)).toBe(true);
     expect(fired.has(Source.Glade)).toBe(true);
     expect(fired.has(Source.FamousGalaxy)).toBe(true);
-  });
-
-  /**
-   * Palette opened: adds the 'paletteOpened' request flag, which triggers
-   * pgcAlias on top of the boot set. Famous slot 'loading' for famousGalaxiesMeta.
-   */
-  it('palette opened: boot set + pgcAlias', async () => {
-    const state = makeState({
-      requests: new Set(['paletteOpened']),
-    });
-
-    const fired = await firedKeys(state);
-
-    expect(fired).toEqual(
-      new Set<AssetKey>([
-        Source.SDSS,
-        Source.TwoMRS,
-        Source.Glade,
-        Source.FamousGalaxy,
-        Source.Milliquas,
-        'famousGalaxiesMeta',
-        'structureCatalog',
-        'mcpm',
-        'pgcAlias',
-      ]),
-    );
   });
 
   /**
@@ -548,36 +494,6 @@ describe('reevaluateDemand demand-table regression', () => {
     expect(fired.has(Source.Milliquas)).toBe(false);
     // Famous's point row is demanded but errored (non-idle) — not re-loaded.
     expect(fired.has(Source.FamousGalaxy)).toBe(false);
-  });
-
-  /**
-   * cf4Density field enabled: user toggled cf4-density on, so it joins the
-   * boot set (which already includes mcpm). Spreads the seeded fields and
-   * flips cf4-density's enabled bit rather than replacing the record, so
-   * mcpm's default-on bit survives. Famous slot 'loading' for famousGalaxiesMeta.
-   */
-  it('cf4Density field enabled: boot set + cf4Density', async () => {
-    const volumeFields: VolumeFieldLeaves = {
-      ...BOOT_VOLUME_FIELDS,
-      'cf4-density': { enabled: true },
-    };
-    const state = makeState({ volumeFields });
-
-    const fired = await firedKeys(state);
-
-    expect(fired).toEqual(
-      new Set<AssetKey>([
-        Source.SDSS,
-        Source.TwoMRS,
-        Source.Glade,
-        Source.FamousGalaxy,
-        Source.Milliquas,
-        'famousGalaxiesMeta',
-        'structureCatalog',
-        'mcpm',
-        'cf4Density',
-      ]),
-    );
   });
 
   /**

@@ -59,7 +59,10 @@ const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
 const EARTH = BODIES.get('earth')! as BodyState;
 const MARS = BODIES.get('mars')! as BodyState;
-const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
+// The outer bound, matching cameraDrivers'/focusFraming's own read of
+// bodyFootprintRadiusM — not the datum, which F2's Earth relief now diverges
+// from by 0.14%.
+const R_MPC = bodyFootprintRadiusM(SCENE_EARTH) * SCALE_UNITS.M_TO_MPC;
 
 function distTo(eye: Readonly<Vec3>, body: BodyState): number {
   return Math.hypot(

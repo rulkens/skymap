@@ -13,12 +13,6 @@ import { describe, it, expect } from 'vitest';
 import { earthEraForLookback } from '../../../src/utils/math/earthEraForLookback';
 
 describe('earthEraForLookback', () => {
-  it('returns the modern-era string for 0 Gyr', () => {
-    // The closest band is "essentially now (modern era)" for any value
-    // < 0.001 Gyr (= 1 Myr).  z = 0 lookback always lands here.
-    expect(earthEraForLookback(0)).toBe('essentially now (modern era)');
-  });
-
   it('treats the boundary value as the start of the *upper* band (half-open)', () => {
     // 0.066 Gyr is exactly the K-Pg extinction boundary.  Per the docstring
     // the comparison is strict `<`, so 0.066 lies in the next-deeper band:

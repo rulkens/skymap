@@ -13,7 +13,7 @@ A full data-refreshing deploy:
 
 1. `npm run build-tiers` — regenerates all `public/data/*.bin`.
 2. `npm run build-filaments` — only if filaments need rebuilding (rare).
-3. `npm run build-earth-tiles` — only if the Earth surface virtual texture needs rebaking (rare). Read "Earth tile versioning" below first — changing pixels without bumping the version leaves the CDN serving the wrong imagery.
+3. `npm run build-surface-tiles` — only if the Earth surface virtual texture needs rebaking (rare). Read "Earth tile versioning" below first — changing pixels without bumping the version leaves the CDN serving the wrong imagery.
 4. `npm run sync-r2-secure` — uploads changed files across every group (see "R2 sync architecture" below), then purges matching CDN URLs for the groups that aren't immutable; idempotent, so rerunning only moves bytes that differ. The wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store; bare `sync-r2` (no-bash fallback) skips the purge without credentials, leaving stale CDN bytes until TTL expiry.
 5. `npm run deploy` — pushes `main`; Cloudflare rebuilds the shell (~30 s).
 
@@ -33,18 +33,22 @@ The runtime `cloudLoader` requests `<source>-<tier>.bin` per source; callers kee
 
 Two transports exist (`tools/deploy/r2/R2Transport.ts`):
 
-- **`wrangler`** spawns one `npx wrangler r2 object put` per file, skipping any file whose remote ETag already matches. Fine for dozens of large artefacts: the `.bin` tiers, famous/hi-res images, textures, extra files, and the Earth tile manifest.
+- **`wrangler`** spawns one `npx wrangler r2 object put` per file, skipping any file whose remote ETag already matches. Fine for dozens of large artefacts: the `.bin` tiers, famous/hi-res images, textures, extra files, mesh sources, and the Earth tile manifest.
 - **`bulk`** hands a whole group to a single `rclone copy` (`tools/deploy/r2/uploadViaRclone.ts`), which owns listing, diffing, retry and concurrency itself. The reason it exists: at wrangler's ~1-2 s process-startup cost per file, the 10912 Earth tiles would take 3-6 hours before a single byte moved.
 
 The Earth tiles are split into two groups because of that. The tile bodies (`collectEarthTiles.ts`) go up via `bulk`, `cacheControl: immutable`, `purge: false`. The manifest (`collectEarthTileManifest.ts`) is a separate `wrangler` row that `buildGroups()` places last — it's the pointer the runtime reads to discover tiles, and must never name a tile this run hasn't finished uploading. `collectEarthTiles` reads the tile list from the bake's `earth-tiles/index.txt` rather than walking the tile tree: the bake writes that index last, so an interrupted bake leaves no index and the sync correctly uploads nothing rather than a partial tile set.
+
+The `Mesh sources` group backs up the pristine downloads and edited `<key>.blend` files listed in `meshes.sha256` under `data/raw/meshes/`; restoring from that backup is `data/raw/meshes/README.md`.
 
 If a bulk group has files but the credentials below are missing, `syncR2.ts` fails in a preflight before any upload starts, rather than partway through a run.
 
 #### Earth tile versioning
 
-Tile keys sit under a versioned prefix (currently `earth-tiles/v7`; the `TILE_PREFIX` constant in `tools/textures/buildEarthTiles.ts` is the source of truth, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
+Tile keys sit under a versioned prefix (currently `earth-tiles/v8`; the `TILE_PREFIX` constant in `tools/textures/buildSurfaceTiles.ts` is the source of truth, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
 
-A manifest SHAPE change (not just pixels — e.g. `levels.surface` growing a second band) is a sharper case: `fetchEarthTileManifest`'s runtime guard rejects any manifest shape it doesn't recognise, so between a merge that changes the shape and the next `npm run sync-r2-secure`, every client fetches the stale R2 manifest, gets rejected, and Earth surface tiles are OFF in production entirely — the sync is a blocking merge step, not a follow-up.
+A manifest SHAPE change (not just pixels — e.g. `bands` growing a second band) is a sharper case: `fetchSurfaceTileManifest`'s runtime guard rejects any manifest shape it doesn't recognise, so between a merge that changes the shape and the next `npm run sync-r2-secure`, every client fetches the stale R2 manifest, gets rejected, and surface tiles are OFF in production entirely — the sync is a blocking merge step, not a follow-up.
+
+The v7 → v8 release (the `levels` → `bands` manifest break plus the new `albedo/` path segment, alongside the new `height/` product) moves in this order: server-side copy `earth-tiles/v7/surface` to `earth-tiles/v8/albedo` (same bytes, new prefix — no re-upload), `bulk`-upload the new `earth-tiles/v8/height` tiles, then sync the manifest last. Tiles are OFF in production for that whole window (spec §3.4b) — the old manifest still names `v7/surface`, which nothing serves once the copy starts.
 
 #### Credentials
 
@@ -60,7 +64,7 @@ rclone is configured entirely through `RCLONE_CONFIG_R2_*` environment variables
 
 ### Cache-Control + CORS
 
-- **Cache:** shell via `public/_headers` (JS/CSS/WGSL/WASM `max-age=31536000, immutable`; famous WebPs `max-age=86400`) — these rules are belt-and-braces that only reach `public/data/` under a local `vite preview`; production data bytes come from R2, whose cache policy is set independently by `buildGroups()`. R2 objects get their `Cache-Control` per group from `buildGroups()` in `syncR2.ts`: every hashed data file (the five binary families under `public/data/` plus the root JSON) is `immutable, max-age=31536000` and never purged — the content hash invalidates a stale file, not the cache header. `manifest.json` is the one exception: `no-cache`, purged on every sync, and uploaded **last** so it never names a file the run hasn't finished uploading. Famous/hi-res images, planet textures, and the Earth tile manifest keep `max-age=86400`; the Earth tile bodies stay `immutable` (their own `earth-tiles/vN` epoch, see above).
+- **Cache:** shell via `public/_headers` (JS/CSS/WGSL/WASM `max-age=31536000, immutable`; famous WebPs `max-age=86400`) — these rules are belt-and-braces that only reach `public/data/` under a local `vite preview`; production data bytes come from R2, whose cache policy is set independently by `buildGroups()`. R2 objects get their `Cache-Control` per group from `buildGroups()` in `syncR2.ts`: every hashed data file (the five binary families under `public/data/` plus the root JSON) is `immutable, max-age=31536000` and never purged — the content hash invalidates a stale file, not the cache header. `manifest.json` is the one exception: `no-cache`, purged on every sync, and uploaded **last** so it never names a file the run hasn't finished uploading. Famous/hi-res images, planet textures, and the Earth tile manifest keep `max-age=86400`; the Earth tile bodies stay `immutable` (their own `earth-tiles/vN` epoch, see above). `Mesh sources` is `no-cache` too but never purged: an edited `.blend` is re-saved under the same key, so an `immutable` header would hand a restore the pre-edit bytes.
 - **CORS:** one R2 rule allows `GET`/`HEAD` from `skymap.rulkens.com`, `skymap.rulkens.workers.dev`, and `localhost:5173`; re-apply with `npm run r2-cors` (`tools/deploy/r2Cors.json`).
 
 ### Wire compression + edge cache

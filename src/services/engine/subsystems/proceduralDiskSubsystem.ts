@@ -35,7 +35,7 @@ import {
 } from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
@@ -50,7 +50,7 @@ export type ProceduralDiskDeps = {
    * curated WebP is loaded in the atlas, that instance's `procFadeOut` ramps
    * down. Omit it (e.g. in tests) and `procFadeOut` stays 1.0 throughout.
    */
-  readonly atlas?: BitmapStreamSubsystem;
+  readonly atlas?: TileStreamSubsystem<ImageBitmap>;
 };
 
 export function createProceduralDiskSubsystem(
@@ -81,6 +81,10 @@ export function createProceduralDiskSubsystem(
     // Hoisted per source by beginSource so onRow does no map lookup — the
     // walk guarantees beginSource precedes every onRow for that source.
     let stickyProcDisks: Map<number, ProceduralDiskInstance> = new Map();
+    // The source's live survey-fade opacity, sampled ONCE per source (mirrors
+    // texturedDiskSubsystem) so a hidden catalog's procedural disks fade out
+    // with its point sprites instead of staying fully bright.
+    let sourceOpacity = 1;
 
     const visitor: DiskRowVisitor = {
       onSourceHidden(source) {
@@ -89,6 +93,7 @@ export function createProceduralDiskSubsystem(
 
       beginSource(source, safeStart, end) {
         stickyProcDisks = stickyFor(source);
+        sourceOpacity = input.sourceOpacity(source);
         // Purge sticky entries inside the current stride window — the
         // row visits are authoritative for those indices.
         purgeStrideWindow(stickyProcDisks, safeStart, end);
@@ -129,7 +134,10 @@ export function createProceduralDiskSubsystem(
         const rawSb = galaxySbAmp(absMag, medianAbsMag, dKpcRow);
         const regEntry = SOURCE_REGISTRY[source];
         const sbBoost = regEntry.type === 'galaxyCatalog' ? regEntry.sbBoost : 1;
-        const sbAmp = Math.min(rawSb, sbMax) * sbScale * sbBoost * brightness;
+        // sourceOpacity is the survey-fade term (see beginSource above) — folded
+        // in here because sbAmp is the sole brightness/alpha multiplier the
+        // fragment shader reads (proceduralDisks/fragment.wesl's `intensity`).
+        const sbAmp = Math.min(rawSb, sbMax) * sbScale * sbBoost * brightness * sourceOpacity;
 
         const emitted = maybeEmitProceduralDisk(
           px,

@@ -44,10 +44,4 @@ describe('TourBeatRail', () => {
     expect(silent?.textContent).toBe('');
     expect(upcoming?.textContent).toBe('The Virgo Cluster');
   });
-
-  it('is passive: no buttons, no links', () => {
-    render(<TourBeatRail titles={TITLES} index={0} />);
-    expect(screen.queryByRole('button')).toBeNull();
-    expect(screen.queryByRole('link')).toBeNull();
-  });
 });

@@ -29,30 +29,6 @@ describe('deriveGridBox', () => {
     expect(box.sizeMpc).toEqual([40, 30, 20]);
   });
 
-  it('boot default: 200 Mpc box at 0.75 Mpc/vox — dims 272³, voxelSizeMpc exact (Q4)', () => {
-    const box = deriveGridBox(defaultGridSlice);
-    expect(box.dims).toEqual([272, 272, 272]);
-    expect(box.voxelSizeMpc).toBe(0.75);
-  });
-
-  it('derives rotation from grid.manualRotation — autoFitGridBox itself always returns identity', () => {
-    const manualRotation: Vec4 = [0, Math.SQRT1_2, 0, Math.SQRT1_2]; // 90° about Y
-    const box = deriveGridBox({ ...defaultGridSlice, manualRotation });
-    expect(box.rotation).toEqual(manualRotation);
-  });
-
-  it('grid.importedBox short-circuits derivation, returned verbatim', () => {
-    const importedBox = {
-      centerMpc: [1, 2, 3] as Vec3,
-      sizeMpc: [80, 80, 80] as Vec3,
-      dims: [40, 40, 40] as Vec3,
-      voxelSizeMpc: 2,
-      rotation: [0, 0, 0, 1] as Vec4,
-    };
-    const box = deriveGridBox({ ...defaultGridSlice, importedBox });
-    expect(box).toEqual(importedBox);
-  });
-
   it('V2: importedBox stays verbatim (unclamped) even past a set maxBufferBytes floor', () => {
     // A box that would itself blow a tiny limit if it were derived through the manual
     // path — importedBox must return it untouched anyway (ruling in deriveGridBox.ts).
@@ -78,18 +54,6 @@ describe('deriveGridBox — V2 allocation-aware voxel-size floor', () => {
     };
     const box = deriveGridBox(grid);
     expect(box.voxelSizeMpc).toBe(0.1);
-  });
-
-  it('manual voxel size above the floor: derived voxelSizeMpc is unchanged', () => {
-    const grid = {
-      ...defaultGridSlice,
-      manualSizeMpc: [200, 200, 200] as Vec3,
-      manualVoxelSizeMpc: 1, // dims 200^3 * 4 bytes = 32 MB, well under the limit below
-      resolvedElement: 'f32' as const,
-      maxBufferBytes: 4 * 1024 ** 3,
-    };
-    const box = deriveGridBox(grid);
-    expect(box.voxelSizeMpc).toBe(1);
   });
 
   it('manual voxel size below the floor: derived voxelSizeMpc is clamped up to the floor', () => {

@@ -44,6 +44,7 @@ import { orbitTrailsPass } from './orbitTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
 import { sgrAStarLensingPass } from './sgrAStarLensingPass';
+import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 
 /**
  * The contributed passes, as a flat set. It states no order and no grouping:
@@ -88,4 +89,5 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   foregroundLabelsPass,
   clipPathDebugPass,
   atmosphereShellPass,
+  skyCubemapBlitPass,
 ];

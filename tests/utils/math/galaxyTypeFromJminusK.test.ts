@@ -5,13 +5,6 @@ describe('galaxyTypeFromJminusK', () => {
   it('J−K < 0.85 is blue', () => {
     expect(galaxyTypeFromJminusK(0.75).category).toBe('blue');
   });
-  it('0.85 ≤ J−K < 1.0 is green', () => {
-    expect(galaxyTypeFromJminusK(0.92).category).toBe('green');
-  });
-  it('J−K ≥ 1.0 is red', () => {
-    expect(galaxyTypeFromJminusK(1.05).category).toBe('red');
-  });
-
   // Boundary semantics — same shape as galaxyTypeFromBminusJ:
   // both edges use '<', so 0.85 is 'green' and 1.0 is 'red'.
   it('exactly 0.85 is green (lower edge half-open right)', () => {

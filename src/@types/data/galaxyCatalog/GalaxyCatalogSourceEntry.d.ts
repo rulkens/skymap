@@ -1,5 +1,6 @@
 import type { BandLabels } from './BandLabels';
 import type { ColourIndexSpec } from './ColourIndexSpec';
+import type { GalaxyCatalogSourceCategory } from './GalaxyCatalogSourceCategory';
 import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from '../SourceEntryBase';
 import type { Tier } from '../Tier';
@@ -96,4 +97,8 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    * catalogs keep the original ~1000 Mpc tuning.
    */
   readonly falloffHalfMpc: number;
+  /** See `GalaxyCatalogSourceCategory`. */
+  readonly category: GalaxyCatalogSourceCategory;
+  /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */
+  readonly priority: number;
 };

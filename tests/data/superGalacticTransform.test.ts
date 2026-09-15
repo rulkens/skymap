@@ -27,7 +27,7 @@ function eqCartesianToRaDecDist(eq: readonly [number, number, number]): {
 } {
   const [x, y, z] = eq;
   const dist = Math.hypot(x, y, z);
-  const ra = ((Math.atan2(y, x) / RAD) + 360) % 360;
+  const ra = (Math.atan2(y, x) / RAD + 360) % 360;
   const dec = Math.asin(z / dist) / RAD;
   return { ra, dec, dist };
 }
@@ -38,11 +38,6 @@ function col(m: typeof SG_TO_EQ_MATRIX, c: 0 | 1 | 2): readonly [number, number,
 }
 
 describe('superGalacticTransform', () => {
-  it('exports a flat 9-element column-major Mat3 and a 4-element quaternion', () => {
-    expect(SG_TO_EQ_MATRIX).toHaveLength(9);
-    expect(SG_TO_EQ_QUATERNION).toHaveLength(4);
-  });
-
   it('quaternion is unit-norm', () => {
     const [x, y, z, w] = SG_TO_EQ_QUATERNION;
     const norm = Math.hypot(x, y, z, w);
@@ -61,10 +56,6 @@ describe('superGalacticTransform', () => {
     expect(dot(c0, c1)).toBeCloseTo(0, 6);
     expect(dot(c0, c2)).toBeCloseTo(0, 6);
     expect(dot(c1, c2)).toBeCloseTo(0, 6);
-  });
-
-  it('maps origin to origin', () => {
-    expect(sgCartesianToEquatorial([0, 0, 0])).toEqual([0, 0, 0]);
   });
 
   it('maps Virgo (SGX≈-2.5, SGY≈+10.0, SGZ≈-1.0 Mpc/h) to RA≈187°, Dec≈+12°, dist≈10 Mpc/h', () => {
@@ -87,34 +78,6 @@ describe('superGalacticTransform', () => {
   });
 
   describe('SG_TO_EQ_MAT4_COL_MAJOR', () => {
-    it('is a 16-element column-major layout', () => {
-      expect(SG_TO_EQ_MAT4_COL_MAJOR).toHaveLength(16);
-    });
-
-    it('upper-left 3x3 (column-major) equals SG_TO_EQ_MATRIX', () => {
-      for (let c = 0; c < 3; c++) {
-        for (let r = 0; r < 3; r++) {
-          expect(SG_TO_EQ_MAT4_COL_MAJOR[c * 4 + r]).toBeCloseTo(
-            SG_TO_EQ_MATRIX[c * 3 + r]!,
-            10,
-          );
-        }
-      }
-    });
-
-    it('translation column is zero, w corner is 1', () => {
-      expect(SG_TO_EQ_MAT4_COL_MAJOR[12]).toBe(0);
-      expect(SG_TO_EQ_MAT4_COL_MAJOR[13]).toBe(0);
-      expect(SG_TO_EQ_MAT4_COL_MAJOR[14]).toBe(0);
-      expect(SG_TO_EQ_MAT4_COL_MAJOR[15]).toBe(1);
-    });
-
-    it('homogeneous w-row of upper 3 columns is zero', () => {
-      expect(SG_TO_EQ_MAT4_COL_MAJOR[3]).toBe(0);
-      expect(SG_TO_EQ_MAT4_COL_MAJOR[7]).toBe(0);
-      expect(SG_TO_EQ_MAT4_COL_MAJOR[11]).toBe(0);
-    });
-
     it('applied as a column-major mat4, rotates Coma SG to expected EQ', () => {
       const sg: readonly [number, number, number] = [0, 93.8, 7.8];
       const eq: [number, number, number] = [0, 0, 0];

@@ -16,6 +16,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -253,11 +254,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     // to 0 in frameContext, and an absent one yields NaN alphas here.
     focusBlend: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
-    galaxyPointRenderer,
     renderTargets,
-    // texturedDisks slot is referenced from frameContext shape;
-    // we'll null the matching subsystem on `state` so the pass skips.
-    texturedDisks: null,
   } as never;
 
   const settings = {
@@ -300,6 +297,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         earthRenderer: null,
         starRenderer: null,
         planetRenderer: null,
+        // No mesh renderer → the probe scheduler idles before reading `data`.
+        meshBodyRenderer: null,
         // Near-field handle null → atmosphereShellPass disabled AND the
         // atmosphereSkyView compute step early-outs, so it bills no work.
         atmosphereShellRenderer: null,
@@ -319,6 +318,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // Every `ContentPass.draw` reads its renderer straight off
         // `state.gpu.*` — this is the ONLY place these mock instances are
         // wired in (no top-level `input.*` duplication).
+        galaxyPointRenderer,
         milkyWayCloudRenderer,
         horizonShellRenderer,
         texturedDiskRenderer,
@@ -377,13 +377,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       },
       // The cubemap-capture bookkeeping — see the matching fixture comment in
       // renderFrame.test.ts.
-      cubemapCaptures: {
-        sgrAStar: {
-          lastBandActive: false,
-          lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-          bakedSettings: null,
-        },
-      },
+      cubemapCaptures: makeCubemapCaptureRuntimes(),
     } as never,
     device,
     context,

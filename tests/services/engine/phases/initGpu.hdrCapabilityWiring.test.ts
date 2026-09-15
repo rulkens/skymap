@@ -347,6 +347,14 @@ vi.mock('../../../../src/services/gpu/labelLayout/loadFontAtlases', () => ({
   })),
 }));
 
+// The env-BRDF loader fetches its two static assets; mock it to the one thing
+// the unmocked `createMeshBodyRenderer` asks of the texture — a view.
+vi.mock('../../../../src/services/gpu/resources/loadEnvBrdfLut', () => ({
+  loadEnvBrdfLut: vi.fn(
+    async () => ({ createView: () => ({ __mockLutView: true }) }) as unknown as GPUTexture,
+  ),
+}));
+
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // The mocked `watchHdrCapability` itself: the HDR-dispatch-wiring tests below
@@ -460,6 +468,14 @@ function makeDeps(): BootstrapDeps {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
+    // initGpu never reads a resolver — a resolver that always returns null
+    // is enough to satisfy the type.
+    selection: {
+      resolvePick: () => null,
+      extractRow: () => null,
+      resolveFocusId: () => null,
+      focusIdOf: () => null,
+    },
   };
 }
 

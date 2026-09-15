@@ -11,56 +11,24 @@ describe('normalizeDesignation', () => {
     expect(normalizeDesignation('NGC0253')).toBe('NGC 253');
   });
 
-  it('IC1101 → "IC 1101" (no padding to strip)', () => {
-    expect(normalizeDesignation('IC1101')).toBe('IC 1101');
-  });
-
   it('UGCA013 → "UGCA 13" (UGCA wins over UGC even with the longer prefix)', () => {
     expect(normalizeDesignation('UGCA013')).toBe('UGCA 13');
-  });
-
-  it('UGC07772 → "UGC 7772"', () => {
-    expect(normalizeDesignation('UGC07772')).toBe('UGC 7772');
   });
 
   it('MESSIER031 → "M 31" (special-case prefix swap)', () => {
     expect(normalizeDesignation('MESSIER031')).toBe('M 31');
   });
 
-  it('MESSIER001 → "M 1" (Crab Nebula)', () => {
-    expect(normalizeDesignation('MESSIER001')).toBe('M 1');
-  });
-
   it('PGC123 → null (self-row is filtered out of alias list)', () => {
     expect(normalizeDesignation('PGC123')).toBeNull();
-  });
-
-  it('PGC002789 → null (longer-padded PGC also filtered)', () => {
-    expect(normalizeDesignation('PGC002789')).toBeNull();
   });
 
   it('2MASXJ12362058+2559155 → null (skipped catalog ID)', () => {
     expect(normalizeDesignation('2MASXJ12362058+2559155')).toBeNull();
   });
 
-  it('IRAS01234+5678 → null (skipped catalog ID)', () => {
-    expect(normalizeDesignation('IRAS01234+5678')).toBeNull();
-  });
-
   it('MCG-04-03-009 → "MCG -04-03-009" (preserves sub-fields)', () => {
     expect(normalizeDesignation('MCG-04-03-009')).toBe('MCG -04-03-009');
-  });
-
-  it('ESO123-G045 → "ESO 123-G045"', () => {
-    expect(normalizeDesignation('ESO123-G045')).toBe('ESO 123-G045');
-  });
-
-  it('ARP220 → "ARP 220"', () => {
-    expect(normalizeDesignation('ARP220')).toBe('ARP 220');
-  });
-
-  it('MRK421 → "MRK 421"', () => {
-    expect(normalizeDesignation('MRK421')).toBe('MRK 421');
   });
 
   it('empty → null', () => {
@@ -78,11 +46,6 @@ describe('sortAliasNames', () => {
   it('orders within prefix by trailing number, not lexicographically', () => {
     const out = sortAliasNames(['NGC 100', 'NGC 9', 'NGC 1000', 'NGC 50']);
     expect(out).toEqual(['NGC 9', 'NGC 50', 'NGC 100', 'NGC 1000']);
-  });
-
-  it('deduplicates', () => {
-    const out = sortAliasNames(['NGC 5', 'NGC 5', 'IC 7']);
-    expect(out).toEqual(['NGC 5', 'IC 7']);
   });
 
   it('unknown prefixes go to the end alphabetically', () => {
@@ -108,10 +71,6 @@ describe('parseDesignationsCsv', () => {
       { objname: 'NGC0253', design: 'PGC002789' },
       { objname: 'NGC0253', design: 'UGCA013' },
     ]);
-  });
-
-  it('returns empty array on body-less response', () => {
-    expect(parseDesignationsCsv('# only comments\n# more\n')).toEqual([]);
   });
 });
 

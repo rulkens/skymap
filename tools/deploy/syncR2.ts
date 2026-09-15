@@ -17,10 +17,12 @@ import { collectEarthTileManifest } from './r2/collectEarthTileManifest';
 import { collectEarthTiles } from './r2/collectEarthTiles';
 import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
+import { collectMeshSources } from './r2/collectMeshSources';
 import { collectTextureImages } from './r2/collectTextureImages';
 import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
+import { RAW_DATA } from '../utils/io/rawDataRegistry';
 
 const DATA_DIR = 'public/data';
 const HIRES_DIR = 'public/data/images/famous-hires';
@@ -73,6 +75,15 @@ function buildGroups(): R2SyncGroup[] {
       transport: { kind: 'wrangler' },
       cacheControl: DAY,
       purge: true,
+    },
+    // `no-cache`, not immutable: an edited `.blend` is re-saved under the same
+    // key, so an immutable header would hand a restore the pre-edit bytes.
+    {
+      label: 'Mesh sources',
+      files: collectMeshSources(RAW_DATA['meshes.dir'].path),
+      transport: { kind: 'wrangler' },
+      cacheControl: NO_CACHE,
+      purge: false,
     },
     {
       label: 'Earth surface tiles',

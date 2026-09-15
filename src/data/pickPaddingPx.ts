@@ -7,8 +7,8 @@
  * Lives in its own pure data module (not `galaxyPickRenderer.ts`) so
  * `pickUniformBytesOf` — a GPU-free value packer — can read it without
  * importing a renderer module and dragging WESL shader imports into its
- * plain-value world. `structureMarker/ringPick` and `milkyWay/pick` bake the
- * same padding into their pick-widened floors; this is their one TS home.
+ * plain-value world. `structureMarker/ringPick` mirrors the same padding into
+ * its apron; this is that mirror's one TS home.
  */
 
 /** Extra pixels added to `pointSizePx` for the pick pass. */

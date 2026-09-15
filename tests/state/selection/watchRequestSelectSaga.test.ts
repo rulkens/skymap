@@ -10,6 +10,7 @@ import { engineSourceCountReported } from '../../../src/state/engine/engineSlice
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -44,13 +45,13 @@ describe('watchRequestSelectSaga', () => {
       catalogs: {
         get: (src) =>
           cloudPresent && src === Source.SDSS ? makeCloud(1237668393006604288n) : undefined,
+        famousMeta: [],
       },
-      famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
     mw.run(watchRequestSelectSaga);
-    mw.setContext({ resolveDeps: () => deps });
+    mw.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps) });
     return s;
   }
   beforeEach(() => {

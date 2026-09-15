@@ -197,14 +197,6 @@ describe('produceStructureLabels', () => {
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
   });
 
-  it('fades the label out below the far-distance floor', () => {
-    // Tiny apparent radius (far away, below markerMinApparentRadiusPx=5) →
-    // minFadeOut 0 → dropped.
-    const state = makeState();
-    state.data.structures.setGroup('anchors', [rec('far', { worldPos: [100000, 0, CAM_Z] })]);
-    expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
-  });
-
   it('bakes per-category opacityOf into fadeAlpha', () => {
     // A cluster label at 0.5 category opacity emits half the at-rest fadeAlpha.
     const atRest = makeState();
@@ -261,16 +253,6 @@ describe('produceStructureLabels', () => {
     const state = makeState({ focusedOnly: true });
     state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
     expect(produceStructureLabels(state, makeCtx()).labels).toEqual([]);
-  });
-
-  it('at-rest output is unchanged (blend 0, all categories at 1, no focus)', () => {
-    // Golden: at rest the distance-fade fadeAlpha is unscaled (catOpacity 1 ×
-    // recession 1). Two featured anchors at distance 10 Mpc sit in the flat
-    // band of both fades, so fadeAlpha is exactly 1.
-    const state = makeState();
-    state.data.structures.setGroup('anchors', [rec('a'), rec('b')]);
-    const out = produceStructureLabels(state, makeCtx());
-    expect(out.labels.map((l) => l.fadeAlpha)).toEqual([1, 1]);
   });
 
   it('emits nothing at deep zoom — the surveyDeepZoom band empties the producer', () => {

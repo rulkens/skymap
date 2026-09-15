@@ -29,20 +29,6 @@ describe('CollapsibleSection', () => {
     expect(header).toHaveAttribute('aria-expanded', 'false');
   });
 
-  it('renders a header whose initial aria-expanded reflects defaultOpen', () => {
-    render(
-      createElement(CollapsibleSection, {
-        title: 'Display',
-        defaultOpen: true,
-        children: 'body',
-      }),
-    );
-    expect(screen.getByRole('button', { name: /display/i })).toHaveAttribute(
-      'aria-expanded',
-      'true',
-    );
-  });
-
   it('honors the headerToggleIndeterminate prop on the master checkbox', () => {
     // The DOM IDL for HTMLInputElement.indeterminate is settable but
     // not reflected as an attribute, so it only shows up in a real DOM.

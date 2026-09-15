@@ -1,15 +1,17 @@
 /**
  * galaxyAtlasSubsystem — the galaxy thumbnail atlas.
  *
- * Configures the generic `bitmapStreamSubsystem` with the galaxy
- * thumbnail atlas's geometry and pixel format: this is the only
- * galaxy-specific knowledge in the LOD-2 atlas path, everything else
+ * Configures the generic `tileStreamSubsystem` with the galaxy thumbnail
+ * atlas's geometry, pixel format and bitmap upload/release: this is the
+ * only galaxy-specific knowledge in the LOD-2 atlas path, everything else
  * (LRU clock, fetch queue, failure memoisation, eviction hook) lives in
- * `bitmapStreamSubsystem`, which has no notion of what it's streaming.
+ * `tileStreamSubsystem`, which has no notion of what it's streaming.
  */
 
-import { createBitmapStreamSubsystem } from './bitmapStreamSubsystem';
-import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import { createTileStreamSubsystem } from './tileStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
+import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
+import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 
 // Geometry of the galaxy thumbnail atlas: a single 2048×2048 texture
 // sliced into a 16×16 grid of 128×128 slots (256 thumbnails total).
@@ -30,13 +32,17 @@ export type GalaxyAtlasDeps = {
   readonly requestRender: () => void;
 };
 
-export function createGalaxyAtlasSubsystem(deps: GalaxyAtlasDeps): BitmapStreamSubsystem {
-  return createBitmapStreamSubsystem({
+export function createGalaxyAtlasSubsystem(
+  deps: GalaxyAtlasDeps,
+): TileStreamSubsystem<ImageBitmap> {
+  return createTileStreamSubsystem<ImageBitmap>({
     device: deps.device,
     requestRender: deps.requestRender,
     atlasSide: GALAXY_ATLAS_SIDE,
     slotSide: GALAXY_ATLAS_SLOT_SIDE,
     format: GALAXY_ATLAS_FORMAT,
     label: 'galaxy-atlas',
+    upload: uploadBitmapToAtlas,
+    release: closeBitmap,
   });
 }

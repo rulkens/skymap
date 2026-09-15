@@ -18,25 +18,28 @@ import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyS
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { sceneBodyLabels } from '../../../src/services/engine/presentation/sceneBodyLabels';
 import { CAPTION_FADE_RULES } from '../../../src/services/engine/presentation/captionFadeRules';
-import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { makeSettingsFixture } from '../../state/settings/makeSettingsFixture';
 
 import type { CaptionFadeRule } from '../../../src/services/engine/presentation/captionFadeRules';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 
 const ID = 'sgr-a-star';
 const STATES = deriveBodyStates(CONST_J2000);
 
 // The body decoder resolves against the static SCENE_BODIES import and reads
 // nothing off the live engine resources, so there is no catalog to stub.
-const NO_DEPS = {} as ResolveDeps;
+const resolver = selectionResolverOver({
+  catalogs: { get: () => undefined, famousMeta: [] },
+  structures: { byId: () => null, byCategory: () => [] },
+  stars: { current: () => null },
+});
 
 describe('Sgr A*', () => {
   it('is focusable and labelled but contributes no draw record', () => {
     // Focusable + selectable: both consumers gate on SCENE_BODIES membership and
     // return null on a miss, so the decode standing in for them is the check.
-    expect(resolveFocusId(`body-${ID}`, NO_DEPS)).toEqual({ type: 'body', id: ID });
+    expect(resolver.resolveFocusId(`body-${ID}`)).toEqual({ type: 'body', id: ID });
 
     // Labelled: with no geometry the caption is the ENTIRE on-screen presence,
     // so an unemitted one leaves nothing at all — and no error.

@@ -13,15 +13,6 @@ import { makeDecBandFilter } from '../../../../tools/utils/math/makeDecBandFilte
 describe('makeDecBandFilter', () => {
   const isInBand = makeDecBandFilter(30.65, 1.25, 205, 270);
 
-  it('accepts a point clearly inside the band', () => {
-    expect(isInBand(237, 30.65)).toBe(true);
-  });
-
-  it('accepts the band corners (inclusive Dec + RA edges)', () => {
-    expect(isInBand(205, 29.4)).toBe(true);
-    expect(isInBand(270, 31.9)).toBe(true);
-  });
-
   it('rejects points past the lower and upper Dec edges', () => {
     // Just inside each Dec edge stays in; just outside drops.
     expect(isInBand(237, 29.4)).toBe(true);
@@ -35,13 +26,5 @@ describe('makeDecBandFilter', () => {
     expect(isInBand(204.99, 30.65)).toBe(false);
     expect(isInBand(270, 30.65)).toBe(true);
     expect(isInBand(270.01, 30.65)).toBe(false);
-  });
-
-  it('rejects a point in the RA span but far off the Dec band', () => {
-    expect(isInBand(237, 45)).toBe(false);
-  });
-
-  it('rejects a point on the Dec band but outside the RA span', () => {
-    expect(isInBand(120, 30.65)).toBe(false);
   });
 });

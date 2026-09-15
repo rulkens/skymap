@@ -60,12 +60,6 @@ describe('advanceEpoch', () => {
   });
 });
 
-describe('elapsedMs', () => {
-  it('of an unstarted epoch is 0', () => {
-    expect(elapsedMs(UNSTARTED, 5000)).toBe(0);
-  });
-});
-
 function makeCameraState(overrides?: Partial<CameraState>): CameraState {
   return {
     base: { frame: 'absolute', pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 } },

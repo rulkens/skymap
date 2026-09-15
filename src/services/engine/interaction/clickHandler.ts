@@ -32,16 +32,9 @@ import type { ClickResolveInput } from '../../../@types/engine/ClickResolveInput
 import type { ClickResolver } from '../../../@types/engine/ClickResolver';
 import type { CreateClickResolverInput } from '../../../@types/engine/CreateClickResolverInput';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
-import type { ResolvePickDeps } from '../../../@types/engine/ResolvePickDeps';
-import { resolvePick } from '../helpers/resolvePick';
 
 export function createClickResolver(input: CreateClickResolverInput): ClickResolver {
-  const { pickProgram, structures } = input;
-
-  // Everything `resolvePick` needs, bundled once at construction so the
-  // per-click path is a single call. The galaxy arm is positional (no cloud
-  // read), so the dep bag is just the structure store.
-  const deps: ResolvePickDeps = { structures };
+  const { pickProgram, resolvePick } = input;
 
   // Built as a `const` (rather than returned inline) so we can attach
   // the `satisfies Destroyable` latch — the click resolver is one of
@@ -55,7 +48,7 @@ export function createClickResolver(input: CreateClickResolverInput): ClickResol
       const pick = await pickProgram.pick(args.pickXPx, args.pickYPx);
       // Decode + resolve via the shared boundary (same one the hover path
       // uses), so click and hover can't drift on how a pixel resolves.
-      return resolvePick(pick, deps);
+      return resolvePick(pick);
     },
     destroy(): void {
       // Intentionally empty — see the type-level docstring for why.

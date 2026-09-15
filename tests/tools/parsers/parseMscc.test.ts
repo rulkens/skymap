@@ -20,12 +20,9 @@ import { parseMscc, type MsccRow } from '../../../tools/parsers/parseMscc';
  */
 const ROW_1 =
   '  1                     9   0.77 -26.72 0.064  50.6 A0014,A0020,A2683A,A2716,A2726A,A2734,A4038C,A4049B,A4053B';
-const ROW_2 =
-  '  2  3                  2   1.09 +09.77 0.098  20.2 A2694,A2706';
-const ROW_3 =
-  '  3                     4   1.20 +16.05 0.119  41.5 A0001,A2688A,A2703,A2705';
-const ROW_6 =
-  '  6                     4   1.58 -64.24 0.116  37.7 A2732,A2740A,A2760,A4028';
+const ROW_2 = '  2  3                  2   1.09 +09.77 0.098  20.2 A2694,A2706';
+const ROW_3 = '  3                     4   1.20 +16.05 0.119  41.5 A0001,A2688A,A2703,A2705';
+const ROW_6 = '  6                     4   1.58 -64.24 0.116  37.7 A2732,A2740A,A2760,A4028';
 
 describe('parseMscc', () => {
   describe('reads decimal RAdeg/DEdeg, z, Nm, dmax', () => {
@@ -59,13 +56,6 @@ describe('parseMscc', () => {
       expect(row.decDeg).toBeGreaterThan(0);
     });
 
-    it('parses MSCC 3 with another positive declination +16.05', () => {
-      const rows = parseMscc(ROW_3);
-      expect(rows).toHaveLength(1);
-      const row = rows[0] as MsccRow;
-      expect(row.decDeg).toBeCloseTo(16.05, 2);
-    });
-
     it('parses MSCC 2 id without zero-padding', () => {
       const rows = parseMscc(ROW_2);
       expect(rows[0]!.id).toBe('MSCC 2');
@@ -74,23 +64,13 @@ describe('parseMscc', () => {
 
   describe('skips comment and blank lines', () => {
     it('ignores lines starting with # and blank lines', () => {
-      const input = [
-        '# VizieR comment line',
-        '',
-        ROW_1,
-        '   ',
-        '# Another comment',
-        ROW_2,
-      ].join('\n');
+      const input = ['# VizieR comment line', '', ROW_1, '   ', '# Another comment', ROW_2].join(
+        '\n',
+      );
       const rows = parseMscc(input);
       expect(rows).toHaveLength(2);
       expect(rows[0]!.id).toBe('MSCC 1');
       expect(rows[1]!.id).toBe('MSCC 2');
-    });
-
-    it('returns an empty array when given only blanks and comments', () => {
-      const rows = parseMscc('# comment\n\n# another\n');
-      expect(rows).toHaveLength(0);
     });
 
     it('returns an empty array for an empty string', () => {

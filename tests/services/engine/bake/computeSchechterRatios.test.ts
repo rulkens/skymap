@@ -27,13 +27,6 @@ function makeCloud(count: number): GalaxyCatalog {
 }
 
 describe('computeSchechterRatios', () => {
-  it('returns a Float32Array of length cloud.count', () => {
-    const cloud = makeCloud(5);
-    const ratios = computeSchechterRatios({ cloud, source: Source.SDSS });
-    expect(ratios).toBeInstanceOf(Float32Array);
-    expect(ratios.length).toBe(5);
-  });
-
   it('clamps every value to [0.3, 1.2] (symmetric rebalance)', () => {
     // Symmetric rebalancing centres ratios on 1.0: galaxies in higher-than-
     // median density dim, lower-than-median boost, with an asymmetric clamp

@@ -16,11 +16,11 @@ import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
 import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
-import type { CubemapCaptureRuntime } from './CubemapCaptureRuntime';
-import type { CubemapCaptureKey } from '../../rendering/CubemapCaptureKey';
+import type { CubemapCaptureRuntimes } from './CubemapCaptureRuntimes';
 import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
-import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
+import type { LayerInstance } from '../layer/LayerInstance';
+import type { SelectionKindRow } from '../layer/SelectionKindRow';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -30,8 +30,6 @@ export type EngineState = {
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
   selectionRows: SelectionRowsState;
-  /** A getter onto `store.getState().engine.meta.famousGalaxies`. */
-  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
   /** Per-type data stores — the authoritative app-side home for each. See `EngineData`. */
   data: EngineData;
   picking: EnginePickingState;
@@ -47,11 +45,17 @@ export type EngineState = {
   cameraRuntime: CameraRuntime;
   /**
    * Per-`CUBEMAP_CAPTURES`-row bake bookkeeping — render state, not camera
-   * state; written by `scheduleCubemapCaptures`, read by each row's target's
-   * `allocateWhen`. Total over the key union (seeded in `engine.ts`), so every
-   * read is a plain property access; entries are mutated in place.
+   * state; written by `scheduleSkyCaptures` and `scheduleProbeCapture`, read
+   * by each sky row's target's `allocateWhen`. Seeded in `engine.ts`; entries
+   * are mutated in place.
    */
-  cubemapCaptures: Readonly<Record<CubemapCaptureKey, CubemapCaptureRuntime>>;
+  cubemapCaptures: CubemapCaptureRuntimes;
+  /**
+   * Bumped once per successful galaxy-catalog commit (`wireGalaxyCatalogSourceSlot`'s
+   * single writer). A scalar, not per-row: it counts catalog content changes, not
+   * settings, and is read by `scheduleSkyCaptures`' re-bake key.
+   */
+  contentVersion: number;
   assetSlots: EngineAssetSlots;
   /**
    * One-shot transient request flags read by demand predicates via
@@ -60,4 +64,20 @@ export type EngineState = {
    * is needed.
    */
   requests: Set<RequestKey>;
+  /**
+   * Every Layer bound to its runtime by `createLayers`, in composition tuple
+   * order. `[]` until that phase runs; `destroy()` tears these down in
+   * REVERSE order before any core teardown a Layer's captured core object
+   * depends on (D8).
+   */
+  layers: readonly LayerInstance[];
+  /**
+   * The one selection-row array core owns (D5, Ruling 4): `[]` here,
+   * populated by Task 8's core rows and appended to once, by `createLayers`,
+   * with each Layer's own rows. Named distinctly from `selectionRows` above —
+   * that field is the UNRELATED saga-reconciled display cache
+   * (`SelectionRowsState`); this one holds `SelectionKindRow`s, the composed
+   * resolver's dispatch table.
+   */
+  selectionKindRows: readonly SelectionKindRow[];
 };

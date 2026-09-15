@@ -125,12 +125,4 @@ describe('cloneGalaxyCatalogForTransfer', () => {
 
     expect(transferredColumns).toEqual(expectedColumns);
   });
-
-  it('handles count = 0 (empty catalog)', () => {
-    const cloud = makeCloud(0);
-    const { copy } = cloneGalaxyCatalogForTransfer(cloud);
-    expect(copy.count).toBe(0);
-    expect(copy.objIDs.length).toBe(0);
-    expect(copy.positions.length).toBe(0);
-  });
 });

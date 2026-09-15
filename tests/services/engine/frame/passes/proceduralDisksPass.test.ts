@@ -45,12 +45,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: { draw: vi.fn() } as any,
     renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
-    texturedDisks: {
-      lastOutput: { quads: [], disks: [] },
-      hasInFlightWork: () => false,
-    } as any,
     // Nothing in this file reads bodyPose — a stub that never resolves a
     // body is a safe default, overridable like every other field.
     bodyPose: () => null,
@@ -73,28 +68,10 @@ function makeProceduralDiskRenderer() {
 }
 
 describe('proceduralDisksPass', () => {
-  it('enabled() returns false when subsystems.proceduralDisks is null', () => {
-    const state = {
-      subsystems: { proceduralDisks: null },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
-  });
-
   it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
     const state = {
       subsystems: { proceduralDisks: { lastOutput: { instances: [{}] } } },
       settings: { thumbnails: { enabled: false } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
-  });
-
-  it('enabled() returns false when lastOutput.instances is empty', () => {
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances: [] } } },
-      settings: { thumbnails: { enabled: true } },
     } as unknown as EngineState;
     const ctx = makeCtx();
     expect(proceduralDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
@@ -125,28 +102,5 @@ describe('proceduralDisksPass', () => {
     // Args: (pass, vp, viewport, camPos, pxPerRad, focusBindGroup, instances).
     expect(call[5]).toBe(focusBindGroup);
     expect(call[6]).toBe(instances);
-  });
-
-  it('draw() is a no-op when state.gpu.proceduralDiskRenderer is null (pre-bootstrap)', () => {
-    const instances = [{ x: 1 }];
-    const state = {
-      subsystems: { proceduralDisks: { lastOutput: { instances } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, proceduralDiskRenderer: null },
-    } as unknown as EngineState;
-    const pass = {} as GPURenderPassEncoder;
-    const ctx = makeCtx();
-    expect(() => proceduralDisksPass.draw(pass, makeView(ctx), ctx, state)).not.toThrow();
-  });
-
-  it('drawPick() is a no-op when state.gpu.proceduralDiskRenderer is null', () => {
-    const state = {
-      gpu: {
-        focusUniform: { bindGroup: {} as GPUBindGroup },
-        proceduralDiskRenderer: null,
-      },
-    } as unknown as EngineState;
-    const pass = {} as GPURenderPassEncoder;
-    const ctx = makeCtx();
-    expect(() => proceduralDisksPass.drawPick!(pass, makeView(ctx), ctx, state)).not.toThrow();
   });
 });

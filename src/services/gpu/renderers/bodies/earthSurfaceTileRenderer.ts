@@ -1,13 +1,13 @@
 /**
  * earthSurfaceTileRenderer — one instanced indexed draw of the resident
  * virtual-texture surface patches (`cutSurfaceTiles`'s cut) over the base
- * globe: one shared template index buffer, one 64-byte `PatchInstance` per
+ * globe: one shared template index buffer, one 80-byte `PatchInstance` per
  * patch, all geometry derived in `vertex.wesl`.
  *
  * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline shares
  * the base globe's nominal radius, so ties must resolve in ITS favour. It
- * owns neither the tile atlas nor the base globe's material/night/normal/
- * cloud maps — both arrive as views on every `draw` call.
+ * owns neither the tile atlas nor the base globe's material/night/cloud maps
+ * — both arrive as views on every `draw` call.
  *
  * @module
  */
@@ -30,7 +30,11 @@ import {
   writePatchInstance,
   writeSurfaceTileUniforms,
 } from './earthSurfaceTileLayout';
-import { EARTH_TILE_CROSSFADE_MS } from '../../../../data/bodies/earthTileParams';
+import {
+  EARTH_TILE_CROSSFADE_MS,
+  HEIGHT_ATLAS_SLOTS_PER_ROW,
+} from '../../../../data/bodies/earthTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and
@@ -80,9 +84,9 @@ export function createEarthSurfaceTileRenderer(
   device.queue.writeBuffer(indexBuffer, 0, indices);
 
   // ── Bind group layout (explicit, not 'auto') ─────────────────────────
-  // Binding 2 was the per-corner vertex array and is gone; 3–9 keep their
-  // numbers so the fragment's bindings don't move (they need not be
-  // contiguous).
+  // Binding 2 was the per-corner vertex array P6 deleted; the height atlas
+  // took the free slot. 3–9 keep their numbers so the fragment's bindings
+  // don't move (they need not be contiguous).
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-surface-tile-bgl',
     entries: [
@@ -96,12 +100,23 @@ export function createEarthSurfaceTileRenderer(
         visibility: GPUShaderStage.VERTEX,
         buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
       },
+      // r32float read with `textureLoad` from BOTH stages (vertex displaces,
+      // fragment takes its normal from the cell): `sampleType: 'float'` fails
+      // validation unless `float32-filterable` is requested, and `device.ts`
+      // does not request it.
+      {
+        binding: 2,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'unfilterable-float' },
+      },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-      { binding: 8, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      // 8 was the whole-globe normal map, now the base globe's alone: a patch
+      // takes its normal from the height field, and compositing both would
+      // shade the same relief twice (spec §7.2).
       { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     ],
   });
@@ -187,9 +202,9 @@ export function createEarthSurfaceTileRenderer(
       cloudShellRadius,
       debugLodOverlay,
       surfaceAtlasView,
+      heightAtlasView,
       materialView,
       nightView,
-      normalView,
       cloudsView,
     } = args;
     const tileCount = tiles.length;
@@ -212,13 +227,18 @@ export function createEarthSurfaceTileRenderer(
       // the primary one (see io.wesl's `PatchInstance` doc) — mix() at weight 1
       // returns the primary sample exactly, so the fragment never needs to
       // branch on "is there a fallback".
-      const fallback = tile.resident.fallback ?? tile.resident;
+      const fallback = tile.albedo.fallback ?? tile.albedo;
       const fadeWeight =
-        tile.resident.fallback === null
+        tile.albedo.fallback === null
           ? 1
-          : Math.min(1, Math.max(0, (nowMs - tile.resident.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
+          : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
 
       const origin = patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM);
+      // The leaf's sub-rect of the slot it inherited (R14), not the slot
+      // itself: at `levelDelta` 0 `originPosts` is [0, 0] and the two agree.
+      const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
+      const slotOriginY =
+        Math.floor(tile.height.slot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
       writePatchInstance(
         patchScratchView,
         i * PATCH_INSTANCE_BYTES,
@@ -230,14 +250,21 @@ export function createEarthSurfaceTileRenderer(
         tile.anchor.lat0Rad,
         tile.anchor.dLonRad,
         tile.anchor.dLatRad,
-        tile.resident.atlasUvOrigin[0],
-        tile.resident.atlasUvOrigin[1],
-        tile.resident.atlasUvScale[0],
-        tile.resident.atlasUvScale[1],
+        tile.albedo.atlasUvOrigin[0],
+        tile.albedo.atlasUvOrigin[1],
+        tile.albedo.atlasUvScale[0],
+        tile.albedo.atlasUvScale[1],
         fallback.atlasUvOrigin[0],
         fallback.atlasUvOrigin[1],
         fallback.atlasUvScale[0],
         fallback.atlasUvScale[1],
+        slotOriginX + tile.height.originPosts[0],
+        slotOriginY + tile.height.originPosts[1],
+        tile.edgeCoarser[0] |
+          (tile.edgeCoarser[1] << 1) |
+          (tile.edgeCoarser[2] << 2) |
+          (tile.edgeCoarser[3] << 3),
+        (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
       );
     }
 
@@ -276,12 +303,12 @@ export function createEarthSurfaceTileRenderer(
           binding: 1,
           resource: { buffer: patchBuffer!, size: tileCount * PATCH_INSTANCE_BYTES },
         },
+        { binding: 2, resource: heightAtlasView },
         { binding: 3, resource: baseSampler },
         { binding: 4, resource: atlasSampler },
         { binding: 5, resource: surfaceAtlasView },
         { binding: 6, resource: materialView },
         { binding: 7, resource: nightView },
-        { binding: 8, resource: normalView },
         { binding: 9, resource: cloudsView },
       ],
     });

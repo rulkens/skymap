@@ -30,7 +30,7 @@ function EarthTileAtlasSectionContainer({
   const handle = engineHandleRef.current;
   if (!handle) return null;
   return (
-    <EarthTileAtlasSection earthTileDebug={handle.debug.earthTiles} flyToLonLat={onFlyToLonLat} />
+    <EarthTileAtlasSection earthTileDebug={handle.debug.surfaceTiles} flyToLonLat={onFlyToLonLat} />
   );
 }
 

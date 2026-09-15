@@ -92,13 +92,6 @@ function target0(desc: GPURenderPipelineDescriptor): GPUColorTargetState {
 }
 
 describe('createCompositor', () => {
-  it('exposes label, draw, destroy', () => {
-    const c = make(mockDevice());
-    expect(c.label).toBe('compositor');
-    expect(typeof c.draw).toBe('function');
-    expect(typeof c.destroy).toBe('function');
-  });
-
   it('builds one pipeline per (blend, dstFormat) key and reuses it across draws', () => {
     const device = mockDevice();
     const c = make(device);

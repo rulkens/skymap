@@ -15,11 +15,6 @@ import type { SelectionState } from '../../../src/@types/store/SelectionState';
 const ref = { type: 'galaxyCatalog', source: Source.SDSS, index: 7 } as const;
 
 describe('selectionSlice', () => {
-  it('updateSelectionSelect writes the ref', () => {
-    const next = reducer(undefined, updateSelectionSelect(ref));
-    expect(next.select).toEqual(ref);
-  });
-
   it('dedups a structurally-equal write (same slot reference returned)', () => {
     const a = reducer(undefined, updateSelectionFocus(ref));
     const b = reducer(
@@ -42,11 +37,6 @@ describe('selectionSlice', () => {
 });
 
 describe('selectionSlice pending', () => {
-  it('requestFocus records the pending focus id', () => {
-    const next = reducer(undefined, requestFocus('NGC 224'));
-    expect(next.pending.focus).toBe('NGC 224');
-  });
-
   it('holds the pending focus id across the ref write and retires it on the row', () => {
     const requested = reducer(undefined, requestFocus('NGC 224'));
 

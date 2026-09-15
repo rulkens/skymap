@@ -20,7 +20,7 @@ import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { schwarzschildRadiusM } from '../../../../utils/physics/schwarzschildRadiusM';
 import { packSgrAStarLensingUniforms } from '../../../../utils/gpu/packSgrAStarLensingUniforms';
 import { lensQuadPlaneRadiusRs } from '../../../../utils/lensing/lensQuadPlaneRadiusRs';
-import { sgrAStarBandAlpha } from '../sgrAStarBandAlpha';
+import { skyCaptureBandAlpha } from '../skyCaptureBandAlpha';
 
 // `BLACK_HOLES` is authored data guaranteed to carry a Sgr A* row; a missing
 // row is a wiring bug worth failing loudly on, not a silent no-op layer. The
@@ -43,7 +43,7 @@ export const sgrAStarLensingPass: ContentPass = {
       return false;
     }
     if (state.gpu.sgrAStarLensingRenderer === null) return false;
-    return sgrAStarBandAlpha(state, ctx) > 0;
+    return skyCaptureBandAlpha('sgrAStar', state, ctx) > 0;
   },
 
   draw(pass, view, ctx, state) {
@@ -58,7 +58,7 @@ export const sgrAStarLensingPass: ContentPass = {
 
     // `> 0` by construction: `enabled` gates on it, and the `lens` line only
     // expands to a step at all while the band is open.
-    const bandAlpha = sgrAStarBandAlpha(state, ctx);
+    const bandAlpha = skyCaptureBandAlpha('sgrAStar', state, ctx);
 
     // Sgr A*'s position relative to the camera, in the SAME body-local frame
     // `view.slab.vp` was built in (camera at the origin) — the negation of

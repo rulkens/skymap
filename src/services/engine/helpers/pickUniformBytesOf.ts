@@ -15,9 +15,10 @@
  * bytes cannot drift from the visual bytes as fields are added or reordered — the
  * drift is structurally impossible, not merely tested-against.
  *
- * This helper is the SINGLE home for shaping the pick image. It produces the
- * COMPLETE pick uniform — every field the pick pass needs is baked in here, so
- * the pick renderer uploads the bytes verbatim with no post-upload patching.
+ * This helper is the SINGLE home for shaping the pick image, and the point
+ * sprites pass is its single reader. It produces the COMPLETE pick uniform —
+ * every field the pick pass needs is baked in here, so the pick renderer
+ * uploads the bytes verbatim with no post-upload patching.
  * The three pick-specific values, all packed by construction:
  *
  *   - `selectedPacked` → `SELECTION_NONE_SENTINEL`: the pick fragment writes its

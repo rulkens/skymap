@@ -63,7 +63,7 @@ describe('textureSourcesFor', () => {
         '2k_neptune.jpg',
         '8k_moon.jpg',
         bmng('3x21600x10800'),
-        // The eight deep quadrants: read only by `build-earth-tiles`, but part of
+        // The eight deep quadrants: read only by `build-surface-tiles`, but part of
         // the full pull, because a raw nothing can download is a raw that gets
         // curl'd by hand.
         ...Object.keys(BMNG_QUADRANT_KEYS).map((quadrant) => bmng(`3x21600x21600.${quadrant}`)),

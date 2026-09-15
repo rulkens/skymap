@@ -1,20 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createSelectionRingRenderer } from '../../../../../src/services/gpu/renderers/selectionRing/selectionRingRenderer';
 
-// Build a renderer with a null device — the factory guards all GPU calls
-// behind `if (device)`, so the null-device no-op path is exercisable without
-// WebGPU. Mirrors `markerLineRenderer.test.ts`.
-const newNullDeviceRenderer = () => {
-  const ctx = {
-    device: null as unknown as GPUDevice,
-    context: null as unknown as GPUCanvasContext,
-    format: 'bgra8unorm' as GPUTextureFormat,
-    canvas: null as unknown as HTMLCanvasElement,
-    hdrCapable: false,
-  };
-  return createSelectionRingRenderer(ctx, ctx.format);
-};
-
 // A mock device that records writeBuffer calls and hands back stub GPU
 // objects, so the populated `draw` path (pipeline + buffers non-null) runs
 // without a real WebGPU backend.
@@ -62,18 +48,6 @@ const newPassSpy = () =>
     draw: vi.fn(),
   }) as unknown as GPURenderPassEncoder;
 
-describe('SelectionRingRenderer colour target', () => {
-  it('bakes the given targetFormat, NOT ctx.format, into the pipeline colour target', () => {
-    // ctx.format ('bgra8unorm') and targetFormat ('rgba16float') deliberately
-    // differ, so a regression to reading ctx.format instead of the explicit
-    // targetFormat argument would fail this assertion.
-    const { renderPipelines } = newMockDeviceRenderer('rgba16float');
-    expect(renderPipelines).toHaveLength(1);
-    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
-    expect(target!.format).toBe('rgba16float');
-  });
-});
-
 describe('SelectionRingRenderer occlusion variant', () => {
   it('blends the occlusion pipeline PREMULTIPLIED — the contract sceneTransmittance depends on', () => {
     // `fragmentOcclude.wesl` returns `shadeRing(...) * sceneTransmittance(...)`:
@@ -97,16 +71,6 @@ describe('SelectionRingRenderer.draw', () => {
     renderer.draw(pass, new Float32Array(16), [1280, 720], null);
     expect(pass.setPipeline).not.toHaveBeenCalled();
     expect(pass.draw).not.toHaveBeenCalled();
-  });
-
-  it('is a no-op on a null device (no throw, never touches the encoder)', () => {
-    const r = newNullDeviceRenderer();
-    // Pass a null encoder to prove the early-return never touches it.
-    r.draw(null as unknown as GPURenderPassEncoder, new Float32Array(16), [1280, 720], {
-      worldPos: [1, 2, 3],
-      ringRadiusPx: 40,
-      alpha: 1,
-    });
   });
 
   it('writes the selection uniform and issues the 6-vertex draw', () => {

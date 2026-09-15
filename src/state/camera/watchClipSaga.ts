@@ -80,7 +80,7 @@ import type { RootState, SagaContext } from '../../store/types';
 export function* watchClipSaga() {
   yield* takeLatest(startClip, function* (action) {
     const playClipSeam = yield* getContext<SagaContext['playClip']>('playClip');
-    const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+    const selection = yield* getContext<SagaContext['selection']>('selection');
     const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
     // Freeze the sim clock for the clip's duration, remembering both the mode
@@ -106,7 +106,7 @@ export function* watchClipSaga() {
           // (which carries the FOV resolveClipFoci needs) exists.
           yield* call(
             waitUntil,
-            () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null,
+            () => clipFociReady(clip.data, selection) && cameraRuntime() !== null,
           );
           const rt = cameraRuntime()!;
           // The STEADY orientation basis so a lookAtId bearing encodes through
@@ -120,7 +120,7 @@ export function* watchClipSaga() {
           // resolve against the SAME instant the clip factory opened on.
           const resolved = resolveClipFoci(
             clip.data,
-            resolveDeps(),
+            selection,
             rt.fovYRad,
             rt.from,
             frozenSimDays,

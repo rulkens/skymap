@@ -53,23 +53,6 @@ function eoxTilePath(coverageDir: string, z: number, row: number, col: number): 
   return join(coverageDir, String(z), String(row), `${col}.jpg`);
 }
 
-/**
- * The EOX tile whose NW corner is `(lon, lat)` — the inverse of
- * `eoxTileIndicesForBbox`'s per-tile bbox math, for one point instead of a
- * range. `round`, not `floor`: the box handed to `readBox` is always built
- * from the same `180 / 2^z` step this function divides by, so the true
- * quotient is an exact integer and only float noise can land it a hair
- * either side of one — `floor` would occasionally read that noise as the
- * tile one row/column short.
- */
-function eoxTileAt(lon: number, lat: number, z: number): { row: number; col: number } {
-  const tileDeg = eoxTileDeg(z);
-  return {
-    row: Math.round((90 - lat) / tileDeg),
-    col: Math.round((lon + 180) / tileDeg),
-  };
-}
-
 /** Bounding row/col rectangle of every `<z>/<row>/<col>.jpg` under
  *  `coverageDir` — the harvest's own footprint, not a requested bbox.
  *  `fileCount` lets the caller assert the rect is actually CONTIGUOUS: a
@@ -214,7 +197,28 @@ export async function eoxTileSource(opts: {
         );
       }
 
-      const nw = eoxTileAt(box.west, box.north, EOX_MAX_LEVEL);
+      // The ladder cell (one skymap z13 tile, a 2x2 EOX block) holding the
+      // box's NW corner. A box FINER than the cell — a deeper band's halo tile
+      // filled from this source (`buildSurfaceTiles.ts`'s GeoDanmark
+      // `underfill`) — is that cell's sub-rect, upscaled at the end; reading
+      // the block at the box's own corner instead handed such a tile a whole
+      // z13 region of ground.
+      const cellDeg = 2 * eoxTileDeg(EOX_MAX_LEVEL);
+      const cellCol = Math.floor((box.west + 180) / cellDeg + 1e-9);
+      const cellRow = Math.floor((90 - box.north) / cellDeg + 1e-9);
+      const cellSpan = (box.east - box.west) / cellDeg;
+      const nw = { row: cellRow * 2, col: cellCol * 2 };
+      const tileDeg = eoxTileDeg(EOX_MAX_LEVEL);
+      const overlapsBox = (child: { row: number; col: number }): boolean => {
+        const west = child.col * tileDeg - 180;
+        const north = 90 - child.row * tileDeg;
+        return (
+          box.west < west + tileDeg &&
+          box.east > west &&
+          box.north > north - tileDeg &&
+          box.south < north
+        );
+      };
       const children = [
         { i: 0, j: 0, row: nw.row, col: nw.col },
         { i: 1, j: 0, row: nw.row, col: nw.col + 1 },
@@ -231,19 +235,19 @@ export async function eoxTileSource(opts: {
         return { ...child, path };
       });
 
-      // A decline only when the block is EMPTY: a source with SOME coverage
-      // has something real to offer, and `underfillImagerySource` fills the
-      // missing quadrants from the global band rather than this source
-      // returning a partial-but-transparent tile itself.
+      // A decline only when nothing under the BOX exists: a source with SOME
+      // coverage has something real to offer, and `underfillImagerySource`
+      // fills the missing quadrants from the global band rather than this
+      // source returning a partial-but-transparent tile itself.
       const present = children.filter(
         (child): child is (typeof children)[number] & { path: string } =>
           child.path !== null && existsSync(child.path),
       );
-      if (present.length === 0) return null;
+      if (!present.some(overlapsBox)) return null;
 
       // Per-child read only — already native size, so a resize here would be
       // a no-op today; compositing them straight in (never resizing the
-      // canvas AFTER `.composite()` — see `buildEarthTiles.ts:150-160`)
+      // canvas AFTER `.composite()` — see `buildSurfaceTiles.ts`'s `bakeCoarserLevel`)
       // matches `bakeCoarserLevel`'s pipeline shape for the same libvips reason.
       const quadrants = await Promise.all(
         present.map(async (child) => ({
@@ -265,8 +269,18 @@ export async function eoxTileSource(opts: {
         .composite(quadrants)
         .raw()
         .toBuffer();
+      if (cellSpan > 1 - 1e-9) return new Uint8Array(composited);
 
-      return new Uint8Array(composited);
+      const left = Math.round(((box.west + 180) / cellDeg - cellCol) * NATIVE_EDGE_PX);
+      const top = Math.round(((90 - box.north) / cellDeg - cellRow) * NATIVE_EDGE_PX);
+      const size = Math.round(cellSpan * NATIVE_EDGE_PX);
+      const raw = { width: NATIVE_EDGE_PX, height: NATIVE_EDGE_PX, channels: 4 as const };
+      const upscaled = await sharp(Buffer.from(composited), { raw })
+        .extract({ left, top, width: size, height: size })
+        .resize(NATIVE_EDGE_PX, NATIVE_EDGE_PX)
+        .raw()
+        .toBuffer();
+      return new Uint8Array(upscaled);
     },
   };
 }

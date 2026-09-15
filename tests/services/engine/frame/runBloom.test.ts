@@ -239,10 +239,4 @@ describe('runBloom', () => {
       expect((desc as Tw).timestampWrites).toBeUndefined();
     }
   });
-
-  it('no-ops when the bloom pyramid handle is null (pre-bootstrap / torn down)', () => {
-    const { encoder, beginRenderPass } = makeEncoder();
-    runBloom(encoder, makeCtx(), makeState(null), NO_TIMING);
-    expect(beginRenderPass).not.toHaveBeenCalled();
-  });
 });

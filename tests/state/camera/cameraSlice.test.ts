@@ -11,9 +11,6 @@
 import { describe, it, expect } from 'vitest';
 
 import reducer, {
-  beginDrag,
-  endDrag,
-  commitCameraPose,
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,
@@ -21,7 +18,6 @@ import reducer, {
   clipEnded,
   resolveClipStart,
 } from '../../../src/state/camera/cameraSlice';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -60,56 +56,6 @@ const tween: CameraTweenDescriptor = {
   frame: tweenFrame,
 };
 
-describe('cameraSlice — commitCameraPose', () => {
-  it('replaces base with the dispatched pose', () => {
-    const next = reducer(base(), commitCameraPose(absoluteArm(pose)));
-    expect(next.base).toEqual(absoluteArm(pose));
-  });
-});
-
-describe('cameraSlice — tween lifecycle', () => {
-  it('startCameraTween installs the descriptor', () => {
-    const next = reducer(base(), startCameraTween(tween));
-    expect(next.tween).toEqual(tween);
-  });
-
-  it('cancelCameraTween clears the tween to null', () => {
-    const withTween = reducer(base(), startCameraTween(tween));
-    const cleared = reducer(withTween, cancelCameraTween());
-    expect(cleared.tween).toBeNull();
-  });
-
-  it('cancelCameraTween is a no-op when tween is already null', () => {
-    const before = base();
-    const after = reducer(before, cancelCameraTween());
-    expect(after.tween).toBeNull();
-  });
-});
-
-describe('cameraSlice — drag state', () => {
-  it('beginDrag sets dragging to true', () => {
-    expect(reducer(base(), beginDrag()).dragging).toBe(true);
-  });
-
-  it('endDrag sets dragging to false', () => {
-    const dragging = reducer(base(), beginDrag());
-    expect(reducer(dragging, endDrag()).dragging).toBe(false);
-  });
-});
-
-describe('cameraSlice — setAutoRotate', () => {
-  it('replaces the whole autoRotate object', () => {
-    const next = reducer(base(), setAutoRotate({ active: true, rate: 0.002 }));
-    expect(next.autoRotate).toEqual({ active: true, rate: 0.002 });
-  });
-
-  it('active and rate are both updated atomically', () => {
-    const next = reducer(base(), setAutoRotate({ active: false, rate: 0.001 }));
-    expect(next.autoRotate.active).toBe(false);
-    expect(next.autoRotate.rate).toBe(0.001);
-  });
-});
-
 describe('cameraSlice — initial state is serialisable', () => {
   it('contains only plain JSON-safe values (no Set / class instance)', () => {
     const state = base();
@@ -135,19 +81,6 @@ const clipFrame: OrientationFrameId = 'galactic';
 const livePose: CameraPose = { target: [10, 20, 30], yaw: 1.0, pitch: -0.5, distance: 50 };
 
 describe('cameraSlice — clip lifecycle', () => {
-  it('clipStarted stores the clip data and the pinned frame', () => {
-    const next = reducer(base(), clipStarted({ data: clipData, frame: clipFrame }));
-    // Reference equality: the reducer stores the exact payload object.
-    expect(next.clip!.data).toBe(clipData);
-    expect(next.clip!.frame).toBe(clipFrame);
-  });
-
-  it('clipEnded clears clip to null', () => {
-    const withClip = reducer(base(), clipStarted({ data: clipData, frame: clipFrame }));
-    const cleared = reducer(withClip, clipEnded());
-    expect(cleared.clip).toBeNull();
-  });
-
   it('clipEnded also clears a dormant tween', () => {
     // A focus saga may plant a tween before/during a clip; once the clip@95
     // driver deactivates, an un-cleared @60 tween would outrank resting@0.

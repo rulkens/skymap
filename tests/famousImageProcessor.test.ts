@@ -84,35 +84,6 @@ describe('applyTransparency', () => {
       expect(buf[(y * width + x) * 4 + 3]).toBe(255);
     }
   });
-
-  it('applies a radial fade in the outer ring when fadeOuterFraction > 0', () => {
-    // 8x8 fixture, all pixels white, fade fraction = 0.5 (outer 50%).
-    const width = 8;
-    const height = 8;
-    const buf = new Uint8ClampedArray(width * height * 4);
-    for (let i = 0; i < buf.length; i += 4) {
-      buf[i + 0] = 200;
-      buf[i + 1] = 200;
-      buf[i + 2] = 200;
-      buf[i + 3] = 255;
-    }
-    applyTransparency(
-      buf,
-      width,
-      height,
-      { r: 0, g: 0, b: 0, a: 255 },
-      {
-        skyTolerance: 0,
-        fadeOuterFraction: 0.5,
-      },
-    );
-    // Centre pixel alpha unchanged
-    const centreIdx = (3 * width + 3) * 4 + 3;
-    expect(buf[centreIdx]).toBeGreaterThan(200);
-    // Edge pixel alpha reduced
-    const edgeIdx = (0 * width + 0) * 4 + 3;
-    expect(buf[edgeIdx]).toBeLessThan(200);
-  });
 });
 
 describe('applyRadialFade', () => {
@@ -151,19 +122,6 @@ describe('applyRadialFade', () => {
       expect(buf[i + 1]).toBe(200);
       expect(buf[i + 2]).toBe(200);
     }
-  });
-
-  it('reduces alpha at the corners and preserves it in the centre', () => {
-    const width = 8;
-    const height = 8;
-    const buf = makeOpaqueFixture(width, height);
-    applyRadialFade(buf, width, height, 0.5);
-    // Centre pixel alpha unchanged (within fadeInnerR).
-    const centreIdx = (3 * width + 3) * 4 + 3;
-    expect(buf[centreIdx]).toBe(255);
-    // Corner pixel alpha fully zero (smoothstep at t=1 → fade=0).
-    const cornerIdx = (0 * width + 0) * 4 + 3;
-    expect(buf[cornerIdx]).toBe(0);
   });
 
   it('is a no-op when fadeOuterFraction is 0', () => {

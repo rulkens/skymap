@@ -17,17 +17,18 @@ import { mat4 } from 'wgpu-matrix';
 import { cutSurfaceTiles } from '../../../src/utils/scene/cutSurfaceTiles';
 import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelForTier';
 import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
-import { earthTileXyForUv } from '../../../src/utils/scene/earthTileXyForUv';
-import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
-import { earthTileBandRequestAllowed } from '../../../src/utils/scene/earthTileBandRequestAllowed';
+import { surfaceTileXyForUv } from '../../../src/utils/scene/surfaceTileXyForUv';
+import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
+import { surfaceTileInBand } from '../../../src/utils/scene/surfaceTileInBand';
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
-import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
+import { EARTH_TILE_LOD_BIAS, EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../src/utils/camera/foregroundFrustum';
-import type { EarthTileId } from '../../../src/@types/data/EarthTileId';
+import type { SurfaceTileId } from '../../../src/@types/data/SurfaceTileId';
+import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const BASE_LEVEL = earthBaseLevelForTier('large');
@@ -37,9 +38,45 @@ const EARTH_RADIUS_KM = 6371;
 const FOV_Y_RAD = (40 * Math.PI) / 180;
 const VIEWPORT: [number, number] = [2560, 1440];
 
-/** A `residentSlot` that never resolves — the "nothing atlas-resident" stub
- *  most tests below don't care about. */
-const NEVER_RESIDENT = (): null => null;
+/** The residency record most fixtures below hand back; its rect is the whole
+ *  atlas, which no assertion here reads. */
+const WHOLE_ATLAS = {
+  slot: 0,
+  atlasUvOrigin: [0, 0] as const,
+  atlasUvScale: [1, 1] as const,
+  readyAtMs: 0,
+};
+
+/** The default fixture band: one whole-globe pyramid from `MIN_TILE_LEVEL`. */
+const GLOBAL_BANDS: readonly SurfaceTileBand[] = [
+  { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 13 },
+];
+
+/** Height residency IS the bake's own tile set (`surfaceTileInBand` over the
+ *  bands), never "everywhere": the complete pyramid the bake owes the walk.
+ *  A leaf with no height ancestor is dropped, so a stub resolving nothing
+ *  would empty every `cut` and say nothing about the rules these fixtures
+ *  exist for. */
+function heightFrom(bands: readonly SurfaceTileBand[]) {
+  return (tile: SurfaceTileId) =>
+    tile.product === 'height' && surfaceTileInBand(bands, EARTH_TILE_PX, tile.z, tile.x, tile.y)
+      ? WHOLE_ATLAS
+      : null;
+}
+
+/** Baked height, albedo nowhere — the "nothing to draw, but refinement
+ *  unblocked" stub. */
+const HEIGHT_ONLY = heightFrom(GLOBAL_BANDS);
+
+/** Wraps an albedo-only stub so height resolves around it, so these fixtures
+ *  go on testing albedo resolution rather than height inheritance. */
+function withHeight<T>(
+  albedo: (tile: SurfaceTileId) => T,
+  bands: readonly SurfaceTileBand[] = GLOBAL_BANDS,
+) {
+  const height = heightFrom(bands);
+  return (tile: SurfaceTileId) => (tile.product === 'height' ? height(tile) : albedo(tile));
+}
 
 // Fixtures below build camPosLocalM at radius 1 (`radiusM: 1`) — a
 // dimensionless "body-radii" world that degenerates the walk's metres-native
@@ -64,19 +101,18 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
   // the f32 `mat4.multiply` result changes no test outcome here.
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
-    kind: 'surface' as const,
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
-    bands: [{ uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: 13 }],
+    bands: GLOBAL_BANDS,
     tilePx: EARTH_TILE_PX,
     // Fixture default is the 1:1 point, not the shipped `EARTH_TILE_LOD_BIAS`,
     // so every test above that predates the bias keeps asserting the rule it
     // was written against rather than a softened one.
     lodBias: 0,
-    residentSlot: NEVER_RESIDENT,
+    residentSlot: HEIGHT_ONLY,
   };
 }
 
@@ -119,19 +155,19 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   const maxLevel = 19;
+  const bands: readonly SurfaceTileBand[] = [
+    { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: maxLevel },
+  ];
   return {
-    kind: 'surface' as const,
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
-    bands: [
-      { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: maxLevel },
-    ],
+    bands,
     tilePx: EARTH_TILE_PX,
     lodBias: 0,
-    residentSlot: NEVER_RESIDENT,
+    residentSlot: heightFrom(bands),
     maxLevel,
   };
 }
@@ -144,7 +180,7 @@ function angleBetween(a: Vec3, b: Vec3): number {
  *  tile `z`/`x`/`y`, recomputed here so the horizon-cull fixture below
  *  derives its numbers rather than hard-coding them. */
 function tileGeometry(z: number, x: number, y: number) {
-  const cols = earthTileColumns(z, EARTH_TILE_PX);
+  const cols = surfaceTileColumns(z, EARTH_TILE_PX);
   const rows = cols / 2;
   const u0 = x / cols;
   const u1 = (x + 1) / cols;
@@ -171,19 +207,19 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
   const view = mat4.lookAt(camPosLocalM, target, camDirUnit);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
+  const bands: readonly SurfaceTileBand[] = [
+    { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: maxLevel },
+  ];
   return {
-    kind: 'surface' as const,
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
-    bands: [
-      { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: maxLevel },
-    ],
+    bands,
     tilePx: EARTH_TILE_PX,
     lodBias: 0,
-    residentSlot: NEVER_RESIDENT,
+    residentSlot: heightFrom(bands),
   };
 }
 
@@ -251,7 +287,11 @@ describe('cutSurfaceTiles', () => {
 
     it('still culls a tile well beyond the horizon at the same pose (no regression to the cull itself)', () => {
       const { altitudeKm, target } = horizonFixture();
-      const [antiX, antiY] = earthTileXyForUv([175 / 360 + 0.5, -55 / 180 + 0.5], Z, EARTH_TILE_PX);
+      const [antiX, antiY] = surfaceTileXyForUv(
+        [175 / 360 + 0.5, -55 / 180 + 0.5],
+        Z,
+        EARTH_TILE_PX,
+      );
       const result = cutSurfaceTiles(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
       expect(
         result.requests.requests.some(
@@ -273,8 +313,8 @@ describe('cutSurfaceTiles', () => {
 
     it('resolves an exactly resident leaf to the ancestor rect unchanged (levelDelta 0)', () => {
       const z = expectedLevel(1000);
-      const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
-      const residentSlot = (tile: EarthTileId) =>
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === z && tile.x === x && tile.y === y
           ? {
               slot: 7,
@@ -282,24 +322,25 @@ describe('cutSurfaceTiles', () => {
               atlasUvScale: [0.125, 0.125] as const,
               readyAtMs: 42_000,
             }
-          : null;
+          : null,
+      );
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
-      expect(entry!.resident.slot).toBe(7);
-      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(0.25, 12);
-      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(0.5, 12);
-      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(0.125, 12);
-      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(0.125, 12);
+      expect(entry!.albedo.slot).toBe(7);
+      expect(entry!.albedo.atlasUvOrigin[0]).toBeCloseTo(0.25, 12);
+      expect(entry!.albedo.atlasUvOrigin[1]).toBeCloseTo(0.5, 12);
+      expect(entry!.albedo.atlasUvScale[0]).toBeCloseTo(0.125, 12);
+      expect(entry!.albedo.atlasUvScale[1]).toBeCloseTo(0.125, 12);
       // No other resident ancestor anywhere in the chain: nothing to fade from.
-      expect(entry!.resident.readyAtMs).toBe(42_000);
-      expect(entry!.resident.fallback).toBeNull();
+      expect(entry!.albedo.readyAtMs).toBe(42_000);
+      expect(entry!.albedo.fallback).toBeNull();
     });
 
     it("carries the z-1 ancestor's flattened rect as fallback, and the leaf's own readyAt, when both are resident", () => {
       const z = expectedLevel(1000);
-      const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const parentZ = z - 1;
       const parentX = x >> 1;
       const parentY = y >> 1;
@@ -311,37 +352,37 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.0, 0.25] as const,
         atlasUvScale: [0.25, 0.25] as const,
       };
-      const residentSlot = (tile: EarthTileId) => {
+      const residentSlot = withHeight((tile: SurfaceTileId) => {
         if (tile.z === z && tile.x === x && tile.y === y)
           return { slot: 7, ...leafRect, readyAtMs: 5_000 };
         if (tile.z === parentZ && tile.x === parentX && tile.y === parentY)
           return { slot: 3, ...parentRect, readyAtMs: 1_000 };
         return null;
-      };
+      });
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       // readyAtMs is the RESOLVED (primary) tile's own timestamp, not the fallback's.
-      expect(entry!.resident.readyAtMs).toBe(5_000);
-      expect(entry!.resident.fallback).not.toBeNull();
+      expect(entry!.albedo.readyAtMs).toBe(5_000);
+      expect(entry!.albedo.fallback).not.toBeNull();
 
       const span = 2;
       const offsetU = (x - parentX * span) / span;
       const offsetV = (y - parentY * span) / span;
-      expect(entry!.resident.fallback!.atlasUvOrigin[0]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvOrigin[0]).toBeCloseTo(
         parentRect.atlasUvOrigin[0] + offsetU * parentRect.atlasUvScale[0],
         12,
       );
-      expect(entry!.resident.fallback!.atlasUvOrigin[1]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvOrigin[1]).toBeCloseTo(
         parentRect.atlasUvOrigin[1] + offsetV * parentRect.atlasUvScale[1],
         12,
       );
-      expect(entry!.resident.fallback!.atlasUvScale[0]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvScale[0]).toBeCloseTo(
         parentRect.atlasUvScale[0] / span,
         12,
       );
-      expect(entry!.resident.fallback!.atlasUvScale[1]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvScale[1]).toBeCloseTo(
         parentRect.atlasUvScale[1] / span,
         12,
       );
@@ -359,23 +400,24 @@ describe('cutSurfaceTiles', () => {
       const z = expectedLevel(1000);
       const levelDelta = 2;
       const ancestorZ = z - levelDelta;
-      const [x, y] = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
       const ancX = x >> levelDelta;
       const ancY = y >> levelDelta;
       const ancestorRect = {
         atlasUvOrigin: [0.25, 0.5] as const,
         atlasUvScale: [0.5, 0.5] as const,
       };
-      const residentSlot = (tile: EarthTileId) =>
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === ancestorZ && tile.x === ancX && tile.y === ancY
           ? { slot: 3, ...ancestorRect, readyAtMs: 9_000 }
-          : null;
+          : null,
+      );
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       // Only one resident ancestor anywhere in the chain: nothing shallower to fade from.
-      expect(entry!.resident.fallback).toBeNull();
+      expect(entry!.albedo.fallback).toBeNull();
 
       // Hand-computed via integer tile-block arithmetic, independent of the
       // source's own formula: `[x, y]`'s low 2 bits give the leaf's position
@@ -395,17 +437,17 @@ describe('cutSurfaceTiles', () => {
         ancestorRect.atlasUvScale[0] / span,
         ancestorRect.atlasUvScale[1] / span,
       ];
-      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(expectedOrigin[0], 12);
-      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(expectedOrigin[1], 12);
-      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(expectedScale[0], 12);
-      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(expectedScale[1], 12);
+      expect(entry!.albedo.atlasUvOrigin[0]).toBeCloseTo(expectedOrigin[0], 12);
+      expect(entry!.albedo.atlasUvOrigin[1]).toBeCloseTo(expectedOrigin[1], 12);
+      expect(entry!.albedo.atlasUvScale[0]).toBeCloseTo(expectedScale[0], 12);
+      expect(entry!.albedo.atlasUvScale[1]).toBeCloseTo(expectedScale[1], 12);
     });
 
     it('never resolves an ancestor at or shallower than baseLevel', () => {
       // Resident everywhere AT baseLevel — if the walk ever queried down that
       // far, every leaf would resolve. None should: nothing else is resident,
       // so `cut` must still come back empty.
-      const residentSlot = (tile: EarthTileId) =>
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === BASE_LEVEL
           ? {
               slot: 0,
@@ -413,26 +455,27 @@ describe('cutSurfaceTiles', () => {
               atlasUvScale: [1, 1] as const,
               readyAtMs: 0,
             }
-          : null;
+          : null,
+      );
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       expect(result.cut).toEqual([]);
       expect(result.requests.requests.length).toBeGreaterThan(0);
     });
 
-    it("draws a band-edge leaf outside every band's request range from a resident ancestor rect", () => {
-      // Reproduces the "hole ring" bug: a global band caps at z7, a deep band
-      // only bakes z8-13 over a small bbox, and the z7 parent straddles that
-      // bbox's edge — `earthTileBandRefineAllowed` lets it refine (the deep
-      // band overlaps SOME of it), but three of its four z8 children land
-      // OUTSIDE the deep band's bbox with no band requestable at z8 there.
+    it('draws the band-edge halo ring from a resident ancestor rect, and never refines it', () => {
+      // The "hole ring" shape: a global band caps at z7, a deep band bakes
+      // z8-13 over one z8 box, and the z7 parent straddles that box's edge.
+      // R11's sibling closure gives the three halo children files of their
+      // own (baked from the band's underfill), so they are fetched and drawn
+      // — but nothing exists BELOW them, so they stay leaves.
       const z7 = 7;
       const z8 = 8;
       const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
-      const [z7x, z7y] = earthTileXyForUv(subUv, z7, EARTH_TILE_PX);
-      const [z8x, z8y] = earthTileXyForUv(subUv, z8, EARTH_TILE_PX);
+      const [z7x, z7y] = surfaceTileXyForUv(subUv, z7, EARTH_TILE_PX);
+      const [z8x, z8y] = surfaceTileXyForUv(subUv, z8, EARTH_TILE_PX);
 
       const tileBounds = (z: number, x: number, y: number) => {
-        const cols = earthTileColumns(z, EARTH_TILE_PX);
+        const cols = surfaceTileColumns(z, EARTH_TILE_PX);
         const rows = cols / 2;
         return {
           uBounds: [x / cols, (x + 1) / cols] as const,
@@ -449,10 +492,15 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.25, 0.5] as const,
         atlasUvScale: [0.5, 0.5] as const,
       };
-      const residentSlot = (tile: EarthTileId) =>
-        tile.z === z7 && tile.x === z7x && tile.y === z7y
-          ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
-          : null;
+      // Height residency is this fixture's OWN band closure, not a blanket
+      // "everywhere": the halo's file is exactly what R11 promises.
+      const heights = heightFrom(bands);
+      const residentSlot = (tile: SurfaceTileId) =>
+        tile.product === 'height'
+          ? heights(tile)
+          : tile.z === z7 && tile.x === z7x && tile.y === z7y
+            ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
+            : null;
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
 
@@ -465,7 +513,11 @@ describe('cutSurfaceTiles', () => {
         result.requests.requests.some(
           (r) => r.tile.z === z8 && r.tile.x === otherX && r.tile.y === otherY,
         ),
-        'skipped leaf must not be requested — no band bakes a file for it',
+        'the halo sibling IS fetched — the closure bakes it from the underfill',
+      ).toBe(true);
+      expect(
+        result.cut.some((c) => c.id.z > z8 && c.id.x >> (c.id.z - z8) === otherX),
+        'and nothing under it: no band bakes deeper there',
       ).toBe(false);
 
       const entry = result.cut.find((c) => c.id.z === z8 && c.id.x === otherX && c.id.y === otherY);
@@ -474,16 +526,16 @@ describe('cutSurfaceTiles', () => {
       const span = 2;
       const offsetU = (otherX - z7x * span) / span;
       const offsetV = (otherY - z7y * span) / span;
-      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(
+      expect(entry!.albedo.atlasUvOrigin[0]).toBeCloseTo(
         ancestorRect.atlasUvOrigin[0] + offsetU * ancestorRect.atlasUvScale[0],
         12,
       );
-      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(
+      expect(entry!.albedo.atlasUvOrigin[1]).toBeCloseTo(
         ancestorRect.atlasUvOrigin[1] + offsetV * ancestorRect.atlasUvScale[1],
         12,
       );
-      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(ancestorRect.atlasUvScale[0] / span, 12);
-      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(ancestorRect.atlasUvScale[1] / span, 12);
+      expect(entry!.albedo.atlasUvScale[0]).toBeCloseTo(ancestorRect.atlasUvScale[0] / span, 12);
+      expect(entry!.albedo.atlasUvScale[1]).toBeCloseTo(ancestorRect.atlasUvScale[1] / span, 12);
     });
 
     it('the near-plane-straddler fallback carries over, in both products', () => {
@@ -498,18 +550,147 @@ describe('cutSurfaceTiles', () => {
       const deep = bare.requests.requests.find((r) => r.tile.z === maxLevel);
       expect(deep, `a z${maxLevel} request`).toBeDefined();
 
-      const residentSlot = (tile: EarthTileId) =>
-        tile.z === deep!.tile.z && tile.x === deep!.tile.x && tile.y === deep!.tile.y
-          ? {
-              slot: 1,
-              atlasUvOrigin: [0, 0] as const,
-              atlasUvScale: [1, 1] as const,
-              readyAtMs: 0,
-            }
-          : null;
+      const residentSlot = withHeight(
+        (tile: SurfaceTileId) =>
+          tile.z === deep!.tile.z && tile.x === deep!.tile.x && tile.y === deep!.tile.y
+            ? {
+                slot: 1,
+                atlasUvOrigin: [0, 0] as const,
+                atlasUvScale: [1, 1] as const,
+                readyAtMs: 0,
+              }
+            : null,
+        input.bands,
+      );
       const result = cutSurfaceTiles({ ...input, residentSlot });
       expect(result.requests.requests.some((r) => r.tile.z === maxLevel)).toBe(true);
       expect(result.cut.length).toBeGreaterThan(0);
+    });
+  });
+
+  /**
+   * R14: refinement is residency-blind and a leaf inherits the deepest
+   * resident height ancestor, so a tile still in flight is a coarser lattice
+   * rather than a hole. The old rule (own tile or nothing) put holes through
+   * to the stars below 150 km, where the base globe is already faded out.
+   */
+  describe('inherited height lattice', () => {
+    const SUB_CAMERA_UV: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
+
+    it('refines to the screen-error level on an ancestor height tile', () => {
+      // Height resident only at MIN_TILE_LEVEL; albedo everywhere.
+      const HEIGHT_LEVEL = MIN_TILE_LEVEL;
+      const residentSlot = (tile: SurfaceTileId) =>
+        tile.product !== 'height'
+          ? WHOLE_ATLAS
+          : tile.z === HEIGHT_LEVEL
+            ? { ...WHOLE_ATLAS, slot: 9 }
+            : null;
+
+      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+
+      const z = expectedLevel(1000);
+      expect(z).toBeGreaterThan(HEIGHT_LEVEL);
+      expect(
+        result.cut.some((t) => t.id.z === z),
+        'the cut reaches the screen-error level',
+      ).toBe(true);
+      expect(result.cut.every((t) => t.id.z - t.height.levelDelta === HEIGHT_LEVEL)).toBe(true);
+
+      // Hand-derived sub-rect: the leaf's low `z - HEIGHT_LEVEL` bits index its
+      // block of the ancestor's 128 cells, rows north-first on both sides.
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, EARTH_TILE_PX);
+      const leaf = result.cut.find((t) => t.id.z === z && t.id.x === x && t.id.y === y);
+      expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
+      const span = 1 << (z - HEIGHT_LEVEL);
+      const cells = 128 >> (z - HEIGHT_LEVEL);
+      expect(leaf!.height.slot).toBe(9);
+      expect(leaf!.height.levelDelta).toBe(z - HEIGHT_LEVEL);
+      expect(leaf!.height.originPosts).toEqual([(x % span) * cells, (y % span) * cells]);
+    });
+
+    it('drops a leaf with no height ancestor at all, and still requests both products', () => {
+      const residentSlot = (tile: SurfaceTileId) =>
+        tile.product === 'height' ? null : WHOLE_ATLAS;
+
+      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
+
+      expect(result.cut).toEqual([]);
+      const keys = new Set(
+        result.requests.requests.map(
+          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
+        ),
+      );
+      const z = expectedLevel(1000);
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, EARTH_TILE_PX);
+      for (const product of ['albedo', 'height'])
+        expect(keys.has(`${product}/${z}/${x}/${y}`), `${product} at the required level`).toBe(
+          true,
+        );
+    });
+
+    it('keeps the strip of ground behind a tilted camera out of the working set', () => {
+      // 300 km / 60 deg, the shipped lod bias, one whole-globe band to z13
+      // (the deepest shape any pose can meet). Without the sphere-vs-frustum
+      // cull in `probe`, the strip behind the camera straddles the eye plane,
+      // skips the frustum cull, and refines to z13 with nothing on screen —
+      // measured 39 height tiles with the cull, so the ceiling here is loose,
+      // just far enough below the pre-cull blowup (~1800) to catch a regression.
+      const result = cutSurfaceTiles({
+        ...tiltedAt(300_000, 60),
+        bands: GLOBAL_BANDS,
+        lodBias: EARTH_TILE_LOD_BIAS,
+        residentSlot: HEIGHT_ONLY,
+      });
+
+      const heightRequests = result.requests.requests.filter((r) => r.tile.product === 'height');
+      expect(heightRequests.length).toBeLessThan(100);
+    });
+
+    it('a pan that scrolls an unfetched sibling into view keeps every settled leaf', () => {
+      // The flicker the eye-check found, now a regression guard: with residency
+      // settled for one pose, a small pan brings tiles with no height into the
+      // frustum. Nothing already on screen may vanish while they stream.
+      const key = (t: SurfaceTileId) => `${t.product}/${t.z}/${t.x}/${t.y}`;
+      const resident = new Set<string>();
+      const residentSlot = (t: SurfaceTileId) => (resident.has(key(t)) ? WHOLE_ATLAS : null);
+      const poseA = { ...nadirAt(1000, 20, 15), lodBias: 1, residentSlot };
+      let settled = cutSurfaceTiles(poseA);
+      for (let round = 0; round < 40; round++) {
+        let added = 0;
+        for (const r of settled.requests.requests)
+          if (!resident.has(key(r.tile))) {
+            resident.add(key(r.tile));
+            added++;
+          }
+        if (added === 0) break;
+        settled = cutSurfaceTiles(poseA);
+      }
+      expect(settled.cut.length).toBeGreaterThan(10);
+
+      const panned = cutSurfaceTiles({ ...nadirAt(1000, 20.5, 15), lodBias: 1, residentSlot });
+      const newHeights = panned.requests.requests.filter(
+        (r) => r.tile.product === 'height' && !resident.has(key(r.tile)),
+      );
+      expect(newHeights.length, 'the pan does scroll an unfetched tile in').toBeGreaterThan(0);
+
+      // What the pan WOULD draw with everything resident: the leaves the two
+      // poses share are on screen in both, and must not have vanished.
+      const ideal = cutSurfaceTiles({
+        ...nadirAt(1000, 20.5, 15),
+        lodBias: 1,
+        residentSlot: () => WHOLE_ATLAS,
+      });
+      const settledLeaves = new Set(settled.cut.map((t) => `${t.id.z}/${t.id.x}/${t.id.y}`));
+      const pannedLeaves = new Set(panned.cut.map((t) => `${t.id.z}/${t.id.x}/${t.id.y}`));
+      let shared = 0;
+      for (const leaf of ideal.cut) {
+        const id = `${leaf.id.z}/${leaf.id.x}/${leaf.id.y}`;
+        if (!settledLeaves.has(id)) continue;
+        shared++;
+        expect(pannedLeaves.has(id), `settled leaf ${id} survives the pan`).toBe(true);
+      }
+      expect(shared).toBeGreaterThan(10);
     });
   });
 
@@ -525,12 +706,14 @@ describe('cutSurfaceTiles', () => {
       const keys = new Set(
         result.requests.requests.map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`),
       );
-      const subCamera = earthTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
-      const antipode = earthTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const subCamera = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const antipode = surfaceTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], z, EARTH_TILE_PX);
 
       expect(keys.has(`${z}/${subCamera[0]}/${subCamera[1]}`), 'sub-camera tile').toBe(true);
       expect(keys.has(`${z}/${antipode[0]}/${antipode[1]}`), 'antipodal tile').toBe(false);
-      expect(result.requests.requests.length).toBeLessThan(128 * 0.6);
+      // Distinct TILES, not request rows: every tile is requested in both
+      // products, so the row count is twice the footprint being asserted here.
+      expect(keys.size).toBeLessThan(128 * 0.6);
     });
 
     it('reaches the level a hand-computed texel density calls for', () => {
@@ -640,7 +823,8 @@ describe('cutSurfaceTiles', () => {
       // assertions (`winX0`/`winY0`/`EARTH_TILE_WINDOW_SIDE` wrap) are
       // dropped: `cutSurfaceTiles` has no window to be inside of.
       const result = cutSurfaceTiles(nadirAt(1000, 180.5, 5));
-      const xFrac = ({ z, x }: { z: number; x: number }) => x / earthTileColumns(z, EARTH_TILE_PX);
+      const xFrac = ({ z, x }: { z: number; x: number }) =>
+        x / surfaceTileColumns(z, EARTH_TILE_PX);
       expect(
         result.requests.requests.some((r) => xFrac(r.tile) < 0.1),
         'tile east of the seam',
@@ -696,7 +880,7 @@ describe('cutSurfaceTiles', () => {
       // predicts at this coarse a level (the reason the four-corner test
       // above measures every corner, not just the centre).
       const Z = MIN_TILE_LEVEL;
-      const [TX, TY] = earthTileXyForUv([0 / 360 + 0.5, 40 / 180 + 0.5], Z, EARTH_TILE_PX);
+      const [TX, TY] = surfaceTileXyForUv([0 / 360 + 0.5, 40 / 180 + 0.5], Z, EARTH_TILE_PX);
       const CAM_LAT_DEG = 10;
       const geo = tileGeometry(Z, TX, TY);
 
@@ -736,6 +920,166 @@ describe('cutSurfaceTiles', () => {
         // absent to present. Restored to the real radiusM below.
         expect(hasTile(outsideAltitudeKm)).toBe(false);
       });
+    });
+  });
+
+  describe('relief headroom in the frustum cull', () => {
+    // Once geometry is displaced, a summit near a side plane is on screen
+    // while its datum patch is not. The bound comes from the resident height
+    // ancestor's own subtree range, never a constant: a constant margin would
+    // re-inflate every patch near the eye plane into a screen-filling
+    // straddler, which is the inflation R14's bounding sphere removed.
+    const RADIUS_M = EARTH_RADIUS_KM * 1000;
+    const HEADROOM_BANDS: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 15 },
+    ];
+
+    /** Albedo and height resident everywhere, every height tile declaring the
+     *  same subtree range — one lives in each tile's `shgt1` header. */
+    function residentWithRange(range: readonly [number, number]) {
+      return (tile: SurfaceTileId) =>
+        tile.product === 'height' ? { ...WHOLE_ATLAS, subtreeRangeM: range } : WHOLE_ATLAS;
+    }
+
+    function cutWithRange(range: readonly [number, number]) {
+      const base = tiltedAt(20_000, 60);
+      return cutSurfaceTiles({
+        ...base,
+        camPosLocalM: base.camPosLocalM.map((c) => c * RADIUS_M) as Vec3,
+        radiusM: RADIUS_M,
+        bands: HEADROOM_BANDS,
+        residentSlot: residentWithRange(range),
+      });
+    }
+
+    /** The set of nodes the walk did NOT cull — every surviving node in band
+     *  requests itself, leaf or not, so this is the cull's own output. The
+     *  CUT is not: a newly-visible child turns its parent from a leaf into an
+     *  interior node, so the drawn set legitimately changes shape. */
+    function survivors(range: readonly [number, number]): Set<string> {
+      return new Set(
+        cutWithRange(range).requests.requests.map(
+          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
+        ),
+      );
+    }
+
+    /** Two nodes read off the walk's own output at this pose: the first flips
+     *  from culled to kept once Earth's relief is in the margin, the second
+     *  stays culled unless the margin is wrong. Pinned rather than counted —
+     *  a size comparison passes on any inflation, which is the bug. */
+    const ADMITTED_BY_RELIEF = 'height/8/143/53';
+    const CULLED_BY_RELIEF = 'height/7/69/26';
+    /** Large enough that the clamp saturates at every node's own chord — and
+     *  exactly what a range left in METRES would do to the same margin. */
+    const SATURATING: readonly [number, number] = [0, 5_000_000];
+    /** Well outside this pose's frustum: no margin the clamp allows reaches
+     *  it, whatever the resident ancestor claims. */
+    const CULLED_AT_ANY_RANGE = 'height/10/555/214';
+
+    it('admits patches a flat datum culls, and culls none it kept', () => {
+      const flat = survivors([0, 0]);
+      const relief = survivors([-430, 8849]);
+
+      for (const id of flat) expect(relief.has(id), `${id} survived the datum cull`).toBe(true);
+      expect(flat.has(ADMITTED_BY_RELIEF)).toBe(false);
+      expect(relief.has(ADMITTED_BY_RELIEF)).toBe(true);
+    });
+
+    it('measures the subtree range in unit-sphere length, not metres', () => {
+      // Undivided, Earth's 8849 m reads as 8849 RADII: past every patch's
+      // chord, so the clamp saturates and the cull collapses onto the
+      // saturating case — which keeps a node the real relief does not.
+      expect(survivors(SATURATING).has(CULLED_BY_RELIEF)).toBe(true);
+      expect(survivors([-430, 8849]).has(CULLED_BY_RELIEF)).toBe(false);
+    });
+
+    it('clamps the margin at the patch’s own corner chord', () => {
+      // Unclamped, a range this absurd (157 000 Earth radii) sweeps 3752
+      // nodes into frustum against 254 — the eye-plane inflation R14's
+      // bounding sphere removed, back through the relief margin.
+      expect(survivors([0, 1e12]).has(CULLED_AT_ANY_RANGE)).toBe(false);
+      expect(survivors(SATURATING).has(CULLED_AT_ANY_RANGE)).toBe(false);
+    });
+  });
+
+  describe('relief headroom in the horizon cull', () => {
+    // Bug repro: Everest, ~2 m above the datum (the orbit target sinks to sea
+    // level — F2), tilted 10-20° above horizontal — a real EOX z8-13 deep
+    // band (public/data/images/earth-tiles/manifest.json) plus the shallow
+    // global band underneath. Unlike the frustum-sphere test two blocks up,
+    // step 1 ("1. Horizon" in `probe`) never reads `reliefHeadroom`: it culls
+    // on the flat-datum angle alone, so a patch whose real relief (Everest's
+    // 8849 m) would lift it above the smooth-sphere horizon at this altitude
+    // is dropped before the relief-aware frustum test ever runs — visible
+    // ground with NOTHING drawn (no leaf, no ancestor), the grey hole from
+    // the eye-check, only where a deep band carries real relief and only at
+    // the low camera heights/high tilts that put the visible ground strip
+    // right at the razor-thin (~0.045° at 2 m) horizon cap.
+    const EVEREST_BAND: SurfaceTileBand = {
+      uBounds: [86.68212890625 / 360 + 0.5, 87.12158203125 / 360 + 0.5],
+      vBounds: [27.79541015625 / 180 + 0.5, 28.10302734375 / 180 + 0.5],
+      min: 8,
+      max: 13,
+    };
+    const EVEREST_BANDS: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 7 },
+      EVEREST_BAND,
+    ];
+    const EVEREST_RELIEF_FRAC: readonly [number, number] = [
+      -200 / (EARTH_RADIUS_KM * 1000),
+      8849 / (EARTH_RADIUS_KM * 1000),
+    ];
+
+    function everestResidentSlot(range: readonly [number, number]) {
+      return (tile: SurfaceTileId) => ({
+        ...WHOLE_ATLAS,
+        subtreeRangeM: tile.product === 'height' ? range : undefined,
+      });
+    }
+
+    function everestRequests(range: readonly [number, number]) {
+      const base = tiltedAt(2, 10, 86.955, 27.932);
+      const { maxLevel: _maxLevel, ...input } = base;
+      const result = cutSurfaceTiles({
+        ...input,
+        bands: EVEREST_BANDS,
+        lodBias: 1,
+        residentSlot: everestResidentSlot(range),
+      });
+      return new Set(
+        result.requests.requests.map(
+          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
+        ),
+      );
+    }
+
+    // Hand-located via the real walk at this exact pose (not re-derived from
+    // the horizon formula): the one node the flat-datum cull drops and
+    // Everest's own relief admits, stable across 10-20° tilt.
+    const ADMITTED_BY_RELIEF = 'height/13/6076/1412';
+
+    it('never requests the patch on a flat datum at this pose', () => {
+      expect(everestRequests([0, 0]).has(ADMITTED_BY_RELIEF)).toBe(false);
+    });
+
+    it('requests the patch once Everest’s own relief is folded into the horizon cap', () => {
+      expect(everestRequests(EVEREST_RELIEF_FRAC).has(ADMITTED_BY_RELIEF)).toBe(true);
+    });
+
+    it('plans a non-empty cut with the camera 50 m under the datum, once relief exists', () => {
+      // Second finding: the early return for `camLen <= radiusM` used to plan
+      // nothing at all here, regardless of relief — the target sinking below
+      // the datum toward real terrain, not just the horizon cap, went dark.
+      const base = tiltedAt(-50, 10, 86.955, 27.932);
+      const { maxLevel: _maxLevel, ...input } = base;
+      const result = cutSurfaceTiles({
+        ...input,
+        bands: EVEREST_BANDS,
+        lodBias: 1,
+        residentSlot: everestResidentSlot(EVEREST_RELIEF_FRAC),
+      });
+      expect(result.cut.length).toBeGreaterThan(0);
     });
   });
 
@@ -804,7 +1148,7 @@ describe('cutSurfaceTiles', () => {
     ];
 
     function tileUvBounds(z: number, x: number, y: number) {
-      const cols = earthTileColumns(z, EARTH_TILE_PX);
+      const cols = surfaceTileColumns(z, EARTH_TILE_PX);
       const rows = cols / 2;
       const vNorth = 1 - y / rows;
       const vSouth = 1 - (y + 1) / rows;
@@ -814,9 +1158,12 @@ describe('cutSurfaceTiles', () => {
     // Full-residency mock: anything the walk is allowed to request resolves —
     // isolates the walk's cull/refine logic (under test) from any residency-
     // race concern (the exact-repro report's §1 already ruled that out).
-    function mockResidentSlot(tile: EarthTileId) {
+    function mockResidentSlot(tile: SurfaceTileId) {
+      // Height everywhere — the complete pyramid the bake owes the walk — so
+      // this fixture keeps testing the bbox cull rather than the height gate.
+      if (tile.product === 'height') return WHOLE_ATLAS;
       const { u0, u1, v0, v1 } = tileUvBounds(tile.z, tile.x, tile.y);
-      if (earthTileBandRequestAllowed(bands, tile.z, u0, u1, v0, v1)) {
+      if (surfaceTileInBand(bands, EARTH_TILE_PX, tile.z, tile.x, tile.y)) {
         return {
           slot: 0,
           atlasUvOrigin: [0, 0] as const,
@@ -883,7 +1230,6 @@ describe('cutSurfaceTiles', () => {
       const { camPosLocalM, viewProjLocal, viewportPx } = buildInputs(50, 10, 0);
 
       const result = cutSurfaceTiles({
-        kind: 'surface',
         camPosLocalM,
         viewProjLocal,
         radiusM: 1,
@@ -895,40 +1241,41 @@ describe('cutSurfaceTiles', () => {
         residentSlot: mockResidentSlot,
       });
 
-      // A healthy walk resolves far more than a handful of tiles at this
-      // altitude/footprint (empirically ~1100 under the fixed f64 path).
-      expect(result.cut.length).toBeGreaterThan(200);
-
-      // Coverage invariant, the real one under test: two ancestor tiles (found
-      // by direct bbox comparison against the pre-fix f32-narrowed matrix —
-      // see this task's investigation notes) sit exactly on the frustum's edge
-      // at this pose. Under the precision bug their bbox is wrongly computed
-      // as fully outside [-1,1], bbox-culling their ENTIRE subtree before any
-      // z19 leaf under them is ever considered — so NONE of their descendants
-      // can appear in `cut`. Under the fix, at least one must.
+      // Coverage oracle, independent of the walk: every z19 tile near the
+      // sub-camera point with a sample inside the frustum must be drawn by
+      // itself or an ancestor. (This used to assert `> 200` leaves against an
+      // empirical ~1100 — most of which were tiles BEHIND the camera that
+      // straddled the eye plane and escaped the frustum cull; the sphere cull
+      // leaves ~20, the ground actually on screen at 50 m.)
       const cutKeys = new Set(result.cut.map((t) => `${t.id.z}/${t.id.x}/${t.id.y}`));
-      const knownEdgeAncestors: readonly {
-        readonly z: number;
-        readonly x: number;
-        readonly y: number;
-      }[] = [
-        { z: 17, x: 88112, y: 15063 },
-        { z: 18, x: 176154, y: 30057 },
-      ];
-      for (const anc of knownEdgeAncestors) {
-        const span = 1 << (19 - anc.z);
-        const x0 = anc.x * span;
-        const y0 = anc.y * span;
-        let coversAny = false;
-        for (let dx = 0; dx < span && !coversAny; dx++) {
-          for (let dy = 0; dy < span && !coversAny; dy++) {
-            if (cutKeys.has(`19/${x0 + dx}/${y0 + dy}`)) coversAny = true;
+      const covered = (z: number, x: number, y: number): boolean => {
+        for (let az = z; az >= BASE_LEVEL; az--)
+          if (cutKeys.has(`${az}/${x >> (z - az)}/${y >> (z - az)}`)) return true;
+        return false;
+      };
+      const [cx, cy] = surfaceTileXyForUv(subCamUv, 19, EARTH_TILE_PX);
+      const cols19 = surfaceTileColumns(19, EARTH_TILE_PX);
+      let visible = 0;
+      for (let x = cx - 20; x <= cx + 20; x++) {
+        for (let y = cy - 20; y <= cy + 20; y++) {
+          let onScreen = false;
+          for (let i = 0; i < 9 && !onScreen; i++) {
+            const u = (x + (i % 3) / 2) / cols19;
+            const v = 1 - (y + Math.floor(i / 3) / 2) / (cols19 / 2);
+            const p = equirectUvToDirection([u, v]);
+            const m = viewProjLocal;
+            const w = m[3]! * p[0] + m[7]! * p[1] + m[11]! * p[2] + m[15]!;
+            if (w <= 0) continue;
+            const nx = (m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2] + m[12]!) / w;
+            const ny = (m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2] + m[13]!) / w;
+            onScreen = Math.abs(nx) <= 1 && Math.abs(ny) <= 1;
           }
+          if (!onScreen) continue;
+          visible++;
+          expect(covered(19, x, y), `z19 ${x}/${y} is on screen but not drawn`).toBe(true);
         }
-        expect(coversAny, `some z19 descendant of ${anc.z}/${anc.x}/${anc.y} must be in cut`).toBe(
-          true,
-        );
       }
+      expect(visible).toBeGreaterThan(0);
     });
   });
 });

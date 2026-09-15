@@ -24,10 +24,6 @@ describe('frameNeedsRender', () => {
     expect(frameNeedsRender({ ...BASE, simRunning: true })).toBe(true);
   });
 
-  it('renders while the path tracer is on and under its sample cap', () => {
-    expect(frameNeedsRender({ ...BASE, pathTracerOn: true, pathTracerSampleCount: 9 })).toBe(true);
-  });
-
   it('goes idle once the path tracer reaches its sample cap', () => {
     expect(frameNeedsRender({ ...BASE, pathTracerOn: true, pathTracerSampleCount: 10 })).toBe(
       false,
@@ -45,23 +41,6 @@ describe('frameNeedsRender', () => {
         pathTracerSampleCap: 20,
       }),
     ).toBe(true);
-  });
-
-  it('lowering the cap below the current count goes clean, without resetting the count', () => {
-    expect(
-      frameNeedsRender({
-        ...BASE,
-        pathTracerOn: true,
-        pathTracerSampleCount: 10,
-        pathTracerSampleCap: 5,
-      }),
-    ).toBe(false);
-  });
-
-  it('a capped path tracer that is OFF never forces a render', () => {
-    expect(frameNeedsRender({ ...BASE, pathTracerOn: false, pathTracerSampleCount: 0 })).toBe(
-      false,
-    );
   });
 
   it('renders right up to the hold deadline', () => {

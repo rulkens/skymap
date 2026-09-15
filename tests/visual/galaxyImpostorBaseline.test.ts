@@ -139,6 +139,7 @@ describe('galaxy-impostor visual baseline', () => {
           sbScale: 5,
           sbMax: 30,
           brightness: 1,
+          sourceOpacity: () => 1,
         };
         walk.runFrame(
           sharedInput,

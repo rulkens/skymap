@@ -126,6 +126,52 @@ describe('eoxTileSource', () => {
     expectPixelNear(se, [...WHITE, 255]);
   });
 
+  it('serves a box finer than the z13 ladder cell as that sub-rect, upscaled', async () => {
+    // A deeper band's halo tile (GeoDanmark z14, filled from EOX) asks for a
+    // box a quarter the cell's area. The bake once got the whole cell back
+    // instead — five tiles around Søndermarken showed a z13 region each.
+    const coverageDir = tmpCoverageDir();
+    const rowNW = 100;
+    const colNW = 200;
+    await writeEoxTile(coverageDir, 'testregion', rowNW, colNW, RED); // NW
+    await writeEoxTile(coverageDir, 'testregion', rowNW, colNW + 1, GREEN); // NE
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW, CYAN); // SW
+    await writeEoxTile(coverageDir, 'testregion', rowNW + 1, colNW + 1, WHITE); // SE
+
+    const source = await eoxTileSource({ coverageDir });
+    // z14: exactly the SE child. z15: the SE child's own NW quarter.
+    const z14 = await source.readBox(eoxTileBounds(rowNW + 1, colNW + 1), 512, 512);
+    const se = eoxTileBounds(rowNW + 1, colNW + 1);
+    const z15 = await source.readBox(
+      {
+        west: se.west,
+        east: (se.west + se.east) / 2,
+        north: se.north,
+        south: (se.north + se.south) / 2,
+      },
+      512,
+      512,
+    );
+    expect(z14).not.toBeNull();
+    expect(z15).not.toBeNull();
+    for (const [x, y] of [
+      [16, 16],
+      [496, 16],
+      [16, 496],
+      [496, 496],
+    ] as const) {
+      expectPixelNear(pixelAt(z14!, 512, x, y), [...WHITE, 255]);
+      expectPixelNear(pixelAt(z15!, 512, x, y), [...WHITE, 255]);
+    }
+
+    // The sub-rect's own child missing: a decline, never a transparent tile,
+    // even though the block's other three children exist.
+    rmSync(
+      join(coverageDir, 'testregion', String(EOX_MAX_LEVEL), String(rowNW + 1), `${colNW + 1}.jpg`),
+    );
+    expect(await source.readBox(eoxTileBounds(rowNW + 1, colNW + 1), 512, 512)).toBeNull();
+  });
+
   it('returns null only when all four children of the block are missing', async () => {
     const coverageDir = tmpCoverageDir();
     await writeEoxTile(coverageDir, 'testregion', 100, 200, RED);

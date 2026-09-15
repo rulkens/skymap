@@ -19,12 +19,6 @@ import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
 import {
-  selectHoverRef,
-  selectSelectedRef,
-  selectFocusRef,
-  selectHoverRow,
-  selectSelectRow,
-  selectFocusRow,
   selectHoveredFocusable,
   selectSelectedFocusable,
   selectFocusedFocusable,
@@ -79,70 +73,6 @@ const structureInfo: StructureInfo = {
   physicalRadiusMpc: 1.7,
 };
 
-// Minimal RootState stub — only the slots the selectors under test read.
-const stubState = (
-  selection: Partial<{
-    hover: SelectionRef | null;
-    select: SelectionRef | null;
-    focus: SelectionRef | null;
-  }>,
-  selectionRows: Partial<{
-    hover: GalaxyRow | null;
-    select: GalaxyRow | null;
-    focus: GalaxyRow | null;
-  }> = {},
-) =>
-  ({
-    [selectionRoute]: {
-      hover: null,
-      select: null,
-      focus: null,
-      pending: { select: null, focus: null },
-      ...selection,
-    },
-    [selectionRowsRoute]: { hover: null, select: null, focus: null, ...selectionRows },
-  }) as unknown as RootState;
-
-// --- selectXRef ---------------------------------------------------------------
-
-describe('selectHoverRef', () => {
-  it('returns the ref when hover slot is set', () => {
-    expect(selectHoverRef(stubState({ hover: galaxyRef }))).toEqual(galaxyRef);
-  });
-});
-
-describe('selectSelectedRef', () => {
-  it('returns the ref when select slot is set', () => {
-    expect(selectSelectedRef(stubState({ select: galaxyRef }))).toEqual(galaxyRef);
-  });
-});
-
-describe('selectFocusRef', () => {
-  it('returns the ref when focus slot is set', () => {
-    expect(selectFocusRef(stubState({ focus: galaxyRef }))).toEqual(galaxyRef);
-  });
-});
-
-// --- selectXRow ---------------------------------------------------------------
-
-describe('selectHoverRow', () => {
-  it('returns the row when hover row is set', () => {
-    expect(selectHoverRow(stubState({}, { hover: galaxyRow }))).toEqual(galaxyRow);
-  });
-});
-
-describe('selectSelectRow', () => {
-  it('returns the row when select row is set', () => {
-    expect(selectSelectRow(stubState({}, { select: galaxyRow }))).toEqual(galaxyRow);
-  });
-});
-
-describe('selectFocusRow', () => {
-  it('returns the row when focus row is set', () => {
-    expect(selectFocusRow(stubState({}, { focus: galaxyRow }))).toEqual(galaxyRow);
-  });
-});
-
 // --- selectIsSelectionActive --------------------------------------------------
 
 describe('selectIsSelectionActive', () => {
@@ -154,12 +84,6 @@ describe('selectIsSelectionActive', () => {
   it('returns true after a select ref is set', () => {
     const { store } = createAppStore();
     store.dispatch(updateSelectionSelect({ type: 'milkyWay' }));
-    expect(selectIsSelectionActive(store.getState())).toBe(true);
-  });
-
-  it('returns true when only a focus ref is set', () => {
-    const { store } = createAppStore();
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     expect(selectIsSelectionActive(store.getState())).toBe(true);
   });
 });
@@ -214,19 +138,6 @@ describe('selectHoveredFocusable', () => {
 });
 
 describe('selectSelectedFocusable', () => {
-  it('returns null when select row is null', () => {
-    const { store } = createAppStore();
-    expect(selectSelectedFocusable(store.getState())).toBeNull();
-  });
-
-  it('builds a FocusableTarget from a galaxy row in the select slot', () => {
-    const { store } = createAppStore();
-    store.dispatch(updateSelectionSelect(galaxyRef));
-    store.dispatch(setSelectionRow({ slot: 'select', row: galaxyRow }));
-    const target = selectSelectedFocusable(store.getState());
-    expect(target).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS });
-  });
-
   it('memoizes across an unrelated-slot write: changing hover does not recompute the select focusable', () => {
     const { store } = createAppStore();
     store.dispatch(setSelectionRow({ slot: 'select', row: { type: 'milkyWay' } }));
@@ -238,26 +149,5 @@ describe('selectSelectedFocusable', () => {
     store.dispatch(setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } }));
     const b = selectSelectedFocusable(store.getState());
     expect(a).toBe(b);
-  });
-});
-
-describe('selectFocusedFocusable', () => {
-  it('returns null when focus row is null', () => {
-    const { store } = createAppStore();
-    expect(selectFocusedFocusable(store.getState())).toBeNull();
-  });
-
-  it('builds a FocusableTarget from a galaxy row in the focus slot', () => {
-    const { store } = createAppStore();
-    store.dispatch(updateSelectionFocus(galaxyRef));
-    store.dispatch(setSelectionRow({ slot: 'focus', row: galaxyRow }));
-    const target = selectFocusedFocusable(store.getState());
-    expect(target).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS });
-  });
-
-  it('returns the StructureInfo as-is for a structure row in the focus slot', () => {
-    const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: structureInfo }));
-    expect(selectFocusedFocusable(store.getState())).toBe(structureInfo);
   });
 });

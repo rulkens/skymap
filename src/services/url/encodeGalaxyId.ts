@@ -2,14 +2,14 @@
  * encodeGalaxyId — the ONE home for the galaxy `#focus=<id>` priority ladder.
  *
  * Both galaxy encoders feed this function normalized fields:
- *   - selectionToFocusId (focusUrl.ts) — from a built GalaxyInfo
- *   - focusIdOf (focusIdOf.ts)         — from a cloud row via extractGalaxyRow
+ *   - selectionToFocusId (focusUrl.ts)           — from a built GalaxyInfo
+ *   - galaxyCatalogSelectionRow's focusId.encode — from a cloud row via extractGalaxyRow
  *
  * Keeping the ladder in a single place means the two entry points can never
  * silently drift in grammar (a prefix or a pos-precision change re-anchors a
- * shared URL onto a different galaxy).  `resolveFocusId` is the inverse of this
- * function; the encode↔decode round-trip parity test is the guard that keeps
- * this home single.
+ * shared URL onto a different galaxy). The composed resolver's `resolveFocusId`
+ * is the inverse of this function; the encode↔decode round-trip parity test is
+ * the guard that keeps this home single.
  *
  * The ladder, with the rationale that used to live in both encoders:
  *   - Synthetic → null   : procedurally-generated rows have no durable identity

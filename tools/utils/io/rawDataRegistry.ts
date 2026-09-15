@@ -662,7 +662,7 @@ export const RAW_DATA = {
 
   // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m/texel
   // and four ladder levels deeper than the equirect (z7 against z5). Only
-  // `build-earth-tiles` reads their pixels; they ride the same `fetch-textures`
+  // `build-surface-tiles` reads their pixels; they ride the same `fetch-textures`
   // pull as everything else so the 421 MB is obtainable by command, not by hand.
   // `BMNG_QUADRANT_KEYS` is the one enumeration of the set.
 
@@ -973,6 +973,63 @@ export const RAW_DATA = {
       'Provenance for the DHM Punktsky harvest — endpoint, licence, anchor height derivation, tile list, fetch landmines.',
   },
 
+  // ─── Height sources — the surface-tile pyramid's second product ────────
+
+  'etopo.surface30s': {
+    path: 'data/raw/etopo/ETOPO_2022_v1_30s_N90W180_surface.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'ETOPO 2022 30 arc-second surface-elevation GeoTIFF, 43200x21600 float32 metres (EGM2008 height), topography and bathymetry in one grid, AREA (cell-centred) registration, NoData -99999, DEFLATE, ~1.59 GB (public domain, NOAA NCEI, DOI 10.25921/fd45-gt74). The global height band bakes from this. Verified live 2026-09-15: HTTP 200, 1,585,813,987 bytes.',
+    upstream:
+      'https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/30s/30s_surface_elev_gtif/ETOPO_2022_v1_30s_N90W180_surface.tif',
+    fetcher: 'tools/fetch/fetchHeightSources.ts',
+    readme: 'etopo.readme',
+  },
+  'etopo.readme': {
+    path: 'data/raw/etopo/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for ETOPO 2022 — upstream URL, registration convention, NoData, licence, fetch date.',
+  },
+
+  'skadi.dir': {
+    path: 'data/raw/skadi',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'skadi 1 arc-second elevation harvest from the AWS `elevation-tiles-prod` open-data bucket, gunzipped to `<N55>/<N55E012>.hgt` — SRTM-format 3601² big-endian int16 metres in GEOGRAPHIC coordinates (unlike the terrarium PNGs in the same bucket, which are WebMercator), -32768 = void. Covers the EOX region boxes (`tools/fetch/eoxRegions.ts`).',
+    upstream: 'https://elevation-tiles-prod.s3.amazonaws.com/skadi/',
+    fetcher: 'tools/fetch/fetchHeightSources.ts',
+    readme: 'skadi.readme',
+  },
+  'skadi.readme': {
+    path: 'data/raw/skadi/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the skadi harvest — bucket path, cell naming, byte layout, void sentinel, licence.',
+  },
+
+  'dhmterraen.dir': {
+    path: 'data/raw/dhmterraen',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'DHM/Terræn 0.4 m DTM raster harvest over Søndermarken, one `DTM_1km_<northingKm>_<eastingKm>.tif` per 1 km DDKN cell — 2500² float32 metres above DVR90 in EPSG:25832, NoData -9999. Distinct from `dhm.dir`, which is the Punktsky POINT CLOUD for the splat bake: different endpoint, different product.',
+    upstream: 'https://api.datafordeler.dk/FileDownloads/GetRasterFile',
+    fetcher: 'tools/fetch/fetchHeightSources.ts',
+    readme: 'dhmterraen.readme',
+  },
+  'dhmterraen.readme': {
+    path: 'data/raw/dhmterraen/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the DHM/Terræn raster harvest — endpoint, tile naming, CRS, licence, key rule, fetch date.',
+  },
+
   // ─── Skråfoto — Dataforsyningen oblique aerial frames over Søndermarken ─
 
   'skraafoto.dir': {
@@ -1032,7 +1089,7 @@ export const RAW_DATA = {
     kind: 'directory',
     source: 'gitignored',
     description:
-      'Source GLBs for the mesh bodies, one subdirectory per mesh key holding the model plus its provenance README + LICENSE. Gitignored build inputs, same posture as the planet textures; `npm run build-meshes` bakes them to public/data/meshes/*.mesh + PBR PNGs. Per-file entries land with the assets themselves.',
+      'Source downloads and edited .blend scenes for the mesh bodies, one subdirectory per mesh key holding the model plus its provenance README + LICENSE. Gitignored build inputs, same posture as the planet textures; `npm run build-meshes` bakes them to public/data/meshes/*.mesh + PBR PNGs. Per-file entries land with the assets themselves.',
   },
   'meshes.whale': {
     path: 'data/raw/meshes/whale/whale.glb',
@@ -1088,12 +1145,22 @@ export const RAW_DATA = {
     upstream: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
     readme: 'meshes.voyager.readme',
   },
+  'meshes.voyagerBlend': {
+    path: 'data/raw/meshes/voyager/voyager.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'voyager.blend — the edited source the pre-bake opens, imported from the pristine download and hand-edited in Blender 5.2 LTS. Regenerate the import (discarding edits) with `npm run import-mesh -- voyager`; older Blender versions cannot open it.',
+    upstream: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.voyager.readme',
+  },
   'meshes.voyager': {
     path: 'data/raw/meshes/voyager/voyager.prebaked.glb',
     kind: 'file',
     source: 'gitignored',
     description:
-      'The Voyager model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.voyager actually points at. Regenerate with `npm run prebake-mesh -- voyager` (Blender, not CI), never by hand.',
+      'The Voyager model flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.voyager actually points at. Baked from `voyager.blend`; regenerate with `npm run prebake-mesh -- voyager` (Blender, not CI), never by hand.',
     upstream: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.voyager.readme',
@@ -1105,6 +1172,45 @@ export const RAW_DATA = {
     description:
       'Provenance for the Voyager model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and what the pre-bake does to it.',
   },
+  'meshes.hubbleSource': {
+    path: 'data/raw/meshes/hubble/Hubble Space Telescope (A).glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Hubble Space Telescope (A)" (public domain) — the untouched download. Only the GitHub mirror carries this textured variant; the model on NASA\'s own page is the untextured printable. buildMeshes never reads it: five materials and inch units go through the Blender import and pre-bake first.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubbleBlend': {
+    path: 'data/raw/meshes/hubble/hubble.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'hubble.blend — the edited source the pre-bake opens: the download scaled from inches to metres with the foil materials made metallic and bumped, all by `npm run import-mesh -- hubble` (Blender 5.2 LTS; older versions cannot open it), which regenerates it from the pristine download.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubble': {
+    path: 'data/raw/meshes/hubble/hubble.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Hubble model flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.hubble actually points at. Baked from `hubble.blend`; regenerate with `npm run prebake-mesh -- hubble` (Blender, not CI), never by hand.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubble.readme': {
+    path: 'data/raw/meshes/hubble/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Hubble model — source mirror, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, the material overrides and the Horizons refresh query behind the orbit row.',
+  },
   'meshes.perseveranceSource': {
     path: 'data/raw/meshes/perseverance/Mars 2020 Perseverance Rover.glb',
     kind: 'file',
@@ -1114,12 +1220,22 @@ export const RAW_DATA = {
     upstream: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     readme: 'meshes.perseverance.readme',
   },
+  'meshes.perseveranceBlend': {
+    path: 'data/raw/meshes/perseverance/perseverance.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'perseverance.blend — the edited source the pre-bake opens, imported from the pristine download and hand-edited in Blender 5.2 LTS. Regenerate the import (discarding edits) with `npm run import-mesh -- perseverance`; older Blender versions cannot open it.',
+    upstream: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.perseverance.readme',
+  },
   'meshes.perseverance': {
     path: 'data/raw/meshes/perseverance/perseverance.prebaked.glb',
     kind: 'file',
     source: 'gitignored',
     description:
-      'The Perseverance model posed mast-up, decimated to 100k tris and flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.perseverance actually points at. Regenerate with `npm run prebake-mesh -- perseverance` (Blender, not CI), never by hand.',
+      'The Perseverance model posed mast-up, decimated to 100k tris and flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.perseverance actually points at. Baked from `perseverance.blend`; regenerate with `npm run prebake-mesh -- perseverance` (Blender, not CI), never by hand.',
     upstream: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.perseverance.readme',
@@ -1145,8 +1261,18 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'The Curiosity scene unzipped from the archive beside it — what the pre-bake opens. buildMeshes never reads it: 18 materials, cameras, lights and helper geometry go through the Blender pre-bake first.',
+      'The Curiosity scene unzipped from the archive beside it — what `npm run import-mesh -- curiosity` opens. buildMeshes never reads it: 18 materials, cameras, lights and helper geometry go through the importer first.',
     upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
+    readme: 'meshes.curiosity.readme',
+  },
+  'meshes.curiosityBlend': {
+    path: 'data/raw/meshes/curiosity/curiosity.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'curiosity.blend — the edited source the pre-bake opens, imported from the pristine download and hand-edited in Blender 5.2 LTS. Regenerate the import (discarding edits) with `npm run import-mesh -- curiosity`; older Blender versions cannot open it.',
+    upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
     readme: 'meshes.curiosity.readme',
   },
   'meshes.curiosity': {
@@ -1154,7 +1280,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      'The Curiosity model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.curiosity actually points at. Regenerate with `npm run prebake-mesh -- curiosity` (Blender, not CI), never by hand.',
+      'The Curiosity model flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.curiosity actually points at. Baked from `curiosity.blend`; regenerate with `npm run prebake-mesh -- curiosity` (Blender, not CI), never by hand.',
     upstream: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.curiosity.readme',
@@ -1176,12 +1302,23 @@ export const RAW_DATA = {
       'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     readme: 'meshes.mer.readme',
   },
+  'meshes.merBlend': {
+    path: 'data/raw/meshes/mer/mer.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'mer.blend — the edited source the pre-bake opens, imported from the pristine download and hand-edited in Blender 5.2 LTS. Regenerate the import (discarding edits) with `npm run import-mesh -- mer`; older Blender versions cannot open it.',
+    upstream:
+      'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.mer.readme',
+  },
   'meshes.mer': {
     path: 'data/raw/meshes/mer/mer.prebaked.glb',
     kind: 'file',
     source: 'gitignored',
     description:
-      'The MER model posed deployed (panels out, mast up) and flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.mer actually points at. Regenerate with `npm run prebake-mesh -- mer` (Blender, not CI), never by hand.',
+      'The MER model posed deployed (panels out, mast up) and flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.mer actually points at. Baked from `mer.blend`; regenerate with `npm run prebake-mesh -- mer` (Blender, not CI), never by hand.',
     upstream:
       'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     fetcher: 'tools/meshes/prebake/meshPrebake.py',
@@ -1199,7 +1336,13 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'SHA-256 sidecar for the hand-downloaded mesh sources — the pre-baked outputs are excluded, being rebuildable products rather than fetches.',
+      'SHA-256 sidecar for the hand-downloaded mesh sources — the pristine downloads plus the four edited `<key>.blend` files; the pre-baked outputs are excluded, being rebuildable products rather than fetches. Also the list `npm run sync-r2-secure` backs up to R2, so a fresh checkout can restore without redoing the hand-download or the Blender edits.',
+  },
+  'meshes.readme': {
+    path: 'data/raw/meshes/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'What `meshes.sha256` pins, the R2 backup, and the restore command.',
   },
 
   // ─── StarNet++ weights (famous-galaxy curator) ────────────────────────

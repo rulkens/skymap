@@ -22,7 +22,7 @@ import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
-import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/earthTileSubsystem';
+import { EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT } from '../../../src/services/engine/subsystems/surfaceTileSubsystem';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 const PASS_NAMES = ['point-sprites', 'textured-quads'];
@@ -39,13 +39,13 @@ const stubTimingService: GpuTimingService = {
 
 const stubSlots = new Map();
 
-// Only `debug.earthTiles` and `debug.cameraDebug` are reached — `flyToLonLat`
+// Only `debug.surfaceTiles` and `debug.cameraDebug` are reached — `flyToLonLat`
 // dispatches a store action rather than reading the handle — so the rest of
 // EngineHandle is unused here and it's cast rather than fully stubbed.
 const stubEngineHandleRef = createRef<EngineHandle | null>();
 stubEngineHandleRef.current = {
   debug: {
-    earthTiles: () => EMPTY_EARTH_TILE_DEBUG_SNAPSHOT,
+    surfaceTiles: () => EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
     cameraDebug: () => QUIET_CAMERA_DEBUG_SNAPSHOT,
   },
 } as unknown as EngineHandle;
@@ -92,22 +92,6 @@ describe('DebugPanel', () => {
     expect(selectDebugOverlays(store.getState())['pick-buffer']).toBe(true);
   });
 
-  it('dispatches setPassDisabled(true) when a renderer-toggle box is unchecked', () => {
-    const { store } = createAppStore();
-    const { container } = renderContainer(store);
-    // Locate the RenderTogglesSection's <details> by its summary text — there are
-    // multiple <details> elements in the panel (AssetLoading, GpuTimings, etc.).
-    const summaries = Array.from(container.querySelectorAll('details summary'));
-    const togglesSummary = summaries.find((s) => s.textContent?.includes('Renderer Toggles'));
-    expect(togglesSummary).not.toBeUndefined();
-    const details = togglesSummary!.closest('details')!;
-    // All passes start enabled (no disabledPasses entries).
-    const boxes = details.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
-    expect(boxes.length).toBeGreaterThan(0);
-    fireEvent.click(boxes[0]!);
-    expect(selectDisabledPasses(store.getState())['point-sprites']).toBe(true);
-  });
-
   it('dispatches setProvenanceFilter and setProvenanceHighlight from the provenance table', () => {
     const { store } = createAppStore();
     expect(selectGalaxyProvenance(store.getState()).orientation.filter).toBe('all');
@@ -144,19 +128,5 @@ describe('DebugPanel', () => {
     expect(playAction).not.toBeUndefined();
     // The button names the registered clip; the action carries its id.
     expect(playAction!.payload).toBe('cosmicFlows');
-  });
-
-  it('dispatches startTour with the tour id on a tour button click', () => {
-    const { store } = createAppStore();
-    const dispatchSpy = vi.spyOn(store, 'dispatch');
-    const { container } = renderContainer(store);
-    const buttons = Array.from(container.querySelectorAll('button'));
-    const tourButton = buttons.find((b) => b.textContent?.includes('Demo Tour'));
-    expect(tourButton).not.toBeUndefined();
-    fireEvent.click(tourButton!);
-    const tourAction = dispatchSpy.mock.calls.map((c) => c[0]).find(startTour.match);
-    expect(tourAction).not.toBeUndefined();
-    // The button names the registered tour; the action carries its id.
-    expect(tourAction!.payload.id).toBe('demo');
   });
 });

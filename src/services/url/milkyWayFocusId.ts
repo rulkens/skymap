@@ -1,15 +1,9 @@
 /**
- * MILKY_WAY_FOCUS_ID — the durable `#focus=<id>` body for the Milky Way singleton.
- *
- * The Milky Way has no catalogued objID and no `${category}-${seed}` token; it's
- * a singleton, so its deep-link is a fixed literal. This is the one canonical
- * home for that literal: the decoder (resolveFocusId) and both encoders
- * (focusIdOf, urlHashFor) import it so the round-trip can't drift — change the
- * spelling here and every side moves together.
- *
- * It happens to match the SelectionRef union tag `'milkyWay'`, but the two are
- * independent facts (one is the URL wire format, the other the in-memory
- * discriminant); they share a home only by intent, not by coincidence-coupling.
+ * MILKY_WAY_FOCUS_ID — the durable `#focus=<id>` body for the Milky Way singleton
+ * (it has no catalogued objID or `${category}-${seed}` token). The one canonical
+ * home for that literal: `urlHashFor` and the composed resolver's `focusIdOf`/
+ * `resolveFocusId` all import it, so the round-trip can't drift. It happens to
+ * match the `SelectionRef` union tag `'milkyWay'` by intent, not by coupling.
  */
 
 export const MILKY_WAY_FOCUS_ID = 'milkyWay';

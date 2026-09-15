@@ -16,6 +16,7 @@ export function pickFrameContext(
   state: EngineState,
   canvas: HTMLCanvasElement,
 ): ReadyFrameContext | null {
+  const nowMs = performance.now();
   const ctx = deriveFrameContext(
     state,
     canvas,
@@ -28,8 +29,11 @@ export function pickFrameContext(
     ORIENTATION_FRAMES[state.settings.orientation],
     ORIENTATION_FRAMES[state.settings.orientation],
     // Pick mask, not draw mask: pickability follows intent, not the fade-out tail.
-    deriveSourceMasks(state).pick,
-    performance.now(),
+    // `enabled` alone drives the pick bit, so the nowMs sample only matters for
+    // `.draw` — passed anyway so this call site never relies on the registry's
+    // stale last-ticked clock.
+    deriveSourceMasks(state, nowMs).pick,
+    nowMs,
     // The instant the last frame derived its bodies at, so pickable body sprites
     // are re-derived exactly where they were drawn.
     state.cameraRuntime.outputs.simDays,

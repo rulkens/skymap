@@ -3,7 +3,7 @@
  * live state lets `createOrbitCamera` take a plain object literal and derive
  * the rest (e.g. `position`) from it.
  */
-import type { Vec3 } from './math/Vec3';
+import type { Vec3 } from '../math/Vec3';
 import type { Mat3 } from '../math/Mat3';
 
 export type OrbitCameraInit = {

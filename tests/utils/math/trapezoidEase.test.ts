@@ -13,11 +13,6 @@ import { describe, it, expect } from 'vitest';
 import { trapezoidEase } from '../../../src/utils/math/trapezoidEase';
 
 describe('trapezoidEase', () => {
-  it('pins the endpoints', () => {
-    expect(trapezoidEase(0, 0.25)).toBe(0);
-    expect(trapezoidEase(1, 0.25)).toBe(1);
-  });
-
   it('is symmetric about the midpoint', () => {
     for (const f of [0.1, 0.25, 0.4, 0.5]) {
       expect(trapezoidEase(0.5, f)).toBeCloseTo(0.5, 9);

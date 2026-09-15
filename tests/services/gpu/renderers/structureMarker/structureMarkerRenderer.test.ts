@@ -2,6 +2,8 @@ import { describe, it, expect, vi } from 'vitest';
 import { createStructureMarkerRenderer } from '../../../../../src/services/gpu/renderers/structureMarker/structureMarkerRenderer';
 import type { StructureMarkerDescriptor } from '../../../../../src/@types/rendering/StructureMarkerDescriptor';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
+import type { Vec2 } from '../../../../../src/@types/math/Vec2';
+import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
 
 // Null-device pattern, mirrors markerLineRenderer.test.ts.
 const newRenderer = (initialCapacity?: number) => {
@@ -53,17 +55,6 @@ const group = (id: number): StructureMarkerDescriptor => ({
 });
 
 describe('StructureMarkerRenderer (CPU state)', () => {
-  it('starts with zero markers', () => {
-    const r = newRenderer();
-    expect(r.markerCount()).toBe(0);
-  });
-
-  it('counts markers after setMarkers', () => {
-    const r = newRenderer();
-    r.setMarkers([cluster(1), cluster(2), cluster(3)]);
-    expect(r.markerCount()).toBe(3);
-  });
-
   it('replaces (not appends) on subsequent setMarkers', () => {
     const r = newRenderer();
     r.setMarkers([cluster(1)]);
@@ -139,6 +130,7 @@ describe('StructureMarkerRenderer colour target', () => {
 describe('StructureMarkerRenderer pick camera', () => {
   it("pickRing uploads the caller's pick camera to its own buffer and binds it at slot 0", () => {
     const buffersByLabel = new Map<string, GPUBuffer>();
+    const bufferSizesByLabel = new Map<string, number>();
     const bindGroupsByLabel = new Map<string, GPUBindGroup>();
     const device = {
       createBindGroupLayout: vi.fn(() => ({})),
@@ -150,6 +142,7 @@ describe('StructureMarkerRenderer pick camera', () => {
       createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
         const buf = { label: desc.label, destroy: vi.fn() } as unknown as GPUBuffer;
         buffersByLabel.set(desc.label!, buf);
+        bufferSizesByLabel.set(desc.label!, desc.size);
         return buf;
       }),
       createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
@@ -175,9 +168,8 @@ describe('StructureMarkerRenderer pick camera', () => {
     renderer.setMarkers([cluster(1)]);
     (device.queue.writeBuffer as ReturnType<typeof vi.fn>).mockClear();
 
-    const pickBytes = new ArrayBuffer(192);
-    const pickBytesView = new Uint8Array(pickBytes);
-    for (let i = 0; i < pickBytesView.length; i++) pickBytesView[i] = i % 256;
+    const viewProj = Float32Array.from({ length: 16 }, (_, i) => i + 1);
+    const viewportPx: Vec2 = [1920, 1080];
 
     const passEncoder = {
       setPipeline: vi.fn(),
@@ -186,18 +178,29 @@ describe('StructureMarkerRenderer pick camera', () => {
       draw: vi.fn(),
     } as unknown as GPURenderPassEncoder;
 
-    renderer.pickRing(passEncoder, pickBytes);
+    renderer.pickRing(passEncoder, viewProj, viewportPx);
 
     const pickCameraBuffer = buffersByLabel.get('structure-marker-pick-camera');
     const drawTimeBuffer = buffersByLabel.get('structure-marker-uniforms');
     expect(pickCameraBuffer).toBeDefined();
     expect(drawTimeBuffer).toBeDefined();
+    // The ring vertex stage declares nothing but the 80-byte CameraUniforms
+    // prefix, so the buffer holds exactly that.
+    expect(bufferSizesByLabel.get('structure-marker-pick-camera')).toBe(CAMERA_UNIFORM_BYTES);
 
-    // The caller's pick-camera bytes land on pickRing's OWN buffer, verbatim —
+    // The pick-time pose lands on pickRing's OWN buffer as the prefix —
     // never on the draw-time `structure-marker-uniforms` buffer, which still
     // holds the last VISUAL frame's pose. Regression: writing to the
     // draw-time buffer here reintroduces the stale-pose pick bug.
-    expect(device.queue.writeBuffer).toHaveBeenCalledWith(pickCameraBuffer, 0, pickBytes);
+    const [target, offset, payload] = (
+      device.queue.writeBuffer as ReturnType<typeof vi.fn>
+    ).mock.calls.at(-1) as [GPUBuffer, number, Float32Array];
+    expect(target).toBe(pickCameraBuffer);
+    expect(offset).toBe(0);
+    expect(payload.byteLength).toBe(CAMERA_UNIFORM_BYTES);
+    expect(Array.from(payload.subarray(0, 16))).toEqual(Array.from(viewProj));
+    expect(payload[16]).toBe(viewportPx[0]);
+    expect(payload[17]).toBe(viewportPx[1]);
     expect(device.queue.writeBuffer).not.toHaveBeenCalledWith(
       drawTimeBuffer,
       expect.anything(),

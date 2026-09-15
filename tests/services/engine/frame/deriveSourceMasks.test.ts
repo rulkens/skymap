@@ -18,6 +18,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
+import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
 import { Source, GALAXY_CATALOG_SOURCES } from '../../../../src/data/sources';
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { maskHas } from '../../../../src/utils/maskHas';
@@ -62,7 +63,7 @@ describe('deriveSourceMasks', () => {
     // Enabled with zero opacity still gets both bits — `enabled` alone drives
     // the pick bit, and `enabled || opacity>0` drives the draw bit.
     const state = makeState({ enabledOverrides: { sdss: true } });
-    const { draw, pick } = deriveSourceMasks(state);
+    const { draw, pick } = deriveSourceMasks(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(true);
     expect(maskHas(pick, Source.SDSS)).toBe(true);
   });
@@ -72,7 +73,7 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0.5 },
     });
-    const { draw, pick } = deriveSourceMasks(state);
+    const { draw, pick } = deriveSourceMasks(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(true);
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
@@ -82,25 +83,37 @@ describe('deriveSourceMasks', () => {
       enabledOverrides: { sdss: false },
       opacityById: { sdss: 0 },
     });
-    const { draw, pick } = deriveSourceMasks(state);
+    const { draw, pick } = deriveSourceMasks(state, 0);
     expect(maskHas(draw, Source.SDSS)).toBe(false);
     expect(maskHas(pick, Source.SDSS)).toBe(false);
   });
 
-  it('lights every galaxy-catalog bit when every galaxy catalog is enabled', () => {
-    // Every galaxy catalog id defaults to enabled in the fixture. ALL_VISIBLE_MASK
-    // is the DEFAULT-visible set, which omits the opt-in DESI patches (cone +
-    // wedge + sgw), so enabling *every* catalog yields ALL_VISIBLE_MASK plus the
-    // DesiDeep, DesiWedge, and DesiSgw bits: enabling a default-off catalog still
-    // sets its bit, which is the invariant this pins.
-    const state = makeState({});
-    const { draw, pick } = deriveSourceMasks(state);
-    const everyBit =
-      ALL_VISIBLE_MASK |
-      (1 << Source.DesiDeep) |
-      (1 << Source.DesiWedge) |
-      (1 << Source.DesiSgw);
-    expect(draw).toBe(everyBit);
-    expect(pick).toBe(everyBit);
+  // Regression: `opacityOf` must be sampled at the PASSED `nowMs`, not the
+  // fade registry's last-ticked clock — `runFrame` derives the masks before
+  // the frame tail's `fades.tick(nowMs)` runs, so a stale read makes the
+  // mask lag a settling fade by one frame (the sky-cubemap bake-in bug).
+  it('samples opacityOf at the given nowMs, not the registry last-ticked clock', () => {
+    const fades = createFadeRegistry({ requestRender: () => {} });
+    const id: FadeId = { kind: 'galaxyCatalog', id: 'sdss' };
+    fades.register(id, 1);
+    // Starts a 100 ms fade-out at t=0 — WITHOUT ever calling `fades.tick(...)`,
+    // so the registry's internal clock stays frozen at construction (0).
+    void fades.fadeTo(id, 0, 100, 0);
+
+    const items = Object.fromEntries(
+      GALAXY_CATALOG_SOURCES.map((s) => {
+        const gid = galaxyCatalogIdOf(s);
+        return [gid, { enabled: gid === 'sdss' ? false : true, labelEnabled: true }];
+      }),
+    ) as Record<GalaxyCatalogId, { enabled: boolean; labelEnabled: boolean }>;
+    const state = {
+      settings: { galaxyCatalogs: { items } } as never,
+      subsystems: { fades } as never,
+    };
+
+    // Query well past the fade's 100 ms end, at a nowMs the registry was
+    // never ticked to.
+    const { draw } = deriveSourceMasks(state, 500);
+    expect(maskHas(draw, Source.SDSS)).toBe(false);
   });
 });

@@ -8,6 +8,8 @@ import {
 import { Source } from '../../../../src/data/sources';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { SOLAR_RADIUS_KM } from '../../../../src/data/bodies/solarRadiusKm';
+import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import type { GalaxyRow } from '../../../../src/@types/engine/GalaxyRow';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
@@ -37,10 +39,6 @@ function structureRow(): StructureInfo {
 }
 
 describe('selectionHalo', () => {
-  it('returns null for a null row (nothing selected)', () => {
-    expect(selectionHalo(null)).toBeNull();
-  });
-
   it('returns null for a structure row (structure uses the marker pass)', () => {
     expect(selectionHalo(structureRow() as SelectionRow)).toBeNull();
   });
@@ -60,7 +58,10 @@ describe('selectionHalo', () => {
     };
     const halo = selectionHalo(bodyRow);
     expect(halo).not.toBeNull();
-    expect(halo!.radiusMpc).toBeCloseTo(6371 * SCALE_UNITS.KM_TO_MPC, 24);
+    expect(halo!.radiusMpc).toBeCloseTo(
+      bodyFootprintRadiusM(SCENE_EARTH) * SCALE_UNITS.M_TO_MPC,
+      24,
+    );
     expect(halo!.radiusMpc).toBeGreaterThan(0);
     expect(halo!.worldPos).toEqual([4.8481e-12, 0, 0]);
     expect(halo!.slab).toBe(NEAR0);

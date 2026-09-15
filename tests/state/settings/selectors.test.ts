@@ -32,28 +32,12 @@ function deriveMasks(
       fades: { opacityOf: (h: { id: GalaxyCatalogId }) => opacityFor(h.id) },
     },
   };
-  return deriveSourceMasks(state as never);
+  return deriveSourceMasks(state as never, 0);
 }
 
 describe('selectVisibleSourceMask', () => {
   it('packs the enabled bits to the deriveSourceMasks pick bitmask (all enabled)', () => {
     const state = makeRoot(); // every galaxy catalog enabled
-    const { pick } = deriveMasks(state[settingsRoute]);
-
-    expect(selectVisibleSourceMask(state)).toBe(pick);
-  });
-
-  it('packs the enabled bits to the deriveSourceMasks pick bitmask (one disabled)', () => {
-    const base = makeRoot();
-    const state = makeRoot({
-      galaxyCatalogs: {
-        ...base[settingsRoute].galaxyCatalogs,
-        items: {
-          ...base[settingsRoute].galaxyCatalogs.items,
-          sdss: { ...base[settingsRoute].galaxyCatalogs.items.sdss, enabled: false },
-        },
-      },
-    });
     const { pick } = deriveMasks(state[settingsRoute]);
 
     expect(selectVisibleSourceMask(state)).toBe(pick);

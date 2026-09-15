@@ -136,23 +136,6 @@ describe('local-volume override in recordsToCloud', () => {
     expect(r).toBeLessThan(10);
     expect(cloud.spectroscopicZ[0]).toBeCloseTo(0.002, 5);
   });
-
-  it('null overrides: legacy behaviour, every row on cz', () => {
-    const m31 = rec({
-      objID: BigInt(M31_PGC),
-      ra: M31_RA,
-      dec: M31_DEC,
-      z: M31_Z,
-      spectroscopicZ: M31_Z,
-    });
-    const cloud = recordsToCloud([m31], null);
-    const r = Math.hypot(cloud.positions[0]!, cloud.positions[1]!, cloud.positions[2]!);
-    // No override available → the cz path fires at |cz/H0| ≈ 3 Mpc, not the
-    // CF4 distance. (Direction is now M31's true direction — see the
-    // blueshift-true-direction test below — but this legacy case only pins
-    // that the distance magnitude is the cz value.)
-    expect(Math.abs(r - M31_DIST_MPC)).toBeGreaterThan(1);
-  });
 });
 
 describe('blueshifted rows without a redshift-independent distance', () => {

@@ -129,8 +129,9 @@ export function focusFraming(row: SelectionRow, fovYRad: number): FocusFraming {
     // exhaustive over `SelectionRow['type']`) before ever calling
     // `focusTweenDescriptor`/`focusFraming` (that's the ONE enforcement site —
     // do not add a second filter here or elsewhere). The clip-authoring path
-    // (`resolveClipFoci`) is separately unreachable: `urlHashFor`/`focusIdOf`
-    // never encode this arm, so no `FocusId` can decode back to it. This throw
+    // (`resolveClipFoci`) is separately unreachable: `urlHashFor` and the
+    // resolver's `focusIdOf` never encode this arm, so no `FocusId` can decode
+    // back to it. This throw
     // is therefore a should-never-happen assertion, not a live error path.
     case 'zoneOfAvoidance':
       throw new Error('focusFraming: zoneOfAvoidance has no focus target');

@@ -57,7 +57,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {
       specs: FIXTURE_SPECS,
       specOf: (id: string) => {
@@ -80,7 +79,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       setSwapFormat: vi.fn(),
       destroy: vi.fn(),
     },
-    texturedDisks: {} as never,
   };
 }
 
@@ -115,12 +113,6 @@ describe('createUpsamplePass', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(PASS_STUB);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(offscreenView);
-  });
-
-  it('skips the blit when the handle is null', () => {
-    const layer = createUpsamplePass(makeRow({ handleOf: () => null }));
-
-    expect(() => layer.draw(PASS_STUB, VIEW_STUB, makeCtx(), STATE_STUB)).not.toThrow();
   });
 
   it('runs postBlit after the blit, into the same pass', () => {

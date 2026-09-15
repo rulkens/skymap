@@ -14,7 +14,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createEarthRenderer } from '../../../../../src/services/gpu/renderers/bodies/earthRenderer';
 import { mipLevelCount } from '../../../../../src/services/gpu/lib/generateMipChain';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(recorders?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
@@ -65,20 +64,6 @@ function mockDevice(recorders?: {
 }
 
 describe('createEarthRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    expect(() =>
-      createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
-    ).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
   it('setMap and draw are callable with the right arity', () => {
     const renderer = createEarthRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
 

@@ -134,11 +134,6 @@ const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;
 const VIEW_STUB = makeNear0View([0, 0, 0]);
 
 describe('starCatalogPass.enabled', () => {
-  it('is false while the renderer handle is null (pre-bootstrap)', () => {
-    const state = makeState(null);
-    expect(starCatalogPass.enabled(state, CTX_STUB, VIEW_STUB)).toBe(false);
-  });
-
   it('follows the master gate, the per-item toggle, and the crossfade band', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const insideCtx = makeCtx(camAtPc(inner + (outer - inner) * 0.25));
@@ -225,11 +220,5 @@ describe('starCatalogPass.draw', () => {
       expect(call[1].aggregateIntensityCap).toBe(0.15);
       expect(call[1].brightness).toBeCloseTo(expectedBrightness, 10);
     }
-  });
-
-  it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View(camAtPc(inner));
-    const state = makeState(null);
-    expect(() => starCatalogPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
   });
 });

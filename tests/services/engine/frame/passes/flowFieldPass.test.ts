@@ -39,9 +39,7 @@ function makeCtx(): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
-    texturedDisks: {} as never,
   };
 }
 
@@ -141,10 +139,5 @@ describe('flowFieldPass.draw', () => {
     expect(call[3]).toBe(state.settings.flow);
     // The layer fade opacity (from fades.opacityOf) is folded in as the 5th arg.
     expect(call[4]).toBe(0.42);
-  });
-
-  it('does not throw when flowFieldRenderer is null (defensive null-check)', () => {
-    const state = makeState({ flowFieldRenderer: null });
-    expect(() => flowFieldPass.draw(PASS_STUB, makeView(), makeCtx(), state)).not.toThrow();
   });
 });

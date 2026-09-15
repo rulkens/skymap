@@ -17,46 +17,159 @@ export function rotationRowById(id: string): RotationElements | null {
 }
 
 export const ROTATION_ELEMENTS: readonly RotationElements[] = [
-  { id: 'mercury', poleRaDeg: 281.0103, poleDecDeg: 61.4155, primeMeridianDeg: 329.5988, spinRateDegPerDay: 6.1385108 },
+  {
+    id: 'mercury',
+    poleRaDeg: 281.0103,
+    poleDecDeg: 61.4155,
+    primeMeridianDeg: 329.5988,
+    spinRateDegPerDay: 6.1385108,
+  },
   // Retrograde, so Ẇ is negative under the planet convention — contrast Pluto below.
-  { id: 'venus', poleRaDeg: 272.76, poleDecDeg: 67.16, primeMeridianDeg: 160.2, spinRateDegPerDay: -1.4813688 },
-  { id: 'earth', poleRaDeg: 0.0, poleDecDeg: 90.0, primeMeridianDeg: 190.147, spinRateDegPerDay: 360.9856235 },
+  {
+    id: 'venus',
+    poleRaDeg: 272.76,
+    poleDecDeg: 67.16,
+    primeMeridianDeg: 160.2,
+    spinRateDegPerDay: -1.4813688,
+  },
+  {
+    id: 'earth',
+    poleRaDeg: 0.0,
+    poleDecDeg: 90.0,
+    primeMeridianDeg: 190.147,
+    spinRateDegPerDay: 360.9856235,
+  },
   // `orbitPlaneFrames.ts` carries the same pole rounded to 317.681/52.887.
-  { id: 'mars', poleRaDeg: 317.68143, poleDecDeg: 52.8865, primeMeridianDeg: 176.63, spinRateDegPerDay: 350.89198226 },
-  { id: 'jupiter', poleRaDeg: 268.056595, poleDecDeg: 64.495303, primeMeridianDeg: 284.95, spinRateDegPerDay: 870.536 },
+  {
+    id: 'mars',
+    poleRaDeg: 317.68143,
+    poleDecDeg: 52.8865,
+    primeMeridianDeg: 176.63,
+    spinRateDegPerDay: 350.89198226,
+  },
+  {
+    id: 'jupiter',
+    poleRaDeg: 268.056595,
+    poleDecDeg: 64.495303,
+    primeMeridianDeg: 284.95,
+    spinRateDegPerDay: 870.536,
+  },
   // This pole MUST equal SATURN_EQUATORIAL_FRAME's (`orbitPlaneFrames.ts`) — texture and
   // rings ride one equatorial frame, and `rotationElements.test.ts` pins the two equal.
-  { id: 'saturn', poleRaDeg: 40.589, poleDecDeg: 83.537, primeMeridianDeg: 38.9, spinRateDegPerDay: 810.7939024 },
+  {
+    id: 'saturn',
+    poleRaDeg: 40.589,
+    poleDecDeg: 83.537,
+    primeMeridianDeg: 38.9,
+    spinRateDegPerDay: 810.7939024,
+  },
   // Retrograde, and δ₀ is genuinely negative: the invariable-plane convention puts the
   // IAU north pole south of the ecliptic. Authored as published, not sign-flipped.
-  { id: 'uranus', poleRaDeg: 257.311, poleDecDeg: -15.175, primeMeridianDeg: 203.81, spinRateDegPerDay: -501.1600928 },
-  { id: 'neptune', poleRaDeg: 299.36, poleDecDeg: 43.46, primeMeridianDeg: 249.978, spinRateDegPerDay: 541.1397757 },
-  { id: 'moon', poleRaDeg: 269.9949, poleDecDeg: 66.5392, primeMeridianDeg: 38.3213, spinRateDegPerDay: 13.17635815 },
-  { id: 'io', poleRaDeg: 268.05, poleDecDeg: 64.5, primeMeridianDeg: 200.39, spinRateDegPerDay: 203.4889538 },
-  { id: 'europa', poleRaDeg: 268.08, poleDecDeg: 64.51, primeMeridianDeg: 36.022, spinRateDegPerDay: 101.3747235 },
-  { id: 'ganymede', poleRaDeg: 268.2, poleDecDeg: 64.57, primeMeridianDeg: 44.064, spinRateDegPerDay: 50.3176081 },
-  { id: 'callisto', poleRaDeg: 268.72, poleDecDeg: 64.83, primeMeridianDeg: 259.51, spinRateDegPerDay: 21.5710715 },
+  {
+    id: 'uranus',
+    poleRaDeg: 257.311,
+    poleDecDeg: -15.175,
+    primeMeridianDeg: 203.81,
+    spinRateDegPerDay: -501.1600928,
+  },
+  {
+    id: 'neptune',
+    poleRaDeg: 299.36,
+    poleDecDeg: 43.46,
+    primeMeridianDeg: 249.978,
+    spinRateDegPerDay: 541.1397757,
+  },
+  {
+    id: 'moon',
+    poleRaDeg: 269.9949,
+    poleDecDeg: 66.5392,
+    primeMeridianDeg: 38.3213,
+    spinRateDegPerDay: 13.17635815,
+  },
+  {
+    id: 'io',
+    poleRaDeg: 268.05,
+    poleDecDeg: 64.5,
+    primeMeridianDeg: 200.39,
+    spinRateDegPerDay: 203.4889538,
+  },
+  {
+    id: 'europa',
+    poleRaDeg: 268.08,
+    poleDecDeg: 64.51,
+    primeMeridianDeg: 36.022,
+    spinRateDegPerDay: 101.3747235,
+  },
+  {
+    id: 'ganymede',
+    poleRaDeg: 268.2,
+    poleDecDeg: 64.57,
+    primeMeridianDeg: 44.064,
+    spinRateDegPerDay: 50.3176081,
+  },
+  {
+    id: 'callisto',
+    poleRaDeg: 268.72,
+    poleDecDeg: 64.83,
+    primeMeridianDeg: 259.51,
+    spinRateDegPerDay: 21.5710715,
+  },
   // Pluto and Charon come from NAIF pck00011.tpc (BODY999/BODY901), not the tables above.
   // Minor-body pole convention: the "positive" pole, so Ẇ is positive despite the retrograde
   // spin — unlike Uranus/Venus above, which keep the planet convention and go negative.
-  { id: 'pluto', poleRaDeg: 132.993, poleDecDeg: -6.163, primeMeridianDeg: 302.695, spinRateDegPerDay: 56.3625225 },
+  {
+    id: 'pluto',
+    poleRaDeg: 132.993,
+    poleDecDeg: -6.163,
+    primeMeridianDeg: 302.695,
+    spinRateDegPerDay: 56.3625225,
+  },
   // LANDMINE — what this row shares with Pluto's is physics, not copy-paste: mutual tidal lock
   // means one spin axis (identical pole), each prime meridian is the sub-companion one (W₀
   // exactly 180° apart), and rotation and orbit are one quantity measured twice (Ẇ =
   // 360°/6.387222 d, Charon's period in `orbitalElements.ts`; 56.3625225 × 6.387222 =
   // 359.99994°, the residual being their rounding).
-  { id: 'charon', poleRaDeg: 132.993, poleDecDeg: -6.163, primeMeridianDeg: 122.695, spinRateDegPerDay: 56.3625225 },
+  {
+    id: 'charon',
+    poleRaDeg: 132.993,
+    poleDecDeg: -6.163,
+    primeMeridianDeg: 122.695,
+    spinRateDegPerDay: 56.3625225,
+  },
   // Whale and petunias (Hitchhiker's Guide easter egg). The whale is ORBIT-LOCKED: one turn
   // per orbit about the orbit pole (Earth's own, so α₀/δ₀ match the 'earth' row), holding its
   // head along the velocity and its belly Earthward in the body frame the bake's
   // `bodyFromSource` remap sets (+X nose, -Y dorsal); W₀ phases that to the M = 0 epoch. The
   // pot's pole stays DECORATIVE — off-axis and quick, a turn per 90 s, so its tumble wobbles.
-  { id: 'whale', poleRaDeg: 0.0, poleDecDeg: 90.0, primeMeridianDeg: 90.0, spinRateDegPerDay: 360 / MESH_BODY_PERIOD_DAYS },
-  { id: 'petunias', poleRaDeg: 198.6, poleDecDeg: -37.2, primeMeridianDeg: 0.0, spinRateDegPerDay: 345600 },
+  {
+    id: 'whale',
+    poleRaDeg: 0.0,
+    poleDecDeg: 90.0,
+    primeMeridianDeg: 90.0,
+    spinRateDegPerDay: 360 / MESH_BODY_PERIOD_DAYS,
+  },
+  {
+    id: 'petunias',
+    poleRaDeg: 198.6,
+    poleDecDeg: -37.2,
+    primeMeridianDeg: 0.0,
+    spinRateDegPerDay: 345600,
+  },
   // Both probes keep the high-gain dish on Earth — the real pointing constraint,
   // and the only one that stays true at any epoch as the geometry opens up.
   { kind: 'lookAt', id: 'voyager1', targetId: 'earth' },
   { kind: 'lookAt', id: 'voyager2', targetId: 'earth' },
+  // Hubble holds an inertial attitude, but WHICH one is the observing schedule's
+  // business, so this one is authored: aperture (+X) on the celestial north pole
+  // — the one direction a 28.5°-inclined orbit never puts the Earth in front of
+  // — and the solar-array long axis (+Z, the pole here) on the equinox. Ẇ = 0.
+  {
+    id: 'hubble',
+    poleRaDeg: 0.0,
+    poleDecDeg: 0.0,
+    primeMeridianDeg: 90.0,
+    spinRateDegPerDay: 0,
+  },
   // Rover headings are AUTHORED presentation, not surveyed landing azimuths:
   // they only spread the four so no two face the same way, and the visual pass
   // is their only gate.

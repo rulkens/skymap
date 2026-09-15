@@ -23,7 +23,7 @@ import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
@@ -51,7 +51,7 @@ const LOAD_FADE_MS = 400;
 
 export type TexturedDiskDeps = {
   readonly device: GPUDevice;
-  readonly atlas: BitmapStreamSubsystem;
+  readonly atlas: TileStreamSubsystem<ImageBitmap>;
   /** For tests.  Defaults to fetchGalaxyBitmap. */
   readonly fetcher?: (args: {
     ra: number;
@@ -141,6 +141,11 @@ export function createTexturedDiskSubsystem(
     // Hoisted per source by beginSource so onRow does no map lookup — the
     // walk guarantees beginSource precedes every onRow for that source.
     let stickyDisks: Map<number, DiskInstance> = new Map();
+    // The source's live survey-fade opacity, sampled ONCE per source (not per
+    // row — the row loop scales with ~2.5M galaxies) so a hidden catalog's
+    // disks fade out with its point sprites instead of staying at full alpha
+    // until the mask bit clears.
+    let sourceOpacity = 1;
 
     const visitor: DiskRowVisitor = {
       onSourceHidden(source) {
@@ -149,6 +154,7 @@ export function createTexturedDiskSubsystem(
 
       beginSource(source, safeStart, end) {
         stickyDisks = stickyFor(source);
+        sourceOpacity = input.sourceOpacity(source);
         // Purge sticky entries inside the current stride window — the
         // row visits are authoritative for those indices.
         purgeStrideWindow(stickyDisks, safeStart, end);
@@ -205,8 +211,8 @@ export function createTexturedDiskSubsystem(
               // The walk is decimated, so the slot allocated above may sit
               // unrevisited long enough for the LRU to hand it to another
               // galaxy mid-fetch — resolve by the key's CURRENT slot instead.
-              const uploaded = atlas.uploadBitmap(key, bitmap) !== null;
-              bitmap.close();
+              // `upload` closes `bitmap` either way (uploaded or recycled).
+              const uploaded = atlas.upload(key, bitmap) !== null;
               // Arrival stamps quantize to the frame clock so crossfade
               // alphas are a pure function of stamped time (deterministic
               // under a stepped recorder clock); sub-frame precision is
@@ -225,7 +231,10 @@ export function createTexturedDiskSubsystem(
           px,
         );
         const loadFade = loadFadeAlpha(bitmapReadyTime.get(key), nowMs, LOAD_FADE_MS);
-        const fadeAlpha = distFade * loadFade;
+        // Survey-fade term: without it, toggling a catalog off left its
+        // textured disks at full alpha through the point sprites' fade and
+        // popped them out only once `deriveSourceMasks` dropped the source.
+        const fadeAlpha = distFade * loadFade * sourceOpacity;
 
         // Disks-only.  The `Number.isFinite` checks are a defensive
         // guard against corrupted .bin files — every encoded galaxy

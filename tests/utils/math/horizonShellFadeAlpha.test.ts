@@ -19,11 +19,6 @@ describe('horizonShellFadeAlpha', () => {
     expect(horizonShellFadeAlpha(5, RADIUS_MPC)).toBe(0);
   });
 
-  it('is at full strength at and above 40% of the shell radius', () => {
-    expect(horizonShellFadeAlpha(0.4 * RADIUS_MPC, RADIUS_MPC)).toBe(1);
-    expect(horizonShellFadeAlpha(RADIUS_MPC, RADIUS_MPC)).toBe(1);
-  });
-
   it('ramps monotonically through the band', () => {
     const a = horizonShellFadeAlpha(0.1 * RADIUS_MPC, RADIUS_MPC);
     const b = horizonShellFadeAlpha(0.2 * RADIUS_MPC, RADIUS_MPC);

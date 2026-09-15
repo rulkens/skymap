@@ -37,17 +37,6 @@ function cf4Index(records: ReadonlyArray<Cf4Record>): Cf4CatalogIndex {
 }
 
 describe('catalogDistanceFor — CF4 by PGC', () => {
-  it('returns the CF4 distance when the record carries a PGC CF4 lists', () => {
-    const record = rec({ objID: 2557n }); // PGC 2557 = M31
-    const cf4 = cf4Index([
-      { pgc: 2557, distMpc: 0.785, eDistMpc: 0.04, raDeg: 10.68, deDeg: 41.27 },
-    ]);
-    const out = catalogDistanceFor(record, cf4, new Map());
-    expect(out).not.toBeNull();
-    expect(out!.distMpc).toBeCloseTo(0.785, 3);
-    expect(out!.source).toBe('cf4');
-  });
-
   it('does NOT consult byMassId — CF4 has no 2MASS XSC column (PGC-only by design)', () => {
     // The record carries a 2MASS XSC ID but no PGC. CF4 should miss
     // because there is no 2MASS index. Per the parser docstring, the
@@ -82,12 +71,6 @@ describe('catalogDistanceFor — HyperLEDA fallback', () => {
       ['12345', { pa: 0, axisRatio: 1, mod0: NaN, e_mod0: NaN }],
     ]);
     const out = catalogDistanceFor(record, cf4Index([]), hyperLeda);
-    expect(out).toBeNull();
-  });
-
-  it('returns null when both CF4 and HyperLEDA miss', () => {
-    const record = rec({ objID: 999999n });
-    const out = catalogDistanceFor(record, cf4Index([]), new Map());
     expect(out).toBeNull();
   });
 

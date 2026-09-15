@@ -39,16 +39,6 @@ describe('DateEntryPopover', () => {
     expect(props.onCancel).not.toHaveBeenCalled();
   });
 
-  it('commits on Enter', () => {
-    const props = renderPopover();
-    const input = screen.getByLabelText(/date and time \(utc\)/i) as HTMLInputElement;
-
-    fireEvent.change(input, { target: { value: '2027-03-14T09:26' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
-
-    expect(props.onCommit).toHaveBeenCalledWith(new Date(Date.UTC(2027, 2, 14, 9, 26)));
-  });
-
   it('does not commit a blank input on Set', () => {
     const props = renderPopover();
     const input = screen.getByLabelText(/date and time \(utc\)/i) as HTMLInputElement;

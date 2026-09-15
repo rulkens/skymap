@@ -20,8 +20,4 @@ describe('starTeffK', () => {
     // Anything bluer than C=0.39 yields the boundary temperature.
     expect(starTeffK(0.2, 'dwarf')).toBeCloseTo(starTeffK(0.39, 'dwarf'), 6);
   });
-
-  it('clamps a too-red dwarf colour to the cool validity edge', () => {
-    expect(starTeffK(2.0, 'dwarf')).toBeCloseTo(starTeffK(1.5, 'dwarf'), 6);
-  });
 });

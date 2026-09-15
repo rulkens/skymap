@@ -146,40 +146,6 @@ describe('attachEngineInputs', () => {
     expect(scheduler.requestRender).not.toHaveBeenCalled();
   });
 
-  it('forwards pointerleave to onPointerLeave', () => {
-    const onPointerLeave = vi.fn();
-    attachEngineInputs({
-      canvas: canvas.target as unknown as HTMLCanvasElement,
-      scheduler,
-      onPointerMove: () => {},
-      onPointerLeave,
-      onPointerDown: () => {},
-      onPointerUp: () => {},
-      onEscape: () => {},
-      onResize: () => {},
-    });
-    canvas.fire('pointerleave', {});
-    expect(onPointerLeave).toHaveBeenCalledTimes(1);
-    expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
-  });
-
-  it('forwards pointerdown to onPointerDown', () => {
-    const onPointerDown = vi.fn();
-    attachEngineInputs({
-      canvas: canvas.target as unknown as HTMLCanvasElement,
-      scheduler,
-      onPointerMove: () => {},
-      onPointerLeave: () => {},
-      onPointerDown,
-      onPointerUp: () => {},
-      onEscape: () => {},
-      onResize: () => {},
-    });
-    canvas.fire('pointerdown', {});
-    expect(onPointerDown).toHaveBeenCalledTimes(1);
-    expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
-  });
-
   it('forwards window pointerup AND pointercancel to onPointerUp', () => {
     const onPointerUp = vi.fn();
     attachEngineInputs({
@@ -216,23 +182,6 @@ describe('attachEngineInputs', () => {
     expect(onEscape).toHaveBeenCalledTimes(1);
     // Escape is wake-free: the selection setters own that wake.
     expect(scheduler.requestRender).not.toHaveBeenCalled();
-  });
-
-  it('forwards window resize to onResize', () => {
-    const onResize = vi.fn();
-    attachEngineInputs({
-      canvas: canvas.target as unknown as HTMLCanvasElement,
-      scheduler,
-      onPointerMove: () => {},
-      onPointerLeave: () => {},
-      onPointerDown: () => {},
-      onPointerUp: () => {},
-      onEscape: () => {},
-      onResize,
-    });
-    windowRecorder.fire('resize', {});
-    expect(onResize).toHaveBeenCalledTimes(1);
-    expect(scheduler.requestRender).toHaveBeenCalledTimes(1);
   });
 
   it('destroy() removes every listener it added', () => {

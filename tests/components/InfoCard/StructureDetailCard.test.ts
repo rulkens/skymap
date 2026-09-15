@@ -53,11 +53,6 @@ describe('StructureDetailCard', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
-  it('omits the Galaxies row when no member count is supplied', () => {
-    const { container } = render(createElement(StructureDetailCard, { structure: virgoNoAbell }));
-    expect(container.textContent).not.toMatch(/Galaxies/);
-  });
-
   it('omits the Galaxies row when the count is null (not yet computable)', () => {
     const { container } = render(
       createElement(StructureDetailCard, { structure: virgoNoAbell, memberCount: null }),

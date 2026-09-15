@@ -71,7 +71,7 @@ export type { BeatOutcome };
  */
 export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown, BeatOutcome> {
   // Read context inside the worker — the engine sets it after root-saga forks.
-  const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+  const selection = yield* getContext<SagaContext['selection']>('selection');
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
 
@@ -83,8 +83,8 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   yield* call(
     waitUntil,
     () =>
-      (beat.enterClip === undefined || clipFociReady(beat.enterClip, resolveDeps())) &&
-      clipFociReady(beat.dwellClip, resolveDeps()) &&
+      (beat.enterClip === undefined || clipFociReady(beat.enterClip, selection)) &&
+      clipFociReady(beat.dwellClip, selection) &&
       cameraRuntime() !== null,
   );
 
@@ -104,7 +104,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
     const enterClip = resolveClipFoci(
       beat.enterClip,
-      resolveDeps(),
+      selection,
       rt.fovYRad,
       rt.from,
       simDays,
@@ -130,7 +130,7 @@ export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown
   const dwellSimDays = deriveSimDays(yield* select(selectTimeState), performance.now());
   const dwellClip = resolveClipFoci(
     beat.dwellClip,
-    resolveDeps(),
+    selection,
     rt.fovYRad,
     rt.from,
     dwellSimDays,

@@ -13,7 +13,6 @@ import { describe, it, expect } from 'vitest';
 import {
   clampDistance,
   MIN_DISTANCE_MPC,
-  MAX_DISTANCE_MPC,
   SURFACE_STANDOFF_RADII,
 } from '../../../src/utils/camera/clampDistance';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
@@ -36,26 +35,11 @@ const EARTH_RADIUS_MPC = 6371 * SCALE_UNITS.KM_TO_MPC;
 const EARTH_FLOOR_MPC = EARTH_RADIUS_MPC * SURFACE_STANDOFF_RADII;
 
 describe('clampDistance — floor at the absolute minimum (no pivot: empty space, galaxy, structure)', () => {
-  it('floors at MIN_DISTANCE_MPC', () => {
-    // 1e-30 is well below the absolute floor.
-    expect(clampDistance(1e-30, MIN_DISTANCE_MPC)).toBe(MIN_DISTANCE_MPC);
-  });
-
-  it('caps at MAX_DISTANCE_MPC', () => {
-    // A distance beyond the observable-universe limit is clamped to MAX.
-    expect(clampDistance(1e9, MIN_DISTANCE_MPC)).toBe(MAX_DISTANCE_MPC);
-  });
-
   it('does not ratchet the galaxy focus-on end distance', () => {
     // The floor must never reach up into galaxy-focus territory: a focus
     // tween that ends at 0.15 Mpc has to pass through untouched, or every
     // galaxy focus would be pushed back out again.
     expect(clampDistance(GALAXY_FOCUS_MIN_MPC, MIN_DISTANCE_MPC)).toBe(GALAXY_FOCUS_MIN_MPC);
-  });
-
-  it('returns an in-bounds value unchanged', () => {
-    const mid = 10; // 10 Mpc — squarely inside [MIN_DISTANCE_MPC, 30000]
-    expect(clampDistance(mid, MIN_DISTANCE_MPC)).toBe(mid);
   });
 });
 

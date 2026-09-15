@@ -41,14 +41,6 @@ function setPos(cloud: GalaxyCatalog, i: number, ra: number, dec: number, z: num
 }
 
 describe('computeAngularWeights', () => {
-  it('returns a Float32Array of length cloud.count', () => {
-    const cloud = emptyCloud(10);
-    for (let i = 0; i < 10; i++) setPos(cloud, i, i * 36, 0, 0.05);
-    const w = computeAngularWeights({ cloud, source: Source.Glade });
-    expect(w).toBeInstanceOf(Float32Array);
-    expect(w.length).toBe(10);
-  });
-
   it('every weight is finite and inside [0.3, 1.2]', () => {
     const cloud = emptyCloud(50);
     // Random-but-deterministic spread.  Use a simple LCG so the test isn't

@@ -301,12 +301,6 @@ describe('starSpheresPass.draw', () => {
     expect(composeMock).toHaveBeenCalledTimes(1);
     expect(composeMock.mock.calls[0]![1]).toBe(SUN.positionMpc);
   });
-
-  it('is a no-op when the starRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View([0, 0, 5]);
-    const state = { gpu: { starRenderer: null } } as unknown as EngineState;
-    expect(() => starSpheresPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
 });
 
 // §8.1 regression — the pick id carries the body's STABLE SCENE_STARS seed

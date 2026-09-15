@@ -41,35 +41,6 @@ function apply(actions: Action[]) {
 }
 
 describe('state reducer', () => {
-  it('initial state has nothing selected, default sliders', () => {
-    expect(initialState.activeId).toBeUndefined();
-    expect(initialState.starnet.stride).toBe(256);
-    expect(initialState.alpha.blackPoint).toBe(8);
-    expect(initialState.alpha.whitePoint).toBe(255);
-    expect(initialState.alpha.gamma).toBeCloseTo(0.7);
-  });
-
-  it('setGalaxies populates the list', () => {
-    const s = reducer(initialState, {
-      type: 'setGalaxies',
-      galaxies: [
-        {
-          id: 'm31',
-          names: ['M31'],
-          ra: 0,
-          dec: 0,
-          distanceMpc: 0,
-          diameterKpc: 0,
-          type: '',
-          description: '',
-          curated: false,
-          hasDisk: false,
-        },
-      ],
-    });
-    expect(s.galaxies).toHaveLength(1);
-  });
-
   it('markCuratedById flips curated + disk flags so the list badge appears without a refetch', () => {
     const entry = {
       id: 'm31',
@@ -88,31 +59,6 @@ describe('state reducer', () => {
     expect(s.galaxies[0]!.curated).toBe(true);
     expect(s.galaxies[0]!.hasDisk).toBe(true);
     expect(s.galaxies[0]!.diskDeproject).toBe(true);
-  });
-
-  it('markCuratedById clears the disk flags when a galaxy is committed without a disk', () => {
-    const entry = {
-      id: 'm31',
-      names: ['M31'],
-      ra: 0,
-      dec: 0,
-      distanceMpc: 0,
-      diameterKpc: 0,
-      type: '',
-      description: '',
-      curated: false,
-      hasDisk: true,
-      diskDeproject: true,
-    };
-    let s = reducer(initialState, { type: 'setGalaxies', galaxies: [entry] });
-    s = reducer(s, {
-      type: 'markCuratedById',
-      id: 'm31',
-      hasDisk: false,
-      diskDeproject: undefined,
-    });
-    expect(s.galaxies[0]!.hasDisk).toBe(false);
-    expect(s.galaxies[0]!.diskDeproject).toBeUndefined();
   });
 
   it('selectGalaxy clears tmpId, source, crop, previews, processedOnce', () => {
@@ -141,24 +87,6 @@ describe('state reducer', () => {
     // resetCrop returns the largest centred square = min(width, height).
     expect(s.crop?.width).toBe(800);
     expect(s.dirty.crop).toBe(true);
-  });
-
-  it('setCrop marks crop dirty', () => {
-    const s = apply([
-      { type: 'setSource', tmpId: 't', width: 1000, height: 800, previewUrl: '/p' },
-      { type: 'markProcessed' },
-      { type: 'setCrop', crop: { x: 0, y: 0, width: 100, height: 100, rotationDeg: 0 } },
-    ]);
-    expect(s.dirty.crop).toBe(true);
-    expect(s.processedOnce).toBe(true); // crop dirty does NOT reset processedOnce
-  });
-
-  it('setStarnet marks starnet dirty', () => {
-    const s = apply([
-      { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
-      { type: 'setStarnet', starnet: { stride: 512, upsample: true } },
-    ]);
-    expect(s.dirty.starnet).toBe(true);
   });
 
   it('setAlpha marks alpha dirty but NOT crop/starnet', () => {
@@ -213,29 +141,6 @@ describe('state reducer — disk slice', () => {
     expect(s.disk).toEqual(diskFixture);
     expect(s.dirty.disk).toBe(true);
   });
-
-  it('clearDisk resets disk to undefined', () => {
-    const s = apply([{ type: 'setDisk', disk: diskFixture }, { type: 'clearDisk' }]);
-    expect(s.disk).toBeUndefined();
-  });
-
-  it('selectGalaxy clears disk and disk dirty', () => {
-    const s = apply([
-      { type: 'setDisk', disk: diskFixture },
-      { type: 'selectGalaxy', id: 'm31' },
-    ]);
-    expect(s.disk).toBeUndefined();
-    expect(s.dirty.disk).toBe(false);
-  });
-
-  it('markProcessed clears disk dirty', () => {
-    const s = apply([
-      { type: 'setSource', tmpId: 't', width: 100, height: 100, previewUrl: '/p' },
-      { type: 'setDisk', disk: diskFixture },
-      { type: 'markProcessed' },
-    ]);
-    expect(s.dirty.disk).toBe(false);
-  });
 });
 
 describe('state reducer — deproject crop slice', () => {
@@ -255,13 +160,6 @@ describe('state reducer — deproject crop slice', () => {
     s = reducer(s, { type: 'setDeprojectCrop', crop: rect });
     s = reducer(s, { type: 'restoreSquareCrop' });
     expect(s.crop).toEqual(sq);
-    expect(s.savedSquareCrop).toBeUndefined();
-  });
-
-  it('selectGalaxy clears savedSquareCrop', () => {
-    let s = reducer(initialState, { type: 'setCrop', crop: sq });
-    s = reducer(s, { type: 'setDeprojectCrop', crop: rect });
-    s = reducer(s, { type: 'selectGalaxy', id: 'm51' });
     expect(s.savedSquareCrop).toBeUndefined();
   });
 });

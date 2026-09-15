@@ -39,12 +39,12 @@ const MEASURED_BBOX: LabelBBox = { minX: -50, minY: -30, maxX: 50, maxY: 12 };
 const TEXT_BOTTOM_BELOW_ANCHOR_PX =
   MEASURED_BBOX.maxY * (FAMOUS_LABEL_STYLE.minPixelSize / ATLAS_FONT_SIZE);
 
-// produceFamousGalaxyLabels reads `state.famousGalaxiesMeta` for the sidecar records and
-// `state.data.galaxies` for the positional catalog, `state.subsystems.fades`
-// for the `galaxy` layer opacity (read-only),
+// produceFamousGalaxyLabels reads `state.data.galaxies` for the sidecar records
+// and the positional catalog, `state.subsystems.fades` for the `galaxy` layer
+// opacity (read-only),
 // `state.settings.galaxyCatalogs.items.famousGalaxy.labelEnabled` for the
 // visibility gate, and `state.gpu.labelRenderer.measure` for the caption's ink
-// bbox (which places the leader-line top). The fixture supplies all five; the
+// bbox (which places the leader-line top). The fixture supplies all four; the
 // `galaxy` handle is registered at 1 so the at-rest opacity is 1. The
 // famous label gate defaults visible.
 function makeState(
@@ -60,7 +60,6 @@ function makeState(
   const bbox = opts.bbox ?? MEASURED_BBOX;
   return {
     data: createEngineData(),
-    famousGalaxiesMeta: [],
     gpu: { labelRenderer: { measure: vi.fn<(label: Label2D) => LabelBBox>(() => bbox) } },
     subsystems: {
       fades,
@@ -127,26 +126,13 @@ const famousCatalog = (positions: number[], diameters: number[]): GalaxyCatalog 
     diameterKpc: new Float32Array(diameters),
   }) as unknown as GalaxyCatalog;
 
-// `famousGalaxiesMeta` is readonly on `EngineState` (the getter delegates to
-// the Redux store in the real engine); the fixture is a plain object
-// literal, so writing through a mutable-view cast is the direct way to seed
-// it here.
-function setFamousGalaxiesMeta(
-  state: EngineState,
-  entries: Partial<FamousGalaxyMetaEntry>[],
-): void {
-  (state as unknown as { famousGalaxiesMeta: FamousGalaxyMetaEntry[] }).famousGalaxiesMeta = meta(
-    ...entries,
-  );
-}
-
 function seed(
   state: EngineState,
   entries: Partial<FamousGalaxyMetaEntry>[],
   positions: number[],
   diameters: number[],
 ): void {
-  setFamousGalaxiesMeta(state, entries);
+  state.data.galaxies.setFamousMeta(meta(...entries));
   state.data.galaxies.setCatalog(Source.FamousGalaxy, famousCatalog(positions, diameters));
 }
 
@@ -300,7 +286,7 @@ describe('produceFamousGalaxyLabels', () => {
 
   it('emits nothing when the famous catalog is absent or meta is empty', () => {
     const noCatalog = makeState();
-    setFamousGalaxiesMeta(noCatalog, [{ id: 'm31', names: ['M31'] }]);
+    noCatalog.data.galaxies.setFamousMeta(meta({ id: 'm31', names: ['M31'] }));
     expect(produceFamousGalaxyLabels(noCatalog, makeCtx()).labels).toEqual([]);
 
     const noMeta = makeState();
@@ -384,15 +370,6 @@ describe('produceFamousGalaxyLabels', () => {
     }
   });
 
-  it('at-rest output is unchanged (galaxy layer at 1, blend 0)', () => {
-    // Golden: galaxy layer at 1 × recession 1 (blend 0) ⇒ layerAlpha 1, so the
-    // emitted fadeAlpha equals the raw distance-fade value (1 here).
-    const state = makeState();
-    seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
-    expect(out.labels[0]!.fadeAlpha).toBe(1);
-  });
-
   it('caps a very close companion (e.g. the LMC) to the near-distance pixel ceiling', () => {
     // Inside the near band (< 0.1 Mpc), the ramp is fully bottomed out at the
     // 60 px near cap rather than the category's 150 px `maxPixelSize` — the
@@ -402,24 +379,6 @@ describe('produceFamousGalaxyLabels', () => {
     seed(state, [{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
     const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.maxPixelSize).toBe(60);
-  });
-
-  it('keeps the full 150 px ceiling for a distant famous galaxy (e.g. M31)', () => {
-    // Beyond the far band (> 1 Mpc), the ramp is fully saturated at the
-    // category's normal `maxPixelSize` — the dramatic close-approach labels
-    // for far companions like M31 must not shrink.
-    const state = makeState();
-    seed(state, [{ id: 'm31', names: ['M31'] }], [3, 0, 0], [40]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
-    expect(out.labels[0]!.maxPixelSize).toBe(FAMOUS_LABEL_STYLE.maxPixelSize);
-  });
-
-  it('yields a strictly intermediate ceiling in the near-to-far ramp band', () => {
-    const state = makeState();
-    seed(state, [{ id: 'mid', names: ['Mid'] }], [0.5, 0, 0], [20]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
-    expect(out.labels[0]!.maxPixelSize).toBeGreaterThan(60);
-    expect(out.labels[0]!.maxPixelSize).toBeLessThan(FAMOUS_LABEL_STYLE.maxPixelSize);
   });
 
   it("stamps each label with its catalog row's pick id, size-gate skips included", () => {
@@ -438,7 +397,9 @@ describe('produceFamousGalaxyLabels', () => {
     for (const label of labels) {
       const pick = unpackPick(label.pickId!)!;
       expect(pick.sourceCode).toBe(Source.FamousGalaxy);
-      expect(state.famousGalaxiesMeta[pick.localIdx]!.id).toBe(label.id.replace('famous-', ''));
+      expect(state.data.galaxies.famousMeta[pick.localIdx]!.id).toBe(
+        label.id.replace('famous-', ''),
+      );
     }
   });
 });

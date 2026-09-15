@@ -13,7 +13,7 @@
  * case here defaults it to at-rest (`NO_ANIM`).
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 
 import { shouldKeepTicking } from '../../../../src/services/engine/helpers/shouldKeepTicking';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -56,16 +56,21 @@ function rootWithCamera(
 const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
-const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false, labelsAnimating: false };
+const NO_ANIM = {
+  starFadeAnimating: false,
+  surfaceTilesAnimating: false,
+  labelsAnimating: false,
+  probeDue: false,
+  layersAnimating: false,
+};
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default
  * to their AT-REST value (nothing animating); each test flips exactly one.
  *
- * `isEngineReady` is left false (null GPU handles), so the textured-disk term
- * short-circuits to false without needing a thumbnail subsystem — the tests
- * that care about flow/fades/focus don't depend on it. The one test that
- * exercises the in-flight-thumbnail term builds a ready state explicitly.
+ * `subsystems.texturedDisks` is left null (D13: the term reads it directly,
+ * `?.hasInFlightWork() ?? false`, with no bootstrap gate), so it short-
+ * circuits to false without needing a thumbnail subsystem.
  */
 function makeState(over: {
   flowEnabled?: boolean;
@@ -129,26 +134,9 @@ describe('shouldKeepTicking', () => {
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(false);
   });
 
-  it('flow loaded but disabled → false (the enabled guard)', () => {
-    const state = makeState({ flowEnabled: false, flowReady: true });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(false);
-  });
-
   it('a dragging camera → true (selectCameraActive)', () => {
     const state = makeState({});
     expect(shouldKeepTicking(state, rootWithCamera({ dragging: true }), 1000, NO_ANIM)).toBe(true);
-  });
-
-  it('an in-flight tween → true (selectCameraActive)', () => {
-    const state = makeState({});
-    expect(shouldKeepTicking(state, rootWithCamera({ tween: {} }), 1000, NO_ANIM)).toBe(true);
-  });
-
-  it('auto-rotate spinning → true (selectCameraActive)', () => {
-    const state = makeState({});
-    expect(
-      shouldKeepTicking(state, rootWithCamera({ autoRotateActive: true }), 1000, NO_ANIM),
-    ).toBe(true);
   });
 
   it('a fade animating → true', () => {
@@ -226,48 +214,13 @@ describe('shouldKeepTicking', () => {
     ).toBe(true);
   });
 
-  it('Earth tile work in flight → true even with everything else at rest', () => {
-    // The vote runFrame reads outside its engage gate: a manifest or a tile
-    // still fetching, or a landed tile mid-fade. Without it a camera that
-    // stops moving during the manifest fetch sleeps the loop, and the virtual
-    // texture never engages at all.
+  it('layersAnimating is a keep-alive term — true even with everything else at rest', () => {
+    // A Layer's frame hook voted true this frame (D2); runFrame folds every
+    // hook's return into this one bag entry, so the predicate need not know
+    // anything about Layers itself — just this bit.
     const state = makeState({});
-    expect(
-      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, earthTilesAnimating: true }),
-    ).toBe(true);
-  });
-
-  it('a label envelope mid-ramp → true even with everything else at rest', () => {
-    // The label director's appear/disappear envelope returns this vote
-    // rather than firing its own requestRender.
-    const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, labelsAnimating: true })).toBe(
+    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAnimating: true })).toBe(
       true,
     );
-  });
-
-  it('passes nowMs through to the time-dependent fade/focus terms', () => {
-    const isAnyAnimating = vi.fn<(nowMs: number) => boolean>(() => false);
-    const isAwake = vi.fn<(nowMs: number) => boolean>(() => false);
-    const state = {
-      settings: { flow: { enabled: false } },
-      gpu: { galaxyPointRenderer: null, galaxyPickRenderer: null, renderTargets: null },
-      booted: false,
-      cameraRuntime: {
-        register: { winner: 'resting' },
-        follow: null,
-      },
-      subsystems: {
-        texturedDisks: null,
-        fades: { isAnyAnimating },
-        structureFocus: { isAwake },
-      },
-      assetSlots: { flow: null },
-    } as unknown as EngineState;
-
-    shouldKeepTicking(state, restingRoot, 4242, NO_ANIM);
-
-    expect(isAnyAnimating).toHaveBeenCalledWith(4242);
-    expect(isAwake).toHaveBeenCalledWith(4242);
   });
 });

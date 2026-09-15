@@ -1,5 +1,5 @@
 import type { BiasMode } from '../../data/galaxyCatalog/BiasMode';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
 import type { SchechterRunner } from './SchechterRunner';
 import type { AngularRunner } from './AngularRunner';

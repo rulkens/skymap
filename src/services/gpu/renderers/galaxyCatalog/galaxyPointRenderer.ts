@@ -222,7 +222,7 @@ export function createGalaxyPointRenderer(init: {
     const catalogs = Array.from(store.entries());
     if (catalogs.length === 0) return;
 
-    // Pack 176 bytes — see `UNIFORM_BYTES` for the layout, and
+    // Pack UNIFORM_BYTES — see `UNIFORM_BYTES` for the layout, and
     // `points/io.wesl::Uniforms` for the WGSL-side struct.  `pickPass`
     // defaults to 0 (visual pass); the pick path packs its own image via
     // `pickUniformBytesOf`, never this buffer. Written into THIS call's own

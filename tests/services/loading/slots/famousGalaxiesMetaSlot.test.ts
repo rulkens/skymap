@@ -1,69 +1,70 @@
 /**
- * The slot's contract is graceful degradation: the fetcher throws on HTTP
- * failure so a retry policy can branch on status, and the slot's subscriber
- * maps that to "feature off" by reporting an empty array to the engine slice.
- * A deployment without `famous_galaxies_meta.json` must still render famous galaxies,
- * just without enriched InfoCard text.
- *
- * The slot reports to the store and nowhere else: it dispatches the parsed
- * payload on success and an empty array on failure, and that single dispatch
- * is the only route either the command palette or the engine has to the
- * sidecar, so the two can never diverge. Asserting on the dispatched action
- * is therefore asserting the whole contract.
+ * The sidecar slot publishes the famous meta to TWO homes for one PR: the
+ * galaxy store (the engine-side readers) and the engine slice (the command
+ * palette, until PR-D). A missing store write on either transition would be
+ * masked by the redux copy until PR-D deletes it, so both are pinned here.
  */
-import { describe, it, expect, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
+import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
+
+const { mockFetch } = vi.hoisted(() => ({ mockFetch: vi.fn() }));
+
+vi.mock('../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher', () => ({
+  famousGalaxiesMetaFetcher: mockFetch,
+}));
+
 import { createFamousGalaxiesMetaSlot } from '../../../../src/services/loading/slots/famousGalaxiesMetaSlot';
+import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { engineFamousGalaxiesMetaReported } from '../../../../src/state/engine/engineSlice';
-import { Source } from '../../../../src/data/sources';
-import { useFetchMock } from '../../../setup/fetchMock';
+import { HttpError } from '../../../../src/services/loading/fetchWithProgress';
 
-// The slot touches nothing on EngineState — it reports through `cb.store`.
-const fakeState = {} as EngineState;
+const M87: FamousGalaxyMetaEntry = {
+  id: 'm87',
+  names: ['M87'],
+  description: '',
+  type: 'elliptical',
+} as FamousGalaxyMetaEntry;
 
-/** The fetcher ignores the request; any well-typed `GalaxyCatalogReq` will do. */
-const REQ = { source: Source.FamousGalaxy, tier: 'medium' as const };
+const REQ = { source: 'famousGalaxy' } as never;
 
-function fakeCb(): { cb: EngineCallbacks; dispatch: ReturnType<typeof vi.fn> } {
-  const dispatch = vi.fn();
-  return { cb: { store: { dispatch } } as unknown as EngineCallbacks, dispatch };
+function fakeState(): EngineState {
+  return { data: createEngineData() } as unknown as EngineState;
+}
+
+function fakeCb(): EngineCallbacks {
+  return { store: { dispatch: vi.fn(), getState: vi.fn() } } as unknown as EngineCallbacks;
 }
 
 describe('createFamousGalaxiesMetaSlot', () => {
-  const fetch = useFetchMock();
+  it('a settled fetch writes the payload onto state.data.galaxies.famousMeta', async () => {
+    const meta = [M87];
+    mockFetch.mockResolvedValue({ meta });
+    const state = fakeState();
+    const cb = fakeCb();
 
-  it('reports the parsed meta to the engine slice on success', async () => {
-    fetch.mock.mockResolvedValueOnce(
-      new Response(
-        JSON.stringify([
-          {
-            id: 'm31',
-            names: ['Andromeda Galaxy', 'M31'],
-            description: 'The nearest large spiral to the Milky Way.',
-            type: 'Sb',
-          },
-        ]),
-        { status: 200 },
-      ),
-    );
-    const { cb, dispatch } = fakeCb();
-    const slot = createFamousGalaxiesMetaSlot(fakeState, cb);
-    await slot.load(REQ);
+    const slot = createFamousGalaxiesMetaSlot(state, cb);
+    slot.load(REQ);
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
 
-    expect(dispatch).toHaveBeenCalledWith(
-      engineFamousGalaxiesMetaReported(
-        expect.arrayContaining([expect.objectContaining({ id: 'm31' })]) as unknown as never[],
-      ),
-    );
+    expect(state.data.galaxies.famousMeta).toBe(meta);
+    expect(cb.store.dispatch).toHaveBeenCalledTimes(1);
+    expect(cb.store.dispatch).toHaveBeenCalledWith(engineFamousGalaxiesMetaReported(meta));
   });
 
-  it('reports an empty array when the sidecar is missing', async () => {
-    fetch.mock.mockResolvedValue(new Response('not found', { status: 404 }));
-    const { cb, dispatch } = fakeCb();
-    const slot = createFamousGalaxiesMetaSlot(fakeState, cb);
-    await slot.load(REQ).catch(() => {});
+  it('a failed fetch resets the store to []', async () => {
+    // A 404 is permanent under the retry policy, so the slot errors without
+    // waiting out a backoff.
+    mockFetch.mockRejectedValue(new HttpError(404, 'famous_galaxies_meta.json'));
+    const state = fakeState();
+    state.data.galaxies.setFamousMeta([M87]);
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-    expect(dispatch).toHaveBeenCalledWith(engineFamousGalaxiesMetaReported([]));
+    const slot = createFamousGalaxiesMetaSlot(state, fakeCb());
+    slot.load(REQ);
+    await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
+
+    expect(state.data.galaxies.famousMeta).toEqual([]);
   });
 });

@@ -3,7 +3,7 @@
  * texture names for a picked star) into the star it identifies: heliocentric
  * world position in Mpc plus the dequantised absolute magnitude and BP-RP
  * colour. This is the load-bearing "the pick names the right star" resolver;
- * `extractSelectionRow`'s star arm reads through it.
+ * `starSelectionRow`'s `extractRow` reads through it.
  *
  * ── Why binary-search the LEAF nodes, not the whole node table ─────────────
  *

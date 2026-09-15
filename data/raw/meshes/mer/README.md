@@ -29,39 +29,55 @@ curl -L -o "data/raw/meshes/mer/Mars Exploration Rover - Spirit and Opportunity.
 
 Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
+## The `.blend` — the edited source
+
+`mer.blend` is what the pre-bake opens, not the download above. Written by
+Blender 5.2 LTS, it does not open in older versions. Re-import it at any time
+with `npm run import-mesh -- mer` — this **overwrites any edits** made since
+the last import.
+
+`tools/meshes/prebake/importMesh.py` evaluates the 63-object scene at **frame
+1325** before saving. The frame is load-bearing: the deploy animation starts
+with the rover in its folded landing configuration (solar panels shut, 1.28 m
+wide, mast down) and only reaches the deployed rover — panels out to 2.28 m,
+Pancam mast at 1.58 m — past frame ~530; saving frame 0 would ship a folded
+rover. The importer then freezes every part's world transform at that frame;
+parenting is untouched. It also renames each part's UV layer onto the shared
+layer name, re-flags all seven colour maps (which arrive flagged Non-Color)
+as sRGB so the bake doesn't wash out, and drops two rival Material Output
+nodes — targeted at Cycles and each fed by a bare Diffuse BSDF, they win over
+the Principled the file renders with; left in, those parts would bake black
+albedo (a Diffuse node emits nothing) and roughness 1.
+
+Every joint hangs off a material-less marker cube, and those cubes stay in
+the file as parents: the pre-bake omits them from the join, and its
+`parent_clear` keeps each freed part's transform — which is what lets the
+cubes go without detaching the wheels and panels they carry.
+
+To edit the model: open `mer.blend` in Blender 5.2 LTS, change materials,
+save, update this file's line in `../meshes.sha256`, then
+`npm run prebake-mesh -- mer` and `npm run build-meshes`.
+
 ## The pre-bake — what `build-meshes` actually reads
 
-`MESH_SOURCES.mer` points at `mer.prebaked.glb`, **not** the download: the
-source is a 63-object Blender scene with nine materials and two lights, and
-`buildMeshes` reads GLB with one material. The flattening happens upstream,
-once:
+`MESH_SOURCES.mer` points at `mer.prebaked.glb`, **not** `mer.blend`: the
+source carries nine materials and `buildMeshes` reads GLB with one material.
+The flattening happens upstream, once:
 
 ```
 npm run prebake-mesh -- mer    # Blender 5.2 LTS; ~10 s, not run in CI
 ```
 
-`tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 1325**,
-leaves the 21 material-less marker cubes behind, joins the 40 remaining parts,
-smart-UV-projects and bakes all nine materials into one 2048² atlas per
-`BAKE_PASSES` row — today a single albedo row. Its output and the loose
-`mer.prebaked.albedo.png` beside it are gitignored build products — regenerate
-them, don't archive them. Having no normal or metallicRoughness map is
-expected: `buildMeshes` substitutes 1×1 constants and lists them
-under `substituted`.
-
-Two things about this file bite:
-
-- **The frame is load-bearing.** The deploy animation starts with the rover in
-  its folded landing configuration (solar panels shut, 1.28 m wide, mast down)
-  and only reaches the deployed rover — panels out to 2.28 m, Pancam mast at
-  1.58 m — past frame ~530. Baking frame 0 would ship a folded rover.
-- **Every joint hangs off a material-less cube.** Those cubes are parents, so
-  deleting them before the join detaches the wheels and panels and scatters the
-  model; the pre-bake leaves them in place and simply omits them from the join.
-
-All seven colour maps arrive flagged Non-Color, so the renderer skips the sRGB
-decode and the rover bakes out washed; the pre-bake re-flags anything feeding
-Base Color as sRGB.
+`tools/meshes/prebake/meshPrebake.py` leaves the 21 material-less marker
+cubes behind, joins the 40 remaining parts, smart-UV-projects and bakes all
+nine materials into one 2048² atlas per `BAKE_PASSES` row — albedo, normal,
+roughness and metallic. Its output and the four loose `mer.prebaked.*.png`
+atlases beside it are gitignored build products — regenerate them, don't
+archive them. The GLB carries the normal atlas and the metallicRoughness pair
+the glTF exporter packs from the last two; `substituted: []` on the generated
+row is the check that the exporter still packs them. Every material authors
+metallic 0, so that atlas bakes flat black. Roughness is 0.5 over 90 % of the
+baked texels and 0.1–0.4 over the rest.
 
 ## Attribution
 
@@ -77,8 +93,8 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 
 Blender 4.02 file: 61 mesh objects, 32,814 tris, nine materials, 13 packed
 textures (1024²/512²/256²), 38 animation actions. No armature. Normal maps are
-packed in the file but wired into nothing, so nothing carries them; the
-pre-bake bakes albedo only.
+packed in the file but wired into nothing, so nothing carries them and the
+normal atlas bakes flat.
 
 **Units: metres, +Z up.** The scene's unit system reads `NONE`, but at frame
 1325 the deployed solar array spans 2.28 m against the real 2.3 m and the

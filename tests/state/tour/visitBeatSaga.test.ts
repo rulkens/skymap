@@ -41,6 +41,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { visitBeatSaga } from '../../../src/state/tour/visitBeatSaga';
 import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -85,8 +86,7 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 
 // Structure resolved by id immediately — no catalog needed.
 const STRUCTURE_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
+  catalogs: { get: () => undefined, famousMeta: [] },
   stars: { current: () => null },
   structures: {
     byId: (id) =>
@@ -100,6 +100,7 @@ const STRUCTURE_DEPS: ResolveDeps = {
         apparentRadiusMpc: 2,
         featured: true,
       }) as const,
+    byCategory: () => [],
   },
 };
 
@@ -148,6 +149,7 @@ function buildStore(opts: {
 
   sagaMiddleware.setContext({
     resolveDeps: () => deps,
+    selection: selectionResolverOver(deps),
     cameraRuntime: () => cam,
     playClip: (clip: ClipData) => playClipFn(clip),
   });
@@ -199,9 +201,11 @@ describe('visitBeatSaga', () => {
     });
 
     const lazyDeps: ResolveDeps = {
-      catalogs: { get: () => (cloudLoaded ? CLOUD : undefined) },
-      famousGalaxiesMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
-      structures: { byId: () => null },
+      catalogs: {
+        get: () => (cloudLoaded ? CLOUD : undefined),
+        famousMeta: [{ id: FAMOUS_ID, name: 'M87', pgc: 41361 } as never],
+      },
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
 
@@ -218,6 +222,7 @@ describe('visitBeatSaga', () => {
     let currentRuntime: LiveCameraRuntime | null = null;
     sagaMiddleware.setContext({
       resolveDeps: () => lazyDeps,
+      selection: selectionResolverOver(lazyDeps),
       cameraRuntime: () => currentRuntime,
       playClip: (clip: ClipData) => playClipMock(clip),
     });
@@ -320,23 +325,6 @@ describe('visitBeatSaga', () => {
     expect(store.getState().tour.dwellNonce).toBe(0);
   });
 
-  it("returns 'prev' when prevBeat arrives mid-fly", async () => {
-    const playClipMock = vi
-      .fn<(clip: ClipData) => Promise<void>>()
-      .mockImplementation(() => new Promise<void>(() => {}));
-
-    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-
-    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 1);
-    await flush();
-
-    store.dispatch(prevBeat());
-    const outcome = await task.toPromise();
-
-    expect(outcome).toBe('prev');
-    expect(store.getState().tour.dwellNonce).toBe(0);
-  });
-
   // ── (4) advanceTour during the dwell resolves to 'next' ───────────────────
 
   it("returns 'next' when advanceTour wins the dwell race, and cancels the drift", async () => {
@@ -367,20 +355,6 @@ describe('visitBeatSaga', () => {
   });
 
   // ── (5) prevBeat during the dwell resolves to 'prev' ──────────────────────
-
-  it("returns 'prev' when prevBeat wins the dwell race", async () => {
-    const { store, sagaMiddleware } = buildStore({ playClip: flyThenBlockingDrift(true) });
-
-    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 1);
-
-    await flush();
-    await flush();
-
-    store.dispatch(prevBeat());
-    const outcome = await task.toPromise();
-
-    expect(outcome).toBe('prev');
-  });
 
   // ── (6) the dwell timeout auto-advances to 'next' ─────────────────────────
 

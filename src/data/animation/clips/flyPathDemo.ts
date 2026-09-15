@@ -31,7 +31,8 @@
  * To slow one stretch further, pin a waypoint's `over`; to shape the curve where
  * catalog positions bend it awkwardly, drop a hand-placed `atPoint(world,
  * distance)` control point between two `atFocus` waypoints — the forms interleave
- * freely. The group ids are `${category}-${seedId}` per `resolveFocusId`.
+ * freely. The group ids are `${category}-${seedId}`, per the composed resolver's
+ * `resolveFocusId`.
  */
 
 import type { Clip } from '../../../@types/animation/Clip';

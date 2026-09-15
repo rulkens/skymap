@@ -1,14 +1,8 @@
-"""meshPrebake — flatten a NASA 3D Resources model to what buildMeshes accepts.
-
-Every source here is a multi-material scene of dozens of parts, and several
-carry a stow→deploy animation whose SAVED transforms are not the pose we want.
-`buildMeshes` refuses multi-material input by design, so the flattening happens
-HERE, once, and MESH_SOURCES points at the OUTPUT. Decimate BEFORE the
-unwrap+bake: baking into UVs that decimation then moves mis-registers the atlas
-against the triangles that survive.
-
-Run:  npm run prebake-mesh -- <key>   (Blender 5.2 LTS; not run in CI)
-"""
+"""meshPrebake — bake an imported `<key>.blend` (importMesh.py) to what buildMeshes accepts.
+`buildMeshes` refuses multi-material input, so the join+bake happens HERE and MESH_SOURCES
+points at the OUTPUT. Decimate BEFORE the unwrap+bake: baking into UVs that decimation then
+moves mis-registers the atlas against the triangles that survive.
+Run:  npm run prebake-mesh -- <key>   (Blender 5.2 LTS; not run in CI)"""
 
 import os
 import sys
@@ -20,29 +14,89 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 
 ATLAS_PX = 2048
 
-# (name, `bpy.ops.object.bake` kwargs, atlas colourspace) — one atlas per row,
-# `bake_pass` runs a row start to finish.
+EMISSION_COLOUR = "Emission Color"
+EMISSION_STRENGTH = "Emission Strength"
+
+
+def socket_state(socket):
+    source = socket.links[0].from_socket if socket.links else None
+    value = socket.default_value
+    return source, tuple(value) if hasattr(value, "__len__") else value
+
+
+def swap_to_emission(socket_name):
+    """Cycles has no metallic bake, and its DIFFUSE colour pass of a metal is
+    zero — so both rows that need a raw Principled input borrow the emission
+    output instead: the named socket (a scalar as the grey `(v, v, v)`, an image
+    re-linked socket to socket) drives Emission Color at strength 1 for the
+    duration of the bake. `use_pass_direct`/`use_pass_indirect` are off, so EMIT
+    returns that value unlit. The returned undo runs before the next row bakes,
+    so no swap outlives its own row whatever order BAKE_PASSES lists them in."""
+
+    def prepare(materials):
+        undo = []
+        plain = 0
+        for mat in materials:
+            if mat is None or not mat.use_nodes:
+                continue
+            tree = mat.node_tree
+            principled = [n for n in tree.nodes if n.type == "BSDF_PRINCIPLED"]
+            plain += len(principled) == 0
+            for node in principled:
+                colour = node.inputs[EMISSION_COLOUR]
+                strength = node.inputs[EMISSION_STRENGTH]
+                undo.append((tree, node, socket_state(colour), socket_state(strength)))
+                for link in list(colour.links) + list(strength.links):
+                    tree.links.remove(link)
+                socket = node.inputs[socket_name]
+                if socket.links:
+                    tree.links.new(colour, socket.links[0].from_socket)
+                elif hasattr(socket.default_value, "__len__"):
+                    colour.default_value = tuple(socket.default_value)
+                else:
+                    v = socket.default_value
+                    colour.default_value = (v, v, v, 1.0)
+                strength.default_value = 1.0
+        if plain:
+            log("%s pass: %d materials have no Principled node — they bake their own "
+                "emission as %s, black unless they emit" % (socket_name, plain, socket_name))
+        return lambda: restore_emission(undo)
+
+    return prepare
+
+
+def restore_emission(undo):
+    for tree, node, colour_state, strength_state in undo:
+        for socket, (source, value) in ((node.inputs[EMISSION_COLOUR], colour_state),
+                                        (node.inputs[EMISSION_STRENGTH], strength_state)):
+            for link in list(socket.links):
+                tree.links.remove(link)
+            socket.default_value = value
+            if source is not None:
+                tree.links.new(socket, source)
+
+
+# (name, `bpy.ops.object.bake` kwargs, atlas colourspace, optional material
+# preparation returning its own undo) — one atlas per row, `bake_pass` runs a
+# row start to finish. Every row but albedo is DATA: an atlas of slopes or
+# material values saved through the sRGB view transform comes out gamma-bent,
+# and the runtime decodes `_normal` and `_mr` linearly.
 BAKE_PASSES = [
-    ("albedo", dict(type="DIFFUSE", pass_filter={"COLOR"}), "sRGB"),
+    ("albedo", dict(type="EMIT"), "sRGB", swap_to_emission("Base Color")),
+    ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None),
+    ("roughness", dict(type="ROUGHNESS"), "Non-Color", None),
+    ("metallic", dict(type="EMIT"), "Non-Color", swap_to_emission("Metallic")),
 ]
 
 
-def source(key, filename, frame=None, triangles=None, drop_materials=()):
+def source(key, triangles=None):
     d = os.path.join(REPO, "data/raw/meshes", key)
     return {
         "key": key,
         "dir": d,
-        "src": os.path.join(d, filename),
+        "src": os.path.join(d, "%s.blend" % key),
         "out": os.path.join(d, "%s.prebaked.glb" % key),
-        # None = the file's saved transforms; an int = that animation frame. The
-        # deploy animations park the rover STOWED at their own frame 0, so a
-        # source with actions must name a frame or risk baking a folded rover.
-        "frame": frame,
         "triangles": triangles,
-        # Materials that exist only to mark a rig pivot or fake a ground shadow.
-        # An object whose materials are ALL in this set goes; the raise guards
-        # against the name drifting upstream and the marker silently shipping.
-        "drop_materials": set(drop_materials),
     }
 
 
@@ -50,16 +104,8 @@ def atlas_path(cfg, name):
     return os.path.join(cfg["dir"], "%s.prebaked.%s.png" % (cfg["key"], name))
 
 
-SOURCES = {
-    s["key"]: s
-    for s in [
-        source("voyager", "Voyager Probe (B).glb"),
-        source("perseverance", "Mars 2020 Perseverance Rover.glb", frame=120, triangles=100_000),
-        source("curiosity", "Curiosity Rover (MSL) (Clean).blend", frame=206,
-               drop_materials=("pivot", "shadow2")),
-        source("mer", "Mars Exploration Rover - Spirit and Opportunity.blend", frame=1325),
-    ]
-}
+SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance", triangles=100_000),
+                                 source("curiosity"), source("mer"), source("hubble")]}
 
 
 def log(msg):
@@ -68,86 +114,38 @@ def log(msg):
 
 
 def load(cfg):
-    if cfg["src"].endswith(".blend"):
-        bpy.ops.wm.open_mainfile(filepath=cfg["src"])
-    else:
-        bpy.ops.wm.read_factory_settings(use_empty=True)
-        bpy.ops.import_scene.gltf(filepath=cfg["src"], merge_vertices=True)
-    scene = bpy.context.scene
-    for vl in scene.view_layers:
-        exclusions(vl.layer_collection)
-    if cfg["frame"] is not None:
-        scene.frame_set(cfg["frame"])
-    return scene
+    bpy.ops.wm.open_mainfile(filepath=cfg["src"])
+    return bpy.context.scene
 
 
-def exclusions(layer_collection):
-    layer_collection.exclude = False
-    layer_collection.hide_viewport = False
-    for child in layer_collection.children:
-        exclusions(child)
-
-
-def fix_colour_management():
-    """Both .blend rovers reach 4.x with their colour maps flagged Non-Color, so
-    the renderer skips the sRGB decode and the bake comes out washed to white.
-    Anything feeding Base Color is an sRGB colour map by definition. The same
-    pass re-points materials at a texture whose file went missing (Curiosity
-    ships one duplicate that resolves to nothing and would bake black)."""
-    resolved = {i.name.split(".png")[0]: i for i in bpy.data.images if tuple(i.size) != (0, 0)}
-    fixed = 0
-    relinked = 0
-    for mat in bpy.data.materials:
-        if not mat.use_nodes:
-            continue
-        for node in mat.node_tree.nodes:
-            if node.type != "TEX_IMAGE" or node.image is None:
-                continue
-            if not any(l.to_socket.name == "Base Color" for o in node.outputs for l in o.links):
-                continue
-            if tuple(node.image.size) == (0, 0):
-                stand_in = resolved.get(node.image.name.split(".png")[0])
-                if stand_in is None:
-                    raise RuntimeError("prebake: %s has no pixels and no replacement" % node.image.name)
-                node.image = stand_in
-                relinked += 1
-            if node.image.colorspace_settings.name != "sRGB":
-                node.image.colorspace_settings.name = "sRGB"
-                fixed += 1
-    return fixed, relinked
-
-
-def keepers(cfg, scene):
-    """Surface geometry only: no cameras, lights, face-less meshes or the marker
-    cubes the rigs hang joints on. Nothing is DELETED here — every rover parents
-    its parts to empties, an armature or a marker cube, and removing a parent
-    drops its children's transform and scatters the model. The rejects go once
-    the join has baked the survivors' world matrices in."""
+def keepers(scene):
+    """Surface geometry only: no cameras, lights or face-less meshes."""
     keep = []
     dropped = 0
-    marked = 0
     for obj in scene.objects:
         if obj.type != "MESH":
             continue
         materials = {s.material.name for s in obj.material_slots if s.material}
         if len(obj.data.polygons) == 0 or not materials:
             dropped += 1
-        elif materials <= cfg["drop_materials"]:
-            marked += 1
         else:
             keep.append(obj)
-    if cfg["drop_materials"] and marked == 0:
-        raise RuntimeError("prebake: no %s objects to drop — the markers were renamed upstream"
-                           % sorted(cfg["drop_materials"]))
-    return keep, dropped, marked
+    return keep, dropped
 
 
-def apply_modifiers(meshes):
-    """Curiosity hangs geometry-nodes modifiers off a dozen parts and
-    Perseverance armature-deforms one; `join` reads the object's own mesh, so
-    whatever is not applied here is lost."""
-    select(meshes)
-    bpy.ops.object.convert(target="MESH")
+def source_uv(meshes):
+    """`join` merges UV layers BY NAME, so a part whose single layer is named
+    differently lands with zeroed UVs and bakes one texel of flat colour. The
+    import unified them; an edit in Blender can quietly undo that."""
+    shared = None
+    for obj in meshes:
+        names = [l.name for l in obj.data.uv_layers]
+        if len(names) != 1 or (shared is not None and names[0] != shared):
+            raise RuntimeError("prebake: %s has uv layers %s; every mesh needs exactly one, "
+                               "all named alike — re-run `npm run import-mesh -- <key>` or "
+                               "remove the extra layer" % (obj.name, names))
+        shared = names[0]
+    return shared
 
 
 def select(objects):
@@ -161,37 +159,11 @@ def select(objects):
     bpy.context.view_layer.objects.active = objects[0]
 
 
-SOURCE_UV = "source"
-
-
-def unify_source_uvs(meshes):
-    """`join` merges UV layers BY NAME, and these scenes mix 'UVTex', 'UVMap'
-    and 'UVMap.001' across their parts — so a part whose layer name loses the
-    vote lands in the merged mesh with zeroed UVs and bakes one texel of flat
-    colour over its whole surface. Collapsing every part to its render layer
-    under one name first is what makes the bake read the authored textures."""
-    for obj in meshes:
-        layers = obj.data.uv_layers
-        if not layers:
-            layers.new(name=SOURCE_UV)
-            continue
-        render = next((l for l in layers if l.active_render), layers[0])
-        for other in [l for l in layers if l != render]:
-            layers.remove(other)
-        layers[0].name = SOURCE_UV
-        layers[0].active_render = True
-
-
 def join_meshes(scene, meshes):
     select(meshes)
     if len(meshes) > 1:
         bpy.ops.object.join()
     joined = bpy.context.view_layer.objects.active
-    # The join hands its own animation data to the survivor. `transform_apply`
-    # bakes the pose into the vertices and zeroes the channels, but the F-curves
-    # then re-apply it on the next evaluation and the export ships the rotation
-    # TWICE. Dropping the action is what makes the applied transform stick.
-    joined.animation_data_clear()
     bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     for obj in [o for o in scene.objects if o is not joined]:
@@ -215,7 +187,7 @@ def decimate(obj, target):
     return triangles(obj)
 
 
-def unwrap(obj):
+def unwrap(obj, source_name):
     """A second UV set: the source UVs stay put so the bake can still read the
     original materials through them."""
     uv = obj.data.uv_layers.new(name="bake")
@@ -226,7 +198,7 @@ def unwrap(obj):
     # reference goes stale across the edit-mode round trip below.
     obj.data.uv_layers.active = uv
     uv_name = uv.name
-    obj.data.uv_layers[SOURCE_UV].active_render = True
+    obj.data.uv_layers[source_name].active_render = True
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
@@ -256,9 +228,11 @@ def arm_materials(obj):
         mat.node_tree.nodes.active = node
 
 
-def bake_pass(obj, uv_name, cfg, name, settings, colourspace):
+def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare):
     """One BAKE_PASSES row start to finish: its atlas image, the bake, the save."""
-    image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX, alpha=False)
+    is_data = colourspace != "sRGB"
+    image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX,
+                                alpha=False, is_data=is_data)
     image.generated_color = (0, 0, 0, 1)
     image.colorspace_settings.name = colourspace
     for slot in obj.material_slots:
@@ -278,7 +252,10 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
+    restore = prepare([s.material for s in obj.material_slots]) if prepare else None
     bpy.ops.object.bake(uv_layer=uv_name, use_clear=True, **settings)
+    if restore is not None:
+        restore()
 
     image.filepath_raw = atlas_path(cfg, name)
     image.file_format = "PNG"
@@ -286,21 +263,31 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace):
     return image
 
 
+def atlas_node(tree, image):
+    node = tree.nodes.new("ShaderNodeTexImage")
+    node.image = image
+    return node
+
+
 def flatten_materials(obj, key, images):
-    """One material sampling the baked atlases, replacing the whole stack."""
+    """One material sampling the baked atlases, replacing the whole stack.
+    Roughness and Metallic are linked as separate images on purpose: the glTF
+    exporter is what packs them into the single `metallicRoughnessTexture`
+    (roughness G, metallic B) the runtime samples."""
     obj.data.materials.clear()
     mat = bpy.data.materials.new(key)
     mat.use_nodes = True
-    bsdf = mat.node_tree.nodes["Principled BSDF"]
-    # The channels no BAKE_PASSES row bakes. These two reach the GLB as material
-    # factors, which buildMeshes turns into the 1x1 _mr.png the runtime samples;
-    # Blender's own default roughness is 0.5, so dropping them would relight the
-    # rovers. They go with the rows that supersede them.
-    bsdf.inputs["Metallic"].default_value = 0.0
-    bsdf.inputs["Roughness"].default_value = 0.7
-    tex = mat.node_tree.nodes.new("ShaderNodeTexImage")
-    tex.image = images["albedo"]
-    mat.node_tree.links.new(bsdf.inputs["Base Color"], tex.outputs["Color"])
+    tree = mat.node_tree
+    bsdf = tree.nodes["Principled BSDF"]
+    for name, socket in (("albedo", "Base Color"), ("roughness", "Roughness"),
+                         ("metallic", "Metallic")):
+        tree.links.new(bsdf.inputs[socket], atlas_node(tree, images[name]).outputs["Color"])
+    # The Normal Map node is how the exporter learns the atlas is tangent space;
+    # an image wired straight into Normal exports as nothing at all.
+    normal_map = tree.nodes.new("ShaderNodeNormalMap")
+    normal_map.space = "TANGENT"
+    tree.links.new(normal_map.inputs["Color"], atlas_node(tree, images["normal"]).outputs["Color"])
+    tree.links.new(bsdf.inputs["Normal"], normal_map.outputs["Normal"])
     obj.data.materials.append(mat)
 
 
@@ -357,13 +344,10 @@ def main():
     started = time.time()
 
     scene = load(cfg)
-    log("%s: loaded %s at frame %s" % (key, os.path.basename(cfg["src"]), cfg["frame"]))
-    log("colour management: %d images decoded as sRGB, %d relinked" % fix_colour_management())
-    keep, dropped, marked = keepers(cfg, scene)
-    log("keeping %d meshes; left behind %d face-less/matless and %d marker objects"
-        % (len(keep), dropped, marked))
-    apply_modifiers(keep)
-    unify_source_uvs(keep)
+    log("%s: loaded %s at frame %s" % (key, os.path.basename(cfg["src"]), scene.frame_current))
+    keep, dropped = keepers(scene)
+    log("keeping %d meshes; left behind %d face-less/matless" % (len(keep), dropped))
+    source_name = source_uv(keep)
     obj = join_meshes(scene, keep)
     log("joined -> %d tris, %d material slots, uv layers %s"
         % (triangles(obj), len(obj.material_slots), [l.name for l in obj.data.uv_layers]))
@@ -371,12 +355,12 @@ def main():
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
     log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
 
-    uv_name = unwrap(obj)
+    uv_name = unwrap(obj, source_name)
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
     arm_materials(obj)
     images = {}
-    for name, settings, colourspace in BAKE_PASSES:
-        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace)
+    for name, settings, colourspace, prepare in BAKE_PASSES:
+        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare)
         log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
             % (ATLAS_PX, name, images[name].filepath_raw, time.time() - started))
 

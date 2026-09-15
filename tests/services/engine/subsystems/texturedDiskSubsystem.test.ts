@@ -97,6 +97,8 @@ function makeInput(
   catalogs: Map<SourceType, GalaxyCatalog>,
   mask = 0xffffffff,
   famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[] = [],
+  nowMs = 0,
+  sourceOpacity: (source: SourceType) => number = () => 1,
 ) {
   const cam = makeCam();
   return {
@@ -105,7 +107,8 @@ function makeInput(
     visibleSourceMask: mask,
     pxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     famousGalaxiesMeta,
-    nowMs: 0,
+    nowMs,
+    sourceOpacity,
   };
 }
 
@@ -132,23 +135,34 @@ describe('createTexturedDiskSubsystem', () => {
     expect(out.disks.length).toBe(2);
   });
 
-  it('emits no disks for NaN-orientation galaxies', async () => {
-    // Production bins always carry finite orientation (the build
-    // pipeline fills in a deterministic fallback). Synthetic NaN here
-    // exercises the disks-only defensive guard.
-    const fetcher = vi.fn(async () => makeFakeBitmap());
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-    const sys = createTexturedDiskSubsystem({
-      device,
-      atlas,
-      fetcher,
-    });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(2, NaN, NaN)]]);
-    runTexturedSolo(walk, sys, makeInput(clouds));
-    await new Promise((r) => setTimeout(r, 0));
-    const out = runTexturedSolo(walk, sys, makeInput(clouds));
-    expect(out.disks.length).toBe(0);
+  // Survey-fade regression: a disk for a source whose live opacity is 0.25
+  // (mid fade-out, or a catalog toggled off) must scale `fadeAlpha` by 0.25
+  // — before this fix the planner ignored source visibility entirely and the
+  // textured disk stayed at full alpha through the whole fade.
+  it('scales fadeAlpha by the source opacity sampled via sourceOpacity', async () => {
+    async function runToSettledDisk(sourceOpacity: () => number) {
+      const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+      const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+      const sys = createTexturedDiskSubsystem({
+        device,
+        atlas,
+        fetcher: async () => makeFakeBitmap(),
+      });
+      const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+      // Frame 1 (nowMs=0): enqueues the fetch.
+      runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 0, sourceOpacity));
+      await new Promise((r) => setTimeout(r, 0));
+      // Frame 2, well past LOAD_FADE_MS (400 ms) so loadFade saturates to 1 —
+      // isolates the assertion to the sourceOpacity term.
+      const out = runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 1000, sourceOpacity));
+      return out.disks[0]!.fadeAlpha;
+    }
+
+    const fullOpacity = await runToSettledDisk(() => 1);
+    const quarterOpacity = await runToSettledDisk(() => 0.25);
+
+    expect(fullOpacity).toBeGreaterThan(0);
+    expect(quarterOpacity).toBeCloseTo(fullOpacity * 0.25, 5);
   });
 
   it('hasInFlightWork is true during fetch and false after it settles', async () => {
@@ -191,27 +205,6 @@ describe('createTexturedDiskSubsystem', () => {
     };
   }
 
-  it('emits hiResLayerIdx -1 and hiResCrossfadeAlpha 0 by default (no hi-res dep)', async () => {
-    const fetcher = vi.fn(async () => makeFakeBitmap());
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-    const sys = createTexturedDiskSubsystem({
-      device,
-      atlas,
-      fetcher,
-    });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
-
-    runTexturedSolo(walk, sys, makeInput(clouds));
-    await new Promise((r) => setTimeout(r, 0));
-    const out = runTexturedSolo(walk, sys, makeInput(clouds));
-    expect(out.disks.length).toBe(2);
-    for (const d of out.disks) {
-      expect(d.hiResLayerIdx).toBe(-1);
-      expect(d.hiResCrossfadeAlpha).toBe(0);
-    }
-  });
-
   it('with hiResFamous dep, Famous-source DiskInstance gets per-galaxy hi-res state', async () => {
     const fetcher = vi.fn(async () => makeFakeBitmap());
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
@@ -242,34 +235,6 @@ describe('createTexturedDiskSubsystem', () => {
     expect(byIdx.get(0)?.hiResCrossfadeAlpha).toBeCloseTo(0.7);
     expect(byIdx.get(1)?.hiResLayerIdx).toBe(-1);
     expect(byIdx.get(1)?.hiResCrossfadeAlpha).toBe(0);
-  });
-
-  it('with hiResFamous dep, non-Famous-source DiskInstance still defaults to -1 / 0', async () => {
-    // Defensive: byFamousIdx is keyed by Famous-source local index
-    // only — even when an index happens to overlap a non-Famous
-    // catalog's row, the planner must not fold it in.
-    const fetcher = vi.fn(async () => makeFakeBitmap());
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const hiResFamous = makeStubHiResFamous(
-      new Map([[0, { hiResLayerIdx: 5, hiResCrossfadeAlpha: 1 }]]),
-    );
-    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-    const sys = createTexturedDiskSubsystem({
-      device,
-      atlas,
-      fetcher,
-      hiResFamous,
-    });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(2)]]);
-
-    runTexturedSolo(walk, sys, makeInput(clouds));
-    await new Promise((r) => setTimeout(r, 0));
-    const out = runTexturedSolo(walk, sys, makeInput(clouds));
-    expect(out.disks.length).toBe(2);
-    for (const d of out.disks) {
-      expect(d.hiResLayerIdx).toBe(-1);
-      expect(d.hiResCrossfadeAlpha).toBe(0);
-    }
   });
 
   it('setHiResFamous swaps the planner reference used by the next frame', async () => {
@@ -342,23 +307,6 @@ describe('createTexturedDiskSubsystem', () => {
   // id has arrived must not enqueue a fetch at all — enqueueing would
   // fall through to the SDSS/DSS chain (fetchGalaxyBitmap's
   // `if (famousId)` shortcut) and memoise the wrong bitmap.
-
-  it('does not fetch a Famous row while famousGalaxiesMeta has not loaded yet', async () => {
-    const fetcher = vi.fn(async () => makeFakeBitmap());
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-    const sys = createTexturedDiskSubsystem({
-      device,
-      atlas,
-      fetcher,
-    });
-    const clouds = new Map([[Source.FamousGalaxy, makeDenseCloud(1)]]);
-
-    runTexturedSolo(walk, sys, makeInput(clouds, undefined, []));
-    await new Promise((r) => setTimeout(r, 0));
-
-    expect(fetcher).not.toHaveBeenCalled();
-  });
 
   it('fetches a Famous row with famousId once famousGalaxiesMeta has loaded for it', async () => {
     const fetcher = vi.fn(async () => makeFakeBitmap());

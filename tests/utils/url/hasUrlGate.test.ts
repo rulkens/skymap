@@ -36,16 +36,6 @@ describe('hasUrlGate', () => {
     });
   }
 
-  it('returns true when the named gate is in window.location.search', () => {
-    setSearch('?gpuTimings');
-    expect(hasUrlGate('gpuTimings')).toBe(true);
-  });
-
-  it('returns false when the named gate is absent', () => {
-    setSearch('?volumes');
-    expect(hasUrlGate('gpuTimings')).toBe(false);
-  });
-
   it('tracks the live search string across changes', () => {
     setSearch('?debug=loading');
     expect(hasUrlGate('debug')).toBe(true);

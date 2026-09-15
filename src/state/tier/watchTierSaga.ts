@@ -40,7 +40,6 @@ import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
 import { setMilkyWayTuning } from '../settings/settingsSlice';
-import { resolveFocusId } from '../../services/url/resolveFocusId';
 import { catalogLoaded } from '../catalog/catalogLoaded';
 import { MILKY_WAY_STARS_PER_TIER } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RootState, SagaContext } from '../../store/types';
@@ -50,16 +49,15 @@ export function* watchTierSaga() {
     const prev = yield* select(selectTier);
     if (prev === action.payload) return;
 
-    const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+    const selection = yield* getContext<SagaContext['selection']>('selection');
 
     // Capture durable galaxy focus ids BEFORE the write — the old clouds are
-    // still present, so focusIdOf can read the objID. Only sources whose
-    // tier target changes are captured (tier-agnostic sources never reload).
-    // Structure / milkyWay refs are durable and survive untouched.
+    // still present, so the composed resolver's focusIdOf can read the objID.
+    // Only sources whose tier target changes are captured (tier-agnostic
+    // sources never reload). Structure / milkyWay refs are durable and survive
+    // untouched.
     const state = yield* select((s: RootState) => s);
-    const reanchor = resolveDeps
-      ? captureGalaxyFocusIds(state, resolveDeps(), prev, action.payload)
-      : [];
+    const reanchor = captureGalaxyFocusIds(state, selection, prev, action.payload);
 
     // Clear hover across the swap: a stale hover ref over a replaced cloud
     // would resolve to a different galaxy. (Select / focus are re-anchored below.)
@@ -78,9 +76,7 @@ export function* watchTierSaga() {
     // newer requestTier arrives, preventing a stale re-anchor).
     for (const { slot, source, focusId } of reanchor) {
       yield* take((a: Action) => catalogLoaded.match(a) && a.payload.source === source);
-      // resolveDeps is guaranteed non-null here: reanchor is only non-empty when
-      // resolveDeps was available (the `resolveDeps ? ... : []` guard above).
-      const ref = resolveFocusId(focusId, resolveDeps!());
+      const ref = selection.resolveFocusId(focusId);
       yield* put(SELECTION_WRITE_BY_SLOT[slot](ref)); // hit → re-anchor; miss → null (clears slot)
     }
   });

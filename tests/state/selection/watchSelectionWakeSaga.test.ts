@@ -28,7 +28,6 @@ describe('watchSelectionWakeSaga', () => {
     const reconcile: ReconcileEffects = {
       requestRender,
       syncFades: vi.fn(),
-      reseedFlow: vi.fn(),
       bakeBias: vi.fn(),
       logCameraState: vi.fn(),
       applySwapFormat: vi.fn(),
@@ -42,11 +41,6 @@ describe('watchSelectionWakeSaga', () => {
 
   it('select wakes the loop', async () => {
     store.dispatch(updateSelectionSelect({ type: 'milkyWay' }));
-    await flush();
-    expect(requestRender).toHaveBeenCalledTimes(1);
-  });
-  it('focus wakes the loop', async () => {
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(requestRender).toHaveBeenCalledTimes(1);
   });

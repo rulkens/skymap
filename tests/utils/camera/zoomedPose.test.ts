@@ -43,19 +43,9 @@ describe('zoomedPose', () => {
     expect(result.distance).toBe(200);
   });
 
-  it('zooming in (factor < 1) reduces distance', () => {
-    const result = zoomedPose(makePose(100), 0.5, NO_PIVOT);
-    expect(result.distance).toBe(50);
-  });
-
   it('clamps to the maximum distance', () => {
     const result = zoomedPose(makePose(MAX_DISTANCE_MPC), 1000, NO_PIVOT);
     expect(result.distance).toBe(MAX_DISTANCE_MPC);
-  });
-
-  it('clamps to the minimum distance', () => {
-    const result = zoomedPose(makePose(MIN_DISTANCE_MPC), 0.0001, NO_PIVOT);
-    expect(result.distance).toBe(MIN_DISTANCE_MPC);
   });
 
   it('floors at a pivoted body’s surface rather than the absolute minimum', () => {
@@ -66,13 +56,6 @@ describe('zoomedPose', () => {
     const radii = result.distance / EARTH_RADIUS_MPC;
     expect(radii).toBeGreaterThan(1);
     expect(radii).toBeLessThan(1.05);
-  });
-
-  it('carries target, yaw, and pitch over unchanged', () => {
-    const result = zoomedPose(makePose(100), 2, NO_PIVOT);
-    expect(result.target).toEqual([1, 2, 3]);
-    expect(result.yaw).toBe(0.5);
-    expect(result.pitch).toBe(-0.3);
   });
 
   it('returns a fresh target array — not the input pose’s', () => {

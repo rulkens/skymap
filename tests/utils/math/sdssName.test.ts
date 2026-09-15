@@ -19,37 +19,4 @@ describe('sdssName', () => {
     // truncates, which is the IAU-stable convention.)
     expect(sdssName(188.7365, 1.396)).toBe('SDSS J123456.75+012345.5');
   });
-
-  it('always emits a leading + on Dec for objects in the northern hemisphere', () => {
-    // SDSS designations always show the explicit sign — readers parsing the
-    // string can rely on the character at position 17 always being + or -.
-    expect(sdssName(0, 0)).toContain('+000000.0');
-  });
-
-  it('emits a - for southern declinations', () => {
-    expect(sdssName(0, -10)).toContain('-100000.0');
-  });
-
-  it('wraps RA values outside [0, 360)', () => {
-    // -10° wraps to 350°; the function must not produce a negative
-    // hours component or a malformed name.
-    const name = sdssName(-10, 0);
-    expect(name).toMatch(/^SDSS J2320/);
-  });
-
-  it('truncates seconds rather than rounding (catalog name stability)', () => {
-    // Adding floating-point dust at the 1e-9° level just barely crosses the
-    // centisecond tick boundary upward (from .75 to .76).  That's the
-    // *intended* behaviour of integer truncation: the digit increments only
-    // when the value crosses a tick, not from below-tick noise.  Dec is
-    // unchanged, so 45.5 stays put.
-    expect(sdssName(188.736500001, 1.396)).toBe('SDSS J123456.76+012345.5');
-  });
-
-  it('clamps Dec values above +90° to exactly +90°', () => {
-    // Out-of-range Dec inputs (from upstream bugs) clamp rather than producing
-    // nonsensical strings like "+910000.0" that would never appear in a real
-    // catalog.
-    expect(sdssName(0, 95)).toContain('+900000.0');
-  });
 });

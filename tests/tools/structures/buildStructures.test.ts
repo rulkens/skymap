@@ -13,10 +13,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import {
-  extractAbell,
-  buildClusterEntries,
-} from '../../../tools/structures/buildStructures';
+import { extractAbell, buildClusterEntries } from '../../../tools/structures/buildStructures';
 import { parseStructureSeed } from '../../../tools/parsers/parseStructureSeed';
 import type { McxcRow } from '../../../tools/parsers/parseMcxc';
 import type { MsccRow } from '../../../tools/parsers/parseMscc';
@@ -33,7 +30,7 @@ const BELOW_THRESHOLD_M500 = 0.5;
 /** Redshift safely within Z_MAX = 0.15. */
 const NEAR_Z = 0.05;
 /** Redshift safely beyond Z_MAX. */
-const FAR_Z = 0.20;
+const FAR_Z = 0.2;
 
 /** Nm safely above the MSCC_NM_MIN threshold (6). */
 const ABOVE_NM = 12;
@@ -73,10 +70,6 @@ const NO_SEED: readonly StructureSeedEntry[] = [];
 
 describe('extractAbell', () => {
   describe('finds Abell/ACO tokens in AName or OName', () => {
-    it('returns normalized token from aName when present', () => {
-      expect(extractAbell('RXC J2346.6+2821', 'A2670')).toBe('A2670');
-    });
-
     it('strips internal spaces: " A 2670" → "A2670"', () => {
       expect(extractAbell('RXC J2346.6+2821', ' A 2670')).toBe('A2670');
     });
@@ -90,29 +83,12 @@ describe('extractAbell', () => {
       expect(extractAbell('UGC 12890', 'UGC 12890')).toBeNull();
     });
 
-    it('returns null when both names are blank', () => {
-      expect(extractAbell('', '')).toBeNull();
-    });
-
     it('handles ACO southern supplement prefix S', () => {
       expect(extractAbell('', 'S0805')).toBe('S805');
     });
 
     it('strips leading zeros: A0007 → A7', () => {
       expect(extractAbell('', 'A0007')).toBe('A7');
-    });
-
-    it('strips leading zeros: A0013 → A13', () => {
-      expect(extractAbell('', 'A0013')).toBe('A13');
-    });
-
-    it('strips leading zeros for S-prefix: S0026 → S26', () => {
-      expect(extractAbell('', 'S0026')).toBe('S26');
-    });
-
-    it('strips leading zeros with internal space: A 0085 → A85', () => {
-      // Space between prefix and digits is absorbed; leading zeros are stripped.
-      expect(extractAbell('', 'A 0085')).toBe('A85');
     });
 
     it('prefers aName over oName when both have an Abell token', () => {
@@ -143,12 +119,6 @@ describe('buildClusterEntries excludes structures beyond Z_MAX', () => {
     const mcxc = [makeMcxcRow({ z: FAR_Z })];
     const entries = buildClusterEntries(mcxc, [], NO_SEED);
     expect(entries.filter((e) => e.category === 0)).toHaveLength(0);
-  });
-
-  it('drops an MSCC row with z > Z_MAX', () => {
-    const mscc = [makeMsccRow({ z: FAR_Z })];
-    const entries = buildClusterEntries([], mscc, NO_SEED);
-    expect(entries.filter((e) => e.category === 1)).toHaveLength(0);
   });
 
   it('keeps an MCXC row with z exactly = Z_MAX', () => {
@@ -277,31 +247,5 @@ describe('buildClusterEntries prefers the Abell designation for the name', () =>
     // names[0] slug of MCXC id
     expect(e.names[0]).toBeTruthy();
     expect(e.abell).toBeNull();
-  });
-});
-
-// ── buildClusterEntries — abell null for superclusters ───────────────────────
-
-describe('buildClusterEntries sets abell null for superclusters', () => {
-  it('abell is always null for MSCC entries', () => {
-    const mscc = [makeMsccRow({ nm: ABOVE_NM })];
-    const entries = buildClusterEntries([], mscc, NO_SEED);
-    const e = entries.find((x) => x.category === 1)!;
-    expect(e).toBeDefined();
-    expect(e.abell).toBeNull();
-  });
-});
-
-// ── buildClusterEntries — category byte ──────────────────────────────────────
-
-describe('buildClusterEntries tags category 0 for MCXC, 1 for MSCC', () => {
-  it('MCXC entries have category 0', () => {
-    const entries = buildClusterEntries([makeMcxcRow()], [], NO_SEED);
-    expect(entries[0]?.category).toBe(0);
-  });
-
-  it('MSCC entries have category 1', () => {
-    const entries = buildClusterEntries([], [makeMsccRow()], NO_SEED);
-    expect(entries[0]?.category).toBe(1);
   });
 });

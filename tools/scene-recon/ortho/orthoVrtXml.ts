@@ -10,7 +10,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
+import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
 import type { TileIndexRect } from '../../utils/scene/TileIndexRect';
 
 export type OrthoVrtSpec = {
@@ -28,7 +28,7 @@ export function orthoVrtXml(spec: OrthoVrtSpec): string {
   const { levelDir, rect, level, tilePx } = spec;
   const { xMin, xMax, yMin, yMax } = rect;
 
-  const deg = 360 / earthTileColumns(level, tilePx);
+  const deg = 360 / surfaceTileColumns(level, tilePx);
   const pixelSize = deg / tilePx;
   const originX = xMin * deg - 180;
   const originY = 90 - yMin * deg;

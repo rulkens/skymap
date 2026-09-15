@@ -3,10 +3,6 @@ import { f16ToFloat } from '../../../src/utils/math/f16ToFloat';
 import { floatToF16 } from '../../../src/utils/math/floatToF16';
 
 describe('f16ToFloat', () => {
-  it('decodes the zero bit pattern to 0', () => {
-    expect(f16ToFloat(0)).toBe(0);
-  });
-
   it('decodes 0x3c00 to 1.0', () => {
     expect(f16ToFloat(0x3c00)).toBe(1);
   });

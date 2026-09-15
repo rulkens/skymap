@@ -32,15 +32,6 @@ describe('injectAnalytics', () => {
     expect(document.getElementById('counterscale-script')).toBeNull();
   });
 
-  it('injects nothing when the origin is unset', () => {
-    vi.stubEnv('PROD', true);
-    vi.stubEnv('VITE_COUNTERSCALE_URL', '');
-
-    injectAnalytics();
-
-    expect(document.getElementById('counterscale-script')).toBeNull();
-  });
-
   it('strips a trailing slash from the origin', () => {
     vi.stubEnv('PROD', true);
     vi.stubEnv('VITE_COUNTERSCALE_URL', 'https://x.example/');

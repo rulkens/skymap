@@ -9,8 +9,8 @@
  * flown through-centre.)
  *
  * Each waypoint is an `atFocus` addressed by a BARE famous-galaxy seed id (the
- * ids in `data/seeds/famous_galaxies.seed.json`). Bare ids route to the famous
- * resolver in `resolveFocusId`; a `group-`/`cluster-`/`pgc-` prefix would route
+ * ids in `data/seeds/famous_galaxies.seed.json`). Bare ids route to the composed
+ * resolver's famous branch; a `group-`/`cluster-`/`pgc-` prefix would route
  * elsewhere — so famous galaxies stay un-prefixed here.
  *
  * ### Waypoint order is precomputed to minimise turning, not by distance

@@ -47,8 +47,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { NEAR0 } from '../slabs';
-import { pickUniformBytesOf } from '../../helpers/pickUniformBytesOf';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';
@@ -135,10 +133,9 @@ export const milkyWayPass: ContentPass = {
   // uniform, so there is no CPU size argument.
   //
   // This row SELF-BINDS its @group(0) pick camera, like every other pickable
-  // row, so pick rows are order-independent within a pass. The bytes here are
-  // the SAME complete pick image point-sprites uploads — `pickUniformBytesOf`
-  // against THIS row's slab view — so the billboard's in-shader sizing reads
-  // the identical camera facts, just projected through NEAR0.
+  // row, so pick rows are order-independent within a pass. The camera facts
+  // come from THIS row's slab view, so the billboard's in-shader sizing reads
+  // the same values the point pick reads, just projected through NEAR0.
   //
   // Visibility is NOT re-checked here: the pick program filters by this row's
   // `pickEnabled`, evaluated against the pick-time camera. That gate composes
@@ -148,6 +145,6 @@ export const milkyWayPass: ContentPass = {
   drawPick(pass, view, ctx, state) {
     const pickRenderer = state.gpu.milkyWayPickRenderer;
     if (pickRenderer === null) return;
-    pickRenderer.pickMilkyWay(pass, pickUniformBytesOf(view, ctx, state));
+    pickRenderer.pickMilkyWay(pass, view.vp, view.viewportPx, view.camPos, ctx.drawPxPerRad);
   },
 };

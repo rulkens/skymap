@@ -64,10 +64,6 @@ describe('near0SelectionRingPass.enabled', () => {
     expect(near0SelectionRingPass.enabled(stateWith(STAR_ROW), CTX, VIEW_STUB)).toBe(true);
   });
 
-  it('is false when the renderer is null (pre-bootstrap)', () => {
-    expect(near0SelectionRingPass.enabled(stateWith(STAR_ROW, null), CTX, VIEW_STUB)).toBe(false);
-  });
-
   it('is false when nothing is selected', () => {
     expect(near0SelectionRingPass.enabled(stateWith(null), CTX, VIEW_STUB)).toBe(false);
   });

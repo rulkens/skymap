@@ -25,7 +25,13 @@ import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
 import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
-import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
+import {
+  EARTH_SURFACE_TILE_MESH_RESOLUTION,
+  EARTH_TILE_ATLAS_SIDE,
+  EARTH_TILE_PX,
+  SURFACE_TILE_SKIRT_DEPTH_FRACTION,
+} from '../../../../src/data/bodies/earthTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 
 /**
@@ -264,6 +270,36 @@ describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment
 });
 
 /**
+ * Both shader stages read their cell count from the instance record's
+ * `heightCells` (R14), so neither mirrors HEIGHT_POSTS_PER_TILE any more. What
+ * still has to hold is that a leaf drawing its OWN tile lands every template
+ * vertex exactly on a post: a fractional stride there would put the two sides
+ * of an LOD boundary on lattice points they cannot share.
+ */
+describe('HEIGHT_POSTS_PER_TILE vs the template (heightTileFormat.ts ↔ earthTileParams.ts)', () => {
+  it('the post stride per template cell is integral', () => {
+    expect((HEIGHT_POSTS_PER_TILE - 1) % EARTH_SURFACE_TILE_MESH_RESOLUTION).toBe(0);
+  });
+});
+
+/**
+ * SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts) is the eye-check's one
+ * tuning knob for the skirt ring (F2-R3), and the vertex stage is its only
+ * consumer — so without this guard the TS export is a knob that turns nothing.
+ */
+describe('SURFACE_TILE_SKIRT_DEPTH_FRACTION parity (earthTileParams.ts ↔ earthSurfaceTile/vertex.wesl)', () => {
+  it("vertex.wesl's SURFACE_TILE_SKIRT_DEPTH_FRACTION equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl';
+    const weslValue = readWeslConst(file, 'SURFACE_TILE_SKIRT_DEPTH_FRACTION');
+    expect(weslValue, `SURFACE_TILE_SKIRT_DEPTH_FRACTION is missing from ${file}`).toBeDefined();
+    expect(
+      weslValue,
+      `${file}: WESL SURFACE_TILE_SKIRT_DEPTH_FRACTION (${weslValue}) does not match TS SURFACE_TILE_SKIRT_DEPTH_FRACTION (${SURFACE_TILE_SKIRT_DEPTH_FRACTION})`,
+    ).toBe(SURFACE_TILE_SKIRT_DEPTH_FRACTION);
+  });
+});
+
+/**
  * PROXY_SCALE (proxyScale.ts) mirrors analyticSphere.wesl's own PROXY_SCALE —
  * `bodySlabRow` (slabs.ts) needs the same inflation factor CPU-side to size a
  * body row's near-plane margin, so a rasterised proxy vertex can never fall
@@ -283,11 +319,11 @@ describe('PROXY_SCALE parity (proxyScale.ts ↔ analyticSphere.wesl)', () => {
 });
 
 /**
- * The mesh bodies carry no `sunIrradiance` uniform — their 176-byte layout is
- * full — so `pbrDirect`'s caller-applied irradiance scale (`pbr.wesl`'s
- * contract) is a WESL const mirroring `EARTH_SURFACE_PARAMS.sunIrradiance`.
- * That is what keeps the whale and the pot at the same brightness as every
- * `litShade` body; a drift here silently darkens or blows them out.
+ * One unit for the probe and the direct term: the mesh body's probe captures
+ * the planets in `litShade` units, so the Sun's irradiance on the mesh is a
+ * WESL const mirroring `EARTH_SURFACE_PARAMS.sunIrradiance` rather than a
+ * uniform. A drift here makes a metal reflect its host at a brightness the
+ * direct highlight no longer matches.
  */
 describe('SUN_IRRADIANCE parity (earthSurfaceParams.ts ↔ meshBody/fragment.wesl)', () => {
   it("meshBody/fragment.wesl's SUN_IRRADIANCE equals EARTH_SURFACE_PARAMS.sunIrradiance", () => {

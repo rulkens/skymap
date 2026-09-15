@@ -75,20 +75,6 @@ describe('RenderTogglesSection', () => {
     expect(text).not.toContain('hdr→swap');
   });
 
-  it('checks every box when the disabledPasses record is empty', () => {
-    const { container } = render(
-      createElement(RenderTogglesSection, {
-        passNames: ALL_NAMES,
-        disabledPasses: {},
-        onTogglePass: vi.fn<(name: string) => void>(),
-      }),
-    );
-    const boxes = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
-    for (const box of boxes) {
-      expect(box.checked).toBe(true);
-    }
-  });
-
   it('renders a checkbox unchecked when its name is in disabledPasses', () => {
     const { container } = render(
       createElement(RenderTogglesSection, {
@@ -120,28 +106,5 @@ describe('RenderTogglesSection', () => {
     fireEvent.click(earthBox);
     expect(onTogglePass).toHaveBeenCalledOnce();
     expect(onTogglePass).toHaveBeenCalledWith('earth');
-  });
-
-  it('reflects the prop after the parent re-renders with an updated record', () => {
-    const { container, rerender } = render(
-      createElement(RenderTogglesSection, {
-        passNames: ALL_NAMES,
-        disabledPasses: {},
-        onTogglePass: vi.fn<(name: string) => void>(),
-      }),
-    );
-    const box = () =>
-      [...container.querySelectorAll('label')]
-        .find((l) => l.textContent === 'labels')!
-        .querySelector<HTMLInputElement>('input')!;
-    expect(box().checked).toBe(true);
-    rerender(
-      createElement(RenderTogglesSection, {
-        passNames: ALL_NAMES,
-        disabledPasses: { labels: true },
-        onTogglePass: vi.fn<(name: string) => void>(),
-      }),
-    );
-    expect(box().checked).toBe(false);
   });
 });

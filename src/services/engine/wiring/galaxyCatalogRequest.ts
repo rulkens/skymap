@@ -4,7 +4,7 @@ import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq'
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { Tier } from '../../../@types/data/Tier';
 
-/** The ONE point-source request. The famous-meta companion row calls it too (D11 will derive it). */
+/** The ONE point-source request. */
 export function galaxyCatalogRequest(source: SourceType, tier: Tier): GalaxyCatalogReq {
   const entry = SOURCE_REGISTRY[source];
   // A tier the source has no file for would drift on every flip and re-fetch the

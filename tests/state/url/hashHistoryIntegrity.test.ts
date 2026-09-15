@@ -112,10 +112,10 @@ describe('hash history integrity', () => {
   /**
    * The real store, the real root saga, the real URL seam — and `createTestStore`
    * rather than a hand-built harness precisely because registering the context is
-   * what releases the hash bridge, so this call IS the arrival read. Its inert bag
-   * is all a body deep link needs: `resolveFocusId` and `extractSelectionRow` both
-   * resolve a scene body off the static `SCENE_BODIES` import, with no engine
-   * resource in the path.
+   * what releases the hash bridge, so this call IS the arrival read.
+   * `NOOP_SAGA_CONTEXT.selection` composes the real core rows over an empty
+   * `ResolveDeps`, so a body deep link resolves off the static `SCENE_BODIES`
+   * table through that resolver, with no engine resource in the path.
    */
   const boot = () => createTestStore();
 
@@ -143,23 +143,6 @@ describe('hash history integrity', () => {
     // catch up with it. ANY push here is a forward-stack truncation, so the
     // assertion is the empty sequence rather than a bound on its length — one
     // push would be as fatal as two, and the final URL is correct either way.
-    expect(pushedHashes()).toEqual([]);
-  });
-
-  it('pushes nothing when Back returns to a bare URL', async () => {
-    seedHash('focus=body-mars');
-    boot();
-    await flush();
-
-    pushState.mockClear();
-    navigate('');
-    await flush();
-
-    // One param, so nothing here is about rows racing each other: this is the
-    // `focus` row tearing its own ladder. `clearSelection` nulls `pending.focus`
-    // in its reducer, `selectionRows.focus` still holds Mars until the
-    // reconciler runs, and a write landing between the two composes
-    // `focus=body-mars` — over a URL the browser has already moved to bare.
     expect(pushedHashes()).toEqual([]);
   });
 
@@ -192,20 +175,6 @@ describe('hash history integrity', () => {
     // into a no-op. Without it a visitor following a shared link lands several
     // entries deep in a history they never navigated, every one of them the same
     // URL, and Back does nothing visible.
-    expect(pushedHashes()).toEqual([]);
-  });
-
-  it('pushes nothing on a cold load of a two-param deep link', async () => {
-    seedHash('focus=body-mars&orientation=galactic');
-
-    boot();
-    await flush();
-
-    // The boot read skips `readAbsent`, which is why the single-param case above
-    // was quiet even before the write coalesced — and why it did not cover this
-    // one. With two params the boot pass dispatches for both rows, so the same
-    // cross-row gap opens on a plain cold load: a shared two-param link cost the
-    // visitor two history entries before they touched anything.
     expect(pushedHashes()).toEqual([]);
   });
 

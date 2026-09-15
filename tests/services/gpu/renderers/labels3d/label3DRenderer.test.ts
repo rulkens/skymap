@@ -276,11 +276,6 @@ describe('label3DRenderer WESL binding parity', () => {
 });
 
 describe('label3DRenderer (CPU state)', () => {
-  it('starts with zero glyphs to draw', () => {
-    const r = newRenderer(new Map());
-    expect(r.glyphCount()).toBe(0);
-  });
-
   it('counts one glyph per repeat across repeatCount copies', () => {
     const r = newRenderer(new Map());
     r.setLabels([

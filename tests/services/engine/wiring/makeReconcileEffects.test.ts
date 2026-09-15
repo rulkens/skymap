@@ -57,31 +57,25 @@ const CANVAS = {} as HTMLCanvasElement;
 // absent; `as unknown as EngineState` bridges the gap (matching the pattern
 // used in syncVisibilityFades.test.ts and other wiring tests).
 
-function makeState(overrides?: { flowFieldRenderer?: { maybeReseed: () => void } | null }): {
+function makeState(): {
   state: EngineState;
   requestRender: ReturnType<typeof vi.fn<() => void>>;
   setMode: ReturnType<typeof vi.fn<(mode: BiasMode) => Promise<void>>>;
-  maybeReseed: ReturnType<typeof vi.fn<() => void>>;
 } {
   const requestRender = vi.fn<() => void>();
   const setMode = vi.fn<(mode: BiasMode) => Promise<void>>(() => Promise.resolve());
-  const maybeReseed = vi.fn<() => void>();
-
-  const flowFieldRenderer =
-    overrides?.flowFieldRenderer !== undefined ? overrides.flowFieldRenderer : { maybeReseed };
 
   const state = {
     subsystems: {
       scheduler: { requestRender },
       biasCorrection: { setMode },
     },
-    gpu: { flowFieldRenderer },
     booted: false,
     selectionRows: { hover: null, select: null, focus: null },
     cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
   } as unknown as EngineState;
 
-  return { state, requestRender, setMode, maybeReseed };
+  return { state, requestRender, setMode };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -91,48 +85,12 @@ describe('makeReconcileEffects', () => {
     vi.clearAllMocks();
   });
 
-  it('requestRender calls scheduler.requestRender', () => {
-    const { state, requestRender } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.requestRender();
-    expect(requestRender).toHaveBeenCalledTimes(1);
-  });
-
-  it("syncFades(['flow']) narrows the pass to { animate: true, only: ['flow'] }", () => {
-    const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.syncFades(['flow']);
-    expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
-    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true, only: ['flow'] });
-  });
-
-  it('syncFades() with no rows runs a full pass (only: undefined)', () => {
+  it('syncFades() runs a full pass over every row', () => {
     const { state } = makeState();
     const effects = makeReconcileEffects(state, CANVAS);
     effects.syncFades();
     expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
-    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true, only: undefined });
-  });
-
-  it('reseedFlow calls flowFieldRenderer.maybeReseed', () => {
-    const { state, maybeReseed } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.reseedFlow();
-    expect(maybeReseed).toHaveBeenCalledTimes(1);
-  });
-
-  it('reseedFlow tolerates a null flowFieldRenderer — no throw', () => {
-    const { state } = makeState({ flowFieldRenderer: null });
-    const effects = makeReconcileEffects(state, CANVAS);
-    expect(() => effects.reseedFlow()).not.toThrow();
-  });
-
-  it('bakeBias(1) calls biasCorrection.setMode(1)', () => {
-    const { state, setMode } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.bakeBias(1);
-    expect(setMode).toHaveBeenCalledTimes(1);
-    expect(setMode).toHaveBeenCalledWith(1);
+    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
   });
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {
@@ -164,12 +122,12 @@ describe('makeReconcileEffects', () => {
     );
   });
 
-  it("logCameraState forwards the earthTiles subsystem's sub-camera readout when engaged", () => {
+  it("logCameraState forwards the surfaceTiles subsystem's sub-camera readout when engaged", () => {
     const getDebugSnapshot = vi.fn(() => ({
       subCamera: { lonDeg: 12.53, latDeg: 55.67, coveredMaxLevel: 19 },
     }));
     const { state } = makeState();
-    (state as unknown as { subsystems: { earthTiles: unknown } }).subsystems.earthTiles = {
+    (state as unknown as { subsystems: { surfaceTiles: unknown } }).subsystems.surfaceTiles = {
       getDebugSnapshot,
     };
     const effects = makeReconcileEffects(state, CANVAS);

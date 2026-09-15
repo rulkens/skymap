@@ -23,6 +23,7 @@ import {
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../src/@types/animation/ClipId';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -39,9 +40,8 @@ const EXPECTED = clipRegistry[CLIP_ID].data;
 const EXPECTED_FRAME_BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 
 const EMPTY_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  catalogs: { get: () => undefined, famousMeta: [] },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 
@@ -76,6 +76,7 @@ function buildHarness() {
       pinnedFrame: vi.fn<() => OrientationFrameId | null>(() => null),
     },
     resolveDeps: () => EMPTY_DEPS,
+    selection: selectionResolverOver(EMPTY_DEPS),
     cameraRuntime: () => RUNTIME,
   });
   sagaMiddleware.run(watchClipPathInspectSaga);

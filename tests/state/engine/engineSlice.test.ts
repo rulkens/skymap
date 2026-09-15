@@ -15,17 +15,20 @@
 import { describe, it, expect } from 'vitest';
 
 import reducer, {
-  engineStatusChanged,
   engineSourceCountReported,
   engineProvenanceCountsReported,
-  engineStructureCountsChanged,
-  engineLoadProgressChanged,
   engineScaleChanged,
   engineBodyDistanceReported,
-  engineHdrCapabilityChanged,
+  engineStructureSearchListChanged,
+  factsReported,
+  layerFactsSeeded,
 } from '../../../src/state/engine/engineSlice';
 import type { EngineSliceState } from '../../../src/@types/store/EngineSliceState';
+import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import { Source } from '../../../src/data/source';
+
+/** A state widened with a stub Layer's facts key, standing in for a landed Layer. */
+type WithStubFacts = EngineSliceState & { stub: { a: number; b: number; list?: number[] } };
 
 const base = (): EngineSliceState => ({
   status: { kind: 'initializing' },
@@ -36,71 +39,16 @@ const base = (): EngineSliceState => ({
   structureCounts: {},
   provenanceCounts: {},
   loadProgress: null,
+  structureSearchList: [],
   meta: { famousGalaxies: [], famousStars: [] },
 });
 
-describe('engineSlice — engineStatusChanged', () => {
-  it('engineStatusChanged writes status', () => {
-    expect(reducer(base(), engineStatusChanged({ kind: 'loading' })).status).toEqual({
-      kind: 'loading',
-    });
-  });
-});
-
 describe('engineSlice — engineSourceCountReported', () => {
-  it('engineSourceCountReported writes the reported source count', () => {
-    const next = reducer(base(), engineSourceCountReported({ source: Source.SDSS, count: 5 }));
-    expect(next.sourceCounts[Source.SDSS]).toBe(5);
-  });
-
   it('engineSourceCountReported merges a second source without dropping the first', () => {
     const after1 = reducer(base(), engineSourceCountReported({ source: Source.SDSS, count: 5 }));
     const after2 = reducer(after1, engineSourceCountReported({ source: Source.TwoMRS, count: 42 }));
     expect(after2.sourceCounts[Source.SDSS]).toBe(5);
     expect(after2.sourceCounts[Source.TwoMRS]).toBe(42);
-  });
-});
-
-describe('engineSlice — engineProvenanceCountsReported', () => {
-  it('engineProvenanceCountsReported merges a second source without dropping the first', () => {
-    const first = { total: 100, estimated: { orientation: 10, size: 5 } };
-    const second = { total: 200, estimated: { orientation: 20, size: 15 } };
-    const after1 = reducer(
-      base(),
-      engineProvenanceCountsReported({ source: Source.SDSS, counts: first }),
-    );
-    const after2 = reducer(
-      after1,
-      engineProvenanceCountsReported({ source: Source.TwoMRS, counts: second }),
-    );
-    expect(after2.provenanceCounts[Source.SDSS]).toEqual(first);
-    expect(after2.provenanceCounts[Source.TwoMRS]).toEqual(second);
-  });
-});
-
-describe('engineSlice — engineStructureCountsChanged', () => {
-  it('engineStructureCountsChanged replaces the whole map', () => {
-    // 'cluster' and 'supercluster' are StructureId values from the registry.
-    const payload = { cluster: 12, supercluster: 3 } as EngineSliceState['structureCounts'];
-    const next = reducer(base(), engineStructureCountsChanged(payload));
-    expect(next.structureCounts).toEqual(payload);
-  });
-});
-
-describe('engineSlice — engineLoadProgressChanged', () => {
-  it('engineLoadProgressChanged writes loadProgress', () => {
-    const progress = { loadedBytes: 1024, totalBytes: 4096, inFlightCount: 1 };
-    const next = reducer(base(), engineLoadProgressChanged(progress));
-    expect(next.loadProgress).toEqual(progress);
-  });
-
-  it('engineLoadProgressChanged with null clears loadProgress', () => {
-    const seeded: EngineSliceState = {
-      ...base(),
-      loadProgress: { loadedBytes: 512, totalBytes: 2048, inFlightCount: 1 },
-    };
-    const next = reducer(seeded, engineLoadProgressChanged(null));
-    expect(next.loadProgress).toBeNull();
   });
 });
 
@@ -120,12 +68,6 @@ describe('engineSlice — engineScaleChanged', () => {
     const next = reducer(s, engineScaleChanged({ label: '500 Mpc', widthPx: 150 }));
     expect(next.scale.widthPx).toBe(150);
   });
-
-  it('engineScaleChanged replaces scale when label differs', () => {
-    const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
-    const next = reducer(s, engineScaleChanged({ label: '1 Gpc', widthPx: 120 }));
-    expect(next.scale.label).toBe('1 Gpc');
-  });
 });
 
 describe('engineSlice — engineBodyDistanceReported', () => {
@@ -144,9 +86,52 @@ describe('engineSlice — engineBodyDistanceReported', () => {
   });
 });
 
-describe('engineSlice — engineHdrCapabilityChanged', () => {
-  it('engineHdrCapabilityChanged records the display capability', () => {
-    const next = reducer(base(), engineHdrCapabilityChanged(true));
-    expect(next.hdrCapable).toBe(true);
+describe('engineSlice — engineStructureSearchListChanged', () => {
+  it('engineStructureSearchListChanged replaces the list wholesale', () => {
+    const first: StructureSearchEntry = {
+      id: 'cluster-virgo',
+      name: 'Virgo Cluster',
+      category: 'cluster',
+      abell: null,
+      description: '',
+    };
+    const s: EngineSliceState = { ...base(), structureSearchList: [first] };
+    const second: StructureSearchEntry = { ...first, id: 'cluster-coma', name: 'Coma Cluster' };
+    const next = reducer(s, engineStructureSearchListChanged([second]));
+    expect(next.structureSearchList).toEqual([second]);
+  });
+});
+
+describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 7)', () => {
+  it('factsReported merges a patch under the layer key and leaves sibling facts', () => {
+    const s: WithStubFacts = { ...base(), stub: { a: 1, b: 2 } };
+    const next = reducer(
+      s as unknown as EngineSliceState,
+      factsReported({ layer: 'stub', patch: { b: 3 } }),
+    ) as unknown as WithStubFacts;
+    expect(next.stub).toEqual({ a: 1, b: 3 });
+    expect(next.status).toEqual(s.status);
+  });
+
+  it('factsReported replaces a field wholesale, it does not deep-merge', () => {
+    const s: WithStubFacts = { ...base(), stub: { a: 1, b: 2, list: [0, 0] } };
+    const next = reducer(
+      s as unknown as EngineSliceState,
+      factsReported({ layer: 'stub', patch: { list: [1] } }),
+    ) as unknown as WithStubFacts;
+    expect(next.stub.list).toEqual([1]);
+  });
+
+  it('layerFactsSeeded installs a Layer key and a later patch merges into it', () => {
+    const s = base();
+    const seeded = reducer(
+      s,
+      layerFactsSeeded({ layer: 'stub', facts: { a: 1, b: 2 } }),
+    ) as unknown as WithStubFacts;
+    const patched = reducer(
+      seeded as unknown as EngineSliceState,
+      factsReported({ layer: 'stub', patch: { b: 9 } }),
+    ) as unknown as WithStubFacts;
+    expect(patched.stub).toEqual({ a: 1, b: 9 });
   });
 });

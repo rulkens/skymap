@@ -66,7 +66,6 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND, PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 import { createDummyFadeBindGroup } from '../../lib/dummyFade';
-import { UNIFORM_BYTES } from '../galaxyCatalog/galaxyPointVertexLayout';
 
 /**
  * 12 floats per instance × 4 bytes = 48 bytes/instance.
@@ -351,12 +350,9 @@ export function createStructureMarkerRenderer(
     pickDummyFadeBuffer = pickDummyFade.buffer;
     pickDummyFadeBindGroup = pickDummyFade.bindGroup;
 
-    // UNIFORM_BYTES, not CAMERA_UNIFORM_BYTES: the ring vertex stage reads only
-    // the 80-byte prefix, but `pickRing` uploads the whole 192-byte
-    // `pickUniformBytesOf` image verbatim, so the buffer must hold all of it.
     pickCameraBuffer = device.createBuffer({
       label: 'structure-marker-pick-camera',
-      size: UNIFORM_BYTES,
+      size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     pickCameraBindGroup = device.createBindGroup({
@@ -584,9 +580,9 @@ export function createStructureMarkerRenderer(
   /**
    * Issue per-category structure ring pick draws into the caller-supplied
    * render pass, binding every group the pick pipeline declares: @group(0)
-   * (our own pick camera, uploaded from `uniformBytes` verbatim), @group(1)
-   * (dummy fade) and @group(2) (per-category source), then one
-   * `draw(6, count)` per non-empty bucket.
+   * (our own pick camera, the 80-byte prefix packed from the pick-time
+   * pose), @group(1) (dummy fade) and @group(2) (per-category source),
+   * then one `draw(6, count)` per non-empty bucket.
    *
    * We reuse the same per-category bucketing the visible draw path
    * already produced in `setMarkers` (bucketOffsets + bucketCounts +
@@ -598,11 +594,19 @@ export function createStructureMarkerRenderer(
    * Voids ARE included in the pick path (unlike the halo draw, which
    * skips them) — a user should still be able to click a void's ring.
    */
-  function pickRing(passEncoder: GPURenderPassEncoder, uniformBytes: ArrayBuffer): void {
+  function pickRing(
+    passEncoder: GPURenderPassEncoder,
+    viewProj: Float32Array,
+    viewportPx: Vec2,
+  ): void {
     if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
-    device.queue.writeBuffer(pickCameraBuffer, 0, uniformBytes);
+    // Same prefix write as `draw`, into the pick buffer: the pads (floats
+    // 18..19) stay zero via Float32Array zero-init.
+    const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
+    writeCameraPrefix(uni, viewProj, viewportPx);
+    device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);
     passEncoder.setBindGroup(1, pickDummyFadeBindGroup);

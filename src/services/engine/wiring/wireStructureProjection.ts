@@ -14,10 +14,9 @@
  *     continues normally).
  *
  * Famous galaxies are deliberately NOT wired here — they are galaxy data, and
- * `produceFamousGalaxyLabels` derives their labels per frame from the catalog in
- * `galaxyStore` joined with the famous-galaxies meta sidecar (the engine
- * slice, via `state.famousGalaxiesMeta`).  There is no structure-store famous
- * group.
+ * `produceFamousGalaxyLabels` derives their labels per frame from the catalog
+ * and the meta sidecar, both held by the galaxy store.  There is no
+ * structure-store famous group.
  *
  * ### Structure-count dispatches
  *
@@ -32,7 +31,11 @@
 
 import { buildStaticAnchorStructures } from '../../../data/structure/buildStaticAnchorStructures';
 import { structureCatalogToStructures } from './structureCatalogToStructures';
-import { engineStructureCountsChanged } from '../../../state/engine/engineSlice';
+import {
+  engineStructureCountsChanged,
+  engineStructureSearchListChanged,
+} from '../../../state/engine/engineSlice';
+import { toStructureSearchEntry } from '../../../utils/structure/toStructureSearchEntry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
@@ -45,10 +48,11 @@ import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
  */
 export function wireStructureProjection(state: EngineState, cb: EngineCallbacks): void {
   /**
-   * Emit fresh per-category structure counts after any group change.  Called
-   * once at boot (static anchors) and again whenever the bulk group lands or
-   * clears.  Counts are read from `structureStore.byCategory` so they reflect
-   * the authoritative record set — the same one that renders.
+   * Emit fresh per-category structure counts AND the command palette's search
+   * list after any group change.  Called once at boot (static anchors) and
+   * again whenever the bulk group lands or clears.  Both reads go through
+   * `structureStore` so they reflect the authoritative record set — the same
+   * one that renders.
    */
   function emitCounts(): void {
     cb.store.dispatch(
@@ -59,13 +63,16 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
         group: state.data.structures.byCategory('group').length,
       }),
     );
+    cb.store.dispatch(
+      engineStructureSearchListChanged(state.data.structures.all().map(toStructureSearchEntry)),
+    );
   }
 
   // ── Group 1: static anchors (synchronous) ───────────────────────────
   //
   // The id-slug + worldPos build lives in `data/buildStaticAnchorStructures.ts`
-  // so the `${category}-${seed}` ids a `#focus=` deep link decodes to (see
-  // `resolveFocusId`) cannot drift from the ids stored here.  physicalRadiusMpc
+  // so the `${category}-${seed}` ids a `#focus=` deep link decodes to (see the
+  // resolver's `resolveFocusId`) cannot drift from the ids stored here.  physicalRadiusMpc
   // comes from the seed JSON (R_200 / virial radii for clusters, characteristic
   // extent for superclusters and voids).
   state.data.structures.setGroup('anchors', buildStaticAnchorStructures());

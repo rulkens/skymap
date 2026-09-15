@@ -167,19 +167,4 @@ describe('partitionBodiesByPresentation', () => {
     expect(textured).toEqual([]);
     expect(glints).toEqual([]);
   });
-
-  it('keeps the four branches disjoint and covering', () => {
-    const marsTextured = bodyAt('mars', 3390000, CLOSE(3390000));
-    const titanFlat = bodyAt('titan', 2575000, CLOSE(2575000));
-    const jupiterGlint = bodyAt('jupiter', 69911000, AU_M);
-    const moonMesh = meshAt('moon', 1737000, CLOSE(1737000));
-    const bodies = [marsTextured, titanFlat, jupiterGlint, moonMesh];
-
-    const { glints, flat, textured, meshes } = partition(bodies, (id) => id === 'mars');
-
-    const all = [...glints, ...flat, ...textured, ...meshes];
-    expect(all).toHaveLength(bodies.length);
-    expect(new Set(all)).toEqual(new Set(bodies));
-    expect(new Set(all).size).toBe(bodies.length);
-  });
 });

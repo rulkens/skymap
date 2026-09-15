@@ -59,7 +59,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {
       specs: FIXTURE_SPECS,
       specOf: (id: string) => {
@@ -85,7 +84,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       setSwapFormat: vi.fn(),
       destroy: vi.fn(),
     },
-    texturedDisks: {} as never,
   };
 }
 
@@ -146,22 +144,6 @@ describe('volumeUpsamplePass.enabled', () => {
     ).toBe(false);
   });
 
-  it('returns false when no fields are active and no fade-out tail is in flight', () => {
-    expect(
-      volumeUpsamplePass.enabled(
-        livenessState({ hasActiveFields: () => false }),
-        makeCtx(),
-        VIEW_STUB,
-      ),
-    ).toBe(false);
-  });
-
-  it('returns false when volumeFieldRenderer is null (pre-bootstrap)', () => {
-    expect(
-      volumeUpsamplePass.enabled(livenessState({ renderer: null }), makeCtx(), VIEW_STUB),
-    ).toBe(false);
-  });
-
   it('stays enabled even when volumeUpsample is null (draw self-guards, not the gate)', () => {
     // The producer (scalar-volume raymarch) and this consumer share one gate;
     // volumeUpsample being null is a bootstrap-only case handled defensively in
@@ -194,15 +176,5 @@ describe('volumeUpsamplePass.draw', () => {
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(PASS_STUB);
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(offscreenView);
-  });
-
-  it('does not throw when volumeUpsample is null (defensive null-check)', () => {
-    const state = {
-      gpu: {
-        volumeFieldRenderer: { hasActiveFields: () => true },
-        volumeUpsample: null,
-      },
-    } as unknown as EngineState;
-    expect(() => volumeUpsamplePass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state)).not.toThrow();
   });
 });
