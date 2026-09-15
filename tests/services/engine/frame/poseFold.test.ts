@@ -527,6 +527,23 @@ describe('runFrame — the regime fold', () => {
     expect(tiltRad[tiltRad.length - 1]!).toBeLessThan(onePixelRad);
   });
 
+  it('focusing a rover from the world arm keeps its PLANET’s remembered tilt', () => {
+    // The tilt belongs to the surface the focus stands on, so its key is the
+    // focus's surface-fixed ROOT. Keyed on the focus's own id, selecting
+    // Curiosity from Mars orbit re-keyed {mars, 0.8} to {curiosity, 0} on the
+    // very next frame — one frame before the descent reaches `siteRung.host`,
+    // whose stated job is to keep exactly that tilt alive.
+    const h = makeHarness();
+    h.seedPose(absoluteArm(poseAtHR(h.bodies.get('mars')!, h.radiusM('mars'), 2)));
+    const seeded = { hostId: 'mars' as BodyId, rememberedTiltRad: 0.8 };
+    h.state.cameraRuntime = { ...h.state.cameraRuntime, tilt: seeded };
+    h.focus('curiosity');
+
+    h.frame(1);
+
+    expect(h.state.cameraRuntime.tilt).toEqual(seeded);
+  });
+
   it('the hand-back from a ground-level site view lands above the host arm’s own floor', () => {
     // The site rung's ground was rated in the ROVER's bounding radii (0.5 m over
     // Curiosity's tangent plane) while the body arm that receives the hand-back

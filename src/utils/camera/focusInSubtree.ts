@@ -6,15 +6,8 @@
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';
-import { positionDriverById } from '../../data/bodies/positionDrivers';
+import { surfaceFixedChain } from './surfaceFixedChain';
 
 export function focusInSubtree(focusId: BodyId | null, rungId: BodyId): boolean {
-  if (focusId === null) return true;
-  let id: string | null = focusId;
-  while (id !== null) {
-    if (id === rungId) return true;
-    const driver = positionDriverById(id);
-    id = driver.kind === 'surfaceFixed' ? driver.hostId : null;
-  }
-  return false;
+  return focusId === null || surfaceFixedChain(focusId).includes(rungId);
 }

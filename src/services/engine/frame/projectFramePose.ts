@@ -33,6 +33,7 @@ import { sameFrame } from '../camera/rungs/sameFrame';
 import { stepRung } from '../camera/rungs/stepRung';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
 import { focusInSubtree } from '../../../utils/camera/focusInSubtree';
+import { surfaceFixedChain } from '../../../utils/camera/surfaceFixedChain';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { addVec3 } from '../../../utils/math/addVec3';
@@ -89,9 +90,12 @@ export function projectFramePose(args: {
   // Post-pin, PRE-projection (R12b-1).
   let register = authoredOverride ?? displayed;
   // The body the tilt memory belongs to: the ENGAGED rung's host while a body
-  // arm holds (a differing focus has already released it), else the FOCUSED body.
+  // arm holds (a differing focus has already released it), else the SURFACE the
+  // focus stands on. Keying a rover's own id would wipe its planet's tilt one
+  // frame before `siteRung.host` — whose stated job is to keep it — can run.
   const regime = intent.base.frame;
-  const noted = notedTiltMemory(tilt, hostOf(regime, ctx)?.id ?? ctx.focusBodyId);
+  const tiltHostId = hostOf(regime, ctx)?.id ?? surfaceFixedChain(ctx.focusBodyId).at(-1) ?? null;
+  const noted = notedTiltMemory(tilt, tiltHostId);
   displayed = approachTiltedPose(
     displayed,
     pivotsOnFocusedBody,
