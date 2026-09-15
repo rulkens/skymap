@@ -186,7 +186,7 @@ describe('cubemapFaceContext', () => {
     });
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).draw);
+    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state, 0).draw);
   });
 
   it('renders a cube-axis direction to the exact (s,t) the WGSL cube sampler computes for it, under world and host axes', () => {

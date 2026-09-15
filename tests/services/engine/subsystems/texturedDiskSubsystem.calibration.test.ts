@@ -106,6 +106,7 @@ function makeInput(
     sbScale: 5,
     sbMax: 30,
     brightness: 1,
+    sourceOpacity: () => 1,
   };
 }
 

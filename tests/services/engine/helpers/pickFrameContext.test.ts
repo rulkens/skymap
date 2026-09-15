@@ -142,7 +142,7 @@ describe('pickFrameContext', () => {
       // same pole and their vp matches.
       ORIENTATION_FRAMES[state.settings.orientation],
       ORIENTATION_FRAMES[state.settings.orientation],
-      deriveSourceMasks(state).pick,
+      deriveSourceMasks(state, 0).pick,
       0,
       // simDays does not affect the view-projection this test compares; any
       // valid epoch reproduces the same vp.
@@ -178,6 +178,6 @@ describe('pickFrameContext', () => {
     const ctx = pickFrameContext(state, makeCanvas());
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state).pick);
+    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state, 0).pick);
   });
 });

@@ -70,7 +70,11 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) {
+function makeInput(
+  catalogs: Map<SourceType, GalaxyCatalog>,
+  mask = 0xffffffff,
+  sourceOpacity: (source: SourceType) => number = () => 1,
+) {
   const cam = makeCam();
   return {
     cam,
@@ -83,6 +87,7 @@ function makeInput(catalogs: Map<SourceType, GalaxyCatalog>, mask = 0xffffffff) 
     sbScale: 5,
     sbMax: 30,
     brightness: 1,
+    sourceOpacity,
   };
 }
 
@@ -93,6 +98,27 @@ describe('createProceduralDiskSubsystem', () => {
     const clouds = new Map([[Source.SDSS, makeDenseCloud(4)]]);
     const out = runProceduralSolo(walk, sys, makeInput(clouds));
     expect(out.instances.length).toBe(4);
+  });
+
+  // Survey-fade regression (mirrors texturedDiskSubsystem's coverage): a
+  // source whose live opacity is 0.25 must scale `sbAmp` — the fragment's
+  // sole brightness/alpha multiplier — by 0.25.
+  it('scales sbAmp by the source opacity sampled via sourceOpacity', () => {
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+
+    const full = runProceduralSolo(
+      createDiskPlannerWalk({ decimationFactor: 1 }),
+      createProceduralDiskSubsystem(),
+      makeInput(clouds, undefined, () => 1),
+    );
+    const quarter = runProceduralSolo(
+      createDiskPlannerWalk({ decimationFactor: 1 }),
+      createProceduralDiskSubsystem(),
+      makeInput(clouds, undefined, () => 0.25),
+    );
+
+    expect(full.instances[0]!.sbAmp).toBeGreaterThan(0);
+    expect(quarter.instances[0]!.sbAmp).toBeCloseTo(full.instances[0]!.sbAmp * 0.25, 5);
   });
 
   it('emits nothing for a cloud whose source bit is clear', () => {

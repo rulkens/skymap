@@ -13,6 +13,7 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { SourceType } from '../../../@types/data/SourceType';
 
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -32,6 +33,7 @@ import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
@@ -71,8 +73,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const { clipEpoch } = state.subsystems.clipPlayer.tick(state.cameraRuntime.epochs.clip, nowMs);
 
   // The masks are a per-frame projection of settings + fade opacity, never a
-  // hand-maintained mirror; demand itself reads settings directly.
-  const masks = deriveSourceMasks(state);
+  // hand-maintained mirror; demand itself reads settings directly. Sampled at
+  // THIS frame's nowMs — not the registry's last-ticked clock, which the frame
+  // tail's `fades.tick(nowMs)` (below) only advances to AFTER this call.
+  const masks = deriveSourceMasks(state, nowMs);
   reevaluateDemand(state);
 
   // `reconcile` runs unconditionally (canvas size AND every state-driven scale
@@ -236,6 +240,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       catalogs: state.data.galaxies.catalogs,
       visibleSourceMask: masks.draw,
       pxPerRad: ctx.drawPxPerRad,
+      // Both LOD disk bodies fold this into their emitted alpha/brightness so a
+      // hidden catalog's disks fade out with the point sprites instead of
+      // popping once `deriveSourceMasks` drops the source from the mask.
+      sourceOpacity: (source: SourceType) =>
+        state.subsystems.fades.opacityOf(
+          { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) },
+          ctx.nowMs,
+        ),
     };
     diskPlannerWalk.runFrame(
       sharedInput,
