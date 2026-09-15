@@ -483,12 +483,12 @@ in value and in type; `settingsSlice.ts:235` keeps asserting over `APP_SETTINGS_
 `SelectionKindRow` and `SelectionResolver` are consumed by Tasks 6, 7 and 10; declaring them here is
 what lets those tasks run in parallel. Bring `Layer.d.ts`'s header to the new hook list.
 
-- [ ] Delete the backlog index line and detail file; the spec's §13 A8 row already records the
+- [x] Delete the backlog index line and detail file; the spec's §13 A8 row already records the
       closing decision.
-- [ ] `npm run typecheck` green with `layers: []` — the only test this task has (testing.md: no
+- [x] `npm run typecheck` green with `layers: []` — the only test this task has (testing.md: no
       runtime type tests). The existing `settingsSlice — composed action namespace` case
       (`settingsSlice.test.ts:346-358`) covers the derived tuple.
-- [ ] `npm test -- settingsSlice initialSettings` green. Commit.
+- [x] `npm test -- settingsSlice initialSettings` green. Commit.
 
 ## Task 2 — the import-boundary ratchet
 
@@ -516,15 +516,15 @@ const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
 const LAYERS_ALLOWED: Readonly<Record<string, number>> = {};
 ```
 
-- [ ] Test `every engine and state file imports nothing from src/layers beyond its ALLOWED row` —
+- [x] Test `every engine and state file imports nothing from src/layers beyond its ALLOWED row` —
       `it.each` over the swept files, message naming the offending specifiers and the row to edit.
-- [ ] Test `no file under src/layers imports src/state or src/store` — the same walk over
+- [x] Test `no file under src/layers imports src/state or src/store` — the same walk over
       `LAYERS_ALLOWED`; the message says a Layer mints its own `createAction`s rather than importing
       the slice, and names the cycle.
-- [ ] Prove both directions bite: temporarily add a layers import to any `src/state/**` file and a
+- [x] Prove both directions bite: temporarily add a layers import to any `src/state/**` file and a
       `settingsSlice` import to any `src/layers/**` file, run the test, see each fail, revert. Say so
       in the task report; no fixture file is committed for it.
-- [ ] `npm test -- layerImportBoundary` green. Commit.
+- [x] `npm test -- layerImportBoundary` green. Commit.
 
 ## Task 3 — a content version on the bake key; fades become target-shaped
 
@@ -576,22 +576,22 @@ reasoning is now false, so the comment is deleted rather than updated — Task 4
 it. `setImmediate` is untouched (already collapses to one value per call) and `FadeRegistry` is
 untouched (it forwards to the per-id controller this lives inside).
 
-- [ ] Test (`renderFrame.cubemapCaptures.test.ts`) `a content-version bump alone triggers a full
-    six-face sweep` — mirrors the existing same-content-object case (`:309-324`): bake once, clear
+- [x] Test (`renderFrame.cubemapCaptures.test.ts`) `a content-version bump alone triggers a full
+  six-face sweep` — mirrors the existing same-content-object case (`:309-324`): bake once, clear
       the mock, `state.contentVersion += 1`, render again, assert six calls. `makeState` and
       `makeCaptureRuntime` gain the two new fields.
-- [ ] Test (`galaxyCatalogSourceRegistry.test.ts`, the fade-in bridge describe) `a commit bumps
-    state.contentVersion by exactly one`.
-- [ ] Test (`galaxyCatalogSourceRegistry.test.ts`) `a re-commit whose fade is already held still
-    requests a render` — pre-seed the fade at target 1 via `setImmediate`, commit again, assert
+- [x] Test (`galaxyCatalogSourceRegistry.test.ts`, the fade-in bridge describe) `a commit bumps
+  state.contentVersion by exactly one`.
+- [x] Test (`galaxyCatalogSourceRegistry.test.ts`) `a re-commit whose fade is already held still
+  requests a render` — pre-seed the fade at target 1 via `setImmediate`, commit again, assert
       `state.subsystems.scheduler.requestRender` is called through the slot's ready transition
       (`installSlotReadyWake`) — the `isAnyAnimating` wake this PR retires was never the only one.
-- [ ] Test (`fadeController.test.ts`) `fadeTo at the held target does not restart the ramp` — start a
+- [x] Test (`fadeController.test.ts`) `fadeTo at the held target does not restart the ramp` — start a
       ramp toward 1, call `fadeTo(1, …)` again partway through with a different duration, assert
       `currentOpacity` still saturates at the ORIGINAL `transitionStartMs + durationMs` (t0 unmoved).
-- [ ] `rg -n "isAnyAnimating" src/services/engine/frame/scheduleCubemapCaptures.ts` shows only the
+- [x] `rg -n "isAnyAnimating" src/services/engine/frame/scheduleCubemapCaptures.ts` shows only the
       `rosterSettling` read (thumbnail load-fades and visibility-ramp starts — untouched).
-- [ ] `npm test -- renderFrame.cubemapCaptures galaxyCatalogSourceRegistry fadeController` green. Commit.
+- [x] `npm test -- renderFrame.cubemapCaptures galaxyCatalogSourceRegistry fadeController` green. Commit.
 
 ## Task 4 — `targetOf`, and `applyIntent` skips a held target
 
@@ -622,18 +622,18 @@ bridge) call the same `applyIntent`, so the skip covers both alike — Task 3's 
 key is what makes that safe: the per-item bridge no longer has to keep re-issuing `fadeTo` to hold
 the lensed sky honest (Ruling 1). The `animate: false` batch wake at `:71` is unchanged.
 
-- [ ] Test (`fadeController.test.ts`) `targetOf reports the destination mid-ramp and the held value at rest`.
-- [ ] Test (`fadeRegistry.test.ts`) `targetOf is null for an unregistered id` and
+- [x] Test (`fadeController.test.ts`) `targetOf reports the destination mid-ramp and the held value at rest`.
+- [x] Test (`fadeRegistry.test.ts`) `targetOf is null for an unregistered id` and
       `targetOf follows fadeTo and setImmediate`.
-- [ ] Test (`syncVisibilityFades.test.ts`) `applyIntent does not re-issue fadeTo to a target already
-    held, through either bridge` — registry spy, an item at target 1 with intent true, driven once
+- [x] Test (`syncVisibilityFades.test.ts`) `applyIntent does not re-issue fadeTo to a target already
+  held, through either bridge` — registry spy, an item at target 1 with intent true, driven once
       through `syncVisibilityFades` and once through `syncVisibilityFadeItem`: `fadeTo` not called
       either time.
-- [ ] Test `a held target still runs guard and post` — the same item, either bridge: `post` called
+- [x] Test `a held target still runs guard and post` — the same item, either bridge: `post` called
       once. This is the lazy volume re-arm, pinned.
-- [ ] Test `applyIntent retargets an in-flight fade whose intent flipped` — target 1 in flight,
+- [x] Test `applyIntent retargets an in-flight fade whose intent flipped` — target 1 in flight,
       intent false: `fadeTo(…, 0, …)` called once.
-- [ ] `npm test -- fadeController fadeRegistry syncVisibilityFades` green. Commit.
+- [x] `npm test -- fadeController fadeRegistry syncVisibilityFades` green. Commit.
 
 ## Task 5 — one generic `syncFades()`; `FADE_ROW` and the `writes` half go
 
@@ -660,15 +660,15 @@ syncFades: () => void;
 `scopedVisibilityActions.ts`, `computeSceneEntering.ts`) are untouched (spec D4's last sentence).
 `syncVisibilityFades`' `only` option survives for `applySceneEffect.ts:43-47,62-66`.
 
-- [ ] Test (`watchFadesSaga.test.ts`) `any settings write calls syncFades with no rows` — the
+- [x] Test (`watchFadesSaga.test.ts`) `any settings write calls syncFades with no rows` — the
       existing per-key cases collapse into this; `setMilkyWayEnabled`, `writeVolumeField`,
       `setZoneOfAvoidanceEnabled` and `mergeSnapshot` each fire exactly once with no argument. The
       synchronous-notify case (`:44-54`) stays. The `every FADE_ROW entry…` case (`:101-105`) dies
       with its subject.
-- [ ] Test `a non-settings write does not call syncFades` — a `camera/` action.
-- [ ] `rg -n "FADE_ROW|writes:" src tests` returns nothing (the `writes` grep may hit unrelated
+- [x] Test `a non-settings write does not call syncFades` — a `camera/` action.
+- [x] `rg -n "FADE_ROW|writes:" src tests` returns nothing (the `writes` grep may hit unrelated
       fields; confirm each remaining hit is not a `VisibilityActionRow`).
-- [ ] `npm test -- watchFadesSaga makeReconcileEffects applySceneEffect fadeLayers` green. Commit.
+- [x] `npm test -- watchFadesSaga makeReconcileEffects applySceneEffect fadeLayers` green. Commit.
 
 ## Task 6 — the flow field reconciles its seed in the frame; the saga goes
 
@@ -703,13 +703,13 @@ one does. No new frame file: the compare is the renderer's, and `runFrame`'s pur
 The saga, its `rootSaga` fork, `ReconcileEffects.reseedFlow`, its `makeReconcileEffects` line and the
 harness/NOOP entries go.
 
-- [ ] Test (renderer) `reconcile arms a reseed when mode or count changes and not otherwise` —
+- [x] Test (renderer) `reconcile arms a reseed when mode or count changes and not otherwise` —
       three calls: `{mode:a,count:1}` records only; same again arms nothing; `{mode:a,count:2}` arms
       once. Assert through the renderer's observable (whatever `encodeFlowCompute.test.ts:12` reads
       today), not a spy on a private.
-- [ ] Test (`runFrame.test.ts`) `the flow field's reconcile is called every frame with the flow settings`.
-- [ ] `rg -n "reseedFlow|maybeReseed|watchFlowReseedSaga" src tests` returns nothing.
-- [ ] `npm test -- flowField runFrame makeReconcileEffects reconcileSagaHarness watchFadesSaga`
+- [x] Test (`runFrame.test.ts`) `the flow field's reconcile is called every frame with the flow settings`.
+- [x] `rg -n "reseedFlow|maybeReseed|watchFlowReseedSaga" src tests` returns nothing.
+- [x] `npm test -- flowField runFrame makeReconcileEffects reconcileSagaHarness watchFadesSaga`
       green. Commit.
 
 ## Task 7 — the six core selection rows, and the composer
@@ -788,26 +788,26 @@ and not cached.
 `composeSelectionRows(() => coreSelectionRows(() => deps))`, so Task 8's fixture edits are one line
 each.
 
-- [ ] The existing cases of `resolveFocusId.test.ts` (every `describe`), `focusIdOf.test.ts`,
+- [x] The existing cases of `resolveFocusId.test.ts` (every `describe`), `focusIdOf.test.ts`,
       `resolvePick.test.ts`, `resolvePickTable.test.ts` and `extractSelectionRow.test.ts` move into
       `tests/services/engine/selection/*.test.ts` driven through `selectionResolverOver(deps)`;
       Task 8 deletes the originals. Keep each case's assertion; drop the `:244` comment about
       iteration order, which claims are disjoint now. Report which cases moved where.
-- [ ] Test (`composeSelectionRows.test.ts`) `a claiming row is authoritative even when its decode is null` —
+- [x] Test (`composeSelectionRows.test.ts`) `a claiming row is authoritative even when its decode is null` —
       a stub row claiming `x-` with `decode: () => null` beside a stub row claiming `y-`: `x-1`
       resolves null and the second row's `decode` is never called.
-- [ ] Test `an unclaimed id resolves to null without consulting any decode`.
-- [ ] Test `two rows claiming the same id throw, naming the id and both rows` — two stubs both
+- [x] Test `an unclaimed id resolves to null without consulting any decode`.
+- [x] Test `two rows claiming the same id throw, naming the id and both rows` — two stubs both
       claiming `x-`; assert the throw, not a first-wins result.
-- [ ] Test `an unloaded famous id is unclaimed; a loaded one is claimed and decodes to the famous cloud index` —
+- [x] Test `an unloaded famous id is unclaimed; a loaded one is claimed and decodes to the famous cloud index` —
       the D6'2 deferral: `famousGalaxiesMeta: []` → null; meta with `m31` and the Famous cloud
       absent → null (claimed, decode null); both present → the ref.
-- [ ] Test `rowsOf is read on every call` — a `rowsOf` that returns a longer list on its second call.
-- [ ] Test (`assertSelectionRowsDisjoint.test.ts`) `throws on a repeated pick source code` and
+- [x] Test `rowsOf is read on every call` — a `rowsOf` that returns a longer list on its second call.
+- [x] Test (`assertSelectionRowsDisjoint.test.ts`) `throws on a repeated pick source code` and
       `throws on a repeated type`; `coreSelectionRows` over an empty `ResolveDeps` passes it.
-- [ ] Test (`bodySelectionRow.test.ts`) `the famous-star code resolves to a body ref` and the three
+- [x] Test (`bodySelectionRow.test.ts`) `the famous-star code resolves to a body ref` and the three
       existing body-arm cases (`resolvePickTable.test.ts:36-69`).
-- [ ] `npm test -- selection assertSelectionRowsDisjoint` green. Commit.
+- [x] `npm test -- selection assertSelectionRowsDisjoint` green. Commit.
 
 ## Task 8 — the composed resolver in the saga context and the pick path; the tables deleted
 
@@ -864,16 +864,16 @@ untouched. `NOOP_SAGA_CONTEXT.selection` is `composeSelectionRows(() => [])`.
 Module headers to rewrite in the same commit, each to budget: `hoverPickDriver.ts`, `clickHandler.ts`
 (`resolvePick` is now injected), `watchSelectionRowsSaga.ts:23-25`, `watchTierSaga.ts`.
 
-- [ ] Test (`clickHandler.test.ts`, `hoverPickDriver.test.ts`) — the existing cases inject a
+- [x] Test (`clickHandler.test.ts`, `hoverPickDriver.test.ts`) — the existing cases inject a
       `resolvePick` stub instead of a structures stub; report the delta.
-- [ ] Test (`watchTierSaga.test.ts`) `re-anchors a captured galaxy ref through the composed resolver`
+- [x] Test (`watchTierSaga.test.ts`) `re-anchors a captured galaxy ref through the composed resolver`
       — the existing re-anchor case, driven through `selection`.
-- [ ] Test (`resolveFocusRefDeferring.test.ts` or the two `watchRequest*Saga` tests) `a body deep link
-  resolves before any catalog pulse` — the boot-window contract Ruling 4 protects; if no existing
+- [x] Test (`resolveFocusRefDeferring.test.ts` or the two `watchRequest*Saga` tests) `a body deep link
+resolves before any catalog pulse` — the boot-window contract Ruling 4 protects; if no existing
       case pins it, add one.
-- [ ] `rg -n "ResolvePickDeps|RESOLVE_PICK|EXTRACT_ROW|FOCUS_ID_DECODERS|resolveFocusId\(|focusIdOf\(|extractSelectionRow\(" src tests`
+- [x] `rg -n "ResolvePickDeps|RESOLVE_PICK|EXTRACT_ROW|FOCUS_ID_DECODERS|resolveFocusId\(|focusIdOf\(|extractSelectionRow\(" src tests`
       returns only the composed resolver's methods and the selection-row files.
-- [ ] `npm test`, `npm run typecheck` green. Commit.
+- [x] `npm test`, `npm run typecheck` green. Commit.
 
 ## Task 9 — `factsReported`, and the engine slice composes facts
 
@@ -904,14 +904,14 @@ APP_COMPOSITION.layers>` only as a **type**, and a type import in a `.d.ts` is f
 carries no runtime edge to the composition at all (Findings, last paragraph). Trim the slice header
 (`:1-29`) while there.
 
-- [ ] Test `factsReported merges a patch under the layer key and leaves sibling facts` — drive the
+- [x] Test `factsReported merges a patch under the layer key and leaves sibling facts` — drive the
       reducer with a widened fixture state carrying `stub: { a: 1, b: 2 }`; patch `{ b: 3 }`; assert
       `{ a: 1, b: 3 }` and `status` untouched.
-- [ ] Test `factsReported replaces a field wholesale, it does not deep-merge` — patch `{ list: [1] }`
+- [x] Test `factsReported replaces a field wholesale, it does not deep-merge` — patch `{ list: [1] }`
       over `{ list: [0, 0] }` gives `[1]`.
-- [ ] Test `layerFactsSeeded installs a Layer's key and a later patch merges into it` — seed then
+- [x] Test `layerFactsSeeded installs a Layer's key and a later patch merges into it` — seed then
       patch, in that order, on a state that had no such key.
-- [ ] `npm test -- engineSlice selectors` green. Commit.
+- [x] `npm test -- engineSlice selectors` green. Commit.
 
 ## Task 10 — the handle shrinks: `camera` gone, `assetSlots` under `debug`, the structure list a fact
 
@@ -952,13 +952,13 @@ list is published at boot (anchors) and on each bulk set/clear, the same moments
 `logCameraStateFn` and the `camera` sub-handle go; the `l` key is untouched (Findings, row 1).
 `EngineHandle.d.ts`'s header shrinks with its subject.
 
-- [ ] Test (`wireStructureProjection.test.ts`) `publishes the structure search list with the counts, at boot and when the bulk group lands` —
+- [x] Test (`wireStructureProjection.test.ts`) `publishes the structure search list with the counts, at boot and when the bulk group lands` —
       assert the dispatched list's ids equal `structures.all().map(s => s.id)` after each event.
-- [ ] Test (`engineSlice.test.ts`) `engineStructureSearchListChanged replaces the list wholesale`.
-- [ ] `rg -n "getStructures|useStructureIndex|EngineCameraHandle|logCameraStateFn|\.assetSlots" src tests`
+- [x] Test (`engineSlice.test.ts`) `engineStructureSearchListChanged replaces the list wholesale`.
+- [x] `rg -n "getStructures|useStructureIndex|EngineCameraHandle|logCameraStateFn|\.assetSlots" src tests`
       returns only `debug.assetSlots` reads and `state.assetSlots`.
-- [ ] Manual, attested in the task report: Cmd+K lists structures on the first open after boot.
-- [ ] `npm test`, `npm run typecheck` green. Commit.
+- [x] Manual, attested in the task report: Cmd+K lists structures on the first open after boot.
+- [x] `npm test`, `npm run typecheck` green. Commit.
 
 ## Task 11 — `createLayers`, `LayerInstance`, the deps, destroy in reverse
 
@@ -1016,25 +1016,25 @@ the input detach block (`:521-529`) and before `biasCorrection.destroy()` (`:531
 `state.layers = []`. The four-line destroy comment at `:515-517` gains the sentence "Layers go
 before core, in reverse tuple order".
 
-- [ ] Test (`instantiateLayer.test.ts`) `binds frame and selection to the runtime create returned`
+- [x] Test (`instantiateLayer.test.ts`) `binds frame and selection to the runtime create returned`
       — a stub Layer whose `create` returns `{ tag }`; `frame(runtime)` receives that object; the
       bound hook forwards `(ctx, state)` and its boolean.
-- [ ] Test `a Layer without frame or selection binds null and []`.
-- [ ] Test (`createLayers.test.ts`) `hands every Layer the four core objects` — `focusUniform` and
+- [x] Test `a Layer without frame or selection binds null and []`.
+- [x] Test (`createLayers.test.ts`) `hands every Layer the four core objects` — `focusUniform` and
       `fades` are the same references as `state.gpu.focusUniform` / `state.subsystems.fades`;
       `publish({ x: 1 })` dispatches `factsReported({ layer: 'stub', patch: { x: 1 } })`;
       `reportSourceCount(s, n)` dispatches `engineSourceCountReported({ source: s, count: n })`.
-- [ ] Test `creates in tuple order and stores instances in that order`.
-- [ ] Test `a Layer's facts are seeded before its create runs` — a stub whose `create` calls
+- [x] Test `creates in tuple order and stores instances in that order`.
+- [x] Test `a Layer's facts are seeded before its create runs` — a stub whose `create` calls
       `publish` immediately; the store ends with the seed merged with the patch, and the seed
       dispatch precedes the `create` call in the dispatch log.
-- [ ] Test `throws at boot when two rows share a pick source code` — one row already on
+- [x] Test `throws at boot when two rows share a pick source code` — one row already on
       `state.selectionRows` and one Layer row claiming the same code.
-- [ ] Test (`bootstrap.test.ts`) — the phase-order case gains `createLayers` between `initGpu` and
+- [x] Test (`bootstrap.test.ts`) — the phase-order case gains `createLayers` between `initGpu` and
       `wireSlots`; the short-circuit cases stay.
-- [ ] Test (`engine.destroyOrder.test.ts`) `destroy runs Layers in reverse tuple order before core teardown`
+- [x] Test (`engine.destroyOrder.test.ts`) `destroy runs Layers in reverse tuple order before core teardown`
       — two stub Layers recording into a shared log; `destroyGpuHandles` (mocked) appends last.
-- [ ] `npm test -- createLayers instantiateLayer bootstrap destroyOrder` green. Commit.
+- [x] `npm test -- createLayers instantiateLayer bootstrap destroyOrder` green. Commit.
 
 ## Task 12 — the `frame` hook runs, and votes (D2, Ruling 3)
 
@@ -1063,13 +1063,13 @@ block (`:207`), `runFrame` calls each `state.layers[i].frame` that is non-null, 
 fold feeds `layersAnimating`. No new declaration in `runFrame.ts` (its purity row stays 3; a loop is
 not a symbol). The galaxy blocks and the galaxy `shouldKeepTicking` terms stay (PR-D).
 
-- [ ] Test (`runFrame.test.ts`) `every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform` —
+- [x] Test (`runFrame.test.ts`) `every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform` —
       two stub instances recording the call order and `ctx.focus` at call time.
-- [ ] Test `a hook returning true keeps the loop ticking` — `scheduler.requestRender` called at the
+- [x] Test `a hook returning true keeps the loop ticking` — `scheduler.requestRender` called at the
       frame's tail with everything else at rest; false does not.
-- [ ] Test `a second hook still runs when the first returned true`.
-- [ ] Test (`shouldKeepTicking.test.ts`) `layersAnimating is a keep-alive term`.
-- [ ] `npm test -- runFrame shouldKeepTicking` green. Commit.
+- [x] Test `a second hook still runs when the first returned true`.
+- [x] Test (`shouldKeepTicking.test.ts`) `layersAnimating is a keep-alive term`.
+- [x] `npm test -- runFrame shouldKeepTicking` green. Commit.
 
 ## Task 13 — readiness narrows to core; the ready context loses its galaxy handles
 
@@ -1094,15 +1094,15 @@ Both `engineReady.ts` (`:1-93`) and `ReadyFrameContext.d.ts` (`:1-47`) headers a
 budget; the surviving fact is one sentence each: which handles the gate proves, and why
 `filamentRenderer` is not among them.
 
-- [ ] `engineReady.test.ts`: the three galaxy false-branch cases (`:81-83,99-105`) die; the
+- [x] `engineReady.test.ts`: the three galaxy false-branch cases (`:81-83,99-105`) die; the
       narrowing case (`:126-158`) narrows `renderTargets` and `compositor` only.
-- [ ] `frameContext.test.ts`: the `galaxyPointRenderer`/`texturedDisks` not-ready cases die; the
+- [x] `frameContext.test.ts`: the `galaxyPointRenderer`/`texturedDisks` not-ready cases die; the
       forwarding case (`:322-343`) keeps only `renderTargets`.
-- [ ] Test (`passes.test.ts`) `point-sprites is disabled while the point renderer is absent` — and
+- [x] Test (`passes.test.ts`) `point-sprites is disabled while the point renderer is absent` — and
       the existing draw cases build their renderer on `state.gpu`, not `ctx`.
-- [ ] `rg -n "ctx\.galaxyPointRenderer|ctx\.texturedDisks|galaxyPointRenderer: |texturedDisks: " src tests`
+- [x] `rg -n "ctx\.galaxyPointRenderer|ctx\.texturedDisks|galaxyPointRenderer: |texturedDisks: " src tests`
       returns nothing on a `ReadyFrameContext`.
-- [ ] `npm test -- engineReady frameContext passes cubemapFaceContext pickFrameContext shouldKeepTicking`
+- [x] `npm test -- engineReady frameContext passes cubemapFaceContext pickFrameContext shouldKeepTicking`
       green. Commit.
 
 ## Task 14 — the panel renders composed sections first (D13)
@@ -1117,27 +1117,27 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
 core children follow unchanged. The `create-component` conventions apply (own folder, no new
 module); the 44-line header shrinks to the order rule and the one prop.
 
-- [ ] Test `renders a present Layer's ui section before the core sections` — `vi.mock` the
+- [x] Test `renders a present Layer's ui section before the core sections` — `vi.mock` the
       composition module with one stub Layer whose `ui` renders a marker; assert DOM order against
       the Galaxies section.
-- [ ] Test `renders nothing extra over the empty composition` — the existing snapshot-free child
+- [x] Test `renders nothing extra over the empty composition` — the existing snapshot-free child
       assertions stay as they are.
-- [ ] `npm test -- SettingsPanel` green. Commit.
+- [x] `npm test -- SettingsPanel` green. Commit.
 
 ## Task 15 — gate
 
 Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) declare only their own symbol; the purity ratchet `tests/services/engine/frame/frameFilePurity.test.ts` shrinks only.
 
-- [ ] `npm run typecheck` (both projects) green.
-- [ ] `npm test` green. **No pre-committed number**: six test files die and about thirty are
+- [x] `npm run typecheck` (both projects) green.
+- [x] `npm test` green. **No pre-committed number**: six test files die and about thirty are
       adapted; report the ACTUAL delta with a reason per difference, reconciled against Tasks 4, 5, 6,
       7, 9 and 12's reports of which cases moved where. An unexplained drop is coverage deleted where
       it should have moved.
-- [ ] `npm run build` green.
-- [ ] `tests/conventions/layerImportBoundary.test.ts` present, green, with exactly one row inbound
+- [x] `npm run build` green.
+- [x] `tests/conventions/layerImportBoundary.test.ts` present, green, with exactly one row inbound
       (`state/settings/settingsSlice: 13`) and an empty allow-list outbound.
-- [ ] `tests/services/engine/frame/frameFilePurity.test.ts` unchanged (no row went up).
-- [ ] Manual, attested by the user with the branch's dev server:
+- [x] `tests/services/engine/frame/frameFilePurity.test.ts` unchanged (no row went up).
+- [x] Manual, attested by the user with the branch's dev server:
   - click a galaxy, a cluster ring, a planet, a famous star, the Milky Way: each selects (the pick
     path is the composed resolver);
   - `#focus=body-earth`, `#focus=cluster-virgo-m87`, `#focus=m31`, `#focus=star-42` deep links each
@@ -1149,14 +1149,14 @@ Frame files (`src/services/engine/frame/**`, incl. `timing/` and `passes/`) decl
   - near Sgr A\* with the lens active, flip the tier: the lensed sky re-bakes after the catalogs
     re-commit (Task 3's `contentVersion` contract);
   - DebugPanel's asset-slot rows still populate.
-- [ ] Spec §14 ("Corrections to the review") gains one line: D5's sentence that the ratchet's one
+- [x] Spec §14 ("Corrections to the review") gains one line: D5's sentence that the ratchet's one
       exemption "becomes the composed-tuple import once D1 lands" is wrong. `settingsSlice.ts` keeps
       its thirteen direct fragment imports — the `liftClusterReducers` spreads need each fragment's
       literal type for the typed `settingsSlice.actions` exports (Findings, row 5) — so the row is
       13, not 1, until reducers compose at the type level. 04c and 04d read the spec after this PR.
-- [ ] Spec §9(d)'s "Backlog consumption" paragraph is intact; the spec stays in `specs/` (shared with
+- [x] Spec §9(d)'s "Backlog consumption" paragraph is intact; the spec stays in `specs/` (shared with
       04c/04d), so `/feature-done` relocates only this plan.
-- [ ] The PR body carries the D1 import-cycle constraint the outbound ratchet now enforces (what
+- [x] The PR body carries the D1 import-cycle constraint the outbound ratchet now enforces (what
       PR-D may not write, and why) and the two veto-able rulings (2, 3), each with the user's
       decision recorded.
 
@@ -1171,46 +1171,48 @@ used where Task 11 says to throw; any file under `src/layers/` was created or ed
 
 **Deliverable inventory**
 
-- [ ] `Layer` carries `Settings`, `Sources`, `Facts` type parameters and the `facts`, `selection`,
+- [x] `Layer` carries `Settings`, `Sources`, `Facts` type parameters and the `facts`, `selection`,
       `frame` members; `defineLayer` takes them as `const` parameters; `PickResolverRow` and
       `Layer.pick` are gone.
-- [ ] `APP_SETTINGS_FRAGMENTS` is `[...UNFORMED_SETTINGS_FRAGMENTS, ...settingsOf(APP_COMPOSITION.layers)]`
+- [x] `APP_SETTINGS_FRAGMENTS` is `[...UNFORMED_SETTINGS_FRAGMENTS, ...settingsOf(APP_COMPOSITION.layers)]`
       and `docs/backlog/2026-09-11-layer-settings-tuple-seam.md` no longer exists.
-- [ ] `LayerCoreDeps<Facts>` carries `focusUniform`, `fades`, `reportSourceCount` and a `publish`
+- [x] `LayerCoreDeps<Facts>` carries `focusUniform`, `fades`, `reportSourceCount` and a `publish`
       conditional on `Facts`; `createLayers` runs between `initGpu` and `wireSlots`, seeds each
       Layer's facts before its `create`, and appends its rows to `state.selectionRows`;
       `engine.destroy()` destroys `state.layers` in reverse before any core teardown.
-- [ ] `runFrame` calls every instance's `frame` hook after the focus uniform and folds it into
+- [x] `runFrame` calls every instance's `frame` hook after the focus uniform and folds it into
       `shouldKeepTicking`.
-- [ ] `SagaContext.selection` is the composed `SelectionResolver`; the pick path calls its
+- [x] `SagaContext.selection` is the composed `SelectionResolver`; the pick path calls its
       `resolvePick`; `RESOLVE_PICK`, `EXTRACT_ROW`, `FOCUS_ID_DECODERS`, `ENCODE`, `ResolvePickDeps`
       no longer exist; `ResolveDeps` survives with four fields.
-- [ ] `tests/conventions/layerImportBoundary.test.ts` exists with the single `settingsSlice` row
+- [x] `tests/conventions/layerImportBoundary.test.ts` exists with the single `settingsSlice` row
       inbound and an empty `src/layers/** → src/state|store` allow-list outbound.
-- [ ] `factsReported`, `layerFactsSeeded` and `engineStructureSearchListChanged` exist on the engine
+- [x] `factsReported`, `layerFactsSeeded` and `engineStructureSearchListChanged` exist on the engine
       slice; `EngineSliceState` is `CoreEngineSliceState & FactsOf<AppLayers>`, and `engineSlice.ts`
       imports the composition for its type only.
-- [ ] `EngineHandle` is `{ selection, sources, debug, destroy }`, `debug.assetSlots` exists,
+- [x] `EngineHandle` is `{ selection, sources, debug, destroy }`, `debug.assetSlots` exists,
       `EngineSourcesHandle.getStructures` and `useStructureIndex` do not.
-- [ ] `state.contentVersion` exists, bumped once per catalog commit; `scheduleCubemapCaptures`' re-bake
+- [x] `state.contentVersion` exists, bumped once per catalog commit; `scheduleCubemapCaptures`' re-bake
       key reads it directly instead of leaning on `fades.isAnyAnimating`; `fadeController.fadeTo`
       resolves immediately for an already-held target.
-- [ ] `FadeRegistry.targetOf` exists; `FADE_ROW`, `VisibilityActionRow.writes`,
+- [x] `FadeRegistry.targetOf` exists; `FADE_ROW`, `VisibilityActionRow.writes`,
       `ReconcileEffects.reseedFlow`, `watchFlowReseedSaga`, `FlowFieldRenderer.maybeReseed` do not;
       `FlowFieldRenderer.reconcile` does.
-- [ ] `isEngineReady` proves `booted`, `renderTargets`, `compositor` and nothing else;
+- [x] `isEngineReady` proves `booted`, `renderTargets`, `compositor` and nothing else;
       `ReadyFrameContext` has no `galaxyPointRenderer` or `texturedDisks` field.
-- [ ] `SettingsPanel` maps the composition's `ui` sections before its core children.
+- [x] `SettingsPanel` maps the composition's `ui` sections before its core children.
 
 **Named observable behaviours** (Task 15's pass, user-attested)
 
-- [ ] Every pickable kind still selects on click and hover.
-- [ ] A body or Milky Way deep link resolves during the boot window, before any catalog pulse.
-- [ ] A famous-galaxy deep link resolves once the meta and cloud have landed, not before.
-- [ ] The command palette's structure search is populated from the store on first open.
-- [ ] A tier swap near the black-hole lens re-bakes the lensed sky after the re-commit.
-- [ ] A flow count or mode change reseeds the field on the next frame.
-- [ ] A layer toggle fades once; unrelated settings writes do not restart it.
+- [x] Every pickable kind still selects on click and hover.
+- [x] A body or Milky Way deep link resolves during the boot window, before any catalog pulse.
+- [x] A famous-galaxy deep link resolves once the meta and cloud have landed, not before.
+- [x] The command palette's structure search is populated from the store on first open.
+- [x] A tier swap near the black-hole lens re-bakes the lensed sky after the re-commit.
+- [ ] A flow count or mode change reseeds the field on the next frame. — NOT MET at landing: found
+      broken on main and the deployed build alike (pre-existing); the in-frame `reconcile` preserved
+      the behaviour exactly. Backlog `docs/backlog/2026-09-15-flow-field-no-reseed-on-count-change.md` (#721).
+- [x] A layer toggle fades once; unrelated settings writes do not restart it.
 
 **The deferral boundary** — see "Deferred". No file under `src/layers/` changes. No `Layer` value
 exists. No pass, asset row, fade row or label producer is composed from `state.layers` yet.
