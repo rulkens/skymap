@@ -565,30 +565,46 @@ parallel to it.
 
 ### 7.2 Normals
 
-In the fragment shader, the normal is the gradient of the bilinear cell the fragment
-lies in, from that cell's own four posts, in the local `(Ê, N̂, Û)` frame at the
+**Amended after the eye-check (spike `b95d565ac`, kept — this supersedes the
+bilinear-cell-gradient design below the eye-check found).** A gradient constant across
+the whole cell drew visible facets ("quilting") at coarse levels: shading stepped
+between posts instead of blending. The shipped normal instead interpolates a
+**per-post central-difference gradient** across the cell: at each of the cell's four
+corner posts, take the central difference against that post's own four neighbours
+(`lattice.wesl`'s `latticePostGradient` — **16 `textureLoad`s** per fragment, four per
+post, one-sided/clamped where a post sits on the sub-rect's own edge — **no apron**,
+the tile carries no halo row), then bilinear-blend the four post gradients by the
+fragment's position `(u, v)` inside the cell, in the local `(Ê, N̂, Û)` frame at the
 **source level's** post spacing — `patchExtent / heightCells` (R14), the lattice
-actually sampled, never a fixed 128. With `(u, v)` the fragment's position inside
-cell `(i, j)`:
+actually sampled, never a fixed 128:
 
 ```
-dhdE = ((h(i+1,j) − h(i,j))·(1−v) + (h(i+1,j+1) − h(i,j+1))·v) / postSpacingE_M
-dhdN = ((h(i,j+1) − h(i,j))·(1−u) + (h(i+1,j+1) − h(i+1,j))·u) / postSpacingN_M
-n    = normalize(Û − dhdE·Ê − dhdN·N̂)
+g(post) = ((h(post.x+1) − h(post.x−1)) / spacingE, (h(post.y+1) − h(post.y−1)) / spacingN)   // central, clamped at the sub-rect edge
+g       = mix(mix(g(NW), g(NE), u), mix(g(SW), g(SE), u), v)
+n       = normalize(Û − g.E·Ê − g.N·N̂)
 ```
 
-This is exact for the surface actually being drawn, it reads no post outside the tile,
-and across a tile edge both sides read the same bit-identical shared column (§5.4.1),
-so neither can disagree with the other. A central difference would go one-sided at the
-129th post and draw a seam along every tile edge. Shading resolution decouples from
-tessellation, and a coarse patch and a fine patch sampling the same height level
-produce **identical** normals — no shading seam at an LOD boundary even though the
-geometry densities differ. If the eye-check shows cell quilting at coarse levels, the
-escalation is a one-post apron in the tile, not a clamp.
+No apron means a post's central difference is one-sided at the sub-rect's own edge
+(clamped to the post itself rather than reading a neighbouring leaf's ground), so two
+patches sharing an edge take one-sided slopes from opposite sides of the same shared
+post — a second-order disagreement one post wide, five orders below anything §7.3's
+crack argument is about (position, not shading). If a future eye-check finds a
+residual seam there, the escalation is a one-post apron in the tile format (a
+re-bake), not a shader clamp.
+
+Shading resolution still decouples from tessellation, and a coarse patch and a fine
+patch sampling the same height level still produce **identical** normals — no shading
+seam at an LOD boundary even though the geometry densities differ.
 
 Patches take their normal from the height field alone. The whole-globe tangent-space
 normal map that the tile shader samples today (`fragment.wesl:109-110`) stays on the
 base globe only — compositing both would shade the same relief twice.
+
+**Night lights gate on the datum normal, not this one.** The emissive city-lights term
+(§8's `nightLights`) keys "is the sun up" on `dot(Ng, l)` — `Ng` the un-displaced datum
+normal, not the terrain-shaded `n` above. Keying it on `n` turned every slope facing
+away from the sun at local noon into "night" and lit it with the Black Marble glow
+(found at Søndermarken during the eye-check, fixed `ad7ab0f69`).
 
 ### 7.3 Crack accounting
 
@@ -811,8 +827,8 @@ land/park call is the user's.
 | --- | -------------------------------------------------------------------------------------------------- | --------------------------- |
 | P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                                | #704 — landed               |
 | P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                       | #705 — landed, perf NEUTRAL |
-| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                    | one PR                      |
-| F2  | Displacement, normals, edge collapse, base-globe shrink                                            | one PR                      |
+| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                    | #713 closed superseded, landed via #719 |
+| F2  | Displacement, normals, edge collapse, base-globe shrink                                            | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
 | F3  | Ground truth: height field, `ceilingHeightM` routing, `raycast` pick, horizon cap, cloud clearance | one PR                      |
 | F4  | Mars: imagery bake, global height, four rover-site bands                                           | one PR                      |
 

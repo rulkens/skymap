@@ -348,10 +348,10 @@ The fade band and the `'nearer-or-equal'` compare do not move (§7.4). `CLOUD_SH
 
 No code. Runs on **this worktree's own dev server** — note its port from the `Local:` line; a perf run without `--url http://localhost:<port>` silently measures another branch.
 
-- [ ] Four poses, with the user looking: **orbit** (terrain reads as relief, not as noise; no cracks along LOD boundaries), the **300 km band** (the base globe stays, at the inner bound, and nothing of it pokes through the patches), **Søndermarken at z19** (1.19 m geometry posts; the fragment normal carries the 0.597 m detail — shading should be finer than the silhouette), and a **limb view** (the silhouette is terrain, and no skirt is visible edge-on as a black wall).
-- [ ] Band seams specifically: look along the EOX box boundary and the Søndermarken boundary, where the step is multi-level and the skirt is the only thing closing it. If a skirt reads as a visible wall, `SURFACE_TILE_SKIRT_DEPTH_FRACTION` is the one knob (F2-R3).
-- [ ] Confirm `reliefM`'s literal against the F1 bake's printed global min/max diagnostics (F2-R4); change the constant if they disagree.
-- [ ] **USER-RUN:** `npm run perf -- --url http://localhost:<port>` before and after, A-B-A-B, on the earth-surface and solar-system poses — P6 measured 21.28 → 20.78 ms and 20.73 → 20.47 ms at `n = 8`, and F2 raises the drawn triangle count from ~33k to ~2.2M per frame (256 patches × 8,192 grid + 512 skirt triangles). No agent runs this (F2-R6). A neutral-or-negative measurement **halts the landing pipeline**; land/park is the user's call, and the cheap lever is `EARTH_SURFACE_TILE_MESH_RESOLUTION` (a constant, not a re-bake — 32 quarters the triangles).
+- [~] Four poses, with the user looking: **orbit** (terrain reads as relief, not as noise; no cracks along LOD boundaries), the **300 km band** (the base globe stays, at the inner bound, and nothing of it pokes through the patches), **Søndermarken at z19** (1.19 m geometry posts; the fragment normal carries the 0.597 m detail — shading should be finer than the silhouette), and a **limb view** (the silhouette is terrain, and no skirt is visible edge-on as a black wall). Done at Everest, Søndermarken and multiple tilted orbit poses across the eye-check session; surfaced and fixed the shading-quilt spike, the night-lights cream bug and a horizon-cull gap (all landed). NOT cleanly closed: grey rectangles at screen edges under high tilt were investigated at length and PARKED as a known limitation (`docs/backlog/2026-09-15-terrain-grey-holes-high-tilt.md`); the limb view's skirt-wall risk (flagged by the implementer at the 0.05 depth knob) was never separately confirmed clean by the user.
+- [x] Band seams specifically: look along the EOX box boundary and the Søndermarken boundary, where the step is multi-level and the skirt is the only thing closing it. If a skirt reads as a visible wall, `SURFACE_TILE_SKIRT_DEPTH_FRACTION` is the one knob (F2-R3). User confirmed: "not really noticeable" — no visible seams.
+- [~] Confirm `reliefM`'s literal against the F1 bake's printed global min/max diagnostics (F2-R4); change the constant if they disagree. The bake's printed global range includes uncorrected deep-ocean pit artifacts (§4.4's open water item) that make a literal min/max comparison meaningless; the constant was never explicitly re-confirmed against a corrected figure before landing. Shipped as `[-430, 8849]` (Dead Sea / Everest), unchanged.
+- [ ] **USER-RUN:** `npm run perf -- --url http://localhost:<port>` before and after, A-B-A-B, on the earth-surface and solar-system poses — P6 measured 21.28 → 20.78 ms and 20.73 → 20.47 ms at `n = 8`, and F2 raises the drawn triangle count from ~33k to ~2.2M per frame (256 patches × 8,192 grid + 512 skirt triangles). No agent runs this (F2-R6). A neutral-or-negative measurement **halts the landing pipeline**; land/park is the user's call, and the cheap lever is `EARTH_SURFACE_TILE_MESH_RESOLUTION` (a constant, not a re-bake — 32 quarters the triangles). **Waived by the user** ("ok for now") so production (broken on main) could ship; the `docs/BACKLOG.md` "Terrain mesh resolution 128" index line carries the deferred perf gate forward.
 
 ---
 
@@ -428,3 +428,48 @@ F1's `probe` culls with a sphere of radius 1.5× the corner chord about the patc
 **Files:** `src/services/gpu/shaders/bodies/earthSurfaceTile/{vertex,io}.wesl` (skirt ring unconditional; `collapseStride` for mesh steps deleted; stride clamp), `src/@types/scene/SurfaceCutTile.d.ts`, `src/utils/scene/balanceSurfaceCut.ts` + test (code 2 gone), `src/services/gpu/renderers/bodies/earthSurfaceTileRenderer.ts` (bit packing) + layout test, `src/utils/scene/cutSurfaceTiles.ts` (`reliefHeadroom` clamp) + test, `src/utils/scene/latticeHeightSample.ts` + test (a `cells = 128` stride-2 case at an even post is a no-op — that is the correct answer, since the neighbour's coarser lattice already sits on the even posts; and the clamp at `cells = 1`), `surfaceNormalFromHeightCell.ts` + test + `fragment.wesl`, spec §7.3 (the "same vertex count per edge" premise is false across a cut-level step; skirts own those seams) / §7.4 / F2-R1 / F2-R3, `docs/RENDERER.md`, this plan's DoD.
 
 - [x] Commit `feat(terrain): R15 — skirts on every edge; edge code is the lattice step only`.
+
+---
+
+## Amendment — eye-check fixes and landing decision (2026-09-15, post-R15)
+
+Ruled/landed during the T9 eye-check, after B5. Task 6's own contract text above
+("spec §7.2's forward difference, not a central one") is left as written for history;
+this amendment is the current truth and is what spec §7.2 now says.
+
+- **Normals: per-post central-difference spike, `b95d565ac`, KEPT.** Task 6's
+  bilinear-cell-gradient normal drew visible quilting at Everest. Replaced with
+  per-post central differences (`lattice.wesl`'s `latticePostGradient`, 16
+  `textureLoad`s per fragment) interpolated across the cell — spec §7.2 (amended).
+  `surfaceNormalFromHeightCell`'s TS twin was re-signed to match.
+- **Night lights, `ad7ab0f69`.** The emissive gate used the terrain-shaded normal's
+  `NoL`, so any slope facing away from the sun at noon read as night (Søndermarken
+  went cream-white). Fixed: gate on the datum normal `Ng`, never the displaced `n` —
+  spec §7.2 (amended).
+- **Horizon cull, `d8636f2f1`** (landed on `terrain-f1-height-products`, carried into
+  this branch by the pre-landing merge). The walk's horizon cap ignored a node's
+  `reliefHeadroom` and a camera below the datum planned nothing; both fixed. Did not
+  resolve the grey-rectangle symptom below — its root cause is elsewhere — but is
+  correct on its own and load-bearing for the under-datum-camera test.
+- **Known limitations shipped, not fixed here** — investigated at length during the
+  eye-check; each is its own backlog item rather than re-described:
+  - Grey rectangles at screen edges under high tilt (a leaf absent from the cut with
+    zero misses) — `docs/backlog/2026-09-15-terrain-grey-holes-high-tilt.md`.
+  - Relief LOD reads coarser than expected near nadir at low tilt, worse as tilt
+    rises — `docs/backlog/2026-09-15-terrain-relief-coarsens-under-tilt.md`.
+  - A height-LOD debug overlay is a prerequisite for debugging the above — its own
+    `docs/BACKLOG.md` index line.
+  - `EARTH_SURFACE_TILE_MESH_RESOLUTION` 64 → 128 (to match the 129-post height
+    tiles) is deferred, perf-A/B gated — its own `docs/BACKLOG.md` index line.
+  - The atmosphere shows a hard seam over Everest's summit (the analytic ground
+    sphere's horizon vs. the now-displaced terrain) — a pre-existing external
+    dependency (spec §2, depth-blind inside-atmosphere composite), not introduced by
+    F2; the Bruneton-tables effort parked "until the terrain mesh lands" is the
+    follow-on.
+- **Landing decision.** `npm run perf` was waived by the user ("ok for now") and
+  F1+F2 landed together via #719 directly onto `main` — the F1 worktree was
+  unreachable from this session's guard — because production was broken with F1's
+  tile format already deployed. The final whole-branch review and a deletion-audit
+  pass were both explicitly skipped at landing time to ship the fix; this
+  `/feature-done` pass (branch `terrain-feature-done-docs`) is that skipped
+  bookkeeping, run after the fact.
