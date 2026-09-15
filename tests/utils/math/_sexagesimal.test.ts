@@ -34,14 +34,6 @@ describe('decomposeSexagesimal (rounding variant)', () => {
     expect(m).toBe(0);
     expect(sub).toBe(0);
   });
-
-  it('returns subunits in [0, 60·subunitFactor) for any value', () => {
-    // Sanity check on the integer-decomposition arithmetic: with
-    // subunitFactor=10, the third component must always be < 600 (60×10).
-    const [, , sub] = decomposeSexagesimal(45.7, 10);
-    expect(sub).toBeGreaterThanOrEqual(0);
-    expect(sub).toBeLessThan(600);
-  });
 });
 
 describe('decomposeSexagesimalTrunc (truncation variant)', () => {

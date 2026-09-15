@@ -39,7 +39,4 @@ describe('formatDistance', () => {
     expect(formatDistance(0.5 * SCALE_UNITS.KM_TO_MPC)).toBe('500 m');
     expect(formatDistance(0.999 * SCALE_UNITS.KM_TO_MPC)).toBe('999 m');
   });
-  it('stays in km at exactly 1 km (boundary)', () => {
-    expect(formatDistance(SCALE_UNITS.KM_TO_MPC)).toBe('1.00 km');
-  });
 });

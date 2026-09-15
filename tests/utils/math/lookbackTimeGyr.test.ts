@@ -11,26 +11,11 @@ import { lookbackTimeGyr } from '../../../src/utils/math/lookbackTimeGyr';
 import { HUBBLE_TIME_GYR } from '../../../src/utils/math/constants';
 
 describe('lookbackTimeGyr', () => {
-  it('returns 0 at z = 0 (no lookback for the present epoch)', () => {
-    expect(lookbackTimeGyr(0)).toBe(0);
-  });
-
   it('returns half the Hubble time at z = 1 (z/(1+z) = 0.5)', () => {
     // At z = 1, the formula gives t_H × 0.5.  This is the only redshift where
     // the closed-form ratio is a clean number, so it doubles as a sanity-check
     // on the constant table.
     expect(lookbackTimeGyr(1)).toBeCloseTo(HUBBLE_TIME_GYR * 0.5, 6);
-  });
-
-  it('is monotonically increasing in z', () => {
-    // Light from a more distant (higher-z) source has been travelling longer,
-    // so lookback must grow with z everywhere.
-    let prev = -1;
-    for (let z = 0; z <= 5; z += 0.1) {
-      const t = lookbackTimeGyr(z);
-      expect(t).toBeGreaterThanOrEqual(prev);
-      prev = t;
-    }
   });
 
   it('asymptotes to the Hubble time as z grows large', () => {

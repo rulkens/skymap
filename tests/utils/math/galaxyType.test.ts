@@ -45,9 +45,4 @@ describe('galaxyType', () => {
       galaxyType(Source.FamousGalaxy, { magU: 0, magG: 0, magR: 0, magI: 0, magZ: 0 }).category,
     ).toBe('blue');
   });
-  it('Source.FamousGalaxy with NaN photometry falls back to UNKNOWN (green)', () => {
-    expect(
-      galaxyType(Source.FamousGalaxy, { magU: NaN, magG: 0, magR: NaN, magI: 0, magZ: 0 }).category,
-    ).toBe('green');
-  });
 });

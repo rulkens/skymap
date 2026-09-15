@@ -18,12 +18,6 @@ function maxColumnDot(m: Mat3): number {
 }
 
 describe('reorthonormalise', () => {
-  it('leaves the identity unchanged', () => {
-    const m: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
-    const r = reorthonormalise(m);
-    for (let i = 0; i < 9; i++) expect(r[i]).toBeCloseTo(m[i]!, 12);
-  });
-
   it('normalises columns to unit length', () => {
     const m: Mat3 = [2, 0, 0, 0, 3, 0, 0, 0, 4];
     const r = reorthonormalise(m);

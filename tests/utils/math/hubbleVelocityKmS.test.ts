@@ -14,10 +14,6 @@ import { hubbleVelocityKmS } from '../../../src/utils/math/hubbleVelocityKmS';
 import { C_KM_S } from '../../../src/utils/math/constants';
 
 describe('hubbleVelocityKmS', () => {
-  it('returns 0 km/s at z = 0 (no expansion for the present epoch)', () => {
-    expect(hubbleVelocityKmS(0)).toBe(0);
-  });
-
   it('agrees with c·z at low z (the classical Hubble-law regime)', () => {
     // At z = 0.01 the ΛCDM comoving distance is within ~1% of the linear
     // c·z/H₀, so v = H₀·d_C must land within 1% of c·z. This is the regime

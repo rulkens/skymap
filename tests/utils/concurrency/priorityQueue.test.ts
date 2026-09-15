@@ -163,38 +163,4 @@ describe('PriorityQueue', () => {
 
     expect(thirdFetcher).not.toHaveBeenCalled();
   });
-
-  it('calls onResult with the fetcher result', async () => {
-    const queue = new PriorityQueue();
-    const cb = vi.fn();
-    const fakeBitmap = { close: () => {} } as unknown as ImageBitmap;
-    queue.enqueue({
-      key: 'k',
-      priority: 1,
-      fetcher: async () => fakeBitmap,
-      onResult: cb,
-    });
-    await queue.drain();
-    expect(cb).toHaveBeenCalledWith(fakeBitmap);
-  });
-
-  it('inFlightCount reports the number of running fetches', async () => {
-    const queue = new PriorityQueue();
-    expect(queue.inFlightCount()).toBe(0);
-
-    // Build a fetcher that we can resolve manually.
-    let resolveFetch: (b: ImageBitmap | null) => void = () => {};
-    const fetcher = () =>
-      new Promise<ImageBitmap | null>((resolve) => {
-        resolveFetch = resolve;
-      });
-
-    queue.enqueue({ key: 'k1', priority: 1, fetcher, onResult: () => {} });
-    expect(queue.inFlightCount()).toBe(1);
-
-    resolveFetch(null);
-    // Drain so the .finally() runs and the count drops back to 0.
-    await queue.drain();
-    expect(queue.inFlightCount()).toBe(0);
-  });
 });

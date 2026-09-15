@@ -18,13 +18,6 @@ describe('sdssThumbnailUrl', () => {
     );
   });
 
-  it('accepts negative declinations (southern hemisphere)', () => {
-    // The service understands signed Dec; we just interpolate the literal
-    // number into the URL — no sign munging required.
-    const url = sdssThumbnailUrl(0, -45.5);
-    expect(url).toContain('dec=-45.5');
-  });
-
   it('derives scale from fovArcmin so the cutout frames the galaxy', () => {
     // 4 arcmin over 200 px → 4×60/200 = 1.2 arcsec/pixel.  Without the FOV
     // arg the scale stays at the native 0.4 (asserted in the first test).

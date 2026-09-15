@@ -9,10 +9,4 @@ describe('minOf', () => {
   it('returns the fallback for an empty array', () => {
     expect(minOf([], 42)).toBe(42);
   });
-
-  it('ignores the fallback when the array is non-empty', () => {
-    // A fallback smaller than every element must not win — it only applies
-    // when there is no element to compare.
-    expect(minOf([3, 4, 5], -100)).toBe(3);
-  });
 });

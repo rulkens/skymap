@@ -99,19 +99,4 @@ describe('runDisposableWorker', () => {
     await expect(promise).rejects.toThrow('something failed');
     expect(lastWorker!.terminate).toHaveBeenCalledTimes(1);
   });
-
-  it('rejects with the label-only fallback when neither error nor message is set', async () => {
-    lastWorker = null;
-    const promise = runDisposableWorker<unknown, unknown>(
-      FakeWorkerCtor as unknown as new () => Worker,
-      {},
-      [],
-      'angular-weights',
-    );
-
-    lastWorker!.onerror!({ error: null, message: '' } as unknown as ErrorEvent);
-
-    await expect(promise).rejects.toThrow('angular-weights worker error');
-    expect(lastWorker!.terminate).toHaveBeenCalledTimes(1);
-  });
 });

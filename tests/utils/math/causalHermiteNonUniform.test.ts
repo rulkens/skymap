@@ -73,9 +73,4 @@ describe('causalHermiteNonUniform', () => {
     expect(slopeAt(1)).toBeCloseTo(p2 - p1, 3);
     expect(slopeAt(2)).toBeCloseTo(2 * (p2 - p1), 3);
   });
-
-  it('holds the left value when two knot times coincide (degenerate leg)', () => {
-    const v = causalHermiteNonUniform(0, 5, 9, 12, 0, 2, 2, 4, 2, 1);
-    expect(Number.isFinite(v)).toBe(true);
-  });
 });

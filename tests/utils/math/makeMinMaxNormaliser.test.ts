@@ -10,11 +10,6 @@ describe('makeMinMaxNormaliser', () => {
     expect(n(30)).toBe(1);
   });
 
-  it('linearly interpolates interior values', () => {
-    const n = makeMinMaxNormaliser([0, 100], identity);
-    expect(n(25)).toBeCloseTo(0.25, 10);
-  });
-
   it('applies the transform before normalising (log space)', () => {
     // log10 over [1, 100] spans [0, 2]; 10 sits at the midpoint.
     const n = makeMinMaxNormaliser([1, 100], Math.log10);

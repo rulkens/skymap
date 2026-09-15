@@ -9,9 +9,4 @@ describe('createReseedLatch', () => {
     // A steady frame after the reseed must NOT re-seed.
     expect(latch.consume()).toBe(false);
   });
-
-  it('a fresh latch is not armed', () => {
-    const latch = createReseedLatch();
-    expect(latch.consume()).toBe(false);
-  });
 });

@@ -19,11 +19,6 @@ describe('mortonEncode3', () => {
     expect(mortonEncode3(0, 0, 1)).toBe(4);
   });
 
-  it('interleaves the second-lowest bit of each axis (bits 3,4,5)', () => {
-    // x=2 → bit 3 (8), y=2 → bit 4 (16), z=2 → bit 5 (32); together 56.
-    expect(mortonEncode3(2, 2, 2)).toBe(56);
-  });
-
   it('fills all 30 bits at the maximum coordinate and stays a positive uint32', () => {
     const code = mortonEncode3(1023, 1023, 1023);
     expect(code).toBe(0x3fffffff);

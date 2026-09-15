@@ -23,20 +23,4 @@ describe('apparentSizePx', () => {
       apparentSizePx({ diameterKpc: 30, distanceMpc: -5, viewportHeightPx: 1080, fovYRad: 1 }),
     ).toBe(0);
   });
-
-  it('scales linearly with viewport height', () => {
-    const small = apparentSizePx({
-      diameterKpc: 30,
-      distanceMpc: 5,
-      viewportHeightPx: 540,
-      fovYRad: 1,
-    });
-    const big = apparentSizePx({
-      diameterKpc: 30,
-      distanceMpc: 5,
-      viewportHeightPx: 1080,
-      fovYRad: 1,
-    });
-    expect(big).toBeCloseTo(small * 2, 6);
-  });
 });

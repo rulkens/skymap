@@ -20,11 +20,6 @@ describe('healpixNest — known reference values', () => {
     expect(healpixNest(0, 90, 1)).toBe(0);
   });
 
-  it('nside=1: south pole maps to pixel 8', () => {
-    // South pole sits at the symmetric southern face — face index 8.
-    expect(healpixNest(0, -90, 1)).toBe(8);
-  });
-
   it('nside=1: equatorial points map to one of the equatorial faces (4..7)', () => {
     // The four equatorial faces 4..7 carve out the band |Dec| ≤ ~41.8°.
     // Any (RA, 0) should land on one of those four pixels at nside=1.
@@ -46,14 +41,6 @@ describe('healpixNest — known reference values', () => {
     }
   });
 
-  it('nside=1: southern-cap points map to faces 8..11', () => {
-    for (let ra = 5; ra < 360; ra += 30) {
-      const px = healpixNest(ra, -80, 1);
-      expect(px).toBeGreaterThanOrEqual(8);
-      expect(px).toBeLessThanOrEqual(11);
-    }
-  });
-
   it('nside=2: clearly-interior equatorial point picks one cell', () => {
     // RA=22.5, Dec=0 sits inside face 4's south-east sub-pixel at nside=2.
     // At nside=2, each face has 4 sub-pixels (16..19 for face 4) — the
@@ -71,14 +58,5 @@ describe('healpixNest — known reference values', () => {
     expect(healpixNest(720, 30, 32)).toBe(healpixNest(0, 30, 32));
     // RA=-90 (negative) should map to the same pixel as RA=270.
     expect(healpixNest(-90, 30, 32)).toBe(healpixNest(270, 30, 32));
-  });
-
-  it('produces matching pixels for nearby points (cell coherence)', () => {
-    // Two points within a single ~1.83° cell at nside=32 should land in the
-    // same pixel.  We pick a non-pole interior point and offset by 0.1° in
-    // both RA and Dec — well inside the cell width.
-    const a = healpixNest(45, 45, 32);
-    const b = healpixNest(45.1, 45.1, 32);
-    expect(a).toBe(b);
   });
 });

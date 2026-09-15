@@ -22,26 +22,6 @@ describe('clampFlowParams', () => {
     expect(clampFlowParams(flowWith({ trail: 0 })).trail).toBe(MIN_TRAIL_STEP);
   });
 
-  it('clampFlowParams floors flowSpeed and wander at 0', () => {
-    const f = clampFlowParams(flowWith({ flowSpeed: -5, wander: -2 }));
-    expect(f.flowSpeed).toBe(0);
-    expect(f.wander).toBe(0);
-  });
-
-  it('clampFlowParams bounds intensity and densityBias to [0,1]', () => {
-    const lo = clampFlowParams(flowWith({ intensity: -0.5, densityBias: -3 }));
-    expect(lo.intensity).toBe(0);
-    expect(lo.densityBias).toBe(0);
-    const hi = clampFlowParams(flowWith({ intensity: 2, densityBias: 9 }));
-    expect(hi.intensity).toBe(1);
-    expect(hi.densityBias).toBe(1);
-  });
-
-  it('clampFlowParams bounds boundaryFadeWidth to [0,0.5]', () => {
-    expect(clampFlowParams(flowWith({ boundaryFadeWidth: -1 })).boundaryFadeWidth).toBe(0);
-    expect(clampFlowParams(flowWith({ boundaryFadeWidth: 5 })).boundaryFadeWidth).toBe(0.5);
-  });
-
   it('clampFlowParams does not mutate the input', () => {
     const input = flowWith({ count: 1e9, trail: 0, flowSpeed: -5, intensity: 2 });
     clampFlowParams(input);

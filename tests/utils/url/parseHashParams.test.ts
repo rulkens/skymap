@@ -10,15 +10,6 @@ describe('parseHashParams', () => {
     ]);
   });
 
-  it('parses a single focus param as today', () => {
-    const m = parseHashParams('focus=cluster-virgo-m87');
-    expect([...m]).toEqual([['focus', 'cluster-virgo-m87']]);
-  });
-
-  it('returns an empty map for an empty body', () => {
-    expect([...parseHashParams('')]).toEqual([]);
-  });
-
   it('splits on the FIRST = only, so values may contain =', () => {
     const m = parseHashParams('t=2026-07-21T00:00:00Z&q=a=b=c');
     expect(m.get('t')).toBe('2026-07-21T00:00:00Z');

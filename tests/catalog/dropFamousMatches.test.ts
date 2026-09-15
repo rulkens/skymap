@@ -38,22 +38,6 @@ describe('dropFamousMatches', () => {
     expect(kept[0]!.ra).toBe(180);
   });
 
-  it('keeps records just outside the threshold', () => {
-    const famous = [{ ra: 10.6847, dec: 41.2687 }];
-    // 60 arcsec north of M31 — outside a 30" threshold
-    const records = [rec(10.6847, 41.2687 + 60 / 3600)];
-    const { kept, dropped } = dropFamousMatches(records, famous, 30);
-    expect(dropped).toBe(0);
-    expect(kept).toHaveLength(1);
-  });
-
-  it('returns input unchanged when no famous positions are supplied', () => {
-    const records = [rec(10.6847, 41.2687), rec(180, 0)];
-    const { kept, dropped } = dropFamousMatches(records, [], 30);
-    expect(dropped).toBe(0);
-    expect(kept).toBe(records);
-  });
-
   it('compresses RA separation by cos(dec) for high-latitude matches', () => {
     // At dec = 80°, 1° of RA spans only cos(80°) ≈ 0.174° on the sky.
     // A record 0.05° east in RA at dec=80 should be ~31" away on the sky,

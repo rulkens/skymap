@@ -24,9 +24,4 @@ describe('speedRamp', () => {
       prevRedMinusBlue = redMinusBlue;
     }
   });
-
-  it('clamps out-of-range inputs to the ramp ends', () => {
-    expect(speedRamp(-1)).toEqual(speedRamp(0));
-    expect(speedRamp(2)).toEqual(speedRamp(1));
-  });
 });

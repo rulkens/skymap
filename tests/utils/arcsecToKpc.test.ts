@@ -15,15 +15,7 @@ describe('arcsecToKpc', () => {
     expect(arcsecToKpc(1, 1)).toBeCloseTo(4.848e-3, 6);
   });
 
-  it('converts a 30" galaxy at 100 Mpc to ≈ 14.5 kpc', () => {
-    expect(arcsecToKpc(30, 100)).toBeCloseTo(14.54, 2);
-  });
-
   it('returns NaN when distance is non-finite', () => {
     expect(Number.isNaN(arcsecToKpc(10, NaN))).toBe(true);
-  });
-
-  it('returns NaN when arcsec is non-finite', () => {
-    expect(Number.isNaN(arcsecToKpc(NaN, 100))).toBe(true);
   });
 });

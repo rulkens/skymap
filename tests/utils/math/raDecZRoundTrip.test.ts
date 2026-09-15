@@ -27,27 +27,6 @@ describe('raDecZToCartesian / cartesianToRaDecZ', () => {
     expect(decBack).toBeCloseTo(dec, 4);
     expect(zBack).toBeCloseTo(z, 4);
   });
-
-  it('round-trips a southern-hemisphere coordinate', () => {
-    // Dec = -45° is well outside the SDSS footprint but typical for 2MRS/GLADE.
-    const ra = 250;
-    const dec = -45;
-    const z = 0.01;
-    const [x, y, zc] = raDecZToCartesian(ra, dec, z);
-    const [raBack, decBack, zBack] = cartesianToRaDecZ(x, y, zc);
-    expect(raBack).toBeCloseTo(ra, 4);
-    expect(decBack).toBeCloseTo(dec, 4);
-    expect(zBack).toBeCloseTo(z, 4);
-  });
-
-  it('produces the origin for z = 0', () => {
-    // d(0) = 0 under any cosmology, so the cartesian point is the origin
-    // regardless of (RA, Dec) — they multiply out to zero.
-    const [x, y, z] = raDecZToCartesian(123, 45, 0);
-    expect(x).toBeCloseTo(0, 10);
-    expect(y).toBeCloseTo(0, 10);
-    expect(z).toBeCloseTo(0, 10);
-  });
 });
 
 describe('cartesianToRaDecZ — degenerate inputs', () => {

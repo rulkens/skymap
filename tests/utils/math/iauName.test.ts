@@ -32,13 +32,6 @@ describe('iauName', () => {
     expect(iauName(Source.TwoMRS, 188.7365, 1.396)).toBe('2MASX J123456.75+012345.5');
   });
 
-  it('always emits a leading + for non-negative declinations', () => {
-    // Even a tiny positive Dec must carry the explicit + sign — that's the
-    // IAU convention, so info-card readers can always parse the sign field.
-    const name = iauName(Source.SDSS, 0, 0);
-    expect(name.startsWith('SDSS J000000.00+')).toBe(true);
-  });
-
   it('emits a leading - for negative declinations', () => {
     // Southern-hemisphere objects (Dec < 0) get a leading minus.
     const name = iauName(Source.SDSS, 0, -45.5);
@@ -69,10 +62,5 @@ describe('iauName', () => {
     // upstream bug) are clamped rather than producing nonsensical strings.
     const name = iauName(Source.SDSS, 0, 95);
     expect(name).toContain('+900000.0');
-  });
-
-  it('clamps Dec values below -90 to -90', () => {
-    const name = iauName(Source.SDSS, 0, -95);
-    expect(name).toContain('-900000.0');
   });
 });

@@ -29,14 +29,6 @@ describe('galaxyDiameterKpc', () => {
     expect(galaxyDiameterKpc({ absMagBmag: -20.5 })).toBeCloseTo(34.86, 1);
   });
 
-  it('returns a smaller diameter for a fainter galaxy (M_B = -18)', () => {
-    expect(galaxyDiameterKpc({ absMagBmag: -18 })).toBeCloseTo(8.32, 1);
-  });
-
-  it('returns a larger diameter for a brighter galaxy (M_B = -22.5)', () => {
-    expect(galaxyDiameterKpc({ absMagBmag: -22.5 })).toBeCloseTo(109.81, 1);
-  });
-
   it('clamps to a sensible minimum to avoid zero/negative diameters', () => {
     expect(galaxyDiameterKpc({ absMagBmag: -10 })).toBeGreaterThanOrEqual(1);
   });

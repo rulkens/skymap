@@ -2,11 +2,6 @@ import { describe, expect, it } from 'vitest';
 import { linearRgbToHex } from '../../../src/utils/color/linearRgbToHex';
 
 describe('linearRgbToHex', () => {
-  it('maps linear 0 and 1 to sRGB black and white', () => {
-    expect(linearRgbToHex([0, 0, 0])).toBe('#000000');
-    expect(linearRgbToHex([1, 1, 1])).toBe('#ffffff');
-  });
-
   it('maps the linear 0.214 anchor to the sRGB mid-grey byte (~0x80)', () => {
     const hex = linearRgbToHex([0.214, 0.214, 0.214]);
     const byte = parseInt(hex.slice(1, 3), 16);

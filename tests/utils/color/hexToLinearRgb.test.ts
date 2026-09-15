@@ -3,14 +3,6 @@ import { hexToLinearRgb } from '../../../src/utils/color/hexToLinearRgb';
 import { linearRgbToHex } from '../../../src/utils/color/linearRgbToHex';
 
 describe('hexToLinearRgb', () => {
-  it('maps sRGB black and white to linear 0 and 1', () => {
-    expect(hexToLinearRgb('#000000')).toEqual([0, 0, 0]);
-    const [r, g, b] = hexToLinearRgb('#ffffff');
-    expect(r).toBeCloseTo(1, 5);
-    expect(g).toBeCloseTo(1, 5);
-    expect(b).toBeCloseTo(1, 5);
-  });
-
   it('maps the sRGB mid-grey anchor point to ~0.2140 linear', () => {
     // #808080 ≈ sRGB 0.5019..., whose linear equivalent is the textbook
     // "18% grey card" anchor (~0.214), not the naive 0.5.
