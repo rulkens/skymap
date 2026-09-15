@@ -21,6 +21,7 @@ import type { TiltMemory } from '../../../@types/camera/TiltMemory';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
 import { applyFocusedBodyPivot } from '../camera/applyFocusedBodyPivot';
+import { hOverR } from '../camera/hOverR';
 import { liveBodyPosition } from '../camera/liveBodyPosition';
 import { approachTiltedPose } from '../camera/approachTiltedPose';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
@@ -36,6 +37,7 @@ import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
 import { focusInSubtree } from '../../../utils/camera/focusInSubtree';
 import { surfaceFixedChain } from '../../../utils/camera/surfaceFixedChain';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
+import { releasedWorldRoll } from '../../../utils/camera/releasedWorldRoll';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
@@ -143,11 +145,14 @@ export function projectFramePose(args: {
           ? liveBodyPosition(focus, bodies)
           : null;
         const centreMpc = addVec3(focused ?? host.state.positionMpc, follow?.panOffset ?? NO_PAN);
+        const eyeMpc = eyeMpcOf(world, poseBasis);
         displayed = centreLookingArm(
-          eyeMpcOf(world, poseBasis),
+          eyeMpc,
           centreMpc,
           poseBasis,
-          world.roll ?? 0,
+          // The world arm's up is the frame pole's: a cut out of the band may
+          // not hand it the host's local horizon (see `releasedWorldRoll`).
+          releasedWorldRoll(world.roll ?? 0, hOverR(eyeMpc, host.state, host.radiusM), tuning),
         );
         // Centre-looking, so authored and displayed coincide.
         register = displayed;

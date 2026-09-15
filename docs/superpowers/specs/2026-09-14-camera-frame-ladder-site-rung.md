@@ -810,6 +810,21 @@ put it (`hostedFocusOverHorizon.ts`). Unbounded, the hold stranded every switch
 between two rovers: no driver runs inside a body arm, so a focus 142° around
 Mars was held by an arm that could never reach it.
 
+Both of those releases **cut out from below the band**, and that is what decides
+the world arm's up on the way out. Climbing out through the band, the blend has
+already reached the scene up at the flip (`clampCameraTuning` pins
+`tiltZeroHR ≤ disengageHR` for exactly this), so `toWorldArm`'s screen-up
+residual is scene-aligned and carries through unchanged — the lossless crossing
+§5.1 promises. A cut carries the site's local horizon instead, and no world-arm
+authority ever reclaims it: `frameAlignedRoll` settles only what a zoom notch
+charges it for, so the rover's tilt rides to the new focus as permanent image
+roll (adverse 9). The cut already re-aims the sightline at the host's centre
+(`centreLookingArm`, P3), so it lands the image on the selected frame's pole
+with it: **`releasedWorldRoll` is the world arm's whole up authority at a
+disengage** — carry through the band, level on a cut, and with `northUp` off
+(ruling 11) carry either way. Nothing downstream resets roll, so nothing
+downstream can forget to.
+
 That rule alone would strand the approach. `followActive` is gated on the world
 arm (`cameraDrivers.ts:81-83`) because the ease has no meaning once the state
 co-rotates; a rover's framing distance is metres, so an approach with the
