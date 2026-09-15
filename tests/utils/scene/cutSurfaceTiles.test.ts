@@ -1003,6 +1003,86 @@ describe('cutSurfaceTiles', () => {
     });
   });
 
+  describe('relief headroom in the horizon cull', () => {
+    // Bug repro: Everest, ~2 m above the datum (the orbit target sinks to sea
+    // level — F2), tilted 10-20° above horizontal — a real EOX z8-13 deep
+    // band (public/data/images/earth-tiles/manifest.json) plus the shallow
+    // global band underneath. Unlike the frustum-sphere test two blocks up,
+    // step 1 ("1. Horizon" in `probe`) never reads `reliefHeadroom`: it culls
+    // on the flat-datum angle alone, so a patch whose real relief (Everest's
+    // 8849 m) would lift it above the smooth-sphere horizon at this altitude
+    // is dropped before the relief-aware frustum test ever runs — visible
+    // ground with NOTHING drawn (no leaf, no ancestor), the grey hole from
+    // the eye-check, only where a deep band carries real relief and only at
+    // the low camera heights/high tilts that put the visible ground strip
+    // right at the razor-thin (~0.045° at 2 m) horizon cap.
+    const EVEREST_BAND: SurfaceTileBand = {
+      uBounds: [86.68212890625 / 360 + 0.5, 87.12158203125 / 360 + 0.5],
+      vBounds: [27.79541015625 / 180 + 0.5, 28.10302734375 / 180 + 0.5],
+      min: 8,
+      max: 13,
+    };
+    const EVEREST_BANDS: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 7 },
+      EVEREST_BAND,
+    ];
+    const EVEREST_RELIEF_FRAC: readonly [number, number] = [
+      -200 / (EARTH_RADIUS_KM * 1000),
+      8849 / (EARTH_RADIUS_KM * 1000),
+    ];
+
+    function everestResidentSlot(range: readonly [number, number]) {
+      return (tile: SurfaceTileId) => ({
+        ...WHOLE_ATLAS,
+        subtreeRangeM: tile.product === 'height' ? range : undefined,
+      });
+    }
+
+    function everestRequests(range: readonly [number, number]) {
+      const base = tiltedAt(2, 10, 86.955, 27.932);
+      const { maxLevel: _maxLevel, ...input } = base;
+      const result = cutSurfaceTiles({
+        ...input,
+        bands: EVEREST_BANDS,
+        lodBias: 1,
+        residentSlot: everestResidentSlot(range),
+      });
+      return new Set(
+        result.requests.requests.map(
+          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
+        ),
+      );
+    }
+
+    // Hand-located via the real walk at this exact pose (not re-derived from
+    // the horizon formula): the one node the flat-datum cull drops and
+    // Everest's own relief admits, stable across 10-20° tilt.
+    const ADMITTED_BY_RELIEF = 'height/13/6076/1412';
+
+    it('never requests the patch on a flat datum at this pose', () => {
+      expect(everestRequests([0, 0]).has(ADMITTED_BY_RELIEF)).toBe(false);
+    });
+
+    it('requests the patch once Everest’s own relief is folded into the horizon cap', () => {
+      expect(everestRequests(EVEREST_RELIEF_FRAC).has(ADMITTED_BY_RELIEF)).toBe(true);
+    });
+
+    it('plans a non-empty cut with the camera 50 m under the datum, once relief exists', () => {
+      // Second finding: the early return for `camLen <= radiusM` used to plan
+      // nothing at all here, regardless of relief — the target sinking below
+      // the datum toward real terrain, not just the horizon cap, went dark.
+      const base = tiltedAt(-50, 10, 86.955, 27.932);
+      const { maxLevel: _maxLevel, ...input } = base;
+      const result = cutSurfaceTiles({
+        ...input,
+        bands: EVEREST_BANDS,
+        lodBias: 1,
+        residentSlot: everestResidentSlot(EVEREST_RELIEF_FRAC),
+      });
+      expect(result.cut.length).toBeGreaterThan(0);
+    });
+  });
+
   describe('low-altitude planner input precision (the f64 belt-and-braces contract)', () => {
     // Reproduces the diagnosed bug: composeBodyMvp used to narrow its result to
     // f32 before this walk ever saw it. At low altitude the matrix's own

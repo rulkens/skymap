@@ -86,19 +86,20 @@ export function cutSurfaceTiles(input: {
   } = input;
 
   const camLen = Math.hypot(camPosLocalM[0], camPosLocalM[1], camPosLocalM[2]);
-  // Computed before the early return below so a degenerate/underground camera
-  // still reports a (best-effort) sub-camera direction rather than none.
   const camDir: Vec3 =
     camLen > 0
       ? [camPosLocalM[0] / camLen, camPosLocalM[1] / camLen, camPosLocalM[2] / camLen]
       : [1, 0, 0];
-  // Camera on or inside the surface: no horizon, nothing sensible to plan.
-  if (!(camLen > radiusM))
-    return { cut: [], requests: { zWin: baseLevel, requests: [], subCameraDirLocal: camDir } };
   // Horizon lies acos(radiusM/d) from the sub-camera point on the sphere —
   // the metres-native form of the old unit-sphere acos(1/d) (radiusM = 1
   // there), so the walk is unit-agnostic rather than assuming a unit sphere.
-  const capAngle = Math.acos(radiusM / camLen);
+  // A camera on/inside the datum (the F2 orbit target sinking to sea level
+  // over relief that reaches above it) has no flat-datum distance to take
+  // acos of; clamp it to just outside the sphere so capAngle stays finite —
+  // reliefHeadroom's per-node widening in `probe` is what actually admits
+  // terrain in that case, not this floor value.
+  const capCamLen = Math.max(camLen, radiusM * (1 + 1e-9));
+  const capAngle = Math.acos(radiusM / capCamLen);
   // The deepest level any band bakes: bounds `required` below so a huge
   // screen-space extent can't ask the walk to descend past every band's max.
   let maxTileLevel = baseLevel;
@@ -161,15 +162,23 @@ export function cutSurfaceTiles(input: {
       cornerSE[0] * centre[0] + cornerSE[1] * centre[1] + cornerSE[2] * centre[2],
     );
     const patchAngle = Math.acos(Math.min(1, Math.max(-1, minCornerDot)));
+    // Relief this node's subtree can reach, shared by both culls below so the
+    // resident-ancestor walk inside reliefHeadroom() runs once per node.
+    const relief = reliefHeadroom(z, x, y);
 
-    // 1. Horizon
+    // 1. Horizon, widened by the angle relief lifts a point above the
+    // smooth-sphere horizon: a point at radius R+h is visible from a camera
+    // at distance d when its angle from the sub-camera point is
+    // <= acos(R/d) + acos(R/(R+h)) — the second term is acos(1/(1+relief))
+    // since `relief` is already h/R (reliefHeadroom's own unit).
     const centreAngle = Math.acos(
       Math.min(
         1,
         Math.max(-1, centre[0] * camDir[0] + centre[1] * camDir[1] + centre[2] * camDir[2]),
       ),
     );
-    if (centreAngle - patchAngle > capAngle) return null;
+    const horizonCap = relief > 0 ? capAngle + Math.acos(1 / (1 + relief)) : capAngle;
+    if (centreAngle - patchAngle > horizonCap) return null;
 
     // 2. Frustum, conservatively: a sphere about the patch centre, radius to
     // the farthest corner plus headroom for skirts, plus the relief this
@@ -177,7 +186,7 @@ export function cutSurfaceTiles(input: {
     // gets — its projected bbox below is meaningless — and it also catches
     // points entirely behind the eye, which fail every plane test at once.
     const cornerChord = Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
-    const boundRadius = 1.5 * cornerChord + Math.min(reliefHeadroom(z, x, y), cornerChord);
+    const boundRadius = 1.5 * cornerChord + Math.min(relief, cornerChord);
     for (let k = 0; k < 4; k++) {
       const dist =
         (planeA[k]! * centre[0] + planeB[k]! * centre[1] + planeC[k]! * centre[2] + planeD[k]!) *
