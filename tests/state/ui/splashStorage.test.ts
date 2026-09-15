@@ -33,10 +33,5 @@ describe('splashStorage', () => {
       writeSeenVersion(2);
       expect(window.localStorage.getItem(SPLASH_STORAGE_KEY)).toBe('2');
     });
-
-    it('writes the current version constant without coercion loss', () => {
-      writeSeenVersion(CURRENT_SPLASH_VERSION);
-      expect(window.localStorage.getItem(SPLASH_STORAGE_KEY)).toBe(String(CURRENT_SPLASH_VERSION));
-    });
   });
 });

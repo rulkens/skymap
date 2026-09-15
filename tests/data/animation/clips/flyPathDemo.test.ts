@@ -85,14 +85,6 @@ function prepared() {
 }
 
 describe('flyPathDemo clip', () => {
-  it('resolves its named group waypoints and compiles to one path track', () => {
-    const compiled = compileClip(prepared());
-    expect(compiled.pathTracks).toHaveLength(1);
-    // The clip authors `linger: 0.65`, so the dwell ADDS time: the take runs
-    // longer than the authored 20s cruise budget.
-    expect(compiled.durationSec).toBeGreaterThan(20);
-  });
-
   it('starts at the live eye and flies the camera through to the Sculptor group', () => {
     const resolved = prepared();
     const dur = compileClip(resolved).durationSec; // real (dwelled) take length

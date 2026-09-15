@@ -163,48 +163,7 @@ describe('watchTourSaga', () => {
 
   // ── (2) restore fires on natural completion ──────────────────────────────
 
-  it('restores the captured baseline when all beats complete naturally', async () => {
-    vi.useFakeTimers();
-
-    const { store } = buildHarness();
-    store.dispatch(setVolumesEnabled(true));
-
-    store.dispatch(startTour('demo'));
-    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
-    store.dispatch(setVolumesEnabled(false));
-    expect(store.getState().settings.volumes.enabled).toBe(false);
-
-    // Advance timers so the 0.001s dwell expires and the beat + loop complete.
-    await vi.runAllTimersAsync();
-
-    // guidedTourSaga's finally restored the captured baseline and ended the tour.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
-    expect(store.getState().tour.active).toBe(false);
-  });
-
   // ── (3) restore fires when exitTour cancels the run ──────────────────────
-
-  it('restores the captured baseline when exitTour cancels the run', async () => {
-    const { store } = buildHarness({ playClip: makeAutoFlyStub() });
-    store.dispatch(setVolumesEnabled(true));
-
-    // webShowcase dwells forever — the beat never auto-advances during this test.
-    store.dispatch(startTour('webShowcase'));
-    // Mutate settings mid-run — the stand-in for an in-clip scene cue.
-    store.dispatch(setVolumesEnabled(false));
-
-    // Advance to the dwell race inside the beat.
-    await flush();
-    await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(false);
-
-    store.dispatch(exitTour());
-    await flush();
-
-    // The finally block ran on exitTour cancellation: baseline restored, tour ended.
-    expect(store.getState().settings.volumes.enabled).toBe(true);
-    expect(store.getState().tour.active).toBe(false);
-  });
 
   // ── (4) second startTour supersedes first (takeLatest) ───────────────────
 

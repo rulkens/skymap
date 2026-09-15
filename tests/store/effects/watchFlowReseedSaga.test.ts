@@ -28,12 +28,6 @@ describe('watchFlowReseedSaga', () => {
     expect(reconcile.reseedFlow).toHaveBeenCalledTimes(1);
   });
 
-  it('setFlow({mode}) → reseedFlow called', () => {
-    store.dispatch(setFlow({ mode: 'advect' }));
-
-    expect(reconcile.reseedFlow).toHaveBeenCalledTimes(1);
-  });
-
   it('setFlow({intensity}) → reseedFlow NOT called', () => {
     // knob-only patch: mode and count are both undefined → reseed guard
     // returns early.

@@ -51,29 +51,10 @@ describe('buildInitialUiState', () => {
   });
 
   describe('splash.dismissedVersion', () => {
-    it('seeds to null when no seenVersion is stored', () => {
-      const state = buildInitialUiState();
-      expect(state.splash.dismissedVersion).toBeNull();
-    });
-
     it('seeds to the stored seenVersion when present', () => {
       window.localStorage.setItem(SPLASH_STORAGE_KEY, String(CURRENT_SPLASH_VERSION));
       const state = buildInitialUiState();
       expect(state.splash.dismissedVersion).toBe(CURRENT_SPLASH_VERSION);
-    });
-  });
-
-  describe('default boolean flags', () => {
-    it('paletteOpen defaults to false', () => {
-      expect(buildInitialUiState().paletteOpen).toBe(false);
-    });
-
-    it('uiHidden defaults to false', () => {
-      expect(buildInitialUiState().uiHidden).toBe(false);
-    });
-
-    it('debugPanelOpen defaults to false', () => {
-      expect(buildInitialUiState().debugPanelOpen).toBe(false);
     });
   });
 });

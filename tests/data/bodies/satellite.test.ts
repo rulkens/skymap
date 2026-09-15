@@ -43,16 +43,18 @@ describe('satellite() moon elements', () => {
     // ~2072 orbits to 2010. The test exists to catch a wrong frame, a flipped
     // precession sign, or a km/Mpc slip — any of which misses by a large fraction
     // of the orbit — not to validate the ephemeris model to arcseconds.
-    const horizonsEclKm: Vec3 = [
-      3.405621456428792e5,
-      -2.491330105433191e5,
-      -4.082960674869799e3,
-    ];
+    const horizonsEclKm: Vec3 = [3.405621456428792e5, -2.491330105433191e5, -4.082960674869799e3];
     const F = ECLIPTIC_FRAME;
     const eqWorldKm: Vec3 = [
-      horizonsEclKm[0] * F.xAxis[0] + horizonsEclKm[1] * F.yAxis[0] + horizonsEclKm[2] * F.normal[0],
-      horizonsEclKm[0] * F.xAxis[1] + horizonsEclKm[1] * F.yAxis[1] + horizonsEclKm[2] * F.normal[1],
-      horizonsEclKm[0] * F.xAxis[2] + horizonsEclKm[1] * F.yAxis[2] + horizonsEclKm[2] * F.normal[2],
+      horizonsEclKm[0] * F.xAxis[0] +
+        horizonsEclKm[1] * F.yAxis[0] +
+        horizonsEclKm[2] * F.normal[0],
+      horizonsEclKm[0] * F.xAxis[1] +
+        horizonsEclKm[1] * F.yAxis[1] +
+        horizonsEclKm[2] * F.normal[1],
+      horizonsEclKm[0] * F.xAxis[2] +
+        horizonsEclKm[1] * F.yAxis[2] +
+        horizonsEclKm[2] * F.normal[2],
     ];
     const expectedMpc = eqWorldKm.map((km) => km * SCALE_UNITS.KM_TO_MPC) as Vec3;
 

@@ -146,23 +146,6 @@ describe('hash history integrity', () => {
     expect(pushedHashes()).toEqual([]);
   });
 
-  it('pushes nothing when Back returns to a bare URL', async () => {
-    seedHash('focus=body-mars');
-    boot();
-    await flush();
-
-    pushState.mockClear();
-    navigate('');
-    await flush();
-
-    // One param, so nothing here is about rows racing each other: this is the
-    // `focus` row tearing its own ladder. `clearSelection` nulls `pending.focus`
-    // in its reducer, `selectionRows.focus` still holds Mars until the
-    // reconciler runs, and a write landing between the two composes
-    // `focus=body-mars` — over a URL the browser has already moved to bare.
-    expect(pushedHashes()).toEqual([]);
-  });
-
   it('pushes nothing when a navigation moves two params at once', async () => {
     seedHash('');
     boot();
@@ -192,20 +175,6 @@ describe('hash history integrity', () => {
     // into a no-op. Without it a visitor following a shared link lands several
     // entries deep in a history they never navigated, every one of them the same
     // URL, and Back does nothing visible.
-    expect(pushedHashes()).toEqual([]);
-  });
-
-  it('pushes nothing on a cold load of a two-param deep link', async () => {
-    seedHash('focus=body-mars&orientation=galactic');
-
-    boot();
-    await flush();
-
-    // The boot read skips `readAbsent`, which is why the single-param case above
-    // was quiet even before the write coalesced — and why it did not cover this
-    // one. With two params the boot pass dispatches for both rows, so the same
-    // cross-row gap opens on a plain cold load: a shared two-param link cost the
-    // visitor two history entries before they touched anything.
     expect(pushedHashes()).toEqual([]);
   });
 

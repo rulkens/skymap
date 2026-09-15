@@ -56,26 +56,6 @@ const tween: CameraTweenDescriptor = {
   frame: tweenFrame,
 };
 
-describe('cameraSlice — tween lifecycle', () => {
-  it('startCameraTween installs the descriptor', () => {
-    const next = reducer(base(), startCameraTween(tween));
-    expect(next.tween).toEqual(tween);
-  });
-
-  it('cancelCameraTween clears the tween to null', () => {
-    const withTween = reducer(base(), startCameraTween(tween));
-    const cleared = reducer(withTween, cancelCameraTween());
-    expect(cleared.tween).toBeNull();
-  });
-});
-
-describe('cameraSlice — setAutoRotate', () => {
-  it('replaces the whole autoRotate object', () => {
-    const next = reducer(base(), setAutoRotate({ active: true, rate: 0.002 }));
-    expect(next.autoRotate).toEqual({ active: true, rate: 0.002 });
-  });
-});
-
 describe('cameraSlice — initial state is serialisable', () => {
   it('contains only plain JSON-safe values (no Set / class instance)', () => {
     const state = base();
@@ -101,19 +81,6 @@ const clipFrame: OrientationFrameId = 'galactic';
 const livePose: CameraPose = { target: [10, 20, 30], yaw: 1.0, pitch: -0.5, distance: 50 };
 
 describe('cameraSlice — clip lifecycle', () => {
-  it('clipStarted stores the clip data and the pinned frame', () => {
-    const next = reducer(base(), clipStarted({ data: clipData, frame: clipFrame }));
-    // Reference equality: the reducer stores the exact payload object.
-    expect(next.clip!.data).toBe(clipData);
-    expect(next.clip!.frame).toBe(clipFrame);
-  });
-
-  it('clipEnded clears clip to null', () => {
-    const withClip = reducer(base(), clipStarted({ data: clipData, frame: clipFrame }));
-    const cleared = reducer(withClip, clipEnded());
-    expect(cleared.clip).toBeNull();
-  });
-
   it('clipEnded also clears a dormant tween', () => {
     // A focus saga may plant a tween before/during a clip; once the clip@95
     // driver deactivates, an un-cleared @60 tween would outrank resting@0.

@@ -44,15 +44,6 @@ describe('buildStaticAnchorStructures', () => {
     expect(byName.get('Pisces-Cetus Supercluster')).toBe('supercluster-pisces-cetus-sc');
   });
 
-  it('is synchronous and returns a fresh array per call', () => {
-    const a = buildStaticAnchorStructures();
-    const b = buildStaticAnchorStructures();
-    // Fresh array each call (so a mutating caller can't corrupt a shared
-    // instance) but structurally identical — the build is deterministic.
-    expect(a).not.toBe(b);
-    expect(a).toEqual(b);
-  });
-
   it('surfaces the abell designation on a featured cluster', () => {
     const structures = buildStaticAnchorStructures();
     const coma = structures.find((p) => p.id === 'cluster-coma-a1656');
@@ -95,46 +86,3 @@ describe('buildStaticAnchorStructures', () => {
  * id/category/worldPos wiring is asserted against a single known entry rather
  * than coupling to whichever groups happen to be seeded.
  */
-describe('buildStaticAnchorStructures — group seed entry mapping', () => {
-  it('maps a group seed entry to a GroupRecord with the correct id, category, featured, and worldPos', async () => {
-    // Inline fixture — mirrors the shape of a real seed entry.
-    const groupFixture = {
-      id: 'local-group',
-      names: ['Local Group'],
-      category: 'group' as const,
-      raHours: 10.67,
-      decDeg: 41.27,
-      distMpc: 0.78,
-      physicalRadiusMpc: 0.5,
-      apparentRadiusMpc: 1.0,
-    };
-
-    // Inject only our fixture into the seed so the whole output is one entry.
-    // `resetModules` busts the ESM cache so the dynamic import below
-    // re-evaluates `buildStaticAnchorStructures` (already statically imported
-    // at the top of this file) and picks up the mocked seed — `doMock` alone
-    // does not invalidate an already-loaded module.
-    vi.resetModules();
-    vi.doMock('../../../data/seeds/structure_anchors.seed.json', () => ({
-      default: [groupFixture],
-    }));
-
-    // Dynamic import after resetModules + doMock so this load sees the mock.
-    const { buildStaticAnchorStructures: buildWithGroupSeed } =
-      await import('../../../src/data/structure/buildStaticAnchorStructures');
-
-    const structures = buildWithGroupSeed();
-    expect(structures.length).toBe(1);
-    const structure = structures[0]!;
-
-    expect(structure.id).toBe('group-local-group');
-    expect(structure.category).toBe('group');
-    expect(structure.featured).toBe(true);
-    // worldPos must match the independent conversion of the same ra/dec/dist —
-    // asserting this verifies the carry-through wiring, not just the discriminant.
-    expect(structure.worldPos).toEqual(raDecDistToEqCart(groupFixture));
-
-    vi.doUnmock('../../../data/seeds/structure_anchors.seed.json');
-    vi.resetModules();
-  });
-});

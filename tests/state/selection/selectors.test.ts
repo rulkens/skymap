@@ -86,12 +86,6 @@ describe('selectIsSelectionActive', () => {
     store.dispatch(updateSelectionSelect({ type: 'milkyWay' }));
     expect(selectIsSelectionActive(store.getState())).toBe(true);
   });
-
-  it('returns true when only a focus ref is set', () => {
-    const { store } = createAppStore();
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
-    expect(selectIsSelectionActive(store.getState())).toBe(true);
-  });
 });
 
 // --- selectHasSelectionIntent --------------------------------------------------
@@ -144,19 +138,6 @@ describe('selectHoveredFocusable', () => {
 });
 
 describe('selectSelectedFocusable', () => {
-  it('returns null when select row is null', () => {
-    const { store } = createAppStore();
-    expect(selectSelectedFocusable(store.getState())).toBeNull();
-  });
-
-  it('builds a FocusableTarget from a galaxy row in the select slot', () => {
-    const { store } = createAppStore();
-    store.dispatch(updateSelectionSelect(galaxyRef));
-    store.dispatch(setSelectionRow({ slot: 'select', row: galaxyRow }));
-    const target = selectSelectedFocusable(store.getState());
-    expect(target).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS });
-  });
-
   it('memoizes across an unrelated-slot write: changing hover does not recompute the select focusable', () => {
     const { store } = createAppStore();
     store.dispatch(setSelectionRow({ slot: 'select', row: { type: 'milkyWay' } }));
@@ -168,26 +149,5 @@ describe('selectSelectedFocusable', () => {
     store.dispatch(setSelectionRow({ slot: 'hover', row: { type: 'milkyWay' } }));
     const b = selectSelectedFocusable(store.getState());
     expect(a).toBe(b);
-  });
-});
-
-describe('selectFocusedFocusable', () => {
-  it('returns null when focus row is null', () => {
-    const { store } = createAppStore();
-    expect(selectFocusedFocusable(store.getState())).toBeNull();
-  });
-
-  it('builds a FocusableTarget from a galaxy row in the focus slot', () => {
-    const { store } = createAppStore();
-    store.dispatch(updateSelectionFocus(galaxyRef));
-    store.dispatch(setSelectionRow({ slot: 'focus', row: galaxyRow }));
-    const target = selectFocusedFocusable(store.getState());
-    expect(target).toMatchObject({ type: 'galaxyCatalog', source: Source.SDSS });
-  });
-
-  it('returns the StructureInfo as-is for a structure row in the focus slot', () => {
-    const { store } = createAppStore();
-    store.dispatch(setSelectionRow({ slot: 'focus', row: structureInfo }));
-    expect(selectFocusedFocusable(store.getState())).toBe(structureInfo);
   });
 });

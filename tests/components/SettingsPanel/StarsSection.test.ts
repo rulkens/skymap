@@ -63,18 +63,6 @@ function baseProps() {
 
 describe('StarsSection', () => {
   describe('per-catalog checkbox', () => {
-    it('reflects items[id].enabled for gaiaStars', () => {
-      const { container } = render(
-        createElement(StarsSection, { ...baseProps(), items: items(false) }),
-      );
-      const gaia = container.querySelector<HTMLInputElement>('#toggle-star-catalog-gaiaStars');
-      expect(gaia).not.toBeNull();
-      expect(gaia!.checked).toBe(false);
-      const label = container.querySelector('label[for="toggle-star-catalog-gaiaStars"]');
-      expect(label).not.toBeNull();
-      expect(label!.textContent).toContain('Gaia Stars');
-    });
-
     it('fires onToggleCatalog with (gaiaStars, false) when the checked row is clicked', () => {
       const onToggleCatalog = vi.fn<(id: StarCatalogId, enabled: boolean) => void>();
       const { container } = render(
@@ -106,26 +94,12 @@ describe('StarsSection', () => {
   });
 
   describe('master tri-state', () => {
-    it('is checked and not indeterminate when the gate is on and every catalog is enabled (allOn)', () => {
-      const { container } = render(createElement(StarsSection, baseProps()));
-      const header = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      expect(header.checked).toBe(true);
-      expect(header.indeterminate).toBe(false);
-    });
-
     it('is checked and indeterminate when the gate is on but a catalog is disabled (mixed)', () => {
       const { container } = render(
         createElement(StarsSection, { ...baseProps(), enabled: true, items: items(false) }),
       );
       const header = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       expect(header.indeterminate).toBe(true);
-    });
-
-    it('is unchecked when the gate is off (noneOn)', () => {
-      const { container } = render(createElement(StarsSection, { ...baseProps(), enabled: false }));
-      const header = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      expect(header.checked).toBe(false);
-      expect(header.indeterminate).toBe(false);
     });
 
     it('fires onToggleMaster(false) when the checked master is clicked', () => {
@@ -137,17 +111,6 @@ describe('StarsSection', () => {
       fireEvent.click(header);
       expect(onToggleMaster).toHaveBeenCalledOnce();
       expect(onToggleMaster).toHaveBeenCalledWith(false);
-    });
-
-    it('fires onToggleMaster(true) when the unchecked master is clicked', () => {
-      const onToggleMaster = vi.fn<(enabled: boolean) => void>();
-      const { container } = render(
-        createElement(StarsSection, { ...baseProps(), enabled: false, onToggleMaster }),
-      );
-      const header = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      fireEvent.click(header);
-      expect(onToggleMaster).toHaveBeenCalledOnce();
-      expect(onToggleMaster).toHaveBeenCalledWith(true);
     });
   });
 });

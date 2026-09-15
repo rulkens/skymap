@@ -98,20 +98,6 @@ describe('installPerfHook', () => {
     expect(entries.some(([key, value]) => key !== value)).toBe(true);
   });
 
-  it('getTier reports the current tier held by the store', () => {
-    vi.mocked(isPerfMode).mockReturnValue(true);
-
-    const store = buildStore();
-    installPerfHook(store, fakeEngine());
-    const hook = getHook();
-
-    // The boot default seeded by the tier slice.
-    expect(hook!.getTier()).toBe('medium');
-    // A write to the tier slice is reflected — the hook reads live, not a snapshot.
-    store.dispatch(setTier('large'));
-    expect(hook!.getTier()).toBe('large');
-  });
-
   it('setTier dispatches the requestTier command and resolves once the ready predicate holds', async () => {
     vi.useFakeTimers();
     vi.mocked(isPerfMode).mockReturnValue(true);

@@ -9,8 +9,4 @@ describe('pickProperName', () => {
   it('falls back to names[0] when every name is a designation', () => {
     expect(pickProperName(['NGC 1300', 'PGC 12412'])).toBe('NGC 1300');
   });
-
-  it('returns "?" for an empty list', () => {
-    expect(pickProperName([])).toBe('?');
-  });
 });

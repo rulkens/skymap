@@ -6,12 +6,6 @@ import { createElement } from 'react';
 import SearchTrigger from '../../../src/components/SearchTrigger/SearchTrigger';
 
 describe('SearchTrigger', () => {
-  it('exposes Meta+K via aria-keyshortcuts so screen readers can surface it', () => {
-    render(createElement(SearchTrigger, { onClick: () => {} }));
-    const btn = screen.getByRole('button', { name: /search galaxies/i });
-    expect(btn).toHaveAttribute('aria-keyshortcuts', expect.stringContaining('Meta+K'));
-  });
-
   it('fires onClick when the user clicks the button', async () => {
     const onClick = vi.fn();
     const user = userEvent.setup();

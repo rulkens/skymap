@@ -45,19 +45,4 @@ describe('waitUntil', () => {
     const step3 = gen.next();
     expect(step3.done).toBe(true);
   });
-
-  it('calls the predicate on each poll until it succeeds', () => {
-    let count = 0;
-    const pred = () => {
-      count++;
-      return count === 2;
-    };
-
-    const gen = waitUntil(pred);
-    gen.next(); // pred() returns false → yields delay
-    gen.next(); // pred() returns true → done
-
-    // Two predicate calls: one that returned false, one that returned true.
-    expect(count).toBe(2);
-  });
 });

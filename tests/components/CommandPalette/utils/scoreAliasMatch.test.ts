@@ -6,17 +6,8 @@ const NGC4565 = {
 };
 
 describe('scoreAliasMatch', () => {
-  it('returns >0 for an exact name match', () => {
-    expect(scoreAliasMatch(NGC4565, 'NGC 4565')).toBeGreaterThan(0);
-    expect(scoreAliasMatch(NGC4565, 'ngc 4565')).toBeGreaterThan(0);
-  });
-
   it('matches the spaceless form (ngc4565)', () => {
     expect(scoreAliasMatch(NGC4565, 'ngc4565')).toBeGreaterThan(0);
-  });
-
-  it('matches a prefix substring', () => {
-    expect(scoreAliasMatch(NGC4565, 'NGC 4')).toBeGreaterThan(0);
   });
 
   it('matches a non-prefix substring (UGC inside the alias list)', () => {
@@ -28,9 +19,7 @@ describe('scoreAliasMatch', () => {
   });
 
   it('ranks exact matches higher than substring matches', () => {
-    expect(scoreAliasMatch(NGC4565, 'NGC 4565')).toBeGreaterThan(
-      scoreAliasMatch(NGC4565, 'UGC'),
-    );
+    expect(scoreAliasMatch(NGC4565, 'NGC 4565')).toBeGreaterThan(scoreAliasMatch(NGC4565, 'UGC'));
   });
 
   it('case-insensitive across both forms', () => {

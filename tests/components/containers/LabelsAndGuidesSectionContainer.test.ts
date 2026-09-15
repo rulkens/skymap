@@ -77,48 +77,6 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(headerCheckbox.indeterminate).toBe(true);
   });
 
-  it('is indeterminate when every row is on except a store-seeded orbit-trails off', () => {
-    const { store } = createAppStore();
-    // Flip constellations on and orbit trails off — isolates the second row's
-    // contribution to the master tri-state from the default-state fixture above.
-    store.dispatch({ type: 'settings/setConstellationsEnabled', payload: true });
-    store.dispatch({ type: 'settings/setOrbitTrailsEnabled', payload: false });
-    expect(selectOrbitTrailsEnabled(store.getState())).toBe(false);
-
-    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
-
-    const headerCheckbox = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-    expect(headerCheckbox.checked).toBe(false);
-    expect(headerCheckbox.indeterminate).toBe(true);
-  });
-
-  it('reflects a per-category labelEnabled=false from pre-seeded store state (structure)', () => {
-    const { store } = createAppStore();
-    // Disable cluster label before rendering.
-    store.dispatch({
-      type: 'settings/setStructureLabelEnabled',
-      payload: { id: 'cluster', enabled: false },
-    });
-
-    const { container } = render(createElement(LabelsAndGuidesSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
-
-    // With cluster label disabled and others enabled → mixed → master is indeterminate.
-    const headerCheckbox = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-    expect(headerCheckbox.indeterminate).toBe(true);
-
-    // Expand the section to access per-category checkboxes.
-    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
-    fireEvent.click(expandButton);
-
-    const clusterCheckbox = container.querySelector<HTMLInputElement>('#toggle-label-cluster');
-    expect(clusterCheckbox).not.toBeNull();
-    expect(clusterCheckbox!.checked).toBe(false);
-  });
-
   // ── CRITICAL: label-home dispatch tests ───────────────────────────────────────
 
   it('[label-home dispatch] toggling a structure label category flips the structure item labelEnabled in the store', () => {

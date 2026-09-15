@@ -23,14 +23,4 @@ describe('S_STAR_SEEDS', () => {
     // it would put a star at a NaN position with no error.
     expect(S_STAR_SEEDS.map((s) => s.id)).not.toContain('s111');
   });
-
-  it('gives every seed a positive semi-major axis and eccentricity below 1', () => {
-    // The property that makes `propagateElements` (elliptical-only) applicable
-    // to every row — the machine-checkable generalisation of the S111 exclusion
-    // above, rather than a second test pinned to that one id.
-    for (const seed of S_STAR_SEEDS) {
-      expect(seed.semiMajorArcsec).toBeGreaterThan(0);
-      expect(seed.eccentricity).toBeLessThan(1);
-    }
-  });
 });

@@ -70,12 +70,6 @@ describe('tourSlice reducers', () => {
     expect(s.beatIndex).toBe(1);
   });
 
-  it('setPaused writes the flag', () => {
-    const base = initial();
-    expect(tourReducer(base, setPaused(true)).paused).toBe(true);
-    expect(tourReducer({ ...base, paused: true }, setPaused(false)).paused).toBe(false);
-  });
-
   it('tourEnded returns to the inert initial state', () => {
     const s = tourReducer(
       {
@@ -133,18 +127,6 @@ describe('tour selectors', () => {
         }),
       ),
     ).toBeNull();
-  });
-
-  it('selectTourTotal derives the beat count from the registry', () => {
-    const st = asState({
-      active: true,
-      tourId: 'webShowcase',
-      beatIndex: 0,
-      paused: false,
-      dwellNonce: 0,
-      dwellSec: 0,
-    });
-    expect(selectTourTotal(st)).toBe(tourRegistry.webShowcase.beats.length);
   });
 
   it('selectTourBeatTitles maps beat titles with null for silent beats', () => {

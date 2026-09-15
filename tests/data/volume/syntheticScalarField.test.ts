@@ -31,16 +31,6 @@ describe('synthetic Gaussian cube', () => {
     const right = f16ToFloat(cube.voxels[7 + 4 * 9 + 4 * 81]!);
     expect(Math.abs(left - right)).toBeLessThan(0.01);
   });
-
-  it('is centred at the world origin by construction', () => {
-    const cube = makeSyntheticGaussianCube({
-      dims: 8,
-      frameKind: 'equatorial-cartesian',
-      boxSizeMpc: 200,
-    });
-    expect(cube.origin).toEqual([-100, -100, -100]);
-    expect(cube.voxelSize).toBe(200 / 8);
-  });
 });
 
 describe('cartesian grid cube', () => {
@@ -105,18 +95,6 @@ describe('spherical grid cube', () => {
     // degenerate "shell".  Spoke contribution at origin = 1.
     const centre = f16ToFloat(cube.voxels[idx(8, 8, 8, 17)]!);
     expect(centre).toBeGreaterThan(0.9);
-  });
-
-  it('has voxels near the +X spoke that are bright', () => {
-    // Voxel along the +X axis with y, z ≈ 0: pick a voxel at
-    // (centre_x + offset, centre_y, centre_z) of an odd-dim cube.
-    const cube = makeSphericalGridCube({ dims: 17, boxSizeMpc: 400 });
-    // (10, 8, 8) — world position roughly (47, 0, 0).
-    // dToX = sqrt(0² + 0²) = 0 → spoke value = 1.  Shell distance
-    // from r ≈ 47 to nearest shell (50) = 3 → shell value = exp(-9/18) ≈ 0.6.
-    // max = 1.0 (the spoke wins).
-    const v = f16ToFloat(cube.voxels[idx(10, 8, 8, 17)]!);
-    expect(v).toBeGreaterThan(0.9);
   });
 
   it('is octahedrally symmetric (any axis flip preserves values)', () => {

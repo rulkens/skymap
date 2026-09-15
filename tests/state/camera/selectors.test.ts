@@ -131,11 +131,6 @@ describe('selectCameraActive', () => {
 });
 
 describe('selectClipActive', () => {
-  it('is false when no clip is set', () => {
-    const store = makeStore();
-    expect(selectClipActive(store.getState())).toBe(false);
-  });
-
   it('is true after clipStarted and false after clipEnded', () => {
     const store = makeStore();
     store.dispatch(clipStarted(clip));

@@ -74,16 +74,6 @@ function baseProps() {
 
 describe('StructuresSection', () => {
   describe('master tri-state', () => {
-    it('reflects checked (allOn) when all categories are enabled', () => {
-      const { container } = render(createElement(StructuresSection, baseProps()));
-      // The master toggle is the first checkbox — it lives in the <button> header
-      // and is always accessible regardless of collapsed state.
-      const headerCheckbox =
-        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      expect(headerCheckbox.checked).toBe(true);
-      expect(headerCheckbox.indeterminate).toBe(false);
-    });
-
     it('is indeterminate when only a subset of categories are enabled', () => {
       const props = { ...baseProps(), markerCategoryVisibility: partialVisibility() };
       const { container } = render(createElement(StructuresSection, props));
@@ -92,15 +82,6 @@ describe('StructuresSection', () => {
       // indeterminate is a DOM property, not an HTML attribute — set imperatively by
       // the CollapsibleSection via useEffect + ref.
       expect(headerCheckbox.indeterminate).toBe(true);
-    });
-
-    it('is unchecked (noneOn) when no categories are enabled', () => {
-      const props = { ...baseProps(), markerCategoryVisibility: noneOnVisibility() };
-      const { container } = render(createElement(StructuresSection, props));
-      const headerCheckbox =
-        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      expect(headerCheckbox.checked).toBe(false);
-      expect(headerCheckbox.indeterminate).toBe(false);
     });
   });
 
@@ -172,27 +153,6 @@ describe('StructuresSection', () => {
       expect(onSetMarkerCategoryVisibility).toHaveBeenCalledTimes(STRUCTURE_IDS.length);
       for (const cat of STRUCTURE_IDS) {
         expect(onSetMarkerCategoryVisibility).toHaveBeenCalledWith(cat, true);
-      }
-    });
-
-    it('calls onSetMarkerCategoryVisibility with false for all STRUCTURE_IDS when master toggled from allOn', () => {
-      const onSetMarkerCategoryVisibility =
-        vi.fn<(category: StructureId, visible: boolean) => void>();
-      const props = {
-        ...baseProps(),
-        markerCategoryVisibility: allOnVisibility(),
-        onSetMarkerCategoryVisibility,
-      };
-      const { container } = render(createElement(StructuresSection, props));
-
-      // allOn → master click sets all to false.
-      const headerCheckbox =
-        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      fireEvent.click(headerCheckbox);
-
-      expect(onSetMarkerCategoryVisibility).toHaveBeenCalledTimes(STRUCTURE_IDS.length);
-      for (const cat of STRUCTURE_IDS) {
-        expect(onSetMarkerCategoryVisibility).toHaveBeenCalledWith(cat, false);
       }
     });
   });

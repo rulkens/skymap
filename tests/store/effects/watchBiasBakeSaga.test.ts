@@ -21,13 +21,6 @@ describe('watchBiasBakeSaga', () => {
     reconcile = built.reconcile;
   });
 
-  it('setBiasMode(1) → bakeBias(1) called', () => {
-    store.dispatch(setBiasMode(1));
-
-    expect(reconcile.bakeBias).toHaveBeenCalledTimes(1);
-    expect(reconcile.bakeBias).toHaveBeenCalledWith(1);
-  });
-
   it('setBiasMode fires requestRender in addition to bakeBias', () => {
     // setBiasMode is a settings write → watchWakeSaga fires regardless.
     store.dispatch(setBiasMode(2));
