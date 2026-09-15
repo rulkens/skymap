@@ -44,16 +44,19 @@ paragraph) and collapses the UV layers onto one shared name before saving.
 **The materials are overridden.** The model types every surface matte
 (metallic 0, roughness 0.84–0.91), so baked as authored the telescope reads as
 grey cardboard. Hubble is wrapped in aluminised multi-layer insulation, a
-crinkled mirror, so the importer row's `materials=` sets `hbltel_1` (the
-forward shell, light shield and aft shroud panels), `hbltel_2` (aperture door,
-aft bulkhead) and `hbltel_4` (handrails, antenna mast) to metallic 1 at
-roughness 0.2–0.3, with a ×2 Base Color gain on `hbltel_1` because its mid-grey
-texture becomes a metal's reflectance once metallic. The source has no normal
-maps, so the same two materials take `bump=0.08`: the colour texture's
-luminance stands in for height at 8 cm per unit, which is what it takes for
-its low-contrast crinkle and panel seams to tilt the baked normal a visible
-few degrees. `hbltel_3` (the copper Kapton array blankets) and `hbltel_wfc_1`
-(the instrument box) bake as authored.
+crinkled mirror, so the importer row's `materials=` sets `hbltel_1` (the aft
+shroud and equipment-section panels, plus the array booms), `hbltel_4` (the
+light shield and forward shell — the long thin tube) and `hbltel_2` (aperture
+door, aft bulkhead, the two dishes) to metallic 1 at roughness 0.2, with a ×2
+Base Color gain on `hbltel_1` because its mid-grey texture becomes a metal's
+reflectance once metallic. The source has no normal maps, so all three take
+`bump=0.08`: the colour texture's luminance stands in for height at 8 cm per
+unit, which is what it takes for the low-contrast crinkle and panel seams to
+tilt the baked normal a visible few degrees. `hbltel_3` (the solar arrays,
+cells on aluminised copper Kapton) goes metallic 0.8 at roughness 0.35 — a
+tinted mirror rather than cardboard. `hbltel_wfc_1` (the instrument box)
+bakes as authored. The material-to-surface map was read off a render with one
+flat colour per material, not off the material names.
 
 ## The pre-bake — what `build-meshes` actually reads
 

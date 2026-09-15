@@ -42,15 +42,17 @@ SOURCES = {
     "curiosity": source("Curiosity Rover (MSL) (Clean).blend", frame=206,
                         drop_materials=("pivot", "shadow2")),
     "mer": source("Mars Exploration Rover - Spirit and Opportunity.blend", frame=1325),
-    # Aluminised MLI on the shells (hbltel_1), the aperture door and aft
-    # bulkhead (hbltel_2) and the handrails/mast (hbltel_4); the texture's mid
-    # grey is a metal's REFLECTANCE once metallic, hence the gain. Foil is
-    # locally a mirror — its crinkle is the bump's job, not roughness's. The
-    # copper array blankets (hbltel_3) and the instrument box stay authored.
+    # Aluminised MLI on the aft shroud and equipment section (hbltel_1), the
+    # light shield and forward shell (hbltel_4), the aperture door, bulkhead
+    # and dishes (hbltel_2); hbltel_1's mid grey is a metal's REFLECTANCE once
+    # metallic, hence its gain. Foil is locally a mirror — its crinkle is the
+    # bump's job, not roughness's. The arrays (hbltel_3) are cells on
+    # aluminised copper Kapton, a tinted mirror; the instrument box as authored.
     "hubble": source("Hubble Space Telescope (A).glb", scale=0.0254, materials={
         "hbltel_1": dict(metallic=1.0, roughness=0.2, gain=2.0, bump=0.08),
         "hbltel_2": dict(metallic=1.0, roughness=0.2, bump=0.08),
-        "hbltel_4": dict(metallic=1.0, roughness=0.3),
+        "hbltel_4": dict(metallic=1.0, roughness=0.2, bump=0.08),
+        "hbltel_3": dict(metallic=0.8, roughness=0.35),
     }),
 }
 
