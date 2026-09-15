@@ -19,7 +19,9 @@ import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../../src/data/camera/
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { SCENE_CELESTIAL_BODIES } from '../../../../../src/data/bodies/sceneCelestialBodies';
 import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodies';
+import { SURFACE_FIXED_SITES } from '../../../../../src/data/bodies/surfaceFixedSites';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
+import { sitePointBodyFixed } from '../../../../../src/utils/camera/sitePointBodyFixed';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
@@ -60,13 +62,19 @@ function worldArm(eyeMpc: Vec3): FramedPose<'absolute'> {
 // Eye on +x with the identity basis, so the sightline (+z) misses the body and
 // `toWorldArm`'s grazing branch reconstructs this exact eye — the altitude the
 // case names is the altitude `release` measures.
-function bodyArm(id: BodyId, radiusM: number, hOverR: number): FramedPose<'body'> {
+function bodyArm(
+  id: BodyId,
+  radiusM: number,
+  hOverR: number,
+  dir: Vec3 = [1, 0, 0],
+): FramedPose<'body'> {
+  const eyeM = radiusM * (1 + hOverR);
   return {
     frame: { body: id },
     pose: {
       bodyId: id,
       anchorLocalM: [0, 0, 0],
-      eyeRelAnchorM: [radiusM * (1 + hOverR), 0, 0],
+      eyeRelAnchorM: [dir[0] * eyeM, dir[1] * eyeM, dir[2] * eyeM],
       basisLocal: IDENTITY,
     },
   };
@@ -200,16 +208,24 @@ describe('stepRung', () => {
     });
   });
 
-  it("a focus in the rung's host subtree keeps the rung", () => {
+  it("a focus in the rung's host subtree keeps the rung while the arm can serve it", () => {
     // Spec §0's premise correction: releasing on any differing focus made the
-    // Mars arm unreachable with a rover focused. The eye is a planet radius up,
-    // far outside the site band, so this pins Mars holding, not a descent.
+    // Mars arm unreachable with a rover focused. The eye is a fraction of a
+    // planet radius up OVER Bradbury Landing — far outside the site band, so
+    // this pins Mars holding, not a descent — and above the rover's horizon,
+    // which is what bounds the hold (§4.8).
     const marsRadiusM = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'test').surface
       .datumRadiusM;
+    const site = sitePointBodyFixed(
+      findByIdOrThrow(SURFACE_FIXED_SITES, 'curiosity', 'test'),
+      marsRadiusM,
+    );
+    const mag = Math.hypot(site[0], site[1], site[2]);
+    const up: Vec3 = [site[0] / mag, site[1] / mag, site[2] / mag];
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('mars'), bodyStateAtOrigin()]]);
     const current = { body: bodyId('mars') };
     const ctx = ctxFor(bodyStates, bodyId('curiosity'));
-    expect(stepRung(bodyArm(current.body, marsRadiusM, TUNING.engageHR * 0.5), ctx)).toEqual(
+    expect(stepRung(bodyArm(current.body, marsRadiusM, TUNING.engageHR * 0.5, up), ctx)).toEqual(
       current,
     );
   });

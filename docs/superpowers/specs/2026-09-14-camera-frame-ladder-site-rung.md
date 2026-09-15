@@ -777,6 +777,14 @@ gated off. `PositionDriver` is the chain's only reader; there is no second host
 notion here (`utils/scene/hostBodyId` resolves a _texture_ key's host and is
 unrelated).
 
+The hold is bounded by what the arm can serve: **a hosted focus keeps (and
+admits) the arm only while its site point is above the eye's horizon** —
+`dot(E − P, P) > 0` in body-fixed metres, the eye first lifted to the descent
+floor so an approach parked under the datum is judged from where the arm would
+put it (`hostedFocusOverHorizon.ts`). Unbounded, the hold stranded every switch
+between two rovers: no driver runs inside a body arm, so a focus 142° around
+Mars was held by an arm that could never reach it.
+
 That rule alone would strand the approach. `followActive` is gated on the world
 arm (`cameraDrivers.ts:81-83`) because the ease has no meaning once the state
 co-rotates; a rover's framing distance is metres, so an approach with the

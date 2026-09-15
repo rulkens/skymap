@@ -4,8 +4,9 @@
  * author) — conversion + commit-on-edge untouched, the follow row active next
  * frame — instead of doing nothing until a manual zoom-out past disengage.
  * Also pins the low-altitude conversion (finite, eye-preserving, targeted at
- * the RELEASED body's centre) and the no-flap property: the engage test may
- * not re-capture the eye while the differing focus holds.
+ * the RELEASED body's centre), the no-flap property (the engage test may not
+ * re-capture the eye while the differing focus holds), and the same rule one
+ * rung down: a switch between two ROVERS on the same planet.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -21,6 +22,9 @@ vi.mock('../../../../src/services/gpu/device', () => ({
 }));
 
 import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
+import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { frameKey } from '../../../../src/services/engine/camera/rungs/frameKey';
+import { poseAtHR } from '../../../helpers/camera/poseAtHR';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { driveWheelEvents } from '../../../helpers/camera/driveWheelEvents';
 import { displayedEye } from '../../../helpers/camera/displayedEye';
@@ -30,7 +34,11 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
+import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
+import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -148,5 +156,115 @@ describe('focus release while engaged (round 10)', () => {
     h.tick(64);
     const framed = h.state.cameraRuntime.register.pose;
     expect(isBodyArm(framed) && framed.frame.body).toBe('mars');
+  });
+});
+
+/** The distinct regimes `camera.base` passed through, in order. */
+function regimeTrace(h: ReturnType<typeof makeCameraSimHarness>, frames: number): string[] {
+  const seq: string[] = [frameKey(h.store.getState().camera.base.frame)];
+  for (let i = 0; i < frames; i += 1) {
+    h.frame();
+    const key = frameKey(h.store.getState().camera.base.frame);
+    if (seq[seq.length - 1] !== key) seq.push(key);
+  }
+  return seq;
+}
+
+describe('focus switch between two rovers on one planet (adverse 5)', () => {
+  const MARS_R = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!.surface.datumRadiusM;
+  const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
+  const RUNG_CTX = { bodies: BODIES as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B };
+
+  it('from a rover site, focusing another rover flies there and lands its site arm', () => {
+    // Bradbury Landing is 142° of Mars around from Challenger Memorial Station,
+    // so the Mars arm holding Opportunity's focus could serve Curiosity only by
+    // seeing through the planet. Held, no driver is live — the pin and the
+    // follow pair are inert in a body arm — so the eye sat 6,400 km away
+    // forever and the search row lied.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    h.seedPose(
+      absoluteArm(
+        foldToWorld(
+          {
+            frame: { site: 'opportunity' as BodyId },
+            pose: {
+              siteId: 'opportunity' as BodyId,
+              headingRad: 0.4,
+              elevationRad: 0.5,
+              rangeM: 60,
+            },
+          },
+          RUNG_CTX,
+        ),
+      ),
+    );
+    h.focus('opportunity');
+    h.frame(40);
+    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:opportunity');
+
+    h.focus('curiosity');
+    const trace = regimeTrace(h, 900);
+
+    // Out to the world arm — the only rung the follow approach is live in —
+    // then back down Mars's band into the new rover's site arm. Asserted whole
+    // because the LENGTH is half the property: the same release rule without
+    // its mirror in `engage` re-enters Mars's band every frame of the crossing
+    // and flaps `body:mars`/`absolute` at 60 Hz instead of descending.
+    expect(trace).toEqual([
+      'site:opportunity',
+      'body:mars',
+      'absolute',
+      'body:mars',
+      'site:curiosity',
+    ]);
+  });
+
+  it('from the Mars arm with Mars focused, focusing a rover flies there (main parity)', () => {
+    // The same knot without a site rung in it, and the regression this branch
+    // introduced: on main `release` fired on `focus !== host` and the approach
+    // flew to the rover, so selecting a rover from Mars orbit did something.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    h.seedPose(absoluteArm(poseAtHR(MARS, MARS_R, 0.1)));
+    h.focus('mars');
+    h.frame(5);
+    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+
+    h.focus('curiosity');
+    const trace = regimeTrace(h, 900);
+
+    expect(trace).toEqual(['body:mars', 'absolute', 'body:mars', 'site:curiosity']);
+  });
+
+  it('a hosted focus the arm can still see keeps it — the §4.8 hold', () => {
+    // The other side of the rule, and why it is the horizon and not the focus
+    // edge: an eye overhead of Bradbury IS serving Curiosity, so the arm holds
+    // and a zoom-out from the rover is not yanked to framing distance.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    h.seedPose(
+      absoluteArm(
+        foldToWorld(
+          {
+            frame: { site: 'curiosity' as BodyId },
+            pose: {
+              siteId: 'curiosity' as BodyId,
+              headingRad: 0.4,
+              elevationRad: 0.5,
+              rangeM: 60,
+            },
+          },
+          RUNG_CTX,
+        ),
+      ),
+    );
+    h.focus('curiosity');
+    h.frame(40);
+    expect(frameKey(h.store.getState().camera.base.frame)).toBe('site:curiosity');
+
+    // Zoom out past `siteDisengageR` and stop: the Mars arm takes it and KEEPS
+    // it — the rover is still under the eye.
+    for (let i = 0; i < 40; i += 1) h.wheel(240);
+    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
+    h.frame(120);
+    expect(frameKey(h.store.getState().camera.base.frame)).toBe('body:mars');
   });
 });

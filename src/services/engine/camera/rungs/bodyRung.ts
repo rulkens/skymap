@@ -11,10 +11,12 @@
 import type { ClimbRow } from '../../../../@types/camera/ClimbRow';
 import { EMPTY_SURFACE_GESTURE_MEMORY, surfaceStep } from '../../../camera/surfaceStep';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
+import { bodyFixedEyeM } from '../../../../utils/camera/bodyFixedEyeM';
 import { decodeBodyFixedChannels } from '../../../../utils/camera/decodeBodyFixedChannels';
 import { eyeMpcOf } from '../../../../utils/camera/eyeMpcOf';
 import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
 import { frameUp } from '../../../../utils/camera/frameUp';
+import { hostedFocusOverHorizon } from '../../../../utils/camera/hostedFocusOverHorizon';
 import { hostedFocusPivotM } from '../../../../utils/camera/hostedFocusPivotM';
 import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
@@ -112,11 +114,22 @@ export const bodyRung: ClimbRow<'body'> = {
     // Clip/tour reachability (R10-1): a hand-authored `flyToClip` CAN park at one
     // body's surface with a stale focus on another. No engage happens there, so
     // the first at-rest frame's pivot pin re-targets the FOCUSED body.
-    return nearest !== null &&
-      nearest.hr < ctx.tuning.engageHR &&
-      focusInSubtree(ctx.focusBodyId, nearest.bodyId)
-      ? { body: nearest.bodyId }
-      : null;
+    if (
+      nearest === null ||
+      nearest.hr >= ctx.tuning.engageHR ||
+      !focusInSubtree(ctx.focusBodyId, nearest.bodyId)
+    ) {
+      return null;
+    }
+    // The horizon test from the parent side, so an arm `release` would hand back
+    // next frame is never entered: an approach to a rover on the far side crosses
+    // this band, and without this it flips regime on every frame of the crossing.
+    const host = hostOf({ body: nearest.bodyId }, ctx);
+    if (host !== null) {
+      const arm = toBodyArm(parent.pose, ctx.poseBasis, ctx.upBasis, host.id, host.state);
+      if (hostedFocusOverHorizon(bodyFixedEyeM(arm), ctx.focusBodyId, host)) return null;
+    }
+    return { body: nearest.bodyId };
   },
 
   release(framed, ctx) {
@@ -126,6 +139,10 @@ export const bodyRung: ClimbRow<'body'> = {
     // Unresolved this frame: hold rather than guess — the caller's next frame retries.
     const host = hostOf(framed.frame, ctx);
     if (host === null) return false;
+    // ...but only while the arm can SERVE it: nothing moves the camera from
+    // inside a body arm (the pin and the follow pair are both inert here), so a
+    // hold past the horizon strands a switch between two rovers forever.
+    if (hostedFocusOverHorizon(bodyFixedEyeM(framed.pose), ctx.focusBodyId, host)) return true;
     const world = toWorldArm(
       framed.pose,
       host.state,

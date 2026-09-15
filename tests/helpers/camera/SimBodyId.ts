@@ -5,4 +5,4 @@
  * id space, where every planet shares the single `'planet'` row). Only the
  * planets carry a datum radius, so a rover may be focused but not booted at.
  */
-export type SimBodyId = 'earth' | 'mars' | 'saturn' | 'curiosity';
+export type SimBodyId = 'earth' | 'mars' | 'saturn' | 'curiosity' | 'opportunity';
