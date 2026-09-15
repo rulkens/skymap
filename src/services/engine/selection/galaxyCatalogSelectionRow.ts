@@ -109,7 +109,7 @@ function resolvePos(raDegT: number, decDegT: number, deps: Deps): GalaxyCatalogR
   let bestIdx = -1;
 
   for (const source of GALAXY_CATALOG_SOURCES) {
-    const cloud = deps.catalogs.get(source as GalaxyCatalogSourceType);
+    const cloud = deps.catalogs.get(source);
     if (!cloud) continue;
     const positions = cloud.positions;
     for (let i = 0; i < cloud.count; i++) {
@@ -122,7 +122,7 @@ function resolvePos(raDegT: number, decDegT: number, deps: Deps): GalaxyCatalogR
       const sqArcsec = (ddec * ddec + dra * dra) * 3600 * 3600;
       if (sqArcsec < bestSqArcsec) {
         bestSqArcsec = sqArcsec;
-        bestSource = source as GalaxyCatalogSourceType;
+        bestSource = source;
         bestIdx = i;
       }
     }
