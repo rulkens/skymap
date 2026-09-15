@@ -33,8 +33,9 @@ import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
  * every `GPU_HANDLE_ROWS`-owned handle except the `constructPhase: 'wireInput'`
  * rows (`galaxyPickRenderer`/`pickProgram`, built by `wireInput` once
  * `focusUniform` exists). Mints no `state.assetSlots.*` — those are minted
- * in `wireSlots`. Stashes `device`/`context`/`unwatchHdrCapability` on
- * `deps.phaseLocals` so `engine.ts`'s `destroy()` can remove the HDR listener.
+ * in `wireSlots`. Stashes `device`/`context`/`format`/`unwatchHdrCapability` on
+ * `deps.phaseLocals` so `createLayers` can build each Layer's `GpuContext` and
+ * `engine.ts`'s `destroy()` can remove the HDR listener.
  */
 export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { canvas } = deps;
@@ -50,7 +51,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   const unwatchHdrCapability = watchHdrCapability((capable) =>
     deps.cb.store.dispatch(engineHdrCapabilityChanged(capable)),
   );
-  deps.phaseLocals = { device, context, unwatchHdrCapability };
+  deps.phaseLocals = { device, context, format, unwatchHdrCapability };
 
   // fadeBgl/sourceBgl/focusBgl/timingService/uiCtx/fontAtlases: the 6
   // `GpuHandleKey`-excluded state.gpu fields (see GpuHandleKey.d.ts) — built

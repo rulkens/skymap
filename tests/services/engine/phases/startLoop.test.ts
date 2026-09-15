@@ -111,6 +111,7 @@ function makeDeps({ timeMode = 'live' }: { timeMode?: 'live' | 'manual' } = {}):
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
+      format: 'bgra8unorm' as GPUTextureFormat,
       unwatchHdrCapability: () => {},
     },
   };

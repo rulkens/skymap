@@ -349,6 +349,11 @@ export function createEngine(
     // Edge-triggered UI events driving demand predicates. The wiring layer sets a
     // key and leaves it set — the demand loop's idle-guard prevents a re-fetch.
     requests: new Set<RequestKey>(),
+    // Both empty until `createLayers` runs (D7); see EngineState.d.ts for why
+    // `selectionKindRows` is not named `selectionRows` (that getter, above, is
+    // the unrelated saga display cache).
+    layers: [],
+    selectionKindRows: [],
   };
 
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
@@ -496,7 +501,9 @@ export function createEngine(
   function destroy(): void {
     // Ordering is load-bearing only for the first two groups: the render loop stops
     // before anything it touches is torn down, and DOM listeners detach before the
-    // subsystems they fire into. Past that it is free.
+    // subsystems they fire into. Past that it is free. Layers go before core, in
+    // reverse tuple order (D8) — a Layer's captured core object (e.g. `focusUniform`)
+    // must still be alive when its `destroy` runs.
     state.subsystems.scheduler.destroy();
     state.subsystems.assetQueue.destroy();
 
@@ -509,6 +516,9 @@ export function createEngine(
     // Undefined only if the GPU IIFE errored before registering the HDR-capability
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();
+
+    for (const instance of state.layers.slice().reverse()) instance.destroy();
+    state.layers = [];
 
     state.subsystems.biasCorrection.destroy();
     state.subsystems.cosmoLabelDirector.destroy();

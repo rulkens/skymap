@@ -39,6 +39,7 @@ const stateWrites: Record<string, unknown> = {};
 // vi.mock hoists).
 const __phaseControl = {
   initGpu: { throw: false as Error | false, write: false },
+  createLayers: { throw: false as Error | false },
   wireSlots: { throw: false as Error | false },
   wireInput: { throw: false as Error | false },
   startLoop: { throw: false as Error | false },
@@ -53,6 +54,13 @@ vi.mock('../../../../src/services/engine/phases/initGpu', () => ({
       stateWrites.fromInitGpu = state.gpu.galaxyPointRenderer;
     }
     if (__phaseControl.initGpu.throw) throw __phaseControl.initGpu.throw;
+  }),
+}));
+
+vi.mock('../../../../src/services/engine/phases/createLayers', () => ({
+  createLayers: vi.fn(async (_state: any, _deps: any) => {
+    order.push('createLayers');
+    if (__phaseControl.createLayers.throw) throw __phaseControl.createLayers.throw;
   }),
 }));
 
@@ -112,33 +120,40 @@ describe('runBootstrapPhases', () => {
     for (const k of Object.keys(stateWrites)) delete stateWrites[k];
     __phaseControl.initGpu.throw = false;
     __phaseControl.initGpu.write = false;
+    __phaseControl.createLayers.throw = false;
     __phaseControl.wireSlots.throw = false;
     __phaseControl.wireInput.throw = false;
     __phaseControl.startLoop.throw = false;
   });
 
-  it('runs phases in the declared order: initGpu → wireSlots → wireInput → startLoop', async () => {
+  it('runs phases in the declared order: initGpu → createLayers → wireSlots → wireInput → startLoop', async () => {
     await runBootstrapPhases(makeState(), makeDeps());
-    expect(order).toEqual(['initGpu', 'wireSlots', 'wireInput', 'startLoop']);
+    expect(order).toEqual(['initGpu', 'createLayers', 'wireSlots', 'wireInput', 'startLoop']);
   });
 
-  it('first rejection short-circuits — initGpu throws → wireSlots/wireInput/startLoop NOT called', async () => {
+  it('first rejection short-circuits — initGpu throws → createLayers/wireSlots/wireInput/startLoop NOT called', async () => {
     __phaseControl.initGpu.throw = new Error('initGpu boom');
     await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('initGpu boom');
     // Only the throwing phase ran; later phases are not invoked.
     expect(order).toEqual(['initGpu']);
   });
 
+  it('first rejection short-circuits — createLayers throws → wireSlots/wireInput/startLoop NOT called', async () => {
+    __phaseControl.createLayers.throw = new Error('createLayers boom');
+    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('createLayers boom');
+    expect(order).toEqual(['initGpu', 'createLayers']);
+  });
+
   it('first rejection short-circuits — wireSlots throws → wireInput/startLoop NOT called', async () => {
     __phaseControl.wireSlots.throw = new Error('wireSlots boom');
     await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('wireSlots boom');
-    expect(order).toEqual(['initGpu', 'wireSlots']);
+    expect(order).toEqual(['initGpu', 'createLayers', 'wireSlots']);
   });
 
   it('first rejection short-circuits — wireInput throws → startLoop NOT called', async () => {
     __phaseControl.wireInput.throw = new Error('wireInput boom');
     await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('wireInput boom');
-    expect(order).toEqual(['initGpu', 'wireSlots', 'wireInput']);
+    expect(order).toEqual(['initGpu', 'createLayers', 'wireSlots', 'wireInput']);
   });
 
   it('state writes from earlier phases are visible to later phases', async () => {

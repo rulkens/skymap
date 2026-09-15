@@ -21,6 +21,8 @@ import type { CubemapCaptureKey } from '../../rendering/CubemapCaptureKey';
 import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
 import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
+import type { LayerInstance } from '../layer/LayerInstance';
+import type { SelectionKindRow } from '../layer/SelectionKindRow';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -66,4 +68,20 @@ export type EngineState = {
    * is needed.
    */
   requests: Set<RequestKey>;
+  /**
+   * Every Layer bound to its runtime by `createLayers`, in composition tuple
+   * order. `[]` until that phase runs; `destroy()` tears these down in
+   * REVERSE order before any core teardown a Layer's captured core object
+   * depends on (D8).
+   */
+  layers: readonly LayerInstance[];
+  /**
+   * The one selection-row array core owns (D5, Ruling 4): `[]` here,
+   * populated by Task 8's core rows and appended to once, by `createLayers`,
+   * with each Layer's own rows. Named distinctly from `selectionRows` above —
+   * that field is the UNRELATED saga-reconciled display cache
+   * (`SelectionRowsState`); this one holds `SelectionKindRow`s, the composed
+   * resolver's dispatch table.
+   */
+  selectionKindRows: readonly SelectionKindRow[];
 };
