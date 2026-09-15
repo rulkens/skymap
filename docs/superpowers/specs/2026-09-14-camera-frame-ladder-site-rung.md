@@ -617,21 +617,35 @@ eye          = bodyFixedEyeM(pose)
 rel          = eye − P
 rangeM       = |rel|
 elevationRad = asin(clamp((rel/rangeM) · up, −1, 1))
-headingRad   = atan2((rel/rangeM) · east, (rel/rangeM) · north)
+right        = basisLocal's first column
+headingRad   = atan2(right · north, −(right · east))
 ```
 
-then the floors of §4.5. **The incoming basis is discarded**: the site rung
-looks at the site by construction, so entering re-aims the camera onto `P`.
-That is acceptable because engage only fires at rest with the focus on the site
-body, which means the follow approach has already aimed the camera at the rover
-(`cameraDrivers.ts:154-160` frames the focus) and the re-aim is a no-op up to
-the tilt residual. It also fixes the round-trip asymmetry precisely:
-`fromParent(toParent(s))` is the identity for every `SitePose` within float
-tolerance; `toParent(fromParent(b))` is **not** the identity for an arbitrary
-body pose — it projects the aim onto the site. Both are pinned as tests (§6).
-Whatever the body arm's sightline missed `P` by is therefore spent in the engage
-frame as one step, which is why the pivot rule of §0 has to hold the focus on
-that sightline through the descent, not only at the moment of arrival.
+then the floors of §4.5. Each site coordinate is read from **whichever incoming
+quantity fixes it**. Range and elevation come from the eye. The heading comes
+from the **basis**, because the eye does not fix it: the engage lands at the
+remembered top-down tilt, where the eye sits over `P` and its azimuth about the
+site is float noise — three identical zoom-outs and zoom-ins measured headings
+−1.396, −0.939 and −1.144 rad, so the rover landed spun by a different angle
+every time (adverse 8, 2026-09-15). `right` is the axis to read it off: the
+basis of §4.2 is `canonicalBasisAt(siteFrame, headingRad + π, π/2 − elevationRad)`,
+whose `right` works out to `horiz × localUp`, independent of the tilt — so it stays
+in the tangent plane at every elevation, where screen-up's tangent projection
+shrinks as `sin(elevationRad)` and dies at the horizon.
+
+Reading the heading off the basis costs nothing when the view is already on the
+site, which is the case engage fires in: the follow approach frames the focus
+(`cameraDrivers.ts:154-160`) and the body arm serves it at the centre, so the
+incoming `forward` is `−dir` to 1e-12 and the two readings agree. Where they
+differ, the **eye** is what moves and the screen orientation is kept, which is
+the right way round — an eye off the turntable's azimuth by `Δheading` is at
+most `2 · rangeM · cos(elevationRad) · sin(Δheading/2)` away (9 cm at the tilt
+the engage lands at), while an orientation off by `Δheading` is the whole
+screen. The round-trip asymmetry is therefore the same shape as before with the
+projected quantity swapped: `fromParent(toParent(s))` is the identity for every
+`SitePose` within float tolerance; `toParent(fromParent(b))` is **not** the
+identity for an arbitrary body pose — it keeps the basis and projects the eye.
+Both are pinned as tests (§6).
 
 ### 4.4 Engage and release
 

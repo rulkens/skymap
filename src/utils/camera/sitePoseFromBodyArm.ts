@@ -1,7 +1,8 @@
 /**
- * host body arm → site (spec §4.3), which IS the engage. The incoming basis is
- * DISCARDED — the rung looks at the site by construction — so deliberately
- * `fromParent(toParent(s))` is exact while `toParent(fromParent(b))` projects.
+ * host body arm → site (spec §4.3), which IS the engage. Range and elevation
+ * come from the eye, the HEADING from the basis's right: the engage lands at
+ * the remembered top-down tilt, where the eye's azimuth about the site is float
+ * noise, while right stays horizontal at every tilt (it is `horiz × localUp`).
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -30,10 +31,13 @@ export function sitePoseFromBodyArm(
   // never recovers — `clampedSitePose` floors the range, not the angles.
   const d = Math.max(rangeM, 1e-9);
   const dir = [rel[0] / d, rel[1] / d, rel[2] / d] as const;
+  const right = [arm.basisLocal[0], arm.basisLocal[1], arm.basisLocal[2]] as const;
   return clampedSitePose(
     {
       siteId: site.id as BodyId,
-      headingRad: Math.atan2(dot3(dir, east), dot3(dir, north)),
+      // `canonicalBasisAt(frame, heading + π, …)` leaves right at
+      // `sin(heading)·north − cos(heading)·east`, whatever the tilt.
+      headingRad: Math.atan2(dot3(right, north), -dot3(right, east)),
       elevationRad: Math.asin(Math.min(1, Math.max(-1, dot3(dir, localUp)))),
       rangeM,
     },

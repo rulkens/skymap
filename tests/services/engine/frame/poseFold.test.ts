@@ -667,6 +667,48 @@ describe('runFrame — the regime fold', () => {
     expect(range.pose.rangeM).toBeLessThan(1e2);
   });
 
+  it('two engages from the same climb land the rover the same way up', () => {
+    // Adverse 8, the user's words: "when I zoom in and out, Opportunity ends up
+    // in a different orientation every time". The engage lands at the remembered
+    // top-down tilt, where the eye's azimuth about the site is float noise, so a
+    // heading read off the eye spun the turntable by a different angle per pass.
+    const h = makeHarness();
+    parkAtCuriositySite(h);
+
+    const screenUp: Vec3[] = [];
+    for (let cycle = 0; cycle < 2; cycle++) {
+      for (let i = 0; i < 60; i++) {
+        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.frame(1);
+        if (!isSiteArm(h.state.cameraRuntime.register.pose)) break;
+      }
+      for (let i = 0; i < 12; i++) {
+        h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
+        h.frame(1);
+      }
+      expect(isBodyArm(h.state.cameraRuntime.register.pose)).toBe(true);
+      for (let i = 0; i < 80; i++) {
+        h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
+        h.frame(1);
+        if (isSiteArm(h.state.cameraRuntime.register.pose)) break;
+      }
+      expect(isSiteArm(h.state.cameraRuntime.register.pose)).toBe(true);
+      // One frame PAST the crossing: the engage frame still draws the pre-fold
+      // world pose (that is what keeps the crossing continuous), so the site
+      // arm's own orientation only reaches the screen on the frame after it.
+      h.frame(1);
+      screenUp.push(renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose).up);
+    }
+
+    // Time is paused, so the site's own axes are the same on both passes and the
+    // drawn screen-up is directly comparable. One pixel here is 1.05e-2 rad.
+    const [first, second] = screenUp as [Vec3, Vec3];
+    const spreadRad = Math.acos(
+      Math.min(1, first[0] * second[0] + first[1] * second[1] + first[2] * second[2]),
+    );
+    expect(spreadRad).toBeLessThan(1e-4);
+  });
+
   it('a site-framed clip leg over an absolute base cannot jump two rungs', () => {
     // S1: the clip authors `{ site: curiosity }` while the regime is still
     // `absolute`. `stepRung` answers `body:mars` (the engage band), the flip

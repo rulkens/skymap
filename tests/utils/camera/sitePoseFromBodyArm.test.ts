@@ -1,5 +1,5 @@
 /**
- * sitePoseFromBodyArm — the engage. Round-trip exactness one way, aim
+ * sitePoseFromBodyArm — the engage. Round-trip exactness one way, eye
  * projection the other: asserting full symmetry would pin the wrong contract.
  */
 
@@ -15,6 +15,7 @@ import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { MeshBody } from '../../../src/@types/scene/MeshBody';
 import type { SitePose } from '../../../src/@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../../src/@types/scene/SurfaceFixedSite';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const ROVER: MeshBody = {
   id: 'fixture-rover',
@@ -80,12 +81,13 @@ describe('sitePoseFromBodyArm', () => {
     for (const pose of POSES) expectRoundTrip(tiny, 1000, pose);
   });
 
-  it('entering the site rung re-aims the camera at the site', () => {
+  it('entering the site rung keeps the screen orientation and moves the eye', () => {
     const s = SITES[2]!;
     const pose = POSES[2]!;
     const arm = sitePoseToBodyArm(pose, s, HOST_RADIUS_M);
     const p = sitePointBodyFixed(s, HOST_RADIUS_M);
-    // Same eye, basis swung a quarter turn off the site.
+    // Same eye, basis swung a quarter turn off the site: the heading rides the
+    // basis, so the turntable answers the quarter turn and the eye follows it.
     const aimedAway = {
       ...arm,
       basisLocal: canonicalBasisAt(
@@ -95,20 +97,50 @@ describe('sitePoseFromBodyArm', () => {
       ),
     };
 
-    const reEntered = sitePoseToBodyArm(
-      sitePoseFromBodyArm(aimedAway, s, HOST_RADIUS_M, ROVER),
-      s,
-      HOST_RADIUS_M,
-    );
+    const entered = sitePoseFromBodyArm(aimedAway, s, HOST_RADIUS_M, ROVER);
+    expect(entered.headingRad).toBeCloseTo(pose.headingRad - Math.PI / 2, 9);
+    expect(entered.elevationRad).toBeCloseTo(pose.elevationRad, 9);
+    expect(entered.rangeM).toBeCloseTo(pose.rangeM, 6);
 
+    const reEntered = sitePoseToBodyArm(entered, s, HOST_RADIUS_M);
     for (const i of [0, 1, 2] as const) {
       expect(reEntered.anchorLocalM[i]).toBeCloseTo(arm.anchorLocalM[i], 6);
-      expect(reEntered.eyeRelAnchorM[i]).toBeCloseTo(arm.eyeRelAnchorM[i], 6);
     }
-    // Forward is the third column: it now points from the eye back at the site.
-    const range = Math.hypot(...arm.eyeRelAnchorM);
+    // Right and up are the first two columns: the swung screen orientation held.
+    for (const i of [0, 1, 2, 3, 4, 5] as const) {
+      expect(reEntered.basisLocal[i]).toBeCloseTo(aimedAway.basisLocal[i], 9);
+    }
+    // Forward is the third column: it still points from the (moved) eye at the site.
+    const range = Math.hypot(...reEntered.eyeRelAnchorM);
     for (const i of [0, 1, 2] as const) {
-      expect(reEntered.basisLocal[6 + i]).toBeCloseTo(-arm.eyeRelAnchorM[i] / range, 9);
+      expect(reEntered.basisLocal[6 + i]).toBeCloseTo(-reEntered.eyeRelAnchorM[i] / range, 9);
     }
+  });
+
+  it('an overhead engage takes its heading from the basis, not from eye noise', () => {
+    // Adverse 8: the engage lands at the remembered top-down tilt, where the
+    // eye's azimuth about the site is sub-millimetre float noise — two eyes a
+    // tenth of a millimetre apart used to hand back headings π apart, so the
+    // rover landed spun by a different angle every time the user zoomed in.
+    const s = SITES[2]!;
+    const p = sitePointBodyFixed(s, HOST_RADIUS_M);
+    const frame = siteEyeFrame(p);
+    const HEADING_RAD = 0.7;
+    const RANGE_M = 50;
+    const basisLocal = canonicalBasisAt(frame, HEADING_RAD + Math.PI, 0);
+    const headingFor = (offsetM: number): number => {
+      const eyeRelAnchorM = [0, 1, 2].map(
+        (i) => RANGE_M * frame.localUp[i]! + offsetM * frame.east[i]!,
+      ) as Vec3;
+      return sitePoseFromBodyArm(
+        { bodyId: 'fixture-host' as BodyId, anchorLocalM: p, eyeRelAnchorM, basisLocal },
+        s,
+        HOST_RADIUS_M,
+        ROVER,
+      ).headingRad;
+    };
+
+    expect(headingFor(1e-4)).toBeCloseTo(HEADING_RAD, 9);
+    expect(headingFor(-1e-4)).toBeCloseTo(HEADING_RAD, 9);
   });
 });
