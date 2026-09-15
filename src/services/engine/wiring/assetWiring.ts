@@ -10,8 +10,15 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
+import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import { HI_RES_LAYER_SIDE_BY_TIER, Source, SOURCE_REGISTRY } from '../../../data/sources';
+import {
+  HI_RES_LAYER_SIDE_BY_TIER,
+  Source,
+  SOURCE_REGISTRY,
+  GALAXY_CATALOG_SOURCES,
+} from '../../../data/sources';
+import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
@@ -73,20 +80,23 @@ const externalFactory = (): never => {
 };
 
 /**
- * One demand+req row for a point source. `priority` is a parameter because the
- * galaxy catalogs do NOT share a rank — see the fetch-rank note below.
+ * One demand+req row per galaxy-catalog entry, derived from the fields it
+ * already carries: `category === 'synthetic'` reads the fallback request
+ * flag (Ruling 2), everything else reads its settings toggle.
  */
-function pointRow(source: SourceType, priority: number): AssetWiringRow {
-  // The items record is keyed by GalaxyCatalogId but the cast widens from
-  // SourceType, so the optional chain guards a non-galaxy catalog code at runtime.
-  const id = SOURCE_REGISTRY[source].id as GalaxyCatalogId;
+function pointRow(entry: GalaxyCatalogSourceEntry): AssetWiringRow {
+  const source = entry.code as SourceType;
+  const id = entry.id as GalaxyCatalogId;
   return {
     key: source,
     built: 'external',
     factory: externalFactory,
     req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
-    priority,
+    demand: (ctx) =>
+      entry.category === 'synthetic'
+        ? ctx.request('syntheticFallback')
+        : ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
+    priority: entry.priority,
   };
 }
 
@@ -194,18 +204,11 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
   };
 }
 
-/**
- * Fetch ranks (`priority`, lower first). Array order below is grouped for READING and
- * differs from fetch order on purpose. The bulk-survey ranks 60–65 are DISTINCT
- * because `popHighestPriority` breaks ties by first-encountered: equal ranks would
- * fall back to array order and fetch GLADE (26 MB) before Milliquas (12.8 MB), the
- * large-before-small order the ranking exists to prevent. Two ranks look wrong and
- * are deliberate — famous galaxies (20) and 2MRS (40) both outrank the star catalog
- * (50); Famous is the codebase's only `surveyDeepZoom` exemption, so it is the one
- * galaxy asset that draws at the boot rung, and 2MRS buys resident local structure
- * for about a second of stars-arrive-later.
- */
-export const ASSET_WIRING: readonly AssetWiringRow[] = [
+// Point-source ranks live on each galaxy entry (see `pointRow`); two look odd
+// and are deliberate — famous galaxies (20) and 2MRS (40) both outrank the
+// star catalog (50), since Famous is the only `surveyDeepZoom` exemption and
+// 2MRS buys resident local structure for about a second of stars-arrive-later.
+export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
   // ── Low-resolution all-bodies surface atlas ──────────────────────
   // Rank 0 and deliberately NOT proximity-gated: it is the universal fallback the
   // per-body rows upgrade, so gating it would reinstate the "body reached before its
@@ -219,39 +222,17 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     priority: 0,
   },
 
-  // ── Point sources (demand+req only; slots minted in wireSlots) ──────
-  pointRow(Source.SDSS, 60),
-  pointRow(Source.TwoMRS, 40),
-  pointRow(Source.Glade, 62),
-  pointRow(Source.Milliquas, 61),
-  pointRow(Source.FamousGalaxy, 20),
-  pointRow(Source.DesiDeep, 63),
-  pointRow(Source.DesiWedge, 65),
-  pointRow(Source.DesiSgw, 64),
-  {
-    // Armed by `createSyntheticFallback`, whose count-aware, hidden-at-boot-aware
-    // gate no pure ctx predicate can express; it trips the request flag instead.
-    key: Source.Synthetic,
-    built: 'external',
-    factory: externalFactory,
-    req: (tier) => galaxyCatalogRequest(Source.Synthetic, tier),
-    demand: (ctx) => ctx.request('syntheticFallback'),
-    // Ahead of everything real: only demanded when the real catalogs failed.
-    priority: 5,
-  },
+  // ── Point sources, Synthetic included (Ruling 2) — one row per
+  // GALAXY_CATALOG_SOURCES code, demand+req only; slots minted in wireSlots ──
+  ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(SOURCE_REGISTRY[code])),
 
   // ── Famous-galaxy meta sidecar ───────────────────────────────────
-  // Companion join: loads once the Famous slot leaves `idle`, so the InfoCard text
-  // rides in alongside the binary rather than racing ahead of it. The request is
-  // the identical call the Famous point row makes, so the two cannot disagree by
-  // construction. D11 (PR-C) replaces this shared call with `companionOf` on the
-  // row, from which core derives the companion's demand, priority and request.
+  // Loads once the Famous slot leaves `idle`, so the InfoCard text rides in
+  // alongside the binary rather than racing ahead of it (Ruling 6).
   {
     key: 'famousGalaxiesMeta',
     factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),
-    req: (tier) => galaxyCatalogRequest(Source.FamousGalaxy, tier),
-    demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle',
-    priority: 21, // immediately behind its .bin (20), never overtaking it
+    companionOf: Source.FamousGalaxy,
   },
 
   // ── Famous-star meta sidecar ──────────────────────────────────────
@@ -395,4 +376,4 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = [
     demand: () => true,
     priority: 1,
   },
-];
+]);

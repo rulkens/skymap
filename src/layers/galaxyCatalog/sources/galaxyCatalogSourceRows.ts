@@ -31,3 +31,8 @@ export const GALAXY_CATALOG_SOURCE_ROWS = [
   [Source.DesiWedge, DESI_WEDGE_ENTRY],
   [Source.DesiSgw, DESI_SGW_ENTRY],
 ] as const satisfies readonly (readonly [SourceType, SourceEntry])[];
+
+// Each entry's `priority` rank feeds `ASSET_WIRING`'s fetch queue. The bulk-
+// survey ranks (60-65, above) are DISTINCT because `popHighestPriority`
+// breaks ties by array order: equal ranks would fetch GLADE (26 MB) ahead of
+// Milliquas (12.8 MB), the large-before-small order the ranking prevents.
