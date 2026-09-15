@@ -6,7 +6,7 @@
  * constant anywhere in this file, matching the body-blind predicate under test.
  *
  * Fixture ids ('moon', 'deimos') are widened with `id as BodyId`, the same
- * `SceneBody`-boundary cast `slabs.ts`/`resolvePickTable.ts` use: `BodyId` is a
+ * `SceneBody`-boundary cast `slabs.ts`/`bodySelectionRow.ts` use: `BodyId` is a
  * 5-value settings category, narrower than the ~30 bodies `SCENE_BODIES` seeds.
  */
 
