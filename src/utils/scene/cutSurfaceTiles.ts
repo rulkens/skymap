@@ -11,6 +11,7 @@ import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
 import { surfaceTileBandRequestAllowed } from './surfaceTileBandRequestAllowed';
 import { equirectUvToDirection } from '../math/equirectUvToDirection';
 import { surfacePatchAnchor } from './surfacePatchAnchor';
+import { balanceSurfaceCut } from './balanceSurfaceCut';
 
 type ResidentLookupResult = {
   readonly slot: number;
@@ -351,7 +352,25 @@ export function cutSurfaceTiles(input: {
   // Largest-on-screen-first: residency walk order and fetch queue pop order.
   requests.sort((a, b) => b.screenPx - a.screenPx);
 
-  return { cut, requests: { zWin, requests, subCameraDirLocal: camDir } };
+  // 2:1 balance last, over the finished cut: a neighbour relation only exists
+  // once every leaf is known, and coarsening one quad can unbalance another.
+  const balanced = balanceSurfaceCut(cut, tilePx, (pz, px, py) => {
+    const heightSlot = heightSlotOf(pz, px, py);
+    if (heightSlot === null) return null;
+    const albedo = resolveCutResidency({ z: pz, x: px, y: py, baseLevel, residentSlot });
+    if (albedo === null) return null;
+    const cols = surfaceTileColumns(pz, tilePx);
+    const rows = cols / 2;
+    return {
+      id: { z: pz, x: px, y: py },
+      anchor: surfacePatchAnchor(px / cols, 1 - (py + 1) / rows, (px + 1) / cols, 1 - py / rows),
+      albedo,
+      heightSlot,
+      edgeCoarser: NO_COARSER_EDGES,
+    };
+  });
+
+  return { cut: balanced, requests: { zWin, requests, subCameraDirLocal: camDir } };
 }
 
 /**
