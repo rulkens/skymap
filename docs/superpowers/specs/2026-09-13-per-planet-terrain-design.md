@@ -350,7 +350,9 @@ Neighbouring levels are then stepped to within one of each other by `balanceSurf
 (§6), which is what F2's one-bit edge collapse needs. The original rule — own tile or
 nothing, residency gating refinement — was measured as holes: the atlas allocator
 refuses when full and never retries, and below 150 km the base globe has faded out, so
-every refused tile was a hole to the stars for as long as the pose held.
+every refused tile was a hole to the stars for as long as the pose held. The climb is
+capped at seven levels; deeper falls back to a dropped leaf, the same as no resident
+ancestor at all.
 
 ### 5.3 Height tile format — `shgt1`
 

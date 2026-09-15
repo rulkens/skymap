@@ -5,8 +5,8 @@ import { HEIGHT_POSTS_PER_TILE } from '../../data/scene/heightTileFormat';
 /**
  * resolveHeightLattice — the height lattice a leaf samples (R14): the deepest
  * resident tile in its OWN ancestor chain, flattened to the leaf's sub-rect in
- * posts. Strict decimation (R1) makes that sub-rect exactly the lattice the
- * ancestor itself draws, so a leaf on inherited posts and its ancestor agree.
+ * posts. Strict decimation (R1) makes that sub-rect match the ancestor's own.
+ * Capped at `levelDelta` 7 (`cells` hits 0 past it) — dropped, not degenerate.
  */
 export function resolveHeightLattice(input: {
   readonly z: number;
@@ -21,7 +21,12 @@ export function resolveHeightLattice(input: {
 }): SurfaceCutTile['height'] | null {
   const { z, x, y, baseLevel, minLevelDelta, residentSlot } = input;
 
-  for (let levelDelta = Math.max(0, minLevelDelta); z - levelDelta > baseLevel; levelDelta++) {
+  const MAX_LEVEL_DELTA = 7;
+  for (
+    let levelDelta = Math.max(0, minLevelDelta);
+    levelDelta <= MAX_LEVEL_DELTA && z - levelDelta > baseLevel;
+    levelDelta++
+  ) {
     const ancX = x >> levelDelta;
     const ancY = y >> levelDelta;
     const found = residentSlot({ product: 'height', z: z - levelDelta, x: ancX, y: ancY });

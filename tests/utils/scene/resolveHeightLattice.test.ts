@@ -72,4 +72,34 @@ describe('resolveHeightLattice', () => {
       }),
     ).toBeNull();
   });
+
+  it('drops a z19 leaf whose only resident height ancestor is past the 7-level cap', () => {
+    // Søndermarken's shape: the leaf's chain is resident only at z11 —
+    // levelDelta 8 — one round trip short of `128 >> levelDelta` reaching 0
+    // (a zero-cell sub-rect) at levelDelta 8. Dropped like any leaf with no
+    // ancestor in reach, not served a degenerate rect.
+    const height = resolveHeightLattice({
+      z: 19,
+      x: 300_000,
+      y: 111_000,
+      baseLevel: BASE_LEVEL,
+      minLevelDelta: 0,
+      residentSlot: residentAt(11),
+    });
+    expect(height).toBeNull();
+  });
+
+  it('climbs to exactly the 7-level cap when the ancestor lands one level shallower', () => {
+    const height = resolveHeightLattice({
+      z: 19,
+      x: 300_000,
+      y: 111_000,
+      baseLevel: BASE_LEVEL,
+      minLevelDelta: 0,
+      residentSlot: residentAt(12),
+    });
+    // z19 on a z12 tile: a 128 x 128 block of leaves over 128 cells, one post
+    // per leaf. 300_000 = 2343 * 128 + 96, 111_000 = 867 * 128 + 24.
+    expect(height).toEqual({ slot: 3, levelDelta: 7, originPosts: [96, 24] });
+  });
 });
