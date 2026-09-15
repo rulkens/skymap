@@ -18,6 +18,24 @@ fn latticeCellM(tex: texture_2d<f32>, origin: vec2<u32>, cell: vec2<u32>, stride
   );
 }
 
+// Height slope at one post of the sub-rect, metres per POST, as (east,
+// north): central differences, one-sided on the sub-rect's own edge rather
+// than reading a neighbouring leaf's ground. Two tiles sharing an edge
+// therefore take one-sided slopes from opposite sides of the same post -- a
+// second-order disagreement a post wide, the price of no apron in the tile.
+// TWIN: src/utils/scene/latticePostGradient.ts.
+fn latticePostGradient(tex: texture_2d<f32>, origin: vec2<u32>, post: vec2<u32>, cells: u32) -> vec2<f32> {
+  let west = max(post.x, 1u) - 1u;
+  let east = min(post.x + 1u, cells);
+  let north = max(post.y, 1u) - 1u;
+  let south = min(post.y + 1u, cells);
+  let hW = textureLoad(tex, origin + vec2<u32>(west, post.y), 0).r;
+  let hE = textureLoad(tex, origin + vec2<u32>(east, post.y), 0).r;
+  let hN = textureLoad(tex, origin + vec2<u32>(post.x, north), 0).r;
+  let hS = textureLoad(tex, origin + vec2<u32>(post.x, south), 0).r;
+  return vec2<f32>((hE - hW) / f32(east - west), (hN - hS) / f32(south - north));
+}
+
 // Bilinear height at lattice position 'p' (posts from 'origin', fractional
 // once the leaf inherits a coarser ancestor's lattice). At a multiple of the
 // stride both weights are 0 and the result is that post, bit-for-bit. The
