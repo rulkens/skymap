@@ -662,7 +662,7 @@ export const RAW_DATA = {
 
   // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m/texel
   // and four ladder levels deeper than the equirect (z7 against z5). Only
-  // `build-earth-tiles` reads their pixels; they ride the same `fetch-textures`
+  // `build-surface-tiles` reads their pixels; they ride the same `fetch-textures`
   // pull as everything else so the 421 MB is obtainable by command, not by hand.
   // `BMNG_QUADRANT_KEYS` is the one enumeration of the set.
 
@@ -971,6 +971,63 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Provenance for the DHM Punktsky harvest — endpoint, licence, anchor height derivation, tile list, fetch landmines.',
+  },
+
+  // ─── Height sources — the surface-tile pyramid's second product ────────
+
+  'etopo.surface30s': {
+    path: 'data/raw/etopo/ETOPO_2022_v1_30s_N90W180_surface.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'ETOPO 2022 30 arc-second surface-elevation GeoTIFF, 43200x21600 float32 metres (EGM2008 height), topography and bathymetry in one grid, AREA (cell-centred) registration, NoData -99999, DEFLATE, ~1.59 GB (public domain, NOAA NCEI, DOI 10.25921/fd45-gt74). The global height band bakes from this. Verified live 2026-09-15: HTTP 200, 1,585,813,987 bytes.',
+    upstream:
+      'https://www.ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/30s/30s_surface_elev_gtif/ETOPO_2022_v1_30s_N90W180_surface.tif',
+    fetcher: 'tools/fetch/fetchHeightSources.ts',
+    readme: 'etopo.readme',
+  },
+  'etopo.readme': {
+    path: 'data/raw/etopo/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for ETOPO 2022 — upstream URL, registration convention, NoData, licence, fetch date.',
+  },
+
+  'skadi.dir': {
+    path: 'data/raw/skadi',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'skadi 1 arc-second elevation harvest from the AWS `elevation-tiles-prod` open-data bucket, gunzipped to `<N55>/<N55E012>.hgt` — SRTM-format 3601² big-endian int16 metres in GEOGRAPHIC coordinates (unlike the terrarium PNGs in the same bucket, which are WebMercator), -32768 = void. Covers the EOX region boxes (`tools/fetch/eoxRegions.ts`).',
+    upstream: 'https://elevation-tiles-prod.s3.amazonaws.com/skadi/',
+    fetcher: 'tools/fetch/fetchHeightSources.ts',
+    readme: 'skadi.readme',
+  },
+  'skadi.readme': {
+    path: 'data/raw/skadi/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the skadi harvest — bucket path, cell naming, byte layout, void sentinel, licence.',
+  },
+
+  'dhmterraen.dir': {
+    path: 'data/raw/dhmterraen',
+    kind: 'directory',
+    source: 'gitignored',
+    description:
+      'DHM/Terræn 0.4 m DTM raster harvest over Søndermarken, one `DTM_1km_<northingKm>_<eastingKm>.tif` per 1 km DDKN cell — 2500² float32 metres above DVR90 in EPSG:25832, NoData -9999. Distinct from `dhm.dir`, which is the Punktsky POINT CLOUD for the splat bake: different endpoint, different product.',
+    upstream: 'https://api.datafordeler.dk/FileDownloads/GetRasterFile',
+    fetcher: 'tools/fetch/fetchHeightSources.ts',
+    readme: 'dhmterraen.readme',
+  },
+  'dhmterraen.readme': {
+    path: 'data/raw/dhmterraen/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the DHM/Terræn raster harvest — endpoint, tile naming, CRS, licence, key rule, fetch date.',
   },
 
   // ─── Skråfoto — Dataforsyningen oblique aerial frames over Søndermarken ─

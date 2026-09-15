@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { earthTileColumns } from '../../../src/utils/scene/earthTileColumns';
+import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { patchOriginRelEyeM } from '../../../src/utils/scene/patchOriginRelEyeM';
 import { surfacePatchAnchor } from '../../../src/utils/scene/surfacePatchAnchor';
@@ -8,7 +8,7 @@ import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 
 /** The walk's own uv footprint for tile `(z, x, y)` — `cutSurfaceTiles.ts:131-141`. */
 function tileFootprint(z: number, x: number, y: number) {
-  const cols = earthTileColumns(z, EARTH_TILE_PX);
+  const cols = surfaceTileColumns(z, EARTH_TILE_PX);
   const rows = cols / 2;
   return { u0: x / cols, u1: (x + 1) / cols, v0: 1 - (y + 1) / rows, v1: 1 - y / rows };
 }

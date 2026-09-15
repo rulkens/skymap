@@ -13,10 +13,9 @@
  * tiles draw AFTER it (gated on a non-empty last cut + a live atlas view — an
  * empty cut is a legitimate "nothing resident yet" frame, not a bug), so the
  * tile pipeline's `nearer-or-equal` depth compare resolves ties in its
- * favour. Past that gate the base globe's alpha dissolves through
- * `baseGlobeFadeAlpha` so the tile mesh — which fully covers the cap by
- * then — stops fighting the base globe's depth for it; outside the gate
- * alpha is pinned to 1, the failure floor for every disengaged case.
+ * favour. The globe is ALWAYS drawn: it sits at the datum's inner bound
+ * (§7.4), so it cannot occlude relief, and it is what covers ground no
+ * resident patch does yet.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -34,13 +33,13 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
+import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
-import { baseGlobeFadeAlpha } from '../../../../utils/scene/baseGlobeFadeAlpha';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -163,10 +162,17 @@ export const earthPass: ContentPass = {
 
     const prepared = prepareBodySurfaceFrame(state, ctx, view);
     if (prepared === null) return;
-    const { bodyState: earthState, radiusM, mvpLocal, camLocal } = prepared;
-    // Narrow HERE, at the GPU-upload boundary — `prepared.mvpLocal` stays f64
-    // for the tile planner's own read of it (see PreparedBodySurfaceFrame's doc).
-    const mvp = narrowMat4(mvpLocal);
+    const { body, bodyState: earthState, radiusM } = prepared;
+    // The base globe alone draws at the INNER bound (datum + reliefM[0], never
+    // positive) so a below-datum trench can never be occluded by it (§7.4,
+    // F2-R5) — its own frame, recomposed here at the GPU-upload boundary.
+    // `prepared.mvpLocal`/`camLocal` stay on the datum for the tile planner
+    // and drawPick, which read the same memo.
+    const baseGlobeRadiusM = innerBoundRadiusM(body.surface);
+    const mvp = narrowMat4(
+      composeBodySlabMvp(view.slab.vp, prepared.pose.eyeRelBodyM, baseGlobeRadiusM),
+    );
+    const camLocal = bodySlabCamLocal(prepared.pose.eyeRelBodyM, baseGlobeRadiusM);
     const radiusMpc = radiusM * SCALE_UNITS.M_TO_MPC;
 
     // Sun direction rotated into Earth's local frame (orientation carries the
@@ -186,45 +192,42 @@ export const earthPass: ContentPass = {
 
     // ── Detail tiles, resolved BEFORE the base globe draw ──────────────────
     //
-    // The base-globe fade below needs to know whether the tile path is
-    // actually alive THIS frame: an empty cut or a not-yet-engaged atlas is
-    // the ordinary pre-residency picture, not an error, and the base globe
-    // MUST stay at its alpha-1 failure floor through it — fading with
-    // nothing covering the cap would punch a hole through to whatever is
-    // behind Earth.
+    // An empty cut or a not-yet-engaged atlas is the ordinary pre-residency
+    // picture, not an error: the tile draw is skipped and the base globe
+    // alone covers the cap.
     const tileRenderer = state.gpu.earthSurfaceTileRenderer;
-    const earthTiles = state.subsystems.earthTiles;
+    const earthTiles = state.subsystems.surfaceTiles;
     const tiles = earthTiles?.getLastCut() ?? [];
     const surfaceAtlasView = earthTiles?.getAtlasView() ?? null;
-    const tilesLive = tileRenderer !== null && surfaceAtlasView !== null && tiles.length > 0;
-    const globeAlpha = tilesLive ? baseGlobeFadeAlpha(cameraDistanceMpc, radiusMpc) : 1;
+    // The height atlas is as load-bearing as the albedo one: every vertex
+    // position reads it, so a cut drawn without it would be a flat sphere
+    // at best and garbage at worst.
+    const heightAtlasView = earthTiles?.getHeightAtlasView() ?? null;
+    const tilesLive =
+      tileRenderer !== null &&
+      surfaceAtlasView !== null &&
+      heightAtlasView !== null &&
+      tiles.length > 0;
 
-    // Skip the draw call entirely at alpha 0 (the tiles cover the whole cap
-    // by then) — this rides the SAME per-frame uniform write as any other
-    // alpha, never a second `renderer.draw` (see earthRenderer's
-    // at-most-once-per-frame precondition).
-    if (globeAlpha > 0) {
-      renderer.draw(
-        pass,
-        packEarthSurfaceUniforms(
-          mvp,
-          sun,
-          camLocal,
-          EARTH_SURFACE_PARAMS.roughnessBase,
-          EARTH_SURFACE_PARAMS.f0,
-          EARTH_SURFACE_PARAMS.sunIrradiance,
-          cloudShadowStrength,
-          // Unit-sphere local radius of the SAME shell cloudShellPass draws, so
-          // the cast shadow and the drawn deck agree by construction.
-          CLOUD_SHELL_PARAMS.radiusRatio,
-          // Live user settings, not the WESL consts (seeded from
-          // EARTH_SURFACE_PARAMS so the defaults match).
-          state.settings.earth.ambientLight,
-          state.settings.earth.oceanRoughness,
-          globeAlpha,
-        ),
-      );
-    }
+    renderer.draw(
+      pass,
+      packEarthSurfaceUniforms(
+        mvp,
+        sun,
+        camLocal,
+        EARTH_SURFACE_PARAMS.roughnessBase,
+        EARTH_SURFACE_PARAMS.f0,
+        EARTH_SURFACE_PARAMS.sunIrradiance,
+        cloudShadowStrength,
+        // Unit-sphere local radius of the SAME shell cloudShellPass draws, so
+        // the cast shadow and the drawn deck agree by construction.
+        CLOUD_SHELL_PARAMS.radiusRatio,
+        // Live user settings, not the WESL consts (seeded from
+        // EARTH_SURFACE_PARAMS so the defaults match).
+        state.settings.earth.ambientLight,
+        state.settings.earth.oceanRoughness,
+      ),
+    );
 
     // ── Detail tiles, drawn AFTER the base globe ──────────────────────────
     //
@@ -250,9 +253,9 @@ export const earthPass: ContentPass = {
         // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
         debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
         surfaceAtlasView: surfaceAtlasView!,
+        heightAtlasView: heightAtlasView!,
         materialView: renderer.getMapView('material'),
         nightView: renderer.getMapView('night'),
-        normalView: renderer.getMapView('normal'),
         cloudsView: renderer.getMapView('clouds'),
       });
     }

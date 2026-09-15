@@ -470,7 +470,7 @@ export type EngineGpuHandles = {
    * (`cutSurfaceTiles`'s `cut` product) over the base globe — the OTHER half
    * of the surface virtual texture, replacing the earlier page-table blend
    * inside `earthRenderer`'s own fragment. Owns neither the tile atlas
-   * (`earthTileSubsystem`) nor the base globe's material/night/normal/cloud
+   * (`surfaceTileSubsystem`) nor the base globe's material/night/normal/cloud
    * maps (`earthRenderer.getMapView`); both arrive as views on every
    * `draw()` call. Excluded from `isEngineReady`, null-checked at use by
    * `earthPass`. Null until `initGpu` constructs it; released and

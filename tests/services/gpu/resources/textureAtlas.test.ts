@@ -152,4 +152,31 @@ describe('TextureAtlas slot state machine', () => {
     const uvRow1 = a.slotUv(16);
     expect(uvRow1[1]).toBeCloseTo(SLOT_SIDE / ATLAS_SIDE);
   });
+
+  it("uploadTexels writes at the slot's texel origin via writeTexture", () => {
+    const writeTexture = vi.fn();
+    const device = {
+      createTexture: () => ({ createView: () => ({}) as GPUTextureView }),
+      queue: { writeTexture },
+    } as unknown as GPUDevice;
+    const a = new TextureAtlas(device, {
+      atlasSide: ATLAS_SIDE,
+      slotSide: SLOT_SIDE,
+      format: 'r32float',
+      label: 'test-atlas-texels',
+    });
+    a.initTexture();
+
+    const data = new Float32Array(SLOT_SIDE * SLOT_SIDE);
+    // 16 slots per row (2048 / 128) — slot 17 is row 1, col 1.
+    a.uploadTexels(17, data, SLOT_SIDE * 4, SLOT_SIDE);
+
+    expect(writeTexture).toHaveBeenCalledTimes(1);
+    const [destination, payload, dataLayout, size] = writeTexture.mock.calls[0]!;
+    expect(destination.origin).toEqual([SLOT_SIDE, SLOT_SIDE, 0]);
+    expect(payload).toBe(data);
+    // `bytesPerRow` passes through untouched — never re-derived from slotUv.
+    expect(dataLayout.bytesPerRow).toBe(SLOT_SIDE * 4);
+    expect(size).toEqual([SLOT_SIDE, SLOT_SIDE, 1]);
+  });
 });

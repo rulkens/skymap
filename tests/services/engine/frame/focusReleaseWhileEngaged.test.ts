@@ -29,6 +29,7 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -38,7 +39,10 @@ const SIM = CONST_J2000;
 const BODIES = deriveBodyStates(SIM);
 const EARTH = BODIES.get('earth')! as BodyState;
 const MARS = BODIES.get('mars')! as BodyState;
-const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
+// The outer bound, matching cameraDrivers'/focusFraming's own read of
+// bodyFootprintRadiusM — not the datum, which F2's Earth relief now diverges
+// from by 0.14%.
+const R_MPC = bodyFootprintRadiusM(SCENE_EARTH) * SCALE_UNITS.M_TO_MPC;
 
 function distTo(eye: Readonly<Vec3>, body: BodyState): number {
   return Math.hypot(

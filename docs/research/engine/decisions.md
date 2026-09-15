@@ -51,7 +51,7 @@ the deep tuning surface.
      earthTiles-style paged; imperative upload like `addVolumeField` folds into
      `generated` explicitly). `generated` carries stalenessKey + optional budget.
    - Wake: bundle votes fold into `shouldKeepTicking`'s `anim` bag (already past
-     the second-special-case trigger: starFadeAnimating, earthTilesAnimating,
+     the second-special-case trigger: starFadeAnimating, surfaceTilesAnimating,
      flow's bespoke clause, followApproachEaseActive).
    - Cross-subsystem ambient state (structureFocus → ctx.focus/focusBlend →
      shared focus uniform): engine-core `ctx` state; rule = bundles read ctx,
@@ -484,7 +484,7 @@ the deep tuning surface.
       now describes the vote instead of the call; `shouldKeepTicking`'s `anim`
       parameter carries the required `labelsAnimating` field
       (`shouldKeepTicking.ts:121`) alongside `starFadeAnimating` and
-      `earthTilesAnimating`, and the disjunction is ten terms, not nine
+      `surfaceTilesAnimating`, and the disjunction is ten terms, not nine
       (`shouldKeepTicking.ts:123-134`).
     - **D6 — `foregroundLabelsLayer.ts:810`'s caption wake is rung 8's, and
       the split is clean.** Four reasons: (1) no return channel exists — the

@@ -56,11 +56,9 @@
 //
 // ## Blend target
 //
-// Output @location(0) writes 'rgba16float'; straight-alpha OVER blending means we
-// emit STRAIGHT colour with alpha='u.baseGlobeAlpha' (1 outside the descent-fade
-// band, where this is visually identical to the old alpha=1 opaque draw). The
-// albedo/night textures are 'rgba8unorm-srgb' (hardware linearises on read);
-// material/normal are LINEAR.
+// Output @location(0) writes 'rgba16float', opaque: the globe is always drawn
+// and always covers what no detail patch does. The albedo/night textures are
+// 'rgba8unorm-srgb' (hardware linearises on read); material/normal are LINEAR.
 
 import package::bodies::earth::io::VSOut;
 import package::lib::sphere::EarthSurfaceUniforms;
@@ -145,5 +143,5 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let cloudAlphaHere = textureSample(cloudTexture, earthSampler, in.uv).a;
   let emissive = nightLights(nightColour, NoL, cloudAlphaHere);
 
-  return vec4<f32>(colour + emissive, u.baseGlobeAlpha);
+  return vec4<f32>(colour + emissive, 1.0);
 }

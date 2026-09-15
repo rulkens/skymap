@@ -43,7 +43,7 @@ export type DebugPanelProps = {
    * the async bootstrap long after the handle is built.
    */
   assetPriorities: () => ReadonlyMap<string, number>;
-  /** Engine-handle ref, threaded to `EarthTileAtlasSectionContainer` for its `debug.earthTiles` / `debug.flyToLonLat` reach. */
+  /** Engine-handle ref, threaded to `EarthTileAtlasSectionContainer` for its `debug.surfaceTiles` / `debug.flyToLonLat` reach. */
   engineHandleRef: RefObject<EngineHandle | null>;
 };
 

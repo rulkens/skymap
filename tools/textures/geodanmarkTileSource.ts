@@ -5,7 +5,7 @@
  * y0 at +90 south-positive) — unlike EOX's own TMS grid, no re-indexing or
  * 2x2 compositing, just a 1:1 lookup and JPEG decode. The harvest bbox must
  * be SNAPPED to `minLevel`'s tile grid (the caller passes it in, single
- * source of truth with `buildEarthTiles.ts`'s band wiring): every parent
+ * source of truth with `buildSurfaceTiles.ts`'s band wiring): every parent
  * down to z18 then has all four children, so this band needs no
  * `underfill` — misalignment throws at construction instead of silently
  * baking transparent edge parents.
@@ -19,7 +19,7 @@ import sharp from 'sharp';
 import type { EarthImagerySource } from './EarthImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
-import { earthTileColumns } from '../../src/utils/scene/earthTileColumns';
+import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
 
 /** Deepest (and only) level the Søndermarken harvest reaches — the WMS
  *  server rendered z19 natively; every coarser level is a bake-time 2x2
@@ -37,7 +37,7 @@ const GEODANMARK_PROVENANCE = {
  *  edge — the same ladder `tileBox`/`earthTileIndicesForBounds` use, so a
  *  box this source is handed always lands on an exact multiple. */
 function tileDeg(z: number): number {
-  return 360 / earthTileColumns(z, EARTH_TILE_PX);
+  return 360 / surfaceTileColumns(z, EARTH_TILE_PX);
 }
 
 /**
@@ -110,7 +110,7 @@ export async function geodanmarkTileSource(opts: {
   readonly coverageDir: string; // rawDataPath('geodanmark.dir')
   /** The band floor this source bakes down to — every edge of the harvest
    *  rect must be a multiple of `2^(19 - minLevel)` tiles (see module
-   *  header); pass the same constant `buildEarthTiles.ts` wires as the
+   *  header); pass the same constant `buildSurfaceTiles.ts` wires as the
    *  band's own `minLevel`. */
   readonly minLevel: number;
 }): Promise<EarthImagerySource> {

@@ -18,8 +18,8 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { BitmapStreamSubsystem } from '../subsystems/BitmapStreamSubsystem';
-import type { EarthTileSubsystem } from '../subsystems/EarthTileSubsystem';
+import type { TileStreamSubsystem } from '../subsystems/TileStreamSubsystem';
+import type { SurfaceTileSubsystem } from '../subsystems/SurfaceTileSubsystem';
 import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
@@ -40,7 +40,7 @@ import type { Destroyable } from '../../rendering/Destroyable';
 import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
-  galaxyAtlas: BitmapStreamSubsystem | null;
+  galaxyAtlas: TileStreamSubsystem<ImageBitmap> | null;
   proceduralDisks: ProceduralDiskSubsystem | null;
   texturedDisks: TexturedDiskSubsystem | null;
   /**
@@ -76,7 +76,7 @@ export type EngineSubsystemHandles = {
    * the planner says the base texture has started magnifying, so a session
    * that never approaches Earth pays nothing. Null before `wireSlots` runs.
    */
-  earthTiles: EarthTileSubsystem | null;
+  surfaceTiles: SurfaceTileSubsystem | null;
   clickResolver: ClickResolver | null;
   inputBindings: InputBindings | null;
   /**

@@ -13,6 +13,8 @@ import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { Slab } from '../../../@types/engine/frame/Slab';
+import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
 import type { SourceType } from '../../../@types/data/SourceType';
 
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
@@ -27,7 +29,9 @@ import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
-import { earthSurfaceTier } from './earthSurfaceTier';
+import { bodySurfaceTier } from '../../../utils/scene/bodySurfaceTier';
+import { earthBaseLevelForTier } from '../../../utils/scene/earthBaseLevelForTier';
+import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
 import { advanceStarFades } from './passes/starCatalogPass';
 import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
 import { slabViewOf } from './slabs';
@@ -265,26 +269,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
-  // The tile planner keys off Earth's OWN slab row (no row = already culled)
-  // and the layer's own `enabled`, so tiles and layer never disagree about
-  // whether Earth is on screen.
-  const earthTiles = state.subsystems.earthTiles;
-  const earth = state.data.bodies.earth;
-  const earthSlab = ctx.slabs.find(
-    (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth',
+  // The tile planner keys off the ENGAGED body's own slab row (no row =
+  // already culled, and membership in the registry is the "this body
+  // tiles" predicate — never a literal bodyId), so tiles and layer never
+  // disagree about whether that body is on screen. A slab exists only for a
+  // body `sceneBodyPartition` actually iterated, so its presence already
+  // implies the body itself is seeded; no separate null check needed.
+  const surfaceTiles = state.subsystems.surfaceTiles;
+  const surfaceTileSlab = ctx.slabs.find(
+    (slab): slab is Slab & { frame: Extract<SlabFrame, { kind: 'body-m' }> } =>
+      slab.frame.kind === 'body-m' && slab.frame.bodyId in SURFACE_TILE_REGISTRY,
   );
-  if (earthTiles !== null && earth !== null && earthSlab !== undefined) {
+  if (surfaceTiles !== null && surfaceTileSlab !== undefined) {
+    const bodyId = surfaceTileSlab.frame.bodyId;
     // The same slab view `earthPass.draw` samples into.
-    const earthTilesView = slabViewOf(ctx, earthSlab.index);
-    if (earthPass.enabled(state, ctx, earthTilesView)) {
+    const surfaceTilesView = slabViewOf(ctx, surfaceTileSlab.index);
+    if (earthPass.enabled(state, ctx, surfaceTilesView)) {
       // The tier off the COMMITTED texture slot, so a swap in flight cannot make
       // the planner believe in detail that is not on the GPU yet.
-      const params = earthTiles.plannerParams(earthSurfaceTier(state));
+      const baseLevel = earthBaseLevelForTier(bodySurfaceTier(state, bodyId));
+      const params = surfaceTiles.plannerParams(bodyId, baseLevel);
       // `setLastCut` runs unconditionally so a tier swap in flight draws
       // nothing stale rather than last frame's cut.
       let cut: readonly SurfaceCutTile[] = [];
       if (params !== null) {
-        const prepared = prepareBodySurfaceFrame(state, ctx, earthTilesView);
+        const prepared = prepareBodySurfaceFrame(state, ctx, surfaceTilesView);
         if (prepared !== null) {
           // One walk yields both the draw cut and the fetch requests.
           const result = cutSurfaceTiles({
@@ -292,21 +301,21 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
             camPosLocalM: prepared.pose.eyeRelBodyM,
             viewProjLocal: prepared.mvpLocal,
             radiusM: prepared.radiusM,
-            viewportPx: earthTilesView.viewportPx,
-            residentSlot: earthTiles.residentSlot,
+            viewportPx: surfaceTilesView.viewportPx,
+            residentSlot: surfaceTiles.residentSlot,
           });
           cut = result.cut;
-          earthTiles.update({ plan: result.requests });
+          surfaceTiles.update({ bodyId, plan: result.requests });
         }
       }
-      earthTiles.setLastCut(cut);
+      surfaceTiles.setLastCut(cut);
     }
   }
 
   // Outside the gate: `isAnimating()` is true while the manifest is in flight,
   // before the layer can engage — voting only on engaged frames would sleep
   // the loop mid-fetch.
-  const earthTilesAnimating = earthTiles?.isAnimating() ?? false;
+  const surfaceTilesAnimating = surfaceTiles?.isAnimating() ?? false;
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
@@ -356,7 +365,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
     starFadeAnimating: starCut?.anyNodeFading ?? false,
-    earthTilesAnimating,
+    surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,
     layersAnimating,

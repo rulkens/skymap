@@ -12,7 +12,7 @@
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
-import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebugSnapshot';
+import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { frameKey } from '../camera/rungs/frameKey';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
@@ -25,7 +25,7 @@ export function logCameraState(
   canvas: HTMLCanvasElement,
   focusRow: SelectionRow | null,
   simDays: number,
-  earthSubCamera: EarthTileDebugSnapshot['subCamera'] = null,
+  earthSubCamera: SurfaceTileDebugSnapshot['subCamera'] = null,
   framed: FramedCameraPose | null = null,
 ): void {
   if (!cam) {

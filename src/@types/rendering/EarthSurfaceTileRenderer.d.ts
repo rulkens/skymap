@@ -41,12 +41,18 @@ export type EarthSurfaceTileDrawArgs = {
    *  `atlasUvScale` (see fragment.wesl), so this is the only new fact the
    *  overlay needs. */
   readonly debugLodOverlay: boolean;
-  /** The earthTileSubsystem atlas view -- resident high-res patches, sampled at each tile's resolved rect. Not owned by this renderer. */
+  /** The surfaceTileSubsystem atlas view -- resident high-res patches, sampled at each tile's resolved rect. Not owned by this renderer. */
   readonly surfaceAtlasView: GPUTextureView;
-  /** The SAME whole-globe maps `earthRenderer` binds -- not owned by this renderer. */
+  /** The surfaceTileSubsystem's `r32float` HEIGHT atlas, read with
+   *  `textureLoad` at each patch's own slot. Mandatory: every vertex position
+   *  reads it, so a cut must never be drawn without it. Not owned here. */
+  readonly heightAtlasView: GPUTextureView;
+  /** The SAME whole-globe maps `earthRenderer` binds -- not owned by this
+   *  renderer. The whole-globe NORMAL map is deliberately not among them: a
+   *  patch's normal comes from its height cell, and compositing both would
+   *  shade the same relief twice (spec §7.2). */
   readonly materialView: GPUTextureView;
   readonly nightView: GPUTextureView;
-  readonly normalView: GPUTextureView;
   readonly cloudsView: GPUTextureView;
 };
 
