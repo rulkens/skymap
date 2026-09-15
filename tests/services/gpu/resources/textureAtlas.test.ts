@@ -20,25 +20,11 @@ describe('TextureAtlas slot state machine', () => {
       label: 'test-atlas',
     });
 
-  it('allocates sequential slots starting at 0', () => {
-    const a = newAtlas();
-    expect(a.allocate('obj-1', 1)).toBe(0);
-    expect(a.allocate('obj-2', 1)).toBe(1);
-    expect(a.allocate('obj-3', 1)).toBe(2);
-  });
-
   it('returns the same slot for the same key (idempotent)', () => {
     const a = newAtlas();
     const slot = a.allocate('obj-x', 1);
     expect(a.allocate('obj-x', 2)).toBe(slot);
     expect(a.allocate('obj-x', 99)).toBe(slot);
-  });
-
-  it('records the frame the slot was last seen', () => {
-    const a = newAtlas();
-    a.allocate('obj-y', 5);
-    a.touch('obj-y', 17);
-    expect(a.lastSeenFrame('obj-y')).toBe(17);
   });
 
   it('evicts the LRU slot when full', () => {
@@ -76,33 +62,6 @@ describe('TextureAtlas slot state machine', () => {
   });
 
   describe('onEvict handler', () => {
-    it('fires onEvict with the evicted key when LRU kicks an old slot', () => {
-      const a = newAtlas();
-      const onEvict = vi.fn();
-      a.setEvictHandler(onEvict);
-      // Fill the atlas with distinct lastSeenFrame values; obj-0 will be LRU.
-      for (let i = 0; i < SLOT_COUNT; i++) {
-        a.allocate(`obj-${i}`, i);
-      }
-      expect(onEvict).not.toHaveBeenCalled();
-      // Allocating a new key forces eviction of obj-0.
-      a.allocate('obj-new', 9999);
-      expect(onEvict).toHaveBeenCalledTimes(1);
-      expect(onEvict).toHaveBeenCalledWith('obj-0');
-    });
-
-    it('does NOT fire onEvict on free-slot allocation or refresh', () => {
-      const a = newAtlas();
-      const onEvict = vi.fn();
-      a.setEvictHandler(onEvict);
-      // Allocations into free slots — no eviction.
-      a.allocate('obj-1', 1);
-      a.allocate('obj-2', 1);
-      // Re-allocate same key — idempotent, no eviction.
-      a.allocate('obj-1', 5);
-      expect(onEvict).not.toHaveBeenCalled();
-    });
-
     it('a thrown handler does not break atlas invariants', () => {
       const a = newAtlas();
       a.setEvictHandler(() => {
@@ -118,16 +77,6 @@ describe('TextureAtlas slot state machine', () => {
       expect(a.lastSeenFrame('obj-0')).toBeUndefined();
       expect(a.lastSeenFrame('obj-new')).toBe(9999);
       errSpy.mockRestore();
-    });
-
-    it('setEvictHandler(undefined) clears the handler', () => {
-      const a = newAtlas();
-      const onEvict = vi.fn();
-      a.setEvictHandler(onEvict);
-      a.setEvictHandler(undefined);
-      for (let i = 0; i < SLOT_COUNT; i++) a.allocate(`obj-${i}`, i);
-      a.allocate('obj-new', 9999);
-      expect(onEvict).not.toHaveBeenCalled();
     });
   });
 

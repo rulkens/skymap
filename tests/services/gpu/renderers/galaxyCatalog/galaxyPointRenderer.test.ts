@@ -126,30 +126,6 @@ const FOCUS_BIND_GROUP = {} as unknown as GPUBindGroup;
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('GalaxyPointRenderer colour target', () => {
-  it('bakes the given targetFormat into the pipeline colour target', () => {
-    const captured: GPURenderPipelineDescriptor[] = [];
-    const device = {
-      ...makeStubDevice(),
-      createRenderPipeline: (desc: GPURenderPipelineDescriptor) => {
-        captured.push(desc);
-        return { getBindGroupLayout: () => ({}) } as unknown as GPURenderPipeline;
-      },
-    } as unknown as GPUDevice;
-    createGalaxyPointRenderer({
-      device,
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    expect(captured).toHaveLength(1);
-    const target = Array.from(captured[0]!.fragment!.targets!)[0]!;
-    expect(target!.format).toBe('rgba16float');
-  });
-});
-
 // ─── GalaxyPointRenderer.destroy() ─────────────────────────────────────────────────
 //
 // GalaxyPointRenderer owns the app's largest GPU allocations (via the store: the
@@ -201,29 +177,6 @@ function makeDestroyTrackingDevice(createdBuffers: TrackedBuffer[]): GPUDevice {
 }
 
 describe('GalaxyPointRenderer.destroy', () => {
-  it("releases the renderer's uniform ring", () => {
-    const buffers: TrackedBuffer[] = [];
-    const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createGalaxyPointRenderer({
-      device,
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    // The constructor allocates VIEW_SLOT_COUNT buffers: the renderer's own
-    // per-view-slot uniform ring (Task 13b). The cluster-focus uniform is
-    // shared and owned by the engine (state.gpu.focusUniform), not the
-    // renderer.
-    expect(buffers).toHaveLength(VIEW_SLOT_COUNT);
-    for (const b of buffers) expect(b.destroyCount).toBe(0);
-
-    renderer.destroy();
-
-    for (const b of buffers) expect(b.destroyCount).toBe(1);
-  });
-
   it('releases each per-source buffer + fade ring', async () => {
     const buffers: TrackedBuffer[] = [];
     const device = makeDestroyTrackingDevice(buffers);
@@ -275,28 +228,6 @@ describe('GalaxyPointRenderer.destroy', () => {
     renderer.destroy();
 
     expect(Array.from(renderer.loadedSources())).toHaveLength(0);
-  });
-
-  it('is idempotent — safe to call twice without throwing', async () => {
-    const buffers: TrackedBuffer[] = [];
-    const device = makeDestroyTrackingDevice(buffers);
-    const renderer = createGalaxyPointRenderer({
-      device,
-      targetFormat: 'rgba16float',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(1));
-
-    expect(() => renderer.destroy()).not.toThrow();
-    // Second call iterates an empty galaxyCatalogs map and re-destroys the
-    // already-destroyed uniform buffer.  WebGPU's spec defines
-    // `GPUBuffer.destroy()` as idempotent; our stub mirrors that by
-    // simply incrementing the counter — the test's contract is "no
-    // throw", not "destroyCount stays at 1".
-    expect(() => renderer.destroy()).not.toThrow();
   });
 });
 

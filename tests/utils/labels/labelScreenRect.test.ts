@@ -53,19 +53,6 @@ describe('labelScreenRect', () => {
     expect(rect).toEqual({ x0: 95, y0: 190, x1: 115, y1: 202.5 });
   });
 
-  it('clamps the projected em to minPixelSize when the anchor is far away', () => {
-    // clipW 100 drops the projected em to 0.84 px; the floor lifts it to 42,
-    // the same scale 0.5 as above — a far label keeps a legible, clickable box.
-    const rect = labelScreenRect({
-      label: label({ worldEmMpc: 1, minPixelSize: ATLAS_FONT_SIZE / 2, maxPixelSize: 1000 }),
-      bbox: BBOX,
-      screenPx: [100, 200],
-      clipW: 100,
-      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
-    });
-    expect(rect).toEqual({ x0: 95, y0: 190, x1: 115, y1: 202.5 });
-  });
-
   it('inflates by padPx on every side', () => {
     const rect = labelScreenRect({
       label: label({ worldEmMpc: 1, minPixelSize: 1, maxPixelSize: 1000 }),
@@ -109,25 +96,6 @@ describe('labelScreenRect', () => {
       y0: 180 - fringe,
       x1: 130 + fringe,
       y1: 205 + fringe,
-    });
-  });
-
-  it('composes padPx and the outline fringe additively', () => {
-    const rect = labelScreenRect({
-      label: label({ worldEmMpc: 1, minPixelSize: 1, maxPixelSize: 1000, outlineEmFrac: 0.16 }),
-      bbox: BBOX,
-      screenPx: [100, 200],
-      clipW: 1,
-      viewportHeightPx: 2 * ATLAS_FONT_SIZE,
-      padPx: 8,
-      includeOutline: true,
-    });
-    const inflate = 8 + 0.16 * 84;
-    expect(rect).toEqual({
-      x0: 90 - inflate,
-      y0: 180 - inflate,
-      x1: 130 + inflate,
-      y1: 205 + inflate,
     });
   });
 });

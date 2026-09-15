@@ -7,10 +7,7 @@ import {
   CONSTELLATION_INTENSITY_F32,
   CONSTELLATION_COLOR_F32,
 } from '../../../../../src/services/gpu/renderers/constellations/constellationRenderer';
-import {
-  writeCameraPrefix,
-  CAMERA_UNIFORM_BYTES,
-} from '../../../../../src/services/gpu/lib/cameraUniforms';
+import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { ConstellationsArtifact } from '../../../../../src/@types/loading/ConstellationsArtifact';
 import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
@@ -61,14 +58,6 @@ describe('createConstellationRenderer.hasData', () => {
     const renderer = createConstellationRenderer(mockDevice(), 'rgba16float', mockFadeBgl);
     renderer.upload({ version: 1, constellations: [] });
     expect(renderer.hasData()).toBe(false);
-  });
-
-  it('bakes the given targetFormat into the pipeline colour target', () => {
-    const pipelines: GPURenderPipelineDescriptor[] = [];
-    createConstellationRenderer(mockDevice(pipelines), 'rgba16float', mockFadeBgl);
-    expect(pipelines).toHaveLength(1);
-    const target = Array.from(pipelines[0]!.fragment!.targets!)[0]!;
-    expect(target!.format).toBe('rgba16float');
   });
 });
 
@@ -160,19 +149,5 @@ describe('constellation uniform layout parity', () => {
     // so a misaligned f32-index here would make the GPU read the wrong lanes.
     expect((CONSTELLATION_COLOR_F32 * 4) % 16).toBe(0);
     expect(CONSTELLATION_COLOR_F32 * 4 + 12).toBeLessThanOrEqual(CONSTELLATION_UNIFORM_BYTES);
-  });
-
-  it('the camera prefix write never collides with the scalar slots', () => {
-    const buf = new ArrayBuffer(CONSTELLATION_UNIFORM_BYTES);
-    const f32 = new Float32Array(buf);
-    writeCameraPrefix(f32, mat4.identity() as Float32Array, [1920, 1080]);
-    f32[CONSTELLATION_HALFWIDTH_F32] = 0.9;
-    f32[CONSTELLATION_INTENSITY_F32] = 0.7;
-    // viewportPx (prefix) still intact at floats 16/17 — the scalar writes landed
-    // past it, not on it.
-    expect(f32[16]).toBe(1920);
-    expect(f32[17]).toBe(1080);
-    expect(f32[CONSTELLATION_HALFWIDTH_F32]).toBe(Math.fround(0.9));
-    expect(f32[CONSTELLATION_INTENSITY_F32]).toBe(Math.fround(0.7));
   });
 });

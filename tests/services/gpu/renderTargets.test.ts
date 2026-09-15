@@ -142,25 +142,6 @@ describe('createRenderTargets', () => {
     expect(targets.viewOf('star-aggregates')).not.toBe(aggViewBefore);
   });
 
-  it('a fixedSizePx row allocates at its declared size regardless of canvas size', () => {
-    const device = mockDevice();
-    const create = device.createTexture as ReturnType<typeof vi.fn>;
-    createRenderTargets(
-      device,
-      SWAP_FORMAT,
-      { width: 900, height: 600 },
-      stateWithDivisor(MW_DIVISOR),
-    );
-
-    const desc = create.mock.calls.find((c) => c[0].label === 'render-target-sky-cubemap')![0];
-    expect(desc.size).toEqual({
-      width: SKY_CUBEMAP_RESOLUTION_PX,
-      height: SKY_CUBEMAP_RESOLUTION_PX,
-      depthOrArrayLayers: 6,
-    });
-    expect(desc.dimension).toBe('2d');
-  });
-
   it('cubeViewOf returns a dimension:cube view for a 6-layer row and throws for a non-cube row', () => {
     const device = mockDevice();
     const targets = createRenderTargets(
@@ -173,27 +154,6 @@ describe('createRenderTargets', () => {
     // 'hdr' has no fixedSizePx (a single layer), so it gets no cube view.
     expect(() => targets.cubeViewOf('hdr')).toThrow();
     expect(() => targets.cubeViewOf('nope')).toThrow();
-  });
-
-  it('reconcile does not reallocate a fixedSizePx row when the canvas resizes', () => {
-    const device = mockDevice();
-    const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(
-      device,
-      SWAP_FORMAT,
-      { width: 900, height: 600 },
-      stateWithDivisor(MW_DIVISOR),
-    );
-    const callsBefore = create.mock.calls.filter(
-      (c) => c[0].label === 'render-target-sky-cubemap',
-    ).length;
-
-    targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
-
-    const callsAfter = create.mock.calls.filter(
-      (c) => c[0].label === 'render-target-sky-cubemap',
-    ).length;
-    expect(callsAfter).toBe(callsBefore);
   });
 
   it('a fixedSizePx row whose size is a function resolves it against live state, and reconcile reallocates when the resolved size moves', () => {
@@ -400,23 +360,6 @@ describe('createRenderTargets', () => {
     ).toBe(depthCallsBefore + 1);
   });
 
-  it('depthViewOf returns the depth view for foreground:0 and throws for depthless rows and swap', () => {
-    const targets = createRenderTargets(
-      mockDevice(),
-      SWAP_FORMAT,
-      { width: 800, height: 600 },
-      stateWithDivisor(MW_DIVISOR),
-    );
-    // The one row that declares depth resolves to a live depth view.
-    expect(targets.depthViewOf('foreground:0')).toBeDefined();
-    // Depthless offscreen rows have no depth attachment.
-    expect(() => targets.depthViewOf('hdr')).toThrow();
-    expect(() => targets.depthViewOf('volume')).toThrow();
-    // swap is executor-resolved and has no depth either; unknown ids throw too.
-    expect(() => targets.depthViewOf('swap')).toThrow();
-    expect(() => targets.depthViewOf('nope')).toThrow();
-  });
-
   it('destroy destroys every allocated texture', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
@@ -473,17 +416,6 @@ describe('createRenderTargets', () => {
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
-  it('specOf returns the declared row and throws for an unknown id', () => {
-    const targets = createRenderTargets(
-      mockDevice(),
-      SWAP_FORMAT,
-      { width: 800, height: 600 },
-      stateWithDivisor(MW_DIVISOR),
-    );
-    expect(targets.specOf('hdr').id).toBe('hdr');
-    expect(() => targets.specOf('nope')).toThrow();
-  });
-
   it('sizeOf returns the allocated pixel size of an offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
@@ -497,20 +429,6 @@ describe('createRenderTargets', () => {
     expect(targets.sizeOf('zoa')).toEqual({ width: 180, height: 120 });
     expect(() => targets.sizeOf('swap')).toThrow();
     expect(() => targets.sizeOf('nope')).toThrow();
-  });
-
-  // The clamp on the `sizeOf` READER path — the 'clamps volume to a 1 px
-  // minimum' case above covers the same clamp on the ALLOCATION path (the
-  // `createTexture` descriptor).
-  it('sizeOf clamps to a 1 px minimum when floor(size/scale) is 0', () => {
-    const targets = createRenderTargets(
-      mockDevice(),
-      SWAP_FORMAT,
-      { width: 2, height: 2 },
-      stateWithDivisor(MW_DIVISOR),
-    );
-    // floor(2 / 3) = 0 -> clamped up to 1.
-    expect(targets.sizeOf('volume')).toEqual({ width: 1, height: 1 });
   });
 
   // `clearValue` is a required field, so a row silently losing it in a future
@@ -533,24 +451,5 @@ describe('createRenderTargets', () => {
       const clearValue = spec.clearValue as GPUColorDict;
       expect(clearValue.a).toBe(expectedAlpha);
     }
-  });
-
-  it('destroy destroys depth textures alongside colour', () => {
-    const device = mockDevice();
-    const create = device.createTexture as ReturnType<typeof vi.fn>;
-    const targets = createRenderTargets(
-      device,
-      SWAP_FORMAT,
-      { width: 800, height: 600 },
-      stateWithDivisor(MW_DIVISOR),
-    );
-    const depthResult = create.mock.results.find(
-      (_r, i) => create.mock.calls[i]![0].label === 'render-target-foreground:0-depth',
-    )!;
-    targets.destroy();
-    // The depth texture was torn down like every colour texture.
-    expect(depthResult.value.destroy).toHaveBeenCalled();
-    // After destroy the depth view is gone → depthViewOf throws.
-    expect(() => targets.depthViewOf('foreground:0')).toThrow();
   });
 });

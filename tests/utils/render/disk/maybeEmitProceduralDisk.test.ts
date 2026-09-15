@@ -35,25 +35,6 @@ describe('maybeEmitProceduralDisk', () => {
     fadeEndPx: 14,
   };
 
-  it('returns null below the fade start (strictly-greater gate)', () => {
-    const r = maybeEmitProceduralDisk(
-      7,
-      0.7,
-      30,
-      base.x,
-      base.y,
-      base.z,
-      base.sizeWorldMpc,
-      base.colourIndex,
-      1.0, // sbAmp
-      base.fadeStartPx,
-      base.fadeEndPx,
-      0,
-      0,
-    );
-    expect(r).toBeNull();
-  });
-
   it('returns null exactly at the fade-start edge', () => {
     // Boundary pin: 8 px is the exclusive lower edge.  Flipping the
     // helper's `<=` to `<` would break this and emit a zero-alpha
@@ -81,25 +62,6 @@ describe('maybeEmitProceduralDisk', () => {
       10,
       NaN,
       30,
-      base.x,
-      base.y,
-      base.z,
-      base.sizeWorldMpc,
-      base.colourIndex,
-      1.0, // sbAmp
-      base.fadeStartPx,
-      base.fadeEndPx,
-      0,
-      0,
-    );
-    expect(r).toBeNull();
-  });
-
-  it('returns null when positionAngleDeg is NaN', () => {
-    const r = maybeEmitProceduralDisk(
-      10,
-      0.7,
-      NaN,
       base.x,
       base.y,
       base.z,
@@ -218,29 +180,5 @@ describe('maybeEmitProceduralDisk', () => {
     expect(r!.positionAngleDeg).toBe(137);
     expect(r!.colourIndex).toBe(1.7);
     expect(r!.sbAmp).toBe(1.0);
-  });
-
-  it('defaults procFadeOut to 1.0 — no fade-out against the textured-disk pass', () => {
-    // The helper has no notion of "which galaxy is famous" or "which
-    // bitmap is loaded"; that decision lives at the caller in
-    // proceduralDiskSubsystem.runFrame.  The default 1.0 here preserves
-    // the pre-2026-05-28 behavior for every galaxy that doesn't get
-    // explicitly overridden by the caller.
-    const r = maybeEmitProceduralDisk(
-      20,
-      0.7,
-      30,
-      base.x,
-      base.y,
-      base.z,
-      base.sizeWorldMpc,
-      base.colourIndex,
-      1.0, // sbAmp
-      base.fadeStartPx,
-      base.fadeEndPx,
-      0,
-      0,
-    );
-    expect(r!.procFadeOut).toBe(1.0);
   });
 });

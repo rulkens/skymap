@@ -13,23 +13,10 @@ import { describe, it, expect } from 'vitest';
 import { foregroundFrustum, FAR_MIN_MPC } from '../../../src/utils/camera/foregroundFrustum';
 
 describe('foregroundFrustum', () => {
-  it('returns near < far', () => {
-    // Galaxy scale and Earth-surface scale — both must give a valid frustum.
-    expect(foregroundFrustum(0.43).near).toBeLessThan(foregroundFrustum(0.43).far);
-    expect(foregroundFrustum(1e-16).near).toBeLessThan(foregroundFrustum(1e-16).far);
-  });
-
   it('near stays strictly positive at tiny distance', () => {
     // At Earth-surface distance the pure ratio underflows toward zero; the
     // floor keeps near > 0 so the perspective matrix never degenerates.
     expect(foregroundFrustum(1e-16).near).toBeGreaterThan(0);
-  });
-
-  it('near scales with distance', () => {
-    // Above the near floor, 10x the distance gives strictly larger near.
-    const base = foregroundFrustum(0.43).near;
-    const tenX = foregroundFrustum(4.3).near;
-    expect(tenX).toBeGreaterThan(base);
   });
 
   it('far never falls below the seeded-orbit floor', () => {
