@@ -547,15 +547,15 @@ describe('runFrame — the regime fold', () => {
     expect(h.state.cameraRuntime.tilt).toEqual(seeded);
   });
 
-  it('the hand-back from a ground-level site view lands above the host arm’s own floor', () => {
-    // The site rung's ground was rated in the ROVER's bounding radii (0.5 m over
-    // Curiosity's tangent plane) while the body arm that receives the hand-back
-    // floors the eye at Mars's descent standoff (8.1 m over the datum). A view
-    // from rover height therefore handed back UNDER the host's floor, and the
-    // first body-arm notch spent the difference as a radial shove: eye step
-    // 25.9 m against neighbours at 11-12 m, and — the shove being radial while
-    // the settle pivots about the rover — the rover left centre by 0.030 rad
-    // (3 px here, ~31 px at 1080p) and STAYED there for every later notch.
+  it('the hand-back from a ground-level site view keeps the rover centred', () => {
+    // The site rung rates its ground in the ROVER's bounding radii (0.5 m over
+    // Curiosity's tangent plane) and the body arm that receives the hand-back
+    // floors the eye at Mars's descent standoff (8.1 m over the datum), so a
+    // view from rover height lands UNDER the receiving arm's floor — by design,
+    // the rung exists to get there. The first body-arm notch used to spend the
+    // difference as a RADIAL shove, and the settle pivoting about the rover
+    // while the shove did not, the rover left centre by 0.030 rad (3 px here,
+    // ~31 px at 1080p) and STAYED there for every later notch.
     const h = makeHarness();
     const rover = h.bodies.get('curiosity')!;
     const roverR = findByIdOrThrow(SCENE_MESH_BODIES, 'curiosity', 'poseFold').boundingRadiusM;

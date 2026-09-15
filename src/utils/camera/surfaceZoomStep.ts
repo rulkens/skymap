@@ -56,7 +56,7 @@ export function surfaceZoomStep(
       ? latched
       : (pickOnBody(cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad), bodyRadiusM)?.pointM ??
         null));
-  const stepped = anchoredZoomStep(arm, factor, anchorM, bodyRadiusM, standoffRadii);
+  const stepped = anchoredZoomStep(arm, factor, anchorM, bodyRadiusM, standoffRadii, focusPivotM);
   // A dive at the sky has no ground point to converge over and keeps its
   // framing; a dive with one settles about it (pixel-locked). An unfocused
   // recession settles about the eye — anchor-pivoting there cancels ~h/(R+h)

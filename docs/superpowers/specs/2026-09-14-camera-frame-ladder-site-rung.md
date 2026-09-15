@@ -693,8 +693,14 @@ slider rows land beside the existing band sliders in
   `elevationRad ≥ asin(min(1, 0.2 · boundingRadiusM / rangeM))`. At the range
   floor that is ≈ 5.7°. This is the rung's ground: the eye cannot reach the
   horizon plane and cannot pass under it, at any range. The site's own floor is
-  the ONLY one here — the rung exists to get under the host's standoff, and the
-  host's floor at the hand-back is the body arm's own concern (§6b).
+  the ONLY one here — the rung exists to get under the host's standoff, and
+  folding the host's in saturates the `asin` at close range, pinning every pose
+  at the ceiling. The hand-back therefore lands the body arm BELOW that arm's
+  own descent floor, and the arm's floor is what answers for it: with a hosted
+  focus it lifts the eye by raising its elevation ABOUT THAT FOCUS at constant
+  range (`flooredBodyPose`), so the rover holds the sightline the settle pivots
+  on. A radial push there instead takes the rover 0.030 rad off centre on the
+  first notch and leaves it there for the rest of the climb.
 - **Elevation ceiling:** `SITE_RUNG.elevationCeilRad`, π/2 minus 1e-3. At
   exactly π/2 the heading has nowhere to go — the same degeneracy
   `CameraPose.roll` documents at nadir (`CameraPose.d.ts:15-21`).

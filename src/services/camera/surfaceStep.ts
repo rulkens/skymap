@@ -93,7 +93,9 @@ export function surfaceStep(
   // its own, so the zoom arm above is already floored. The level runs on the
   // FLOORED pose: the floor moves the eye radially, and the ENU it settles
   // against has to be the final standpoint.
-  const floored = flooredBodyPose(pose, bodyRadiusM, standoffRadii);
+  // No pivot: a drag serves its own gesture anchor, not the focus, and the
+  // tilt handle already spends its floor budget before reaching here.
+  const floored = flooredBodyPose(pose, bodyRadiusM, standoffRadii, null);
   // Drags stay heading-free (ruled) — only zoom walks north up — but no drag
   // may ROLL: pan and orbit hold their entry heading (the transport that makes
   // holonomy unrepresentable), look and tilt level around the heading they

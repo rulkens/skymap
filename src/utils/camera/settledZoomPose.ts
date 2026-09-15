@@ -101,6 +101,7 @@ export function settledZoomPose(
       capRad: ORIENT_DECAY.capRadPerLogZoom * Math.abs(logZoom),
     });
   }
-  // A tilt about a surface anchor holds |eye − anchor|, not |eye|.
-  return flooredBodyPose(out, bodyRadiusM, standoffRadii);
+  // A tilt about a surface anchor holds |eye − anchor|, not |eye| — so the
+  // floor undoes it about the same pivot, which is what keeps the lock.
+  return flooredBodyPose(out, bodyRadiusM, standoffRadii, pivotM);
 }
