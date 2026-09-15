@@ -5,7 +5,7 @@
  * The MW's visible form is the star/dust point cloud, which owns no pick
  * pipeline; this stamps its identity into the r32uint pick texture instead.
  * The two uniform images below must stay byte-exact with
- * `shaders/milkyWay/pick/io.wesl` — `milkyWayPickUniformParity` pins them.
+ * `shaders/milkyWay/pick/io.wesl` — the renderer test pins both images.
  */
 
 import type { GpuContext } from '../../../../@types/rendering/GpuContext';
@@ -39,12 +39,6 @@ const MW_PICK_UNIFORM_BYTES = 32;
  * camPosWorld (80) + f32 pxPerRad (92), packed per pick by `pickMilkyWay`.
  */
 const MILKY_WAY_PICK_CAMERA_BYTES = 96;
-
-/** Byte offset of the disc world-radius f32 in the @group(2) uniform. */
-const MW_RADIUS_MPC_BYTE_OFFSET = 16;
-
-/** Byte offset of the apparent-size floor f32 in the @group(2) uniform. */
-const MW_MIN_SIZE_PX_BYTE_OFFSET = 20;
 
 export function createMilkyWayPickRenderer(
   ctx: GpuContext,
@@ -175,8 +169,8 @@ export function createMilkyWayPickRenderer(
     f32[1] = MILKY_WAY_CENTER_WORLD[1];
     f32[2] = MILKY_WAY_CENTER_WORLD[2];
     new Uint32Array(scratch, 12, 1)[0] = Source.MilkyWay;
-    f32[MW_RADIUS_MPC_BYTE_OFFSET / 4] = MILKY_WAY_RADIUS_MPC;
-    f32[MW_MIN_SIZE_PX_BYTE_OFFSET / 4] = MILKY_WAY_PICK_MIN_SIZE_PX;
+    f32[4] = MILKY_WAY_RADIUS_MPC;
+    f32[5] = MILKY_WAY_PICK_MIN_SIZE_PX;
     device.queue.writeBuffer(mwUniformBuffer, 0, scratch);
     mwBindGroup = device.createBindGroup({
       label: 'milky-way-pick-source-bg',
