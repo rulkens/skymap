@@ -1,8 +1,7 @@
 /**
- * The site rung's gesture register (spec §4.6): one drag mode, the turntable.
- * The rate is the angle the pixel delta subtends at the lens — the body arm's
- * law, so no tuning constant exists to be wrong. Both signs are that arm's
- * ORBIT handle re-derived, not its tilt handle; do not "fix" them toward it.
+ * The site rung's gesture register (spec §4.6): one turntable drag, at the body
+ * arm's rate law (a pixel delta's angle at the lens), so no tuning constant can
+ * be wrong. Both signs are that arm's ORBIT handle re-derived, never its tilt.
  */
 
 import type { InputStep } from '../../@types/camera/InputStep';

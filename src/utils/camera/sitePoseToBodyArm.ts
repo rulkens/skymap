@@ -1,8 +1,7 @@
 /**
  * site → host body arm (spec §4.3), which IS the disengage: the arm lands
  * anchored AT the site, not at the body centre, so the stored magnitudes stay
- * at rover scale instead of host-radius scale. `site.id === pose.siteId` is a
- * precondition, not a runtime check.
+ * at rover scale. `site.id === pose.siteId` is a precondition, not a check.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
@@ -26,7 +25,6 @@ export function sitePoseToBodyArm(
   const ch = Math.cos(pose.headingRad);
   const sh = Math.sin(pose.headingRad);
   const { east, north, localUp } = frame;
-  // The unit SITE → EYE vector.
   const eyeRelAnchorM: Vec3 = [
     pose.rangeM * (ce * (ch * north[0] + sh * east[0]) + se * localUp[0]),
     pose.rangeM * (ce * (ch * north[1] + sh * east[1]) + se * localUp[1]),

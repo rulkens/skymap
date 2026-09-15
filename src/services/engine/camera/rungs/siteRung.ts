@@ -1,9 +1,7 @@
 /**
- * The site rung's row (spec §4): a turntable about a fixed lat/lon on a host.
- * THE one place the site registries are read — the authored site row, the mesh
- * body's bounding sphere, the driver kind; everything below takes them as
- * arguments. `host` answers the site's PLANET, which is what keeps the
- * remembered tilt alive across a world → body → site descent (ruling 8).
+ * The site rung's row (spec §4): THE one place the site registries are read,
+ * everything below taking them as arguments. `host` answers the site's PLANET,
+ * which keeps the remembered tilt alive across a world → body → site descent.
  */
 
 import type { BodyId } from '../../../../@types/data/body/BodyId';
@@ -24,7 +22,6 @@ import { climbRowFor } from './climbRowFor';
 import { hostOf } from './hostOf';
 import { hostOrThrow } from './hostOrThrow';
 
-/** The authored site row, or null when this body is not surface-fixed. */
 function siteRowOf(id: BodyId): SurfaceFixedSite | null {
   const driver = positionDriverById(id);
   return driver.kind === 'surfaceFixed' ? driver : null;
@@ -48,8 +45,8 @@ export const siteRung: ClimbRow<'site'> = {
   emptyMemory: null,
 
   channels: {
-    // World channels in, per prep's signature — so the leg's authored target is
-    // the body row's business and this row only ever sees the folded arm.
+    // World channels in, per prep's signature, so the fold down to the site is
+    // this cell's own business.
     encode: (world, frame, ctx) => {
       const hostFrame: FrameOf['body'] = { body: hostOrThrow(frame, ctx).id };
       const arm = climbRowFor<'body'>(hostFrame).fromParent(

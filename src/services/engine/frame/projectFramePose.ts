@@ -115,13 +115,13 @@ export function projectFramePose(args: {
   // mid-animation. Free while the two agree — `refoldTo` answers by reference.
   const target = intent.dragging ? regime : stepRung(refoldTo(displayed, regime, ctx), ctx);
   // Two whole skips, never a clamp or a latch, both retried next frame: a live
-  // gesture (ruled, Q6), and an approach that has not reached its FOCUS yet
-  // (§4.8). `followActive` is gated on the world arm, so a descent into a rung
-  // the focus merely hangs off — Mars, under a rover focus — goes inactive
+  // gesture (ruled, Q6), and an approach that has not reached its FOCUS (§4.8).
+  // `followActive` is gated on the world arm, so descending into a rung the
+  // focus merely hangs off — Mars, under a rover focus — goes inactive
   // mid-flight and parks the camera ~1500 km short. A descent into the focus's
-  // OWN rung is the arrival and must still land: gating that one lets the ease
-  // yank a camera already inside its focus's band out to framing distance,
-  // where it never engages again (the ordinary tour landing).
+  // OWN rung is the arrival and must still land, or the ease yanks a camera
+  // already inside its focus's band out to framing distance and it never
+  // engages again.
   if (!intent.dragging && !(approaching && frameBodyId(target) !== ctx.focusBodyId)) {
     if (rungKindOf(target) === 'absolute') {
       if (!isWorldArm(displayed)) {

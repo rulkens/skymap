@@ -1,9 +1,7 @@
 /**
- * The one conversion in the system: climb `toParent` to the rung the two frames
- * share, then descend `fromParent` to the target. Whichever end is deeper moves
- * first, so a site → its own host arm is ONE `toParent` and never a round trip
- * through heliocentric Mpc (spec 2 §10's seam); a pose already in the target
- * frame is answered by reference.
+ * The one conversion in the system: climb `toParent` to the frame the two ends
+ * share, then descend `fromParent`. Whichever end is DEEPER moves first, so a
+ * site → its own host arm is one hop, never a round trip through Mpc (2 §10).
  */
 
 import type { ClimbableKind } from '../../../../@types/camera/ClimbableKind';

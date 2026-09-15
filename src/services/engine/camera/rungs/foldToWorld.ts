@@ -1,7 +1,6 @@
 /**
  * `refoldTo`'s `'absolute'` specialisation. The world arm returns its own pose
- * BY REFERENCE — that identity is what keeps the per-frame fold free (spec §7)
- * — and a deeper rung climbs every step, since a site sits two rungs down.
+ * BY REFERENCE — that identity is what keeps the per-frame fold free (spec §7).
  */
 
 import type { CameraPose } from '../../../../@types/camera/CameraPose';

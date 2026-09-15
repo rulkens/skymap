@@ -68,8 +68,8 @@ export function logCameraState(
             eyeFromCentreM: Math.hypot(...bodyFixedEyeM(bodyArm)),
             basisLocal: bodyArm.basisLocal,
           },
-    // Eye height above the tangent plane, metres (spec §4.9): the one number
-    // that shows whether the ground floor (`clampedSitePose`) is doing its job.
+    // `eyeHeightM` is metres above the site's tangent plane (spec §4.9) — the
+    // one number that shows whether `clampedSitePose`'s floor is doing its job.
     siteArmPose:
       siteArm === null
         ? null

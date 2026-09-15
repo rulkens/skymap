@@ -7,7 +7,7 @@ import { rungKindOf } from './rungKindOf';
 
 export function frameBodyId(frame: PoseFrame): BodyId | null {
   if (frame === 'absolute') return null;
-  // The kind IS the key the tag carries its id under (§2.1), so one index
-  // spells every rung; the index is what the union type cannot state.
+  // The kind IS the key the tag carries its id under (§2.1) — a fact the union
+  // type cannot state, hence the cast.
   return (frame as Record<RungKind, BodyId>)[rungKindOf(frame)];
 }

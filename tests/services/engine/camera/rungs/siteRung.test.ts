@@ -1,9 +1,7 @@
 /**
- * siteRung — the third rung as the ladder sees it (spec §4.3-§4.7): the whole
- * fold out and back, the host the tilt memory is keyed on, the keyframe codec,
- * and the two band cells. The conversions themselves are pinned one level down
- * (`sitePoseToBodyArm` / `sitePoseFromBodyArm`); what can only fail HERE is a
- * miswired cell — a row reading the wrong registry, radius or tuning edge.
+ * siteRung — the third rung as the ladder sees it (spec §4.3-§4.7). The
+ * conversions are pinned one level down (`sitePoseToBodyArm` / `…FromBodyArm`);
+ * what can fail HERE is a cell reading the wrong registry, radius or band edge.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -125,9 +123,8 @@ describe('the site rung in the ladder', () => {
 
   it('the site band is hysteretic', () => {
     const ctx = ctxFor(SITE_ID);
-    // Inward past the engage edge takes the rung; the rung then holds until the
-    // range crosses the release edge outward. A pose parked between the two
-    // keeps whichever rung it arrived in — without that the rung thrashes.
+    // A pose parked BETWEEN the two edges keeps whichever rung it arrived in;
+    // without that gap the rung thrashes every frame.
     expect(ROW.engage(armAt(INSIDE), ctx)).toEqual(SITE_FRAME);
     expect(ROW.engage(armAt(BETWEEN), ctx)).toBeNull();
     expect(ROW.release({ frame: SITE_FRAME, pose: pose(0.4, 0.3, BETWEEN) }, ctx)).toBe(false);

@@ -46,7 +46,7 @@ type PanelModel = {
   readonly markerReadout: string;
   readonly weightReadout: string;
   readonly rememberedTiltReadout: string;
-  /** §4.9's site rows — heading, elevation, range, eye height; absent off a site arm. */
+  /** Null off a site arm. */
   readonly site: readonly RawRow[] | null;
   readonly raw: readonly RawRow[];
 };

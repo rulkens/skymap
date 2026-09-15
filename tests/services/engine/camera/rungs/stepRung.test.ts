@@ -201,11 +201,9 @@ describe('stepRung', () => {
   });
 
   it("a focus in the rung's host subtree keeps the rung", () => {
-    // Spec §0's premise correction as a test: today's chooser released on any
-    // differing focus, so with a rover focused the Mars arm was unreachable and
-    // the rover was orbited from the world arm — rolling horizon and all. The
-    // site rung is far out of its own band here (the eye is a planet radius up),
-    // so this pins the MARS rung holding, not a descent past it.
+    // Spec §0's premise correction: releasing on any differing focus made the
+    // Mars arm unreachable with a rover focused. The eye is a planet radius up,
+    // far outside the site band, so this pins Mars holding, not a descent.
     const marsRadiusM = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'test').surface
       .datumRadiusM;
     const bodyStates = new Map<BodyId, BodyState>([[bodyId('mars'), bodyStateAtOrigin()]]);

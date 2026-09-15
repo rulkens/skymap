@@ -1,8 +1,7 @@
 /**
  * host body arm → site (spec §4.3), which IS the engage. The incoming basis is
- * DISCARDED: the site rung looks at the site by construction, so entering
- * re-aims onto P. That asymmetry is deliberate — `fromParent(toParent(s))` is
- * the identity, `toParent(fromParent(b))` projects the aim onto the site.
+ * DISCARDED — the rung looks at the site by construction — so deliberately
+ * `fromParent(toParent(s))` is exact while `toParent(fromParent(b))` projects.
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';

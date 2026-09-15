@@ -400,11 +400,9 @@ describe('runFrame — the regime fold', () => {
   });
 
   it('an approach owns the rung until it reaches its focus, then descends one rung per frame', () => {
-    // §4.8, both halves at once. `followActive` is gated on the world arm, so
-    // engaging Mars mid-approach would kill the ease at Mars's engage band —
-    // ~1500 km short of a rover whose framing distance is metres. And the
-    // descent that follows is TWO frames, one rung each: a single-frame
-    // teleport would skip the frame the crossing commit is drawn on.
+    // §4.8, both halves at once: engaging Mars mid-approach kills the ease at
+    // Mars's engage band, ~1500 km short of a rover framed in metres; and the
+    // descent that follows is TWO frames, one rung each.
     const { store, state, deps } = makeHarness();
     const site = { site: 'curiosity' as BodyId } as const;
     const ctx = {

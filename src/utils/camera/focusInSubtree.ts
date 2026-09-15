@@ -1,8 +1,7 @@
 /**
  * Does a focus keep this rung? True when `focusId` IS `rungId` or reaches it by
- * walking `bodyHostId` — a rover focus keeps its planet's arm (spec §4.8). No
- * focus constrains no rung, which is the `focusBodyId !== null` guard both band
- * cells used to carry. `bodyHostId` is the chain's only reader.
+ * walking `bodyHostId` (the chain's only reader) — a rover focus keeps its
+ * planet's arm (spec §4.8). No focus constrains no rung, hence null ⇒ true.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';
