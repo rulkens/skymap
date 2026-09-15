@@ -85,6 +85,8 @@ import {
   passTimingSlotName,
   renderStepTimingSlotName,
 } from './slabs';
+import { computeTimingSlotName } from './timing/computeTimingSlotName';
+import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { captureFaceAttachment } from './captureFaceAttachment';
 import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
@@ -93,18 +95,29 @@ import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 
 /**
  * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
- * today (`'flow'` and `'atmosphereSkyView'`); a new compute pre-pass is a new
- * row, not a new branch. Every row takes the uniform `(encoder, ctx, state)`
- * shape — `flow` reads `ctx.nowMs` as its real-time advection clock, while
- * `atmosphereSkyView` reads the rendered pose off it so its baked LUT matches
- * what the shell fragment samples.
+ * today (`'flow'` and `'sky-view'`); a new compute pre-pass is a new row, not a
+ * new branch. Every row takes the uniform
+ * `(encoder, ctx, state, claimTimestampWrites)` shape — `flow` reads `ctx.nowMs`
+ * as its real-time advection clock, while `sky-view` reads the rendered pose off
+ * it so its baked LUT matches what the shell fragment samples.
+ *
+ * A row claims the step's timing slot at the moment it opens a pass and not
+ * before (see `ClaimTimestampWrites`), and attaches it to the one pass that runs
+ * every frame the step runs at all — a row that opens several (flow's
+ * conditional reseed) leaves the rest untimed rather than letting the last pass
+ * overwrite the slot.
  */
 const COMPUTE: Record<
   string,
-  (encoder: GPUCommandEncoder, ctx: ReadyFrameContext, state: EngineState) => void
+  (
+    encoder: GPUCommandEncoder,
+    ctx: ReadyFrameContext,
+    state: EngineState,
+    claimTimestampWrites: ClaimTimestampWrites,
+  ) => void
 > = {
-  flow: (encoder, ctx, state) => encodeFlowCompute(encoder, state, ctx.nowMs),
-  atmosphereSkyView: (encoder, ctx, state) => encodeAtmosphereSkyView(encoder, ctx, state),
+  flow: (encoder, ctx, state, claim) => encodeFlowCompute(encoder, state, ctx.nowMs, claim),
+  'sky-view': (encoder, ctx, state, claim) => encodeAtmosphereSkyView(encoder, ctx, state, claim),
 };
 
 /**
@@ -207,7 +220,18 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         if (!compute) {
           throw new Error(`executeFrame: no COMPUTE row for '${step.name}'`);
         }
-        compute(encoder, ctx, state);
+        // The same one-way DebugPanel override the render rows take below: a
+        // toggle hides work the frame would otherwise do, and can never force
+        // a dispatch the row's own gate declined. Toggle key and timing slot
+        // are ONE string (see `computeTimingSlotName` for why it is suffixed —
+        // `'flow'` names both this integrator and the ribbon that draws it).
+        const slot = computeTimingSlotName(step.name);
+        if (state.settings.debug.disabledPasses[slot] === true) break;
+        // The claim is LAZY on purpose: `descriptorFor` marks the slot live for
+        // this frame, and these rows carry their own gates (an empty atmosphere
+        // draw list, flow switched off) — claiming up front would leave a row
+        // reporting the query set's stale ticks from when it last ran.
+        compute(encoder, ctx, state, () => timing.descriptorFor(slot));
         break;
       }
       case 'render': {

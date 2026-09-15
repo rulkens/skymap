@@ -72,11 +72,20 @@ describe('encodeFlowCompute', () => {
     expect(renderer.encodeCompute).not.toHaveBeenCalled();
   });
 
-  it('delegates to encodeCompute when enabled + loaded, forwarding nowMs', () => {
+  it('delegates to encodeCompute when enabled + loaded, forwarding nowMs and the timing slot', () => {
     const renderer = spyRenderer();
     const state = stateStub({ renderer, flow: { enabled: true } });
-    encodeFlowCompute(encoder, state, NOW_MS);
+    // The step's own GPU-timing slot rides through to the renderer — without it
+    // the prelude's dispatch is untimed and its cost drains into whichever
+    // render pass opens next, reading there as that pass regressing.
+    const claim = () => undefined;
+    encodeFlowCompute(encoder, state, NOW_MS, claim);
     expect(renderer.encodeCompute).toHaveBeenCalledTimes(1);
-    expect(renderer.encodeCompute).toHaveBeenCalledWith(encoder, state.settings.flow, NOW_MS);
+    expect(renderer.encodeCompute).toHaveBeenCalledWith(
+      encoder,
+      state.settings.flow,
+      NOW_MS,
+      claim,
+    );
   });
 });

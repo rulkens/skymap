@@ -6,6 +6,7 @@
 import type { FrameStep } from '../../../../@types/engine/frame/FrameStep';
 import type { TimedSlotRow } from '../../../../@types/engine/frame/TimedSlotRow';
 import { groupKeyOf, passTimingSlotName, renderStepTimingSlotName } from '../slabs';
+import { computeTimingSlotName } from './computeTimingSlotName';
 
 export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSlotRow[] {
   const rows: TimedSlotRow[] = [];
@@ -29,6 +30,12 @@ export function timedSlotRowsOf(program: readonly FrameStep[]): readonly TimedSl
         name: renderStepTimingSlotName(groupKey, step.capture?.face, step.slot),
         groupKey,
       });
+    } else if (step.kind === 'compute') {
+      // The prelude dispatches are real GPU work AHEAD of the frame's first
+      // render pass, so leaving them untimed is worse than leaving them slow:
+      // on a tile-based GPU an untimed dispatch drains into the next timed
+      // pass's end-of-pass timestamp and reads there as that pass regressing.
+      rows.push({ name: computeTimingSlotName(step.name), groupKey: 'compute' });
     } else if (step.kind === 'composite') {
       rows.push({ name: `${step.step.source}→${step.step.dest}`, groupKey: 'composite' });
     } else if (step.kind === 'bloom') {

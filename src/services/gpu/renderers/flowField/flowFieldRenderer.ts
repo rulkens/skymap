@@ -51,6 +51,7 @@ import type { Vec4 } from '../../../../@types/math/Vec4';
 import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
 import type { FlowField } from '../../../../@types/data/flow/FlowField';
 import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
+import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
 import type { FlowFieldRenderer } from '../../../../@types/rendering/FlowFieldRenderer';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import { flowFieldFromCube } from '../../resources/flowFieldFromCube';
@@ -313,7 +314,12 @@ export function createFlowFieldRenderer(init: {
       return field !== null;
     },
 
-    encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings, nowMs: number): void {
+    encodeCompute(
+      encoder: GPUCommandEncoder,
+      flow: FlowSettings,
+      nowMs: number,
+      claimTimestampWrites?: ClaimTimestampWrites,
+    ): void {
       if (field === null || !computeBindGroup) return;
       // Clamp every knob to its GPU-safe bound once, at the point of use — the
       // store holds raw intent; this renderer owns its buffer + loop limits.
@@ -362,9 +368,15 @@ export function createFlowFieldRenderer(init: {
         seedPass.end();
       }
 
-      // Integrate pass — advect or streamline per flow.mode.
+      // Integrate pass — advect or streamline per flow.mode. It carries the
+      // step's timing slot because it is the pass that runs on EVERY call; the
+      // seed pass above would otherwise overwrite the same two query indices on
+      // the rare reseed frame (see the type's `timestampWrites` doc).
       const integrate = f.mode === 'streamline' ? streamlinePipeline : advectPipeline;
-      const pass = encoder.beginComputePass();
+      const timestampWrites = claimTimestampWrites?.();
+      const pass = encoder.beginComputePass(
+        timestampWrites === undefined ? {} : { timestampWrites },
+      );
       pass.setPipeline(integrate);
       pass.setBindGroup(0, computeBindGroup);
       pass.dispatchWorkgroups(dispatchCount);
