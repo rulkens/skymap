@@ -136,6 +136,10 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     requireController(id).setImmediate(value);
   }
 
+  function targetOf(id: FadeId): number | null {
+    return controllers.get(serializeFadeId(id))?.targetOf() ?? null;
+  }
+
   function opacityOf(id: FadeId, nowMs?: number): number {
     const c = controllers.get(serializeFadeId(id));
     if (!c) return 1.0; // fail-safe — see module docblock
@@ -170,6 +174,7 @@ export function createFadeRegistry(deps: { readonly requestRender: () => void })
     unregister,
     fadeTo,
     setImmediate,
+    targetOf,
     opacityOf,
     isAnyAnimating,
     tick,

@@ -101,6 +101,10 @@ export function createFadeController(
     return now < transitionStartMs + transitionDurationMs;
   }
 
+  function targetOf(): number {
+    return targetOpacity;
+  }
+
   function fadeTo(
     target: number,
     durationMs: number,
@@ -152,5 +156,5 @@ export function createFadeController(
     }
   }
 
-  return { fadeTo, setImmediate, currentOpacity, isAnimating, tick };
+  return { fadeTo, setImmediate, currentOpacity, isAnimating, tick, targetOf };
 }

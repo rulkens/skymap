@@ -63,6 +63,15 @@ describe('createFadeController', () => {
     expect(c.currentOpacity(1400)).toBeCloseTo(0, 5);
   });
 
+  it('targetOf reports the destination mid-ramp and the held value at rest', () => {
+    const c = createFadeController(0, 1000);
+    expect(c.targetOf()).toBe(0);
+    c.fadeTo(1, 600, 1000);
+    expect(c.targetOf()).toBe(1); // mid-ramp: still heading for 1
+    expect(c.currentOpacity(1300)).toBeCloseTo(0.5, 5); // not there yet
+    expect(c.targetOf()).toBe(1); // at rest, holding 1
+  });
+
   it('setImmediate skips animation and sets opacity instantly', () => {
     const c = createFadeController(0, 1000);
     c.setImmediate(1);

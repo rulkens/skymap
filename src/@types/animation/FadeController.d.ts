@@ -53,6 +53,9 @@ export type FadeController = {
    */
   currentOpacity(nowMs?: number): number;
 
+  /** The value the ramp is heading for (or already holds) — time-independent. */
+  targetOf(): number;
+
   /**
    * Whether the smoothstep ramp is still in progress at the given time.
    * False once `nowMs >= transitionStartMs + transitionDurationMs`,

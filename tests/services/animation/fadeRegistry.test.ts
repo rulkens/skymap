@@ -122,6 +122,23 @@ describe('createFadeRegistry', () => {
     expect(r.opacityOf(h)).toBeCloseTo(0.5, 5);
   });
 
+  it('targetOf is null for an unregistered id', () => {
+    const r = makeRegistry();
+    const h: FadeId = { kind: 'filament' };
+    expect(r.targetOf(h)).toBeNull();
+  });
+
+  it('targetOf follows fadeTo and setImmediate', () => {
+    const r = makeRegistry();
+    const h: FadeId = { kind: 'filament' };
+    r.register(h, 0);
+    expect(r.targetOf(h)).toBe(0);
+    r.fadeTo(h, 1, 600, 0);
+    expect(r.targetOf(h)).toBe(1);
+    r.setImmediate(h, 0.5);
+    expect(r.targetOf(h)).toBe(0.5);
+  });
+
   it('setImmediate skips animation', () => {
     const r = makeRegistry();
     const h: FadeId = { kind: 'milkyWay' };

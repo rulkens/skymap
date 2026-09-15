@@ -57,6 +57,12 @@ export type FadeRegistry = Destroyable & {
   setImmediate(id: FadeId, value: number): void;
 
   /**
+   * The value the id's ramp is heading for (or holds). `null` for an
+   * unregistered id — never a spurious match against a real 0 or 1 target.
+   */
+  targetOf(id: FadeId): number | null;
+
+  /**
    * The opacity at the given time for the given id. Returns 1.0 for
    * unregistered ids — fail-safe so a renderer asking for an id
    * that hasn't finished registering draws at full opacity instead of

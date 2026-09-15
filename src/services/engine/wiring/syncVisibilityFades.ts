@@ -25,12 +25,18 @@ function applyIntent<Item>(
 
   // applyIntent is only ever called on intent rows, so `intent` is present.
   const target = row.intent!(state.settings, item) ? 1 : 0;
+  const handle = row.handle(item);
 
-  if (opts.animate) {
-    const dur = opts.durationMs ?? (target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
-    void state.subsystems.fades.fadeTo(row.handle(item), target, dur);
-  } else {
-    state.subsystems.fades.setImmediate(row.handle(item), target);
+  // A re-sync of an unchanged intent skips the write, not `post`: `post` isn't
+  // a fade write and isn't idempotent (the volumeField row's `post` re-arms a
+  // lazy-load on every call where the settings item is enabled).
+  if (state.subsystems.fades.targetOf(handle) !== target) {
+    if (opts.animate) {
+      const dur = opts.durationMs ?? (target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS);
+      void state.subsystems.fades.fadeTo(handle, target, dur);
+    } else {
+      state.subsystems.fades.setImmediate(handle, target);
+    }
   }
 
   row.post?.(state as EngineState, item);
