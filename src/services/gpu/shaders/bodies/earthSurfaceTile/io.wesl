@@ -35,14 +35,14 @@ struct PatchInstance {
   lat0Rad: f32,
   dLonRad: f32,
   dLatRad: f32,
-  // This tile's already-resolved atlas rect ('SurfaceCutTile.resident'),
+  // This tile's already-resolved atlas rect ('SurfaceCutTile.albedo'),
   // flattened as (origin.xy, scale.xy) -- no page-table indirection.
   albedoRect: vec4<f32>,
   // The next resident ancestor strictly above the resolved tile, flattened
   // the same way -- the coarser imagery the fragment crossfades FROM
   // (fragment.wesl samples both). Equal to albedoRect (and fadeWeight
   // forced to 1) when no deeper resident ancestor exists --
-  // 'SurfaceCutTile.resident.fallback === null's CPU-side encoding, so the
+  // 'SurfaceCutTile.albedo.fallback === null's CPU-side encoding, so the
   // fragment always has a valid second rect to sample.
   fallbackRect: vec4<f32>,
 };

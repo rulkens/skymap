@@ -36,6 +36,7 @@ import { createTileStreamSubsystem } from './tileStreamSubsystem';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
+import { surfaceTileBandFromBounds } from '../../../utils/scene/surfaceTileBandFromBounds';
 import { surfaceTilePath } from '../../../utils/scene/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../../../utils/scene/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileBitmap';
@@ -178,13 +179,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       const min = Math.max(band.min, baseLevel + 1);
       // A band clamped past its own depth at this base level bakes nothing usable.
       if (!(band.max >= min)) continue;
-      bands.push({
-        uBounds: [(band.bounds.west + 180) / 360, (band.bounds.east + 180) / 360],
-        // South-first: matches the mesh's v (v = 0 at the south pole).
-        vBounds: [(band.bounds.south + 90) / 180, (band.bounds.north + 90) / 180],
-        min,
-        max: band.max,
-      });
+      bands.push(surfaceTileBandFromBounds(band.bounds, min, band.max));
     }
     if (bands.length === 0) return null;
     return {
@@ -330,14 +325,16 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     // untouched one). Pass 1 stamps every resident first; only genuine misses
     // reach pass 2's allocator.
     const misses: SurfaceTileRequest[] = [];
-    // Debug-only tally: planned tiles whose bitmap hasn't landed in `resident`
-    // yet, whatever the atlas's own slot state — see `SurfaceTileDebugSnapshot`.
+    // Debug-only tally: planned tiles whose payload hasn't landed yet,
+    // whatever the atlas's own slot state — see `SurfaceTileDebugSnapshot`.
+    // BOTH products: height is the one that gates refinement, so an
+    // albedo-only count reads zero while the cut is stuck.
     let notResidentCount = 0;
     for (const request of plan.requests) {
       const key = surfaceTilePath(request.tile, prefix);
       const isHeight = request.tile.product === 'height';
       const stream = isHeight ? streams.heightStream : streams.stream;
-      if (!isHeight && !resident.has(key)) notResidentCount++;
+      if (!(isHeight ? heightResident : resident).has(key)) notResidentCount++;
       // Checked BEFORE touching: a touched failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
       if (stream.isFailed(key)) continue;

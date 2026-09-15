@@ -50,7 +50,7 @@ export type SurfaceTileSubsystem = Destroyable & {
     readonly atlasUvOrigin: readonly [number, number];
     readonly atlasUvScale: readonly [number, number];
     /** `performance.now()` (REAL time) stamped when this slot's bitmap
-     *  uploaded — see `SurfaceCutTile.resident.readyAtMs`. */
+     *  uploaded — see `SurfaceCutTile.albedo.readyAtMs`. */
     readonly readyAtMs: number;
   } | null;
 
