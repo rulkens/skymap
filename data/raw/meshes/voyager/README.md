@@ -25,9 +25,24 @@ curl -L -o "data/raw/meshes/voyager/Voyager Probe (B).glb" \
 
 Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
+## The `.blend` — the edited source
+
+`voyager.blend` is what the pre-bake opens, not the download above. Written by
+Blender 5.2 LTS, it does not open in older versions. Re-import it from the
+pristine download at any time with `npm run import-mesh -- voyager` — this
+**overwrites any edits** made since the last import.
+
+`tools/meshes/prebake/importMesh.py` renames each part's single UV layer to
+the one shared name and saves; the download has no animation, modifiers or
+material defects.
+
+To edit the model: open `voyager.blend` in Blender 5.2 LTS, change materials,
+save, update this file's line in `../meshes.sha256`, then
+`npm run prebake-mesh -- voyager` and `npm run build-meshes`.
+
 ## The pre-bake — what `build-meshes` actually reads
 
-`MESH_SOURCES.voyager` points at `voyager.prebaked.glb`, **not** the download:
+`MESH_SOURCES.voyager` points at `voyager.prebaked.glb`, **not** `voyager.blend`:
 the source carries three materials and `buildMeshes` refuses multi-material
 input by design, so the flattening happens upstream, once:
 
@@ -35,11 +50,12 @@ input by design, so the flattening happens upstream, once:
 npm run prebake-mesh -- voyager    # Blender 5.2 LTS; ~10 s, not run in CI
 ```
 
-`tools/meshes/prebake/meshPrebake.py` drops the `_root` placeholder cube, joins
-the three parts, smart-UV-projects and bakes all three materials into one 2048²
-atlas per `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output
-and the four loose `voyager.prebaked.*.png` atlases beside it are gitignored
-build products — regenerate them, don't archive them. The GLB carries the normal
+`tools/meshes/prebake/meshPrebake.py` joins the three parts (leaving behind
+any face-less/materialless leftovers, such as the `_root` placeholder cube),
+smart-UV-projects and bakes all three materials into one 2048² atlas per
+`BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output and the
+four loose `voyager.prebaked.*.png` atlases beside it are gitignored build
+products — regenerate them, don't archive them. The GLB carries the normal
 atlas and the metallicRoughness pair the glTF exporter packs from the last two;
 `substituted: []` on the generated row is the check that the exporter still
 packs them.

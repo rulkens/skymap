@@ -25,32 +25,48 @@ curl -L -o "data/raw/meshes/perseverance/Mars 2020 Perseverance Rover.glb" \
 
 Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
+## The `.blend` — the edited source
+
+`perseverance.blend` is what the pre-bake opens, not the download above.
+Written by Blender 5.2 LTS, it does not open in older versions. Re-import it
+from the pristine download at any time with `npm run import-mesh --
+perseverance` — this **overwrites any edits** made since the last import.
+
+`tools/meshes/prebake/importMesh.py` evaluates the scene at **frame 120**
+before saving. The frame is load-bearing: the file's saved transforms park the
+rover with its remote-sensing mast folded flat on the deck (bbox tops out at
+1.85 m); the deploy animation raises it over frames 0→48 and re-stows it after
+~338, so any frame in 48–290 gives the mast-up rover at its real 2.23 m
+height, while saving the default pose would ship a headless rover. The
+importer applies the armature deform at that frame, clears the animation, and
+collapses the parts' UV layers onto one shared name, re-pointing the 11
+Normal Map nodes that named the old one.
+
+To edit the model: open `perseverance.blend` in Blender 5.2 LTS, change
+materials, save, update this file's line in `../meshes.sha256`, then
+`npm run prebake-mesh -- perseverance` and `npm run build-meshes`.
+
 ## The pre-bake — what `build-meshes` actually reads
 
-`MESH_SOURCES.perseverance` points at `perseverance.prebaked.glb`, **not** the
-download: the source carries 47 materials, is over the triangle budget, and
-ships **stowed**. `buildMeshes` refuses multi-material input by design, so the
+`MESH_SOURCES.perseverance` points at `perseverance.prebaked.glb`, **not**
+`perseverance.blend`: the source carries 47 materials and is over the
+triangle budget. `buildMeshes` refuses multi-material input by design, so the
 flattening happens upstream, once:
 
 ```
 npm run prebake-mesh -- perseverance    # Blender 5.2 LTS; ~20 s, not run in CI
 ```
 
-`tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 120**,
-drops the `Icosphere` ground helper, joins the 68 remaining parts, decimates
-199,482 → 100,000 tris, smart-UV-projects and bakes all 47 materials into one
-2048² atlas per `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its
-output and the four loose `perseverance.prebaked.*.png` atlases beside it are
-gitignored build products — regenerate them, don't archive them. The GLB carries
-the normal atlas and the metallicRoughness pair the glTF exporter packs from the
-last two; `substituted: []` on the generated row is the check that the exporter
-still packs them.
-
-**The frame is load-bearing.** The file's saved transforms park the rover with
-its remote-sensing mast folded flat on the deck (bbox tops out at 1.85 m). The
-deploy animation raises it over frames 0→48 and re-stows it after ~338, so any
-frame in 48–290 gives the mast-up rover at its real 2.23 m height. Baking the
-saved pose would ship a headless rover.
+`tools/meshes/prebake/meshPrebake.py` joins the 68 remaining parts (leaving
+behind any face-less/materialless leftovers, such as the `Icosphere` ground
+helper), decimates 199,482 → 100,000 tris, smart-UV-projects and bakes all 47
+materials into one 2048² atlas per `BAKE_PASSES` row — albedo, normal,
+roughness and metallic. Its output and the four loose
+`perseverance.prebaked.*.png` atlases beside it are gitignored build products
+— regenerate them, don't archive them. The GLB carries the normal atlas and
+the metallicRoughness pair the glTF exporter packs from the last two;
+`substituted: []` on the generated row is the check that the exporter still
+packs them.
 
 ## Attribution
 
@@ -67,7 +83,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 glTF 2.0, Draco-compressed: 69 mesh nodes, 199,601 tris, 47 materials, 22 packed
 textures (1024²/512²/256²), an armature and 23 animation actions (mast deploy
 plus cover releases). Authored normal maps reach the normal atlas only because
-the pre-bake re-points the 11 Normal Map nodes that name a UV layer at the
+the importer re-points the 11 Normal Map nodes that name a UV layer at the
 renamed one; a dangling name bakes flat in silence. Roughness spans 0.2–1.0 and
 about half the baked surface is fully metallic (aluminium, brass, gold foil,
 gunmetal). Their tint reaches the albedo atlas only because that row bakes Base

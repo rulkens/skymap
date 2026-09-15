@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { gzipSync } from 'node:zlib';
 import { mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -32,6 +32,10 @@ function contentTypeFor(path: string): string | undefined {
  * transparently inflates them, so nothing downstream of the network needs to
  * know. `syncGroup`'s local ETag hash must be computed over these same
  * gzipped bytes — see `localUploadHash`.
+ *
+ * `execFileSync` with an argument array, not a shell string: mesh-source
+ * filenames carry spaces and parentheses that an unquoted string turns into
+ * a shell syntax error.
  */
 export function uploadViaWrangler(
   { localPath, r2Key }: R2Upload,
@@ -46,13 +50,23 @@ export function uploadViaWrangler(
   const contentType = contentTypeFor(localPath);
 
   try {
-    execSync(
-      `npx wrangler r2 object put ${bucket}/${r2Key}` +
-        ` --file ${uploadPath}` +
-        ` --cache-control "${cacheControl}"` +
-        (contentType ? ` --content-type "${contentType}"` : '') +
-        (gzip ? ` --content-encoding gzip` : '') +
-        ` --remote --force`,
+    execFileSync(
+      'npx',
+      [
+        'wrangler',
+        'r2',
+        'object',
+        'put',
+        `${bucket}/${r2Key}`,
+        '--file',
+        uploadPath,
+        '--cache-control',
+        cacheControl,
+        ...(contentType ? ['--content-type', contentType] : []),
+        ...(gzip ? ['--content-encoding', 'gzip'] : []),
+        '--remote',
+        '--force',
+      ],
       { stdio: 'inherit' },
     );
   } finally {
