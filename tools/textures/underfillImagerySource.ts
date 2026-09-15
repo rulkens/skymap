@@ -23,11 +23,19 @@ export function underfillImagerySource(
     provenance: primary.provenance,
 
     async readBox(box, widthPx, heightPx) {
-      // A primary decline means nothing here for the box at all — return null
-      // WITHOUT reading filler. `bakeDeepestLevel` probes every z13 box on the
-      // globe (~33.5M), and this decline path must stay existsSync-cheap.
       const primaryRaster = await primary.readBox(box, widthPx, heightPx);
-      if (primaryRaster === null) return null;
+      if (primaryRaster === null) {
+        // Outside the band's own boxes this is one of R11's HALO tiles —
+        // baked only so the tile beside it has all three siblings, and its
+        // pixels can come from nowhere but the filler. INSIDE them a decline
+        // still means "no file at all": filling a hole in the harvest with
+        // upscaled filler would hide it behind plausible pixels.
+        const halo = !primary.coverage.some(
+          (c) =>
+            box.west < c.east && box.east > c.west && box.south < c.north && box.north > c.south,
+        );
+        return halo ? filler.readBox(box, widthPx, heightPx) : null;
+      }
 
       const fillerRaster = await filler.readBox(box, widthPx, heightPx);
       // Filler declining is strictly no worse than today: emit primary as-is.

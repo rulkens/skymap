@@ -43,10 +43,14 @@ import sharp, { type Sharp } from 'sharp';
 import type { SurfaceTileProduct } from '../../src/@types/data/SurfaceTileProduct';
 import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
 import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTileManifestBand';
+import type { SurfaceTileBand } from '../../src/@types/scene/SurfaceTileBand';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
 import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
+import { surfaceTileBandFromBounds } from '../../src/utils/scene/surfaceTileBandFromBounds';
+import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
+import { surfaceTileInBand } from '../../src/utils/scene/surfaceTileInBand';
 import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
 import { parseFlags } from '../utils/cli/args';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
@@ -73,29 +77,41 @@ import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
-/** Default coverage for a caller that doesn't clamp — degenerates
- *  `candidateTileIndices` back to the whole grid. */
-const WHOLE_GLOBE: readonly LonLatBounds[] = [{ west: -180, east: 180, south: -90, north: 90 }];
+/** Default band for a caller that doesn't clamp — degenerates
+ *  `candidateTileIndices` back to the whole grid at every level. */
+const WHOLE_GLOBE_BANDS: readonly SurfaceTileBand[] = [
+  surfaceTileBandFromBounds({ west: -180, east: 180, south: -90, north: 90 }, 0, Infinity),
+];
 
 /**
- * Every `(x, y)` a bake at level `z` needs to visit for `coverage`: the union
- * of each box's tile rect, deduped through a `Set` so overlapping or adjacent
- * boxes can't queue the same tile twice, in row-major order so `written`
- * stays deterministic before its final sort.
+ * Every `(x, y)` a bake at level `z` must visit for `bands` — R11's
+ * sibling-closed set, so no baked tile is ever missing a sibling and the
+ * runtime walk's "refine when every child's height is resident" rule can be
+ * literal. `surfaceTileInBand` is the authority; the rect below is only a
+ * superset to scan (hence the ±1 slack), deduped through a `Set` so
+ * overlapping boxes can't queue a tile twice and sorted so `written` stays
+ * deterministic.
  */
 function candidateTileIndices(
-  coverage: ReadonlyArray<LonLatBounds>,
+  bands: readonly SurfaceTileBand[],
   z: number,
   tilePx: number,
 ): ReadonlyArray<{ readonly x: number; readonly y: number }> {
+  const cols = surfaceTileColumns(z, tilePx);
+  const rows = cols / 2;
   const seen = new Set<string>();
   const indices: Array<{ x: number; y: number }> = [];
-  for (const bounds of coverage) {
-    const rect = earthTileIndicesForBounds(bounds, z, tilePx);
-    for (let y = rect.yMin; y <= rect.yMax; y++) {
-      for (let x = rect.xMin; x <= rect.xMax; x++) {
+  for (const band of bands) {
+    if (z < band.min || z > band.max) continue;
+    const xMin = Math.max(0, Math.floor(band.uBounds[0] * cols) - 1);
+    const xMax = Math.min(cols - 1, Math.floor(band.uBounds[1] * cols) + 1);
+    // Band `v` counts north from −90; tile rows count south from +90.
+    const yMin = Math.max(0, Math.floor((1 - band.vBounds[1]) * rows) - 1);
+    const yMax = Math.min(rows - 1, Math.floor((1 - band.vBounds[0]) * rows) + 1);
+    for (let y = yMin; y <= yMax; y++) {
+      for (let x = xMin; x <= xMax; x++) {
         const key = `${x},${y}`;
-        if (seen.has(key)) continue;
+        if (seen.has(key) || !surfaceTileInBand(bands, tilePx, z, x, y)) continue;
         seen.add(key);
         indices.push({ x, y });
       }
@@ -198,13 +214,14 @@ async function writeTile(rgba: Uint8Array, tilePx: number, outPath: string): Pro
  */
 async function bakeDeepestLevel(
   source: EarthImagerySource,
+  bands: readonly SurfaceTileBand[],
   z: number,
   tilePx: number,
   outDir: string,
 ): Promise<readonly string[]> {
   const written: string[] = [];
 
-  for (const { x, y } of candidateTileIndices(source.coverage, z, tilePx)) {
+  for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
     const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, TILE_PREFIX);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
@@ -250,12 +267,12 @@ export async function bakeCoarserLevel(
   tilePx: number,
   outDir: string,
   underfill?: EarthImagerySource,
-  coverage: ReadonlyArray<LonLatBounds> = WHOLE_GLOBE,
+  bands: readonly SurfaceTileBand[] = WHOLE_GLOBE_BANDS,
 ): Promise<string[]> {
   const halfPx = tilePx / 2;
   const written: string[] = [];
 
-  for (const { x, y } of candidateTileIndices(coverage, z, tilePx)) {
+  for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
     const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, TILE_PREFIX);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
@@ -359,7 +376,7 @@ function readHeightTile(outDir: string, z: number, x: number, y: number) {
 async function printWaterDiagnostics(
   outDir: string,
   z: number,
-  coverage: ReadonlyArray<LonLatBounds>,
+  bands: readonly SurfaceTileBand[],
 ): Promise<void> {
   const posts = HEIGHT_POSTS_PER_TILE;
   const step = heightLatticeStepDeg(z);
@@ -367,7 +384,7 @@ async function printWaterDiagnostics(
 
   let globalMin = Infinity;
   let globalMax = -Infinity;
-  for (const { x, y } of candidateTileIndices(coverage, z, EARTH_TILE_PX)) {
+  for (const { x, y } of candidateTileIndices(bands, z, EARTH_TILE_PX)) {
     const tile = readHeightTile(outDir, z, x, y);
     if (tile === null) continue;
     globalMin = Math.min(globalMin, tile.subtreeMinM);
@@ -452,6 +469,11 @@ export async function bakeAll(
 
   for (const { source, minLevel, underfill, height, heightUnderfill, flattenWater } of ordered) {
     const maxLevel = source.maxLevel;
+    // The band as the runtime sees it — one entry per coverage box, so the
+    // bake's tile set and the walk's request gate are the same predicate.
+    const uvBands = source.coverage.map((box) =>
+      surfaceTileBandFromBounds(box, minLevel, maxLevel),
+    );
 
     // A source that can't beat its own band floor has nothing to contribute
     // — for the global band that floor is the coarsest tier's whole-globe
@@ -465,14 +487,14 @@ export async function bakeAll(
     if (products.has('albedo')) {
       process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
       const effective = underfill ? underfillImagerySource(source, underfill) : source;
-      const deepest = await bakeDeepestLevel(effective, maxLevel, tilePx, outDir);
+      const deepest = await bakeDeepestLevel(effective, uvBands, maxLevel, tilePx, outDir);
       written.push(...deepest);
       process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
 
       for (let z = maxLevel - 1; z >= minLevel; z--) {
         // A parent's coverage box is the same as its children's (containment
         // of bounds), so the band's own boxes clamp every coarser level too.
-        const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill, source.coverage);
+        const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill, uvBands);
         written.push(...levelPaths);
         process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
       }
@@ -490,7 +512,7 @@ export async function bakeAll(
       for (let z = maxLevel; z >= minLevel; z--) {
         const levelPaths = await bakeHeightLevel({
           z,
-          tiles: candidateTileIndices(source.coverage, z, tilePx),
+          tiles: candidateTileIndices(uvBands, z, tilePx),
           source: height,
           underfill: heightUnderfill ?? null,
           outDir,
@@ -500,7 +522,7 @@ export async function bakeAll(
         written.push(...levelPaths);
         process.stderr.write(`  z${z}: ${levelPaths.length} height tiles from ${height.id}\n`);
       }
-      if (flattenWater === true) await printWaterDiagnostics(outDir, maxLevel, source.coverage);
+      if (flattenWater === true) await printWaterDiagnostics(outDir, maxLevel, uvBands);
     }
 
     // One entry per coverage box: a source spanning the antimeridian declares
@@ -688,9 +710,12 @@ async function main(): Promise<void> {
         {
           source: geodanmark,
           minLevel: GEODANMARK_MIN_LEVEL,
-          // No underfill: the harvest bbox is snapped to this band's own
-          // minLevel grid (see `geodanmarkTileSource`), so every z14-18
-          // parent inside coverage already has all four children.
+          // The band the level above it stops at: R11's sibling closure pulls
+          // in halo tiles outside the harvest bbox, and their pixels have to
+          // come from somewhere — EOX, not BMNG, or the halo ring would be
+          // six levels coarser than the tiles beside it. (`dhm` is already
+          // void-filled from skadi, the height product's own halo source.)
+          underfill: eox,
           height: dhm,
         },
       ],

@@ -1,5 +1,5 @@
 import { describe, it, expect, afterAll } from 'vitest';
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 
@@ -309,8 +309,9 @@ describe('bakeAll', () => {
   it('clamps the deepest-level bake to the band coverage instead of walking the whole grid', async () => {
     const dir = tmpDir();
     // At TILE_PX=512, z=3 is an 8x4 tile grid (lonStep=latStep=45); this box
-    // is exactly tile (x=3, y=1)'s own span, so the clamped rect is 1x1 —
-    // pre-fix, bakeDeepestLevel probes all 32 tiles of the z3 grid instead.
+    // is exactly tile (x=3, y=1)'s own span, so the clamped set is that tile
+    // plus the three siblings R11's closure pulls in with it — four, against
+    // the 32 an unclamped bakeDeepestLevel would probe.
     const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
     let readBoxCalls = 0;
     const regional: EarthImagerySource = {
@@ -333,7 +334,7 @@ describe('bakeAll', () => {
 
     await bakeAll([{ source: regional, minLevel: 3 }], dir);
 
-    expect(readBoxCalls).toBe(1);
+    expect(readBoxCalls).toBe(4);
   });
 
   // Every OTHER bakeAll test uses minLevel === maxLevel, so the coarser-level
@@ -344,8 +345,8 @@ describe('bakeAll', () => {
     const dir = tmpDir();
     // z3 (8x4) is the deepest level, z2 (4x2) the one coarser level baked.
     // This box is exactly z3 tile (x=3, y=1)'s span, whose z2 parent is
-    // (x=1, y=0) (same lonStep/latStep=45/90 arithmetic as
-    // earthTileIndicesForBounds's own tests).
+    // (x=1, y=0); the closure widens each level to that parent's siblings —
+    // four tiles at z3, the pair (0, 0) and (1, 0) at z2.
     const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
     let underfillCalls = 0;
     const underfill: EarthImagerySource = {
@@ -383,21 +384,90 @@ describe('bakeAll', () => {
     };
 
     // Orphan left over from an earlier, differently-shaped bake: a z3 child
-    // at (0, 0), whose z2 parent (0, 0) sits OUTSIDE this band's coverage
-    // (which clamps to parent (1, 0)). A coverage-clamped coarser loop never
-    // visits parent (0, 0); an unclamped (full 4x2 z2 grid) loop would find
-    // its one present child and call the underfill source to fill the rest.
-    await writeChild(dir, 3, 0, 0, [9, 9, 9, 255]);
+    // at (6, 2), whose z2 parent (3, 1) sits OUTSIDE this band's closure. A
+    // clamped coarser loop never visits it; an unclamped (full 4x2 z2 grid)
+    // loop would find its one present child and call the underfill source to
+    // fill the rest.
+    await writeChild(dir, 3, 6, 2, [9, 9, 9, 255]);
 
     await bakeAll([{ source: regional, minLevel: 2, underfill }], dir);
 
-    // 1 underfill call from the deepest level's own clamped tile (z3, x=3,
-    // y=1) + 1 from the coarser level's one clamped parent (z2, x=1, y=0).
-    // Dropping `source.coverage` from bakeAll's bakeCoarserLevel call would
-    // walk the full z2 grid instead, pick up the orphan's partial parent
-    // too, and this becomes 3 — verified by temporarily making that drop
-    // (see the report for the sabotage-run evidence).
-    expect(underfillCalls).toBe(2);
+    // 4 underfill calls, one per deepest-level tile; none at z2, where parent
+    // (1, 0) has all four children and parent (0, 0) has none at all.
+    // Dropping the band clamp from bakeAll's bakeCoarserLevel call would walk
+    // the full z2 grid instead, pick up the orphan's partial parent, and make
+    // this 5.
+    expect(underfillCalls).toBe(4);
+  });
+
+  // R11: the walk refines a quad only when EVERY child's height is resident,
+  // so a band whose tile set stopped at its own bbox would stall the quad
+  // straddling that edge forever. The bake closes the set over siblings, and
+  // the ones outside the bbox can get their pixels only from the underfill.
+  it("bakes a band edge's halo siblings from the underfill, and nothing further out", async () => {
+    const dir = tmpDir();
+    // z3 (8x4). The box is exactly tile (3, 1)'s span, so (2, 0), (3, 0) and
+    // (2, 1) are halo siblings and (1, 1) — the next quad west — is not.
+    const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
+    const primary: EarthImagerySource = {
+      id: 'stub-edge',
+      attribution: 'stub-edge attribution',
+      provenance: {
+        sourceId: 'stub-edge',
+        attribution: 'stub-edge attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [coverageBox],
+      async readBox(box, widthPx, heightPx) {
+        if (box.west !== coverageBox.west || box.south !== coverageBox.south) return null;
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        for (let i = 0; i < raster.length; i += 4) raster.set([255, 0, 0, 255], i);
+        return raster;
+      },
+    };
+    // Answers every box, unlike `stubSource` — a global filler, which is what
+    // BMNG is under EOX and EOX under GeoDanmark.
+    const underfill: EarthImagerySource = {
+      id: 'stub-edge-underfill',
+      attribution: 'stub-edge-underfill attribution',
+      provenance: {
+        sourceId: 'stub-edge-underfill',
+        attribution: 'stub-edge-underfill attribution',
+        vintage: 'stub',
+      },
+      maxLevel: 3,
+      coverage: [{ west: -180, east: 180, north: 90, south: -90 }],
+      async readBox(_box, widthPx, heightPx) {
+        const raster = new Uint8Array(widthPx * heightPx * 4);
+        for (let i = 0; i < raster.length; i += 4) raster.set(ORANGE, i);
+        return raster;
+      },
+    };
+
+    await bakeAll([{ source: primary, minLevel: 3, underfill }], dir);
+
+    const colourAt = async (x: number, y: number) => {
+      const path = join(dir, surfaceTilePath({ product: 'albedo', z: 3, x, y }, TILE_PREFIX));
+      const { data, info } = await sharp(path)
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      return pixelAt(data, info.width, Math.floor(info.width / 2), Math.floor(info.height / 2));
+    };
+
+    expectPixelNear(await colourAt(3, 1), [255, 0, 0, 255]);
+    for (const [x, y] of [
+      [2, 0],
+      [3, 0],
+      [2, 1],
+    ] as const) {
+      expectPixelNear(await colourAt(x, y), ORANGE);
+    }
+    expect(
+      existsSync(join(dir, surfaceTilePath({ product: 'albedo', z: 3, x: 1, y: 1 }, TILE_PREFIX))),
+      'the quad beyond the siblings is not baked',
+    ).toBe(false);
   });
 
   it('writes two manifest entries and both sources tiles, in band order', async () => {
