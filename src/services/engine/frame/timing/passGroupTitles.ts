@@ -12,6 +12,10 @@ import { slabName } from '../slabs';
 import { BODY_SLAB_CAPACITY } from './bodySlabCapacity';
 
 export const PASS_GROUP_TITLES: Readonly<Record<string, string>> = {
+  // FIRST, because the prelude's dispatches run ahead of every render step and
+  // this table's value order is the display order: a reader comparing a slow
+  // render row against the frame must see what already ran before it.
+  compute: 'Compute prelude',
   'volume·COSMO': 'Volumes & aggregates',
   'zoa·COSMO': 'Volumes & aggregates',
   'star-aggregates·NEAR0': 'Volumes & aggregates',

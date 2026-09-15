@@ -14,14 +14,15 @@ import { COSMO, NEAR0 } from './slabs';
 
 export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // The compute prelude. `flow` integrates the peculiar-velocity particles;
-  // `atmosphereSkyView` bakes the sky-view LUT, which folds in this frame's
-  // camera altitude + sun direction and so re-bakes every frame (unlike the
-  // once-baked transmittance + multi-scatter LUTs). Both sit well ahead of the
-  // `foreground:0` render so the atmosphere shell samples this frame's table —
-  // WebGPU orders the compute write before the later fragment read. A compute
-  // step contributes no timing slot.
+  // `sky-view` bakes its LUT, which folds in this frame's camera altitude + sun
+  // direction and so re-bakes every frame (unlike the once-baked transmittance
+  // + multi-scatter LUTs). Both sit well ahead of the `foreground:0` render so
+  // the atmosphere shell samples this frame's table — WebGPU orders the compute
+  // write before the later fragment read. Each step bills `<name>-compute` and
+  // toggles under it (`computeTimingSlotName`); the suffix is what keeps `flow`
+  // here apart from the ribbon pass of that name.
   { kind: 'compute', name: 'flow' },
-  { kind: 'compute', name: 'atmosphereSkyView' },
+  { kind: 'compute', name: 'sky-view' },
   // The sky captures, in the compute prelude's wake and ahead of every
   // other render step so a same-frame lensing draw can sample a cubemap this
   // frame actually wrote. The frame's face list for a key is empty most

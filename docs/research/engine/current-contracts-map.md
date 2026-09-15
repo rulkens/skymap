@@ -60,7 +60,7 @@ flowchart LR
     FP["frameProgram(tone, bloom)<br/>13–14 ordered FrameSteps"] --> EX["executeFrame"]
     CL["CONTENT_LAYERS<br/>36 ContentLayer rows"] --> EX
     RT["RenderTargets<br/>renderTargetRows(): 12 spec rows"] --> EX
-    CR["COMPUTE record<br/>flow, atmosphereSkyView"] --> EX
+    CR["COMPUTE record<br/>flow, sky-view"] --> EX
     RD --> EX
     EX -->|"render step: filter layers by (target, slab)"| PASS["one GPU pass per group"]
     EX -->|"composite step"| CMP["Compositor"]

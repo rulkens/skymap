@@ -26,7 +26,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/cosmoLabelProjection': 1,
   'frame/cubemapFaceContext': 4,
   'frame/deriveBodyStates': 3,
-  'frame/executeFrame': 7,
+  'frame/executeFrame': 6,
   'frame/expandFrameOrder': 6,
   'frame/foregroundMaxDistance': 1,
   'frame/milkyWayCloudLiveness': 1,

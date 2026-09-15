@@ -197,7 +197,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // Ahead of every other render step, so a same-frame lensing draw can
     // sample a cubemap this frame actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
-    expect(steps[1]).toEqual({ kind: 'compute', name: 'atmosphereSkyView' });
+    expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
     expect(steps[2]).toBe(capture[0]);
   });
 

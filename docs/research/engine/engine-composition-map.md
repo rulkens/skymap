@@ -20,7 +20,7 @@ relative to repo root; line numbers are current as of this worktree.
    targets, e.g. `hdr` into `swap`), or `'bloom'` (one opaque sub-pipeline).
    The concrete program today (`frameProgram.ts:81-152`):
    ```
-   compute:flow -> compute:atmosphereSkyView
+   compute:flow -> compute:sky-view
      -> render(volume,COSMO) -> render(hdr,COSMO)
      -> render(star-aggregates,NEAR0) -> render(mw-aggregate,NEAR0)
      -> render(hdr,NEAR0)
