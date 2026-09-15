@@ -52,7 +52,7 @@ SOURCES = {
         "hbltel_1": dict(metallic=1.0, roughness=0.2, gain=2.0, bump=0.08),
         "hbltel_2": dict(metallic=1.0, roughness=0.2, bump=0.08),
         "hbltel_4": dict(metallic=1.0, roughness=0.2, bump=0.08),
-        "hbltel_3": dict(metallic=0.8, roughness=0.35),
+        "hbltel_3": dict(metallic=0.8, roughness=0.35, bump=0.08),
     }),
 }
 
