@@ -113,6 +113,14 @@ export function cutSurfaceTiles(input: {
   const mw1 = viewProjLocal[7]!;
   const mw2 = viewProjLocal[11]!;
   const mw3 = viewProjLocal[15]!;
+  // The four side planes of the frustum in the walk's own frame (the rows of
+  // the vp, Gribb–Hartmann): inside is `w ± x >= 0`, `w ± y >= 0`. Normalised
+  // so a signed distance compares against a bounding radius.
+  const planeA = [mw0 + mx0, mw0 - mx0, mw0 + my0, mw0 - my0];
+  const planeB = [mw1 + mx1, mw1 - mx1, mw1 + my1, mw1 - my1];
+  const planeC = [mw2 + mx2, mw2 - mx2, mw2 + my2, mw2 - my2];
+  const planeD = [mw3 + mx3, mw3 - mx3, mw3 + my3, mw3 - my3];
+  const planeInvLen = planeA.map((a, k) => 1 / Math.hypot(a, planeB[k]!, planeC[k]!));
 
   const requests: SurfaceTileRequest[] = [];
   const cut: SurfaceCutTile[] = [];
@@ -159,7 +167,26 @@ export function cutSurfaceTiles(input: {
     );
     if (centreAngle - patchAngle > capAngle) return null;
 
-    // 2. Frustum, and the projected extent that drives everything else
+    // 2. Frustum, conservatively: a sphere about the patch centre whose
+    // radius is the chord to the farthest corner (which contains the whole
+    // surface patch — a lat/lon box is farthest from its centre at a corner)
+    // with headroom for skirts and for relief up to half the patch's extent,
+    // since the bake carries no per-tile height bounds. This is the ONLY
+    // reject a near-plane straddler gets: its projected bbox below is
+    // meaningless, and skipping the frustum entirely for it (as before) let
+    // the strip of ground behind a tilted camera — which straddles the eye
+    // plane along its whole width — refine to the deepest band level with
+    // nothing on screen (887 z13 leaves at 300 km/60°). Points behind the eye
+    // fail all four plane tests at once, so the sphere test culls them too.
+    const boundRadius = 1.5 * Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
+    for (let k = 0; k < 4; k++) {
+      const dist =
+        (planeA[k]! * centre[0] + planeB[k]! * centre[1] + planeC[k]! * centre[2] + planeD[k]!) *
+        planeInvLen[k]!;
+      if (dist < -boundRadius) return null;
+    }
+
+    // 3. The projected extent that drives everything else
     let minX = Infinity;
     let minY = Infinity;
     let maxX = -Infinity;
@@ -186,8 +213,9 @@ export function cutSurfaceTiles(input: {
     // footprint sweeps toward infinity as a sample nears w=0, so the
     // surviving corners alone can land anywhere, including a false reject
     // that prunes the whole subtree. Trust the bbox only when nothing was
-    // dropped; otherwise treat the patch as screen-filling and force it to
-    // the deepest level any band offers here.
+    // dropped; a straddler that survived the sphere test is at the camera's
+    // feet, so treat it as screen-filling and force it to the deepest level
+    // any band offers here.
     const straddlesNearPlane = nInFront < 9;
     if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) return null;
 

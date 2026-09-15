@@ -633,10 +633,11 @@ describe('cutSurfaceTiles', () => {
       // The tilted-view working set, measured: 300 km / 60 deg, the shipped lod
       // bias, one whole-globe band to z13 (the deepest shape any pose can meet).
       // 1855 height tiles under the max-extent screen error — the live app
-      // measured 1848 at this pose — against 1819 under the geometric mean.
-      // The remainder is NOT anisotropy: the horizon ring straddles the eye
-      // plane, and a straddler is treated as screen-filling and forced to the
-      // deepest band level (see `probe`). Fixing that is its own change.
+      // measured 1848 at this pose — and 1819 under the geometric mean alone:
+      // almost all of it was the strip of ground BEHIND the camera, which
+      // straddles the eye plane and used to skip the frustum cull, refining
+      // to z13 with nothing on screen. The sphere-vs-frustum cull in `probe`
+      // brings the pose to 39.
       const result = cutSurfaceTiles({
         ...tiltedAt(300_000, 60),
         bands: GLOBAL_BANDS,
@@ -645,7 +646,7 @@ describe('cutSurfaceTiles', () => {
       });
 
       const heightRequests = result.requests.requests.filter((r) => r.tile.product === 'height');
-      expect(heightRequests.length).toBe(1819);
+      expect(heightRequests.length).toBe(39);
     });
 
     it('a pan that scrolls an unfetched sibling into view keeps every settled leaf', () => {
@@ -1082,40 +1083,41 @@ describe('cutSurfaceTiles', () => {
         residentSlot: mockResidentSlot,
       });
 
-      // A healthy walk resolves far more than a handful of tiles at this
-      // altitude/footprint (empirically ~1100 under the fixed f64 path).
-      expect(result.cut.length).toBeGreaterThan(200);
-
-      // Coverage invariant, the real one under test: two ancestor tiles (found
-      // by direct bbox comparison against the pre-fix f32-narrowed matrix —
-      // see this task's investigation notes) sit exactly on the frustum's edge
-      // at this pose. Under the precision bug their bbox is wrongly computed
-      // as fully outside [-1,1], bbox-culling their ENTIRE subtree before any
-      // z19 leaf under them is ever considered — so NONE of their descendants
-      // can appear in `cut`. Under the fix, at least one must.
+      // Coverage oracle, independent of the walk: every z19 tile near the
+      // sub-camera point with a sample inside the frustum must be drawn by
+      // itself or an ancestor. (This used to assert `> 200` leaves against an
+      // empirical ~1100 — most of which were tiles BEHIND the camera that
+      // straddled the eye plane and escaped the frustum cull; the sphere cull
+      // leaves ~20, the ground actually on screen at 50 m.)
       const cutKeys = new Set(result.cut.map((t) => `${t.id.z}/${t.id.x}/${t.id.y}`));
-      const knownEdgeAncestors: readonly {
-        readonly z: number;
-        readonly x: number;
-        readonly y: number;
-      }[] = [
-        { z: 17, x: 88112, y: 15063 },
-        { z: 18, x: 176154, y: 30057 },
-      ];
-      for (const anc of knownEdgeAncestors) {
-        const span = 1 << (19 - anc.z);
-        const x0 = anc.x * span;
-        const y0 = anc.y * span;
-        let coversAny = false;
-        for (let dx = 0; dx < span && !coversAny; dx++) {
-          for (let dy = 0; dy < span && !coversAny; dy++) {
-            if (cutKeys.has(`19/${x0 + dx}/${y0 + dy}`)) coversAny = true;
+      const covered = (z: number, x: number, y: number): boolean => {
+        for (let az = z; az >= BASE_LEVEL; az--)
+          if (cutKeys.has(`${az}/${x >> (z - az)}/${y >> (z - az)}`)) return true;
+        return false;
+      };
+      const [cx, cy] = surfaceTileXyForUv(subCamUv, 19, EARTH_TILE_PX);
+      const cols19 = surfaceTileColumns(19, EARTH_TILE_PX);
+      let visible = 0;
+      for (let x = cx - 20; x <= cx + 20; x++) {
+        for (let y = cy - 20; y <= cy + 20; y++) {
+          let onScreen = false;
+          for (let i = 0; i < 9 && !onScreen; i++) {
+            const u = (x + (i % 3) / 2) / cols19;
+            const v = 1 - (y + Math.floor(i / 3) / 2) / (cols19 / 2);
+            const p = equirectUvToDirection([u, v]);
+            const m = viewProjLocal;
+            const w = m[3]! * p[0] + m[7]! * p[1] + m[11]! * p[2] + m[15]!;
+            if (w <= 0) continue;
+            const nx = (m[0]! * p[0] + m[4]! * p[1] + m[8]! * p[2] + m[12]!) / w;
+            const ny = (m[1]! * p[0] + m[5]! * p[1] + m[9]! * p[2] + m[13]!) / w;
+            onScreen = Math.abs(nx) <= 1 && Math.abs(ny) <= 1;
           }
+          if (!onScreen) continue;
+          visible++;
+          expect(covered(19, x, y), `z19 ${x}/${y} is on screen but not drawn`).toBe(true);
         }
-        expect(coversAny, `some z19 descendant of ${anc.z}/${anc.x}/${anc.y} must be in cut`).toBe(
-          true,
-        );
       }
+      expect(visible).toBeGreaterThan(0);
     });
   });
 });
