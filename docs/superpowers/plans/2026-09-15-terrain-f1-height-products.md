@@ -411,7 +411,7 @@ No code. Runs from **main** after merge, or from this worktree with `data/raw` s
 - [ ] Downloads complete: `data/raw/etopo/*.tif` = 1,585,813,987 B; 47 skadi cells present; write `.sha256` sidecars; `data/raw/mola/*.tif` (11.4 GB) is for F4 and is not used here.
 - [ ] DHM/Terræn tiles fetched (`npm run fetch-height -- --dhm-terraen`, ~25 tiles, ~325 MB). If that fetch fails, the Søndermarken band bakes **later** (P5 makes that a re-run) and the manifest for now carries only the global and EOX bands — which also drops the GeoDanmark **albedo** band until then (bands are shared). State this to the user before baking; it is their call.
 - [ ] Relayout: `cp -R public/data/images/earth-tiles/v7/surface public/data/images/earth-tiles/v8/albedo` (bytes identical, no re-encode), then `npm run build-surface-tiles` — albedo tiles are skipped as existing, height tiles bake, the manifest is written once both products are complete. Expect ~19.7k height tiles, ~1.3 GB (§10).
-- [ ] Eye-check on this worktree's dev server: orbit (tiles engaged, picture identical to main), the 300 km fade band, Søndermarken z19 (or z13 if the DHM band is deferred), a limb view. Debug panel shows `height n/256` climbing with residency. Refinement depth reaches the band ceiling once heights land.
+- [ ] Eye-check on this worktree's dev server: orbit (tiles engaged, picture identical to main), the 300 km fade band, Søndermarken z19 (or z13 if the DHM band is deferred), a limb view. Debug panel shows `height n/1024` climbing with residency. Refinement depth reaches the band ceiling regardless of residency (R14).
 - [ ] Deploy note for `docs/DEPLOY.md`: R2 server-side copy `earth-tiles/v7/surface → v8/albedo`, upload `v8/height`, manifest last. The prune of v5–v7 is the existing open item.
 
 ---
@@ -425,14 +425,14 @@ No code. Runs from **main** after merge, or from this worktree with `data/raw` s
 - `createTileStreamSubsystem<T>` + `TextureAtlas.uploadTexels`; no `ImageBitmap` in the stream module.
 - `buildSurfaceTiles.ts` idempotent, per-product, `--only` gone; manifest written only from a complete band table.
 - `heightTileFormat.ts`, `decodeHeightTile`, `encodeHeightTile`, `fetchHeightTile`, `HeightSource` + three sources, `fetchHeightSources.ts`, `bakeHeightLevel`, registry rows + READMEs.
-- Height stream (`r32float`, 2064², 256 slots) inside the surface-tile subsystem; `getHeightAtlasView()`.
-- `SurfaceCutTile { albedo, heightSlot, edgeCoarser }`; refinement gated on own height residency; 2:1 balance.
+- Height stream (`r32float`, 4128², 1024 slots — R14) inside the surface-tile subsystem; `getHeightAtlasView()`.
+- `SurfaceCutTile { albedo, height, edgeCoarser }`; refinement residency-blind, height inheriting from the deepest resident ancestor (R14); balance on the height level.
 
 **Observable behaviours (manual smoke)**
 
 - Picture identical to `main` at the four poses (no shader or record change).
-- Debug panel: albedo and height residency counts both climb on approach; height count never exceeds albedo count for the same level.
-- With height tiles deleted from disk, refinement stops at the base level + 0 (no patch is drawn) — the gate is real.
+- Debug panel: albedo and height residency counts both climb on approach (`height n/1024`).
+- With height tiles deleted from disk, nothing is drawn at all (no leaf resolves a height ancestor) — but refinement depth and the request set are unchanged, because the walk no longer reads residency (R14).
 - Bake: a second `npm run build-surface-tiles` run over the same output finishes in seconds and rewrites nothing.
 
 **Deferral boundary** — out of scope here, explicitly: displacement, normals, edge collapse, base-globe shrink (F2); `SurfaceHeightField`, `ceilingHeightM`, `raycast`, horizon cap, compiled min/max grid, `reliefM`, cloud clearance (F3); Mars rows, imagery and rover sites (F4); renaming the draw side (R6); the `geometricResidualM` refinement term (§6, deferred); the `tilePx` / polar-refinement / uv-conversion / "island in stars" backlog items (§3.7).
@@ -496,5 +496,5 @@ export type SurfaceCutTile = {
 
 ### Task A3: docs
 
-- [ ] Spec: §5.2 (own-tile-or-nothing → deepest resident ancestor, strict decimation is what makes it crack-free), §5.4 item 4 (R11 stays as a bake property; its "what makes the refine rule satisfiable" clause goes), §5.5 atlas size, §6 items 1–2 (refine gate gone; balance on height level; R12 kept; R13 struck), Drawability paragraph. `docs/RENDERER.md` surface-tile bullets. Plan `Definition of Done`: `SurfaceCutTile { albedo, height, edgeCoarser }`, "refinement gated on own height residency" struck, atlas 1024. Module headers of `cutSurfaceTiles.ts`/`balanceSurfaceCut.ts` ≤ 5 lines.
-- [ ] Commit `docs(terrain): R14 in spec, renderer map and plan`.
+- [x] Spec: §5.2 (own-tile-or-nothing → deepest resident ancestor, strict decimation is what makes it crack-free), §5.4 item 4 (R11 stays as a bake property; its "what makes the refine rule satisfiable" clause goes), §5.5 atlas size, §6 items 1–2 (refine gate gone; balance on height level; R12 kept; R13 struck), Drawability paragraph. `docs/RENDERER.md` surface-tile bullets. Plan `Definition of Done`: `SurfaceCutTile { albedo, height, edgeCoarser }`, "refinement gated on own height residency" struck, atlas 1024. Module headers of `cutSurfaceTiles.ts`/`balanceSurfaceCut.ts` ≤ 5 lines.
+- [x] Commit `docs(terrain): R14 in spec, renderer map and plan`.

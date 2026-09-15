@@ -2,7 +2,7 @@
 
 **Status:** F1 in execution (plan `2026-09-15-terrain-f1-height-products.md`). Written
 against `main` at `be13f9dc7`; amended 2026-09-15 from the F1 plan's rulings R1, R3,
-R11, R12 and the data rulings in §4.2 — each amendment is marked in place.
+R11, R12, R14 and the data rulings in §4.2 — each amendment is marked in place.
 
 **As built:** [`specs/completed/2026-07-28-earth-surface-virtual-texture.md`](completed/2026-07-28-earth-surface-virtual-texture.md)
 — the quadtree, the atlas, the band manifest and the residency walk this spec
@@ -114,7 +114,7 @@ export type SurfaceHeightField = {
 // 215 call sites grow `?? radiusM` and the scalar is back wearing a new costume.
 
 // SurfaceCutTile:  resident: {…}  →  albedo: ResolvedTileResidency;
-//                                    heightSlot: AtlasSlot;   // the leaf's OWN (z,x,y), never inherited
+//                                    height: { slot, levelDelta, originPosts };  // inherits like albedo (R14)
 //                                  + heightBoundsM; + edgeCoarser: [0|1, 0|1, 0|1, 0|1]
 
 // deleted (P6, #705): bakeSurfaceTileMesh.ts · surfaceTileMeshCache.ts ·
@@ -340,15 +340,17 @@ export type CoverageIndex = {
 };
 ```
 
-**The invariant that makes crack-freedom hold:** a leaf's height tile is its own
-`(z, x, y)` tile, always — never an ancestor's. The walk emits a leaf only when that
-height tile is resident; otherwise the parent stays the leaf. Albedo may still inherit
-an ancestor's texels, as it does today: it is only a texture. So residency gates
-_refinement_, and the sampled height level is a function of the cut alone — which is
-what keeps neighbours on nested lattices at every moment of streaming. Reusing the
-incumbent `resolveCutResidency` climb for height is the tempting mistake (joint 6):
-it makes neighbouring patches sample different height levels as tiles arrive, and
-the cracks flicker.
+**The invariant that makes crack-freedom hold (amended, R14):** a leaf samples the
+deepest resident tile in its OWN ancestor chain, flattened into its sub-rect of that
+tile's posts — the same climb albedo already does, and the same one `resolveHeightLattice`
+now performs beside `resolveCutResidency`. Strict decimation (§5.4.3, R1) is what makes
+that safe: the sub-rect IS the lattice the ancestor itself draws, so a leaf on inherited
+posts and its ancestor agree bit-for-bit, and only the LEVEL varies while tiles stream.
+Neighbouring levels are then stepped to within one of each other by `balanceSurfaceCut`
+(§6), which is what F2's one-bit edge collapse needs. The original rule — own tile or
+nothing, residency gating refinement — was measured as holes: the atlas allocator
+refuses when full and never retries, and below 150 km the base globe has faded out, so
+every refused tile was a hole to the stars for as long as the pose held.
 
 ### 5.3 Height tile format — `shgt1`
 
@@ -404,9 +406,8 @@ Three structural properties, none a convention:
 4. **Sibling-closed tile sets** (amended, R11). A band bakes tile `(L, x, y)` iff
    its _parent's_ box overlaps the band bounds and `min ≤ L ≤ max`, so every baked
    tile's three siblings exist; the halo tiles outside the bounds come from the
-   band's underfill. This is what lets §6's refine rule ask every visible child
-   for its own tile at a band edge, and it applies to both products
-   through one shared existence helper that the bake and the walk both call.
+   band's underfill. It applies to both products through one shared existence
+   helper that the bake and the walk both call.
 
 **Voids** are filled from the coarser level at bake time, and the bake asserts every
 post is finite. The loader rejects a payload carrying a non-finite value — one check,
@@ -416,8 +417,10 @@ sentinel reaches the GPU as a 10 km pit. The runtime sees neither.
 ### 5.5 The height atlas
 
 A second atlas instance, `r32float`, slot stride **129**: a row is 516 B, already
-4-aligned, and no WebGPU constraint asks for more. 16×16 = 256 slots in a 2064²
-texture, 17.0 MB — the same slot count as the albedo atlas, because the cut is 1:1.
+4-aligned, and no WebGPU constraint asks for more. 32×32 = 1024 slots in a 4128²
+texture, 68 MB (amended, R14). Not the albedo atlas's 256: a tilted view's working
+set runs to ~1800 tiles, and where albedo's miss is blur, height's is a flattened
+lattice, so the two products are sized by what a miss costs, not by the cut's 1:1.
 
 Sampled with `textureLoad` and **manual bilinear**, clamped to the slot rect. Three
 independent reasons, any one sufficient: `textureSample` is illegal in the vertex
@@ -431,23 +434,23 @@ slot in as a one-texel ridge along every patch edge regardless of format.
 `cutSurfaceTiles` keeps its shape — one pure per-frame quadtree walk resolving both
 `requests` and `cut` — and gains three things.
 
-1. **Two products resolved per leaf.** `SurfaceCutTile` carries an `albedo`
-   `ResolvedTileResidency` (the inline shape today, extracted to its own type) and a
-   `heightSlot` — a plain slot reference, not a resolved residency, because a leaf's
-   height tile is its own `(z, x, y)` and never an ancestor's (§5.2). Requests
-   therefore run one level ahead of the cut: where screen error wants a deeper leaf,
-   the walk requests the children's height tiles and emits the parent until the
-   first lands. **Amended (R13):** the node refines as soon as _any_ visible child's
-   own height tile is resident, onto the ready children only; a child still in
-   flight is a hole the base globe fills for one round trip. Waiting for all four
-   discarded every settled subtree each time a culled sibling scrolled into view,
-   and under a base-level parent (never resident) a whole root quad vanished to
-   the base globe — the flicker the F1 eye-check found.
-2. **A 2:1 balance constraint**, so a leaf never neighbours a leaf more than one
-   level away. This is what bounds `edgeCoarser` to one bit per edge and lets §7's
-   stitching be a vertex-shader decision needing no neighbour data beyond four bits.
-   **Amended (R12):** the balance holds _within a band's reach_ only — it never
-   coarsens a leaf against a neighbour that cannot refine (no tile exists under it
+1. **Two products resolved per leaf** (amended, R14; R13 struck). `SurfaceCutTile`
+   carries an `albedo` `ResolvedTileResidency` and a `height` record (slot,
+   `levelDelta`, `originPosts`) — the deepest resident tile in the leaf's own
+   ancestor chain and the leaf's sub-rect inside it (§5.2). Refinement is
+   **residency-blind**: a node refines iff screen error wants it and the band
+   allows it, every node on the path is requested in both products, and anything
+   still loading draws on the best loaded ancestor. Nothing is ever a hole. Screen error is **isotropic** — the
+   geometric mean of the projected bbox's extents, not the max — so a foreshortened
+   horizon sliver no longer demands the level its width alone would.
+2. **A balance constraint on the HEIGHT level** (amended, R14, R12 kept), so no two
+   edge-neighbouring leaves sample height levels more than one apart. This is what
+   bounds `edgeCoarser` to one bit per edge and lets §7's stitching be a
+   vertex-shader decision needing no neighbour data beyond four bits.
+   `balanceSurfaceCut` never adds or removes a leaf — it raises the finer side's
+   `levelDelta`, climbing to the next resident ancestor — so a cut that is already
+   drawn cannot lose patches to it. The balance holds _within a band's reach_ only:
+   it never coarsens against a neighbour that cannot refine (no tile exists under it
    at the next level), or a deep band ringed by band-capped coarse leaves would
    collapse to the coarse level. A band boundary therefore keeps a multi-level step
    with that edge's bit at 0; §7.3 says how F2 hides it.
@@ -468,13 +471,12 @@ refinement — mountains pulled in earlier from orbit — so it is deferred to a
 after the eye-check. The field stays in the header, so adding the term is a walk
 change and not a re-bake.
 
-**Drawability.** A leaf's own height tile is resident because the walk refines a node
-only onto the children whose own height tile is (R13); a node that is never refined
-into is emitted on its own residency check, so a leaf is never drawn on an ancestor's
-heights. Albedo then resolves to some resident ancestor, and
-that inheritance covers the streaming case — a deeper tile in flight — plus the
-base-level boundary. A patch with no albedo ancestor stays dropped from the cut; the
-base globe covers it, exactly as today.
+**Drawability** (amended, R14). Both products inherit: a leaf draws on the deepest
+resident ancestor of each, which covers the streaming case — a deeper tile in flight
+— plus the base-level boundary. A leaf with NO resident ancestor in either product
+stays dropped from the cut, and the base globe covers it; that is one round trip for
+a brand-new root child, and F2 (whose globe sits at the inner bound rather than
+fading out) is what stops it showing stars instead.
 
 ## 7. Displaced geometry
 
@@ -776,7 +778,8 @@ fail on a real bug nothing else catches.
   holds — the property that makes eviction unable to raise the floor (§8.2).
 - **Horizon cap**: a patch containing a peak at `boundsM.max` is _not_ culled from a
   distance where the mean-sphere cap would cull it.
-- **2:1 balance**: the walk never emits neighbouring leaves more than one level apart.
+- **Level balance** (R14): neighbouring leaves never sample height levels more than
+  one apart, and the balance never adds or removes a leaf.
 - Not tested: constant restatements, the registry's contents, clamp boundaries.
 
 `npm run perf` before and after P6, and again after displacement lands, with the
