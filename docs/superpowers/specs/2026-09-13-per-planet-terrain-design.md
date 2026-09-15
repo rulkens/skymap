@@ -516,8 +516,9 @@ struct PatchInstance {
   dLatRad          : f32,
   albedoRect       : vec4f, // at offset 32: every vec4 must precede the vec2u or
   fallbackRect     : vec4f, // WGSL alignment pads the record past 80 B
-  heightSlotOrigin : vec2u, // F2
+  heightSlotOrigin : vec2u, // F2: the leaf's SUB-RECT origin in atlas posts (R14)
   edgeCoarser      : u32,   // F2: 4 × 2-bit code (amended, F2-R1: 0|1|2, not 4 × 1 bit)
+  heightCells      : u32,   // F2 (R14): 128 >> levelDelta — was the trailing pad
 }                           // 80 B; P6 lands the first 64 B
 ```
 
@@ -565,8 +566,9 @@ parallel to it.
 
 In the fragment shader, the normal is the gradient of the bilinear cell the fragment
 lies in, from that cell's own four posts, in the local `(Ê, N̂, Û)` frame at the
-**source level's** post spacing. With `(u, v)` the fragment's position inside cell
-`(i, j)`:
+**source level's** post spacing — `patchExtent / heightCells` (R14), the lattice
+actually sampled, never a fixed 128. With `(u, v)` the fragment's position inside
+cell `(i, j)`:
 
 ```
 dhdE = ((h(i+1,j) − h(i,j))·(1−v) + (h(i+1,j+1) − h(i,j+1))·v) / postSpacingE_M
@@ -589,18 +591,19 @@ base globe only — compositing both would shade the same relief twice.
 
 ### 7.3 Crack accounting
 
-| mismatch                                         | resolved by                                                                                                                                                                                                                                                    |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| different vertex counts along a shared edge      | **edge collapse**: where `edgeCoarser` is set, odd template indices snap to the adjacent even index in the parametric domain, so the fine polyline becomes exactly the coarse one. Costs 32 degenerate triangles per collapsed edge. Requires §6's 2:1 balance |
-| different height _tiles_ across a tile boundary  | the duplicated 129th post, bit-identical by §5.4.2                                                                                                                                                                                                             |
-| different height _levels_ across an LOD boundary | bit-identical at shared lattice points by §5.4.3                                                                                                                                                                                                               |
-| f32 arithmetic from two different patch origins  | ~µm residue, five orders below a 0.149 m texel. Acceptable _only because_ the data and the topology are exact; it cannot be relied on to hide either                                                                                                           |
+| mismatch                                         | resolved by                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| different height LEVELS along a shared edge      | **edge collapse (amended, R14)**: where `edgeCoarser` is 1, that edge samples the lattice at DOUBLED stride, which by R1's strict decimation IS the coarse neighbour's own posts — so both sides compute the same height at the same parametric position. No index snapping, no degenerate triangles: the two sides always have the same vertex count (`n` is one constant), only the lattice differs. Requires §6's 2:1 balance |
+| different height _tiles_ across a tile boundary  | the duplicated 129th post, bit-identical by §5.4.2                                                                                                                                                                                                                                                                                                                                                                               |
+| different height _levels_ across an LOD boundary | bit-identical at shared lattice points by §5.4.3                                                                                                                                                                                                                                                                                                                                                                                 |
+| f32 arithmetic from two different patch origins  | ~µm residue, five orders below a 0.149 m texel. Acceptable _only because_ the data and the topology are exact; it cannot be relied on to hide either                                                                                                                                                                                                                                                                             |
 
 No skirts inside a band: a skirt is what you build when the heights disagree, and
 within one source pyramid they do not. **Amended (R12):** a _band boundary_ is a
 source seam (skadi beside ETOPO, DHM beside skadi) with a multi-level step the
 balance leaves alone, so F2 draws a skirt on exactly those edges — the ones whose
-neighbour is coarser by more than one level — and nowhere else.
+neighbour's HEIGHT level is two or more coarser after the balance (`edgeCoarser`
+2, which R14 makes exactly that condition) — and nowhere else.
 
 ### 7.4 The base globe
 
@@ -613,8 +616,15 @@ the 300→150 km band.
 Fix: draw the base globe at `datumRadiusM + reliefM[0]` — shrunk by maximum
 depression, 430 m on Earth, 0.007 % (§4.4) — so resident patches always cover it.
 Where no patch is resident the globe reads 430 m small, sub-pixel at any range the
-base globe is visible at. The fade band and the
-`'nearer-or-equal'` compare both stay as they are.
+base globe is visible at. The `'nearer-or-equal'` compare stays.
+
+**Amended (R14): the descent fade is gone.** It existed for the depth fight an
+un-shrunk globe had with the patches, and the inner bound removes that fight. It
+also made the R14 hole worse: below 150 km a leaf with no resident ancestor — one
+round trip for a brand-new root child — showed stars rather than ground. The globe
+is now drawn at every altitude at alpha 1, opaque, and is what covers whatever the
+cut does not (`baseGlobeFadeAlpha`, `EARTH_BASE_GLOBE_FADE_*` and the
+`baseGlobeAlpha` uniform slot are deleted).
 
 ## 8. Terrain as ground truth
 
