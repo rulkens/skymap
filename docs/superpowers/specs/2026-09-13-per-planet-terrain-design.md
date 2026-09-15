@@ -1,6 +1,8 @@
 # Per-planet 3D terrain — Earth and Mars — design
 
-**Status:** Draft (2026-09-13), awaiting plans. Written against `main` at `be13f9dc7`.
+**Status:** F1 in execution (plan `2026-09-15-terrain-f1-height-products.md`). Written
+against `main` at `be13f9dc7`; amended 2026-09-15 from the F1 plan's rulings R1, R3,
+R11, R12 and the data rulings in §4.2 — each amendment is marked in place.
 
 **As built:** [`specs/completed/2026-07-28-earth-surface-virtual-texture.md`](completed/2026-07-28-earth-surface-virtual-texture.md)
 — the quadtree, the atlas, the band manifest and the residency walk this spec
@@ -160,7 +162,7 @@ never pushed — only ever permitted lower as finer data lands.
 | --- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | a   | **Delete the name `radiusM`.** Every one of the 215 sites fails to compile and picks one of five currencies, legibly, in the diff | one mechanical PR over ~10 hubs. The alternative — keeping `radiusM` as the datum with bounds beside it — leaves R1/R4/R5 silently holding the wrong currency and removes the compiler from the loop, which is the entire value                                                                                                                                                            |
 | b   | **Break the manifest shape** (`levels` → `bands`)                                                                                 | `fetchEarthTileManifest`'s guard rejects unknown shapes, so tiles are OFF in production between merge and R2 sync (`docs/DEPLOY.md:47`). Accepted: the bake must re-run for height anyway, and `prefix` versioning already isolates the CDN. Compat — both keys read forever — was rejected                                                                                                |
-| c   | **Nested point decimation** for the height pyramid, not filtering                                                                 | coarse levels are point-sampled, so a peak can survive into a level where its neighbours averaged away. Bought: level _L_ is a bit-identical subset of _L+1_, making cross-level cracks structurally zero instead of skirt-hidden. Softened by choosing, among each coarse post's four candidates, the one nearest the local mean — still nested                                           |
+| c   | **Nested point decimation** for the height pyramid, not filtering                                                                 | coarse levels are point-sampled, so a peak can survive into a level where its neighbours averaged away. Bought: level _L_ is a bit-identical subset of _L+1_, making cross-level cracks structurally zero instead of skirt-hidden. **Amended (R1):** strict decimation — the coarse post _is_ the coincident fine post, no candidate choice, so §5.4.3's identity holds by construction    |
 | d   | **Procedural vertex-shader geometry** (user's choice at the checkpoint)                                                           | replaces exact f64 CPU-baked positions with f32 small-angle trig on the _existing_ Earth path. Bought: deletes three modules and the per-frame vertex upload, and makes real instancing possible for the first time — one draw call, ≤ 80 B per patch. Requires a numeric test against f64 ground truth and its own perf measurement (P6)                                                  |
 | e   | **A compiled coarse min/max height grid** (64×32 int16 pairs, 8 KB/body) in the bundle                                            | 8 KB of bundle per body. Bought: `ceilingHeightM` has a bound at boot with zero network, so the floor never steps _up_ when the first tiles land — which happens on close approach, exactly when the camera is near the ground. It is the z6 layer of the bound the tile headers carry, and it is the one compiled home for relief: `reliefM` is its extremes, not a second compiled tuple |
 | f   | **One shared atlas, at most one engaged body**                                                                                    | a hypothetical pose close to two planets at once gets tiles on neither. Bought: 268 MB instead of 536 MB. Tiles engage only on close approach, and no pose is close to two planets                                                                                                                                                                                                         |
@@ -185,10 +187,9 @@ P1 and P6 each get their own PR. P2–P5 ride the first feature PR as separate
 commits. Prep, adjacent cleanup and feature are three different diffs whatever PR
 they ride.
 
-Sequencing conflict to resolve first: `TILE_PREFIX` is `earth-tiles/v5` on `main`
-(`buildEarthTiles.ts:127`) but the on-disk bake is `v6` from the unmerged
-`eox-2025` worktree. That must land or be abandoned before the height bake bumps
-the prefix again.
+The `eox-2025` sequencing conflict is resolved: it landed as `v7` (#662). F1 bumps
+`TILE_PREFIX` to `earth-tiles/v8` with a per-product segment (`albedo/`, `height/`);
+the albedo relayout is a byte-identical copy of `v7/surface`, never a re-encode.
 
 ### 3.7 Adjacent findings
 
@@ -240,23 +241,32 @@ therefore have identical band boxes at identical levels, on every body.
 
 Heights are only needed where bands exist, which makes acquisition modest.
 
-- **Earth global:** ETOPO 2022 30″ (~1.9 GB, one download, geographic grid,
-  includes bathymetry). Bathymetry is clamped to 0 at bake time — the ocean is a
-  flat sea at the datum, not a hole (§4.4).
+- **Earth global:** ETOPO 2022 30″ surface GeoTIFF (1,585,813,987 B, one download,
+  geographic grid, includes bathymetry) from
+  `ngdc.noaa.gov/mgg/global/relief/ETOPO2022/data/30s/30s_surface_elev_gtif/` — the
+  thredds path first quoted here 404s. Water is flattened at bake time per §4.4 (R3),
+  not clamped.
 - **Earth deep bands:** the `skadi` product in `s3://elevation-tiles-prod`, which
   is SRTM-format 1°×1° 3601² int16 **in geographic coordinates** — no reprojection,
   unlike the terrarium PNGs in the same bucket, which are WebMercator. Verified
   live: `skadi/N55/N55E012.hgt.gz` → 200, 2.1 MB, 3601², min −60 / max 129. The 19
   EOX boxes need ~30 cells.
-- **Søndermarken (z14–19 albedo):** DHM/Terræn 0.4 m raster via the Dataforsyningen
-  WCS `dhm_terraen` coverage (token required). Note the repo's existing
+- **Søndermarken (z14–19 albedo):** DHM/Terræn 0.4 m as 1 km GeoTIFF tiles
+  (`DTM_1km_<N>_<E>.tif`, EPSG:25832) from the Datafordeler `GetRasterFile`
+  endpoint with the keychain key `skymap-datafordeler-apikey`, read in-process and
+  never logged (`npm run fetch-height -- --dhm-terraen`). Note the repo's existing
   `npm run fetch-dhm` pulls DHM _point clouds_ for the scene-workbench LiDAR bake —
   a different endpoint and a different product.
-- **Mars global:** MOLA–HRSC blended DEM 200 m v2 (USGS Astrogeology, 106,694 ×
-  53,347 int16, simple cylindrical, sphere radius 3,396,190 m — note this differs
-  from the scene's 3,390,000 m Mars radius; see §4.3). Imagery: Viking MDIM21.
-- **Mars rover sites:** HiRISE DTM mosaics at ~1 m with 25 cm orthoimages (Jezero
-  has the USGS Mars 2020 TRN products; the 2024 MSR TRN release is a 5.3 GB zip).
+- **Mars global:** **amended (user ruling 2026-09-15):** MOLA 463 m DEM
+  (`Mars_MGS_MOLA_DEM_mosaic_global_463m.tif`, 2.1 GB) replaces the 200 m MOLA–HRSC
+  blend — z7 is the only global level wanted, and 463 m posts already sit inside
+  z7's 1,300 m. Reference sphere 3,396,190 m, so the §4.3 rebase still applies.
+  Imagery: Viking MDIM21 232 m (12.7 GB).
+- **Mars rover sites:** Gale and Jezero have USGS HiRISE DTM mosaics at ~1 m with
+  25 cm orthoimages (the 2024 MSR TRN release is a 5.5 GB zip). Gusev and Meridiani
+  have no mosaic: they use controlled HiRISE stereo-pair DTM + ortho COGs from the
+  public `astrogeo-ard` bucket, whose orthos are single-band RED — colour for those
+  two sites comes from tinting with the global base (F4).
 
 All fetchers register in `tools/utils/io/rawDataRegistry.ts` with provenance
 READMEs, per `docs/DATA.md:214-222`.
@@ -277,12 +287,21 @@ reference sphere and any areoid correction are named in the provenance README.
 ### 4.4 Water
 
 Copernicus and SRTM are hydro-flattened (water at ~0), so no extra work there.
-ETOPO carries real bathymetry, which would make every ocean a 4 km pit. The bake
-clamps **marine** bathymetry to 0 — negative posts under the source's ocean mask.
-Land below sea level is not water and keeps its value: the Dead Sea at −430 m and the
-Caspian shore are terrain, which is why Earth's `reliefM[0]` is ≈ −430 m and not 0.
-Coastal cliffs are not introduced: the clamp matches what the hydro-flattened deep
-sources already do, so the two agree at band boundaries.
+ETOPO carries real bathymetry, which would make every ocean a 4 km pit. **Amended
+(R3):** the bake flattens water by connected component over the whole level grid
+(NASA water mask, 4-connected, longitude-wrapped): the largest component — the world
+ocean — goes to 0, every other component to the lowest post on its own shore. Land
+below sea level is not water and keeps its value: the Dead Sea at −430 m is terrain,
+which is why Earth's `reliefM[0]` is ≈ −430 m and not 0. Coastal cliffs are not
+introduced: the flattening matches what the hydro-flattened deep sources already do,
+so the two agree at band boundaries.
+
+_Open after the first real bake (2026-09-15):_ where the mask says land but ETOPO
+30″ puts the post under deep water — atolls, the Antarctic coast, the Caspian and
+Black Sea shores — those posts escape flattening (single-post needles to −4.9 km at
+z7) and donate their depth as a basin's "lowest shore" (Caspian −131 m instead of
+≈ −28, Black Sea −541 instead of 0). Candidate rule for the user: a land post below a
+threshold that touches water adopts the water level and is ignored as a shore.
 
 ## 5. The tiled products
 
@@ -382,6 +401,13 @@ Three structural properties, none a convention:
    produce exactly zero crack even where a z patch meets a z+1 patch sampling a
    different height level.
 
+4. **Sibling-closed tile sets** (amended, R11). A band bakes tile `(L, x, y)` iff
+   its _parent's_ box overlaps the band bounds and `min ≤ L ≤ max`, so every baked
+   tile's three siblings exist; the halo tiles outside the bounds come from the
+   band's underfill. This is what makes §6's refine rule — all four children
+   resident, or none — satisfiable at a band edge, and it applies to both products
+   through one shared existence helper that the bake and the walk both call.
+
 **Voids** are filled from the coarser level at bake time, and the bake asserts every
 post is finite. The loader rejects a payload carrying a non-finite value — one check,
 no flag. A NaN reaching the runtime propagates into vertex positions; a `−9999`
@@ -414,6 +440,11 @@ slot in as a one-texel ridge along every patch edge regardless of format.
 2. **A 2:1 balance constraint**, so a leaf never neighbours a leaf more than one
    level away. This is what bounds `edgeCoarser` to one bit per edge and lets §7's
    stitching be a vertex-shader decision needing no neighbour data beyond four bits.
+   **Amended (R12):** the balance holds _within a band's reach_ only — it never
+   coarsens a leaf against a neighbour that cannot refine (no tile exists under it
+   at the next level), or a deep band ringed by band-capped coarse leaves would
+   collapse to the coarse level. A band boundary therefore keeps a multi-level step
+   with that edge's bit at 0; §7.3 says how F2 hides it.
 3. **A terrain-aware horizon cap.** Today `capAngle = acos(radiusM / camLen)` with
    a hard `camLen > radiusM` early-return of an empty cut. Both are mean-sphere
    facts and both are wrong with terrain: on Mars a 9 km peak is geometrically visible
@@ -431,8 +462,10 @@ refinement — mountains pulled in earlier from orbit — so it is deferred to a
 after the eye-check. The field stays in the header, so adding the term is a walk
 change and not a re-bake.
 
-**Drawability.** A leaf's own height tile is resident by construction: that residency
-is what let the walk refine to it. Albedo then resolves to some resident ancestor, and
+**Drawability.** A leaf's own height tile is resident because the walk refines a node
+only once every visible child's own height tile is; a node that is never refined
+into is emitted on its own residency check, so a leaf is never drawn on an ancestor's
+heights. Albedo then resolves to some resident ancestor, and
 that inheritance covers the streaming case — a deeper tile in flight — plus the
 base-level boundary. A patch with no albedo ancestor stays dropped from the cut; the
 base globe covers it, exactly as today.
@@ -551,7 +584,11 @@ base globe only — compositing both would shade the same relief twice.
 | different height _levels_ across an LOD boundary | bit-identical at shared lattice points by §5.4.3                                                                                                                                                                                                               |
 | f32 arithmetic from two different patch origins  | ~µm residue, five orders below a 0.149 m texel. Acceptable _only because_ the data and the topology are exact; it cannot be relied on to hide either                                                                                                           |
 
-No skirts. A skirt is what you build when the heights disagree; these do not.
+No skirts inside a band: a skirt is what you build when the heights disagree, and
+within one source pyramid they do not. **Amended (R12):** a _band boundary_ is a
+source seam (skadi beside ETOPO, DHM beside skadi) with a multi-level step the
+balance leaves alone, so F2 draws a skirt on exactly those edges — the ones whose
+neighbour is coarser by more than one level — and nowhere else.
 
 ### 7.4 The base globe
 
@@ -654,8 +691,8 @@ Mars needs the imagery path it does not have: today it is one whole-globe
 `mars-8192.jpg` at 2.6 km/texel, no tiles, no DEM, no normal map.
 
 - **Global albedo:** Viking MDIM21 → z3–z7, mirroring Earth's BMNG band.
-- **Global height:** MOLA–HRSC 200 m → z3–z7 (1,300 m posts), matching the albedo
-  band level for level. Mars relief is ±21 km on a 3,390 km radius — 0.6 %, four
+- **Global height:** MOLA 463 m (amended, §4.2) → z3–z7 (1,300 m posts), matching
+  the albedo band level for level. Mars relief is ±21 km on a 3,390 km radius — 0.6 %, four
   times Earth's — so Olympus Mons and Valles Marineris are visible from orbit in a
   way Earth's relief is not, which is the case for matching rather than trailing the
   imagery. The source supports z9.7, so z7 is a re-bake away from deeper if wanted.
@@ -687,7 +724,9 @@ Height bytes are 66,588 per tile (§5.3); a full pyramid to level `L` costs roug
 | Mars rover sites height (4×) | z10–z17 | = albedo count | 1.27 m       | count × 66.6 KB |
 
 Height bands equal albedo bands (§4.1), so on Earth the height pyramid mirrors the
-albedo pyramid tile for tile, 19,701 each. Each ceiling is source-clean, not
+albedo pyramid tile for tile, 19,701 each (the first real bake, 2026-09-15, landed on
+exactly that count at 1.3 GB), plus the one-parent-wide halo per level that §5.4.4's
+sibling closure adds to both products. Each ceiling is source-clean, not
 interpolated: global z7's 2,446 m posts sit inside ETOPO 30″'s 926 m; the EOX boxes'
 z13 38.2 m posts inside skadi 1″'s 30 m; Søndermarken's z19 0.597 m posts inside DHM's
 0.4 m. Nothing is invented anywhere real data exists — the requirement in §1, and the
