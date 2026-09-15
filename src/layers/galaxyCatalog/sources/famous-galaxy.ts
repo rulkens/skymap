@@ -54,4 +54,8 @@ export const FAMOUS_GALAXY_ENTRY = {
   // every other catalog's brightness.
   sbBoost: 0.45,
   falloffHalfMpc: 1000,
+  category: 'curated',
+  // Famous is the codebase's only `surveyDeepZoom` exemption, so it draws
+  // at the boot rung ahead of the bulk surveys.
+  priority: 20,
 } as const satisfies GalaxyCatalogSourceEntry;

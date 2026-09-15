@@ -24,4 +24,7 @@ export const SYNTHETIC_ENTRY = {
   // Per-source SB boost — 1.0 = no boost.
   sbBoost: 1.0,
   falloffHalfMpc: 1e30,
+  category: 'synthetic',
+  // Ahead of everything real: only demanded when the real catalogs failed.
+  priority: 5,
 } as const satisfies GalaxyCatalogSourceEntry;

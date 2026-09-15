@@ -1,5 +1,6 @@
 import type { BandLabels } from './BandLabels';
 import type { ColourIndexSpec } from './ColourIndexSpec';
+import type { GalaxyCatalogSourceCategory } from './GalaxyCatalogSourceCategory';
 import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from '../SourceEntryBase';
 import type { Tier } from '../Tier';
@@ -96,4 +97,13 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    * catalogs keep the original ~1000 Mpc tuning.
    */
   readonly falloffHalfMpc: number;
+  /** See `GalaxyCatalogSourceCategory`. */
+  readonly category: GalaxyCatalogSourceCategory;
+  /**
+   * Fetch-priority rank `ASSET_WIRING` mints the row at (`popHighestPriority`,
+   * lower first). Distinct per source, even within `survey` — ties break by
+   * array order, which would silently fetch GLADE (26 MB) ahead of Milliquas
+   * (12.8 MB).
+   */
+  readonly priority: number;
 };

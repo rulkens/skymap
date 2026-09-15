@@ -52,18 +52,26 @@
  * but `maybeArmSyntheticFallback` bails before setting the request flag.
  */
 
-import { Source } from '../../../data/sources';
+import { Source, GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { FormatVersionError } from '../../../data/formatVersionError';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
-import {
-  GALAXY_CATALOG_POINT_SOURCES,
-  TIER_FETCHED_POINT_SOURCES,
-} from './galaxyCatalogSourceRegistry';
 import { reevaluateDemand } from './reevaluateDemand';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
+import type { SourceType } from '../../../@types/data/SourceType';
+
+// Counted toward the ready gate; a hidden catalog counts as already settled
+// (below). Private here — this gate is the only consumer.
+const GALAXY_CATALOG_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCES.filter(
+  (code) => SOURCE_REGISTRY[code].category === 'survey',
+);
+
+// Subscribed to learn when every real galaxy catalog has settled.
+const TIER_FETCHED_POINT_SOURCES: readonly SourceType[] = GALAXY_CATALOG_SOURCES.filter(
+  (code) => SOURCE_REGISTRY[code].category !== 'synthetic',
+);
 
 /**
  * Wire the synthetic-fallback gate. Subscribes to every tier-fetched point

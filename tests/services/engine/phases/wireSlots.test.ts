@@ -204,18 +204,9 @@ vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () =>
 // hand, so `wireGalaxyCatalogSourceSlot` is stubbed to a no-op here —
 // otherwise it would overwrite those fakes with real slots (whose commits hit
 // the real fetchers, unmocked in this file) before the demand loop ever runs.
-// `GALAXY_CATALOG_POINT_SOURCES` / `TIER_FETCHED_POINT_SOURCES` stay real
-// (via importOriginal) since `createSyntheticFallback` reads them to know
-// which sources to subscribe to.
-vi.mock(
-  '../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry',
-  async (importOriginal) => ({
-    ...(await importOriginal<
-      typeof import('../../../../src/services/engine/wiring/galaxyCatalogSourceRegistry')
-    >()),
-    wireGalaxyCatalogSourceSlot: vi.fn(),
-  }),
-);
+vi.mock('../../../../src/services/engine/wiring/wireGalaxyCatalogSourceSlot', () => ({
+  wireGalaxyCatalogSourceSlot: vi.fn(),
+}));
 
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the

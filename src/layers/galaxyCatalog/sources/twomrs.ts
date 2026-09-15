@@ -29,4 +29,8 @@ export const TWOMRS_ENTRY = {
   // Per-source SB boost — 1.0 = no boost.
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
+  category: 'survey',
+  // Outranks the star catalog (50) and the other surveys: buys resident
+  // local structure for about a second of stars-arrive-later.
+  priority: 40,
 } as const satisfies GalaxyCatalogSourceEntry;
