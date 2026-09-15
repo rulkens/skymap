@@ -7,8 +7,9 @@ import { surfaceTileInBand } from './surfaceTileInBand';
 /**
  * balanceSurfaceCut — steps edge-neighbouring leaves onto HEIGHT levels no
  * more than one apart (R14) by climbing the finer side's lattice; leaves are
- * never added or removed. A neighbour that cannot refine (no band bakes under
- * it) is exempt: a band ceiling is a permanent step (R12). Longitude wraps.
+ * never added or removed. Meeting a neighbour AT its band ceiling (no tile
+ * one level finer than its CURRENT height) is skipped — a permanent step
+ * (R12) — but its edge bit is still set. Longitude wraps.
  */
 export function balanceSurfaceCut(
   cut: readonly SurfaceCutTile[],
@@ -65,11 +66,11 @@ export function balanceSurfaceCut(
   }
 
   const cell = [0, 0];
-  /** Every adjacent pair, visited once, from the finer-or-equal side: the
+  /** Every adjacent pair, visited once, from the finer-or-equal LEAF side: the
    *  coarser leaf of a pair never finds the finer one, so `visit` gets both
-   *  indices and `edge` as seen from `i`. A pair straddling a band ceiling is
-   *  skipped whole (R12): nothing exists under the coarse side to refine into,
-   *  so its step is permanent and meeting it would walk the cut back up. */
+   *  indices and `edge` as seen from `i`. Ceiling exemption (R12) is decided
+   *  per-comparison by the caller, not here — it keys on HEIGHT level, which
+   *  a pair's leaf adjacency does not determine. */
   function eachPair(visit: (i: number, j: number, edge: number) => void): void {
     for (let i = 0; i < cut.length; i++) {
       const { z, x, y } = cut[i]!.id;
@@ -77,12 +78,19 @@ export function balanceSurfaceCut(
         if (!neighbourCell(edge, z, x, y, cell)) continue;
         const j = coveringLeaf(z, cell[0]!, cell[1]!);
         if (j < 0 || j === i) continue;
-        const other = cut[j]!.id;
-        if (other.z < z && !surfaceTileInBand(bands, tilePx, other.z + 1, other.x * 2, other.y * 2))
-          continue;
         visit(i, j, edge);
       }
     }
+  }
+
+  /** True when leaf `k`'s cell has no tile one level FINER than its CURRENT
+   *  height level (not its leaf level, which streaming can leave stale) — a
+   *  permanent band ceiling (R12), not a resident tile just not landed yet. */
+  function atHeightCeiling(k: number): boolean {
+    const { z, x, y } = cut[k]!.id;
+    const hz = heightLevel(k);
+    const shift = z - hz;
+    return !surfaceTileInBand(bands, tilePx, hz + 1, (x >> shift) * 2, (y >> shift) * 2);
   }
 
   /** Climb leaf `i`'s lattice to `targetLevel` or the next resident level
@@ -98,7 +106,9 @@ export function balanceSurfaceCut(
 
   // Fixpoint: one climb can put its leaf two levels from a neighbour that was
   // in balance a moment ago. `levelDelta` only ever grows and is bounded by the
-  // base level, so this terminates.
+  // base level, so this terminates. Coarsening the fine side toward a coarse
+  // one AT its ceiling would throw away resolution the ring can never meet
+  // halfway (Søndermarken), so that side alone is exempt — the step survives.
   let changed = true;
   while (changed) {
     changed = false;
@@ -106,9 +116,9 @@ export function balanceSurfaceCut(
       const a = heightLevel(i);
       const b = heightLevel(j);
       if (a - b >= 2) {
-        if (coarsenTo(i, b + 1)) changed = true;
+        if (!atHeightCeiling(j) && coarsenTo(i, b + 1)) changed = true;
       } else if (b - a >= 2) {
-        if (coarsenTo(j, a + 1)) changed = true;
+        if (!atHeightCeiling(i) && coarsenTo(j, a + 1)) changed = true;
       }
     });
   }
@@ -122,5 +132,12 @@ export function balanceSurfaceCut(
     else if (b === a + 1) edges[j]![edge ^ 1] = 1;
   });
 
-  return cut.map((leaf, i) => ({ ...leaf, height: heights[i]!, edgeCoarser: edges[i]! }));
+  // Most leaves clear balance untouched every frame; returning the SAME
+  // object then (not a spread copy) skips ~900 allocations per frame.
+  return cut.map((leaf, i) => {
+    const e = edges[i]!;
+    if (heights[i] === leaf.height && e[0] === 0 && e[1] === 0 && e[2] === 0 && e[3] === 0)
+      return leaf;
+    return { ...leaf, height: heights[i]!, edgeCoarser: e };
+  });
 }

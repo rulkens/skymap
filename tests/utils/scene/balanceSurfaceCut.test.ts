@@ -195,6 +195,51 @@ describe('balanceSurfaceCut', () => {
     expect(find(balanced, 13, 40, 20).edgeCoarser).toEqual([0, 0, 0, 0]);
   });
 
+  it('sets the edge bit toward a band-ceiling neighbour without coarsening either side', () => {
+    // A one-level step, not the six-level island case above: too small to
+    // coarsen regardless, so this isolates R14(b) — the old code keyed the
+    // ceiling check on the neighbour's LEAF level and skipped the pair from
+    // BOTH passes, so the bit never got set even though nothing needed climbing.
+    const islandZ7X = 10;
+    const islandZ7Y = 5;
+    const deepCols = surfaceTileColumns(7, EARTH_TILE_PX);
+    const deepRows = deepCols / 2;
+    const bands: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: 0, max: 7 },
+      {
+        uBounds: [islandZ7X / deepCols, (islandZ7X + 1) / deepCols],
+        vBounds: [1 - (islandZ7Y + 1) / deepRows, 1 - islandZ7Y / deepRows],
+        min: 8,
+        max: 8,
+      },
+    ];
+    const cut = [leafAt(8, islandZ7X * 2, islandZ7Y * 2), leafAt(7, islandZ7X - 1, islandZ7Y)];
+
+    const balanced = balance(cut, bands);
+
+    expect(find(balanced, 8, islandZ7X * 2, islandZ7Y * 2).height.levelDelta).toBe(0);
+    expect(find(balanced, 8, islandZ7X * 2, islandZ7Y * 2).edgeCoarser).toEqual([1, 0, 0, 0]);
+  });
+
+  it("climbs the fine side past a neighbour's stale height when tiles exist below it", () => {
+    // The neighbour's LEAF sits at z12 (a real ceiling if key'd on leaf level
+    // — the band caps at 12) but its resolved HEIGHT is still z10 —
+    // streaming lag, not a ceiling: z11 is inside the band, one level under
+    // its current height. The old leaf-keyed check saw "nothing at z13" and
+    // wrongly exempted the whole pair; the fine z13 siblings either side must
+    // still climb to meet it.
+    const cappedAt12: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: 0, max: 12 },
+    ];
+    const cut = [leafAt(13, 39, 20), leafAt(12, 20, 10, 10), leafAt(13, 42, 20)];
+
+    const balanced = balance(cut, cappedAt12, heightsAt([13, 12, 11, 10]));
+
+    expect(worstStep(balanced)).toBeLessThanOrEqual(1);
+    expect(find(balanced, 13, 39, 20).height.levelDelta).toBe(2);
+    expect(find(balanced, 13, 42, 20).height.levelDelta).toBe(2);
+  });
+
   it('treats the antimeridian columns as neighbours', () => {
     // x = 0 and x = cols - 1 share an edge. Without the wrap, the z9 leaves at
     // the last column see no western neighbour and the seam goes unstitched.
