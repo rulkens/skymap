@@ -7,9 +7,9 @@
  *
  * Keeping the ladder in a single place means the two entry points can never
  * silently drift in grammar (a prefix or a pos-precision change re-anchors a
- * shared URL onto a different galaxy).  `resolveFocusId` is the inverse of this
- * function; the encode↔decode round-trip parity test is the guard that keeps
- * this home single.
+ * shared URL onto a different galaxy). The composed resolver's `resolveFocusId`
+ * is the inverse of this function; the encode↔decode round-trip parity test is
+ * the guard that keeps this home single.
  *
  * The ladder, with the rationale that used to live in both encoders:
  *   - Synthetic → null   : procedurally-generated rows have no durable identity

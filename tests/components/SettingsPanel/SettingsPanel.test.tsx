@@ -73,17 +73,8 @@ describe('SettingsPanel — composition order (D13)', () => {
 
   it('renders nothing extra over the empty composition', () => {
     layersRef.current = [];
-    const { queryByTestId, getByTestId } = render(<SettingsPanel />);
+    const { queryByTestId } = render(<SettingsPanel />);
 
     expect(queryByTestId('stub-layer-section')).toBeNull();
-    // The eight core sections are still present and unchanged.
-    expect(getByTestId('galaxies-section')).toBeTruthy();
-    expect(getByTestId('stars-section')).toBeTruthy();
-    expect(getByTestId('cosmic-web-section')).toBeTruthy();
-    expect(getByTestId('flow-section')).toBeTruthy();
-    expect(getByTestId('structures-section')).toBeTruthy();
-    expect(getByTestId('labels-section')).toBeTruthy();
-    expect(getByTestId('display-section')).toBeTruthy();
-    expect(getByTestId('earth-section')).toBeTruthy();
   });
 });

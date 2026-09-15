@@ -1,7 +1,7 @@
 /**
  * zoneOfAvoidanceSelectionRow — the dust-band singleton. No `focusId`: the
  * band has no position to fly to, so there is nothing for a `#focus=` hash
- * to name (mirrors the deleted `focusIdOf.ts`'s null row for this type).
+ * to name.
  */
 
 import { Source } from '../../../data/sources';

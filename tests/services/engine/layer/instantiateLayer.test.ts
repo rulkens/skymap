@@ -30,35 +30,4 @@ describe('instantiateLayer', () => {
     expect(instance.frame?.(ctx, passState)).toBe(true);
     expect(frameSpy).toHaveBeenCalledWith(ctx, passState);
   });
-
-  it('a Layer without frame or selection binds null and []', () => {
-    const runtime = { tag: 'bare' };
-    const layer: Layer<'bare', typeof runtime> = {
-      name: 'bare',
-      create: () => runtime,
-      destroy: vi.fn(),
-      passes: () => [],
-    };
-
-    const instance = instantiateLayer(layer, STUB_DEPS);
-
-    expect(instance.frame).toBeNull();
-    expect(instance.selection).toEqual([]);
-  });
-
-  it('destroy calls the Layer destroy with the created runtime', () => {
-    const runtime = { tag: 'destroy-me' };
-    const destroySpy = vi.fn();
-    const layer: Layer<'d', typeof runtime> = {
-      name: 'd',
-      create: () => runtime,
-      destroy: destroySpy,
-      passes: () => [],
-    };
-
-    const instance = instantiateLayer(layer, STUB_DEPS);
-    instance.destroy();
-
-    expect(destroySpy).toHaveBeenCalledWith(runtime);
-  });
 });

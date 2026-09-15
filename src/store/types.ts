@@ -126,10 +126,10 @@ export type SagaContext = {
   resolveDeps: () => ResolveDeps;
   /**
    * The composed `SelectionResolver` (D5) — the one object the pick path and
-   * every selection-reconciling saga read instead of the deleted
-   * `resolvePick`/`extractSelectionRow`/`resolveFocusId`/`focusIdOf` tables.
-   * Reads `state.selectionKindRows` lazily, so a Layer row `createLayers`
-   * appends after registration is visible on the very next call.
+   * every selection-reconciling saga read for pick resolution, row extraction,
+   * and focus-id encode/decode. Reads `state.selectionKindRows` lazily, so a
+   * Layer row `createLayers` appends after registration is visible on the very
+   * next call.
    */
   selection: SelectionResolver;
   /**

@@ -1,10 +1,9 @@
 /**
  * galaxyCatalogSelectionRow — the core `SelectionKindRow` for per-point galaxy
  * catalogs. Pick identity is positional (index drifts on a tier swap; the
- * tier saga re-anchors by durable id). Focus-id decode is the pgc-/sdss-/
- * pos@/famous branch set moved whole from the deleted `resolveFocusId.ts`;
- * order no longer matters because `claims` makes each branch mutually
- * exclusive by construction (see `composeSelectionRows.ts`).
+ * tier saga re-anchors by durable id). Focus-id decode dispatches over the
+ * pgc-/sdss-/pos@/famous branches; order doesn't matter because `claims`
+ * makes each branch mutually exclusive by construction (composeSelectionRows.ts).
  */
 
 import { Source, GALAXY_CATALOG_SOURCES } from '../../../data/sources';
@@ -72,8 +71,6 @@ export function galaxyCatalogSelectionRow(deps: () => Deps): SelectionKindRow<Ga
   };
 }
 
-// ─── Branch resolvers — moved whole from the deleted resolveFocusId.ts ──────
-
 function resolveFamous(id: string, deps: Deps): GalaxyCatalogRef | null {
   for (let i = 0; i < deps.famousGalaxiesMeta.length; i++) {
     if (deps.famousGalaxiesMeta[i]!.id === id) {
@@ -103,8 +100,7 @@ function resolveSdss(objID: bigint, deps: Deps): GalaxyCatalogRef | null {
 
 /**
  * Nearest-neighbour search across every galaxy catalog source within 30
- * arcsec (the `buildFamous.ts` cross-match envelope). See the deleted
- * `resolveFocusId.ts` for the small-angle metric derivation.
+ * arcsec (the `buildFamous.ts` cross-match envelope).
  */
 function resolvePos(raDegT: number, decDegT: number, deps: Deps): GalaxyCatalogRef | null {
   const cosDecT = Math.cos((decDegT * Math.PI) / 180);

@@ -47,19 +47,24 @@ function specifiersUnder(file: string, prefixes: readonly string[]): string[] {
     });
 }
 
-function assertRow(
-  file: string,
-  offending: readonly string[],
+/** One `it` per sweep: collects every file whose count is off its ALLOWED row into `offenders`, each entry carrying the same per-file diagnosis `assertRow` used to print alone. */
+function assertSweep(
+  files: readonly string[],
+  prefixes: readonly string[],
   allowed: Readonly<Record<string, number>>,
   adviceForOverBudget: string,
 ) {
-  const key = keyOf(file);
-  const budget = allowed[key] ?? 0;
-  expect(
-    offending.length,
-    `${file} imports ${offending.length} specifier(s) beyond its ALLOWED row ` +
-      `('${key}': ${budget}): ${offending.join(', ') || 'none'}. ${adviceForOverBudget}`,
-  ).toBe(budget);
+  const offenders = files.flatMap((file) => {
+    const offending = specifiersUnder(file, prefixes);
+    const key = keyOf(file);
+    const budget = allowed[key] ?? 0;
+    if (offending.length === budget) return [];
+    return [
+      `${file} imports ${offending.length} specifier(s) beyond its ALLOWED row ` +
+        `('${key}': ${budget}): ${offending.join(', ') || 'none'}.`,
+    ];
+  });
+  expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
 // The one row Findings records: `settingsSlice.ts` imports the thirteen
@@ -75,11 +80,10 @@ describe('engine and state files import nothing from src/layers beyond their ALL
   const files = [...walk('src/services/engine'), ...walk('src/state')];
   expect(files.length).toBeGreaterThan(0);
 
-  it.each(files)('%s', (file) => {
-    const offending = specifiersUnder(file, ['src/layers/']);
-    assertRow(
-      file,
-      offending,
+  it('every file matches its ALLOWED row', () => {
+    assertSweep(
+      files,
+      ['src/layers/'],
       ENGINE_AND_STATE_ALLOWED,
       'Over the row: a Layer contributes into core through Layer.create/passes/etc, ' +
         'not the other way — read the value through the composition, or raise the row ' +
@@ -97,11 +101,10 @@ describe('no file under src/layers imports src/state or src/store', () => {
   const files = walk('src/layers');
   expect(files.length).toBeGreaterThan(0);
 
-  it.each(files)('%s', (file) => {
-    const offending = specifiersUnder(file, ['src/state/', 'src/store/']);
-    assertRow(
-      file,
-      offending,
+  it('every file matches its ALLOWED row', () => {
+    assertSweep(
+      files,
+      ['src/state/', 'src/store/'],
       LAYERS_ALLOWED,
       'A Layer mints its own createAction(s) rather than importing the slice — ' +
         "importing settingsSlice from a Layer module closes D1's module-init cycle " +

@@ -47,8 +47,7 @@ export type CoreEngineSliceState = {
    * (anchors + bulk) projected down to its lean searchable fields. Published
    * by `wireStructureProjection` alongside `engineStructureCountsChanged`, on
    * the same boot + group-change schedule, so a Cmd+K opened before any
-   * catalog lands still gets the anchor set. Replaces `EngineSourcesHandle
-   * .getStructures` / `useStructureIndex`, which polled the handle instead.
+   * catalog lands still gets the anchor set.
    */
   structureSearchList: readonly StructureSearchEntry[];
   /**

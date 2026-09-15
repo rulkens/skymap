@@ -6,9 +6,9 @@ import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
  *
  * `getCloud`/`getCloudObjIds` expose the in-memory GalaxyCatalog for
  * deep-link / alias-index consumers. Visibility is dispatched directly to
- * the store; tier changes are driven by the tier saga. `getStructures` is
- * gone — the command palette reads `selectStructureSearchList`, a core fact
- * `wireStructureProjection` publishes on every group change (Task 10).
+ * the store; tier changes are driven by the tier saga. Structure search reads
+ * `selectStructureSearchList`, a core fact `wireStructureProjection` publishes
+ * on every group change.
  */
 export type EngineSourcesHandle = {
   /** Return the full GalaxyCatalog for a source, or undefined if unloaded. */

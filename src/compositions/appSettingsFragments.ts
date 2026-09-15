@@ -22,7 +22,7 @@ import { zoneOfAvoidanceSettingsFragment } from '../layers/zoneOfAvoidance/setti
 import { settingsOf } from '../utils/layer/settingsOf';
 import { APP_COMPOSITION } from './app';
 
-export const UNFORMED_SETTINGS_FRAGMENTS = [
+const UNFORMED_SETTINGS_FRAGMENTS = [
   galaxyCatalogsSettingsFragment,
   starCatalogsSettingsFragment,
   structuresSettingsFragment,

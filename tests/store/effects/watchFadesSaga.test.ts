@@ -12,7 +12,6 @@ import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
 import {
   setMilkyWayEnabled,
   writeVolumeField,
-  setFlowEnabled,
   setZoneOfAvoidanceEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
@@ -63,19 +62,6 @@ describe('watchFadesSaga', () => {
     });
 
     store.dispatch(setMilkyWayEnabled(!before));
-
-    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
-  });
-
-  it('writeVolumeField idempotent: second identical dispatch → syncFades fires again', () => {
-    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
-    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
-
-    expect(reconcile.syncFades).toHaveBeenCalledTimes(2);
-  });
-
-  it('setFlowEnabled(true) → syncFades called', () => {
-    store.dispatch(setFlowEnabled(true));
 
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
   });

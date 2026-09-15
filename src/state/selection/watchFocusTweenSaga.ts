@@ -2,37 +2,9 @@
  * watchFocusTweenSaga — the camera-tween EFFECT of a focus gesture. A focus writes
  * the focus ref (updateSelectionFocus); the camera flying to that target is an
  * effect of that Intent, so it lives here as a saga — symmetric with
- * watchSelectionWakeSaga (render-wake).
- *
- * The saga is a thin resolve→build→dispatch shell:
- *   1. re-resolve the ref to a row via the live `resolveDeps` (firing on the REF,
- *      not the reconciled row, keeps the tween a response to the Intent and free
- *      of any dependence on watchSelectionRowsSaga running first). A STAR or
- *      STRUCTURE deep link races its backing store the way a body deep link
- *      races the camera: its id resolves statically (index / durable id), so
- *      `updateSelectionFocus` fires at bootstrap, but the row returns null until
- *      the store is fed (the Gaia bin for a star; `wireStructureProjection`'s
- *      synchronous anchors group, ahead of the async bulk group, for a
- *      structure). So the row resolve DEFERS, symmetric with the camera wait
- *      below, on the `NOT_YET_LOADED` table's pulse for that ref's type — the
- *      guard is STORE PRESENCE, not row-ness: a null row with the store fed is
- *      a stale/garbage id, which drops to the no-op below rather than waiting
- *      for a pulse that never recurs. Galaxy deep links never reach here null
- *      (their `updateSelectionFocus` is itself deferred on `catalogLoaded`), so
- *      the table only needs the two entries. Both stores are already demanded
- *      at boot, so nothing here has to trigger the load — only await it;
- *   2. read the live camera Resources (`cameraRuntime`) — the visible from-pose
- *      and the lens FOV. When the camera is not ready yet the saga DEFERS on the
- *      `engineStatusChanged` pulse rather than dropping the tween: a deep-link
- *      focus whose id resolves statically (a scene body, the Milky Way, a star)
- *      fires `updateSelectionFocus` during bootstrap, before `initGpu` has built
- *      the camera, so `cameraRuntime()` is momentarily null. Galaxy deep links
- *      dodge this because their `updateSelectionFocus` is itself deferred on
- *      `catalogLoaded`, which only fires after the camera exists. `takeLatest`
- *      (not `takeEvery`) aborts a still-waiting worker if a newer focus arrives,
- *      exactly as `watchRequestFocusSaga` aborts a stale ref deferral;
- *   3. build the `startCameraTween` payload with the pure `focusTweenDescriptor`
- *      table and dispatch it.
+ * watchSelectionWakeSaga (render-wake). The saga is a thin resolve→build→dispatch
+ * shell: it builds the `startCameraTween` payload with the pure
+ * `focusTweenDescriptor` table and dispatches it.
  *
  * The dispatch alone wakes the render loop: `startCameraTween` is a `camera/*`
  * write, which `watchWakeSaga`/WAKE_ROUTES turns into a render request — so there is
@@ -85,13 +57,17 @@ export function* watchFocusTweenSaga() {
         empty(): boolean;
         pulse: typeof engineSourceCountReported | typeof engineStructureCountsChanged;
       };
-      const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> = {
-        star: { empty: () => resolveDeps().stars.current() === null, pulse: engineSourceCountReported },
-        structure: {
-          empty: () => resolveDeps().structures.loaded?.() === false,
-          pulse: engineStructureCountsChanged,
-        },
-      };
+      const NOT_YET_LOADED: Partial<Record<NonNullable<typeof action.payload>['type'], Deferral>> =
+        {
+          star: {
+            empty: () => resolveDeps().stars.current() === null,
+            pulse: engineSourceCountReported,
+          },
+          structure: {
+            empty: () => resolveDeps().structures.loaded?.() === false,
+            pulse: engineStructureCountsChanged,
+          },
+        };
       // `ref.type` never changes across retries, so the deferral (if any) is
       // looked up once; only `empty()` is re-polled per pulse.
       const deferral = action.payload ? NOT_YET_LOADED[action.payload.type] : undefined;

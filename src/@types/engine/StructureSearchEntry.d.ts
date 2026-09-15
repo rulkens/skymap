@@ -9,8 +9,9 @@ import type { StructureId } from '../data/structure/StructureId';
  * parallel to how `AliasIndexEntry` is a lean join over a galaxy cloud.
  *
  * `id` is the durable `${category}-${seedId}` (or `${category}-bulk-${id}`)
- * focus id that `resolveFocusId` accepts and `structures.byId` resolves — the
- * palette emits it verbatim through `requestFocus`.
+ * focus id that the composed resolver's `resolveFocusId` accepts and
+ * `structures.byId` resolves — the palette emits it verbatim through
+ * `requestFocus`.
  */
 export type StructureSearchEntry = {
   /** Durable `#focus=<id>` string — resolves to the structure via the saga. */
