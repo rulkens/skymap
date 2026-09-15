@@ -7,7 +7,7 @@ import { dataUrl } from '../../services/loading/fetchWithProgress';
 const FETCH_DEADLINE_MS = 10_000;
 
 /**
- * fetchEarthTileBitmap — one virtual-texture tile, decoded ready for atlas
+ * fetchSurfaceTileBitmap — one virtual-texture tile, decoded ready for atlas
  * upload, or `null` if it is not there.
  *
  * A 404 is the normal case, not an error: both imagery sources are

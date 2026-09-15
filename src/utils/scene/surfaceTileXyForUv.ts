@@ -2,7 +2,7 @@ import type { Vec2 } from '../../@types/math/Vec2';
 import { surfaceTileColumns } from './surfaceTileColumns';
 
 /**
- * earthTileXyForUv — which tile of level `z` contains the mesh uv `uv`.
+ * surfaceTileXyForUv — which tile of level `z` contains the mesh uv `uv`.
  *
  * This function and `earthTileCentreUv` are the ONLY two places the mesh's uv
  * convention meets the tile grid's, written as independent formulas so

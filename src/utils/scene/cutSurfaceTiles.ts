@@ -1,5 +1,5 @@
-import type { EarthTileKind } from '../../@types/data/EarthTileKind';
 import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
+import type { SurfaceTileProduct } from '../../@types/data/SurfaceTileProduct';
 import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
 import type { SurfaceTilePlan } from '../../@types/scene/SurfaceTilePlan';
 import type { SurfaceTileRequest } from '../../@types/scene/SurfaceTileRequest';
@@ -19,6 +19,11 @@ type ResidentLookupResult = {
   readonly readyAtMs: number;
 } | null;
 
+/** The one product this walk requests/resolves today — Task 11 makes the
+ *  cut two-product (height-gated refinement); until then every emitted
+ *  `SurfaceTileId` names this one, not a caller-supplied value. */
+const PRODUCT: SurfaceTileProduct = 'albedo';
+
 /**
  * cutSurfaceTiles — `planEarthTiles`'s walk, superseding it: one quadtree
  * walk, two products. `requests` is what to fetch (the plan, minus the
@@ -30,7 +35,6 @@ type ResidentLookupResult = {
  * window fields from that type, so no reshaping seam is needed here.
  */
 export function cutSurfaceTiles(input: {
-  readonly kind: EarthTileKind;
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
    *  units — see `radiusM` below, the walk's new length scale). */
   readonly camPosLocalM: Readonly<Vec3>;
@@ -48,8 +52,9 @@ export function cutSurfaceTiles(input: {
   readonly radiusM: number;
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;
-  /** The manifest's geographic depth bands for this kind; a leaf outside every
-   *  overlapping band's `[min, max]` has no file and is not requested. */
+  /** The manifest's geographic depth bands for the albedo product; a leaf
+   *  outside every overlapping band's `[min, max]` has no file and is not
+   *  requested. */
   readonly bands: readonly SurfaceTileBand[];
   readonly tilePx: number;
   /** Levels coarser than one texel per screen pixel to settle for; see
@@ -58,7 +63,7 @@ export function cutSurfaceTiles(input: {
   /** Resolve one exact tile's atlas residency, or null if it is not
    *  resident. Injected so this stays a pure function testable without a
    *  real GPU/atlas — Task 5 wires the real `surfaceTileSubsystem.residentSlot`
-   *  query in. Takes the full `SurfaceTileId` (carries `kind`, unlike
+   *  query in. Takes the full `SurfaceTileId` (carries `product`, unlike
    *  `SurfaceCutTile.id`) because it must key the same
    *  `surfaceTilePath(tile, prefix)` lookup `surfaceTileSubsystem` already uses
    *  for its resident map. */
@@ -68,7 +73,6 @@ export function cutSurfaceTiles(input: {
   readonly requests: SurfaceTilePlan;
 } {
   const {
-    kind,
     camPosLocalM,
     viewProjLocal,
     viewportPx,
@@ -223,7 +227,7 @@ export function cutSurfaceTiles(input: {
       // Same band-request gate as the leaf branch: a would-be ancestor no
       // band bakes at this z has no file to fetch either.
       if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
-        requests.push({ tile: { kind, z, x, y }, screenPx });
+        requests.push({ tile: { product: PRODUCT, z, x, y }, screenPx });
       stack.push(z + 1, x * 2, y * 2);
       stack.push(z + 1, x * 2 + 1, y * 2);
       stack.push(z + 1, x * 2, y * 2 + 1);
@@ -239,14 +243,14 @@ export function cutSurfaceTiles(input: {
     // still have a resident ANCESTOR to draw — skip only the fetch, not the
     // residency lookup below, or a band-edge ring never gets ancestor pixels.
     if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
-      requests.push({ tile: { kind, z, x, y }, screenPx });
+      requests.push({ tile: { product: PRODUCT, z, x, y }, screenPx });
 
     // Ancestor-fallback residency: the leaf's own tile if resident, else the
     // nearest resident ancestor strictly deeper than `baseLevel` (that level
     // and shallower is the base globe's, never atlas-resident — see
     // `resolveCutResidency`). No resident tile anywhere in the chain drops
     // the leaf from `cut`; the base globe fills in for THAT case instead.
-    const resolved = resolveCutResidency({ kind, z, x, y, baseLevel, residentSlot });
+    const resolved = resolveCutResidency({ z, x, y, baseLevel, residentSlot });
     if (resolved !== null) {
       cut.push({
         id: { z, x, y },
@@ -286,14 +290,13 @@ export function cutSurfaceTiles(input: {
  * the PRIMARY tile is fading in.
  */
 function resolveCutResidency(input: {
-  readonly kind: EarthTileKind;
   readonly z: number;
   readonly x: number;
   readonly y: number;
   readonly baseLevel: number;
   readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
 }): SurfaceCutTile['resident'] | null {
-  const { kind, z, x, y, baseLevel, residentSlot } = input;
+  const { z, x, y, baseLevel, residentSlot } = input;
 
   let primary: {
     slot: number;
@@ -306,7 +309,7 @@ function resolveCutResidency(input: {
     const ancestorZ = z - levelDelta;
     const ancX = x >> levelDelta;
     const ancY = y >> levelDelta;
-    const found = residentSlot({ kind, z: ancestorZ, x: ancX, y: ancY });
+    const found = residentSlot({ product: PRODUCT, z: ancestorZ, x: ancX, y: ancY });
     if (found === null) continue;
     const span = 1 << levelDelta;
     const offsetU = (x - ancX * span) / span;

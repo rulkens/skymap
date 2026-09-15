@@ -18,7 +18,6 @@
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
-import type { EarthTileKind } from '../../../@types/data/EarthTileKind';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { SurfaceTileSpec } from '../../../@types/data/SurfaceTileSpec';
 import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
@@ -45,11 +44,6 @@ import {
   EARTH_TILE_LOD_BIAS,
   EARTH_TILE_PX,
 } from '../../../data/bodies/earthTileParams';
-
-// The one kind this subsystem pages today; tiling relief too would need a
-// second instance of this machinery, not a branch inside it (different
-// deepest levels, independent residency, a different pixel format).
-const TILED_KIND: EarthTileKind = 'surface';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
 
@@ -152,32 +146,33 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     fetched: SurfaceTileManifest,
     baseLevel: number,
   ): SurfaceTilePlannerParams | null {
-    const levels = fetched.levels?.[TILED_KIND];
-    if (!levels || levels.length === 0) return null;
+    if (fetched.bands.length === 0) return null;
     const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
     if (tilePx !== EARTH_TILE_PX) return null;
     const bands: SurfaceTileBand[] = [];
-    for (const level of levels) {
+    for (const band of fetched.bands) {
+      // Not baked for the albedo product (e.g. a height-only row, once those
+      // exist) — this planner only ever requests albedo tiles.
+      if (band?.builtFrom?.albedo === undefined) continue;
       // A structurally-wrong manifest entry (missing/malformed `bounds`)
       // degrades by skipping it, matching this function's whole stance —
       // never throw out of `refreshParams` over one bad band.
-      if (typeof level?.bounds?.west !== 'number') continue;
+      if (typeof band?.bounds?.west !== 'number') continue;
       // Deeper of the band's own min and base+1: at/above base would
       // re-download detail the whole-globe base already delivers.
-      const min = Math.max(level.min, baseLevel + 1);
+      const min = Math.max(band.min, baseLevel + 1);
       // A band clamped past its own depth at this base level bakes nothing usable.
-      if (!(level.max >= min)) continue;
+      if (!(band.max >= min)) continue;
       bands.push({
-        uBounds: [(level.bounds.west + 180) / 360, (level.bounds.east + 180) / 360],
+        uBounds: [(band.bounds.west + 180) / 360, (band.bounds.east + 180) / 360],
         // South-first: matches the mesh's v (v = 0 at the south pole).
-        vBounds: [(level.bounds.south + 90) / 180, (level.bounds.north + 90) / 180],
+        vBounds: [(band.bounds.south + 90) / 180, (band.bounds.north + 90) / 180],
         min,
-        max: level.max,
+        max: band.max,
       });
     }
     if (bands.length === 0) return null;
     return {
-      kind: TILED_KIND,
       tilePx,
       baseLevel,
       bands,
@@ -242,7 +237,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       atlasSide: EARTH_TILE_ATLAS_SIDE,
       slotSide: tilePx,
       format: ATLAS_FORMAT,
-      label: `earth-${TILED_KIND}-tiles`,
+      label: 'surface-tiles-albedo',
       concurrency: EARTH_TILE_CONCURRENCY,
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.

@@ -2,7 +2,7 @@ import type { Vec2 } from '../../@types/math/Vec2';
 import { surfaceTileColumns } from './surfaceTileColumns';
 
 /**
- * earthTileCentreUv — the mesh uv at the centre of tile `[x, y]` of level `z`.
+ * surfaceTileCentreUv — the mesh uv at the centre of tile `[x, y]` of level `z`.
  * The inverse of `earthTileXyForUv`, written as its own formula so the pair
  * round-trips as a genuine test (see that function for the `1 - v` flip).
  *

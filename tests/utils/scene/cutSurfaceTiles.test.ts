@@ -64,7 +64,6 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
   // the f32 `mat4.multiply` result changes no test outcome here.
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
-    kind: 'surface' as const,
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
@@ -120,7 +119,6 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   const maxLevel = 19;
   return {
-    kind: 'surface' as const,
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
@@ -172,7 +170,6 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
-    kind: 'surface' as const,
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
@@ -888,7 +885,6 @@ describe('cutSurfaceTiles', () => {
       const { camPosLocalM, viewProjLocal, viewportPx } = buildInputs(50, 10, 0);
 
       const result = cutSurfaceTiles({
-        kind: 'surface',
         camPosLocalM,
         viewProjLocal,
         radiusM: 1,

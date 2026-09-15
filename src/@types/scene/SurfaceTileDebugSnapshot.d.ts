@@ -5,7 +5,7 @@ import type { LonLatDeg } from './LonLatDeg';
  * residency for the DebugPanel. Built fresh per call (not pushed per-frame),
  * so the panel polls it at a human-readable rate instead of every render.
  * `engaged: false` (atlas never allocated, or destroyed) means every other
- * field is a quiet zero/empty — see `emptyEarthTileDebugSnapshot`.
+ * field is a quiet zero/empty — see `EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT`.
  */
 export type SurfaceTileDebugSnapshot = {
   readonly engaged: boolean;
@@ -25,7 +25,7 @@ export type SurfaceTileDebugSnapshot = {
     readonly zWin: number;
     /** Planned tiles with no bitmap resident yet. */
     readonly misses: number;
-    /** Leaves in the last frame's drawn cut (`earthTileSubsystem`'s
+    /** Leaves in the last frame's drawn cut (`surfaceTileSubsystem`'s
      *  `lastCut`) — unbounded today; a growth watch, not a cap. */
     readonly cutCount: number;
   } | null;

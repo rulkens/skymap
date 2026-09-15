@@ -1,7 +1,9 @@
 /**
- * fetchSurfaceTileManifest — the `prefix` guard is the load-bearing case: a
- * pre-versioning bake with no `prefix` (or an empty one) must fold into the
- * same `null` as a missing file, not be trusted into an `undefined/…` URL.
+ * fetchSurfaceTileManifest — the `prefix` and `bands` guards are the
+ * load-bearing cases: a pre-versioning bake with no `prefix` (or an empty
+ * one), or a pre-v8 `levels`-keyed manifest, must fold into the same `null`
+ * as a missing file, not be trusted into a broken URL or a `.length` read on
+ * `undefined`.
  */
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -21,18 +23,16 @@ afterEach(() => {
 describe('fetchSurfaceTileManifest', () => {
   it('returns a well-formed manifest as-is', async () => {
     const manifest = {
-      prefix: 'earth-tiles/v1',
+      prefix: 'earth-tiles/v8',
       tilePx: 512,
-      levels: {
-        surface: [
-          {
-            bounds: { west: -180, south: -90, east: 180, north: 90 },
-            min: 4,
-            max: 6,
-            builtFrom: { sourceId: 'blue-marble', attribution: 'NASA', vintage: '2004' },
-          },
-        ],
-      },
+      bands: [
+        {
+          bounds: { west: -180, south: -90, east: 180, north: 90 },
+          min: 4,
+          max: 6,
+          builtFrom: { albedo: { sourceId: 'blue-marble', attribution: 'NASA', vintage: '2004' } },
+        },
+      ],
     };
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
@@ -42,7 +42,7 @@ describe('fetchSurfaceTileManifest', () => {
   });
 
   it('returns null for a manifest with no prefix', async () => {
-    const manifest = { tilePx: 512, levels: {} };
+    const manifest = { tilePx: 512, bands: [] };
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
@@ -51,7 +51,7 @@ describe('fetchSurfaceTileManifest', () => {
   });
 
   it('returns null for a manifest with an empty prefix', async () => {
-    const manifest = { prefix: '', tilePx: 512, levels: {} };
+    const manifest = { prefix: '', tilePx: 512, bands: [] };
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
@@ -59,11 +59,25 @@ describe('fetchSurfaceTileManifest', () => {
     expect(await fetchSurfaceTileManifest('earth-tiles')).toBeNull();
   });
 
-  it('returns null for a v1-shaped (pre-band-list) manifest', async () => {
+  it('returns null for a levels-keyed (pre-bands) manifest', async () => {
+    // The v7 shape: per-kind `levels`, no flat `bands` array at all.
     const manifest = {
-      prefix: 'earth-tiles/v1',
+      prefix: 'earth-tiles/v7',
       tilePx: 512,
-      levels: { surface: { min: 4, max: 6 } },
+      levels: { surface: [{ bounds: {}, min: 4, max: 6 }] },
+    };
+    globalThis.fetch = vi.fn(
+      async () => new Response(JSON.stringify(manifest), { status: 200 }),
+    ) as unknown as typeof fetch;
+
+    expect(await fetchSurfaceTileManifest('earth-tiles')).toBeNull();
+  });
+
+  it('returns null for a band entry missing numeric min/max', async () => {
+    const manifest = {
+      prefix: 'earth-tiles/v8',
+      tilePx: 512,
+      bands: [{ bounds: {}, min: 4 }],
     };
     globalThis.fetch = vi.fn(
       async () => new Response(JSON.stringify(manifest), { status: 200 }),

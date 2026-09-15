@@ -31,7 +31,7 @@ async function writeChild(
   y: number,
   rgba: readonly [number, number, number, number],
 ): Promise<void> {
-  const path = join(outDir, surfaceTilePath({ kind: 'surface', z, x, y }, TILE_PREFIX));
+  const path = join(outDir, surfaceTilePath({ product: 'albedo', z, x, y }, TILE_PREFIX));
   mkdirSync(dirname(path), { recursive: true });
   await sharp({
     create: {
@@ -100,7 +100,7 @@ describe('bakeCoarserLevel', () => {
 
     const parentPath = join(
       dir,
-      surfaceTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+      surfaceTilePath({ product: 'albedo', z: 1, x: 0, y: 0 }, TILE_PREFIX),
     );
     const { data } = await sharp(parentPath)
       .ensureAlpha()
@@ -130,7 +130,7 @@ describe('bakeCoarserLevel', () => {
 
     const parentPath = join(
       dir,
-      surfaceTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+      surfaceTilePath({ product: 'albedo', z: 1, x: 0, y: 0 }, TILE_PREFIX),
     );
     const { data } = await sharp(parentPath)
       .ensureAlpha()
@@ -182,7 +182,7 @@ describe('bakeCoarserLevel', () => {
 
     const parentPath = join(
       dir,
-      surfaceTilePath({ kind: 'surface', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+      surfaceTilePath({ product: 'albedo', z: 1, x: 0, y: 0 }, TILE_PREFIX),
     );
     const { data } = await sharp(parentPath)
       .ensureAlpha()
@@ -280,7 +280,7 @@ describe('bakeAll', () => {
 
     const tilePath = join(
       dir,
-      surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+      surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
     );
     const { data, info } = await sharp(tilePath)
       .ensureAlpha()
@@ -416,22 +416,22 @@ describe('bakeAll', () => {
     const manifest = JSON.parse(
       readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
     ) as SurfaceTileManifest;
-    const bands = manifest.levels.surface;
+    const bands = manifest.bands;
     expect(bands).toHaveLength(2);
     expect(bands?.[0]?.bounds).toEqual(BOX_WEST);
     // Each band's builtFrom is ITS OWN source's provenance, not a shared
     // module-level assumption — the bug this pins would stamp both bands
     // with whichever source's vintage happened to be hardcoded.
-    expect(bands?.[0]?.builtFrom).toEqual(west.provenance);
+    expect(bands?.[0]?.builtFrom.albedo).toEqual(west.provenance);
     expect(bands?.[1]?.bounds).toEqual(BOX_EAST);
-    expect(bands?.[1]?.builtFrom).toEqual(east.provenance);
+    expect(bands?.[1]?.builtFrom.albedo).toEqual(east.provenance);
 
     const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
     expect(index).toContain(
-      surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+      surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
     );
     expect(index).toContain(
-      surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+      surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
     );
   });
 
@@ -477,10 +477,10 @@ describe('bakeAll', () => {
       const westIndex = readFileSync(join(dir, 'earth-tiles/index-stub-west.txt'), 'utf8');
       const eastIndex = readFileSync(join(dir, 'earth-tiles/index-stub-east.txt'), 'utf8');
       expect(westIndex).toContain(
-        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
       );
       expect(eastIndex).toContain(
-        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
     });
 
@@ -495,7 +495,7 @@ describe('bakeAll', () => {
       await bakeAll(bands, dir);
       const eastTilePath = join(
         dir,
-        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
       const beforeMtime = statSync(eastTilePath).mtimeMs;
       east.readBoxCalls = 0;
@@ -507,16 +507,16 @@ describe('bakeAll', () => {
 
       const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
       expect(index).toContain(
-        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
       );
       expect(index).toContain(
-        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
 
       const manifest = JSON.parse(
         readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
       ) as SurfaceTileManifest;
-      expect(manifest.levels.surface).toHaveLength(2);
+      expect(manifest.bands).toHaveLength(2);
     });
 
     it('throws naming the band when a stitched tile has been deleted from disk', async () => {
@@ -530,7 +530,7 @@ describe('bakeAll', () => {
       await bakeAll(bands, dir);
       const eastTilePath = join(
         dir,
-        surfaceTilePath({ kind: 'surface', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
+        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
       );
       rmSync(eastTilePath);
 

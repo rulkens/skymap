@@ -17,10 +17,10 @@
  * landmine that governs how that average is built) — nothing here ever holds
  * a whole-globe raster (1.6 TB at z11) or a level.
  *
- * Lands on disk: `earth-tiles/surface/<z>/<x>/<y>.webp` (`earthTilePath`,
+ * Lands on disk: `earth-tiles/v8/albedo/<z>/<x>/<y>.webp` (`surfaceTilePath`,
  * shared with the runtime fetcher's own URL builder — drift 404s quietly,
  * degrading to the base texture); `earth-tiles/manifest.json` (tile edge,
- * baked level range, source); `earth-tiles/index.txt` (one path per line,
+ * baked band list, source); `earth-tiles/index.txt` (one path per line,
  * walked by the deploy collector instead of the filesystem, so a
  * half-finished bake can't upload a partial pyramid as complete).
  * `public/data/` is gitignored — nothing here is committed.
@@ -32,8 +32,9 @@ import { fileURLToPath } from 'node:url';
 
 import sharp from 'sharp';
 
-import type { EarthTileKind } from '../../src/@types/data/EarthTileKind';
+import type { SurfaceTileProduct } from '../../src/@types/data/SurfaceTileProduct';
 import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTileManifestBand';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { TIER_LADDER } from '../../src/data/tierLadder';
 import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
@@ -117,9 +118,8 @@ const EOX_COLOUR_MATCH_SIGMA_DEG = 0.018;
  *  `minLevel`), so this is the ladder's single source of truth for both. */
 const GEODANMARK_MIN_LEVEL = 14;
 
-/** The only kind this tool bakes — relief, clouds, night lights and the
- *  material map carry no fine structure worth streaming. */
-const KIND: EarthTileKind = 'surface';
+/** The only product this tool bakes today — height is Task 9's bake. */
+const PRODUCT: SurfaceTileProduct = 'albedo';
 
 /** Stable location of the manifest and index — the pointer clients always fetch. */
 const TILE_ROOT = 'earth-tiles';
@@ -129,9 +129,10 @@ const TILE_ROOT = 'earth-tiles';
  * that changes pixels: the tiles are served `immutable` and never purged, so
  * reusing a version leaves the CDN answering with old imagery against a new
  * manifest for up to a day — mismatched, not merely stale. A new version is
- * new keys, which cost nothing extra and need no purge.
+ * new keys, which cost nothing extra and need no purge. v8: the `levels` →
+ * `bands` manifest break plus the new `albedo/` path segment (Task 3).
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v7`;
+export const TILE_PREFIX = `${TILE_ROOT}/v8`;
 
 /**
  * Encode one RGBA raster as a surface tile, creating its `z/x` directories.
@@ -167,7 +168,7 @@ async function bakeDeepestLevel(
   for (const { x, y } of candidateTileIndices(source.coverage, z, tilePx)) {
     const rgba = await source.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx);
     if (rgba === null) continue;
-    const relPath = surfaceTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
+    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, TILE_PREFIX);
     await writeTile(rgba, tilePx, join(outDir, relPath));
     written.push(relPath);
   }
@@ -220,7 +221,7 @@ export async function bakeCoarserLevel(
       .map(({ i, j }) => ({
         input: join(
           outDir,
-          surfaceTilePath({ kind: KIND, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
+          surfaceTilePath({ product: PRODUCT, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
         ),
         left: i * halfPx,
         top: j * halfPx,
@@ -239,7 +240,7 @@ export async function bakeCoarserLevel(
       })),
     );
 
-    const relPath = surfaceTilePath({ kind: KIND, z, x, y }, TILE_PREFIX);
+    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, TILE_PREFIX);
     const outPath = join(outDir, relPath);
     mkdirSync(dirname(outPath), { recursive: true });
 
@@ -345,8 +346,8 @@ function stitchBandIndex(
  * Bake every band's levels (`source.maxLevel` down to that band's own
  * `minLevel`) into `outDir`, then write ONE `index.txt` and ONE
  * `manifest.json` covering all bands — several imagery sources can share a
- * kind at different geographic footprints and depths (EOX deep tiles over
- * BMNG; see `EarthTileManifest`).
+ * product at different geographic footprints and depths (EOX deep tiles over
+ * BMNG; see `SurfaceTileManifest`).
  *
  * `opts.only` re-bakes a single band and stitches every other band's tiles
  * forward from its own prior per-band index (`writePerBandIndex`) instead of
@@ -369,7 +370,7 @@ export async function bakeAll(
 ): Promise<void> {
   const tilePx = EARTH_TILE_PX;
   const written: string[] = [];
-  const bandEntries: NonNullable<SurfaceTileManifest['levels'][typeof KIND]>[number][] = [];
+  const bandEntries: SurfaceTileManifestBand[] = [];
 
   if (opts?.only !== undefined && !bands.some((band) => band.source.id === opts.only)) {
     throw new Error(
@@ -419,16 +420,23 @@ export async function bakeAll(
     // is the source's OWN provenance — never a module-level assumption, or a
     // second band's manifest entry would carry the first band's identity.
     // Derived from `source`, not the stitched index, for every band alike —
-    // the manifest is always fresh.
+    // the manifest is always fresh. Keyed by `PRODUCT`, not a bare value: a
+    // later product baking the SAME box (Task 9's height) adds its own
+    // `builtFrom` entry to this band rather than a second band row.
     for (const bounds of source.coverage) {
-      bandEntries.push({ bounds, min: minLevel, max: maxLevel, builtFrom: source.provenance });
+      bandEntries.push({
+        bounds,
+        min: minLevel,
+        max: maxLevel,
+        builtFrom: { [PRODUCT]: source.provenance },
+      });
     }
   }
 
   const manifest: SurfaceTileManifest = {
     prefix: TILE_PREFIX,
     tilePx,
-    levels: { [KIND]: bandEntries },
+    bands: bandEntries,
   };
 
   // Sorted so two bakes of the same pyramid produce the same index, letting a

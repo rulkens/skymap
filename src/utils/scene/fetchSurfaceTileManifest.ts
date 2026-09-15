@@ -27,11 +27,15 @@ export async function fetchSurfaceTileManifest(
     // every tile URL as "undefined/surface/…" and 404-storm. Folding it into
     // the null case degrades to base-only instead.
     if (typeof parsed?.prefix !== 'string' || parsed.prefix === '') return null;
-    // A v1 bake's `levels.surface` is a bare `{min, max}` object, not a band
-    // array — trusting it would hand `derivePlannerParams` a `.length` read
-    // on an object. An absent `surface` key is legitimately valid (staged
-    // rollout), so only a present-but-non-array value is rejected.
-    if (parsed.levels?.surface !== undefined && !Array.isArray(parsed.levels.surface)) {
+    // A pre-v8 bake keys tiles by `levels` (per-kind), not this format's flat
+    // `bands` list — trusting one would hand `derivePlannerParams` a
+    // `.length` read on `undefined`. Rejecting a missing/non-array `bands`
+    // catches that shape for free (a `levels`-keyed manifest simply has no
+    // `bands` field), degrading to null exactly like a missing manifest.
+    if (
+      !Array.isArray(parsed.bands) ||
+      parsed.bands.some((band) => typeof band?.min !== 'number' || typeof band?.max !== 'number')
+    ) {
       return null;
     }
     return parsed;

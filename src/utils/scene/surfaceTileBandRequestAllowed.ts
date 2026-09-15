@@ -2,7 +2,7 @@ import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
 import { surfaceTileBandOverlapsUv } from './surfaceTileBandOverlapsUv';
 
 /**
- * earthTileBandRequestAllowed — true when some band overlapping this tile's
+ * surfaceTileBandRequestAllowed — true when some band overlapping this tile's
  * uv footprint actually bakes a file at `z` (`band.min <= z <= band.max`).
  */
 export function surfaceTileBandRequestAllowed(

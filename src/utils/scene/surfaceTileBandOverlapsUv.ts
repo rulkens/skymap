@@ -1,7 +1,7 @@
 import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
 
 /**
- * earthTileBandOverlapsUv — open-interval AABB test shared by the two band
+ * surfaceTileBandOverlapsUv — open-interval AABB test shared by the two band
  * predicates so they can't silently diverge (a divergence would leave tiles
  * that refine but are never requested). Four scalars, not a uv object: the
  * quadtree walk in `cutSurfaceTiles` calls this per node, per frame.

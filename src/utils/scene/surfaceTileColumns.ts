@@ -1,7 +1,7 @@
 import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams';
 
 /**
- * earthTileColumns — how many tiles span 360° of longitude at pyramid level
+ * surfaceTileColumns — how many tiles span 360° of longitude at pyramid level
  * `z`, given a `tilePx` tile edge. Row count is NOT returned alongside it: the
  * equirect raster is always twice as wide as tall, so rows are
  * `columns / 2` by construction, and returning both would invite drift.
