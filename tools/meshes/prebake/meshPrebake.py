@@ -1,14 +1,8 @@
-"""meshPrebake — flatten a NASA 3D Resources model to what buildMeshes accepts.
-
-Every source here is a multi-material scene of dozens of parts, and several
-carry a stow→deploy animation whose SAVED transforms are not the pose we want.
-`buildMeshes` refuses multi-material input by design, so the flattening happens
-HERE, once, and MESH_SOURCES points at the OUTPUT. Decimate BEFORE the
-unwrap+bake: baking into UVs that decimation then moves mis-registers the atlas
-against the triangles that survive.
-
-Run:  npm run prebake-mesh -- <key>   (Blender 5.2 LTS; not run in CI)
-"""
+"""meshPrebake — bake an imported `<key>.blend` (importMesh.py) to what buildMeshes accepts.
+`buildMeshes` refuses multi-material input, so the join+bake happens HERE and MESH_SOURCES
+points at the OUTPUT. Decimate BEFORE the unwrap+bake: baking into UVs that decimation then
+moves mis-registers the atlas against the triangles that survive.
+Run:  npm run prebake-mesh -- <key>   (Blender 5.2 LTS; not run in CI)"""
 
 import os
 import sys
@@ -95,22 +89,14 @@ BAKE_PASSES = [
 ]
 
 
-def source(key, filename, frame=None, triangles=None, drop_materials=()):
+def source(key, triangles=None):
     d = os.path.join(REPO, "data/raw/meshes", key)
     return {
         "key": key,
         "dir": d,
-        "src": os.path.join(d, filename),
+        "src": os.path.join(d, "%s.blend" % key),
         "out": os.path.join(d, "%s.prebaked.glb" % key),
-        # None = the file's saved transforms; an int = that animation frame. The
-        # deploy animations park the rover STOWED at their own frame 0, so a
-        # source with actions must name a frame or risk baking a folded rover.
-        "frame": frame,
         "triangles": triangles,
-        # Materials that exist only to mark a rig pivot or fake a ground shadow.
-        # An object whose materials are ALL in this set goes; the raise guards
-        # against the name drifting upstream and the marker silently shipping.
-        "drop_materials": set(drop_materials),
     }
 
 
@@ -118,16 +104,8 @@ def atlas_path(cfg, name):
     return os.path.join(cfg["dir"], "%s.prebaked.%s.png" % (cfg["key"], name))
 
 
-SOURCES = {
-    s["key"]: s
-    for s in [
-        source("voyager", "Voyager Probe (B).glb"),
-        source("perseverance", "Mars 2020 Perseverance Rover.glb", frame=120, triangles=100_000),
-        source("curiosity", "Curiosity Rover (MSL) (Clean).blend", frame=206,
-               drop_materials=("pivot", "shadow2")),
-        source("mer", "Mars Exploration Rover - Spirit and Opportunity.blend", frame=1325),
-    ]
-}
+SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance", triangles=100_000),
+                                 source("curiosity"), source("mer")]}
 
 
 def log(msg):
@@ -136,112 +114,43 @@ def log(msg):
 
 
 def load(cfg):
-    if cfg["src"].endswith(".blend"):
-        bpy.ops.wm.open_mainfile(filepath=cfg["src"])
-    else:
-        bpy.ops.wm.read_factory_settings(use_empty=True)
-        bpy.ops.import_scene.gltf(filepath=cfg["src"], merge_vertices=True)
+    bpy.ops.wm.open_mainfile(filepath=cfg["src"])
     scene = bpy.context.scene
-    for vl in scene.view_layers:
-        exclusions(vl.layer_collection)
-    if cfg["frame"] is not None:
-        scene.frame_set(cfg["frame"])
+    # A headless open does not evaluate animation, so non-object channels the
+    # import left at the stow frame would read their frame-0 values.
+    scene.frame_set(scene.frame_current)
     return scene
 
 
-def exclusions(layer_collection):
-    layer_collection.exclude = False
-    layer_collection.hide_viewport = False
-    for child in layer_collection.children:
-        exclusions(child)
-
-
-def fix_colour_management():
-    """Both .blend rovers reach 4.x with their colour maps flagged Non-Color, so
-    the renderer skips the sRGB decode and the bake comes out washed to white.
-    Anything feeding Base Color is an sRGB colour map by definition. The same
-    pass re-points materials at a texture whose file went missing (Curiosity
-    ships one duplicate that resolves to nothing and would bake black)."""
-    resolved = {i.name.split(".png")[0]: i for i in bpy.data.images if tuple(i.size) != (0, 0)}
-    fixed = 0
-    relinked = 0
-    for mat in bpy.data.materials:
-        if not mat.use_nodes:
-            continue
-        for node in mat.node_tree.nodes:
-            if node.type != "TEX_IMAGE" or node.image is None:
-                continue
-            if not any(l.to_socket.name == "Base Color" for o in node.outputs for l in o.links):
-                continue
-            if tuple(node.image.size) == (0, 0):
-                stand_in = resolved.get(node.image.name.split(".png")[0])
-                if stand_in is None:
-                    raise RuntimeError("prebake: %s has no pixels and no replacement" % node.image.name)
-                node.image = stand_in
-                relinked += 1
-            if node.image.colorspace_settings.name != "sRGB":
-                node.image.colorspace_settings.name = "sRGB"
-                fixed += 1
-    return fixed, relinked
-
-
-def unify_shader_outputs():
-    """Both .blend rovers keep a SECOND Material Output, targeted at Cycles and
-    fed by a bare Diffuse BSDF beside the Principled the file renders with. A
-    Cycles-targeted output wins, so the bake reads that node and never sees the
-    Principled every PBR row samples — albedo emits nothing (black), roughness
-    is the Diffuse node's. Keeping the active output, retargeted at ALL, is what
-    puts every row on one shader."""
-    dropped = 0
-    for mat in bpy.data.materials:
-        if not mat.use_nodes:
-            continue
-        tree = mat.node_tree
-        outputs = [n for n in tree.nodes if n.type == "OUTPUT_MATERIAL"]
-        if len(outputs) < 2:
-            continue
-        active = [n for n in outputs if n.is_active_output]
-        keep = active[0] if active else outputs[0]
-        log("%s: kept output '%s' of %d (%d flagged active)"
-            % (mat.name, keep.name, len(outputs), len(active)))
-        keep.target = "ALL"
-        for node in [n for n in outputs if n is not keep]:
-            tree.nodes.remove(node)
-            dropped += 1
-    return dropped
-
-
-def keepers(cfg, scene):
-    """Surface geometry only: no cameras, lights, face-less meshes or the marker
-    cubes the rigs hang joints on. Nothing is DELETED here — every rover parents
-    its parts to empties, an armature or a marker cube, and removing a parent
-    drops its children's transform and scatters the model. The rejects go once
-    the join has baked the survivors' world matrices in."""
+def keepers(scene):
+    """Surface geometry only: no cameras, lights or face-less meshes. The
+    rejects are not deleted here; `join_meshes` removes them after the join."""
     keep = []
     dropped = 0
-    marked = 0
     for obj in scene.objects:
         if obj.type != "MESH":
             continue
         materials = {s.material.name for s in obj.material_slots if s.material}
         if len(obj.data.polygons) == 0 or not materials:
             dropped += 1
-        elif materials <= cfg["drop_materials"]:
-            marked += 1
         else:
             keep.append(obj)
-    if cfg["drop_materials"] and marked == 0:
-        raise RuntimeError("prebake: no %s objects to drop — the markers were renamed upstream"
-                           % sorted(cfg["drop_materials"]))
-    return keep, dropped, marked
+    return keep, dropped
 
 
-def apply_modifiers(meshes):
-    """Curiosity hangs geometry-nodes modifiers off a dozen parts and
-    Perseverance armature-deforms one; `join` reads the object's own mesh, so
-    whatever is not applied here is lost."""
-    select(meshes)
-    bpy.ops.object.convert(target="MESH")
+def source_uv(meshes):
+    """`join` merges UV layers BY NAME, so a part whose single layer is named
+    differently lands with zeroed UVs and bakes one texel of flat colour. The
+    import unified them; an edit in Blender can quietly undo that."""
+    shared = None
+    for obj in meshes:
+        names = [l.name for l in obj.data.uv_layers]
+        if len(names) != 1 or (shared is not None and names[0] != shared):
+            raise RuntimeError("prebake: %s has uv layers %s, expected the one shared layer %s — "
+                               "re-run `npm run import-mesh -- <key>` or remove the extra layer"
+                               % (obj.name, names, shared))
+        shared = names[0]
+    return shared
 
 
 def select(objects):
@@ -253,47 +162,6 @@ def select(objects):
     for obj in objects:
         obj.select_set(True)
     bpy.context.view_layer.objects.active = objects[0]
-
-
-SOURCE_UV = "source"
-
-
-def unify_source_uvs(meshes):
-    """`join` merges UV layers BY NAME, and these scenes mix 'UVTex', 'UVMap'
-    and 'UVMap.001' across their parts — so a part whose layer name loses the
-    vote lands in the merged mesh with zeroed UVs and bakes one texel of flat
-    colour over its whole surface. Collapsing every part to its render layer
-    under one name first is what makes the bake read the authored textures."""
-    for obj in meshes:
-        layers = obj.data.uv_layers
-        if not layers:
-            layers.new(name=SOURCE_UV)
-            continue
-        render = next((l for l in layers if l.active_render), layers[0])
-        for other in [l for l in layers if l != render]:
-            layers.remove(other)
-        layers[0].name = SOURCE_UV
-        layers[0].active_render = True
-    repointed = repoint_uv_references()
-    log("re-pointed %d uv references at '%s'" % (repointed, SOURCE_UV))
-
-
-def repoint_uv_references():
-    """Shader nodes that name a UV map by STRING — every glTF-imported Normal
-    Map node does — go dangling when the rename above lands, and a Normal Map
-    node whose name resolves to nothing bakes FLAT without a word of complaint.
-    The sweep covers every material in the file, not just the kept meshes': on
-    anything that bakes the renamed layer is the only one left, and a node on a
-    dropped object never renders."""
-    repointed = 0
-    for mat in bpy.data.materials:
-        if not mat.use_nodes:
-            continue
-        for node in mat.node_tree.nodes:
-            if getattr(node, "uv_map", "") not in ("", SOURCE_UV):
-                node.uv_map = SOURCE_UV
-                repointed += 1
-    return repointed
 
 
 def join_meshes(scene, meshes):
@@ -329,7 +197,7 @@ def decimate(obj, target):
     return triangles(obj)
 
 
-def unwrap(obj):
+def unwrap(obj, source_name):
     """A second UV set: the source UVs stay put so the bake can still read the
     original materials through them."""
     uv = obj.data.uv_layers.new(name="bake")
@@ -340,7 +208,7 @@ def unwrap(obj):
     # reference goes stale across the edit-mode round trip below.
     obj.data.uv_layers.active = uv
     uv_name = uv.name
-    obj.data.uv_layers[SOURCE_UV].active_render = True
+    obj.data.uv_layers[source_name].active_render = True
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
@@ -486,14 +354,10 @@ def main():
     started = time.time()
 
     scene = load(cfg)
-    log("%s: loaded %s at frame %s" % (key, os.path.basename(cfg["src"]), cfg["frame"]))
-    log("colour management: %d images decoded as sRGB, %d relinked" % fix_colour_management())
-    log("dropped %d rival material outputs" % unify_shader_outputs())
-    keep, dropped, marked = keepers(cfg, scene)
-    log("keeping %d meshes; left behind %d face-less/matless and %d marker objects"
-        % (len(keep), dropped, marked))
-    apply_modifiers(keep)
-    unify_source_uvs(keep)
+    log("%s: loaded %s at frame %s" % (key, os.path.basename(cfg["src"]), scene.frame_current))
+    keep, dropped = keepers(scene)
+    log("keeping %d meshes; left behind %d face-less/matless" % (len(keep), dropped))
+    source_name = source_uv(keep)
     obj = join_meshes(scene, keep)
     log("joined -> %d tris, %d material slots, uv layers %s"
         % (triangles(obj), len(obj.material_slots), [l.name for l in obj.data.uv_layers]))
@@ -501,7 +365,7 @@ def main():
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
     log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
 
-    uv_name = unwrap(obj)
+    uv_name = unwrap(obj, source_name)
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
     arm_materials(obj)
     images = {}
