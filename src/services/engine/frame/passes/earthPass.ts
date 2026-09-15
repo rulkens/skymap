@@ -13,10 +13,9 @@
  * tiles draw AFTER it (gated on a non-empty last cut + a live atlas view — an
  * empty cut is a legitimate "nothing resident yet" frame, not a bug), so the
  * tile pipeline's `nearer-or-equal` depth compare resolves ties in its
- * favour. Past that gate the base globe's alpha dissolves through
- * `baseGlobeFadeAlpha` so the tile mesh — which fully covers the cap by
- * then — stops fighting the base globe's depth for it; outside the gate
- * alpha is pinned to 1, the failure floor for every disengaged case.
+ * favour. The globe is ALWAYS drawn: it sits at the datum's inner bound
+ * (§7.4), so it cannot occlude relief, and it is what covers ground no
+ * resident patch does yet.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -41,7 +40,6 @@ import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurface
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
-import { baseGlobeFadeAlpha } from '../../../../utils/scene/baseGlobeFadeAlpha';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -194,12 +192,9 @@ export const earthPass: ContentPass = {
 
     // ── Detail tiles, resolved BEFORE the base globe draw ──────────────────
     //
-    // The base-globe fade below needs to know whether the tile path is
-    // actually alive THIS frame: an empty cut or a not-yet-engaged atlas is
-    // the ordinary pre-residency picture, not an error, and the base globe
-    // MUST stay at its alpha-1 failure floor through it — fading with
-    // nothing covering the cap would punch a hole through to whatever is
-    // behind Earth.
+    // An empty cut or a not-yet-engaged atlas is the ordinary pre-residency
+    // picture, not an error: the tile draw is skipped and the base globe
+    // alone covers the cap.
     const tileRenderer = state.gpu.earthSurfaceTileRenderer;
     const earthTiles = state.subsystems.surfaceTiles;
     const tiles = earthTiles?.getLastCut() ?? [];
@@ -213,34 +208,26 @@ export const earthPass: ContentPass = {
       surfaceAtlasView !== null &&
       heightAtlasView !== null &&
       tiles.length > 0;
-    const globeAlpha = tilesLive ? baseGlobeFadeAlpha(cameraDistanceMpc, radiusMpc) : 1;
 
-    // Skip the draw call entirely at alpha 0 (the tiles cover the whole cap
-    // by then) — this rides the SAME per-frame uniform write as any other
-    // alpha, never a second `renderer.draw` (see earthRenderer's
-    // at-most-once-per-frame precondition).
-    if (globeAlpha > 0) {
-      renderer.draw(
-        pass,
-        packEarthSurfaceUniforms(
-          mvp,
-          sun,
-          camLocal,
-          EARTH_SURFACE_PARAMS.roughnessBase,
-          EARTH_SURFACE_PARAMS.f0,
-          EARTH_SURFACE_PARAMS.sunIrradiance,
-          cloudShadowStrength,
-          // Unit-sphere local radius of the SAME shell cloudShellPass draws, so
-          // the cast shadow and the drawn deck agree by construction.
-          CLOUD_SHELL_PARAMS.radiusRatio,
-          // Live user settings, not the WESL consts (seeded from
-          // EARTH_SURFACE_PARAMS so the defaults match).
-          state.settings.earth.ambientLight,
-          state.settings.earth.oceanRoughness,
-          globeAlpha,
-        ),
-      );
-    }
+    renderer.draw(
+      pass,
+      packEarthSurfaceUniforms(
+        mvp,
+        sun,
+        camLocal,
+        EARTH_SURFACE_PARAMS.roughnessBase,
+        EARTH_SURFACE_PARAMS.f0,
+        EARTH_SURFACE_PARAMS.sunIrradiance,
+        cloudShadowStrength,
+        // Unit-sphere local radius of the SAME shell cloudShellPass draws, so
+        // the cast shadow and the drawn deck agree by construction.
+        CLOUD_SHELL_PARAMS.radiusRatio,
+        // Live user settings, not the WESL consts (seeded from
+        // EARTH_SURFACE_PARAMS so the defaults match).
+        state.settings.earth.ambientLight,
+        state.settings.earth.oceanRoughness,
+      ),
+    );
 
     // ── Detail tiles, drawn AFTER the base globe ──────────────────────────
     //

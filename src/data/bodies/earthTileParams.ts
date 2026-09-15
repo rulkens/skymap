@@ -78,21 +78,6 @@ export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 64;
 export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
 
 /**
- * Base-globe descent-fade band, in camera altitude above the surface (km).
- * The detail-tile mesh fully covers the visible cap once resident, and the
- * base globe's non-RTC f32 depth jitters at low altitude, stochastically
- * punching through the tiles — so the globe fades out ahead of that fight.
- * 300 km completes the fade far above the few-km altitudes where the jitter
- * becomes visible; 150 km sits far below tile engagement, so tiles are
- * always resident by the time the globe is gone. See `baseGlobeFadeAlpha`.
- */
-export const EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM = 300;
-
-/** Lower edge (alpha 0) of the base-globe fade band — see
- *  `EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM`. */
-export const EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM = 150;
-
-/**
  * Crossfade duration, in milliseconds of REAL time (`performance.now()`,
  * never sim time -- a paused or scaled sim clock must not stall or distort
  * the fade), a freshly-landed detail tile takes to blend in over the

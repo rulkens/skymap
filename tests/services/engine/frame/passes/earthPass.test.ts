@@ -48,10 +48,6 @@ import { innerBoundRadiusM } from '../../../../../src/utils/scene/innerBoundRadi
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';
-import {
-  EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM,
-  EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM,
-} from '../../../../../src/data/bodies/earthTileParams';
 import { Source } from '../../../../../src/data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../../src/data/selectionEncoding';
 import { BODY_PICK_MIN_RADIUS_PX } from '../../../../../src/services/engine/helpers/minPickRadiusMpc';
@@ -718,7 +714,7 @@ describe('earthPass.draw — detail tiles', () => {
   });
 });
 
-describe('earthPass.draw — base globe fade under the tile cut', () => {
+describe('earthPass.draw — the base globe is always drawn', () => {
   // A minimal stand-in cut, reused from the detail-tiles suite above.
   const STUB_CUT = [
     {
@@ -735,8 +731,7 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
   ];
   const ATLAS_VIEW = {} as GPUTextureView;
 
-  /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along
-   *  +x — the shared fixture for the fade tests below. */
+  /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along +x. */
   function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
     const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
@@ -767,26 +762,10 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
     return baseDraw;
   }
 
-  it('forwards alpha 1 when the cut is empty, regardless of altitude', () => {
-    const view = makeEarthBodyView('earth');
-    const state = makeTileDrawState({
-      tileRenderer: { draw: vi.fn() },
-      cut: [],
-      atlasView: ATLAS_VIEW,
-    });
-    const baseDraw = spyOnBaseDraw(state);
-
-    // Deep inside what would be the alpha-0 band if the fade engaged — the
-    // empty cut must keep the base globe at the alpha-1 failure floor.
-    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
-    earthPass.draw(PASS_STUB, view, ctx, state);
-
-    expect(baseDraw).toHaveBeenCalledTimes(1);
-    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
-    expect(uniforms[29]).toBe(1);
-  });
-
-  it('skips the base-globe draw call at alpha 0 with a non-empty cut', () => {
+  it('draws the base globe at low altitude under a full cut', () => {
+    // The globe used to fade out below 300 km, so a leaf with no resident
+    // ancestor showed the stars. It sits at the datum's inner bound now
+    // (§7.4) and is what covers whatever the cut does not.
     const view = makeEarthBodyView('earth');
     const tileDraw = vi.fn();
     const state = makeTileDrawState({
@@ -796,31 +775,10 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
     });
     const baseDraw = spyOnBaseDraw(state);
 
-    const ctx = makeAltitudeCtx(EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM / 2);
-    earthPass.draw(PASS_STUB, view, ctx, state);
-
-    expect(baseDraw).not.toHaveBeenCalled();
-    // The tiles cover the whole cap by now — they must still draw.
-    expect(tileDraw).toHaveBeenCalledTimes(1);
-  });
-
-  it('forwards a fractional alpha at the fade band midpoint', () => {
-    const view = makeEarthBodyView('earth');
-    const state = makeTileDrawState({
-      tileRenderer: { draw: vi.fn() },
-      cut: STUB_CUT,
-      atlasView: ATLAS_VIEW,
-    });
-    const baseDraw = spyOnBaseDraw(state);
-
-    const midAltitudeKm =
-      (EARTH_BASE_GLOBE_FADE_FULL_ALTITUDE_KM + EARTH_BASE_GLOBE_FADE_GONE_ALTITUDE_KM) / 2;
-    earthPass.draw(PASS_STUB, view, makeAltitudeCtx(midAltitudeKm), state);
+    earthPass.draw(PASS_STUB, view, makeAltitudeCtx(1), state);
 
     expect(baseDraw).toHaveBeenCalledTimes(1);
-    const uniforms = baseDraw.mock.calls[0]![1] as Float32Array;
-    expect(uniforms[29]).toBeGreaterThan(0);
-    expect(uniforms[29]).toBeLessThan(1);
+    expect(tileDraw).toHaveBeenCalledTimes(1);
   });
 });
 

@@ -347,20 +347,8 @@ export function createEarthRenderer(
     fragment: {
       module: fsModule,
       entryPoint: 'fs',
-      targets: [
-        {
-          format: targetFormat,
-          // Straight-alpha OVER (matches cloudShellRenderer): the fragment's
-          // alpha is `u.baseGlobeAlpha` (see packEarthSurfaceUniforms), 1
-          // outside the descent-fade band. At alpha 1 this reduces to the
-          // old opaque replace exactly (dst factor 1-1=0), so the fade is
-          // invisible until the camera actually enters the band.
-          blend: {
-            color: { srcFactor: 'src-alpha', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-            alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha', operation: 'add' },
-          },
-        },
-      ],
+      // Opaque replace: the globe is drawn every engaged frame at alpha 1.
+      targets: [{ format: targetFormat }],
     },
     primitive: {
       topology: 'triangle-list',
