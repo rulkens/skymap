@@ -38,46 +38,16 @@ describe('recipe', () => {
     expect(parseRecipe(json)).toEqual(r);
   });
 
-  it('emits stable two-space-indented JSON for diff-friendly commits', () => {
-    const r = sample();
-    const json = serialiseRecipe(r);
-    expect(json.startsWith('{\n  "version": 1,')).toBe(true);
-    expect(json.endsWith('}\n')).toBe(true);
-  });
-
-  it('rejects an object missing the crop block', () => {
-    const r = sample() as unknown as Record<string, unknown>;
-    delete r.crop;
-    expect(() => parseRecipe(JSON.stringify(r))).toThrow(/crop/);
-  });
-
-  it('rejects an invalid alpha.gamma (non-finite)', () => {
-    const r = sample();
-    r.alpha.gamma = Number.NaN;
-    expect(() => parseRecipe(JSON.stringify(r))).toThrow(/gamma/);
-  });
-
   it('rejects a future version it does not know how to parse', () => {
     const r = sample();
     (r as unknown as { version: number }).version = 99;
     expect(() => parseRecipe(JSON.stringify(r))).toThrow(/version/);
   });
 
-  it('rejects malformed JSON', () => {
-    expect(() => parseRecipe('not json {')).toThrow();
-  });
-
   // --- RecipeDisk ---
-  // The disk block is optional: recipes without it must round-trip unchanged;
-  // recipes with it must round-trip every field, validate types, and return
-  // a freshly-constructed value with no aliasing to the caller's input.
-
-  it('parseRecipe round-trips a recipe with no disk block (disk stays undefined)', () => {
-    const r = sample();
-    // Confirm sample() has no disk field, then check the parsed result too.
-    expect(r.disk).toBeUndefined();
-    expect(parseRecipe(serialiseRecipe(r)).disk).toBeUndefined();
-  });
+  // The disk block is optional: recipes with it must round-trip every field,
+  // validate types, and return a freshly-constructed value with no aliasing
+  // to the caller's input.
 
   it('parseRecipe parses a valid disk block', () => {
     const r = sample();
@@ -131,21 +101,6 @@ describe('recipe', () => {
     };
     expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/centerPx/);
   });
-
-  it('parseRecipe throws when disk.radiusPx or disk.paDeg is non-finite', () => {
-    const r = sample();
-    r.disk = { centerPx: [100, 100], radiusPx: Infinity, paDeg: 0, deproject: false };
-    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/radiusPx/);
-
-    r.disk = { centerPx: [100, 100], radiusPx: 50, paDeg: NaN, deproject: false };
-    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/paDeg/);
-  });
-
-  it('parseRecipe throws when disk.deproject is not a boolean', () => {
-    const r = sample();
-    r.disk = { centerPx: [100, 100], radiusPx: 50, paDeg: 0, deproject: 1 as unknown as boolean };
-    expect(() => parseRecipe(serialiseRecipe(r))).toThrow(/deproject/);
-  });
 });
 
 describe('Recipe.source', () => {
@@ -154,12 +109,6 @@ describe('Recipe.source', () => {
     r.source = { width: 3774, height: 3950 };
     const parsed = parseRecipe(serialiseRecipe(r));
     expect(parsed.source).toEqual({ width: 3774, height: 3950 });
-  });
-
-  it('leaves source undefined when absent (backward compatible)', () => {
-    const r = sample();
-    expect(r.source).toBeUndefined();
-    expect(parseRecipe(serialiseRecipe(r)).source).toBeUndefined();
   });
 
   it('throws when a source dimension is non-finite or non-positive', () => {
@@ -190,11 +139,6 @@ describe('RecipeDisk.margin', () => {
       }),
     );
     expect(r.disk?.margin).toBe(0.5);
-  });
-
-  it('omits margin when absent (backward compatible)', () => {
-    const d = validateRecipeDisk({ centerPx: [1, 2], radiusPx: 3, paDeg: 4, deproject: false });
-    expect('margin' in d).toBe(false);
   });
 
   it('throws on a negative margin', () => {

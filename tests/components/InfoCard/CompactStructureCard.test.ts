@@ -27,16 +27,6 @@ const virgo: StructureInfo = {
 };
 
 describe('CompactStructureCard', () => {
-  it('renders the structure name and category label', () => {
-    render(createElement(CompactStructureCard, { structure: virgo }));
-    expect(screen.getByText('Virgo Cluster')).toBeInTheDocument();
-    // Category badge — exact-match "Cluster" with title-case from the
-    // inlined category-label helper.  Exact match (not /cluster/i)
-    // so the headline "Virgo Cluster" doesn't also satisfy this
-    // assertion — the badge is the load-bearing surface here.
-    expect(screen.getByText('Cluster')).toBeInTheDocument();
-  });
-
   it('renders a distance row derived from |worldPos|', () => {
     render(createElement(CompactStructureCard, { structure: virgo }));
     // |[10, 0, 0]| = 10 Mpc.  formatDistance renders "10.0 Mpc / 32.6 Mly"

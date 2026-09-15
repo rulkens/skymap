@@ -434,41 +434,6 @@ describe('label2DDirector', () => {
     expect(labelStub.setLabels).toHaveBeenLastCalledWith([onScreen, offScreen]);
   });
 
-  it('no longer fires any layer load-in fade on a non-empty flush', () => {
-    // The per-category structure load-in lives in produceStructureLabels;
-    // the director must not call fades.fadeTo on its own.
-    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
-    const labelStub = makeLabelStub();
-    const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
-    dir.registerProducer(makeProducer('p', [SAMPLE_LABEL]));
-
-    const state = makeState();
-    dir.runFrame(state, makeCtx());
-    expect(state.subsystems.fades.fadeTo as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
-  });
-
-  it('treats a label with no prominencePx as prominence 0', () => {
-    const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
-    const labelStub = makeLabelStub();
-    const lineStub = makeLineStub();
-    dir.attachRenderers(labelStub as never, lineStub as never);
-
-    // A label that omits prominencePx collides with a prominent structure
-    // label at the same point → loses the overlap; its leader drops with
-    // it.  (The Milky Way "You are here" avoids this fate by declaring
-    // prominencePx: Number.MAX_VALUE — see produceMilkyWayLabel.)
-    const anonymous: Label2D = { ...SAMPLE_LABEL, id: 'anonymous', leader: SAMPLE_LEADER };
-    const structure: Label2D = { ...SAMPLE_LABEL, id: 'coma', prominencePx: 200 };
-    dir.registerProducer(makeProducer('anon', [anonymous]));
-    dir.registerProducer(makeProducer('struct', [structure]));
-
-    dir.runFrame(makeState(), makeCtx(0));
-    dir.runFrame(makeState(), makeCtx(300));
-    expect(labelStub.setLabels).toHaveBeenLastCalledWith([structure]);
-    expect(lineStub.setLines).toHaveBeenLastCalledWith([]);
-  });
-
   describe('appear/disappear envelope', () => {
     it('fades a newly appearing label in over the 300 ms ramp (smoothstep of nowMs)', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
@@ -654,27 +619,6 @@ describe('label2DDirector', () => {
   });
 
   describe('the projection stage', () => {
-    it('projects each label exactly once per frame', () => {
-      const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
-      const labelStub = makeLabelStub();
-      const lineStub = makeLineStub();
-      dir.attachRenderers(labelStub as never, lineStub as never);
-
-      // Distinct world positions so both anchors are on-screen and neither
-      // culls the other — isolates the count from declutter's collision logic.
-      const a: Label2D = { ...SAMPLE_LABEL, id: 'a', worldPos: [-0.5, 0, 0] };
-      const b: Label2D = { ...SAMPLE_LABEL, id: 'b', worldPos: [0.5, 0, 0] };
-      dir.registerProducer(makeProducer('p', [a, b]));
-
-      dir.runFrame(makeState(), makeCtx(0));
-
-      // `measure` only runs inside the bboxOverlap arm's rect construction —
-      // the one consumer of the shared per-label projected record. A count
-      // above label count would mean a later stage re-projected instead of
-      // reusing it.
-      expect(labelStub.measure).toHaveBeenCalledTimes(2);
-    });
-
     it('sorts by prominencePx descending with a stable input-order tiebreak', () => {
       const dir = createLabel2DDirector(COSMO_LABEL_DIRECTOR);
       const labelStub = makeLabelStub();

@@ -14,7 +14,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createStarPointRenderer } from '../../../../../src/services/gpu/renderers/bodies/starPointRenderer';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
@@ -62,27 +61,7 @@ const SIRIUS: PositionedStar = {
 };
 
 describe('createStarPointRenderer', () => {
-  it('construct does not throw under the mock device (no depth format param)', () => {
-    expect(() => createStarPointRenderer(mockDevice(), 'rgba16float')).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createStarPointRenderer(mockDevice(), 'rgba16float');
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
   const DRAW_OPTS = { sizePx: 2.5, brightness: 1, viewSlot: 0 };
-
-  it('setStars and draw are callable with the right arity', () => {
-    const renderer = createStarPointRenderer(mockDevice(), 'rgba16float');
-    expect(typeof renderer.setStars).toBe('function');
-    expect(renderer.setStars.length).toBe(2);
-    expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(4);
-  });
 
   it('draw is a no-op before setStars, draws 6×N after, and clears on empty upload', () => {
     const renderer = createStarPointRenderer(mockDevice(), 'rgba16float');

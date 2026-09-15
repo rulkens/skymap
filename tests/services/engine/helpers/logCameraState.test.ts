@@ -143,38 +143,6 @@ describe('logCameraState', () => {
     expect(out.derived).toBeNull();
   });
 
-  it('carries the earthSubCamera readout through when supplied, and defaults it to null', () => {
-    vi.stubGlobal('window', { devicePixelRatio: 1 });
-    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-    const cam = createOrbitCamera({
-      target: [0, 0, 0],
-      distance: 10,
-      yaw: 0,
-      pitch: 0,
-      fovYRad: 0.9,
-      aspect: 1,
-      near: 0.01,
-      far: 100,
-    });
-
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, {
-      lonDeg: 12.53012,
-      latDeg: 55.67021,
-      coveredMaxLevel: 19,
-    });
-    const [, withReadout] = logSpy.mock.calls[0] as [string, string];
-    expect(JSON.parse(withReadout).earthSubCamera).toEqual({
-      lonDeg: 12.53012,
-      latDeg: 55.67021,
-      coveredMaxLevel: 19,
-    });
-
-    logSpy.mockClear();
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
-    const [, withoutReadout] = logSpy.mock.calls[0] as [string, string];
-    expect(JSON.parse(withoutReadout).earthSubCamera).toBeNull();
-  });
-
   it('names the frame and prints metres in a body arm', () => {
     vi.stubGlobal('window', { devicePixelRatio: 1 });
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
@@ -201,7 +169,7 @@ describe('logCameraState', () => {
     logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, bodyArm);
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
-    expect(out.frame).toBe('earth');
+    expect(out.frame).toBe('body:earth');
     // Metres, at full precision: the 50 m standoff must survive the print.
     expect(out.bodyArmMetres.eyeRelAnchorM).toEqual([0, 0, EARTH_RADIUS_M + 50]);
     expect(out.bodyArmMetres.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);

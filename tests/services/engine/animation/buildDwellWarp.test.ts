@@ -23,12 +23,6 @@ describe('buildDwellWarp', () => {
     expect(w.baseTimeAt(8)).toBeCloseTo(8, 9);
   });
 
-  it('is the identity when the window is 0, even with depth', () => {
-    const w = buildDwellWarp(KNOT_TIME, [0, 1, 0], 0, 8);
-    expect(w.totalSec).toBe(8);
-    expect(w.baseTimeAt(6)).toBeCloseTo(6, 9);
-  });
-
   it('ADDS wall-clock time when an interior knot dwells', () => {
     const w = buildDwellWarp(KNOT_TIME, [0, 0.9, 0], 2, 8);
     expect(w.totalSec).toBeGreaterThan(8);

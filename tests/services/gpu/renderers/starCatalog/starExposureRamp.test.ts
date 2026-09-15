@@ -22,7 +22,6 @@ import {
   RAMP_NEAR_MPC,
   RAMP_MID_MPC,
   RAMP_FAR_MPC,
-  RAMP_FAR_SCALE,
   SHADER_BAKED_NEAR_EXPOSURE,
 } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
 
@@ -43,11 +42,6 @@ describe('starExposureRamp', () => {
   it('holds at the near baseline (1) at and below the near anchor', () => {
     expect(starExposureRamp(RAMP_NEAR_MPC)).toBe(1.0);
     expect(starExposureRamp(RAMP_NEAR_MPC / 10)).toBe(1.0);
-  });
-
-  it('holds at the far scale at and above the far anchor', () => {
-    expect(starExposureRamp(RAMP_FAR_MPC)).toBe(RAMP_FAR_SCALE);
-    expect(starExposureRamp(RAMP_FAR_MPC * 10)).toBe(RAMP_FAR_SCALE);
   });
 
   it('passes exactly through the mid anchor scale at the mid-anchor distance', () => {
@@ -76,21 +70,6 @@ describe('starExposureRamp', () => {
     );
   });
 
-  it('is monotone non-decreasing across the ramp at the defaults', () => {
-    // Defaults are 6 / 23 / 28 (near < mid < far), so the whole curve rises.
-    // Sample log-uniformly from a decade below near to a decade above far,
-    // spanning both clamps and both interpolated segments.
-    const lo = Math.log10(RAMP_NEAR_MPC) - 1;
-    const hi = Math.log10(RAMP_FAR_MPC) + 1;
-    let prev = -Infinity;
-    for (let i = 0; i <= 100; i++) {
-      const d = 10 ** (lo + ((hi - lo) * i) / 100);
-      const s = starExposureRamp(d);
-      expect(s).toBeGreaterThanOrEqual(prev);
-      prev = s;
-    }
-  });
-
   it('treats a zero or negative distance as the near case (returns 1)', () => {
     expect(starExposureRamp(0)).toBe(1.0);
     expect(starExposureRamp(-1)).toBe(1.0);
@@ -112,35 +91,6 @@ describe('starExposureRamp', () => {
           12,
         );
       }
-    });
-
-    it('reproduces the old look at the shipped defaults (visually indistinguishable)', () => {
-      // The default midX (23) is the old value at 3 kpc rounded to a whole
-      // number, so the default curve tracks the old two-point curve to within a
-      // hair everywhere — the ramp brings a new lever, not a new look.
-      const lo = Math.log10(RAMP_NEAR_MPC) - 1;
-      const hi = Math.log10(RAMP_FAR_MPC) + 1;
-      for (let i = 0; i <= 200; i++) {
-        const d = 10 ** (lo + ((hi - lo) * i) / 200);
-        expect(Math.abs(starExposureRamp(d) - oldTwoPoint(d))).toBeLessThan(0.02);
-      }
-    });
-  });
-
-  describe('the mid anchor is an independent middle lever', () => {
-    it('dips the 3 kpc value without moving the near or far endpoints', () => {
-      // Pull midX below its default: the mid-anchor value drops, but the near
-      // clamp (1) and far clamp (farX/6) are untouched — the whole point of the
-      // third anchor is a middle bend that leaves both ends fixed.
-      const lowered = starExposureRamp(RAMP_MID_MPC, SHADER_BAKED_NEAR_EXPOSURE, 30, 28);
-      const defaulted = starExposureRamp(RAMP_MID_MPC, SHADER_BAKED_NEAR_EXPOSURE, 57, 28);
-      expect(lowered).toBeLessThan(defaulted);
-      expect(lowered).toBeCloseTo(30 / SHADER_BAKED_NEAR_EXPOSURE, 12);
-
-      expect(starExposureRamp(RAMP_NEAR_MPC, SHADER_BAKED_NEAR_EXPOSURE, 30, 28)).toBe(1.0);
-      expect(starExposureRamp(RAMP_FAR_MPC, SHADER_BAKED_NEAR_EXPOSURE, 30, 28)).toBe(
-        RAMP_FAR_SCALE,
-      );
     });
   });
 

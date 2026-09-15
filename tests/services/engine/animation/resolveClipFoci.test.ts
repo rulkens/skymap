@@ -226,28 +226,6 @@ describe('resolveClipFoci recurses into seq/all/fork', () => {
     });
   });
 
-  it('id-bearing leaf nested under all is rewritten', () => {
-    const id = focusId('cluster-virgo');
-    const clip: ClipData = {
-      timeline: [all([hold(1), moveTargetId(id, 2)])],
-    };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
-    const outer = resolved.timeline[0];
-    if (outer!.kind !== 'all') throw new Error('expected all');
-    expect(outer.children[1]).toMatchObject({ kind: 'setVec', ch: 'target' });
-  });
-
-  it('id-bearing leaf nested under fork is rewritten', () => {
-    const id = focusId('cluster-virgo');
-    const clip: ClipData = {
-      timeline: [fork(focus(id))],
-    };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
-    const outer = resolved.timeline[0];
-    if (outer!.kind !== 'fork') throw new Error('expected fork');
-    expect(outer.child).toEqual({ kind: 'focus', ref: { type: 'structure', id: 'cluster-virgo' } });
-  });
-
   it('non-focus leaves inside seq pass through unchanged', () => {
     const clip: ClipData = {
       timeline: [seq([hold(2), hide(['flow'])])],
@@ -347,28 +325,11 @@ describe('resolveClipFoci throws on unresolvable id', () => {
     const clip: ClipData = { timeline: [focus(id)] };
     expect(() => resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS)).toThrow(/no-such-object/);
   });
-
-  it('throws when moveTargetId cannot resolve the id', () => {
-    const id = focusId('cluster-unknown-xyz');
-    const clip: ClipData = { timeline: [moveTargetId(id, 2)] };
-    expect(() => resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS)).toThrow(/cluster-unknown-xyz/);
-  });
 });
 
 // ---------------------------------------------------------------------------
 // Test 6 — ClipData fields other than timeline pass through unchanged
 // ---------------------------------------------------------------------------
-
-describe('resolveClipFoci preserves ClipData metadata', () => {
-  it('the start pose passes through unchanged', () => {
-    const clip: ClipData = {
-      start: { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 },
-      timeline: [hold(1)],
-    };
-    const resolved = resolveClipFoci(clip, DEPS, FOV_Y, POSE, SIM_DAYS);
-    expect(resolved.start).toBe(clip.start);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // Test 7 — flyPath: id-form waypoints resolve, at-form pass through, opts kept

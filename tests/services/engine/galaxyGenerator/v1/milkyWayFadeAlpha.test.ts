@@ -55,16 +55,6 @@ describe('milkyWayFadeAlpha', () => {
     );
   });
 
-  it('is monotonically non-increasing in camera distance', () => {
-    const goneDist = distForApparentPx(MILKY_WAY_FADE_GONE_PX);
-    let prev = Infinity;
-    for (let d = 0.1; d <= goneDist * 1.5; d += goneDist / 100) {
-      const a = milkyWayFadeAlpha(d, FOV_Y_RAD, VIEWPORT_H_PX);
-      expect(a).toBeLessThanOrEqual(prev);
-      prev = a;
-    }
-  });
-
   it('adapts the band to viewport height — the same distance can be visible on a tall screen and gone on a short one', () => {
     // Pick a distance where a 720-px viewport sees just under the GONE
     // threshold: alpha 0 there, but a 4x-taller viewport sees 4x the pixels

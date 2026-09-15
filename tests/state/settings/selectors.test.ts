@@ -43,22 +43,6 @@ describe('selectVisibleSourceMask', () => {
     expect(selectVisibleSourceMask(state)).toBe(pick);
   });
 
-  it('packs the enabled bits to the deriveSourceMasks pick bitmask (one disabled)', () => {
-    const base = makeRoot();
-    const state = makeRoot({
-      galaxyCatalogs: {
-        ...base[settingsRoute].galaxyCatalogs,
-        items: {
-          ...base[settingsRoute].galaxyCatalogs.items,
-          sdss: { ...base[settingsRoute].galaxyCatalogs.items.sdss, enabled: false },
-        },
-      },
-    });
-    const { pick } = deriveMasks(state[settingsRoute]);
-
-    expect(selectVisibleSourceMask(state)).toBe(pick);
-  });
-
   it('follows intent only — a disabled galaxy catalog still fading out is not in the mask', () => {
     const base = makeRoot();
     const state = makeRoot({

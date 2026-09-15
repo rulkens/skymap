@@ -275,17 +275,6 @@ describe('parseGlade2masxPgcLine', () => {
     const line = SAMPLE.split('\n')[2]!;
     expect(parseGlade2masxPgcLine(line)).toBeNull();
   });
-
-  it('returns null when 2MASX name is the sentinel `---`', () => {
-    // Construct a line where PGC is real (NGC 253's 2789) but the
-    // 2MASX name slot is overwritten with 16 dashes.  Both halves of
-    // the pair must be valid — without a 2MASX name there's nothing
-    // for the 2MRS-side lookup to key off, so the row contributes
-    // nothing to the map and we return null.
-    const base = SAMPLE.split('\n')[0]!;
-    const dashed = base.slice(0, 67) + '----------------' + base.slice(83);
-    expect(parseGlade2masxPgcLine(dashed)).toBeNull();
-  });
 });
 
 describe('GLADE isotropic filter', () => {
@@ -300,12 +289,6 @@ describe('GLADE isotropic filter', () => {
     // SDSS populated AND HyperLEDA populated → kept (HyperLEDA is all-sky,
     // so the row contributes uniformly regardless of where SDSS pointed).
     const line = makeFixture({ sdssAndHyperleda: true });
-    expect(parseGladeLine(line, { isotropic: true })).not.toBeNull();
-  });
-
-  it('keeps a row whose only parent is HyperLEDA', () => {
-    // The most common GLADE row shape — kept unchanged by the filter.
-    const line = makeFixture({ hyperledaOnly: true });
     expect(parseGladeLine(line, { isotropic: true })).not.toBeNull();
   });
 

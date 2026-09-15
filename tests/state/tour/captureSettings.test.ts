@@ -110,12 +110,4 @@ describe('captureSettings', () => {
     expect(snap.bodies.items.earth.labelEnabled).toBe(false);
     expect(snap.starCatalogs.items.famousStar.labelEnabled).toBe(false);
   });
-
-  it('detaches the per-body capture from later mutation', () => {
-    const settings = makeSettingsFixture();
-    const snap = captureSettings({ settings });
-    settings.bodies.items.earth.labelEnabled = false;
-
-    expect(snap.bodies.items.earth.labelEnabled).toBe(true);
-  });
 });

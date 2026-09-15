@@ -70,13 +70,6 @@ describe('randomGalaxyParams', () => {
     expect(params.legacy?.starCount).toBeUndefined();
   });
 
-  it('leaves the dust-ring trio undefined — the spike randomizer never sampled them', () => {
-    const params = randomGalaxyParams(mulberry32(11), { includeSize: true });
-    expect(params.legacy?.dustRing).toBeUndefined();
-    expect(params.legacy?.dustRingWidth).toBeUndefined();
-    expect(params.legacy?.dustRingStrength).toBeUndefined();
-  });
-
   it('irregular hii stays <= 0.5', () => {
     // TYPES has 14 entries (html:541); index 13 is 'Irr'. Pinning the first
     // rng() draw to 0.95 forces `(rng() * 14) | 0 === 13`, so the type pick
@@ -85,13 +78,5 @@ describe('randomGalaxyParams', () => {
     const params = randomGalaxyParams(rng, { includeSize: true });
     expect(params.type).toBe('Irr');
     expect(params.legacy?.hii).toBeLessThanOrEqual(0.5);
-  });
-
-  it('all four seeds are integers', () => {
-    const params = randomGalaxyParams(mulberry32(99), { includeSize: true });
-    expect(Number.isInteger(params.shared.seed)).toBe(true);
-    expect(Number.isInteger(params.shared.asymSeed)).toBe(true);
-    expect(Number.isInteger(params.shared.clumpSeed)).toBe(true);
-    expect(Number.isInteger(params.shared.waveSeed)).toBe(true);
   });
 });

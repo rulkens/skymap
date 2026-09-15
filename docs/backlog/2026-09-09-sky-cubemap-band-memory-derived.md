@@ -9,9 +9,9 @@ still stored rather than derived.
 
 ## Stored today
 
-`CubemapCaptureRuntime` carries `lastBandActive` and `lastAnchorDistanceMpc`:
+`SkyCaptureRuntime` carries `lastBandActive` and `lastAnchorDistanceMpc`:
 the row's band state and the camera's distance from the row's anchor **as of the
-last rendered frame**. `scheduleCubemapCaptures` is the sole writer (it
+last rendered frame**. `scheduleSkyCaptures` is the sole writer (it
 recomputes both from `ctx.drawCamPos` every frame); the row's `allocateWhen` in
 `renderTargets.ts` is the sole reader. Both are derivable from this frame's
 camera pose — they are stored only because the reader cannot see it.

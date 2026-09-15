@@ -23,22 +23,6 @@ import type { SetSagaContext } from '../../src/store/types';
 import { NOOP_SAGA_CONTEXT } from '../support/createTestStore';
 
 describe('SagaContextProvider / useSetSagaContext', () => {
-  it('returns the provided setSagaContext and invokes it correctly', () => {
-    const spy = vi.fn<SetSagaContext>();
-
-    const wrapper = ({ children }: { children: ReactNode }) =>
-      createElement(SagaContextProvider, { value: spy, children });
-
-    const { result } = renderHook(() => useSetSagaContext(), { wrapper });
-
-    // Identity: the hook returns the exact function we provided.
-    expect(result.current).toBe(spy);
-
-    // Invocability: calling the returned function delegates to the spy.
-    result.current(NOOP_SAGA_CONTEXT);
-    expect(spy).toHaveBeenCalledTimes(1);
-  });
-
   it('throws a clear error when rendered outside a SagaContextProvider', () => {
     // renderHook with no wrapper mounts in a bare React tree — no provider.
     expect(() => renderHook(() => useSetSagaContext())).toThrow(

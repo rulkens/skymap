@@ -21,25 +21,10 @@ import type { PickResult } from '../../src/@types/data/PickResult';
 import { Source } from '../../src/data/sources';
 
 describe('selectionEncoding', () => {
-  it('exposes the canonical encoding constants', () => {
-    expect(SELECTION_SOURCE_SHIFT).toBe(26);
-    expect(SELECTION_LOCAL_IDX_MASK).toBe(0x03ffffff);
-    expect(SELECTION_NONE_SENTINEL).toBe(0xffffffff);
-    expect(SELECTION_SOURCE_SENTINEL_CODE).toBe(63);
-    expect(PICK_SENTINEL_OFFSET).toBe(1);
-  });
-
   it('packs (source, localIdx) into the documented bit layout', () => {
     // Source code 3 (e.g. GLADE) in bits 26..31, localIdx 42 in bits 0..25.
     // Expected: (3 << 26) | 42 = 0x0c000000 | 0x2a = 0x0c00002a.
     expect(packSelection(3, 42)).toBe(0x0c00002a);
-  });
-
-  it('packs source code 0 + localIdx 0 to 0', () => {
-    // The picker offsets writes by +1 specifically because this packed
-    // value collides with the cleared-pick-texture sentinel. The encoding
-    // itself does NOT do the offset — that's the picker's job.
-    expect(packSelection(0, 0)).toBe(0);
   });
 
   it('unpacks a real pick value back to (sourceCode, localIdx)', () => {

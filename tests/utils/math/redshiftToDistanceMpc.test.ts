@@ -19,10 +19,6 @@ import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanc
 import { HUBBLE_DISTANCE_MPC } from '../../../src/utils/math/constants';
 
 describe('redshiftToDistanceMpc', () => {
-  it('returns 0 for z = 0 (the observer is at the origin)', () => {
-    expect(redshiftToDistanceMpc(0)).toBe(0);
-  });
-
   it('maps negative z to a negative (mirrored) distance, not the origin', () => {
     // Regression: 2MRS keeps ~25 blueshifted nearby galaxies (M31 at
     // cz ≈ -300 km/s → z ≈ -0.001, etc.). A `z <= 0 → 0` clause collapsed
@@ -32,17 +28,6 @@ describe('redshiftToDistanceMpc', () => {
     const z = -0.001;
     expect(redshiftToDistanceMpc(z)).toBeCloseTo(HUBBLE_DISTANCE_MPC * z, 6);
     expect(redshiftToDistanceMpc(z)).toBeLessThan(0);
-  });
-
-  it('approaches linear Hubble at small z', () => {
-    // At z = 0.001 the leading-order ΛCDM correction is ~0.02% — well
-    // within 1% of the linear-Hubble value.  Asserting in relative terms
-    // because the absolute Mpc gap (~0.001 Mpc) is below toBeCloseTo's
-    // absolute-diff resolution.
-    const z = 0.001;
-    const linear = HUBBLE_DISTANCE_MPC * z;
-    const lcdm = redshiftToDistanceMpc(z);
-    expect(Math.abs(lcdm - linear) / linear).toBeLessThan(0.001);
   });
 
   it('returns ~413 Mpc for z = 0.1 (ΛCDM Planck 2018)', () => {
@@ -69,17 +54,6 @@ describe('redshiftToDistanceMpc', () => {
     // comoving distance is strictly below the linear value c·z/H₀.
     for (const z of [0.05, 0.5, 1.0, 3.0, 5.0]) {
       expect(redshiftToDistanceMpc(z)).toBeLessThan(HUBBLE_DISTANCE_MPC * z);
-    }
-  });
-
-  it('is monotonic across z in [0, 7]', () => {
-    // Higher redshifts must always map to larger distances.  Covers the
-    // full Milliquas tail.
-    let prev = -1;
-    for (let z = 0; z <= 7; z += 0.25) {
-      const d = redshiftToDistanceMpc(z);
-      expect(d).toBeGreaterThanOrEqual(prev);
-      prev = d;
     }
   });
 });

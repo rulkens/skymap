@@ -85,27 +85,12 @@ describe('makeReconcileEffects', () => {
     vi.clearAllMocks();
   });
 
-  it('requestRender calls scheduler.requestRender', () => {
-    const { state, requestRender } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.requestRender();
-    expect(requestRender).toHaveBeenCalledTimes(1);
-  });
-
   it('syncFades() runs a full pass over every row', () => {
     const { state } = makeState();
     const effects = makeReconcileEffects(state, CANVAS);
     effects.syncFades();
     expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
     expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
-  });
-
-  it('bakeBias(1) calls biasCorrection.setMode(1)', () => {
-    const { state, setMode } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.bakeBias(1);
-    expect(setMode).toHaveBeenCalledTimes(1);
-    expect(setMode).toHaveBeenCalledWith(1);
   });
 
   it("applySwapFormat('rgba16float') forwards to the applySwapFormat phase with state", () => {

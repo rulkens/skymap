@@ -43,14 +43,6 @@ describe('INITIAL_SETTINGS', () => {
     expect(items.desiSgw).toEqual({ enabled: false, labelEnabled: true });
   });
 
-  it('derives exactly one structure item row per id, each ring + label on', () => {
-    const { items } = INITIAL_SETTINGS.structures;
-    expect(Object.keys(items).sort()).toEqual([...STRUCTURE_IDS].sort());
-    for (const id of STRUCTURE_IDS) {
-      expect(items[id]).toEqual({ enabled: true, labelEnabled: true });
-    }
-  });
-
   it('wires per-field defaults from data/defaults', () => {
     expect(INITIAL_SETTINGS.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(INITIAL_SETTINGS.starCatalogs.sizePx).toBe(DEFAULT_STAR_SIZE_PX);

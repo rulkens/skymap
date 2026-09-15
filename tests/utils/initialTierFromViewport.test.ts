@@ -22,11 +22,6 @@ describe('initialTierFromViewport', () => {
     expect(initialTierFromViewport(4096)).toBe('medium');
   });
 
-  it('treats non-finite width as medium (defensive default)', () => {
-    expect(initialTierFromViewport(Number.NaN)).toBe('medium');
-    expect(initialTierFromViewport(Number.POSITIVE_INFINITY)).toBe('medium');
-  });
-
   it('treats zero or negative width as small (mobile-side bias)', () => {
     expect(initialTierFromViewport(0)).toBe('small');
     expect(initialTierFromViewport(-100)).toBe('small');

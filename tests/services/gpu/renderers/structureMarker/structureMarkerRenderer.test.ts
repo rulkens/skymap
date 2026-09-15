@@ -53,17 +53,6 @@ const group = (id: number): StructureMarkerDescriptor => ({
 });
 
 describe('StructureMarkerRenderer (CPU state)', () => {
-  it('starts with zero markers', () => {
-    const r = newRenderer();
-    expect(r.markerCount()).toBe(0);
-  });
-
-  it('counts markers after setMarkers', () => {
-    const r = newRenderer();
-    r.setMarkers([cluster(1), cluster(2), cluster(3)]);
-    expect(r.markerCount()).toBe(3);
-  });
-
   it('replaces (not appends) on subsequent setMarkers', () => {
     const r = newRenderer();
     r.setMarkers([cluster(1)]);

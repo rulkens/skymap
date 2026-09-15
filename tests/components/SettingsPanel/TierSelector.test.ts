@@ -7,26 +7,16 @@ import { TierSelector } from '../../../src/components/SettingsPanel/TierSelector
 
 describe('TierSelector', () => {
   it('marks the active tier with aria-pressed=true and the others false', () => {
-    render(
-      createElement(TierSelector, { tier: 'medium', onTierChange: () => {} }),
-    );
-    expect(
-      screen.getByRole('button', { name: /medium/i, pressed: true }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /small/i, pressed: false }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /large/i, pressed: false }),
-    ).toBeInTheDocument();
+    render(createElement(TierSelector, { tier: 'medium', onTierChange: () => {} }));
+    expect(screen.getByRole('button', { name: /medium/i, pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /small/i, pressed: false })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /large/i, pressed: false })).toBeInTheDocument();
   });
 
   it('fires onTierChange with the clicked tier', async () => {
     const onTierChange = vi.fn();
     const user = userEvent.setup();
-    render(
-      createElement(TierSelector, { tier: 'small', onTierChange }),
-    );
+    render(createElement(TierSelector, { tier: 'small', onTierChange }));
     await user.click(screen.getByRole('button', { name: /large/i }));
     expect(onTierChange).toHaveBeenCalledOnce();
     expect(onTierChange).toHaveBeenCalledWith('large');
@@ -37,9 +27,7 @@ describe('TierSelector', () => {
     // when the click target matches the current tier.
     const onTierChange = vi.fn();
     const user = userEvent.setup();
-    render(
-      createElement(TierSelector, { tier: 'medium', onTierChange }),
-    );
+    render(createElement(TierSelector, { tier: 'medium', onTierChange }));
     await user.click(screen.getByRole('button', { name: /medium/i }));
     expect(onTierChange).not.toHaveBeenCalled();
   });

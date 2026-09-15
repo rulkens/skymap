@@ -4,7 +4,8 @@
  * otherwise be silent: a Layer that adds a pass and forgets the order line
  * never draws, a name listed twice draws twice, a mistyped target filters to
  * nothing. Names no present Layer owns are NOT an error — that is how a Layer
- * left out of a composition is omitted.
+ * left out of a composition is omitted. Nor is a pass that only a capture
+ * line rosters — a probe's sky blit exists for the capture alone.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -14,7 +15,7 @@ import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 type StepFacts = {
   /** Names this line draws for the real view — the "exactly once" domain. */
   readonly drawn: readonly string[];
-  /** Names this line RE-draws into a capture target; they must also be drawn. */
+  /** Names this line draws into a capture — outside the "exactly once" domain. */
   readonly captured: readonly string[];
   readonly targets: readonly string[];
 };
@@ -28,10 +29,14 @@ const STEP_FACTS: {
   compute: () => NONE,
   capture: (spec) => ({
     drawn: [],
-    captured: [...spec.cosmoPasses, ...spec.near0Passes],
+    captured: [...spec.cosmoPasses, ...spec.near0Passes, ...spec.bodyPasses],
     // Resolved through the table so the check still proves the capture lands in
     // a declared render-target row; a bogus key is already a typecheck error.
-    targets: [CUBEMAP_CAPTURES[spec.capture].target],
+    // Only a sky row names one — a probe's faces are its subject's own cube.
+    targets: spec.captures.flatMap((key) => {
+      const row = CUBEMAP_CAPTURES[key];
+      return row.kind === 'sky' ? [row.target] : [];
+    }),
   }),
   render: (spec) => ({ drawn: spec.passes, captured: [], targets: [spec.target] }),
   foreground: (spec) => ({
@@ -50,31 +55,25 @@ export function checkFrameOrder(
   targetIds: readonly string[],
 ): void {
   const drawCount = new Map<string, number>();
-  const captured: string[] = [];
+  const captured = new Set<string>();
   const targets: string[] = [];
   for (const spec of order) {
     const factsOf = STEP_FACTS[spec.kind] as (s: FrameStepSpec) => StepFacts;
     const facts = factsOf(spec);
     for (const name of facts.drawn) drawCount.set(name, (drawCount.get(name) ?? 0) + 1);
-    captured.push(...facts.captured);
+    for (const name of facts.captured) captured.add(name);
     targets.push(...facts.targets);
   }
 
   for (const pass of passes) {
     const count = drawCount.get(pass.name) ?? 0;
-    if (count === 0) {
+    if (count === 0 && !captured.has(pass.name)) {
       throw new Error(`checkFrameOrder: no FRAME_ORDER line draws contributed pass '${pass.name}'`);
     }
     if (count > 1) {
       throw new Error(
         `checkFrameOrder: pass '${pass.name}' is listed on ${count} FRAME_ORDER lines`,
       );
-    }
-  }
-
-  for (const name of captured) {
-    if (!drawCount.has(name)) {
-      throw new Error(`checkFrameOrder: capture roster names '${name}', which no line draws`);
     }
   }
 

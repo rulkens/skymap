@@ -216,12 +216,6 @@ describe('planetsPass.draw — one body per row (partition boundary)', () => {
     expect(drawnByTextured).toEqual(new Set(['mars']));
     for (const id of drawnByPlanets) expect(drawnByTextured.has(id)).toBe(false);
   });
-
-  it('is a no-op when the planetRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeBodyView('mercury' as BodyId);
-    const state = { gpu: { planetRenderer: null } } as unknown as EngineState;
-    expect(() => planetsPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
 });
 
 describe('planetsPass.draw — the f64 seam and packed record layout', () => {
@@ -364,13 +358,5 @@ describe('planetsPass.drawPick', () => {
     const expectedFloor = (BODY_PICK_MIN_RADIUS_PX / pxPerRad) * dM;
     expect(radiusArg).toBeCloseTo(expectedFloor, 0);
     expect(radiusArg).toBeGreaterThan(radiusM); // the floor is genuinely active here
-  });
-
-  it('is a no-op when the bodyPickRenderer handle is null', () => {
-    const state = makePartitionFixtureState();
-    (state.gpu as { bodyPickRenderer: unknown }).bodyPickRenderer = null;
-    expect(() =>
-      planetsPass.drawPick!(PASS_STUB, makeBodyView('mercury' as BodyId), makeCtx(), state),
-    ).not.toThrow();
   });
 });

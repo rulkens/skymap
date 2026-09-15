@@ -113,7 +113,9 @@ import { lerpInSpace } from '../animation/channelSpace';
 import { EASE } from '../animation/ease';
 import { lerpAngleShortest } from '../../../utils/math/lerpAngleShortest';
 import { lerp } from '../../../utils/math/lerp';
-import { toBodyFixedChannels, fromBodyFixedChannels } from './clipFrameChannels';
+import { foldToWorld } from './rungs/foldToWorld';
+import { rowFor } from './rungs/rowFor';
+import { sameFrame } from './rungs/sameFrame';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.
@@ -483,10 +485,6 @@ type FrameLeg = {
   readonly anchor: BaseSegment | null;
 };
 
-function frameKeyOf(frame: PoseFrame): string {
-  return frame === 'absolute' ? 'absolute' : frame.body;
-}
-
 const legsCache = new WeakMap<CompiledClip, readonly FrameLeg[]>();
 
 // Keyed on the PLAYBACK, not the compiled clip: replaying the same `ClipData`
@@ -506,7 +504,7 @@ function frameLegsOf(compiled: CompiledClip): readonly FrameLeg[] {
   const legs: FrameLeg[] = [{ frame: 'absolute', startSec: -Infinity, anchor: null }];
   for (const seg of segments) {
     const frame = seg.frame ?? 'absolute';
-    if (frameKeyOf(frame) !== frameKeyOf(legs[legs.length - 1]!.frame)) {
+    if (!sameFrame(frame, legs[legs.length - 1]!.frame)) {
       legs.push({ frame, startSec: seg.startSec, anchor: seg });
     }
   }
@@ -546,12 +544,12 @@ function convertChannels(
   to: PoseFrame,
   deps: FrameDeps,
 ): CameraPose {
-  if (frameKeyOf(from) === frameKeyOf(to)) return channels;
-  const world =
-    from === 'absolute'
-      ? channels
-      : fromBodyFixedChannels(channels, from.body, deps.bodies, deps.basis);
-  return to === 'absolute' ? world : toBodyFixedChannels(world, to.body, deps.bodies, deps.basis);
+  if (sameFrame(from, to)) return channels;
+  // The clip's one steady basis serves as BOTH rung bases: its absolute angles
+  // were authored through it, and a leg start has no separate up to read.
+  const ctx = { bodies: deps.bodies, poseBasis: deps.basis, upBasis: deps.basis };
+  const world = foldToWorld(rowFor(from).channels.decode(channels, from, ctx), ctx);
+  return rowFor(to).channels.encode(world, to, ctx);
 }
 
 function originOfLeg(

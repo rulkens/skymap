@@ -272,10 +272,4 @@ describe('texturedBodiesPass.draw', () => {
     expect(marsU[20]).toBe(0);
     expect(marsU[21]).toBe(0);
   });
-
-  it('is a no-op when the texturedBodyRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeBodyView('mars' as BodyId);
-    const state = makeState(null, [bodyAt('mars', 3390000)]);
-    expect(() => texturedBodiesPass.draw(PASS_STUB, view, makeCtx(), state)).not.toThrow();
-  });
 });

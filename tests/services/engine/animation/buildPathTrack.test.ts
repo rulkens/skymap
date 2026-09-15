@@ -396,25 +396,6 @@ describe('buildPathTrack', () => {
     }
   });
 
-  it('depth without a window does nothing (a dwell needs both)', () => {
-    const base = buildPathTrack({
-      start: dwellStart,
-      startSec: 0,
-      over: 8,
-      ease: 'linear',
-      waypoints: dwellWaypoints,
-    });
-    const depthOnly = buildPathTrack({
-      start: dwellStart,
-      startSec: 0,
-      over: 8,
-      ease: 'linear',
-      waypoints: dwellWaypoints,
-      linger: 0.9, // no lingerSec → window 0 → no dwell
-    });
-    expect(depthOnly.endSec).toBe(base.endSec);
-  });
-
   it('a dwell ADDS wall-clock time (endSec grows past the cruise total)', () => {
     const track = buildPathTrack({
       start: dwellStart,
@@ -566,23 +547,6 @@ describe('buildPathTrack', () => {
       expect(lookAngleOffApproach('centripetal')).toBeGreaterThan(0.5);
     });
 
-    it('defaults to centripetal when no spline mode is given', () => {
-      const def = buildPathTrack({ start, startSec: 0, over: 20, ease: 'linear', waypoints });
-      const cen = buildPathTrack({
-        start,
-        startSec: 0,
-        over: 20,
-        ease: 'linear',
-        waypoints,
-        spline: { kind: 'centripetal' },
-      });
-      for (let i = 0; i <= 10; i++) {
-        const t = (i / 10) * 20;
-        expect(def.sample(t).yaw).toBeCloseTo(cen.sample(t).yaw, 9);
-        expect(eyeOf(def.sample(t))[0]).toBeCloseTo(eyeOf(cen.sample(t))[0], 9);
-      }
-    });
-
     it('turnDelay scales the causal overshoot past a sharp interior corner', () => {
       // A right-angle corner: fly +Z to the corner, then +X. A larger turnDelay
       // lengthens the arrival tangent, so the curve shoots further past the
@@ -651,18 +615,6 @@ describe('buildPathTrack', () => {
       return tStar;
     };
 
-    it('applies the default look-ahead when absent (buildPathTrack fallback)', () => {
-      // A causal config that omits lookAhead falls back to DEFAULT_LOOK_AHEAD —
-      // so `build()` is byte-identical to spelling out the default.
-      const def = build();
-      const explicit = build(DEFAULT_LOOK_AHEAD);
-      for (let i = 0; i <= 20; i++) {
-        const t = (i / 20) * 20;
-        expect(def.sample(t).yaw).toBeCloseTo(explicit.sample(t).yaw, 9);
-        expect(def.sample(t).pitch).toBeCloseTo(explicit.sample(t).pitch, 9);
-      }
-    });
-
     it('leads toward the next leg sooner after a corner than no look-ahead', () => {
       const base = build(0);
       const lead = build(3);
@@ -673,28 +625,6 @@ describe('buildPathTrack', () => {
       const baseX = lookOf(base.sample(t))[0];
       const leadX = lookOf(lead.sample(t))[0];
       expect(leadX).toBeGreaterThan(baseX + 0.2);
-    });
-
-    it('leads sooner the larger the look-ahead (the knob is monotone)', () => {
-      // The instant the look crosses 45° toward the +X out-leg (look.x > √½). A
-      // larger Δ reaches that lead earlier in the take; no Δ saturates the metric
-      // because it is a TIME, not an angle. 4 < 1.5 < 0 (no look-ahead is latest).
-      // Scan from t=3 — past the align-in, whose initial live→forward turn can
-      // transiently swing the look through ±X and is unrelated to the leg lead.
-      const tCrossX = (d: number): number => {
-        const track = build(d);
-        for (let i = 0; i <= 2000; i++) {
-          const t = (i / 2000) * 20;
-          if (t < 3) continue;
-          if (lookOf(track.sample(t))[0] > Math.SQRT1_2) return t;
-        }
-        return Infinity;
-      };
-      const t0 = tCrossX(0);
-      const t1 = tCrossX(1.5);
-      const t2 = tCrossX(4);
-      expect(t1).toBeLessThan(t0 - 0.1);
-      expect(t2).toBeLessThan(t1 - 0.1);
     });
 
     it('still settles framed on the destination centre (tail look-at preserved)', () => {

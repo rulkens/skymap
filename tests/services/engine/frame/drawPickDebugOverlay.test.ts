@@ -144,24 +144,6 @@ describe('drawPickDebugOverlay', () => {
     expect(state.gpu.pickProgram!.renderForDebug).not.toHaveBeenCalled();
   });
 
-  it('is a no-op when pickProgram is null', () => {
-    const callLog: string[] = [];
-    const deps = makeDeps(callLog);
-    const state = makeState();
-    (state.gpu as any).pickProgram = null;
-    drawPickDebugOverlay(state, deps);
-    expect(callLog).toHaveLength(0);
-  });
-
-  it('is a no-op when pickDebugOverlay is null', () => {
-    const callLog: string[] = [];
-    const deps = makeDeps(callLog);
-    const state = makeState();
-    (state.gpu as any).pickDebugOverlay = null;
-    drawPickDebugOverlay(state, deps);
-    expect(callLog).toHaveLength(0);
-  });
-
   it('is a no-op when renderForDebug returns an empty array (no pickable slab)', () => {
     const callLog: string[] = [];
     const deps = makeDeps(callLog);

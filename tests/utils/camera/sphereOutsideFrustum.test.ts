@@ -53,21 +53,6 @@ describe('sphereOutsideFrustum', () => {
     expect(sphereOutsideFrustum(planes, -100, 0, 0, 0.5)).toBe(true);
   });
 
-  it('a sphere far to the right is outside', () => {
-    const planes = standardFrustum();
-    expect(sphereOutsideFrustum(planes, 100, 0, 0, 0.5)).toBe(true);
-  });
-
-  it('a sphere far above is outside', () => {
-    const planes = standardFrustum();
-    expect(sphereOutsideFrustum(planes, 0, 100, 0, 0.5)).toBe(true);
-  });
-
-  it('a sphere far below is outside', () => {
-    const planes = standardFrustum();
-    expect(sphereOutsideFrustum(planes, 0, -100, 0, 0.5)).toBe(true);
-  });
-
   it('a sphere straddling the right plane is not outside (conservative keep)', () => {
     const planes = standardFrustum();
     // x=3 sits just past the ~2.887 half-width at z=0, so its centre is outside

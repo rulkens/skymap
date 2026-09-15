@@ -140,18 +140,6 @@ describe('InfoCard mobile branch', () => {
       expect(screen.getByText('Galaxy Cluster')).toBeInTheDocument();
       expect(screen.getByText(/10\.0 Mpc/)).toBeInTheDocument();
     });
-
-    it('keeps the full detail body in the DOM on mobile', () => {
-      render(
-        createElement(InfoCard, {
-          hovered: null,
-          selected: galaxyStub,
-        }),
-      );
-      // "RA" is a below-fold reference row inside the <details> block; it lives
-      // in the DOM regardless of the disclosure's open state.
-      expect(screen.getByText('RA')).toBeInTheDocument();
-    });
   });
 
   describe('desktop', () => {

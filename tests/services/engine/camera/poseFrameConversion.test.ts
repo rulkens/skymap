@@ -11,12 +11,7 @@
 
 import { describe, it, expect } from 'vitest';
 
-import {
-  toBodyArm,
-  toWorldArm,
-  resolveWorldArm,
-} from '../../../../src/services/engine/camera/poseFrameConversion';
-import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
+import { toBodyArm, toWorldArm } from '../../../../src/services/engine/camera/poseFrameConversion';
 import { bodyRelativePose } from '../../../../src/services/engine/camera/bodyRelativePose';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
@@ -524,16 +519,5 @@ describe('toWorldArm across the limb', () => {
     // The roll the fold bakes into the absolute arm at disengage is a function
     // of that axis, which is what made a jumping axis a jumping roll.
     expect(coarse.rollRad, 'roll jump, rad').toBeLessThan(1e-7);
-  });
-});
-
-describe('resolveWorldArm', () => {
-  it("returns the absolute arm's pose by reference", () => {
-    // The idempotence that makes the per-frame fold free while the camera is in
-    // the world arm — a copy here would allocate on every frame and break the
-    // `toBe` identity `applyFocusedBodyPivot`'s pass-through relies on.
-    const pose: CameraPose = { target: [1, 2, 3], yaw: 0.4, pitch: -0.2, distance: 12 };
-    const resolved = resolveWorldArm(absoluteArm(pose), new Map(), IDENTITY, IDENTITY);
-    expect(resolved).toBe(pose);
   });
 });

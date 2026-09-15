@@ -53,7 +53,10 @@ function componentFlux(component: GalaxyFieldComponent): number {
  * and compare it against this SAME `reservation.flux`.
  */
 function totalFlux(result: GalaxyFieldMixtureResult): number {
-  const componentsFlux = result.components.reduce((sum, component) => sum + componentFlux(component), 0);
+  const componentsFlux = result.components.reduce(
+    (sum, component) => sum + componentFlux(component),
+    0,
+  );
   return (
     componentsFlux +
     (result.spurCloudReservation?.flux ?? 0) +
@@ -135,7 +138,8 @@ describe('galaxy field flux ledger', () => {
   // mixture with no arm components conserves flux trivially.
   it.each(['m100', 'mw'])('%s renders arm components for that ledger to be about', (id) => {
     const geometry = geometryOf(REFERENCE_GALAXIES.find((ref) => ref.id === id)!);
-    const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).components.length;
+    const withArms = buildGalaxyFieldMixture(geometry, DEFAULT_GALAXY_FIELD_TUNING).components
+      .length;
     const without = buildGalaxyFieldMixture(geometry, {
       ...DEFAULT_GALAXY_FIELD_TUNING,
       arms: { ...ARMS, enabled: false },

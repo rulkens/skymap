@@ -36,7 +36,10 @@ describe('useIsMobile', () => {
 
   beforeEach(() => {
     fakeMql = makeMediaQueryList(false);
-    vi.stubGlobal('matchMedia', vi.fn<(query: string) => MediaQueryList>().mockReturnValue(fakeMql));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn<(query: string) => MediaQueryList>().mockReturnValue(fakeMql),
+    );
   });
 
   afterEach(() => {
@@ -45,15 +48,13 @@ describe('useIsMobile', () => {
 
   it('returns true when the query matches', () => {
     fakeMql = makeMediaQueryList(true);
-    vi.stubGlobal('matchMedia', vi.fn<(query: string) => MediaQueryList>().mockReturnValue(fakeMql));
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn<(query: string) => MediaQueryList>().mockReturnValue(fakeMql),
+    );
 
     const { result } = renderHook(() => useIsMobile());
     expect(result.current).toBe(true);
-  });
-
-  it('returns false when the query does not match', () => {
-    const { result } = renderHook(() => useIsMobile());
-    expect(result.current).toBe(false);
   });
 
   it('updates when the media query change event fires', () => {

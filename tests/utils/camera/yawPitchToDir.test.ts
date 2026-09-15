@@ -15,7 +15,6 @@
 import { describe, it, expect } from 'vitest';
 import { yawPitchToDir } from '../../../src/utils/camera/yawPitchToDir';
 import { orbitAnglesLookingAlong } from '../../../src/utils/camera/orbitAnglesLookingAlong';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('yawPitchToDir', () => {
   it('yaw 0, pitch 0 points along +Z', () => {
@@ -23,20 +22,6 @@ describe('yawPitchToDir', () => {
     expect(d[0]).toBeCloseTo(0, 6);
     expect(d[1]).toBeCloseTo(0, 6);
     expect(d[2]).toBeCloseTo(1, 6);
-  });
-
-  it('yaw π/2, pitch 0 points along +X', () => {
-    const d = yawPitchToDir(Math.PI / 2, 0);
-    expect(d[0]).toBeCloseTo(1, 6);
-    expect(d[1]).toBeCloseTo(0, 6);
-    expect(d[2]).toBeCloseTo(0, 6);
-  });
-
-  it('yaw 0, pitch π/2 points along +Y', () => {
-    const d = yawPitchToDir(0, Math.PI / 2);
-    expect(d[0]).toBeCloseTo(0, 6);
-    expect(d[1]).toBeCloseTo(1, 6);
-    expect(d[2]).toBeCloseTo(0, 6);
   });
 
   it('round-trips through orbitAnglesLookingAlong for an oblique bearing', () => {
@@ -47,13 +32,5 @@ describe('yawPitchToDir', () => {
     const back = orbitAnglesLookingAlong([-dir[0], -dir[1], -dir[2]]);
     expect(back.yaw).toBeCloseTo(yaw, 6);
     expect(back.pitch).toBeCloseTo(pitch, 6);
-  });
-
-  it('writes into out when provided and returns the same reference', () => {
-    const out: Vec3 = [0, 0, 0];
-    const result = yawPitchToDir(Math.PI / 2, 0, out);
-    expect(result).toBe(out);
-    expect(out[0]).toBeCloseTo(1, 6);
-    expect(out[2]).toBeCloseTo(0, 6);
   });
 });

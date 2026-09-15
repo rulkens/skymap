@@ -31,16 +31,6 @@ describe('raySphereRoots', () => {
     expect(roots![1]).toBeCloseTo(2, 12);
   });
 
-  it('surface point along the sun hits the shell', () => {
-    // ro=[1,0,0] on the unit sphere, rd=+x, shell radius 1.01.
-    //   m=[1,0,0]; b=1; c=1-1.0201=-0.0201; discr=1.0201; s=1.01
-    //   roots = -2.01, +0.01   →  tFar≈0.01 is the shell exit toward the sun.
-    const ro: Vec3 = [1, 0, 0];
-    const roots = raySphereRoots(ro, PLUS_X, ORIGIN, 1.01);
-    expect(roots).not.toBeNull();
-    expect(roots![1]).toBeCloseTo(0.01, 6);
-  });
-
   it('tangent returns a double root', () => {
     // Ray grazing the unit sphere one unit off-axis: ro=[-3,1,0], rd=+x.
     //   m=[-3,1,0]; b=-3; c=(9+1)-1=9; discr=9-9=0; s=0

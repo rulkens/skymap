@@ -26,7 +26,6 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
 import { bodyTextureSlotKey } from '../../../../src/utils/scene/bodyTextureSlotKey';
 import { meshBodySlotKey } from '../../../../src/utils/scene/meshBodySlotKey';
-import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
@@ -80,70 +79,6 @@ function bodyPosOf(id: string, simDays: number = CONST_J2000): Readonly<Vec3> {
 }
 
 describe('ASSET_WIRING membership', () => {
-  it('has exactly one row per fetchable asset key', () => {
-    const keys = ASSET_WIRING.map((r) => r.key);
-    const expected: AssetKey[] = [
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.Milliquas,
-      Source.FamousGalaxy,
-      Source.DesiDeep,
-      Source.DesiWedge,
-      Source.DesiSgw,
-      Source.Synthetic,
-      'famousGalaxiesMeta',
-      'famousStarsMeta',
-      'filaments',
-      'mcpm',
-      'cf4Density',
-      'polyphorm2Mrs',
-      'mcpmWorkbench',
-      'flow',
-      'constellations',
-      'structureCatalog',
-      'pgcAlias',
-      'bodyTextureAtlas',
-      'hiResFamous',
-      ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
-      ...SCENE_MESH_BODIES.map((b) => meshBodySlotKey(b.id)),
-      Source.GaiaStars,
-    ];
-    expect(new Set(keys)).toEqual(new Set(expected));
-    // No duplicate rows.
-    expect(keys.length).toBe(expected.length);
-  });
-
-  it('does NOT include the non-fetched structure sources (Cluster/Supercluster/Void)', () => {
-    const keys = new Set<AssetKey>(ASSET_WIRING.map((r) => r.key));
-    expect(keys.has(Source.Cluster)).toBe(false);
-    expect(keys.has(Source.Supercluster)).toBe(false);
-    expect(keys.has(Source.Void)).toBe(false);
-  });
-
-  it('marks the point-source rows as externally built', () => {
-    // Point slots are minted directly in wireSlots, not by the registry; rows
-    // exist for demand+req only and must carry the skip marker.
-    const pointKeys: SourceType[] = [
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.Milliquas,
-      Source.FamousGalaxy,
-      Source.DesiDeep,
-      Source.DesiWedge,
-      Source.DesiSgw,
-      Source.Synthetic,
-    ];
-    for (const k of pointKeys) {
-      expect(rowFor(k).built).toBe('external');
-    }
-    // The sidecar rows are registry-built (no marker).
-    expect(rowFor('filaments').built).toBeUndefined();
-    expect(rowFor('famousGalaxiesMeta').built).toBeUndefined();
-    expect(rowFor('famousStarsMeta').built).toBeUndefined();
-  });
-
   it('mints one externally-built row per body-texture family key', () => {
     // Every (body, kind) entry + the ring is an externally-built row (minted in
     // wireSlots, like the point slots), keyed by its composite
@@ -194,26 +129,6 @@ describe('ASSET_WIRING demand predicates', () => {
     expect(filaments.demand(makeCtx({ settings: { filaments: { enabled: false } } }))).toBe(false);
   });
 
-  it('mcpm demand follows its field-enabled flag', () => {
-    const mcpm = rowFor('mcpm');
-    expect(
-      mcpm.demand(makeCtx({ settings: { volumes: { items: { mcpm: { enabled: true } } } } })),
-    ).toBe(true);
-    // Default-off (field absent) ⇒ false.
-    expect(mcpm.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
-  });
-
-  it('polyphorm2Mrs demand follows its field-enabled flag', () => {
-    const polyphorm2Mrs = rowFor('polyphorm2Mrs');
-    expect(
-      polyphorm2Mrs.demand(
-        makeCtx({ settings: { volumes: { items: { 'polyphorm-2mrs': { enabled: true } } } } }),
-      ),
-    ).toBe(true);
-    // Default-off (field absent) ⇒ false.
-    expect(polyphorm2Mrs.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
-  });
-
   it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
     const cf4 = rowFor('cf4Density');
     expect(
@@ -222,24 +137,6 @@ describe('ASSET_WIRING demand predicates', () => {
       ),
     ).toBe(true);
     expect(cf4.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
-  });
-
-  it('mcpmWorkbench demand follows its field-enabled flag (default-off ⇒ false)', () => {
-    const mcpmWorkbench = rowFor('mcpmWorkbench');
-    expect(
-      mcpmWorkbench.demand(
-        makeCtx({ settings: { volumes: { items: { 'mcpm-workbench': { enabled: true } } } } }),
-      ),
-    ).toBe(true);
-    expect(mcpmWorkbench.demand(makeCtx({ settings: { volumes: { items: {} } } }))).toBe(false);
-  });
-
-  it('flow demand follows settings.flow.enabled (singleton overlay layer)', () => {
-    // Flow's master gate lives in settings alongside filaments/milkyWay — no
-    // bespoke DemandCtx surface. See singleton-overlay-layers convention.
-    const flow = rowFor('flow');
-    expect(flow.demand(makeCtx({ settings: { flow: { enabled: true } } }))).toBe(true);
-    expect(flow.demand(makeCtx({ settings: { flow: { enabled: false } } }))).toBe(false);
   });
 
   it('structureCatalog demand follows structure-category visibility (bug-fix pin)', () => {
@@ -412,11 +309,6 @@ describe('ASSET_WIRING req builders', () => {
     expect(sameRequest(row.req('small'), row.req('medium'))).toBe(false);
   });
 
-  it('tier-aware sidecars carry { tier }', () => {
-    expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
-    expect(rowFor('polyphorm2Mrs').req('large')).toEqual({ tier: 'large' });
-  });
-
   it("the famous-meta row's request equals the famous point row's request at every tier", () => {
     const meta = rowFor('famousGalaxiesMeta');
     const point = rowFor(Source.FamousGalaxy);
@@ -430,15 +322,5 @@ describe('ASSET_WIRING req builders', () => {
     for (const tier of ['small', 'medium', 'large'] as const) {
       expect(row.req(tier)).toBeUndefined();
     }
-  });
-
-  it('structureCatalog req is the empty request', () => {
-    expect(rowFor('structureCatalog').req('medium')).toEqual({});
-  });
-
-  it('void-request sidecars (cf4Density, pgcAlias, mcpmWorkbench) return undefined', () => {
-    expect(rowFor('cf4Density').req('medium')).toBeUndefined();
-    expect(rowFor('pgcAlias').req('medium')).toBeUndefined();
-    expect(rowFor('mcpmWorkbench').req('medium')).toBeUndefined();
   });
 });

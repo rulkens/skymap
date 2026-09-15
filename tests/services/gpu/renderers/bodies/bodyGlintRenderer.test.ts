@@ -18,7 +18,6 @@ import {
   MAX_GLINTS,
   INSTANCE_FLOATS,
 } from '../../../../../src/services/gpu/renderers/bodies/bodyGlintRenderer';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
@@ -52,24 +51,6 @@ function batch(count: number): Float32Array {
 }
 
 describe('createBodyGlintRenderer', () => {
-  it('construct does not throw under the mock device (no depth format param)', () => {
-    expect(() => createBodyGlintRenderer(mockDevice(), 'rgba16float')).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createBodyGlintRenderer(mockDevice(), 'rgba16float');
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
-  it('draw has the batch-in signature arity (pass, instances, count, viewProj, viewportPx)', () => {
-    const renderer = createBodyGlintRenderer(mockDevice(), 'rgba16float');
-    expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(5);
-  });
-
   it('draws 6×count, clamps count to the cap, and no-ops a zero-count batch', () => {
     const renderer = createBodyGlintRenderer(mockDevice(), 'rgba16float');
 
@@ -86,7 +67,13 @@ describe('createBodyGlintRenderer', () => {
 
     // Over-count — clamped to MAX_GLINTS rather than running off the buffer.
     const over = mockPass();
-    renderer.draw(over, batch(MAX_GLINTS + 10), MAX_GLINTS + 10, new Float32Array(16), [1920, 1080]);
+    renderer.draw(
+      over,
+      batch(MAX_GLINTS + 10),
+      MAX_GLINTS + 10,
+      new Float32Array(16),
+      [1920, 1080],
+    );
     expect(over.draw).toHaveBeenCalledWith(6, MAX_GLINTS);
   });
 

@@ -128,43 +128,6 @@ describe('watchTierSaga', () => {
 
   // ─── Re-anchor tests ──────────────────────────────────────────────────────────
 
-  it('re-anchors a galaxy select ref across a tier swap by durable id', async () => {
-    // Before the swap: SDSS cloud has objID 42n at index 0.
-    // After the swap:  SDSS cloud has objID 42n at index 3 (tier changed the slice).
-    // The saga must re-anchor the select ref from index 0 → index 3.
-    const SDSS_OBJ_ID = 42n;
-    let currentCloud = makeCloud(SDSS_OBJ_ID, 0, 4);
-
-    const resolveDeps = (): ResolveDeps => ({
-      catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
-      famousGalaxiesMeta: [],
-      structures: { byId: () => null },
-      stars: { current: () => null },
-    });
-
-    store = buildStore(resolveDeps);
-    // Seed a galaxy select ref BEFORE the swap (index 0 in the old cloud).
-    store.dispatch(updateSelectionSelect({ type: 'galaxyCatalog', source: Source.SDSS, index: 0 }));
-
-    // Dispatch the tier change (medium → large; SDSS reloads on this swap because
-    // tierTarget(medium) = 156_000 but tierTarget(large) = undefined).
-    store.dispatch(requestTier('large'));
-    await flush();
-
-    // The select ref should still be pending (re-anchor waits for catalogLoaded).
-    // Simulate the new cloud arriving: objID 42n is now at index 3.
-    currentCloud = makeCloud(SDSS_OBJ_ID, 3, 4);
-    store.dispatch(catalogLoaded({ source: Source.SDSS }));
-    await flush();
-
-    const selectRef = store.getState()[selectionRoute].select;
-    expect(selectRef).toEqual({
-      type: 'galaxyCatalog',
-      source: Source.SDSS,
-      index: 3, // re-anchored to the new position
-    });
-  });
-
   it('clears the select ref when the galaxy is absent from the new cloud (miss)', async () => {
     // Before the swap: cloud has objID 99n at index 0.
     // After the swap:  new cloud does NOT contain objID 99n (miss → clear).

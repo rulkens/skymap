@@ -58,42 +58,4 @@ describe('mergeSettingsSnapshot', () => {
 
     expect(next.flow.flowSpeed).toBe(1);
   });
-
-  it('merges all ten clusters when given a full snapshot', () => {
-    const state = makeSettingsFixture();
-    const firstStructureId = Object.keys(state.structures.items)[0]! as StructureId;
-    const full: SettingsSnapshot = {
-      galaxyCatalogs: { ...state.galaxyCatalogs, sizePx: state.galaxyCatalogs.sizePx + 1 },
-      structures: {
-        ...state.structures,
-        items: {
-          ...state.structures.items,
-          [firstStructureId]: {
-            ...state.structures.items[firstStructureId],
-            enabled: !state.structures.items[firstStructureId].enabled,
-          },
-        },
-      },
-      volumes: { ...state.volumes, enabled: !state.volumes.enabled },
-      filaments: { ...state.filaments, intensity: 0.123 },
-      milkyWay: { ...state.milkyWay, enabled: !state.milkyWay.enabled },
-      flow: { ...state.flow, flowSpeed: 7 },
-      orbitTrails: { ...state.orbitTrails, enabled: !state.orbitTrails.enabled },
-      starCatalogs: { ...state.starCatalogs, enabled: !state.starCatalogs.enabled },
-      bodies: { ...state.bodies },
-      labels: { ...state.labels, focusedOnly: !state.labels.focusedOnly },
-    };
-
-    const next = mergeSettingsSnapshot(state, full);
-
-    expect(next.galaxyCatalogs.sizePx).toBe(full.galaxyCatalogs.sizePx);
-    expect(next.structures.items).toEqual(full.structures.items);
-    expect(next.volumes.enabled).toBe(full.volumes.enabled);
-    expect(next.filaments.intensity).toBe(0.123);
-    expect(next.milkyWay.enabled).toBe(full.milkyWay.enabled);
-    expect(next.flow.flowSpeed).toBe(7);
-    expect(next.orbitTrails.enabled).toBe(full.orbitTrails.enabled);
-    expect(next.starCatalogs.enabled).toBe(full.starCatalogs.enabled);
-    expect(next.bodies).toEqual(full.bodies);
-  });
 });

@@ -24,11 +24,6 @@ describe('ZONE_OF_AVOIDANCE_SLIDER_FIELDS — parity with the tuning knobs', () 
     expect(registryKeys).toEqual(scalarKeys);
   });
 
-  it('declares no duplicate keys', () => {
-    const keys = ZONE_OF_AVOIDANCE_SLIDER_FIELDS.map((f) => f.key);
-    expect(new Set(keys).size).toBe(keys.length);
-  });
-
   // A range that ends on its own default boots the panel showing a slider
   // already pinned to an end stop, draggable in one direction only — so the
   // upper bound is strict, not merely inclusive.

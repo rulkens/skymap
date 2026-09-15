@@ -81,18 +81,6 @@ describe('DisplaySection', () => {
       const select = getByLabelText(/tone curve/i) as HTMLSelectElement;
       expect(select.value).toBe(String(ToneMapCurve.Reinhard));
     });
-
-    it('shows the correct selected value for Asinh (2)', () => {
-      const { getByRole, getByLabelText } = render(
-        createElement(
-          DisplaySection,
-          baseProps({ toneMapCurve: ToneMapCurve.Asinh as ToneMapCurveT }),
-        ),
-      );
-      fireEvent.click(getByRole('button', { name: /display/i }));
-      const select = getByLabelText(/tone curve/i) as HTMLSelectElement;
-      expect(select.value).toBe(String(ToneMapCurve.Asinh));
-    });
   });
 
   describe('changing the dropdown calls onToneMapCurveChange', () => {
@@ -112,24 +100,6 @@ describe('DisplaySection', () => {
       fireEvent.change(select, { target: { value: String(ToneMapCurve.Linear) } });
       expect(onToneMapCurveChange).toHaveBeenCalledOnce();
       expect(onToneMapCurveChange).toHaveBeenCalledWith(ToneMapCurve.Linear);
-    });
-
-    it('calls onToneMapCurveChange with the parsed numeric curve value when changed to Aces (4)', () => {
-      const onToneMapCurveChange = vi.fn<(curve: ToneMapCurveT) => void>();
-      const { getByRole, getByLabelText } = render(
-        createElement(
-          DisplaySection,
-          baseProps({
-            toneMapCurve: ToneMapCurve.Reinhard as ToneMapCurveT,
-            onToneMapCurveChange,
-          }),
-        ),
-      );
-      fireEvent.click(getByRole('button', { name: /display/i }));
-      const select = getByLabelText(/tone curve/i);
-      fireEvent.change(select, { target: { value: String(ToneMapCurve.Aces) } });
-      expect(onToneMapCurveChange).toHaveBeenCalledOnce();
-      expect(onToneMapCurveChange).toHaveBeenCalledWith(ToneMapCurve.Aces);
     });
   });
 

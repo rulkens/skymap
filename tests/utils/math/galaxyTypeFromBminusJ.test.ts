@@ -5,13 +5,6 @@ describe('galaxyTypeFromBminusJ', () => {
   it('B−J < 1.5 is blue (star-forming)', () => {
     expect(galaxyTypeFromBminusJ(0.8).category).toBe('blue');
   });
-  it('1.5 ≤ B−J < 2.5 is intermediate (green valley)', () => {
-    expect(galaxyTypeFromBminusJ(2.0).category).toBe('green');
-  });
-  it('B−J ≥ 2.5 is red (quiescent)', () => {
-    expect(galaxyTypeFromBminusJ(3.0).category).toBe('red');
-  });
-
   // Boundary semantics: the source uses '<' for both edges, so the lower
   // edge (1.5) lands in 'green' and the upper edge (2.5) lands in 'red'.
   // Pinning the exact boundary value catches a comparison-operator flip

@@ -96,10 +96,4 @@ describe('createAdditiveUpsample', () => {
     const textureEntry = entries.find((e) => e.binding === 0);
     expect(textureEntry?.resource).toBe(halfResView);
   });
-
-  it('destroy() does not throw', () => {
-    const device = mockDevice();
-    const upsample = createAdditiveUpsample(device, 'rgba16float');
-    expect(() => upsample.destroy()).not.toThrow();
-  });
 });

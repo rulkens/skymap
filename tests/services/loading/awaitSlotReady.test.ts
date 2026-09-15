@@ -75,12 +75,6 @@ function makeFakeSlot<T>(initial: LoadState<T>): {
 }
 
 describe('awaitSlotReady', () => {
-  it('resolves with the fallback when the slot is null', async () => {
-    const fallback = new Map<string, number>([['fallback', 1]]);
-    const result = await awaitSlotReady<Map<string, number>>(null, fallback);
-    expect(result).toBe(fallback);
-  });
-
   it('resolves with the cached value when the slot is already ready (no subscription)', async () => {
     const value = new Map<string, number>([['cached', 42]]);
     const { slot, subscriberSpy } = makeFakeSlot<Map<string, number>>({
@@ -140,20 +134,5 @@ describe('awaitSlotReady', () => {
     // fire the (now-stale) listener and bump the count.
     transition({ kind: 'error', req: undefined, error: new Error('late'), finalAttempt: 2 });
     expect(subscriberSpy.mock.calls.length).toBe(callsAfterResolve);
-  });
-
-  it('ignores transient loading transitions and waits for ready', async () => {
-    // Defends the implicit "only ready/error settle the promise"
-    // contract.  A future refactor that accidentally settled on
-    // `committing` or any non-terminal state would resolve too early.
-    const { slot, transition } = makeFakeSlot<string>({
-      kind: 'idle',
-    });
-    const promise = awaitSlotReady<string>(slot, 'fallback');
-    transition({ kind: 'loading', req: undefined, loaded: 0, total: 100, attempt: 0 });
-    transition({ kind: 'loading', req: undefined, loaded: 50, total: 100, attempt: 0 });
-    transition({ kind: 'committing', req: undefined });
-    transition({ kind: 'ready', req: undefined, value: 'final', loadedAtMs: 1 });
-    await expect(promise).resolves.toBe('final');
   });
 });

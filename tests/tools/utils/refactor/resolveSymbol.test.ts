@@ -4,8 +4,10 @@ import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 
 // In-memory Projects let us seed a tiny module graph and assert on resolution
 // without touching disk — the house pattern (see applyMoves.test.ts).
+// `skipLoadingLibFiles` drops the lib.d.ts parse (~150 ms per Project, the bulk
+// of this file's cost); nothing here resolves a global type.
 function projectWith(files: Record<string, string>): Project {
-  const project = new Project({ useInMemoryFileSystem: true });
+  const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
   for (const [path, content] of Object.entries(files)) {
     project.createSourceFile(path, content);
   }

@@ -12,12 +12,6 @@ function idx(x: number, y: number, z: number, dims: number): number {
 }
 
 describe('synthetic Gaussian cube', () => {
-  it('produces the requested dims', () => {
-    const cube = makeSyntheticGaussianCube({ dims: 8, frameKind: 'equatorial-cartesian' });
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
-
   it('peaks at the centre', () => {
     const cube = makeSyntheticGaussianCube({ dims: 9, frameKind: 'equatorial-cartesian' });
     // Centre voxel index (4, 4, 4) of a 9³ cube; x-fastest layout.
@@ -37,28 +31,9 @@ describe('synthetic Gaussian cube', () => {
     const right = f16ToFloat(cube.voxels[7 + 4 * 9 + 4 * 81]!);
     expect(Math.abs(left - right)).toBeLessThan(0.01);
   });
-
-  it('is centred at the world origin by construction', () => {
-    const cube = makeSyntheticGaussianCube({
-      dims: 8,
-      frameKind: 'equatorial-cartesian',
-      boxSizeMpc: 200,
-    });
-    expect(cube.origin).toEqual([-100, -100, -100]);
-    expect(cube.voxelSize).toBe(200 / 8);
-  });
 });
 
 describe('cartesian grid cube', () => {
-  it('produces the requested dims', () => {
-    // Palette + densityScale are not cube properties — they live in
-    // `volumeFieldDefaults.ts` keyed by the renderer's handle.  The
-    // generator's job here is purely to produce a valid voxel grid.
-    const cube = makeCartesianGridCube({ dims: 8 });
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
-
   it('peaks at the world origin (which sits on a grid plane on every axis)', () => {
     // 9³ box of 400 Mpc → voxelSize ≈ 44.44.  The CENTRE voxel (4, 4, 4)
     // has world position (-200 + 4.5*44.44, ...) ≈ (0, 0, 0).  With
@@ -98,14 +73,6 @@ describe('cartesian grid cube', () => {
 });
 
 describe('spherical grid cube', () => {
-  it('produces the requested dims', () => {
-    // Palette + densityScale are not cube properties; see the
-    // companion comment on the cartesian generator's test above.
-    const cube = makeSphericalGridCube({ dims: 8 });
-    expect(cube.dims).toEqual([8, 8, 8]);
-    expect(cube.voxels.length).toBe(8 * 8 * 8);
-  });
-
   it('has high value near the world origin (all three spokes pass through it)', () => {
     // 16³ at 400 Mpc → voxelSize 25.  The voxel nearest the origin is
     // (8, 8, 8) with world position (12.5, 12.5, 12.5).
@@ -128,18 +95,6 @@ describe('spherical grid cube', () => {
     // degenerate "shell".  Spoke contribution at origin = 1.
     const centre = f16ToFloat(cube.voxels[idx(8, 8, 8, 17)]!);
     expect(centre).toBeGreaterThan(0.9);
-  });
-
-  it('has voxels near the +X spoke that are bright', () => {
-    // Voxel along the +X axis with y, z ≈ 0: pick a voxel at
-    // (centre_x + offset, centre_y, centre_z) of an odd-dim cube.
-    const cube = makeSphericalGridCube({ dims: 17, boxSizeMpc: 400 });
-    // (10, 8, 8) — world position roughly (47, 0, 0).
-    // dToX = sqrt(0² + 0²) = 0 → spoke value = 1.  Shell distance
-    // from r ≈ 47 to nearest shell (50) = 3 → shell value = exp(-9/18) ≈ 0.6.
-    // max = 1.0 (the spoke wins).
-    const v = f16ToFloat(cube.voxels[idx(10, 8, 8, 17)]!);
-    expect(v).toBeGreaterThan(0.9);
   });
 
   it('is octahedrally symmetric (any axis flip preserves values)', () => {

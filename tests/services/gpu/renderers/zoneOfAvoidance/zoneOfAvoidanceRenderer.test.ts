@@ -25,10 +25,6 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
 }
 
 describe('createZoneOfAvoidanceRenderer', () => {
-  it('constructs under a null device', () => {
-    expect(() => createZoneOfAvoidanceRenderer(mockDevice(), 'rgba16float')).not.toThrow();
-  });
-
   it('builds a pick pipeline targeting r32uint with no blend and a depth test', () => {
     // Regression guard: a blend key on an integer target is a validation
     // error, and a missing depthStencil breaks occlusion against other

@@ -56,6 +56,7 @@
     "build-filaments-sdss": "tsx tools/filaments/buildFilaments.ts --sources sdss --output public/data/filament/v1/filaments-sdss.bin && npm run build-data-manifest",
     "build-filaments-small": "tsx tools/filaments/buildFilaments.ts --cut 7 --output public/data/filament/v1/filaments-small.bin && npm run build-data-manifest",
     "build-fonts": "tsx tools/fonts/buildFontAtlas.ts",
+    "build-env-brdf-lut": "tsx tools/lut/buildEnvBrdfLut.ts",
     "build-tiers": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
     "build-textures": "tsx tools/textures/buildTextures.ts",
     "tour-length": "tsx tools/animation/tourLength.ts",

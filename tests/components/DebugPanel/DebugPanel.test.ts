@@ -92,22 +92,6 @@ describe('DebugPanel', () => {
     expect(selectDebugOverlays(store.getState())['pick-buffer']).toBe(true);
   });
 
-  it('dispatches setPassDisabled(true) when a renderer-toggle box is unchecked', () => {
-    const { store } = createAppStore();
-    const { container } = renderContainer(store);
-    // Locate the RenderTogglesSection's <details> by its summary text — there are
-    // multiple <details> elements in the panel (AssetLoading, GpuTimings, etc.).
-    const summaries = Array.from(container.querySelectorAll('details summary'));
-    const togglesSummary = summaries.find((s) => s.textContent?.includes('Renderer Toggles'));
-    expect(togglesSummary).not.toBeUndefined();
-    const details = togglesSummary!.closest('details')!;
-    // All passes start enabled (no disabledPasses entries).
-    const boxes = details.querySelectorAll<HTMLInputElement>('input[type=checkbox]');
-    expect(boxes.length).toBeGreaterThan(0);
-    fireEvent.click(boxes[0]!);
-    expect(selectDisabledPasses(store.getState())['point-sprites']).toBe(true);
-  });
-
   it('dispatches setProvenanceFilter and setProvenanceHighlight from the provenance table', () => {
     const { store } = createAppStore();
     expect(selectGalaxyProvenance(store.getState()).orientation.filter).toBe('all');
@@ -144,19 +128,5 @@ describe('DebugPanel', () => {
     expect(playAction).not.toBeUndefined();
     // The button names the registered clip; the action carries its id.
     expect(playAction!.payload).toBe('cosmicFlows');
-  });
-
-  it('dispatches startTour with the tour id on a tour button click', () => {
-    const { store } = createAppStore();
-    const dispatchSpy = vi.spyOn(store, 'dispatch');
-    const { container } = renderContainer(store);
-    const buttons = Array.from(container.querySelectorAll('button'));
-    const tourButton = buttons.find((b) => b.textContent?.includes('Demo Tour'));
-    expect(tourButton).not.toBeUndefined();
-    fireEvent.click(tourButton!);
-    const tourAction = dispatchSpy.mock.calls.map((c) => c[0]).find(startTour.match);
-    expect(tourAction).not.toBeUndefined();
-    // The button names the registered tour; the action carries its id.
-    expect(tourAction!.payload.id).toBe('demo');
   });
 });

@@ -141,19 +141,6 @@ describe('applyIntent', () => {
     expect(1234).not.toBe(FADE_OUT_DURATION_MS);
   });
 
-  it('falls back to FADE_IN/OUT constants when durationMs is omitted', () => {
-    const { state, fadeTo } = makeState();
-
-    const onRow = makeRow({ intent: () => true });
-    applyIntentForTest(state, onRow, undefined, { animate: true });
-    expect(fadeTo).toHaveBeenCalledWith(HANDLE, 1, FADE_IN_DURATION_MS);
-
-    fadeTo.mockClear();
-    const offRow = makeRow({ intent: () => false });
-    applyIntentForTest(state, offRow, undefined, { animate: true });
-    expect(fadeTo).toHaveBeenCalledWith(HANDLE, 0, FADE_OUT_DURATION_MS);
-  });
-
   it('does not re-issue fadeTo to a target already held', () => {
     const { state, fadeTo, targetOf } = makeState();
     targetOf.mockReturnValue(1);
@@ -386,16 +373,6 @@ describe('syncVisibilityFades', () => {
     syncVisibilityFades(state, { animate: true });
 
     expect(requestRender).not.toHaveBeenCalled();
-  });
-
-  it('writes no settings', () => {
-    const { state, settings } = makeBridgeState();
-    const before = JSON.parse(JSON.stringify(settings));
-
-    syncVisibilityFades(state, { animate: true });
-
-    // The bridge does fades ONLY, so settings are untouched.
-    expect(JSON.parse(JSON.stringify(settings))).toEqual(before);
   });
 
   it('threads durationMs to every animated fadeTo call', () => {

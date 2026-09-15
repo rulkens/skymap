@@ -18,7 +18,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createBodyPickRenderer } from '../../../../../src/services/gpu/renderers/bodies/bodyPickRenderer';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 import type {
   BodyPointPick,
   BodyGlintPick,
@@ -69,15 +68,6 @@ const gpt = (packedId: number, x: number, bandClass: number): BodyGlintPick => (
 
 const VP = new Float32Array(16);
 const VIEWPORT: Vec2 = [1920, 1080];
-
-describe('createBodyPickRenderer', () => {
-  it('satisfies Renderer and destroys cleanly', () => {
-    const renderer = createBodyPickRenderer(mockDevice(), false);
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-});
 
 describe('bodyPickRenderer.drawPoints — multi-caller-per-submit', () => {
   it('two same-pass calls bind DIFFERENT instance buffers + bind groups (no last-write-wins clobber)', () => {

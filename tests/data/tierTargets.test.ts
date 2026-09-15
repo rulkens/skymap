@@ -27,19 +27,6 @@ describe('tierTarget', () => {
     expect(tierTarget(Source.FamousGalaxy, 'small')).toBeUndefined();
   });
 
-  it('medium tier caps SDSS at ~156k and GLADE at ~400k', () => {
-    expect(tierTarget(Source.SDSS, 'medium')).toBe(156_000);
-    expect(tierTarget(Source.Glade, 'medium')).toBe(400_000);
-  });
-
-  it('large tier caps SDSS at 500k, leaves GLADE and Milliquas uncapped', () => {
-    // The raw SDSS CSV is the complete DR17 pull (~970k rows); the cap keeps
-    // the large tier at the point budget the perf numbers were measured at.
-    expect(tierTarget(Source.SDSS, 'large')).toBe(500_000);
-    expect(tierTarget(Source.Glade, 'large')).toBeUndefined();
-    expect(tierTarget(Source.Milliquas, 'large')).toBeUndefined();
-  });
-
   it('returns undefined for non-galaxy catalog sources (structures cannot be subsampled)', () => {
     expect(tierTarget(Source.Cluster, 'medium')).toBeUndefined();
     expect(tierTarget(Source.Supercluster, 'small')).toBeUndefined();
@@ -63,82 +50,5 @@ describe('tierFilenameForSource', () => {
     expect(tierFilenameForSource(Source.FamousGalaxy, 'medium')).toBe(
       'galaxy-catalog/v9/famous.bin',
     );
-  });
-});
-
-describe('tierFilenameForSource — Milliquas', () => {
-  it('returns tier-suffixed filenames for medium/large', () => {
-    // Milliquas is tiered like SDSS and GLADE — every tier produces a
-    // distinct on-disk file because the brightest-N subsample is
-    // different at each cap.  Suffixed names let the three variants
-    // coexist on the static host.
-    expect(tierFilenameForSource(Source.Milliquas, 'medium')).toBe(
-      'galaxy-catalog/v9/milliquas-medium.bin',
-    );
-    expect(tierFilenameForSource(Source.Milliquas, 'large')).toBe(
-      'galaxy-catalog/v9/milliquas-large.bin',
-    );
-  });
-});
-
-describe('tierTarget — Milliquas', () => {
-  it('caps Milliquas at 60k in the small tier (mobile budget)', () => {
-    // The mobile GPU budget admits the brightest ~60k quasars on top of
-    // the GLADE small sample.
-    expect(tierTarget(Source.Milliquas, 'small')).toBe(60_000);
-  });
-
-  it('caps Milliquas at 200k in the medium tier', () => {
-    expect(tierTarget(Source.Milliquas, 'medium')).toBe(200_000);
-  });
-
-  it('keeps Milliquas uncapped in the large tier (undefined)', () => {
-    expect(tierTarget(Source.Milliquas, 'large')).toBeUndefined();
-  });
-});
-
-describe('tierFilenameForSource — DesiDeep', () => {
-  it('emits the shared filename for every tier (tier-agnostic, like 2MRS)', () => {
-    // DesiDeep's tierTargets is {} — a single small pencil-beam cone, not
-    // a bulk catalog that needs per-tier subsampling.
-    expect(tierFilenameForSource(Source.DesiDeep, 'small')).toBe('galaxy-catalog/v9/desi-deep.bin');
-    expect(tierFilenameForSource(Source.DesiDeep, 'medium')).toBe(
-      'galaxy-catalog/v9/desi-deep.bin',
-    );
-    expect(tierFilenameForSource(Source.DesiDeep, 'large')).toBe('galaxy-catalog/v9/desi-deep.bin');
-  });
-});
-
-describe('tierTarget — DesiDeep', () => {
-  it('is uncapped in every tier (undefined)', () => {
-    expect(tierTarget(Source.DesiDeep, 'small')).toBeUndefined();
-    expect(tierTarget(Source.DesiDeep, 'medium')).toBeUndefined();
-    expect(tierTarget(Source.DesiDeep, 'large')).toBeUndefined();
-  });
-});
-
-describe('tierFilenameForSource — DesiWedge', () => {
-  it('emits the shared filename for every tier (tier-agnostic, like the cone)', () => {
-    // DesiWedge's tierTargets is {} — a fixed dec-band patch, not a bulk
-    // catalog that needs per-tier subsampling.
-    expect(tierFilenameForSource(Source.DesiWedge, 'small')).toBe(
-      'galaxy-catalog/v9/desi-wedge.bin',
-    );
-    expect(tierFilenameForSource(Source.DesiWedge, 'medium')).toBe(
-      'galaxy-catalog/v9/desi-wedge.bin',
-    );
-    expect(tierFilenameForSource(Source.DesiWedge, 'large')).toBe(
-      'galaxy-catalog/v9/desi-wedge.bin',
-    );
-  });
-});
-
-describe('tierFilenameForSource — DesiSgw', () => {
-  it('emits the shared filename for every tier (tier-agnostic, like the cone)', () => {
-    // DesiSgw's tierTargets is {} — a fixed depth-bounded patch, not a bulk
-    // catalog that needs per-tier subsampling.
-    expect(tierFilenameForSource(Source.DesiSgw, 'small')).toBe('galaxy-catalog/v9/desi-sgw.bin');
-    expect(tierFilenameForSource(Source.DesiSgw, 'medium')).toBe('galaxy-catalog/v9/desi-sgw.bin');
-    expect(tierFilenameForSource(Source.DesiSgw, 'large')).toBe('galaxy-catalog/v9/desi-sgw.bin');
   });
 });

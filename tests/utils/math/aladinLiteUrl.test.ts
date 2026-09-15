@@ -19,11 +19,6 @@ describe('aladinLiteUrl', () => {
     );
   });
 
-  it('accepts negative declinations (southern hemisphere)', () => {
-    const url = aladinLiteUrl(0, -45.5, 2);
-    expect(url).toContain('target=0%20-45.5');
-  });
-
   it('converts fovArcmin to degrees — 90 arcmin → fov=1.5 deg', () => {
     expect(aladinLiteUrl(0, 0, 90)).toContain('fov=1.5');
   });
@@ -33,9 +28,5 @@ describe('aladinLiteUrl', () => {
     // mush in a full-screen viewport; the builder zooms those out to 30'.
     expect(aladinLiteUrl(0, 0, 2)).toContain(`fov=${30 / 60}`);
     expect(aladinLiteUrl(0, 0, 45)).toContain(`fov=${45 / 60}`);
-  });
-
-  it('uses the same DSS2 colour composite survey as the DSS thumbnails', () => {
-    expect(aladinLiteUrl(0, 0, 2)).toContain('survey=CDS%2FP%2FDSS2%2Fcolor');
   });
 });

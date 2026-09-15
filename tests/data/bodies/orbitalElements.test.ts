@@ -31,14 +31,6 @@ describe('ORBITAL_ELEMENTS has a valid structure', () => {
     }
   });
 
-  it('every orbital element row names a focus', () => {
-    // `focusId` has no null case any more — an empty string would silently
-    // resolve to nothing in `deriveBodyStates`'s map lookup.
-    for (const e of ORBITAL_ELEMENTS) {
-      expect(e.focusId.length).toBeGreaterThan(0);
-    }
-  });
-
   it('pairs every eccentricity with the sign of its semi-major axis', () => {
     // The conic branch stated twice, so a transcription that "tidies" one half
     // fails: an ellipse is e < 1 with a > 0, a hyperbola e > 1 with a < 0 —

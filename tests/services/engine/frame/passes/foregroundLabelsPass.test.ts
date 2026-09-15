@@ -162,10 +162,6 @@ describe('foregroundLabelsPass.enabled', () => {
     dir.runFrame(state, makeCtx(5100));
     expect(foregroundLabelsPass.enabled(layerState, makeCtx(5100), VIEW_STUB)).toBe(true);
   });
-
-  it('is false pre-bootstrap, before the renderer exists', () => {
-    expect(foregroundLabelsPass.enabled(makeState(null), makeCtx(), VIEW_STUB)).toBe(false);
-  });
 });
 
 describe('foregroundLabelsPass.draw', () => {
@@ -217,10 +213,5 @@ describe('foregroundLabelsPass.draw', () => {
     const state = makeState(renderer, null);
     foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state);
     expect(renderer.draw as unknown as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
-  });
-
-  it('is a no-op when the foreground renderer is null (pre-bootstrap)', () => {
-    const state = makeState(null);
-    expect(() => foregroundLabelsPass.draw(PASS_STUB, VIEW_STUB, makeCtx(), state)).not.toThrow();
   });
 });

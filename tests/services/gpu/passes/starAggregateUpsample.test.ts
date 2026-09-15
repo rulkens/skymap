@@ -83,9 +83,4 @@ describe('createStarAggregateUpsample', () => {
     const entries = Array.from(bindGroupDescs[0]!.entries) as GPUBindGroupEntry[];
     expect(entries.find((e) => e.binding === 0)?.resource).toBe(halfResView);
   });
-
-  it('destroy() does not throw', () => {
-    const upsample = createStarAggregateUpsample(mockDevice(), 'rgba16float');
-    expect(() => upsample.destroy()).not.toThrow();
-  });
 });

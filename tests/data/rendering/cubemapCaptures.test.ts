@@ -28,6 +28,9 @@ describe('CUBEMAP_CAPTURES', () => {
 
   it('names a declared render-target row as its capture target', () => {
     const ids = new Set(renderTargetRows('bgra8unorm').map((spec) => spec.id));
-    for (const row of ROWS) expect(ids.has(row.target)).toBe(true);
+    // Sky rows only: a probe's faces are its subject's own cube, not a row here.
+    for (const row of ROWS) {
+      if (row.kind === 'sky') expect(ids.has(row.target)).toBe(true);
+    }
   });
 });

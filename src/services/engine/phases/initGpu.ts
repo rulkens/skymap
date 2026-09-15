@@ -1,6 +1,6 @@
 /**
  * initGpu — bootstrap phase that acquires the WebGPU device + swap-chain context,
- * builds the shared BGL/uiCtx/fontAtlases prerequisites, then constructs every GPU
+ * builds the shared BGL/uiCtx/fontAtlases/env-BRDF prerequisites, then constructs every GPU
  * handle via `constructGpuHandles`/`GPU_HANDLE_ROWS` (see `../gpuHandles/`). Runs
  * first because every later phase needs the device.
  *
@@ -13,6 +13,7 @@ import { initGpu as gpuInitGpu, resizeCanvasToDisplay, watchHdrCapability } from
 import { createGpuTimingService } from '../../gpu/timing/gpuTimingService';
 import { TIMED_SLOTS } from '../frame/timing/timedSlots';
 import { loadFontAtlases } from '../../gpu/labelLayout/loadFontAtlases';
+import { loadEnvBrdfLut } from '../../gpu/resources/loadEnvBrdfLut';
 import { engineHdrCapabilityChanged } from '../../../state/engine/engineSlice';
 import { hasUrlGate } from '../../../utils/url/hasUrlGate';
 import { isPerfMode } from '../../../utils/url/isPerfMode';
@@ -53,10 +54,9 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   );
   deps.phaseLocals = { device, context, format, unwatchHdrCapability };
 
-  // fadeBgl/sourceBgl/focusBgl/timingService/uiCtx/fontAtlases: the 6
-  // `GpuHandleKey`-excluded state.gpu fields (see GpuHandleKey.d.ts) — built
-  // here, not as rows. fadeBgl/sourceBgl/focusBgl/fontAtlases also feed
-  // `handleDeps` below; uiCtx/timingService don't.
+  // fadeBgl/sourceBgl/focusBgl/timingService/uiCtx/fontAtlases/envBrdfLut: the
+  // 7 `GpuHandleKey`-excluded state.gpu fields (see GpuHandleKey.d.ts) — built
+  // here, not as rows. All but uiCtx/timingService also feed `handleDeps` below.
   state.gpu.fadeBgl = createFadeUniformsBgl(device);
   state.gpu.sourceBgl = createSourceUniformsBgl(device);
   state.gpu.focusBgl = createFocusUniformsBgl(device);
@@ -71,6 +71,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
   // Sequenced here, before `constructGpuHandles`, exactly as it always ran.
   state.gpu.uiCtx = { device, context, canvas, hdrCapable };
   state.gpu.fontAtlases = await loadFontAtlases();
+  state.gpu.envBrdfLut = await loadEnvBrdfLut(device);
 
   const handleDeps: GpuHandleConstructDeps = {
     ctx: { device, context, canvas, format, hdrCapable },
@@ -78,6 +79,7 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     sourceBgl: state.gpu.sourceBgl!,
     focusBgl: state.gpu.focusBgl!,
     fontAtlases: state.gpu.fontAtlases!,
+    envBrdfLut: state.gpu.envBrdfLut!,
   };
   // Complement of wireInput.ts's filter below, by construction: this phase
   // builds every row EXCEPT the ones marked `constructPhase: 'wireInput'`.

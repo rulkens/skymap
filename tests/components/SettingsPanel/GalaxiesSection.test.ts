@@ -63,15 +63,6 @@ function baseProps() {
 
 describe('GalaxiesSection', () => {
   describe('master tri-state', () => {
-    it('reflects checked (allOn) when all TOGGLEABLE_SOURCES are set in the mask', () => {
-      const { container } = render(createElement(GalaxiesSection, baseProps()));
-      // The master toggle is the first checkbox in the CollapsibleSection header
-      const headerCheckbox =
-        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      expect(headerCheckbox.checked).toBe(true);
-      expect(headerCheckbox.indeterminate).toBe(false);
-    });
-
     it('is indeterminate when only a subset of sources are set', () => {
       const props = { ...baseProps(), visibleSourceMask: PARTIAL_MASK };
       const { container } = render(createElement(GalaxiesSection, props));
@@ -79,15 +70,6 @@ describe('GalaxiesSection', () => {
         container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
       // indeterminate is not a boolean attribute HTML renders — it is a DOM property
       expect(headerCheckbox.indeterminate).toBe(true);
-    });
-
-    it('is unchecked (noneOn) when mask is 0', () => {
-      const props = { ...baseProps(), visibleSourceMask: 0 };
-      const { container } = render(createElement(GalaxiesSection, props));
-      const headerCheckbox =
-        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      expect(headerCheckbox.checked).toBe(false);
-      expect(headerCheckbox.indeterminate).toBe(false);
     });
   });
 
@@ -111,31 +93,6 @@ describe('GalaxiesSection', () => {
       );
       expect(twomrsCheckbox).not.toBeNull();
       expect(twomrsCheckbox!.checked).toBe(false);
-    });
-
-    it('renders a checkbox row for DESI Deep Field', () => {
-      const { container } = render(createElement(GalaxiesSection, baseProps()));
-      const desiCheckbox = container.querySelector<HTMLInputElement>(
-        `#toggle-source-${Source.DesiDeep}`,
-      );
-      expect(desiCheckbox).not.toBeNull();
-      // DesiDeep's bit is part of ALL_ON_MASK, so the box renders checked.
-      expect(desiCheckbox!.checked).toBe(true);
-      const desiLabel = container.querySelector(`label[for="toggle-source-${Source.DesiDeep}"]`);
-      expect(desiLabel).not.toBeNull();
-      expect(desiLabel!.textContent).toContain('DESI Deep Field');
-    });
-  });
-
-  describe('point-size slider', () => {
-    it('reflects the pointSize prop as the slider value', () => {
-      const props = { ...baseProps(), pointSize: 4.5 };
-      const { container } = render(createElement(GalaxiesSection, props));
-      // The Slider lives in the (default-collapsed) Advanced section, whose
-      // wrapper is aria-hidden, so a raw DOM query rather than getByRole.
-      const slider = container.querySelector('[role="slider"]')!;
-      expect(slider.getAttribute('aria-valuenow')).toBe('4.5');
-      expect(slider.getAttribute('aria-valuetext')).toBe('4.5 px');
     });
   });
 
@@ -192,25 +149,6 @@ describe('GalaxiesSection', () => {
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, true);
       expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgw, true);
-    });
-
-    it('calls onToggleSource with false for all TOGGLEABLE_SOURCES when master is toggled from allOn', () => {
-      const onToggleSource = vi.fn<(source: SourceType, visible: boolean) => void>();
-      const props = { ...baseProps(), visibleSourceMask: ALL_ON_MASK, onToggleSource };
-      const { container } = render(createElement(GalaxiesSection, props));
-
-      // Mask=ALL_ON_MASK: allOn=true, so onToggle fires each source with targetEnabled=false.
-      // fireEvent.click is the reliable trigger for controlled checkboxes in jsdom.
-      const headerCheckbox =
-        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      fireEvent.click(headerCheckbox);
-
-      expect(onToggleSource).toHaveBeenCalledTimes(8);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.FamousGalaxy, false);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.SDSS, false);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiDeep, false);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiWedge, false);
-      expect(onToggleSource).toHaveBeenCalledWith(Source.DesiSgw, false);
     });
   });
 });

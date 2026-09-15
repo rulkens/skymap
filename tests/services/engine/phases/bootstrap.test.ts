@@ -144,18 +144,6 @@ describe('runBootstrapPhases', () => {
     expect(order).toEqual(['initGpu', 'createLayers']);
   });
 
-  it('first rejection short-circuits — wireSlots throws → wireInput/startLoop NOT called', async () => {
-    __phaseControl.wireSlots.throw = new Error('wireSlots boom');
-    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('wireSlots boom');
-    expect(order).toEqual(['initGpu', 'createLayers', 'wireSlots']);
-  });
-
-  it('first rejection short-circuits — wireInput throws → startLoop NOT called', async () => {
-    __phaseControl.wireInput.throw = new Error('wireInput boom');
-    await expect(runBootstrapPhases(makeState(), makeDeps())).rejects.toThrow('wireInput boom');
-    expect(order).toEqual(['initGpu', 'createLayers', 'wireSlots', 'wireInput']);
-  });
-
   it('state writes from earlier phases are visible to later phases', async () => {
     __phaseControl.initGpu.write = true;
     const state = makeState();

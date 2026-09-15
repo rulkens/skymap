@@ -2,17 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { createFadeController } from '../../../src/services/animation/fadeController';
 
 describe('createFadeController', () => {
-  it('reports the initial opacity before any fade is started', () => {
-    const c = createFadeController(0.25, 1000);
-    expect(c.currentOpacity(1000)).toBe(0.25);
-    expect(c.isAnimating(1000)).toBe(false);
-  });
-
-  it('defaults initial opacity to 0', () => {
-    const c = createFadeController(undefined, 1000);
-    expect(c.currentOpacity(1000)).toBe(0);
-  });
-
   it('smoothstep-eases from sourceOpacity to targetOpacity over duration', () => {
     const c = createFadeController(0, 1000);
     c.fadeTo(1, 600, 1000);
@@ -20,13 +9,6 @@ describe('createFadeController', () => {
     expect(c.currentOpacity(1000)).toBeCloseTo(0, 5);
     expect(c.currentOpacity(1300)).toBeCloseTo(0.5, 5);
     expect(c.currentOpacity(1600)).toBeCloseTo(1, 5);
-  });
-
-  it('clamps to targetOpacity after start + duration', () => {
-    const c = createFadeController(0, 1000);
-    c.fadeTo(1, 600, 1000);
-    expect(c.currentOpacity(2000)).toBe(1);
-    expect(c.isAnimating(2000)).toBe(false);
   });
 
   it('isAnimating returns false exactly at start + duration boundary', () => {

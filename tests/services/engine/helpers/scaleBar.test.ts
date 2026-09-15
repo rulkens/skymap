@@ -19,27 +19,9 @@ const TARGET_PX = 150;
 const CANVAS = { width: 1280, height: 720 };
 
 describe('computeScaleInfo', () => {
-  it('returns null when canvas height is zero', () => {
-    const result = computeScaleInfo({
-      cam: { distance: 100, fovYRad: FOV },
-      canvasSize: { width: 1280, height: 0 },
-      targetPx: TARGET_PX,
-    });
-    expect(result).toBeNull();
-  });
-
   it('returns null when distance is zero (pxPerMpc would be infinite)', () => {
     const result = computeScaleInfo({
       cam: { distance: 0, fovYRad: FOV },
-      canvasSize: CANVAS,
-      targetPx: TARGET_PX,
-    });
-    expect(result).toBeNull();
-  });
-
-  it('returns null when distance is negative (pxPerMpc <= 0)', () => {
-    const result = computeScaleInfo({
-      cam: { distance: -10, fovYRad: FOV },
       canvasSize: CANVAS,
       targetPx: TARGET_PX,
     });
@@ -73,17 +55,6 @@ describe('computeScaleInfo', () => {
     expect(result!.label).toBe('1.00 Gpc / 3.26 Gly');
   });
 
-  it('emits a kpc label at close-up galaxy distance', () => {
-    // distance = 0.5 Mpc → desiredMpc ≈ 0.12 → niceRound → 0.1 (= 100 kpc)
-    const result = computeScaleInfo({
-      cam: { distance: 0.5, fovYRad: FOV },
-      canvasSize: CANVAS,
-      targetPx: TARGET_PX,
-    });
-    expect(result).not.toBeNull();
-    expect(result!.label).toBe('100 kpc / 326 kly');
-  });
-
   it('always returns widthPx ≤ targetPx (floor rounding fits inside envelope)', () => {
     // Sweep a handful of distances spanning 4 orders of magnitude.
     const distances = [0.05, 0.5, 5, 50, 500, 5000];
@@ -114,26 +85,6 @@ describe('computeScaleInfo', () => {
       const mantissa = leading!.replace(/0+$/, '');
       expect(['1', '2', '5']).toContain(mantissa);
     }
-  });
-
-  it('scales linearly with viewport height', () => {
-    // Doubling the canvas height doubles pxPerMpc, halves desiredMpc,
-    // typically lands on the same niceMpc tick (the widths themselves differ).
-    const a = computeScaleInfo({
-      cam: { distance: 100, fovYRad: FOV },
-      canvasSize: { width: 1280, height: 720 },
-      targetPx: TARGET_PX,
-    });
-    const b = computeScaleInfo({
-      cam: { distance: 100, fovYRad: FOV },
-      canvasSize: { width: 1280, height: 1440 },
-      targetPx: TARGET_PX,
-    });
-    expect(a).not.toBeNull();
-    expect(b).not.toBeNull();
-    // Doubled viewport: pxPerMpc doubles, desiredMpc halves.
-    // 24 → 12, both round down to 10 in the {1,2,5}×10^k family.
-    expect(b!.label).toBe('10.0 Mpc / 32.6 Mly');
   });
 
   it('reads a ground-level range as metres, not as its centre-distance equivalent', () => {

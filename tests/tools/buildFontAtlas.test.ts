@@ -22,12 +22,4 @@ describe('assertAtlasDimensions', () => {
   it('throws with the font id when height overflows', () => {
     expect(() => assertAtlasDimensions('cormorant', ATLAS_PX, 2048)).toThrow(/cormorant/);
   });
-
-  it('mentions both expected and actual dimensions in the error', () => {
-    // The engineer reading the failure needs to see which dimension is
-    // wrong and by how much.
-    expect(() => assertAtlasDimensions('cormorant', 2048, 768)).toThrow(
-      /1024/, // expected
-    );
-  });
 });

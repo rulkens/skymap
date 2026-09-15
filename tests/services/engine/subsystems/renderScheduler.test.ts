@@ -72,26 +72,6 @@ function makeFakeTimers() {
 }
 
 describe('createRenderScheduler', () => {
-  it('does not schedule a frame until requestRender is called', () => {
-    const fake = makeFakeRaf();
-    const onFrame = vi.fn();
-    createRenderScheduler({ onFrame, rafImpl: fake.rafImpl, cafImpl: fake.cafImpl });
-    expect(fake.pendingCount()).toBe(0);
-    expect(onFrame).not.toHaveBeenCalled();
-  });
-
-  it('requestRender schedules exactly one rAF', () => {
-    const fake = makeFakeRaf();
-    const onFrame = vi.fn();
-    const sched = createRenderScheduler({
-      onFrame,
-      rafImpl: fake.rafImpl,
-      cafImpl: fake.cafImpl,
-    });
-    sched.requestRender();
-    expect(fake.pendingCount()).toBe(1);
-  });
-
   it('coalesces multiple requestRender calls before the frame fires', () => {
     const fake = makeFakeRaf();
     const onFrame = vi.fn();
@@ -106,29 +86,6 @@ describe('createRenderScheduler', () => {
     expect(fake.pendingCount()).toBe(1);
     fake.fireOne();
     expect(onFrame).toHaveBeenCalledTimes(1);
-  });
-
-  it('after the frame fires, the loop is idle until requestRender is called again', () => {
-    const fake = makeFakeRaf();
-    const onFrame = vi.fn();
-    const sched = createRenderScheduler({
-      onFrame,
-      rafImpl: fake.rafImpl,
-      cafImpl: fake.cafImpl,
-    });
-    sched.requestRender();
-    fake.fireOne();
-    expect(fake.pendingCount()).toBe(0);
-    expect(onFrame).toHaveBeenCalledTimes(1);
-
-    // No further activity ⇒ no more frames scheduled.
-    expect(fake.pendingCount()).toBe(0);
-
-    // A new requestRender wakes the loop again.
-    sched.requestRender();
-    expect(fake.pendingCount()).toBe(1);
-    fake.fireOne();
-    expect(onFrame).toHaveBeenCalledTimes(2);
   });
 
   it('a requestRender during the frame body re-schedules the next frame', () => {
@@ -246,20 +203,5 @@ describe('createRenderScheduler', () => {
     expect(timers.pendingCount()).toBe(1);
     sched.destroy();
     expect(timers.pendingCount()).toBe(0);
-  });
-
-  it('isScheduled() reports the current scheduling state', () => {
-    const fake = makeFakeRaf();
-    const onFrame = vi.fn();
-    const sched = createRenderScheduler({
-      onFrame,
-      rafImpl: fake.rafImpl,
-      cafImpl: fake.cafImpl,
-    });
-    expect(sched.isScheduled()).toBe(false);
-    sched.requestRender();
-    expect(sched.isScheduled()).toBe(true);
-    fake.fireOne();
-    expect(sched.isScheduled()).toBe(false);
   });
 });

@@ -18,6 +18,7 @@ import { selectOrientation } from '../settings/selectors';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { reencodePose } from '../../utils/camera/reencodePose';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
+import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import type { SagaContext } from '../../store/types';
 
 // Frame-roll duration (~1 s, spec §8); co-located since only this saga uses it.
@@ -36,7 +37,7 @@ export function* watchOrientationChangeSaga() {
     yield* put(setOrientation(frame));
     // World arm only: a body arm's pose is stored in the body's own axes, so no
     // (yaw, pitch) is expressed against the pole that just moved.
-    if (base.frame === 'absolute') {
+    if (isWorldArm(base)) {
       yield* put(
         commitCameraPose(
           absoluteArm(

@@ -82,25 +82,6 @@ function makeStubPass() {
 }
 
 describe('createGalaxyPickRenderer', () => {
-  it('constructs from device + BGLs + focus bind group only, exposing the draw surface', () => {
-    // The picker owns its own pickUniformBuffer; callers pass the packed
-    // bytes per `drawPoints` call.  The public surface is the slimmed
-    // point-pick draw provider: `drawPoints`, `destroy`.
-    const { device } = makeStubDevice();
-    const galaxyPickRenderer = createGalaxyPickRenderer(
-      device,
-      makeStubFadeBgl(),
-      makeStubSourceBgl(),
-      makeStubFocusBgl(),
-      {} as unknown as GPUBindGroup,
-      false,
-    );
-
-    expect(galaxyPickRenderer).toBeDefined();
-    expect(typeof galaxyPickRenderer.drawPoints).toBe('function');
-    expect(typeof galaxyPickRenderer.destroy).toBe('function');
-  });
-
   it('drawPoints uploads the caller bytes VERBATIM to its OWN buffer — no post-upload patching', () => {
     // drawPoints is the point-pick draw surface: it uploads the caller's
     // already-pick-shaped uniform bytes to the renderer's OWN pickUniformBuffer

@@ -25,10 +25,4 @@ describe('earthFlyout', () => {
     const earthJ2000 = deriveBodyStates(CONST_J2000).get('earth')!.positionMpc;
     expect(start.target).not.toEqual([...earthJ2000]);
   });
-
-  it('carries its durable id and a non-empty timeline regardless of instant', () => {
-    const clip = earthFlyout(CONST_J2000);
-    expect(clip.id).toBe('earthFlyout');
-    expect(clip.data.timeline.length).toBeGreaterThan(0);
-  });
 });

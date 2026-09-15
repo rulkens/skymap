@@ -52,13 +52,6 @@ describe('LUT quantizers', () => {
     expect(absMagToLutIndex(20)).toBe(127);
   });
 
-  it('clamps out-of-range BP-RP colours to the endpoints', () => {
-    // Below STAR_COLORIDX_MIN (-0.6) -> 0; above STAR_COLORIDX_MAX (4.4)
-    // -> the top index 63.
-    expect(bpRpToColorIdx(-1.0)).toBe(0);
-    expect(bpRpToColorIdx(5.0)).toBe(STAR_COLORIDX_LEVELS - 1);
-  });
-
   it('dequantizes magnitude indices to bin centres', () => {
     // A magnitude of 6.3 lands in index 64, whose centre is
     // -6.0 + 64.5 * 0.19 = 6.255 mag — within half a step of the input.

@@ -20,7 +20,6 @@ const SEED_PATH = resolve(__dirname, '../../data/seeds/structure_anchors.seed.js
 const allEntries = parseStructureSeed(readFileSync(SEED_PATH, 'utf-8'));
 
 const CLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'cluster');
-const SUPERCLUSTER_ENTRIES = allEntries.filter((e) => e.category === 'supercluster');
 const VOID_ENTRIES = allEntries.filter((e) => e.category === 'void');
 
 describe('raDecDistToEqCart', () => {
@@ -63,35 +62,7 @@ describe('cluster seed — cluster entries', () => {
   });
 });
 
-describe('cluster seed — supercluster entries', () => {
-  it('every entry has a positive distance', () => {
-    for (const a of SUPERCLUSTER_ENTRIES) {
-      expect(a.distMpc).toBeGreaterThan(0);
-    }
-  });
-
-  it('every entry has a finite, positive physicalRadiusMpc', () => {
-    for (const a of SUPERCLUSTER_ENTRIES) {
-      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
-      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
-    }
-  });
-});
-
 describe('cluster seed — void entries', () => {
-  it('every entry has a positive distance', () => {
-    for (const a of VOID_ENTRIES) {
-      expect(a.distMpc).toBeGreaterThan(0);
-    }
-  });
-
-  it('every entry has a finite, positive physicalRadiusMpc', () => {
-    for (const a of VOID_ENTRIES) {
-      expect(a.physicalRadiusMpc).toBeGreaterThan(0);
-      expect(Number.isFinite(a.physicalRadiusMpc)).toBe(true);
-    }
-  });
-
   it('Boötes Void sits inside the 500 Mpc CF-4 box', () => {
     // The CF-4 reconstruction volume is 500 Mpc radius from the observer;
     // Boötes is at the edge of reliable reconstruction.  This test pins

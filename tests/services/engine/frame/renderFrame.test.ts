@@ -13,6 +13,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -475,6 +476,8 @@ function makeInput(
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
+          // No mesh renderer → the probe scheduler idles before reading `data`.
+          meshBodyRenderer: null,
           // Near-field handle null → atmosphereShellPass reports enabled=false
           // AND the atmosphereSkyView compute step early-outs, so these fixtures
           // stay a pure cosmological-frame trace (like the other body handles).
@@ -575,13 +578,7 @@ function makeInput(
         // active. The fixture camera sits Mpc-scale away from Sgr A*, so the
         // band stays closed and nothing is scheduled; see
         // `scheduleCubemapCaptures`.
-        cubemapCaptures: {
-          sgrAStar: {
-            lastBandActive: false,
-            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-            bakedSettings: null,
-          },
-        },
+        cubemapCaptures: makeCubemapCaptureRuntimes(),
       } as never,
       device,
       context,
@@ -602,12 +599,12 @@ describe('renderFrame', () => {
     fx = makeInput();
   });
 
-  it('creates exactly one command encoder per frame', () => {
+  it('creates exactly one command encoder on a frame with no capture faces', () => {
     renderFrame(fx.input);
     expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
   });
 
-  it('submits exactly once with the encoder.finish() output', () => {
+  it('submits exactly once, with the encoder.finish() output, on a frame with no capture faces', () => {
     renderFrame(fx.input);
     const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
     expect(submit).toHaveBeenCalledTimes(1);

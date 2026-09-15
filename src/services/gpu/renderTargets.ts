@@ -146,7 +146,7 @@ import type { Size } from '../../@types/rendering/Size';
 import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
-import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
+import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -162,16 +162,6 @@ const STAR_AGGREGATE_DIVISOR = 2;
  * same one-line-change reason as `STAR_AGGREGATE_DIVISOR`.
  */
 const ZONE_OF_AVOIDANCE_DIVISOR = 5;
-
-/**
- * Hysteresis margin for the `sky-cubemap` row's `allocateWhen`: once
- * allocated, the row survives until the camera-to-anchor distance exceeds
- * this multiple of the lensing band's `goneAt` (500 AU) — 750 AU — rather
- * than releasing the instant the band itself closes. Without it, a camera
- * dithering across the 500 AU edge destroys and reallocates the row's 50 MB
- * + 7 views every frame.
- */
-const SKY_CUBEMAP_ROW_RELEASE_MARGIN = 1.5;
 
 /** A row's divisor for this state — constant rows ignore the state entirely. */
 function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
@@ -277,32 +267,20 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
     // The black-hole lens's captured environment: 6 layers of a fixed-size
     // 2d-array, later bound as a `texture_cube` (see `CubeFace.d.ts`). Same
     // depthless/additive/zero-clear profile as `hdr` — the captured roster
-    // (point-sprites, star-catalog/aggregates, S-star glints) is additive.
+    // (`frameOrder.ts`'s sky capture line) is additive.
     //
-    // The one row with an `allocateWhen`: 1024² × 6 × 8 B is 50 MB, and the
-    // lens draws only within ~500 AU of Sgr A*, so the texture exists only
-    // while the band does. `scheduleCubemapCaptures` writes the band flag and
-    // reconciles on its edge, so the row is there on the band-entry frame —
-    // the frame that sweeps all six faces. Once allocated it outlives a brief close by
-    // `SKY_CUBEMAP_ROW_RELEASE_MARGIN` (a camera dithering across the band
-    // edge would otherwise destroy + reallocate the row every frame); a row
-    // never allocated does not spring into existence from proximity alone —
-    // only `lastBandActive` triggers first allocation.
+    // Lazily allocated: 1024² × 6 × 8 B is 50 MB, and the lens draws only
+    // within ~500 AU of Sgr A*, so the texture exists only while the band does.
+    // `scheduleSkyCaptures` writes the band flag and reconciles on its edge, so
+    // the row is there on the band-entry frame — the frame that sweeps all six
+    // faces.
     {
       id: 'sky-cubemap',
       format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
-      allocateWhen: (state, isAllocated) => {
-        const capture = state.cubemapCaptures.sgrAStar;
-        if (capture.lastBandActive) return true;
-        return (
-          isAllocated &&
-          capture.lastAnchorDistanceMpc <=
-            SKY_CUBEMAP_ROW_RELEASE_MARGIN * CUBEMAP_CAPTURES.sgrAStar.band.goneAt
-        );
-      },
+      allocateWhen: captureRowAllocateWhen('sgrAStar'),
       // `size` is a live setting (the DebugPanel resolution knob,
       // 256/512/1024/2048) — `reconcile` resolves it every frame exactly like
       // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
@@ -311,6 +289,18 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
         size: (state) => state.settings.sgrAStarLensingTuning.cubemapResolutionPx,
         layers: 6,
       },
+    },
+    // The sky a reflection probe is captured over, on the same lazy terms as
+    // `sky-cubemap`: 6 layers, held only while the camera is inside the solar
+    // system. A fixed size, not a live knob: only the probe capture samples it.
+    {
+      id: 'solar-system-sky',
+      format: HDR_TARGET_FORMAT,
+      depth: null,
+      scale: 1, // unused: fixedSizePx below overrides it (required by the type).
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+      allocateWhen: captureRowAllocateWhen('solarSystem'),
+      fixedSizePx: { size: 256, layers: 6 },
     },
     {
       id: 'swap',
@@ -343,18 +333,17 @@ export function createRenderTargets(
   // depth attachment", which is exactly what `depthViewOf` throws on.
   const textures = new Map<string, GPUTexture>();
   const views = new Map<string, GPUTextureView>();
-  // A dimension:'cube' view alongside `views`' default (2d-array) one, for the
-  // one row whose 6 layers are later sampled as a `texture_cube` (see
+  // A dimension:'cube' view alongside `views`' default (2d-array) one, for a
+  // row whose 6 layers are later sampled as a `texture_cube` (see
   // `RenderTargets.cubeViewOf`'s doc). Keyed off `fixedSizePx.layers === 6`
-  // (data-driven, not a hardcoded 'sky-cubemap' id check) so a future second
-  // 6-layer row gets one for free.
+  // (data-driven, not a hardcoded id check) so every 6-layer row gets one.
   const cubeViews = new Map<string, GPUTextureView>();
   // One single-array-layer `dimension: '2d'` view per layer, for a row whose
   // `views`' default (a whole-array `2d-array` view with no `baseArrayLayer`)
   // is unusable as a COLOUR ATTACHMENT when the row has more than one layer —
-  // WebGPU rejects a multi-layer view there. Only the sky-cubemap capture
-  // needs this today (`executeFrame`'s per-face colour attachment), gated the
-  // same data-driven way as `cubeViews` rather than a hardcoded id check.
+  // WebGPU rejects a multi-layer view there. The capture rows need this
+  // (`executeFrame`'s per-face colour attachment), gated the same data-driven
+  // way as `cubeViews` rather than a hardcoded id check.
   const layerViews = new Map<string, readonly GPUTextureView[]>();
   const depthTextures = new Map<string, GPUTexture>();
   const depthViews = new Map<string, GPUTextureView>();

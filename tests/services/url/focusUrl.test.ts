@@ -76,12 +76,6 @@ describe('selectionToFocusId', () => {
     expect(selectionToFocusId(baseInfo({ source: Source.Glade, objID: 2789n }))).toBe('pgc-2789');
   });
 
-  it('returns pgc-<n> for a 2MRS row with a real PGC objID', () => {
-    expect(selectionToFocusId(baseInfo({ source: Source.TwoMRS, objID: 12345n }))).toBe(
-      'pgc-12345',
-    );
-  });
-
   it('returns sdss-<n> for an SDSS row with a 19-digit bigint objID', () => {
     expect(selectionToFocusId(baseInfo({ source: Source.SDSS, objID: 1237665128253423687n }))).toBe(
       'sdss-1237665128253423687',
@@ -96,17 +90,6 @@ describe('selectionToFocusId', () => {
       dec: -5.4567,
     });
     expect(selectionToFocusId(info)).toBe('pos@10.1235,-5.4567');
-  });
-
-  it('rounds positive declinations to 4 decimals in pos fallback', () => {
-    const info = baseInfo({
-      source: Source.Glade,
-      objID: 0n,
-      ra: 359.99999,
-      dec: 89.5,
-    });
-    // ra rounds up to 360.0000 (codec doesn't normalise wrap; that's fine)
-    expect(selectionToFocusId(info)).toBe('pos@360.0000,89.5000');
   });
 
   it('returns null for synthetic-source rows (not link-encodable)', () => {

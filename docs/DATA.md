@@ -209,7 +209,7 @@ Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from
 | Planet textures        | `fetch-textures` (`--dev` for a subset) | `build-textures`                                  |
 | Earth surface tiles    | `fetch-textures` + `fetch-eox`          | `build-earth-tiles` (`--dev` for a quick z5 pass) |
 
-Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Full-resolution texture and tile builds run post-merge from the main worktree.
+Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Two small deterministic bakes are the exceptions and live in git under `public/`: the MSDF font atlases in `public/fonts/` (`npm run build-fonts`) and the split-sum environment-BRDF LUT in `public/lut/` (`npm run build-env-brdf-lut`). Full-resolution texture and tile builds run post-merge from the main worktree.
 
 ## Adding a new raw data source
 

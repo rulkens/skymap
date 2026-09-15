@@ -12,8 +12,10 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { MeshBodyRenderer } from '../../../../@types/rendering/MeshBodyRenderer';
 import type { MeshResources } from '../../../../@types/rendering/MeshResources';
+import type { MeshProbe } from '../../../../@types/rendering/MeshProbe';
 import type { MeshAsset } from '../../../../@types/data/mesh/MeshAsset';
 import { MESH_BODY_UNIFORM_BYTES } from '../../../../data/mesh/meshBodyUniformLayout';
+import { CUBEMAP_CAPTURES } from '../../../../data/rendering/cubemapCaptures';
 import { MESH_TEXTURE_SLOTS } from '../../../../data/mesh/meshTextureSlots';
 import { MESH_VERTEX_SLOTS } from '../../../../data/mesh/meshVertexSlots';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
@@ -22,17 +24,26 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/meshBody/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/meshBody/fragment.wesl?static';
 
+// The body's reflection probe, after the material maps; the fragment's
+// `@group(0) @binding(5)` decoration mirrors this by hand.
+const PROBE_BINDING = 5;
+
 /**
- * @param reversedZ selects this slab's depth convention (single-sourced in
+ * @param init.reversedZ selects this slab's depth convention (single-sourced in
  *   `SLAB_REVERSED_Z`): `false` ⇒ smaller-z-wins (`depthCompare: 'less'`),
  *   `true` ⇒ reversed-Z greater-wins. Resolved through `resolveDepthCompare`.
+ * @param init.envBrdfLut the split-sum LUT loaded once at boot
+ *   (`resources/loadEnvBrdfLut.ts`) and shared by every mesh body.
  */
-export function createMeshBodyRenderer(
-  device: GPUDevice,
-  targetFormat: GPUTextureFormat,
-  depthFormat: GPUTextureFormat,
-  reversedZ: boolean,
-): MeshBodyRenderer {
+export function createMeshBodyRenderer(init: {
+  readonly device: GPUDevice;
+  readonly targetFormat: GPUTextureFormat;
+  readonly depthFormat: GPUTextureFormat;
+  readonly reversedZ: boolean;
+  readonly envBrdfLut: GPUTexture;
+}): MeshBodyRenderer {
+  const { device, targetFormat, depthFormat, reversedZ, envBrdfLut } = init;
+
   const sampler = device.createSampler({
     label: 'meshBody-sampler',
     magFilter: 'linear',
@@ -42,8 +53,23 @@ export function createMeshBodyRenderer(
     addressModeV: 'repeat',
   });
 
-  const bindGroupLayout = device.createBindGroupLayout({
-    label: 'meshBody-bgl',
+  // Clamp-to-edge is load-bearing, not a default: the LUT is read at
+  // (NoV, roughness), and a wrapping sampler turns grazing NoV → 0 into the
+  // NoV = 1 column — a bright rim exactly where the Fresnel term should peak.
+  const lutSampler = device.createSampler({
+    label: 'meshBody-lut-sampler',
+    magFilter: 'linear',
+    minFilter: 'linear',
+    addressModeU: 'clamp-to-edge',
+    addressModeV: 'clamp-to-edge',
+  });
+
+  // Group 0 holds what a body owns, group 1 what the renderer owns. Binding 1
+  // of group 0 is vacant: the sampler lives in group 1, and renumbering the
+  // texture bindings would desync this layout from `MESH_TEXTURE_SLOTS`, which
+  // the shader's decorations mirror by hand.
+  const bodyBindGroupLayout = device.createBindGroupLayout({
+    label: 'meshBody-body-bgl',
     entries: [
       {
         binding: 0,
@@ -51,12 +77,35 @@ export function createMeshBodyRenderer(
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: { type: 'uniform', minBindingSize: MESH_BODY_UNIFORM_BYTES },
       },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       ...MESH_TEXTURE_SLOTS.map((slot) => ({
         binding: slot.binding,
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' as const },
       })),
+      {
+        binding: PROBE_BINDING,
+        visibility: GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'float', viewDimension: 'cube' },
+      },
+    ],
+  });
+
+  const globalBindGroupLayout = device.createBindGroupLayout({
+    label: 'meshBody-global-bgl',
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    ],
+  });
+
+  const globalBindGroup = device.createBindGroup({
+    label: 'meshBody-global-bg',
+    layout: globalBindGroupLayout,
+    entries: [
+      { binding: 0, resource: sampler },
+      { binding: 1, resource: envBrdfLut.createView({ label: 'meshBody-envBrdf-view' }) },
+      { binding: 2, resource: lutSampler },
     ],
   });
 
@@ -67,7 +116,7 @@ export function createMeshBodyRenderer(
     label: 'meshBody-pipeline',
     layout: device.createPipelineLayout({
       label: 'meshBody-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
+      bindGroupLayouts: [bodyBindGroupLayout, globalBindGroupLayout],
     }),
     vertex: {
       module: vsModule,
@@ -106,7 +155,33 @@ export function createMeshBodyRenderer(
     for (const buffer of res.vertexBuffers) buffer.destroy();
     res.indexBuffer.destroy();
     for (const texture of res.textures) texture.destroy();
+    res.probe.cube.destroy();
+    res.probe.depth.destroy();
     res.uniformBuffer.destroy();
+  }
+
+  // The capture writes the cube's mip 0 face by face and `prefilterCubeGgx`
+  // renders the mips below it, so both textures are colour/depth attachments
+  // as well as sampled. The chain runs to 1 px: its last mip is the
+  // roughness-1 level the fragment's diffuse term reads.
+  const probeFaceSizePx = CUBEMAP_CAPTURES.probe.faceSizePx;
+  const probeMipLevelCount = mipLevelCount(probeFaceSizePx, probeFaceSizePx);
+
+  function mintProbe(id: string): MeshProbe {
+    const cube = device.createTexture({
+      label: `meshBody-probe-${id}`,
+      size: [probeFaceSizePx, probeFaceSizePx, 6],
+      format: 'rgba16float',
+      mipLevelCount: probeMipLevelCount,
+      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const depth = device.createTexture({
+      label: `meshBody-probe-depth-${id}`,
+      size: [probeFaceSizePx, probeFaceSizePx, 1],
+      format: 'depth32float',
+      usage: GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    return { cube, depth };
   }
 
   function uploadTexture(id: string, field: string, format: GPUTextureFormat, src: ImageBitmap) {
@@ -166,6 +241,8 @@ export function createMeshBodyRenderer(
       uploadTexture(id, slot.field, slot.format, asset[slot.field]),
     );
 
+    const probe = mintProbe(id);
+
     const uniformBuffer = device.createBuffer({
       label: `meshBody-uniform-${id}`,
       size: MESH_BODY_UNIFORM_BYTES,
@@ -177,20 +254,31 @@ export function createMeshBodyRenderer(
       indexBuffer,
       indexCount: asset.indexCount,
       textures,
+      probe,
       uniformBuffer,
       bindGroup: device.createBindGroup({
         label: `meshBody-bg-${id}`,
-        layout: bindGroupLayout,
+        layout: bodyBindGroupLayout,
         entries: [
           { binding: 0, resource: { buffer: uniformBuffer } },
-          { binding: 1, resource: sampler },
           ...MESH_TEXTURE_SLOTS.map((slot, i) => ({
             binding: slot.binding,
             resource: textures[i]!.createView(),
           })),
+          {
+            binding: PROBE_BINDING,
+            resource: probe.cube.createView({
+              label: `meshBody-probe-view-${id}`,
+              dimension: 'cube',
+            }),
+          },
         ],
       }),
     });
+  }
+
+  function probeOf(id: string): MeshProbe | null {
+    return meshes.get(id)?.probe ?? null;
   }
 
   function clearMesh(id: string): void {
@@ -213,6 +301,7 @@ export function createMeshBodyRenderer(
     device.queue.writeBuffer(res.uniformBuffer, 0, uniforms);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, res.bindGroup);
+    pass.setBindGroup(1, globalBindGroup);
     for (let slot = 0; slot < res.vertexBuffers.length; slot++) {
       pass.setVertexBuffer(slot, res.vertexBuffers[slot]!);
     }
@@ -230,6 +319,7 @@ export function createMeshBodyRenderer(
     setMesh,
     clearMesh,
     hasMesh,
+    probeOf,
     draw,
     destroy,
   };

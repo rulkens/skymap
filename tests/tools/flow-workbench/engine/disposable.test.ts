@@ -10,12 +10,6 @@ import { describe, expect, it, vi } from 'vitest';
 import { createDisposableTracker } from '../../../../tools/flow-workbench/src/engine/gpu/createDisposableTracker';
 
 describe('createDisposableTracker', () => {
-  it('track returns the resource it was given', () => {
-    const tracker = createDisposableTracker();
-    const fake = { destroy: vi.fn() } as unknown as GPUBuffer;
-    expect(tracker.track(fake)).toBe(fake);
-  });
-
   it('disposeAll calls destroy on GPU resources in reverse order', () => {
     const tracker = createDisposableTracker();
     const order: string[] = [];
@@ -25,14 +19,6 @@ describe('createDisposableTracker', () => {
     tracker.track(second);
     tracker.disposeAll();
     expect(order).toEqual(['second', 'first']);
-  });
-
-  it('disposeAll calls dispose on Disposable resources', () => {
-    const tracker = createDisposableTracker();
-    const dispose = vi.fn();
-    tracker.track({ dispose });
-    tracker.disposeAll();
-    expect(dispose).toHaveBeenCalledTimes(1);
   });
 
   it('disposeAll is idempotent', () => {

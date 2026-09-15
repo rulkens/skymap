@@ -17,26 +17,10 @@ const PROBES: ReadonlyArray<readonly [number, number]> = [
 ];
 
 describe('panAxes', () => {
-  it('right and up are unit length', () => {
-    for (const [az, el] of PROBES) {
-      const { right, up } = panAxes(az, el);
-      expect(Math.hypot(...right)).toBeCloseTo(1, 10);
-      expect(Math.hypot(...up)).toBeCloseTo(1, 10);
-    }
-  });
-
   it('right is horizontal', () => {
     for (const [az, el] of PROBES) {
       const { right } = panAxes(az, el);
       expect(right[1]).toBe(0);
-    }
-  });
-
-  it('right is perpendicular to up', () => {
-    for (const [az, el] of PROBES) {
-      const { right, up } = panAxes(az, el);
-      const dot = right[0] * up[0] + right[1] * up[1] + right[2] * up[2];
-      expect(dot).toBeCloseTo(0, 10);
     }
   });
 

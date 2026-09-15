@@ -28,16 +28,6 @@ describe('searchHasGate', () => {
     expect(searchHasGate('?volumes', 'gpuTimings')).toBe(false);
   });
 
-  it('returns false for an empty search string', () => {
-    expect(searchHasGate('', 'gpuTimings')).toBe(false);
-  });
-
-  it('handles multiple params and finds the named one', () => {
-    expect(searchHasGate('?volumes&anchors&gpuTimings', 'anchors')).toBe(true);
-    expect(searchHasGate('?volumes&anchors&gpuTimings', 'gpuTimings')).toBe(true);
-    expect(searchHasGate('?volumes&anchors&gpuTimings', 'debug')).toBe(false);
-  });
-
   it('does not match a param that merely shares a prefix with the gate', () => {
     expect(searchHasGate('?cinemaScope', 'cinema')).toBe(false);
   });

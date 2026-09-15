@@ -8,7 +8,7 @@
  *   - override index file gains the new entry
  *   - re-export of the same id replaces previous contents
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { existsSync, mkdtempSync, mkdirSync, writeFileSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -53,10 +53,16 @@ function fakeRepoRoot(): string {
 }
 
 describe('handleExport', () => {
-  it('writes all four WebPs + recipe.json and clears .tmp/', async () => {
+  // The three assertions below read different facets of ONE export with
+  // identical inputs, and each run is ~180 ms of sharp encoding — so they share
+  // a single run rather than repeating it.
+  let repo: string;
+  let result: Awaited<ReturnType<typeof handleExport>>;
+
+  beforeAll(async () => {
     const sess = await seedSession();
-    const repo = fakeRepoRoot();
-    const result = await handleExport({
+    repo = fakeRepoRoot();
+    result = await handleExport({
       body: {
         id: 'm31',
         tmpId: sess.tmpId,
@@ -69,6 +75,9 @@ describe('handleExport', () => {
       starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
+  });
+
+  it('writes all four WebPs + recipe.json and clears .tmp/', () => {
     const outDir = resolve(repo, 'public/images/famous-curated/m31');
     for (const name of ['source.webp', 'starless.webp', 'full.webp', 'atlas.webp', 'recipe.json']) {
       expect(existsSync(resolve(outDir, name))).toBe(true);
@@ -77,27 +86,20 @@ describe('handleExport', () => {
     expect(result.paths.recipe.endsWith('recipe.json')).toBe(true);
   });
 
-  it('publishes BOTH runtime tiers (low-res atlas + hi-res full)', async () => {
+  it('publishes BOTH runtime tiers (low-res atlas + hi-res full)', () => {
     // Regression: handleExport must publish both runtime tiers via
     // publishFamousRuntimeImages (an atlas-only publish leaves the gitignored
     // hi-res slot stale).
-    const sess = await seedSession();
-    const repo = fakeRepoRoot();
-    await handleExport({
-      body: {
-        id: 'm31',
-        tmpId: sess.tmpId,
-        crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
-        starnet: { stride: 256, upsample: false },
-        alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
-        metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
-      },
-      repoRoot: repo,
-      starnetConfig: { mock: true },
-      sessionDirOverride: sess.sessionDir,
-    });
     expect(existsSync(resolve(repo, 'public/images/famous/m31.webp'))).toBe(true);
     expect(existsSync(resolve(repo, 'public/data/images/famous-hires/m31.webp'))).toBe(true);
+  });
+
+  it('records the entry in the override index', () => {
+    const idx = JSON.parse(
+      readFileSync(resolve(repo, 'data/seeds/famous_curated_overrides.json'), 'utf8'),
+    );
+    expect(idx.entries.m31.author).toBe('Alice');
+    expect(idx.entries.m31.dir).toBe('famous-curated/m31');
   });
 
   it('records the source.png dimensions in recipe.source', async () => {
@@ -105,7 +107,7 @@ describe('handleExport', () => {
     // image's true dimensions (read from the bytes, not the client) to let the
     // resume flow rescale exactly when a re-fetch returns a different size.
     const sess = await seedSession(300);
-    const repo = fakeRepoRoot();
+    const ownRepo = fakeRepoRoot();
     await handleExport({
       body: {
         id: 'm31',
@@ -115,36 +117,13 @@ describe('handleExport', () => {
         alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
         metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
       },
-      repoRoot: repo,
+      repoRoot: ownRepo,
       starnetConfig: { mock: true },
       sessionDirOverride: sess.sessionDir,
     });
-    const outDir = resolve(repo, 'public/images/famous-curated/m31');
+    const outDir = resolve(ownRepo, 'public/images/famous-curated/m31');
     const recipe = JSON.parse(readFileSync(resolve(outDir, 'recipe.json'), 'utf8'));
     expect(recipe.source).toEqual({ width: 300, height: 300 });
-  });
-
-  it('records the entry in the override index', async () => {
-    const sess = await seedSession();
-    const repo = fakeRepoRoot();
-    await handleExport({
-      body: {
-        id: 'm31',
-        tmpId: sess.tmpId,
-        crop: { x: 0, y: 0, width: 256, height: 256, rotationDeg: 0 },
-        starnet: { stride: 256, upsample: false },
-        alpha: { blackPoint: 8, whitePoint: 200, gamma: 0.7 },
-        metadata: { sourceUrl: 'https://example.com', license: 'CC-BY', author: 'Alice' },
-      },
-      repoRoot: repo,
-      starnetConfig: { mock: true },
-      sessionDirOverride: sess.sessionDir,
-    });
-    const idx = JSON.parse(
-      readFileSync(resolve(repo, 'data/seeds/famous_curated_overrides.json'), 'utf8'),
-    );
-    expect(idx.entries.m31.author).toBe('Alice');
-    expect(idx.entries.m31.dir).toBe('famous-curated/m31');
   });
 
   it('replaces previous contents when re-exporting the same id', async () => {

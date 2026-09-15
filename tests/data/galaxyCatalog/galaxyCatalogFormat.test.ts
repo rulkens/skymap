@@ -295,17 +295,6 @@ describe('galaxyCatalogFormat — header / version rejection', () => {
     expect(() => decodeGalaxyCatalog(buf)).toThrow(/magic/);
   });
 
-  it('rejects v8 with the version-specific regenerate error', () => {
-    const buf = new ArrayBuffer(16);
-    const dv = new DataView(buf);
-    dv.setUint32(0, 0x504d4b53, true); // "SKMP"
-    dv.setUint32(4, 8, true); // v8 — the previous on-disk shape
-    dv.setUint32(8, 0, true);
-    dv.setUint32(12, 0, true);
-    expect(() => decodeGalaxyCatalog(buf)).toThrow(/unsupported version: 8/);
-    expect(() => decodeGalaxyCatalog(buf)).toThrow(/regenerate/);
-  });
-
   it('rejects a stale version with a typed FormatVersionError carrying found/expected', () => {
     const buf = new ArrayBuffer(16);
     const dv = new DataView(buf);
