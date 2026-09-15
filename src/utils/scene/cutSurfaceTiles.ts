@@ -228,6 +228,7 @@ export function cutSurfaceTiles(input: {
   const childY = [0, 0, 0, 0];
   const childScreenPx = [0, 0, 0, 0];
   const childRequired = [0, 0, 0, 0];
+  const childReady = [false, false, false, false];
 
   const rootCols = surfaceTileColumns(baseLevel, tilePx);
   for (let y = 0; y < rootCols / 2; y++) {
@@ -255,7 +256,7 @@ export function cutSurfaceTiles(input: {
     // 3 & 4. Refine or emit
     if (required > z && surfaceTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
       let visibleChildren = 0;
-      let heightsReady = true;
+      let readyChildren = 0;
       for (let q = 0; q < 4; q++) {
         const cx = x * 2 + (q & 1);
         const cy = y * 2 + (q >> 1);
@@ -265,28 +266,39 @@ export function cutSurfaceTiles(input: {
         childY[visibleChildren] = cy;
         childScreenPx[visibleChildren] = probed.screenPx;
         childRequired[visibleChildren] = probed.required;
+        // Every visible child is asked: R11's sibling-closed bake means a
+        // child the walk can descend to always has a file.
+        childReady[visibleChildren] = heightSlotOf(z + 1, cx, cy) !== null;
+        if (childReady[visibleChildren]) readyChildren++;
         visibleChildren++;
-        // Every visible child, no exceptions: R11's sibling-closed bake means
-        // a child the walk can descend to always has a file, so narrowing
-        // this to "children some band bakes" could only ever let a quad
-        // refine onto a height level one of its members doesn't have.
-        if (heightSlotOf(z + 1, cx, cy) === null) heightsReady = false;
       }
 
-      if (heightsReady) {
-        // Same existence gate as the leaf branch: a would-be ancestor no band
-        // bakes at this z has no file to fetch either.
-        if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
-        for (let c = 0; c < visibleChildren; c++)
-          stack.push(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!, childRequired[c]!);
+      // Same existence gate as the leaf branch: a would-be ancestor no band
+      // bakes at this z has no file to fetch either.
+      const requestable = surfaceTileInBand(bands, tilePx, z, x, y);
+      if (readyChildren > 0) {
+        // Refine onto the children whose OWN height has landed (R13). A child
+        // still in flight is a hole the base globe fills for one round trip —
+        // never a reason to hold the parent as the leaf: that discarded every
+        // settled subtree each time a culled sibling scrolled into view, and
+        // under a base-level parent (never resident) a whole root quad
+        // vanished to the base globe. §5.2 still holds: nothing draws on an
+        // ancestor's heights. The missing children are requested in both
+        // products below, alongside the ready ones — a request is also the LRU
+        // touch that keeps a resident sibling alive while the last is in flight.
+        if (requestable) request(z, x, y, screenPx);
+        for (let c = 0; c < visibleChildren; c++) {
+          if (childReady[c]) {
+            stack.push(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!, childRequired[c]!);
+          } else if (surfaceTileInBand(bands, tilePx, z + 1, childX[c]!, childY[c]!)) {
+            request(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!);
+          }
+        }
         continue;
       }
 
-      // Refinement is waiting on height, so this node stays the leaf and its
-      // children are fetched instead — ALL of them, not only the ones still
-      // missing: a request is also the LRU touch that keeps a sibling's
-      // height tile alive, and without it the first to land are evicted while
-      // the last is in flight, and refinement never converges.
+      // No child can be drawn yet, so this node stays the leaf and its
+      // children are fetched instead.
       for (let c = 0; c < visibleChildren; c++) {
         if (surfaceTileInBand(bands, tilePx, z + 1, childX[c]!, childY[c]!))
           request(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!);

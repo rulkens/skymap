@@ -404,8 +404,8 @@ Three structural properties, none a convention:
 4. **Sibling-closed tile sets** (amended, R11). A band bakes tile `(L, x, y)` iff
    its _parent's_ box overlaps the band bounds and `min ≤ L ≤ max`, so every baked
    tile's three siblings exist; the halo tiles outside the bounds come from the
-   band's underfill. This is what makes §6's refine rule — all four children
-   resident, or none — satisfiable at a band edge, and it applies to both products
+   band's underfill. This is what lets §6's refine rule ask every visible child
+   for its own tile at a band edge, and it applies to both products
    through one shared existence helper that the bake and the walk both call.
 
 **Voids** are filled from the coarser level at bake time, and the bake asserts every
@@ -436,7 +436,13 @@ slot in as a one-texel ridge along every patch edge regardless of format.
    `heightSlot` — a plain slot reference, not a resolved residency, because a leaf's
    height tile is its own `(z, x, y)` and never an ancestor's (§5.2). Requests
    therefore run one level ahead of the cut: where screen error wants a deeper leaf,
-   the walk requests the children's height tiles and emits the parent until they land.
+   the walk requests the children's height tiles and emits the parent until the
+   first lands. **Amended (R13):** the node refines as soon as _any_ visible child's
+   own height tile is resident, onto the ready children only; a child still in
+   flight is a hole the base globe fills for one round trip. Waiting for all four
+   discarded every settled subtree each time a culled sibling scrolled into view,
+   and under a base-level parent (never resident) a whole root quad vanished to
+   the base globe — the flicker the F1 eye-check found.
 2. **A 2:1 balance constraint**, so a leaf never neighbours a leaf more than one
    level away. This is what bounds `edgeCoarser` to one bit per edge and lets §7's
    stitching be a vertex-shader decision needing no neighbour data beyond four bits.
@@ -463,7 +469,7 @@ after the eye-check. The field stays in the header, so adding the term is a walk
 change and not a re-bake.
 
 **Drawability.** A leaf's own height tile is resident because the walk refines a node
-only once every visible child's own height tile is; a node that is never refined
+only onto the children whose own height tile is (R13); a node that is never refined
 into is emitted on its own residency check, so a leaf is never drawn on an ancestor's
 heights. Albedo then resolves to some resident ancestor, and
 that inheritance covers the streaming case — a deeper tile in flight — plus the

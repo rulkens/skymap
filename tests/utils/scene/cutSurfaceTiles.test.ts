@@ -631,13 +631,14 @@ describe('cutSurfaceTiles', () => {
       expect(result.requests.zWin).toBe(HEIGHT_CEILING + 1);
     });
 
-    it("holds the parent as the leaf while one visible child's height is missing", () => {
-      // R11's literal refine rule. Three of a quad's height tiles have landed
-      // and the fourth has not — refining anyway would put that fourth patch
-      // on a coarser height lattice than its siblings, which is the crack the
-      // whole §5.2 invariant exists to prevent. The narrowing this replaces
-      // exempted children "no band bakes"; under the sibling-closed bake
-      // there are none, and the exemption only ever let the quad split.
+    it("refines onto the ready children while one visible child's height is missing", () => {
+      // R13. Three of a quad's height tiles have landed and the fourth has
+      // not. Holding the PARENT as the leaf would discard the three ready
+      // subtrees every time a culled sibling scrolls into view (a base-level
+      // parent is never resident, so a whole root quad would vanish to the
+      // base globe); instead the ready children are drawn and the missing
+      // one is a hole the base globe fills for one round trip. §5.2 holds:
+      // nothing is ever drawn on an ancestor's heights.
       const z = BASE_LEVEL + 1;
       const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
       const [px, py] = surfaceTileXyForUv(subUv, z, EARTH_TILE_PX);
@@ -656,16 +657,29 @@ describe('cutSurfaceTiles', () => {
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
 
+      const under = (
+        t: { id: { z: number; x: number; y: number } },
+        tz: number,
+        tx: number,
+        ty: number,
+      ) => t.id.z >= tz && t.id.x >> (t.id.z - tz) === tx && t.id.y >> (t.id.z - tz) === ty;
       expect(
         result.cut.some((t) => t.id.z === z && t.id.x === px && t.id.y === py),
-        'the parent stays the leaf',
-      ).toBe(true);
-      expect(
-        result.cut.some(
-          (t) => t.id.z > z && t.id.x >> (t.id.z - z) === px && t.id.y >> (t.id.z - z) === py,
-        ),
-        'and nothing under it is drawn',
+        'the parent is not the leaf',
       ).toBe(false);
+      expect(
+        result.cut.some((t) => under(t, z + 1, missingX, missingY)),
+        'nothing is drawn under the missing child',
+      ).toBe(false);
+      for (let q = 0; q < 4; q++) {
+        const cx = px * 2 + (q & 1);
+        const cy = py * 2 + (q >> 1);
+        if (cx === missingX && cy === missingY) continue;
+        expect(
+          result.cut.some((t) => under(t, z + 1, cx, cy)),
+          `ready child ${q} is drawn`,
+        ).toBe(true);
+      }
 
       // All four children are still fetched, the resident three included: a
       // request is also the LRU touch that keeps them alive while the fourth
@@ -683,6 +697,54 @@ describe('cutSurfaceTiles', () => {
           ).toBe(true);
         }
       }
+    });
+
+    it('a pan that scrolls an unfetched sibling into view keeps every settled leaf', () => {
+      // The flicker the eye-check found: with residency settled for one pose,
+      // a small pan brings one z5 child of a base-level root into the frustum
+      // with no height tile. The root must not fall back to being the leaf
+      // (it is never atlas-resident, so its 12 settled z7 leaves would vanish
+      // to the base globe until three sequential height round trips landed).
+      const key = (t: SurfaceTileId) => `${t.product}/${t.z}/${t.x}/${t.y}`;
+      const resident = new Set<string>();
+      const residentSlot = (t: SurfaceTileId) => (resident.has(key(t)) ? WHOLE_ATLAS : null);
+      const poseA = { ...nadirAt(1000, 20, 15), lodBias: 1, residentSlot };
+      let settled = cutSurfaceTiles(poseA);
+      for (let round = 0; round < 40; round++) {
+        let added = 0;
+        for (const r of settled.requests.requests)
+          if (!resident.has(key(r.tile))) {
+            resident.add(key(r.tile));
+            added++;
+          }
+        if (added === 0) break;
+        settled = cutSurfaceTiles(poseA);
+      }
+      expect(settled.cut.length).toBeGreaterThan(10);
+
+      const panned = cutSurfaceTiles({ ...nadirAt(1000, 20.5, 15), lodBias: 1, residentSlot });
+      const newHeights = panned.requests.requests.filter(
+        (r) => r.tile.product === 'height' && !resident.has(key(r.tile)),
+      );
+      expect(newHeights.length, 'the pan does scroll an unfetched tile in').toBeGreaterThan(0);
+
+      // What the pan WOULD draw with everything resident: the leaves the two
+      // poses share are on screen in both, and must not have vanished.
+      const ideal = cutSurfaceTiles({
+        ...nadirAt(1000, 20.5, 15),
+        lodBias: 1,
+        residentSlot: () => WHOLE_ATLAS,
+      });
+      const settledLeaves = new Set(settled.cut.map((t) => `${t.id.z}/${t.id.x}/${t.id.y}`));
+      const pannedLeaves = new Set(panned.cut.map((t) => `${t.id.z}/${t.id.x}/${t.id.y}`));
+      let shared = 0;
+      for (const leaf of ideal.cut) {
+        const id = `${leaf.id.z}/${leaf.id.x}/${leaf.id.y}`;
+        if (!settledLeaves.has(id)) continue;
+        shared++;
+        expect(pannedLeaves.has(id), `settled leaf ${id} survives the pan`).toBe(true);
+      }
+      expect(shared).toBeGreaterThan(10);
     });
   });
 
