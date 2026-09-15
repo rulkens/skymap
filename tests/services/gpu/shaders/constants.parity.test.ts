@@ -25,7 +25,12 @@ import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
 import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
-import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
+import {
+  EARTH_SURFACE_TILE_MESH_RESOLUTION,
+  EARTH_TILE_ATLAS_SIDE,
+  EARTH_TILE_PX,
+} from '../../../../src/data/bodies/earthTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 
 /**
@@ -260,6 +265,33 @@ describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment
       weslValue,
       `${file}: WESL EARTH_TILE_PX (${weslValue}) does not match TS EARTH_TILE_PX (${EARTH_TILE_PX})`,
     ).toBe(EARTH_TILE_PX);
+  });
+});
+
+/**
+ * HEIGHT_POSTS_PER_TILE (heightTileFormat.ts) is mirrored into
+ * earthSurfaceTile/vertex.wesl, which addresses a post inside a height slot by
+ * `(HEIGHT_POSTS_PER_TILE - 1) / meshResolution`. A drift there reads the wrong
+ * slot's posts along every patch edge. The stride must also be an integer — a
+ * fractional one lands template vertices between posts, so the two sides of an
+ * LOD boundary stop sharing lattice points and the collapse stops closing it.
+ */
+describe('HEIGHT_POSTS_PER_TILE parity (heightTileFormat.ts ↔ earthSurfaceTile/vertex.wesl)', () => {
+  const files = ['src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl'];
+
+  it("each file's HEIGHT_POSTS_PER_TILE equals the TS export", () => {
+    for (const file of files) {
+      const weslValue = readWeslConst(file, 'HEIGHT_POSTS_PER_TILE');
+      expect(weslValue, `HEIGHT_POSTS_PER_TILE is missing from ${file}`).toBeDefined();
+      expect(
+        weslValue,
+        `${file}: WESL HEIGHT_POSTS_PER_TILE (${weslValue}) does not match TS HEIGHT_POSTS_PER_TILE (${HEIGHT_POSTS_PER_TILE})`,
+      ).toBe(HEIGHT_POSTS_PER_TILE);
+    }
+  });
+
+  it('the post stride per template cell is integral', () => {
+    expect((HEIGHT_POSTS_PER_TILE - 1) % EARTH_SURFACE_TILE_MESH_RESOLUTION).toBe(0);
   });
 });
 

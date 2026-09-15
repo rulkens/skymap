@@ -54,11 +54,12 @@ export const EARTH_EQUATORIAL_CIRCUMFERENCE_M = 40075016.686;
  */
 export const EARTH_TILE_LOD_BIAS = 1;
 
-/** Subdivision `n` per patch edge of the shared vertex-shader template.
- *  Independent of the height data's post spacing -- surplus height detail
- *  reaches the picture through the fragment-stage normal -- so raising this
- *  to 64 for displacement is a constant change, not a re-bake (spec §7). */
-export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 8;
+/** Subdivision `n` per patch edge of the shared vertex-shader template: 1.19 m
+ *  geometric post spacing at z19. Deliberately half the height tile's 128 cells
+ *  — geometry LOD and shading LOD are separate budgets, and the surplus height
+ *  detail reaches the picture through the fragment-stage normal (spec §7, §10).
+ *  `(HEIGHT_POSTS_PER_TILE - 1)` must stay divisible by it (parity-tested). */
+export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 64;
 
 /**
  * Base-globe descent-fade band, in camera altitude above the surface (km).

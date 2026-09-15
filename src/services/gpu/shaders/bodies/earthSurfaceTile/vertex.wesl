@@ -1,13 +1,14 @@
-// earthSurfaceTile/vertex.wesl — every patch's geometry from nothing but a
-// 64-byte 'PatchInstance' and the two draw builtins: '@builtin(instance_index)'
-// picks the patch, '@builtin(vertex_index)' is the shared template's vertex id,
-// split into (i, j) over the (n+1)^2 grid by 'u.meshResolution'.
+// earthSurfaceTile/vertex.wesl — every patch's geometry from nothing but an
+// 80-byte 'PatchInstance', the height atlas and the two draw builtins:
+// '@builtin(instance_index)' picks the patch, '@builtin(vertex_index)' is the
+// shared template's vertex id, split into (i, j) over the (n+1)^2 grid by
+// 'u.meshResolution'. The record is 'inst' -- 'patch' is a WGSL RESERVED WORD.
 //
-// 'patchVertexOffset' is the twin of src/utils/scene/patchVertexOffsetM.ts --
-// same names, same order, changed together; the f64 ground truth is tested
-// there. 'originRelEyeM' was differenced in f64 CPU-side from the SAME
-// f32-rounded anchor read here, so s = t = 0 lands on it exactly: no cracks.
-// The record is 'inst', never 'patch' -- 'patch' is a WGSL RESERVED WORD.
+// 'patchVertexOffset' is the twin of src/utils/scene/patchVertexOffsetM.ts and
+// the post lookup that of surfacePatchPostIndex.ts -- same names, same order,
+// changed together; the f64 ground truth is tested there. 'originRelEyeM' was
+// differenced in f64 CPU-side from the SAME f32-rounded anchor read here, so
+// s = t = 0 lands on it exactly: no cracks.
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::PatchInstance;
@@ -15,12 +16,21 @@ import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
 @group(0) @binding(1) var<storage, read> patches: array<PatchInstance>;
+// r32float, read with 'textureLoad' at an integer post: 'textureSample' is
+// illegal in the vertex stage, r32float is not guaranteed filterable, and
+// hardware bilinear in a slot atlas bleeds the neighbouring slot in along
+// every patch edge (spec section 5.5 -- three independent reasons).
+@group(0) @binding(2) var heightAtlas: texture_2d<f32>;
+
+// Mirrors src/data/scene/heightTileFormat.ts -- parity-tested in
+// constants.parity.test.ts, '?static' linking does no value injection.
+const HEIGHT_POSTS_PER_TILE: u32 = 129u;
 
 // Offset from the patch's origin corner, in the body's fixed axes, metres.
 // '2*sin^2(x/2)' is algebraically '1 - cos x' and NOT interchangeable with it:
 // at a z19 patch's dlon of 1.2e-5 rad, '1 - cos' cancels away every
 // significant f32 bit while this form keeps them all. Do not 'simplify' it.
-fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32) -> vec3<f32> {
+fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32, heightM: f32) -> vec3<f32> {
   let lon0Rad = anchor.lon0Rad;
   let lat0Rad = anchor.lat0Rad;
   let dlon = s * anchor.dLonRad;
@@ -36,9 +46,11 @@ fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32) -> vec
   let cN = sin(dlat) + cosLat * sin(lat0Rad) * havLon;
   let cU = -havLat - cosLat * cos(lat0Rad) * havLon;
 
-  let xE = radiusM * cE;
-  let xN = radiusM * cN;
-  let xU = radiusM * cU;
+  // 'heightM' DISTRIBUTED, never summed into radiusM: the f32 sum quantizes to
+  // 0.5 m at Earth's radius and terraces every patch (spec section 7.1).
+  let xE = radiusM * cE + heightM * cE;
+  let xN = radiusM * cN + heightM * cN;
+  let xU = radiusM * cU + heightM * cU + heightM;
 
   // The ENU frame at (lon0, lat0) in the body's fixed axes -- +Z the pole,
   // longitude 0 on +X, the convention 'equirectUvToDirection' fixes.
@@ -65,7 +77,13 @@ fn vs(
   let s = f32(i) / f32(u.meshResolution);
   let t = f32(j) / f32(u.meshResolution);
 
-  let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(inst, u.radiusM, s, t);
+  // The row flip: the anchor's lat0 is the patch's SOUTH edge and j counts
+  // north, while a height tile's row 0 is its NORTH row.
+  let stride = (HEIGHT_POSTS_PER_TILE - 1u) / u.meshResolution;
+  let post = vec2<u32>(i * stride, (HEIGHT_POSTS_PER_TILE - 1u) - j * stride);
+  let h = textureLoad(heightAtlas, inst.heightSlotOrigin + post, 0).r;
+
+  let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(inst, u.radiusM, s, t, h);
 
   var out: VSOut;
   out.clip = u.vp * vec4<f32>(worldPosRelCam, 1.0);

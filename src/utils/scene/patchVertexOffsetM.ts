@@ -17,6 +17,10 @@ export function patchVertexOffsetM(
   radiusM: number,
   s: number,
   t: number,
+  /** Metres above the datum, DISTRIBUTED below rather than summed into the
+   *  radius: the f32 sum `radiusM + heightM` quantizes to 0.5 m at Earth's
+   *  radius and terraces every patch (spec §7.1). */
+  heightM: number,
 ): Vec3 {
   const { lon0Rad, lat0Rad } = anchor;
   const dlon = s * anchor.dLonRad;
@@ -30,9 +34,9 @@ export function patchVertexOffsetM(
   const cN = Math.sin(dlat) + cosLat * Math.sin(lat0Rad) * havLon;
   const cU = -havLat - cosLat * Math.cos(lat0Rad) * havLon;
 
-  const xE = radiusM * cE;
-  const xN = radiusM * cN;
-  const xU = radiusM * cU;
+  const xE = radiusM * cE + heightM * cE;
+  const xN = radiusM * cN + heightM * cN;
+  const xU = radiusM * cU + heightM * cU + heightM;
 
   // The ENU frame at (lon0, lat0) in the body's fixed axes — +Z the pole,
   // longitude 0 on +X, the convention `equirectUvToDirection` fixes.
