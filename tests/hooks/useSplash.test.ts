@@ -144,7 +144,7 @@ describe('useSplash — blocked state', () => {
     // Both gate conditions now live in the store, so driving it is the whole
     // trigger — no input prop participates in readiness.
     act(() => {
-      store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+      store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
       store.dispatch(engineLoadProgressChanged(null));
     });
 
@@ -160,7 +160,7 @@ describe('useSplash — blocked state', () => {
     };
     const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui });
     // Seed the engine slice: status=ready, loadProgress in-flight.
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
     store.dispatch(engineLoadProgressChanged({ loadedBytes: 1, totalBytes: 2, inFlightCount: 1 }));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });
@@ -269,7 +269,7 @@ describe('useSplash error mapping', () => {
 
   it('returns null on the happy path', () => {
     const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui: visibleUi });
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
     store.dispatch(engineLoadProgressChanged(null));
     const wrapper = ({ children }: { children: ReactNode }) =>
       createElement(Provider, { store, children });

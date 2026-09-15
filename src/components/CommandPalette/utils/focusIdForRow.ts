@@ -36,8 +36,7 @@ const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
   famous: (row) => (row.kind === 'famous' ? row.entry.id : ''),
   // An alias row is a GLADE/2MRS galaxy keyed by PGC. famousId is null (alias
   // rows are non-famous) and ra/dec are unused because a PGC objId (> 0) takes
-  // the catalog-id rung of the ladder before the pos@ rung — so the result is
-  // always the non-null 'pgc-<n>' string for these sources.
+  // the catalog-id rung of the ladder before the pos@ rung.
   alias: (row) =>
     row.kind === 'alias'
       ? encodeGalaxyId({
@@ -46,7 +45,7 @@ const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
           objId: row.entry.pgc,
           ra: 0,
           dec: 0,
-        })!
+        })
       : '',
   structure: (row) => (row.kind === 'structure' ? row.entry.id : ''),
   milkyWay: () => MILKY_WAY_FOCUS_ID,

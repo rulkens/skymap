@@ -12,9 +12,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
-// The mint helper picks this fetcher for every non-synthetic entry (every
-// source this suite exercises); stub it so each test controls the resolved
-// catalog instead of hitting the network.
+// The mint helper hands every entry this fetcher; stub it so each test
+// controls the resolved catalog instead of hitting the network.
 vi.mock('../../../../src/layers/galaxyCatalog/load/galaxyCatalogFetcher', () => ({
   galaxyCatalogFetcher: vi.fn(),
 }));

@@ -64,6 +64,5 @@ export const DESI_SGW_ENTRY = {
   // dim its far edge relative to its near edge — the whole structure should
   // stay uniformly lit. Same rationale as the cone/wedge.
   falloffHalfMpc: 1e30,
-  category: 'survey',
   priority: 64,
 } as const satisfies GalaxyCatalogSourceEntry;

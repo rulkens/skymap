@@ -292,7 +292,8 @@ deleted; `selectProvenanceCounts` (`state/engine/selectors.ts:52`) re-points at
 
 **Ruling 13 — the synthetic gate dissolves: the arming policy becomes a pure predicate over the
 runtime's slots, the boot-status echo goes home to core, and `createSyntheticFallback.ts` is
-deleted.** The file's own header states why it had to be imperative: `DemandCtx` exposes only the
+deleted.**
+_Superseded 2026-09-16: the synthetic catalog is deleted wholesale (user ruling); no arming predicate exists._ The file's own header states why it had to be imperative: `DemandCtx` exposes only the
 `LoadStateKind` discriminant, so it can see neither a ready catalog's `count` nor
 `galaxyPointRenderer.totalCount()`. **Both reasons die with this move** — the Synthetic row's
 `demand` is a closure over the runtime, which owns `points` (every slot's `ready` value, hence its
@@ -505,7 +506,7 @@ and labels after core's, in tuple order` — a stub composition of two Layers wh
       file: two Layers minting the same slot key throw from `createLayers` (the shadow that the
       ordering in `slotFor` would otherwise hide).
 - [ ] Test (`createLayers.sourcePulse.test.ts`) `reportSourceCount reports the count, bumps the
-  content version and echoes a running-total ready status` — call the closure for two sources with
+content version and echoes a running-total ready status` — call the closure for two sources with
       counts 3 and 4 and a third with 0; assert the three `engineSourceCountReported` payloads, that
       `state.contentVersion` advanced once per call, and that the dispatched statuses carry 3 then 7,
       with none for the zero. Real bug it catches: the status echo dropped or made per-source in the move
@@ -713,7 +714,7 @@ STOP).
       the pin for `AssetSlot`'s commit-before-`committed` ordering, so a later `AssetSlot` refactor
       reads the failure as its own rather than re-pointing the test.
 - [ ] Test (`syntheticShouldArm.test.ts`) `the synthetic backstop arms only when every enabled survey
-  catalog settled without data` — over a fake `points` map: no arm while one survey slot is still
+catalog settled without data` — over a fake `points` map: no arm while one survey slot is still
       loading; no arm when one is ready with `count > 0`; arm when the rest errored and a disabled
       catalog never transitioned; no arm when any survey slot's error is a `FormatVersionError`. Real
       bug it catches: the policy silently narrowed to the `LoadStateKind` discriminant during the

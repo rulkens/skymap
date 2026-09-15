@@ -2,8 +2,7 @@
  * URL_HASH_FOR — table-dispatch coverage for the `#focus=<id>` body.
  *
  * One assertion per arm: the galaxy row delegates to the codec ladder
- * (`selectionToFocusId`) and returns null for a non-encodable Synthetic row;
- * the structure row returns the structure's own id.
+ * (`selectionToFocusId`); the structure row returns the structure's own id.
  */
 import { describe, it, expect } from 'vitest';
 import { URL_HASH_FOR } from '../../../src/services/url/urlHashFor';
@@ -44,11 +43,6 @@ describe('URL_HASH_FOR', () => {
     const galaxy = makeGalaxy(Source.SDSS);
     expect(URL_HASH_FOR.galaxyCatalog(galaxy)).toBe(selectionToFocusId(galaxy));
     expect(URL_HASH_FOR.galaxyCatalog(galaxy)).toBe('sdss-1234567890');
-  });
-
-  it('galaxyCatalog row returns null for a non-encodable (Synthetic) galaxy', () => {
-    const synthetic = makeGalaxy(Source.Synthetic);
-    expect(URL_HASH_FOR.galaxyCatalog(synthetic)).toBeNull();
   });
 
   it('structure row returns the structure id', () => {

@@ -62,7 +62,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     countBySource.set(source, count);
     if (count > 0) {
       const total = [...countBySource.values()].reduce((sum, n) => sum + n, 0);
-      deps.cb.store.dispatch(engineStatusChanged({ kind: 'ready', count: total, source }));
+      deps.cb.store.dispatch(engineStatusChanged({ kind: 'ready', count: total }));
     }
   };
 

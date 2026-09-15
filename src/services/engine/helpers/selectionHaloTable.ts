@@ -4,7 +4,7 @@
  * ring, the world position to centre it on, and the depth slab whose frustum
  * that position lives in.
  *
- * A galaxy uses its catalog diameter (with a synthetic-fallback floor); the
+ * A galaxy uses its catalog diameter (with a missing-diameter floor); the
  * Milky Way its disc radius anchored at the galactic centre; a scene body (a
  * planet, a famous star, Earth) and a survey star each carry a REAL physical
  * radius (converted to Mpc) — so the NEAR0 ring layer can wrap the
@@ -71,8 +71,8 @@ const SELECTION_HALO_TABLE: {
   body: (row: BodyRow) => SelectionHalo;
   star: (row: StarRow) => SelectionHalo;
 } = {
-  // `max(diameterKpc, 30)` handles the synthetic-fallback source and any
-  // pre-v4-format galaxy without a measured size; *2 = diameter→radius span.
+  // `max(diameterKpc, 30)` handles any pre-v4-format galaxy without a measured
+  // size; *2 = diameter→radius span.
   galaxyCatalog: (row) => ({
     radiusMpc: ((row.diameterKpc > 0 ? row.diameterKpc : 30) * 2) / 1000,
     worldPos: [row.x, row.y, row.z],

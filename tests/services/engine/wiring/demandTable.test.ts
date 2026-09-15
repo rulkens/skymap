@@ -44,14 +44,6 @@
  * enabled:false). `makeState` injects the same `seedVolumeFields` record into
  * `settings.volumes.items` so the test exercises the real defaults rather than
  * a hand-rolled set.
- *
- * ### Synthetic fallback gate
- *
- * The Synthetic row's demand IS the arming predicate (`syntheticShouldArm`)
- * over the Layer runtime's own point slots — count-aware and
- * disabled-catalog-aware, which is why it needs no request flag. Synthetic
- * starts idle, so the loop's idle-guard lets it load once armed; the errored
- * galaxy catalog slots that armed it stay non-idle and are NOT re-loaded.
  */
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -147,8 +139,7 @@ type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
 type GalaxyCatalogItemLeaves = Partial<Record<GalaxyCatalogId, { enabled: boolean }>>;
 
 /**
- * Default-at-boot settings: all structure categories visible, filaments off,
- * Synthetic fallback visible.
+ * Default-at-boot settings: all structure categories visible, filaments off.
  *
  * These match the engine's real initial state as documented in
  * `data/defaults.ts` and `EngineSettingsState`.
@@ -180,7 +171,6 @@ const BOOT_VOLUME_FIELDS: VolumeFieldLeaves = seedVolumeFields();
  * (DesiDeep / DesiWedge / DesiSgw).
  */
 const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
-  synthetic: { enabled: true },
   sdss: { enabled: true },
   '2mrs': { enabled: true },
   glade: { enabled: true },
@@ -223,8 +213,8 @@ type MakeStateOptions = {
 };
 
 /**
- * All source codes that appear in ASSET_WIRING as point rows — galaxy catalogs +
- * Synthetic. Ensures every expected-key slot is reachable via `slotFor`.
+ * All source codes that appear in ASSET_WIRING as point rows. Ensures every
+ * expected-key slot is reachable via `slotFor`.
  */
 const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.SDSS,
@@ -235,7 +225,6 @@ const ALL_POINT_SOURCES: readonly SourceType[] = [
   Source.DesiDeep,
   Source.DesiWedge,
   Source.DesiSgw,
-  Source.Synthetic,
 ];
 
 function makeState(opts: MakeStateOptions = {}): EngineState {
@@ -264,8 +253,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
   );
   layerSlots.set('pgcAlias', (namedSlots.pgcAlias ?? stubSlot()) as AssetSlot<unknown, unknown>);
   layerSlots.set('hiResFamous', stubSlot() as AssetSlot<unknown, unknown>);
-  // The Layer's rows read `points` (the synthetic backstop's arming predicate)
-  // and hand back these same slots from their factories.
+  // The Layer's rows hand back these same slots from their factories.
   const galaxyRuntime = {
     points,
     famousGalaxiesMeta: layerSlots.get('famousGalaxiesMeta'),
@@ -401,7 +389,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
    * which the construction seed lands as true (registry visible:true). cf4Density
    * is NOT (seeded enabled:false). filaments: off. pgcAlias: no request.
-   * Synthetic: galaxy catalogs not errored. `hiResFamous` demands
+   * `hiResFamous` demands
    * unconditionally — its "fetch" is a GPU allocation, not a download.
    */
   it('boot defaults: SDSS + 2MRS + GLADE + Famous + Milliquas + famousGalaxiesMeta + hiResFamous + structureCatalog + mcpm (DesiDeep + DesiWedge + DesiSgw off)', async () => {
@@ -463,18 +451,13 @@ describe('reevaluateDemand demand-table regression', () => {
   });
 
   /**
-   * Synthetic fallback armed: every enabled survey catalog has settled without
-   * data, which IS the Synthetic row's demand predicate (Ruling 13).
-   *
-   * The galaxy catalog slots are driven to 'error' to mirror a realistic all-failed
-   * boot. Synthetic starts idle (never loaded), so the idle-guard lets it load
-   * when armed — exactly the recovery path. The errored galaxy catalog rows, by
-   * contrast, are NOT re-loaded: the idle-guard skips non-idle slots, which is
-   * the desired no-retry-storm behaviour (a re-eval must not abort + re-fetch
-   * failed galaxy catalogs). famousGalaxiesMeta still demands because Famous slot !== 'idle';
-   * structureCatalog is still demanded (categories visible).
+   * An all-failed boot: every galaxy catalog slot is driven to 'error'. The
+   * errored rows are still demanded (still visible) but NOT idle, so the
+   * idle-guard skips them — the no-retry-storm behaviour (a re-eval must not
+   * abort + re-fetch failed galaxy catalogs). famousGalaxiesMeta still demands
+   * because Famous slot !== 'idle'; structureCatalog is still demanded.
    */
-  it('synthetic fallback armed: Synthetic loads, errored galaxy catalogs are not retried', async () => {
+  it('errored galaxy catalogs are not retried on re-evaluation', async () => {
     const pointSlots: PointSlotOverrides = {
       [Source.SDSS]: stubSlot('error'),
       [Source.TwoMRS]: stubSlot('error'),
@@ -484,14 +467,10 @@ describe('reevaluateDemand demand-table regression', () => {
       // famousGalaxiesMeta demands because Famous slot !== 'idle'.
       [Source.FamousGalaxy]: stubSlot('error'),
     };
-    // No request flag any more: the backstop's demand IS the arming predicate
-    // over these very slots (Ruling 13) — every enabled survey catalog errored.
     const state = makeState({ pointSlots });
 
     const fired = await firedKeys(state);
 
-    // Synthetic fallback is demanded AND idle → it loads (the recovery path).
-    expect(fired.has(Source.Synthetic)).toBe(true);
     // famousGalaxiesMeta is demanded (Famous slot !== 'idle').
     expect(fired.has('famousGalaxiesMeta')).toBe(true);
     // structureCatalog still demanded (structure visibility unchanged).
@@ -546,17 +525,9 @@ describe('reevaluateDemand demand-table regression', () => {
 
     const fired = await firedKeys(state);
 
-    // Synthetic rides along: every SURVEY catalog is disabled, so each counts as
-    // settled with no data and the backstop arms — the same verdict the
-    // imperative gate reached at boot for a hidden-everything session. Famous
-    // is curated and moves neither way. `hiResFamous` demands unconditionally.
+    // `hiResFamous` demands unconditionally.
     expect(fired).toEqual(
-      new Set<AssetKey>([
-        Source.FamousGalaxy,
-        Source.Synthetic,
-        'famousGalaxiesMeta',
-        'hiResFamous',
-      ]),
+      new Set<AssetKey>([Source.FamousGalaxy, 'famousGalaxiesMeta', 'hiResFamous']),
     );
   });
 });

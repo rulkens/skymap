@@ -1,6 +1,6 @@
 /**
- * GalaxyCatalog — the single renderer-ready data shape shared by the synthetic
- * generator, the .bin loader, and the GPU upload path. Uses a struct-of-arrays
+ * GalaxyCatalog — the single renderer-ready data shape shared by the .bin
+ * loader and the GPU upload path. Uses a struct-of-arrays
  * layout so each typed array can be passed straight to `writeBuffer`.
  */
 
@@ -36,9 +36,9 @@ export type GalaxyCatalog = {
    * JavaScript's `number` type is a 64-bit float and can only represent
    * integers exactly up to 2^53 — SDSS objIDs regularly exceed that.
    *
-   * For synthetic data `objIDs[i] = BigInt(i)` (sequential 0..N-1); those
-   * values won't resolve to real SDSS images, but the field is always present
-   * so the renderer code path is uniform.
+   * A source without real objIDs (the curated Famous catalog) fills them
+   * sequentially 0..N-1; those values won't resolve to real SDSS images, but
+   * the field is always present so the renderer code path is uniform.
    */
   objIDs: BigUint64Array;
 
@@ -207,8 +207,7 @@ export type GalaxyCatalog = {
    * `utils/galaxy/galaxySbAmp.ts` and `utils/galaxy/galaxyMedianAbsMag.ts`).
    *
    * Populated by every runtime construction path: `decodeGalaxyCatalog`,
-   * `generateSyntheticCloud`, `emptyGalaxyCatalog`, and
-   * `cloneGalaxyCatalogForTransfer`. Optional ONLY so lightweight test
+   * `emptyGalaxyCatalog`, and `cloneGalaxyCatalogForTransfer`. Optional ONLY so lightweight test
    * fixtures may omit it — consumers that need a value fall back
    * themselves (the point bake recomputes via `galaxyMedianAbsMag`; the
    * disk planner falls back to -20.5).
@@ -224,7 +223,7 @@ export type GalaxyCatalog = {
    * count. 1 means the (axisRatio, positionAngleDeg) pair was synthesised by
    * `fallbackOrientation(objID, ra, dec)` because the source catalog had no
    * measured axis-ratio / position-angle; 0 means the pair is a real
-   * measurement (or a sentinel like NaN for synthetic clouds).
+   * measurement (or the format's NaN "no measurement" sentinel).
    *
    * This is the AUTHORITATIVE provenance signal, stamped at build time in
    * `recordsToCloud` where the real-vs-fallback decision is actually made,
@@ -249,7 +248,7 @@ export type GalaxyCatalog = {
    * 30 default, applied because the parser had NO real measured size AND no
    * angular size to re-derive a physical diameter from; 0 means the row's
    * diameter is a real catalog measurement, an angular-derived value, or a
-   * synthetic / famous-curated size.
+   * famous-curated size.
    *
    * This is the AUTHORITATIVE persisted provenance signal, stamped at build
    * time in `recordsToCloud` on the exact `diameterKpc === null` distinction

@@ -9,7 +9,6 @@ describe('Source enum', () => {
     // These integers are baked into every `.bin` cloud file ever written, so
     // pinning them in a test guards against an accidental renumbering during
     // a refactor — see the rationale in the module's docstring.
-    expect(Source.Synthetic).toBe(0);
     expect(Source.SDSS).toBe(1);
     expect(Source.TwoMRS).toBe(2);
     expect(Source.Glade).toBe(3);

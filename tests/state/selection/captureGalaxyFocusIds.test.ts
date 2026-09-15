@@ -10,7 +10,7 @@
  * SDSS ships tier variants, so its request carries the tier name: `medium`
  * differs from `large`, but `large` matches `large`.
  *
- * 2MRS, Famous, the DESI cuts, and Synthetic have empty `tierTargets`, so
+ * 2MRS, Famous and the DESI cuts have empty `tierTargets`, so
  * `galaxyCatalogRequest` drops the tier and names the same request for every
  * swap — they never drift.
  */

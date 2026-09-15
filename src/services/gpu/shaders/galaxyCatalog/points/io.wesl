@@ -252,12 +252,12 @@ struct PerVertex {
   //   - 'abs(axisRatio)' for the elliptical mask shape
   //   - 'axisRatio < 0.0' for the fallback flag
   //
-  // ## NaN handling (synthetic-fallback source)
+  // ## NaN handling
   //
-  // The synthetic-fallback source ships its axisRatio array filled with
-  // NaN. WGSL's 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so
-  // the vertex stage routes synthetic rows through the existing
-  // 'axisRatio > 0 is false' round-mask path with the fallback flag clear.
+  // NaN is the format's "no measurement" axisRatio sentinel. WGSL's
+  // 'abs(NaN)' returns NaN and 'NaN < 0.0' is false, so the vertex stage
+  // routes such a row through the existing 'axisRatio > 0 is false'
+  // round-mask path with the fallback flag clear.
   @location(3) axisRatio: f32,
 
   // Pre-baked (cos, sin) of the position-angle rotation, negation folded
@@ -270,7 +270,7 @@ struct PerVertex {
 
   // Per-galaxy padded billboard radius in Mpc — equals
   // 'max(diameterKpc, 30) * 2 / 1000' baked at upload time. The 4×
-  // thumbnail-footprint padding and the synthetic-fallback floor are
+  // thumbnail-footprint padding and the missing-diameter floor are
   // already applied; the shader reads the value directly as the
   // half-extent of the world-space quad.
   //
@@ -280,7 +280,7 @@ struct PerVertex {
   // estimate. The vertex stage recovers both pieces in one read:
   //   - 'abs(radiusMpc)' for the billboard magnitude
   //   - 'radiusMpc < 0.0' for the fallback flag
-  // 'NaN < 0.0' is false, so synthetic rows read as non-fallback.
+  // 'NaN < 0.0' is false, so a NaN radius reads as non-fallback.
   @location(5) radiusMpc: f32,
 
   // Per-galaxy 1/V_max weight for Malmquist-bias correction. Baked at

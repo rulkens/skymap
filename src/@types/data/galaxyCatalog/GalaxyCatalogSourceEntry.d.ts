@@ -1,6 +1,5 @@
 import type { BandLabels } from './BandLabels';
 import type { ColourIndexSpec } from './ColourIndexSpec';
-import type { GalaxyCatalogSourceCategory } from './GalaxyCatalogSourceCategory';
 import type { SchechterTriple } from './SchechterTriple';
 import type { SourceEntryBase } from '../SourceEntryBase';
 import type { Tier } from '../Tier';
@@ -9,20 +8,16 @@ import type { Tier } from '../Tier';
  * Galaxy catalog-typed row of the SOURCE_REGISTRY — all the per-galaxy-catalog metadata
  * needed by the UI, the loader, and the camera, colocated so adding a new
  * galaxy catalog means editing one place.
- *
- * `binBaseName` is `null` for sources without an on-disk file (e.g. the
- * Synthetic procedurally-generated cloud); every other field is required.
  */
 export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly type: 'galaxyCatalog';
   /** Stable numeric tag, matching the `.bin` file format byte. */
   readonly code: number;
   /**
-   * Filename stem under `public/data/` (and on R2). `null` for sources with
-   * no on-disk representation. Tier-aware sources get `-<tier>` appended by
-   * `tierFilenameForSource`.
+   * Filename stem under `public/data/` (and on R2). Tier-aware sources get
+   * `-<tier>` appended by `tierFilenameForSource`.
    */
-  readonly binBaseName: string | null;
+  readonly binBaseName: string;
   /**
    * Approximate effective depth used to frame the camera, in megaparsecs.
    * Not a strict cut — outliers may sit beyond.
@@ -65,7 +60,7 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    *                  build skips writing the file; runtime gets a 404).
    *   positive N   → keep the brightest N galaxies by absolute magnitude.
    *
-   * Tier-agnostic galaxy catalogs (2MRS, Famous, Synthetic) carry `{}` — no caps
+   * Tier-agnostic galaxy catalogs (2MRS, Famous) carry `{}` — no caps
    * anywhere, one file shared across tiers.
    */
   readonly tierTargets: Partial<Record<Tier, number>>;
@@ -97,8 +92,6 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
    * catalogs keep the original ~1000 Mpc tuning.
    */
   readonly falloffHalfMpc: number;
-  /** See `GalaxyCatalogSourceCategory`. */
-  readonly category: GalaxyCatalogSourceCategory;
   /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */
   readonly priority: number;
 };

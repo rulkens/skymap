@@ -56,7 +56,7 @@ const PA_COS_SIN_BYTE_OFFSET = 24;
 /**
  * Slot 8: padded billboard radius in Mpc.  Baked at upload as
  * `max(diameterKpc, 30) * 2 / 1000` — folds in 4× thumbnail-footprint
- * padding and the synthetic-fallback floor.  Vertex shader takes
+ * padding and the missing-diameter floor.  Vertex shader takes
  * `abs()` then divides by distance_Mpc for angular radius; the sign bit
  * flags a fallback-diameter estimate (mirrors axisRatio's sign bit).
  */

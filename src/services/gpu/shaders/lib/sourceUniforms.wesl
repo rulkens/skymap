@@ -1,8 +1,8 @@
 // lib/sourceUniforms.wesl — per-source 6-bit pick-ID uniform for the
 // points pipeline.
 //
-// Carries this draw's 6-bit Source enum value (Synthetic=0, SDSS=1,
-// TwoMRS=2, Glade=3, Famous=4). The points vertex stage reads
+// Carries this draw's 6-bit Source enum value (SDSS=1, TwoMRS=2,
+// Glade=3, Famous=4). The points vertex stage reads
 // 'source.sourceCode' and composes each instance's packed identity as
 // '(sourceCode << 26u) | instance_index' for the selection-halo +
 // pick-output paths.
@@ -30,8 +30,8 @@
 // list only @group(0) and @group(1).
 
 struct SourceUniforms {
-  // 6-bit Source enum value (Synthetic=0, SDSS=1, TwoMRS=2, Glade=3,
-  // Famous=4). Stored as u32 because WGSL uniforms have no smaller
+  // 6-bit Source enum value (SDSS=1, TwoMRS=2, Glade=3, Famous=4).
+  // Stored as u32 because WGSL uniforms have no smaller
   // integer types and the pack-into-pickbuffer uses u32 arithmetic
   // anyway.
   sourceCode: u32,

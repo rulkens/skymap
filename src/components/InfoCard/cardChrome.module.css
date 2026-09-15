@@ -153,7 +153,7 @@
 
 /*
  * Small uppercase chip telling the user *which survey* the data came from
- * (SDSS, 2MRS, GLADE, Famous, Synthetic).  Sits on the same row as the name
+ * (SDSS, 2MRS, GLADE, Famous).  Sits on the same row as the name
  * headline, pinned to the top-right via the flex .headlineRow below — the
  * survey is metadata about the name, so reading them together is natural.
  */

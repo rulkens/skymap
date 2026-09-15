@@ -175,7 +175,7 @@ describe('catalogStore.loadedSources', () => {
     });
     // Upload in non-iteration order on purpose — the store must re-sort.
     // GALAXY_CATALOG_SOURCES is ordered smallest-catalogue → largest:
-    //   [Synthetic, Famous, TwoMRS, SDSS, Glade]
+    //   [Famous, TwoMRS, SDSS, Glade]
     // so TwoMRS comes before SDSS.
     await store.upload(idOf(Source.SDSS), makeCloud(100));
     await store.upload(idOf(Source.TwoMRS), makeCloud(50));

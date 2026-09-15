@@ -23,7 +23,6 @@ import {
   FADE_OUT_DURATION_MS,
 } from '../../../services/animation/fadeController';
 import { galaxyCatalogFetcher } from './galaxyCatalogFetcher';
-import { syntheticPointFetcher } from './syntheticPointFetcher';
 
 export function wireGalaxyCatalogSourceSlot(
   entry: GalaxyCatalogRegistryEntry,
@@ -36,11 +35,10 @@ export function wireGalaxyCatalogSourceSlot(
 ): AssetSlot<GalaxyCatalog, GalaxyCatalogReq> {
   const source = entry.code;
   const id = entry.id;
-  const fetcher = entry.category === 'synthetic' ? syntheticPointFetcher : galaxyCatalogFetcher;
 
   const slot = createAssetSlot<GalaxyCatalog, GalaxyCatalogReq>({
     name: `${id}-points`,
-    fetch: fetcher,
+    fetch: galaxyCatalogFetcher,
     commit: async (cloud) => {
       const t0 = performance.now();
       console.log(`[engine] upload start ${id} count=${cloud.count}`);

@@ -14,9 +14,9 @@
  * galaxy looks alike". Mixing in RA × 1e5 + Dec × 1e5 (positions are
  * unique to ~0.04 arcsec, well below the SDSS pixel scale) breaks the tie.
  *
- * Why mulberry32? It's the project's blessed seedable PRNG — the same
- * one used elsewhere for synthetic data — so the fallback's distribution
- * is statistically vetted and consistent with the rest of the codebase.
+ * Why mulberry32? It's the project's blessed seedable PRNG, so the
+ * fallback's distribution is statistically vetted and consistent with the
+ * rest of the codebase.
  *
  * Distribution:
  *   - axisRatio uniform in [0.3, 1.0): the lower bound matches the

@@ -5,8 +5,7 @@
  * `bootstrap.test.ts` mocks this phase at module scope, so its composition
  * has no direct asserts elsewhere; this file pins that wireSlots: (1) returns
  * synchronously and fires one `loading` status; (2) the demand loop loads the
- * default boot set, real-catalog `ready` echoes fire, and the synthetic
- * backstop loads when every catalog errors; (3) the loadProgress emitter is
+ * default boot set and real-catalog `ready` echoes fire; (3) the loadProgress emitter is
  * wired against EVERY installed slot in `deps.allSlots`; (4) every subsystem/
  * fade wire is present after boot, including structures-visibility gating
  * structureCatalog.
@@ -293,8 +292,7 @@ function makeFakeSlot(name: string): FakeSlot {
  * Build a boot-shaped points map: SDSS/2MRS/GLADE galaxy catalog fakes left idle
  * (still "loading" — they never fire), plus a Famous fake pre-fired to
  * `loading` so the famous-galaxies-meta demand predicate (`slotState(Famous) !== 'idle'`)
- * reads true.  Idle galaxy catalog fakes keep the synthetic-fallback gate waiting
- * rather than arming + re-running demand — the live-boot shape.
+ * reads true.  Idle galaxy catalog fakes never re-run demand — the live-boot shape.
  */
 function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
   const famous = makeFakeSlot('famous-points');
@@ -388,8 +386,7 @@ function makeState(
   // star-bin fetch this fixture provides no slot for).
   return {
     // Top-level data tier — its own root field on EngineState; the source
-    // expression `req(state.tier)` reads it, and the synthetic-fallback
-    // assertion checks `tier: state.tier`.
+    // expression `req(state.tier)` reads it.
     tier: 'medium',
     settings: {
       galaxyCatalogs: {
@@ -833,7 +830,7 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    // Idle galaxy catalog fakes keep the synthetic gate waiting so demand runs once.
+    // Idle galaxy catalog fakes keep demand to a single run.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     await wireSlots(state, deps);
@@ -871,8 +868,8 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    // Idle galaxy catalog fakes keep the synthetic gate waiting so demand runs once —
-    // a double-run would re-trigger the (non-idempotent) structure-catalog load
+    // Idle galaxy catalog fakes keep demand to a single run — a double-run
+    // would re-trigger the (non-idempotent) structure-catalog load
     // and race the mock once-value against its empty default.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();

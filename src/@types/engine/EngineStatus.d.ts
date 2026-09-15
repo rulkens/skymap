@@ -4,8 +4,6 @@
  * the correct status text or error message.
  */
 
-import type { SourceType } from '../data/SourceType';
-
 /**
  * Status reported during engine startup and steady-state.
  *
@@ -14,12 +12,8 @@ import type { SourceType } from '../data/SourceType';
  *
  *   initializing  → GPU bootstrap in progress (before fetch starts)
  *   loading       → fetch /data/sdss.bin in progress
- *   ready         → rendering is live; `count` and `source` are set
+ *   ready         → rendering is live; `count` is the running galaxy total
  *   error         → GPU or fatal load error; `message` carries the detail
- *
- * `source` is the `Source` enum value of the catalog that just became
- * ready — the only consumer (the StatusBar) compares it against
- * `Source.Synthetic` to flag the no-real-data fallback path.
  *
  * `cause` on the error variant is optional and machine-readable: `useSplash`
  * discriminates on it (rather than sniffing `message`) to route a stale-`.bin`
@@ -28,9 +22,5 @@ import type { SourceType } from '../data/SourceType';
 export type EngineStatus =
   | { kind: 'initializing' }
   | { kind: 'loading' }
-  | {
-      kind: 'ready';
-      count: number;
-      source: SourceType;
-    }
+  | { kind: 'ready'; count: number }
   | { kind: 'error'; message: string; cause?: 'format-version' };

@@ -16,13 +16,8 @@ import {
   SOURCE_REGISTRY,
 } from '../../../data/sources';
 import { galaxyCatalogRequest } from '../../../services/engine/wiring/galaxyCatalogRequest';
-import { syntheticShouldArm } from './syntheticShouldArm';
 
-/**
- * One demand+req row per galaxy-catalog entry, derived from the fields it
- * already carries: the synthetic backstop reads the arming predicate over the
- * runtime's own slots, everything else reads its settings toggle.
- */
+/** One demand+req row per galaxy-catalog entry, derived from the fields it already carries. */
 function pointRow(
   runtime: GalaxyCatalogRuntime,
   entry: GalaxyCatalogRegistryEntry,
@@ -33,10 +28,7 @@ function pointRow(
     key: source,
     factory: () => runtime.points.get(source)!,
     req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: (ctx) =>
-      entry.category === 'synthetic'
-        ? syntheticShouldArm(runtime, ctx.settings)
-        : ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
+    demand: (ctx) => ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
     priority: entry.priority,
   };
 }

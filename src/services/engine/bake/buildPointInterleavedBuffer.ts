@@ -171,8 +171,8 @@ export function buildPointInterleavedBuffer(
   // above (that one is a cosmetic per-catalog display shift; this one is
   // the physical median absolute magnitude `galaxySbAmp` normalises
   // against). Shared with the disk-planner mirror of this bake via
-  // `cloud.medianAbsMag` when the catalog carries one (the real
-  // decode/synthetic paths always populate it); recomputed here as a
+  // `cloud.medianAbsMag` when the catalog carries one (the decode path
+  // always populates it); recomputed here as a
   // fallback for lightweight test fixtures that omit the optional field.
   const medianAbsMag = cloud.medianAbsMag ?? galaxyMedianAbsMag(cloud);
 
@@ -269,9 +269,9 @@ export function buildPointInterleavedBuffer(
     //
     // in a single per-instance attribute read.  Float sign-bit packing
     // is well-defined for finite non-zero values and survives NaN
-    // (synthetic clouds use NaN axisRatio; the shader's existing
-    // `axisRatio > 0` mask correctly treats NaN as "no orientation" →
-    // circle, no fallback flag).
+    // (the format's NaN "no measurement" sentinel included; the shader's
+    // existing `axisRatio > 0` mask correctly treats NaN as "no
+    // orientation" → circle, no fallback flag).
     const ab = cloud.axisRatio[i]!;
     interleaved[o + 5] = isFallbackArr[i] === 1 ? -Math.abs(ab) : ab;
 
@@ -280,8 +280,8 @@ export function buildPointInterleavedBuffer(
     // points down on screen, and rotating the UV is the inverse of
     // rotating the ellipse — hence the minus sign, identical to what the
     // vertex shader used to apply before calling cos/sin per vertex.
-    // NaN PA (synthetic clouds) bakes to NaN cos/sin, matching the
-    // shader-computed values for those rows bit-for-bit.
+    // A NaN PA bakes to NaN cos/sin, matching the shader-computed values
+    // for those rows bit-for-bit.
     const paRad = (-cloud.positionAngleDeg[i]! * Math.PI) / 180;
     interleaved[o + 6] = Math.cos(paRad);
     interleaved[o + 7] = Math.sin(paRad);

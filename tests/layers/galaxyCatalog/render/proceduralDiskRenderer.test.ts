@@ -100,7 +100,7 @@ function fakeProceduralInstance(
     colourIndex: 0.7,
     crossfadeAlpha: 0.5,
     procFadeOut: 1,
-    sourceCode: 0,
+    sourceCode: 1,
     localIdx: 0,
     sbAmp: 1,
     ...overrides,

@@ -1,6 +1,6 @@
 ---
 name: link-data
-description: Symlink the current worktree's `public/data/` to the main checkout's `public/data/`, so the worktree renders against the same real catalog data without rebuilding. Use when the user types `/link-data` or asks to "use real data here", "link the data", "stop falling back to synthetic", or sees `unsupported version: N — please regenerate the .bin via "npm run build-tiers"` warnings in the dev-server log. Idempotent: re-running on an already-linked worktree is a no-op.
+description: Symlink the current worktree's `public/data/` to the main checkout's `public/data/`, so the worktree renders against the same real catalog data without rebuilding. Use when the user types `/link-data` or asks to "use real data here", "link the data", "fix an empty sky in a worktree", or sees `unsupported version: N — please regenerate the .bin via "npm run build-tiers"` warnings in the dev-server log. Idempotent: re-running on an already-linked worktree is a no-op.
 ---
 
 # `/link-data` — Symlink Worktree `public/data/` to Main
@@ -15,9 +15,8 @@ holds content-hashed filenames behind `manifest.json` (see docs/DATA.md
 same way, through main's manifest, since it's the same directory. .bin files
 left over from older sessions trigger
 `unsupported version: N — please regenerate the .bin via "npm run build-tiers"`
-warnings in the browser console, and the engine falls back to the synthetic
-procedural cloud (visible as ~100k dim dots, sometimes black squares if
-synthetic.ts has its own bugs).
+warnings in the browser console, and the catalog slot lands in `error` —
+the sky stays empty.
 
 Rebuilding the bins in every worktree is wasteful — they're deterministic
 outputs of `tools/catalog/buildAllBins.ts` against `data/raw/`, take several
@@ -138,7 +137,6 @@ absolute paths; the assistant reads the output and chooses the next command.
    ```
 
    Branch on the output — in the controller, not in bash:
-
    - No bins on main → bail: "run `npm run build-tiers` in main first".
      (Also bail if `<MAIN>/public/data` is itself a symlink.)
    - `readlink` prints `<MAIN>/public/data` → report "already linked", stop.

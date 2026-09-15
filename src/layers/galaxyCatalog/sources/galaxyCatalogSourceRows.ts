@@ -10,7 +10,6 @@ import type { SourceType } from '../../../@types/data/SourceType';
 import type { SourceEntry } from '../../../@types/data/SourceEntry';
 
 import { Source } from '../../../data/source';
-import { SYNTHETIC_ENTRY } from './synthetic';
 import { FAMOUS_GALAXY_ENTRY } from './famous-galaxy';
 import { TWOMRS_ENTRY } from './twomrs';
 import { SDSS_ENTRY } from './sdss';
@@ -21,7 +20,6 @@ import { DESI_WEDGE_ENTRY } from './desiWedge';
 import { DESI_SGW_ENTRY } from './desiSgw';
 
 export const GALAXY_CATALOG_SOURCE_ROWS = [
-  [Source.Synthetic, SYNTHETIC_ENTRY],
   [Source.FamousGalaxy, FAMOUS_GALAXY_ENTRY],
   [Source.TwoMRS, TWOMRS_ENTRY],
   [Source.SDSS, SDSS_ENTRY],

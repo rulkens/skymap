@@ -12,8 +12,6 @@
  * the guard that keeps this home single.
  *
  * The ladder, with the rationale that used to live in both encoders:
- *   - Synthetic → null   : procedurally-generated rows have no durable identity
- *                          across rebuilds, so a shared URL can't re-find them.
  *   - famous id          : a curated seed id ("m31") beats every numeric id —
  *                          stable across rebuilds and human-readable.
  *   - sdss-/pgc- <objId> : objId > 0n is a real catalog identifier (SDSS's
@@ -33,9 +31,7 @@ export function encodeGalaxyId(galaxy: {
   readonly objId: bigint;
   readonly ra: number;
   readonly dec: number;
-}): string | null {
-  // Synthetic rows have no durable identity across rebuilds.
-  if (galaxy.source === Source.Synthetic) return null;
+}): string {
   // Curated famous seed id beats every numeric id — stable + human-readable.
   if (galaxy.famousId) return galaxy.famousId;
   // objId > 0n means a real catalog identifier: SDSS 19-digit objID, else a PGC.

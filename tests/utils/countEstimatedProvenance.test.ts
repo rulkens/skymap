@@ -1,7 +1,7 @@
 /**
  * countEstimatedProvenance tallies each axis off its own fallback-flag
  * column, and stops at the shorter of `cloud.count` and the flag array's
- * length — a synthetic cloud can over-allocate its columns beyond the rows
+ * length — a cloud can over-allocate its columns beyond the rows
  * it actually carries, and a partial cloud stub can omit a column entirely.
  */
 

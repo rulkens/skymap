@@ -125,8 +125,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
 
   // Same window: a stale-.bin version mismatch turns into a splash-visible
-  // error instead of silently falling through to the synthetic backstop
-  // (`syntheticShouldArm` suppresses arming on the same error type).
+  // error rather than a silent empty sky.
   installFormatVersionAlert(cb.store.dispatch, deps.allSlots);
 
   // Signal loading state immediately so the user sees progress before the

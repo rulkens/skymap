@@ -50,8 +50,7 @@ fn fsPick(in: VSOut) -> @location(0) vec4<u32> {
   // Write '(sourceCode << 26 | instance_index) + 1' so background
   // pixels (cleared to 0) are distinguishable from a real hit. The +1
   // keeps 0 as the unambiguous 'no hit' sentinel; even with sourceCode
-  // = 0 (the Synthetic galaxy catalog) and localIdx = 0 the written value is
-  // 1, never 0.
+  // and localIdx both 0 the written value is 1, never 0.
   //
   // 'in.instanceIdx' was assembled in the vertex stage from
   // '(source.sourceCode << 26u) | @builtin(instance_index)'. The

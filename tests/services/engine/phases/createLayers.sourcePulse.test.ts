@@ -90,8 +90,8 @@ describe('createLayers reportSourceCount', () => {
       .filter(engineStatusChanged.match)
       .map((action) => action.payload);
     expect(statuses).toEqual([
-      { kind: 'ready', count: 3, source: Source.SDSS },
-      { kind: 'ready', count: 7, source: Source.TwoMRS },
+      { kind: 'ready', count: 3 },
+      { kind: 'ready', count: 7 },
     ]);
   });
 });

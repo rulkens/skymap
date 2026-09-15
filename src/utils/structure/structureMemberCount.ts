@@ -4,18 +4,16 @@
  *
  * This is the InfoCard-facing consumer the `structureMembership` cone-search
  * was written for.  It assembles the catalog set the way the renderer
- * draws it — visible galaxy catalog sources only, Synthetic excluded — so the
+ * draws it — visible galaxy catalog sources only — so the
  * number agrees with both the on-screen points and the focus-mode fade
  * (which keeps exactly these galaxies bright).
  *
  * ### Why this source set
  *
- * The count sums `sourceCounts` over `GALAXY_CATALOG_SOURCES` minus
- * Synthetic, gated by `visibleSourceMask` — the same filter the renderer
- * draws with, so the member count tracks the on-screen points: a galaxy
- * catalog toggled off drops straight out of the total.  Synthetic is
- * excluded because it only loads in the all-fetch-failed fallback, where
- * labelling its procedural points as member "Galaxies" would mislead.
+ * The count sums `sourceCounts` over `GALAXY_CATALOG_SOURCES`, gated by
+ * `visibleSourceMask` — the same filter the renderer draws with, so the
+ * member count tracks the on-screen points: a galaxy catalog toggled off
+ * drops straight out of the total.
  *
  * ### Membership radius
  *
@@ -35,7 +33,7 @@
 
 import { structureMembership } from './structureMembership';
 import type { CatalogWithSource } from '../../@types/data/structure/CatalogWithSource';
-import { GALAXY_CATALOG_SOURCES, Source } from '../../data/sources';
+import { GALAXY_CATALOG_SOURCES } from '../../data/sources';
 import { maskHas } from '../maskHas';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../@types/data/SourceType';
@@ -50,7 +48,6 @@ export function structureMemberCount(
 
   const catalogs: CatalogWithSource[] = [];
   for (const source of GALAXY_CATALOG_SOURCES) {
-    if (source === Source.Synthetic) continue;
     if (!maskHas(visibleSourceMask, source)) continue;
     const catalog = getCloud(source);
     if (catalog === undefined) continue;

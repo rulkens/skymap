@@ -8,7 +8,7 @@
  * ad-hoc string.
  *
  * Kinds:
- *   - galaxyCatalog — one of SDSS, 2MRS, GLADE, Famous, Synthetic.
+ *   - galaxyCatalog — one of SDSS, 2MRS, GLADE, Famous, ….
  *                    Fades in on first load; fades out → upload → in
  *                    on tier swap. Discriminator: `id: GalaxyCatalogId`
  *                    (the string id the point renderer keys catalogs by).

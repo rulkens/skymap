@@ -31,11 +31,9 @@ const UNKNOWN: GalaxyTypeInfo = { category: 'green', description: 'Unknown galax
 
 export function galaxyType(source: SourceType, mags: GalaxyTypeMags): GalaxyTypeInfo {
   switch (source) {
-    case Source.SDSS:
-    case Source.Synthetic: {
+    case Source.SDSS: {
       // SDSS u−r is the canonical red-sequence/blue-cloud discriminator
-      // (Strateva et al. 2001). Synthetic data is generated to mimic SDSS,
-      // so it shares the same band layout and thresholds.
+      // (Strateva et al. 2001).
       const ur = mags.magU - mags.magR;
       return Number.isFinite(ur) ? galaxyTypeFromColor(ur) : UNKNOWN;
     }

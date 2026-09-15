@@ -19,10 +19,9 @@ import { encodeGalaxyId } from './encodeGalaxyId';
 
 /**
  * Build the `#focus=<id>` payload (the bit after `=`) for the given
- * selection, or `null` when the row isn't link-encodable.  Delegates the
- * priority ladder to the shared encodeGalaxyId.
+ * selection.  Delegates the priority ladder to the shared encodeGalaxyId.
  */
-export function selectionToFocusId(info: GalaxyInfo): string | null {
+export function selectionToFocusId(info: GalaxyInfo): string {
   return encodeGalaxyId({
     source: info.source,
     famousId: info.famous?.id ?? null,

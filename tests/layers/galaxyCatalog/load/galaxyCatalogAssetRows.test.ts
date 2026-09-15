@@ -75,11 +75,11 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
 describe('galaxyCatalogAssetRows req builders', () => {
   it('a tiered row carries its tier; an untiered one carries only its source', () => {
     expect(rowFor(Source.SDSS).req('medium')).toEqual({ source: Source.SDSS, tier: 'medium' });
-    expect(rowFor(Source.Synthetic).req('large')).toEqual({ source: Source.Synthetic });
+    expect(rowFor(Source.TwoMRS).req('large')).toEqual({ source: Source.TwoMRS });
   });
 
   it("an untiered point source's request is identical across tiers", () => {
-    for (const source of [Source.TwoMRS, Source.FamousGalaxy, Source.Synthetic]) {
+    for (const source of [Source.TwoMRS, Source.FamousGalaxy]) {
       const row = rowFor(source);
       expect(sameRequest(row.req('small'), row.req('large')), `${source} drifted`).toBe(true);
     }
