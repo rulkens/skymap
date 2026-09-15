@@ -34,7 +34,9 @@ export function elapsedMs(epoch: Epoch<unknown>, nowMs: number): number {
  * Advances the five rows in one call. `tween`/`autoRotate`/`follow` read their
  * live ref only when the winner names that epoch (else the ease would burn while
  * some other driver, e.g. a drag, holds) — replaying `prev.ref` when ineligible
- * makes `advanceEpoch` a guaranteed no-op for that row. `frameTween` has no gate:
+ * makes `advanceEpoch` a guaranteed no-op for that row. `follow` also reads it
+ * under a winner that DELIVERS the framing: the row it settles the debt for has
+ * to be the row the settle is then read against. `frameTween` has no gate:
  * `resolveFrameBasis` reads it regardless of winner. `clip` is not advanced here
  * at all — the clip player advances it before the frame step runs, so it is
  * passed through by reference.
@@ -46,10 +48,12 @@ export function advanceEpochs(
     readonly focus: SelectionRow | null;
     readonly clip: Epoch<NonNullable<CameraState['clip']>>;
     readonly winnerEpoch: EpochRow | undefined;
+    /** The winner DELIVERS the framing (clip/tween); absent reads as no. */
+    readonly winnerDelivers?: boolean;
     readonly nowMs: number;
   },
 ): CameraEpochs {
-  const { intent, focus, clip, winnerEpoch, nowMs } = inputs;
+  const { intent, focus, clip, winnerEpoch, winnerDelivers = false, nowMs } = inputs;
 
   const tween = advanceEpoch(
     prev.tween,
@@ -67,7 +71,7 @@ export function advanceEpochs(
   );
   const follow = advanceEpoch(
     prev.follow,
-    winnerEpoch === 'follow' ? focus : prev.follow.ref,
+    winnerEpoch === 'follow' || winnerDelivers ? focus : prev.follow.ref,
     nowMs,
   );
   const frameTween = advanceEpoch(prev.frameTween, intent.frameTween, nowMs);

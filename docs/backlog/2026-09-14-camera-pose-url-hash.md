@@ -18,5 +18,5 @@ Open before it can be spec'd: precision/length budget for the numbers, whether
 a stale frame id (a rung the build no longer has) falls back or throws, and
 whether the hash writes on every commit or only at rest.
 
-Out of scope of `docs/superpowers/specs/2026-09-14-camera-frame-ladder-site-rung.md`
+Out of scope of `docs/superpowers/specs/completed/2026-09-14-camera-frame-ladder-site-rung.md`
 by ruling — that spec builds the `channels` cell this would read.

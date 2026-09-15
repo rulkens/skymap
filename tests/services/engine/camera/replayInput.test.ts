@@ -9,6 +9,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { replayInput } from '../../../../src/services/engine/camera/replayInput';
+import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
 import * as surfaceStepModule from '../../../../src/services/camera/surfaceStep';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
@@ -88,7 +89,7 @@ const atRestZoom = (factor: number): InputStep => ({
 
 /** Geocentric range of a body arm, metres — the anchor is the body centre. */
 function rangeM(framed: FramedCameraPose): number {
-  if (framed.frame === 'absolute') throw new Error('rangeM: not a body arm');
+  if (!isBodyArm(framed)) throw new Error('rangeM: not a body arm');
   return Math.hypot(...framed.pose.eyeRelAnchorM);
 }
 
@@ -277,7 +278,7 @@ describe('replayInput', () => {
     const store = makeStore();
     const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
-    if (arm.frame === 'absolute') throw new Error('fixture: not a body arm');
+    if (!isBodyArm(arm)) throw new Error('fixture: not a body arm');
     const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.surface.datumRadiusM;
     const anchorFor = (px: Vec2): Vec3 => {
       const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], Math.PI / 3);
@@ -308,7 +309,7 @@ describe('replayInput', () => {
     );
 
     const committed = next.actions[0]!.payload as FramedCameraPose;
-    if (committed.frame === 'absolute') throw new Error('the arm flipped');
+    if (!isBodyArm(committed)) throw new Error('the arm flipped');
     const got = committed.pose.eyeRelAnchorM;
     const cursorAnchor = anchorFor([700, 500]);
     expect(rangeTo(cursorAnchor, got)).toBeCloseTo(f * rangeTo(cursorAnchor, eyeM), 3);

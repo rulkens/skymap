@@ -11,6 +11,7 @@
 
 import { liveBodyPosition } from './liveBodyPosition';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { addVec3 } from '../../../utils/math/addVec3';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { isWorldArm } from './rungs/isWorldArm';
 import type { BodyState } from '../../../@types/scene/BodyState';
@@ -35,7 +36,7 @@ export function applyFocusedBodyPivot(
   if (pivot === null) return framed;
   const pose = framed.pose;
   return absoluteArm({
-    target: [pivot[0] + panOffset[0], pivot[1] + panOffset[1], pivot[2] + panOffset[2]],
+    target: addVec3(pivot, panOffset),
     yaw: pose.yaw,
     pitch: pose.pitch,
     distance: pose.distance,

@@ -77,6 +77,11 @@ function earthFramedClip(): ClipData {
   return { start: START, timeline: [earthLeg()] };
 }
 
+/** Strictly between, either direction — the two ends are fixture values, not authored. */
+function between(from: number, mid: number, to: number): boolean {
+  return (mid - from) * (mid - to) < 0;
+}
+
 /** The world aim (target → eye is its negation) an absolute pose encodes. */
 function aimOf(pose: CameraPose): Vec3 {
   const dir = rotateVec3ByTightMat3(yawPitchToDir(pose.yaw, pose.pitch), BASIS);
@@ -163,6 +168,30 @@ describe('frame-tagged keyframes', () => {
     const a = aimOf(pose);
     const b = aimOf(back);
     expect(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).toBeCloseTo(1, 12);
+  });
+
+  it('a clip leg tagged { site } evaluates in the site rung, tweening from its converted start', () => {
+    const CURIOSITY = { site: 'curiosity' as BodyId };
+    const HEADING_RAD = 0.7;
+    const ELEVATION_RAD = 0.2;
+    const RANGE_M = 12;
+    const siteLeg: ClipData['timeline'][number] = all([
+      tween('yaw', { to: HEADING_RAD, over: 4, frame: CURIOSITY }),
+      tween('pitch', { to: ELEVATION_RAD, over: 4, frame: CURIOSITY }),
+      tween('distance', { to: RANGE_M, over: 4, frame: CURIOSITY }),
+    ]);
+    const data: ClipData = { start: START, timeline: [siteLeg] };
+
+    // MID-tween, not at the end: at `t = 4` the value is the authored `to`
+    // whatever the leg-open conversion produced, so the site rung's `decode`
+    // would not be on the measured path at all.
+    const open = evaluateFramedClip(data, 0, opts());
+    const mid = evaluateFramedClip(data, 2, opts());
+
+    expect(mid.frame).toEqual(CURIOSITY);
+    expect(between(open.channels.yaw, mid.channels.yaw, HEADING_RAD)).toBe(true);
+    expect(between(open.channels.pitch, mid.channels.pitch, ELEVATION_RAD)).toBe(true);
+    expect(between(open.channels.distance, mid.channels.distance, RANGE_M)).toBe(true);
   });
 
   it('the clip driver hands out a decoded body arm, never a re-encoded absolute one', () => {

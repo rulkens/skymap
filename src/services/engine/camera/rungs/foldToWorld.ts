@@ -11,5 +11,5 @@ import { isWorldArm } from './isWorldArm';
 
 export function foldToWorld(framed: FramedCameraPose, ctx: RungBasisCtx): CameraPose {
   if (isWorldArm(framed)) return framed.pose;
-  return climbRowFor(framed.frame).toParent(framed, ctx).pose;
+  return foldToWorld(climbRowFor(framed.frame).toParent(framed, ctx), ctx);
 }

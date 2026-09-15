@@ -4,4 +4,5 @@ import type { BodyId } from '../data/body/BodyId';
 export type FrameOf = {
   readonly absolute: 'absolute';
   readonly body: { readonly body: BodyId };
+  readonly site: { readonly site: BodyId };
 };

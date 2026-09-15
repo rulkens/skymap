@@ -64,7 +64,20 @@ arm's, and there is no ground plane anywhere in that path.
 - The fold steps **at most one rung per at-rest frame**; clips own the rung
   while playing, as today; no fixpoint iteration.
 - Site→body disengage lands the body arm anchored **at the site**
-  (`anchorLocalM` = the site point), not at the body centre.
+  (`anchorLocalM` = the site point), not at the body centre, which keeps the
+  stored magnitudes at rover scale.
+- **The body arm serves ONE point**: under a focus _hosted_ on the arm's body
+  that point is the focus's own — its body-fixed point re-derived from
+  `focusBodyId` each drain, carrying the follow memory's `panOffset` wherever
+  the reader works in world Mpc. Everything the arm does about a point reads
+  it: the eye's own scaling and all three settle turns pivot on it, the hold
+  asks whether it is still above the eye's horizon, and the disengage commits
+  the arm looking at it. So the rover is pixel-locked in both directions, the
+  tilt ramps back to the remembered value about it (ruling 12), and neither
+  crossing has anything to re-aim. With no hosted focus the wheel keeps its
+  cursor-pick anchor (ruling #7), and the accepted cost is that a focused rover
+  has no cursor-directed zoom in its host's arm, exactly as it has none in the
+  world arm.
 
 ## 1. Goals / non-goals
 
@@ -90,8 +103,9 @@ arm's, and there is no ground plane anywhere in that path.
   the world arm; a site rung needs a `surfaceFixed` driver row.
 - **Terrain.** Bodies stay analytic spheres, so the floors below are sphere
   floors. A future DEM changes the floor's input, not the rung.
-- **Rung-generic follow/approach drivers.** The approach stays absolute-arm
-  only; §4.8 keeps the descent from stranding it instead.
+- **Rung-generic follow/approach drivers.** The HOLD row stays absolute-arm
+  only; the approach row is arm-free (§4.8), which is what keeps a descent —
+  or an arm the focus hosts — from stranding it.
 
 ## 2. The ladder model
 
@@ -310,14 +324,27 @@ export function hostOrThrow(frame: PoseFrame, ctx: RungBasisCtx): HostBody;
 
 // src/services/engine/camera/rungs/stepRung.ts
 export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame;
+
+// the narrowings a display or a gate needs, one symbol per file
+// src/services/engine/camera/rungs/isBodyArm.ts
+export function isBodyArm(framed: FramedCameraPose): framed is FramedPose<'body'>;
+// src/services/engine/camera/rungs/isSiteArm.ts
+export function isSiteArm(framed: FramedCameraPose): framed is FramedPose<'site'>;
+// src/services/engine/camera/rungs/frameBodyId.ts
+export function frameBodyId(frame: PoseFrame): BodyId | null;
 ```
 
-- `refoldTo` climbs `toParent` to the shallower of the two rungs, then descends
-  `fromParent` to the target — the one conversion in the system. `foldToWorld`
-  is its `'absolute'` specialisation returning the pose; like today's
-  `resolveWorldArm` it returns the world arm's own pose **by reference**
-  (`poseFrameConversion.ts:141-145`), which is what keeps the per-frame fold
-  free on the world arm.
+- `refoldTo` is the one conversion in the system, and it moves **whichever end
+  is deeper**: it climbs `toParent` from the deeper frame until the two meet,
+  then descends `fromParent` to the target. That is what keeps a rung's trip to
+  **its own host arm** a single `toParent` — a site reaches its planet's arm in
+  one hop and never round-trips through heliocentric Mpc, where metre-scale
+  numbers lose their resolution to the 1 Mpc seam (spec 2 §10). A pose already
+  in the target frame comes back by reference. `foldToWorld` is its
+  `'absolute'` specialisation returning the pose, climbing to the root however
+  many rungs deep the frame sits; like today's `resolveWorldArm` it returns the
+  world arm's own pose **by reference** (`poseFrameConversion.ts:141-145`),
+  which is what keeps the per-frame fold free on the world arm.
 - `hostOf` walks up from the given frame and answers the first non-null `host`
   cell. **One failure policy**: `hostOf` answers `null` when the body is
   unresolved this instant; `hostOrThrow` is the single throwing wrapper, used
@@ -329,7 +356,14 @@ export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame;
   business. `replayInput` keeps arbitration, the store commits and the driver
   memories (follow's `panOffset`, the roll ride's epoch bookkeeping).
 - `stepRung` replaces `regimeArmFor`: it asks the current rung's `release`,
-  then each child's `engage`, and answers the frame at most one rung away.
+  then each child's `engage`, and answers the frame at most one rung away. Both
+  halves are kind-generic. A release answers the parent **frame**, taken from
+  `climbRowFor(current.frame).toParent(current, ctx).frame` — the parent kind
+  alone does not name a frame, since a site's parent is its own host planet's
+  arm, and only the row can resolve which body that is. An engage asks every row
+  whose `parent` equals `rungKindOf(current.frame)`, so a rung parented on a
+  body is reachable from a body arm exactly as one parented on the world arm is
+  reachable from `'absolute'`.
 
 ### 2.6 Invariants
 
@@ -339,13 +373,28 @@ export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame;
    `src/@types/camera` with an empty allow-list and must stay that way — a
    string-keyed rung table passes it by construction.
 2. **Consumers never branch on the tag** except through `rungKindOf`,
-   `frameKey`/`sameFrame`, `isWorldArm`, `hostOf`, `refoldTo`/`foldToWorld`,
-   `stepRung` and `rowFor(...).step` / `.channels`.
-3. **The narrowing is confined.** `rowFor` and `climbRowFor` hold one `as`
-   expression each and nothing else; one test covers both.
+   `frameKey`/`sameFrame`, `isWorldArm`/`isBodyArm`/`isSiteArm`, `frameBodyId`,
+   `hostOf`, `refoldTo`/`foldToWorld`, `stepRung` and `rowFor(...).step` /
+   `.channels`. Once a third rung exists, "not the world arm" stops meaning
+   "body-fixed metres", so a display that wants a body arm's anchor and basis
+   asks `isBodyArm` and a display that wants the turntable's angles asks
+   `isSiteArm`; `frameBodyId` answers the body a frame **names** (its own, not
+   its host, which is `hostOf`'s question).
+3. **The narrowing is confined to the vocabulary.** Every `as` expression that
+   asserts a rung fact the value's type cannot carry lives in
+   `src/services/engine/camera/rungs/`: `rowFor` and `climbRowFor` (the table
+   lookup), `refoldTo` (the descent's child frame and its parent's), `stepRung`
+   (the engage loop's parent-framed pose) and `frameBodyId` (the tag's id keyed
+   by its kind). Each is guarded by a stated structural argument beside it. No
+   file outside that folder narrows a frame or a pose, which is what
+   `oneTagReader.test.ts` enforces directory-wise.
 4. **One rung per at-rest frame.** `stepRung` moves by one; a two-rung descent
    takes two frames, both invisible (the frame draws the pre-flip world arm —
-   `projectFramePose.ts:57-58`).
+   `projectFramePose.ts:57-58`). The fold's own flip is kind-generic to match:
+   it crosses when the step's answer differs from the displayed frame **and**
+   the displayed pose is the one the step judged — the world arm on an engage,
+   or the regime's own rung on a descent between two rungs. A produced pose in
+   some third frame (a clip leg's) is not this crossing's to convert.
 5. **Clips own the rung while playing.** A playing clip authors its own tag per
    leg and keeps it for the leg's duration, as today
    (`cameraDrivers.ts:182-184`, `replayInput.ts:116-117`).
@@ -569,18 +618,35 @@ eye          = bodyFixedEyeM(pose)
 rel          = eye − P
 rangeM       = |rel|
 elevationRad = asin(clamp((rel/rangeM) · up, −1, 1))
-headingRad   = atan2((rel/rangeM) · east, (rel/rangeM) · north)
+right        = basisLocal's first column
+headingRad   = atan2(right · north, −(right · east))
 ```
 
-then the floors of §4.5. **The incoming basis is discarded**: the site rung
-looks at the site by construction, so entering re-aims the camera onto `P`.
-That is acceptable because engage only fires at rest with the focus on the site
-body, which means the follow approach has already aimed the camera at the rover
-(`cameraDrivers.ts:154-160` frames the focus) and the re-aim is a no-op up to
-the tilt residual. It also fixes the round-trip asymmetry precisely:
-`fromParent(toParent(s))` is the identity for every `SitePose` within float
-tolerance; `toParent(fromParent(b))` is **not** the identity for an arbitrary
-body pose — it projects the aim onto the site. Both are pinned as tests (§6).
+then the floors of §4.5. Each site coordinate is read from **whichever incoming
+quantity fixes it**. Range and elevation come from the eye. The heading comes
+from the **basis**, because the eye does not fix it: the engage lands at the
+remembered top-down tilt, where the eye sits over `P` and its azimuth about the
+site is float noise — three identical zoom-outs and zoom-ins measured headings
+−1.396, −0.939 and −1.144 rad, so the rover landed spun by a different angle
+every time (adverse 8, 2026-09-15). `right` is the axis to read it off: the
+basis of §4.2 is `canonicalBasisAt(siteFrame, headingRad + π, π/2 − elevationRad)`,
+whose `right` works out to `horiz × localUp`, independent of the tilt — so it stays
+in the tangent plane at every elevation, where screen-up's tangent projection
+shrinks as `sin(elevationRad)` and dies at the horizon.
+
+Reading the heading off the basis costs nothing when the view is already on the
+site, which is the case engage fires in: the follow approach frames the focus
+(`cameraDrivers.ts:154-160`) and the body arm serves it at the centre, so the
+incoming `forward` is `−dir` to 1e-12 and the two readings agree. Where they
+differ, the **eye** is what moves and the screen orientation is kept, which is
+the right way round — an eye off the turntable's azimuth by `Δheading` is at
+most `2 · rangeM · cos(elevationRad) · sin(Δheading/2)` away (9 cm at the tilt
+the engage lands at), while an orientation off by `Δheading` is the whole
+screen. The round-trip asymmetry is therefore the same shape as before with the
+projected quantity swapped: `fromParent(toParent(s))` is the identity for every
+`SitePose` within float tolerance; `toParent(fromParent(b))` is **not** the
+identity for an arbitrary body pose — it keeps the basis and projects the eye.
+Both are pinned as tests (§6).
 
 ### 4.4 Engage and release
 
@@ -641,7 +707,15 @@ slider rows land beside the existing band sliders in
   `SITE_RUNG.eyeFloorBoundingRadii × boundingRadiusM` (0.2), i.e.
   `elevationRad ≥ asin(min(1, 0.2 · boundingRadiusM / rangeM))`. At the range
   floor that is ≈ 5.7°. This is the rung's ground: the eye cannot reach the
-  horizon plane and cannot pass under it, at any range.
+  horizon plane and cannot pass under it, at any range. The site's own floor is
+  the ONLY one here — the rung exists to get under the host's standoff, and
+  folding the host's in saturates the `asin` at close range, pinning every pose
+  at the ceiling. The hand-back therefore lands the body arm BELOW that arm's
+  own descent floor, and the arm's floor is what answers for it: with a hosted
+  focus it lifts the eye by raising its elevation ABOUT THAT FOCUS at constant
+  range (`flooredBodyPose`), so the rover holds the sightline the settle pivots
+  on. A radial push there instead takes the rover 0.030 rad off centre on the
+  first notch and leaves it there for the rest of the climb.
 - **Elevation ceiling:** `SITE_RUNG.elevationCeilRad`, π/2 minus 1e-3. At
   exactly π/2 the heading has nowhere to go — the same degeneracy
   `CameraPose.roll` documents at nadir (`CameraPose.d.ts:15-21`).
@@ -657,14 +731,17 @@ the previous frame's end pixel (`InputStep.d.ts:6-7,19`), so the rung needs
 for it.
 
 - **Drag** — one mode, the turntable; no pan/strafe/look/tilt latch, so none of
-  `SurfaceGesture`'s machinery applies. The rate is the angle the pixel delta
-  subtends at the lens, the same law as the body arm
-  (`draggedSurfacePose.ts:46-50`), so a drag of one screen height is one FOV of
-  turn at every range and no tuning constant exists to be wrong:
+  `SurfaceGesture`'s machinery applies. The rate is the body arm's 1:1 ground
+  tracking (`anchoredDragRotation`) re-derived on the site's bounding sphere —
+  one pixel spans `rangeM · fovYRad / viewportPx[1]` metres of that sphere, so
+  it turns that over the sphere's radius, capped at `ORBIT_MAX_RAD_PER_PX`
+  exactly as `orbitRadPerPixel` caps the same law:
 
   ```
-  headingRad   += ((endPx[0] − startPx[0]) / viewportPx[1]) · fovYRad
-  elevationRad += ((endPx[1] − startPx[1]) / viewportPx[1]) · fovYRad
+  gain          = min(ORBIT_MAX_RAD_PER_PX,
+                      (fovYRad / viewportPx[1]) · rangeM / boundingRadiusM)
+  headingRad   += (endPx[0] − startPx[0]) · gain
+  elevationRad += (endPx[1] − startPx[1]) · gain
   ```
 
   Both signs are the body arm's **orbit** handle, re-derived: an orbit drag
@@ -698,8 +775,11 @@ channels:
 | `target`   | `[0, 0, 0]` — the tag names the site, so the point is redundant |
 
 A tween between two site keyframes therefore interpolates heading, elevation
-and range linearly, which is the turntable move an author wants. The absent-tag
-rule is unchanged: a segment with no `frame` is `'absolute'`
+and range linearly, which is the turntable move an author wants. `encode` emits
+clamped values and `decode` does not: a leg's endpoints were clamped when they
+were captured, and re-flooring them here would bend a tween's ends — so a
+hand-authored `distance: 0` puts the eye at the site until the next input step.
+The absent-tag rule is unchanged: a segment with no `frame` is `'absolute'`
 (`evaluateClip.ts:509`). Known limit, inherited from the body arm: heading
 takes the short way only if the author keeps the pair inside a turn — linear
 channel interpolation does not unwrap.
@@ -711,43 +791,87 @@ engaged one (`regimeArmFor.ts:39`) and blocks engage the same way (`:31-33`).
 With a rover focused, that keeps the Mars arm permanently unreachable — the
 premise correction in §0.
 
-The rule becomes generic: **a focus whose `bodyHostId` chain passes through a
-rung's id keeps (and admits) that rung.** `bodyHostId`
-(`positionDrivers.ts:44-54`) resolves each driver's host — an orbit's focus, a
-site's host — so `curiosity → mars → sun` passes through `mars` and the Mars
-arm holds under a rover focus. `bodyHostId` is the chain's only reader; there
-is no second host notion here (`utils/scene/hostBodyId` resolves a _texture_
-key's host and is unrelated).
+The rule becomes generic: **a focus fixed to a rung's surface — directly, or up
+a chain of surface-fixed hosts — keeps (and admits) that rung.** The walk reads
+each driver's host (`positionDrivers.ts:34-54`) and follows it only while the
+row's kind is `surfaceFixed`, so `curiosity → mars` holds the Mars arm under a
+rover focus and stops there. That restriction is what keeps the rule off the
+fifteen moons, Pluto/Charon and the two Voyagers: an _orbiting_ focus inside a
+host's subtree leaves a body-fixed arm behind rather than riding it, so
+admitting or holding that arm would sail the focus out of frame with follow
+gated off. `PositionDriver` is the chain's only reader; there is no second host
+notion here (`utils/scene/hostBodyId` resolves a _texture_ key's host and is
+unrelated).
 
-That rule alone would strand the approach. `followActive` is gated on the world
-arm (`cameraDrivers.ts:81-83`) because the ease has no meaning once the state
-co-rotates; a rover's framing distance is metres, so an approach with the
-subtree rule in place would cross Mars's engage band ~1500 km out, the follow
-row would go inactive mid-flight, and the camera would park there. The fix is
-uniform with the rule the fold already has for gestures: **an approach owns the
-rung while it runs.** The rung step is skipped while a follow row is winning and
-its memory is not yet `saturated` (`FollowMemory.saturated`, set at
-`cameraDrivers.ts:166`), exactly as the fold is skipped while `intent.dragging`
-(`projectFramePose.ts:112-114`).
+The hold is bounded by what the arm can serve: **a hosted focus keeps (and
+admits) the arm only while its site point is above the eye's horizon** —
+`dot(E − P, P) > 0` in body-fixed metres, the eye first lifted to the descent
+floor so an approach parked under the datum is judged from where the arm would
+put it (`hostedFocusOverHorizon.ts`). Unbounded, the hold stranded every switch
+between two rovers: no driver runs inside a body arm, so a focus 142° around
+Mars was held by an arm that could never reach it.
 
-The gate lives **in `projectFramePose`, beside that `intent.dragging` skip** —
-not inside `stepRung`. `RungCtx` carries no driver state, and widening it to
-carry follow memory would braid the driver table into every row's context for
-one caller's benefit; `stepRung` stays a pure function of the ladder.
+Both of those releases **cut out from below the band**, and that is what decides
+the world arm's up on the way out. Climbing out through the band, the blend has
+already reached the scene up at the flip (`clampCameraTuning` pins
+`tiltZeroHR ≤ disengageHR` for exactly this), so `toWorldArm`'s screen-up
+residual is scene-aligned and carries through unchanged — the lossless crossing
+§5.1 promises. A cut carries the site's local horizon instead, and no world-arm
+authority ever reclaims it: `frameAlignedRoll` settles only what a zoom notch
+charges it for, so the rover's tilt rides to the new focus as permanent image
+roll (adverse 9). The cut already re-aims the sightline at the host's centre
+(`centreLookingArm`, P3), so it lands the image on the selected frame's pole
+with it: **`releasedWorldRoll` is the world arm's whole up authority at a
+disengage** — carry through the band, level on a cut, and with `northUp` off
+(ruling 11) carry either way. Nothing downstream resets roll, so nothing
+downstream can forget to.
 
-With both, focusing Curiosity from far away plays out as: follow approaches in
-the world arm and saturates at rover framing distance → next at-rest frame,
-`absolute → { body: 'mars' }` (h/R over Mars ≈ 1e-6, focus in Mars's subtree) →
-the frame after, `{ body: 'mars' } → { site: 'curiosity' }` (range in metres,
-well inside 40 R). Two invisible frames, one rung each. Follow stays inactive
-from then on and nothing is lost by it: the rover is body-fixed on Mars and the
-Mars rung co-rotates with it, so there is nothing left to follow.
+That rule alone would strand the approach. A focus dispatch creates a **framing
+debt** — `FollowMemory` for that focus row, unsaturated — and only the follow
+approach pays it. Gating the approach on the world arm made the arm's hold do
+double duty as "suppress the fresh approach", so an approach owed from inside an
+arm the focus HOSTS (standing at a rover, focusing its planet; parked at h/R 0.1
+over Mars with Mars focused) could never fly and the camera sat where it was
+(adverse 10). So the rows split: **the APPROACH row is arm-free** — its job, ease
+from where the eye is to the focus's framing pose, is stated in world terms, and
+the fold refolds its world pose into whatever arm geometry picks, so the arms
+release and engage on geometry alone — while **the HOLD row stays world-arm
+gated**, because below the world arm the arm IS the hold (spec §7: the state
+co-rotates, so "keep the body centred" is structural). Both rows ease toward
+`releasedWorldArm(base)` — the world arm a hand-back would land on, by reference
+where the base already is the world arm, so world-arm numbers are unchanged, and
+carrying `releasedWorldRoll` below it so an approach out of an arm cannot ride
+the local horizon out as permanent image roll. The debt is settled by the ease
+saturating, or by a driver that DELIVERS the framing itself: `clip` and `tween`
+declare `deliversFraming`, which both settles their memory and advances the
+follow epoch's row, so a tour landing is not undone by an approach at the clip's
+exit. While a debt is owed, a wheel notch rides the follow distance target in
+either arm (`replayInput`'s follow lane, un-gated from the arm the same way as
+the row); only its roll charge (ruling 8) stays world-arm, since the body arm
+has no roll authority.
+
+With the split, focusing Curiosity from far away plays out as: follow approaches
+in the world arm, crosses `absolute → { body: 'mars' }` on geometry as it enters
+Mars's band, keeps easing there (the descent costs it nothing now), and lands
+`{ body: 'mars' } → { site: 'curiosity' }` at rover framing distance. Focusing
+Mars from `site:curiosity` is the mirror: the subtree rule hands back to
+`{ body: 'mars' }`, the owed approach flies the eye out through Mars's band, the
+`disengageHR` edge hands back to `absolute`, and the ease saturates at
+`bodyFocusDistance` — a framing move, which is what a focus dispatch is.
 
 ### 4.9 Displays
 
 `logCameraState` and the debug panel label the frame with `frameKey`, so a site
 frame reads `site:curiosity`; the panel's site rows are heading, elevation and
-range plus the derived eye height above the tangent plane. Clip authoring
+range plus the derived eye height above the tangent plane.
+
+The panel reads nothing but `CameraDebugSnapshot`, so the snapshot carries
+`siteHeadingRad`, `siteElevationRad` and `siteRangeM`, each null off a site arm
+and written together. Eye height is **not** a fourth field: it is
+`siteRangeM · sin(siteElevationRad)`, derived at the readout, so the snapshot
+cannot carry a value that disagrees with the two it is computed from.
+
+Clip authoring
 accepts `frame: { site: <id> }` wherever it accepts `{ body: <id> }` today
 (`src/@types/animation/CameraAction.d.ts:72,82`,
 `effectHelpers.ts:86-101,122-137`) with no
@@ -824,11 +948,12 @@ restatements, no clamp-boundary mirrors.
 - **One rung per frame.** From the world arm with a rover focused at rover
   range, two successive `stepRung` calls reach `{ site }` and not before —
   neither a single-frame teleport nor a third frame.
-- **Turntable feel.** After an arbitrary sequence of drag steps, the pose's
-  basis up stays in the plane of the site radial and the sightline (horizon
-  level), and the eye's height above the tangent plane never goes below the
-  floor. This is the test that would have caught the incumbent's rolling
-  horizon.
+- **Turntable feel.** After an arbitrary sequence of drag steps, the eye's
+  height above the tangent plane never goes below the floor. The level horizon
+  is structural rather than a named test: `SitePose` carries no roll and
+  `canonicalBasisAt` takes none, so the incumbent's rolling horizon is
+  unrepresentable here; the basis itself is covered by
+  `tests/utils/camera/canonicalBasisAt.test.ts`.
 - **Channels.** A site keyframe's `encode`/`decode` round-trips; an untagged
   segment still reads as `'absolute'`.
 
@@ -839,7 +964,10 @@ restatements, no clamp-boundary mirrors.
    mid-flight — a latent stranding bug, not a feature, but a behaviour change
    all the same. _Recommend:_ adopt it in the feature PR (never in prep), and
    check `driverGoldenTrace` for a trace that engages mid-approach; if one
-   exists, re-record it with the diff justified.
+   exists, re-record it with the diff justified. _Settled:_ the gate is gone
+   (adverse 10). An arm-free approach row makes a mid-flight descent harmless,
+   so the crossing needs no suppressing; the three golden traces stay
+   byte-identical because no recorded step engages mid-approach.
 2. **Are 40 R / 80 R the right edges?** _Recommend:_ ship them as the defaults
    with sliders; the sliders make a re-tune a one-line data change, and the
    eye-check settles it faster than analysis does.

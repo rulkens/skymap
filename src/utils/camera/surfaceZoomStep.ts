@@ -27,6 +27,7 @@ export function surfaceZoomStep(
   sceneUpLocal: Readonly<Vec3>,
   rememberedTiltRad: number,
   tuning: CameraTuning,
+  focusPivotM: Readonly<Vec3> | null,
 ): BodyFixedPose {
   const latched = gesture?.anchorLocalM ?? null;
   // Past the anchor's own tangent plane the anchor is behind the horizon and
@@ -44,16 +45,23 @@ export function surfaceZoomStep(
   // on the pointed-at ground point rather than drifting off it.
   const pixel: Readonly<Vec2> = gesture?.prevPixel ??
     cursorPx ?? [viewportPx[0] / 2, viewportPx[1] / 2];
-  const cursorAnchorM =
-    latched !== null && !stale
+  // A focus hosted on this body OWNS the notch's anchor, so the pick is not
+  // even taken: the eye scales about the rover and every settle turn pivots
+  // there, which pixel-locks it in BOTH directions and leaves the site engage
+  // nothing to re-aim. The cost is deliberate — with a rover focused the wheel
+  // is not cursor-directed here, exactly as it is not in the world arm.
+  const anchorM =
+    focusPivotM ??
+    (latched !== null && !stale
       ? latched
       : (pickOnBody(cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad), bodyRadiusM)?.pointM ??
-        null);
-  const stepped = anchoredZoomStep(arm, factor, cursorAnchorM, bodyRadiusM, standoffRadii);
+        null));
+  const stepped = anchoredZoomStep(arm, factor, anchorM, bodyRadiusM, standoffRadii, focusPivotM);
   // A dive at the sky has no ground point to converge over and keeps its
-  // framing; a dive with one settles about it (pixel-locked). A recession
-  // settles about the eye and needs no anchor at all.
-  if (factor < 1 && cursorAnchorM === null) return stepped;
+  // framing; a dive with one settles about it (pixel-locked). An unfocused
+  // recession settles about the eye — anchor-pivoting there cancels ~h/(R+h)
+  // of every correction (measured), and it has nothing to hold.
+  if (factor < 1 && anchorM === null) return stepped;
   // The pre-notch readout, against the pre-notch reference: the azimuth
   // deviation the recession ride preserves rather than re-authoring, and the
   // tilt deviation from the band mapping (ruling 12) — what the zoom did NOT
@@ -66,7 +74,8 @@ export function surfaceZoomStep(
       : preInBlendFrame.tiltRad - mappedTiltRad(rememberedTiltRad, hrPre, tuning);
   return settledZoomPose(
     stepped,
-    factor < 1 ? cursorAnchorM : null,
+    focusPivotM ?? (factor < 1 ? anchorM : null),
+    factor < 1,
     bodyRadiusM,
     standoffRadii,
     preTiltDevRad,

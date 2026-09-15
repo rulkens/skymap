@@ -8,6 +8,7 @@ import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
+import { foldToWorld } from '../../../src/services/engine/camera/rungs/foldToWorld';
 import { worldArmOf } from '../../fixtures/worldArmOf';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../src/@types/scene/BodyState';
@@ -32,6 +33,14 @@ export function makeDriverCtx(
     elapsedMs: args.elapsedMs ?? 0,
     register,
     authoredWorld: args.authoredWorld ?? worldArmOf(register),
+    // Defaults to the store's own base, folded where the fixture seeded a body arm.
+    committedWorld:
+      args.committedWorld ??
+      foldToWorld(args.state.camera.base, {
+        bodies: args.bodies ?? (deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>),
+        poseBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
+        upBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
+      }),
     winnerLastFrame: args.winnerLastFrame ?? 'resting',
     poseBasis: args.poseBasis ?? ORIENTATION_FRAMES[args.state.settings.orientation],
     simDays,

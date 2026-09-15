@@ -38,6 +38,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
+import { diveUntilEngaged } from '../../../helpers/camera/diveUntilEngaged';
 import { tiltOfPose } from '../../../helpers/camera/tiltOfPose';
 import { deepFreeze } from '../../../helpers/deepFreeze';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
@@ -97,18 +98,21 @@ describe('stepCameraRuntime', () => {
   });
 
   it('an idle frame returns the epochs, gesture, tilt and follow groups by identity', () => {
-    // A body arm: the follow driver is inert there, so its memory rides
-    // through unchanged and `notedTiltMemory` sees the host it already
+    // A body arm reached the way the app reaches one — the focus's approach
+    // flown to saturation, then dived into the band. The HOLD is inert there
+    // (the arm IS the hold) and the settled approach is done, so the memory
+    // rides through unchanged and `notedTiltMemory` sees the host it already
     // remembers. `toBe` on all four — a group re-spread on a steady frame
     // breaks every between-frame memo keyed on it.
-    const h = makeCameraSimHarness({ bootHR: 0.1 });
-    h.frame(3);
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    diveUntilEngaged(h, { body: 'earth' });
     const prev = h.state.cameraRuntime;
     expect(prev.register.pose.frame).toEqual({ body: 'earth' });
     expect(prev.follow).not.toBeNull();
     expect(prev.tilt.hostId).toBe('earth');
 
-    const { next } = stepCameraRuntime(prev, inputsFor(h, 64));
+    const { next } = stepCameraRuntime(prev, inputsFor(h, h.nowMs() + 16));
 
     expect(next.epochs).toBe(prev.epochs);
     expect(next.gesture).toBe(prev.gesture);

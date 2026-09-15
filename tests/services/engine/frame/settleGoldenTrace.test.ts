@@ -21,6 +21,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
+import { isBodyArm } from '../../../../src/services/engine/camera/rungs/isBodyArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { expectSigRows } from '../../../helpers/camera/expectSigRows';
 import { flatFramedPose } from '../../../helpers/camera/flatFramedPose';
@@ -91,7 +92,7 @@ function snapshot(state: EngineState, label: string): Step {
   const reg = state.cameraRuntime.register.pose;
   return {
     label,
-    arm: reg.frame === 'absolute' ? 'absolute' : reg.frame.body,
+    arm: isBodyArm(reg) ? reg.frame.body : 'absolute',
     hr: goldenSig(hr),
     displayed: [...live.target, live.yaw, live.pitch, live.distance, live.roll ?? 0].map(goldenSig),
     register: flatFramedPose(reg).map(goldenSig),

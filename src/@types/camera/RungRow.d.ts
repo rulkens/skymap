@@ -19,9 +19,10 @@ export type RungRow<K extends RungKind> = {
   /** Rung-local gesture memory; the runtime wipes it when `frameKey` changes. */
   readonly emptyMemory: MemOf[K];
   /**
-   * One input step in this rung's own frame, gesture edges included. A kind the
-   * rung declines returns `framed.pose` BY REFERENCE — the drain's at-rest notch
-   * commit reads that identity as "nothing moved". `tilt` rides beside `memory`
+   * One input step in this rung's own frame, gesture edges included. A step the
+   * rung declines — an unhandled kind, or a notch its floors eat whole —
+   * returns `framed.pose` BY REFERENCE; the drain's at-rest notch commit reads
+   * that identity as "nothing moved". `tilt` rides beside `memory`
    * rather than inside it: it is keyed by HOST, not by frame (spec §3-P4), so a
    * frame change must not wipe it, and only a tilt-authoring drag writes it.
    */

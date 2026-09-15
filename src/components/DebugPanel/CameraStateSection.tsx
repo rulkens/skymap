@@ -46,6 +46,8 @@ type PanelModel = {
   readonly markerReadout: string;
   readonly weightReadout: string;
   readonly rememberedTiltReadout: string;
+  /** Null off a site arm. */
+  readonly site: readonly RawRow[] | null;
   readonly raw: readonly RawRow[];
 };
 
@@ -89,6 +91,23 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
           }`,
     weightReadout: snap.bandUpWeight === null ? '—' : snap.bandUpWeight.toFixed(3),
     rememberedTiltReadout: deg(snap.rememberedTiltRad),
+    site:
+      snap.sitePose === null
+        ? null
+        : [
+            { key: 'heading', value: deg(snap.sitePose.headingRad) },
+            { key: 'elevation', value: deg(snap.sitePose.elevationRad) },
+            {
+              key: 'range_m',
+              value: `${Math.round(snap.sitePose.rangeM).toLocaleString('en-US')} m`,
+            },
+            {
+              key: 'eye_height_m',
+              // Above the site's tangent plane (spec §4.9) — the one number
+              // that shows whether `clampedSitePose`'s floor is doing its job.
+              value: `${(snap.sitePose.rangeM * Math.sin(snap.sitePose.elevationRad)).toFixed(2)} m`,
+            },
+          ],
     raw: [
       { key: 'stored_regime', value: frameKey(snap.storedFrame) },
       { key: 'rendered_arm', value: frameKey(snap.renderedFrame) },
@@ -125,6 +144,7 @@ function copyTextOf(model: PanelModel): string {
   }
   for (const [title, rows] of [
     ['band', model.band],
+    ...(model.site === null ? [] : [['site', model.site] as const]),
     ['raw', model.raw],
   ] as const) {
     lines.push(`[${title}]`);
@@ -198,6 +218,17 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
         weightReadout={model.weightReadout}
         rememberedTiltReadout={model.rememberedTiltReadout}
       />
+
+      {model.site === null ? null : (
+        <div className={styles.grid}>
+          {model.site.map((row) => (
+            <div key={row.key} className={styles.row}>
+              <span className={styles.key}>{row.key}</span>
+              <span>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <details className={styles.rawBlock}>
         <summary className={styles.rawSummary}>raw</summary>

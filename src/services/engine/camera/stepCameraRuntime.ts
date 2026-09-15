@@ -24,7 +24,7 @@ import { pickWinner, elapsedForWinner } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
-import { foldToWorld } from './rungs/foldToWorld';
+import { releasedWorldArm } from './releasedWorldArm';
 import { frameKey } from './rungs/frameKey';
 import { rowFor } from './rungs/rowFor';
 import { resolveFrameBasis } from './resolveFrameBasis';
@@ -130,6 +130,7 @@ export function stepCameraRuntime(
     focus,
     clip: clipEpoch,
     winnerEpoch: winner.epoch,
+    winnerDelivers: winner.deliversFraming ?? false,
     nowMs,
   });
   // The follow memory belongs to one focus row: a fresh row (a same-body
@@ -142,7 +143,13 @@ export function stepCameraRuntime(
       state: rootState,
       elapsedMs: elapsedForWinner(winner, epochs, nowMs),
       register: drained.register,
-      authoredWorld: foldToWorld(drained.register, replayCtx),
+      // Both by reference in the world arm, so the follow rows' world numbers
+      // — and the goldens — are untouched. Below it they are the world arm a
+      // hand-back would land on: an arm's roll is its local horizon, and an
+      // approach that carried it out would leave the image tilted for good
+      // (the band test `releasedWorldRoll` makes is the same one).
+      authoredWorld: releasedWorldArm(drained.register, replayCtx, tuning),
+      committedWorld: releasedWorldArm(rootState.camera.base, replayCtx, tuning),
       winnerLastFrame: prev.register.winner,
       poseBasis,
       simDays,
