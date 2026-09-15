@@ -45,6 +45,7 @@ const WESL_TYPES: Record<string, { align: number; size: number; kind: Kind; lane
   f32: { align: 4, size: 4, kind: 'float', lanes: 1 },
   u32: { align: 4, size: 4, kind: 'uint', lanes: 1 },
   'vec2<f32>': { align: 8, size: 8, kind: 'float', lanes: 2 },
+  'vec2<u32>': { align: 8, size: 8, kind: 'uint', lanes: 2 },
   'vec3<f32>': { align: 16, size: 12, kind: 'float', lanes: 3 },
   'vec4<f32>': { align: 16, size: 16, kind: 'float', lanes: 4 },
   'mat4x4<f32>': { align: 16, size: 64, kind: 'float', lanes: 16 },
@@ -122,6 +123,8 @@ function fieldForExpr(expr: string): string {
   if (/^dLatRad$/.test(expr)) return 'dLatRad';
   if (/^albedoUv(Origin|Scale)[XY]$/.test(expr)) return 'albedoRect';
   if (/^fallbackUv(Origin|Scale)[XY]$/.test(expr)) return 'fallbackRect';
+  if (/^heightSlotOrigin[XY]\b/.test(expr)) return 'heightSlotOrigin';
+  if (/^edgeCoarser\b/.test(expr)) return 'edgeCoarser';
   if (/^vp\[/.test(expr)) return 'vp';
   const orientationIndex = expr.match(/^orientation\[(\d+)\]/);
   if (orientationIndex) {
@@ -187,10 +190,22 @@ describe('PatchInstance CPU/WESL layout parity', () => {
     expect(PATCH_INSTANCE_BYTES).toBe(structSize);
   });
 
-  // fieldForExpr maps all four lanes of albedoRect/fallbackRect to one field
-  // name, so the offset/kind/field check above can't see an origin<->scale
-  // swap inside a rect -- asymmetric fixture values per lane close that gap.
-  it('albedoRect / fallbackRect land origin then scale, lane by lane', () => {
+  // Pinned as absolute numbers, not derived: a vec2<u32> declared BEFORE the
+  // two vec4s still parses and still packs, but pads the record past 80 bytes
+  // (spec §7's field-order note), and the derived check above would follow it.
+  it('the height fields land at 64 and 72 inside an 80-byte record', () => {
+    const { writes, structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
+    expect(PATCH_INSTANCE_BYTES).toBe(80);
+    expect(structSize).toBe(80);
+    expect(writes.find((w) => w.field === 'heightSlotOrigin')?.offset).toBe(64);
+    expect(writes.find((w) => w.field === 'edgeCoarser')?.offset).toBe(72);
+  });
+
+  // fieldForExpr maps every lane of a multi-lane field to one field name, so
+  // the offset/kind/field check above can't see an origin<->scale swap inside
+  // a rect, or an x<->y swap in heightSlotOrigin (which would read a whole
+  // other tile's posts) -- asymmetric fixture values per lane close that gap.
+  it('multi-lane fields land lane by lane, in declaration order', () => {
     const view = new DataView(new ArrayBuffer(PATCH_INSTANCE_BYTES));
     writePatchInstance(
       view,
@@ -211,6 +226,9 @@ describe('PatchInstance CPU/WESL layout parity', () => {
       0.66,
       0.77,
       0.88,
+      129,
+      258,
+      0b01_10_00_10,
     );
     expect(view.getFloat32(32, true)).toBeCloseTo(0.11); // albedoUvOriginX
     expect(view.getFloat32(36, true)).toBeCloseTo(0.22); // albedoUvOriginY
@@ -220,6 +238,9 @@ describe('PatchInstance CPU/WESL layout parity', () => {
     expect(view.getFloat32(52, true)).toBeCloseTo(0.66); // fallbackUvOriginY
     expect(view.getFloat32(56, true)).toBeCloseTo(0.77); // fallbackUvScaleX
     expect(view.getFloat32(60, true)).toBeCloseTo(0.88); // fallbackUvScaleY
+    expect(view.getUint32(64, true)).toBe(129); // heightSlotOriginX
+    expect(view.getUint32(68, true)).toBe(258); // heightSlotOriginY
+    expect(view.getUint32(72, true)).toBe(0b01_10_00_10); // edgeCoarser
   });
 });
 

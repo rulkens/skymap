@@ -11,9 +11,11 @@
 // cross-check: a field reorder on one side alone scrambles every drawn
 // patch with no compiler signal.
 //
-// The two vec4s must stay last and adjacent. Reordering the five scalars
-// keeps the 64-byte stride but re-maps offsets 12..31 with no compiler
-// signal -- the layout test's per-field assertions are the only guard.
+// The two vec4s must stay BEFORE 'heightSlotOrigin': a vec2<u32> declared
+// earlier pads the record past its 80-byte stride (spec section 7's
+// field-order note). Reordering the five scalars keeps the stride but
+// re-maps offsets 12..31 with no compiler signal -- the layout test's
+// per-field assertions are the only guard.
 //
 // 'datumRadiusM' is deliberately absent: it is the per-draw uniform
 // 'SurfaceTileUniforms.radiusM' (offset 76), since one body is engaged per
@@ -45,6 +47,17 @@ struct PatchInstance {
   // 'SurfaceCutTile.albedo.fallback === null's CPU-side encoding, so the
   // fragment always has a valid second rect to sample.
   fallbackRect: vec4<f32>,
+  // Texel origin of this leaf's OWN height slot in the r32float atlas
+  // ('SurfaceCutTile.heightSlot' times the 129-post slot stride, row-major
+  // like TextureAtlas's albedo slots). A post is addressed by adding its
+  // (col, row) and reading with 'textureLoad' -- never a sampler, which
+  // would bleed the neighbouring slot in along every patch edge.
+  heightSlotOrigin: vec2<u32>,
+  // How far each edge's neighbouring leaf steps UP, 2 bits per edge in R9
+  // order: code(west) | code(east) << 2 | code(south) << 4 | code(north) << 6.
+  // 0 = same level, finer or absent; 1 = exactly one level coarser, which
+  // the vertex stage collapses onto; 2 = a band seam, which it skirts.
+  edgeCoarser: u32,
 };
 
 // VSOut mirrors the shape of bodies/earth/io.wesl: clip position, an

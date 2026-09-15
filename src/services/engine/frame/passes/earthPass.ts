@@ -196,7 +196,15 @@ export const earthPass: ContentPass = {
     const earthTiles = state.subsystems.surfaceTiles;
     const tiles = earthTiles?.getLastCut() ?? [];
     const surfaceAtlasView = earthTiles?.getAtlasView() ?? null;
-    const tilesLive = tileRenderer !== null && surfaceAtlasView !== null && tiles.length > 0;
+    // The height atlas is as load-bearing as the albedo one: every vertex
+    // position reads it, so a cut drawn without it would be a flat sphere
+    // at best and garbage at worst.
+    const heightAtlasView = earthTiles?.getHeightAtlasView() ?? null;
+    const tilesLive =
+      tileRenderer !== null &&
+      surfaceAtlasView !== null &&
+      heightAtlasView !== null &&
+      tiles.length > 0;
     const globeAlpha = tilesLive ? baseGlobeFadeAlpha(cameraDistanceMpc, radiusMpc) : 1;
 
     // Skip the draw call entirely at alpha 0 (the tiles cover the whole cap
@@ -250,6 +258,7 @@ export const earthPass: ContentPass = {
         // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
         debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
         surfaceAtlasView: surfaceAtlasView!,
+        heightAtlasView: heightAtlasView!,
         materialView: renderer.getMapView('material'),
         nightView: renderer.getMapView('night'),
         normalView: renderer.getMapView('normal'),

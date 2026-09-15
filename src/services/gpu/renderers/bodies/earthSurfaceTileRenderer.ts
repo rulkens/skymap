@@ -1,7 +1,7 @@
 /**
  * earthSurfaceTileRenderer — one instanced indexed draw of the resident
  * virtual-texture surface patches (`cutSurfaceTiles`'s cut) over the base
- * globe: one shared template index buffer, one 64-byte `PatchInstance` per
+ * globe: one shared template index buffer, one 80-byte `PatchInstance` per
  * patch, all geometry derived in `vertex.wesl`.
  *
  * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline shares
@@ -30,7 +30,15 @@ import {
   writePatchInstance,
   writeSurfaceTileUniforms,
 } from './earthSurfaceTileLayout';
-import { EARTH_TILE_CROSSFADE_MS } from '../../../../data/bodies/earthTileParams';
+import {
+  EARTH_TILE_CROSSFADE_MS,
+  HEIGHT_TILE_ATLAS_SIDE,
+} from '../../../../data/bodies/earthTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
+
+/** Mirrors `TextureAtlas`'s own row-major slot layout (`textureAtlas.ts`'s
+ *  `slotUv`); the height stream hands out slot indices in the same space. */
+const HEIGHT_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and
@@ -80,9 +88,9 @@ export function createEarthSurfaceTileRenderer(
   device.queue.writeBuffer(indexBuffer, 0, indices);
 
   // ── Bind group layout (explicit, not 'auto') ─────────────────────────
-  // Binding 2 was the per-corner vertex array and is gone; 3–9 keep their
-  // numbers so the fragment's bindings don't move (they need not be
-  // contiguous).
+  // Binding 2 was the per-corner vertex array P6 deleted; the height atlas
+  // took the free slot. 3–9 keep their numbers so the fragment's bindings
+  // don't move (they need not be contiguous).
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'earth-surface-tile-bgl',
     entries: [
@@ -95,6 +103,15 @@ export function createEarthSurfaceTileRenderer(
         binding: 1,
         visibility: GPUShaderStage.VERTEX,
         buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
+      },
+      // r32float read with `textureLoad` from BOTH stages (vertex displaces,
+      // fragment takes its normal from the cell): `sampleType: 'float'` fails
+      // validation unless `float32-filterable` is requested, and `device.ts`
+      // does not request it.
+      {
+        binding: 2,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        texture: { sampleType: 'unfilterable-float' },
       },
       { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
@@ -187,6 +204,7 @@ export function createEarthSurfaceTileRenderer(
       cloudShellRadius,
       debugLodOverlay,
       surfaceAtlasView,
+      heightAtlasView,
       materialView,
       nightView,
       normalView,
@@ -238,6 +256,12 @@ export function createEarthSurfaceTileRenderer(
         fallback.atlasUvOrigin[1],
         fallback.atlasUvScale[0],
         fallback.atlasUvScale[1],
+        (tile.heightSlot % HEIGHT_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
+        Math.floor(tile.heightSlot / HEIGHT_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
+        tile.edgeCoarser[0] |
+          (tile.edgeCoarser[1] << 2) |
+          (tile.edgeCoarser[2] << 4) |
+          (tile.edgeCoarser[3] << 6),
       );
     }
 
@@ -276,6 +300,7 @@ export function createEarthSurfaceTileRenderer(
           binding: 1,
           resource: { buffer: patchBuffer!, size: tileCount * PATCH_INSTANCE_BYTES },
         },
+        { binding: 2, resource: heightAtlasView },
         { binding: 3, resource: baseSampler },
         { binding: 4, resource: atlasSampler },
         { binding: 5, resource: surfaceAtlasView },

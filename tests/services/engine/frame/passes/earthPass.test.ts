@@ -256,16 +256,21 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
   } as unknown as EngineState;
 }
 
+const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
+
 /**
  * `makeState`'s tile-draw variant: adds the `earthSurfaceTileRenderer` GPU
- * handle and a `surfaceTiles` subsystem stub whose `getLastCut`/`getAtlasView`
- * are caller-controlled — the instanced-draw gate's three inputs
- * (`state.gpu.earthSurfaceTileRenderer`, `getAtlasView()`, `getLastCut()`).
+ * handle and a `surfaceTiles` subsystem stub whose cut and two atlas views are
+ * caller-controlled — the instanced-draw gate's four inputs
+ * (`state.gpu.earthSurfaceTileRenderer`, `getAtlasView()`,
+ * `getHeightAtlasView()`, `getLastCut()`).
  */
 function makeTileDrawState(input: {
   readonly tileRenderer: unknown;
   readonly cut: readonly unknown[];
   readonly atlasView: GPUTextureView | null;
+  /** Defaults to engaged: only the gate case below cares that it can be null. */
+  readonly heightAtlasView?: GPUTextureView | null;
 }): EngineState {
   const base = makeState(
     { draw: vi.fn(), getMapView: vi.fn(() => ({}) as GPUTextureView) },
@@ -281,6 +286,8 @@ function makeTileDrawState(input: {
       surfaceTiles: {
         getLastCut: () => input.cut,
         getAtlasView: () => input.atlasView,
+        getHeightAtlasView: () =>
+          input.heightAtlasView === undefined ? HEIGHT_ATLAS_VIEW : input.heightAtlasView,
       },
     },
   } as unknown as EngineState;
@@ -626,6 +633,7 @@ describe('earthPass.draw — detail tiles', () => {
     expect(pass).toBe(PASS_STUB);
     expect(args.tiles).toBe(STUB_CUT);
     expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
+    expect(args.heightAtlasView).toBe(HEIGHT_ATLAS_VIEW);
     // No rebase: the tile draw's vp is the slab's own already-eye-relative
     // f32 view (view.vp), never a freshly narrowed/rebased copy.
     expect(args.vp).toBe(view.vp);
@@ -678,6 +686,23 @@ describe('earthPass.draw — detail tiles', () => {
       tileRenderer: { draw: tileDraw },
       cut: STUB_CUT,
       atlasView: null,
+    });
+
+    earthPass.draw(PASS_STUB, view, NEAR_CTX, state);
+
+    expect(tileDraw).not.toHaveBeenCalled();
+  });
+
+  it('does not draw the tile renderer when the HEIGHT atlas has not engaged yet', () => {
+    // Every vertex position reads it — a cut drawn without it is not a
+    // degraded picture, it is undefined geometry.
+    const tileDraw = vi.fn();
+    const view = makeEarthBodyView('earth');
+    const state = makeTileDrawState({
+      tileRenderer: { draw: tileDraw },
+      cut: STUB_CUT,
+      atlasView: ATLAS_VIEW,
+      heightAtlasView: null,
     });
 
     earthPass.draw(PASS_STUB, view, NEAR_CTX, state);
