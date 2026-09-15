@@ -9,6 +9,4 @@ export type MeshProbe = {
   readonly cube: GPUTexture;
   /** depth32float, one layer, the capture's depth for the host body-m step. */
   readonly depth: GPUTexture;
-  readonly mipLevelCount: number;
-  readonly faceSizePx: number;
 };

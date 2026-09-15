@@ -25,7 +25,7 @@
 //   offset  80..127: model               (mat3x3<f32> -- 3 columns x 16 bytes)
 //   offset 128..139: camPosLocal         (vec3<f32> -- 16-byte aligned)
 //   offset 140..143: sinSunAngularRadius (f32 -- fills camPosLocal's 4th slot;
-//                                         sin(asin(R_sun / d)) from the body)
+//                                         R_sun / d from the body)
 //
 // The first 80 bytes match 'LitBodyUniforms' byte-for-byte, but
 // 'packLitBodyUniforms' can NOT be reused: it zeroes byte 76 that

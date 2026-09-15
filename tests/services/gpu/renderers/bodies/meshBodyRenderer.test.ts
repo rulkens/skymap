@@ -12,6 +12,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createMeshBodyRenderer } from '../../../../../src/services/gpu/renderers/bodies/meshBodyRenderer';
 import { MESH_TEXTURE_SLOTS } from '../../../../../src/data/mesh/meshTextureSlots';
+import { CUBEMAP_CAPTURES } from '../../../../../src/data/rendering/cubemapCaptures';
+import { mipLevelCount } from '../../../../../src/services/gpu/lib/generateMipChain';
 import type { MeshAsset } from '../../../../../src/@types/data/mesh/MeshAsset';
 
 const LUT_VIEW = { __envBrdfView: true };
@@ -167,15 +169,18 @@ describe('createMeshBodyRenderer', () => {
     expect(probe).not.toBeNull();
     expect(renderer.probeOf('missing')).toBeNull();
 
+    const faceSizePx = CUBEMAP_CAPTURES.probe.faceSizePx;
+    const expectedMipLevelCount = mipLevelCount(faceSizePx, faceSizePx);
+
     const cube = textures.find((t) => t.desc.format === 'rgba16float')!;
-    expect(cube.desc.size).toEqual([probe.faceSizePx, probe.faceSizePx, 6]);
+    expect(cube.desc.size).toEqual([faceSizePx, faceSizePx, 6]);
     expect(cube.desc.usage & GPUTextureUsage.RENDER_ATTACHMENT).toBeTruthy();
     // Full chain: the coarsest mip is 1 px, the roughness-1 level the diffuse term reads.
-    expect(probe.faceSizePx >> (probe.mipLevelCount - 1)).toBe(1);
-    expect(cube.desc.mipLevelCount).toBe(probe.mipLevelCount);
+    expect(faceSizePx >> (expectedMipLevelCount - 1)).toBe(1);
+    expect(cube.desc.mipLevelCount).toBe(expectedMipLevelCount);
 
     const depth = textures.find((t) => t.desc.format === 'depth32float')!;
-    expect(depth.desc.size).toEqual([probe.faceSizePx, probe.faceSizePx, 1]);
+    expect(depth.desc.size).toEqual([faceSizePx, faceSizePx, 1]);
 
     renderer.clearMesh('a');
     expect(cube.destroy).toHaveBeenCalledTimes(1);

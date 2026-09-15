@@ -181,7 +181,7 @@ export function createMeshBodyRenderer(init: {
       format: 'depth32float',
       usage: GPUTextureUsage.RENDER_ATTACHMENT,
     });
-    return { cube, depth, mipLevelCount: probeMipLevelCount, faceSizePx: probeFaceSizePx };
+    return { cube, depth };
   }
 
   function uploadTexture(id: string, field: string, format: GPUTextureFormat, src: ImageBitmap) {

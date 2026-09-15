@@ -24,7 +24,6 @@ const CUBE_FACES = 6;
 
 export function prefilterCubeGgx(device: GPUDevice, cube: GPUTexture): void {
   const levels = cube.mipLevelCount;
-  if (levels <= 1) return;
 
   const module = createShaderModuleWithDevLog(device, prefilterCode, 'prefilterCube');
 

@@ -56,7 +56,7 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
     pbrDirectSphere(n, v, u.sunDirLocal, diffuseAlbedo, roughness, f0, u.sinSunAngularRadius) *
     SUN_IRRADIANCE * u.sunVisibleFraction;
   let env = envSplitSum(
-    n, v, albedo, roughness, metallic, f0, probeTexture, meshSampler, envBrdfLut, lutSampler,
+    n, v, diffuseAlbedo, roughness, f0, probeTexture, meshSampler, envBrdfLut, lutSampler,
   );
 
   return vec4<f32>(direct + env, 1.0);

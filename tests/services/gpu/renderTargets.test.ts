@@ -270,8 +270,8 @@ describe('createRenderTargets', () => {
     // Guards NEW-1 from the black-hole fix round's re-review: a camera
     // dithering across the band edge must not destroy + reallocate the
     // row's 50 MB every frame. `goneAt` is the band's close distance;
-    // `CAPTURE_ROW_RELEASE_MARGIN` (1.5×, named beside the row in
-    // `renderTargets.ts`) is the row's own wider release edge.
+    // `CAPTURE_ROW_RELEASE_MARGIN` (1.5×, named in
+    // `captureRowAllocateWhen.ts`) is the row's own wider release edge.
     const goneAt = SCALE_FADE_BANDS.sgrAStarLensing.goneAt;
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;

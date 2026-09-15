@@ -163,14 +163,6 @@ const STAR_AGGREGATE_DIVISOR = 2;
  */
 const ZONE_OF_AVOIDANCE_DIVISOR = 5;
 
-/**
- * Hysteresis margin for the capture rows: once allocated, a row survives until
- * the camera-to-anchor distance exceeds this multiple of its band's `goneAt` —
- * 750 AU for `sky-cubemap`, whose 1024² × 6 × 8 B is 50 MB + 7 views, the
- * costliest row to churn (see `captureRowAllocateWhen`).
- */
-const CAPTURE_ROW_RELEASE_MARGIN = 1.5;
-
 /** A row's divisor for this state — constant rows ignore the state entirely. */
 function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
   return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
@@ -288,7 +280,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       depth: null,
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
-      allocateWhen: captureRowAllocateWhen('sgrAStar', CAPTURE_ROW_RELEASE_MARGIN),
+      allocateWhen: captureRowAllocateWhen('sgrAStar'),
       // `size` is a live setting (the DebugPanel resolution knob,
       // 256/512/1024/2048) — `reconcile` resolves it every frame exactly like
       // `mw-aggregate`'s divisor, so dragging the knob reallocates this row
@@ -307,7 +299,7 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       depth: null,
       scale: 1, // unused: fixedSizePx below overrides it (required by the type).
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
-      allocateWhen: captureRowAllocateWhen('solarSystem', CAPTURE_ROW_RELEASE_MARGIN),
+      allocateWhen: captureRowAllocateWhen('solarSystem'),
       fixedSizePx: { size: 256, layers: 6 },
     },
     {

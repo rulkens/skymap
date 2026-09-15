@@ -1,6 +1,5 @@
 import type { Vec3 } from '../../@types/math/Vec3';
 import { SCALE_UNITS } from '../../data/scaleUnits';
-import { angularRadiusRad } from '../math/angularRadiusRad';
 
 /**
  * sunVisibleFraction — fraction of the Sun's disc NOT occluded by the host
@@ -46,6 +45,8 @@ function angularRadiusAndDirection(
   const dy = posMpc[1] - bodyPosMpc[1];
   const dz = posMpc[2] - bodyPosMpc[2];
   const distanceMpc = Math.hypot(dx, dy, dz);
-  const angRad = angularRadiusRad(radiusM, distanceMpc * SCALE_UNITS.MPC_TO_M);
+  const distanceM = distanceMpc * SCALE_UNITS.MPC_TO_M;
+  // asin's domain: only reachable with the body inside the disc, at test distances.
+  const angRad = Math.asin(Math.min(1, radiusM / distanceM));
   return { angRad, dir: [dx / distanceMpc, dy / distanceMpc, dz / distanceMpc] };
 }

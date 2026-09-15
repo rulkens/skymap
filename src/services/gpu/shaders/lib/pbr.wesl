@@ -307,8 +307,8 @@ fn pbrDirect(
 // point of the Sun's disc closest to the reflection ray, and D is renormalised
 // by (alpha / alpha')^2 with alpha' = saturate(alpha + 0.5 * sinAngularRadius)
 // so the widened light gains no energy. Diffuse sees the true 'l'.
-// 'sinAngularRadius' = sin(asin(R_sun / d)); alpha comes from the floored
-// roughness, which is what keeps alpha' (and the ratio) off zero.
+// 'sinAngularRadius' = R_sun / d; alpha comes from the floored roughness,
+// which is what keeps alpha' (and the ratio) off zero.
 
 fn pbrDirectSphere(
   n: vec3<f32>,
@@ -357,9 +357,8 @@ fn pbrDirectSphere(
 fn envSplitSum(
   n: vec3<f32>,
   v: vec3<f32>,
-  albedo: vec3<f32>,
+  diffuseAlbedo: vec3<f32>,
   roughness: f32,
-  metallic: f32,
   f0: vec3<f32>,
   probe: texture_cube<f32>,
   probeSampler: sampler,
@@ -375,6 +374,6 @@ fn envSplitSum(
 
   let specularAlbedo = f0 * ab.x + ab.y;
   let specular = prefiltered * specularAlbedo;
-  let diffuse = (vec3<f32>(1.0) - specularAlbedo) * (1.0 - metallic) * albedo * irradiance;
+  let diffuse = (vec3<f32>(1.0) - specularAlbedo) * diffuseAlbedo * irradiance;
   return diffuse + specular;
 }
