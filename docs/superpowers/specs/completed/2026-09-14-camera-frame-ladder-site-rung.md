@@ -845,7 +845,10 @@ the local horizon out as permanent image roll. The debt is settled by the ease
 saturating, or by a driver that DELIVERS the framing itself: `clip` and `tween`
 declare `deliversFraming`, which both settles their memory and advances the
 follow epoch's row, so a tour landing is not undone by an approach at the clip's
-exit.
+exit. While a debt is owed, a wheel notch rides the follow distance target in
+either arm (`replayInput`'s follow lane, un-gated from the arm the same way as
+the row); only its roll charge (ruling 8) stays world-arm, since the body arm
+has no roll authority.
 
 With the split, focusing Curiosity from far away plays out as: follow approaches
 in the world arm, crosses `absolute → { body: 'mars' }` on geometry as it enters
