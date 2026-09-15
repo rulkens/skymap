@@ -11,7 +11,6 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { configureStore } from '@reduxjs/toolkit';
 
 // Spies that DELEGATE to the real modules: the fold's placement is a call-order
 // property, so the frame has to run its production path while the probe records

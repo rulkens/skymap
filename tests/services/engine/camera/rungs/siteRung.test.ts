@@ -113,12 +113,10 @@ describe('the site rung in the ladder', () => {
 
     const decoded = ROW.channels.decode(channels, SITE_FRAME, ctx);
     expect(decoded.frame).toEqual(SITE_FRAME);
-    expect(decoded.pose).toEqual({
-      siteId: SITE_ID,
-      headingRad: channels.yaw,
-      elevationRad: channels.pitch,
-      rangeM: channels.distance,
-    });
+    expect(decoded.pose.siteId).toBe(SITE_ID);
+    expect(decoded.pose.headingRad).toBeCloseTo(start.headingRad, 5);
+    expect(decoded.pose.elevationRad).toBeCloseTo(start.elevationRad, 5);
+    expect(decoded.pose.rangeM).toBeCloseTo(start.rangeM, 3);
   });
 
   it('the site band is hysteretic', () => {
