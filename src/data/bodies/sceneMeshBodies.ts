@@ -3,7 +3,7 @@ import { meshBody, type MeshBodySeed } from './makers/meshBody';
 
 /**
  * SCENE_MESH_BODIES — seeded mesh-drawn bodies (the fifth `SceneBody` arm).
- * The seeds carry identity and per-body dials: `radiusM` and `albedo` are
+ * The seeds carry identity and per-body dials: `boundingRadiusM` and `albedo` are
  * joined in from `MESH_ASSETS`, so the baked asset stays their single source of
  * truth and a re-bake never needs an edit here. Positions ride the position
  * drivers (`ORBITAL_ELEMENTS` or `SURFACE_FIXED_SITES`), orientation

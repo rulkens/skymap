@@ -26,6 +26,7 @@ import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialB
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { deepFreeze } from '../deepFreeze';
+import { makeCubemapCaptureRuntimes } from '../engine/makeCubemapCaptureRuntimes';
 import { poseAtHR } from './poseAtHR';
 import type { SimBodyId } from './SimBodyId';
 import type { CameraSimHarnessOptions } from './CameraSimHarnessOptions';
@@ -77,13 +78,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       committed: absoluteArm(neutralPose),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
-    cubemapCaptures: {
-      sgrAStar: {
-        lastBandActive: false,
-        lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedSettings: null,
-      },
-    },
+    cubemapCaptures: makeCubemapCaptureRuntimes(),
   } as unknown as EngineState;
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({

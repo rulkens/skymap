@@ -19,7 +19,7 @@ it — the rover looks pasted onto Mars rather than standing on it.
 - **Ground shadow**: the same map sampled by the HOST's surface fragment
   (`texturedBody`) for texels inside the body's footprint, so the rover casts
   onto Mars. A hostless body (a Voyager) has no ground and needs only the first.
-- Both are Sun-only; host-shine and the ambient floor stay unshadowed.
+- Both are Sun-only; the environment term stays unshadowed.
 
 Sequencing: after the PBR effort
 (`docs/superpowers/specs/2026-09-12-mesh-body-pbr-design.md`), which reshapes the

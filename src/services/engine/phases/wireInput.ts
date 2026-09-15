@@ -61,6 +61,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     get fontAtlases() {
       return state.gpu.fontAtlases!;
     },
+    get envBrdfLut() {
+      return state.gpu.envBrdfLut!;
+    },
   };
   // Complement of initGpu.ts's filter, by construction: this phase builds
   // only the rows marked `constructPhase: 'wireInput'`.

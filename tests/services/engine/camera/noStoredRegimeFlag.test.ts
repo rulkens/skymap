@@ -2,7 +2,7 @@
  * noStoredRegimeFlag — spec §4/§11's grep criterion: `camera.base.frame` (a
  * `PoseFrame`) IS the regime, so a boolean shadowing it — `isSurfaceMode`,
  * `regimeEngaged`, whatever the name — would make an inconsistent pair
- * representable, exactly the mirror-state failure `regimeArmFor` exists to
+ * representable, exactly the mirror-state failure the rung table exists to
  * avoid. This is an import-graph / declaration scan (ts-morph, real AST
  * nodes), not a source-text grep, in the shape of `oneMpcSeam.test.ts`: a
  * substring search bans nothing a comment or a string literal couldn't dodge,

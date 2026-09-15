@@ -9,14 +9,14 @@ import type { BodyRowSource } from '../../../@types/engine/frame/BodyRowSource';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
-import { sgrAStarBandAlpha } from './sgrAStarBandAlpha';
+import { skyCaptureBandAlpha } from './skyCaptureBandAlpha';
 
 export function bodyRowSlabs(
   state: EngineState,
   ctx: ReadyFrameContext,
 ): Record<BodyRowSource, readonly number[]> {
   const sgrAStar =
-    sgrAStarBandAlpha(state, ctx) <= 0
+    skyCaptureBandAlpha('sgrAStar', state, ctx) <= 0
       ? undefined
       : ctx.slabs.find(
           (slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === SGR_A_STAR.id,

@@ -148,4 +148,10 @@ export const SCALE_FADE_BANDS = {
   // to Sgr A*; the far-field glint alpha is derived from this band
   // (1 - fadeBand) at its call site.
   sgrAStarLensing: { fullAt: 100 * SCALE_UNITS.AU_TO_MPC, goneAt: 500 * SCALE_UNITS.AU_TO_MPC },
+
+  // Keyed on: CAMERA distance from the `solar-system` region's anchor (the
+  // Sun), Mpc. Holds the sky bake a reflection probe is captured over, so the
+  // edges are a reach, not a look: wide enough for a Voyager for two centuries
+  // (170 au today, 3.6 au/yr).
+  solarSystemSky: { fullAt: 500 * SCALE_UNITS.AU_TO_MPC, goneAt: 1000 * SCALE_UNITS.AU_TO_MPC },
 } as const satisfies Readonly<Record<string, FadeBand>>;

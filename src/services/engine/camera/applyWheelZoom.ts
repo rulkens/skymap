@@ -7,6 +7,7 @@
 
 import { spinAutoRotate } from './spinAutoRotate';
 import { zoomedPose } from '../../../utils/camera/zoomedPose';
+import { isWorldArm } from './rungs/isWorldArm';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';
@@ -21,7 +22,7 @@ export function applyWheelZoom(args: {
 }): CameraPose | null {
   const { base, factor, spin, spinElapsedMs, pivot } = args;
   // World arm only (spec §7): in a body arm the wheel routes to the surface gesture.
-  if (base.frame !== 'absolute') return null;
+  if (!isWorldArm(base)) return null;
   const pose = spin.owns ? spinAutoRotate(base.pose, spin.rate, spinElapsedMs) : base.pose;
   return zoomedPose(pose, factor, pivot);
 }

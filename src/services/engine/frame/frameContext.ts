@@ -15,18 +15,22 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
-import { normalize3 } from '../../../utils/math/normalize3';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
 import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
+import { hostOf } from '../camera/rungs/hostOf';
+import { isWorldArm } from '../camera/rungs/isWorldArm';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
 import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
@@ -55,9 +59,14 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByR
  * or scrubbed, and `nowMs` being threaded rather than sampled per consumer is
  * the seam a frame-by-frame recorder needs to step time deterministically.
  *
- * `arm` is the SAME framed pose `pose` was resolved from (`resolveWorldArm`,
+ * `arm` is the SAME framed pose `pose` was resolved from (`foldToWorld`,
  * called once by the caller) and serves only the pose-provider seam below
  * (spec §5.2).
+ *
+ * `altitudeMpc` is the eye-to-pivot-surface range NEAR0's bracket is sized
+ * from; absent, it is derived from `pose` and the focused pivot. A capture
+ * face passes its own: its synthetic pose orbits no pivot, and the real
+ * focus's radius taken off a metre-scale probe distance goes hugely negative.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -70,6 +79,7 @@ export function deriveFrameContext(
   visibleSourceMask: number,
   nowMs: number,
   simDays: number,
+  altitudeMpc?: number,
 ): FrameContext {
   if (!isEngineReady(state)) {
     return { isReady: false };
@@ -88,11 +98,7 @@ export function deriveFrameContext(
   // frame returns this SAME Map by reference — no second cache, no drift.
   const bodyStates = deriveBodyStates(simDays);
 
-  const camForward = normalize3([
-    cam.target[0] - cam.position[0],
-    cam.target[1] - cam.position[1],
-    cam.target[2] - cam.position[2],
-  ]);
+  const camForward = orbitForwardOf(cam);
 
   const { earth, planets, meshBodies } = state.data.bodies;
   // A mesh body whose driver hangs off something with no row of its own gets
@@ -142,9 +148,15 @@ export function deriveFrameContext(
   const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
   // Provider B serves ONLY the engaged body, straight from its own stored
   // pose — no Mpc round trip. Every other body, and the whole absolute arm,
-  // stay on provider A (spec §5.2, ruled S1: "B keeps A").
+  // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Gated on the
+  // HOST, not the frame: a rung not its own host must still fall through here.
+  const armHost = hostOf(arm.frame, {
+    bodies: bodyStates as ReadonlyMap<BodyId, BodyState>,
+    poseBasis,
+    upBasis,
+  });
   const bodyPose: BodyPoseProvider = (bodyId) => {
-    if (arm.frame !== 'absolute' && arm.frame.body === bodyId) {
+    if (!isWorldArm(arm) && armHost?.id === bodyId) {
       return poseFromBodyArm(arm.pose);
     }
     const bodyState = bodyStates.get(bodyId);
@@ -202,7 +214,7 @@ export function deriveFrameContext(
   const slabs = deriveSlabs({
     cam,
     cosmoVp: vp,
-    altitudeMpc: pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
+    altitudeMpc: altitudeMpc ?? pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
     pose: bodyPose,
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,

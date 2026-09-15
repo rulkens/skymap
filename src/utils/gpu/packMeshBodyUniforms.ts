@@ -1,9 +1,9 @@
 /**
- * packMeshBodyUniforms — pure packer for the 176-byte `MeshBodyUniforms` struct.
+ * packMeshBodyUniforms — pure packer for the 144-byte `MeshBodyUniforms` struct.
  * The layout lives ONCE, beside the struct, in `shaders/bodies/meshBody/io.wesl`'s
  * header — read it there; the writes below are in that order. It MATCHES
  * `packLitBodyUniforms`'s first 80 bytes byte-for-byte (keep the two in step by
- * hand); `camPosLocal`/`dirToHost` are in the HOST body's fixed axes, not this
+ * hand); `camPosLocal`/`sunDirLocal` are in the HOST body's fixed axes, not this
  * body's own — the same axes `localPos = u.model * position` lands in.
  */
 
@@ -17,9 +17,7 @@ export function packMeshBodyUniforms(args: {
   readonly sunVisibleFraction: number;
   readonly model: Readonly<Mat3>;
   readonly camPosLocal: Readonly<Vec3>;
-  readonly hostShineStrength: number;
-  readonly hostShineColor: Readonly<Vec3>;
-  readonly dirToHost: Readonly<Vec3>;
+  readonly sinSunAngularRadius: number;
 }): Float32Array {
   const out = new Float32Array(MESH_BODY_UNIFORM_FLOATS);
   out.set(args.mvp.subarray(0, 16), 0);
@@ -42,12 +40,6 @@ export function packMeshBodyUniforms(args: {
   out[32] = args.camPosLocal[0];
   out[33] = args.camPosLocal[1];
   out[34] = args.camPosLocal[2];
-  out[35] = args.hostShineStrength;
-  out[36] = args.hostShineColor[0];
-  out[37] = args.hostShineColor[1];
-  out[38] = args.hostShineColor[2];
-  out[40] = args.dirToHost[0];
-  out[41] = args.dirToHost[1];
-  out[42] = args.dirToHost[2];
+  out[35] = args.sinSunAngularRadius;
   return out;
 }

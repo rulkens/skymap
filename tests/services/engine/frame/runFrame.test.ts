@@ -119,13 +119,15 @@ import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../../src/data/so
 import { DEFAULT_GALAXY_PROVENANCE, DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { createStructureFocusSubsystem } from '../../../../src/services/engine/subsystems/structureFocusSubsystem';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
 import { earthArm } from '../../../fixtures/earthArm';
 import { makeCameraSimHarness } from '../../../helpers/camera/makeCameraSimHarness';
 import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
 
@@ -245,7 +247,8 @@ function makeState(): EngineState {
       },
       epochs: UNSTARTED_EPOCHS,
       follow: null,
-      surface: EMPTY_SURFACE_MEMORY,
+      gesture: EMPTY_SURFACE_GESTURE_MEMORY,
+      tilt: EMPTY_TILT_MEMORY,
       outputs: {
         displayed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         simDays: 0,
@@ -1037,6 +1040,8 @@ describe('runFrame — the label-director wake fold', () => {
       },
       data: { bodies: { earth: null, planets: [], stars: [], meshBodies: [] } },
       selectionRows: { focus: null },
+      // Read past the (mocked) renderFrame for the probe's wake vote.
+      cubemapCaptures: makeCubemapCaptureRuntimes(),
       gpu: {
         ...base.gpu,
         galaxyPointRenderer: {},

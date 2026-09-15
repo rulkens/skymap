@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import { decodeMesh } from '../../../src/data/mesh/meshBinaryFormat';
+import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
 import { buildMeshes } from '../../../tools/meshes/buildMeshes';
 
 // Every fixture is synthesised here rather than read from data/raw/meshes:
@@ -83,6 +84,18 @@ async function withBaseColour(doc: Document, material: Material): Promise<Materi
   return material.setBaseColorTexture(
     doc.createTexture('albedo').setImage(image).setMimeType('image/png'),
   );
+}
+
+/** ...plus the other two maps, so the fixture substitutes nothing. */
+async function withEveryMap(doc: Document, material: Material): Promise<Material> {
+  const texture = async (name: string, r: number, g: number, b: number) =>
+    doc
+      .createTexture(name)
+      .setImage(await solidPng(r, g, b))
+      .setMimeType('image/png');
+  return (await withBaseColour(doc, material))
+    .setNormalTexture(await texture('normal', 128, 128, 255))
+    .setMetallicRoughnessTexture(await texture('mr', 0, 255, 0));
 }
 
 let dir: string;
@@ -411,7 +424,7 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    expect(row.normalMapSubstituted).toBe(true);
+    expect(row.substituted).toEqual(['metalRough', 'normalMap']);
     const normalPx = await sharp(join(dir, 'out', 'testmesh_normal.png'))
       .raw()
       .toBuffer();
@@ -427,6 +440,33 @@ describe('buildMeshes()', () => {
     expect(readFileSync(join(dir, 'meshAssets.generated.ts'), 'utf8')).toContain(
       "path: 'meshes/testmesh.mesh'",
     );
+  });
+
+  it('leaves substituted empty when the source carries every map', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withEveryMap(doc, doc.createMaterial('everyMap'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    const row = (await run(await writeGlb(doc)))[0]!;
+
+    expect(row.substituted).toEqual([]);
+    expect(warn.mock.calls.flat().join(' ')).not.toMatch(/substituting/);
+  });
+
+  it('writes every MESH_TEXTURE_SLOTS suffix, so a slot added to the table lands on disk', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    await run(await writeGlb(doc));
+
+    for (const slot of MESH_TEXTURE_SLOTS) {
+      expect(existsSync(join(dir, 'out', `testmesh${slot.suffix}.png`))).toBe(true);
+    }
   });
 
   it('reports groundOffsetM as the drop from the origin to the lowest vertex', async () => {

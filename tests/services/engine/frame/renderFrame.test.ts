@@ -13,6 +13,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
@@ -475,6 +476,8 @@ function makeInput(
           earthRenderer: null,
           starRenderer: null,
           planetRenderer: null,
+          // No mesh renderer → the probe scheduler idles before reading `data`.
+          meshBodyRenderer: null,
           // Near-field handle null → atmosphereShellPass reports enabled=false
           // AND the atmosphereSkyView compute step early-outs, so these fixtures
           // stay a pure cosmological-frame trace (like the other body handles).
@@ -575,13 +578,7 @@ function makeInput(
         // active. The fixture camera sits Mpc-scale away from Sgr A*, so the
         // band stays closed and nothing is scheduled; see
         // `scheduleCubemapCaptures`.
-        cubemapCaptures: {
-          sgrAStar: {
-            lastBandActive: false,
-            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-            bakedSettings: null,
-          },
-        },
+        cubemapCaptures: makeCubemapCaptureRuntimes(),
       } as never,
       device,
       context,
@@ -600,6 +597,22 @@ describe('renderFrame', () => {
 
   beforeEach(() => {
     fx = makeInput();
+  });
+
+  it('creates exactly one command encoder on a frame with no capture faces', () => {
+    renderFrame(fx.input);
+    expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
+  });
+
+  it('submits exactly once, with the encoder.finish() output, on a frame with no capture faces', () => {
+    renderFrame(fx.input);
+    const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(fx.env.finish).toHaveBeenCalledTimes(1);
+    // The submitted buffer is the one finish() returned.
+    const submitted = (submit as any).lastBuffers as ReadonlyArray<GPUCommandBuffer>;
+    expect(submitted).toHaveLength(1);
+    expect(submitted[0]).toBe((fx.env.finish.mock.results[0] as any).value);
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
@@ -870,5 +883,26 @@ describe('renderFrame', () => {
     expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();
+  });
+
+  it('skips a pass whose name appears in settings.debug.disabledPasses', () => {
+    // The DebugPanel flips entries in/out of `settings.debug.disabledPasses`.
+    // The executor's render-step group filter checks the record after each
+    // layer's own `enabled()` gate, so mapping `point-sprites` to true stops
+    // `galaxyPointRenderer.draw` even though every other input would run it.
+    const fx2 = makeInput({ disabledPasses: { 'point-sprites': true } });
+    renderFrame(fx2.input);
+    expect(fx2.galaxyPointRenderer.draw).not.toHaveBeenCalled();
+    // Milky-way still draws — the override is per-pass, not global — and both
+    // halves of the cloud (its own aggregate pass, its dust pass in HDR) run.
+    expect(fx2.milkyWayCloudRenderer.drawStars).toHaveBeenCalledTimes(1);
+    expect(fx2.milkyWayCloudRenderer.drawDust).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not skip a pass whose name maps to false in disabledPasses', () => {
+    // `[name] === false` means enabled — only `=== true` hides a pass.
+    const fx2 = makeInput({ disabledPasses: { 'point-sprites': false } });
+    renderFrame(fx2.input);
+    expect(fx2.galaxyPointRenderer.draw).toHaveBeenCalledTimes(1);
   });
 });

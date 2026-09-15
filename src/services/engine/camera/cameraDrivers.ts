@@ -9,6 +9,8 @@
  * orbit terms — which is why the follow HOLD sits below autoRotate and the drag.
  */
 
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraDriver } from '../../../@types/engine/camera/CameraDriver';
 import type { DriverCtx } from '../../../@types/engine/camera/DriverCtx';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
@@ -26,7 +28,6 @@ import { spinAutoRotate } from './spinAutoRotate';
 import { elapsedMs } from './cameraEpochs';
 import { evaluateFramedClip } from './evaluateClip';
 import { reencodePose } from '../../../utils/camera/reencodePose';
-import { decodeBodyFixedChannels } from '../../../utils/camera/decodeBodyFixedChannels';
 import { bodyFocusDistance } from './bodyFocusDistance';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -39,6 +40,8 @@ import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
 import { lerp } from '../../../utils/math/lerp';
+import { isWorldArm } from './rungs/isWorldArm';
+import { rowFor } from './rungs/rowFor';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -79,7 +82,7 @@ export const NO_FOLLOW_MEMORY: FollowMemory = {
  * once the state co-rotates with the body.
  */
 function followActive(s: RootState): boolean {
-  return s.camera.base.frame === 'absolute' && bodyMovesThisFrame(s.selectionRows.focus);
+  return isWorldArm(s.camera.base) && bodyMovesThisFrame(s.selectionRows.focus);
 }
 
 /**
@@ -100,7 +103,7 @@ function followPose(
   if (focus === null || focus.type !== 'body' || livePos === null) {
     return { pose: base, memory: mem };
   }
-  if (base.frame !== 'absolute') return { pose: base, memory: mem };
+  if (!isWorldArm(base)) return { pose: base, memory: mem };
 
   // Captured ONCE per activation (`runFrame` nulls the memory on the focus
   // edge) through the EYE, not the angles: `approachTiltedPose` is eye-preserving
@@ -168,19 +171,27 @@ function followPose(
 }
 
 /**
- * The exit both keyframe rows share: an absolute evaluation is re-encoded from
- * the clip's pinned basis into the CURRENT one (by reference when they match),
- * a body-framed one is DECODED (spec §8) — its angles are about the body's own
- * axes, which no orientation frame touches, so the re-encode must not run.
+ * The exit both keyframe rows share: the rung's own `decode` reads the channels
+ * (spec §8), then an absolute reading is re-encoded from the clip's pinned basis
+ * into the CURRENT one (by reference when they match). The re-encode stays
+ * OUTSIDE the cell: neither basis is a rung fact, and a body arm's angles are
+ * about the body's own axes, which no orientation frame touches.
  */
 function framedClipArm(
   evaluated: FramedClipPose,
   from: Readonly<Mat3>,
   to: Readonly<Mat3>,
+  bodies: ReadonlyMap<BodyId, BodyState>,
 ): FramedCameraPose {
   const { frame, channels } = evaluated;
-  if (frame === 'absolute') return absoluteArm(reencodePose(channels, from, to));
-  return { frame, pose: decodeBodyFixedChannels(channels, frame.body) };
+  // No decode cell reads a basis TODAY. The day one does — a site row reading
+  // `upBasis` — it silently gets the current basis `to` where the clip pinned `from`.
+  const decoded = rowFor(frame).channels.decode(channels, frame, {
+    bodies,
+    poseBasis: to,
+    upBasis: to,
+  });
+  return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }
 
 /** The seven rows. Constant data: a driver sees the frame only through its `ctx`. */
@@ -210,7 +221,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         playback: clip,
       });
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
         memory: mem,
       };
     },
@@ -278,7 +289,7 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
         playback: tween,
       });
       return {
-        pose: framedClipArm(evaluated, pinned, ctx.poseBasis),
+        pose: framedClipArm(evaluated, pinned, ctx.poseBasis, ctx.bodies),
         memory: mem,
       };
     },
@@ -291,13 +302,13 @@ export const CAMERA_DRIVERS: readonly CameraDriver[] = [
     pivotsOnFocusedBody: true,
     // Absolute arm only (spec §7): a yaw spin about the frame pole is not a
     // thing a body-fixed arm expresses.
-    isActive: (s) => s.camera.autoRotate.active && s.camera.base.frame === 'absolute',
+    isActive: (s) => s.camera.autoRotate.active && isWorldArm(s.camera.base),
     // Spins from the FROZEN base (it only changes on a commit edge), so yaw
     // advances at the cumulative rate, not a per-frame delta off a moving base.
     pose: (ctx, mem) => {
       const base = ctx.state.camera.base;
       // The isActive gate restated as the narrowing TS needs.
-      if (base.frame !== 'absolute') return { pose: base, memory: mem };
+      if (!isWorldArm(base)) return { pose: base, memory: mem };
       return {
         pose: absoluteArm(
           spinAutoRotate(base.pose, ctx.state.camera.autoRotate.rate, ctx.elapsedMs),

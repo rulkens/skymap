@@ -14,9 +14,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 // `vi.mock` factories are hoisted above imports (and above plain top-level
 // `const`s) — `vi.hoisted` is the sanctioned escape hatch for a mock fn both
 // the factory AND the test body need to reference.
-const { executeFrameMock, cubemapFaceContextMock } = vi.hoisted(() => ({
+const { executeFrameMock, cubemapFaceContextMock, scheduleMock, finishMock } = vi.hoisted(() => ({
   executeFrameMock: vi.fn(),
   cubemapFaceContextMock: vi.fn(),
+  scheduleMock: vi.fn(),
+  finishMock: vi.fn(),
 }));
 vi.mock('../../../../src/services/engine/frame/executeFrame', () => ({
   executeFrame: executeFrameMock,
@@ -24,49 +26,70 @@ vi.mock('../../../../src/services/engine/frame/executeFrame', () => ({
 vi.mock('../../../../src/services/engine/frame/cubemapFaceContext', () => ({
   cubemapFaceContext: cubemapFaceContextMock,
 }));
+// The real scheduler by default; a test that needs a hand-picked face set
+// (fewer than the sky sweep's six) overrides it for one call.
+vi.mock('../../../../src/services/engine/frame/scheduleCubemapCaptures', async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import('../../../../src/services/engine/frame/scheduleCubemapCaptures')
+    >();
+  scheduleMock.mockImplementation(actual.scheduleCubemapCaptures);
+  return { scheduleCubemapCaptures: scheduleMock };
+});
+vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
+  finishCubemapCapture: finishMock,
+}));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
-import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures';
+import {
+  ALL_CUBE_FACES,
+  CUBEMAP_CAPTURES,
+  SKY_CAPTURE_KEYS,
+} from '../../../../src/data/rendering/cubemapCaptures';
+import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
+import type { CaptureFace } from '../../../../src/@types/engine/frame/CaptureFace';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
+import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureKey';
 
-/** The `sgrAStar` row's per-face contexts as handed to `executeFrame`. */
-function handedOffContexts(): ReadonlyMap<CubeFace, ReadyFrameContext> {
+/** Every sky row's target id, so the mock serves whichever row bakes. */
+const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
+
+/** Every program `executeFrame` walked this frame: one per scheduled face, then the frame's own. */
+function programs(): readonly (readonly FrameStep[])[] {
+  return executeFrameMock.mock.calls.map((call) => call[0].program as readonly FrameStep[]);
+}
+
+/** One row's per-face hand-off, as every `executeFrame` call receives it. */
+function handedOffContexts(key: SkyCaptureKey = 'sgrAStar'): ReadonlyMap<CubeFace, CaptureFace> {
   const args = executeFrameMock.mock.calls[0]![0] as { captureContexts?: CaptureFaceContexts };
-  return args.captureContexts?.get('sgrAStar') ?? new Map();
+  return args.captureContexts?.get(key) ?? new Map();
 }
 
 /**
- * The faces the frame program actually carries capture steps for — the other
- * half of the hand-off, since `captureFaces` reaches `executeFrame` already
- * expanded into steps.
+ * The faces the frame's programs carry capture steps for — the other half of
+ * the hand-off, since `captureFaces` reaches `executeFrame` already expanded
+ * into steps.
  */
 function programFaces(): readonly CubeFace[] {
-  const program = executeFrameMock.mock.calls[0]![0].program as readonly FrameStep[];
-  const faces = program.flatMap((step) =>
-    step.kind === 'render' && step.capture?.key === 'sgrAStar' ? [step.capture.face] : [],
-  );
+  const faces = programs()
+    .flat()
+    .flatMap((step) =>
+      step.kind === 'render' && step.capture?.key === 'sgrAStar' ? [step.capture.face] : [],
+    );
   return [...new Set(faces)].sort();
-}
-
-/** A fresh, never-baked `cubemapCaptures` entry for the `sgrAStar` row. */
-function makeCaptureRuntime() {
-  return {
-    lastBandActive: false,
-    lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-    bakedSettings: null,
-  };
 }
 
 function makeState(overrides: Partial<EngineState> = {}): EngineState {
   return {
-    gpu: { focusUniform: null },
+    // No mesh renderer ⇒ the probe scheduler idles; the sky sweeps are the subject here.
+    gpu: { focusUniform: null, meshBodyRenderer: null },
     settings: {
       tonemap: { exposure: 1, curve: 0 },
       hdr: { enabled: false, knee: 0, headroom: 0 },
@@ -79,7 +102,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
       fades: { isAnyAnimating: () => false },
       texturedDisks: { hasInFlightWork: () => false },
     },
-    cubemapCaptures: { sgrAStar: makeCaptureRuntime() },
+    cubemapCaptures: makeCubemapCaptureRuntimes(),
     ...overrides,
   } as unknown as EngineState;
 }
@@ -100,14 +123,15 @@ function makeCtx(
     renderTargets: {
       reconcile: vi.fn(),
       specOf: (id: string) => {
-        if (id === 'sky-cubemap') return { fixedSizePx: { size: faceSizePx, layers: 6 } };
+        if (CAPTURE_TARGET_IDS.includes(id))
+          return { fixedSizePx: { size: faceSizePx, layers: 6 } };
         if (id === 'swap') return { format: 'bgra8unorm' };
         throw new Error(`mock renderTargets: no spec row for '${id}'`);
       },
       // The sweep reads the ALLOCATED size, not the spec's `fixedSizePx.size`
-      // (a live setting) — see `scheduleCubemapCaptures`'s `faceSizePx`.
+      // (a live setting) — see `scheduleSkyCaptures`'s `faceSizePx`.
       sizeOf: (id: string) => {
-        if (id === 'sky-cubemap') return { width: faceSizePx, height: faceSizePx };
+        if (CAPTURE_TARGET_IDS.includes(id)) return { width: faceSizePx, height: faceSizePx };
         throw new Error(`mock renderTargets: no allocated size for '${id}'`);
       },
     },
@@ -135,6 +159,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   beforeEach(() => {
     executeFrameMock.mockClear();
     cubemapFaceContextMock.mockClear();
+    scheduleMock.mockClear();
+    finishMock.mockClear();
   });
 
   it('derives each face via cubemapFaceContext(eye=camera, faceSizePx=row size) and threads the map into executeFrame', () => {
@@ -170,12 +196,91 @@ describe('renderFrame — cubemap-capture hand-off', () => {
       ...ALL_CUBE_FACES,
     ]);
 
-    expect(executeFrameMock).toHaveBeenCalledTimes(1);
+    // Six face submissions, then the frame's own.
+    expect(executeFrameMock).toHaveBeenCalledTimes(7);
     const handedOff = handedOffContexts();
     expect(handedOff.size).toBe(6);
-    for (const face of ALL_CUBE_FACES) expect(handedOff.get(face)).toBe(faceCtxByFace.get(face));
+    for (const face of ALL_CUBE_FACES) {
+      expect(handedOff.get(face)?.ctx).toBe(faceCtxByFace.get(face));
+    }
     // The same six faces reach the program, off the one map.
     expect(programFaces()).toEqual([...ALL_CUBE_FACES]);
+  });
+
+  it("submits each scheduled face in its own command buffer, in program order, before the frame's", () => {
+    // Landmine #1 (docs/RENDERER.md): a body renderer rewrites its uniform
+    // buffer per draw, so a body drawn for a face and for the view cannot
+    // share one submission. Two faces of one row ⇒ two face buffers, each
+    // holding only that face's steps, then the frame's — which holds none.
+    const face3 = { ctx: makeCtx([1000, 0, 0]), bodySlabs: [] };
+    const face5 = { ctx: makeCtx([1000, 0, 0]), bodySlabs: [] };
+    scheduleMock.mockReturnValueOnce(
+      new Map([
+        [
+          'sgrAStar',
+          new Map<CubeFace, CaptureFace>([
+            [3, face3],
+            [5, face5],
+          ]),
+        ],
+      ]),
+    );
+    const input = makeInput(makeCtx([1000, 0, 0]), makeState());
+    renderFrame(input);
+
+    const submit = input.device.queue.submit as unknown as ReturnType<typeof vi.fn>;
+    expect(submit).toHaveBeenCalledTimes(3);
+    expect(input.device.createCommandEncoder).toHaveBeenCalledTimes(3);
+    const facesOf = (program: readonly FrameStep[]): readonly (CubeFace | undefined)[] => [
+      ...new Set(program.map((step) => (step.kind === 'render' ? step.capture?.face : undefined))),
+    ];
+    const [first, second, frame] = programs();
+    expect(facesOf(first!)).toEqual([3]);
+    expect(facesOf(second!)).toEqual([5]);
+    expect(frame!.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
+    expect(frame!.length).toBeGreaterThan(0);
+    // Every buffer submitted is one executeFrame call's own encoder, finished.
+    const recorded = executeFrameMock.mock.calls.map(
+      (call) => (call[0].encoder.finish as ReturnType<typeof vi.fn>).mock.results[0]!.value,
+    );
+    expect(new Set(recorded).size).toBe(3);
+    submit.mock.calls.forEach((call, i) => expect(call[0][0]).toBe(recorded[i]));
+  });
+
+  it('runs finishCubemapCapture once per row that had faces this frame, after its faces', () => {
+    // "Had faces" means expanded STEPS, one finish per row however many faces
+    // it scheduled — and in the order the capture lines run, not the map's.
+    const face = (): CaptureFace => ({ ctx: makeCtx([1000, 0, 0]), bodySlabs: [] });
+    scheduleMock.mockReturnValueOnce(
+      new Map([
+        ['probe', new Map<CubeFace, CaptureFace>([[0, face()]])],
+        ['sgrAStar', new Map<CubeFace, CaptureFace>([[0, face()]])],
+        [
+          'solarSystem',
+          new Map<CubeFace, CaptureFace>([
+            [0, face()],
+            [1, face()],
+          ]),
+        ],
+      ]),
+    );
+    const state = makeState();
+    const input = makeInput(makeCtx([1000, 0, 0]), state);
+    renderFrame(input);
+
+    expect(finishMock.mock.calls.map((call) => call[0])).toEqual([
+      'sgrAStar',
+      'solarSystem',
+      'probe',
+    ]);
+    expect(finishMock).toHaveBeenCalledWith('solarSystem', state, input.device);
+    // Every face's submit precedes every finish; the frame's submit follows.
+    const submit = input.device.queue.submit as unknown as ReturnType<typeof vi.fn>;
+    const submitOrder = submit.mock.invocationCallOrder;
+    const finishOrder = finishMock.mock.invocationCallOrder;
+    expect(submitOrder).toHaveLength(5);
+    expect(Math.max(...submitOrder.slice(0, 4))).toBeLessThan(Math.min(...finishOrder));
+    expect(Math.max(...finishOrder)).toBeLessThan(submitOrder[4]!);
   });
 
   it('omits a face from the hand-off map when cubemapFaceContext returns null, and leaves bakedSettings unset so the next frame retries', () => {
@@ -320,6 +425,29 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     state.settings = { ...state.settings };
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
 
+    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a row with rebakeOnSettings false bakes on band entry and ignores a settings replacement until the band re-enters', () => {
+    cubemapFaceContextMock.mockImplementation(
+      (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
+    );
+
+    // At the Sun: inside `solarSystem`'s band and far outside the lens's, so
+    // the only row sweeping here is the once-baked one.
+    const atTheSun: readonly [number, number, number] = [0, 0, 0];
+    const state = makeState();
+    renderFrame(makeInput(makeCtx(atTheSun), state));
+    expect(handedOffContexts('solarSystem').size).toBe(6);
+    cubemapFaceContextMock.mockClear();
+
+    // The settings write that would re-bake `sgrAStar` leaves this row alone.
+    state.settings = { ...state.settings };
+    renderFrame(makeInput(makeCtx(atTheSun), state));
+    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
+
+    renderFrame(makeInput(makeCtx([1000, 0, 0]), state)); // band close.
+    renderFrame(makeInput(makeCtx(atTheSun), state)); // re-entry ⇒ bakes again.
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
   });
 

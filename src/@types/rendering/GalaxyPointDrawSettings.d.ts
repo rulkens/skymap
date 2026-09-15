@@ -63,7 +63,7 @@ export type GalaxyPointDrawSettings = {
   /**
    * `ReadyFrameContext.viewSlot` — which view-slot buffer this call's
    * per-frame uniform/fade writes land in (Task 13b). `0` for the main view;
-   * `1..6` for a sky-cubemap capture face. Lets several `draw()` calls with
+   * `viewSlotBase + face` for a capture face. Lets several `draw()` calls with
    * different cameras share one submit without one overwriting another's
    * bytes before the GPU reads them (see `createViewSlotUniformRing`'s doc).
    */

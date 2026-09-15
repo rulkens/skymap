@@ -19,17 +19,14 @@ import type { OrientDeltas } from '../../@types/camera/OrientDeltas';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { TimeState } from '../../@types/time/TimeState';
-import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
+import { hostOf } from '../../services/engine/camera/rungs/hostOf';
+import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import { sameFrame } from '../../services/engine/camera/rungs/sameFrame';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
-
-function sameFrame(a: PoseFrame, b: PoseFrame): boolean {
-  if (a === 'absolute' || b === 'absolute') return a === b;
-  return a.body === b.body;
-}
 
 export function cameraDebugSnapshotOf(input: {
   readonly storedFrame: PoseFrame;
@@ -82,10 +79,10 @@ export function cameraDebugSnapshotOf(input: {
   // readout on `bestHeightM` so it reads height over the ground actually drawn.
   const datumRadiusM =
     bodyId !== null
-      ? SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId)?.surface.datumRadiusM
+      ? hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis })?.radiusM
       : undefined;
 
-  const engagedPose = renderedFrame !== 'absolute' ? renderedPose.pose : null;
+  const engagedPose = isWorldArm(renderedPose) ? null : renderedPose.pose;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;
   const epochDeltaEpsDays = Math.abs(
     deriveSimDays(time, EPOCH_DELTA_TOLERANCE_MS) - deriveSimDays(time, 0),
