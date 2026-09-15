@@ -1,27 +1,20 @@
 import type { SurfaceCutTile } from '../../@types/scene/SurfaceCutTile';
+import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
+import { packSurfaceTileKey as packTile } from './packSurfaceTileKey';
 import { surfaceTileColumns } from './surfaceTileColumns';
-
-/** (z, x, y) in one double: 5 + 20 + 19 bits, exact well past z19 at any tile
- *  edge ≥ 256 px, and a number key keeps the Map off per-leaf string building. */
-function packTile(z: number, x: number, y: number): number {
-  return z * 2 ** 39 + x * 2 ** 19 + y;
-}
+import { surfaceTileInBand } from './surfaceTileInBand';
 
 /**
  * balanceSurfaceCut — coarsens leaves, never refines, until no two
  * edge-neighbouring leaves differ by more than one level, then fills
- * `edgeCoarser`. One bit per edge is all F2's vertex stage gets to stitch
- * with, and that bit only means something under a 2:1 cut.
- *
- * Coarsening replaces a leaf's whole parent subtree with the parent, which
- * `resolveParent` builds from the residency the walk already has — resident by
- * construction, since it is what let the walk refine past it. A sibling culled
- * from the cut does not block the collapse: the parent covers it, off-screen.
- * Longitude wraps; the poles have no north/south neighbour.
+ * `edgeCoarser`. A neighbour that cannot refine (no band bakes under it) is
+ * exempt: a band ceiling is a permanent step, and coarsening against it would
+ * walk the whole cut back up. Longitude wraps; the poles have no N/S edge.
  */
 export function balanceSurfaceCut(
   cut: readonly SurfaceCutTile[],
   tilePx: number,
+  bands: readonly SurfaceTileBand[],
   resolveParent: (z: number, x: number, y: number) => SurfaceCutTile | null,
 ): SurfaceCutTile[] {
   if (cut.length === 0) return [];
@@ -62,13 +55,17 @@ export function balanceSurfaceCut(
   }
 
   const cell = [0, 0];
-  /** The coarsest edge neighbour of this leaf, or null if none is coarser. */
+  /** The coarsest edge neighbour this leaf could ever meet halfway, or null.
+   *  A neighbour sitting on its own band's ceiling is skipped: nothing exists
+   *  under it to refine INTO, so the step it makes is permanent (R12). */
   function coarsestNeighbourLevel(z: number, x: number, y: number): number | null {
     let coarsest: number | null = null;
     for (let edge = 0; edge < 4; edge++) {
       if (!neighbourCell(edge, z, x, y, cell)) continue;
       const other = coveringLeaf(z, cell[0]!, cell[1]!);
       if (other === null || other.id.z >= z) continue;
+      if (!surfaceTileInBand(bands, tilePx, other.id.z + 1, other.id.x * 2, other.id.y * 2))
+        continue;
       if (coarsest === null || other.id.z < coarsest) coarsest = other.id.z;
     }
     return coarsest;
@@ -110,12 +107,24 @@ export function balanceSurfaceCut(
   for (const leaf of leaves.values()) {
     const { z, x, y } = leaf.id;
     const edgeCoarser: [0 | 1, 0 | 1, 0 | 1, 0 | 1] = [0, 0, 0, 0];
+    let anyCoarser = false;
     for (let edge = 0; edge < 4; edge++) {
       if (!neighbourCell(edge, z, x, y, cell)) continue;
       const other = coveringLeaf(z, cell[0]!, cell[1]!);
-      if (other !== null && other.id.z < z) edgeCoarser[edge] = 1;
+      // EXACTLY one level, never merely coarser: a band-ceiling or
+      // unresolvable-parent step is more than F2's single bit can collapse,
+      // and claiming otherwise would pull the edge onto posts that aren't there.
+      if (other !== null && other.id.z === z - 1) {
+        edgeCoarser[edge] = 1;
+        anyCoarser = true;
+      }
     }
-    balanced.push({ ...leaf, edgeCoarser });
+    const e = leaf.edgeCoarser;
+    balanced.push(
+      !anyCoarser && e[0] === 0 && e[1] === 0 && e[2] === 0 && e[3] === 0
+        ? leaf
+        : { ...leaf, edgeCoarser },
+    );
   }
   return balanced;
 }

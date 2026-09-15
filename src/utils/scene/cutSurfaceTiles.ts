@@ -8,9 +8,10 @@ import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { surfaceTileColumns } from './surfaceTileColumns';
 import { surfaceTileBandRefineAllowed } from './surfaceTileBandRefineAllowed';
-import { surfaceTileBandRequestAllowed } from './surfaceTileBandRequestAllowed';
+import { surfaceTileInBand } from './surfaceTileInBand';
 import { equirectUvToDirection } from '../math/equirectUvToDirection';
 import { surfacePatchAnchor } from './surfacePatchAnchor';
+import { packSurfaceTileKey } from './packSurfaceTileKey';
 import { balanceSurfaceCut } from './balanceSurfaceCut';
 
 type ResidentLookupResult = {
@@ -20,22 +21,15 @@ type ResidentLookupResult = {
   readonly readyAtMs: number;
 } | null;
 
-/** Shared by every leaf; `balanceSurfaceCut` rebuilds the ones it coarsens. */
+/** Shared by every leaf; `balanceSurfaceCut` hands the leaf back untouched
+ *  when nothing coarsens against it, so this array is the common case. */
 const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
 
 /**
- * cutSurfaceTiles — `planEarthTiles`'s walk, superseding it: one quadtree
- * walk, two products. `requests` is what to fetch (every tile in BOTH
- * products), `cut` is what to draw — each leaf's albedo resolved in the same
- * pass via the injected `residentSlot` ancestor-fallback lookup, its height
- * strictly its own (spec §5.2). Two walks re-deriving the same
- * horizon/frustum/refine logic would eventually desync; one walk can't.
- *
- * Height residency gates REFINEMENT, not just drawing, so the height level the
- * cut samples is a function of the cut alone and neighbours stay on nested
- * lattices throughout streaming. Which is why a node's cull is computed by its
- * PARENT (`probe`) and rides the stack: the parent has to know a child's
- * visibility before it can decide.
+ * cutSurfaceTiles — one quadtree walk, two products: `requests` is what to
+ * fetch, `cut` what to draw. A leaf's height is strictly its OWN (spec §5.2),
+ * so height residency gates REFINEMENT, not just drawing — which is why a
+ * node's cull is computed by its PARENT (`probe`) and rides the stack.
  */
 export function cutSurfaceTiles(input: {
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
@@ -234,7 +228,6 @@ export function cutSurfaceTiles(input: {
   const childY = [0, 0, 0, 0];
   const childScreenPx = [0, 0, 0, 0];
   const childRequired = [0, 0, 0, 0];
-  const childBakeable = [false, false, false, false];
 
   const rootCols = surfaceTileColumns(baseLevel, tilePx);
   for (let y = 0; y < rootCols / 2; y++) {
@@ -261,8 +254,6 @@ export function cutSurfaceTiles(input: {
 
     // 3 & 4. Refine or emit
     if (required > z && surfaceTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
-      const childCols = cols * 2;
-      const childRows = rows * 2;
       let visibleChildren = 0;
       let heightsReady = true;
       for (let q = 0; q < 4; q++) {
@@ -274,28 +265,18 @@ export function cutSurfaceTiles(input: {
         childY[visibleChildren] = cy;
         childScreenPx[visibleChildren] = probed.screenPx;
         childRequired[visibleChildren] = probed.required;
-        const cu0 = cx / childCols;
-        const cv1 = 1 - cy / childRows;
-        const bakeable = surfaceTileBandRequestAllowed(
-          bands,
-          z + 1,
-          cu0,
-          cu0 + 1 / childCols,
-          cv1 - 1 / childRows,
-          cv1,
-        );
-        childBakeable[visibleChildren] = bakeable;
         visibleChildren++;
-        // Only a child the walk would actually REQUEST can hold refinement
-        // back: one no band bakes at z+1 can never become resident, and
-        // waiting on it would freeze every deep band at its own boundary.
-        if (bakeable && heightSlotOf(z + 1, cx, cy) === null) heightsReady = false;
+        // Every visible child, no exceptions: R11's sibling-closed bake means
+        // a child the walk can descend to always has a file, so narrowing
+        // this to "children some band bakes" could only ever let a quad
+        // refine onto a height level one of its members doesn't have.
+        if (heightSlotOf(z + 1, cx, cy) === null) heightsReady = false;
       }
 
       if (heightsReady) {
-        // Same band-request gate as the leaf branch: a would-be ancestor no
-        // band bakes at this z has no file to fetch either.
-        if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1)) request(z, x, y, screenPx);
+        // Same existence gate as the leaf branch: a would-be ancestor no band
+        // bakes at this z has no file to fetch either.
+        if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
         for (let c = 0; c < visibleChildren; c++)
           stack.push(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!, childRequired[c]!);
         continue;
@@ -307,7 +288,8 @@ export function cutSurfaceTiles(input: {
       // height tile alive, and without it the first to land are evicted while
       // the last is in flight, and refinement never converges.
       for (let c = 0; c < visibleChildren; c++) {
-        if (childBakeable[c]) request(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!);
+        if (surfaceTileInBand(bands, tilePx, z + 1, childX[c]!, childY[c]!))
+          request(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!);
       }
       // Demand, not residency: `zWin` is the subsystem's engage gate, so a cold
       // start that cannot refine must still name the level it is asking for.
@@ -323,7 +305,7 @@ export function cutSurfaceTiles(input: {
     // under a shallower global band) with no file of its OWN to fetch, yet
     // still have a resident ANCESTOR to draw — skip only the fetch, not the
     // residency lookup below, or a band-edge ring never gets ancestor pixels.
-    if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1)) request(z, x, y, screenPx);
+    if (surfaceTileInBand(bands, tilePx, z, x, y)) request(z, x, y, screenPx);
 
     // §5.2: a leaf draws from its OWN height tile or not at all. Inheriting an
     // ancestor's posts would make neighbouring patches sample different height
@@ -349,12 +331,9 @@ export function cutSurfaceTiles(input: {
     }
   }
 
-  // Largest-on-screen-first: residency walk order and fetch queue pop order.
-  requests.sort((a, b) => b.screenPx - a.screenPx);
-
-  // 2:1 balance last, over the finished cut: a neighbour relation only exists
-  // once every leaf is known, and coarsening one quad can unbalance another.
-  const balanced = balanceSurfaceCut(cut, tilePx, (pz, px, py) => {
+  // 2:1 balance over the finished cut: a neighbour relation only exists once
+  // every leaf is known, and coarsening one quad can unbalance another.
+  const balanced = balanceSurfaceCut(cut, tilePx, bands, (pz, px, py) => {
     const heightSlot = heightSlotOf(pz, px, py);
     if (heightSlot === null) return null;
     const albedo = resolveCutResidency({ z: pz, x: px, y: py, baseLevel, residentSlot });
@@ -370,7 +349,26 @@ export function cutSurfaceTiles(input: {
     };
   });
 
-  return { cut: balanced, requests: { zWin, requests, subCameraDirLocal: camDir } };
+  const leafKeys = new Set<number>();
+  for (const leaf of balanced) leafKeys.add(packSurfaceTileKey(leaf.id.z, leaf.id.x, leaf.id.y));
+
+  /** One level past the leaf covering it is as deep as a request may go —
+   *  §6.1's "requests run one level ahead of the cut". Anything deeper is a
+   *  level the balance discarded, and fetching it pins an atlas slot this cut
+   *  can never draw. A tile no leaf covers (its leaf dropped for want of
+   *  height) keeps its request: that is the cold-start path. */
+  function withinBalancedDepth(z: number, x: number, y: number): boolean {
+    for (let az = z; az >= baseLevel; az--) {
+      if (leafKeys.has(packSurfaceTileKey(az, x >> (z - az), y >> (z - az)))) return z <= az + 1;
+    }
+    return true;
+  }
+
+  // Largest-on-screen-first: residency walk order and fetch queue pop order.
+  const kept = requests.filter((r) => withinBalancedDepth(r.tile.z, r.tile.x, r.tile.y));
+  kept.sort((a, b) => b.screenPx - a.screenPx);
+
+  return { cut: balanced, requests: { zWin, requests: kept, subCameraDirLocal: camDir } };
 }
 
 /**

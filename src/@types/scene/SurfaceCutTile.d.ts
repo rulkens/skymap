@@ -21,9 +21,11 @@ export type SurfaceCutTile = {
    *  patches on nested height lattices while tiles stream in. */
   readonly heightSlot: number;
   /** One bit per edge, `[west, east, south, north]` (R9): 1 where the
-   *  neighbouring leaf is exactly one level COARSER, which is what lets F2's
+   *  neighbouring leaf is EXACTLY one level coarser, which is what lets F2's
    *  vertex stage collapse that edge onto the coarse neighbour's posts with
-   *  no neighbour data beyond these four bits. `balanceSurfaceCut` fills it,
-   *  and the 2:1 balance it enforces is what bounds it to one bit. */
+   *  no neighbour data beyond these four bits. `balanceSurfaceCut` fills it.
+   *  A deeper step — a band ceiling the balance may not cross, or a parent it
+   *  could not resolve — stays 0: the edge is left as a seam rather than
+   *  collapsed onto posts the coarse side does not have. */
   readonly edgeCoarser: readonly [0 | 1, 0 | 1, 0 | 1, 0 | 1];
 };

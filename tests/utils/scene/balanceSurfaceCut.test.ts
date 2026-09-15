@@ -14,6 +14,7 @@ import { balanceSurfaceCut } from '../../../src/utils/scene/balanceSurfaceCut';
 import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import type { SurfaceCutTile } from '../../../src/@types/scene/SurfaceCutTile';
+import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 
 function leafAt(z: number, x: number, y: number): SurfaceCutTile {
   return {
@@ -36,8 +37,18 @@ function leafAt(z: number, x: number, y: number): SurfaceCutTile {
  *  refine past it). */
 const alwaysEmittable = (z: number, x: number, y: number) => leafAt(z, x, y);
 
-function balance(cut: readonly SurfaceCutTile[]) {
-  return balanceSurfaceCut(cut, EARTH_TILE_PX, alwaysEmittable);
+/** One whole-globe band deep enough that nothing below is band-capped — the
+ *  case every pre-R12 test was written against. */
+const UNCAPPED: readonly SurfaceTileBand[] = [
+  { uBounds: [0, 1], vBounds: [0, 1], min: 0, max: 30 },
+];
+
+function balance(
+  cut: readonly SurfaceCutTile[],
+  bands: readonly SurfaceTileBand[] = UNCAPPED,
+  resolveParent: (z: number, x: number, y: number) => SurfaceCutTile | null = alwaysEmittable,
+) {
+  return balanceSurfaceCut(cut, EARTH_TILE_PX, bands, resolveParent);
 }
 
 function find(cut: readonly SurfaceCutTile[], z: number, x: number, y: number) {
@@ -119,6 +130,69 @@ describe('balanceSurfaceCut', () => {
     // no bit — the FINE side is the one that has to collapse an edge.
     expect(find(balanced, 9, 23, 10)!.edgeCoarser).toEqual([0, 0, 0, 0]);
     expect(find(balanced, 8, 10, 5)!.edgeCoarser).toEqual([0, 0, 0, 0]);
+  });
+
+  it('leaves a deep band island alone: a band ceiling is a step, not an offender', () => {
+    // Søndermarken's shape: a z13 block filling one z7 tile, ringed by z7
+    // leaves the bake caps at z7. Coarsening the island against them would
+    // walk the whole 6-level step back up and throw the deep band away —
+    // the ring cannot meet it halfway, so there is nothing to balance.
+    const islandZ7X = 10;
+    const islandZ7Y = 5;
+    const deepCols = surfaceTileColumns(7, EARTH_TILE_PX);
+    const deepRows = deepCols / 2;
+    const bands: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: 0, max: 7 },
+      {
+        uBounds: [islandZ7X / deepCols, (islandZ7X + 1) / deepCols],
+        vBounds: [1 - (islandZ7Y + 1) / deepRows, 1 - islandZ7Y / deepRows],
+        min: 8,
+        max: 13,
+      },
+    ];
+
+    const span = 1 << 6;
+    const cut: SurfaceCutTile[] = [];
+    for (let dy = 0; dy < span; dy++)
+      for (let dx = 0; dx < span; dx++)
+        cut.push(leafAt(13, islandZ7X * span + dx, islandZ7Y * span + dy));
+    const ring: ReadonlyArray<readonly [number, number]> = [
+      [islandZ7X - 1, islandZ7Y],
+      [islandZ7X + 1, islandZ7Y],
+      [islandZ7X, islandZ7Y - 1],
+      [islandZ7X, islandZ7Y + 1],
+    ];
+    for (const [x, y] of ring) cut.push(leafAt(7, x, y));
+    expect(worstStep(cut), 'the fixture really is a six-level step').toBe(6);
+
+    const balanced = balance(cut, bands);
+
+    expect(balanced).toHaveLength(cut.length);
+    expect(balanced.filter((t) => t.id.z === 13)).toHaveLength(span * span);
+    for (const [x, y] of ring) {
+      expect(find(balanced, 7, x, y)!.edgeCoarser, `ring tile ${x},${y}`).toEqual([0, 0, 0, 0]);
+    }
+    // And the fine side carries no bit either: one bit can only collapse a
+    // one-level step, and this one is six.
+    expect(find(balanced, 13, islandZ7X * span, islandZ7Y * span)!.edgeCoarser).toEqual([
+      0, 0, 0, 0,
+    ]);
+  });
+
+  it('leaves the bits clear when the collapse is refused for want of a parent', () => {
+    const cut = [
+      leafAt(8, 10, 5),
+      leafAt(10, 44, 20),
+      leafAt(10, 45, 20),
+      leafAt(10, 44, 21),
+      leafAt(10, 45, 21),
+    ];
+
+    const balanced = balance(cut, UNCAPPED, () => null);
+
+    expect(worstStep(balanced), 'the step survives rather than punching a hole').toBe(2);
+    expect(find(balanced, 10, 44, 20)!.edgeCoarser).toEqual([0, 0, 0, 0]);
+    expect(find(balanced, 10, 44, 21)!.edgeCoarser).toEqual([0, 0, 0, 0]);
   });
 
   it('treats the antimeridian columns as neighbours', () => {

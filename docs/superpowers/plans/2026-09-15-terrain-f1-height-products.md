@@ -387,10 +387,14 @@ Walk rules:
 
 ```ts
 /** Coarsens leaves — never refines — until no two edge-neighbouring leaves differ by more than one level, then fills edgeCoarser.
- *  Coarsening replaces four siblings by their parent; the parent's height tile is resident by construction (it is what let the walk refine).
+ *  Coarsening replaces four siblings by their parent, which `resolveParent` may still decline (a leaf can be in the cut on an ancestor's
+ *  albedo while the parent's own height tile was evicted) — a refused collapse leaves the step, with that edge's bit 0.
+ *  A neighbour that cannot refine (nothing baked under it, per `surfaceTileInBand`) is never coarsened against: a band ceiling is permanent.
  *  Longitude wraps; the poles have no north/south neighbour. */
 export function balanceSurfaceCut(
   cut: readonly SurfaceCutTile[],
+  tilePx: number,
+  bands: readonly SurfaceTileBand[],
   resolveParent: (z: number, x: number, y: number) => SurfaceCutTile | null,
 ): SurfaceCutTile[];
 ```

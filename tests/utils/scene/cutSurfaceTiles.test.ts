@@ -19,7 +19,7 @@ import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelFo
 import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
 import { surfaceTileXyForUv } from '../../../src/utils/scene/surfaceTileXyForUv';
 import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
-import { surfaceTileBandRequestAllowed } from '../../../src/utils/scene/surfaceTileBandRequestAllowed';
+import { surfaceTileInBand } from '../../../src/utils/scene/surfaceTileInBand';
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
@@ -28,6 +28,7 @@ import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../src/utils/camera/foregroundFrustum';
 import type { SurfaceTileId } from '../../../src/@types/data/SurfaceTileId';
+import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const BASE_LEVEL = earthBaseLevelForTier('large');
@@ -46,19 +47,36 @@ const WHOLE_ATLAS = {
   readyAtMs: 0,
 };
 
-/** A `residentSlot` that resolves HEIGHT everywhere and albedo nowhere — the
- *  "nothing to draw, but refinement unblocked" stub. Height residency is what
- *  gates refinement (§5.2), so the older "resolves nothing" stub would now pin
- *  every walk at the base level and say nothing about the cull and refine
- *  rules these fixtures exist for. */
-const HEIGHT_ONLY = (tile: SurfaceTileId) => (tile.product === 'height' ? WHOLE_ATLAS : null);
+/** The default fixture band: one whole-globe pyramid from `MIN_TILE_LEVEL`. */
+const GLOBAL_BANDS: readonly SurfaceTileBand[] = [
+  { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 13 },
+];
 
-/** Wraps an albedo-only stub so height resolves everywhere around it — the
- *  complete-height-pyramid case, which is what the bake owes the walk: every
- *  tile the walk can reach has its own height tile, so these fixtures go on
- *  testing albedo resolution rather than the refinement gate. */
-function withHeight<T>(albedo: (tile: SurfaceTileId) => T) {
-  return (tile: SurfaceTileId) => (tile.product === 'height' ? WHOLE_ATLAS : albedo(tile));
+/** Height residency IS the bake's own tile set (`surfaceTileInBand` over the
+ *  bands), never "everywhere": the complete pyramid the bake owes the walk,
+ *  and the only state in which the refine rule's "every visible child" is
+ *  satisfiable at all. Height gates refinement (§5.2), so a stub resolving
+ *  nothing would pin every walk at the base level and say nothing about the
+ *  cull and refine rules these fixtures exist for. */
+function heightFrom(bands: readonly SurfaceTileBand[]) {
+  return (tile: SurfaceTileId) =>
+    tile.product === 'height' && surfaceTileInBand(bands, EARTH_TILE_PX, tile.z, tile.x, tile.y)
+      ? WHOLE_ATLAS
+      : null;
+}
+
+/** Baked height, albedo nowhere — the "nothing to draw, but refinement
+ *  unblocked" stub. */
+const HEIGHT_ONLY = heightFrom(GLOBAL_BANDS);
+
+/** Wraps an albedo-only stub so height resolves around it, so these fixtures
+ *  go on testing albedo resolution rather than the refinement gate. */
+function withHeight<T>(
+  albedo: (tile: SurfaceTileId) => T,
+  bands: readonly SurfaceTileBand[] = GLOBAL_BANDS,
+) {
+  const height = heightFrom(bands);
+  return (tile: SurfaceTileId) => (tile.product === 'height' ? height(tile) : albedo(tile));
 }
 
 // Fixtures below build camPosLocalM at radius 1 (`radiusM: 1`) — a
@@ -89,7 +107,7 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
-    bands: [{ uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: 13 }],
+    bands: GLOBAL_BANDS,
     tilePx: EARTH_TILE_PX,
     // Fixture default is the 1:1 point, not the shipped `EARTH_TILE_LOD_BIAS`,
     // so every test above that predates the bias keeps asserting the rule it
@@ -138,18 +156,19 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   const maxLevel = 19;
+  const bands: readonly SurfaceTileBand[] = [
+    { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: maxLevel },
+  ];
   return {
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
-    bands: [
-      { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: maxLevel },
-    ],
+    bands,
     tilePx: EARTH_TILE_PX,
     lodBias: 0,
-    residentSlot: HEIGHT_ONLY,
+    residentSlot: heightFrom(bands),
     maxLevel,
   };
 }
@@ -189,18 +208,19 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
   const view = mat4.lookAt(camPosLocalM, target, camDirUnit);
   const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
+  const bands: readonly SurfaceTileBand[] = [
+    { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: maxLevel },
+  ];
   return {
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
-    bands: [
-      { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: maxLevel },
-    ],
+    bands,
     tilePx: EARTH_TILE_PX,
     lodBias: 0,
-    residentSlot: HEIGHT_ONLY,
+    residentSlot: heightFrom(bands),
   };
 }
 
@@ -443,12 +463,12 @@ describe('cutSurfaceTiles', () => {
       expect(result.requests.requests.length).toBeGreaterThan(0);
     });
 
-    it("draws a band-edge leaf outside every band's request range from a resident ancestor rect", () => {
-      // Reproduces the "hole ring" bug: a global band caps at z7, a deep band
-      // only bakes z8-13 over a small bbox, and the z7 parent straddles that
-      // bbox's edge — `surfaceTileBandRefineAllowed` lets it refine (the deep
-      // band overlaps SOME of it), but three of its four z8 children land
-      // OUTSIDE the deep band's bbox with no band requestable at z8 there.
+    it('draws the band-edge halo ring from a resident ancestor rect, and never refines it', () => {
+      // The "hole ring" shape: a global band caps at z7, a deep band bakes
+      // z8-13 over one z8 box, and the z7 parent straddles that box's edge.
+      // R11's sibling closure gives the three halo children files of their
+      // own (baked from the band's underfill), so they are fetched and drawn
+      // — but nothing exists BELOW them, so they stay leaves.
       const z7 = 7;
       const z8 = 8;
       const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
@@ -473,11 +493,15 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.25, 0.5] as const,
         atlasUvScale: [0.5, 0.5] as const,
       };
-      const residentSlot = withHeight((tile: SurfaceTileId) =>
-        tile.z === z7 && tile.x === z7x && tile.y === z7y
-          ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
-          : null,
-      );
+      // Height residency is this fixture's OWN band closure, not a blanket
+      // "everywhere": the halo's file is exactly what R11 promises.
+      const heights = heightFrom(bands);
+      const residentSlot = (tile: SurfaceTileId) =>
+        tile.product === 'height'
+          ? heights(tile)
+          : tile.z === z7 && tile.x === z7x && tile.y === z7y
+            ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
+            : null;
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
 
@@ -490,7 +514,11 @@ describe('cutSurfaceTiles', () => {
         result.requests.requests.some(
           (r) => r.tile.z === z8 && r.tile.x === otherX && r.tile.y === otherY,
         ),
-        'skipped leaf must not be requested — no band bakes a file for it',
+        'the halo sibling IS fetched — the closure bakes it from the underfill',
+      ).toBe(true);
+      expect(
+        result.cut.some((c) => c.id.z > z8 && c.id.x >> (c.id.z - z8) === otherX),
+        'and nothing under it: no band bakes deeper there',
       ).toBe(false);
 
       const entry = result.cut.find((c) => c.id.z === z8 && c.id.x === otherX && c.id.y === otherY);
@@ -523,15 +551,17 @@ describe('cutSurfaceTiles', () => {
       const deep = bare.requests.requests.find((r) => r.tile.z === maxLevel);
       expect(deep, `a z${maxLevel} request`).toBeDefined();
 
-      const residentSlot = withHeight((tile: SurfaceTileId) =>
-        tile.z === deep!.tile.z && tile.x === deep!.tile.x && tile.y === deep!.tile.y
-          ? {
-              slot: 1,
-              atlasUvOrigin: [0, 0] as const,
-              atlasUvScale: [1, 1] as const,
-              readyAtMs: 0,
-            }
-          : null,
+      const residentSlot = withHeight(
+        (tile: SurfaceTileId) =>
+          tile.z === deep!.tile.z && tile.x === deep!.tile.x && tile.y === deep!.tile.y
+            ? {
+                slot: 1,
+                atlasUvOrigin: [0, 0] as const,
+                atlasUvScale: [1, 1] as const,
+                readyAtMs: 0,
+              }
+            : null,
+        input.bands,
       );
       const result = cutSurfaceTiles({ ...input, residentSlot });
       expect(result.requests.requests.some((r) => r.tile.z === maxLevel)).toBe(true);
@@ -601,48 +631,58 @@ describe('cutSurfaceTiles', () => {
       expect(result.requests.zWin).toBe(HEIGHT_CEILING + 1);
     });
 
-    it('drops a leaf whose own height tile is missing even though its ancestor has one', () => {
-      // The band-edge shape: a global band capping at z7 and a deep band over
-      // exactly one z8 tile. The in-band child has its own height tile; its
-      // sibling has none and never will, but DOES have a resident z7 height
-      // ancestor — the climb the albedo path does and this one must not.
-      const z7 = 7;
-      const z8 = 8;
+    it("holds the parent as the leaf while one visible child's height is missing", () => {
+      // R11's literal refine rule. Three of a quad's height tiles have landed
+      // and the fourth has not — refining anyway would put that fourth patch
+      // on a coarser height lattice than its siblings, which is the crack the
+      // whole §5.2 invariant exists to prevent. The narrowing this replaces
+      // exempted children "no band bakes"; under the sibling-closed bake
+      // there are none, and the exemption only ever let the quad split.
+      const z = BASE_LEVEL + 1;
       const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
-      const [z7x, z7y] = surfaceTileXyForUv(subUv, z7, EARTH_TILE_PX);
-      const [z8x, z8y] = surfaceTileXyForUv(subUv, z8, EARTH_TILE_PX);
-      const cols = surfaceTileColumns(z8, EARTH_TILE_PX);
-      const rows = cols / 2;
-      const bands = [
-        { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: z7 },
-        {
-          uBounds: [z8x / cols, (z8x + 1) / cols] as const,
-          vBounds: [1 - (z8y + 1) / rows, 1 - z8y / rows] as const,
-          min: z8,
-          max: 13,
-        },
-      ];
+      const [px, py] = surfaceTileXyForUv(subUv, z, EARTH_TILE_PX);
+      // The quadrant of (px, py) that is NOT the sub-camera child, so the
+      // blocked child is one the walk definitely sees.
+      const [cx0, cy0] = surfaceTileXyForUv(subUv, z + 1, EARTH_TILE_PX);
+      const missingX = cx0 === px * 2 ? px * 2 + 1 : px * 2;
+      const missingY = cy0;
+
+      const baked = heightFrom(GLOBAL_BANDS);
       const residentSlot = (tile: SurfaceTileId) => {
         if (tile.product !== 'height') return WHOLE_ATLAS;
-        if (tile.z <= z7) return WHOLE_ATLAS;
-        return tile.z === z8 && tile.x === z8x && tile.y === z8y ? WHOLE_ATLAS : null;
+        if (tile.z === z + 1 && tile.x === missingX && tile.y === missingY) return null;
+        return baked(tile);
       };
 
-      const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
+      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
 
-      const otherX = z8x === z7x * 2 ? z7x * 2 + 1 : z7x * 2;
       expect(
-        result.cut.some((t) => t.id.z === z8 && t.id.x === z8x && t.id.y === z8y),
-        'the in-band child, with its own height tile, is drawn',
+        result.cut.some((t) => t.id.z === z && t.id.x === px && t.id.y === py),
+        'the parent stays the leaf',
       ).toBe(true);
       expect(
-        result.cut.some((t) => t.id.z === z8 && t.id.x === otherX && t.id.y === z8y),
-        'its sibling, with only an ancestor height tile, is not',
+        result.cut.some(
+          (t) => t.id.z > z && t.id.x >> (t.id.z - z) === px && t.id.y >> (t.id.z - z) === py,
+        ),
+        'and nothing under it is drawn',
       ).toBe(false);
-      expect(
-        result.cut.some((t) => t.id.z === z7 && t.id.x === z7x && t.id.y === z7y),
-        'and the parent did refine — a sibling with no file to wait for cannot hold it back',
-      ).toBe(false);
+
+      // All four children are still fetched, the resident three included: a
+      // request is also the LRU touch that keeps them alive while the fourth
+      // is in flight.
+      const keys = new Set(
+        result.requests.requests.map(
+          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
+        ),
+      );
+      for (let q = 0; q < 4; q++) {
+        for (const product of ['albedo', 'height']) {
+          expect(
+            keys.has(`${product}/${z + 1}/${px * 2 + (q & 1)}/${py * 2 + (q >> 1)}`),
+            `${product} child ${q}`,
+          ).toBe(true);
+        }
+      }
     });
   });
 
@@ -955,7 +995,7 @@ describe('cutSurfaceTiles', () => {
       // this fixture keeps testing the bbox cull rather than the height gate.
       if (tile.product === 'height') return WHOLE_ATLAS;
       const { u0, u1, v0, v1 } = tileUvBounds(tile.z, tile.x, tile.y);
-      if (surfaceTileBandRequestAllowed(bands, tile.z, u0, u1, v0, v1)) {
+      if (surfaceTileInBand(bands, EARTH_TILE_PX, tile.z, tile.x, tile.y)) {
         return {
           slot: 0,
           atlasUvOrigin: [0, 0] as const,
