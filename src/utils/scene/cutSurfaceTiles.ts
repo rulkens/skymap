@@ -167,17 +167,11 @@ export function cutSurfaceTiles(input: {
     );
     if (centreAngle - patchAngle > capAngle) return null;
 
-    // 2. Frustum, conservatively: a sphere about the patch centre whose
-    // radius is the chord to the farthest corner (which contains the whole
-    // surface patch — a lat/lon box is farthest from its centre at a corner)
-    // with headroom for skirts and for relief up to half the patch's extent,
-    // since the bake carries no per-tile height bounds. This is the ONLY
-    // reject a near-plane straddler gets: its projected bbox below is
-    // meaningless, and skipping the frustum entirely for it (as before) let
-    // the strip of ground behind a tilted camera — which straddles the eye
-    // plane along its whole width — refine to the deepest band level with
-    // nothing on screen (887 z13 leaves at 300 km/60°). Points behind the eye
-    // fail all four plane tests at once, so the sphere test culls them too.
+    // 2. Frustum, conservatively: a sphere about the patch centre, radius to
+    // the farthest corner plus headroom for skirts/relief (no per-tile height
+    // bounds exist yet). The only test a near-plane straddler gets — its
+    // projected bbox below is meaningless — and it also catches points
+    // entirely behind the eye, which fail every plane test at once.
     const boundRadius = 1.5 * Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
     for (let k = 0; k < 4; k++) {
       const dist =
@@ -208,22 +202,15 @@ export function cutSurfaceTiles(input: {
       if (ndcY > maxY) maxY = ndcY;
     }
     if (nInFront === 0) return null;
-    // A sample past the near plane is dropped before it can corrupt the
-    // bbox, but a STRADDLING patch's bbox is still meaningless: the true
-    // footprint sweeps toward infinity as a sample nears w=0, so the
-    // surviving corners alone can land anywhere, including a false reject
-    // that prunes the whole subtree. Trust the bbox only when nothing was
-    // dropped; a straddler that survived the sphere test is at the camera's
-    // feet, so treat it as screen-filling and force it to the deepest level
-    // any band offers here.
+    // A sample past the near plane is dropped before it can corrupt the bbox,
+    // but a straddler's bbox stays meaningless regardless (its footprint
+    // sweeps toward infinity as w→0): trust it only when nothing was dropped,
+    // else treat the patch as screen-filling at the deepest level.
     const straddlesNearPlane = nInFront < 9;
     if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) return null;
 
-    // NDC spans 2 units across the viewport, hence the halving. The GEOMETRIC
-    // MEAN of the two extents, not the max: a foreshortened horizon sliver is
-    // wide and a few pixels tall, and sizing it by its width demanded the
-    // deepest level for tiles covering almost no area — 876 of the 930 leaves
-    // at a 60 degree tilt, far past what the atlases can hold.
+    // NDC spans 2 units, hence the halving. GEOMETRIC MEAN, not max — sizing
+    // a foreshortened sliver by its width alone over-refines it for its area.
     const screenPx = straddlesNearPlane
       ? Math.max(viewportPx[0], viewportPx[1])
       : Math.sqrt(((maxX - minX) / 2) * viewportPx[0] * (((maxY - minY) / 2) * viewportPx[1]));
