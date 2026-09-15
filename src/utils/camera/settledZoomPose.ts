@@ -7,6 +7,7 @@ import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { bodyUpWeight } from './bodyUpWeight';
 import { eyeFrameOf } from './eyeFrameOf';
 import { flooredBodyPose } from './flooredBodyPose';
+import { heldAnchorM } from './heldAnchorM';
 import { levelledPose } from './levelledPose';
 import { mappedTiltRad } from './mappedTiltRad';
 import { orientStepRad } from './orientStepRad';
@@ -23,8 +24,8 @@ import { wrapRad } from '../math/wrapRad';
  * directions — heading → north of the band-blended reference, tilt → the
  * remembered mapping, roll → level. `diveAnchorM !== null` IS the dive: its
  * turns pivot about the anchor so the dived-on point stays pixel-locked
- * (Q4c); a recession turns about the eye (anchor-pivoting there cancels
- * ~h/(R+h) of every correction, measured). `northUp` (ruling 11) gates
+ * (Q4c); a recession turns about the eye — it has nothing to hold, unless the
+ * arm is anchored at a surface point. `northUp` (ruling 11) gates
  * heading + roll only: the tilt term's 0-at-disengage is what keeps the
  * fold's retarget view-exact, toggle or no toggle. Every settle amount here is
  * priced in `logZoom` (`|ln factor|`), so a trackpad twitch and a mouse notch
@@ -45,6 +46,11 @@ export function settledZoomPose(
   let out = pose;
   const eyeM0 = bodyFixedEyeM(out);
   if (Math.hypot(...eyeM0) === 0) return pose;
+  // Every turn below settles ABOUT this point: a dive's own anchor, or — on a
+  // recession — the surface point the arm holds, which only the site hand-back
+  // gives it. Turning about the eye instead lets that point leave the sightline,
+  // and the ramp to the remembered tilt walks the rover out of frame.
+  const holdM = diveAnchorM ?? heldAnchorM(pose);
   // The reference is the band blend (round 5): body pole deep in, scene up at
   // disengage, so an engaged recession hands the fold a scene-aligned bake.
   const blendW = bodyUpWeight(Math.hypot(...eyeM0) / bodyRadiusM - 1, tuning);
@@ -67,12 +73,8 @@ export function settledZoomPose(
           logZoom,
         );
     if (dPsi !== 0) {
-      out = diveAnchorM
-        ? turnedPose(
-            out,
-            quatFromAxisAngle(normalize3(diveAnchorM), dPsi),
-            BODY_LOCAL_FRAME.centreM,
-          )
+      out = holdM
+        ? turnedPose(out, quatFromAxisAngle(normalize3(holdM), dPsi), BODY_LOCAL_FRAME.centreM)
         : turnedPose(out, quatFromAxisAngle(f0.localUp, dPsi), null);
     }
   }
@@ -91,7 +93,7 @@ export function settledZoomPose(
     out = tiltTurnedPose(
       out,
       -riddenOrientStepRad(devPre, devNew - devPre, Infinity, logZoom),
-      diveAnchorM,
+      holdM,
     );
   }
 
@@ -100,7 +102,7 @@ export function settledZoomPose(
       blendW,
       sceneUpLocal,
       heldAzimuthRad: null,
-      pivotM: diveAnchorM,
+      pivotM: holdM,
       capRad: ORIENT_DECAY.capRadPerLogZoom * Math.abs(logZoom),
     });
   }

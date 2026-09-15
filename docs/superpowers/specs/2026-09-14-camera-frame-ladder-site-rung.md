@@ -64,7 +64,9 @@ arm's, and there is no ground plane anywhere in that path.
 - The fold steps **at most one rung per at-rest frame**; clips own the rung
   while playing, as today; no fixpoint iteration.
 - Site→body disengage lands the body arm anchored **at the site**
-  (`anchorLocalM` = the site point), not at the body centre.
+  (`anchorLocalM` = the site point), not at the body centre — and the body
+  arm's zoom settle turns about that anchor, so the site stays on the sightline
+  while the display tilt ramps back to the remembered value (ruling 12).
 
 ## 1. Goals / non-goals
 
