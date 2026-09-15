@@ -8,7 +8,7 @@
  * (2048=z2, 4096=z3, 8192=z4) and matches the WGS84/EOX ladder verbatim.
  * Three floors, none a constant here: BASE (`earthBaseLevelForTier`) is
  * the walk floor; REQUEST (`derivePlannerParams`) and BAKE
- * (`tools/textures/buildEarthTiles.ts`) are the fetch/bake floors.
+ * (`tools/textures/buildSurfaceTiles.ts`) are the fetch/bake floors.
  */
 
 /** Full equirectangular width, in texels, of pyramid level 0. Level `z` is

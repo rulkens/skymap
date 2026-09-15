@@ -662,7 +662,7 @@ export const RAW_DATA = {
 
   // The eight 21600x21600 quadrants composite to 86400x43200, about 464 m/texel
   // and four ladder levels deeper than the equirect (z7 against z5). Only
-  // `build-earth-tiles` reads their pixels; they ride the same `fetch-textures`
+  // `build-surface-tiles` reads their pixels; they ride the same `fetch-textures`
   // pull as everything else so the 421 MB is obtainable by command, not by hand.
   // `BMNG_QUADRANT_KEYS` is the one enumeration of the set.
 

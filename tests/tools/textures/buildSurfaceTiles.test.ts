@@ -5,7 +5,7 @@ import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
-import { bakeAll, bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildEarthTiles';
+import { bakeAll, bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildSurfaceTiles';
 import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
 import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
 import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
@@ -17,7 +17,7 @@ const dirs: string[] = [];
 
 /** A fresh temp dir, tracked for cleanup once the whole file is done. */
 function tmpDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'build-earth-tiles-'));
+  const dir = mkdtempSync(join(tmpdir(), 'build-surface-tiles-'));
   dirs.push(dir);
   return dir;
 }
@@ -243,7 +243,7 @@ describe('bakeAll', () => {
   // The Fix-1 "always opaque" invariant, exercised through `bakeAll` itself
   // rather than `underfillImagerySource`/`bakeCoarserLevel` in isolation —
   // pins the `effective = underfillImagerySource(source, underfill)` wiring
-  // at the DEEPEST level (buildEarthTiles.ts's `bakeDeepestLevel` call),
+  // at the DEEPEST level (buildSurfaceTiles.ts's `bakeDeepestLevel` call),
   // which the two halves' own tests don't reach.
   const ORANGE = [255, 128, 0, 255] as const;
 
@@ -435,167 +435,50 @@ describe('bakeAll', () => {
     );
   });
 
-  describe('--only', () => {
-    /** Same shape as `stubSource`, plus a call counter — needed to prove a
-     *  skipped band's `readBox` never runs. */
-    function countingStub(
-      id: string,
-      coverage: LonLatBounds,
-      rgba: readonly [number, number, number, number],
-    ): EarthImagerySource & { readBoxCalls: number } {
-      const stub = {
-        id,
-        attribution: `${id} attribution`,
-        provenance: { sourceId: id, attribution: `${id} attribution`, vintage: 'stub-vintage' },
-        maxLevel: STUB_Z,
-        coverage: [coverage],
-        readBoxCalls: 0,
-        async readBox(box: LonLatBounds, widthPx: number, heightPx: number) {
-          stub.readBoxCalls++;
-          if (box.west !== coverage.west) return null;
-          const raster = new Uint8Array(widthPx * heightPx * 4);
-          for (let i = 0; i < raster.length; i += 4) raster.set(rgba, i);
-          return raster;
-        },
-      };
-      return stub;
-    }
+  it('a second bakeAll over the same output skips existing tiles and leaves bytes identical', async () => {
+    const dir = tmpDir();
+    const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
+    const bands = [{ source: west, minLevel: STUB_Z }];
 
-    it('writes a per-band index for every band on a full bake', async () => {
-      const dir = tmpDir();
-      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
-      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
+    await bakeAll(bands, dir);
+    const tilePath = join(
+      dir,
+      surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    const beforeMtime = statSync(tilePath).mtimeMs;
+    const beforeBytes = readFileSync(tilePath);
 
-      await bakeAll(
-        [
-          { source: west, minLevel: STUB_Z },
-          { source: east, minLevel: STUB_Z },
-        ],
-        dir,
-      );
+    await bakeAll(bands, dir);
 
-      const westIndex = readFileSync(join(dir, 'earth-tiles/index-stub-west.txt'), 'utf8');
-      const eastIndex = readFileSync(join(dir, 'earth-tiles/index-stub-east.txt'), 'utf8');
-      expect(westIndex).toContain(
-        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
-      );
-      expect(eastIndex).toContain(
-        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
-      );
-    });
+    expect(statSync(tilePath).mtimeMs).toBe(beforeMtime);
+    expect(readFileSync(tilePath).equals(beforeBytes)).toBe(true);
+  });
 
-    it('skips a band --only does not name: no readBox calls, its tile untouched, merged index and manifest still carry it', async () => {
-      const dir = tmpDir();
-      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
-      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
-      const bands = [
-        { source: west, minLevel: STUB_Z },
-        { source: east, minLevel: STUB_Z },
-      ];
-      await bakeAll(bands, dir);
-      const eastTilePath = join(
-        dir,
-        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
-      );
-      const beforeMtime = statSync(eastTilePath).mtimeMs;
-      east.readBoxCalls = 0;
+  it("refuses to write the manifest while a band's tile set is incomplete", async () => {
+    const dir = tmpDir();
+    const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
+    const bands = [{ source: west, minLevel: STUB_Z }];
+    await bakeAll(bands, dir);
 
-      await bakeAll(bands, dir, { only: 'stub-west' });
+    const tilePath = join(
+      dir,
+      surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    rmSync(tilePath);
+    // Simulate the underlying raw data no longer covering this box (a
+    // harvest area shrank, a raw file went missing) — a bare retry can't
+    // regenerate what the prior index promised.
+    west.readBox = async () => null;
 
-      expect(east.readBoxCalls).toBe(0);
-      expect(statSync(eastTilePath).mtimeMs).toBe(beforeMtime);
+    const manifestPath = join(dir, 'earth-tiles/manifest.json');
+    const indexPath = join(dir, 'earth-tiles/index.txt');
+    const manifestBefore = readFileSync(manifestPath, 'utf8');
+    const indexBefore = readFileSync(indexPath, 'utf8');
 
-      const index = readFileSync(join(dir, 'earth-tiles/index.txt'), 'utf8');
-      expect(index).toContain(
-        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
-      );
-      expect(index).toContain(
-        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
-      );
+    await expect(bakeAll(bands, dir)).rejects.toThrow(/missing on disk/);
 
-      const manifest = JSON.parse(
-        readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
-      ) as SurfaceTileManifest;
-      expect(manifest.bands).toHaveLength(2);
-    });
-
-    it('throws naming the band when a stitched tile has been deleted from disk', async () => {
-      const dir = tmpDir();
-      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
-      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
-      const bands = [
-        { source: west, minLevel: STUB_Z },
-        { source: east, minLevel: STUB_Z },
-      ];
-      await bakeAll(bands, dir);
-      const eastTilePath = join(
-        dir,
-        surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
-      );
-      rmSync(eastTilePath);
-
-      await expect(bakeAll(bands, dir, { only: 'stub-west' })).rejects.toThrow(/stub-east/);
-    });
-
-    it('throws naming the band when its minLevel drifted since the prior index', async () => {
-      const dir = tmpDir();
-      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
-      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
-      await bakeAll(
-        [
-          { source: west, minLevel: STUB_Z },
-          { source: east, minLevel: STUB_Z },
-        ],
-        dir,
-      );
-
-      // Same band, now claiming a deeper floor than the run that wrote its
-      // stitched index — that index still only has z1 lines, not z0.
-      await expect(
-        bakeAll(
-          [
-            { source: west, minLevel: STUB_Z },
-            { source: east, minLevel: STUB_Z - 1 },
-          ],
-          dir,
-          { only: 'stub-west' },
-        ),
-      ).rejects.toThrow(/stub-east/);
-    });
-
-    it('throws listing available ids when --only names an unknown band', async () => {
-      const dir = tmpDir();
-      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
-
-      await expect(
-        bakeAll([{ source: west, minLevel: STUB_Z }], dir, { only: 'does-not-exist' }),
-      ).rejects.toThrow(/stub-west/);
-    });
-
-    it('throws naming the band when its stitched index was written under a different TILE_PREFIX', async () => {
-      const dir = tmpDir();
-      const west = countingStub('stub-west', BOX_WEST, [255, 0, 0, 255]);
-      const east = countingStub('stub-east', BOX_EAST, [0, 0, 255, 255]);
-      const bands = [
-        { source: west, minLevel: STUB_Z },
-        { source: east, minLevel: STUB_Z },
-      ];
-      await bakeAll(bands, dir);
-
-      // A stale per-band index left over from a run under an OLDER
-      // TILE_PREFIX — tiles are immutable and the index is read verbatim off
-      // disk, never rewritten, so a version bump between that run and now
-      // must fail loudly rather than ship a manifest at today's prefix
-      // pointing at index lines the new prefix never baked.
-      const eastIndexPath = join(dir, 'earth-tiles/index-stub-east.txt');
-      const stalePrefixed = readFileSync(eastIndexPath, 'utf8').replaceAll(
-        TILE_PREFIX,
-        'earth-tiles/v0',
-      );
-      writeFileSync(eastIndexPath, stalePrefixed);
-
-      await expect(bakeAll(bands, dir, { only: 'stub-west' })).rejects.toThrow(/stub-east/);
-    });
+    expect(readFileSync(manifestPath, 'utf8')).toBe(manifestBefore);
+    expect(readFileSync(indexPath, 'utf8')).toBe(indexBefore);
   });
 });
 

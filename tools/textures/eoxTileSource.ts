@@ -243,7 +243,7 @@ export async function eoxTileSource(opts: {
 
       // Per-child read only — already native size, so a resize here would be
       // a no-op today; compositing them straight in (never resizing the
-      // canvas AFTER `.composite()` — see `buildEarthTiles.ts:150-160`)
+      // canvas AFTER `.composite()` — see `buildSurfaceTiles.ts`'s `bakeCoarserLevel`)
       // matches `bakeCoarserLevel`'s pipeline shape for the same libvips reason.
       const quadrants = await Promise.all(
         present.map(async (child) => ({

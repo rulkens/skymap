@@ -1,7 +1,7 @@
 /**
  * underfillImagerySource — wrap a regional PRIMARY source so its transparent
  * margins fall back to a coarser FILLER source, guaranteeing every baked tile
- * is fully opaque (see `buildEarthTiles.ts`'s "bake invariant" note: "no
+ * is fully opaque (see `buildSurfaceTiles.ts`'s "bake invariant" note: "no
  * coverage" must show up as an absent file, never a transparent texel, or a
  * regional tile shadows the ancestor beneath it in the runtime page table).
  * Identity fields are `primary`'s verbatim; only `readBox` blends.

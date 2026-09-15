@@ -2,7 +2,7 @@ import type { SurfaceTileProvenance } from '../../src/@types/scene/SurfaceTilePr
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /**
- * EarthImagerySource — the one seam between `buildEarthTiles` and wherever
+ * EarthImagerySource — the one seam between `buildSurfaceTiles` and wherever
  * the pixels come from. Lives in the BUILD tool only, one method wide: a
  * source only answers "given this piece of the planet, at this pixel size,
  * what does it look like?" — the tile grid, level ladder and container stay

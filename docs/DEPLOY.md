@@ -13,7 +13,7 @@ A full data-refreshing deploy:
 
 1. `npm run build-tiers` — regenerates all `public/data/*.bin`.
 2. `npm run build-filaments` — only if filaments need rebuilding (rare).
-3. `npm run build-earth-tiles` — only if the Earth surface virtual texture needs rebaking (rare). Read "Earth tile versioning" below first — changing pixels without bumping the version leaves the CDN serving the wrong imagery.
+3. `npm run build-surface-tiles` — only if the Earth surface virtual texture needs rebaking (rare). Read "Earth tile versioning" below first — changing pixels without bumping the version leaves the CDN serving the wrong imagery.
 4. `npm run sync-r2-secure` — uploads changed files across every group (see "R2 sync architecture" below), then purges matching CDN URLs for the groups that aren't immutable; idempotent, so rerunning only moves bytes that differ. The wrapper loads `CLOUDFLARE_API_TOKEN` + `CLOUDFLARE_ZONE_ID` from the OS secrets store; bare `sync-r2` (no-bash fallback) skips the purge without credentials, leaving stale CDN bytes until TTL expiry.
 5. `npm run deploy` — pushes `main`; Cloudflare rebuilds the shell (~30 s).
 
@@ -42,7 +42,7 @@ If a bulk group has files but the credentials below are missing, `syncR2.ts` fai
 
 #### Earth tile versioning
 
-Tile keys sit under a versioned prefix (currently `earth-tiles/v7`; the `TILE_PREFIX` constant in `tools/textures/buildEarthTiles.ts` is the source of truth, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
+Tile keys sit under a versioned prefix (currently `earth-tiles/v7`; the `TILE_PREFIX` constant in `tools/textures/buildSurfaceTiles.ts` is the source of truth, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
 
 A manifest SHAPE change (not just pixels — e.g. `levels.surface` growing a second band) is a sharper case: `fetchEarthTileManifest`'s runtime guard rejects any manifest shape it doesn't recognise, so between a merge that changes the shape and the next `npm run sync-r2-secure`, every client fetches the stale R2 manifest, gets rejected, and Earth surface tiles are OFF in production entirely — the sync is a blocking merge step, not a follow-up.
 
