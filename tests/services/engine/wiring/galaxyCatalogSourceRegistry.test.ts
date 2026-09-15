@@ -63,9 +63,11 @@ import { syncVisibilityFadeItem } from '../../../../src/services/engine/wiring/s
 import { galaxyCatalogIdOf } from '../../../../src/utils/galaxyCatalogIdOf';
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 import { engineSourceCountReported } from '../../../../src/state/engine/engineSlice';
+import { installSlotReadyWake } from '../../../../src/services/engine/wiring/installSlotReadyWake';
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 
 /**
  * Minimal-shape fixture for the `EngineState` slices the helper reads
@@ -106,6 +108,7 @@ function makeState(opts: {
     assetSlots: {
       points: new Map(),
     },
+    contentVersion: 0,
   } as unknown as EngineState;
 }
 
@@ -214,6 +217,27 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(state.data.galaxies.catalogs.get(Source.Glade)).toBe(cloud);
   });
 
+  it('a commit bumps state.contentVersion by exactly one', async () => {
+    const upload = vi.fn().mockResolvedValue(undefined);
+    const state = makeState({ rendererUpload: upload });
+    const cfg: GalaxyCatalogSourceConfig = {
+      source: Source.SDSS,
+      shortName: 'sdss',
+      fetcher: async () => fakeCloud(5),
+      category: 'survey',
+    };
+
+    wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
+    const slot = state.assetSlots.points.get(Source.SDSS)!;
+    slot.load({ source: Source.SDSS, tier: 'medium' });
+
+    await vi.waitFor(() => {
+      expect(slot.state().kind).toBe('ready');
+    });
+
+    expect(state.contentVersion).toBe(1);
+  });
+
   it('skips the upload silently when state.gpu.galaxyPointRenderer is null (post-destroy / pre-init race)', async () => {
     const state = makeState({ rendererUpload: vi.fn() });
     // Simulate the renderer having been torn down before commit fires.
@@ -279,5 +303,49 @@ describe('wireGalaxyCatalogSourceSlot — fade-in bridge', () => {
     expect(upload.mock.invocationCallOrder[0]!).toBeLessThan(
       bridge.mock.invocationCallOrder[bridge.mock.invocationCallOrder.length - 1]!,
     );
+  });
+
+  // The sky-cubemap bake key no longer reads `isAnyAnimating` (Task 3's
+  // `contentVersion` term replaces it) — this pins that the render wake a
+  // re-commit needs was never solely the fade's to give: `installSlotReadyWake`
+  // fires on every `ready` transition regardless of whether the row's fade
+  // has anything left to animate.
+  it('a re-commit whose fade is already held still requests a render', async () => {
+    const upload = vi.fn().mockResolvedValue(undefined);
+    const requestRender = vi.fn();
+    const state = makeState({ rendererUpload: upload });
+    (
+      state as unknown as { subsystems: { scheduler: { requestRender: () => void } } }
+    ).subsystems.scheduler = { requestRender };
+    const cfg: GalaxyCatalogSourceConfig = {
+      source: Source.SDSS,
+      shortName: 'sdss',
+      fetcher: async () => fakeCloud(5),
+      category: 'survey',
+    };
+
+    wireGalaxyCatalogSourceSlot(state, cfg, makeDeps());
+    const slot = state.assetSlots.points.get(Source.SDSS)!;
+    installSlotReadyWake(
+      requestRender,
+      state.assetSlots.points as unknown as ReadonlyMap<string, AssetSlot<unknown, unknown>>,
+    );
+
+    // Pre-seed the row's fade at the target the commit will drive toward —
+    // "already held", nothing left for the fade path to animate.
+    (state.subsystems.fades as { setImmediate: (id: unknown, v: number) => void }).setImmediate(
+      { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(Source.SDSS) },
+      1,
+    );
+
+    slot.load({ source: Source.SDSS, tier: 'medium' });
+    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    requestRender.mockClear();
+
+    // Re-commit.
+    slot.load({ source: Source.SDSS, tier: 'medium' });
+    await vi.waitFor(() => expect(upload).toHaveBeenCalledTimes(2));
+
+    expect(requestRender).toHaveBeenCalled();
   });
 });

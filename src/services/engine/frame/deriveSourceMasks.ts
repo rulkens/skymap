@@ -42,6 +42,7 @@ import { maskWith } from '../../../utils/maskWith';
 
 export function deriveSourceMasks(
   state: Pick<EngineState, 'settings' | 'subsystems'>,
+  nowMs: number,
 ): SourceMasks {
   let draw = 0;
   let pick = 0;
@@ -51,7 +52,10 @@ export function deriveSourceMasks(
     // typing on `.id` would otherwise force here.
     const id = galaxyCatalogIdOf(src);
     const enabled = state.settings.galaxyCatalogs.items[id].enabled;
-    const opacity = state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id });
+    // Sampled at THIS frame's nowMs, not the registry's last-ticked clock
+    // (`tick(nowMs)` runs at the frame TAIL, runFrame.ts) — otherwise the mask
+    // lags the fade by one frame and keeps a just-settled source drawing.
+    const opacity = state.subsystems.fades.opacityOf({ kind: 'galaxyCatalog', id }, nowMs);
     // Draw through the fade-out tail so a hidden galaxy catalog ramps down smoothly.
     if (enabled || opacity > 0) draw = maskWith(draw, src);
     // Pick on intent only — unclickable the instant it's toggled off.

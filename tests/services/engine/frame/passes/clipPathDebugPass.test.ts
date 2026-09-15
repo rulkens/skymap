@@ -70,9 +70,7 @@ function makeCtx(): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
-    texturedDisks: {} as never,
   };
 }
 

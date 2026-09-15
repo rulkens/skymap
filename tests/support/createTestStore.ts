@@ -35,18 +35,19 @@
  */
 
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
+import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
+import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';
 import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 
 // The narrow engine surface `watchWakeSaga` (and its sibling reconcile watchers)
 // reach for. Every method is a no-op: a test store has no scheduler, fade
-// registry, flow field or bias LUT to drive, and no assertion here inspects
-// these — they exist only so `getContext('reconcile')` resolves.
+// registry or bias LUT to drive, and no assertion here inspects these — they
+// exist only so `getContext('reconcile')` resolves.
 export const NOOP_RECONCILE: ReconcileEffects = {
   requestRender: () => {},
   syncFades: () => {},
-  reseedFlow: () => {},
   bakeBias: () => {},
   logCameraState: () => {},
   applySwapFormat: () => {},
@@ -60,7 +61,7 @@ export const NOOP_RECONCILE: ReconcileEffects = {
 const EMPTY_RESOLVE_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 
@@ -76,6 +77,12 @@ const EMPTY_RESOLVE_DEPS: ResolveDeps = {
 export const NOOP_SAGA_CONTEXT: SagaContext = {
   reconcile: NOOP_RECONCILE,
   resolveDeps: () => EMPTY_RESOLVE_DEPS,
+  // The real core rows, over the empty bag above: a static id (body/star/
+  // cluster/…) resolves off its table exactly as the running app does, while
+  // a catalog-backed id (galaxy) still resolves to null with no engine
+  // resource in the path — the pre-branch behaviour `resolveFocusId` gave
+  // for free before it was folded into the composed resolver (Ruling 4).
+  selection: composeSelectionRows(() => coreSelectionRows(() => EMPTY_RESOLVE_DEPS)),
   // Null is the same answer the engine gives pre-bootstrap and post-destroy, and
   // both camera sagas already handle it by no-opping.
   cameraRuntime: () => null,

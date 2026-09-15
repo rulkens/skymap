@@ -22,4 +22,6 @@ export type SkyCaptureRuntime = {
    * reference too, but only its null-ness is consulted.
    */
   bakedSettings: EngineSettingsState | null;
+  /** The row's own memory of `state.contentVersion` at its last bake; same null sentinel. */
+  bakedContentVersion: number | null;
 };

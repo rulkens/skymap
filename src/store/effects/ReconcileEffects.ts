@@ -11,10 +11,9 @@
  * Each method represents a distinct engine concern that a saga might need to
  * trigger in response to a dispatched action:
  *   requestRender  — wakes the render-on-demand scheduler
- *   syncFades      — drives the intent→fade bridge; `rows` narrows to specific
- *                    layers, OMITTING it re-fades every row (the full pass a tour
- *                    scene-restore needs)
- *   reseedFlow     — reseeds the cosmic-flow particle field (e.g. on setting change)
+ *   syncFades      — re-syncs every intent→fade row; cheap on every settings
+ *                    write because a row whose target hasn't moved costs
+ *                    `applyIntent` one `targetOf` lookup, not a fade restart
  *   bakeBias       — re-computes the galaxy brightness bias LUT
  *   logCameraState — prints the current orbit-camera pose (debug aid, the
  *                    `l` key)
@@ -26,16 +25,15 @@
  * store read (`captureScene` selector) and its restore is pure Intent
  * (`restoreSceneSaga` puts `mergeSnapshot` + `updateSelectionFocus`); the restore
  * fade rides the EXISTING `syncFades` reactively (watchFadesSaga reacts to
- * `mergeSnapshot`), so no restore-specific effect is added here.
+ * every settings write, `mergeSnapshot` included), so no restore-specific
+ * effect is added here.
  */
 
-import type { VisibilityLayerKey } from '../../@types/animation/VisibilityLayerKey';
 import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 
 export type ReconcileEffects = {
   requestRender: () => void;
-  syncFades: (rows?: readonly VisibilityLayerKey[]) => void;
-  reseedFlow: () => void;
+  syncFades: () => void;
   bakeBias: (mode: BiasMode) => void;
   logCameraState: () => void;
   applySwapFormat: (desired: GPUTextureFormat) => void;

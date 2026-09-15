@@ -9,7 +9,7 @@ function spyRenderer(): FlowFieldRenderer & { encodeCompute: ReturnType<typeof v
   return {
     label: 'flowFieldRenderer',
     upload: vi.fn(),
-    maybeReseed: vi.fn(),
+    reconcile: vi.fn(),
     encodeCompute: vi.fn(),
     draw: vi.fn(),
     destroy: vi.fn(),

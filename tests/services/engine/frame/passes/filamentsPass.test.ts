@@ -42,9 +42,7 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
       physicalRadiusMpc: 0,
       blend: focusBlend,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {} as never,
-    texturedDisks: {} as never,
   };
 }
 

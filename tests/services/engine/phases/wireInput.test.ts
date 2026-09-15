@@ -201,9 +201,18 @@ function makeDeps(): BootstrapDeps {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
+    // `createClickResolver` is module-mocked above, so no test here exercises
+    // a resolution — a resolver that always returns null is enough.
+    selection: {
+      resolvePick: () => null,
+      extractRow: () => null,
+      resolveFocusId: () => null,
+      focusIdOf: () => null,
+    },
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,
+      format: 'bgra8unorm' as GPUTextureFormat,
       unwatchHdrCapability: () => {},
     },
   };

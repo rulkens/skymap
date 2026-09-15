@@ -12,7 +12,6 @@ import { all } from 'typed-redux-saga';
 
 import { watchTierSaga } from '../state/tier/watchTierSaga';
 import { watchWakeSaga } from './effects/watchWakeSaga';
-import { watchFlowReseedSaga } from './effects/watchFlowReseedSaga';
 import { watchSwapFormatSaga } from './effects/watchSwapFormatSaga';
 import { watchBiasBakeSaga } from './effects/watchBiasBakeSaga';
 import { watchFadesSaga } from './effects/watchFadesSaga';
@@ -36,7 +35,6 @@ export function* mainSaga() {
   yield* all([
     watchTierSaga(),
     watchWakeSaga(),
-    watchFlowReseedSaga(),
     watchSwapFormatSaga(),
     watchBiasBakeSaga(),
     watchFadesSaga(),

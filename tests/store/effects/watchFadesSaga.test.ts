@@ -12,14 +12,10 @@ import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
 import {
   setMilkyWayEnabled,
   writeVolumeField,
-  setFlowEnabled,
   setZoneOfAvoidanceEnabled,
   mergeSnapshot,
 } from '../../../src/state/settings/settingsSlice';
-import {
-  VISIBILITY_ACTION_ROW,
-  FADE_ROW,
-} from '../../../src/services/animation/visibilityActionRow';
+import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 
 describe('watchFadesSaga', () => {
   let store: ReturnType<typeof buildStore>['store'];
@@ -31,11 +27,28 @@ describe('watchFadesSaga', () => {
     reconcile = built.reconcile;
   });
 
-  it('setMilkyWayEnabled(true) → syncFades(["milkyWayDisk"]) called', () => {
-    store.dispatch(setMilkyWayEnabled(true));
+  // The per-key cases collapse into one shape: any settings write re-syncs
+  // every row (Task 4's targetOf skip is what keeps this cheap — see Task 5).
 
+  it('any settings write calls syncFades with no rows', () => {
+    store.dispatch(setMilkyWayEnabled(true));
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
-    expect(reconcile.syncFades).toHaveBeenCalledWith(['milkyWayDisk']);
+    expect(reconcile.syncFades).toHaveBeenCalledWith();
+
+    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(2);
+    expect(reconcile.syncFades).toHaveBeenNthCalledWith(2);
+
+    store.dispatch(setZoneOfAvoidanceEnabled(true));
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(3);
+
+    store.dispatch(mergeSnapshot({}));
+    expect(reconcile.syncFades).toHaveBeenCalledTimes(4);
+  });
+
+  it('a non-settings write does not call syncFades', () => {
+    store.dispatch(setAutoRotate({ active: true, rate: 1 }));
+    expect(reconcile.syncFades).not.toHaveBeenCalled();
   });
 
   // An assertion living only INSIDE the spy passes silently when the spy is never
@@ -51,44 +64,5 @@ describe('watchFadesSaga', () => {
     store.dispatch(setMilkyWayEnabled(!before));
 
     expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
-  });
-
-  it('writeVolumeField contrast patch → syncFades(["volumeField"]) fired', () => {
-    // Any patch triggers the row-driven sync — the no-op guard lives in the fade
-    // bridge, not this saga.
-    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
-
-    expect(reconcile.syncFades).toHaveBeenCalledWith(['volumeField']);
-  });
-
-  it('writeVolumeField idempotent: second identical dispatch → syncFades fires again', () => {
-    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
-    store.dispatch(writeVolumeField({ id: 'cf4-density', patch: { contrast: 0.5 } }));
-
-    expect(reconcile.syncFades).toHaveBeenCalledTimes(2);
-    expect(reconcile.syncFades).toHaveBeenNthCalledWith(1, ['volumeField']);
-    expect(reconcile.syncFades).toHaveBeenNthCalledWith(2, ['volumeField']);
-  });
-
-  // The dead-toggle defect: a fade row with no matching FADE_ROW entry writes the
-  // store and never calls syncFades.
-
-  // The full pass is what lets a tour scene-restore need no bespoke engine effect.
-
-  it('mergeSnapshot → syncFades() called with no rows (full pass)', () => {
-    store.dispatch(mergeSnapshot({}));
-
-    expect(reconcile.syncFades).toHaveBeenCalledTimes(1);
-    expect(reconcile.syncFades).toHaveBeenCalledWith();
-  });
-
-  // Fails when two rows declare the same writer: the derivation is
-  // last-write-wins, so a colliding second row would silently take over the
-  // first row's FADE_ROW entry and this assertion would catch it failing.
-
-  it('every FADE_ROW entry maps to the layer whose row declares that writer', () => {
-    for (const [key, row] of Object.entries(VISIBILITY_ACTION_ROW)) {
-      expect(row.writes === null || FADE_ROW[row.writes.type] === key).toBe(true);
-    }
   });
 });

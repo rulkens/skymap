@@ -115,7 +115,10 @@ export function cubemapFaceContext(input: {
     },
     basis,
     basis,
-    deriveSourceMasks(state).draw, // draw mask: a capture, not a click target
+    // draw mask: a capture, not a click target. Sampled at the FRAME's nowMs
+    // (not the registry's last-ticked clock) so a just-settled fade-out never
+    // gets baked into the capture — see deriveSourceMasks's nowMs docblock.
+    deriveSourceMasks(state, nowMs).draw,
 
     nowMs,
     state.cameraRuntime.outputs.simDays,

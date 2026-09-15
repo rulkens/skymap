@@ -57,7 +57,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       physicalRadiusMpc: 0,
       blend: 0,
     },
-    galaxyPointRenderer: {} as never,
     renderTargets: {
       specs: FIXTURE_SPECS,
       specOf: (id: string) => {
@@ -80,7 +79,6 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
       setSwapFormat: vi.fn(),
       destroy: vi.fn(),
     },
-    texturedDisks: {} as never,
   };
 }
 

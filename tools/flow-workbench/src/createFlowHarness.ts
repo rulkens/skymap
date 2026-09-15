@@ -7,7 +7,7 @@
  * registry. Now it composes — the host owns only what a flow-tuning harness
  * needs (device, HDR graph, orbit camera, the per-frame loop, the store bridge)
  * and DELEGATES every flow concern to `createFlowFieldRenderer` from `src/`. The
- * renderer's `upload`/`encodeCompute`/`draw`/`maybeReseed` are exactly the
+ * renderer's `upload`/`encodeCompute`/`draw`/`reconcile` are exactly the
  * surface the runtime engine drives, so the look the workbench shows IS the look
  * the app ships. We do not reimplement; we drive.
  *
@@ -115,14 +115,6 @@ export async function createFlowHarness(
   let lastT = 0;
   let autoYaw = 0;
 
-  // Reseed trackers: a mode switch OR a change in the rounded particle count
-  // must re-seed the shared buffer set (Delta 1 in flowFieldRenderer — the modes
-  // share one buffer triple, so switching must overwrite stale state). We watch
-  // those two store fields and arm a reseed when either moves, mirroring the
-  // runtime handle's reseed-on-mode/count.
-  let lastMode = initial.flow.mode;
-  let lastCount = Math.round(initial.flow.count);
-
   function tick(now: number): void {
     if (!running) return;
     rafHandle = requestAnimationFrame(tick);
@@ -147,13 +139,9 @@ export async function createFlowHarness(
     resizeCanvasToDisplay(canvas);
     renderGraph.resize(canvas.width, canvas.height);
 
-    // Store-driven reseed: arm when mode or rounded count changed since last frame.
-    const roundedCount = Math.round(s.flow.count);
-    if (s.flow.mode !== lastMode || roundedCount !== lastCount) {
-      renderer.maybeReseed();
-      lastMode = s.flow.mode;
-      lastCount = roundedCount;
-    }
+    // The renderer owns the mode/count diff now (mirrors runFrame's per-frame
+    // milkyWayCloud.reconcile call) — the workbench just feeds it every frame.
+    renderer.reconcile({ mode: s.flow.mode, count: Math.round(s.flow.count) });
 
     const encoder = device.createCommandEncoder();
 

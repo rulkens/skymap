@@ -35,7 +35,6 @@
  */
 
 import { cssToTexPx } from '../helpers/cssToTexPx';
-import { resolvePick } from '../helpers/resolvePick';
 import { updateSelectionHover } from '../../../state/selection/selectionSlice';
 import type { HoverPickDeps } from '../../../@types/engine/interaction/HoverPickDeps';
 import type { CssPx } from '../../../@types/input/CssPx';
@@ -93,7 +92,7 @@ export function createHoverPickDriver(deps: HoverPickDeps): {
 
     deps.pickProgram
       .pick(cssToTexPx(pos.x), cssToTexPx(pos.y))
-      .then((hit) => deps.store.dispatch(updateSelectionHover(resolvePick(hit, deps.resolveDeps))))
+      .then((hit) => deps.store.dispatch(updateSelectionHover(deps.resolvePick(hit))))
       .catch(() => {
         // A failed GPU readback is not a hover result worth surfacing: leave
         // the prior hover selection in place rather than crash the driver.

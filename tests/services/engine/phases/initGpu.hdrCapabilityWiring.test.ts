@@ -468,6 +468,14 @@ function makeDeps(): BootstrapDeps {
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
+    // initGpu never reads a resolver — a resolver that always returns null
+    // is enough to satisfy the type.
+    selection: {
+      resolvePick: () => null,
+      extractRow: () => null,
+      resolveFocusId: () => null,
+      focusIdOf: () => null,
+    },
   };
 }
 

@@ -16,6 +16,13 @@
  *
  * `ProceduralDiskFrameInput` aliases this type verbatim (the procedural body
  * needs no extras); the textured body extends it.
+ *
+ * `sourceOpacity` carries the source's live survey-fade opacity (`fades.opacityOf`
+ * sampled at the frame's `nowMs`) so both LOD bodies fold visibility into their
+ * emitted alpha/brightness the same way the point-sprite pass does — a hidden
+ * catalog's disks now fade out instead of popping once the mask bit clears.
+ * Each body reads it once per source in its `beginSource` (not per row: the
+ * per-row loop scales with ~2.5M rows).
  */
 
 import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
@@ -27,4 +34,5 @@ export type DiskWalkInput = {
   readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   readonly visibleSourceMask: number;
   readonly pxPerRad: number;
+  readonly sourceOpacity: (source: SourceType) => number;
 };

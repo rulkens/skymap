@@ -35,7 +35,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
-- [ ] **`Layer.settings` erases the keys `ComposedClusters` needs** `ready` — the fragment tuple stays a parallel authority with nothing tying it to `composition.layers`; close before the first Layer value lands. → [details](backlog/2026-09-11-layer-settings-tuple-seam.md)
 - [ ] **Focusable-kind registry** `needs-design` — a focusable/selectable kind is smeared across ~10 per-kind dispatch tables (pick, selection row, framing, halo, URL); consolidate into one descriptor + registry, sibling to the subsystem-bundle work. → [details](backlog/2026-08-17-focusable-kind-registry.md)
 - [ ] **Unify `ReadyFrameContext`'s camera-derived fields into one `view` record** `needs-design` — vp/slabs/drawCamPos/billboard basis are separate derivations from `ctx.cam`, and per-frame memos key on `ctx` assuming one camera per frame; surfaced by the Quest VR spike. → [details](backlog/2026-08-23-frame-view-record.md)
 - [ ] **`earthFlyout` stalls the recorder's virtual clock** `needs-debug` — intermittent; the page runs rAF on real time while the granted virtual budget never elapses, with zero requests in flight. → [details](backlog/2026-07-31-earthflyout-virtual-time-stall.md)

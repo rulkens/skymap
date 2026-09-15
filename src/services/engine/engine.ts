@@ -10,7 +10,6 @@
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
-import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -45,10 +44,7 @@ import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
 import { CONTENT_PASSES } from './frame/passes';
 import { FRAME_ORDER } from './frame/frameOrder';
-import { logCameraState } from './helpers/logCameraState';
-import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveWorldPose } from './helpers/liveWorldPose';
-import { liveFocusRow } from './helpers/liveFocusRow';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
@@ -79,6 +75,8 @@ import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
+import { coreSelectionRows } from './selection/coreSelectionRows';
+import { composeSelectionRows } from './selection/composeSelectionRows';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup
@@ -127,6 +125,7 @@ export function createEngine(
             lastBandActive: false,
             lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
             bakedSettings: null,
+            bakedContentVersion: null,
           }
         : { subject: null, refreshedAtMs: new Map<string, number>(), due: false },
     ]),
@@ -319,6 +318,7 @@ export function createEngine(
     booted: false,
     cameraRuntime,
     cubemapCaptures,
+    contentVersion: 0,
     // The Maps are declared up-front so consumers can reach a slot without a null
     // check, but the slots themselves are minted in `wireSlots`: their commit
     // closures re-read GPU handles at call time and null-guard, rather than assuming
@@ -354,6 +354,11 @@ export function createEngine(
     // Edge-triggered UI events driving demand predicates. The wiring layer sets a
     // key and leaves it set — the demand loop's idle-guard prevents a re-fetch.
     requests: new Set<RequestKey>(),
+    // Both empty until `createLayers` runs (D7); see EngineState.d.ts for why
+    // `selectionKindRows` is not named `selectionRows` (that getter, above, is
+    // the unrelated saga display cache).
+    layers: [],
+    selectionKindRows: [],
   };
 
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
@@ -399,15 +404,6 @@ export function createEngine(
   // Null here — the handle is declared after the IIFE below. `wireInput` reads it
   // lazily, so it is non-null by the time a user can physically double-click.
   const handleRef: { current: EngineHandle | null } = { current: null };
-  const bootstrapDeps: BootstrapDeps = {
-    canvas,
-    cb,
-    composition,
-    frameRef,
-    detachControlsRef,
-    handleRef,
-    allSlots,
-  };
 
   // Every runner below is registered in ONE `setSagaContext` call before the async
   // GPU bootstrap finishes, which is safe only because each closure dereferences
@@ -417,7 +413,11 @@ export function createEngine(
       get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
     },
     famousGalaxiesMeta: state.famousGalaxiesMeta,
-    structures: { byId: (id) => state.data.structures.byId(id) },
+    structures: {
+      byId: (id) => state.data.structures.byId(id),
+      byCategory: (cat) => state.data.structures.byCategory(cat),
+      loaded: () => state.data.structures.loaded(),
+    },
     // The first (only, in v1) committed Gaia catalog, or null before the star cloud
     // lands and after the GPU tears down.
     stars: {
@@ -429,6 +429,23 @@ export function createEngine(
       },
     },
   });
+
+  // The one row array core owns (D5); createLayers appends each Layer's rows
+  // once, in tuple order, over the empty composition today. `selection` reads
+  // it lazily (never rebuilds a list), so a deep link resolving during the
+  // boot window — before createLayers has run — still sees the core rows.
+  state.selectionKindRows = coreSelectionRows(resolveDeps);
+  const selection = composeSelectionRows(() => state.selectionKindRows);
+  const bootstrapDeps: BootstrapDeps = {
+    canvas,
+    cb,
+    composition,
+    frameRef,
+    detachControlsRef,
+    handleRef,
+    allSlots,
+    selection,
+  };
 
   // The single clip-run seam the saga context exposes.
   const playClip = createPlayClip({
@@ -451,6 +468,7 @@ export function createEngine(
   cb.setSagaContext({
     reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
+    selection,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
     // captures the live pole rather than snapping to the committed frame. Null
     // pre-bootstrap and post-destroy, so a saga no-ops rather than seeding stale.
@@ -480,18 +498,6 @@ export function createEngine(
 
   // Declared up-front so the handle literal can reference each by name — no forward
   // references, no `!` assertions.
-  function logCameraStateFn(): void {
-    const simDays = state.cameraRuntime.outputs.simDays;
-    logCameraState(
-      liveRenderCamera(state),
-      canvas,
-      liveFocusRow(state.selectionRows.focus, simDays),
-      simDays,
-      state.subsystems.earthTiles?.getDebugSnapshot().subCamera ?? null,
-      state.cameraRuntime.outputs.displayed,
-    );
-  }
-
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
     // The pgcAlias row demands on `request('paletteOpened')`, so setting the flag
     // and waking the loop is what fires the load. The flag stays set, so a second
@@ -510,14 +516,12 @@ export function createEngine(
     return state.data.galaxies.catalogs.get(source)?.objIDs;
   }
 
-  function getStructures(): readonly StructureInfo[] {
-    return state.data.structures.all();
-  }
-
   function destroy(): void {
     // Ordering is load-bearing only for the first two groups: the render loop stops
     // before anything it touches is torn down, and DOM listeners detach before the
-    // subsystems they fire into. Past that it is free.
+    // subsystems they fire into. Past that it is free. Layers go before core, in
+    // reverse tuple order (D8) — a Layer's captured core object (e.g. `focusUniform`)
+    // must still be alive when its `destroy` runs.
     state.subsystems.scheduler.destroy();
     state.subsystems.assetQueue.destroy();
 
@@ -530,6 +534,9 @@ export function createEngine(
     // Undefined only if the GPU IIFE errored before registering the HDR-capability
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();
+
+    for (const instance of state.layers.slice().reverse()) instance.destroy();
+    state.layers = [];
 
     state.subsystems.biasCorrection.destroy();
     state.subsystems.cosmoLabelDirector.destroy();
@@ -583,18 +590,17 @@ export function createEngine(
   // The engine's only public surface: imperative operations only — store writes go
   // direct to the store.
   const handle: EngineHandle = {
-    camera: {
-      logState: logCameraStateFn,
-    },
     selection: {
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
       getCloud,
       getCloudObjIds,
-      getStructures,
     },
     debug: {
+      // The same Map the bootstrap populates, so the dev panel observes slots as
+      // they appear. Read-only at the type level, so React-side mutation trips tsc.
+      assetSlots: allSlots,
       // A getter, not a copied reference: initGpu assigns `state.gpu.timingService`
       // AFTER this literal is built, so a copy would be null forever.
       get timingService() {
@@ -653,10 +659,6 @@ export function createEngine(
     },
 
     destroy,
-
-    // The same Map the bootstrap populates, so the dev panel observes slots as they
-    // appear. Read-only at the type level, so React-side mutation trips tsc.
-    assetSlots: allSlots,
   };
 
   handleRef.current = handle;

@@ -114,4 +114,58 @@ describe('createFlowFieldRenderer', () => {
     expect(f32[0]).toBeCloseTo(expectedDtSec, 6);
     expect(f32[2]).toBeCloseTo(flow.flowSpeed * HEAD_SPEED_SCALE * expectedDtSec, 6);
   });
+
+  it('reconcile arms a reseed when mode or count changes and not otherwise', () => {
+    // Observable through encodeCompute's own contract (module header): a seed
+    // pass only opens a SECOND beginComputePass call ahead of the integrate
+    // pass, so beginComputePass's call count is the renderer's own signal of
+    // whether a reseed was pending — no spy on the private `reseed` latch.
+    const device = mockDevice();
+    const renderer = createFlowFieldRenderer({ device, targetFormat: 'rgba16float' });
+    renderer.upload(mockCube());
+
+    const mockPass = {
+      setPipeline: vi.fn(),
+      setBindGroup: vi.fn(),
+      dispatchWorkgroups: vi.fn(),
+      end: vi.fn(),
+    };
+    const beginComputePass = vi.fn(() => mockPass);
+    const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
+    const flow: FlowSettings = {
+      enabled: true,
+      mode: 'advect',
+      intensity: 0.7,
+      count: 1000,
+      trail: 0.003,
+      flowSpeed: 0.06,
+      densityBias: 1,
+      wander: 0.15,
+      boundaryFadeWidth: 0.1,
+    };
+
+    // `upload` already armed the first seed; consume it before this test's
+    // own reconcile calls so only THEIR effect is under test.
+    renderer.encodeCompute(encoder, flow, 1000);
+    beginComputePass.mockClear();
+
+    // First call only records — no baseline to differ from yet.
+    renderer.reconcile({ mode: 'advect', count: 1000 });
+    renderer.encodeCompute(encoder, flow, 1010);
+    expect(beginComputePass).toHaveBeenCalledTimes(1); // integrate only
+
+    beginComputePass.mockClear();
+
+    // Same seed again — arms nothing.
+    renderer.reconcile({ mode: 'advect', count: 1000 });
+    renderer.encodeCompute(encoder, flow, 1020);
+    expect(beginComputePass).toHaveBeenCalledTimes(1);
+
+    beginComputePass.mockClear();
+
+    // count differs from the last value handed in — arms once.
+    renderer.reconcile({ mode: 'advect', count: 2000 });
+    renderer.encodeCompute(encoder, flow, 1030);
+    expect(beginComputePass).toHaveBeenCalledTimes(2); // seed + integrate
+  });
 });

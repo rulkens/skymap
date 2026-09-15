@@ -1,12 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
 import { focusIdForRow } from '../../../../src/components/CommandPalette/utils/focusIdForRow';
-import { resolveFocusId } from '../../../../src/services/url/resolveFocusId';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
-import type { ResolveDeps } from '../../../../src/@types/engine/ResolveDeps';
 import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
 
 const M31: FamousGalaxyMetaEntry = {
@@ -22,15 +20,6 @@ const COMA: StructureSearchEntry = {
   category: 'cluster',
   abell: 'A1656',
   description: 'X-ray cluster · z = 0.023',
-};
-
-// The body branch of the focus-id decoder reads SCENE_BODIES (a static import)
-// and nothing else, so an all-empty deps object is enough to resolve one.
-const EMPTY_RESOLVE_DEPS: ResolveDeps = {
-  catalogs: { get: () => undefined },
-  famousGalaxiesMeta: [],
-  structures: { byId: () => null },
-  stars: { current: () => null },
 };
 
 function alias(names: readonly string[], localIdx: number): AliasIndexEntry {

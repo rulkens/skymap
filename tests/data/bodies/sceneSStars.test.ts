@@ -10,13 +10,17 @@ import { describe, it, expect } from 'vitest';
 import { SCENE_S_STARS } from '../../../src/data/bodies/sceneSStars';
 import { SCENE_STARS } from '../../../src/data/bodies/sceneStars';
 import { SCENE_BODIES } from '../../../src/data/bodies/sceneBodies';
-import { resolvePick } from '../../../src/services/engine/helpers/resolvePick';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import { rankPaletteMatches } from '../../../src/components/CommandPalette/utils/rankPaletteMatches';
 import { Source } from '../../../src/data/sources';
-import type { ResolvePickDeps } from '../../../src/@types/engine/ResolvePickDeps';
 
-/** The body arms read no store data, so a stub structure store suffices. */
-const pickDeps: ResolvePickDeps = { structures: { byCategory: () => [] } };
+/** The body arms read no store data, so an empty ResolveDeps fixture suffices. */
+const resolver = selectionResolverOver({
+  catalogs: { get: () => undefined },
+  famousGalaxiesMeta: [],
+  structures: { byId: () => null, byCategory: () => [] },
+  stars: { current: () => null },
+});
 
 describe('SCENE_S_STARS', () => {
   it('shares no id with the famous-star map', () => {
@@ -33,12 +37,12 @@ describe('SCENE_S_STARS', () => {
   it('picking an S-star materialises a body ref that SCENE_BODIES can resolve', () => {
     // Two halves of one path, and both fail by returning null rather than
     // throwing: the pick decodes through `BODY_PICK_ROWS`'s `s-star` row,
-    // and `extractSelectionRow` then looks the id up in `SCENE_BODIES`. Omitting
-    // either leaves a click that highlights nothing and opens no card.
+    // and the body row's `extractRow` then looks the id up in `SCENE_BODIES`.
+    // Omitting either leaves a click that highlights nothing and opens no card.
     const s2Index = SCENE_S_STARS.findIndex((star) => star.id === 's2');
     expect(s2Index).toBeGreaterThanOrEqual(0);
 
-    const ref = resolvePick({ sourceCode: Source.SStar, localIdx: s2Index }, pickDeps);
+    const ref = resolver.resolvePick({ sourceCode: Source.SStar, localIdx: s2Index });
     expect(ref).toEqual({ type: 'body', id: 's2' });
 
     expect(SCENE_BODIES.some((body) => body.id === 's2')).toBe(true);

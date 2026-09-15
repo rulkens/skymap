@@ -28,7 +28,7 @@
 
 import type { EnginePickingState } from '../state/EnginePickingState';
 import type { PickProgram } from '../frame/PickProgram';
-import type { ResolvePickDeps } from '../ResolvePickDeps';
+import type { SelectionResolver } from '../selection/SelectionResolver';
 
 export type HoverPickDeps = {
   /** The engine's picking sub-state — read for `pickInFlight` and `pointerDown`. */
@@ -45,6 +45,6 @@ export type HoverPickDeps = {
    * else.
    */
   readonly store: { dispatch: (action: unknown) => void };
-  /** Passed verbatim to `resolvePick` to decode a GPU hit into a `SelectionRef`. */
-  readonly resolveDeps: ResolvePickDeps;
+  /** The composed resolver's dispatch — decodes a GPU hit into a `SelectionRef`. */
+  readonly resolvePick: SelectionResolver['resolvePick'];
 };

@@ -18,13 +18,14 @@ describe('createFadeController', () => {
     expect(c.isAnimating(1600)).toBe(false);
   });
 
-  it('a fade to the opacity already held still reports animating', () => {
-    // renderFrame's sky-cubemap bake key reads `isAnyAnimating` to hold off
-    // baking while a re-committed catalog fades in. An unchanged-target early
-    // return here would stale the lensed sky across a tier swap, suite green.
-    const c = createFadeController(1, 1000);
-    c.fadeTo(1, 800, 1000);
-    expect(c.isAnimating(1400)).toBe(true);
+  it('fadeTo at the held target does not restart the ramp', () => {
+    const c = createFadeController(0, 1000);
+    c.fadeTo(1, 600, 1000); // saturates at 1600
+    // Retarget to the SAME value partway through, with a different duration.
+    c.fadeTo(1, 9999, 1300);
+    // Still saturates at the ORIGINAL deadline — t0 unmoved.
+    expect(c.currentOpacity(1600)).toBeCloseTo(1, 5);
+    expect(c.isAnimating(1600)).toBe(false);
   });
 
   it('mid-flight retarget picks up from the current value', () => {
@@ -42,6 +43,16 @@ describe('createFadeController', () => {
     expect(c.currentOpacity(1350)).toBeCloseTo(0.25, 5);
     // At t=1400, fully at 0.
     expect(c.currentOpacity(1400)).toBeCloseTo(0, 5);
+  });
+
+  it('targetOf reports the destination mid-ramp and the held value at rest', () => {
+    const c = createFadeController(0, 1000);
+    expect(c.targetOf()).toBe(0);
+    c.fadeTo(1, 600, 1000);
+    expect(c.targetOf()).toBe(1); // mid-ramp: still heading for 1
+    expect(c.currentOpacity(1300)).toBeCloseTo(0.5, 5); // not there yet
+    expect(c.currentOpacity(1700)).toBeCloseTo(1, 5); // past the 600ms ramp — at rest
+    expect(c.targetOf()).toBe(1); // at rest, holding 1
   });
 
   it('setImmediate skips animation and sets opacity instantly', () => {

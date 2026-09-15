@@ -81,14 +81,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state,
     pickProgram,
     store,
-    resolveDeps: { structures: state.data.structures },
+    resolvePick: deps.selection.resolvePick,
   });
 
   // Galaxy identity is purely positional — no cloud read at pick time; the
   // reconciler resolves the cloud at display time.
   state.subsystems.clickResolver = createClickResolver({
     pickProgram,
-    structures: state.data.structures,
+    resolvePick: deps.selection.resolvePick,
   });
 
   // Boot straight into the composition's home pose. The live wall-clock instant

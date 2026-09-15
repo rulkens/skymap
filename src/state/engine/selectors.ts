@@ -33,6 +33,7 @@ import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
+import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 const selectEngine = (state: RootState): EngineSliceState => state[engineRoute];
 
@@ -52,6 +53,14 @@ export const selectProvenanceCounts = (
 
 export const selectLoadProgress = (state: RootState): LoadProgressState | null =>
   selectEngine(state).loadProgress;
+
+/**
+ * The command palette's structure search index — published by
+ * `wireStructureProjection` at boot (anchors) and on every later group
+ * change (the bulk catalog landing or clearing).
+ */
+export const selectStructureSearchList = (state: RootState): readonly StructureSearchEntry[] =>
+  selectEngine(state).structureSearchList;
 
 /**
  * Famous-galaxy metadata sidecar, empty until its asset slot settles (and after

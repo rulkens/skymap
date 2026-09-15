@@ -10,11 +10,10 @@ import { URL_HASH_FOR } from '../../../src/services/url/urlHashFor';
 import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { MILKY_WAY_INFO } from '../../../src/data/milkyWay/milkyWayInfo';
 import { selectionToFocusId } from '../../../src/services/url/focusUrl';
-import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { GalaxyInfo } from '../../../src/@types/engine/GalaxyInfo';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { BodyInfo } from '../../../src/@types/engine/BodyInfo';
-import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import { Source } from '../../../src/data/sources';
 
 function makeGalaxy(source: number): GalaxyInfo {
@@ -63,24 +62,24 @@ describe('URL_HASH_FOR', () => {
 
   it('#focus=body-<id> round-trips for a star', () => {
     // A focused body (BodyInfo) encodes to `body-<id>` under the shared prefix,
-    // and resolveFocusId decodes it back to the body ref — the deep-link
-    // round-trip the feature exists for. 'sirius' is a seeded famous star, so
-    // resolveFocusId validates it against the static SCENE_BODIES table (no
-    // loaded catalog needed — the minimal deps below suffice).
+    // and the composed resolver decodes it back to the body ref — the
+    // deep-link round-trip the feature exists for. 'sirius' is a seeded famous
+    // star, so the body row validates it against the static SCENE_BODIES table
+    // (no loaded catalog needed — the minimal deps below suffice).
     const star: BodyInfo = {
       type: 'body',
       id: 'sirius',
       label: 'Sirius',
       positionMpc: [1e-6, 2e-6, 3e-6],
     };
-    const deps: ResolveDeps = {
+    const resolver = selectionResolverOver({
       catalogs: { get: () => undefined },
       famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
-    };
+    });
     const id = URL_HASH_FOR.body(star);
     expect(id).toBe('body-sirius');
-    expect(resolveFocusId(id as string, deps)).toEqual({ type: 'body', id: 'sirius' });
+    expect(resolver.resolveFocusId(id as string)).toEqual({ type: 'body', id: 'sirius' });
   });
 });

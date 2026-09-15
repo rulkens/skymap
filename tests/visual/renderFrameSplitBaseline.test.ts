@@ -365,11 +365,9 @@ describe('renderFrame visual baseline', () => {
       // it to 0 in frameContext, and an absent one yields NaN alphas here.
       focusBlend: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
-      galaxyPointRenderer,
       // The executor resolves hdr/volume attachments — and volumeUpsamplePass
       // its source texture — via ctx.renderTargets.viewOf(id).
       renderTargets,
-      texturedDisks: texturedDisksSubsystem,
     } as never;
 
     const settings = {
@@ -446,6 +444,7 @@ describe('renderFrame visual baseline', () => {
           // `proceduralDiskRenderer`, `texturedDiskRenderer`,
           // `filamentRenderer`) are the same logging-renderer instances
           // declared above, so their `argShape` entries land in `records`.
+          galaxyPointRenderer,
           milkyWayCloudRenderer,
           milkyWayAggregateUpsample,
           horizonShellRenderer,

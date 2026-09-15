@@ -21,8 +21,9 @@
  *
  * A single `part`/`trail`/`acc` set is shared across both modes; the modes never
  * render simultaneously, so switching mode (or changing `count`) seeds afresh.
- * `maybeReseed` records "encode the seed pass next frame"; `encodeCompute`
- * consumes that flag, encoding the dedicated `seed` compute pass before the
+ * `reconcile` records "encode the seed pass next frame" when either knob
+ * moved since its last call; `encodeCompute` consumes that flag, encoding the
+ * dedicated `seed` compute pass before the
  * steady integrator — both into the same frame encoder (decision §5: no
  * out-of-band submit; WebGPU inserts the storage barrier between compute
  * passes). Because `seed` reads only the `Prm` subset it shares with the
@@ -51,11 +52,12 @@ export type FlowFieldRenderer = {
    */
   upload(cube: ScalarCube): void;
   /**
-   * Record "encode the `seed` pass on the next `encodeCompute`". Called by the
-   * Phase-D handle on enable / mode-switch / count-change. A no-op on steady
-   * frames (the flag stays cleared).
+   * Called once per frame with the live `mode`/`count` knobs (mirrors
+   * `milkyWayCloud.reconcile(starCount)`). Arms a reseed when either differs
+   * from the value handed in last call; the first call only records — the
+   * field's own `upload` arms the first seed.
    */
-  maybeReseed(): void;
+  reconcile(seed: Pick<FlowSettings, 'mode' | 'count'>): void;
   /**
    * True once a velocity cube is uploaded and bound. Lets the flow fade row's
    * guard gate flow's fade on real renderable-ness.

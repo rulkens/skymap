@@ -1,58 +1,18 @@
 /**
- * ReadyFrameContext — the discriminated-ready case of `FrameContext`.
- *
- * Pre-D.1, the per-frame body opened with five free-standing snapshot
- * locals — `camRef`, `vp`, `rendererRef`, `thumbnailsRef`,
- * `postProcessRef` — followed by a 5-way null check that bailed out
- * if *any* of them was unset.  The same body then forwarded each of
- * those snapshots, plus two more derived scalars (`drawCamPos`,
- * `drawPxPerRad`), into `renderFrame()` as separate `RenderFrameInput`
- * fields.  `renderFrame()` itself recomputed `drawCamPos` and
- * `drawPxPerRad` from `cam` because the caller hadn't bothered passing
- * the derived values along.
- *
- * The fix is one named struct, derived once at the top of the frame
- * body and consumed by every downstream site that asks "what's the
- * camera doing this frame?".  Adding a new derived per-frame quantity
- * (e.g. frustum planes for culling, or a cached camera-distance scalar)
- * becomes a one-line addition here, not a 4-snapshot scatter across
- * two files.
- *
- * ### Why `drawCamPos: Readonly<Vec3>` (a tuple)
- *
- * `OrbitCamera.position` is a mutable `Vec3` tuple, updated in place by
- * `updatePosition`.  Forwarding the live array to downstream
- * passes risks two failure modes: (a) a consumer accidentally mutating
- * an entry (array writes don't fault), and (b) the camera moving
- * between the snapshot point and the read point inside one frame —
- * possible in principle if a future feature lets a tween advance
- * mid-frame.  Snapshotting to a plain readonly tuple defends against
- * both: the array is small (3 floats — copy is essentially free), the
- * shape is pinned, and the `Readonly<...>` modifier makes attempted
- * writes a tsc error.
- *
- * ### Why the GPU handles ride along on the ready context
- *
- * `state.gpu.galaxyPointRenderer`, `state.gpu.renderTargets`, and
- * `state.subsystems.thumbnails` are all part of the 5-way bootstrap
- * gate.  Once the gate passes, downstream code wants to use those
- * handles without re-checking they're non-null — but if we left them
- * on `state.gpu.*` and `state.subsystems.*`, every consumer would have
- * to re-narrow them locally (since TS can't track that *another
- * function* asserted them non-null earlier in the call stack).
- *
- * Forwarding the narrowed handles onto `ReadyFrameContext` carries the
- * narrowing across the function boundary.  A pass implementation can
- * read `ctx.galaxyPointRenderer.draw(...)` directly, no `!` needed.
+ * ReadyFrameContext — the discriminated-ready case of `FrameContext`, one
+ * named struct derived once at the top of the frame body for every
+ * downstream site that asks "what's the camera doing this frame?". `renderTargets`
+ * rides along narrowed (from `isEngineReady`'s gate) so a pass reads
+ * `ctx.renderTargets` with no `!`; the galaxy/textured-disk handles do NOT
+ * (D8) — a pass reads those off `state.gpu.*` behind its own null guard,
+ * the convention `ContentPass.d.ts` states.
  */
 
 import type { Mat4 } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { Vec3 } from '../../math/Vec3';
-import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 import type { RenderTargets } from '../../rendering/RenderTargets';
-import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Slab } from './Slab';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
@@ -129,13 +89,6 @@ export type ReadyFrameContext = {
   /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */
   focus: FocusUniformsValue;
   /**
-   * Non-null GPU + subsystem handles, narrowed across the bootstrap
-   * gate so consumers don't have to re-check `state.gpu.*` /
-   * `state.subsystems.*` themselves.  See the module header for the
-   * "why these ride along" rationale.
-   */
-  galaxyPointRenderer: GalaxyPointRenderer;
-  /**
    * The offscreen render-target table (`hdr`, `volume`, …).  Forwarded
    * here from `state.gpu.renderTargets` — same reference, no allocation —
    * so the executor's `viewFor` and any layer that samples an offscreen
@@ -151,5 +104,4 @@ export type ReadyFrameContext = {
    * executor skips an empty render step, leaving that depth stale/uninitialised).
    */
   renderedTargets: ReadonlySet<string>;
-  texturedDisks: TexturedDiskSubsystem;
 };
