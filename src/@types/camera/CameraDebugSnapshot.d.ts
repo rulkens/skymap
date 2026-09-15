@@ -36,6 +36,14 @@ export type CameraDebugSnapshot = {
   readonly anchorLocalM: Vec3 | null;
   /** `|eyeRelAnchorM|`, metres, when `renderedFrame` is a body arm; else null. */
   readonly eyeRelAnchorMagM: number | null;
+  /** Site turntable heading, radians, when `renderedFrame` is a site arm; else null. */
+  readonly siteHeadingRad: number | null;
+  /** Site turntable elevation, radians; null alongside `siteHeadingRad`. */
+  readonly siteElevationRad: number | null;
+  /** Eye←site range, metres; null alongside `siteHeadingRad`. */
+  readonly siteRangeM: number | null;
+  /** `siteRangeM · sin(siteElevationRad)` — eye height above the tangent plane; null alongside. */
+  readonly siteEyeHeightM: number | null;
   /** `cameraRuntime.register.winner` — last frame's driver-table winner. */
   readonly activeDriverId: string;
   /** Latched gesture mode; 'down (unlatched)' between press and first step; null at rest. */

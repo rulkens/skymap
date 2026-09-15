@@ -165,6 +165,29 @@ describe('frame-tagged keyframes', () => {
     expect(a[0] * b[0] + a[1] * b[1] + a[2] * b[2]).toBeCloseTo(1, 12);
   });
 
+  it('a clip leg tagged { site } evaluates in the site rung and reaches its authored heading, elevation and range', () => {
+    const CURIOSITY = { site: 'curiosity' as BodyId };
+    const HEADING_RAD = 0.7;
+    const ELEVATION_RAD = 0.2;
+    const RANGE_M = 12;
+    const siteLeg: ClipData['timeline'][number] = all([
+      tween('yaw', { to: HEADING_RAD, over: 4, frame: CURIOSITY }),
+      tween('pitch', { to: ELEVATION_RAD, over: 4, frame: CURIOSITY }),
+      tween('distance', { to: RANGE_M, over: 4, frame: CURIOSITY }),
+    ]);
+    const data: ClipData = { start: START, timeline: [siteLeg] };
+
+    // At the tween's own end, the value IS the authored `to` — independent of
+    // the leg-open conversion this fires beforehand (which only sets the
+    // interpolation's start), so no host/mesh fixture bookkeeping is needed.
+    const framed = evaluateFramedClip(data, 4, opts());
+
+    expect(framed.frame).toEqual(CURIOSITY);
+    expect(framed.channels.yaw).toBeCloseTo(HEADING_RAD, 9);
+    expect(framed.channels.pitch).toBeCloseTo(ELEVATION_RAD, 9);
+    expect(framed.channels.distance).toBeCloseTo(RANGE_M, 6);
+  });
+
   it('the clip driver hands out a decoded body arm, never a re-encoded absolute one', () => {
     const store = configureStore({ reducer: rootReducer });
     const data = earthFramedClip();

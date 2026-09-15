@@ -46,6 +46,8 @@ type PanelModel = {
   readonly markerReadout: string;
   readonly weightReadout: string;
   readonly rememberedTiltReadout: string;
+  /** §4.9's site rows — heading, elevation, range, eye height; absent off a site arm. */
+  readonly site: readonly RawRow[] | null;
   readonly raw: readonly RawRow[];
 };
 
@@ -89,6 +91,18 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
           }`,
     weightReadout: snap.bandUpWeight === null ? '—' : snap.bandUpWeight.toFixed(3),
     rememberedTiltReadout: deg(snap.rememberedTiltRad),
+    site:
+      snap.siteHeadingRad === null ||
+      snap.siteElevationRad === null ||
+      snap.siteRangeM === null ||
+      snap.siteEyeHeightM === null
+        ? null
+        : [
+            { key: 'heading', value: deg(snap.siteHeadingRad) },
+            { key: 'elevation', value: deg(snap.siteElevationRad) },
+            { key: 'range_m', value: `${Math.round(snap.siteRangeM).toLocaleString('en-US')} m` },
+            { key: 'eye_height_m', value: `${snap.siteEyeHeightM.toFixed(2)} m` },
+          ],
     raw: [
       { key: 'stored_regime', value: frameKey(snap.storedFrame) },
       { key: 'rendered_arm', value: frameKey(snap.renderedFrame) },
@@ -125,6 +139,7 @@ function copyTextOf(model: PanelModel): string {
   }
   for (const [title, rows] of [
     ['band', model.band],
+    ...(model.site === null ? [] : [['site', model.site] as const]),
     ['raw', model.raw],
   ] as const) {
     lines.push(`[${title}]`);
@@ -198,6 +213,17 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
         weightReadout={model.weightReadout}
         rememberedTiltReadout={model.rememberedTiltReadout}
       />
+
+      {model.site === null ? null : (
+        <div className={styles.grid}>
+          {model.site.map((row) => (
+            <div key={row.key} className={styles.row}>
+              <span className={styles.key}>{row.key}</span>
+              <span>{row.value}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <details className={styles.rawBlock}>
         <summary className={styles.rawSummary}>raw</summary>

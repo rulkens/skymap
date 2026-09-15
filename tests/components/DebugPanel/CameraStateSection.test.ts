@@ -18,6 +18,7 @@ import CameraStateSection from '../../../src/components/DebugPanel/CameraStateSe
 import { rootReducer } from '../../../src/store/rootReducer';
 import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
+import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 afterEach(() => {
@@ -79,5 +80,27 @@ describe('CameraStateSection', () => {
     // the roll row keeps both its target and its residual, not an em-dash.
     expect(container.textContent).toContain('-11.5°');
     expect(container.textContent).toContain('17.2°');
+  });
+
+  it('labels a site frame site:<id> and shows its eye height above the tangent plane', () => {
+    const store = configureStore({ reducer: rootReducer });
+    const siteSnap: CameraDebugSnapshot = {
+      ...SNAP,
+      renderedFrame: { site: 'curiosity' as BodyId },
+      siteHeadingRad: 0.7,
+      siteElevationRad: 0.2,
+      siteRangeM: 12,
+      siteEyeHeightM: 12 * Math.sin(0.2),
+    };
+    const { container } = render(
+      createElement(CameraStateSection, { cameraDebug: () => siteSnap }),
+      {
+        wrapper: ({ children }: { children: ReactNode }) =>
+          createElement(Provider, { store, children }),
+      },
+    );
+
+    expect(container.textContent).toContain('site:curiosity');
+    expect(container.textContent).toContain(`${(12 * Math.sin(0.2)).toFixed(2)} m`);
   });
 });

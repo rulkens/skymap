@@ -24,6 +24,7 @@ import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { isBodyArm } from '../../services/engine/camera/rungs/isBodyArm';
+import { isSiteArm } from '../../services/engine/camera/rungs/isSiteArm';
 import { sameFrame } from '../../services/engine/camera/rungs/sameFrame';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
@@ -83,6 +84,7 @@ export function cameraDebugSnapshotOf(input: {
       : undefined;
 
   const engagedPose = isBodyArm(renderedPose) ? renderedPose.pose : null;
+  const sitePose = isSiteArm(renderedPose) ? renderedPose.pose : null;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;
   const epochDeltaEpsDays = Math.abs(
     deriveSimDays(time, EPOCH_DELTA_TOLERANCE_MS) - deriveSimDays(time, 0),
@@ -106,6 +108,10 @@ export function cameraDebugSnapshotOf(input: {
     epochMismatch: Math.abs(epochDeltaDays) > epochDeltaEpsDays,
     anchorLocalM: engagedPose !== null ? [...engagedPose.anchorLocalM] : null,
     eyeRelAnchorMagM: engagedPose !== null ? Math.hypot(...engagedPose.eyeRelAnchorM) : null,
+    siteHeadingRad: sitePose?.headingRad ?? null,
+    siteElevationRad: sitePose?.elevationRad ?? null,
+    siteRangeM: sitePose?.rangeM ?? null,
+    siteEyeHeightM: sitePose === null ? null : sitePose.rangeM * Math.sin(sitePose.elevationRad),
     activeDriverId,
     gestureMode: gesture === null ? null : gesture === 'down' ? 'down (unlatched)' : gesture.mode,
     gestureCursorHit: gesture === null || gesture === 'down' ? null : gesture.anchorLocalM !== null,

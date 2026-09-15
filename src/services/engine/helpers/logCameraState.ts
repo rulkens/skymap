@@ -16,6 +16,7 @@ import type { EarthTileDebugSnapshot } from '../../../@types/scene/EarthTileDebu
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
 import { frameKey } from '../camera/rungs/frameKey';
 import { isBodyArm } from '../camera/rungs/isBodyArm';
+import { isSiteArm } from '../camera/rungs/isSiteArm';
 import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -54,6 +55,7 @@ export function logCameraState(
   // metres, so reading the Mpc rows above as the whole truth would mislead.
   // Absent ⇒ absolute, the same rule untagged serialized input parses under.
   const bodyArm = framed !== null && isBodyArm(framed) ? framed.pose : null;
+  const siteArm = framed !== null && isSiteArm(framed) ? framed.pose : null;
 
   const out = {
     frame: framed === null ? 'absolute' : frameKey(framed.frame),
@@ -65,6 +67,17 @@ export function logCameraState(
             eyeRelAnchorM: bodyArm.eyeRelAnchorM,
             eyeFromCentreM: Math.hypot(...bodyFixedEyeM(bodyArm)),
             basisLocal: bodyArm.basisLocal,
+          },
+    // Eye height above the tangent plane, metres (spec §4.9): the one number
+    // that shows whether the ground floor (`clampedSitePose`) is doing its job.
+    siteArmPose:
+      siteArm === null
+        ? null
+        : {
+            headingRad: siteArm.headingRad,
+            elevationRad: siteArm.elevationRad,
+            rangeM: siteArm.rangeM,
+            eyeHeightM: siteArm.rangeM * Math.sin(siteArm.elevationRad),
           },
     target: cam.target,
     yaw: cam.yaw,

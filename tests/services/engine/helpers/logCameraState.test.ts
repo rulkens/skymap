@@ -19,6 +19,7 @@ import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamer
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 
 const EARTH_RADIUS_M = 6_371_000;
 const EARTH_RADIUS_MPC = EARTH_RADIUS_M * SCALE_UNITS.M_TO_MPC;
@@ -212,6 +213,42 @@ describe('logCameraState', () => {
     const [, world] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(world).frame).toBe('absolute');
     expect(JSON.parse(world).bodyArmMetres).toBeNull();
+  });
+
+  it('names the frame and derives eye height in a site arm', () => {
+    vi.stubGlobal('window', { devicePixelRatio: 1 });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const cam = createOrbitCamera({
+      target: [0, 0, 0],
+      distance: 10,
+      yaw: 0,
+      pitch: 0,
+      fovYRad: 0.9,
+      aspect: 1,
+      near: 0.01,
+      far: 100,
+    });
+    const siteArm: FramedCameraPose = {
+      frame: { site: 'curiosity' as BodyId },
+      pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
+    };
+
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS, null, siteArm);
+    const [, engaged] = logSpy.mock.calls[0] as [string, string];
+    const out = JSON.parse(engaged);
+    expect(out.frame).toBe('site:curiosity');
+    expect(out.bodyArmMetres).toBeNull();
+    expect(out.siteArmPose).toEqual({
+      headingRad: 0.7,
+      elevationRad: 0.2,
+      rangeM: 12,
+      eyeHeightM: 12 * Math.sin(0.2),
+    });
+
+    // A body arm carries no site block either.
+    logSpy.mockClear();
+    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
+    expect(JSON.parse((logSpy.mock.calls[0] as [string, string])[1]).siteArmPose).toBeNull();
   });
 
   it('prints a single not-ready line and touches neither canvas nor window when the camera is null', () => {
