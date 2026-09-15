@@ -27,6 +27,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { slotReady } from '../../loading/slotReady';
 
 /**
@@ -47,9 +48,10 @@ export function encodeFlowCompute(
   encoder: GPUCommandEncoder,
   state: EngineState,
   nowMs: number,
+  claimTimestampWrites?: ClaimTimestampWrites,
 ): void {
   const flowFieldRenderer = state.gpu.flowFieldRenderer;
   const flow = state.settings.flow;
   if (flowFieldRenderer === null || !flow.enabled || !slotReady(state.assetSlots.flow)) return;
-  flowFieldRenderer.encodeCompute(encoder, flow, nowMs);
+  flowFieldRenderer.encodeCompute(encoder, flow, nowMs, claimTimestampWrites);
 }

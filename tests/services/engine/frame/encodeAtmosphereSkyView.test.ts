@@ -17,7 +17,7 @@
  * sub-pixel disc cull, so the packing case reaches an entry at all.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 import { encodeAtmosphereSkyView } from '../../../../src/services/engine/frame/encodeAtmosphereSkyView';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
@@ -75,11 +75,15 @@ const SEEDED_EARTH: SeededEarth = {
   orientation: EARTH_STATE.orientation,
 };
 
-const encoder = {} as unknown as GPUCommandEncoder;
+/** The ONE compute pass the encode opens for the whole draw list — the shape
+ *  that lets the step bill a single GPU-timing slot. */
+const computePass = { end: vi.fn() } as unknown as GPUComputePassEncoder;
+const beginComputePass = vi.fn((_descriptor?: GPUComputePassDescriptor) => computePass);
+const encoder = { beginComputePass } as unknown as GPUCommandEncoder;
 
-/** A spy atmosphere renderer — only `encodeSkyView` is exercised here. */
-function spyRenderer(): { encodeSkyView: ReturnType<typeof vi.fn> } {
-  return { encodeSkyView: vi.fn() };
+/** A spy atmosphere renderer — only `dispatchSkyView` is exercised here. */
+function spyRenderer(): { dispatchSkyView: ReturnType<typeof vi.fn> } {
+  return { dispatchSkyView: vi.fn() };
 }
 
 /**
@@ -143,6 +147,44 @@ const DRAW_CAM_POS: Vec3 = [
 const EYE_REL_BODY_M: Vec3 = [5 * SEEDED_EARTH.surface.datumRadiusM, 0, 0];
 
 describe('encodeAtmosphereSkyView', () => {
+  beforeEach(() => {
+    beginComputePass.mockClear();
+  });
+
+  // The step owns ONE GPU-timing slot, so it must open ONE compute pass however
+  // many bodies bake — per-body passes would each write that slot's two query
+  // indices and the last body would silently decide what the panel reports.
+  it('opens one compute pass for the draw list, carrying the claimed timestamp writes', () => {
+    const renderer = spyRenderer();
+    const writes = { querySet: {}, beginningOfPassWriteIndex: 4, endOfPassWriteIndex: 5 };
+    const claim = vi.fn(() => ({
+      timestampWrites: writes as unknown as GPUComputePassTimestampWrites,
+    }));
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
+      makeState({ renderer }),
+      claim,
+    );
+    expect(beginComputePass).toHaveBeenCalledTimes(1);
+    expect(beginComputePass.mock.calls[0]![0]).toMatchObject({ timestampWrites: writes });
+  });
+
+  // Claiming a slot marks it LIVE for the frame, and a query set holds its last
+  // write — so a claim on a frame that opens no pass makes the panel report the
+  // ticks from whenever the atmosphere was last in view, as if it still were.
+  it('claims no timing slot and opens no pass when no body carries an atmosphere', () => {
+    const claim = vi.fn(() => ({}));
+    encodeAtmosphereSkyView(
+      encoder,
+      makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
+      makeState({ renderer: spyRenderer(), earth: null }),
+      claim,
+    );
+    expect(beginComputePass).not.toHaveBeenCalled();
+    expect(claim).not.toHaveBeenCalled();
+  });
+
   it('is a no-op when the camera is beyond the near-field distance gate', () => {
     const renderer = spyRenderer();
     encodeAtmosphereSkyView(
@@ -153,7 +195,7 @@ describe('encodeAtmosphereSkyView', () => {
       }),
       makeState({ renderer }),
     );
-    expect(renderer.encodeSkyView).not.toHaveBeenCalled();
+    expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
   });
 
   it('is a no-op when bodies.earth is unseeded', () => {
@@ -163,7 +205,7 @@ describe('encodeAtmosphereSkyView', () => {
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
       makeState({ renderer, earth: null }),
     );
-    expect(renderer.encodeSkyView).not.toHaveBeenCalled();
+    expect(renderer.dispatchSkyView).not.toHaveBeenCalled();
   });
 
   it('bakes the SkyViewParams from ctx.bodyPose (the M1 body-slab pose seam), via bodySlabCamLocal', () => {
@@ -174,13 +216,13 @@ describe('encodeAtmosphereSkyView', () => {
       makeState({ renderer }),
     );
 
-    expect(renderer.encodeSkyView).toHaveBeenCalledTimes(1);
-    const [encoderArg, bodyIdArg, uniforms] = renderer.encodeSkyView.mock.calls[0]! as [
-      GPUCommandEncoder,
+    expect(renderer.dispatchSkyView).toHaveBeenCalledTimes(1);
+    const [passArg, bodyIdArg, uniforms] = renderer.dispatchSkyView.mock.calls[0]! as [
+      GPUComputePassEncoder,
       string,
       Float32Array,
     ];
-    expect(encoderArg).toBe(encoder);
+    expect(passArg).toBe(computePass);
     expect(bodyIdArg).toBe(SEEDED_EARTH.id);
     expect(uniforms).toBeInstanceOf(Float32Array);
     expect(uniforms).toHaveLength(4);
@@ -216,7 +258,7 @@ describe('encodeAtmosphereSkyView', () => {
       makeCtx({ bodyPose: makeBodyPose(fartherPose) }),
       makeState({ renderer: fartherRenderer }),
     );
-    const fartherUniforms = fartherRenderer.encodeSkyView.mock.calls[0]![2] as Float32Array;
+    const fartherUniforms = fartherRenderer.dispatchSkyView.mock.calls[0]![2] as Float32Array;
     expect(fartherUniforms[0]).toBeGreaterThan(uniforms[0]!);
 
     // The camera five radii out sits well above the surface, so the LUT's view

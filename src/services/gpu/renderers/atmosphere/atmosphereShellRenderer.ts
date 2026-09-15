@@ -565,7 +565,7 @@ export function createAtmosphereShellRenderer(
   // submit (the two-pass encoder lesson `flowFieldRenderer` documents). The loop
   // repeats the pair per body inside the same encoder; do NOT submit per body. The
   // sky-view LUT is NOT baked here — it depends on the per-frame camera + sun state
-  // (`encodeSkyView`).
+  // (`dispatchSkyView`).
   {
     const encoder = device.createCommandEncoder({ label: 'atmosphere-startup-bake' });
 
@@ -607,26 +607,27 @@ export function createAtmosphereShellRenderer(
     return bundle;
   }
 
-  // ── encodeSkyView (per frame) ──────────────────────────────────────────────
+  // ── dispatchSkyView (per frame) ────────────────────────────────────────────
 
-  function encodeSkyView(
-    encoder: GPUCommandEncoder,
+  function dispatchSkyView(
+    pass: GPUComputePassEncoder,
     bodyId: string,
     skyViewUniforms: Float32Array,
   ): void {
     // Write THIS body's per-frame camera + sun state, then dispatch the sky-view
-    // bake into `encoder` (the same frame encoder, submitted downstream). One write
-    // + one dispatch per body → no writeBuffer/submit race (the flow precedent).
+    // bake into the CALLER's pass. Each body owns its own params buffer and its
+    // own output LUT, so several bodies share one pass with no hazard between
+    // them — and the caller keeps the pass, hence the step's one timing slot.
+    // The write rides the queue timeline (ordered ahead of the submit) even
+    // though the pass is already open — no writeBuffer/submit race, as for flow.
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.skyViewParamsBuffer, 0, skyViewUniforms);
-    const pass = encoder.beginComputePass({ label: 'atmosphere-skyview-pass' });
     pass.setPipeline(skyViewPipeline);
     pass.setBindGroup(0, bundle.skyViewBindGroup);
     pass.dispatchWorkgroups(
       dispatchCount(SKY_VIEW_LUT_SIZE[0]),
       dispatchCount(SKY_VIEW_LUT_SIZE[1]),
     );
-    pass.end();
   }
 
   // ── setRingTexture ─────────────────────────────────────────────────────────
@@ -711,7 +712,7 @@ export function createAtmosphereShellRenderer(
 
   const renderer: AtmosphereShellRenderer = {
     label: 'atmosphereShellRenderer',
-    encodeSkyView,
+    dispatchSkyView,
     setRingTexture,
     draw,
     destroy,
