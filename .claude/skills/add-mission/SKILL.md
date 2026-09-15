@@ -90,14 +90,12 @@ Read MATERIALS, TEXTURES, ANIMATIONS and the scene bbox. No materials or no
 textures = an untextured print model; it bakes flat grey — find another source
 or stop. Extents tell you the **units**: compare the longest axis with the fact
 sheet (Hubble: 13.2 m; if the bbox reads 525, it is inches). Units off by a
-constant are a scale edit in the imported `.blend` (step 3), never a hand
-rescale of the download. Then dump each material's Principled values
-(`metallic`, `roughness`) — NASA's models type every surface matte whatever it
-is made of, and the bake copies that verbatim. Foil, polished metal and glass
-get their metallic and roughness set in the `.blend`, plus a Bump node driven
-by the colour map when the source has no normal map (a low-contrast texture
-needs several centimetres of relief); the mesh's `README.md` says which
-material is which surface.
+constant get a `scale=` on the importer row (step 3), never a hand rescale of
+the download. Then dump each material's Principled values (`metallic`,
+`roughness`) — NASA's models type every surface matte whatever it is made of,
+and the bake copies that verbatim. Foil, polished metal and glass get a
+per-material `materials=` override on the same row; the mesh's `README.md`
+says which material is which surface.
 
 Then find the **axes** — which source axis is the boresight/dish/forward and
 which is up — by rendering the source down all six axes and looking:
@@ -132,13 +130,17 @@ Every step is a literal edit site. Tick them all.
    `meshes.<key>` (the `<key>.prebaked.glb`, `fetcher:` the prebake script) and
    `meshes.<key>.readme`, copied from the voyager quartet.
 3. **Import** — `tools/meshes/prebake/importMesh.py` `SOURCES`: one
-   `"<key>": source("<file>", frame=…, drop_materials=…)` row; `frame` only for
-   a source with deploy animations, `drop_materials` for rig-pivot and fake
-   shadow materials. `npm run import-mesh -- <key>` writes `<key>.blend`. Open
-   it in Blender 5.2 LTS for the edits the inspection called for — scale for
-   the units, metallic/roughness and a Bump node for foil — save, and add its
-   line to `meshes.sha256`. A re-import overwrites every edit, so the README
-   lists each one.
+   `"<key>": source("<file>", frame=…, drop_materials=…, scale=…, materials=…)`
+   row. `frame` only for a source with deploy animations; `drop_materials` for
+   rig-pivot and fake shadow materials; `scale` multiplies the root objects
+   (the join applies it before anything measures); `materials` maps a source
+   material name to `metallic` / `roughness` / `gain` (Base Color multiplier —
+   a mid-grey texture becomes a metal's reflectance once metallic, so foil
+   wants ~2) / `bump` (metres of relief per unit of the colour map's luminance,
+   for a source with no normal map; a low-contrast texture needs several
+   centimetres). `npm run import-mesh -- <key>` writes `<key>.blend`; add its
+   line to `meshes.sha256`. Edits the row cannot express are hand edits in
+   Blender 5.2 LTS that a re-import overwrites, so the README lists each one.
 4. **Prebake** — `tools/meshes/prebake/meshPrebake.py` `SOURCES`: one
    `source("<key>", triangles=…)` row, `triangles` when over the 150k budget.
    Run `npm run prebake-mesh -- <key>` (Blender 5.2, ~10–30 s) and read the

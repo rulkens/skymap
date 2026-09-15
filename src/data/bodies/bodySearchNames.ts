@@ -28,6 +28,8 @@ const AUTHORED: readonly (readonly [string, readonly string[]])[] = [
   // Mission designations and nicknames: what a reader types is rarely the label.
   ['voyager1', ['Voyager 1', 'Voyager']],
   ['voyager2', ['Voyager 2', 'Voyager']],
+  ['hubble', ['Hubble', 'HST', 'Hubble Space Telescope']],
+  ['apollo11', ['Apollo 11', 'Eagle', 'Tranquility Base', 'Lunar Module']],
   ['curiosity', ['Curiosity', 'MSL', 'Mars Science Laboratory']],
   ['perseverance', ['Perseverance', 'Percy', 'Mars 2020']],
   ['spirit', ['Spirit', 'MER-A']],
