@@ -66,15 +66,18 @@ arm's, and there is no ground plane anywhere in that path.
 - Site→body disengage lands the body arm anchored **at the site**
   (`anchorLocalM` = the site point), not at the body centre, which keeps the
   stored magnitudes at rover scale.
-- **The pivot is the focus**: under a focus _hosted_ on the arm's body, the
-  body arm's whole zoom — the eye's own scaling and all three settle turns —
-  acts about the focus's body-fixed point, re-derived from `focusBodyId` each
-  drain, so the rover is pixel-locked in both directions, the tilt ramps back
-  to the remembered value about it (ruling 12), and neither crossing has
-  anything to re-aim; with no hosted focus the wheel keeps its cursor-pick
-  anchor (ruling #7), and the accepted cost is that a focused rover has no
-  cursor-directed zoom in its host's arm, exactly as it has none in the world
-  arm.
+- **The body arm serves ONE point**: under a focus _hosted_ on the arm's body
+  that point is the focus's own — its body-fixed point re-derived from
+  `focusBodyId` each drain, carrying the follow memory's `panOffset` wherever
+  the reader works in world Mpc. Everything the arm does about a point reads
+  it: the eye's own scaling and all three settle turns pivot on it, the hold
+  asks whether it is still above the eye's horizon, and the disengage commits
+  the arm looking at it. So the rover is pixel-locked in both directions, the
+  tilt ramps back to the remembered value about it (ruling 12), and neither
+  crossing has anything to re-aim. With no hosted focus the wheel keeps its
+  cursor-pick anchor (ruling #7), and the accepted cost is that a focused rover
+  has no cursor-directed zoom in its host's arm, exactly as it has none in the
+  world arm.
 
 ## 1. Goals / non-goals
 

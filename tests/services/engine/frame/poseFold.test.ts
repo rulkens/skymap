@@ -151,9 +151,10 @@ function seedPose(
 }
 
 /**
- * The wheel's cursor pixel for the two hand-back cases. OFF centre on purpose:
- * a focused rover sits at screen centre, so a cursor there makes the cursor
- * pick and the rover coincide and hides every pivot defect they exist for.
+ * The wheel's cursor pixel for every crossing case below. OFF centre on
+ * purpose: a focused body sits at screen centre, so a cursor there makes the
+ * cursor pick and the focus coincide and hides every pivot defect they exist
+ * for — the fixtures would be choosing the one input the bug cannot occur on.
  */
 const WHEEL_PX = { xPx: 70, yPx: 30 } as const;
 
@@ -384,7 +385,7 @@ describe('runFrame — the regime fold', () => {
 
     let crossing = -1;
     for (let i = 0; i < 80 && crossing < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
       h.frame(1);
       if (h.store.getState().camera.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
@@ -436,13 +437,13 @@ describe('runFrame — the regime fold', () => {
     // In past the engage edge, then back out through `disengageHR`. Two frames
     // per notch so each one is fully folded before the next arrives.
     for (let i = 0; i < 60 && h.store.getState().camera.base.frame === 'absolute'; i++) {
-      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, ...WHEEL_PX });
       h.frame(2);
     }
     expect(h.store.getState().camera.base.frame).toEqual(EARTH_ARM);
     let crossing = -1;
     for (let i = 0; i < 80 && crossing < 0; i++) {
-      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, ...WHEEL_PX });
       h.frame(1);
       if (h.store.getState().camera.base.frame === 'absolute') {
         crossing = probe.drawnPoses.length - 1;
