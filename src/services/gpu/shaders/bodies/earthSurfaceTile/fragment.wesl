@@ -4,7 +4,7 @@
 // night-lights) so a resident tile reads as a seamless closeup of the same
 // globe -- see that file's header for the physical derivation of each
 // term, not repeated here. Differs only in addressing: 'surfaceTexture' is
-// the earthTileSubsystem ATLAS, sampled at the CPU-RESOLVED rect
+// the surfaceTileSubsystem ATLAS, sampled at the CPU-RESOLVED rect
 // ('atlasUvOrigin + uv * atlasUvScale') in place of the base globe's
 // per-fragment page-table lookup (Task 2's 'cutSurfaceTiles' already
 // resolved it once per LEAF); 'material'/'night'/'normal'/'clouds' stay

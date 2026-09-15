@@ -7,6 +7,4 @@
 export type SurfaceTileSpec = {
   /** Folder under `data/images/` holding `manifest.json` — e.g. `earth-tiles`. */
   readonly manifestKey: string;
-  /** Equatorial circumference in metres, for texel-metre error terms. */
-  readonly circumferenceM: number;
 };

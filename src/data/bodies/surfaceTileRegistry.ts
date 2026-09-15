@@ -9,5 +9,5 @@ import type { BodyId } from '../../@types/data/body/BodyId';
 import type { SurfaceTileSpec } from '../../@types/data/SurfaceTileSpec';
 
 export const SURFACE_TILE_REGISTRY = {
-  earth: { manifestKey: 'earth-tiles', circumferenceM: 40075016.686 },
+  earth: { manifestKey: 'earth-tiles' },
 } as const satisfies Partial<Record<BodyId, SurfaceTileSpec>>;

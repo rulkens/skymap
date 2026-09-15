@@ -56,7 +56,7 @@ function rootWithCamera(
 const restingRoot = rootWithCamera();
 
 /** No in-frame animation vote — the default for every case but the vote ones. */
-const NO_ANIM = { starFadeAnimating: false, earthTilesAnimating: false, labelsAnimating: false };
+const NO_ANIM = { starFadeAnimating: false, surfaceTilesAnimating: false, labelsAnimating: false };
 
 /**
  * Minimal state covering every term shouldKeepTicking reads. All terms default
@@ -233,7 +233,7 @@ describe('shouldKeepTicking', () => {
     // texture never engages at all.
     const state = makeState({});
     expect(
-      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, earthTilesAnimating: true }),
+      shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, surfaceTilesAnimating: true }),
     ).toBe(true);
   });
 

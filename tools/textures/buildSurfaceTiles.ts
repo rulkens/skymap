@@ -51,7 +51,6 @@ import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
 import { surfaceTileBandFromBounds } from '../../src/utils/scene/surfaceTileBandFromBounds';
 import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
 import { surfaceTileInBand } from '../../src/utils/scene/surfaceTileInBand';
-import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
 import { parseFlags } from '../utils/cli/args';
 import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
@@ -255,12 +254,15 @@ async function bakeDeepestLevel(
  * the assembled mosaic only because the halving is exact — libvips's integer
  * block shrink never lets a 2x2 group straddle a child boundary.
  *
- * A parent with no children is not written. One with SOME children, and no
- * `underfill` source, is written with the missing quadrants transparent, so
- * the base texture shows through (the global band's own coarser levels, and
- * the future coastal-sparse case). With `underfill`, the missing quadrants
- * are filled from it instead — see `underfillImagerySource` for why a baked
- * tile must always end up fully opaque.
+ * A parent with SOME children, and no `underfill` source, is written with the
+ * missing quadrants transparent, so the base texture shows through (the
+ * global band's own coarser levels, and the future coastal-sparse case). With
+ * `underfill`, the missing quadrants are filled from it instead — see
+ * `underfillImagerySource` for why a baked tile must always end up fully
+ * opaque. A parent with NO children (R11's halo tiles, baked only to close a
+ * sibling group with nothing of their own beneath them) is read straight from
+ * `deepSource` at this level instead — the same fallback shape as the height
+ * path's `fill.readGrid` — and left unwritten only if that too declines.
  */
 export async function bakeCoarserLevel(
   z: number,
@@ -268,6 +270,7 @@ export async function bakeCoarserLevel(
   outDir: string,
   underfill?: EarthImagerySource,
   bands: readonly SurfaceTileBand[] = WHOLE_GLOBE_BANDS,
+  deepSource?: EarthImagerySource,
 ): Promise<string[]> {
   const halfPx = tilePx / 2;
   const written: string[] = [];
@@ -295,7 +298,14 @@ export async function bakeCoarserLevel(
         top: j * halfPx,
       }))
       .filter((child) => existsSync(child.input));
-    if (childPaths.length === 0) continue;
+    if (childPaths.length === 0) {
+      const rgba = await deepSource?.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx);
+      if (rgba != null) {
+        await writeTile(rgba, tilePx, outPath);
+        written.push(relPath);
+      }
+      continue;
+    }
 
     // ensureAlpha restores a plane a fully-opaque WebP may have dropped (see
     // writeTile); resize happens here, per child, never after the composite below.
@@ -494,7 +504,9 @@ export async function bakeAll(
       for (let z = maxLevel - 1; z >= minLevel; z--) {
         // A parent's coverage box is the same as its children's (containment
         // of bounds), so the band's own boxes clamp every coarser level too.
-        const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill, uvBands);
+        // `effective` (source blended with underfill) is also the childless
+        // halo tile's own source — same object `bakeDeepestLevel` just used.
+        const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill, uvBands, effective);
         written.push(...levelPaths);
         process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
       }
@@ -539,7 +551,9 @@ export async function bakeAll(
         max: maxLevel,
         builtFrom: {
           [PRODUCT]: source.provenance,
-          ...(height === undefined ? {} : { height: height.provenance }),
+          // Also gated on `products.has('height')`: a `--product albedo` run
+          // still configures a height source but bakes none of its tiles.
+          ...(height === undefined || !products.has('height') ? {} : { height: height.provenance }),
         },
       });
     }
@@ -624,28 +638,12 @@ function productFlag(argv: readonly string[]): SurfaceTileProduct | undefined {
   return value;
 }
 
-/** `--body <id>`: validated against `SURFACE_TILE_REGISTRY` so an unknown
- *  body fails loudly rather than silently baking Earth's bands under its
- *  name. One row (`earth`) until F4 (R7) — the flag exists now so deploy
- *  scripts can name their body explicitly ahead of a second one landing. */
-function bodyFlag(argv: readonly string[]): keyof typeof SURFACE_TILE_REGISTRY {
-  const idx = argv.indexOf('--body');
-  const value = idx >= 0 && idx + 1 < argv.length ? argv[idx + 1]! : 'earth';
-  if (!(value in SURFACE_TILE_REGISTRY)) {
-    throw new Error(
-      `buildSurfaceTiles: --body '${value}' has no SURFACE_TILE_REGISTRY entry (only 'earth' until F4)`,
-    );
-  }
-  return value as keyof typeof SURFACE_TILE_REGISTRY;
-}
-
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
   const argv = process.argv.slice(2);
   const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
   const product = productFlag(argv);
   const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
-  bodyFlag(argv);
   process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, 'earth-tiles')}\n`);
   if (dev) {
     // Whole-globe BMNG only — the EOX and GeoDanmark bands need real harvests

@@ -35,7 +35,7 @@ export function shouldKeepTicking(
   state: EngineState,
   s: RootState,
   nowMs: number,
-  anim: { starFadeAnimating: boolean; earthTilesAnimating: boolean; labelsAnimating: boolean },
+  anim: { starFadeAnimating: boolean; surfaceTilesAnimating: boolean; labelsAnimating: boolean },
 ): boolean {
   return (
     selectCameraActive(s) ||
@@ -46,7 +46,7 @@ export function shouldKeepTicking(
     selectIsManualPlaying(s) ||
     followApproachEaseActive(state) ||
     anim.starFadeAnimating ||
-    anim.earthTilesAnimating ||
+    anim.surfaceTilesAnimating ||
     anim.labelsAnimating
   );
 }

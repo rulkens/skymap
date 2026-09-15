@@ -83,7 +83,10 @@ function surfaceManifest(tilePx: number | undefined): SurfaceTileManifest {
         bounds: WORLD_BOUNDS,
         min: MIN_TILE_LEVEL,
         max: MIN_TILE_LEVEL + 1,
-        builtFrom: { albedo: { sourceId: 'test', attribution: 'test', vintage: 'test' } },
+        builtFrom: {
+          albedo: { sourceId: 'test', attribution: 'test', vintage: 'test' },
+          height: { sourceId: 'test-height', attribution: 'test', vintage: 'test' },
+        },
       },
     ],
   } as unknown as SurfaceTileManifest;
@@ -139,6 +142,22 @@ describe('surfaceTileSubsystem manifest validation', () => {
     expect(params).not.toBeNull();
     expect(params!.bands).toHaveLength(1);
     expect(params!.bands[0]!.max).toBe(goodBand.max);
+  });
+
+  it('skips a band with no baked height, rather than requesting tiles that 404', async () => {
+    // A leaf draws only with its OWN height tile (§5.2): an albedo-only band
+    // (a `--product albedo` run, or a bake older than the height product)
+    // would otherwise plan requests for height tiles that were never baked,
+    // 404ing forever and stalling refinement on that band's whole footprint.
+    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const albedoOnly: SurfaceTileManifest = {
+      ...manifest,
+      bands: [
+        { ...manifest.bands[0]!, builtFrom: { albedo: manifest.bands[0]!.builtFrom.albedo } },
+      ],
+    };
+
+    expect(await plannerParamsFor(albedoOnly)).toBeNull();
   });
 });
 

@@ -292,7 +292,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Outside the gate: `isAnimating()` is true while the manifest is in flight,
   // before the layer can engage — voting only on engaged frames would sleep
   // the loop mid-fetch.
-  const earthTilesAnimating = surfaceTiles?.isAnimating() ?? false;
+  const surfaceTilesAnimating = surfaceTiles?.isAnimating() ?? false;
 
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
@@ -342,7 +342,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
     starFadeAnimating: starCut?.anyNodeFading ?? false,
-    earthTilesAnimating,
+    surfaceTilesAnimating,
     labelsAnimating,
   });
 

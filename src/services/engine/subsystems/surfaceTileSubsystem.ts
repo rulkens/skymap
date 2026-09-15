@@ -168,8 +168,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     const bands: SurfaceTileBand[] = [];
     for (const band of fetched.bands) {
       // Not baked for the albedo product (e.g. a height-only row, once those
-      // exist) — this planner only ever requests albedo tiles.
-      if (band?.builtFrom?.albedo === undefined) continue;
+      // exist) — this planner only ever requests albedo tiles. Not baked for
+      // height either: a leaf draws only with its OWN height tile (§5.2), so
+      // an albedo-only band would request tiles that 404 and never refine.
+      if (band?.builtFrom?.albedo === undefined || band?.builtFrom?.height === undefined) continue;
       // A structurally-wrong manifest entry (missing/malformed `bounds`)
       // degrades by skipping it, matching this function's whole stance —
       // never throw out of `refreshParams` over one bad band.

@@ -209,6 +209,42 @@ describe('bakeCoarserLevel', () => {
 
     expect(filler.readBoxCalls).toBe(0);
   });
+
+  // R11's own halo case: a sibling-closed coarser tile whose children were
+  // never baked (they sit outside every band's own z+1 range). Mirrors
+  // `bakeHeightLevel`, which resamples its source instead of leaving a gap —
+  // the bug this pins left the tile unwritten, `continue`d before ever
+  // consulting a source.
+  it('bakes a childless tile at a coarser level from the deep source instead of skipping it', async () => {
+    const dir = tmpDir();
+    const PURPLE = [128, 0, 128, 255] as const;
+    const deepSource = stubFillerSource(PURPLE);
+
+    await bakeCoarserLevel(1, TILE_PX, dir, undefined, undefined, deepSource);
+
+    const parentPath = join(
+      dir,
+      surfaceTilePath({ product: 'albedo', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    const { data } = await sharp(parentPath)
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    expectPixelNear(pixelAt(data, TILE_PX, 128, 128), PURPLE);
+  });
+
+  it('leaves a childless tile unwritten when no deep source is given', async () => {
+    const dir = tmpDir();
+
+    await bakeCoarserLevel(1, TILE_PX, dir);
+
+    const parentPath = join(
+      dir,
+      surfaceTilePath({ product: 'albedo', z: 1, x: 0, y: 0 }, TILE_PREFIX),
+    );
+    expect(existsSync(parentPath)).toBe(false);
+  });
 });
 
 describe('bakeAll', () => {
@@ -346,7 +382,9 @@ describe('bakeAll', () => {
     // z3 (8x4) is the deepest level, z2 (4x2) the one coarser level baked.
     // This box is exactly z3 tile (x=3, y=1)'s span, whose z2 parent is
     // (x=1, y=0); the closure widens each level to that parent's siblings —
-    // four tiles at z3, the pair (0, 0) and (1, 0) at z2.
+    // four tiles at z3, all four of (0,0)/(1,0)/(0,1)/(1,1) at z2. Only
+    // (1, 0) nests on real z3 children; the other three are childless halo
+    // tiles, each now baked from the deep source (Task A) instead of skipped.
     const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
     let underfillCalls = 0;
     const underfill: EarthImagerySource = {
@@ -392,12 +430,13 @@ describe('bakeAll', () => {
 
     await bakeAll([{ source: regional, minLevel: 2, underfill }], dir);
 
-    // 4 underfill calls, one per deepest-level tile; none at z2, where parent
-    // (1, 0) has all four children and parent (0, 0) has none at all.
-    // Dropping the band clamp from bakeAll's bakeCoarserLevel call would walk
-    // the full z2 grid instead, pick up the orphan's partial parent, and make
-    // this 5.
-    expect(underfillCalls).toBe(4);
+    // 4 underfill calls at z3 (one per deepest-level tile) plus 3 at z2, one
+    // per childless halo tile the deep source resamples — (1, 0) nests on
+    // real children and needs no underfill call of its own. Dropping the
+    // band clamp from bakeAll's bakeCoarserLevel call would additionally walk
+    // the full z2 grid and pick up the orphan's partial parent (3, 1), one
+    // underfill call more.
+    expect(underfillCalls).toBe(7);
   });
 
   // R11: the walk refines a quad only when EVERY child's height is resident,

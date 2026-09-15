@@ -30,6 +30,10 @@ export function underfillImagerySource(
         // pixels can come from nowhere but the filler. INSIDE them a decline
         // still means "no file at all": filling a hole in the harvest with
         // upscaled filler would hide it behind plausible pixels.
+        // Strict, not `boundsOverlap`'s inclusive-edge test: coverage boxes and
+        // their halo neighbours sit on the same tile grid and routinely share
+        // an exact boundary (GeoDanmark's bbox is snapped to it — see
+        // docs/DATA.md) with zero real overlap, which must still read as halo.
         const halo = !primary.coverage.some(
           (c) =>
             box.west < c.east && box.east > c.west && box.south < c.north && box.north > c.south,
