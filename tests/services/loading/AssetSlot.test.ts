@@ -5,6 +5,11 @@ import type { RetryPolicy } from '../../../src/@types/loading/RetryPolicy';
 
 const noRetry: RetryPolicy = () => 'give-up';
 
+// Every state transition below settles within a microtask or two, but vitest's
+// `waitFor` re-polls only every 50 ms — a floor of ~50 ms per wait, which was
+// this file's whole runtime. Same conditions and timeout, checked promptly.
+const waitFor = (check: () => void) => vi.waitFor(check, { interval: 1, timeout: 1000 });
+
 function deferred<T>(): {
   promise: Promise<T>;
   resolve: (v: T) => void;
@@ -30,7 +35,7 @@ describe('AssetSlot — happy path', () => {
       retry: noRetry,
     });
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     expect(commit).toHaveBeenCalledWith('X', expect.any(AbortSignal));
   });
 });
@@ -50,13 +55,13 @@ describe('AssetSlot — ready-after-commit ordering', () => {
 
     slot.load();
     // Let the fetch resolve and the commit start.
-    await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
+    await waitFor(() => expect(slot.state().kind).toBe('committing'));
     // The commit body is still pending — no 'ready' yet.
     expect(observed).not.toContain('ready');
 
     // Unblock the commit body.
     commitGate.resolve();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     // 'ready' arrives only after resolve.
     expect(observed).toContain('ready');
     // And the commit ran exactly once.
@@ -105,7 +110,7 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
     slot.load(2); // starts fetch B; A's controller aborts
     fetchA.resolve('A'); // A's resolution arrives — must NOT commit
     fetchB.resolve('B');
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(slot.current()).toBe('B');
     expect(commit).toHaveBeenCalledTimes(1);
@@ -131,13 +136,13 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
 
     slot.load(1);
     fetchA.resolve('A');
-    await vi.waitFor(() => expect(slot.state().kind).toBe('committing'));
+    await waitFor(() => expect(slot.state().kind).toBe('committing'));
 
     slot.load(2); // mid-commit-A: starts fetch B, increments generation
     commitA.resolve(); // commit A finishes — must NOT mark slot ready with A
     fetchB.resolve('B');
     commitB.resolve();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(slot.current()).toBe('B');
   });
@@ -160,7 +165,7 @@ describe('AssetSlot — race-fix (the structural bug from the existing cloudLoad
     slot.load(1);
     slot.load(2); // aborts A's controller
     fetchB.resolve('B');
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(commit).toHaveBeenCalledTimes(1);
     expect(commit).toHaveBeenCalledWith('B', expect.any(AbortSignal));
@@ -181,7 +186,7 @@ describe('AssetSlot — retry', () => {
       retry: (attempt) => (attempt < 3 ? { delayMs: 0 } : 'give-up'),
     });
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'), { timeout: 1000 });
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     expect(calls).toBe(3);
     expect(slot.current()).toBe('OK');
   });
@@ -194,7 +199,7 @@ describe('AssetSlot — retry', () => {
       retry: (attempt) => (attempt < 1 ? { delayMs: 0 } : 'give-up'),
     });
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
+    await waitFor(() => expect(slot.state().kind).toBe('error'));
     expect(fetch).toHaveBeenCalledTimes(2);
   });
 });
@@ -212,7 +217,7 @@ describe('AssetSlot — release (the evict edge)', () => {
       retry: noRetry,
     });
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     slot.release();
 
@@ -242,7 +247,7 @@ describe('AssetSlot — release (the evict edge)', () => {
       retry: noRetry,
     });
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('loading'));
+    await waitFor(() => expect(slot.state().kind).toBe('loading'));
 
     slot.release();
 
@@ -266,7 +271,7 @@ describe('AssetSlot — release (the evict edge)', () => {
     });
 
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('loading'));
+    await waitFor(() => expect(slot.state().kind).toBe('loading'));
     // Release before the fetch resolves — generation bumps, controller aborts.
     slot.release();
     // The late fetch resolution must not resurrect the slot: the post-fetch
@@ -291,12 +296,12 @@ describe('AssetSlot — release (the evict edge)', () => {
     const slot = createAssetSlot<string, void>({ name: 'test', fetch, onRelease, retry: noRetry });
 
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     slot.release();
     expect(slot.state().kind).toBe('idle');
 
     slot.load();
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     expect(slot.current()).toBe('payload-2');
     expect(calls).toBe(2);
   });
@@ -307,7 +312,7 @@ describe('AssetSlot — cancel and forceReload', () => {
     const first: Fetcher<string, number> = vi.fn().mockResolvedValue('A');
     const slot = createAssetSlot<string, number>({ name: 'test', fetch: first, retry: noRetry });
     slot.load(1);
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     const pending = deferred<string>();
     const second: Fetcher<string, number> = (_req, signal) => {
@@ -319,7 +324,7 @@ describe('AssetSlot — cancel and forceReload', () => {
     // Replace fetcher mid-test by recreating — simpler than vi.fn juggling.
     const slot2 = createAssetSlot<string, number>({ name: 'test', fetch: second, retry: noRetry });
     slot2.load(1);
-    await vi.waitFor(() => expect(slot2.state().kind).toBe('loading'));
+    await waitFor(() => expect(slot2.state().kind).toBe('loading'));
     slot2.cancel();
     expect(slot2.state().kind).toBe('idle');
   });
@@ -332,9 +337,9 @@ describe('AssetSlot — cancel and forceReload', () => {
     });
     const slot = createAssetSlot<string, number>({ name: 'test', fetch, retry: noRetry });
     slot.load(42);
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     slot.forceReload();
-    await vi.waitFor(() => expect(slot.current()).toBe('payload-2'));
+    await waitFor(() => expect(slot.current()).toBe('payload-2'));
     expect(calls).toBe(2);
   });
 
@@ -346,7 +351,7 @@ describe('AssetSlot — cancel and forceReload', () => {
     expect(slot.lastRequest()).toBeNull();
 
     slot.load(7);
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     expect(slot.lastRequest()).toBe(7);
 
     slot.release();
@@ -372,9 +377,9 @@ describe('AssetSlot — the committed value', () => {
   async function loadedThenReloading(onRelease?: (v: string) => void) {
     const { slot, second } = reloadingSlot(onRelease);
     slot.load({ tier: 'medium' });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
     slot.load({ tier: 'large' });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('loading'));
+    await waitFor(() => expect(slot.state().kind).toBe('loading'));
     return { slot, second };
   }
 
@@ -382,7 +387,7 @@ describe('AssetSlot — the committed value', () => {
     const fetch: Fetcher<string, Req> = vi.fn().mockResolvedValue('A');
     const slot = createAssetSlot<string, Req>({ name: 'test', fetch, retry: noRetry });
     slot.load({ tier: 'medium' });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
+    await waitFor(() => expect(slot.state().kind).toBe('ready'));
 
     expect(slot.committed()).toBe(slot.state());
     expect(slot.committed()?.req.tier).toBe('medium');
@@ -401,7 +406,7 @@ describe('AssetSlot — the committed value', () => {
     const { slot, second } = await loadedThenReloading();
 
     second.reject(new Error('boom'));
-    await vi.waitFor(() => expect(slot.state().kind).toBe('error'));
+    await waitFor(() => expect(slot.state().kind).toBe('error'));
     expect(slot.committed()?.value).toBe('first');
     expect(slot.committed()?.req.tier).toBe('medium');
   });
@@ -411,7 +416,7 @@ describe('AssetSlot — the committed value', () => {
     expect(slot.current()).toBe('first');
 
     second.resolve('second');
-    await vi.waitFor(() => expect(slot.current()).toBe('second'));
+    await waitFor(() => expect(slot.current()).toBe('second'));
     expect(slot.committed()?.req.tier).toBe('large');
   });
 

@@ -48,9 +48,12 @@ function tileBox(z: number, x: number, y: number, tilesX: number, tilesY: number
   };
 }
 
-/** A 4x4 block of level-13 tiles at mid-latitude, wholly inside one level-8
- *  canvas tile, so the canvas has a covered patch with room around it. */
-const COVERAGE = tileBox(PRIMARY_LEVEL, 4000, 1000, 4, 4);
+/** One level-13 tile at mid-latitude, wholly inside one level-8 canvas tile, so
+ *  the canvas has a covered patch with room around it. One tile is enough: the
+ *  primary and reference are both flat over it, so the normalised blur's answer
+ *  is the exact colour gap wherever the blurred weight is non-negligible —
+ *  a wider patch only multiplies the per-primary-tile harvest. */
+const COVERAGE = tileBox(PRIMARY_LEVEL, 4001, 1001, 1, 1);
 
 function intersects(a: LonLatBounds, b: LonLatBounds): boolean {
   return a.west < b.east && a.east > b.west && a.south < b.north && a.north > b.south;
@@ -277,8 +280,10 @@ describe('colourMatchedImagerySource', () => {
     // Coverage stops at -4.21875° and resumes there: one box lands in canvas
     // tile 124, the other in 125. A field per box measures the ramp over a
     // different half of the boundary each side, which shows up as a step.
-    const west = tileBox(PRIMARY_LEVEL, 3998, 1698, 2, 2);
-    const east = tileBox(PRIMARY_LEVEL, 4000, 1698, 2, 2);
+    // One tile wide each side of the boundary — the probe reaches only 8 canvas
+    // pixels out, and a tile is 16.
+    const west = tileBox(PRIMARY_LEVEL, 3999, 1698, 1, 2);
+    const east = tileBox(PRIMARY_LEVEL, 4000, 1698, 1, 2);
     const primary = stubSource({
       id: 'primary',
       maxLevel: PRIMARY_LEVEL,
