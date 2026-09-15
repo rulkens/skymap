@@ -33,7 +33,7 @@ import {
   clearSelection,
 } from '../selection/selectionSlice';
 import { catalogLoaded } from '../catalog/catalogLoaded';
-import { engineSourceCountReported } from '../engine/engineSlice';
+import { engineSourceCountReported, engineStructureCountsChanged } from '../engine/engineSlice';
 import { setSelectionRow } from './selectionRowsSlice';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
@@ -68,16 +68,19 @@ export function* watchSelectionRowsSaga() {
     yield* reextract('focus');
   });
   // A late catalog makes a previously-unresolvable ref resolvable — fill the
-  // gaps. Both commit pulses wake it: catalogLoaded (galaxy cloud) and
+  // gaps. Three commit pulses wake it: catalogLoaded (galaxy cloud),
   // engineSourceCountReported (every source's count pulse, incl. the star bin,
-  // which never fires catalogLoaded). Extra firings for already-filled slots are
-  // guarded no-ops (row === null && ref !== null), so the star count report is
-  // harmless for galaxy slots and vice versa.
-  yield* takeEvery([catalogLoaded, engineSourceCountReported], function* () {
-    for (const slot of ['hover', 'select', 'focus'] as const) {
-      const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
-      const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
-      if (row === null && ref !== null) yield* reextract(slot);
-    }
-  });
+  // which never fires catalogLoaded) and engineStructureCountsChanged (the
+  // structure store's only signal). Extra firings for already-filled slots are
+  // guarded no-ops (row === null && ref !== null).
+  yield* takeEvery(
+    [catalogLoaded, engineSourceCountReported, engineStructureCountsChanged],
+    function* () {
+      for (const slot of ['hover', 'select', 'focus'] as const) {
+        const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
+        const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
+        if (row === null && ref !== null) yield* reextract(slot);
+      }
+    },
+  );
 }
