@@ -212,11 +212,11 @@ export function createEarthSurfaceTileRenderer(
       // the primary one (see io.wesl's `PatchInstance` doc) — mix() at weight 1
       // returns the primary sample exactly, so the fragment never needs to
       // branch on "is there a fallback".
-      const fallback = tile.resident.fallback ?? tile.resident;
+      const fallback = tile.albedo.fallback ?? tile.albedo;
       const fadeWeight =
-        tile.resident.fallback === null
+        tile.albedo.fallback === null
           ? 1
-          : Math.min(1, Math.max(0, (nowMs - tile.resident.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
+          : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
 
       const origin = patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM);
       writePatchInstance(
@@ -230,10 +230,10 @@ export function createEarthSurfaceTileRenderer(
         tile.anchor.lat0Rad,
         tile.anchor.dLonRad,
         tile.anchor.dLatRad,
-        tile.resident.atlasUvOrigin[0],
-        tile.resident.atlasUvOrigin[1],
-        tile.resident.atlasUvScale[0],
-        tile.resident.atlasUvScale[1],
+        tile.albedo.atlasUvOrigin[0],
+        tile.albedo.atlasUvOrigin[1],
+        tile.albedo.atlasUvScale[0],
+        tile.albedo.atlasUvScale[1],
         fallback.atlasUvOrigin[0],
         fallback.atlasUvOrigin[1],
         fallback.atlasUvScale[0],

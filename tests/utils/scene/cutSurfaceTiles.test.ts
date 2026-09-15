@@ -37,9 +37,29 @@ const EARTH_RADIUS_KM = 6371;
 const FOV_Y_RAD = (40 * Math.PI) / 180;
 const VIEWPORT: [number, number] = [2560, 1440];
 
-/** A `residentSlot` that never resolves — the "nothing atlas-resident" stub
- *  most tests below don't care about. */
-const NEVER_RESIDENT = (): null => null;
+/** The residency record most fixtures below hand back; its rect is the whole
+ *  atlas, which no assertion here reads. */
+const WHOLE_ATLAS = {
+  slot: 0,
+  atlasUvOrigin: [0, 0] as const,
+  atlasUvScale: [1, 1] as const,
+  readyAtMs: 0,
+};
+
+/** A `residentSlot` that resolves HEIGHT everywhere and albedo nowhere — the
+ *  "nothing to draw, but refinement unblocked" stub. Height residency is what
+ *  gates refinement (§5.2), so the older "resolves nothing" stub would now pin
+ *  every walk at the base level and say nothing about the cull and refine
+ *  rules these fixtures exist for. */
+const HEIGHT_ONLY = (tile: SurfaceTileId) => (tile.product === 'height' ? WHOLE_ATLAS : null);
+
+/** Wraps an albedo-only stub so height resolves everywhere around it — the
+ *  complete-height-pyramid case, which is what the bake owes the walk: every
+ *  tile the walk can reach has its own height tile, so these fixtures go on
+ *  testing albedo resolution rather than the refinement gate. */
+function withHeight<T>(albedo: (tile: SurfaceTileId) => T) {
+  return (tile: SurfaceTileId) => (tile.product === 'height' ? WHOLE_ATLAS : albedo(tile));
+}
 
 // Fixtures below build camPosLocalM at radius 1 (`radiusM: 1`) — a
 // dimensionless "body-radii" world that degenerates the walk's metres-native
@@ -75,7 +95,7 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     // so every test above that predates the bias keeps asserting the rule it
     // was written against rather than a softened one.
     lodBias: 0,
-    residentSlot: NEVER_RESIDENT,
+    residentSlot: HEIGHT_ONLY,
   };
 }
 
@@ -129,7 +149,7 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
     ],
     tilePx: EARTH_TILE_PX,
     lodBias: 0,
-    residentSlot: NEVER_RESIDENT,
+    residentSlot: HEIGHT_ONLY,
     maxLevel,
   };
 }
@@ -180,7 +200,7 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
     ],
     tilePx: EARTH_TILE_PX,
     lodBias: 0,
-    residentSlot: NEVER_RESIDENT,
+    residentSlot: HEIGHT_ONLY,
   };
 }
 
@@ -275,7 +295,7 @@ describe('cutSurfaceTiles', () => {
     it('resolves an exactly resident leaf to the ancestor rect unchanged (levelDelta 0)', () => {
       const z = expectedLevel(1000);
       const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
-      const residentSlot = (tile: SurfaceTileId) =>
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === z && tile.x === x && tile.y === y
           ? {
               slot: 7,
@@ -283,19 +303,20 @@ describe('cutSurfaceTiles', () => {
               atlasUvScale: [0.125, 0.125] as const,
               readyAtMs: 42_000,
             }
-          : null;
+          : null,
+      );
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
-      expect(entry!.resident.slot).toBe(7);
-      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(0.25, 12);
-      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(0.5, 12);
-      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(0.125, 12);
-      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(0.125, 12);
+      expect(entry!.albedo.slot).toBe(7);
+      expect(entry!.albedo.atlasUvOrigin[0]).toBeCloseTo(0.25, 12);
+      expect(entry!.albedo.atlasUvOrigin[1]).toBeCloseTo(0.5, 12);
+      expect(entry!.albedo.atlasUvScale[0]).toBeCloseTo(0.125, 12);
+      expect(entry!.albedo.atlasUvScale[1]).toBeCloseTo(0.125, 12);
       // No other resident ancestor anywhere in the chain: nothing to fade from.
-      expect(entry!.resident.readyAtMs).toBe(42_000);
-      expect(entry!.resident.fallback).toBeNull();
+      expect(entry!.albedo.readyAtMs).toBe(42_000);
+      expect(entry!.albedo.fallback).toBeNull();
     });
 
     it("carries the z-1 ancestor's flattened rect as fallback, and the leaf's own readyAt, when both are resident", () => {
@@ -312,37 +333,37 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.0, 0.25] as const,
         atlasUvScale: [0.25, 0.25] as const,
       };
-      const residentSlot = (tile: SurfaceTileId) => {
+      const residentSlot = withHeight((tile: SurfaceTileId) => {
         if (tile.z === z && tile.x === x && tile.y === y)
           return { slot: 7, ...leafRect, readyAtMs: 5_000 };
         if (tile.z === parentZ && tile.x === parentX && tile.y === parentY)
           return { slot: 3, ...parentRect, readyAtMs: 1_000 };
         return null;
-      };
+      });
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       // readyAtMs is the RESOLVED (primary) tile's own timestamp, not the fallback's.
-      expect(entry!.resident.readyAtMs).toBe(5_000);
-      expect(entry!.resident.fallback).not.toBeNull();
+      expect(entry!.albedo.readyAtMs).toBe(5_000);
+      expect(entry!.albedo.fallback).not.toBeNull();
 
       const span = 2;
       const offsetU = (x - parentX * span) / span;
       const offsetV = (y - parentY * span) / span;
-      expect(entry!.resident.fallback!.atlasUvOrigin[0]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvOrigin[0]).toBeCloseTo(
         parentRect.atlasUvOrigin[0] + offsetU * parentRect.atlasUvScale[0],
         12,
       );
-      expect(entry!.resident.fallback!.atlasUvOrigin[1]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvOrigin[1]).toBeCloseTo(
         parentRect.atlasUvOrigin[1] + offsetV * parentRect.atlasUvScale[1],
         12,
       );
-      expect(entry!.resident.fallback!.atlasUvScale[0]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvScale[0]).toBeCloseTo(
         parentRect.atlasUvScale[0] / span,
         12,
       );
-      expect(entry!.resident.fallback!.atlasUvScale[1]).toBeCloseTo(
+      expect(entry!.albedo.fallback!.atlasUvScale[1]).toBeCloseTo(
         parentRect.atlasUvScale[1] / span,
         12,
       );
@@ -367,16 +388,17 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.25, 0.5] as const,
         atlasUvScale: [0.5, 0.5] as const,
       };
-      const residentSlot = (tile: SurfaceTileId) =>
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === ancestorZ && tile.x === ancX && tile.y === ancY
           ? { slot: 3, ...ancestorRect, readyAtMs: 9_000 }
-          : null;
+          : null,
+      );
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       const entry = result.cut.find((c) => c.id.z === z && c.id.x === x && c.id.y === y);
       expect(entry, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       // Only one resident ancestor anywhere in the chain: nothing shallower to fade from.
-      expect(entry!.resident.fallback).toBeNull();
+      expect(entry!.albedo.fallback).toBeNull();
 
       // Hand-computed via integer tile-block arithmetic, independent of the
       // source's own formula: `[x, y]`'s low 2 bits give the leaf's position
@@ -396,17 +418,17 @@ describe('cutSurfaceTiles', () => {
         ancestorRect.atlasUvScale[0] / span,
         ancestorRect.atlasUvScale[1] / span,
       ];
-      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(expectedOrigin[0], 12);
-      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(expectedOrigin[1], 12);
-      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(expectedScale[0], 12);
-      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(expectedScale[1], 12);
+      expect(entry!.albedo.atlasUvOrigin[0]).toBeCloseTo(expectedOrigin[0], 12);
+      expect(entry!.albedo.atlasUvOrigin[1]).toBeCloseTo(expectedOrigin[1], 12);
+      expect(entry!.albedo.atlasUvScale[0]).toBeCloseTo(expectedScale[0], 12);
+      expect(entry!.albedo.atlasUvScale[1]).toBeCloseTo(expectedScale[1], 12);
     });
 
     it('never resolves an ancestor at or shallower than baseLevel', () => {
       // Resident everywhere AT baseLevel — if the walk ever queried down that
       // far, every leaf would resolve. None should: nothing else is resident,
       // so `cut` must still come back empty.
-      const residentSlot = (tile: SurfaceTileId) =>
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === BASE_LEVEL
           ? {
               slot: 0,
@@ -414,7 +436,8 @@ describe('cutSurfaceTiles', () => {
               atlasUvScale: [1, 1] as const,
               readyAtMs: 0,
             }
-          : null;
+          : null,
+      );
       const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot });
       expect(result.cut).toEqual([]);
       expect(result.requests.requests.length).toBeGreaterThan(0);
@@ -450,10 +473,11 @@ describe('cutSurfaceTiles', () => {
         atlasUvOrigin: [0.25, 0.5] as const,
         atlasUvScale: [0.5, 0.5] as const,
       };
-      const residentSlot = (tile: SurfaceTileId) =>
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === z7 && tile.x === z7x && tile.y === z7y
           ? { slot: 3, ...ancestorRect, readyAtMs: 3_000 }
-          : null;
+          : null,
+      );
 
       const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
 
@@ -475,16 +499,16 @@ describe('cutSurfaceTiles', () => {
       const span = 2;
       const offsetU = (otherX - z7x * span) / span;
       const offsetV = (otherY - z7y * span) / span;
-      expect(entry!.resident.atlasUvOrigin[0]).toBeCloseTo(
+      expect(entry!.albedo.atlasUvOrigin[0]).toBeCloseTo(
         ancestorRect.atlasUvOrigin[0] + offsetU * ancestorRect.atlasUvScale[0],
         12,
       );
-      expect(entry!.resident.atlasUvOrigin[1]).toBeCloseTo(
+      expect(entry!.albedo.atlasUvOrigin[1]).toBeCloseTo(
         ancestorRect.atlasUvOrigin[1] + offsetV * ancestorRect.atlasUvScale[1],
         12,
       );
-      expect(entry!.resident.atlasUvScale[0]).toBeCloseTo(ancestorRect.atlasUvScale[0] / span, 12);
-      expect(entry!.resident.atlasUvScale[1]).toBeCloseTo(ancestorRect.atlasUvScale[1] / span, 12);
+      expect(entry!.albedo.atlasUvScale[0]).toBeCloseTo(ancestorRect.atlasUvScale[0] / span, 12);
+      expect(entry!.albedo.atlasUvScale[1]).toBeCloseTo(ancestorRect.atlasUvScale[1] / span, 12);
     });
 
     it('the near-plane-straddler fallback carries over, in both products', () => {
@@ -499,7 +523,7 @@ describe('cutSurfaceTiles', () => {
       const deep = bare.requests.requests.find((r) => r.tile.z === maxLevel);
       expect(deep, `a z${maxLevel} request`).toBeDefined();
 
-      const residentSlot = (tile: SurfaceTileId) =>
+      const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === deep!.tile.z && tile.x === deep!.tile.x && tile.y === deep!.tile.y
           ? {
               slot: 1,
@@ -507,10 +531,118 @@ describe('cutSurfaceTiles', () => {
               atlasUvScale: [1, 1] as const,
               readyAtMs: 0,
             }
-          : null;
+          : null,
+      );
       const result = cutSurfaceTiles({ ...input, residentSlot });
       expect(result.requests.requests.some((r) => r.tile.z === maxLevel)).toBe(true);
       expect(result.cut.length).toBeGreaterThan(0);
+    });
+  });
+
+  /**
+   * Spec §5.2, the invariant the whole crack argument rests on: a leaf draws
+   * from its OWN height tile, never an ancestor's — so height residency gates
+   * REFINEMENT, and the height level the cut samples is a function of the cut
+   * alone. Broken, this is silent until F2 displaces geometry, and then it is
+   * cracks that flicker while tiles stream rather than a stable seam.
+   */
+  describe('height-gated refinement', () => {
+    /** Albedo resolvable everywhere, height only down to `deepestZ` — the
+     *  streaming state where the next level's height tiles have not landed. */
+    function heightTo(deepestZ: number) {
+      return (tile: SurfaceTileId) =>
+        tile.product === 'height' && tile.z > deepestZ ? null : WHOLE_ATLAS;
+    }
+
+    /** Deep enough that only the height gate can be what stops the walk. */
+    const HEIGHT_CEILING = BASE_LEVEL + 2;
+
+    it('never emits a leaf deeper than the level whose height tiles are resident', () => {
+      expect(expectedLevel(1000)).toBeGreaterThan(HEIGHT_CEILING);
+      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot: heightTo(HEIGHT_CEILING) });
+
+      expect(result.cut.length).toBeGreaterThan(0);
+      expect(result.cut.every((t) => t.id.z <= HEIGHT_CEILING)).toBe(true);
+      // And it does reach that level: a gate that dropped everything would
+      // satisfy the line above while saying nothing.
+      expect(result.cut.some((t) => t.id.z === HEIGHT_CEILING)).toBe(true);
+    });
+
+    it('requests the blocking children in both products, one level ahead of the cut', () => {
+      const result = cutSurfaceTiles({ ...nadirAt(1000), residentSlot: heightTo(HEIGHT_CEILING) });
+      const [px, py] = surfaceTileXyForUv(
+        [20 / 360 + 0.5, 15 / 180 + 0.5],
+        HEIGHT_CEILING,
+        EARTH_TILE_PX,
+      );
+      expect(
+        result.cut.some((t) => t.id.z === HEIGHT_CEILING && t.id.x === px && t.id.y === py),
+        `the sub-camera tile is the cut's leaf at z${HEIGHT_CEILING}`,
+      ).toBe(true);
+
+      const keys = new Set(
+        result.requests.requests.map(
+          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
+        ),
+      );
+      for (let q = 0; q < 4; q++) {
+        const cx = px * 2 + (q & 1);
+        const cy = py * 2 + (q >> 1);
+        for (const product of ['albedo', 'height']) {
+          expect(
+            keys.has(`${product}/${HEIGHT_CEILING + 1}/${cx}/${cy}`),
+            `${product} child ${cx},${cy}`,
+          ).toBe(true);
+        }
+      }
+      // `zWin` reports DEMAND, not residency: it is the subsystem's engage
+      // gate, so a cold start that cannot refine must still ask for the level
+      // that would unblock it, or nothing is ever fetched.
+      expect(result.requests.zWin).toBe(HEIGHT_CEILING + 1);
+    });
+
+    it('drops a leaf whose own height tile is missing even though its ancestor has one', () => {
+      // The band-edge shape: a global band capping at z7 and a deep band over
+      // exactly one z8 tile. The in-band child has its own height tile; its
+      // sibling has none and never will, but DOES have a resident z7 height
+      // ancestor — the climb the albedo path does and this one must not.
+      const z7 = 7;
+      const z8 = 8;
+      const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
+      const [z7x, z7y] = surfaceTileXyForUv(subUv, z7, EARTH_TILE_PX);
+      const [z8x, z8y] = surfaceTileXyForUv(subUv, z8, EARTH_TILE_PX);
+      const cols = surfaceTileColumns(z8, EARTH_TILE_PX);
+      const rows = cols / 2;
+      const bands = [
+        { uBounds: [0, 1] as const, vBounds: [0, 1] as const, min: MIN_TILE_LEVEL, max: z7 },
+        {
+          uBounds: [z8x / cols, (z8x + 1) / cols] as const,
+          vBounds: [1 - (z8y + 1) / rows, 1 - z8y / rows] as const,
+          min: z8,
+          max: 13,
+        },
+      ];
+      const residentSlot = (tile: SurfaceTileId) => {
+        if (tile.product !== 'height') return WHOLE_ATLAS;
+        if (tile.z <= z7) return WHOLE_ATLAS;
+        return tile.z === z8 && tile.x === z8x && tile.y === z8y ? WHOLE_ATLAS : null;
+      };
+
+      const result = cutSurfaceTiles({ ...nadirAt(1000), bands, residentSlot });
+
+      const otherX = z8x === z7x * 2 ? z7x * 2 + 1 : z7x * 2;
+      expect(
+        result.cut.some((t) => t.id.z === z8 && t.id.x === z8x && t.id.y === z8y),
+        'the in-band child, with its own height tile, is drawn',
+      ).toBe(true);
+      expect(
+        result.cut.some((t) => t.id.z === z8 && t.id.x === otherX && t.id.y === z8y),
+        'its sibling, with only an ancestor height tile, is not',
+      ).toBe(false);
+      expect(
+        result.cut.some((t) => t.id.z === z7 && t.id.x === z7x && t.id.y === z7y),
+        'and the parent did refine — a sibling with no file to wait for cannot hold it back',
+      ).toBe(false);
     });
   });
 
@@ -531,7 +663,9 @@ describe('cutSurfaceTiles', () => {
 
       expect(keys.has(`${z}/${subCamera[0]}/${subCamera[1]}`), 'sub-camera tile').toBe(true);
       expect(keys.has(`${z}/${antipode[0]}/${antipode[1]}`), 'antipodal tile').toBe(false);
-      expect(result.requests.requests.length).toBeLessThan(128 * 0.6);
+      // Distinct TILES, not request rows: every tile is requested in both
+      // products, so the row count is twice the footprint being asserted here.
+      expect(keys.size).toBeLessThan(128 * 0.6);
     });
 
     it('reaches the level a hand-computed texel density calls for', () => {
@@ -817,6 +951,9 @@ describe('cutSurfaceTiles', () => {
     // isolates the walk's cull/refine logic (under test) from any residency-
     // race concern (the exact-repro report's §1 already ruled that out).
     function mockResidentSlot(tile: SurfaceTileId) {
+      // Height everywhere — the complete pyramid the bake owes the walk — so
+      // this fixture keeps testing the bbox cull rather than the height gate.
+      if (tile.product === 'height') return WHOLE_ATLAS;
       const { u0, u1, v0, v1 } = tileUvBounds(tile.z, tile.x, tile.y);
       if (surfaceTileBandRequestAllowed(bands, tile.z, u0, u1, v0, v1)) {
         return {

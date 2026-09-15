@@ -340,13 +340,15 @@ describe('surfaceTileSubsystem debug snapshot', () => {
       {
         id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
         anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
-        resident: {
+        albedo: {
           slot: 0,
           atlasUvOrigin: [0, 0],
           atlasUvScale: [1, 1],
           readyAtMs: 0,
           fallback: null,
         },
+        heightSlot: 0,
+        edgeCoarser: [0, 0, 0, 0],
       },
     ]);
     expect(subsystem.getDebugSnapshot().plan?.cutCount).toBe(1);
@@ -576,13 +578,15 @@ describe('surfaceTileSubsystem lastCut', () => {
       {
         id: { z: MIN_TILE_LEVEL, x: 0, y: 0 },
         anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
-        resident: {
+        albedo: {
           slot: 0,
           atlasUvOrigin: [0, 0],
           atlasUvScale: [0.1, 0.1],
           readyAtMs: 0,
           fallback: null,
         },
+        heightSlot: 0,
+        edgeCoarser: [0, 0, 0, 0],
       },
     ];
     subsystem.setLastCut(cut);

@@ -1,9 +1,9 @@
 import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
-import type { SurfaceTileProduct } from '../../@types/data/SurfaceTileProduct';
 import type { SurfaceTileBand } from '../../@types/scene/SurfaceTileBand';
 import type { SurfaceTilePlan } from '../../@types/scene/SurfaceTilePlan';
 import type { SurfaceTileRequest } from '../../@types/scene/SurfaceTileRequest';
 import type { SurfaceCutTile } from '../../@types/scene/SurfaceCutTile';
+import type { ResolvedTileResidency } from '../../@types/scene/ResolvedTileResidency';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { surfaceTileColumns } from './surfaceTileColumns';
@@ -19,20 +19,22 @@ type ResidentLookupResult = {
   readonly readyAtMs: number;
 } | null;
 
-/** The one product this walk requests/resolves today — Task 11 makes the
- *  cut two-product (height-gated refinement); until then every emitted
- *  `SurfaceTileId` names this one, not a caller-supplied value. */
-const PRODUCT: SurfaceTileProduct = 'albedo';
+/** Shared by every leaf; `balanceSurfaceCut` rebuilds the ones it coarsens. */
+const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
 
 /**
  * cutSurfaceTiles — `planEarthTiles`'s walk, superseding it: one quadtree
- * walk, two products. `requests` is what to fetch (the plan, minus the
- * page-table window clip — gone with the page table it sized, Task 5).
- * `cut` is what to draw: each leaf resolved in the same pass via the
- * injected `residentSlot` ancestor-fallback lookup. Two walks re-deriving
- * the same horizon/frustum/refine logic would eventually desync; one walk
- * can't. `requests` IS a `SurfaceTilePlan` — Task 5 dropped the page-table
- * window fields from that type, so no reshaping seam is needed here.
+ * walk, two products. `requests` is what to fetch (every tile in BOTH
+ * products), `cut` is what to draw — each leaf's albedo resolved in the same
+ * pass via the injected `residentSlot` ancestor-fallback lookup, its height
+ * strictly its own (spec §5.2). Two walks re-deriving the same
+ * horizon/frustum/refine logic would eventually desync; one walk can't.
+ *
+ * Height residency gates REFINEMENT, not just drawing, so the height level the
+ * cut samples is a function of the cut alone and neighbours stay on nested
+ * lattices throughout streaming. Which is why a node's cull is computed by its
+ * PARENT (`probe`) and rides the stack: the parent has to know a child's
+ * visibility before it can decide.
  */
 export function cutSurfaceTiles(input: {
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
@@ -121,18 +123,9 @@ export function cutSurfaceTiles(input: {
   const cut: SurfaceCutTile[] = [];
   let zWin = baseLevel;
 
-  // Explicit stack, not recursion: allocation-free in a per-frame path.
-  const stack: number[] = [];
-  const rootCols = surfaceTileColumns(baseLevel, tilePx);
-  for (let y = 0; y < rootCols / 2; y++) {
-    for (let x = 0; x < rootCols; x++) stack.push(baseLevel, x, y);
-  }
-
-  while (stack.length > 0) {
-    const y = stack.pop()!;
-    const x = stack.pop()!;
-    const z = stack.pop()!;
-
+  /** Horizon + frustum cull for one node plus the level its screen footprint
+   *  asks for; `null` when culled. Once per node — see the header. */
+  function probe(z: number, x: number, y: number): { screenPx: number; required: number } | null {
     const cols = surfaceTileColumns(z, tilePx);
     const rows = cols / 2;
     const u0 = x / cols;
@@ -140,13 +133,8 @@ export function cutSurfaceTiles(input: {
     // Tile rows count south from +90 while the mesh's v counts north from -90.
     const vNorth = 1 - y / rows;
     const vSouth = 1 - (y + 1) / rows;
-    const uMid = (u0 + u1) / 2;
-    const vMid = (vNorth + vSouth) / 2;
-    // `v0`/`v1` are min/max, so `vSouth` (mesh-v increases north) is `v0`.
-    const v0 = vSouth;
-    const v1 = vNorth;
 
-    const centre = equirectUvToDirection([uMid, vMid]);
+    const centre = equirectUvToDirection([(u0 + u1) / 2, (vNorth + vSouth) / 2]);
     // Angular radius of the patch, to its corners (farthest from centre) —
     // ALL FOUR, not just one: meridians converge toward the poles, so a
     // plate-carrée patch is not angularly symmetric about its centre. A
@@ -174,7 +162,7 @@ export function cutSurfaceTiles(input: {
         Math.max(-1, centre[0] * camDir[0] + centre[1] * camDir[1] + centre[2] * camDir[2]),
       ),
     );
-    if (centreAngle - patchAngle > capAngle) continue;
+    if (centreAngle - patchAngle > capAngle) return null;
 
     // 2. Frustum, and the projected extent that drives everything else
     let minX = Infinity;
@@ -197,7 +185,7 @@ export function cutSurfaceTiles(input: {
       if (ndcY < minY) minY = ndcY;
       if (ndcY > maxY) maxY = ndcY;
     }
-    if (nInFront === 0) continue;
+    if (nInFront === 0) return null;
     // A sample past the near plane is dropped before it can corrupt the
     // bbox, but a STRADDLING patch's bbox is still meaningless: the true
     // footprint sweeps toward infinity as a sample nears w=0, so the
@@ -206,15 +194,14 @@ export function cutSurfaceTiles(input: {
     // dropped; otherwise treat the patch as screen-filling and force it to
     // the deepest level any band offers here.
     const straddlesNearPlane = nInFront < 9;
-    if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) continue;
+    if (!straddlesNearPlane && (maxX < -1 || minX > 1 || maxY < -1 || minY > 1)) return null;
 
     // NDC spans 2 units across the viewport, hence the halving.
     const screenPx = straddlesNearPlane
       ? Math.max(viewportPx[0], viewportPx[1])
       : Math.max(((maxX - minX) / 2) * viewportPx[0], ((maxY - minY) / 2) * viewportPx[1]);
-    if (!(screenPx > 0)) continue;
+    if (!(screenPx > 0)) return null;
 
-    // 3 & 4. Refine or emit
     // `lodBias` is subtracted AFTER the ceil, not folded into the log
     // argument: for an integer bias `ceil(x) - bias === ceil(x - bias)`.
     const required = straddlesNearPlane
@@ -223,27 +210,126 @@ export function cutSurfaceTiles(input: {
           maxTileLevel,
           Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
         );
-    if (required > z && surfaceTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
-      // Same band-request gate as the leaf branch: a would-be ancestor no
-      // band bakes at this z has no file to fetch either.
-      if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
-        requests.push({ tile: { product: PRODUCT, z, x, y }, screenPx });
-      stack.push(z + 1, x * 2, y * 2);
-      stack.push(z + 1, x * 2 + 1, y * 2);
-      stack.push(z + 1, x * 2, y * 2 + 1);
-      stack.push(z + 1, x * 2 + 1, y * 2 + 1);
-      continue;
+    return { screenPx, required };
+  }
+
+  /** Both products of one tile — height rides every albedo request (§6.1),
+   *  band-floor ancestors included: refinement needs posts, not pixels. */
+  function request(z: number, x: number, y: number, screenPx: number): void {
+    requests.push({ tile: { product: 'albedo', z, x, y }, screenPx });
+    requests.push({ tile: { product: 'height', z, x, y }, screenPx });
+  }
+
+  /** This exact tile's height slot, or null. No ancestor climb, ever: §5.2. */
+  function heightSlotOf(z: number, x: number, y: number): number | null {
+    return residentSlot({ product: 'height', z, x, y })?.slot ?? null;
+  }
+
+  // Explicit stack, not recursion: allocation-free in a per-frame path. Five
+  // numbers per node — its id plus `probe`'s two results, unpaid for twice.
+  const stack: number[] = [];
+  // Hoisted scratch for the four children's probe results.
+  const childX = [0, 0, 0, 0];
+  const childY = [0, 0, 0, 0];
+  const childScreenPx = [0, 0, 0, 0];
+  const childRequired = [0, 0, 0, 0];
+  const childBakeable = [false, false, false, false];
+
+  const rootCols = surfaceTileColumns(baseLevel, tilePx);
+  for (let y = 0; y < rootCols / 2; y++) {
+    for (let x = 0; x < rootCols; x++) {
+      const probed = probe(baseLevel, x, y);
+      if (probed !== null) stack.push(baseLevel, x, y, probed.screenPx, probed.required);
     }
-    // `zWin` is the finest level the walk REACHED, counting leaves no bake
-    // covers, regardless of which files happen to exist.
-    if (z > zWin) zWin = z;
+  }
+
+  while (stack.length > 0) {
+    const required = stack.pop()!;
+    const screenPx = stack.pop()!;
+    const y = stack.pop()!;
+    const x = stack.pop()!;
+    const z = stack.pop()!;
+
+    const cols = surfaceTileColumns(z, tilePx);
+    const rows = cols / 2;
+    const u0 = x / cols;
+    const u1 = (x + 1) / cols;
+    // `v0`/`v1` are min/max, so the south edge (mesh-v increases north) is `v0`.
+    const v0 = 1 - (y + 1) / rows;
+    const v1 = 1 - y / rows;
+
+    // 3 & 4. Refine or emit
+    if (required > z && surfaceTileBandRefineAllowed(bands, z, u0, u1, v0, v1)) {
+      const childCols = cols * 2;
+      const childRows = rows * 2;
+      let visibleChildren = 0;
+      let heightsReady = true;
+      for (let q = 0; q < 4; q++) {
+        const cx = x * 2 + (q & 1);
+        const cy = y * 2 + (q >> 1);
+        const probed = probe(z + 1, cx, cy);
+        if (probed === null) continue;
+        childX[visibleChildren] = cx;
+        childY[visibleChildren] = cy;
+        childScreenPx[visibleChildren] = probed.screenPx;
+        childRequired[visibleChildren] = probed.required;
+        const cu0 = cx / childCols;
+        const cv1 = 1 - cy / childRows;
+        const bakeable = surfaceTileBandRequestAllowed(
+          bands,
+          z + 1,
+          cu0,
+          cu0 + 1 / childCols,
+          cv1 - 1 / childRows,
+          cv1,
+        );
+        childBakeable[visibleChildren] = bakeable;
+        visibleChildren++;
+        // Only a child the walk would actually REQUEST can hold refinement
+        // back: one no band bakes at z+1 can never become resident, and
+        // waiting on it would freeze every deep band at its own boundary.
+        if (bakeable && heightSlotOf(z + 1, cx, cy) === null) heightsReady = false;
+      }
+
+      if (heightsReady) {
+        // Same band-request gate as the leaf branch: a would-be ancestor no
+        // band bakes at this z has no file to fetch either.
+        if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1)) request(z, x, y, screenPx);
+        for (let c = 0; c < visibleChildren; c++)
+          stack.push(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!, childRequired[c]!);
+        continue;
+      }
+
+      // Refinement is waiting on height, so this node stays the leaf and its
+      // children are fetched instead — ALL of them, not only the ones still
+      // missing: a request is also the LRU touch that keeps a sibling's
+      // height tile alive, and without it the first to land are evicted while
+      // the last is in flight, and refinement never converges.
+      for (let c = 0; c < visibleChildren; c++) {
+        if (childBakeable[c]) request(z + 1, childX[c]!, childY[c]!, childScreenPx[c]!);
+      }
+      // Demand, not residency: `zWin` is the subsystem's engage gate, so a cold
+      // start that cannot refine must still name the level it is asking for.
+      if (z + 1 > zWin) zWin = z + 1;
+    } else if (z > zWin) {
+      // `zWin` is the finest level the walk REACHED, counting leaves no bake
+      // covers, regardless of which files happen to exist.
+      zWin = z;
+    }
+
     // Requestable and drawable are different questions: a leaf can sit past
     // every overlapping band's max (e.g. just outside a deep band's bbox,
     // under a shallower global band) with no file of its OWN to fetch, yet
     // still have a resident ANCESTOR to draw — skip only the fetch, not the
     // residency lookup below, or a band-edge ring never gets ancestor pixels.
-    if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1))
-      requests.push({ tile: { product: PRODUCT, z, x, y }, screenPx });
+    if (surfaceTileBandRequestAllowed(bands, z, u0, u1, v0, v1)) request(z, x, y, screenPx);
+
+    // §5.2: a leaf draws from its OWN height tile or not at all. Inheriting an
+    // ancestor's posts would make neighbouring patches sample different height
+    // levels as tiles arrive, and the cracks would flicker. Covers
+    // `z <= baseLevel` too — nothing is atlas-resident there, in either product.
+    const heightSlot = heightSlotOf(z, x, y);
+    if (heightSlot === null) continue;
 
     // Ancestor-fallback residency: the leaf's own tile if resident, else the
     // nearest resident ancestor strictly deeper than `baseLevel` (that level
@@ -255,7 +341,9 @@ export function cutSurfaceTiles(input: {
       cut.push({
         id: { z, x, y },
         anchor: surfacePatchAnchor(u0, v0, u1, v1),
-        resident: resolved,
+        albedo: resolved,
+        heightSlot,
+        edgeCoarser: NO_COARSER_EDGES,
       });
     }
   }
@@ -295,7 +383,7 @@ function resolveCutResidency(input: {
   readonly y: number;
   readonly baseLevel: number;
   readonly residentSlot: (tile: SurfaceTileId) => ResidentLookupResult;
-}): SurfaceCutTile['resident'] | null {
+}): ResolvedTileResidency | null {
   const { z, x, y, baseLevel, residentSlot } = input;
 
   let primary: {
@@ -309,7 +397,7 @@ function resolveCutResidency(input: {
     const ancestorZ = z - levelDelta;
     const ancX = x >> levelDelta;
     const ancY = y >> levelDelta;
-    const found = residentSlot({ product: PRODUCT, z: ancestorZ, x: ancX, y: ancY });
+    const found = residentSlot({ product: 'albedo', z: ancestorZ, x: ancX, y: ancY });
     if (found === null) continue;
     const span = 1 << levelDelta;
     const offsetU = (x - ancX * span) / span;
