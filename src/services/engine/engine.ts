@@ -45,7 +45,6 @@ import { CONTENT_PASSES } from './frame/passes';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { deriveBodyStates } from './frame/deriveBodyStates';
-import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
