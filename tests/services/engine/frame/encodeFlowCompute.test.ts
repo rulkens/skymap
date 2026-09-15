@@ -78,7 +78,7 @@ describe('encodeFlowCompute', () => {
     // The step's own GPU-timing slot rides through to the renderer — without it
     // the prelude's dispatch is untimed and its cost drains into whichever
     // render pass opens next, reading there as that pass regressing.
-    const claim = () => undefined;
+    const claim = () => ({});
     encodeFlowCompute(encoder, state, NOW_MS, claim);
     expect(renderer.encodeCompute).toHaveBeenCalledTimes(1);
     expect(renderer.encodeCompute).toHaveBeenCalledWith(

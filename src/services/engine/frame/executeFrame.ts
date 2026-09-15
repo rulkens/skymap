@@ -92,6 +92,7 @@ import { encodeFlowCompute } from './encodeFlowCompute';
 import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
+import { timestampSpread } from '../../../utils/gpu/timestampSpread';
 
 /**
  * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
@@ -187,15 +188,6 @@ type Destination = {
   readonly touchKey: string;
 };
 
-/** Spread-if idiom: attach `timestampWrites` only when the service returns one. */
-function timestampSpread(
-  timing: GpuTimingService,
-  slot: string,
-): { timestampWrites?: GPURenderPassTimestampWrites } {
-  const descriptor = timing.descriptorFor(slot);
-  return descriptor ? { timestampWrites: descriptor } : {};
-}
-
 export function executeFrame(args: ExecuteFrameArgs): void {
   const { encoder, ctx, state, program, strategy, timing, swapView, captureContexts } = args;
 
@@ -231,7 +223,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // this frame, and these rows carry their own gates (an empty atmosphere
         // draw list, flow switched off) — claiming up front would leave a row
         // reporting the query set's stale ticks from when it last ran.
-        compute(encoder, ctx, state, () => timing.descriptorFor(slot));
+        compute(encoder, ctx, state, () => timestampSpread(timing, slot));
         break;
       }
       case 'render': {

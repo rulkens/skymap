@@ -373,10 +373,7 @@ export function createFlowFieldRenderer(init: {
       // seed pass above would otherwise overwrite the same two query indices on
       // the rare reseed frame (see the type's `timestampWrites` doc).
       const integrate = f.mode === 'streamline' ? streamlinePipeline : advectPipeline;
-      const timestampWrites = claimTimestampWrites?.();
-      const pass = encoder.beginComputePass(
-        timestampWrites === undefined ? {} : { timestampWrites },
-      );
+      const pass = encoder.beginComputePass({ ...(claimTimestampWrites?.() ?? {}) });
       pass.setPipeline(integrate);
       pass.setBindGroup(0, computeBindGroup);
       pass.dispatchWorkgroups(dispatchCount);

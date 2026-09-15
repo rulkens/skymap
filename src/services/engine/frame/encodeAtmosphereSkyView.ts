@@ -32,12 +32,11 @@ export function encodeAtmosphereSkyView(
   const entries = atmosphereDrawList(state, ctx);
   if (entries.length === 0) return;
 
-  // Claimed only now, past both gates: a slot claimed on a frame that opens no
-  // pass reports the ticks it last held (see `ClaimTimestampWrites`).
-  const timestampWrites = claimTimestampWrites?.();
   const pass = encoder.beginComputePass({
     label: 'atmosphere-skyview-pass',
-    ...(timestampWrites === undefined ? {} : { timestampWrites }),
+    // Claimed only now, past both gates: a slot claimed on a frame that opens
+    // no pass reports the ticks it last held (see `ClaimTimestampWrites`).
+    ...(claimTimestampWrites?.() ?? {}),
   });
   for (const { body, params, camLocal, sunLocal } of entries) {
     const radius = Math.hypot(camLocal[0], camLocal[1], camLocal[2]);

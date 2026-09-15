@@ -157,7 +157,9 @@ describe('encodeAtmosphereSkyView', () => {
   it('opens one compute pass for the draw list, carrying the claimed timestamp writes', () => {
     const renderer = spyRenderer();
     const writes = { querySet: {}, beginningOfPassWriteIndex: 4, endOfPassWriteIndex: 5 };
-    const claim = vi.fn(() => writes as unknown as GPUComputePassTimestampWrites);
+    const claim = vi.fn(() => ({
+      timestampWrites: writes as unknown as GPUComputePassTimestampWrites,
+    }));
     encodeAtmosphereSkyView(
       encoder,
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
@@ -172,7 +174,7 @@ describe('encodeAtmosphereSkyView', () => {
   // write — so a claim on a frame that opens no pass makes the panel report the
   // ticks from whenever the atmosphere was last in view, as if it still were.
   it('claims no timing slot and opens no pass when no body carries an atmosphere', () => {
-    const claim = vi.fn(() => undefined);
+    const claim = vi.fn(() => ({}));
     encodeAtmosphereSkyView(
       encoder,
       makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
