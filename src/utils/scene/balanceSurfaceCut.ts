@@ -106,18 +106,17 @@ export function balanceSurfaceCut(
   const balanced: SurfaceCutTile[] = [];
   for (const leaf of leaves.values()) {
     const { z, x, y } = leaf.id;
-    const edgeCoarser: [0 | 1, 0 | 1, 0 | 1, 0 | 1] = [0, 0, 0, 0];
+    const edgeCoarser: [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2] = [0, 0, 0, 0];
     let anyCoarser = false;
     for (let edge = 0; edge < 4; edge++) {
       if (!neighbourCell(edge, z, x, y, cell)) continue;
       const other = coveringLeaf(z, cell[0]!, cell[1]!);
-      // EXACTLY one level, never merely coarser: a band-ceiling or
-      // unresolvable-parent step is more than F2's single bit can collapse,
-      // and claiming otherwise would pull the edge onto posts that aren't there.
-      if (other !== null && other.id.z === z - 1) {
-        edgeCoarser[edge] = 1;
-        anyCoarser = true;
-      }
+      if (other === null || other.id.z >= z) continue;
+      // Exactly one level collapses; anything deeper — a band ceiling or an
+      // unresolvable parent — is a seam F2 skirts, because the coarse side has
+      // no post at the even index to pull the edge onto.
+      edgeCoarser[edge] = z - other.id.z === 1 ? 1 : 2;
+      anyCoarser = true;
     }
     const e = leaf.edgeCoarser;
     balanced.push(

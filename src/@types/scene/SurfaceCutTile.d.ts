@@ -20,12 +20,12 @@ export type SurfaceCutTile = {
    *  never an ancestor's (spec §5.2), which is what keeps edge-neighbouring
    *  patches on nested height lattices while tiles stream in. */
   readonly heightSlot: number;
-  /** One bit per edge, `[west, east, south, north]` (R9): 1 where the
-   *  neighbouring leaf is EXACTLY one level coarser, which is what lets F2's
-   *  vertex stage collapse that edge onto the coarse neighbour's posts with
-   *  no neighbour data beyond these four bits. `balanceSurfaceCut` fills it.
-   *  A deeper step — a band ceiling the balance may not cross, or a parent it
-   *  could not resolve — stays 0: the edge is left as a seam rather than
-   *  collapsed onto posts the coarse side does not have. */
-  readonly edgeCoarser: readonly [0 | 1, 0 | 1, 0 | 1, 0 | 1];
+  /** Per edge, in R9 order `[west, east, south, north]`, how far the
+   *  neighbouring leaf steps UP: 0 = same level, finer, or no neighbour;
+   *  1 = exactly one level coarser (F2 collapses that edge onto the coarse
+   *  neighbour's posts); 2 = coarser by more than one level — a band seam the
+   *  2:1 balance may not cross (spec §6 R12), which F2 hides with a skirt and
+   *  never collapses, since the coarse side has no post at the even index.
+   *  `balanceSurfaceCut` fills it; only the FINE side of a step carries one. */
+  readonly edgeCoarser: readonly [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2];
 };

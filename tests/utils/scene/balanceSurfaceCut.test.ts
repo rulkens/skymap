@@ -1,11 +1,11 @@
 /**
- * The 2:1 balance is what bounds `edgeCoarser` to one bit per edge, and one
- * bit is the whole stitching budget F2's vertex stage gets (spec §6.2). A cut
- * that slips to a two-level step, or a bit set on the wrong edge, is invisible
- * in F1 — nothing reads either — and shows up later as a crack nobody can tie
- * back to the walk. Hand-built cuts, because the interesting shapes (a deep
- * island beside a coarse neighbour, the antimeridian seam) are ones a camera
- * fixture reaches only by accident.
+ * The 2:1 balance is what keeps `edgeCoarser` to code 1 anywhere it can, and
+ * the code is the whole stitching budget F2's vertex stage gets (spec §6.2):
+ * 1 collapses, 2 gets a skirt. A step that slips a level, or a code on the
+ * wrong edge, shows up later as a crack nobody can tie back to the walk.
+ * Hand-built cuts, because the interesting shapes (a deep island beside a
+ * coarse neighbour, the antimeridian seam) are ones a camera fixture reaches
+ * only by accident.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -127,7 +127,7 @@ describe('balanceSurfaceCut', () => {
     expect(find(balanced, 9, 22, 10)!.edgeCoarser).toEqual([1, 0, 0, 0]);
     expect(find(balanced, 9, 22, 11)!.edgeCoarser).toEqual([1, 0, 0, 0]);
     // The east pair touches only its own level; the coarse leaf itself carries
-    // no bit — the FINE side is the one that has to collapse an edge.
+    // nothing — the FINE side is the one that has to collapse an edge.
     expect(find(balanced, 9, 23, 10)!.edgeCoarser).toEqual([0, 0, 0, 0]);
     expect(find(balanced, 8, 10, 5)!.edgeCoarser).toEqual([0, 0, 0, 0]);
   });
@@ -172,14 +172,14 @@ describe('balanceSurfaceCut', () => {
     for (const [x, y] of ring) {
       expect(find(balanced, 7, x, y)!.edgeCoarser, `ring tile ${x},${y}`).toEqual([0, 0, 0, 0]);
     }
-    // And the fine side carries no bit either: one bit can only collapse a
-    // one-level step, and this one is six.
+    // The island's north-west leaf faces the ring on two edges, six levels up:
+    // code 2 on both — a band seam F2 skirts and must never collapse.
     expect(find(balanced, 13, islandZ7X * span, islandZ7Y * span)!.edgeCoarser).toEqual([
-      0, 0, 0, 0,
+      2, 0, 0, 2,
     ]);
   });
 
-  it('leaves the bits clear when the collapse is refused for want of a parent', () => {
+  it('codes the surviving step 2 when the collapse is refused for want of a parent', () => {
     const cut = [
       leafAt(8, 10, 5),
       leafAt(10, 44, 20),
@@ -191,8 +191,8 @@ describe('balanceSurfaceCut', () => {
     const balanced = balance(cut, UNCAPPED, () => null);
 
     expect(worstStep(balanced), 'the step survives rather than punching a hole').toBe(2);
-    expect(find(balanced, 10, 44, 20)!.edgeCoarser).toEqual([0, 0, 0, 0]);
-    expect(find(balanced, 10, 44, 21)!.edgeCoarser).toEqual([0, 0, 0, 0]);
+    expect(find(balanced, 10, 44, 20)!.edgeCoarser).toEqual([2, 0, 0, 0]);
+    expect(find(balanced, 10, 44, 21)!.edgeCoarser).toEqual([2, 0, 0, 0]);
   });
 
   it('treats the antimeridian columns as neighbours', () => {
