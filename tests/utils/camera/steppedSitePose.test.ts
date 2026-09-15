@@ -6,6 +6,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { steppedSitePose } from '../../../src/utils/camera/steppedSitePose';
+import { ORBIT_MAX_RAD_PER_PX } from '../../../src/utils/camera/orbitRadPerPixel';
 import { SITE_RUNG } from '../../../src/data/camera/siteRung';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { InputStep } from '../../../src/@types/camera/InputStep';
@@ -40,12 +41,20 @@ function step(pose: SitePose, input: InputStep): SitePose {
 }
 
 describe('steppedSitePose', () => {
-  it('turns the turntable by one FOV for a drag of one screen height, at any range', () => {
-    for (const rangeM of [12, 400]) {
-      const out = step({ ...POSE, rangeM }, drag(600, 0));
-      expect(out.headingRad).toBeCloseTo(FOV_Y_RAD, 12);
-      expect(out.rangeM).toBe(rangeM);
-    }
+  it('drags at the ground rate — k radii out, k times the pixel angle', () => {
+    // 1:1 ground tracking, as the body arm's drag does it: a pixel spans
+    // `range · fovY / heightPx` of the bounding sphere, so at k radii it turns
+    // k · 1.3333e-3 rad. Hand-computed at k = 3: 4.0e-3 rad/px, 60 px → 0.24.
+    const near = step({ ...POSE, rangeM: 3 * ROVER.boundingRadiusM }, drag(60, 30));
+    expect(near.headingRad).toBeCloseTo(0.24, 12);
+    expect(near.elevationRad).toBeCloseTo(POSE.elevationRad + 0.12, 12);
+    expect(near.rangeM).toBe(3 * ROVER.boundingRadiusM);
+  });
+
+  it('holds the flat ceiling once the ground rate outruns it', () => {
+    // k = 10 asks 1.3333e-2 rad/px and gets ORBIT_MAX_RAD_PER_PX: 60 px → 0.3.
+    const far = step({ ...POSE, rangeM: 10 * ROVER.boundingRadiusM }, drag(60, 0));
+    expect(far.headingRad).toBeCloseTo(60 * ORBIT_MAX_RAD_PER_PX, 12);
   });
 
   it('drag signs: +Δx raises the heading and +Δy raises the eye', () => {

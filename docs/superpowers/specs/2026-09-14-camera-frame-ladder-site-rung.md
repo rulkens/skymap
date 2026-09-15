@@ -692,14 +692,17 @@ the previous frame's end pixel (`InputStep.d.ts:6-7,19`), so the rung needs
 for it.
 
 - **Drag** — one mode, the turntable; no pan/strafe/look/tilt latch, so none of
-  `SurfaceGesture`'s machinery applies. The rate is the angle the pixel delta
-  subtends at the lens, the same law as the body arm
-  (`draggedSurfacePose.ts:46-50`), so a drag of one screen height is one FOV of
-  turn at every range and no tuning constant exists to be wrong:
+  `SurfaceGesture`'s machinery applies. The rate is the body arm's 1:1 ground
+  tracking (`anchoredDragRotation`) re-derived on the site's bounding sphere —
+  one pixel spans `rangeM · fovYRad / viewportPx[1]` metres of that sphere, so
+  it turns that over the sphere's radius, capped at `ORBIT_MAX_RAD_PER_PX`
+  exactly as `orbitRadPerPixel` caps the same law:
 
   ```
-  headingRad   += ((endPx[0] − startPx[0]) / viewportPx[1]) · fovYRad
-  elevationRad += ((endPx[1] − startPx[1]) / viewportPx[1]) · fovYRad
+  gain          = min(ORBIT_MAX_RAD_PER_PX,
+                      (fovYRad / viewportPx[1]) · rangeM / boundingRadiusM)
+  headingRad   += (endPx[0] − startPx[0]) · gain
+  elevationRad += (endPx[1] − startPx[1]) · gain
   ```
 
   Both signs are the body arm's **orbit** handle, re-derived: an orbit drag

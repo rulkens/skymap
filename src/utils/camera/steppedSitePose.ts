@@ -1,7 +1,9 @@
 /**
- * The site rung's gesture register (spec §4.6): one turntable drag, at the body
- * arm's rate law (a pixel delta's angle at the lens), so no tuning constant can
- * be wrong. Both signs are that arm's ORBIT handle re-derived, never its tilt.
+ * The site rung's gesture register (spec §4.6): one turntable drag at the body
+ * arm's 1:1 GROUND rate — a pixel spans `rangeM · fovY / heightPx` metres of the
+ * site's bounding sphere, which is that over the sphere's radius in radians —
+ * capped by the flat `ORBIT_MAX_RAD_PER_PX`, as `orbitRadPerPixel` caps the same
+ * law. Both signs are that arm's ORBIT handle re-derived, never its tilt.
  */
 
 import type { InputStep } from '../../@types/camera/InputStep';
@@ -9,6 +11,7 @@ import type { MeshBody } from '../../@types/scene/MeshBody';
 import type { SitePose } from '../../@types/camera/SitePose';
 import type { Vec2 } from '../../@types/math/Vec2';
 import { clampedSitePose } from './clampedSitePose';
+import { ORBIT_MAX_RAD_PER_PX } from './orbitRadPerPixel';
 import { spentZoomFactor } from './spentZoomFactor';
 import { wrapRad } from '../math/wrapRad';
 
@@ -20,7 +23,10 @@ export function steppedSitePose(
   fovYRad: number,
 ): SitePose {
   if (input.kind === 'drag') {
-    const gain = fovYRad / viewportPx[1];
+    const gain = Math.min(
+      ORBIT_MAX_RAD_PER_PX,
+      ((fovYRad / viewportPx[1]) * pose.rangeM) / body.boundingRadiusM,
+    );
     return clampedSitePose(
       {
         ...pose,
