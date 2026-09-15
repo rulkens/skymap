@@ -923,6 +923,56 @@ describe('cutSurfaceTiles', () => {
     });
   });
 
+  describe('relief headroom in the frustum cull', () => {
+    // Once geometry is displaced, a summit near a side plane is on screen
+    // while its datum patch is not. The bound comes from the resident height
+    // ancestor's own subtree range, never a constant: a constant margin would
+    // re-inflate every patch near the eye plane into a screen-filling
+    // straddler, which is the inflation R14's bounding sphere removed.
+    const RADIUS_M = EARTH_RADIUS_KM * 1000;
+    const HEADROOM_BANDS: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 15 },
+    ];
+
+    /** Albedo and height resident everywhere, every height tile declaring the
+     *  same subtree range — one lives in each tile's `shgt1` header. */
+    function residentWithRange(range: readonly [number, number]) {
+      return (tile: SurfaceTileId) =>
+        tile.product === 'height' ? { ...WHOLE_ATLAS, subtreeRangeM: range } : WHOLE_ATLAS;
+    }
+
+    function cutWithRange(range: readonly [number, number]) {
+      const base = tiltedAt(20_000, 60);
+      return cutSurfaceTiles({
+        ...base,
+        camPosLocalM: base.camPosLocalM.map((c) => c * RADIUS_M) as Vec3,
+        radiusM: RADIUS_M,
+        bands: HEADROOM_BANDS,
+        residentSlot: residentWithRange(range),
+      });
+    }
+
+    /** The set of nodes the walk did NOT cull — every surviving node in band
+     *  requests itself, leaf or not, so this is the cull's own output. The
+     *  CUT is not: a newly-visible child turns its parent from a leaf into an
+     *  interior node, so the drawn set legitimately changes shape. */
+    function survivors(range: readonly [number, number]): Set<string> {
+      return new Set(
+        cutWithRange(range).requests.requests.map(
+          (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
+        ),
+      );
+    }
+
+    it('admits patches a flat datum culls, and culls none it kept', () => {
+      const flat = survivors([0, 0]);
+      const relief = survivors([-430, 8849]);
+
+      for (const id of flat) expect(relief.has(id), `${id} survived the datum cull`).toBe(true);
+      expect(relief.size).toBeGreaterThan(flat.size);
+    });
+  });
+
   describe('low-altitude planner input precision (the f64 belt-and-braces contract)', () => {
     // Reproduces the diagnosed bug: composeBodyMvp used to narrow its result to
     // f32 before this walk ever saw it. At low altitude the matrix's own

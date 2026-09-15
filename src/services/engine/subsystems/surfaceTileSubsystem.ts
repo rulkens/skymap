@@ -78,6 +78,9 @@ type ResidentTile = {
   readonly tile: SurfaceTileId;
   readonly slot: number;
   readonly readyAtMs: number;
+  /** HEIGHT only: the `shgt1` header's subtree bounds, which the walk turns
+   *  into frustum-cull headroom for every descendant. Null for albedo. */
+  readonly subtreeRangeM: readonly [number, number] | null;
 };
 
 export type SurfaceTileDeps = {
@@ -368,7 +371,12 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
             // in F1 (the renderer doesn't sample the atlas yet, and R14's
             // ancestor fallback makes one tile's stamp meaningless anyway),
             // but the residency record is shared, so it is stamped the same way.
-            heightResident.set(key, { tile: request.tile, slot, readyAtMs: performance.now() });
+            heightResident.set(key, {
+              tile: request.tile,
+              slot,
+              readyAtMs: performance.now(),
+              subtreeRangeM: [tile.subtreeMinM, tile.subtreeMaxM],
+            });
           },
         });
         continue;
@@ -396,7 +404,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
           const readyAtMs = performance.now();
           pendingLevelOf.delete(key);
           if (slot === null) return;
-          resident.set(key, { tile: request.tile, slot, readyAtMs });
+          resident.set(key, { tile: request.tile, slot, readyAtMs, subtreeRangeM: null });
         },
       });
     }
@@ -418,6 +426,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     atlasUvOrigin: readonly [number, number];
     atlasUvScale: readonly [number, number];
     readyAtMs: number;
+    subtreeRangeM: readonly [number, number] | null;
   } | null {
     if (manifest === null || atlas === null) return null;
     const key = surfaceTilePath(tile, manifest.prefix);
@@ -431,6 +440,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       atlasUvOrigin: [u0, v0],
       atlasUvScale: [u1 - u0, v1 - v0],
       readyAtMs: entry.readyAtMs,
+      subtreeRangeM: entry.subtreeRangeM,
     };
   }
 

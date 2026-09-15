@@ -19,6 +19,10 @@ type ResidentLookupResult = {
   readonly atlasUvOrigin: readonly [number, number];
   readonly atlasUvScale: readonly [number, number];
   readonly readyAtMs: number;
+  /** HEIGHT only: the tile header's `subtreeMin/MaxM`, which bound every
+   *  descendant of that tile. Absent or null is read as "no bound known",
+   *  which is the datum — never an assumption of flat ground. */
+  readonly subtreeRangeM?: readonly [number, number] | null;
 } | null;
 
 /** Placeholder until `balanceSurfaceCut` fills the real bits in. */
@@ -168,11 +172,12 @@ export function cutSurfaceTiles(input: {
     if (centreAngle - patchAngle > capAngle) return null;
 
     // 2. Frustum, conservatively: a sphere about the patch centre, radius to
-    // the farthest corner plus headroom for skirts/relief (no per-tile height
-    // bounds exist yet). The only test a near-plane straddler gets — its
-    // projected bbox below is meaningless — and it also catches points
-    // entirely behind the eye, which fail every plane test at once.
-    const boundRadius = 1.5 * Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
+    // the farthest corner plus headroom for skirts, plus the relief this
+    // node's subtree can actually reach. The only test a near-plane straddler
+    // gets — its projected bbox below is meaningless — and it also catches
+    // points entirely behind the eye, which fail every plane test at once.
+    const boundRadius =
+      1.5 * Math.sqrt(Math.max(0, 2 - 2 * minCornerDot)) + reliefHeadroom(z, x, y);
     for (let k = 0; k < 4; k++) {
       const dist =
         (planeA[k]! * centre[0] + planeB[k]! * centre[1] + planeC[k]! * centre[2] + planeD[k]!) *
@@ -225,6 +230,27 @@ export function cutSurfaceTiles(input: {
           Math.max(baseLevel, z + Math.ceil(Math.log2(screenPx / tilePx)) - lodBias),
         );
     return { screenPx, required };
+  }
+
+  /** Relief a node's subtree can reach, in the walk's unit-sphere length —
+   *  the deepest resident height ancestor's `subtreeMin/MaxM`, which bounds
+   *  every descendant by construction. 0 when nothing is resident: the datum,
+   *  as F1. A CONSTANT margin instead would inflate every patch near the eye
+   *  plane back into a screen-filling straddler, which is what R14 removed. */
+  function reliefHeadroom(z: number, x: number, y: number): number {
+    for (let levelDelta = 0; z - levelDelta > baseLevel; levelDelta++) {
+      const found = residentSlot({
+        product: 'height',
+        z: z - levelDelta,
+        x: x >> levelDelta,
+        y: y >> levelDelta,
+      });
+      if (found === null) continue;
+      const range = found.subtreeRangeM;
+      if (range === undefined || range === null) return 0;
+      return Math.max(Math.abs(range[0]), Math.abs(range[1])) / radiusM;
+    }
+    return 0;
   }
 
   /** Both products of one tile — height rides every albedo request (§6.1),
