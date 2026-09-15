@@ -58,7 +58,8 @@ describe('surfacePatchIndices', () => {
   /**
    * The one bug class here no screenshot at an ordinary pose reveals: under
    * `frontFace: 'ccw'` + `cullMode: 'back'` a reversed skirt quad is simply
-   * invisible, so a band seam keeps gaping with nothing on screen to blame.
+   * invisible, so the seam it was hiding keeps gaping with nothing on screen
+   * to blame.
    */
   it('winds skirt quads outward on all four edges', () => {
     const indices = surfacePatchIndices(RESOLUTION);

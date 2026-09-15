@@ -261,9 +261,9 @@ export function createEarthSurfaceTileRenderer(
         slotOriginX + tile.height.originPosts[0],
         slotOriginY + tile.height.originPosts[1],
         tile.edgeCoarser[0] |
-          (tile.edgeCoarser[1] << 2) |
-          (tile.edgeCoarser[2] << 4) |
-          (tile.edgeCoarser[3] << 6),
+          (tile.edgeCoarser[1] << 1) |
+          (tile.edgeCoarser[2] << 2) |
+          (tile.edgeCoarser[3] << 3),
         (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
       );
     }

@@ -58,7 +58,7 @@ export function writePatchInstance(
    *  `SurfaceCutTile.height.originPosts`. */
   heightSlotOriginX: number,
   heightSlotOriginY: number,
-  /** Pre-packed 2 bits per edge — see `io.wesl`'s `edgeCoarser` comment. */
+  /** Pre-packed one bit per edge — see `io.wesl`'s `edgeCoarser` comment. */
   edgeCoarser: number,
   /** Cells across that sub-rect: `128 >> levelDelta`. */
   heightCells: number,

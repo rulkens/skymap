@@ -1,9 +1,11 @@
 /**
- * The level balance is what decides each edge's 3-valued code, and that code is
- * the whole stitching budget F2's vertex stage gets (spec §6.2): 1 is sampled
- * across at doubled stride, 2 is skirted. Since R14 it works on the HEIGHT
- * level a leaf inherited, not the leaf's own: a code on the wrong edge, or a 2
- * where a 1 belongs, shows up as a crack nobody can tie back to the walk.
+ * The level balance is what decides each edge's bit, and that bit is the whole
+ * lattice-stitching budget F2's vertex stage gets (spec §6.2): set, the edge
+ * samples at doubled stride; clear, it samples its own posts and the skirt
+ * covers whatever the neighbour does. Since R14 it works on the HEIGHT level a
+ * leaf inherited, not the leaf's own: a bit on the wrong edge, or one set
+ * across a step of two, displaces that edge off a lattice nobody shares —
+ * a crack nobody can tie back to the walk.
  * Hand-built cuts, because the interesting shapes (a deep island beside a
  * coarse neighbour, the antimeridian seam) are ones a camera fixture reaches
  * only by accident.
@@ -176,24 +178,25 @@ describe('balanceSurfaceCut', () => {
     for (const [x, y] of ring) {
       expect(find(balanced, 7, x, y).edgeCoarser, `ring tile ${x},${y}`).toEqual([0, 0, 0, 0]);
     }
-    // The island's north-west leaf carries code 2 on exactly the two edges
-    // facing the ring: six levels is past anything a doubled stride can meet,
-    // so F2 skirts those and neither side coarsens.
+    // Six levels is past anything a doubled stride can meet, so the island's
+    // north-west leaf carries NO bit on the two edges facing the ring: neither
+    // side coarsens and F2's skirt is what hides the step.
     expect(find(balanced, 13, islandZ7X * span, islandZ7Y * span).edgeCoarser).toEqual([
-      2, 0, 0, 2,
+      0, 0, 0, 0,
     ]);
   });
 
-  it('marks the edge a band seam when nothing coarser is resident to climb to', () => {
+  it('leaves the edge unmarked when nothing coarser is resident to climb to', () => {
     const cut = [leafAt(13, 40, 20), leafAt(13, 41, 20, 11)];
 
     const balanced = balance(cut, UNCAPPED, heightsAt([13]));
 
     // Nothing above 13 is resident for the fine leaf, so it cannot meet the
-    // coarse one — the seam survives rather than the leaf.
+    // coarse one — the seam survives rather than the leaf, and a stride of 2
+    // would land on neither lattice, so the edge stays unmarked.
     expect(worstStep(balanced), 'the step survives, the leaf is not dropped').toBe(2);
     expect(balanced).toHaveLength(2);
-    expect(find(balanced, 13, 40, 20).edgeCoarser).toEqual([0, 2, 0, 0]);
+    expect(find(balanced, 13, 40, 20).edgeCoarser).toEqual([0, 0, 0, 0]);
   });
 
   it('sets the edge bit toward a band-ceiling neighbour without coarsening either side', () => {

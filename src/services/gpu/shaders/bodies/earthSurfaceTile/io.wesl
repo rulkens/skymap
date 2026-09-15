@@ -54,11 +54,11 @@ struct PatchInstance {
   // are read with 'textureLoad' -- never a sampler, which would bleed the
   // neighbouring slot in along every patch edge.
   heightSlotOrigin: vec2<u32>,
-  // How far each edge's neighbouring leaf's HEIGHT LEVEL steps UP, 2 bits per
-  // edge in R9 order: code(west) | code(east) << 2 | code(south) << 4 |
-  // code(north) << 6. 0 = same, finer or absent; 1 = exactly one coarser,
-  // which the vertex stage samples at doubled stride (that IS the neighbour's
-  // lattice); 2 = a band seam the balance may not cross, which it skirts.
+  // One bit per edge in R9 order (west | east << 1 | south << 2 |
+  // north << 3), set when that neighbouring leaf's HEIGHT LEVEL is exactly
+  // one coarser: the vertex stage then samples that edge at doubled stride,
+  // which IS the neighbour's own lattice. A step of two or more carries no
+  // bit -- no stride meets it, and the skirt (on every edge, R15) hides it.
   edgeCoarser: u32,
   // Cells across the sub-rect above: 128 >> levelDelta, so 128 on a leaf
   // drawing its own tile. Fills what was the record's trailing pad.

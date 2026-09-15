@@ -964,12 +964,42 @@ describe('cutSurfaceTiles', () => {
       );
     }
 
+    /** Two nodes read off the walk's own output at this pose: the first flips
+     *  from culled to kept once Earth's relief is in the margin, the second
+     *  stays culled unless the margin is wrong. Pinned rather than counted —
+     *  a size comparison passes on any inflation, which is the bug. */
+    const ADMITTED_BY_RELIEF = 'height/8/143/53';
+    const CULLED_BY_RELIEF = 'height/7/69/26';
+    /** Large enough that the clamp saturates at every node's own chord — and
+     *  exactly what a range left in METRES would do to the same margin. */
+    const SATURATING: readonly [number, number] = [0, 5_000_000];
+    /** Well outside this pose's frustum: no margin the clamp allows reaches
+     *  it, whatever the resident ancestor claims. */
+    const CULLED_AT_ANY_RANGE = 'height/10/555/214';
+
     it('admits patches a flat datum culls, and culls none it kept', () => {
       const flat = survivors([0, 0]);
       const relief = survivors([-430, 8849]);
 
       for (const id of flat) expect(relief.has(id), `${id} survived the datum cull`).toBe(true);
-      expect(relief.size).toBeGreaterThan(flat.size);
+      expect(flat.has(ADMITTED_BY_RELIEF)).toBe(false);
+      expect(relief.has(ADMITTED_BY_RELIEF)).toBe(true);
+    });
+
+    it('measures the subtree range in unit-sphere length, not metres', () => {
+      // Undivided, Earth's 8849 m reads as 8849 RADII: past every patch's
+      // chord, so the clamp saturates and the cull collapses onto the
+      // saturating case — which keeps a node the real relief does not.
+      expect(survivors(SATURATING).has(CULLED_BY_RELIEF)).toBe(true);
+      expect(survivors([-430, 8849]).has(CULLED_BY_RELIEF)).toBe(false);
+    });
+
+    it('clamps the margin at the patch’s own corner chord', () => {
+      // Unclamped, a range this absurd (157 000 Earth radii) sweeps 3752
+      // nodes into frustum against 254 — the eye-plane inflation R14's
+      // bounding sphere removed, back through the relief margin.
+      expect(survivors([0, 1e12]).has(CULLED_AT_ANY_RANGE)).toBe(false);
+      expect(survivors(SATURATING).has(CULLED_AT_ANY_RANGE)).toBe(false);
     });
   });
 

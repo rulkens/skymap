@@ -176,8 +176,8 @@ export function cutSurfaceTiles(input: {
     // node's subtree can actually reach. The only test a near-plane straddler
     // gets — its projected bbox below is meaningless — and it also catches
     // points entirely behind the eye, which fail every plane test at once.
-    const boundRadius =
-      1.5 * Math.sqrt(Math.max(0, 2 - 2 * minCornerDot)) + reliefHeadroom(z, x, y);
+    const cornerChord = Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
+    const boundRadius = 1.5 * cornerChord + Math.min(reliefHeadroom(z, x, y), cornerChord);
     for (let k = 0; k < 4; k++) {
       const dist =
         (planeA[k]! * centre[0] + planeB[k]! * centre[1] + planeC[k]! * centre[2] + planeD[k]!) *
@@ -236,7 +236,10 @@ export function cutSurfaceTiles(input: {
    *  the deepest resident height ancestor's `subtreeMin/MaxM`, which bounds
    *  every descendant by construction. 0 when nothing is resident: the datum,
    *  as F1. A CONSTANT margin instead would inflate every patch near the eye
-   *  plane back into a screen-filling straddler, which is what R14 removed. */
+   *  plane back into a screen-filling straddler, which is what R14 removed —
+   *  and so does the caller's clamp at the patch's own chord, since before
+   *  deep tiles land the resident ancestor is the base level, whose range is
+   *  the whole body's relief (R15). */
   function reliefHeadroom(z: number, x: number, y: number): number {
     for (let levelDelta = 0; z - levelDelta > baseLevel; levelDelta++) {
       const found = residentSlot({

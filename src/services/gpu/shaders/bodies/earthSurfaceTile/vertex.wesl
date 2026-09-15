@@ -60,23 +60,20 @@ fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32, height
 }
 
 // Edge order is R9's [west, east, south, north] = template i = 0, i = n,
-// j = 0, j = n. Code 1 doubles the sampling stride along that edge, which is
-// exactly the coarse neighbour's own lattice; at code 2 the neighbour is more
-// than one level away and has no post to meet, so that edge is skirted. The
-// stride is scalar rather than per-axis because a boundary vertex's FIXED
-// coordinate is always a multiple of 2 (0 or 'cells'), where doubling is a
-// no-op.
-fn collapseStride(i: u32, j: u32, n: u32, edgeCoarser: u32) -> f32 {
-  let west = edgeCoarser & 3u;
-  let east = (edgeCoarser >> 2u) & 3u;
-  let south = (edgeCoarser >> 4u) & 3u;
-  let north = (edgeCoarser >> 6u) & 3u;
-  let onCollapsedEdge =
-    (i == 0u && west == 1u) ||
-    (i == n && east == 1u) ||
-    (j == 0u && south == 1u) ||
-    (j == n && north == 1u);
-  return select(1.0, 2.0, onCollapsedEdge);
+// j = 0, j = n, one bit each. A set bit means that neighbour's HEIGHT level
+// is one coarser, so the edge samples every second post -- exactly the
+// lattice the neighbour itself draws (R1's strict decimation). It says
+// nothing about the neighbour's MESH density, which the skirt owns (R15).
+// The stride is scalar rather than per-axis because a boundary vertex's
+// FIXED coordinate is always a multiple of 2 (0 or 'cells'), where doubling
+// is a no-op.
+fn edgeLatticeStride(i: u32, j: u32, n: u32, edgeCoarser: u32) -> f32 {
+  let onCoarserEdge =
+    (i == 0u && (edgeCoarser & 1u) != 0u) ||
+    (i == n && (edgeCoarser & 2u) != 0u) ||
+    (j == 0u && (edgeCoarser & 4u) != 0u) ||
+    (j == n && (edgeCoarser & 8u) != 0u);
+  return select(1.0, 2.0, onCoarserEdge);
 }
 
 @vertex
@@ -91,12 +88,11 @@ fn vs(
   let isSkirt = vertexIndex >= gridCount;
   // A skirt vertex IS its boundary post -- same lattice position, same
   // interpolants; only the height it is placed at differs (depthM below).
-  var edge = 0u;
   var i = vertexIndex % row;
   var j = vertexIndex / row;
   if (isSkirt) {
     let sid = vertexIndex - gridCount;
-    edge = sid / row;
+    let edge = sid / row;
     let k = sid % row;
     if (edge == 0u) { i = 0u; j = k; }
     else if (edge == 1u) { i = n; j = k; }
@@ -117,13 +113,16 @@ fn vs(
     heightAtlas,
     inst.heightSlotOrigin,
     p,
-    collapseStride(i, j, n, inst.edgeCoarser),
+    edgeLatticeStride(i, j, n, inst.edgeCoarser),
+    cells,
   );
 
-  // Zero on every edge but a band seam (code 2), where the ring becomes a wall
-  // hanging radially inward -- at zero the quads are degenerate and cost a cull.
+  // The ring hangs radially inward on EVERY edge (R15): the cut's mesh levels
+  // are unbalanced, so any neighbour may have half this patch's vertices along
+  // the shared edge, and the wall is what hides the T-junction. No edge code
+  // gates it -- 'edge' only picks which boundary post the vertex repeats.
   var depthM = 0.0;
-  if (isSkirt && ((inst.edgeCoarser >> (2u * edge)) & 3u) == 2u) {
+  if (isSkirt) {
     depthM = SURFACE_TILE_SKIRT_DEPTH_FRACTION * u.radiusM * inst.dLatRad;
   }
 

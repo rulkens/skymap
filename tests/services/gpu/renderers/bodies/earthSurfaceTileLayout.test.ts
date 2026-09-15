@@ -230,7 +230,7 @@ describe('PatchInstance CPU/WESL layout parity', () => {
       0.88,
       129,
       258,
-      0b01_10_00_10,
+      0b1011,
       32,
     );
     expect(view.getFloat32(32, true)).toBeCloseTo(0.11); // albedoUvOriginX
@@ -243,7 +243,7 @@ describe('PatchInstance CPU/WESL layout parity', () => {
     expect(view.getFloat32(60, true)).toBeCloseTo(0.88); // fallbackUvScaleY
     expect(view.getUint32(64, true)).toBe(129); // heightSlotOriginX
     expect(view.getUint32(68, true)).toBe(258); // heightSlotOriginY
-    expect(view.getUint32(72, true)).toBe(0b01_10_00_10); // edgeCoarser
+    expect(view.getUint32(72, true)).toBe(0b1011); // edgeCoarser
     expect(view.getUint32(76, true)).toBe(32); // heightCells
   });
 });

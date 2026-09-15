@@ -25,11 +25,11 @@ export type SurfaceCutTile = {
     readonly levelDelta: number;
     readonly originPosts: readonly [number, number];
   };
-  /** Per edge, in R9 order `[west, east, south, north]`, how far the
-   *  neighbouring leaf's HEIGHT level steps up: 0 = same, finer, or no
-   *  neighbour; 1 = exactly one coarser (F2 samples that edge at doubled
-   *  stride, the coarse neighbour's own lattice); 2 = two or more after the
-   *  balance — a band seam it may not cross (R12), which F2 skirts and never
-   *  collapses. `balanceSurfaceCut` fills it; only the fine side carries one. */
-  readonly edgeCoarser: readonly [0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2];
+  /** Per edge, in R9 order `[west, east, south, north]`: 1 when the
+   *  neighbouring leaf's HEIGHT level is exactly one coarser, which F2 samples
+   *  at doubled stride — that neighbour's own lattice. 0 otherwise, a step of
+   *  two or more (R12's band seam) included: no stride meets it, and F2's
+   *  skirt — drawn on every edge — is what hides it. `balanceSurfaceCut` fills
+   *  it; only the fine side of a pair carries a bit. */
+  readonly edgeCoarser: readonly [0 | 1, 0 | 1, 0 | 1, 0 | 1];
 };

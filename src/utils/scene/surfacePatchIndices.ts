@@ -1,9 +1,9 @@
 /**
  * Shared template index buffer for every resident surface patch, level and body
  * — one buffer, built once: a `(n+1)²` grid then a `4(n+1)`-vertex skirt ring in
- * R9 edge order [west, east, south, north], whose depth the vertex stage zeroes
- * on every edge that is not a band seam. Winding is CCW-outward throughout, the
- * sole definition of the pipeline's `frontFace: 'ccw'` + `cullMode: 'back'`.
+ * R9 edge order [west, east, south, north], which the vertex stage hangs inward
+ * on every edge (R15). Winding is CCW-outward throughout, the sole definition
+ * of the pipeline's `frontFace: 'ccw'` + `cullMode: 'back'`.
  */
 export function surfacePatchIndices(resolution: number): Uint16Array {
   const row = resolution + 1;

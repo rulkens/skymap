@@ -15,11 +15,11 @@ function expectClose(got: readonly number[], want: readonly number[]): void {
  */
 describe('surfaceNormalFromHeightCell', () => {
   it('is up on a flat cell', () => {
-    expectClose(surfaceNormalFromHeightCell(7, 7, 7, 7, 0.3, 0.6, 2560, 3840, 128), [0, 0, 1]);
+    expectClose(surfaceNormalFromHeightCell(7, 7, 7, 7, 0.3, 0.6, 20, 30), [0, 0, 1]);
   });
 
   it('tilts west on a 1:1 east slope', () => {
-    expectClose(surfaceNormalFromHeightCell(0, 20, 0, 20, 0.3, 0.6, 2560, 3840, 128), [
+    expectClose(surfaceNormalFromHeightCell(0, 20, 0, 20, 0.3, 0.6, 20, 30), [
       -ROOT_HALF,
       0,
       ROOT_HALF,
@@ -27,7 +27,7 @@ describe('surfaceNormalFromHeightCell', () => {
   });
 
   it('tilts south on a 1:1 north slope', () => {
-    expectClose(surfaceNormalFromHeightCell(30, 30, 0, 0, 0.3, 0.6, 2560, 3840, 128), [
+    expectClose(surfaceNormalFromHeightCell(30, 30, 0, 0, 0.3, 0.6, 20, 30), [
       0,
       -ROOT_HALF,
       ROOT_HALF,
@@ -35,10 +35,9 @@ describe('surfaceNormalFromHeightCell', () => {
   });
 
   it('interpolates between the cell’s two edge gradients', () => {
-    // East slope 1 along the north row, 2 along the south row; 32 cells over
-    // a 32 m patch, so the cell spacing is 1 m.
-    const atNorth = surfaceNormalFromHeightCell(0, 1, 0, 2, 0, 0, 32, 32, 32);
-    const atMid = surfaceNormalFromHeightCell(0, 1, 0, 2, 0, 0.5, 32, 32, 32);
+    // East slope 1 along the north row, 2 along the south row, over a 1 m cell.
+    const atNorth = surfaceNormalFromHeightCell(0, 1, 0, 2, 0, 0, 1, 1);
+    const atMid = surfaceNormalFromHeightCell(0, 1, 0, 2, 0, 0.5, 1, 1);
     expectClose(atNorth, [-ROOT_HALF, 0, ROOT_HALF]);
     const midLen = Math.hypot(1.5, 1);
     expectClose(atMid, [-1.5 / midLen, 0, 1 / midLen]);

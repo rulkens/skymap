@@ -284,7 +284,7 @@ describe('HEIGHT_POSTS_PER_TILE vs the template (heightTileFormat.ts ↔ earthTi
 
 /**
  * SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts) is the eye-check's one
- * tuning knob for band-seam skirts (F2-R3), and the vertex stage is its only
+ * tuning knob for the skirt ring (F2-R3), and the vertex stage is its only
  * consumer — so without this guard the TS export is a knob that turns nothing.
  */
 describe('SURFACE_TILE_SKIRT_DEPTH_FRACTION parity (earthTileParams.ts ↔ earthSurfaceTile/vertex.wesl)', () => {
