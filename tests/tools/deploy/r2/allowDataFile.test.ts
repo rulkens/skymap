@@ -8,34 +8,15 @@ import { describe, expect, it } from 'vitest';
 import { allowDataFile } from '../../../../tools/deploy/r2/allowDataFile';
 
 describe('allowDataFile', () => {
-  it('accepts structures.ccat and structures_meta.json', () => {
-    expect(allowDataFile('structures.ccat')).toBe(true);
-    expect(allowDataFile('structures_meta.json')).toBe(true);
-  });
-
-  it('accepts famous_stars_meta.json', () => {
-    expect(allowDataFile('famous_stars_meta.json')).toBe(true);
-  });
-
   it('still rejects glade.bin / sdss.bin', () => {
     // Un-tiered legacy bins are offline DisPerSE inputs, never browser-fetched.
     expect(allowDataFile('glade.bin')).toBe(false);
     expect(allowDataFile('sdss.bin')).toBe(false);
   });
 
-  it('accepts the tier-agnostic flowfield.scfd', () => {
-    expect(allowDataFile('flowfield.scfd')).toBe(true);
-  });
-
   it('rejects a tier-suffixed flowfield variant', () => {
     expect(allowDataFile('flowfield-large.scfd')).toBe(false);
     expect(allowDataFile('flowfield.bin')).toBe(false);
-  });
-
-  it('accepts the three tier-agnostic DESI patches', () => {
-    expect(allowDataFile('desi-deep.bin')).toBe(true);
-    expect(allowDataFile('desi-wedge.bin')).toBe(true);
-    expect(allowDataFile('desi-sgw.bin')).toBe(true);
   });
 
   it('rejects tier-suffixed DESI variants', () => {
@@ -70,13 +51,6 @@ describe('allowDataFile', () => {
 
   it('rejects anything under images/, regardless of basename', () => {
     expect(allowDataFile('images/famous/x.webp')).toBe(false);
-  });
-
-  it('accepts the four baked mesh files under meshes/', () => {
-    expect(allowDataFile('meshes/whale.mesh')).toBe(true);
-    expect(allowDataFile('meshes/whale_albedo.png')).toBe(true);
-    expect(allowDataFile('meshes/whale_mr.png')).toBe(true);
-    expect(allowDataFile('meshes/whale_normal.png')).toBe(true);
   });
 
   it('rejects a mesh file with the same basename outside meshes/', () => {

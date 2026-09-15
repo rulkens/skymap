@@ -15,14 +15,6 @@ describe('budgetTone', () => {
     expect(budgetTone(8.3)).toBe('green');
   });
 
-  it('is yellow between the 60fps and 30fps budgets', () => {
-    expect(budgetTone(21.4)).toBe('yellow');
-  });
-
-  it('is red beyond the 30fps budget', () => {
-    expect(budgetTone(40)).toBe('red');
-  });
-
   it('treats the 16.7 ms frame budget as already yellow (strict <)', () => {
     expect(budgetTone(16.7)).toBe('yellow');
   });

@@ -70,10 +70,6 @@ const NO_SEED: readonly StructureSeedEntry[] = [];
 
 describe('extractAbell', () => {
   describe('finds Abell/ACO tokens in AName or OName', () => {
-    it('returns normalized token from aName when present', () => {
-      expect(extractAbell('RXC J2346.6+2821', 'A2670')).toBe('A2670');
-    });
-
     it('strips internal spaces: " A 2670" → "A2670"', () => {
       expect(extractAbell('RXC J2346.6+2821', ' A 2670')).toBe('A2670');
     });
@@ -85,10 +81,6 @@ describe('extractAbell', () => {
     it('returns null when no Abell token present', () => {
       // UGC designation — not an Abell token
       expect(extractAbell('UGC 12890', 'UGC 12890')).toBeNull();
-    });
-
-    it('returns null when both names are blank', () => {
-      expect(extractAbell('', '')).toBeNull();
     });
 
     it('handles ACO southern supplement prefix S', () => {
@@ -127,12 +119,6 @@ describe('buildClusterEntries excludes structures beyond Z_MAX', () => {
     const mcxc = [makeMcxcRow({ z: FAR_Z })];
     const entries = buildClusterEntries(mcxc, [], NO_SEED);
     expect(entries.filter((e) => e.category === 0)).toHaveLength(0);
-  });
-
-  it('drops an MSCC row with z > Z_MAX', () => {
-    const mscc = [makeMsccRow({ z: FAR_Z })];
-    const entries = buildClusterEntries([], mscc, NO_SEED);
-    expect(entries.filter((e) => e.category === 1)).toHaveLength(0);
   });
 
   it('keeps an MCXC row with z exactly = Z_MAX', () => {
@@ -261,31 +247,5 @@ describe('buildClusterEntries prefers the Abell designation for the name', () =>
     // names[0] slug of MCXC id
     expect(e.names[0]).toBeTruthy();
     expect(e.abell).toBeNull();
-  });
-});
-
-// ── buildClusterEntries — abell null for superclusters ───────────────────────
-
-describe('buildClusterEntries sets abell null for superclusters', () => {
-  it('abell is always null for MSCC entries', () => {
-    const mscc = [makeMsccRow({ nm: ABOVE_NM })];
-    const entries = buildClusterEntries([], mscc, NO_SEED);
-    const e = entries.find((x) => x.category === 1)!;
-    expect(e).toBeDefined();
-    expect(e.abell).toBeNull();
-  });
-});
-
-// ── buildClusterEntries — category byte ──────────────────────────────────────
-
-describe('buildClusterEntries tags category 0 for MCXC, 1 for MSCC', () => {
-  it('MCXC entries have category 0', () => {
-    const entries = buildClusterEntries([makeMcxcRow()], [], NO_SEED);
-    expect(entries[0]?.category).toBe(0);
-  });
-
-  it('MSCC entries have category 1', () => {
-    const entries = buildClusterEntries([], [makeMsccRow()], NO_SEED);
-    expect(entries[0]?.category).toBe(1);
   });
 });

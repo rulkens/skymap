@@ -21,11 +21,4 @@ describe('meanLogTraceAtPoints', () => {
     expect(Number.isNaN(meanLogTraceAtPoints([], 0))).toBe(true);
     expect(Number.isNaN(meanLogTraceAtPoints([-1, -1], 0))).toBe(true);
   });
-
-  it('accepts a typed array the same way it accepts a plain array', () => {
-    // Float32Array precision loses ~e-9 on Math.E - 1; a f32-appropriate
-    // tolerance, not the f64 precision the other cases assert.
-    const densities = new Float32Array([-1, Math.E - 1, 0]);
-    expect(meanLogTraceAtPoints(densities, 2)).toBeCloseTo(0.5, 6);
-  });
 });

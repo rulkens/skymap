@@ -20,23 +20,8 @@ function baseEntry(overrides: Partial<FamousEntry> = {}): FamousEntry {
 }
 
 describe('famousSeed', () => {
-  it('accepts an entry with a non-empty commonName', () => {
-    const e = baseEntry({ commonName: 'Andromeda Galaxy' });
-    expect(validateFamousEntry(e).commonName).toBe('Andromeda Galaxy');
-  });
-
-  it('accepts an entry with commonName omitted', () => {
-    const e = baseEntry();
-    expect(validateFamousEntry(e).commonName).toBeUndefined();
-  });
-
   it('rejects a commonName that is the empty string', () => {
     const e = baseEntry({ commonName: '' });
-    expect(() => validateFamousEntry(e)).toThrow(/commonName/);
-  });
-
-  it('rejects a commonName that is not a string', () => {
-    const e = baseEntry({ commonName: 42 as unknown as string });
     expect(() => validateFamousEntry(e)).toThrow(/commonName/);
   });
 

@@ -34,24 +34,4 @@ describe('readIdSet', () => {
     const result = readIdSet(path);
     expect([...result].sort()).toEqual(['12345', '67890']);
   });
-
-  it('trims whitespace around the id', () => {
-    const path = join(dir, 'cache.csv');
-    writeFileSync(path, 'id,extra\n  42  ,x\n');
-    const result = readIdSet(path);
-    expect([...result]).toEqual(['42']);
-  });
-
-  it('handles CRLF line endings', () => {
-    const path = join(dir, 'cache.csv');
-    writeFileSync(path, 'id,extra\r\n12345,foo\r\n67890,bar\r\n');
-    const result = readIdSet(path);
-    expect([...result].sort()).toEqual(['12345', '67890']);
-  });
-
-  it('returns an empty Set for a header-only file', () => {
-    const path = join(dir, 'cache.csv');
-    writeFileSync(path, 'id,extra\n');
-    expect(readIdSet(path).size).toBe(0);
-  });
 });

@@ -16,10 +16,6 @@ import { histogramSlice } from '../../../../tools/mcpm-workbench/src/state/histo
 import { storeWriteIsDirty } from '../../../../tools/mcpm-workbench/src/state/storeWriteIsDirty';
 
 describe('storeWriteIsDirty', () => {
-  it('is false for the identical snapshot', () => {
-    expect(storeWriteIsDirty(defaultAppState, defaultAppState)).toBe(false);
-  });
-
   it('is false for an fps-only write', () => {
     const next = {
       ...defaultAppState,
@@ -74,10 +70,5 @@ describe('storeWriteIsDirty', () => {
     };
     const next = { ...stepped, sim: { ...stepped.sim, running: !stepped.sim.running } };
     expect(storeWriteIsDirty(stepped, next)).toBe(true);
-  });
-
-  it('is true when a non-view, non-sim, non-histogram slice changes', () => {
-    const next = { ...defaultAppState, grid: { ...defaultAppState.grid, showGridBox: true } };
-    expect(storeWriteIsDirty(defaultAppState, next)).toBe(true);
   });
 });

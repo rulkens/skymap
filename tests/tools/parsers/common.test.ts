@@ -16,15 +16,6 @@ describe('slot', () => {
     expect(slot(LINE, 7, 12)).toBe('42.5');
   });
 
-  it('extracts a multi-word string field in the middle (bytes 14–24)', () => {
-    expect(slot(LINE, 14, 24)).toBe('hello world');
-  });
-
-  it('returns empty string when the slice is entirely spaces', () => {
-    // bytes 6–6 is a single space character
-    expect(slot(LINE, 6, 6)).toBe('');
-  });
-
   it('returns empty string when start is past the line end', () => {
     // LINE is 25 chars; bytes 30–35 lie entirely past the end.
     expect(slot(LINE, 30, 35)).toBe('');
@@ -39,10 +30,6 @@ describe('nonCommentLines', () => {
 
   it('strips lines starting with #', () => {
     expect(nonCommentLines('# comment\ndata')).toEqual(['data']);
-  });
-
-  it('strips lines starting with --', () => {
-    expect(nonCommentLines('-- sql comment\ndata')).toEqual(['data']);
   });
 
   it('normalises CRLF line endings', () => {

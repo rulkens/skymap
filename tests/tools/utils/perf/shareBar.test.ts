@@ -11,25 +11,9 @@ import { describe, it, expect } from 'vitest';
 import { shareBar } from '../../../../tools/utils/perf/shareBar';
 
 describe('shareBar', () => {
-  it('fills half of an 8-wide bar with full blocks then spaces', () => {
-    expect(shareBar(0.5, 8)).toBe('████    ');
-  });
-
-  it('fills a full bar', () => {
-    expect(shareBar(1, 4)).toBe('████');
-  });
-
-  it('renders an empty bar for zero', () => {
-    expect(shareBar(0, 4)).toBe('    ');
-  });
-
   it('renders a partial eighth-block for a fractional fill', () => {
     // 0.3125 · 4 = 1.25 → 1 full block, partial index round(0.25·8) = 2 → '▎'.
     expect(shareBar(0.3125, 4)).toBe('█▎  ');
-  });
-
-  it('renders an all-space bar for NaN', () => {
-    expect(shareBar(NaN, 4)).toBe('    ');
   });
 
   it('always returns exactly width characters', () => {

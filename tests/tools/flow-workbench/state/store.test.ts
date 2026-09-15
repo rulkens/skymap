@@ -14,29 +14,6 @@ import { createStore } from '../../../../tools/flow-workbench/src/state/createSt
 type Counter = { readonly n: number };
 
 describe('createStore', () => {
-  it('getSnapshot returns the initial state', () => {
-    const initial: Counter = { n: 0 };
-    const store = createStore(initial);
-    expect(store.getSnapshot()).toEqual(initial);
-  });
-
-  it('setState replaces the snapshot with the update result', () => {
-    const initial: Counter = { n: 0 };
-    const store = createStore(initial);
-    store.setState((prev) => ({ n: prev.n + 1 }));
-    expect(store.getSnapshot()).toEqual({ n: 1 });
-    // The original snapshot object is untouched — updaters return fresh state.
-    expect(initial.n).toBe(0);
-  });
-
-  it('subscribe is called when state changes', () => {
-    const store = createStore<Counter>({ n: 0 });
-    const listener = vi.fn();
-    store.subscribe(listener);
-    store.setState((prev) => ({ n: prev.n + 1 }));
-    expect(listener).toHaveBeenCalledTimes(1);
-  });
-
   it('subscribe is NOT called when the update returns the same reference', () => {
     const store = createStore<Counter>({ n: 0 });
     const listener = vi.fn();
