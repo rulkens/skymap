@@ -1,11 +1,8 @@
 /**
- * wireHiResFamousSlot — mints the LOD-3 hi-res famous-galaxy pair as an asset slot.
- *
- * The "fetch" is a synchronous GPU allocation, not a download, so the slot exists
- * for its commit: a tier flip changes `layerSide`, WebGPU textures are immutable in
- * shape, and the pair has to be swapped without the visible famous galaxies falling
- * back to their atlas tiles in between. Binding and handing over before destroying
- * is what buys that; see the ordering comment in `commit`.
+ * wireHiResFamousSlot — the LOD-3 hi-res famous-galaxy pair as an asset slot.
+ * Its "fetch" is a synchronous GPU allocation; the slot exists for the COMMIT,
+ * where a tier flip swaps an immutably-shaped texture without the visible famous
+ * galaxies dropping back to their atlas tiles (ordering comment in `commit`).
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';

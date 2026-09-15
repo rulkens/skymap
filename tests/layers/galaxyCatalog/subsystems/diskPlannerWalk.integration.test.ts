@@ -23,8 +23,11 @@ import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCata
 import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
 import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem';
 import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
-import { runProceduralSolo, runTexturedSolo } from './diskWalkHarness';
-import { cartesianToRaDec } from '../../../../src/utils/math';
+import {
+  runProceduralSolo,
+  runTexturedSolo,
+} from '../../../services/engine/subsystems/diskWalkHarness';
+import { cartesianToRaDec } from '../../../../src/utils/math/index';
 import { galaxyCacheKey } from '../../../../src/utils/render/disk/galaxyCacheKey';
 import {
   PROCEDURAL_DISK_FADE_START_PX,

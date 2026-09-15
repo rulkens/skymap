@@ -102,7 +102,7 @@ describe('engineSlice — engineStructureSearchListChanged', () => {
   });
 });
 
-describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 7)', () => {
+describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 6)', () => {
   it('factsReported merges a patch under the layer key and leaves sibling facts', () => {
     const s: WithStubFacts = { ...base(), stub: { a: 1, b: 2 } };
     const next = reducer(

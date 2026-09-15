@@ -1,20 +1,8 @@
 /**
  * texturedDisksPass — LOD-2 textured galaxy thumbnails (3D-oriented disks), from
  * the disks the shared planner walk left on the subsystem earlier this frame.
- *
- * ### Sky-cubemap capture roster (Task 13b, Ruling 6)
- *
- * The textured famous-galaxy thumbnails (LMC/SMC/M31 at close approach) are
- * part of the black-hole lens's captured "sky" — without this flag the cubemap
- * lacked them, so the lens quad covered the real, textured originals with a
- * capture that never had them. Draw-safe against a synthetic per-face ctx:
- * `disks` is computed ONCE per frame from the REAL camera, upstream of the
- * capture sweep, so a capture face's synthetic ctx can never cull a galaxy the
- * real observer's gates already admitted. `ctx.viewSlot` forwards to the
- * renderer so each call's `@group(0)` camera uniform lands in its own physical
- * buffer (`instancedQuadRenderer.ts`'s `viewSlotCount` ring) instead of racing
- * on a shared one — the instance buffer needs no such ring, since every call
- * this frame re-uploads the same byte-identical `disks` list.
+ * In the sky-capture roster (Ruling 6): without it the black-hole lens quad
+ * covered the real textured LMC/SMC/M31 with a cubemap that never had them.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -30,6 +18,9 @@ export function texturedDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
     },
 
     draw(pass, view, ctx, state) {
+      // Capture-safe: `disks` was computed ONCE this frame from the REAL
+      // camera, upstream of the capture sweep, so a capture face's per-face ctx
+      // can never cull a galaxy the real observer's gates already admitted.
       const { disks } = runtime.texturedDisks.lastOutput;
       if (disks.length === 0) return;
       runtime.texturedDiskRenderer.draw(
@@ -39,6 +30,9 @@ export function texturedDisksPass(runtime: GalaxyCatalogRuntime): ContentPass {
         view.camPos,
         state.gpu.focusUniform!.bindGroup,
         disks,
+        // Each call's `@group(0)` camera uniform needs its own physical buffer
+        // (`instancedQuadRenderer`'s ring) — the instance buffer needs no ring,
+        // every call this frame re-uploads the same byte-identical `disks`.
         ctx.viewSlot,
       );
     },

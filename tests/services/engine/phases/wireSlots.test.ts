@@ -10,9 +10,10 @@
  * fade wire is present after boot, including structures-visibility gating
  * structureCatalog.
  *
- * Mocking: `AssetSlot`s are real (pure CPU state machines); fetchers,
- * thumbnail factory and GPU device are mocked; point slots are pre-seeded
- * fakes since `wireGalaxyCatalogSourceSlot`'s mint loop is mocked to a no-op.
+ * Mocking: `AssetSlot`s are real (pure CPU state machines); fetchers and GPU
+ * device are mocked. The Layer's point slots are pre-seeded fakes injected
+ * into `state.layerSlots` — `createLayers` mints the real ones, and this
+ * suite never runs that phase.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -67,10 +68,6 @@ vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher', () => ({
-  famousGalaxiesMetaFetcher: vi.fn(async () => ({ meta: [] })),
-}));
-
 // famousStarsMeta demands unconditionally at boot (like bodyTextureAtlas
 // below), so its fetcher fires inside every wireSlots run; mock it so the
 // test doesn't network.
@@ -94,10 +91,6 @@ vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () 
     },
     meta: [],
   })),
-}));
-
-vi.mock('../../../../src/layers/galaxyCatalog/load/pgcAliasFetcher', () => ({
-  pgcAliasFetcher: vi.fn(async () => new Map()),
 }));
 
 // The body-texture atlas row demands unconditionally at boot (`demand: () => true`),
@@ -143,70 +136,6 @@ vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () =
   })),
 }));
 
-// wireSlots constructs three impostor subsystems (galaxyAtlas,
-// proceduralDisk, texturedDisk), each carrying a GPU-device dependency.
-// Hollow factories that satisfy the call sites without touching the
-// stubbed device.
-vi.mock('../../../../src/layers/galaxyCatalog/subsystems/galaxyAtlasSubsystem', () => ({
-  createGalaxyAtlasSubsystem: vi.fn(() => ({
-    getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
-    destroy: vi.fn(),
-  })),
-}));
-vi.mock('../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem', () => ({
-  createProceduralDiskSubsystem: vi.fn(() => ({
-    runFrame: vi.fn(),
-    lastOutput: { instances: [] },
-    destroy: vi.fn(),
-  })),
-}));
-vi.mock('../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem', () => ({
-  createTexturedDiskSubsystem: vi.fn(() => ({
-    runFrame: vi.fn(),
-    lastOutput: { quads: [], disks: [] },
-    hasInFlightWork: vi.fn(() => false),
-    setHiResFamous: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-// LOD-3 hi-res pair: the texture factory would call into
-// `device.createTexture` without a real GPU — stub the resource handle
-// and its consumer subsystem.
-vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
-  createHiResFamousTexture: vi.fn(() => ({
-    initTexture: vi.fn(),
-    getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
-    getLayerSide: vi.fn(() => 1024),
-    allocate: vi.fn(() => -1),
-    touch: vi.fn(),
-    release: vi.fn(),
-    isLoaded: vi.fn(() => false),
-    isFailed: vi.fn(() => false),
-    markFailed: vi.fn(),
-    layerForKey: vi.fn(() => undefined),
-    uploadBitmap: vi.fn(),
-    setEvictHandler: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-vi.mock('../../../../src/layers/galaxyCatalog/subsystems/hiResFamousSubsystem', () => ({
-  createHiResFamousSubsystem: vi.fn(() => ({
-    runFrame: vi.fn(),
-    lastOutput: { byFamousIdx: new Map() },
-    destroy: vi.fn(),
-  })),
-}));
-
-// wireSlots now mints the per-source point slots directly (moved from
-// initGpu). This suite injects its OWN fake slots into `state.layerSlots`
-// (see `bootPointSlots` / per-test `points` maps below) and drives them by
-// hand, so `wireGalaxyCatalogSourceSlot` is stubbed to a no-op here —
-// otherwise it would overwrite those fakes with real slots (whose commits hit
-// the real fetchers, unmocked in this file) before the demand loop ever runs.
-vi.mock('../../../../src/services/engine/wiring/wireGalaxyCatalogSourceSlot', () => ({
-  wireGalaxyCatalogSourceSlot: vi.fn(),
-}));
-
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the
 // moment wireSlots hands the registry off.
@@ -230,12 +159,10 @@ import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
-import { famousGalaxiesMetaFetcher } from '../../../../src/layers/galaxyCatalog/load/famousGalaxiesMetaFetcher';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
-import { pgcAliasFetcher } from '../../../../src/layers/galaxyCatalog/load/pgcAliasFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -551,10 +478,10 @@ describe('wireSlots', () => {
     emitterSpy.mockClear();
   });
 
-  it('returns synchronously (does not wait on galaxy catalog arrivals) and fires `loading` status', async () => {
-    // Progressive disclosure: wireSlots mints + kicks off loads then
-    // returns. Per-arrival `ready` emissions happen later via the
-    // subscribers it registered, not by awaiting in this body.
+  it('returns synchronously (does not await any slot) and fires `loading` status', async () => {
+    // Progressive disclosure: wireSlots kicks off loads then returns.
+    // Per-arrival `ready` emissions happen later via the subscribers it
+    // registered, not by awaiting in this body.
     const sdssSlot = makeFakeSlot('sdss-points');
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
@@ -705,7 +632,6 @@ describe('wireSlots', () => {
     vi.mocked(structureCatalogFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
     vi.mocked(cf4DensityFetcher).mockClear();
-    vi.mocked(pgcAliasFetcher).mockClear();
 
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();

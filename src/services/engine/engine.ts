@@ -39,10 +39,6 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
-import { CONTENT_PASSES } from './frame/passes';
-import { ASSET_WIRING } from './wiring/assetWiring';
-import { FADE_LAYERS } from './wiring/fadeLayers';
-import { expandCompanionRows } from '../../utils/loading/expandCompanionRows';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { liveWorldPose } from './helpers/liveWorldPose';
@@ -323,7 +319,7 @@ export function createEngine(
     // Edge-triggered UI events driving demand predicates. The wiring layer sets a
     // key and leaves it set — the demand loop's idle-guard prevents a re-fetch.
     requests: new Set<RequestKey>(),
-    // Both empty until `createLayers` runs (D7); see EngineState.d.ts for why
+    // Both empty until `createLayers` runs (D8); see EngineState.d.ts for why
     // `selectionKindRows` is not named `selectionRows` (that getter, above, is
     // the unrelated saga display cache).
     layers: [],
@@ -331,10 +327,11 @@ export function createEngine(
     // TEMPORARY (Ruling 5): written by `createLayers` from the Layer that
     // declares it; the two `EngineHandle` galaxy reads below go through it.
     galaxyBridge: null,
-    // Core's halves, until `createLayers` replaces each with the composed list.
-    passes: CONTENT_PASSES,
-    assetRows: expandCompanionRows(ASSET_WIRING),
-    fadeRows: FADE_LAYERS,
+    // Empty until `createLayers` composes core's rows with every Layer's; no
+    // phase before it reads any of the four (`pickProgram` is `wireInput`).
+    passes: [],
+    assetRows: [],
+    fadeRows: [],
     layerSlots: new Map(),
   };
 

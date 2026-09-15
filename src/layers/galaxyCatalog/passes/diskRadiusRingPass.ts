@@ -1,12 +1,9 @@
 /**
- * diskRadiusRingPass — developer overlay that rings the SELECTED galaxy at its
- * catalog procedural-disk radius, lying in the disk plane. Drawn post-tone-map
+ * diskRadiusRingPass — developer overlay ringing the SELECTED galaxy at its
+ * CATALOG disk radius (not the calibrated quad size — the ring is the fixed
+ * reference calibration is checked against), in the disk plane. Post-tone-map
  * among the swap-target layers, so it hands the ring the swap row's CURRENT
- * format and the renderer re-keys its pipeline on a change (D9) — core's
- * swap-format rebuild walk no longer owns this handle.
- *
- * Radius is the CATALOG value, not the calibrated quad size: calibration scales
- * the rendered quad, and the ring is the fixed reference it is checked against.
+ * format and the renderer re-keys its own pipeline on a change (D9).
  */
 
 import { Source } from '../../../data/sources';

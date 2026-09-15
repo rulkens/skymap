@@ -1,7 +1,7 @@
 /**
- * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D7).
+ * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer in tuple order, seeding its facts key first
- * (Ruling 7), then composes core's contributions with each instance's onto
+ * (D6, Ruling 6), then composes core's contributions with each instance's onto
  * `state.passes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`
  * and asserts the composed sets stay disjoint (D5) — a bad composition throws
  * at boot, not inside a click's swallowed promise.

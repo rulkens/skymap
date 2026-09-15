@@ -1,11 +1,10 @@
 /**
  * galaxyPointSpritesPass — every loaded galaxy from every visible source as an
  * instanced additive billboard in the HDR target; the headline content layer.
- *
- * Always on: per-source visibility is a shader-side `visibleSourceMask` uniform,
- * so hiding SDSS is a 4-byte write rather than a CPU-side skip. The renderer's
- * own loop skips a source at exactly 0 opacity, which is what keeps a completed
- * deep-zoom fade from rasterizing millions of alpha-0 instances.
+ * Always on: per-source visibility is the shader-side `visibleSourceMask`, so
+ * hiding SDSS is a 4-byte write. The renderer's own loop skips a source at
+ * exactly 0 opacity, which is what keeps a completed deep-zoom fade from
+ * rasterizing millions of alpha-0 instances.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';

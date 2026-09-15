@@ -21,7 +21,10 @@ import { createGalaxyAtlasSubsystem } from '../../../../src/layers/galaxyCatalog
 import { createTexturedDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/texturedDiskSubsystem';
 import { createProceduralDiskSubsystem } from '../../../../src/layers/galaxyCatalog/subsystems/proceduralDiskSubsystem';
 import { createDiskPlannerWalk } from '../../../../src/layers/galaxyCatalog/subsystems/diskPlannerWalk';
-import { runProceduralSolo, runTexturedSolo } from './diskWalkHarness';
+import {
+  runProceduralSolo,
+  runTexturedSolo,
+} from '../../../services/engine/subsystems/diskWalkHarness';
 import { paddedRadiusMpc } from '../../../../src/utils/paddedRadiusMpc';
 import { fallbackOrientation } from '../../../../src/utils/random/fallbackOrientation';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';

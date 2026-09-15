@@ -58,6 +58,10 @@ export type Layer<
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
   labels?(runtime: Runtime): readonly Label2DProducer[];
   selection?(runtime: Runtime): readonly SelectionKindRow[];
-  /** Once per frame, after the focus uniform, before any pass; `true` keeps the loop awake. */
+  /**
+   * Once per frame, after the focus uniform, before any pass; `true` keeps the
+   * loop awake and defers sky captures (`scheduleSkyCaptures` skips a frame any
+   * Layer votes animating, so a capture never bakes half-arrived content).
+   */
   frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => boolean;
 };

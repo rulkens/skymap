@@ -1,8 +1,8 @@
 /**
- * wireImpostorSubsystems — builds the four galaxy-thumbnail subsystems and
- * binds the atlas view into the textured-disk renderer, returning the cluster
- * for `create` to park on the runtime. Construction order is a dependency
- * order, not a preference: see the comments at each step.
+ * wireImpostorSubsystems — the four galaxy-thumbnail subsystems, with the atlas
+ * view bound into the textured-disk renderer, returned for `create` to park on
+ * the runtime. Construction order is a dependency order, not a preference: see
+ * the comments at each step.
  */
 
 import { createGalaxyAtlasSubsystem } from '../subsystems/galaxyAtlasSubsystem';
