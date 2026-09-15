@@ -79,10 +79,10 @@ Then `npm run refactor -- rename` for each type/function symbol to its new name 
 
 **Not renamed** (R6): `earthBaseLevelForTier`, `earthTexelMetres`, `earthLevelFittingWidth`, `earthSurfaceTier`, `src/data/bodies/earthTileParams.ts` and its constants, the renderer/layout/shader/pass/UI files.
 
-- [ ] Write the manifest JSON in the scratchpad, `npm run move-files -- --manifest <file> --dry`, then run it.
-- [ ] Symbol renames via `npm run refactor -- rename`. `git grep -n "EarthTile\|earthTile"` afterwards: the only survivors are the R6 list and `EarthTileAtlasSection*`/`earthTileParams`. Fix stragglers in string literals by hand (labels like `` `earth-${TILED_KIND}-tiles` `` become `surface-tiles-albedo` in Task 3).
-- [ ] No new test — a pure rename.
-- [ ] `npm run typecheck:fast`, run the moved tests, commit `refactor(tiles): P2a — rename the tile planning stack to SurfaceTile*`.
+- [x] Write the manifest JSON in the scratchpad, `npm run move-files -- --manifest <file> --dry`, then run it.
+- [x] Symbol renames via `npm run refactor -- rename`. `git grep -n "EarthTile\|earthTile"` afterwards: the only survivors are the R6 list and `EarthTileAtlasSection*`/`earthTileParams`. Fix stragglers in string literals by hand (labels like `` `earth-${TILED_KIND}-tiles` `` become `surface-tiles-albedo` in Task 3).
+- [x] No new test — a pure rename.
+- [x] `npm run typecheck:fast`, run the moved tests, commit `refactor(tiles): P2a — rename the tile planning stack to SurfaceTile*`.
 
 ### Task 2: P2b — registry-driven, per-body, one engaged
 
@@ -113,9 +113,9 @@ export function bodySurfaceTier(state: EngineState, bodyId: BodyId): Tier; // sa
 
 `EARTH_EQUATORIAL_CIRCUMFERENCE_M` reads on the planning path (`npm run refactor -- refs EARTH_EQUATORIAL_CIRCUMFERENCE_M`) take the engaged body's `circumferenceM` — via `SurfaceTilePlannerParams` if the walk needs it, deleting the constant if nothing else reads it. `runFrame.ts:250-252` finds the slab whose `bodyId` is a key of `SURFACE_TILE_REGISTRY` (`bodyId in SURFACE_TILE_REGISTRY`), never `'earth'`. `earthPass.ts:154` stays — that is Earth's pass.
 
-- [ ] Test (existing file): `plannerParams` requests `images/earth-tiles/manifest.json` for `bodyId: 'earth'` (URL derived from the registry, not a literal). No switch-path test (R7).
-- [ ] Implement. `runFrame.ts` remains a single-export file.
-- [ ] Commit `refactor(tiles): P2b — registry-driven per-body surface tiles, one engaged`.
+- [x] Test (existing file): `plannerParams` requests `images/earth-tiles/manifest.json` for `bodyId: 'earth'` (URL derived from the registry, not a literal). No switch-path test (R7).
+- [x] Implement. `runFrame.ts` remains a single-export file.
+- [x] Commit `refactor(tiles): P2b — registry-driven per-body surface tiles, one engaged`.
 
 ### Task 3: P3 — `SurfaceTileProduct`, manifest `bands`, per-product path, v8
 
@@ -151,9 +151,9 @@ export type SurfaceTileManifest = {
 
 Manifest guard: `bands` must be an array of objects with numeric `min`/`max`; a `levels` key (the v7 shape) ⇒ `null`. Requests, residency maps and stream keys are keyed by the full path, so `product` is part of every key for free.
 
-- [ ] Tests: rewrite `fetchSurfaceTileManifest.test.ts:62` as `returns null for a levels-keyed (pre-bands) manifest`; `buildEarthTiles.test.ts:394` asserts `bands[i].builtFrom.albedo` and the `albedo/` path segment.
-- [ ] Implement. `git grep -n "'surface'" src/utils/scene src/services/engine/subsystems tools/textures` finds no tile-path use left (the whole-globe `TextureKind` `'surface'` elsewhere is untouched).
-- [ ] Commit `refactor(tiles): P3 — SurfaceTileProduct axis, manifest bands, v8 prefix`.
+- [x] Tests: rewrite `fetchSurfaceTileManifest.test.ts:62` as `returns null for a levels-keyed (pre-bands) manifest`; `buildEarthTiles.test.ts:394` asserts `bands[i].builtFrom.albedo` and the `albedo/` path segment.
+- [x] Implement. `git grep -n "'surface'" src/utils/scene src/services/engine/subsystems tools/textures` finds no tile-path use left (the whole-globe `TextureKind` `'surface'` elsewhere is untouched).
+- [x] Commit `refactor(tiles): P3 — SurfaceTileProduct axis, manifest bands, v8 prefix`.
 
 ### Task 4: P4 — stream + atlas generic over payload
 
@@ -181,9 +181,9 @@ export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStrea
 
 The bitmap `upload`/`release` pair lives in two one-function utils under `src/utils/gpu/` (`uploadBitmapToAtlas`, `closeBitmap`) passed by the albedo caller; there is no `ImageBitmap` mention left in the stream module.
 
-- [ ] Test: `uploadTexels writes at the slot's texel origin` — mock `queue.writeTexture`, assert `origin` for slot 17 of a 16-per-row atlas is `{x: slotSide, y: slotSide}` and `bytesPerRow` passes through (hand-computed, not derived from `slotUv`).
-- [ ] Existing stream tests re-target the generic API with a bitmap-shaped `T`; `a bitmap arriving after its slot was recycled` (`:139`) asserts `release` was called.
-- [ ] Commit `refactor(gpu): P4 — tile stream and atlas generic over payload`.
+- [x] Test: `uploadTexels writes at the slot's texel origin` — mock `queue.writeTexture`, assert `origin` for slot 17 of a 16-per-row atlas is `{x: slotSide, y: slotSide}` and `bytesPerRow` passes through (hand-computed, not derived from `slotUv`).
+- [x] Existing stream tests re-target the generic API with a bitmap-shaped `T`; `a bitmap arriving after its slot was recycled` (`:139`) asserts `release` was called.
+- [x] Commit `refactor(gpu): P4 — tile stream and atlas generic over payload`.
 
 ### Task 5: P5 — idempotent, per-product bake; delete `--only`
 
@@ -193,10 +193,10 @@ The bitmap `upload`/`release` pair lives in two one-function utils under `src/ut
 - Modify `buildSurfaceTiles.ts` `:146-151` (`writeTile` writes to `<path>.tmp` then renames), `:159-175` and `:203-268` (skip a tile whose output exists), `:273-342` (delete `perBandIndexPath`, `writePerBandIndex`, `stitchBandIndex`), `:344-448` (`bakeAll`: index = union of existing `index.txt` lines and baked paths, sorted; manifest written last from the **complete** band table, after asserting every path the PRIOR `index.txt` promised still exists on disk — exit non-zero otherwise, leaving the previous manifest untouched), `:485-488` (delete `onlySourceId`), `:490-537` (CLI `--dev`, `--product albedo|height` default both, `--body earth`).
 - Tests `tests/tools/textures/buildSurfaceTiles.test.ts`: delete the `--only` describe (`:425-562`); add the two below. `docs/DATA.md:188,194,210`.
 
-- [ ] Test `a second bakeAll over the same output skips existing tiles and leaves bytes identical` (mtime unchanged on the pre-existing files).
-- [ ] Test `bakeAll refuses to write the manifest while a band's tile set is incomplete` (delete one baked tile, re-run, expect a thrown error and the old manifest intact).
-- [ ] Implement. The `bakeCoarserLevel` operator stays the albedo 2×2 average; Task 9 adds the height operator beside it.
-- [ ] Commit `refactor(bake): P5 — idempotent per-product surface-tile bake, --only deleted`.
+- [x] Test `a second bakeAll over the same output skips existing tiles and leaves bytes identical` (mtime unchanged on the pre-existing files).
+- [x] Test `bakeAll refuses to write the manifest while a band's tile set is incomplete` (delete one baked tile, re-run, expect a thrown error and the old manifest intact).
+- [x] Implement. The `bakeCoarserLevel` operator stays the albedo 2×2 average; Task 9 adds the height operator beside it.
+- [x] Commit `refactor(bake): P5 — idempotent per-product surface-tile bake, --only deleted`.
 
 ### Task 6: `shgt1` — height tile format, decode, encode
 
@@ -233,15 +233,15 @@ export function decodeHeightTile(buf: ArrayBuffer, byteOffset?: number): HeightT
 export function encodeHeightTile(tile: HeightTile): Uint8Array;
 ```
 
-- [ ] Tests: `round-trips a tile through encode/decode` (bit-identical `heightM`, header fields); `rejects a payload with a non-finite post` (NaN and −Infinity); `rejects a wrong magic`; `header offsets` — write bytes by hand with `DataView` at the offsets above and assert the decoded fields (this is the keep-rule "on-disk format" test).
-- [ ] Commit `feat(terrain): shgt1 height tile format, decode and encode`.
+- [x] Tests: `round-trips a tile through encode/decode` (bit-identical `heightM`, header fields); `rejects a payload with a non-finite post` (NaN and −Infinity); `rejects a wrong magic`; `header offsets` — write bytes by hand with `DataView` at the offsets above and assert the decoded fields (this is the keep-rule "on-disk format" test).
+- [x] Commit `feat(terrain): shgt1 height tile format, decode and encode`.
 
 ### Task 7: `fetchHeightTile`
 
 **Files:** create `src/utils/network/fetchHeightTile.ts` (mirror `fetchSurfaceTileBitmap.ts:24-43`: same deadline, `dataUrl('images/' + surfaceTilePath(tile, prefix))`, `response.arrayBuffer()` → `decodeHeightTile`, any throw → `null`).
 
-- [ ] No test (network wrapper; decode is tested in Task 6).
-- [ ] Commit `feat(terrain): fetchHeightTile`.
+- [x] No test (network wrapper; decode is tested in Task 6).
+- [x] Commit `feat(terrain): fetchHeightTile`.
 
 ### Task 8: height sources and fetchers (tools)
 
@@ -282,8 +282,8 @@ export function readGeoTiffWindow(
 - skadi: `data/raw/skadi/<N55>/<N55E012>.hgt`, 3601² big-endian int16, geographic, cell edges at whole degrees, `-32768` = void → NaN. `fetchHeightSources.ts --skadi` computes the cell set from `EOX_REGIONS` (`tools/fetch/eoxRegions.ts:30`) via `skadiCellsForBounds`, resumable, gunzips in place. (47 cells were already pulled 2026-09-15 by hand; the fetcher must find them complete and skip.)
 - DHM/Terræn (probed 2026-09-15, works with the existing key): Datafordeler serves the 0.4 m DTM as **1 km GeoTIFF tiles** — `https://api.datafordeler.dk/FileDownloads/GetRasterFile?FileName=DTM_1km_<northingKm>_<eastingKm>.tif&apiKey=<key>` (200, ~13 MB, bytes start `II*`; the response's `content-type` says zip and is wrong). Tile naming = the Punktsky scheme in `data/raw/dhm/README.md:100-120` (SW-corner km indices, EPSG:25832, DVR90). The key is the keychain item `skymap-datafordeler-apikey`, read in-process exactly as `tools/fetch/fetchDhm.ts` does; never print it; 401 is retryable for ~20 min after key creation. `fetchHeightSources.ts --dhm-terraen` pulls the tiles covering the Søndermarken **z14** tile rect (the z19 harvest rect `x[280352..280447] y[49984..50015]` from `data/raw/geodanmark/README.md:40` divided by 32 → z14 `x 8761..8763, y 1562`, i.e. lon 12.4805–12.5464, lat 55.6567–55.6787) into `data/raw/dhmterraen/DTM_1km_<N>_<E>.tif`. The source samples a lon/lat lattice post by projecting it to UTM32 — add `tools/utils/geo/lonLatToUtm32.ts` (forward transverse Mercator, GRS80, k0 = 0.9996, central meridian 9°E, false easting 500 km; Snyder series is enough at 1 mm) with a test that the anchor 55.67°N 12.53°E lands inside tile `6175_721` (E ∈ [721000, 722000), N ∈ [6175000, 6176000) — `data/raw/dhm/README.md:48-71`). NoData in the tiles → NaN (the band's underfill is skadi).
 - The two remaining sources (DHM at z19 for Søndermarken, skadi at z13 for the EOX boxes) both reach their band's albedo ceiling natively (§4.1), so the band table's height entries are exactly the albedo table's boxes and levels.
-- [ ] Tests: `skadiCellsForBounds` for the `sjaelland` box (hand-computed: `N54/N54E010`…`N56/N56E012`, 9 cells) and a box crossing 0° (`W001` and `E000` both present); `skadiHeightSource` decodes a hand-written 3601² fixture header row (a 3-post fixture is enough: assert the big-endian sign and the void → NaN).
-- [ ] Commit `feat(terrain): height sources (ETOPO, skadi, DHM/Terræn) and fetcher`.
+- [x] Tests: `skadiCellsForBounds` for the `sjaelland` box (hand-computed: `N54/N54E010`…`N56/N56E012`, 9 cells) and a box crossing 0° (`W001` and `E000` both present); `skadiHeightSource` decodes a hand-written 3601² fixture header row (a 3-post fixture is enough: assert the big-endian sign and the void → NaN).
+- [x] Commit `feat(terrain): height sources (ETOPO, skadi, DHM/Terræn) and fetcher`.
 
 ### Task 9: the height bake
 
@@ -333,8 +333,8 @@ Rules the implementation must follow (each is a test or a reviewer check):
 5. Band order in `buildSurfaceTiles`: by `max` descending, all bands in one invocation; global last.
 6. **Diagnostics** printed at the end of the global band: min/max height inside the boxes Dead Sea (35.3–35.6E, 31.1–31.8N), Caspian (47–54E, 36–47N), Lake Superior (−92 – −84E, 46.4–49N), Black Sea (28–41E, 41–47N), plus global min/max. These feed R3's user ruling; they are not tests.
 
-- [ ] Tests (§11), all against a synthetic analytic `HeightSource` (e.g. `h = 1000·sin(lon)·cos(2·lat)`) so nothing is downloaded: `two adjacent deepest-level tiles agree bit-for-bit on their shared column` (`Object.is` per post); `a decimated parent's posts are identical to the matching child posts` (every parent post `(i, j)` equals child `(2i mod 128, 2j mod 128)` of the covering child); `a parent's subtreeMax is ≥ every child's subtreeMax and ≥ its own max post`; `flattenWaterComponents pins the largest component to 0 and an enclosed basin to its lowest shore` (a hand-built 8×8 grid with two water blobs).
-- [ ] Commit `feat(terrain): height bake — nested pyramid, water flattening, header bounds`.
+- [x] Tests (§11), all against a synthetic analytic `HeightSource` (e.g. `h = 1000·sin(lon)·cos(2·lat)`) so nothing is downloaded: `two adjacent deepest-level tiles agree bit-for-bit on their shared column` (`Object.is` per post); `a decimated parent's posts are identical to the matching child posts` (every parent post `(i, j)` equals child `(2i mod 128, 2j mod 128)` of the covering child); `a parent's subtreeMax is ≥ every child's subtreeMax and ≥ its own max post`; `flattenWaterComponents pins the largest component to 0 and an enclosed basin to its lowest shore` (a hand-built 8×8 grid with two water blobs).
+- [x] Commit `feat(terrain): height bake — nested pyramid, water flattening, header bounds`.
 
 ### Task 10: the height stream inside the surface-tile subsystem
 
@@ -342,9 +342,9 @@ Rules the implementation must follow (each is a test or a reviewer check):
 
 - Modify `src/data/bodies/earthTileParams.ts` (add `HEIGHT_TILE_ATLAS_SIDE = 16 * HEIGHT_POSTS_PER_TILE` = 2064 beside `EARTH_TILE_ATLAS_SIDE`), `src/services/engine/subsystems/surfaceTileSubsystem.ts` (second `createTileStreamSubsystem<HeightTile>` with `format: 'r32float'`, `slotSide: 129`, `upload: (atlas, slot, tile) => atlas.uploadTexels(slot, tile.heightM, 129 * 4, 129)`, `release: () => {}`; requests dispatched by `tile.product`; residency map already keyed by path), `src/@types/engine/subsystems/SurfaceTileSubsystem.d.ts` (`getHeightAtlasView(): GPUTextureView | null`), `src/@types/scene/SurfaceTileDebugSnapshot.d.ts` + `EarthTileAtlasSection.tsx` (one line: `height <used>/<capacity>`), `tests/services/engine/subsystems/surfaceTileSubsystem.test.ts`.
 
-- [ ] Test: `a height request lands in the height atlas and residentSlot resolves it by product` (mock `fetchHeightTile`; assert `residentSlot({product:'height',…})` is non-null and `residentSlot({product:'albedo',…})` for the same `(z,x,y)` is null).
-- [ ] Test: `stand-down releases both atlases' residency` (extend the existing stand-down test at `:439`).
-- [ ] Commit `feat(terrain): height tile stream and r32float atlas`.
+- [x] Test: `a height request lands in the height atlas and residentSlot resolves it by product` (mock `fetchHeightTile`; assert `residentSlot({product:'height',…})` is non-null and `residentSlot({product:'albedo',…})` for the same `(z,x,y)` is null).
+- [x] Test: `stand-down releases both atlases' residency` (extend the existing stand-down test at `:439`).
+- [x] Commit `feat(terrain): height tile stream and r32float atlas`.
 
 ### Task 11: two-product cut — refinement gated on the leaf's own height tile
 
@@ -373,9 +373,9 @@ Walk rules:
 - A node may **refine** only if screen error wants it (today's `required > z`), and then only onto the children that survive the frustum/horizon tests **and** have their own height tile resident (R13, amended after the eye-check: originally all visible children, which collapsed settled subtrees whenever a culled sibling scrolled in). A visible child without its tile is left undrawn and **requested in both products**; a node with no ready child is emitted (if emittable) — requests run one level ahead of the cut (§6.1).
 - Every request the walk emits for albedo is also emitted for height (same `(z,x,y)`), including the band-floor ancestor requests at `:225-226`.
 
-- [ ] Tests (§11 + §5.2): `a leaf is never emitted without its own height tile resident` (all albedo resident, height resident only at z ≤ N → no leaf deeper than N); `refinement waits for the children's height tiles and requests them in both products` (height resident at z, not at z+1, screen error wanting z+1 → the cut holds z and `requests` contains the four children in both products); `height residency never resolves from an ancestor` (ancestor resident, own not → node absent).
-- [ ] Update the existing residency tests for the `albedo` field rename.
-- [ ] Commit `feat(terrain): two-product cut — refinement gated on own height residency`.
+- [x] Tests (§11 + §5.2): `a leaf is never emitted without its own height tile resident` (all albedo resident, height resident only at z ≤ N → no leaf deeper than N); `refinement waits for the children's height tiles and requests them in both products` (height resident at z, not at z+1, screen error wanting z+1 → the cut holds z and `requests` contains the four children in both products); `height residency never resolves from an ancestor` (ancestor resident, own not → node absent).
+- [x] Update the existing residency tests for the `albedo` field rename.
+- [x] Commit `feat(terrain): two-product cut — refinement gated on own height residency`.
 
 ### Task 12: 2:1 balance and `edgeCoarser`
 
@@ -401,18 +401,18 @@ export function balanceSurfaceCut(
 
 `resolveParent` is a closure the walk provides (it can build the parent's `SurfaceCutTile` from the residency lookups it already has). Coarsening only when the finer side's parent is emittable; a sibling culled from the cut does not block the collapse (the parent covers it — off-screen overdraw, harmless).
 
-- [ ] Tests: `never emits edge-neighbouring leaves more than one level apart` (a hand-built cut: one z10 leaf beside a z8 leaf → the z10 leaf and its siblings collapse to z9); `edgeCoarser is set exactly on the edge facing a coarser neighbour` (a z9 leaf east of a z8 leaf → `[1,0,0,0]`); `wraps at the antimeridian` (x = 0 and x = 2^z − 1 are neighbours).
-- [ ] Commit `feat(terrain): 2:1-balanced cut with edgeCoarser bits`.
+- [x] Tests: `never emits edge-neighbouring leaves more than one level apart` (a hand-built cut: one z10 leaf beside a z8 leaf → the z10 leaf and its siblings collapse to z9); `edgeCoarser is set exactly on the edge facing a coarser neighbour` (a z9 leaf east of a z8 leaf → `[1,0,0,0]`); `wraps at the antimeridian` (x = 0 and x = 2^z − 1 are neighbours).
+- [x] Commit `feat(terrain): 2:1-balanced cut with edgeCoarser bits`.
 
 ### Task 13: acquisition, bake, eye-check (controller + user)
 
 No code. Runs from **main** after merge, or from this worktree with `data/raw` symlinked to main's.
 
-- [ ] Downloads complete: `data/raw/etopo/*.tif` = 1,585,813,987 B; 47 skadi cells present; write `.sha256` sidecars; `data/raw/mola/*.tif` (11.4 GB) is for F4 and is not used here.
-- [ ] DHM/Terræn tiles fetched (`npm run fetch-height -- --dhm-terraen`, ~25 tiles, ~325 MB). If that fetch fails, the Søndermarken band bakes **later** (P5 makes that a re-run) and the manifest for now carries only the global and EOX bands — which also drops the GeoDanmark **albedo** band until then (bands are shared). State this to the user before baking; it is their call.
-- [ ] Relayout: `cp -R public/data/images/earth-tiles/v7/surface public/data/images/earth-tiles/v8/albedo` (bytes identical, no re-encode), then `npm run build-surface-tiles` — albedo tiles are skipped as existing, height tiles bake, the manifest is written once both products are complete. Expect ~19.7k height tiles, ~1.3 GB (§10).
-- [ ] Eye-check on this worktree's dev server: orbit (tiles engaged, picture identical to main), the 300 km fade band, Søndermarken z19 (or z13 if the DHM band is deferred), a limb view. Debug panel shows `height n/1024` climbing with residency. Refinement depth reaches the band ceiling regardless of residency (R14).
-- [ ] Deploy note for `docs/DEPLOY.md`: R2 server-side copy `earth-tiles/v7/surface → v8/albedo`, upload `v8/height`, manifest last. The prune of v5–v7 is the existing open item.
+- [x] Downloads complete: `data/raw/etopo/*.tif` = 1,585,813,987 B; 47 skadi cells present; write `.sha256` sidecars; `data/raw/mola/*.tif` (11.4 GB) is for F4 and is not used here.
+- [x] DHM/Terræn tiles fetched (`npm run fetch-height -- --dhm-terraen`, ~25 tiles, ~325 MB). If that fetch fails, the Søndermarken band bakes **later** (P5 makes that a re-run) and the manifest for now carries only the global and EOX bands — which also drops the GeoDanmark **albedo** band until then (bands are shared). State this to the user before baking; it is their call.
+- [x] Relayout: `cp -R public/data/images/earth-tiles/v7/surface public/data/images/earth-tiles/v8/albedo` (bytes identical, no re-encode), then `npm run build-surface-tiles` — albedo tiles are skipped as existing, height tiles bake, the manifest is written once both products are complete. Expect ~19.7k height tiles, ~1.3 GB (§10).
+- [x] Eye-check on this worktree's dev server: orbit (tiles engaged, picture identical to main), the 300 km fade band, Søndermarken z19 (or z13 if the DHM band is deferred), a limb view. Debug panel shows `height n/1024` climbing with residency. Refinement depth reaches the band ceiling regardless of residency (R14). (Extensive iterative eye-checking across F1+F2 — see ledgers; two follow-on defects found post-F2-landing are tracked as backlog items, not re-opened here.)
+- [x] Deploy note for `docs/DEPLOY.md`: R2 server-side copy `earth-tiles/v7/surface → v8/albedo`, upload `v8/height`, manifest last. The prune of v5–v7 is the existing open item.
 
 ---
 
