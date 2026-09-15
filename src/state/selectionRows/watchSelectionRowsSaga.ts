@@ -10,10 +10,10 @@
  * on the catalog-landed pulse: engineSourceCountReported, which every source
  * reports on commit — the galaxy clouds and the Gaia star bin alike.
  *
- * Keyed on the COMPLETE resolvability set (every selection-slice action ∪ both
- * commit pulses), so the cache can't hand-sync-drift the way two authoritative
- * homes do — this is what justifies materializing a derived value in the store
- * (see the spec's exception note).
+ * Keyed on the COMPLETE resolvability set (every selection-slice action ∪ the
+ * catalog- and structure-landed pulses), so the cache can't hand-sync-drift the
+ * way two authoritative homes do — this is what justifies materializing a
+ * derived value in the store (see the spec's exception note).
  *
  * Every action that writes a selection ref MUST appear here, or its slot's row
  * goes stale — a clear that the UI never sees.

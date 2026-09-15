@@ -51,7 +51,9 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   // Core's "a source's catalog landed" pulse, and everything core does on it
   // (D6, Ruling 3). The running total is `galaxyPointRenderer.totalCount()` by
   // construction — per-source last-reported count, summed, replaced on a tier
-  // swap — so the splash's ready echo needs no renderer read of its own.
+  // swap — so the splash's ready echo needs no renderer read of its own. The
+  // echo is per-arrival, not per-boot: a catalog the user enables mid-session
+  // echoes too, where the deleted gate only subscribed to boot-enabled sources.
   const countBySource = new Map<SourceType, number>();
   const reportSourceCount = (source: SourceType, count: number): void => {
     deps.cb.store.dispatch(engineSourceCountReported({ source, count }));

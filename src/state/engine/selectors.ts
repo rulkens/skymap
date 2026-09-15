@@ -24,6 +24,7 @@
 
 import { engineRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
+import type { CoreEngineSliceState } from '../../@types/store/CoreEngineSliceState';
 import type { EngineSliceState } from '../../@types/store/EngineSliceState';
 import type { EngineStatus } from '../../@types/engine/EngineStatus';
 import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
@@ -35,15 +36,17 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
-const selectEngine = (state: RootState): EngineSliceState => state[engineRoute] as EngineSliceState;
+const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRoute];
 
 /**
  * The same slice, typed for the BOOT WINDOW: each Layer's facts key is seeded by
  * `createLayers` when the engine bootstraps, so it is absent for the first
  * frames the shell renders. The reducer cannot seed it (that import closes D1's
- * module cycle), so the absence is read here rather than asserted away.
+ * module cycle), so the absence is read here rather than asserted away — and the
+ * cast lives here, so `Partial` is the only typed path to a facts key.
  */
-const selectEngineFacts = (state: RootState): Partial<EngineSliceState> => selectEngine(state);
+const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
+  selectEngine(state) as Partial<EngineSliceState>;
 
 /** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */
 const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
