@@ -1,9 +1,11 @@
 /**
  * Four things this subsystem owns that a stand-in device is enough to see: the
- * manifest validation in `derivePlannerParams`, the base level it derives from
- * the tier the whole-globe texture is bound at, the residency query
- * (`residentSlot`) `cutSurfaceTiles` calls back into, and the engage/disengage
- * transition the atlas view + debug snapshot both key off.
+ * manifest validation in `derivePlannerParams`, the base level `runFrame`
+ * derives from the tier the whole-globe texture is bound at and passes in, the
+ * residency query (`residentSlot`) `cutSurfaceTiles` calls back into, and the
+ * engage/disengage transition the atlas view + debug snapshot both key off.
+ * All exercised against the registry's one row (`earth`) — R7 defers the
+ * multi-body switch path's own test to F4's Mars row.
  *
  * The base level is the one of the three that is invisible when it is wrong. The
  * three tiers bind three different whole-globe images — z2, z3 and z4 on the
@@ -87,13 +89,16 @@ async function subsystemWithManifest(manifest: SurfaceTileManifest) {
     requestRender: () => {},
   });
   // The first call is what starts the fetch, and it necessarily answers null.
-  subsystem.plannerParams('large');
+  subsystem.plannerParams('earth', BASE_LEVEL);
   await new Promise((resolve) => setTimeout(resolve, 0));
   return subsystem;
 }
 
 async function plannerParamsFor(manifest: SurfaceTileManifest, tier: Tier = 'large') {
-  return (await subsystemWithManifest(manifest)).plannerParams(tier);
+  return (await subsystemWithManifest(manifest)).plannerParams(
+    'earth',
+    earthBaseLevelForTier(tier),
+  );
 }
 
 describe('earthTileSubsystem manifest validation', () => {
@@ -124,6 +129,21 @@ describe('earthTileSubsystem manifest validation', () => {
   });
 });
 
+describe('earthTileSubsystem registry-driven manifest fetch', () => {
+  it("requests earth's SURFACE_TILE_REGISTRY manifestKey, not a literal", async () => {
+    vi.mocked(fetchSurfaceTileManifest).mockClear();
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    const subsystem = createSurfaceTileSubsystem({
+      device: {} as unknown as GPUDevice,
+      requestRender: () => {},
+    });
+
+    subsystem.plannerParams('earth', BASE_LEVEL);
+
+    expect(fetchSurfaceTileManifest).toHaveBeenCalledWith('earth-tiles');
+  });
+});
+
 describe('earthTileSubsystem base level', () => {
   it('reports a base one level coarser per tier step down, off the same manifest', async () => {
     // The tier has to reach `derivePlannerParams` for this to hold: a base level
@@ -137,15 +157,19 @@ describe('earthTileSubsystem base level', () => {
     expect(small!.baseLevel).toBe(large!.baseLevel - 2);
   });
 
-  it('re-derives the base level when the tier changes under one subsystem', async () => {
+  it('re-derives the base level when the caller passes a different one under one subsystem', async () => {
     // The params are memoised — one small object per session, not per frame — so
-    // the memo has to be keyed on the tier. Cached without it, a tier swap would
-    // keep planning against the previous session's base for the rest of the
-    // session, with the manifest already in hand and nothing to re-fetch.
+    // the memo has to be keyed on the base level. Cached without it, a tier swap
+    // would keep planning against the previous session's base for the rest of
+    // the session, with the manifest already in hand and nothing to re-fetch.
     const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
-    const before = subsystem.plannerParams('large')!.baseLevel;
-    expect(subsystem.plannerParams('medium')!.baseLevel).toBe(before - 1);
-    expect(subsystem.plannerParams('large')!.baseLevel).toBe(before);
+    const before = subsystem.plannerParams('earth', earthBaseLevelForTier('large'))!.baseLevel;
+    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('medium'))!.baseLevel).toBe(
+      before - 1,
+    );
+    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('large'))!.baseLevel).toBe(
+      before,
+    );
   });
 });
 
@@ -199,15 +223,15 @@ async function engagedSubsystem() {
     device: recordingDevice(),
     requestRender: () => {},
   });
-  subsystem.plannerParams('large');
+  subsystem.plannerParams('earth', BASE_LEVEL);
   await new Promise((resolve) => setTimeout(resolve, 0));
 
-  subsystem.update({ plan: ENGAGED });
+  subsystem.update({ bodyId: 'earth', plan: ENGAGED });
   await new Promise((resolve) => setTimeout(resolve, 0));
   // A second frame of the SAME plan: the tile lands async during the first
   // call's fetch, so `notResidentCount`/`lastEngaged.plan.misses` only reads
   // 0 on the frame AFTER the bitmap resolves.
-  subsystem.update({ plan: ENGAGED });
+  subsystem.update({ bodyId: 'earth', plan: ENGAGED });
 
   return subsystem;
 }
@@ -223,9 +247,9 @@ async function engagesAt(plan: SurfaceTilePlan, tier: Tier): Promise<boolean> {
     device: recordingDevice(),
     requestRender: () => {},
   });
-  subsystem.plannerParams(tier);
+  subsystem.plannerParams('earth', earthBaseLevelForTier(tier));
   await new Promise((resolve) => setTimeout(resolve, 0));
-  subsystem.update({ plan });
+  subsystem.update({ bodyId: 'earth', plan });
   return subsystem.getAtlasView() !== null;
 }
 
@@ -252,8 +276,8 @@ describe('earthTileSubsystem engage gate', () => {
     const subsystem = await engagedSubsystem();
     const fetchesAfterFirstLand = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
 
-    subsystem.update({ plan: DISENGAGED });
-    subsystem.update({ plan: ENGAGED });
+    subsystem.update({ bodyId: 'earth', plan: DISENGAGED });
+    subsystem.update({ bodyId: 'earth', plan: ENGAGED });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length).toBe(fetchesAfterFirstLand);
@@ -313,7 +337,7 @@ describe('earthTileSubsystem debug snapshot', () => {
     const subsystem = await engagedSubsystem();
     expect(subsystem.getDebugSnapshot().subCamera).not.toBeNull();
 
-    subsystem.update({ plan: DISENGAGED });
+    subsystem.update({ bodyId: 'earth', plan: DISENGAGED });
     expect(subsystem.getDebugSnapshot().subCamera).toBeNull();
   });
 });
@@ -332,10 +356,10 @@ describe('earthTileSubsystem residency readiness', () => {
       device: recordingDevice(),
       requestRender: () => {},
     });
-    subsystem.plannerParams('large');
+    subsystem.plannerParams('earth', earthBaseLevelForTier('large'));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    subsystem.update({ plan: ENGAGED });
+    subsystem.update({ bodyId: 'earth', plan: ENGAGED });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const resolved = subsystem.residentSlot(TILE);
@@ -398,6 +422,7 @@ describe('earthTileSubsystem residentSlot', () => {
       screenPx: side * side - i,
     }));
     subsystem.update({
+      bodyId: 'earth',
       plan: {
         zWin: MIN_TILE_LEVEL,
         requests: filling,
@@ -448,10 +473,10 @@ describe('earthTileSubsystem stand-down', () => {
     });
 
     const subsystem = createSurfaceTileSubsystem({ device, requestRender: () => {} });
-    subsystem.plannerParams('large');
+    subsystem.plannerParams('earth', earthBaseLevelForTier('large'));
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let frame = 0; frame < 3; frame++) {
-      subsystem.update({ plan: DISENGAGED });
+      subsystem.update({ bodyId: 'earth', plan: DISENGAGED });
     }
 
     // Not one property of the device read: no atlas, no upload. 67 MB rides on
@@ -477,14 +502,14 @@ describe('earthTileSubsystem stand-down', () => {
     });
 
     const subsystem = createSurfaceTileSubsystem({ device, requestRender: () => {} });
-    expect(subsystem.plannerParams('large')).toBeNull();
+    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('large'))).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // A caller that ignored runFrame's `params !== null` gate has to be safe
     // anyway: engaged frames against a null-manifest session must still be inert.
-    expect(subsystem.plannerParams('large')).toBeNull();
+    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('large'))).toBeNull();
     for (let frame = 0; frame < 3; frame++) {
-      subsystem.update({ plan: ENGAGED });
+      subsystem.update({ bodyId: 'earth', plan: ENGAGED });
     }
 
     expect(touched).toBe(false);
@@ -534,7 +559,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
       device: recordingDevice(),
       requestRender: () => {},
     });
-    subsystem.plannerParams('large');
+    subsystem.plannerParams('earth', earthBaseLevelForTier('large'));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const resident = fillingRequests();
@@ -545,7 +570,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     };
 
     const callsBeforeFill = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
-    subsystem.update({ plan: fillPlan });
+    subsystem.update({ bodyId: 'earth', plan: fillPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
     // The atlas is now genuinely full — every one of its slots resident.
     expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length - callsBeforeFill).toBe(SLOT_COUNT);
@@ -561,7 +586,7 @@ describe('earthTileSubsystem full-atlas allocation', () => {
     };
 
     const callsBeforeNext = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
-    subsystem.update({ plan: nextPlan });
+    subsystem.update({ bodyId: 'earth', plan: nextPlan });
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // Nothing resident got evicted-and-refetched, and the full atlas made the

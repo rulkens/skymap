@@ -1,5 +1,5 @@
 /**
- * earthSurfaceTier — which whole-globe surface texture Earth is actually
+ * bodySurfaceTier — which whole-globe surface texture a body is actually
  * rendering, expressed as its tier.
  *
  * The tile planner's base level is derived from this, so the difference between
@@ -17,10 +17,10 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { earthSurfaceTier } from '../../../../src/services/engine/frame/earthSurfaceTier';
-import { bodyTextureSlotKey } from '../../../../src/utils/scene/bodyTextureSlotKey';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { Tier } from '../../../../src/@types/data/Tier';
+import { bodySurfaceTier } from '../../../src/utils/scene/bodySurfaceTier';
+import { bodyTextureSlotKey } from '../../../src/utils/scene/bodyTextureSlotKey';
+import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import type { Tier } from '../../../src/@types/data/Tier';
 
 /** An engine state whose `earth:surface` slot is in `kind` holding a request for
  *  `requestTier`, with a committed request of `committedTier` (defaults to
@@ -49,16 +49,17 @@ function stateWith(input: {
   return { tier: input.tier, assetSlots: { bodyTextures } } as unknown as EngineState;
 }
 
-describe('earthSurfaceTier', () => {
+describe('bodySurfaceTier', () => {
   it('reports the committed tier, not the app-wide request, while the two differ', () => {
     // The user has asked for `large`; the 4096 image is still the one on the GPU,
     // and its level is the one the tiles have to refine on top of.
     expect(
-      earthSurfaceTier(
+      bodySurfaceTier(
         stateWith({
           tier: 'large',
           slot: { kind: 'ready', requestTier: 'medium', committedTier: 'medium' },
         }),
+        'earth',
       ),
     ).toBe('medium');
   });
@@ -68,10 +69,11 @@ describe('earthSurfaceTier', () => {
     // whole-globe image whose level can be named, so the answer is the one that
     // is arriving. `lastRequest()` alone would be read as gospel here, which is
     // the requested tier again by a longer route.
-    expect(earthSurfaceTier(stateWith({ tier: 'small' }))).toBe('small');
+    expect(bodySurfaceTier(stateWith({ tier: 'small' }), 'earth')).toBe('small');
     expect(
-      earthSurfaceTier(
+      bodySurfaceTier(
         stateWith({ tier: 'small', slot: { kind: 'loading', requestTier: 'large' } }),
+        'earth',
       ),
     ).toBe('small');
   });
@@ -82,11 +84,12 @@ describe('earthSurfaceTier', () => {
     // claim a level the bound image doesn't carry yet. `committed()` still holds
     // the previous ready state until the reload's commit lands.
     expect(
-      earthSurfaceTier(
+      bodySurfaceTier(
         stateWith({
           tier: 'large',
           slot: { kind: 'loading', requestTier: 'large', committedTier: 'medium' },
         }),
+        'earth',
       ),
     ).toBe('medium');
   });

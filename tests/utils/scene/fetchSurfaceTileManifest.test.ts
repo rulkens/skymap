@@ -1,5 +1,5 @@
 /**
- * fetchEarthTileManifest — the `prefix` guard is the load-bearing case: a
+ * fetchSurfaceTileManifest — the `prefix` guard is the load-bearing case: a
  * pre-versioning bake with no `prefix` (or an empty one) must fold into the
  * same `null` as a missing file, not be trusted into an `undefined/…` URL.
  */
@@ -18,7 +18,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('fetchEarthTileManifest', () => {
+describe('fetchSurfaceTileManifest', () => {
   it('returns a well-formed manifest as-is', async () => {
     const manifest = {
       prefix: 'earth-tiles/v1',
@@ -38,7 +38,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchSurfaceTileManifest()).toEqual(manifest);
+    expect(await fetchSurfaceTileManifest('earth-tiles')).toEqual(manifest);
   });
 
   it('returns null for a manifest with no prefix', async () => {
@@ -47,7 +47,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchSurfaceTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest('earth-tiles')).toBeNull();
   });
 
   it('returns null for a manifest with an empty prefix', async () => {
@@ -56,7 +56,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchSurfaceTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest('earth-tiles')).toBeNull();
   });
 
   it('returns null for a v1-shaped (pre-band-list) manifest', async () => {
@@ -69,7 +69,7 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response(JSON.stringify(manifest), { status: 200 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchSurfaceTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest('earth-tiles')).toBeNull();
   });
 
   it('returns null on a non-ok response', async () => {
@@ -77,6 +77,17 @@ describe('fetchEarthTileManifest', () => {
       async () => new Response('not found', { status: 404 }),
     ) as unknown as typeof fetch;
 
-    expect(await fetchSurfaceTileManifest()).toBeNull();
+    expect(await fetchSurfaceTileManifest('earth-tiles')).toBeNull();
+  });
+
+  it("requests the given manifestKey's own path, not a hard-coded body", async () => {
+    const fetchSpy = vi.fn(
+      async () => new Response('not found', { status: 404 }),
+    ) as unknown as typeof fetch;
+    globalThis.fetch = fetchSpy;
+
+    await fetchSurfaceTileManifest('mars-tiles');
+
+    expect(String(vi.mocked(fetchSpy).mock.calls[0]![0])).toContain('mars-tiles/manifest.json');
   });
 });

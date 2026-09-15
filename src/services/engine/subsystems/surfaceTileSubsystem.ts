@@ -1,5 +1,6 @@
 /**
- * surfaceTileSubsystem — the residency half of Earth's surface virtual texture.
+ * surfaceTileSubsystem — the residency half of one body's surface virtual
+ * texture, registry-driven and ONE-ENGAGED (`SURFACE_TILE_REGISTRY`).
  * `cutSurfaceTiles` (pure, tested) decides which tiles a frame wants and
  * resolves each visible leaf's atlas residency; `bitmapStreamSubsystem` owns
  * the atlas, LRU clock and fetch queue. This file turns a fetch demand
@@ -11,12 +12,15 @@
  * `update()` owns both sides of engagement (`plan.zWin > baseLevel`), not
  * just a caller's `if` — a drive-site `if` once left stale tiles drawing
  * after the camera pulled back out. Allocation is lazy: the 67 MB atlas is
- * created by the first engaged `update()`.
+ * created by the first engaged `update()`. A `bodyId` change (R7's switch
+ * path, untested until F4's Mars row) stands the old body's atlas and
+ * residency down before engaging the new one — see `standDown`.
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
 import type { EarthTileKind } from '../../../@types/data/EarthTileKind';
-import type { Tier } from '../../../@types/data/Tier';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { SurfaceTileSpec } from '../../../@types/data/SurfaceTileSpec';
 import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
 import type { SurfaceTileBand } from '../../../@types/scene/SurfaceTileBand';
 import type { SurfaceTilePlan } from '../../../@types/scene/SurfaceTilePlan';
@@ -29,7 +33,7 @@ import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/Bi
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { createBitmapStreamSubsystem } from './bitmapStreamSubsystem';
-import { earthBaseLevelForTier } from '../../../utils/scene/earthBaseLevelForTier';
+import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
 import { surfaceTilePath } from '../../../utils/scene/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../../../utils/scene/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileBitmap';
@@ -81,23 +85,31 @@ export type SurfaceTileDeps = {
 export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSubsystem {
   const { device, requestRender } = deps;
 
-  // Fetched once, on the first `plannerParams()` call — earlier than
-  // engagement, since the engage rule needs the manifest's `zWin`.
-  let manifestRequested = false;
+  // Which body's manifest is requested/pending/loaded. Re-fetched only when
+  // `plannerParams` is asked about a DIFFERENT body than this one — a tier
+  // change alone (same body) reuses the manifest already on hand.
+  let manifestBodyId: BodyId | null = null;
   let manifestPending = false;
   let manifest: SurfaceTileManifest | null = null;
 
-  // The one writer is `refreshParams` — keeping the pair in one record means
-  // the two can never describe different tiers (see its doc comment).
+  // The one writer is `refreshParams` — keeping the triple in one record means
+  // `bodyId`/`baseLevel`/`params` can never describe different requests (see
+  // its doc comment).
   let paramsState: {
+    readonly bodyId: BodyId;
+    readonly baseLevel: number;
     readonly params: SurfaceTilePlannerParams | null;
-    readonly tier: Tier | null;
-  } = { params: null, tier: null };
+  } | null = null;
 
-  // Set together by `engage()`, cleared together by `destroy()` — the atlas
-  // and its row geometry have one lifecycle, so one nullable record replaces
-  // the `stream`/`slotsPerRow` pair a null check used to have to keep in sync.
-  let atlas: { readonly stream: BitmapStreamSubsystem; readonly slotsPerRow: number } | null = null;
+  // Set together by `engage()`, cleared together by `standDown()`/`destroy()`
+  // — the atlas, its row geometry and the body it belongs to have one
+  // lifecycle, so one nullable record replaces three fields a null check
+  // used to have to keep in sync.
+  let atlas: {
+    readonly stream: BitmapStreamSubsystem;
+    readonly slotsPerRow: number;
+    readonly bodyId: BodyId;
+  } | null = null;
 
   const resident = new Map<string, ResidentTile>();
   // key -> z, for the debug snapshot's per-level pending counts. Written when a
@@ -126,22 +138,24 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   let destroyed = false;
 
   /**
-   * Turn a fetched manifest plus the bound tier into planner inputs, or null
-   * if the bake is one this build cannot address — every rejection degrades
-   * to base-only, cheaper to reason about than silently adapting to wrong
-   * pixels. `tilePx` is a validated ASSERTION: `residentSlot` derives the
-   * atlas's `slotsPerRow` from `EARTH_TILE_ATLAS_SIDE / tilePx` alone, an
-   * identity that holds only at the shipped 512 px edge.
+   * Turn a fetched manifest plus the caller's base level into planner
+   * inputs, or null if the bake is one this build cannot address — every
+   * rejection degrades to base-only, cheaper to reason about than silently
+   * adapting to wrong pixels. `tilePx` is a validated ASSERTION:
+   * `residentSlot` derives the atlas's `slotsPerRow` from
+   * `EARTH_TILE_ATLAS_SIDE / tilePx` alone, an identity that holds only at
+   * the shipped 512 px edge. `baseLevel` arrives already resolved — WHICH
+   * function turns a tier into a level is body-specific (`earthBaseLevelForTier`
+   * today), so this generic subsystem no longer calls one itself.
    */
   function derivePlannerParams(
     fetched: SurfaceTileManifest,
-    tier: Tier,
+    baseLevel: number,
   ): SurfaceTilePlannerParams | null {
     const levels = fetched.levels?.[TILED_KIND];
     if (!levels || levels.length === 0) return null;
     const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
     if (tilePx !== EARTH_TILE_PX) return null;
-    const baseLevel = earthBaseLevelForTier(tier);
     const bands: SurfaceTileBand[] = [];
     for (const level of levels) {
       // A structurally-wrong manifest entry (missing/malformed `bounds`)
@@ -151,7 +165,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       // Deeper of the band's own min and base+1: at/above base would
       // re-download detail the whole-globe base already delivers.
       const min = Math.max(level.min, baseLevel + 1);
-      // A band clamped past its own depth at this tier bakes nothing usable.
+      // A band clamped past its own depth at this base level bakes nothing usable.
       if (!(level.max >= min)) continue;
       bands.push({
         uBounds: [(level.bounds.west + 180) / 360, (level.bounds.east + 180) / 360],
@@ -171,34 +185,56 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     };
   }
 
-  /** The one writer of `paramsState`, so `params`/`tier` can't describe
-   *  different tiers. */
-  function refreshParams(tier: Tier): void {
-    paramsState = { tier, params: manifest === null ? null : derivePlannerParams(manifest, tier) };
+  /** The one writer of `paramsState`, so `bodyId`/`baseLevel`/`params` can't
+   *  describe different requests. */
+  function refreshParams(bodyId: BodyId, baseLevel: number): void {
+    paramsState = {
+      bodyId,
+      baseLevel,
+      params: manifest === null ? null : derivePlannerParams(manifest, baseLevel),
+    };
   }
 
-  function plannerParams(tier: Tier): SurfaceTilePlannerParams | null {
-    if (!manifestRequested) {
-      manifestRequested = true;
+  function plannerParams(bodyId: BodyId, baseLevel: number): SurfaceTilePlannerParams | null {
+    // Cast: the registry's own declaration stays a literal (`as const
+    // satisfies`) so a body-name typo there is a compile error, but that
+    // makes it non-indexable by the wider `BodyId` a caller carries.
+    const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>)[bodyId];
+    if (spec === undefined) return null;
+    // A different body than the one whose manifest is loaded/loading —
+    // supersede it. `manifestBodyId` is checked again inside the `.then`,
+    // so a fetch superseded by ANOTHER body switch never writes a stale
+    // manifest over the one the newer request is waiting on.
+    if (manifestBodyId !== bodyId) {
+      manifestBodyId = bodyId;
       manifestPending = true;
-      void fetchSurfaceTileManifest().then((fetched) => {
-        manifestPending = false;
-        if (destroyed || fetched === null) return;
+      manifest = null;
+      paramsState = null;
+      void fetchSurfaceTileManifest(spec.manifestKey).then((fetched) => {
+        if (manifestBodyId === bodyId) manifestPending = false;
+        if (destroyed || manifestBodyId !== bodyId || fetched === null) return;
         manifest = fetched;
         // Derived here so `update()` has params ready the same frame.
-        refreshParams(paramsState.tier ?? tier);
+        refreshParams(bodyId, paramsState?.baseLevel ?? baseLevel);
       });
     }
-    if (paramsState.tier !== tier) refreshParams(tier);
-    return paramsState.params;
+    if (
+      paramsState === null ||
+      paramsState.bodyId !== bodyId ||
+      paramsState.baseLevel !== baseLevel
+    ) {
+      refreshParams(bodyId, baseLevel);
+    }
+    return paramsState !== null && paramsState.bodyId === bodyId ? paramsState.params : null;
   }
 
   /**
-   * Allocate the atlas. Called by the first engaged frame and never again —
-   * `slotSide` comes from the manifest's tile edge, so a re-bake at a
-   * different edge stays a data change.
+   * Allocate the atlas for `bodyId`. Called by the first engaged frame (or
+   * the first frame after a body switch stood the previous one down) and
+   * never again per engagement — `slotSide` comes from the manifest's tile
+   * edge, so a re-bake at a different edge stays a data change.
    */
-  function engage(tilePx: number): BitmapStreamSubsystem {
+  function engage(tilePx: number, bodyId: BodyId): BitmapStreamSubsystem {
     const slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
     const created = createBitmapStreamSubsystem({
       device,
@@ -211,28 +247,43 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
     created.setEvictHandler((key) => resident.delete(key));
-    atlas = { stream: created, slotsPerRow };
+    atlas = { stream: created, slotsPerRow, bodyId };
     return created;
   }
 
-  function update(input: { readonly plan: SurfaceTilePlan }): void {
+  /** Tear down the engaged body's atlas and residency (§ one engaged) —
+   *  everything `destroy()` also clears EXCEPT the manifest/params state,
+   *  which by the time a body switch is detected already belongs to the
+   *  NEW body (`plannerParams` runs earlier in the same frame). */
+  function standDown(): void {
+    atlas?.stream.destroy();
+    atlas = null;
+    resident.clear();
+    pendingLevelOf.clear();
+    lastEngaged = null;
+  }
+
+  function update(input: { readonly bodyId: BodyId; readonly plan: SurfaceTilePlan }): void {
     if (destroyed) return;
-    const active = paramsState.params;
+    const { bodyId, plan } = input;
+    // A different body than the one currently engaged (§ one engaged) —
+    // its atlas and residency describe the WRONG body's tiles now.
+    if (atlas !== null && atlas.bodyId !== bodyId) standDown();
+
+    const active = paramsState?.bodyId === bodyId ? paramsState.params : null;
     // `refreshParams` is the sole writer of `paramsState`, and only ever
     // derives params from a non-null manifest — reasserting it here keeps
     // the tile prefix a read of the manifest rather than a second copy that
     // could go stale.
-    if (active === null || manifest === null) return;
+    if (active === null || manifest === null || manifestBodyId !== bodyId) return;
     const prefix = manifest.prefix;
-
-    const { plan } = input;
 
     if (!(plan.zWin > active.baseLevel)) {
       lastEngaged = null;
       return;
     }
 
-    const stream = atlas?.stream ?? engage(active.tilePx);
+    const stream = atlas?.stream ?? engage(active.tilePx, bodyId);
 
     frameCounter++;
 
@@ -245,7 +296,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     // reach pass 2's allocator.
     const misses: SurfaceTileRequest[] = [];
     // Debug-only tally: planned tiles whose bitmap hasn't landed in `resident`
-    // yet, whatever the atlas's own slot state — see `EarthTileDebugSnapshot`.
+    // yet, whatever the atlas's own slot state — see `SurfaceTileDebugSnapshot`.
     let notResidentCount = 0;
     for (const request of plan.requests) {
       const key = surfaceTilePath(request.tile, prefix);
@@ -328,7 +379,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     return atlas !== null && atlas.stream.inFlightCount() > 0;
   }
 
-  /** See `EarthTileDebugSnapshot`. Built on demand for a low-rate DebugPanel
+  /** See `SurfaceTileDebugSnapshot`. Built on demand for a low-rate DebugPanel
    *  poll — never called from a render path, so an O(resident) scan is fine. */
   function getDebugSnapshot(): SurfaceTileDebugSnapshot {
     if (atlas === null) return EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT;
@@ -355,10 +406,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       deepestLevelKeys.push(`${entry.tile.x},${entry.tile.y}`);
     }
 
-    // `paramsState.params` (the last tier's bands) is set together with
+    // `paramsState.params` (the last request's bands) is set together with
     // `lastEngaged` by `refreshParams`/`update`.
     let subCamera: SurfaceTileDebugSnapshot['subCamera'] = null;
-    if (lastEngaged !== null && paramsState.params !== null) {
+    if (lastEngaged !== null && paramsState !== null && paramsState.params !== null) {
       const lonLat = directionToLonLatDeg(lastEngaged.subCameraDirLocal);
       subCamera = {
         ...lonLat,
@@ -386,13 +437,11 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
   function destroy(): void {
     destroyed = true;
-    atlas?.stream.destroy();
-    atlas = null;
-    resident.clear();
-    pendingLevelOf.clear();
-    lastEngaged = null;
+    standDown();
+    manifestBodyId = null;
+    manifestPending = false;
     manifest = null;
-    paramsState = { params: null, tier: null };
+    paramsState = null;
     lastCut = [];
   }
 

@@ -1,12 +1,12 @@
 /**
- * SurfaceTileSubsystem — residency for Earth's surface virtual texture. A
- * third layer above the two the Earth renderer already has: base texture
- * and placeholder are untouched, so every failure path falls back to
- * today's picture rather than a hole. Owns the `BitmapStreamSubsystem` and
- * manifest; `cutSurfaceTiles` stays pure and calls back into `residentSlot`
- * to resolve what it can draw. GPU resources allocate lazily on first
- * engage; the subsystem never wakes the render loop, only votes via
- * `isAnimating()`.
+ * SurfaceTileSubsystem — residency for one body's surface virtual texture at
+ * a time (§ registry-driven, one engaged — `SURFACE_TILE_REGISTRY`). A third
+ * layer above the two the body's own renderer already has: base texture and
+ * placeholder are untouched, so every failure path falls back to today's
+ * picture rather than a hole. Owns the `BitmapStreamSubsystem` and manifest;
+ * `cutSurfaceTiles` stays pure and calls back into `residentSlot` to resolve
+ * what it can draw. GPU resources allocate lazily on first engage; the
+ * subsystem never wakes the render loop, only votes via `isAnimating()`.
  * Rationale: docs/superpowers/plans/completed/2026-07-29-earth-surface-virtual-texture-a-to-d.md
  */
 
@@ -16,28 +16,33 @@ import type { SurfaceTilePlannerParams } from '../../scene/SurfaceTilePlannerPar
 import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnapshot';
 import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
 import type { Destroyable } from '../../rendering/Destroyable';
-import type { Tier } from '../../data/Tier';
+import type { BodyId } from '../../data/body/BodyId';
 
 export type SurfaceTileSubsystem = Destroyable & {
   /**
-   * The pyramid facts `cutSurfaceTiles` needs, or `null` before the
-   * manifest lands (first call triggers the one-shot fetch). `tier` fixes
-   * `baseLevel` (three tiers, three base images z2/z3/z4).
+   * The pyramid facts `cutSurfaceTiles` needs for `bodyId`, or `null` before
+   * its manifest lands (a call for a body not seen before, or seen last as a
+   * different body, triggers a one-shot fetch keyed by
+   * `SURFACE_TILE_REGISTRY[bodyId].manifestKey`). `baseLevel` is the
+   * caller's — this subsystem no longer derives it from a `Tier`, since which
+   * function does that is body-specific (`earthBaseLevelForTier` today).
    */
-  plannerParams(tier: Tier): SurfaceTilePlannerParams | null;
+  plannerParams(bodyId: BodyId, baseLevel: number): SurfaceTilePlannerParams | null;
 
   /**
-   * Drive one frame's fetch demand; call every frame Earth's layer draws.
-   * Engaged or not follows the plan (`plan.zWin > baseLevel`). Engaged:
-   * LRU-touches every planned tile largest-first, enqueues anything missing
-   * — allocating the atlas on first engage.
+   * Drive one frame's fetch demand; call every frame the body's layer draws.
+   * A `bodyId` other than the currently ENGAGED one stands the old body's
+   * atlas and residency down first (§ one engaged) and starts fresh for the
+   * new one. Engaged or not follows the plan (`plan.zWin > baseLevel`).
+   * Engaged: LRU-touches every planned tile largest-first, enqueues anything
+   * missing — allocating the atlas on first engage.
    */
-  update(input: { readonly plan: SurfaceTilePlan }): void;
+  update(input: { readonly bodyId: BodyId; readonly plan: SurfaceTilePlan }): void;
 
   /**
    * Resolve one exact tile's atlas residency, or `null` if it is not
    * resident. The callback `cutSurfaceTiles`'s ancestor-fallback walk calls
-   * per candidate tile — keyed the same `earthTilePath(tile, prefix)` way
+   * per candidate tile — keyed the same `surfaceTilePath(tile, prefix)` way
    * the internal `resident` map is.
    */
   residentSlot(tile: SurfaceTileId): {
@@ -79,7 +84,7 @@ export type SurfaceTileSubsystem = Destroyable & {
 
   /**
    * A fresh, cheap-to-build snapshot of atlas residency for the DebugPanel —
-   * see `EarthTileDebugSnapshot`. Never call this from a render path; it
+   * see `SurfaceTileDebugSnapshot`. Never call this from a render path; it
    * exists for a low-rate poll, not the frame loop.
    */
   getDebugSnapshot(): SurfaceTileDebugSnapshot;
