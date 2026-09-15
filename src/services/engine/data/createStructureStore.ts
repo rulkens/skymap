@@ -37,6 +37,7 @@ export function createStructureStore(): StructureStore {
       groups.delete(id);
     },
     all,
+    loaded: () => groups.size > 0,
     byId(id: string): StructureInfo | null {
       return all().find((r) => r.id === id) ?? null;
     },

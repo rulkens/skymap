@@ -17,7 +17,16 @@ export type ResolveDeps = {
   readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
   // Widened to the two methods the structure selection row needs (Ruling 5):
   // `resolveStructureFromPick` reads `byCategory`, `extractRow` reads `byId`.
-  readonly structures: Pick<StructureStore, 'byId' | 'byCategory'>;
+  // `loaded` is OPTIONAL rather than folded into the Pick: it exists only for
+  // `watchFocusTweenSaga`'s retry loop (true once the anchors group has landed,
+  // synchronously ahead of the async bulk group — the structure analogue of
+  // `stars.current() === null`), and making it required would force every
+  // other ResolveDeps stub in the test suite (none of which exercise structure
+  // deferral) to grow a field they don't use. A stub that omits it is treated
+  // as already-loaded by the loop, matching today's no-retry behaviour.
+  readonly structures: Pick<StructureStore, 'byId' | 'byCategory'> & {
+    loaded?(): boolean;
+  };
   // The sole loaded star catalog (v1 ships one starCatalog source, the Gaia
   // bin). Reads LIVE engine state each call like the other getters — null
   // before the star cloud lands, so a star deep-link retries rather than

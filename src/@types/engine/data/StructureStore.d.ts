@@ -28,6 +28,14 @@ export type StructureStore = {
   clearGroup(id: StructureGroupId): void;
   /** All records, concatenated in `anchors` → `bulk` order. */
   all(): readonly StructureInfo[];
+  /**
+   * True once at least one group has been installed. The `anchors` group is
+   * set synchronously at the start of `wireStructureProjection`, well before
+   * `bulk` lands — so this flips true on that first call, the same "the store
+   * has been fed" signal a deep-link deferral loop needs to stop waiting on a
+   * genuinely-absent id rather than retrying forever.
+   */
+  loaded(): boolean;
   /** Resolve a record by id across all groups, or null. */
   byId(id: string): StructureInfo | null;
   /** Records of one category, in `all()` order (pick-index alignment). */

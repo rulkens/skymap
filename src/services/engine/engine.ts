@@ -416,6 +416,7 @@ export function createEngine(
     structures: {
       byId: (id) => state.data.structures.byId(id),
       byCategory: (cat) => state.data.structures.byCategory(cat),
+      loaded: () => state.data.structures.loaded(),
     },
     // The first (only, in v1) committed Gaia catalog, or null before the star cloud
     // lands and after the GPU tears down.
