@@ -10,9 +10,8 @@
  * or a `(state as any)` cast would slip past the type checker) yet silently
  * read undefined. Greppable, dumb, and final.
  *
- * `.d.ts` files are excluded: type homes legitimately keep historical doc
- * references to the locations they replaced (e.g. GalaxyStore's docblock notes
- * it "absorbs `state.sources.catalogs`"). Only runtime `.ts`/`.tsx` is swept.
+ * `.d.ts` files are excluded: type homes legitimately keep doc references to
+ * the locations they replaced. Only runtime `.ts`/`.tsx` is swept.
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';

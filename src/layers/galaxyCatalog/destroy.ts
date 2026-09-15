@@ -1,7 +1,6 @@
 /**
- * destroy — the teardown `engine.ts` used to run across three blocks, in the
- * order it ran there. WebGPU releases nothing on GC, so every renderer and the
- * committed hi-res pair are destroyed by hand.
+ * destroy — WebGPU releases nothing on GC, so every renderer and the committed
+ * hi-res pair are destroyed by hand, subsystems before the renderers they hold.
  */
 
 import type { GalaxyCatalogRuntime } from './types/GalaxyCatalogRuntime';

@@ -45,8 +45,9 @@ const SEAM_FILES: readonly string[] = [
 // directories the migrations actually put files in — a new file dropped into
 // any of these (a layer, a body renderer, a driver) is gated with no
 // hand-edit here. `walk` recurses, so sweeping 'frame' also covers
-// 'frame/passes', and sweeping 'utils/camera' covers `composeBodySlabMvp.ts`
-// and `bodySlabCamLocal.ts` without naming them individually. The two
+// 'frame/passes', sweeping 'src/layers' covers a Layer's own passes and
+// renderers, and sweeping 'utils/camera' covers `composeBodySlabMvp.ts` and
+// `bodySlabCamLocal.ts` without naming them individually. The two
 // remaining single-file entries below aren't under any swept dir, so they
 // stay named (a rename/move of one of them is then a deliberate edit here,
 // not a silent drop from the gate).
@@ -56,6 +57,7 @@ const TS_FILES: readonly string[] = [
   ...walkFiles('src/services/engine/camera', ['.ts']),
   ...walkFiles('src/services/camera', ['.ts']),
   ...walkFiles('src/utils/camera', ['.ts']),
+  ...walkFiles('src/layers', ['.ts']),
   'src/utils/scene/cutSurfaceTiles.ts',
   'src/utils/scene/starSphereRangeM.ts',
 ].filter((f) => !SEAM_FILES.includes(f));
@@ -71,6 +73,7 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/camera/cameraDrivers.ts',
   'src/services/camera/orbitControls.ts',
   'src/utils/camera/computeViewProj.ts',
+  'src/layers/galaxyCatalog/passes/galaxyPointSpritesPass.ts',
 ];
 
 const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies', ['.wesl']);

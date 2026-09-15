@@ -83,11 +83,11 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       reportSourceCount,
     };
     // Facts is erased to `undefined` at this composition boundary
-    // (`Layer<string, unknown>`), so `publish` can't appear in a `LayerCoreDeps<undefined>`
-    // — it's a Layer's own `create(deps: LayerCoreDeps<Facts>)` that sees it typed, once
-    // its literal Facts is known (post-PR-D). Built into the literal, not assigned after
-    // the fact: `publish` is `readonly` on `LayerCoreDeps`, and the cast below is the one
-    // place that erasure boundary is bridged.
+    // (`Layer<string, unknown>`), so `publish` cannot appear in a
+    // `LayerCoreDeps<undefined>` — only a Layer's own `create` sees it typed,
+    // against its literal Facts. Built into the literal rather than assigned
+    // after: `publish` is `readonly`, and the cast below is the one place that
+    // erasure boundary is bridged.
     const declaresFacts = layer.facts !== undefined;
     if (declaresFacts) {
       deps.cb.store.dispatch(

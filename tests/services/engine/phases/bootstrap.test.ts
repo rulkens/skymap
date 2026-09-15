@@ -50,8 +50,8 @@ vi.mock('../../../../src/services/engine/phases/initGpu', () => ({
     order.push('initGpu');
     if (__phaseControl.initGpu.write) {
       // Simulate a state write that later phases should be able to read.
-      state.gpu.galaxyPointRenderer = { __mockRenderer: true };
-      stateWrites.fromInitGpu = state.gpu.galaxyPointRenderer;
+      state.gpu.milkyWayCloudRenderer = { __mockRenderer: true };
+      stateWrites.fromInitGpu = state.gpu.milkyWayCloudRenderer;
     }
     if (__phaseControl.initGpu.throw) throw __phaseControl.initGpu.throw;
   }),
@@ -68,7 +68,7 @@ vi.mock('../../../../src/services/engine/phases/wireSlots', () => ({
   wireSlots: vi.fn(async (state: any, _deps: any) => {
     order.push('wireSlots');
     // Capture what initGpu wrote so the test can assert visibility.
-    stateWrites.observedInWireSlots = state.gpu.galaxyPointRenderer;
+    stateWrites.observedInWireSlots = state.gpu.milkyWayCloudRenderer;
     if (__phaseControl.wireSlots.throw) throw __phaseControl.wireSlots.throw;
   }),
 }));
@@ -148,7 +148,7 @@ describe('runBootstrapPhases', () => {
     __phaseControl.initGpu.write = true;
     const state = makeState();
     await runBootstrapPhases(state, makeDeps());
-    // initGpu wrote `state.gpu.galaxyPointRenderer`; wireSlots's mock captured the
+    // initGpu wrote `state.gpu.milkyWayCloudRenderer`; wireSlots's mock captured the
     // freshly-written value via the same `state` reference.
     expect(stateWrites.fromInitGpu).toEqual({ __mockRenderer: true });
     expect(stateWrites.observedInWireSlots).toBe(stateWrites.fromInitGpu);

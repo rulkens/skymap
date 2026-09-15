@@ -194,10 +194,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   ctx.focus = focusUniforms;
 
   // Each Layer's `frame` hook, in tuple order, right after the focus uniform
-  // and before any planner (D2). No short-circuit: every hook runs every
-  // frame, so a later Layer's vote is never skipped by an earlier `true`.
-  // Empty over the empty composition today; PR-D's first Layer is the first
-  // caller.
+  // and before any planner. No short-circuit: every hook runs every frame, so a
+  // later Layer's vote is never skipped by an earlier `true`.
   let layersAnimating = false;
   for (const layer of state.layers) {
     if (layer.frame !== null && layer.frame(ctx, state)) layersAnimating = true;

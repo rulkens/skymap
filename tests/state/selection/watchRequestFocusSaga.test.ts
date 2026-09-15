@@ -72,9 +72,9 @@ describe('watchRequestFocusSaga', () => {
   });
 
   it('resolves a body deep link immediately, with no catalog cloud in the path', async () => {
-    // Ruling 4: a static (body/star/structure) focus id resolves off its
-    // table through the composed resolver's core rows — no `catalogLoaded` /
-    // `engineSourceCountReported` pulse required, even with the cloud absent.
+    // Ruling 4: a static (body/star/structure) focus id resolves off its table
+    // through the composed resolver's core rows — no `engineSourceCountReported`
+    // pulse required, even with the cloud absent.
     cloudPresent = false;
     store.dispatch(requestFocus('body-mars'));
     await flush();

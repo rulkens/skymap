@@ -1,8 +1,7 @@
 /**
- * galaxyCatalogAssetRows — the demand + request cases that used to sit in
- * `assetWiring.test.ts`, re-pointed at the Layer's own rows. The registry is
- * still pure data, so each row's predicate is exercised against a stub
- * `DemandCtx` without a full engine.
+ * galaxyCatalogAssetRows — the Layer's demand + request cases. The registry is
+ * pure data, so each row's predicate is exercised against a stub `DemandCtx`
+ * without a full engine.
  */
 
 import { describe, it, expect } from 'vitest';

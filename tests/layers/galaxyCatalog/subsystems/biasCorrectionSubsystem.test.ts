@@ -83,8 +83,7 @@ function makeCloud(count: number): GalaxyCatalog {
 }
 
 /**
- * Build the three narrow deps the subsystem now consumes (Task 4 of
- * the lean-engine-cleanup refactor):
+ * Build the three narrow deps the subsystem consumes:
  *
  *   - `getMode`         — live BiasMode accessor (mutable via the
  *                         returned `setMode` setter, so tests can flip

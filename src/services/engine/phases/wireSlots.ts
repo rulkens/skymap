@@ -26,7 +26,7 @@
  *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
  *      visitor's `seenVersion` already hid the splash, so the alert needs
  *      both to actually reach them.
- *   9. `reevaluateDemand` — the single place loads start, awaited on
+ *   8. `reevaluateDemand` — the single place loads start, awaited on
  *      `loadDataManifest` immediately before it so no fetch can race the
  *      manifest. It walks every wiring row and triggers each demanded slot
  *      with its tier-derived request. The same loop re-runs on every state

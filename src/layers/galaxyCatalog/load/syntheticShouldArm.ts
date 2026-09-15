@@ -1,9 +1,6 @@
 /**
  * The whole synthetic-backstop policy as one pure read of the runtime's slots:
  * arm only when every enabled survey catalog has settled without usable data.
- * It can be a predicate now that the `count` lives behind the same closure —
- * the thing `DemandCtx` could not see, and the only reason the gate it
- * replaces had to be imperative.
  */
 
 import { FormatVersionError } from '../../../data/formatVersionError';

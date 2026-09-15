@@ -87,9 +87,9 @@ describe('watchRequestSelectSaga', () => {
     });
   });
 
-  // The star bin commits via engineSourceCountReported and never fires
-  // catalogLoaded; the shared deferral loop wakes on BOTH pulses, so a deep link
-  // resolves on a count report too.
+  // Every catalog commits through engineSourceCountReported, star bin and
+  // galaxy cloud alike, so the shared deferral loop resolves a deep link on a
+  // count report.
   it('defers an unresolvable galaxy id, then resolves on engineSourceCountReported', async () => {
     cloudPresent = false;
     store.dispatch(requestSelect('sdss-1237668393006604288'));

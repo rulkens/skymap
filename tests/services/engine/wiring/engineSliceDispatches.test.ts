@@ -1,10 +1,8 @@
 /**
  * engineSliceDispatches — verifies that every engine wiring site dispatches
  * the matching engineSlice action to the store alongside its existing callback.
- * Modelled on the `vi.spyOn(store, 'dispatch')` pattern from
- * `catalogLoadedDispatch.test.ts`: spin up a real Redux store, spy on
- * `dispatch`, drive the wiring function, assert the matching action creator
- * was called.
+ * Spin up a real Redux store, spy on `dispatch`, drive the wiring function,
+ * assert the matching action creator was called.
  *
  * `wireSlots`'s `loading` emission and `engine.ts`'s `initializing`/`error`
  * emissions are integration-level, exercised by `wireSlots.test.ts` and

@@ -1,70 +1,9 @@
 /**
- * biasCorrectionSubsystem — owns the engine's Malmquist-bias correction
- * mode flags, cached per-source ratios/weights, the async bake state
- * machine, and the worker-runner registry.
- *
- * This state machine has no rendering reason to live on `GalaxyPointRenderer`;
- * keeping it in a sibling subsystem leaves the renderer as a clean
- * instanced-billboard drawer.  The split is uni-directional — the
- * renderer doesn't observe the subsystem; the subsystem reaches in via
- * the renderer's callback setters and splice methods.
- *
- * ### Why a closure-returning factory rather than a class?
- *
- * Same rationale every other subsystem under this folder uses
- * (thumbnailSubsystem, etc.):
- * the codebase's convention is "factories return typed handles, not
- * class instances", the internal mutable state (renderer ref, mode,
- * cache maps, generation counter) is genuinely inaccessible from
- * outside (no `this.mode` to reach in and poke), and the per-engine
- * cost is irrelevant — there's exactly one engine per page.
- *
- * ### Race handling via a generation counter
- *
- * Each `setMode` increments `generation`.  Each per-source bake captures
- * the generation at start; on resolve, drops the result if the captured
- * generation no longer equals `generation`.  Same shape as `AssetSlot`'s
- * tier-swap generation counter.  The `fast_toggle_race` test is the
- * regression-suite anchor.
- *
- * ### Why the worker runner is a factory parameter
- *
- * Test injection.  The alternative — a mutable static setter on the
- * subsystem or renderer — is a global smell and hangs an injection
- * seam off a surface that isn't its concern.  As a factory parameter,
- * tests pass an in-process stub at construction; production omits
- * the param and gets the default Vite `?worker` runner declared as
- * `defaultSchechterRunner` / `defaultAngularRunner` in this module.
- *
- * ### Why the bias mode stays separate
- *
- * The subsystem mirrors the settings mode internally (`mode` field here) but
- * doesn't own it.  The UI-facing knob bag stays in settings so every reader
- * (URL hash, InfoCard, SettingsPanel echo) reads the one canonical place.
- *
- * ### Wake contract
- *
- * `setMode` wakes the scheduler on entry (so the shader's mode gate flips next
- * frame, including for the identity modes that fire no bake).  Every per-source
- * bake then wakes the loop AT ITS SPLICE SITE — `bakeSchechterFor` /
- * `bakeAngularFor` call `requestRender()` right after splicing into the vertex
- * buffer.  The wake lives there, not in `setMode`'s post-`Promise.all`, because
- * the same splice is reached by `onSourceUploaded` (a re-bake when a source
- * uploads while a bias mode is active — the boot path, since `AngularReweight`
- * is the default mode).  A wake only in `setMode` left that path stranded: the
- * reweight spliced into the GPU buffer but the render-on-demand loop, asleep
- * after the boot fade-in, never redrew it until the next unrelated input.
- * Callers need no trailing `requestRender()`.
- *
- * ### Production wiring
- *
- * The Layer's `frame` hook drives bake state: it compares the settings mode with
- * the runtime's `biasLastApplied` and calls `setMode` on a change.  The points
- * pass reads the settings mode per-frame for the uniform write; this subsystem
- * owns the splice pipeline that lays per-galaxy ratios/weights into the
- * per-source vertex buffers.
- *
- * @module
+ * biasCorrectionSubsystem — the Malmquist-bias bake state machine: per-source
+ * ratios/weights baked in a worker, cached, and spliced into the renderer's
+ * vertex buffers. A generation counter drops a bake that a newer `setMode`
+ * superseded (the fast-toggle race). Coupling is one-way — the renderer knows
+ * nothing of this subsystem; the subsystem reaches in through its setters.
  */
 
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
@@ -81,43 +20,20 @@ import type { BiasCorrectionDeps } from '../../../@types/engine/subsystems/BiasC
 import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
 import type { SourceType } from '../../../@types/data/SourceType';
 
-// `?worker` is a Vite-specific import suffix.  It instructs the bundler
-// to emit each `.worker.ts` file as its own worker chunk and hand back a
-// default-exported class whose `new`-instantiation spawns a Worker
-// running that bundle.  The imports live here alongside the bake state
-// machine so the renderer owns rendering and only rendering.
-//
-// In Node-only test environments the `?worker` suffix isn't resolvable;
-// tests inject a synchronous fallback via the factory's optional
-// `schechterRunner` / `angularRunner` parameters instead of importing
-// this module's defaults.
+// The `?worker` suffix is Vite-only and does not resolve in a Node test
+// environment: tests inject synchronous runners through the factory's
+// `schechterRunner` / `angularRunner` rather than importing these defaults.
 import ComputeSchechterRatiosWorker from './bake/computeSchechterRatios.worker?worker';
 import ComputeAngularWeightsWorker from './bake/computeAngularWeights.worker?worker';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
 
 /**
- * Production default for the lazy Schechter-ratio bake — spawns a fresh
- * `?worker` chunk per call, ships a copied (slice-then-transfer) cloud,
- * waits for the resulting `Float32Array`, and terminates the worker.
- *
- * ### Why one worker per call?
- *
- * Parallel galaxy catalog fetches resolve in unpredictable order, so SDSS can
- * finish baking while 2MRS is mid-bake.  A long-lived worker would have
- * to queue requests internally; a per-call worker has zero shared
- * state and the OS-level concurrency happens automatically.  Worker
- * spawn is cheap (a few ms) compared to the 1–2 s bake itself.
- *
- * ### Why slice-then-transfer
- *
- * The engine retains the original `GalaxyCatalog` for picker / InfoCard
- * reads after the bake is kicked off — we cannot detach those buffers
- * in place via `Transferable[]`.  `slice(0)` mints owned copies whose
- * underlying ArrayBuffers we *can* transfer, leaving the engine's
- * authoritative cloud completely intact.  Cost: ~50 ms memcpy at full
- * deck — versus a multi-second structured clone if the buffers were
- * shipped without a transfer list.
+ * One worker per call: parallel catalog fetches bake in unpredictable order, and
+ * a per-call worker needs no internal queue — spawn (a few ms) is noise against
+ * a 1-2 s bake. `slice(0)` before transferring because the engine keeps reading
+ * the original cloud for picker/InfoCard rows, so its buffers cannot be detached
+ * in place (~50 ms memcpy, versus a multi-second clone with no transfer list).
  */
 function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Float32Array> {
   const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
@@ -130,16 +46,9 @@ function defaultSchechterRunner(input: ComputeSchechterRatiosInput): Promise<Flo
 }
 
 /**
- * Production default for the lazy HEALPix angular-reweight bake.
- * Mirror of `defaultSchechterRunner` — same per-call worker spawn,
- * same slice-then-transfer ownership pattern, same termination on
- * resolve/error.  See that function's docstring for the full rationale.
- *
- * The bake itself is three linear passes through the cloud's positions
- * plus a per-shell median sort; ~100-300 ms at full deck.  Worker spawn
- * (~few ms) is the right trade-off — even though the bake isn't as
- * dramatically expensive as the Schechter integral, dropping a frame
- * on mode toggle would feel sluggish.
+ * Mirror of `defaultSchechterRunner`. This bake is three linear passes plus a
+ * per-shell median sort, ~100-300 ms at full deck — still worth a worker, since
+ * dropping a frame on a mode toggle feels sluggish.
  */
 function defaultAngularRunner(input: ComputeAngularWeightsInput): Promise<Float32Array> {
   const { copy, transfer } = cloneGalaxyCatalogForTransfer(input.cloud);
@@ -156,23 +65,15 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   const schechterRunner: SchechterRunner = deps.schechterRunner ?? defaultSchechterRunner;
   const angularRunner: AngularRunner = deps.angularRunner ?? defaultAngularRunner;
 
-  // Internal mutable state.  Closure-captured `let`s so they're
-  // genuinely inaccessible from outside (no `this.mode` for a future
-  // caller to reach in and poke). `mode` initialises from the live setting at
-  // first READ, so the mirror starts in sync without a construction-time read.
+  // `mode` initialises from the live setting at first READ, so the mirror
+  // starts in sync without a construction-time read of the store.
   let mode: BiasModeT | null = null;
   const cachedSchechter = new Map<SourceType, Float32Array>();
   const cachedAngular = new Map<SourceType, Float32Array>();
-  /**
-   * Generation counter — incremented on every `setMode`.  Each per-source
-   * bake captures the generation at start and drops its result if the
-   * captured generation no longer matches `generation` on resolve.  This
-   * is the structural fix for the fast-toggle race; mirrors AssetSlot's
-   * tier-swap race counter.
-   */
+  // Captured by each bake at start, compared on resolve: the fast-toggle race
+  // fix, the same shape as AssetSlot's tier-swap counter.
   let generation = 0;
 
-  /** Lazily read & memoize the current internal mode mirror. */
   function currentMode(): BiasModeT {
     if (mode === null) {
       mode = getMode();
@@ -180,7 +81,6 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     return mode;
   }
 
-  /** Snapshot every loaded `(source, catalog)` from the engine state. */
   function loadedSourceCatalogPairs(): { source: SourceType; catalog: GalaxyCatalog }[] {
     const out: { source: SourceType; catalog: GalaxyCatalog }[] = [];
     const catalogs = getLoadedClouds();
@@ -193,12 +93,6 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     return out;
   }
 
-  /**
-   * Run a per-source Schechter bake.  Captures the generation at start;
-   * on resolve, drops the result if a newer generation has started
-   * (fast-toggle-race fix).  On race-pass: caches the ratios + (if
-   * renderer attached) splices them immediately.
-   */
   async function bakeSchechterFor(
     source: SourceType,
     cloud: GalaxyCatalog,
@@ -207,14 +101,10 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const ratios = await schechterRunner({ cloud, source });
     if (myGen !== generation) return; // stale — superseded by a newer setMode
     cachedSchechter.set(source, ratios);
-    // Splice immediately AND wake the loop.  The bake is async, so by the time
-    // it resolves the render-on-demand loop may have gone to sleep (the boot
-    // fade-in already settled).  The splice mutates the per-source vertex
-    // buffer, so without a wake the reweight sits in the GPU buffer unshown
-    // until the next unrelated input — the AngularReweight-on-boot "galaxies
-    // dim on first mouse move" strand.  The wake is at the splice site so it
-    // covers BOTH callers (setMode's bake AND the onSourceUploaded re-bake),
-    // not just the manual mode toggle.
+    // The wake belongs at the splice site, not after the bakes: the loop may
+    // have gone to sleep while the bake ran, and this covers BOTH callers —
+    // setMode and the onSourceUploaded re-bake, whose stranded splice was the
+    // AngularReweight-on-boot "galaxies dim on first mouse move" strand.
     renderer.spliceSchechterRatios(source, ratios);
     requestRender();
   }
@@ -227,9 +117,7 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const weights = await angularRunner({ cloud, source });
     if (myGen !== generation) return;
     cachedAngular.set(source, weights);
-    // See bakeSchechterFor: wake at the splice site so an onSourceUploaded
-    // re-bake (the boot path, AngularReweight being the default mode) isn't
-    // stranded in the GPU buffer until the next input.
+    // See bakeSchechterFor for why the wake sits at the splice site.
     renderer.spliceAngularWeights(source, weights);
     requestRender();
   }
@@ -238,17 +126,13 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     generation += 1;
     const myGen = generation;
     mode = next;
-    // Entry wake — flips the mode gate next frame; the only wake identity
-    // modes need (bake modes wake again post-splice below). Redundant with
-    // the settings route today (`setBiasMode` → `watchWakeSaga`), but `setMode`
-    // dispatches nothing itself, so that coverage is the caller's — D8.
+    // Entry wake — flips the shader's mode gate next frame, and the only wake
+    // an identity mode needs.
     requestRender();
 
     if (next === BiasMode.None || next === BiasMode.VolumeLimited || next === BiasMode.VMax) {
-      // Identity-only modes.  The shader's gate ignores the per-galaxy
-      // slot, so the slot's value is irrelevant — but we clear for
-      // diagnostic cleanliness (a future debug overlay can recognise
-      // 0.0 as "not active").  No bake, so this resolves synchronously.
+      // The shader's gate ignores the per-galaxy slot in these modes; clearing
+      // it leaves 0.0 to read as "not active" in a debug overlay.
       renderer.clearBiasOverlays();
       return;
     }
@@ -256,12 +140,8 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     const pairs = loadedSourceCatalogPairs();
 
     if (next === BiasMode.Schechter) {
-      // Per-source independence: each bake is a separate Promise, splice
-      // fires when each resolves.  Tests assert this ordering invariant
-      // via the multi_source_completion_ordering case.  No post-Promise.all
-      // wake: each bakeSchechterFor wakes the loop at its own splice site, so a
-      // trailing wake here would be redundant (and the same per-splice wake is
-      // what fixes the onSourceUploaded re-bake path — #render-wake).
+      // Per-source independence: each bake splices as it resolves, and wakes
+      // the loop itself — a trailing wake here would be redundant.
       await Promise.all(
         pairs.map(({ source, catalog }) => bakeSchechterFor(source, catalog, myGen)),
       );
@@ -275,15 +155,11 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
   }
 
   function onSourceUploaded(source: SourceType, cloud: GalaxyCatalog): void {
-    // A re-upload invalidates any prior cache for this source.
     cachedSchechter.delete(source);
     cachedAngular.delete(source);
 
-    // If a bias mode is active, fire a fresh per-source bake using
-    // the current generation.  Same race-drop semantics as setMode.
-    // The mid_bake_upload_race test asserts that this is a per-source
-    // bake, NOT a re-bake-all (the original setMode's Promise.all is
-    // independent and continues to resolve).
+    // One source re-bakes, not all of them: a setMode Promise.all already in
+    // flight is independent and keeps resolving (mid_bake_upload_race).
     const myGen = generation;
     const m = currentMode();
     if (m === BiasMode.Schechter) {
@@ -298,17 +174,12 @@ export function createBiasCorrectionSubsystem(deps: BiasCorrectionDeps): BiasCor
     cachedAngular.delete(source);
   }
 
-  // Install the upload/unload callbacks so the renderer can notify us mid-mode
-  // when a source arrives/leaves.  Uni-directional coupling — the renderer
-  // doesn't import or know about this subsystem; the subsystem reaches in via
-  // these setters.
+  // How the renderer notifies us mid-mode that a source arrived or left.
   renderer.setBiasUploadCallback((source, cloud) => onSourceUploaded(source, cloud));
   renderer.setBiasUnloadCallback((source) => onSourceUnloaded(source));
 
-  // Built as a `const` (rather than returned inline) so we can attach
-  // the `satisfies Destroyable` latch — the bias-correction subsystem
-  // is one of the engine's ~13 teardown targets, and the shared shape
-  // lets engine.destroy() iterate uniformly across the bag.
+  // A `const` so the `satisfies Destroyable` latch below can hold: teardown
+  // iterates the subsystem bag uniformly.
   const subsystem: BiasCorrectionSubsystem = {
     setMode,
     onSourceUploaded,

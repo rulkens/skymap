@@ -8,8 +8,8 @@
  * properties.
  *
  * The fixture composes the two upstream fixtures this helper's inputs come from:
- * the bootstrap-gate handles that `frameContext.test.ts` builds (`cam`, `gpu.*`,
- * `subsystems.texturedDisks`), plus the `settings.galaxyCatalogs.items` +
+ * the bootstrap-gate handles that `frameContext.test.ts` builds (`cam`,
+ * `gpu.*`), plus the `settings.galaxyCatalogs.items` +
  * `subsystems.fades` stub that `deriveSourceMasks.test.ts` builds, plus a
  * `cameraRuntime` carrying the last pose and projection.
  */

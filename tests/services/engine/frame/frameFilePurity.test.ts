@@ -1,20 +1,28 @@
 /**
  * A file under `src/services/engine/frame/` — and its `timing/` and `passes/`
- * subfolders — declares ONE thing: the symbol it is named for (for a pass file,
- * its `ContentPass`). Helpers and constants inlined beside it are invisible to
- * the rest of the codebase and untestable alone, and agents keep re-adding them
- * — hence a ratchet rather than a review note. `ALLOWED` carries today's debt,
- * keyed `<swept dir>/<file>` so the three sweeps can't borrow each other's
- * budgets; rows only ever go DOWN.
+ * subfolders, and every Layer's own `passes/` — declares ONE thing: the symbol
+ * it is named for (for a pass file, its `ContentPass`). Helpers and constants
+ * inlined beside it are invisible to the rest of the codebase and untestable
+ * alone, and agents keep re-adding them — hence a ratchet rather than a review
+ * note. `ALLOWED` carries today's debt, keyed `<swept dir>/<file>` so the
+ * sweeps can't borrow each other's budgets; rows only ever go DOWN.
  */
 
 import { describe, expect, it } from 'vitest';
-import { readdirSync } from 'node:fs';
+import { readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { Node, SyntaxKind, type Statement } from 'ts-morph';
 import { parseOnlyProject } from '../../../helpers/conventions/parseOnlyProject';
 
 const FRAME_DIR = fileURLToPath(new URL('../../../../src/services/engine/frame/', import.meta.url));
+const LAYERS_DIR = fileURLToPath(new URL('../../../../src/layers/', import.meta.url));
+
+// A Layer's passes are frame passes that happen to live in the Layer, so they
+// are swept on the same terms — derived, so a new Layer's `passes/` is gated
+// the day it appears rather than when someone remembers this file.
+const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYERS_DIR)
+  .map((name) => [`layers/${name}/passes`, `${LAYERS_DIR}${name}/passes/`] as const)
+  .filter(([, dir]) => statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true);
 
 // Files that still inline helpers, with their current count. `slabs.ts` is the
 // slab vocabulary itself — a genuine multi-symbol module whose split is its own
@@ -110,12 +118,13 @@ function strayDeclarations(path: string, base: string): readonly string[] {
 }
 
 describe.each([
-  ['frame', FRAME_DIR],
-  ['frame/timing', FRAME_DIR + 'timing/'],
-  ['frame/passes', FRAME_DIR + 'passes/'],
+  ['frame', FRAME_DIR] as const,
+  ['frame/timing', FRAME_DIR + 'timing/'] as const,
+  ['frame/passes', FRAME_DIR + 'passes/'] as const,
+  ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
-  // `passes/index.ts` is the registry barrel, not a pass; the other two dirs
-  // have no barrel and CLAUDE.md forbids adding one.
+  // `passes/index.ts` is the registry barrel, not a pass; the other dirs have
+  // no barrel and CLAUDE.md forbids adding one.
   const files = readdirSync(dir).filter(
     (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
   );

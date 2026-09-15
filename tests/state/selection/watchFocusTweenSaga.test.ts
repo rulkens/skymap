@@ -138,7 +138,7 @@ describe('watchFocusTweenSaga', () => {
   // must not be silently dropped; it must fire once the engine emits its
   // readiness pulse (by when wireInput has installed the camera). Galaxy deep
   // links dodge this because their updateSelectionFocus is itself deferred on
-  // catalogLoaded, which only fires after the camera exists.
+  // the catalog-landed pulse, which only fires after the camera exists.
   it('defers the tween when the camera is not ready, then plants it on the engine-ready pulse', async () => {
     cameraRuntime = () => null;
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));

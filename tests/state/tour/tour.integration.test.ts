@@ -256,8 +256,8 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       },
       selection: { select: null, hover: null, focus: null },
       gpu: { focusUniform: { bindGroup: {} } },
-      // The fade bridge walks the COMPOSED rows; over an empty layer tuple
-      // that is core's own manifest.
+      // The fade bridge walks the COMPOSED rows; this stub draws nothing from a
+      // Layer, so core's own manifest is the whole set.
       fadeRows: FADE_LAYERS,
     } as unknown as EngineState;
   }

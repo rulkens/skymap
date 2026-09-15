@@ -1,8 +1,8 @@
 /**
- * The bias reconcile `frame` took over from `watchBiasBakeSaga`. `setMode`
- * resolves never here, standing in for the ~200 ms worker bake: a compare
- * written against the subsystem's own lagging mode would re-fire every frame
- * for its duration, which no other test would see.
+ * The Layer's `frame` bias reconcile. `setMode` never resolves here, standing in
+ * for the ~200 ms worker bake: a compare written against the subsystem's own
+ * lagging mode would re-fire every frame for its duration, which no other test
+ * would see.
  */
 import { describe, it, expect, vi } from 'vitest';
 

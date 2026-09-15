@@ -7,7 +7,7 @@ import type { EarthBody } from '../../../@types/scene/EarthBody';
 /**
  * createBodyStore — factory for the scene-body data store.
  *
- * Same factory-plus-closure shape as `createGalaxyStore` / `createStructureStore`:
+ * Same factory-plus-closure shape as `createStructureStore`:
  * a plain factory closing over private mutable state rather than a class, since
  * the engine is a singleton and a class would only add a `this.` access pattern.
  * The closure holds the star/planet arrays and the nullable Earth record; the

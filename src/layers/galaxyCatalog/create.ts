@@ -1,8 +1,8 @@
 /**
- * create — the galaxy family's whole construction, in the order core's three
- * bootstrap phases used to run it (`initGpu` renderers → `wireSlots` subsystems
- * → slots). Everything is a local here and a field on the returned runtime;
- * nothing lands on `EngineState`, and no consumer re-checks a null handle.
+ * create — the galaxy family's whole construction, in dependency order:
+ * renderers, then subsystems, then slots. Everything is a local here and a field
+ * on the returned runtime; nothing lands on `EngineState`, and no consumer
+ * re-checks a null handle.
  */
 
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';

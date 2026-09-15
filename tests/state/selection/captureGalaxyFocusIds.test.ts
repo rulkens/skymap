@@ -5,7 +5,7 @@
  * slots BEFORE a tier swap replaces the old clouds, but ONLY for sources whose
  * `galaxyCatalogRequest` actually drifts across the given prev→next transition
  * AND are enabled. A source that doesn't drift, or isn't enabled, must be
- * skipped to avoid a hanging `take(catalogLoaded)`.
+ * skipped to avoid a hanging `take` on a pulse that never comes.
  *
  * SDSS ships tier variants, so its request carries the tier name: `medium`
  * differs from `large`, but `large` matches `large`.
@@ -198,7 +198,7 @@ describe('captureGalaxyFocusIds', () => {
   it('a disabled source is not captured', () => {
     // SDSS's request differs across medium→large, so the drift check alone would
     // capture it. But the demand loop only reloads a slot it demands, and a
-    // disabled catalog is never demanded — no `catalogLoaded` fires for it — so
+    // disabled catalog is never demanded — no landed pulse fires for it — so
     // capture must not wait on it either, or the consumer's `take` blocks forever.
     const store = buildStore();
     store.dispatch(updateSelectionSelect(SDSS_REF));

@@ -18,8 +18,8 @@ import type { StructureId } from '../../data/structure/StructureId';
  * the same animated opacity the rings fade through. The store holds records
  * only.
  *
- * Famous galaxies are deliberately NOT held here — they are galaxy data
- * (`GalaxyStore`); their label is produced from there.
+ * Famous galaxies are deliberately NOT held here — they are catalog data, owned
+ * by the galaxyCatalog Layer's runtime; their label is produced from there.
  */
 export type StructureStore = {
   /** Install (replacing) the records for one group. A defensive copy is taken. */

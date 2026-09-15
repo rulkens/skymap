@@ -1,8 +1,7 @@
 /**
- * frame — the per-frame prelude core's `runFrame` used to inline: the bias-mode
- * reconcile (the saga this replaces), the hi-res famous planner, then the ONE
- * catalog walk feeding both disk planners. The keep-ticking vote is the textured
- * planner's in-flight thumbnail work.
+ * frame — the Layer's per-frame prelude, in order: the bias-mode reconcile, the
+ * hi-res famous planner, then the ONE catalog walk feeding both disk planners.
+ * The keep-ticking vote is the textured planner's in-flight thumbnail work.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';

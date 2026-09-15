@@ -1,8 +1,7 @@
 /**
- * The galaxy family's whole runtime: what `state.gpu.*`, `state.subsystems.*`,
- * `state.assetSlots.*` and `state.data.galaxies` used to hold, as plain fields
- * every contribution closes over. Non-null throughout — `create` builds each
- * before returning, so nothing re-checks a handle core had to leave nullable.
+ * The galaxy family's whole runtime — renderers, subsystems, slots and catalogs
+ * as plain fields every contribution closes over. Non-null throughout: `create`
+ * builds each one before returning, so no reader re-checks a handle.
  */
 
 import type { GalaxyCatalogBridge } from '../../../@types/engine/layer/GalaxyCatalogBridge';

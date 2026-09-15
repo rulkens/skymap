@@ -14,9 +14,8 @@ export type BiasCorrectionDeps = {
   renderer: GalaxyPointRenderer;
 
   /**
-   * Current bias mode — read lazily on every bake decision because
-   * the user can flip modes between bakes. Replaces the old
-   * `getState().settings.bias.mode` read.
+   * Current bias mode — read lazily on every bake decision, because the user
+   * can flip modes between bakes.
    */
   getMode: () => BiasMode;
 

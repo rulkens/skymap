@@ -28,8 +28,8 @@
  *      stops demanding immediately while it fades out.
  *
  *   2. `request` — one-shot transient flags (see `RequestKey`).  Covers
- *      discrete UI events that have no persistent settings counterpart —
- *      opening the palette picker, requesting a lazy PGC-alias load, etc.
+ *      discrete UI events that have no persistent settings counterpart, such as
+ *      opening the palette picker.
  *      The flag is never cleared; the demand loop's idle-guard stops the
  *      already-loaded slot from re-fetching, so a set-and-leave flag is safe.
  *
