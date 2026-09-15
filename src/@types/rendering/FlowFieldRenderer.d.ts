@@ -35,6 +35,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { Vec2 } from '../math/Vec2';
 import type { ScalarCube } from '../data/volume/ScalarCube';
 import type { FlowSettings } from '../settings/FlowSettings';
+import type { ClaimTimestampWrites } from '../gpu/timing/ClaimTimestampWrites';
 
 export type FlowFieldRenderer = {
   /**
@@ -74,8 +75,19 @@ export type FlowFieldRenderer = {
    * its own last-call timestamp, so advection speed and lifetime read in
    * seconds, not rendered frames. Caller gates on enabled + loaded (see
    * `encodeFlowCompute`).
+   *
+   * `claimTimestampWrites` bills the step's GPU-timing slot. It is called at,
+   * and only at, the INTEGRATE pass — the one that runs on every call, past the
+   * renderer's own `field === null` gate. A reseed frame's extra seed dispatch
+   * stays untimed rather than having the two passes overwrite each other's ends
+   * in the one slot.
    */
-  encodeCompute(encoder: GPUCommandEncoder, flow: FlowSettings, nowMs: number): void;
+  encodeCompute(
+    encoder: GPUCommandEncoder,
+    flow: FlowSettings,
+    nowMs: number,
+    claimTimestampWrites?: ClaimTimestampWrites,
+  ): void;
   /**
    * Additive ribbon draw into the open HDR pass. Packs the `Cam` uniform
    * (mvp = `viewProj`, the cube `model`, aspect from `viewportPx`, the pulse
