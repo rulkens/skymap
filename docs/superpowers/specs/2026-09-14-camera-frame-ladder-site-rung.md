@@ -733,8 +733,11 @@ channels:
 | `target`   | `[0, 0, 0]` — the tag names the site, so the point is redundant |
 
 A tween between two site keyframes therefore interpolates heading, elevation
-and range linearly, which is the turntable move an author wants. The absent-tag
-rule is unchanged: a segment with no `frame` is `'absolute'`
+and range linearly, which is the turntable move an author wants. `encode` emits
+clamped values and `decode` does not: a leg's endpoints were clamped when they
+were captured, and re-flooring them here would bend a tween's ends — so a
+hand-authored `distance: 0` puts the eye at the site until the next input step.
+The absent-tag rule is unchanged: a segment with no `frame` is `'absolute'`
 (`evaluateClip.ts:509`). Known limit, inherited from the body arm: heading
 takes the short way only if the author keeps the pair inside a turn — linear
 channel interpolation does not unwrap.
@@ -746,13 +749,17 @@ engaged one (`regimeArmFor.ts:39`) and blocks engage the same way (`:31-33`).
 With a rover focused, that keeps the Mars arm permanently unreachable — the
 premise correction in §0.
 
-The rule becomes generic: **a focus whose `bodyHostId` chain passes through a
-rung's id keeps (and admits) that rung.** `bodyHostId`
-(`positionDrivers.ts:44-54`) resolves each driver's host — an orbit's focus, a
-site's host — so `curiosity → mars → sun` passes through `mars` and the Mars
-arm holds under a rover focus. `bodyHostId` is the chain's only reader; there
-is no second host notion here (`utils/scene/hostBodyId` resolves a _texture_
-key's host and is unrelated).
+The rule becomes generic: **a focus fixed to a rung's surface — directly, or up
+a chain of surface-fixed hosts — keeps (and admits) that rung.** The walk reads
+each driver's host (`positionDrivers.ts:34-54`) and follows it only while the
+row's kind is `surfaceFixed`, so `curiosity → mars` holds the Mars arm under a
+rover focus and stops there. That restriction is what keeps the rule off the
+fifteen moons, Pluto/Charon and the two Voyagers: an _orbiting_ focus inside a
+host's subtree leaves a body-fixed arm behind rather than riding it, so
+admitting or holding that arm would sail the focus out of frame with follow
+gated off. `PositionDriver` is the chain's only reader; there is no second host
+notion here (`utils/scene/hostBodyId` resolves a _texture_ key's host and is
+unrelated).
 
 That rule alone would strand the approach. `followActive` is gated on the world
 arm (`cameraDrivers.ts:81-83`) because the ease has no meaning once the state
@@ -784,8 +791,9 @@ The gate lives **in `projectFramePose`, beside that `intent.dragging` skip** —
 not inside `stepRung`. `RungCtx` carries no driver state, and widening it to
 carry follow memory would braid the driver table into every row's context for
 one caller's benefit; `stepRung` stays a pure function of the ladder. What the
-fold needs instead is the frame's winning `DriverId`, which it takes as an
-argument from `stepCameraRuntime`'s existing `winnerId`.
+fold needs instead is the one boolean "an approach is in flight and has not
+saturated", which `stepCameraRuntime` computes from its existing `winnerId` and
+follow memory and passes in as `approaching`.
 
 With both, focusing Curiosity from far away plays out as: follow approaches in
 the world arm and saturates at rover framing distance → next at-rest frame,
@@ -884,11 +892,12 @@ restatements, no clamp-boundary mirrors.
 - **One rung per frame.** From the world arm with a rover focused at rover
   range, two successive `stepRung` calls reach `{ site }` and not before —
   neither a single-frame teleport nor a third frame.
-- **Turntable feel.** After an arbitrary sequence of drag steps, the pose's
-  basis up stays in the plane of the site radial and the sightline (horizon
-  level), and the eye's height above the tangent plane never goes below the
-  floor. This is the test that would have caught the incumbent's rolling
-  horizon.
+- **Turntable feel.** After an arbitrary sequence of drag steps, the eye's
+  height above the tangent plane never goes below the floor. The level horizon
+  is structural rather than a named test: `SitePose` carries no roll and
+  `canonicalBasisAt` takes none, so the incumbent's rolling horizon is
+  unrepresentable here; the basis itself is covered by
+  `tests/utils/camera/canonicalBasisAt.test.ts`.
 - **Channels.** A site keyframe's `encode`/`decode` round-trips; an untagged
   segment still reads as `'absolute'`.
 
