@@ -310,14 +310,27 @@ export function hostOrThrow(frame: PoseFrame, ctx: RungBasisCtx): HostBody;
 
 // src/services/engine/camera/rungs/stepRung.ts
 export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame;
+
+// the narrowings a display or a gate needs, one symbol per file
+// src/services/engine/camera/rungs/isBodyArm.ts
+export function isBodyArm(framed: FramedCameraPose): framed is FramedPose<'body'>;
+// src/services/engine/camera/rungs/isSiteArm.ts
+export function isSiteArm(framed: FramedCameraPose): framed is FramedPose<'site'>;
+// src/services/engine/camera/rungs/frameBodyId.ts
+export function frameBodyId(frame: PoseFrame): BodyId | null;
 ```
 
-- `refoldTo` climbs `toParent` to the shallower of the two rungs, then descends
-  `fromParent` to the target — the one conversion in the system. `foldToWorld`
-  is its `'absolute'` specialisation returning the pose; like today's
-  `resolveWorldArm` it returns the world arm's own pose **by reference**
-  (`poseFrameConversion.ts:141-145`), which is what keeps the per-frame fold
-  free on the world arm.
+- `refoldTo` is the one conversion in the system, and it moves **whichever end
+  is deeper**: it climbs `toParent` from the deeper frame until the two meet,
+  then descends `fromParent` to the target. That is what keeps a rung's trip to
+  **its own host arm** a single `toParent` — a site reaches its planet's arm in
+  one hop and never round-trips through heliocentric Mpc, where metre-scale
+  numbers lose their resolution to the 1 Mpc seam (spec 2 §10). A pose already
+  in the target frame comes back by reference. `foldToWorld` is its
+  `'absolute'` specialisation returning the pose, climbing to the root however
+  many rungs deep the frame sits; like today's `resolveWorldArm` it returns the
+  world arm's own pose **by reference** (`poseFrameConversion.ts:141-145`),
+  which is what keeps the per-frame fold free on the world arm.
 - `hostOf` walks up from the given frame and answers the first non-null `host`
   cell. **One failure policy**: `hostOf` answers `null` when the body is
   unresolved this instant; `hostOrThrow` is the single throwing wrapper, used
@@ -329,7 +342,14 @@ export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame;
   business. `replayInput` keeps arbitration, the store commits and the driver
   memories (follow's `panOffset`, the roll ride's epoch bookkeeping).
 - `stepRung` replaces `regimeArmFor`: it asks the current rung's `release`,
-  then each child's `engage`, and answers the frame at most one rung away.
+  then each child's `engage`, and answers the frame at most one rung away. Both
+  halves are kind-generic. A release answers the parent **frame**, taken from
+  `climbRowFor(current.frame).toParent(current, ctx).frame` — the parent kind
+  alone does not name a frame, since a site's parent is its own host planet's
+  arm, and only the row can resolve which body that is. An engage asks every row
+  whose `parent` equals `rungKindOf(current.frame)`, so a rung parented on a
+  body is reachable from a body arm exactly as one parented on the world arm is
+  reachable from `'absolute'`.
 
 ### 2.6 Invariants
 
@@ -339,13 +359,28 @@ export function stepRung(current: FramedCameraPose, ctx: RungCtx): PoseFrame;
    `src/@types/camera` with an empty allow-list and must stay that way — a
    string-keyed rung table passes it by construction.
 2. **Consumers never branch on the tag** except through `rungKindOf`,
-   `frameKey`/`sameFrame`, `isWorldArm`, `hostOf`, `refoldTo`/`foldToWorld`,
-   `stepRung` and `rowFor(...).step` / `.channels`.
-3. **The narrowing is confined.** `rowFor` and `climbRowFor` hold one `as`
-   expression each and nothing else; one test covers both.
+   `frameKey`/`sameFrame`, `isWorldArm`/`isBodyArm`/`isSiteArm`, `frameBodyId`,
+   `hostOf`, `refoldTo`/`foldToWorld`, `stepRung` and `rowFor(...).step` /
+   `.channels`. Once a third rung exists, "not the world arm" stops meaning
+   "body-fixed metres", so a display that wants a body arm's anchor and basis
+   asks `isBodyArm` and a display that wants the turntable's angles asks
+   `isSiteArm`; `frameBodyId` answers the body a frame **names** (its own, not
+   its host, which is `hostOf`'s question).
+3. **The narrowing is confined to the vocabulary.** Every `as` expression that
+   asserts a rung fact the value's type cannot carry lives in
+   `src/services/engine/camera/rungs/`: `rowFor` and `climbRowFor` (the table
+   lookup), `refoldTo` (the descent's child frame and its parent's), `stepRung`
+   (the engage loop's parent-framed pose) and `frameBodyId` (the tag's id keyed
+   by its kind). Each is guarded by a stated structural argument beside it. No
+   file outside that folder narrows a frame or a pose, which is what
+   `oneTagReader.test.ts` enforces directory-wise.
 4. **One rung per at-rest frame.** `stepRung` moves by one; a two-rung descent
    takes two frames, both invisible (the frame draws the pre-flip world arm —
-   `projectFramePose.ts:57-58`).
+   `projectFramePose.ts:57-58`). The fold's own flip is kind-generic to match:
+   it crosses when the step's answer differs from the displayed frame **and**
+   the displayed pose is the one the step judged — the world arm on an engage,
+   or the regime's own rung on a descent between two rungs. A produced pose in
+   some third frame (a clip leg's) is not this crossing's to convert.
 5. **Clips own the rung while playing.** A playing clip authors its own tag per
    leg and keeps it for the leg's duration, as today
    (`cameraDrivers.ts:182-184`, `replayInput.ts:116-117`).
@@ -725,15 +760,32 @@ co-rotates; a rover's framing distance is metres, so an approach with the
 subtree rule in place would cross Mars's engage band ~1500 km out, the follow
 row would go inactive mid-flight, and the camera would park there. The fix is
 uniform with the rule the fold already has for gestures: **an approach owns the
-rung while it runs.** The rung step is skipped while a follow row is winning and
-its memory is not yet `saturated` (`FollowMemory.saturated`, set at
-`cameraDrivers.ts:166`), exactly as the fold is skipped while `intent.dragging`
-(`projectFramePose.ts:112-114`).
+rung until it reaches its focus.** While a follow row is winning and its memory
+is not yet `saturated` (`FollowMemory.saturated`, set at
+`cameraDrivers.ts:166`), the rung step is skipped — exactly as the fold is
+skipped while `intent.dragging` (`projectFramePose.ts:112-114`) — **for a
+descent into a rung the focus merely hangs off**, and only for that:
+
+```ts
+approaching && frameBodyId(target) !== ctx.focusBodyId;
+```
+
+A descent into the focus's **own** rung is the arrival, and it must land. A body
+focused from inside its own band — the ordinary tour landing, parked at h/R 0.1
+over Mars with Mars focused — engages on the next fold today, and that engage is
+what cuts the fresh approach short. Defer it and the approach's `distanceTarget`
+is `bodyFocusDistance`, h/R ≈ 3.3: the ease spends its whole duration pulling the
+camera **out** of the band, and when the gate finally opens the camera is outside
+`engageHR` and never engages again. Gating only the hangs-off case closes the
+rover strand without reopening that one; both are the same predicate read from
+the two sides, so there is no second rule to keep in step.
 
 The gate lives **in `projectFramePose`, beside that `intent.dragging` skip** —
 not inside `stepRung`. `RungCtx` carries no driver state, and widening it to
 carry follow memory would braid the driver table into every row's context for
-one caller's benefit; `stepRung` stays a pure function of the ladder.
+one caller's benefit; `stepRung` stays a pure function of the ladder. What the
+fold needs instead is the frame's winning `DriverId`, which it takes as an
+argument from `stepCameraRuntime`'s existing `winnerId`.
 
 With both, focusing Curiosity from far away plays out as: follow approaches in
 the world arm and saturates at rover framing distance → next at-rest frame,
@@ -747,7 +799,15 @@ Mars rung co-rotates with it, so there is nothing left to follow.
 
 `logCameraState` and the debug panel label the frame with `frameKey`, so a site
 frame reads `site:curiosity`; the panel's site rows are heading, elevation and
-range plus the derived eye height above the tangent plane. Clip authoring
+range plus the derived eye height above the tangent plane.
+
+The panel reads nothing but `CameraDebugSnapshot`, so the snapshot carries
+`siteHeadingRad`, `siteElevationRad` and `siteRangeM`, each null off a site arm
+and written together. Eye height is **not** a fourth field: it is
+`siteRangeM · sin(siteElevationRad)`, derived at the readout, so the snapshot
+cannot carry a value that disagrees with the two it is computed from.
+
+Clip authoring
 accepts `frame: { site: <id> }` wherever it accepts `{ body: <id> }` today
 (`src/@types/animation/CameraAction.d.ts:72,82`,
 `effectHelpers.ts:86-101,122-137`) with no
@@ -839,7 +899,10 @@ restatements, no clamp-boundary mirrors.
    mid-flight — a latent stranding bug, not a feature, but a behaviour change
    all the same. _Recommend:_ adopt it in the feature PR (never in prep), and
    check `driverGoldenTrace` for a trace that engages mid-approach; if one
-   exists, re-record it with the diff justified.
+   exists, re-record it with the diff justified. _Settled:_ adopted in the
+   narrowed form §4.8 now states — the literal predicate breaks arrival into a
+   focus's own band. No recorded step engages mid-approach, so the three golden
+   traces stay byte-identical.
 2. **Are 40 R / 80 R the right edges?** _Recommend:_ ship them as the defaults
    with sliders; the sliders make a re-tune a one-line data change, and the
    eye-check settles it faster than analysis does.
