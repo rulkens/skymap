@@ -1,6 +1,6 @@
 # Camera frame ladder — ground preparation (P1–P5)
 
-> **Spec.** [`specs/2026-09-14-camera-frame-ladder-site-rung.md`](../specs/2026-09-14-camera-frame-ladder-site-rung.md)
+> **Spec.** [`specs/2026-09-14-camera-frame-ladder-site-rung.md`](../../specs/2026-09-14-camera-frame-ladder-site-rung.md)
 > — the binding authority. This plan implements **§2 (the ladder model)** and
 > **§3 (Ground preparation P1–P5)** only. §4 (the site rung) is a second plan,
 > written in parallel against the same §2 names; nothing here may change a
@@ -1161,54 +1161,54 @@ disengage's centre-looking post-step is called out as its own task).
 
 **Deliverable inventory**
 
-- [ ] `src/services/engine/camera/rungs/` exports exactly: `rungKindOf`,
+- [x] `src/services/engine/camera/rungs/` exports exactly: `rungKindOf`,
       `frameKey`, `sameFrame`, `isWorldArm`, `cameraRungs` (`CAMERA_RUNGS`),
       `absoluteRung`, `bodyRung`, `rowFor`, `climbRowFor`, `hostOf`,
       `hostOrThrow`, `refoldTo`, `foldToWorld`, `stepRung` — one symbol per file,
       filename = symbol, so each row lives in its own file (`bodyRung.ts` exports
       `bodyRung`) and `cameraRungs.ts` is only the table. The site-rung plan's
       `siteRung.ts` follows the same shape.
-- [ ] `CAMERA_RUNGS` carries every §2.4 cell for both incumbent kinds:
+- [x] `CAMERA_RUNGS` carries every §2.4 cell for both incumbent kinds:
       `kind`, `host`, `emptyMemory`, `step`, `channels`, and on the body row
       `parent`, `toParent`, `fromParent`, `engage`, `release`.
-- [ ] `PoseFrame` and `FramedCameraPose` are **derived** from `RungKind` and
+- [x] `PoseFrame` and `FramedCameraPose` are **derived** from `RungKind` and
       spell exactly what they spell on `main`.
-- [ ] Deleted: `regimeArmFor.ts`, `resolveWorldArm`, `clipFrameChannels.ts`,
+- [x] Deleted: `regimeArmFor.ts`, `resolveWorldArm`, `clipFrameChannels.ts`,
       `SurfaceMemory.d.ts`, `evaluateClip`'s `frameKeyOf`,
       `cameraDebugSnapshotOf`'s local `sameFrame`, `CameraStateSection`'s
       `frameLabel`, `replayInput`'s `routeToSurface`, and both `!` host
       assertions in `projectFramePose`.
-- [ ] `tests/services/engine/camera/oneTagReader.test.ts` exists, allow-lists
+- [x] `tests/services/engine/camera/oneTagReader.test.ts` exists, allow-lists
       only `src/services/engine/camera/rungs/`, and has been shown to fail when a
       tag comparison is added outside it.
 
 **Behaviour bar — the prep's whole safety argument**
 
-- [ ] `tests/fixtures/camera/driverGoldenTrace.json` and
+- [x] `tests/fixtures/camera/driverGoldenTrace.json` and
       `settleGoldenTrace.json` are **byte-identical to `origin/main`**:
       `git diff origin/main...HEAD -- tests/fixtures/camera/` is empty. If either
       was re-recorded, the commit body carries a parse-compared cell diff and the
       user has ruled on it.
-- [ ] `tests/services/engine/frame/poseFold.test.ts` is unmodified except for
+- [x] `tests/services/engine/frame/poseFold.test.ts` is unmodified except for
       mechanical argument-shape updates; **no assertion changed**.
-- [ ] `noStoredRegimeFlag.test.ts` green with `ALLOW_LIST` still empty.
-- [ ] `frameFilePurity.test.ts` green with `frame/projectFramePose` at ≤ 1.
-- [ ] `oneMpcSeam.test.ts` green — no new importer of `SCALE_UNITS` appeared in
+- [x] `noStoredRegimeFlag.test.ts` green with `ALLOW_LIST` still empty.
+- [x] `frameFilePurity.test.ts` green with `frame/projectFramePose` at ≤ 1.
+- [x] `oneMpcSeam.test.ts` green — no new importer of `SCALE_UNITS` appeared in
       the camera path.
-- [ ] `logCameraState`'s `frame` field is the only behavioural string change in
+- [x] `logCameraState`'s `frame` field is the only behavioural string change in
       the PR, and its test was updated in the same commit that made it.
 
 **Named observable behaviours (manual pass, one session)** — prep is invisible by
 construction, so this is a "nothing moved" check, each recorded in the user's own
 words:
 
-- [ ] Fly to Earth from deep space: the engage feels as it does on `main`, with
+- [x] Fly to Earth from deep space: the engage feels as it does on `main`, with
       no snap at the crossing and no rolling horizon appearing.
-- [ ] Zoom back out past the disengage edge: no pop, no eye jump inward.
-- [ ] Drag/orbit/tilt at Earth's surface, release, re-drag: the remembered tilt
+- [x] Zoom back out past the disengage edge: no pop, no eye jump inward.
+- [x] Drag/orbit/tilt at Earth's surface, release, re-drag: the remembered tilt
       survives, and it still wipes on a switch to another body.
-- [ ] Play a body-framed clip leg and an absolute one: both play as on `main`.
-- [ ] The debug panel's Camera section shows `body:earth` / `absolute` and no
+- [x] Play a body-framed clip leg and an absolute one: both play as on `main`.
+- [x] The debug panel's Camera section shows `body:earth` / `absolute` and no
       ARM MISMATCH badge through an engage/disengage cycle.
 
 **Deferral boundary — do not chase these**
