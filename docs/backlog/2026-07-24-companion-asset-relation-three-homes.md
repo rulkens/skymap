@@ -8,13 +8,12 @@
 times in three mechanisms that can each be satisfied without the
 others:
 
-1. `companions: ['famousGalaxiesMeta']` on the Famous row of
-   `GALAXY_CATALOG_SOURCE_REGISTRY`
-   (`src/services/engine/wiring/galaxyCatalogSourceRegistry.ts:74`),
-   consumed by `loadCompanionAssets` on tier transition only.
-2. `demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle'` on
-   the `famousGalaxiesMeta` row of `ASSET_WIRING` — the boot path, and the only
-   one that runs at boot.
+1. `demand: (ctx) => ctx.slotState(Source.FamousGalaxy) !== 'idle'` on
+   the `famousGalaxiesMeta` row of `ASSET_WIRING`
+   (`src/services/engine/wiring/assetWiring.ts:252`) — the join itself.
+2. `req: (tier) => galaxyCatalogRequest(Source.FamousGalaxy, tier)` on the
+   same row — the identical call the Famous point row makes, so the meta
+   reloads with its `.bin` only because both spell the request by hand.
 3. `priority: 21`, authored to sit "immediately behind its `.bin` (20)"
    in the fetch-rank table.
 
@@ -39,10 +38,10 @@ test that has to iterate to describe a table is the tell.
 ## Directions to explore (design decides)
 
 - Make the companion relation the one mechanism: give `AssetWiringRow`
-  an optional `companionOf: AssetKey`, derive both the demand predicate
-  and the rank (companion rank = parent rank + 1) from it, and let
-  `loadCompanionAssets` read the same field instead of a per-source
-  list.
+  an optional `companionOf: AssetKey`, and derive the demand predicate,
+  the request and the rank (companion rank = parent rank + 1) from it.
+  This is what §9(d) D11 rules for PR-C; see the row comment at
+  `src/services/engine/wiring/assetWiring.ts:248`.
 - Or keep the registry list as the home and derive the wiring rows from
   it, which folds into the source-registry-factory item.
 - Either way the predicate "the parent is no longer idle" should stop

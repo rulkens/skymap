@@ -12,7 +12,7 @@
  * (`CLOUD_SHELL_PARAMS.radiusRatio` is one shared constant, not a per-body
  * table — the lean choice while Earth is the only textured cloud deck). The
  * seeded `bodies.earth` record is composed as a unit sphere scaled to
- * `earth.radiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
+ * `earth.surface.datumRadiusM × CLOUD_SHELL_PARAMS.radiusRatio` (a hair above the surface)
  * in the body's own eye-relative frame, with the orientation resolved this
  * frame from the `BodyState` snapshot. The shared `cloudShellRenderer`
  * textures that sphere with Earth's equirectangular cloud map (RGB colour +
@@ -120,7 +120,7 @@ function cloudShellDraw(
   // Checked before the sub-pixel cull so it also covers that cull's
   // distanceMpc === 0 degenerate case: a camera at the body's centre is deep
   // inside the fade-out band already.
-  const bodyRadiusMpc = earth.radiusM * SCALE_UNITS.M_TO_MPC;
+  const bodyRadiusMpc = earth.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
   const deckFade = cloudDeckFade(distanceMpc, bodyRadiusMpc);
   if (deckFade <= 0) return null;
   // Same shell radius the geometry itself is scaled to (radiusRatio, in body
@@ -133,7 +133,7 @@ function cloudShellDraw(
   // resolved here since deckFade already handled that case above.
   if (distanceMpc === 0) return { earth, deckFade, insideShell };
   const diameterPx = apparentSizePx({
-    diameterKpc: (2 * earth.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+    diameterKpc: (2 * earth.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
     distanceMpc,
     viewportHeightPx: ctx.canvasSize.height,
     fovYRad: ctx.fovYRad,
@@ -174,9 +174,11 @@ export const cloudShellPass: ContentPass = {
     const earthState = sceneBodyStates(state, ctx).get(earth.id)!;
 
     // Scale the unit sphere to the shell radius — just above the surface — in
-    // metres, the body-m slab frame's own unit (earth.radiusM is already metres,
-    // so no Mpc conversion crosses this seam).
-    const shellRadiusM = earth.radiusM * CLOUD_SHELL_PARAMS.radiusRatio;
+    // metres, the body-m slab frame's own unit (the datum is already metres, so
+    // no Mpc conversion crosses this seam). The deck stays a RATIO of the datum
+    // here; F3 re-expresses it as an altitude above the outer bound, so a peak
+    // can never rise through it.
+    const shellRadiusM = earth.surface.datumRadiusM * CLOUD_SHELL_PARAMS.radiusRatio;
     const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, shellRadiusM);
     // Sun rotated into Earth's local frame (its resolved orientation carries the
     // axial tilt), so the fragment's Lambert dim on the night side stays co-framed

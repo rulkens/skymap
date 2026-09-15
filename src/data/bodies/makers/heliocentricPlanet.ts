@@ -18,7 +18,7 @@ export function heliocentricPlanet(spec: BodySpec): PlanetBody {
   return {
     id: spec.id,
     label: spec.label,
-    radiusM: spec.radiusM,
+    surface: { datumRadiusM: spec.datumRadiusM, reliefM: [0, 0] },
     albedo: spec.albedo,
   };
 }

@@ -1,17 +1,18 @@
 /**
  * meshFetcher — `Fetcher<MeshAsset, MeshReq>`: one `.mesh` geometry binary plus
- * its three baked PBR textures, all under `public/data/meshes/<key>.*`. Three
- * fixed roles, so no `TextureKind` dispatch the way `bodyTextureFetcher` needs.
+ * the `MESH_TEXTURE_SLOTS` maps, all under `public/data/meshes/<key>.*`.
  *
- * `_mr` and `_normal` carry numeric channels, not a picture, so both decode
- * with `colorSpaceConversion: 'none'`; `_albedo` is a colour map and takes the
- * default managed (sRGB) decode — `bodyTextureFetcher.ts` has the full writeup.
+ * A slot whose format is not sRGB carries numeric channels rather than a
+ * picture, so it decodes with `colorSpaceConversion: 'none'` — the full writeup
+ * is in `bodyTextureFetcher.ts`.
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { MeshReq } from '../../../@types/loading/MeshReq';
 import type { MeshAsset } from '../../../@types/data/mesh/MeshAsset';
+import type { MeshTextureField } from '../../../@types/data/mesh/MeshTextureField';
 import { decodeMesh } from '../../../data/mesh/meshBinaryFormat';
+import { MESH_TEXTURE_SLOTS } from '../../../data/mesh/meshTextureSlots';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
 
 async function fetchTexture(
@@ -38,11 +39,23 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
   const buf = await fetchWithProgress(dataUrl(`${prefix}.mesh`), signal, onProgress);
   const geometry = decodeMesh(buf);
 
-  const [albedo, metalRough, normalMap] = await Promise.all([
-    fetchTexture(dataUrl(`${prefix}_albedo.png`), signal, false),
-    fetchTexture(dataUrl(`${prefix}_mr.png`), signal, true),
-    fetchTexture(dataUrl(`${prefix}_normal.png`), signal, true),
-  ]);
+  // `fromEntries` widens the key back to `string`; the slot table is what makes
+  // the record exhaustive, so the assertion is restating it, not hiding a gap.
+  const textures = Object.fromEntries(
+    await Promise.all(
+      MESH_TEXTURE_SLOTS.map(
+        async (slot) =>
+          [
+            slot.field,
+            await fetchTexture(
+              dataUrl(`${prefix}${slot.suffix}.png`),
+              signal,
+              !slot.format.endsWith('-srgb'),
+            ),
+          ] as const,
+      ),
+    ),
+  ) as Record<MeshTextureField, ImageBitmap>;
 
-  return { ...geometry, albedo, metalRough, normalMap };
+  return { ...geometry, ...textures };
 };

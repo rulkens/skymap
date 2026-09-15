@@ -99,14 +99,6 @@ const preparedByCtx = new WeakMap<
   Map<BodyId, PreparedBodySurfaceFrame | null>
 >();
 
-// The tile mesh cache's LRU stamp — an integer index rather than `ctx.nowMs`
-// so a stepped/paused clock (tests, a recorder) can't collapse two frames'
-// stamps onto the same value. Advanced once per real tile draw, not memoised
-// alongside `PreparedBodySurfaceFrame` (unlike the old per-ctx frame field):
-// it has nothing to do with the pose derivation and would otherwise stay
-// stale across a (ctx, bodyId) cache hit.
-let earthFrameCounter = 0;
-
 export function prepareBodySurfaceFrame(
   state: PassState,
   ctx: ReadyFrameContext,
@@ -143,7 +135,10 @@ function computeBodySurfaceFrame(
   // from ever drifting off the basis `view.slab.vp` was actually built from.
   const pose = ctx.bodyPose(bodyId);
   if (pose === null) return null;
-  const radiusM = body.radiusM;
+  // Datum, not a bound: tiles displace off the datum sphere, so the mvp scale and
+  // the radius the tile cut is planned against must be that same number. F2 shrinks
+  // only the BASE globe (to the inner bound) so relief cannot poke through it (§7.4).
+  const radiusM = body.surface.datumRadiusM;
   // See composeBodySlabMvp's header: the seam already rotated the camera into
   // the body's fixed axes, so view.slab.vp (built about the eye from that
   // SAME basis) is what this composes against — never the f32-narrowed view.vp.
@@ -238,7 +233,6 @@ export const earthPass: ContentPass = {
     if (tilesLive) {
       tileRenderer!.draw(pass, {
         tiles,
-        frame: ++earthFrameCounter,
         // The slab vp is already eye-relative by construction (body-m rows
         // build vp about the eye) — no rebase, unlike the old NEAR0 path.
         vp: view.vp,

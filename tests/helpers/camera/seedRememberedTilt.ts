@@ -13,6 +13,7 @@ import {
 } from '../../../src/services/camera/surfaceStep';
 import { frameKey } from '../../../src/services/engine/camera/rungs/frameKey';
 import { surfaceGestureEdge } from '../../../src/utils/camera/surfaceGestureEdge';
+import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
 import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import type { CameraSimHarness } from './CameraSimHarness';
 import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
@@ -25,6 +26,7 @@ const CTX = {
   viewportPx: [100, 100] as const,
   fovYRad: Math.PI / 2,
   bodyRadiusM: 1,
+  standoffRadii: SURFACE_STANDOFF_RADII,
   sceneUpLocal: [0, 0, 1] as const,
   tuning: DEFAULT_CAMERA_TUNING,
 };

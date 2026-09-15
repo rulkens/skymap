@@ -9,6 +9,7 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
+import { innerBoundRadiusM } from '../../utils/scene/innerBoundRadiusM';
 import { SCENE_EARTH } from './sceneEarth';
 import { SCENE_PLANETS } from './scenePlanets';
 import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';
@@ -25,8 +26,12 @@ const seededPlanet = (id: string): PlanetBody => {
 
 // This table (and the WGSL struct it packs into) is in km; body radii are
 // authored in metres. The boundary is crossed here and nowhere else.
-const seededRadiusKm = (id: string): number => seededPlanet(id).radiusM * SCALE_UNITS.M_TO_KM;
-const EARTH_RADIUS_KM = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_KM;
+// The ground sphere is the INNER bound: a floor above a peak would leave that
+// peak outside its own atmosphere. That only composites correctly once §2's
+// depth-aware shell lands; with today's zero relief it is the datum exactly.
+const seededRadiusKm = (id: string): number =>
+  innerBoundRadiusM(seededPlanet(id).surface) * SCALE_UNITS.M_TO_KM;
+const EARTH_RADIUS_KM = innerBoundRadiusM(SCENE_EARTH.surface) * SCALE_UNITS.M_TO_KM;
 
 export const ATMOSPHERE_PARAMS: Readonly<Record<string, AtmosphereParams>> = {
   earth: {

@@ -81,7 +81,7 @@ describe('pivotFraming', () => {
       label: 'Sagittarius A*',
       positionMpc: [0, 0, 0],
     };
-    const radiusMpc = SGR_A_STAR.radiusM * SCALE_UNITS.M_TO_MPC;
+    const radiusMpc = SGR_A_STAR.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     expect(pivotFraming(sgrAStar)).toEqual({
       radiusMpc,
       floorMpc: radiusMpc * SGR_A_STAR.standoffRadii!,

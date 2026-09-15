@@ -454,10 +454,10 @@ describe('earthPass.draw', () => {
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     // The body's true equatorial radius in metres, not an Mpc conversion.
-    expect(call[2]).toBe(SEEDED_EARTH.radiusM);
+    expect(call[2]).toBe(SEEDED_EARTH.surface.datumRadiusM);
 
     expect(camLocalMock).toHaveBeenCalledTimes(1);
-    expect(camLocalMock.mock.calls[0]![1]).toBe(SEEDED_EARTH.radiusM);
+    expect(camLocalMock.mock.calls[0]![1]).toBe(SEEDED_EARTH.surface.datumRadiusM);
 
     // The renderer receives the pass + the packed length-32 EarthSurfaceUniforms
     // record (16 mvp + 3 sunDirLocal + roughnessBase + 3 camPosLocal + f0 +
@@ -548,7 +548,7 @@ describe('earthPass.draw', () => {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeState({ draw: drawSpy }, SEEDED_EARTH);
-    const radiusMpc = SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+    const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const midAltitudeRadii =
       (CLOUD_SHELL_PARAMS.fadeStartAltitudeRadii + CLOUD_SHELL_PARAMS.fadeEndAltitudeRadii) / 2;
     const drawCamPos: Vec3 = [
@@ -594,7 +594,7 @@ describe('earthPass.draw — detail tiles', () => {
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
-      originLocal: [1, 0, 0],
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
       resident: {
         slot: 0,
         atlasUvOrigin: [0, 0],
@@ -632,11 +632,10 @@ describe('earthPass.draw — detail tiles', () => {
     expect(pass).toBe(PASS_STUB);
     expect(args.tiles).toBe(STUB_CUT);
     expect(args.surfaceAtlasView).toBe(ATLAS_VIEW);
-    expect(typeof args.frame).toBe('number');
     // No rebase: the tile draw's vp is the slab's own already-eye-relative
     // f32 view (view.vp), never a freshly narrowed/rebased copy.
     expect(args.vp).toBe(view.vp);
-    expect(args.radiusM).toBe(SEEDED_EARTH.radiusM);
+    expect(args.radiusM).toBe(SEEDED_EARTH.surface.datumRadiusM);
     // The eyeRelBodyM the base globe's mvp/camLocal composed from — same
     // pose, no separate re-derivation for the tile draw.
     expect(mvpMock.mock.calls[0]![1]).toBe(args.eyeRelBodyM);
@@ -705,7 +704,7 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
-      originLocal: [1, 0, 0],
+      anchor: { lon0Rad: 0, lat0Rad: 0, dLonRad: 0.1, dLatRad: 0.1 },
       resident: {
         slot: 0,
         atlasUvOrigin: [0, 0],
@@ -720,7 +719,7 @@ describe('earthPass.draw — base globe fade under the tile cut', () => {
   /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along
    *  +x — the shared fixture for the fade tests below. */
   function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
-    const radiusMpc = SEEDED_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+    const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
     const drawCamPos: Vec3 = [
       SEEDED_EARTH.positionMpc[0] + radiusMpc + altitudeMpc,
@@ -840,7 +839,7 @@ describe('earthPass.drawPick', () => {
     expect(camLocalMock).toHaveBeenCalledTimes(2);
     const pickRadiusM = mvpMock.mock.calls[1]![2] as number;
     expect(camLocalMock.mock.calls[1]![1]).toBe(pickRadiusM);
-    expect(pickRadiusM).toBeGreaterThan(SEEDED_EARTH.radiusM);
+    expect(pickRadiusM).toBeGreaterThan(SEEDED_EARTH.surface.datumRadiusM);
 
     // Independently recomputed floor formula.
     const dM = Math.hypot(
@@ -849,7 +848,7 @@ describe('earthPass.drawPick', () => {
       mvpMock.mock.calls[1]![1][2],
     );
     const expectedFloor = Math.max(
-      SEEDED_EARTH.radiusM,
+      SEEDED_EARTH.surface.datumRadiusM,
       (BODY_PICK_MIN_RADIUS_PX / ctx.drawPxPerRad) * dM,
     );
     expect(pickRadiusM).toBeCloseTo(expectedFloor, 6);

@@ -17,22 +17,28 @@ export type AssetSlot<T, Req> = {
    * marks the call `void` to say so explicitly.
    */
   load(req: Req): Promise<void>;
+  /** The committed value, or `null` when the slot has none. */
   current(): T | null;
+  /**
+   * The slot's committed state: the current one when `ready`, else the last
+   * `ready` state it reached. The ONE reading of "this slot has a committed
+   * value" — a slot reloading, committing or erroring over a previous commit
+   * still has one, which is what lets a tier swap replace data in place.
+   * `release()` is the only thing that clears it.
+   */
+  committed(): (LoadState<T> & { kind: 'ready'; req: Req }) | null;
   state(): LoadState<T>;
   subscribe(fn: (state: LoadState<T>) => void): () => void;
   forceReload(): void;
   cancel(): void;
   /**
-   * The request the slot last loaded with, or `null` before its first `load()`
-   * and after `release()` drops it back to idle.
+   * The request of the slot's last load ATTEMPT — `null` before its first
+   * `load()` and after `release()`. While a reload is in flight this is already
+   * the NEW request, where `committed().req` is still the previous one.
    *
-   * The one read surface onto what a `ready` slot is holding, exposed for the
-   * stale-tier evict edge in `reevaluateDemand`: a proximity `release(ctx)`
-   * predicate cannot see the slot, so the demand loop compares this committed
-   * request's tier against the freshly-clamped `req(state.tier)` tier to decide
-   * whether a resident texture is now the wrong resolution. Set on `load`,
-   * cleared on `release` — a released slot has nothing committed, so a later
-   * `forceReload()` is correctly a no-op.
+   * Read by the demand loop's drift edge: when the request a resident slot
+   * should hold no longer matches the one it was last loaded with, the slot
+   * reloads in place. Release is distance eviction only.
    */
   lastRequest(): Req | null;
   /**
@@ -54,15 +60,15 @@ export type AssetSlot<T, Req> = {
    */
   startedAtMs(): number | null;
   /**
-   * The evict edge of two-way demand. From any state: aborts any in-flight
-   * fetch and drops the slot to `idle`, bumping the generation so a commit that
-   * resolves after this call fails its race-check and cannot resurrect the slot.
+   * The evict edge of two-way demand — distance eviction only; a drifted
+   * request reloads the slot in place instead. From any state: aborts any
+   * in-flight fetch and drops the slot to `idle`, bumping the generation so a
+   * commit that resolves after this call cannot resurrect the slot.
    *
-   * Where `cancel()` rolls back to the last ready value (a transient stop),
-   * `release()` un-commits: if a payload was committed it runs the slot's
-   * `onRelease` hook exactly once so the consumer can free what the commit
-   * allocated (destroying a GPU texture is the canonical case). A released slot
-   * is idle and will re-load the moment its `demand` predicate turns true again.
+   * Where `cancel()` rolls back to the committed value (a transient stop),
+   * `release()` drops it, running `onRelease` exactly once so the consumer can
+   * free what the commit allocated (a GPU texture is the canonical case). A
+   * released slot re-loads the moment its `demand` predicate turns true again.
    */
   release(): void;
 };

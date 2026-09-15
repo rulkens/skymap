@@ -45,7 +45,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
-const EARTH_RADIUS_M = SCENE_EARTH.radiusM;
+const EARTH_RADIUS_M = SCENE_EARTH.surface.datumRadiusM;
 const MPC_TO_KM = 1 / SCALE_UNITS.M_TO_MPC / 1000;
 
 /** Displayed pose vs Earth: eye, h/R, and angle(view axis, nadir). */

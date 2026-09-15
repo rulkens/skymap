@@ -16,6 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { sameRequest } from '../../../../src/utils/loading/sameRequest';
 import { Source } from '../../../../src/data/sources';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
 import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTextureLoadRadius';
@@ -103,6 +104,7 @@ describe('ASSET_WIRING membership', () => {
       'structureCatalog',
       'pgcAlias',
       'bodyTextureAtlas',
+      'hiResFamous',
       ...ALL_BODY_TEXTURE_KEYS.map((e) => bodyTextureSlotKey(e.bodyId, e.kind)),
       ...SCENE_MESH_BODIES.map((b) => meshBodySlotKey(b.id)),
       Source.GaiaStars,
@@ -388,20 +390,46 @@ describe('ASSET_WIRING demand predicates', () => {
 });
 
 describe('ASSET_WIRING req builders', () => {
-  it('galaxy catalog rows carry { source, tier }', () => {
+  it('a tiered row carries its tier; an untiered one carries only its source', () => {
     expect(rowFor(Source.SDSS).req('medium')).toEqual({ source: Source.SDSS, tier: 'medium' });
-    expect(rowFor(Source.Synthetic).req('large')).toEqual({
-      source: Source.Synthetic,
-      tier: 'large',
-    });
+    expect(rowFor(Source.Synthetic).req('large')).toEqual({ source: Source.Synthetic });
+  });
+
+  it("an untiered point source's request is identical across tiers", () => {
+    for (const source of [Source.TwoMRS, Source.FamousGalaxy, Source.Synthetic]) {
+      const row = rowFor(source);
+      expect(sameRequest(row.req('small'), row.req('large')), `${source} drifted`).toBe(true);
+    }
+  });
+
+  it('the filaments request drifts only across the small boundary', () => {
+    const row = rowFor('filaments');
+    // Polarity, not just drift: a flipped flag would fetch the wrong file at
+    // every tier while keeping the drift assertions below green.
+    expect(row.req('small')).toEqual({ small: true });
+    expect(row.req('large')).toEqual({ small: false });
+    expect(sameRequest(row.req('medium'), row.req('large'))).toBe(true);
+    expect(sameRequest(row.req('small'), row.req('medium'))).toBe(false);
   });
 
   it('tier-aware sidecars carry { tier }', () => {
-    expect(rowFor('famousGalaxiesMeta').req('small')).toEqual({ tier: 'small' });
-    expect(rowFor('famousStarsMeta').req('small')).toEqual({ tier: 'small' });
-    expect(rowFor('filaments').req('medium')).toEqual({ tier: 'medium' });
     expect(rowFor('mcpm').req('large')).toEqual({ tier: 'large' });
     expect(rowFor('polyphorm2Mrs').req('large')).toEqual({ tier: 'large' });
+  });
+
+  it("the famous-meta row's request equals the famous point row's request at every tier", () => {
+    const meta = rowFor('famousGalaxiesMeta');
+    const point = rowFor(Source.FamousGalaxy);
+    for (const tier of ['small', 'medium', 'large'] as const) {
+      expect(sameRequest(meta.req(tier), point.req(tier)), `drifted at ${tier}`).toBe(true);
+    }
+  });
+
+  it("the famous-stars-meta row's request is undefined at every tier", () => {
+    const row = rowFor('famousStarsMeta');
+    for (const tier of ['small', 'medium', 'large'] as const) {
+      expect(row.req(tier)).toBeUndefined();
+    }
   });
 
   it('structureCatalog req is the empty request', () => {

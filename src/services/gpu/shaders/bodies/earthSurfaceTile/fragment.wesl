@@ -50,9 +50,8 @@ const EARTH_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_ATLAS_SIDE;
 const EARTH_TILE_PX: f32 = 512.0;
 const TILE_SLOT_SCALE: f32 = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
 
-// Inverse of 'equirectUvToDirection', bakeSurfaceTileMesh.ts's CPU twin --
-// duplicated from earth/fragment.wesl rather than imported: it lives
-// inline there, not in 'lib/', and this task creates new files only.
+// Inverse of 'equirectUvToDirection'. Duplicated from earth/fragment.wesl
+// rather than imported: it lives inline there, not in 'lib/'.
 fn dirToEquirectUv(dir: vec3<f32>) -> vec2<f32> {
   let u_uv = fract(atan2(dir.y, dir.x) / TAU + 0.5);
   let v_uv = asin(clamp(dir.z, -1.0, 1.0)) / PI + 0.5;
@@ -97,7 +96,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   // Crossfade: mix the freshly-landed primary tile in over the coarser
   // fallback it's replacing. At fadeWeight 1 (the CPU-side encoding for
   // both "fully faded in" and "no fallback resident" -- see io.wesl's
-  // NodeParams doc) mix() returns primaryAlbedo exactly, so this is
+  // PatchInstance doc) mix() returns primaryAlbedo exactly, so this is
   // pixel-identical to a single-sample path at that weight.
   let primaryUv = resolveTileAtlasUv(in.atlasUvOrigin, in.atlasUvScale, in.uv);
   let primaryAlbedo = textureSampleLevel(surfaceTexture, atlasSampler, primaryUv, 0.0).rgb;
@@ -113,7 +112,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let l = u.sunDirLocal;
 
   let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), u.oceanRoughness, mat.g);
-  let directBase = pbrDirect(n, v, l, baseAlbedo, roughness, u.f0);
+  let directBase = pbrDirect(n, v, l, baseAlbedo, roughness, vec3<f32>(u.f0));
 
   // Ground shadow: cast from the GEOMETRIC surface position toward the sun
   // through the cloud shell, exactly as 'earth/fragment.wesl' does.

@@ -42,11 +42,12 @@ npm run prebake-mesh -- mer    # Blender 5.2 LTS; ~10 s, not run in CI
 
 `tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 1325**,
 leaves the 21 material-less marker cubes behind, joins the 40 remaining parts,
-smart-UV-projects and bakes all nine materials into one 2048² albedo atlas. Its
-output and the loose `mer.prebaked.albedo.png` beside it are gitignored build
-products — regenerate them, don't archive them. Having no normal or
-metallicRoughness map is expected: `buildMeshes` substitutes 1×1 constants and
-records `normalMapSubstituted: true`.
+smart-UV-projects and bakes all nine materials into one 2048² atlas per
+`BAKE_PASSES` row — today a single albedo row. Its output and the loose
+`mer.prebaked.albedo.png` beside it are gitignored build products — regenerate
+them, don't archive them. Having no normal or metallicRoughness map is
+expected: `buildMeshes` substitutes 1×1 constants and lists them
+under `substituted`.
 
 Two things about this file bite:
 

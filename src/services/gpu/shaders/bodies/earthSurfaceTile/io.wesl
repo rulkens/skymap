@@ -1,55 +1,50 @@
 // earthSurfaceTile/io.wesl — byte-layout contract (exceeds the usual header
-// budget on that basis, per lib/camera.wesl's precedent): the two per-frame
-// storage-array structs the vertex-pulling draw reads, the shared
-// inter-stage 'VSOut' (mirroring bodies/earth/io.wesl's shape), and the
-// draw's uniform block.
+// budget on that basis, per lib/camera.wesl's precedent): the per-patch
+// instance record, the shared inter-stage 'VSOut' (mirroring
+// bodies/earth/io.wesl's shape), and the draw's uniform block.
 //
-// ## NodeParams / TileVertex — the vertex-pulling addressing
+// One 'PatchInstance' per cut tile, selected by '@builtin(instance_index)';
+// there is no vertex data at all -- 'vertex.wesl' derives every position
+// from this record and '@builtin(vertex_index)'. The CPU packer in
+// 'earthSurfaceTileLayout.ts' is the ONE matching statement of these
+// structs' byte layout, and 'earthSurfaceTileLayout.test.ts' the only
+// cross-check: a field reorder on one side alone scrambles every drawn
+// patch with no compiler signal.
 //
-// One 'NodeParams' per cut tile; one 'TileVertex' per drawn CORNER (the
-// baked (resolution+1)^2-vertex grid is EXPANDED through its own indices at
-// CPU pack time, not drawn indexed -- see the renderer's module header for
-// why). 'vertex.wesl' derives 'tileSlot = vertex_index / u.vertsPerTile'
-// and 'localVertex = vertex_index % u.vertsPerTile', then reads
-// 'nodeParams[tileSlot]' and 'tileVerts[node.vertexBase + localVertex]'.
-// The CPU packer in 'earthSurfaceTileLayout.ts' is the ONE matching
-// statement of these two structs' byte layout; a field reorder on either
-// side without the other moving is caught by
-// 'earthSurfaceTileLayout.test.ts'.
-struct NodeParams {
-  // Tile origin (the uv-origin corner direction, scaled by radiusM, in the
-  // body's fixed axes) minus the eye, subtracted CPU-side in f64 and
-  // narrowed once -- the composeBodySlabMvp-style precision seam (see the
-  // renderer's module header).
-  originRelCamM: vec3<f32>,
-  vertexBase: u32,
-  // This tile's already-resolved atlas rect ('SurfaceCutTile.resident',
-  // Task 2's ancestor-fallback resolution) -- no page-table indirection.
-  atlasUvOrigin: vec2<f32>,
-  atlasUvScale: vec2<f32>,
-  // The next resident ancestor strictly above the resolved tile, flattened
-  // into this leaf's own sub-rect the same way -- the coarser imagery the
-  // fragment crossfades FROM. Equal to atlasUvOrigin/atlasUvScale (and
-  // fadeWeight forced to 1) when no deeper resident ancestor exists --
-  // `SurfaceCutTile.resident.fallback === null`'s CPU-side encoding, so the
-  // fragment always has a valid second rect to sample.
-  fallbackUvOrigin: vec2<f32>,
-  fallbackUvScale: vec2<f32>,
+// The two vec4s must stay last and adjacent. Reordering the five scalars
+// keeps the 64-byte stride but re-maps offsets 12..31 with no compiler
+// signal -- the layout test's per-field assertions are the only guard.
+//
+// 'datumRadiusM' is deliberately absent: it is the per-draw uniform
+// 'SurfaceTileUniforms.radiusM' (offset 76), since one body is engaged per
+// draw, and because both paths reach the GPU through an f32 write the
+// uniform carries the identical word 'patchOriginRelEyeM' rounded to.
+struct PatchInstance {
+  // The patch's (lon0, lat0) corner scaled by radiusM, in the body's fixed
+  // axes, minus the eye -- subtracted CPU-side in f64 from the f32-ROUNDED
+  // anchor and narrowed once ('patchOriginRelEyeM'). At s = t = 0 the
+  // vertex stage reproduces this exactly, so patch corners never crack.
+  originRelEyeM: vec3<f32>,
   // clamp((nowMs - readyAtMs) / EARTH_TILE_CROSSFADE_MS, 0, 1), computed
   // once per tile in earthSurfaceTileRenderer.ts's draw() (nowMs sampled
   // once per frame, not per tile) -- 1.0 is the "no fade" fast path.
   fadeWeight: f32,
-};
-
-struct TileVertex {
-  // Unit-sphere-local position, relative to the tile's own origin
-  // direction (bakeSurfaceTileMesh.ts's f32-safe local offset).
-  position: vec3<f32>,
-  // Intra-tile uv in [0,1]^2 -- NOT the whole-globe equirect uv.
-  uv: vec2<f32>,
-  // Local-frame unit +u (east) tangent, forwarded raw (the same convention
-  // earth/vertex.wesl's tangent attribute uses).
-  tangent: vec3<f32>,
+  // The patch's angular footprint (radians), the f32 half of the CPU/GPU
+  // contract: the vertex stage rebuilds the ENU frame from THESE words.
+  lon0Rad: f32,
+  lat0Rad: f32,
+  dLonRad: f32,
+  dLatRad: f32,
+  // This tile's already-resolved atlas rect ('SurfaceCutTile.resident'),
+  // flattened as (origin.xy, scale.xy) -- no page-table indirection.
+  albedoRect: vec4<f32>,
+  // The next resident ancestor strictly above the resolved tile, flattened
+  // the same way -- the coarser imagery the fragment crossfades FROM
+  // (fragment.wesl samples both). Equal to albedoRect (and fadeWeight
+  // forced to 1) when no deeper resident ancestor exists --
+  // 'SurfaceCutTile.resident.fallback === null's CPU-side encoding, so the
+  // fragment always has a valid second rect to sample.
+  fallbackRect: vec4<f32>,
 };
 
 // VSOut mirrors the shape of bodies/earth/io.wesl: clip position, an
@@ -85,14 +80,14 @@ struct VSOut {
 // 'orientation' rather than a 'mat3x3<f32>' field: WGSL's uniform-address-
 // space mat3x3 pads each column to a vec4, which is easy to get byte-wrong
 // by hand; three explicit vec3 columns sidestep that trap entirely (see
-// the wesl-shaders skill's alignment landmines). The vertex
-// stage applies 'rot' to a tile-local delta ('rotCol0*x + rotCol1*y +
-// rotCol2*z'); the fragment applies its transpose ('dot' against each
-// column) to invert it -- valid because a rotation's inverse is its
-// transpose. Under the body-slab frame the CPU side always packs the
-// IDENTITY here (see the renderer's module header): the pose seam already
-// expresses every position in the body's fixed axes, so this rotation is a
-// no-op kept only so the struct's byte layout (below) doesn't move.
+// the wesl-shaders skill's alignment landmines). 'rotCol0/1/2' are
+// inverted ('dot' per column) in the vertex stage for 'normalLocal' and
+// 'viewDirLocal' only; the position path is composed directly from the
+// anchor in body-local space and needs no rotation. Under the body-slab
+// frame the CPU side always packs the IDENTITY here (see the renderer's
+// module header): the pose seam already expresses every position in the
+// body's fixed axes, so this rotation is a no-op kept only so the
+// struct's byte layout (below) doesn't move.
 //
 // 'camPosRelBodyM' (metres, camera minus Earth-centre in the body's fixed
 // axes -- the body-slab pose seam's own 'eyeRelBodyM', f64-composed and
@@ -114,7 +109,7 @@ struct VSOut {
 //   offset  64..75:  rotCol0             vec3<f32>
 //   offset  76..79:  radiusM             f32
 //   offset  80..91:  rotCol1             vec3<f32>
-//   offset  92..95:  vertsPerTile        u32
+//   offset  92..95:  meshResolution      u32
 //   offset  96..107: rotCol2             vec3<f32>
 //   offset 108..111: roughnessBase       f32
 //   offset 112..123: camPosRelBodyM      vec3<f32>
@@ -131,7 +126,7 @@ struct VSOut {
 //   total: 176 bytes.
 //
 // The CPU side uploads 44 f32 words via a mixed Float32Array/Uint32Array
-// DataView (only 'vertsPerTile', word 23, is written as a u32; words 41..43
+// DataView (only 'meshResolution', word 23, is written as a u32; words 41..43
 // are left as the scratch ArrayBuffer's zero fill). The single source of
 // truth for that packing is 'writeSurfaceTileUniforms' in
 // 'earthSurfaceTileLayout.ts'.
@@ -140,7 +135,9 @@ struct SurfaceTileUniforms {
   rotCol0: vec3<f32>,
   radiusM: f32,
   rotCol1: vec3<f32>,
-  vertsPerTile: u32,
+  // The template's 'n': the vertex stage splits '@builtin(vertex_index)'
+  // into (i, j) over an (n+1)^2 grid.
+  meshResolution: u32,
   rotCol2: vec3<f32>,
   roughnessBase: f32,
   camPosRelBodyM: vec3<f32>,

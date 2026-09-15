@@ -32,7 +32,7 @@ const FOV = Math.PI / 2;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
 const EARTH = BODIES.get('earth')!;
-const R_MPC = SCENE_EARTH.radiusM * SCALE_UNITS.M_TO_MPC;
+const R_MPC = SCENE_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
 
 /** Scene up 0.41 rad off the pole; standpoint midway ON the arc — the locus. */
 const SCENE_UP: Vec3 = [Math.sin(0.41), 0, Math.cos(0.41)];

@@ -74,7 +74,7 @@ function bodyAt(id: string, radiusM: number): SeededPlanet {
   return {
     id,
     label: id,
-    radiusM,
+    surface: { datumRadiusM: radiusM, reliefM: [0, 0] },
     albedo: [0.5, 0.5, 0.5],
     positionMpc: [distanceM * SCALE_UNITS.M_TO_MPC, 0, 0],
     orientation: IDENTITY_MAT3,
@@ -182,13 +182,13 @@ describe('texturedBodiesPass.draw', () => {
     expect(call[0]).toBe(view.slab.vp);
     expect(call[0]).not.toBe(view.vp);
     expect(call[1]).toBe(STUB_POSE.eyeRelBodyM);
-    expect(call[2]).toBe(mars.radiusM);
+    expect(call[2]).toBe(mars.surface.datumRadiusM);
 
     expect(camLocalMock).toHaveBeenCalledTimes(1);
     expect(camLocalMock.mock.calls[0]![0]).toBe(STUB_POSE.eyeRelBodyM);
     // camPosLocal uses the SAME radius the mvp did (the Minnaert view-cosine
     // frame must match the frame the vertices were transformed into).
-    expect(camLocalMock.mock.calls[0]![1]).toBe(mars.radiusM);
+    expect(camLocalMock.mock.calls[0]![1]).toBe(mars.surface.datumRadiusM);
   });
 
   it('draws only the row matching its own body, never a neighbour`s', () => {
@@ -241,9 +241,11 @@ describe('texturedBodiesPass.draw', () => {
     // ARGUMENTS: the altitude term reads the pose's eyeRelBodyM at the body's
     // own radius, and the eye-relative vp is `view.slab.vp` (the f64 one —
     // `view.vp` is all zeros here) scaled by that radius, translation untouched.
-    expect(u0[27]).toBe(Math.fround(bodySlabCamAltitudeSq(STUB_POSE.eyeRelBodyM, mars.radiusM)));
-    expect(u0[28]).toBe(Math.fround(0.5 * mars.radiusM));
-    expect(u0[31]).toBe(Math.fround(3.5 * mars.radiusM));
+    expect(u0[27]).toBe(
+      Math.fround(bodySlabCamAltitudeSq(STUB_POSE.eyeRelBodyM, mars.surface.datumRadiusM)),
+    );
+    expect(u0[28]).toBe(Math.fround(0.5 * mars.surface.datumRadiusM));
+    expect(u0[31]).toBe(Math.fround(3.5 * mars.surface.datumRadiusM));
     expect([u0[40], u0[41], u0[42], u0[43]]).toEqual([12.5, 13.5, 14.5, 15.5]);
   });
 
@@ -259,8 +261,12 @@ describe('texturedBodiesPass.draw', () => {
 
     const ring = SCENE_RINGS.find((r) => r.bodyId === 'saturn')!;
     const saturnU = renderer.draw.mock.calls[0]![2];
-    expect(saturnU[20]).toBeCloseTo(ring.innerRadiusKm / (saturn.radiusM * SCALE_UNITS.M_TO_KM));
-    expect(saturnU[21]).toBeCloseTo(ring.outerRadiusKm / (saturn.radiusM * SCALE_UNITS.M_TO_KM));
+    expect(saturnU[20]).toBeCloseTo(
+      ring.innerRadiusKm / (saturn.surface.datumRadiusM * SCALE_UNITS.M_TO_KM),
+    );
+    expect(saturnU[21]).toBeCloseTo(
+      ring.outerRadiusKm / (saturn.surface.datumRadiusM * SCALE_UNITS.M_TO_KM),
+    );
 
     const marsU = renderer.draw.mock.calls[1]![2];
     expect(marsU[20]).toBe(0);

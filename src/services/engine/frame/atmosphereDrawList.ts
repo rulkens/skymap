@@ -20,6 +20,7 @@ import { bodySlabCamLocal } from '../../../utils/camera/bodySlabCamLocal';
 import { isInsideAtmosphereShell } from '../../../utils/camera/isInsideAtmosphereShell';
 import { sunDirLocal } from '../../../utils/camera/sunDirLocal';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
+import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
 import { FOREGROUND_MAX_DISTANCE_MPC } from './foregroundMaxDistance';
 import { SUB_PIXEL_BODY_CULL_PX } from './subPixelBodyCullPx';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -83,7 +84,8 @@ export function atmosphereDrawList(
       continue;
     }
     const diameterPx = apparentSizePx({
-      diameterKpc: (2 * body.radiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
+      diameterKpc:
+        (2 * outerBoundRadiusM(body.surface) * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
       distanceMpc,
       viewportHeightPx: ctx.canvasSize.height,
       fovYRad: ctx.fovYRad,

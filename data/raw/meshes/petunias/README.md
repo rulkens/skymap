@@ -38,9 +38,9 @@ rest, decimates to 150k tris, smart-UV-projects, bakes all 11 materials into one
 2048² albedo atlas, and exports a single-material GLB with only
 `POSITION`/`NORMAL`/`TEXCOORD_0`. Its output and the loose
 `petunias.prebaked.albedo.png` beside it are both gitignored build products —
-regenerate them, don't archive them. Having no normal map is expected here:
-`buildMeshes` substitutes a 1×1 flat normal and warns, and the generated row
-records it as `normalMapSubstituted: true`.
+regenerate them, don't archive them. Having no normal or metallicRoughness map is
+expected here: `buildMeshes` substitutes 1×1 constants and warns, and the
+generated row lists them under `substituted`.
 
 ## Attribution — required
 

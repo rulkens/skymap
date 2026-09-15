@@ -155,12 +155,13 @@ export const ringsPass: ContentPass = {
     const sun = sunDirLocal(bodyState.positionMpc, RENDER_ORIGIN_MPC, bodyState.orientation);
     // Camera in the body's local frame, in PLANET radii (not ring-outer
     // radii) — see the module header's "two different radius units" note.
-    const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.radiusM);
+    const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.surface.datumRadiusM);
     // Ring-shape scalars, both relative to the OUTER radius (the disc's unit
     // radius): the planet's size in disc units, and the hole's inner edge.
     // The ring table is authored in km, the body in metres — hence the
     // conversion inside this otherwise unit-free ratio.
-    const planetRadiusRatio = (body.radiusM * SCALE_UNITS.M_TO_KM) / ring.outerRadiusKm;
+    const planetRadiusRatio =
+      (body.surface.datumRadiusM * SCALE_UNITS.M_TO_KM) / ring.outerRadiusKm;
     const innerRatio = ring.innerRadiusKm / ring.outerRadiusKm;
     // Narrow here, at the GPU uniform write — composeBodySlabMvp returns f64.
     renderer.draw(pass, packRingUniforms(narrowMat4(mvp), sun, planetRadiusRatio, cam, innerRatio));

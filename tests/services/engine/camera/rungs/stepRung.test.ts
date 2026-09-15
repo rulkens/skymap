@@ -2,8 +2,8 @@
  * stepRung — the ladder's band tests (spec §2.5, §12-R2). Every fixture places
  * a body at the Mpc origin with the identity orientation, so the eye's
  * distance from the body is just its own magnitude and `h/R` follows from
- * `SCENE_BODIES`' `radiusM` directly — no Earth-typed constant anywhere in
- * this file, matching the body-blind predicate under test.
+ * `SCENE_CELESTIAL_BODIES`' `surface.datumRadiusM` directly — no Earth-typed
+ * constant anywhere in this file, matching the body-blind predicate under test.
  *
  * Fixture ids ('moon', 'deimos') are widened with `id as BodyId`, the same
  * `SceneBody`-boundary cast `slabs.ts`/`resolvePickTable.ts` use: `BodyId` is a

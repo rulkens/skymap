@@ -5,6 +5,8 @@ import type { BodyState } from '../scene/BodyState';
 export type HostBody = {
   readonly id: BodyId;
   readonly state: BodyState;
-  /** Ground radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull. */
+  /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull. */
   readonly radiusM: number;
+  /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
+  readonly standoffRadii: number;
 };

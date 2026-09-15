@@ -5,9 +5,9 @@
 // the sun by the host is the CPU-side scalar 'u.sunVisibleFraction' and nothing
 // else, the same analytic posture every other body-lighting effect here takes.
 //
-// The bodies are dielectrics: 'pbrDirect's 'f0' is a scalar, so the mr map's
-// metallic channel is read by nobody. A metal/dielectric blend, if ever wanted,
-// is built HERE, not inside 'pbrDirect'.
+// The bodies are dielectrics: the mr map's metallic channel is read by nobody.
+// A metal/dielectric blend, if ever wanted, is built HERE and handed to
+// 'pbrDirect' as its blended 'f0'.
 
 import package::bodies::meshBody::io::MeshBodyUniforms;
 import package::bodies::meshBody::io::MeshBodyVSOut;
@@ -16,10 +16,10 @@ import package::lib::math::saturate;
 import package::lib::pbr::pbrDirect;
 
 @group(0) @binding(0) var<uniform> u: MeshBodyUniforms;
-@group(0) @binding(1) var meshSampler: sampler;
 @group(0) @binding(2) var albedoTexture: texture_2d<f32>;
 @group(0) @binding(3) var metalRoughTexture: texture_2d<f32>;
 @group(0) @binding(4) var normalTexture: texture_2d<f32>;
+@group(1) @binding(0) var meshSampler: sampler;
 
 // Normal-incidence reflectance of a non-metal (~4%), 'lib/pbr.wesl's rock value.
 const DIELECTRIC_F0: f32 = 0.04;
@@ -47,7 +47,7 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let roughness = textureSample(metalRoughTexture, meshSampler, in.uv).g;
 
   let v = normalize(u.camPosLocal - in.localPos);
-  let direct = pbrDirect(n, v, u.sunDirLocal, albedo, roughness, DIELECTRIC_F0) *
+  let direct = pbrDirect(n, v, u.sunDirLocal, albedo, roughness, vec3<f32>(DIELECTRIC_F0)) *
     SUN_IRRADIANCE * u.sunVisibleFraction;
 
   // 'u.dirToHost' is a uniform, not a varying: derived per fragment it would be

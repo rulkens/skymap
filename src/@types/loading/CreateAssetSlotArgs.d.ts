@@ -12,7 +12,7 @@ import type { RetryPolicy } from './RetryPolicy';
 export type CreateAssetSlotArgs<T, Req> = {
   name: string;
   fetch: Fetcher<T, Req>;
-  commit?: Committer<T, Req>;
+  commit?: Committer<T>;
   /**
    * Inverse of `commit`: run by `release()` when a committed payload is dropped,
    * so the consumer can free whatever the commit allocated (destroying a GPU

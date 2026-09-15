@@ -1,7 +1,7 @@
 /**
  * watchWakeSaga tests — verifies that a write to a WAKE_ROUTE (settings,
- * camera, or the sim clock) pokes the passive render-on-demand scheduler via
- * requestRender, and that a write to a non-wake route (tier) does not.
+ * camera, the sim clock, or the tier) pokes the passive render-on-demand
+ * scheduler via requestRender.
  *
  * Runs under the shared reconcileSagaHarness (all four reconcile watchers), so
  * settings writes that also drive other effects still behave faithfully.
@@ -33,10 +33,7 @@ describe('watchWakeSaga', () => {
     expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
   });
 
-  // ── WAKE_ROUTES — camera writes wake the loop; unrelated routes do not ───────
-  // watchWakeSaga matches the WAKE_ROUTES set (settings + camera). A camera-slice
-  // write must poke the passive scheduler; a write to a non-wake route (tier)
-  // must not.
+  // ── camera writes wake the loop ─────────────────────────────────────────────
 
   it('a camera slice write (beginDrag) wakes the loop', () => {
     store.dispatch(beginDrag());
@@ -50,10 +47,15 @@ describe('watchWakeSaga', () => {
     expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it('a tier write does NOT wake the loop (tier is not a WAKE_ROUTE)', () => {
+  // ── tier writes wake the loop ───────────────────────────────────────────────
+  // The catalog reload after a tier change starts from a FRAME (the demand
+  // loop's drift edge), so a `tier/` write that arrives while the loop is
+  // asleep must schedule one in its own right — nothing else will.
+
+  it('a tier write wakes the render loop', () => {
     store.dispatch(setTier('large'));
 
-    expect(reconcile.requestRender).not.toHaveBeenCalled();
+    expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
   });
 
   // ── time slice writes wake the loop ─────────────────────────────────────────

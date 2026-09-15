@@ -37,10 +37,11 @@ npm run prebake-mesh -- voyager    # Blender 5.2 LTS; ~10 s, not run in CI
 
 `tools/meshes/prebake/meshPrebake.py` drops the `_root` placeholder cube, joins
 the three parts, smart-UV-projects and bakes all three materials into one 2048²
-albedo atlas. Its output and the loose `voyager.prebaked.albedo.png` beside it
-are gitignored build products — regenerate them, don't archive them. Having no
-normal or metallicRoughness map is expected: `buildMeshes` substitutes 1×1
-constants and records `normalMapSubstituted: true`.
+atlas per `BAKE_PASSES` row — today a single albedo row. Its output and the
+loose `voyager.prebaked.albedo.png` beside it are gitignored build products —
+regenerate them, don't archive them. Having no normal or metallicRoughness map
+is expected: `buildMeshes` substitutes 1×1 constants and lists them
+under `substituted`.
 
 ## Attribution
 

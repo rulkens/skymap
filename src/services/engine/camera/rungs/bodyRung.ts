@@ -17,6 +17,7 @@ import { frameUp } from '../../../../utils/camera/frameUp';
 import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
 import { surfaceGestureEdge } from '../../../../utils/camera/surfaceGestureEdge';
+import { bodyStandoffRadii } from '../../../../utils/scene/bodyStandoffRadii';
 import { hOverR } from '../hOverR';
 import { nearestBodyHR } from '../nearestBodyHR';
 import { toBodyArm, toWorldArm } from '../poseFrameConversion';
@@ -47,7 +48,12 @@ export const bodyRung: ClimbRow<'body'> = {
     const state = ctx.bodies.get(frame.body);
     const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === frame.body);
     if (state === undefined || body === undefined) return null;
-    return { id: frame.body, state, radiusM: body.radiusM };
+    return {
+      id: frame.body,
+      state,
+      radiusM: body.surface.datumRadiusM,
+      standoffRadii: bodyStandoffRadii(body),
+    };
   },
 
   step(memory, tilt, framed, input, ctx) {
@@ -65,6 +71,7 @@ export const bodyRung: ClimbRow<'body'> = {
       viewportPx: ctx.viewportPx,
       fovYRad: ctx.fovYRad,
       bodyRadiusM: host.radiusM,
+      standoffRadii: host.standoffRadii,
       // The body rotates under the scene frame, so this is resampled per drain.
       sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
       tuning: ctx.tuning,
@@ -76,7 +83,14 @@ export const bodyRung: ClimbRow<'body'> = {
     const host = hostOrThrow(framed.frame, ctx);
     return {
       frame: 'absolute',
-      pose: toWorldArm(framed.pose, host.state, ctx.poseBasis, ctx.upBasis, host.radiusM),
+      pose: toWorldArm(
+        framed.pose,
+        host.state,
+        ctx.poseBasis,
+        ctx.upBasis,
+        host.radiusM,
+        host.standoffRadii,
+      ),
     };
   },
 
@@ -106,7 +120,14 @@ export const bodyRung: ClimbRow<'body'> = {
     // Unresolved this frame: hold rather than guess — the caller's next frame retries.
     const host = hostOf(framed.frame, ctx);
     if (host === null) return false;
-    const world = toWorldArm(framed.pose, host.state, ctx.poseBasis, ctx.upBasis, host.radiusM);
+    const world = toWorldArm(
+      framed.pose,
+      host.state,
+      ctx.poseBasis,
+      ctx.upBasis,
+      host.radiusM,
+      host.standoffRadii,
+    );
     return (
       hOverR(eyeMpcOf(world, ctx.poseBasis), host.state, host.radiusM) > ctx.tuning.disengageHR
     );

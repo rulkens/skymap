@@ -30,7 +30,7 @@
  * Same seam as every body-slab layer: this row's `pose = ctx.bodyPose(bodyId)`
  * is the SAME closure `deriveSlabs` built this row's `view.slab.vp` from — see
  * `composeBodySlabMvp`'s module header. `camPosLocal` (the Minnaert view
- * cosine's camera) uses the SAME `planet.radiusM` the mvp used, so both share
+ * cosine's camera) uses the SAME `surface.datumRadiusM` the mvp used, so both share
  * one definition of "the frame where this body is the unit sphere" — and why
  * the contact-range depth pair is composed here too (see
  * `lib/analyticSphere.wesl`'s depth section).
@@ -73,7 +73,7 @@ function ringRatios(body: PlanetBody): { inner: number; outer: number } {
   const ring = SCENE_RINGS.find((r) => r.bodyId === body.id);
   if (ring === undefined) return { inner: 0, outer: 0 };
   // The ring table is authored in km, the body in metres.
-  const bodyRadiusKm = body.radiusM * SCALE_UNITS.M_TO_KM;
+  const bodyRadiusKm = body.surface.datumRadiusM * SCALE_UNITS.M_TO_KM;
   return { inner: ring.innerRadiusKm / bodyRadiusKm, outer: ring.outerRadiusKm / bodyRadiusKm };
 }
 
@@ -114,7 +114,7 @@ export const texturedBodiesPass: ContentPass = {
     if (pose === null) return;
 
     const bodyState = sceneBodyStates(state, ctx).get(body.id)!;
-    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, body.radiusM);
+    const mvp = composeBodySlabMvp(view.slab.vp, pose.eyeRelBodyM, body.surface.datumRadiusM);
     // Rotate the sun direction into the body's local frame (its orientation
     // carries any axial tilt) so the fragment's Lambert term stays a plain
     // co-framed dot product — the same rotate earth/planets do.
@@ -122,10 +122,10 @@ export const texturedBodiesPass: ContentPass = {
     const { inner, outer } = ringRatios(body);
     // Minnaert limb-darkening: the per-body strength/exponent (identity for a
     // body absent from `LIMB_DARKENING_PARAMS`), plus the camera in the body's
-    // local frame the fragment's view cosine needs — the SAME radiusM the mvp
-    // above used, so both share one definition of "the unit-sphere frame".
+    // local frame the fragment's view cosine needs — the SAME datum radius the
+    // mvp above used, so both share one definition of "the unit-sphere frame".
     const { strength, exponent } = limbParams(body);
-    const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.radiusM);
+    const cam = bodySlabCamLocal(pose.eyeRelBodyM, body.surface.datumRadiusM);
     // Narrow here, at the GPU uniform write — both composes return f64.
     const uniforms = packTexturedBodyUniforms(
       narrowMat4(mvp),
@@ -135,8 +135,8 @@ export const texturedBodiesPass: ContentPass = {
       strength,
       exponent,
       cam,
-      bodySlabCamAltitudeSq(pose.eyeRelBodyM, body.radiusM),
-      narrowMat4(composeBodySlabCamRelVp(view.slab.vp, body.radiusM)),
+      bodySlabCamAltitudeSq(pose.eyeRelBodyM, body.surface.datumRadiusM),
+      narrowMat4(composeBodySlabCamRelVp(view.slab.vp, body.surface.datumRadiusM)),
     );
     // The partition only routes bodies with a BODY_TEXTURE_REGISTRY row into
     // `textured`, so the string id IS a BodyTextureId the renderer accepts.

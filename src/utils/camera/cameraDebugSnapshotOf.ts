@@ -75,7 +75,9 @@ export function cameraDebugSnapshotOf(input: {
     tuning,
   });
   const { bodyId, hOverR: hr } = dofs;
-  const radiusM =
+  // Altitude over the datum, matching `hOverR`'s own denominator. F3 re-bases the
+  // readout on `bestHeightM` so it reads height over the ground actually drawn.
+  const datumRadiusM =
     bodyId !== null
       ? hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis })?.radiusM
       : undefined;
@@ -91,7 +93,7 @@ export function cameraDebugSnapshotOf(input: {
     renderedFrame,
     armMismatch: !sameFrame(storedFrame, renderedFrame),
     hOverR: hr,
-    altitudeM: hr !== null && radiusM !== undefined ? hr * radiusM : null,
+    altitudeM: hr !== null && datumRadiusM !== undefined ? hr * datumRadiusM : null,
     distanceMpc: worldPose.distance,
     orientationFrame,
     bandUpWeight: hr !== null ? bodyUpWeight(hr, tuning) : null,

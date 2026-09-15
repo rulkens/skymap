@@ -76,6 +76,7 @@ export function toWorldArm(
   poseBasis: Readonly<Mat3>,
   upBasis: Readonly<Mat3>,
   bodyRadiusM: number,
+  standoffRadii: number,
 ): CameraPose {
   const { basisLocal } = pose;
   const eyeLocalM = bodyFixedEyeM(pose);
@@ -97,7 +98,7 @@ export function toWorldArm(
   // which the surface arm's descent floor already stands off from.
   const rangeM = Math.max(
     roots === null ? grazingM : roots[0],
-    Math.max(eyeMagM, surfaceFloorM(bodyRadiusM)) - bodyRadiusM,
+    Math.max(eyeMagM, surfaceFloorM(bodyRadiusM, standoffRadii)) - bodyRadiusM,
   );
   const armLocalM: Vec3 = [
     forwardLocal[0] * rangeM,

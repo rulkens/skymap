@@ -75,7 +75,6 @@ import { PriorityQueue } from '../../utils/concurrency/priorityQueue';
 import { ASSET_QUEUE_CONCURRENCY } from '../../utils/concurrency/assetQueueConcurrency';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import { EMPTY_EARTH_TILE_DEBUG_SNAPSHOT } from './subsystems/earthTileSubsystem';
-import { makeRunTierTransition } from './wiring/makeRunTierTransition';
 import { makeReconcileEffects } from './wiring/makeReconcileEffects';
 import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
@@ -330,7 +329,8 @@ export function createEngine(
       structureCatalog: null,
       pgcAlias: null,
       cf4Density: null,
-      // Tier-aware (unlike cf4Density): setTier reloads on tier change.
+      // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
+      // when the tier changes.
       mcpm: null,
       flow: null,
       // Tier-aware like mcpm.
@@ -344,6 +344,9 @@ export function createEngine(
       // One boot fetch seeding every body's placeholder, so no body ever draws
       // untextured while its own map loads.
       bodyTextureAtlas: null,
+      // Stays null in a composition without the disk renderers — `wireSlots`
+      // mints it only inside that guard.
+      hiResFamous: null,
     },
     // Edge-triggered UI events driving demand predicates. The wiring layer sets a
     // key and leaves it set — the demand loop's idle-guard prevents a re-fetch.
@@ -443,7 +446,6 @@ export function createEngine(
   });
 
   cb.setSagaContext({
-    runTierTransition: makeRunTierTransition(state, bootstrapDeps),
     reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch

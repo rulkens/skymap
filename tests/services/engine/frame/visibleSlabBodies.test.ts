@@ -34,21 +34,21 @@ describe('visibleSlabBodies', () => {
     // Both bodies sit at distanceMpc = 1000, on-axis, under a 90° vertical FOV
     // and a 1000px-tall viewport, so pxPerRad = 500 and the apparent-diameter
     // formula reduces to diameterPx = diameterKpc·5e-4. The pixel floor keys
-    // on rEffM = PROXY_SCALE·radiusM for a shell-less body (radar frame
-    // finding 2 — same basis the frustum cull already used), so `radiusM` is
-    // pre-divided by PROXY_SCALE here: rEffM lands at 3e22 (≈0.972px, just
-    // under the 1px floor) and 3.2e22 (≈1.037px, just over it) — see the
-    // task-4 report for that derivation.
+    // on rEffM = PROXY_SCALE·outerBoundRadiusM for a shell-less body (radar
+    // frame finding 2 — same basis the frustum cull already used), so the
+    // outer bound is pre-divided by PROXY_SCALE here: rEffM lands at 3e22
+    // (≈0.972px, just under the 1px floor) and 3.2e22 (≈1.037px, just over
+    // it) — see the task-4 report for that derivation.
     const belowFloor: PlanetBody = {
       id: 'below',
       label: 'Below floor',
-      radiusM: 3e22 / PROXY_SCALE,
+      surface: { datumRadiusM: 3e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
     const aboveFloor: PlanetBody = {
       id: 'above',
       label: 'Above floor',
-      radiusM: 3.2e22 / PROXY_SCALE,
+      surface: { datumRadiusM: 3.2e22 / PROXY_SCALE, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
     const bodyStates = new Map<string, BodyState>([
@@ -70,11 +70,15 @@ describe('visibleSlabBodies', () => {
   });
 
   it('includes earth alongside surviving planets, and drops a body missing a bodyState', () => {
-    const earth = { id: 'earth', label: 'Earth', radiusM: 6.371e6 };
+    const earth = {
+      id: 'earth',
+      label: 'Earth',
+      surface: { datumRadiusM: 6.371e6, reliefM: [0, 0] as const },
+    };
     const orphan: PlanetBody = {
       id: 'orphan',
       label: 'Orphan',
-      radiusM: 3.2e22,
+      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
     const bodyStates = new Map<string, BodyState>([['earth', makeState()]]);
@@ -93,8 +97,8 @@ describe('visibleSlabBodies', () => {
   });
 
   it('keeps a ringed body once the ring, not the bare disc, clears the pixel floor', () => {
-    // Radar frame finding 2: the pixel floor used to key on body.radiusM
-    // alone while the frustum cull (below) already used the ring-inclusive
+    // Radar frame finding 2: the pixel floor used to key on the body's outer
+    // bound alone while the frustum cull (below) already used the ring-inclusive
     // bodyDrawRadiusM — a ring could still be several px across while the
     // bare globe was sub-pixel, and the roster gate dropped the row before
     // any per-layer gate (e.g. ringsPass's own outer-diameter cull) got a
@@ -122,13 +126,13 @@ describe('visibleSlabBodies', () => {
   describe('view-frustum angular cull', () => {
     // Shared FOV for the direct frustum-geometry cases: 90° vertical, square
     // viewport ⇒ half-diagonal ≈ 54.74°, cull threshold ≈ 62.9° (×1.15
-    // margin). radiusM = 3.2e22 (the `aboveFloor` fixture) keeps the angular
+    // margin). A 3.2e22 m datum (the `aboveFloor` fixture) keeps the angular
     // radius negligible (≈0.06°) so these cases isolate the frustum test from
     // the sub-pixel one.
     const wideBody: PlanetBody = {
       id: 'wide',
       label: 'Wide body',
-      radiusM: 3.2e22,
+      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
       albedo: [1, 1, 1],
     };
 
@@ -164,13 +168,14 @@ describe('visibleSlabBodies', () => {
       const distanceMpc = 10;
       const rEffMpc = distanceMpc * Math.sin((30 * Math.PI) / 180);
       const rEffM = rEffMpc / SCALE_UNITS.M_TO_MPC;
-      // bodyDrawRadiusM(body) = radiusM for an unregistered id (no atmosphere/
-      // rings/cloud shell), so rEff = PROXY_SCALE·radiusM — invert for radiusM.
-      const radiusM = rEffM / 1.05;
+      // bodyDrawRadiusM(body) = the outer bound for an unregistered id (no
+      // atmosphere/rings/cloud shell), so rEff = PROXY_SCALE·outer bound —
+      // invert for the datum.
+      const datumRadiusM = rEffM / 1.05;
       const straddling: PlanetBody = {
         id: 'straddling',
         label: 'Straddling',
-        radiusM,
+        surface: { datumRadiusM, reliefM: [0, 0] },
         albedo: [1, 1, 1],
       };
       const bodyStates = new Map<string, BodyState>([
@@ -192,7 +197,7 @@ describe('visibleSlabBodies', () => {
 
     it('keeps Saturn at its real ring-outer radius, pose-A off-axis geometry (θ≈20.55°, in view)', () => {
       // Regression guard for the saturn-vanish-investigation.md pose A: real
-      // Saturn (radiusM 58,232 km, ring outer 140,220 km ⇒ bodyDrawRadiusM
+      // Saturn (datum 58,232 km, ring outer 140,220 km ⇒ bodyDrawRadiusM
       // wins over the PROXY_SCALE-inflated globe) viewed 20.55° off-axis at
       // Titan-orbit scale (dM ≈ 1.2e9 m), under a 60° FOV / 16:9 viewport
       // (threshold ≈ 57.2°) — well inside the frustum, must never be culled
@@ -223,12 +228,12 @@ describe('visibleSlabBodies', () => {
     const visibleAnchor: AnchorPointBody = {
       id: 'visible-anchor',
       label: 'Visible anchor',
-      radiusM: 3.2e22,
+      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
     };
     const hiddenAnchor: AnchorPointBody = {
       id: 'hidden-anchor',
       label: 'Hidden anchor',
-      radiusM: 3.2e22,
+      surface: { datumRadiusM: 3.2e22, reliefM: [0, 0] },
     };
     const bodyStates = new Map<string, BodyState>([
       ['visible-anchor', makeState()],

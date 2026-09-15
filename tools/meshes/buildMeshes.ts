@@ -1,10 +1,11 @@
 /**
- * buildMeshes — bake a source GLB to `public/data/meshes/<key>.mesh` plus its
- * three PBR PNGs, and rewrite `src/data/bodies/meshAssets.generated.ts`.
+ * buildMeshes — bake a source GLB to `public/data/meshes/<key>.mesh` plus one
+ * PNG per `MESH_TEXTURE_SLOTS` row, and rewrite
+ * `src/data/bodies/meshAssets.generated.ts`.
  *
  * The runtime never parses glTF: everything `@gltf-transform` knows (node
  * transforms, skins, materials, image containers) is resolved HERE, into flat
- * arrays and three texture slots the renderer binds unconditionally. So
+ * arrays and the texture slots the renderer binds unconditionally. So
  * substitution is a bake-time decision — a source with no normal map gets a
  * real 1x1 flat-normal PNG on disk, never a runtime branch. Spec:
  * docs/superpowers/specs/2026-09-10-mesh-bodies-design.md ("Tool").
@@ -19,9 +20,13 @@ import sharp from 'sharp';
 
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
 import type { Mat3 } from '../../src/@types/math/Mat3';
+import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
+import { quote } from '../utils/codegen/quote';
+import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
 import { meanAlbedo } from './meanAlbedo';
 import { writeMeshBinary } from './writeMeshBinary';
@@ -403,11 +408,17 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
   };
 }
 
+/** What a texture slot bakes from: the source map, or the 1x1 standing in for it. */
+type TextureSource = {
+  readonly texture: Texture | null;
+  readonly fallback: { r: number; g: number; b: number };
+};
+
 /**
- * Write one texture slot, resized into the budget. `_albedo.png` is sRGB;
- * `_normal.png` and `_mr.png` are LINEAR data and must not be colour-managed —
- * sharp neither converts colourspace nor embeds an ICC profile by default, and
- * the fetcher's `colorSpaceConversion: 'none'` is the matching half.
+ * Write one texture slot, resized into the budget. The sRGB slot is
+ * colour-managed, the others are LINEAR data that must not be — sharp neither
+ * converts colourspace nor embeds an ICC profile by default, and the fetcher's
+ * `colorSpaceConversion: 'none'` is the matching half.
  */
 async function writeTexture(
   texture: Texture | null,
@@ -453,33 +464,44 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   const geometry = mergeGeometry(doc, target.bodyFromSource);
   writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(writeMeshBinary(geometry)));
 
-  const normalTexture = material.getNormalTexture();
-  const mrTexture = material.getMetallicRoughnessTexture();
-  if (!normalTexture) {
-    console.warn(`buildMeshes: ${key} has no normal map — substituting a 1x1 flat normal`);
-  }
-  if (!mrTexture) {
-    console.warn(
-      `buildMeshes: ${key} has no metallicRoughness map — substituting a 1x1 constant from ` +
-        `metallic ${material.getMetallicFactor()} / roughness ${material.getRoughnessFactor()}`,
-    );
-  }
-
   const factor = material.getBaseColorFactor();
   const baseColorTexture = material.getBaseColorTexture();
-  const albedoPath = join(outDir, `${key}_albedo.png`);
-  await writeTexture(baseColorTexture, srgbByte(factor[0], factor[1], factor[2]), albedoPath);
-  await writeTexture(normalTexture, FLAT_NORMAL, join(outDir, `${key}_normal.png`));
-  // glTF packs roughness in G and metallic in B; R is unused by the spec.
-  await writeTexture(
-    mrTexture,
-    {
-      r: 0,
-      g: Math.round(material.getRoughnessFactor() * 255),
-      b: Math.round(material.getMetallicFactor() * 255),
+  const sources: Record<MeshTextureField, TextureSource> = {
+    albedo: {
+      texture: baseColorTexture,
+      fallback: srgbByte(factor[0], factor[1], factor[2]),
     },
-    join(outDir, `${key}_mr.png`),
+    metalRough: {
+      texture: material.getMetallicRoughnessTexture(),
+      // glTF packs roughness in G and metallic in B; R is unused by the spec.
+      fallback: {
+        r: 0,
+        g: Math.round(material.getRoughnessFactor() * 255),
+        b: Math.round(material.getMetallicFactor() * 255),
+      },
+    },
+    normalMap: { texture: material.getNormalTexture(), fallback: FLAT_NORMAL },
+  };
+
+  // Captured from the loop so the read-back below is never a second spelling
+  // of the albedo suffix.
+  let albedoPath = '';
+  for (const slot of MESH_TEXTURE_SLOTS) {
+    const { texture, fallback } = sources[slot.field];
+    const path = join(outDir, `${key}${slot.suffix}.png`);
+    if (slot.field === 'albedo') albedoPath = path;
+    await writeTexture(texture, fallback, path);
+  }
+
+  const substituted = MESH_TEXTURE_SLOTS.filter((slot) => sources[slot.field].texture === null).map(
+    (slot) => slot.field,
   );
+  for (const field of substituted) {
+    const { r, g, b } = sources[field].fallback;
+    console.warn(
+      `buildMeshes: ${key} has no ${field} map — substituting 1x1 rgb(${r}, ${g}, ${b})`,
+    );
+  }
 
   const { data, info } = await sharp(albedoPath).raw().toBuffer({ resolveWithObject: true });
   // glTF's base colour is factor x texture, so the glint's colour is too. The
@@ -497,7 +519,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     groundOffsetM: geometry.groundOffsetM,
     meanAlbedo: mean.map((c) => Number(c.toFixed(6))) as Vec3,
     triangleCount: geometry.indices.length / 3,
-    normalMapSubstituted: normalTexture === null,
+    substituted,
     source: target.source,
     licence: target.licence,
     attribution: target.attribution,
@@ -517,11 +539,6 @@ const GENERATED_BANNER =
   '// Regenerate with:  npm run build-meshes\n' +
   '// Source of truth:  data/raw/meshes/**\n';
 
-/** Prettier's `quoteProps: as-needed` / `singleQuote` output, reproduced. */
-function quote(s: string): string {
-  return s.includes("'") || s.includes('\\') ? JSON.stringify(s) : `'${s}'`;
-}
-
 /**
  * Prettier's `printWidth: 100` break — after the colon, since it cannot split a
  * string literal. `format:check` runs over this generated file, so emitting
@@ -532,44 +549,31 @@ function field(name: string, value: string): string {
   return flat.length <= 100 ? flat : `    ${name}:\n      ${value},`;
 }
 
-function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
+/** Prettier leaves comments alone, so the continuation indent is ours to hold. */
+function docBlock(lines: readonly string[]): string {
+  return `${lines.map((line, i) => (i === 0 ? `  /** ${line}` : `   *  ${line}`)).join('\n')} */\n`;
+}
+
+/** Exported for the round-trip test that pins the committed table to this output. */
+export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
   const body = rows
     .map((row) =>
       [
         `  ${/^[A-Za-z_$][\w$]*$/.test(row.key) ? row.key : quote(row.key)}: {`,
-        field('key', quote(row.key)),
-        field('path', quote(row.path)),
-        field('boundingRadiusM', String(row.boundingRadiusM)),
-        field('groundOffsetM', String(row.groundOffsetM)),
-        field('meanAlbedo', `[${row.meanAlbedo.join(', ')}]`),
-        field('triangleCount', String(row.triangleCount)),
-        field('normalMapSubstituted', String(row.normalMapSubstituted)),
-        field('source', quote(row.source)),
-        field('licence', quote(row.licence)),
-        field('attribution', quote(row.attribution)),
+        ...MESH_ASSET_ROW_FIELDS.map((f) => field(f.name, f.emit(row))),
         '  },',
       ].join('\n'),
     )
     .join('\n');
+  const rowType = MESH_ASSET_ROW_FIELDS.map(
+    (f) => (f.doc ? docBlock(f.doc) : '') + `  readonly ${f.name}: ${f.tsType};\n`,
+  ).join('');
   return (
     GENERATED_BANNER +
     "import type { Vec3 } from '../../@types/math/Vec3';\n" +
+    "import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';\n" +
     '\n' +
-    'export type MeshAssetRow = {\n' +
-    '  readonly key: string;\n' +
-    '  readonly path: string;\n' +
-    '  readonly boundingRadiusM: number;\n' +
-    "  /** How far the lowest vertex sits BELOW the origin along the body frame's −Z,\n" +
-    '   *  metres, ≥ 0. A surface-locked body is lifted by this so it rests on the\n' +
-    "   *  host's sphere; meaningless (but harmless) for a free-flying one. */\n" +
-    '  readonly groundOffsetM: number;\n' +
-    '  readonly meanAlbedo: Vec3;\n' +
-    '  readonly triangleCount: number;\n' +
-    '  readonly normalMapSubstituted: boolean;\n' +
-    '  readonly source: string;\n' +
-    '  readonly licence: string;\n' +
-    '  readonly attribution: string; // author + URL; empty string for CC0\n' +
-    '};\n' +
+    `export type MeshAssetRow = {\n${rowType}};\n` +
     '\n' +
     'export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = ' +
     (rows.length === 0 ? '{};\n' : `{\n${body}\n};\n`)

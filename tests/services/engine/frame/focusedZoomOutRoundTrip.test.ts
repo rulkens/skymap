@@ -31,7 +31,7 @@ import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraSimHarness } from '../../../helpers/camera/CameraSimHarness';
 
 const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
-const EARTH_RADIUS_M = SCENE_EARTH.radiusM;
+const EARTH_RADIUS_M = SCENE_EARTH.surface.datumRadiusM;
 
 /** 16 ms frames from 0..endT, wheel notches injected at their timestamps. */
 function runLoop(

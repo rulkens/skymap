@@ -7,16 +7,17 @@
  * is identity only — a body's time-varying position and orientation live in its
  * `BodyState`, derived from the orbital elements by `deriveBodyStates`, never
  * baked here. A generic planet has no texture yet, so it is lit as a flat sphere
- * tinted by `albedo` (linear RGB, so it composites in the HDR pass); `radiusM`
- * is authored in SI metres and converted to draw space at render time, matching
- * `EarthBody.radiusM`.
+ * tinted by `albedo` (linear RGB, so it composites in the HDR pass); its
+ * `surface` datum is authored in SI metres and converted to draw space at
+ * render time, matching `EarthBody.surface`.
  */
 
+import type { BodySurface } from './BodySurface';
 import type { Vec3 } from '../math/Vec3';
 
 export type PlanetBody = {
   readonly id: string;
   readonly label: string;
-  readonly radiusM: number; // metres; resolved to a sphere at render time
+  readonly surface: BodySurface;
   readonly albedo: Vec3; // flat lit colour (no texture yet), linear RGB
 };

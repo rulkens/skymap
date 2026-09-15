@@ -278,7 +278,7 @@ describe('replayInput', () => {
     const arm = earthArm(2);
     store.dispatch(commitCameraPose(arm));
     if (arm.frame === 'absolute') throw new Error('fixture: not a body arm');
-    const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.radiusM;
+    const radiusM = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'earth')!.surface.datumRadiusM;
     const anchorFor = (px: Vec2): Vec3 => {
       const ray = cursorRayBodyLocal(arm.pose, px, [1000, 1000], Math.PI / 3);
       const t = raySphereRoots(ray.originM, ray.dir, [0, 0, 0], radiusM)![0];

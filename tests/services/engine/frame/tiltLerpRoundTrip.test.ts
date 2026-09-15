@@ -33,7 +33,7 @@ import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 
 const EARTH = deriveBodyStates(CONST_J2000).get('earth')! as BodyState;
-const EARTH_RADIUS_M = SCENE_EARTH.radiusM;
+const EARTH_RADIUS_M = SCENE_EARTH.surface.datumRadiusM;
 
 describe('tilt lerp round trip (ruling 13)', () => {
   it('display tilt tracks remembered × w through the window in BOTH directions', () => {

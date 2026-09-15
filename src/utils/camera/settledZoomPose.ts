@@ -34,6 +34,7 @@ export function settledZoomPose(
   pose: BodyFixedPose,
   diveAnchorM: Readonly<Vec3> | null,
   bodyRadiusM: number,
+  standoffRadii: number,
   preTiltDevRad: number | null,
   sceneUpLocal: Readonly<Vec3>,
   preBlendAzimuthRad: number | null,
@@ -104,5 +105,5 @@ export function settledZoomPose(
     });
   }
   // A tilt about a surface anchor holds |eye − anchor|, not |eye|.
-  return flooredBodyPose(out, bodyRadiusM);
+  return flooredBodyPose(out, bodyRadiusM, standoffRadii);
 }

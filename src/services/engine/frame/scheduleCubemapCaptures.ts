@@ -55,7 +55,8 @@ export function scheduleCubemapCaptures(input: {
     // at 8 kpc shifts by a texel only after ~12 pc of travel, against a 500 AU
     // band — and the lens samples the cubemap at infinity, so no eye to pin.
     // Absent from the settings-ref re-bake key on purpose: `tier` (a swap
-    // dissolves through `fades.fadeTo`, which `rosterSettling` catches),
+    // re-commits every visible catalog, and each commit's fade-in keeps
+    // `rosterSettling` true across it),
     // `faceSizePx` (its knob IS a settings write, reconciled above first),
     // `selection` (a stale halo in the lensed sky is accepted).
     const faces = new Map<CubeFace, ReadyFrameContext>();

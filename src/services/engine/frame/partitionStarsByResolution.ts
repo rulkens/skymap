@@ -78,7 +78,7 @@ export function partitionStarsByResolution(input: {
     // per-star special case here.
     const diameterPx = bodyApparentDiameterPx({
       positionMpc: star.positionMpc,
-      radiusM: star.radiusM,
+      radiusM: star.surface.datumRadiusM,
       camPosMpc,
       viewportHeightPx,
       fovYRad,

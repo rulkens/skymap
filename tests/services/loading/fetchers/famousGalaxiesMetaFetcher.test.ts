@@ -3,7 +3,11 @@ import {
   famousGalaxiesMetaFetcher,
   parseFamousGalaxiesMeta,
 } from '../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher';
+import { Source } from '../../../../src/data/sources';
 import { useFetchMock } from '../../../setup/fetchMock';
+
+/** The fetcher ignores the request; any well-typed `GalaxyCatalogReq` will do. */
+const REQ = { source: Source.FamousGalaxy, tier: 'medium' as const };
 
 describe('parseFamousGalaxiesMeta', () => {
   it('parses valid array', () => {
@@ -21,25 +25,21 @@ describe('famousGalaxiesMetaFetcher', () => {
 
   it('fetches famous_galaxies_meta.json and returns the parsed payload', async () => {
     fetch.mock.mockResolvedValueOnce(new Response('[]', { status: 200 }));
-    const payload = await famousGalaxiesMetaFetcher(
-      { tier: 'medium' },
-      new AbortController().signal,
-      () => {},
-    );
+    const payload = await famousGalaxiesMetaFetcher(REQ, new AbortController().signal, () => {});
     expect(payload).toEqual({ meta: [] });
   });
 
   it('rejects on a non-2xx HTTP status', async () => {
     fetch.mock.mockResolvedValue(new Response('boom', { status: 500 }));
     await expect(
-      famousGalaxiesMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
+      famousGalaxiesMetaFetcher(REQ, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
   it('rejects when the JSON body is malformed', async () => {
     fetch.mock.mockResolvedValueOnce(new Response('not-json', { status: 200 }));
     await expect(
-      famousGalaxiesMetaFetcher({ tier: 'medium' }, new AbortController().signal, () => {}),
+      famousGalaxiesMetaFetcher(REQ, new AbortController().signal, () => {}),
     ).rejects.toThrow();
   });
 
@@ -57,8 +57,6 @@ describe('famousGalaxiesMetaFetcher', () => {
       }
       return Promise.resolve(new Response('[]', { status: 200 }));
     });
-    await expect(
-      famousGalaxiesMetaFetcher({ tier: 'medium' }, controller.signal, () => {}),
-    ).rejects.toThrow();
+    await expect(famousGalaxiesMetaFetcher(REQ, controller.signal, () => {})).rejects.toThrow();
   });
 });

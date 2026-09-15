@@ -50,9 +50,7 @@ export function produceConstellationCaptions(
   state: EngineState,
   ctx: ReadyFrameContext,
 ): Label2DProducerOutput {
-  const slotState = state.assetSlots.constellations?.state();
-  const artifact =
-    slotState !== undefined && slotState.kind === 'ready' ? slotState.value : undefined;
+  const artifact = state.assetSlots.constellations?.committed()?.value;
   const captions = captionsFor(artifact);
   if (captions.length === 0) return { labels: [], awake: false };
 

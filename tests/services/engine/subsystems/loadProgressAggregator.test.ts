@@ -45,6 +45,7 @@ function fakeSlot(name: string): {
     name,
     load: () => Promise.resolve(),
     current: () => null,
+    committed: () => null,
     state: () => cur,
     subscribe(fn) {
       subs.add(fn);

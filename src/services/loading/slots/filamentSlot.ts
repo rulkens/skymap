@@ -2,14 +2,8 @@
  * filamentSlot — factory for the cosmic-web skeleton's asset slot.
  *
  * The cosmic-web skeleton flows through its own slot — different fetcher
- * (binary format is segments-not-points), different renderer target
- * (`filamentRenderer` rather than the per-source `galaxyPointRenderer`), and a
- * one-shot lifecycle: load() at boot, never on tier change.
- *
- * Why one-shot?  Re-downloading the ~30 MB skeleton every tier flip
- * would tax bandwidth for a topology that barely differs between tiers
- * — see `filamentFetcher.ts`'s docblock for the detailed rationale,
- * including the "small-tier-on-desktop edge case" trade-off.
+ * (binary format is segments-not-points) and a different renderer target
+ * (`filamentRenderer` rather than the per-source `galaxyPointRenderer`).
  *
  * Construction-pure: builds + subscribes + RETURNS the slot. The
  * orchestrator (`installSlots`) owns the write to `state.assetSlots`.

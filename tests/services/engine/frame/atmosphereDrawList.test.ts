@@ -21,6 +21,8 @@ import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams'
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import { outerBoundRadiusM } from '../../../../src/utils/scene/outerBoundRadiusM';
+import type { BodySurface } from '../../../../src/@types/scene/BodySurface';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
@@ -117,9 +119,9 @@ function poseFrom(drawCamPos: Vec3): BodyPoseProvider {
 }
 
 /** A camera pose `radii` Earth-radii out from `body` along +x — sets the disc size. */
-function camRadiiOut(body: { positionMpc: Vec3; radiusM: number }, radii: number): Vec3 {
+function camRadiiOut(body: { positionMpc: Vec3; surface: BodySurface }, radii: number): Vec3 {
   return [
-    body.positionMpc[0] + radii * body.radiusM * SCALE_UNITS.M_TO_MPC,
+    body.positionMpc[0] + radii * outerBoundRadiusM(body.surface) * SCALE_UNITS.M_TO_MPC,
     body.positionMpc[1],
     body.positionMpc[2],
   ];
@@ -130,7 +132,7 @@ const NO_ROW_PLANET: SeededPlanet = {
   id: 'atmosphereless-test-body',
   label: 'No Atmosphere',
   positionMpc: SEEDED_EARTH.positionMpc,
-  radiusM: 6371000,
+  surface: { datumRadiusM: 6371000, reliefM: [0, 0] },
   albedo: [0.5, 0.5, 0.5],
   orientation: [...IDENTITY_MAT3] as Mat3,
 };

@@ -169,7 +169,7 @@ describe('runFrame — the regime fold', () => {
     const { store, state, deps } = makeHarness();
     probe.state = state;
     const PREVIOUS = absoluteArm({ target: [1, 2, 3], yaw: 0.1, pitch: 0.2, distance: 5 });
-    const PRODUCED = poseAtHR(EARTH, SCENE_EARTH.radiusM, 12);
+    const PRODUCED = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 12);
     state.cameraRuntime = {
       ...state.cameraRuntime,
       register: { ...state.cameraRuntime.register, pose: PREVIOUS },
@@ -189,7 +189,7 @@ describe('runFrame — the regime fold', () => {
     // the pin see it on the next frame. Once only: re-committing every frame
     // would churn the store and reset every base-identity-keyed clock.
     const { store, state, deps } = makeHarness();
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1));
     const spy = vi.spyOn(store, 'dispatch');
 
     runFrame(state, deps, 0);
@@ -212,7 +212,7 @@ describe('runFrame — the regime fold', () => {
     // a 60 Hz store write through every saga channel — and would feed the
     // predicate `'absolute'`, swapping §4's disengage test for the engage one.
     const { store, state, deps } = makeHarness();
-    const FROM = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1);
+    const FROM = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1);
     // Yaw-only, so every frame of the tween sits at the same h/R: the arm must
     // hold across all four, not re-engage on each.
     const TO: CameraPose = { ...FROM, yaw: FROM.yaw + 0.4 };
@@ -239,7 +239,7 @@ describe('runFrame — the regime fold', () => {
     // `disengageHR` converts back and re-commits, or the camera is stuck in a
     // body frame forever.
     const { store, state, deps } = makeHarness();
-    const FAR = poseAtHR(EARTH, SCENE_EARTH.radiusM, 5);
+    const FAR = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 5);
     const arm = {
       frame: EARTH_ARM,
       pose: toBodyArm(FAR, B, B, EARTH_ARM.body, EARTH),
@@ -268,7 +268,7 @@ describe('runFrame — the regime fold', () => {
     // Body arm just inside the band, tilt 0 (looking at the centre) — the pose
     // every driven recession reaches the boundary with. A tenth of the edge
     // below it, derived so a band re-tune keeps the premise.
-    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.radiusM, TUNING.disengageHR * 0.9);
+    const NEAR_EDGE = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, TUNING.disengageHR * 0.9);
     const arm = {
       frame: EARTH_ARM,
       pose: toBodyArm(NEAR_EDGE, B, B, EARTH_ARM.body, EARTH),
@@ -321,7 +321,7 @@ describe('runFrame — the regime fold', () => {
     // re-evaluated at gesture end — which subsumes the mid-drag wheel guard and
     // the gesture-scoped latch two earlier fix waves reached for.
     const { store, state, deps } = makeHarness();
-    const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1);
+    const ENGAGING = poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1);
     seedPose(store, state, ENGAGING);
     store.dispatch(beginDrag());
 
@@ -348,7 +348,7 @@ describe('runFrame — the regime fold', () => {
     // unit sightline; a real snap (a dropped roll, the wrong basis, a missed
     // anchor fold) is metres to megametres, decades above either bound.
     const { store, state, deps } = makeHarness();
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1));
 
     runFrame(state, deps, 0);
     runFrame(state, deps, 16);
@@ -369,7 +369,7 @@ describe('runFrame — the regime fold', () => {
     // is structurally satisfied — the pin has nothing to do and the follow
     // driver's approach ease and idle hold have no meaning.
     const { store, state, deps } = makeHarness();
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1));
     store.dispatch(
       setSelectionRow({
         slot: 'focus',
@@ -401,7 +401,7 @@ describe('runFrame — the regime fold', () => {
     // the pose in body-fixed metres. `applyWheelZoom`'s answer would arrive as
     // an ABSOLUTE arm, which is what the frame assertion below rules out.
     const { store, state, deps } = makeHarness();
-    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.radiusM, 0.1));
+    seedPose(store, state, poseAtHR(EARTH, SCENE_EARTH.surface.datumRadiusM, 0.1));
 
     runFrame(state, deps, 0);
     const engaged = state.cameraRuntime.register.pose;

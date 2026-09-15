@@ -9,20 +9,18 @@
  * bleed.
  *
  * The saga middleware is wired and `mainSaga` is run at construction — see
- * `rootSaga`, which now forks its first feature saga (the tier watcher). Running
- * the root here means the seam's later phases add feature sagas without touching
- * this factory.
+ * `rootSaga`, which composes the feature watchers. Running the root here means
+ * a new feature saga is added without touching this factory.
  *
  * The factory ALSO hands back a `setSagaContext` setter, delegating to
  * redux-saga's `sagaMiddleware.setContext`. The store is a state container;
  * registering a saga's runner (an engine resource the saga calls into) is a
  * DISTINCT capability, kept un-braided from the store by returning it as its own
  * value rather than bolting it onto the store object. The engine calls
- * `setSagaContext` post-construction with a bag carrying, among the rest, the
- * tier-transition runner; `getContext('runTierTransition')` inside the running
- * saga reads it back. That `setContext`/`getContext` pair is how an engine
- * resource crosses from engine-land into store-land without the saga importing
- * the engine.
+ * `setSagaContext` post-construction with a bag of its closures, and
+ * `getContext(<name>)` inside the running saga reads one back. That
+ * `setContext`/`getContext` pair is how an engine resource crosses from
+ * engine-land into store-land without the saga importing the engine.
  *
  * `setSagaContext` is the outward seam for engine-side closures. Sagas live
  * entirely in the store layer and have no compile-time access to the engine's

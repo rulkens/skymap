@@ -23,6 +23,7 @@ export function surfaceZoomStep(
   viewportPx: Readonly<Vec2>,
   fovYRad: number,
   bodyRadiusM: number,
+  standoffRadii: number,
   sceneUpLocal: Readonly<Vec3>,
   rememberedTiltRad: number,
   tuning: CameraTuning,
@@ -48,7 +49,7 @@ export function surfaceZoomStep(
       ? latched
       : (pickOnBody(cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad), bodyRadiusM)?.pointM ??
         null);
-  const stepped = anchoredZoomStep(arm, factor, cursorAnchorM, bodyRadiusM);
+  const stepped = anchoredZoomStep(arm, factor, cursorAnchorM, bodyRadiusM, standoffRadii);
   // A dive at the sky has no ground point to converge over and keeps its
   // framing; a dive with one settles about it (pixel-locked). A recession
   // settles about the eye and needs no anchor at all.
@@ -67,6 +68,7 @@ export function surfaceZoomStep(
     stepped,
     factor < 1 ? cursorAnchorM : null,
     bodyRadiusM,
+    standoffRadii,
     preTiltDevRad,
     sceneUpLocal,
     preInBlendFrame?.azimuthRad ?? null,
