@@ -155,8 +155,11 @@ Every step is a literal edit site. Tick them all.
    `groundOffsetM` for a lander. In a worktree every OTHER key's prebaked GLB
    must be copied in from the main checkout first, or this step DELETES their
    generated rows; and with `/link-data` the `.mesh` output lands in main's
-   `public/data` — harmless (gitignored, and main re-bakes) but restart any dev
-   server reading it.
+   `public/data` — but the browser resolves logical names through
+   `manifest.json`, which `build-data-manifest` REFUSES to rebuild through a
+   symlink, so every rebake is invisible until you run it against main's tree:
+   `npx tsx -e "import { buildDataManifest } from './tools/deploy/buildDataManifest.ts'; buildDataManifest('<main>/public/data');"`
+   then hard-refresh.
 7. **Seed** — `src/data/bodies/sceneMeshBodies.ts`: `{ id, label, meshKey }`.
    `standoffRadii` only when a boom or array sets the bounding sphere; no
    `captionRevealM` for a real object.
