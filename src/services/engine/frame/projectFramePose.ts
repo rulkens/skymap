@@ -32,6 +32,7 @@ import { rungKindOf } from '../camera/rungs/rungKindOf';
 import { sameFrame } from '../camera/rungs/sameFrame';
 import { stepRung } from '../camera/rungs/stepRung';
 import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
+import { focusInSubtree } from '../../../utils/camera/focusInSubtree';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
@@ -122,8 +123,17 @@ export function projectFramePose(args: {
   if (!intent.dragging && !(approaching && frameBodyId(target) !== ctx.focusBodyId)) {
     if (rungKindOf(target) === 'absolute') {
       if (!isWorldArm(displayed)) {
-        // Disengage normalization (pop-2 fix) — see `centreLookingArm`.
-        const centreMpc = hostOrThrow(displayed.frame, ctx).state.positionMpc;
+        // Disengage normalization (pop-2 fix) — see `centreLookingArm`. The
+        // centre is the FOCUSED body when it merely hangs off the arm's host
+        // (a rover keeps its planet's arm, §4.8): the pin and the follow rows
+        // re-read an absolute `target` as the focus, so committing the host's
+        // centre leaves them a body radius to close as an eye teleport (pop-3).
+        const host = hostOrThrow(displayed.frame, ctx);
+        const focused =
+          ctx.focusBodyId !== null && focusInSubtree(ctx.focusBodyId, host.id)
+            ? bodies.get(ctx.focusBodyId)
+            : undefined;
+        const centreMpc = (focused ?? host.state).positionMpc;
         displayed = centreLookingArm(
           eyeMpcOf(world, poseBasis),
           centreMpc,

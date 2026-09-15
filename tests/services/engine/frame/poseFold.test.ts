@@ -319,6 +319,58 @@ describe('runFrame — the regime fold', () => {
     }
   });
 
+  it('disengaging from a body that only HOSTS the focus keeps the eye continuous', () => {
+    // Pop-3, pop-2's sibling under §4.8: a rover focus KEEPS its planet's arm,
+    // so the arm's host (Mars) and the body an absolute `target` means to the
+    // rows that re-read it (Curiosity) differ. Normalizing the disengage onto
+    // the host committed a Mars-centre distance that the next frame re-applied
+    // from the rover, teleporting the eye one Mars radius (3,390 km) out.
+    //
+    // The wheel-out is run from the site arm rather than seeded at the band
+    // edge because the pop needs a follow memory with a captured distance: a
+    // memory taken fresh at the flip is eye-preserving by construction and
+    // hides it, exactly as the user's approach-then-zoom-out does not.
+    const h = makeHarness();
+    const site = { site: 'curiosity' as BodyId } as const;
+    const parked = foldToWorld(
+      { frame: site, pose: { siteId: site.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 2e5 } },
+      { bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B },
+    );
+    h.seedPose(absoluteArm(parked));
+    h.focus('curiosity');
+    // Two frames a follow-tween apart: the approach saturates and lands the
+    // site arm, which is the memory capture the fixture is here for.
+    h.tick(0);
+    h.tick(FOCUS_TWEEN_MS + 16);
+
+    let crossing = -1;
+    for (let i = 0; i < 80 && crossing < 0; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.frame(1);
+      if (h.store.getState().camera.base.frame === 'absolute') {
+        crossing = probe.drawnPoses.length - 1;
+      }
+    }
+    expect(crossing).toBeGreaterThan(0);
+    h.frame(1); // quiet: no notch, so any eye motion here is the hand-back's
+
+    // The eye keeps pop-2's conversion floor (0 m measured; the bug was 3.4e6 m).
+    // The sightline cannot: the crossing is not at tilt 0 — the anchored zoom
+    // leaves its target ~0.4 km off the rover at ~3,100 km and the normalization
+    // re-aims through the rover — so its bound is ONE PIXEL of the fixture's
+    // viewport, 1.0e-2 rad against 4.7e-5 rad measured.
+    const onePixelRad =
+      h.state.cameraRuntime.outputs.projection.fovYRad /
+      (h.deps.canvas as { height: number }).height;
+    const flip = renderedCamera(probe.drawnPoses[crossing] as CameraPose);
+    const settled = renderedCamera(probe.drawnPoses[crossing + 1] as CameraPose);
+    for (let i = 0; i < 3; i++) {
+      const eyeDriftM = Math.abs(settled.eye[i]! - flip.eye[i]!) * SCALE_UNITS.MPC_TO_M;
+      expect(eyeDriftM).toBeLessThan(5e-5);
+      expect(Math.abs(settled.forward[i]! - flip.forward[i]!)).toBeLessThan(onePixelRad);
+    }
+  });
+
   it('a gesture in flight cannot change the arm', () => {
     // Ruled Q6 / spec §4: the predicate is SKIPPED while a gesture is live and
     // re-evaluated at gesture end — which subsumes the mid-drag wheel guard and
