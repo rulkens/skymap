@@ -28,6 +28,7 @@ const CTX = {
   bodyRadiusM: 1,
   standoffRadii: SURFACE_STANDOFF_RADII,
   sceneUpLocal: [0, 0, 1] as const,
+  focusPivotM: null,
   tuning: DEFAULT_CAMERA_TUNING,
 };
 

@@ -64,9 +64,17 @@ arm's, and there is no ground plane anywhere in that path.
 - The fold steps **at most one rung per at-rest frame**; clips own the rung
   while playing, as today; no fixpoint iteration.
 - Site→body disengage lands the body arm anchored **at the site**
-  (`anchorLocalM` = the site point), not at the body centre — and the body
-  arm's zoom settle turns about that anchor, so the site stays on the sightline
-  while the display tilt ramps back to the remembered value (ruling 12).
+  (`anchorLocalM` = the site point), not at the body centre, which keeps the
+  stored magnitudes at rover scale.
+- **The pivot is the focus**: under a focus _hosted_ on the arm's body, the
+  body arm's whole zoom — the eye's own scaling and all three settle turns —
+  acts about the focus's body-fixed point, re-derived from `focusBodyId` each
+  drain, so the rover is pixel-locked in both directions, the tilt ramps back
+  to the remembered value about it (ruling 12), and neither crossing has
+  anything to re-aim; with no hosted focus the wheel keeps its cursor-pick
+  anchor (ruling #7), and the accepted cost is that a focused rover has no
+  cursor-directed zoom in its host's arm, exactly as it has none in the world
+  arm.
 
 ## 1. Goals / non-goals
 
@@ -618,6 +626,9 @@ the tilt residual. It also fixes the round-trip asymmetry precisely:
 `fromParent(toParent(s))` is the identity for every `SitePose` within float
 tolerance; `toParent(fromParent(b))` is **not** the identity for an arbitrary
 body pose — it projects the aim onto the site. Both are pinned as tests (§6).
+Whatever the body arm's sightline missed `P` by is therefore spent in the engage
+frame as one step, which is why the pivot rule of §0 has to hold the focus on
+that sightline through the descent, not only at the moment of arrival.
 
 ### 4.4 Engage and release
 

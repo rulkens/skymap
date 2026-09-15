@@ -46,6 +46,7 @@ const CTX = {
   bodyRadiusM: R,
   standoffRadii: SURFACE_STANDOFF_RADII,
   sceneUpLocal: POLE,
+  focusPivotM: null,
   tuning: TUNING,
 };
 

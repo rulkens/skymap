@@ -35,6 +35,8 @@ type SurfaceStepCtx = {
   readonly standoffRadii: number;
   /** Scene-frame up in BODY-FIXED axes (unit); the body rotates under it, so resample per drain. */
   readonly sceneUpLocal: Readonly<Vec3>;
+  /** A focus HOSTED on this body, body-fixed metres — it owns the zoom's pivot. */
+  readonly focusPivotM: Readonly<Vec3> | null;
   readonly tuning: CameraTuning;
 };
 
@@ -52,7 +54,8 @@ export function surfaceStep(
   readonly gesture: SurfaceGestureMemory;
   readonly tilt: TiltMemory;
 } {
-  const { viewportPx, fovYRad, bodyRadiusM, standoffRadii, sceneUpLocal, tuning } = ctx;
+  const { viewportPx, fovYRad, bodyRadiusM, standoffRadii, sceneUpLocal, focusPivotM, tuning } =
+    ctx;
   if (step.kind === 'zoom') {
     return {
       pose: surfaceZoomStep(
@@ -67,6 +70,7 @@ export function surfaceStep(
         sceneUpLocal,
         tilt.rememberedTiltRad,
         tuning,
+        focusPivotM,
       ),
       gesture: prev,
       tilt,

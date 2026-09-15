@@ -18,7 +18,7 @@ import { surfaceFloorM } from './surfaceFloorM';
 export function anchoredZoomStep(
   pose: BodyFixedPose,
   factor: number,
-  cursorAnchorM: Vec3 | null,
+  cursorAnchorM: Readonly<Vec3> | null,
   bodyRadiusM: number,
   standoffRadii: number,
 ): BodyFixedPose {
@@ -32,7 +32,7 @@ export function anchoredZoomStep(
   // undo one notch in near the ground. An eye exactly at the centre has no
   // radial, so the centre is the only answer there.
   const eyeMagM = Math.hypot(eyeM[0], eyeM[1], eyeM[2]);
-  const anchorM: Vec3 =
+  const anchorM: Readonly<Vec3> =
     cursorAnchorM !== null
       ? cursorAnchorM
       : eyeMagM === 0

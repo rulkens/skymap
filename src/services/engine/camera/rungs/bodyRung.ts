@@ -15,6 +15,7 @@ import { decodeBodyFixedChannels } from '../../../../utils/camera/decodeBodyFixe
 import { eyeMpcOf } from '../../../../utils/camera/eyeMpcOf';
 import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
 import { frameUp } from '../../../../utils/camera/frameUp';
+import { hostedFocusPivotM } from '../../../../utils/camera/hostedFocusPivotM';
 import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
 import { surfaceGestureEdge } from '../../../../utils/camera/surfaceGestureEdge';
@@ -75,6 +76,9 @@ export const bodyRung: ClimbRow<'body'> = {
       standoffRadii: host.standoffRadii,
       // The body rotates under the scene frame, so this is resampled per drain.
       sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
+      // Derived from the FOCUS every drain, never carried in the pose: a
+      // carried anchor decouples from the rover as soon as a drag turns the arm.
+      focusPivotM: hostedFocusPivotM(ctx.focusBodyId, host.id, host.radiusM),
       tuning: ctx.tuning,
     });
     return { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };
