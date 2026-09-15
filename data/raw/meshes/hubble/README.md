@@ -30,36 +30,46 @@ curl -L -o "data/raw/meshes/hubble/Hubble Space Telescope (A).glb" \
 
 Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
+## The `.blend` — the edited source
+
+`hubble.blend` is what the pre-bake opens, not the download above. Written by
+Blender 5.2 LTS, it does not open in older versions. Regenerate it from the
+pristine download at any time with `npm run import-mesh -- hubble`: every edit
+below is the importer's own, so a re-import loses nothing.
+
+`tools/meshes/prebake/importMesh.py` scales the root object by `0.0254` (the
+model is authored in INCHES — see below), overrides three materials (next
+paragraph) and collapses the UV layers onto one shared name before saving.
+
+**The materials are overridden.** The model types every surface matte
+(metallic 0, roughness 0.84–0.91), so baked as authored the telescope reads as
+grey cardboard. Hubble is wrapped in aluminised multi-layer insulation, a
+crinkled mirror, so the importer row's `materials=` sets `hbltel_1` (the
+forward shell, light shield and aft shroud panels), `hbltel_2` (aperture door,
+aft bulkhead) and `hbltel_4` (handrails, antenna mast) to metallic 1 at
+roughness 0.2–0.3, with a ×2 Base Color gain on `hbltel_1` because its mid-grey
+texture becomes a metal's reflectance once metallic. The source has no normal
+maps, so the same two materials take `bump=0.08`: the colour texture's
+luminance stands in for height at 8 cm per unit, which is what it takes for
+its low-contrast crinkle and panel seams to tilt the baked normal a visible
+few degrees. `hbltel_3` (the copper Kapton array blankets) and `hbltel_wfc_1`
+(the instrument box) bake as authored.
+
 ## The pre-bake — what `build-meshes` actually reads
 
-`MESH_SOURCES.hubble` points at `hubble.prebaked.glb`, **not** the download: the
-source carries five materials and `buildMeshes` refuses multi-material input by
-design, so the flattening happens upstream, once:
+`MESH_SOURCES.hubble` points at `hubble.prebaked.glb`, **not** `hubble.blend`:
+the source carries five materials and `buildMeshes` refuses multi-material
+input by design, so the flattening happens upstream, once:
 
 ```
 npm run prebake-mesh -- hubble    # Blender 5.2 LTS; ~5 s, not run in CI
 ```
 
-`tools/meshes/prebake/meshPrebake.py` joins the parts, applies `scale=0.0254`
-(the model is authored in INCHES — see below), overrides three materials (next
-paragraph), smart-UV-projects and bakes all five materials into one 2048² atlas
-per `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output and
-the four loose `hubble.prebaked.*.png` atlases beside it are gitignored build
-products — regenerate them, don't archive them.
-
-**The materials are overridden.** The model types every surface matte
-(metallic 0, roughness 0.84–0.91), so baked as authored the telescope reads as
-grey cardboard. Hubble is wrapped in aluminised multi-layer insulation, a
-crinkled mirror, so the row's `materials=` sets `hbltel_1` (the forward shell,
-light shield and aft shroud panels), `hbltel_2` (aperture door, aft bulkhead)
-and `hbltel_4` (handrails, antenna mast) to metallic 1 at roughness 0.35–0.4,
-with a ×2 Base Color gain on `hbltel_1` because its mid-grey texture becomes a
-metal's reflectance once metallic. The source has no normal maps, so the same
-two materials take `bump=0.08`: the colour texture's luminance stands in for
-height at 8 cm per unit, which is what it takes for its low-contrast crinkle
-and panel seams to tilt the baked normal a visible few degrees. `hbltel_3`
-(the copper Kapton array blankets) and `hbltel_wfc_1` (the instrument box)
-bake as authored.
+`tools/meshes/prebake/meshPrebake.py` joins the parts, smart-UV-projects and
+bakes all five materials into one 2048² atlas per `BAKE_PASSES` row — albedo,
+normal, roughness and metallic. Its output and the four loose
+`hubble.prebaked.*.png` atlases beside it are gitignored build products —
+regenerate them, don't archive them.
 
 ## Attribution
 
@@ -79,7 +89,7 @@ animation.
 
 **Units: inches.** The bounding box spans 458 (X) × 525 (Y) × 501 (Z) in glTF
 axes, and the Y axis is the telescope tube — 13.3 m against the 13.2 m fact sheet once
-multiplied by 0.0254, so the prebake row carries `scale=0.0254` and nothing is
+multiplied by 0.0254, so the importer row carries `scale=0.0254` and nothing is
 rescaled by hand. The solar arrays are the original 12 m SA1/SA2 type, not the
 shorter rigid-frame pair flown since 2002.
 

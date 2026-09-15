@@ -27,22 +27,18 @@ curl -L -o "data/raw/meshes/lunar-module/Apollo Lunar Module.glb" \
 
 Verify with `shasum -c meshes.sha256` from `data/raw/meshes/`.
 
-## The pre-bake — what `build-meshes` actually reads
+## The `.blend` — the edited source
 
-`MESH_SOURCES['lunar-module']` points at `lunar-module.prebaked.glb`, **not** the
-download: the source carries twelve materials and `buildMeshes` refuses
-multi-material input by design, so the flattening happens upstream, once:
+`lunar-module.blend` is what the pre-bake opens, not the download above.
+Written by Blender 5.2 LTS, it does not open in older versions. Regenerate it
+from the pristine download at any time with
+`npm run import-mesh -- lunar-module`: every edit below is the importer's own,
+so a re-import loses nothing.
 
-```
-npm run prebake-mesh -- lunar-module    # Blender 5.2 LTS; ~6 s, not run in CI
-```
-
-`tools/meshes/prebake/meshPrebake.py` joins the 134 parts, applies `scale=1.45`
-(see below), overrides six materials (next paragraph), smart-UV-projects and
-bakes all twelve materials into one 2048² atlas per `BAKE_PASSES` row — albedo,
-normal, roughness and metallic. Its output and the four loose
-`lunar-module.prebaked.*.png` atlases beside it are gitignored build products —
-regenerate them, don't archive them.
+`tools/meshes/prebake/importMesh.py` scales the root object by `1.45` (see
+below), overrides six materials (next paragraph) and collapses the 134 parts'
+UV layers onto one shared name before saving. The file's animations are of
+zero duration, so the row names no `frame`.
 
 **The materials are overridden.** Nine of the twelve are flat colours typed
 matte (metallic 0, roughness 0.41), and the colours say what each surface is:
@@ -53,6 +49,23 @@ gear struts → metallic 0.9, roughness 0.45; `blinn2SG.002` (dark grey)
 metallic 0.7, roughness 0.5. Black, white, the pale window frame and the three
 decal-textured materials bake as authored. There is no crinkle to bump from:
 the source carries no foil texture, only decals.
+
+## The pre-bake — what `build-meshes` actually reads
+
+`MESH_SOURCES['lunar-module']` points at `lunar-module.prebaked.glb`, **not**
+`lunar-module.blend`: the source carries twelve materials and `buildMeshes`
+refuses multi-material input by design, so the flattening happens upstream,
+once:
+
+```
+npm run prebake-mesh -- lunar-module    # Blender 5.2 LTS; ~6 s, not run in CI
+```
+
+`tools/meshes/prebake/meshPrebake.py` joins the 134 parts, smart-UV-projects
+and bakes all twelve materials into one 2048² atlas per `BAKE_PASSES` row —
+albedo, normal, roughness and metallic. Its output and the four loose
+`lunar-module.prebaked.*.png` atlases beside it are gitignored build products —
+regenerate them, don't archive them.
 
 ## Attribution
 
@@ -68,7 +81,7 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 
 glTF 2.0, Draco-compressed, 64,787 vertices / 97,587 triangles, twelve materials
 of which three carry a baseColor webp texture. The file holds animations of ZERO
-duration, so there is no pose to choose and the prebake row names no `frame`.
+duration, so there is no pose to choose.
 The full vehicle is modelled — descent and ascent stages together, Eagle as it
 stood in July 1969, not as it was left.
 

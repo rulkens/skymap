@@ -1115,6 +1115,45 @@ export const RAW_DATA = {
     description:
       'Provenance for the Voyager model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and what the pre-bake does to it.',
   },
+  'meshes.hubbleSource': {
+    path: 'data/raw/meshes/hubble/Hubble Space Telescope (A).glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Hubble Space Telescope (A)" (public domain) — the untouched download. Only the GitHub mirror carries this textured variant; the model on NASA\'s own page is the untextured printable. buildMeshes never reads it: five materials and inch units go through the Blender import and pre-bake first.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubbleBlend': {
+    path: 'data/raw/meshes/hubble/hubble.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'hubble.blend — the edited source the pre-bake opens: the download scaled from inches to metres with the foil materials made metallic and bumped, all by `npm run import-mesh -- hubble` (Blender 5.2 LTS; older versions cannot open it), which regenerates it from the pristine download.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubble': {
+    path: 'data/raw/meshes/hubble/hubble.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Hubble model flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES.hubble actually points at. Baked from `hubble.blend`; regenerate with `npm run prebake-mesh -- hubble` (Blender, not CI), never by hand.',
+    upstream:
+      'https://github.com/nasa/NASA-3D-Resources/tree/master/3D%20Models/Hubble%20Space%20Telescope%20(A)',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.hubble.readme',
+  },
+  'meshes.hubble.readme': {
+    path: 'data/raw/meshes/hubble/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Hubble model — source mirror, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, the material overrides and the Horizons refresh query behind the orbit row.',
+  },
   'meshes.perseveranceSource': {
     path: 'data/raw/meshes/perseverance/Mars 2020 Perseverance Rover.glb',
     kind: 'file',
@@ -1234,6 +1273,42 @@ export const RAW_DATA = {
     source: 'committed',
     description:
       'Provenance for the MER model — author, model URL, the working GitHub-mirror fetch, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
+  },
+  'meshes.lunarModuleSource': {
+    path: 'data/raw/meshes/lunar-module/Apollo Lunar Module.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'NASA 3D Resources "Apollo Lunar Module" by Michael D. Carbajal (public domain) — the untouched download, the marker for the Apollo 11 site. buildMeshes never reads it: 12 materials, Draco compression and a 0.7-scale model go through the Blender import and pre-bake first.',
+    upstream: 'https://science.nasa.gov/3d-resources/apollo-lunar-module/',
+    readme: 'meshes.lunarModule.readme',
+  },
+  'meshes.lunarModuleBlend': {
+    path: 'data/raw/meshes/lunar-module/lunar-module.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'lunar-module.blend — the edited source the pre-bake opens: the download scaled to its real 9.4 m gear span with the Kapton and aluminium materials made metallic, all by `npm run import-mesh -- lunar-module` (Blender 5.2 LTS; older versions cannot open it), which regenerates it from the pristine download.',
+    upstream: 'https://science.nasa.gov/3d-resources/apollo-lunar-module/',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.lunarModule.readme',
+  },
+  'meshes.lunarModule': {
+    path: 'data/raw/meshes/lunar-module/lunar-module.prebaked.glb',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'The Lunar Module flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES["lunar-module"] actually points at. Baked from `lunar-module.blend`; regenerate with `npm run prebake-mesh -- lunar-module` (Blender, not CI), never by hand.',
+    upstream: 'https://science.nasa.gov/3d-resources/apollo-lunar-module/',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
+    readme: 'meshes.lunarModule.readme',
+  },
+  'meshes.lunarModule.readme': {
+    path: 'data/raw/meshes/lunar-module/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Lunar Module model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, the scale derivation and the material overrides.',
   },
   'meshes.sha256': {
     path: 'data/raw/meshes/meshes.sha256',
