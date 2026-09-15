@@ -18,11 +18,12 @@ import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { SCENE_CELESTIAL_BODIES } from '../../data/bodies/sceneCelestialBodies';
 import { hOverR } from '../../services/engine/camera/hOverR';
 import { nearestBodyHR } from '../../services/engine/camera/nearestBodyHR';
 import { bandRollTarget } from '../../services/engine/camera/frameAlignedRoll';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
+import { hostOf } from '../../services/engine/camera/rungs/hostOf';
+import { rungKindOf } from '../../services/engine/camera/rungs/rungKindOf';
 import { blendedEnuAt } from './blendedEnuAt';
 import { bodyUpWeight } from './bodyUpWeight';
 import { eyeMpcOf } from './eyeMpcOf';
@@ -60,15 +61,10 @@ export function cameraDofAnglesOf(input: {
   // Engaged body wins outright (spec's own regime predicate: `storedFrame` IS
   // the regime); the roster-wide nearest is only a stand-in for the "where's
   // the hysteresis band?" question while flying free in the absolute arm.
-  let bodyId: BodyId | null = storedFrame !== 'absolute' ? storedFrame.body : null;
-  let hr: number | null = null;
-  if (bodyId !== null) {
-    const engaged = bodyStates.get(bodyId);
-    const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === bodyId);
-    if (engaged !== undefined && body !== undefined) {
-      hr = hOverR(eyeMpc, engaged, body.surface.datumRadiusM);
-    }
-  } else {
+  const engaged = hostOf(storedFrame, { bodies: bodyStates, poseBasis, upBasis });
+  let bodyId: BodyId | null = engaged?.id ?? null;
+  let hr: number | null = engaged === null ? null : hOverR(eyeMpc, engaged.state, engaged.radiusM);
+  if (rungKindOf(storedFrame) === 'absolute') {
     const nearest = nearestBodyHR(eyeMpc, bodyStates);
     if (nearest !== null) {
       bodyId = nearest.bodyId;

@@ -15,7 +15,9 @@ import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../@types/math/Mat3';
+import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
+import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -27,6 +29,8 @@ import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { bodyRelativePose } from '../camera/bodyRelativePose';
+import { hostOf } from '../camera/rungs/hostOf';
+import { isWorldArm } from '../camera/rungs/isWorldArm';
 import { bodyStateInHostFrame } from '../../../utils/scene/bodyStateInHostFrame';
 import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
 import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
@@ -55,7 +59,7 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByR
  * or scrubbed, and `nowMs` being threaded rather than sampled per consumer is
  * the seam a frame-by-frame recorder needs to step time deterministically.
  *
- * `arm` is the SAME framed pose `pose` was resolved from (`resolveWorldArm`,
+ * `arm` is the SAME framed pose `pose` was resolved from (`foldToWorld`,
  * called once by the caller) and serves only the pose-provider seam below
  * (spec §5.2).
  */
@@ -142,9 +146,15 @@ export function deriveFrameContext(
   const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
   // Provider B serves ONLY the engaged body, straight from its own stored
   // pose — no Mpc round trip. Every other body, and the whole absolute arm,
-  // stay on provider A (spec §5.2, ruled S1: "B keeps A").
+  // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Gated on the
+  // HOST, not the frame: a rung not its own host must still fall through here.
+  const armHost = hostOf(arm.frame, {
+    bodies: bodyStates as ReadonlyMap<BodyId, BodyState>,
+    poseBasis,
+    upBasis,
+  });
   const bodyPose: BodyPoseProvider = (bodyId) => {
-    if (arm.frame !== 'absolute' && arm.frame.body === bodyId) {
+    if (!isWorldArm(arm) && armHost?.id === bodyId) {
       return poseFromBodyArm(arm.pose);
     }
     const bodyState = bodyStates.get(bodyId);

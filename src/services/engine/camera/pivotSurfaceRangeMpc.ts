@@ -10,6 +10,7 @@
  */
 
 import { pivotRadiusMpc } from './pivotRadiusMpc';
+import { isWorldArm } from './rungs/isWorldArm';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 
@@ -18,7 +19,5 @@ export function pivotSurfaceRangeMpc(
   worldDistanceMpc: number,
   focus: SelectionRow | null,
 ): number {
-  return arm.frame === 'absolute'
-    ? worldDistanceMpc - (pivotRadiusMpc(focus) ?? 0)
-    : worldDistanceMpc;
+  return isWorldArm(arm) ? worldDistanceMpc - (pivotRadiusMpc(focus) ?? 0) : worldDistanceMpc;
 }

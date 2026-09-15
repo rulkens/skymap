@@ -8,16 +8,15 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
-import { resolveWorldArm } from '../camera/poseFrameConversion';
+import { foldToWorld } from '../camera/rungs/foldToWorld';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
 export function liveWorldPose(state: EngineState): CameraPose {
-  return resolveWorldArm(
-    state.cameraRuntime.outputs.displayed,
-    deriveBodyStates(state.cameraRuntime.outputs.simDays) as ReadonlyMap<BodyId, BodyState>,
+  return foldToWorld(state.cameraRuntime.outputs.displayed, {
+    bodies: deriveBodyStates(state.cameraRuntime.outputs.simDays) as ReadonlyMap<BodyId, BodyState>,
     // The committed pose basis (the decode never mid-slerps) and the live
     // up-basis — the same split `runFrame` feeds the draw path.
-    ORIENTATION_FRAMES[state.settings.orientation],
-    state.cameraRuntime.outputs.upBasis,
-  );
+    poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
+    upBasis: state.cameraRuntime.outputs.upBasis,
+  });
 }

@@ -10,7 +10,8 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import type { InputStep } from '../../@types/camera/InputStep';
-import type { SurfaceMemory } from '../../@types/camera/SurfaceMemory';
+import type { SurfaceGestureMemory } from '../../@types/camera/SurfaceGestureMemory';
+import type { TiltMemory } from '../../@types/camera/TiltMemory';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
@@ -37,26 +38,20 @@ type SurfaceStepCtx = {
   readonly tuning: CameraTuning;
 };
 
-/** The engine's boot value; immutable, so one shared object is fine. */
-export const EMPTY_SURFACE_MEMORY: SurfaceMemory = {
-  gesture: null,
-  rememberedTiltRad: 0,
-  memoryBodyId: null,
-};
-
-/** Once per frame with the camera's current body; a DIFFERENT body wipes the tilt (ruling 18), null keeps it. */
-export function noteBody(prev: SurfaceMemory, bodyId: string | null): SurfaceMemory {
-  if (bodyId === null || bodyId === prev.memoryBodyId) return prev;
-  const wipe = prev.memoryBodyId !== null;
-  return { ...prev, rememberedTiltRad: wipe ? 0 : prev.rememberedTiltRad, memoryBodyId: bodyId };
-}
+/** The body rung's empty memory. */
+export const EMPTY_SURFACE_GESTURE_MEMORY: SurfaceGestureMemory = { gesture: null };
 
 export function surfaceStep(
-  prev: SurfaceMemory,
+  prev: SurfaceGestureMemory,
+  tilt: TiltMemory,
   arm: BodyFixedPose,
   step: InputStep,
   ctx: SurfaceStepCtx,
-): { readonly pose: BodyFixedPose; readonly next: SurfaceMemory } {
+): {
+  readonly pose: BodyFixedPose;
+  readonly gesture: SurfaceGestureMemory;
+  readonly tilt: TiltMemory;
+} {
   const { viewportPx, fovYRad, bodyRadiusM, standoffRadii, sceneUpLocal, tuning } = ctx;
   if (step.kind === 'zoom') {
     return {
@@ -70,15 +65,16 @@ export function surfaceStep(
         bodyRadiusM,
         standoffRadii,
         sceneUpLocal,
-        prev.rememberedTiltRad,
+        tilt.rememberedTiltRad,
         tuning,
       ),
-      next: prev,
+      gesture: prev,
+      tilt,
     };
   }
   // The press and release reach the memory at `replayInput`'s two gesture
   // edges; nothing latches here from idle.
-  if (step.kind !== 'drag' || prev.gesture === null) return { pose: arm, next: prev };
+  if (step.kind !== 'drag' || prev.gesture === null) return { pose: arm, gesture: prev, tilt };
   const gesture =
     prev.gesture === 'down'
       ? latchSurfaceGesture(arm, step, viewportPx, fovYRad, bodyRadiusM)
@@ -116,7 +112,7 @@ export function surfaceStep(
   // (zoom never authors tilt). Near w → 0 the ratio diverges:
   // `MAX_REMEMBERED_TILT_RAD` is the only cap on the memory, and a degenerate
   // weight leaves it untouched (no intent is readable there).
-  let rememberedTiltRad = prev.rememberedTiltRad;
+  let rememberedTiltRad = tilt.rememberedTiltRad;
   if (mode === 'tilt' || mode === 'look') {
     const f = eyeFrameOf(final, 1, BODY_LOCAL_FRAME.pole);
     const hr = Math.hypot(...bodyFixedEyeM(final)) / bodyRadiusM - 1;
@@ -126,6 +122,7 @@ export function surfaceStep(
   }
   return {
     pose: final,
-    next: { ...prev, gesture: { ...gesture, mode, prevPixel: step.endPx }, rememberedTiltRad },
+    gesture: { gesture: { ...gesture, mode, prevPixel: step.endPx } },
+    tilt: { ...tilt, rememberedTiltRad },
   };
 }

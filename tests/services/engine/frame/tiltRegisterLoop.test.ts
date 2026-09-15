@@ -88,7 +88,7 @@ function toMidWindow(h: CameraSimHarness) {
   // 2026-09-10 band leaves a thin weight there, so a small one would map to a
   // projection too shallow to see.
   seedRememberedTilt(h, { targetRad: 2.8, guard: 60, pxStep: 5 });
-  const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
+  const remembered = h.state.cameraRuntime.tilt.rememberedTiltRad;
   expect(remembered).toBeGreaterThan(2.5);
 
   // Out past disengage, then back in to the ONE standpoint that is both world
