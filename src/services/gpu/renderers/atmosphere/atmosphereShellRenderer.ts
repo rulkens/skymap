@@ -432,7 +432,7 @@ export function createAtmosphereShellRenderer(
 
   /** The sky-view LUT size actually built right now, distinct from the
    *  construction-time default above — `reconcile` (tier-switchable size,
-   *  see `skyViewLutSizeByTier.ts`) rewrites this, and `encodeSkyView`'s
+   *  see `skyViewLutSizeByTier.ts`) rewrites this, and `dispatchSkyView`'s
    *  dispatch grid tracks it so a shrunk texture is not still dispatched at
    *  the old, larger workgroup count. */
   let currentSkyViewLutSize: readonly [number, number] = SKY_VIEW_LUT_SIZE;
