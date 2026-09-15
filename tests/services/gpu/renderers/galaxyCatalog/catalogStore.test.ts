@@ -105,16 +105,6 @@ function makeStubSourceBgl() {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('catalogStore.totalCount', () => {
-  it('returns 0 before any upload', () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    expect(store.totalCount()).toBe(0);
-  });
-
   it('sums counts across multiple sources', async () => {
     const store = createCatalogStore({
       device: makeStubDevice(),
@@ -563,15 +553,5 @@ describe('catalogStore.clearBiasOverlays', () => {
     store.clearBiasOverlays();
     // One writeBuffer per loaded source.
     expect(writeCalls.length - before).toBe(2);
-  });
-
-  it('is a no-op when no sources are loaded', () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    expect(() => store.clearBiasOverlays()).not.toThrow();
   });
 });

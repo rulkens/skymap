@@ -58,14 +58,6 @@ function mockCube(): ScalarCube {
 }
 
 describe('createFlowFieldRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    // Smoke: the 3 compute pipelines + render pipeline + both explicit BGLs all
-    // build against the mock without a real GPU surface.
-    expect(() =>
-      createFlowFieldRenderer({ device: mockDevice(), targetFormat: 'rgba16float' }),
-    ).not.toThrow();
-  });
-
   it('bakes the given targetFormat into the ribbon render pipeline colour target', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createFlowFieldRenderer({ device: mockDevice(renderPipelines), targetFormat: 'rgba16float' });

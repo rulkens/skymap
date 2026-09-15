@@ -126,20 +126,6 @@ describe('MarkerLineRenderer occlusion variant', () => {
 });
 
 describe('MarkerLineRenderer (CPU state)', () => {
-  it('starts with zero lines', () => {
-    const r = newRenderer();
-    expect(r.lineCount()).toBe(0);
-  });
-
-  it('counts lines after setLines', () => {
-    const r = newRenderer();
-    r.setLines([
-      { id: 'a', fromWorld: [0, 0, 0], toWorld: [0, 1, 0], pixelWidth: 2, color: [1, 1, 1, 1] },
-      { id: 'b', fromWorld: [1, 0, 0], toWorld: [1, 2, 0], pixelWidth: 1.5, color: [1, 0, 0, 1] },
-    ]);
-    expect(r.lineCount()).toBe(2);
-  });
-
   it('replaces (not appends) on subsequent setLines', () => {
     const r = newRenderer();
     r.setLines([

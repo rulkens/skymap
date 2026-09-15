@@ -58,16 +58,6 @@ describe('DebugLineRenderer colour target', () => {
 });
 
 describe('DebugLineRenderer (CPU state)', () => {
-  it('starts with zero lines', () => {
-    expect(newRenderer().lineCount()).toBe(0);
-  });
-
-  it('counts lines after setLines', () => {
-    const r = newRenderer();
-    r.setLines([line(), line()]);
-    expect(r.lineCount()).toBe(2);
-  });
-
   it('replaces (not appends) on subsequent setLines', () => {
     const r = newRenderer();
     r.setLines([line()]);

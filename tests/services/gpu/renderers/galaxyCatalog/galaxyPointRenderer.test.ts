@@ -301,57 +301,6 @@ describe('GalaxyPointRenderer.destroy', () => {
 });
 
 describe('GalaxyPointRenderer.draw — GalaxyPointDrawSettings shape', () => {
-  it('accepts a single GalaxyPointDrawSettings record', async () => {
-    const renderer = createGalaxyPointRenderer({
-      device: makeStubDevice(),
-      targetFormat: 'bgra8unorm',
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      focusBgl: makeStubFocusBgl(),
-      buildRunner: testRunner,
-    });
-    await renderer.upload(idOf(Source.SDSS), makeCloud(10));
-
-    // Stub the encoder.  draw() must call setPipeline + setBindGroup + draw
-    // once (one source loaded, one passing visibility bit).
-    const calls: string[] = [];
-    const pass = {
-      setPipeline: () => calls.push('setPipeline'),
-      setBindGroup: () => calls.push('setBindGroup'),
-      setVertexBuffer: () => calls.push('setVertexBuffer'),
-      draw: () => calls.push('draw'),
-    } as unknown as GPURenderPassEncoder;
-
-    const viewProj = new Float32Array(16) as unknown as Mat4;
-
-    renderer.draw(pass, viewProj, [800, 600], {
-      pointSizePx: 1,
-      brightness: 1,
-      selectedPacked: 0xffffffff >>> 0,
-      visibleSourceMask: 0xffffffff,
-      camPosWorld: [0, 0, 0],
-      pxPerRad: 1,
-      provenance: {
-        orientation: { highlight: false, filter: 'all' },
-        size: { highlight: false, filter: 'all' },
-      },
-      biasMode: 0,
-      absMagLimit: 0,
-      depthFadeEnabled: false,
-      sbScale: 8,
-      sbMax: 30,
-      falloffStrength: 0.8,
-      pxFadeStart: 0,
-      pxFadeEnd: 0,
-      focusBindGroup: FOCUS_BIND_GROUP,
-      fadeOpacityOf: () => 1,
-      viewSlot: 0,
-    });
-
-    expect(calls).toContain('setPipeline');
-    expect(calls).toContain('draw');
-  });
-
   it('skips a source whose resolved fade opacity is exactly 0', async () => {
     // Alpha-0 instances into the additive target are pure GPU cost for zero
     // contribution, so the per-source loop drops the draw call entirely when

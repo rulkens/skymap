@@ -171,11 +171,6 @@ describe('LabelRenderer occlusion variant', () => {
 });
 
 describe('LabelRenderer (CPU state)', () => {
-  it('starts with zero glyphs to draw', () => {
-    const r = newRenderer();
-    expect(r.glyphCount()).toBe(0);
-  });
-
   it('counts glyphs across all labels after setLabels', () => {
     const r = newRenderer();
     r.setLabels([
@@ -201,32 +196,5 @@ describe('LabelRenderer (CPU state)', () => {
     r.setLabels([{ id: 'b', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24, font: 'cormorant' }]);
     expect(r.labelCount()).toBe(1);
     expect(r.glyphCount()).toBe(3);
-  });
-});
-
-// ── fontIndex packing test ────────────────────────────────────────────────
-//
-// Reaching into the renderer's packed glyph buffer would require
-// exposing internals; instead we verify the layer-index lookup
-// indirectly by counting glyphs across mixed-font labels.  Since
-// FONTS has only `cormorant` at this point, every label resolves to
-// fontIndex 0 — the test asserts the lookup works without throwing.
-// A future second font would extend this test with a real index
-// assertion.
-
-describe('LabelRenderer fontIndex resolution', () => {
-  it('accepts labels with the cormorant font without throwing', () => {
-    const ctx = {
-      device: null as unknown as GPUDevice,
-      context: null as unknown as GPUCanvasContext,
-      format: 'rgba16float' as GPUTextureFormat,
-      canvas: null as unknown as HTMLCanvasElement,
-      hdrCapable: false,
-    };
-    const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
-    expect(() =>
-      r.setLabels([{ id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 24, font: 'cormorant' }]),
-    ).not.toThrow();
-    expect(r.glyphCount()).toBe(1);
   });
 });

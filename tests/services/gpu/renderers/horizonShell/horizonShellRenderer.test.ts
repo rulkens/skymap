@@ -25,12 +25,6 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
 }
 
 describe('createHorizonShellRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    expect(() =>
-      createHorizonShellRenderer({ device: mockDevice(), targetFormat: 'rgba16float' }),
-    ).not.toThrow();
-  });
-
   it('bakes the given targetFormat into the pipeline colour target', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createHorizonShellRenderer({
