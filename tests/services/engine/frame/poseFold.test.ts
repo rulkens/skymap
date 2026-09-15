@@ -93,6 +93,8 @@ import {
   startCameraTween,
 } from '../../../../src/state/camera/cameraSlice';
 import { setSelectionRow } from '../../../../src/state/selectionRows/selectionRowsSlice';
+import { clipStarted, resolveClipStart } from '../../../../src/state/camera/cameraSlice';
+import { all, tween } from '../../../../src/services/engine/animation/effectHelpers';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
@@ -663,6 +665,55 @@ describe('runFrame — the regime fold', () => {
     const range = h.state.cameraRuntime.register.pose;
     if (!isSiteArm(range)) throw new Error('the dive did not engage the site arm');
     expect(range.pose.rangeM).toBeLessThan(1e2);
+  });
+
+  it('a site-framed clip leg over an absolute base cannot jump two rungs', () => {
+    // S1: the clip authors `{ site: curiosity }` while the regime is still
+    // `absolute`. `stepRung` answers `body:mars` (the engage band), the flip
+    // branch rightly declines to refold a pose in a THIRD frame — and the
+    // commit below it then published that third frame anyway, so `camera.base`
+    // went absolute → site:curiosity → body:mars in three frames, skipping a
+    // rung on the way down and climbing back on the next frame.
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null, realClipPlayer: true });
+    const SITE = { site: 'curiosity' as BodyId };
+    const near = foldToWorld(
+      { frame: SITE, pose: { siteId: SITE.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 3e5 } },
+      { bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B },
+    );
+    h.seedPose(absoluteArm(near));
+    h.store.dispatch(
+      clipStarted({
+        data: resolveClipStart(
+          {
+            timeline: [
+              all([
+                tween('yaw', { to: 0.7, over: 4, frame: SITE }),
+                tween('pitch', { to: 0.2, over: 4, frame: SITE }),
+                tween('distance', { to: 12, over: 4, frame: SITE }),
+              ]),
+            ],
+          },
+          near,
+        ),
+        frame: DEFAULT_ORIENTATION,
+      }),
+    );
+
+    const drawn = probe.drawnPoses.length;
+    const regimes: string[] = [];
+    for (let i = 0; i < 8; i++) {
+      h.frame(1);
+      regimes.push(frameKey(h.store.getState().camera.base.frame));
+    }
+
+    // The clip owns the rung while it plays, so the regime holds where it was.
+    expect(new Set(regimes)).toEqual(new Set(['absolute']));
+    // Not vacuous: the leg really is driving the camera through those frames.
+    const first = renderedCamera(probe.drawnPoses[drawn] as CameraPose);
+    const last = renderedCamera(probe.drawnPoses[probe.drawnPoses.length - 1] as CameraPose);
+    expect(Math.hypot(last.eye[0]! - first.eye[0]!, last.eye[1]! - first.eye[1]!)).toBeGreaterThan(
+      0,
+    );
   });
 
   it('a gesture in flight cannot change the arm', () => {

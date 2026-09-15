@@ -164,10 +164,13 @@ export function projectFramePose(args: {
       // tilt is geometry, not a projection, so the register holds it too.
       register = displayed;
     }
-    // Once per crossing. The wake is the fold's own: `shouldKeepTicking` reads
-    // the pre-fold snapshot, so a flip that quiets the last live term would
-    // otherwise park the loop.
-    if (!sameFrame(target, regime)) {
+    // Once per crossing, and only of a pose in the crossing's TARGET frame:
+    // where the refold above declined a third frame, committing anyway would
+    // publish that third frame as the regime — a site-framed clip leg over an
+    // absolute base jumped two rungs in one frame. The wake is the fold's own:
+    // `shouldKeepTicking` reads the pre-fold snapshot, so a flip that quiets
+    // the last live term would otherwise park the loop.
+    if (!sameFrame(target, regime) && sameFrame(displayed.frame, target)) {
       actions.push(commitCameraPose(displayed));
       requestRender = true;
     }
