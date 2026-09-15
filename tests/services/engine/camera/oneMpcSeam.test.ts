@@ -87,6 +87,10 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and cloudDeckFade (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [
+    'src/services/engine/frame/passes/earthSurfaceTilesPass.ts',
+    'fade precedent — bridges radiusM to Mpc for cloudDeckFade alone, so a patch and the base globe dissolve the deck shadow together (outside the body-slab path)',
+  ],
+  [
     'src/services/engine/frame/passes/cloudShellPass.ts',
     'cull/fade precedent — bridges radiusM to Mpc for the same apparentSizePx cull and for cloudDeckFade (outside the body-slab path)',
   ],

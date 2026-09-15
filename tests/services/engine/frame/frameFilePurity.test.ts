@@ -44,7 +44,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/bodyGlintsPass': 8,
   'frame/passes/cloudShellPass': 1,
   'frame/passes/constellationsPass': 2,
-  'frame/passes/earthPass': 5,
+  'frame/passes/earthPass': 4,
   'frame/passes/fieldStarSpherePass': 6,
   'frame/passes/filamentsPass': 3,
   'frame/passes/horizonShellPass': 1,
