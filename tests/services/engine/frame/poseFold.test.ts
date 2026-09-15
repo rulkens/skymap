@@ -406,6 +406,57 @@ describe('runFrame — the regime fold', () => {
     }
   });
 
+  it('disengaging after a pan keeps the eye continuous — the pin re-reads panOffset', () => {
+    // Pop-2's third sibling: the pan strafe lives on the follow memory's
+    // `panOffset`, and the pin re-reads an absolute target as `focus +
+    // panOffset`. Normalizing the disengage onto the bare focus centre left
+    // the pin a whole `panOffset` to close on the next QUIET frame — a 6.4e5 m
+    // eye teleport for a two-pixel drag at h/R 2, and it scales with the pan.
+    const h = makeCameraSimHarness({ focusBody: 'earth', bootHR: 2 });
+    probe.state = h.state;
+    // The approach must be saturated before the pan: a live ease writes the
+    // eye every frame and the quiet frame would have no baseline of its own.
+    h.frame(40);
+    h.store.dispatch(beginDrag());
+    h.push({ kind: 'gestureStart' });
+    h.push({ kind: 'dragAnchor', xPx: 50, yPx: 50 });
+    h.push({ kind: 'dragMove', mode: 'pan', xPx: 52, yPx: 50 });
+    h.frame(1);
+    h.push({ kind: 'gestureEnd' });
+    h.store.dispatch(endDrag());
+    h.frame(2);
+    const panOffset = h.state.cameraRuntime.follow?.panOffset ?? [0, 0, 0];
+    const panM = Math.hypot(...panOffset) * SCALE_UNITS.MPC_TO_M;
+    // Non-vacuity: a pan the fold could not see would pass the bound for free.
+    expect(panM).toBeGreaterThan(1e5);
+
+    // In past the engage edge, then back out through `disengageHR`. Two frames
+    // per notch so each one is fully folded before the next arrives.
+    for (let i = 0; i < 60 && h.store.getState().camera.base.frame === 'absolute'; i++) {
+      h.push({ kind: 'wheel', deltaY: -240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.frame(2);
+    }
+    expect(h.store.getState().camera.base.frame).toEqual(EARTH_ARM);
+    let crossing = -1;
+    for (let i = 0; i < 80 && crossing < 0; i++) {
+      h.push({ kind: 'wheel', deltaY: 240, duringGesture: false, xPx: 50, yPx: 50 });
+      h.frame(1);
+      if (h.store.getState().camera.base.frame === 'absolute') {
+        crossing = probe.drawnPoses.length - 1;
+      }
+    }
+    expect(crossing).toBeGreaterThan(0);
+    h.frame(1); // quiet: no notch, so any eye motion here is the hand-back's
+
+    const flip = renderedCamera(probe.drawnPoses[crossing] as CameraPose);
+    const settled = renderedCamera(probe.drawnPoses[crossing + 1] as CameraPose);
+    for (let i = 0; i < 3; i++) {
+      // Pop-2's conversion floor again; the bug measured 6.371e5 m, matching
+      // `|panOffset|` to every digit.
+      expect(Math.abs(settled.eye[i]! - flip.eye[i]!) * SCALE_UNITS.MPC_TO_M).toBeLessThan(5e-5);
+    }
+  });
+
   it('the site hand-back keeps the focused rover on the sightline as the tilt ramps out', () => {
     // The adverse eye check: zooming out from Opportunity, the rover left the
     // frame the moment the site arm handed back to Mars's. The ramp itself is

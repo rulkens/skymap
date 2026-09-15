@@ -35,6 +35,7 @@ import { centreLookingArm } from '../../../utils/camera/centreLookingArm';
 import { focusInSubtree } from '../../../utils/camera/focusInSubtree';
 import { notedTiltMemory } from '../../../utils/camera/notedTiltMemory';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
+import { addVec3 } from '../../../utils/math/addVec3';
 import { commitCameraPose } from '../../../state/camera/cameraSlice';
 
 /** The pin's strafe while no follow memory exists. */
@@ -128,12 +129,14 @@ export function projectFramePose(args: {
         // (a rover keeps its planet's arm, §4.8): the pin and the follow rows
         // re-read an absolute `target` as the focus, so committing the host's
         // centre leaves them a body radius to close as an eye teleport (pop-3).
+        // `panOffset` rides along for the same reason — the pin re-reads it
+        // too, so a commit without it is a |pan| teleport on the quiet frame.
         const host = hostOrThrow(displayed.frame, ctx);
         const focused =
           ctx.focusBodyId !== null && focusInSubtree(ctx.focusBodyId, host.id)
             ? bodies.get(ctx.focusBodyId)
             : undefined;
-        const centreMpc = (focused ?? host.state).positionMpc;
+        const centreMpc = addVec3((focused ?? host.state).positionMpc, follow?.panOffset ?? NO_PAN);
         displayed = centreLookingArm(
           eyeMpcOf(world, poseBasis),
           centreMpc,
