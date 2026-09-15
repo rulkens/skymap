@@ -26,6 +26,7 @@ import type { SurfaceTilePlan } from '../../../@types/scene/SurfaceTilePlan';
 import type { SurfaceTilePlannerParams } from '../../../@types/scene/SurfaceTilePlannerParams';
 import type { SurfaceTileRequest } from '../../../@types/scene/SurfaceTileRequest';
 import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
+import type { HeightTile } from '../../../@types/scene/HeightTile';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { SurfaceTileSubsystem } from '../../../@types/engine/subsystems/SurfaceTileSubsystem';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
@@ -38,6 +39,7 @@ import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry'
 import { surfaceTilePath } from '../../../utils/scene/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../../../utils/scene/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileBitmap';
+import { fetchHeightTile } from '../../../utils/network/fetchHeightTile';
 import { directionToLonLatDeg } from '../../../utils/scene/directionToLonLatDeg';
 import { deepestBandLevelAt } from '../../../utils/scene/deepestBandLevelAt';
 import {
@@ -45,9 +47,14 @@ import {
   EARTH_TILE_CONCURRENCY,
   EARTH_TILE_LOD_BIAS,
   EARTH_TILE_PX,
+  HEIGHT_TILE_ATLAS_SIDE,
 } from '../../../data/bodies/earthTileParams';
+import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
+/** Raw metres above the datum, never an encoding — see `heightTileFormat`. */
+const HEIGHT_ATLAS_FORMAT: GPUTextureFormat = 'r32float';
+const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE;
 
 /** The "nothing here yet" snapshot — atlas never allocated, or `state.subsystems.surfaceTiles`
  *  itself is null. Exported so `engine.ts`'s debug handle shares this shape instead of
@@ -56,6 +63,7 @@ export const EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT: SurfaceTileDebugSnapshot = {
   engaged: false,
   capacity: 0,
   used: 0,
+  height: { used: 0, capacity: 0 },
   levels: [],
   plan: null,
   droppedAllocations: 0,
@@ -103,11 +111,16 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // used to have to keep in sync.
   let atlas: {
     readonly stream: TileStreamSubsystem<ImageBitmap>;
+    readonly heightStream: TileStreamSubsystem<HeightTile>;
     readonly slotsPerRow: number;
     readonly bodyId: BodyId;
   } | null = null;
 
+  // One map per product rather than one keyed by the (already
+  // product-bearing) tile path: the two atlases have different slot geometry,
+  // so a slot number only means something alongside the stream it came from.
   const resident = new Map<string, ResidentTile>();
+  const heightResident = new Map<string, ResidentTile>();
   // key -> z, for the debug snapshot's per-level pending counts. Written when a
   // fetch is enqueued; cleared in the same `onResult` branches that already
   // handle its resolution (declined or uploaded), so there's no third path to
@@ -231,7 +244,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * never again per engagement — `slotSide` comes from the manifest's tile
    * edge, so a re-bake at a different edge stays a data change.
    */
-  function engage(tilePx: number, bodyId: BodyId): TileStreamSubsystem<ImageBitmap> {
+  function engage(tilePx: number, bodyId: BodyId): NonNullable<typeof atlas> {
     const slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
     const created = createTileStreamSubsystem<ImageBitmap>({
       device,
@@ -244,10 +257,31 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       upload: uploadBitmapToAtlas,
       release: closeBitmap,
     });
+    // Post count and `shgt1` are compiled constants, not manifest fields
+    // (spec §5.2), so the height atlas's geometry never depends on the bake.
+    const createdHeight = createTileStreamSubsystem<HeightTile>({
+      device,
+      requestRender,
+      atlasSide: HEIGHT_TILE_ATLAS_SIDE,
+      slotSide: HEIGHT_POSTS_PER_TILE,
+      format: HEIGHT_ATLAS_FORMAT,
+      label: 'surface-tiles-height',
+      concurrency: EARTH_TILE_CONCURRENCY,
+      upload: (heightAtlas, slotIdx, tile) =>
+        heightAtlas.uploadTexels(
+          slotIdx,
+          tile.heightM,
+          HEIGHT_POSTS_PER_TILE * 4,
+          HEIGHT_POSTS_PER_TILE,
+        ),
+      // A decoded height tile is plain JS memory; nothing to hand back.
+      release: () => {},
+    });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
     created.setEvictHandler((key) => resident.delete(key));
-    atlas = { stream: created, slotsPerRow, bodyId };
-    return created;
+    createdHeight.setEvictHandler((key) => heightResident.delete(key));
+    atlas = { stream: created, heightStream: createdHeight, slotsPerRow, bodyId };
+    return atlas;
   }
 
   /** Tear down the engaged body's atlas and residency (§ one engaged) —
@@ -256,8 +290,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    *  NEW body (`plannerParams` runs earlier in the same frame). */
   function standDown(): void {
     atlas?.stream.destroy();
+    atlas?.heightStream.destroy();
     atlas = null;
     resident.clear();
+    heightResident.clear();
     pendingLevelOf.clear();
     lastEngaged = null;
   }
@@ -282,7 +318,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       return;
     }
 
-    const stream = atlas?.stream ?? engage(active.tilePx, bodyId);
+    const streams = atlas ?? engage(active.tilePx, bodyId);
 
     frameCounter++;
 
@@ -299,7 +335,9 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     let notResidentCount = 0;
     for (const request of plan.requests) {
       const key = surfaceTilePath(request.tile, prefix);
-      if (!resident.has(key)) notResidentCount++;
+      const isHeight = request.tile.product === 'height';
+      const stream = isHeight ? streams.heightStream : streams.stream;
+      if (!isHeight && !resident.has(key)) notResidentCount++;
       // Checked BEFORE touching: a touched failed key would keep its LRU
       // stamp fresh forever, pinning slots on tiles with no pixels.
       if (stream.isFailed(key)) continue;
@@ -309,15 +347,34 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     let droppedAllocations = 0;
     for (const request of misses) {
       const key = surfaceTilePath(request.tile, prefix);
+      const isHeight = request.tile.product === 'height';
 
       // Null means the atlas is already full this frame.
-      if (stream.allocate(key, frameCounter) === null) {
+      if ((isHeight ? streams.heightStream : streams.stream).allocate(key, frameCounter) === null) {
         droppedAllocations++;
         continue;
       }
 
+      if (isHeight) {
+        streams.heightStream.enqueueFetch({
+          key,
+          priority: request.screenPx,
+          fetcher: () => fetchHeightTile(request.tile, prefix),
+          onResult: (tile) => {
+            if (destroyed || tile === null) return;
+            const slot = streams.heightStream.upload(key, tile);
+            if (slot === null) return;
+            // `readyAtMs` is the albedo crossfade's clock; height has no fade
+            // (a leaf without its own height tile is not drawn at all), but
+            // the residency record is shared, so it is stamped the same way.
+            heightResident.set(key, { tile: request.tile, slot, readyAtMs: performance.now() });
+          },
+        });
+        continue;
+      }
+
       pendingLevelOf.set(key, request.tile.z);
-      stream.enqueueFetch({
+      streams.stream.enqueueFetch({
         key,
         // Highest-priority-first queue.
         priority: request.screenPx,
@@ -331,7 +388,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
           // Resolved from the key now, not carried: may have been evicted
           // mid-flight. `upload` closes `bitmap` either way (uploaded or
           // recycled) — see `uploadBitmapToAtlas`/`closeBitmap`.
-          const slot = stream.upload(key, bitmap);
+          const slot = streams.stream.upload(key, bitmap);
           // Stamped here, at the upload site — REAL time (`performance.now()`,
           // never sim time), so `earthSurfaceTileRenderer`'s crossfade runs
           // even while the sim clock is paused or scaled.
@@ -363,9 +420,11 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   } | null {
     if (manifest === null || atlas === null) return null;
     const key = surfaceTilePath(tile, manifest.prefix);
-    const entry = resident.get(key);
+    const isHeight = tile.product === 'height';
+    const entry = (isHeight ? heightResident : resident).get(key);
     if (entry === undefined) return null;
-    const [u0, v0, u1, v1] = atlas.stream.slotUv(entry.slot);
+    const stream = isHeight ? atlas.heightStream : atlas.stream;
+    const [u0, v0, u1, v1] = stream.slotUv(entry.slot);
     return {
       slot: entry.slot,
       atlasUvOrigin: [u0, v0],
@@ -376,7 +435,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
   function isAnimating(): boolean {
     if (manifestPending) return true;
-    return atlas !== null && atlas.stream.inFlightCount() > 0;
+    if (atlas === null) return false;
+    return atlas.stream.inFlightCount() > 0 || atlas.heightStream.inFlightCount() > 0;
   }
 
   /** See `SurfaceTileDebugSnapshot`. Built on demand for a low-rate DebugPanel
@@ -427,6 +487,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       engaged: true,
       capacity: atlas.slotsPerRow * atlas.slotsPerRow,
       used: atlas.stream.occupiedCount(),
+      height: {
+        used: atlas.heightStream.occupiedCount(),
+        capacity: HEIGHT_ATLAS_SLOTS_PER_ROW * HEIGHT_ATLAS_SLOTS_PER_ROW,
+      },
       levels,
       plan,
       droppedAllocations: lastEngaged?.droppedAllocations ?? 0,
@@ -454,6 +518,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     },
     getLastCut: () => lastCut,
     getAtlasView: () => atlas?.stream.getTextureView() ?? null,
+    getHeightAtlasView: () => atlas?.heightStream.getTextureView() ?? null,
     isAnimating,
     getDebugSnapshot,
     destroy,

@@ -13,7 +13,12 @@ export type SurfaceTileDebugSnapshot = {
   readonly capacity: number;
   /** Slots currently claimed by a key, loaded or still in flight. */
   readonly used: number;
-  /** One row per level with any resident or pending tile, sorted by `z`. */
+  /** Slot pressure on the second product's own `r32float` atlas. Separate
+   *  from `used`/`capacity` above because the two atlases have different
+   *  geometry and independent LRU clocks — height residency is what gates
+   *  refinement, so it is worth reading on its own. */
+  readonly height: { readonly used: number; readonly capacity: number };
+  /** One row per level with any resident or pending ALBEDO tile, sorted by `z`. */
   readonly levels: ReadonlyArray<{
     readonly z: number;
     readonly resident: number;

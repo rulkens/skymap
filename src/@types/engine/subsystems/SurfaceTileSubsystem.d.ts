@@ -75,6 +75,11 @@ export type SurfaceTileSubsystem = Destroyable & {
    */
   getAtlasView(): GPUTextureView | null;
 
+  /** The HEIGHT atlas's texture view (`r32float`, 129-post slots), or `null`
+   *  before the first engaged frame. Unread until F2 displaces geometry —
+   *  F1 only has to make the tiles resident. */
+  getHeightAtlasView(): GPUTextureView | null;
+
   /**
    * Whether anything here changes next frame's picture — manifest or tile in
    * flight. A vote for the frame loop's keep-ticking predicate, never a

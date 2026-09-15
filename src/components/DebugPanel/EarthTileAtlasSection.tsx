@@ -103,6 +103,13 @@ function EarthTileAtlasSection({
         <span className={styles.total}>{totalPending}</span>
       </div>
 
+      <div
+        className={styles.readout}
+        title="Height atlas slots — residency here is what lets the walk refine"
+      >
+        height {snap.height.used}/{snap.height.capacity}
+      </div>
+
       <div className={styles.readout}>
         {snap.plan
           ? `plan: ${snap.plan.requestCount} req · zWin ${snap.plan.zWin} · ${snap.plan.misses} miss`

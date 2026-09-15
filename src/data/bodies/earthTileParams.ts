@@ -11,6 +11,8 @@
  * (`tools/textures/buildSurfaceTiles.ts`) are the fetch/bake floors.
  */
 
+import { HEIGHT_POSTS_PER_TILE } from '../scene/heightTileFormat';
+
 /** Full equirectangular width, in texels, of pyramid level 0. Level `z` is
  *  `EARTH_EQUIRECT_BASE_WIDTH_PX << z` wide and half that tall, so `z = 4` is
  *  exactly the 8192 × 4096 whole-globe texture the `large` tier binds.
@@ -27,6 +29,11 @@ export const EARTH_TILE_PX = 512;
  *  working set past the old 64-slot ceiling; 8192 is also WebGPU's baseline
  *  maxTextureDimension2D, so no limit request is needed. (Design 6.) */
 export const EARTH_TILE_ATLAS_SIDE = 8192;
+
+/** Physical edge of the HEIGHT atlas: the same 16 x 16 = 256 slots as the
+ *  albedo atlas — the cut is 1:1 between the two products — at the height
+ *  tile's 129-post stride, so 2064 px of `r32float`, 17.0 MB. (Spec §5.5.) */
+export const HEIGHT_TILE_ATLAS_SIDE = 16 * HEIGHT_POSTS_PER_TILE;
 
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than
  *  the asset queue's: many small streaming fetches during flight (~33 KB each),

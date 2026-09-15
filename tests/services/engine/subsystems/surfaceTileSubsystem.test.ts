@@ -39,6 +39,9 @@ vi.mock('../../../../src/utils/scene/fetchSurfaceTileManifest', () => ({
 vi.mock('../../../../src/utils/network/fetchSurfaceTileBitmap', () => ({
   fetchSurfaceTileBitmap: vi.fn(),
 }));
+vi.mock('../../../../src/utils/network/fetchHeightTile', () => ({
+  fetchHeightTile: vi.fn(),
+}));
 
 import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
 import type { SurfaceTilePlan } from '../../../../src/@types/scene/SurfaceTilePlan';
@@ -50,8 +53,17 @@ import {
 } from '../../../../src/services/engine/subsystems/surfaceTileSubsystem';
 import { fetchSurfaceTileManifest } from '../../../../src/utils/scene/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfaceTileBitmap';
+import { fetchHeightTile } from '../../../../src/utils/network/fetchHeightTile';
 import { earthBaseLevelForTier } from '../../../../src/utils/scene/earthBaseLevelForTier';
-import { EARTH_TILE_ATLAS_SIDE, EARTH_TILE_PX } from '../../../../src/data/bodies/earthTileParams';
+import {
+  EARTH_TILE_ATLAS_SIDE,
+  EARTH_TILE_PX,
+  HEIGHT_TILE_ATLAS_SIDE,
+} from '../../../../src/data/bodies/earthTileParams';
+import {
+  HEIGHT_POSTS_PER_TILE,
+  HEIGHT_TILE_POST_COUNT,
+} from '../../../../src/data/scene/heightTileFormat';
 
 /** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
  *  bake sits one level above. */
@@ -191,12 +203,25 @@ function recordingDevice(): GPUDevice {
 }
 
 const TILE = { product: 'albedo', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
+/** The SAME (z, x, y) as `TILE`, in the other product — the pair that makes
+ *  "keyed by the full tile path" an assertion rather than a claim. */
+const HEIGHT_TILE = { product: 'height', z: MIN_TILE_LEVEL, x: 0, y: 0 } as const;
 // Sub-camera on the prime meridian/equator — an arbitrary but exactly
 // predictable direction (lonDeg 0, latDeg 0) for the debug-snapshot test below.
 const SUB_CAMERA_EQUATOR_PRIME: SurfaceTilePlan['subCameraDirLocal'] = [1, 0, 0];
 const ENGAGED: SurfaceTilePlan = {
   zWin: MIN_TILE_LEVEL,
   requests: [{ tile: TILE, screenPx: EARTH_TILE_PX }],
+  subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
+};
+/** The shape the two-product walk emits: every tile requested in both
+ *  products at the same (z, x, y). */
+const BOTH_PRODUCTS: SurfaceTilePlan = {
+  zWin: MIN_TILE_LEVEL,
+  requests: [
+    { tile: TILE, screenPx: EARTH_TILE_PX },
+    { tile: HEIGHT_TILE, screenPx: EARTH_TILE_PX },
+  ],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
 /** At the `large` tier's base level exactly: the density that whole-globe
@@ -433,6 +458,112 @@ describe('surfaceTileSubsystem residentSlot', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(subsystem.residentSlot(TILE)).toBeNull();
+  });
+});
+
+/**
+ * The second product's stream (§5.5): its own `r32float` atlas at a 129-post
+ * slot stride, driven by the same plan and answered by the same residency
+ * query. The two are told apart by `product` alone — every key is a full tile
+ * path — so what this pins is that the dispatch exists at all: a height
+ * payload uploaded into the albedo atlas (or a height key resolved against the
+ * albedo atlas's slot geometry) is a slot the walk then reports as resident
+ * while it holds someone else's bytes.
+ */
+describe('surfaceTileSubsystem height stream', () => {
+  /** A subsystem with the manifest landed and BOTH products of `TILE` fetched. */
+  async function engagedWithBothProducts() {
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
+      close: () => {},
+    } as unknown as ImageBitmap);
+    vi.mocked(fetchHeightTile).mockResolvedValue({
+      subtreeMinM: -10,
+      subtreeMaxM: 20,
+      geometricResidualM: 0,
+      heightM: new Float32Array(HEIGHT_TILE_POST_COUNT),
+    });
+
+    const subsystem = createSurfaceTileSubsystem({
+      device: recordingDevice(),
+      requestRender: () => {},
+    });
+    subsystem.plannerParams('earth', BASE_LEVEL);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    subsystem.update({ bodyId: 'earth', plan: BOTH_PRODUCTS });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return subsystem;
+  }
+
+  it('lands a height request in the height atlas and resolves residency by product', async () => {
+    const subsystem = createSurfaceTileSubsystem({
+      device: recordingDevice(),
+      requestRender: () => {},
+    });
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchHeightTile).mockResolvedValue({
+      subtreeMinM: -10,
+      subtreeMaxM: 20,
+      geometricResidualM: 0,
+      heightM: new Float32Array(HEIGHT_TILE_POST_COUNT),
+    });
+    subsystem.plannerParams('earth', BASE_LEVEL);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    // Height ALONE in the plan: the albedo tile at the same (z, x, y) stays
+    // unrequested, so a residency map that ignored `product` would answer both.
+    subsystem.update({
+      bodyId: 'earth',
+      plan: {
+        zWin: MIN_TILE_LEVEL,
+        requests: [{ tile: HEIGHT_TILE, screenPx: EARTH_TILE_PX }],
+        subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    const resolved = subsystem.residentSlot(HEIGHT_TILE);
+    expect(resolved).not.toBeNull();
+    expect(subsystem.residentSlot(TILE)).toBeNull();
+    expect(subsystem.getHeightAtlasView()).not.toBeNull();
+    // Resolved against the HEIGHT atlas's own geometry (129-post slots in a
+    // 2064 texture), not the albedo atlas's 512-in-8192 — the two fractions
+    // differ, so this is the assertion a shared-atlas slip fails.
+    const slotFraction = HEIGHT_POSTS_PER_TILE / HEIGHT_TILE_ATLAS_SIDE;
+    expect(resolved!.atlasUvScale[0]).toBeCloseTo(slotFraction);
+    expect(resolved!.atlasUvScale[1]).toBeCloseTo(slotFraction);
+
+    const snap = subsystem.getDebugSnapshot();
+    expect(snap.height).toEqual({
+      used: 1,
+      capacity: (HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_PER_TILE) ** 2,
+    });
+    // The per-level rows stay the albedo product's: a height tile counted
+    // there would read as albedo residency the walk does not have.
+    expect(snap.levels).toEqual([]);
+  });
+
+  it('clears both products’ residency when the body stands down', async () => {
+    const subsystem = await engagedWithBothProducts();
+    expect(subsystem.residentSlot(TILE)).not.toBeNull();
+    expect(subsystem.residentSlot(HEIGHT_TILE)).not.toBeNull();
+
+    // A different body than the engaged one stands the old one down (§ one
+    // engaged); its own params never resolve, so nothing re-engages here.
+    subsystem.update({ bodyId: 'planet', plan: BOTH_PRODUCTS });
+    expect(subsystem.getAtlasView()).toBeNull();
+    expect(subsystem.getHeightAtlasView()).toBeNull();
+
+    // Both atlases are fresh on re-engage, so both products must re-fetch: a
+    // residency map that survived the stand-down would report slots in the
+    // new, empty atlas — the same stale-rect bug eviction already guards.
+    const albedoCalls = vi.mocked(fetchSurfaceTileBitmap).mock.calls.length;
+    const heightCalls = vi.mocked(fetchHeightTile).mock.calls.length;
+    subsystem.update({ bodyId: 'earth', plan: BOTH_PRODUCTS });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length).toBe(albedoCalls + 1);
+    expect(vi.mocked(fetchHeightTile).mock.calls.length).toBe(heightCalls + 1);
   });
 });
 
