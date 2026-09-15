@@ -11,9 +11,16 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { Project, SyntaxKind } from 'ts-morph';
-import { readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import {
+  Project,
+  SyntaxKind,
+  type PropertyDeclaration,
+  type PropertySignature,
+  type SourceFile,
+  type VariableDeclaration,
+} from 'ts-morph';
+import { readFileSync } from 'node:fs';
+import { walkFiles } from '../../../helpers/conventions/walkFiles';
 
 const NAME_PATTERN = /surface|regime|engaged/i;
 // Exact boolean-shaped type text only: a narrowing like `true` or `false`
@@ -29,15 +36,7 @@ const SWEPT_DIRS: readonly string[] = [
   'src/@types/camera',
 ];
 
-function walk(dir: string, extensions: readonly string[]): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) return walk(p, extensions);
-    return extensions.some((ext) => p.endsWith(ext)) ? [p] : [];
-  });
-}
-
-const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walk(dir, ['.ts', '.d.ts']));
+const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walkFiles(dir, ['.ts', '.d.ts']));
 
 // Allow-list: pre-existing declarations the sweep's name pattern would catch
 // that are NOT a regime flag. Each entry names why it is not the thing §4
@@ -45,29 +44,36 @@ const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walk(dir, ['.ts', '
 // use instead of loosening NAME_PATTERN or BOOLEAN_TYPE_TEXTS.
 const ALLOW_LIST: ReadonlySet<string> = new Set();
 
+type NamedDeclaration = VariableDeclaration | PropertySignature | PropertyDeclaration;
+
+function namedDeclarations(sourceFile: SourceFile): readonly NamedDeclaration[] {
+  return [
+    ...sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration),
+    ...sourceFile.getDescendantsOfKind(SyntaxKind.PropertySignature),
+    ...sourceFile.getDescendantsOfKind(SyntaxKind.PropertyDeclaration),
+  ];
+}
+
+// A resolving project, not the shared parse-only one: an annotation-less
+// declaration (`const engaged = a > b`) needs the CHECKER to be recognised as
+// boolean. The text pre-filter below keeps the file set — and so the program —
+// tiny, which is where the resolve cost actually lives.
 const project = new Project({ useInMemoryFileSystem: false });
 
 function regimeBooleanNames(file: string): string[] {
-  const sourceFile = project.addSourceFileAtPath(file);
-  const hits: string[] = [];
+  // A declaration NAME the pattern matches is text in the file, so a file whose
+  // text misses it cannot hit, and parsing it is the sweep's whole cost.
+  if (!NAME_PATTERN.test(readFileSync(file, 'utf8'))) return [];
 
-  const record = (name: string, typeNode: { getText(): string } | undefined, fallbackTypeText: () => string) => {
-    if (!NAME_PATTERN.test(name)) return;
-    const typeText = typeNode !== undefined ? typeNode.getText() : fallbackTypeText();
-    if (BOOLEAN_TYPE_TEXTS.has(typeText)) hits.push(name);
-  };
-
-  for (const decl of sourceFile.getDescendantsOfKind(SyntaxKind.VariableDeclaration)) {
-    record(decl.getName(), decl.getTypeNode(), () => decl.getType().getText());
-  }
-  for (const prop of sourceFile.getDescendantsOfKind(SyntaxKind.PropertySignature)) {
-    record(prop.getName(), prop.getTypeNode(), () => prop.getType().getText());
-  }
-  for (const prop of sourceFile.getDescendantsOfKind(SyntaxKind.PropertyDeclaration)) {
-    record(prop.getName(), prop.getTypeNode(), () => prop.getType().getText());
-  }
-
-  return hits;
+  return namedDeclarations(project.addSourceFileAtPath(file))
+    .filter((decl) => NAME_PATTERN.test(decl.getName()))
+    .filter((decl) => {
+      const typeNode = decl.getTypeNode();
+      return BOOLEAN_TYPE_TEXTS.has(
+        typeNode !== undefined ? typeNode.getText() : decl.getType().getText(),
+      );
+    })
+    .map((decl) => decl.getName());
 }
 
 describe('no stored regime flag: camera.base.frame is the only discriminant', () => {
