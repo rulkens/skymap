@@ -27,7 +27,6 @@ import { watchFadesSaga } from '../../../src/store/effects/watchFadesSaga';
 import { watchFlowReseedSaga } from '../../../src/store/effects/watchFlowReseedSaga';
 import { watchBiasBakeSaga } from '../../../src/store/effects/watchBiasBakeSaga';
 import { watchSwapFormatSaga } from '../../../src/store/effects/watchSwapFormatSaga';
-import type { VisibilityLayerKey } from '../../../src/@types/animation/VisibilityLayerKey';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 
@@ -35,7 +34,7 @@ import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffec
 // vi.fn<...>() throughout — bare vi.fn() fails tsc against typed callback fields.
 export type ReconcileSpies = {
   requestRender: ReturnType<typeof vi.fn<() => void>>;
-  syncFades: ReturnType<typeof vi.fn<(rows?: readonly VisibilityLayerKey[]) => void>>;
+  syncFades: ReturnType<typeof vi.fn<() => void>>;
   reseedFlow: ReturnType<typeof vi.fn<() => void>>;
   bakeBias: ReturnType<typeof vi.fn<(mode: BiasMode) => void>>;
   applySwapFormat: ReturnType<typeof vi.fn<(desired: GPUTextureFormat) => void>>;
@@ -50,7 +49,7 @@ export function buildStore() {
 
   const reconcile: ReconcileEffects = {
     requestRender: vi.fn<() => void>(),
-    syncFades: vi.fn<(rows?: readonly VisibilityLayerKey[]) => void>(),
+    syncFades: vi.fn<() => void>(),
     reseedFlow: vi.fn<() => void>(),
     bakeBias: vi.fn<(mode: BiasMode) => void>(),
     logCameraState: vi.fn<() => void>(),

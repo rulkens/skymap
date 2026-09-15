@@ -98,20 +98,12 @@ describe('makeReconcileEffects', () => {
     expect(requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it("syncFades(['flow']) narrows the pass to { animate: true, only: ['flow'] }", () => {
-    const { state } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.syncFades(['flow']);
-    expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
-    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true, only: ['flow'] });
-  });
-
-  it('syncFades() with no rows runs a full pass (only: undefined)', () => {
+  it('syncFades() runs a full pass over every row', () => {
     const { state } = makeState();
     const effects = makeReconcileEffects(state, CANVAS);
     effects.syncFades();
     expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
-    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true, only: undefined });
+    expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
   });
 
   it('reseedFlow calls flowFieldRenderer.maybeReseed', () => {
