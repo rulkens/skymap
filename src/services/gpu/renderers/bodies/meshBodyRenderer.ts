@@ -42,8 +42,12 @@ export function createMeshBodyRenderer(
     addressModeV: 'repeat',
   });
 
-  const bindGroupLayout = device.createBindGroupLayout({
-    label: 'meshBody-bgl',
+  // Group 0 holds what a body owns, group 1 what the renderer owns. Binding 1
+  // of group 0 is vacant: the sampler lives in group 1, and renumbering the
+  // texture bindings would desync this layout from `MESH_TEXTURE_SLOTS`, which
+  // the shader's decorations mirror by hand.
+  const bodyBindGroupLayout = device.createBindGroupLayout({
+    label: 'meshBody-body-bgl',
     entries: [
       {
         binding: 0,
@@ -51,13 +55,23 @@ export function createMeshBodyRenderer(
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
         buffer: { type: 'uniform', minBindingSize: MESH_BODY_UNIFORM_BYTES },
       },
-      { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
       ...MESH_TEXTURE_SLOTS.map((slot) => ({
         binding: slot.binding,
         visibility: GPUShaderStage.FRAGMENT,
         texture: { sampleType: 'float' as const },
       })),
     ],
+  });
+
+  const globalBindGroupLayout = device.createBindGroupLayout({
+    label: 'meshBody-global-bgl',
+    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } }],
+  });
+
+  const globalBindGroup = device.createBindGroup({
+    label: 'meshBody-global-bg',
+    layout: globalBindGroupLayout,
+    entries: [{ binding: 0, resource: sampler }],
   });
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'meshBody.vertex');
@@ -67,7 +81,7 @@ export function createMeshBodyRenderer(
     label: 'meshBody-pipeline',
     layout: device.createPipelineLayout({
       label: 'meshBody-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
+      bindGroupLayouts: [bodyBindGroupLayout, globalBindGroupLayout],
     }),
     vertex: {
       module: vsModule,
@@ -180,10 +194,9 @@ export function createMeshBodyRenderer(
       uniformBuffer,
       bindGroup: device.createBindGroup({
         label: `meshBody-bg-${id}`,
-        layout: bindGroupLayout,
+        layout: bodyBindGroupLayout,
         entries: [
           { binding: 0, resource: { buffer: uniformBuffer } },
-          { binding: 1, resource: sampler },
           ...MESH_TEXTURE_SLOTS.map((slot, i) => ({
             binding: slot.binding,
             resource: textures[i]!.createView(),
@@ -213,6 +226,7 @@ export function createMeshBodyRenderer(
     device.queue.writeBuffer(res.uniformBuffer, 0, uniforms);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, res.bindGroup);
+    pass.setBindGroup(1, globalBindGroup);
     for (let slot = 0; slot < res.vertexBuffers.length; slot++) {
       pass.setVertexBuffer(slot, res.vertexBuffers[slot]!);
     }

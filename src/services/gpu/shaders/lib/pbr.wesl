@@ -14,8 +14,8 @@
 //     degrades gracefully to ideal Lambert. Tinted by the surface 'albedo'.
 //   - SPECULAR — light that reflects off the microscopic facets of the surface
 //     without entering it. Modelled with the Cook-Torrance microfacet BRDF
-//     'D * G * F / (4 * NoV * NoL)'. For a dielectric this lobe is nearly
-//     white (see the F0 note), so it is a scalar here, not albedo-tinted.
+//     'D * G * F / (4 * NoV * NoL)'. Tinted by the caller's 'f0', never by
+//     'albedo'.
 //
 // Both terms are true BRDF values (units of 1/steradian): the diffuse carries
 // its '1 / PI' and the specular carries its '1 / (4 NoV NoL)', so the two are on
@@ -33,13 +33,8 @@
 //     here means the one ambient constant stays the single source of truth (the
 //     same discipline 'bodyLighting.wesl' documents), and the night hemisphere's
 //     lift is decided in one place for every body.
-//   - No metalness, no image-based lighting (IBL), no multi-scatter energy
-//     compensation. Skymap's bodies are dielectrics (rock, water, ice) lit by a
-//     single analytic sun, so 'f0' is a scalar dielectric reflectance (the
-//     Fresnel value at normal incidence, ~0.02 for water, ~0.04 for rock — the
-//     2-4% of light a non-metal reflects straight back). A full metalness
-//     workflow would make 'f0' an RGB derived from a metallic mask; we have no
-//     metals, so a scalar is the honest representation and costs nothing to read.
+//   - No image-based lighting (IBL), no multi-scatter energy compensation, and
+//     no metal/dielectric blend: 'f0' arrives already blended from the caller.
 //   - No energy-conserving diffuse/specular coupling (the 'kD = 1 - F' factor).
 //     The composition is the literal 'diffuse * albedo + specular' the Earth
 //     fragment expects. For a dielectric F0 the double-count at normal incidence
@@ -188,8 +183,8 @@ fn geometrySmithGGX(NoV: f32, NoL: f32, roughness: f32) -> f32 {
 //
 // Schlick's polynomial approximates the full Fresnel equations to within a
 // percent or so across the whole angular range while costing five multiplies
-// instead of a pair of transcendental refraction terms. 'f0' is the scalar
-// dielectric reflectance at normal incidence (see the module header).
+// instead of a pair of transcendental refraction terms. 'f0' is the
+// normal-incidence reflectance (~0.02-0.04 for a dielectric).
 //
 // 'cosTheta' is expected to be 'VoH' (view dotted with the half-vector), the
 // angle at the microfacet — 'pbrDirect' supplies it. The '(1 - cosTheta)' is
@@ -197,7 +192,7 @@ fn geometrySmithGGX(NoV: f32, NoL: f32, roughness: f32) -> f32 {
 // feed a negative base into the odd power. '(1-cosTheta)^5' is expanded as
 // 'm*m * m*m * m' to avoid a 'pow' call.
 
-fn fresnelSchlick(cosTheta: f32, f0: f32) -> f32 {
+fn fresnelSchlick(cosTheta: f32, f0: vec3<f32>) -> vec3<f32> {
   let m = clamp(1.0 - cosTheta, 0.0, 1.0);
   let m2 = m * m;
   return f0 + (1.0 - f0) * (m2 * m2 * m);
@@ -264,7 +259,7 @@ fn orenNayarDiffuse(n: vec3<f32>, v: vec3<f32>, l: vec3<f32>, roughness: f32) ->
 // 'litShade' in 'lib/bodyLighting.wesl'):
 //   n — surface normal.  v — surface -> camera.  l — surface -> sun.
 // 'albedo' is the linear-RGB surface colour, 'roughness' the perceptual
-// roughness in [0, 1], 'f0' the scalar dielectric normal-incidence reflectance.
+// roughness in [0, 1], 'f0' the per-channel normal-incidence reflectance.
 //
 //   half   = normalize(v + l)               (the mirror bisector)
 //   spec   = D(NoH) * G(NoV,NoL) * F(VoH) / (4 * NoV * NoL)
@@ -285,7 +280,7 @@ fn pbrDirect(
   l: vec3<f32>,
   albedo: vec3<f32>,
   roughness: f32,
-  f0: f32,
+  f0: vec3<f32>,
 ) -> vec3<f32> {
   let h = normalize(v + l);
   let NoL = max(dot(n, l), 0.0);
@@ -296,9 +291,9 @@ fn pbrDirect(
   let D = distributionGGX(NoH, roughness);
   let G = geometrySmithGGX(NoV, NoL, roughness);
   let F = fresnelSchlick(VoH, f0);
-  let specular = (D * G * F) / max(4.0 * NoV * NoL, 1e-4);
+  let specular = (D * G) * F / max(4.0 * NoV * NoL, 1e-4);
 
   let diffuse = orenNayarDiffuse(n, v, l, roughness) * albedo;
 
-  return (diffuse + vec3<f32>(specular)) * NoL;
+  return (diffuse + specular) * NoL;
 }

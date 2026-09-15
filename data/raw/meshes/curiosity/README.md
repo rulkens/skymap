@@ -47,11 +47,12 @@ npm run prebake-mesh -- curiosity    # Blender 5.2 LTS; ~10 s, not run in CI
 `tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 206**,
 drops the camera markers and the `pivot` / `shadow2` helper geometry, joins the
 73 remaining parts, applies their geometry-nodes modifiers, smart-UV-projects
-and bakes all 16 surviving materials into one 2048² albedo atlas. Its output
-and the loose `curiosity.prebaked.albedo.png` beside it are gitignored build
-products — regenerate them, don't archive them. Having no normal or
-metallicRoughness map is expected: `buildMeshes` substitutes 1×1 constants and
-records `normalMapSubstituted: true`.
+and bakes all 16 surviving materials into one 2048² atlas per `BAKE_PASSES`
+row — today a single albedo row. Its output and the loose
+`curiosity.prebaked.albedo.png` beside it are gitignored build products —
+regenerate them, don't archive them. Having no normal or metallicRoughness map
+is expected: `buildMeshes` substitutes 1×1 constants and lists them
+under `substituted`.
 
 Three things about this file bite:
 

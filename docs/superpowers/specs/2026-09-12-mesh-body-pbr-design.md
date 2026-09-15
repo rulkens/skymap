@@ -144,3 +144,14 @@ Lambert term): the host planet is in the probe.
 Shape signed off; T1–T4 ruled 2026-09-13 (above). Packaging RULED 2026-09-12: #693
 landed first without PBR; this spec is its own effort off main — P1 (keyed cubemap
 captures) as a standalone prep PR, P2–P5 plus the feature on the feature PR.
+
+### Plan-time rulings (user-accepted 2026-09-14)
+
+Plans: `plans/2026-09-14-mesh-body-pbr-prep.md` (P2–P5) and
+`plans/2026-09-14-mesh-body-pbr.md` (feature), PR #708. Rulings that change the shape
+above: P2 builds the global group only — no `bindProbe`/`setEnvBrdfLut` (probe minted in
+`setMesh`, LUT a factory input); ONE `probe` capture row with a per-frame subject, not one
+per body; all six probe faces + prefilter in one frame, one command buffer per face (body
+renderers write one uniform buffer per draw); probe roster = sky blit + host body only;
+P4 keeps Metallic 0 / Roughness 0.7 until the feature's rows replace them. Perf gates are
+skipped for this effort.

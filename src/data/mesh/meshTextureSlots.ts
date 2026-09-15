@@ -1,17 +1,20 @@
 /**
- * meshTextureSlots — the three baked material maps of a mesh body, each with the
- * bind-group binding the shader reads it at. Only albedo is sRGB: a metal-rough
- * or normal map decoded through sRGB returns wrong roughness and wrong slopes.
+ * meshTextureSlots — the baked material maps of a mesh body: the bind-group
+ * binding the shader reads each at, and the `<key><suffix>.png` the bake writes
+ * and the fetcher asks for (those file names are already on R2, so they are
+ * fixed). Only albedo is sRGB: a metal-rough or normal map decoded through sRGB
+ * returns wrong roughness and wrong slopes.
  */
 
-import type { MeshAsset } from '../../@types/data/mesh/MeshAsset';
+import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 
 export const MESH_TEXTURE_SLOTS = [
-  { field: 'albedo', binding: 2, format: 'rgba8unorm-srgb' },
-  { field: 'metalRough', binding: 3, format: 'rgba8unorm' },
-  { field: 'normalMap', binding: 4, format: 'rgba8unorm' },
+  { field: 'albedo', binding: 2, format: 'rgba8unorm-srgb', suffix: '_albedo' },
+  { field: 'metalRough', binding: 3, format: 'rgba8unorm', suffix: '_mr' },
+  { field: 'normalMap', binding: 4, format: 'rgba8unorm', suffix: '_normal' },
 ] as const satisfies readonly {
-  field: keyof MeshAsset;
+  field: MeshTextureField;
   binding: number;
   format: GPUTextureFormat;
+  suffix: string;
 }[];
