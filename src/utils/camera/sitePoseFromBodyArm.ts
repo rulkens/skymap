@@ -26,7 +26,10 @@ export function sitePoseFromBodyArm(
   const eye = bodyFixedEyeM(arm);
   const rel = [eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]] as const;
   const rangeM = Math.hypot(rel[0], rel[1], rel[2]);
-  const dir = [rel[0] / rangeM, rel[1] / rangeM, rel[2] / rangeM] as const;
+  // An authored `distance: 0` reaches here through `decode`, and a NaN heading
+  // never recovers — `clampedSitePose` floors the range, not the angles.
+  const d = Math.max(rangeM, 1e-9);
+  const dir = [rel[0] / d, rel[1] / d, rel[2] / d] as const;
   return clampedSitePose(
     {
       siteId: site.id as BodyId,
