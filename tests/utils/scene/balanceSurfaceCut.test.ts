@@ -1,9 +1,10 @@
 /**
- * The level balance is what bounds `edgeCoarser` to one bit per edge, and one
- * bit is the whole stitching budget F2's vertex stage gets (spec §6.2). Since
- * R14 it works on the HEIGHT level a leaf inherited, not the leaf's own level:
- * a two-level step, or a bit on the wrong edge, is invisible in F1 — nothing
- * reads either — and shows up later as a crack nobody can tie back to the walk. * Hand-built cuts, because the interesting shapes (a deep island beside a
+ * The level balance is what decides each edge's 3-valued code, and that code is
+ * the whole stitching budget F2's vertex stage gets (spec §6.2): 1 is sampled
+ * across at doubled stride, 2 is skirted. Since R14 it works on the HEIGHT
+ * level a leaf inherited, not the leaf's own: a code on the wrong edge, or a 2
+ * where a 1 belongs, shows up as a crack nobody can tie back to the walk.
+ * Hand-built cuts, because the interesting shapes (a deep island beside a
  * coarse neighbour, the antimeridian seam) are ones a camera fixture reaches
  * only by accident.
  */
@@ -175,14 +176,15 @@ describe('balanceSurfaceCut', () => {
     for (const [x, y] of ring) {
       expect(find(balanced, 7, x, y).edgeCoarser, `ring tile ${x},${y}`).toEqual([0, 0, 0, 0]);
     }
-    // And the fine side carries no bit either: one bit can only collapse a
-    // one-level step, and this one is six.
+    // The island's north-west leaf carries code 2 on exactly the two edges
+    // facing the ring: six levels is past anything a doubled stride can meet,
+    // so F2 skirts those and neither side coarsens.
     expect(find(balanced, 13, islandZ7X * span, islandZ7Y * span).edgeCoarser).toEqual([
-      0, 0, 0, 0,
+      2, 0, 0, 2,
     ]);
   });
 
-  it('leaves the bits clear when nothing coarser is resident to climb to', () => {
+  it('marks the edge a band seam when nothing coarser is resident to climb to', () => {
     const cut = [leafAt(13, 40, 20), leafAt(13, 41, 20, 11)];
 
     const balanced = balance(cut, UNCAPPED, heightsAt([13]));
@@ -191,7 +193,7 @@ describe('balanceSurfaceCut', () => {
     // coarse one — the seam survives rather than the leaf.
     expect(worstStep(balanced), 'the step survives, the leaf is not dropped').toBe(2);
     expect(balanced).toHaveLength(2);
-    expect(find(balanced, 13, 40, 20).edgeCoarser).toEqual([0, 0, 0, 0]);
+    expect(find(balanced, 13, 40, 20).edgeCoarser).toEqual([0, 2, 0, 0]);
   });
 
   it('sets the edge bit toward a band-ceiling neighbour without coarsening either side', () => {

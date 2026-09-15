@@ -270,31 +270,13 @@ describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment
 });
 
 /**
- * HEIGHT_POSTS_PER_TILE (heightTileFormat.ts) is mirrored into
- * earthSurfaceTile's two stages: the vertex addresses a post inside a height
- * slot by `(HEIGHT_POSTS_PER_TILE - 1) / meshResolution`, the fragment turns a
- * uv into a cell over the same 128 cells. A drift there reads the wrong slot's
- * posts along every patch edge. The stride must also be an integer — a
- * fractional one lands template vertices between posts, so the two sides of an
- * LOD boundary stop sharing lattice points and the collapse stops closing it.
+ * Both shader stages read their cell count from the instance record's
+ * `heightCells` (R14), so neither mirrors HEIGHT_POSTS_PER_TILE any more. What
+ * still has to hold is that a leaf drawing its OWN tile lands every template
+ * vertex exactly on a post: a fractional stride there would put the two sides
+ * of an LOD boundary on lattice points they cannot share.
  */
-describe('HEIGHT_POSTS_PER_TILE parity (heightTileFormat.ts ↔ earthSurfaceTile shaders)', () => {
-  const files = [
-    'src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl',
-    'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl',
-  ];
-
-  it("each file's HEIGHT_POSTS_PER_TILE equals the TS export", () => {
-    for (const file of files) {
-      const weslValue = readWeslConst(file, 'HEIGHT_POSTS_PER_TILE');
-      expect(weslValue, `HEIGHT_POSTS_PER_TILE is missing from ${file}`).toBeDefined();
-      expect(
-        weslValue,
-        `${file}: WESL HEIGHT_POSTS_PER_TILE (${weslValue}) does not match TS HEIGHT_POSTS_PER_TILE (${HEIGHT_POSTS_PER_TILE})`,
-      ).toBe(HEIGHT_POSTS_PER_TILE);
-    }
-  });
-
+describe('HEIGHT_POSTS_PER_TILE vs the template (heightTileFormat.ts ↔ earthTileParams.ts)', () => {
   it('the post stride per template cell is integral', () => {
     expect((HEIGHT_POSTS_PER_TILE - 1) % EARTH_SURFACE_TILE_MESH_RESOLUTION).toBe(0);
   });

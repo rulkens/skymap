@@ -6,6 +6,7 @@
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::PatchInstance;
 import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
+import package::bodies::earthSurfaceTile::lattice::latticeHeightM;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
 @group(0) @binding(1) var<storage, read> patches: array<PatchInstance>;
@@ -15,11 +16,7 @@ import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
 // every patch edge (spec section 5.5 -- three independent reasons).
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 
-// Mirrors src/data/scene/heightTileFormat.ts -- parity-tested in
-// constants.parity.test.ts, '?static' linking does no value injection.
-const HEIGHT_POSTS_PER_TILE: u32 = 129u;
-
-// Mirrors SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts), likewise
+// Mirrors SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts),
 // parity-tested -- it is the eye-check's one tuning knob (F2-R3).
 const SURFACE_TILE_SKIRT_DEPTH_FRACTION: f32 = 0.05;
 
@@ -62,21 +59,24 @@ fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32, height
   );
 }
 
-// Twin of src/utils/scene/collapseTemplateIndex.ts. Edge order is R9's
-// [west, east, south, north] = template i = 0, i = n, j = 0, j = n. Code 1
-// only: at 2 the neighbour is more than one level away and has no post at the
-// even index either, so that edge is skirted instead.
-fn collapseTemplateIndex(i: u32, j: u32, n: u32, edgeCoarser: u32) -> vec2<u32> {
+// Edge order is R9's [west, east, south, north] = template i = 0, i = n,
+// j = 0, j = n. Code 1 doubles the sampling stride along that edge, which is
+// exactly the coarse neighbour's own lattice; at code 2 the neighbour is more
+// than one level away and has no post to meet, so that edge is skirted. The
+// stride is scalar rather than per-axis because a boundary vertex's FIXED
+// coordinate is always a multiple of 2 (0 or 'cells'), where doubling is a
+// no-op.
+fn collapseStride(i: u32, j: u32, n: u32, edgeCoarser: u32) -> f32 {
   let west = edgeCoarser & 3u;
   let east = (edgeCoarser >> 2u) & 3u;
   let south = (edgeCoarser >> 4u) & 3u;
   let north = (edgeCoarser >> 6u) & 3u;
-  let alongWestEast = (i == 0u && west == 1u) || (i == n && east == 1u);
-  let alongSouthNorth = (j == 0u && south == 1u) || (j == n && north == 1u);
-  return vec2<u32>(
-    select(i, i - (i % 2u), alongSouthNorth),
-    select(j, j - (j % 2u), alongWestEast),
-  );
+  let onCollapsedEdge =
+    (i == 0u && west == 1u) ||
+    (i == n && east == 1u) ||
+    (j == 0u && south == 1u) ||
+    (j == n && north == 1u);
+  return select(1.0, 2.0, onCollapsedEdge);
 }
 
 @vertex
@@ -89,33 +89,36 @@ fn vs(
   let row = n + 1u;
   let gridCount = row * row;
   let isSkirt = vertexIndex >= gridCount;
-  // A skirt vertex IS its boundary post -- same collapse, same post index, same
+  // A skirt vertex IS its boundary post -- same lattice position, same
   // interpolants; only the height it is placed at differs (depthM below).
   var edge = 0u;
-  var rawI = vertexIndex % row;
-  var rawJ = vertexIndex / row;
+  var i = vertexIndex % row;
+  var j = vertexIndex / row;
   if (isSkirt) {
     let sid = vertexIndex - gridCount;
     edge = sid / row;
     let k = sid % row;
-    if (edge == 0u) { rawI = 0u; rawJ = k; }
-    else if (edge == 1u) { rawI = n; rawJ = k; }
-    else if (edge == 2u) { rawI = k; rawJ = 0u; }
-    else { rawI = k; rawJ = n; }
+    if (edge == 0u) { i = 0u; j = k; }
+    else if (edge == 1u) { i = n; j = k; }
+    else if (edge == 2u) { i = k; j = 0u; }
+    else { i = k; j = n; }
   }
-  // The snapped pair feeds BOTH (s, t) and the post index, so the two sides of
-  // a collapsed edge name the same lattice point and read the same post.
-  let ij = collapseTemplateIndex(rawI, rawJ, n, inst.edgeCoarser);
-  let i = ij.x;
-  let j = ij.y;
   let s = f32(i) / f32(n);
   let t = f32(j) / f32(n);
 
-  // The row flip: the anchor's lat0 is the patch's SOUTH edge and j counts
-  // north, while a height tile's row 0 is its NORTH row.
-  let stride = (HEIGHT_POSTS_PER_TILE - 1u) / n;
-  let post = vec2<u32>(i * stride, (HEIGHT_POSTS_PER_TILE - 1u) - j * stride);
-  let h = textureLoad(heightAtlas, inst.heightSlotOrigin + post, 0).r;
+  // Lattice position in the leaf's sub-rect. The row flip: the anchor's lat0
+  // is the patch's SOUTH edge and j counts north, while row 0 of a height
+  // lattice is its NORTH row. 'cells' is the leaf's own, so an inherited
+  // lattice (R14) lands template vertices BETWEEN ancestor posts rather than
+  // off the end of a 128-cell assumption.
+  let cells = f32(inst.heightCells);
+  let p = vec2<f32>(f32(i) * cells / f32(n), f32(n - j) * cells / f32(n));
+  let h = latticeHeightM(
+    heightAtlas,
+    inst.heightSlotOrigin,
+    p,
+    collapseStride(i, j, n, inst.edgeCoarser),
+  );
 
   // Zero on every edge but a band seam (code 2), where the ring becomes a wall
   // hanging radially inward -- at zero the quads are degenerate and cost a cull.
@@ -150,7 +153,7 @@ fn vs(
   out.fallbackUvOrigin = inst.fallbackRect.xy;
   out.fallbackUvScale = inst.fallbackRect.zw;
   out.fadeWeight = inst.fadeWeight;
-  out.heightSlotOrigin = inst.heightSlotOrigin;
+  out.heightLattice = vec3<u32>(inst.heightSlotOrigin, inst.heightCells);
   out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
   // Camera minus vertex, inverted through the same rotation and scaled into
   // body-radius units. Cancellation-free at metre scale, unlike the

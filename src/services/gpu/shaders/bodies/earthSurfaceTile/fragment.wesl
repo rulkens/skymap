@@ -6,6 +6,7 @@
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
+import package::bodies::earthSurfaceTile::lattice::latticeCellM;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::nightLights::nightLights;
@@ -24,11 +25,6 @@ import package::lib::math::TAU;
 @group(0) @binding(7) var nightTexture: texture_2d<f32>;
 // Binding 8 was the whole-globe normal map; it is the base globe's alone now.
 @group(0) @binding(9) var cloudTexture: texture_2d<f32>;
-
-// Mirrors src/data/scene/heightTileFormat.ts -- parity-tested in
-// constants.parity.test.ts, '?static' linking does no value injection.
-const HEIGHT_POSTS_PER_TILE: f32 = 129.0;
-const HEIGHT_CELLS_PER_TILE: f32 = HEIGHT_POSTS_PER_TILE - 1.0;
 
 // Mirrored from 'EARTH_TILE_ATLAS_SIDE' (earthTileParams.ts) -- parity-tested
 // in constants.parity.test.ts, ?static linking does no value injection. Half
@@ -105,32 +101,30 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;
 
   // Normal from the bilinear height cell this fragment lies in, spec section
-  // 7.2's FORWARD difference (a central one goes one-sided at the 129th post
+  // 7.2's FORWARD difference (a central one goes one-sided at the last post
   // and seams every tile edge). Twin: src/utils/scene/surfaceNormalFromHeightCell.ts.
   // 'in.uv.y' already runs 0 at the patch's NORTH edge (vertex.wesl's
-  // 'uv = (s, 1 - t)'), which is the height tile's own row order.
-  let col = in.uv.x * HEIGHT_CELLS_PER_TILE;
-  let rowF = in.uv.y * HEIGHT_CELLS_PER_TILE;
-  let i0 = clamp(floor(col), 0.0, HEIGHT_CELLS_PER_TILE - 1.0);
-  let j0 = clamp(floor(rowF), 0.0, HEIGHT_CELLS_PER_TILE - 1.0);
+  // 'uv = (s, 1 - t)'), which is the lattice's own row order. Cells are the
+  // LEAF's (R14), not a fixed 128: an inherited lattice has fewer, and the
+  // post spacing below is what turns them into metres.
+  let cells = f32(in.heightLattice.z);
+  let col = in.uv.x * cells;
+  let rowF = in.uv.y * cells;
+  let i0 = clamp(floor(col), 0.0, cells - 1.0);
+  let j0 = clamp(floor(rowF), 0.0, cells - 1.0);
   let cellU = col - i0;
   let cellV = rowF - j0;
-  let cell = in.heightSlotOrigin + vec2<u32>(u32(i0), u32(j0));
-  let hNW = textureLoad(heightAtlas, cell, 0).r;
-  let hNE = textureLoad(heightAtlas, cell + vec2<u32>(1u, 0u), 0).r;
-  let hSW = textureLoad(heightAtlas, cell + vec2<u32>(0u, 1u), 0).r;
-  let hSE = textureLoad(heightAtlas, cell + vec2<u32>(1u, 1u), 0).r;
+  // The same sampler the vertex stage displaces from, at stride 1 and an
+  // integer post, where its bilinear weights are 0 -- four loads, not sixteen.
+  let h = latticeCellM(heightAtlas, in.heightLattice.xy, vec2<u32>(u32(i0), u32(j0)), 1u);
 
   // The 'max' is the polar guard: cos(lat) reaches 0 on the pole row and the
   // east gradient would divide by zero.
   let lat = asin(clamp(Ng.z, -1.0, 1.0));
-  let postSpacingNM = u.radiusM * in.patchSpanRad.y / HEIGHT_CELLS_PER_TILE;
-  let postSpacingEM = max(
-    u.radiusM * cos(lat) * in.patchSpanRad.x / HEIGHT_CELLS_PER_TILE,
-    1e-3,
-  );
-  let dhdE = ((hNE - hNW) * (1.0 - cellV) + (hSE - hSW) * cellV) / postSpacingEM;
-  let dhdN = ((hNW - hSW) * (1.0 - cellU) + (hNE - hSE) * cellU) / postSpacingNM;
+  let postSpacingNM = u.radiusM * in.patchSpanRad.y / cells;
+  let postSpacingEM = max(u.radiusM * cos(lat) * in.patchSpanRad.x / cells, 1e-3);
+  let dhdE = ((h.y - h.x) * (1.0 - cellV) + (h.w - h.z) * cellV) / postSpacingEM;
+  let dhdN = ((h.x - h.z) * (1.0 - cellU) + (h.y - h.w) * cellU) / postSpacingNM;
   // Re-orthogonalized against Ng and re-normalized -- 'in.tangent' survives an
   // interpolation across the patch and is no longer guaranteed either, the
   // same treatment perturbNormal (lib/normalMap.wesl) gives it.

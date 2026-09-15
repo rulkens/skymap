@@ -19,12 +19,12 @@ import type { Vec3 } from '../../../../@types/math/Vec3';
  * `fadeWeight` f32 (12..15, filling the vec3's alignment pad) + `lon0Rad`
  * / `lat0Rad` / `dLonRad` / `dLatRad` f32 (16..31) + `albedoRect` vec4
  * (32..47) + `fallbackRect` vec4 (48..63) + `heightSlotOrigin` vec2u
- * (64..71) + `edgeCoarser` u32 (72..75) + 4 bytes of true padding (the
- * struct rounds up to the vec4s' 16-byte alignment; nothing writes them).
- * The two vec4s must stay BEFORE `heightSlotOrigin` — a vec2u declared
- * earlier pads the record past 80. Reordering the five scalars keeps the
- * stride but re-maps offsets 12..31 with no compiler signal — the layout
- * test's per-field assertions are the only guard.
+ * (64..71) + `edgeCoarser` u32 (72..75) + `heightCells` u32 (76..79, what
+ * used to be the struct's trailing pad). The two vec4s must stay BEFORE
+ * `heightSlotOrigin` — a vec2u declared earlier pads the record past 80.
+ * Reordering the five scalars keeps the stride but re-maps offsets 12..31
+ * with no compiler signal — the layout test's per-field assertions are the
+ * only guard.
  */
 export const PATCH_INSTANCE_BYTES = 80;
 
@@ -54,10 +54,14 @@ export function writePatchInstance(
   fallbackUvOriginY: number,
   fallbackUvScaleX: number,
   fallbackUvScaleY: number,
+  /** Post origin of the leaf's SUB-RECT: its height tile's slot origin plus
+   *  `SurfaceCutTile.height.originPosts`. */
   heightSlotOriginX: number,
   heightSlotOriginY: number,
   /** Pre-packed 2 bits per edge — see `io.wesl`'s `edgeCoarser` comment. */
   edgeCoarser: number,
+  /** Cells across that sub-rect: `128 >> levelDelta`. */
+  heightCells: number,
 ): void {
   view.setFloat32(base + 0, originRelEyeMX, true);
   view.setFloat32(base + 4, originRelEyeMY, true);
@@ -78,7 +82,7 @@ export function writePatchInstance(
   view.setUint32(base + 64, heightSlotOriginX >>> 0, true);
   view.setUint32(base + 68, heightSlotOriginY >>> 0, true);
   view.setUint32(base + 72, edgeCoarser >>> 0, true);
-  // Bytes 76..79 stay the scratch ArrayBuffer's zero fill (true padding).
+  view.setUint32(base + 76, heightCells >>> 0, true);
 }
 
 /**

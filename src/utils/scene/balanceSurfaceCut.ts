@@ -9,7 +9,7 @@ import { surfaceTileInBand } from './surfaceTileInBand';
  * more than one apart (R14) by climbing the finer side's lattice; leaves are
  * never added or removed. Meeting a neighbour AT its band ceiling (no tile
  * one level finer than its CURRENT height) is skipped — a permanent step
- * (R12) — but its edge bit is still set. Longitude wraps.
+ * (R12) — and gets code 2, the only way a step of 2+ survives. Longitude wraps.
  */
 export function balanceSurfaceCut(
   cut: readonly SurfaceCutTile[],
@@ -32,7 +32,7 @@ export function balanceSurfaceCut(
     if (z < minZ) minZ = z;
   }
   const heights = cut.map((leaf) => leaf.height);
-  const edges: Array<[0 | 1, 0 | 1, 0 | 1, 0 | 1]> = cut.map(() => [0, 0, 0, 0]);
+  const edges: Array<[0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2, 0 | 1 | 2]> = cut.map(() => [0, 0, 0, 0]);
 
   const heightLevel = (i: number): number => cut[i]!.id.z - heights[i]!.levelDelta;
 
@@ -124,12 +124,14 @@ export function balanceSurfaceCut(
   }
 
   // `edge ^ 1` is the same edge from the neighbour's side (west↔east,
-  // south↔north), which is how the coarser-id leaf of a pair gets its bit.
+  // south↔north), which is how the coarser-id leaf of a pair gets its code.
+  // A step of 2+ survives the fixpoint above only under R12's band-ceiling
+  // exemption, and is the seam F2 skirts rather than samples across.
   eachPair((i, j, edge) => {
     const a = heightLevel(i);
     const b = heightLevel(j);
-    if (a === b + 1) edges[i]![edge] = 1;
-    else if (b === a + 1) edges[j]![edge ^ 1] = 1;
+    if (a > b) edges[i]![edge] = a - b === 1 ? 1 : 2;
+    else if (b > a) edges[j]![edge ^ 1] = b - a === 1 ? 1 : 2;
   });
 
   // Most leaves clear balance untouched every frame; returning the SAME

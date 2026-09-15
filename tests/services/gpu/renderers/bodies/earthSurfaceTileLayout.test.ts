@@ -125,6 +125,7 @@ function fieldForExpr(expr: string): string {
   if (/^fallbackUv(Origin|Scale)[XY]$/.test(expr)) return 'fallbackRect';
   if (/^heightSlotOrigin[XY]\b/.test(expr)) return 'heightSlotOrigin';
   if (/^edgeCoarser\b/.test(expr)) return 'edgeCoarser';
+  if (/^heightCells\b/.test(expr)) return 'heightCells';
   if (/^vp\[/.test(expr)) return 'vp';
   const orientationIndex = expr.match(/^orientation\[(\d+)\]/);
   if (orientationIndex) {
@@ -193,12 +194,13 @@ describe('PatchInstance CPU/WESL layout parity', () => {
   // Pinned as absolute numbers, not derived: a vec2<u32> declared BEFORE the
   // two vec4s still parses and still packs, but pads the record past 80 bytes
   // (spec §7's field-order note), and the derived check above would follow it.
-  it('the height fields land at 64 and 72 inside an 80-byte record', () => {
+  it('the height fields land at 64, 72 and 76 inside an 80-byte record', () => {
     const { writes, structSize } = structLayout(structFields(ioWesl, 'PatchInstance'));
     expect(PATCH_INSTANCE_BYTES).toBe(80);
     expect(structSize).toBe(80);
     expect(writes.find((w) => w.field === 'heightSlotOrigin')?.offset).toBe(64);
     expect(writes.find((w) => w.field === 'edgeCoarser')?.offset).toBe(72);
+    expect(writes.find((w) => w.field === 'heightCells')?.offset).toBe(76);
   });
 
   // fieldForExpr maps every lane of a multi-lane field to one field name, so
@@ -229,6 +231,7 @@ describe('PatchInstance CPU/WESL layout parity', () => {
       129,
       258,
       0b01_10_00_10,
+      32,
     );
     expect(view.getFloat32(32, true)).toBeCloseTo(0.11); // albedoUvOriginX
     expect(view.getFloat32(36, true)).toBeCloseTo(0.22); // albedoUvOriginY
@@ -241,6 +244,7 @@ describe('PatchInstance CPU/WESL layout parity', () => {
     expect(view.getUint32(64, true)).toBe(129); // heightSlotOriginX
     expect(view.getUint32(68, true)).toBe(258); // heightSlotOriginY
     expect(view.getUint32(72, true)).toBe(0b01_10_00_10); // edgeCoarser
+    expect(view.getUint32(76, true)).toBe(32); // heightCells
   });
 });
 

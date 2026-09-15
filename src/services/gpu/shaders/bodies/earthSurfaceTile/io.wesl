@@ -15,7 +15,8 @@
 // earlier pads the record past its 80-byte stride (spec section 7's
 // field-order note). Reordering the five scalars keeps the stride but
 // re-maps offsets 12..31 with no compiler signal -- the layout test's
-// per-field assertions are the only guard.
+// per-field assertions are the only guard. 'heightCells' at 76 fills what
+// was the struct's trailing pad, so the stride is still 80.
 //
 // 'datumRadiusM' is deliberately absent: it is the per-draw uniform
 // 'SurfaceTileUniforms.radiusM' (offset 76), since one body is engaged per
@@ -47,17 +48,21 @@ struct PatchInstance {
   // 'SurfaceCutTile.albedo.fallback === null's CPU-side encoding, so the
   // fragment always has a valid second rect to sample.
   fallbackRect: vec4<f32>,
-  // Texel origin of this leaf's OWN height slot in the r32float atlas
-  // ('SurfaceCutTile.heightSlot' times the 129-post slot stride, row-major
-  // like TextureAtlas's albedo slots). A post is addressed by adding its
-  // (col, row) and reading with 'textureLoad' -- never a sampler, which
-  // would bleed the neighbouring slot in along every patch edge.
+  // Post origin of this leaf's SUB-RECT in the r32float atlas: its resident
+  // height tile's slot origin plus 'SurfaceCutTile.height.originPosts', so a
+  // leaf flattened into an ancestor's slot (R14) needs no second field. Posts
+  // are read with 'textureLoad' -- never a sampler, which would bleed the
+  // neighbouring slot in along every patch edge.
   heightSlotOrigin: vec2<u32>,
-  // How far each edge's neighbouring leaf steps UP, 2 bits per edge in R9
-  // order: code(west) | code(east) << 2 | code(south) << 4 | code(north) << 6.
-  // 0 = same level, finer or absent; 1 = exactly one level coarser, which
-  // the vertex stage collapses onto; 2 = a band seam, which it skirts.
+  // How far each edge's neighbouring leaf's HEIGHT LEVEL steps UP, 2 bits per
+  // edge in R9 order: code(west) | code(east) << 2 | code(south) << 4 |
+  // code(north) << 6. 0 = same, finer or absent; 1 = exactly one coarser,
+  // which the vertex stage samples at doubled stride (that IS the neighbour's
+  // lattice); 2 = a band seam the balance may not cross, which it skirts.
   edgeCoarser: u32,
+  // Cells across the sub-rect above: 128 >> levelDelta, so 128 on a leaf
+  // drawing its own tile. Fills what was the record's trailing pad.
+  heightCells: u32,
 };
 
 // VSOut mirrors the shape of bodies/earth/io.wesl: clip position, an
@@ -86,11 +91,12 @@ struct VSOut {
   @location(6) @interpolate(flat) fallbackUvOrigin: vec2<f32>,
   @location(7) @interpolate(flat) fallbackUvScale: vec2<f32>,
   @location(8) @interpolate(flat) fadeWeight: f32,
-  // The two facts the fragment needs to take its normal from the height cell
-  // it lies in: which slot to read, and the patch's (dLon, dLat) to turn a
-  // post step into metres. Per-tile constants, so flat -- and a u32 cannot
-  // interpolate at all.
-  @location(9) @interpolate(flat) heightSlotOrigin: vec2<u32>,
+  // What the fragment needs to take its normal from the height cell it lies
+  // in: the leaf's lattice as (origin.xy, cells) -- one location rather than
+  // two, since a sub-rect origin without its cell count addresses nothing --
+  // and the patch's (dLon, dLat) to turn a cell step into metres. Per-tile
+  // constants, so flat; a u32 cannot interpolate at all.
+  @location(9) @interpolate(flat) heightLattice: vec3<u32>,
   @location(10) @interpolate(flat) patchSpanRad: vec2<f32>,
 };
 

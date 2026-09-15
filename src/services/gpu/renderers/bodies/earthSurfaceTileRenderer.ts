@@ -234,6 +234,11 @@ export function createEarthSurfaceTileRenderer(
           : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
 
       const origin = patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM);
+      // The leaf's sub-rect of the slot it inherited (R14), not the slot
+      // itself: at `levelDelta` 0 `originPosts` is [0, 0] and the two agree.
+      const slotOriginX = (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
+      const slotOriginY =
+        Math.floor(tile.height.slot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE;
       writePatchInstance(
         patchScratchView,
         i * PATCH_INSTANCE_BYTES,
@@ -253,12 +258,13 @@ export function createEarthSurfaceTileRenderer(
         fallback.atlasUvOrigin[1],
         fallback.atlasUvScale[0],
         fallback.atlasUvScale[1],
-        (tile.height.slot % HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
-        Math.floor(tile.height.slot / HEIGHT_ATLAS_SLOTS_PER_ROW) * HEIGHT_POSTS_PER_TILE,
+        slotOriginX + tile.height.originPosts[0],
+        slotOriginY + tile.height.originPosts[1],
         tile.edgeCoarser[0] |
           (tile.edgeCoarser[1] << 2) |
           (tile.edgeCoarser[2] << 4) |
           (tile.edgeCoarser[3] << 6),
+        (HEIGHT_POSTS_PER_TILE - 1) >> tile.height.levelDelta,
       );
     }
 
