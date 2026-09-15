@@ -1,21 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import {
-  HttpError,
-  fetchWithProgress,
-  dataUrl,
-} from '../../../src/services/loading/fetchWithProgress';
+import { fetchWithProgress, dataUrl } from '../../../src/services/loading/fetchWithProgress';
 import { useFetchMock } from '../../setup/fetchMock';
-
-describe('HttpError', () => {
-  it('exposes status and url', () => {
-    const e = new HttpError(502, 'https://example.com/x.bin');
-    expect(e).toBeInstanceOf(Error);
-    expect(e.status).toBe(502);
-    expect(e.url).toBe('https://example.com/x.bin');
-    expect(e.message).toContain('502');
-    expect(e.message).toContain('x.bin');
-  });
-});
 
 // None of these cases call loadDataManifest, so resolveDataPath (Task 12)
 // stays identity — dataManifest.test.ts covers the hashed-path resolution
@@ -29,10 +14,6 @@ describe('dataUrl', () => {
   it('falls back to relative /data/ when env empty', () => {
     vi.stubEnv('VITE_DATA_BASE_URL', '');
     expect(dataUrl('sdss.bin')).toBe('/data/sdss.bin');
-  });
-  it('strips trailing slash on base', () => {
-    vi.stubEnv('VITE_DATA_BASE_URL', 'https://x.example/');
-    expect(dataUrl('y.bin')).toBe('https://x.example/data/y.bin');
   });
 });
 

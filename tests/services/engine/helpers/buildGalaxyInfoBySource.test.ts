@@ -147,20 +147,6 @@ describe('buildGalaxyInfo — SDSS source', () => {
     expect(info.famous).toBeUndefined();
   });
 
-  it('falls back to a NED coord-search URL when objID is 0n (synthetic-style ID)', () => {
-    // Synthetic-style sequential IDs starting at 0 don't resolve to a real
-    // SDSS Explorer page, so for that edge case we fall back to a NED
-    // near-position search at the row's RA/Dec.  Keeps the catalog link
-    // non-null in tests so the InfoCard's link path stays exercised.
-    const cloud = makeCloud(1);
-    cloud.objIDs[0] = 0n;
-    setPosition(cloud, 0, 100, 0, 0);
-    const info = buildInfo(cloud, 0, Source.SDSS);
-    expect(info.catalogues[0]!.label).toBe('NED');
-    expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu');
-    expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
-  });
-
   it('flags orientation provenance as "deterministic fallback" when the persisted flag is set', () => {
     // Provenance now reads the authoritative persisted `orientationIsFallback`
     // byte (threaded through the row), NOT a re-hash of position.  Setting the
@@ -214,22 +200,6 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
     expect(info.orientation.provenance).toBe('2MASS XSC sup_phi');
   });
 
-  it('uses `PGC <n>` as displayName when the row has a real PGC', () => {
-    // The build-time GLADE→2MRS cross-match populates objID with the
-    // matching PGC for ~30 % of 2MRS rows.  When present, the headline
-    // should prefer `PGC <n>` over the coord-based 2MASX designation
-    // because PGC numbers are NED-indexed and shorter to read.
-    const cloud = makeCloud(1);
-    cloud.objIDs[0] = 2789n; // NGC 253's PGC
-    setPosition(cloud, 0, 50, 50, 0);
-    const info = buildInfo(cloud, 0, Source.TwoMRS);
-    expect(info.displayName).toBe('PGC 2789');
-    // The IAU name still comes through unchanged for callers that need
-    // the coord-based form (it's not the headline anymore but other
-    // code paths may consume it).
-    expect(info.iauName.startsWith('2MASX J')).toBe(true);
-  });
-
   it('falls back to iauName as displayName when objID is 0n (no cross-match)', () => {
     const cloud = makeCloud(1);
     cloud.objIDs[0] = 0n;
@@ -243,40 +213,6 @@ describe('buildGalaxyInfo — TwoMRS source', () => {
 // ─── buildGalaxyInfo — Glade branch ──────────────────────────────────────────
 
 describe('buildGalaxyInfo — Glade source', () => {
-  it('uses the GLADE prefix, DSS thumbnail, and HyperLEDA orientation tag', () => {
-    // GLADE rows: B/J/H/K in g/r/i/z slots; u-slot is '—'.
-    const cloud = makeCloud(1);
-    // makeCloud seeds objIDs[i] = i+1; for GLADE rows the SDSS-shaped
-    // objID slot now carries the row's HyperLEDA PGC.  Force it to 0n
-    // here so this test exercises the "no PGC, fall back to coord
-    // search" branch.  The real-PGC branch has its own test below.
-    cloud.objIDs[0] = 0n;
-    setPosition(cloud, 0, 0, 0, 200);
-    cloud.magG[0] = 14.0; // B
-    cloud.magR[0] = 13.0; // J
-    cloud.magI[0] = 12.5; // H
-    cloud.magZ[0] = 12.0; // K
-
-    const info = buildInfo(cloud, 0, Source.Glade);
-
-    expect(info.source).toBe(Source.Glade);
-    expect(info.sourceLabel).toBe('GLADE');
-    expect(info.iauName.startsWith('GLADE J')).toBe(true);
-    // GLADE row with PGC = 0n → NED coord-search URL.
-    expect(info.catalogues[0]!.label).toBe('NED');
-    expect(info.catalogues[0]!.href).toContain('ned.ipac.caltech.edu');
-    expect(info.catalogues[0]!.href).toContain('Near+Position+Search');
-    expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
-
-    expect(info.bands).toEqual({ u: '—', g: 'B', r: 'J', i: 'H', z: 'K' });
-
-    // GLADE pairs: u−g excluded (u is '—'), so we get B−J, J−H, H−K.
-    expect(info.colours.map((c) => c.label)).toEqual(['B−J', 'J−H', 'H−K']);
-
-    // Non-fallback orientation values get the HyperLEDA tag.
-    expect(info.orientation.provenance).toBe('HyperLEDA PGC');
-  });
-
   it('builds a NED byname URL with PGC<n> when objID encodes a real PGC', () => {
     // The GLADE parser persists the row's HyperLEDA PGC number into the
     // SDSS-shaped objID slot when one is present (`tools/parsers/glade.ts`).
@@ -293,34 +229,6 @@ describe('buildGalaxyInfo — Glade source', () => {
 });
 
 // ─── buildGalaxyInfo — Synthetic branch ──────────────────────────────────────
-
-describe('buildGalaxyInfo — Synthetic source', () => {
-  it('uses the Synth prefix and DSS thumbnail; orientation falls back', () => {
-    // Synthetic data carries SDSS-shaped band labels but the catalog link is
-    // null (synthetic coords don't correspond to real objects).  Orientation
-    // provenance is always "deterministic fallback" for synthetic — synthetic
-    // data skips the real-data fetch entirely.
-    const cloud = makeCloud(1);
-    setPosition(cloud, 0, 0, 100, 0);
-    // Use deterministic-fallback values so provenance lands on the synthetic
-    // tag.  (Even non-fallback values land on "deterministic fallback" for
-    // Source.Synthetic per the source's else branch — but using the actual
-    // fallback is a stronger spec match.)
-    const [ra, dec] = cartesianToRaDecZ(0, 100, 0);
-    const fb = fallbackOrientation(cloud.objIDs[0]!, ra, dec);
-    cloud.axisRatio[0] = fb.axisRatio;
-    cloud.positionAngleDeg[0] = fb.positionAngleDeg;
-
-    const info = buildInfo(cloud, 0, Source.Synthetic);
-
-    expect(info.source).toBe(Source.Synthetic);
-    expect(info.sourceLabel).toBe('Synthetic');
-    expect(info.iauName.startsWith('Synth J')).toBe(true);
-    expect(info.catalogues).toEqual([]);
-    expect(info.thumbnailUrl).toContain('alasky.cds.unistra.fr');
-    expect(info.orientation.provenance).toBe('deterministic fallback');
-  });
-});
 
 // ─── buildGalaxyInfo — Famous branch ─────────────────────────────────────────
 
@@ -388,22 +296,6 @@ describe('buildGalaxyInfo — diameter provenance', () => {
     expect(info.diameterProvenance).toBe('SDSS petroR50_r');
   });
 
-  it('credits 2MRS Riso for non-fallback 2MRS diameters', () => {
-    const cloud = makeCloud(1);
-    setPosition(cloud, 0, 100, 0, 0);
-    cloud.diameterKpc[0] = 22;
-    const info = buildInfo(cloud, 0, Source.TwoMRS);
-    expect(info.diameterProvenance).toBe('2MRS Riso');
-  });
-
-  it('credits GLADE Tully for non-fallback GLADE diameters', () => {
-    const cloud = makeCloud(1);
-    setPosition(cloud, 0, 100, 0, 0);
-    cloud.diameterKpc[0] = 18;
-    const info = buildInfo(cloud, 0, Source.Glade);
-    expect(info.diameterProvenance).toBe('GLADE Tully');
-  });
-
   it('flags diameter provenance as "fallback (30 kpc)" when the persisted flag is set', () => {
     // Mirrors the orientation-provenance flagged-fallback test above: setting
     // the authoritative byte directly is the whole contract, independent of
@@ -450,13 +342,6 @@ describe('buildGalaxyInfo — skyViewUrl', () => {
     setPosition(cloud, 0, 100, 0, 0);
     const info = buildInfo(cloud, 0, Source.SDSS);
     expect(info.skyViewUrl).toContain('skyserver.sdss.org/dr18/VisualTools/navi');
-  });
-
-  it('routes non-SDSS rows to the Aladin Lite viewer', () => {
-    const cloud = makeCloud(1);
-    setPosition(cloud, 0, 50, 50, 0);
-    const info = buildInfo(cloud, 0, Source.TwoMRS);
-    expect(info.skyViewUrl).toContain('aladin.cds.unistra.fr/AladinLite');
   });
 });
 

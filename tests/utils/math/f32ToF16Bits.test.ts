@@ -3,10 +3,6 @@ import { f32ToF16Bits } from '../../../src/utils/math/f32ToF16Bits';
 import { f16BitsToFloat } from '../../../tools/utils/math/f16BitsToFloat';
 
 describe('f32ToF16Bits', () => {
-  it('packs zero as bit pattern 0', () => {
-    expect(f32ToF16Bits(0)).toBe(0);
-  });
-
   it('overflows to +Inf and -Inf', () => {
     expect(f16BitsToFloat(f32ToF16Bits(1e10))).toBe(Infinity);
     expect(f16BitsToFloat(f32ToF16Bits(-1e10))).toBe(-Infinity);

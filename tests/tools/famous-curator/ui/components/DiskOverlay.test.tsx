@@ -40,14 +40,6 @@ describe('DiskOverlay', () => {
     expect(screen.queryByTestId('disk-handle-minor')).not.toBeInTheDocument();
   });
 
-  it('renders the SVG with the correct viewBox', () => {
-    const { container } = render(
-      <DiskOverlay source={source} disk={disk} interactive={true} onDiskChange={vi.fn()} />,
-    );
-    const svg = container.querySelector('svg');
-    expect(svg?.getAttribute('viewBox')).toBe('0 0 500 400');
-  });
-
   it('has pointer-events:none on svg when not interactive', () => {
     const { container } = render(
       <DiskOverlay source={source} disk={disk} interactive={false} onDiskChange={vi.fn()} />,

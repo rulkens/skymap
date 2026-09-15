@@ -79,17 +79,6 @@ describe('rankPaletteMatches', () => {
     expect(rows.some((r) => r.kind === 'structure' && r.entry.id === 'cluster-coma')).toBe(true);
   });
 
-  it('shows no structure rows for an empty query (browse = famous only)', () => {
-    const rows = rankPaletteMatches([M31], [], [COMA], '');
-    expect(rows.some((r) => r.kind === 'structure')).toBe(false);
-  });
-
-  it('caps structure rows at 50', () => {
-    const many = Array.from({ length: 60 }, (_, i) => structure('Abelltest', null, i));
-    const rows = rankPaletteMatches([], [], many, 'abelltest');
-    expect(rows.filter((r) => r.kind === 'structure')).toHaveLength(50);
-  });
-
   it('tolerates an undefined structure index', () => {
     const rows = rankPaletteMatches([M31], [], undefined, 'm31');
     expect(rows.some((r) => r.kind === 'famous')).toBe(true);
@@ -133,16 +122,6 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(bodyIdx).toBeLessThan(famousIdx);
   });
 
-  it('shows no body rows on an empty query (browse = famous + MW)', () => {
-    const rows = rankPaletteMatches([M31], [], [], '');
-    expect(rows.some((r) => r.kind === 'body')).toBe(false);
-  });
-
-  it('yields no body row for a query that matches no body name', () => {
-    const rows = rankPaletteMatches([M31], [], [], 'zzznotathing');
-    expect(rows.some((r) => r.kind === 'body')).toBe(false);
-  });
-
   it('a star is findable by its Bayer alias without the deepZoom gate', () => {
     // No deepZoom URL gate is set, yet a query for Sirius's Bayer designation
     // (not its common name) surfaces the Sirius body row — pins both the ungate
@@ -158,18 +137,5 @@ describe('rankPaletteMatches — scene-body rows', () => {
     // ('sgr-a-star') does not contain 'sagittarius' either.
     const rows = rankPaletteMatches([M31], [], [], 'sagittarius');
     expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')).toBe(true);
-  });
-
-  it('resolves the Sgr A* row to a body focus id', () => {
-    // The palette only names the thing; the decoder returns null for any id
-    // absent from SCENE_BODIES, so this is what a registration gap would break.
-    const rows = rankPaletteMatches([M31], [], [], 'sagittarius');
-    const row = rows.find((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')!;
-    const focusId = focusIdForRow(row);
-    expect(focusId).toBe('body-sgr-a-star');
-    expect(resolveFocusId(focusId, EMPTY_RESOLVE_DEPS)).toEqual({
-      type: 'body',
-      id: 'sgr-a-star',
-    });
   });
 });

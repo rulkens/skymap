@@ -160,7 +160,12 @@ describe('buildGalaxyIsmMapArmForcing — arm spur coupling (arms.spurs.gasWeigh
 
     const zeroWeight = buildGalaxyIsmMapArmForcing(geometry, tuningZeroWeight);
     const spursDisabled = buildGalaxyIsmMapArmForcing(geometry, tuningSpursDisabled);
-    expect(zeroWeight).toEqual(spursDisabled);
+    // Still exact, still element-wise — but `toEqual` over two 786432-element
+    // Float32Arrays spends ~1.1s in vitest's generic deep-equals, where the
+    // bakes themselves are ~20ms each. Report the first divergence instead.
+    expect(zeroWeight.length).toBe(spursDisabled.length);
+    const firstDiff = zeroWeight.findIndex((v, i) => v !== spursDisabled[i]);
+    expect(firstDiff === -1 ? null : { firstDiff, zeroWeight: zeroWeight[firstDiff] }).toBeNull();
   });
 
   it("gasWeight > 0 raises forcing at a known spur root, and leaves every texel inside every spur's excluded (pre-root) radius unchanged", () => {

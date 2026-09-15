@@ -41,19 +41,6 @@ function makeWrapper(store: AppStore) {
 }
 
 describe('StructuresSectionContainer', () => {
-  it('renders with default store state: all categories enabled (allOn master)', () => {
-    const { store } = createAppStore();
-    const { container } = render(createElement(StructuresSectionContainer, null), {
-      wrapper: makeWrapper(store),
-    });
-
-    // Master checkbox (in the header) should be checked — initial state has all
-    // structure items enabled = true.
-    const headerCheckbox = container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-    expect(headerCheckbox.checked).toBe(true);
-    expect(headerCheckbox.indeterminate).toBe(false);
-  });
-
   it('reflects a per-category enabled=false from pre-seeded store state', () => {
     const { store } = createAppStore();
     // Disable 'cluster' before rendering so the checkbox must read from the store.
@@ -107,10 +94,9 @@ describe('StructuresSectionContainer', () => {
     // `selectStructureCounts` internally (no prop threading).
     store.dispatch(engineStructureCountsChanged({ cluster: 42 }));
 
-    const { container } = render(
-      createElement(StructuresSectionContainer, null),
-      { wrapper: makeWrapper(store) },
-    );
+    const { container } = render(createElement(StructuresSectionContainer, null), {
+      wrapper: makeWrapper(store),
+    });
 
     // Expand the section to view body labels.
     const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;

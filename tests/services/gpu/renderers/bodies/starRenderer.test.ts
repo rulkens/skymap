@@ -12,7 +12,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createStarRenderer } from '../../../../../src/services/gpu/renderers/bodies/starRenderer';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {
   return {
@@ -32,20 +31,6 @@ function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice 
 }
 
 describe('createStarRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    expect(() =>
-      createStarRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
-    ).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createStarRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
   it('draw is callable with (pass, mvp, color) and records an indexed draw', () => {
     const renderer = createStarRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
 

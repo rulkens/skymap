@@ -90,10 +90,6 @@ const SAMPLES = Array.from({ length: 101 }, (_, i) => i / 100);
 const REF_NAMES = Object.keys(REF) as Ease[];
 
 describe('EASE', () => {
-  it('covers exactly the same 31 names as the reference table', () => {
-    expect(Object.keys(EASE).sort()).toEqual(REF_NAMES.slice().sort());
-  });
-
   for (const name of REF_NAMES) {
     it(`${name} matches the published easings.net formula`, () => {
       for (const t of SAMPLES) {

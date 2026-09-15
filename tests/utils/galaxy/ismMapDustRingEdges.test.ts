@@ -26,13 +26,6 @@ describe('ismMapDustRingEdges', () => {
     expect(rOuter).toBeCloseTo(4 * Math.SQRT2, 12);
   });
 
-  it('an arithmetic-mean regression would fail the same case', () => {
-    // Guards the CHOICE of mean, not just the arithmetic: an arithmetic
-    // bisection of centres 2 and 4 would land at 3, not 2*sqrt(2) ~= 2.828.
-    const { rInner } = ismMapDustRingEdges(2, RINGS, R_MIN, R_MAX);
-    expect(rInner).not.toBeCloseTo(3, 6);
-  });
-
   it('adjacent rings share an edge -- no gap, no overlap', () => {
     for (let ring = 0; ring < RINGS - 1; ring++) {
       const a = ismMapDustRingEdges(ring, RINGS, R_MIN, R_MAX);

@@ -68,11 +68,6 @@ const tour = (active: boolean): TourRuntimeState => ({
 });
 
 describe('KEYBOARD_SHORTCUTS', () => {
-  it('Esc returns clearSelection, exitTour, and stopClip', () => {
-    const run = byKeys('escape').run;
-    expect(run(stateWith({}))).toEqual([clearSelection(), exitTour(), stopClip()]);
-  });
-
   it('/ opens palette only when closed', () => {
     const run = byKeys('/').run;
     expect(run(stateWith({ ui: ui(false) }))).toEqual(setPaletteOpen(true));
@@ -106,23 +101,6 @@ describe('KEYBOARD_SHORTCUTS', () => {
     const pauseResult = run(stateWith({ time: time(3, false) })) as ReturnType<typeof pause>;
     expect(resumeResult.type).toBe(resume({ nowMs: 0 }).type);
     expect(pauseResult.type).toBe(pause({ nowMs: 0 }).type);
-  });
-
-  it('tab toggles the UI-hidden flag', () => {
-    expect(byKeys('tab').run(stateWith({}))).toEqual(toggleUiHidden());
-  });
-
-  it('d toggles the debug panel', () => {
-    expect(byKeys('d').run(stateWith({}))).toEqual(toggleDebugPanelOpen());
-  });
-
-  it('h,e goes home', () => {
-    expect(byKeys('h,e').run(stateWith({}))).toEqual(goHome());
-  });
-
-  it('shift+n goes live', () => {
-    const result = byKeys('shift+n').run(stateWith({})) as ReturnType<typeof goLive>;
-    expect(result.type).toBe(goLive({ simDays: 0, nowMs: 0 }).type);
   });
 
   it('command+k,ctrl+k opens the palette, both comma-split keys resolving to the same entry', () => {

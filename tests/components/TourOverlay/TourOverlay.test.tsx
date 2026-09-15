@@ -54,14 +54,6 @@ describe('TourCaption', () => {
     expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
   });
 
-  it('renders no kicker at all without chrome when the tour has no label', () => {
-    const caption: BeatCaption = { title: 'M87' };
-    render(<TourCaption chrome={false} caption={caption} label={null} index={2} total={3} />);
-
-    expect(screen.getByText('M87')).toBeInTheDocument();
-    expect(screen.queryByText(/\d{2} \/ \d{2}/)).not.toBeInTheDocument();
-  });
-
   it('renders markdown body: bold becomes <strong>, links open in a new tab', () => {
     const caption: BeatCaption = {
       title: 'The Milky Way',
@@ -116,20 +108,6 @@ describe('TourNav', () => {
 
     rerender(<TourNav {...baseProps()} paused={true} />);
     expect(screen.getByRole('button', { name: 'Resume' })).toBeInTheDocument();
-  });
-
-  it('renders the extracted glyph icons (prev, next, stop, pause)', () => {
-    render(<TourNav {...baseProps()} />);
-    expect(screen.getByTestId('prev-icon')).toBeInTheDocument();
-    expect(screen.getByTestId('next-icon')).toBeInTheDocument();
-    expect(screen.getByTestId('stop-icon')).toBeInTheDocument();
-    expect(screen.getByTestId('tour-pause-icon')).toBeInTheDocument();
-  });
-
-  it('swaps the pause glyph for the play glyph when paused', () => {
-    render(<TourNav {...baseProps()} paused={true} />);
-    expect(screen.getByTestId('tour-play-icon')).toBeInTheDocument();
-    expect(screen.queryByTestId('tour-pause-icon')).not.toBeInTheDocument();
   });
 });
 

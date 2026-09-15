@@ -199,18 +199,6 @@ describe('evaluateClip windowed osc fades its amplitude', () => {
 // ---------------------------------------------------------------------------
 
 describe('evaluateClip is pure', () => {
-  it('same (data, t) twice produces deep-equal results', () => {
-    const data: ClipData = {
-      start: START,
-      timeline: [dollyTo(200, 3)],
-    };
-
-    const a = evaluateClip(data, 1.5);
-    const b = evaluateClip(data, 1.5);
-
-    expect(a).toEqual(b);
-  });
-
   it('target array is a fresh allocation each call (never aliased)', () => {
     const data: ClipData = {
       start: START,

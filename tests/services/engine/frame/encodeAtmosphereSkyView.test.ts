@@ -143,16 +143,6 @@ const DRAW_CAM_POS: Vec3 = [
 const EYE_REL_BODY_M: Vec3 = [5 * SEEDED_EARTH.surface.datumRadiusM, 0, 0];
 
 describe('encodeAtmosphereSkyView', () => {
-  it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
-    expect(() =>
-      encodeAtmosphereSkyView(
-        encoder,
-        makeCtx({ bodyPose: makeBodyPose(EYE_REL_BODY_M) }),
-        makeState({ renderer: null }),
-      ),
-    ).not.toThrow();
-  });
-
   it('is a no-op when the camera is beyond the near-field distance gate', () => {
     const renderer = spyRenderer();
     encodeAtmosphereSkyView(

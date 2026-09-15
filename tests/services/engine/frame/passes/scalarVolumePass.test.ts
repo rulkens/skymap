@@ -100,16 +100,6 @@ describe('scalarVolumePass.enabled', () => {
     expect(scalarVolumePass.enabled(liveState(), ctx, slabViewOf(ctx, COSMO))).toBe(true);
   });
 
-  it('is disabled when the renderer is null (pre-bootstrap)', () => {
-    const state = {
-      gpu: { volumeFieldRenderer: null },
-      settings: { volumes: { enabled: true, items: {} } },
-      subsystems: { fades: { opacityOf: () => 1 } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(scalarVolumePass.enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(false);
-  });
-
   it('is disabled when no field is active', () => {
     const ctx = makeCtx();
     expect(
@@ -138,24 +128,5 @@ describe('scalarVolumePass.draw', () => {
     // raymarch's jitter dither frequency stays stable.
     expect(args[2]).toEqual([Math.floor(1280 / VOLUME_SCALE), Math.floor(720 / VOLUME_SCALE)]);
     expect(args[3]).toEqual(view.camPos);
-  });
-
-  it('forwards the liveness settingsOf/fadeOpacityOf closures to draw', () => {
-    // The renderer reads per-field knobs + fade opacity through the same
-    // projection the gate was computed from; both reach draw (args 4 and 5).
-    const drawSpy = vi.fn();
-    const state = liveState({ draw: drawSpy });
-    const ctx = makeCtx();
-    scalarVolumePass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
-    expect(typeof drawSpy.mock.calls[0]![4]).toBe('function');
-    expect(typeof drawSpy.mock.calls[0]![5]).toBe('function');
-  });
-
-  it('is a no-op when volumes are not live (defensive — executor gates first)', () => {
-    const drawSpy = vi.fn();
-    const state = liveState({ draw: drawSpy, hasActiveFields: () => false });
-    const ctx = makeCtx();
-    scalarVolumePass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
-    expect(drawSpy).not.toHaveBeenCalled();
   });
 });

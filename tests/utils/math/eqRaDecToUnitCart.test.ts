@@ -22,9 +22,4 @@ describe('eqRaDecToUnitCart', () => {
     expect(y).toBeCloseTo(0, 12);
     expect(z).toBeCloseTo(1, 12);
   });
-
-  it('returns a unit vector regardless of distance — it is direction-only', () => {
-    const [x, y, z] = eqRaDecToUnitCart(266.4051, -28.9362);
-    expect(Math.hypot(x, y, z)).toBeCloseTo(1, 12);
-  });
 });

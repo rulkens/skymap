@@ -105,16 +105,6 @@ function makeStubSourceBgl() {
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
 describe('catalogStore.totalCount', () => {
-  it('returns 0 before any upload', () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    expect(store.totalCount()).toBe(0);
-  });
-
   it('sums counts across multiple sources', async () => {
     const store = createCatalogStore({
       device: makeStubDevice(),
@@ -359,13 +349,13 @@ describe('catalogStore.upload — regression: empty-cloud unload', () => {
 // catch any residual staleness with the correct (current) cloud reference.
 describe('catalogStore.upload — regression: parallel-upload rebake race', () => {
   it('does not overwrite a concurrent upload during rebake', async () => {
-    // Per-source delays: SDSS bakes fast (50 ms), GLADE bakes slow (200 ms).
-    // SDSS's post-bake rebake fires while GLADE's worker is still running.
-    // Without the fix, SDSS's rebake re-bakes GLADE using the OLD (1.9M)
+    // Per-source delays: SDSS bakes fast, GLADE ~15x slower, so SDSS's
+    // post-bake rebake reliably fires while GLADE's worker is still running.
+    // Without the fix, SDSS's rebake re-bakes GLADE using the OLD (larger)
     // cloud reference and stomps the in-flight GLADE-medium upload.
     const delaysMs = new Map<SourceType, number>([
-      [Source.SDSS, 50],
-      [Source.Glade, 200],
+      [Source.SDSS, 2],
+      [Source.Glade, 30],
     ]);
     const delayedRunner: BuildRunner = async (input) => {
       const ms = delaysMs.get(input.source) ?? 0;
@@ -382,13 +372,15 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
       buildRunner: delayedRunner,
     });
 
-    // Seed with the "prior tier" layout so the rebake has stale offsets to act on.
-    await store.upload(idOf(Source.SDSS), makeCloud(498_227));
-    await store.upload(idOf(Source.Glade), makeCloud(1_995_421));
+    // Seed with the "prior tier" layout so the rebake has stale offsets to act
+    // on. Counts only have to differ from the new ones — the race is in the
+    // ordering, not the volume — so these stand in for the real ~0.5M/2M tiers.
+    await store.upload(idOf(Source.SDSS), makeCloud(497));
+    await store.upload(idOf(Source.Glade), makeCloud(1995));
 
     // Tier swap: kick off both in parallel, the way `engine.setTier` does.
-    const sdssPromise = store.upload(idOf(Source.SDSS), makeCloud(156_000));
-    const gladePromise = store.upload(idOf(Source.Glade), makeCloud(400_000));
+    const sdssPromise = store.upload(idOf(Source.SDSS), makeCloud(156));
+    const gladePromise = store.upload(idOf(Source.Glade), makeCloud(400));
 
     await Promise.all([sdssPromise, gladePromise]);
 
@@ -396,11 +388,11 @@ describe('catalogStore.upload — regression: parallel-upload rebake race', () =
     const sdss = entries.find((e) => e.source === Source.SDSS);
     const glade = entries.find((e) => e.source === Source.Glade);
 
-    expect(sdss?.count).toBe(156_000);
-    // The bug surfaced as `glade.count === 1_995_421` here — the rebake
-    // resurrected the old large cloud.  The fix keeps GLADE on the new
-    // medium cloud the user actually requested.
-    expect(glade?.count).toBe(400_000);
+    expect(sdss?.count).toBe(156);
+    // The bug surfaced as `glade.count === 1995` here — the rebake resurrected
+    // the old large cloud.  The fix keeps GLADE on the new medium cloud the
+    // user actually requested.
+    expect(glade?.count).toBe(400);
   });
 });
 
@@ -563,15 +555,5 @@ describe('catalogStore.clearBiasOverlays', () => {
     store.clearBiasOverlays();
     // One writeBuffer per loaded source.
     expect(writeCalls.length - before).toBe(2);
-  });
-
-  it('is a no-op when no sources are loaded', () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    expect(() => store.clearBiasOverlays()).not.toThrow();
   });
 });

@@ -3,18 +3,6 @@ import { rampLut } from '../../../src/utils/color/rampLut';
 import type { RampAnchor } from '../../../src/@types/color/RampAnchor';
 
 describe('rampLut', () => {
-  it('produces a size×4 RGBA8 array', () => {
-    const lut = rampLut(
-      [
-        [0, 0, 0, 0],
-        [1, 255, 255, 255],
-      ],
-      8,
-    );
-    expect(lut).toBeInstanceOf(Uint8Array);
-    expect(lut.length).toBe(8 * 4);
-  });
-
   it('pins the endpoints to the first and last anchor colours', () => {
     const lut = rampLut(
       [

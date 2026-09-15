@@ -7,8 +7,10 @@ import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 // a tiny module graph, resolve the target the way the CLI does, run the planner,
 // then read back the resulting file set. planDelete validates before mutating and
 // never saves, so every assertion reads from the live Project.
+// `skipLoadingLibFiles` drops the lib.d.ts parse (~150 ms per Project, the bulk
+// of this file's cost); nothing here resolves a global type.
 function projectWith(files: Record<string, string>): Project {
-  const project = new Project({ useInMemoryFileSystem: true });
+  const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
   for (const [path, content] of Object.entries(files)) {
     project.createSourceFile(path, content);
   }

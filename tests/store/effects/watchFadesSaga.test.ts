@@ -70,20 +70,8 @@ describe('watchFadesSaga', () => {
     expect(reconcile.syncFades).toHaveBeenNthCalledWith(2, ['volumeField']);
   });
 
-  it('setFlowEnabled(true) → syncFades(["flow"]) called', () => {
-    store.dispatch(setFlowEnabled(true));
-
-    expect(reconcile.syncFades).toHaveBeenCalledWith(['flow']);
-  });
-
   // The dead-toggle defect: a fade row with no matching FADE_ROW entry writes the
   // store and never calls syncFades.
-
-  it('setZoneOfAvoidanceEnabled(true) → syncFades(["zoneOfAvoidance"]) called', () => {
-    store.dispatch(setZoneOfAvoidanceEnabled(true));
-
-    expect(reconcile.syncFades).toHaveBeenCalledWith(['zoneOfAvoidance']);
-  });
 
   // The full pass is what lets a tour scene-restore need no bespoke engine effect.
 

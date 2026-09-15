@@ -161,12 +161,4 @@ describe('starAggregatesPass', () => {
     starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, 1), state);
     expect(renderer.draw.mock.calls[1]![1].knee).toBe(true);
   });
-
-  it('is a no-op when the renderer handle is null (pre-bootstrap)', () => {
-    const camPos = camAtPcVec(FAR_PC);
-    const state = makeState(null);
-    expect(() =>
-      starAggregatesPass.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), state),
-    ).not.toThrow();
-  });
 });

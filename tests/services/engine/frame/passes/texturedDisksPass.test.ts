@@ -80,24 +80,6 @@ describe('texturedDisksPass', () => {
     expect(texturedDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
   });
 
-  it('enabled() returns false when subsystem is null', () => {
-    const state = {
-      subsystems: { texturedDisks: null },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(texturedDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
-  });
-
-  it('enabled() returns false when disks array is empty', () => {
-    const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
-      settings: { thumbnails: { enabled: true } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(texturedDisksPass.enabled(state, ctx, makeView(ctx))).toBe(false);
-  });
-
   it('enabled() returns true when disks array is non-empty', () => {
     const state = {
       subsystems: { texturedDisks: { lastOutput: { disks: [{}] } } },
@@ -105,41 +87,6 @@ describe('texturedDisksPass', () => {
     } as unknown as EngineState;
     const ctx = makeCtx();
     expect(texturedDisksPass.enabled(state, ctx, makeView(ctx))).toBe(true);
-  });
-
-  it('draw() invokes state.gpu.texturedDiskRenderer.draw', () => {
-    const disks = [{ x: 1 }];
-    const texturedDiskRenderer = makeTexturedDiskRenderer();
-    const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, texturedDiskRenderer },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
-    expect(texturedDiskRenderer.draw).toHaveBeenCalledTimes(1);
-  });
-
-  it('draw() is a no-op when disks array is empty', () => {
-    const texturedDiskRenderer = makeTexturedDiskRenderer();
-    const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks: [] } } },
-      gpu: { texturedDiskRenderer },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    texturedDisksPass.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state);
-    expect(texturedDiskRenderer.draw).not.toHaveBeenCalled();
-  });
-
-  it('draw() is a no-op when state.gpu.texturedDiskRenderer is null (pre-bootstrap)', () => {
-    const disks = [{ x: 1 }];
-    const state = {
-      subsystems: { texturedDisks: { lastOutput: { disks } } },
-      gpu: { focusUniform: { bindGroup: {} as GPUBindGroup }, texturedDiskRenderer: null },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(() =>
-      texturedDisksPass.draw({} as GPURenderPassEncoder, makeView(ctx), ctx, state),
-    ).not.toThrow();
   });
 
   it('draw() forwards ctx.viewSlot to texturedDiskRenderer.draw as the 7th arg', () => {

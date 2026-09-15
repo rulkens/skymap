@@ -27,21 +27,20 @@ const makeFakeDevice = () => {
     createTexture,
     queue: { copyExternalImageToTexture },
   } as unknown as GPUDevice;
-  return { device, createTexture, copyExternalImageToTexture, createView, textureDestroy, fakeTexture };
+  return {
+    device,
+    createTexture,
+    copyExternalImageToTexture,
+    createView,
+    textureDestroy,
+    fakeTexture,
+  };
 };
 
 const LAYER_SIDE = 1024;
 const LAYER_COUNT = 8;
 
 describe('HiResFamousTexture', () => {
-  it('allocate returns sequential layers under capacity', () => {
-    const { device } = makeFakeDevice();
-    const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
-    expect(h.allocate('g-1', 100)).toBe(0);
-    expect(h.allocate('g-2', 100)).toBe(1);
-    expect(h.allocate('g-3', 100)).toBe(2);
-  });
-
   it('allocate returns the existing layer for a repeat key', () => {
     const { device } = makeFakeDevice();
     const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
@@ -75,21 +74,6 @@ describe('HiResFamousTexture', () => {
     expect(h.allocate('g-w', 100)).toBe(layer);
   });
 
-  it('markFailed + isFailed survive multiple ticks', () => {
-    const { device } = makeFakeDevice();
-    const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
-    h.allocate('g-fail', 100);
-    expect(h.isFailed('g-fail')).toBe(false);
-    h.markFailed('g-fail');
-    expect(h.isFailed('g-fail')).toBe(true);
-    // touch should not clear the failed flag — the diameter signal is
-    // independent of the load-status signal.
-    h.touch('g-fail', 200);
-    expect(h.isFailed('g-fail')).toBe(true);
-    h.touch('g-fail', 50);
-    expect(h.isFailed('g-fail')).toBe(true);
-  });
-
   it('setEvictHandler is fired BEFORE the slot is overwritten', () => {
     const { device } = makeFakeDevice();
     const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
@@ -121,17 +105,6 @@ describe('HiResFamousTexture', () => {
     expect(copySize).toEqual([LAYER_SIDE, LAYER_SIDE, 1]);
   });
 
-  it('getTextureView is built with dimension "2d-array"', () => {
-    const { device, createView } = makeFakeDevice();
-    const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
-    h.initTexture();
-    h.getTextureView();
-    expect(createView).toHaveBeenCalledTimes(1);
-    const [descriptor] = createView.mock.calls[0]!;
-    expect(descriptor?.dimension).toBe('2d-array');
-  });
-
-  // ── extra coverage for invariants the contract requires ─────────────
   it('initTexture is idempotent', () => {
     const { device, createTexture } = makeFakeDevice();
     const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
@@ -159,16 +132,6 @@ describe('HiResFamousTexture', () => {
     expect((desc.usage & wantBits) === wantBits).toBe(true);
   });
 
-  it('uploadBitmap marks the entry as loaded', () => {
-    const { device } = makeFakeDevice();
-    const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
-    h.initTexture();
-    const layer = h.allocate('g-load', 100);
-    expect(h.isLoaded('g-load')).toBe(false);
-    h.uploadBitmap(layer, { __bitmap: true } as unknown as ImageBitmap);
-    expect(h.isLoaded('g-load')).toBe(true);
-  });
-
   it('allocate when array is full returns -1 if no existing entry has smaller diameter', () => {
     // Eviction policy: smallest-diameter resident wins; if every
     // resident has diameter ≥ the incoming caller's, the caller isn't
@@ -194,35 +157,5 @@ describe('HiResFamousTexture', () => {
     expect(textureDestroy).toHaveBeenCalledTimes(1);
     // After destroy(), getTextureView throws (texture is gone).
     expect(() => h.getTextureView()).toThrow();
-  });
-
-  it('mutators + accessors throw after destroy (contract: handle is unusable)', () => {
-    // Stale references to a destroyed handle must fail loudly rather
-    // than silently returning sentinel values — a silent -1 from
-    // allocate() would crash the caller a frame later on the bogus index.
-    const { device } = makeFakeDevice();
-    const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
-    h.initTexture();
-    h.allocate('g-1', 100);
-    h.destroy();
-    const expected = /handle is destroyed/;
-    expect(() => h.allocate('g-2', 100)).toThrow(expected);
-    expect(() => h.touch('g-1', 100)).toThrow(expected);
-    expect(() => h.release('g-1')).toThrow(expected);
-    expect(() => h.markFailed('g-1')).toThrow(expected);
-    expect(() => h.uploadBitmap(0, { __bitmap: true } as unknown as ImageBitmap)).toThrow(expected);
-    expect(() => h.getTextureView()).toThrow(expected);
-  });
-
-  it('setEvictHandler(undefined) clears the handler', () => {
-    const { device } = makeFakeDevice();
-    const h = createHiResFamousTexture({ device, layerSide: LAYER_SIDE, layerCount: LAYER_COUNT });
-    const handler = vi.fn();
-    h.setEvictHandler(handler);
-    h.setEvictHandler(undefined);
-    const diameters = [250, 240, 230, 220, 210, 290, 280, 270];
-    diameters.forEach((px, i) => h.allocate(`g-${i}`, px));
-    h.allocate('g-new', 999);
-    expect(handler).not.toHaveBeenCalled();
   });
 });

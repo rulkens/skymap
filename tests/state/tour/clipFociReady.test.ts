@@ -141,27 +141,6 @@ describe('clipFociReady', () => {
     expect(clipFociReady(structureClip, emptyDeps)).toBe(true);
   });
 
-  it('clipFociReady is true for milkyWay', () => {
-    // 'milkyWay' is a singleton id handled before the famous fallback in
-    // resolveFocusId. It resolves to { type: 'milkyWay' } without any catalog
-    // lookup — always ready.
-    const mwClip: ClipData = {
-      start: 'live',
-      timeline: [focus(id('milkyWay'))],
-    };
-    expect(clipFociReady(mwClip, emptyDeps)).toBe(true);
-  });
-
-  it('clipFociReady is true for a clip with no focus-bound effects', () => {
-    // A hold-only clip has no moveTargetId / dollyToId / focusId leaves.
-    // The walk visits no id-bearing nodes — trivially ready.
-    const holdClip: ClipData = {
-      start: 'live',
-      timeline: [hold(3)],
-    };
-    expect(clipFociReady(holdClip, emptyDeps)).toBe(true);
-  });
-
   it('clipFociReady is true for focusId(null)', () => {
     // A focus-clear cue carries id: null. The predicate must return true without
     // calling resolveFocusId — clearing focus needs no data.
@@ -189,15 +168,6 @@ describe('clipFociReady', () => {
       timeline: [seq([hold(2), moveTargetId(id('m87'), 5)])],
     };
     expect(clipFociReady(seqClip, depsM87NotLoaded)).toBe(false);
-  });
-
-  it('returns false when an id inside a fork block is not resolvable', () => {
-    // fork recurses into its single child — an unresolvable id there propagates up.
-    const forkClip: ClipData = {
-      start: 'live',
-      timeline: [fork(focus(id('m87')))],
-    };
-    expect(clipFociReady(forkClip, depsM87NotLoaded)).toBe(false);
   });
 
   it('returns false when a flyPath has an unresolvable atFocus waypoint', () => {

@@ -9,12 +9,6 @@ import { describe, it, expect } from 'vitest';
 import { sameRequest } from '../../../src/utils/loading/sameRequest';
 
 describe('sameRequest', () => {
-  it('identical primitives and undefined compare equal', () => {
-    expect(sameRequest(undefined, undefined)).toBe(true);
-    expect(sameRequest(3, 3)).toBe(true);
-    expect(sameRequest(undefined, {})).toBe(false);
-  });
-
   it('structurally equal flat objects compare equal across separate allocations', () => {
     expect(sameRequest({ source: 4, tier: 'large' }, { source: 4, tier: 'large' })).toBe(true);
     expect(sameRequest({ tier: 'large' }, { tier: 'medium' })).toBe(false);

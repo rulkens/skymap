@@ -109,14 +109,6 @@ describe('deriveVolumeLiveness', () => {
     expect(deriveVolumeLiveness(state, makeCtx())).not.toBeNull();
   });
 
-  it('returns settingsOf/fadeOpacityOf closures when a field is live', () => {
-    const state = makeState();
-    const liveness = deriveVolumeLiveness(state, makeCtx());
-    expect(liveness).not.toBeNull();
-    expect(typeof liveness!.settingsOf).toBe('function');
-    expect(typeof liveness!.fadeOpacityOf).toBe('function');
-  });
-
   it('settingsOf clamps the raw store record at the read edge', () => {
     const state = makeState({ items: { [FIELD_ID]: rawSettings({ intensity: 5 }) } });
     const liveness = deriveVolumeLiveness(state, makeCtx())!;

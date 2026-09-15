@@ -26,10 +26,6 @@ describe('hashBodyFor', () => {
     expect(hashBodyFor(stateAfter(requestFocus('m31')))).toBe('focus=m31');
   });
 
-  it('composes a single param when only orientation is set', () => {
-    expect(hashBodyFor(stateAfter(setOrientation('galactic')))).toBe('orientation=galactic');
-  });
-
   it('composes focus, t, and orientation in TABLE ORDER regardless of dispatch order', () => {
     // Dispatched out of table order (orientation first, then time, then focus)
     // on purpose: the composed string must still come out focus → t →

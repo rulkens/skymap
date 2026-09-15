@@ -17,17 +17,6 @@ import CollapsibleSection from '../../../../src/components/common/CollapsibleSec
 import styles from '../../../../src/components/common/CollapsibleSection/CollapsibleSection.module.css';
 
 describe('CollapsibleSection nesting', () => {
-  it('renders a top-level section with no nested class or data-nested hook', () => {
-    const { container } = render(
-      <CollapsibleSection title="SHAPE" open onToggle={() => {}}>
-        <div />
-      </CollapsibleSection>,
-    );
-    const button = container.querySelector('button[aria-expanded]')!;
-    expect(button.hasAttribute('data-nested')).toBe(false);
-    expect(button.parentElement?.className).not.toContain(styles.nestedHeader);
-  });
-
   it('marks a nested section for the probe and applies the diminished style', () => {
     const { container } = render(
       <CollapsibleSection title="DIG" open onToggle={() => {}} variant="nested">

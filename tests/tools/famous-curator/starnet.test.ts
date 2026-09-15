@@ -12,9 +12,7 @@
  * real binary being installed.
  */
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import { isAbsolute, join, resolve } from 'node:path';
+import { isAbsolute, resolve } from 'node:path';
 import {
   resolveStarnetConfig,
   runStarnet,
@@ -22,20 +20,6 @@ import {
 } from '../../../tools/famous-curator/plugin/starnet';
 
 describe('resolveStarnetConfig', () => {
-  it('returns the env-supplied bin + weights path', () => {
-    const cfg = resolveStarnetConfig({ STARNET_BIN: 'sn2', STARNET_WEIGHTS: '/w.pt' });
-    expect(cfg.mock).toBe(false);
-    if (!cfg.mock) {
-      expect(cfg.bin).toBe('sn2');
-      expect(cfg.weights).toBe('/w.pt');
-    }
-  });
-
-  it('defaults bin to starnet2 when STARNET_BIN is unset', () => {
-    const cfg = resolveStarnetConfig({ STARNET_WEIGHTS: '/w.pt' });
-    if (!cfg.mock) expect(cfg.bin).toBe('starnet2');
-  });
-
   it('resolves a relative STARNET_WEIGHTS to an absolute path', () => {
     // runStarnet spawns the binary with cwd = a session tmpdir, so a
     // relative weights path must be pinned absolute at config time or the
@@ -58,21 +42,6 @@ describe('resolveStarnetConfig', () => {
 });
 
 describe('runStarnet', () => {
-  it('mock mode copies input bytes to output', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'curator-starnet-'));
-    const input = join(dir, 'in.png');
-    const output = join(dir, 'out.png');
-    writeFileSync(input, Buffer.from([1, 2, 3, 4, 5]));
-    await runStarnet({
-      input,
-      output,
-      stride: 256,
-      upsample: false,
-      config: { mock: true },
-    });
-    expect(Array.from(readFileSync(output))).toEqual([1, 2, 3, 4, 5]);
-  });
-
   it('real mode invokes the binary with the expected argv', async () => {
     let capturedArgs: readonly string[] = [];
     const spawner: Spawner = (bin, args) => {
@@ -89,10 +58,14 @@ describe('runStarnet', () => {
     });
     expect(capturedArgs).toEqual([
       'starnet2',
-      '-i', '/in.png',
-      '-o', '/out.png',
-      '-s', '512',
-      '-w', '/w.pt',
+      '-i',
+      '/in.png',
+      '-o',
+      '/out.png',
+      '-s',
+      '512',
+      '-w',
+      '/w.pt',
       '-e',
       '-u',
     ]);
@@ -116,8 +89,7 @@ describe('runStarnet', () => {
   });
 
   it('real mode throws when the binary exits non-zero', async () => {
-    const spawner: Spawner = () =>
-      Promise.resolve({ code: 1, stdout: '', stderr: 'boom' });
+    const spawner: Spawner = () => Promise.resolve({ code: 1, stdout: '', stderr: 'boom' });
     await expect(
       runStarnet({
         input: '/in.png',

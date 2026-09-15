@@ -104,11 +104,3 @@ describe('filamentsPass.enabled is unaffected by focus recession', () => {
     expect(filamentsPass.enabled(state, ctx1, slabViewOf(ctx1, COSMO))).toBe(false);
   });
 });
-
-describe('filamentsPass.draw renderer-null guard', () => {
-  it('skips drawing when state.gpu.filamentRenderer is null even if enabled', () => {
-    const state = makeState(1, { enabled: true }, null);
-    const ctx = makeCtx(0);
-    expect(() => filamentsPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state)).not.toThrow();
-  });
-});

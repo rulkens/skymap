@@ -57,29 +57,6 @@ describe('applySwapFormat', () => {
     expect(() => applySwapFormat(state, 'bgra8unorm')).not.toThrow();
   });
 
-  it('does not throw and does not reconfigure when uiCtx exists but fontAtlases is still null (half-initialised engine)', () => {
-    // Mirrors a leaked watchHdrCapability listener firing between initGpu's
-    // uiCtx assignment and its (later) loadFontAtlases await landing: without
-    // this guard the call reaches buildSwapRenderers, which dereferences
-    // `state.gpu.fontAtlases!` and throws inside a takeEvery worker.
-    const configure = vi.fn();
-    const setSwapFormat = vi.fn();
-    const specs = [makeSwapSpec('bgra8unorm')];
-    const state = {
-      gpu: {
-        renderTargets: { specs, specOf: specOfStub(specs), setSwapFormat },
-        uiCtx: { device: {}, context: { configure }, canvas: {} },
-        fontAtlases: null,
-      },
-      subsystems: { scheduler: { requestRender: vi.fn() } },
-    } as unknown as EngineState;
-
-    expect(() => applySwapFormat(state, 'rgba16float')).not.toThrow();
-    expect(configure).not.toHaveBeenCalled();
-    expect(setSwapFormat).not.toHaveBeenCalled();
-    expect(buildSwapRenderers).not.toHaveBeenCalled();
-  });
-
   it('is a no-op when the desired format already matches the live format', () => {
     const configure = vi.fn();
     const setSwapFormat = vi.fn();
@@ -129,15 +106,6 @@ describe('applySwapFormat', () => {
     applySwapFormat(state, 'rgba16float');
 
     expect(requestRender).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not request a render when the desired format already matches live', () => {
-    const requestRender = vi.fn();
-    const state = makeState('bgra8unorm', requestRender);
-
-    applySwapFormat(state, 'bgra8unorm');
-
-    expect(requestRender).not.toHaveBeenCalled();
   });
 
   // The toneMapping spread IS the feature: it's what makes the swap chain

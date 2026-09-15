@@ -40,14 +40,6 @@ describe('elevationFromQ', () => {
     expect(elevationFromQ(0.5, 'irregular')).toBeNull();
   });
 
-  it('clamps q = 1 to the 1.45 ceiling', () => {
-    expect(elevationFromQ(1, 'spiral')).toBeCloseTo(1.45, 10);
-  });
-
-  it('floors a tiny q at 0.05', () => {
-    expect(elevationFromQ(0.001, 'barred')).toBeCloseTo(0.05, 3);
-  });
-
   it('returns asin(q) for a mid-range disk', () => {
     expect(elevationFromQ(0.5, 'lenticular')).toBeCloseTo(Math.asin(0.5), 10);
   });

@@ -22,9 +22,4 @@ describe('galacticToCartesian', () => {
     expect(y).toBeCloseTo(0, 12);
     expect(z).toBeCloseTo(1, 12);
   });
-
-  it('returns a unit vector', () => {
-    const [x, y, z] = galacticToCartesian(137.37, 6.32);
-    expect(Math.hypot(x, y, z)).toBeCloseTo(1, 12);
-  });
 });

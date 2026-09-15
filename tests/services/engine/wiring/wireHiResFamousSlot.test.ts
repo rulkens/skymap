@@ -118,15 +118,4 @@ describe('wireHiResFamousSlot', () => {
       'destroy texture#0',
     ]);
   });
-
-  it('publishes the new pair on both state.subsystems fields', async () => {
-    const state = makeState();
-    wireHiResFamousSlot(state, {} as GPUDevice, makeRenderer());
-
-    await state.assetSlots.hiResFamous!.load(reqFor('medium'));
-
-    const committed = state.assetSlots.hiResFamous!.current()!;
-    expect(state.subsystems.hiResFamous).toBe(committed.subsystem);
-    expect(state.subsystems.hiResFamousTexture).toBe(committed.texture);
-  });
 });

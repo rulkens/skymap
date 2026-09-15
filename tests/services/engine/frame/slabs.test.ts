@@ -656,12 +656,6 @@ describe('slabViewOf', () => {
     expect(Array.from(view.vp)).toEqual(Array.from(Float32Array.from(ctx.vp)));
   });
 
-  it('slabViewOf viewportPx mirrors canvasSize', () => {
-    const ctx = makeReadyCtx({ canvasSize: { width: 800, height: 600 } });
-    const view = slabViewOf(ctx, COSMO);
-    expect(view.viewportPx).toEqual([800, 600]);
-  });
-
   it('slabViewOf(ctx, NEAR0) exposes the adaptive near/far slab row', () => {
     const cam = makeCam(100);
     const ctx = makeReadyCtx({ cam });

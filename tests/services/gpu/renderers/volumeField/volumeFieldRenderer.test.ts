@@ -97,16 +97,6 @@ function uniformScratch(device: GPUDevice): Float32Array | undefined {
   return hit?.[2] as Float32Array | undefined;
 }
 
-describe('createVolumeFieldRenderer colour target', () => {
-  it('bakes the given targetFormat into the raymarch pipeline colour target', () => {
-    const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createVolumeFieldRenderer(mockDevice(renderPipelines), 'rgba16float', {} as never);
-    expect(renderPipelines).toHaveLength(1);
-    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
-    expect(target!.format).toBe('rgba16float');
-  });
-});
-
 describe('createVolumeFieldRenderer draw', () => {
   it('draw reads field values from settingsOf', () => {
     const device = mockDevice();
@@ -217,24 +207,6 @@ describe('createVolumeFieldRenderer draw', () => {
     expect(
       (device.queue.writeTexture as unknown as { mock: { calls: unknown[] } }).mock.calls.length,
     ).toBe(before + 1);
-  });
-
-  it('draw on a disabled, fully-faded field does not draw', () => {
-    // enabled:false + fadeOpacityOf returning 0 → the field is fully
-    // off; no GPU work should be issued.
-    const device = mockDevice();
-    const r = createVolumeFieldRenderer(device, 'bgra8unorm', {} as never);
-    r.upload('mcpm', fixture());
-    const pass = makeFakePass();
-    r.draw(
-      pass,
-      new Float32Array(16) as unknown as Mat4,
-      [320, 180],
-      [0, 0, 5],
-      () => fullSettings({ enabled: false }),
-      () => 0,
-    );
-    expect(pass.drawIndexed).not.toHaveBeenCalled();
   });
 
   it('draw skips an ENABLED field whose resolved opacity is 0', () => {

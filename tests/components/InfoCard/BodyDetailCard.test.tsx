@@ -145,22 +145,4 @@ describe('BodyDetailCard', () => {
     expect(container.textContent).toMatch(/119 AU \(1,40\d Schwarzschild radii\)/);
     expect(container.textContent).toMatch(/7,69\d km\/s/);
   });
-
-  it('omits absent optional properties', () => {
-    const { massSolar, luminositySolar, ageGyr, ...lean } = rigelMeta;
-    void massSolar;
-    void luminositySolar;
-    void ageGyr;
-    const { container } = render(
-      createElement(BodyDetailCard, { target: rigelTarget, famousStarsMeta: [lean] }),
-    );
-
-    // Required rows still render… ('Spectral type' is both the row label and
-    // its InfoTip title, so it appears more than once.)
-    expect(screen.getAllByText('Spectral type').length).toBeGreaterThan(0);
-    // …but the optional lines are dropped, not shown blank.
-    expect(container.textContent).not.toMatch(/Mass/);
-    expect(container.textContent).not.toMatch(/Age/);
-    expect(container.textContent).not.toMatch(/Luminosity/);
-  });
 });

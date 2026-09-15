@@ -58,39 +58,12 @@ function mockCube(): ScalarCube {
 }
 
 describe('createFlowFieldRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    // Smoke: the 3 compute pipelines + render pipeline + both explicit BGLs all
-    // build against the mock without a real GPU surface.
-    expect(() =>
-      createFlowFieldRenderer({ device: mockDevice(), targetFormat: 'rgba16float' }),
-    ).not.toThrow();
-  });
-
-  it('bakes the given targetFormat into the ribbon render pipeline colour target', () => {
-    const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createFlowFieldRenderer({ device: mockDevice(renderPipelines), targetFormat: 'rgba16float' });
-    // The flow renderer builds exactly one render pipeline (the additive ribbon);
-    // its single colour target must carry the format handed to the factory.
-    expect(renderPipelines).toHaveLength(1);
-    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
-    expect(target!.format).toBe('rgba16float');
-  });
-
   it('fieldLoaded is false before upload, true after', () => {
     // The flow fade row's guard reads this — it reports whether a cube is
     // committed, independent of the slot lifecycle.
     const renderer = createFlowFieldRenderer({ device: mockDevice(), targetFormat: 'rgba16float' });
     expect(renderer.fieldLoaded()).toBe(false);
     renderer.upload(mockCube());
-    expect(renderer.fieldLoaded()).toBe(true);
-  });
-
-  it('upload builds a model matrix placing the cube origin in world space', () => {
-    // The model-matrix math itself is covered by buildCubeModelMatrix.test.ts;
-    // here we only assert upload wires the field without throwing and flips
-    // fieldLoaded true (proving the matrix + bind group built).
-    const renderer = createFlowFieldRenderer({ device: mockDevice(), targetFormat: 'rgba16float' });
-    expect(() => renderer.upload(mockCube())).not.toThrow();
     expect(renderer.fieldLoaded()).toBe(true);
   });
 

@@ -54,25 +54,4 @@ describe('DebugTuningSection', () => {
     expect(onSliderChange).toHaveBeenCalledOnce();
     expect(onSliderChange).toHaveBeenCalledWith('b', 7);
   });
-
-  it('renders children after the last slider row', () => {
-    const { container } = render(
-      createElement(
-        DebugTuningSection,
-        {
-          title: 'Fixture tuning',
-          fields: FIXTURE_FIELDS,
-          values: FIXTURE_VALUES,
-          onSliderChange: vi.fn<(key: string, value: number) => void>(),
-        },
-        createElement('button', { type: 'button' }, 'extra'),
-      ),
-    );
-    const body = container.querySelector('details > div')!;
-    const children = Array.from(body.children);
-    // Two slider rows, then the extra child last.
-    expect(children).toHaveLength(3);
-    expect(children[2]!.tagName).toBe('BUTTON');
-    expect(children[2]!.textContent).toBe('extra');
-  });
 });

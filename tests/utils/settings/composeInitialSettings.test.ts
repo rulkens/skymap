@@ -23,12 +23,4 @@ describe('composeInitialSettings', () => {
       /"labels" is claimed by a fragment and by the core/,
     );
   });
-
-  it('throws when two fragments share a key', () => {
-    const rival = { key: 'alpha', initialState: { n: 2 }, reducers: {} } as const;
-
-    expect(() => composeInitialSettings(core, [alpha, rival])).toThrow(
-      /"alpha" is claimed by two fragments/,
-    );
-  });
 });

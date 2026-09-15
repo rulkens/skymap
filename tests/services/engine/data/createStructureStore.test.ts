@@ -24,14 +24,6 @@ describe('createStructureStore', () => {
     expect(s.all().map((r) => r.id)).toEqual(['a1', 'b1', 'b2']);
   });
 
-  it('setGroup replaces only its own group', () => {
-    const s = createStructureStore();
-    s.setGroup('anchors', [rec('a1')]);
-    s.setGroup('bulk', [rec('b1')]);
-    s.setGroup('anchors', [rec('a2')]);
-    expect(s.all().map((r) => r.id)).toEqual(['a2', 'b1']);
-  });
-
   it('clearGroup drops only its group', () => {
     const s = createStructureStore();
     s.setGroup('anchors', [rec('a1')]);

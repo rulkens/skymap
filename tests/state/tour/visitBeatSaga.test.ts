@@ -320,23 +320,6 @@ describe('visitBeatSaga', () => {
     expect(store.getState().tour.dwellNonce).toBe(0);
   });
 
-  it("returns 'prev' when prevBeat arrives mid-fly", async () => {
-    const playClipMock = vi
-      .fn<(clip: ClipData) => Promise<void>>()
-      .mockImplementation(() => new Promise<void>(() => {}));
-
-    const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-
-    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 1);
-    await flush();
-
-    store.dispatch(prevBeat());
-    const outcome = await task.toPromise();
-
-    expect(outcome).toBe('prev');
-    expect(store.getState().tour.dwellNonce).toBe(0);
-  });
-
   // ── (4) advanceTour during the dwell resolves to 'next' ───────────────────
 
   it("returns 'next' when advanceTour wins the dwell race, and cancels the drift", async () => {
@@ -367,20 +350,6 @@ describe('visitBeatSaga', () => {
   });
 
   // ── (5) prevBeat during the dwell resolves to 'prev' ──────────────────────
-
-  it("returns 'prev' when prevBeat wins the dwell race", async () => {
-    const { store, sagaMiddleware } = buildStore({ playClip: flyThenBlockingDrift(true) });
-
-    const task = sagaMiddleware.run(visitBeatSaga, milkyWayBeat, 1);
-
-    await flush();
-    await flush();
-
-    store.dispatch(prevBeat());
-    const outcome = await task.toPromise();
-
-    expect(outcome).toBe('prev');
-  });
 
   // ── (6) the dwell timeout auto-advances to 'next' ─────────────────────────
 

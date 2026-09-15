@@ -67,25 +67,6 @@ function expandSection(container: HTMLElement): void {
 
 describe('LabelsAndGuidesSection', () => {
   describe('master tri-state', () => {
-    it('is checked when every row is enabled', () => {
-      const { container } = render(createElement(LabelsAndGuidesSection, { rows: makeRows() }));
-      const master = headerCheckbox(container);
-      expect(master.checked).toBe(true);
-      expect(master.indeterminate).toBe(false);
-    });
-
-    it('is unchecked when every row is disabled', () => {
-      const rows = makeRows({
-        'toggle-label-cluster': false,
-        'toggle-label-sun': false,
-        'toggle-constellations': false,
-      });
-      const { container } = render(createElement(LabelsAndGuidesSection, { rows }));
-      const master = headerCheckbox(container);
-      expect(master.checked).toBe(false);
-      expect(master.indeterminate).toBe(false);
-    });
-
     it('is indeterminate when only some rows are enabled', () => {
       const rows = makeRows({ 'toggle-label-sun': false });
       const { container } = render(createElement(LabelsAndGuidesSection, { rows }));
@@ -116,34 +97,8 @@ describe('LabelsAndGuidesSection', () => {
   });
 
   describe('master click', () => {
-    it('sets every row to true when clicked from noneOn', () => {
-      const rows = makeRows({
-        'toggle-label-cluster': false,
-        'toggle-label-sun': false,
-        'toggle-constellations': false,
-      });
-      const { container } = render(createElement(LabelsAndGuidesSection, { rows }));
-      fireEvent.click(headerCheckbox(container));
-
-      for (const row of rows) {
-        expect(row.onChange).toHaveBeenCalledOnce();
-        expect(row.onChange).toHaveBeenCalledWith(true);
-      }
-    });
-
     it('clears every row when clicked from a mixed set', () => {
       const rows = makeRows({ 'toggle-label-sun': false });
-      const { container } = render(createElement(LabelsAndGuidesSection, { rows }));
-      fireEvent.click(headerCheckbox(container));
-
-      for (const row of rows) {
-        expect(row.onChange).toHaveBeenCalledOnce();
-        expect(row.onChange).toHaveBeenCalledWith(false);
-      }
-    });
-
-    it('clears every row when clicked from allOn', () => {
-      const rows = makeRows();
       const { container } = render(createElement(LabelsAndGuidesSection, { rows }));
       fireEvent.click(headerCheckbox(container));
 

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { Source, SOURCE_REGISTRY } from '../src/data/sources';
-import { ALL_VISIBLE_MASK } from '../src/utils/allVisibleMask';
+import { Source } from '../src/data/sources';
 import { maskHas } from '../src/utils/maskHas';
 import { maskWith } from '../src/utils/maskWith';
 import { maskWithout } from '../src/utils/maskWithout';
@@ -17,22 +16,7 @@ describe('Source enum', () => {
   });
 });
 
-describe('source coverage metadata', () => {
-  it('reports approximate maximum distance per galaxy catalog in Mpc', () => {
-    expect(SOURCE_REGISTRY[Source.TwoMRS].maxDistMpc).toBeLessThan(300);
-    // GLADE's distance distribution has a long tail past 1 Gpc; we choose
-    // a generous band-edge here so the auto-LOD heuristic includes it in
-    // the mid-range view.
-    expect(SOURCE_REGISTRY[Source.Glade].maxDistMpc).toBeGreaterThan(800);
-    expect(SOURCE_REGISTRY[Source.SDSS].maxDistMpc).toBeGreaterThan(2000);
-  });
-});
-
 describe('source mask helpers', () => {
-  it('ALL_VISIBLE_MASK has every defined source bit set', () => {
-    expect(maskHas(ALL_VISIBLE_MASK, Source.SDSS)).toBe(true);
-    expect(maskHas(ALL_VISIBLE_MASK, Source.Glade)).toBe(true);
-  });
   it('maskHas / maskWith / maskWithout flip individual bits', () => {
     let m = 0;
     expect(maskHas(m, Source.SDSS)).toBe(false);

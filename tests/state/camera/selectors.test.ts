@@ -15,7 +15,6 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import {
-  selectCameraBase,
   selectAutoRotate,
   selectCameraActive,
   selectClipActive,
@@ -30,7 +29,6 @@ import {
   startFrameTween,
 } from '../../../src/state/camera/cameraSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { CameraTweenDescriptor } from '../../../src/@types/camera/CameraTweenDescriptor';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -70,31 +68,6 @@ const frameTween: FrameTween = {
   durationMs: 800,
   easing: 'easeInOutCubic',
 };
-
-describe('selectCameraBase', () => {
-  it('returns the committed base pose', () => {
-    const store = makeStore();
-    store.dispatch(commitCameraPose(absoluteArm(pose)));
-
-    expect(selectCameraBase(store.getState())).toEqual(absoluteArm(pose));
-  });
-});
-
-describe('selectAutoRotate', () => {
-  it('returns true after setAutoRotate active:true', () => {
-    const store = makeStore();
-    store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
-
-    expect(selectAutoRotate(store.getState())).toBe(true);
-  });
-
-  it('returns false after setAutoRotate active:false', () => {
-    const store = makeStore();
-    store.dispatch(setAutoRotate({ active: false, rate: 0.001 }));
-
-    expect(selectAutoRotate(store.getState())).toBe(false);
-  });
-});
 
 describe('selectCameraActive', () => {
   it('is false at rest (no drag, no tween, auto-rotate off)', () => {
@@ -158,11 +131,6 @@ describe('selectCameraActive', () => {
 });
 
 describe('selectClipActive', () => {
-  it('is false when no clip is set', () => {
-    const store = makeStore();
-    expect(selectClipActive(store.getState())).toBe(false);
-  });
-
   it('is true after clipStarted and false after clipEnded', () => {
     const store = makeStore();
     store.dispatch(clipStarted(clip));

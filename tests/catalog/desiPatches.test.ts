@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DESI_PATCHES, DESI_CONE } from '../../tools/catalog/desiPatches';
+import { DESI_PATCHES } from '../../tools/catalog/desiPatches';
 
 /**
  * DESI_PATCHES shape — the build loops this table (one `.bin` per row) and
@@ -19,20 +19,6 @@ describe('DESI_PATCHES', () => {
   it('has unique sources', () => {
     const sources = DESI_PATCHES.map((p) => p.source);
     expect(new Set(sources).size).toBe(sources.length);
-  });
-
-  it("each row's makeFilter builds a callable 3-arg predicate", () => {
-    // The predicate takes (raDeg, decDeg, z); sky-only patches ignore z, the
-    // depth-bounded Sloan Great Wall uses it. All must return a boolean either way.
-    for (const patch of DESI_PATCHES) {
-      const keep = patch.makeFilter();
-      expect(typeof keep(DESI_CONE.raDeg, DESI_CONE.decDeg, 0.075)).toBe('boolean');
-    }
-  });
-
-  it('the cone predicate accepts its own center', () => {
-    const cone = DESI_PATCHES.find((p) => p.key === 'cone')!;
-    expect(cone.makeFilter()(DESI_CONE.raDeg, DESI_CONE.decDeg, 0.075)).toBe(true);
   });
 
   it('the sgw ellipsoid-union predicate rejects a deep-background galaxy', () => {

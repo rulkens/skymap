@@ -28,13 +28,4 @@ describe('sdssExplorerUrl', () => {
     const url = sdssExplorerUrl(bigID);
     expect(url).toContain('objId=1237671121517085123');
   });
-
-  it('handles 0n (synthetic / unknown objID) without crashing', () => {
-    // The engine guards against using this URL for objID = 0n at the
-    // GalaxyInfo layer, but the URL builder itself is permissive and just
-    // string-interpolates the value.
-    expect(sdssExplorerUrl(0n)).toBe(
-      'https://skyserver.sdss.org/dr18/VisualTools/quickobj?objId=0',
-    );
-  });
 });

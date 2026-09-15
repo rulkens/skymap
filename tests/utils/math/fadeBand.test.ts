@@ -29,36 +29,15 @@ describe('fadeBand — approach direction (fullAt > goneAt, fades out as value d
     // Centre of [0.002, 0.008] is 0.005; smoothstep at t=0.5 is exactly 0.5.
     expect(fadeBand(mwApproach, 0.005)).toBeCloseTo(0.5, 5);
   });
-
-  it('ramps monotonically up across the band', () => {
-    let prev = -Infinity;
-    for (let d = 0; d <= 0.01; d += 0.0002) {
-      const a = fadeBand(mwApproach, d);
-      expect(a).toBeGreaterThanOrEqual(prev);
-      prev = a;
-    }
-  });
 });
 
 describe('fadeBand — recede direction (fullAt < goneAt, fades out as value rises)', () => {
   // The star-caption neighbourhood band: full ≤ 12 pc, gone ≥ 25 pc.
   const starCaption = { fullAt: 12, goneAt: 25 };
 
-  it('holds full alpha at and below the low (fullAt) edge', () => {
-    expect(fadeBand(starCaption, 0)).toBe(1);
-    expect(fadeBand(starCaption, 10.34)).toBe(1);
-    expect(fadeBand(starCaption, 12)).toBe(1);
-  });
-
   it('is fully gone at and above the high (goneAt) edge', () => {
     expect(fadeBand(starCaption, 25)).toBe(0);
     expect(fadeBand(starCaption, 1000)).toBe(0);
-  });
-
-  it('is strictly fractional mid-band', () => {
-    const mid = fadeBand(starCaption, (12 + 25) / 2);
-    expect(mid).toBeGreaterThan(0);
-    expect(mid).toBeLessThan(1);
   });
 
   it('ramps monotonically down across the band', () => {

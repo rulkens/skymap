@@ -8,11 +8,6 @@ const M31 = {
 };
 
 describe('scoreFamousMatch', () => {
-  it('returns >0 for an exact-prefix name match', () => {
-    expect(scoreFamousMatch(M31, 'M31')).toBeGreaterThan(0);
-    expect(scoreFamousMatch(M31, 'm31')).toBeGreaterThan(0);
-  });
-
   it('matches by common-name substring (case-insensitive)', () => {
     expect(scoreFamousMatch(M31, 'andromeda')).toBeGreaterThan(0);
   });

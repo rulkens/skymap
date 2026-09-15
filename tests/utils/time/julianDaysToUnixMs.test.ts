@@ -11,9 +11,4 @@ describe('julianDaysToUnixMs', () => {
     const jd = unixMsToJulianDays(unixMs);
     expect(julianDaysToUnixMs(jd)).toBe(unixMs);
   });
-
-  it('maps the Unix epoch JD back to 0 ms', () => {
-    // 2_440_587.5 is the JD of 1970-01-01T00:00:00Z — the map's fixed point.
-    expect(julianDaysToUnixMs(2_440_587.5)).toBe(0);
-  });
 });

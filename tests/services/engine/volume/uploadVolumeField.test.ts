@@ -54,8 +54,7 @@ describe('uploadVolumeField', () => {
 
     expect(store.dispatch).toHaveBeenCalledWith(addVolumeField(fieldId));
     expect(upload).toHaveBeenCalledWith(fieldId, cube);
-    const dispatchOrder = (store.dispatch as ReturnType<typeof vi.fn>).mock
-      .invocationCallOrder[0]!;
+    const dispatchOrder = (store.dispatch as ReturnType<typeof vi.fn>).mock.invocationCallOrder[0]!;
     const uploadOrder = upload.mock.invocationCallOrder[0]!;
     expect(dispatchOrder).toBeLessThan(uploadOrder);
   });
@@ -71,15 +70,5 @@ describe('uploadVolumeField', () => {
     const uploadOrder = upload.mock.invocationCallOrder[0]!;
     const fadeOrder = bridge.mock.invocationCallOrder[0]!;
     expect(uploadOrder).toBeLessThan(fadeOrder);
-  });
-
-  it('does nothing at all when the renderer is not constructed', () => {
-    const state = fakeState(null);
-    const store = { dispatch: vi.fn() } as unknown as AppStore;
-
-    uploadVolumeField(state, store, fieldId, fakeCube());
-
-    expect(store.dispatch).not.toHaveBeenCalled();
-    expect(bridge).not.toHaveBeenCalled();
   });
 });

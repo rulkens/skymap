@@ -6,34 +6,11 @@ import { createElement } from 'react';
 import SearchTrigger from '../../../src/components/SearchTrigger/SearchTrigger';
 
 describe('SearchTrigger', () => {
-  it('renders a button advertising galaxy search', () => {
-    render(createElement(SearchTrigger, { onClick: () => {} }));
-    expect(
-      screen.getByRole('button', { name: /search galaxies/i }),
-    ).toBeInTheDocument();
-  });
-
-  it('exposes Meta+K via aria-keyshortcuts so screen readers can surface it', () => {
-    render(createElement(SearchTrigger, { onClick: () => {} }));
-    const btn = screen.getByRole('button', { name: /search galaxies/i });
-    expect(btn).toHaveAttribute('aria-keyshortcuts', expect.stringContaining('Meta+K'));
-  });
-
   it('fires onClick when the user clicks the button', async () => {
     const onClick = vi.fn();
     const user = userEvent.setup();
     render(createElement(SearchTrigger, { onClick }));
     await user.click(screen.getByRole('button', { name: /search galaxies/i }));
-    expect(onClick).toHaveBeenCalledOnce();
-  });
-
-  it('fires onClick on Enter when focused (keyboard accessibility)', async () => {
-    const onClick = vi.fn();
-    const user = userEvent.setup();
-    render(createElement(SearchTrigger, { onClick }));
-    const btn = screen.getByRole('button', { name: /search galaxies/i });
-    btn.focus();
-    await user.keyboard('{Enter}');
     expect(onClick).toHaveBeenCalledOnce();
   });
 

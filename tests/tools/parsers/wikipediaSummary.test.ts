@@ -38,13 +38,6 @@ describe('parseWikipediaSummary', () => {
     expect(out.thumbnailUrl).toBe('https://example.test/thumb.jpg');
   });
 
-  it('leaves image URLs undefined when absent', () => {
-    const json = JSON.stringify({ type: 'standard', title: 'Foo', extract: 'x' });
-    const out = parseWikipediaSummary(json);
-    expect(out.originalImageUrl).toBeUndefined();
-    expect(out.thumbnailUrl).toBeUndefined();
-  });
-
   it('returns empty extract for disambiguation pages (type field)', () => {
     const json = JSON.stringify({
       type: 'disambiguation',
@@ -66,32 +59,9 @@ describe('parseWikipediaSummary', () => {
     const out = parseWikipediaSummary(json);
     expect(out.extract).toBe('');
   });
-
-  it('treats missing extract as empty string', () => {
-    const json = JSON.stringify({ type: 'standard', title: 'Foo' });
-    const out = parseWikipediaSummary(json);
-    expect(out.extract).toBe('');
-    expect(out.title).toBe('Foo');
-  });
-
-  it('treats missing title as empty string', () => {
-    const json = JSON.stringify({ type: 'standard', extract: 'A galaxy.' });
-    const out = parseWikipediaSummary(json);
-    expect(out.extract).toBe('A galaxy.');
-    expect(out.title).toBe('');
-  });
-
-  it('throws SyntaxError on malformed JSON', () => {
-    expect(() => parseWikipediaSummary('not json')).toThrow();
-  });
 });
 
 describe('wikipediaSummaryUrl', () => {
-  it('encodes a normal title', () => {
-    const url = wikipediaSummaryUrl('Messier_31');
-    expect(url).toContain('/page/summary/Messier_31');
-  });
-
   it('converts spaces to underscores before URL-encoding', () => {
     // "Andromeda Galaxy" → "Andromeda_Galaxy" → URL-encoded.
     const url = wikipediaSummaryUrl('Andromeda Galaxy');

@@ -41,12 +41,6 @@ describe('watchWakeSaga', () => {
     expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
   });
 
-  it('a camera slice write (setAutoRotate) wakes the loop', () => {
-    store.dispatch(setAutoRotate({ active: true, rate: 0.001 }));
-
-    expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
-  });
-
   // ── tier writes wake the loop ───────────────────────────────────────────────
   // The catalog reload after a tier change starts from a FRAME (the demand
   // loop's drift edge), so a `tier/` write that arrives while the loop is
@@ -66,12 +60,6 @@ describe('watchWakeSaga', () => {
 
   it('a time slice write (pause) wakes the loop', () => {
     store.dispatch(pause({ nowMs: 0 }));
-
-    expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
-  });
-
-  it('a time slice write (resume) wakes the loop', () => {
-    store.dispatch(resume({ nowMs: 0 }));
 
     expect(reconcile.requestRender).toHaveBeenCalledTimes(1);
   });

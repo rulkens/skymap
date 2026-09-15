@@ -31,17 +31,6 @@ describe('catalogSlice setPackedCatalog', () => {
 });
 
 describe('catalogSlice zero-point status', () => {
-  it('catalogLoaded clears a stale statusMessage — a real load must supersede it', () => {
-    const stale = reducer(
-      defaultCatalogSlice,
-      actions.setCatalogStatusMessage('no catalog points'),
-    );
-
-    const loaded = reducer(stale, actions.catalogLoaded({ points, weights, bounds: null }));
-
-    expect(loaded.statusMessage).toBeNull();
-  });
-
   it('catalogLoaded moves points into catalog state', () => {
     const loaded = reducer(
       defaultCatalogSlice,

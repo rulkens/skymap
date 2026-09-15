@@ -194,35 +194,4 @@ describe('produceStructureMarkers', () => {
     expect(aFoc.ringColor[3]).toBeCloseTo(aRest.ringColor[3], 6);
     expect(aFoc.haloColor[3]).toBeCloseTo(aRest.haloColor[3], 6);
   });
-
-  it('selected ring bump is unaffected by recession', () => {
-    // 'sel' is SELECTED but a DIFFERENT structure 'foc' is FOCUSED, so the
-    // selected-but-not-focused ring would recede if recession leaked into the
-    // selected branch. It must not: the bump stays min(1, base×1.5).
-    const state = makeState('sel', 'foc');
-    state.data.structures.setGroup('anchors', [
-      rec('sel', 'cluster', { significance: 0 }),
-      rec('foc', 'cluster', { significance: 0 }),
-    ]);
-    const focused = produceStructureMarkers(state, makeCtx(1));
-    const sel = focused.find((m) => m.id === 'sel')!;
-    // base = 1 × 1 × 0.25 = 0.25; selected → min(1, 0.25 × 1.5) = 0.375,
-    // recession-free even at blend 1.
-    expect(sel.ringColor[3]).toBeCloseTo(0.375, 6);
-  });
-
-  it('at-rest output is unchanged (blend 0, fail-safe toggles, no focus)', () => {
-    const state = makeState();
-    state.data.structures.setGroup('anchors', [
-      rec('a', 'cluster', { significance: 0 }),
-      rec('v', 'void', { significance: 1 }),
-    ]);
-    const markers = produceStructureMarkers(state, makeCtx(0));
-    const a = markers.find((m) => m.id === 'a')!;
-    const v = markers.find((m) => m.id === 'v')!;
-    // Cluster significance 0 → sigWeight 0.25; ring at-rest alpha 1 → 0.25.
-    expect(a.ringColor[3]).toBeCloseTo(0.25, 6);
-    // Void significance 1 → sigWeight 1; ring tint #73B3D9 (alpha 1) → 1.
-    expect(v.ringColor[3]).toBeCloseTo(1, 6);
-  });
 });

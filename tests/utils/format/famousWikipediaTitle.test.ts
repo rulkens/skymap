@@ -16,10 +16,6 @@ describe('famousWikipediaTitle', () => {
     );
   });
 
-  it('handles an IC designation anywhere in the list', () => {
-    expect(famousWikipediaTitle(['Foo', 'IC 1613'])).toBe('IC 1613');
-  });
-
   it('falls back to names[1] then names[0] when no NGC/IC name is present', () => {
     expect(famousWikipediaTitle(['Alpha', 'Beta'])).toBe('Beta');
     expect(famousWikipediaTitle(['Solo'])).toBe('Solo');

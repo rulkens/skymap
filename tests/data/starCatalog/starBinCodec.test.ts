@@ -12,10 +12,7 @@
  *      codec is actually engaged rather than passing bytes through untouched.
  */
 import { describe, it, expect } from 'vitest';
-import {
-  compressStarBin,
-  decompressStarBin,
-} from '../../../src/data/starCatalog/starBinCodec';
+import { compressStarBin, decompressStarBin } from '../../../src/data/starCatalog/starBinCodec';
 
 /**
  * A payload with two regimes: 4 KiB of LCG pseudo-random bytes (high entropy,
