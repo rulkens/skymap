@@ -123,8 +123,7 @@ def load(cfg):
 
 
 def keepers(scene):
-    """Surface geometry only: no cameras, lights or face-less meshes. The
-    rejects are not deleted here; `join_meshes` removes them after the join."""
+    """Surface geometry only: no cameras, lights or face-less meshes."""
     keep = []
     dropped = 0
     for obj in scene.objects:
@@ -146,9 +145,9 @@ def source_uv(meshes):
     for obj in meshes:
         names = [l.name for l in obj.data.uv_layers]
         if len(names) != 1 or (shared is not None and names[0] != shared):
-            raise RuntimeError("prebake: %s has uv layers %s, expected the one shared layer %s — "
-                               "re-run `npm run import-mesh -- <key>` or remove the extra layer"
-                               % (obj.name, names, shared))
+            raise RuntimeError("prebake: %s has uv layers %s; every mesh needs exactly one, "
+                               "all named alike — re-run `npm run import-mesh -- <key>` or "
+                               "remove the extra layer" % (obj.name, names))
         shared = names[0]
     return shared
 
@@ -169,10 +168,7 @@ def join_meshes(scene, meshes):
     if len(meshes) > 1:
         bpy.ops.object.join()
     joined = bpy.context.view_layer.objects.active
-    # The join hands its own animation data to the survivor. `transform_apply`
-    # bakes the pose into the vertices and zeroes the channels, but the F-curves
-    # then re-apply it on the next evaluation and the export ships the rotation
-    # TWICE. Dropping the action is what makes the applied transform stick.
+    # Live F-curves would re-apply the pose `transform_apply` bakes in, exporting it twice.
     joined.animation_data_clear()
     bpy.ops.object.parent_clear(type="CLEAR_KEEP_TRANSFORM")
     bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)

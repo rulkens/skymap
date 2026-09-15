@@ -63,7 +63,10 @@ cleared with `KEEP_TRANSFORM` first — but a child whose F-curves animate its l
 transform would then re-apply parent-relative values on the next evaluation and scatter
 the model. So at the stow frame the importer applies modifiers (Perseverance's armature
 deform and Curiosity's geometry nodes are evaluated there), clears object animation,
-clears every parent keeping world transforms, and only then deletes the markers. The GUI
+unparents only the markers' direct children keeping their world transforms, and only then
+deletes the markers. Unparenting every object is not an option: writing a world matrix
+back into loc/rot/scale is not bit-exact, and the drift moves Perseverance's decimation
+(99 999 triangles) and MER's ground offset, failing the empty-diff gate. The GUI
 shows the bake's pose at any timeline position, and the per-body `frame` config leaves
 the prebake. `frame_current` is still saved at the stow frame so any non-object animation
 (materials, node values) evaluates where it did before.

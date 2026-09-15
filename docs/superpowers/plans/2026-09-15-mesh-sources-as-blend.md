@@ -72,10 +72,13 @@ rewrite):
 5. `apply_modifiers` over meshes with faces and materials (`:239-244`, filter from
    `keepers` `:223-232`) — at the stow frame, so armature deform and geometry nodes are
    evaluated there.
-6. Freeze the pose, for every object: record `matrix_world`, clear `animation_data`, clear
-   the parent, restore `matrix_world`. Freezing before any delete is what stops a child
-   whose F-curves animate its parent-relative transform from scattering once its marker
-   parent is gone.
+6. Freeze the pose: `view_layer.update()`, record every object's `matrix_world`, clear
+   `animation_data` on every object; then, only for the direct children of the objects
+   step 7 deletes, clear the parent and restore `matrix_world`. Freezing before any delete
+   is what stops a child whose F-curves animate its parent-relative transform from
+   scattering once its marker parent is gone. Never unparent everything: the
+   matrix→loc/rot/scale round trip drifts at 1e-7 and moves Perseverance's decimation
+   count and MER's ground offset (review A, measured).
 7. Delete objects whose materials are all in `drop_materials`; raise if the set is
    non-empty and nothing matched (guard text from `:233-235`).
 8. `unify_source_uvs` + `repoint_uv_references` (`:258-296`) over the surviving meshes

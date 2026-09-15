@@ -141,33 +141,31 @@ def select(objects):
     bpy.context.view_layer.objects.active = objects[0]
 
 
-def freeze_pose(scene):
-    """Every rover parents its parts to empties, an armature or a marker cube,
-    and animates them through those links. All world matrices are read BEFORE
-    any link is cut: unparenting a parent first would move its children. Object
-    constraints go too — restored into `matrix_basis`, they would apply twice."""
-    bpy.context.view_layer.update()
-    world = {obj: obj.matrix_world.copy() for obj in scene.objects}
-    constrained = 0
-    for obj in world:
-        obj.animation_data_clear()
-        constrained += len(obj.constraints)
-        obj.constraints.clear()
-        obj.parent = None
-    for obj, matrix in world.items():
-        obj.matrix_world = matrix
-    return len(world), constrained
-
-
-def drop_markers(scene, drop_materials):
+def markers(scene, drop_materials):
     marked = [o for o in scene.objects
               if o.type == "MESH" and materials_of(o) and materials_of(o) <= drop_materials]
     if drop_materials and not marked:
         raise RuntimeError("import: no %s objects to drop — the markers were renamed upstream"
                            % sorted(drop_materials))
-    for obj in marked:
-        bpy.data.objects.remove(obj, do_unlink=True)
-    return len(marked)
+    return marked
+
+
+def freeze_pose(scene, doomed):
+    """After `frame_set` the evaluated F-curve values sit in each object's own
+    loc/rot/scale, so clearing animation alone keeps the pose. Only children of
+    a doomed marker are unparented: writing `matrix_world` back into float32
+    loc/rot/scale drifts ~1e-7, enough to move the decimation. Their constraints
+    go too, or they would apply on top of the restored world matrix."""
+    bpy.context.view_layer.update()
+    world = {obj: obj.matrix_world.copy() for obj in scene.objects}
+    for obj in world:
+        obj.animation_data_clear()
+    orphans = [obj for obj in world if obj.parent in doomed]
+    for obj in orphans:
+        obj.constraints.clear()
+        obj.parent = None
+        obj.matrix_world = world[obj]
+    return len(world), len(orphans)
 
 
 def unify_source_uvs(meshes):
@@ -209,13 +207,14 @@ def repoint_uv_references():
 
 
 def pack_images():
-    """`pack_all` raises on a file it cannot find, and Curiosity's relinked
-    duplicate is exactly that. With no users it would not be saved anyway."""
-    orphans = [i for i in bpy.data.images if i.users == 0 and tuple(i.size) == (0, 0)]
-    for image in orphans:
+    """`pack_all` raises on a file it cannot find. A zero-pixel image feeding
+    Base Color was relinked or raised above, so what is left samples nothing
+    (Curiosity's duplicate still counts a stale material user)."""
+    missing = [i for i in bpy.data.images if tuple(i.size) == (0, 0)]
+    for image in missing:
         bpy.data.images.remove(image)
     bpy.ops.file.pack_all()
-    return len(orphans)
+    return len(missing)
 
 
 def main():
@@ -238,13 +237,14 @@ def main():
     meshes = surfaces(scene)
     apply_modifiers(meshes)
     log("applied modifiers on %d meshes" % len(meshes))
-    log("froze %d objects (%d constraints cleared)" % freeze_pose(scene))
-    log("deleted %d marker objects" % drop_markers(scene, cfg["drop_materials"]))
+    doomed = markers(scene, cfg["drop_materials"])
+    log("froze %d objects (%d unparented from markers)" % freeze_pose(scene, doomed))
+    for obj in doomed:
+        bpy.data.objects.remove(obj, do_unlink=True)
+    log("deleted %d marker objects" % len(doomed))
     unify_source_uvs(surfaces(scene))
 
-    log("packed images (%d unused missing images removed)" % pack_images())
-    if cfg["frame"] is not None:
-        scene.frame_current = cfg["frame"]
+    log("packed images (%d missing images removed)" % pack_images())
     bpy.ops.wm.save_as_mainfile(filepath=out)
     log("wrote %s (%d objects)" % (out, len(scene.objects)))
 
