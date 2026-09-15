@@ -1,6 +1,6 @@
 /**
- * CubemapCaptureRuntime — cross-frame memory for ONE `CUBEMAP_CAPTURES` row's
- * bake. Single-writer: only `scheduleCubemapCaptures` writes it, only the row's
+ * SkyCaptureRuntime — cross-frame memory for ONE sky row's bake.
+ * Single-writer: only `scheduleSkyCaptures` writes it, only the row's
  * `allocateWhen` (`renderTargets.ts`) reads it.
  *
  * Both `last…` fields are LAST-frame values, not live ones: `allocateWhen` runs
@@ -10,7 +10,7 @@
 
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 
-export type CubemapCaptureRuntime = {
+export type SkyCaptureRuntime = {
   /** Whether the row's band was open. */
   lastBandActive: boolean;
   /** Camera distance from the row's anchor, Mpc. */
@@ -18,7 +18,8 @@ export type CubemapCaptureRuntime = {
   /**
    * The settings slice reference the faces were baked under. `null` = nothing
    * usable baked: never baked, the band just closed, or the last bake ran while
-   * the roster was still settling.
+   * the roster was still settling. A `rebakeOnSettings: false` row records the
+   * reference too, but only its null-ness is consulted.
    */
   bakedSettings: EngineSettingsState | null;
 };

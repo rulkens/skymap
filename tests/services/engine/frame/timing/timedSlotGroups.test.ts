@@ -13,12 +13,14 @@ describe('TIMED_SLOT_GROUPS', () => {
     // star-aggregates and milky-way-aggregate are non-adjacent steps that all
     // map to "Volumes & aggregates"; the two composites and pick — scattered
     // through execution order — collapse into the trailing "Composites & pick".
-    // "Sky capture" is TIMED_SLOTS' 6 capture steps (one row per face); "Sgr A*
-    // lensing" is the lens pool, sized off `MAX_FRAME_INPUTS.bodyRowSlabs.lens` the
-    // same way "Foreground bodies" is sized off its `foregroundChain`.
+    // "Sky capture" is TIMED_SLOTS' 6 capture steps (one row per face); "Probe
+    // capture" the probe's faces plus a body pool per face; "Sgr A* lensing" is
+    // the lens pool, sized off `MAX_FRAME_INPUTS.bodyRowSlabs.lens` the same way
+    // "Foreground bodies" is sized off its `foregroundChain`.
     expect(TIMED_SLOT_GROUPS.map((g) => g.title)).toEqual([
       'Volumes & aggregates',
       'Sky capture',
+      'Probe capture',
       'Cosmos · HDR',
       'Near field · HDR',
       'Sgr A* lensing',

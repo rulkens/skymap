@@ -212,17 +212,17 @@ src/utils/scene/hostSkyFraction.ts + tests/utils/scene/hostSkyFraction.test.ts
 Everything later is judged against these; they cannot be reconstructed after
 a feature commit lands.
 
-- [ ] Dev server for THIS worktree; note its `Local:` port.
-- [ ] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30`
+- [x] Dev server for THIS worktree; note its `Local:` port.
+- [x] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30`
       and the same for `solar-system`; save both outputs under the scratchpad
       as `perf-before-*.txt`.
-- [ ] Screenshots, sim clock PAUSED, saved beside them: (a) Voyager 1 framed
+- [x] Screenshots, sim clock PAUSED, saved beside them: (a) Voyager 1 framed
       on the bus + dish from ~10 m, Sun behind the camera's shoulder; (b)
       Curiosity, deck and mast from ~4 m, daytime; (c) Curiosity from the same
       pose at night (advance the clock ~12 h, pause); (d) the whale from ~30 m
       with Earth filling the background; (e) Earth from the `earth-surface`
       perf pose (ocean glint).
-- [ ] `?gpuTimings`, strategy merged, clock paused: record the MERGED TOTAL at
+- [x] `?gpuTimings`, strategy merged, clock paused: record the MERGED TOTAL at
       poses (a) and (b) — read it three times and keep the median.
 
 ---
@@ -238,15 +238,18 @@ a feature commit lands.
 
 ```python
 BAKE_PASSES = [
-    ("albedo",    dict(type="DIFFUSE", pass_filter={"COLOR"}), "sRGB",      None),
+    ("albedo",    dict(type="EMIT"),                           "sRGB",      swap_to_emission("Base Color")),
     ("normal",    dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None),
     ("roughness", dict(type="ROUGHNESS"),                      "Non-Color", None),
-    ("metallic",  dict(type="EMIT"),                           "Non-Color", swap_metallic_to_emission),
+    ("metallic",  dict(type="EMIT"),                           "Non-Color", swap_to_emission("Metallic")),
 ]
-# The fourth column is an optional (enter, exit) pair around the bake: Blender
-# has no metallic bake, so the row routes every source material's Metallic
-# input into Emission for the duration of its bake and restores it after.
-def swap_metallic_to_emission(materials) -> restore_fn
+# The fourth column is an optional enter step around the bake, paired with
+# restore_emission(undo): Cycles has no metallic bake, and its DIFFUSE colour
+# pass of a metal is zero, so both rows route the named Principled input into
+# Emission for the duration of the bake (constant → (v, v, v) colour, image
+# node → re-linked; use_pass_direct/indirect off so EMIT is unlit) and restore it after.
+def swap_to_emission(socket_name) -> enter_fn(materials) -> undo
+def restore_emission(undo)
 ```
 
 `flatten_materials(obj, key, images)` links `albedo` → Base Color,
@@ -254,32 +257,32 @@ def swap_metallic_to_emission(materials) -> restore_fn
 `normal` → a Normal Map node (tangent space) → Normal; the `Metallic 0` /
 `Roughness 0.7` constants are DELETED with the rows that supersede them.
 
-- [ ] Add the three rows and the swap. A Metallic input driven by a constant
+- [x] Add the three rows and the swap. A Metallic input driven by a constant
       becomes an emission colour `(m, m, m)`; one driven by an image node is
       re-linked to Emission Color; emission strength 1.0; `use_pass_direct` /
       `use_pass_indirect` off is already the script's posture, so EMIT bakes the
       raw value. Data images are created with `is_data=True` and saved
       Non-Color — a data atlas saved through the sRGB view transform comes out
       gamma-bent, and the runtime decodes `_mr`/`_normal` linearly.
-- [ ] Verify (log line) that the exported GLB carries `normalTexture` AND a
+- [x] Verify (log line) that the exported GLB carries `normalTexture` AND a
       combined `metallicRoughnessTexture`: Blender's glTF exporter packs
       image-driven Roughness (G) and Metallic (B) sockets into one texture.
       If a Blender version stops doing that, the fallback is to pack the two
       atlases into `<key>.prebaked.mr.png` in the script (numpy over
       `image.pixels`) and link it through a Separate Color node — say so in a
       comment only if that fallback is what ships.
-- [ ] READMEs: replace "Having no normal or metallicRoughness map is expected …
+- [x] READMEs: replace "Having no normal or metallicRoughness map is expected …
       records `normalMapSubstituted: true`" with the four-atlas sentence and
       `substituted: []`. `rawDataRegistry.ts` `meshes.{voyager,perseverance,curiosity,mer}`
       descriptions: "one baked 2048² albedo atlas" → "four baked 2048² atlases
       (albedo, normal, roughness, metallic)".
-- [ ] **USER-RUN:** `npm run prebake-mesh -- <key>` ×4 (sources linked as in
+- [x] **USER-RUN:** `npm run prebake-mesh -- <key>` ×4 (sources linked as in
       prep Task 4), then `npm run build-meshes`. Expected stderr: no
       "substituting" warning for the four; the generated rows read
       `substituted: []`. Eyeball one `_mr.png`: the dish/foil parts of Voyager
       are bright in B (metallic), fabric/paint dark.
-- [ ] `npm test -- meshes` green (the round-trip test pins the regenerated table).
-- [ ] Commit: `feat(meshes): bake normal, roughness and metallic atlases for the NASA models`.
+- [x] `npm test -- meshes` green (the round-trip test pins the regenerated table).
+- [x] Commit: `feat(meshes): bake normal, roughness and metallic atlases for the NASA models`.
       Deployment of `public/data/meshes/*` to R2 is a post-merge step from
       `main` (`docs/DEPLOY.md`), as #693 did — note it in the PR body.
 
@@ -311,19 +314,19 @@ export type EnvBrdfLutMeta = {
 };
 ```
 
-- [ ] `tests/tools/lut/envBrdfLut.test.ts`:
+- [x] `tests/tools/lut/envBrdfLut.test.ts`:
   - `it('a mirror at normal incidence reflects everything: (NoV=1, roughness≈0) → scale≈1, bias≈0')`
     — read the texel at the top-right column of row 0; `scale` within 0.02 of 1,
     `bias` within 0.02 of 0 (hand-derived: F = F0 at VoH = 1, D·G/(4 NoV NoL)
     integrates to 1 over a Dirac lobe).
   - `it('never returns more energy than it receives: 0 ≤ scale + bias ≤ 1 at every texel')`.
-- [ ] Implement; 128 × 128, 1024 samples (the tool runs once; seconds are
+- [x] Implement; 128 × 128, 1024 samples (the tool runs once; seconds are
       fine). Write both files. Commit them: the font atlases are the precedent
       for a small deterministic build artefact in `public/`.
-- [ ] `docs/DATA.md`: beside the sentence that says raw files and built
+- [x] `docs/DATA.md`: beside the sentence that says raw files and built
       artefacts are gitignored, name `public/fonts/` and `public/lut/` as the
       committed exceptions (font atlas, env-BRDF LUT), each with its `npm run`.
-- [ ] Commit: `feat(lut): split-sum environment-BRDF LUT tool + committed 128² rg16float asset`.
+- [x] Commit: `feat(lut): split-sum environment-BRDF LUT tool + committed 128² rg16float asset`.
 
 ---
 
@@ -368,21 +371,21 @@ export function createMeshBodyRenderer(init: {
 The LUT is read at `(NoV, roughness)`; clamp-to-edge is what keeps NoV → 0
 from wrapping to the NoV = 1 column.
 
-- [ ] `loadEnvBrdfLut.test.ts` (mocked `fetch` + mocked device):
+- [x] `loadEnvBrdfLut.test.ts` (mocked `fetch` + mocked device):
       `it('sizes the texture from the json and uploads bytesPerRow = width × 4')`
       — a wrong `bytesPerRow` garbles the LUT silently.
-- [ ] Implement the loader (`fetch('/lut/envBrdf.json')`, then the `.bin`;
+- [x] Implement the loader (`fetch('/lut/envBrdf.json')`, then the `.bin`;
       `createTexture({ format: meta.format, size: [w, h] })`,
       `queue.writeTexture` with `bytesPerRow: w * 4`). `initGpu` awaits it after
       `loadFontAtlases` and puts it on `state.gpu.envBrdfLut` and `handleDeps`.
-- [ ] Renderer: named bag; `globalBindGroup` grows the LUT view + `lutSampler`.
+- [x] Renderer: named bag; `globalBindGroup` grows the LUT view + `lutSampler`.
       Fragment declares the two bindings (unused until Task 9 — an unused
       resource variable is legal WGSL). `meshBodyRenderer.test.ts`:
       `it('binds the LUT and its clamp sampler in the global group')`.
-- [ ] `gpuHandleRegistry.ts` `meshBodyRenderer` row passes the bag with
+- [x] `gpuHandleRegistry.ts` `meshBodyRenderer` row passes the bag with
       `deps.envBrdfLut`.
-- [ ] `npm test -- meshBodyRenderer loadEnvBrdfLut` green; `npm run typecheck`.
-- [ ] Commit: `feat(mesh-bodies): load the env-BRDF LUT at boot and bind it in the mesh renderer's global group`.
+- [x] `npm test -- meshBodyRenderer loadEnvBrdfLut` green; `npm run typecheck`.
+- [x] Commit: `feat(mesh-bodies): load the env-BRDF LUT at boot and bind it in the mesh renderer's global group`.
 
 ---
 
@@ -479,37 +482,37 @@ export function scheduleSkyCaptures(input: { state; ctx }): CaptureFaceContexts;
 // scheduleCubemapCaptures composes: sky now, probe from Task 8
 ```
 
-- [ ] Renames first, tool-driven:
+- [x] Renames first, tool-driven:
       `npm run move-files -- --dry src/@types/rendering/CubemapCapture.d.ts src/@types/rendering/SkyCapture.d.ts`
       then without `--dry`; `npm run refactor -- rename CubemapCapture SkyCapture`.
       Same for `src/@types/engine/state/CubemapCaptureRuntime.d.ts` →
       `SkyCaptureRuntime.d.ts` + `rename CubemapCaptureRuntime SkyCaptureRuntime`.
       Then re-create `CubemapCapture.d.ts` as the union.
-- [ ] Add the keys, rows, runtime types, band, `solar-system-sky` render-target
+- [x] Add the keys, rows, runtime types, band, `solar-system-sky` render-target
       row: `fixedSizePx: { size: 256, layers: 6 }` and an `allocateWhen` of
       `captureRowAllocateWhen('solarSystem', 1.5)` (the `sky-cubemap` row uses the
       same helper with its existing margin constant). `VIEW_SLOT_COUNT` 7 → 19;
       its doc: slot 0 is the main view, the rest are claimed per
       `CUBEMAP_CAPTURES` row (the table's test pins the ranges).
-- [ ] `engine.ts` seeds runtimes per row kind (`sky` → the P1 seed; `probe` →
+- [x] `engine.ts` seeds runtimes per row kind (`sky` → the P1 seed; `probe` →
       `{ subject: null, refreshedAtMs: new Map() }`), typed as
       `CubemapCaptureRuntimes`.
-- [ ] `scheduleSkyCaptures.ts`: the P1 loop over `SKY_CAPTURE_KEYS`, with
+- [x] `scheduleSkyCaptures.ts`: the P1 loop over `SKY_CAPTURE_KEYS`, with
       `const stale = runtime.bakedSettings === null || (row.rebakeOnSettings && runtime.bakedSettings !== state.settings)`
       replacing the settings-reference test. `scheduleCubemapCaptures.ts`
       becomes the composer (returns `scheduleSkyCaptures(...)` for now).
-- [ ] `cubemapFaceContext`: `pose = { target: eye + forward * nearMpc, yaw: 0, pitch: 0, distance: nearMpc }`
+- [x] `cubemapFaceContext`: `pose = { target: eye + forward * nearMpc, yaw: 0, pitch: 0, distance: nearMpc }`
       (ruling above); its docblock says why. Test:
       `it('places the synthetic orbit distance at the row's near plane, under the foreground gate')`
       — `ctx.cam.distance === nearMpc`.
-- [ ] `CaptureStepSpec.captures`; `expandFrameOrder`'s capture arm and
+- [x] `CaptureStepSpec.captures`; `expandFrameOrder`'s capture arm and
       `checkFrameOrder`'s facts loop the array; `checkFrameOrder` reads a
       target only from `kind === 'sky'` rows. `frameOrder.ts`: the sky line
       becomes `captures: ['sgrAStar', 'solarSystem']` — one roster, two rows;
       its comment gains a sentence on the second row (the star field a probe
       is captured over; parallax across the solar system is sub-texel at 256²).
-- [ ] `passGroupTitles`: `solarSystem·COSMO` / `solarSystem·NEAR0` → 'Sky capture'.
-- [ ] Tests: `cubemapCaptures.test.ts` — the slot test is unchanged in
+- [x] `passGroupTitles`: `solarSystem·COSMO` / `solarSystem·NEAR0` → 'Sky capture'.
+- [x] Tests: `cubemapCaptures.test.ts` — the slot test is unchanged in
       meaning (every row, both kinds); the target test filters to `kind === 'sky'`
       and gains `it('sky rows sharing a FRAME_ORDER line bake the same roster')`
       is NOT needed (the line is one literal). `renderFrame.cubemapCaptures.test.ts`
@@ -518,13 +521,13 @@ export function scheduleSkyCaptures(input: { state; ctx }): CaptureFaceContexts;
       `checkFrameOrder.test.ts`'s capture fixture too. Introduce one fixture
       helper for the state's `cubemapCaptures` value (a `tests/…/fixtures/`
       file is fine outside `src/`), and point the five fixture sites at it.
-- [ ] `frameFilePurity`: no new stray in `frame/`; `scheduleSkyCaptures` and
+- [x] `frameFilePurity`: no new stray in `frame/`; `scheduleSkyCaptures` and
       `scheduleCubemapCaptures` each declare only themselves.
-- [ ] `npm test` green; `npm run typecheck`.
-- [ ] **USER-RUN check:** with `?gpuTimings`, the `solarSystem·COSMO/NEAR0·FACE[n]`
+- [x] `npm test` green; `npm run typecheck`.
+- [x] **USER-RUN check:** with `?gpuTimings`, the `solarSystem·COSMO/NEAR0·FACE[n]`
       rows fire once shortly after boot near Earth and never again while
       dragging a slider; the lens still bakes on band entry at Sgr A\*.
-- [ ] Commit: `feat(captures): capture rows by kind; once-baked solar-system sky row`.
+- [x] Commit: `feat(captures): capture rows by kind; once-baked solar-system sky row`.
 
 ---
 
@@ -574,23 +577,23 @@ colour attachments; the prefilter samples mip 0 through a cube view limited to
 `faceSizePx` comes from `CUBEMAP_CAPTURES.probe.faceSizePx`. `mipLevelCount` =
 `mipLevelCount(faceSizePx, faceSizePx)` from `generateMipChain.ts`.
 
-- [ ] `prefilterCubeGgx.test.ts` (mock device on `generateMipChain.test.ts`'s
+- [x] `prefilterCubeGgx.test.ts` (mock device on `generateMipChain.test.ts`'s
       pattern, recording pass descriptors, bind groups and `writeBuffer`):
   - `it('opens one pass per (mip ≥ 1, face), rendering into that mip/layer while sampling a cube view pinned to mip 0')`.
   - `it('roughness climbs 0 → 1 across the mips, so the coarsest mip is the roughness-1 level the diffuse term reads')`
     — decode the per-pass uniform bytes at each 256-byte offset.
-- [ ] Shader `prefilterCube.wesl`: fullscreen triangle (`lib/fullscreenTri`),
+- [x] Shader `prefilterCube.wesl`: fullscreen triangle (`lib/fullscreenTri`),
       uniforms `{ face: u32, roughness: f32, sampleCount: u32, _pad: u32 }`,
       direction from `(ndc, face)` by the `texture_cube` face convention
       (`CubeFace.d.ts` order; ±Y borrow world ±Z as `cubemapFaceContext`'s
       `FACE_UP` records), tangent frame around N=V=R, `D`-weighted sum with
       `NoL > 0` guard. Mip 0 is sampled with `textureSampleLevel(..., 0.0)`.
-- [ ] Renderer: `setMesh` mints `probe` (cube + depth) and binds the cube's
+- [x] Renderer: `setMesh` mints `probe` (cube + depth) and binds the cube's
       full-mip cube view at group-0 binding 5; `releaseResources` destroys
       both; `probeOf`. Test:
       `it('setMesh mints a 6-layer rgba16float probe cube with a full mip chain and a depth texture, both destroyed by clearMesh')`.
-- [ ] `npm test -- prefilterCubeGgx meshBodyRenderer` green; `npm run typecheck`.
-- [ ] Commit: `feat(mesh-bodies): per-body reflection-probe texture + GGX cube prefilter`.
+- [x] `npm test -- prefilterCubeGgx meshBodyRenderer` green; `npm run typecheck`.
+- [x] Commit: `feat(mesh-bodies): per-body reflection-probe texture + GGX cube prefilter`.
 
 ---
 
@@ -655,26 +658,26 @@ encoder as today. `timingService.beginFrame()` stays first and
 frame's readback. The docblock states the one reason for the split (landmine
 #1: per-body uniform buffers).
 
-- [ ] Types + `expandFrameOrder`: per face, the COSMO and NEAR0 steps as today,
+- [x] Types + `expandFrameOrder`: per face, the COSMO and NEAR0 steps as today,
       then one `{ slab, capture, depthLoad: 'clear', passes: resolve(spec.bodyPasses) }`
       per `bodySlabs` entry. `MAX_FRAME_INPUTS.captureFaces`: sky rows six faces
       with `bodySlabs: []`; the probe row six faces × every capacity body index
       (the same `k + 2` list `lensBodySlabs` uses). `passGroupTitles`:
       `probe·COSMO` and `probe·BODY[k]` (per capacity slot) → 'Probe capture'.
-- [ ] `checkFrameOrder`: a pass named only on a capture line is legal — the
+- [x] `checkFrameOrder`: a pass named only on a capture line is legal — the
       "no line draws" throw fires only for a pass on NO line; the "listed on N
       lines" rule still counts render lines only; probe rows contribute no
       target id. Tests: delete `throws when a capture roster names a pass no render line draws`,
       add `it('accepts a pass that only a capture line rosters')` and
       `it('a probe row contributes no render-target id to the check')`.
-- [ ] `captureFaceAttachment` per-kind table: sky → `layerViewOf(row.target, face)` + spec clear, `depthView: null`; probe →
+- [x] `captureFaceAttachment` per-kind table: sky → `layerViewOf(row.target, face)` + spec clear, `depthView: null`; probe →
       `probeOf(runtime.subject)` (throw if null: the scheduler picked a resident
       body this frame, so absence is a wiring bug), `cube.createView({ dimension: '2d', baseMipLevel: 0, mipLevelCount: 1, baseArrayLayer: face, arrayLayerCount: 1 })`,
       clear `{0,0,0,0}`, `depthView: depth.createView()`.
-- [ ] `executeFrame` as described; `renderFrame` + the two new files.
+- [x] `executeFrame` as described; `renderFrame` + the two new files.
       `scheduleSkyCaptures` returns `CaptureFace`s with `bodySlabs: []`.
       `ExecuteFrameArgs.captureContexts` doc: value is a `CaptureFace`.
-- [ ] Tests (fixtures carry `{ ctx, bodySlabs }` now):
+- [x] Tests (fixtures carry `{ ctx, bodySlabs }` now):
   - `expandFrameOrder`: `it('expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair')`;
     `it('a face with no body slabs expands to the COSMO/NEAR0 pair only')`.
   - `executeFrame`: `it('attaches the capture row's depth on a body-slab capture step and none on its COSMO step')`;
@@ -686,11 +689,11 @@ frame's readback. The docblock states the one reason for the split (landmine
     (mock the module).
   - `frameFilePurity`: `partitionCaptureSteps`, `finishCubemapCapture` declare
     only themselves; `executeFrame`'s row unchanged or lower.
-- [ ] `npm test` green; `npm run typecheck`.
-- [ ] **USER-RUN check:** the Sgr A\* lens still bakes and renders (Task 5 of
+- [x] `npm test` green; `npm run typecheck`.
+- [x] **USER-RUN check:** the Sgr A\* lens still bakes and renders (Task 5 of
       the P1 plan's smoke list, items 1–4) — the per-face submit must be
       invisible there.
-- [ ] Commit: `feat(frame): capture faces may draw a body row and each submit their own command buffer`.
+- [x] Commit: `feat(frame): capture faces may draw a body row and each submit their own command buffer`.
 
 ---
 
@@ -767,31 +770,31 @@ the same axis — `viewDir = normalize(vec3(ndc.x, -ndc.y, -1.0))`, world =
 sign is Task 10's "Mars under the rover" item; get it wrong and the host lights
 the DECK.
 
-- [ ] `scheduleProbeCapture.test.ts` (`renderFrame.cubemapCaptures.test.ts`'s
+- [x] `scheduleProbeCapture.test.ts` (`renderFrame.cubemapCaptures.test.ts`'s
       mocking style, `cubemapFaceContext` mocked):
   - `it('picks the drawn mesh body with the oldest refresh, one per frame')`;
   - `it('refreshes nothing while every candidate is inside PROBE_REFRESH_INTERVAL_MS')`;
   - `it('derives each face at the body's position with the probe row's near plane, slot base and face size, and resolves the host's body-m slab in the FACE context')`;
   - `it('a hostless body's faces carry no body slab')`;
   - `it('schedules nothing and records no refresh when a face context is null')`.
-- [ ] Implement the scheduler; `scheduleCubemapCaptures` composes sky + probe
+- [x] Implement the scheduler; `scheduleCubemapCaptures` composes sky + probe
       into one map (`'probe'` entry only when non-null).
-- [ ] Blit renderer + shader (`shaders/cubeFaceBlit/cubeFaceBlit.wesl`: `vs`
+- [x] Blit renderer + shader (`shaders/cubeFaceBlit/cubeFaceBlit.wesl`: `vs`
       via `lib/fullscreenTri`, `fs` samples `texture_cube` with
       `textureSampleLevel(..., 0.0)`; uniform = the 48-byte `mat3x3` basis;
       bind group rebuilt per draw around the given cube view — the lens
       renderer's reason). Pipeline: `targetFormat` (HDR), no blend, no depth.
       Test: `it('rebuilds its bind group per draw around the given cube view and writes the basis before the draw')`.
-- [ ] Pass, registry row, `EngineGpuHandles.cubeFaceBlitRenderer`, the
+- [x] Pass, registry row, `EngineGpuHandles.cubeFaceBlitRenderer`, the
       `FRAME_ORDER` line. `frameFilePurity`: `skyCubemapBlitPass` and
       `scheduleProbeCapture` declare only themselves.
-- [ ] `npm test` green; `npm run typecheck`. `checkFrameOrder` passes at boot
+- [x] `npm test` green; `npm run typecheck`. `checkFrameOrder` passes at boot
       (the blit is capture-only; Task 7 made that legal).
-- [ ] **USER-RUN check:** `?gpuTimings` at Curiosity: `probe·COSMO·FACE[0..5]`
+- [x] **USER-RUN check:** `?gpuTimings` at Curiosity: `probe·COSMO·FACE[0..5]`
       and `probe·BODY[k]·FACE[0..5]` rows appear once per
       `PROBE_REFRESH_INTERVAL_MS`, never on two consecutive frames; at Voyager
       only the `probe·COSMO` rows fire; away from every mesh body none fire.
-- [ ] Commit: `feat(captures): per-body probe scheduling, sky blit, probe capture line`.
+- [x] Commit: `feat(captures): per-body probe scheduling, sky blit, probe capture line`.
 
 ---
 
@@ -876,33 +879,33 @@ already matches — that is the single-unit argument, and the reason
 `constants.parity.test.ts`'s SUN_IRRADIANCE block keeps its test (update its
 comment: not "the layout is full" but "one unit for probe and direct term").
 
-- [ ] `angularRadiusRad.test.ts`: `it('the Sun from 1 au subtends 0.00465 rad')`
+- [x] `angularRadiusRad.test.ts`: `it('the Sun from 1 au subtends 0.00465 rad')`
       (R = 696 340 km, d = 149 597 870.7 km — hand value 0.004655) and
       `it('clamps to π/2 inside the sphere')`. `sunVisibleFraction.ts`'s private
       helper calls it; its own tests are unchanged.
-- [ ] `packMeshBodyUniforms.test.ts`: rewrite the index assertions for the
+- [x] `packMeshBodyUniforms.test.ts`: rewrite the index assertions for the
       36-float layout (`out.byteLength === 144`; `out[35]` = the sine at byte
       140; nothing past). `MESH_BODY_UNIFORM_FLOATS = 36`.
-- [ ] `meshBodiesPass`: `sinSunAngularRadius: Math.sin(angularRadiusRad(SOLAR_RADIUS_KM * KM_TO_M, distanceMpc(bodyState.positionMpc, RENDER_ORIGIN_MPC) * MPC_TO_M))`;
+- [x] `meshBodiesPass`: `sinSunAngularRadius: Math.sin(angularRadiusRad(SOLAR_RADIUS_KM * KM_TO_M, distanceMpc(bodyState.positionMpc, RENDER_ORIGIN_MPC) * MPC_TO_M))`;
       delete `hostSkyFraction`, `ATMOSPHERE_PARAMS`, `EARTH_SURFACE_PARAMS`
       imports, `hostShineColor`, `invDist`/`dirToHost`, and the fill comment;
       the `hosted` flag now gates only `sunVisibleFraction`. Header: the frame
       contract no longer names `dirToHost`. Delete `hostSkyFraction.ts` + its
       test (`grep -rn hostSkyFraction src tests` → nothing).
-- [ ] Shaders as specified; `io.wesl`'s header table rewritten to the 144-byte
+- [x] Shaders as specified; `io.wesl`'s header table rewritten to the 144-byte
       layout; `fragment.wesl`'s header: no shadow term (landmine stays), the
       metal blend is built here, the probe is the ambient.
-- [ ] `docs/RENDERER.md` "Mesh bodies" bullet: LUT in group 1, probe in the
+- [x] `docs/RENDERER.md` "Mesh bodies" bullet: LUT in group 1, probe in the
       body's resources, no host-shine; `MeshBodyRenderer.d.ts` header likewise.
       `docs/backlog/2026-09-12-mesh-body-shadows.md`: "host-shine and the ambient
       floor stay unshadowed" → "the environment term stays unshadowed".
       `sceneMeshBodies.ts` header: `radiusM` → `boundingRadiusM`.
       `npx prettier --write src/data/bodies/rotationElements.ts`.
-- [ ] `npm test` green; `npm run typecheck`; `npm run build`.
-- [ ] **USER-RUN:** dev console clean for `meshBody.fragment`, `prefilterCube`,
+- [x] `npm test` green; `npm run typecheck`; `npm run build`.
+- [x] **USER-RUN:** dev console clean for `meshBody.fragment`, `prefilterCube`,
       `cubeFaceBlit` (link errors show only here); a first look at Voyager and
       Curiosity — Task 10 is the real gate.
-- [ ] Commit: `feat(mesh-bodies): GGX metal/dielectric material, sphere-light Sun, split-sum probe lighting; host-shine and ambient fills removed`.
+- [x] Commit: `feat(mesh-bodies): GGX metal/dielectric material, sphere-light Sun, split-sum probe lighting; host-shine and ambient fills removed`.
 
 ---
 
@@ -911,49 +914,49 @@ comment: not "the layout is full" but "one unit for probe and direct term").
 Same poses as Task 1, sim clock paused, f.lux/Night Shift OFF. Compare
 against the Task 1 screenshots; fix loops ride Task 9's files.
 
-- [ ] **Voyager 1 (a):** the high-gain dish and the bus's foil read as metal —
+- [x] **Voyager 1 (a):** the high-gain dish and the bus's foil read as metal —
       a soft, coloured (star-field-grey, faintly Sun-warm) sheen that moves as
       the camera orbits, plus ONE Sun highlight the size of the Sun's disc
       (~0.0003 rad at 170 au — a tight point, not a blown-out spike). Fabric /
       painted parts stay matte. No black metal (a black dish = probe unbound or
       LUT missing; a uniformly grey dish = prefilter wrote nothing).
-- [ ] **Curiosity, day (b):** solar panels / RTG fins show a glossy, sky-tinted
+- [x] **Curiosity, day (b):** solar panels / RTG fins show a glossy, sky-tinted
       reflection; the undercarriage and wheel insides are tinted Mars-orange
       (host in the probe, BELOW the rover); the deck top is NOT orange-lit (a
       wrong blit sign puts Mars overhead). Painted white parts are matte white.
-- [ ] **Curiosity, night (c):** no black hole in the star field — the
+- [x] **Curiosity, night (c):** no black hole in the star field — the
       night-side rover is a dim shape lit by the probe's Mars-glow (planets
       keep their 0.08 floor, so Mars in the probe is not black). Darker than
       before (the 0.08 mesh floor is gone) but readable.
-- [ ] **Whale (d):** the Earth-facing flank carries blue-white earthshine
+- [x] **Whale (d):** the Earth-facing flank carries blue-white earthshine
       that tracks the limb as the camera orbits; the sky-facing flank is
       star-dark. No banding across the flank (a 128 px probe's mip seams).
-- [ ] **Earth (e):** the ocean glint is byte-for-byte the Task 1 screenshot's
+- [x] **Earth (e):** the ocean glint is byte-for-byte the Task 1 screenshot's
       (only the mesh fragment changed material; `pbrDirect` is untouched
       since P3).
-- [ ] Refresh cadence: orbit Curiosity slowly — the reflection updates
+- [x] Refresh cadence: orbit Curiosity slowly — the reflection updates
       stepwise every `PROBE_REFRESH_INTERVAL_MS`, without a visible pop (if the
       steps read as pops, halve the interval in `probeRefreshIntervalMs.ts`
       and re-measure in Task 11).
-- [ ] `?gpuTimings`: probe rows as in Task 8's check; `solarSystem` rows only
+- [x] `?gpuTimings`: probe rows as in Task 8's check; `solarSystem` rows only
       once after boot.
 
 ---
 
 ## Task 11: Perf gate and wrap (USER-RUN)
 
-- [ ] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30`
+- [x] `npm run perf -- --url http://localhost:<port> --scenario earth-surface --frames 30`
       and `solar-system`, same flags as Task 1; compare MERGED medians —
       expected neutral (no mesh body near; the sky row bakes once at boot,
       outside the measured window). A regression here means a probe or sky
       step fires without a subject.
-- [ ] `?gpuTimings` MERGED TOTAL at poses (a) and (b), three reads, median vs
+- [x] `?gpuTimings` MERGED TOTAL at poses (a) and (b), three reads, median vs
       Task 1. Expected: +0–0.3 ms on a non-refresh frame (the fragment's extra
       taps); a refresh frame shows the six face groups + prefilter once per
       interval. Report both numbers with the maintenance cost beside them in
       the PR body; a neutral-or-negative visual verdict HALTS the landing for
       the user's ruling.
-- [ ] `/feature-done` on this plan and the prep plan; `deletion-audit` over
+- [x] `/feature-done` on this plan and the prep plan; `deletion-audit` over
       the branch (host-shine remnants, the P1 `bindProbe`-shaped comments,
       any `probeIntensity` mention).
 

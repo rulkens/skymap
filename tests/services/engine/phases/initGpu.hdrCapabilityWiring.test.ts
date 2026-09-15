@@ -347,6 +347,14 @@ vi.mock('../../../../src/services/gpu/labelLayout/loadFontAtlases', () => ({
   })),
 }));
 
+// The env-BRDF loader fetches its two static assets; mock it to the one thing
+// the unmocked `createMeshBodyRenderer` asks of the texture — a view.
+vi.mock('../../../../src/services/gpu/resources/loadEnvBrdfLut', () => ({
+  loadEnvBrdfLut: vi.fn(
+    async () => ({ createView: () => ({ __mockLutView: true }) }) as unknown as GPUTexture,
+  ),
+}));
+
 // Imported AFTER the mocks so initGpu picks up the mocked dependencies.
 import { initGpu } from '../../../../src/services/engine/phases/initGpu';
 // The mocked `watchHdrCapability` itself: the HDR-dispatch-wiring tests below

@@ -21,9 +21,10 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
   const uiCtx = state.gpu.uiCtx!;
   const fontAtlases = state.gpu.fontAtlases!;
 
-  // fadeBgl/sourceBgl/focusBgl: none of the 8 rows below read them, and the
-  // code this replaces never touched `state.gpu.fadeBgl` et al. here either —
-  // getters keep that true instead of widening this call's state requirement.
+  // fadeBgl/sourceBgl/focusBgl/envBrdfLut: none of the 8 rows below read them,
+  // and the code this replaces never touched `state.gpu.fadeBgl` et al. here
+  // either — getters keep that true instead of widening this call's state
+  // requirement.
   const deps: GpuHandleConstructDeps = {
     ctx: { ...uiCtx, format },
     get fadeBgl() {
@@ -36,6 +37,9 @@ export function buildSwapRenderers(state: EngineState, format: GPUTextureFormat)
       return state.gpu.focusBgl!;
     },
     fontAtlases,
+    get envBrdfLut() {
+      return state.gpu.envBrdfLut!;
+    },
   };
 
   // `=== true`, not `.rebuildOnSwapFormat` truthiness — the flag is absent

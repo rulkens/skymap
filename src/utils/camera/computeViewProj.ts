@@ -16,12 +16,14 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import type { ImagePlaneBasis } from '../../@types/camera/ImagePlaneBasis';
 import { imagePlaneBasis } from './imagePlaneBasis';
 import { frameUp } from './frameUp';
+import { orbitForwardOf } from './orbitForwardOf';
 
 // Module-scope scratch reused every frame: the forward view direction, the
 // frame-pole reference up, and the roll-adjusted basis. computeViewProj runs
 // once per frame on the render hot path, so all three are hoisted out of the
 // function to avoid per-call allocation.
 const forwardScratch: Vec3 = [0, 0, 0];
+const aimScratch: Vec3 = [0, 0, 0];
 const upRefScratch: Vec3 = [0, 0, 0];
 const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], up: [0, 0, 0] };
 
@@ -82,18 +84,12 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   // `poseBasis`); absent a basis that is world +Y, so the pre-frame camera is
   // unchanged.
   //
-  // `forward` is the unit view direction (target − position). `imagePlaneBasis`
-  // needs it as a required argument even when roll is zero (it also determines
-  // the frame-pole projection for the base up-vector), so we always build it
-  // here — a subtract + normalize into module scratch, no allocation.
-  const tgt = cam.target as Vec3;
-  const fx = tgt[0] - cam.position[0];
-  const fy = tgt[1] - cam.position[1];
-  const fz = tgt[2] - cam.position[2];
-  const flen = Math.hypot(fx, fy, fz) || 1;
-  forwardScratch[0] = fx / flen;
-  forwardScratch[1] = fy / flen;
-  forwardScratch[2] = fz / flen;
+  // `forward` is decoded, not `target − position` (see `orbitForwardOf`), and
+  // lookAt aims one unit along it rather than at `target`, for the same reason.
+  orbitForwardOf(cam, forwardScratch);
+  aimScratch[0] = cam.position[0] + forwardScratch[0];
+  aimScratch[1] = cam.position[1] + forwardScratch[1];
+  aimScratch[2] = cam.position[2] + forwardScratch[2];
   const basis = imagePlaneBasis(
     forwardScratch,
     cam.roll ?? 0,
@@ -106,7 +102,7 @@ export function computeViewProj(cam: OrbitCamera): Mat4 {
   // allocation behaviour as the previous `mat4.create()` + write-into-dst.
   const view = mat4.lookAt(
     cam.position, // eye: where the camera is
-    cam.target, // center: what the camera looks at
+    aimScratch, // center: a point along the view direction
     basis.rolledUp, // up: world +Y by default; rotated by roll when non-zero
     // ⚠ If pitch = ±π/2, `position` is directly above/below `target` and
     // the default up vector is parallel to the view direction.  lookAt

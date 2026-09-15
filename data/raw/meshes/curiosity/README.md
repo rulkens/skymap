@@ -47,12 +47,18 @@ npm run prebake-mesh -- curiosity    # Blender 5.2 LTS; ~10 s, not run in CI
 `tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 206**,
 drops the camera markers and the `pivot` / `shadow2` helper geometry, joins the
 73 remaining parts, applies their geometry-nodes modifiers, smart-UV-projects
-and bakes all 16 surviving materials into one 2048² atlas per `BAKE_PASSES`
-row — today a single albedo row. Its output and the loose
-`curiosity.prebaked.albedo.png` beside it are gitignored build products —
-regenerate them, don't archive them. Having no normal or metallicRoughness map
-is expected: `buildMeshes` substitutes 1×1 constants and lists them
-under `substituted`.
+and bakes all 16 surviving materials into one 2048² atlas per `BAKE_PASSES` row
+— albedo, normal, roughness and metallic. Its output and the four loose
+`curiosity.prebaked.*.png` atlases beside it are gitignored build products —
+regenerate them, don't archive them. The GLB carries the normal atlas and the
+metallicRoughness pair the glTF exporter packs from the last two;
+`substituted: []` on the generated row is the check that the exporter still
+packs them. Every material authors metallic 0, so that atlas bakes flat black.
+Roughness is 0.5 over 83 % of the baked texels, 0.1–0.4 over most of the rest,
+and 1.0 on a sliver of about 10,800 texels. Seven rival Material Output nodes,
+targeted at Cycles and each fed by a bare Diffuse BSDF, win over the Principled
+the file renders with, so the pre-bake drops them — left in, those parts bake
+black albedo (a Diffuse node emits nothing) and roughness 1.
 
 Three things about this file bite:
 

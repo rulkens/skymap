@@ -11,13 +11,10 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import { ATMOSPHERE_PARAMS } from '../../../../data/bodies/atmosphereParams';
-import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { SCENE_CELESTIAL_BODIES } from '../../../../data/bodies/sceneCelestialBodies';
 import { SCENE_MESH_BODIES } from '../../../../data/bodies/sceneMeshBodies';
 import { SOLAR_RADIUS_KM } from '../../../../data/bodies/solarRadiusKm';
@@ -26,9 +23,8 @@ import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packMeshBodyUniforms } from '../../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../../utils/scene/bodyStateInHostFrame';
-import { hostSkyFraction } from '../../../../utils/scene/hostSkyFraction';
 import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
-import { outerBoundRadiusM } from '../../../../utils/scene/outerBoundRadiusM';
+import { sinSunAngularRadius } from '../../../../utils/scene/sinSunAngularRadius';
 import { sunVisibleFraction } from '../../../../utils/scene/sunVisibleFraction';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
@@ -51,26 +47,21 @@ export const meshBodiesPass: ContentPass = {
     if (bodies.length === 0) return;
     const bodyStates = sceneBodyStates(state, ctx);
     const hostState = bodyStates.get(hostId);
-    // The umbra and the host-shine solid angle are both ground geometry, so the
-    // host comes from the CELESTIAL roster; a hostless body misses (see below).
+    // The umbra is ground geometry, so the host comes from the CELESTIAL roster;
+    // a hostless body misses (see below).
     const host = SCENE_CELESTIAL_BODIES.find((body) => body.id === hostId);
     if (hostState === undefined) return;
     // The SAME pose-provider closure `deriveSlabs` built this row's
     // `view.slab.vp` from — read, never re-derived.
     const hostPose = ctx.bodyPose(hostId);
     if (hostPose === null) return;
-    // A host with no `ATMOSPHERE_PARAMS` row has no authored ground albedo, so
-    // it contributes no fill rather than an invented one.
-    const hostShineColor: Vec3 = ATMOSPHERE_PARAMS[hostId]?.groundAlbedo ?? [0, 0, 0];
+    const sunRadiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
 
     for (const body of bodies) {
       const bodyState = bodyStates.get(body.id)!;
       const { posM, rotM } = bodyStateInHostFrame(bodyState, hostState);
-      const distToHostM = Math.hypot(posM[0], posM[1], posM[2]);
-      const invDist = distToHostM > 0 ? 1 / distToHostM : 0;
-      // A hostless body is its own host, so both host-lighting terms degenerate
-      // at zero separation: `sunVisibleFraction` returns NaN and
-      // `hostSkyFraction` a half-sky. Unshadowed Sun, no fill, instead.
+      // A hostless body is its own host, and `sunVisibleFraction` returns NaN at
+      // zero separation. Unshadowed Sun instead.
       const hosted = host !== undefined;
       renderer.draw(
         pass,
@@ -84,7 +75,7 @@ export const meshBodiesPass: ContentPass = {
                 bodyPosMpc: bodyState.positionMpc,
                 sunPosMpc: RENDER_ORIGIN_MPC,
                 hostPosMpc: hostState.positionMpc,
-                sunRadiusM: SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M,
+                sunRadiusM,
                 hostRadiusM: innerBoundRadiusM(host.surface),
               })
             : 1,
@@ -94,17 +85,11 @@ export const meshBodiesPass: ContentPass = {
             hostPose.eyeRelBodyM[1] - posM[1],
             hostPose.eyeRelBodyM[2] - posM[2],
           ],
-          // A tuned fill, not a radiometric earthshine: the SHAPE follows the
-          // host's solid angle times its albedo (`hostShineColor`), the scale
-          // is art-directed — don't "correct" it toward a Lambertian value.
-          // `sunIrradiance` is the fragment's own `SUN_IRRADIANCE`, mirrored
-          // there under the parity test in `shaders/constants.parity.test.ts`.
-          hostShineStrength: hosted
-            ? (EARTH_SURFACE_PARAMS.sunIrradiance / Math.PI) *
-              hostSkyFraction(outerBoundRadiusM(host.surface), distToHostM)
-            : 0,
-          hostShineColor,
-          dirToHost: [-posM[0] * invDist, -posM[1] * invDist, -posM[2] * invDist],
+          sinSunAngularRadius: sinSunAngularRadius(
+            bodyState.positionMpc,
+            RENDER_ORIGIN_MPC,
+            sunRadiusM,
+          ),
         }),
       );
     }

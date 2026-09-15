@@ -26,6 +26,7 @@ import {
 import { createOrbitCamera } from '../../../../src/utils/camera/createOrbitCamera';
 import { computeForegroundViewProj } from '../../../../src/utils/camera/computeForegroundViewProj';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
 import {
   foregroundFrustum,
   MIN_NEAR_M,
@@ -149,9 +150,14 @@ describe('deriveSlabs', () => {
     // would drift the moment computeForegroundViewProj changes, so equality
     // against the live util — not a hand-rolled expectation — is the contract.
     const { near, far } = foregroundFrustum(distance);
+    const forward = orbitForwardOf(cam);
     const expected = computeForegroundViewProj({
       eyeMpc: cam.position,
-      targetMpc: cam.target,
+      targetMpc: [
+        cam.position[0] + forward[0],
+        cam.position[1] + forward[1],
+        cam.position[2] + forward[2],
+      ],
       up: [0, 1, 0],
       renderOrigin: RENDER_ORIGIN_MPC,
       fovYRad: cam.fovYRad,

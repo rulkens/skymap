@@ -30,9 +30,7 @@ const SUN_VISIBLE = 0.375;
 // block is unmistakable.
 const MODEL: Mat3 = [101, 102, 103, 104, 105, 106, 107, 108, 109];
 const CAM_LOCAL: Vec3 = [3.5, -4.25, 6.75];
-const HOST_SHINE_STRENGTH = 0.625;
-const HOST_SHINE_COLOUR: Vec3 = [0.125, 0.1875, 0.8125];
-const DIR_TO_HOST: Vec3 = [-0.5, 0.25, -0.875];
+const SIN_SUN_ANGULAR_RADIUS = 0.625;
 
 describe('MeshBodyUniforms byte offsets', () => {
   it('packs every field at its documented float index', () => {
@@ -42,13 +40,11 @@ describe('MeshBodyUniforms byte offsets', () => {
       sunVisibleFraction: SUN_VISIBLE,
       model: MODEL,
       camPosLocal: CAM_LOCAL,
-      hostShineStrength: HOST_SHINE_STRENGTH,
-      hostShineColor: HOST_SHINE_COLOUR,
-      dirToHost: DIR_TO_HOST,
+      sinSunAngularRadius: SIN_SUN_ANGULAR_RADIUS,
     });
 
     expect(out).toHaveLength(MESH_BODY_UNIFORM_FLOATS);
-    expect(out.byteLength).toBe(176);
+    expect(out.byteLength).toBe(144);
 
     for (let i = 0; i < 16; i++) expect(out[i]).toBe(i + 1); // bytes 0..63
 
@@ -64,13 +60,7 @@ describe('MeshBodyUniforms byte offsets', () => {
     expect(out[31]).toBe(0);
 
     expect([out[32], out[33], out[34]]).toEqual([3.5, -4.25, 6.75]); // bytes 128..139
-    expect(out[35]).toBe(HOST_SHINE_STRENGTH); // byte 140 — camPosLocal's pad slot
-
-    expect([out[36], out[37], out[38]]).toEqual([0.125, 0.1875, 0.8125]); // bytes 144..155
-    expect(out[39]).toBe(0); // byte 156 — _pad0
-
-    expect([out[40], out[41], out[42]]).toEqual([-0.5, 0.25, -0.875]); // bytes 160..171
-    expect(out[43]).toBe(0); // byte 172 — _pad1, rounding the struct to 176
+    expect(out[35]).toBe(SIN_SUN_ANGULAR_RADIUS); // byte 140 — camPosLocal's pad slot
   });
 
   it('reads only the first 16 floats of a longer mvp', () => {
@@ -84,9 +74,7 @@ describe('MeshBodyUniforms byte offsets', () => {
       sunVisibleFraction: SUN_VISIBLE,
       model: MODEL,
       camPosLocal: CAM_LOCAL,
-      hostShineStrength: HOST_SHINE_STRENGTH,
-      hostShineColor: HOST_SHINE_COLOUR,
-      dirToHost: DIR_TO_HOST,
+      sinSunAngularRadius: SIN_SUN_ANGULAR_RADIUS,
     });
     expect([out[16], out[17], out[18]]).toEqual([0.5, 0.25, 0.75]);
   });

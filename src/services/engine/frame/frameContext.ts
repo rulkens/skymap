@@ -22,7 +22,7 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
-import { normalize3 } from '../../../utils/math/normalize3';
+import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
 import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { starSphereRangeM } from '../../../utils/scene/starSphereRangeM';
 import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
@@ -62,6 +62,11 @@ import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByR
  * `arm` is the SAME framed pose `pose` was resolved from (`foldToWorld`,
  * called once by the caller) and serves only the pose-provider seam below
  * (spec §5.2).
+ *
+ * `altitudeMpc` is the eye-to-pivot-surface range NEAR0's bracket is sized
+ * from; absent, it is derived from `pose` and the focused pivot. A capture
+ * face passes its own: its synthetic pose orbits no pivot, and the real
+ * focus's radius taken off a metre-scale probe distance goes hugely negative.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -74,6 +79,7 @@ export function deriveFrameContext(
   visibleSourceMask: number,
   nowMs: number,
   simDays: number,
+  altitudeMpc?: number,
 ): FrameContext {
   if (!isEngineReady(state)) {
     return { isReady: false };
@@ -92,11 +98,7 @@ export function deriveFrameContext(
   // frame returns this SAME Map by reference — no second cache, no drift.
   const bodyStates = deriveBodyStates(simDays);
 
-  const camForward = normalize3([
-    cam.target[0] - cam.position[0],
-    cam.target[1] - cam.position[1],
-    cam.target[2] - cam.position[2],
-  ]);
+  const camForward = orbitForwardOf(cam);
 
   const { earth, planets, meshBodies } = state.data.bodies;
   // A mesh body whose driver hangs off something with no row of its own gets
@@ -212,7 +214,7 @@ export function deriveFrameContext(
   const slabs = deriveSlabs({
     cam,
     cosmoVp: vp,
-    altitudeMpc: pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
+    altitudeMpc: altitudeMpc ?? pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
     pose: bodyPose,
     visibleBodies,
     viewportPx: [canvasSize.width, canvasSize.height] as Vec2,

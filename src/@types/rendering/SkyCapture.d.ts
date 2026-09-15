@@ -1,12 +1,14 @@
 /**
- * CubemapCapture — one six-face environment bake as a row: where its faces go,
- * when it runs, and which view slots it claims.
+ * SkyCapture — one six-face bake of the SKY as a row: where its faces go, when
+ * it runs, and which view slots it claims. Its faces are layers of a declared
+ * render-target row, which is what separates it from a `ProbeCapture`.
  */
 
 import type { BodyRegion } from '../scene/BodyRegion';
 import type { FadeBand } from '../math/FadeBand';
 
-export type CubemapCapture = {
+export type SkyCapture = {
+  readonly kind: 'sky';
   /** `RenderTargetSpec.id` of the row whose 6 layers are this capture's faces. */
   readonly target: string;
   /** Region whose anchor the band keys on — camera distance to it, Mpc. */
@@ -21,4 +23,6 @@ export type CubemapCapture = {
   readonly nearMpc: number;
   /** First `ReadyFrameContext.viewSlot` this capture's faces claim (base … base+5). */
   readonly viewSlotBase: number;
+  /** false ⇒ one bake per band entry (settings writes are ignored once baked). */
+  readonly rebakeOnSettings: boolean;
 };

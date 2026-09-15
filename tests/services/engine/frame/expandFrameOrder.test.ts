@@ -10,8 +10,11 @@ import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFr
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
+import type { CaptureFaceInput } from '../../../../src/@types/engine/frame/CaptureFaceInput';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
+import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
+import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameStepSpec';
 import type { FrameInputs } from '../../../../src/services/engine/frame/expandFrameOrder';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -26,6 +29,11 @@ function namesOf(step: FrameStep | undefined): readonly string[] {
 /** The authored timing-slot suffix a step carries, if any. */
 function slotOf(step: FrameStep | undefined): string | undefined {
   return step !== undefined && step.kind === 'render' ? step.slot : 'no step';
+}
+
+/** A sky row's face: no body row to draw. */
+function skyFace(face: CubeFace): CaptureFaceInput {
+  return { face, bodySlabs: [] };
 }
 
 /** A fake row is enough: expansion reads only `name`. */
@@ -147,16 +155,32 @@ describe('expandFrameOrder', () => {
 
     expect(namesOf(program[0])).toEqual(['b', 'a']);
   });
+
+  it('every capture-line pass name is a CONTENT_PASSES name', () => {
+    // `resolve` drops unknown names silently, and no render line counts a
+    // capture-only pass, so a rename missed on a capture line fails nowhere else.
+    const known = new Set(CONTENT_PASSES.map((p) => p.name));
+    const captureNames = FRAME_ORDER.flatMap((line) =>
+      line.kind === 'capture' ? [...line.cosmoPasses, ...line.near0Passes, ...line.bodyPasses] : [],
+    );
+    expect(captureNames.filter((name) => !known.has(name))).toEqual([]);
+  });
 });
 
 describe('expandFrameOrder — the per-frame fan-outs', () => {
-  it('emits a COSMO capture step alongside NEAR0 per requested face', () => {
+  it('emits a COSMO capture step alongside NEAR0 per requested face, row by row', () => {
     // The fixed opt-in roster spans both slabs — `point-sprites`/
     // `textured-disks` (COSMO), `star-aggregates`/`star-catalog` (NEAR0) — and a
     // render step is the unit of pass encoding, so each requested face must get
     // ONE step per slab. A NEAR0-only step would leave the COSMO half of the
-    // roster permanently undrawn.
-    const steps = program({ captureFaces: new Map([['sgrAStar', [0, 2]]]) });
+    // roster permanently undrawn. The line names several rows, which bake one
+    // after the other in the order named.
+    const steps = program({
+      captureFaces: new Map([
+        ['sgrAStar', [skyFace(0), skyFace(2)]],
+        ['solarSystem', [skyFace(1)]],
+      ]),
+    });
     const capture = steps.filter((step) => step.kind === 'render' && step.capture !== undefined);
     expect(
       capture.map((step) =>
@@ -167,6 +191,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [NEAR0, 'sgrAStar', 0],
       [COSMO, 'sgrAStar', 2],
       [NEAR0, 'sgrAStar', 2],
+      [COSMO, 'solarSystem', 1],
+      [NEAR0, 'solarSystem', 1],
     ]);
     // Ahead of every other render step, so a same-frame lensing draw can
     // sample a cubemap this frame actually wrote.
@@ -175,13 +201,73 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     expect(steps[2]).toBe(capture[0]);
   });
 
+  it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {
+    // A probe face sees its subject's host: after the sky pair, one step per
+    // body row the face schedules, each restarting depth the way the foreground
+    // chain does — a nearer row must not test against a farther row's depth.
+    const order: FrameStepSpec[] = [
+      {
+        kind: 'capture',
+        captures: ['probe'],
+        cosmoPasses: ['sky'],
+        near0Passes: ['stars'],
+        bodyPasses: ['mesh'],
+      },
+    ];
+    const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
+      tone: TONE,
+      bloomEnabled: false,
+      foregroundChain: [],
+      captureFaces: new Map([['probe', [{ face: 4, bodySlabs: [3, 2] }]]]),
+      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    });
+    expect(
+      steps.map((step) =>
+        step.kind === 'render' ? [step.slab, step.capture?.face, step.depth, namesOf(step)] : null,
+      ),
+    ).toEqual([
+      [COSMO, 4, undefined, ['sky']],
+      [NEAR0, 4, undefined, ['stars']],
+      [3, 4, 'clear', ['mesh']],
+      [2, 4, 'clear', ['mesh']],
+    ]);
+  });
+
+  it('a face with no body slabs expands to the COSMO/NEAR0 pair only', () => {
+    const order: FrameStepSpec[] = [
+      {
+        kind: 'capture',
+        captures: ['sgrAStar'],
+        cosmoPasses: ['sky'],
+        near0Passes: ['stars'],
+        bodyPasses: ['mesh'],
+      },
+    ];
+    const steps = expandFrameOrder(order, [fakePass('sky'), fakePass('stars'), fakePass('mesh')], {
+      tone: TONE,
+      bloomEnabled: false,
+      foregroundChain: [],
+      captureFaces: new Map([['sgrAStar', [skyFace(0)]]]),
+      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    });
+    expect(steps.map((step) => (step.kind === 'render' ? step.slab : null))).toEqual([
+      COSMO,
+      NEAR0,
+    ]);
+  });
+
   it('emits no capture steps when no faces are requested (Q6 zero-dispatch)', () => {
     expect(program().some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(
       false,
     );
     // An entry present but empty is the same nothing: `renderFrame` always keys
     // the map, whether or not this frame bakes.
-    const empty = program({ captureFaces: new Map([['sgrAStar', []]]) });
+    const empty = program({
+      captureFaces: new Map([
+        ['sgrAStar', []],
+        ['solarSystem', []],
+      ]),
+    });
     expect(empty.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
   });
 

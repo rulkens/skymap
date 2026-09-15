@@ -39,11 +39,12 @@ npm run prebake-mesh -- perseverance    # Blender 5.2 LTS; ~20 s, not run in CI
 `tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 120**,
 drops the `Icosphere` ground helper, joins the 68 remaining parts, decimates
 199,482 → 100,000 tris, smart-UV-projects and bakes all 47 materials into one
-2048² atlas per `BAKE_PASSES` row — today a single albedo row. Its output and
-the loose `perseverance.prebaked.albedo.png` beside it are gitignored build
-products — regenerate them, don't archive them. Having no normal or
-metallicRoughness map is expected: `buildMeshes` substitutes 1×1 constants and
-lists them under `substituted`.
+2048² atlas per `BAKE_PASSES` row — albedo, normal, roughness and metallic. Its
+output and the four loose `perseverance.prebaked.*.png` atlases beside it are
+gitignored build products — regenerate them, don't archive them. The GLB carries
+the normal atlas and the metallicRoughness pair the glTF exporter packs from the
+last two; `substituted: []` on the generated row is the check that the exporter
+still packs them.
 
 **The frame is load-bearing.** The file's saved transforms park the rover with
 its remote-sensing mast folded flat on the deck (bbox tops out at 1.85 m). The
@@ -63,11 +64,15 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 
 ## As inspected (2026-09-11)
 
-glTF 2.0, Draco-compressed: 69 mesh nodes, 199,601 tris, 47 materials, 22
-packed textures (1024²/512²/256²), an armature and 23 animation actions
-(mast deploy plus cover releases). Normal maps ARE authored on several
-materials; the pre-bake does not carry them into a second atlas, so the runtime
-gets a flat normal.
+glTF 2.0, Draco-compressed: 69 mesh nodes, 199,601 tris, 47 materials, 22 packed
+textures (1024²/512²/256²), an armature and 23 animation actions (mast deploy
+plus cover releases). Authored normal maps reach the normal atlas only because
+the pre-bake re-points the 11 Normal Map nodes that name a UV layer at the
+renamed one; a dangling name bakes flat in silence. Roughness spans 0.2–1.0 and
+about half the baked surface is fully metallic (aluminium, brass, gold foil,
+gunmetal). Their tint reaches the albedo atlas only because that row bakes Base
+Color through the emission output: Cycles' DIFFUSE colour pass of a metal is
+zero by definition, and baked that way every metal texel is black.
 
 **Units: metres, +Z up (Blender frame).** Wheels measure 0.526 m across against
 the real 0.525 m, so the model feeds the bake in native metres with no rescale.
