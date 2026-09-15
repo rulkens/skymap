@@ -42,8 +42,6 @@ export type CameraDebugSnapshot = {
   readonly siteElevationRad: number | null;
   /** Eye←site range, metres; null alongside `siteHeadingRad`. */
   readonly siteRangeM: number | null;
-  /** `siteRangeM · sin(siteElevationRad)` — eye height above the tangent plane; null alongside. */
-  readonly siteEyeHeightM: number | null;
   /** `cameraRuntime.register.winner` — last frame's driver-table winner. */
   readonly activeDriverId: string;
   /** Latched gesture mode; 'down (unlatched)' between press and first step; null at rest. */

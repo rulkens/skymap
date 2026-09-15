@@ -90,7 +90,6 @@ describe('CameraStateSection', () => {
       siteHeadingRad: 0.7,
       siteElevationRad: 0.2,
       siteRangeM: 12,
-      siteEyeHeightM: 12 * Math.sin(0.2),
     };
     const { container } = render(
       createElement(CameraStateSection, { cameraDebug: () => siteSnap }),

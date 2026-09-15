@@ -92,16 +92,18 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
     weightReadout: snap.bandUpWeight === null ? '—' : snap.bandUpWeight.toFixed(3),
     rememberedTiltReadout: deg(snap.rememberedTiltRad),
     site:
-      snap.siteHeadingRad === null ||
-      snap.siteElevationRad === null ||
-      snap.siteRangeM === null ||
-      snap.siteEyeHeightM === null
+      snap.siteHeadingRad === null || snap.siteElevationRad === null || snap.siteRangeM === null
         ? null
         : [
             { key: 'heading', value: deg(snap.siteHeadingRad) },
             { key: 'elevation', value: deg(snap.siteElevationRad) },
             { key: 'range_m', value: `${Math.round(snap.siteRangeM).toLocaleString('en-US')} m` },
-            { key: 'eye_height_m', value: `${snap.siteEyeHeightM.toFixed(2)} m` },
+            {
+              key: 'eye_height_m',
+              // Above the site's tangent plane (spec §4.9) — the one number
+              // that shows whether `clampedSitePose`'s floor is doing its job.
+              value: `${(snap.siteRangeM * Math.sin(snap.siteElevationRad)).toFixed(2)} m`,
+            },
           ],
     raw: [
       { key: 'stored_regime', value: frameKey(snap.storedFrame) },

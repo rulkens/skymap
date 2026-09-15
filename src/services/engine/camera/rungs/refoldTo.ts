@@ -11,12 +11,24 @@ import type { FramedPose } from '../../../../@types/camera/FramedPose';
 import type { ParentOf } from '../../../../@types/camera/ParentOf';
 import type { PoseFrame } from '../../../../@types/camera/PoseFrame';
 import type { RungBasisCtx } from '../../../../@types/camera/RungBasisCtx';
+import type { RungKind } from '../../../../@types/camera/RungKind';
+import { CAMERA_RUNGS } from './cameraRungs';
 import { climbRowFor } from './climbRowFor';
+import { hostOrThrow } from './hostOrThrow';
 import { isWorldArm } from './isWorldArm';
-import { parentFrameOf } from './parentFrameOf';
-import { rungDepth } from './rungDepth';
 import { rungKindOf } from './rungKindOf';
 import { sameFrame } from './sameFrame';
+
+/** Rungs to the world arm, off the rows' own `parent` so a new rung needs no line. */
+function rungDepth(kind: RungKind): number {
+  return kind === 'absolute' ? 0 : rungDepth(CAMERA_RUNGS[kind].parent) + 1;
+}
+
+/** Every non-root parent names this frame's HOST body (§2.2), keyed by its kind. */
+function parentFrameOf(frame: FrameOf[ClimbableKind], ctx: RungBasisCtx): PoseFrame {
+  const parent = climbRowFor(frame).parent;
+  return parent === 'absolute' ? 'absolute' : { [parent]: hostOrThrow(frame, ctx).id };
+}
 
 export function refoldTo(
   framed: FramedCameraPose,

@@ -36,7 +36,6 @@ export const QUIET_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   siteHeadingRad: null,
   siteElevationRad: null,
   siteRangeM: null,
-  siteEyeHeightM: null,
   activeDriverId: 'resting',
   gestureMode: null,
   gestureCursorHit: null,

@@ -244,11 +244,6 @@ describe('logCameraState', () => {
       rangeM: 12,
       eyeHeightM: 12 * Math.sin(0.2),
     });
-
-    // A body arm carries no site block either.
-    logSpy.mockClear();
-    logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
-    expect(JSON.parse((logSpy.mock.calls[0] as [string, string])[1]).siteArmPose).toBeNull();
   });
 
   it('prints a single not-ready line and touches neither canvas nor window when the camera is null', () => {

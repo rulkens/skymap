@@ -111,7 +111,6 @@ export function cameraDebugSnapshotOf(input: {
     siteHeadingRad: sitePose?.headingRad ?? null,
     siteElevationRad: sitePose?.elevationRad ?? null,
     siteRangeM: sitePose?.rangeM ?? null,
-    siteEyeHeightM: sitePose === null ? null : sitePose.rangeM * Math.sin(sitePose.elevationRad),
     activeDriverId,
     gestureMode: gesture === null ? null : gesture === 'down' ? 'down (unlatched)' : gesture.mode,
     gestureCursorHit: gesture === null || gesture === 'down' ? null : gesture.anchorLocalM !== null,
