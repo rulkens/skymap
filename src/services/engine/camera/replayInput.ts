@@ -201,33 +201,38 @@ export function replayInput(
         // The settles are priced per unit of zoom, not per step (user ruling
         // 2026-09-10): a trackpad twitch must not spend a mouse notch's decay.
         const logZoom = Math.abs(Math.log(step.factor));
-        if (stepRegister(step)) break;
         // A follow row re-asserts its own target every frame and would swallow
         // a committed base, so its notch is resolved to a distance the driver
         // adopts; a second notch in the same drain resolves off the first.
+        // Read ABOVE the rung in EITHER arm: a notch handed to a rung the owed
+        // approach overwrites is simply lost (the world arm reached this lane
+        // through `stepRegister`'s own at-rest decline, so its order stands).
         const followTargetBefore = followDistanceTarget ?? follow?.distanceTarget ?? null;
-        if (
-          isWorldArm(camera.base) &&
-          isFollowDriverId(winnerLastFrame) &&
-          followTargetBefore !== null
-        ) {
+        const ridesTheFollow =
+          !step.duringGesture && isFollowDriverId(winnerLastFrame) && followTargetBefore !== null;
+        if (!ridesTheFollow && stepRegister(step)) break;
+        if (ridesTheFollow) {
           followDistanceTarget = zoomedDistance(followTargetBefore, step.factor, pivot);
           // Ruling 8: the ride's authored altitude move IS that target change —
           // the live pose twice gave a zero delta and froze the band roll. It
-          // lands on `base.roll`, the term the follow pose lerps toward.
-          const basePose = camera.base.pose;
-          const live = foldToWorld(register, ctx);
-          const roll = frameAlignedRoll(
-            { ...live, distance: followTargetBefore },
-            { ...live, distance: followDistanceTarget },
-            bodies,
-            poseBasis,
-            upBasis,
-            logZoom,
-            tuning,
-          );
-          if (roll !== (basePose.roll ?? 0))
-            emit(commitCameraPose(absoluteArm({ ...basePose, roll })));
+          // lands on `base.roll`, the term the follow pose lerps toward. The
+          // world arm's own settle (R1 of the body-arm spec): below it the roll
+          // belongs to the arm, which has no such term to charge.
+          if (isWorldArm(camera.base)) {
+            const basePose = camera.base.pose;
+            const live = foldToWorld(register, ctx);
+            const roll = frameAlignedRoll(
+              { ...live, distance: followTargetBefore },
+              { ...live, distance: followDistanceTarget },
+              bodies,
+              poseBasis,
+              upBasis,
+              logZoom,
+              tuning,
+            );
+            if (roll !== (basePose.roll ?? 0))
+              emit(commitCameraPose(absoluteArm({ ...basePose, roll })));
+          }
           break;
         }
         // The spin epoch as THIS frame's advance will see it (idempotent on an
