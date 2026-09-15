@@ -2,12 +2,12 @@
 
 Deep height source under the EOX s2cloudless imagery bands.
 
-| | |
-| --- | --- |
-| Layout | `<N55>/<N55E012>.hgt`, one file per 1°×1° cell, 25,934,402 B each |
-| Upstream | `https://elevation-tiles-prod.s3.amazonaws.com/skadi/<N55>/<N55E012>.hgt.gz` |
-| Fetched | 2026-09-15 (`npm run fetch-height -- --skadi`) |
-| Licence | Public-domain and open national sources (NASA SRTM v3, USGS NED/3DEP, Canada CDEM and others) redistributed by the AWS Open Data programme; see <https://github.com/tilezen/joerd/blob/master/docs/attribution.md>. |
+|          |                                                                                                                                                                                                                     |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Layout   | `<N55>/<N55E012>.hgt`, one file per 1°×1° cell, 25,934,402 B each                                                                                                                                                   |
+| Upstream | `https://elevation-tiles-prod.s3.amazonaws.com/skadi/<N55>/<N55E012>.hgt.gz`                                                                                                                                        |
+| Fetched  | 2026-09-15 (`npm run fetch-height -- --skadi`)                                                                                                                                                                      |
+| Licence  | Public-domain and open national sources (NASA SRTM v3, USGS NED/3DEP, Canada CDEM and others) redistributed by the AWS Open Data programme; see <https://github.com/tilezen/joerd/blob/master/docs/attribution.md>. |
 
 ## Why `skadi` and not `terrarium`
 

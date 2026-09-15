@@ -195,19 +195,21 @@ The bake emits `public/data/images/earth-tiles/v8/albedo/<z>/<x>/<y>.webp`: 512 
 
 The tiling is equirectangular: level `z` spans `512 << z` texels of width, i.e. `2^z` columns of tiles ([`earthTileParams.ts`](../src/data/bodies/earthTileParams.ts)). The whole-globe base textures sit on the same ladder (small tier z2, medium z3, large z4), and the runtime planner only streams tiles finer than the session's base level. Three bands fill the pyramid, all baked the same way — deepest level from an `EarthImagerySource`, coarser levels a 2x2 average read back off disk: Blue Marble globally at z3–z7; EOX s2cloudless regional insets at z8–z13, harvested at z13 for the named boxes in [`eoxRegions.ts`](../tools/fetch/eoxRegions.ts) and underfilled from Blue Marble at box margins, with its colour matched to Blue Marble below 2 km and separately for land and water ([`colourMatchedImagerySource.ts`](../tools/textures/colourMatchedImagerySource.ts)), so the band transition holds while EOX keeps its own finer detail; and a GeoDanmark orthophoto band at z14–z19 over Søndermarken, Copenhagen, harvested at z19 with its bbox snapped to the z14 tile grid so the z14–z18 pyramid is closed (every parent has all four children, no underfill needed — see [`data/raw/geodanmark/README.md`](../data/raw/geodanmark/README.md)). Refinement past z7 happens only inside a region box, and past z13 only inside the GeoDanmark patch.
 
+The same three bands carry a second product, **height**: `earth-tiles/v8/height/<z>/<x>/<y>.bin`, 129 posts of f32 metres above the datum sphere in the `shgt1` format ([`heightTileFormat.ts`](../src/data/scene/heightTileFormat.ts)), baked over the albedo bands' own boxes and levels from ETOPO 2022 30″ globally, `skadi` 1″ under the EOX boxes, and DHM/Terræn 0.4 m under the GeoDanmark patch (`npm run fetch-height`; one README per source under `data/raw/`). Two rules make displacement crack-free and are easy to break silently: every post is addressed by its GLOBAL lattice index, so two adjacent tiles write the same computed float on their shared column; and a coarser level takes its posts from the children already on disk by plain every-other-post decimation, never an average, so a parent is bit-identical to its children at shared points ([`bakeHeightLevel.ts`](../tools/textures/bakeHeightLevel.ts)). Bands therefore bake deepest-first in one invocation, which is also what nests z7 global under the z8 skadi tiles. ETOPO's bathymetry is not clamped at the source: the bake flattens each connected water component to its lowest shore and the largest one — the world ocean — to exactly 0, so an enclosed basin keeps its own level (the Dead Sea at −430 m, no Great-Lakes pit).
+
 At runtime [`surfaceTileSubsystem.ts`](../src/services/engine/subsystems/surfaceTileSubsystem.ts) fetches the manifest (any failure degrades to the base globe, never an error), then streams tiles through a 256-slot LRU atlas (8192 px, 512 px slots) at 4 concurrent fetches. On R2 the tiles are immutable and bulk-uploaded via rclone; any re-bake that changes pixels bumps the `TILE_PREFIX` version, and the day-cached manifest uploads last ([`syncR2.ts`](../tools/deploy/syncR2.ts), [DEPLOY.md](DEPLOY.md)). Earth tiles never appear in the data `manifest.json`, so `npm run fetch-data` skips them by construction; dev serves whatever `public/data/images/earth-tiles/` holds locally.
 
 ## Data-refresh re-run orders
 
 Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (a worktree's `data/` is its own; see the deploy doc). The sync step is the deploy path, covered in [docs/DEPLOY.md](DEPLOY.md).
 
-| Data changed           | Fetch                                   | Build                                               |
-| ---------------------- | --------------------------------------- | --------------------------------------------------- |
-| CF4 distances          | `fetch-cf4`                             | `build-tiers` (`2mrs.bin`, `glade-*.bin`)           |
-| Clusters/superclusters | `fetch-structures`                      | `build-structures` (after `build-tiers`)            |
-| DESI                   | `fetch-desi`                            | `build-tiers` (`desi-{deep,wedge,sgw}.bin`)         |
-| Planet textures        | `fetch-textures` (`--dev` for a subset) | `build-textures`                                    |
-| Earth surface tiles    | `fetch-textures` + `fetch-eox`          | `build-surface-tiles` (`--dev` for a quick z5 pass) |
+| Data changed           | Fetch                                           | Build                                                            |
+| ---------------------- | ----------------------------------------------- | ---------------------------------------------------------------- |
+| CF4 distances          | `fetch-cf4`                                     | `build-tiers` (`2mrs.bin`, `glade-*.bin`)                        |
+| Clusters/superclusters | `fetch-structures`                              | `build-structures` (after `build-tiers`)                         |
+| DESI                   | `fetch-desi`                                    | `build-tiers` (`desi-{deep,wedge,sgw}.bin`)                      |
+| Planet textures        | `fetch-textures` (`--dev` for a subset)         | `build-textures`                                                 |
+| Earth surface tiles    | `fetch-textures` + `fetch-eox` + `fetch-height` | `build-surface-tiles` (`--dev` for a quick z5 pass, albedo only) |
 
 Raw files and built artefacts are gitignored; only provenance READMEs and `.sha256` sidecars are committed. Full-resolution texture and tile builds run post-merge from the main worktree.
 

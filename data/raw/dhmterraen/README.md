@@ -2,14 +2,14 @@
 
 Deepest height source, under the GeoDanmark z19 orthophoto band.
 
-| | |
-| --- | --- |
-| Layout | `DTM_1km_<northingKm>_<eastingKm>.tif`, one file per 1 km DDKN cell, ~13 MB each |
+|          |                                                                                                     |
+| -------- | --------------------------------------------------------------------------------------------------- |
+| Layout   | `DTM_1km_<northingKm>_<eastingKm>.tif`, one file per 1 km DDKN cell, ~13 MB each                    |
 | Endpoint | `https://api.datafordeler.dk/FileDownloads/GetRasterFile?FileName=DTM_1km_<n>_<e>.tif&apiKey=<key>` |
-| Fetched | 2026-09-15 (`npm run fetch-height -- --dhm-terraen`) |
-| Licence | Frie data — © Klimadatastyrelsen, via Datafordeler. |
+| Fetched  | 2026-09-15 (`npm run fetch-height -- --dhm-terraen`)                                                |
+| Licence  | Frie data — © Klimadatastyrelsen, via Datafordeler.                                                 |
 
-**Not `data/raw/dhm/`.** That is the DHM *Punktsky* LAS point cloud for the
+**Not `data/raw/dhm/`.** That is the DHM _Punktsky_ LAS point cloud for the
 scene-workbench splat bake, from a different endpoint
 (`GetPointCloudFile`) and a different product. This is the gridded terrain
 model.
