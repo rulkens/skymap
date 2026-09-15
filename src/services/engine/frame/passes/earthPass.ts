@@ -261,7 +261,6 @@ export const earthPass: ContentPass = {
         heightAtlasView: heightAtlasView!,
         materialView: renderer.getMapView('material'),
         nightView: renderer.getMapView('night'),
-        normalView: renderer.getMapView('normal'),
         cloudsView: renderer.getMapView('clouds'),
       });
     }

@@ -271,14 +271,18 @@ describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment
 
 /**
  * HEIGHT_POSTS_PER_TILE (heightTileFormat.ts) is mirrored into
- * earthSurfaceTile/vertex.wesl, which addresses a post inside a height slot by
- * `(HEIGHT_POSTS_PER_TILE - 1) / meshResolution`. A drift there reads the wrong
- * slot's posts along every patch edge. The stride must also be an integer — a
+ * earthSurfaceTile's two stages: the vertex addresses a post inside a height
+ * slot by `(HEIGHT_POSTS_PER_TILE - 1) / meshResolution`, the fragment turns a
+ * uv into a cell over the same 128 cells. A drift there reads the wrong slot's
+ * posts along every patch edge. The stride must also be an integer — a
  * fractional one lands template vertices between posts, so the two sides of an
  * LOD boundary stop sharing lattice points and the collapse stops closing it.
  */
-describe('HEIGHT_POSTS_PER_TILE parity (heightTileFormat.ts ↔ earthSurfaceTile/vertex.wesl)', () => {
-  const files = ['src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl'];
+describe('HEIGHT_POSTS_PER_TILE parity (heightTileFormat.ts ↔ earthSurfaceTile shaders)', () => {
+  const files = [
+    'src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl',
+    'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl',
+  ];
 
   it("each file's HEIGHT_POSTS_PER_TILE equals the TS export", () => {
     for (const file of files) {

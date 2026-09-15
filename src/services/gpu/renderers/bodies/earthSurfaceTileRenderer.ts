@@ -6,8 +6,8 @@
  *
  * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline shares
  * the base globe's nominal radius, so ties must resolve in ITS favour. It
- * owns neither the tile atlas nor the base globe's material/night/normal/
- * cloud maps — both arrive as views on every `draw` call.
+ * owns neither the tile atlas nor the base globe's material/night/cloud maps
+ * — both arrive as views on every `draw` call.
  *
  * @module
  */
@@ -118,7 +118,9 @@ export function createEarthSurfaceTileRenderer(
       { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-      { binding: 8, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+      // 8 was the whole-globe normal map, now the base globe's alone: a patch
+      // takes its normal from the height field, and compositing both would
+      // shade the same relief twice (spec §7.2).
       { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
     ],
   });
@@ -207,7 +209,6 @@ export function createEarthSurfaceTileRenderer(
       heightAtlasView,
       materialView,
       nightView,
-      normalView,
       cloudsView,
     } = args;
     const tileCount = tiles.length;
@@ -306,7 +307,6 @@ export function createEarthSurfaceTileRenderer(
         { binding: 5, resource: surfaceAtlasView },
         { binding: 6, resource: materialView },
         { binding: 7, resource: nightView },
-        { binding: 8, resource: normalView },
         { binding: 9, resource: cloudsView },
       ],
     });

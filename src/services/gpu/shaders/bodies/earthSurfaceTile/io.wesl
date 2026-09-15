@@ -86,6 +86,12 @@ struct VSOut {
   @location(6) @interpolate(flat) fallbackUvOrigin: vec2<f32>,
   @location(7) @interpolate(flat) fallbackUvScale: vec2<f32>,
   @location(8) @interpolate(flat) fadeWeight: f32,
+  // The two facts the fragment needs to take its normal from the height cell
+  // it lies in: which slot to read, and the patch's (dLon, dLat) to turn a
+  // post step into metres. Per-tile constants, so flat -- and a u32 cannot
+  // interpolate at all.
+  @location(9) @interpolate(flat) heightSlotOrigin: vec2<u32>,
+  @location(10) @interpolate(flat) patchSpanRad: vec2<f32>,
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance

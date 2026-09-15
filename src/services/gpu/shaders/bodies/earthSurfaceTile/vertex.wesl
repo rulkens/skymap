@@ -158,6 +158,8 @@ fn vs(
   out.fallbackUvOrigin = inst.fallbackRect.xy;
   out.fallbackUvScale = inst.fallbackRect.zw;
   out.fadeWeight = inst.fadeWeight;
+  out.heightSlotOrigin = inst.heightSlotOrigin;
+  out.patchSpanRad = vec2<f32>(inst.dLonRad, inst.dLatRad);
   // Camera minus vertex, inverted through the same rotation and scaled into
   // body-radius units. Cancellation-free at metre scale, unlike the
   // 'camPosLocal - Ng' this replaced (two near-unit f32 vectors).

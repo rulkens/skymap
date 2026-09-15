@@ -7,29 +7,38 @@
 // the surfaceTileSubsystem ATLAS, sampled at the CPU-RESOLVED rect
 // ('atlasUvOrigin + uv * atlasUvScale') in place of the base globe's
 // per-fragment page-table lookup (Task 2's 'cutSurfaceTiles' already
-// resolved it once per LEAF); 'material'/'night'/'normal'/'clouds' stay
-// the SAME whole-globe textures, sampled at an equirect uv reconstructed
-// from the interpolated local normal (this mesh carries only intra-tile
-// uv -- see io.wesl).
+// resolved it once per LEAF); 'material'/'night'/'clouds' stay the SAME
+// whole-globe textures, sampled at an equirect uv reconstructed from the
+// interpolated local normal (this mesh carries only intra-tile uv -- see
+// io.wesl). The whole-globe NORMAL map is deliberately absent: patches take
+// their normal from the height field alone, since compositing both would
+// shade the same relief twice (spec section 7.2).
 
 import package::bodies::earthSurfaceTile::io::VSOut;
 import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::nightLights::nightLights;
-import package::lib::normalMap::perturbNormal;
 import package::lib::util::raySphere;
 import package::lib::math::PI;
 import package::lib::math::TAU;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
+// The same r32float height atlas the vertex stage displaces from, read the same
+// way: 'textureLoad' at an integer post, never a sampler (spec section 5.5).
+@group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(3) var baseSampler: sampler;
 @group(0) @binding(4) var atlasSampler: sampler;
 @group(0) @binding(5) var surfaceTexture: texture_2d<f32>;
 @group(0) @binding(6) var materialTexture: texture_2d<f32>;
 @group(0) @binding(7) var nightTexture: texture_2d<f32>;
-@group(0) @binding(8) var normalTexture: texture_2d<f32>;
+// Binding 8 was the whole-globe normal map; it is the base globe's alone now.
 @group(0) @binding(9) var cloudTexture: texture_2d<f32>;
+
+// Mirrors src/data/scene/heightTileFormat.ts -- parity-tested in
+// constants.parity.test.ts, '?static' linking does no value injection.
+const HEIGHT_POSTS_PER_TILE: f32 = 129.0;
+const HEIGHT_CELLS_PER_TILE: f32 = HEIGHT_POSTS_PER_TILE - 1.0;
 
 // Mirrored from 'EARTH_TILE_ATLAS_SIDE' (earthTileParams.ts) -- parity-tested
 // in constants.parity.test.ts, ?static linking does no value injection. Half
@@ -105,8 +114,36 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let baseAlbedo = mix(fallbackAlbedo, primaryAlbedo, in.fadeWeight);
   let mat = textureSample(materialTexture, baseSampler, equirectUv).rg;
 
-  let nEnc = textureSample(normalTexture, baseSampler, equirectUv).rg;
-  let n = perturbNormal(Ng, in.tangent, nEnc);
+  // Normal from the bilinear height cell this fragment lies in, spec section
+  // 7.2's FORWARD difference (a central one goes one-sided at the 129th post
+  // and seams every tile edge). Twin: src/utils/scene/surfaceNormalFromHeightCell.ts.
+  // 'in.uv.y' already runs 0 at the patch's NORTH edge (vertex.wesl's
+  // 'uv = (s, 1 - t)'), which is the height tile's own row order.
+  let col = in.uv.x * HEIGHT_CELLS_PER_TILE;
+  let rowF = in.uv.y * HEIGHT_CELLS_PER_TILE;
+  let i0 = clamp(floor(col), 0.0, HEIGHT_CELLS_PER_TILE - 1.0);
+  let j0 = clamp(floor(rowF), 0.0, HEIGHT_CELLS_PER_TILE - 1.0);
+  let cellU = col - i0;
+  let cellV = rowF - j0;
+  let cell = in.heightSlotOrigin + vec2<u32>(u32(i0), u32(j0));
+  let hNW = textureLoad(heightAtlas, cell, 0).r;
+  let hNE = textureLoad(heightAtlas, cell + vec2<u32>(1u, 0u), 0).r;
+  let hSW = textureLoad(heightAtlas, cell + vec2<u32>(0u, 1u), 0).r;
+  let hSE = textureLoad(heightAtlas, cell + vec2<u32>(1u, 1u), 0).r;
+
+  // The 'max' is the polar guard: cos(lat) reaches 0 on the pole row and the
+  // east gradient would divide by zero.
+  let lat = asin(clamp(Ng.z, -1.0, 1.0));
+  let postSpacingNM = u.radiusM * in.patchSpanRad.y / HEIGHT_CELLS_PER_TILE;
+  let postSpacingEM = max(
+    u.radiusM * cos(lat) * in.patchSpanRad.x / HEIGHT_CELLS_PER_TILE,
+    1e-3,
+  );
+  let dhdE = ((hNE - hNW) * (1.0 - cellV) + (hSE - hSW) * cellV) / postSpacingEM;
+  let dhdN = ((hNW - hSW) * (1.0 - cellU) + (hNE - hSE) * cellU) / postSpacingNM;
+  let eHat = normalize(in.tangent);
+  let nHat = cross(Ng, eHat);
+  let n = normalize(Ng - dhdE * eHat - dhdN * nHat);
   // Cancellation-free view vector -- see vertex.wesl's 'viewDirLocal'.
   let v = normalize(in.viewDirLocal);
   let l = u.sunDirLocal;
