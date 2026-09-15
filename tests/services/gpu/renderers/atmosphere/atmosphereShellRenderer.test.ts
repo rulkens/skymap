@@ -13,36 +13,53 @@ import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../../src/utils/gpu/packAtmo
  * attenuate this body's own in-scatter by its own transmittance).
  */
 
+/** A stub GPUTexture: just enough surface for the renderer to create a view
+ *  from it and destroy it, with `destroy` spied so a test can tell whether ITS
+ *  specific texture (not some other body's, not a differently-sized rebuild)
+ *  was the one released. */
+type StubTexture = { label: string; createView: () => object; destroy: ReturnType<typeof vi.fn> };
+
 /** Records what the renderer built. `descOf` maps each opaque pipeline handle
  *  back to the descriptor it came from, so a draw-order assertion can name the
- *  pipelines by what they do. */
+ *  pipelines by what they do. `texturesByLabel` — most recent write wins — lets
+ *  a `reconcile` test grab the exact `StubTexture` a label resolved to at a
+ *  given point, e.g. before vs. after a resize. */
 type Harness = {
   device: GPUDevice;
   renderPipelines: GPURenderPipelineDescriptor[];
   shaderCode: string[];
   descOf: Map<unknown, GPURenderPipelineDescriptor>;
+  texturesByLabel: Map<string, StubTexture>;
+  bindGroupCreations: () => number;
 };
 
 function mockDevice(): Harness {
   const renderPipelines: GPURenderPipelineDescriptor[] = [];
   const shaderCode: string[] = [];
   const descOf = new Map<unknown, GPURenderPipelineDescriptor>();
+  const texturesByLabel = new Map<string, StubTexture>();
   const computePass = {
     setPipeline: vi.fn(),
     setBindGroup: vi.fn(),
     dispatchWorkgroups: vi.fn(),
     end: vi.fn(),
   };
+  const createBindGroup = vi.fn(() => ({}));
   const device = {
     createSampler: vi.fn(() => ({})),
     createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => {
       shaderCode.push(desc.code);
       return { getCompilationInfo: () => Promise.resolve({ messages: [] }) };
     }),
-    createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
+    createTexture: vi.fn((desc: GPUTextureDescriptor) => {
+      const label = desc.label ?? '';
+      const texture: StubTexture = { label, createView: () => ({}), destroy: vi.fn() };
+      texturesByLabel.set(label, texture);
+      return texture;
+    }),
     createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
     createBindGroupLayout: vi.fn(() => ({})),
-    createBindGroup: vi.fn(() => ({})),
+    createBindGroup,
     createPipelineLayout: vi.fn(() => ({})),
     createComputePipeline: vi.fn(() => ({})),
     createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
@@ -57,7 +74,14 @@ function mockDevice(): Harness {
     })),
     queue: { writeBuffer: vi.fn(), writeTexture: vi.fn(), submit: vi.fn() },
   } as unknown as GPUDevice;
-  return { device, renderPipelines, shaderCode, descOf };
+  return {
+    device,
+    renderPipelines,
+    shaderCode,
+    descOf,
+    texturesByLabel,
+    bindGroupCreations: () => createBindGroup.mock.calls.length,
+  };
 }
 
 function build() {
@@ -206,5 +230,37 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
       const body = new RegExp(`fn\\s+${entryPoint}\\([^{]*\\{([^]*?)\\n\\}`).exec(linked)?.[1];
       expect(body).toContain('sampleShellRay(');
     }
+  });
+});
+
+describe('reconcile — tier-switchable sky-view LUT size', () => {
+  it('is a no-op when the size matches what is already built (the every-frame common case)', () => {
+    const { renderer, texturesByLabel, bindGroupCreations } = build();
+    const before = texturesByLabel.get('atmosphere-skyview-lut-earth');
+    const bindGroupsBefore = bindGroupCreations();
+
+    // Matches the construction-time default (SKY_VIEW_LUT_SIZE) — nothing to do.
+    renderer.reconcile({ skyViewLutSize: [192, 108] });
+
+    expect(texturesByLabel.get('atmosphere-skyview-lut-earth')).toBe(before);
+    expect(bindGroupCreations()).toBe(bindGroupsBefore);
+  });
+
+  it('recreates skyViewTex and rebuilds both bind groups that reference it on a size change', () => {
+    const { renderer, texturesByLabel, bindGroupCreations } = build();
+    const before = texturesByLabel.get('atmosphere-skyview-lut-earth')!;
+    const bindGroupsBefore = bindGroupCreations();
+
+    renderer.reconcile({ skyViewLutSize: [64, 36] });
+
+    // The old texture is the one released — not left for `destroy()` to find
+    // as a stale handle later.
+    expect(before.destroy).toHaveBeenCalledTimes(1);
+    const after = texturesByLabel.get('atmosphere-skyview-lut-earth');
+    expect(after).not.toBe(before);
+    // skyViewBindGroup (binding 5, storage output) and shellBindGroup
+    // (binding 2, sampled) both reference the resized texture and must be
+    // rebuilt; transmittance/multi-scatter bind groups do not.
+    expect(bindGroupCreations()).toBe(bindGroupsBefore + 2);
   });
 });
