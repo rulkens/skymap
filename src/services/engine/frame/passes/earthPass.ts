@@ -1,6 +1,6 @@
 /**
- * earthPass — Earth's `'body'`-slab content row: the base globe, then the
- * resident surface-tile detail patches over it, drawn into `foreground:0`.
+ * earthPass — Earth's `'body'`-slab content row: the base globe, drawn into
+ * `foreground:0`. The detail patches over it are `earthSurfaceTilesPass`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
  * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;
@@ -9,13 +9,9 @@
  *
  * `earthRenderer.draw` writes ONE non-dynamic uniform buffer, so this row
  * draws the base globe AT MOST once per frame (see that renderer's header for
- * the `writeBuffer`-vs-`submit` race a second draw would trigger). The detail
- * tiles draw AFTER it (gated on a non-empty last cut + a live atlas view — an
- * empty cut is a legitimate "nothing resident yet" frame, not a bug), so the
- * tile pipeline's `nearer-or-equal` depth compare resolves ties in its
- * favour. The globe is ALWAYS drawn: it sits at the datum's inner bound
- * (§7.4), so it cannot occlude relief, and it is what covers ground no
- * resident patch does yet.
+ * the `writeBuffer`-vs-`submit` race a second draw would trigger). The globe is
+ * ALWAYS drawn: it sits at the datum's inner bound (§7.4), so it cannot occlude
+ * relief, and it is what covers ground no resident patch does yet.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -40,24 +36,10 @@ import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurface
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
+import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { sceneBodyStates } from '../sceneBodyStates';
-
-/**
- * Camera-to-Earth-centre distance in Mpc, from the live per-frame snapshot
- * position — NOT `ctx.cam.distance` (the orbit distance-to-FOCUS, which
- * coincides with this only while Earth is the orbit pivot). `enabled`'s
- * sub-pixel cull and `draw`'s cloud-shadow descent fade both key off this same
- * quantity; factoring it out here means they read it once instead of
- * potentially drifting onto two slightly different distances.
- */
-function earthCameraDistanceMpc(earthPositionMpc: Vec3, ctx: ReadyFrameContext): number {
-  const dx = earthPositionMpc[0] - ctx.drawCamPos[0];
-  const dy = earthPositionMpc[1] - ctx.drawCamPos[1];
-  const dz = earthPositionMpc[2] - ctx.drawCamPos[2];
-  return Math.hypot(dx, dy, dz);
-}
 
 /**
  * The registry record for `bodyId`, searched across every store the body-slab
@@ -186,28 +168,11 @@ export const earthPass: ContentPass = {
     // dimming (nightLights reads cloudAlphaHere with no strength scalar).
     // Fixing that needs one more uniform field — deferred rather than paid
     // for a night-side-only artifact.
-    const cameraDistanceMpc = earthCameraDistanceMpc(earthState.positionMpc, ctx);
-    const cloudFade = cloudDeckFade(cameraDistanceMpc, radiusMpc);
+    const cloudFade = cloudDeckFade(
+      bodyCameraDistanceMpc(earthState.positionMpc, ctx.drawCamPos),
+      radiusMpc,
+    );
     const cloudShadowStrength = EARTH_SURFACE_PARAMS.cloudShadowStrength * cloudFade;
-
-    // ── Detail tiles, resolved BEFORE the base globe draw ──────────────────
-    //
-    // An empty cut or a not-yet-engaged atlas is the ordinary pre-residency
-    // picture, not an error: the tile draw is skipped and the base globe
-    // alone covers the cap.
-    const tileRenderer = state.gpu.earthSurfaceTileRenderer;
-    const earthTiles = state.subsystems.surfaceTiles;
-    const tiles = earthTiles?.getLastCut() ?? [];
-    const surfaceAtlasView = earthTiles?.getAtlasView() ?? null;
-    // The height atlas is as load-bearing as the albedo one: every vertex
-    // position reads it, so a cut drawn without it would be a flat sphere
-    // at best and garbage at worst.
-    const heightAtlasView = earthTiles?.getHeightAtlasView() ?? null;
-    const tilesLive =
-      tileRenderer !== null &&
-      surfaceAtlasView !== null &&
-      heightAtlasView !== null &&
-      tiles.length > 0;
 
     renderer.draw(
       pass,
@@ -228,37 +193,6 @@ export const earthPass: ContentPass = {
         state.settings.earth.oceanRoughness,
       ),
     );
-
-    // ── Detail tiles, drawn AFTER the base globe ──────────────────────────
-    //
-    // `nearer-or-equal` depth compare on the tile pipeline needs the base
-    // globe's depth already written — see the module header.
-    if (tilesLive) {
-      tileRenderer!.draw(pass, {
-        tiles,
-        // The slab vp is already eye-relative by construction (body-m rows
-        // build vp about the eye) — no rebase, unlike the old NEAR0 path.
-        vp: view.vp,
-        eyeRelBodyM: prepared.pose.eyeRelBodyM,
-        radiusM,
-        sunDirLocal: sun,
-        roughnessBase: EARTH_SURFACE_PARAMS.roughnessBase,
-        f0: EARTH_SURFACE_PARAMS.f0,
-        sunIrradiance: EARTH_SURFACE_PARAMS.sunIrradiance,
-        ambientLight: state.settings.earth.ambientLight,
-        oceanRoughness: state.settings.earth.oceanRoughness,
-        cloudShadowStrength,
-        cloudShellRadius: CLOUD_SHELL_PARAMS.radiusRatio,
-        // DebugPanel's Earth LOD overlay toggle — read live each frame from the
-        // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
-        debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
-        surfaceAtlasView: surfaceAtlasView!,
-        heightAtlasView: heightAtlasView!,
-        materialView: renderer.getMapView('material'),
-        nightView: renderer.getMapView('night'),
-        cloudsView: renderer.getMapView('clouds'),
-      });
-    }
   },
 
   // Stamps Earth's packed identity into the body-slab r32uint pick pass.

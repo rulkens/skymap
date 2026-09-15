@@ -66,7 +66,15 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     captures: ['probe'],
     cosmoPasses: ['sky-cubemap-blit'],
     near0Passes: [],
-    bodyPasses: ['earth', 'cloud-shell', 'planets', 'textured-bodies', 'rings', 'atmosphere-shell'],
+    bodyPasses: [
+      'earth',
+      'earth-surface-tiles',
+      'cloud-shell',
+      'planets',
+      'textured-bodies',
+      'rings',
+      'atmosphere-shell',
+    ],
   },
   // The half-res scalar-volume raymarch into its own offscreen. It is merged
   // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,
@@ -209,6 +217,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     near0Passes: ['star-spheres', 'field-star-sphere'],
     bodyPasses: [
       'earth',
+      'earth-surface-tiles',
       'cloud-shell',
       'planets',
       'textured-bodies',
