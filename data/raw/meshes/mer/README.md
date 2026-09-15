@@ -42,11 +42,18 @@ npm run prebake-mesh -- mer    # Blender 5.2 LTS; ~10 s, not run in CI
 
 `tools/meshes/prebake/meshPrebake.py` evaluates the scene at **frame 1325**,
 leaves the 21 material-less marker cubes behind, joins the 40 remaining parts,
-smart-UV-projects and bakes all nine materials into one 2048² albedo atlas. Its
-output and the loose `mer.prebaked.albedo.png` beside it are gitignored build
-products — regenerate them, don't archive them. Having no normal or
-metallicRoughness map is expected: `buildMeshes` substitutes 1×1 constants and
-records `normalMapSubstituted: true`.
+smart-UV-projects and bakes all nine materials into one 2048² atlas per
+`BAKE_PASSES` row — albedo, normal, roughness and metallic. Its output and the
+four loose `mer.prebaked.*.png` atlases beside it are gitignored build products
+— regenerate them, don't archive them. The GLB carries the normal atlas and the
+metallicRoughness pair the glTF exporter packs from the last two;
+`substituted: []` on the generated row is the check that the exporter still
+packs them. Every material authors metallic 0, so that atlas bakes flat black.
+Roughness is 0.5 over 90 % of the baked texels and 0.1–0.4 over the rest. Two
+rival Material Output nodes, targeted at Cycles and each fed by a bare Diffuse
+BSDF, win over the Principled the file renders with, so the pre-bake drops them
+— left in, those parts bake black albedo (a Diffuse node emits nothing) and
+roughness 1.
 
 Two things about this file bite:
 
@@ -76,8 +83,8 @@ protected separately — see <https://www.nasa.gov/nasa-brand-center/images-and-
 
 Blender 4.02 file: 61 mesh objects, 32,814 tris, nine materials, 13 packed
 textures (1024²/512²/256²), 38 animation actions. No armature. Normal maps are
-packed in the file but wired into nothing, so nothing carries them; the
-pre-bake bakes albedo only.
+packed in the file but wired into nothing, so nothing carries them and the
+normal atlas bakes flat.
 
 **Units: metres, +Z up.** The scene's unit system reads `NONE`, but at frame
 1325 the deployed solar array spans 2.28 m against the real 2.3 m and the

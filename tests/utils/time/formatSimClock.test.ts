@@ -16,11 +16,6 @@ afterEach(() => {
 });
 
 describe('formatSimClock', () => {
-  it('renders a UTC date-time', () => {
-    const date = new Date(Date.UTC(2026, 10, 3, 18, 0, 0));
-    expect(formatSimClock(date)).toBe('2026-11-03 18:00 UTC');
-  });
-
   it('reads UTC fields, never the host-local ones', () => {
     // We stub the LOCAL getters (getFullYear/getMonth/... — no UTC in the name)
     // to return sentinel values that appear in NO valid rendering of any

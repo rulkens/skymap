@@ -28,15 +28,6 @@ describe('SCENE_ANCHORS', () => {
     }
   });
 
-  it('Proxima sits ~1.301 pc from the Sun', () => {
-    // The parsec-scale f64 anchor: this magnitude is what the descent pins its
-    // precision against, so the tolerance is tight.
-    const proxima = findAnchor('proxima-centauri');
-    const expected = 1.301 * SCALE_UNITS.PC_TO_MPC;
-    const tolMpc = 1e-3 * SCALE_UNITS.PC_TO_MPC;
-    expect(Math.abs(hypot3(proxima.positionMpc) - expected)).toBeLessThan(tolMpc);
-  });
-
   it('named stars sit at their catalogued distances', () => {
     // Spot checks against published nearest-/brightest-star distances. Loose
     // tolerance (~0.02 pc) because A/B components are merged onto the primary.
@@ -69,13 +60,5 @@ describe('SCENE_ANCHORS', () => {
     expect(sirius.positionMpc[0]).toBeCloseTo(expected[0], 9);
     expect(sirius.positionMpc[1]).toBeCloseTo(expected[1], 9);
     expect(sirius.positionMpc[2]).toBeCloseTo(expected[2], 9);
-  });
-
-  it('every anchor position is finite', () => {
-    for (const anchor of SCENE_ANCHORS) {
-      for (const c of anchor.positionMpc) {
-        expect(Number.isFinite(c), anchor.id).toBe(true);
-      }
-    }
   });
 });

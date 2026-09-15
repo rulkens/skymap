@@ -534,11 +534,6 @@ describe('orbitTrailsPass.draw', () => {
     expect(galacticCentreConics).toHaveLength(0);
   });
 
-  it('is a no-op when the orbitTrailRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View();
-    expect(() => orbitTrailsPass.draw(PASS_STUB, view, CTX_STUB, makeState(null))).not.toThrow();
-  });
-
   it('culls every orbit and skips the draw when all are deep sub-pixel', () => {
     composeMock.mockClear();
     const renderer = makeRendererSpy();

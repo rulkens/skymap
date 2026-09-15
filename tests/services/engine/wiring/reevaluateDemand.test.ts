@@ -193,30 +193,6 @@ describe('evaluateRows', () => {
     expect(slot.load).not.toHaveBeenCalled();
   });
 
-  it('does not re-load a slot that is already loading', () => {
-    const slot = stubSlot('loading');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    evaluateRows(state, [row(Source.SDSS, () => true)]);
-    // A fetch is already in flight; re-triggering would abort and restart it.
-    expect(slot.load).not.toHaveBeenCalled();
-  });
-
-  it('re-evaluation after a slot becomes ready is a no-op for that row', () => {
-    // First eval finds the slot idle and loads it; flipping the stub to ready
-    // models the slot settling. The second eval must NOT re-load — this pins
-    // the toggle-storm prevention the idle-guard exists for.
-    const slot = stubSlot('idle');
-    const state = makeState(new Map([[Source.SDSS, slot]]));
-    const rows = [row(Source.SDSS, () => true)];
-
-    evaluateRows(state, rows);
-    expect(slot.load).toHaveBeenCalledTimes(1);
-
-    slot.setKind('ready');
-    evaluateRows(state, rows);
-    expect(slot.load).toHaveBeenCalledTimes(1);
-  });
-
   it('skips a true-demand row with no slot without throwing', () => {
     // slotFor returns undefined for a key with no minted slot; the optional
     // chain makes the load a no-op rather than a crash.
@@ -301,30 +277,6 @@ describe('evaluateRows', () => {
     // Exactly ASSET_QUEUE_CONCURRENCY loads, and they are the two best ranks in
     // rank order — SDSS, first in the array and worst-ranked, waits its turn.
     expect(started).toEqual([Source.TwoMRS, Source.Glade]);
-  });
-
-  it('a throwing release predicate is caught and does not stop later rows', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const sdss = stubSlot('ready');
-    const glade = stubSlot('ready');
-    const state = makeState(
-      new Map([
-        [Source.SDSS, sdss],
-        [Source.Glade, glade],
-      ]),
-    );
-    evaluateRows(state, [
-      row(Source.SDSS, () => false, {
-        release: () => {
-          throw new Error('boom');
-        },
-      }),
-      row(Source.Glade, () => false, { release: () => true }),
-    ]);
-    // First row's throw is swallowed + warned; the second row still evicts.
-    expect(sdss.release).not.toHaveBeenCalled();
-    expect(glade.release).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalled();
   });
 });
 

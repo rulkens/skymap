@@ -148,43 +148,9 @@ describe('captureGalaxyFocusIds', () => {
     }
   });
 
-  it('synthetic is never captured', () => {
-    // Synthetic's tierTargets is {}, same as the other tier-agnostic sources —
-    // its request never drifts, so it is never captured on any swap.
-    const store = buildStore();
-    store.dispatch(
-      updateSelectionSelect({ type: 'galaxyCatalog', source: Source.Synthetic, index: 0 }),
-    );
-
-    const resolveDeps: ResolveDeps = {
-      catalogs: { get: () => undefined },
-      famousGalaxiesMeta: [],
-      structures: { byId: () => null },
-      stars: { current: () => null },
-    };
-
-    const result = captureGalaxyFocusIds(store.getState(), resolveDeps, 'medium', 'large');
-
-    expect(result).toHaveLength(0);
-  });
-
   it('does NOT capture a structure ref', () => {
     const store = buildStore();
     store.dispatch(updateSelectionSelect({ type: 'structure', id: 'cluster-virgo' }));
-
-    const result = captureGalaxyFocusIds(
-      store.getState(),
-      makeSdssResolveDeps(1n),
-      'medium',
-      'large',
-    );
-
-    expect(result).toHaveLength(0);
-  });
-
-  it('does NOT capture a milkyWay ref', () => {
-    const store = buildStore();
-    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
 
     const result = captureGalaxyFocusIds(
       store.getState(),

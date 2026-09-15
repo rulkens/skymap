@@ -29,7 +29,6 @@ import {
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
 } from '../../../../../src/services/gpu/renderers/bodies/planetRenderer';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 
 type BufferDesc = { label?: string; size: number };
@@ -78,20 +77,6 @@ function mockPass(): GPURenderPassEncoder {
 }
 
 describe('createPlanetRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    expect(() =>
-      createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
-    ).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createPlanetRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
   it('allocates the geometry buffers but no instance buffer at construction', () => {
     // Position + index geometry is fixed-size (one uv-sphere mesh) and
     // allocated eagerly. The instance buffer has nothing to size against

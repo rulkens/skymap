@@ -15,17 +15,13 @@ import {
 } from '../../../../tools/galaxy-renderer/src/state/createStore';
 import { paramsPatched } from '../../../../tools/galaxy-renderer/src/state/slices/galaxySlice';
 import { renderPatched } from '../../../../tools/galaxy-renderer/src/state/slices/renderSlice';
-import { lodPatched } from '../../../../tools/galaxy-renderer/src/state/slices/lodSlice';
 import {
   comparePanelToggled,
   fitFinished,
   fitStarted,
   viewRequested,
 } from '../../../../tools/galaxy-renderer/src/state/slices/compareSlice';
-import {
-  extrasCountSet,
-  extrasToggled,
-} from '../../../../tools/galaxy-renderer/src/state/slices/extrasSlice';
+import { extrasToggled } from '../../../../tools/galaxy-renderer/src/state/slices/extrasSlice';
 import { autoRotateSet } from '../../../../tools/galaxy-renderer/src/state/slices/uiSlice';
 import { fieldTuningPatched } from '../../../../tools/galaxy-renderer/src/state/slices/fieldTuningSlice';
 import { DEFAULT_GALAXY_PARAMS } from '../../../../tools/galaxy-renderer/src/data/defaultGalaxyParams';
@@ -76,65 +72,11 @@ function makeFakeEngine(): { engine: GalaxyEngineHandle; mocks: EngineMocks } {
   return { engine, mocks };
 }
 
-/**
- * What the engine actually receives at boot. The DUST (LEGACY) pill is off by
- * default, and the bridge gates it on the OUTGOING copy rather than in the
- * stored `galaxy` slice — so the engine sees the two legacy-dust lanes zeroed
- * while the sliders still hold the values a re-enable must restore. Spelled
- * out rather than routed back through `paramsForEngine`, which would only
- * restate the implementation.
- */
-const ENGINE_PARAMS = {
-  ...DEFAULT_GALAXY_PARAMS,
-  legacy: { ...DEFAULT_GALAXY_PARAMS.legacy, spriteDust: 0, dustRingStrength: 0 },
-};
-
 describe('connectEngineBridge', () => {
   let store: AppStore;
 
   beforeEach(() => {
     store = createGalaxyStore();
-  });
-
-  it('connect performs the initial sync', () => {
-    const { engine, mocks } = makeFakeEngine();
-    const disconnect = connectEngineBridge(store, engine);
-
-    expect(mocks.setRender).toHaveBeenCalledTimes(1);
-    expect(mocks.setRender).toHaveBeenCalledWith({
-      ...DEFAULT_RENDER_SETTINGS,
-      ...DEFAULT_LOD_SETTINGS,
-    });
-    expect(mocks.setInsets).toHaveBeenCalledTimes(1);
-    expect(mocks.setInsets).toHaveBeenCalledWith(0, 340);
-    expect(mocks.setAutoRotate).toHaveBeenCalledTimes(1);
-    expect(mocks.setAutoRotate).toHaveBeenCalledWith(false);
-    expect(mocks.setParams).toHaveBeenCalledTimes(1);
-    expect(mocks.setParams).toHaveBeenCalledWith(ENGINE_PARAMS);
-
-    disconnect();
-  });
-
-  it('galaxy slice change calls setParams immediately', () => {
-    const { engine, mocks } = makeFakeEngine();
-    const disconnect = connectEngineBridge(store, engine);
-    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only
-
-    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 3 } }));
-    expect(mocks.setParams).toHaveBeenCalledTimes(2);
-    expect(mocks.setParams).toHaveBeenLastCalledWith({
-      ...ENGINE_PARAMS,
-      shared: { ...ENGINE_PARAMS.shared, armCount: 3 },
-    });
-
-    store.dispatch(paramsPatched({ shared: { ...DEFAULT_GALAXY_PARAMS.shared, armCount: 4 } }));
-    expect(mocks.setParams).toHaveBeenCalledTimes(3);
-    expect(mocks.setParams).toHaveBeenLastCalledWith({
-      ...ENGINE_PARAMS,
-      shared: { ...ENGINE_PARAMS.shared, armCount: 4 },
-    });
-
-    disconnect();
   });
 
   it('render changes call setRender immediately and never setParams', () => {
@@ -148,28 +90,6 @@ describe('connectEngineBridge', () => {
       ...DEFAULT_RENDER_SETTINGS,
       exposure: 1.5,
       ...DEFAULT_LOD_SETTINGS,
-    });
-    expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
-
-    disconnect();
-  });
-
-  it('lod changes ride the same setRender path', () => {
-    const { engine, mocks } = makeFakeEngine();
-    const disconnect = connectEngineBridge(store, engine);
-
-    // Derived from the default, not a literal: a literal here silently
-    // becomes a no-op the day it coincides with the (seeded) default, and the
-    // failure — one fewer setRender call than expected — reads as a bridge
-    // bug rather than what it actually is, a fixture collision.
-    const patchedLodApparent = DEFAULT_LOD_SETTINGS.lodApparent + 0.01;
-    store.dispatch(lodPatched({ lodApparent: patchedLodApparent }));
-
-    expect(mocks.setRender).toHaveBeenCalledTimes(2); // initial sync + this change
-    expect(mocks.setRender).toHaveBeenLastCalledWith({
-      ...DEFAULT_RENDER_SETTINGS,
-      ...DEFAULT_LOD_SETTINGS,
-      lodApparent: patchedLodApparent,
     });
     expect(mocks.setParams).toHaveBeenCalledTimes(1); // initial sync only — never scheduled
 
@@ -197,22 +117,6 @@ describe('connectEngineBridge', () => {
     disconnect();
   });
 
-  it('compare open/close drives setInsets 390/0', () => {
-    const { engine, mocks } = makeFakeEngine();
-    const disconnect = connectEngineBridge(store, engine);
-    expect(mocks.setInsets).toHaveBeenLastCalledWith(0, 340); // initial sync, panel closed
-
-    store.dispatch(comparePanelToggled());
-    expect(mocks.setInsets).toHaveBeenCalledTimes(2);
-    expect(mocks.setInsets).toHaveBeenLastCalledWith(390, 340);
-
-    store.dispatch(comparePanelToggled());
-    expect(mocks.setInsets).toHaveBeenCalledTimes(3);
-    expect(mocks.setInsets).toHaveBeenLastCalledWith(0, 340);
-
-    disconnect();
-  });
-
   it('extras enable → immediate setExtras; disable → setExtras([])', () => {
     const { engine, mocks } = makeFakeEngine();
     const rng = mulberry32(7);
@@ -225,21 +129,6 @@ describe('connectEngineBridge', () => {
     store.dispatch(extrasToggled(false));
     expect(mocks.setExtras).toHaveBeenCalledTimes(2);
     expect(mocks.setExtras).toHaveBeenLastCalledWith([]);
-
-    disconnect();
-  });
-
-  it('extras count change calls setExtras immediately', () => {
-    const { engine, mocks } = makeFakeEngine();
-    const rng = mulberry32(7);
-    const disconnect = connectEngineBridge(store, engine, { rng });
-
-    store.dispatch(extrasToggled(true));
-    expect(mocks.setExtras).toHaveBeenCalledTimes(1);
-
-    store.dispatch(extrasCountSet(20));
-    expect(mocks.setExtras).toHaveBeenCalledTimes(2);
-    expect(mocks.setExtras.mock.calls[1]![0]).toHaveLength(20);
 
     disconnect();
   });

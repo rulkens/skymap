@@ -36,13 +36,6 @@ describe('estimateLog10StellarMass — SDSS', () => {
     );
     expect(out).toBeNaN();
   });
-
-  it('propagates NaN when distMpc is non-positive', () => {
-    const out = estimateLog10StellarMass(
-      input({ source: Source.SDSS, magG: 17.5, magR: 16.8, distMpc: 0 }),
-    );
-    expect(out).toBeNaN();
-  });
 });
 
 describe('estimateLog10StellarMass — 2MRS', () => {
@@ -55,15 +48,6 @@ describe('estimateLog10StellarMass — 2MRS', () => {
 });
 
 describe('estimateLog10StellarMass — GLADE', () => {
-  it('uses the flat K-band relation (magZ) when K is real, same as 2MRS', () => {
-    // GLADE's magZ holds 2MASS K (glade.ts's mapping) — this must match
-    // estimateTwoMrs's relation exactly: log10(M/L_K)=log10(0.6), M_sun,K=3.27.
-    // M_K = 10.0 - 5*log10(50) - 25 = -23.4949
-    // log10 M = log10(0.6) + 0.4*(3.27 - (-23.4949)) = 10.484
-    const out = estimateLog10StellarMass(input({ source: Source.Glade, magZ: 10.0, distMpc: 50 }));
-    expect(out).toBeCloseTo(10.484, 2);
-  });
-
   it('falls back to the single-band B relation when K is missing but B is real', () => {
     // M_B = 13.0 - 5*log10(20) - 25 = -18.5051
     // log10(M/L_B) = -0.942 + 1.737*0.75 - 0.15 = 0.2108

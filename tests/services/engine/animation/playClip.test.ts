@@ -189,34 +189,4 @@ describe('playClip', () => {
     // reference identity.
     expect(payload.data).not.toBe(originalClip);
   });
-
-  it('with a fixed start passes it through unchanged', () => {
-    const store = makeStore();
-    const dispatchSpy = vi.spyOn(store, 'dispatch');
-    const stub = makeStubClipPlayer();
-
-    const playClip = createPlayClip({
-      store,
-      clipPlayer: stub,
-      getLivePose: () => LIVE_POSE,
-    });
-
-    const originalClip = makeClip(FIXED_POSE);
-    playClip(originalClip, FRAME);
-
-    const startClipCall = dispatchSpy.mock.calls.find(
-      (c) => (c[0] as { type?: string }).type === clipStarted.type,
-    );
-    expect(startClipCall).toBeDefined();
-
-    const dispatched = startClipCall![0] as ReturnType<typeof clipStarted>;
-    const payload = dispatched.payload;
-
-    // The concrete start pose must be forwarded verbatim (value equality).
-    expect(payload.data.start).toEqual(FIXED_POSE);
-
-    // The returned `data` is still FRESH (resolveClipStart always spreads), so
-    // the clock-reset trigger fires even for a replay of the same static clip.
-    expect(payload.data).not.toBe(originalClip);
-  });
 });

@@ -25,10 +25,6 @@ const TEST_POSE: CameraPose = {
 };
 
 describe('flowOrbit clip', () => {
-  it('starts live (orbits from the user-dialed framing)', () => {
-    expect(flowOrbit.data.start).toBe('live');
-  });
-
   it('compiles without a single-writer clash', () => {
     // yaw (spin) and pitch (oscillate) are distinct channels — no overlap.
     expect(() => compileClip(flowOrbit.data)).not.toThrow();

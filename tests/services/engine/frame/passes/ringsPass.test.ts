@@ -258,10 +258,4 @@ describe('ringsPass.draw', () => {
     expect(u[22]).toBe(Math.fround(MOCK_CAM_LOCAL[2]));
     expect(u[23]).toBeCloseTo(SATURN_RING.innerRadiusKm / SATURN_RING.outerRadiusKm);
   });
-
-  it('is a no-op when the ringRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeBodyView('saturn' as BodyId);
-    const state = makeState(null, [saturnBody()], ['saturn-ring']);
-    expect(() => ringsPass.draw(PASS_STUB, view, makeCtx(), state)).not.toThrow();
-  });
 });

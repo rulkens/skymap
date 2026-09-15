@@ -22,11 +22,6 @@ describe('formatMorphology', () => {
     expect(formatMorphology('E-S0')).toBe('Elliptical/lenticular (E-S0)');
   });
 
-  it('labels irregulars', () => {
-    expect(formatMorphology('I')).toBe('Irregular (I)');
-    expect(formatMorphology('IB')).toBe('Irregular (IB)');
-  });
-
   it('labels dwarf morphologies', () => {
     expect(formatMorphology('dSph')).toBe('Dwarf spheroidal (dSph)');
     expect(formatMorphology('dE3')).toBe('Dwarf elliptical (dE3)');

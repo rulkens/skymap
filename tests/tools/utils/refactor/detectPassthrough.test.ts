@@ -7,9 +7,11 @@ import { resolveSymbol } from '../../../../tools/utils/refactor/resolveSymbol';
 // so each case is a single in-memory file, resolved the way the CLI does, then
 // classified. The correctness guard is the pair of null cases: anything richer
 // than a straight passthrough must NOT be reported, so `inline` refuses instead
-// of mangling a call site with real logic in it.
+// of mangling a call site with real logic in it. `skipLoadingLibFiles` drops the
+// lib.d.ts parse (~150 ms per Project, the bulk of this file's cost); detection
+// compares signature TEXT, never a resolved global type.
 function resolvedFoo(source: string) {
-  const project = new Project({ useInMemoryFileSystem: true });
+  const project = new Project({ useInMemoryFileSystem: true, skipLoadingLibFiles: true });
   project.createSourceFile('/src/wrapper.ts', source);
   return resolveSymbol(project, { file: '/src/wrapper.ts', symbol: 'foo' });
 }

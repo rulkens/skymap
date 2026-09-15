@@ -22,11 +22,13 @@ import { stepCameraRuntime } from '../../../../src/services/engine/camera/stepCa
 import { projectFramePose } from '../../../../src/services/engine/frame/projectFramePose';
 import { CAMERA_DRIVERS } from '../../../../src/services/engine/camera/cameraDrivers';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from '../../../../src/services/engine/camera/cameraFraming';
-import { EMPTY_SURFACE_MEMORY } from '../../../../src/services/camera/surfaceStep';
+import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
+import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
-import { resolveWorldArm } from '../../../../src/services/engine/camera/poseFrameConversion';
+import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../../src/state/time/selectors';
+import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
@@ -94,23 +96,43 @@ describe('stepCameraRuntime', () => {
     expect(next.follow?.panOffset).not.toEqual([0, 0, 0]);
   });
 
-  it('an idle frame returns the epochs, surface and follow groups by identity', () => {
+  it('an idle frame returns the epochs, gesture, tilt and follow groups by identity', () => {
     // A body arm: the follow driver is inert there, so its memory rides
-    // through unchanged and `noteBody` sees the body it already remembers.
-    // `toBe` on all three — a group re-spread on a steady frame breaks every
-    // between-frame memo keyed on it.
+    // through unchanged and `notedTiltMemory` sees the host it already
+    // remembers. `toBe` on all four — a group re-spread on a steady frame
+    // breaks every between-frame memo keyed on it.
     const h = makeCameraSimHarness({ bootHR: 0.1 });
     h.frame(3);
     const prev = h.state.cameraRuntime;
     expect(prev.register.pose.frame).toEqual({ body: 'earth' });
     expect(prev.follow).not.toBeNull();
-    expect(prev.surface.memoryBodyId).toBe('earth');
+    expect(prev.tilt.hostId).toBe('earth');
 
     const { next } = stepCameraRuntime(prev, inputsFor(h, 64));
 
     expect(next.epochs).toBe(prev.epochs);
-    expect(next.surface).toBe(prev.surface);
+    expect(next.gesture).toBe(prev.gesture);
+    expect(next.tilt).toBe(prev.tilt);
     expect(next.follow).toBe(prev.follow);
+  });
+
+  it('the rung memory is wiped when the frame key changes and kept when it does not', () => {
+    // The same-key half asserts IDENTITY: an envelope that re-wrapped the
+    // memory every frame would hand the drain a fresh object each time and
+    // silently break every `!==` the surface step decides a decline by.
+    const h = makeCameraSimHarness({ bootHR: 0.1 });
+    const prev = {
+      ...h.state.cameraRuntime,
+      gesture: { key: 'absolute', value: { gesture: 'down' as const } },
+    };
+
+    const crossing = stepCameraRuntime(prev, inputsFor(h, 16));
+    const held = stepCameraRuntime(crossing.next, inputsFor(h, 32));
+
+    expect(crossing.next.register.pose.frame).toEqual({ body: 'earth' });
+    expect(crossing.next.gesture.key).toBe('body:earth');
+    expect(crossing.next.gesture.value).toBe(EMPTY_SURFACE_GESTURE_MEMORY);
+    expect(held.next.gesture.value).toBe(crossing.next.gesture.value);
   });
 
   it('the fold runs after the pin and the tilt projection', () => {
@@ -131,12 +153,18 @@ describe('stepCameraRuntime', () => {
         pivotsOnFocusedBody: true,
         focus: EARTH_ROW,
         follow: null,
-        surface: { ...EMPTY_SURFACE_MEMORY, rememberedTiltRad, memoryBodyId: 'earth' },
+        tilt: { ...EMPTY_TILT_MEMORY, rememberedTiltRad, hostId: 'earth' },
         intent,
-        bodies: BODIES,
-        poseBasis: B,
-        upBasis: B,
-        tuning: intent.tuning,
+        ctx: {
+          bodies: BODIES,
+          poseBasis: B,
+          upBasis: B,
+          focusBodyId: 'earth',
+          pivot: pivotFraming(EARTH_ROW),
+          viewportPx: [1000, 1000],
+          fovYRad: Math.PI / 3,
+          tuning: intent.tuning,
+        },
       });
 
     const flat = project(0);
@@ -145,7 +173,7 @@ describe('stepCameraRuntime', () => {
     expect(flat.displayed.frame).toEqual({ body: 'earth' });
     expect(flat.actions.map((a) => a.type)).toEqual([commitCameraPose.type]);
     const tiltOf = (out: typeof flat): number => {
-      const world = resolveWorldArm(out.displayed, BODIES, B, B);
+      const world = foldToWorld(out.displayed, { bodies: BODIES, poseBasis: B, upBasis: B });
       return tiltOfPose(world, eyeMpcOf(world, B), EARTH);
     };
     expect(tiltOf(flat)).toBeLessThan(1e-6);

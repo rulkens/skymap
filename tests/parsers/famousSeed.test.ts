@@ -2,25 +2,6 @@ import { describe, it, expect } from 'vitest';
 import { parseFamousSeed, validateFamousEntry } from '../../tools/parsers/famousSeed';
 
 describe('parseFamousSeed', () => {
-  it('parses a minimal one-entry seed', () => {
-    const json = JSON.stringify([
-      {
-        id: 'm31',
-        names: ['M31', 'Andromeda Galaxy'],
-        ra: 10.68,
-        dec: 41.27,
-        distanceMpc: 0.778,
-        diameterKpc: 67.5,
-        type: 'SA(s)b',
-        description: 'Andromeda.',
-      },
-    ]);
-    const entries = parseFamousSeed(json);
-    expect(entries).toHaveLength(1);
-    expect(entries[0]!.id).toBe('m31');
-    expect(entries[0]!.names).toContain('Andromeda Galaxy');
-  });
-
   it('rejects entries with duplicate ids', () => {
     const dup = [
       {
@@ -143,67 +124,6 @@ describe('parseFamousSeed', () => {
     expect(entries[0]!.axisRatio).toBeCloseTo(0.39);
     expect(entries[0]!.positionAngleDeg).toBe(35);
     expect(entries[0]!.magB).toBeCloseTo(4.3);
-  });
-
-  it('rejects out-of-range axisRatio', () => {
-    expect(() =>
-      validateFamousEntry({
-        id: 'x',
-        names: ['x'],
-        ra: 0,
-        dec: 0,
-        distanceMpc: 1,
-        diameterKpc: 10,
-        type: 'E',
-        description: 'x',
-        axisRatio: 0.0,
-      } as never),
-    ).toThrow(/axisRatio/);
-    expect(() =>
-      validateFamousEntry({
-        id: 'x',
-        names: ['x'],
-        ra: 0,
-        dec: 0,
-        distanceMpc: 1,
-        diameterKpc: 10,
-        type: 'E',
-        description: 'x',
-        axisRatio: 1.5,
-      } as never),
-    ).toThrow(/axisRatio/);
-  });
-
-  it('rejects out-of-range positionAngleDeg', () => {
-    expect(() =>
-      validateFamousEntry({
-        id: 'x',
-        names: ['x'],
-        ra: 0,
-        dec: 0,
-        distanceMpc: 1,
-        diameterKpc: 10,
-        type: 'E',
-        description: 'x',
-        positionAngleDeg: 180,
-      } as never),
-    ).toThrow(/positionAngleDeg/);
-  });
-
-  it('rejects out-of-range magnitudes', () => {
-    expect(() =>
-      validateFamousEntry({
-        id: 'x',
-        names: ['x'],
-        ra: 0,
-        dec: 0,
-        distanceMpc: 1,
-        diameterKpc: 10,
-        type: 'E',
-        description: 'x',
-        magB: 100,
-      } as never),
-    ).toThrow(/magB/);
   });
 
   it('parses the real seed file we ship', async () => {

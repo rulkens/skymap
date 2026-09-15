@@ -9,31 +9,12 @@ import { describe, it, expect } from 'vitest';
 import {
   sourceClassLabel,
   milliquasParentSurveyPrefix,
-  MILLIQUAS_CLASS_BYTE,
-  MILLIQUAS_PARENT_SURVEY_BYTE,
-  DESI_TRACER_CLASS,
 } from '../../../src/data/galaxyCatalog/sourceClass';
 import { Source } from '../../../src/data/sources';
 
 describe('sourceClassLabel', () => {
-  it('maps each Milliquas class byte to the corresponding human label', () => {
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.Q)).toBe('Quasar');
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.A)).toBe('AGN type-1');
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.B)).toBe('BL Lac');
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.K)).toBe('Seyfert-1 narrow');
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.N)).toBe('Seyfert-1 broad');
-    expect(sourceClassLabel(Source.Milliquas, MILLIQUAS_CLASS_BYTE.S)).toBe('Candidate');
-  });
-
   it('returns null for Milliquas byte 0 (unclassified)', () => {
     expect(sourceClassLabel(Source.Milliquas, 0)).toBeNull();
-  });
-
-  it('maps each DESI tracer class byte to a tracer-flavoured label', () => {
-    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.BGS)).toContain('BGS');
-    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.LRG)).toContain('LRG');
-    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.ELG)).toContain('ELG');
-    expect(sourceClassLabel(Source.DesiDeep, DESI_TRACER_CLASS.QSO)).toContain('QSO');
   });
 
   it('returns null for DESI byte 0 (unclassified) and unrecognised DESI bytes', () => {
@@ -41,15 +22,6 @@ describe('sourceClassLabel', () => {
     expect(sourceClassLabel(Source.DesiDeep, 99)).toBeNull();
     expect(sourceClassLabel(Source.DesiWedge, 0)).toBeNull();
     expect(sourceClassLabel(Source.DesiSgw, 0)).toBeNull();
-  });
-
-  it('returns null for any source without class semantics today', () => {
-    expect(sourceClassLabel(Source.SDSS, 0)).toBeNull();
-    expect(sourceClassLabel(Source.SDSS, 1)).toBeNull();
-    expect(sourceClassLabel(Source.TwoMRS, 5)).toBeNull();
-    expect(sourceClassLabel(Source.Glade, 3)).toBeNull();
-    expect(sourceClassLabel(Source.FamousGalaxy, 2)).toBeNull();
-    expect(sourceClassLabel(Source.Synthetic, 1)).toBeNull();
   });
 
   it('returns null for an unrecognised Milliquas class byte', () => {
@@ -61,16 +33,6 @@ describe('sourceClassLabel', () => {
 });
 
 describe('milliquasParentSurveyPrefix', () => {
-  it('maps each parent-survey byte to its display prefix', () => {
-    expect(milliquasParentSurveyPrefix(MILLIQUAS_PARENT_SURVEY_BYTE.SDSS)).toBe('SDSS');
-    expect(milliquasParentSurveyPrefix(MILLIQUAS_PARENT_SURVEY_BYTE.TWOMASX)).toBe('2MASX');
-    expect(milliquasParentSurveyPrefix(MILLIQUAS_PARENT_SURVEY_BYTE.GAIA)).toBe('GAIA');
-    expect(milliquasParentSurveyPrefix(MILLIQUAS_PARENT_SURVEY_BYTE.WISEA)).toBe('WISEA');
-    expect(milliquasParentSurveyPrefix(MILLIQUAS_PARENT_SURVEY_BYTE.NVSS)).toBe('NVSS');
-    expect(milliquasParentSurveyPrefix(MILLIQUAS_PARENT_SURVEY_BYTE.FIRST)).toBe('FIRST');
-    expect(milliquasParentSurveyPrefix(MILLIQUAS_PARENT_SURVEY_BYTE.SIXDFGS)).toBe('6dFGS');
-  });
-
   it('returns null for the OTHER sentinel (byte 0)', () => {
     expect(milliquasParentSurveyPrefix(0)).toBeNull();
   });

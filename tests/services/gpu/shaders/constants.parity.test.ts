@@ -283,11 +283,11 @@ describe('PROXY_SCALE parity (proxyScale.ts ↔ analyticSphere.wesl)', () => {
 });
 
 /**
- * The mesh bodies carry no `sunIrradiance` uniform — their 176-byte layout is
- * full — so `pbrDirect`'s caller-applied irradiance scale (`pbr.wesl`'s
- * contract) is a WESL const mirroring `EARTH_SURFACE_PARAMS.sunIrradiance`.
- * That is what keeps the whale and the pot at the same brightness as every
- * `litShade` body; a drift here silently darkens or blows them out.
+ * One unit for the probe and the direct term: the mesh body's probe captures
+ * the planets in `litShade` units, so the Sun's irradiance on the mesh is a
+ * WESL const mirroring `EARTH_SURFACE_PARAMS.sunIrradiance` rather than a
+ * uniform. A drift here makes a metal reflect its host at a brightness the
+ * direct highlight no longer matches.
  */
 describe('SUN_IRRADIANCE parity (earthSurfaceParams.ts ↔ meshBody/fragment.wesl)', () => {
   it("meshBody/fragment.wesl's SUN_IRRADIANCE equals EARTH_SURFACE_PARAMS.sunIrradiance", () => {

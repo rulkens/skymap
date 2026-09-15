@@ -10,8 +10,8 @@ import type { BodyRowSource } from '../../../@types/engine/frame/BodyRowSource';
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
+import type { CaptureFaceInput } from '../../../@types/engine/frame/CaptureFaceInput';
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
-import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
@@ -26,7 +26,7 @@ export type FrameInputs = {
    * the per-face context map because `MAX_FRAME_INPUTS` must enumerate every
    * face a frame could ever step with no camera to derive one from.
    */
-  readonly captureFaces: ReadonlyMap<CubemapCaptureKey, readonly CubeFace[]>;
+  readonly captureFaces: ReadonlyMap<CubemapCaptureKey, readonly CaptureFaceInput[]>;
   readonly bodyRowSlabs: Record<BodyRowSource, readonly number[]>;
 };
 
@@ -60,20 +60,32 @@ function merge(
 const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
   compute: (spec) => [{ kind: 'compute', name: spec.name }],
   capture: (spec, passes, frame) =>
-    (frame.captureFaces.get(spec.capture) ?? []).flatMap((face): readonly FrameStep[] => [
-      {
-        kind: 'render',
-        slab: COSMO,
-        capture: { key: spec.capture, face },
-        passes: resolve(spec.cosmoPasses, passes),
-      },
-      {
-        kind: 'render',
-        slab: NEAR0,
-        capture: { key: spec.capture, face },
-        passes: resolve(spec.near0Passes, passes),
-      },
-    ]),
+    spec.captures.flatMap((key) =>
+      (frame.captureFaces.get(key) ?? []).flatMap(({ face, bodySlabs }): readonly FrameStep[] => [
+        {
+          kind: 'render',
+          slab: COSMO,
+          capture: { key, face },
+          passes: resolve(spec.cosmoPasses, passes),
+        },
+        {
+          kind: 'render',
+          slab: NEAR0,
+          capture: { key, face },
+          passes: resolve(spec.near0Passes, passes),
+        },
+        // The foreground line's painter-chain rule: every body row restarts depth.
+        ...bodySlabs.map(
+          (slab): FrameStep => ({
+            kind: 'render',
+            slab,
+            capture: { key, face },
+            depth: 'clear',
+            passes: resolve(spec.bodyPasses, passes),
+          }),
+        ),
+      ]),
+    ),
   render: (spec, passes, frame) =>
     (typeof spec.slab === 'number' ? [spec.slab] : frame.bodyRowSlabs[spec.slab]).map((slab) => ({
       kind: 'render',

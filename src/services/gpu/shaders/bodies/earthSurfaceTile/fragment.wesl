@@ -112,7 +112,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let l = u.sunDirLocal;
 
   let roughness = mix(clamp(mat.r * u.roughnessBase, MIN_ROUGHNESS, 1.0), u.oceanRoughness, mat.g);
-  let directBase = pbrDirect(n, v, l, baseAlbedo, roughness, u.f0);
+  let directBase = pbrDirect(n, v, l, baseAlbedo, roughness, vec3<f32>(u.f0));
 
   // Ground shadow: cast from the GEOMETRIC surface position toward the sun
   // through the cloud shell, exactly as 'earth/fragment.wesl' does.

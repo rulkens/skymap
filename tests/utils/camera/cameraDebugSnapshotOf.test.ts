@@ -2,7 +2,7 @@
  * cameraDebugSnapshotOf — covers the two cross-checks the DebugPanel's
  * "Camera" section exists for (armMismatch, epochMismatch), plus the
  * engaged-vs-nearest h/R choice and the body-arm-only anchor/eye readout.
- * Geometry setup mirrors `regimeArmFor.test.ts` (body-at-origin, eye on +x).
+ * Geometry setup mirrors `stepRung.test.ts` (body-at-origin, eye on +x).
  */
 
 import { describe, it, expect } from 'vitest';

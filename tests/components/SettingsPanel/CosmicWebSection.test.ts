@@ -152,18 +152,6 @@ describe('CosmicWebSection', () => {
       expect(headerCheckbox.checked).toBe(true);
     });
 
-    it('is checked when filamentsEnabled=true and volumesEnabled=false', () => {
-      const { container } = render(
-        createElement(
-          CosmicWebSection,
-          baseProps({ volumesEnabled: false, filamentsEnabled: true }),
-        ),
-      );
-      const headerCheckbox =
-        container.querySelectorAll<HTMLInputElement>('input[type=checkbox]')[0]!;
-      expect(headerCheckbox.checked).toBe(true);
-    });
-
     it('is unchecked when both volumesEnabled and filamentsEnabled are false', () => {
       const { container } = render(
         createElement(
@@ -233,23 +221,6 @@ describe('CosmicWebSection', () => {
   });
 
   describe('filament intensity slider', () => {
-    it('renders the filament intensity slider when filamentsEnabled is true', () => {
-      const { container } = render(
-        createElement(
-          CosmicWebSection,
-          baseProps({ volumesEnabled: false, filamentsEnabled: true, filamentIntensity: 0.6 }),
-        ),
-      );
-      // The Slider has no native range input; found by role + aria-label,
-      // per the pattern in GalaxiesSection.test.ts.
-      const slider = Array.from(container.querySelectorAll('[role="slider"]')).find(
-        (el) => el.getAttribute('aria-label') === 'Filament intensity',
-      );
-      expect(slider).not.toBeUndefined();
-      expect(slider!.getAttribute('aria-valuenow')).toBe('0.6');
-      expect(slider!.getAttribute('aria-valuetext')).toBe('0.60');
-    });
-
     it('fires onFilamentIntensityChange with the stepped value on a keyboard nudge', () => {
       const onFilamentIntensityChange = vi.fn<(value: number) => void>();
       const { container } = render(

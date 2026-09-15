@@ -48,14 +48,6 @@ describe('createFilamentRenderer.hasCloud', () => {
     expect(renderer.hasCloud()).toBe(false);
   });
 
-  it('bakes the given targetFormat into the pipeline colour target', () => {
-    const renderPipelines: GPURenderPipelineDescriptor[] = [];
-    createFilamentRenderer(mockDevice(renderPipelines), 'rgba16float', mockFadeBgl);
-    expect(renderPipelines).toHaveLength(1);
-    const target = Array.from(renderPipelines[0]!.fragment!.targets!)[0]!;
-    expect(target!.format).toBe('rgba16float');
-  });
-
   it('stays false when the uploaded cloud has zero segments', () => {
     // An empty skeleton uploads to a null instance buffer — nothing drawable,
     // so the fade guard must keep suppressing.

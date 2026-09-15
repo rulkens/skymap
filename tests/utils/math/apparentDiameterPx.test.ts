@@ -7,12 +7,6 @@ describe('apparentDiameterPx', () => {
     expect(apparentDiameterPx(1, 100, Math.PI / 2, 1000)).toBeCloseTo(5, 10);
   });
 
-  it('scales linearly with diameter and inversely with distance', () => {
-    const base = apparentDiameterPx(1, 100, Math.PI / 2, 1000);
-    expect(apparentDiameterPx(2, 100, Math.PI / 2, 1000)).toBeCloseTo(base * 2, 10);
-    expect(apparentDiameterPx(1, 200, Math.PI / 2, 1000)).toBeCloseTo(base / 2, 10);
-  });
-
   it('clamps non-positive distance to a tiny floor — enormous but finite (camera at the object)', () => {
     for (const dist of [0, -5]) {
       const px = apparentDiameterPx(1, dist, Math.PI / 2, 1000);

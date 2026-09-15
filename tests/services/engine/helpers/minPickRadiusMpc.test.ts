@@ -41,10 +41,7 @@ describe('minPickRadiusMpc', () => {
 
 describe('minPickRadiusMpc ↔ starPointPick.wesl footprint parity', () => {
   it('BODY_PICK_MIN_RADIUS_PX equals the WESL FAMOUS_STAR_PICK_RADIUS_PX', () => {
-    const path = join(
-      process.cwd(),
-      'src/services/gpu/shaders/bodies/starPointPick.wesl',
-    );
+    const path = join(process.cwd(), 'src/services/gpu/shaders/bodies/starPointPick.wesl');
     const text = readFileSync(path, 'utf-8');
     const m = /const\s+FAMOUS_STAR_PICK_RADIUS_PX\s*:\s*f32\s*=\s*([0-9]+(?:\.[0-9]+)?)/.exec(text);
     expect(m, 'FAMOUS_STAR_PICK_RADIUS_PX not found in starPointPick.wesl').not.toBeNull();

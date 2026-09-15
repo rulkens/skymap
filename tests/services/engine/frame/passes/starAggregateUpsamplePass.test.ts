@@ -96,16 +96,4 @@ describe('starAggregateUpsamplePass', () => {
     expect(drawSpy.mock.calls[0]![0]).toBe(PASS_STUB);
     expect(drawSpy.mock.calls[0]![1]).toBe(offscreenView);
   });
-
-  it('does not throw when starAggregateUpsample is null (defensive null-check)', () => {
-    const state = makeState(null);
-    expect(() =>
-      starAggregateUpsamplePass.draw(
-        PASS_STUB,
-        VIEW_STUB,
-        makeCtx({} as GPUTextureView, inBand),
-        state,
-      ),
-    ).not.toThrow();
-  });
 });

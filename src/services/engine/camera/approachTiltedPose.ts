@@ -21,6 +21,7 @@ import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
 import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
 import { normalize3 } from '../../../utils/math/normalize3';
+import { isWorldArm } from './rungs/isWorldArm';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraTuning } from '../../../@types/camera/CameraTuning';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
@@ -38,7 +39,7 @@ export function approachTiltedPose(
   upBasis: Readonly<Mat3>,
   tuning: CameraTuning,
 ): FramedCameraPose {
-  if (framed.frame !== 'absolute') return framed;
+  if (!isWorldArm(framed)) return framed;
   if (!pivotsOnFocusedBody || rememberedTiltRad === 0) return framed;
   if (focusRow === null || focusRow.type !== 'body' || !bodyMovesThisFrame(focusRow)) {
     return framed;

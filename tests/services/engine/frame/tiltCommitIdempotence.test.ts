@@ -70,7 +70,7 @@ function toMidWindow(h: CameraSimHarness): void {
   // ABOVE engage, and the 2026-09-10 band leaves a thin weight there, so a
   // small memory would map to a projection too shallow to compose against.
   seedRememberedTilt(h, { targetRad: 2.8, guard: 60, pxStep: 5 });
-  const remembered = h.state.cameraRuntime.surface.rememberedTiltRad;
+  const remembered = h.state.cameraRuntime.tilt.rememberedTiltRad;
   expect(remembered).toBeGreaterThan(2.5);
 
   // Out past disengage (arm flips absolute), then back in to the ONE

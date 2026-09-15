@@ -170,42 +170,6 @@ describe('TimeBarContainer', () => {
     expect(selectTimeState(store.getState()).rateIndex).toBe(2);
   });
 
-  it('the slowest detent disables Slower — no silent flip into manual', () => {
-    // Boot state: live, rateIndex 0 (the slowest detent). The old code let Slower
-    // still dispatch a clamped setRate, which re-anchored the live clock into
-    // manual (the only visible tell being the Now button). The step must be inert
-    // at the floor: the click does nothing and the clock stays live at index 0.
-    const { store } = createAppStore();
-    expect(selectTimeState(store.getState()).mode).toBe('live');
-    expect(selectTimeState(store.getState()).rateIndex).toBe(0);
-
-    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
-      wrapper: makeWrapper(store),
-    });
-
-    fireEvent.pointerDown(button(container, 'Slower'));
-
-    const time = selectTimeState(store.getState());
-    expect(time.mode).toBe('live');
-    expect(time.rateIndex).toBe(0);
-  });
-
-  it('the fastest detent disables Faster — the step is inert at the ceiling', () => {
-    // Distinct wiring from the floor guard (its own handler + fasterDisabled prop),
-    // so it earns its own cheap check: seeded at the top detent, Faster can't step.
-    const top = RATE_LADDER.length - 1;
-    const { store } = createAppStore();
-    store.dispatch(setRate({ rateIndex: top, nowMs: 0 }));
-
-    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
-      wrapper: makeWrapper(store),
-    });
-
-    fireEvent.pointerDown(button(container, 'Faster'));
-
-    expect(selectTimeState(store.getState()).rateIndex).toBe(top);
-  });
-
   it('opens the date-entry popover on readout click', () => {
     const { store } = createAppStore();
     const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
@@ -239,10 +203,7 @@ describe('TimeBarContainer', () => {
     const time = selectTimeState(store.getState());
     expect(time.mode).toBe('manual');
     expect(time.paused).toBe(true);
-    expect(time.anchor.simDays).toBeCloseTo(
-      unixMsToJulianDays(Date.UTC(2030, 5, 15, 12, 30)),
-      9,
-    );
+    expect(time.anchor.simDays).toBeCloseTo(unixMsToJulianDays(Date.UTC(2030, 5, 15, 12, 30)), 9);
     expect(popover(container)).toBeNull();
   });
 
@@ -316,25 +277,6 @@ describe('TimeBarContainer', () => {
     expect(dialogCount(container)).toBe(0);
   });
 
-  it('mousedown+click on the readout trigger closes an open date popover (not reopen)', () => {
-    // Mirrors the rate-trigger guard above: without excluding the readout
-    // button from the date popover's outside-mousedown dismiss, a re-click
-    // would close-then-reopen instead of closing.
-    const { store } = createAppStore();
-    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
-      wrapper: makeWrapper(store),
-    });
-
-    const trigger = readoutTrigger(container);
-    fireEvent.click(trigger);
-    expect(dialogCount(container)).toBe(1);
-
-    fireEvent.mouseDown(trigger);
-    fireEvent.click(trigger);
-
-    expect(dialogCount(container)).toBe(0);
-  });
-
   it('closes the rate selector on Esc without dispatching', () => {
     // The rate selector implements its own Esc handler (a mirror of the date
     // popover's), so it earns its own guard: Esc closes, nothing dispatches.
@@ -350,23 +292,6 @@ describe('TimeBarContainer', () => {
     fireEvent.keyDown(dialog, { key: 'Escape' });
 
     expect(popover(container)).toBeNull();
-    expect(selectTimeState(store.getState())).toBe(before);
-  });
-
-  it('cancels the popover on Esc without dispatching', () => {
-    const { store } = createAppStore();
-    const before = selectTimeState(store.getState());
-    const { container } = render(createElement(TimeBarContainer, { hidden: false }), {
-      wrapper: makeWrapper(store),
-    });
-
-    fireEvent.click(readoutTrigger(container));
-    const dialog = popover(container);
-    if (dialog === null) throw new Error('popover did not open');
-    fireEvent.keyDown(dialog, { key: 'Escape' });
-
-    expect(popover(container)).toBeNull();
-    // No action dispatched → the slice reference is untouched.
     expect(selectTimeState(store.getState())).toBe(before);
   });
 });

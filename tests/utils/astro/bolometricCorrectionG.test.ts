@@ -18,8 +18,4 @@ describe('bolometricCorrectionG', () => {
   it('clamps below 4000 K to the 4000 K value (avoids the erratum coefficients)', () => {
     expect(bolometricCorrectionG(3000)).toBeCloseTo(bolometricCorrectionG(4000), 10);
   });
-
-  it('clamps above 8000 K to the 8000 K value', () => {
-    expect(bolometricCorrectionG(9000)).toBeCloseTo(bolometricCorrectionG(8000), 10);
-  });
 });

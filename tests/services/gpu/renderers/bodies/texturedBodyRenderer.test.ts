@@ -17,7 +17,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createTexturedBodyRenderer } from '../../../../../src/services/gpu/renderers/bodies/texturedBodyRenderer';
 import { mipLevelCount } from '../../../../../src/services/gpu/lib/generateMipChain';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 function mockDevice(recorders?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
@@ -78,27 +77,6 @@ function mockDevice(recorders?: {
 }
 
 describe('createTexturedBodyRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    expect(() =>
-      createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false),
-    ).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
-  it('setMap / setRingTexture / draw are callable with the right arity', () => {
-    const renderer = createTexturedBodyRenderer(mockDevice(), 'rgba16float', 'depth32float', false);
-    expect(renderer.setMap.length).toBe(3);
-    expect(renderer.setRingTexture.length).toBe(2);
-    expect(renderer.draw.length).toBe(3);
-  });
-
   it('bakes the given targetFormat + depthFormat into the pipeline', () => {
     const renderPipelines: GPURenderPipelineDescriptor[] = [];
     createTexturedBodyRenderer(

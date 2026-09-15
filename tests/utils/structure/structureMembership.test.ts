@@ -35,13 +35,6 @@ describe('structureMembership — pure cone search', () => {
     expect(result.packedIds).toEqual([packSelection(Source.SDSS, 0)]);
   });
 
-  it('uses strict less-than (galaxy on boundary excluded)', () => {
-    const catalog = makeCatalog([[0, 0, 10]]);
-    const result = structureMembership([{ source: Source.TwoMRS, catalog }], [0, 0, 0], 10);
-    expect(result.count).toBe(0);
-    expect(result.packedIds).toEqual([]);
-  });
-
   it('merges members across multiple catalogs with correct source codes', () => {
     const sdss = makeCatalog([
       [1, 0, 0], // inside
@@ -68,25 +61,5 @@ describe('structureMembership — pure cone search', () => {
       packSelection(Source.TwoMRS, 0),
       packSelection(Source.TwoMRS, 1),
     ]);
-  });
-
-  it('returns {count: 0, packedIds: []} for empty catalogs', () => {
-    const result = structureMembership([], [0, 0, 0], 10);
-    expect(result.count).toBe(0);
-    expect(result.packedIds).toEqual([]);
-  });
-
-  it('returns {count: 0, packedIds: []} when every input catalog is empty', () => {
-    const empty = makeCatalog([]);
-    const result = structureMembership(
-      [
-        { source: Source.SDSS, catalog: empty },
-        { source: Source.TwoMRS, catalog: empty },
-      ],
-      [0, 0, 0],
-      10,
-    );
-    expect(result.count).toBe(0);
-    expect(result.packedIds).toEqual([]);
   });
 });

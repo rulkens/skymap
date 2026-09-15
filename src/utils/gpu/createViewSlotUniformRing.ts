@@ -11,8 +11,11 @@
 
 import type { ViewSlotUniformRing } from '../../@types/rendering/ViewSlotUniformRing';
 
-/** Slot 0 is the main view; 1..6 are the sky-cubemap's six capture faces. */
-export const VIEW_SLOT_COUNT = 7;
+/**
+ * Slot 0 is the main view; every other slot is claimed by a `CUBEMAP_CAPTURES`
+ * row's six faces (`viewSlotBase … +5`), whose ranges that table's test pins.
+ */
+export const VIEW_SLOT_COUNT = 19;
 
 export function createViewSlotUniformRing(init: {
   readonly device: GPUDevice;

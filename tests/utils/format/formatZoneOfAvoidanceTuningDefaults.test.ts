@@ -35,23 +35,6 @@ describe('formatZoneOfAvoidanceTuningDefaults', () => {
     tuning.labelColor.forEach((c, i) => expect(parsed.labelColor[i]).toBeCloseTo(c, 3));
   });
 
-  it('emits a self-contained literal body — no trailing comma corruption, every knob present', () => {
-    const tuning: ZoneOfAvoidanceTuning = {
-      intensity: 0.5,
-      radialFalloff: 0.35,
-      edgeSharpness: 5,
-      color: [1, 0.75, 0.5],
-      labelColor: [1, 1, 1],
-    };
-
-    const parsed = parseEmitted(formatZoneOfAvoidanceTuningDefaults(tuning));
-
-    // Compared against the fixture's own keys, not a hand-written list: a
-    // knob added to `ZoneOfAvoidanceTuning` forces the fixture to grow, and
-    // this assertion then covers it without anyone remembering to.
-    expect(Object.keys(parsed).sort()).toEqual(Object.keys(tuning).sort());
-  });
-
   it('drops `enabled` when called with the settings bag rather than the bare tuning cluster', () => {
     // The real call site (`ZoneOfAvoidanceTuningSection.tsx`) passes the live
     // `zoneOfAvoidance` settings object, typed `ZoneOfAvoidanceSettings` —

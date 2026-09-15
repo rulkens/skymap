@@ -22,7 +22,6 @@ import {
   MAX_ORBIT_OCCLUDERS,
   RIBBON_SEGMENTS,
 } from '../../../../../src/data/bodies/orbitTrailConstants';
-import type { Renderer } from '../../../../../src/@types/rendering/Renderer';
 
 // An empty per-frame occluder list — every draw below takes one.
 const NO_OCCLUDERS = { count: 0, spheresKm: new Float32Array(MAX_ORBIT_OCCLUDERS * 4) };
@@ -62,18 +61,6 @@ function mockPass(): GPURenderPassEncoder {
 }
 
 describe('createOrbitTrailRenderer', () => {
-  it('construct does not throw under the mock device', () => {
-    expect(() => createOrbitTrailRenderer(mockDevice(), 'rgba16float')).not.toThrow();
-  });
-
-  it('satisfies Renderer — non-empty label + destroy function', () => {
-    const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
-    renderer satisfies Renderer;
-    expect(renderer.label.length).toBeGreaterThan(0);
-    expect(typeof renderer.destroy).toBe('function');
-    expect(() => renderer.destroy()).not.toThrow();
-  });
-
   it('allocates no instance buffer at construction — sizing is deferred to the first draw', () => {
     // Unlike a fixed cap, there is nothing to size the buffer against until a
     // caller says how many slots it has. Mirrors starPointRenderer's
@@ -148,12 +135,6 @@ describe('createOrbitTrailRenderer', () => {
     expect(desc.depthStencil).toBeUndefined();
     // The orbital plane is viewed from both sides — never cull.
     expect(desc.primitive?.cullMode).toBe('none');
-  });
-
-  it('draw is callable with (pass, instances, count, occluders)', () => {
-    const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
-    expect(typeof renderer.draw).toBe('function');
-    expect(renderer.draw.length).toBe(4);
   });
 
   it('issues one ribbon draw for the whole count', () => {

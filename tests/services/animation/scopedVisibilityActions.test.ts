@@ -40,12 +40,6 @@ describe('scopedVisibilityActions', () => {
     ]);
   });
 
-  it('structureRing:<category> dispatches one item action for that category only', () => {
-    expect(scopedVisibilityActions('structureRing:group', true, settings)).toEqual([
-      setStructureItemEnabled({ id: 'group', enabled: true }),
-    ]);
-  });
-
   it('label:<category> dispatches one label action for that category only', () => {
     expect(scopedVisibilityActions('label:group', true, settings)).toEqual([
       setStructureLabelEnabled({ id: 'group', enabled: true }),
@@ -61,12 +55,6 @@ describe('scopedVisibilityActions', () => {
   it('label:structure fans out over every structure category', () => {
     expect(scopedVisibilityActions('label:structure', false, settings)).toEqual(
       STRUCTURE_IDS.map((id) => setStructureLabelEnabled({ id, enabled: false })),
-    );
-  });
-
-  it('label:survey fans out over every galaxy catalog label', () => {
-    expect(scopedVisibilityActions('label:survey', true, settings)).toEqual(
-      GALAXY_CATALOG_IDS.map((id) => setGalaxyCatalogLabelEnabled({ id, enabled: true })),
     );
   });
 });

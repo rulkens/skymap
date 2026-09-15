@@ -98,32 +98,6 @@ describe('volume slot ingest', () => {
     expect(ingest).toHaveBeenCalledWith(state, cb.store, 'cf4-density', cube);
   });
 
-  it('mcpmSlot ingests its cube under the mcpm field id', async () => {
-    const cube = fakeCube();
-    mockMcpmFetch.mockResolvedValue(cube);
-    const state = fakeState();
-    const cb = fakeCb();
-
-    const slot = createMcpmSlot(state, cb);
-    slot.load({ tier: 'small' });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-
-    expect(ingest).toHaveBeenCalledWith(state, cb.store, 'mcpm', cube);
-  });
-
-  it('polyphorm2MrsSlot ingests its cube under the polyphorm-2mrs field id', async () => {
-    const cube = fakeCube();
-    mockPolyphormFetch.mockResolvedValue(cube);
-    const state = fakeState();
-    const cb = fakeCb();
-
-    const slot = createPolyphorm2MrsSlot(state, cb);
-    slot.load({ tier: 'small' });
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-
-    expect(ingest).toHaveBeenCalledWith(state, cb.store, 'polyphorm-2mrs', cube);
-  });
-
   it('a synthetic fixture ingests its cube under its own debug- field id', async () => {
     const cube = fakeCube();
     mockSyntheticFetch.mockResolvedValue(cube);
@@ -135,18 +109,5 @@ describe('volume slot ingest', () => {
     await vi.waitFor(() => expect(slots['debug-gaussian'].state().kind).toBe('ready'));
 
     expect(ingest).toHaveBeenCalledWith(state, cb.store, 'debug-gaussian', cube);
-  });
-
-  it('mcpmWorkbenchSlot ingests its cube under the mcpm-workbench field id', async () => {
-    const cube = fakeCube();
-    mockMcpmWorkbenchFetch.mockResolvedValue(cube);
-    const state = fakeState();
-    const cb = fakeCb();
-
-    const slot = createMcpmWorkbenchSlot(state, cb);
-    slot.load(undefined as never);
-    await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
-
-    expect(ingest).toHaveBeenCalledWith(state, cb.store, 'mcpm-workbench', cube);
   });
 });

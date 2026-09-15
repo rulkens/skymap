@@ -12,6 +12,7 @@
 import { liveBodyPosition } from './liveBodyPosition';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
+import { isWorldArm } from './rungs/isWorldArm';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
@@ -26,7 +27,7 @@ export function applyFocusedBodyPivot(
 ): FramedCameraPose {
   // A body arm co-rotates with its body, so "keep the moving body centred" is
   // structurally satisfied and the pin has nothing to do (spec §7 step 4).
-  if (framed.frame !== 'absolute') return framed;
+  if (!isWorldArm(framed)) return framed;
   if (!pivotsOnFocusedBody) return framed;
   if (!bodyMovesThisFrame(focusRow)) return framed;
   const pivot = liveBodyPosition(focusRow, bodies);

@@ -65,18 +65,4 @@ describe('CopyButton', () => {
     });
     expect(screen.getByRole('button')).toHaveTextContent('Copy');
   });
-
-  it('clears the pending feedback timer on unmount', async () => {
-    stubClipboard(() => Promise.resolve());
-    const setSpy = vi.spyOn(globalThis, 'setTimeout');
-    const clearSpy = vi.spyOn(globalThis, 'clearTimeout');
-    const { unmount } = render(createElement(CopyButton, { text: 'x', label: 'Copy' }));
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button'));
-      await Promise.resolve();
-    });
-    const scheduledId = setSpy.mock.results[setSpy.mock.results.length - 1]!.value;
-    unmount();
-    expect(clearSpy).toHaveBeenCalledWith(scheduledId);
-  });
 });

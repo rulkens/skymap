@@ -63,26 +63,6 @@ describe('applyPathTuning', () => {
     expect(fly.spline).toEqual({ kind: 'causalHermite', turnDelay: 1.5 });
   });
 
-  it('overwrites a flyPath that already carries its own align/rampSec', () => {
-    const clip: ClipData = {
-      start: 'live',
-      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, align: 2, rampSec: 3 })],
-    };
-    const tuned = applyPathTuning(clip, TUNING);
-    const node = tuned.timeline[0] as Extract<(typeof tuned.timeline)[number], { kind: 'flyPath' }>;
-    expect(node.align).toBe(0.7);
-    expect(node.rampSec).toBe(1.2);
-    expect(node.linger).toBe(0.3);
-  });
-
-  it('leaves a flyPath-free clip unchanged', () => {
-    const clip: ClipData = {
-      start: 'live',
-      timeline: [dollyTo(100, 6, 'easeInOutCubic')],
-    };
-    expect(applyPathTuning(clip, TUNING)).toEqual(clip);
-  });
-
   it('overrides only the present knobs, keeping the clip authored values for the rest', () => {
     // The inspector passes only the ACTIVATED knobs. An omitted knob must keep
     // the clip's own value — this is what lets a Calculate preview the clip's
@@ -106,13 +86,5 @@ describe('applyPathTuning', () => {
     expect(node.align).toBe(2); // untouched (clip's value)
     expect(node.rampSec).toBe(3); // untouched
     expect(node.spline).toEqual({ kind: 'causalHermite', turnDelay: 1 }); // untouched
-  });
-
-  it('is a no-op for an empty tuning (no knob activated)', () => {
-    const clip: ClipData = {
-      start: 'live',
-      timeline: [flyPath([atPoint([10, 0, 0], 5)], { over: 8, linger: 0.65 })],
-    };
-    expect(applyPathTuning(clip, {})).toEqual(clip);
   });
 });

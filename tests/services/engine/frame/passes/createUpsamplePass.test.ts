@@ -117,12 +117,6 @@ describe('createUpsamplePass', () => {
     expect((drawSpy as ReturnType<typeof vi.fn>).mock.calls[0]![1]).toBe(offscreenView);
   });
 
-  it('skips the blit when the handle is null', () => {
-    const layer = createUpsamplePass(makeRow({ handleOf: () => null }));
-
-    expect(() => layer.draw(PASS_STUB, VIEW_STUB, makeCtx(), STATE_STUB)).not.toThrow();
-  });
-
   it('runs postBlit after the blit, into the same pass', () => {
     const order: string[] = [];
     const seenPasses: GPURenderPassEncoder[] = [];

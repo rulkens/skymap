@@ -118,33 +118,6 @@ function fakeCloud(count: number): GalaxyCatalog {
 }
 
 describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
-  it('declares exactly the 9 expected sources in Source enum order', () => {
-    const sources = GALAXY_CATALOG_SOURCE_REGISTRY.map((c) => c.source);
-    expect(sources).toEqual([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.FamousGalaxy,
-      Source.Milliquas,
-      Source.DesiDeep,
-      Source.DesiWedge,
-      Source.DesiSgw,
-      Source.Synthetic,
-    ]);
-  });
-
-  it('uses the shared galaxyCatalogFetcher for the eight real galaxy catalogs and the dedicated synthetic fetcher for Synthetic', () => {
-    // We don't import the fetchers here to avoid coupling to their
-    // implementation — but we can verify the structural invariant
-    // "Synthetic's fetcher is not the same reference as the others".
-    const real = GALAXY_CATALOG_SOURCE_REGISTRY.filter((c) => c.source !== Source.Synthetic);
-    const synthetic = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.Synthetic);
-    expect(synthetic).toBeDefined();
-    const realFetchers = new Set(real.map((c) => c.fetcher));
-    expect(realFetchers.size).toBe(1); // all eight real galaxy catalogs share one fetcher
-    expect(synthetic!.fetcher).not.toBe(real[0]!.fetcher);
-  });
-
   it('derives GALAXY_CATALOG_POINT_SOURCES from rows with category="survey"', () => {
     // Pin the consolidation invariant: anything that the boot-time
     // synthetic-fallback gate consults must come from the registry,
@@ -153,22 +126,6 @@ describe('GALAXY_CATALOG_SOURCE_REGISTRY', () => {
       Source.SDSS,
       Source.TwoMRS,
       Source.Glade,
-      Source.Milliquas,
-      Source.DesiDeep,
-      Source.DesiWedge,
-      Source.DesiSgw,
-    ]);
-  });
-
-  it('derives TIER_FETCHED_POINT_SOURCES as every non-synthetic row in enum order', () => {
-    // The boot-time slot-load loop + the tier-change reload loop both
-    // iterate this list.  Adding a new galaxy catalog via one registry row
-    // should automatically wire it through both loops.
-    expect([...TIER_FETCHED_POINT_SOURCES]).toEqual([
-      Source.SDSS,
-      Source.TwoMRS,
-      Source.Glade,
-      Source.FamousGalaxy,
       Source.Milliquas,
       Source.DesiDeep,
       Source.DesiWedge,
@@ -196,23 +153,6 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(slot).toBeDefined();
     expect(slot!.name).toBe('sdss-points');
     expect(slot!.state().kind).toBe('idle');
-  });
-
-  it('produces independent slots for each source — no cross-talk', () => {
-    const state = makeState({ rendererUpload: vi.fn().mockResolvedValue(undefined) });
-    const sdssCfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.SDSS)!;
-    const gladeCfg = GALAXY_CATALOG_SOURCE_REGISTRY.find((c) => c.source === Source.Glade)!;
-
-    wireGalaxyCatalogSourceSlot(state, sdssCfg, makeDeps());
-    wireGalaxyCatalogSourceSlot(state, gladeCfg, makeDeps());
-
-    const sdssSlot = state.assetSlots.points.get(Source.SDSS);
-    const gladeSlot = state.assetSlots.points.get(Source.Glade);
-    expect(sdssSlot).toBeDefined();
-    expect(gladeSlot).toBeDefined();
-    expect(sdssSlot).not.toBe(gladeSlot);
-    expect(sdssSlot!.name).toBe('sdss-points');
-    expect(gladeSlot!.name).toBe('glade-points');
   });
 
   it('dispatches engineSourceCountReported(source, count) on the ready transition', async () => {

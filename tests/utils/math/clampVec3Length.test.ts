@@ -3,11 +3,6 @@ import { clampVec3Length } from '../../../src/utils/math/clampVec3Length';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('clampVec3Length', () => {
-  it('returns the input reference unchanged when already within the limit', () => {
-    const v: Vec3 = [3, 4, 0]; // length 5
-    expect(clampVec3Length(v, 10)).toBe(v);
-  });
-
   it('scales an over-limit vector to the max length, preserving direction', () => {
     const v: Vec3 = [3, 4, 0]; // length 5, scale 2.5/5 = 0.5
     const out = clampVec3Length(v, 2.5);

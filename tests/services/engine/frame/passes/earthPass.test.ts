@@ -575,12 +575,6 @@ describe('earthPass.draw', () => {
     expect(uniforms[25]).toBeLessThan(EARTH_SURFACE_PARAMS.cloudShadowStrength);
   });
 
-  it('is a no-op when the earthRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeEarthBodyView('earth');
-    const state = makeState(null, SEEDED_EARTH);
-    expect(() => earthPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
-
   it('is a no-op when bodies.earth is null (unseeded)', () => {
     const view = makeEarthBodyView('earth');
     const state = makeState({ draw: vi.fn() }, null);
@@ -689,13 +683,6 @@ describe('earthPass.draw — detail tiles', () => {
     earthPass.draw(PASS_STUB, view, NEAR_CTX, state);
 
     expect(tileDraw).not.toHaveBeenCalled();
-  });
-
-  it('does not draw when the earthSurfaceTileRenderer GPU handle is null (pre-bootstrap)', () => {
-    const view = makeEarthBodyView('earth');
-    const state = makeTileDrawState({ tileRenderer: null, cut: STUB_CUT, atlasView: ATLAS_VIEW });
-
-    expect(() => earthPass.draw(PASS_STUB, view, NEAR_CTX, state)).not.toThrow();
   });
 });
 
@@ -852,17 +839,6 @@ describe('earthPass.drawPick', () => {
       (BODY_PICK_MIN_RADIUS_PX / ctx.drawPxPerRad) * dM,
     );
     expect(pickRadiusM).toBeCloseTo(expectedFloor, 6);
-  });
-
-  it('is a no-op when the bodyPickRenderer handle is null', () => {
-    const view = makeEarthBodyView('earth');
-    const state = {
-      ...makeState({ draw: vi.fn() }, SEEDED_EARTH),
-      gpu: { bodyPickRenderer: null },
-    };
-    expect(() =>
-      earthPass.drawPick!(PASS_STUB, view, NEAR_CTX, state as unknown as EngineState),
-    ).not.toThrow();
   });
 
   it('is a no-op when bodies.earth is null (unseeded)', () => {

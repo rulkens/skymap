@@ -142,7 +142,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
         poseBasis,
         upBasis,
         bodyStates,
-        rememberedTiltRad: next.surface.rememberedTiltRad,
+        rememberedTiltRad: next.tilt.rememberedTiltRad,
         tuning: rootState.camera.tuning,
       }),
     );
@@ -344,6 +344,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     starFadeAnimating: starCut?.anyNodeFading ?? false,
     surfaceTilesAnimating,
     labelsAnimating,
+    probeDue: state.cubemapCaptures.probe.due,
   });
 
   if (keepTicking) {

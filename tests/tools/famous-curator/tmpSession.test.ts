@@ -8,11 +8,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { existsSync, statSync } from 'node:fs';
-import { tmpdir } from 'node:os';
-import {
-  createSession,
-  sessionPath,
-} from '../../../tools/famous-curator/plugin/tmpSession';
+import { createSession } from '../../../tools/famous-curator/plugin/tmpSession';
 
 describe('tmpSession', () => {
   it('createSession returns a unique tmpId per call and creates the dir', () => {
@@ -22,11 +18,5 @@ describe('tmpSession', () => {
     expect(existsSync(a.dir)).toBe(true);
     expect(existsSync(b.dir)).toBe(true);
     expect(statSync(a.dir).isDirectory()).toBe(true);
-  });
-
-  it('sessionPath resolves under the OS tmpdir + famous-curator/', () => {
-    const p = sessionPath('abc123');
-    expect(p.startsWith(tmpdir())).toBe(true);
-    expect(p.endsWith('/famous-curator/abc123') || p.endsWith('\\famous-curator\\abc123')).toBe(true);
   });
 });

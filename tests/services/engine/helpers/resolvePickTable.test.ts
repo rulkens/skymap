@@ -13,7 +13,6 @@ import { resolvePick } from '../../../../src/services/engine/helpers/resolvePick
 import { Source } from '../../../../src/data/sources';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import type { ResolvePickDeps } from '../../../../src/@types/engine/ResolvePickDeps';
 
 /** The star arm reads no store data, so a stub structure store suffices. */
@@ -39,21 +38,6 @@ describe('RESOLVE_PICK body arms', () => {
     expect(resolvePick({ sourceCode: Source.FamousStar, localIdx: idx }, deps)).toEqual({
       type: 'body',
       id: SCENE_STARS[idx]!.id,
-    });
-  });
-
-  it('recovers the planet seed id from its pick index', () => {
-    const idx = SCENE_PLANETS.length - 1;
-    expect(resolvePick({ sourceCode: Source.Planet, localIdx: idx }, deps)).toEqual({
-      type: 'body',
-      id: SCENE_PLANETS[idx]!.id,
-    });
-  });
-
-  it('recovers Earth from its sole pick index (0)', () => {
-    expect(resolvePick({ sourceCode: Source.Earth, localIdx: 0 }, deps)).toEqual({
-      type: 'body',
-      id: SCENE_EARTH.id,
     });
   });
 

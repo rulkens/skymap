@@ -3,17 +3,10 @@
  * as ONE lossless JSON blob for reconstructing a failing pose. `cam` and
  * `focusRow` must be the LIVE values the caller assembled this frame
  * (`liveRenderCamera` / `liveFocusRow`) — this module trusts them as-is.
- *
  * `JSON.stringify`'s default formatting only — no `toFixed`/`toPrecision` —
- * because scales span the observable universe (~1e2 Mpc) down to a body's
- * surface (a 50 m altitude at Earth's radius is a ~1e-6 relative offset on
- * `distance`), and digit-limited formatting rounds that to zero.
- *
- * `earthSubCamera` piggybacks off `surfaceTileSubsystem`'s own last-plan
- * readout rather than re-deriving lon/lat from the focused body's rotation
- * generically: it is `null` whenever Earth's virtual texture isn't engaged
- * (any other focus, or Earth too far out), which is the honest scope — this
- * blob exists to debug THAT feature.
+ * because scales span ~1e2 Mpc down to a body's surface (a 50 m altitude at
+ * Earth's radius is a ~1e-6 relative offset on `distance`), which digit-limited
+ * formatting rounds to zero.
  */
 
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
@@ -21,6 +14,8 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
 import { pivotRadiusMpc } from '../camera/pivotRadiusMpc';
+import { frameKey } from '../camera/rungs/frameKey';
+import { isWorldArm } from '../camera/rungs/isWorldArm';
 import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
@@ -58,10 +53,10 @@ export function logCameraState(
   // The stored arm, named (spec §8): a body arm's numbers are body-FIXED
   // metres, so reading the Mpc rows above as the whole truth would mislead.
   // Absent ⇒ absolute, the same rule untagged serialized input parses under.
-  const bodyArm = framed !== null && framed.frame !== 'absolute' ? framed.pose : null;
+  const bodyArm = framed !== null && !isWorldArm(framed) ? framed.pose : null;
 
   const out = {
-    frame: bodyArm === null ? 'absolute' : bodyArm.bodyId,
+    frame: framed === null ? 'absolute' : frameKey(framed.frame),
     bodyArmMetres:
       bodyArm === null
         ? null

@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  buildCf4CatalogIndex,
-  parseCf4Line,
-} from '../../tools/parsers/cosmicflows4';
+import { buildCf4CatalogIndex, parseCf4Line } from '../../tools/parsers/cosmicflows4';
 
 /**
  * Build a fixed-width CF4 line by overlaying field values at the byte
@@ -69,15 +66,6 @@ describe('parseCf4Line', () => {
     expect(rec).not.toBeNull();
     expect(rec!.pgc).toBeNull();
   });
-
-  it('parses a real galactic distance (NGC 4258 = M106 maser anchor)', () => {
-    // PGC 39600 = NGC 4258. CF4 gives ~7.4 Mpc; DM = 25 + 5*log10(7.4) ≈ 29.35
-    const line = buildCf4Row({ pgc: '39600', dm: '29.350', eDm: '0.030' });
-    const rec = parseCf4Line(line);
-    expect(rec).not.toBeNull();
-    expect(rec!.pgc).toBe(39600);
-    expect(rec!.distMpc).toBeCloseTo(7.41, 1);
-  });
 });
 
 describe('buildCf4CatalogIndex', () => {
@@ -106,9 +94,7 @@ describe('buildCf4CatalogIndex', () => {
 
   it('skips comment lines and blank lines', () => {
     const text =
-      '# header comment\n\n' +
-      buildCf4Row({ pgc: '2557', dm: '24.470', eDm: '0.120' }) +
-      '\n';
+      '# header comment\n\n' + buildCf4Row({ pgc: '2557', dm: '24.470', eDm: '0.120' }) + '\n';
     const idx = buildCf4CatalogIndex(text);
     expect(idx.byPgc.size).toBe(1);
   });

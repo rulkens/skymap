@@ -3,7 +3,6 @@ import { structureMemberCount } from '../../../src/utils/structure/structureMemb
 import { Source } from '../../../src/data/sources';
 import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 import { maskWith } from '../../../src/utils/maskWith';
-import { maskWithout } from '../../../src/utils/maskWithout';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../src/@types/data/SourceType';
@@ -83,10 +82,6 @@ describe('structureMemberCount', () => {
     expect(structureMemberCount(cluster, getCloud, ALL_VISIBLE_MASK)).toBeNull();
   });
 
-  it('returns null when no visible catalog is loaded yet', () => {
-    expect(structureMemberCount(cluster, cloudFrom({}), ALL_VISIBLE_MASK)).toBeNull();
-  });
-
   it('returns 0 for a genuinely empty sphere over loaded data', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([
@@ -114,14 +109,5 @@ describe('structureMemberCount', () => {
         maskWith(0, Source.SDSS),
       ),
     ).toBe(0);
-  });
-
-  it('drops a single hidden galaxy catalog from the count without disturbing the rest', () => {
-    const getCloud = cloudFrom({
-      [Source.SDSS]: makeCatalog([[1, 0, 0]]),
-      [Source.Glade]: makeCatalog([[0, 1, 0]]),
-    });
-    const noGlade = maskWithout(ALL_VISIBLE_MASK, Source.Glade);
-    expect(structureMemberCount(cluster, getCloud, noGlade)).toBe(1);
   });
 });

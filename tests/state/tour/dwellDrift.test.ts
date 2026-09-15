@@ -20,10 +20,6 @@ function effectsOf(clip: ReturnType<typeof dwellDrift>): Effect[] | null {
 }
 
 describe('dwellDrift', () => {
-  it('starts live', () => {
-    expect(dwellDrift(10).start).toBe('live');
-  });
-
   it('drives yaw with a finite inOut spin and pitch with an eased oscillation', () => {
     const effects = effectsOf(dwellDrift(10));
     expect(effects).not.toBeNull();

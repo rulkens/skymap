@@ -11,7 +11,8 @@
 import { describe, expect, it } from 'vitest';
 import { readdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { Node, Project, type Statement } from 'ts-morph';
+import { Node, SyntaxKind, type Statement } from 'ts-morph';
+import { parseOnlyProject } from '../../../helpers/conventions/parseOnlyProject';
 
 const FRAME_DIR = fileURLToPath(new URL('../../../../src/services/engine/frame/', import.meta.url));
 
@@ -58,20 +59,22 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/zoneOfAvoidancePass': 4,
 };
 
-const project = new Project({
-  skipAddingFilesFromTsConfig: true,
-  skipFileDependencyResolution: true,
-  compilerOptions: {},
-});
-
 type Declared = { readonly name: string; readonly exported: boolean };
+
+// The `export` KEYWORD, not ts-morph's `isExported()`: the latter also asks
+// whether the symbol is re-exported elsewhere, which drags in the type checker
+// and cost this sweep ~1.7s. A frame file re-exported via `export { x }` would
+// read as unexported here and blow its ALLOWED row — a loud failure, not a
+// silent pass, and no frame file does it (CLAUDE.md forbids the barrel).
+const isExportedStatement = (stmt: Statement): boolean =>
+  Node.isModifierable(stmt) && stmt.hasModifier(SyntaxKind.ExportKeyword);
 
 /** Top-level VALUE declarations; types are `src/@types/`'s business, not this sweep's. */
 function declarationsOf(stmt: Statement): readonly Declared[] {
   if (Node.isImportDeclaration(stmt) || Node.isExportDeclaration(stmt)) return [];
   if (Node.isTypeAliasDeclaration(stmt) || Node.isInterfaceDeclaration(stmt)) return [];
   if (Node.isVariableStatement(stmt)) {
-    const exported = stmt.isExported();
+    const exported = isExportedStatement(stmt);
     return stmt
       .getDeclarationList()
       .getDeclarations()
@@ -82,7 +85,7 @@ function declarationsOf(stmt: Statement): readonly Declared[] {
     Node.isEnumDeclaration(stmt) ||
     Node.isClassDeclaration(stmt)
   ) {
-    return [{ name: stmt.getName() ?? '(anonymous)', exported: stmt.isExported() }];
+    return [{ name: stmt.getName() ?? '(anonymous)', exported: isExportedStatement(stmt) }];
   }
   return [{ name: stmt.getKindName(), exported: false }];
 }
@@ -94,7 +97,10 @@ const normalize = (name: string): string => name.replace(/_/g, '').toLowerCase()
 
 /** Everything declared beside the file's own symbol (the export it is named for). */
 function strayDeclarations(path: string, base: string): readonly string[] {
-  const declared = project.addSourceFileAtPath(path).getStatements().flatMap(declarationsOf);
+  const declared = parseOnlyProject
+    .addSourceFileAtPath(path)
+    .getStatements()
+    .flatMap(declarationsOf);
   const named = declared.findIndex((d) => d.exported && normalize(d.name) === normalize(base));
   // A file whose export name carries a unit suffix (`…MaxDistance.ts` exporting
   // `…_MAX_DISTANCE_MPC`) still has exactly one own symbol — fall back to the

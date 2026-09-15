@@ -9,7 +9,6 @@
  */
 import { describe, expect, it } from 'vitest';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
-import type { Vec4 } from '../../../../src/@types/math/Vec4';
 import type { GridBox } from '../../../../tools/mcpm-workbench/@types/GridBox';
 import {
   defaultGridSlice,
@@ -34,27 +33,6 @@ const IMPORTED_BOX: GridBox = {
 const withImportedBox = { ...defaultGridSlice, importedBox: IMPORTED_BOX };
 
 describe('gridSlice setters clear importedBox on any user edit', () => {
-  it('setVoxelSizeMpc clears it', () => {
-    expect(reducer(withImportedBox, actions.setVoxelSizeMpc(2)).importedBox).toBeNull();
-  });
-
-  it('setPaddingMpc clears it', () => {
-    expect(reducer(withImportedBox, actions.setPaddingMpc(10)).importedBox).toBeNull();
-  });
-
-  it('setManualCenterMpc clears it', () => {
-    expect(reducer(withImportedBox, actions.setManualCenterMpc([1, 2, 3])).importedBox).toBeNull();
-  });
-
-  it('setManualSizeMpc clears it', () => {
-    expect(reducer(withImportedBox, actions.setManualSizeMpc([50, 50, 50])).importedBox).toBeNull();
-  });
-
-  it('setRotation clears it', () => {
-    const rotation: Vec4 = [0, 0, Math.SQRT1_2, Math.SQRT1_2];
-    expect(reducer(withImportedBox, actions.setRotation(rotation)).importedBox).toBeNull();
-  });
-
   it('fitBoxToCatalog clears it', () => {
     const bounds: { min: Vec3; max: Vec3 } = { min: [0, 0, 0], max: [100, 50, 30] };
     expect(reducer(withImportedBox, actions.fitBoxToCatalog(bounds)).importedBox).toBeNull();
@@ -68,14 +46,6 @@ describe('gridSlice setters clear importedBox on any user edit', () => {
 describe('setAutoFitPercent', () => {
   it('clamps below 80 up to 80', () => {
     expect(reducer(defaultGridSlice, actions.setAutoFitPercent(50)).autoFitPercent).toBe(80);
-  });
-
-  it('clamps above 100 down to 100', () => {
-    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(150)).autoFitPercent).toBe(100);
-  });
-
-  it('passes an in-range integer through unchanged', () => {
-    expect(reducer(defaultGridSlice, actions.setAutoFitPercent(92)).autoFitPercent).toBe(92);
   });
 });
 

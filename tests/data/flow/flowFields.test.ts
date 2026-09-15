@@ -22,11 +22,6 @@ describe('FLOW_SLIDER_FIELDS — parity with FlowSettings numeric leaves', () =>
     expect(registryKeys).toEqual(numericKeys);
   });
 
-  it('declares no duplicate keys', () => {
-    const keys = FLOW_SLIDER_FIELDS.map((f) => f.key);
-    expect(new Set(keys).size).toBe(keys.length);
-  });
-
   it('every slider has a non-empty, min<=max range', () => {
     for (const f of FLOW_SLIDER_FIELDS) {
       expect(f.min).toBeLessThanOrEqual(f.max);

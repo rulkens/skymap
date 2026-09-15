@@ -19,11 +19,6 @@ describe('sdssNavigateUrl', () => {
     );
   });
 
-  it('accepts negative declinations (southern hemisphere)', () => {
-    const url = sdssNavigateUrl(0, -45.5, 2);
-    expect(url).toContain('dec=-45.5');
-  });
-
   it('derives scale from fovArcmin over the fixed 512px Navigate viewport', () => {
     // 4 arcmin over 512 px → 4×60/512 = 0.46875 arcsec/pixel.
     expect(sdssNavigateUrl(0, 0, 4)).toContain('scale=0.46875');

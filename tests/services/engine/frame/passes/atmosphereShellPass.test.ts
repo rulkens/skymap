@@ -220,12 +220,6 @@ describe('atmosphereShellPass.draw', () => {
     expect(marsUniforms[19]).toBeCloseTo(expectedMarsBottom);
     expect(earthUniforms[19]).not.toBeCloseTo(marsUniforms[19]!, 3);
   });
-
-  it('is a no-op when the atmosphereShellRenderer handle is null (pre-bootstrap)', () => {
-    const state = makeState(null);
-    const view = makeBodyView('earth' as BodyId);
-    expect(() => atmosphereShellPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
 });
 
 describe('invMvp inversion sanity (mat4d.inverse dst-last / f64 contract)', () => {

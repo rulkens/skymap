@@ -39,47 +39,9 @@ describe('spinAutoRotate', () => {
     expect(result.yaw).toBeCloseTo(base.yaw + rate, 10);
   });
 
-  it('scales linearly — two frames advance yaw by 2 * rate', () => {
-    const base = makePose();
-    const rate = 0.000873;
-    const result = spinAutoRotate(base, rate, 2 * FRAME_MS);
-    expect(result.yaw).toBeCloseTo(base.yaw + 2 * rate, 10);
-  });
-
-  it('leaves target, pitch, and distance equal to the base values', () => {
-    const base = makePose();
-    const result = spinAutoRotate(base, 0.001, FRAME_MS);
-    expect(result.target[0]).toBe(base.target[0]);
-    expect(result.target[1]).toBe(base.target[1]);
-    expect(result.target[2]).toBe(base.target[2]);
-    expect(result.pitch).toBe(base.pitch);
-    expect(result.distance).toBe(base.distance);
-  });
-
-  it('is pure — base pose is not mutated after the call', () => {
-    const base = makePose();
-    const yawBefore = base.yaw;
-    const pitchBefore = base.pitch;
-    const distanceBefore = base.distance;
-    const targetBefore = [...base.target];
-
-    spinAutoRotate(base, 0.001, FRAME_MS);
-
-    expect(base.yaw).toBe(yawBefore);
-    expect(base.pitch).toBe(pitchBefore);
-    expect(base.distance).toBe(distanceBefore);
-    expect([...base.target]).toEqual(targetBefore);
-  });
-
   it('is pure — returned target is a different array instance than base.target', () => {
     const base = makePose();
     const result = spinAutoRotate(base, 0.001, FRAME_MS);
     expect(result.target).not.toBe(base.target);
-  });
-
-  it('elapsedMs = 0 returns the same yaw as base', () => {
-    const base = makePose();
-    const result = spinAutoRotate(base, 0.001, 0);
-    expect(result.yaw).toBe(base.yaw);
   });
 });

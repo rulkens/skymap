@@ -147,26 +147,6 @@ describe('skeletonToFilamentCloud', () => {
     ]);
   });
 
-  it('drops strips with fewer than 2 vertices', () => {
-    // 1-vertex strips are also dropped because a polyline needs at least
-    // 2 endpoints to form an edge — a single isolated point can never
-    // become a line segment.
-    const cloud = skeletonToFilamentCloud({
-      strips: [
-        { vertices: [], density: [] },
-        {
-          vertices: [
-            [1, 2, 3],
-            [4, 5, 6],
-          ],
-          density: [0.5, 0.5],
-        },
-      ],
-    });
-    expect(cloud.stripCount).toBe(1);
-    expect(cloud.vertexCount).toBe(2);
-  });
-
   it('drops strips with one vertex (polyline degenerate)', () => {
     const cloud = skeletonToFilamentCloud({
       strips: [

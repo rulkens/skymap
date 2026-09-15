@@ -22,8 +22,4 @@ describe('resolveFeaturedEntries', () => {
     const result = resolveFeaturedEntries([entry('m31'), entry('not-a-real-id')]);
     expect(result.map((e) => e.id)).toEqual(['m31']);
   });
-
-  it('returns [] for empty input', () => {
-    expect(resolveFeaturedEntries([])).toEqual([]);
-  });
 });

@@ -22,8 +22,7 @@ import type { EngineState } from '../../@types/engine/state/EngineState';
 import { seedCameraRuntime } from './camera/seedCameraRuntime';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './camera/cameraFraming';
 import { liveUpBasisQuat } from './camera/liveUpBasisQuat';
-import type { CubemapCaptureRuntime } from '../../@types/engine/state/CubemapCaptureRuntime';
-import type { CubemapCaptureKey } from '../../@types/rendering/CubemapCaptureKey';
+import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCaptureRuntimes';
 import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createEngineData } from './data/createEngineData';
@@ -116,20 +115,22 @@ export function createEngine(
     projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
-  // One bake-bookkeeping entry per capture row — false/infinity/null until the
-  // first frame its band goes active; `scheduleCubemapCaptures` is the sole
-  // writer thereafter. Infinity, not 0: far outside every band pre-boot, so a
-  // row's hysteresis margin can't mistake "never measured" for "just closed".
+  // One bake-bookkeeping entry per capture row, seeded per kind; that kind's
+  // scheduler is the sole writer thereafter. A sky row starts at Infinity, not
+  // 0: far outside every band pre-boot, so a row's hysteresis margin can't
+  // mistake "never measured" for "just closed".
   const cubemapCaptures = Object.fromEntries(
-    (Object.keys(CUBEMAP_CAPTURES) as CubemapCaptureKey[]).map((key) => [
+    Object.entries(CUBEMAP_CAPTURES).map(([key, row]) => [
       key,
-      {
-        lastBandActive: false,
-        lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
-        bakedSettings: null,
-      },
+      row.kind === 'sky'
+        ? {
+            lastBandActive: false,
+            lastAnchorDistanceMpc: Number.POSITIVE_INFINITY,
+            bakedSettings: null,
+          }
+        : { subject: null, refreshedAtMs: new Map<string, number>(), due: false },
     ]),
-  ) as Record<CubemapCaptureKey, CubemapCaptureRuntime>;
+  ) as CubemapCaptureRuntimes;
 
   const store = cb.store;
 
@@ -186,6 +187,7 @@ export function createEngine(
       compositor: null,
       filamentRenderer: null,
       constellationRenderer: null,
+      envBrdfLut: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
       fontAtlases: null,
@@ -231,6 +233,7 @@ export function createEngine(
       starPointRenderer: null,
       bodyGlintRenderer: null,
       sgrAStarLensingRenderer: null,
+      cubeFaceBlitRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
       bodyPickRenderer: null,
@@ -565,6 +568,9 @@ export function createEngine(
     // fontAtlases/uiCtx own no GPU resource — re-nulled for lifecycle symmetry.
     state.gpu.fontAtlases = null;
     state.gpu.uiCtx = null;
+    // The LUT does own one, and it is no row, so nothing else releases it.
+    state.gpu.envBrdfLut?.destroy();
+    state.gpu.envBrdfLut = null;
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
 
@@ -624,7 +630,7 @@ export function createEngine(
       cameraDebug: () => {
         const rootState = store.getState();
         const time = selectTimeState(rootState);
-        const { register, surface, outputs } = state.cameraRuntime;
+        const { register, gesture, tilt, outputs } = state.cameraRuntime;
         const bodyStates = deriveBodyStates(outputs.simDays) as ReadonlyMap<BodyId, BodyState>;
         return cameraDebugSnapshotOf({
           storedFrame: rootState.camera.base.frame,
@@ -638,8 +644,8 @@ export function createEngine(
           liveSimDays: deriveSimDays(time, performance.now()),
           time,
           activeDriverId: register.winner,
-          gesture: surface.gesture,
-          rememberedTiltRad: surface.rememberedTiltRad,
+          gesture: gesture.value?.gesture ?? null,
+          rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
         });

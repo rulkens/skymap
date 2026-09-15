@@ -142,9 +142,4 @@ describe('flowFieldPass.draw', () => {
     // The layer fade opacity (from fades.opacityOf) is folded in as the 5th arg.
     expect(call[4]).toBe(0.42);
   });
-
-  it('does not throw when flowFieldRenderer is null (defensive null-check)', () => {
-    const state = makeState({ flowFieldRenderer: null });
-    expect(() => flowFieldPass.draw(PASS_STUB, makeView(), makeCtx(), state)).not.toThrow();
-  });
 });

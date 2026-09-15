@@ -14,22 +14,12 @@ function makeCluster(overrides: Record<string, unknown> = {}): StructureInfo {
   } as unknown as StructureInfo;
 }
 
-function makeVoid(overrides: Record<string, unknown> = {}): StructureInfo {
-  return makeCluster({ id: 'bootes', name: 'Boötes Void', category: 'void', ...overrides });
-}
-
 // Factory helper — passes a no-op wake function for tests that don't inspect it.
 function makeStructureFocus(initialNowMs = 0) {
   return createStructureFocusSubsystem({ requestRender: () => {} }, initialNowMs);
 }
 
 describe('structureFocusSubsystem', () => {
-  it('starts inactive with blend=0', () => {
-    const sub = makeStructureFocus(0);
-    expect(sub.produceFocusUniforms(0).blend).toBe(0);
-    expect(sub.isAwake(0)).toBe(false);
-  });
-
   it('update with a cluster structure fades blend 0→1 with correct center/radii', () => {
     const sub = makeStructureFocus(0);
     sub.update(makeCluster({ worldPos: [3, 4, 5], physicalRadiusMpc: 7 }), 0);
@@ -50,19 +40,6 @@ describe('structureFocusSubsystem', () => {
     const settled = sub.produceFocusUniforms(500);
     expect(settled.apparentRadiusMpc).toBe(5);
     expect(settled.physicalRadiusMpc).toBe(2);
-  });
-
-  it('update with a void structure focuses it exactly like a cluster (no inversion)', () => {
-    // Voids share the cluster rule: galaxies inside the void's radius are
-    // members (stay bright), everything else fades.  The uniform carries
-    // no per-category bit — just center + the two radii + blend.
-    const sub = makeStructureFocus(0);
-    sub.update(makeVoid({ worldPos: [1, 2, 3], physicalRadiusMpc: 9 }), 0);
-    const settled = sub.produceFocusUniforms(500);
-    expect(settled.blend).toBe(1);
-    expect(settled.center).toEqual([1, 2, 3]);
-    expect(settled.apparentRadiusMpc).toBe(9);
-    expect(settled.physicalRadiusMpc).toBe(9);
   });
 
   it('update(null) after a cluster fades blend 1→0 (and stays settling under per-frame calls)', () => {

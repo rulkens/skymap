@@ -9,9 +9,10 @@
  * assertion, not a grep, under testing.md's "cross-file contract" keep-rule.
  */
 import { describe, it, expect } from 'vitest';
-import { Project, SyntaxKind, Node, type SourceFile } from 'ts-morph';
-import { readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { SyntaxKind, Node, type SourceFile } from 'ts-morph';
+import { readFileSync } from 'node:fs';
+import { parseOnlyProject } from '../../../helpers/conventions/parseOnlyProject';
+import { walkFiles } from '../../../helpers/conventions/walkFiles';
 
 const FIELD = 'cameraRuntime';
 
@@ -37,23 +38,15 @@ const ASSIGNMENT_TOKENS: readonly SyntaxKind[] = [
   SyntaxKind.QuestionQuestionEqualsToken,
 ];
 
-function walk(dir: string, extensions: readonly string[]): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const p = join(dir, name);
-    if (statSync(p).isDirectory()) return walk(p, extensions);
-    return extensions.some((ext) => p.endsWith(ext)) ? [p] : [];
-  });
-}
-
 // DERIVED by sweeping the directories that hold every engine/state/UI path with
 // a handle on EngineState — a new file dropped into any of them is gated with
 // no hand-edit here.
 const TS_FILES: readonly string[] = [
-  ...walk('src/services', ['.ts', '.tsx']),
-  ...walk('src/state', ['.ts', '.tsx']),
-  ...walk('src/store', ['.ts', '.tsx']),
-  ...walk('src/hooks', ['.ts', '.tsx']),
-  ...walk('src/components', ['.ts', '.tsx']),
+  ...walkFiles('src/services', ['.ts', '.tsx']),
+  ...walkFiles('src/state', ['.ts', '.tsx']),
+  ...walkFiles('src/store', ['.ts', '.tsx']),
+  ...walkFiles('src/hooks', ['.ts', '.tsx']),
+  ...walkFiles('src/components', ['.ts', '.tsx']),
 ];
 
 // A typo'd dir/extension sweeps zero files and the whole test passes vacuously
@@ -72,8 +65,6 @@ const ALLOW_LIST: ReadonlyMap<string, string> = new Map([
   ['src/services/engine/frame/runFrame.ts', "the frame's one install of stepCameraRuntime's next"],
   ['src/services/engine/phases/wireInput.ts', 'the boot seed, once, at bootstrap'],
 ]);
-
-const project = new Project({ useInMemoryFileSystem: false });
 
 /** Strip the wrappers that would otherwise hide a chain: `!`, `(…)`, `as X`. */
 function unwrap(node: Node): Node {
@@ -151,7 +142,11 @@ function aliasNames(sourceFile: SourceFile): ReadonlySet<string> {
 
 /** `file:line — source` for every assignment or Object.assign into the runtime. */
 function writesToCameraRuntime(file: string): string[] {
-  const sourceFile = project.addSourceFileAtPath(file);
+  // Every chain the AST rules below can flag — direct write or alias — is rooted
+  // in the identifier `cameraRuntime`, so a file whose text lacks it cannot hit,
+  // and parsing all ~750 swept files to learn that is the sweep's whole cost.
+  if (!readFileSync(file, 'utf8').includes(FIELD)) return [];
+  const sourceFile = parseOnlyProject.addSourceFileAtPath(file);
   const aliases = aliasNames(sourceFile);
   const hitsRuntime = (target: Node): boolean => {
     const { root, namesField } = chainOf(target);

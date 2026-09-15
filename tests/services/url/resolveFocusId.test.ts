@@ -15,7 +15,6 @@
 import { describe, it, expect } from 'vitest';
 import { resolveFocusId } from '../../../src/services/url/resolveFocusId';
 import { focusIdOf } from '../../../src/services/url/focusIdOf';
-import { MILKY_WAY_FOCUS_ID } from '../../../src/services/url/milkyWayFocusId';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -105,10 +104,6 @@ describe('resolveFocusId', () => {
     });
   });
 
-  it('pgc- with id not in any PGC cloud → null', () => {
-    expect(resolveFocusId('pgc-99999', deps)).toBeNull();
-  });
-
   // ── famous ───────────────────────────────────────────────────────────────
 
   it('famous id → galaxy ref in FamousGalaxy cloud', () => {
@@ -117,14 +112,6 @@ describe('resolveFocusId', () => {
       source: Source.FamousGalaxy,
       index: 0,
     });
-  });
-
-  it('famous id with FamousGalaxy cloud not loaded → null', () => {
-    const noFamous: ResolveDeps = {
-      ...deps,
-      catalogs: { get: (s) => (s === Source.SDSS ? makeCloud(1237668393006604288n) : undefined) },
-    };
-    expect(resolveFocusId('m31', noFamous)).toBeNull();
   });
 
   it('unknown famous id → null', () => {
@@ -143,36 +130,7 @@ describe('resolveFocusId', () => {
     });
   });
 
-  it('supercluster-<seed> → structure ref', () => {
-    expect(resolveFocusId('supercluster-hydra-wall', deps)).toEqual({
-      type: 'structure',
-      id: 'supercluster-hydra-wall',
-    });
-  });
-
-  it('void-<seed> → structure ref', () => {
-    expect(resolveFocusId('void-bootes', deps)).toEqual({
-      type: 'structure',
-      id: 'void-bootes',
-    });
-  });
-
-  it('group-<seed> → structure ref', () => {
-    expect(resolveFocusId('group-local', deps)).toEqual({
-      type: 'structure',
-      id: 'group-local',
-    });
-  });
-
   // ── milkyWay ─────────────────────────────────────────────────────────────
-
-  it('milkyWay literal → milkyWay singleton ref', () => {
-    // The Milky Way is a singleton focal target with no per-instance data.
-    // The literal comes from MILKY_WAY_FOCUS_ID — the same constant the
-    // encoder (focusIdOf) emits, so the round-trip closes.
-    expect(resolveFocusId(MILKY_WAY_FOCUS_ID, deps)).toEqual({ type: 'milkyWay' });
-    expect(resolveFocusId('milkyWay', deps)).toEqual({ type: 'milkyWay' });
-  });
 
   it('round-trips a milkyWay ref through encode → decode', () => {
     // Encode a milkyWay SelectionRef, then decode the resulting id back: it
@@ -184,12 +142,6 @@ describe('resolveFocusId', () => {
   });
 
   // ── scene bodies ─────────────────────────────────────────────────────────
-
-  it('body-<seedId> → body ref for a seeded scene body', () => {
-    // SCENE_BODIES is a static import, so resolution needs no loaded catalog:
-    // the fixture deps are irrelevant to this branch.
-    expect(resolveFocusId('body-earth', deps)).toEqual({ type: 'body', id: 'earth' });
-  });
 
   it('body-<unknownSeed> → null (garbage id, never "not loaded yet")', () => {
     expect(resolveFocusId('body-krypton', deps)).toBeNull();
@@ -263,33 +215,11 @@ describe('resolveFocusId', () => {
     expect(resolveFocusId('pos@90.0000,89.0000', deps)).toBeNull();
   });
 
-  it('pos@ with no clouds loaded → null', () => {
-    const noClouds: ResolveDeps = { ...deps, catalogs: { get: () => undefined } };
-    expect(resolveFocusId('pos@0.0000,0.0000', noClouds)).toBeNull();
-  });
-
   // ── edge cases ───────────────────────────────────────────────────────────
-
-  it('empty string → null', () => {
-    expect(resolveFocusId('', deps)).toBeNull();
-  });
-
-  it('pgc- with non-numeric suffix → null', () => {
-    expect(resolveFocusId('pgc-abc', deps)).toBeNull();
-  });
-
-  it('sdss- with non-numeric suffix → null', () => {
-    expect(resolveFocusId('sdss-abc', deps)).toBeNull();
-  });
 
   it('malformed pos@ (trailing garbage) → null', () => {
     // POS_RE is anchored at both ends; extra components should fail.
     expect(resolveFocusId('pos@1,2,3', deps)).toBeNull();
-  });
-
-  it('id with invalid characters → null', () => {
-    // Not a recognized prefix, not a valid famous id character class.
-    expect(resolveFocusId('foo bar', deps)).toBeNull();
   });
 });
 

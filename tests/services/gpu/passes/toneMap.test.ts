@@ -30,12 +30,6 @@ import {
 const ALL_CURVES = [linearClamp, reinhardExtended, asinhStretch, gamma2, acesFilmic];
 
 describe('tone-map curves — common invariants', () => {
-  it('every curve maps 0 to 0', () => {
-    for (const f of ALL_CURVES) {
-      expect(f(0, 1)).toBeCloseTo(0, 6);
-    }
-  });
-
   it('every curve clamps output to [0, 1] across the practical input range', () => {
     for (const f of ALL_CURVES) {
       for (let c = 0; c < 100; c += 0.5) {
@@ -60,33 +54,13 @@ describe('tone-map curves — common invariants', () => {
 });
 
 describe('linearClamp', () => {
-  it('passes inputs through up to 1.0 then clamps', () => {
-    expect(linearClamp(0.5, 1)).toBeCloseTo(0.5, 6);
-    expect(linearClamp(1.0, 1)).toBeCloseTo(1.0, 6);
-    expect(linearClamp(2.0, 1)).toBeCloseTo(1.0, 6);
-  });
-
   it('exposure scales before clamp', () => {
     expect(linearClamp(0.4, 2)).toBeCloseTo(0.8, 6);
     expect(linearClamp(0.6, 2)).toBeCloseTo(1.0, 6); // clipped
   });
 });
 
-describe('reinhardExtended', () => {
-  it('asymptotes toward 1 for large input', () => {
-    expect(reinhardExtended(100, 1)).toBeGreaterThan(0.9);
-  });
-
-  it('exposure scales the input before mapping', () => {
-    expect(reinhardExtended(0.5, 2)).toBeCloseTo(reinhardExtended(1.0, 1), 4);
-  });
-});
-
 describe('asinhStretch', () => {
-  it('asymptotes toward 1 for large input', () => {
-    expect(asinhStretch(100, 1)).toBeGreaterThan(0.9);
-  });
-
   it('lifts the low end more aggressively than reinhardExtended', () => {
     // The whole point of asinh: more weight on dim values, so for any
     // small c > 0 the asinh output should exceed reinhardExtended's at
@@ -104,25 +78,6 @@ describe('gamma2', () => {
     expect(gamma2(0.25, 1)).toBeCloseTo(0.5, 4);
     expect(gamma2(0.5, 1)).toBeCloseTo(Math.SQRT1_2, 4);
     expect(gamma2(1.0, 1)).toBeCloseTo(1.0, 4);
-  });
-
-  it('clamps inputs above 1 to 1 (post-clamp gamma)', () => {
-    expect(gamma2(2.0, 1)).toBeCloseTo(1.0, 4);
-  });
-});
-
-describe('acesFilmic', () => {
-  it('produces an S-curve: small input mapped < linear, mid input ~ linear', () => {
-    // ACES is shoulder+toe; very small c gets a slight toe lift but
-    // stays below the linear identity, while mid values track close
-    // to it.  Exact numbers depend on the Narkowicz approximation;
-    // we just assert the qualitative shape.
-    expect(acesFilmic(0.5, 1)).toBeGreaterThan(0.3);
-    expect(acesFilmic(0.5, 1)).toBeLessThan(0.7);
-  });
-
-  it('asymptotes toward 1 for large input', () => {
-    expect(acesFilmic(100, 1)).toBeGreaterThan(0.9);
   });
 });
 

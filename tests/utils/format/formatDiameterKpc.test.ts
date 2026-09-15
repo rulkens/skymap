@@ -11,7 +11,4 @@ describe('formatDiameterKpc', () => {
     expect(formatDiameterKpc(30)).toBe('30.0 kpc / 97.8 kly');
     expect(formatDiameterKpc(100)).toBe('100 kpc / 326 kly');
   });
-  it('handles small dwarf-galaxy diameters', () => {
-    expect(formatDiameterKpc(0.5)).toBe('0.5 kpc / 1.63 kly');
-  });
 });

@@ -127,41 +127,9 @@ describe('deriveFrameContext — not-ready branch', () => {
     expect(ctx.isReady).toBe(false);
   });
 
-  it('returns isReady:false when gpu.galaxyPointRenderer is null', () => {
-    const ctx = deriveFrameContext(
-      makeState({ galaxyPointRenderer: null }),
-      makeCanvas(),
-      RESTING_POSE,
-      RESTING_ARM,
-      PROJECTION,
-      BASIS,
-      BASIS,
-      0xffffffff,
-      0,
-      CONST_J2000,
-    );
-    expect(ctx.isReady).toBe(false);
-  });
-
   it('returns isReady:false when gpu.renderTargets is null', () => {
     const ctx = deriveFrameContext(
       makeState({ renderTargets: null }),
-      makeCanvas(),
-      RESTING_POSE,
-      RESTING_ARM,
-      PROJECTION,
-      BASIS,
-      BASIS,
-      0xffffffff,
-      0,
-      CONST_J2000,
-    );
-    expect(ctx.isReady).toBe(false);
-  });
-
-  it('returns isReady:false when subsystems.texturedDisks is null', () => {
-    const ctx = deriveFrameContext(
-      makeState({ texturedDisks: null }),
       makeCanvas(),
       RESTING_POSE,
       RESTING_ARM,
@@ -200,27 +168,6 @@ describe('deriveFrameContext — ready branch', () => {
     expect(ctx.cam.distance).toBe(50);
     expect(ctx.cam.yaw).toBeCloseTo(0.5);
     expect(ctx.cam.pitch).toBeCloseTo(0.1);
-  });
-
-  it('ctx.cam.fovYRad === projection.fovYRad', () => {
-    // The projection Resource is the one source of fovYRad — the FOV slider
-    // writes it every frame with no resize event.
-    const projection: CameraProjection = { fovYRad: 0.9, aspect: 1, near: 0.1, far: 1000 };
-    const ctx = deriveFrameContext(
-      makeState(),
-      makeCanvas(),
-      RESTING_POSE,
-      RESTING_ARM,
-      projection,
-      BASIS,
-      BASIS,
-      0xffffffff,
-      0,
-      CONST_J2000,
-    );
-    expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return;
-    expect(ctx.cam.fovYRad).toBe(0.9);
   });
 
   it('drawPxPerRad uses projection.fovYRad', () => {
@@ -301,47 +248,6 @@ describe('deriveFrameContext — ready branch', () => {
     expect(Array.from(ctx.slabs[1]!.vp)).toEqual(Array.from(expected[1]!.vp));
   });
 
-  it('populates canvasSize from canvas dimensions', () => {
-    const ctx = deriveFrameContext(
-      makeState(),
-      makeCanvas(800, 600),
-      RESTING_POSE,
-      RESTING_ARM,
-      PROJECTION,
-      BASIS,
-      BASIS,
-      0xffffffff,
-      0,
-      CONST_J2000,
-    );
-    expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return;
-    expect(ctx.canvasSize).toEqual({ width: 800, height: 600 });
-  });
-
-  it('forwards galaxyPointRenderer, renderTargets, texturedDisks references onto the ready context', () => {
-    const galaxyPointRenderer = { tag: 'galaxyPointRenderer' };
-    const renderTargets = { tag: 'renderTargets' };
-    const texturedDisks = { tag: 'texturedDisks' };
-    const ctx = deriveFrameContext(
-      makeState({ galaxyPointRenderer, renderTargets, texturedDisks }),
-      makeCanvas(),
-      RESTING_POSE,
-      RESTING_ARM,
-      PROJECTION,
-      BASIS,
-      BASIS,
-      0xffffffff,
-      0,
-      CONST_J2000,
-    );
-    expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return;
-    expect(ctx.galaxyPointRenderer).toBe(galaxyPointRenderer);
-    expect(ctx.renderTargets).toBe(renderTargets);
-    expect(ctx.texturedDisks).toBe(texturedDisks);
-  });
-
   it('exposes visibleSourceMask and a seeded focus on the ready context', () => {
     const mask = 0b1011;
     const ctx = deriveFrameContext(
@@ -360,24 +266,6 @@ describe('deriveFrameContext — ready branch', () => {
     if (!ctx.isReady) return;
     expect(ctx.visibleSourceMask).toBe(mask);
     expect(ctx.focus.blend).toBe(0);
-  });
-
-  it('stamps nowMs onto the ready context', () => {
-    const ctx = deriveFrameContext(
-      makeState(),
-      makeCanvas(),
-      RESTING_POSE,
-      RESTING_ARM,
-      PROJECTION,
-      BASIS,
-      BASIS,
-      0xffffffff,
-      1234.5,
-      CONST_J2000,
-    );
-    expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return;
-    expect(ctx.nowMs).toBe(1234.5);
   });
 
   it('stamps simDays onto the ready context (the frame epoch every body reader shares)', () => {

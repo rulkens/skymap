@@ -6,8 +6,8 @@
 //
 // Normal, tangent and 'localPos' are rotated by 'u.model' -- the body's tumble
 // only. Putting 'u.mvp' on any of them would drag the view and projection into
-// vectors the fragment dots against 'u.camPosLocal' / 'u.dirToHost', which are
-// packed in the host's fixed axes ('io.wesl's frame contract).
+// vectors the fragment dots against 'u.camPosLocal' and 'u.sunDirLocal', which
+// are packed in the host's fixed axes ('io.wesl's frame contract).
 
 import package::bodies::meshBody::io::MeshBodyUniforms;
 import package::bodies::meshBody::io::MeshBodyVSOut;

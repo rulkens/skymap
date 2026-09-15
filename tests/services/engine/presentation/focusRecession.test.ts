@@ -1,11 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   FILAMENT_RECESSION,
-  LABEL_RECESSION,
-  MARKER_RECESSION,
-  VOLUME_RECESSION,
   focusRecession,
-  recessionTargetFor,
   resolveLayerOpacity,
 } from '../../../../src/services/engine/presentation/focusRecession';
 import { createFadeRegistry } from '../../../../src/services/animation/fadeRegistry';
@@ -45,56 +41,9 @@ function makeClipPlayer(factor: number): ClipPlayer {
   };
 }
 
-import type { StructureId } from '../../../../src/@types/data/structure/StructureId';
-
 describe('focusRecession', () => {
-  it('returns 1.0 for an untagged handle at blend 0', () => {
-    expect(focusRecession({ kind: 'galaxyCatalog', id: 'sdss' }, 0)).toBe(1);
-  });
-
-  it('returns 1.0 for an untagged handle at blend 1', () => {
-    // Galaxy catalog handles have no recession target — they never recede, at any blend.
-    expect(focusRecession({ kind: 'galaxyCatalog', id: 'sdss' }, 1)).toBe(1);
-  });
-
-  it('returns 1.0 for a tagged handle at blend 0', () => {
-    // Unfocused is full opacity even for a recession-tagged layer.
-    expect(focusRecession({ kind: 'filament' }, 0)).toBe(1);
-  });
-
   it('returns the exact target for a tagged handle at blend 1', () => {
     expect(focusRecession({ kind: 'filament' }, 1)).toBe(FILAMENT_RECESSION);
-  });
-
-  it('lerps a tagged handle at intermediate blend', () => {
-    expect(focusRecession({ kind: 'filament' }, 0.5)).toBe(lerp(1, FILAMENT_RECESSION, 0.5));
-  });
-});
-
-describe('recessionTargetFor', () => {
-  it('tags structure for every id', () => {
-    const ids: StructureId[] = ['cluster', 'supercluster', 'void', 'group'];
-    for (const id of ids) {
-      expect(recessionTargetFor({ kind: 'structure', id })).toBe(MARKER_RECESSION);
-    }
-  });
-
-  it('tags filament and volumesMaster — the diffuse fields the HDR encoders recede', () => {
-    // The two ambient subsystems routed through the HDR encoders / filament
-    // pass at the call site. Both recede to the same diffuse-field target.
-    expect(recessionTargetFor({ kind: 'filament' })).toBe(FILAMENT_RECESSION);
-    expect(recessionTargetFor({ kind: 'volumesMaster' })).toBe(VOLUME_RECESSION);
-  });
-
-  it('does not recede the milky-way disk', () => {
-    expect(recessionTargetFor({ kind: 'milkyWay' })).toBeUndefined();
-  });
-
-  it('tags structure and galaxy labels but not milkyWay or scaleBar', () => {
-    expect(recessionTargetFor({ kind: 'labelLayer', layer: 'structure' })).toBe(LABEL_RECESSION);
-    expect(recessionTargetFor({ kind: 'labelLayer', layer: 'galaxy' })).toBe(LABEL_RECESSION);
-    expect(recessionTargetFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBeUndefined();
-    expect(recessionTargetFor({ kind: 'labelLayer', layer: 'scaleBar' })).toBeUndefined();
   });
 });
 

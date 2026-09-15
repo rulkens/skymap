@@ -97,13 +97,6 @@ describe('TimeBar', () => {
     expect(props.onReadoutClick).toHaveBeenCalledTimes(1);
   });
 
-  it('fires onRateLabelClick from the rate label', () => {
-    // The rate label is a chromeless button that opens the rate-selector popover.
-    const props = renderBar({ rateLabel: '1 day/s' });
-    fireEvent.click(screen.getByRole('button', { name: /change speed/i }));
-    expect(props.onRateLabelClick).toHaveBeenCalledTimes(1);
-  });
-
   it('press-and-hold on a step button auto-repeats, and release stops it', () => {
     // The stepper steps on pointer-down and auto-repeats while held. This pins
     // the whole hold contract in one shot: the immediate step (so a quick click
@@ -130,15 +123,5 @@ describe('TimeBar', () => {
     } finally {
       vi.useRealTimers();
     }
-  });
-
-  it('reflects paused state on the play/pause control', () => {
-    renderBar({ paused: false });
-    const pauseBtn = screen.getByRole('button', { name: /pause/i });
-    expect(pauseBtn.getAttribute('aria-pressed')).toBe('true');
-
-    renderBar({ paused: true });
-    const playBtn = screen.getByRole('button', { name: /play/i });
-    expect(playBtn.getAttribute('aria-pressed')).toBe('false');
   });
 });

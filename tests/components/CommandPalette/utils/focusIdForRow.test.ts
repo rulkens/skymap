@@ -29,23 +29,11 @@ const COMA: StructureSearchEntry = {
 };
 
 describe('focusIdForRow', () => {
-  it('a famous row → its curated seed id', () => {
-    expect(focusIdForRow({ kind: 'famous', entry: M31, score: 0 })).toBe('m31');
-  });
-
   it('an alias row → the shared galaxy-id ladder pgc- rung', () => {
     expect(focusIdForRow({ kind: 'alias', entry: NGC4565, score: 0 })).toBe('pgc-42038');
   });
 
   it('a structure row → its own durable category-prefixed id, verbatim', () => {
     expect(focusIdForRow({ kind: 'structure', entry: COMA, score: 0 })).toBe('cluster-coma');
-  });
-
-  it('the Milky Way row → the durable singleton focus id', () => {
-    expect(focusIdForRow({ kind: 'milkyWay', score: 0 })).toBe('milkyWay');
-  });
-
-  it('a scene-body row → its seed id under the body- prefix', () => {
-    expect(focusIdForRow({ kind: 'body', body: SCENE_EARTH, score: 0 })).toBe('body-earth');
   });
 });

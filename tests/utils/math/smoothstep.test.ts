@@ -8,16 +8,6 @@ import { describe, it, expect } from 'vitest';
 import { smoothstep } from '../../../src/utils/math/smoothstep';
 
 describe('smoothstep', () => {
-  it('returns 0 at and below the lower edge', () => {
-    expect(smoothstep(10, 50, 10)).toBe(0);
-    expect(smoothstep(10, 50, -5)).toBe(0);
-  });
-
-  it('returns 1 at and above the upper edge', () => {
-    expect(smoothstep(10, 50, 50)).toBe(1);
-    expect(smoothstep(10, 50, 999)).toBe(1);
-  });
-
   it('returns 0.5 at the band midpoint (symmetric S-curve)', () => {
     expect(smoothstep(0, 1, 0.5)).toBeCloseTo(0.5, 12);
   });

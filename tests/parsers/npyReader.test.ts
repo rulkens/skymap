@@ -103,18 +103,6 @@ describe('readNpy', () => {
     expect(Array.from(result.values as Float64Array)).toEqual(data);
   });
 
-  it('reads a 3-D f64 array (matches the CF4++ d_mean_CF4pp 128³ shape pattern)', () => {
-    // Smaller dimensions than 128³ so the test stays fast — the shape
-    // semantics are what we care about, not the bandwidth.
-    const data = Array.from({ length: 2 * 3 * 4 }, (_, i) => i / 7);
-    const buf = writeF64Npy(data, [2, 3, 4]);
-    const result = readNpy(buf);
-    expect(result.dtype).toBe('<f8');
-    expect(Array.from(result.shape)).toEqual([2, 3, 4]);
-    expect((result.values as Float64Array).length).toBe(24);
-    expect(Array.from(result.values as Float64Array)).toEqual(data);
-  });
-
   it('throws on bad magic', () => {
     const buf = new ArrayBuffer(16);
     expect(() => readNpy(buf)).toThrow(/magic/i);

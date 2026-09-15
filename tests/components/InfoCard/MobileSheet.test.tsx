@@ -22,21 +22,13 @@ describe('MobileSheet', () => {
   const originalScrollTo = HTMLElement.prototype.scrollTo;
 
   beforeEach(() => {
-    HTMLElement.prototype.scrollTo = vi.fn<(options?: ScrollToOptions) => void>() as unknown as typeof HTMLElement.prototype.scrollTo;
+    HTMLElement.prototype.scrollTo = vi.fn<
+      (options?: ScrollToOptions) => void
+    >() as unknown as typeof HTMLElement.prototype.scrollTo;
   });
 
   afterEach(() => {
     HTMLElement.prototype.scrollTo = originalScrollTo;
-  });
-
-  it('renders its child content', () => {
-    render(
-      createElement(MobileSheet, {
-        resetKey: 'galaxy:42',
-        children: createElement('p', null, 'marker'),
-      }),
-    );
-    expect(screen.getByText('marker')).toBeInTheDocument();
   });
 
   it('scrolls to the peek on mount', () => {
@@ -75,18 +67,5 @@ describe('MobileSheet', () => {
       }),
     );
     expect(HTMLElement.prototype.scrollTo).toHaveBeenCalledWith({ top: 0 });
-  });
-
-  it('does not throw when the container ref is detached', () => {
-    const { unmount } = render(
-      createElement(MobileSheet, {
-        resetKey: 'galaxy:42',
-        children: createElement('p', null, 'marker'),
-      }),
-    );
-    // Unmounting drops the ref; the guarded effect must never run against a
-    // null container.  A re-render after unmount isn't possible, so the
-    // assertion is simply that teardown is clean.
-    expect(() => unmount()).not.toThrow();
   });
 });

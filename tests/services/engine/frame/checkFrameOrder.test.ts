@@ -41,17 +41,37 @@ describe('checkFrameOrder', () => {
     expect(() => checkFrameOrder(order, [fakePass('a')], TARGETS)).toThrow(/'a'/);
   });
 
-  it('throws when a capture roster names a pass no render line draws', () => {
+  it('accepts a pass that only a capture line rosters', () => {
+    // A probe's sky blit draws for the capture alone — it is rostered on no
+    // render line, and that is not the silent-omission the "no line draws"
+    // rule exists to catch.
     const order: FrameStepSpec[] = [
       {
         kind: 'capture',
-        capture: 'sgrAStar',
-        cosmoPasses: ['a'],
-        near0Passes: ['not-drawn'],
+        captures: ['sgrAStar'],
+        cosmoPasses: ['capture-only'],
+        near0Passes: [],
+        bodyPasses: ['body-capture-only'],
       },
       ...drawing('a'),
     ];
-    expect(() => checkFrameOrder(order, [fakePass('a')], TARGETS)).toThrow(/not-drawn/);
+    expect(() =>
+      checkFrameOrder(
+        order,
+        [fakePass('a'), fakePass('capture-only'), fakePass('body-capture-only')],
+        TARGETS,
+      ),
+    ).not.toThrow();
+  });
+
+  it('a probe row contributes no render-target id to the check', () => {
+    // The probe's faces are its subject's own cube, so there is no row id for
+    // the declared-target check to demand — TARGETS names none for it.
+    const order: FrameStepSpec[] = [
+      { kind: 'capture', captures: ['probe'], cosmoPasses: [], near0Passes: [], bodyPasses: [] },
+      ...drawing('a'),
+    ];
+    expect(() => checkFrameOrder(order, [fakePass('a')], TARGETS)).not.toThrow();
   });
 
   it('throws naming a step target that is not a declared render-target id', () => {

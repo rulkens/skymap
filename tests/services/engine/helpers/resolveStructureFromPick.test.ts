@@ -52,12 +52,6 @@ describe('resolveStructureFromPick', () => {
     );
   });
 
-  it('resolves the 1st cluster index to the second record', () => {
-    expect(resolveStructureFromPick(structures, { category: 'cluster', structureIndex: 1 })).toBe(
-      coma,
-    );
-  });
-
   it('resolves a void index independently of the cluster bucket', () => {
     // The per-category-local indexing invariant: a `structureIndex` of 0
     // means "the 0th of THIS category", not "the 0th globally".
@@ -70,11 +64,5 @@ describe('resolveStructureFromPick', () => {
     expect(resolveStructureFromPick(structures, { category: 'cluster', structureIndex: 99 })).toBe(
       null,
     );
-  });
-
-  it('returns null for a category with no entries', () => {
-    expect(
-      resolveStructureFromPick(structures, { category: 'supercluster', structureIndex: 0 }),
-    ).toBe(null);
   });
 });

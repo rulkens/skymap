@@ -90,6 +90,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`CaptionKind` shadows the label-bearing registry** `deferred` — the union is still hand-typed, but it was never 1:1 with `bearsLabel`, so deriving it needs a new registry flag rather than a filter. → [details](backlog/2026-07-29-caption-kind-shadow-registry.md)
 - [ ] **Multi-star sphere presence** `deferred` — the field-star sphere is one-at-a-time (nearest wins); a Gaia-resolved double a few AU apart would leave the companion sprite-retired with no body. → [details](backlog/2026-07-21-multi-star-sphere-presence.md)
 - [ ] **Mesh bodies: self-shadowing and a ground shadow** `needs-design` — no shadow term at all; a rover lights its own deck and casts nothing on Mars. → [details](backlog/2026-09-12-mesh-body-shadows.md)
+- [ ] **Mesh sources as editable `.blend`, backed up to R2** `ready` — NASA models author metallic 0 everywhere; make `.blend` the one prebake source (fixes saved in, glb path deleted), edit in Blender, rebake; sources to R2. → [details](backlog/2026-09-15-mesh-sources-as-blend.md)
 - [ ] **Saturn ring brightness** `ready` — the ring reads too dim next to the new limb-darkened disc; retune ring albedo/exposure (surfaced in the planet-atmospherics per-body visual pass).
 - [ ] **`foreground:0`'s alpha is doing three jobs** `needs-design` — the shell and ring write premultiplied rgb into a straight-alpha composite, and one alpha cannot dim the starfield chromatically. → [details](backlog/2026-08-18-foreground-alpha-overloaded.md)
 - [ ] **Body seed albedos are authored, not measured** `needs-design` — one field serves surface reflectance and the atmosphere's ground bounce, which want different quantities; Pluto's is 0.49 vs a measured 0.72. → [details](backlog/2026-08-18-body-seed-albedos-vs-measured.md)
@@ -215,7 +216,6 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Saga-context boot-ordering argument told nine times** `ready` — one causal chain restated across nine docblocks; keep it in `sagaContextRegistered.ts` and point the rest there. → [details](backlog/2026-07-30-boot-ordering-argument-nine-copies.md)
 - [ ] **Plan `Needs:` lines for wave dispatch** `needs-design` — SDD serializes plans; mined dependency graphs from completed plans understate real depth, so the DAG must be authored, not mined. → [details](backlog/2026-07-31-plan-needs-lines-wave-dispatch.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
-- [ ] **Test-suite prune** `ready` — repo-wide sweep deleting tests that cannot fail on a real bug. → [details](backlog/2026-09-15-test-suite-prune.md)
 - [ ] **Comment prune to the 5-line budget** `ready` — script-listed files only; landmine memories + RENDERER.md protected. → [details](backlog/2026-09-15-comment-prune.md)
 
 ## External / blocked

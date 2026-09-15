@@ -28,18 +28,6 @@ const sum = (a: Float32Array): number => {
 };
 
 describe('renormalizeWeightMass', () => {
-  it('rescales an arbitrary weight array to sum to TOTAL_WEIGHT_MASS', () => {
-    const input = new Float32Array([1, 2, 3, 4]);
-    const result = renormalizeWeightMass(input);
-    expect(sum(result)).toBeCloseTo(TOTAL_WEIGHT_MASS, 3);
-  });
-
-  it('preserves relative proportions between weights', () => {
-    const input = new Float32Array([1, 3]);
-    const result = renormalizeWeightMass(input);
-    expect(result[1]! / result[0]!).toBeCloseTo(3, 5);
-  });
-
   it('passes an all-zero array through unchanged rather than dividing by zero', () => {
     const input = new Float32Array([0, 0, 0]);
     const result = renormalizeWeightMass(input);

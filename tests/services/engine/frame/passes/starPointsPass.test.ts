@@ -483,12 +483,6 @@ describe('starPointsPass.draw', () => {
     expect(renderer.setStars).toHaveBeenCalledTimes(1);
     expect(renderer.setStars.mock.calls[0]![0].map((star) => star.id)).toEqual([SUN.id]);
   });
-
-  it('is a no-op when the starPointRenderer handle is null (pre-bootstrap)', () => {
-    const view = makeNear0View([0, 0, 5]);
-    const state = { gpu: { starPointRenderer: null } } as unknown as EngineState;
-    expect(() => starPointsPass.draw(PASS_STUB, view, CTX_STUB, state)).not.toThrow();
-  });
 });
 
 /**

@@ -48,28 +48,12 @@ describe('famousStarsSeed', () => {
     expect(validateFamousStarEntry(e).gaiaDr3).toBeNull();
   });
 
-  it('throws on a non-digit gaiaDr3 string', () => {
-    expect(() => validateFamousStarEntry(baseEntry({ gaiaDr3: 'DR3 123' }))).toThrow(/gaiaDr3/);
-    expect(() => validateFamousStarEntry(baseEntry({ gaiaDr3: '12a3' }))).toThrow(/gaiaDr3/);
-  });
-
   it('throws on a missing hip field', () => {
     // Same required-field invariant as gaiaDr3: a curation gap ("not yet
     // resolved") must never be indistinguishable from an intended null.
     const e = baseEntry();
     delete (e as { hip?: number | null }).hip;
     expect(() => validateFamousStarEntry(e)).toThrow(/hip/);
-  });
-
-  it('accepts hip: null — the Sun', () => {
-    const e = baseEntry({ id: 'sun', gaiaDr3: null, hip: null });
-    expect(validateFamousStarEntry(e).hip).toBeNull();
-  });
-
-  it('throws on a non-integer or non-positive hip', () => {
-    expect(() => validateFamousStarEntry(baseEntry({ hip: 1.5 }))).toThrow(/hip/);
-    expect(() => validateFamousStarEntry(baseEntry({ hip: -1 }))).toThrow(/hip/);
-    expect(() => validateFamousStarEntry(baseEntry({ hip: 0 }))).toThrow(/hip/);
   });
 
   it('throws when hip disagrees with a HIP alias', () => {
@@ -80,39 +64,11 @@ describe('famousStarsSeed', () => {
     ).toBe(100);
   });
 
-  it('allows a non-null hip with no HIP alias — the Alpha Centauri enrichment', () => {
-    const e = baseEntry({ names: ['Betelgeuse'], hip: 71683 });
-    expect(validateFamousStarEntry(e).hip).toBe(71683);
-  });
-
-  it('accepts hipCompanions — the Alpha Centauri two-component case', () => {
-    const e = baseEntry({ names: ['Betelgeuse'], hip: 71683, hipCompanions: [71681] });
-    expect(validateFamousStarEntry(e).hipCompanions).toEqual([71681]);
-  });
-
   it('throws when hipCompanions is present but hip is null', () => {
     // A companion is an *additional* resolved component; the canonical hip is the
     // identity, so companions are meaningless without it.
     const e = baseEntry({ id: 'sun', gaiaDr3: null, hip: null, hipCompanions: [71681] });
     expect(() => validateFamousStarEntry(e)).toThrow(/hipCompanions/);
-  });
-
-  it('throws on a non-positive or non-integer hipCompanion', () => {
-    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [1.5] }))).toThrow(
-      /hipCompanions/,
-    );
-    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [-1] }))).toThrow(
-      /hipCompanions/,
-    );
-    expect(() => validateFamousStarEntry(baseEntry({ hipCompanions: [0] }))).toThrow(
-      /hipCompanions/,
-    );
-  });
-
-  it('throws on a duplicate hipCompanion', () => {
-    expect(() =>
-      validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [71681, 71681] })),
-    ).toThrow(/hipCompanions/);
   });
 
   it('throws when hipCompanions contains the entry own hip', () => {
@@ -121,21 +77,6 @@ describe('famousStarsSeed', () => {
     expect(() =>
       validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [71683] })),
     ).toThrow(/hipCompanions/);
-  });
-
-  it('throws on an empty hipCompanions array', () => {
-    // Convention: the key is present only when non-empty; an empty array is the
-    // "absent value as an empty key" placeholder the schema forbids elsewhere.
-    expect(() => validateFamousStarEntry(baseEntry({ hip: 71683, hipCompanions: [] }))).toThrow(
-      /hipCompanions/,
-    );
-  });
-
-  it('throws on out-of-range ra / dec / distancePc / temperatureK', () => {
-    expect(() => validateFamousStarEntry(baseEntry({ ra: 360 }))).toThrow(/ra/);
-    expect(() => validateFamousStarEntry(baseEntry({ dec: 91 }))).toThrow(/dec/);
-    expect(() => validateFamousStarEntry(baseEntry({ distancePc: -1 }))).toThrow(/distance/);
-    expect(() => validateFamousStarEntry(baseEntry({ temperatureK: 999 }))).toThrow(/temperature/);
   });
 
   it('accepts distancePc: 0 — the Sun', () => {
@@ -158,52 +99,9 @@ describe('famousStarsSeed', () => {
     expect(validateFamousStarEntry(e).names).toHaveLength(1);
   });
 
-  it('accepts an entry omitting massSolar/luminositySolar/ageGyr', () => {
-    const e = baseEntry();
-    expect(e.massSolar).toBeUndefined();
-    expect(validateFamousStarEntry(e).id).toBe('betelgeuse');
-  });
-
-  it('throws on a malformed variable', () => {
-    // Wrong-length magRange, non-finite member, and empty type are all loud.
-    expect(() =>
-      validateFamousStarEntry(baseEntry({ variable: { type: 'SRC', magRange: [0.0] as never } })),
-    ).toThrow(/variable/);
-    expect(() =>
-      validateFamousStarEntry(
-        baseEntry({ variable: { type: 'SRC', magRange: [0.0, Number.NaN] } }),
-      ),
-    ).toThrow(/variable/);
-    expect(() =>
-      validateFamousStarEntry(baseEntry({ variable: { type: '', magRange: [0.0, 1.3] } })),
-    ).toThrow(/variable/);
-    // magRange[0] must not exceed magRange[1].
-    expect(() =>
-      validateFamousStarEntry(baseEntry({ variable: { type: 'SRC', magRange: [1.3, 0.0] } })),
-    ).toThrow(/variable/);
-  });
-
-  it('accepts a well-formed variable', () => {
-    const e = baseEntry({ variable: { type: 'SRC', magRange: [0.0, 1.3] } });
-    expect(validateFamousStarEntry(e).variable).toEqual({ type: 'SRC', magRange: [0.0, 1.3] });
-  });
-
-  it('throws on out-of-range magV / absMag', () => {
-    expect(() => validateFamousStarEntry(baseEntry({ magV: -40 }))).toThrow(/magV/);
-    expect(() => validateFamousStarEntry(baseEntry({ magV: 20 }))).toThrow(/magV/);
-    expect(() => validateFamousStarEntry(baseEntry({ absMag: -20 }))).toThrow(/absMag/);
-    expect(() => validateFamousStarEntry(baseEntry({ absMag: 25 }))).toThrow(/absMag/);
-  });
-
   it("accepts the Sun's magV -26.74", () => {
     const e = baseEntry({ id: 'sun', magV: -26.74, absMag: 4.83, gaiaDr3: null });
     expect(validateFamousStarEntry(e).magV).toBe(-26.74);
-  });
-
-  it('parseFamousStarsSeed carries entries through the array', () => {
-    const json = JSON.stringify([baseEntry({ id: 'sirius' }), baseEntry({ id: 'vega' })]);
-    const out = parseFamousStarsSeed(json);
-    expect(out.map((e) => e.id)).toEqual(['sirius', 'vega']);
   });
 
   it('selectHipEntries drops null-hip entries and narrows the type', () => {

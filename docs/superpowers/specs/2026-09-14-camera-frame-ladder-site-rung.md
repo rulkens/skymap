@@ -199,12 +199,18 @@ export type RungRow<K extends RungKind> = {
   host(frame: FrameOf[K], ctx: RungBasisCtx): HostBody | null;
   /** Rung-local gesture memory; the runtime wipes it when `frameKey` changes. */
   readonly emptyMemory: MemOf[K];
+  /**
+   * `tilt` rides beside `memory` rather than inside it: the tilt memory is keyed
+   * by HOST, not by frame, so a frame change must not wipe it. A row that does
+   * not author tilt passes the slot back unchanged.
+   */
   step(
     memory: MemOf[K],
+    tilt: TiltMemory,
     framed: FramedPose<K>,
     input: InputStep,
     ctx: RungCtx,
-  ): { readonly pose: PoseOf[K]; readonly memory: MemOf[K] };
+  ): { readonly pose: PoseOf[K]; readonly memory: MemOf[K]; readonly tilt: TiltMemory };
   readonly channels: RungChannels<K>;
 };
 

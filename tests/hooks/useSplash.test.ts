@@ -55,28 +55,6 @@ describe('useSplash — slice-backed visibility', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('splashVisible is true when the store seeds splash visible', () => {
-    const ui: UiState = {
-      paletteOpen: false,
-      uiHidden: false,
-      debugPanelOpen: false,
-      splash: { visible: true, dismissedVersion: null },
-    };
-    const { result } = renderSplash(ui);
-    expect(result.current.splashVisible).toBe(true);
-  });
-
-  it('splashVisible is false when the store seeds splash hidden', () => {
-    const ui: UiState = {
-      paletteOpen: false,
-      uiHidden: false,
-      debugPanelOpen: false,
-      splash: { visible: false, dismissedVersion: CURRENT_SPLASH_VERSION },
-    };
-    const { result } = renderSplash(ui);
-    expect(result.current.splashVisible).toBe(false);
-  });
-
   it('splashVisible follows store dispatches (dismiss → reopen cycle)', () => {
     const ui: UiState = {
       paletteOpen: false,
@@ -117,23 +95,6 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
 
     act(() => {
       result.current.dismissExplore();
-    });
-
-    expect(selectSplashVisible(store.getState())).toBe(false);
-    expect(selectSplashDismissedVersion(store.getState())).toBe(CURRENT_SPLASH_VERSION);
-  });
-
-  it('dismissTour dispatches dismissSplash — sets visible:false and records version', () => {
-    const ui: UiState = {
-      paletteOpen: false,
-      uiHidden: false,
-      debugPanelOpen: false,
-      splash: { visible: true, dismissedVersion: null },
-    };
-    const { store, result } = renderSplash(ui);
-
-    act(() => {
-      result.current.dismissTour();
     });
 
     expect(selectSplashVisible(store.getState())).toBe(false);

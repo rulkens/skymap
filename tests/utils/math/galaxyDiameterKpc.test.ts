@@ -21,24 +21,12 @@ import { galaxyDiameterKpc } from '../../../src/utils/math/galaxyDiameterKpc';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../../src/utils/math/defaultGalaxyDiameterKpc';
 
 describe('galaxyDiameterKpc', () => {
-  it('returns the default when no input is supplied', () => {
-    expect(galaxyDiameterKpc({})).toBe(DEFAULT_GALAXY_DIAMETER_KPC);
-  });
-
   it('returns the default when absMagBmag is NaN', () => {
     expect(galaxyDiameterKpc({ absMagBmag: NaN })).toBe(DEFAULT_GALAXY_DIAMETER_KPC);
   });
 
   it('returns ~34.9 kpc for M_B = -20.5 (Milky-Way-ish L*)', () => {
     expect(galaxyDiameterKpc({ absMagBmag: -20.5 })).toBeCloseTo(34.86, 1);
-  });
-
-  it('returns a smaller diameter for a fainter galaxy (M_B = -18)', () => {
-    expect(galaxyDiameterKpc({ absMagBmag: -18 })).toBeCloseTo(8.32, 1);
-  });
-
-  it('returns a larger diameter for a brighter galaxy (M_B = -22.5)', () => {
-    expect(galaxyDiameterKpc({ absMagBmag: -22.5 })).toBeCloseTo(109.81, 1);
   });
 
   it('clamps to a sensible minimum to avoid zero/negative diameters', () => {

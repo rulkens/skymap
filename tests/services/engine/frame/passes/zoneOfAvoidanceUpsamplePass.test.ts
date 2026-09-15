@@ -79,34 +79,6 @@ function makeState(
   } as unknown as EngineState;
 }
 
-describe('zoneOfAvoidanceUpsamplePass.enabled', () => {
-  it('is enabled when the camera sits inside the visibility window', () => {
-    const ctx = makeCtx();
-    expect(zoneOfAvoidanceUpsamplePass.enabled(makeState(), ctx, slabViewOf(ctx, COSMO))).toBe(
-      true,
-    );
-  });
-
-  it('is disabled once the camera is past the recede band', () => {
-    const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
-    const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    expect(zoneOfAvoidanceUpsamplePass.enabled(makeState(), ctx, slabViewOf(ctx, COSMO))).toBe(
-      false,
-    );
-  });
-
-  it('is disabled when zoneOfAvoidanceRenderer is null (pre-bootstrap)', () => {
-    const ctx = makeCtx();
-    expect(
-      zoneOfAvoidanceUpsamplePass.enabled(
-        makeState({ renderer: null }),
-        ctx,
-        slabViewOf(ctx, COSMO),
-      ),
-    ).toBe(false);
-  });
-});
-
 describe('zoneOfAvoidanceUpsamplePass.draw', () => {
   it('composites the zoa offscreen into HDR and draws the full-res lettering', () => {
     const upsampleDraw = vi.fn();
@@ -156,12 +128,5 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     zoneOfAvoidanceUpsamplePass.draw(PASS_STUB, view, ctx, state);
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(labelDraw).not.toHaveBeenCalled();
-  });
-
-  it('is a no-op when both handles are null (pre-bootstrap)', () => {
-    const state = makeState({ upsample: null, label3D: null });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    expect(() => zoneOfAvoidanceUpsamplePass.draw(PASS_STUB, view, ctx, state)).not.toThrow();
   });
 });

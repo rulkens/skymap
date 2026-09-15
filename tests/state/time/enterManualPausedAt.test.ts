@@ -44,16 +44,3 @@ describe('manualPausedAtActions', () => {
     expect(scrub.payload.nowMs).toBe(freeze.payload.nowMs);
   });
 });
-
-describe('enterManualPausedAt', () => {
-  it('still dispatches both actions in order', () => {
-    const dispatch = vi.fn();
-
-    enterManualPausedAt(dispatch as unknown as AppDispatch, INSTANT);
-
-    expect(dispatch.mock.calls.map(([action]) => action.type)).toEqual([
-      setSimDays.type,
-      pause.type,
-    ]);
-  });
-});

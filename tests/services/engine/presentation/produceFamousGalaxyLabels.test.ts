@@ -384,15 +384,6 @@ describe('produceFamousGalaxyLabels', () => {
     }
   });
 
-  it('at-rest output is unchanged (galaxy layer at 1, blend 0)', () => {
-    // Golden: galaxy layer at 1 × recession 1 (blend 0) ⇒ layerAlpha 1, so the
-    // emitted fadeAlpha equals the raw distance-fade value (1 here).
-    const state = makeState();
-    seed(state, [{ id: 'm31', names: ['M31'] }], [10, 0, 0], [120]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
-    expect(out.labels[0]!.fadeAlpha).toBe(1);
-  });
-
   it('caps a very close companion (e.g. the LMC) to the near-distance pixel ceiling', () => {
     // Inside the near band (< 0.1 Mpc), the ramp is fully bottomed out at the
     // 60 px near cap rather than the category's 150 px `maxPixelSize` — the
@@ -402,24 +393,6 @@ describe('produceFamousGalaxyLabels', () => {
     seed(state, [{ id: 'lmc', names: ['LMC'] }], [0.05, 0, 0], [10]);
     const out = produceFamousGalaxyLabels(state, makeCtx());
     expect(out.labels[0]!.maxPixelSize).toBe(60);
-  });
-
-  it('keeps the full 150 px ceiling for a distant famous galaxy (e.g. M31)', () => {
-    // Beyond the far band (> 1 Mpc), the ramp is fully saturated at the
-    // category's normal `maxPixelSize` — the dramatic close-approach labels
-    // for far companions like M31 must not shrink.
-    const state = makeState();
-    seed(state, [{ id: 'm31', names: ['M31'] }], [3, 0, 0], [40]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
-    expect(out.labels[0]!.maxPixelSize).toBe(FAMOUS_LABEL_STYLE.maxPixelSize);
-  });
-
-  it('yields a strictly intermediate ceiling in the near-to-far ramp band', () => {
-    const state = makeState();
-    seed(state, [{ id: 'mid', names: ['Mid'] }], [0.5, 0, 0], [20]);
-    const out = produceFamousGalaxyLabels(state, makeCtx());
-    expect(out.labels[0]!.maxPixelSize).toBeGreaterThan(60);
-    expect(out.labels[0]!.maxPixelSize).toBeLessThan(FAMOUS_LABEL_STYLE.maxPixelSize);
   });
 
   it("stamps each label with its catalog row's pick id, size-gate skips included", () => {

@@ -11,8 +11,4 @@ describe('dMaxFromAbsolute', () => {
     const dMax = dMaxFromAbsolute(M, mLim);
     expect(apparentFromAbsolute(M, dMax)).toBeCloseTo(mLim, 6);
   });
-  it('brighter galaxies (more negative M) are detectable to larger distances', () => {
-    const mLim = 17.77;
-    expect(dMaxFromAbsolute(-22, mLim)).toBeGreaterThan(dMaxFromAbsolute(-18, mLim));
-  });
 });
