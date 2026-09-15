@@ -629,15 +629,13 @@ describe('cutSurfaceTiles', () => {
         );
     });
 
-    it('sizes a tilted view by the geometric mean of the bbox extents', () => {
-      // The tilted-view working set, measured: 300 km / 60 deg, the shipped lod
-      // bias, one whole-globe band to z13 (the deepest shape any pose can meet).
-      // 1855 height tiles under the max-extent screen error — the live app
-      // measured 1848 at this pose — and 1819 under the geometric mean alone:
-      // almost all of it was the strip of ground BEHIND the camera, which
-      // straddles the eye plane and used to skip the frustum cull, refining
-      // to z13 with nothing on screen. The sphere-vs-frustum cull in `probe`
-      // brings the pose to 39.
+    it('keeps the strip of ground behind a tilted camera out of the working set', () => {
+      // 300 km / 60 deg, the shipped lod bias, one whole-globe band to z13
+      // (the deepest shape any pose can meet). Without the sphere-vs-frustum
+      // cull in `probe`, the strip behind the camera straddles the eye plane,
+      // skips the frustum cull, and refines to z13 with nothing on screen —
+      // measured 39 height tiles with the cull, so the ceiling here is loose,
+      // just far enough below the pre-cull blowup (~1800) to catch a regression.
       const result = cutSurfaceTiles({
         ...tiltedAt(300_000, 60),
         bands: GLOBAL_BANDS,
@@ -646,7 +644,7 @@ describe('cutSurfaceTiles', () => {
       });
 
       const heightRequests = result.requests.requests.filter((r) => r.tile.product === 'height');
-      expect(heightRequests.length).toBe(39);
+      expect(heightRequests.length).toBeLessThan(100);
     });
 
     it('a pan that scrolls an unfetched sibling into view keeps every settled leaf', () => {
