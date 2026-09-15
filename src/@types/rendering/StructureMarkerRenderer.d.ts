@@ -1,74 +1,33 @@
 /**
- * Public handle returned by `createStructureMarkerRenderer`.  Mirrors
- * `MarkerLineRenderer`'s shape: typed methods, no internals leaked.
- *
- * One renderer draws halos + rings for ALL structure categories
- * (cluster / supercluster / void / group).  Per-category source-code
- * differentiation happens inside the renderer (one pre-built per-source
- * bind group each) so the pick path gets the correct
- * (sourceCode << 26) | structureIndex packing for free.
+ * Public handle returned by `createStructureMarkerRenderer`. One renderer draws halos
+ * + rings for ALL structure categories, each category on its own pre-built
+ * SourceUniforms bind group, so the pick path gets `(sourceCode << 26) | index` free.
  */
 
 import type { StructureMarkerDescriptor } from './StructureMarkerDescriptor';
 import type { Vec2 } from '../math/Vec2';
 
 export type StructureMarkerRenderer = {
-  /** Human-readable identifier. */
   readonly label: string;
-  /**
-   * Replace the current marker set.  Calling `setMarkers([])` clears all markers.
-   * The descriptors are partitioned internally by `category` so the renderer
-   * can issue one draw per category (halo) and one per category (ring),
-   * each bound to that category's SourceUniforms.
-   *
-   * Designed to be called by `runFrame.ts` once per frame from the
-   * output of `produceStructureMarkers(state, ctx)`.
-   */
+  /** Replace the marker set (`[]` clears); partitioned by `category`, one draw each. */
   setMarkers(descriptors: readonly StructureMarkerDescriptor[]): void;
-  /**
-   * Issue the draws inside an in-flight render pass against the HDR target.
-   *
-   * `fadeOpacity` is the per-frame opacity scalar for the entire marker
-   * layer.  Folded into the alpha output via the shared
-   * `lib::fadeUniforms::applyFade` helper — same contract as
-   * `filamentRenderer.draw(... fadeOpacity)`.  The pass file passes a
-   * constant 1.0; a FadeRegistry handle for structure markers (e.g. for
-   * layer-toggle animations) can substitute its per-frame value here.
-   */
+  /** `fadeOpacity` scales the whole layer's alpha through `lib::fadeUniforms::applyFade`. */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     fadeOpacity: number,
   ): void;
-  /** Number of markers last passed to setMarkers.  Used by the pass `enabled()` check. */
   markerCount(): number;
   /**
-   * Issue one ring-pick draw per structure category (cluster /
-   * supercluster / void / group) into the caller-supplied render pass.
-   * The pass MUST already have:
-   *
-   *   - The pick-pass colour attachment (r32uint pick texture) bound.
-   *   - A `depth24plus` depth attachment bound (this pipeline writes +
-   *     tests depth so a galaxy in front of a ring claims the pixel).
-   * `viewProj` + `viewportPx` are the pick-time pose; the renderer packs
-   * them into the 80-byte `CameraUniforms` prefix the ring vertex stage
-   * reads, in this renderer's OWN pick camera buffer bound at `@group(0)`.
-   * Never the draw-time uniform buffer: that holds the last visual frame's
-   * camera, a stale snapshot of the pose being picked.
-   *
-   * `pickRing` also binds `@group(1)` (a dummy zeroed FadeUniforms — the
-   * pick fragment doesn't read fade.opacity) and `@group(2)` (the
-   * per-category SourceUniforms whose `sourceCode` the fragment ORs
-   * into the packed identity).
-   *
-   * Why a method on the renderer rather than a free function: the
-   * renderer owns the pick pipeline, the per-category SourceUniforms
-   * bind groups, and the instance vertex buffer.  Exposing those to a
-   * free function would widen the renderer's public surface for one
-   * consumer (the engine's pick pass).
+   * One ring-pick draw per category into the caller's pass, which must already bind
+   * the r32uint pick attachment and a `depth24plus` depth attachment (this pipeline
+   * writes + tests depth, so a galaxy in front of a ring claims the pixel). The pose
+   * packs into this renderer's OWN `@group(0)` buffer, never the draw-time uniform,
+   * which holds the last visual frame's stale camera; `@group(1)` is a dummy zeroed
+   * FadeUniforms, since every declared group must be bound.
    */
   pickRing(passEncoder: GPURenderPassEncoder, viewProj: Float32Array, viewportPx: Vec2): void;
-  /** Release all GPU resources.  No-op if constructed with a null device. */
+  /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;
 };

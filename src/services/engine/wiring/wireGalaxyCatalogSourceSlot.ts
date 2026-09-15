@@ -7,10 +7,8 @@
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
-import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
-import type { SourceType } from '../../../@types/data/SourceType';
+import type { GalaxyCatalogRowEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRowEntry';
 import type { WirePointSourceDeps } from '../../../@types/engine/wiring/WirePointSourceDeps';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { createAssetSlot } from '../../loading/AssetSlot';
@@ -32,15 +30,11 @@ import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenanc
  */
 export function wireGalaxyCatalogSourceSlot(
   state: EngineState,
-  entry: GalaxyCatalogSourceEntry,
+  entry: GalaxyCatalogRowEntry,
   deps: WirePointSourceDeps,
 ): void {
-  // `entry`'s declared field types (`code: number`, `id: string`) are the
-  // registry's total shape; the caller (`SOURCE_REGISTRY[code]`) always holds
-  // a galaxy-catalog row, so narrowing back to the numeric/string source
-  // types here is sound — the same cast `galaxyCatalogIdOf` names for `.id`.
-  const source = entry.code as SourceType;
-  const id = entry.id as GalaxyCatalogId;
+  const source = entry.code;
+  const id = entry.id;
   const { category } = entry;
   const { cb } = deps;
   const fetcher = category === 'synthetic' ? syntheticPointFetcher : galaxyCatalogFetcher;

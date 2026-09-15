@@ -8,7 +8,7 @@ function isCompanion(row: AssetWiringRow | CompanionAssetRow): row is CompanionA
 /**
  * Fold `CompanionAssetRow`s into full `AssetWiringRow`s once, at table-build
  * time — so `reevaluateDemand`, `buildSlotsFromRegistry` and the debug panel
- * all walk the same plain rows the demand loop runs (Ruling 6). Own rows
+ * all walk the same plain rows the demand loop runs. Own rows
  * pass through by identity; a companion's parent is looked up among the OWN
  * rows only, so a parent that is itself a companion reads as missing rather
  * than chaining — a chain would otherwise surface as a `TypeError` inside a

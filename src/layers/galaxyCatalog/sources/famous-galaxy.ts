@@ -55,7 +55,6 @@ export const FAMOUS_GALAXY_ENTRY = {
   sbBoost: 0.45,
   falloffHalfMpc: 1000,
   category: 'curated',
-  // Famous is the codebase's only `surveyDeepZoom` exemption, so it draws
-  // at the boot rung ahead of the bulk surveys.
+  // Ahead of the star catalog (50): the only `surveyDeepZoom` exemption, so it draws at boot.
   priority: 20,
 } as const satisfies GalaxyCatalogSourceEntry;

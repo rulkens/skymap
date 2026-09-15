@@ -10,7 +10,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { GalaxyCatalogSourceEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceEntry';
+import type { GalaxyCatalogRowEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRowEntry';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import {
   HI_RES_LAYER_SIDE_BY_TIER,
@@ -46,7 +46,6 @@ import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
 import { meshBodySlotKey } from '../../../utils/scene/meshBodySlotKey';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
@@ -82,11 +81,11 @@ const externalFactory = (): never => {
 /**
  * One demand+req row per galaxy-catalog entry, derived from the fields it
  * already carries: `category === 'synthetic'` reads the fallback request
- * flag (Ruling 2), everything else reads its settings toggle.
+ * flag, everything else reads its settings toggle.
  */
-function pointRow(entry: GalaxyCatalogSourceEntry): AssetWiringRow {
-  const source = entry.code as SourceType;
-  const id = entry.id as GalaxyCatalogId;
+function pointRow(entry: GalaxyCatalogRowEntry): AssetWiringRow {
+  const source = entry.code;
+  const id = entry.id;
   return {
     key: source,
     built: 'external',
@@ -204,10 +203,6 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
   };
 }
 
-// Point-source ranks live on each galaxy entry (see `pointRow`); two look odd
-// and are deliberate — famous galaxies (20) and 2MRS (40) both outrank the
-// star catalog (50), since Famous is the only `surveyDeepZoom` exemption and
-// 2MRS buys resident local structure for about a second of stars-arrive-later.
 export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
   // ── Low-resolution all-bodies surface atlas ──────────────────────
   // Rank 0 and deliberately NOT proximity-gated: it is the universal fallback the
@@ -222,13 +217,13 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
     priority: 0,
   },
 
-  // ── Point sources, Synthetic included (Ruling 2) — one row per
+  // ── Point sources, Synthetic included — one row per
   // GALAXY_CATALOG_SOURCES code, demand+req only; slots minted in wireSlots ──
   ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(SOURCE_REGISTRY[code])),
 
   // ── Famous-galaxy meta sidecar ───────────────────────────────────
   // Loads once the Famous slot leaves `idle`, so the InfoCard text rides in
-  // alongside the binary rather than racing ahead of it (Ruling 6).
+  // alongside the binary rather than racing ahead of it.
   {
     key: 'famousGalaxiesMeta',
     factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),

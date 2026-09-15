@@ -99,11 +99,6 @@ export type GalaxyCatalogSourceEntry = SourceEntryBase & {
   readonly falloffHalfMpc: number;
   /** See `GalaxyCatalogSourceCategory`. */
   readonly category: GalaxyCatalogSourceCategory;
-  /**
-   * Fetch-priority rank `ASSET_WIRING` mints the row at (`popHighestPriority`,
-   * lower first). Distinct per source, even within `survey` — ties break by
-   * array order, which would silently fetch GLADE (26 MB) ahead of Milliquas
-   * (12.8 MB).
-   */
+  /** Fetch rank of the `ASSET_WIRING` row minted here; see `AssetWiringRow.priority`. */
   readonly priority: number;
 };

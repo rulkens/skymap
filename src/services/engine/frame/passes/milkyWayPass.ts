@@ -47,7 +47,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { NEAR0 } from '../slabs';
 import { deriveMilkyWayCloudAlpha } from '../milkyWayCloudLiveness';
 import { cameraBillboardBasis } from '../../../../utils/camera/cameraBillboardBasis';
 import { milkyWayModelCached } from '../../galaxyGenerator/v1/milkyWayModelCached';

@@ -107,7 +107,7 @@ export const SOURCE_REGISTRY = {
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
 // code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every
-// iterating site (Tasks 2/3 read `.category`/`.priority` off it directly).
+// iterating site — `.category` and `.priority` read off it without a cast.
 
 // ─── Famous-galaxy high-res LOD ─────────────────────────────────────────────
 

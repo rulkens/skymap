@@ -1,6 +1,6 @@
 /**
  * expandCompanionRows — the fold from `CompanionAssetRow` to a full
- * `AssetWiringRow`, run once where `ASSET_WIRING` is built (Ruling 6). Pins
+ * `AssetWiringRow`, run once where `ASSET_WIRING` is built. Pins
  * the derivation arithmetic and the two failure modes a chained or missing
  * parent would otherwise surface as a swallowed `TypeError` inside a demand
  * predicate, starving one asset silently.

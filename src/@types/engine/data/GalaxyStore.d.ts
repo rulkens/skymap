@@ -1,5 +1,5 @@
 import type { SourceType } from '../../data/SourceType';
-import type { GalaxyCatalog } from '../../data/GalaxyCatalog';
+import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
 
 /**

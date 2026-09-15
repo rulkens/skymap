@@ -13,7 +13,7 @@
  *
  * Mocking: `AssetSlot`s are real (pure CPU state machines); fetchers,
  * thumbnail factory and GPU device are mocked; point slots are pre-seeded
- * fakes since `galaxyCatalogSourceRegistry`'s mint loop is mocked to a no-op.
+ * fakes since `wireGalaxyCatalogSourceSlot`'s mint loop is mocked to a no-op.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

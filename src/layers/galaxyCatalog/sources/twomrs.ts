@@ -30,7 +30,6 @@ export const TWOMRS_ENTRY = {
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
   category: 'survey',
-  // Outranks the star catalog (50) and the other surveys: buys resident
-  // local structure for about a second of stars-arrive-later.
+  // Ahead of the star catalog (50): resident local structure beats a second of stars.
   priority: 40,
 } as const satisfies GalaxyCatalogSourceEntry;

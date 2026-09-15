@@ -36,7 +36,5 @@ export const SDSS_ENTRY = {
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
   category: 'survey',
-  // Distinct from the other bulk-survey ranks (61-65): ties break by array
-  // order, which would silently reorder the fetch queue.
   priority: 60,
 } as const satisfies GalaxyCatalogSourceEntry;
