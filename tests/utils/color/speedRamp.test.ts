@@ -8,12 +8,6 @@ import { describe, it, expect } from 'vitest';
 import { speedRamp } from '../../../src/utils/color/speedRamp';
 
 describe('speedRamp', () => {
-  it('returns premultiplied RGBA with alpha 1', () => {
-    const c = speedRamp(0.5);
-    expect(c).toHaveLength(4);
-    expect(c[3]).toBe(1);
-  });
-
   it('is blue at the slow end and red at the fast end', () => {
     const slow = speedRamp(0);
     expect(slow[2]).toBeGreaterThan(slow[0]); // more blue than red

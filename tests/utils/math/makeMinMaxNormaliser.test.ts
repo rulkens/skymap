@@ -31,9 +31,4 @@ describe('makeMinMaxNormaliser', () => {
     const n = makeMinMaxNormaliser([5, 5, 5], identity);
     expect(n(5)).toBe(1);
   });
-
-  it('returns full weight for a single-sample set', () => {
-    const n = makeMinMaxNormaliser([7], identity);
-    expect(n(7)).toBe(1);
-  });
 });

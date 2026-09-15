@@ -4,15 +4,14 @@
  * These two functions are exact inverses — given (RA, Dec, z), the forward
  * function produces (x, y, z_cart), and the inverse function must recover the
  * same (RA, Dec, z) within floating-point tolerance.  This invariant is the
- * cleanest way to test both at once.  We also pin a couple of axis-aligned
- * specials (origin, north pole, equator at RA=0) to catch sign-convention
- * regressions that round-trip alone wouldn't notice.
+ * cleanest way to test both at once.  The axis conventions themselves are
+ * pinned by `eqRaDecToUnitCart.test.ts`; what round-tripping alone misses —
+ * the degenerate origin, the RA wrap, the pole clamp — is pinned below.
  */
 
 import { describe, it, expect } from 'vitest';
 import { raDecZToCartesian } from '../../../src/utils/math/raDecZToCartesian';
 import { cartesianToRaDecZ } from '../../../src/utils/math/cartesianToRaDecZ';
-import { redshiftToDistanceMpc } from '../../../src/utils/math/redshiftToDistanceMpc';
 
 describe('raDecZToCartesian / cartesianToRaDecZ', () => {
   it('round-trips an SDSS-ish coordinate within 1e-4 tolerance', () => {
@@ -48,31 +47,6 @@ describe('raDecZToCartesian / cartesianToRaDecZ', () => {
     expect(x).toBeCloseTo(0, 10);
     expect(y).toBeCloseTo(0, 10);
     expect(z).toBeCloseTo(0, 10);
-  });
-
-  it('places (RA=0, Dec=0) on the +x axis', () => {
-    // Convention: +x → (RA=0°, Dec=0°). Verify by checking y and z are zero.
-    const [x, y, z] = raDecZToCartesian(0, 0, 0.1);
-    expect(y).toBeCloseTo(0, 6);
-    expect(z).toBeCloseTo(0, 6);
-    // x should equal the Hubble distance × 0.1.
-    expect(x).toBeCloseTo(redshiftToDistanceMpc(0.1), 6);
-  });
-
-  it('places (RA=90, Dec=0) on the +y axis', () => {
-    // Convention: +y → (RA=90°, Dec=0°).
-    const [x, y, z] = raDecZToCartesian(90, 0, 0.1);
-    expect(x).toBeCloseTo(0, 6);
-    expect(z).toBeCloseTo(0, 6);
-    expect(y).toBeCloseTo(redshiftToDistanceMpc(0.1), 6);
-  });
-
-  it('places (Dec=+90) on the +z axis (celestial north pole)', () => {
-    // Convention: +z → Dec = +90°. RA is degenerate at the pole.
-    const [x, y, z] = raDecZToCartesian(0, 90, 0.1);
-    expect(x).toBeCloseTo(0, 6);
-    expect(y).toBeCloseTo(0, 6);
-    expect(z).toBeCloseTo(redshiftToDistanceMpc(0.1), 6);
   });
 });
 

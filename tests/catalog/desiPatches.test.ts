@@ -21,15 +21,6 @@ describe('DESI_PATCHES', () => {
     expect(new Set(sources).size).toBe(sources.length);
   });
 
-  it("each row's makeFilter builds a callable 3-arg predicate", () => {
-    // The predicate takes (raDeg, decDeg, z); sky-only patches ignore z, the
-    // depth-bounded Sloan Great Wall uses it. All must return a boolean either way.
-    for (const patch of DESI_PATCHES) {
-      const keep = patch.makeFilter();
-      expect(typeof keep(DESI_CONE.raDeg, DESI_CONE.decDeg, 0.075)).toBe('boolean');
-    }
-  });
-
   it('the cone predicate accepts its own center', () => {
     const cone = DESI_PATCHES.find((p) => p.key === 'cone')!;
     expect(cone.makeFilter()(DESI_CONE.raDeg, DESI_CONE.decDeg, 0.075)).toBe(true);

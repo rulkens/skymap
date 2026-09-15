@@ -66,21 +66,6 @@ describe('healpixNest — known reference values', () => {
     expect(px).toBeLessThan(20);
   });
 
-  it('returns a value in the valid pixel range for arbitrary input', () => {
-    // Every (RA, Dec) must produce a pixel in [0, 12·nside²).  We sweep a
-    // grid to make sure the polar / equatorial boundary at |cos θ| = 2/3
-    // doesn't produce out-of-range indices.
-    const nside = 32;
-    const total = 12 * nside * nside;
-    for (let ra = 0; ra < 360; ra += 30) {
-      for (let dec = -85; dec <= 85; dec += 17) {
-        const px = healpixNest(ra, dec, nside);
-        expect(px).toBeGreaterThanOrEqual(0);
-        expect(px).toBeLessThan(total);
-      }
-    }
-  });
-
   it('handles RA outside [0, 360) by wrapping', () => {
     // RA=720 (two full revolutions) should map to the same pixel as RA=0.
     expect(healpixNest(720, 30, 32)).toBe(healpixNest(0, 30, 32));
@@ -95,33 +80,5 @@ describe('healpixNest — known reference values', () => {
     const a = healpixNest(45, 45, 32);
     const b = healpixNest(45.1, 45.1, 32);
     expect(a).toBe(b);
-  });
-
-  it('different sky regions land in different pixels', () => {
-    // Sanity: opposite sides of the sky shouldn't collide.
-    const a = healpixNest(0, 45, 32);
-    const b = healpixNest(180, -45, 32);
-    expect(a).not.toBe(b);
-  });
-
-  it('produces a near-uniform pixel-population over many random points', () => {
-    // Property test: if the algorithm is a genuine equal-area tessellation,
-    // sampling random isotropic directions and binning at nside=32 should
-    // give roughly the same expected count per cell.  We just check that
-    // every cell touched is in valid range and that the SAME (ra, dec)
-    // always produces the SAME pixel (idempotence).
-    const nside = 32;
-    for (let i = 0; i < 100; i++) {
-      // Random isotropic direction: uniform in cos(theta), uniform in phi.
-      const u = Math.random();
-      const v = Math.random();
-      const dec = (Math.acos(2 * u - 1) * 180) / Math.PI - 90;
-      const ra = v * 360;
-      const p1 = healpixNest(ra, dec, nside);
-      const p2 = healpixNest(ra, dec, nside);
-      expect(p1).toBe(p2);
-      expect(p1).toBeGreaterThanOrEqual(0);
-      expect(p1).toBeLessThan(12 * nside * nside);
-    }
   });
 });

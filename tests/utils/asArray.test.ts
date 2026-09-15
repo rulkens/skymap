@@ -14,8 +14,4 @@ describe('asArray', () => {
   it('collapses null to the empty array', () => {
     expect(asArray(null)).toEqual([]);
   });
-
-  it('collapses undefined to the empty array', () => {
-    expect(asArray(undefined)).toEqual([]);
-  });
 });

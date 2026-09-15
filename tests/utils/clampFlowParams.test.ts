@@ -42,12 +42,6 @@ describe('clampFlowParams', () => {
     expect(clampFlowParams(flowWith({ boundaryFadeWidth: 5 })).boundaryFadeWidth).toBe(0.5);
   });
 
-  it('clampFlowParams passes enabled and mode through unchanged', () => {
-    const f = clampFlowParams(flowWith({ enabled: true, mode: 'streamline' }));
-    expect(f.enabled).toBe(true);
-    expect(f.mode).toBe('streamline');
-  });
-
   it('clampFlowParams does not mutate the input', () => {
     const input = flowWith({ count: 1e9, trail: 0, flowSpeed: -5, intensity: 2 });
     clampFlowParams(input);

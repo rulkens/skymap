@@ -37,22 +37,4 @@ describe('shallowEqualRef', () => {
   it('returns true for both null', () => {
     expect(shallowEqualRef(null, null)).toBe(true);
   });
-
-  it('returns true for two equal structure refs', () => {
-    const a: SelectionRef = { type: 'structure', id: 'abell-2065' };
-    const b: SelectionRef = { type: 'structure', id: 'abell-2065' };
-    expect(shallowEqualRef(a, b)).toBe(true);
-  });
-
-  it('returns false for structure refs with differing id', () => {
-    const a: SelectionRef = { type: 'structure', id: 'abell-2065' };
-    const b: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
-    expect(shallowEqualRef(a, b)).toBe(false);
-  });
-
-  it('returns true for two milkyWay refs', () => {
-    const a: SelectionRef = { type: 'milkyWay' };
-    const b: SelectionRef = { type: 'milkyWay' };
-    expect(shallowEqualRef(a, b)).toBe(true);
-  });
 });

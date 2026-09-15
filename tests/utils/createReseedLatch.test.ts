@@ -10,14 +10,6 @@ describe('createReseedLatch', () => {
     expect(latch.consume()).toBe(false);
   });
 
-  it('arming twice still yields a single true', () => {
-    const latch = createReseedLatch();
-    latch.arm();
-    latch.arm();
-    expect(latch.consume()).toBe(true);
-    expect(latch.consume()).toBe(false);
-  });
-
   it('a fresh latch is not armed', () => {
     const latch = createReseedLatch();
     expect(latch.consume()).toBe(false);

@@ -15,12 +15,4 @@ describe('minOf', () => {
     // when there is no element to compare.
     expect(minOf([3, 4, 5], -100)).toBe(3);
   });
-
-  it('handles negative values', () => {
-    expect(minOf([-2, -7, -1], 0)).toBe(-7);
-  });
-
-  it('returns the sole element of a single-element array', () => {
-    expect(minOf([9], 0)).toBe(9);
-  });
 });

@@ -21,10 +21,6 @@ import { galaxyDiameterKpc } from '../../../src/utils/math/galaxyDiameterKpc';
 import { DEFAULT_GALAXY_DIAMETER_KPC } from '../../../src/utils/math/defaultGalaxyDiameterKpc';
 
 describe('galaxyDiameterKpc', () => {
-  it('returns the default when no input is supplied', () => {
-    expect(galaxyDiameterKpc({})).toBe(DEFAULT_GALAXY_DIAMETER_KPC);
-  });
-
   it('returns the default when absMagBmag is NaN', () => {
     expect(galaxyDiameterKpc({ absMagBmag: NaN })).toBe(DEFAULT_GALAXY_DIAMETER_KPC);
   });

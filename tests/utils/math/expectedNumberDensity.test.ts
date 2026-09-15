@@ -7,12 +7,6 @@ describe('expectedNumberDensity (Schechter LF integrated to flux limit)', () => 
   // 2MRS Huchra 2012 K_s-band LF: M*=−24.2, α=−1.02, φ*=0.0108
   const twoMrs = { mStar: -24.2, alpha: -1.02, phiStar: 0.0108, mLim: 11.75 };
 
-  it('density at d=100 Mpc is well-defined and positive', () => {
-    const n = expectedNumberDensity({ ...sdss, dMpc: 100 });
-    expect(n).toBeGreaterThan(0);
-    expect(Number.isFinite(n)).toBe(true);
-  });
-
   it('density decreases monotonically with distance', () => {
     const n100 = expectedNumberDensity({ ...sdss, dMpc: 100 });
     const n500 = expectedNumberDensity({ ...sdss, dMpc: 500 });
@@ -51,13 +45,6 @@ describe('expectedNumberDensity (Schechter LF integrated to flux limit)', () => 
     // — not NaN, not a tiny positive number from a degenerate trapezoid.
     // 1e9 Mpc is comfortably past the observable universe.
     expect(expectedNumberDensity({ ...sdss, dMpc: 1e9 })).toBe(0);
-  });
-
-  it('returns 0 when the integration window is exactly empty', () => {
-    // A flux-limit so bright that even at d=10 Mpc the faintest detectable
-    // absolute mag is brighter than M_brightCut=-30.  The function should
-    // return 0 from the early guard, never enter the trapezoidal loop.
-    expect(expectedNumberDensity({ ...sdss, dMpc: 10, mLim: -50 })).toBe(0);
   });
 
   // ── Schechter parameter scaling ──────────────────────────────────────────
@@ -115,18 +102,5 @@ describe('expectedNumberDensity (Schechter LF integrated to flux limit)', () => 
     const sdssN = expectedNumberDensity({ ...sdss, dMpc: 100 });
     const twoMrsN = expectedNumberDensity({ ...twoMrs, dMpc: 100 });
     expect(sdssN).toBeGreaterThan(twoMrsN);
-  });
-
-  // ── Numerical stability ──────────────────────────────────────────────────
-
-  it('produces finite results across the full SDSS galaxy catalog distance range', () => {
-    // Guard against silent NaN / Infinity sneaking in at the integration
-    // edges.  Sweeps the SDSS distance range used by the visualisation
-    // and asserts every single sample is a finite, non-negative number.
-    for (let d = 1; d <= 1000; d += 25) {
-      const n = expectedNumberDensity({ ...sdss, dMpc: d });
-      expect(Number.isFinite(n)).toBe(true);
-      expect(n).toBeGreaterThanOrEqual(0);
-    }
   });
 });

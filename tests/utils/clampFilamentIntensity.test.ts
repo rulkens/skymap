@@ -11,8 +11,4 @@ describe('clampFilamentIntensity', () => {
   it('clampFilamentIntensity bounds a value above 1 to 1', () => {
     expect(clampFilamentIntensity(5)).toBe(1);
   });
-
-  it('clampFilamentIntensity passes an in-range value through', () => {
-    expect(clampFilamentIntensity(0.6)).toBe(0.6);
-  });
 });

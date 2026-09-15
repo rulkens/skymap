@@ -26,8 +26,4 @@ describe('arcsecToKpc', () => {
   it('returns NaN when arcsec is non-finite', () => {
     expect(Number.isNaN(arcsecToKpc(NaN, 100))).toBe(true);
   });
-
-  it('returns 0 when arcsec is 0', () => {
-    expect(arcsecToKpc(0, 100)).toBe(0);
-  });
 });

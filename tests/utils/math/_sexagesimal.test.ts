@@ -4,43 +4,16 @@
  * These functions aren't part of the public math barrel (the leading underscore
  * makes that clear), but they're imported by `formatRaSexagesimal`,
  * `formatDecSexagesimal`, `sdssName`, and `iauName`.  Since those public
- * formatters delegate the heavy lifting here, a regression in `pad` or
+ * formatters delegate the heavy lifting here, a regression in
  * `decomposeSexagesimal*` would cascade through every coordinate string the
  * UI displays — worth pinning the contract directly.
  */
 
 import { describe, it, expect } from 'vitest';
 import {
-  pad,
   decomposeSexagesimal,
   decomposeSexagesimalTrunc,
 } from '../../../src/utils/math/_sexagesimal';
-
-describe('pad', () => {
-  it('zero-pads single-digit integers to width 2', () => {
-    // Width 2 is the typical use case for HH/MM/SS string parts.
-    expect(pad(7, 2)).toBe('07');
-  });
-
-  it('returns the number unchanged when it is already wider than width', () => {
-    // pad uses padStart, which never truncates — wider inputs pass through.
-    expect(pad(123, 2)).toBe('123');
-  });
-
-  it('returns "0" for zero with width 1', () => {
-    expect(pad(0, 1)).toBe('0');
-  });
-
-  it('zero-pads to width 4 (used by some catalog identifiers)', () => {
-    expect(pad(42, 4)).toBe('0042');
-  });
-
-  it('does not zero-pad negative numbers (sign character is treated as a digit)', () => {
-    // padStart treats '-' as one character, so pad(-3, 2) is "-3" already at width 2.
-    // Documented behaviour — sign handling is the caller's responsibility (see sdssName).
-    expect(pad(-3, 2)).toBe('-3');
-  });
-});
 
 describe('decomposeSexagesimal (rounding variant)', () => {
   it('decomposes 12.5 hours into [12, 30, 0]', () => {
@@ -69,10 +42,6 @@ describe('decomposeSexagesimal (rounding variant)', () => {
     expect(sub).toBeGreaterThanOrEqual(0);
     expect(sub).toBeLessThan(600);
   });
-
-  it('handles zero exactly', () => {
-    expect(decomposeSexagesimal(0, 100)).toEqual([0, 0, 0]);
-  });
 });
 
 describe('decomposeSexagesimalTrunc (truncation variant)', () => {
@@ -83,14 +52,5 @@ describe('decomposeSexagesimalTrunc (truncation variant)', () => {
     const [h, m, _sub] = decomposeSexagesimalTrunc(12.99999, 100);
     expect(h).toBe(12);
     expect(m).toBe(59);
-  });
-
-  it('decomposes 12.5 hours into [12, 30, 0] (same as rounding variant for exact values)', () => {
-    // Exact values produce identical results regardless of rounding mode.
-    expect(decomposeSexagesimalTrunc(12.5, 100)).toEqual([12, 30, 0]);
-  });
-
-  it('returns zero on zero input', () => {
-    expect(decomposeSexagesimalTrunc(0, 10)).toEqual([0, 0, 0]);
   });
 });

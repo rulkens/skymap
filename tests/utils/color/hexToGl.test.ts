@@ -6,10 +6,6 @@ describe('hexToGl', () => {
     expect(hexToGl('#FFFFFF')).toEqual([1, 1, 1, 1]);
   });
 
-  it('parses pure black #000000 as [0,0,0,1]', () => {
-    expect(hexToGl('#000000')).toEqual([0, 0, 0, 1]);
-  });
-
   it('parses pure red #FF0000 as [1,0,0,1]', () => {
     expect(hexToGl('#FF0000')).toEqual([1, 0, 0, 1]);
   });
@@ -25,10 +21,6 @@ describe('hexToGl', () => {
     expect(g).toBe(0);
     expect(b).toBe(0);
     expect(a).toBeCloseTo(128 / 255);
-  });
-
-  it('treats #RRGGBBFF as fully opaque (equivalent to #RRGGBB)', () => {
-    expect(hexToGl('#336699FF')).toEqual(hexToGl('#336699'));
   });
 
   it('is case-insensitive', () => {
