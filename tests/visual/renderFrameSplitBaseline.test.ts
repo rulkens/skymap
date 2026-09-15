@@ -26,6 +26,7 @@ import type { OrbitCamera } from '../../src/@types/camera/OrbitCamera';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
+import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -506,6 +507,7 @@ describe('renderFrame visual baseline', () => {
         // The cubemap-capture bookkeeping — see the matching fixture comment
         // in renderFrame.test.ts.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
+        passes: CONTENT_PASSES,
       } as never,
       device,
       context,

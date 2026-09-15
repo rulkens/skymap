@@ -18,7 +18,6 @@ import { FRAME_ORDER } from './frameOrder';
 import { partitionCaptureSteps } from './partitionCaptureSteps';
 import { resolveStrategy } from './resolveStrategy';
 import { foregroundChainOrder } from './slabs';
-import { CONTENT_PASSES } from './passes';
 import { hdrActiveOf } from '../../../utils/gpu/hdrActiveOf';
 import { bodyRowSlabs } from './bodyRowSlabs';
 import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
@@ -50,7 +49,7 @@ export function renderFrame(input: RenderFrameInput): void {
 
   const captureContexts = scheduleCubemapCaptures({ state, ctx });
 
-  const program = expandFrameOrder(FRAME_ORDER, CONTENT_PASSES, {
+  const program = expandFrameOrder(FRAME_ORDER, state.passes, {
     tone: {
       exposure: state.settings.tonemap.exposure,
       curve: state.settings.tonemap.curve,

@@ -1180,7 +1180,16 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
   }
 
   function makeLayer(name: string, frame: NonNullable<LayerInstance['frame']>): LayerInstance {
-    return { name, selection: [], frame, destroy: () => {} };
+    return {
+      name,
+      passes: [],
+      assets: [],
+      fades: [],
+      labels: [],
+      selection: [],
+      frame,
+      destroy: () => {},
+    };
   }
 
   it("every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform", () => {

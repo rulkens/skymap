@@ -230,7 +230,7 @@ export const FADE_LAYERS = [
 export function seedFades(state: EngineState): void {
   const { settings } = state;
   const fades = state.subsystems.fades;
-  for (const row of FADE_LAYERS) {
+  for (const row of state.fadeRows) {
     for (const item of row.expand(state)) {
       fades.register(row.handle(item), row.seed(settings, item));
     }

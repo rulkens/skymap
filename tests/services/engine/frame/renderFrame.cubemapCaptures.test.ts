@@ -41,6 +41,7 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 }));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -104,6 +105,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
     },
     cubemapCaptures: makeCubemapCaptureRuntimes(),
     contentVersion: 0,
+    passes: CONTENT_PASSES,
     ...overrides,
   } as unknown as EngineState;
 }

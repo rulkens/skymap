@@ -114,6 +114,8 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
+    // `slotFor` consults the Layer-owned slots first; none here.
+    layerSlots: new Map(),
   } as unknown as EngineState;
 }
 
@@ -432,6 +434,8 @@ describe('evaluateRows — bodyTextures at a stale tier', () => {
           upBasis: ORIENTATION_FRAMES.ecliptic,
         },
       },
+      // `slotFor` consults the Layer-owned slots first; none here.
+      layerSlots: new Map(),
     } as unknown as EngineState;
   }
 

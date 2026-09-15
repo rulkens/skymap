@@ -1,15 +1,15 @@
 /**
- * ASSET_WIRING — the flat registry of every fetchable asset's lifecycle contract
- * (`key` + `factory` + `req` + `demand`), iterated by `wireSlots` to build the slot
- * table and by `reevaluateDemand` to decide what loads now. Each row's `demand(ctx)`
- * is a pure predicate over `DemandCtx`, re-run whole on any state change, so no edge
- * (tier flip while hidden, toggle mid-flight) can be missed. `built: 'external'` rows
- * are minted in `wireSlots` and appear here only for demand + `req(tier)`; their
- * `factory` throws if the construction pass calls it. The DEV synthetic volumes are
- * absent so Vite tree-shakes the generators.
+ * ASSET_WIRING — core's half of the fetchable-asset registry, AUTHORED: companion
+ * rows are folded by `createLayers`, over these plus every Layer's, into
+ * `state.assetRows`. Each `demand(ctx)` is a pure predicate over `DemandCtx`, re-run
+ * whole on any state change, so no edge (tier flip while hidden, toggle mid-flight)
+ * can be missed. `built: 'external'` rows are minted in `wireSlots` and appear here
+ * only for demand + `req(tier)`; their `factory` throws if the construction pass
+ * calls it. The DEV synthetic volumes are absent so Vite tree-shakes the generators.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
+import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import {
@@ -18,7 +18,6 @@ import {
   SOURCE_REGISTRY,
   GALAXY_CATALOG_SOURCES,
 } from '../../../data/sources';
-import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
 import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
@@ -203,7 +202,7 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
   };
 }
 
-export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
+export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   // ── Low-resolution all-bodies surface atlas ──────────────────────
   // Rank 0 and deliberately NOT proximity-gated: it is the universal fallback the
   // per-body rows upgrade, so gating it would reinstate the "body reached before its
@@ -371,4 +370,4 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
     demand: () => true,
     priority: 1,
   },
-]);
+];

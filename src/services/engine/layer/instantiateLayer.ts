@@ -7,8 +7,8 @@ import type { SourceEntry } from '../../../@types/data/SourceEntry';
 
 /**
  * Bind one Layer to its own `Runtime`, once — the only place `create` runs.
- * `frame`/`selection` are bound here so `runFrame` and the selection composer
- * only ever touch the returned closures, never the Layer object again.
+ * Every contribution hook is called here, so core's composers only ever touch
+ * the returned lists and closures, never the Layer object again.
  */
 export function instantiateLayer<
   Runtime,
@@ -22,6 +22,10 @@ export function instantiateLayer<
   const runtime = layer.create(deps);
   return {
     name: layer.name,
+    passes: layer.passes(runtime),
+    assets: layer.assets?.(runtime) ?? [],
+    fades: layer.fades?.(runtime) ?? [],
+    labels: layer.labels?.(runtime) ?? [],
     selection: layer.selection?.(runtime) ?? [],
     frame: layer.frame?.(runtime) ?? null,
     destroy: () => layer.destroy(runtime),

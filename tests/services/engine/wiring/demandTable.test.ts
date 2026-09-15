@@ -72,6 +72,8 @@ import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFie
 import type { GalaxyCatalogId } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
+import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
+import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 
 // ── Stub slot factory ────────────────────────────────────────────────────────
 
@@ -303,6 +305,10 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     // directly. Per state so no pending entry survives into the next case, and
     // at the production concurrency so `firedKeys` exercises the real bound.
     subsystems: { assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY) },
+    // The composed lists `createLayers` would have written; over an empty layer
+    // tuple they are core's own registry, and no Layer owns a slot.
+    assetRows: expandCompanionRows(ASSET_WIRING),
+    layerSlots: new Map(),
   } as unknown as EngineState;
 }
 

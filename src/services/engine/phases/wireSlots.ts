@@ -67,7 +67,6 @@
  *   - Mutates `deps.allSlots` — populated with every installed slot.
  */
 
-import { ASSET_WIRING } from '../wiring/assetWiring';
 import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
 import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
@@ -97,7 +96,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Build every non-external slot from the wiring registry, then install them
   // in one mutation pass.  Point + body-texture slots are skipped here
   // (built: 'external' — minted below instead).
-  const slots = buildSlotsFromRegistry(ASSET_WIRING, { state, cb });
+  const slots = buildSlotsFromRegistry(state.assetRows, { state, cb });
   installSlots(state, slots);
 
   // The two externally-built families: their `ASSET_WIRING` rows carry

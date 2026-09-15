@@ -11,6 +11,7 @@ import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
@@ -578,6 +579,9 @@ function makeInput(
         // band stays closed and nothing is scheduled; see
         // `scheduleCubemapCaptures`.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
+        // `renderFrame` expands FRAME_ORDER over the COMPOSED pass list; over an
+        // empty layer tuple that is core's own registry.
+        passes: CONTENT_PASSES,
       } as never,
       device,
       context,

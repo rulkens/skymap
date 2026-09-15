@@ -20,6 +20,11 @@ import type { CubemapCaptureRuntimes } from './CubemapCaptureRuntimes';
 import type { SelectionState } from '../../store/SelectionState';
 import type { SelectionRowsState } from '../../store/SelectionRowsState';
 import type { LayerInstance } from '../layer/LayerInstance';
+import type { ContentPass } from '../frame/ContentPass';
+import type { AssetKey } from '../../loading/AssetKey';
+import type { AssetSlot } from '../../loading/AssetSlot';
+import type { AssetWiringRow } from '../../loading/AssetWiringRow';
+import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 
 export type EngineState = {
@@ -71,6 +76,18 @@ export type EngineState = {
    * depends on (D8).
    */
   layers: readonly LayerInstance[];
+  /**
+   * The composed contributions: core's constants followed by each Layer's, in
+   * tuple order, assembled once by `createLayers`. Every runtime reader walks
+   * these rather than `CONTENT_PASSES` / `ASSET_WIRING` / `FADE_LAYERS`, which
+   * are core's authored halves only. `assetRows` is the COMPANION-EXPANDED
+   * fold over both halves; `layerSlots` holds the slot each Layer asset row's
+   * factory minted, consulted by `slotFor` ahead of core's own homes.
+   */
+  passes: readonly ContentPass[];
+  assetRows: readonly AssetWiringRow[];
+  fadeRows: readonly FadeLayer<unknown>[];
+  layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

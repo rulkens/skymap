@@ -11,7 +11,6 @@
 
 import { buildDemandCtx } from './buildDemandCtx';
 import { slotFor } from './slotFor';
-import { ASSET_WIRING } from './assetWiring';
 import { sameRequest } from '../../../utils/loading/sameRequest';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
@@ -20,7 +19,7 @@ import type { QueueEntry } from '../../../@types/loading/QueueEntry';
 
 /**
  * Evaluate a specific set of rows against `state`. The public
- * `reevaluateDemand` calls this with the real `ASSET_WIRING`; tests call it
+ * `reevaluateDemand` calls this with the real `state.assetRows`; tests call it
  * with a stub array to exercise the guarded loop in isolation.
  */
 export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]): void {
@@ -28,7 +27,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
   const queue = state.subsystems.assetQueue;
   // Collected across the whole walk and submitted in ONE call at the end.
   // Enqueueing inside the loop would start the first `ASSET_QUEUE_CONCURRENCY`
-  // demanded rows the instant they were walked — in `ASSET_WIRING` array order,
+  // demanded rows the instant they were walked — in composed-row array order,
   // before a better-ranked row further down the table had even been evaluated —
   // leaving `priority` to govern only the slots that free later. See
   // `PriorityQueue.enqueueMany`.
@@ -124,7 +123,7 @@ export function evaluateRows(state: EngineState, rows: readonly AssetWiringRow[]
   queue.enqueueMany(batch);
 }
 
-/** Re-evaluate the full asset-wiring registry against the current state. */
+/** Re-evaluate the composed asset rows against the current state. */
 export function reevaluateDemand(state: EngineState): void {
-  evaluateRows(state, ASSET_WIRING);
+  evaluateRows(state, state.assetRows);
 }

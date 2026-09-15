@@ -26,7 +26,6 @@
  */
 
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
-import { ASSET_WIRING } from './assetWiring';
 import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
 import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
 import { engineLoadProgressChanged } from '../../../state/engine/engineSlice';
@@ -78,11 +77,19 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   // with no matching assetSlots field fails to compile — the `isBodyTextureKey`
   // / `isMeshBodyKey` guards narrow the family keys out so only true
   // named-field keys reach the index.
-  for (const row of ASSET_WIRING) {
+  for (const row of state.assetRows) {
     if (typeof row.key !== 'string' || isBodyTextureKey(row.key) || isMeshBodyKey(row.key))
       continue;
     const slot = state.assetSlots[row.key];
     if (slot) allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+  }
+
+  // Layer-owned slots (minted by `createLayers` from each Layer's asset rows).
+  // They live in their own map, so neither the keyed-family walks nor the
+  // named-field walk above reaches them — and a slot absent here gets no
+  // loading-bar progress and no slot-ready render wake.
+  for (const [, slot] of state.layerSlots) {
+    allSlots.set(slot.name, slot);
   }
 
   // DEV synthetic-volume fixtures (present only in dev builds).

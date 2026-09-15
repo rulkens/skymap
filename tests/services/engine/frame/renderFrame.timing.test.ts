@@ -15,6 +15,7 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
@@ -378,6 +379,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       // The cubemap-capture bookkeeping — see the matching fixture comment in
       // renderFrame.test.ts.
       cubemapCaptures: makeCubemapCaptureRuntimes(),
+      passes: CONTENT_PASSES,
     } as never,
     device,
     context,

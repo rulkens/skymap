@@ -10,6 +10,7 @@ import type { SettingsFragmentLike } from '../../settings/SettingsFragmentLike';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { ContentPass } from '../frame/ContentPass';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
+import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { Label2DProducer } from '../subsystems/Label2DProducer';
 import type { SourceType } from '../../data/SourceType';
@@ -52,7 +53,7 @@ export type Layer<
 
   // Runtime-bound contributions: closures over the Layer's own state.
   passes(runtime: Runtime): readonly ContentPass[];
-  assets?(runtime: Runtime): readonly AssetWiringRow[];
+  assets?(runtime: Runtime): readonly (AssetWiringRow | CompanionAssetRow)[];
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
   labels?(runtime: Runtime): readonly Label2DProducer[];
   selection?(runtime: Runtime): readonly SelectionKindRow[];

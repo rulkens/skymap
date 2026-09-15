@@ -34,6 +34,8 @@ import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
+import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 
 // ── Stub slot ────────────────────────────────────────────────────────────────
 
@@ -202,6 +204,10 @@ function makeState(opts: { disabledSources?: readonly SourceType[] } = {}): Make
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
+    // The composed lists `createLayers` would have written; over an empty layer
+    // tuple they are core's own registry, and no Layer owns a slot.
+    assetRows: expandCompanionRows(ASSET_WIRING),
+    layerSlots: new Map(),
   } as unknown as EngineState;
 
   return { state, slots, cb };

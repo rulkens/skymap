@@ -1,6 +1,6 @@
 /**
- * slotFor — resolve an `AssetKey` to its `AssetSlot`, unifying the three homes
- * a slot can live in.
+ * slotFor — resolve an `AssetKey` to its `AssetSlot`, unifying the homes a slot
+ * can live in: a Layer's own `state.layerSlots`, else core's own.
  *
  * The engine stores slots in three structurally different places:
  *
@@ -48,6 +48,10 @@ export function slotFor(
   state: EngineState,
   key: AssetKey,
 ): AssetSlot<unknown, unknown> | undefined {
+  // A Layer's own slots first: a Layer owns its key outright, and
+  // `createLayers` throws on a key core also claims, so this cannot shadow.
+  const layerSlot = state.layerSlots.get(key);
+  if (layerSlot !== undefined) return layerSlot;
   // Numeric = Source code; dispatch on the registry entry's kind (star vs
   // galaxy) for which per-source map holds the slot.
   if (typeof key === 'number') {

@@ -31,6 +31,7 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
+import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -75,6 +76,7 @@ function makeEngineState(settings: EngineSettingsState): EngineState {
     },
     gpu: { flowFieldRenderer: { fieldLoaded: () => false } },
     assetSlots: {},
+    fadeRows: FADE_LAYERS,
   } as unknown as EngineState;
 }
 
@@ -254,6 +256,9 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
       },
       selection: { select: null, hover: null, focus: null },
       gpu: { focusUniform: { bindGroup: {} }, galaxyPointRenderer: null },
+      // The fade bridge walks the COMPOSED rows; over an empty layer tuple
+      // that is core's own manifest.
+      fadeRows: FADE_LAYERS,
     } as unknown as EngineState;
   }
 

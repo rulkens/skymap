@@ -16,6 +16,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { sameRequest } from '../../../../src/utils/loading/sameRequest';
 import { Source } from '../../../../src/data/sources';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../../src/data/bodies/bodyTextureKeys';
@@ -34,9 +35,14 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
+// The rows as the demand loop sees them: `createLayers` folds companions over
+// core's authored table plus every Layer's, and over an empty tuple that fold
+// is exactly this one.
+const EXPANDED_ROWS = expandCompanionRows(ASSET_WIRING);
+
 /** Find the single row for an asset key (throws if absent — keeps tests crisp). */
 function rowFor(key: AssetKey) {
-  const r = ASSET_WIRING.find((row) => row.key === key);
+  const r = EXPANDED_ROWS.find((row) => row.key === key);
   if (!r) throw new Error(`no ASSET_WIRING row for key ${String(key)}`);
   return r;
 }

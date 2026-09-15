@@ -116,6 +116,8 @@ import { createSyntheticFallback } from '../../../../src/services/engine/wiring/
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
+import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
+import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 
 // ── Shared helpers ──────────────────────────────────────────────────────────
 
@@ -212,6 +214,10 @@ function makeProgressState(): EngineState {
       meshBodies: new Map(),
     },
     subsystems: { loadProgress: null },
+    // The composed lists `createLayers` would have written; over an empty layer
+    // tuple they are core's own registry, and no Layer owns a slot.
+    assetRows: expandCompanionRows(ASSET_WIRING),
+    layerSlots: new Map(),
   } as unknown as EngineState;
 }
 
@@ -305,6 +311,8 @@ function makeSyntheticFallbackState(): {
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
+    assetRows: expandCompanionRows(ASSET_WIRING),
+    layerSlots: new Map(),
   } as unknown as EngineState;
 
   return { state, slots };

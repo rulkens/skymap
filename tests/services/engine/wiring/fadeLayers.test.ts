@@ -92,6 +92,9 @@ function makeState(
     subsystems: {
       fades: createFadeRegistry({ requestRender: vi.fn<() => void>() }),
     },
+    // `seedFades` walks the COMPOSED rows; over an empty layer tuple that is
+    // the core manifest these tests are written against.
+    fadeRows: FADE_LAYERS,
   } as unknown as EngineState;
 }
 

@@ -224,6 +224,9 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
+import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
+import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { famousGalaxiesMetaFetcher } from '../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
@@ -496,6 +499,11 @@ function makeState(
       bodyTextures: new Map(),
       meshBodies: new Map(),
     },
+    // The composed lists `createLayers` would have written; over an empty
+    // layer tuple they are core's own registries.
+    assetRows: expandCompanionRows(ASSET_WIRING),
+    fadeRows: FADE_LAYERS,
+    layerSlots: new Map(),
   } as unknown as EngineState;
 }
 

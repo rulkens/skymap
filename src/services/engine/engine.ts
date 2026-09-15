@@ -42,7 +42,11 @@ import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
 import { CONTENT_PASSES } from './frame/passes';
+import { ASSET_WIRING } from './wiring/assetWiring';
+import { FADE_LAYERS } from './wiring/fadeLayers';
+import { expandCompanionRows } from '../../utils/loading/expandCompanionRows';
 import { FRAME_ORDER } from './frame/frameOrder';
+import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
@@ -354,6 +358,11 @@ export function createEngine(
     // the unrelated saga display cache).
     layers: [],
     selectionKindRows: [],
+    // Core's halves, until `createLayers` replaces each with the composed list.
+    passes: CONTENT_PASSES,
+    assetRows: expandCompanionRows(ASSET_WIRING),
+    fadeRows: FADE_LAYERS,
+    layerSlots: new Map(),
   };
 
   // Registration order only sets the tiebreak for equal-`prominencePx` collisions;
@@ -606,10 +615,10 @@ export function createEngine(
         idle:
           frameStats.lastStartMs === 0 || performance.now() - frameStats.lastStartMs > IDLE_GAP_MS,
       }),
-      // Every composed pass except the volume-target raymarch, which has no
+      // Every AUTHORED pass except the volume-target raymarch, which has no
       // user toggle — the frame order is what says which pass that is.
       passOverrides: {
-        allNames: CONTENT_PASSES.map((pass) => pass.name).filter(
+        allNames: FRAME_ORDER_PASS_NAMES.filter(
           (name) =>
             !FRAME_ORDER.some(
               (step) =>
