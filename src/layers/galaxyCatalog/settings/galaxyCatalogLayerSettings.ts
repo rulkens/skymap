@@ -6,6 +6,12 @@
  * that same root type — a circular alias `tsc` refuses and tsgo does not see.
  */
 
+import { biasSettingsFragment } from './biasSettings';
 import { galaxyCatalogsSettingsFragment } from './galaxyCatalogsSettings';
+import { thumbnailsSettingsFragment } from './thumbnailsSettings';
 
-export const galaxyCatalogLayerSettings = [galaxyCatalogsSettingsFragment] as const;
+export const galaxyCatalogLayerSettings = [
+  galaxyCatalogsSettingsFragment,
+  biasSettingsFragment,
+  thumbnailsSettingsFragment,
+] as const;

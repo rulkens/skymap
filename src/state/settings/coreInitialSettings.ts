@@ -5,8 +5,6 @@
  */
 
 import {
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_BIAS_MODE,
   DEFAULT_FOV_DEG,
   DEFAULT_EXPOSURE,
   DEFAULT_HDR_ENABLED,
@@ -15,7 +13,6 @@ import {
   DEFAULT_BLOOM_ENABLED,
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
-  DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_ORIENTATION,
 } from '../../data/defaults';
@@ -63,18 +60,6 @@ export const CORE_INITIAL_SETTINGS: CoreSettingsState = {
     enabled: DEFAULT_BLOOM_ENABLED,
     strength: DEFAULT_BLOOM_STRENGTH,
     threshold: DEFAULT_BLOOM_THRESHOLD,
-  },
-  // Bias's user-tunable subset.  Bake-derived fields live on
-  // `state.bias` (worker outputs, not settings).  The -19 default is
-  // roughly where the SDSS spectroscopic main sample is volume-complete
-  // out to the galaxy catalog's flux limit — bright enough that nearly every
-  // catalog galaxy has a spectrum, dim enough to keep plenty of structure.
-  bias: {
-    mode: DEFAULT_BIAS_MODE,
-    absMagLimit: DEFAULT_ABS_MAG_LIMIT,
-  },
-  thumbnails: {
-    enabled: DEFAULT_GALAXY_TEXTURES_ENABLED,
   },
   // Cross-cutting label presentation: focusedOnly default OFF — all enabled
   // labels draw (the guided tour flips it on and its snapshot restores it).

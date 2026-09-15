@@ -19,7 +19,7 @@ import { constellationsSettingsFragment } from '../../layers/constellations/sett
 import { earthSettingsFragment } from '../../layers/body/settings/earthSettings';
 import { filamentsSettingsFragment } from '../../layers/filaments/settings/filamentsSettings';
 import { flowSettingsFragment } from '../../layers/flow/settings/flowSettings';
-import { galaxyCatalogsSettingsFragment } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSettings';
+import { galaxyCatalogLayerSettings } from '../../layers/galaxyCatalog/settings/galaxyCatalogLayerSettings';
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
 import { mergeSettingsSnapshot } from './mergeSettingsSnapshot';
 import { milkyWaySettingsFragment } from '../../layers/milkyWay/settings/milkyWaySettings';
@@ -31,7 +31,6 @@ import { volumesSettingsFragment } from '../../layers/volume/settings/volumesSet
 import { zoneOfAvoidanceSettingsFragment } from '../../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSettings';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
-import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';
 import type { PassByDir } from '../../@types/animation/PassByDir';
@@ -44,6 +43,12 @@ import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 // Standing outside `createSlice` costs the contextual state type, so each core
 // reducer annotates the draft it writes.
 type SettingsDraft = Draft<EngineSettingsState>;
+
+// Destructured rather than imported one by one: the Layer's tuple is the single
+// authority for which clusters it owns, and each element keeps the literal type
+// `liftClusterReducers` needs to name the lifted reducer keys.
+const [galaxyCatalogsSettingsFragment, biasSettingsFragment, thumbnailsSettingsFragment] =
+  galaxyCatalogLayerSettings;
 
 /**
  * The case reducers over clusters core owns — the half of the action namespace
@@ -90,19 +95,6 @@ export const CORE_REDUCERS = {
   },
   setBloomThreshold: (settings: SettingsDraft, action: PayloadAction<number>) => {
     settings.bloom.threshold = action.payload;
-  },
-
-  // ── bias ────────────────────────────────────────────────────────────────
-  setBiasMode: (settings: SettingsDraft, action: PayloadAction<BiasMode>) => {
-    settings.bias.mode = action.payload;
-  },
-  setAbsMagLimit: (settings: SettingsDraft, action: PayloadAction<number>) => {
-    settings.bias.absMagLimit = action.payload;
-  },
-
-  // ── thumbnails ──────────────────────────────────────────────────────────
-  setThumbnailsEnabled: (settings: SettingsDraft, action: PayloadAction<boolean>) => {
-    settings.thumbnails.enabled = action.payload;
   },
 
   // ── labels (cross-cutting presentation) ─────────────────────────────────
@@ -244,6 +236,10 @@ export const settingsSlice = createSlice({
     ...CORE_REDUCERS,
     ...liftClusterReducers<EngineSettingsState, typeof galaxyCatalogsSettingsFragment>(
       galaxyCatalogsSettingsFragment,
+    ),
+    ...liftClusterReducers<EngineSettingsState, typeof biasSettingsFragment>(biasSettingsFragment),
+    ...liftClusterReducers<EngineSettingsState, typeof thumbnailsSettingsFragment>(
+      thumbnailsSettingsFragment,
     ),
     ...liftClusterReducers<EngineSettingsState, typeof starCatalogsSettingsFragment>(
       starCatalogsSettingsFragment,

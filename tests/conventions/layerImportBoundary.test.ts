@@ -67,9 +67,10 @@ function assertSweep(
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
-// `settingsSlice.ts` imports the pre-Layer fragments directly for
-// `liftClusterReducers`'s per-fragment spreads, which need each literal fragment
-// type — this stays until reducers compose at the type level, not this PR.
+// `settingsSlice.ts` imports each pre-Layer fragment directly, and a formed
+// Layer's settings tuple as one specifier, for `liftClusterReducers`'s
+// per-fragment spreads — each needs its literal fragment type. This stays until
+// reducers compose at the type level, not this PR.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'state/settings/settingsSlice': 13,
 };
