@@ -35,6 +35,7 @@
  */
 
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
+import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';
 import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
@@ -59,7 +60,7 @@ export const NOOP_RECONCILE: ReconcileEffects = {
 const EMPTY_RESOLVE_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 
@@ -75,6 +76,10 @@ const EMPTY_RESOLVE_DEPS: ResolveDeps = {
 export const NOOP_SAGA_CONTEXT: SagaContext = {
   reconcile: NOOP_RECONCILE,
   resolveDeps: () => EMPTY_RESOLVE_DEPS,
+  // No rows composed: an empty engine has no core rows to close over either
+  // (the composer itself is what's under test elsewhere), so every dispatch
+  // resolves to null/not-pickable rather than throwing.
+  selection: composeSelectionRows(() => []),
   // Null is the same answer the engine gives pre-bootstrap and post-destroy, and
   // both camera sagas already handle it by no-opping.
   cameraRuntime: () => null,

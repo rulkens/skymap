@@ -30,8 +30,11 @@ const wireInputPath = resolve(__dirname, '../../../../src/services/engine/phases
 describe('wireInput structure wiring', () => {
   const src = readFileSync(wireInputPath, 'utf8');
 
-  it('passes the structure store to createClickResolver', () => {
-    expect(src).toContain('structures: state.data.structures');
+  it('passes the composed resolver to createClickResolver', () => {
+    // Structure hits reach `state.data.structures` through the composed
+    // resolver's structure row (`composeSelectionRows` → `resolvePick`), not
+    // a direct field on the click-resolver input (D5).
+    expect(src).toContain('resolvePick: selection.resolvePick');
   });
 
   it('reads the authoritative selection slot for the dblclick focus', () => {

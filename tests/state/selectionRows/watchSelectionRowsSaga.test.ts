@@ -41,6 +41,7 @@ import {
   encodeStarCatalog,
   decodeStarCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
@@ -93,11 +94,11 @@ describe('watchSelectionRowsSaga', () => {
     const deps: ResolveDeps = {
       catalogs: { get: (src) => (cloudPresent && src === Source.SDSS ? makeCloud() : undefined) },
       famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => starCatalog },
     };
     sagaMiddleware.run(watchSelectionRowsSaga);
-    sagaMiddleware.setContext({ resolveDeps: () => deps });
+    sagaMiddleware.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps) });
     return s;
   }
 

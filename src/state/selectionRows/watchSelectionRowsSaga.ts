@@ -20,9 +20,9 @@
  * Every action that writes a selection ref MUST appear here, or its slot's row
  * goes stale — a clear that the UI never sees.
  *
- * It reaches the live engine cloud/structures via getContext('resolveDeps'),
- * the same seam watchTierSaga reads for its re-anchor capture. The reducers
- * stay free of engine references; only this saga crosses the boundary.
+ * It reaches the composed resolver via getContext('selection'), the same seam
+ * watchTierSaga reads for its re-anchor capture. The reducers stay free of
+ * engine references; only this saga crosses the boundary.
  */
 import { takeEvery, select, put, getContext } from 'typed-redux-saga';
 
@@ -35,7 +35,6 @@ import {
 import { catalogLoaded } from '../catalog/catalogLoaded';
 import { engineSourceCountReported } from '../engine/engineSlice';
 import { setSelectionRow } from './selectionRowsSlice';
-import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { selectTimeState } from '../time/selectors';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';
@@ -43,13 +42,13 @@ import type { RootState, SagaContext } from '../../store/types';
 import type { SelectionSlot } from '../../@types/engine/SelectionSlot';
 
 function* reextract(slot: SelectionSlot) {
-  const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+  const selection = yield* getContext<SagaContext['selection']>('selection');
   const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
   // Off-frame resolve — derive the sim instant from the time-intent slice the
   // same way `watchGoHomeSaga` does, so a body row's position matches where the
   // render path draws it rather than a fixed epoch.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
-  yield* put(setSelectionRow({ slot, row: extractSelectionRow(ref, resolveDeps(), simDays) }));
+  yield* put(setSelectionRow({ slot, row: selection.extractRow(ref, simDays) }));
 }
 
 export function* watchSelectionRowsSaga() {

@@ -64,27 +64,20 @@ import type { ClipId } from '../../@types/animation/ClipId';
  */
 function* sampleInspected(clipId: ClipId, keepStart: boolean) {
   const seam = yield* getContext<SagaContext['clipPathInspect']>('clipPathInspect');
-  const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+  const selection = yield* getContext<SagaContext['selection']>('selection');
   const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
   const clip = clipRegistry[clipId];
 
   // Block until every id-bearing cue resolves AND the camera runtime (which
   // carries the FOV resolveClipFoci needs) exists — same gate as watchClipSaga.
-  yield* call(waitUntil, () => clipFociReady(clip.data, resolveDeps()) && cameraRuntime() !== null);
+  yield* call(waitUntil, () => clipFociReady(clip.data, selection) && cameraRuntime() !== null);
   const rt = cameraRuntime()!;
   const orientation = yield* select(selectOrientation);
   const frameBasis = ORIENTATION_FRAMES[orientation];
   // Off-frame resolve — live sim instant, same derivation as watchGoHomeSaga,
   // so a body-targeting cue frames on where it is drawn now.
   const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
-  const resolved = resolveClipFoci(
-    clip.data,
-    resolveDeps(),
-    rt.fovYRad,
-    rt.from,
-    simDays,
-    frameBasis,
-  );
+  const resolved = resolveClipFoci(clip.data, selection, rt.fovYRad, rt.from, simDays, frameBasis);
   // Bake only the ACTIVATED pacing knobs into the flyPath nodes before
   // sampling, so the overlay AND the pinned (replayable) clip carry the
   // overrides — while inactive knobs let the clip's own authored value through.

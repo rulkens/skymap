@@ -24,6 +24,8 @@ import {
   decodeStarCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { resolveStarRecord } from '../../../src/services/engine/helpers/resolveStarRecord';
+import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
@@ -81,7 +83,11 @@ describe('watchFocusTweenSaga', () => {
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
     cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
-    mw.setContext({ resolveDeps, cameraRuntime: () => cameraRuntime() });
+    mw.setContext({
+      resolveDeps,
+      selection: composeSelectionRows(() => coreSelectionRows(resolveDeps)),
+      cameraRuntime: () => cameraRuntime(),
+    });
     return s;
   }
   beforeEach(() => {

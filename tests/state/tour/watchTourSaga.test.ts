@@ -85,6 +85,7 @@ import { startTour, exitTour } from '../../../src/state/tour/tourActions';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setVolumesEnabled } from '../../../src/state/settings/settingsSlice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
@@ -101,7 +102,7 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 const NARRATION_DEPS: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
 
@@ -122,6 +123,7 @@ function buildHarness(opts: { playClip?: PlayClipStub } = {}) {
 
   sagaMiddleware.setContext({
     resolveDeps: () => NARRATION_DEPS,
+    selection: selectionResolverOver(NARRATION_DEPS),
     cameraRuntime: () => CAMERA_RUNTIME,
     playClip: (clip: ClipData) => playClipFn(clip),
   });

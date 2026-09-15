@@ -12,6 +12,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { clipFociReady } from '../../../src/state/tour/clipFociReady';
+import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -42,9 +43,10 @@ const id = (s: string): FocusId => s as FocusId;
 const emptyDeps: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousGalaxiesMeta: [],
-  structures: { byId: () => null },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
+const emptyResolver = selectionResolverOver(emptyDeps);
 
 // FamousGalaxyMetaEntry stub for 'm87'. The famous branch of resolveFocusId
 // scans famousGalaxiesMeta for .id === 'm87'; if found AND the FamousGalaxy
@@ -63,9 +65,10 @@ const m87Meta: FamousGalaxyMetaEntry = {
 const depsM87NotLoaded: ResolveDeps = {
   catalogs: { get: () => undefined },
   famousGalaxiesMeta: [m87Meta],
-  structures: { byId: () => null },
+  structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
+const m87NotLoadedResolver = selectionResolverOver(depsM87NotLoaded);
 
 // ─── flyToClip-shaped clip for 'm87' ─────────────────────────────────────────
 //
@@ -88,23 +91,23 @@ describe('clipFociReady', () => {
   it('clipFociReady is false when a famous id is not yet loaded', () => {
     // m87 appears in famousGalaxiesMeta but the FamousGalaxy cloud is absent.
     // resolveFocusId returns null for 'm87', so the predicate must return false.
-    expect(clipFociReady(m87FlyClip, depsM87NotLoaded)).toBe(false);
+    expect(clipFociReady(m87FlyClip, m87NotLoadedResolver)).toBe(false);
   });
 
   it('clipFociReady gates lookAtId and strafeId like the other id-bearing arms', () => {
     // Both carry a FocusId that must resolve before the resolve-time math can
     // run — an unloaded famous id blocks readiness, a structure id never does.
     const m87LookClip: ClipData = { start: 'live', timeline: [lookAtId(id('m87'), 3)] };
-    expect(clipFociReady(m87LookClip, depsM87NotLoaded)).toBe(false);
+    expect(clipFociReady(m87LookClip, m87NotLoadedResolver)).toBe(false);
 
     const m87StrafeClip: ClipData = { start: 'live', timeline: [strafeId(id('m87'), 10, 3)] };
-    expect(clipFociReady(m87StrafeClip, depsM87NotLoaded)).toBe(false);
+    expect(clipFociReady(m87StrafeClip, m87NotLoadedResolver)).toBe(false);
 
     const virgoLookClip: ClipData = {
       start: 'live',
       timeline: [lookAtId(id('cluster-virgo-m87'), 3)],
     };
-    expect(clipFociReady(virgoLookClip, emptyDeps)).toBe(true);
+    expect(clipFociReady(virgoLookClip, emptyResolver)).toBe(true);
   });
 
   it('clipFociReady gates spinToId like the other id-bearing arms', () => {
@@ -114,13 +117,13 @@ describe('clipFociReady', () => {
     // which would make resolveClipFoci's throw the caller's first signal
     // instead of the saga polling until the catalog loads.
     const m87SpinClip: ClipData = { start: 'live', timeline: [spinToId(id('m87'), { over: 3 })] };
-    expect(clipFociReady(m87SpinClip, depsM87NotLoaded)).toBe(false);
+    expect(clipFociReady(m87SpinClip, m87NotLoadedResolver)).toBe(false);
 
     const virgoSpinClip: ClipData = {
       start: 'live',
       timeline: [spinToId(id('cluster-virgo-m87'), { over: 3 })],
     };
-    expect(clipFociReady(virgoSpinClip, emptyDeps)).toBe(true);
+    expect(clipFociReady(virgoSpinClip, emptyResolver)).toBe(true);
   });
 
   it('clipFociReady is true for a structure id', () => {
@@ -138,7 +141,7 @@ describe('clipFociReady', () => {
       ],
     };
     // emptyDeps has no catalogs or famousGalaxiesMeta, but structure ids bypass both.
-    expect(clipFociReady(structureClip, emptyDeps)).toBe(true);
+    expect(clipFociReady(structureClip, emptyResolver)).toBe(true);
   });
 
   it('clipFociReady is true for focusId(null)', () => {
@@ -148,7 +151,7 @@ describe('clipFociReady', () => {
       start: 'live',
       timeline: [focus(null)],
     };
-    expect(clipFociReady(clearFocusClip, emptyDeps)).toBe(true);
+    expect(clipFociReady(clearFocusClip, emptyResolver)).toBe(true);
   });
 
   it('returns false when a dollyToId id is not resolvable', () => {
@@ -157,7 +160,7 @@ describe('clipFociReady', () => {
       start: 'live',
       timeline: [dollyToId(id('m87'), 5)],
     };
-    expect(clipFociReady(dollyOnlyClip, depsM87NotLoaded)).toBe(false);
+    expect(clipFociReady(dollyOnlyClip, m87NotLoadedResolver)).toBe(false);
   });
 
   it('returns false when an id inside a seq block is not resolvable', () => {
@@ -167,7 +170,7 @@ describe('clipFociReady', () => {
       start: 'live',
       timeline: [seq([hold(2), moveTargetId(id('m87'), 5)])],
     };
-    expect(clipFociReady(seqClip, depsM87NotLoaded)).toBe(false);
+    expect(clipFociReady(seqClip, m87NotLoadedResolver)).toBe(false);
   });
 
   it('returns false when a flyPath has an unresolvable atFocus waypoint', () => {
@@ -177,7 +180,7 @@ describe('clipFociReady', () => {
       start: 'live',
       timeline: [flyPath([atFocus(id('m87'))], { over: 4 })],
     };
-    expect(clipFociReady(clip, depsM87NotLoaded)).toBe(false);
+    expect(clipFociReady(clip, m87NotLoadedResolver)).toBe(false);
   });
 
   it('is true for a flyPath with only concrete (atPoint) waypoints', () => {
@@ -185,6 +188,6 @@ describe('clipFociReady', () => {
       start: 'live',
       timeline: [flyPath([atPoint([1, 0, 0], 5), atPoint([2, 0, 0], 10)], { over: 4 })],
     };
-    expect(clipFociReady(clip, emptyDeps)).toBe(true);
+    expect(clipFociReady(clip, emptyResolver)).toBe(true);
   });
 });

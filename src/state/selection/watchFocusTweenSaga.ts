@@ -10,7 +10,7 @@
  *      of any dependence on watchSelectionRowsSaga running first). A STAR deep
  *      link races the Gaia bin the way a body deep link races the camera: its id
  *      resolves statically (index-based), so `updateSelectionFocus` fires at
- *      bootstrap, but `extractSelectionRow`'s star arm returns null until the
+ *      bootstrap, but the composed resolver's star row returns null until the
  *      star catalog commits. So the row resolve DEFERS, symmetric with the camera
  *      wait below: while the row is null AND the ref is a still-unloaded star, it
  *      waits on `engineSourceCountReported` — the pulse each catalog (star
@@ -50,7 +50,6 @@ import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
-import { extractSelectionRow } from '../../services/engine/helpers/extractSelectionRow';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
 import { suspendDuringClip } from './suspendDuringClip';
@@ -65,6 +64,7 @@ export function* watchFocusTweenSaga() {
     updateSelectionFocus,
     suspendDuringClip(function* (action) {
       const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
+      const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
 
       // A star deep link resolves its ref statically at bootstrap, before the
@@ -81,9 +81,8 @@ export function* watchFocusTweenSaga() {
       // span real time (a star catalog landing), so a stale sample would only
       // matter for the (currently impossible) case of a body ref racing a
       // catalog — re-selecting keeps it correct regardless.
-      let row = extractSelectionRow(
+      let row = selection.extractRow(
         action.payload,
-        resolveDeps(),
         deriveSimDays(yield* select(selectTimeState), performance.now()),
       );
       while (
@@ -92,9 +91,8 @@ export function* watchFocusTweenSaga() {
         resolveDeps().stars.current() === null
       ) {
         yield* take(engineSourceCountReported);
-        row = extractSelectionRow(
+        row = selection.extractRow(
           action.payload,
-          resolveDeps(),
           deriveSimDays(yield* select(selectTimeState), performance.now()),
         );
       }

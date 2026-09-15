@@ -75,6 +75,8 @@ import { assetPriorityBySlotName } from './wiring/assetPriorityBySlotName';
 import { createPlayClip } from './animation/playClip';
 import { createClipPathInspectSeam } from './animation/computeClipPath';
 import type { ResolveDeps } from '../../@types/engine/ResolveDeps';
+import { coreSelectionRows } from './selection/coreSelectionRows';
+import { composeSelectionRows } from './selection/composeSelectionRows';
 
 /**
  * Start the WebGPU engine on `canvas`. Returns a handle synchronously; async setup
@@ -420,7 +422,10 @@ export function createEngine(
       get: (source: GalaxyCatalogSourceType) => state.data.galaxies.catalogs.get(source),
     },
     famousGalaxiesMeta: state.famousGalaxiesMeta,
-    structures: { byId: (id) => state.data.structures.byId(id) },
+    structures: {
+      byId: (id) => state.data.structures.byId(id),
+      byCategory: (cat) => state.data.structures.byCategory(cat),
+    },
     // The first (only, in v1) committed Gaia catalog, or null before the star cloud
     // lands and after the GPU tears down.
     stars: {
@@ -432,6 +437,13 @@ export function createEngine(
       },
     },
   });
+
+  // The one row array core owns (D5); createLayers appends each Layer's rows
+  // once, in tuple order, over the empty composition today. `selection` reads
+  // it lazily (never rebuilds a list), so a deep link resolving during the
+  // boot window — before createLayers has run — still sees the core rows.
+  state.selectionKindRows = coreSelectionRows(resolveDeps);
+  const selection = composeSelectionRows(() => state.selectionKindRows);
 
   // The single clip-run seam the saga context exposes.
   const playClip = createPlayClip({
@@ -454,6 +466,7 @@ export function createEngine(
   cb.setSagaContext({
     reconcile: makeReconcileEffects(state, canvas),
     resolveDeps,
+    selection,
     // The up-basis quaternion is resolved THIS frame, so a mid-slerp re-switch
     // captures the live pole rather than snapping to the committed frame. Null
     // pre-bootstrap and post-destroy, so a saga no-ops rather than seeding stale.

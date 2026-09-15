@@ -44,10 +44,21 @@ import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+// No source selected: the re-anchor capture skips both slots without ever
+// dereferencing this — the default for tests that never seed a galaxy ref.
+const EMPTY_DEPS: ResolveDeps = {
+  catalogs: { get: () => undefined },
+  famousGalaxiesMeta: [],
+  structures: { byId: () => null, byCategory: () => [] },
+  stars: { current: () => null },
+};
 
 // ─── Cloud fixture ─────────────────────────────────────────────────────────────
 
@@ -74,14 +85,16 @@ function makeCloud(objId: bigint, index: number, count: number): GalaxyCatalog {
 describe('watchTierSaga', () => {
   let store: ReturnType<typeof buildStore>;
 
-  function buildStore(resolveDeps?: () => ResolveDeps) {
+  function buildStore(resolveDeps: () => ResolveDeps = () => EMPTY_DEPS) {
     const sagaMiddleware = createSagaMiddleware();
     const built = configureStore({
       reducer: rootReducer,
       middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
     });
     sagaMiddleware.run(watchTierSaga);
-    if (resolveDeps) sagaMiddleware.setContext({ resolveDeps });
+    sagaMiddleware.setContext({
+      selection: composeSelectionRows(() => coreSelectionRows(resolveDeps)),
+    });
     return built;
   }
 
@@ -137,7 +150,7 @@ describe('watchTierSaga', () => {
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
       famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     });
 
@@ -184,7 +197,7 @@ describe('watchTierSaga', () => {
     const resolveDeps = (): ResolveDeps => ({
       catalogs: { get: (src) => (src === Source.SDSS ? currentCloud : undefined) },
       famousGalaxiesMeta: [],
-      structures: { byId: () => null },
+      structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     });
 
