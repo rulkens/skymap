@@ -2,7 +2,7 @@
  * surfaceTileSubsystem — the residency half of one body's surface virtual
  * texture, registry-driven and ONE-ENGAGED (`SURFACE_TILE_REGISTRY`).
  * `cutSurfaceTiles` (pure, tested) decides which tiles a frame wants and
- * resolves each visible leaf's atlas residency; `bitmapStreamSubsystem` owns
+ * resolves each visible leaf's atlas residency; `tileStreamSubsystem` owns
  * the atlas, LRU clock and fetch queue. This file turns a fetch demand
  * (`update()`) into allocations and fetches, answers per-tile residency
  * queries (`residentSlot`, the callback `cutSurfaceTiles` resolves through),
@@ -28,10 +28,12 @@ import type { SurfaceTileRequest } from '../../../@types/scene/SurfaceTileReques
 import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { SurfaceTileSubsystem } from '../../../@types/engine/subsystems/SurfaceTileSubsystem';
-import type { BitmapStreamSubsystem } from '../../../@types/engine/subsystems/BitmapStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import { createBitmapStreamSubsystem } from './bitmapStreamSubsystem';
+import { createTileStreamSubsystem } from './tileStreamSubsystem';
+import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
+import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
 import { surfaceTilePath } from '../../../utils/scene/surfaceTilePath';
 import { fetchSurfaceTileManifest } from '../../../utils/scene/fetchSurfaceTileManifest';
@@ -100,7 +102,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // lifecycle, so one nullable record replaces three fields a null check
   // used to have to keep in sync.
   let atlas: {
-    readonly stream: BitmapStreamSubsystem;
+    readonly stream: TileStreamSubsystem<ImageBitmap>;
     readonly slotsPerRow: number;
     readonly bodyId: BodyId;
   } | null = null;
@@ -229,9 +231,9 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * never again per engagement — `slotSide` comes from the manifest's tile
    * edge, so a re-bake at a different edge stays a data change.
    */
-  function engage(tilePx: number, bodyId: BodyId): BitmapStreamSubsystem {
+  function engage(tilePx: number, bodyId: BodyId): TileStreamSubsystem<ImageBitmap> {
     const slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
-    const created = createBitmapStreamSubsystem({
+    const created = createTileStreamSubsystem<ImageBitmap>({
       device,
       requestRender,
       atlasSide: EARTH_TILE_ATLAS_SIDE,
@@ -239,6 +241,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       format: ATLAS_FORMAT,
       label: 'surface-tiles-albedo',
       concurrency: EARTH_TILE_CONCURRENCY,
+      upload: uploadBitmapToAtlas,
+      release: closeBitmap,
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
     created.setEvictHandler((key) => resident.delete(key));
@@ -324,14 +328,15 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
             bitmap?.close();
             return;
           }
-          // Resolved from the key now, not carried: may have been evicted mid-flight.
-          const slot = stream.uploadBitmap(key, bitmap);
+          // Resolved from the key now, not carried: may have been evicted
+          // mid-flight. `upload` closes `bitmap` either way (uploaded or
+          // recycled) — see `uploadBitmapToAtlas`/`closeBitmap`.
+          const slot = stream.upload(key, bitmap);
           // Stamped here, at the upload site — REAL time (`performance.now()`,
           // never sim time), so `earthSurfaceTileRenderer`'s crossfade runs
           // even while the sim clock is paused or scaled.
           const readyAtMs = performance.now();
           pendingLevelOf.delete(key);
-          bitmap.close();
           if (slot === null) return;
           resident.set(key, { tile: request.tile, slot, readyAtMs });
         },

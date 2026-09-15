@@ -3,7 +3,7 @@
  * a time (§ registry-driven, one engaged — `SURFACE_TILE_REGISTRY`). A third
  * layer above the two the body's own renderer already has: base texture and
  * placeholder are untouched, so every failure path falls back to today's
- * picture rather than a hole. Owns the `BitmapStreamSubsystem` and manifest;
+ * picture rather than a hole. Owns the `TileStreamSubsystem<ImageBitmap>` and manifest;
  * `cutSurfaceTiles` stays pure and calls back into `residentSlot` to resolve
  * what it can draw. GPU resources allocate lazily on first engage; the
  * subsystem never wakes the render loop, only votes via `isAnimating()`.

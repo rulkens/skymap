@@ -532,7 +532,7 @@ describe('surfaceTileSubsystem stand-down', () => {
  * first, so nothing is evicted mid-plan.
  *
  * `fetchSurfaceTileBitmap` call count is the observable: eviction clears the
- * key's `bitmapReady` membership (see `bitmapStreamSubsystem`'s evict
+ * key's loaded membership (see `tileStreamSubsystem`'s evict
  * handler), so a resident tile coming back re-fetches. Snapshotting the count
  * around each `update()` keeps the assertion independent of the file's shared
  * (never-reset) mock call history.

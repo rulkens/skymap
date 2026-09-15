@@ -170,8 +170,8 @@ describe('createProceduralDiskSubsystem', () => {
         slotUv: () => {
           throw new Error('atlas.slotUv not expected');
         },
-        uploadBitmap: () => {
-          throw new Error('atlas.uploadBitmap not expected');
+        upload: () => {
+          throw new Error('atlas.upload not expected');
         },
         enqueueFetch: () => {
           throw new Error('atlas.enqueueFetch not expected');
