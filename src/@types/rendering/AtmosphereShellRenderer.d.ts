@@ -132,4 +132,16 @@ export type AtmosphereShellRenderer = Renderer & {
    * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
    */
   draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array, inside: boolean): void;
+
+  /**
+   * Called once per frame with the live tier's sky-view LUT texel size
+   * (mirrors `flowFieldRenderer.reconcile(seed)` — an object param, not
+   * positionals). A no-op when `skyViewLutSize` matches the size last built
+   * (the common case, every frame); on a change, every bundle's `skyViewTex`
+   * is destroyed and recreated at the new size and both bind groups that
+   * reference it (`skyViewBindGroup`, `shellBindGroup`) are rebuilt. The
+   * shader itself needs no change — `skyViewLut.wesl` derives its bounds from
+   * `textureDimensions(outTex)`.
+   */
+  reconcile(config: { readonly skyViewLutSize: readonly [number, number] }): void;
 };

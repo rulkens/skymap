@@ -47,6 +47,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
  * Scale-bar width, CSS px. Must stay under the ScaleBar panel's ~145 px content
@@ -95,6 +96,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
   state.gpu.flowFieldRenderer?.reconcile(state.settings.flow);
+  state.gpu.atmosphereShellRenderer?.reconcile({
+    skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier],
+  });
 
   // The frame's ONE store snapshot. The camera step runs before
   // `deriveFrameContext` so a camera-only-ready frame still makes motion
