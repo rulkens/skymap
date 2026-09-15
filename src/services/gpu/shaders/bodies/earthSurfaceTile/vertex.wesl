@@ -121,9 +121,13 @@ fn vs(
   // are unbalanced, so any neighbour may have half this patch's vertices along
   // the shared edge, and the wall is what hides the T-junction. No edge code
   // gates it -- 'edge' only picks which boundary post the vertex repeats.
+  // Capped at 'maxSkirtDepthM': the fraction scales with the PATCH, so at z3's
+  // 45 degree span it asks for 250 km, and every edge whose neighbour has not
+  // landed draws that as a sheet. No seam can open wider than the body's
+  // relief. TWIN: src/utils/scene/surfaceSkirtDepthM.ts.
   var depthM = 0.0;
   if (isSkirt) {
-    depthM = SURFACE_TILE_SKIRT_DEPTH_FRACTION * u.radiusM * inst.dLatRad;
+    depthM = min(SURFACE_TILE_SKIRT_DEPTH_FRACTION * u.radiusM * inst.dLatRad, u.maxSkirtDepthM);
   }
 
   let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(inst, u.radiusM, s, t, h - depthM);

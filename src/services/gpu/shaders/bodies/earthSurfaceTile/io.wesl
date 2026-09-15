@@ -146,12 +146,13 @@ struct VSOut {
 //   offset 152..155: cloudShadowStrength f32
 //   offset 156..159: cloudShellRadius    f32
 //   offset 160..163: debugLodOverlay     f32
-//   offset 164..175: padding (true padding -- struct rounds to the mat4x4's
+//   offset 164..167: maxSkirtDepthM      f32
+//   offset 168..175: padding (true padding -- struct rounds to the mat4x4's
 //                     16-byte alignment; nothing writes these bytes)
 //   total: 176 bytes.
 //
 // The CPU side uploads 44 f32 words via a mixed Float32Array/Uint32Array
-// DataView (only 'meshResolution', word 23, is written as a u32; words 41..43
+// DataView (only 'meshResolution', word 23, is written as a u32; words 42..43
 // are left as the scratch ArrayBuffer's zero fill). The single source of
 // truth for that packing is 'writeSurfaceTileUniforms' in
 // 'earthSurfaceTileLayout.ts'.
@@ -177,4 +178,9 @@ struct SurfaceTileUniforms {
   // it with '> 0.5') -- a fresh field rather than a reused pad slot, since
   // the struct had none left (see the byte table above).
   debugLodOverlay: f32,
+  // Ceiling on the vertex stage's skirt depth: this body's relief span
+  // ('reliefSpanM'), the widest a height seam can open. The fraction-of-patch
+  // heuristic scales with the PATCH and asks for 250 km at z3, which any edge
+  // whose neighbour has not landed then draws as a sheet -- see vertex.wesl.
+  maxSkirtDepthM: f32,
 };

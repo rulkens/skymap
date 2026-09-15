@@ -34,6 +34,7 @@ import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionE
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
+import { reliefSpanM } from '../../../../utils/scene/reliefSpanM';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';
@@ -249,6 +250,10 @@ export const earthPass: ContentPass = {
         oceanRoughness: state.settings.earth.oceanRoughness,
         cloudShadowStrength,
         cloudShellRadius: CLOUD_SHELL_PARAMS.radiusRatio,
+        // The skirt ring's ceiling: no height seam can open wider than the
+        // body's own relief, and past that a skirt only waits for an exposed
+        // edge to draw it (see `surfaceSkirtDepthM`).
+        maxSkirtDepthM: reliefSpanM(body.surface),
         // DebugPanel's Earth LOD overlay toggle — read live each frame from the
         // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
         debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],

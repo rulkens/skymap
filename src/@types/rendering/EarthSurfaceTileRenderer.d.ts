@@ -41,6 +41,9 @@ export type EarthSurfaceTileDrawArgs = {
    *  `atlasUvScale` (see fragment.wesl), so this is the only new fact the
    *  overlay needs. */
   readonly debugLodOverlay: boolean;
+  /** Ceiling on skirt depth — the body's `reliefSpanM`, the widest a height
+   *  seam can open. Without it a shallow patch's skirt is a 250 km sheet. */
+  readonly maxSkirtDepthM: number;
   /** The surfaceTileSubsystem atlas view -- resident high-res patches, sampled at each tile's resolved rect. Not owned by this renderer. */
   readonly surfaceAtlasView: GPUTextureView;
   /** The surfaceTileSubsystem's `r32float` HEIGHT atlas, read with
