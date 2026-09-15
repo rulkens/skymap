@@ -19,7 +19,6 @@ export function makeReconcileEffects(
   return {
     requestRender: () => state.subsystems.scheduler.requestRender(),
     syncFades: () => syncVisibilityFades(state, { animate: true }),
-    reseedFlow: () => state.gpu.flowFieldRenderer?.maybeReseed(),
     bakeBias: (mode) => void state.subsystems.biasCorrection.setMode(mode),
     logCameraState: () => {
       const simDays = state.cameraRuntime.outputs.simDays;

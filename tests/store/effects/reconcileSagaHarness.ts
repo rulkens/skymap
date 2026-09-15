@@ -1,12 +1,10 @@
 /**
  * reconcileSagaHarness — shared test harness for the reconcile watcher sagas
- * (watchWakeSaga, watchFadesSaga, watchFlowReseedSaga, watchBiasBakeSaga,
- * watchSwapFormatSaga).
+ * (watchWakeSaga, watchFadesSaga, watchBiasBakeSaga, watchSwapFormatSaga).
  *
  * Each saga lives in its own file with its own spec, but they all consume the
- * same ReconcileEffects surface and several writes fan out across more than one
- * watcher (a setFlow patch hits both watchFadesSaga and watchFlowReseedSaga;
- * setHdrEnabled hits both watchWakeSaga's requestRender and
+ * same ReconcileEffects surface and some writes fan out across more than one
+ * watcher (setHdrEnabled hits both watchWakeSaga's requestRender and
  * watchSwapFormatSaga). Running ALL of them under a shared root here lets each
  * spec assert its own effect while the cross-saga fan-out stays faithful to
  * production.
@@ -24,7 +22,6 @@ import { all } from 'typed-redux-saga';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchWakeSaga } from '../../../src/store/effects/watchWakeSaga';
 import { watchFadesSaga } from '../../../src/store/effects/watchFadesSaga';
-import { watchFlowReseedSaga } from '../../../src/store/effects/watchFlowReseedSaga';
 import { watchBiasBakeSaga } from '../../../src/store/effects/watchBiasBakeSaga';
 import { watchSwapFormatSaga } from '../../../src/store/effects/watchSwapFormatSaga';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
@@ -35,7 +32,6 @@ import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffec
 export type ReconcileSpies = {
   requestRender: ReturnType<typeof vi.fn<() => void>>;
   syncFades: ReturnType<typeof vi.fn<() => void>>;
-  reseedFlow: ReturnType<typeof vi.fn<() => void>>;
   bakeBias: ReturnType<typeof vi.fn<(mode: BiasMode) => void>>;
   applySwapFormat: ReturnType<typeof vi.fn<(desired: GPUTextureFormat) => void>>;
 };
@@ -50,7 +46,6 @@ export function buildStore() {
   const reconcile: ReconcileEffects = {
     requestRender: vi.fn<() => void>(),
     syncFades: vi.fn<() => void>(),
-    reseedFlow: vi.fn<() => void>(),
     bakeBias: vi.fn<(mode: BiasMode) => void>(),
     logCameraState: vi.fn<() => void>(),
     applySwapFormat: vi.fn<(desired: GPUTextureFormat) => void>(),
@@ -61,15 +56,9 @@ export function buildStore() {
   sagaMiddleware.setContext({ reconcile });
 
   // Run every watcher under a shared root so they share the context above
-  // and cross-saga fan-out (e.g. setFlow → fades + reseed) stays faithful.
+  // and cross-saga fan-out stays faithful to production.
   sagaMiddleware.run(function* () {
-    yield* all([
-      watchWakeSaga(),
-      watchFadesSaga(),
-      watchFlowReseedSaga(),
-      watchBiasBakeSaga(),
-      watchSwapFormatSaga(),
-    ]);
+    yield* all([watchWakeSaga(), watchFadesSaga(), watchBiasBakeSaga(), watchSwapFormatSaga()]);
   });
 
   return { store, reconcile: reconcile as unknown as ReconcileSpies };

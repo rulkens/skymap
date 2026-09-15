@@ -15,8 +15,8 @@
  *
  * What we assert:
  *   - `setSagaContext` is called exactly once during the synchronous prefix.
- *   - The argument carries a `reconcile` bag with four function members
- *     (`requestRender`, `syncFades`, `reseedFlow`, `bakeBias`), confirming
+ *   - The argument carries a `reconcile` bag with function members
+ *     (`requestRender`, `syncFades`, `bakeBias`, …), confirming
  *     `makeReconcileEffects(state)` ran and its closures are in the context.
  *
  * The real store (via `createAppStore`) is used for `cb.store` because the

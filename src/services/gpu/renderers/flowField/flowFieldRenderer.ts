@@ -241,6 +241,9 @@ export function createFlowFieldRenderer(init: {
   let lastNowMs: number | null = null;
   // Built in upload once the velocity texture view + sampler exist.
   let computeBindGroup: GPUBindGroup | null = null;
+  // The seed knobs `reconcile` last saw; null before the first call, so that
+  // call only records rather than arming a reseed against no baseline.
+  let lastSeed: Pick<FlowSettings, 'mode' | 'count'> | null = null;
 
   function modeCode(flow: FlowSettings): number {
     return flow.mode === 'streamline' ? MODE_STREAMLINE : MODE_ADVECT;
@@ -293,8 +296,11 @@ export function createFlowFieldRenderer(init: {
       reseed.arm();
     },
 
-    maybeReseed(): void {
-      reseed.arm();
+    reconcile(seed: Pick<FlowSettings, 'mode' | 'count'>): void {
+      if (lastSeed !== null && (lastSeed.mode !== seed.mode || lastSeed.count !== seed.count)) {
+        reseed.arm();
+      }
+      lastSeed = seed;
     },
 
     fieldLoaded(): boolean {

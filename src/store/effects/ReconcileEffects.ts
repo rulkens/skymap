@@ -14,7 +14,6 @@
  *   syncFades      — re-syncs every intent→fade row; cheap on every settings
  *                    write because a row whose target hasn't moved costs
  *                    `applyIntent` one `targetOf` lookup, not a fade restart
- *   reseedFlow     — reseeds the cosmic-flow particle field (e.g. on setting change)
  *   bakeBias       — re-computes the galaxy brightness bias LUT
  *   logCameraState — prints the current orbit-camera pose (debug aid, the
  *                    `l` key)
@@ -35,7 +34,6 @@ import type { BiasMode } from '../../@types/data/galaxyCatalog/BiasMode';
 export type ReconcileEffects = {
   requestRender: () => void;
   syncFades: () => void;
-  reseedFlow: () => void;
   bakeBias: (mode: BiasMode) => void;
   logCameraState: () => void;
   applySwapFormat: (desired: GPUTextureFormat) => void;

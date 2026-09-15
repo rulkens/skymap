@@ -57,31 +57,25 @@ const CANVAS = {} as HTMLCanvasElement;
 // absent; `as unknown as EngineState` bridges the gap (matching the pattern
 // used in syncVisibilityFades.test.ts and other wiring tests).
 
-function makeState(overrides?: { flowFieldRenderer?: { maybeReseed: () => void } | null }): {
+function makeState(): {
   state: EngineState;
   requestRender: ReturnType<typeof vi.fn<() => void>>;
   setMode: ReturnType<typeof vi.fn<(mode: BiasMode) => Promise<void>>>;
-  maybeReseed: ReturnType<typeof vi.fn<() => void>>;
 } {
   const requestRender = vi.fn<() => void>();
   const setMode = vi.fn<(mode: BiasMode) => Promise<void>>(() => Promise.resolve());
-  const maybeReseed = vi.fn<() => void>();
-
-  const flowFieldRenderer =
-    overrides?.flowFieldRenderer !== undefined ? overrides.flowFieldRenderer : { maybeReseed };
 
   const state = {
     subsystems: {
       scheduler: { requestRender },
       biasCorrection: { setMode },
     },
-    gpu: { flowFieldRenderer },
     booted: false,
     selectionRows: { hover: null, select: null, focus: null },
     cameraRuntime: { outputs: { simDays: 2461272.948547558, displayed: 'DISPLAYED_ARM' } },
   } as unknown as EngineState;
 
-  return { state, requestRender, setMode, maybeReseed };
+  return { state, requestRender, setMode };
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -104,19 +98,6 @@ describe('makeReconcileEffects', () => {
     effects.syncFades();
     expect(syncVisibilityFades).toHaveBeenCalledTimes(1);
     expect(syncVisibilityFades).toHaveBeenCalledWith(state, { animate: true });
-  });
-
-  it('reseedFlow calls flowFieldRenderer.maybeReseed', () => {
-    const { state, maybeReseed } = makeState();
-    const effects = makeReconcileEffects(state, CANVAS);
-    effects.reseedFlow();
-    expect(maybeReseed).toHaveBeenCalledTimes(1);
-  });
-
-  it('reseedFlow tolerates a null flowFieldRenderer — no throw', () => {
-    const { state } = makeState({ flowFieldRenderer: null });
-    const effects = makeReconcileEffects(state, CANVAS);
-    expect(() => effects.reseedFlow()).not.toThrow();
   });
 
   it('bakeBias(1) calls biasCorrection.setMode(1)', () => {

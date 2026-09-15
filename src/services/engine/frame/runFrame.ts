@@ -86,6 +86,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   });
 
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
+  state.gpu.flowFieldRenderer?.reconcile(state.settings.flow);
 
   // The frame's ONE store snapshot. The camera step runs before
   // `deriveFrameContext` so a camera-only-ready frame still makes motion

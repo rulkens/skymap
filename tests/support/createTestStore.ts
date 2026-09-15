@@ -41,12 +41,11 @@ import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 
 // The narrow engine surface `watchWakeSaga` (and its sibling reconcile watchers)
 // reach for. Every method is a no-op: a test store has no scheduler, fade
-// registry, flow field or bias LUT to drive, and no assertion here inspects
-// these — they exist only so `getContext('reconcile')` resolves.
+// registry or bias LUT to drive, and no assertion here inspects these — they
+// exist only so `getContext('reconcile')` resolves.
 export const NOOP_RECONCILE: ReconcileEffects = {
   requestRender: () => {},
   syncFades: () => {},
-  reseedFlow: () => {},
   bakeBias: () => {},
   logCameraState: () => {},
   applySwapFormat: () => {},
