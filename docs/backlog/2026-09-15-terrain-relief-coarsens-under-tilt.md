@@ -34,3 +34,13 @@ cell count), so a second overlay mode can tint by
 coarser the height field is than the leaf. That separates "texture went
 coarse" from "relief went coarse" in one eye-check and is the first thing to
 build when this item is picked up.
+
+**Second symptom, same family (user eye-check 2026-09-15).** At near-nadir
+tilt (0–4°) low over Søndermarken the relief LOD reads LOWER than it should,
+even though a nadir view gives the tile its largest footprint and the walk
+should be at the band's max level there. Candidate: the leaf's height
+lattice is an ancestor height tile's sub-rect (the height pyramid is sparse;
+`resolveCutResidency` walks up separately for height and albedo), so the
+albedo overlay shows green while the relief is several levels coarser. The
+height-LOD overlay above is the check; if the overlay is not green, the fix
+is on the height residency/request side, not the refine estimate.
