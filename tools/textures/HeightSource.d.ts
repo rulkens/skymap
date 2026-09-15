@@ -2,15 +2,11 @@ import type { SurfaceTileProvenance } from '../../src/@types/scene/SurfaceTilePr
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /**
- * HeightSource — the seam between the height bake and wherever the elevations
- * come from, the `EarthImagerySource` of the second product. Metres above the
- * body's datum sphere, never a radius (spec §5.3).
- *
- * Unlike imagery, a height source is addressed in LATTICE indices rather than
- * a lon/lat box: the shared post of two adjacent tiles must be the same
- * computed float in both, and deriving its position from a box-relative offset
- * reintroduces the last-bit difference that shows up as a hairline crack
- * (§5.4.2). The lattice is global per level and the same in both axes.
+ * HeightSource — the seam between the height bake and wherever elevations
+ * come from, the `EarthImagerySource` of the second product: metres above
+ * the datum sphere, never a radius (spec §5.3). Addressed in GLOBAL LATTICE
+ * indices, not a lon/lat box — deriving a shared post from a box-relative
+ * offset reintroduces the last-bit difference that shows up as a crack (§5.4.2).
  */
 export type HeightSource = {
   readonly id: string;

@@ -1,11 +1,8 @@
 /**
- * HeightTile — one decoded `shgt1` tile (`heightTileFormat.ts`): 129² posts of
- * elevation in metres above the body's datum sphere, plus the three header
- * scalars the walk reads without touching the payload.
- *
- * `subtreeMinM`/`subtreeMaxM` bound this tile's ENTIRE descendant subtree at
- * the finest baked data, not just its own posts — that is what lets a horizon
- * or occlusion test on a coarse tile stay conservative for everything under it.
+ * HeightTile — one decoded `shgt1` tile (`heightTileFormat.ts`): 129² posts
+ * of elevation in metres above the body's datum sphere. `subtreeMin/MaxM`
+ * bound the ENTIRE descendant subtree, not just this tile's own posts, so a
+ * coarse-tile horizon/occlusion test stays conservative for everything under it.
  */
 export type HeightTile = {
   readonly subtreeMinM: number;

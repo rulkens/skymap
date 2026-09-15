@@ -10,14 +10,11 @@ const DEPTHS = {
 };
 
 /**
- * readGeoTiffWindow — one pixel window of a DEM GeoTIFF as f32, at its native
- * numeric depth.
- *
- * `toColourspace('b-w')` is load-bearing: sharp's default output colourspace
- * is sRGB, which silently triples a single-band DEM into three interleaved
- * copies. And an 8-bit depth THROWS rather than being rescaled — a byte-depth
- * DEM is a wrong or pre-stretched file, and a rescale would fabricate metres
- * that look plausible all the way to the horizon cap.
+ * readGeoTiffWindow — one pixel window of a DEM GeoTIFF as f32, at its
+ * native numeric depth. `toColourspace('b-w')` is load-bearing: sharp's
+ * default sRGB output silently triples a single-band DEM into three
+ * interleaved copies. An 8-bit depth THROWS rather than rescaling — a
+ * byte-depth DEM is a wrong/pre-stretched file, and rescaling would fabricate metres.
  */
 export async function readGeoTiffWindow(
   path: string,

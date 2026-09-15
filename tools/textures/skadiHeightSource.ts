@@ -1,13 +1,9 @@
 /**
  * skadiHeightSource — a `HeightSource` over the `skadi` 1″ harvest
  * (`data/raw/skadi/README.md`): SRTM-format `<N55>/<N55E012>.hgt`, 3601²
- * big-endian int16 metres, GEOGRAPHIC (unlike the terrarium PNGs in the same
- * bucket, which are WebMercator and would need reprojecting).
- *
- * Cells overlap by one post on each shared edge, so a post on a whole-degree
- * parallel or meridian exists in two files. Which one answers is decided by
- * `floor` — the same rule `skadiCellsForBounds` fetches by, so the reader can
- * never want a cell the fetcher had no reason to pull.
+ * big-endian int16 metres, GEOGRAPHIC (the sibling terrarium PNGs are
+ * WebMercator). Cells overlap by one post per shared edge; `floor` decides
+ * which file answers, the same rule `skadiCellsForBounds` fetches by.
  */
 
 import { existsSync, readFileSync } from 'node:fs';

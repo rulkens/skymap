@@ -9,6 +9,8 @@ import { bakeHeightLevel } from '../../../tools/textures/bakeHeightLevel';
 import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
 import { decodeHeightTile } from '../../../src/utils/scene/decodeHeightTile';
 import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
+import { earthTileBounds } from '../../../tools/utils/scene/earthTileBounds';
+import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import { flattenWaterComponents } from '../../../tools/utils/textures/flattenWaterComponents';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
 
@@ -183,6 +185,20 @@ describe('bakeHeightLevel', () => {
     expect(parent.geometricResidualM).toBeGreaterThan(0);
   });
 
+  // A `j ↔ ny−1−j` flip in the region-to-tile slicing would pass every other
+  // test here (which only compare tiles to each other) while shipping a
+  // north/south-flipped surface to the renderer.
+  it('keeps the north row first: heightM[0] is the NW corner, not the SW', async () => {
+    const dir = scratchDir();
+    const source = analyticSource(5);
+    await bake(dir, 5, [{ x: 10, y: 8 }], source);
+
+    const tile = readTile(dir, 5, 10, 8);
+    const box = earthTileBounds(5, 10, 8, EARTH_TILE_PX);
+    expect(tile.heightM[0]).toBe(analyticHeight(box.west, box.north));
+    expect(tile.heightM[(POSTS - 1) * POSTS]).toBe(analyticHeight(box.west, box.south));
+  });
+
   it('skips a tile whose output already exists', async () => {
     const dir = scratchDir();
     const source = analyticSource(5);
@@ -237,5 +253,44 @@ describe('flattenWaterComponents', () => {
     }
     expect(heightM[0]).toBe(100);
     expect(heightM[6 * nx + 4]).toBe(12);
+  });
+
+  // Column 0 and column nx−1 are the SAME lattice point (lon ±180): water at
+  // both must be one component, and the ocean/largest-component rule sets
+  // them to the identical value only if the labelling union treats them so.
+  it('unions water straddling the antimeridian into one component', () => {
+    const nx = 8;
+    const ny = 8;
+    const heightM = new Float32Array(nx * ny).fill(50);
+    const isWater = new Uint8Array(nx * ny);
+    isWater[2 * nx + 0] = 1;
+    heightM[2 * nx + 0] = -500;
+    isWater[2 * nx + (nx - 1)] = 1;
+    heightM[2 * nx + (nx - 1)] = -700;
+
+    flattenWaterComponents(heightM, isWater, nx, ny);
+
+    expect(heightM[2 * nx + 0]).toBe(0);
+    expect(heightM[2 * nx + (nx - 1)]).toBe(0);
+  });
+
+  // A land post at col 0's west neighbour is col nx−2 (the point just before
+  // the lon ±180 duplicate), not col nx−1 (itself); a self-referencing wrap
+  // would never let this shore height reach the water it borders. A larger
+  // decoy component elsewhere keeps this single water post from becoming the
+  // "ocean" (set to 0 regardless of shore) rather than exercising the rule.
+  it('lets a shore across the antimeridian seam set the water level', () => {
+    const nx = 8;
+    const ny = 8;
+    const heightM = new Float32Array(nx * ny).fill(100);
+    const isWater = new Uint8Array(nx * ny);
+    for (let row = 0; row <= 1; row++)
+      for (let col = 2; col <= 3; col++) isWater[row * nx + col] = 1;
+    heightM[4 * nx + 0] = 5;
+    isWater[4 * nx + (nx - 2)] = 1;
+
+    flattenWaterComponents(heightM, isWater, nx, ny);
+
+    expect(heightM[4 * nx + (nx - 2)]).toBe(5);
   });
 });

@@ -8,12 +8,10 @@ const DEG = Math.PI / 180;
 
 /**
  * lonLatToUtm32 — WGS84/GRS80 lon/lat to EPSG:25832 metres (UTM zone 32N).
- *
  * Snyder's transverse-Mercator series (Map Projections §8), truncated at e'⁶:
- * the residual is under a millimetre anywhere in Denmark, which is four
- * orders below the 0.4 m DHM post spacing this positions samples on. It exists
- * because the DHM tile grid is named in UTM kilometres while the height
- * lattice is in degrees — no proj dependency for one formula.
+ * the residual is under a millimetre anywhere in Denmark, four orders below
+ * the 0.4 m DHM post spacing this positions samples on — no proj dependency
+ * needed for one formula.
  */
 export function lonLatToUtm32(
   lonDeg: number,

@@ -1,13 +1,9 @@
 /**
  * dhmTerraenHeightSource — a `HeightSource` over the DHM/Terræn 0.4 m DTM
  * (`data/raw/dhmterraen/README.md`): 1 km GeoTIFF tiles named by their
- * SW-corner kilometre indices in EPSG:25832, float32 metres above DVR90.
- *
- * The one non-obvious step is the projection: the lattice is in degrees and
- * the tiles are in UTM metres, so every post is projected before it is
- * sampled (`lonLatToUtm32`) rather than the tile being warped once. Heights
- * pass through unchanged — DVR90 is orthometric, which R10 takes as
- * sphere-relative for Earth.
+ * SW-corner kilometre indices in EPSG:25832, float32 metres above DVR90. The
+ * lattice is in degrees and the tiles in UTM metres, so every post is
+ * projected before sampling (`lonLatToUtm32`) rather than warping the tile.
  */
 
 import { existsSync } from 'node:fs';
@@ -33,8 +29,23 @@ const DHM_MAX_LEVEL = 19;
  *  of Denmark; it exists only so a post's row index stays non-negative. */
 const NORTHING_REF_M = 10_000_000;
 
-/** 2500² f32 is 25 MB a tile, and a lattice strip at z19 spans at most a few. */
-const TILE_CACHE_LIMIT = 4;
+/** How many distinct 1 km EAST columns `coverage`'s bounding box spans, plus a
+ *  margin: the cache must hold a whole lattice ROW's tiles at once, or a scan
+ *  across it re-decodes each 25 MB GeoTIFF once per row (was a fixed 4). */
+function stripTileSpan(coverage: ReadonlyArray<LonLatBounds>): number {
+  let eMin = Number.POSITIVE_INFINITY;
+  let eMax = Number.NEGATIVE_INFINITY;
+  for (const box of coverage) {
+    for (const lon of [box.west, box.east]) {
+      for (const lat of [box.south, box.north]) {
+        const { easting } = lonLatToUtm32(lon, lat);
+        eMin = Math.min(eMin, easting);
+        eMax = Math.max(eMax, easting);
+      }
+    }
+  }
+  return Math.floor(eMax / TILE_M) - Math.floor(eMin / TILE_M) + 1;
+}
 
 const DHM_PROVENANCE = {
   sourceId: 'dhm-terraen-04m',
@@ -52,6 +63,7 @@ export function dhmTerraenHeightSource(opts: {
   // are awaited together, so caching after the read would let the same 25 MB
   // tile be decoded four times over.
   const tiles = new Map<string, Promise<Float32Array | null>>();
+  const cacheLimit = Math.max(4, stripTileSpan(opts.coverage) + 2);
 
   function tile(northKm: number, eastKm: number): Promise<Float32Array | null> {
     const key = `${northKm}_${eastKm}`;
@@ -62,7 +74,7 @@ export function dhmTerraenHeightSource(opts: {
     const pixels = existsSync(path)
       ? readGeoTiffWindow(path, 0, 0, TILE_PX, TILE_PX)
       : Promise.resolve(null);
-    if (tiles.size >= TILE_CACHE_LIMIT) tiles.delete(tiles.keys().next().value!);
+    if (tiles.size >= cacheLimit) tiles.delete(tiles.keys().next().value!);
     tiles.set(key, pixels);
     return pixels;
   }
@@ -120,22 +132,53 @@ export function dhmTerraenHeightSource(opts: {
     },
 
     async boundsInBox(box) {
-      // Sampled on a lon/lat grid rather than the tiles' pixel rect: the box's
-      // UTM image is a slightly rotated quadrilateral, so no exact pixel rect
-      // exists. The sample count is capped because this is a SUPPLEMENT — the
-      // bake unions it with the children's own bounds, which are exact at the
-      // deepest level where the lattice is finer than the source.
-      const steps = Math.max(2, Math.ceil(((box.east - box.west) * 111320) / PIXEL_M));
-      const capped = Math.min(steps, 256);
+      // The tiles' own pixels, not a resampled grid: the box's UTM image is a
+      // rotated quadrilateral, so this scans each tile's AXIS-ALIGNED
+      // intersection with the box's UTM bounding rect — wider than the box,
+      // never narrower, which is all a bound (unioned with the children's
+      // exact one) is required to be.
+      let eMin = Number.POSITIVE_INFINITY;
+      let eMax = Number.NEGATIVE_INFINITY;
+      let nMin = Number.POSITIVE_INFINITY;
+      let nMax = Number.NEGATIVE_INFINITY;
+      for (const lon of [box.west, box.east]) {
+        for (const lat of [box.south, box.north]) {
+          const { easting, northing } = lonLatToUtm32(lon, lat);
+          eMin = Math.min(eMin, easting);
+          eMax = Math.max(eMax, easting);
+          nMin = Math.min(nMin, northing);
+          nMax = Math.max(nMax, northing);
+        }
+      }
+
       let min = Number.POSITIVE_INFINITY;
       let max = Number.NEGATIVE_INFINITY;
-      for (let j = 0; j <= capped; j++) {
-        const lat = box.south + ((box.north - box.south) * j) / capped;
-        for (let i = 0; i <= capped; i++) {
-          const value = await sample(box.west + ((box.east - box.west) * i) / capped, lat);
-          if (!Number.isFinite(value)) continue;
-          if (value < min) min = value;
-          if (value > max) max = value;
+      for (
+        let northKm = Math.floor(nMin / TILE_M);
+        northKm <= Math.floor(nMax / TILE_M);
+        northKm++
+      ) {
+        for (
+          let eastKm = Math.floor(eMin / TILE_M);
+          eastKm <= Math.floor(eMax / TILE_M);
+          eastKm++
+        ) {
+          const pixels = await tile(northKm, eastKm);
+          if (pixels === null) continue;
+          const tileEastM = eastKm * TILE_M;
+          const tileNorthM = (northKm + 1) * TILE_M;
+          const colFrom = Math.max(0, Math.floor((eMin - tileEastM) / PIXEL_M));
+          const colTo = Math.min(TILE_PX - 1, Math.ceil((eMax - tileEastM) / PIXEL_M));
+          const rowFrom = Math.max(0, Math.floor((tileNorthM - nMax) / PIXEL_M));
+          const rowTo = Math.min(TILE_PX - 1, Math.ceil((tileNorthM - nMin) / PIXEL_M));
+          for (let row = rowFrom; row <= rowTo; row++) {
+            for (let col = colFrom; col <= colTo; col++) {
+              const value = pixels[row * TILE_PX + col]!;
+              if (value === NODATA || !Number.isFinite(value)) continue;
+              if (value < min) min = value;
+              if (value > max) max = value;
+            }
+          }
         }
       }
       return min === Number.POSITIVE_INFINITY ? null : [min, max];

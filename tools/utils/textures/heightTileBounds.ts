@@ -2,13 +2,10 @@ import type { HeightTile } from '../../../src/@types/scene/HeightTile';
 
 /**
  * heightTileBounds — a tile's `subtreeMin/MaxM`: the range of the FINEST data
- * anywhere under it, not just of its own posts.
- *
- * Three contributors, unioned: this tile's posts, every child already on disk
- * (whose own header already bounds ITS subtree, so the union is recursive for
- * free), and the source's native-resolution range over the tile's box — which
- * catches a peak the lattice steps straight over. A bound may be wide; it may
- * never be narrow, because everything downstream treats it as an envelope.
+ * anywhere under it, not just its own posts. Three contributors, unioned:
+ * this tile's posts, every on-disk child (recursive for free, since a
+ * child's header already bounds ITS subtree), and the source's native range
+ * over the tile's box, which catches a peak the lattice steps over. Wide, never narrow.
  */
 export function heightTileBounds(
   own: Float32Array,

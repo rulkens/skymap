@@ -1,7 +1,10 @@
 /**
- * Multi-constant byte-layout file (the `galaxyCatalogFormat.ts` precedent) —
- * over the comment budget on purpose: the table below IS the `shgt1` format,
- * shared by the bake's encoder and the runtime's decoder.
+ * Byte-layout file (the `galaxyCatalogFormat.ts` precedent) — over budget on
+ * purpose: the table below IS the `shgt1` format, shared by the bake's
+ * encoder and the runtime's decoder. Little-endian throughout; the 24-byte
+ * header keeps the payload 4-aligned for an in-place view. Heights are raw
+ * f32 metres, never an integer encoding — §5.4's bit-identical shared edges
+ * are what make adjacent patches crack-free, and any per-tile affine breaks that.
  *
  *   off   size            field
  *     0      4   u32      HEIGHT_TILE_MAGIC ('SHGT', little-endian)
@@ -13,12 +16,6 @@
  *    16      4   f32      subtreeMaxM          max over the same
  *    20      4   f32      geometricResidualM   max |this level's bilinear − finest| in this tile
  *    24  66564   f32[16641]  heightM, row-major, NORTH row first, metres above the datum
- *
- * Little-endian throughout. The 24-byte header keeps the payload 4-aligned so
- * a decoder can view it in place rather than copy 65 kB per tile. Heights are
- * raw f32 metres above the datum — never a radius, and never an integer
- * encoding, because §5.4's bit-identical shared edges are what makes adjacent
- * patches crack-free, and any per-tile affine destroys them.
  */
 
 export const HEIGHT_TILE_MAGIC = 0x54474853;

@@ -10,13 +10,10 @@ const FETCH_DEADLINE_MS = 10_000;
 
 /**
  * fetchHeightTile — one `shgt1` tile, decoded ready for atlas upload, or
- * `null` if it is not there.
- *
- * A 404 is the normal case (the height pyramid is as sparse as the albedo
- * one), and so is a rejected payload: an HTML error page from a throttled
- * origin fails `decodeHeightTile`'s magic check. Both degrade to `null`, which
- * the stream subsystem memoises as failed, rather than an exception that would
- * take the frame down.
+ * `null` if absent. A 404 is normal (the height pyramid is as sparse as the
+ * albedo one), and so is a rejected payload — an HTML error page from a
+ * throttled origin fails `decodeHeightTile`'s magic check — both degrade to
+ * `null` rather than an exception that would take the frame down.
  */
 export async function fetchHeightTile(
   tile: SurfaceTileId,

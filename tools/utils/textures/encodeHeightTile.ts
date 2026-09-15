@@ -17,12 +17,10 @@ import {
 } from '../../../src/data/scene/heightTileFormat';
 
 /**
- * encodeHeightTile — one tile's bytes in the `shgt1` layout.
- *
- * Deliberately not lenient about the post count: a short or long payload here
- * would write a file the decoder rejects only once it reaches a browser, hours
- * of bake later. Post FINITENESS is the bake's own assertion (it can name the
- * tile and the lattice point); this only refuses to lie about the header.
+ * encodeHeightTile — one tile's bytes in the `shgt1` layout. Deliberately not
+ * lenient about the post count: a short/long payload would write a file the
+ * decoder only rejects once it reaches a browser, hours of bake later. Post
+ * FINITENESS is the bake's own assertion; this only refuses to lie about the header.
  */
 export function encodeHeightTile(tile: HeightTile): Uint8Array {
   if (tile.heightM.length !== HEIGHT_TILE_POST_COUNT) {

@@ -17,13 +17,10 @@ import {
 
 /**
  * decodeHeightTile — `shgt1` bytes to posts, rejecting anything the GPU must
- * never see. A NaN post propagates into vertex positions and a `−9999`
- * sentinel arrives as a 10 km pit, so every post is checked once here rather
- * than guarded at each of displacement's read sites.
- *
- * A payload landing on a 4-aligned offset is viewed in place; otherwise it is
- * copied, because alignment is the caller's slicing choice and not a defect in
- * the bytes — throwing would report a good tile as corrupt.
+ * never see (a NaN post propagates into vertex positions) — checked once
+ * here rather than at each displacement read site. A payload on a 4-aligned
+ * offset is viewed in place; otherwise copied, since misalignment is the
+ * caller's slicing choice, not a defect worth throwing over.
  */
 export function decodeHeightTile(buf: ArrayBuffer, byteOffset = 0): HeightTile {
   if (buf.byteLength - byteOffset < HEIGHT_TILE_BYTES) {

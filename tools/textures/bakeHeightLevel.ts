@@ -1,16 +1,9 @@
 /**
- * bakeHeightLevel — one level of one band's `shgt1` pyramid.
- *
- * The rule is uniform across levels (R2): a post covered by a child tile
- * already on disk takes that child's post, everything else is resampled from
- * the source on the GLOBAL lattice. At a band's deepest level no children
- * exist and it degenerates to a pure resample — except under a deeper band,
- * where z7 global does have z8 children and must nest with them, which is
- * exactly why the two cases are one.
- *
- * Memory: the region is assembled whole before slicing, so the global band's
- * z7 grid is ~540 MB. That is the price of §5.4.2's one-resample-then-cut and
- * of labelling water components across tile seams.
+ * bakeHeightLevel — one level of one band's `shgt1` pyramid. A post covered
+ * by an on-disk child takes that child's post (R2); everything else
+ * resamples the source on the GLOBAL lattice, so z7 global nests with z8's
+ * children instead of needing its own deepest-level case. Assembled whole
+ * before slicing (≈2.4 GB at z7) to label water across tile seams.
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -24,6 +17,7 @@ import { voidFilledHeightSource } from './voidFilledHeightSource';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
 import { decodeHeightTile } from '../../src/utils/scene/decodeHeightTile';
 import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
+import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
 import { encodeHeightTile } from '../utils/textures/encodeHeightTile';
 import { decimateHeightGrid } from '../utils/textures/decimateHeightGrid';
 import { flattenWaterComponents } from '../utils/textures/flattenWaterComponents';
@@ -58,7 +52,10 @@ function regionsOf(
   whole: boolean,
 ): Region[] {
   if (whole) {
-    return [{ xMin: 0, xMax: 2 ** z - 1, yMin: 0, yMax: 2 ** (z - 1) - 1, tiles }];
+    // Columns/rows come from the one place that owns tile-grid shape
+    // (`heightLatticeStepDeg` assumes the same 2^z columns at EARTH_TILE_PX).
+    const columns = surfaceTileColumns(z, EARTH_TILE_PX);
+    return [{ xMin: 0, xMax: columns - 1, yMin: 0, yMax: columns / 2 - 1, tiles }];
   }
 
   const rows = new Map<number, number[]>();
@@ -127,14 +124,24 @@ async function waterMaskAtLattice(
   return isWater;
 }
 
-function readTileIfPresent(
+function childPath(
   outDir: string,
   prefix: string,
   z: number,
   x: number,
   y: number,
-): HeightTile | null {
-  const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, prefix));
+  q: number,
+): string {
+  return join(
+    outDir,
+    surfaceTilePath(
+      { product: 'height', z: z + 1, x: 2 * x + (q % 2), y: 2 * y + (q - (q % 2)) / 2 },
+      prefix,
+    ),
+  );
+}
+
+function readTileIfPresent(path: string): HeightTile | null {
   if (!existsSync(path)) return null;
   const bytes = readFileSync(path);
   return decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset);
@@ -207,16 +214,25 @@ export async function bakeHeightLevel(input: {
     // `existsSync` each, never a resample.
     if (pending.length === 0) continue;
 
+    // Every pending tile's four children are already baked, so the loop below
+    // overwrites the whole region regardless — skip the resample and (on a
+    // global band) the water pass entirely rather than throw them away.
+    const fullyNested = pending.every(({ x, y }) =>
+      [0, 1, 2, 3].every((q) => existsSync(childPath(outDir, prefix, z, x, y, q))),
+    );
+
     const i0 = region.xMin * SPAN;
     const j0 = region.yMin * SPAN;
     const nx = (region.xMax - region.xMin + 1) * SPAN + 1;
     const ny = (region.yMax - region.yMin + 1) * SPAN + 1;
-    const grid = (await fill.readGrid(z, i0, j0, nx, ny)) ?? new Float32Array(nx * ny).fill(NaN);
+    const grid = fullyNested
+      ? new Float32Array(nx * ny)
+      : ((await fill.readGrid(z, i0, j0, nx, ny)) ?? new Float32Array(nx * ny).fill(NaN));
 
     // Before the children are laid over it, never after: a child's posts are
     // already at their own band's water treatment, and re-levelling them here
     // would break the parent's bit-identical nesting (§5.4.3).
-    if (flattenWater)
+    if (flattenWater && !fullyNested)
       flattenWaterComponents(grid, await waterMaskAtLattice(z, i0, j0, nx, ny), nx, ny);
 
     for (const { x, y } of pending) {
@@ -228,7 +244,7 @@ export async function bakeHeightLevel(input: {
       }
 
       const children = [0, 1, 2, 3].map((q) =>
-        readTileIfPresent(outDir, prefix, z + 1, 2 * x + (q % 2), 2 * y + (q - (q % 2)) / 2),
+        readTileIfPresent(childPath(outDir, prefix, z, x, y, q)),
       );
       for (let q = 0; q < children.length; q++) {
         const child = children[q];

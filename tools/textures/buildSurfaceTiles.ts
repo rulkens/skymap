@@ -57,6 +57,7 @@ import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBou
 import { bakeHeightLevel } from './bakeHeightLevel';
 import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
 import { colourMatchedImagerySource } from './colourMatchedImagerySource';
+import { constantHeightSource } from './constantHeightSource';
 import { dhmTerraenHeightSource } from './dhmTerraenHeightSource';
 import type { EarthImagerySource } from './EarthImagerySource';
 import { equirectFileSource } from './equirectFileSource';
@@ -341,6 +342,20 @@ const WATER_DIAGNOSTIC_BOXES: ReadonlyArray<readonly [string, LonLatBounds]> = [
   ['Black Sea', { west: 28, east: 41, south: 41, north: 47 }],
 ];
 
+/** Read one tile's decoded posts, or `null` if it wasn't baked. */
+function readHeightTile(outDir: string, z: number, x: number, y: number) {
+  const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, TILE_PREFIX));
+  if (!existsSync(path)) return null;
+  const bytes = readFileSync(path);
+  return decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset);
+}
+
+/**
+ * The global range comes straight from each tile's own header (`subtreeMinM`
+ * at the deepest baked level IS that tile's own post range) rather than a
+ * 545M-post rescan; each named box only decodes the handful of tiles its own
+ * `earthTileIndicesForBounds` rect touches.
+ */
 async function printWaterDiagnostics(
   outDir: string,
   z: number,
@@ -348,30 +363,40 @@ async function printWaterDiagnostics(
 ): Promise<void> {
   const posts = HEIGHT_POSTS_PER_TILE;
   const step = heightLatticeStepDeg(z);
-  const ranges = new Map<string, [number, number]>([['global', [Infinity, -Infinity]]]);
-  const widen = (key: string, value: number): void => {
-    const range = ranges.get(key) ?? [Infinity, -Infinity];
-    ranges.set(key, [Math.min(range[0], value), Math.max(range[1], value)]);
-  };
+  const ranges = new Map<string, [number, number]>();
 
+  let globalMin = Infinity;
+  let globalMax = -Infinity;
   for (const { x, y } of candidateTileIndices(coverage, z, EARTH_TILE_PX)) {
-    const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, TILE_PREFIX));
-    if (!existsSync(path)) continue;
-    const bytes = readFileSync(path);
-    const { heightM } = decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset);
-    for (let j = 0; j < posts; j++) {
-      const lat = 90 - (y * (posts - 1) + j) * step;
-      for (let i = 0; i < posts; i++) {
-        const value = heightM[j * posts + i]!;
-        widen('global', value);
-        const lon = -180 + (x * (posts - 1) + i) * step;
-        for (const [name, box] of WATER_DIAGNOSTIC_BOXES) {
-          if (lon >= box.west && lon <= box.east && lat >= box.south && lat <= box.north) {
-            widen(name, value);
+    const tile = readHeightTile(outDir, z, x, y);
+    if (tile === null) continue;
+    globalMin = Math.min(globalMin, tile.subtreeMinM);
+    globalMax = Math.max(globalMax, tile.subtreeMaxM);
+  }
+  ranges.set('global', [globalMin, globalMax]);
+
+  for (const [name, box] of WATER_DIAGNOSTIC_BOXES) {
+    const rect = earthTileIndicesForBounds(box, z, EARTH_TILE_PX);
+    let min = Infinity;
+    let max = -Infinity;
+    for (let y = rect.yMin; y <= rect.yMax; y++) {
+      for (let x = rect.xMin; x <= rect.xMax; x++) {
+        const tile = readHeightTile(outDir, z, x, y);
+        if (tile === null) continue;
+        for (let j = 0; j < posts; j++) {
+          const lat = 90 - (y * (posts - 1) + j) * step;
+          if (lat < box.south || lat > box.north) continue;
+          for (let i = 0; i < posts; i++) {
+            const lon = -180 + (x * (posts - 1) + i) * step;
+            if (lon < box.west || lon > box.east) continue;
+            const value = tile.heightM[j * posts + i]!;
+            min = Math.min(min, value);
+            max = Math.max(max, value);
           }
         }
       }
     }
+    ranges.set(name, [min, max]);
   }
 
   process.stderr.write(`  water diagnostics at z${z} (metres):\n`);
@@ -645,6 +670,9 @@ async function main(): Promise<void> {
           source: bmng,
           minLevel: BAKE_MIN_LEVEL,
           height: etopo,
+          // ETOPO's own NODATA maps to NaN (`etopoHeightSource`), so a rare
+          // gap in a global 1.6 GB GeoTIFF would otherwise abort the bake.
+          heightUnderfill: constantHeightSource(0),
           // The only band whose source carries real bathymetry, and the only
           // one that is global — which is what lets R3 label the world ocean
           // as simply the largest connected water component.

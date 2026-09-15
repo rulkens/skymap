@@ -1,18 +1,9 @@
 /**
  * flattenWaterComponents — R3's water rule, in place over a WHOLE level grid.
- *
- * Every 4-connected component of the water mask is set to the lowest
- * elevation among the land posts touching it; the component with the most
- * posts — the world ocean, by a wide margin — is set to exactly 0. That single
- * rule gives spec §4.4's outcomes with no basin list and no ocean seed: the
- * ocean sits flat at the datum, the Dead Sea keeps its own depth, the Caspian
- * keeps its own, and the Great Lakes stop being a pit.
- *
- * Whole grid, before any slicing: a component spans tiles, and labelling per
- * tile would give one lake two different levels either side of a seam.
- * Column 0 and column `nx − 1` are the SAME lattice point (lon −180 and +180),
- * so they are unioned — that is the longitude wrap, and it is why this must be
- * handed a global grid rather than a regional one.
+ * Every 4-connected water component takes the lowest elevation among the land
+ * posts touching it, except the largest (the world ocean), set to exactly 0 —
+ * no basin list, no seed. Column 0 and `nx − 1` are the same lattice point
+ * (lon ±180), so a component spanning that seam must be shored across it.
  */
 export function flattenWaterComponents(
   heightM: Float32Array,
@@ -89,9 +80,12 @@ export function flattenWaterComponents(
       const k = row * nx + col;
       if (isWater[k] === 1) continue;
       const height = heightM[k]!;
+      // Column 0 and nx−1 are the same point (lon ±180), so "west of 0" and
+      // "east of nx−1" must skip past that duplicate to nx−2 and 1 — using
+      // nx−1/0 instead would have a seam-straddling land post read itself.
       const neighbours = [
-        col > 0 ? k - 1 : row * nx + nx - 1,
-        col < nx - 1 ? k + 1 : row * nx,
+        col > 0 ? k - 1 : row * nx + nx - 2,
+        col < nx - 1 ? k + 1 : row * nx + 1,
         row > 0 ? k - nx : -1,
         row < ny - 1 ? k + nx : -1,
       ];

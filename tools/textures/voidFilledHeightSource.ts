@@ -1,10 +1,8 @@
 /**
  * voidFilledHeightSource — wrap a deep PRIMARY height source so its NaN posts
  * (source voids, tile gaps, nodata) take a coarser FALLBACK's value instead.
- *
  * Every post of a baked tile must be finite (`encodeHeightTile` refuses
- * otherwise, and a NaN reaching the runtime propagates into vertex positions),
- * so a band whose source has holes needs this rather than a sentinel.
+ * otherwise), so a band whose source has holes needs this rather than a sentinel.
  */
 
 import type { HeightSource } from './HeightSource';

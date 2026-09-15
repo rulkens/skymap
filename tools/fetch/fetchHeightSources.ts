@@ -1,13 +1,10 @@
 #!/usr/bin/env node
 /**
  * fetchHeightSources — pull the three Earth height sources the surface-tile
- * bake reads: ETOPO 2022 30″ globally, `skadi` 1″ over the EOX region boxes,
- * and DHM/Terræn 0.4 m over Søndermarken (`--etopo`, `--skadi`,
- * `--dhm-terraen`; none means all three).
- *
- * Every artefact is size-checked against what its format implies, so an
- * interrupted download is re-fetched rather than baked into a pyramid as a
- * truncated cell. Re-running is the resume: a complete file is skipped.
+ * bake reads: ETOPO 2022 30″ globally, `skadi` 1″ over the EOX boxes, and
+ * DHM/Terræn 0.4 m over Søndermarken (`--etopo`/`--skadi`/`--dhm-terraen`;
+ * none means all three). Every artefact is size-checked against its format,
+ * so an interrupted download is re-fetched rather than baked in truncated.
  */
 
 import { createWriteStream, existsSync, mkdirSync, renameSync, rmSync, statSync } from 'node:fs';

@@ -1,13 +1,9 @@
 /**
  * etopoHeightSource — the global `HeightSource`: ETOPO 2022 30″ surface
  * elevation, one 43200×21600 float32 GeoTIFF with bathymetry included
- * (`data/raw/etopo/README.md`).
- *
- * Cell (AREA) registration, so a pixel's value sits at its CENTRE — half a
- * cell off the corner the geotransform names, which is the difference between
- * a coastline landing on the right post and a 460 m shift everywhere.
- * Bathymetry is left as it is here: the sea is flattened in the bake, where
- * the whole level grid is available to label water bodies (R3).
+ * (`data/raw/etopo/README.md`). Cell (AREA) registration, so a pixel's value
+ * sits at its CENTRE, half a cell off the corner the geotransform names — the
+ * difference between a coastline on the right post and a 460 m shift everywhere.
  */
 
 import sharp from 'sharp';
