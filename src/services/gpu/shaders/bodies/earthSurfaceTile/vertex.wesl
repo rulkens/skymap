@@ -65,6 +65,23 @@ fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32, height
   );
 }
 
+// Twin of src/utils/scene/collapseTemplateIndex.ts. Edge order is R9's
+// [west, east, south, north] = template i = 0, i = n, j = 0, j = n. Code 1
+// only: at 2 the neighbour is more than one level away and has no post at the
+// even index either, so that edge is skirted instead.
+fn collapseTemplateIndex(i: u32, j: u32, n: u32, edgeCoarser: u32) -> vec2<u32> {
+  let west = edgeCoarser & 3u;
+  let east = (edgeCoarser >> 2u) & 3u;
+  let south = (edgeCoarser >> 4u) & 3u;
+  let north = (edgeCoarser >> 6u) & 3u;
+  let alongWestEast = (i == 0u && west == 1u) || (i == n && east == 1u);
+  let alongSouthNorth = (j == 0u && south == 1u) || (j == n && north == 1u);
+  return vec2<u32>(
+    select(i, i - (i % 2u), alongSouthNorth),
+    select(j, j - (j % 2u), alongWestEast),
+  );
+}
+
 @vertex
 fn vs(
   @builtin(vertex_index) vertexIndex: u32,
@@ -72,8 +89,16 @@ fn vs(
 ) -> VSOut {
   let inst = patches[instanceIndex];
   let row = u.meshResolution + 1u;
-  let i = vertexIndex % row;
-  let j = vertexIndex / row;
+  // The snapped pair feeds BOTH (s, t) and the post index, so the two sides of
+  // a collapsed edge name the same lattice point and read the same post.
+  let ij = collapseTemplateIndex(
+    vertexIndex % row,
+    vertexIndex / row,
+    u.meshResolution,
+    inst.edgeCoarser,
+  );
+  let i = ij.x;
+  let j = ij.y;
   let s = f32(i) / f32(u.meshResolution);
   let t = f32(j) / f32(u.meshResolution);
 
