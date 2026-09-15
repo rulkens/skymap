@@ -67,19 +67,19 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     // its literal Facts is known (post-PR-D). Built into the literal, not assigned after
     // the fact: `publish` is `readonly` on `LayerCoreDeps`, and the cast below is the one
     // place that erasure boundary is bridged.
-    const coreDeps =
-      layer.facts !== undefined
-        ? {
-            ...common,
-            publish: (patch: Record<string, unknown>) =>
-              deps.cb.store.dispatch(factsReported({ layer: layer.name, patch })),
-          }
-        : common;
-    if (layer.facts !== undefined) {
+    const declaresFacts = layer.facts !== undefined;
+    if (declaresFacts) {
       deps.cb.store.dispatch(
         layerFactsSeeded({ layer: layer.name, facts: layer.facts as Record<string, unknown> }),
       );
     }
+    const coreDeps = declaresFacts
+      ? {
+          ...common,
+          publish: (patch: Record<string, unknown>) =>
+            deps.cb.store.dispatch(factsReported({ layer: layer.name, patch })),
+        }
+      : common;
     return instantiateLayer(layer, coreDeps as LayerCoreDeps<undefined>);
   });
 

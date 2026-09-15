@@ -241,9 +241,14 @@ export function createFlowFieldRenderer(init: {
   let lastNowMs: number | null = null;
   // Built in upload once the velocity texture view + sampler exist.
   let computeBindGroup: GPUBindGroup | null = null;
-  // The seed knobs `reconcile` last saw; null before the first call, so that
-  // call only records rather than arming a reseed against no baseline.
-  let lastSeed: Pick<FlowSettings, 'mode' | 'count'> | null = null;
+  // The seed knobs `reconcile` last saw, as scalars rather than the live
+  // settings object — that object is replaced wholesale on every settings
+  // write today, but storing a reference would silently stop detecting a
+  // change the day something mutates `settings.flow` in place. Null before
+  // the first call, so that call only records rather than arming a reseed
+  // against no baseline.
+  let lastMode: FlowSettings['mode'] | null = null;
+  let lastCount: number | null = null;
 
   function modeCode(flow: FlowSettings): number {
     return flow.mode === 'streamline' ? MODE_STREAMLINE : MODE_ADVECT;
@@ -297,10 +302,11 @@ export function createFlowFieldRenderer(init: {
     },
 
     reconcile(seed: Pick<FlowSettings, 'mode' | 'count'>): void {
-      if (lastSeed !== null && (lastSeed.mode !== seed.mode || lastSeed.count !== seed.count)) {
+      if (lastMode !== null && (lastMode !== seed.mode || lastCount !== seed.count)) {
         reseed.arm();
       }
-      lastSeed = seed;
+      lastMode = seed.mode;
+      lastCount = seed.count;
     },
 
     fieldLoaded(): boolean {

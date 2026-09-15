@@ -176,11 +176,7 @@ const engineSlice = createSlice({
       action: PayloadAction<{ layer: string; patch: Record<string, unknown> }>,
     ) => {
       const facts = state as unknown as Record<string, Record<string, unknown> | undefined>;
-      const existing = facts[action.payload.layer];
-      if (!existing) {
-        throw new Error(`factsReported: no seeded facts for layer "${action.payload.layer}"`);
-      }
-      Object.assign(existing, action.payload.patch);
+      Object.assign(facts[action.payload.layer]!, action.payload.patch);
     },
 
     layerFactsSeeded: (

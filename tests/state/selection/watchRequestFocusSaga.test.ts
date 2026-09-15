@@ -67,6 +67,16 @@ describe('watchRequestFocusSaga', () => {
     });
   });
 
+  it('resolves a body deep link immediately, with no catalog cloud in the path', async () => {
+    // Ruling 4: a static (body/star/structure) focus id resolves off its
+    // table through the composed resolver's core rows — no `catalogLoaded` /
+    // `engineSourceCountReported` pulse required, even with the cloud absent.
+    cloudPresent = false;
+    store.dispatch(requestFocus('body-mars'));
+    await flush();
+    expect(store.getState()[selectionRoute].focus).toEqual({ type: 'body', id: 'mars' });
+  });
+
   it('defers an unresolvable galaxy id, then resolves on catalogLoaded', async () => {
     cloudPresent = false;
     store.dispatch(requestFocus('sdss-1237668393006604288'));

@@ -404,15 +404,6 @@ export function createEngine(
   // Null here — the handle is declared after the IIFE below. `wireInput` reads it
   // lazily, so it is non-null by the time a user can physically double-click.
   const handleRef: { current: EngineHandle | null } = { current: null };
-  const bootstrapDeps: BootstrapDeps = {
-    canvas,
-    cb,
-    composition,
-    frameRef,
-    detachControlsRef,
-    handleRef,
-    allSlots,
-  };
 
   // Every runner below is registered in ONE `setSagaContext` call before the async
   // GPU bootstrap finishes, which is safe only because each closure dereferences
@@ -444,6 +435,16 @@ export function createEngine(
   // boot window — before createLayers has run — still sees the core rows.
   state.selectionKindRows = coreSelectionRows(resolveDeps);
   const selection = composeSelectionRows(() => state.selectionKindRows);
+  const bootstrapDeps: BootstrapDeps = {
+    canvas,
+    cb,
+    composition,
+    frameRef,
+    detachControlsRef,
+    handleRef,
+    allSlots,
+    selection,
+  };
 
   // The single clip-run seam the saga context exposes.
   const playClip = createPlayClip({

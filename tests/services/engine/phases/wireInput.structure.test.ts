@@ -33,8 +33,10 @@ describe('wireInput structure wiring', () => {
   it('passes the composed resolver to createClickResolver', () => {
     // Structure hits reach `state.data.structures` through the composed
     // resolver's structure row (`composeSelectionRows` → `resolvePick`), not
-    // a direct field on the click-resolver input (D5).
-    expect(src).toContain('resolvePick: selection.resolvePick');
+    // a direct field on the click-resolver input (D5). The resolver is
+    // threaded in from `deps.selection` (engine.ts's one instance), not
+    // rebuilt here — see F1.
+    expect(src).toContain('resolvePick: deps.selection.resolvePick');
   });
 
   it('reads the authoritative selection slot for the dblclick focus', () => {

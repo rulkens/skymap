@@ -2,7 +2,7 @@
  * liveFocusRow — the focused SelectionRow with its `positionMpc` corrected to
  * the LIVE value, for debug tooling that runs OUTSIDE the frame loop.
  *
- * Only the 'body' arm ever goes stale: `extractSelectionRow` resolves it once,
+ * Only the 'body' arm ever goes stale: the composed resolver's `extractRow` resolves it once,
  * at the hardcoded CONST_J2000 epoch (see its header), so a row read long
  * after selection can sit years off the pose it's dumped next to. Every other
  * arm already carries a live-resolved position. Identity fields

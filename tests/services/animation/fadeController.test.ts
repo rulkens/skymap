@@ -51,6 +51,7 @@ describe('createFadeController', () => {
     c.fadeTo(1, 600, 1000);
     expect(c.targetOf()).toBe(1); // mid-ramp: still heading for 1
     expect(c.currentOpacity(1300)).toBeCloseTo(0.5, 5); // not there yet
+    expect(c.currentOpacity(1700)).toBeCloseTo(1, 5); // past the 600ms ramp — at rest
     expect(c.targetOf()).toBe(1); // at rest, holding 1
   });
 

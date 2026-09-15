@@ -4,6 +4,7 @@ import type { EngineComposition } from './EngineComposition';
 import type { Layer } from './layer/Layer';
 import type { AssetSlot } from '../loading/AssetSlot';
 import type { PhaseLocals } from './PhaseLocals';
+import type { SelectionResolver } from './selection/SelectionResolver';
 
 /**
  * Closure captures the bootstrap phases rely on.  Every entry was a
@@ -21,6 +22,14 @@ export type BootstrapDeps = {
 
   /** createEngine arg — the app's composition; `wireInput` reads its `home`. */
   readonly composition: EngineComposition<readonly Layer<string, unknown>[]>;
+
+  /**
+   * The one composed resolver (D5) `engine.ts` builds over `state.selectionKindRows`.
+   * `wireInput` hands its `resolvePick` to the hover driver and the click resolver —
+   * threaded through rather than rebuilt, so the two paths can never diverge even
+   * if `composeSelectionRows` grows internal state later.
+   */
+  readonly selection: SelectionResolver;
 
   /**
    * Mutable: forward-declared `frame` binding from `engine.ts`.  The

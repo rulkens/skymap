@@ -108,6 +108,14 @@ function makeDeps({ timeMode = 'live' }: { timeMode?: 'live' | 'manual' } = {}):
     detachControlsRef: { current: null },
     handleRef: { current: null },
     allSlots: new Map(),
+    // startLoop never reads a resolver — a resolver that always returns null
+    // is enough to satisfy the type.
+    selection: {
+      resolvePick: () => null,
+      extractRow: () => null,
+      resolveFocusId: () => null,
+      focusIdOf: () => null,
+    },
     phaseLocals: {
       device: {} as GPUDevice,
       context: {} as GPUCanvasContext,

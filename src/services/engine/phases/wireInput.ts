@@ -11,7 +11,6 @@ import { constructGpuHandles } from '../gpuHandles/constructGpuHandles';
 import { GPU_HANDLE_ROWS } from '../gpuHandles/gpuHandleRegistry';
 import { createClickResolver } from '../interaction/clickHandler';
 import { createHoverPickDriver } from '../interaction/hoverPickDriver';
-import { composeSelectionRows } from '../selection/composeSelectionRows';
 import { attachEngineInputs } from '../interaction/inputBindings';
 import { computeInitialCamera, DEFAULT_FOV_Y_RAD } from '../camera/cameraFraming';
 import { seedCameraRuntime } from '../camera/seedCameraRuntime';
@@ -75,11 +74,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   );
   const pickProgram = state.gpu.pickProgram!;
 
-  // The composed resolver (D5) — reads `state.selectionKindRows` lazily, so a
-  // Layer row `createLayers` appends after this phase still reaches both
-  // paths below without either being rebuilt.
-  const selection = composeSelectionRows(() => state.selectionKindRows);
-
   // Hover feeds only the React InfoCard text, not a visual halo, so the hover
   // path never needs a `requestRender`; GPU readback latency is its throttle.
   const store = deps.cb.store;
@@ -87,14 +81,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     state,
     pickProgram,
     store,
-    resolvePick: selection.resolvePick,
+    resolvePick: deps.selection.resolvePick,
   });
 
   // Galaxy identity is purely positional — no cloud read at pick time; the
   // reconciler resolves the cloud at display time.
   state.subsystems.clickResolver = createClickResolver({
     pickProgram,
-    resolvePick: selection.resolvePick,
+    resolvePick: deps.selection.resolvePick,
   });
 
   // Boot straight into the composition's home pose. The live wall-clock instant

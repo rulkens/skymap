@@ -1,16 +1,10 @@
 /**
- * CoreEngineSliceState — the shape of the Redux 'engine' slice's core fields:
- * lifecycle status, per-source/structure/provenance counts, load progress, the
- * scale-bar descriptor, the focused-body distance, HDR capability, and the two
- * curated metadata sidecars. Each field is written by a single action creator
- * in `engineSlice`; nothing here is computed — derivation is the selector's
- * job. `EngineSliceState` widens this with each Layer's published facts.
+ * CoreEngineSliceState — the shape of the Redux 'engine' slice's core fields.
+ * `EngineSliceState` widens this with each Layer's published facts.
  *
  * `sourceCounts`/`structureCounts`/`provenanceCounts` are sparse (Partial)
  * because the engine reports them one source/structure at a time; a missing
- * key means "not yet reported", not "zero". `loadProgress` is nullable rather
- * than optional because null itself is meaningful ("no fetch in flight") and
- * drives the progress bar's visibility.
+ * key means "not yet reported", not "zero".
  */
 
 import type { EngineStatus } from '../engine/EngineStatus';
