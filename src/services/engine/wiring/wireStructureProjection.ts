@@ -32,7 +32,11 @@
 
 import { buildStaticAnchorStructures } from '../../../data/structure/buildStaticAnchorStructures';
 import { structureCatalogToStructures } from './structureCatalogToStructures';
-import { engineStructureCountsChanged } from '../../../state/engine/engineSlice';
+import {
+  engineStructureCountsChanged,
+  engineStructureSearchListChanged,
+} from '../../../state/engine/engineSlice';
+import { toStructureSearchEntry } from '../../../utils/structure/toStructureSearchEntry';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
@@ -45,10 +49,11 @@ import type { EngineCallbacks } from '../../../@types/engine/EngineCallbacks';
  */
 export function wireStructureProjection(state: EngineState, cb: EngineCallbacks): void {
   /**
-   * Emit fresh per-category structure counts after any group change.  Called
-   * once at boot (static anchors) and again whenever the bulk group lands or
-   * clears.  Counts are read from `structureStore.byCategory` so they reflect
-   * the authoritative record set — the same one that renders.
+   * Emit fresh per-category structure counts AND the command palette's search
+   * list after any group change.  Called once at boot (static anchors) and
+   * again whenever the bulk group lands or clears.  Both reads go through
+   * `structureStore` so they reflect the authoritative record set — the same
+   * one that renders.
    */
   function emitCounts(): void {
     cb.store.dispatch(
@@ -58,6 +63,9 @@ export function wireStructureProjection(state: EngineState, cb: EngineCallbacks)
         void: state.data.structures.byCategory('void').length,
         group: state.data.structures.byCategory('group').length,
       }),
+    );
+    cb.store.dispatch(
+      engineStructureSearchListChanged(state.data.structures.all().map(toStructureSearchEntry)),
     );
   }
 

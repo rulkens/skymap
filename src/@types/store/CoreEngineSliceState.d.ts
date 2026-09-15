@@ -21,6 +21,7 @@ import type { LoadProgressState } from '../loading/LoadProgressState';
 import type { ProvenanceCounts } from '../engine/ProvenanceCounts';
 import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';
+import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
 
 export type CoreEngineSliceState = {
   status: EngineStatus;
@@ -47,6 +48,15 @@ export type CoreEngineSliceState = {
   structureCounts: Partial<Record<StructureId, number>>;
   provenanceCounts: Partial<Record<SourceType, ProvenanceCounts>>;
   loadProgress: LoadProgressState | null;
+  /**
+   * The command palette's structure search index — every loaded structure
+   * (anchors + bulk) projected down to its lean searchable fields. Published
+   * by `wireStructureProjection` alongside `engineStructureCountsChanged`, on
+   * the same boot + group-change schedule, so a Cmd+K opened before any
+   * catalog lands still gets the anchor set. Replaces `EngineSourcesHandle
+   * .getStructures` / `useStructureIndex`, which polled the handle instead.
+   */
+  structureSearchList: readonly StructureSearchEntry[];
   /**
    * Curated JSON sidecar payloads that the React layer selects — narrative and
    * physical metadata not carried in a catalog's binary rows. Each field is

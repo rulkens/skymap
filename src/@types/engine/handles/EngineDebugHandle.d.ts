@@ -13,6 +13,7 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { FrameStats } from '../FrameStats';
 import type { EarthTileDebugSnapshot } from '../../scene/EarthTileDebugSnapshot';
 import type { CameraDebugSnapshot } from '../../camera/CameraDebugSnapshot';
+import type { AssetSlot } from '../../loading/AssetSlot';
 
 /**
  * Read-only pass-name list for the DebugPanel's renderer-toggle section.
@@ -26,6 +27,18 @@ export type PassOverridesHandle = {
 };
 
 export type EngineDebugHandle = {
+  /**
+   * Flat read-only registry of every asset slot the engine owns, keyed by the
+   * slot's `name` (e.g. `'sdss-points'`, `'2mrs-points'`, `'glade-points'`,
+   * `'famous-points'`, `'filaments'`, `'famous-galaxies-meta'`, `'pgc-aliases'`).
+   * Type-erased to `AssetSlot<unknown, unknown>` because the slots carry
+   * different payload + request shapes — the dev panel only needs the
+   * discriminated `state()` projection, uniform across slot types. Populated
+   * lazily as the async bootstrap wires each slot, so the Map may be empty for
+   * the first frames. Read-only contract: drive slots via `slot.load()` /
+   * `slot.forceReload()` / `slot.cancel()`, never by mutating the Map.
+   */
+  readonly assetSlots: ReadonlyMap<string, AssetSlot<unknown, unknown>>;
   /**
    * Always non-null: check `.enabled` before subscribing — disabled means
    * either no `?gpuTimings` or an adapter without `timestamp-query`.

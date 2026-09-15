@@ -8,7 +8,7 @@
  * ratchet keeps shut). `createLayers` seeds each Layer's key via
  * `layerFactsSeeded` before that Layer's `create` runs, so `factsReported`'s
  * merge below never needs an existence branch — a patch under an unseeded key
- * throws (`Object.assign` on `undefined`) rather than silently minting one.
+ * throws rather than silently minting one.
  *
  * `engineScaleChanged`/`engineBodyDistanceReported` use DEDUP-ON-WRITE:
  * skipping the mutation when the value is unchanged keeps the same Immer
@@ -28,6 +28,7 @@ import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
+import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
 /**
  * Initial scale-bar value that renders something sensible before the engine
@@ -44,6 +45,7 @@ const CORE_INITIAL: CoreEngineSliceState = {
   structureCounts: {},
   provenanceCounts: {},
   loadProgress: null,
+  structureSearchList: [],
   meta: { famousGalaxies: [], famousStars: [] },
 };
 
@@ -92,6 +94,16 @@ const engineSlice = createSlice({
     // ── load progress ────────────────────────────────────────────────────────
     engineLoadProgressChanged: (state, action: PayloadAction<LoadProgressState | null>) => {
       state.loadProgress = action.payload;
+    },
+
+    // ── structure search index ───────────────────────────────────────────────
+    // Whole-array replace, dispatched by `wireStructureProjection` at boot and
+    // on every later group change — the same schedule as its counts dispatch.
+    engineStructureSearchListChanged: (
+      state,
+      action: PayloadAction<readonly StructureSearchEntry[]>,
+    ) => {
+      state.structureSearchList = [...action.payload];
     },
 
     // ── curated metadata sidecars ────────────────────────────────────────────
@@ -186,6 +198,7 @@ export const {
   engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
+  engineStructureSearchListChanged,
   engineFamousGalaxiesMetaReported,
   engineFamousStarsMetaReported,
   engineScaleChanged,

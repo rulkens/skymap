@@ -13,8 +13,9 @@
  * `store/` or `state/`.
  *
  * App passes down only what isn't a store concern: `engineHandleRef`, the ref
- * `useAliasIndex` walks to join GLADE/2MRS objIds against PGC aliases and
- * `useStructureIndex` reads to snapshot the loaded structures.  (The Milky-Way
+ * `useAliasIndex` walks to join GLADE/2MRS objIds against PGC aliases. The
+ * structure index is a store read (`selectStructureSearchList`), published by
+ * `wireStructureProjection` — no engine-handle poll needed.  (The Milky-Way
  * pick no longer needs App's `focusMilkyWay` — it routes through the same
  * `requestFocus(MILKY_WAY_FOCUS_ID)` path as a deep-link.)
  *
@@ -27,9 +28,8 @@ import { memo } from 'react';
 import type { RefObject } from 'react';
 import CommandPalette from '../CommandPalette/CommandPalette';
 import { useAliasIndex } from '../../hooks/useAliasIndex';
-import { useStructureIndex } from '../../hooks/useStructureIndex';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectFamousGalaxiesMeta } from '../../state/engine/selectors';
+import { selectFamousGalaxiesMeta, selectStructureSearchList } from '../../state/engine/selectors';
 import { selectPaletteOpen } from '../../state/ui/selectors';
 import { setPaletteOpen } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
@@ -47,7 +47,7 @@ function CommandPaletteContainer({
   const paletteOpen = useAppSelector(selectPaletteOpen);
   const famousGalaxiesMeta = useAppSelector(selectFamousGalaxiesMeta);
   const { aliasIndex } = useAliasIndex({ paletteOpen, engineHandleRef });
-  const structures = useStructureIndex({ paletteOpen, engineHandleRef });
+  const structures = useAppSelector(selectStructureSearchList);
   return (
     <CommandPalette
       entries={famousGalaxiesMeta}

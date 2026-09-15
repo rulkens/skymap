@@ -10,7 +10,6 @@
  */
 
 import type { SourceType } from '../../@types/data/SourceType';
-import type { StructureInfo } from '../../@types/data/structure/StructureInfo';
 import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogSourceType } from '../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
@@ -46,10 +45,7 @@ import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
 import { CONTENT_PASSES } from './frame/passes';
 import { FRAME_ORDER } from './frame/frameOrder';
-import { logCameraState } from './helpers/logCameraState';
-import { liveRenderCamera } from './helpers/liveRenderCamera';
 import { liveWorldPose } from './helpers/liveWorldPose';
-import { liveFocusRow } from './helpers/liveFocusRow';
 import { deriveBodyStates } from './frame/deriveBodyStates';
 import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
@@ -479,18 +475,6 @@ export function createEngine(
 
   // Declared up-front so the handle literal can reference each by name — no forward
   // references, no `!` assertions.
-  function logCameraStateFn(): void {
-    const simDays = state.cameraRuntime.outputs.simDays;
-    logCameraState(
-      liveRenderCamera(state),
-      canvas,
-      liveFocusRow(state.selectionRows.focus, simDays),
-      simDays,
-      state.subsystems.earthTiles?.getDebugSnapshot().subCamera ?? null,
-      state.cameraRuntime.outputs.displayed,
-    );
-  }
-
   function loadPgcAliasesFn(): Promise<PgcAliasMap> {
     // The pgcAlias row demands on `request('paletteOpened')`, so setting the flag
     // and waking the loop is what fires the load. The flag stays set, so a second
@@ -507,10 +491,6 @@ export function createEngine(
 
   function getCloudObjIds(source: SourceType): BigUint64Array | undefined {
     return state.data.galaxies.catalogs.get(source)?.objIDs;
-  }
-
-  function getStructures(): readonly StructureInfo[] {
-    return state.data.structures.all();
   }
 
   function destroy(): void {
@@ -579,18 +559,17 @@ export function createEngine(
   // The engine's only public surface: imperative operations only — store writes go
   // direct to the store.
   const handle: EngineHandle = {
-    camera: {
-      logState: logCameraStateFn,
-    },
     selection: {
       loadAliases: loadPgcAliasesFn,
     },
     sources: {
       getCloud,
       getCloudObjIds,
-      getStructures,
     },
     debug: {
+      // The same Map the bootstrap populates, so the dev panel observes slots as
+      // they appear. Read-only at the type level, so React-side mutation trips tsc.
+      assetSlots: allSlots,
       // A getter, not a copied reference: initGpu assigns `state.gpu.timingService`
       // AFTER this literal is built, so a copy would be null forever.
       get timingService() {
@@ -649,10 +628,6 @@ export function createEngine(
     },
 
     destroy,
-
-    // The same Map the bootstrap populates, so the dev panel observes slots as they
-    // appear. Read-only at the type level, so React-side mutation trips tsc.
-    assetSlots: allSlots,
   };
 
   handleRef.current = handle;
