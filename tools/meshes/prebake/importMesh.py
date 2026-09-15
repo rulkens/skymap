@@ -17,8 +17,8 @@ SOURCE_UV = "source"
 def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None):
     return {
         "filename": filename,
-        # Modellers author in whatever unit suits them — Hubble in inches, the
-        # Lunar Module at 0.7 — and everything downstream reads metres.
+        # Modellers author in whatever unit suits them — Hubble in inches — and
+        # everything downstream reads metres.
         "scale": scale,
         # NASA's documentary models type every surface matte whatever it is
         # made of. Per-material `metallic` / `roughness` / `gain` (Base Color
@@ -51,17 +51,6 @@ SOURCES = {
         "hbltel_1": dict(metallic=1.0, roughness=0.2, gain=2.0, bump=0.08),
         "hbltel_2": dict(metallic=1.0, roughness=0.2, bump=0.08),
         "hbltel_4": dict(metallic=1.0, roughness=0.3),
-    }),
-    # Flat-colour materials name their surfaces: the two golds are the descent
-    # stage's Kapton blankets, the greys the ascent stage's aluminium skin and
-    # the gear struts. Black, white and the decal textures as authored.
-    "lunar-module": source("Apollo Lunar Module.glb", scale=1.45, materials={
-        "blinn1SG.002": dict(metallic=1.0, roughness=0.3),
-        "blinn9SG.001": dict(metallic=1.0, roughness=0.3),
-        "blinn4SG.002": dict(metallic=0.9, roughness=0.45),
-        "blinn3SG.001": dict(metallic=0.9, roughness=0.45),
-        "initialShadingGr.001": dict(metallic=0.9, roughness=0.45),
-        "blinn2SG.002": dict(metallic=0.7, roughness=0.5),
     }),
 }
 

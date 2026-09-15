@@ -1,10 +1,10 @@
 /**
  * SURFACE_FIXED_SITES — the authored landing sites: a body, its host, and where
- * on that host it sits. A rover row is where it TOUCHED DOWN, not where it
- * stopped — Curiosity has since driven ~35 km up Mount Sharp and Opportunity
- * ~45 km to Perseverance Valley; the fact sheets say so. Heights are measured
- * from the host's mean sphere, so areoid- and selenoid-relative elevations are
- * not modelled.
+ * on that host it sits. The four rows are where each rover TOUCHED DOWN, not
+ * where it stopped — Curiosity has since driven ~35 km up Mount Sharp and
+ * Opportunity ~45 km to Perseverance Valley; the fact sheets say so. Heights
+ * are measured from Mars's mean 3390 km sphere, so areoid-relative site
+ * elevations are not modelled.
  */
 
 import { MESH_ASSETS } from './meshAssets.generated';
@@ -20,15 +20,6 @@ function groundOffsetM(meshKey: string): number {
 }
 
 export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
-  // Tranquility Base, Mare Tranquillitatis — the only site here that is not on
-  // Mars, and the only one whose vehicle never moved.
-  {
-    id: 'apollo11',
-    hostId: 'moon',
-    latDeg: 0.67416,
-    lonDeg: 23.47314,
-    altitudeM: groundOffsetM('lunar-module'),
-  },
   // Bradbury Landing, Gale crater.
   {
     id: 'curiosity',

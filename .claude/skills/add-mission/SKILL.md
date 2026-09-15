@@ -17,9 +17,8 @@ recomputed.
 
 Read `docs/DATA.md` "Adding a new raw data source" first if `data/raw/` is new
 to you. The reference implementations are `voyager1` (escape probe) and
-`curiosity` (landing site); `hubble` (Earth orbiter) and `apollo11` are on
-PR #718, together with the `orbiter()` maker — until it merges an orbiter
-cannot land.
+`curiosity` (landing site); `hubble` (Earth orbiter) is on PR #718, together
+with the `orbiter()` maker — until it merges an orbiter cannot land.
 
 ## Input
 
@@ -122,8 +121,8 @@ Every step is a literal edit site. Tick them all.
    edited source" listing every hand edit, "what the pre-bake does", attribution
    string, "as inspected" units + axes, and the Horizons refresh query for an
    orbit row), and a line in `data/raw/meshes/meshes.sha256` for the download.
-   The directory is named for the mesh key, which names the MODEL (`mer`,
-   `lunar-module`), not the mission that flew it.
+   The directory is named for the mesh key, which names the MODEL (`mer`, not
+   `spirit`), not the mission that flew it.
 2. **Registry** — `tools/utils/io/rawDataRegistry.ts`: four rows
    `meshes.<key>Source` (the download, `upstream:` the model page),
    `meshes.<key>Blend` (`<key>.blend`, `fetcher:` the import script),

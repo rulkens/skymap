@@ -29,7 +29,6 @@ const SEED_MESH_BODIES: readonly MeshBodySeed[] = [
   { id: 'voyager1', label: 'Voyager 1', meshKey: 'voyager', standoffRadii: 0.5 },
   { id: 'voyager2', label: 'Voyager 2', meshKey: 'voyager', standoffRadii: 0.5 },
   { id: 'hubble', label: 'Hubble', meshKey: 'hubble' },
-  { id: 'apollo11', label: 'Apollo 11', meshKey: 'lunar-module' },
   { id: 'curiosity', label: 'Curiosity', meshKey: 'curiosity' },
   { id: 'perseverance', label: 'Perseverance', meshKey: 'perseverance' },
   { id: 'spirit', label: 'Spirit', meshKey: 'mer' },

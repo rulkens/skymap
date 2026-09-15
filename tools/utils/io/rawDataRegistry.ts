@@ -1274,42 +1274,6 @@ export const RAW_DATA = {
     description:
       'Provenance for the MER model — author, model URL, the working GitHub-mirror fetch, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, and why the pre-bake picks an animation frame.',
   },
-  'meshes.lunarModuleSource': {
-    path: 'data/raw/meshes/lunar-module/Apollo Lunar Module.glb',
-    kind: 'file',
-    source: 'gitignored',
-    description:
-      'NASA 3D Resources "Apollo Lunar Module" by Michael D. Carbajal (public domain) — the untouched download, the marker for the Apollo 11 site. buildMeshes never reads it: 12 materials, Draco compression and a 0.7-scale model go through the Blender import and pre-bake first.',
-    upstream: 'https://science.nasa.gov/3d-resources/apollo-lunar-module/',
-    readme: 'meshes.lunarModule.readme',
-  },
-  'meshes.lunarModuleBlend': {
-    path: 'data/raw/meshes/lunar-module/lunar-module.blend',
-    kind: 'file',
-    source: 'gitignored',
-    description:
-      'lunar-module.blend — the edited source the pre-bake opens: the download scaled to its real 9.4 m gear span with the Kapton and aluminium materials made metallic, all by `npm run import-mesh -- lunar-module` (Blender 5.2 LTS; older versions cannot open it), which regenerates it from the pristine download.',
-    upstream: 'https://science.nasa.gov/3d-resources/apollo-lunar-module/',
-    fetcher: 'tools/meshes/prebake/importMesh.py',
-    readme: 'meshes.lunarModule.readme',
-  },
-  'meshes.lunarModule': {
-    path: 'data/raw/meshes/lunar-module/lunar-module.prebaked.glb',
-    kind: 'file',
-    source: 'gitignored',
-    description:
-      'The Lunar Module flattened to one material over four baked 2048^2 atlases (albedo, normal, roughness, metallic) — what MESH_SOURCES["lunar-module"] actually points at. Baked from `lunar-module.blend`; regenerate with `npm run prebake-mesh -- lunar-module` (Blender, not CI), never by hand.',
-    upstream: 'https://science.nasa.gov/3d-resources/apollo-lunar-module/',
-    fetcher: 'tools/meshes/prebake/meshPrebake.py',
-    readme: 'meshes.lunarModule.readme',
-  },
-  'meshes.lunarModule.readme': {
-    path: 'data/raw/meshes/lunar-module/README.md',
-    kind: 'file',
-    source: 'committed',
-    description:
-      'Provenance for the Lunar Module model — author, model URL, NASA public-domain terms, fetch date, checksum, the attribution string, native units/axes, the scale derivation and the material overrides.',
-  },
   'meshes.sha256': {
     path: 'data/raw/meshes/meshes.sha256',
     kind: 'file',

@@ -62,14 +62,6 @@ export const MESH_SOURCES: Readonly<Record<string, MeshSourceEntry>> = {
     // Voyager dish, so the same remap puts the boresight on body +X.
     bodyFromSource: [0, -1, 0, 1, 0, 0, 0, 0, 1],
   },
-  'lunar-module': {
-    native: 'meshes.lunarModule',
-    licence: 'Public domain (NASA)',
-    attribution:
-      'NASA / Michael D. Carbajal, "Apollo Lunar Module" (https://science.nasa.gov/3d-resources/apollo-lunar-module/)',
-    // Same source orientation as perseverance: up +Y → +Z, ladder/hatch +Z → +X.
-    bodyFromSource: [0, 1, 0, 0, 0, 1, 1, 0, 0],
-  },
   perseverance: {
     native: 'meshes.perseverance',
     licence: 'Public domain (NASA)',

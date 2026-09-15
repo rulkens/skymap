@@ -170,10 +170,9 @@ export const ROTATION_ELEMENTS: readonly RotationElements[] = [
     primeMeridianDeg: 90.0,
     spinRateDegPerDay: 0,
   },
-  // Lander headings — Eagle's included — are AUTHORED presentation, not
-  // surveyed landing azimuths: they only spread the neighbours so no two face
-  // the same way, and the visual pass is their only gate.
-  { kind: 'surfaceLocked', id: 'apollo11', headingDeg: 0 },
+  // Rover headings are AUTHORED presentation, not surveyed landing azimuths:
+  // they only spread the four so no two face the same way, and the visual pass
+  // is their only gate.
   { kind: 'surfaceLocked', id: 'curiosity', headingDeg: 90 },
   { kind: 'surfaceLocked', id: 'perseverance', headingDeg: 0 },
   { kind: 'surfaceLocked', id: 'spirit', headingDeg: 180 },

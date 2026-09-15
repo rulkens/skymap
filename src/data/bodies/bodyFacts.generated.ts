@@ -354,12 +354,6 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     description:
       'Launched on 24 April 1990 aboard the shuttle Discovery on STS-31, Hubble was the first large optical telescope placed above the atmosphere, and five shuttle servicing missions between 1993 and 2009 repaired its flawed mirror and replaced its instruments in turn. It has been observing from low Earth orbit ever since, circling once every 94 minutes.',
   },
-  apollo11: {
-    dayLength: '29 d 12 h 44 m (one lunar day)',
-    wikiTitle: 'Apollo_11',
-    description:
-      'Neil Armstrong and Buzz Aldrin landed the lunar module Eagle at Tranquility Base (0.67°N 23.47°E) on 20 July 1969 and spent 21.5 hours on the surface, a little over two of them outside. The marker shows Eagle as it landed; only the descent stage remains, the ascent stage having carried the crew back to lunar orbit.',
-  },
   curiosity: {
     dayLength: '24 h 39 m 35 s (1 sol)',
     wikiTitle: 'Curiosity_(rover)',
