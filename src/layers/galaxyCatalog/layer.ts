@@ -1,7 +1,7 @@
 /**
  * The galaxy-catalog Layer: nine point sources, their renderers, the thumbnail
- * LOD chain and every contribution they make to a frame. No `ui` yet (Ruling 8)
- * and no `targets`/`sagas`.
+ * LOD chain, the Galaxies settings section and every contribution they make to
+ * a frame. No `targets`/`sagas`.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -18,6 +18,7 @@ import { diskRadiusRingPass } from './passes/diskRadiusRingPass';
 import { galaxyCatalogFadeRows } from './present/galaxyCatalogFadeRows';
 import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
 import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
+import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
 import type { GalaxyCatalogFacts } from './types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
@@ -45,4 +46,5 @@ export const galaxyCatalogLayer = defineLayer({
   labels: (runtime) => [{ id: 'famousLabels', produceLabels: produceFamousGalaxyLabels(runtime) }],
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   frame,
+  ui: GalaxiesSectionContainer,
 });

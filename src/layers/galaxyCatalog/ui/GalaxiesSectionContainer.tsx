@@ -1,4 +1,4 @@
-// src/components/containers/GalaxiesSectionContainer.tsx
+// src/layers/galaxyCatalog/ui/GalaxiesSectionContainer.tsx
 /**
  * GalaxiesSectionContainer — store boundary for the Galaxies settings section.
  *
@@ -26,8 +26,8 @@
  */
 
 import { memo, useCallback } from 'react';
-import GalaxiesSection from '../SettingsPanel/GalaxiesSection';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import GalaxiesSection from './GalaxiesSection';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   selectVisibleSourceMask,
   selectGalaxyCatalogSize,
@@ -37,8 +37,8 @@ import {
   selectGalaxySbScale,
   selectGalaxySbMax,
   selectGalaxyFalloffStrength,
-} from '../../state/settings/selectors';
-import { selectSourceCounts } from '../../state/engine/selectors';
+} from '../../../state/settings/selectors';
+import { selectSourceCounts } from '../../../state/engine/selectors';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogSize,
@@ -48,10 +48,10 @@ import {
   setGalaxySbScale,
   setGalaxySbMax,
   setGalaxyFalloffStrength,
-} from '../../state/settings/settingsSlice';
-import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
-import type { SourceType } from '../../@types/data/SourceType';
-import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
+} from '../../../state/settings/settingsSlice';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
+import type { SourceType } from '../../../@types/data/SourceType';
+import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 
 function GalaxiesSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

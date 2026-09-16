@@ -1,4 +1,4 @@
-// src/components/SettingsPanel/GalaxiesSection.tsx
+// src/layers/galaxyCatalog/ui/GalaxiesSection.tsx
 /**
  * GalaxiesSection — presentational component for the Galaxies thematic group
  * inside the SettingsPanel.
@@ -23,14 +23,14 @@
  */
 
 import { memo } from 'react';
-import { Source, SOURCE_REGISTRY } from '../../data/sources';
-import { maskHas } from '../../utils/maskHas';
-import { BiasMode } from '../../data/galaxyCatalog/biasMode';
-import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
-import type { SourceType } from '../../@types/data/SourceType';
-import CollapsibleSection from './CollapsibleSection';
-import Slider from '../common/Slider/Slider';
-import styles from './SettingsPanel.module.css';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
+import { maskHas } from '../../../utils/maskHas';
+import { BiasMode } from '../../../data/galaxyCatalog/biasMode';
+import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
+import type { SourceType } from '../../../@types/data/SourceType';
+import CollapsibleSection from '../../../components/SettingsPanel/CollapsibleSection';
+import Slider from '../../../components/common/Slider/Slider';
+import styles from '../../../components/SettingsPanel/SettingsPanel.module.css';
 
 // ── Module-level constants ─────────────────────────────────────────────────────
 
