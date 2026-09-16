@@ -13,6 +13,7 @@ import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { scaleToUnitMax } from '../../../../src/utils/color/scaleToUnitMax';
+import { captionTint } from '../../../../src/utils/color/captionTint';
 
 // The caller passes the per-frame body snapshot; these tests use the J2000
 // instant. RENDER_ORIGIN_MPC is the Sun, so worldPos == positionMpc.
@@ -83,15 +84,27 @@ describe('sceneBodyLabels', () => {
     expect(vegaLater.worldPos).toEqual(vegaNow.worldPos);
   });
 
-  it('tints each label from its body record (spectral colour / albedo / Earth blue)', () => {
+  it('tints each label from its body record, lifted to display space', () => {
     const vega = SCENE_STARS.find((star) => star.id === 'vega')!;
     const vegaLabel = labels.find((label) => label.id === 'sceneBody-vega')!;
-    expect(vegaLabel.color).toEqual([...vega.color, 1]);
+    expect(vegaLabel.color).toEqual([...captionTint(vega.color), 1]);
     const moon = SCENE_PLANETS.find((planet) => planet.id === 'moon')!;
     const moonLabel = labels.find((label) => label.id === 'sceneBody-moon')!;
-    expect(moonLabel.color).toEqual([...moon.albedo, 1]);
+    expect(moonLabel.color).toEqual([...captionTint(moon.albedo), 1]);
+    // Earth's tint is hand-authored in display space, so it passes through raw.
     const earthLabel = labels.find((label) => label.id === 'sceneBody-earth')!;
     expect(earthLabel.color).toEqual([0.5, 0.72, 1, 1]);
+  });
+
+  it('keeps every caption readable against a black sky', () => {
+    // The guard on the call sites, not on `captionTint`: a body whose tint is a
+    // raw linear albedo (Mercury's is 0.29) paints as near-unreadable dark grey
+    // once it reaches the post-tone-map overlay. Floor is `captionTint`'s, minus
+    // float slack; Earth and Sgr A* clear it on their authored values alone.
+    for (const label of labels) {
+      const [r, g, b] = label.color;
+      expect(0.2126 * r! + 0.7152 * g! + 0.0722 * b!).toBeGreaterThan(0.649);
+    }
   });
 
   it('staggers the co-located captions vertically (Sun below, Earth above, Moon below)', () => {
@@ -134,6 +147,6 @@ describe('sceneBodyLabels', () => {
 
     expect(label.kind).toBe('meshBody');
     expect(label.text).toBe(body.label);
-    expect(label.color).toEqual([...scaleToUnitMax(body.albedo), 1]);
+    expect(label.color).toEqual([...captionTint(scaleToUnitMax(body.albedo)), 1]);
   });
 });

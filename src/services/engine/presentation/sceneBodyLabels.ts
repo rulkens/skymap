@@ -9,11 +9,16 @@
  *
  * Sourced from the full seed set (`SCENE_EARTH` + `SCENE_STARS` +
  * `SCENE_PLANETS` + `SGR_A_STAR` + `SCENE_MESH_BODIES`), each tinted by its own
- * authored colour: a star's spectral-class `color`, a planet's or mesh body's
+ * authored colour: a star's blackbody `color`, a planet's or mesh body's
  * `albedo`, and fixed tints for the two records that carry no colour (Earth,
  * which has a texture instead, and Sgr A*, which has no light). Deriving the
  * tints from the body records keeps this file free of a parallel colour table
  * that would drift from the seeds.
+ *
+ * These captions draw after the tone-map, so `bodyLabel` takes a DISPLAY tint,
+ * while a star's `color` and a body's `albedo` are LINEAR — Mercury's is 0.29.
+ * Each derived tint therefore crosses `captionTint`; the two hand-authored
+ * ones below are already display values and pass straight through.
  *
  * ### Why the foreground projection, not the main one
  *
@@ -46,6 +51,7 @@ import { SCENE_PLANETS } from '../../../data/bodies/scenePlanets';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
+import { captionTint } from '../../../utils/color/captionTint';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SUN_ENTRY } from '../../../data/sources/sun';
@@ -75,17 +81,17 @@ export const FOREGROUND_LABEL_CAPACITY =
   2 ** Math.ceil(Math.log2(SCENE_BODIES.length + CONSTELLATION_COUNT));
 
 /**
- * Earth's caption tint. `EarthBody` carries a texture rather than a colour,
- * so this is the one hand-authored tint in the set — the same Earth blue
- * the captions have always used.
+ * Earth's caption tint, display space. `EarthBody` carries a texture rather
+ * than a colour, so this is hand-authored — the same Earth blue the captions
+ * have always used.
  */
 const EARTH_TINT: Readonly<Vec3> = [0.5, 0.72, 1];
 
 /**
- * Sgr A*'s caption tint. An `AnchorPointBody` carries no photometry — there is
- * no light to take a colour from — so this is authored: a warm accretion amber,
- * distinct from every blue-to-white star tint so the Galactic Centre reads as a
- * landmark rather than one more name in the star map.
+ * Sgr A*'s caption tint, display space. An `AnchorPointBody` carries no
+ * photometry — no light to take a colour from — so this is authored: a warm
+ * accretion amber, distinct from every blue-to-white star tint so the Galactic
+ * Centre reads as a landmark rather than one more name in the star map.
  */
 const SGR_A_STAR_TINT: Readonly<Vec3> = [1, 0.66, 0.32];
 
@@ -127,10 +133,10 @@ export const SCENE_STAR_LABEL_IDS: ReadonlySet<string> = new Set(
 
 /**
  * Build the common label shape for one body. The position is the caller's — no
- * `SceneBody` arm carries one — so this reads it as a parameter. The colour is
- * the caller's per-type derivation (spectral colour / albedo / Earth blue), widened
- * to straight RGBA at full alpha; `kind` is the caller's structural knowledge of
- * which seed table the body came from.
+ * `SceneBody` arm carries one — so this reads it as a parameter. The tint is the
+ * caller's per-type derivation, already in DISPLAY space, widened to straight
+ * RGBA at full alpha; `kind` is the caller's structural knowledge of which seed
+ * table the body came from.
  */
 function bodyLabel(
   body: SceneBody,
@@ -210,12 +216,17 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
       bodyLabel(
         star,
         bodyStates.get(star.id)!.positionMpc,
-        star.color,
+        captionTint(star.color),
         star.id === SUN_ENTRY.id ? 'sun' : 'star',
       ),
     ),
     ...SCENE_PLANETS.map((planet) =>
-      bodyLabel(planet, bodyStates.get(planet.id)!.positionMpc, planet.albedo, 'planet'),
+      bodyLabel(
+        planet,
+        bodyStates.get(planet.id)!.positionMpc,
+        captionTint(planet.albedo),
+        'planet',
+      ),
     ),
     // Sgr A* draws no geometry, so this caption is its ENTIRE on-screen
     // presence: omitted here it is invisible with nothing to diagnose, which is
@@ -229,7 +240,7 @@ export function sceneBodyLabels(bodyStates: ReadonlyMap<string, BodyState>): For
       ...bodyLabel(
         body,
         bodyStates.get(body.id)!.positionMpc,
-        scaleToUnitMax(body.albedo),
+        captionTint(scaleToUnitMax(body.albedo)),
         'meshBody',
       ),
       revealBand: captionRevealBand(body.captionRevealM),

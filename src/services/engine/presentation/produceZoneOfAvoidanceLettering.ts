@@ -13,6 +13,7 @@ import type { Label3D } from '../../../@types/rendering/Label3D';
 import { deriveZoneOfAvoidanceLiveness } from '../frame/zoneOfAvoidanceLiveness';
 import { GAL_X_EQ, GAL_Z_EQ } from '../../../data/orientation/orientationFrames';
 import { FONT_IDS } from '../../../data/fonts';
+import { linearRgbToDisplay } from '../../../utils/color/linearRgbToDisplay';
 import {
   ZONE_OF_AVOIDANCE_LABEL_TEXT,
   ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
@@ -39,6 +40,10 @@ export function produceZoneOfAvoidanceLettering(
   if (fadeAlpha === null) return { labels: [], awake: false };
 
   const tuning = state.settings.zoneOfAvoidance;
+  // The knob is linear RGB, like the band's `color`, but the lettering draws
+  // after the tone-map — encoding it here is what makes the DebugPanel's sRGB
+  // picker show the colour that actually lands on screen.
+  const [r, g, b] = linearRgbToDisplay(tuning.labelColor);
   const label: Label3D = {
     id: 'zoneOfAvoidance',
     text: ZONE_OF_AVOIDANCE_LABEL_TEXT,
@@ -52,7 +57,7 @@ export function produceZoneOfAvoidanceLettering(
     },
     emMpc: LABEL_EM_MPC,
     repeatCount: ZONE_OF_AVOIDANCE_LABEL_REPEAT_COUNT,
-    color: [tuning.labelColor[0], tuning.labelColor[1], tuning.labelColor[2], 1],
+    color: [r, g, b, 1],
     fadeAlpha,
   };
   return { labels: [label], awake: false };

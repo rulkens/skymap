@@ -20,6 +20,6 @@ export type ZoneOfAvoidanceTuning = {
   edgeSharpness: number;
   /** Veil tint, linear RGB. */
   color: Vec3;
-  /** Curved-lettering tint, linear RGB (same currency as `color`). */
+  /** Curved-lettering tint, linear RGB (same currency as `color`); the producer display-encodes it. */
   labelColor: Vec3;
 };
