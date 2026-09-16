@@ -128,17 +128,6 @@ export const FADE_LAYERS = [
     intent: (s, id) => s.structures.items[id].labelEnabled,
   }),
   fadeLayerRow({
-    key: 'filaments',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'filament' }),
-    seed: () => 0,
-    intent: (s) => s.filaments.enabled,
-    // Unguarded, a tour reveal whose download is still in flight starts the fade
-    // over an empty renderer, and the slot commit's default-duration re-sync then
-    // stomps the authored ramp — the layer pops in wherever the invisible fade got.
-    guard: (state) => state.gpu.filamentRenderer?.hasCloud() ?? false,
-  }),
-  fadeLayerRow({
     key: 'constellations',
     expand: () => [undefined],
     handle: () => ({ kind: 'constellations' }),

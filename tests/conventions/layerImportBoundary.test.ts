@@ -71,15 +71,8 @@ function assertSweep(
 // Layer's settings tuple as one specifier, for `liftClusterReducers`'s
 // per-fragment spreads — each needs its literal fragment type. This stays until
 // reducers compose at the type level, not this PR.
-//
-// The two `filaments` rows below are 05a's in-flight state: core still
-// constructs the renderer and builds the slot from the modules that moved under
-// `src/layers/filaments/`. Task 5 deletes both reads in favour of
-// `Layer.create`/`assets` and drops the rows with them.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'state/settings/settingsSlice': 13,
-  'services/engine/gpuHandles/gpuHandleRegistry': 1,
-  'services/engine/wiring/assetWiring': 1,
 };
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {

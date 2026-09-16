@@ -17,7 +17,7 @@ import type { BodyStore } from './BodyStore';
  *
  * Filaments and flow have NO store: they held only a status-only `loaded` bit
  * that mirrored their asset slot's `ready` state. That mirror is gone — read
- * `slotReady(state.assetSlots.flow / .filaments)` instead.
+ * the slot through `slotFor(state, 'flow' / 'filaments')` instead.
  *
  * Volumes also have no store: their only app-side state is per-field settings,
  * which live in `state.settings.volumes.items` (ADR 0006 superseded the

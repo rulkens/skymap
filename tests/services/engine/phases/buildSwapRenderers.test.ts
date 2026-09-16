@@ -38,7 +38,7 @@ import { buildSwapRenderers } from '../../../../src/services/engine/phases/build
 /**
  * The eight handle keys `buildSwapRenderers` owns on `state.gpu.*`, plus the
  * `uiCtx` / `fontAtlases` inputs it reads, plus one NOT-flagged row
- * (`filamentRenderer`) — the untouched-identity proof's subject.
+ * (`constellationRenderer`) — the untouched-identity proof's subject.
  */
 function makeState(): EngineState {
   return {
@@ -58,7 +58,7 @@ function makeState(): EngineState {
       pickDebugOverlay: null,
       foregroundLabelRenderer: null,
       foregroundMarkerLineRenderer: null,
-      filamentRenderer: makeStub(),
+      constellationRenderer: makeStub(),
     },
     subsystems: {
       cosmoLabelDirector: {
@@ -123,7 +123,7 @@ describe('buildSwapRenderers', () => {
 
   it("a non-swap-format row's handle identity is unchanged across a rebuild", () => {
     const state = makeState();
-    const filamentRenderer = state.gpu.filamentRenderer;
+    const constellationRenderer = state.gpu.constellationRenderer;
 
     buildSwapRenderers(state, 'bgra8unorm');
     buildSwapRenderers(state, 'rgba16float');
@@ -131,8 +131,8 @@ describe('buildSwapRenderers', () => {
     // Proves the rebuildOnSwapFormat filter is exact, not a superset: a row
     // absent from GPU_HANDLE_ROWS's flagged 8 must survive two rebuilds
     // untouched — same reference, destroy() never called.
-    const stub = filamentRenderer as unknown as { destroy: ReturnType<typeof vi.fn> };
-    expect(state.gpu.filamentRenderer).toBe(filamentRenderer);
+    const stub = constellationRenderer as unknown as { destroy: ReturnType<typeof vi.fn> };
+    expect(state.gpu.constellationRenderer).toBe(constellationRenderer);
     expect(stub.destroy).not.toHaveBeenCalled();
   });
 });

@@ -54,7 +54,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/constellationsPass': 2,
   'frame/passes/earthPass': 4,
   'frame/passes/fieldStarSpherePass': 6,
-  'frame/passes/filamentsPass': 3,
   'frame/passes/horizonShellPass': 1,
   'frame/passes/milkyWayPass': 1,
   'frame/passes/orbitTrailsPass': 1,
@@ -65,10 +64,8 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/starPointsPass': 3,
   'frame/passes/texturedBodiesPass': 2,
   'frame/passes/zoneOfAvoidancePass': 4,
-  // 05a Task 1 relocated filamentsPass.ts here verbatim; its own tuning
-  // constants ride along. The `frame/passes/filamentsPass` row above becomes
-  // dead once Task 5 deletes the file from CONTENT_PASSES's core copy — this
-  // is the live one from here on.
+  // A Layer's own pass file is swept on the same terms as core's: its four
+  // tuning constants are this pass's alone, so they ride along.
   'layers/filaments/passes/filamentsPass': 3,
 };
 

@@ -116,7 +116,6 @@ function stubSlot(kind: LoadState<unknown>['kind'] = 'idle'): StubSlot {
  * they declare, so the full ~12-field bag is unnecessary in tests.
  */
 type SettingsLeaves = {
-  filaments?: { enabled: boolean };
   structures?: {
     enabled: boolean;
     items: Record<string, { enabled: boolean; labelEnabled: boolean }>;
@@ -139,13 +138,12 @@ type VolumeFieldLeaves = Partial<Record<VolumeFieldId, { enabled: boolean }>>;
 type GalaxyCatalogItemLeaves = Partial<Record<GalaxyCatalogId, { enabled: boolean }>>;
 
 /**
- * Default-at-boot settings: all structure categories visible, filaments off.
+ * Default-at-boot settings: all structure categories visible.
  *
  * These match the engine's real initial state as documented in
  * `data/defaults.ts` and `EngineSettingsState`.
  */
 const BOOT_SETTINGS: SettingsLeaves = {
-  filaments: { enabled: false },
   structures: {
     enabled: true,
     items: {
@@ -192,7 +190,6 @@ const BOOT_GALAXY_CATALOG_ITEMS: GalaxyCatalogItemLeaves = {
 type PointSlotOverrides = Partial<Record<SourceType, StubSlot>>;
 type NamedSlotOverrides = Partial<{
   famousGalaxiesMeta: StubSlot;
-  filaments: StubSlot;
   structureCatalog: StubSlot;
   pgcAlias: StubSlot;
   cf4Density: StubSlot;
@@ -289,7 +286,6 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       },
     },
     assetSlots: {
-      filaments: (namedSlots.filaments ?? stubSlot()) as AssetSlot<unknown, unknown> as never,
       structureCatalog: (namedSlots.structureCatalog ?? stubSlot()) as AssetSlot<
         unknown,
         unknown
@@ -329,7 +325,7 @@ function collectFired(state: EngineState): Set<AssetKey> {
   }
 
   // Core's named slots — the ones that might have fired.
-  const namedKeys = ['filaments', 'structureCatalog', 'cf4Density', 'mcpm'] as const;
+  const namedKeys = ['structureCatalog', 'cf4Density', 'mcpm'] as const;
   for (const key of namedKeys) {
     const slot = state.assetSlots[key] as StubSlot | null | undefined;
     if (slot?.load.mock.calls.length) fired.add(key);
@@ -389,7 +385,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * loads because every structure category is visible by default. mcpm IS
    * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
    * which the construction seed lands as true (registry visible:true). cf4Density
-   * is NOT (seeded enabled:false). filaments: off. pgcAlias: palette closed.
+   * is NOT (seeded enabled:false). pgcAlias: palette closed.
    * `hiResFamous` demands
    * unconditionally — its "fetch" is a GPU allocation, not a download.
    */

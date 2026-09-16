@@ -12,7 +12,6 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import { createFilamentSlot } from '../../../layers/filaments/load/filamentSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
@@ -196,17 +195,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     req: () => undefined,
     demand: () => true,
     priority: 22, // right behind famousGalaxiesMeta; both are tiny and wanted early
-  },
-
-  // ── Cosmic-web filament skeleton ─────────────────────────────────
-  {
-    key: 'filaments',
-    // Non-null by phase order: `initGpu` constructs the handle, `wireSlots`
-    // builds this row. The row leaves core once the filaments Layer is composed.
-    factory: (deps) => createFilamentSlot(deps.state.gpu.filamentRenderer!),
-    req: (tier) => ({ small: tier === 'small' }),
-    demand: (ctx) => ctx.settings.filaments.enabled,
-    priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
   },
 
   // ── Volume overlays: mcpm / cf4Density / polyphorm2Mrs / mcpmWorkbench ──

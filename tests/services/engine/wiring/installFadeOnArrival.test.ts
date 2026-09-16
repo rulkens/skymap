@@ -8,6 +8,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
+import { filamentsFadeRows } from '../../../../src/layers/filaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { FADE_IN_DURATION_MS } from '../../../../src/services/animation/fadeController';
 import { installFadeOnArrival } from '../../../../src/services/engine/wiring/installFadeOnArrival';
@@ -17,6 +18,7 @@ import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
+import type { FilamentsRuntime } from '../../../../src/layers/filaments/types/FilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import type { FadeBridgeState } from '../../../helpers/engine/FadeBridgeState';
 
@@ -58,9 +60,11 @@ describe('installFadeOnArrival', () => {
   it('fades a row in when its guard opens on slot ready', () => {
     const { state, fadeTo } = makeFadeBridgeState();
     let hasCloud = false;
-    (state.gpu as unknown as { filamentRenderer: { hasCloud: () => boolean } }).filamentRenderer = {
-      hasCloud: () => hasCloud,
-    };
+    // A REAL row, over a renderer the test commits into by hand — the guard
+    // transition under test is the one an upload actually opens.
+    (state as FadeBridgeState).fadeRows = filamentsFadeRows({
+      renderer: { hasCloud: () => hasCloud },
+    } as unknown as FilamentsRuntime) as FadeBridgeState['fadeRows'];
     const { slots, notifyReady } = makeStubSlot();
 
     installFadeOnArrival(state as EngineState, slots);

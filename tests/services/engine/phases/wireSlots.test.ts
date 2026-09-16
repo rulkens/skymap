@@ -709,15 +709,14 @@ describe('wireSlots', () => {
 
     // Registry includes the Layer's slots (the per-source point slots and its
     // two sidecars, by `.name`) plus the sidecars wireSlots itself mints
-    // (filaments, structure catalog, CF-4, MCPM) plus synthetic fixtures
-    // (DEV-only — vitest runs as DEV). Asserted as a superset so additive
-    // changes don't break the test for the wrong reason.
+    // (structure catalog, CF-4, MCPM) plus synthetic fixtures (DEV-only —
+    // vitest runs as DEV). Asserted as a superset so additive changes don't
+    // break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);
     expect(names.has('glade-points')).toBe(true);
     expect(names.has('famous-points')).toBe(true);
-    expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);
