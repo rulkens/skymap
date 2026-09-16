@@ -24,7 +24,6 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { flowFieldFetcher } from '../fetchers/flowFieldFetcher';
-import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 
@@ -38,12 +37,6 @@ export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) =
       // slotReady(assetSlots.flow) becomes true exactly when "committed to the
       // renderer" is true — no separate status mirror needed.
       state.gpu.flowFieldRenderer?.upload(cube);
-      // Drive the first-load fade through the intent → fade bridge: the flow row
-      // owns the intent gate (reads settings.flow.enabled) and its guard
-      // (`fieldLoaded()`), which is true here because `upload(cube)` just ran. A
-      // load that completes after the user toggled off snaps to opacity 0 and
-      // never visibly renders.
-      syncVisibilityFades(state, { animate: true, only: ['flow'] });
     },
   });
   slot.subscribe((s) => {
