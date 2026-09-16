@@ -39,13 +39,16 @@ export function cutSurfaceTiles(input: {
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
    *  units — see `radiusM` below, the walk's new length scale). */
   readonly camPosLocalM: Readonly<Vec3>;
-  /** The body slab's own f64 vp, built about the eye, in metres. Only x/y
-   *  extent is read, so the depth convention doesn't matter here. Stays
-   *  `Float64Array` as a belt-and-braces contract: the `w`-row cancellation
-   *  that forced it under the old Mpc-frame walk (`composeBodyMvp`'s header)
-   *  no longer occurs — metres is already the small, well-conditioned unit
-   *  — but keeping the type honest costs nothing and guards a future caller
-   *  that narrows too early. */
+  /** `composeBodySlabMvp`'s f64 result — `slabVp · T(−eye) · S(radiusM)`, so
+   *  it consumes UNIT-SPHERE positions, NOT the metres `camPosLocalM` and
+   *  `radiusM` are in. Every position `probe` feeds it is a unit direction
+   *  from `equirectUvToDirection`, and `cornerChord`/`relief`/`boundRadius`
+   *  are dimensionless to match. Passing the slab's own vp (which does take
+   *  eye-relative metres) instead evaluates every plane and screen extent one
+   *  metre from the body centre — the cull goes all-or-nothing for the whole
+   *  globe and `screenPx` collapses — with nothing but this line to say so.
+   *  Only x/y extent is read, so the depth convention doesn't matter here.
+   *  Stays `Float64Array` to guard a caller that narrows too early. */
   readonly viewProjLocal: Float64Array;
   readonly viewportPx: Readonly<Vec2>;
   /** The body's equatorial radius in metres — was implicit (unit sphere);
