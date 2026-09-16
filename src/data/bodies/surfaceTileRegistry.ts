@@ -15,7 +15,7 @@ export const SURFACE_TILE_REGISTRY = {
     effects: ['materialMap', 'nightLights', 'cloudShadows'],
     // Picked fields, not the whole object: `EARTH_SURFACE_PARAMS` also carries
     // `cloudShadowStrength`/`ambientLight`/`oceanRoughness`, which stay live
-    // user settings rather than a fixed per-body row (see Task 6).
+    // user settings rather than a fixed per-body row.
     shading: {
       roughnessBase: EARTH_SURFACE_PARAMS.roughnessBase,
       f0: EARTH_SURFACE_PARAMS.f0,

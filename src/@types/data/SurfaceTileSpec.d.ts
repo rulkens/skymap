@@ -10,7 +10,7 @@ import type { SurfaceTileShading } from './SurfaceTileShading';
 export type SurfaceTileSpec = {
   /** Folder under `data/images/` holding `manifest.json` — e.g. `earth-tiles`. */
   readonly manifestKey: string;
-  /** Fragment variant selector — see Task 6. Order-insensitive. */
+  /** Fragment variant selector. Order-insensitive. */
   readonly effects: readonly SurfaceEffect[];
   readonly shading: SurfaceTileShading;
 };
