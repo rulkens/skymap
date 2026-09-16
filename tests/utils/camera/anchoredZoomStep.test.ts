@@ -21,6 +21,7 @@ import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
 
 const BASIS_IDENTITY: BodyFixedPose['basisLocal'] = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 const BODY_RADIUS_M = 6_371_000;
+const GROUND_AT_M = () => BODY_RADIUS_M;
 
 function eyeOf(pose: BodyFixedPose): readonly [number, number, number] {
   return [
@@ -46,7 +47,15 @@ describe('anchoredZoomStep', () => {
     const OUT_FACTOR = 1.01;
     let pose = start;
     for (let i = 0; i < 260; i++) {
-      pose = anchoredZoomStep(pose, OUT_FACTOR, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII, null);
+      pose = anchoredZoomStep(
+        pose,
+        OUT_FACTOR,
+        null,
+        BODY_RADIUS_M,
+        SURFACE_STANDOFF_RADII,
+        GROUND_AT_M,
+        null,
+      );
     }
     for (let i = 0; i < 260; i++) {
       pose = anchoredZoomStep(
@@ -55,6 +64,7 @@ describe('anchoredZoomStep', () => {
         null,
         BODY_RADIUS_M,
         SURFACE_STANDOFF_RADII,
+        GROUND_AT_M,
         null,
       );
     }
@@ -83,10 +93,26 @@ describe('anchoredZoomStep', () => {
     const subEyeM: [number, number, number] = [0, 0, BODY_RADIUS_M];
 
     const f = 0.9;
-    const inOnce = anchoredZoomStep(start, f, subEyeM, BODY_RADIUS_M, SURFACE_STANDOFF_RADII, null);
+    const inOnce = anchoredZoomStep(
+      start,
+      f,
+      subEyeM,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
+      null,
+    );
     expect(Math.hypot(...eyeOf(inOnce)) - BODY_RADIUS_M).toBeCloseTo(altitudeM * f, 6);
 
-    const back = anchoredZoomStep(inOnce, 1 / f, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII, null);
+    const back = anchoredZoomStep(
+      inOnce,
+      1 / f,
+      null,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
+      null,
+    );
     const [bx, by, bz] = eyeOf(back);
     expect(bx).toBeCloseTo(0, 6);
     expect(by).toBeCloseTo(0, 6);
@@ -112,6 +138,7 @@ describe('anchoredZoomStep', () => {
       cursorAnchorM,
       BODY_RADIUS_M,
       SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
       null,
     );
     const second = anchoredZoomStep(
@@ -120,6 +147,7 @@ describe('anchoredZoomStep', () => {
       cursorAnchorM,
       BODY_RADIUS_M,
       SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
       null,
     );
 
@@ -149,6 +177,7 @@ describe('anchoredZoomStep', () => {
       cursorAnchorM,
       BODY_RADIUS_M,
       SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
       null,
     );
     const eyeStart = [0, 0, 20_000_000] as const;
@@ -167,7 +196,15 @@ describe('anchoredZoomStep', () => {
       basisLocal: BASIS_IDENTITY,
     };
 
-    const out = anchoredZoomStep(pose, 0.01, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII, null);
+    const out = anchoredZoomStep(
+      pose,
+      0.01,
+      null,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
+      null,
+    );
 
     expect(magnitude(eyeOf(out))).toBeGreaterThanOrEqual(floorM - 1e-6);
   });
@@ -180,17 +217,42 @@ describe('anchoredZoomStep', () => {
       basisLocal: BASIS_IDENTITY,
     };
 
-    const hugeOut1 = anchoredZoomStep(pose, 1e6, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII, null);
-    const hugeOut2 = anchoredZoomStep(pose, 1e9, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII, null);
+    const hugeOut1 = anchoredZoomStep(
+      pose,
+      1e6,
+      null,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
+      null,
+    );
+    const hugeOut2 = anchoredZoomStep(
+      pose,
+      1e9,
+      null,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
+      null,
+    );
     expect(hugeOut2).toEqual(hugeOut1);
 
-    const tinyIn1 = anchoredZoomStep(pose, 1e-9, null, BODY_RADIUS_M, SURFACE_STANDOFF_RADII, null);
+    const tinyIn1 = anchoredZoomStep(
+      pose,
+      1e-9,
+      null,
+      BODY_RADIUS_M,
+      SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
+      null,
+    );
     const tinyIn2 = anchoredZoomStep(
       pose,
       1e-12,
       null,
       BODY_RADIUS_M,
       SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
       null,
     );
     expect(tinyIn2).toEqual(tinyIn1);
@@ -221,6 +283,7 @@ describe('anchoredZoomStep', () => {
       cursorAnchorM,
       BODY_RADIUS_M,
       SURFACE_STANDOFF_RADII,
+      GROUND_AT_M,
       null,
     );
     const [ex, ey, ez] = eyeOf(out);

@@ -1,4 +1,5 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { rotatedAboutPoint } from './rotatedAboutPoint';
@@ -17,13 +18,15 @@ import { quatFromAxisAngle } from '../math/quatFromAxisAngle';
  */
 export function flooredBodyPose(
   pose: BodyFixedPose,
-  bodyRadiusM: number,
+  groundRadiusAtM: GroundRadiusLookup,
   standoffRadii: number,
   pivotM: Readonly<Vec3> | null,
 ): BodyFixedPose {
   const eyeM = bodyFixedEyeM(pose);
   const magM = Math.hypot(...eyeM);
-  const floorM = surfaceFloorM(bodyRadiusM, standoffRadii);
+  // Asked under the eye AFTER the step that moved it, so the ground the floor
+  // stands off from is the ground the eye is actually over.
+  const floorM = surfaceFloorM(groundRadiusAtM(eyeM), standoffRadii);
   // An eye exactly at the centre has no push direction; no bounded step reaches
   // it from a floored pose, and leaving it beats returning NaN.
   if (magM >= floorM || magM === 0) return pose;

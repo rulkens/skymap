@@ -9,6 +9,7 @@
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { InputStep } from '../../@types/camera/InputStep';
 import type { SurfaceGestureMemory } from '../../@types/camera/SurfaceGestureMemory';
 import type { TiltMemory } from '../../@types/camera/TiltMemory';
@@ -33,6 +34,8 @@ type SurfaceStepCtx = {
   readonly bodyRadiusM: number;
   /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
   readonly standoffRadii: number;
+  /** What the floor stands off from, per direction; `bodyRadiusM` keeps the band arithmetic. */
+  readonly groundRadiusAtM: GroundRadiusLookup;
   /** Scene-frame up in BODY-FIXED axes (unit); the body rotates under it, so resample per drain. */
   readonly sceneUpLocal: Readonly<Vec3>;
   /** A focus HOSTED on this body, body-fixed metres — it owns the zoom's pivot. */
@@ -54,8 +57,16 @@ export function surfaceStep(
   readonly gesture: SurfaceGestureMemory;
   readonly tilt: TiltMemory;
 } {
-  const { viewportPx, fovYRad, bodyRadiusM, standoffRadii, sceneUpLocal, focusPivotM, tuning } =
-    ctx;
+  const {
+    viewportPx,
+    fovYRad,
+    bodyRadiusM,
+    standoffRadii,
+    groundRadiusAtM,
+    sceneUpLocal,
+    focusPivotM,
+    tuning,
+  } = ctx;
   if (step.kind === 'zoom') {
     return {
       pose: surfaceZoomStep(
@@ -67,6 +78,7 @@ export function surfaceStep(
         fovYRad,
         bodyRadiusM,
         standoffRadii,
+        groundRadiusAtM,
         sceneUpLocal,
         tilt.rememberedTiltRad,
         tuning,
@@ -95,7 +107,7 @@ export function surfaceStep(
   // against has to be the final standpoint.
   // No pivot: a drag serves its own gesture anchor, not the focus, and the
   // tilt handle already spends its floor budget before reaching here.
-  const floored = flooredBodyPose(pose, bodyRadiusM, standoffRadii, null);
+  const floored = flooredBodyPose(pose, groundRadiusAtM, standoffRadii, null);
   // Drags stay heading-free (ruled) — only zoom walks north up — but no drag
   // may ROLL: pan and orbit hold their entry heading (the transport that makes
   // holonomy unrepresentable), look and tilt level around the heading they

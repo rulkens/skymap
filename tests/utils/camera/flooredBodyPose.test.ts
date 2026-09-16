@@ -24,7 +24,7 @@ describe('flooredBodyPose', () => {
       eyeRelAnchorM: [0, 0, 0],
       basisLocal: IDENTITY,
     };
-    const out = flooredBodyPose(pose, 1, SURFACE_STANDOFF_RADII, null);
+    const out = flooredBodyPose(pose, () => 1, SURFACE_STANDOFF_RADII, null);
     expect(out).toBe(pose);
   });
 
@@ -38,7 +38,7 @@ describe('flooredBodyPose', () => {
       eyeRelAnchorM: [0, 0, -0.5],
       basisLocal: IDENTITY,
     };
-    const out = flooredBodyPose(pose, 1, SURFACE_STANDOFF_RADII, null);
+    const out = flooredBodyPose(pose, () => 1, SURFACE_STANDOFF_RADII, null);
     // Exactly the floor radius, not merely "further out": a push that
     // overshoots or undershoots is the bug this guards.
     expect(Math.hypot(...bodyFixedEyeM(out))).toBeCloseTo(
@@ -65,7 +65,7 @@ describe('flooredBodyPose', () => {
       basisLocal: mat3FromColumns(right as Vec3, up as Vec3, forward),
     };
 
-    const out = flooredBodyPose(pose, R, STANDOFF, pivot);
+    const out = flooredBodyPose(pose, () => R, STANDOFF, pivot);
     const lifted = bodyFixedEyeM(out);
     expect(Math.hypot(...lifted)).toBeCloseTo(surfaceFloorM(R, STANDOFF), 9);
     // Constant range about the pivot — the lift is a turn, not a push.

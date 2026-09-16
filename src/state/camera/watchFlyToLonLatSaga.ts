@@ -73,7 +73,15 @@ export function* watchFlyToLonLatSaga() {
     // centre: only the target (surface point → centre) and distance change, and
     // the roll carrying the heading survives the re-aim untouched.
     const surface = lonLatFocusPose({ lonDeg, latDeg }, body, host.radiusM, rangeM, heading);
-    const world = toWorldArm(surface, host.state, basis, basis, host.radiusM, host.standoffRadii);
+    const world = toWorldArm(
+      surface,
+      host.state,
+      basis,
+      basis,
+      host.radiusM,
+      host.standoffRadii,
+      host.groundRadiusAtM,
+    );
     const to = centreLookingArm(
       eyeMpcOf(world, basis),
       host.state.positionMpc,
