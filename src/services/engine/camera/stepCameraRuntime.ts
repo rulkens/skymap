@@ -137,6 +137,13 @@ export function stepCameraRuntime(
   // re-select included) drops it, and the driver re-captures against the new
   // target on its next produce.
   const followIn = epochs.follow.ref !== prev.epochs.follow.ref ? null : drained.follow;
+  const edge = commitOnEdge({
+    register: drained.register,
+    displayed: prev.outputs.displayed,
+    prevWinner: prev.register.winner,
+    winner,
+    drivers,
+  });
 
   const { pose, memory } = winner.pose(
     {
@@ -149,7 +156,9 @@ export function stepCameraRuntime(
       // approach that carried it out would leave the image tilted for good
       // (the band test `releasedWorldRoll` makes is the same one).
       authoredWorld: releasedWorldArm(drained.register, replayCtx, tuning),
-      committedWorld: releasedWorldArm(rootState.camera.base, replayCtx, tuning),
+      // Post-edge: a follow row taking over from a tween adopts where the tween
+      // LANDED, not the pose the tween departed from (still `base` this frame).
+      committedWorld: releasedWorldArm(edge.committed ?? rootState.camera.base, replayCtx, tuning),
       winnerLastFrame: prev.register.winner,
       poseBasis,
       simDays,
@@ -187,20 +196,12 @@ export function stepCameraRuntime(
     actions.push(cancelCameraTween());
   }
 
-  const edge = commitOnEdge({
-    register: drained.register,
-    displayed: prev.outputs.displayed,
-    produced: pose,
-    prevWinner: prev.register.winner,
-    winner,
-    drivers,
-  });
   actions.push(...edge.actions);
   const foldCtx: RungCtx = { ...rungFields, upBasis };
   // The fold reads the SAME intent the drivers resolved against: the edge
   // commit above is not visible to this frame's regime read.
   const projected = projectFramePose({
-    render: edge.render,
+    render: edge.render ?? pose,
     authoredOverride: edge.authoredOverride,
     pivotsOnFocusedBody: winner.pivotsOnFocusedBody ?? false,
     focus,
