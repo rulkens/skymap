@@ -101,7 +101,7 @@ struct VSOut {
 };
 
 // SurfaceTileUniforms — one record per draw call, shared by every instance
-// (there is exactly one Earth). 'rotCol0/1/2' are the three columns of
+// (one engaged body at a time). 'rotCol0/1/2' are the three columns of
 // 'orientation' rather than a 'mat3x3<f32>' field: WGSL's uniform-address-
 // space mat3x3 pads each column to a vec4, which is easy to get byte-wrong
 // by hand; three explicit vec3 columns sidestep that trap entirely (see

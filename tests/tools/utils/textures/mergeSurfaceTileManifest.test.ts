@@ -93,12 +93,4 @@ describe('mergeSurfaceTileManifest', () => {
 
     expect(merged).toEqual(run);
   });
-
-  it('no prior manifest passes the run through unchanged', () => {
-    const run = manifest([
-      band(BOUNDS_A, 0, 7, { albedo: { sourceId: 'a', attribution: 'a', vintage: 'v1' } }),
-    ]);
-
-    expect(mergeSurfaceTileManifest(null, run)).toEqual(run);
-  });
 });

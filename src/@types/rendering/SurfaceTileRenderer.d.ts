@@ -27,7 +27,7 @@ export type SurfaceTileDrawArgs = {
   readonly radiusM: number;
   /** The body slab's own eye-relative view-projection (`view.vp`). */
   readonly vp: Float32Array;
-  /** Sun direction in Earth's local (unrotated) frame, matching `EarthSurfaceUniforms.sunDirLocal`'s convention. */
+  /** Sun direction in the engaged body's local (unrotated) frame, matching `EarthSurfaceUniforms.sunDirLocal`'s convention. */
   readonly sunDirLocal: Readonly<Vec3>;
   /** The engaged body's registry row: `effects` picks the fragment variant,
    *  `effectInputs` must carry exactly those effects' resources. */

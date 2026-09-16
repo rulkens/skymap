@@ -8,8 +8,10 @@ import sharp from 'sharp';
 import { bakeAll, bakeCoarserLevel } from '../../../tools/textures/buildSurfaceTiles';
 import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
 import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import type { HeightSource } from '../../../tools/textures/HeightSource';
 import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { SurfaceTileProduct } from '../../../src/@types/data/SurfaceTileProduct';
 
 const TILE_PX = 512;
 /** Fixture stand-in for Earth's own `earthSurfaceBake` — the generic
@@ -549,6 +551,52 @@ describe('bakeAll', () => {
     expect(index).toContain(
       surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 1, y: 0 }, TILE_PREFIX),
     );
+  });
+
+  // The bug this pins: the albedo `builtFrom` entry was written unconditionally,
+  // not gated on `products.has('albedo')` (unlike the height entry beside it) —
+  // a `--product height` run would restamp the band's albedo provenance with
+  // whatever imagery source it happened to carry, even though it baked none
+  // of that product's tiles.
+  it('a height-only run keeps the prior albedo provenance instead of overwriting it', async () => {
+    const dir = tmpDir();
+    const heightSource = (vintage: string): HeightSource => ({
+      id: 'stub-height',
+      attribution: 'stub-height attribution',
+      maxLevel: STUB_Z,
+      coverage: [BOX_WEST],
+      provenance: { sourceId: 'stub-height', attribution: 'stub-height attribution', vintage },
+      async readGrid(_z, _i0, _j0, nx, ny) {
+        return new Float32Array(nx * ny).fill(100);
+      },
+      async boundsInBox() {
+        return [100, 100];
+      },
+    });
+    const albedoV1 = stubSource('stub-albedo', BOX_WEST, [255, 0, 0, 255]);
+
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedoV1, minLevel: STUB_Z, height: heightSource('v1') }],
+      dir,
+    );
+
+    // A later run baking height only: the albedo source object it carries
+    // (needed for the band's own coverage/levels) has since moved to a new
+    // vintage on disk, but this run never reads it for pixels.
+    const albedoV2 = stubSource('stub-albedo', BOX_WEST, [0, 255, 0, 255]);
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedoV2, minLevel: STUB_Z, height: heightSource('v2') }],
+      dir,
+      new Set<SurfaceTileProduct>(['height']),
+    );
+
+    const manifest = JSON.parse(
+      readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+    ) as SurfaceTileManifest;
+    expect(manifest.bands?.[0]?.builtFrom.albedo).toEqual(albedoV1.provenance);
+    expect(manifest.bands?.[0]?.builtFrom.height).toEqual(heightSource('v2').provenance);
   });
 
   it('a second bakeAll over the same output skips existing tiles and leaves bytes identical', async () => {

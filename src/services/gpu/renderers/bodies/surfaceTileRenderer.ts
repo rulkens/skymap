@@ -57,7 +57,7 @@ export function createSurfaceTileRenderer(
   // baseSampler mirrors earthRenderer's whole-globe sampler (repeat u,
   // clamp v, trilinear — these views carry the base globe's own mip chain).
   const baseSampler = device.createSampler({
-    label: 'earth-surface-tile-base-sampler',
+    label: 'surface-tile-base-sampler',
     magFilter: 'linear',
     minFilter: 'linear',
     mipmapFilter: 'linear',
@@ -69,7 +69,7 @@ export function createSurfaceTileRenderer(
   // away from an unrelated tile's pixels, is guarded separately by the
   // fragment's own half-texel uv clamp, see surfaceLighting.wesl), single mip level.
   const atlasSampler = device.createSampler({
-    label: 'earth-surface-tile-atlas-sampler',
+    label: 'surface-tile-atlas-sampler',
     magFilter: 'linear',
     minFilter: 'linear',
     addressModeU: 'clamp-to-edge',
@@ -80,7 +80,7 @@ export function createSurfaceTileRenderer(
   const indices = surfacePatchIndices(resolution);
   const indexCount = indices.length;
   const indexBuffer = device.createBuffer({
-    label: 'earth-surface-tile-index-buffer',
+    label: 'surface-tile-index-buffer',
     size: indices.byteLength,
     usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
   });
@@ -130,7 +130,7 @@ export function createSurfaceTileRenderer(
       throw new Error(`surfaceTileRenderer: no shader variant for effects '${key}'`);
     }
     const bindGroupLayout = device.createBindGroupLayout({
-      label: `earth-surface-tile-bgl[${key}]`,
+      label: `surface-tile-bgl[${key}]`,
       entries: [
         ...sharedLayoutEntries,
         ...variant.bindings.map((binding) => fragmentLayoutEntries[binding]!),
@@ -142,9 +142,9 @@ export function createSurfaceTileRenderer(
       `surfaceTile.fragment[${key}]`,
     );
     const pipeline = device.createRenderPipeline({
-      label: `earth-surface-tile-pipeline[${key}]`,
+      label: `surface-tile-pipeline[${key}]`,
       layout: device.createPipelineLayout({
-        label: `earth-surface-tile-pipeline-layout[${key}]`,
+        label: `surface-tile-pipeline-layout[${key}]`,
         bindGroupLayouts: [bindGroupLayout],
       }),
       // Positions are derived from the instance record — no vertex buffers.
@@ -173,7 +173,7 @@ export function createSurfaceTileRenderer(
 
   // ── Uniform buffer (one record per draw call) ────────────────────────
   const uniformBuffer = device.createBuffer({
-    label: 'earth-surface-tile-uniform-buffer',
+    label: 'surface-tile-uniform-buffer',
     size: SURFACE_TILE_UNIFORM_BYTES,
     usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
   });
@@ -190,7 +190,7 @@ export function createSurfaceTileRenderer(
     if (patchBuffer !== null && patchScratch.byteLength >= bytes) return;
     patchBuffer?.destroy();
     patchBuffer = device.createBuffer({
-      label: 'earth-surface-tile-patch-instances',
+      label: 'surface-tile-patch-instances',
       size: bytes,
       usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
     });
@@ -246,7 +246,7 @@ export function createSurfaceTileRenderer(
 
     ensureCapacity(tileCount);
 
-    // Sampled ONCE per draw call (== once per frame; `earthPass` calls
+    // Sampled ONCE per draw call (== once per frame; `surfaceTilesPass` calls
     // `draw` at most once), never per tile — every tile's fade weight must
     // read the same instant, or tiles that upload microseconds apart would
     // visibly desync. REAL time: a fade must run even while the sim clock
@@ -341,7 +341,7 @@ export function createSurfaceTileRenderer(
       9: cloudShadows?.view,
     };
     const bindGroup = device.createBindGroup({
-      label: `earth-surface-tile-bg[${key}]`,
+      label: `surface-tile-bg[${key}]`,
       layout: variant.bindGroupLayout,
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },

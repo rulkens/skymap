@@ -27,7 +27,7 @@ height lattice below the level whose post spacing resolves the subtree's
 relief range) restores the detail without blowing the request count.
 
 **Tooling prerequisite (own index line): height-LOD debug overlay.** The
-existing `earth-lod-overlay` tints by the ALBEDO rect's level delta only.
+existing `surface-lod-overlay` tints by the ALBEDO rect's level delta only.
 The fragment stage already carries `heightLattice.z` (the leaf's sub-rect
 cell count), so a second overlay mode can tint by
 `log2(HEIGHT_CELLS_PER_TILE / heightLattice.z)`, i.e. how many levels

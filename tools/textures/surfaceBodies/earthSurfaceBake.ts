@@ -1,11 +1,11 @@
 /**
  * earthSurfaceBake — Earth's `SURFACE_BODY_BAKES` row: which imagery/height
- * sources feed `bakeAll`, and at which floors. Moved out of `buildSurfaceTiles`
- * wholesale (Mars's own row will sit beside this one, not inside the shared
- * bake harness) — no pixel or level changes from what `main()` used to build.
+ * sources feed `bakeAll`, and at which floors. Mars's own row sits beside
+ * this one, not inside the shared bake harness.
  */
 
 import { TIER_LADDER } from '../../../src/data/tierLadder';
+import { SURFACE_TILE_REGISTRY } from '../../../src/data/bodies/surfaceTileRegistry';
 import { baseLevelForTier } from '../../../src/utils/surfaceTiles/baseLevelForTier';
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
@@ -24,7 +24,10 @@ import type { SurfaceBakeBand } from '../SurfaceBakeBand';
 import type { SurfaceBodyBake } from '../SurfaceBodyBake';
 import { voidFilledHeightSource } from '../voidFilledHeightSource';
 
-const TILE_ROOT = 'earth-tiles';
+/** Stable location of the manifest and index — the pointer clients always
+ *  fetch — so it reads `SURFACE_TILE_REGISTRY`'s own key rather than a
+ *  second literal that could drift from the runtime's. */
+const TILE_ROOT = SURFACE_TILE_REGISTRY.earth.manifestKey;
 
 /**
  * Versioned prefix for the tile bodies themselves. BUMP THIS on any re-bake
@@ -171,7 +174,6 @@ async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBan
 }
 
 export const earthSurfaceBake: SurfaceBodyBake = {
-  bodyId: 'earth',
   tileRoot: TILE_ROOT,
   tilePrefix: TILE_PREFIX,
   bands,

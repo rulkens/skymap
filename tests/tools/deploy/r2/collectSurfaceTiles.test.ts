@@ -10,9 +10,8 @@
  *      bulk transport runs `relative(localRoot, localPath)` and hands the
  *      result to rclone, which rejects a `../` escape — a malformed index
  *      line must not slip past this collector unnoticed.
- *   3. `manifestKey` selects the folder read — the new parameter, and the
- *      one thing that changed: a `mars-tiles` index must not be read off
- *      `earth-tiles/index.txt`, or vice versa.
+ *   3. `manifestKey` selects the folder read: a `mars-tiles` index must not
+ *      be read off `earth-tiles/index.txt`, or vice versa.
  */
 import { describe, expect, it } from 'vitest';
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';

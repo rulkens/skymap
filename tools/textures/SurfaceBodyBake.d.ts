@@ -1,11 +1,9 @@
-import type { SurfaceTileBodyId } from '../../src/@types/data/SurfaceTileBodyId';
 import type { SurfaceBakeBand } from './SurfaceBakeBand';
 
 /** One body's entry in `SURFACE_BODY_BAKES` — what `--body` selects. `bands`
  *  is a function, not a value, so a body's raw-data reads happen only when
  *  that body is actually baked (Mars's DEMs are not touched by an Earth run). */
 export type SurfaceBodyBake = {
-  readonly bodyId: SurfaceTileBodyId;
   /** `SURFACE_TILE_REGISTRY[bodyId].manifestKey` — read, never retyped. */
   readonly tileRoot: string;
   /** `${tileRoot}/vN` — bump on any pixel change (see `earthSurfaceBake`'s

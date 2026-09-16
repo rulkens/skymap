@@ -1,8 +1,8 @@
 // src/components/DebugPanel/SurfaceTileAtlasSection.tsx
 /**
- * SurfaceTileAtlasSection — textual residency readout for Earth's surface
- * virtual texture: slot pressure, per-level resident/pending counts, the
- * last plan's shape, and the deepest level's resident tile keys.
+ * SurfaceTileAtlasSection — textual residency readout for the engaged body's
+ * surface virtual texture: slot pressure, per-level resident/pending counts,
+ * the last plan's shape, and the deepest level's resident tile keys.
  *
  * No visualization — this is for reading numbers against
  * `surfaceTileSubsystem.ts`'s `resident` map and page-table window while
@@ -27,7 +27,7 @@ import DebugSection from './DebugSection';
 import styles from './SurfaceTileAtlasSection.module.css';
 
 export type SurfaceTileAtlasSectionProps = {
-  earthTileDebug: () => SurfaceTileDebugSnapshot;
+  surfaceTileDebug: () => SurfaceTileDebugSnapshot;
   /** Fly-to-coordinates debug instrument, from the engine handle's
    *  `debug.flyToLonLat`. `body` omitted keeps `flyToLonLatActions`'s own
    *  Earth default — this section passes the snapshot's `bodyId` verbatim. */
@@ -45,21 +45,21 @@ const TERRAIN_ROWS = DEBUG_OVERLAY_ROWS.filter(
 const POLL_MS = 250;
 
 function SurfaceTileAtlasSection({
-  earthTileDebug,
+  surfaceTileDebug,
   flyToLonLat,
   overlays,
   onToggle,
 }: SurfaceTileAtlasSectionProps): ReactElement {
-  const [snap, setSnap] = useState<SurfaceTileDebugSnapshot>(earthTileDebug);
+  const [snap, setSnap] = useState<SurfaceTileDebugSnapshot>(surfaceTileDebug);
   // Uncontrolled-feeling text box: the panel never reformats what the user
   // typed, so an in-progress edit ("12.53, 5") isn't clobbered by the 4 Hz
   // poll — this state is local and update-on-submit only.
   const [flyToText, setFlyToText] = useState('');
 
   useEffect(() => {
-    const id = setInterval(() => setSnap(earthTileDebug()), POLL_MS);
+    const id = setInterval(() => setSnap(surfaceTileDebug()), POLL_MS);
     return () => clearInterval(id);
-  }, [earthTileDebug]);
+  }, [surfaceTileDebug]);
 
   // Lives outside the `!snap.engaged` early return below: flying IN is
   // exactly what a not-yet-engaged reader needs — gating the box on
@@ -106,7 +106,7 @@ function SurfaceTileAtlasSection({
       <DebugSection title="Surface Tiles">
         {flyToForm}
         {terrainToggles}
-        <div className={styles.notice}>Not engaged — no manifest, or camera outside Earth.</div>
+        <div className={styles.notice}>Not engaged — no manifest, or no body engaged.</div>
       </DebugSection>
     );
   }

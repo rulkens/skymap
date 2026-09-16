@@ -1,10 +1,10 @@
 // src/components/containers/SurfaceTileAtlasSectionContainer.tsx
 /**
  * SurfaceTileAtlasSectionContainer — engine-handle + store boundary for the
- * Earth tile atlas debug readout. `earthTileDebug` still comes off
- * `engineHandleRef.current.debug` (engine-only data), but `flyToLonLat` now
- * dispatches the `camera/flyToLonLat` request action — the fly-to instrument
- * moved off the debug handle onto `watchFlyToLonLatSaga`.
+ * surface tile atlas debug readout. `surfaceTileDebug` still comes off
+ * `engineHandleRef.current.debug` (engine-only data), but `flyToLonLat`
+ * dispatches the `camera/flyToLonLat` request action instead — the fly-to
+ * instrument lives on `watchFlyToLonLatSaga`, not the debug handle.
  */
 
 import { memo, useCallback, type ReactElement } from 'react';
@@ -41,7 +41,7 @@ function SurfaceTileAtlasSectionContainer({
   if (!handle) return null;
   return (
     <SurfaceTileAtlasSection
-      earthTileDebug={handle.debug.surfaceTiles}
+      surfaceTileDebug={handle.debug.surfaceTiles}
       flyToLonLat={onFlyToLonLat}
       overlays={overlays}
       onToggle={onToggle}

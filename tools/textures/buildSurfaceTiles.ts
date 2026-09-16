@@ -515,7 +515,10 @@ export async function bakeAll(
         min: minLevel,
         max: maxLevel,
         builtFrom: {
-          [PRODUCT]: source.provenance,
+          // Gated on `products.has('albedo')`: a `--product height` run
+          // still carries an imagery source (for coverage/levels) but bakes
+          // none of its tiles, and must not restamp its provenance.
+          ...(products.has('albedo') ? { [PRODUCT]: source.provenance } : {}),
           // Also gated on `products.has('height')`: a `--product albedo` run
           // still configures a height source but bakes none of its tiles.
           ...(height === undefined || !products.has('height') ? {} : { height: height.provenance }),

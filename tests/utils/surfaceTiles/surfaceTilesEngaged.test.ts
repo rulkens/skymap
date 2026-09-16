@@ -1,8 +1,8 @@
 /**
  * surfaceTilesEngaged — pins the two properties `earthPass.enabled` cannot
- * stand in for once the tile planner's gate is body-generic: the shared
- * foreground-distance cutoff, and — the joint this task actually creates —
- * that a registry body with no `earthRenderer` GPU handle still engages.
+ * stand in for now that the tile planner's gate is body-generic: the shared
+ * foreground-distance cutoff, and that a registry body with no
+ * `earthRenderer` GPU handle still engages.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -61,8 +61,8 @@ function makeCtx(distanceMpc: number): ReadyFrameContext {
 }
 
 /** State with Earth's catalog data seeded, `earthRenderer` deliberately
- *  ABSENT — the gate this task exists to open (`earthPass.enabled` would
- *  refuse this state outright). */
+ *  ABSENT — `earthPass.enabled` would refuse this state outright, but the
+ *  registry-driven gate must not. */
 const STATE_NO_EARTH_RENDERER: PassState = {
   gpu: {},
   data: { bodies: { earth: SCENE_EARTH, planets: [], stars: [] } },

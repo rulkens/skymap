@@ -90,30 +90,28 @@ function buildGroups(): R2SyncGroup[] {
     // before EVERY manifest group below — a row whose bake never ran
     // contributes `[]` from both collectors, so a Mars-less checkout still
     // builds this table today with exactly Earth's two groups.
-    ...Object.keys(SURFACE_TILE_REGISTRY).map((bodyId): R2SyncGroup => {
-      const { manifestKey } = SURFACE_TILE_REGISTRY[bodyId as keyof typeof SURFACE_TILE_REGISTRY];
-      return {
+    ...Object.values(SURFACE_TILE_REGISTRY).map(
+      ({ manifestKey }): R2SyncGroup => ({
         label: `Surface tiles (${manifestKey})`,
         files: collectSurfaceTiles(IMAGES_DIR, manifestKey),
         transport: { kind: 'bulk', localRoot: IMAGES_DIR, keyRoot: 'data/images' },
         cacheControl: IMMUTABLE,
         purge: false,
-      };
-    }),
+      }),
+    ),
     // Each row's manifest is the pointer the runtime reads to discover that
     // row's tiles, so it must never name tiles this same run hasn't
     // finished uploading — hence every tiles group above every manifest
     // group, not just this row's own pair.
-    ...Object.keys(SURFACE_TILE_REGISTRY).map((bodyId): R2SyncGroup => {
-      const { manifestKey } = SURFACE_TILE_REGISTRY[bodyId as keyof typeof SURFACE_TILE_REGISTRY];
-      return {
+    ...Object.values(SURFACE_TILE_REGISTRY).map(
+      ({ manifestKey }): R2SyncGroup => ({
         label: `Surface tile manifest (${manifestKey})`,
         files: collectSurfaceTileManifest(IMAGES_DIR, manifestKey),
         transport: { kind: 'wrangler' },
         cacheControl: DAY,
         purge: true,
-      };
-    }),
+      }),
+    ),
     // Must stay last of all: it's the pointer the runtime reads to resolve
     // every logical data path, so it must never name a hashed file this run
     // hasn't finished uploading — the same rule as the surface tile
