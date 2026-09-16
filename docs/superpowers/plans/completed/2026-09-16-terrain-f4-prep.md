@@ -296,7 +296,7 @@ User-ruled 2026-09-16. `src/data/bodies/earthTileParams.ts` holds constants that
 
 - Earth from orbit, at the terminator (night lights on), under a cloud shadow, and at Søndermarken z19: identical to main.
 - Debug panel section shows `Surface Tiles — earth` while engaged; its fly-to still lands on Earth.
-- `build-surface-tiles -- --dev --product albedo` into a temp dir holding a full prior manifest keeps every band's `builtFrom.height`.
+- `build-surface-tiles -- --dev --product albedo` into a temp dir holding a full prior manifest keeps every band's `builtFrom.height`. **Skipped (user, 2026-09-17):** the bake writes only to `public/data/images`, which is main's live data. Covered instead by the `bakeAll` merge and tileRoot tests, plus a line-by-line review of the Earth bands.
 - `syncR2`'s group list for today's registry names the same Earth local paths and R2 keys as main (read the built list in a test or a `tsx -e` print; never run the sync).
 
 **Deferral boundary (F4, not this PR)**

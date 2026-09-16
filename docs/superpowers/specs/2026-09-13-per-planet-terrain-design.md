@@ -213,7 +213,7 @@ over-selection (`:105`), and the descent "island in stars" bug (`:109`).
 
 F1–F2 kept Earth names on the draw side and an Earth-only registry (R6, R7), so
 Mars is not yet a row. The F4 refactor-ground pass, cross-checked greenfield, found
-the joints below. Plan: `docs/superpowers/plans/2026-09-16-terrain-f4-prep.md`.
+the joints below. Plan: `docs/superpowers/plans/completed/2026-09-16-terrain-f4-prep.md`.
 
 ```ts
 // SURFACE_TILE_REGISTRY rows carry everything body-specific the stack needs
