@@ -209,6 +209,40 @@ code this feature modifies and are **not** consumed — the uv-conversion dead h
 (`BACKLOG.md:106`), `tilePx`'s single value (`:111`), polar refinement
 over-selection (`:105`), and the descent "island in stars" bug (`:109`).
 
+### 3.8 F4 ground preparation (2026-09-16)
+
+F1–F2 kept Earth names on the draw side and an Earth-only registry (R6, R7), so
+Mars is not yet a row. The F4 refactor-ground pass, cross-checked greenfield, found
+the joints below. Plan: `docs/superpowers/plans/2026-09-16-terrain-f4-prep.md`.
+
+```ts
+// SURFACE_TILE_REGISTRY rows carry everything body-specific the stack needs
+earth: { manifestKey: 'earth-tiles', effects: ['materialMap', 'nightLights', 'cloudShadows'],
+         shading: { roughnessBase, f0, sunIrradiance } },
+// F4 adds:  mars: { manifestKey: 'mars-tiles', effects: [], shading: {...} }
+// bake: SURFACE_BODY_BAKES[bodyId] = { tileRoot, tilePrefix, bands() }; `--body <id>`
+```
+
+| Blocker | Verdict | Prep |
+| --- | --- | --- |
+| `runFrame.ts:244` gates planning on `earthPass.enabled` (`bodyId === 'earth'`); `earthBaseLevelForTier` reads the Earth texture row | bolt-on | registry-driven gate; `baseLevelForTier(bodyId, tier)` |
+| `earthSurfaceTilesPass.ts:31-32` Earth-only, requires `earthRenderer`; fragment binds Earth's material/night/cloud maps | bolt-on | fragment variants keyed by the row's `effects` set (user ruling: effects-set variants, not placeholder textures) |
+| `buildSurfaceTiles.ts:160-170` tile root is a module constant; band list hardcoded in `main()` | bolt-on | per-body bake table + `--body` |
+| `bakeAll` rebuilds `manifest.json` from this run's bands only (:547-588) — a partial run drops other bands' and products' provenance | bug | merge with the prior manifest by (band, product) |
+| `collectEarthTiles` / `collectEarthTileManifest` hardwired to `earth-tiles` | bolt-on | collectors keyed by `manifestKey`, one group per registry row |
+| `SurfaceTileDebugSnapshot` has no body | bolt-on | `bodyId` on the snapshot; fly-to passes it |
+
+Greenfield divergences, priced: the manifest keeps today's shape (a
+`(bandId, product)`-keyed schema would cost an Earth manifest rewrite and an R2
+cache-skew window for no behaviour the merge doesn't already give); the bake
+grows in place rather than moving to a new `tools/terrain/` tree. Radius ruling
+(user, 2026-09-16): §4.3 stands — heights are shifted onto the scene's 3,390 km
+sphere, accepting up to ~20 km of areoid error near the poles. Rovers stand on
+terrain through F3's height lookup, which lands before F4 (F3 split: F3a lookup,
+F3b the rest). Packaging (user): one prep PR, then the F4 feature PR. The prep
+PR and F4 both wait on the WebP height-tile rewrite for everything touching the
+bake or the tile shader.
+
 ## 4. Data
 
 ### 4.1 Resolution ladder
