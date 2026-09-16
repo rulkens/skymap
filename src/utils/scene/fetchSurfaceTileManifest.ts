@@ -20,7 +20,9 @@ export async function fetchSurfaceTileManifest(
   manifestKey: string,
 ): Promise<SurfaceTileManifest | null> {
   try {
-    const res = await fetch(dataUrl(`images/${manifestKey}/manifest.json`));
+    // Revalidate every load: a cached copy held past a prefix bump names a
+    // version the bucket no longer has.
+    const res = await fetch(dataUrl(`images/${manifestKey}/manifest.json`), { cache: 'no-cache' });
     if (!res.ok) return null;
     const parsed = (await res.json()) as SurfaceTileManifest;
     // A pre-versioning bake has no prefix; taking it on trust would build

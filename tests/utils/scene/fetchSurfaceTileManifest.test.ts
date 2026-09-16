@@ -39,6 +39,8 @@ describe('fetchSurfaceTileManifest', () => {
     ) as unknown as typeof fetch;
 
     expect(await fetchSurfaceTileManifest('earth-tiles')).toEqual(manifest);
+    // A max-age copy held past a prefix bump names a pruned version.
+    expect(globalThis.fetch).toHaveBeenCalledWith(expect.any(String), { cache: 'no-cache' });
   });
 
   it('returns null for a manifest with no prefix', async () => {
