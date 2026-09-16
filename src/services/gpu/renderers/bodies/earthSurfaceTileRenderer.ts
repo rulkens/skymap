@@ -100,10 +100,9 @@ export function createEarthSurfaceTileRenderer(
         visibility: GPUShaderStage.VERTEX,
         buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
       },
-      // r32float read with `textureLoad` from BOTH stages (vertex displaces,
-      // fragment takes its normal from the cell): `sampleType: 'float'` fails
-      // validation unless `float32-filterable` is requested, and `device.ts`
-      // does not request it.
+      // Terrain-RGB codes read with `textureLoad` from BOTH stages (vertex
+      // displaces, fragment takes its normal from the cell); no sampler ever
+      // touches it, so the binding stays unfilterable.
       {
         binding: 2,
         visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,

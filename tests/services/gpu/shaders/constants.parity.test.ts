@@ -31,7 +31,11 @@ import {
   EARTH_TILE_PX,
   SURFACE_TILE_SKIRT_DEPTH_FRACTION,
 } from '../../../../src/data/bodies/earthTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
+import {
+  HEIGHT_CODE_OFFSET_M,
+  HEIGHT_CODE_STEP_M,
+  HEIGHT_POSTS_PER_TILE,
+} from '../../../../src/data/scene/heightTileFormat';
 import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 
 /**
@@ -139,7 +143,7 @@ describe('ismMap @workgroup_size(N, N) ↔ ISM_MAP_WORKGROUP_SIZE parity', () =>
  */
 function readWeslConst(relPath: string, name: string): number | undefined {
   const text = readFileSync(join(process.cwd(), relPath), 'utf-8');
-  const re = /const\s+(\w+)\s*:\s*(?:u32|f32)\s*=\s*([0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;
+  const re = /const\s+(\w+)\s*:\s*(?:u32|f32)\s*=\s*(-?[0-9]+(?:\.[0-9]+)?)[uf]?\s*;/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(text)) !== null) {
     if (m[1] === name) return parseFloat(m[2]!);
@@ -334,5 +338,20 @@ describe('SUN_IRRADIANCE parity (earthSurfaceParams.ts ↔ meshBody/fragment.wes
       weslValue,
       `${file}: WESL SUN_IRRADIANCE (${weslValue}) does not match TS EARTH_SURFACE_PARAMS.sunIrradiance (${EARTH_SURFACE_PARAMS.sunIrradiance})`,
     ).toBe(EARTH_SURFACE_PARAMS.sunIrradiance);
+  });
+});
+
+/**
+ * The shader decodes Terrain-RGB heights itself (`postHeightM`), so a drift in
+ * either number shifts or scales every displaced vertex against the CPU's
+ * subtree bounds, which the walk's cull headroom is built from.
+ */
+describe('Terrain-RGB height code parity (heightTileFormat.ts ↔ earthSurfaceTile/lattice.wesl)', () => {
+  it.each([
+    ['HEIGHT_CODE_OFFSET_M', HEIGHT_CODE_OFFSET_M],
+    ['HEIGHT_CODE_STEP_M', HEIGHT_CODE_STEP_M],
+  ])("lattice.wesl's %s equals the TS export", (name, tsValue) => {
+    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/lattice.wesl';
+    expect(readWeslConst(file, name), `${file}: ${name}`).toBe(tsValue);
   });
 });

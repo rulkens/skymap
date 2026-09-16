@@ -14,6 +14,7 @@ import { readRiffChunk } from '../../../src/utils/image/readRiffChunk';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
 import { codeHeightM } from '../../../src/utils/scene/codeHeightM';
 import { decodeHeightTile } from '../../../src/utils/scene/decodeHeightTile';
+import { decodeHeightTileHeader } from '../../../src/utils/scene/decodeHeightTileHeader';
 import { heightCode } from '../../../src/utils/scene/heightCode';
 import { encodeHeightTile } from '../../../tools/utils/textures/encodeHeightTile';
 
@@ -101,7 +102,7 @@ describe('encodeHeightTile / decodeHeightTile', () => {
     expectSameTile(decoded, tile);
   });
 
-  it('decodes 4-channel pixels identically to 3-channel', async () => {
+  it('decodes 4-channel pixels identically to 3-channel (sharp on an RGBA file)', async () => {
     const tile = quantisedTile();
     const bytes = await encodeHeightTile(tile);
     const { rgb } = await decodeWithSharp(bytes);
@@ -126,24 +127,25 @@ describe('encodeHeightTile / decodeHeightTile', () => {
     await expect(encodeHeightTile(tile)).rejects.toThrow(/posts/);
   });
 
-  it('decodeHeightTile rejects a short chunk, a wrong version and a 128² image', () => {
-    const pixels = flatPixels(HEIGHT_POSTS_PER_TILE);
-    expect(() => decodeHeightTile(pixels, validChunk().subarray(0, 12))).toThrow(/bytes/);
+  it('decodeHeightTileHeader rejects a short chunk, a wrong version and a wrong post count', () => {
+    expect(() => decodeHeightTileHeader(validChunk().subarray(0, 12))).toThrow(/bytes/);
 
     const wrongVersion = validChunk();
     new DataView(wrongVersion.buffer).setUint16(0, HEIGHT_TILE_VERSION + 1, true);
-    expect(() => decodeHeightTile(pixels, wrongVersion)).toThrow(/version/);
+    expect(() => decodeHeightTileHeader(wrongVersion)).toThrow(/version/);
 
     const wrongPosts = validChunk();
     new DataView(wrongPosts.buffer).setUint16(2, 128, true);
-    expect(() => decodeHeightTile(pixels, wrongPosts)).toThrow(/posts/);
+    expect(() => decodeHeightTileHeader(wrongPosts)).toThrow(/posts/);
+  });
 
+  it('decodeHeightTile rejects a 128² image', () => {
     expect(() => decodeHeightTile(flatPixels(128), validChunk())).toThrow(/image/);
   });
 
-  it('reads the header fields at their documented offsets', () => {
-    const tile = decodeHeightTile(flatPixels(HEIGHT_POSTS_PER_TILE), validChunk());
-    expect([tile.subtreeMinM, tile.subtreeMaxM, tile.geometricResidualM]).toEqual([
+  it('decodeHeightTileHeader reads the fields at their documented offsets', () => {
+    const header = decodeHeightTileHeader(validChunk());
+    expect([header.subtreeMinM, header.subtreeMaxM, header.geometricResidualM]).toEqual([
       -1.5, 2.5, 0.25,
     ]);
   });

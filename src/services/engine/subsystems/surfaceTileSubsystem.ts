@@ -26,7 +26,7 @@ import type { SurfaceTilePlan } from '../../../@types/scene/SurfaceTilePlan';
 import type { SurfaceTilePlannerParams } from '../../../@types/scene/SurfaceTilePlannerParams';
 import type { SurfaceTileRequest } from '../../../@types/scene/SurfaceTileRequest';
 import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTileDebugSnapshot';
-import type { HeightTile } from '../../../@types/scene/HeightTile';
+import type { HeightTileImage } from '../../../@types/scene/HeightTileImage';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { SurfaceTileSubsystem } from '../../../@types/engine/subsystems/SurfaceTileSubsystem';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
@@ -54,8 +54,9 @@ import {
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
-/** Raw metres above the datum, never an encoding — see `heightTileFormat`. */
-const HEIGHT_ATLAS_FORMAT: GPUTextureFormat = 'r32float';
+/** Terrain-RGB codes the shader decodes (`lattice.wesl`'s `postHeightM`), so
+ *  never `-srgb`: the bytes are not colour. */
+const HEIGHT_ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm';
 
 /** The "nothing here yet" snapshot — atlas never allocated, or `state.subsystems.surfaceTiles`
  *  itself is null. Exported so `engine.ts`'s debug handle shares this shape instead of
@@ -115,7 +116,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   // used to have to keep in sync.
   let atlas: {
     readonly stream: TileStreamSubsystem<ImageBitmap>;
-    readonly heightStream: TileStreamSubsystem<HeightTile>;
+    readonly heightStream: TileStreamSubsystem<HeightTileImage>;
     readonly slotsPerRow: number;
     readonly bodyId: BodyId;
   } | null = null;
@@ -260,7 +261,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     });
     // Post count and the Terrain-RGB format are compiled constants, not manifest fields
     // (spec §5.2), so the height atlas's geometry never depends on the bake.
-    const createdHeight = createTileStreamSubsystem<HeightTile>({
+    const createdHeight = createTileStreamSubsystem<HeightTileImage>({
       device,
       requestRender,
       atlasSide: HEIGHT_TILE_ATLAS_SIDE,
@@ -268,15 +269,9 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       format: HEIGHT_ATLAS_FORMAT,
       label: 'surface-tiles-height',
       concurrency: EARTH_TILE_CONCURRENCY,
-      upload: (heightAtlas, slotIdx, tile) =>
-        heightAtlas.uploadTexels(
-          slotIdx,
-          tile.heightM,
-          HEIGHT_POSTS_PER_TILE * 4,
-          HEIGHT_POSTS_PER_TILE,
-        ),
-      // A decoded height tile is plain JS memory; nothing to hand back.
-      release: () => {},
+      upload: (heightAtlas, slotIdx, image) =>
+        uploadBitmapToAtlas(heightAtlas, slotIdx, image.bitmap),
+      release: (image) => image.bitmap.close(),
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
     created.setEvictHandler((key) => resident.delete(key));
@@ -363,9 +358,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
           key,
           priority: request.screenPx,
           fetcher: () => fetchHeightTile(request.tile, prefix),
-          onResult: (tile) => {
-            if (destroyed || tile === null) return;
-            const slot = streams.heightStream.upload(key, tile);
+          onResult: (image) => {
+            // A destroyed subsystem destroyed its stream first, which releases.
+            if (destroyed || image === null) return;
+            const slot = streams.heightStream.upload(key, image);
             if (slot === null) return;
             // `readyAtMs` is the albedo crossfade's clock; height has no fade
             // in F1 (the renderer doesn't sample the atlas yet, and R14's
@@ -375,7 +371,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
               tile: request.tile,
               slot,
               readyAtMs: performance.now(),
-              subtreeRangeM: [tile.subtreeMinM, tile.subtreeMaxM],
+              subtreeRangeM: [image.subtreeMinM, image.subtreeMaxM],
             });
           },
         });

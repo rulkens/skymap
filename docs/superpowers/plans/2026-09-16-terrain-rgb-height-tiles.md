@@ -159,8 +159,8 @@ Contract notes for the implementer:
 - Read `.claude/skills/wesl-shaders/SKILL.md` and `docs/RENDERER.md` first. WGSL comments contain no backticks. Explicit bind-group layouts stay explicit (no `'auto'`). Never pass a storage struct by value to a WGSL fn (an Adreno landmine). If the atlas `texture_2d<f32>` binding's `sampleType` is declared `'unfilterable-float'`, change it to `'float'`, or leave it if still valid for `rgba8unorm`, and name which one you did.
 - No new unit test for `postHeightM`: there is no WGSL runner in the suite, the constants parity test pins the numbers, and the controller verifies the formula visually in Brave and Chrome.
 
-- [ ] Implement the above. `npm run typecheck:fast` + `npx vitest run tests/utils/scene tests/services/engine/subsystems tests/services/gpu tests/tools/textures`.
-- [ ] Commit: `fix(terrain): decode Terrain-RGB heights in the shader, not via canvas readback`.
+- [x] Implement the above. `npm run typecheck:fast` + `npx vitest run tests/utils/scene tests/services/engine/subsystems tests/services/gpu tests/tools/textures`.
+- [x] Commit: `fix(terrain): decode Terrain-RGB heights in the shader, not via canvas readback`.
 - [ ] Controller: hard-reload in Brave (Shields on) and Chrome. Relief matches with no spikes. The height atlas shows no WebGPU validation errors in the console.
 
 ## Execution

@@ -1,8 +1,8 @@
-import type { HeightTile } from '../../@types/scene/HeightTile';
+import type { HeightTileImage } from '../../@types/scene/HeightTileImage';
 import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
-import { HEIGHT_TILE_CHUNK_FOURCC } from '../../data/scene/heightTileFormat';
+import { HEIGHT_POSTS_PER_TILE, HEIGHT_TILE_CHUNK_FOURCC } from '../../data/scene/heightTileFormat';
 import { readRiffChunk } from '../image/readRiffChunk';
-import { decodeHeightTile } from '../scene/decodeHeightTile';
+import { decodeHeightTileHeader } from '../scene/decodeHeightTileHeader';
 import { surfaceTilePath } from '../scene/surfaceTilePath';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
 
@@ -11,18 +11,16 @@ import { dataUrl } from '../../services/loading/fetchWithProgress';
 const FETCH_DEADLINE_MS = 10_000;
 
 /**
- * fetchHeightTile — one Terrain-RGB WebP height tile, decoded ready for atlas
- * upload, or `null` if absent. A 404 is normal (the height pyramid is as
- * sparse as the albedo one), and so is a missing `SHGT` chunk or a failed
- * image decode — an HTML error page from a throttled origin fails both — all
- * degrading to `null` rather than an exception that would take the frame down.
+ * fetchHeightTile — one Terrain-RGB WebP height tile as header + still-encoded
+ * bitmap, or `null` if absent (404s are normal; so is a missing `SHGT` chunk or
+ * failed decode, e.g. an HTML error page). Pixels are never read back on the
+ * CPU: Brave, Safari and Firefox perturb canvas readback, so the shader decodes.
  */
 export async function fetchHeightTile(
   tile: SurfaceTileId,
   prefix: string,
-): Promise<HeightTile | null> {
+): Promise<HeightTileImage | null> {
   const url = dataUrl(`images/${surfaceTilePath(tile, prefix)}`);
-  let bitmap: ImageBitmap | null = null;
   try {
     const res = await fetch(url, {
       mode: 'cors',
@@ -33,22 +31,20 @@ export async function fetchHeightTile(
     const bytes = new Uint8Array(await res.arrayBuffer());
     const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
     if (chunk === null) return null;
+    const header = decodeHeightTileHeader(chunk);
 
-    bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/webp' }), {
+    const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/webp' }), {
       colorSpaceConversion: 'none',
       premultiplyAlpha: 'none',
     });
-    // Sized from the bitmap, not the format, so `decodeHeightTile`'s dimension
-    // check sees a wrong-sized image instead of a zero-padded 129² readback.
-    const { width, height } = bitmap;
-    const ctx = new OffscreenCanvas(width, height).getContext('2d', { willReadFrequently: true });
-    if (ctx === null) return null;
-    ctx.drawImage(bitmap, 0, 0);
-    const { data } = ctx.getImageData(0, 0, width, height);
-    return decodeHeightTile({ data, width, height, channels: 4 }, chunk);
+    // The atlas copies exactly one slot, so a wrong-sized image would read as
+    // a cropped or zero-padded lattice.
+    if (bitmap.width !== HEIGHT_POSTS_PER_TILE || bitmap.height !== HEIGHT_POSTS_PER_TILE) {
+      bitmap.close();
+      return null;
+    }
+    return { ...header, bitmap };
   } catch {
     return null;
-  } finally {
-    bitmap?.close();
   }
 }
