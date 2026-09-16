@@ -52,11 +52,11 @@ export function baseLevelForTier(bodyId: SurfaceTileBodyId, tier: Tier): number;
 export type SurfaceTileBodyId = keyof typeof SURFACE_TILE_REGISTRY; // exported beside the registry's type file
 ```
 
-- [ ] Rename with `npm run refactor` / `npm run move-files` (dry first): `earthLevelFittingWidth` → `levelFittingWidth`, `earthBaseLevelForTier` → `baseLevelForTier`; the new signature reads `BODY_TEXTURE_REGISTRY[bodyId].kinds.surface` (throw if the row has no `surface` kind — a registry row that cannot tile is a programming error).
-- [ ] Update every caller, including the tests at `tests/utils/scene/cutSurfaceTiles.test.ts:18`, `tests/services/engine/subsystems/surfaceTileSubsystem.test.ts:57,113`, and the bake's `BAKE_MIN_LEVEL` (pass `'earth'` for now; Task 4 makes it per-body).
-- [ ] In `runFrame.ts`, replace `earthPass.enabled(state, ctx, surfaceTilesView)` with a body-generic predicate carrying the same non-Earth conditions (not beyond `FOREGROUND_MAX_DISTANCE_MPC`, the body's scene data seeded). Put it in `src/utils/scene/surfaceTilesEngaged.ts` (frame-file purity). It must NOT require `state.gpu.earthRenderer`.
-- [ ] Test `surfaceTilesEngaged is false beyond the foreground distance` and `… true for a registry body with no earthRenderer` — the second is the joint this task creates and nothing else would catch its regression. No test for the renames (compiler).
-- [ ] `npm run typecheck:fast && npm test -- surfaceTile baseLevel runFrame` → green. Commit.
+- [x] Rename with `npm run refactor` / `npm run move-files` (dry first): `earthLevelFittingWidth` → `levelFittingWidth`, `earthBaseLevelForTier` → `baseLevelForTier`; the new signature reads `BODY_TEXTURE_REGISTRY[bodyId].kinds.surface` (throw if the row has no `surface` kind — a registry row that cannot tile is a programming error).
+- [x] Update every caller, including the tests at `tests/utils/scene/cutSurfaceTiles.test.ts:18`, `tests/services/engine/subsystems/surfaceTileSubsystem.test.ts:57,113`, and the bake's `BAKE_MIN_LEVEL` (pass `'earth'` for now; Task 4 makes it per-body).
+- [x] In `runFrame.ts`, replace `earthPass.enabled(state, ctx, surfaceTilesView)` with a body-generic predicate carrying the same non-Earth conditions (not beyond `FOREGROUND_MAX_DISTANCE_MPC`, the body's scene data seeded). Put it in `src/utils/scene/surfaceTilesEngaged.ts` (frame-file purity). It must NOT require `state.gpu.earthRenderer`.
+- [x] Test `surfaceTilesEngaged is false beyond the foreground distance` and `… true for a registry body with no earthRenderer` — the second is the joint this task creates and nothing else would catch its regression. No test for the renames (compiler).
+- [x] `npm run typecheck:fast && npm test -- surfaceTile baseLevel runFrame` → green. Commit.
 
 ### Task 2: Debug snapshot names its body
 
@@ -65,8 +65,8 @@ export type SurfaceTileBodyId = keyof typeof SURFACE_TILE_REGISTRY; // exported 
 
 **Contract:** snapshot gains `readonly bodyId: SurfaceTileBodyId | null` (null while disengaged). The section title reads `Surface Tiles — <bodyId>`; its fly-to prop becomes `flyToLonLat(lonDeg, latDeg, body)` and passes the snapshot's `bodyId` (omit `body` when null, which keeps today's Earth default). Load the `create-component` skill before editing the component.
 
-- [ ] Implement; no new test (a routing change the compiler checks).
-- [ ] Commit.
+- [x] Implement; no new test (a routing change the compiler checks).
+- [x] Commit.
 
 ### Task 3: Deploy collectors keyed by manifestKey
 
@@ -83,8 +83,8 @@ export function collectSurfaceTileManifest(imagesDir: string, manifestKey: strin
 
 `syncR2` builds one tiles group per `SURFACE_TILE_REGISTRY` row (label `Surface tiles (<key>)`), then one manifest group per row (label `Surface tile manifest (<key>)`, purge true) — every tiles group before every manifest group, and all of them before `Data manifest`. A row whose `index.txt` / `manifest.json` is absent contributes `[]` (today's collectors already return `[]` for a missing manifest — keep that for the index too).
 
-- [ ] Test `collectSurfaceTiles reads <manifestKey>/index.txt` with a temp dir holding a `mars-tiles` index — the parameter is the new behaviour. Keep the existing collector tests, retargeted.
-- [ ] Test `syncR2's groups list every tiles group before every manifest group` only if the group list is extracted into a pure function; otherwise no test. `sync-r2` has no dry-run flag — never run it to check this. Commit.
+- [x] Test `collectSurfaceTiles reads <manifestKey>/index.txt` with a temp dir holding a `mars-tiles` index — the parameter is the new behaviour. Keep the existing collector tests, retargeted.
+- [x] Test `syncR2's groups list every tiles group before every manifest group` only if the group list is extracted into a pure function; otherwise no test. `sync-r2` has no dry-run flag — never run it to check this. Commit.
 
 ### Task 4: Per-body bake table and `--body` — `webp-gate: yes`
 

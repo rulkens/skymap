@@ -13,8 +13,8 @@ import { readEnvProductionValue } from '../utils/io/readEnvProductionValue';
 import type { R2SyncGroup } from './r2/R2SyncGroup';
 import { collectDataFiles } from './r2/collectDataFiles';
 import { collectDataManifest } from './r2/collectDataManifest';
-import { collectEarthTileManifest } from './r2/collectEarthTileManifest';
-import { collectEarthTiles } from './r2/collectEarthTiles';
+import { collectSurfaceTileManifest } from './r2/collectSurfaceTileManifest';
+import { collectSurfaceTiles } from './r2/collectSurfaceTiles';
 import { collectExtraFiles, missingExtraFiles } from './r2/collectExtraFiles';
 import { collectHiResImages } from './r2/collectHiResImages';
 import { collectMeshSources } from './r2/collectMeshSources';
@@ -23,6 +23,7 @@ import { purgeCloudflareCache } from './r2/purgeCloudflareCache';
 import { MISSING_CREDENTIALS_HELP, readRcloneCredentials } from './r2/rcloneEnv';
 import { syncGroup, type R2SyncContext } from './r2/syncGroup';
 import { RAW_DATA } from '../utils/io/rawDataRegistry';
+import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
 
 const DATA_DIR = 'public/data';
 const HIRES_DIR = 'public/data/images/famous-hires';
@@ -85,27 +86,38 @@ function buildGroups(): R2SyncGroup[] {
       cacheControl: NO_CACHE,
       purge: false,
     },
-    {
-      label: 'Earth surface tiles',
-      files: collectEarthTiles(IMAGES_DIR),
-      transport: { kind: 'bulk', localRoot: IMAGES_DIR, keyRoot: 'data/images' },
-      cacheControl: IMMUTABLE,
-      purge: false,
-    },
-    // Must come after 'Earth surface tiles': it's the pointer the runtime
-    // reads to discover tiles, so it must never name tiles that this same
-    // run hasn't finished uploading.
-    {
-      label: 'Earth tile manifest',
-      files: collectEarthTileManifest(IMAGES_DIR),
-      transport: { kind: 'wrangler' },
-      cacheControl: DAY,
-      purge: true,
-    },
+    // One tiles group per `SURFACE_TILE_REGISTRY` row, EVERY one of them
+    // before EVERY manifest group below — a row whose bake never ran
+    // contributes `[]` from both collectors, so a Mars-less checkout still
+    // builds this table today with exactly Earth's two groups.
+    ...Object.keys(SURFACE_TILE_REGISTRY).map((bodyId): R2SyncGroup => {
+      const { manifestKey } = SURFACE_TILE_REGISTRY[bodyId as keyof typeof SURFACE_TILE_REGISTRY];
+      return {
+        label: `Surface tiles (${manifestKey})`,
+        files: collectSurfaceTiles(IMAGES_DIR, manifestKey),
+        transport: { kind: 'bulk', localRoot: IMAGES_DIR, keyRoot: 'data/images' },
+        cacheControl: IMMUTABLE,
+        purge: false,
+      };
+    }),
+    // Each row's manifest is the pointer the runtime reads to discover that
+    // row's tiles, so it must never name tiles this same run hasn't
+    // finished uploading — hence every tiles group above every manifest
+    // group, not just this row's own pair.
+    ...Object.keys(SURFACE_TILE_REGISTRY).map((bodyId): R2SyncGroup => {
+      const { manifestKey } = SURFACE_TILE_REGISTRY[bodyId as keyof typeof SURFACE_TILE_REGISTRY];
+      return {
+        label: `Surface tile manifest (${manifestKey})`,
+        files: collectSurfaceTileManifest(IMAGES_DIR, manifestKey),
+        transport: { kind: 'wrangler' },
+        cacheControl: DAY,
+        purge: true,
+      };
+    }),
     // Must stay last of all: it's the pointer the runtime reads to resolve
     // every logical data path, so it must never name a hashed file this run
-    // hasn't finished uploading — the same rule as the Earth tile manifest
-    // above, one level up.
+    // hasn't finished uploading — the same rule as the surface tile
+    // manifests above, one level up.
     {
       label: 'Data manifest',
       files: collectDataManifest(DATA_DIR),
