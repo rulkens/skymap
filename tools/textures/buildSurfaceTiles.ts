@@ -55,6 +55,7 @@ import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
 import { surfaceTileInBand } from '../../src/utils/scene/surfaceTileInBand';
 import { parseFlags } from '../utils/cli/args';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
+import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
@@ -308,6 +309,17 @@ function readPriorIndex(outDir: string, tileRoot: string): ReadonlySet<string> {
   );
 }
 
+/** `manifest.json`'s prior contents, or `null` on a first bake — the merge
+ *  base `mergeSurfaceTileManifest` folds this run's bands onto. A malformed
+ *  file throws rather than reading as absent: a partially-written or hand-
+ *  edited manifest silently treated as "no prior" would drop every band a
+ *  `--product`-scoped run doesn't touch. */
+function readPriorManifest(outDir: string, tileRoot: string): SurfaceTileManifest | null {
+  const manifestPath = join(outDir, `${tileRoot}/manifest.json`);
+  if (!existsSync(manifestPath)) return null;
+  return JSON.parse(readFileSync(manifestPath, 'utf8')) as SurfaceTileManifest;
+}
+
 /**
  * Named water bodies R3 is judged by: the ocean must come out flat at 0, the
  * Dead Sea near −430, the Caspian near −28, and neither the Great Lakes nor
@@ -395,6 +407,9 @@ async function printWaterDiagnostics(
  * against disk; if any is missing (deleted by hand, a bad rsync, a source
  * that can no longer reproduce it), `bakeAll` throws and writes NEITHER
  * `index.txt` nor `manifest.json`, so a broken pyramid never looks complete.
+ * The manifest itself MERGES onto the prior one (`mergeSurfaceTileManifest`)
+ * rather than replacing it outright, so a scoped `--product`/`bands` run
+ * can't erase a band or a product's provenance it didn't touch this time.
  */
 export async function bakeAll(
   body: Pick<SurfaceBodyBake, 'tileRoot' | 'tilePrefix'>,
@@ -520,11 +535,11 @@ export async function bakeAll(
     );
   }
 
-  const manifest: SurfaceTileManifest = {
+  const manifest = mergeSurfaceTileManifest(readPriorManifest(outDir, tileRoot), {
     prefix: tilePrefix,
     tilePx,
     bands: bandEntries,
-  };
+  });
 
   // Sorted so two bakes of the same pyramid produce the same index, letting a
   // resumed sync diff one against the other.

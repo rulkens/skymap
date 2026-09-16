@@ -26,6 +26,7 @@
 ### Task 1: Registry-driven frame gate and base level
 
 **Files:**
+
 - Modify: `src/@types/data/SurfaceTileSpec.d.ts`, `src/data/bodies/surfaceTileRegistry.ts`
 - Create: `src/@types/data/SurfaceEffect.d.ts`, `src/@types/data/SurfaceTileShading.d.ts`
 - Move: `src/utils/scene/earthBaseLevelForTier.ts` → `src/utils/scene/baseLevelForTier.ts`; `src/utils/scene/earthLevelFittingWidth.ts` → `src/utils/scene/levelFittingWidth.ts` (with their tests)
@@ -61,6 +62,7 @@ export type SurfaceTileBodyId = keyof typeof SURFACE_TILE_REGISTRY; // exported 
 ### Task 2: Debug snapshot names its body
 
 **Files:**
+
 - Modify: `src/@types/scene/SurfaceTileDebugSnapshot.d.ts`, `src/services/engine/subsystems/surfaceTileSubsystem.ts` (snapshot builder + `EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT`), `src/components/DebugPanel/EarthTileAtlasSection.tsx:31,68,103,116`, `src/components/containers/EarthTileAtlasSectionContainer.tsx`
 
 **Contract:** snapshot gains `readonly bodyId: SurfaceTileBodyId | null` (null while disengaged). The section title reads `Surface Tiles — <bodyId>`; its fly-to prop becomes `flyToLonLat(lonDeg, latDeg, body)` and passes the snapshot's `bodyId` (omit `body` when null, which keeps today's Earth default). Load the `create-component` skill before editing the component.
@@ -71,6 +73,7 @@ export type SurfaceTileBodyId = keyof typeof SURFACE_TILE_REGISTRY; // exported 
 ### Task 3: Deploy collectors keyed by manifestKey
 
 **Files:**
+
 - Move/modify: `tools/deploy/r2/collectEarthTiles.ts` → `collectSurfaceTiles.ts`, `tools/deploy/r2/collectEarthTileManifest.ts` → `collectSurfaceTileManifest.ts` (with tests, via `npm run move-files`)
 - Modify: `tools/deploy/syncR2.ts:16-17,88-104`, `docs/DEPLOY.md` (the Earth-tiles step names)
 
@@ -89,16 +92,20 @@ export function collectSurfaceTileManifest(imagesDir: string, manifestKey: strin
 ### Task 4: Per-body bake table and `--body` — `webp-gate: yes`
 
 **Files:**
+
 - Create: `tools/textures/surfaceBodies/earthSurfaceBake.ts`, `tools/textures/SurfaceBodyBake.d.ts`, `tools/textures/SurfaceBakeBand.d.ts` (beside `EarthImagerySource.d.ts` / `HeightSource.d.ts`, where the tool's types already live)
 - Modify: `tools/textures/buildSurfaceTiles.ts` (constants :133-170, `bakeDeepestLevel`, `bakeCoarserLevel`, `readPriorIndex`, `printWaterDiagnostics`, `bakeAll`, `main`), `tools/textures/bakeHeightLevel.ts` if its prefix/root reach is module-level, `tests/tools/textures/buildSurfaceTiles.test.ts`, `package.json` script help if any, `docs/DATA.md` (the build-surface-tiles invocation)
 
 **Contract:**
 
 ```ts
-export type SurfaceBakeBand = {           // today's inline bakeAll band element, unchanged fields
-  readonly source: EarthImagerySource; readonly minLevel: number;
+export type SurfaceBakeBand = {
+  // today's inline bakeAll band element, unchanged fields
+  readonly source: EarthImagerySource;
+  readonly minLevel: number;
   readonly underfill?: EarthImagerySource;
-  readonly height?: HeightSource; readonly heightUnderfill?: HeightSource;
+  readonly height?: HeightSource;
+  readonly heightUnderfill?: HeightSource;
   readonly flattenWater?: boolean;
 };
 export type SurfaceBodyBake = {
@@ -119,15 +126,16 @@ export async function bakeAll(
 // CLI: `--body <id>` (default 'earth'); unknown id → throw listing the known ids
 ```
 
-- [ ] Move Earth's band assembly (today's `main()` :635+, `deepSource`, `devSource`, the EOX/GeoDanmark floors and colour-match sigma) into `earthSurfaceBake.ts`; `tilePrefix` stays `earth-tiles/v9` byte for byte. `BAKE_MIN_LEVEL` becomes `min over tiers of baseLevelForTier(bodyId, tier) + 1` inside the body file.
-- [ ] Thread `tileRoot`/`tilePrefix` through every function that read `TILE_ROOT`/`TILE_PREFIX`; delete the module constants. Rename `EarthImagerySource` → `SurfaceImagerySource` with `npm run refactor` (the interface is already body-neutral).
-- [ ] Rename the body-neutral geometry helpers the bake will call for Mars — `tools/utils/scene/earthTileBounds.ts`, `earthTileIndicesForBounds.ts` → `surfaceTileBounds.ts`, `surfaceTileIndicesForBounds.ts` — via `npm run move-files` + `npm run refactor rename`.
-- [ ] Test `bakeAll writes under the body's tileRoot` — a `--dev`-sized fake source baked with `{tileRoot: 'test-tiles', tilePrefix: 'test-tiles/v1'}` lands `test-tiles/manifest.json` and nothing under `earth-tiles/`. This is the landmine guard (a hardwired root would overwrite main's live Earth manifest).
-- [ ] `npm run build-surface-tiles -- --dev` into a temp `outDir` still produces the pre-change Earth tile set (diff the index against a run from main, same temp setup). Commit.
+- [x] Move Earth's band assembly (today's `main()` :635+, `deepSource`, `devSource`, the EOX/GeoDanmark floors and colour-match sigma) into `earthSurfaceBake.ts`; `tilePrefix` stays `earth-tiles/v9` byte for byte. `BAKE_MIN_LEVEL` becomes `min over tiers of baseLevelForTier(bodyId, tier) + 1` inside the body file.
+- [x] Thread `tileRoot`/`tilePrefix` through every function that read `TILE_ROOT`/`TILE_PREFIX`; delete the module constants. Rename `EarthImagerySource` → `SurfaceImagerySource` with `npm run refactor` (the interface is already body-neutral).
+- [x] Rename the body-neutral geometry helpers the bake will call for Mars — `tools/utils/scene/earthTileBounds.ts`, `earthTileIndicesForBounds.ts` → `surfaceTileBounds.ts`, `surfaceTileIndicesForBounds.ts` — via `npm run move-files` + `npm run refactor rename`.
+- [x] Test `bakeAll writes under the body's tileRoot` — a `--dev`-sized fake source baked with `{tileRoot: 'test-tiles', tilePrefix: 'test-tiles/v1'}` lands `test-tiles/manifest.json` and nothing under `earth-tiles/`. This is the landmine guard (a hardwired root would overwrite main's live Earth manifest).
+- [x] `npm run build-surface-tiles -- --dev` into a temp `outDir` still produces the pre-change Earth tile set (diff the index against a run from main, same temp setup). SKIPPED: this worktree's `data/raw/textures/` holds only the README + checksum sidecar, not the BMNG equirect `devSource()` needs, so no bake (before or after) can run here. Commit.
 
 ### Task 5: Manifest write merges with the prior manifest — `webp-gate: yes`
 
 **Files:**
+
 - Create: `tools/utils/textures/mergeSurfaceTileManifest.ts`, `tests/tools/utils/textures/mergeSurfaceTileManifest.test.ts`
 - Modify: `tools/textures/buildSurfaceTiles.ts` (`bakeAll` :446+, manifest write near :568-590)
 
@@ -147,14 +155,16 @@ export function mergeSurfaceTileManifest(
 `bakeAll` reads `<tileRoot>/manifest.json` if present (a corrupt file throws, never silently becomes `null`), merges, and writes as today — still last, still after the completeness check.
 
 Tests (each is a silent-when-broken bug):
-- [ ] `an albedo-only run keeps the prior height provenance` — prior band with `{albedo, height}`, run band with `{albedo}` → merged band has both, albedo from the run.
-- [ ] `a run with one band keeps the other bands` — prior 3 bands, run 1 matching band → 3 bands, order of prior preserved.
-- [ ] `a new band is appended` and `a prior with another prefix is dropped`.
-- [ ] Wire into `bakeAll`; `npm test -- mergeSurfaceTileManifest buildSurfaceTiles` green. Commit.
+
+- [x] `an albedo-only run keeps the prior height provenance` — prior band with `{albedo, height}`, run band with `{albedo}` → merged band has both, albedo from the run.
+- [x] `a run with one band keeps the other bands` — prior 3 bands, run 1 matching band → 3 bands, order of prior preserved.
+- [x] `a new band is appended` and `a prior with another prefix is dropped`.
+- [x] Wire into `bakeAll`; `npm test -- mergeSurfaceTileManifest buildSurfaceTiles` green. Commit.
 
 ### Task 6: Tile fragment variants keyed by the effects set — `webp-gate: yes`, `review: yes`
 
 **Files:**
+
 - Create: `src/services/gpu/shaders/bodies/earthSurfaceTile/surfaceLighting.wesl` (shared fns), `src/services/gpu/shaders/bodies/earthSurfaceTile/fragmentBare.wesl`, `src/data/bodies/surfaceTileShaderVariants.ts`, `src/utils/scene/surfaceEffectsKey.ts`, `src/@types/rendering/SurfaceEffectInputs.d.ts`
 - Rename: `fragment.wesl` → `fragmentEarth.wesl` (update `package::` imports and the `?static` import by hand — the move tool misses both)
 - Modify: `src/services/gpu/renderers/bodies/earthSurfaceTileRenderer.ts` (layout :86-125, pipeline :127, draw :189-320), `src/@types/rendering/EarthSurfaceTileRenderer.d.ts`, `src/services/engine/frame/passes/earthSurfaceTilesPass.ts`, `tests/services/gpu/shaders/constants.parity.test.ts` (reads `fragment.wesl`), and the doc references in `src/utils/scene/surfaceNormalFromHeightCell.ts`, `src/data/bodies/earthTileParams.ts`, `src/data/debug/debugOverlayRows.ts`
@@ -165,13 +175,22 @@ Tests (each is a silent-when-broken bug):
 export type SurfaceEffectInputs = {
   readonly materialMap?: { readonly view: GPUTextureView; readonly oceanRoughness: number };
   readonly nightLights?: { readonly view: GPUTextureView };
-  readonly cloudShadows?: { readonly view: GPUTextureView; readonly strength: number; readonly shellRadius: number };
+  readonly cloudShadows?: {
+    readonly view: GPUTextureView;
+    readonly strength: number;
+    readonly shellRadius: number;
+  };
 };
 export function surfaceEffectsKey(effects: readonly SurfaceEffect[]): string; // sorted, '+'-joined; [] → ''
-export const SURFACE_TILE_SHADER_VARIANTS: Readonly<Record<string, {
-  readonly fragment: string;            // ?static source
-  readonly bindings: readonly number[]; // fragment-only bindings this variant declares
-}>>;
+export const SURFACE_TILE_SHADER_VARIANTS: Readonly<
+  Record<
+    string,
+    {
+      readonly fragment: string; // ?static source
+      readonly bindings: readonly number[]; // fragment-only bindings this variant declares
+    }
+  >
+>;
 // '' → fragmentBare, bindings [5]            (albedo atlas; + 0/1/2/4 shared with the vertex stage)
 // 'cloudShadows+materialMap+nightLights' → fragmentEarth, bindings [3,5,6,7,9]
 // draw args: drop materialView/nightView/cloudsView/oceanRoughness/cloudShadowStrength/
@@ -181,12 +200,14 @@ export const SURFACE_TILE_SHADER_VARIANTS: Readonly<Record<string, {
 ```
 
 Rules:
+
 - `SurfaceTileUniforms` layout does NOT change (the bare variant ignores the effect fields; keeps the parity test and the Adreno fix intact). Unused effect fields are written as 0.
 - The renderer builds one pipeline + bind-group layout per variant key lazily and caches it; the bind group is built from the variant's `bindings`. Supplying an input the variant lacks, or omitting one it needs, throws in `draw` (dev programming error).
 - `surfaceLighting.wesl` holds what both entries share: atlas crossfade sample, the height-cell normal (today's `fs` body up to `n`), `resolveTileAtlasUv`, the LOD overlay. Textures pass in as parameters. `fragmentEarth.wesl` must shade pixel-identically to today's `fragment.wesl`; `fragmentBare.wesl` = `pbrDirect` with roughness `clamp(u.roughnessBase, MIN_ROUGHNESS, 1)` + ambient, no material/night/cloud terms.
 - The pass reads the engaged body's row: `effects`, `shading`, and builds `effectInputs` per listed effect from `state.gpu.earthRenderer` (the only body whose maps exist today). `enabled` requires `earthRenderer` only when the row lists an effect. `ambientLight` stays `state.settings.earth.ambientLight` for every body in this PR (Mars's value is an F4 decision). The pass keeps its Earth-only `bodyId` check REMOVED — the registry is the predicate.
 
 Tests:
+
 - [ ] `every registry row's effects key has a shader variant` — adding Mars with an unlisted combination must fail here, not at pipeline creation on a user's GPU.
 - [ ] `surfaceEffectsKey is order-insensitive`.
 - [ ] WGSL validation of both entries through the project's existing shader test path (wesl link + naga where tint is absent).
@@ -206,6 +227,7 @@ Out of scope: the `earth-tiles` manifest key, `EARTH_TILE_*` constants in `earth
 ## Definition of Done
 
 **Deliverables**
+
 - `SURFACE_TILE_REGISTRY` rows carry `effects` + `shading`; `baseLevelForTier(bodyId, tier)`; `surfaceTilesEngaged`.
 - `SurfaceTileDebugSnapshot.bodyId`; the debug section's fly-to carries it.
 - `collectSurfaceTiles` / `collectSurfaceTileManifest` keyed by `manifestKey`, one group per registry row.
@@ -215,12 +237,14 @@ Out of scope: the `earth-tiles` manifest key, `EARTH_TILE_*` constants in `earth
 - Generic draw path carries no `earth` in its names (Task 7 list).
 
 **Observable behaviours (manual smoke)**
+
 - Earth from orbit, at the terminator (night lights on), under a cloud shadow, and at Søndermarken z19: identical to main.
 - Debug panel section shows `Surface Tiles — earth` while engaged; its fly-to still lands on Earth.
 - `build-surface-tiles -- --dev --product albedo` into a temp dir holding a full prior manifest keeps every band's `builtFrom.height`.
 - `syncR2`'s group list for today's registry names the same Earth local paths and R2 keys as main (read the built list in a test or a `tsx -e` print; never run the sync).
 
 **Deferral boundary (F4, not this PR)**
+
 - The `mars` registry row, Mars bake bands, MOLA/Viking/HiRISE readers, raw-data registry rows and READMEs.
 - Mars shading values, Mars ambient, rebuilding `mars-8192` from MDIM21, Mars `reliefM`, the Mars base globe at the inner bound.
 - Rover placement on terrain (F3a's height lookup).
