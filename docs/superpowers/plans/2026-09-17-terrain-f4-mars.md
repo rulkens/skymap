@@ -25,28 +25,29 @@
 
 All rasters: equirectangular, lat_ts 0, lon0 0, sphere R = 3,396,190 m (lon = x/R, lat = y/R).
 
-| key (new)                | file                                                                    | size / layout                    | type, nodata                                              | px      | bounds (lon, lat °)              |
-| ------------------------ | ----------------------------------------------------------------------- | -------------------------------- | --------------------------------------------------------- | ------- | -------------------------------- |
-| `mola.dem463`            | `mola/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif`                         | 2.1 GB, 46080×23040, strip       | Int16, −32768                                             | 463 m   | global                           |
-| `viking.mdim21`          | `viking/Mars_Viking_MDIM21_ClrMosaic_global_232m.tif`                   | 12.7 GB, 92160×46080, strip, RGB | Byte, 0                                                   | 232 m   | global                           |
-| `hirise.gale.dtm`        | `hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3.tif`                             | 3.9 GB, LZW strip                | Float32, −32767                                           | 1 m     | 137.124–137.681, −5.099–−4.130   |
-| `hirise.gale.ortho`      | `hirise/gale/MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif`                | 1.0 GB, JPEG-YCbCr COG, RGB      | Byte, mask                                                | 0.25 m  | 137.327–137.479, −4.876–−4.555   |
-| `hirise.gusev.dtm`       | `hirise/gusev/DTEEC_001513_1655_001777_1650_U01.tif`                    | 136 MB COG                       | Float32, −3.4e38                                          | 1.01 m  | 175.442–175.555, −14.677–−14.492 |
-| `hirise.gusev.ortho`     | `hirise/gusev/PSP_001513_1655_RED_A_01_ORTHO.tif`                       | 696 MB COG, grey                 | UInt16, 0                                                 | 0.254 m | = DTM                            |
-| `hirise.endeavour.dtm`   | `hirise/meridiani-endeavour/DTEEC_018701_1775_018846_1775_U01.tif`      | 248 MB COG                       | Float32, −3.4e38                                          | 1.01 m  | −5.445–−5.311, −2.491–−2.125     |
-| `hirise.endeavour.ortho` | `hirise/meridiani-endeavour/ESP_018701_1775_RED_A_01_ORTHO.tif`         | 1.6 GB COG, grey                 | UInt16, 0 (Offset/Scale tag)                              | 0.253 m | = DTM                            |
-| `hirise.eagle.dtm`       | `hirise/meridiani-landing/DTEEC_001414_1780_001612_1780_U01.tif`        | 4.8 MB COG                       | Float32, −3.4e38                                          | 1.01 m  | −5.507–−5.485, −2.065–−2.036     |
-| `hirise.eagle.ortho`     | `hirise/meridiani-landing/PSP_001414_1780_RED_A_01_ORTHO.tif`           | 23 MB COG, grey                  | UInt16, 0                                                 | 0.253 m | = DTM                            |
-| `hirise.jezero.zip`      | `hirise/jezero/MSR_TRN_HiRISE_soc_003_USGS_release_aug2024_mosaics.zip` | 5.5 GB, unextracted              | DTM `…DeltaGeoid_1m…` (areoid, per README) + 0.25 m ortho |         | read after extraction            |
+| key (new)                 | file                                                                                            | size / layout                             | type, nodata                     | px      | bounds (lon, lat °)              |
+| ------------------------- | ----------------------------------------------------------------------------------------------- | ----------------------------------------- | -------------------------------- | ------- | -------------------------------- |
+| `mola.dem463`             | `mola/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif`                                                 | 2.1 GB, 46080×23040, strip                | Int16, −32768                    | 463 m   | global                           |
+| `viking.mdim21`           | `viking/Mars_Viking_MDIM21_ClrMosaic_global_232m.tif`                                           | 12.7 GB, 92160×46080, strip, RGB          | Byte, 0                          | 232 m   | global                           |
+| `hirise.gale.dtm`         | `hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3.tif`                                                     | 3.9 GB, LZW strip                         | Float32, −32767                  | 1 m     | 137.124–137.681, −5.099–−4.130   |
+| `hirise.gale.ortho`       | `hirise/gale/MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif`                                        | 1.0 GB, JPEG-YCbCr COG, RGB               | Byte, mask                       | 0.25 m  | 137.327–137.479, −4.876–−4.555   |
+| `hirise.gusev.dtm`        | `hirise/gusev/DTEEC_001513_1655_001777_1650_U01.tif`                                            | 136 MB COG                                | Float32, −3.4e38                 | 1.01 m  | 175.442–175.555, −14.677–−14.492 |
+| `hirise.gusev.ortho`      | `hirise/gusev/PSP_001513_1655_RED_A_01_ORTHO.tif`                                               | 696 MB COG, grey                          | UInt16, 0                        | 0.254 m | = DTM                            |
+| `hirise.endeavour.dtm`    | `hirise/meridiani-endeavour/DTEEC_018701_1775_018846_1775_U01.tif`                              | 248 MB COG                                | Float32, −3.4e38                 | 1.01 m  | −5.445–−5.311, −2.491–−2.125     |
+| `hirise.endeavour.ortho`  | `hirise/meridiani-endeavour/ESP_018701_1775_RED_A_01_ORTHO.tif`                                 | 1.6 GB COG, grey                          | UInt16, 0 (Offset/Scale tag)     | 0.253 m | = DTM                            |
+| _(eagle, not baked — R1)_ | `hirise/meridiani-landing/DTEEC_001414_1780_001612_1780_U01.tif`                                | 4.8 MB COG                                | Float32, −3.4e38                 | 1.01 m  | −5.507–−5.485, −2.065–−2.036     |
+| _(eagle, not baked — R1)_ | `hirise/meridiani-landing/PSP_001414_1780_RED_A_01_ORTHO.tif`                                   | 23 MB COG, grey                           | UInt16, 0                        | 0.253 m | = DTM                            |
+| `hirise.jezero.dtm`       | `hirise/jezero/MSR_hirise_soc_003_DTM_MOLATopography_DeltaGeoid_1m_Eqc_latTs0_lon0_Blend40.tif` | 712 MB, 19144×26816, LZW tiled 256        | Float32, −32767 (areoid, README) | 1 m     | 77.058–77.381, 18.136–18.588     |
+| `hirise.jezero.ortho`     | `hirise/jezero/MSR_hirise_soc_003_Orthomosaic_0.25m_Eqc_latTs0_lon0_First_NoBlend.tif`          | 4.7 GB, 76576×107264, LZW tiled 256, grey | Byte, 0                          | 0.25 m  | = DTM                            |
 
-Rover rows (`src/data/bodies/surfaceFixedSites.ts:22-55`): curiosity −4.5895, 137.4417 (inside Gale); spirit −14.5684, 175.4726 (inside Gusev); perseverance 18.4447, 77.4508 (Jezero, unverified); **opportunity −1.9462, 354.4734 (= −5.5266) — outside both Meridiani boxes** (open question O1).
+Rover rows (`src/data/bodies/surfaceFixedSites.ts:22-55`): curiosity −4.5895, 137.4417 (inside Gale); spirit −14.5684, 175.4726 (inside Gusev); perseverance 18.4447, 77.4508 (landing site — ~4 km EAST of the Jezero box); opportunity −1.9462, 354.4734 (Eagle crater, outside both Meridiani DTMs; moves per R1).
 
-## Open questions (user rulings needed before Task 4's bands are final)
+## Rulings (user, 2026-09-17)
 
-- **O1 Opportunity.** Neither Meridiani DTM covers the row (Eagle crater). Options: bake both boxes anyway (Opportunity stands on MOLA z7 ground); find a HiRISE DTM over Eagle crater; or move the row.
-- **O2 Site extents.** Full-extent boxes at z17 come to roughly 30k tiles per product (Gale ~8.6k, Endeavour ~8.7k, Gusev ~3.7k, Jezero ~10k est.), against spec §10's ~6k. Options: full extents, or clip each box to a fixed window around the rover.
-- **O3 Jezero extraction.** Unzip the DTM (712 MB) and ortho (4.67 GB) from the zip into `data/raw/hirise/jezero/` in main.
-- **O4 Base-globe colour** (decide at the eye-check, Task 6): tiles are Viking MDIM21 and the base globe is Solar System Scope's `mars-8192`, so a colour step is expected at tile engagement. Accept, or rebuild `mars-*` from MDIM21 (`tools/utils/io/textureSources.ts:42`) in this PR.
+- **R1 Opportunity moves** to its final resting place in Perseverance Valley, inside the Endeavour box (coordinates from the controller's lookup, recorded in the ledger). The Eagle-crater box (`meridiani-landing`) is not baked and gets no registry row.
+- **R2 Site boxes are clipped** to a 3 × 3 km window centred on each rover (`MARS_SITE_WINDOW_M = 3000`), intersected with the file's bounds, so about 550 tiles per site per product. The window is a named constant; widening it later is only a re-bake.
+- **R3 Jezero extracted:** the DTM and ortho `.tif` files (plus `.xml` sidecars) sit loose in `data/raw/hirise/jezero/`; the zip stays.
+- **O4 Base-globe colour** (still open; decided at the eye-check, Task 6): the tiles use Viking MDIM21 while the base globe uses Solar System Scope's `mars-8192`, so a colour step is expected when tiles engage. Either accept it, or rebuild `mars-*` from MDIM21 (`tools/utils/io/textureSources.ts:42`) in this PR.
 
 ---
 
@@ -59,7 +60,7 @@ Rover rows (`src/data/bodies/surfaceFixedSites.ts:22-55`): curiosity −4.5895, 
 - Modify: `docs/DATA.md` (source list)
 
 - [ ] Confirm how `rawDataPath` resolves from a linked worktree (main's `data/raw` or the worktree's). If the worktree's, stop and report; the controller decides between symlinking `data/raw/{mola,viking,hirise}` and baking from main.
-- [ ] Add the keys in the table above (`kind: 'file'`, `source: 'gitignored'`, `upstream` URL, `readme` key). Use `mola.*`/`viking.*`/`hirise.*` names, not `textures.*`, so the `fetchTextures` rule (`tests/tools/utils/io/rawDataRegistry.test.ts:44-73`) does not apply. No fetchers: the files were fetched by hand; the README records the upstream URL and product ID. Jezero rows point at the extracted paths, added once O3 is ruled.
+- [ ] Add the keys in the table above (`kind: 'file'`, `source: 'gitignored'`, `upstream` URL, `readme` key). Use `mola.*`/`viking.*`/`hirise.*` names, not `textures.*`, so the `fetchTextures` rule (`tests/tools/utils/io/rawDataRegistry.test.ts:44-73`) does not apply. No fetchers: the files were fetched by hand; the README records the upstream URL and product ID. Jezero rows point at the extracted `.tif` paths (R3); the header facts go in the table above once read.
 - [ ] READMEs, per `docs/DATA.md:214-222`: product, upstream, projection, sphere, **vertical reference** (areoid topography; the +6,190 m rebase is the bake's, per spec §4.3), nodata.
 - [ ] No new test (registry shape is already tested). Commit.
 
@@ -158,12 +159,13 @@ Bands (priority order, per `tools/textures/SurfaceBakeBand.d.ts`; no `flattenWat
 
 \* `BAKE_MIN_LEVEL` exactly as `earthSurfaceBake.ts:48` computes it, with `'mars'`.
 
-Site set and extents follow O1–O3. Grey stretch `[lo, hi]`: the 0.5/99.5 percentiles of a decimated read of each ortho, computed once and written into the band table as named constants with a comment saying how they were measured.
+Sites: Gale, Jezero, Gusev, Endeavour (R1), each box = `MARS_SITE_WINDOW_M` square around the rover row's lon/lat, intersected with the DTM ∩ ortho bounds (R2); the bake throws if a rover's window is not wholly inside. The window is computed from the site rows (`SURFACE_FIXED_SITES`), never restated. Grey stretch `[lo, hi]`: the 0.5/99.5 percentiles of a decimated read of each ortho, computed once and written into the band table as named constants with a comment saying how they were measured.
 
 - [ ] Add the registry row. The compiler then requires `SURFACE_BODY_BAKES.mars`; `tests/data/bodies/surfaceTileShaderVariants.test.ts` covers the `''` variant.
 - [ ] `MARS_SURFACE_SHADING`: `sunIrradiance` must give tiles the same brightness as the textured Mars globe (`src/services/gpu/shaders/lib/bodyLighting.wesl`, how `texturedBodyRenderer` scales sun light) so the tile hand-off does not step. Derive from that code, cite it in a comment; `roughnessBase`/`f0` for dry regolith (rough, dielectric: roughness ≈ 0.9, f0 ≈ 0.03). No new test.
 - [ ] Mars `reliefM`: `[min, max]` of MOLA over the whole globe + 6,190 m (read `gdalinfo -mm` or a decimated scan; expected ≈ [−2,011, 27,431]) widened to cover the site DTMs' rebased extremes. Store where Earth's is (`sceneEarth.ts:23` pattern); `heliocentricPlanet` must accept it instead of hardcoding `[0, 0]`.
 - [ ] Bake-time datum check (in `marsSurfaceBake`, printed, not a unit test): per site band, median of (DTM − MOLA) over the box at z10. A value beyond ±200 m means a datum mismatch (a sphere-relative DTM is off by kilometres) — throw.
+- [ ] Move Opportunity's row in `src/data/bodies/surfaceFixedSites.ts` to the final-position lat/lon from the ledger (R1); keep the `// source` comment style of the other rows, citing where the coordinates came from.
 - [ ] `dev` bands: the global band only, `maxLevel` 4, no height.
 - [ ] `npm run build-surface-tiles -- --body mars --dev` into the linked `public/data` is allowed (writes `mars-tiles/` only); verify the Earth manifest mtime is unchanged. Commit.
 
@@ -228,7 +230,7 @@ F3a routes surface-fixed site placement (`deriveBodyStates.ts:84` and `sitePoint
 
 - Mars from orbit shows relief at Olympus Mons / Valles Marineris; tiles engage without a hole or a brightness step.
 - Hellas close up: no base-globe bleed-through.
-- Gale, Jezero, Gusev (and Meridiani per O1) show HiRISE-resolution ground with no seam to the global band.
+- Gale, Jezero, Gusev and Endeavour (Opportunity) show HiRISE-resolution ground with no seam to the global band.
 - Each rover stands on the ground after F3a is merged; the camera floor holds above Mars terrain.
 - Earth is pixel-identical at the prep PR's four poses.
 - Debug fly-to and `surface-lod-overlay` work on Mars.
