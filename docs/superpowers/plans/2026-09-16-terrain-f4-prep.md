@@ -228,7 +228,7 @@ Out of scope: the `earth-tiles` manifest key, `EARTH_TILE_*` constants in `earth
 
 **Signature:** `levelFittingWidth(widthPx: number, baseWidthPx: number): number`. The generic name hid an Earth-only constant, `EARTH_EQUIRECT_BASE_WIDTH_PX`; callers now pass it in (Earth callers pass that constant). No behaviour change.
 
-- [ ] Update the existing test to pass the base width. Commit.
+- [x] Update the existing test to pass the base width. Commit.
 
 ### Task 9: `utils/scene/` split into domain folders
 
@@ -246,8 +246,8 @@ User-ruled 2026-09-16: every group rides this PR. Pure moves via `npm run move-f
 | `src/utils/labels/` | declutterByScreenSeparation |
 | `src/utils/star/` | resolvesToSphere, starSphereRangeM |
 
-- [ ] Move each file with its `tests/` mirror. Then grep `src tools tests docs .claude` for `utils/scene/<name>`, and fix string paths and doc links (frame-purity allow-list, RENDERER.md, skills). Leave history (plans/specs under `completed/`, backlog, audits) alone.
-- [ ] One commit per destination row, or one commit for all of them; the tree typechecks at every commit.
+- [x] Move each file with its `tests/` mirror. Then grep `src tools tests docs .claude` for `utils/scene/<name>`, and fix string paths and doc links (frame-purity allow-list, RENDERER.md, skills). Leave history (plans/specs under `completed/`, backlog, audits) alone.
+- [x] One commit per destination row, or one commit for all of them; the tree typechecks at every commit.
 
 ---
 
