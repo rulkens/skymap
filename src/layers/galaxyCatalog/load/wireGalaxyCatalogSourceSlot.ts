@@ -1,8 +1,9 @@
 /**
  * wireGalaxyCatalogSourceSlot — one per-source galaxy-catalog slot, built by
- * `create`. WHEN it loads belongs to the Layer's asset rows, not here.
- * `subscribe` keeps today's two writes at today's beat: core's catalog-landed
- * pulse (which owns what the count MEANS — Ruling 3) and the provenance fact.
+ * `create`. WHEN it loads belongs to the Layer's asset rows, and the arrival
+ * fade to core's `installFadeOnArrival`, not here. `subscribe` keeps today's two
+ * writes at today's beat: core's catalog-landed pulse (which owns what the count
+ * MEANS — Ruling 3) and the provenance fact.
  */
 
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
@@ -18,10 +19,6 @@ import type { GalaxyCatalogFacts } from '../types/GalaxyCatalogFacts';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
-import {
-  FADE_IN_DURATION_MS,
-  FADE_OUT_DURATION_MS,
-} from '../../../services/animation/fadeController';
 import { galaxyCatalogFetcher } from './galaxyCatalogFetcher';
 
 export function wireGalaxyCatalogSourceSlot(
@@ -50,21 +47,6 @@ export function wireGalaxyCatalogSourceSlot(
       // index's row set goes stale (aliases for galaxies the new array lacks,
       // none for ones it gained) — bump so `frame` rebuilds it.
       galaxy.bumpCatalogsVersion();
-
-      // The single-ITEM re-sync, not the batch sweep: on a tier swap every
-      // visible source reloads concurrently, and a sweep would have this commit
-      // re-drive the others' in-flight fades. Fire-and-forget, so the slot
-      // reaches `ready` without waiting on the smoothstep. The `survey` row's
-      // own guard (`hasCatalog`) is true by construction right here.
-      const handle = { kind: 'galaxyCatalog', id } as const;
-      const target = deps.store.getState().settings.galaxyCatalogs.items[id].enabled ? 1 : 0;
-      if (deps.fades.targetOf(handle) !== target) {
-        void deps.fades.fadeTo(
-          handle,
-          target,
-          target === 1 ? FADE_IN_DURATION_MS : FADE_OUT_DURATION_MS,
-        );
-      }
 
       const dtMs = Math.round(performance.now() - t0);
       // If this disagrees with `cloud.count`, a concurrent upload overwrote.

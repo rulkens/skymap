@@ -23,16 +23,8 @@ import {
   syncVisibilityFadeItem,
 } from '../../../../src/services/engine/wiring/syncVisibilityFades';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
-import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
-
-/** Every catalog committed, so the `survey` row's demand-loaded guard passes. */
-const GALAXY_RUNTIME = {
-  pointRenderer: { hasCatalog: () => true },
-} as unknown as GalaxyCatalogRuntime;
+import { makeFadeBridgeState } from '../../../helpers/engine/makeFadeBridgeState';
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
-import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
-import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 
 // ── Fixtures ──────────────────────────────────────────────────────────
@@ -202,88 +194,8 @@ describe('applyIntent', () => {
 
 // ── syncVisibilityFades (public bridge over the REAL FADE_LAYERS) ──────
 //
-// These tests stub the fades registry (typed spies on fadeTo/setImmediate) and
-// the scheduler, and stand up a full settings/state slice covering every intent
-// row's leaf — so the real manifest expands and intents run end to end. Stubbing
-// (vs the real createFadeRegistry) avoids having to pre-register every handle;
-// we assert the spy calls directly.
-
-// The state slice the bridge feeds the rows — same Pick applyIntent uses.
-type BridgeState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu' | 'fadeRows'>;
-
-/**
- * Build a state whose settings cover every intent row's leaf, a stubbed fades
- * registry + scheduler, and a loaded flow renderer (so the flow guard passes).
- * No `sources` slice: the survey row no longer has a mask-recompute `post`.
- */
-function makeBridgeState(): {
-  state: BridgeState;
-  fadeTo: ReturnType<typeof vi.fn<(id: FadeId, target: number, dur?: number) => Promise<void>>>;
-  setImmediate: ReturnType<typeof vi.fn<(id: FadeId, v: number) => void>>;
-  targetOf: ReturnType<typeof vi.fn<(id: FadeId) => number | null>>;
-  requestRender: ReturnType<typeof vi.fn<() => void>>;
-  settings: EngineSettingsState;
-} {
-  const fadeTo = vi.fn<(id: FadeId, target: number, dur?: number) => Promise<void>>(() =>
-    Promise.resolve(),
-  );
-  const setImmediate = vi.fn<(id: FadeId, v: number) => void>();
-  // null never matches a real 0/1 target — every existing bridge test keeps
-  // seeing its fadeTo/setImmediate calls fire unless a test overrides this.
-  const targetOf = vi.fn<(id: FadeId) => number | null>(() => null);
-  const requestRender = vi.fn<() => void>();
-
-  const galaxyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const id of GALAXY_CATALOG_IDS) galaxyItems[id] = { enabled: true, labelEnabled: false };
-  galaxyItems.famousGalaxy = { enabled: true, labelEnabled: true };
-
-  const structureItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const id of STRUCTURE_IDS) structureItems[id] = { enabled: true, labelEnabled: true };
-
-  const starCatalogItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const id of STAR_CATALOG_IDS) starCatalogItems[id] = { enabled: true, labelEnabled: true };
-
-  const bodyItems: Record<string, { enabled: boolean; labelEnabled: boolean }> = {};
-  for (const id of BODY_IDS) bodyItems[id] = { enabled: true, labelEnabled: true };
-
-  const settings = {
-    galaxyCatalogs: { items: galaxyItems },
-    starCatalogs: { enabled: true, items: starCatalogItems },
-    bodies: { items: bodyItems },
-    structures: { enabled: true, items: structureItems },
-    milkyWay: { enabled: true, labelEnabled: true },
-    zoneOfAvoidance: { enabled: true },
-    // Empty volume items: the volumeField intent reads items[id]?.enabled (→
-    // false here) and its post no-ops because assetSlots.syntheticVolumes is
-    // absent — neither throws, which is all this fixture needs.
-    volumes: { enabled: true, items: {} },
-    filaments: { enabled: true },
-    flow: { enabled: true },
-    orbitTrails: { enabled: true },
-  } as unknown as EngineSettingsState;
-
-  const state = {
-    settings,
-    // Demand-loaded renderers report their assets committed so every guarded
-    // row (survey / flow / filaments / volumeField) passes and its fade fires.
-    gpu: {
-      galaxyPointRenderer: { hasCatalog: () => true },
-      flowFieldRenderer: { fieldLoaded: () => true },
-      filamentRenderer: { hasCloud: () => true },
-      volumeFieldRenderer: { listIds: () => [] },
-    },
-    subsystems: {
-      fades: { fadeTo, setImmediate, targetOf },
-      scheduler: { requestRender },
-    },
-    // The bridge walks the COMPOSED rows — core's manifest plus the
-    // galaxyCatalog Layer's, which is what `createLayers` writes and what the
-    // `survey` / `surveyLabel` assertions below exercise.
-    fadeRows: [...FADE_LAYERS, ...galaxyCatalogFadeRows(GALAXY_RUNTIME)],
-  } as unknown as BridgeState;
-
-  return { state, fadeTo, setImmediate, targetOf, requestRender, settings };
-}
+// These tests drive the shared `makeFadeBridgeState` stub, so the real manifest
+// expands and intents run end to end and we assert the registry spy calls directly.
 
 // The intent keys whose handles a full (no-`only`) sync must drive…
 const INTENT_KEYS = [
@@ -318,7 +230,7 @@ function fadedHandle(
 
 describe('syncVisibilityFades', () => {
   it('with `only` filters to that row’s handles', () => {
-    const { state, fadeTo } = makeBridgeState();
+    const { state, fadeTo } = makeFadeBridgeState();
 
     syncVisibilityFades(state, { animate: true, only: ['survey'] });
 
@@ -333,7 +245,7 @@ describe('syncVisibilityFades', () => {
   });
 
   it('with no `only` covers every intent row and skips registration-only rows', () => {
-    const { state, fadeTo } = makeBridgeState();
+    const { state, fadeTo } = makeFadeBridgeState();
 
     syncVisibilityFades(state, { animate: true });
 
@@ -373,7 +285,7 @@ describe('syncVisibilityFades', () => {
   });
 
   it('animate:false issues exactly one requestRender after the batch', () => {
-    const { state, setImmediate, requestRender, fadeTo } = makeBridgeState();
+    const { state, setImmediate, requestRender, fadeTo } = makeFadeBridgeState();
 
     syncVisibilityFades(state, { animate: false });
 
@@ -384,7 +296,7 @@ describe('syncVisibilityFades', () => {
   });
 
   it('animate:true issues no requestRender (fadeTo owns the wake)', () => {
-    const { state, requestRender } = makeBridgeState();
+    const { state, requestRender } = makeFadeBridgeState();
 
     syncVisibilityFades(state, { animate: true });
 
@@ -392,7 +304,7 @@ describe('syncVisibilityFades', () => {
   });
 
   it('threads durationMs to every animated fadeTo call', () => {
-    const { state, fadeTo } = makeBridgeState();
+    const { state, fadeTo } = makeFadeBridgeState();
 
     syncVisibilityFades(state, { animate: true, durationMs: 750 });
 
@@ -416,7 +328,7 @@ describe('syncVisibilityFades', () => {
 
 describe('syncVisibilityFadeItem', () => {
   it('drives exactly the one named item, not its row siblings', () => {
-    const { state, fadeTo } = makeBridgeState();
+    const { state, fadeTo } = makeFadeBridgeState();
     const idA = STRUCTURE_IDS[0]!;
     const idB = STRUCTURE_IDS[1]!;
 
@@ -435,7 +347,7 @@ describe('syncVisibilityFadeItem', () => {
 // skip covers both public entry points identically.
 describe('applyIntent does not re-issue fadeTo to a target already held, through either bridge', () => {
   it('via syncVisibilityFades', () => {
-    const { state, fadeTo, targetOf } = makeBridgeState();
+    const { state, fadeTo, targetOf } = makeFadeBridgeState();
     targetOf.mockReturnValue(1); // every row here has intent true → target 1
 
     syncVisibilityFades(state, { animate: true, only: ['structureRing'] });
@@ -444,7 +356,7 @@ describe('applyIntent does not re-issue fadeTo to a target already held, through
   });
 
   it('via syncVisibilityFadeItem', () => {
-    const { state, fadeTo, targetOf } = makeBridgeState();
+    const { state, fadeTo, targetOf } = makeFadeBridgeState();
     targetOf.mockReturnValue(1);
 
     syncVisibilityFadeItem(state, 'structureRing', STRUCTURE_IDS[0]!);

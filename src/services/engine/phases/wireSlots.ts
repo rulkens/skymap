@@ -21,6 +21,9 @@
  *      emitter, over core's slots and every Layer's.
  *   7. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
+ *      `installFadeOnArrival` shares that mouth for the arrival fade: a fade
+ *      row's `guard` opening on a slot's `ready` is what fades a demand-loaded
+ *      layer in, so no slot factory drives one itself.
  *      `installFormatVersionAlert` shares the same window and shape: the first
  *      time any slot's error is a `FormatVersionError`, it dispatches a
  *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
@@ -58,6 +61,7 @@ import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
 import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
 import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
+import { installFadeOnArrival } from '../wiring/installFadeOnArrival';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
@@ -123,6 +127,10 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // Channel-mouth render wake.  After installLoadProgress (allSlots fully
   // populated), before reevaluateDemand (no slot can reach 'ready' unsubscribed).
   installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
+
+  // The same channel mouth for the arrival fade. After `seedFades`, so the guard
+  // snapshot it takes reflects seeded reality.
+  installFadeOnArrival(state, deps.allSlots);
 
   // Same window: a stale-.bin version mismatch turns into a splash-visible
   // error rather than a silent empty sky.

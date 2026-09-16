@@ -66,7 +66,7 @@ function stubLayer(
 }
 
 describe('createLayers', () => {
-  it('hands every Layer the four core objects', async () => {
+  it('hands every Layer the core objects', async () => {
     const { store } = createAppStore();
     let received: LayerCoreDeps<undefined> | undefined;
     const layer = stubLayer('stub', {
@@ -81,7 +81,6 @@ describe('createLayers', () => {
     await createLayers(state, deps);
 
     expect(received?.focusUniform).toBe(state.gpu.focusUniform);
-    expect(received?.fades).toBe(state.subsystems.fades);
 
     received!.reportSourceCount(1 as never, 5);
     expect(store.getState().engine.sourceCounts[1 as never]).toBe(5);
