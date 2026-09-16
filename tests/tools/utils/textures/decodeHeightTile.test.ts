@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
-import type { HeightTile } from '../../../src/@types/scene/HeightTile';
+import type { HeightTile } from '../../../../tools/textures/HeightTile';
 import {
   HEIGHT_CODE_MAX,
   HEIGHT_POSTS_PER_TILE,
@@ -9,14 +9,14 @@ import {
   HEIGHT_TILE_CHUNK_FOURCC,
   HEIGHT_TILE_POST_COUNT,
   HEIGHT_TILE_VERSION,
-} from '../../../src/data/scene/heightTileFormat';
-import { readRiffChunk } from '../../../src/utils/image/readRiffChunk';
-import { mulberry32 } from '../../../src/utils/random/mulberry32';
-import { codeHeightM } from '../../../src/utils/scene/codeHeightM';
-import { decodeHeightTile } from '../../../src/utils/scene/decodeHeightTile';
-import { decodeHeightTileHeader } from '../../../src/utils/scene/decodeHeightTileHeader';
-import { heightCode } from '../../../src/utils/scene/heightCode';
-import { encodeHeightTile } from '../../../tools/utils/textures/encodeHeightTile';
+} from '../../../../src/data/scene/heightTileFormat';
+import { readRiffChunk } from '../../../../src/utils/image/readRiffChunk';
+import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import { codeHeightM } from '../../../../tools/utils/textures/codeHeightM';
+import { decodeHeightTile } from '../../../../tools/utils/textures/decodeHeightTile';
+import { decodeHeightTileHeader } from '../../../../src/utils/scene/decodeHeightTileHeader';
+import { heightCode } from '../../../../tools/utils/textures/heightCode';
+import { encodeHeightTile } from '../../../../tools/utils/textures/encodeHeightTile';
 
 // Above 2^20 m an f32 is spaced 0.125 m, coarser than the 0.1 m step, so
 // neighbouring codes collapse onto one float; no real relief comes near it.

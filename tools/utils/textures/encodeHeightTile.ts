@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 
-import type { HeightTile } from '../../../src/@types/scene/HeightTile';
+import type { HeightTile } from '../../textures/HeightTile';
 import {
   HEIGHT_POSTS_PER_TILE,
   HEIGHT_TILE_CHUNK_BYTES,
@@ -13,8 +13,8 @@ import {
   HEIGHT_TILE_VERSION,
   HEIGHT_TILE_VERSION_OFFSET,
 } from '../../../src/data/scene/heightTileFormat';
-import { codeHeightM } from '../../../src/utils/scene/codeHeightM';
-import { heightCode } from '../../../src/utils/scene/heightCode';
+import { codeHeightM } from './codeHeightM';
+import { heightCode } from './heightCode';
 import { appendWebpChunk } from '../image/appendWebpChunk';
 
 const RGB_CHANNELS = 3;

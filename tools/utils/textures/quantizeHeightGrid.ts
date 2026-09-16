@@ -1,5 +1,5 @@
-import { codeHeightM } from '../../../src/utils/scene/codeHeightM';
-import { heightCode } from '../../../src/utils/scene/heightCode';
+import { codeHeightM } from './codeHeightM';
+import { heightCode } from './heightCode';
 
 /** quantizeHeightGrid — snap every post onto the 0.1 m grid in place. The bake
  *  must call this BEFORE deriving header bounds, so the header describes the

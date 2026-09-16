@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 
 import type { HeightSource } from './HeightSource';
-import type { HeightTile } from '../../src/@types/scene/HeightTile';
+import type { HeightTile } from './HeightTile';
 import { voidFilledHeightSource } from './voidFilledHeightSource';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
 import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';

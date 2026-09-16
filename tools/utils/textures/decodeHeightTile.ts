@@ -1,8 +1,11 @@
-import type { DecodedPixels } from '../../@types/scene/DecodedPixels';
-import type { HeightTile } from '../../@types/scene/HeightTile';
-import { HEIGHT_POSTS_PER_TILE, HEIGHT_TILE_POST_COUNT } from '../../data/scene/heightTileFormat';
+import type { DecodedPixels } from '../../textures/DecodedPixels';
+import type { HeightTile } from '../../textures/HeightTile';
+import {
+  HEIGHT_POSTS_PER_TILE,
+  HEIGHT_TILE_POST_COUNT,
+} from '../../../src/data/scene/heightTileFormat';
 import { codeHeightM } from './codeHeightM';
-import { decodeHeightTileHeader } from './decodeHeightTileHeader';
+import { decodeHeightTileHeader } from '../../../src/utils/scene/decodeHeightTileHeader';
 
 const RGB_CHANNELS = 3;
 
