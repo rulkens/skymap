@@ -8,7 +8,7 @@
  * the remaining tilt on the flip frame.
  */
 
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+import type { FramedPose } from '../../@types/camera/FramedPose';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 
@@ -21,7 +21,7 @@ export function centreLookingArm(
   centreMpc: Readonly<Vec3>,
   poseBasis: Readonly<Mat3>,
   roll: number,
-): FramedCameraPose {
+): FramedPose<'absolute'> {
   const toCentre: Vec3 = [
     centreMpc[0] - eyeMpc[0],
     centreMpc[1] - eyeMpc[1],

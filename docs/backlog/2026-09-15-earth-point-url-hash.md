@@ -9,10 +9,12 @@ navigate to a point on earth".
 - `HASH_PARAM_SOURCES` (`src/state/url/hashParamSources.ts`) carries `focus`,
   `t` and `orientation` only. `focus=body-earth` frames the planet; nothing
   places the camera over a coordinate.
-- The snap already exists as a debug instrument: `flyToLonLat({ lonDeg, latDeg })`
-  (`src/state/camera/flyToLonLatActions.ts`) → `watchFlyToLonLatSaga.ts` commits
-  a body-arm pose over the point at the camera's CURRENT altitude and heading,
-  via `lonLatFocusPose`. The Earth Tile Atlas debug section is its only caller.
+- The fly already exists as a camera command:
+  `flyToLonLat({ lonDeg, latDeg, body?, altKm?, headingRad?, durationMs? })`
+  (`src/state/camera/flyToLonLatActions.ts`) → `watchFlyToLonLatSaga.ts`
+  focuses the body and tweens over the point (omitted altitude/heading: the
+  camera's own on the focused body, else the focus framing and north up). The
+  Earth Tile Atlas debug section is its only UI caller.
 - The current point can be read back from
   `surfaceTiles.getDebugSnapshot().subCamera` (engine handle) while the tile
   subsystem is engaged, and from the body arm's `bodyFixedEyeM` otherwise.
@@ -30,8 +32,7 @@ to ~5 decimals (about 1 m) — or read-only in a first cut, like `t` was.
 
 - Altitude default when the param carries none (the saga keeps the current
   altitude, which at boot is the 27,587 km framing — useless for a point).
-- Earth only (`SCENE_EARTH` is hard-wired in the saga) or `site=<body>:lon,lat`
-  now that Mars terrain is planned.
+- Earth only or `site=<body>:lon,lat` (the saga already takes any body).
 - Ordering against `focus=body-earth` in the same hash, and against the
   wider camera-pose codec in
   [`2026-09-14-camera-pose-url-hash.md`](2026-09-14-camera-pose-url-hash.md):
