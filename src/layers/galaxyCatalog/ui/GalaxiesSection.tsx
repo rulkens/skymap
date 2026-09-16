@@ -1,25 +1,10 @@
 // src/layers/galaxyCatalog/ui/GalaxiesSection.tsx
 /**
- * GalaxiesSection — presentational component for the Galaxies thematic group
- * inside the SettingsPanel.
- *
- * Owns the Galaxies thematic group UI: per-catalog toggles, the tri-state
- * master, the point-size slider, depth-fade toggle, and density-correction
- * controls. Isolating this into its own component ensures a slider drag
- * re-renders ONLY this section rather than the entire HUD. The section owns the
- * tri-state master derivation (the `galaxiesMaster` object) — that logic is
- * section-local, summarising the per-catalog toggles that live right here, so
- * it belongs here, not in a shared parent.
- *
- * Imports nothing from `store/` or `state/`: this is a pure function of props
- * and transient CollapsibleSection open/closed state. Tests supply plain props
- * with no Provider.
- *
- * Why `memo`: when `GalaxiesSectionContainer`'s parent (SettingsPanel shell or
- * App) re-renders for an unrelated reason, `memo` bails on the prop-compare step
- * so the section does not re-render. The `useCallback`-wrapped handlers the
- * container passes in have stable identity across the container's lifetime
- * (dispatch is invariant), making the bail effective.
+ * GalaxiesSection — presentational Galaxies thematic group for SettingsPanel:
+ * per-catalog toggles, tri-state master, sliders, depth-fade and
+ * density-correction controls. Pure props, no `store`/`state` import (tests
+ * supply plain props, no Provider); `memo`'d so an unrelated parent
+ * re-render bails on the prop-compare instead of re-rendering this section.
  */
 
 import { memo } from 'react';

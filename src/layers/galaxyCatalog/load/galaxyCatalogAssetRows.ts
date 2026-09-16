@@ -47,9 +47,8 @@ export function galaxyCatalogAssetRows(
       companionOf: Source.FamousGalaxy,
     },
 
-    // Lazy: only demanded while the command palette is open — opening it IS
-    // the trigger, and the render-on-demand loop only re-evaluates demand
-    // once `watchPaletteWakeSaga` wakes it (Ruling 6).
+    // Lazy: only demanded while the command palette is open — see
+    // `watchPaletteWakeSaga`'s header for why opening it must also wake a frame.
     {
       key: 'pgcAlias',
       factory: () => runtime.pgcAlias,

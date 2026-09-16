@@ -106,8 +106,8 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(h.upload).toHaveBeenCalledOnce();
     expect(h.upload).toHaveBeenCalledWith(SOURCE_REGISTRY[Source.Glade].id, cloud);
     expect(h.catalogs.get(Source.Glade)).toBe(cloud);
-    // A stale `localIdx` would otherwise linger past this commit — the alias
-    // index reconcile keys on this bump to know its build is out of date.
+    // A stale alias row set would otherwise linger past this commit — the
+    // alias index reconcile keys on this bump to know its build is out of date.
     expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
   });
 

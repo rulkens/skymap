@@ -35,7 +35,12 @@ function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>):
 }
 
 function makeCtx(visibleSourceMask: number): ReadyFrameContext {
-  return { cam: {}, visibleSourceMask, drawPxPerRad: 100, nowMs: 0 } as unknown as ReadyFrameContext;
+  return {
+    cam: {},
+    visibleSourceMask,
+    drawPxPerRad: 100,
+    nowMs: 0,
+  } as unknown as ReadyFrameContext;
 }
 
 function makeState(select: SelectionRow | null): PassState {
@@ -111,5 +116,48 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
     // which is exactly what the renderer draws and the focus fade tracks.
     tick(makeCtx(maskWith(0, Source.TwoMRS)), makeState(CLUSTER));
     expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 0 });
+  });
+
+  it('recomputes when only catalogsVersion changes, same selection and mask (tier-swap recount)', () => {
+    let catalogsVersion = 0;
+    let catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
+    const publish = vi.fn();
+    const runtime = {
+      biasLastApplied: 0,
+      biasCorrection: { setMode: vi.fn() },
+      hiResFamous: { committed: () => null },
+      diskPlannerWalk: { runFrame: vi.fn() },
+      proceduralDisks: { beginFrame: vi.fn(() => ({})) },
+      texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+      get catalogs() {
+        return catalogs;
+      },
+      famousMeta: [],
+      get catalogsVersion() {
+        return catalogsVersion;
+      },
+      pgcAlias: { committed: () => null },
+      publish,
+    } as unknown as GalaxyCatalogRuntime;
+    const tick = frame(runtime);
+
+    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
+    expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
+
+    // Tier swap: same selection, same visible mask, but this source's array
+    // was replaced wholesale (a second member gained) and catalogsVersion
+    // bumped — must recompute against the new array, not reuse the stale count.
+    catalogs = new Map([
+      [
+        Source.SDSS,
+        catalogAt([
+          [1, 0, 0],
+          [2, 0, 0],
+        ]),
+      ],
+    ]);
+    catalogsVersion = 1;
+    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
+    expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 2 });
   });
 });

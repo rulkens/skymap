@@ -1,9 +1,9 @@
 /**
- * RunSagaProvider — carries `createAppStore`'s `runSaga` sibling to `useEngine`
- * through its own React context, the same seam `SagaContextProvider` uses for
- * `setSagaContext` (see that file's header for why each capability rides its
- * own context rather than folding onto the store object). `createLayers`
- * calls the hook's value once per composed Layer's declared `sagas`.
+ * RunSagaProvider — carries `createAppStore`'s `runSaga` sibling (see `RunSaga`'s
+ * doc comment) to `useEngine` through its own React context, the same seam
+ * `SagaContextProvider` uses for `setSagaContext` (see that file's header for
+ * why each capability rides its own context rather than folding onto the
+ * store object).
  */
 
 import { createContext, useContext, type ReactNode } from 'react';

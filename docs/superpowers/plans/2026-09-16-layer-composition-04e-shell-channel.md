@@ -182,7 +182,7 @@ empty index for a never-loaded catalog is fine — the palette accepts `[]`.
 - [ ] Add the reconcile to `frame.ts` and the `aliasIndex` key to `GalaxyCatalogFacts` +
       `layer.ts`'s `facts` literal (`aliasIndex: []`).
 - [ ] New test `frame.aliasIndexReconcile.test.ts`: `publishes once per catalogsVersion bump, not per
-    frame` (drive `frame(runtime)` three times across one bump, assert exactly one `publish` call
+  frame` (drive `frame(runtime)` three times across one bump, assert exactly one `publish` call
       carrying `aliasIndex`) and `does not publish while the pgcAlias slot is uncommitted`.
 - [ ] Add `selectAliasIndex` beside `selectFamousGalaxiesMeta`, through `selectEngineFacts`, with a
       module-level `NO_ALIAS_INDEX` empty array for the pre-seed window (the shape
@@ -448,9 +448,10 @@ CSS module per Layer is exactly the bolt-on this sequence exists to avoid.
 - [ ] Cmd+K, type a PGC alias (e.g. a GLADE galaxy's common name): the palette lists it on the first
       open, a second or so after opening — proving the demand flip **and** the wake (open the palette
       with the scene at rest, camera untouched; without the wake the list never fills).
-- [ ] Cmd+K alias search **after a tier swap**: swap small ↔ medium, then search the same alias and
-      select it — the camera flies to the right galaxy (Ruling 1's stale-`localIdx` fix; on `main`
-      this selects the wrong object).
+- [ ] Cmd+K alias search **after a tier swap**: swap small ↔ medium, then search an alias only the
+      new tier carries — it's findable and selects correctly (Ruling 1's stale-row-set fix; on `main`
+      the index never rebuilds, so a galaxy the new tier gained is absent from search and one the new
+      tier dropped resolves to nothing).
 - [ ] Select a cluster ring: the InfoCard shows "Galaxies N"; toggle a galaxy catalog off and the
       number drops; select a famous galaxy and the row disappears.
 - [ ] Settings › Galaxies renders in its usual place with every control live (source toggles, bias

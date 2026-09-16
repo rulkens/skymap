@@ -1,9 +1,7 @@
 /**
- * watchPaletteWakeSaga — opening the palette is the pgcAlias row's demand
- * trigger (`galaxyCatalogAssetRows.ts` demands on `ctx.ui.paletteOpen`), but
- * the demand loop only runs inside a frame: at rest, no frame runs to notice
- * the flag flip, so the alias load never starts without this wake. Closing
- * has no load to trigger, so it stays silent.
+ * watchPaletteWakeSaga — opening the command palette wakes a frame so the
+ * demand loop (idle at rest) notices `pgcAlias`'s demand flip; closing has
+ * nothing to trigger, so it stays silent.
  */
 import { takeEvery, getContext } from 'typed-redux-saga';
 

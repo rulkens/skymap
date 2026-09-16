@@ -25,6 +25,7 @@ function makeState(): EngineState {
     },
     subsystems: { fades: {}, scheduler: { requestRender: vi.fn() } },
     layers: [],
+    layerSagaTasks: [],
     selectionKindRows: [],
   } as unknown as EngineState;
 }
@@ -65,5 +66,32 @@ describe('createLayers — Layer sagas', () => {
     store.dispatch({ type: 'TEST_MARKER' });
 
     expect(markerSeen).toBe(true);
+  });
+
+  it("collects each fork into state.layerSagaTasks so a cancel (engine.ts's destroy) stops it reacting", async () => {
+    const { store, runSaga } = createAppStore();
+    let markerCount = 0;
+    function* watchMarkerSaga() {
+      yield* takeEvery('TEST_MARKER', function* () {
+        markerCount += 1;
+      });
+    }
+    const layer: Layer<string, unknown> = {
+      name: 'stub',
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      sagas: [watchMarkerSaga],
+    };
+    const state = makeState();
+
+    await createLayers(state, makeDeps([layer], { store, runSaga }));
+    store.dispatch({ type: 'TEST_MARKER' });
+    expect(markerCount).toBe(1);
+
+    for (const task of state.layerSagaTasks) task.cancel();
+    store.dispatch({ type: 'TEST_MARKER' });
+
+    expect(markerCount).toBe(1);
   });
 });

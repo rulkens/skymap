@@ -59,6 +59,7 @@ import type { ClipData } from '../@types/animation/ClipData';
 import type { ClipId } from '../@types/animation/ClipId';
 import type { Mat3 } from '../@types/math/Mat3';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
+import type { Task } from 'redux-saga';
 import type { SagaFactory } from '../@types/engine/layer/SagaFactory';
 
 export type RootState = ReturnType<typeof rootReducer>;
@@ -68,9 +69,15 @@ export type AppDispatch = AppStore['dispatch'];
  * Forks a watcher saga under the SAME middleware `mainSaga` runs under, outside
  * `mainSaga`'s own `all([...])` — the seam `createLayers` uses to start a
  * composed Layer's `sagas` without `src/store/**` importing the composition
- * (see `createAppStore`'s factory return).
+ * (see `createAppStore`'s factory return). Returns the forked `Task` so the
+ * caller can `cancel()` it: a Layer saga is forked once per `createEngine`,
+ * not once per store, so it needs its own teardown — `engine.ts`'s `destroy()`
+ * cancels every task `createLayers` collected, before tearing down the Layers
+ * themselves, or a second `createEngine` on the same store (Fast Refresh, a
+ * future re-mount) leaves the previous run's watchers live alongside the new
+ * ones.
  */
-export type RunSaga = (saga: SagaFactory) => void;
+export type RunSaga = (saga: SagaFactory) => Task;
 
 /**
  * The live camera Resources the focus and orientation sagas read off the frame

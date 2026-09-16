@@ -93,7 +93,7 @@ export const selectFamousGalaxiesMeta = (state: RootState): readonly FamousGalax
 /**
  * The command palette's PGC alias index (Ruling 1), on the same pre-seed
  * contract as `selectFamousGalaxiesMeta`. Rebuilt by `frame` on every
- * `catalogsVersion` bump, so a tier swap's stale `localIdx`s never linger.
+ * `catalogsVersion` bump, so a tier swap's stale row set never lingers.
  */
 export const selectAliasIndex = (state: RootState): readonly AliasIndexEntry[] =>
   selectEngineFacts(state).galaxyCatalog?.aliasIndex ?? NO_ALIAS_INDEX;

@@ -29,9 +29,8 @@
  *
  *   2. `ui` — a read-only view of the shell's UI state (`UiState`).  Covers
  *      discrete UI events that have no persistent settings counterpart, such as
- *      `ui.paletteOpen` gating the PGC-alias fetch: opening the palette is
- *      itself the trigger, so the row's own demand predicate reads the flag
- *      directly rather than a one-shot request mechanism.
+ *      `ui.paletteOpen` gating the PGC-alias fetch — see `watchPaletteWakeSaga`'s
+ *      header for why opening the palette must also wake a frame.
  *
  *   3. `slotState` — the `LoadStateKind` of any slot in the registry.
  *      Used for two patterns described in ADR 0005 §3:

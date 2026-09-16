@@ -47,7 +47,8 @@ export function wireGalaxyCatalogSourceSlot(
       await galaxy.pointRenderer.upload(id, cloud);
       galaxy.catalogs.set(source, cloud);
       // Every commit replaces (or seeds) this source's array, so a built alias
-      // index's `localIdx` pointers into it go stale — bump so `frame` rebuilds.
+      // index's row set goes stale (aliases for galaxies the new array lacks,
+      // none for ones it gained) — bump so `frame` rebuilds it.
       galaxy.bumpCatalogsVersion();
 
       // The single-ITEM re-sync, not the batch sweep: on a tier swap every

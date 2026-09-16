@@ -319,6 +319,7 @@ export function createEngine(
     // `selectionKindRows` is not named `selectionRows` (that getter, above, is
     // the unrelated saga display cache).
     layers: [],
+    layerSagaTasks: [],
     selectionKindRows: [],
     // Empty until `createLayers` composes core's rows with every Layer's; no
     // phase before it reads any of the four (`pickProgram` is `wireInput`).
@@ -474,6 +475,10 @@ export function createEngine(
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();
 
+    // Cancelled before a Layer's own `destroy` runs: a still-live saga could
+    // otherwise dispatch into a half-destroyed Layer (see `RunSaga`'s doc comment).
+    for (const task of state.layerSagaTasks) task.cancel();
+    state.layerSagaTasks = [];
     for (const instance of state.layers.slice().reverse()) instance.destroy();
     state.layers = [];
 

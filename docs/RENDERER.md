@@ -7,7 +7,7 @@ Read this before touching `src/services/gpu/`, `engine`, shaders, or debugging a
 - **Layer vs core.** A self-contained family (galaxies today; stars/structures/
   bodies/volumes follow) lives colocated under `src/layers/<name>/`
   (`layer.ts`'s `Layer` object is the only import surface — `sources/`,
-  `settings/`, `load/`, `render/`, `passes/`, `ui/`, `types/`), and contributes
+  `settings/`, `load/`, `render/`, `passes/`, `sagas/`, `ui/`, `types/`), and contributes
   its passes, asset rows, fades, labels and settings section into the
   composition (`src/compositions/app.ts`); everything not yet a Layer —
   Milky Way, stars, structures, bodies, volumes, constellations, atmosphere,

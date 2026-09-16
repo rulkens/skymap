@@ -97,4 +97,57 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
       aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade, localIdx: 0 }],
     });
   });
+
+  // The tier-swap path this PR exists to fix: the sidecar is ALREADY committed
+  // (built once) when a SECOND catalogsVersion bump lands with a replaced
+  // `catalogs` array — main never rebuilds here, so a stale row set lingers.
+  it('rebuilds and republishes on a second catalogsVersion bump with the sidecar already committed', () => {
+    let catalogsVersion = 1;
+    const catalogs = new Map<number, GalaxyCatalog>([
+      [Source.Glade, { objIDs: new BigUint64Array([100n]) } as unknown as GalaxyCatalog],
+    ]);
+    const committed = {
+      value: new Map<bigint, readonly string[]>([
+        [100n, ['NGC 1']],
+        [200n, ['NGC 2']],
+      ]),
+    };
+    const publish = vi.fn();
+    const runtime = {
+      biasLastApplied: 0,
+      biasCorrection: { setMode: vi.fn() },
+      hiResFamous: { committed: () => null },
+      diskPlannerWalk: { runFrame: vi.fn() },
+      proceduralDisks: { beginFrame: vi.fn(() => ({})) },
+      texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+      catalogs,
+      famousMeta: [],
+      get catalogsVersion() {
+        return catalogsVersion;
+      },
+      pgcAlias: { committed: () => committed },
+      publish,
+    } as unknown as GalaxyCatalogRuntime;
+    const tick = frame(runtime);
+
+    tick(CTX, STATE);
+    expect(aliasCalls(publish)).toHaveLength(1);
+    expect(aliasCalls(publish)[0]![0]).toEqual({
+      aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade, localIdx: 0 }],
+    });
+
+    // Tier swap: this source's array is replaced wholesale (100n dropped,
+    // 200n gained — the wireGalaxyCatalogSourceSlot commit path), and the
+    // commit's `bumpCatalogsVersion()` fires again.
+    catalogs.clear();
+    catalogs.set(Source.Glade, { objIDs: new BigUint64Array([200n]) } as unknown as GalaxyCatalog);
+    catalogsVersion = 2;
+    tick(CTX, STATE);
+
+    const calls = aliasCalls(publish);
+    expect(calls).toHaveLength(2);
+    expect(calls[1]![0]).toEqual({
+      aliasIndex: [{ pgc: 200, names: ['NGC 2'], source: Source.Glade, localIdx: 0 }],
+    });
+  });
 });

@@ -9,8 +9,8 @@
  *     the engine sets up its own WebGPU context against it.
  *   - `handleRef` — the `EngineHandle` returned by `createEngine`,
  *     stored in a ref so other hooks and containers (useFocusUrlSync,
- *     useAliasIndex, InfoCardContainer, CommandPaletteContainer) can call
- *     methods on it without dependency gymnastics.
+ *     InfoCardContainer, CommandPaletteContainer) can call methods on it
+ *     without dependency gymnastics.
  *
  * All engine-driven state (status, scale, source counts, load progress,
  * structure counts) lives in the Redux `engine` slice, dispatched
@@ -68,9 +68,7 @@ export function useEngine(): UseEngineReturn {
   // nor reads it.
   const setSagaContext = useSetSagaContext();
 
-  // The store factory's third sibling — forks a Layer's declared `sagas` under
-  // the same middleware `mainSaga` runs under, without `mainSaga` importing the
-  // composition. `createLayers` calls it once per composed Layer.
+  // The store factory's third sibling — see `RunSaga`'s doc comment.
   const runSaga = useRunSaga();
 
   const canvasRef = useRef<HTMLCanvasElement>(null);

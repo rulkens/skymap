@@ -53,9 +53,10 @@ import type { BuildPointInterleavedBufferInput } from '../../../@types/engine/Bu
 import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/BuildPointInterleavedBufferResult';
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
-import type { ViewSlotUniformRing } from '../../../@types/rendering/ViewSlotUniformRing';
 import type { CatalogDrawEntry } from '../types/CatalogDrawEntry';
 import type { CatalogStore } from '../types/CatalogStore';
+import type { BuildRunner } from '../types/BuildRunner';
+import type { LoadedSource } from '../types/LoadedSource';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
@@ -98,15 +99,6 @@ function defaultWorkerRunner(
   );
 }
 
-/**
- * How a catalog's interleaved vertex buffer gets baked.  Production
- * hands over `defaultWorkerRunner`; Node tests inject a synchronous
- * function (`Worker` doesn't exist there).
- */
-export type BuildRunner = (
-  input: BuildPointInterleavedBufferInput,
-) => Promise<BuildPointInterleavedBufferResult>;
-
 // ─── Source code ↔ catalog id resolution ──────────────────────────────────────
 //
 // The public key is the string `GalaxyCatalogId`, but the GPU-facing
@@ -136,34 +128,6 @@ const CATALOG_DRAW_ORDER: readonly { code: SourceType; id: GalaxyCatalogId }[] =
   GALAXY_CATALOG_SOURCES.map((code) => ({ code, id: ID_OF_CODE.get(code)! }));
 
 // ─── Per-source bookkeeping ───────────────────────────────────────────────────
-
-/** One catalog's GPU vertex buffer and the per-source bind groups it needs. */
-type LoadedSource = {
-  buffer: GPUBuffer;
-  count: number;
-  /**
-   * Mirror of the interleaved Float32Array baked into `buffer`, held
-   * on the JS side so the bias-correction subsystem's splice methods
-   * (`spliceSchechterRatios` etc.) can rewrite slots 10 / 11 of every
-   * row and re-upload the whole buffer in one `writeBuffer` call.
-   * Single full re-upload (~50 ms PCIe for 17 MB SDSS) beats N sparse
-   * writes — WebGPU has no scatter primitive, and per-call overhead
-   * dominates.  Memory cost (~14 MB for full SDSS) is dwarfed by the
-   * cloud itself; freed when the source unloads.
-   */
-  interleaved: Float32Array;
-  /**
-   * Per-source FadeUniforms (opacity + pad), one physical buffer per view
-   * slot (Task 13b) — a sky-cubemap capture sweep draws this catalog once
-   * per face plus once for the real view, all before one `submit()`, so a
-   * single shared buffer would keep only the last call's opacity (see
-   * `createViewSlotUniformRing`'s doc).
-   */
-  fade: ViewSlotUniformRing;
-  /** Per-source SourceUniforms (6-bit sourceCode + pad) written once at upload. */
-  sourceBuffer: GPUBuffer;
-  sourceBindGroup: GPUBindGroup;
-};
 
 /**
  * Allocate an empty store.  Everything it owns is created lazily, per

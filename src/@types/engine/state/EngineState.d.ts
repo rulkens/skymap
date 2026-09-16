@@ -7,6 +7,7 @@
  * allocate two objects per slider drag.
  */
 
+import type { Task } from 'redux-saga';
 import type { Tier } from '../../data/Tier';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineData } from '../data/EngineData';
@@ -71,6 +72,13 @@ export type EngineState = {
    * depends on (D8).
    */
   layers: readonly LayerInstance[];
+  /**
+   * The `Task`s `createLayers` forked for each Layer's declared `sagas` (RunSaga's
+   * doc comment). `destroy()` cancels every one of these BEFORE tearing down
+   * `layers` above, so a re-`createEngine` on the same store never leaves a
+   * watcher from the previous run reacting alongside the new one's.
+   */
+  layerSagaTasks: readonly Task[];
   /**
    * The composed contributions: core's constants followed by each Layer's, in
    * tuple order, assembled once by `createLayers`. Every runtime reader walks

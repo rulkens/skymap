@@ -14,7 +14,7 @@ A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at b
 src/@types/  one type per file; deep relative imports, no barrels
 src/compositions/  build-time engine compositions (app; reference engines later)
 src/layers/  self-contained Layers, colocated (galaxyCatalog shipped in (d)/(e);
-             sources/, settings/, load/, render/, passes/, present/, ui/, types/)
+             sources/, settings/, load/, render/, passes/, present/, sagas/, ui/, types/)
 src/services/engine/galaxyGenerator/  v1/ sprite stars (to be deleted),
                                       v2/ analytic field, shared/ — READMEs in each
 src/state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)

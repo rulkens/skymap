@@ -57,7 +57,8 @@ import {
   GALAXY_POINT_VERTEX_ATTRIBUTES,
   UNIFORM_BYTES,
 } from './galaxyPointVertexLayout';
-import { createCatalogStore, type BuildRunner } from './catalogStore';
+import { createCatalogStore } from './catalogStore';
+import type { BuildRunner } from '../types/BuildRunner';
 
 // The `schechter*` uniform slots at byte offsets 140..155 are
 // dead-but-reserved: the Schechter integral bakes into the per-vertex
