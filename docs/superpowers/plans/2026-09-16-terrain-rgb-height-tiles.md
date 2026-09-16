@@ -4,9 +4,9 @@
 
 **Goal:** Replace the raw-f32 `shgt1` height tile (a fixed 66,588 B) with a lossless Terrain-RGB WebP (~7 KB on average), cutting the height tree from 1.38 GB to ~140 MB and making a global z8–10 land expansion affordable.
 
-**Architecture:** Heights are quantised to one global 0.1 m grid and packed into 24-bit RGB; the tile header travels in a custom `SHGT` RIFF chunk of an extended (VP8X) WebP. The bake rounds every post onto the grid _before_ deriving the header values, so parent/child nesting and shared tile edges stay bit-identical. A pure decoder is shared by the browser (canvas readback) and the tools (`sharp`).
+**Architecture:** Heights are quantised to one global 0.1 m grid and packed into 24-bit RGB; the tile header travels in a custom `SHGT` RIFF chunk of an extended (VP8X) WebP. The bake rounds every post onto the grid _before_ deriving the header values, so parent/child nesting and shared tile edges stay bit-identical. The tools decode with `sharp` and a pure TS decoder; the runtime uploads the bitmap untouched and decodes in WGSL (Task 4), because canvas readback is perturbed by fingerprinting protection.
 
-**Tech Stack:** TS, `sharp` (bake + tool read-back), `createImageBitmap` + `OffscreenCanvas` (runtime), Vitest.
+**Tech Stack:** TS, `sharp` (bake + tool read-back), `createImageBitmap` + `copyExternalImageToTexture` + WGSL (runtime), Vitest.
 
 **Spec:** none. The user chose a short plan after an in-session design pass (2026-09-16), so the design lives here. Measurements: scratchpad `heightcomp/` (`exp.py`, `rgb.py`, `all.py`).
 
@@ -112,7 +112,7 @@ decodeHeightTile(
   2. `npx tsx .claude/worktrees/terrain-rgb-webp-height-tiles/tools/textures/buildSurfaceTiles.ts` (full run, not `--only`: a prefix bump makes `--only` illegal).
   3. `npm run build-data-manifest`.
 - [ ] **Verify the bake** with a scratchpad script over every v9 height tile against its v8 `.bin`: same tile set (20,684); max |post Δ| ≤ 0.05 m + f32 slop; `subtreeMin ≤ every post ≤ subtreeMax`; residual within 0.1 m of v8. Report total bytes (expect ≈ 140 MB).
-- [ ] **Chrome decode check:** worktree dev server (`/link-data`, then `/dev`). In devtools, run `fetchHeightTile` on 3 tiles (z7, z13, z19) and compare to the Node decode of the same files (checksum of `heightM` bytes). They must be identical.
+- [x] **Chrome decode check:** worktree dev server (`/link-data`, then `/dev`). In devtools, run `fetchHeightTile` on 3 tiles (z7, z13, z19) and compare to the Node decode of the same files (checksum of `heightM` bytes). They must be identical. (Done against the Task 2 canvas path: 252 tiles identical in Chrome, perturbed in Brave, which led to Task 4. Superseded by Task 4's browser check.)
 - [ ] **User eye-check** (hard reload): relief over Søndermarken (z19), Everest and Grand Canyon (z13), and a global z5 view looks the same as v8. No cracks at tile seams or level steps, and no height-fetch errors in the console.
 - [ ] Ask about the perf gate (per `sdd-execution.md`); if yes, `npm run perf --url <worktree server>` before and after, watching main-thread decode cost during a fly-in.
 

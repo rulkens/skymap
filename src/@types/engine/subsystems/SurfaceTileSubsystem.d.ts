@@ -79,9 +79,8 @@ export type SurfaceTileSubsystem = Destroyable & {
    */
   getAtlasView(): GPUTextureView | null;
 
-  /** The HEIGHT atlas's texture view (Terrain-RGB `rgba8unorm`, 129-post slots), or `null`
-   *  before the first engaged frame. Unread until F2 displaces geometry —
-   *  F1 only has to make the tiles resident. */
+  /** The HEIGHT atlas's texture view (Terrain-RGB `rgba8unorm`, 129-post
+   *  slots, decoded in the shader), or `null` before the first engaged frame. */
   getHeightAtlasView(): GPUTextureView | null;
 
   /**

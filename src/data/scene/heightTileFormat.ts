@@ -1,6 +1,6 @@
 /**
  * Byte-layout file — over budget on purpose: the table is the height-tile format
- * shared by the bake's encoder and both decoders. A tile is a lossless 129² RGB
+ * shared by the bake's encoder, the CPU decoder and the shader. A tile is a lossless 129² RGB
  * WebP (VP8X + VP8L) carrying a Terrain-RGB code per post, plus a `SHGT` RIFF
  * chunk with the header below. Little-endian throughout.
  *
@@ -13,7 +13,7 @@
  *    12     4  f32  geometricResidualM   max |this level's bilinear − finest| in this tile
  *
  * Pixels are row-major, NORTH row first: code = R·65536 + G·256 + B and
- * heightM = fround(HEIGHT_CODE_OFFSET_M + code · HEIGHT_CODE_STEP_M). One global
+ * heightM = HEIGHT_CODE_OFFSET_M + code · HEIGHT_CODE_STEP_M in f32. One global
  * step (never a per-tile scale) keeps shared tile edges bit-identical, which is
  * what makes adjacent patches crack-free.
  */

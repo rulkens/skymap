@@ -271,7 +271,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       concurrency: EARTH_TILE_CONCURRENCY,
       upload: (heightAtlas, slotIdx, image) =>
         uploadBitmapToAtlas(heightAtlas, slotIdx, image.bitmap),
-      release: (image) => image.bitmap.close(),
+      release: (image) => closeBitmap(image.bitmap),
     });
     // Recycled slot; drop so `residentSlot` stays a pure projection of residency.
     created.setEvictHandler((key) => resident.delete(key));
@@ -364,9 +364,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
             const slot = streams.heightStream.upload(key, image);
             if (slot === null) return;
             // `readyAtMs` is the albedo crossfade's clock; height has no fade
-            // in F1 (the renderer doesn't sample the atlas yet, and R14's
-            // ancestor fallback makes one tile's stamp meaningless anyway),
-            // but the residency record is shared, so it is stamped the same way.
+            // (R14's ancestor fallback makes one tile's stamp meaningless), but
+            // the residency record is shared, so it is stamped the same way.
             heightResident.set(key, {
               tile: request.tile,
               slot,
