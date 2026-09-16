@@ -10,7 +10,7 @@ import type { DebugOverlayRow } from '../../@types/data/debug/DebugOverlayRow';
 // drawn surface-tile fragment by how many pyramid levels its resolved atlas
 // rect fell back from the leaf it's shading (green = the leaf's own tile,
 // yellow/orange/red = 1/2/3+ levels coarser) — see
-// earthSurfaceTile/fragment.wesl's `earthLodOverlayColor`.
+// earthSurfaceTile/surfaceLighting.wesl's `earthLodOverlayColor`.
 export const DEBUG_OVERLAY_ROWS = [
   { key: 'pick-buffer', label: 'Show pick buffer' },
   { key: 'orbit-trail-impostor', label: 'Show orbit-trail impostor' },

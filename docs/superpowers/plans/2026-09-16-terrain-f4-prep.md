@@ -208,9 +208,9 @@ Rules:
 
 Tests:
 
-- [ ] `every registry row's effects key has a shader variant` — adding Mars with an unlisted combination must fail here, not at pipeline creation on a user's GPU.
-- [ ] `surfaceEffectsKey is order-insensitive`.
-- [ ] WGSL validation of both entries through the project's existing shader test path (wesl link + naga where tint is absent).
+- [x] `every registry row's effects key has a shader variant` — adding Mars with an unlisted combination must fail here, not at pipeline creation on a user's GPU.
+- [x] `surfaceEffectsKey is order-insensitive`.
+- [x] WGSL validation of both entries through the project's existing shader test path (wesl link + naga where tint is absent).
 - [ ] Eye-check (user): Earth at orbit, the terminator with night lights, a cloud shadow, and the Søndermarken z19 patch look identical to main. Commit.
 
 ### Task 7: Earth names off the generic draw path — `webp-gate: yes`

@@ -86,6 +86,6 @@ export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
  * differently band boundaries (BMNG-derived z4-7, EOX z8-13, GeoDanmark
  * z14-19) popping; short enough that a fast descent doesn't trail visible
  * ghosting. See `earthSurfaceTileRenderer.ts`'s per-tile weight and
- * `earthSurfaceTile/fragment.wesl`'s dual-sample mix.
+ * `earthSurfaceTile/surfaceLighting.wesl`'s dual-sample mix.
  */
 export const EARTH_TILE_CROSSFADE_MS = 400;

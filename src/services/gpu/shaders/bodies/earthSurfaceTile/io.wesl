@@ -43,7 +43,7 @@ struct PatchInstance {
   albedoRect: vec4<f32>,
   // The next resident ancestor strictly above the resolved tile, flattened
   // the same way -- the coarser imagery the fragment crossfades FROM
-  // (fragment.wesl samples both). Equal to albedoRect (and fadeWeight
+  // (surfaceLighting.wesl samples both). Equal to albedoRect (and fadeWeight
   // forced to 1) when no deeper resident ancestor exists --
   // 'SurfaceCutTile.albedo.fallback === null's CPU-side encoding, so the
   // fragment always has a valid second rect to sample.

@@ -6,13 +6,15 @@
  *
  * Depth compare is `'nearer-or-equal'`, not `'nearer'`: this pipeline shares
  * the base globe's nominal radius, so ties must resolve in ITS favour. It
- * owns neither the tile atlas nor the base globe's material/night/cloud maps
- * — both arrive as views on every `draw` call.
+ * owns neither the tile atlas nor any effect map — both arrive on every
+ * `draw` call. One pipeline per effects set (`SURFACE_TILE_SHADER_VARIANTS`),
+ * built on first use.
  *
  * @module
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
+import type { SurfaceEffect } from '../../../../@types/data/SurfaceEffect';
 import type {
   EarthSurfaceTileRenderer,
   EarthSurfaceTileDrawArgs,
@@ -21,9 +23,9 @@ import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { patchOriginRelEyeM } from '../../../../utils/scene/patchOriginRelEyeM';
 import { surfacePatchIndices } from '../../../../utils/scene/surfacePatchIndices';
+import { surfaceEffectsKey } from '../../../../utils/scene/surfaceEffectsKey';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/earthSurfaceTile/vertex.wesl?static';
-import fsCode from '../../shaders/bodies/earthSurfaceTile/fragment.wesl?static';
 import {
   PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
@@ -35,6 +37,7 @@ import {
   HEIGHT_ATLAS_SLOTS_PER_ROW,
 } from '../../../../data/bodies/earthTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
+import { SURFACE_TILE_SHADER_VARIANTS } from '../../../../data/bodies/surfaceTileShaderVariants';
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and
@@ -64,7 +67,7 @@ export function createEarthSurfaceTileRenderer(
   // atlasSampler mirrors earthRenderer's tileSampler: clamp both axes (only
   // guards the ATLAS TEXTURE's own edge — a resolved rect's edge, one slot
   // away from an unrelated tile's pixels, is guarded separately by the
-  // fragment's own half-texel uv clamp, see fragment.wesl), single mip level.
+  // fragment's own half-texel uv clamp, see surfaceLighting.wesl), single mip level.
   const atlasSampler = device.createSampler({
     label: 'earth-surface-tile-atlas-sampler',
     magFilter: 'linear',
@@ -83,72 +86,90 @@ export function createEarthSurfaceTileRenderer(
   });
   device.queue.writeBuffer(indexBuffer, 0, indices);
 
-  // ── Bind group layout (explicit, not 'auto') ─────────────────────────
+  // ── Bind group layouts (explicit, not 'auto'), one per variant ───────
   // Binding 2 was the per-corner vertex array P6 deleted; the height atlas
   // took the free slot. 3–9 keep their numbers so the fragment's bindings
   // don't move (they need not be contiguous).
-  const bindGroupLayout = device.createBindGroupLayout({
-    label: 'earth-surface-tile-bgl',
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
-      {
-        binding: 1,
-        visibility: GPUShaderStage.VERTEX,
-        buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
-      },
-      // Terrain-RGB codes read with `textureLoad` from BOTH stages (vertex
-      // displaces, fragment takes its normal from the cell); no sampler ever
-      // touches it, so the binding stays unfilterable.
-      {
-        binding: 2,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        texture: { sampleType: 'unfilterable-float' },
-      },
-      { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
-      { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-      { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-      { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-      // 8 was the whole-globe normal map, now the base globe's alone: a patch
-      // takes its normal from the height field, and compositing both would
-      // shade the same relief twice (spec §7.2).
-      { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
-    ],
-  });
+  const sharedLayoutEntries: readonly GPUBindGroupLayoutEntry[] = [
+    {
+      binding: 0,
+      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      buffer: { type: 'uniform' },
+    },
+    {
+      binding: 1,
+      visibility: GPUShaderStage.VERTEX,
+      buffer: { type: 'read-only-storage', minBindingSize: PATCH_INSTANCE_BYTES },
+    },
+    // Terrain-RGB codes read with `textureLoad` from BOTH stages (vertex
+    // displaces, fragment takes its normal from the cell); no sampler ever
+    // touches it, so the binding stays unfilterable.
+    {
+      binding: 2,
+      visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+      texture: { sampleType: 'unfilterable-float' },
+    },
+    { binding: 4, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+  ];
+  // 8 was the whole-globe normal map, now the base globe's alone: a patch
+  // takes its normal from the height field, and compositing both would
+  // shade the same relief twice (spec §7.2).
+  const fragmentLayoutEntries: Readonly<Record<number, GPUBindGroupLayoutEntry>> = {
+    3: { binding: 3, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+    5: { binding: 5, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    6: { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    7: { binding: 7, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+    9: { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
+  };
 
   const vsModule = createShaderModuleWithDevLog(device, vsCode, 'earthSurfaceTile.vertex');
-  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'earthSurfaceTile.fragment');
 
-  const pipeline = device.createRenderPipeline({
-    label: 'earth-surface-tile-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'earth-surface-tile-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
-    }),
-    // Positions are derived from the instance record — no vertex buffers.
-    vertex: { module: vsModule, entryPoint: 'vs' },
-    fragment: {
-      module: fsModule,
-      entryPoint: 'fs',
-      targets: [{ format: targetFormat }], // opaque replace, alpha=1
-    },
-    primitive: {
-      topology: 'triangle-list',
-      frontFace: 'ccw', // matches surfacePatchIndices' east x north = outward winding
-      cullMode: 'back',
-    },
-    depthStencil: {
-      format: depthFormat,
-      depthWriteEnabled: true,
-      // See the module header: draws over the base globe at the same
-      // nominal radius, so ties must resolve in THIS pipeline's favour.
-      depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
-    },
-  });
+  function buildVariant(key: string) {
+    const variant = SURFACE_TILE_SHADER_VARIANTS[key];
+    if (variant === undefined) {
+      throw new Error(`earthSurfaceTileRenderer: no shader variant for effects '${key}'`);
+    }
+    const bindGroupLayout = device.createBindGroupLayout({
+      label: `earth-surface-tile-bgl[${key}]`,
+      entries: [
+        ...sharedLayoutEntries,
+        ...variant.bindings.map((binding) => fragmentLayoutEntries[binding]!),
+      ],
+    });
+    const fsModule = createShaderModuleWithDevLog(
+      device,
+      variant.fragment,
+      `earthSurfaceTile.fragment[${key}]`,
+    );
+    const pipeline = device.createRenderPipeline({
+      label: `earth-surface-tile-pipeline[${key}]`,
+      layout: device.createPipelineLayout({
+        label: `earth-surface-tile-pipeline-layout[${key}]`,
+        bindGroupLayouts: [bindGroupLayout],
+      }),
+      // Positions are derived from the instance record — no vertex buffers.
+      vertex: { module: vsModule, entryPoint: 'vs' },
+      fragment: {
+        module: fsModule,
+        entryPoint: 'fs',
+        targets: [{ format: targetFormat }], // opaque replace, alpha=1
+      },
+      primitive: {
+        topology: 'triangle-list',
+        frontFace: 'ccw', // matches surfacePatchIndices' east x north = outward winding
+        cullMode: 'back',
+      },
+      depthStencil: {
+        format: depthFormat,
+        depthWriteEnabled: true,
+        // See the module header: draws over the base globe at the same
+        // nominal radius, so ties must resolve in THIS pipeline's favour.
+        depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
+      },
+    });
+    return { bindGroupLayout, pipeline, bindings: variant.bindings };
+  }
+  const variants = new Map<string, ReturnType<typeof buildVariant>>();
 
   // ── Uniform buffer (one record per draw call) ────────────────────────
   const uniformBuffer = device.createBuffer({
@@ -192,24 +213,36 @@ export function createEarthSurfaceTileRenderer(
       radiusM,
       vp,
       sunDirLocal,
-      roughnessBase,
-      f0,
-      sunIrradiance,
+      effects,
+      effectInputs,
+      shading,
       ambientLight,
-      oceanRoughness,
-      cloudShadowStrength,
-      cloudShellRadius,
       debugLodOverlay,
       noDisplacement,
       noSkirts,
       surfaceAtlasView,
       heightAtlasView,
-      materialView,
-      nightView,
-      cloudsView,
     } = args;
     const tileCount = tiles.length;
     if (tileCount === 0) return;
+
+    const key = surfaceEffectsKey(effects);
+    const suppliedKey = surfaceEffectsKey(
+      (Object.keys(effectInputs) as SurfaceEffect[]).filter(
+        (effect) => effectInputs[effect] !== undefined,
+      ),
+    );
+    if (suppliedKey !== key) {
+      throw new Error(
+        `earthSurfaceTileRenderer: effect inputs '${suppliedKey}' do not match effects '${key}'`,
+      );
+    }
+    let variant = variants.get(key);
+    if (variant === undefined) {
+      variant = buildVariant(key);
+      variants.set(key, variant);
+    }
+    const { materialMap, nightLights, cloudShadows } = effectInputs;
 
     ensureCapacity(tileCount);
 
@@ -281,13 +314,15 @@ export function createEarthSurfaceTileRenderer(
       resolution,
       eyeRelBodyM,
       sunDirLocal,
-      roughnessBase,
-      f0,
-      sunIrradiance,
+      shading.roughnessBase,
+      shading.f0,
+      shading.sunIrradiance,
       ambientLight,
-      oceanRoughness,
-      cloudShadowStrength,
-      cloudShellRadius,
+      // A variant without the effect never reads its field; 0 keeps the
+      // uniform layout fixed across variants.
+      materialMap?.oceanRoughness ?? 0,
+      cloudShadows?.strength ?? 0,
+      cloudShadows?.shellRadius ?? 0,
       debugLodOverlay,
       noDisplacement,
       noSkirts,
@@ -296,10 +331,18 @@ export function createEarthSurfaceTileRenderer(
 
     // Bind group rebuilt every draw: the storage buffer may have grown,
     // and the texture views are supplied fresh per call (this renderer owns
-    // neither the atlas nor the base globe's other maps — see the header).
+    // neither the atlas nor any effect map — see the header). The key check
+    // above guarantees every binding the variant lists has its resource.
+    const fragmentResources: Readonly<Record<number, GPUBindingResource | undefined>> = {
+      3: baseSampler,
+      5: surfaceAtlasView,
+      6: materialMap?.view,
+      7: nightLights?.view,
+      9: cloudShadows?.view,
+    };
     const bindGroup = device.createBindGroup({
-      label: 'earth-surface-tile-bg',
-      layout: bindGroupLayout,
+      label: `earth-surface-tile-bg[${key}]`,
+      layout: variant.bindGroupLayout,
       entries: [
         { binding: 0, resource: { buffer: uniformBuffer } },
         {
@@ -307,16 +350,15 @@ export function createEarthSurfaceTileRenderer(
           resource: { buffer: patchBuffer!, size: tileCount * PATCH_INSTANCE_BYTES },
         },
         { binding: 2, resource: heightAtlasView },
-        { binding: 3, resource: baseSampler },
         { binding: 4, resource: atlasSampler },
-        { binding: 5, resource: surfaceAtlasView },
-        { binding: 6, resource: materialView },
-        { binding: 7, resource: nightView },
-        { binding: 9, resource: cloudsView },
+        ...variant.bindings.map((binding) => ({
+          binding,
+          resource: fragmentResources[binding]!,
+        })),
       ],
     });
 
-    pass.setPipeline(pipeline);
+    pass.setPipeline(variant.pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.drawIndexed(indexCount, tileCount);

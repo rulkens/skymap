@@ -236,14 +236,14 @@ describe('ISM_MAP_FLUID_EVENT_STRIDE parity (packIsmMapFluidEvents.ts ↔ ismMap
 
 /**
  * EARTH_TILE_ATLAS_SIDE (earthTileParams.ts) is mirrored into
- * earthSurfaceTile/fragment.wesl to derive the half-atlas-texel inset (C3)
+ * earthSurfaceTile/surfaceLighting.wesl to derive the half-atlas-texel inset (C3)
  * that keeps a resolved tile rect's bilinear sampling from crossing into a
  * neighbour slot's pixels — a drift here would silently widen or shrink
  * that guard band against the atlas's real physical size.
  */
-describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ earthSurfaceTile/fragment.wesl)', () => {
-  it("fragment.wesl's EARTH_TILE_ATLAS_SIDE equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl';
+describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ earthSurfaceTile/surfaceLighting.wesl)', () => {
+  it("surfaceLighting.wesl's EARTH_TILE_ATLAS_SIDE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/surfaceLighting.wesl';
     const weslValue = readWeslConst(file, 'EARTH_TILE_ATLAS_SIDE');
     expect(weslValue, `EARTH_TILE_ATLAS_SIDE is missing from ${file}`).toBeDefined();
     expect(
@@ -255,15 +255,15 @@ describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ earthSurfaceTile/
 
 /**
  * EARTH_TILE_PX (earthTileParams.ts) is mirrored into
- * earthSurfaceTile/fragment.wesl to derive TILE_SLOT_SCALE, the atlas-uv
+ * earthSurfaceTile/surfaceLighting.wesl to derive TILE_SLOT_SCALE, the atlas-uv
  * width of a tile drawn from its own slot with no ancestor fallback — the
  * `earth-lod-overlay` toggle divides a resolved rect's actual width into
  * this to recover how many pyramid levels the fallback walked. A drift here
  * would silently mis-band every overlay tint.
  */
-describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment.wesl)', () => {
-  it("fragment.wesl's EARTH_TILE_PX equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl';
+describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/surfaceLighting.wesl)', () => {
+  it("surfaceLighting.wesl's EARTH_TILE_PX equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/surfaceLighting.wesl';
     const weslValue = readWeslConst(file, 'EARTH_TILE_PX');
     expect(weslValue, `EARTH_TILE_PX is missing from ${file}`).toBeDefined();
     expect(

@@ -1,6 +1,9 @@
 import type { Renderer } from './Renderer';
 import type { SurfaceCutTile } from '../scene/SurfaceCutTile';
 import type { Vec3 } from '../math/Vec3';
+import type { SurfaceEffect } from '../data/SurfaceEffect';
+import type { SurfaceTileShading } from '../data/SurfaceTileShading';
+import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
 
 /**
  * `EarthSurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is Task 2's
@@ -13,9 +16,8 @@ import type { Vec3 } from '../math/Vec3';
  * seam (`bodyRelativePose`), so no separate orientation rotation is needed
  * (unlike the pre-body-slab NEAR0 path). `vp` needs no rebase either: a
  * body-m slab's vp is already built about the eye. The renderer owns neither
- * the tile atlas nor the base globe's material/night/normal/cloud maps --
- * both are supplied as views here every draw (see the renderer's module
- * header).
+ * the tile atlas nor any effect map -- both are supplied here every draw (see
+ * the renderer's module header).
  */
 export type EarthSurfaceTileDrawArgs = {
   readonly tiles: readonly SurfaceCutTile[];
@@ -27,18 +29,17 @@ export type EarthSurfaceTileDrawArgs = {
   readonly vp: Float32Array;
   /** Sun direction in Earth's local (unrotated) frame, matching `EarthSurfaceUniforms.sunDirLocal`'s convention. */
   readonly sunDirLocal: Readonly<Vec3>;
-  readonly roughnessBase: number;
-  readonly f0: number;
-  readonly sunIrradiance: number;
+  /** The engaged body's registry row: `effects` picks the fragment variant,
+   *  `effectInputs` must carry exactly those effects' resources. */
+  readonly effects: readonly SurfaceEffect[];
+  readonly effectInputs: SurfaceEffectInputs;
+  readonly shading: SurfaceTileShading;
   readonly ambientLight: number;
-  readonly oceanRoughness: number;
-  readonly cloudShadowStrength: number;
-  readonly cloudShellRadius: number;
   /** The `earth-lod-overlay` DebugPanel toggle (`debug.overlays['earth-lod-overlay']`) —
    *  tints each drawn fragment by how many pyramid levels its resolved atlas
    *  rect fell back from the leaf it's shading. Read live each frame, not
    *  cached: the fragment derives the level delta itself from
-   *  `atlasUvScale` (see fragment.wesl), so this is the only new fact the
+   *  `atlasUvScale` (see surfaceLighting.wesl), so this is the only new fact the
    *  overlay needs. */
   readonly debugLodOverlay: boolean;
   /** `terrain-no-displacement` debug toggle: patches flatten onto the datum,
@@ -52,13 +53,6 @@ export type EarthSurfaceTileDrawArgs = {
    *  `textureLoad` at each patch's own slot. Mandatory: every vertex position
    *  reads it, so a cut must never be drawn without it. Not owned here. */
   readonly heightAtlasView: GPUTextureView;
-  /** The SAME whole-globe maps `earthRenderer` binds -- not owned by this
-   *  renderer. The whole-globe NORMAL map is deliberately not among them: a
-   *  patch's normal comes from its height cell, and compositing both would
-   *  shade the same relief twice (spec §7.2). */
-  readonly materialView: GPUTextureView;
-  readonly nightView: GPUTextureView;
-  readonly cloudsView: GPUTextureView;
 };
 
 export type EarthSurfaceTileRenderer = Renderer & {
