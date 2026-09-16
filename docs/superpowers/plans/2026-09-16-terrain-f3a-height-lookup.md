@@ -209,12 +209,21 @@ not re-derive:
 - `latticeHeightSample.ts` is the existing tested f64 twin of `lattice.wesl`'s sampler.
   Reuse it with a `postM` that reads the grid, rather than writing a second bilinear.
 - Every 24-bit code maps to a finite height — no sentinels or NaNs to guard.
+- **A zero `dirBodyFixed` reaches this function.** P2's review found three sites that can
+  pass one: `flooredBodyPose.ts:29` queries _before_ its own `magM === 0` guard, and
+  neither `toWorldArm` nor `hostedFocusOverHorizon` guards at all. A zero vector has no
+  direction, so `terrainHeightM` must define the answer rather than normalize a zero and
+  return `NaN`. Return `0` (the datum), same as every other miss — and do not "fix" the
+  callers' guards in this task.
 
 - [ ] Test `terrainHeightM falls back to the deepest resident ancestor` — the leaf's own
       tile absent, an ancestor resident: reads the ancestor's grid, not `0`.
 - [ ] Test `terrainHeightM returns exactly 0 when no ancestor is resident` — asserting
       `0`, and `Number.isFinite`. A `NaN` here becomes a `NaN` camera position and a black
       screen with no error.
+- [ ] Test `terrainHeightM returns 0 for a zero direction vector` — the three unguarded
+      call sites above make this reachable in production, and its failure mode is the same
+      black screen.
 - [ ] Test `terrainHeightM reads a shared post identically from both levels` — a post
       coincident at levels _L_ and _L+1_ (strict decimation, §3.4c-R1, guarantees the
       coarse post _is_ the fine post) reads the same metres from either. This is the
@@ -308,6 +317,12 @@ poses — Earth is focus-pinned at boot and its follow driver reverts bare camer
   roughly zero at ground level.
 - Camera feel is unchanged: the regime-band transitions, zoom taper and tilt mapping
   behave as before, because their h/R inputs still use the datum.
+- **Zoom in and back out over steep ground returns you where you started.**
+  `anchoredZoomStep`'s nadir-fallback anchor sits on the datum (P2's review), so once the
+  floor is terrain-aware, "one notch out undoes one notch in" is measured against a
+  different surface than the floor pushes off. Whether that asymmetry is visible is an
+  eye-check question, not an arithmetic one; if it is, fixing it is its own change, not a
+  widening of F3a.
 
 **Deferral boundary** — out of scope, do not chase
 
