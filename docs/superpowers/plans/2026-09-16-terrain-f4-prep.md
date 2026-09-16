@@ -211,7 +211,7 @@ Tests:
 - [x] `every registry row's effects key has a shader variant` — adding Mars with an unlisted combination must fail here, not at pipeline creation on a user's GPU.
 - [x] `surfaceEffectsKey is order-insensitive`.
 - [x] WGSL validation of both entries through the project's existing shader test path (wesl link + naga where tint is absent).
-- [ ] Eye-check (user): Earth at orbit, the terminator with night lights, a cloud shadow, and the Søndermarken z19 patch look identical to main. Commit.
+- [x] Eye-check (user, passed 2026-09-16): Earth at orbit, the terminator with night lights, a cloud shadow, and the Søndermarken z19 patch look identical to main. Commit.
 
 ### Task 7: Earth names off the generic draw path — `webp-gate: yes`
 
@@ -221,6 +221,33 @@ Out of scope: the `earth-tiles` manifest key, `EARTH_TILE_*` constants in `earth
 
 - [x] `npm run move-files -- --manifest <moves.json> --dry`, then for real; `npm run refactor rename` for the symbols; then grep for every old path and name (`package::bodies::earthSurfaceTile`, `?static` imports, `'earth-surface-tiles'`) and fix the stragglers. No new test.
 - [x] `npm run typecheck && npm test` green. Commit.
+
+### Task 8: `levelFittingWidth` takes its base width
+
+**Files:** `src/utils/scene/levelFittingWidth.ts`, its callers (`baseLevelForTier.ts`, `tools/textures/bmngQuadrantSource.ts`, `tools/textures/equirectFileSource.ts`), `tests/utils/scene/levelFittingWidth.test.ts`
+
+**Signature:** `levelFittingWidth(widthPx: number, baseWidthPx: number): number`. The generic name hid an Earth-only constant, `EARTH_EQUIRECT_BASE_WIDTH_PX`; callers now pass it in (Earth callers pass that constant). No behaviour change.
+
+- [ ] Update the existing test to pass the base width. Commit.
+
+### Task 9: `utils/scene/` split into domain folders
+
+User-ruled 2026-09-16: every group rides this PR. Pure moves via `npm run move-files -- --manifest <moves.json>` (`--dry` first); no symbol renames, no behaviour change, no new tests.
+
+| Destination | Files (from `src/utils/scene/`) |
+| --- | --- |
+| `src/utils/surfaceTiles/` | balanceSurfaceCut, baseLevelForTier, cutSurfaceTiles, decodeHeightTileHeader, deepestBandLevelAt, earthTexelMetres, latticeHeightSample, latticePostGradient, levelFittingWidth, packSurfaceTileKey, patchOriginRelEyeM, patchVertexOffsetM, resolveHeightLattice, surfaceEffectsKey, surfaceNormalFromHeightCell, surfacePatchAnchor, surfacePatchIndices, surfaceTileBandFromBounds, surfaceTileBandOverlapsUv, surfaceTileBandRefineAllowed, surfaceTileCentreUv, surfaceTileColumns, surfaceTileInBand, surfaceTilePath, surfaceTileXyForUv, surfaceTilesEngaged |
+| `src/utils/network/` | fetchSurfaceTileManifest |
+| `src/utils/bodyTextures/` | bodySurfaceTier, bodyTextureFilename, bodyTextureSlotKey, hostBodyId, isAlphaTextureKind, isBodyTextureKey, isLinearTextureKind |
+| `src/utils/meshBodies/` | isMeshBody, isMeshBodyKey, meshBodiesAttachedTo, meshBodySlabHostId, meshBodySlotKey |
+| `src/utils/regions/` | regionById, regionOfBody, regionRelativeDistanceMpc, chainOverlapViolations |
+| `src/utils/occlusion/` | innerBoundRadiusM, outerBoundRadiusM, nearestSphereFaceM, selectOccluderSpheresKm, subjectOccludedByBodies, sunVisibleFraction, sinSunAngularRadius |
+| `src/utils/geo/` | lonLatDegToDirection, directionToLonLatDeg, surfacePointBodyFixed, parseLonLatInput |
+| `src/utils/labels/` | declutterByScreenSeparation |
+| `src/utils/star/` | resolvesToSphere, starSphereRangeM |
+
+- [ ] Move each file with its `tests/` mirror. Then grep `src tools tests docs .claude` for `utils/scene/<name>`, and fix string paths and doc links (frame-purity allow-list, RENDERER.md, skills). Leave history (plans/specs under `completed/`, backlog, audits) alone.
+- [ ] One commit per destination row, or one commit for all of them; the tree typechecks at every commit.
 
 ---
 
