@@ -1,0 +1,115 @@
+/**
+ * The Layer's `frame` structureMemberCount reconcile: recomputes and
+ * republishes the InfoCard's "N galaxies" figure only when the (selected row,
+ * visible mask, catalogsVersion) key changes — never once per frame — and
+ * publishes `null` for anything that isn't a structure selection.
+ */
+import { describe, it, expect, vi } from 'vitest';
+
+import { frame } from '../../../src/layers/galaxyCatalog/frame';
+import { Source } from '../../../src/data/sources';
+import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
+import { maskWith } from '../../../src/utils/maskWith';
+import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
+import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
+import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { PassState } from '../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+
+/** A cluster at the origin with a 10 Mpc core radius — mirrors structureMemberCount.test.ts. */
+const CLUSTER: SelectionRow = {
+  type: 'structure',
+  id: 'test-cluster',
+  name: 'Test Cluster',
+  category: 'cluster',
+  worldPos: [0, 0, 0],
+  featured: true,
+  physicalRadiusMpc: 10,
+};
+
+function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>): GalaxyCatalog {
+  const flat = new Float32Array(positions.length * 3);
+  positions.forEach((p, i) => flat.set(p, i * 3));
+  return makeGalaxyCatalog(positions.length, { positions: flat });
+}
+
+function makeCtx(visibleSourceMask: number): ReadyFrameContext {
+  return { cam: {}, visibleSourceMask, drawPxPerRad: 100, nowMs: 0 } as unknown as ReadyFrameContext;
+}
+
+function makeState(select: SelectionRow | null): PassState {
+  return {
+    settings: {
+      bias: { mode: 0, absMagLimit: -19 },
+      galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1 },
+    },
+    selectionRows: { select },
+    subsystems: { fades: { opacityOf: () => 1 } },
+  } as unknown as PassState;
+}
+
+// Every other limb of `frame` is inert here (no committed pgcAlias/hi-res
+// pair, a no-op planner walk) — this suite is only about this reconcile.
+function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
+  const publish = vi.fn();
+  const runtime = {
+    biasLastApplied: 0,
+    biasCorrection: { setMode: vi.fn() },
+    hiResFamous: { committed: () => null },
+    diskPlannerWalk: { runFrame: vi.fn() },
+    proceduralDisks: { beginFrame: vi.fn(() => ({})) },
+    texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+    catalogs,
+    famousMeta: [],
+    catalogsVersion: 0,
+    pgcAlias: { committed: () => null },
+    publish,
+  } as unknown as GalaxyCatalogRuntime;
+  return { runtime, publish };
+}
+
+describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
+  it('recomputes only when the key changes', () => {
+    const catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]); // 1 inside
+    const { runtime, publish } = makeRuntime(catalogs);
+    const tick = frame(runtime);
+
+    tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER)); // primes the key — not asserted
+    publish.mockClear();
+
+    for (let i = 0; i < 9; i += 1) tick(makeCtx(ALL_VISIBLE_MASK), makeState(CLUSTER));
+    tick(makeCtx(ALL_VISIBLE_MASK), makeState(null)); // the one selection change
+
+    expect(publish).toHaveBeenCalledTimes(1);
+    expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
+  });
+
+  it('publishes null when the selected row is not a structure', () => {
+    const catalogs = new Map([[Source.SDSS, catalogAt([[1, 0, 0]])]]);
+    const { runtime, publish } = makeRuntime(catalogs);
+    const tick = frame(runtime);
+
+    const milkyWay: SelectionRow = { type: 'milkyWay' };
+    tick(makeCtx(ALL_VISIBLE_MASK), makeState(milkyWay));
+
+    expect(publish).toHaveBeenCalledWith({ structureMemberCount: null });
+  });
+
+  it('recomputes when the visible source mask changes with the same selection', () => {
+    const catalogs = new Map([
+      [Source.SDSS, catalogAt([[1, 0, 0]])], // 1 inside
+      [Source.TwoMRS, catalogAt([])], // loaded, no members
+    ]);
+    const { runtime, publish } = makeRuntime(catalogs);
+    const tick = frame(runtime);
+
+    tick(makeCtx(maskWith(0, Source.SDSS)), makeState(CLUSTER));
+    expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 1 });
+
+    // Same selection, same catalogsVersion — only the visible source swapped,
+    // which is exactly what the renderer draws and the focus fade tracks.
+    tick(makeCtx(maskWith(0, Source.TwoMRS)), makeState(CLUSTER));
+    expect(publish).toHaveBeenLastCalledWith({ structureMemberCount: 0 });
+  });
+});

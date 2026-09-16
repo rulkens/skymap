@@ -99,6 +99,15 @@ export const selectAliasIndex = (state: RootState): readonly AliasIndexEntry[] =
   selectEngineFacts(state).galaxyCatalog?.aliasIndex ?? NO_ALIAS_INDEX;
 
 /**
+ * The selected structure's "N galaxies" figure (Ruling 3), on the same
+ * pre-seed contract: `undefined` (boot window) collapses to `null`, the same
+ * "not countable yet" value the reconcile itself publishes before a structure
+ * is selected.
+ */
+export const selectStructureMemberCount = (state: RootState): number | null =>
+  selectEngineFacts(state).galaxyCatalog?.structureMemberCount ?? null;
+
+/**
  * Famous-star metadata sidecar, on the same contract as
  * `selectFamousGalaxiesMeta`.
  */

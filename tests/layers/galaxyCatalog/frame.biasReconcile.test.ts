@@ -40,6 +40,7 @@ function makeState(mode: BiasMode): PassState {
       bias: { mode, absMagLimit: -19 },
       galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1 },
     },
+    selectionRows: { select: null },
     subsystems: { fades: { opacityOf: () => 1 } },
   } as unknown as PassState;
 }

@@ -26,7 +26,12 @@ export const galaxyCatalogLayer = defineLayer({
   // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: galaxyCatalogLayerSettings,
   sources: GALAXY_CATALOG_SOURCE_ROWS,
-  facts: { famousMeta: [], provenanceCounts: {}, aliasIndex: [] } as GalaxyCatalogFacts,
+  facts: {
+    famousMeta: [],
+    provenanceCounts: {},
+    aliasIndex: [],
+    structureMemberCount: null,
+  } as GalaxyCatalogFacts,
   create,
   destroy,
   passes: (runtime) => [

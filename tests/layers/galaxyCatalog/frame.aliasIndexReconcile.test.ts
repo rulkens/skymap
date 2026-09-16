@@ -25,6 +25,7 @@ const STATE = {
     bias: { mode: 0, absMagLimit: -19 },
     galaxyCatalogs: { sbScale: 1, sbMax: 1, brightness: 1 },
   },
+  selectionRows: { select: null },
   subsystems: { fades: { opacityOf: () => 1 } },
 } as unknown as PassState;
 
@@ -56,13 +57,20 @@ function makeRuntime(opts: {
   return { runtime, publish };
 }
 
+// `runtime.publish` also carries the sibling structureMemberCount reconcile's
+// calls (Task 2) — every catalogsVersion bump triggers both. Filtered to the
+// aliasIndex-bearing calls so this suite stays about its own reconcile only.
+function aliasCalls(publish: ReturnType<typeof vi.fn>) {
+  return publish.mock.calls.filter(([patch]) => patch !== undefined && 'aliasIndex' in patch);
+}
+
 describe('galaxyCatalog frame — alias index reconcile', () => {
   it('does not publish while the pgcAlias slot is uncommitted', () => {
     const { runtime, publish } = makeRuntime({ committed: () => null, catalogsVersion: () => 0 });
     const tick = frame(runtime);
 
     for (let i = 0; i < 3; i += 1) tick(CTX, STATE);
-    expect(publish).not.toHaveBeenCalled();
+    expect(aliasCalls(publish)).toHaveLength(0);
   });
 
   it('publishes once per catalogsVersion bump, not per frame', () => {
@@ -75,7 +83,7 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     const tick = frame(runtime);
 
     tick(CTX, STATE); // sidecar still loading — no build yet
-    expect(publish).not.toHaveBeenCalled();
+    expect(aliasCalls(publish)).toHaveLength(0);
 
     // The one bump: the sidecar commits and the catalog it joins against lands.
     committed = { value: new Map([[100n, ['NGC 1']]]) };
@@ -83,8 +91,9 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
     tick(CTX, STATE);
     tick(CTX, STATE); // same version again — must not re-fire
 
-    expect(publish).toHaveBeenCalledTimes(1);
-    expect(publish).toHaveBeenCalledWith({
+    const calls = aliasCalls(publish);
+    expect(calls).toHaveLength(1);
+    expect(calls[0]![0]).toEqual({
       aliasIndex: [{ pgc: 100, names: ['NGC 1'], source: Source.Glade, localIdx: 0 }],
     });
   });
