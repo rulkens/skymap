@@ -3,8 +3,8 @@
  *
  * The registry of every data source skymap loads, keyed by `Source` code;
  * see `SourceEntry.d.ts` for the ten `type` kinds it discriminates over.
- * `Source` lives in `./source`; each row lives in its own `./sources/<id>.ts`
- * (the nine galaxy-catalog rows: `layers/galaxyCatalog/sources/`).
+ * `Source` lives in `./source`; each row lives in its own `./sources/<id>.ts`,
+ * or under `layers/<name>/sources/` once that family is a formed Layer.
  */
 
 import type { SourceEntry } from '../@types/data/SourceEntry';
@@ -18,7 +18,7 @@ import { CLUSTER_ENTRY } from './sources/cluster';
 import { SUPERCLUSTER_ENTRY } from './sources/supercluster';
 import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
-import { FILAMENTS_ENTRY } from '../layers/filaments/sources/filaments';
+import { FILAMENTS_SOURCE_ROWS } from '../layers/filaments/sources/filamentsSourceRows';
 import { CONSTELLATIONS_ENTRY } from './sources/constellations';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
@@ -78,7 +78,6 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Supercluster]: SUPERCLUSTER_ENTRY,
   [Source.Void]: VOID_ENTRY,
   [Source.Group]: GROUP_ENTRY,
-  [Source.Filaments]: FILAMENTS_ENTRY,
   [Source.Cf4Density]: CF4_DENSITY_ENTRY,
   [Source.Mcpm]: MCPM_ENTRY,
   [Source.DebugGaussian]: DEBUG_GAUSSIAN_ENTRY,
@@ -103,6 +102,7 @@ const UNFORMED_SOURCE_REGISTRY = {
 export const SOURCE_REGISTRY = {
   ...UNFORMED_SOURCE_REGISTRY,
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
+  ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
 // code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every

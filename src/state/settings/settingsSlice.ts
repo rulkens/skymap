@@ -17,7 +17,7 @@ import { bodiesSettingsFragment } from '../../layers/body/settings/bodiesSetting
 import { INITIAL_SETTINGS } from './initialSettings';
 import { constellationsSettingsFragment } from '../../layers/constellations/settings/constellationsSettings';
 import { earthSettingsFragment } from '../../layers/body/settings/earthSettings';
-import { filamentsSettingsFragment } from '../../layers/filaments/settings/filamentsSettings';
+import { filamentsLayerSettings } from '../../layers/filaments/settings/filamentsLayerSettings';
 import { flowSettingsFragment } from '../../layers/flow/settings/flowSettings';
 import { galaxyCatalogLayerSettings } from '../../layers/galaxyCatalog/settings/galaxyCatalogLayerSettings';
 import { liftClusterReducers } from '../../utils/settings/liftClusterReducers';
@@ -49,6 +49,7 @@ type SettingsDraft = Draft<EngineSettingsState>;
 // `liftClusterReducers` needs to name the lifted reducer keys.
 const [galaxyCatalogsSettingsFragment, biasSettingsFragment, thumbnailsSettingsFragment] =
   galaxyCatalogLayerSettings;
+const [filamentsSettingsFragment] = filamentsLayerSettings;
 
 /**
  * The case reducers over clusters core owns — the half of the action namespace
