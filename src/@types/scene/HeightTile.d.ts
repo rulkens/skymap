@@ -1,5 +1,5 @@
 /**
- * HeightTile — one decoded `shgt1` tile (`heightTileFormat.ts`): 129² posts
+ * HeightTile — one decoded Terrain-RGB WebP tile (`heightTileFormat.ts`): 129² posts
  * of elevation in metres above the body's datum sphere. `subtreeMin/MaxM`
  * bound the ENTIRE descendant subtree, not just this tile's own posts, so a
  * coarse-tile horizon/occlusion test stays conservative for everything under it.

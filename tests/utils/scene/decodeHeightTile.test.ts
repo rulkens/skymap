@@ -1,143 +1,139 @@
+import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
+import type { HeightTile } from '../../../src/@types/scene/HeightTile';
 import {
+  HEIGHT_CODE_MAX,
   HEIGHT_POSTS_PER_TILE,
-  HEIGHT_TILE_BYTES,
-  HEIGHT_TILE_HEADER_BYTES,
-  HEIGHT_TILE_MAGIC,
+  HEIGHT_TILE_CHUNK_BYTES,
+  HEIGHT_TILE_CHUNK_FOURCC,
   HEIGHT_TILE_POST_COUNT,
   HEIGHT_TILE_VERSION,
+  HEIGHT_TILE_VERSION_OFFSET,
 } from '../../../src/data/scene/heightTileFormat';
+import { readRiffChunk } from '../../../src/utils/image/readRiffChunk';
+import { mulberry32 } from '../../../src/utils/random/mulberry32';
+import { codeHeightM } from '../../../src/utils/scene/codeHeightM';
 import { decodeHeightTile } from '../../../src/utils/scene/decodeHeightTile';
+import { heightCode } from '../../../src/utils/scene/heightCode';
 import { encodeHeightTile } from '../../../tools/utils/textures/encodeHeightTile';
 
-function sampleHeights(): Float32Array {
+// Above 2^20 m an f32 is spaced 0.125 m, coarser than the 0.1 m step, so
+// neighbouring codes collapse onto one float; no real relief comes near it.
+const F32_EXACT_CODE_LIMIT = Math.floor((2 ** 20 + 32768) / 0.1);
+
+function quantisedTile(): HeightTile {
   const heightM = new Float32Array(HEIGHT_TILE_POST_COUNT);
-  for (let i = 0; i < heightM.length; i++) heightM[i] = Math.fround(Math.sin(i) * 3000);
-  return heightM;
+  const lo = heightCode(-430);
+  const hi = heightCode(8848.9);
+  for (let i = 0; i < heightM.length; i++) {
+    heightM[i] = codeHeightM(lo + ((i * 7919) % (hi - lo + 1)));
+  }
+  heightM[0] = codeHeightM(lo);
+  heightM[1] = codeHeightM(hi);
+  return {
+    subtreeMinM: Math.fround(-430),
+    subtreeMaxM: Math.fround(8848.9),
+    geometricResidualM: Math.fround(12.3),
+    heightM,
+  };
 }
 
-describe('decodeHeightTile', () => {
-  it('round-trips a tile through encode/decode', () => {
-    const heightM = sampleHeights();
-    const bytes = encodeHeightTile({
-      subtreeMinM: -431.5,
-      subtreeMaxM: 8848.25,
-      geometricResidualM: 12.5,
-      heightM,
-    });
-    expect(bytes.byteLength).toBe(HEIGHT_TILE_BYTES);
+async function decodeWithSharp(bytes: Uint8Array): Promise<{ tile: HeightTile; rgb: Buffer }> {
+  const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
+  const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
+  if (!chunk) throw new Error('missing SHGT chunk');
+  expect(info.channels).toBe(3);
+  const pixels = { data, width: info.width, height: info.height, channels: 3 as const };
+  return { tile: decodeHeightTile(pixels, chunk), rgb: data };
+}
 
-    const tile = decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset);
-    expect(tile.subtreeMinM).toBe(-431.5);
-    expect(tile.subtreeMaxM).toBe(8848.25);
-    expect(tile.geometricResidualM).toBe(12.5);
-    for (let i = 0; i < heightM.length; i++) {
-      expect(Object.is(tile.heightM[i], heightM[i])).toBe(true);
+function expectSameTile(actual: HeightTile, expected: HeightTile): void {
+  expect(Object.is(actual.subtreeMinM, expected.subtreeMinM)).toBe(true);
+  expect(Object.is(actual.subtreeMaxM, expected.subtreeMaxM)).toBe(true);
+  expect(Object.is(actual.geometricResidualM, expected.geometricResidualM)).toBe(true);
+  for (let i = 0; i < HEIGHT_TILE_POST_COUNT; i++) {
+    if (!Object.is(actual.heightM[i], expected.heightM[i])) {
+      throw new Error(`post ${i}: ${actual.heightM[i]} !== ${expected.heightM[i]}`);
+    }
+  }
+}
+
+function validChunk(): Uint8Array {
+  const chunk = new Uint8Array(HEIGHT_TILE_CHUNK_BYTES);
+  const view = new DataView(chunk.buffer);
+  view.setUint16(HEIGHT_TILE_VERSION_OFFSET, HEIGHT_TILE_VERSION, true);
+  view.setUint16(2, HEIGHT_POSTS_PER_TILE, true);
+  return chunk;
+}
+
+function flatPixels(size: number) {
+  return { data: new Uint8Array(size * size * 3), width: size, height: size, channels: 3 as const };
+}
+
+describe('heightCode', () => {
+  it('heightCode inverts codeHeightM across the code range', () => {
+    const rand = mulberry32(42);
+    const codes = [0, 1, 2 ** 23, F32_EXACT_CODE_LIMIT];
+    for (let i = 0; i < 10_000; i++) codes.push(Math.floor(rand() * F32_EXACT_CODE_LIMIT));
+    for (const c of codes) expect(heightCode(codeHeightM(c))).toBe(c);
+    // Past the f32 limit codes are no longer unique, but quantising stays idempotent.
+    for (const c of [F32_EXACT_CODE_LIMIT + 2, HEIGHT_CODE_MAX - 1, HEIGHT_CODE_MAX]) {
+      expect(codeHeightM(heightCode(codeHeightM(c)))).toBe(codeHeightM(c));
     }
   });
 
-  it('decodes from an unaligned byteOffset', () => {
-    const bytes = encodeHeightTile({
-      subtreeMinM: 0,
-      subtreeMaxM: 1,
-      geometricResidualM: 0,
-      heightM: sampleHeights(),
-    });
-    const shifted = new Uint8Array(HEIGHT_TILE_BYTES + 2);
-    shifted.set(bytes, 2);
+  it('heightCode rejects a height below the offset, above the range, and NaN', () => {
+    expect(() => heightCode(-32768.1)).toThrow(/range/);
+    expect(() => heightCode(codeHeightM(HEIGHT_CODE_MAX) + 1)).toThrow(/range/);
+    expect(() => heightCode(Number.NaN)).toThrow(/range/);
+  });
+});
 
-    const tile = decodeHeightTile(shifted.buffer as ArrayBuffer, 2);
-    expect(tile.subtreeMaxM).toBe(1);
-    expect(tile.heightM[7]).toBe(Math.fround(Math.sin(7) * 3000));
+describe('encodeHeightTile / decodeHeightTile', () => {
+  it('round-trips a quantised tile bit-exactly through encode, sharp decode and decodeHeightTile', async () => {
+    const tile = quantisedTile();
+    const { tile: decoded } = await decodeWithSharp(await encodeHeightTile(tile));
+    expectSameTile(decoded, tile);
   });
 
-  it('rejects a payload with a non-finite post', () => {
-    for (const bad of [Number.NaN, Number.NEGATIVE_INFINITY]) {
-      const heightM = sampleHeights();
-      heightM[1234] = bad;
-      const bytes = encodeHeightTile({
-        subtreeMinM: 0,
-        subtreeMaxM: 0,
-        geometricResidualM: 0,
-        heightM,
-      });
-      expect(() => decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset)).toThrow(
-        /non-finite/,
-      );
+  it('decodes 4-channel pixels identically to 3-channel', async () => {
+    const tile = quantisedTile();
+    const bytes = await encodeHeightTile(tile);
+    const { rgb } = await decodeWithSharp(bytes);
+    const rgba = new Uint8ClampedArray(HEIGHT_TILE_POST_COUNT * 4);
+    for (let i = 0; i < HEIGHT_TILE_POST_COUNT; i++) {
+      rgba.set(rgb.subarray(i * 3, i * 3 + 3), i * 4);
+      rgba[i * 4 + 3] = 255;
     }
+    const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC)!;
+    const pixels = { data: rgba, width: HEIGHT_POSTS_PER_TILE, height: HEIGHT_POSTS_PER_TILE };
+    expectSameTile(decodeHeightTile({ ...pixels, channels: 4 }, chunk), tile);
   });
 
-  it('rejects a wrong magic', () => {
-    const bytes = encodeHeightTile({
-      subtreeMinM: 0,
-      subtreeMaxM: 0,
-      geometricResidualM: 0,
-      heightM: sampleHeights(),
-    });
-    new DataView(bytes.buffer, bytes.byteOffset).setUint32(0, 0x44464353, true);
-    expect(() => decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset)).toThrow(/magic/);
+  it('encodeHeightTile refuses a post off the 0.1 m grid', async () => {
+    const tile = quantisedTile();
+    tile.heightM[500] = Math.fround(12.34);
+    await expect(encodeHeightTile(tile)).rejects.toThrow(/off the height-code grid/);
   });
 
-  it('rejects a wrong version', () => {
-    const bytes = encodeHeightTile({
-      subtreeMinM: 0,
-      subtreeMaxM: 0,
-      geometricResidualM: 0,
-      heightM: sampleHeights(),
-    });
-    new DataView(bytes.buffer, bytes.byteOffset).setUint16(4, HEIGHT_TILE_VERSION + 1, true);
-    expect(() => decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset)).toThrow(
-      /version/,
-    );
+  it('encodeHeightTile refuses a wrong post count', async () => {
+    const tile = { ...quantisedTile(), heightM: new Float32Array(128 * 128) };
+    await expect(encodeHeightTile(tile)).rejects.toThrow(/posts/);
   });
 
-  it('rejects a truncated payload', () => {
-    const bytes = encodeHeightTile({
-      subtreeMinM: 0,
-      subtreeMaxM: 0,
-      geometricResidualM: 0,
-      heightM: sampleHeights(),
-    });
-    const short = bytes.slice(0, HEIGHT_TILE_BYTES - 4);
-    expect(() => decodeHeightTile(short.buffer as ArrayBuffer, short.byteOffset)).toThrow(/bytes/);
-  });
+  it('decodeHeightTile rejects a short chunk, a wrong version and a 128² image', () => {
+    const pixels = flatPixels(HEIGHT_POSTS_PER_TILE);
+    expect(() => decodeHeightTile(pixels, validChunk().subarray(0, 12))).toThrow(/bytes/);
 
-  // The on-disk byte table itself (spec §5.3): written by hand at the
-  // documented offsets, so a re-ordered header fails here and nowhere else.
-  it('reads the header fields at their documented offsets', () => {
-    const buf = new ArrayBuffer(HEIGHT_TILE_BYTES);
-    const view = new DataView(buf);
-    view.setUint32(0, HEIGHT_TILE_MAGIC, true);
-    view.setUint16(4, HEIGHT_TILE_VERSION, true);
-    view.setUint16(6, HEIGHT_POSTS_PER_TILE, true);
-    view.setUint16(8, HEIGHT_POSTS_PER_TILE, true);
-    view.setUint16(10, 0, true);
-    view.setFloat32(12, -100.5, true);
-    view.setFloat32(16, 200.25, true);
-    view.setFloat32(20, 3.75, true);
-    view.setFloat32(HEIGHT_TILE_HEADER_BYTES, 42.5, true);
-    view.setFloat32(HEIGHT_TILE_BYTES - 4, -7.25, true);
+    const wrongVersion = validChunk();
+    new DataView(wrongVersion.buffer).setUint16(0, HEIGHT_TILE_VERSION + 1, true);
+    expect(() => decodeHeightTile(pixels, wrongVersion)).toThrow(/version/);
 
-    expect(HEIGHT_TILE_HEADER_BYTES).toBe(24);
-    expect(HEIGHT_TILE_BYTES).toBe(66588);
-    const tile = decodeHeightTile(buf);
-    expect(tile.subtreeMinM).toBe(-100.5);
-    expect(tile.subtreeMaxM).toBe(200.25);
-    expect(tile.geometricResidualM).toBe(3.75);
-    expect(tile.heightM.length).toBe(HEIGHT_TILE_POST_COUNT);
-    expect(tile.heightM[0]).toBe(42.5);
-    expect(tile.heightM[HEIGHT_TILE_POST_COUNT - 1]).toBe(-7.25);
-  });
+    const wrongPosts = validChunk();
+    new DataView(wrongPosts.buffer).setUint16(2, 128, true);
+    expect(() => decodeHeightTile(pixels, wrongPosts)).toThrow(/posts/);
 
-  it('rejects a post count the header disagrees with', () => {
-    const bytes = encodeHeightTile({
-      subtreeMinM: 0,
-      subtreeMaxM: 0,
-      geometricResidualM: 0,
-      heightM: sampleHeights(),
-    });
-    new DataView(bytes.buffer, bytes.byteOffset).setUint16(6, 128, true);
-    expect(() => decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset)).toThrow(/posts/);
+    expect(() => decodeHeightTile(flatPixels(128), validChunk())).toThrow(/image/);
   });
 });
