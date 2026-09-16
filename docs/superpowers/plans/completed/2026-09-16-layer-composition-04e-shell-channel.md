@@ -170,24 +170,24 @@ differs from the version the last publish was built at; otherwise it does nothin
 GLADE and 2MRS (`[Source.Glade, Source.TwoMRS]`, as `useAliasIndex.ts:33` does today). Publishing an
 empty index for a never-loaded catalog is fine — the palette accepts `[]`.
 
-- [ ] Move `buildAliasIndex` with the command above; `rg -n "buildAliasIndex" src tests` afterwards to
+- [x] Move `buildAliasIndex` with the command above; `rg -n "buildAliasIndex" src tests` afterwards to
       catch specifiers the tool missed.
-- [ ] Change its input to `catalogs` and emit `pgc: Number(pgc)`; keep both skip rules (`pgc === 0n`,
+- [x] Change its input to `catalogs` and emit `pgc: Number(pgc)`; keep both skip rules (`pgc === 0n`,
       empty `names`) and their comments.
-- [ ] In the moved test, keep every existing case (zero PGC, missing source, empty names) rebuilt
+- [x] In the moved test, keep every existing case (zero PGC, missing source, empty names) rebuilt
       against a `Map<SourceType, GalaxyCatalog>` input, and add
       `buildAliasIndex emits pgc as a number, not a bigint` asserting `typeof entry.pgc === 'number'`.
-- [ ] Add `catalogsVersion` to the runtime (initialised `0` in `create.ts`), bumped in the point slot's
+- [x] Add `catalogsVersion` to the runtime (initialised `0` in `create.ts`), bumped in the point slot's
       commit in `wireGalaxyCatalogSourceSlot.ts` beside the existing `catalogs.set`.
-- [ ] Add the reconcile to `frame.ts` and the `aliasIndex` key to `GalaxyCatalogFacts` +
+- [x] Add the reconcile to `frame.ts` and the `aliasIndex` key to `GalaxyCatalogFacts` +
       `layer.ts`'s `facts` literal (`aliasIndex: []`).
-- [ ] New test `frame.aliasIndexReconcile.test.ts`: `publishes once per catalogsVersion bump, not per
+- [x] New test `frame.aliasIndexReconcile.test.ts`: `publishes once per catalogsVersion bump, not per
   frame` (drive `frame(runtime)` three times across one bump, assert exactly one `publish` call
       carrying `aliasIndex`) and `does not publish while the pgcAlias slot is uncommitted`.
-- [ ] Add `selectAliasIndex` beside `selectFamousGalaxiesMeta`, through `selectEngineFacts`, with a
+- [x] Add `selectAliasIndex` beside `selectFamousGalaxiesMeta`, through `selectEngineFacts`, with a
       module-level `NO_ALIAS_INDEX` empty array for the pre-seed window (the shape
       `selectors.ts:52-55` establishes).
-- [ ] `npm run typecheck:fast` + `npm test -- buildAliasIndex aliasIndexReconcile` green. Commit.
+- [x] `npm run typecheck:fast` + `npm test -- buildAliasIndex aliasIndexReconcile` green. Commit.
 
 ---
 
@@ -220,18 +220,18 @@ and publishes; when the selected row is absent or not a structure it publishes `
 key change). `src/utils/structure/structureMemberCount.ts` does not move: it is a shared cone-search
 util, and the `structure` Layer will want it in §10(e).
 
-- [ ] Read `SelectionRow` (`src/@types/engine/SelectionRow.d.ts`) and confirm which arm carries the
+- [x] Read `SelectionRow` (`src/@types/engine/SelectionRow.d.ts`) and confirm which arm carries the
       structure's `worldPos` / `apparentRadiusMpc` / `physicalRadiusMpc`; narrow on the row's own tag,
       never a structural sniff (the pattern at `useStructureMemberCount.ts:44-46`).
-- [ ] Add the key fields to the runtime as plain private fields on the closure in `frame.ts` (not on
+- [x] Add the key fields to the runtime as plain private fields on the closure in `frame.ts` (not on
       `GalaxyCatalogRuntime` — no other contribution reads them).
-- [ ] New test `frame.memberCountReconcile.test.ts`, three cases:
+- [x] New test `frame.memberCountReconcile.test.ts`, three cases:
       `recomputes only when the key changes` (10 frames, one selection change, assert one publish);
       `publishes null when the selected row is not a structure`;
       `recomputes when the visible source mask changes with the same selection`.
-- [ ] Add `structureMemberCount: null` to the `facts` literal and the Facts type.
-- [ ] `selectStructureMemberCount` beside `selectAliasIndex`.
-- [ ] `npm run typecheck:fast` + `npm test -- memberCountReconcile` green. Commit.
+- [x] Add `structureMemberCount: null` to the `facts` literal and the Facts type.
+- [x] `selectStructureMemberCount` beside `selectAliasIndex`.
+- [x] `npm run typecheck:fast` + `npm test -- memberCountReconcile` green. Commit.
 
 ---
 
@@ -272,22 +272,22 @@ owned). `instantiateLayer`'s optional `onRuntime?(runtime)` parameter and `creat
 `layer.name === 'galaxyCatalog'` cast go with it; `EngineState.galaxyBridge` and its `engine.ts:330`
 seed and `:534` teardown go too.
 
-- [ ] Delete the three handle/bridge types and rewrite `EngineHandle` to the two fields above; let
+- [x] Delete the three handle/bridge types and rewrite `EngineHandle` to the two fields above; let
       `tsc` enumerate the readers.
-- [ ] `engine.ts`: delete `loadPgcAliasesFn`, `getCloud`, `getCloudObjIds`, the `selection`/`sources`
+- [x] `engine.ts`: delete `loadPgcAliasesFn`, `getCloud`, `getCloudObjIds`, the `selection`/`sources`
       entries in the handle literal, the `PgcAliasMap`/`GalaxyCatalog`/`SourceType` imports they
       needed, and the `galaxyBridge` seed + teardown.
-- [ ] `InfoCardContainer`: drop the `engineHandleRef` prop and the hook call; read
+- [x] `InfoCardContainer`: drop the `engineHandleRef` prop and the hook call; read
       `selectStructureMemberCount` with `useAppSelector`. `CommandPaletteContainer`: same, reading
       `selectAliasIndex` (keep passing `aliasIndex ?? undefined` semantics — the selector returns `[]`,
       so pass it straight). `App.tsx:136,147` drop the prop; **`handleRef` itself stays** — the
       DebugPanel's two containers still take it (Finding 4).
-- [ ] Delete `awaitSlotReady` and its test (Finding 3) — re-`rg` for readers first, and if any
+- [x] Delete `awaitSlotReady` and its test (Finding 3) — re-`rg` for readers first, and if any
       survives, leave the file and say so in the report.
-- [ ] No new test: this is a deletion + selector re-point, and Tasks 1–2's reconcile tests plus
+- [x] No new test: this is a deletion + selector re-point, and Tasks 1–2's reconcile tests plus
       `tsc` cover the replacement. Delete `tests/components/CommandPalette/CommandPalette.test.ts`
       cases that stub the handle, if any remain after the prop goes.
-- [ ] `npm run typecheck:fast` green. Do **not** commit yet — Task 4 shares this commit.
+- [x] `npm run typecheck:fast` green. Do **not** commit yet — Task 4 shares this commit.
 
 ---
 
@@ -322,17 +322,17 @@ and, on `payload === true`, calls `fx.requestRender()` off the `reconcile` conte
 `src/state/selection/watchSelectionWakeSaga.ts:20-27` — and is forked in `rootSaga.ts`'s list beside
 it. It is **not** declared on the Layer: `Layer.sagas` has no reader (Finding 11, Ruling 6).
 
-- [ ] Check whether `EngineState` already exposes a store-getter pattern to copy for `ui`
+- [x] Check whether `EngineState` already exposes a store-getter pattern to copy for `ui`
       (`selection`, `EngineState.d.ts:35-36`) and mirror it exactly — including where the getter is
       installed in `engine.ts`.
-- [ ] Write the saga test first: `wakes the render loop when the palette opens` and
+- [x] Write the saga test first: `wakes the render loop when the palette opens` and
       `does not wake when the palette closes` (assert `requestRender` call counts against a stub
       `ReconcileEffects` context — this is the bug class CI cannot see: at rest, no wake means the
       alias load never starts).
-- [ ] Implement the saga and fork it in `src/store/rootSaga.ts`.
-- [ ] Swap `request` for `ui` on `DemandCtx` + `buildDemandCtx`, delete `RequestKey.d.ts`,
+- [x] Implement the saga and fork it in `src/store/rootSaga.ts`.
+- [x] Swap `request` for `ui` on `DemandCtx` + `buildDemandCtx`, delete `RequestKey.d.ts`,
       `state.requests` and its `engine.ts:322` seed, and flip the row's `demand`.
-- [ ] `npm run typecheck:fast`, `npm test -- watchPaletteWakeSaga demand`, then **commit Tasks 3+4
+- [x] `npm run typecheck:fast`, `npm test -- watchPaletteWakeSaga demand`, then **commit Tasks 3+4
       together** with a message naming both halves.
 
 ---
@@ -366,15 +366,15 @@ importing `CollapsibleSection`, `Slider` and `SettingsPanel.module.css` from
 `src/components/` by relative path: the shared section chrome is core vocabulary, and duplicating a
 CSS module per Layer is exactly the bolt-on this sequence exists to avoid.
 
-- [ ] Move both files with the manifest form; then `rg -n "GalaxiesSection" src tests` for
+- [x] Move both files with the manifest form; then `rg -n "GalaxiesSection" src tests` for
       string-literal and CSS specifiers the tool misses.
-- [ ] Declare `ui` on the Layer; delete the panel's hand-written child + import.
-- [ ] `npm test -- SettingsPanel` and `npm run build` — the empirical check Ruling 5 asks for. If
+- [x] Declare `ui` on the Layer; delete the panel's hand-written child + import.
+- [x] `npm test -- SettingsPanel` and `npm run build` — the empirical check Ruling 5 asks for. If
       either fails on a module cycle or a CSS-module resolution in the node test env, fall back to
       `src/compositions/appUi.ts` (a `readonly (readonly [layerName, LayerUiSection])[]` the panel
       maps instead) and record **which shape landed** in the dispatch report.
-- [ ] No new test: `SettingsPanel.test.tsx` already asserts the composed section renders.
-- [ ] Commit.
+- [x] No new test: `SettingsPanel.test.tsx` already asserts the composed section renders.
+- [x] Commit.
 
 ---
 
@@ -402,23 +402,23 @@ CSS module per Layer is exactly the bolt-on this sequence exists to avoid.
 - Spec §14 (Corrections): one row for this plan's scope ruling — the reference engine moves from
   §10(d) to §10(e), with Finding-backed reasoning (36 core passes; no store parameterization).
 
-- [ ] Write the four doc edits above; each claim gets opened and checked against the tree before it
+- [x] Write the four doc edits above; each claim gets opened and checked against the tree before it
       is written (the citations-open-file rule), not transcribed from this plan.
-- [ ] Spec §14 row for the reference-engine deferral; leave §7 in place (it describes (e) now) with a
+- [x] Spec §14 row for the reference-engine deferral; leave §7 in place (it describes (e) now) with a
       one-line pointer to the §14 row.
-- [ ] Run the **deletion audit** over `origin/main..HEAD` — the whole 04d+04e galaxy Layer surface is
+- [x] Run the **deletion audit** over `origin/main..HEAD` — the whole 04d+04e galaxy Layer surface is
       in scope, this being the feature's `/feature-done` (04d deferred its audit here). Frame it as
       "a less-capable model wrote this; surplus is presumed". Report findings; apply only what the
       controller rules.
-- [ ] Run the **comment audit** over every file this branch touched, plus the two 04d carry-overs:
+- [x] Run the **comment audit** over every file this branch touched, plus the two 04d carry-overs:
       `src/layers/galaxyCatalog/passes/diskRadiusRing.ts` (68 comment lines / 106 code) and the
       `built: 'external'` marker in `createLayers.ts`. Budget: module header ≤ 5 lines, comment lines
       ≤ half the code lines.
-- [ ] Delete the four `04e deletes this` markers 04d left on the scaffolding (`instantiateLayer.ts:13`
+- [x] Delete the four `04e deletes this` markers 04d left on the scaffolding (`instantiateLayer.ts:13`
       and siblings — `rg -n "04e" src`), verifying each is genuinely gone rather than just unmarked.
-- [ ] Backlog hygiene: `rg -n "layer" docs/BACKLOG.md` and delete any index line + detail file this PR
+- [x] Backlog hygiene: `rg -n "layer" docs/BACKLOG.md` and delete any index line + detail file this PR
       consumes; leave the rest untouched.
-- [ ] `npm test`, `npm run build`, `npm run format`. Commit.
+- [x] `npm test`, `npm run build`, `npm run format`. Commit.
 
 ---
 
@@ -426,24 +426,29 @@ CSS module per Layer is exactly the bolt-on this sequence exists to avoid.
 
 **Deliverable inventory**
 
-- [ ] `EngineHandle` is exactly `{ debug: EngineDebugHandle; destroy: () => void }`; no
+- [x] `EngineHandle` is exactly `{ debug: EngineDebugHandle; destroy: () => void }`; no
       `EngineSourcesHandle`, `EngineSelectionHandle` or `GalaxyCatalogBridge` file exists;
       `EngineState` has neither `galaxyBridge` nor `requests`.
-- [ ] `GalaxyCatalogFacts` has four keys — `famousMeta`, `provenanceCounts`, `aliasIndex`,
+- [x] `GalaxyCatalogFacts` has four keys — `famousMeta`, `provenanceCounts`, `aliasIndex`,
       `structureMemberCount` — each with a selector in `src/state/engine/selectors.ts` and each
       published from the Layer, never from a core reducer.
-- [ ] `src/hooks/` holds no `useAliasIndex` / `useStructureMemberCount`, and
+- [x] `src/hooks/` holds no `useAliasIndex` / `useStructureMemberCount`, and
       `src/@types/engine/` holds none of their three input/return types; `AliasIndexEntry.pgc` is a
       `number`.
-- [ ] `RequestKey` does not exist; `DemandCtx` has `ui` and no `request`; the `pgcAlias` row demands
-      on `ctx.ui.paletteOpen`, with `watchPaletteWakeSaga` forked in `rootSaga.ts`.
-- [ ] `galaxyCatalogLayer` declares `ui`; `src/layers/galaxyCatalog/ui/` holds both Galaxies section
+- [x] `RequestKey` does not exist; `DemandCtx` has `ui` and no `request`; the `pgcAlias` row demands
+      on `ctx.ui.paletteOpen`. `watchPaletteWakeSaga` lives in the Layer's `sagas/` and is forked by
+      `createLayers` off `layer.sagas` — NOT in `rootSaga.ts` as first written, because D4 built the
+      Layer-saga apparatus (user ruling 2026-09-16).
+- [x] `galaxyCatalogLayer` declares `ui`; `src/layers/galaxyCatalog/ui/` holds both Galaxies section
       files; `SettingsPanel.tsx` renders no galaxy child by hand. (Or: `appUi.ts` landed instead, and
       the report says why.)
-- [ ] `rg -n "04e" src` is empty.
-- [ ] The four §15 docs and the spec's §14 row are updated.
+- [x] `rg -n "04e" src` is empty.
+- [x] The four §15 docs and the spec's §14 row are updated.
 
 **Named observable behaviours** (user-attested on this branch's dev server, `/link-data` linked)
+
+> NOT attested. The user approved PR #731 on the code and the CI gate without walking this list;
+> left unticked rather than claimed. Dev server for a later pass: `npm run dev` in the worktree.
 
 - [ ] Cmd+K, type a PGC alias (e.g. a GLADE galaxy's common name): the palette lists it on the first
       open, a second or so after opening — proving the demand flip **and** the wake (open the palette
