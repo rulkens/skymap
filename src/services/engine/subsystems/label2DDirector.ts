@@ -111,7 +111,7 @@ import { labelScreenRect } from '../../../utils/labels/labelScreenRect';
 import { clampVec3Length } from '../../../utils/math/clampVec3Length';
 import { liftedLabelPlacement } from '../presentation/liftedLabelPlacement';
 import { FAMOUS_LABEL_STYLE } from '../presentation/famousLabelStyle';
-import { declutterByScreenSeparation } from '../../../utils/scene/declutterByScreenSeparation';
+import { declutterByScreenSeparation } from '../../../utils/labels/declutterByScreenSeparation';
 
 /**
  * Ramp record for one label id under `smoothstepRamp` (COSMO).

@@ -5,7 +5,7 @@ import {
   HEIGHT_TILE_POST_COUNT,
 } from '../../../src/data/scene/heightTileFormat';
 import { codeHeightM } from './codeHeightM';
-import { decodeHeightTileHeader } from '../../../src/utils/scene/decodeHeightTileHeader';
+import { decodeHeightTileHeader } from '../../../src/utils/surfaceTiles/decodeHeightTileHeader';
 
 const RGB_CHANNELS = 3;
 

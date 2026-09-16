@@ -48,7 +48,7 @@ import sharp, { type OverlayOptions } from 'sharp';
 
 import type { BodyTextureId } from '../../src/@types/data/BodyTextureId';
 import { atlasTileRect } from '../../src/utils/gpu/atlasTileRect';
-import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
+import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
 
 /**
  * The atlas file, written beside the per-body tiers. Authored HERE and nowhere

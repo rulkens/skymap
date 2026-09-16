@@ -67,7 +67,7 @@ import type { BodyRelativePose } from '../../../../@types/engine/camera/BodyRela
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { SCENE_RINGS } from '../../../../data/bodies/sceneRings';
-import { bodyTextureSlotKey } from '../../../../utils/scene/bodyTextureSlotKey';
+import { bodyTextureSlotKey } from '../../../../utils/bodyTextures/bodyTextureSlotKey';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';

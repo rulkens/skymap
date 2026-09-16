@@ -15,7 +15,7 @@
  */
 
 import { constellationOfBody } from '../../../utils/scene/constellationOfBody';
-import { regionOfBody } from '../../../utils/scene/regionOfBody';
+import { regionOfBody } from '../../../utils/regions/regionOfBody';
 
 export function bodyRowChip(bodyId: string, label: string): string | undefined {
   const chip = constellationOfBody(bodyId) ?? regionOfBody(bodyId)?.label;

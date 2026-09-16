@@ -21,7 +21,7 @@ import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams'
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
-import { outerBoundRadiusM } from '../../../../src/utils/scene/outerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import type { BodySurface } from '../../../../src/@types/scene/BodySurface';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';

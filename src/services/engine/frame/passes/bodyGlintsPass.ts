@@ -89,8 +89,8 @@ import { bodyApparentDiameterPx } from '../../../../utils/scene/bodyApparentDiam
 import { bodyFootprintRadiusM } from '../../../../utils/scene/bodyFootprintRadiusM';
 import { bodyGlintBrightness } from '../../../../utils/scene/bodyGlintBrightness';
 import { fadeBand } from '../../../../utils/math/fadeBand';
-import { regionById } from '../../../../utils/scene/regionById';
-import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
+import { regionById } from '../../../../utils/regions/regionById';
+import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';

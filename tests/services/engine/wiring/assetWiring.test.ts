@@ -22,9 +22,9 @@ import { loadRadiusMpc } from '../../../../src/services/engine/frame/bodyTexture
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
-import { hostBodyId } from '../../../../src/utils/scene/hostBodyId';
-import { bodyTextureSlotKey } from '../../../../src/utils/scene/bodyTextureSlotKey';
-import { meshBodySlotKey } from '../../../../src/utils/scene/meshBodySlotKey';
+import { hostBodyId } from '../../../../src/utils/bodyTextures/hostBodyId';
+import { bodyTextureSlotKey } from '../../../../src/utils/bodyTextures/bodyTextureSlotKey';
+import { meshBodySlotKey } from '../../../../src/utils/meshBodies/meshBodySlotKey';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';

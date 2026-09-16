@@ -44,7 +44,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
-import { innerBoundRadiusM } from '../../../../../src/utils/scene/innerBoundRadiusM';
+import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each conic recognisable Float32Arrays. The real

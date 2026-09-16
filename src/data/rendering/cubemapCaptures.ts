@@ -13,7 +13,7 @@ import type { ProbeCapture } from '../../@types/rendering/ProbeCapture';
 import type { ProbeCaptureKey } from '../../@types/rendering/ProbeCaptureKey';
 import type { SkyCapture } from '../../@types/rendering/SkyCapture';
 import type { SkyCaptureKey } from '../../@types/rendering/SkyCaptureKey';
-import { regionById } from '../../utils/scene/regionById';
+import { regionById } from '../../utils/regions/regionById';
 import { SCALE_FADE_BANDS } from '../../services/engine/presentation/scaleFadeBands';
 import { SCALE_UNITS } from '../scaleUnits';
 

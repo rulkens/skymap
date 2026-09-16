@@ -7,7 +7,19 @@
 
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { SurfaceTileSpec } from '../../@types/data/SurfaceTileSpec';
+import { EARTH_SURFACE_PARAMS } from './earthSurfaceParams';
 
 export const SURFACE_TILE_REGISTRY = {
-  earth: { manifestKey: 'earth-tiles' },
+  earth: {
+    manifestKey: 'earth-tiles',
+    effects: ['materialMap', 'nightLights', 'cloudShadows'],
+    // Picked fields, not the whole object: `EARTH_SURFACE_PARAMS` also carries
+    // `cloudShadowStrength`/`ambientLight`/`oceanRoughness`, which stay live
+    // user settings rather than a fixed per-body row.
+    shading: {
+      roughnessBase: EARTH_SURFACE_PARAMS.roughnessBase,
+      f0: EARTH_SURFACE_PARAMS.f0,
+      sunIrradiance: EARTH_SURFACE_PARAMS.sunIrradiance,
+    },
+  },
 } as const satisfies Partial<Record<BodyId, SurfaceTileSpec>>;

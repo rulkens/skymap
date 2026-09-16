@@ -94,7 +94,7 @@ import { starPickId } from '../../../../utils/picking/starPickId';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { fadeBand } from '../../../../utils/math/fadeBand';
-import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
+import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { sgrAStarCaptionTarget } from '../../presentation/sgrAStarCaptionTarget';
@@ -103,8 +103,8 @@ import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../data/famousStarPickRadiusPx';
-import { regionById } from '../../../../utils/scene/regionById';
-import { regionOfBody } from '../../../../utils/scene/regionOfBody';
+import { regionById } from '../../../../utils/regions/regionById';
+import { regionOfBody } from '../../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../../utils/camera/projectToScreenPx';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render

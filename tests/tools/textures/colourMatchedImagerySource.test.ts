@@ -15,7 +15,7 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
+import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import { colourMatchedImagerySource } from '../../../tools/textures/colourMatchedImagerySource';
 
@@ -70,7 +70,7 @@ function stubSource(opts: {
   maxLevel: number;
   coverage: readonly LonLatBounds[];
   rgb: readonly [number, number, number];
-}): EarthImagerySource {
+}): SurfaceImagerySource {
   return {
     id: opts.id,
     attribution: `${opts.id} attribution`,
@@ -93,7 +93,7 @@ function perPixelSource(opts: {
   maxLevel: number;
   coverage: readonly LonLatBounds[];
   sample: (lon: number, lat: number) => readonly [number, number, number, number];
-}): EarthImagerySource {
+}): SurfaceImagerySource {
   return {
     id: opts.id,
     attribution: `${opts.id} attribution`,
@@ -132,7 +132,7 @@ function allLandMaskPath(): Promise<string> {
   return maskPath;
 }
 
-function referenceSource(): EarthImagerySource {
+function referenceSource(): SurfaceImagerySource {
   return stubSource({
     id: 'reference',
     maxLevel: REFERENCE_LEVEL,

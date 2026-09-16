@@ -4,7 +4,7 @@ import type { R2Upload } from './R2Upload';
 
 /**
  * `manifest.json` as its own upload — the pointer the runtime resolves
- * logical catalog paths through. Mirrors `collectEarthTileManifest`: `[]`
+ * logical catalog paths through. Mirrors `collectSurfaceTileManifest`: `[]`
  * when absent, so it drops into `buildGroups()` the same way every other
  * collector does; its caller places the group last so it never names a
  * hashed file this run hasn't finished uploading.

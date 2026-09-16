@@ -12,7 +12,7 @@
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
-import { isMeshBody } from '../../../utils/scene/isMeshBody';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { hOverR } from './hOverR';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';

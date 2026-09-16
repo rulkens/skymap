@@ -1,3 +1,5 @@
+import { purgeFileEntries } from './purgeFileEntries';
+
 /** Cloudflare's per-request cap on `files` in a purge call. */
 const PURGE_BATCH = 30;
 
@@ -29,11 +31,11 @@ export async function purgeCloudflareCache(
     return;
   }
 
-  const urls = keys.map((k) => `${publicUrl}/${k}`);
+  const entries = purgeFileEntries(keys.map((k) => `${publicUrl}/${k}`));
   const endpoint = `https://api.cloudflare.com/client/v4/zones/${zoneId}/purge_cache`;
 
-  for (let i = 0; i < urls.length; i += PURGE_BATCH) {
-    const batch = urls.slice(i, i + PURGE_BATCH);
+  for (let i = 0; i < entries.length; i += PURGE_BATCH) {
+    const batch = entries.slice(i, i + PURGE_BATCH);
     const res = await fetch(endpoint, {
       method: 'POST',
       headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
@@ -44,6 +46,6 @@ export async function purgeCloudflareCache(
       const msg = body.errors?.map((e) => e.message).join('; ') ?? `HTTP ${res.status}`;
       throw new Error(`Cloudflare purge failed: ${msg}`);
     }
-    console.log(`  purged ${batch.length} URL(s)`);
+    console.log(`  purged ${batch.length} cache entries`);
   }
 }

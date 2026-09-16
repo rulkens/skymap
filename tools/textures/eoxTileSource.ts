@@ -1,5 +1,5 @@
 /**
- * eoxTileSource — an `EarthImagerySource` over the EOX s2cloudless z13
+ * eoxTileSource — a `SurfaceImagerySource` over the EOX s2cloudless z13
  * harvest (`fetchEoxTiles.ts`'s output: `<region>/<z>/<row>/<col>.jpg`,
  * 256 px tiles). EOX's WGS84 TMS grid at z13 is exactly HALF skymap's own
  * 512 px tile edge (`earthTileColumns.ts`), so one skymap z13 box is always
@@ -16,7 +16,7 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { EarthImagerySource } from './EarthImagerySource';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** EOX only ever harvests z13 (`fetchEoxTiles.ts`'s header) — coarser levels
@@ -26,7 +26,7 @@ const EOX_MAX_LEVEL = 13;
 /** Native edge of one harvested EOX tile. */
 const EOX_TILE_PX = 256;
 
-/** Native edge of the 2x2-composited output — always `EARTH_TILE_PX`, by the
+/** Native edge of the 2x2-composited output — always `SURFACE_TILE_PX`, by the
  *  ladder identity in the module header. */
 const NATIVE_EDGE_PX = EOX_TILE_PX * 2;
 
@@ -154,7 +154,7 @@ function rectContains(rect: RegionRect, row: number, col: number): boolean {
 
 export async function eoxTileSource(opts: {
   readonly coverageDir: string; // rawDataPath('eox.dir')
-}): Promise<EarthImagerySource> {
+}): Promise<SurfaceImagerySource> {
   // Regions sorted by name (see `discoverRegionDirs`), so `regions` below —
   // and thus `coverage` and readBox's first-by-name-wins tile lookup — are
   // both deterministic regardless of directory-read order.
@@ -188,7 +188,7 @@ export async function eoxTileSource(opts: {
       // Checked first, before any disk read or compositing: the module
       // header's ladder identity guarantees every real caller requests
       // exactly `NATIVE_EDGE_PX`, so a mismatch means that identity broke
-      // (e.g. `EARTH_TILE_PX` moved off 512) — a loud, CHEAP failure, not a
+      // (e.g. `SURFACE_TILE_PX` moved off 512) — a loud, CHEAP failure, not a
       // silently-added, silently-untested resize branch after the work.
       if (widthPx !== NATIVE_EDGE_PX || heightPx !== NATIVE_EDGE_PX) {
         throw new Error(

@@ -11,6 +11,7 @@
 
 import type { InputGestureEvent } from '../../@types/camera/InputGestureEvent';
 import type { OrbitControlsOptions } from '../../@types/camera/OrbitControlsOptions';
+import { PINCH_WHEEL_GAIN } from '../../data/camera/pinchWheelGain';
 
 export function attachOrbitControls(
   canvas: HTMLCanvasElement,
@@ -133,7 +134,7 @@ export function attachOrbitControls(
     // drag arms, so the pick ray is built from one pixel space either way.
     emit({
       kind: 'wheel',
-      deltaY: e.deltaY,
+      deltaY: e.ctrlKey ? e.deltaY * PINCH_WHEEL_GAIN : e.deltaY,
       duringGesture: activePointers.size > 0,
       xPx: e.clientX,
       yPx: e.clientY,

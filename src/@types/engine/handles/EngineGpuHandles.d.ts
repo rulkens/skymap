@@ -34,7 +34,7 @@ import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRen
 import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
-import type { EarthSurfaceTileRenderer } from '../../rendering/EarthSurfaceTileRenderer';
+import type { SurfaceTileRenderer } from '../../rendering/SurfaceTileRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
@@ -427,7 +427,7 @@ export type EngineGpuHandles = {
    * `earthPass`. Null until `initGpu` constructs it; released and
    * re-nulled by `destroy()`.
    */
-  earthSurfaceTileRenderer: EarthSurfaceTileRenderer | null;
+  surfaceTileRenderer: SurfaceTileRenderer | null;
   /**
    * Flat-emissive resolved stars (the `spheres` branch of
    * `partitionStarsByResolution` — any star whose apparent size crosses

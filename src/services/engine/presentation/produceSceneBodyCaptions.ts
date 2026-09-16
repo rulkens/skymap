@@ -25,7 +25,7 @@ import { CAPTION_PRIORITY, CAPTION_TIER_SCALE } from './captionPriority';
 import { apparentSizePx } from '../../../utils/math/apparentSizePx';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { overflowFade } from '../../../utils/scene/overflowFade';
-import { subjectOccludedByBodies } from '../../../utils/scene/subjectOccludedByBodies';
+import { subjectOccludedByBodies } from '../../../utils/occlusion/subjectOccludedByBodies';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { LEADER_LINE_BOTTOM_GAP_PX } from './leaderLineStyle';
 

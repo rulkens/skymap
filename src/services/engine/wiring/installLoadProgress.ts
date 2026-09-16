@@ -26,9 +26,9 @@
  */
 
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
-import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isBodyTextureKey } from '../../../utils/bodyTextures/isBodyTextureKey';
 import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
-import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
+import { isMeshBodyKey } from '../../../utils/meshBodies/isMeshBodyKey';
 import { engineLoadProgressChanged } from '../../../state/engine/engineSlice';
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';

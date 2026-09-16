@@ -16,7 +16,7 @@ import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
-import { innerBoundRadiusM } from '../../../../src/utils/scene/innerBoundRadiusM';
+import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';

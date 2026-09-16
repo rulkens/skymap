@@ -5,7 +5,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { blendedEnuAt } from './blendedEnuAt';
 import { canonicalBasisAt } from './canonicalBasisAt';
-import { lonLatDegToDirection } from '../scene/lonLatDegToDirection';
+import { lonLatDegToDirection } from '../geo/lonLatDegToDirection';
 
 /**
  * lonLatFocusPose — the body arm that puts a geodetic point under the camera:

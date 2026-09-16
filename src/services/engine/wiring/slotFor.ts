@@ -29,8 +29,8 @@
  */
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
-import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
+import { isBodyTextureKey } from '../../../utils/bodyTextures/isBodyTextureKey';
+import { isMeshBodyKey } from '../../../utils/meshBodies/isMeshBodyKey';
 import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';

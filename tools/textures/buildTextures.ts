@@ -23,7 +23,7 @@ import type { ChromaCalibration } from '../../src/@types/scene/ChromaCalibration
 import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
-import { bodyTextureFilename } from '../../src/utils/scene/bodyTextureFilename';
+import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';

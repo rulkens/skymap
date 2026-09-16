@@ -48,7 +48,7 @@
 //
 // This fragment no longer blends the surface virtual texture itself (the
 // page table + atlas bindings and the per-fragment cell lookup that used to
-// live here) -- 'earthSurfaceTileRenderer' draws the resolved detail
+// live here) -- 'surfaceTileRenderer' draws the resolved detail
 // patches directly over this base globe, at the same nominal radius, with a
 // 'nearer-or-equal' depth compare so ties resolve in ITS favour. This
 // fragment always draws the plain whole-globe picture; where no detail

@@ -9,7 +9,7 @@
  */
 
 import { SCALE_UNITS } from '../scaleUnits';
-import { innerBoundRadiusM } from '../../utils/scene/innerBoundRadiusM';
+import { innerBoundRadiusM } from '../../utils/occlusion/innerBoundRadiusM';
 import { SCENE_EARTH } from './sceneEarth';
 import { SCENE_PLANETS } from './scenePlanets';
 import type { AtmosphereParams } from '../../@types/scene/AtmosphereParams';

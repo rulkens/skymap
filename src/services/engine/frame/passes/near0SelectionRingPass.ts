@@ -82,7 +82,7 @@ import { NEAR0_OVERLAY_CLIP_SCALE } from '../near0OverlayClipScale';
 import { near0OverlayVpF32 } from '../near0OverlayVpF32';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
-import { subjectOccludedByBodies } from '../../../../utils/scene/subjectOccludedByBodies';
+import { subjectOccludedByBodies } from '../../../../utils/occlusion/subjectOccludedByBodies';
 import { pinInsideNearPlane } from '../../../../utils/camera/pinInsideNearPlane';
 
 export const near0SelectionRingPass: ContentPass = {
