@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { attachOrbitControls } from '../../../src/services/camera/orbitControls';
+import { PINCH_WHEEL_GAIN } from '../../../src/data/camera/pinchWheelGain';
 import type { InputGestureEvent } from '../../../src/@types/camera/InputGestureEvent';
 
 type Listener = (e: unknown) => void;
@@ -243,6 +244,23 @@ describe('attachOrbitControls — gesture boundaries', () => {
       xPx: 641,
       yPx: 361,
     });
+  });
+
+  it('amplifies a ctrl-wheel (trackpad pinch) by PINCH_WHEEL_GAIN', () => {
+    const { canvas, rec } = makeCanvas();
+    const sink = makeSink();
+    attachOrbitControls(canvas as unknown as HTMLCanvasElement, sink.emit);
+
+    rec.fire('wheel', {
+      deltaY: 3,
+      ctrlKey: true,
+      clientX: 0,
+      clientY: 0,
+      preventDefault: vi.fn(),
+    });
+    expect(sink.events).toContainEqual(
+      expect.objectContaining({ kind: 'wheel', deltaY: 3 * PINCH_WHEEL_GAIN }),
+    );
   });
 
   it('emits pinch samples only while two contacts are down', () => {
