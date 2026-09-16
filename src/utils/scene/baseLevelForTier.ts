@@ -1,6 +1,7 @@
 import type { SurfaceTileBodyId } from '../../@types/data/SurfaceTileBodyId';
 import type { Tier } from '../../@types/data/Tier';
 import { BODY_TEXTURE_REGISTRY } from '../../data/bodies/bodyTextureRegistry';
+import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams';
 import { clampTier } from '../math/clampTier';
 import { tierToTexturePx } from '../math/tierToTexturePx';
 import { levelFittingWidth } from './levelFittingWidth';
@@ -29,5 +30,5 @@ export function baseLevelForTier(bodyId: SurfaceTileBodyId, tier: Tier): number 
     throw new Error(`baseLevelForTier: '${bodyId}' has no BODY_TEXTURE_REGISTRY surface kind`);
   }
   const widthPx = tierToTexturePx(clampTier(tier, surfaceCeiling));
-  return levelFittingWidth(widthPx);
+  return levelFittingWidth(widthPx, EARTH_EQUIRECT_BASE_WIDTH_PX);
 }
