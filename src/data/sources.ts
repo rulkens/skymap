@@ -18,7 +18,7 @@ import { CLUSTER_ENTRY } from './sources/cluster';
 import { SUPERCLUSTER_ENTRY } from './sources/supercluster';
 import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
-import { FILAMENTS_ENTRY } from './sources/filaments';
+import { FILAMENTS_ENTRY } from '../layers/filaments/sources/filaments';
 import { CONSTELLATIONS_ENTRY } from './sources/constellations';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';

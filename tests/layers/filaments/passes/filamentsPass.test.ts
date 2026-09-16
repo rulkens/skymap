@@ -8,13 +8,13 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
-import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
-import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
-import { FILAMENT_RECESSION } from '../../../../../src/services/engine/presentation/focusRecession';
-import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import { filamentsPass } from '../../../../src/layers/filaments/passes/filamentsPass';
+import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
+import { FILAMENT_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
+import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 
 function makeCtx(focusBlend: number): ReadyFrameContext {
   const vp = new Float32Array(16) as unknown as Mat4;

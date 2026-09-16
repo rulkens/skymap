@@ -6,9 +6,9 @@
  * layer reads as disabled, so its toggle is a no-op rather than an error path.
  */
 
-import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import { resolveLayerOpacity } from '../../presentation/focusRecession';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
 // Halfwidth: the shader expands each segment to a 2 × this quad, so 1.5 → ~3-px lines.
 const FILAMENT_LINE_HALFWIDTH_PX = 1.5;

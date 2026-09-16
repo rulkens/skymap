@@ -10,7 +10,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
+import { filamentsPass } from '../../../../../src/layers/filaments/passes/filamentsPass';
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';

@@ -9,8 +9,8 @@
  * orchestrator (`installSlots`) owns the write to `state.assetSlots`.
  */
 
-import { createAssetSlot } from '../AssetSlot';
-import { filamentFetcher } from '../fetchers/filamentFetcher';
+import { createAssetSlot } from '../../../services/loading/AssetSlot';
+import { filamentFetcher } from './filamentFetcher';
 import type { FilamentReq } from '../../../@types/loading/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';

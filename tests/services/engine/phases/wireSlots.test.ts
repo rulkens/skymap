@@ -60,7 +60,7 @@ vi.mock('../../../../src/services/loading/fetchers/cf4DensityFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
+vi.mock('../../../../src/layers/filaments/load/filamentFetcher', () => ({
   filamentFetcher: vi.fn(async () => ({
     stripCount: 0,
     vertexCount: 0,
@@ -161,7 +161,7 @@ import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
-import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
+import { filamentFetcher } from '../../../../src/layers/filaments/load/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';

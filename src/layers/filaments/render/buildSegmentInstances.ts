@@ -26,7 +26,7 @@
  * strips is `totalVerts - stripCount`.
  */
 
-import type { FilamentCloud } from '../../../../@types/data/filament/FilamentCloud';
+import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 
 /**
  * 8 floats per segment instance: startxyz + startDensity + endxyz + endDensity.

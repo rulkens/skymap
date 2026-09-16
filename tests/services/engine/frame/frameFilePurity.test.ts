@@ -65,6 +65,11 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/starPointsPass': 3,
   'frame/passes/texturedBodiesPass': 2,
   'frame/passes/zoneOfAvoidancePass': 4,
+  // 05a Task 1 relocated filamentsPass.ts here verbatim; its own tuning
+  // constants ride along. The `frame/passes/filamentsPass` row above becomes
+  // dead once Task 5 deletes the file from CONTENT_PASSES's core copy — this
+  // is the live one from here on.
+  'layers/filaments/passes/filamentsPass': 3,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };
