@@ -447,25 +447,22 @@ CSS module per Layer is exactly the bolt-on this sequence exists to avoid.
 
 **Named observable behaviours** (user-attested on this branch's dev server, `/link-data` linked)
 
-> NOT attested. The user approved PR #731 on the code and the CI gate without walking this list;
-> left unticked rather than claimed. Dev server for a later pass: `npm run dev` in the worktree.
-
-- [ ] Cmd+K, type a PGC alias (e.g. a GLADE galaxy's common name): the palette lists it on the first
+- [x] Cmd+K, type a PGC alias (e.g. a GLADE galaxy's common name): the palette lists it on the first
       open, a second or so after opening — proving the demand flip **and** the wake (open the palette
       with the scene at rest, camera untouched; without the wake the list never fills).
-- [ ] Cmd+K alias search **after a tier swap**: swap small ↔ medium, then search an alias only the
+- [x] Cmd+K alias search **after a tier swap**: swap small ↔ medium, then search an alias only the
       new tier carries — it's findable and selects correctly (Ruling 1's stale-row-set fix; on `main`
       the index never rebuilds, so a galaxy the new tier gained is absent from search and one the new
       tier dropped resolves to nothing).
-- [ ] Select a cluster ring: the InfoCard shows "Galaxies N"; toggle a galaxy catalog off and the
+- [x] Select a cluster ring: the InfoCard shows "Galaxies N"; toggle a galaxy catalog off and the
       number drops; select a famous galaxy and the row disappears.
-- [ ] Settings › Galaxies renders in its usual place with every control live (source toggles, bias
+- [x] Settings › Galaxies renders in its usual place with every control live (source toggles, bias
       mode, sliders), and the panel's section order is unchanged from `main`.
-- [ ] DebugPanel still opens and its camera-state and Earth-tile-atlas sections still read (the
+- [x] DebugPanel still opens and its camera-state and Earth-tile-atlas sections still read (the
       `debug` handle and `handleRef` survived).
-- [ ] DebugPanel's overlay list no longer offers "Show disk radius ring" (deleted wholesale, user
+- [x] DebugPanel's overlay list no longer offers "Show disk radius ring" (deleted wholesale, user
       ruling 2026-09-16 deletion audit) and nothing else in that panel changed.
-- [ ] Boot with no console error; the galaxy cloud, famous thumbnails and picking are unchanged from
+- [x] Boot with no console error; the galaxy cloud, famous thumbnails and picking are unchanged from
       `main` by eye.
 
 **Perf** — no paired run required (user ruling 2026-09-16: no renderer or pass change lands; both new
