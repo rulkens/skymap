@@ -1,3 +1,4 @@
+import type { DecodedPixels } from '../../@types/scene/DecodedPixels';
 import type { HeightTile } from '../../@types/scene/HeightTile';
 import {
   HEIGHT_POSTS_PER_TILE,
@@ -11,13 +12,6 @@ import {
   HEIGHT_TILE_VERSION_OFFSET,
 } from '../../data/scene/heightTileFormat';
 import { codeHeightM } from './codeHeightM';
-
-type DecodedPixels = {
-  data: ArrayLike<number>;
-  width: number;
-  height: number;
-  channels: 3 | 4;
-};
 
 /**
  * decodeHeightTile — decoded Terrain-RGB pixels plus the `SHGT` chunk to posts.
