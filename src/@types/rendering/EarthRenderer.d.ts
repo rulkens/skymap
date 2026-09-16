@@ -79,7 +79,7 @@ export type EarthRenderer = Renderer & {
   setPlaceholderMap(kind: TextureKind, atlas: ImageBitmap, rect: AtlasTileRect): void;
   /**
    * A fresh view of `kind`'s current layer (committed map if `setMap` has
-   * landed one, else the placeholder) — how `earthSurfaceTileRenderer`
+   * landed one, else the placeholder) — how `surfaceTileRenderer`
    * shares this renderer's material/night/normal/cloud maps, since it owns
    * none of them itself. This renderer stays the sole owner; the caller
    * must never destroy the returned view's texture.

@@ -25,7 +25,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * different body, triggers a one-shot fetch keyed by
    * `SURFACE_TILE_REGISTRY[bodyId].manifestKey`). `baseLevel` is the
    * caller's — this subsystem no longer derives it from a `Tier`, since which
-   * function does that is body-specific (`earthBaseLevelForTier` today).
+   * function does that is body-specific (`baseLevelForTier` today).
    */
   plannerParams(bodyId: BodyId, baseLevel: number): SurfaceTilePlannerParams | null;
 

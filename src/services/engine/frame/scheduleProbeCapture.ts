@@ -15,7 +15,7 @@ import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../data/rendering/probeRefreshIntervalMs';
-import { meshBodySlabHostId } from '../../../utils/scene/meshBodySlabHostId';
+import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
 import { cubemapFaceContext } from './cubemapFaceContext';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';

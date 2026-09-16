@@ -1,4 +1,5 @@
 import type { LonLatDeg } from './LonLatDeg';
+import type { SurfaceTileBodyId } from '../data/SurfaceTileBodyId';
 
 /**
  * SurfaceTileDebugSnapshot — a cheap, on-demand read of `surfaceTileSubsystem`'s
@@ -9,7 +10,10 @@ import type { LonLatDeg } from './LonLatDeg';
  */
 export type SurfaceTileDebugSnapshot = {
   readonly engaged: boolean;
-  /** Atlas slot count: `(EARTH_TILE_ATLAS_SIDE / tilePx) ** 2`. */
+  /** The engaged body, or `null` while disengaged — what the panel titles
+   *  itself with and what its fly-to control targets. */
+  readonly bodyId: SurfaceTileBodyId | null;
+  /** Atlas slot count: `(SURFACE_TILE_ATLAS_SIDE / tilePx) ** 2`. */
   readonly capacity: number;
   /** Slots currently claimed by a key, loaded or still in flight. */
   readonly used: number;

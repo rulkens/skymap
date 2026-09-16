@@ -17,7 +17,7 @@ import { deriveBodyStates } from '../../../../services/engine/frame/deriveBodySt
 import { orbitAnglesLookingAlong } from '../../../../utils/camera/orbitAnglesLookingAlong';
 import { ORIENTATION_FRAMES } from '../../../orientation/orientationFrames';
 import { SCENE_EARTH } from '../../../bodies/sceneEarth';
-import { outerBoundRadiusM } from '../../../../utils/scene/outerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../../scaleUnits';
 
 const FLIGHT_SEC = 70; // default one-leg pull-back window, same as earthFlyout

@@ -19,6 +19,7 @@
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
 import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { SurfaceTileSpec } from '../../../@types/data/SurfaceTileSpec';
 import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
 import type { SurfaceTileBand } from '../../../@types/scene/SurfaceTileBand';
@@ -36,21 +37,21 @@ import { createTileStreamSubsystem } from './tileStreamSubsystem';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { surfaceTileBandFromBounds } from '../../../utils/scene/surfaceTileBandFromBounds';
-import { surfaceTilePath } from '../../../utils/scene/surfaceTilePath';
-import { fetchSurfaceTileManifest } from '../../../utils/scene/fetchSurfaceTileManifest';
+import { surfaceTileBandFromBounds } from '../../../utils/surfaceTiles/surfaceTileBandFromBounds';
+import { surfaceTilePath } from '../../../utils/surfaceTiles/surfaceTilePath';
+import { fetchSurfaceTileManifest } from '../../../utils/network/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../utils/network/fetchHeightTile';
-import { directionToLonLatDeg } from '../../../utils/scene/directionToLonLatDeg';
-import { deepestBandLevelAt } from '../../../utils/scene/deepestBandLevelAt';
+import { directionToLonLatDeg } from '../../../utils/geo/directionToLonLatDeg';
+import { deepestBandLevelAt } from '../../../utils/surfaceTiles/deepestBandLevelAt';
 import {
-  EARTH_TILE_ATLAS_SIDE,
-  EARTH_TILE_CONCURRENCY,
-  EARTH_TILE_LOD_BIAS,
-  EARTH_TILE_PX,
+  SURFACE_TILE_ATLAS_SIDE,
+  SURFACE_TILE_CONCURRENCY,
+  SURFACE_TILE_LOD_BIAS,
+  SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
-} from '../../../data/bodies/earthTileParams';
+} from '../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
@@ -63,6 +64,7 @@ const HEIGHT_ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm';
  *  restating it. */
 export const EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT: SurfaceTileDebugSnapshot = {
   engaged: false,
+  bodyId: null,
   capacity: 0,
   used: 0,
   height: { used: 0, capacity: 0 },
@@ -157,9 +159,9 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * rejection degrades to base-only, cheaper to reason about than silently
    * adapting to wrong pixels. `tilePx` is a validated ASSERTION:
    * `residentSlot` derives the atlas's `slotsPerRow` from
-   * `EARTH_TILE_ATLAS_SIDE / tilePx` alone, an identity that holds only at
+   * `SURFACE_TILE_ATLAS_SIDE / tilePx` alone, an identity that holds only at
    * the shipped 512 px edge. `baseLevel` arrives already resolved — WHICH
-   * function turns a tier into a level is body-specific (`earthBaseLevelForTier`
+   * function turns a tier into a level is body-specific (`baseLevelForTier`
    * today), so this generic subsystem no longer calls one itself.
    */
   function derivePlannerParams(
@@ -167,8 +169,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     baseLevel: number,
   ): SurfaceTilePlannerParams | null {
     if (fetched.bands.length === 0) return null;
-    const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
-    if (tilePx !== EARTH_TILE_PX) return null;
+    const tilePx = fetched.tilePx ?? SURFACE_TILE_PX;
+    if (tilePx !== SURFACE_TILE_PX) return null;
     const bands: SurfaceTileBand[] = [];
     for (const band of fetched.bands) {
       // Not baked for the albedo product (e.g. a height-only row, once those
@@ -193,7 +195,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       tilePx,
       baseLevel,
       bands,
-      lodBias: EARTH_TILE_LOD_BIAS,
+      lodBias: SURFACE_TILE_LOD_BIAS,
     };
   }
 
@@ -247,15 +249,15 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * edge, so a re-bake at a different edge stays a data change.
    */
   function engage(tilePx: number, bodyId: BodyId): NonNullable<typeof atlas> {
-    const slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
+    const slotsPerRow = SURFACE_TILE_ATLAS_SIDE / tilePx;
     const created = createTileStreamSubsystem<ImageBitmap>({
       device,
       requestRender,
-      atlasSide: EARTH_TILE_ATLAS_SIDE,
+      atlasSide: SURFACE_TILE_ATLAS_SIDE,
       slotSide: tilePx,
       format: ATLAS_FORMAT,
       label: 'surface-tiles-albedo',
-      concurrency: EARTH_TILE_CONCURRENCY,
+      concurrency: SURFACE_TILE_CONCURRENCY,
       upload: uploadBitmapToAtlas,
       release: closeBitmap,
     });
@@ -268,7 +270,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       slotSide: HEIGHT_POSTS_PER_TILE,
       format: HEIGHT_ATLAS_FORMAT,
       label: 'surface-tiles-height',
-      concurrency: EARTH_TILE_CONCURRENCY,
+      concurrency: SURFACE_TILE_CONCURRENCY,
       upload: (heightAtlas, slotIdx, image) =>
         uploadBitmapToAtlas(heightAtlas, slotIdx, image.bitmap),
       release: (image) => closeBitmap(image.bitmap),
@@ -394,7 +396,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
           // recycled) — see `uploadBitmapToAtlas`/`closeBitmap`.
           const slot = streams.stream.upload(key, bitmap);
           // Stamped here, at the upload site — REAL time (`performance.now()`,
-          // never sim time), so `earthSurfaceTileRenderer`'s crossfade runs
+          // never sim time), so `surfaceTileRenderer`'s crossfade runs
           // even while the sim clock is paused or scaled.
           const readyAtMs = performance.now();
           pendingLevelOf.delete(key);
@@ -491,6 +493,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
     return {
       engaged: true,
+      // Only reachable via `engage()`, called from `update()` after
+      // `plannerParams` already matched `bodyId` against a registry row —
+      // narrower than `BodyId` for real, not just by assertion.
+      bodyId: atlas.bodyId as SurfaceTileBodyId,
       capacity: atlas.slotsPerRow * atlas.slotsPerRow,
       used: atlas.stream.occupiedCount(),
       height: {

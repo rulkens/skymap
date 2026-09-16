@@ -12,7 +12,7 @@
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
-import { meshBodiesAttachedTo } from '../../../utils/scene/meshBodiesAttachedTo';
+import { meshBodiesAttachedTo } from '../../../utils/meshBodies/meshBodiesAttachedTo';
 import { sceneBodyPartition } from './sceneBodyPartition';
 
 export function drawableMeshBodies(

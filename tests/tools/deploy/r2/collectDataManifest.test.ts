@@ -1,6 +1,6 @@
 /**
  * `collectDataManifest` is the manifest's own upload row — mirrors
- * `collectEarthTileManifest`. The empty-directory case is the one that
+ * `collectSurfaceTileManifest`. The empty-directory case is the one that
  * matters: a silently-empty group here would let `buildGroups()` upload
  * fresh hashed data behind a stale `manifest.json` still pointing at the
  * previous generation, which is the exact failure the whole drift-guard

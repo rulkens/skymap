@@ -52,7 +52,7 @@
  * `cutSurfaceTiles` refines a patch at level `z` while its projected size
  * `screenPx` needs a finer level, and settles at the first level where
  * `screenPx <= 2 · tilePx` (that threshold falls out of
- * `EARTH_TILE_LOD_BIAS = 1`: the planner refines while
+ * `SURFACE_TILE_LOD_BIAS = 1`: the planner refines while
  * `ceil(log2(screenPx / tilePx)) - lodBias > 0`). A level-`z` tile spans
  * `2πR / 2^z` of ground (`surfaceTileColumns` puts `2^z` tiles around the
  * equator), and at altitude `h` a viewport `H` px tall spans `2h·tan(fovY/2)`
@@ -66,7 +66,7 @@
  * (`src/services/engine/camera/cameraFraming.ts`; NOT the 40° an earlier
  * draft of this comment assumed — that gave a band 1.77× too high, fading the
  * deck out around z5 instead of across z6→z7) — `tilePx = 512`
- * (`EARTH_TILE_PX`), and a representative 900 px-tall viewport: z6 settles
+ * (`SURFACE_TILE_PX`), and a representative 900 px-tall viewport: z6 settles
  * around 476 km and z7 around 238 km. Expressed in Earth radii that is
  * `476 / 6371 ≈ 0.075` and `238 / 6371 ≈ 0.037` — the fade starts at the z6
  * altitude (still coarse tiles, so the whole-globe deck is doing its normal
@@ -79,7 +79,7 @@
  * This is a CALIBRATION against a default viewport, not an identity: `h`
  * scales linearly with viewport height `H`, so a taller window shifts every
  * level's settling altitude upward (at `H = 1000` the z6 altitude is ~529 km,
- * not ~476 km), and the tier's base level plus `EARTH_TILE_LOD_BIAS` also
+ * not ~476 km), and the tier's base level plus `SURFACE_TILE_LOD_BIAS` also
  * move where the planner actually settles for a given session. The band
  * therefore tracks the tile levels approximately and by intent, not exactly —
  * which is fine, because it is a look dial, and it is the same reason the

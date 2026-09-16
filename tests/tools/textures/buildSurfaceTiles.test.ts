@@ -5,13 +5,19 @@ import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
-import { bakeAll, bakeCoarserLevel, TILE_PREFIX } from '../../../tools/textures/buildSurfaceTiles';
-import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
-import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
+import { bakeAll, bakeCoarserLevel } from '../../../tools/textures/buildSurfaceTiles';
+import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
+import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import type { HeightSource } from '../../../tools/textures/HeightSource';
 import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { SurfaceTileProduct } from '../../../src/@types/data/SurfaceTileProduct';
 
 const TILE_PX = 512;
+/** Fixture stand-in for Earth's own `earthSurfaceBake` — the generic
+ *  functions under test don't care whose tileRoot they're writing to. */
+const TILE_PREFIX = 'earth-tiles/v9';
+const TEST_BODY = { tileRoot: 'earth-tiles', tilePrefix: TILE_PREFIX };
 
 const dirs: string[] = [];
 
@@ -96,7 +102,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 0, 1, BLUE);
     await writeChild(dir, 2, 1, 1, WHITE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir);
+    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -126,7 +132,7 @@ describe('bakeCoarserLevel', () => {
     const dir = tmpDir();
     await writeChild(dir, 2, 1, 1, WHITE); // SE only
 
-    await bakeCoarserLevel(1, TILE_PX, dir);
+    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -148,8 +154,10 @@ describe('bakeCoarserLevel', () => {
   // transparent hole once an underfill source is given.
   const ORANGE = [255, 128, 0, 255] as const;
 
-  /** A stub `EarthImagerySource` whose `readBox` always returns a solid colour. */
-  function stubFillerSource(rgba: readonly [number, number, number, number]): EarthImagerySource & {
+  /** A stub `SurfaceImagerySource` whose `readBox` always returns a solid colour. */
+  function stubFillerSource(
+    rgba: readonly [number, number, number, number],
+  ): SurfaceImagerySource & {
     readBoxCalls: number;
   } {
     const stub = {
@@ -178,7 +186,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 1, 1, WHITE); // SE only — NW/NE/SW absent
     const filler = stubFillerSource(ORANGE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, filler);
+    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, filler);
 
     const parentPath = join(
       dir,
@@ -205,7 +213,7 @@ describe('bakeCoarserLevel', () => {
     await writeChild(dir, 2, 1, 1, WHITE);
     const filler = stubFillerSource(ORANGE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, filler);
+    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, filler);
 
     expect(filler.readBoxCalls).toBe(0);
   });
@@ -220,7 +228,7 @@ describe('bakeCoarserLevel', () => {
     const PURPLE = [128, 0, 128, 255] as const;
     const deepSource = stubFillerSource(PURPLE);
 
-    await bakeCoarserLevel(1, TILE_PX, dir, undefined, undefined, deepSource);
+    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX, undefined, undefined, deepSource);
 
     const parentPath = join(
       dir,
@@ -237,7 +245,7 @@ describe('bakeCoarserLevel', () => {
   it('leaves a childless tile unwritten when no deep source is given', async () => {
     const dir = tmpDir();
 
-    await bakeCoarserLevel(1, TILE_PX, dir);
+    await bakeCoarserLevel(1, TILE_PX, dir, TILE_PREFIX);
 
     const parentPath = join(
       dir,
@@ -254,13 +262,13 @@ describe('bakeAll', () => {
   const BOX_WEST: LonLatBounds = { west: -180, east: 0, south: -90, north: 90 };
   const BOX_EAST: LonLatBounds = { west: 0, east: 180, south: -90, north: 90 };
 
-  /** A minimal `EarthImagerySource` that answers only its own tile box —
+  /** A minimal `SurfaceImagerySource` that answers only its own tile box —
    *  the other stub's box is outside its coverage, same as a real source. */
   function stubSource(
     id: string,
     coverage: LonLatBounds,
     rgba: readonly [number, number, number, number],
-  ): EarthImagerySource {
+  ): SurfaceImagerySource {
     return {
       id,
       attribution: `${id} attribution`,
@@ -287,7 +295,7 @@ describe('bakeAll', () => {
     const dir = tmpDir();
     // Primary answers only its own half of every tile's box (see the raster
     // below); the rest of each tile stays transparent unless underfilled.
-    const primary: EarthImagerySource = {
+    const primary: SurfaceImagerySource = {
       id: 'stub-primary',
       attribution: 'stub-primary attribution',
       provenance: {
@@ -312,7 +320,7 @@ describe('bakeAll', () => {
     };
     const underfill = stubSource('stub-underfill', BOX_WEST, ORANGE);
 
-    await bakeAll([{ source: primary, minLevel: STUB_Z, underfill }], dir);
+    await bakeAll(TEST_BODY, [{ source: primary, minLevel: STUB_Z, underfill }], dir);
 
     const tilePath = join(
       dir,
@@ -350,7 +358,7 @@ describe('bakeAll', () => {
     // the 32 an unclamped bakeDeepestLevel would probe.
     const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
     let readBoxCalls = 0;
-    const regional: EarthImagerySource = {
+    const regional: SurfaceImagerySource = {
       id: 'stub-regional',
       attribution: 'stub-regional attribution',
       provenance: {
@@ -368,7 +376,7 @@ describe('bakeAll', () => {
       },
     };
 
-    await bakeAll([{ source: regional, minLevel: 3 }], dir);
+    await bakeAll(TEST_BODY, [{ source: regional, minLevel: 3 }], dir);
 
     expect(readBoxCalls).toBe(4);
   });
@@ -387,7 +395,7 @@ describe('bakeAll', () => {
     // tiles, each now baked from the deep source (Task A) instead of skipped.
     const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
     let underfillCalls = 0;
-    const underfill: EarthImagerySource = {
+    const underfill: SurfaceImagerySource = {
       id: 'stub-underfill-2',
       attribution: 'stub-underfill-2 attribution',
       provenance: {
@@ -404,7 +412,7 @@ describe('bakeAll', () => {
         return raster;
       },
     };
-    const regional: EarthImagerySource = {
+    const regional: SurfaceImagerySource = {
       id: 'stub-regional-2',
       attribution: 'stub-regional-2 attribution',
       provenance: {
@@ -428,7 +436,7 @@ describe('bakeAll', () => {
     // fill the rest.
     await writeChild(dir, 3, 6, 2, [9, 9, 9, 255]);
 
-    await bakeAll([{ source: regional, minLevel: 2, underfill }], dir);
+    await bakeAll(TEST_BODY, [{ source: regional, minLevel: 2, underfill }], dir);
 
     // 4 underfill calls at z3 (one per deepest-level tile) plus 3 at z2, one
     // per childless halo tile the deep source resamples — (1, 0) nests on
@@ -448,7 +456,7 @@ describe('bakeAll', () => {
     // z3 (8x4). The box is exactly tile (3, 1)'s span, so (2, 0), (3, 0) and
     // (2, 1) are halo siblings and (1, 1) — the next quad west — is not.
     const coverageBox: LonLatBounds = { west: -45, east: 0, north: 45, south: 0 };
-    const primary: EarthImagerySource = {
+    const primary: SurfaceImagerySource = {
       id: 'stub-edge',
       attribution: 'stub-edge attribution',
       provenance: {
@@ -467,7 +475,7 @@ describe('bakeAll', () => {
     };
     // Answers every box, unlike `stubSource` — a global filler, which is what
     // BMNG is under EOX and EOX under GeoDanmark.
-    const underfill: EarthImagerySource = {
+    const underfill: SurfaceImagerySource = {
       id: 'stub-edge-underfill',
       attribution: 'stub-edge-underfill attribution',
       provenance: {
@@ -484,7 +492,7 @@ describe('bakeAll', () => {
       },
     };
 
-    await bakeAll([{ source: primary, minLevel: 3, underfill }], dir);
+    await bakeAll(TEST_BODY, [{ source: primary, minLevel: 3, underfill }], dir);
 
     const colourAt = async (x: number, y: number) => {
       const path = join(dir, surfaceTilePath({ product: 'albedo', z: 3, x, y }, TILE_PREFIX));
@@ -515,6 +523,7 @@ describe('bakeAll', () => {
     const east = stubSource('stub-east', BOX_EAST, [0, 0, 255, 255]);
 
     await bakeAll(
+      TEST_BODY,
       [
         { source: west, minLevel: STUB_Z },
         { source: east, minLevel: STUB_Z },
@@ -544,12 +553,58 @@ describe('bakeAll', () => {
     );
   });
 
+  // The bug this pins: the albedo `builtFrom` entry was written unconditionally,
+  // not gated on `products.has('albedo')` (unlike the height entry beside it) —
+  // a `--product height` run would restamp the band's albedo provenance with
+  // whatever imagery source it happened to carry, even though it baked none
+  // of that product's tiles.
+  it('a height-only run keeps the prior albedo provenance instead of overwriting it', async () => {
+    const dir = tmpDir();
+    const heightSource = (vintage: string): HeightSource => ({
+      id: 'stub-height',
+      attribution: 'stub-height attribution',
+      maxLevel: STUB_Z,
+      coverage: [BOX_WEST],
+      provenance: { sourceId: 'stub-height', attribution: 'stub-height attribution', vintage },
+      async readGrid(_z, _i0, _j0, nx, ny) {
+        return new Float32Array(nx * ny).fill(100);
+      },
+      async boundsInBox() {
+        return [100, 100];
+      },
+    });
+    const albedoV1 = stubSource('stub-albedo', BOX_WEST, [255, 0, 0, 255]);
+
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedoV1, minLevel: STUB_Z, height: heightSource('v1') }],
+      dir,
+    );
+
+    // A later run baking height only: the albedo source object it carries
+    // (needed for the band's own coverage/levels) has since moved to a new
+    // vintage on disk, but this run never reads it for pixels.
+    const albedoV2 = stubSource('stub-albedo', BOX_WEST, [0, 255, 0, 255]);
+    await bakeAll(
+      TEST_BODY,
+      [{ source: albedoV2, minLevel: STUB_Z, height: heightSource('v2') }],
+      dir,
+      new Set<SurfaceTileProduct>(['height']),
+    );
+
+    const manifest = JSON.parse(
+      readFileSync(join(dir, 'earth-tiles/manifest.json'), 'utf8'),
+    ) as SurfaceTileManifest;
+    expect(manifest.bands?.[0]?.builtFrom.albedo).toEqual(albedoV1.provenance);
+    expect(manifest.bands?.[0]?.builtFrom.height).toEqual(heightSource('v2').provenance);
+  });
+
   it('a second bakeAll over the same output skips existing tiles and leaves bytes identical', async () => {
     const dir = tmpDir();
     const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
     const bands = [{ source: west, minLevel: STUB_Z }];
 
-    await bakeAll(bands, dir);
+    await bakeAll(TEST_BODY, bands, dir);
     const tilePath = join(
       dir,
       surfaceTilePath({ product: 'albedo', z: STUB_Z, x: 0, y: 0 }, TILE_PREFIX),
@@ -557,7 +612,7 @@ describe('bakeAll', () => {
     const beforeMtime = statSync(tilePath).mtimeMs;
     const beforeBytes = readFileSync(tilePath);
 
-    await bakeAll(bands, dir);
+    await bakeAll(TEST_BODY, bands, dir);
 
     expect(statSync(tilePath).mtimeMs).toBe(beforeMtime);
     expect(readFileSync(tilePath).equals(beforeBytes)).toBe(true);
@@ -567,7 +622,7 @@ describe('bakeAll', () => {
     const dir = tmpDir();
     const west = stubSource('stub-west', BOX_WEST, [255, 0, 0, 255]);
     const bands = [{ source: west, minLevel: STUB_Z }];
-    await bakeAll(bands, dir);
+    await bakeAll(TEST_BODY, bands, dir);
 
     const tilePath = join(
       dir,
@@ -584,10 +639,24 @@ describe('bakeAll', () => {
     const manifestBefore = readFileSync(manifestPath, 'utf8');
     const indexBefore = readFileSync(indexPath, 'utf8');
 
-    await expect(bakeAll(bands, dir)).rejects.toThrow(/missing on disk/);
+    await expect(bakeAll(TEST_BODY, bands, dir)).rejects.toThrow(/missing on disk/);
 
     expect(readFileSync(manifestPath, 'utf8')).toBe(manifestBefore);
     expect(readFileSync(indexPath, 'utf8')).toBe(indexBefore);
+  });
+
+  // The landmine guard: a hardwired tileRoot would silently overwrite
+  // whichever body baked first into a shared outDir (main's live Earth
+  // manifest, if this ever ran with `public/data/images` for real).
+  it("writes under the body's own tileRoot and nothing under a different body's", async () => {
+    const dir = tmpDir();
+    const source = stubSource('stub-mars', BOX_WEST, [180, 90, 60, 255]);
+    const marsBody = { tileRoot: 'test-tiles', tilePrefix: 'test-tiles/v1' };
+
+    await bakeAll(marsBody, [{ source, minLevel: STUB_Z }], dir);
+
+    expect(existsSync(join(dir, 'test-tiles/manifest.json'))).toBe(true);
+    expect(existsSync(join(dir, 'earth-tiles'))).toBe(false);
   });
 });
 

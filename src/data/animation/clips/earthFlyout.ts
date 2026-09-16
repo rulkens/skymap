@@ -44,7 +44,7 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import { dollyTo, spin, all } from '../../../services/engine/animation/effectHelpers';
 import { deriveBodyStates } from '../../../services/engine/frame/deriveBodyStates';
 import { SCENE_EARTH } from '../../bodies/sceneEarth';
-import { outerBoundRadiusM } from '../../../utils/scene/outerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../scaleUnits';
 
 // The pull-back window. Longer than flyout's 22 s because this shot spans ~20

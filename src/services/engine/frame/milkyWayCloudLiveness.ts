@@ -17,8 +17,8 @@ import { fadeBand } from '../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
 import { sceneBodyStates } from './sceneBodyStates';
-import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
-import { regionById } from '../../../utils/scene/regionById';
+import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
+import { regionById } from '../../../utils/regions/regionById';
 
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 

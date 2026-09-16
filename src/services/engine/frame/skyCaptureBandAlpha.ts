@@ -13,7 +13,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import type { SkyCaptureKey } from '../../../@types/rendering/SkyCaptureKey';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
+import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function skyCaptureBandAlpha(

@@ -22,9 +22,9 @@ import { orthoVrtXml } from './ortho/orthoVrtXml';
 import { packPoints, type ScenePoint } from './pack/packPoints';
 import { assetArtifactUrl, groupAssetDir } from './manifest/geo3dLayout';
 import { publishAsset } from './manifest/publishAsset';
-import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
+import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 import type { BoundsM } from '../scene-workbench/@types/BoundsM';
 import type { SceneGroupDefinition } from './@types/SceneGroupDefinition';
 import type { PointCloudAsset } from '../scene-workbench/@types/PointCloudAsset';
@@ -63,7 +63,7 @@ export async function bakeLidar(
   const workDir = join(dhmDir, '.bake');
   await mkdir(workDir, { recursive: true });
 
-  const rect = earthTileIndicesForBounds(group.bounds, GEODANMARK_LEVEL, EARTH_TILE_PX);
+  const rect = surfaceTileIndicesForBounds(group.bounds, GEODANMARK_LEVEL, SURFACE_TILE_PX);
   const levelDir = join(rawDataPath('geodanmark.dir'), String(GEODANMARK_LEVEL));
   // GDAL reads a VRT whose sources are missing as all-zero, so without this
   // check an absent tile tree bakes every point black and reports success.
@@ -75,7 +75,7 @@ export async function bakeLidar(
   const vrtPath = join(workDir, `${group.id}-ortho.vrt`);
   await writeFile(
     vrtPath,
-    orthoVrtXml({ levelDir, rect, level: GEODANMARK_LEVEL, tilePx: EARTH_TILE_PX }),
+    orthoVrtXml({ levelDir, rect, level: GEODANMARK_LEVEL, tilePx: SURFACE_TILE_PX }),
   );
 
   const csvPath = join(workDir, `${group.id}.csv`);

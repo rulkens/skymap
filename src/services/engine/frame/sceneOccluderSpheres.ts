@@ -7,7 +7,7 @@
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { MAX_ORBIT_OCCLUDERS } from '../../../data/bodies/orbitTrailConstants';
-import { selectOccluderSpheresKm } from '../../../utils/scene/selectOccluderSpheresKm';
+import { selectOccluderSpheresKm } from '../../../utils/occlusion/selectOccluderSpheresKm';
 import { sceneOccluderBodies } from './sceneOccluderBodies';
 
 // Refilled each frame so the hot path allocates no GPU-bound buffer; the

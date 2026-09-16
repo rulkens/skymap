@@ -10,13 +10,13 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
+import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileColumns';
 import type { TileIndexRect } from '../../utils/scene/TileIndexRect';
 
 export type OrthoVrtSpec = {
   /** `<geodanmark.dir>/19` — the level directory holding `<x>/<y>.jpg`. */
   readonly levelDir: string;
-  readonly rect: TileIndexRect; // earthTileIndicesForBounds(bounds, 19, EARTH_TILE_PX)
+  readonly rect: TileIndexRect; // surfaceTileIndicesForBounds(bounds, 19, SURFACE_TILE_PX)
   readonly level: number;
   readonly tilePx: number;
 };

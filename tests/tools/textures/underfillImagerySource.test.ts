@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { underfillImagerySource } from '../../../tools/textures/underfillImagerySource';
-import type { EarthImagerySource } from '../../../tools/textures/EarthImagerySource';
+import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 const BOX: LonLatBounds = { west: 12, east: 13, south: 55, north: 56 };
@@ -9,7 +9,7 @@ const WIDTH = 4;
 const HEIGHT = 4;
 
 /** Minimal stub source: constant identity fields, `readBox` fixed to one return value. */
-function stubSource(id: string, readBox: EarthImagerySource['readBox']): EarthImagerySource {
+function stubSource(id: string, readBox: SurfaceImagerySource['readBox']): SurfaceImagerySource {
   return {
     id,
     attribution: `${id} attribution`,
@@ -55,7 +55,9 @@ describe('underfillImagerySource', () => {
 
   it('declines without ever calling filler.readBox when primary declines INSIDE its coverage', async () => {
     const primary = stubSource('primary', async () => null);
-    const fillerReadBox = vi.fn<EarthImagerySource['readBox']>(async () => solid([0, 0, 255, 255]));
+    const fillerReadBox = vi.fn<SurfaceImagerySource['readBox']>(async () =>
+      solid([0, 0, 255, 255]),
+    );
     const filler = stubSource('filler', fillerReadBox);
 
     const source = underfillImagerySource(primary, filler);

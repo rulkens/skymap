@@ -58,8 +58,8 @@ const TS_FILES: readonly string[] = [
   ...walkFiles('src/services/camera', ['.ts']),
   ...walkFiles('src/utils/camera', ['.ts']),
   ...walkFiles('src/layers', ['.ts']),
-  'src/utils/scene/cutSurfaceTiles.ts',
-  'src/utils/scene/starSphereRangeM.ts',
+  'src/utils/surfaceTiles/cutSurfaceTiles.ts',
+  'src/utils/star/starSphereRangeM.ts',
 ].filter((f) => !SEAM_FILES.includes(f));
 
 // A glob typo (wrong dir name, wrong extension) would silently sweep zero
@@ -90,7 +90,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     'cull/fade precedent — bridges radiusM to Mpc to call the shared apparentSizePx sub-pixel cull and cloudDeckFade (both outside the body-slab path, both Mpc-shaped APIs)',
   ],
   [
-    'src/services/engine/frame/passes/earthSurfaceTilesPass.ts',
+    'src/services/engine/frame/passes/surfaceTilesPass.ts',
     'fade precedent — bridges radiusM to Mpc for cloudDeckFade alone, so a patch and the base globe dissolve the deck shadow together (outside the body-slab path)',
   ],
   [
@@ -122,7 +122,7 @@ const SCALE_UNITS_ALLOW_LIST: ReadonlyMap<string, string> = new Map([
     "NEAR0 star-sphere precedent — scales a star's radiusM into the RENDER_ORIGIN_MPC-relative NEAR0 model matrix via composeBodyMvp, not the body-slab's composeBodySlabMvp",
   ],
   [
-    'src/utils/scene/starSphereRangeM.ts',
+    'src/utils/star/starSphereRangeM.ts',
     "NEAR0 star-sphere precedent (spec §7.1) — folds a Mpc DISTANCE SCALAR (camera-to-sphere hypot) to metres for NEAR0's distanceRangeM, not a pose; the one exception spec §7.1 carves for the star-sphere interval",
   ],
   [

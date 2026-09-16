@@ -6,8 +6,8 @@ import { elementsById } from '../../../src/data/bodies/orbitalElements';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
-import { regionById } from '../../../src/utils/scene/regionById';
-import { regionRelativeDistanceMpc } from '../../../src/utils/scene/regionRelativeDistanceMpc';
+import { regionById } from '../../../src/utils/regions/regionById';
+import { regionRelativeDistanceMpc } from '../../../src/utils/regions/regionRelativeDistanceMpc';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 describe('BODY_REGIONS', () => {

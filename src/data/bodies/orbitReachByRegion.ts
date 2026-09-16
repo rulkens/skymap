@@ -9,7 +9,7 @@
 
 import type { BodyRegion } from '../../@types/scene/BodyRegion';
 import { orbitReachByRegion } from '../../utils/orbit/orbitReachByRegion';
-import { regionOfBody } from '../../utils/scene/regionOfBody';
+import { regionOfBody } from '../../utils/regions/regionOfBody';
 import { TRAIL_ELEMENTS } from './trailElements';
 import { SCENE_ANCHORS } from './sceneAnchors';
 

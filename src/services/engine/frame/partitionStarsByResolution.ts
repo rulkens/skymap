@@ -25,7 +25,7 @@
 import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { resolvesToSphere } from '../../../utils/scene/resolvesToSphere';
+import { resolvesToSphere } from '../../../utils/star/resolvesToSphere';
 
 /**
  * Apparent-size threshold (px) at which a star promotes from an additive

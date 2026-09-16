@@ -14,7 +14,7 @@ import { readRiffChunk } from '../../../../src/utils/image/readRiffChunk';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
 import { codeHeightM } from '../../../../tools/utils/textures/codeHeightM';
 import { decodeHeightTile } from '../../../../tools/utils/textures/decodeHeightTile';
-import { decodeHeightTileHeader } from '../../../../src/utils/scene/decodeHeightTileHeader';
+import { decodeHeightTileHeader } from '../../../../src/utils/surfaceTiles/decodeHeightTileHeader';
 import { heightCode } from '../../../../tools/utils/textures/heightCode';
 import { encodeHeightTile } from '../../../../tools/utils/textures/encodeHeightTile';
 
