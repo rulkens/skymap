@@ -24,11 +24,21 @@ const SURFACE_TILE_SKIRT_DEPTH_FRACTION: f32 = 0.05;
 // '2*sin^2(x/2)' is algebraically '1 - cos x' and NOT interchangeable with it:
 // at a z19 patch's dlon of 1.2e-5 rad, '1 - cos' cancels away every
 // significant f32 bit while this form keeps them all. Do not 'simplify' it.
-fn patchVertexOffset(anchor: PatchInstance, radiusM: f32, s: f32, t: f32, heightM: f32) -> vec3<f32> {
-  let lon0Rad = anchor.lon0Rad;
-  let lat0Rad = anchor.lat0Rad;
-  let dlon = s * anchor.dLonRad;
-  let dlat = t * anchor.dLatRad;
+// Scalars, never the PatchInstance by value: Adreno (Android Chrome) reads the
+// copied storage-buffer struct's angles as ~0, collapsing every patch onto its
+// corner -- see RENDERER.md.
+fn patchVertexOffset(
+  lon0Rad: f32,
+  lat0Rad: f32,
+  dLonRad: f32,
+  dLatRad: f32,
+  radiusM: f32,
+  s: f32,
+  t: f32,
+  heightM: f32
+) -> vec3<f32> {
+  let dlon = s * dLonRad;
+  let dlat = t * dLatRad;
   let lat = lat0Rad + dlat;
 
   let sinHalfLon = sin(dlon / 2.0);
@@ -126,7 +136,9 @@ fn vs(
     depthM = SURFACE_TILE_SKIRT_DEPTH_FRACTION * u.radiusM * inst.dLatRad;
   }
 
-  let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(inst, u.radiusM, s, t, h - depthM);
+  let worldPosRelCam = inst.originRelEyeM + patchVertexOffset(
+    inst.lon0Rad, inst.lat0Rad, inst.dLonRad, inst.dLatRad, u.radiusM, s, t, h - depthM
+  );
 
   var out: VSOut;
   out.clip = u.vp * vec4<f32>(worldPosRelCam, 1.0);
