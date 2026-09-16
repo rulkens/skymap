@@ -119,6 +119,8 @@ export function installPerfHook(store: AppStore, engine: EngineHandle): void {
     collectTimings: (frames: number) => collectTimings(engine, frames),
     setTier: (tier: Tier) => setTier(store, tier),
     getTier: () => selectTier(store.getState()),
+    dispatch: store.dispatch,
+    getState: () => store.getState(),
     slotGroups: SLOT_GROUPS,
   };
   (window as PerfWindow).__skymapPerf = hook;
