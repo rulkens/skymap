@@ -82,7 +82,6 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       sourceBgl,
       focusBgl,
       focusUniform,
-      fades: state.subsystems.fades,
       store: deps.cb.store,
       requestRender,
       reportSourceCount,
