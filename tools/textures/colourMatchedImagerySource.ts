@@ -14,10 +14,10 @@ import sharp from 'sharp';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import type { GreyRaster } from '../utils/image/GreyRaster';
-import { earthTileBounds } from '../utils/scene/earthTileBounds';
-import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
+import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
+import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import type { TileIndexRect } from '../utils/scene/TileIndexRect';
-import type { EarthImagerySource } from './EarthImagerySource';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import { colourOffsetFields } from './colourOffsetFields';
 
 /** Canvas-space offset fields for one contiguous group of `primary`'s coverage,
@@ -63,16 +63,16 @@ function landFractionAt(mask: GreyRaster, lon: number, lat: number): number {
 }
 
 export function colourMatchedImagerySource(
-  primary: EarthImagerySource,
+  primary: SurfaceImagerySource,
   /** Must resample an ARBITRARY box; a fixed-grid source that snaps to its own
    *  tiling (`eoxTileSource`) misregisters the canvas silently. */
-  reference: EarthImagerySource,
+  reference: SurfaceImagerySource,
   opts: {
     readonly sigmaDeg: number;
     /** Whole-globe equirect mask, land 255 and water 0 — inverted swaps the classes silently. */
     readonly waterMaskPath: string;
   },
-): EarthImagerySource {
+): SurfaceImagerySource {
   const canvasLevel = reference.maxLevel + 1;
   if (primary.maxLevel < canvasLevel) {
     throw new Error(
@@ -97,7 +97,7 @@ export function colourMatchedImagerySource(
   // by whichever box `fieldFor` matched — a seam on a tile boundary. The
   // group's envelope costs nothing; the primary declines outside real coverage.
   const rects = primary.coverage.map((box) =>
-    earthTileIndicesForBounds(box, canvasLevel, EARTH_TILE_PX),
+    surfaceTileIndicesForBounds(box, canvasLevel, EARTH_TILE_PX),
   );
   const groupOfCoverage = primary.coverage.map((_, index) => index);
   let merged = true;
@@ -148,11 +148,11 @@ export function colourMatchedImagerySource(
   };
 
   async function buildField(coverage: LonLatBounds): Promise<OffsetField> {
-    const rect = earthTileIndicesForBounds(coverage, canvasLevel, EARTH_TILE_PX);
+    const rect = surfaceTileIndicesForBounds(coverage, canvasLevel, EARTH_TILE_PX);
     const width = (rect.xMax - rect.xMin + 1) * EARTH_TILE_PX;
     const height = (rect.yMax - rect.yMin + 1) * EARTH_TILE_PX;
     const pixels = width * height;
-    const origin = earthTileBounds(canvasLevel, rect.xMin, rect.yMin, EARTH_TILE_PX);
+    const origin = surfaceTileBounds(canvasLevel, rect.xMin, rect.yMin, EARTH_TILE_PX);
     const pxDeg = (origin.east - origin.west) / EARTH_TILE_PX;
     const west = origin.west;
     const north = origin.north;
@@ -162,7 +162,7 @@ export function colourMatchedImagerySource(
     for (let ty = rect.yMin; ty <= rect.yMax; ty++) {
       for (let tx = rect.xMin; tx <= rect.xMax; tx++) {
         const raster = await reference.readBox(
-          earthTileBounds(canvasLevel, tx, ty, EARTH_TILE_PX),
+          surfaceTileBounds(canvasLevel, tx, ty, EARTH_TILE_PX),
           EARTH_TILE_PX,
           EARTH_TILE_PX,
         );
@@ -188,11 +188,11 @@ export function colourMatchedImagerySource(
     // every harvested pixel contributes to the difference exactly once.
     const primaryRgb = new Float32Array(pixels * 3);
     const primaryWeight = new Float32Array(pixels);
-    const primaryRect = earthTileIndicesForBounds(coverage, primary.maxLevel, EARTH_TILE_PX);
+    const primaryRect = surfaceTileIndicesForBounds(coverage, primary.maxLevel, EARTH_TILE_PX);
     for (let ty = primaryRect.yMin; ty <= primaryRect.yMax; ty++) {
       for (let tx = primaryRect.xMin; tx <= primaryRect.xMax; tx++) {
         const raster = await primary.readBox(
-          earthTileBounds(primary.maxLevel, tx, ty, EARTH_TILE_PX),
+          surfaceTileBounds(primary.maxLevel, tx, ty, EARTH_TILE_PX),
           EARTH_TILE_PX,
           EARTH_TILE_PX,
         );

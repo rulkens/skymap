@@ -1,5 +1,5 @@
 /**
- * bmngQuadrantSource — an `EarthImagerySource` over Blue Marble Next
+ * bmngQuadrantSource — a `SurfaceImagerySource` over Blue Marble Next
  * Generation's eight-file quadrant tiling.
  *
  * NASA publishes each BMNG month twice: one 21600x10800 whole-globe equirect,
@@ -34,7 +34,7 @@ import { existsSync } from 'node:fs';
 import sharp from 'sharp';
 
 import { levelFittingWidth } from '../../src/utils/scene/levelFittingWidth';
-import type { EarthImagerySource } from './EarthImagerySource';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Longitude and latitude extent of one quadrant, in degrees. */
@@ -123,7 +123,7 @@ export async function bmngQuadrantSource(source: {
   /** Called once per cache MISS — the band cache is the difference between a
    *  5-minute deepest level and a 2-hour one, worth being observable. */
   readonly onBandDecode?: (quadrant: BmngQuadrant, topPx: number) => void;
-}): Promise<EarthImagerySource> {
+}): Promise<SurfaceImagerySource> {
   const missing = QUADRANT_NAMES.filter((name) => !existsSync(source.quadrantPaths[name]));
   if (missing.length > 0) {
     throw new Error(

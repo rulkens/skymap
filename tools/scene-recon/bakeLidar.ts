@@ -22,7 +22,7 @@ import { orthoVrtXml } from './ortho/orthoVrtXml';
 import { packPoints, type ScenePoint } from './pack/packPoints';
 import { assetArtifactUrl, groupAssetDir } from './manifest/geo3dLayout';
 import { publishAsset } from './manifest/publishAsset';
-import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
+import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import type { BoundsM } from '../scene-workbench/@types/BoundsM';
@@ -63,7 +63,7 @@ export async function bakeLidar(
   const workDir = join(dhmDir, '.bake');
   await mkdir(workDir, { recursive: true });
 
-  const rect = earthTileIndicesForBounds(group.bounds, GEODANMARK_LEVEL, EARTH_TILE_PX);
+  const rect = surfaceTileIndicesForBounds(group.bounds, GEODANMARK_LEVEL, EARTH_TILE_PX);
   const levelDir = join(rawDataPath('geodanmark.dir'), String(GEODANMARK_LEVEL));
   // GDAL reads a VRT whose sources are missing as all-zero, so without this
   // check an absent tile tree bakes every point black and reports success.

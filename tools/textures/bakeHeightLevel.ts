@@ -25,7 +25,7 @@ import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { quantizeHeightGrid } from '../utils/textures/quantizeHeightGrid';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { earthTileBounds } from '../utils/scene/earthTileBounds';
+import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 
 /** Post intervals per tile edge: 129 posts, 128 gaps, the 129th shared with
@@ -266,7 +266,7 @@ export async function bakeHeightLevel(input: {
       // Before bounds/residual, per quantizeHeightGrid's own contract.
       quantizeHeightGrid(own);
 
-      const box = earthTileBounds(z, x, y, EARTH_TILE_PX);
+      const box = surfaceTileBounds(z, x, y, EARTH_TILE_PX);
       // Under water flattening the source's own range still describes the
       // bathymetry that was levelled away, so it would report every ocean tile
       // as 5 km deep — §4.4 wants the Dead Sea's −430 m to be Earth's floor.

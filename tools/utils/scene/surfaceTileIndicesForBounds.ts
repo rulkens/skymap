@@ -3,14 +3,14 @@ import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns'
 import type { TileIndexRect } from './TileIndexRect';
 
 /**
- * earthTileIndicesForBounds — which tile `(x, y)` cells at level `z` a
+ * surfaceTileIndicesForBounds — which tile `(x, y)` cells at level `z` a
  * geographic box touches, as an inclusive rect. `floor` on the min edge and
  * `ceil(edge) - 1` on the max edge: an edge sitting exactly on a tile
  * boundary stays out of the tile beyond it, but any partial overlap still
  * pulls that tile in — the same rule bake callers need to avoid probing
  * tiles a source's `coverage` box can never satisfy.
  */
-export function earthTileIndicesForBounds(
+export function surfaceTileIndicesForBounds(
   bounds: LonLatBounds,
   z: number,
   tilePx: number,

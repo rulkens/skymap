@@ -10,7 +10,7 @@ import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat'
 import { codeHeightM } from '../../../tools/utils/textures/codeHeightM';
 import { heightCode } from '../../../tools/utils/textures/heightCode';
 import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
-import { earthTileBounds } from '../../../tools/utils/scene/earthTileBounds';
+import { surfaceTileBounds } from '../../../tools/utils/scene/surfaceTileBounds';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import { flattenWaterComponents } from '../../../tools/utils/textures/flattenWaterComponents';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
@@ -198,7 +198,7 @@ describe('bakeHeightLevel', () => {
     await bake(dir, 5, [{ x: 10, y: 8 }], source);
 
     const tile = await readTile(dir, 5, 10, 8);
-    const box = earthTileBounds(5, 10, 8, EARTH_TILE_PX);
+    const box = surfaceTileBounds(5, 10, 8, EARTH_TILE_PX);
     // Posts sit on the 0.1 m grid, so compare against the quantised field.
     const quantised = (v: number): number => codeHeightM(heightCode(v));
     expect(tile.heightM[0]).toBe(quantised(analyticHeight(box.west, box.north)));

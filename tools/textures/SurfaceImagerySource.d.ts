@@ -2,7 +2,7 @@ import type { SurfaceTileProvenance } from '../../src/@types/scene/SurfaceTilePr
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /**
- * EarthImagerySource — the one seam between `buildSurfaceTiles` and wherever
+ * SurfaceImagerySource — the one seam between `buildSurfaceTiles` and wherever
  * the pixels come from. Lives in the BUILD tool only, one method wide: a
  * source only answers "given this piece of the planet, at this pixel size,
  * what does it look like?" — the tile grid, level ladder and container stay
@@ -24,7 +24,7 @@ import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
  * to mask and returns 255 everywhere, but still returns four channels — the
  * runtime's blend is written against the channel's presence, not its content.
  */
-export type EarthImagerySource = {
+export type SurfaceImagerySource = {
   readonly id: string;
   /** Verbatim attribution text the licence requires, surfaced in the Splash credits. */
   readonly attribution: string;

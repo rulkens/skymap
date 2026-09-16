@@ -1,5 +1,5 @@
 /**
- * eoxTileSource — an `EarthImagerySource` over the EOX s2cloudless z13
+ * eoxTileSource — a `SurfaceImagerySource` over the EOX s2cloudless z13
  * harvest (`fetchEoxTiles.ts`'s output: `<region>/<z>/<row>/<col>.jpg`,
  * 256 px tiles). EOX's WGS84 TMS grid at z13 is exactly HALF skymap's own
  * 512 px tile edge (`earthTileColumns.ts`), so one skymap z13 box is always
@@ -16,7 +16,7 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { EarthImagerySource } from './EarthImagerySource';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** EOX only ever harvests z13 (`fetchEoxTiles.ts`'s header) — coarser levels
@@ -154,7 +154,7 @@ function rectContains(rect: RegionRect, row: number, col: number): boolean {
 
 export async function eoxTileSource(opts: {
   readonly coverageDir: string; // rawDataPath('eox.dir')
-}): Promise<EarthImagerySource> {
+}): Promise<SurfaceImagerySource> {
   // Regions sorted by name (see `discoverRegionDirs`), so `regions` below —
   // and thus `coverage` and readBox's first-by-name-wins tile lookup — are
   // both deterministic regardless of directory-read order.

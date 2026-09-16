@@ -1,5 +1,5 @@
 /**
- * geodanmarkTileSource — an `EarthImagerySource` over the GeoDanmark z19
+ * geodanmarkTileSource — a `SurfaceImagerySource` over the GeoDanmark z19
  * orthophoto harvest (`data/raw/geodanmark/README.md`): `<x>/<y>.jpg` tiles
  * ALREADY on skymap's own equirect grid (512 px, x0 at -180 east-positive,
  * y0 at +90 south-positive) — unlike EOX's own TMS grid, no re-indexing or
@@ -16,7 +16,7 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { EarthImagerySource } from './EarthImagerySource';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
@@ -34,7 +34,7 @@ const GEODANMARK_PROVENANCE = {
 } as const;
 
 /** Degrees per tile at `z`, identical on both axes at the shipped 512 px
- *  edge — the same ladder `tileBox`/`earthTileIndicesForBounds` use, so a
+ *  edge — the same ladder `tileBox`/`surfaceTileIndicesForBounds` use, so a
  *  box this source is handed always lands on an exact multiple. */
 function tileDeg(z: number): number {
   return 360 / surfaceTileColumns(z, EARTH_TILE_PX);
@@ -113,7 +113,7 @@ export async function geodanmarkTileSource(opts: {
    *  header); pass the same constant `buildSurfaceTiles.ts` wires as the
    *  band's own `minLevel`. */
   readonly minLevel: number;
-}): Promise<EarthImagerySource> {
+}): Promise<SurfaceImagerySource> {
   const rect = scanCoverage(opts.coverageDir);
 
   const rectArea = (rect.xMax - rect.xMin + 1) * (rect.yMax - rect.yMin + 1);
