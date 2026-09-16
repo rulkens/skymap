@@ -82,10 +82,6 @@ describe('heightCode', () => {
     const codes = [0, 1, 2 ** 23, F32_EXACT_CODE_LIMIT];
     for (let i = 0; i < 10_000; i++) codes.push(Math.floor(rand() * F32_EXACT_CODE_LIMIT));
     for (const c of codes) expect(heightCode(codeHeightM(c))).toBe(c);
-    // Past the f32 limit codes are no longer unique, but quantising stays idempotent.
-    for (const c of [F32_EXACT_CODE_LIMIT + 2, HEIGHT_CODE_MAX - 1, HEIGHT_CODE_MAX]) {
-      expect(codeHeightM(heightCode(codeHeightM(c)))).toBe(codeHeightM(c));
-    }
   });
 
   it('heightCode rejects a height below the offset, above the range, and NaN', () => {

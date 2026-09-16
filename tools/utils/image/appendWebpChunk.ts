@@ -20,7 +20,7 @@ function writeUint24(view: DataView, offset: number, value: number): void {
 }
 
 /**
- * appendWebpChunk — rewrap a simple (VP8/VP8L) WebP as extended (VP8X) and
+ * appendWebpChunk — rewrap a simple lossless (VP8L) WebP as extended (VP8X) and
  * append a custom chunk. Unknown chunks are only legal after a VP8X header, and
  * the VP8X flags stay 0 because the custom chunk declares no known feature.
  */
@@ -36,7 +36,7 @@ export function appendWebpChunk(
   }
   const imageChunk = webp.subarray(RIFF_HEADER_BYTES);
   const imageFourcc = readFourcc(imageChunk, 0);
-  if (imageFourcc !== 'VP8L' && imageFourcc !== 'VP8 ') {
+  if (imageFourcc !== 'VP8L') {
     throw new Error(`appendWebpChunk: expected a simple WebP, found a '${imageFourcc}' chunk`);
   }
 
