@@ -249,6 +249,35 @@ User-ruled 2026-09-16: every group rides this PR. Pure moves via `npm run move-f
 - [x] Move each file with its `tests/` mirror. Then grep `src tools tests docs .claude` for `utils/scene/<name>`, and fix string paths and doc links (frame-purity allow-list, RENDERER.md, skills). Leave history (plans/specs under `completed/`, backlog, audits) alone.
 - [x] One commit per destination row, or one commit for all of them; the tree typechecks at every commit.
 
+### Task 10: Pipeline-wide tile constants and debug ids lose `earth`
+
+User-ruled 2026-09-16. `src/data/bodies/earthTileParams.ts` holds constants that apply to every body's pyramid, and the generic shader and debug surfaces inherited their Earth names.
+
+**Renames**
+- File: `src/data/bodies/earthTileParams.ts` → `src/data/bodies/surfaceTileParams.ts` (`npm run move-files`).
+- Constants (`npm run refactor rename`):
+  - `EARTH_EQUIRECT_BASE_WIDTH_PX` → `SURFACE_EQUIRECT_BASE_WIDTH_PX`
+  - `EARTH_TILE_PX` → `SURFACE_TILE_PX`
+  - `EARTH_TILE_ATLAS_SIDE` → `SURFACE_TILE_ATLAS_SIDE`
+  - `EARTH_TILE_CONCURRENCY` → `SURFACE_TILE_CONCURRENCY`
+  - `EARTH_TILE_LOD_BIAS` → `SURFACE_TILE_LOD_BIAS`
+  - `EARTH_SURFACE_TILE_MESH_RESOLUTION` → `SURFACE_TILE_MESH_RESOLUTION`
+  - `EARTH_TILE_CROSSFADE_MS` → `SURFACE_TILE_CROSSFADE_MS`
+  - The `EARTH_TILE_*` constants re-exported or mirrored in `surfaceTileSubsystem.ts`, if any.
+- WGSL copies in `bodies/surfaceTile/*.wesl`:
+  - `EARTH_TILE_ATLAS_SIDE`, `EARTH_TILE_ATLAS_HALF_TEXEL` and `EARTH_TILE_PX` take the `SURFACE_` prefix.
+  - `earthLodOverlayColor` → `tileLodOverlayColor`.
+  - Update `tests/services/gpu/shaders/constants.parity.test.ts` to match.
+- Debug ids:
+  - Overlay key `'earth-lod-overlay'` → `'surface-lod-overlay'`, label "Surface LOD overlay".
+  - Overlay-row section `'earth-tiles'` → `'surface-tiles'`.
+  - Check how `debug.overlays` is persisted and loaded. A stored old key must be dropped or ignored, never a load error.
+- `levelFittingWidth` drops the `baseWidthPx` parameter it gained in Task 8 and reads `SURFACE_EQUIRECT_BASE_WIDTH_PX` again, because the base width is pipeline-wide.
+
+**Unchanged:** `EARTH_EQUATORIAL_CIRCUMFERENCE_M` and `earthTexelMetres` (truly Earth), the `'earth-tiles'` manifest key and R2 paths, and `earthPass`.
+
+- [ ] Grep `src tools tests docs .claude` for every old name, id and path (outside history folders), and fix stragglers, including `.wesl` comments. No new test. Commit.
+
 ---
 
 ## Definition of Done
