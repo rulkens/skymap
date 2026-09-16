@@ -1,5 +1,5 @@
 /**
- * bmngQuadrantSource — an `EarthImagerySource` over Blue Marble Next
+ * bmngQuadrantSource — a `SurfaceImagerySource` over Blue Marble Next
  * Generation's eight-file quadrant tiling.
  *
  * NASA publishes each BMNG month twice: one 21600x10800 whole-globe equirect,
@@ -33,8 +33,8 @@ import { existsSync } from 'node:fs';
 
 import sharp from 'sharp';
 
-import { earthLevelFittingWidth } from '../../src/utils/scene/earthLevelFittingWidth';
-import type { EarthImagerySource } from './EarthImagerySource';
+import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Longitude and latitude extent of one quadrant, in degrees. */
@@ -123,7 +123,7 @@ export async function bmngQuadrantSource(source: {
   /** Called once per cache MISS — the band cache is the difference between a
    *  5-minute deepest level and a 2-hour one, worth being observable. */
   readonly onBandDecode?: (quadrant: BmngQuadrant, topPx: number) => void;
-}): Promise<EarthImagerySource> {
+}): Promise<SurfaceImagerySource> {
   const missing = QUADRANT_NAMES.filter((name) => !existsSync(source.quadrantPaths[name]));
   if (missing.length > 0) {
     throw new Error(
@@ -206,7 +206,7 @@ export async function bmngQuadrantSource(source: {
   return {
     id: source.id,
     attribution: source.attribution,
-    maxLevel: earthLevelFittingWidth(quadrantEdgePx * QUADRANT_COLUMNS.length),
+    maxLevel: levelFittingWidth(quadrantEdgePx * QUADRANT_COLUMNS.length),
     coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
     provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 

@@ -3,7 +3,7 @@ import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /**
  * HeightSource — the seam between the height bake and wherever elevations
- * come from, the `EarthImagerySource` of the second product: metres above
+ * come from, the `SurfaceImagerySource` of the second product: metres above
  * the datum sphere, never a radius (spec §5.3). Addressed in GLOBAL LATTICE
  * indices, not a lon/lat box — deriving a shared post from a box-relative
  * offset reintroduces the last-bit difference that shows up as a crack (§5.4.2).

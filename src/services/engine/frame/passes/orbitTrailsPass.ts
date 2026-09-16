@@ -15,7 +15,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { TRAIL_ELEMENTS } from '../../../../data/bodies/trailElements';
 import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';
 import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
-import { regionRelativeDistanceMpc } from '../../../../utils/scene/regionRelativeDistanceMpc';
+import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';

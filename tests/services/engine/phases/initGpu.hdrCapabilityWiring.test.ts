@@ -82,7 +82,7 @@ vi.mock('../../../../src/services/gpu/device', () => ({
       createPipelineLayout: vi.fn(() => ({})),
       createRenderPipeline: vi.fn(() => ({})),
       createBuffer: vi.fn(() => ({ destroy: vi.fn() })),
-      // earthSurfaceTileRenderer uploads its shared template index buffer at
+      // surfaceTileRenderer uploads its shared template index buffer at
       // construction, so a queue is part of the construction-time surface now.
       queue: { writeBuffer: vi.fn() },
     } as unknown as GPUDevice,

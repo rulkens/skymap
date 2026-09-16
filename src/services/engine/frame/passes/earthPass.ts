@@ -1,6 +1,6 @@
 /**
  * earthPass — Earth's `'body'`-slab content row: the base globe, drawn into
- * `foreground:0`. The detail patches over it are `earthSurfaceTilesPass`.
+ * `foreground:0`. The detail patches over it are `surfaceTilesPass`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
  * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;
@@ -29,7 +29,7 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
-import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
+import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';

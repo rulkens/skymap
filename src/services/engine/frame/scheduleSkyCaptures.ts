@@ -20,7 +20,7 @@ import {
 } from '../../../data/rendering/cubemapCaptures';
 import { cubemapFaceContext } from './cubemapFaceContext';
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { regionRelativeDistanceMpc } from '../../../utils/scene/regionRelativeDistanceMpc';
+import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function scheduleSkyCaptures(input: {

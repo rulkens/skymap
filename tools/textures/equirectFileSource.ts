@@ -1,11 +1,11 @@
 /**
- * equirectFileSource — an `EarthImagerySource` over a whole-globe
+ * equirectFileSource — a `SurfaceImagerySource` over a whole-globe
  * equirectangular image already sitting in `data/raw/`. The `--dev` pyramid
  * source: no download, no external service — a real, correctly-addressed
  * pyramid good enough to build and visually verify against.
  *
  * `maxLevel` is derived, not declared: the deepest honest level is the
- * largest `z` whose full equirect width (`earthLevelFittingWidth`) still
+ * largest `z` whose full equirect width (`levelFittingWidth`) still
  * fits the source's own — Blue Marble at 21600 px gives z5 (16384, a genuine
  * downsample); z6 (32768) would upscale a photograph.
  *
@@ -18,9 +18,9 @@
 
 import sharp from 'sharp';
 
-import { earthLevelFittingWidth } from '../../src/utils/scene/earthLevelFittingWidth';
+import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
 import { rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
-import type { EarthImagerySource } from './EarthImagerySource';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 
 export async function equirectFileSource(source: {
   /** Stable identifier recorded in the manifest's `builtFrom`, vintage included. */
@@ -31,7 +31,7 @@ export async function equirectFileSource(source: {
   readonly attribution: string;
   /** Human-readable vintage, folded with `id`/`attribution` into `provenance`. */
   readonly vintage: string;
-}): Promise<EarthImagerySource> {
+}): Promise<SurfaceImagerySource> {
   const path = rawDataPath(source.rawKey);
   const meta = await sharp(path, { limitInputPixels: false }).metadata();
   const sourceWidth = meta.width ?? 0;
@@ -48,7 +48,7 @@ export async function equirectFileSource(source: {
   return {
     id: source.id,
     attribution: source.attribution,
-    maxLevel: earthLevelFittingWidth(sourceWidth),
+    maxLevel: levelFittingWidth(sourceWidth),
     coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
     provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 
@@ -71,7 +71,7 @@ export async function equirectFileSource(source: {
         // projection, not an aspect error to preserve.
         .resize(widthPx, heightPx, { fit: 'fill' })
         // Blue Marble has no no-data — this source never declines a box, but
-        // still returns the alpha channel (see EarthImagerySource).
+        // still returns the alpha channel (see SurfaceImagerySource).
         .ensureAlpha()
         .raw()
         .toBuffer();

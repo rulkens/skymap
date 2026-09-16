@@ -5,7 +5,7 @@
  */
 
 import type { MeshBody } from '../../@types/scene/MeshBody';
-import { meshBodySlabHostId } from '../../utils/scene/meshBodySlabHostId';
+import { meshBodySlabHostId } from '../../utils/meshBodies/meshBodySlabHostId';
 import { SCENE_MESH_BODIES } from './sceneMeshBodies';
 
 export const HOSTLESS_MESH_BODIES: readonly MeshBody[] = SCENE_MESH_BODIES.filter(

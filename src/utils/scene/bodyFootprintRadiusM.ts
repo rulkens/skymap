@@ -1,6 +1,6 @@
 import type { SceneBody } from '../../@types/scene/SceneBody';
-import { isMeshBody } from './isMeshBody';
-import { outerBoundRadiusM } from './outerBoundRadiusM';
+import { isMeshBody } from '../meshBodies/isMeshBody';
+import { outerBoundRadiusM } from '../occlusion/outerBoundRadiusM';
 
 /**
  * bodyFootprintRadiusM — the radius of the sphere the body OCCUPIES, metres: a

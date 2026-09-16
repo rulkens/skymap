@@ -9,12 +9,12 @@
 
 import sharp from 'sharp';
 
-import type { EarthImagerySource } from './EarthImagerySource';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
 
 export function underfillImagerySource(
-  primary: EarthImagerySource,
-  filler: EarthImagerySource,
-): EarthImagerySource {
+  primary: SurfaceImagerySource,
+  filler: SurfaceImagerySource,
+): SurfaceImagerySource {
   return {
     id: primary.id,
     attribution: primary.attribution,

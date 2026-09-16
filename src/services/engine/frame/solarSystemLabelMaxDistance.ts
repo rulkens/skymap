@@ -44,6 +44,6 @@
  * — this caption gate is a single distance-to-focus, the texture gates are
  * per-body proximity radii, so the two may be tuned apart.
  */
-import { regionById } from '../../../utils/scene/regionById';
+import { regionById } from '../../../utils/regions/regionById';
 
 export const SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC = regionById('solar-neighbourhood').extentMpc * 4;

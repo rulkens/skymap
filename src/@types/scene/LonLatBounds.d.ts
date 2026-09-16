@@ -1,6 +1,6 @@
 /**
  * LonLatBounds — an axis-aligned geographic box in degrees: the sampling unit an
- * `EarthImagerySource` is handed.
+ * `SurfaceImagerySource` is handed.
  *
  * Degrees, not radians, since every imagery source in play already addresses
  * itself that way. Four named edges, not an origin plus a size, so

@@ -48,7 +48,7 @@
  * ### Tile detail draws over this, in a separate renderer
  *
  * This renderer no longer binds the surface virtual texture (the page table
- * + atlas that used to occupy bindings 7–9) — `earthSurfaceTileRenderer`
+ * + atlas that used to occupy bindings 7–9) — `surfaceTileRenderer`
  * draws the resolved detail patches directly over this base globe instead,
  * reading `surfaceTileSubsystem`'s atlas view and this renderer's own
  * `getMapView` for the material/night/normal/cloud maps it shares. Every
@@ -65,7 +65,7 @@ import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
-import { isLinearTextureKind } from '../../../../utils/scene/isLinearTextureKind';
+import { isLinearTextureKind } from '../../../../utils/bodyTextures/isLinearTextureKind';
 import { EARTH_SURFACE_UNIFORM_FLOATS } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';
@@ -443,7 +443,7 @@ export function createEarthRenderer(
 
   /**
    * A fresh view of a map's current layer (committed-over-placeholder, same
-   * resolution `buildBindGroup` uses) — what `earthSurfaceTileRenderer`
+   * resolution `buildBindGroup` uses) — what `surfaceTileRenderer`
    * shares this renderer's material/night/normal/cloud maps through, since
    * it owns none of them itself (see that renderer's module header).
    */

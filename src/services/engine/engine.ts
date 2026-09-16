@@ -205,7 +205,7 @@ export function createEngine(
       bloomPyramid: null,
       pickDebugOverlay: null,
       earthRenderer: null,
-      earthSurfaceTileRenderer: null,
+      surfaceTileRenderer: null,
       starRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,

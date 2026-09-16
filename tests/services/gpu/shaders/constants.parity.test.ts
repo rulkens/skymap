@@ -26,11 +26,11 @@ import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbient
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
 import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
 import {
-  EARTH_SURFACE_TILE_MESH_RESOLUTION,
-  EARTH_TILE_ATLAS_SIDE,
-  EARTH_TILE_PX,
+  SURFACE_TILE_MESH_RESOLUTION,
+  SURFACE_TILE_ATLAS_SIDE,
+  SURFACE_TILE_PX,
   SURFACE_TILE_SKIRT_DEPTH_FRACTION,
-} from '../../../../src/data/bodies/earthTileParams';
+} from '../../../../src/data/bodies/surfaceTileParams';
 import {
   HEIGHT_CODE_OFFSET_M,
   HEIGHT_CODE_STEP_M,
@@ -235,41 +235,41 @@ describe('ISM_MAP_FLUID_EVENT_STRIDE parity (packIsmMapFluidEvents.ts ↔ ismMap
 });
 
 /**
- * EARTH_TILE_ATLAS_SIDE (earthTileParams.ts) is mirrored into
- * earthSurfaceTile/fragment.wesl to derive the half-atlas-texel inset (C3)
+ * SURFACE_TILE_ATLAS_SIDE (surfaceTileParams.ts) is mirrored into
+ * surfaceTile/surfaceLighting.wesl to derive the half-atlas-texel inset (C3)
  * that keeps a resolved tile rect's bilinear sampling from crossing into a
  * neighbour slot's pixels — a drift here would silently widen or shrink
  * that guard band against the atlas's real physical size.
  */
-describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ earthSurfaceTile/fragment.wesl)', () => {
-  it("fragment.wesl's EARTH_TILE_ATLAS_SIDE equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl';
-    const weslValue = readWeslConst(file, 'EARTH_TILE_ATLAS_SIDE');
-    expect(weslValue, `EARTH_TILE_ATLAS_SIDE is missing from ${file}`).toBeDefined();
+describe('SURFACE_TILE_ATLAS_SIDE parity (surfaceTileParams.ts ↔ surfaceTile/surfaceLighting.wesl)', () => {
+  it("surfaceLighting.wesl's SURFACE_TILE_ATLAS_SIDE equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/surfaceLighting.wesl';
+    const weslValue = readWeslConst(file, 'SURFACE_TILE_ATLAS_SIDE');
+    expect(weslValue, `SURFACE_TILE_ATLAS_SIDE is missing from ${file}`).toBeDefined();
     expect(
       weslValue,
-      `${file}: WESL EARTH_TILE_ATLAS_SIDE (${weslValue}) does not match TS EARTH_TILE_ATLAS_SIDE (${EARTH_TILE_ATLAS_SIDE})`,
-    ).toBe(EARTH_TILE_ATLAS_SIDE);
+      `${file}: WESL SURFACE_TILE_ATLAS_SIDE (${weslValue}) does not match TS SURFACE_TILE_ATLAS_SIDE (${SURFACE_TILE_ATLAS_SIDE})`,
+    ).toBe(SURFACE_TILE_ATLAS_SIDE);
   });
 });
 
 /**
- * EARTH_TILE_PX (earthTileParams.ts) is mirrored into
- * earthSurfaceTile/fragment.wesl to derive TILE_SLOT_SCALE, the atlas-uv
+ * SURFACE_TILE_PX (surfaceTileParams.ts) is mirrored into
+ * surfaceTile/surfaceLighting.wesl to derive TILE_SLOT_SCALE, the atlas-uv
  * width of a tile drawn from its own slot with no ancestor fallback — the
- * `earth-lod-overlay` toggle divides a resolved rect's actual width into
+ * `surface-lod-overlay` toggle divides a resolved rect's actual width into
  * this to recover how many pyramid levels the fallback walked. A drift here
  * would silently mis-band every overlay tint.
  */
-describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment.wesl)', () => {
-  it("fragment.wesl's EARTH_TILE_PX equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/fragment.wesl';
-    const weslValue = readWeslConst(file, 'EARTH_TILE_PX');
-    expect(weslValue, `EARTH_TILE_PX is missing from ${file}`).toBeDefined();
+describe('SURFACE_TILE_PX parity (surfaceTileParams.ts ↔ surfaceTile/surfaceLighting.wesl)', () => {
+  it("surfaceLighting.wesl's SURFACE_TILE_PX equals the TS export", () => {
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/surfaceLighting.wesl';
+    const weslValue = readWeslConst(file, 'SURFACE_TILE_PX');
+    expect(weslValue, `SURFACE_TILE_PX is missing from ${file}`).toBeDefined();
     expect(
       weslValue,
-      `${file}: WESL EARTH_TILE_PX (${weslValue}) does not match TS EARTH_TILE_PX (${EARTH_TILE_PX})`,
-    ).toBe(EARTH_TILE_PX);
+      `${file}: WESL SURFACE_TILE_PX (${weslValue}) does not match TS SURFACE_TILE_PX (${SURFACE_TILE_PX})`,
+    ).toBe(SURFACE_TILE_PX);
   });
 });
 
@@ -280,20 +280,20 @@ describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/fragment
  * vertex exactly on a post: a fractional stride there would put the two sides
  * of an LOD boundary on lattice points they cannot share.
  */
-describe('HEIGHT_POSTS_PER_TILE vs the template (heightTileFormat.ts ↔ earthTileParams.ts)', () => {
+describe('HEIGHT_POSTS_PER_TILE vs the template (heightTileFormat.ts ↔ surfaceTileParams.ts)', () => {
   it('the post stride per template cell is integral', () => {
-    expect((HEIGHT_POSTS_PER_TILE - 1) % EARTH_SURFACE_TILE_MESH_RESOLUTION).toBe(0);
+    expect((HEIGHT_POSTS_PER_TILE - 1) % SURFACE_TILE_MESH_RESOLUTION).toBe(0);
   });
 });
 
 /**
- * SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts) is the eye-check's one
+ * SURFACE_TILE_SKIRT_DEPTH_FRACTION (surfaceTileParams.ts) is the eye-check's one
  * tuning knob for the skirt ring (F2-R3), and the vertex stage is its only
  * consumer — so without this guard the TS export is a knob that turns nothing.
  */
-describe('SURFACE_TILE_SKIRT_DEPTH_FRACTION parity (earthTileParams.ts ↔ earthSurfaceTile/vertex.wesl)', () => {
+describe('SURFACE_TILE_SKIRT_DEPTH_FRACTION parity (surfaceTileParams.ts ↔ surfaceTile/vertex.wesl)', () => {
   it("vertex.wesl's SURFACE_TILE_SKIRT_DEPTH_FRACTION equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl';
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/vertex.wesl';
     const weslValue = readWeslConst(file, 'SURFACE_TILE_SKIRT_DEPTH_FRACTION');
     expect(weslValue, `SURFACE_TILE_SKIRT_DEPTH_FRACTION is missing from ${file}`).toBeDefined();
     expect(
@@ -346,12 +346,12 @@ describe('SUN_IRRADIANCE parity (earthSurfaceParams.ts ↔ meshBody/fragment.wes
  * either number shifts or scales every displaced vertex against the CPU's
  * subtree bounds, which the walk's cull headroom is built from.
  */
-describe('Terrain-RGB height code parity (heightTileFormat.ts ↔ earthSurfaceTile/lattice.wesl)', () => {
+describe('Terrain-RGB height code parity (heightTileFormat.ts ↔ surfaceTile/lattice.wesl)', () => {
   it.each([
     ['HEIGHT_CODE_OFFSET_M', HEIGHT_CODE_OFFSET_M],
     ['HEIGHT_CODE_STEP_M', HEIGHT_CODE_STEP_M],
   ])("lattice.wesl's %s equals the TS export", (name, tsValue) => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/lattice.wesl';
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/lattice.wesl';
     expect(readWeslConst(file, name), `${file}: ${name}`).toBe(tsValue);
   });
 });

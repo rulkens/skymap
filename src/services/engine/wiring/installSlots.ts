@@ -30,9 +30,9 @@
  */
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
-import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isBodyTextureKey } from '../../../utils/bodyTextures/isBodyTextureKey';
 import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
-import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
+import { isMeshBodyKey } from '../../../utils/meshBodies/isMeshBodyKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { EngineState } from '../../../@types/engine/state/EngineState';

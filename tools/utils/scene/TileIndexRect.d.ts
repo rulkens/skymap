@@ -1,4 +1,4 @@
-/** Inclusive tile index rect from `earthTileIndicesForBounds` — `xMax`/`yMax`
+/** Inclusive tile index rect from `surfaceTileIndicesForBounds` — `xMax`/`yMax`
  *  are indices IN the rect, not one-past-the-end, so a bake loop's `<=` reads
  *  naturally against the whole-globe loops it replaces. */
 export type TileIndexRect = {

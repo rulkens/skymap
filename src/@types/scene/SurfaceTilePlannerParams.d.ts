@@ -14,7 +14,7 @@ export type SurfaceTilePlannerParams = {
   /** Tile edge in pixels, from the manifest — also the atlas's slot edge. */
   readonly tilePx: number;
   /** Level the whole-globe base texture this session bound already
-   *  delivers (`earthBaseLevelForTier`) — the planner's walk floor and
+   *  delivers (`baseLevelForTier`) — the planner's walk floor and
    *  what the engage gate compares `zWin` against. */
   readonly baseLevel: number;
   /** Geographic depth bands baked for the albedo product, each floored to
@@ -23,6 +23,6 @@ export type SurfaceTilePlannerParams = {
    *  a footprint at different depths (EOX deep tiles over BMNG). */
   readonly bands: readonly SurfaceTileBand[];
   /** Levels coarser than one texel per screen pixel the planner settles for;
-   *  see `EARTH_TILE_LOD_BIAS`. */
+   *  see `SURFACE_TILE_LOD_BIAS`. */
   readonly lodBias: number;
 };

@@ -1,5 +1,5 @@
 import { SCENE_BODIES } from './sceneBodies';
-import { isMeshBody } from '../../utils/scene/isMeshBody';
+import { isMeshBody } from '../../utils/meshBodies/isMeshBody';
 import type { CelestialBody } from '../../@types/scene/CelestialBody';
 
 /**

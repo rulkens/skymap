@@ -2,6 +2,8 @@
 /**
  * buildSurfaceTiles — bake a body's surface imagery into the `z/x/y` pyramid
  * the runtime virtual texture pages, under `public/data/images/<manifestKey>/`.
+ * `--body <id>` (default `earth`) selects a `SURFACE_BODY_BAKES` row; the
+ * bands themselves (which sources, which floors) are that body's own concern.
  *
  * Its own tool rather than a loop inside `buildTextures`: the whole-globe
  * tiers build from raws every contributor already has, in seconds, while this
@@ -10,7 +12,7 @@
  * skip) `build-textures` for everyone, and the two derive from DIFFERENT
  * sources, so re-curating one cannot stale the other.
  *
- * Row 0 of every tile is its NORTH edge (see `EarthImagerySource` for why).
+ * Row 0 of every tile is its NORTH edge (see `SurfaceImagerySource` for why).
  * The deepest albedo level bakes from the imagery source tile by tile,
  * straight to disk; every coarser level is a 2x2 average of the level above,
  * read back off disk (see `bakeCoarserLevel` for the sharp/libvips
@@ -23,15 +25,15 @@
  * written LAST, only once every tile the union of the prior index and this
  * run's bake promises is actually present on disk — see `bakeAll`.
  *
- * Lands on disk: `earth-tiles/v9/albedo/<z>/<x>/<y>.webp` and, for a band
- * declaring a height source, `earth-tiles/v9/height/<z>/<x>/<y>.webp`
- * (`surfaceTilePath`, shared with the runtime fetcher's own URL builder —
- * drift 404s quietly, degrading to the base texture);
- * `earth-tiles/manifest.json` (tile edge,
- * baked band list, source); `earth-tiles/index.txt` (one path per line,
- * walked by the deploy collector instead of the filesystem, so a
- * half-finished bake can't upload a partial pyramid as complete).
- * `public/data/` is gitignored — nothing here is committed.
+ * Lands on disk under the body's own `tileRoot`, e.g. `earth-tiles/v9/albedo/
+ * <z>/<x>/<y>.webp` and, for a band declaring a height source, `earth-tiles/
+ * v9/height/<z>/<x>/<y>.webp` (`surfaceTilePath`, shared with the runtime
+ * fetcher's own URL builder — drift 404s quietly, degrading to the base
+ * texture); `<tileRoot>/manifest.json` (tile edge, baked band list, source);
+ * `<tileRoot>/index.txt` (one path per line, walked by the deploy collector
+ * instead of the filesystem, so a half-finished bake can't upload a partial
+ * pyramid as complete). `public/data/` is gitignored — nothing here is
+ * committed.
  */
 
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
@@ -41,39 +43,28 @@ import { fileURLToPath } from 'node:url';
 import sharp, { type Sharp } from 'sharp';
 
 import type { SurfaceTileProduct } from '../../src/@types/data/SurfaceTileProduct';
+import type { SurfaceTileBodyId } from '../../src/@types/data/SurfaceTileBodyId';
 import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
 import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTileManifestBand';
 import type { SurfaceTileBand } from '../../src/@types/scene/SurfaceTileBand';
-import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
-import { TIER_LADDER } from '../../src/data/tierLadder';
-import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
-import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
-import { surfaceTileBandFromBounds } from '../../src/utils/scene/surfaceTileBandFromBounds';
-import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
-import { surfaceTileInBand } from '../../src/utils/scene/surfaceTileInBand';
-import { parseFlags } from '../utils/cli/args';
-import { BMNG_QUADRANT_KEYS } from '../utils/io/bmngQuadrantKeys';
-import { BMNG_VINTAGE } from '../utils/io/bmngVintage';
-import { rawDataPath } from '../utils/io/rawDataRegistry';
-import { earthTileBounds } from '../utils/scene/earthTileBounds';
-import { earthTileIndicesForBounds } from '../utils/scene/earthTileIndicesForBounds';
-import { bakeHeightLevel } from './bakeHeightLevel';
-import { bmngQuadrantSource, type BmngQuadrant } from './bmngQuadrantSource';
-import { colourMatchedImagerySource } from './colourMatchedImagerySource';
-import { constantHeightSource } from './constantHeightSource';
-import { dhmTerraenHeightSource } from './dhmTerraenHeightSource';
-import type { EarthImagerySource } from './EarthImagerySource';
-import { equirectFileSource } from './equirectFileSource';
-import { eoxTileSource } from './eoxTileSource';
-import { etopoHeightSource } from './etopoHeightSource';
-import { geodanmarkTileSource } from './geodanmarkTileSource';
-import type { HeightSource } from './HeightSource';
-import { skadiHeightSource } from './skadiHeightSource';
-import { underfillImagerySource } from './underfillImagerySource';
-import { voidFilledHeightSource } from './voidFilledHeightSource';
+import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
+import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
+import { surfaceTileBandFromBounds } from '../../src/utils/surfaceTiles/surfaceTileBandFromBounds';
+import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileInBand } from '../../src/utils/surfaceTiles/surfaceTileInBand';
+import { parseFlags } from '../utils/cli/args';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
+import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
+import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
+import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
+import { bakeHeightLevel } from './bakeHeightLevel';
+import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
+import type { SurfaceBakeBand } from './SurfaceBakeBand';
+import type { SurfaceBodyBake } from './SurfaceBodyBake';
+import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import { underfillImagerySource } from './underfillImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Default band for a caller that doesn't clamp — degenerates
@@ -124,50 +115,9 @@ function candidateTileIndices(
  *  that doubles as the land mask. */
 const WEBP_QUALITY = 82;
 
-/**
- * Shallowest level this bake emits: one finer than the COARSEST whole-globe
- * base, not the finest — pinning this to the `large` tier's z4 base would
- * leave `medium`/`small` sessions falling back to the base texture one or
- * two levels early (an unbaked level 404s like ocean does).
- */
-const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
-
-/**
- * Shallowest level the EOX regional band emits: one deeper than BMNG's OWN
- * max (z7), not derived from `BAKE_MIN_LEVEL` — a regional band's floor is a
- * different rule ("pick up where the global band stops"), not the global
- * band's own tier-derived floor.
- */
-const EOX_MIN_LEVEL = 8;
-
-/** Scale below which EOX's colour is pulled onto Blue Marble's, in degrees
- *  along a meridian: 2 km is about one Blue Marble texel, so the seam is
- *  matched at the finest scale the band underneath can resolve and everything
- *  finer stays EOX's own. */
-const EOX_COLOUR_MATCH_SIGMA_DEG = 0.018;
-
-/** GeoDanmark's own floor: one level deeper than EOX's own max (z13), same
- *  "pick up where the shallower band stops" rule as `EOX_MIN_LEVEL` — also
- *  the level the z19 harvest bbox is snapped to (`geodanmarkTileSource`'s
- *  `minLevel`), so this is the ladder's single source of truth for both. */
-const GEODANMARK_MIN_LEVEL = 14;
-
 /** The imagery product's own name — the height path is built from the literal
  *  `'height'` inside `bakeHeightLevel`, which owns that product end to end. */
 const PRODUCT: SurfaceTileProduct = 'albedo';
-
-/** Stable location of the manifest and index — the pointer clients always fetch. */
-const TILE_ROOT = 'earth-tiles';
-
-/**
- * Versioned prefix for the tile bodies themselves. BUMP THIS on any re-bake
- * that changes pixels: the tiles are served `immutable` and never purged, so
- * reusing a version leaves the CDN answering with old imagery against a new
- * manifest for up to a day — mismatched, not merely stale. A new version is
- * new keys, which cost nothing extra and need no purge. v9: height tiles
- * became Terrain-RGB WebP instead of raw f32 (`heightTileFormat.ts`).
- */
-export const TILE_PREFIX = `${TILE_ROOT}/v9`;
 
 /**
  * Encode a sharp pipeline to `outPath` atomically: write to `<outPath>.tmp`,
@@ -212,22 +162,23 @@ async function writeTile(rgba: Uint8Array, tilePx: number, outPath: string): Pro
  * present on disk either way.
  */
 async function bakeDeepestLevel(
-  source: EarthImagerySource,
+  source: SurfaceImagerySource,
   bands: readonly SurfaceTileBand[],
   z: number,
   tilePx: number,
   outDir: string,
+  tilePrefix: string,
 ): Promise<readonly string[]> {
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
-    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, TILE_PREFIX);
+    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, tilePrefix);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
       written.push(relPath);
       continue;
     }
-    const rgba = await source.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx);
+    const rgba = await source.readBox(surfaceTileBounds(z, x, y, tilePx), tilePx, tilePx);
     if (rgba === null) continue;
     await writeTile(rgba, tilePx, outPath);
     written.push(relPath);
@@ -268,15 +219,16 @@ export async function bakeCoarserLevel(
   z: number,
   tilePx: number,
   outDir: string,
-  underfill?: EarthImagerySource,
+  tilePrefix: string,
+  underfill?: SurfaceImagerySource,
   bands: readonly SurfaceTileBand[] = WHOLE_GLOBE_BANDS,
-  deepSource?: EarthImagerySource,
+  deepSource?: SurfaceImagerySource,
 ): Promise<string[]> {
   const halfPx = tilePx / 2;
   const written: string[] = [];
 
   for (const { x, y } of candidateTileIndices(bands, z, tilePx)) {
-    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, TILE_PREFIX);
+    const relPath = surfaceTilePath({ product: PRODUCT, z, x, y }, tilePrefix);
     const outPath = join(outDir, relPath);
     if (existsSync(outPath)) {
       written.push(relPath);
@@ -292,14 +244,14 @@ export async function bakeCoarserLevel(
       .map(({ i, j }) => ({
         input: join(
           outDir,
-          surfaceTilePath({ product: PRODUCT, z: z + 1, x: 2 * x + i, y: 2 * y + j }, TILE_PREFIX),
+          surfaceTilePath({ product: PRODUCT, z: z + 1, x: 2 * x + i, y: 2 * y + j }, tilePrefix),
         ),
         left: i * halfPx,
         top: j * halfPx,
       }))
       .filter((child) => existsSync(child.input));
     if (childPaths.length === 0) {
-      const rgba = await deepSource?.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx);
+      const rgba = await deepSource?.readBox(surfaceTileBounds(z, x, y, tilePx), tilePx, tilePx);
       if (rgba != null) {
         await writeTile(rgba, tilePx, outPath);
         written.push(relPath);
@@ -323,7 +275,7 @@ export async function bakeCoarserLevel(
     // practice) falls back to the transparent canvas, no worse than today.
     const fillerRaster =
       underfill && childPaths.length < 4
-        ? await underfill.readBox(earthTileBounds(z, x, y, tilePx), tilePx, tilePx)
+        ? await underfill.readBox(surfaceTileBounds(z, x, y, tilePx), tilePx, tilePx)
         : null;
     const canvas = fillerRaster
       ? sharp(Buffer.from(fillerRaster), { raw: { width: tilePx, height: tilePx, channels: 4 } })
@@ -345,8 +297,8 @@ export async function bakeCoarserLevel(
 /** `index.txt`'s prior lines, or an empty set on a first bake into a fresh
  *  `outDir` — the floor `bakeAll`'s completeness check holds every run to,
  *  and the other half of the new index's union (see `bakeAll`). */
-function readPriorIndex(outDir: string): ReadonlySet<string> {
-  const indexPath = join(outDir, `${TILE_ROOT}/index.txt`);
+function readPriorIndex(outDir: string, tileRoot: string): ReadonlySet<string> {
+  const indexPath = join(outDir, `${tileRoot}/index.txt`);
   if (!existsSync(indexPath)) return new Set();
   return new Set(
     readFileSync(indexPath, 'utf8')
@@ -354,6 +306,17 @@ function readPriorIndex(outDir: string): ReadonlySet<string> {
       .map((line) => line.trim())
       .filter((line) => line.length > 0),
   );
+}
+
+/** `manifest.json`'s prior contents, or `null` on a first bake — the merge
+ *  base `mergeSurfaceTileManifest` folds this run's bands onto. A malformed
+ *  file throws rather than reading as absent: a partially-written or hand-
+ *  edited manifest silently treated as "no prior" would drop every band a
+ *  `--product`-scoped run doesn't touch. */
+function readPriorManifest(outDir: string, tileRoot: string): SurfaceTileManifest | null {
+  const manifestPath = join(outDir, `${tileRoot}/manifest.json`);
+  if (!existsSync(manifestPath)) return null;
+  return JSON.parse(readFileSync(manifestPath, 'utf8')) as SurfaceTileManifest;
 }
 
 /**
@@ -373,12 +336,13 @@ const WATER_DIAGNOSTIC_BOXES: ReadonlyArray<readonly [string, LonLatBounds]> = [
  * The global range comes straight from each tile's own header (`subtreeMinM`
  * at the deepest baked level IS that tile's own post range) rather than a
  * 545M-post rescan; each named box only decodes the handful of tiles its own
- * `earthTileIndicesForBounds` rect touches.
+ * `surfaceTileIndicesForBounds` rect touches.
  */
 async function printWaterDiagnostics(
   outDir: string,
   z: number,
   bands: readonly SurfaceTileBand[],
+  tilePrefix: string,
 ): Promise<void> {
   const posts = HEIGHT_POSTS_PER_TILE;
   const step = heightLatticeStepDeg(z);
@@ -386,8 +350,8 @@ async function printWaterDiagnostics(
 
   let globalMin = Infinity;
   let globalMax = -Infinity;
-  for (const { x, y } of candidateTileIndices(bands, z, EARTH_TILE_PX)) {
-    const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, TILE_PREFIX));
+  for (const { x, y } of candidateTileIndices(bands, z, SURFACE_TILE_PX)) {
+    const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, tilePrefix));
     const tile = await readHeightTileFile(path);
     if (tile === null) continue;
     globalMin = Math.min(globalMin, tile.subtreeMinM);
@@ -396,12 +360,12 @@ async function printWaterDiagnostics(
   ranges.set('global', [globalMin, globalMax]);
 
   for (const [name, box] of WATER_DIAGNOSTIC_BOXES) {
-    const rect = earthTileIndicesForBounds(box, z, EARTH_TILE_PX);
+    const rect = surfaceTileIndicesForBounds(box, z, SURFACE_TILE_PX);
     let min = Infinity;
     let max = -Infinity;
     for (let y = rect.yMin; y <= rect.yMax; y++) {
       for (let x = rect.xMin; x <= rect.xMax; x++) {
-        const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, TILE_PREFIX));
+        const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, tilePrefix));
         const tile = await readHeightTileFile(path);
         if (tile === null) continue;
         for (let j = 0; j < posts; j++) {
@@ -442,27 +406,18 @@ async function printWaterDiagnostics(
  * against disk; if any is missing (deleted by hand, a bad rsync, a source
  * that can no longer reproduce it), `bakeAll` throws and writes NEITHER
  * `index.txt` nor `manifest.json`, so a broken pyramid never looks complete.
+ * The manifest itself MERGES onto the prior one (`mergeSurfaceTileManifest`)
+ * rather than replacing it outright, so a scoped `--product`/`bands` run
+ * can't erase a band or a product's provenance it didn't touch this time.
  */
 export async function bakeAll(
-  bands: ReadonlyArray<{
-    readonly source: EarthImagerySource;
-    readonly minLevel: number;
-    /** Global-band source to underfill this band's uncovered margins with,
-     *  at every level — see `underfillImagerySource` for why a regional
-     *  band's tiles must always come out fully opaque. */
-    readonly underfill?: EarthImagerySource;
-    /** Heights for the SAME boxes at the SAME levels (spec §4.1) — optional
-     *  only because `--dev` bakes from raws that don't include a 1.6 GB DEM,
-     *  not because a shipped band may skip the product. */
-    readonly height?: HeightSource;
-    readonly heightUnderfill?: HeightSource;
-    /** R3's water rule, for the one band whose source carries real bathymetry. */
-    readonly flattenWater?: boolean;
-  }>,
+  body: Pick<SurfaceBodyBake, 'tileRoot' | 'tilePrefix'>,
+  bands: readonly SurfaceBakeBand[],
   outDir: string,
   products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(['albedo', 'height']),
 ): Promise<void> {
-  const tilePx = EARTH_TILE_PX;
+  const { tileRoot, tilePrefix } = body;
+  const tilePx = SURFACE_TILE_PX;
   const written: string[] = [];
   const bandEntries: SurfaceTileManifestBand[] = [];
 
@@ -491,7 +446,14 @@ export async function bakeAll(
     if (products.has('albedo')) {
       process.stderr.write(`  z${maxLevel}: baking from ${source.id}\n`);
       const effective = underfill ? underfillImagerySource(source, underfill) : source;
-      const deepest = await bakeDeepestLevel(effective, uvBands, maxLevel, tilePx, outDir);
+      const deepest = await bakeDeepestLevel(
+        effective,
+        uvBands,
+        maxLevel,
+        tilePx,
+        outDir,
+        tilePrefix,
+      );
       written.push(...deepest);
       process.stderr.write(`  z${maxLevel}: ${deepest.length} tiles\n`);
 
@@ -500,7 +462,15 @@ export async function bakeAll(
         // of bounds), so the band's own boxes clamp every coarser level too.
         // `effective` (source blended with underfill) is also the childless
         // halo tile's own source — same object `bakeDeepestLevel` just used.
-        const levelPaths = await bakeCoarserLevel(z, tilePx, outDir, underfill, uvBands, effective);
+        const levelPaths = await bakeCoarserLevel(
+          z,
+          tilePx,
+          outDir,
+          tilePrefix,
+          underfill,
+          uvBands,
+          effective,
+        );
         written.push(...levelPaths);
         process.stderr.write(`  z${z}: ${levelPaths.length} tiles (2x2 average of z${z + 1})\n`);
       }
@@ -522,13 +492,13 @@ export async function bakeAll(
           source: height,
           underfill: heightUnderfill ?? null,
           outDir,
-          prefix: TILE_PREFIX,
+          prefix: tilePrefix,
           flattenWater: flattenWater ?? false,
         });
         written.push(...levelPaths);
         process.stderr.write(`  z${z}: ${levelPaths.length} height tiles from ${height.id}\n`);
       }
-      if (flattenWater === true) await printWaterDiagnostics(outDir, maxLevel, uvBands);
+      if (flattenWater === true) await printWaterDiagnostics(outDir, maxLevel, uvBands, tilePrefix);
     }
 
     // One entry per coverage box: a source spanning the antimeridian declares
@@ -544,7 +514,10 @@ export async function bakeAll(
         min: minLevel,
         max: maxLevel,
         builtFrom: {
-          [PRODUCT]: source.provenance,
+          // Gated on `products.has('albedo')`: a `--product height` run
+          // still carries an imagery source (for coverage/levels) but bakes
+          // none of its tiles, and must not restamp its provenance.
+          ...(products.has('albedo') ? { [PRODUCT]: source.provenance } : {}),
           // Also gated on `products.has('height')`: a `--product albedo` run
           // still configures a height source but bakes none of its tiles.
           ...(height === undefined || !products.has('height') ? {} : { height: height.provenance }),
@@ -553,7 +526,7 @@ export async function bakeAll(
     }
   }
 
-  const priorPaths = readPriorIndex(outDir);
+  const priorPaths = readPriorIndex(outDir, tileRoot);
   const finalPaths = new Set([...priorPaths, ...written]);
 
   const missing = [...priorPaths].filter((relPath) => !existsSync(join(outDir, relPath)));
@@ -564,59 +537,34 @@ export async function bakeAll(
     );
   }
 
-  const manifest: SurfaceTileManifest = {
-    prefix: TILE_PREFIX,
+  const manifest = mergeSurfaceTileManifest(readPriorManifest(outDir, tileRoot), {
+    prefix: tilePrefix,
     tilePx,
     bands: bandEntries,
-  };
+  });
 
   // Sorted so two bakes of the same pyramid produce the same index, letting a
   // resumed sync diff one against the other.
   const sorted = [...finalPaths].sort();
-  writeFileSync(join(outDir, `${TILE_ROOT}/index.txt`), `${sorted.join('\n')}\n`);
+  writeFileSync(join(outDir, `${tileRoot}/index.txt`), `${sorted.join('\n')}\n`);
 
   // Written LAST, after the index it implies and after the completeness
   // check above: an interrupted or now-incomplete bake then leaves the
   // PREVIOUS manifest in place, so the runtime keeps serving what it last
   // knew to be whole rather than a manifest naming tiles that 404.
   writeFileSync(
-    join(outDir, `${TILE_ROOT}/manifest.json`),
+    join(outDir, `${tileRoot}/manifest.json`),
     `${JSON.stringify(manifest, null, 2)}\n`,
   );
 
   process.stderr.write(`  ${sorted.length} tiles indexed\n`);
 }
 
-/** Shared: the quadrants and the whole-globe equirect are the SAME BMNG month
- *  (see `BMNG_VINTAGE`). */
-const BMNG_ATTRIBUTION = `NASA Blue Marble Next Generation, ${BMNG_VINTAGE.label} topography + bathymetry (public domain, credit NASA Earth Observatory).`;
-
-/** The shipped source: BMNG's eight-file quadrant set, reaching z7. */
-async function deepSource(): Promise<EarthImagerySource> {
-  return bmngQuadrantSource({
-    id: `nasa-bmng-${BMNG_VINTAGE.stamp}-quadrants`,
-    attribution: BMNG_ATTRIBUTION,
-    vintage: BMNG_VINTAGE.label,
-    quadrantPaths: Object.fromEntries(
-      Object.entries(BMNG_QUADRANT_KEYS).map(([quadrant, key]) => [quadrant, rawDataPath(key)]),
-    ) as Record<BmngQuadrant, string>,
-  });
-}
-
-/**
- * `--dev`: the whole-globe equirect, reaching z5 — built from what
- * `fetch-textures` already pulls (no 421 MB quadrant set). An explicit flag
- * rather than a silent fallback: the pyramid would otherwise be complete,
- * valid and four levels short with nothing downstream able to tell.
- */
-async function devSource(): Promise<EarthImagerySource> {
-  return equirectFileSource({
-    id: `nasa-bmng-${BMNG_VINTAGE.stamp}-equirect`,
-    rawKey: 'textures.nasaBmng',
-    attribution: BMNG_ATTRIBUTION,
-    vintage: BMNG_VINTAGE.label,
-  });
-}
+/** Every body this tool can bake, keyed the same way `SURFACE_TILE_REGISTRY`
+ *  is — Mars's own row lands here, not a second switch elsewhere. */
+const SURFACE_BODY_BAKES: Record<SurfaceTileBodyId, SurfaceBodyBake> = {
+  earth: earthSurfaceBake,
+};
 
 /** `--product albedo|height`: `parseFlags` stays bool-only by design (see its
  *  own docstring), so this is a bespoke scan beside the `parseFlags` call —
@@ -632,90 +580,30 @@ function productFlag(argv: readonly string[]): SurfaceTileProduct | undefined {
   return value;
 }
 
+/** `--body <id>` (default `earth`): same bespoke-scan shape as `productFlag`. */
+function bodyFlag(argv: readonly string[]): SurfaceTileBodyId {
+  const idx = argv.indexOf('--body');
+  const value = idx < 0 ? 'earth' : argv[idx + 1];
+  if (value === undefined || !(value in SURFACE_BODY_BAKES)) {
+    throw new Error(
+      `buildSurfaceTiles: --body must be one of ${Object.keys(SURFACE_BODY_BAKES).join(', ')}, got '${value}'`,
+    );
+  }
+  return value as SurfaceTileBodyId;
+}
+
 async function main(): Promise<void> {
   const outDir = resolve('public/data/images');
   const argv = process.argv.slice(2);
   const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
   const product = productFlag(argv);
   const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
-  process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, 'earth-tiles')}\n`);
-  if (dev) {
-    // Whole-globe BMNG only — the EOX and GeoDanmark bands need real harvests
-    // on disk, which `--dev` explicitly opts out of (see `devSource`), and no
-    // height source either: ETOPO is a 1.6 GB pull `--dev` exists to avoid.
-    await bakeAll([{ source: await devSource(), minLevel: BAKE_MIN_LEVEL }], outDir, products);
-  } else {
-    // Shared instance, not two separate `deepSource()` calls: reuses BMNG's
-    // band cache, and its `readBox` handles arbitrary small boxes (Copenhagen
-    // sits wholly inside quadrant C1, no seam risk) — the same source can
-    // serve both as the global band and as the EOX band's underfill.
-    const bmng = await deepSource();
-    const eox = colourMatchedImagerySource(
-      await eoxTileSource({ coverageDir: rawDataPath('eox.dir') }),
-      bmng,
-      {
-        sigmaDeg: EOX_COLOUR_MATCH_SIGMA_DEG,
-        waterMaskPath: rawDataPath('textures.earthWaterMask'),
-      },
-    );
-    const geodanmark = await geodanmarkTileSource({
-      coverageDir: rawDataPath('geodanmark.dir'),
-      minLevel: GEODANMARK_MIN_LEVEL,
-    });
+  const body = SURFACE_BODY_BAKES[bodyFlag(argv)];
 
-    // Each height source covers exactly its albedo band's boxes (§4.1), so
-    // coverage is read off the imagery source rather than declared twice.
-    const etopo = await etopoHeightSource();
-    const skadi: HeightSource = skadiHeightSource({
-      dir: rawDataPath('skadi.dir'),
-      coverage: eox.coverage,
-    });
-    const dhm: HeightSource = voidFilledHeightSource(
-      dhmTerraenHeightSource({
-        dir: rawDataPath('dhmterraen.dir'),
-        coverage: geodanmark.coverage,
-      }),
-      skadi,
-    );
-
-    await bakeAll(
-      [
-        {
-          source: bmng,
-          minLevel: BAKE_MIN_LEVEL,
-          height: etopo,
-          // ETOPO's own NODATA maps to NaN (`etopoHeightSource`), so a rare
-          // gap in a global 1.6 GB GeoTIFF would otherwise abort the bake.
-          heightUnderfill: constantHeightSource(0),
-          // The only band whose source carries real bathymetry, and the only
-          // one that is global — which is what lets R3 label the world ocean
-          // as simply the largest connected water component.
-          flattenWater: true,
-        },
-        {
-          source: eox,
-          minLevel: EOX_MIN_LEVEL,
-          underfill: bmng,
-          height: skadi,
-          heightUnderfill: etopo,
-        },
-        {
-          source: geodanmark,
-          minLevel: GEODANMARK_MIN_LEVEL,
-          // The band the level above it stops at: R11's sibling closure pulls
-          // in halo tiles outside the harvest bbox, and their pixels have to
-          // come from somewhere — EOX, not BMNG, or the halo ring would be
-          // six levels coarser than the tiles beside it. (`dhm` is already
-          // void-filled from skadi, the height product's own halo source.)
-          underfill: eox,
-          height: dhm,
-        },
-      ],
-      outDir,
-      products,
-    );
-  }
-  process.stderr.write(`done; tiles under ${join(outDir, 'earth-tiles')}\n`);
+  process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, body.tileRoot)}\n`);
+  const bands = await body.bands({ dev });
+  await bakeAll(body, bands, outDir, products);
+  process.stderr.write(`done; tiles under ${join(outDir, body.tileRoot)}\n`);
 }
 
 const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
