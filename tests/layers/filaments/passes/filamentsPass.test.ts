@@ -1,10 +1,9 @@
 /**
  * filamentsPass — focus-recession routing of the overlay opacity, pinned at both
- * ends of the blend on the 6th argument of `filamentRenderer.draw`.
- *
- * Also pins that the `enabled` gate is UNAFFECTED by recession: recession ∈
+ * ends of the blend on the 6th argument of `filamentRenderer.draw`, plus the
+ * SlabView threading and the either-or `enabled` gate: recession ∈
  * [FILAMENT_RECESSION, 1] can never zero a layer, so the gate must keep reading
- * the pure toggle alone.
+ * the pure toggle alone, while a fade-out tail keeps drawing after it flips off.
  */
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
@@ -13,6 +12,7 @@ import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { FILAMENT_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { FilamentsRuntime } from '../../../../src/layers/filaments/types/FilamentsRuntime';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 
@@ -57,7 +57,6 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
 function makeState(
   opacity: number,
   filamentsOverrides: Partial<{ enabled: boolean; intensity: number }> = {},
-  filamentRenderer: unknown = null,
 ): EngineState {
   return {
     subsystems: { fades: { opacityOf: () => opacity }, clipPlayer: { clipOpacityOf: () => 1 } },
@@ -68,17 +67,20 @@ function makeState(
         ...filamentsOverrides,
       },
     },
-    gpu: { filamentRenderer },
   } as unknown as EngineState;
+}
+
+function makeRuntime(draw: (...args: unknown[]) => void): FilamentsRuntime {
+  return { renderer: { draw }, slot: {} } as unknown as FilamentsRuntime;
 }
 
 const PASS_STUB = {} as GPURenderPassEncoder;
 
-describe('filamentsPass.draw focus recession', () => {
+describe('filamentsPass draw focus recession', () => {
   it('passes plain opacityOf at blend 0', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(0);
-    filamentsPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
+    filamentsPass(makeRuntime(drawSpy)).draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     // Args: (pass, vp, viewport, halfwidth, intensity, opacity).
     expect(drawSpy.mock.calls[0]![5]).toBe(1);
@@ -87,19 +89,47 @@ describe('filamentsPass.draw focus recession', () => {
   it('passes opacityOf × FILAMENT_RECESSION at blend 1', () => {
     const drawSpy = vi.fn();
     const ctx = makeCtx(1);
-    filamentsPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1, {}, { draw: drawSpy }));
+    filamentsPass(makeRuntime(drawSpy)).draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, makeState(1));
     expect(drawSpy).toHaveBeenCalledTimes(1);
     expect(drawSpy.mock.calls[0]![5]).toBeCloseTo(FILAMENT_RECESSION, 6);
   });
+
+  it('threads the SlabView vp/viewport rather than ctx.vp/ctx.canvasSize', () => {
+    const drawSpy = vi.fn();
+    const ctx = makeCtx(0);
+    const view = slabViewOf(ctx, COSMO);
+    filamentsPass(makeRuntime(drawSpy)).draw(
+      PASS_STUB,
+      view,
+      ctx,
+      makeState(1, { intensity: 0.7 }),
+    );
+    const args = drawSpy.mock.calls[0]!;
+    expect(args[0]).toBe(PASS_STUB);
+    expect(args[1]).toBe(view.vp);
+    expect(args[2]).toEqual(view.viewportPx);
+    expect(args[3]).toBe(1.5); // line halfwidth (FILAMENT_LINE_HALFWIDTH_PX)
+    expect(args[4]).toBe(0.7);
+  });
 });
 
-describe('filamentsPass.enabled is unaffected by focus recession', () => {
+describe('filamentsPass enabled', () => {
   it('returns false when the toggle is off and opacity is 0, regardless of blend', () => {
-    // Pass enabled=false via state; settings arg is unused by the layer.
     const state = makeState(0, { enabled: false });
     const ctx0 = makeCtx(0);
     const ctx1 = makeCtx(1);
-    expect(filamentsPass.enabled(state, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
-    expect(filamentsPass.enabled(state, ctx1, slabViewOf(ctx1, COSMO))).toBe(false);
+    const pass = filamentsPass(makeRuntime(vi.fn()));
+    expect(pass.enabled(state, ctx0, slabViewOf(ctx0, COSMO))).toBe(false);
+    expect(pass.enabled(state, ctx1, slabViewOf(ctx1, COSMO))).toBe(false);
+  });
+
+  it('returns true when the toggle is off BUT fade opacity > 0 (fade-out tail still drawing)', () => {
+    // The gate keeps the layer alive so the user sees the smooth ramp out
+    // instead of an instant pop on the frame the toggle flips.
+    const state = makeState(1, { enabled: false });
+    const ctx = makeCtx(0);
+    expect(filamentsPass(makeRuntime(vi.fn())).enabled(state, ctx, slabViewOf(ctx, COSMO))).toBe(
+      true,
+    );
   });
 });

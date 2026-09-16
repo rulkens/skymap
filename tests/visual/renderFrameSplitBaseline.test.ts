@@ -30,7 +30,9 @@ import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
+import { filamentsPass } from '../../src/layers/filaments/passes/filamentsPass';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { FilamentsRuntime } from '../../src/layers/filaments/types/FilamentsRuntime';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //
@@ -457,13 +459,13 @@ describe('renderFrame visual baseline', () => {
           // wired in (no top-level `renderFrame` input field duplication;
           // see `RenderFrameInput`'s slimmed shape). The local names below
           // (`milkyWayCloudRenderer`, `horizonShellRenderer`,
-          // `proceduralDiskRenderer`, `texturedDiskRenderer`,
-          // `filamentRenderer`) are the same logging-renderer instances
-          // declared above, so their `argShape` entries land in `records`.
+          // `proceduralDiskRenderer`, `texturedDiskRenderer`) are the same
+          // logging-renderer instances declared above, so their `argShape`
+          // entries land in `records`. A Layer's renderer is not among them:
+          // it reaches its pass through the runtime, not through `state.gpu`.
           milkyWayCloudRenderer,
           milkyWayAggregateUpsample,
           horizonShellRenderer,
-          filamentRenderer,
           // Shared focus uniform — no-op write (doesn't touch the recorded
           // encoder); its bind group is bound identically in both the
           // single and split paths, so the sequence stays stable.
@@ -517,13 +519,15 @@ describe('renderFrame visual baseline', () => {
         // The cubemap-capture bookkeeping — see the matching fixture comment
         // in renderFrame.test.ts.
         cubemapCaptures: makeCubemapCaptureRuntimes(),
-        // The COMPOSED list `createLayers` writes: core's registry plus the
-        // galaxyCatalog Layer's passes, whose draws this baseline records.
+        // The COMPOSED list `createLayers` writes: core's registry plus each
+        // Layer's passes, whose draws this baseline records. Array position is
+        // not draw order — `expandFrameOrder` resolves each pass by name.
         passes: [
           ...CONTENT_PASSES,
           galaxyPointSpritesPass(galaxyRuntime),
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
+          filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as FilamentsRuntime),
         ],
       } as never,
       device,

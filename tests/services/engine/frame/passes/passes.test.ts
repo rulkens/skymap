@@ -10,7 +10,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { filamentsPass } from '../../../../../src/layers/filaments/passes/filamentsPass';
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
@@ -169,56 +168,6 @@ describe('starAggregatesPass registry row', () => {
 // `texturedDisksPass.test.ts` (one test file per ContentPass module,
 // matching the convention used by every other entry in `passes/`). The
 // hdr-target layers check above pins the name in canonical order.
-
-describe('filamentsPass.enabled', () => {
-  it('returns false when filaments.enabled is false AND fade opacity is 0', () => {
-    // fades.opacityOf returns 0 so the gate doesn't keep the layer alive
-    // through a fade-out tail; toggle is also off — both conditions false.
-    const stateZeroFade = {
-      subsystems: { fades: { opacityOf: () => 0, isAnyAnimating: () => false } },
-      settings: { filaments: { enabled: false, intensity: 1 } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(filamentsPass.enabled(stateZeroFade, ctx, slabViewOf(ctx, COSMO))).toBe(false);
-  });
-
-  it('returns true when filaments.enabled is false BUT fade opacity > 0 (fade-out tail still drawing)', () => {
-    // STATE_STUB's opacityOf = 1 simulates a fade-out in progress; the
-    // gate keeps the layer alive so the user sees the smooth ~100 ms ramp
-    // instead of an instant pop.
-    const stateOffFading = {
-      ...STATE_STUB,
-      settings: { filaments: { enabled: false, intensity: 1 } },
-    } as unknown as EngineState;
-    const ctx = makeCtx();
-    expect(filamentsPass.enabled(stateOffFading, ctx, slabViewOf(ctx, COSMO))).toBe(true);
-  });
-});
-
-describe('filamentsPass.draw', () => {
-  it('threads the SlabView vp/viewport to filamentRenderer.draw when present', () => {
-    // This is the representative "draw threads the SlabView" check: the
-    // layer must forward the SlabView's `vp`/`viewportPx` — NOT
-    // `ctx.vp`/`ctx.canvasSize` directly.
-    const drawSpy = vi.fn<(...args: unknown[]) => void>();
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    // intensity=0.7 now comes from state.settings.filaments.intensity.
-    const stateWith07 = {
-      ...STATE_STUB,
-      settings: { filaments: { enabled: true, intensity: 0.7 } },
-      gpu: { ...STATE_STUB.gpu, filamentRenderer: { draw: drawSpy } },
-    } as unknown as EngineState;
-    filamentsPass.draw(PASS_STUB, view, ctx, stateWith07);
-    expect(drawSpy).toHaveBeenCalledTimes(1);
-    const args = drawSpy.mock.calls[0]!;
-    expect(args[0]).toBe(PASS_STUB);
-    expect(args[1]).toBe(view.vp);
-    expect(args[2]).toEqual(view.viewportPx);
-    expect(args[3]).toBe(1.5); // line halfwidth (FILAMENT_LINE_HALFWIDTH_PX)
-    expect(args[4]).toBe(0.7);
-  });
-});
 
 describe('milkyWayPass.enabled', () => {
   it('returns true when milkyWay.enabled is true and the disc is above the FULL apparent size', () => {

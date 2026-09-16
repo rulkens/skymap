@@ -72,16 +72,14 @@ function assertSweep(
 // per-fragment spreads — each needs its literal fragment type. This stays until
 // reducers compose at the type level, not this PR.
 //
-// The three `filaments` rows below are 05a Task 1's relocation-only state: the
-// renderer/slot/pass modules moved under `src/layers/filaments/`, but core still
-// constructs and wires them directly (Task 1 changes no behaviour). Tasks 2-5
-// delete these three reads in favour of `Layer.create`/`passes`/`assets`, and
-// drop these rows with them.
+// The two `filaments` rows below are 05a's in-flight state: core still
+// constructs the renderer and builds the slot from the modules that moved under
+// `src/layers/filaments/`. Task 5 deletes both reads in favour of
+// `Layer.create`/`assets` and drops the rows with them.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'state/settings/settingsSlice': 13,
   'services/engine/gpuHandles/gpuHandleRegistry': 1,
   'services/engine/wiring/assetWiring': 1,
-  'services/engine/frame/passes/index': 1,
 };
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
