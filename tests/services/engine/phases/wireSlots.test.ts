@@ -369,14 +369,18 @@ function makeState(
       // filaments slot's commit doesn't bail early; the scalar volume
       // renderer is stubbed so CF-4 and synthetic commits can land.
       renderTargets: null,
+      // `hasCloud`/`listIds` are the arrival-fade guards: `installFadeOnArrival`
+      // calls them on a present renderer, where `seedFades` never did.
       filamentRenderer: {
         upload: vi.fn(async () => {}),
+        hasCloud: () => false,
       } as never,
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
       volumeFieldRenderer: {
         upload: vi.fn(),
+        listIds: () => [],
       } as never,
     },
     subsystems: {

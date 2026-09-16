@@ -11,7 +11,6 @@
 
 import { createAssetSlot } from '../AssetSlot';
 import { filamentFetcher } from '../fetchers/filamentFetcher';
-import { syncVisibilityFades } from '../../engine/wiring/syncVisibilityFades';
 import type { FilamentReq } from '../../../@types/loading/FilamentReq';
 import type { FilamentCloud } from '../../../@types/data/filament/FilamentCloud';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
@@ -26,11 +25,6 @@ export const createFilamentSlot: SlotFactory<FilamentCloud, FilamentReq> = (stat
       // Kept inside the async commit body for symmetry with the
       // galaxy-catalog point slot, whose upload is async.
       state.gpu.filamentRenderer.upload(cloud);
-      // Drive the first-load fade through the intent → fade bridge: the
-      // filaments row owns the intent gate (reads settings.filaments.enabled), so
-      // a load that completes while the user has filaments off snaps to opacity 0
-      // and never renders the cosmic web until they toggle it on.
-      syncVisibilityFades(state, { animate: true, only: ['filaments'] });
     },
   });
   slot.subscribe((s) => {
