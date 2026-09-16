@@ -16,7 +16,7 @@ import { describe, expect, it } from 'vitest';
 
 import { baseLevelForTier } from '../../../src/utils/surfaceTiles/baseLevelForTier';
 import { tierToTexturePx } from '../../../src/utils/math/tierToTexturePx';
-import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../../src/data/bodies/earthTileParams';
+import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../../src/data/bodies/surfaceTileParams';
 import { TIER_LADDER } from '../../../src/data/tierLadder';
 
 describe('baseLevelForTier', () => {
@@ -36,7 +36,7 @@ describe('baseLevelForTier', () => {
       // The defining property: the level whose full equirect width IS that
       // tier's texture width. Off by one either way and the tiles refine the
       // wrong image.
-      expect(EARTH_EQUIRECT_BASE_WIDTH_PX << z, tier).toBe(tierToTexturePx(tier));
+      expect(SURFACE_EQUIRECT_BASE_WIDTH_PX << z, tier).toBe(tierToTexturePx(tier));
     }
   });
 });

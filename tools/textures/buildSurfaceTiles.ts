@@ -47,7 +47,7 @@ import type { SurfaceTileBodyId } from '../../src/@types/data/SurfaceTileBodyId'
 import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
 import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTileManifestBand';
 import type { SurfaceTileBand } from '../../src/@types/scene/SurfaceTileBand';
-import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
 import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
 import { surfaceTileBandFromBounds } from '../../src/utils/surfaceTiles/surfaceTileBandFromBounds';
@@ -351,7 +351,7 @@ async function printWaterDiagnostics(
 
   let globalMin = Infinity;
   let globalMax = -Infinity;
-  for (const { x, y } of candidateTileIndices(bands, z, EARTH_TILE_PX)) {
+  for (const { x, y } of candidateTileIndices(bands, z, SURFACE_TILE_PX)) {
     const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, tilePrefix));
     const tile = await readHeightTileFile(path);
     if (tile === null) continue;
@@ -361,7 +361,7 @@ async function printWaterDiagnostics(
   ranges.set('global', [globalMin, globalMax]);
 
   for (const [name, box] of WATER_DIAGNOSTIC_BOXES) {
-    const rect = surfaceTileIndicesForBounds(box, z, EARTH_TILE_PX);
+    const rect = surfaceTileIndicesForBounds(box, z, SURFACE_TILE_PX);
     let min = Infinity;
     let max = -Infinity;
     for (let y = rect.yMin; y <= rect.yMax; y++) {
@@ -418,7 +418,7 @@ export async function bakeAll(
   products: ReadonlySet<SurfaceTileProduct> = new Set<SurfaceTileProduct>(['albedo', 'height']),
 ): Promise<void> {
   const { tileRoot, tilePrefix } = body;
-  const tilePx = EARTH_TILE_PX;
+  const tilePx = SURFACE_TILE_PX;
   const written: string[] = [];
   const bandEntries: SurfaceTileManifestBand[] = [];
 

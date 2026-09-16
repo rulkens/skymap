@@ -15,7 +15,7 @@ import { describe, it, expect } from 'vitest';
 
 import { balanceSurfaceCut } from '../../../src/utils/surfaceTiles/balanceSurfaceCut';
 import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileColumns';
-import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
 import type { SurfaceCutTile } from '../../../src/@types/scene/SurfaceCutTile';
 import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 
@@ -61,7 +61,7 @@ function balance(
   bands: readonly SurfaceTileBand[] = UNCAPPED,
   resolveHeight = ALL_LEVELS,
 ) {
-  return balanceSurfaceCut(cut, EARTH_TILE_PX, bands, resolveHeight);
+  return balanceSurfaceCut(cut, SURFACE_TILE_PX, bands, resolveHeight);
 }
 
 function find(cut: readonly SurfaceCutTile[], z: number, x: number, y: number) {
@@ -88,7 +88,7 @@ function worstStep(cut: readonly SurfaceCutTile[]): number {
   let worst = 0;
   for (const tile of cut) {
     const { z, x, y } = tile.id;
-    const cols = surfaceTileColumns(z, EARTH_TILE_PX);
+    const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
     const rows = cols / 2;
     const cells: ReadonlyArray<readonly [number, number] | null> = [
       [x === 0 ? cols - 1 : x - 1, y],
@@ -145,7 +145,7 @@ describe('balanceSurfaceCut', () => {
     // throw the deep band's heights away — the ring cannot meet it halfway.
     const islandZ7X = 10;
     const islandZ7Y = 5;
-    const deepCols = surfaceTileColumns(7, EARTH_TILE_PX);
+    const deepCols = surfaceTileColumns(7, SURFACE_TILE_PX);
     const deepRows = deepCols / 2;
     const bands: readonly SurfaceTileBand[] = [
       { uBounds: [0, 1], vBounds: [0, 1], min: 0, max: 7 },
@@ -206,7 +206,7 @@ describe('balanceSurfaceCut', () => {
     // BOTH passes, so the bit never got set even though nothing needed climbing.
     const islandZ7X = 10;
     const islandZ7Y = 5;
-    const deepCols = surfaceTileColumns(7, EARTH_TILE_PX);
+    const deepCols = surfaceTileColumns(7, SURFACE_TILE_PX);
     const deepRows = deepCols / 2;
     const bands: readonly SurfaceTileBand[] = [
       { uBounds: [0, 1], vBounds: [0, 1], min: 0, max: 7 },
@@ -247,7 +247,7 @@ describe('balanceSurfaceCut', () => {
   it('treats the antimeridian columns as neighbours', () => {
     // x = 0 and x = cols - 1 share an edge. Without the wrap, the z9 leaves at
     // the last column see no western neighbour and the seam goes unstitched.
-    const lastZ9 = surfaceTileColumns(9, EARTH_TILE_PX) - 1;
+    const lastZ9 = surfaceTileColumns(9, SURFACE_TILE_PX) - 1;
     const cut = [
       leafAt(8, 0, 5),
       leafAt(9, lastZ9, 10),

@@ -5,23 +5,23 @@
 
 import package::bodies::surfaceTile::lattice::latticePostGradient;
 
-// Mirrored from 'EARTH_TILE_ATLAS_SIDE' (earthTileParams.ts), parity-tested
+// Mirrored from 'SURFACE_TILE_ATLAS_SIDE' (surfaceTileParams.ts), parity-tested
 // in constants.parity.test.ts. Half an ATLAS texel in atlas uv: the inset
 // that keeps a bilinear tap at a resolved rect's edge out of a DIFFERENT
 // slot's pixels (the sampler's clamp-to-edge only guards the atlas's own edge).
-const EARTH_TILE_ATLAS_SIDE: f32 = 8192.0;
-const EARTH_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / EARTH_TILE_ATLAS_SIDE;
+const SURFACE_TILE_ATLAS_SIDE: f32 = 8192.0;
+const SURFACE_TILE_ATLAS_HALF_TEXEL: f32 = 0.5 / SURFACE_TILE_ATLAS_SIDE;
 
-// Mirrored from 'EARTH_TILE_PX' (earthTileParams.ts), parity-tested. The
+// Mirrored from 'SURFACE_TILE_PX' (surfaceTileParams.ts), parity-tested. The
 // atlas-uv width of a tile drawn from ITS OWN slot; the LOD overlay divides a
 // resolved rect's width into it to recover how many levels the fallback walked.
-const EARTH_TILE_PX: f32 = 512.0;
-const TILE_SLOT_SCALE: f32 = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
+const SURFACE_TILE_PX: f32 = 512.0;
+const TILE_SLOT_SCALE: f32 = SURFACE_TILE_PX / SURFACE_TILE_ATLAS_SIDE;
 
-// The 'earth-lod-overlay' ladder: green = own leaf tile resident,
+// The 'surface-lod-overlay' ladder: green = own leaf tile resident,
 // yellow/orange/red = 1/2/3+ levels coarser. Flat bands, not a ramp: the
 // ask is a small integer a reader can name at a glance.
-fn earthLodOverlayColor(levelDelta: u32) -> vec3<f32> {
+fn tileLodOverlayColor(levelDelta: u32) -> vec3<f32> {
   if (levelDelta == 0u) {
     return vec3<f32>(0.10, 0.75, 0.15); // green
   } else if (levelDelta == 1u) {
@@ -37,7 +37,7 @@ fn earthLodOverlayColor(levelDelta: u32) -> vec3<f32> {
 // clamp() leaves indeterminate -- so the inset is capped at half the rect.
 fn resolveTileAtlasUv(origin: vec2<f32>, scale: vec2<f32>, uv: vec2<f32>) -> vec2<f32> {
   let raw = origin + uv * scale;
-  let inset = min(vec2<f32>(EARTH_TILE_ATLAS_HALF_TEXEL), 0.5 * scale);
+  let inset = min(vec2<f32>(SURFACE_TILE_ATLAS_HALF_TEXEL), 0.5 * scale);
   return clamp(raw, origin + inset, origin + scale - inset);
 }
 
@@ -112,7 +112,7 @@ fn tileShadingNormal(
 fn tileLodOverlay(colour: vec3<f32>, rectWidth: f32, lodOverlay: f32) -> vec3<f32> {
   if (lodOverlay > 0.5) {
     let levelDelta = u32(round(log2(max(TILE_SLOT_SCALE / rectWidth, 1.0))));
-    return mix(colour, earthLodOverlayColor(levelDelta), 0.6);
+    return mix(colour, tileLodOverlayColor(levelDelta), 0.6);
   }
   return colour;
 }

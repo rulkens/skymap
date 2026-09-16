@@ -18,7 +18,6 @@
 
 import sharp from 'sharp';
 
-import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../src/data/bodies/earthTileParams';
 import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
 import { rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
@@ -49,7 +48,7 @@ export async function equirectFileSource(source: {
   return {
     id: source.id,
     attribution: source.attribution,
-    maxLevel: levelFittingWidth(sourceWidth, EARTH_EQUIRECT_BASE_WIDTH_PX),
+    maxLevel: levelFittingWidth(sourceWidth),
     coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
     provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 

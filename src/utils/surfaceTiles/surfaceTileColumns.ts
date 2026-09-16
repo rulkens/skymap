@@ -1,4 +1,4 @@
-import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams';
+import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/surfaceTileParams';
 
 /**
  * surfaceTileColumns — how many tiles span 360° of longitude at pyramid level
@@ -10,5 +10,5 @@ import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams'
  * 512 px tile is the exact 2×2 union of four 256 px source tiles.
  */
 export function surfaceTileColumns(z: number, tilePx: number): number {
-  return (EARTH_EQUIRECT_BASE_WIDTH_PX << z) / tilePx;
+  return (SURFACE_EQUIRECT_BASE_WIDTH_PX << z) / tilePx;
 }

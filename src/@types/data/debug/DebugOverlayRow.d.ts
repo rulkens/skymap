@@ -4,7 +4,7 @@ export type DebugOverlayRow = {
   key: string;
   label: string;
   /** Which DebugPanel section renders this row. Absent = the Debug Overlays
-   *  list; `'earth-tiles'` = the Earth Tile Atlas section, for toggles only
-   *  legible next to that section's residency numbers. */
-  section?: 'earth-tiles';
+   *  list; `'surface-tiles'` = the Surface Tile Atlas section, for toggles
+   *  only legible next to that section's residency numbers. */
+  section?: 'surface-tiles';
 };

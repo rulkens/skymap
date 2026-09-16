@@ -8,7 +8,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { surfaceTileInBand } from '../../../src/utils/surfaceTiles/surfaceTileInBand';
-import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
 import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 
 /** A band covering exactly z8 tile (128, 64)'s own box — 256 columns, 128
@@ -21,7 +21,7 @@ const ONE_TILE: SurfaceTileBand = {
 };
 
 const inBand = (z: number, x: number, y: number) =>
-  surfaceTileInBand([ONE_TILE], EARTH_TILE_PX, z, x, y);
+  surfaceTileInBand([ONE_TILE], SURFACE_TILE_PX, z, x, y);
 
 describe('surfaceTileInBand', () => {
   it('claims all four siblings of a tile the band overlaps, and nothing beyond', () => {
@@ -45,8 +45,8 @@ describe('surfaceTileInBand', () => {
     const east: SurfaceTileBand = { uBounds: [0.9, 1], vBounds: [0, 1], min: 8, max: 13 };
     const west: SurfaceTileBand = { uBounds: [0, 0.1], vBounds: [0, 1], min: 8, max: 13 };
     const bands = [east, west];
-    expect(surfaceTileInBand(bands, EARTH_TILE_PX, 8, 255, 64)).toBe(true);
-    expect(surfaceTileInBand(bands, EARTH_TILE_PX, 8, 0, 64)).toBe(true);
-    expect(surfaceTileInBand(bands, EARTH_TILE_PX, 8, 128, 64)).toBe(false);
+    expect(surfaceTileInBand(bands, SURFACE_TILE_PX, 8, 255, 64)).toBe(true);
+    expect(surfaceTileInBand(bands, SURFACE_TILE_PX, 8, 0, 64)).toBe(true);
+    expect(surfaceTileInBand(bands, SURFACE_TILE_PX, 8, 128, 64)).toBe(false);
   });
 });

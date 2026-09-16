@@ -22,7 +22,7 @@ import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileC
 import { surfaceTileInBand } from '../../../src/utils/surfaceTiles/surfaceTileInBand';
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
-import { EARTH_TILE_LOD_BIAS, EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_LOD_BIAS, SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
@@ -59,7 +59,7 @@ const GLOBAL_BANDS: readonly SurfaceTileBand[] = [
  *  exist for. */
 function heightFrom(bands: readonly SurfaceTileBand[]) {
   return (tile: SurfaceTileId) =>
-    tile.product === 'height' && surfaceTileInBand(bands, EARTH_TILE_PX, tile.z, tile.x, tile.y)
+    tile.product === 'height' && surfaceTileInBand(bands, SURFACE_TILE_PX, tile.z, tile.x, tile.y)
       ? WHOLE_ATLAS
       : null;
 }
@@ -107,8 +107,8 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands: GLOBAL_BANDS,
-    tilePx: EARTH_TILE_PX,
-    // Fixture default is the 1:1 point, not the shipped `EARTH_TILE_LOD_BIAS`,
+    tilePx: SURFACE_TILE_PX,
+    // Fixture default is the 1:1 point, not the shipped `SURFACE_TILE_LOD_BIAS`,
     // so every test above that predates the bias keeps asserting the rule it
     // was written against rather than a softened one.
     lodBias: 0,
@@ -165,7 +165,7 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands,
-    tilePx: EARTH_TILE_PX,
+    tilePx: SURFACE_TILE_PX,
     lodBias: 0,
     residentSlot: heightFrom(bands),
     maxLevel,
@@ -180,7 +180,7 @@ function angleBetween(a: Vec3, b: Vec3): number {
  *  tile `z`/`x`/`y`, recomputed here so the horizon-cull fixture below
  *  derives its numbers rather than hard-coding them. */
 function tileGeometry(z: number, x: number, y: number) {
-  const cols = surfaceTileColumns(z, EARTH_TILE_PX);
+  const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
   const rows = cols / 2;
   const u0 = x / cols;
   const u1 = (x + 1) / cols;
@@ -217,7 +217,7 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands,
-    tilePx: EARTH_TILE_PX,
+    tilePx: SURFACE_TILE_PX,
     lodBias: 0,
     residentSlot: heightFrom(bands),
   };
@@ -290,7 +290,7 @@ describe('cutSurfaceTiles', () => {
       const [antiX, antiY] = surfaceTileXyForUv(
         [175 / 360 + 0.5, -55 / 180 + 0.5],
         Z,
-        EARTH_TILE_PX,
+        SURFACE_TILE_PX,
       );
       const result = cutSurfaceTiles(aimedAt(CAM_LAT_DEG, altitudeKm, target, Z));
       expect(
@@ -313,7 +313,7 @@ describe('cutSurfaceTiles', () => {
 
     it('resolves an exactly resident leaf to the ancestor rect unchanged (levelDelta 0)', () => {
       const z = expectedLevel(1000);
-      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, SURFACE_TILE_PX);
       const residentSlot = withHeight((tile: SurfaceTileId) =>
         tile.z === z && tile.x === x && tile.y === y
           ? {
@@ -340,7 +340,7 @@ describe('cutSurfaceTiles', () => {
 
     it("carries the z-1 ancestor's flattened rect as fallback, and the leaf's own readyAt, when both are resident", () => {
       const z = expectedLevel(1000);
-      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, SURFACE_TILE_PX);
       const parentZ = z - 1;
       const parentX = x >> 1;
       const parentY = y >> 1;
@@ -400,7 +400,7 @@ describe('cutSurfaceTiles', () => {
       const z = expectedLevel(1000);
       const levelDelta = 2;
       const ancestorZ = z - levelDelta;
-      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, SURFACE_TILE_PX);
       const ancX = x >> levelDelta;
       const ancY = y >> levelDelta;
       const ancestorRect = {
@@ -471,11 +471,11 @@ describe('cutSurfaceTiles', () => {
       const z7 = 7;
       const z8 = 8;
       const subUv: [number, number] = [20 / 360 + 0.5, 15 / 180 + 0.5];
-      const [z7x, z7y] = surfaceTileXyForUv(subUv, z7, EARTH_TILE_PX);
-      const [z8x, z8y] = surfaceTileXyForUv(subUv, z8, EARTH_TILE_PX);
+      const [z7x, z7y] = surfaceTileXyForUv(subUv, z7, SURFACE_TILE_PX);
+      const [z8x, z8y] = surfaceTileXyForUv(subUv, z8, SURFACE_TILE_PX);
 
       const tileBounds = (z: number, x: number, y: number) => {
-        const cols = surfaceTileColumns(z, EARTH_TILE_PX);
+        const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
         const rows = cols / 2;
         return {
           uBounds: [x / cols, (x + 1) / cols] as const,
@@ -599,7 +599,7 @@ describe('cutSurfaceTiles', () => {
 
       // Hand-derived sub-rect: the leaf's low `z - HEIGHT_LEVEL` bits index its
       // block of the ancestor's 128 cells, rows north-first on both sides.
-      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, SURFACE_TILE_PX);
       const leaf = result.cut.find((t) => t.id.z === z && t.id.x === x && t.id.y === y);
       expect(leaf, `cut entry for ${z}/${x}/${y}`).toBeDefined();
       const span = 1 << (z - HEIGHT_LEVEL);
@@ -622,7 +622,7 @@ describe('cutSurfaceTiles', () => {
         ),
       );
       const z = expectedLevel(1000);
-      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, EARTH_TILE_PX);
+      const [x, y] = surfaceTileXyForUv(SUB_CAMERA_UV, z, SURFACE_TILE_PX);
       for (const product of ['albedo', 'height'])
         expect(keys.has(`${product}/${z}/${x}/${y}`), `${product} at the required level`).toBe(
           true,
@@ -639,7 +639,7 @@ describe('cutSurfaceTiles', () => {
       const result = cutSurfaceTiles({
         ...tiltedAt(300_000, 60),
         bands: GLOBAL_BANDS,
-        lodBias: EARTH_TILE_LOD_BIAS,
+        lodBias: SURFACE_TILE_LOD_BIAS,
         residentSlot: HEIGHT_ONLY,
       });
 
@@ -706,8 +706,8 @@ describe('cutSurfaceTiles', () => {
       const keys = new Set(
         result.requests.requests.map((r) => `${r.tile.z}/${r.tile.x}/${r.tile.y}`),
       );
-      const subCamera = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, EARTH_TILE_PX);
-      const antipode = surfaceTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], z, EARTH_TILE_PX);
+      const subCamera = surfaceTileXyForUv([20 / 360 + 0.5, 15 / 180 + 0.5], z, SURFACE_TILE_PX);
+      const antipode = surfaceTileXyForUv([-160 / 360 + 0.5, -15 / 180 + 0.5], z, SURFACE_TILE_PX);
 
       expect(keys.has(`${z}/${subCamera[0]}/${subCamera[1]}`), 'sub-camera tile').toBe(true);
       expect(keys.has(`${z}/${antipode[0]}/${antipode[1]}`), 'antipodal tile').toBe(false);
@@ -824,7 +824,7 @@ describe('cutSurfaceTiles', () => {
       // dropped: `cutSurfaceTiles` has no window to be inside of.
       const result = cutSurfaceTiles(nadirAt(1000, 180.5, 5));
       const xFrac = ({ z, x }: { z: number; x: number }) =>
-        x / surfaceTileColumns(z, EARTH_TILE_PX);
+        x / surfaceTileColumns(z, SURFACE_TILE_PX);
       expect(
         result.requests.requests.some((r) => xFrac(r.tile) < 0.1),
         'tile east of the seam',
@@ -880,7 +880,7 @@ describe('cutSurfaceTiles', () => {
       // predicts at this coarse a level (the reason the four-corner test
       // above measures every corner, not just the centre).
       const Z = MIN_TILE_LEVEL;
-      const [TX, TY] = surfaceTileXyForUv([0 / 360 + 0.5, 40 / 180 + 0.5], Z, EARTH_TILE_PX);
+      const [TX, TY] = surfaceTileXyForUv([0 / 360 + 0.5, 40 / 180 + 0.5], Z, SURFACE_TILE_PX);
       const CAM_LAT_DEG = 10;
       const geo = tileGeometry(Z, TX, TY);
 
@@ -1148,7 +1148,7 @@ describe('cutSurfaceTiles', () => {
     ];
 
     function tileUvBounds(z: number, x: number, y: number) {
-      const cols = surfaceTileColumns(z, EARTH_TILE_PX);
+      const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
       const rows = cols / 2;
       const vNorth = 1 - y / rows;
       const vSouth = 1 - (y + 1) / rows;
@@ -1163,7 +1163,7 @@ describe('cutSurfaceTiles', () => {
       // this fixture keeps testing the bbox cull rather than the height gate.
       if (tile.product === 'height') return WHOLE_ATLAS;
       const { u0, u1, v0, v1 } = tileUvBounds(tile.z, tile.x, tile.y);
-      if (surfaceTileInBand(bands, EARTH_TILE_PX, tile.z, tile.x, tile.y)) {
+      if (surfaceTileInBand(bands, SURFACE_TILE_PX, tile.z, tile.x, tile.y)) {
         return {
           slot: 0,
           atlasUvOrigin: [0, 0] as const,
@@ -1236,7 +1236,7 @@ describe('cutSurfaceTiles', () => {
         viewportPx,
         baseLevel: BASE_LEVEL,
         bands,
-        tilePx: EARTH_TILE_PX,
+        tilePx: SURFACE_TILE_PX,
         lodBias: 1,
         residentSlot: mockResidentSlot,
       });
@@ -1253,8 +1253,8 @@ describe('cutSurfaceTiles', () => {
           if (cutKeys.has(`${az}/${x >> (z - az)}/${y >> (z - az)}`)) return true;
         return false;
       };
-      const [cx, cy] = surfaceTileXyForUv(subCamUv, 19, EARTH_TILE_PX);
-      const cols19 = surfaceTileColumns(19, EARTH_TILE_PX);
+      const [cx, cy] = surfaceTileXyForUv(subCamUv, 19, SURFACE_TILE_PX);
+      const cols19 = surfaceTileColumns(19, SURFACE_TILE_PX);
       let visible = 0;
       for (let x = cx - 20; x <= cx + 20; x++) {
         for (let y = cy - 20; y <= cy + 20; y++) {

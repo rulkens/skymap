@@ -21,7 +21,7 @@
  *
  * 512 is a property of the tile FORMAT: `residentSlot` resolves
  * `atlasUvOrigin`/`atlasUvScale` off the atlas's own `slotsPerRow`
- * (`EARTH_TILE_ATLAS_SIDE / tilePx`) — sound only at the shipped 512 px
+ * (`SURFACE_TILE_ATLAS_SIDE / tilePx`) — sound only at the shipped 512 px
  * edge, since nothing else re-derives from `tilePx` at all. A bake at
  * another edge is therefore unaddressable, not merely unusual — silently
  * adapting to it would resolve the same tile to a differently-sized atlas
@@ -56,10 +56,10 @@ import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfa
 import { fetchHeightTile } from '../../../../src/utils/network/fetchHeightTile';
 import { baseLevelForTier } from '../../../../src/utils/surfaceTiles/baseLevelForTier';
 import {
-  EARTH_TILE_ATLAS_SIDE,
-  EARTH_TILE_PX,
+  SURFACE_TILE_ATLAS_SIDE,
+  SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
-} from '../../../../src/data/bodies/earthTileParams';
+} from '../../../../src/data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
 
 /** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
@@ -113,13 +113,13 @@ async function plannerParamsFor(manifest: SurfaceTileManifest, tier: Tier = 'lar
 
 describe('surfaceTileSubsystem manifest validation', () => {
   it('accepts a bake at the format tile edge, and one that omits the field', async () => {
-    expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX))).not.toBeNull();
+    expect(await plannerParamsFor(surfaceManifest(SURFACE_TILE_PX))).not.toBeNull();
     expect(await plannerParamsFor(surfaceManifest(undefined))).not.toBeNull();
   });
 
   it('refuses a bake cut at a different tile edge rather than adapting to it', async () => {
-    expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX / 2))).toBeNull();
-    expect(await plannerParamsFor(surfaceManifest(EARTH_TILE_PX * 2))).toBeNull();
+    expect(await plannerParamsFor(surfaceManifest(SURFACE_TILE_PX / 2))).toBeNull();
+    expect(await plannerParamsFor(surfaceManifest(SURFACE_TILE_PX * 2))).toBeNull();
   });
 
   it('skips a structurally-malformed band entry and derives params from the good ones', async () => {
@@ -127,7 +127,7 @@ describe('surfaceTileSubsystem manifest validation', () => {
     // missing `bounds` entirely alongside one well-formed entry. Skipping
     // the bad one — never throwing out of `refreshParams` — is the module's
     // stated stance for any manifest shape this build can't address.
-    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const manifest = surfaceManifest(SURFACE_TILE_PX);
     const goodBand = manifest.bands[0]!;
     const brokenManifest: SurfaceTileManifest = {
       ...manifest,
@@ -146,7 +146,7 @@ describe('surfaceTileSubsystem manifest validation', () => {
     // (a `--product albedo` run, or a bake older than the height product)
     // would otherwise plan requests for height tiles that were never baked,
     // 404ing forever and stalling refinement on that band's whole footprint.
-    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const manifest = surfaceManifest(SURFACE_TILE_PX);
     const albedoOnly: SurfaceTileManifest = {
       ...manifest,
       bands: [
@@ -161,7 +161,7 @@ describe('surfaceTileSubsystem manifest validation', () => {
 describe('surfaceTileSubsystem registry-driven manifest fetch', () => {
   it("requests earth's SURFACE_TILE_REGISTRY manifestKey, not a literal", async () => {
     vi.mocked(fetchSurfaceTileManifest).mockClear();
-    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
     const subsystem = createSurfaceTileSubsystem({
       device: {} as unknown as GPUDevice,
       requestRender: () => {},
@@ -178,7 +178,7 @@ describe('surfaceTileSubsystem base level', () => {
     // The tier has to reach `derivePlannerParams` for this to hold: a base level
     // computed from the `large` ceiling alone answers z4 for all three, which is
     // a promise of detail two of them never bound.
-    const manifest = surfaceManifest(EARTH_TILE_PX);
+    const manifest = surfaceManifest(SURFACE_TILE_PX);
     const large = await plannerParamsFor(manifest, 'large');
     const medium = await plannerParamsFor(manifest, 'medium');
     const small = await plannerParamsFor(manifest, 'small');
@@ -191,7 +191,7 @@ describe('surfaceTileSubsystem base level', () => {
     // the memo has to be keyed on the base level. Cached without it, a tier swap
     // would keep planning against the previous session's base for the rest of
     // the session, with the manifest already in hand and nothing to re-fetch.
-    const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    const subsystem = await subsystemWithManifest(surfaceManifest(SURFACE_TILE_PX));
     const before = subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'))!.baseLevel;
     expect(subsystem.plannerParams('earth', baseLevelForTier('earth', 'medium'))!.baseLevel).toBe(
       before - 1,
@@ -227,7 +227,7 @@ const HEIGHT_TILE = { product: 'height', z: MIN_TILE_LEVEL, x: 0, y: 0 } as cons
 const SUB_CAMERA_EQUATOR_PRIME: SurfaceTilePlan['subCameraDirLocal'] = [1, 0, 0];
 const ENGAGED: SurfaceTilePlan = {
   zWin: MIN_TILE_LEVEL,
-  requests: [{ tile: TILE, screenPx: EARTH_TILE_PX }],
+  requests: [{ tile: TILE, screenPx: SURFACE_TILE_PX }],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
 /** The shape the two-product walk emits: every tile requested in both
@@ -235,8 +235,8 @@ const ENGAGED: SurfaceTilePlan = {
 const BOTH_PRODUCTS: SurfaceTilePlan = {
   zWin: MIN_TILE_LEVEL,
   requests: [
-    { tile: TILE, screenPx: EARTH_TILE_PX },
-    { tile: HEIGHT_TILE, screenPx: EARTH_TILE_PX },
+    { tile: TILE, screenPx: SURFACE_TILE_PX },
+    { tile: HEIGHT_TILE, screenPx: SURFACE_TILE_PX },
   ],
   subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
 };
@@ -256,7 +256,7 @@ const DISENGAGED: SurfaceTilePlan = {
  * assertions exercise the real post-fetch state.
  */
 async function engagedSubsystem() {
-  vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+  vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
   vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
     close: () => {},
   } as unknown as ImageBitmap);
@@ -284,7 +284,7 @@ async function engagedSubsystem() {
  * else, so `getAtlasView()` going non-null IS the gate's answer.
  */
 async function engagesAt(plan: SurfaceTilePlan, tier: Tier): Promise<boolean> {
-  vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+  vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
   const subsystem = createSurfaceTileSubsystem({
     device: recordingDevice(),
     requestRender: () => {},
@@ -336,7 +336,7 @@ describe('surfaceTileSubsystem engage gate', () => {
  */
 describe('surfaceTileSubsystem debug snapshot', () => {
   it('is the quiet empty snapshot before the atlas ever engages', async () => {
-    const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    const subsystem = await subsystemWithManifest(surfaceManifest(SURFACE_TILE_PX));
     expect(subsystem.getDebugSnapshot()).toEqual(EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT);
   });
 
@@ -345,7 +345,7 @@ describe('surfaceTileSubsystem debug snapshot', () => {
     const snap = subsystem.getDebugSnapshot();
 
     expect(snap.engaged).toBe(true);
-    expect(snap.capacity).toBe((EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2);
+    expect(snap.capacity).toBe((SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX) ** 2);
     expect(snap.used).toBe(1);
     expect(snap.levels).toEqual([{ z: MIN_TILE_LEVEL, resident: 1, pending: 0 }]);
     expect(snap.plan).toEqual({ requestCount: 1, zWin: ENGAGED.zWin, misses: 0, cutCount: 0 });
@@ -388,7 +388,7 @@ describe('surfaceTileSubsystem debug snapshot', () => {
 
 describe('surfaceTileSubsystem residency readiness', () => {
   it('stamps a resident entry with the real-time moment its bitmap uploaded', async () => {
-    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
     vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
       close: () => {},
     } as unknown as ImageBitmap);
@@ -416,7 +416,7 @@ describe('surfaceTileSubsystem residency readiness', () => {
 
 describe('surfaceTileSubsystem residentSlot', () => {
   it('returns null before the manifest lands and for a tile nothing has requested', async () => {
-    const cold = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    const cold = await subsystemWithManifest(surfaceManifest(SURFACE_TILE_PX));
     expect(cold.residentSlot(TILE)).toBeNull();
   });
 
@@ -433,7 +433,7 @@ describe('surfaceTileSubsystem residentSlot', () => {
     // Every tile occupies exactly one slot's fraction of the atlas, whichever
     // slot it landed in — a structural invariant of the atlas geometry, not a
     // restatement of `TextureAtlas.slotUv`'s own col/row arithmetic.
-    const slotFraction = EARTH_TILE_PX / EARTH_TILE_ATLAS_SIDE;
+    const slotFraction = SURFACE_TILE_PX / SURFACE_TILE_ATLAS_SIDE;
     expect(resolved!.atlasUvScale[0]).toBeCloseTo(slotFraction);
     expect(resolved!.atlasUvScale[1]).toBeCloseTo(slotFraction);
     expect(resolved!.atlasUvOrigin[0]).toBeGreaterThanOrEqual(0);
@@ -455,7 +455,7 @@ describe('surfaceTileSubsystem residentSlot', () => {
     // Fill the atlas past capacity with distinct tiles at a LATER frame, so
     // LRU has something older (TILE, from `engagedSubsystem`'s frame) to
     // evict. `x` offset by 1 so this list never re-touches TILE's own (0,0).
-    const side = EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX;
+    const side = SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX;
     const filling = Array.from({ length: side * side }, (_, i) => ({
       tile: {
         product: 'albedo' as const,
@@ -491,7 +491,7 @@ describe('surfaceTileSubsystem residentSlot', () => {
 describe('surfaceTileSubsystem height stream', () => {
   /** A subsystem with the manifest landed and BOTH products of `TILE` fetched. */
   async function engagedWithBothProducts() {
-    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
     vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
       close: () => {},
     } as unknown as ImageBitmap);
@@ -518,7 +518,7 @@ describe('surfaceTileSubsystem height stream', () => {
       device: recordingDevice(),
       requestRender: () => {},
     });
-    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
     vi.mocked(fetchHeightTile).mockResolvedValue({
       subtreeMinM: -10,
       subtreeMaxM: 20,
@@ -534,7 +534,7 @@ describe('surfaceTileSubsystem height stream', () => {
       bodyId: 'earth',
       plan: {
         zWin: MIN_TILE_LEVEL,
-        requests: [{ tile: HEIGHT_TILE, screenPx: EARTH_TILE_PX }],
+        requests: [{ tile: HEIGHT_TILE, screenPx: SURFACE_TILE_PX }],
         subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
       },
     });
@@ -587,7 +587,7 @@ describe('surfaceTileSubsystem height stream', () => {
 
 describe('surfaceTileSubsystem lastCut', () => {
   it('starts empty, round-trips through setLastCut, and clears on destroy', async () => {
-    const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
+    const subsystem = await subsystemWithManifest(surfaceManifest(SURFACE_TILE_PX));
     expect(subsystem.getLastCut()).toEqual([]);
 
     const cut: readonly SurfaceCutTile[] = [
@@ -615,7 +615,7 @@ describe('surfaceTileSubsystem lastCut', () => {
 
 describe('surfaceTileSubsystem stand-down', () => {
   it('allocates nothing when a session never engages', async () => {
-    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
     let touched = false;
     const device = new Proxy({} as GPUDevice, {
       get: () => {
@@ -689,12 +689,12 @@ describe('surfaceTileSubsystem stand-down', () => {
  * (never-reset) mock call history.
  */
 describe('surfaceTileSubsystem full-atlas allocation', () => {
-  const SLOT_COUNT = (EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX) ** 2;
+  const SLOT_COUNT = (SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX) ** 2;
 
   /** `SLOT_COUNT` distinct tiles on an 8x8 grid at the window level, exactly
    *  filling the atlas — largest screenPx first, matching planner order. */
   function fillingRequests() {
-    const side = EARTH_TILE_ATLAS_SIDE / EARTH_TILE_PX;
+    const side = SURFACE_TILE_ATLAS_SIDE / SURFACE_TILE_PX;
     return Array.from({ length: SLOT_COUNT }, (_, i) => ({
       tile: { product: 'albedo', z: MIN_TILE_LEVEL, x: i % side, y: Math.floor(i / side) } as const,
       screenPx: SLOT_COUNT - i,
@@ -702,7 +702,7 @@ describe('surfaceTileSubsystem full-atlas allocation', () => {
   }
 
   it('does not evict a planned resident to make room for a new higher-priority tile', async () => {
-    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(EARTH_TILE_PX));
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
     vi.mocked(fetchSurfaceTileBitmap).mockResolvedValue({
       close: () => {},
     } as unknown as ImageBitmap);

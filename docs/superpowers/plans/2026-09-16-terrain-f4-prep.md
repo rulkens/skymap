@@ -276,7 +276,7 @@ User-ruled 2026-09-16. `src/data/bodies/earthTileParams.ts` holds constants that
 
 **Unchanged:** `EARTH_EQUATORIAL_CIRCUMFERENCE_M` and `earthTexelMetres` (truly Earth), the `'earth-tiles'` manifest key and R2 paths, and `earthPass`.
 
-- [ ] Grep `src tools tests docs .claude` for every old name, id and path (outside history folders), and fix stragglers, including `.wesl` comments. No new test. Commit.
+- [x] Grep `src tools tests docs .claude` for every old name, id and path (outside history folders), and fix stragglers, including `.wesl` comments. No new test. Commit.
 
 ---
 

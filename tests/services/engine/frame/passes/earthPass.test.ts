@@ -250,10 +250,10 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
         ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
         oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
       },
-      // The Earth LOD overlay debug toggle earthPass.draw now reads each
+      // The Surface LOD overlay debug toggle earthPass.draw now reads each
       // frame (forwarded into the tile draw args) — off by default, like the
       // fixture's other DEBUG_OVERLAY_ROWS entries.
-      debug: { overlays: { 'earth-lod-overlay': false } },
+      debug: { overlays: { 'surface-lod-overlay': false } },
     },
   } as unknown as EngineState;
 }
@@ -665,7 +665,7 @@ describe('surfaceTilesPass', () => {
     expect(mvpMock.mock.calls[0]![1]).toBe(args.eyeRelBodyM);
   });
 
-  it("packs the live debug.overlays['earth-lod-overlay'] toggle into the tile draw args", () => {
+  it("packs the live debug.overlays['surface-lod-overlay'] toggle into the tile draw args", () => {
     // The DebugPanel toggle must reach the tile renderer every draw, not just
     // on change — the fixture's two states below stand in for a checkbox
     // flip between frames.
@@ -681,7 +681,7 @@ describe('surfaceTilesPass', () => {
     expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
 
     (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
-      'earth-lod-overlay'
+      'surface-lod-overlay'
     ] = true;
     surfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);

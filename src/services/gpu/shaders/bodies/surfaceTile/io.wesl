@@ -28,7 +28,7 @@ struct PatchInstance {
   // anchor and narrowed once ('patchOriginRelEyeM'). At s = t = 0 the
   // vertex stage reproduces this exactly, so patch corners never crack.
   originRelEyeM: vec3<f32>,
-  // clamp((nowMs - readyAtMs) / EARTH_TILE_CROSSFADE_MS, 0, 1), computed
+  // clamp((nowMs - readyAtMs) / SURFACE_TILE_CROSSFADE_MS, 0, 1), computed
   // once per tile in surfaceTileRenderer.ts's draw() (nowMs sampled
   // once per frame, not per tile) -- 1.0 is the "no fade" fast path.
   fadeWeight: f32,
@@ -175,7 +175,7 @@ struct SurfaceTileUniforms {
   oceanRoughness: f32,
   cloudShadowStrength: f32,
   cloudShellRadius: f32,
-  // The 'earth-lod-overlay' DebugPanel toggle (0.0/1.0; the fragment reads
+  // The 'surface-lod-overlay' DebugPanel toggle (0.0/1.0; the fragment reads
   // it with '> 0.5') -- a fresh field rather than a reused pad slot, since
   // the struct had none left (see the byte table above).
   debugLodOverlay: f32,

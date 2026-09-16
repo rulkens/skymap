@@ -36,10 +36,10 @@ export type SurfaceTileAtlasSectionProps = {
   readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
 };
 
-/** The `section: 'earth-tiles'` rows — terrain bisect toggles, which belong
+/** The `section: 'surface-tiles'` rows — terrain bisect toggles, which belong
  *  beside the residency numbers that explain what they change. */
 const TERRAIN_ROWS = DEBUG_OVERLAY_ROWS.filter(
-  (row) => 'section' in row && row.section === 'earth-tiles',
+  (row) => 'section' in row && row.section === 'surface-tiles',
 );
 
 const POLL_MS = 250;

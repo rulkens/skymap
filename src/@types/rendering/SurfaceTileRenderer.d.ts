@@ -35,7 +35,7 @@ export type SurfaceTileDrawArgs = {
   readonly effectInputs: SurfaceEffectInputs;
   readonly shading: SurfaceTileShading;
   readonly ambientLight: number;
-  /** The `earth-lod-overlay` DebugPanel toggle (`debug.overlays['earth-lod-overlay']`) —
+  /** The `surface-lod-overlay` DebugPanel toggle (`debug.overlays['surface-lod-overlay']`) —
    *  tints each drawn fragment by how many pyramid levels its resolved atlas
    *  rect fell back from the leaf it's shading. Read live each frame, not
    *  cached: the fragment derives the level delta itself from

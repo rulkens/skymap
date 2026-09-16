@@ -18,7 +18,7 @@ import sharp from 'sharp';
 
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
-import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
 
 /** Deepest (and only) level the Søndermarken harvest reaches — the WMS
@@ -37,7 +37,7 @@ const GEODANMARK_PROVENANCE = {
  *  edge — the same ladder `tileBox`/`surfaceTileIndicesForBounds` use, so a
  *  box this source is handed always lands on an exact multiple. */
 function tileDeg(z: number): number {
-  return 360 / surfaceTileColumns(z, EARTH_TILE_PX);
+  return 360 / surfaceTileColumns(z, SURFACE_TILE_PX);
 }
 
 /**
@@ -151,13 +151,13 @@ export async function geodanmarkTileSource(opts: {
 
     async readBox(box, widthPx, heightPx) {
       // Checked first, before any disk read: every real caller requests a
-      // z19 tile box at exactly `EARTH_TILE_PX` — a mismatch means the 1:1
+      // z19 tile box at exactly `SURFACE_TILE_PX` — a mismatch means the 1:1
       // ladder identity in the module header broke, a loud CHEAP failure
       // rather than a silently-added resize branch (see `eoxTileSource`).
-      if (widthPx !== EARTH_TILE_PX || heightPx !== EARTH_TILE_PX) {
+      if (widthPx !== SURFACE_TILE_PX || heightPx !== SURFACE_TILE_PX) {
         throw new Error(
           `geodanmarkTileSource: readBox asked for ${widthPx}x${heightPx}, but the z19 harvest is a ` +
-            `1:1 lookup that only produces ${EARTH_TILE_PX}x${EARTH_TILE_PX} tiles`,
+            `1:1 lookup that only produces ${SURFACE_TILE_PX}x${SURFACE_TILE_PX} tiles`,
         );
       }
 

@@ -1,7 +1,7 @@
 import {
   EARTH_EQUATORIAL_CIRCUMFERENCE_M,
-  EARTH_EQUIRECT_BASE_WIDTH_PX,
-} from '../../data/bodies/earthTileParams';
+  SURFACE_EQUIRECT_BASE_WIDTH_PX,
+} from '../../data/bodies/surfaceTileParams';
 
 /**
  * earthTexelMetres — ground metres covered by one texel at pyramid level `z`,
@@ -13,5 +13,5 @@ import {
  * For orientation: z = 4 is 4892 m (today's base texture), z = 13 is 9.55 m.
  */
 export function earthTexelMetres(z: number): number {
-  return EARTH_EQUATORIAL_CIRCUMFERENCE_M / (EARTH_EQUIRECT_BASE_WIDTH_PX << z);
+  return EARTH_EQUATORIAL_CIRCUMFERENCE_M / (SURFACE_EQUIRECT_BASE_WIDTH_PX << z);
 }

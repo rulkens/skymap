@@ -26,7 +26,7 @@ import { quantizeHeightGrid } from '../utils/textures/quantizeHeightGrid';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
-import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 
 /** Post intervals per tile edge: 129 posts, 128 gaps, the 129th shared with
  *  the next tile (§5.4.1). */
@@ -54,8 +54,8 @@ function regionsOf(
 ): Region[] {
   if (whole) {
     // Columns/rows come from the one place that owns tile-grid shape
-    // (`heightLatticeStepDeg` assumes the same 2^z columns at EARTH_TILE_PX).
-    const columns = surfaceTileColumns(z, EARTH_TILE_PX);
+    // (`heightLatticeStepDeg` assumes the same 2^z columns at SURFACE_TILE_PX).
+    const columns = surfaceTileColumns(z, SURFACE_TILE_PX);
     return [{ xMin: 0, xMax: columns - 1, yMin: 0, yMax: columns / 2 - 1, tiles }];
   }
 
@@ -266,7 +266,7 @@ export async function bakeHeightLevel(input: {
       // Before bounds/residual, per quantizeHeightGrid's own contract.
       quantizeHeightGrid(own);
 
-      const box = surfaceTileBounds(z, x, y, EARTH_TILE_PX);
+      const box = surfaceTileBounds(z, x, y, SURFACE_TILE_PX);
       // Under water flattening the source's own range still describes the
       // bathymetry that was levelled away, so it would report every ocean tile
       // as 5 km deep — §4.4 wants the Dead Sea's −430 m to be Earth's floor.

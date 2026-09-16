@@ -22,7 +22,7 @@ import { redactSecret } from '../utils/io/redactSecret';
 import { skadiCellsForBounds } from '../utils/textures/skadiCellsForBounds';
 import { lonLatToUtm32 } from '../utils/geo/lonLatToUtm32';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
-import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 
 /** NGDC's 30″ surface-elevation GeoTIFF; the thredds path in the spec 404s. */
 const ETOPO_URL =
@@ -118,7 +118,7 @@ function dhmTiles(): string[] {
   let south = 90;
   let north = -90;
   for (let x = SOENDERMARKEN_Z14.xMin; x <= SOENDERMARKEN_Z14.xMax; x++) {
-    const box = surfaceTileBounds(SOENDERMARKEN_Z14.z, x, SOENDERMARKEN_Z14.y, EARTH_TILE_PX);
+    const box = surfaceTileBounds(SOENDERMARKEN_Z14.z, x, SOENDERMARKEN_Z14.y, SURFACE_TILE_PX);
     west = Math.min(west, box.west);
     east = Math.max(east, box.east);
     south = Math.min(south, box.south);

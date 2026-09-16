@@ -11,19 +11,15 @@
 
 import { expect, it } from 'vitest';
 
-import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../../src/data/bodies/earthTileParams';
+import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../../src/data/bodies/surfaceTileParams';
 import { levelFittingWidth } from '../../../src/utils/surfaceTiles/levelFittingWidth';
 
 it('takes the deepest level that fits, inclusive of an exact match', () => {
   // A width that IS a ladder level is that level, not the one below it.
-  expect(levelFittingWidth(EARTH_EQUIRECT_BASE_WIDTH_PX << 7, EARTH_EQUIRECT_BASE_WIDTH_PX)).toBe(
-    7,
-  );
+  expect(levelFittingWidth(SURFACE_EQUIRECT_BASE_WIDTH_PX << 7)).toBe(7);
   // One pixel short of it is the level below.
-  expect(
-    levelFittingWidth((EARTH_EQUIRECT_BASE_WIDTH_PX << 7) - 1, EARTH_EQUIRECT_BASE_WIDTH_PX),
-  ).toBe(6);
+  expect(levelFittingWidth((SURFACE_EQUIRECT_BASE_WIDTH_PX << 7) - 1)).toBe(6);
   // The BMNG quadrant composite: 4 x 21600 = 86400 px, between z7 (65536) and
   // z8 (131072), so z7 is the deepest level it can fill without upscaling.
-  expect(levelFittingWidth(86400, EARTH_EQUIRECT_BASE_WIDTH_PX)).toBe(7);
+  expect(levelFittingWidth(86400)).toBe(7);
 });

@@ -59,7 +59,7 @@ export function cutSurfaceTiles(input: {
   readonly bands: readonly SurfaceTileBand[];
   readonly tilePx: number;
   /** Levels coarser than one texel per screen pixel to settle for; see
-   *  `EARTH_TILE_LOD_BIAS`. */
+   *  `SURFACE_TILE_LOD_BIAS`. */
   readonly lodBias: number;
   /** Resolve one exact tile's atlas residency, or null if it is not
    *  resident. Injected so this stays a pure function testable without a

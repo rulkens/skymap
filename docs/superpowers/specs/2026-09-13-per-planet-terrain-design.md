@@ -125,7 +125,7 @@ export type SurfaceHeightField = {
 //          SurfaceTileMesh.d.ts and both their tests ·
 //          EARTH_SURFACE_TILE_MESH_CACHE_CAPACITY ·
 //          the TileVertex storage buffer and its per-frame writeBuffer.
-//          EARTH_SURFACE_TILE_MESH_RESOLUTION survives: it is the template's n (F2 raises it to 64).
+//          SURFACE_TILE_MESH_RESOLUTION survives: it is the template's n (F2 raises it to 64).
 // added:   heightTileFormat.ts · decodeHeightTile.ts · surfaceHeightField.ts ·
 //          tools/textures/buildSurfaceTiles.ts · tools/fetch/fetchHeightSources.ts
 ```
@@ -223,14 +223,14 @@ earth: { manifestKey: 'earth-tiles', effects: ['materialMap', 'nightLights', 'cl
 // bake: SURFACE_BODY_BAKES[bodyId] = { tileRoot, tilePrefix, bands() }; `--body <id>`
 ```
 
-| Blocker | Verdict | Prep |
-| --- | --- | --- |
-| `runFrame.ts:244` gates planning on `earthPass.enabled` (`bodyId === 'earth'`); `earthBaseLevelForTier` reads the Earth texture row | bolt-on | registry-driven gate; `baseLevelForTier(bodyId, tier)` |
-| `earthSurfaceTilesPass.ts:31-32` Earth-only, requires `earthRenderer`; fragment binds Earth's material/night/cloud maps | bolt-on | fragment variants keyed by the row's `effects` set (user ruling: effects-set variants, not placeholder textures) |
-| `buildSurfaceTiles.ts:160-170` tile root is a module constant; band list hardcoded in `main()` | bolt-on | per-body bake table + `--body` |
-| `bakeAll` rebuilds `manifest.json` from this run's bands only (:547-588) — a partial run drops other bands' and products' provenance | bug | merge with the prior manifest by (band, product) |
-| `collectEarthTiles` / `collectEarthTileManifest` hardwired to `earth-tiles` | bolt-on | collectors keyed by `manifestKey`, one group per registry row |
-| `SurfaceTileDebugSnapshot` has no body | bolt-on | `bodyId` on the snapshot; fly-to passes it |
+| Blocker                                                                                                                              | Verdict | Prep                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------- |
+| `runFrame.ts:244` gates planning on `earthPass.enabled` (`bodyId === 'earth'`); `earthBaseLevelForTier` reads the Earth texture row  | bolt-on | registry-driven gate; `baseLevelForTier(bodyId, tier)`                                                           |
+| `earthSurfaceTilesPass.ts:31-32` Earth-only, requires `earthRenderer`; fragment binds Earth's material/night/cloud maps              | bolt-on | fragment variants keyed by the row's `effects` set (user ruling: effects-set variants, not placeholder textures) |
+| `buildSurfaceTiles.ts:160-170` tile root is a module constant; band list hardcoded in `main()`                                       | bolt-on | per-body bake table + `--body`                                                                                   |
+| `bakeAll` rebuilds `manifest.json` from this run's bands only (:547-588) — a partial run drops other bands' and products' provenance | bug     | merge with the prior manifest by (band, product)                                                                 |
+| `collectEarthTiles` / `collectEarthTileManifest` hardwired to `earth-tiles`                                                          | bolt-on | collectors keyed by `manifestKey`, one group per registry row                                                    |
+| `SurfaceTileDebugSnapshot` has no body                                                                                               | bolt-on | `bodyId` on the snapshot; fly-to passes it                                                                       |
 
 Greenfield divergences, priced: the manifest keeps today's shape (a
 `(bandId, product)`-keyed schema would cost an Earth manifest rewrite and an R2
@@ -531,7 +531,7 @@ that is rewritten in full every frame.
 - **Vertex data: none.** A `(n+1)×(n+1)` template is addressed off
   `@builtin(vertex_index)`: `i = vid % (n+1)`, `j = vid / (n+1)`. One shared index
   buffer for every patch, level and body. **P6 lands it at `n = 8`** — today's
-  `EARTH_SURFACE_TILE_MESH_RESOLUTION` — so the picture is comparable like-for-like
+  `SURFACE_TILE_MESH_RESOLUTION` — so the picture is comparable like-for-like
   while the numerics are proven; **F2 raises it to `n = 64`**, which is 1.19 m
   geometric post spacing at z19.
 

@@ -33,9 +33,9 @@ import {
   writeSurfaceTileUniforms,
 } from './surfaceTileLayout';
 import {
-  EARTH_TILE_CROSSFADE_MS,
+  SURFACE_TILE_CROSSFADE_MS,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
-} from '../../../../data/bodies/earthTileParams';
+} from '../../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
 import { SURFACE_TILE_SHADER_VARIANTS } from '../../../../data/bodies/surfaceTileShaderVariants';
 
@@ -250,7 +250,7 @@ export function createSurfaceTileRenderer(
     // `draw` at most once), never per tile — every tile's fade weight must
     // read the same instant, or tiles that upload microseconds apart would
     // visibly desync. REAL time: a fade must run even while the sim clock
-    // is paused or scaled (see `EARTH_TILE_CROSSFADE_MS`'s doc comment).
+    // is paused or scaled (see `SURFACE_TILE_CROSSFADE_MS`'s doc comment).
     const nowMs = performance.now();
 
     for (let i = 0; i < tileCount; i++) {
@@ -265,7 +265,7 @@ export function createSurfaceTileRenderer(
       const fadeWeight =
         tile.albedo.fallback === null
           ? 1
-          : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / EARTH_TILE_CROSSFADE_MS));
+          : Math.min(1, Math.max(0, (nowMs - tile.albedo.readyAtMs) / SURFACE_TILE_CROSSFADE_MS));
 
       const origin = patchOriginRelEyeM(tile.anchor, radiusM, eyeRelBodyM);
       // The leaf's sub-rect of the slot it inherited (R14), not the slot

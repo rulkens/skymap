@@ -4,11 +4,11 @@ import { surfaceTileColumns } from '../../../src/utils/surfaceTiles/surfaceTileC
 import { equirectUvToDirection } from '../../../src/utils/math/equirectUvToDirection';
 import { patchOriginRelEyeM } from '../../../src/utils/surfaceTiles/patchOriginRelEyeM';
 import { surfacePatchAnchor } from '../../../src/utils/surfaceTiles/surfacePatchAnchor';
-import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
 
 /** The walk's own uv footprint for tile `(z, x, y)` — `cutSurfaceTiles.ts:131-141`. */
 function tileFootprint(z: number, x: number, y: number) {
-  const cols = surfaceTileColumns(z, EARTH_TILE_PX);
+  const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
   const rows = cols / 2;
   return { u0: x / cols, u1: (x + 1) / cols, v0: 1 - (y + 1) / rows, v1: 1 - y / rows };
 }

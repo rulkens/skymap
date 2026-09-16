@@ -23,6 +23,6 @@ export type SurfaceTilePlannerParams = {
    *  a footprint at different depths (EOX deep tiles over BMNG). */
   readonly bands: readonly SurfaceTileBand[];
   /** Levels coarser than one texel per screen pixel the planner settles for;
-   *  see `EARTH_TILE_LOD_BIAS`. */
+   *  see `SURFACE_TILE_LOD_BIAS`. */
   readonly lodBias: number;
 };

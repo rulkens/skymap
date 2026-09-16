@@ -45,13 +45,13 @@ import { fetchHeightTile } from '../../../utils/network/fetchHeightTile';
 import { directionToLonLatDeg } from '../../../utils/geo/directionToLonLatDeg';
 import { deepestBandLevelAt } from '../../../utils/surfaceTiles/deepestBandLevelAt';
 import {
-  EARTH_TILE_ATLAS_SIDE,
-  EARTH_TILE_CONCURRENCY,
-  EARTH_TILE_LOD_BIAS,
-  EARTH_TILE_PX,
+  SURFACE_TILE_ATLAS_SIDE,
+  SURFACE_TILE_CONCURRENCY,
+  SURFACE_TILE_LOD_BIAS,
+  SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
-} from '../../../data/bodies/earthTileParams';
+} from '../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../data/scene/heightTileFormat';
 
 const ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
@@ -159,7 +159,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * rejection degrades to base-only, cheaper to reason about than silently
    * adapting to wrong pixels. `tilePx` is a validated ASSERTION:
    * `residentSlot` derives the atlas's `slotsPerRow` from
-   * `EARTH_TILE_ATLAS_SIDE / tilePx` alone, an identity that holds only at
+   * `SURFACE_TILE_ATLAS_SIDE / tilePx` alone, an identity that holds only at
    * the shipped 512 px edge. `baseLevel` arrives already resolved — WHICH
    * function turns a tier into a level is body-specific (`baseLevelForTier`
    * today), so this generic subsystem no longer calls one itself.
@@ -169,8 +169,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     baseLevel: number,
   ): SurfaceTilePlannerParams | null {
     if (fetched.bands.length === 0) return null;
-    const tilePx = fetched.tilePx ?? EARTH_TILE_PX;
-    if (tilePx !== EARTH_TILE_PX) return null;
+    const tilePx = fetched.tilePx ?? SURFACE_TILE_PX;
+    if (tilePx !== SURFACE_TILE_PX) return null;
     const bands: SurfaceTileBand[] = [];
     for (const band of fetched.bands) {
       // Not baked for the albedo product (e.g. a height-only row, once those
@@ -195,7 +195,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       tilePx,
       baseLevel,
       bands,
-      lodBias: EARTH_TILE_LOD_BIAS,
+      lodBias: SURFACE_TILE_LOD_BIAS,
     };
   }
 
@@ -249,15 +249,15 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * edge, so a re-bake at a different edge stays a data change.
    */
   function engage(tilePx: number, bodyId: BodyId): NonNullable<typeof atlas> {
-    const slotsPerRow = EARTH_TILE_ATLAS_SIDE / tilePx;
+    const slotsPerRow = SURFACE_TILE_ATLAS_SIDE / tilePx;
     const created = createTileStreamSubsystem<ImageBitmap>({
       device,
       requestRender,
-      atlasSide: EARTH_TILE_ATLAS_SIDE,
+      atlasSide: SURFACE_TILE_ATLAS_SIDE,
       slotSide: tilePx,
       format: ATLAS_FORMAT,
       label: 'surface-tiles-albedo',
-      concurrency: EARTH_TILE_CONCURRENCY,
+      concurrency: SURFACE_TILE_CONCURRENCY,
       upload: uploadBitmapToAtlas,
       release: closeBitmap,
     });
@@ -270,7 +270,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       slotSide: HEIGHT_POSTS_PER_TILE,
       format: HEIGHT_ATLAS_FORMAT,
       label: 'surface-tiles-height',
-      concurrency: EARTH_TILE_CONCURRENCY,
+      concurrency: SURFACE_TILE_CONCURRENCY,
       upload: (heightAtlas, slotIdx, image) =>
         uploadBitmapToAtlas(heightAtlas, slotIdx, image.bitmap),
       release: (image) => closeBitmap(image.bitmap),

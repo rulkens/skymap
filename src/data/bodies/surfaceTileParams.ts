@@ -1,9 +1,9 @@
 /**
- * earthTileParams — named constants for Earth's surface virtual texture,
+ * surfaceTileParams — named constants for every body's surface-tile pyramid,
  * shared by the walk (`cutSurfaceTiles`), the tile subsystem and the build
  * tool. Full rationale (cited inline as "Design N") lives in
  * docs/superpowers/specs/2026-07-28-earth-surface-virtual-texture.md.
- * Level `z`'s equirectangular width is `EARTH_EQUIRECT_BASE_WIDTH_PX << z`
+ * Level `z`'s equirectangular width is `SURFACE_EQUIRECT_BASE_WIDTH_PX << z`
  * texels; anchoring on 512 puts the three whole-globe tiers on the ladder
  * (2048=z2, 4096=z3, 8192=z4) and matches the WGS84/EOX ladder verbatim.
  * Three floors, none a constant here: BASE (`baseLevelForTier`) is
@@ -14,21 +14,21 @@
 import { HEIGHT_POSTS_PER_TILE } from '../scene/heightTileFormat';
 
 /** Full equirectangular width, in texels, of pyramid level 0. Level `z` is
- *  `EARTH_EQUIRECT_BASE_WIDTH_PX << z` wide and half that tall, so `z = 4` is
+ *  `SURFACE_EQUIRECT_BASE_WIDTH_PX << z` wide and half that tall, so `z = 4` is
  *  exactly the 8192 × 4096 whole-globe texture the `large` tier binds.
  *  (Design 1.) */
-export const EARTH_EQUIRECT_BASE_WIDTH_PX = 512;
+export const SURFACE_EQUIRECT_BASE_WIDTH_PX = 512;
 
 /** Default tile edge in pixels; the manifest's `tilePx` is authoritative at
  *  runtime. Chosen over the source grid's 256 to quarter the object count.
  *  (Design 1.) */
-export const EARTH_TILE_PX = 512;
+export const SURFACE_TILE_PX = 512;
 
 /** Physical atlas edge in pixels: 8192 / 512 = 16 slots per row, 256 slots,
  *  268 MB. Deep z14–19 regional bands push the planner's pinned ancestor-chain
  *  working set past the old 64-slot ceiling; 8192 is also WebGPU's baseline
  *  maxTextureDimension2D, so no limit request is needed. (Design 6.) */
-export const EARTH_TILE_ATLAS_SIDE = 8192;
+export const SURFACE_TILE_ATLAS_SIDE = 8192;
 
 /** Physical edge of the HEIGHT atlas: 32 x 32 = 1024 slots at the height
  *  tile's 129-post stride, so 4128 px of `rgba8unorm`, 68 MB — under the 8192
@@ -47,7 +47,7 @@ export const HEIGHT_ATLAS_SLOTS_PER_ROW = HEIGHT_TILE_ATLAS_SIDE / HEIGHT_POSTS_
 /** Concurrent tile fetches. Matches the thumbnail queue's reasoning rather than
  *  the asset queue's: many small streaming fetches during flight (~33 KB each),
  *  not a handful of big one-shot boot fetches. (Design 4.) */
-export const EARTH_TILE_CONCURRENCY = 4;
+export const SURFACE_TILE_CONCURRENCY = 4;
 
 /** WGS84 equatorial circumference in metres — the numerator of every
  *  metres-per-texel figure on the ladder. */
@@ -61,14 +61,14 @@ export const EARTH_EQUATORIAL_CIRCUMFERENCE_M = 40075016.686;
  * rather than a bigger atlas. Fixed, not servoed: nothing to track while
  * the pyramid is one level deep.
  */
-export const EARTH_TILE_LOD_BIAS = 1;
+export const SURFACE_TILE_LOD_BIAS = 1;
 
 /** Subdivision `n` per patch edge of the shared vertex-shader template: 1.19 m
  *  geometric post spacing at z19. Deliberately half the height tile's 128 cells
  *  — geometry LOD and shading LOD are separate budgets, and the surplus height
  *  detail reaches the picture through the fragment-stage normal (spec §7, §10).
  *  `(HEIGHT_POSTS_PER_TILE - 1)` must stay divisible by it (parity-tested). */
-export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 64;
+export const SURFACE_TILE_MESH_RESOLUTION = 64;
 
 /** Skirt depth as a fraction of the patch's north-south extent
  *  (`radiusM · dLatRad`): 15.6 km at z7, 245 m at z13, 3.8 m at z19. The gap a
@@ -88,4 +88,4 @@ export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
  * ghosting. See `surfaceTileRenderer.ts`'s per-tile weight and
  * `surfaceTile/surfaceLighting.wesl`'s dual-sample mix.
  */
-export const EARTH_TILE_CROSSFADE_MS = 400;
+export const SURFACE_TILE_CROSSFADE_MS = 400;

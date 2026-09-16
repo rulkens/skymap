@@ -58,7 +58,7 @@
   margin-top: var(--space-2);
 }
 
-/* Terrain bisect toggles — the `section: 'earth-tiles'` overlay rows, set off
+/* Terrain bisect toggles — the `section: 'surface-tiles'` overlay rows, set off
    from the residency numbers below them by the same divider `.total` uses. */
 .toggles {
   display: flex;

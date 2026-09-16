@@ -12,7 +12,7 @@
 import sharp from 'sharp';
 
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
-import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
+import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 import type { GreyRaster } from '../utils/image/GreyRaster';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
@@ -82,22 +82,22 @@ export function colourMatchedImagerySource(
   }
   // Canvas pixels one primary tile spans. Past a 9-level gap (512 px tiles)
   // the shift floors to zero, which would zero every offset in silence.
-  const canvasPxPerTile = EARTH_TILE_PX >> (primary.maxLevel - canvasLevel);
+  const canvasPxPerTile = SURFACE_TILE_PX >> (primary.maxLevel - canvasLevel);
   if (canvasPxPerTile < 1) {
     throw new Error(
       `colourMatchedImagerySource: ${primary.id} (maxLevel ${primary.maxLevel}) is more than ` +
-        `${Math.log2(EARTH_TILE_PX)} levels finer than the level-${canvasLevel} canvas ` +
+        `${Math.log2(SURFACE_TILE_PX)} levels finer than the level-${canvasLevel} canvas ` +
         `${reference.id} implies — a primary tile would not fill one canvas pixel.`,
     );
   }
-  const block = EARTH_TILE_PX / canvasPxPerTile;
+  const block = SURFACE_TILE_PX / canvasPxPerTile;
 
   // One field per CONTIGUOUS run of coverage: two boxes sharing a canvas tile
   // would otherwise get a field each, and the shared column would be corrected
   // by whichever box `fieldFor` matched — a seam on a tile boundary. The
   // group's envelope costs nothing; the primary declines outside real coverage.
   const rects = primary.coverage.map((box) =>
-    surfaceTileIndicesForBounds(box, canvasLevel, EARTH_TILE_PX),
+    surfaceTileIndicesForBounds(box, canvasLevel, SURFACE_TILE_PX),
   );
   const groupOfCoverage = primary.coverage.map((_, index) => index);
   let merged = true;
@@ -148,12 +148,12 @@ export function colourMatchedImagerySource(
   };
 
   async function buildField(coverage: LonLatBounds): Promise<OffsetField> {
-    const rect = surfaceTileIndicesForBounds(coverage, canvasLevel, EARTH_TILE_PX);
-    const width = (rect.xMax - rect.xMin + 1) * EARTH_TILE_PX;
-    const height = (rect.yMax - rect.yMin + 1) * EARTH_TILE_PX;
+    const rect = surfaceTileIndicesForBounds(coverage, canvasLevel, SURFACE_TILE_PX);
+    const width = (rect.xMax - rect.xMin + 1) * SURFACE_TILE_PX;
+    const height = (rect.yMax - rect.yMin + 1) * SURFACE_TILE_PX;
     const pixels = width * height;
-    const origin = surfaceTileBounds(canvasLevel, rect.xMin, rect.yMin, EARTH_TILE_PX);
-    const pxDeg = (origin.east - origin.west) / EARTH_TILE_PX;
+    const origin = surfaceTileBounds(canvasLevel, rect.xMin, rect.yMin, SURFACE_TILE_PX);
+    const pxDeg = (origin.east - origin.west) / SURFACE_TILE_PX;
     const west = origin.west;
     const north = origin.north;
 
@@ -162,16 +162,16 @@ export function colourMatchedImagerySource(
     for (let ty = rect.yMin; ty <= rect.yMax; ty++) {
       for (let tx = rect.xMin; tx <= rect.xMax; tx++) {
         const raster = await reference.readBox(
-          surfaceTileBounds(canvasLevel, tx, ty, EARTH_TILE_PX),
-          EARTH_TILE_PX,
-          EARTH_TILE_PX,
+          surfaceTileBounds(canvasLevel, tx, ty, SURFACE_TILE_PX),
+          SURFACE_TILE_PX,
+          SURFACE_TILE_PX,
         );
         if (raster === null) continue;
-        const originX = (tx - rect.xMin) * EARTH_TILE_PX;
-        const originY = (ty - rect.yMin) * EARTH_TILE_PX;
-        for (let y = 0; y < EARTH_TILE_PX; y++) {
-          for (let x = 0; x < EARTH_TILE_PX; x++) {
-            const from = (y * EARTH_TILE_PX + x) * 4;
+        const originX = (tx - rect.xMin) * SURFACE_TILE_PX;
+        const originY = (ty - rect.yMin) * SURFACE_TILE_PX;
+        for (let y = 0; y < SURFACE_TILE_PX; y++) {
+          for (let x = 0; x < SURFACE_TILE_PX; x++) {
+            const from = (y * SURFACE_TILE_PX + x) * 4;
             const to = (originY + y) * width + originX + x;
             referenceRgb[to * 3] = raster[from]!;
             referenceRgb[to * 3 + 1] = raster[from + 1]!;
@@ -188,17 +188,17 @@ export function colourMatchedImagerySource(
     // every harvested pixel contributes to the difference exactly once.
     const primaryRgb = new Float32Array(pixels * 3);
     const primaryWeight = new Float32Array(pixels);
-    const primaryRect = surfaceTileIndicesForBounds(coverage, primary.maxLevel, EARTH_TILE_PX);
+    const primaryRect = surfaceTileIndicesForBounds(coverage, primary.maxLevel, SURFACE_TILE_PX);
     for (let ty = primaryRect.yMin; ty <= primaryRect.yMax; ty++) {
       for (let tx = primaryRect.xMin; tx <= primaryRect.xMax; tx++) {
         const raster = await primary.readBox(
-          surfaceTileBounds(primary.maxLevel, tx, ty, EARTH_TILE_PX),
-          EARTH_TILE_PX,
-          EARTH_TILE_PX,
+          surfaceTileBounds(primary.maxLevel, tx, ty, SURFACE_TILE_PX),
+          SURFACE_TILE_PX,
+          SURFACE_TILE_PX,
         );
         if (raster === null) continue;
-        const originX = tx * canvasPxPerTile - rect.xMin * EARTH_TILE_PX;
-        const originY = ty * canvasPxPerTile - rect.yMin * EARTH_TILE_PX;
+        const originX = tx * canvasPxPerTile - rect.xMin * SURFACE_TILE_PX;
+        const originY = ty * canvasPxPerTile - rect.yMin * SURFACE_TILE_PX;
         for (let y = 0; y < canvasPxPerTile; y++) {
           for (let x = 0; x < canvasPxPerTile; x++) {
             let r = 0;
@@ -207,7 +207,7 @@ export function colourMatchedImagerySource(
             let alpha = 0;
             for (let sy = 0; sy < block; sy++) {
               for (let sx = 0; sx < block; sx++) {
-                const from = ((y * block + sy) * EARTH_TILE_PX + x * block + sx) * 4;
+                const from = ((y * block + sy) * SURFACE_TILE_PX + x * block + sx) * 4;
                 // Alpha-weighted: a source's transparent no-data pixels carry
                 // no colour, and averaging their zeros in would darken the
                 // coastline the difference is measured against.

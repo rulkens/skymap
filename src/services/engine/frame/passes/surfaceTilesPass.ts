@@ -118,7 +118,7 @@ export const surfaceTilesPass: ContentPass = {
       effectInputs,
       shading: spec.shading,
       ambientLight: state.settings.earth.ambientLight,
-      debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
+      debugLodOverlay: state.settings.debug.overlays['surface-lod-overlay'],
       noDisplacement: state.settings.debug.overlays['terrain-no-displacement'],
       noSkirts: state.settings.debug.overlays['terrain-no-skirts'],
       surfaceAtlasView: surfaceTiles.getAtlasView()!,

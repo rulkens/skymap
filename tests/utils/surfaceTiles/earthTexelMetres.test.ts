@@ -13,7 +13,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { earthTexelMetres } from '../../../src/utils/surfaceTiles/earthTexelMetres';
-import { EARTH_EQUATORIAL_CIRCUMFERENCE_M } from '../../../src/data/bodies/earthTileParams';
+import { EARTH_EQUATORIAL_CIRCUMFERENCE_M } from '../../../src/data/bodies/surfaceTileParams';
 
 describe('earthTexelMetres', () => {
   it('puts level 4 at exactly the 8192-wide base texture resolution', () => {

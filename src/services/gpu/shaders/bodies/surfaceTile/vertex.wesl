@@ -16,7 +16,7 @@ import package::bodies::surfaceTile::lattice::latticeHeightM;
 // every patch edge (spec section 5.5 -- three independent reasons).
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 
-// Mirrors SURFACE_TILE_SKIRT_DEPTH_FRACTION (earthTileParams.ts),
+// Mirrors SURFACE_TILE_SKIRT_DEPTH_FRACTION (surfaceTileParams.ts),
 // parity-tested -- it is the eye-check's one tuning knob (F2-R3).
 const SURFACE_TILE_SKIRT_DEPTH_FRACTION: f32 = 0.05;
 
