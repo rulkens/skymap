@@ -20,8 +20,15 @@ const LAYERS_DIR = fileURLToPath(new URL('../../../../src/layers/', import.meta.
 // A Layer's passes are frame passes that happen to live in the Layer, so they
 // are swept on the same terms — derived, so a new Layer's `passes/` is gated
 // the day it appears rather than when someone remembers this file.
-const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYERS_DIR)
-  .map((name) => [`layers/${name}/passes`, `${LAYERS_DIR}${name}/passes/`] as const)
+// `withFileTypes` is load-bearing: `src/layers/` holds a README beside the Layer
+// folders, and `statSync('README.md/passes/')` throws ENOTDIR on Linux — which
+// `throwIfNoEntry: false` does NOT suppress (it covers ENOENT only). A plain file
+// here passed on macOS and failed CI.
+const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYERS_DIR, {
+  withFileTypes: true,
+})
+  .filter((entry) => entry.isDirectory())
+  .map((entry) => [`layers/${entry.name}/passes`, `${LAYERS_DIR}${entry.name}/passes/`] as const)
   .filter(([, dir]) => statSync(dir, { throwIfNoEntry: false })?.isDirectory() === true);
 
 // Files that still inline helpers, with their current count. `slabs.ts` is the
