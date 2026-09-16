@@ -173,7 +173,6 @@ export function createEngine(
       focusUniform: null,
       renderTargets: null,
       compositor: null,
-      filamentRenderer: null,
       constellationRenderer: null,
       envBrdfLut: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
@@ -295,7 +294,6 @@ export function createEngine(
     // `initGpu` already assigned them.
     assetSlots: {
       starCatalogs: new Map(),
-      filaments: null,
       famousStarsMeta: null,
       structureCatalog: null,
       cf4Density: null,

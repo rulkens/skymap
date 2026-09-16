@@ -12,10 +12,12 @@ import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
+import { filamentsFadeRows } from '../../../src/layers/filaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
+import type { FilamentsRuntime } from '../../../src/layers/filaments/types/FilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
 
@@ -23,6 +25,10 @@ import type { FadeBridgeState } from './FadeBridgeState';
 const GALAXY_RUNTIME = {
   pointRenderer: { hasCatalog: () => true },
 } as unknown as GalaxyCatalogRuntime;
+
+const FILAMENTS_RUNTIME = {
+  renderer: { hasCloud: () => true },
+} as unknown as FilamentsRuntime;
 
 export function makeFadeBridgeState(): {
   state: FadeBridgeState;
@@ -75,16 +81,19 @@ export function makeFadeBridgeState(): {
     gpu: {
       galaxyPointRenderer: { hasCatalog: () => true },
       flowFieldRenderer: { fieldLoaded: () => true },
-      filamentRenderer: { hasCloud: () => true },
       volumeFieldRenderer: { listIds: () => [] },
     },
     subsystems: {
       fades: { fadeTo, setImmediate, targetOf },
       scheduler: { requestRender },
     },
-    // The COMPOSED rows — core's manifest plus the galaxyCatalog Layer's, which is
-    // what `createLayers` writes and what the `survey` assertions exercise.
-    fadeRows: [...FADE_LAYERS, ...galaxyCatalogFadeRows(GALAXY_RUNTIME)],
+    // The COMPOSED rows — core's manifest plus every Layer's, which is what
+    // `createLayers` writes and what the `survey` assertions exercise.
+    fadeRows: [
+      ...FADE_LAYERS,
+      ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
+      ...filamentsFadeRows(FILAMENTS_RUNTIME),
+    ],
   } as unknown as FadeBridgeState;
 
   return { state, fadeTo, setImmediate, targetOf, requestRender, settings };

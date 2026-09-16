@@ -7,8 +7,8 @@
  *   - Per-source star-catalog slots live in `state.assetSlots.starCatalogs`,
  *     keyed by the numeric `Source` code.
  *   - The keyed body-texture and mesh-body families live in their own maps.
- *   - The auxiliary assets named by `AssetKey` (the cluster catalog, filaments,
- *     the scalar-volume cubes) are named fields on `state.assetSlots`.
+ *   - The auxiliary assets named by `AssetKey` (the cluster catalog, the
+ *     scalar-volume cubes) are named fields on `state.assetSlots`.
  *   - A Layer's own slots live in `state.layerSlots`, consulted first.
  *
  * `AssetKey` is the union of the key spaces — a numeric `SourceType` OR one of

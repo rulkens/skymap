@@ -14,7 +14,6 @@
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
-import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
 import type { ConstellationRenderer } from '../../rendering/ConstellationRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
@@ -133,23 +132,13 @@ export type EngineGpuHandles = {
    */
   compositor: Compositor | null;
   /**
-   * Cosmic-web filament-skeleton renderer.  Constructed unconditionally
-   * during GPU init (the pipeline is cheap), stays empty-segment until
-   * the optional `loadFilaments()` resolves with a non-null cloud.
-   * Stored on the GPU bag so `destroy()` can release the per-instance
-   * buffer + uniform buffer + quad VBO without needing the construction-
-   * time closure to outlive the public handle.
-   */
-  filamentRenderer: FilamentRenderer | null;
-  /**
    * True-3D constellation stick-figure renderer. Constructed unconditionally
    * during GPU init (the pipeline is cheap), stays empty until the
    * `constellations` slot's commit uploads the ready `constellations.json`
    * artifact once on artifact-ready (flipping `hasData()` true and kicking the
    * demand-loaded fade); the pass thereafter only draws. Nullable + excluded
-   * from `isEngineReady`, same rationale as `filamentRenderer`: the overlay is
-   * an optional demand-loaded asset the `constellationsPass` null-checks at
-   * point of use.
+   * from `isEngineReady`: the overlay is an optional demand-loaded asset the
+   * `constellationsPass` null-checks at point of use.
    */
   constellationRenderer: ConstellationRenderer | null;
   /**
@@ -185,7 +174,7 @@ export type EngineGpuHandles = {
    * MSDF text label renderer.  Null until `initGpu` completes the
    * `loadFontAtlas()` fetch and constructs the renderer against the
    * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate
-   * — same rationale as `filamentRenderer`: the atlas load is async and
+   * — same rationale as `constellationRenderer`: the atlas load is async and
    * optional from the engine's perspective; the `labelsPass` null-checks
    * this field at point of use.  Stored here so `destroy()` can release
    * the GPU buffers (uniform + storage + instance + corner + atlas texture).

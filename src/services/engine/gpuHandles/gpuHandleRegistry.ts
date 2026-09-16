@@ -15,7 +15,6 @@ import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibra
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
 import { createZoneOfAvoidanceRenderer } from '../../gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer';
-import { createFilamentRenderer } from '../../gpu/renderers/filaments/filamentRenderer';
 import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
@@ -210,11 +209,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'label3DRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
-  },
-  {
-    key: 'filamentRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createFilamentRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
   },
   {
     key: 'constellationRenderer',

@@ -60,7 +60,7 @@ vi.mock('../../../../src/services/loading/fetchers/cf4DensityFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
+vi.mock('../../../../src/layers/filaments/load/filamentFetcher', () => ({
   filamentFetcher: vi.fn(async () => ({
     stripCount: 0,
     vertexCount: 0,
@@ -161,7 +161,7 @@ import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
-import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
+import { filamentFetcher } from '../../../../src/layers/filaments/load/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -365,19 +365,14 @@ function makeState(
     picking: {} as never,
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots
-      // optional-chain through them.  Filament renderer is set so the
-      // filaments slot's commit doesn't bail early; the scalar volume
-      // renderer is stubbed so CF-4 and synthetic commits can land.
+      // optional-chain through them.  The scalar volume renderer is stubbed so
+      // CF-4 and synthetic commits can land.
       renderTargets: null,
-      // `hasCloud`/`listIds` are the arrival-fade guards: `installFadeOnArrival`
-      // calls them on a present renderer, where `seedFades` never did.
-      filamentRenderer: {
-        upload: vi.fn(async () => {}),
-        hasCloud: () => false,
-      } as never,
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
+      // `listIds` is an arrival-fade guard: `installFadeOnArrival` calls it on a
+      // present renderer, where `seedFades` never did.
       volumeFieldRenderer: {
         upload: vi.fn(),
         listIds: () => [],
@@ -709,15 +704,14 @@ describe('wireSlots', () => {
 
     // Registry includes the Layer's slots (the per-source point slots and its
     // two sidecars, by `.name`) plus the sidecars wireSlots itself mints
-    // (filaments, structure catalog, CF-4, MCPM) plus synthetic fixtures
-    // (DEV-only — vitest runs as DEV). Asserted as a superset so additive
-    // changes don't break the test for the wrong reason.
+    // (structure catalog, CF-4, MCPM) plus synthetic fixtures (DEV-only —
+    // vitest runs as DEV). Asserted as a superset so additive changes don't
+    // break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);
     expect(names.has('glade-points')).toBe(true);
     expect(names.has('famous-points')).toBe(true);
-    expect(names.has('filaments')).toBe(true);
     expect(names.has('famous-galaxies-meta')).toBe(true);
     expect(names.has('structure-catalog')).toBe(true);
     expect(names.has('pgc-aliases')).toBe(true);

@@ -189,7 +189,6 @@ function makeState(): EngineState {
       galaxyPointRenderer: null,
       galaxyPickRenderer: null,
       renderTargets: null,
-      filamentRenderer: null,
     },
     subsystems: {
       scheduler: { requestRender: vi.fn() },

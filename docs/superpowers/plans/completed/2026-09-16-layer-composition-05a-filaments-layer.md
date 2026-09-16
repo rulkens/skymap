@@ -81,10 +81,10 @@ Test mirrors ride along (`move-files` drags `tests/`): `tests/services/gpu/rende
 
 **Files:** the six moves in the table above, plus their test mirrors.
 
-- [ ] Write a manifest and run `npm run move-files -- --manifest <moves.json> --dry` first, then for real. Do **not** `git mv`.
-- [ ] Grep for each old path afterwards — `move-files` misses string-literal paths and `.wesl` `package::` specifiers. The `?static` shader imports in `filamentRenderer.ts` are relative and get rewritten; verify by eye that they still resolve to `src/services/gpu/shaders/filaments/`.
-- [ ] `npm run typecheck` clean, `npm test` green. No new test: a move that compiles and keeps the suite green cannot fail on a bug the compiler misses.
-- [ ] Commit. Behaviour is unchanged at this point — the renderer is still constructed by `gpuHandleRegistry`, the pass still sits in `CONTENT_PASSES`.
+- [x] Write a manifest and run `npm run move-files -- --manifest <moves.json> --dry` first, then for real. Do **not** `git mv`.
+- [x] Grep for each old path afterwards — `move-files` misses string-literal paths and `.wesl` `package::` specifiers. The `?static` shader imports in `filamentRenderer.ts` are relative and get rewritten; verify by eye that they still resolve to `src/services/gpu/shaders/filaments/`.
+- [x] `npm run typecheck` clean, `npm test` green. No new test: a move that compiles and keeps the suite green cannot fail on a bug the compiler misses.
+- [x] Commit. Behaviour is unchanged at this point — the renderer is still constructed by `gpuHandleRegistry`, the pass still sits in `CONTENT_PASSES`.
 
 ## Task 2: Mint the Runtime, `create` and `destroy`
 
@@ -109,12 +109,12 @@ export function destroy(runtime: FilamentsRuntime): void;
 
 `LayerCoreDeps` with no type argument: this Layer publishes no facts, so `deps.publish` must not exist. Adding a `facts` field to get one is out of scope.
 
-- [ ] `create` builds the renderer with `deps.ctx.device`, `HDR_TARGET_FORMAT` and `deps.fadeBgl` — the same three arguments `gpuHandleRegistry.ts:215-218` passes today.
-- [ ] `create` then mints the slot by calling the moved `createFilamentSlot`, rewired: it must close over `runtime.renderer` instead of reading `state.gpu.filamentRenderer`, which means the null check at its head disappears (the renderer exists by construction). Keep the `ready` console line.
-- [ ] The slot's `syncVisibilityFades(state, { animate: true, only: ['filaments'] })` call is already gone — the prep PR deleted it and made the arrival fade core's edge (`installFadeOnArrival`). Wire **no** fade drive here. `create` must not reach for a fade registry; `LayerCoreDeps` no longer carries one. What opens the row's `hasCloud()` guard is the `upload(cloud)` this commit already does.
-- [ ] `destroy` releases the renderer. WebGPU frees nothing on GC.
-- [ ] No new test. The construction is a straight-line wiring change the typechecker covers, and the arrival fade is the prep PR's tested behaviour.
-- [ ] Commit.
+- [x] `create` builds the renderer with `deps.ctx.device`, `HDR_TARGET_FORMAT` and `deps.fadeBgl` — the same three arguments `gpuHandleRegistry.ts:215-218` passes today.
+- [x] `create` then mints the slot by calling the moved `createFilamentSlot`, rewired: it must close over `runtime.renderer` instead of reading `state.gpu.filamentRenderer`, which means the null check at its head disappears (the renderer exists by construction). Keep the `ready` console line.
+- [x] The slot's `syncVisibilityFades(state, { animate: true, only: ['filaments'] })` call is already gone — the prep PR deleted it and made the arrival fade core's edge (`installFadeOnArrival`). Wire **no** fade drive here. `create` must not reach for a fade registry; `LayerCoreDeps` no longer carries one. What opens the row's `hasCloud()` guard is the `upload(cloud)` this commit already does.
+- [x] `destroy` releases the renderer. WebGPU frees nothing on GC.
+- [x] No new test. The construction is a straight-line wiring change the typechecker covers, and the arrival fade is the prep PR's tested behaviour.
+- [x] Commit.
 
 ## Task 3: Runtime-bound contributions — pass, assets, fades
 
@@ -130,11 +130,11 @@ export function filamentsAssetRows(runtime: FilamentsRuntime): readonly AssetWir
 export function filamentsFadeRows(runtime: FilamentsRuntime): readonly FadeLayer<unknown>[];
 ```
 
-- [ ] `filamentsPass` becomes a factory over the runtime. Its `name` stays `'filaments'` (the `FRAME_ORDER` name resolves through it) and its `enabled` keeps the either-or shape at `filamentsPass.ts:24-31` verbatim — the setting is intent, the opacity is visual state, so a fade-out keeps drawing after the toggle flips off. `draw` loses its `state.gpu.filamentRenderer === null` early return and reads `runtime.renderer`. The four tuning constants stay in the file; they are this pass's own.
-- [ ] `filamentsAssetRows` returns the single row with `key: 'filaments'`, `factory: () => runtime.slot`, and `req`/`demand`/`priority` copied exactly from `assetWiring.ts:202-206` (`{ small: tier === 'small' }`, `ctx.settings.filaments.enabled`, `80`). A Layer row's `factory` hands back the slot `create` already minted; it never builds one.
-- [ ] `filamentsFadeRows` returns the single `fadeLayerRow` with `key`, `handle`, `seed` and `intent` copied from `fadeLayers.ts:130-140`, and `guard` rewritten to `runtime.renderer.hasCloud()` — dropping the `?? false` optional chain, since the renderer is non-null in a Runtime. Carry the existing guard comment across: unguarded, a tour reveal whose download is in flight starts the fade over an empty renderer and the commit's re-sync stomps the authored ramp.
-- [ ] No new test. Each of the three is a relocation of an existing literal; the behaviours they encode are Task 4's DoD lines.
-- [ ] Commit.
+- [x] `filamentsPass` becomes a factory over the runtime. Its `name` stays `'filaments'` (the `FRAME_ORDER` name resolves through it) and its `enabled` keeps the either-or shape at `filamentsPass.ts:24-31` verbatim — the setting is intent, the opacity is visual state, so a fade-out keeps drawing after the toggle flips off. `draw` loses its `state.gpu.filamentRenderer === null` early return and reads `runtime.renderer`. The four tuning constants stay in the file; they are this pass's own.
+- [x] `filamentsAssetRows` returns the single row with `key: 'filaments'`, `factory: () => runtime.slot`, and `req`/`demand`/`priority` copied exactly from `assetWiring.ts:202-206` (`{ small: tier === 'small' }`, `ctx.settings.filaments.enabled`, `80`). A Layer row's `factory` hands back the slot `create` already minted; it never builds one.
+- [x] `filamentsFadeRows` returns the single `fadeLayerRow` with `key`, `handle`, `seed` and `intent` copied from `fadeLayers.ts:130-140`, and `guard` rewritten to `runtime.renderer.hasCloud()` — dropping the `?? false` optional chain, since the renderer is non-null in a Runtime. Carry the existing guard comment across: unguarded, a tour reveal whose download is in flight starts the fade over an empty renderer and the commit's re-sync stomps the authored ramp.
+- [x] No new test. Each of the three is a relocation of an existing literal; the behaviours they encode are Task 4's DoD lines.
+- [x] Commit.
 
 ## Task 4: Form the Layer and compose it
 
@@ -158,12 +158,12 @@ export const filamentsLayer = defineLayer({
 
 No `facts`, no `sagas`, no `labels`, no `selection`, no `targets`, no `frame`, no `ui`. The Cosmic Web settings section is shared with `volumes` (`CosmicWebSection.tsx` derives its Style picker from both masters), so it is **not** this Layer's `ui` — that waits for `volume`.
 
-- [ ] `filamentsLayerSettings` exports `[filamentsSettingsFragment] as const`. It exists so `appSettingsFragments` folds the tuple in from the Layer's own settings module rather than off `APP_COMPOSITION` — reading it there makes the settings root type depend on the Layer's, which depends via `ContentPass` → `PassState` on that same root: a circular alias `tsc` refuses and tsgo does not see (`galaxyCatalogLayerSettings.ts`'s header).
-- [ ] `filamentsSettingsFragment` must leave `UNFORMED_SETTINGS_FRAGMENTS` in the same edit that adds the tuple. A fragment in both lists throws at import on the reducer-key uniqueness assert.
-- [ ] `FILAMENTS_SOURCE_ROWS` exports `[[Source.Filaments, FILAMENTS_ENTRY]] as const`; `sources.ts` drops the `UNFORMED_SOURCE_REGISTRY` entry and spreads `sourceRecordOf(FILAMENTS_SOURCE_ROWS)` beside the galaxy rows.
-- [ ] `app.ts` adds `filamentsLayer` to `layers` and to the `satisfies EngineComposition<readonly [...]>` tuple.
-- [ ] No new test. `createLayers` already throws at boot on a duplicate pass name or a contested asset key, and the settings assert throws at import — three failure modes with live guards, none needing a unit test.
-- [ ] Commit.
+- [x] `filamentsLayerSettings` exports `[filamentsSettingsFragment] as const`. It exists so `appSettingsFragments` folds the tuple in from the Layer's own settings module rather than off `APP_COMPOSITION` — reading it there makes the settings root type depend on the Layer's, which depends via `ContentPass` → `PassState` on that same root: a circular alias `tsc` refuses and tsgo does not see (`galaxyCatalogLayerSettings.ts`'s header).
+- [x] `filamentsSettingsFragment` must leave `UNFORMED_SETTINGS_FRAGMENTS` in the same edit that adds the tuple. A fragment in both lists throws at import on the reducer-key uniqueness assert.
+- [x] `FILAMENTS_SOURCE_ROWS` exports `[[Source.Filaments, FILAMENTS_ENTRY]] as const`; `sources.ts` drops the `UNFORMED_SOURCE_REGISTRY` entry and spreads `sourceRecordOf(FILAMENTS_SOURCE_ROWS)` beside the galaxy rows.
+- [x] `app.ts` adds `filamentsLayer` to `layers` and to the `satisfies EngineComposition<readonly [...]>` tuple.
+- [x] No new test. `createLayers` already throws at boot on a duplicate pass name or a contested asset key, and the settings assert throws at import — three failure modes with live guards, none needing a unit test.
+- [x] Commit.
 
 ## Task 5: Delete what core no longer holds
 
@@ -171,12 +171,12 @@ No `facts`, no `sagas`, no `labels`, no `selection`, no `targets`, no `frame`, n
 
 **review: yes** — `EngineState` field deletions, and the pass-list edit is the one place a stale core row would keep drawing silently.
 
-- [ ] Delete, in one commit, every row in the "Modified — core shrinks" table's deletion half. Deleting `filamentsPass` from `CONTENT_PASSES` is load-bearing, not tidying: `expandFrameOrder` resolves a `FRAME_ORDER` name by the **first** pass that answers to it, so a core pass left behind under `'filaments'` would keep drawing with the Layer's version never reached. `createLayers`' duplicate-name assert (`createLayers.ts:120-131`) catches it at boot if missed.
-- [ ] `EngineAssetSlots.filaments` has no readers outside its own slot file's comment (verified by grep) — delete the field outright rather than leaving it `null`.
-- [ ] `EngineGpuHandles.d.ts` cites `filamentRenderer` at lines 150 and 188 as the rationale precedent for two other nullable handles. Repoint both to `constellationRenderer`, which keeps the same shape and stays in core.
-- [ ] Shrink the `frameFilePurity` ratchet by the `filamentsPass` row. Ratchets only ever shrink.
-- [ ] Run `npm run build` (not just `typecheck`) — `?static` WESL specifiers are invisible to `tsc`, and Task 1 moved the file that holds them.
-- [ ] Commit.
+- [x] Delete, in one commit, every row in the "Modified — core shrinks" table's deletion half. Deleting `filamentsPass` from `CONTENT_PASSES` is load-bearing, not tidying: `expandFrameOrder` resolves a `FRAME_ORDER` name by the **first** pass that answers to it, so a core pass left behind under `'filaments'` would keep drawing with the Layer's version never reached. `createLayers`' duplicate-name assert (`createLayers.ts:120-131`) catches it at boot if missed.
+- [x] `EngineAssetSlots.filaments` has no readers outside its own slot file's comment (verified by grep) — delete the field outright rather than leaving it `null`.
+- [x] `EngineGpuHandles.d.ts` cites `filamentRenderer` at lines 150 and 188 as the rationale precedent for two other nullable handles. Repoint both to `constellationRenderer`, which keeps the same shape and stays in core.
+- [x] Shrink the `frameFilePurity` ratchet by the `filamentsPass` row. Ratchets only ever shrink.
+- [x] Run `npm run build` (not just `typecheck`) — `?static` WESL specifiers are invisible to `tsc`, and Task 1 moved the file that holds them.
+- [x] Commit.
 
 ---
 
@@ -194,20 +194,48 @@ No `facts`, no `sagas`, no `labels`, no `selection`, no `targets`, no `frame`, n
 
 **Deliverable inventory**
 
-- [ ] `src/layers/filaments/` holds `layer.ts`, `create.ts`, `destroy.ts`, `types/FilamentsRuntime.ts`, `render/`, `passes/`, `load/`, `present/`, `settings/`, `sources/`.
-- [ ] `APP_COMPOSITION.layers` is `[galaxyCatalogLayer, filamentsLayer]`.
-- [ ] `EngineGpuHandles` no longer declares `filamentRenderer`; `EngineAssetSlots` no longer declares `filaments`.
-- [ ] `CONTENT_PASSES`, `ASSET_WIRING` and `FADE_LAYERS` each hold one row fewer.
-- [ ] `src/services/gpu/renderers/filaments/`, `src/services/loading/slots/filamentSlot.ts`, `src/services/loading/fetchers/filamentFetcher.ts` and `src/data/sources/filaments.ts` no longer exist.
-- [ ] `npm run build` passes (the WESL gate `typecheck` cannot give).
+- [x] `src/layers/filaments/` holds `layer.ts`, `create.ts`, `destroy.ts`, `types/FilamentsRuntime.ts`, `render/`, `passes/`, `load/`, `present/`, `settings/`, `sources/`.
+- [x] `APP_COMPOSITION.layers` is `[galaxyCatalogLayer, filamentsLayer]`.
+- [x] `EngineGpuHandles` no longer declares `filamentRenderer`; `EngineAssetSlots` no longer declares `filaments`.
+- [x] `CONTENT_PASSES`, `ASSET_WIRING` and `FADE_LAYERS` each hold one row fewer.
+- [x] `src/services/gpu/renderers/filaments/`, `src/services/loading/slots/filamentSlot.ts`, `src/services/loading/fetchers/filamentFetcher.ts` and `src/data/sources/filaments.ts` no longer exist.
+- [x] `npm run build` passes (the WESL gate `typecheck` cannot give).
 
 **Named observable behaviours** (manual smoke pass, filaments requires `public/data/filaments.bin`)
 
-- [ ] Cosmic Web → Style → **Filaments** draws the skeleton, fading in rather than popping.
-- [ ] Toggling filaments **off** fades out over the authored ramp and keeps drawing until opacity reaches 0, rather than cutting on the frame the toggle flips.
-- [ ] Toggling filaments on for the **first time in a session** (download in flight) does not pop in part-way through the ramp — the guard holds the fade until the cloud is uploaded.
-- [ ] The **intensity** slider in Advanced still scales the overlay.
-- [ ] Style → **Both** shows filaments and the volume field together; → **Smooth** leaves only the volume field.
-- [ ] A tour step that reveals filaments still reveals them (the fade handle `{ kind: 'filament' }` is unchanged, so `VisibilityLayerKey` and the tour's visibility actions see what they saw before).
+- [x] Cosmic Web → Style → **Filaments** draws the skeleton, fading in rather than popping.
+- [x] Toggling filaments **off** fades out over the authored ramp and keeps drawing until opacity reaches 0, rather than cutting on the frame the toggle flips.
+- [x] Toggling filaments on for the **first time in a session** (download in flight) does not pop in part-way through the ramp — the guard holds the fade until the cloud is uploaded.
+- [x] The **intensity** slider in Advanced still scales the overlay.
+- [x] Style → **Both** shows filaments and the volume field together; → **Smooth** leaves only the volume field.
+- [x] A tour step that reveals filaments still reveals them (the fade handle `{ kind: 'filament' }` is unchanged, so `VisibilityLayerKey` and the tour's visibility actions see what they saw before).
 
 **Deferral boundary** — everything under "Out of scope" above. A reviewer finding `flow` still wired through `state.gpu.flowFieldRenderer`, or `CosmicWebSection` still hand-rendered by `SettingsPanel`, is looking at 05b/05c, not at a gap here.
+
+---
+
+## Completion note (2026-09-17)
+
+Shipped as PR #739. Three deviations from the text above, all user-directed
+mid-flight — recorded here rather than edited into the task lines, so the plan
+stays the document that was executed:
+
+- **Task 3 says "The four tuning constants stay in the file."** There were
+  three, not four, and they did not stay: `FILAMENT_LINE_HALFWIDTH_PX`,
+  `FILAMENT_BASE_TINT` and `FILAMENT_HOT_TINT` moved to `src/data/filament/`,
+  one symbol per file, on the `src/data/galaxyCatalog/` precedent. That move is
+  what took `frameFilePurity`'s `layers/filaments/passes/filamentsPass` row to
+  zero and deleted it — the "ratchet shrinks" line is MET, not merely claimed.
+- **Task 2 says "Keep the `ready` console line."** Removed; it was dev scaffolding
+  that had served its purpose.
+- **Two commits sit outside the plan's File Structure**, both user-requested
+  during execution: `4cb6b9f5d` adds `src/layers/README.md` (the Layer folder
+  convention), `04d52f78d` gives `src/@types/engine/layer/Layer.d.ts` a TSDoc
+  sweep naming each member's single call site. `Layer.d.ts` carries a standing
+  user exemption from the comment-ratio budget (not from the ≤5-line header rule).
+
+One latent defect surfaced and was fixed here rather than deferred: the
+`frameFilePurity` sweep assumed every entry in `src/layers/` is a directory, so
+the new README made it `stat('README.md/passes/')` — ENOTDIR, which
+`throwIfNoEntry: false` does NOT suppress. macOS returned ENOENT and passed;
+Linux CI threw. Fixed in `9829e3bd1` with `withFileTypes: true`.
