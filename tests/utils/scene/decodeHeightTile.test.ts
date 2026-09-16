@@ -9,7 +9,6 @@ import {
   HEIGHT_TILE_CHUNK_FOURCC,
   HEIGHT_TILE_POST_COUNT,
   HEIGHT_TILE_VERSION,
-  HEIGHT_TILE_VERSION_OFFSET,
 } from '../../../src/data/scene/heightTileFormat';
 import { readRiffChunk } from '../../../src/utils/image/readRiffChunk';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
@@ -59,11 +58,16 @@ function expectSameTile(actual: HeightTile, expected: HeightTile): void {
   }
 }
 
+// Literal offsets on purpose: they pin the plan's SHGT table independently of
+// the shared constants, so a swapped offset can't pass encode and decode alike.
 function validChunk(): Uint8Array {
   const chunk = new Uint8Array(HEIGHT_TILE_CHUNK_BYTES);
   const view = new DataView(chunk.buffer);
-  view.setUint16(HEIGHT_TILE_VERSION_OFFSET, HEIGHT_TILE_VERSION, true);
+  view.setUint16(0, HEIGHT_TILE_VERSION, true);
   view.setUint16(2, HEIGHT_POSTS_PER_TILE, true);
+  view.setFloat32(4, -1.5, true);
+  view.setFloat32(8, 2.5, true);
+  view.setFloat32(12, 0.25, true);
   return chunk;
 }
 
@@ -135,5 +139,17 @@ describe('encodeHeightTile / decodeHeightTile', () => {
     expect(() => decodeHeightTile(pixels, wrongPosts)).toThrow(/posts/);
 
     expect(() => decodeHeightTile(flatPixels(128), validChunk())).toThrow(/image/);
+  });
+
+  it('reads the header fields at their documented offsets', () => {
+    const tile = decodeHeightTile(flatPixels(HEIGHT_POSTS_PER_TILE), validChunk());
+    expect([tile.subtreeMinM, tile.subtreeMaxM, tile.geometricResidualM]).toEqual([
+      -1.5, 2.5, 0.25,
+    ]);
+  });
+
+  it('decodeHeightTile rejects pixel data whose length disagrees with channels', () => {
+    const pixels = { ...flatPixels(HEIGHT_POSTS_PER_TILE), channels: 4 as const };
+    expect(() => decodeHeightTile(pixels, validChunk())).toThrow(/pixel bytes/);
   });
 });

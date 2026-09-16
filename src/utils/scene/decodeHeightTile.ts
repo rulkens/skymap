@@ -16,7 +16,8 @@ import { codeHeightM } from './codeHeightM';
 /**
  * decodeHeightTile — decoded Terrain-RGB pixels plus the `SHGT` chunk to posts.
  * Pure, so the browser (canvas RGBA) and the tools (sharp RGB) share it; alpha
- * is never read. Every code maps to a finite height, so no NaN check is needed.
+ * is never read. Every code maps to a finite height, so a length check is the
+ * only guard against NaN posts.
  */
 export function decodeHeightTile(pixels: DecodedPixels, chunk: Uint8Array): HeightTile {
   if (chunk.length < HEIGHT_TILE_CHUNK_BYTES) {
@@ -42,6 +43,12 @@ export function decodeHeightTile(pixels: DecodedPixels, chunk: Uint8Array): Heig
   }
 
   const { data, channels } = pixels;
+  // A short buffer would read `undefined` and put NaN posts on the GPU.
+  if (data.length !== HEIGHT_TILE_POST_COUNT * channels) {
+    throw new Error(
+      `decodeHeightTile: ${data.length} pixel bytes, expected ${HEIGHT_TILE_POST_COUNT * channels}`,
+    );
+  }
   const heightM = new Float32Array(HEIGHT_TILE_POST_COUNT);
   for (let i = 0; i < HEIGHT_TILE_POST_COUNT; i++) {
     const p = i * channels;
