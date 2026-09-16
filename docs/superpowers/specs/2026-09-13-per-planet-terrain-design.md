@@ -162,14 +162,14 @@ never pushed — only ever permitted lower as finer data lands.
 
 ### 3.4 Priced shape decisions
 
-|     | Decision                                                                                                                          | Price paid                                                                                                                                                                                                                                                                                                                                                                                 |
-| --- | --------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| a   | **Delete the name `radiusM`.** Every one of the 215 sites fails to compile and picks one of five currencies, legibly, in the diff | one mechanical PR over ~10 hubs. The alternative — keeping `radiusM` as the datum with bounds beside it — leaves R1/R4/R5 silently holding the wrong currency and removes the compiler from the loop, which is the entire value                                                                                                                                                            |
-| b   | **Break the manifest shape** (`levels` → `bands`)                                                                                 | `fetchEarthTileManifest`'s guard rejects unknown shapes, so tiles are OFF in production between merge and R2 sync (`docs/DEPLOY.md:47`). Accepted: the bake must re-run for height anyway, and `prefix` versioning already isolates the CDN. Compat — both keys read forever — was rejected                                                                                                |
-| c   | **Nested point decimation** for the height pyramid, not filtering                                                                 | coarse levels are point-sampled, so a peak can survive into a level where its neighbours averaged away. Bought: level _L_ is a bit-identical subset of _L+1_, making cross-level cracks structurally zero instead of skirt-hidden. **Amended (R1):** strict decimation — the coarse post _is_ the coincident fine post, no candidate choice, so §5.4.3's identity holds by construction    |
-| d   | **Procedural vertex-shader geometry** (user's choice at the checkpoint)                                                           | replaces exact f64 CPU-baked positions with f32 small-angle trig on the _existing_ Earth path. Bought: deletes three modules and the per-frame vertex upload, and makes real instancing possible for the first time — one draw call, ≤ 80 B per patch. Requires a numeric test against f64 ground truth and its own perf measurement (P6)                                                  |
-| e   | **A compiled coarse min/max height grid** (64×32 int16 pairs, 8 KB/body) in the bundle                                            | 8 KB of bundle per body. Bought: `ceilingHeightM` has a bound at boot with zero network, so the floor never steps _up_ when the first tiles land — which happens on close approach, exactly when the camera is near the ground. It is the z6 layer of the bound the tile headers carry, and it is the one compiled home for relief: `reliefM` is its extremes, not a second compiled tuple |
-| f   | **One shared atlas, at most one engaged body**                                                                                    | a hypothetical pose close to two planets at once gets tiles on neither. Bought: 268 MB instead of 536 MB. Tiles engage only on close approach, and no pose is close to two planets                                                                                                                                                                                                         |
+|     | Decision                                                                                                                          | Price paid                                                                                                                                                                                                                                                                                                                                                                              |
+| --- | --------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| a   | **Delete the name `radiusM`.** Every one of the 215 sites fails to compile and picks one of five currencies, legibly, in the diff | one mechanical PR over ~10 hubs. The alternative — keeping `radiusM` as the datum with bounds beside it — leaves R1/R4/R5 silently holding the wrong currency and removes the compiler from the loop, which is the entire value                                                                                                                                                         |
+| b   | **Break the manifest shape** (`levels` → `bands`)                                                                                 | `fetchEarthTileManifest`'s guard rejects unknown shapes, so tiles are OFF in production between merge and R2 sync (`docs/DEPLOY.md:47`). Accepted: the bake must re-run for height anyway, and `prefix` versioning already isolates the CDN. Compat — both keys read forever — was rejected                                                                                             |
+| c   | **Nested point decimation** for the height pyramid, not filtering                                                                 | coarse levels are point-sampled, so a peak can survive into a level where its neighbours averaged away. Bought: level _L_ is a bit-identical subset of _L+1_, making cross-level cracks structurally zero instead of skirt-hidden. **Amended (R1):** strict decimation — the coarse post _is_ the coincident fine post, no candidate choice, so §5.4.3's identity holds by construction |
+| d   | **Procedural vertex-shader geometry** (user's choice at the checkpoint)                                                           | replaces exact f64 CPU-baked positions with f32 small-angle trig on the _existing_ Earth path. Bought: deletes three modules and the per-frame vertex upload, and makes real instancing possible for the first time — one draw call, ≤ 80 B per patch. Requires a numeric test against f64 ground truth and its own perf measurement (P6)                                               |
+| e   | ~~**A compiled coarse min/max height grid** (64×32 int16 pairs, 8 KB/body) in the bundle~~ — **WITHDRAWN 2026-09-16, §8.2**       | Its only consumer was the conservative `ceilingHeightM` bound, which §8.2 withdraws; a grid with no reader is bundle weight and a bake step for nothing. `reliefM` therefore stays a hand-written literal in `sceneEarth.ts`                                                                                                                                                            |
+| f   | **One shared atlas, at most one engaged body**                                                                                    | a hypothetical pose close to two planets at once gets tiles on neither. Bought: 268 MB instead of 536 MB. Tiles engage only on close approach, and no pose is close to two planets                                                                                                                                                                                                      |
 
 ### 3.5 Prep refactors
 
@@ -687,10 +687,35 @@ cut does not (`baseGlobeFadeAlpha`, `EARTH_BASE_GLOBE_FADE_*` and the
 
 ## 8. Terrain as ground truth
 
+F3 is split. **F3a** is the live height lookup and the three routing rows that need it;
+**F3b** is pick/`raycast`, the horizon-cap occludee, the cloud-deck altitude, the
+atmosphere rows and the remaining `radiusM` routing. §12 carries the sequence.
+
 ### 8.1 The height field
 
+**Amended 2026-09-16 (F3a).** The four-method field below was designed, priced and
+withdrawn before any of it was written — §8.2 records why. What F3a ships is one
+function:
+
 ```ts
-export type SurfaceHeightField = {
+// src/utils/scene/terrainHeightM.ts
+export function terrainHeightM(dirBodyFixed: Vec3, resident: ResidentHeightLookup): number;
+```
+
+It climbs to the deepest resident height tile containing `dirBodyFixed` and returns the
+bilinear interpolation of that tile's posts, in metres above the datum. When no tile in
+the chain is resident it returns `0` — the datum, which is exactly what the base globe
+draws there (§7.4), so every miss (cold start, 404, an atlas refusal, a direction under
+no band at all) collapses to the surface already on screen rather than to a second
+failure mode. One decode, two consumers holds: the `Float32Array` it interpolates is the
+one `surfaceTileSubsystem` handed the height atlas, retained rather than dropped.
+
+The superseded shape, kept because §8.3's routing table and F3b still name its methods:
+
+```ts
+type SurfaceHeightField = {
+  // NOT BUILT — ceilingHeightM/bestHeightM/boundsM withdrawn per §8.2;
+  // raycast deferred to F3b.
   ceilingHeightM(dirBodyFixed: Vec3): number;
   bestHeightM(dirBodyFixed: Vec3): number;
   boundsM(box: LonLatBounds): readonly [number, number];
@@ -698,21 +723,19 @@ export type SurfaceHeightField = {
 };
 ```
 
-Two queries, deliberately different, because "the height" wants two incompatible
-properties — safe-for-collision and best-estimate — and one name guarantees the
-wrong one gets used for the floor.
+`raycast`, when F3b builds it, intersects the outer-bound sphere first, then marches the
+ray against `terrainHeightM` and bisects the first crossing to convergence. A miss
+returns `null` and the caller falls back to the datum sphere.
 
-`boundsM` and `ceilingHeightM`'s conservative branch are backed by the `subtreeMaxM`
-in the headers of the resident ancestors, plus the compiled grid (§3.4e) before any
-tile lands; `bestHeightM`, `ceilingHeightM`'s exact branch and `raycast` by the CPU
-tile cache — the same `Float32Array`s that were uploaded to the atlas. One decode, two
-consumers.
+### 8.2 Why the conservative ceiling was withdrawn
 
-`raycast` intersects the outer-bound sphere first, then marches the ray against
-`bestHeightM` and bisects the first crossing to convergence. A miss returns `null` and
-the caller falls back to the datum sphere.
+**Amended 2026-09-16 (F3a).** This section argued that a `ceilingHeightM` built on the
+`subtreeMaxM` headers plus the compiled grid (§3.4e) is monotone non-increasing — the
+camera floor may sink as data streams in, never rise — from the data alone, with no
+ratchet. The claim does not survive contact with the shipped bake. It is withdrawn, not
+repaired, and the reasons are kept because they are the argument against rebuilding it.
 
-### 8.2 Why the floor never rises
+The withdrawn formula:
 
 ```
 ceilingHeightM(dir):
@@ -722,29 +745,37 @@ ceilingHeightM(dir):
   otherwise:                                        return the compiled grid's cell max
 ```
 
-Monotone non-increasing from two facts, no ratchet and no convention:
+**It was not monotone.** The level the cut wants deepens as the camera approaches, so the
+branch is not stable under descent. Over ground whose z5 tile is resident and whose z7
+tile is not, the moment the cut asks for z7 the answer flips from `bilinear(z5)` to
+`subtreeMaxM(z5)` and the floor steps **up** by the difference — on close approach, which
+is exactly the moment and the failure this section existed to prevent.
 
-1. `subtreeMaxM` is a max over a **subset** as you descend, so it is non-increasing
-   along the resident ancestor chain.
-2. A tile's bilinear interpolation is ≤ that tile's own max ≤ its `subtreeMaxM` ≤
-   every ancestor's `subtreeMaxM`.
+**The strict repair is unusable on this data.** Dropping the bilinear branch — the bound
+as `min` over the resident chain's subtree maxima and the grid cell — is genuinely
+monotone, and its granularity is one tile. The Dead Sea has no EOX box (§4.2's band list,
+confirmed against the v9 manifest), so its deepest coverage is the global band's z7: that
+tile is the leaf, and its `subtreeMaxM` is the maximum over its own ~313 km span, ≈
++1,700 m of Judaean and Jordanian highland. The floor there would sit 2.1 km above the
+shore permanently, not transiently. A bound fine enough to be useful needs per-block
+maxima inside the tile — a format change and a re-bake, not a query.
 
-So every answer over time forms a non-increasing sequence terminating at the best
-the data supports: the camera is never pushed up, only ever permitted lower. The one
-price: while a chain is still streaming the bound comes off an ancestor, so it lags
-residency by a level — looser than it could be, never wrong.
+So F3a interpolates real posts at every level, which is also what CesiumJS's
+`Globe.getHeight` and Mapbox GL's `Elevation.getAtPoint` do; neither promises
+monotonicity, and both fall back up the parent chain on a miss. **Bought:** a refinement
+step is now the difference between two interpolations of real data at the same point —
+tens of metres between z5 and z7 posts — instead of the kilometre-scale jumps the
+subtree-max branch produced. **Paid:** the camera can clip a hillside for the frame or two
+before the floor clamp pushes it out. Rate-limiting the floor's rise is a few lines in
+`flooredBodyPose` if the eye-check asks for it, and is deliberately not built ahead of
+that evidence.
 
-**Eviction cannot break it**, and nothing has to be pinned for that. The walk's
-request set always includes the ancestor chain under the eye direction, whatever the
-frustum holds, and the atlas never evicts a slot touched in the current frame
-(`textureAtlas.ts:212-254` evicts the oldest `lastSeenFrame` only) — so the chain the
-floor reads cannot be reclaimed. A pure function of the camera, with no pin state to
-leak. The tempting alternative, remembering the lowest value ever returned, never
-releases: fly from the Dead Sea to Everest and the floor stays in the valley.
-
-Before any tile is resident, the compiled 64×32 int16 grid (§3.4e) supplies the bound,
-so the conservative phase is immediate rather than network-bound and there is no
-upward step at first load.
+Two consequences elsewhere. §3.4e's compiled 64×32 grid is **not built** — the withdrawn
+bound was its only consumer — so `reliefM` stays the hand-written literal in
+`sceneEarth.ts`. And the walk needs no change: the claim that its request set always
+includes the eye's ancestor chain "whatever the frustum holds" was **false when written**
+(`cutSurfaceTiles.ts` only pushes a root that survives `probe`, which frustum-rejects), and
+nothing now depends on it.
 
 ### 8.3 Per-purpose routing
 
@@ -759,6 +790,19 @@ upward step at first load.
 | occlusion (trails, captions, umbra, horizon cap)             | 19    | `innerBoundRadiusM` for occluders — they must under-occlude; `boundsM(patch).max` for the occludee in the horizon cap                                                                                                          |
 | pick                                                         | 23    | `raycast` against the height field (§8.1), not `raySphereRoots` — sphere picking is off by up to 8.8 km of parallax at grazing incidence                                                                                       |
 | surface-fixed site placement, orbital elements, InfoCard     | 10    | `bestHeightM` for a rover's ground; `datumRadiusM` for the printed radius — the datum is the mean radius                                                                                                                       |
+
+**F3a takes three of those rows**, and reads `terrainHeightM(dir)` (§8.1) wherever the
+table says `ceilingHeightM` or `bestHeightM` — the two names existed because one was
+conservative, and with a single estimator there is one query:
+
+| row                               | F3a routing                                                                                                    |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| ground collision                  | `datumRadiusM + terrainHeightM(dir)`, then `standoffRadii`                                                     |
+| surface-fixed site placement      | `datumRadiusM + terrainHeightM(dir) + site.altitudeM` — `altitudeM` is the mesh's wheel lift, not an elevation |
+| eye-to-ground altitude _readouts_ | `terrainHeightM(dir)`; the h/R **band arithmetic stays on `datumRadiusM`**, so camera feel is untouched        |
+
+Everything else in the table is F3b. The remaining `bestHeightM`/`ceilingHeightM`/
+`boundsM` mentions above are historical; read them as `terrainHeightM`.
 
 The cloud-deck shape matters more than it looks. `CLOUD_SHELL_PARAMS.radiusRatio`
 is 1.002 ≈ 12.7 km, drawn on a `uvSphereMesh(128, 64)` whose facet-centre sag
@@ -845,10 +889,15 @@ fail on a real bug nothing else catches.
   ~70× the reference's own cancellation floor, far below the f32 budget), and
   asserting the `s = t = 0` corner is exactly `originRelEyeM`. This is the test that
   makes P6's numerics reviewable.
-- **`ceilingHeightM` monotonicity**: feed a scripted residency sequence and assert
-  the returned bound never increases.
-- **The eye's ancestor chain is in every frame's request set**, whatever the frustum
-  holds — the property that makes eviction unable to raise the floor (§8.2).
+- ~~**`ceilingHeightM` monotonicity**~~ and ~~**the eye's ancestor chain is in every
+  frame's request set**~~ — both void with §8.2's withdrawal; there is no monotone bound
+  to assert and nothing depends on the request set's contents. F3a tests instead:
+  **ancestor fallback** (a direction whose own tile is absent reads the deepest resident
+  ancestor's posts, not the datum), **the datum fallback** (nothing resident anywhere in
+  the chain returns exactly `0`, never `NaN`), and **post addressing** (129 posts span
+  128 cells, and a post shared by levels _L_ and _L+1_ reads identically from both —
+  a half-texel error here sinks rovers by a plausible-looking amount and nothing
+  else catches it).
 - **Horizon cap**: a patch containing a peak at `boundsM.max` is _not_ culled from a
   distance where the mean-sphere cap would cull it.
 - **Level balance** (R14): neighbouring leaves never sample height levels more than
@@ -861,14 +910,22 @@ land/park call is the user's.
 
 ## 12. Sequence
 
-|     |                                                                                                    | PR                                                      |
-| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                                | #704 — landed                                           |
-| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                       | #705 — landed, perf NEUTRAL                             |
-| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                    | #713 closed superseded, landed via #719                 |
-| F2  | Displacement, normals, edge collapse, base-globe shrink                                            | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
-| F3  | Ground truth: height field, `ceilingHeightM` routing, `raycast` pick, horizon cap, cloud clearance | one PR                                                  |
-| F4  | Mars: imagery bake, global height, four rover-site bands                                           | one PR                                                  |
+|     |                                                                                                   | PR                                                      |
+| --- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                               | #704 — landed                                           |
+| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                      | #705 — landed, perf NEUTRAL                             |
+| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                   | #713 closed superseded, landed via #719                 |
+| F2  | Displacement, normals, edge collapse, base-globe shrink                                           | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
+| F3a | `terrainHeightM` + the three §8.3 rows it serves: camera floor, site placement, altitude readouts | prep PR, then feature PR                                |
+| F3b | `raycast` pick, horizon-cap occludee, cloud-deck clearance, atmosphere rows, remaining routing    | not scoped                                              |
+| F4  | Mars: imagery bake, global height, four rover-site bands                                          | prep #738, then feature PR                              |
 
-F3's atmosphere row waits on the depth-aware composite (§2); everything else in F3
+F3b's atmosphere row waits on the depth-aware composite (§2); everything else in F3b
 is independent of it.
+
+**F3a depends on F4's prep landing first**, not the other way round: #738 renames the
+tile pass and edits `surfaceTileSubsystem.ts` and `deriveBodyStates.ts`, which are two
+of F3a's three feature files. F3a's own prep (`cutSurfaceTiles.ts`, `bodyRung.ts`)
+touches neither and can land in parallel. F4's rover placement then needs F3a — the four
+`SURFACE_FIXED_SITES` rows are all Mars, and all four sit 1.4–4.5 km below the datum,
+so they float without it.
