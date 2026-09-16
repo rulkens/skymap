@@ -30,10 +30,9 @@ export function installFadeOnArrival(
 
       for (const item of row.expand(state)) {
         const now = row.guard(state, item);
-        // Absent reads as false, so an item its row's `expand` only grows later
-        // (`volumeField`, on `addVolumeField`) still fires on its first pass.
         const opened = now && open.get(item) !== true;
-        // Recorded on every pass, closes included, so an evict re-arms the next open.
+        // Written on every pass, not just on opens: the install pass is the baseline,
+        // and a guard that closes is only ever noticed at the next `ready`.
         open.set(item, now);
         if (drive && opened) syncVisibilityFadeItem(state, row.key, item);
       }

@@ -50,6 +50,8 @@ import type { EngineSettingsState } from '../settings/EngineSettingsState';
 
 export type FadeLayer<Item> = {
   readonly key: VisibilityLayerKey;
+  // Items must be stable identities: the arrival edge keys its guard snapshot by
+  // `item`, so freshly-built objects would silently never fire their fade-in.
   expand(state: EngineState): readonly Item[];
   handle(item: Item): FadeId;
   seed(settings: EngineSettingsState, item: Item): number;
