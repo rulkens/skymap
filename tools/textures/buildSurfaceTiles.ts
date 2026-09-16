@@ -60,7 +60,6 @@ import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
-import type { HeightSource } from './HeightSource';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
 import type { SurfaceBakeBand } from './SurfaceBakeBand';
 import type { SurfaceBodyBake } from './SurfaceBodyBake';
