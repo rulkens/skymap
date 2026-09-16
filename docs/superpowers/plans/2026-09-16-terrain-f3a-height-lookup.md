@@ -61,19 +61,22 @@ export function deepestResidentAncestor<T>(
 ): { readonly found: T; readonly levelDelta: number } | null;
 ```
 
-- [ ] Add the helper, generic over the lookup's payload so all four callers (three now,
+- [x] Add the helper, generic over the lookup's payload so all four callers (three now,
       `terrainHeightM` later) share one climb and query once per level, not twice.
-- [ ] **Preserve each call site's existing bounds exactly.** All three loops are
+- [x] **Preserve each call site's existing bounds exactly.** All three loops are
       `z - levelDelta > baseLevel` — strictly greater, so none probes `baseLevel` itself —
       but only `resolveHeightLattice` also caps at `MAX_LEVEL_DELTA` (7, past which `cells`
       hits 0). That cap is why `maxLevelDelta` is optional; do not apply it to the other
       two, and do not unify the floors.
-- [ ] Test `deepestResidentAncestor stops at minLevel` and
+- [x] Test `deepestResidentAncestor stops at minLevel` and
       `deepestResidentAncestor returns null when nothing in the chain is resident` — the
       `minLevel` boundary is the off-by-one this extraction can silently move. No test for
       the happy path; `cutSurfaceTiles.test.ts` already covers it through the callers.
-- [ ] `npm test -- cutSurfaceTiles resolveHeightLattice deepestResidentAncestor` green.
-- [ ] Commit.
+- [x] Test `resolveHeightLattice` from a shifted start — the review found the new
+      `MAX_LEVEL_DELTA - startDelta` arithmetic had no coverage; two cases pin it from both
+      sides, mutation-verified (`81d7fdfe7`).
+- [x] `npm test -- cutSurfaceTiles resolveHeightLattice deepestResidentAncestor` green.
+- [x] Commit.
 
 ### P2: the floor's radius becomes a per-direction lookup
 
