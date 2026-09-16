@@ -20,9 +20,9 @@ export async function readHeightTileFile(path: string): Promise<HeightTile | nul
   if (chunk === null) {
     throw new Error(`readHeightTileFile: ${path} has no ${HEIGHT_TILE_CHUNK_FOURCC} chunk`);
   }
-  const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
-  return decodeHeightTile(
-    { data, width: info.width, height: info.height, channels: info.channels as 3 | 4 },
-    chunk,
-  );
+  const { data, info } = await sharp(bytes)
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  return decodeHeightTile({ data, width: info.width, height: info.height }, chunk);
 }

@@ -39,13 +39,12 @@ function quantisedTile(): HeightTile {
   };
 }
 
-async function decodeWithSharp(bytes: Uint8Array): Promise<{ tile: HeightTile; rgb: Buffer }> {
+async function decodeWithSharp(bytes: Uint8Array): Promise<HeightTile> {
   const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
   const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
   if (!chunk) throw new Error('missing SHGT chunk');
   expect(info.channels).toBe(3);
-  const pixels = { data, width: info.width, height: info.height, channels: 3 as const };
-  return { tile: decodeHeightTile(pixels, chunk), rgb: data };
+  return decodeHeightTile({ data, width: info.width, height: info.height }, chunk);
 }
 
 function expectSameTile(actual: HeightTile, expected: HeightTile): void {
@@ -73,7 +72,7 @@ function validChunk(): Uint8Array {
 }
 
 function flatPixels(size: number) {
-  return { data: new Uint8Array(size * size * 3), width: size, height: size, channels: 3 as const };
+  return { data: new Uint8Array(size * size * 3), width: size, height: size };
 }
 
 describe('heightCode', () => {
@@ -94,22 +93,7 @@ describe('heightCode', () => {
 describe('encodeHeightTile / decodeHeightTile', () => {
   it('round-trips a quantised tile bit-exactly through encode, sharp decode and decodeHeightTile', async () => {
     const tile = quantisedTile();
-    const { tile: decoded } = await decodeWithSharp(await encodeHeightTile(tile));
-    expectSameTile(decoded, tile);
-  });
-
-  it('decodes 4-channel pixels identically to 3-channel (sharp on an RGBA file)', async () => {
-    const tile = quantisedTile();
-    const bytes = await encodeHeightTile(tile);
-    const { rgb } = await decodeWithSharp(bytes);
-    const rgba = new Uint8ClampedArray(HEIGHT_TILE_POST_COUNT * 4);
-    for (let i = 0; i < HEIGHT_TILE_POST_COUNT; i++) {
-      rgba.set(rgb.subarray(i * 3, i * 3 + 3), i * 4);
-      rgba[i * 4 + 3] = 255;
-    }
-    const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC)!;
-    const pixels = { data: rgba, width: HEIGHT_POSTS_PER_TILE, height: HEIGHT_POSTS_PER_TILE };
-    expectSameTile(decodeHeightTile({ ...pixels, channels: 4 }, chunk), tile);
+    expectSameTile(await decodeWithSharp(await encodeHeightTile(tile)), tile);
   });
 
   it('encodeHeightTile refuses a post off the 0.1 m grid', async () => {
@@ -146,8 +130,9 @@ describe('encodeHeightTile / decodeHeightTile', () => {
     ]);
   });
 
-  it('decodeHeightTile rejects pixel data whose length disagrees with channels', () => {
-    const pixels = { ...flatPixels(HEIGHT_POSTS_PER_TILE), channels: 4 as const };
+  it('decodeHeightTile rejects pixel data that is not packed RGB (e.g. RGBA)', () => {
+    const size = HEIGHT_POSTS_PER_TILE;
+    const pixels = { data: new Uint8Array(size * size * 4), width: size, height: size };
     expect(() => decodeHeightTile(pixels, validChunk())).toThrow(/pixel bytes/);
   });
 });

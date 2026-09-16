@@ -4,9 +4,11 @@ import { HEIGHT_POSTS_PER_TILE, HEIGHT_TILE_POST_COUNT } from '../../data/scene/
 import { codeHeightM } from './codeHeightM';
 import { decodeHeightTileHeader } from './decodeHeightTileHeader';
 
+const RGB_CHANNELS = 3;
+
 /**
  * decodeHeightTile — decoded Terrain-RGB pixels plus the `SHGT` chunk to posts,
- * for the tools (the runtime decodes on the GPU instead); alpha is never read.
+ * for the tools (the runtime decodes on the GPU instead); pixels are packed RGB.
  * Every code maps to a finite height, so a length check is the only guard
  * against NaN posts.
  */
@@ -18,16 +20,16 @@ export function decodeHeightTile(pixels: DecodedPixels, chunk: Uint8Array): Heig
     );
   }
 
-  const { data, channels } = pixels;
-  // A short buffer would read `undefined` and put NaN posts in the tile.
-  if (data.length !== HEIGHT_TILE_POST_COUNT * channels) {
+  const { data } = pixels;
+  // A short buffer (or one with alpha) would misread posts, or read NaN.
+  if (data.length !== HEIGHT_TILE_POST_COUNT * RGB_CHANNELS) {
     throw new Error(
-      `decodeHeightTile: ${data.length} pixel bytes, expected ${HEIGHT_TILE_POST_COUNT * channels}`,
+      `decodeHeightTile: ${data.length} pixel bytes, expected ${HEIGHT_TILE_POST_COUNT * RGB_CHANNELS}`,
     );
   }
   const heightM = new Float32Array(HEIGHT_TILE_POST_COUNT);
   for (let i = 0; i < HEIGHT_TILE_POST_COUNT; i++) {
-    const p = i * channels;
+    const p = i * RGB_CHANNELS;
     heightM[i] = codeHeightM(data[p]! * 65536 + data[p + 1]! * 256 + data[p + 2]!);
   }
 
