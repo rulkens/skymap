@@ -1,7 +1,8 @@
 /**
  * The galaxy-catalog Layer: nine point sources, their renderers, the thumbnail
- * LOD chain, the Galaxies settings section and every contribution they make to
- * a frame. No `targets`/`sagas`.
+ * LOD chain, the Galaxies settings section, `watchPaletteWakeSaga` (its own
+ * demand trigger's wake) and every contribution they make to a frame. No
+ * `targets`.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -18,6 +19,7 @@ import { diskRadiusRingPass } from './passes/diskRadiusRingPass';
 import { galaxyCatalogFadeRows } from './present/galaxyCatalogFadeRows';
 import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
 import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
+import { watchPaletteWakeSaga } from './sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
 import type { GalaxyCatalogFacts } from './types/GalaxyCatalogFacts';
 
@@ -42,6 +44,7 @@ export const galaxyCatalogLayer = defineLayer({
     diskRadiusRingPass(runtime),
   ],
   assets: galaxyCatalogAssetRows,
+  sagas: [watchPaletteWakeSaga],
   fades: galaxyCatalogFadeRows,
   labels: (runtime) => [{ id: 'famousLabels', produceLabels: produceFamousGalaxyLabels(runtime) }],
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],

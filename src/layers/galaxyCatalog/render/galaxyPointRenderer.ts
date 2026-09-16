@@ -291,7 +291,6 @@ export function createGalaxyPointRenderer(init: {
   const renderer: GalaxyPointRenderer = {
     label: 'galaxyPointRenderer',
     upload: store.upload,
-    unload: store.unload,
     setBiasUploadCallback: store.setBiasUploadCallback,
     setBiasUnloadCallback: store.setBiasUnloadCallback,
     spliceSchechterRatios: store.spliceSchechterRatios,

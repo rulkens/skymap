@@ -51,6 +51,7 @@ import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
+import { useRunSaga } from '../store/RunSagaProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
 import { APP_COMPOSITION } from '../compositions/app';
 
@@ -67,6 +68,11 @@ export function useEngine(): UseEngineReturn {
   // nor reads it.
   const setSagaContext = useSetSagaContext();
 
+  // The store factory's third sibling — forks a Layer's declared `sagas` under
+  // the same middleware `mainSaga` runs under, without `mainSaga` importing the
+  // composition. `createLayers` calls it once per composed Layer.
+  const runSaga = useRunSaga();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<EngineHandle | null>(null);
 
@@ -74,7 +80,7 @@ export function useEngine(): UseEngineReturn {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handle = createEngine(canvas, { store, setSagaContext }, APP_COMPOSITION);
+    const handle = createEngine(canvas, { store, setSagaContext, runSaga }, APP_COMPOSITION);
     handleRef.current = handle;
 
     // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed

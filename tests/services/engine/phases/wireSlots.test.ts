@@ -445,6 +445,7 @@ function makeDeps(): BootstrapDeps {
   const cb: EngineCallbacks = {
     store: createAppStore().store,
     setSagaContext: vi.fn<() => void>() as never,
+    runSaga: vi.fn<() => void>() as never,
   };
   return {
     canvas: { width: 800, height: 600 } as HTMLCanvasElement,

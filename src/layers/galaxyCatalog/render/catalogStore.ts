@@ -334,18 +334,6 @@ export function createCatalogStore(init: {
     biasUploadCallback?.(source, galaxyCatalog);
   }
 
-  /** No-op if the catalog was never uploaded. */
-  function unload(id: GalaxyCatalogId): void {
-    const entry = galaxyCatalogs.get(id);
-    if (!entry) return;
-    entry.buffer.destroy();
-    entry.fade.destroy();
-    entry.sourceBuffer.destroy();
-    galaxyCatalogs.delete(id);
-    const source = CODE_OF_ID.get(id);
-    if (source !== undefined) biasUnloadCallback?.(source);
-  }
-
   // ─── Bias-correction splice surface ──────────────────────────────────────
   //
   // Layout-aware writes into the interleaved CPU mirror + re-upload of
@@ -514,7 +502,6 @@ export function createCatalogStore(init: {
 
   return {
     upload,
-    unload,
     setBiasUploadCallback,
     setBiasUnloadCallback,
     spliceSchechterRatios,

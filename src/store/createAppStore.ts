@@ -46,8 +46,13 @@
  * point of this migration is that the settings state is now fully serializable —
  * `disabledPasses` is a plain `Record`, not a `Set` — so RTK's default
  * serializability + immutability checks are kept on as a correctness guard rather
- * than disabled. Re-introducing either escape hatch would silently re-admit the
- * non-serializable shapes the migration removed.
+ * than disabled everywhere else. Re-introducing either escape hatch would
+ * silently re-admit the non-serializable shapes the migration removed.
+ *
+ * The ONE `ignoredPaths` entry below is a SIZE exemption, not a serializability
+ * one: `ALIAS_INDEX_STATE_PATH`'s ~48k rows are plain JSON (D1 chose `number`
+ * over `bigint` for `pgc` for exactly this reason), so skipping them only spares
+ * both checks a deep walk on every dispatch, not a correctness guard.
  */
 
 import { configureStore } from '@reduxjs/toolkit';
@@ -56,7 +61,7 @@ import createSagaMiddleware from 'redux-saga';
 import { rootReducer } from './rootReducer';
 import { mainSaga } from './rootSaga';
 import { sagaContextRegistered } from './sagaContextRegistered';
-import type { RootState, SagaContext } from './types';
+import type { RootState, SagaContext, RunSaga } from './types';
 
 // The store's preloaded shape is a partial route map: a caller may seed any
 // subset of the routes (`tier`, `settings`, `ui` — all optional) and leave the
@@ -66,14 +71,29 @@ import type { RootState, SagaContext } from './types';
 // omitted; main.tsx seeds it explicitly for a fresh boot-time localStorage read.)
 export type PreloadedState = Partial<RootState>;
 
+// The galaxyCatalog Layer's alias index (D6 facts) — the one state path both
+// dev checks are told to skip. Named so the two `ignoredPaths` below can never
+// drift from each other or restate the route string.
+const ALIAS_INDEX_STATE_PATH = 'engine.galaxyCatalog.aliasIndex';
+
 export function createAppStore(preloadedState?: PreloadedState) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
     preloadedState,
-    middleware: (getDefaultMiddleware) => getDefaultMiddleware().concat(sagaMiddleware),
+    middleware: (getDefaultMiddleware) =>
+      getDefaultMiddleware({
+        serializableCheck: { ignoredPaths: [ALIAS_INDEX_STATE_PATH] },
+        immutableCheck: { ignoredPaths: [ALIAS_INDEX_STATE_PATH] },
+      }).concat(sagaMiddleware),
   });
   sagaMiddleware.run(mainSaga);
+  // Exposed so `createLayers` can fork a composed Layer's `sagas` under this
+  // SAME middleware without `mainSaga` (and so `src/store/**`) ever importing
+  // the composition — see `RunSaga`'s doc comment.
+  const runSaga: RunSaga = (saga) => {
+    sagaMiddleware.run(saga);
+  };
   return {
     store,
     // The dispatch after the merge is what makes registration OBSERVABLE. A saga
@@ -87,5 +107,6 @@ export function createAppStore(preloadedState?: PreloadedState) {
       sagaMiddleware.setContext(ctx);
       store.dispatch(sagaContextRegistered());
     },
+    runSaga,
   };
 }

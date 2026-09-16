@@ -8,7 +8,7 @@
  * `useAppSelector` selectors — there is no callback cluster to subscribe to.
  */
 
-import type { AppStore, SetSagaContext } from '../../store/types';
+import type { AppStore, SetSagaContext, RunSaga } from '../../store/types';
 
 export type EngineCallbacks = {
   /**
@@ -31,4 +31,13 @@ export type EngineCallbacks = {
    * injected through React context rather than threaded as props through `App`.
    */
   setSagaContext: SetSagaContext;
+
+  /**
+   * Forks a watcher saga under `createAppStore`'s middleware. `createLayers`
+   * calls this once per composed Layer's declared `sagas`, at Layer-creation
+   * time — the only way a Layer's saga ever runs, since `mainSaga` cannot
+   * import the composition. Sourced from `<RunSagaProvider>`, the third
+   * sibling of `createAppStore`'s return.
+   */
+  runSaga: RunSaga;
 };

@@ -49,6 +49,7 @@ import { Provider } from 'react-redux';
 import { App } from './components/App/App';
 import { createAppStore } from './store/createAppStore';
 import { SagaContextProvider } from './store/SagaContextProvider';
+import { RunSagaProvider } from './store/RunSagaProvider';
 import { settingsRoute, tierRoute, uiRoute } from './store/constants';
 import { INITIAL_SETTINGS } from './state/settings/initialSettings';
 import { buildInitialUiState } from './state/ui/buildInitialUiState';
@@ -86,7 +87,7 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   // useEngine → createEngine) and read by React through <Provider>, so there is
   // no second store to drift.
   const initialTier = initialTierFromViewport(window.innerWidth);
-  const { store, setSagaContext } = createAppStore({
+  const { store, setSagaContext, runSaga } = createAppStore({
     [tierRoute]: initialTier,
     [settingsRoute]: INITIAL_SETTINGS,
     [uiRoute]: buildInitialUiState(),
@@ -99,7 +100,9 @@ if (typeof navigator === 'undefined' || typeof navigator.gpu === 'undefined') {
   createRoot(root).render(
     <Provider store={store}>
       <SagaContextProvider value={setSagaContext}>
-        <App />
+        <RunSagaProvider value={runSaga}>
+          <App />
+        </RunSagaProvider>
       </SagaContextProvider>
     </Provider>,
   );

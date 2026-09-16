@@ -4,8 +4,8 @@
  * The renderer owns what exists once per pipeline: the shader modules, the
  * render pipeline (and its colour target), the per-frame `@group(0)` uniform
  * buffer, and the draw call. The per-catalog GPU resources it delegates to
- * `catalogStore` — their upload / unload / splice / count contracts are
- * pinned in `catalogStore.test.ts`, not here. What remains here is the
+ * `catalogStore` — their upload / splice / count contracts are pinned in
+ * `catalogStore.test.ts`, not here. What remains here is the
  * pipeline descriptor, the composed `draw()`, and the composed teardown
  * (which must reach through the store as well as its own uniform buffer).
  *

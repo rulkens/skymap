@@ -16,7 +16,6 @@ import { watchSwapFormatSaga } from './effects/watchSwapFormatSaga';
 import { watchFadesSaga } from './effects/watchFadesSaga';
 import { watchSelectionRowsSaga } from '../state/selectionRows/watchSelectionRowsSaga';
 import { watchSelectionWakeSaga } from '../state/selection/watchSelectionWakeSaga';
-import { watchPaletteWakeSaga } from '../state/ui/watchPaletteWakeSaga';
 import { watchRequestFocusSaga } from '../state/selection/watchRequestFocusSaga';
 import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSaga';
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
@@ -39,7 +38,6 @@ export function* mainSaga() {
     watchFadesSaga(),
     watchSelectionRowsSaga(),
     watchSelectionWakeSaga(),
-    watchPaletteWakeSaga(),
     watchRequestFocusSaga(),
     watchRequestSelectSaga(),
     watchFocusTweenSaga(),

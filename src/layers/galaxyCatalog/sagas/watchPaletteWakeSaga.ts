@@ -7,8 +7,8 @@
  */
 import { takeEvery, getContext } from 'typed-redux-saga';
 
-import { setPaletteOpen } from './uiSlice';
-import type { ReconcileEffects } from '../../store/effects/ReconcileEffects';
+import { setPaletteOpen } from '../../../state/ui/uiSlice';
+import type { ReconcileEffects } from '../../../store/effects/ReconcileEffects';
 
 export function* watchPaletteWakeSaga() {
   yield* takeEvery(setPaletteOpen, function* (action) {

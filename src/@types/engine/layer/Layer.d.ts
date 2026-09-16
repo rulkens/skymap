@@ -8,6 +8,7 @@
  */
 
 import type { SettingsFragmentLike } from '../../settings/SettingsFragmentLike';
+import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { ContentPass } from '../frame/ContentPass';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
@@ -38,6 +39,7 @@ export type Layer<
   readonly settings?: Settings;
 
   // Static contributions: plain data, readable without booting anything.
+  readonly targets?: readonly RenderTargetSpec[];
   readonly sagas?: readonly SagaFactory[];
   /** This Layer's `SOURCE_REGISTRY` rows, keyed by their global `Source` code. */
   readonly sources?: Sources;

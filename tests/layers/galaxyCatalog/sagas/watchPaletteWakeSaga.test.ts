@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
-import { rootReducer } from '../../../src/store/rootReducer';
-import { watchPaletteWakeSaga } from '../../../src/state/ui/watchPaletteWakeSaga';
-import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
-import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
+import { rootReducer } from '../../../../src/store/rootReducer';
+import { watchPaletteWakeSaga } from '../../../../src/layers/galaxyCatalog/sagas/watchPaletteWakeSaga';
+import { setPaletteOpen } from '../../../../src/state/ui/uiSlice';
+import type { ReconcileEffects } from '../../../../src/store/effects/ReconcileEffects';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

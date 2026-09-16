@@ -94,6 +94,12 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
         layerFactsSeeded({ layer: layer.name, facts: layer.facts as Record<string, unknown> }),
       );
     }
+    // The only place a Layer's `sagas` ever run: `mainSaga` cannot import the
+    // composition, so this fork — not a static `all([...])` entry — is what
+    // makes a declared watcher live (see `RunSaga`'s doc comment).
+    for (const sagaFactory of layer.sagas ?? []) {
+      deps.cb.runSaga(sagaFactory);
+    }
     const coreDeps = declaresFacts
       ? {
           ...common,
