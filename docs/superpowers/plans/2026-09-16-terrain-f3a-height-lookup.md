@@ -1,7 +1,7 @@
 # Terrain F3a — the height lookup
 
 Spec: [`2026-09-13-per-planet-terrain-design.md`](../specs/2026-09-13-per-planet-terrain-design.md)
-§8 (amended 2026-09-16), §11, §12.
+§5.3, §8 (amended 2026-09-16 and 2026-09-17), §11, §12.
 
 Earth draws displaced terrain (F1+F2) that the engine does not know about: the camera
 floor, surface-fixed site placement and the altitude readouts all still use the smooth
@@ -9,26 +9,27 @@ datum sphere. F3a adds one query and routes three consumers to it. F4's rovers d
 it — all four `SURFACE_FIXED_SITES` rows are Mars and all four sit 1.4–4.5 km below the
 datum.
 
-**Read §8.2 before starting.** The spec's conservative `ceilingHeightM` bound and the
-compiled §3.4e grid were withdrawn on 2026-09-16; there is one estimator, not two, and no
-monotonicity promise. Building either back is out of scope.
+**Read §8.2 and §8.4 before starting.** Two design decisions are already made and are not
+open: the conservative `ceilingHeightM` bound and the compiled §3.4e grid were withdrawn
+(one estimator, no monotonicity promise), and the CPU gets its posts from a decimated grid
+in the `SHGT` header chunk — **not** by reading pixels, which #736 forbids.
 
 ## Packaging and sequence
 
 Two PRs, per the user's ruling at the refactor-ground checkpoint.
 
-- **PR 1 (prep)** — P1, P2. No behaviour change. Touches `cutSurfaceTiles.ts` and
-  `bodyRung.ts`, neither of which PR #738 modifies, so it can land in parallel with the
-  Mars F4 prep.
-- **PR 2 (feature)** — F1–F3. Two of its three feature files (`surfaceTileSubsystem.ts`,
-  `deriveBodyStates.ts`) are edited by #738, which also renames
-  `earthSurfaceTilesPass.ts` → `surfaceTilesPass.ts`. **Land #738 first and rebase**, or
-  expect to resolve those by hand.
+- **PR 1 (prep)** — P1, P2. No behaviour change.
+- **PR 2 (feature)** — F0–F3, including a height-product re-bake and R2 sync.
+
+#738 landed as `0bd22dd0c` and this branch is rebased onto it. Two things it changed that
+this plan is written against: the surface-tile helpers moved
+`src/utils/scene/` → `src/utils/surfaceTiles/`, and `mergeSurfaceTileManifest.ts` now
+makes a height-only bake safe (it no longer drops albedo provenance from `manifest.json`).
 
 ## Parallelism and perf
 
-P1/P2 are independent of each other; F1 is independent of P1/P2; F2 depends on F1; F3
-depends on P2 and F2. `terrainHeightM` runs on per-frame camera paths
+P1/P2 are independent of each other. F0 gates F1 (the decoder is what F1 reads); F2
+depends on F1; F3 depends on P2 and F2. `terrainHeightM` runs on per-frame camera paths
 (`bodyRung.step`/`engage`/`release`, `deriveBodyStates`), so `npm run perf` before and
 after PR 2, with this worktree's own `--url`. A neutral-or-negative result halts landing
 and the call is the user's.
@@ -39,14 +40,15 @@ and the call is the user's.
 
 ### P1: extract the deepest-resident-ancestor climb
 
-**Files:** `src/utils/scene/deepestResidentAncestor.ts` (new),
-`src/utils/scene/cutSurfaceTiles.ts` (modify),
-`tests/utils/scene/deepestResidentAncestor.test.ts` (new)
+**Files:** `src/utils/surfaceTiles/deepestResidentAncestor.ts` (new),
+`src/utils/surfaceTiles/cutSurfaceTiles.ts` (modify),
+`src/utils/surfaceTiles/resolveHeightLattice.ts` (modify),
+`tests/utils/surfaceTiles/deepestResidentAncestor.test.ts` (new)
 **review: yes** — renderer walk, a landmine file.
 
-`cutSurfaceTiles.ts` hand-rolls the same ancestor climb three times (`reliefHeadroom` at
-`:252-266`, plus `resolveCutResidency` and `resolveHeightLattice`). `terrainHeightM`
-would be the fourth. Consolidate first.
+The same ancestor climb is hand-rolled three times: `reliefHeadroom`
+(`cutSurfaceTiles.ts:253`), `resolveCutResidency` (`:423`) and `resolveHeightLattice.ts:26`.
+`terrainHeightM` would be the fourth. Consolidate first.
 
 **Signature:**
 
@@ -55,20 +57,22 @@ export function deepestResidentAncestor<T>(
   tile: SurfaceTileId,
   minLevel: number,
   lookup: (tile: SurfaceTileId) => T | null,
+  maxLevelDelta?: number,
 ): { readonly found: T; readonly levelDelta: number } | null;
 ```
 
 - [ ] Add the helper, generic over the lookup's payload so all four callers (three now,
       `terrainHeightM` later) share one climb and query once per level, not twice.
-- [ ] **Preserve each call site's existing floor level exactly.** `reliefHeadroom`'s loop
-      is `z - levelDelta > baseLevel` — strictly greater, so it never probes `baseLevel`
-      itself, while the lattice resolver does. Pass each site's current bound as
-      `minLevel`; do not unify them.
+- [ ] **Preserve each call site's existing bounds exactly.** All three loops are
+      `z - levelDelta > baseLevel` — strictly greater, so none probes `baseLevel` itself —
+      but only `resolveHeightLattice` also caps at `MAX_LEVEL_DELTA` (7, past which `cells`
+      hits 0). That cap is why `maxLevelDelta` is optional; do not apply it to the other
+      two, and do not unify the floors.
 - [ ] Test `deepestResidentAncestor stops at minLevel` and
       `deepestResidentAncestor returns null when nothing in the chain is resident` — the
-      `minLevel` boundary is the off-by-one this extraction can silently move. No test
-      for the happy path; `cutSurfaceTiles.test.ts` already covers it through the callers.
-- [ ] `npm test -- cutSurfaceTiles deepestResidentAncestor` green.
+      `minLevel` boundary is the off-by-one this extraction can silently move. No test for
+      the happy path; `cutSurfaceTiles.test.ts` already covers it through the callers.
+- [ ] `npm test -- cutSurfaceTiles resolveHeightLattice deepestResidentAncestor` green.
 - [ ] Commit.
 
 ### P2: the floor's radius becomes a per-direction lookup
@@ -77,8 +81,8 @@ export function deepestResidentAncestor<T>(
 `src/utils/camera/flooredBodyPose.ts`, `src/utils/camera/hostedFocusOverHorizon.ts`,
 `src/services/engine/camera/poseFrameConversion.ts`, the `HostBody` type,
 plus the call sites those three signature changes reach
-(`anchoredZoomStep.ts:56`, `settledZoomPose.ts:106`, `src/services/camera/surfaceStep.ts:98`,
-`bodyRung.ts:93/:129/:144/:145-151`, `src/state/camera/watchFlyToLonLatSaga.ts:76`)
+(`anchoredZoomStep.ts`, `settledZoomPose.ts`, `src/services/camera/surfaceStep.ts`,
+`bodyRung.ts`, `src/state/camera/watchFlyToLonLatSaga.ts`)
 **review: yes** — camera/pose maths.
 
 `surfaceFloorM(datumRadiusM, standoffRadii)` (`src/utils/camera/surfaceFloorM.ts:5-7`) is
@@ -94,7 +98,7 @@ groundRadiusAtM(dirBodyFixed: Vec3): number;
 
 **In this PR it returns `body.surface.datumRadiusM` unchanged.**
 
-- [ ] Add the field at `bodyRung.ts:51-61`'s `host()`, returning the datum.
+- [ ] Add the field at `bodyRung.ts`'s `host()`, returning the datum.
 - [ ] Switch the three `surfaceFloorM` callers to source their radius from it.
       `surfaceFloorM`'s own signature does not change — only the value it is handed.
 - [ ] **Leave `HostBody.radiusM` alone.** It also feeds pivot maths
@@ -110,20 +114,75 @@ groundRadiusAtM(dirBodyFixed: Vec3): number;
 
 ## PR 2 — the feature
 
+### F0: `SHGT` v3 — the CPU post grid
+
+**Files:** `src/data/scene/heightTileFormat.ts`,
+`src/@types/scene/HeightTileHeader.d.ts`, `src/utils/surfaceTiles/decodeHeightTileHeader.ts`,
+`tools/utils/textures/encodeHeightTile.ts`, `tools/utils/textures/readHeightTileFile.ts`,
+`tests/tools/utils/textures/decodeHeightTile.test.ts` (modify)
+**review: yes** — binary format.
+
+Spec §8.4. The grid is a decimated copy of the image's own pixels, byte-identical, in
+pixel order — same 24-bit Terrain-RGB code, same global step, rows NORTH-first. No second
+encoding: `heightCode.ts` and `codeHeightM.ts` serve both sides.
+
+**Format delta** (append to `heightTileFormat.ts`'s byte table, which is the authority):
+
+```
+HEIGHT_TILE_VERSION            2 → 3
+HEIGHT_GRID_STRIDE             8
+HEIGHT_GRID_POSTS_PER_EDGE     17          // (129 - 1) / 8 + 1, exact
+HEIGHT_GRID_BYTES              867         // 17 · 17 · 3
+HEIGHT_TILE_GRID_OFFSET        16
+HEIGHT_TILE_CHUNK_BYTES        16 → 883
+
+  off  size      field
+   16   867  u8  grid[]   R,G,B per post, row-major, NORTH row first,
+                          image pixels (8i, 8j) for i,j in 0..16
+```
+
+`HeightTileHeader` gains `readonly gridCodes: Uint8Array` (867 B, the raw bytes — decode
+to metres at read time via `codeHeightM`, so the header stays allocation-cheap).
+
+- [ ] Bump the version and extend the byte table in the module header. `decimateHeightGrid.ts`
+      already exists — check whether it gives the stride-8 subset directly before writing
+      anything new.
+- [ ] Test `encode/decode round-trips the v3 grid` and
+      `grid post (i, j) equals image pixel (8i, 8j)` — the second is the only place the CPU
+      and the shader can silently diverge (§11). Assert against the tile's own pixels, not
+      against a recomputed expectation.
+- [ ] Test `decodeHeightTileHeader rejects a v2 chunk` — a stale cached tile must fail
+      loudly at the decoder, not read 867 B of neighbouring memory as heights.
+- [ ] `npm test -- heightTile` green.
+- [ ] Commit.
+
+### F0b: re-bake the height product and sync
+
+**Files:** none in `src/`; `public/data/images/earth-tiles/` and R2.
+
+- [ ] Re-bake **height only** — `mergeSurfaceTileManifest.ts` (#738) keeps albedo
+      provenance, which is what used to make this unsafe. Prefix v9 → v10.
+- [ ] **This worktree's `public/data` is symlinked to main's**, so the bake writes into
+      every server's tiles. Confirm with the user before running it, and never run
+      `build-surface-tiles --product albedo` alone.
+- [ ] Sync the height product to R2 and purge; #742 fixed the CORS-variant purge.
+- [ ] 20,684 height tiles, 180 MB → ~198 MB expected (+10%). A materially different figure
+      means the grid is not being written, or is being written uncompressed into the image.
+
 ### F1: `terrainHeightM`
 
-**Files:** `src/utils/scene/terrainHeightM.ts` (new),
+**Files:** `src/utils/surfaceTiles/terrainHeightM.ts` (new),
 `src/@types/scene/ResidentHeightLookup.d.ts` (new),
-`tests/utils/scene/terrainHeightM.test.ts` (new)
+`tests/utils/surfaceTiles/terrainHeightM.test.ts` (new)
 **review: yes** — post addressing against the tile format.
 
 **Signatures:**
 
 ```ts
 // src/@types/scene/ResidentHeightLookup.d.ts
-export type ResidentHeightLookup = (tile: SurfaceTileId) => HeightTile | null;
+export type ResidentHeightLookup = (tile: SurfaceTileId) => HeightTileHeader | null;
 
-// src/utils/scene/terrainHeightM.ts
+// src/utils/surfaceTiles/terrainHeightM.ts
 export function terrainHeightM(
   dirBodyFixed: Vec3,
   deepestLevel: number,
@@ -134,25 +193,25 @@ export function terrainHeightM(
 
 **Behaviour:** climb from `deepestLevel` via `deepestResidentAncestor` (P1) to the deepest
 resident height tile containing `dirBodyFixed`; return the bilinear interpolation of that
-tile's posts, in metres above the datum. Nothing resident in the chain → `0`.
+tile's **17×17 header grid**, in metres above the datum. Nothing resident in the chain → `0`.
 
 Facts the implementation must hold, all already written down elsewhere — carry them, do
 not re-derive:
 
-- A height tile is `HEIGHT_POSTS_PER_TILE` = **129 posts per edge spanning 128 cells**
-  (`src/data/scene/heightTileFormat.ts`). Mapping the in-tile fraction with `×129` gives
-  plausible heights that are wrong by a sub-texel amount growing with level — rovers sink
-  and nothing looks broken.
-- **Row 0 of a height tile is its NORTH row** (`heightTileFormat.ts:16-17`,
-  `decodeHeightTile.ts`) while the vertex lattice counts north from the patch's _south_
-  edge. `vertex.wesl` flips `j` for this reason; a CPU reader must flip too.
-- Direction → tile x/y goes through the existing `surfaceTileXyForUv.ts:22-27`; do not
-  write a second mercator projection.
-- Every 24-bit code maps to a finite height — there are no sentinels or NaNs to guard
-  (`decodeHeightTile.ts:19-20`).
+- The grid is **17 posts spanning 16 cells**, at image stride 8. Mapping the in-tile
+  fraction with `×17` instead of `×16` gives plausible heights that are wrong by a
+  sub-texel amount growing with level — rovers sink and nothing looks broken.
+- **Row 0 is the NORTH row** (`heightTileFormat.ts:15-16`) while the vertex lattice counts
+  north from the patch's _south_ edge. `vertex.wesl` flips `j` for this reason; a CPU
+  reader must flip too.
+- Direction → tile x/y goes through the existing `surfaceTileXyForUv.ts`; do not write a
+  second mercator projection.
+- `latticeHeightSample.ts` is the existing tested f64 twin of `lattice.wesl`'s sampler.
+  Reuse it with a `postM` that reads the grid, rather than writing a second bilinear.
+- Every 24-bit code maps to a finite height — no sentinels or NaNs to guard.
 
 - [ ] Test `terrainHeightM falls back to the deepest resident ancestor` — the leaf's own
-      tile absent, an ancestor resident: reads the ancestor's posts, not `0`.
+      tile absent, an ancestor resident: reads the ancestor's grid, not `0`.
 - [ ] Test `terrainHeightM returns exactly 0 when no ancestor is resident` — asserting
       `0`, and `Number.isFinite`. A `NaN` here becomes a `NaN` camera position and a black
       screen with no error.
@@ -163,18 +222,17 @@ not re-derive:
 - [ ] `npm test -- terrainHeightM` green.
 - [ ] Commit.
 
-### F2: retain the decoded heights, expose one query
+### F2: retain the header grids, expose one query
 
 **Files:** `src/services/engine/subsystems/surfaceTileSubsystem.ts`,
 `src/@types/engine/subsystems/SurfaceTileSubsystem.d.ts`,
-`src/data/scene/terrainHeightCacheTiles.ts` (new),
 `tests/services/engine/subsystems/surfaceTileSubsystem.test.ts` (modify)
-**review: yes** — subsystem lifetime and the decode/upload seam.
+**review: yes** — subsystem lifetime.
 
-Today the decode is dropped: `surfaceTileSubsystem.ts:279` is `release: () => {}` ("A
-decoded height tile is plain JS memory; nothing to hand back") and `:362-380` keeps only
-`subtreeRangeM`. Keep the array instead — the same one the atlas was handed, so one decode
-serves both consumers.
+`heightResident` (`surfaceTileSubsystem.ts:371-375`) already keeps a `ResidentTile` per
+atlas-resident height tile and stores `subtreeRangeM` from the header. Keep the grid
+beside it — 867 B × 1024 slots ≈ 890 KB, so **no cache, no cap, no eviction policy**; the
+existing evict handler at `:280` already clears entries.
 
 **Contract:** the subsystem gains
 
@@ -183,21 +241,13 @@ terrainHeightAt(bodyId: BodyId, dirBodyFixed: Vec3): number;
 ```
 
 composing `terrainHeightM` with its own residency and the manifest's deepest band level
-for that direction (`deepestBandLevelAt`, already present around `:482-489`). Returns `0`
-when `bodyId` is not the engaged body — body-generic, so Mars is a registry row away.
+for that direction (`deepestBandLevelAt`, already present). Returns `0` when `bodyId` is
+not the engaged body — body-generic, so Mars is a registry row away.
 
-- [ ] Retain decoded tiles in an insertion-ordered cache capped at
-      `TERRAIN_HEIGHT_CACHE_TILES`, a named constant in `src/data/scene/`, **not** for the
-      whole atlas. Arithmetic for the commit message: 129² × 4 B = 66.6 KB per tile, so
-      mirroring the 1024-slot height atlas would put ~68 MB on the JS heap beside the 68 MB
-      already on the GPU — a real regression on Adreno. 128 tiles ≈ 8.5 MB, and queries
-      only ever touch the chain under the camera plus one per site, so the coarse levels
-      stay hot by construction.
-- [ ] Correct the `:279` comment — it now states the opposite of what the code does.
+- [ ] Add the grid to `ResidentTile` and to what the height `onResult` stores.
 - [ ] Test `terrainHeightAt returns 0 for a body that is not engaged` — the body-generic
       contract, and the guard against a Mars query silently reading Earth's atlas once F4
-      adds the second row. No test for the cache's eviction order: it is an LRU with no
-      correctness claim resting on it.
+      adds the second row.
 - [ ] `npm test -- surfaceTileSubsystem` green.
 - [ ] Commit.
 
@@ -210,11 +260,11 @@ when `bodyId` is not the engaged body — body-generic, so Mars is a registry ro
 
 Spec §8.3's F3a table. Three rows, and only three:
 
-| row                    | change                                                                                                                                                        |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| ground collision       | `HostBody.groundRadiusAtM` (P2) starts returning `datumRadiusM + terrainHeightAt(dir)` instead of the datum                                                   |
-| site placement         | `sitePointBodyFixed.ts:11-13` and `deriveBodyStates.ts:83-85` use `datumRadiusM + terrainHeightAt(dir) + site.altitudeM`                                      |
-| eye-to-ground readouts | `cameraDebugSnapshotOf.ts:98`'s `altitudeM` subtracts the terrain height. The DebugPanel and `CameraStateSection.tsx` read this snapshot; no UI change needed |
+| row                    | change                                                                                                                                                 |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| ground collision       | `HostBody.groundRadiusAtM` (P2) starts returning `datumRadiusM + terrainHeightAt(dir)` instead of the datum                                            |
+| site placement         | `sitePointBodyFixed.ts` and `deriveBodyStates.ts` use `datumRadiusM + terrainHeightAt(dir) + site.altitudeM`                                           |
+| eye-to-ground readouts | `cameraDebugSnapshotOf.ts`'s `altitudeM` subtracts the terrain height. DebugPanel and `CameraStateSection.tsx` read this snapshot; no UI change needed |
 
 - [ ] **Do not touch the h/R band arithmetic.** `hOverR`, `nearestBodyHR`,
       `bodyUpWeight`, `mappedTiltRad`, `approachTiltedPose`, `releasedWorldRoll`,
@@ -238,12 +288,14 @@ Spec §8.3's F3a table. Three rows, and only three:
 
 **Deliverables**
 
-- `src/utils/scene/deepestResidentAncestor.ts`, with `cutSurfaceTiles.ts`'s three
-  hand-rolled climbs collapsed onto it.
-- `src/utils/scene/terrainHeightM.ts` + `src/@types/scene/ResidentHeightLookup.d.ts`.
+- `src/utils/surfaceTiles/deepestResidentAncestor.ts`, with the three hand-rolled climbs
+  collapsed onto it.
+- `SHGT` v3 in `src/data/scene/heightTileFormat.ts`, written by the bake and read by
+  `decodeHeightTileHeader`.
+- The height product re-baked to v10 and synced to R2.
+- `src/utils/surfaceTiles/terrainHeightM.ts` + `src/@types/scene/ResidentHeightLookup.d.ts`.
 - `SurfaceTileSubsystem.terrainHeightAt(bodyId, dirBodyFixed)`.
 - `HostBody.groundRadiusAtM(dirBodyFixed)`.
-- `src/data/scene/terrainHeightCacheTiles.ts`.
 
 **Observable behaviours** (user's eye-check; use the `camera/flyToLonLat` action for
 poses — Earth is focus-pinned at boot and its follow driver reverts bare camera writes)
@@ -263,8 +315,11 @@ poses — Earth is focus-pinned at boot and its follow driver reverts bare camer
   occludee, the cloud-deck altitude, the atmosphere rows, the remaining `radiusM` routing.
   That is F3b.
 - Mars. F3a is body-generic and reads whichever body the tile subsystem has engaged;
-  adding the Mars row is F4 (#738 and its feature PR).
+  adding the Mars row is F4. Mars tiles will need the v3 grid when they are first baked —
+  that is automatic, not a task here.
 - The conservative `ceilingHeightM` bound, the `ceiling`/`best` split, `boundsM`, and the
   compiled §3.4e grid — all withdrawn, see spec §8.2.
+- A finer grid stride. 17×17 is the ruling; revisit only if the eye-check shows the rover
+  or the floor visibly off the drawn surface.
 - Rate-limiting the floor's rise. Only if the eye-check shows the hillside-clip that §8.2
   prices, and then as its own change.

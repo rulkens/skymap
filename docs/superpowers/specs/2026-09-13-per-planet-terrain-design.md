@@ -392,37 +392,23 @@ every refused tile was a hole to the stars for as long as the pose held. The cli
 capped at seven levels; deeper falls back to a dropped leaf, the same as no resident
 ancestor at all.
 
-### 5.3 Height tile format — `shgt1`
+### 5.3 Height tile format
 
-```
-off  size        field
-  0     4  u32   magic 'SHGT' (LE 0x54474853)
-  4     2  u16   version = 1
-  6     2  u16   postsX = 129
-  8     2  u16   postsY = 129
- 10     2  u16   reserved = 0
- 12     4  f32   subtreeMinM   min over this tile's entire descendant subtree, finest data
- 16     4  f32   subtreeMaxM   max over the same
- 20     4  f32   geometricResidualM   max |this level's bilinear − finest| inside this tile
- 24  4·129·129   f32 heightM[]  row-major, north row first, metres above datum
-```
+**Superseded twice.** The `shgt1` raw-f32 payload this section specified was replaced by
+lossless Terrain-RGB WebP in #736, and #736's v2 header gains a CPU post grid in F3a (v3,
+§8.4). `src/data/scene/heightTileFormat.ts` is the authority — its module header carries
+the byte table, and the encoder, the CPU decoder and `lattice.wesl` all read it. What
+stays specification rather than layout:
 
-24 B of header plus `129² × 4 = 66,564` B of payload = **66,588 B**. The 24-byte
-header keeps the array 4-aligned for a zero-copy
-`new Float32Array(buf, 24, 16641)` — only if the fetch hands back a 4-aligned
-offset, so the loader slices on 4 or copies. `.bin`-family extensions are gzipped
-on the wire (`tools/deploy/r2/shouldGzipOnWire.ts`), and smooth f32 terrain
-compresses well.
-
-**Raw f32 metres above datum. No integer encoding, no per-tile affine.** f32's ulp
-at Earth's 8,849 m is 0.98 mm and at Mars's 21,229 m is 2.0 mm — four orders below
-anything visible in a fragment-computed normal at the finest post spacing we bake.
-A per-tile scale/offset would halve the wire size and destroy §5.4's bit-identical
-shared edges, which is the property the whole crack argument rests on. A globally
-fixed integer scale cannot span ±21 km and sub-decimetre in 16 bits.
-
-Heights are **never** stored, uploaded or computed as a radius. `R + h` in f32
-quantizes to 0.5 m at Earth's radius — visible terracing, invisible in review.
+- **One globally fixed code → metre mapping**, never a per-tile scale or offset. A
+  per-tile affine would halve the wire size and destroy §5.4's bit-identical shared edges,
+  which is the property the whole crack argument rests on.
+- **Pixels are never read back on the CPU.** Brave, Safari and Firefox perturb canvas
+  readback, so the shader decodes the image and the CPU reads only the header
+  (`fetchHeightTile.ts:16-19`). §8.4 is the consequence: anything the CPU must know about
+  terrain has to be in the header chunk.
+- Heights are **never** stored, uploaded or computed as a radius. `R + h` in f32 quantizes
+  to 0.5 m at Earth's radius — visible terracing, invisible in review.
 
 ### 5.4 Exact edge agreement
 
@@ -698,17 +684,24 @@ withdrawn before any of it was written — §8.2 records why. What F3a ships is 
 function:
 
 ```ts
-// src/utils/scene/terrainHeightM.ts
+// src/utils/surfaceTiles/terrainHeightM.ts
 export function terrainHeightM(dirBodyFixed: Vec3, resident: ResidentHeightLookup): number;
 ```
 
 It climbs to the deepest resident height tile containing `dirBodyFixed` and returns the
-bilinear interpolation of that tile's posts, in metres above the datum. When no tile in
-the chain is resident it returns `0` — the datum, which is exactly what the base globe
-draws there (§7.4), so every miss (cold start, 404, an atlas refusal, a direction under
-no band at all) collapses to the surface already on screen rather than to a second
-failure mode. One decode, two consumers holds: the `Float32Array` it interpolates is the
-one `surfaceTileSubsystem` handed the height atlas, retained rather than dropped.
+bilinear interpolation of that tile's **header grid** posts (§8.4), in metres above the
+datum. When no tile in the chain is resident it returns `0` — the datum, which is exactly
+what the base globe draws there (§7.4), so every miss (cold start, 404, an atlas refusal,
+a direction under no band at all) collapses to the surface already on screen rather than
+to a second failure mode.
+
+**Amended again 2026-09-17.** The original sentence here — "the `Float32Array` it
+interpolates is the one `surfaceTileSubsystem` handed the height atlas, retained rather
+than dropped" — was written against the pre-#736 format and is false. After #736 the
+runtime never holds height posts at all: `fetchHeightTile` returns
+`HeightTileImage = header + ImageBitmap`, the shader decodes the image, and the bitmap is
+closed on upload (`surfaceTileSubsystem.ts:276`). One decode, two consumers is therefore
+not achievable by retention, and §8.4 is how the CPU gets posts instead.
 
 The superseded shape, kept because §8.3's routing table and F3b still name its methods:
 
@@ -810,6 +803,46 @@ brings the shell down to ≈ 8.9 km (`cloudShellRenderer.ts:85-86, :108`). Evere
 8,849 m. Expressing the deck as an altitude above the outer bound makes the
 clearance true by construction instead of true by coincidence.
 
+### 8.4 The CPU post grid — `SHGT` v3
+
+**Added 2026-09-17 (F3a).** §5.3's rule that pixels are never read back on the CPU leaves
+`terrainHeightM` with no posts to interpolate. The header chunk gains them:
+
+```
+HEIGHT_GRID_STRIDE = 8   →  17×17 posts (129 = 16·8 + 1, so the stride divides exactly)
+```
+
+The grid is **a decimated copy of the image's own pixels, byte-identical, in pixel
+order** — the same 24-bit Terrain-RGB code, the same global step, rows NORTH-first,
+indices 0, 8, … 128. No second encoding and no new quantization concept: `heightCode.ts`
+and `codeHeightM.ts` serve both sides. 17² × 3 B = 867 B on an 8.7 KB average tile
+(+10%); fully resident that is 867 B × 1024 slots ≈ **890 KB** of JS heap, so there is no
+cache cap and no eviction policy to get wrong.
+
+Three properties make this the shape rather than a compromise:
+
+- **CPU and GPU residency are identical by construction.** The same fetch delivers both,
+  so the CPU can never read a coarser ancestor than the surface being drawn. Shipping the
+  grids as sibling files would cost less bandwidth and break exactly this.
+- **Every grid post is a true lattice post**, not a resample — strict point decimation
+  (§3.4c-R1) again. The CPU never invents a height; bilinear between true posts is exact
+  on planar ground and errs only with curvature over the stride.
+- **Bit-identical to the shader's posts**, so the floor and the drawn surface agree at
+  every shared post by equality, not by tolerance.
+
+Priced against it, and rejected:
+
+| option                       | why not                                                                                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| full 129² grid in the chunk  | 33 KB on an 8.7 KB tile — the height product goes 180 MB → 869 MB. The WebP compresses the same posts ~6:1; a raw copy beside it is 4× its own carrier                                 |
+| CPU canvas readback          | is what #736 exists to avoid; an R-channel farble is a 6.5 km error                                                                                                                    |
+| GPU readback (compute + map) | makes the camera's floor downstream of the render — a feedback loop with a frame of delay, no answer on the first frame (boot pop, floating rover), and no CPU logic left to unit-test |
+| header min/max only          | §8.2 — the Dead Sea's z7 `subtreeMaxM` pins the floor 2.1 km up                                                                                                                        |
+
+Cost: `HEIGHT_TILE_VERSION` 2 → 3, a re-bake of the height product and an R2 sync.
+#738's `mergeSurfaceTileManifest.ts` makes a height-only bake safe — it no longer drops
+albedo provenance from `manifest.json`.
+
 ## 9. Mars
 
 Mars needs the imagery path it does not have: today it is one whole-globe
@@ -897,7 +930,9 @@ fail on a real bug nothing else catches.
   the chain returns exactly `0`, never `NaN`), and **post addressing** (129 posts span
   128 cells, and a post shared by levels _L_ and _L+1_ reads identically from both —
   a half-texel error here sinks rovers by a plausible-looking amount and nothing
-  else catches it).
+  else catches it). Post addressing now also covers the **v3 grid's own stride**: grid
+  post _(i, j)_ must equal image pixel _(8i, 8j)_, which is the one place the CPU and the
+  shader could silently diverge (§8.4).
 - **Horizon cap**: a patch containing a peak at `boundsM.max` is _not_ culled from a
   distance where the mean-sphere cap would cull it.
 - **Level balance** (R14): neighbouring leaves never sample height levels more than
@@ -910,15 +945,15 @@ land/park call is the user's.
 
 ## 12. Sequence
 
-|     |                                                                                                   | PR                                                      |
-| --- | ------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                               | #704 — landed                                           |
-| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                      | #705 — landed, perf NEUTRAL                             |
-| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                   | #713 closed superseded, landed via #719                 |
-| F2  | Displacement, normals, edge collapse, base-globe shrink                                           | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
-| F3a | `terrainHeightM` + the three §8.3 rows it serves: camera floor, site placement, altitude readouts | prep PR, then feature PR                                |
-| F3b | `raycast` pick, horizon-cap occludee, cloud-deck clearance, atmosphere rows, remaining routing    | not scoped                                              |
-| F4  | Mars: imagery bake, global height, four rover-site bands                                          | prep #738, then feature PR                              |
+|     |                                                                                                                                                       | PR                                                      |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| P1  | `BodySurface` split, 215 sites / ~10 hubs, `standoffRadii` honoured                                                                                   | #704 — landed                                           |
+| P6  | Procedural VS patch geometry at resolution 8, no displacement, perf-measured                                                                          | #705 — landed, perf NEUTRAL                             |
+| F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                                                                       | #713 closed superseded, landed via #719                 |
+| F2  | Displacement, normals, edge collapse, base-globe shrink                                                                                               | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
+| F3a | `SHGT` v3 CPU post grid (§8.4) + height re-bake, `terrainHeightM`, and the three §8.3 rows it serves: camera floor, site placement, altitude readouts | prep PR, then feature PR                                |
+| F3b | `raycast` pick, horizon-cap occludee, cloud-deck clearance, atmosphere rows, remaining routing                                                        | not scoped                                              |
+| F4  | Mars: imagery bake, global height, four rover-site bands                                                                                              | prep #738, then feature PR                              |
 
 F3b's atmosphere row waits on the depth-aware composite (§2); everything else in F3b
 is independent of it.
