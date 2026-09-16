@@ -1,9 +1,9 @@
 // src/components/containers/DebugOverlaysSectionContainer.tsx
 /**
  * DebugOverlaysSectionContainer — store boundary for the renderer's raw
- * debug overlay toggles (pick-buffer view, disk-radius ring, orbit-trail
- * impostor). All are simple RTK settings booleans with no derived read, so
- * the single handler closes over nothing but `dispatch`.
+ * debug overlay toggles (pick-buffer view, orbit-trail impostor). All are
+ * simple RTK settings booleans with no derived read, so the single handler
+ * closes over nothing but `dispatch`.
  */
 
 import { memo, useCallback } from 'react';

@@ -24,7 +24,6 @@ import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointR
 import type { GalaxyPickRenderer } from '../../../@types/rendering/GalaxyPickRenderer';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 import type { ProceduralDiskRenderer } from '../../../@types/rendering/ProceduralDiskRenderer';
-import type { DiskRadiusRing } from '../../../@types/rendering/DiskRadiusRing';
 
 export type GalaxyCatalogRuntime = {
   /** The CPU-side catalog mirror; the point slots' commits are its only writers. */
@@ -46,7 +45,6 @@ export type GalaxyCatalogRuntime = {
   readonly pickRenderer: GalaxyPickRenderer;
   readonly texturedDiskRenderer: TexturedDiskRenderer;
   readonly proceduralDiskRenderer: ProceduralDiskRenderer;
-  readonly diskRadiusRing: DiskRadiusRing;
 
   readonly galaxyAtlas: TileStreamSubsystem<ImageBitmap>;
   readonly texturedDisks: TexturedDiskSubsystem;

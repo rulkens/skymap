@@ -15,7 +15,6 @@ import { galaxyCatalogAssetRows } from './load/galaxyCatalogAssetRows';
 import { galaxyPointSpritesPass } from './passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from './passes/proceduralDisksPass';
 import { texturedDisksPass } from './passes/texturedDisksPass';
-import { diskRadiusRingPass } from './passes/diskRadiusRingPass';
 import { galaxyCatalogFadeRows } from './present/galaxyCatalogFadeRows';
 import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
 import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
@@ -41,7 +40,6 @@ export const galaxyCatalogLayer = defineLayer({
     galaxyPointSpritesPass(runtime),
     proceduralDisksPass(runtime),
     texturedDisksPass(runtime),
-    diskRadiusRingPass(runtime),
   ],
   assets: galaxyCatalogAssetRows,
   sagas: [watchPaletteWakeSaga],

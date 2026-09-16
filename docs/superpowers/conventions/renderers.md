@@ -74,7 +74,7 @@ renderers/
   milkyWay/         cloud + pick — the pick footprint must match the cloud
   labels/           labelRenderer + markerLineRenderer (label stems) — one feeder
   filaments/        filamentRenderer + its pure CPU instance builder
-  devTools/         debugLineRenderer, diskRadiusRing — debug draws that are renderers
+  devTools/         debugLineRenderer — a debug draw that is a renderer
   volumeField/  flowField/  horizonShell/  selectionRing/  structureMarker/
                     genuine singletons — a one-file folder says "this one is alone"
 ```

@@ -38,7 +38,6 @@ describe('settingsSlice — debug', () => {
   it('setDebugOverlay flips exactly the targeted row (Immer in-place, not a record swap)', () => {
     const next = reducer(INITIAL_SETTINGS, setDebugOverlay({ key: 'pick-buffer', enabled: true }));
     expect(next.debug.overlays['pick-buffer']).toBe(true);
-    expect(next.debug.overlays['disk-radius-ring']).toBe(false);
     expect(next.debug.overlays['orbit-trail-impostor']).toBe(false);
   });
 

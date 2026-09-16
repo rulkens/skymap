@@ -23,7 +23,6 @@ import { createGalaxyPointRenderer } from './render/galaxyPointRenderer';
 import { createGalaxyPickRenderer } from './render/galaxyPickRenderer';
 import { createTexturedDiskRenderer } from './render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './render/proceduralDiskRenderer';
-import { createDiskRadiusRing } from './render/diskRadiusRing';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { wireImpostorSubsystems } from './load/wireImpostorSubsystems';
 import { wireGalaxyCatalogSourceSlot } from './load/wireGalaxyCatalogSourceSlot';
@@ -69,7 +68,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     focusBgl: deps.focusBgl,
     reversedZ: SLAB_REVERSED_Z[COSMO]!,
   });
-  const diskRadiusRing = createDiskRadiusRing(device);
 
   // Captures `focusUniform.bindGroup` at construction, which is why core
   // destroys the focus uniform after every Layer (D8).
@@ -130,7 +128,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     pickRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,
-    diskRadiusRing,
     galaxyAtlas,
     texturedDisks,
     proceduralDisks,

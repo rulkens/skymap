@@ -457,6 +457,8 @@ CSS module per Layer is exactly the bolt-on this sequence exists to avoid.
       mode, sliders), and the panel's section order is unchanged from `main`.
 - [ ] DebugPanel still opens and its camera-state and Earth-tile-atlas sections still read (the
       `debug` handle and `handleRef` survived).
+- [ ] DebugPanel's overlay list no longer offers "Show disk radius ring" (deleted wholesale, user
+      ruling 2026-09-16 deletion audit) and nothing else in that panel changed.
 - [ ] Boot with no console error; the galaxy cloud, famous thumbnails and picking are unchanged from
       `main` by eye.
 
