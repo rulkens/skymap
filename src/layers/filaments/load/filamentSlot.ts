@@ -1,11 +1,8 @@
 /**
- * filamentSlot — factory for the cosmic-web skeleton's asset slot.
- *
- * The skeleton flows through its own slot: a different fetcher (the binary
- * format is segments, not points) and a different renderer target.
- *
- * Construction-pure: builds + subscribes + RETURNS the slot. The orchestrator
- * (`wireSlots`) owns the write to `state.assetSlots` and the call to `load`.
+ * filamentSlot — factory for the cosmic-web skeleton's asset slot: its own fetcher
+ * (the binary format is segments, not points) and its own renderer target.
+ * Construction-pure — builds, subscribes and returns. A Layer's slot lands in
+ * `state.layerSlots` (`createLayers`), never `state.assetSlots`.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';

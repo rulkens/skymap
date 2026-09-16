@@ -323,7 +323,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         // wired in (no top-level `input.*` duplication).
         milkyWayCloudRenderer,
         horizonShellRenderer,
-        filamentRenderer: null,
         // The FRAME program's hdr→swap composite reads state.gpu.compositor.
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },

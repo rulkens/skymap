@@ -517,10 +517,9 @@ function makeInput(
           horizonShellRenderer,
           texturedDiskRenderer,
           proceduralDiskRenderer,
-          filamentRenderer: null,
           // zoneOfAvoidancePass.draw (the band) and zoneOfAvoidanceUpsamplePass.draw
-          // (the lettering) both read this off state.gpu.* directly, same === null
-          // early-return guard as filamentRenderer above; the key must EXIST
+          // (the lettering) both read this off state.gpu.* directly, behind a
+          // `=== null` early-return guard; the key must EXIST
           // (undefined would slip past `=== null`) — see the
           // milkyWayAggregateUpsample comment above for the same landmine.
           zoneOfAvoidanceRenderer: null,

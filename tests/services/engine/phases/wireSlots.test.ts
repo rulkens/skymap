@@ -365,19 +365,14 @@ function makeState(
     picking: {} as never,
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots
-      // optional-chain through them.  Filament renderer is set so the
-      // filaments slot's commit doesn't bail early; the scalar volume
-      // renderer is stubbed so CF-4 and synthetic commits can land.
+      // optional-chain through them.  The scalar volume renderer is stubbed so
+      // CF-4 and synthetic commits can land.
       renderTargets: null,
-      // `hasCloud`/`listIds` are the arrival-fade guards: `installFadeOnArrival`
-      // calls them on a present renderer, where `seedFades` never did.
-      filamentRenderer: {
-        upload: vi.fn(async () => {}),
-        hasCloud: () => false,
-      } as never,
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
+      // `listIds` is an arrival-fade guard: `installFadeOnArrival` calls it on a
+      // present renderer, where `seedFades` never did.
       volumeFieldRenderer: {
         upload: vi.fn(),
         listIds: () => [],

@@ -41,7 +41,8 @@ export type Layer<
   // Static contributions: plain data, readable without booting anything.
   /** Offscreen targets this Layer needs. Nothing declares one yet. */
   readonly targets?: readonly RenderTargetSpec[];
-  /** Forked into `rootSaga`'s `all([…])` by `createLayers` — factories, not running sagas. */
+  /** Each runs as its own root task via `createLayers`, cancelled at teardown — not
+   * folded into `rootSaga`. Factories, not running sagas. */
   readonly sagas?: readonly SagaFactory[];
   /** Typing only: `data/sources.ts` folds the same rows into `SOURCE_REGISTRY` by import. */
   readonly sources?: Sources;

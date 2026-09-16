@@ -1,6 +1,6 @@
 /**
- * The Layer's one fade row, unchanged in key and handle so the tour's visibility
- * actions and `VisibilityLayerKey` see exactly what they saw in core's manifest.
+ * The Layer's one fade row. Its `key` and `handle` are load-bearing: the tour's
+ * visibility actions and `VisibilityLayerKey` address the row by them.
  * It seeds at 0 and fades IN on arrival — the demand-loaded asymmetry every
  * asset-backed row carries.
  */

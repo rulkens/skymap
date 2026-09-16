@@ -158,9 +158,6 @@ vi.mock('../../../../src/services/gpu/renderers/labels3d/label3DRenderer', () =>
   createLabel3DRenderer: vi.fn(() => makeStub('label3DRenderer')),
 }));
 
-vi.mock('../../../../src/layers/filaments/render/filamentRenderer', () => ({
-  createFilamentRenderer: vi.fn(() => makeStub('filamentRenderer')),
-}));
 vi.mock('../../../../src/services/gpu/renderers/constellations/constellationRenderer', () => ({
   createConstellationRenderer: vi.fn(() => makeStub('constellationRenderer')),
 }));
@@ -389,7 +386,6 @@ function makeState(): EngineState {
       milkyWayPickRenderer: null,
       renderTargets: null,
       compositor: null,
-      filamentRenderer: null,
       labelRenderer: null,
       foregroundLabelRenderer: null,
       foregroundMarkerLineRenderer: null,
