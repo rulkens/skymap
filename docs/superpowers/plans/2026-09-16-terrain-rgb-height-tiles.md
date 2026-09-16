@@ -73,17 +73,17 @@ decodeHeightTile(
 
 `encodeHeightTile` throws on a wrong post count and on any post that is off the grid (`codeHeightM(heightCode(v)) !== v`). That refusal is the bake's guarantee that the file stores exactly what the header was computed from. `decodeHeightTile` throws on a chunk shorter than `HEIGHT_TILE_CHUNK_BYTES`, a version ≠ 2, a posts field ≠ 129, or pixel dimensions ≠ 129². It reads R, G and B per pixel at stride `channels` and never touches alpha. `HeightTile` (`src/@types/scene/HeightTile.d.ts`) keeps its shape; only its doc comment changes (`shgt1` → the Terrain-RGB WebP).
 
-- [ ] Test `heightCode inverts codeHeightM across the code range`: codes 0, 1, 2²³, `HEIGHT_CODE_MAX` and 10k seeded random codes all satisfy `heightCode(codeHeightM(c)) === c` (f32 slop stays far under half a step).
-- [ ] Test `heightCode rejects a height below the offset, above the range, and NaN`.
-- [ ] Test `round-trips a quantised tile bit-exactly through encode, sharp decode and decodeHeightTile`: posts span −430 … 8848.9 m. After `sharp(bytes).raw()` and `readRiffChunk`, every post plus `subtreeMinM`, `subtreeMaxM` and `geometricResidualM` compare `Object.is`-equal.
-- [ ] Test `decodes 4-channel pixels identically to 3-channel`: same tile, alpha 255 interleaved. This is the browser canvas path.
-- [ ] Test `encodeHeightTile refuses a post off the 0.1 m grid` (e.g. 12.34 m) and `refuses a wrong post count`.
-- [ ] Test `decodeHeightTile rejects a short chunk, a wrong version and a 128² image`.
-- [ ] Test `readRiffChunk returns null for non-RIFF bytes (an HTML error page) and for a WebP without the chunk`.
-- [ ] Test `readRiffChunk skips the pad byte after an odd-sized chunk`: build a file with an odd-sized chunk placed before `SHGT`.
-- [ ] Implement. Delete the old tests (magic, unaligned byteOffset, non-finite post); the new format makes all three impossible.
-- [ ] `npm run typecheck:fast` + `npx vitest run tests/utils/scene/decodeHeightTile.test.ts tests/utils/image/readRiffChunk.test.ts`. Typecheck errors at the old call sites (`fetchHeightTile`, `bakeHeightLevel`, `buildSurfaceTiles`, `bakeHeightLevel.test.ts`) are expected and belong to Task 2. Leave them failing and name them in the reply.
-- [ ] Commit: `feat(terrain): Terrain-RGB WebP height tile codec with SHGT header chunk`.
+- [x] Test `heightCode inverts codeHeightM across the code range`: codes 0, 1, 2²³, `HEIGHT_CODE_MAX` and 10k seeded random codes all satisfy `heightCode(codeHeightM(c)) === c` (f32 slop stays far under half a step).
+- [x] Test `heightCode rejects a height below the offset, above the range, and NaN`.
+- [x] Test `round-trips a quantised tile bit-exactly through encode, sharp decode and decodeHeightTile`: posts span −430 … 8848.9 m. After `sharp(bytes).raw()` and `readRiffChunk`, every post plus `subtreeMinM`, `subtreeMaxM` and `geometricResidualM` compare `Object.is`-equal.
+- [x] Test `decodes 4-channel pixels identically to 3-channel`: same tile, alpha 255 interleaved. This is the browser canvas path.
+- [x] Test `encodeHeightTile refuses a post off the 0.1 m grid` (e.g. 12.34 m) and `refuses a wrong post count`.
+- [x] Test `decodeHeightTile rejects a short chunk, a wrong version and a 128² image`.
+- [x] Test `readRiffChunk returns null for non-RIFF bytes (an HTML error page) and for a WebP without the chunk`.
+- [x] Test `readRiffChunk skips the pad byte after an odd-sized chunk`: build a file with an odd-sized chunk placed before `SHGT`.
+- [x] Implement. Delete the old tests (magic, unaligned byteOffset, non-finite post); the new format makes all three impossible.
+- [x] `npm run typecheck:fast` + `npx vitest run tests/utils/scene/decodeHeightTile.test.ts tests/utils/image/readRiffChunk.test.ts`. Typecheck errors at the old call sites (`fetchHeightTile`, `bakeHeightLevel`, `buildSurfaceTiles`, `bakeHeightLevel.test.ts`) are expected and belong to Task 2. Leave them failing and name them in the reply.
+- [x] Commit: `feat(terrain): Terrain-RGB WebP height tile codec with SHGT header chunk`.
 
 ### Task 2: Wire the codec through bake, tool read-back, runtime fetch and docs
 
@@ -98,23 +98,23 @@ decodeHeightTile(
 - Modify: `tests/tools/textures/bakeHeightLevel.test.ts`. The `:74` read helper becomes `readHeightTileFile`; existing assertions stand (adjacent columns bit-equal, parent = child posts, subtree bounds, north row first, skip existing).
 - Modify: `docs/DATA.md:194,198` (v9; `height/<z>/<x>/<y>.webp`, the encoding formula, the SHGT chunk, and the quantise-before-header rule as a third crack-free rule). `docs/DEPLOY.md:47` (v9) plus a v8 → v9 release-order paragraph: server-side copy `v8/albedo` → `v9/albedo`, bulk-upload `v9/height`, manifest last.
 
-- [ ] Test (new, in `bakeHeightLevel.test.ts`) `quantises every post before deriving the header`. The analytic field is off-grid by construction. Assert every decoded post is on the grid, and that `subtreeMinM`/`subtreeMaxM` equal the min/max of the decoded posts plus children, using a variant of `analyticSource` whose `boundsInBox` returns `null`. Without the quantise call the encoder throws, so this test guards the call's _placement_ (header derived after rounding).
-- [ ] Wire everything above; the existing bake tests pass unchanged apart from the read helper.
-- [ ] `npm run typecheck:fast` + `npx vitest run tests/tools/textures tests/utils/scene tests/services/engine/subsystems/surfaceTileSubsystem.test.ts`.
-- [ ] Commit: `feat(terrain): bake and fetch height tiles as Terrain-RGB WebP under earth-tiles/v9`.
+- [x] Test (new, in `bakeHeightLevel.test.ts`) `quantises every post before deriving the header`. The analytic field is off-grid by construction. Assert every decoded post is on the grid, and that `subtreeMinM`/`subtreeMaxM` equal the min/max of the decoded posts plus children, using a variant of `analyticSource` whose `boundsInBox` returns `null`. Without the quantise call the encoder throws, so this test guards the call's _placement_ (header derived after rounding).
+- [x] Wire everything above; the existing bake tests pass unchanged apart from the read helper.
+- [x] `npm run typecheck:fast` + `npx vitest run tests/tools/textures tests/utils/scene tests/services/engine/subsystems/surfaceTileSubsystem.test.ts`.
+- [x] Commit: `feat(terrain): bake and fetch height tiles as Terrain-RGB WebP under earth-tiles/v9`.
 
 ### Task 3 (controller): browser check, v9 bake, eye-check
 
 **Files:** none committed (data only). Scratchpad scripts only.
 
-- [ ] **Bake from the MAIN checkout's cwd with the worktree's code** (`rawDataPath`/`outDir` are cwd-relative):
+- [x] **Bake from the MAIN checkout's cwd with the worktree's code** (`rawDataPath`/`outDir` are cwd-relative):
   1. Clone the albedo tree: `cp -Rc public/data/images/earth-tiles/v8/albedo public/data/images/earth-tiles/v9/albedo` (APFS clone, no extra disk). The bake's per-tile `existsSync` skip then leaves albedo untouched.
   2. `npx tsx .claude/worktrees/terrain-rgb-webp-height-tiles/tools/textures/buildSurfaceTiles.ts` (full run, not `--only`: a prefix bump makes `--only` illegal).
   3. `npm run build-data-manifest`.
-- [ ] **Verify the bake** with a scratchpad script over every v9 height tile against its v8 `.bin`: same tile set (20,684); max |post Δ| ≤ 0.05 m + f32 slop; `subtreeMin ≤ every post ≤ subtreeMax`; residual within 0.1 m of v8. Report total bytes (expect ≈ 140 MB).
+- [x] **Verify the bake** with a scratchpad script over every v9 height tile against its v8 `.bin`: same tile set (20,684); max |post Δ| ≤ 0.05 m + f32 slop; `subtreeMin ≤ every post ≤ subtreeMax`; residual within 0.1 m of v8. Report total bytes (expect ≈ 140 MB).
 - [x] **Chrome decode check:** worktree dev server (`/link-data`, then `/dev`). In devtools, run `fetchHeightTile` on 3 tiles (z7, z13, z19) and compare to the Node decode of the same files (checksum of `heightM` bytes). They must be identical. (Done against the Task 2 canvas path: 252 tiles identical in Chrome, perturbed in Brave, which led to Task 4. Superseded by Task 4's browser check.)
-- [ ] **User eye-check** (hard reload): relief over Søndermarken (z19), Everest and Grand Canyon (z13), and a global z5 view looks the same as v8. No cracks at tile seams or level steps, and no height-fetch errors in the console.
-- [ ] Ask about the perf gate (per `sdd-execution.md`); if yes, `npm run perf --url <worktree server>` before and after, watching main-thread decode cost during a fly-in.
+- [x] **User eye-check** (hard reload): relief over Søndermarken (z19), Everest and Grand Canyon (z13), and a global z5 view looks the same as v8. No cracks at tile seams or level steps, and no height-fetch errors in the console.
+- [x] Ask about the perf gate (per `sdd-execution.md`; user: no perf gate); if yes, `npm run perf --url <worktree server>` before and after, watching main-thread decode cost during a fly-in.
 
 ### Task 4: Decode heights in the shader, not through a canvas
 
@@ -161,7 +161,7 @@ Contract notes for the implementer:
 
 - [x] Implement the above. `npm run typecheck:fast` + `npx vitest run tests/utils/scene tests/services/engine/subsystems tests/services/gpu tests/tools/textures`.
 - [x] Commit: `fix(terrain): decode Terrain-RGB heights in the shader, not via canvas readback`.
-- [ ] Controller: hard-reload in Brave (Shields on) and Chrome. Relief matches with no spikes. The height atlas shows no WebGPU validation errors in the console.
+- [x] Controller: hard-reload in Brave (Shields on) and Chrome. Relief matches with no spikes. The height atlas shows no WebGPU validation errors in the console.
 
 ## Execution
 
