@@ -35,7 +35,7 @@ describe('engine.destroy — Layer teardown order (D8)', () => {
     order.length = 0;
     const canvas = {} as unknown as HTMLCanvasElement;
     const { store } = createAppStore({ settings: makeSettingsFixture() });
-    const cb: EngineCallbacks = { store, setSagaContext: vi.fn() };
+    const cb: EngineCallbacks = { store, setSagaContext: vi.fn(), runSaga: vi.fn() };
 
     // The mocked runBootstrapPhases has no internal `await`, so its body — and
     // the state.layers write — runs synchronously within this call, before the

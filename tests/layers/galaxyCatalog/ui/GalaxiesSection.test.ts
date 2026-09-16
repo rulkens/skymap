@@ -28,11 +28,11 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement } from 'react';
-import GalaxiesSection from '../../../src/components/SettingsPanel/GalaxiesSection';
-import { BiasMode } from '../../../src/data/galaxyCatalog/biasMode';
-import type { BiasMode as BiasModeT } from '../../../src/@types/data/galaxyCatalog/BiasMode';
-import type { SourceType } from '../../../src/@types/data/SourceType';
-import { Source } from '../../../src/data/source';
+import GalaxiesSection from '../../../../src/layers/galaxyCatalog/ui/GalaxiesSection';
+import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
+import type { BiasMode as BiasModeT } from '../../../../src/@types/data/galaxyCatalog/BiasMode';
+import type { SourceType } from '../../../../src/@types/data/SourceType';
+import { Source } from '../../../../src/data/source';
 
 // All TOGGLEABLE_SOURCES bits set: FamousGalaxy(4)|TwoMRS(2)|SDSS(1)|Glade(3)|Milliquas(8)|DesiDeep(18)|DesiWedge(19)|DesiSgw(20)
 const ALL_ON_MASK =

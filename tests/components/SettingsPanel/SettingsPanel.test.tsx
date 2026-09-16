@@ -26,9 +26,6 @@ vi.mock('../../../src/compositions/app', () => ({
 vi.mock('../../../src/components/containers/TierChipContainer', () => ({
   default: () => <div data-testid="tier-chip" />,
 }));
-vi.mock('../../../src/components/containers/GalaxiesSectionContainer', () => ({
-  default: () => <div data-testid="galaxies-section" />,
-}));
 vi.mock('../../../src/components/containers/StarsSectionContainer', () => ({
   default: () => <div data-testid="stars-section" />,
 }));
@@ -61,9 +58,9 @@ describe('SettingsPanel — composition order (D13)', () => {
     const { getByTestId, container } = render(<SettingsPanel />);
 
     const layerEl = getByTestId('stub-layer-section');
-    const galaxiesEl = getByTestId('galaxies-section');
-    // DOCUMENT_POSITION_FOLLOWING: layerEl comes before galaxiesEl.
-    expect(layerEl.compareDocumentPosition(galaxiesEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
+    const starsEl = getByTestId('stars-section');
+    // DOCUMENT_POSITION_FOLLOWING: layerEl comes before starsEl.
+    expect(layerEl.compareDocumentPosition(starsEl) & Node.DOCUMENT_POSITION_FOLLOWING).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
     expect(container.querySelectorAll('[data-testid]').length).toBeGreaterThan(1);

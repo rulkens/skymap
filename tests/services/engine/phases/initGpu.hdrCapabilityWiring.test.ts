@@ -221,10 +221,6 @@ vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
 
-vi.mock('../../../../src/layers/galaxyCatalog/render/diskRadiusRing', () => ({
-  createDiskRadiusRing: vi.fn(() => makeStub('diskRadiusRing')),
-}));
-
 // The earth renderer keeps its `?static` WESL imports out of JSDOM; mock it
 // so the `earthRenderer` row's construct closure (gpuHandleRegistry.ts)
 // lands a stub on `state.gpu.earthRenderer` (the un-awaited Blue Marble
@@ -412,7 +408,6 @@ function makeState(): EngineState {
       zoneOfAvoidanceUpsample: null,
       starAggregateUpsample: null,
       pickDebugOverlay: null,
-      diskRadiusRing: null,
       earthRenderer: null,
       starRenderer: null,
       planetRenderer: null,

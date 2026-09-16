@@ -271,7 +271,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     kind: 'render',
     target: 'swap',
     slab: COSMO,
-    passes: ['selection-ring', 'disk-radius-ring', 'marker-lines', 'labels'],
+    passes: ['selection-ring', 'marker-lines', 'labels'],
   },
   // The near-field overlays, last, so the scene-body captions land on top of
   // the bodies. `near0-selection-ring` is the NEAR0 sibling of the COSMO ring

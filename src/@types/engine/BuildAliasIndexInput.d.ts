@@ -1,8 +1,8 @@
 import type { SourceType } from '../data/SourceType';
-import type { EngineHandle } from './EngineHandle';
+import type { GalaxyCatalog } from '../data/galaxyCatalog/GalaxyCatalog';
 
 export type BuildAliasIndexInput = {
-  handle: EngineHandle;
+  catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
   aliasMap: ReadonlyMap<bigint, readonly string[]>;
   sources: readonly SourceType[];
 };

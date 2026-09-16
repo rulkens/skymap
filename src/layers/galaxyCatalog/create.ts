@@ -23,7 +23,6 @@ import { createGalaxyPointRenderer } from './render/galaxyPointRenderer';
 import { createGalaxyPickRenderer } from './render/galaxyPickRenderer';
 import { createTexturedDiskRenderer } from './render/texturedDiskRenderer';
 import { createProceduralDiskRenderer } from './render/proceduralDiskRenderer';
-import { createDiskRadiusRing } from './render/diskRadiusRing';
 import { createBiasCorrectionSubsystem } from './subsystems/biasCorrectionSubsystem';
 import { wireImpostorSubsystems } from './load/wireImpostorSubsystems';
 import { wireGalaxyCatalogSourceSlot } from './load/wireGalaxyCatalogSourceSlot';
@@ -38,6 +37,9 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   // Private cell behind the runtime's getter: the meta slot is its only writer,
   // so nothing has to hand the runtime object to a closure built before it.
   let famousMeta: readonly FamousGalaxyMetaEntry[] = [];
+  // Same pattern: bumped by every point-slot commit (wireGalaxyCatalogSourceSlot),
+  // read by `frame`'s reconciles through the getter below.
+  let catalogsVersion = 0;
 
   const pointRenderer = createGalaxyPointRenderer({
     device,
@@ -66,7 +68,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     focusBgl: deps.focusBgl,
     reversedZ: SLAB_REVERSED_Z[COSMO]!,
   });
-  const diskRadiusRing = createDiskRadiusRing(device);
 
   // Captures `focusUniform.bindGroup` at construction, which is why core
   // destroys the focus uniform after every Layer (D8).
@@ -92,6 +93,9 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
         pointRenderer,
         catalogs,
         provenanceCounts,
+        bumpCatalogsVersion: () => {
+          catalogsVersion += 1;
+        },
       }),
     ]),
   );
@@ -112,7 +116,10 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     get famousMeta() {
       return famousMeta;
     },
-    provenanceCounts,
+    get catalogsVersion() {
+      return catalogsVersion;
+    },
+    publish: deps.publish,
     points,
     famousGalaxiesMeta,
     pgcAlias,
@@ -121,7 +128,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     pickRenderer,
     texturedDiskRenderer,
     proceduralDiskRenderer,
-    diskRadiusRing,
     galaxyAtlas,
     texturedDisks,
     proceduralDisks,

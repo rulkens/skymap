@@ -15,7 +15,7 @@ import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
+import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 
 // The rows as the demand loop sees them — `createLayers` folds companions over
@@ -31,12 +31,12 @@ function rowFor(key: AssetKey) {
 
 function makeCtx(over: {
   settings?: unknown;
-  requests?: Set<RequestKey>;
+  paletteOpen?: boolean;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
-    request: (k) => over.requests?.has(k) ?? false,
+    ui: { paletteOpen: over.paletteOpen ?? false } as Readonly<UiState>,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
     cameraPosMpc: [Infinity, Infinity, Infinity],
     simDays: CONST_J2000,
@@ -65,10 +65,10 @@ describe('galaxyCatalogAssetRows demand predicates', () => {
     ).toBe(false);
   });
 
-  it('pgcAlias demands only when the paletteOpened request is set', () => {
+  it('pgcAlias demands only while the palette is open', () => {
     const pgc = rowFor('pgcAlias');
-    expect(pgc.demand(makeCtx({ requests: new Set(['paletteOpened']) }))).toBe(true);
-    expect(pgc.demand(makeCtx({ requests: new Set() }))).toBe(false);
+    expect(pgc.demand(makeCtx({ paletteOpen: true }))).toBe(true);
+    expect(pgc.demand(makeCtx({ paletteOpen: false }))).toBe(false);
   });
 });
 

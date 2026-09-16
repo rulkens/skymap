@@ -9,8 +9,8 @@
  *     the engine sets up its own WebGPU context against it.
  *   - `handleRef` — the `EngineHandle` returned by `createEngine`,
  *     stored in a ref so other hooks and containers (useFocusUrlSync,
- *     useAliasIndex, InfoCardContainer, CommandPaletteContainer) can call
- *     methods on it without dependency gymnastics.
+ *     InfoCardContainer, CommandPaletteContainer) can call methods on it
+ *     without dependency gymnastics.
  *
  * All engine-driven state (status, scale, source counts, load progress,
  * structure counts) lives in the Redux `engine` slice, dispatched
@@ -51,6 +51,7 @@ import type { EngineHandle } from '../@types/engine/EngineHandle';
 import type { UseEngineReturn } from '../@types/engine/UseEngineReturn';
 import { useAppStore } from '../store/hooks';
 import { useSetSagaContext } from '../store/SagaContextProvider';
+import { useRunSaga } from '../store/RunSagaProvider';
 import { installPerfHook } from '../state/perf/installPerfHook';
 import { APP_COMPOSITION } from '../compositions/app';
 
@@ -67,6 +68,9 @@ export function useEngine(): UseEngineReturn {
   // nor reads it.
   const setSagaContext = useSetSagaContext();
 
+  // The store factory's third sibling — see `RunSaga`'s doc comment.
+  const runSaga = useRunSaga();
+
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const handleRef = useRef<EngineHandle | null>(null);
 
@@ -74,7 +78,7 @@ export function useEngine(): UseEngineReturn {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    const handle = createEngine(canvas, { store, setSagaContext }, APP_COMPOSITION);
+    const handle = createEngine(canvas, { store, setSagaContext, runSaga }, APP_COMPOSITION);
     handleRef.current = handle;
 
     // Perf harness seam — a no-op unless the page is in `?perf` mode. Installed

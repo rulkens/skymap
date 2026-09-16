@@ -42,11 +42,7 @@ import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlan
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
 import type { DiskWalkInput } from '../../../@types/engine/subsystems/DiskWalkInput';
 import type { SourceType } from '../../../@types/data/SourceType';
-
-export type DiskPlannerWalkDeps = {
-  /** Defaults to 8.  Tests pass 1 to disable decimation. */
-  readonly decimationFactor?: number;
-};
+import type { DiskPlannerWalkDeps } from '../../../@types/engine/subsystems/DiskPlannerWalkDeps';
 
 /**
  * Per-frame cap on rows admitted into the two onRow bodies. The distance

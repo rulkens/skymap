@@ -30,11 +30,6 @@ export type GalaxyPointRenderer = {
    */
   upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
   /**
-   * Remove a catalog's GPU vertex buffer and reclaim its VRAM.  No-op
-   * if the catalog was never uploaded.
-   */
-  unload(id: GalaxyCatalogId): void;
-  /**
    * Install the upload-tail callback used by the bias-correction
    * subsystem.  Pass `null` to detach.  Idempotent.
    */
@@ -49,8 +44,6 @@ export type GalaxyPointRenderer = {
   clearBiasOverlays(source?: SourceType): void;
   /** Total number of points across every loaded source. */
   totalCount(): number;
-  /** Per-source point count, or 0 when the source isn't loaded. */
-  countOf(source: SourceType): number;
   /** True when the catalog's buffer is committed — the survey fade row's guard reads this. */
   hasCatalog(id: GalaxyCatalogId): boolean;
   /**

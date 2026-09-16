@@ -42,7 +42,9 @@ const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
       ? encodeGalaxyId({
           source: row.entry.source,
           famousId: null,
-          objId: row.entry.pgc,
+          // AliasIndexEntry.pgc is a number (Redux-serializable); encodeGalaxyId's
+          // ladder is shared with SDSS's 19-digit objID, which needs bigint.
+          objId: BigInt(row.entry.pgc),
           ra: 0,
           dec: 0,
         })

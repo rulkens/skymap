@@ -10,14 +10,13 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 
 import type { DemandCtx } from '../../../@types/loading/DemandCtx';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { RequestKey } from '../../../@types/loading/RequestKey';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { LoadState } from '../../../@types/loading/LoadState';
 
 export function buildDemandCtx(state: EngineState): DemandCtx {
   return {
     settings: state.settings,
-    request: (k: RequestKey) => state.requests.has(k),
+    ui: state.ui,
     // An absent slot has never been asked to load — exactly what `idle` means.
     slotState: (k: AssetKey): LoadState<unknown>['kind'] =>
       slotFor(state, k)?.state().kind ?? 'idle',

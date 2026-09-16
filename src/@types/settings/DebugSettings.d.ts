@@ -15,10 +15,7 @@ export type DebugSettings = {
   /**
    * Pass names toggled off, membership by `[name] === true`. Consulted AFTER
    * each pass's own `enabled()`, so the override is ONE-WAY: it can hide a pass
-   * that would run, never force-enable one whose gate said false. Trap:
-   * `'disk-radius-ring'` names a row in BOTH this record and `overlays`, with
-   * opposite defaults AND opposite polarity — absent-means-shown here,
-   * `false`-means-hidden there.
+   * that would run, never force-enable one whose gate said false.
    */
   disabledPasses: Record<string, boolean>;
   /**

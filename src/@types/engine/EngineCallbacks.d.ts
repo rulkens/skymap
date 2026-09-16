@@ -8,7 +8,7 @@
  * `useAppSelector` selectors — there is no callback cluster to subscribe to.
  */
 
-import type { AppStore, SetSagaContext } from '../../store/types';
+import type { AppStore, SetSagaContext, RunSaga } from '../../store/types';
 
 export type EngineCallbacks = {
   /**
@@ -31,4 +31,11 @@ export type EngineCallbacks = {
    * injected through React context rather than threaded as props through `App`.
    */
   setSagaContext: SetSagaContext;
+
+  /**
+   * Forks a watcher saga under `createAppStore`'s middleware — see `RunSaga`'s
+   * doc comment. Sourced from `<RunSagaProvider>`, the third sibling of
+   * `createAppStore`'s return.
+   */
+  runSaga: RunSaga;
 };
