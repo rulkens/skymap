@@ -1,7 +1,7 @@
 import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams';
 
 /**
- * earthLevelFittingWidth — the deepest pyramid level whose full equirectangular
+ * levelFittingWidth — the deepest pyramid level whose full equirectangular
  * width still fits inside `widthPx`. The single inversion of the
  * `EARTH_EQUIRECT_BASE_WIDTH_PX << z` ladder.
  *
@@ -10,7 +10,7 @@ import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../data/bodies/earthTileParams'
  * shallow, making every `z` in the planner's walk non-integer and every tile
  * path 404.
  */
-export function earthLevelFittingWidth(widthPx: number): number {
+export function levelFittingWidth(widthPx: number): number {
   let z = 0;
   while (EARTH_EQUIRECT_BASE_WIDTH_PX << (z + 1) <= widthPx) z++;
   return z;

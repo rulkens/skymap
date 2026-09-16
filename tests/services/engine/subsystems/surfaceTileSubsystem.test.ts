@@ -54,7 +54,7 @@ import {
 import { fetchSurfaceTileManifest } from '../../../../src/utils/scene/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../src/utils/network/fetchHeightTile';
-import { earthBaseLevelForTier } from '../../../../src/utils/scene/earthBaseLevelForTier';
+import { baseLevelForTier } from '../../../../src/utils/scene/baseLevelForTier';
 import {
   EARTH_TILE_ATLAS_SIDE,
   EARTH_TILE_PX,
@@ -67,7 +67,7 @@ import {
 
 /** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
  *  bake sits one level above. */
-const BASE_LEVEL = earthBaseLevelForTier('large');
+const BASE_LEVEL = baseLevelForTier('earth', 'large');
 const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 
 /** A manifest describing a usable surface pyramid, with `tilePx` left to the
@@ -110,7 +110,7 @@ async function subsystemWithManifest(manifest: SurfaceTileManifest) {
 async function plannerParamsFor(manifest: SurfaceTileManifest, tier: Tier = 'large') {
   return (await subsystemWithManifest(manifest)).plannerParams(
     'earth',
-    earthBaseLevelForTier(tier),
+    baseLevelForTier('earth', tier),
   );
 }
 
@@ -195,11 +195,11 @@ describe('surfaceTileSubsystem base level', () => {
     // would keep planning against the previous session's base for the rest of
     // the session, with the manifest already in hand and nothing to re-fetch.
     const subsystem = await subsystemWithManifest(surfaceManifest(EARTH_TILE_PX));
-    const before = subsystem.plannerParams('earth', earthBaseLevelForTier('large'))!.baseLevel;
-    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('medium'))!.baseLevel).toBe(
+    const before = subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'))!.baseLevel;
+    expect(subsystem.plannerParams('earth', baseLevelForTier('earth', 'medium'))!.baseLevel).toBe(
       before - 1,
     );
-    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('large'))!.baseLevel).toBe(
+    expect(subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'))!.baseLevel).toBe(
       before,
     );
   });
@@ -292,7 +292,7 @@ async function engagesAt(plan: SurfaceTilePlan, tier: Tier): Promise<boolean> {
     device: recordingDevice(),
     requestRender: () => {},
   });
-  subsystem.plannerParams('earth', earthBaseLevelForTier(tier));
+  subsystem.plannerParams('earth', baseLevelForTier('earth', tier));
   await new Promise((resolve) => setTimeout(resolve, 0));
   subsystem.update({ bodyId: 'earth', plan });
   return subsystem.getAtlasView() !== null;
@@ -403,7 +403,7 @@ describe('surfaceTileSubsystem residency readiness', () => {
       device: recordingDevice(),
       requestRender: () => {},
     });
-    subsystem.plannerParams('earth', earthBaseLevelForTier('large'));
+    subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     subsystem.update({ bodyId: 'earth', plan: ENGAGED });
@@ -628,7 +628,7 @@ describe('surfaceTileSubsystem stand-down', () => {
     });
 
     const subsystem = createSurfaceTileSubsystem({ device, requestRender: () => {} });
-    subsystem.plannerParams('earth', earthBaseLevelForTier('large'));
+    subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'));
     await new Promise((resolve) => setTimeout(resolve, 0));
     for (let frame = 0; frame < 3; frame++) {
       subsystem.update({ bodyId: 'earth', plan: DISENGAGED });
@@ -657,12 +657,12 @@ describe('surfaceTileSubsystem stand-down', () => {
     });
 
     const subsystem = createSurfaceTileSubsystem({ device, requestRender: () => {} });
-    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('large'))).toBeNull();
+    expect(subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'))).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     // A caller that ignored runFrame's `params !== null` gate has to be safe
     // anyway: engaged frames against a null-manifest session must still be inert.
-    expect(subsystem.plannerParams('earth', earthBaseLevelForTier('large'))).toBeNull();
+    expect(subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'))).toBeNull();
     for (let frame = 0; frame < 3; frame++) {
       subsystem.update({ bodyId: 'earth', plan: ENGAGED });
     }
@@ -714,7 +714,7 @@ describe('surfaceTileSubsystem full-atlas allocation', () => {
       device: recordingDevice(),
       requestRender: () => {},
     });
-    subsystem.plannerParams('earth', earthBaseLevelForTier('large'));
+    subsystem.plannerParams('earth', baseLevelForTier('earth', 'large'));
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     const resident = fillingRequests();

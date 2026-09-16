@@ -5,7 +5,7 @@
  * pyramid good enough to build and visually verify against.
  *
  * `maxLevel` is derived, not declared: the deepest honest level is the
- * largest `z` whose full equirect width (`earthLevelFittingWidth`) still
+ * largest `z` whose full equirect width (`levelFittingWidth`) still
  * fits the source's own — Blue Marble at 21600 px gives z5 (16384, a genuine
  * downsample); z6 (32768) would upscale a photograph.
  *
@@ -18,7 +18,7 @@
 
 import sharp from 'sharp';
 
-import { earthLevelFittingWidth } from '../../src/utils/scene/earthLevelFittingWidth';
+import { levelFittingWidth } from '../../src/utils/scene/levelFittingWidth';
 import { rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
 import type { EarthImagerySource } from './EarthImagerySource';
 
@@ -48,7 +48,7 @@ export async function equirectFileSource(source: {
   return {
     id: source.id,
     attribution: source.attribution,
-    maxLevel: earthLevelFittingWidth(sourceWidth),
+    maxLevel: levelFittingWidth(sourceWidth),
     coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
     provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 

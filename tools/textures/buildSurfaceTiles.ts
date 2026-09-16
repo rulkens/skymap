@@ -46,7 +46,7 @@ import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTile
 import type { SurfaceTileBand } from '../../src/@types/scene/SurfaceTileBand';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { TIER_LADDER } from '../../src/data/tierLadder';
-import { earthBaseLevelForTier } from '../../src/utils/scene/earthBaseLevelForTier';
+import { baseLevelForTier } from '../../src/utils/scene/baseLevelForTier';
 import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
 import { surfaceTileBandFromBounds } from '../../src/utils/scene/surfaceTileBandFromBounds';
 import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
@@ -130,7 +130,7 @@ const WEBP_QUALITY = 82;
  * leave `medium`/`small` sessions falling back to the base texture one or
  * two levels early (an unbaked level 404s like ocean does).
  */
-const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map(earthBaseLevelForTier)) + 1;
+const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map((tier) => baseLevelForTier('earth', tier))) + 1;
 
 /**
  * Shallowest level the EOX regional band emits: one deeper than BMNG's OWN

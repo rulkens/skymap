@@ -158,7 +158,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * `residentSlot` derives the atlas's `slotsPerRow` from
    * `EARTH_TILE_ATLAS_SIDE / tilePx` alone, an identity that holds only at
    * the shipped 512 px edge. `baseLevel` arrives already resolved — WHICH
-   * function turns a tier into a level is body-specific (`earthBaseLevelForTier`
+   * function turns a tier into a level is body-specific (`baseLevelForTier`
    * today), so this generic subsystem no longer calls one itself.
    */
   function derivePlannerParams(

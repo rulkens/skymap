@@ -33,7 +33,7 @@ import { existsSync } from 'node:fs';
 
 import sharp from 'sharp';
 
-import { earthLevelFittingWidth } from '../../src/utils/scene/earthLevelFittingWidth';
+import { levelFittingWidth } from '../../src/utils/scene/levelFittingWidth';
 import type { EarthImagerySource } from './EarthImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
@@ -206,7 +206,7 @@ export async function bmngQuadrantSource(source: {
   return {
     id: source.id,
     attribution: source.attribution,
-    maxLevel: earthLevelFittingWidth(quadrantEdgePx * QUADRANT_COLUMNS.length),
+    maxLevel: levelFittingWidth(quadrantEdgePx * QUADRANT_COLUMNS.length),
     coverage: [{ west: -180, south: -90, east: 180, north: 90 }],
     provenance: { sourceId: source.id, attribution: source.attribution, vintage: source.vintage },
 

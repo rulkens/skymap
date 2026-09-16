@@ -1,5 +1,5 @@
 /**
- * earthBaseLevelForTier — the pyramid level a session's whole-globe surface
+ * baseLevelForTier — the pyramid level a session's whole-globe surface
  * texture already delivers.
  *
  * Two properties, both invisible when broken. The level has to move with the
@@ -14,21 +14,21 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelForTier';
+import { baseLevelForTier } from '../../../src/utils/scene/baseLevelForTier';
 import { tierToTexturePx } from '../../../src/utils/math/tierToTexturePx';
 import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../../src/data/bodies/earthTileParams';
 import { TIER_LADDER } from '../../../src/data/tierLadder';
 
-describe('earthBaseLevelForTier', () => {
+describe('baseLevelForTier', () => {
   it('drops exactly one level per tier step down', () => {
-    const large = earthBaseLevelForTier('large');
-    expect(earthBaseLevelForTier('medium')).toBe(large - 1);
-    expect(earthBaseLevelForTier('small')).toBe(large - 2);
+    const large = baseLevelForTier('earth', 'large');
+    expect(baseLevelForTier('earth', 'medium')).toBe(large - 1);
+    expect(baseLevelForTier('earth', 'small')).toBe(large - 2);
   });
 
   it('inverts the ladder exactly, at an integer level, for every tier', () => {
     for (const tier of TIER_LADDER) {
-      const z = earthBaseLevelForTier(tier);
+      const z = baseLevelForTier('earth', tier);
       // Asserted separately because `<<` truncates its operand: a `Math.log2`
       // result of 4.999 would satisfy the width check below and still hand the
       // walk a level that makes every tile path a decimal.

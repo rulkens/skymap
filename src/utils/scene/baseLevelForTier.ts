@@ -1,12 +1,13 @@
+import type { SurfaceTileBodyId } from '../../@types/data/SurfaceTileBodyId';
 import type { Tier } from '../../@types/data/Tier';
 import { BODY_TEXTURE_REGISTRY } from '../../data/bodies/bodyTextureRegistry';
 import { clampTier } from '../math/clampTier';
 import { tierToTexturePx } from '../math/tierToTexturePx';
-import { earthLevelFittingWidth } from './earthLevelFittingWidth';
+import { levelFittingWidth } from './levelFittingWidth';
 
 /**
- * earthBaseLevelForTier — the pyramid level the whole-globe surface texture a
- * session actually binds already delivers.
+ * baseLevelForTier — the pyramid level `bodyId`'s whole-globe surface texture
+ * a session actually binds already delivers.
  *
  * Must describe the image that is BOUND, not the finest that exists: the
  * three tiers bind three different base textures (2048/4096/8192 px, levels
@@ -19,8 +20,14 @@ import { earthLevelFittingWidth } from './earthLevelFittingWidth';
  * clamps the same way); it's a no-op today, which is exactly why it must
  * stay written down.
  */
-export function earthBaseLevelForTier(tier: Tier): number {
-  // Non-null: every registry row ships a `surface` kind.
-  const widthPx = tierToTexturePx(clampTier(tier, BODY_TEXTURE_REGISTRY.earth.kinds.surface!));
-  return earthLevelFittingWidth(widthPx);
+export function baseLevelForTier(bodyId: SurfaceTileBodyId, tier: Tier): number {
+  const surfaceCeiling = BODY_TEXTURE_REGISTRY[bodyId].kinds.surface;
+  // A surface-tile registry row that cannot even bind a whole-globe texture
+  // is a programming error (a new body row missing from BODY_TEXTURE_REGISTRY),
+  // not a runtime state to degrade from.
+  if (surfaceCeiling === undefined) {
+    throw new Error(`baseLevelForTier: '${bodyId}' has no BODY_TEXTURE_REGISTRY surface kind`);
+  }
+  const widthPx = tierToTexturePx(clampTier(tier, surfaceCeiling));
+  return levelFittingWidth(widthPx);
 }

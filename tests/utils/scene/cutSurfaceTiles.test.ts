@@ -15,7 +15,7 @@ import { describe, it, expect } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
 import { cutSurfaceTiles } from '../../../src/utils/scene/cutSurfaceTiles';
-import { earthBaseLevelForTier } from '../../../src/utils/scene/earthBaseLevelForTier';
+import { baseLevelForTier } from '../../../src/utils/scene/baseLevelForTier';
 import { earthTexelMetres } from '../../../src/utils/scene/earthTexelMetres';
 import { surfaceTileXyForUv } from '../../../src/utils/scene/surfaceTileXyForUv';
 import { surfaceTileColumns } from '../../../src/utils/scene/surfaceTileColumns';
@@ -31,7 +31,7 @@ import type { SurfaceTileId } from '../../../src/@types/data/SurfaceTileId';
 import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 
-const BASE_LEVEL = earthBaseLevelForTier('large');
+const BASE_LEVEL = baseLevelForTier('earth', 'large');
 const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 
 const EARTH_RADIUS_KM = 6371;

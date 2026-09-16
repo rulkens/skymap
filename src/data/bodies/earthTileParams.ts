@@ -6,7 +6,7 @@
  * Level `z`'s equirectangular width is `EARTH_EQUIRECT_BASE_WIDTH_PX << z`
  * texels; anchoring on 512 puts the three whole-globe tiers on the ladder
  * (2048=z2, 4096=z3, 8192=z4) and matches the WGS84/EOX ladder verbatim.
- * Three floors, none a constant here: BASE (`earthBaseLevelForTier`) is
+ * Three floors, none a constant here: BASE (`baseLevelForTier`) is
  * the walk floor; REQUEST (`derivePlannerParams`) and BAKE
  * (`tools/textures/buildSurfaceTiles.ts`) are the fetch/bake floors.
  */

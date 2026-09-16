@@ -12,6 +12,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { RunFrameDeps } from '../../../@types/engine/frame/RunFrameDeps';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
@@ -29,10 +30,11 @@ import { deriveFrameContext } from './frameContext';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { bodySurfaceTier } from '../../../utils/scene/bodySurfaceTier';
-import { earthBaseLevelForTier } from '../../../utils/scene/earthBaseLevelForTier';
+import { baseLevelForTier } from '../../../utils/scene/baseLevelForTier';
+import { surfaceTilesEngaged } from '../../../utils/scene/surfaceTilesEngaged';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
 import { advanceStarFades } from './passes/starCatalogPass';
-import { prepareBodySurfaceFrame, earthPass } from './passes/earthPass';
+import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/scene/cutSurfaceTiles';
 import { deriveSourceMasks } from './deriveSourceMasks';
@@ -234,17 +236,20 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // implies the body itself is seeded; no separate null check needed.
   const surfaceTiles = state.subsystems.surfaceTiles;
   const surfaceTileSlab = ctx.slabs.find(
-    (slab): slab is Slab & { frame: Extract<SlabFrame, { kind: 'body-m' }> } =>
-      slab.frame.kind === 'body-m' && slab.frame.bodyId in SURFACE_TILE_REGISTRY,
+    (
+      slab,
+    ): slab is Slab & {
+      frame: Extract<SlabFrame, { kind: 'body-m' }> & { bodyId: SurfaceTileBodyId };
+    } => slab.frame.kind === 'body-m' && slab.frame.bodyId in SURFACE_TILE_REGISTRY,
   );
   if (surfaceTiles !== null && surfaceTileSlab !== undefined) {
     const bodyId = surfaceTileSlab.frame.bodyId;
     // The same slab view `earthPass.draw` samples into.
     const surfaceTilesView = slabViewOf(ctx, surfaceTileSlab.index);
-    if (earthPass.enabled(state, ctx, surfaceTilesView)) {
+    if (surfaceTilesEngaged(state, ctx, surfaceTilesView)) {
       // The tier off the COMMITTED texture slot, so a swap in flight cannot make
       // the planner believe in detail that is not on the GPU yet.
-      const baseLevel = earthBaseLevelForTier(bodySurfaceTier(state, bodyId));
+      const baseLevel = baseLevelForTier(bodyId, bodySurfaceTier(state, bodyId));
       const params = surfaceTiles.plannerParams(bodyId, baseLevel);
       // `setLastCut` runs unconditionally so a tier swap in flight draws
       // nothing stale rather than last frame's cut.
