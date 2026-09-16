@@ -344,11 +344,14 @@ describe("the winner's elapsed", () => {
 
     // The tween's arrival frame: elapsed 0.
     const pose0 = runAtWinner(drivers, s, epochs, nowMs).pose;
-    expect(pose0).toEqual(absoluteArm(evaluateClip(tweenToClip(TWEEN_DESC), 0)));
+    // Roll rides beside the clip channels; neither endpoint carries one.
+    expect(pose0).toEqual(absoluteArm({ ...evaluateClip(tweenToClip(TWEEN_DESC), 0), roll: 0 }));
 
     // 200 ms later on the same epoch: elapsedMs = 200.
     const pose200 = runAtWinner(drivers, s, epochs, nowMs + 200).pose;
-    expect(pose200).toEqual(absoluteArm(evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000)));
+    expect(pose200).toEqual(
+      absoluteArm({ ...evaluateClip(tweenToClip(TWEEN_DESC), 200 / 1000), roll: 0 }),
+    );
   });
 
   it('passes 0 elapsed to orbitDrag (pose does not use elapsed)', () => {

@@ -1,15 +1,22 @@
 /**
- * flyToLonLatActions — the request signal that drives the Earth Tile Atlas
- * debug panel's fly-to-coordinates instrument.
- *
- * `flyToLonLat({ lonDeg, latDeg })` asks to snap the camera so its sub-camera
- * point lands exactly there. It is reducer-less — `watchFlyToLonLatSaga`
- * resolves Earth's live position/orientation and the resting distance, then
- * commits the computed pose — the same naming/resolving split
- * `clipActions.ts` and `orientationActions.ts` draw for their sagas.
+ * flyToLonLatActions — the body-generic "stand over this lon/lat" camera
+ * command. Reducer-less: `watchFlyToLonLatSaga` resolves the body's live state
+ * and the omitted fields, then flies there.
  */
 import { createAction } from '@reduxjs/toolkit';
 
-export type FlyToLonLatPayload = { readonly lonDeg: number; readonly latDeg: number };
+import type { BodyId } from '../../@types/data/body/BodyId';
+
+/** Omitted `altKm`/`headingRad` keep the camera's own over the focused body; over
+ * any other body they are its click-to-focus distance and north up. */
+export type FlyToLonLatPayload = {
+  readonly lonDeg: number;
+  readonly latDeg: number;
+  /** Defaults to Earth. */
+  readonly body?: BodyId;
+  readonly altKm?: number;
+  readonly headingRad?: number;
+  readonly durationMs?: number;
+};
 
 export const flyToLonLat = createAction<FlyToLonLatPayload>('camera/flyToLonLat');
