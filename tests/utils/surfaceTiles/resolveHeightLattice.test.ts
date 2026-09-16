@@ -102,4 +102,33 @@ describe('resolveHeightLattice', () => {
     // per leaf. 300_000 = 2343 * 128 + 96, 111_000 = 867 * 128 + 24.
     expect(height).toEqual({ slot: 3, levelDelta: 7, originPosts: [96, 24] });
   });
+
+  // The cap is passed to the shared climb relative to the start, as
+  // `MAX_LEVEL_DELTA - minLevelDelta`, and the deltas are added back. The two
+  // cases below pin that shift from both sides; every case above starts at 0,
+  // where a lost or doubled shift is invisible.
+  it('reaches the 7-level cap from a non-zero minLevelDelta', () => {
+    const height = resolveHeightLattice({
+      z: 19,
+      x: 300_000,
+      y: 111_000,
+      baseLevel: BASE_LEVEL,
+      minLevelDelta: 3,
+      residentSlot: residentAt(12),
+    });
+    expect(height).toEqual({ slot: 3, levelDelta: 7, originPosts: [96, 24] });
+  });
+
+  it('does not climb past the cap when minLevelDelta shifts the start', () => {
+    // z11 is levelDelta 8 — outside the cap however the climb started.
+    const height = resolveHeightLattice({
+      z: 19,
+      x: 300_000,
+      y: 111_000,
+      baseLevel: BASE_LEVEL,
+      minLevelDelta: 3,
+      residentSlot: residentAt(11),
+    });
+    expect(height).toBeNull();
+  });
 });
