@@ -15,7 +15,7 @@ import type { SurfaceTileManifestBand } from './SurfaceTileManifestBand';
 
 export type SurfaceTileManifest = {
   /**
-   * Key prefix the tiles hang off, e.g. `earth-tiles/v8`. Versioned, so a
+   * Key prefix the tiles hang off, e.g. `earth-tiles/v9`. Versioned, so a
    * re-bake writes new keys: the old ones keep serving whatever the CDN
    * already cached until this pointer flips, instead of a new manifest
    * naming levels that the edge is still answering with stale pixels.

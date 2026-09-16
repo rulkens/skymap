@@ -13,7 +13,7 @@ export type SurfaceTileDebugSnapshot = {
   readonly capacity: number;
   /** Slots currently claimed by a key, loaded or still in flight. */
   readonly used: number;
-  /** Slot pressure on the second product's own `r32float` atlas. Separate
+  /** Slot pressure on the second product's own `rgba8unorm` atlas. Separate
    *  from `used`/`capacity` above because the two atlases have different
    *  geometry and independent LRU clocks — height residency is what gates
    *  refinement, so it is worth reading on its own. */

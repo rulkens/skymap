@@ -7,12 +7,14 @@ import { afterAll, describe, expect, it } from 'vitest';
 import type { HeightSource } from '../../../tools/textures/HeightSource';
 import { bakeHeightLevel } from '../../../tools/textures/bakeHeightLevel';
 import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
-import { decodeHeightTile } from '../../../src/utils/scene/decodeHeightTile';
+import { codeHeightM } from '../../../tools/utils/textures/codeHeightM';
+import { heightCode } from '../../../tools/utils/textures/heightCode';
 import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
 import { earthTileBounds } from '../../../tools/utils/scene/earthTileBounds';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import { flattenWaterComponents } from '../../../tools/utils/textures/flattenWaterComponents';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
+import { readHeightTileFile } from '../../../tools/utils/textures/readHeightTileFile';
 
 const PREFIX = 'test-tiles/v1';
 const POSTS = HEIGHT_POSTS_PER_TILE;
@@ -69,9 +71,11 @@ function analyticSource(maxLevel: number): HeightSource {
   };
 }
 
-function readTile(dir: string, z: number, x: number, y: number) {
-  const bytes = readFileSync(join(dir, surfaceTilePath({ product: 'height', z, x, y }, PREFIX)));
-  return decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset);
+async function readTile(dir: string, z: number, x: number, y: number) {
+  const path = join(dir, surfaceTilePath({ product: 'height', z, x, y }, PREFIX));
+  const tile = await readHeightTileFile(path);
+  if (tile === null) throw new Error(`readTile: ${path} missing`);
+  return tile;
 }
 
 async function bake(
@@ -107,8 +111,8 @@ describe('bakeHeightLevel', () => {
       source,
     );
 
-    const west = readTile(dir, 5, 10, 8);
-    const east = readTile(dir, 5, 11, 8);
+    const west = await readTile(dir, 5, 10, 8);
+    const east = await readTile(dir, 5, 11, 8);
     for (let row = 0; row < POSTS; row++) {
       const a = west.heightM[row * POSTS + (POSTS - 1)]!;
       const b = east.heightM[row * POSTS]!;
@@ -134,10 +138,10 @@ describe('bakeHeightLevel', () => {
     );
     await bake(dir, 4, [{ x: 5, y: 4 }], source);
 
-    const parent = readTile(dir, 4, 5, 4);
+    const parent = await readTile(dir, 4, 5, 4);
     const children = [
-      [readTile(dir, 5, 10, 8), readTile(dir, 5, 11, 8)],
-      [readTile(dir, 5, 10, 9), readTile(dir, 5, 11, 9)],
+      [await readTile(dir, 5, 10, 8), await readTile(dir, 5, 11, 8)],
+      [await readTile(dir, 5, 10, 9), await readTile(dir, 5, 11, 9)],
     ];
     for (let j = 0; j <= POSTS - 1; j++) {
       for (let i = 0; i <= POSTS - 1; i++) {
@@ -167,12 +171,12 @@ describe('bakeHeightLevel', () => {
     );
     await bake(dir, 4, [{ x: 5, y: 4 }], source);
 
-    const parent = readTile(dir, 4, 5, 4);
+    const parent = await readTile(dir, 4, 5, 4);
     const children = [
-      readTile(dir, 5, 10, 8),
-      readTile(dir, 5, 11, 8),
-      readTile(dir, 5, 10, 9),
-      readTile(dir, 5, 11, 9),
+      await readTile(dir, 5, 10, 8),
+      await readTile(dir, 5, 11, 8),
+      await readTile(dir, 5, 10, 9),
+      await readTile(dir, 5, 11, 9),
     ];
     for (const child of children) {
       expect(parent.subtreeMaxM).toBeGreaterThanOrEqual(child.subtreeMaxM);
@@ -193,10 +197,25 @@ describe('bakeHeightLevel', () => {
     const source = analyticSource(5);
     await bake(dir, 5, [{ x: 10, y: 8 }], source);
 
-    const tile = readTile(dir, 5, 10, 8);
+    const tile = await readTile(dir, 5, 10, 8);
     const box = earthTileBounds(5, 10, 8, EARTH_TILE_PX);
-    expect(tile.heightM[0]).toBe(analyticHeight(box.west, box.north));
-    expect(tile.heightM[(POSTS - 1) * POSTS]).toBe(analyticHeight(box.west, box.south));
+    // Posts sit on the 0.1 m grid, so compare against the quantised field.
+    const quantised = (v: number): number => codeHeightM(heightCode(v));
+    expect(tile.heightM[0]).toBe(quantised(analyticHeight(box.west, box.north)));
+    expect(tile.heightM[(POSTS - 1) * POSTS]).toBe(quantised(analyticHeight(box.west, box.south)));
+  });
+
+  // The encoder already refuses off-grid posts; what it can't see is ORDER —
+  // bounds taken before rounding would describe values no longer on disk.
+  it('quantises every post before deriving the header', async () => {
+    const dir = scratchDir();
+    const base = analyticSource(5);
+    const source: HeightSource = { ...base, boundsInBox: async () => null };
+    await bake(dir, 5, [{ x: 10, y: 8 }], source);
+
+    const tile = await readTile(dir, 5, 10, 8);
+    expect(tile.subtreeMinM).toBe(Math.min(...tile.heightM));
+    expect(tile.subtreeMaxM).toBe(Math.max(...tile.heightM));
   });
 
   it('skips a tile whose output already exists', async () => {

@@ -48,7 +48,7 @@ export type EarthSurfaceTileDrawArgs = {
   readonly noSkirts: boolean;
   /** The surfaceTileSubsystem atlas view -- resident high-res patches, sampled at each tile's resolved rect. Not owned by this renderer. */
   readonly surfaceAtlasView: GPUTextureView;
-  /** The surfaceTileSubsystem's `r32float` HEIGHT atlas, read with
+  /** The surfaceTileSubsystem's Terrain-RGB (`rgba8unorm`) HEIGHT atlas, read with
    *  `textureLoad` at each patch's own slot. Mandatory: every vertex position
    *  reads it, so a cut must never be drawn without it. Not owned here. */
   readonly heightAtlasView: GPUTextureView;

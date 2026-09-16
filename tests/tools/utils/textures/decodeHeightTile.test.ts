@@ -1,0 +1,138 @@
+import sharp from 'sharp';
+import { describe, expect, it } from 'vitest';
+
+import type { HeightTile } from '../../../../tools/textures/HeightTile';
+import {
+  HEIGHT_CODE_MAX,
+  HEIGHT_POSTS_PER_TILE,
+  HEIGHT_TILE_CHUNK_BYTES,
+  HEIGHT_TILE_CHUNK_FOURCC,
+  HEIGHT_TILE_POST_COUNT,
+  HEIGHT_TILE_VERSION,
+} from '../../../../src/data/scene/heightTileFormat';
+import { readRiffChunk } from '../../../../src/utils/image/readRiffChunk';
+import { mulberry32 } from '../../../../src/utils/random/mulberry32';
+import { codeHeightM } from '../../../../tools/utils/textures/codeHeightM';
+import { decodeHeightTile } from '../../../../tools/utils/textures/decodeHeightTile';
+import { decodeHeightTileHeader } from '../../../../src/utils/scene/decodeHeightTileHeader';
+import { heightCode } from '../../../../tools/utils/textures/heightCode';
+import { encodeHeightTile } from '../../../../tools/utils/textures/encodeHeightTile';
+
+// Above 2^20 m an f32 is spaced 0.125 m, coarser than the 0.1 m step, so
+// neighbouring codes collapse onto one float; no real relief comes near it.
+const F32_EXACT_CODE_LIMIT = Math.floor((2 ** 20 + 32768) / 0.1);
+
+function quantisedTile(): HeightTile {
+  const heightM = new Float32Array(HEIGHT_TILE_POST_COUNT);
+  const lo = heightCode(-430);
+  const hi = heightCode(8848.9);
+  for (let i = 0; i < heightM.length; i++) {
+    heightM[i] = codeHeightM(lo + ((i * 7919) % (hi - lo + 1)));
+  }
+  heightM[0] = codeHeightM(lo);
+  heightM[1] = codeHeightM(hi);
+  return {
+    subtreeMinM: Math.fround(-430),
+    subtreeMaxM: Math.fround(8848.9),
+    geometricResidualM: Math.fround(12.3),
+    heightM,
+  };
+}
+
+async function decodeWithSharp(bytes: Uint8Array): Promise<HeightTile> {
+  const { data, info } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
+  const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
+  if (!chunk) throw new Error('missing SHGT chunk');
+  expect(info.channels).toBe(3);
+  return decodeHeightTile({ data, width: info.width, height: info.height }, chunk);
+}
+
+function expectSameTile(actual: HeightTile, expected: HeightTile): void {
+  expect(Object.is(actual.subtreeMinM, expected.subtreeMinM)).toBe(true);
+  expect(Object.is(actual.subtreeMaxM, expected.subtreeMaxM)).toBe(true);
+  expect(Object.is(actual.geometricResidualM, expected.geometricResidualM)).toBe(true);
+  for (let i = 0; i < HEIGHT_TILE_POST_COUNT; i++) {
+    if (!Object.is(actual.heightM[i], expected.heightM[i])) {
+      throw new Error(`post ${i}: ${actual.heightM[i]} !== ${expected.heightM[i]}`);
+    }
+  }
+}
+
+// Literal offsets on purpose: they pin the plan's SHGT table independently of
+// the shared constants, so a swapped offset can't pass encode and decode alike.
+function validChunk(): Uint8Array {
+  const chunk = new Uint8Array(HEIGHT_TILE_CHUNK_BYTES);
+  const view = new DataView(chunk.buffer);
+  view.setUint16(0, HEIGHT_TILE_VERSION, true);
+  view.setUint16(2, HEIGHT_POSTS_PER_TILE, true);
+  view.setFloat32(4, -1.5, true);
+  view.setFloat32(8, 2.5, true);
+  view.setFloat32(12, 0.25, true);
+  return chunk;
+}
+
+function flatPixels(size: number) {
+  return { data: new Uint8Array(size * size * 3), width: size, height: size };
+}
+
+describe('heightCode', () => {
+  it('heightCode inverts codeHeightM across the code range', () => {
+    const rand = mulberry32(42);
+    const codes = [0, 1, 2 ** 23, F32_EXACT_CODE_LIMIT];
+    for (let i = 0; i < 10_000; i++) codes.push(Math.floor(rand() * F32_EXACT_CODE_LIMIT));
+    for (const c of codes) expect(heightCode(codeHeightM(c))).toBe(c);
+  });
+
+  it('heightCode rejects a height below the offset, above the range, and NaN', () => {
+    expect(() => heightCode(-32768.1)).toThrow(/range/);
+    expect(() => heightCode(codeHeightM(HEIGHT_CODE_MAX) + 1)).toThrow(/range/);
+    expect(() => heightCode(Number.NaN)).toThrow(/range/);
+  });
+});
+
+describe('encodeHeightTile / decodeHeightTile', () => {
+  it('round-trips a quantised tile bit-exactly through encode, sharp decode and decodeHeightTile', async () => {
+    const tile = quantisedTile();
+    expectSameTile(await decodeWithSharp(await encodeHeightTile(tile)), tile);
+  });
+
+  it('encodeHeightTile refuses a post off the 0.1 m grid', async () => {
+    const tile = quantisedTile();
+    tile.heightM[500] = Math.fround(12.34);
+    await expect(encodeHeightTile(tile)).rejects.toThrow(/off the height-code grid/);
+  });
+
+  it('encodeHeightTile refuses a wrong post count', async () => {
+    const tile = { ...quantisedTile(), heightM: new Float32Array(128 * 128) };
+    await expect(encodeHeightTile(tile)).rejects.toThrow(/posts/);
+  });
+
+  it('decodeHeightTileHeader rejects a short chunk, a wrong version and a wrong post count', () => {
+    expect(() => decodeHeightTileHeader(validChunk().subarray(0, 12))).toThrow(/bytes/);
+
+    const wrongVersion = validChunk();
+    new DataView(wrongVersion.buffer).setUint16(0, HEIGHT_TILE_VERSION + 1, true);
+    expect(() => decodeHeightTileHeader(wrongVersion)).toThrow(/version/);
+
+    const wrongPosts = validChunk();
+    new DataView(wrongPosts.buffer).setUint16(2, 128, true);
+    expect(() => decodeHeightTileHeader(wrongPosts)).toThrow(/posts/);
+  });
+
+  it('decodeHeightTile rejects a 128² image', () => {
+    expect(() => decodeHeightTile(flatPixels(128), validChunk())).toThrow(/image/);
+  });
+
+  it('decodeHeightTileHeader reads the fields at their documented offsets', () => {
+    const header = decodeHeightTileHeader(validChunk());
+    expect([header.subtreeMinM, header.subtreeMaxM, header.geometricResidualM]).toEqual([
+      -1.5, 2.5, 0.25,
+    ]);
+  });
+
+  it('decodeHeightTile rejects pixel data that is not packed RGB (e.g. RGBA)', () => {
+    const size = HEIGHT_POSTS_PER_TILE;
+    const pixels = { data: new Uint8Array(size * size * 4), width: size, height: size };
+    expect(() => decodeHeightTile(pixels, validChunk())).toThrow(/pixel bytes/);
+  });
+});

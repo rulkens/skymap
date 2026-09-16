@@ -2,9 +2,9 @@ import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
 import type { SurfaceTileProduct } from '../../@types/data/SurfaceTileProduct';
 
 /** On-disk extension per product: `albedo` is a lossy WebP (alpha doubles as
- *  the land mask, so JPEG can't carry it); `height` is the raw `shgt1`
- *  binary format (`heightTileFormat.ts`), never a raster container. */
-const EXT: Record<SurfaceTileProduct, string> = { albedo: 'webp', height: 'bin' };
+ *  the land mask, so JPEG can't carry it); `height` is a lossless Terrain-RGB
+ *  WebP with an `SHGT` header chunk (`heightTileFormat.ts`). */
+const EXT: Record<SurfaceTileProduct, string> = { albedo: 'webp', height: 'webp' };
 
 /**
  * surfaceTilePath — the single home for a virtual-texture tile's path, called

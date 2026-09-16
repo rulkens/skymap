@@ -15,8 +15,8 @@ import package::lib::math::PI;
 import package::lib::math::TAU;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
-// The same r32float height atlas the vertex stage displaces from, read the same
-// way: 'textureLoad' at an integer post, never a sampler (spec section 5.5).
+// The same Terrain-RGB height atlas the vertex stage displaces from, read the
+// same way: 'textureLoad' at an integer post, never a sampler (spec section 5.5).
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;
 @group(0) @binding(3) var baseSampler: sampler;
 @group(0) @binding(4) var atlasSampler: sampler;
