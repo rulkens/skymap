@@ -31,8 +31,12 @@ enumeration tests, copy-pasted defaults. Nothing forces those to agree, and a
 miss is a runtime bug (wrong ring clicked, no count shown, category invisible).
 **Lean on the compiler for the loud sites; use the table below for the silent
 ones.** When you find yourself editing a second hand-maintained list, that is
-the duplication the `STRUCTURE_CATEGORY_META` backlog item exists to kill — note
-it, don't invent a third.
+the duplication a single `STRUCTURE_CATEGORY_META` registry would kill by
+deriving the source-code maps, category lists, and marker buckets from one
+table (no such registry exists yet — not filed in `docs/BACKLOG.md` either).
+Note the duplication rather than inventing a third hand-maintained list; file
+the consolidation if you're adding the third category (see "Known debt"
+below).
 
 ## When to use
 
@@ -53,6 +57,20 @@ work (memory `feedback_seed_data_early`). Order: type union → parser/seed →
 
 ## Path A — a new survey catalog (point cloud)
 
+The common case: **a source row inside the `galaxyCatalog` Layer**
+(`src/layers/galaxyCatalog/sources/`), not a new Layer. The nine existing
+galaxy-catalog sources (SDSS, 2MRS, GLADE, …) each get their own
+`sources/<id>.ts` row file inside the Layer; `sources/galaxyCatalogSourceRows.ts`
+lists them in draw/UI order and the Layer composes them into the global
+`SOURCE_REGISTRY` (`src/data/sources.ts`, still the single cross-Layer table —
+the `Source` code enum stays global, per the layer-composition spec). Adding a
+tenth survey is a new row file plus a line in that list, not a new Layer.
+
+A genuinely **new Layer** (a new family with its own renderers/settings/passes,
+like the planned `starCatalog` or `structure` Layers) is a much bigger edit —
+see `docs/superpowers/specs/2026-09-09-layer-composition-design.md` §9 for the
+folder shape, and don't start one for what's really a tenth catalog.
+
 1. Follow **CLAUDE.md → "Adding a new raw data source"** for the file plumbing:
    `data/raw/<catalog>/` subdir, register every file in
    `tools/utils/io/rawDataRegistry.ts`, provenance `README.md` (auto-tracked by
@@ -60,9 +78,11 @@ work (memory `feedback_seed_data_early`). Order: type union → parser/seed →
    `tools/fetch/fetchHyperLeda.ts`.
 2. Write the parser in `tools/parsers/` (consult the VizieR ReadMe for byte
    offsets — they live next to the data file).
-3. Add a `Source` enum member + `SOURCE_REGISTRY` row (see Path B step 3 — the
-   rule is identical). A survey source persists to `.bin`, so its code is
-   **append-only and load-bearing forever**.
+3. Add a `Source` enum member + a `sources/<id>.ts` row inside the Layer whose
+   family it joins (galaxy catalogs: `src/layers/galaxyCatalog/sources/`; see
+   Path B step 3 for a structure-category row — the rule is identical). A
+   survey source persists to `.bin`, so its code is **append-only and
+   load-bearing forever**.
 4. Wire it into `crossMatch` / `buildAllBins`. If the per-galaxy layout changes,
    that's a format bump (`galaxyCatalogFormat.ts`), and a bump needs the full
    checklist, not just a version constant:
@@ -162,11 +182,10 @@ errors guide you to the totality sites.
 | 3b  | Non-survey guard          | `src/utils/math/galaxyType.ts` (`case Source.X`)                                                 | ✅                                       |
 | 4   | Pick decode               | `src/data/selectionEncoding.ts` (`PickResult` kind + `unpackPick`)                               | ⚠️ **silent** inverse map                |
 | 4b  | WESL pick parity          | `src/services/gpu/shaders/lib/selectionEncoding.wesl` (`SOURCE_CODE_X`)                          | ⚠️ parity test only                      |
-| 5   | Click guard               | `src/services/engine/interaction/clickHandler.ts` (`\|\| kind === 'X'`)                          | ⚠️ **silent**                            |
 | 6   | Seed parser               | `tools/parsers/parseStructureSeed.ts` (`VALID_CATEGORIES`)                                       | ⚠️ **silent**                            |
-| 7   | Marker style row          | `src/services/engine/presentation/structurePoiStyles.ts`                                         | ✅ totality Record                       |
+| 7   | Marker style row          | `src/services/engine/presentation/structureMarkerStyles.ts`                                      | ✅ totality Record                       |
 | 8   | Build records             | `src/data/buildStaticAnchorStructures.ts` (`SeedEntry.category` + switch)                        | ✅ switch exhaustiveness                 |
-| 9   | Marker renderer           | `src/services/gpu/renderers/structureMarkerRenderer.ts` (**~11 sites**, below)                   | mixed                                    |
+| 9   | Marker renderer           | `src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts` (**~11 sites**, below)   | mixed                                    |
 | 10  | UI naming                 | `src/data/poiCategoryInfo.ts` (`label` / `shortLabel` / `plural`)                                | ✅ totality Record                       |
 | 11  | Settings lists            | `src/components/SettingsPanel/SettingsPanel.tsx` (`STRUCTURE_CATEGORIES`, `LABEL_CATEGORIES`)    | ⚠️ **silent** arrays                     |
 | 12  | Bulk-fetch gate           | `src/services/engine/wiring/assetWiring.ts` (`BULK_CATALOG_CATEGORIES`)                          | ⚠️ include **only if** it has a `.ccat`  |
@@ -232,9 +251,10 @@ fade-out (`markerMaxApparentRadiusPx` + band), and the far-distance fade-out
 
 ## Known debt this skill should eventually lean on
 
-The parallel-sites problem is tracked in `docs/BACKLOG.md`: a single
+The parallel-sites problem has no backlog item yet: a single
 `STRUCTURE_CATEGORY_META` registry would _derive_ the source-code maps, the
 category lists, and the marker buckets, turning many silent sites into one
-table — and the `cluster*` → `structure*` naming holdovers (seed file, parser,
-renderer) are the matching rename. If you're adding the _third_ category, promote
-those before paying the duplication tax a third time.
+table. (The seed file, parser, and renderer are already named `structure*`
+throughout, not `cluster*` — that earlier rename is done.) If you're adding
+the _third_ category, file and do that consolidation before paying the
+duplication tax a third time.

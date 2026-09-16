@@ -4,6 +4,19 @@ Read this before touching `src/services/gpu/`, `engine`, shaders, or debugging a
 
 ## Renderer quick map
 
+- **Layer vs core.** A self-contained family (galaxies today; stars/structures/
+  bodies/volumes follow) lives colocated under `src/layers/<name>/`
+  (`layer.ts`'s `Layer` object is the only import surface — `sources/`,
+  `settings/`, `load/`, `render/`, `passes/`, `ui/`, `types/`), and contributes
+  its passes, asset rows, fades, labels and settings section into the
+  composition (`src/compositions/app.ts`); everything not yet a Layer —
+  Milky Way, stars, structures, bodies, volumes, constellations, atmosphere,
+  the frame executor, camera/input, targets/post, the pick program — stays
+  core, under `src/services/engine/` and `src/services/gpu/`. A Layer's pass
+  that no `FRAME_ORDER` line names never draws, and that's a boot-time
+  failure, not a runtime one: `checkFrameOrder` cross-checks the composed
+  pass set against the list once, from `startLoop`, and throws before the
+  first frame renders (see the `frameOrder.ts` bullet below).
 - **`galaxyPointRenderer.ts` + `shaders/points/*.wesl`**: instanced billboards. Vertex stride is 52 bytes / 13 slots (xyz, magnitude, colorIndex, axisRatio + sign-bit fallback flag, baked paCos/paSin, radiusMpc, vMaxWeight, schechterRatio, angularDensityWeight, baked absMag). Galaxy-static values (PA rotation, absolute magnitude) are baked at upload, not recomputed per vertex. Identity is composed on the GPU from a per-draw `SourceUniforms.sourceCode` + `@builtin(instance_index)`, NOT baked per-vertex.
 - **`galaxyPickRenderer.ts`**: r32uint pick texture. The fragment writes `(sourceCode << 26) | (localIdx + PICK_SENTINEL_OFFSET)`; see `src/data/selectionEncoding.ts` for the encoding (6 bits source, 26 bits localIdx, code 63 reserved as the all-ones sentinel). Source codes are append-only (the rule lives in `sources.ts`'s docstring) — same hygiene as enum values that get persisted to .bin, applied to POI-only codes too. Read the texture with `copyTextureToBuffer` for hover/click.
 - **`textureAtlas.ts` + `texturedDiskRenderer.ts` + `shaders/texturedDisks/*.wesl`**: 2048×2048 atlas of 128×128 slots for galaxy thumbnails. LRU eviction.
