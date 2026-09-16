@@ -12,6 +12,7 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { flooredBodyPose } from './flooredBodyPose';
@@ -23,6 +24,7 @@ export function anchoredZoomStep(
   cursorAnchorM: Readonly<Vec3> | null,
   bodyRadiusM: number,
   standoffRadii: number,
+  groundRadiusAtM: GroundRadiusLookup,
   /** The point the notch SERVES (a focused rover), which the floor turns about. */
   floorPivotM: Readonly<Vec3> | null,
 ): BodyFixedPose {
@@ -62,7 +64,7 @@ export function anchoredZoomStep(
         steppedM[2] - anchorLocalM[2],
       ],
     },
-    bodyRadiusM,
+    groundRadiusAtM,
     standoffRadii,
     floorPivotM,
   );

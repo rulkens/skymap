@@ -1,5 +1,6 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { BODY_LOCAL_FRAME } from '../../data/camera/bodyLocalFrame';
 import { ORIENT_DECAY } from '../../data/camera/orientDecay';
@@ -36,6 +37,7 @@ export function settledZoomPose(
   diving: boolean,
   bodyRadiusM: number,
   standoffRadii: number,
+  groundRadiusAtM: GroundRadiusLookup,
   preTiltDevRad: number | null,
   sceneUpLocal: Readonly<Vec3>,
   preBlendAzimuthRad: number | null,
@@ -103,5 +105,5 @@ export function settledZoomPose(
   }
   // A tilt about a surface anchor holds |eye − anchor|, not |eye| — so the
   // floor undoes it about the same pivot, which is what keeps the lock.
-  return flooredBodyPose(out, bodyRadiusM, standoffRadii, pivotM);
+  return flooredBodyPose(out, groundRadiusAtM, standoffRadii, pivotM);
 }

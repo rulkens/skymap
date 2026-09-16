@@ -1,5 +1,6 @@
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
+import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { Vec2 } from '../../@types/math/Vec2';
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -24,6 +25,7 @@ export function surfaceZoomStep(
   fovYRad: number,
   bodyRadiusM: number,
   standoffRadii: number,
+  groundRadiusAtM: GroundRadiusLookup,
   sceneUpLocal: Readonly<Vec3>,
   rememberedTiltRad: number,
   tuning: CameraTuning,
@@ -56,7 +58,15 @@ export function surfaceZoomStep(
       ? latched
       : (pickOnBody(cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad), bodyRadiusM)?.pointM ??
         null));
-  const stepped = anchoredZoomStep(arm, factor, anchorM, bodyRadiusM, standoffRadii, focusPivotM);
+  const stepped = anchoredZoomStep(
+    arm,
+    factor,
+    anchorM,
+    bodyRadiusM,
+    standoffRadii,
+    groundRadiusAtM,
+    focusPivotM,
+  );
   // A dive at the sky has no ground point to converge over and keeps its
   // framing; a dive with one settles about it (pixel-locked). An unfocused
   // recession settles about the eye — anchor-pivoting there cancels ~h/(R+h)
@@ -78,6 +88,7 @@ export function surfaceZoomStep(
     factor < 1,
     bodyRadiusM,
     standoffRadii,
+    groundRadiusAtM,
     preTiltDevRad,
     sceneUpLocal,
     preInBlendFrame?.azimuthRad ?? null,

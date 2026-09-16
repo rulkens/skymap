@@ -45,6 +45,7 @@ const CTX = {
   fovYRad: FOV,
   bodyRadiusM: R,
   standoffRadii: SURFACE_STANDOFF_RADII,
+  groundRadiusAtM: () => R,
   sceneUpLocal: POLE,
   focusPivotM: null,
   tuning: TUNING,

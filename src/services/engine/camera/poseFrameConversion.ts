@@ -15,6 +15,7 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { BodyFixedPose } from '../../../@types/camera/BodyFixedPose';
+import type { GroundRadiusLookup } from '../../../@types/camera/GroundRadiusLookup';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { yawPitchToDir } from '../../../utils/camera/yawPitchToDir';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -77,6 +78,7 @@ export function toWorldArm(
   upBasis: Readonly<Mat3>,
   bodyRadiusM: number,
   standoffRadii: number,
+  groundRadiusAtM: GroundRadiusLookup,
 ): CameraPose {
   const { basisLocal } = pose;
   const eyeLocalM = bodyFixedEyeM(pose);
@@ -98,7 +100,9 @@ export function toWorldArm(
   // which the surface arm's descent floor already stands off from.
   const rangeM = Math.max(
     roots === null ? grazingM : roots[0],
-    Math.max(eyeMagM, surfaceFloorM(bodyRadiusM, standoffRadii)) - bodyRadiusM,
+    // Only the floor is per-direction: the datum stays the sphere the range is
+    // measured against, so it matches the roots above.
+    Math.max(eyeMagM, surfaceFloorM(groundRadiusAtM(eyeLocalM), standoffRadii)) - bodyRadiusM,
   );
   const armLocalM: Vec3 = [
     forwardLocal[0] * rangeM,

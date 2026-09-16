@@ -27,6 +27,7 @@ const CTX = {
   fovYRad: Math.PI / 2,
   bodyRadiusM: 1,
   standoffRadii: SURFACE_STANDOFF_RADII,
+  groundRadiusAtM: () => 1,
   sceneUpLocal: [0, 0, 1] as const,
   focusPivotM: null,
   tuning: DEFAULT_CAMERA_TUNING,

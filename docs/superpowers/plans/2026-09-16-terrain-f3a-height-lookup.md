@@ -98,17 +98,17 @@ groundRadiusAtM(dirBodyFixed: Vec3): number;
 
 **In this PR it returns `body.surface.datumRadiusM` unchanged.**
 
-- [ ] Add the field at `bodyRung.ts`'s `host()`, returning the datum.
-- [ ] Switch the three `surfaceFloorM` callers to source their radius from it.
+- [x] Add the field at `bodyRung.ts`'s `host()`, returning the datum.
+- [x] Switch the three `surfaceFloorM` callers to source their radius from it.
       `surfaceFloorM`'s own signature does not change — only the value it is handed.
-- [ ] **Leave `HostBody.radiusM` alone.** It also feeds pivot maths
+- [x] **Leave `HostBody.radiusM` alone.** It also feeds pivot maths
       (`pivotRadiusMpc.ts`) and site placement (`sitePointBodyFixed`), which want the
       datum and keep it. Spec §3.4a deleted a global `radiusM` precisely to stop one
       scalar serving several currencies; do not add a second scalar beside it.
-- [ ] No new test — a no-op plumbing change the compiler checks, per
+- [x] No new test — a no-op plumbing change the compiler checks, per
       [`testing.md`](../conventions/testing.md).
-- [ ] `npm run typecheck && npm test` green; the app looks identical.
-- [ ] Commit.
+- [x] `npm run typecheck && npm test` green; the app looks identical.
+- [x] Commit.
 
 ---
 

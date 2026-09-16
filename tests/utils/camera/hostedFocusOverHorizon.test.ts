@@ -23,6 +23,7 @@ const MARS: HostBody = {
   id: 'mars' as BodyId,
   state: deriveBodyStates(CONST_J2000).get('mars')!,
   radiusM: MARS_ROW.surface.datumRadiusM,
+  groundRadiusAtM: () => MARS_ROW.surface.datumRadiusM,
   standoffRadii: bodyStandoffRadii(MARS_ROW),
 };
 

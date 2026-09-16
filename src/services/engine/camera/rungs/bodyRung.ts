@@ -56,6 +56,9 @@ export const bodyRung: ClimbRow<'body'> = {
       id: frame.body,
       state,
       radiusM: body.surface.datumRadiusM,
+      // F3a returns `datum + terrainHeightM(dir)` here (spec §8.3); until then
+      // every direction answers the datum, so the floor is where it always was.
+      groundRadiusAtM: () => body.surface.datumRadiusM,
       standoffRadii: bodyStandoffRadii(body),
     };
   },
@@ -76,6 +79,7 @@ export const bodyRung: ClimbRow<'body'> = {
       fovYRad: ctx.fovYRad,
       bodyRadiusM: host.radiusM,
       standoffRadii: host.standoffRadii,
+      groundRadiusAtM: host.groundRadiusAtM,
       // The body rotates under the scene frame, so this is resampled per drain.
       sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
       // Derived from the FOCUS every drain, never carried in the pose: a
@@ -97,6 +101,7 @@ export const bodyRung: ClimbRow<'body'> = {
         ctx.upBasis,
         host.radiusM,
         host.standoffRadii,
+        host.groundRadiusAtM,
       ),
     };
   },
@@ -149,6 +154,7 @@ export const bodyRung: ClimbRow<'body'> = {
       ctx.upBasis,
       host.radiusM,
       host.standoffRadii,
+      host.groundRadiusAtM,
     );
     return (
       hOverR(eyeMpcOf(world, ctx.poseBasis), host.state, host.radiusM) > ctx.tuning.disengageHR
