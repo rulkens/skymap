@@ -935,7 +935,7 @@ describe('cutSurfaceTiles', () => {
     ];
 
     /** Albedo and height resident everywhere, every height tile declaring the
-     *  same subtree range — one lives in each tile's `shgt1` header. */
+     *  same subtree range — one lives in each tile's `SHGT` chunk. */
     function residentWithRange(range: readonly [number, number]) {
       return (tile: SurfaceTileId) =>
         tile.product === 'height' ? { ...WHOLE_ATLAS, subtreeRangeM: range } : WHOLE_ATLAS;

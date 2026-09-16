@@ -2,9 +2,9 @@
  * tileStreamSubsystem — generic atlas + fetch-queue infrastructure for
  * streaming a payload `T` into a GPU texture atlas. Extracted from
  * `thumbnailSubsystem.ts` (2026-05-12) and generalised over payload
- * (2026-09-15, terrain F1) so an `r32float` height stream can reuse it
- * alongside the bitmap-payload galaxy and surface-tile atlases — see
- * `TileStreamDeps<T>` for the payload-specific upload/release seam.
+ * (2026-09-15, terrain F1) so the height stream, whose payload carries a
+ * header beside its bitmap, reuses it alongside the galaxy and albedo
+ * atlases — see `TileStreamDeps<T>` for the upload/release seam.
  *
  * `isLoaded`/`isFailed` mean "payload is in the atlas" / "fetch permanently
  * failed", not "the fetch resolved": a key can be evicted mid-fetch, so

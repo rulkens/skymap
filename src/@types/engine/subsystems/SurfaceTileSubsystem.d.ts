@@ -52,7 +52,7 @@ export type SurfaceTileSubsystem = Destroyable & {
     /** `performance.now()` (REAL time) stamped when this slot's bitmap
      *  uploaded — see `SurfaceCutTile.albedo.readyAtMs`. */
     readonly readyAtMs: number;
-    /** HEIGHT only: the `shgt1` header's `subtreeMin/MaxM` (metres), which
+    /** HEIGHT only: the `SHGT` chunk's `subtreeMin/MaxM` (metres), which
      *  bound every descendant of this tile — the walk's frustum-cull
      *  headroom for displaced geometry. Null for albedo. */
     readonly subtreeRangeM: readonly [number, number] | null;
@@ -79,9 +79,8 @@ export type SurfaceTileSubsystem = Destroyable & {
    */
   getAtlasView(): GPUTextureView | null;
 
-  /** The HEIGHT atlas's texture view (`r32float`, 129-post slots), or `null`
-   *  before the first engaged frame. Unread until F2 displaces geometry —
-   *  F1 only has to make the tiles resident. */
+  /** The HEIGHT atlas's texture view (Terrain-RGB `rgba8unorm`, 129-post
+   *  slots, decoded in the shader), or `null` before the first engaged frame. */
   getHeightAtlasView(): GPUTextureView | null;
 
   /**

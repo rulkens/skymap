@@ -48,7 +48,7 @@ struct PatchInstance {
   // 'SurfaceCutTile.albedo.fallback === null's CPU-side encoding, so the
   // fragment always has a valid second rect to sample.
   fallbackRect: vec4<f32>,
-  // Post origin of this leaf's SUB-RECT in the r32float atlas: its resident
+  // Post origin of this leaf's SUB-RECT in the height atlas: its resident
   // height tile's slot origin plus 'SurfaceCutTile.height.originPosts', so a
   // leaf flattened into an ancestor's slot (R14) needs no second field. Posts
   // are read with 'textureLoad' -- never a sampler, which would bleed the
