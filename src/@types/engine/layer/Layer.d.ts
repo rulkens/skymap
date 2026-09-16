@@ -39,7 +39,7 @@ export type Layer<
   readonly settings?: Settings;
 
   // Static contributions: plain data, readable without booting anything.
-  /** Offscreen targets this Layer needs. Nothing declares one yet. */
+  /** DECLARED BUT NOT CONSUMED — nothing reads this yet; 05c wires it. */
   readonly targets?: readonly RenderTargetSpec[];
   /** Each runs as its own root task via `createLayers`, cancelled at teardown — not
    * folded into `rootSaga`. Factories, not running sagas. */
