@@ -7,17 +7,11 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { Vec3 } from '../../../@types/math/Vec3';
 import type { FilamentsRuntime } from '../types/FilamentsRuntime';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
-
-// Halfwidth: the shader expands each segment to a 2 × this quad, so 1.5 → ~3-px lines.
-const FILAMENT_LINE_HALFWIDTH_PX = 1.5;
-
-// Tint-ramp endpoints (RGB), mixed per-fragment by density; luminance matched on
-// purpose so the sparse → dense shift reads as colour, not glare.
-const FILAMENT_BASE_TINT: Vec3 = [0.55, 0.45, 0.85];
-const FILAMENT_HOT_TINT: Vec3 = [0.85, 0.75, 1.0];
+import { FILAMENT_LINE_HALFWIDTH_PX } from '../../../data/filament/filamentLineHalfwidthPx';
+import { FILAMENT_BASE_TINT } from '../../../data/filament/filamentBaseTint';
+import { FILAMENT_HOT_TINT } from '../../../data/filament/filamentHotTint';
 
 export function filamentsPass(runtime: FilamentsRuntime): ContentPass {
   return {

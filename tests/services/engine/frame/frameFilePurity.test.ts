@@ -71,9 +71,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/starPointsPass': 3,
   'frame/passes/texturedBodiesPass': 2,
   'frame/passes/zoneOfAvoidancePass': 4,
-  // A Layer's own pass file is swept on the same terms as core's: its three
-  // tuning constants are this pass's alone, so they ride along.
-  'layers/filaments/passes/filamentsPass': 3,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };

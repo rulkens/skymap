@@ -1,7 +1,7 @@
 /**
  * filamentSlot — factory for the cosmic-web skeleton's asset slot: its own fetcher
  * (the binary format is segments, not points) and its own renderer target.
- * Construction-pure — builds, subscribes and returns. A Layer's slot lands in
+ * Construction-pure — builds and returns. A Layer's slot lands in
  * `state.layerSlots` (`createLayers`), never `state.assetSlots`.
  */
 
@@ -15,7 +15,7 @@ import type { FilamentRenderer } from '../../../@types/rendering/FilamentRendere
 export function createFilamentSlot(
   renderer: FilamentRenderer,
 ): AssetSlot<FilamentCloud, FilamentReq> {
-  const slot = createAssetSlot({
+  return createAssetSlot({
     name: 'filaments',
     fetch: filamentFetcher,
     commit: async (cloud) => {
@@ -25,13 +25,4 @@ export function createFilamentSlot(
       renderer.upload(cloud);
     },
   });
-  slot.subscribe((s) => {
-    // Loading-bar plumbing is owned by aggregateRegistry; this subscriber just
-    // logs the parsed counts on the `ready` transition as a dev diagnostic. The
-    // render wake is installSlotReadyWake's job, not the factory's.
-    if (s.kind === 'ready') {
-      console.log(`[engine] filaments: ${s.value.stripCount} strips, ${s.value.vertexCount} verts`);
-    }
-  });
-  return slot;
 }
