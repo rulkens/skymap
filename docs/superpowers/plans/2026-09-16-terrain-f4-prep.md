@@ -90,7 +90,7 @@ export function collectSurfaceTileManifest(imagesDir: string, manifestKey: strin
 
 **Files:**
 - Create: `tools/textures/surfaceBodies/earthSurfaceBake.ts`, `tools/textures/SurfaceBodyBake.d.ts`, `tools/textures/SurfaceBakeBand.d.ts` (beside `EarthImagerySource.d.ts` / `HeightSource.d.ts`, where the tool's types already live)
-- Modify: `tools/textures/buildSurfaceTiles.ts` (constants :133-170, `bakeDeepestLevel`, `bakeCoarserLevel`, `readPriorIndex`, `readHeightTile`, `bakeAll`, `main`), `tools/textures/bakeHeightLevel.ts` if its prefix/root reach is module-level, `tests/tools/textures/buildSurfaceTiles.test.ts`, `package.json` script help if any, `docs/DATA.md` (the build-surface-tiles invocation)
+- Modify: `tools/textures/buildSurfaceTiles.ts` (constants :133-170, `bakeDeepestLevel`, `bakeCoarserLevel`, `readPriorIndex`, `printWaterDiagnostics`, `bakeAll`, `main`), `tools/textures/bakeHeightLevel.ts` if its prefix/root reach is module-level, `tests/tools/textures/buildSurfaceTiles.test.ts`, `package.json` script help if any, `docs/DATA.md` (the build-surface-tiles invocation)
 
 **Contract:**
 
@@ -119,7 +119,7 @@ export async function bakeAll(
 // CLI: `--body <id>` (default 'earth'); unknown id → throw listing the known ids
 ```
 
-- [ ] Move Earth's band assembly (today's `main()` :648-722, `deepSource`, `devSource`, the EOX/GeoDanmark floors and colour-match sigma) into `earthSurfaceBake.ts`; `tilePrefix` stays `earth-tiles/v8` byte for byte. `BAKE_MIN_LEVEL` becomes `min over tiers of baseLevelForTier(bodyId, tier) + 1` inside the body file.
+- [ ] Move Earth's band assembly (today's `main()` :635+, `deepSource`, `devSource`, the EOX/GeoDanmark floors and colour-match sigma) into `earthSurfaceBake.ts`; `tilePrefix` stays `earth-tiles/v9` byte for byte. `BAKE_MIN_LEVEL` becomes `min over tiers of baseLevelForTier(bodyId, tier) + 1` inside the body file.
 - [ ] Thread `tileRoot`/`tilePrefix` through every function that read `TILE_ROOT`/`TILE_PREFIX`; delete the module constants. Rename `EarthImagerySource` → `SurfaceImagerySource` with `npm run refactor` (the interface is already body-neutral).
 - [ ] Rename the body-neutral geometry helpers the bake will call for Mars — `tools/utils/scene/earthTileBounds.ts`, `earthTileIndicesForBounds.ts` → `surfaceTileBounds.ts`, `surfaceTileIndicesForBounds.ts` — via `npm run move-files` + `npm run refactor rename`.
 - [ ] Test `bakeAll writes under the body's tileRoot` — a `--dev`-sized fake source baked with `{tileRoot: 'test-tiles', tilePrefix: 'test-tiles/v1'}` lands `test-tiles/manifest.json` and nothing under `earth-tiles/`. This is the landmine guard (a hardwired root would overwrite main's live Earth manifest).
@@ -129,7 +129,7 @@ export async function bakeAll(
 
 **Files:**
 - Create: `tools/utils/textures/mergeSurfaceTileManifest.ts`, `tests/tools/utils/textures/mergeSurfaceTileManifest.test.ts`
-- Modify: `tools/textures/buildSurfaceTiles.ts` (`bakeAll` :547-591)
+- Modify: `tools/textures/buildSurfaceTiles.ts` (`bakeAll` :446+, manifest write near :568-590)
 
 **Contract:**
 
