@@ -1,6 +1,6 @@
 import type { HeightTile } from '../../@types/scene/HeightTile';
 import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
-import { HEIGHT_POSTS_PER_TILE, HEIGHT_TILE_CHUNK_FOURCC } from '../../data/scene/heightTileFormat';
+import { HEIGHT_TILE_CHUNK_FOURCC } from '../../data/scene/heightTileFormat';
 import { readRiffChunk } from '../image/readRiffChunk';
 import { decodeHeightTile } from '../scene/decodeHeightTile';
 import { surfaceTilePath } from '../scene/surfaceTilePath';
@@ -38,16 +38,13 @@ export async function fetchHeightTile(
       colorSpaceConversion: 'none',
       premultiplyAlpha: 'none',
     });
-    const canvas = new OffscreenCanvas(HEIGHT_POSTS_PER_TILE, HEIGHT_POSTS_PER_TILE);
-    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    // Sized from the bitmap, not the format, so `decodeHeightTile`'s dimension
+    // check sees a wrong-sized image instead of a zero-padded 129² readback.
+    const { width, height } = bitmap;
+    const ctx = new OffscreenCanvas(width, height).getContext('2d', { willReadFrequently: true });
     if (ctx === null) return null;
     ctx.drawImage(bitmap, 0, 0);
-    const { data, width, height } = ctx.getImageData(
-      0,
-      0,
-      HEIGHT_POSTS_PER_TILE,
-      HEIGHT_POSTS_PER_TILE,
-    );
+    const { data } = ctx.getImageData(0, 0, width, height);
     return decodeHeightTile({ data, width, height, channels: 4 }, chunk);
   } catch {
     return null;

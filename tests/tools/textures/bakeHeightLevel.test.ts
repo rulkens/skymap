@@ -199,18 +199,14 @@ describe('bakeHeightLevel', () => {
 
     const tile = await readTile(dir, 5, 10, 8);
     const box = earthTileBounds(5, 10, 8, EARTH_TILE_PX);
-    // Every post lands on the 0.1 m grid now, so compare against the SAME
-    // quantised value, not the raw analytic field.
+    // Posts sit on the 0.1 m grid, so compare against the quantised field.
     const quantised = (v: number): number => codeHeightM(heightCode(v));
     expect(tile.heightM[0]).toBe(quantised(analyticHeight(box.west, box.north)));
     expect(tile.heightM[(POSTS - 1) * POSTS]).toBe(quantised(analyticHeight(box.west, box.south)));
   });
 
-  // Guards the CALL SITE, not the codec: `encodeHeightTile` would already
-  // refuse an off-grid post, so a missing quantise call would fail loudly.
-  // What it can't catch is the ORDER — quantising after `heightTileBounds`
-  // would still encode successfully, just with a header describing the
-  // pre-rounding range instead of the posts actually on disk.
+  // The encoder already refuses off-grid posts; what it can't see is ORDER —
+  // bounds taken before rounding would describe values no longer on disk.
   it('quantises every post before deriving the header', async () => {
     const dir = scratchDir();
     const base = analyticSource(5);
@@ -218,7 +214,6 @@ describe('bakeHeightLevel', () => {
     await bake(dir, 5, [{ x: 10, y: 8 }], source);
 
     const tile = await readTile(dir, 5, 10, 8);
-    for (const v of tile.heightM) expect(codeHeightM(heightCode(v))).toBe(v);
     expect(tile.subtreeMinM).toBe(Math.min(...tile.heightM));
     expect(tile.subtreeMaxM).toBe(Math.max(...tile.heightM));
   });

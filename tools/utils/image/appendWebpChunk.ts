@@ -1,5 +1,5 @@
 const RIFF_HEADER_BYTES = 12;
-const RIFF_SIZE_OFFSET = 4;
+const SIZE_OFFSET = 4;
 const FORM_TYPE_OFFSET = 8;
 const CHUNK_HEADER_BYTES = 8;
 const VP8X_PAYLOAD_BYTES = 10;
@@ -47,12 +47,12 @@ export function appendWebpChunk(
   const view = new DataView(out.buffer);
 
   writeFourcc(out, 0, 'RIFF');
-  view.setUint32(RIFF_SIZE_OFFSET, out.length - CHUNK_HEADER_BYTES, true);
+  view.setUint32(SIZE_OFFSET, out.length - CHUNK_HEADER_BYTES, true);
   writeFourcc(out, FORM_TYPE_OFFSET, 'WEBP');
 
   let offset = RIFF_HEADER_BYTES;
   writeFourcc(out, offset, 'VP8X');
-  view.setUint32(offset + RIFF_SIZE_OFFSET, VP8X_PAYLOAD_BYTES, true);
+  view.setUint32(offset + SIZE_OFFSET, VP8X_PAYLOAD_BYTES, true);
   // VP8X stores canvas dimensions minus one.
   writeUint24(view, offset + CHUNK_HEADER_BYTES + VP8X_CANVAS_WIDTH_OFFSET, width - 1);
   writeUint24(view, offset + CHUNK_HEADER_BYTES + VP8X_CANVAS_HEIGHT_OFFSET, height - 1);
@@ -62,7 +62,7 @@ export function appendWebpChunk(
   offset += imageChunk.length;
 
   writeFourcc(out, offset, fourcc);
-  view.setUint32(offset + RIFF_SIZE_OFFSET, payload.length, true);
+  view.setUint32(offset + SIZE_OFFSET, payload.length, true);
   out.set(payload, offset + CHUNK_HEADER_BYTES);
   return out;
 }
