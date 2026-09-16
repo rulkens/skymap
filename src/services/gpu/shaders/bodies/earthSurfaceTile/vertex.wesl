@@ -10,8 +10,8 @@ import package::bodies::earthSurfaceTile::lattice::latticeHeightM;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
 @group(0) @binding(1) var<storage, read> patches: array<PatchInstance>;
-// r32float, read with 'textureLoad' at an integer post: 'textureSample' is
-// illegal in the vertex stage, r32float is not guaranteed filterable, and
+// Terrain-RGB codes, read with 'textureLoad' at an integer post: 'textureSample'
+// is illegal in the vertex stage, filtering encoded bytes is meaningless, and
 // hardware bilinear in a slot atlas bleeds the neighbouring slot in along
 // every patch edge (spec section 5.5 -- three independent reasons).
 @group(0) @binding(2) var heightAtlas: texture_2d<f32>;

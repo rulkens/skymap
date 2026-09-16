@@ -60,10 +60,7 @@ import {
   EARTH_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
 } from '../../../../src/data/bodies/earthTileParams';
-import {
-  HEIGHT_POSTS_PER_TILE,
-  HEIGHT_TILE_POST_COUNT,
-} from '../../../../src/data/scene/heightTileFormat';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
 
 /** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
  *  bake sits one level above. */
@@ -483,7 +480,7 @@ describe('surfaceTileSubsystem residentSlot', () => {
 });
 
 /**
- * The second product's stream (§5.5): its own `r32float` atlas at a 129-post
+ * The second product's stream (§5.5): its own `rgba8unorm` atlas at a 129-post
  * slot stride, driven by the same plan and answered by the same residency
  * query. The two are told apart by `product` alone — every key is a full tile
  * path — so what this pins is that the dispatch exists at all: a height
@@ -502,7 +499,7 @@ describe('surfaceTileSubsystem height stream', () => {
       subtreeMinM: -10,
       subtreeMaxM: 20,
       geometricResidualM: 0,
-      heightM: new Float32Array(HEIGHT_TILE_POST_COUNT),
+      bitmap: { close: () => {} } as unknown as ImageBitmap,
     });
 
     const subsystem = createSurfaceTileSubsystem({
@@ -526,7 +523,7 @@ describe('surfaceTileSubsystem height stream', () => {
       subtreeMinM: -10,
       subtreeMaxM: 20,
       geometricResidualM: 0,
-      heightM: new Float32Array(HEIGHT_TILE_POST_COUNT),
+      bitmap: { close: () => {} } as unknown as ImageBitmap,
     });
     subsystem.plannerParams('earth', BASE_LEVEL);
     await new Promise((resolve) => setTimeout(resolve, 0));

@@ -1,21 +1,20 @@
 /**
- * bakeHeightLevel — one level of one band's `shgt1` pyramid. A post covered
- * by an on-disk child takes that child's post (R2); everything else
+ * bakeHeightLevel — one level of one band's Terrain-RGB WebP pyramid. A post
+ * covered by an on-disk child takes that child's post (R2); everything else
  * resamples the source on the GLOBAL lattice, so z7 global nests with z8's
  * children instead of needing its own deepest-level case. Assembled whole
  * before slicing (≈2.4 GB at z7) to label water across tile seams.
  */
 
-import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
 import type { HeightSource } from './HeightSource';
-import type { HeightTile } from '../../src/@types/scene/HeightTile';
+import type { HeightTile } from './HeightTile';
 import { voidFilledHeightSource } from './voidFilledHeightSource';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
-import { decodeHeightTile } from '../../src/utils/scene/decodeHeightTile';
 import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
 import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
 import { encodeHeightTile } from '../utils/textures/encodeHeightTile';
@@ -23,6 +22,8 @@ import { decimateHeightGrid } from '../utils/textures/decimateHeightGrid';
 import { flattenWaterComponents } from '../utils/textures/flattenWaterComponents';
 import { heightTileBounds } from '../utils/textures/heightTileBounds';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
+import { quantizeHeightGrid } from '../utils/textures/quantizeHeightGrid';
+import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { earthTileBounds } from '../utils/scene/earthTileBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
@@ -141,12 +142,6 @@ function childPath(
   );
 }
 
-function readTileIfPresent(path: string): HeightTile | null {
-  if (!existsSync(path)) return null;
-  const bytes = readFileSync(path);
-  return decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset);
-}
-
 /**
  * How far this level's surface can be from the finest data under it, in
  * metres: the worst gap between this tile's bilinear and a child's own posts,
@@ -243,8 +238,8 @@ export async function bakeHeightLevel(input: {
         own.set(grid.subarray((oy + j) * nx + ox, (oy + j) * nx + ox + posts), j * posts);
       }
 
-      const children = [0, 1, 2, 3].map((q) =>
-        readTileIfPresent(childPath(outDir, prefix, z, x, y, q)),
+      const children = await Promise.all(
+        [0, 1, 2, 3].map((q) => readHeightTileFile(childPath(outDir, prefix, z, x, y, q))),
       );
       for (let q = 0; q < children.length; q++) {
         const child = children[q];
@@ -268,6 +263,9 @@ export async function bakeHeightLevel(input: {
         );
       }
 
+      // Before bounds/residual, per quantizeHeightGrid's own contract.
+      quantizeHeightGrid(own);
+
       const box = earthTileBounds(z, x, y, EARTH_TILE_PX);
       // Under water flattening the source's own range still describes the
       // bathymetry that was levelled away, so it would report every ocean tile
@@ -284,7 +282,7 @@ export async function bakeHeightLevel(input: {
       mkdirSync(dirname(outPath), { recursive: true });
       // `.tmp` then rename: a bake killed mid-write must not leave a truncated
       // file that the next run's existsSync skip-check trusts as complete.
-      writeFileSync(`${outPath}.tmp`, encodeHeightTile(tile));
+      writeFileSync(`${outPath}.tmp`, await encodeHeightTile(tile));
       renameSync(`${outPath}.tmp`, outPath);
       written.push(relPath);
     }

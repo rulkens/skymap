@@ -44,11 +44,11 @@ If a bulk group has files but the credentials below are missing, `syncR2.ts` fai
 
 #### Earth tile versioning
 
-Tile keys sit under a versioned prefix (currently `earth-tiles/v8`; the `TILE_PREFIX` constant in `tools/textures/buildSurfaceTiles.ts` is the source of truth, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
+Tile keys sit under a versioned prefix (currently `earth-tiles/v9`; the `TILE_PREFIX` constant in `tools/textures/buildSurfaceTiles.ts` is the source of truth, named by `manifest.json` and read back by the runtime). The tiles are served `immutable` and never purged, so **re-baking changed pixels means bumping that version** — nothing in the code enforces this. Reusing a version after a pixel change leaves the CDN serving stale tiles against a new manifest for up to a day: not merely stale, but mismatched, since the manifest now names levels the edge hasn't updated.
 
 A manifest SHAPE change (not just pixels — e.g. `bands` growing a second band) is a sharper case: `fetchSurfaceTileManifest`'s runtime guard rejects any manifest shape it doesn't recognise, so between a merge that changes the shape and the next `npm run sync-r2-secure`, every client fetches the stale R2 manifest, gets rejected, and surface tiles are OFF in production entirely — the sync is a blocking merge step, not a follow-up.
 
-The v7 → v8 release (the `levels` → `bands` manifest break plus the new `albedo/` path segment, alongside the new `height/` product) moves in this order: server-side copy `earth-tiles/v7/surface` to `earth-tiles/v8/albedo` (same bytes, new prefix — no re-upload), `bulk`-upload the new `earth-tiles/v8/height` tiles, then sync the manifest last. Tiles are OFF in production for that whole window (spec §3.4b) — the old manifest still names `v7/surface`, which nothing serves once the copy starts.
+The v8 → v9 release (height tiles switch from raw f32 `.bin` to lossless Terrain-RGB `.webp`; albedo pixels are unchanged) moves in this order: server-side copy `earth-tiles/v8/albedo` to `earth-tiles/v9/albedo` (same bytes, new prefix — no re-upload), `bulk`-upload the new `earth-tiles/v9/height` tiles, then sync the manifest last. Height display is OFF in production for that whole window — the old manifest still names `v8/height`, which nothing serves once the copy starts.
 
 #### Credentials
 

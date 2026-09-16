@@ -31,7 +31,7 @@ export const EARTH_TILE_PX = 512;
 export const EARTH_TILE_ATLAS_SIDE = 8192;
 
 /** Physical edge of the HEIGHT atlas: 32 x 32 = 1024 slots at the height
- *  tile's 129-post stride, so 4128 px of `r32float`, 68 MB — under the 8192
+ *  tile's 129-post stride, so 4128 px of `rgba8unorm`, 68 MB — under the 8192
  *  baseline `maxTextureDimension2D`. Four times the albedo atlas's slot count
  *  because a miss costs more: albedo inherits an ancestor's texels and blurs,
  *  height inherits a coarser lattice and flattens. A tilted view's working set
