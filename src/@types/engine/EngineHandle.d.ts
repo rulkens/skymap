@@ -9,20 +9,11 @@
 
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
 
-/**
- * Handle returned by `createEngine`. Lets the React layer drive the
- * engine without knowing its internal structure.
- */
 export type EngineHandle = {
   debug: EngineDebugHandle;
 
-  /**
-   * Stop the render loop, release GPU resources, and detach all event
-   * listeners.  Lives at the root rather than a sub-handle because
-   * destruction is a session-scoped operation, not a cluster knob.
-   *
-   * Call this from React's `useEffect` cleanup so that hot-reload and
-   * StrictMode double-mounts don't leave orphaned RAF loops or GPU objects.
-   */
+  /** Stops the render loop, releases GPU resources, detaches listeners; call
+   *  from React's `useEffect` cleanup so StrictMode's double-mount doesn't
+   *  leave an orphaned RAF loop. */
   destroy: () => void;
 };

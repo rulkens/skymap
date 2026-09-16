@@ -1,43 +1,8 @@
 /**
- * diskRadiusRing — developer overlay pass that draws a world-space ring
- * at a famous galaxy's procedural-disk radius, lying IN the disk plane
- * so it traces the textured quad's projected outline.
- *
- * ### What it's for
- *
- * A calibration aid: if the textured disk's edge falls short of (or
- * overruns) this ring, the per-galaxy `diameterKpc` → world-radius
- * mapping is off. Because the ring reuses `texturedDisks`'s exact
- * disk-plane basis (`lib/orientation::diskAxes` with `paDeg` +
- * `axisRatio`), "does the disk fill the ring?" is an apples-to-apples
- * comparison.
- *
- * ### Why a `(device)` factory and a per-draw format
- *
- * Matches the `passes/pickDebugOverlay` shape — a self-contained
- * overlay that takes only what it needs and returns `{ draw, destroy }`.
- * The target format arrives at DRAW time and the pipeline is re-keyed on a
- * change, so an HDR swap needs no external rebuild walk (D9): the one handle
- * that knows the blend also owns the format it blends into.
- *
- * ### Two uniform bindings
- *
- * Camera prefix (80 B) at @binding 0, per-draw ring data (32 B) at
- * @binding 1 — same split as `selectionRing`. Each uploads at its own
- * cadence (camera per frame, ring per selection).
- *
- * ### Blend mode
- *
- * Premultiplied-alpha OVER (`src: one, dst: one-minus-src-alpha`). The
- * ring is a UI overlay drawn post-tone-map; the fragment emits
- * `rgb * alpha, alpha` so the composite reads as "src over dst".
- *
- * ### Topology
- *
- * `line-strip`: the vertex stage generates a closed ring of
- * `SEGMENTS + 1` vertices (the last wraps onto the first). The draw
- * count `SEGMENTS_PLUS_ONE` MUST equal the shader's `SEGMENTS` (96) + 1.
- * Both numbers carry a comment pinning them together.
+ * diskRadiusRing — dev overlay: draws a world-space ring at a famous galaxy's
+ * procedural-disk radius, in the disk plane, on `texturedDisks`'s own basis
+ * (`lib/orientation::diskAxes`) — a calibration aid for whether `diameterKpc`
+ * maps to the right world radius ("does the disk fill the ring?").
  */
 
 import vsCode from '../../../services/gpu/shaders/diskRadiusRing/vertex.wesl?static';
@@ -65,6 +30,8 @@ const RING_UNIFORM_BYTES = 32;
 const SEGMENTS_PLUS_ONE = 97;
 
 export function createDiskRadiusRing(device: GPUDevice): DiskRadiusRing {
+  // Camera prefix at @binding 0 (per-frame), ring data at @binding 1 (per-selection) —
+  // same split as selectionRing, each uploaded at its own cadence.
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'disk-radius-ring-bgl',
     entries: [

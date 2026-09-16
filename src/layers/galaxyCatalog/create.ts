@@ -118,7 +118,6 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
     get famousMeta() {
       return famousMeta;
     },
-    provenanceCounts,
     get catalogsVersion() {
       return catalogsVersion;
     },

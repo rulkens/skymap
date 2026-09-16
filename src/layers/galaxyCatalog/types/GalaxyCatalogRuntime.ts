@@ -7,7 +7,6 @@
 import type { BiasMode } from '../../../@types/data/galaxyCatalog/BiasMode';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
-import type { ProvenanceCounts } from '../../../@types/engine/ProvenanceCounts';
 import type { GalaxyCatalogFacts } from './GalaxyCatalogFacts';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { FamousGalaxiesPayload } from '../../../@types/loading/FamousGalaxiesPayload';
@@ -34,8 +33,6 @@ export type GalaxyCatalogRuntime = {
   readonly pgcAlias: AssetSlot<PgcAliasMap, void>;
   /** A getter over the meta slot's private cell, so the runtime literal is complete in one expression. */
   readonly famousMeta: readonly FamousGalaxyMetaEntry[];
-  /** Per-source tally; published as a copy beside each source-count pulse (Ruling 12). */
-  readonly provenanceCounts: Map<SourceType, ProvenanceCounts>;
   /** Bumped by every point-slot commit; the two `frame` reconciles key on it. */
   readonly catalogsVersion: number;
   /** Captured from `create`'s deps: `Layer.frame` hands `frame` only the runtime, never `deps`. */

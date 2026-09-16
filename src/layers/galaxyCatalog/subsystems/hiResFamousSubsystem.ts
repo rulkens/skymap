@@ -39,8 +39,7 @@ import { cartesianToRaDec } from '../../../utils/math/index';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { HI_RES_TRIGGER_PX, HI_RES_FADE_BAND_PX } from '../../../data/galaxyLodBands';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
-import type { FetchGalaxyBitmapInput } from '../../../@types/loading/FetchGalaxyBitmapInput';
-import type { HiResFamousTexture } from '../../../@types/rendering/HiResFamousTexture';
+import type { HiResFamousDeps } from '../../../@types/engine/subsystems/HiResFamousDeps';
 import type {
   HiResFamousFrameInput,
   HiResFamousFrameOutput,
@@ -58,17 +57,6 @@ import type {
  * below the absurd-data regime.
  */
 const MAX_PLAUSIBLE_DIAMETER_KPC = 500;
-
-export type HiResFamousDeps = {
-  readonly texture: HiResFamousTexture;
-  readonly requestRender: () => void;
-  /** For tests — defaults to fetchGalaxyBitmap. */
-  readonly fetcher?: (args: FetchGalaxyBitmapInput) => Promise<ImageBitmap | null>;
-  /** For tests — defaults to performance.now.  Unused by the planner
-   *  today (no time-based fades live here) but kept on the deps so a
-   *  future timing tweak doesn't require widening the contract. */
-  readonly now?: () => number;
-};
 
 export function createHiResFamousSubsystem(deps: HiResFamousDeps): HiResFamousSubsystem {
   const { texture, requestRender } = deps;

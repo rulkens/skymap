@@ -1,10 +1,9 @@
 /**
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
- * `create`s every composed Layer in tuple order, seeding its facts key first
- * (D6, Ruling 6), then composes core's contributions with each instance's onto
- * `state.passes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`
- * and asserts the composed sets stay disjoint (D5) — a bad composition throws
- * at boot, not inside a click's swallowed promise.
+ * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
+ * then composes each instance's contributions onto core's `state.passes` /
+ * `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`, asserting
+ * the composed sets stay disjoint (D5) — a bad composition throws at boot.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';

@@ -91,10 +91,15 @@ describe('engine and state files import nothing from src/layers beyond their ALL
   });
 });
 
-// Free today: zero such imports at HEAD. This is the half that closes D1's
-// cycle, so a Layer importing the slice fails here, naming the file, instead
-// of crashing boot on an uninitialised `const` in a graph no unit test builds.
-const LAYERS_ALLOWED: Readonly<Record<string, number>> = {};
+// Free today except a Layer's OWN `ui` section: `LayerUiSection` is a
+// hand-written settings container (ADR 0011), and a settings container's
+// whole job — read the store, dispatch on a change — has always meant store
+// reach, in `src/components/containers/` or here. The ban still holds for
+// every other Layer file (create/frame/passes/etc — D1's cycle risk), so
+// this is a one-file carve-out, not a loosened rule.
+const LAYERS_ALLOWED: Readonly<Record<string, number>> = {
+  'layers/galaxyCatalog/ui/GalaxiesSectionContainer': 4,
+};
 
 describe('no file under src/layers imports src/state or src/store', () => {
   const files = walk('src/layers');
@@ -116,10 +121,12 @@ describe('no file under src/layers imports src/state or src/store', () => {
 // The import ban alone does not close the outbound seam: `LayerCoreDeps.store`
 // is handed to every Layer, so one could mint its own `createAction` and
 // dispatch it — the improvisation the error message above would otherwise
-// invite. Zero at HEAD, and every store write in the sequence is a `deps`
-// field, a published fact, or deleted (Ruling 17).
-describe('no file under src/layers dispatches', () => {
-  const files = walk('src/layers');
+// invite. Zero at HEAD outside `ui/`, and every store write in the runtime
+// sequence is a `deps` field, a published fact, or deleted (Ruling 17). A
+// Layer's `ui/` section is exempt for the same reason as the sweep above:
+// it is a settings container, and every settings container dispatches.
+describe('no file under src/layers dispatches (outside a Layer ui/ section)', () => {
+  const files = walk('src/layers').filter((file) => !file.includes('/ui/'));
   expect(files.length).toBeGreaterThan(0);
 
   it('every file is free of a .dispatch( call', () => {

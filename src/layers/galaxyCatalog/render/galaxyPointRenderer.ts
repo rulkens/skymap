@@ -298,7 +298,6 @@ export function createGalaxyPointRenderer(init: {
     spliceAngularWeights: store.spliceAngularWeights,
     clearBiasOverlays: store.clearBiasOverlays,
     totalCount: store.totalCount,
-    countOf: store.countOf,
     hasCatalog: store.hasCatalog,
     loadedSources: store.loadedSources,
     draw,

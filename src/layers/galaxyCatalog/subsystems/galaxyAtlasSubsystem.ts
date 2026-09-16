@@ -11,6 +11,7 @@
 import { createTileStreamSubsystem } from '../../../services/engine/subsystems/tileStreamSubsystem';
 import { GALAXY_ATLAS_SLOT_SIDE } from '../../../data/galaxyCatalog/galaxyAtlasSlotSide';
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
+import type { GalaxyAtlasDeps } from '../../../@types/engine/subsystems/GalaxyAtlasDeps';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 
@@ -18,16 +19,6 @@ import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 // sliced into a 16×16 grid of 128×128 slots (256 thumbnails total).
 const GALAXY_ATLAS_SIDE = 2048;
 const GALAXY_ATLAS_FORMAT: GPUTextureFormat = 'rgba8unorm-srgb';
-
-export type GalaxyAtlasDeps = {
-  readonly device: GPUDevice;
-  /**
-   * Wake the engine's render loop for the next frame.  Called when a
-   * fetch completes (so the thumbnail can render) and when a fetch
-   * fails (so the still-animating predicate re-checks `inFlightCount`).
-   */
-  readonly requestRender: () => void;
-};
 
 export function createGalaxyAtlasSubsystem(
   deps: GalaxyAtlasDeps,

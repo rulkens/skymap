@@ -54,6 +54,8 @@ import type { BuildPointInterleavedBufferResult } from '../../../@types/engine/B
 import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
 import type { SourceUniformsBgl } from '../../../@types/rendering/SourceUniformsBgl';
 import type { ViewSlotUniformRing } from '../../../@types/rendering/ViewSlotUniformRing';
+import type { CatalogDrawEntry } from '../types/CatalogDrawEntry';
+import type { CatalogStore } from '../types/CatalogStore';
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { cloneGalaxyCatalogForTransfer } from '../../../data/galaxyCatalog/galaxyCatalogTransfer';
 import { runDisposableWorker } from '../../../utils/worker/runDisposableWorker';
@@ -161,44 +163,6 @@ type LoadedSource = {
   /** Per-source SourceUniforms (6-bit sourceCode + pad) written once at upload. */
   sourceBuffer: GPUBuffer;
   sourceBindGroup: GPUBindGroup;
-};
-
-/**
- * One loaded catalog's GPU resources, in `GALAXY_CATALOG_SOURCES` draw
- * order, as `galaxyPointRenderer.draw()` binds them.  The CPU mirror stays
- * private to the store — a draw pass has no business rewriting vertex
- * bytes.
- */
-export type CatalogDrawEntry = {
-  source: SourceType;
-  count: number;
-  vertexBuffer: GPUBuffer;
-  fade: ViewSlotUniformRing;
-  sourceBindGroup: GPUBindGroup;
-};
-
-/** The per-catalog GPU-resource store — see the module header. */
-export type CatalogStore = {
-  upload(id: GalaxyCatalogId, galaxyCatalog: GalaxyCatalog): Promise<void>;
-  unload(id: GalaxyCatalogId): void;
-  setBiasUploadCallback(cb: ((source: SourceType, cloud: GalaxyCatalog) => void) | null): void;
-  setBiasUnloadCallback(cb: ((source: SourceType) => void) | null): void;
-  spliceSchechterRatios(source: SourceType, ratios: Float32Array): void;
-  spliceAngularWeights(source: SourceType, weights: Float32Array): void;
-  clearBiasOverlays(source?: SourceType): void;
-  totalCount(): number;
-  countOf(source: SourceType): number;
-  hasCatalog(id: GalaxyCatalogId): boolean;
-  /** Narrow public projection consumed by the pick program. */
-  loadedSources(): IterableIterator<{
-    source: SourceType;
-    vertexBuffer: GPUBuffer;
-    count: number;
-    sourceBuffer: GPUBuffer;
-  }>;
-  /** Full per-source draw essentials, in draw order, for `galaxyPointRenderer.draw()`. */
-  entries(): IterableIterator<CatalogDrawEntry>;
-  destroy(): void;
 };
 
 /**
@@ -468,16 +432,6 @@ export function createCatalogStore(init: {
     return total;
   }
 
-  /**
-   * Per-source point count (0 when not loaded).  Engine bounds-checks
-   * a picked `(source, localIdx)` pair before building a GalaxyInfo,
-   * since tier swaps can shrink a source's count in flight.
-   */
-  function countOf(source: SourceType): number {
-    const id = ID_OF_CODE.get(source);
-    return (id !== undefined ? galaxyCatalogs.get(id)?.count : undefined) ?? 0;
-  }
-
   // Whether a catalog's buffer is committed — the survey fade row guards on
   // this (same demand-loaded pattern as filamentRenderer.hasCloud): a fade
   // toward "visible" is suppressed until there is something to fade in.
@@ -567,7 +521,6 @@ export function createCatalogStore(init: {
     spliceAngularWeights,
     clearBiasOverlays,
     totalCount,
-    countOf,
     hasCatalog,
     loadedSources,
     entries,

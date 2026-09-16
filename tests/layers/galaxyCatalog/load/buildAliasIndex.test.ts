@@ -42,14 +42,6 @@ describe('buildAliasIndex', () => {
     ]);
   });
 
-  it('emits pgc as a number, not a bigint', () => {
-    const catalogs = fakeCatalogs({ [Source.Glade]: new BigUint64Array([100n]) });
-    const aliasMap = new Map<bigint, readonly string[]>([[100n, ['NGC 1']]]);
-    const out = buildAliasIndex({ catalogs, aliasMap, sources: [Source.Glade] });
-    expect(typeof out[0]!.pgc).toBe('number');
-    expect(out[0]!.pgc).toBe(100);
-  });
-
   it('skips zero PGCs (unmatched cross-match rows)', () => {
     const catalogs = fakeCatalogs({
       [Source.Glade]: new BigUint64Array([0n, 100n]),

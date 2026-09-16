@@ -49,8 +49,6 @@ export type GalaxyPointRenderer = {
   clearBiasOverlays(source?: SourceType): void;
   /** Total number of points across every loaded source. */
   totalCount(): number;
-  /** Per-source point count, or 0 when the source isn't loaded. */
-  countOf(source: SourceType): number;
   /** True when the catalog's buffer is committed — the survey fade row's guard reads this. */
   hasCatalog(id: GalaxyCatalogId): boolean;
   /**
