@@ -23,8 +23,8 @@
  * written LAST, only once every tile the union of the prior index and this
  * run's bake promises is actually present on disk — see `bakeAll`.
  *
- * Lands on disk: `earth-tiles/v8/albedo/<z>/<x>/<y>.webp` and, for a band
- * declaring a height source, `earth-tiles/v8/height/<z>/<x>/<y>.bin`
+ * Lands on disk: `earth-tiles/v9/albedo/<z>/<x>/<y>.webp` and, for a band
+ * declaring a height source, `earth-tiles/v9/height/<z>/<x>/<y>.webp`
  * (`surfaceTilePath`, shared with the runtime fetcher's own URL builder —
  * drift 404s quietly, degrading to the base texture);
  * `earth-tiles/manifest.json` (tile edge,
@@ -71,9 +71,9 @@ import type { HeightSource } from './HeightSource';
 import { skadiHeightSource } from './skadiHeightSource';
 import { underfillImagerySource } from './underfillImagerySource';
 import { voidFilledHeightSource } from './voidFilledHeightSource';
-import { decodeHeightTile } from '../../src/utils/scene/decodeHeightTile';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
+import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
 /** Default band for a caller that doesn't clamp — degenerates
@@ -164,10 +164,10 @@ const TILE_ROOT = 'earth-tiles';
  * that changes pixels: the tiles are served `immutable` and never purged, so
  * reusing a version leaves the CDN answering with old imagery against a new
  * manifest for up to a day — mismatched, not merely stale. A new version is
- * new keys, which cost nothing extra and need no purge. v8: the `levels` →
- * `bands` manifest break plus the new `albedo/` path segment (Task 3).
+ * new keys, which cost nothing extra and need no purge. v9: height tiles
+ * became Terrain-RGB WebP instead of raw f32 (`heightTileFormat.ts`).
  */
-export const TILE_PREFIX = `${TILE_ROOT}/v8`;
+export const TILE_PREFIX = `${TILE_ROOT}/v9`;
 
 /**
  * Encode a sharp pipeline to `outPath` atomically: write to `<outPath>.tmp`,
@@ -369,14 +369,6 @@ const WATER_DIAGNOSTIC_BOXES: ReadonlyArray<readonly [string, LonLatBounds]> = [
   ['Black Sea', { west: 28, east: 41, south: 41, north: 47 }],
 ];
 
-/** Read one tile's decoded posts, or `null` if it wasn't baked. */
-function readHeightTile(outDir: string, z: number, x: number, y: number) {
-  const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, TILE_PREFIX));
-  if (!existsSync(path)) return null;
-  const bytes = readFileSync(path);
-  return decodeHeightTile(bytes.buffer as ArrayBuffer, bytes.byteOffset);
-}
-
 /**
  * The global range comes straight from each tile's own header (`subtreeMinM`
  * at the deepest baked level IS that tile's own post range) rather than a
@@ -395,7 +387,8 @@ async function printWaterDiagnostics(
   let globalMin = Infinity;
   let globalMax = -Infinity;
   for (const { x, y } of candidateTileIndices(bands, z, EARTH_TILE_PX)) {
-    const tile = readHeightTile(outDir, z, x, y);
+    const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, TILE_PREFIX));
+    const tile = await readHeightTileFile(path);
     if (tile === null) continue;
     globalMin = Math.min(globalMin, tile.subtreeMinM);
     globalMax = Math.max(globalMax, tile.subtreeMaxM);
@@ -408,7 +401,8 @@ async function printWaterDiagnostics(
     let max = -Infinity;
     for (let y = rect.yMin; y <= rect.yMax; y++) {
       for (let x = rect.xMin; x <= rect.xMax; x++) {
-        const tile = readHeightTile(outDir, z, x, y);
+        const path = join(outDir, surfaceTilePath({ product: 'height', z, x, y }, TILE_PREFIX));
+        const tile = await readHeightTileFile(path);
         if (tile === null) continue;
         for (let j = 0; j < posts; j++) {
           const lat = 90 - (y * (posts - 1) + j) * step;

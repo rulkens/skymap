@@ -52,7 +52,7 @@ export type SurfaceTileSubsystem = Destroyable & {
     /** `performance.now()` (REAL time) stamped when this slot's bitmap
      *  uploaded — see `SurfaceCutTile.albedo.readyAtMs`. */
     readonly readyAtMs: number;
-    /** HEIGHT only: the `shgt1` header's `subtreeMin/MaxM` (metres), which
+    /** HEIGHT only: the `SHGT` chunk's `subtreeMin/MaxM` (metres), which
      *  bound every descendant of this tile — the walk's frustum-cull
      *  headroom for displaced geometry. Null for albedo. */
     readonly subtreeRangeM: readonly [number, number] | null;

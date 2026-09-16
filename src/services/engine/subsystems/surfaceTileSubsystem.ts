@@ -78,7 +78,7 @@ type ResidentTile = {
   readonly tile: SurfaceTileId;
   readonly slot: number;
   readonly readyAtMs: number;
-  /** HEIGHT only: the `shgt1` header's subtree bounds, which the walk turns
+  /** HEIGHT only: the `SHGT` chunk's subtree bounds, which the walk turns
    *  into frustum-cull headroom for every descendant. Null for albedo. */
   readonly subtreeRangeM: readonly [number, number] | null;
 };
@@ -258,7 +258,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       upload: uploadBitmapToAtlas,
       release: closeBitmap,
     });
-    // Post count and `shgt1` are compiled constants, not manifest fields
+    // Post count and the Terrain-RGB format are compiled constants, not manifest fields
     // (spec §5.2), so the height atlas's geometry never depends on the bake.
     const createdHeight = createTileStreamSubsystem<HeightTile>({
       device,
