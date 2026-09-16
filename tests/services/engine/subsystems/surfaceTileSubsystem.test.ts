@@ -60,7 +60,10 @@ import {
   SURFACE_TILE_PX,
   HEIGHT_TILE_ATLAS_SIDE,
 } from '../../../../src/data/bodies/surfaceTileParams';
-import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
+import {
+  HEIGHT_GRID_BYTES,
+  HEIGHT_POSTS_PER_TILE,
+} from '../../../../src/data/scene/heightTileFormat';
 
 /** The shipped pyramid's reference tier: `large`, whose z4 whole-globe base the
  *  bake sits one level above. */
@@ -499,6 +502,7 @@ describe('surfaceTileSubsystem height stream', () => {
       subtreeMinM: -10,
       subtreeMaxM: 20,
       geometricResidualM: 0,
+      gridCodes: new Uint8Array(HEIGHT_GRID_BYTES),
       bitmap: { close: () => {} } as unknown as ImageBitmap,
     });
 
@@ -523,6 +527,7 @@ describe('surfaceTileSubsystem height stream', () => {
       subtreeMinM: -10,
       subtreeMaxM: 20,
       geometricResidualM: 0,
+      gridCodes: new Uint8Array(HEIGHT_GRID_BYTES),
       bitmap: { close: () => {} } as unknown as ImageBitmap,
     });
     subsystem.plannerParams('earth', BASE_LEVEL);
