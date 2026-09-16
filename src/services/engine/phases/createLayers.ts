@@ -13,7 +13,6 @@ import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { GalaxyCatalogBridge } from '../../../@types/engine/layer/GalaxyCatalogBridge';
 
 import { instantiateLayer } from '../layer/instantiateLayer';
 import {
@@ -103,11 +102,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
             deps.cb.store.dispatch(factsReported({ layer: layer.name, patch })),
         }
       : common;
-    return instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>, (runtime) => {
-      // TEMPORARY (Ruling 5): the galaxy runtime, parked for `EngineHandle`'s two
-      // remaining galaxy reads. 04e deletes this block with the field.
-      if (layer.name === 'galaxyCatalog') state.galaxyBridge = runtime as GalaxyCatalogBridge;
-    });
+    return instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
   });
 
   state.layers = instances;

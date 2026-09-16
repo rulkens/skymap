@@ -1,16 +1,12 @@
 /**
  * EngineHandle — the public API surface returned by createEngine.
  *
- * A thin cluster of named sub-handles plus one root-level affordance
- * (`destroy`). Every imperative knob lives on a topical sub-handle so the
- * React layer can subscribe to just the namespace it cares about; a flat
- * ~50-method root would say nothing about which methods belong together.
- * `camera` (dev `logState`, no reader — Findings) and the root `assetSlots`
- * (moved under `debug`, Task 10) are gone.
+ * Down to two members: `debug` (the DebugPanel's own reach — camera state,
+ * asset slots, timing) and `destroy`. Every other imperative knob the shell
+ * once reached through a sub-handle (`selection`, `sources`) is now either a
+ * plain store dispatch or a published Layer fact, read via a selector.
  */
 
-import type { EngineSelectionHandle } from './handles/EngineSelectionHandle';
-import type { EngineSourcesHandle } from './handles/EngineSourcesHandle';
 import type { EngineDebugHandle } from './handles/EngineDebugHandle';
 
 /**
@@ -18,12 +14,6 @@ import type { EngineDebugHandle } from './handles/EngineDebugHandle';
  * engine without knowing its internal structure.
  */
 export type EngineHandle = {
-  // ── Sub-handles ───────────────────────────────────────────────────────────
-  //
-  // Each cluster's public surface lives in its own type alias so the
-  // React shell can subscribe to just the namespace it cares about.
-  selection: EngineSelectionHandle;
-  sources: EngineSourcesHandle;
   debug: EngineDebugHandle;
 
   /**

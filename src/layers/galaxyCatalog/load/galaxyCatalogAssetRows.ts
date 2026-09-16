@@ -47,13 +47,15 @@ export function galaxyCatalogAssetRows(
       companionOf: Source.FamousGalaxy,
     },
 
-    // Lazy: only the one-shot `paletteOpened` request triggers it.
+    // Lazy: only demanded while the command palette is open — opening it IS
+    // the trigger, and the render-on-demand loop only re-evaluates demand
+    // once `watchPaletteWakeSaga` wakes it (Ruling 6).
     {
       key: 'pgcAlias',
       factory: () => runtime.pgcAlias,
       req: () => undefined,
-      demand: (ctx) => ctx.request('paletteOpened'),
-      priority: 90, // last: nothing renders from it, and its one-shot trigger tolerates a wait
+      demand: (ctx) => ctx.ui.paletteOpen,
+      priority: 90, // last: nothing renders from it, and it tolerates a wait
     },
 
     // `priority: 1` puts a synchronous GPU allocation at the head of the bounded
