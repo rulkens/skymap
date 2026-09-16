@@ -116,6 +116,53 @@ decodeHeightTile(
 - [ ] **User eye-check** (hard reload): relief over Søndermarken (z19), Everest and Grand Canyon (z13), and a global z5 view looks the same as v8. No cracks at tile seams or level steps, and no height-fetch errors in the console.
 - [ ] Ask about the perf gate (per `sdd-execution.md`); if yes, `npm run perf --url <worktree server>` before and after, watching main-thread decode cost during a fly-in.
 
+### Task 4: Decode heights in the shader, not through a canvas
+
+review: yes (shaders, TS↔WGSL contract)
+
+**Why (found in Task 3):** Brave's fingerprinting protection perturbs `getImageData`. In the user's Brave tab, tile 19/280352/50000 decoded with 313 spike posts while Chrome was byte-identical. The same perturbation hits Safari (fingerprinting protection) and Firefox (`resistFingerprinting`), and Brave also perturbs WebGL `readPixels`, so the fix is to never read decoded pixels back. The bitmap goes straight to the GPU with `copyExternalImageToTexture`, and the shader turns RGB into metres. The CPU only needs the `SHGT` header, which it reads from the raw fetched bytes.
+
+**Files:**
+
+- Create: `src/utils/scene/decodeHeightTileHeader.ts`, `src/@types/scene/HeightTileHeader.d.ts`, `src/@types/scene/HeightTileImage.d.ts`
+- Modify: `src/utils/scene/decodeHeightTile.ts` (header parsing delegates to `decodeHeightTileHeader`), `src/@types/scene/HeightTile.d.ts` (`HeightTileHeader & { heightM }`)
+- Modify: `src/utils/network/fetchHeightTile.ts` → returns `HeightTileImage | null`. `createImageBitmap(blob, { colorSpaceConversion: 'none', premultiplyAlpha: 'none' })`; if the bitmap isn't 129 × 129, close it and return null. No canvas, no `decodeHeightTile`.
+- Modify: `src/services/engine/subsystems/surfaceTileSubsystem.ts`:
+  - `HEIGHT_ATLAS_FORMAT` (`:58`) → `'rgba8unorm'` (never `-srgb`: the bytes are codes, not colour).
+  - The height stream becomes `TileStreamSubsystem<HeightTileImage>`. Upload is `uploadBitmapToAtlas(atlas, slot, image.bitmap)`, release is `image.bitmap.close()`, and `subtreeRangeM` comes from the header.
+  - Its doc comments also update.
+- Delete: `TextureAtlas.uploadTexels` (`src/services/gpu/resources/textureAtlas.ts:183-200`), which has no caller left, plus any test of it.
+- Modify: `src/services/gpu/shaders/bodies/earthSurfaceTile/lattice.wesl`. Add `fn postHeightM(tex: texture_2d<f32>, coord: vec2<u32>) -> f32` and route all eight `textureLoad(...).r` reads (`:14-17`, `:32-35`) through it. Update the height-atlas comments in `fragment.wesl:19-20`, `io.wesl:54` and `docs/RENDERER.md:28` (`r32float` → `rgba8unorm` Terrain-RGB).
+- Modify: the WGSL constant source the renderer already shares with TS (see `tests/services/gpu/shaders/constants.parity.test.ts` for how constants are mirrored) to carry `HEIGHT_CODE_OFFSET_M` and `HEIGHT_CODE_STEP_M`, and add them to that parity test.
+- Modify: `tests/services/engine/subsystems/surfaceTileSubsystem.test.ts` (height fetch mocks return `HeightTileImage`) and `tests/utils/scene/decodeHeightTile.test.ts` (the header-offset test targets `decodeHeightTileHeader`).
+
+**Interfaces (produces):**
+
+```ts
+type HeightTileHeader = { readonly subtreeMinM: number; readonly subtreeMaxM: number; readonly geometricResidualM: number };
+type HeightTileImage = HeightTileHeader & { readonly bitmap: ImageBitmap };
+decodeHeightTileHeader(chunk: Uint8Array): HeightTileHeader   // same throws as today: short chunk, version ≠ 2, posts ≠ 129
+fetchHeightTile(tile: SurfaceTileId, prefix: string): Promise<HeightTileImage | null>
+```
+
+```wgsl
+// Terrain-RGB: exact bytes via textureLoad (never a sampler), then
+// OFFSET + code * STEP; code < 2^24 is exact in f32.
+fn postHeightM(tex: texture_2d<f32>, coord: vec2<u32>) -> f32
+```
+
+Contract notes for the implementer:
+
+- Decode with `round(texel.rgb * 255.0)`, never truncate, and build the code from integers (`(r << 16) | (g << 8) | b`) before the single `f32` multiply. Two tiles sharing an edge then decode that post to the same `f32`, which keeps seams closed.
+- The result may differ from the CPU's `codeHeightM` by about one f32 ulp. That is accepted; say so in the helper's comment, in one line.
+- Bilinear blending (`latticeHeightM`) must stay on decoded heights, never on encoded bytes. It already is if only the loads change.
+- Read `.claude/skills/wesl-shaders/SKILL.md` and `docs/RENDERER.md` first. WGSL comments contain no backticks. Explicit bind-group layouts stay explicit (no `'auto'`). Never pass a storage struct by value to a WGSL fn (an Adreno landmine). If the atlas `texture_2d<f32>` binding's `sampleType` is declared `'unfilterable-float'`, change it to `'float'`, or leave it if still valid for `rgba8unorm`, and name which one you did.
+- No new unit test for `postHeightM`: there is no WGSL runner in the suite, the constants parity test pins the numbers, and the controller verifies the formula visually in Brave and Chrome.
+
+- [ ] Implement the above. `npm run typecheck:fast` + `npx vitest run tests/utils/scene tests/services/engine/subsystems tests/services/gpu tests/tools/textures`.
+- [ ] Commit: `fix(terrain): decode Terrain-RGB heights in the shader, not via canvas readback`.
+- [ ] Controller: hard-reload in Brave (Shields on) and Chrome. Relief matches with no spikes. The height atlas shows no WebGPU validation errors in the console.
+
 ## Execution
 
 - Dispatch A = Task 1 (Opus, `review: yes`, one mid-branch review against the Design + chunk table above).
@@ -135,10 +182,10 @@ decodeHeightTile(
 - **Observable behaviours:**
   - v9 height tree ≈ 140 MB with the same 20,684 tiles as v8.
   - Browser-decoded posts are byte-identical to the Node decode.
+  - No spikes in Brave with Shields on (heights decode on the GPU; no canvas readback anywhere on the height path).
   - Relief at Søndermarken, Everest, Grand Canyon and the global view matches v8 by eye, with no seam or level-step cracks and no height-fetch console errors.
 - **Deferred:**
   - Global z8–10 EOX albedo/height expansion (the reason for this change; its own plan).
   - R2 sync of v9: after merge, from main, per the new DEPLOY.md order, on the user's go.
   - Deleting local v8 / R2 v8 prune.
   - iOS Safari and Adreno device checks.
-  - Moving decode off the main thread.
