@@ -12,8 +12,10 @@ import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/typ
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 
-// The reconcile runs before every other limb of `frame`, so the rest of the
-// runtime is inert: no committed hi-res pair, a planner walk that does nothing.
+// The reconcile runs early in `frame`, ahead of the hi-res/disk-walk limbs —
+// this fixture keeps those inert (no committed hi-res pair, a no-op planner
+// walk) and the alias/member-count reconciles that run before it inert too
+// (an uncommitted pgcAlias slot, no selection row).
 function makeRuntime(startMode: BiasMode) {
   const setMode = vi.fn(() => new Promise<void>(() => {}));
   const runtime = {
@@ -22,6 +24,9 @@ function makeRuntime(startMode: BiasMode) {
     hiResFamous: { committed: () => null },
     catalogs: new Map(),
     famousMeta: [],
+    catalogsVersion: 0,
+    pgcAlias: { committed: () => null },
+    publish: vi.fn(),
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },

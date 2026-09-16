@@ -28,7 +28,7 @@ const NGC1300: FamousGalaxyMetaEntry = {
 };
 
 const NGC4565: AliasIndexEntry = {
-  pgc: 42038n,
+  pgc: 42038,
   names: ['NGC 4565', 'UGC 7772'],
   source: Source.Glade,
   localIdx: 1234,

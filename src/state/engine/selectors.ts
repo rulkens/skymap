@@ -35,6 +35,7 @@ import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 
 const selectEngine = (state: RootState): CoreEngineSliceState => state[engineRoute];
 
@@ -51,6 +52,7 @@ const selectEngineFacts = (state: RootState): Partial<EngineSliceState> =>
 /** Stable identities for the pre-seed window, so a subscriber sees no spurious change. */
 const NO_FAMOUS_META: readonly FamousGalaxyMetaEntry[] = [];
 const NO_PROVENANCE: Partial<Record<SourceType, ProvenanceCounts>> = {};
+const NO_ALIAS_INDEX: readonly AliasIndexEntry[] = [];
 
 export const selectEngineStatus = (state: RootState): EngineStatus => selectEngine(state).status;
 
@@ -87,6 +89,14 @@ export const selectStructureSearchList = (state: RootState): readonly StructureS
  */
 export const selectFamousGalaxiesMeta = (state: RootState): readonly FamousGalaxyMetaEntry[] =>
   selectEngineFacts(state).galaxyCatalog?.famousMeta ?? NO_FAMOUS_META;
+
+/**
+ * The command palette's PGC alias index (Ruling 1), on the same pre-seed
+ * contract as `selectFamousGalaxiesMeta`. Rebuilt by `frame` on every
+ * `catalogsVersion` bump, so a tier swap's stale `localIdx`s never linger.
+ */
+export const selectAliasIndex = (state: RootState): readonly AliasIndexEntry[] =>
+  selectEngineFacts(state).galaxyCatalog?.aliasIndex ?? NO_ALIAS_INDEX;
 
 /**
  * Famous-star metadata sidecar, on the same contract as

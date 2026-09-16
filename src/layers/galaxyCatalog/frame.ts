@@ -1,7 +1,8 @@
 /**
- * frame — the Layer's per-frame prelude, in order: the bias-mode reconcile, the
- * hi-res famous planner, then the ONE catalog walk feeding both disk planners.
- * The keep-ticking vote is the textured planner's in-flight thumbnail work.
+ * frame — the Layer's per-frame prelude, in order: the aliasIndex reconcile,
+ * the bias-mode reconcile, the hi-res famous planner, then the ONE catalog
+ * walk feeding both disk planners. The keep-ticking vote is the textured
+ * planner's in-flight thumbnail work.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
@@ -9,12 +10,31 @@ import type { PassState } from '../../@types/engine/frame/PassState';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { GalaxyCatalogRuntime } from './types/GalaxyCatalogRuntime';
 
+import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
+import { buildAliasIndex } from './load/buildAliasIndex';
 
 export function frame(
   runtime: GalaxyCatalogRuntime,
 ): (ctx: ReadyFrameContext, state: PassState) => boolean {
+  // Tracks the `catalogsVersion` the alias index was last built against, so a
+  // fresh publish fires only on a genuine catalog change (or the pgcAlias
+  // sidecar's first arrival), never once per frame.
+  let aliasIndexVersion = -1;
+
   return (ctx, state) => {
+    const pgcAliasCommitted = runtime.pgcAlias.committed();
+    if (pgcAliasCommitted !== null && runtime.catalogsVersion !== aliasIndexVersion) {
+      aliasIndexVersion = runtime.catalogsVersion;
+      runtime.publish({
+        aliasIndex: buildAliasIndex({
+          catalogs: runtime.catalogs,
+          aliasMap: pgcAliasCommitted.value,
+          sources: [Source.Glade, Source.TwoMRS],
+        }),
+      });
+    }
+
     // Set FIRST, then bake: the bake is async and may reject into a warning, so
     // a compare that waited for it would re-fire every frame for its duration.
     const biasMode = state.settings.bias.mode;

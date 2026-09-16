@@ -10,7 +10,7 @@ import type { SourceType } from '../data/SourceType';
  * of the fetcher itself.
  */
 export type AliasIndexEntry = {
-  pgc: bigint;
+  pgc: number;
   names: readonly string[];
   source: SourceType;
   localIdx: number;

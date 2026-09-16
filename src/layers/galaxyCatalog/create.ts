@@ -38,6 +38,9 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
   // Private cell behind the runtime's getter: the meta slot is its only writer,
   // so nothing has to hand the runtime object to a closure built before it.
   let famousMeta: readonly FamousGalaxyMetaEntry[] = [];
+  // Same pattern: bumped by every point-slot commit (wireGalaxyCatalogSourceSlot),
+  // read by `frame`'s reconciles through the getter below.
+  let catalogsVersion = 0;
 
   const pointRenderer = createGalaxyPointRenderer({
     device,
@@ -92,6 +95,9 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
         pointRenderer,
         catalogs,
         provenanceCounts,
+        bumpCatalogsVersion: () => {
+          catalogsVersion += 1;
+        },
       }),
     ]),
   );
@@ -113,6 +119,10 @@ export function create(deps: LayerCoreDeps<GalaxyCatalogFacts>): GalaxyCatalogRu
       return famousMeta;
     },
     provenanceCounts,
+    get catalogsVersion() {
+      return catalogsVersion;
+    },
+    publish: deps.publish,
     points,
     famousGalaxiesMeta,
     pgcAlias,

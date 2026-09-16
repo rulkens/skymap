@@ -29,12 +29,16 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Source } from '../data/sources';
-import { buildAliasIndex } from '../utils/galaxy/buildAliasIndex';
+import { buildAliasIndex } from '../layers/galaxyCatalog/load/buildAliasIndex';
 import { useAppSelector } from '../store/hooks';
 import { selectSourceCounts } from '../state/engine/selectors';
 import type { AliasIndexEntry } from '../@types/engine/AliasIndexEntry';
 import type { UseAliasIndexInput } from '../@types/engine/UseAliasIndexInput';
 import type { UseAliasIndexReturn } from '../@types/engine/UseAliasIndexReturn';
+import type { SourceType } from '../@types/data/SourceType';
+import type { GalaxyCatalog } from '../@types/data/galaxyCatalog/GalaxyCatalog';
+
+const ALIAS_SOURCES: readonly SourceType[] = [Source.Glade, Source.TwoMRS];
 
 export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
   const { paletteOpen, engineHandleRef } = input;
@@ -78,11 +82,20 @@ export function useAliasIndex(input: UseAliasIndexInput): UseAliasIndexReturn {
         // Stash the raw Map first for the deep-link resolver oracle —
         // it only needs `.has(pgc)`, not the per-source localIdx join.
         setAliasMap(loadedAliasMap);
+        // `buildAliasIndex` now takes the catalog map directly (it moved into
+        // the Layer, which owns `catalogs` — this hook only has the handle's
+        // narrower `getCloud`); rebuilt here rather than threaded in, since
+        // this whole hook is superseded by the Layer's own published fact.
+        const catalogs = new Map<SourceType, GalaxyCatalog>();
+        for (const source of ALIAS_SOURCES) {
+          const cloud = handle.sources.getCloud(source);
+          if (cloud) catalogs.set(source, cloud);
+        }
         setAliasIndex(
           buildAliasIndex({
-            handle,
+            catalogs,
             aliasMap: loadedAliasMap,
-            sources: [Source.Glade, Source.TwoMRS],
+            sources: ALIAS_SOURCES,
           }),
         );
       })
