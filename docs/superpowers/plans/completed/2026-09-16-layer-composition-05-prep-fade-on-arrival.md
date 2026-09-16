@@ -92,12 +92,12 @@ export function installFadeOnArrival(
 
 **Install site:** `wireSlots.ts`, immediately after `installSlotReadyWake` at `:125`. It needs `state.fadeRows` composed (`createLayers` runs before `wireSlots`, D8) and `seedFades` already run, so the snapshot reflects seeded reality.
 
-- [ ] Add the test `fades a row in when its guard opens on slot ready` — a stub slot whose commit flips a guard from false to true; assert the fade target moved to the row's `intent`.
-- [ ] Add the test `does not re-fire when an already-ready slot re-notifies` — notify `ready` twice with the guard true throughout; assert the row's `post` ran exactly once. This is the `cancel()` case and the reason for the transition rule.
-- [ ] Add the test `never fires for a row whose guard is constant true` — assert no `syncVisibilityFadeItem` effect for such a row, protecting `volumeField`'s DEV `post`.
-- [ ] Add the test `drives only the item whose guard opened, not its row siblings` — two `survey` items, one opening; assert the sibling's in-flight target is untouched. This is the tier-swap hazard `syncVisibilityFades.ts:82-87` documents.
-- [ ] Implement. Reuse the fixture in `tests/services/engine/wiring/syncVisibilityFades.test.ts` rather than building a second engine-state stub.
-- [ ] Commit.
+- [x] Add the test `fades a row in when its guard opens on slot ready` — a stub slot whose commit flips a guard from false to true; assert the fade target moved to the row's `intent`.
+- [x] Add the test `does not re-fire when an already-ready slot re-notifies` — notify `ready` twice with the guard true throughout; assert the row's `post` ran exactly once. This is the `cancel()` case and the reason for the transition rule.
+- [x] Add the test `never fires for a row whose guard is constant true` — assert no `syncVisibilityFadeItem` effect for such a row, protecting `volumeField`'s DEV `post`.
+- [x] Add the test `drives only the item whose guard opened, not its row siblings` — two `survey` items, one opening; assert the sibling's in-flight target is untouched. This is the tier-swap hazard `syncVisibilityFades.ts:82-87` documents.
+- [x] Implement. Reuse the fixture in `tests/services/engine/wiring/syncVisibilityFades.test.ts` rather than building a second engine-state stub.
+- [x] Commit.
 
 ## Task 2: Delete the five kick sites
 
@@ -105,12 +105,12 @@ export function installFadeOnArrival(
 
 **review: yes** — five behaviour-preserving deletions across four subsystems; a missed one is a double fade, an over-eager one is a missing fade.
 
-- [ ] Delete each kick. The GPU `upload` call in every commit **stays** — it is what opens the guard.
-- [ ] `wireGalaxyCatalogSourceSlot.ts`: delete the whole `handle`/`target`/`fadeTo` block and the `FADE_IN_DURATION_MS`/`FADE_OUT_DURATION_MS` imports it was the only user of. Replace its comment with one line recording that the arrival fade is now core's edge — the tier-swap rationale it carried is preserved verbatim in `installFadeOnArrival`'s test name and in `syncVisibilityFades.ts:82-87`, so do not duplicate it here.
-- [ ] `uploadVolumeField.ts`: this one is a *fix*, not just a move — its row-wide `only: ['volumeField']` sweep becomes the per-item form. Note that in the commit message.
-- [ ] Each slot file's header comment that explains the kick loses that paragraph (`filamentSlot.ts:33-37`, `flowFieldSlot.ts:39-44`, `constellationsSlot.ts:48-50`).
-- [ ] No new test: Task 1's four tests cover the edge, and each deletion is asserted by the existing suite staying green.
-- [ ] Commit.
+- [x] Delete each kick. The GPU `upload` call in every commit **stays** — it is what opens the guard.
+- [x] `wireGalaxyCatalogSourceSlot.ts`: delete the whole `handle`/`target`/`fadeTo` block and the `FADE_IN_DURATION_MS`/`FADE_OUT_DURATION_MS` imports it was the only user of. Replace its comment with one line recording that the arrival fade is now core's edge — the tier-swap rationale it carried is preserved verbatim in `installFadeOnArrival`'s test name and in `syncVisibilityFades.ts:82-87`, so do not duplicate it here.
+- [x] `uploadVolumeField.ts`: this one is a *fix*, not just a move — its row-wide `only: ['volumeField']` sweep becomes the per-item form. Note that in the commit message.
+- [x] Each slot file's header comment that explains the kick loses that paragraph (`filamentSlot.ts:33-37`, `flowFieldSlot.ts:39-44`, `constellationsSlot.ts:48-50`).
+- [x] No new test: Task 1's four tests cover the edge, and each deletion is asserted by the existing suite staying green.
+- [x] Commit.
 
 ## Task 3: Delete `LayerCoreDeps.fades`
 
@@ -118,10 +118,10 @@ export function installFadeOnArrival(
 
 **review: yes** — a Layer contract field.
 
-- [ ] Delete the `fades` field and drop it from `createLayers`' `common` literal. After Task 2 it has no consumers (`wireGalaxyCatalogSourceSlot.ts:61-62` was the only one; the three other `fades` references under `src/layers/` are `state.subsystems.fades` reads inside passes and label producers, which are unaffected).
-- [ ] Update the `LayerCoreDeps` header: the field's removal is the point, so record in one clause that a Layer reads opacity through `state.subsystems.fades` in its passes but cannot drive a fade at construction — core owns that edge.
-- [ ] No new test. `tsc` is total here: a surviving consumer fails the build.
-- [ ] Commit.
+- [x] Delete the `fades` field and drop it from `createLayers`' `common` literal. After Task 2 it has no consumers (`wireGalaxyCatalogSourceSlot.ts:61-62` was the only one; the three other `fades` references under `src/layers/` are `state.subsystems.fades` reads inside passes and label producers, which are unaffected).
+- [x] Update the `LayerCoreDeps` header: the field's removal is the point, so record in one clause that a Layer reads opacity through `state.subsystems.fades` in its passes but cannot drive a fade at construction — core owns that edge.
+- [x] No new test. `tsc` is total here: a surviving consumer fails the build.
+- [x] Commit.
 
 ---
 
@@ -138,21 +138,21 @@ export function installFadeOnArrival(
 
 **Deliverable inventory**
 
-- [ ] `installFadeOnArrival` exists, is installed from `wireSlots`, and has the four named tests.
-- [ ] `grep -rn "fades\.fadeTo\|syncVisibilityFades(" src/layers src/services/loading` returns nothing — no slot factory and no Layer drives a fade.
-- [ ] `syncVisibilityFadeItem` has a production caller.
-- [ ] `LayerCoreDeps` no longer declares `fades`.
-- [ ] `syncVisibilityFades`' `only` option survives, still used by `applySceneEffect`.
+- [x] `installFadeOnArrival` exists, is installed from `wireSlots`, and has the four named tests.
+- [x] `grep -rn "fades\.fadeTo\|syncVisibilityFades(" src/layers src/services/loading` returns nothing — no slot factory and no Layer drives a fade.
+- [x] `syncVisibilityFadeItem` has a production caller.
+- [x] `LayerCoreDeps` no longer declares `fades`.
+- [x] `syncVisibilityFades`' `only` option survives, still used by `applySceneEffect`.
 
 **Named observable behaviours** (manual smoke pass)
 
-- [ ] Enable **filaments** with the download cold: the skeleton fades in on arrival, no pop, no double-ramp.
-- [ ] Enable **constellations** cold: same.
-- [ ] Enable the **flow field** cold: same.
-- [ ] Enable a real volume (**MCPM** or **CF4 density**) cold: it fades in on arrival, and enabling a *second* volume while the first is still ramping does not restart the first's fade — this is the per-item fix.
-- [ ] Toggle a **DEV debug volume** (`debug-gaussian`): it still lazy-loads and appears. This is the `post` path the transition rule deliberately leaves alone.
-- [ ] Switch **tier** (small ⇄ large) with several galaxy catalogs enabled: each catalog fades in as its own payload lands; none restarts a sibling's ramp.
-- [ ] Toggle a catalog **off mid-download**, then let the download finish: it stays invisible rather than fading in.
-- [ ] A tour beat that shows/hides layers still animates over its authored duration (`applySceneEffect`'s `only` path is untouched).
+- [x] Enable **filaments** with the download cold: the skeleton fades in on arrival, no pop, no double-ramp.
+- [x] Enable **constellations** cold: same.
+- [x] Enable the **flow field** cold: same.
+- [x] Enable a real volume (**MCPM** or **CF4 density**) cold: it fades in on arrival, and enabling a *second* volume while the first is still ramping does not restart the first's fade — this is the per-item fix.
+- [x] Toggle a **DEV debug volume** (`debug-gaussian`): it still lazy-loads and appears. This is the `post` path the transition rule deliberately leaves alone.
+- [x] Switch **tier** (small ⇄ large) with several galaxy catalogs enabled: each catalog fades in as its own payload lands; none restarts a sibling's ramp.
+- [x] Toggle a catalog **off mid-download**, then let the download finish: it stays invisible rather than fading in.
+- [x] A tour beat that shows/hides layers still animates over its authored duration (`applySceneEffect`'s `only` path is untouched).
 
 **Deferral boundary** — everything under "Out of scope". A reviewer finding the filaments renderer still built by `gpuHandleRegistry` is looking at 05a, not a gap here.
