@@ -25,8 +25,8 @@ export function countEstimatedProvenance(cloud: GalaxyCatalog): ProvenanceCounts
     let n = 0;
     // Bounded by the shorter of `cloud.count` and the flag column's own
     // length: a partial cloud stub (as engine-wiring tests hand the slot)
-    // can omit a flag column entirely, and a synthetic cloud can allocate one
-    // shorter than the rows it carries. Either way there's nothing to read
+    // can omit a flag column entirely, or allocate one shorter than the rows
+    // it carries. Either way there's nothing to read
     // past the column's end, so we count zero estimated rows for that axis
     // rather than reading undefined — a debug-panel readout should never be
     // able to take down a catalog commit. `total` still reports `cloud.count`

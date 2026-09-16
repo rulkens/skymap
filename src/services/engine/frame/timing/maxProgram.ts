@@ -6,11 +6,15 @@
 import type { FrameStep } from '../../../../@types/engine/frame/FrameStep';
 import { expandFrameOrder } from '../expandFrameOrder';
 import { FRAME_ORDER } from '../frameOrder';
-import { CONTENT_PASSES } from '../passes';
+import { FRAME_ORDER_PASS_NAMES } from '../frameOrderPassNames';
 import { MAX_FRAME_INPUTS } from './maxFrameInputs';
 
 export const MAX_PROGRAM: readonly FrameStep[] = expandFrameOrder(
   FRAME_ORDER,
-  CONTENT_PASSES,
+  // Name-only stubs: every projection downstream reads `contentPass.name` and
+  // nothing else, and a MAXIMAL program must cover every authored name however
+  // few of them a given composition contributes. The two members are inert so
+  // a stub reaching a real encoder would draw nothing rather than throw.
+  FRAME_ORDER_PASS_NAMES.map((name) => ({ name, enabled: () => false, draw: () => {} })),
   MAX_FRAME_INPUTS,
 );

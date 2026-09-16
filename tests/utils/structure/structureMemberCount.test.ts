@@ -71,17 +71,6 @@ describe('structureMemberCount', () => {
     expect(structureMemberCount(cluster, getCloud, sdssOnly)).toBe(2);
   });
 
-  it('never counts the Synthetic fallback cloud', () => {
-    const getCloud = cloudFrom({
-      [Source.Synthetic]: makeCatalog([
-        [1, 0, 0],
-        [2, 0, 0],
-      ]), // inside but synthetic
-    });
-    // Synthetic visible, yet excluded → no real catalogs → null.
-    expect(structureMemberCount(cluster, getCloud, ALL_VISIBLE_MASK)).toBeNull();
-  });
-
   it('returns 0 for a genuinely empty sphere over loaded data', () => {
     const getCloud = cloudFrom({
       [Source.SDSS]: makeCatalog([

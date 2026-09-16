@@ -74,7 +74,7 @@ import {
   galaxyCatalogFluxLimit,
   galaxyCatalogSchechter,
 } from '../../../data/galaxyCatalog/galaxyCatalogFluxLimits';
-import { expectedNumberDensity } from '../../../utils/math';
+import { expectedNumberDensity } from '../../../utils/math/index';
 
 /**
  * Compute per-galaxy Schechter density-correction ratios for one cloud.

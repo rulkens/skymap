@@ -13,7 +13,7 @@ task needs it** — that call is the assistant's to make, not a question for the
 user. It never starts the dev server (that stays opt-in via `/dev`). Linking
 matters because a fresh worktree has **no** `public/data/` at all — every
 catalog file there is a gitignored build output or a `data/`-staged copy — so
-without it the renderer falls back to the synthetic procedural cloud.
+without it the galaxy catalogs fail to load and the sky stays empty.
 
 ## Steps
 

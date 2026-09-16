@@ -9,9 +9,11 @@ import type { FadeLayer } from '../../../@types/animation/FadeLayer';
 import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { FADE_IN_DURATION_MS, FADE_OUT_DURATION_MS } from '../../animation/fadeController';
-import { FADE_LAYERS } from './fadeLayers';
 
-export type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
+export type ApplyIntentState = Pick<
+  EngineState,
+  'settings' | 'subsystems' | 'assetSlots' | 'gpu' | 'fadeRows'
+>;
 
 function applyIntent<Item>(
   state: ApplyIntentState,
@@ -65,7 +67,7 @@ export function syncVisibilityFades(
 ): void {
   const only = opts.only ? new Set(opts.only) : undefined;
 
-  for (const row of FADE_LAYERS) {
+  for (const row of state.fadeRows) {
     if (row.intent === undefined) continue;
     if (only && !only.has(row.key)) continue;
 
@@ -82,14 +84,14 @@ export function syncVisibilityFades(
  * `only: ['survey']` still drives ALL survey catalogs; a galaxy-catalog slot commit
  * must fade in just the catalog it uploaded, or a concurrent tier swap has source A's
  * commit re-drive B's in-flight fade (last-issued wins) and B restarts its ramp.
- * `item` is `unknown` because FADE_LAYERS erases rows to `FadeLayer<unknown>`.
+ * `item` is `unknown` because the composed rows erase to `FadeLayer<unknown>`.
  */
 export function syncVisibilityFadeItem(
   state: ApplyIntentState,
   key: VisibilityLayerKey,
   item: unknown,
 ): void {
-  const row = FADE_LAYERS.find((r) => r.key === key);
+  const row = state.fadeRows.find((r) => r.key === key);
   if (row === undefined || row.intent === undefined) return;
 
   applyIntent(state, row, item, { animate: true });

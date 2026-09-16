@@ -2,7 +2,7 @@
  * CoreEngineSliceState — the shape of the Redux 'engine' slice's core fields.
  * `EngineSliceState` widens this with each Layer's published facts.
  *
- * `sourceCounts`/`structureCounts`/`provenanceCounts` are sparse (Partial)
+ * `sourceCounts`/`structureCounts` are sparse (Partial)
  * because the engine reports them one source/structure at a time; a missing
  * key means "not yet reported", not "zero".
  */
@@ -12,8 +12,6 @@ import type { ScaleInfo } from '../engine/ScaleInfo';
 import type { SourceType } from '../data/SourceType';
 import type { StructureId } from '../data/structure/StructureId';
 import type { LoadProgressState } from '../loading/LoadProgressState';
-import type { ProvenanceCounts } from '../engine/ProvenanceCounts';
-import type { FamousGalaxyMetaEntry } from '../loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../engine/StructureSearchEntry';
 
@@ -40,7 +38,6 @@ export type CoreEngineSliceState = {
   hdrCapable: boolean;
   sourceCounts: Partial<Record<SourceType, number>>;
   structureCounts: Partial<Record<StructureId, number>>;
-  provenanceCounts: Partial<Record<SourceType, ProvenanceCounts>>;
   loadProgress: LoadProgressState | null;
   /**
    * The command palette's structure search index — every loaded structure
@@ -65,18 +62,11 @@ export type CoreEngineSliceState = {
    */
   meta: {
     /**
-     * Famous-galaxy narrative metadata (`famous_galaxies_meta.json`), written wholesale by
-     * `engineFamousGalaxiesMetaReported` when the sidecar's asset slot settles.
-     * Empty until then, and empty again if the fetch failed — the command palette
-     * lists whatever entries it is handed, so an absent sidecar needs no separate
-     * "loaded" flag beside the array.
-     */
-    readonly famousGalaxies: readonly FamousGalaxyMetaEntry[];
-    /**
-     * Famous-star narrative/physical metadata (`famous_stars_meta.json`), on the
-     * same contract as `famousGalaxies` above: written wholesale by
-     * `engineFamousStarsMetaReported`, empty both before the slot settles and
-     * after a failed fetch, which is the InfoCard's headline-alone path.
+     * Famous-star narrative/physical metadata (`famous_stars_meta.json`), written
+     * wholesale by `engineFamousStarsMetaReported` when the sidecar's asset slot
+     * settles, empty both before that and after a failed fetch, which is the
+     * InfoCard's headline-alone path. The famous-GALAXY sidecar's twin left with
+     * the galaxyCatalog Layer, which publishes it as a fact.
      */
     readonly famousStars: readonly FamousStarMetaEntry[];
   };

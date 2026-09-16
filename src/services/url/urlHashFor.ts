@@ -3,8 +3,8 @@
  * FocusableTarget union, keyed on the union tag `t.type`.
  *
  * Each row owns one focusable arm: it narrows the target via `t.type` (no
- * cast) and returns the id segment for that arm, or null when the row isn't
- * link-encodable (a Synthetic galaxy has no durable cross-rebuild identity).
+ * cast) and returns the id segment for that arm, or null when the arm isn't
+ * link-encodable (the zone-of-avoidance band has no position to fly to).
  * The `focus` row in `HASH_PARAM_SOURCES` calls this, and `hashBodyFor` composes
  * a non-null id into the body as `focus=<id>`.
  *
@@ -22,8 +22,7 @@ import { BODY_FOCUS_PREFIX } from './bodyFocusId';
 import { STAR_FOCUS_PREFIX } from './starFocusId';
 
 export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => string | null> = {
-  // Galaxy ids ride the codec's priority ladder (famous → PGC → SDSS objID →
-  // pos@) and are null for non-encodable rows (e.g. Synthetic).
+  // Galaxy ids ride the codec's priority ladder (famous → PGC → SDSS objID → pos@).
   galaxyCatalog: (t) => (t.type === 'galaxyCatalog' ? selectionToFocusId(t) : null),
   // A structure's own id is already the stable `${category}-${seed}` token.
   structure: (t) => (t.type === 'structure' ? t.id : null),

@@ -110,7 +110,7 @@ describe('installRecorderHook', () => {
 
     // The engine turns ready while loadProgress is still null (no slot has
     // started yet) — the predicate flickers true...
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
     // ...then the first fetch registers within the stability window. The
     // flicker must NOT resolve `ready`, even well past the window.
     store.dispatch(engineLoadProgressChanged({ loadedBytes: 0, totalBytes: 10, inFlightCount: 1 }));

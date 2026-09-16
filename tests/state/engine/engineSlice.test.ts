@@ -3,7 +3,7 @@
  *
  * Each test calls the slice reducer directly with an action creator's output
  * (`reducer(state, actionCreator(payload))`) and asserts the single field the
- * reducer writes. The `base()` factory returns a fresh `EngineSliceState` so tests
+ * reducer writes. The `base()` factory returns a fresh `CoreEngineSliceState` so tests
  * are isolated from one another.
  *
  * The same-state-reference test for `engineScaleChanged` is the load-bearing
@@ -16,31 +16,31 @@ import { describe, it, expect } from 'vitest';
 
 import reducer, {
   engineSourceCountReported,
-  engineProvenanceCountsReported,
   engineScaleChanged,
   engineBodyDistanceReported,
   engineStructureSearchListChanged,
   factsReported,
   layerFactsSeeded,
 } from '../../../src/state/engine/engineSlice';
-import type { EngineSliceState } from '../../../src/@types/store/EngineSliceState';
+import type { CoreEngineSliceState } from '../../../src/@types/store/CoreEngineSliceState';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import { Source } from '../../../src/data/source';
 
 /** A state widened with a stub Layer's facts key, standing in for a landed Layer. */
-type WithStubFacts = EngineSliceState & { stub: { a: number; b: number; list?: number[] } };
+type WithStubFacts = CoreEngineSliceState & { stub: { a: number; b: number; list?: number[] } };
 
-const base = (): EngineSliceState => ({
+// `CoreEngineSliceState`, not the composed `CoreEngineSliceState`: each Layer's
+// facts key is seeded at runtime by `createLayers`, never by the reducer.
+const base = (): CoreEngineSliceState => ({
   status: { kind: 'initializing' },
   scale: { label: '…', widthPx: 100 },
   focusedBodyDistanceMpc: null,
   hdrCapable: false,
   sourceCounts: {},
   structureCounts: {},
-  provenanceCounts: {},
   loadProgress: null,
   structureSearchList: [],
-  meta: { famousGalaxies: [], famousStars: [] },
+  meta: { famousStars: [] },
 });
 
 describe('engineSlice — engineSourceCountReported', () => {
@@ -55,7 +55,7 @@ describe('engineSlice — engineSourceCountReported', () => {
 describe('engineSlice — engineScaleChanged', () => {
   it('engineScaleChanged returns the same state reference when label and widthPx are unchanged', () => {
     // Seed a state with a known scale value.
-    const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
+    const s: CoreEngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
     // Dispatch with a freshly-allocated ScaleInfo whose fields are identical.
     const next = reducer(s, engineScaleChanged({ label: '500 Mpc', widthPx: 120 }));
     // The DEDUP-ON-WRITE guard must leave the slice reference unchanged so
@@ -64,7 +64,7 @@ describe('engineSlice — engineScaleChanged', () => {
   });
 
   it('engineScaleChanged replaces scale when widthPx differs', () => {
-    const s: EngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
+    const s: CoreEngineSliceState = { ...base(), scale: { label: '500 Mpc', widthPx: 120 } };
     const next = reducer(s, engineScaleChanged({ label: '500 Mpc', widthPx: 150 }));
     expect(next.scale.widthPx).toBe(150);
   });
@@ -72,7 +72,7 @@ describe('engineSlice — engineScaleChanged', () => {
 
 describe('engineSlice — engineBodyDistanceReported', () => {
   it('engineBodyDistanceReported returns the same state reference when the distance is unchanged', () => {
-    const s: EngineSliceState = { ...base(), focusedBodyDistanceMpc: 1.2e-6 };
+    const s: CoreEngineSliceState = { ...base(), focusedBodyDistanceMpc: 1.2e-6 };
     // A republished-but-identical distance must be deduped away so the
     // InfoCard subscriber does not re-fire a few Hz on a body at rest.
     const next = reducer(s, engineBodyDistanceReported(1.2e-6));
@@ -80,7 +80,7 @@ describe('engineSlice — engineBodyDistanceReported', () => {
   });
 
   it('engineBodyDistanceReported writes when the focused-body distance changes', () => {
-    const s: EngineSliceState = { ...base(), focusedBodyDistanceMpc: null };
+    const s: CoreEngineSliceState = { ...base(), focusedBodyDistanceMpc: null };
     const next = reducer(s, engineBodyDistanceReported(3.4e-6));
     expect(next.focusedBodyDistanceMpc).toBe(3.4e-6);
   });
@@ -95,18 +95,18 @@ describe('engineSlice — engineStructureSearchListChanged', () => {
       abell: null,
       description: '',
     };
-    const s: EngineSliceState = { ...base(), structureSearchList: [first] };
+    const s: CoreEngineSliceState = { ...base(), structureSearchList: [first] };
     const second: StructureSearchEntry = { ...first, id: 'cluster-coma', name: 'Coma Cluster' };
     const next = reducer(s, engineStructureSearchListChanged([second]));
     expect(next.structureSearchList).toEqual([second]);
   });
 });
 
-describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 7)', () => {
+describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 6)', () => {
   it('factsReported merges a patch under the layer key and leaves sibling facts', () => {
     const s: WithStubFacts = { ...base(), stub: { a: 1, b: 2 } };
     const next = reducer(
-      s as unknown as EngineSliceState,
+      s as unknown as CoreEngineSliceState,
       factsReported({ layer: 'stub', patch: { b: 3 } }),
     ) as unknown as WithStubFacts;
     expect(next.stub).toEqual({ a: 1, b: 3 });
@@ -116,7 +116,7 @@ describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 7)', () =
   it('factsReported replaces a field wholesale, it does not deep-merge', () => {
     const s: WithStubFacts = { ...base(), stub: { a: 1, b: 2, list: [0, 0] } };
     const next = reducer(
-      s as unknown as EngineSliceState,
+      s as unknown as CoreEngineSliceState,
       factsReported({ layer: 'stub', patch: { list: [1] } }),
     ) as unknown as WithStubFacts;
     expect(next.stub.list).toEqual([1]);
@@ -129,7 +129,7 @@ describe('engineSlice — factsReported / layerFactsSeeded (D6, Ruling 7)', () =
       layerFactsSeeded({ layer: 'stub', facts: { a: 1, b: 2 } }),
     ) as unknown as WithStubFacts;
     const patched = reducer(
-      seeded as unknown as EngineSliceState,
+      seeded as unknown as CoreEngineSliceState,
       factsReported({ layer: 'stub', patch: { b: 9 } }),
     ) as unknown as WithStubFacts;
     expect(patched.stub).toEqual({ a: 1, b: 9 });

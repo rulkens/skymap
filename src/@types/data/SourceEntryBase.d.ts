@@ -29,7 +29,7 @@ export type SourceEntryBase = {
    * True if this source carries toggleable on-screen text labels.
    * Drives the label-visibility record and the fade-layer routing in the
    * label subsystem. Bulk galaxy catalogs (sdss, glade, 2mrs, milliquas,
-   * desiDeep, synthetic) and the survey-wide Gaia bin are false: they render
+   * desiDeep) and the survey-wide Gaia bin are false: they render
    * millions of points and no names.
    *
    * This is a CAPABILITY, not a routing detail — a source that puts a name on

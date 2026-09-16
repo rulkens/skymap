@@ -31,7 +31,7 @@ vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRende
 vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub()),
 }));
-vi.mock('../../../../src/services/gpu/renderers/devTools/diskRadiusRing', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/render/diskRadiusRing', () => ({
   createDiskRadiusRing: vi.fn(() => makeStub()),
 }));
 
@@ -86,7 +86,6 @@ describe('buildSwapRenderers', () => {
       debugLineRenderer: state.gpu.debugLineRenderer,
       selectionRingRenderer: state.gpu.selectionRingRenderer,
       pickDebugOverlay: state.gpu.pickDebugOverlay,
-      diskRadiusRing: state.gpu.diskRadiusRing,
       foregroundLabelRenderer: state.gpu.foregroundLabelRenderer,
       foregroundMarkerLineRenderer: state.gpu.foregroundMarkerLineRenderer,
     } as const;

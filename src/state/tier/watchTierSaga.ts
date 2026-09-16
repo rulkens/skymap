@@ -24,7 +24,7 @@
  * galaxy (or none). To preserve intent: capture each affected ref's durable
  * focus id BEFORE the write (old cloud still present), clear hover
  * unconditionally (a stale hover is meaningless), then after each source's
- * `catalogLoaded` re-resolve the id to its new index and write it back (hit
+ * count pulse re-resolve the id to its new index and write it back (hit
  * → re-anchor, miss → clear). Only sources whose tier target actually
  * changes are captured; `takeLatest` aborts the re-anchor loop if a newer
  * `requestTier` arrives mid-reanchor.
@@ -40,7 +40,7 @@ import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
 import { setMilkyWayTuning } from '../settings/settingsSlice';
-import { catalogLoaded } from '../catalog/catalogLoaded';
+import { engineSourceCountReported } from '../engine/engineSlice';
 import { MILKY_WAY_STARS_PER_TIER } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RootState, SagaContext } from '../../store/types';
 
@@ -71,11 +71,13 @@ export function* watchTierSaga() {
     yield* put(setMilkyWayTuning({ starCount: MILKY_WAY_STARS_PER_TIER[action.payload] }));
 
     // Re-anchor each captured galaxy slot once its source's new cloud lands.
-    // Bounded: only drifting sources were captured, so catalogLoaded for that
+    // Bounded: only drifting sources were captured, so the count pulse for that
     // source is guaranteed to arrive (or takeLatest aborts this worker if a
-    // newer requestTier arrives, preventing a stale re-anchor).
+    // newer requestTier arrives, preventing a stale re-anchor). The pulse fires
+    // from the slot's `ready` subscriber, one beat AFTER the upload it waits on
+    // — the safe direction for a re-anchor that resolves against the new cloud.
     for (const { slot, source, focusId } of reanchor) {
-      yield* take((a: Action) => catalogLoaded.match(a) && a.payload.source === source);
+      yield* take((a: Action) => engineSourceCountReported.match(a) && a.payload.source === source);
       const ref = selection.resolveFocusId(focusId);
       yield* put(SELECTION_WRITE_BY_SLOT[slot](ref)); // hit → re-anchor; miss → null (clears slot)
     }

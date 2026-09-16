@@ -8,7 +8,7 @@ describe('fallbackOrientation', () => {
     expect(a).toEqual(b);
   });
 
-  it('handles objID 0n (synthetic / 2MRS / GLADE rows)', () => {
+  it('handles objID 0n (2MRS / GLADE rows)', () => {
     const { axisRatio, positionAngleDeg } = fallbackOrientation(0n, 12.5, 30.4);
     expect(Number.isFinite(axisRatio)).toBe(true);
     expect(Number.isFinite(positionAngleDeg)).toBe(true);

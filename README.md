@@ -95,7 +95,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173. Drag to orbit, scroll to zoom (on touch: drag and pinch). With no data files present the renderer falls back to 100,000 synthetic galaxies.
+Open http://localhost:5173. Drag to orbit, scroll to zoom (on touch: drag and pinch).
 
 For real data, pull the prebuilt catalogs:
 

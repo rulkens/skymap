@@ -25,8 +25,6 @@ import type { ScaleInfo } from '../../@types/engine/ScaleInfo';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
-import type { ProvenanceCounts } from '../../@types/engine/ProvenanceCounts';
-import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { FamousStarMetaEntry } from '../../@types/loading/FamousStarMetaEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 
@@ -43,10 +41,9 @@ const CORE_INITIAL: CoreEngineSliceState = {
   hdrCapable: false,
   sourceCounts: {},
   structureCounts: {},
-  provenanceCounts: {},
   loadProgress: null,
   structureSearchList: [],
-  meta: { famousGalaxies: [], famousStars: [] },
+  meta: { famousStars: [] },
 };
 
 const engineSlice = createSlice({
@@ -66,19 +63,6 @@ const engineSlice = createSlice({
       action: PayloadAction<{ source: SourceType; count: number }>,
     ) => {
       state.sourceCounts[action.payload.source] = action.payload.count;
-    },
-
-    // ── per-source provenance counts ─────────────────────────────────────────
-    // A SEPARATE action from `engineSourceCountReported`, not a wider payload
-    // on it: three sagas `take` that action as a bare "a catalog landed"
-    // pulse, keyed on nothing but its dispatch. Folding the provenance tally
-    // into that payload would braid a debug-panel readout into a
-    // load-completion signal those sagas have no reason to depend on.
-    engineProvenanceCountsReported: (
-      state,
-      action: PayloadAction<{ source: SourceType; counts: ProvenanceCounts }>,
-    ) => {
-      state.provenanceCounts[action.payload.source] = action.payload.counts;
     },
 
     // ── per-structure counts ─────────────────────────────────────────────────
@@ -114,13 +98,6 @@ const engineSlice = createSlice({
     // only home, so React and the engine can never see divergent copies. The
     // spread copies the readonly payload into the Immer draft, which wants a
     // mutable array slot even though nothing mutates it.
-    engineFamousGalaxiesMetaReported: (
-      state,
-      action: PayloadAction<readonly FamousGalaxyMetaEntry[]>,
-    ) => {
-      state.meta.famousGalaxies = [...action.payload];
-    },
-
     engineFamousStarsMetaReported: (
       state,
       action: PayloadAction<readonly FamousStarMetaEntry[]>,
@@ -191,11 +168,9 @@ const engineSlice = createSlice({
 export const {
   engineStatusChanged,
   engineSourceCountReported,
-  engineProvenanceCountsReported,
   engineStructureCountsChanged,
   engineLoadProgressChanged,
   engineStructureSearchListChanged,
-  engineFamousGalaxiesMetaReported,
   engineFamousStarsMetaReported,
   engineScaleChanged,
   engineBodyDistanceReported,

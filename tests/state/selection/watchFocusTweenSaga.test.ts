@@ -57,7 +57,6 @@ let structuresLoadedStub = false;
 // catalog online between dispatches.
 const resolveDeps = (): ResolveDeps =>
   ({
-    catalogs: { get: () => undefined, famousMeta: undefined },
     structures: {
       byId: (id: string) => structureById[id] ?? null,
       byCategory: () => [],
@@ -139,7 +138,7 @@ describe('watchFocusTweenSaga', () => {
   // must not be silently dropped; it must fire once the engine emits its
   // readiness pulse (by when wireInput has installed the camera). Galaxy deep
   // links dodge this because their updateSelectionFocus is itself deferred on
-  // catalogLoaded, which only fires after the camera exists.
+  // the catalog-landed pulse, which only fires after the camera exists.
   it('defers the tween when the camera is not ready, then plants it on the engine-ready pulse', async () => {
     cameraRuntime = () => null;
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
@@ -149,7 +148,7 @@ describe('watchFocusTweenSaga', () => {
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
     cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 1, source: Source.SDSS }));
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 1 }));
     await flush();
 
     const tween = store.getState()[cameraRoute].tween;

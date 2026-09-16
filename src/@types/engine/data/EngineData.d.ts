@@ -1,4 +1,3 @@
-import type { GalaxyStore } from './GalaxyStore';
 import type { StructureStore } from './StructureStore';
 import type { BodyStore } from './BodyStore';
 
@@ -8,9 +7,10 @@ import type { BodyStore } from './BodyStore';
  * A store earns its place here when a type has authoritative app-side data no
  * runtime asset slot can supply, and the two ways that happens are:
  *
- * - Galaxies and structures are "rich" query targets: the app CPU-queries them
- *   (InfoCard / picking / camera / membership) through transformed/indexed data
- *   the slot's raw `current()` can't give you.
+ * - Structures are a "rich" query target: the app CPU-queries them (InfoCard /
+ *   picking / camera / membership) through transformed/indexed data the slot's
+ *   raw `current()` can't give you. Galaxies were the other one, and left with
+ *   the galaxyCatalog Layer — its runtime owns the catalog map now.
  * - Bodies (stars, planets, Earth) are authored seed constants: the scene's
  *   true-scale foreground has no fetched asset behind it, so `sceneBodies.ts`
  *   IS the source and the store is where those constants live at runtime.
@@ -24,7 +24,6 @@ import type { BodyStore } from './BodyStore';
  * volumeStore that ADR 0005 originally proposed for that type).
  */
 export type EngineData = {
-  readonly galaxies: GalaxyStore;
   readonly structures: StructureStore;
   readonly bodies: BodyStore;
 };

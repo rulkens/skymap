@@ -78,7 +78,7 @@ describe('computeAngularWeights', () => {
   });
 
   it('over-dense cone has weights ≤ 1; balanced background has weights ≈ 1', () => {
-    // Synthetic cloud: 100 galaxies tightly clustered in a small angular
+    // 100 galaxies tightly clustered in a small angular
     // patch (over-dense cone) at one distance shell, plus 100 galaxies
     // spread isotropically over the sky at the SAME shell.  The over-dense
     // cone's HEALPix cell has counts well above the median for that shell;

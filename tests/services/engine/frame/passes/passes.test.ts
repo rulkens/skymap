@@ -10,11 +10,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { Source } from '../../../../../src/data/sources';
-import { packSelection } from '../../../../../src/data/selectionEncoding';
-import { BiasMode } from '../../../../../src/data/galaxyCatalog/biasMode';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../../../src/services/engine/frame/passes/galaxyPointSpritesPass';
 import { filamentsPass } from '../../../../../src/services/engine/frame/passes/filamentsPass';
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { horizonShellPass } from '../../../../../src/services/engine/frame/passes/horizonShellPass';
@@ -26,7 +21,6 @@ import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
-import type { SelectionRef } from '../../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import {
   MILKY_WAY_FADE_FULL_PX,
@@ -84,6 +78,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
+    layersAnimating: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -119,10 +114,9 @@ const MW_CLOUD_BUFFERS = {
   dustCount: 0,
 };
 
-// `state` is forwarded through — most layers ignore it, but
-// `galaxyPointSpritesPass` reads `state.subsystems.fades.opacityOf` for
-// per-source fade opacity. A minimal fades stub returning full opacity
-// lets the layer run without a live FadeRegistry.
+// `state` is forwarded through — most passes ignore it, but a fades stub
+// returning full opacity lets the ones that ask run without a live
+// FadeRegistry.
 const STATE_STUB = {
   subsystems: {
     fades: {
@@ -138,21 +132,18 @@ const STATE_STUB = {
   // baseline stub has to carry it or `draw` throws before reaching the
   // renderer. Tests that need the toggle off override `settings` wholesale.
   settings: { milkyWay: { enabled: true } },
-  // galaxyPointSpritesPass / disk layers bind the shared focus group off
-  // state.gpu.focusUniform; an opaque bind group is all they read.
-  // The nullable GPU renderer fields default to null (pre-bootstrap
-  // shape); individual draw tests override the one they exercise.
+  // Passes bind the shared focus group off state.gpu.focusUniform; an opaque
+  // bind group is all they read. The nullable GPU renderer fields default to
+  // null (pre-bootstrap shape); individual draw tests override the one they
+  // exercise.
   gpu: {
     focusUniform: { bindGroup: {} as GPUBindGroup, write: () => {}, destroy: () => {} },
     // milkyWayPass.draw reads the generated cloud buffers off this handle.
     milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
-    galaxyPointRenderer: null,
     milkyWayCloudRenderer: null,
     horizonShellRenderer: null,
     filamentRenderer: null,
     flowFieldRenderer: null,
-    texturedDiskRenderer: null,
-    proceduralDiskRenderer: null,
     volumeFieldRenderer: null,
   },
 } as unknown as EngineState;
@@ -362,145 +353,6 @@ describe('horizonShellPass.draw', () => {
   });
 });
 
-// Minimal settings shape for the galaxyPointSpritesPass.draw tests — only
-// the fields the layer now reads from `state.settings`.
-const POINT_SPRITES_SETTINGS_STUB = {
-  galaxyCatalogs: {
-    sizePx: 2.5,
-    brightness: 1.0,
-    provenance: DEFAULT_GALAXY_PROVENANCE,
-    depthFade: true,
-  },
-  bias: {
-    mode: BiasMode.None,
-    absMagLimit: -19,
-  },
-} as unknown as EngineState['settings'];
-
-// galaxyPointSpritesPass now reads its renderer off `state.gpu` (D8), not
-// `ctx` — this builds a state whose `gpu.galaxyPointRenderer` is a fresh
-// draw spy, alongside the other galaxyPointSpritesPass.draw() reads.
-function makeStateWithRenderer(overrides: Partial<EngineState> = {}): {
-  state: EngineState;
-  drawSpy: ReturnType<typeof vi.fn>;
-} {
-  const drawSpy = vi.fn();
-  const state = {
-    ...STATE_STUB,
-    selection: { select: null, hover: null, focus: null },
-    settings: POINT_SPRITES_SETTINGS_STUB,
-    ...overrides,
-    gpu: { ...STATE_STUB.gpu, galaxyPointRenderer: { draw: drawSpy }, ...overrides.gpu },
-  } as unknown as EngineState;
-  return { state, drawSpy };
-}
-
-describe('galaxyPointSpritesPass.enabled', () => {
-  it('is disabled while the point renderer is absent, enabled once it lands', () => {
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    const absent = { ...STATE_STUB, gpu: { ...STATE_STUB.gpu, galaxyPointRenderer: null } };
-    expect(galaxyPointSpritesPass.enabled(absent as unknown as EngineState, ctx, view)).toBe(false);
-
-    const { state } = makeStateWithRenderer();
-    expect(galaxyPointSpritesPass.enabled(state, ctx, view)).toBe(true);
-  });
-});
-
-describe('galaxyPointSpritesPass.draw', () => {
-  it('packs (source, index) into the selectedPacked u32', () => {
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    // Selection is sourced from state.selection.select, not makeSettings.
-    const { state, drawSpy } = makeStateWithRenderer({
-      selection: {
-        select: { type: 'galaxyCatalog', source: Source.SDSS, index: 42 } as SelectionRef,
-        hover: null,
-        focus: null,
-      } as unknown as EngineState['selection'],
-    });
-    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, state);
-    expect(drawSpy).toHaveBeenCalledTimes(1);
-    // Selection lives on arg[3].selectedPacked (the GalaxyPointDrawSettings
-    // record).
-    const expected = packSelection(Source.SDSS, 42);
-    const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    expect(drawSettings.selectedPacked).toBe(expected);
-  });
-
-  it('translates null selection to the 0xFFFFFFFF sentinel', () => {
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    const { state, drawSpy } = makeStateWithRenderer();
-    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, state);
-    const drawSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    expect(drawSettings.selectedPacked).toBe(0xffffffff >>> 0);
-  });
-
-  it('multiplies the deep-zoom survey fade into fadeOpacityOf', () => {
-    // The whole point cloud recedes on descent into the solar system: the
-    // per-source registry opacity (stubbed to 1) is multiplied by the
-    // surveyDeepZoom band, keyed on the camera's distance from the
-    // heliocentric origin. The default fixture camera sits 5 Mpc out — far
-    // outside the band — so the callback must return the registry value
-    // unchanged; a camera mid-band must scale it to a strict fraction.
-    const far = makeStateWithRenderer();
-    const farCtx = makeCtx();
-    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(farCtx, COSMO), farCtx, far.state);
-    const farSettings = far.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    const farFadeOf = farSettings.fadeOpacityOf as (source: number) => number;
-    expect(farFadeOf(Source.SDSS)).toBe(1);
-
-    // Mid-band: 0.005 Mpc from origin sits strictly between the band's goneAt
-    // (0.002) and fullAt (FOREGROUND_MAX_DISTANCE_MPC ≈ 0.0103), so the fade
-    // factor must be a strict fraction — proving the multiply, not just the
-    // fully-faded skip below.
-    const mid = makeStateWithRenderer();
-    const midCtx = makeCtx({
-      drawCamPos: [0, 0, 0.005] as Readonly<[number, number, number]>,
-    });
-    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(midCtx, COSMO), midCtx, mid.state);
-    const midSettings = mid.drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    const midFadeOf = midSettings.fadeOpacityOf as (source: number) => number;
-    const midFade = midFadeOf(Source.SDSS);
-    expect(midFade).toBeGreaterThan(0);
-    expect(midFade).toBeLessThan(1);
-  });
-
-  it('exempts the famous catalog from the survey fade at deep zoom', () => {
-    // Inside the band's goneAt edge the survey sources resolve to 0 (the
-    // renderer's per-source loop then skips them), but the famous catalog
-    // keeps its raw registry opacity — its curated galaxies stay visible
-    // inside the Milky Way and near Earth as reference points. The layer
-    // still calls renderer.draw: famous may be loaded.
-    const { state, drawSpy } = makeStateWithRenderer();
-    const deepCtx = makeCtx({
-      drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
-    });
-    galaxyPointSpritesPass.draw(PASS_STUB, slabViewOf(deepCtx, COSMO), deepCtx, state);
-    const deepSettings = drawSpy.mock.calls[0]![3] as Record<string, unknown>;
-    const deepFadeOf = deepSettings.fadeOpacityOf as (source: number) => number;
-    expect(deepFadeOf(Source.SDSS)).toBe(0);
-    // Registry stub returns 1 — famous must pass it through untouched.
-    expect(deepFadeOf(Source.FamousGalaxy)).toBe(1);
-  });
-
-  it('threads view.vp / view.viewportPx / view.camPos to renderer.draw', () => {
-    // The SlabView-threading check for the point-sprites layer specifically:
-    // it must forward the resolved SlabView, not ctx.vp/ctx.canvasSize.
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    const { state, drawSpy } = makeStateWithRenderer();
-    galaxyPointSpritesPass.draw(PASS_STUB, view, ctx, state);
-    const call = drawSpy.mock.calls[0]!;
-    expect(call[0]).toBe(PASS_STUB);
-    expect(call[1]).toBe(view.vp);
-    expect(call[2]).toEqual(view.viewportPx);
-    const drawSettings = call[3] as Record<string, unknown>;
-    expect(drawSettings.camPosWorld).toEqual(view.camPos);
-  });
-});
-
 describe('structureMarkersPass.enabled', () => {
   it('disables once the surveyDeepZoom fade completes (opacity-zero principle)', () => {
     // Every marker fragment resolves to alpha 0 past the goneAt edge, so the
@@ -517,79 +369,5 @@ describe('structureMarkersPass.enabled', () => {
     // Inside goneAt (0.002 Mpc) → disabled despite queued markers.
     const nearCtx = makeCtx({ drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]> });
     expect(structureMarkersPass.enabled(state, nearCtx, slabViewOf(nearCtx, COSMO))).toBe(false);
-  });
-});
-
-describe('galaxyPointSpritesPass.drawPick', () => {
-  it('filters loadedSources by ctx.visibleSourceMask before drawPoints', () => {
-    // The pick ctx's `visibleSourceMask` IS the pick mask, so a catalog whose
-    // bit is clear (toggled off / fading out) is dropped before the picker
-    // draws it.
-    const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
-    // renderer.loadedSources yields SDSS + 2MRS + GLADE; only SDSS + GLADE
-    // bits are set in the mask.
-    const loaded = [Source.SDSS, Source.TwoMRS, Source.Glade].map((source) => ({
-      source,
-      vertexBuffer: {} as GPUBuffer,
-      count: 1,
-      sourceBuffer: {} as GPUBuffer,
-    }));
-    const ctx = makeCtx({
-      visibleSourceMask: (1 << Source.SDSS) | (1 << Source.Glade),
-    });
-    const view = slabViewOf(ctx, COSMO);
-    const state = {
-      ...STATE_STUB,
-      selection: { select: null, hover: null, focus: null },
-      settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: {
-        ...STATE_STUB.gpu,
-        galaxyPointRenderer: { draw: vi.fn(), loadedSources: () => loaded },
-        galaxyPickRenderer: { drawPoints: drawPointsSpy },
-      },
-    } as unknown as EngineState;
-
-    galaxyPointSpritesPass.drawPick!(PASS_STUB, view, ctx, state);
-
-    expect(drawPointsSpy).toHaveBeenCalledTimes(1);
-    // arg[1] is the filtered `sources` list handed to drawPoints.
-    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
-    expect(passedSources.map((s) => s.source)).toEqual([Source.SDSS, Source.Glade]);
-  });
-
-  it('drops band-faded survey sources from the pick, famous exempt, but still calls drawPoints', () => {
-    // Invisible → unpickable: inside the surveyDeepZoom goneAt edge a survey
-    // source's band-multiplied opacity is exactly 0, so it must stop claiming
-    // hits. Famous rides its exemption (still pickable). drawPoints is called
-    // regardless — its @group(0) pick-camera bind is the prefix contract the
-    // ring / disk / Milky-Way pick pipelines depend on.
-    const drawPointsSpy = vi.fn<(...args: unknown[]) => void>();
-    const loaded = [Source.SDSS, Source.FamousGalaxy].map((source) => ({
-      source,
-      vertexBuffer: {} as GPUBuffer,
-      count: 1,
-      sourceBuffer: {} as GPUBuffer,
-    }));
-    const ctx = makeCtx({
-      visibleSourceMask: 0xffffffff,
-      drawCamPos: [0, 0, 0.001] as Readonly<[number, number, number]>,
-    });
-    const view = slabViewOf(ctx, COSMO);
-    const state = {
-      ...STATE_STUB,
-      selection: { select: null, hover: null, focus: null },
-      settings: POINT_SPRITES_SETTINGS_STUB,
-      gpu: {
-        ...STATE_STUB.gpu,
-        galaxyPointRenderer: { draw: vi.fn(), loadedSources: () => loaded },
-        galaxyPickRenderer: { drawPoints: drawPointsSpy },
-      },
-    } as unknown as EngineState;
-
-    galaxyPointSpritesPass.drawPick!(PASS_STUB, view, ctx, state);
-
-    expect(drawPointsSpy).toHaveBeenCalledTimes(1);
-    const passedSources = drawPointsSpy.mock.calls[0]![1] as ReadonlyArray<{ source: number }>;
-    expect(passedSources.map((s) => s.source)).toEqual([Source.FamousGalaxy]);
   });
 });

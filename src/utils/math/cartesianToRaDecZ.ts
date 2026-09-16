@@ -3,8 +3,8 @@
  *
  * This is the exact inverse of raDecZToCartesian, using the same equatorial
  * right-handed convention. It is useful for:
- *   - Displaying sky coordinates on hover for synthetic data (which only stores
- *     xyz positions in the GPU buffer).
+ *   - Displaying sky coordinates on hover from a GPU buffer that only stores
+ *     xyz positions.
  *   - Sanity-checking the forward conversion via round-trip tests.
  *
  * Inversion steps:

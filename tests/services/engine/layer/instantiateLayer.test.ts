@@ -9,7 +9,7 @@ describe('instantiateLayer', () => {
   it('binds frame and selection to the runtime create returned', () => {
     const runtime = { tag: 'stub-runtime' };
     const frameSpy = vi.fn(() => true);
-    const layer: Layer<'stub', typeof runtime> = {
+    const layer: Layer<'stub', typeof runtime, readonly [], readonly [], undefined> = {
       name: 'stub',
       create: () => runtime,
       destroy: vi.fn(),

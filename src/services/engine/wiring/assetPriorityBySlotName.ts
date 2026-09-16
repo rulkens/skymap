@@ -1,5 +1,5 @@
 /**
- * assetPriorityBySlotName — project `ASSET_WIRING`'s authored fetch ranks onto
+ * assetPriorityBySlotName — project the composed rows' authored fetch ranks onto
  * the slot NAMES the debug panel renders rows for.
  *
  * The panel's registry (`EngineHandle.assetSlots`) is keyed by `slot.name`
@@ -23,14 +23,13 @@
  * absent from the map, which the panel renders as "unranked".
  */
 
-import { ASSET_WIRING } from './assetWiring';
 import { slotFor } from './slotFor';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 export function assetPriorityBySlotName(state: EngineState): ReadonlyMap<string, number> {
   const out = new Map<string, number>();
-  for (const row of ASSET_WIRING) {
+  for (const row of state.assetRows) {
     const slot = slotFor(state, row.key);
     if (slot) out.set(slot.name, row.priority);
   }

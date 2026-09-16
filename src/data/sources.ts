@@ -55,9 +55,8 @@ export { Source } from './source';
  *
  * - **`label`** follows galaxy-catalog-team capitalisation (`'2MRS'` no space,
  *   `'GLADE'` uppercase). Match these in any new UI strings.
- * - **`binBaseName`** is `null` only for runtime-generated sources
- *   (currently just Synthetic). Tier-aware filenames are assembled in
- *   `tierFilenameForSource`.
+ * - **`binBaseName`** is the on-disk filename stem; tier-aware filenames
+ *   are assembled in `tierFilenameForSource`.
  * - **`maxDistMpc`** is a *display* limit (camera framing), not a strict
  *   cut. Conversion uses `H₀ ≈ 70 km/s/Mpc`; outliers may sit beyond.
  * - **`bandLabels`** records the actual band each `magU/G/R/I/Z` slot

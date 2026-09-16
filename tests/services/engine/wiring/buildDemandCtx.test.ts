@@ -70,6 +70,8 @@ function makeState(
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
+    // `slotFor` consults the Layer-owned slots first; none here.
+    layerSlots: new Map(),
   } as unknown as EngineState;
 }
 

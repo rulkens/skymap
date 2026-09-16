@@ -2,9 +2,8 @@
  * watchRequestFocusSaga — the deep-link / palette FLY command handler.
  * requestFocus carries a durable focus id; this resolves it to a ref via the
  * shared resolveFocusRefDeferring loop, which DEFERS while the id is unresolvable
- * on BOTH catalog-commit pulses — catalogLoaded (the galaxy cloud) AND
- * engineSourceCountReported (every source's count pulse, incl. the Gaia star bin,
- * which never fires catalogLoaded), so a star deep link resolves too. Once
+ * on the catalog-landed pulse — engineSourceCountReported, which every source
+ * reports on commit, the Gaia star bin included, so a star deep link resolves too. Once
  * resolved it dispatches updateSelectionFocus(ref); the watchSelectionRowsSaga
  * reconciler then fills the row off that write. takeLatest aborts a stale
  * deferral if a newer requestFocus arrives. Its sibling watchRequestSelectSaga

@@ -34,6 +34,5 @@ export const GLADE_ENTRY = {
   // Per-source SB boost — 1.0 = no boost.
   sbBoost: 1.0,
   falloffHalfMpc: 1000,
-  category: 'survey',
   priority: 62,
 } as const satisfies GalaxyCatalogSourceEntry;

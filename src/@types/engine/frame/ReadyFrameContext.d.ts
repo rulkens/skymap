@@ -84,6 +84,13 @@ export type ReadyFrameContext = {
   viewSlot: number;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
+  /**
+   * True when any Layer's `frame` hook voted to keep ticking this frame —
+   * "this Layer's content is still settling". `runFrame` stamps it right after
+   * the hooks run; the sky-capture scheduler reads it so core can ask that
+   * question without reaching into a Layer's own subsystems.
+   */
+  layersAnimating: boolean;
   /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
   visibleSourceMask: number;
   /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */

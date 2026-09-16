@@ -20,7 +20,7 @@ import { resolveLayerOpacity } from '../../../src/services/engine/presentation/f
 import { cosmicFlows } from '../../../src/data/animation/clips/cosmicFlows';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
-import { galaxyPointSpritesPass } from '../../../src/services/engine/frame/passes/galaxyPointSpritesPass';
+import { galaxyPointSpritesPass } from '../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { deriveMilkyWayCloudAlpha } from '../../../src/services/engine/frame/milkyWayCloudLiveness';
 import { Source } from '../../../src/data/sources';
 
@@ -31,6 +31,7 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
+import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 
 // `clipOpacityOf` answers `factor` for every call. Typed rather than bare
 // `vi.fn()`, which fails tsc.
@@ -75,6 +76,7 @@ function makeEngineState(settings: EngineSettingsState): EngineState {
     },
     gpu: { flowFieldRenderer: { fieldLoaded: () => false } },
     assetSlots: {},
+    fadeRows: FADE_LAYERS,
   } as unknown as EngineState;
 }
 
@@ -253,7 +255,10 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
         bias: {},
       },
       selection: { select: null, hover: null, focus: null },
-      gpu: { focusUniform: { bindGroup: {} }, galaxyPointRenderer: null },
+      gpu: { focusUniform: { bindGroup: {} } },
+      // The fade bridge walks the COMPOSED rows; this stub draws nothing from a
+      // Layer, so core's own manifest is the whole set.
+      fadeRows: FADE_LAYERS,
     } as unknown as EngineState;
   }
 
@@ -261,24 +266,16 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   // shader multiplies into every point's alpha.
   function drawnSurveyOpacity(state: EngineState, nowMs: number): number {
     const drawSpy = vi.fn<(...args: unknown[]) => void>();
-    // galaxyPointSpritesPass reads its renderer off `state.gpu` (D13), so the
-    // spy rides a state copy rather than the ctx `makeDrawCtx` builds.
-    const stateWithRenderer = {
-      ...state,
-      gpu: { ...state.gpu, galaxyPointRenderer: { draw: drawSpy } },
-    } as unknown as EngineState;
+    // The pass closes over its Layer's runtime, so the spy rides a stub runtime
+    // rather than `state.gpu`.
+    const runtime = { pointRenderer: { draw: drawSpy } } as never;
     const ctx = makeDrawCtx(nowMs, SURVEY_CAM_POS);
     const view = {
       vp: new Float32Array(16),
       viewportPx: [CANVAS.width, CANVAS.height],
       camPos: SURVEY_CAM_POS,
     } as unknown as SlabView;
-    galaxyPointSpritesPass.draw(
-      {} as unknown as GPURenderPassEncoder,
-      view,
-      ctx,
-      stateWithRenderer,
-    );
+    galaxyPointSpritesPass(runtime).draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
     const settings = drawSpy.mock.calls[0]![3] as { fadeOpacityOf: (source: number) => number };
     return settings.fadeOpacityOf(Source.SDSS);
   }

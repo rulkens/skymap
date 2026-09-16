@@ -47,6 +47,7 @@ const TS_FILES: readonly string[] = [
   ...walkFiles('src/store', ['.ts', '.tsx']),
   ...walkFiles('src/hooks', ['.ts', '.tsx']),
   ...walkFiles('src/components', ['.ts', '.tsx']),
+  ...walkFiles('src/layers', ['.ts', '.tsx']),
 ];
 
 // A typo'd dir/extension sweeps zero files and the whole test passes vacuously
@@ -59,6 +60,7 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
   'src/services/engine/camera/cameraDrivers.ts',
   'src/services/engine/camera/replayInput.ts',
   'src/services/engine/camera/stepCameraRuntime.ts',
+  'src/layers/galaxyCatalog/frame.ts',
 ];
 
 const ALLOW_LIST: ReadonlyMap<string, string> = new Map([

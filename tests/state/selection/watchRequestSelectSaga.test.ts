@@ -5,12 +5,12 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchRequestSelectSaga } from '../../../src/state/selection/watchRequestSelectSaga';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
-import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
+import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -41,17 +41,20 @@ describe('watchRequestSelectSaga', () => {
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
-    const deps: ResolveDeps = {
-      catalogs: {
-        get: (src) =>
-          cloudPresent && src === Source.SDSS ? makeCloud(1237668393006604288n) : undefined,
-        famousMeta: [],
+    // The galaxyCatalog Layer's slice of the composed resolver, read LIVE so
+    // the deferral cases can land the cloud mid-test.
+    const galaxies = {
+      get catalogs() {
+        return cloudPresent ? new Map([[Source.SDSS, makeCloud(1237668393006604288n)]]) : new Map();
       },
+      famousMeta: [],
+    } as unknown as GalaxyRowFixture;
+    const deps: ResolveDeps = {
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
     mw.run(watchRequestSelectSaga);
-    mw.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps) });
+    mw.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps, galaxies) });
     return s;
   }
   beforeEach(() => {
@@ -68,14 +71,14 @@ describe('watchRequestSelectSaga', () => {
     });
   });
 
-  it('defers an unresolvable galaxy id, then resolves on catalogLoaded', async () => {
+  it('defers an unresolvable galaxy id, then resolves on the catalog-landed count pulse', async () => {
     cloudPresent = false;
     store.dispatch(requestSelect('sdss-1237668393006604288'));
     await flush();
     expect(store.getState()[selectionRoute].select).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(catalogLoaded({ source: Source.SDSS }));
+    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
     await flush();
     expect(store.getState()[selectionRoute].select).toEqual({
       type: 'galaxyCatalog',
@@ -84,9 +87,9 @@ describe('watchRequestSelectSaga', () => {
     });
   });
 
-  // The star bin commits via engineSourceCountReported and never fires
-  // catalogLoaded; the shared deferral loop wakes on BOTH pulses, so a deep link
-  // resolves on a count report too.
+  // Every catalog commits through engineSourceCountReported, star bin and
+  // galaxy cloud alike, so the shared deferral loop resolves a deep link on a
+  // count report.
   it('defers an unresolvable galaxy id, then resolves on engineSourceCountReported', async () => {
     cloudPresent = false;
     store.dispatch(requestSelect('sdss-1237668393006604288'));

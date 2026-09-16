@@ -1,6 +1,6 @@
 /**
  * reconcileSagaHarness — shared test harness for the reconcile watcher sagas
- * (watchWakeSaga, watchFadesSaga, watchBiasBakeSaga, watchSwapFormatSaga).
+ * (watchWakeSaga, watchFadesSaga, watchSwapFormatSaga).
  *
  * Each saga lives in its own file with its own spec, but they all consume the
  * same ReconcileEffects surface and some writes fan out across more than one
@@ -22,9 +22,7 @@ import { all } from 'typed-redux-saga';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchWakeSaga } from '../../../src/store/effects/watchWakeSaga';
 import { watchFadesSaga } from '../../../src/store/effects/watchFadesSaga';
-import { watchBiasBakeSaga } from '../../../src/store/effects/watchBiasBakeSaga';
 import { watchSwapFormatSaga } from '../../../src/store/effects/watchSwapFormatSaga';
-import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
 import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffects';
 
 // A real reconcile spy object matching the ReconcileEffects surface. Typed
@@ -32,7 +30,6 @@ import type { ReconcileEffects } from '../../../src/store/effects/ReconcileEffec
 export type ReconcileSpies = {
   requestRender: ReturnType<typeof vi.fn<() => void>>;
   syncFades: ReturnType<typeof vi.fn<() => void>>;
-  bakeBias: ReturnType<typeof vi.fn<(mode: BiasMode) => void>>;
   applySwapFormat: ReturnType<typeof vi.fn<(desired: GPUTextureFormat) => void>>;
 };
 
@@ -46,7 +43,6 @@ export function buildStore() {
   const reconcile: ReconcileEffects = {
     requestRender: vi.fn<() => void>(),
     syncFades: vi.fn<() => void>(),
-    bakeBias: vi.fn<(mode: BiasMode) => void>(),
     logCameraState: vi.fn<() => void>(),
     applySwapFormat: vi.fn<(desired: GPUTextureFormat) => void>(),
   };
@@ -58,7 +54,7 @@ export function buildStore() {
   // Run every watcher under a shared root so they share the context above
   // and cross-saga fan-out stays faithful to production.
   sagaMiddleware.run(function* () {
-    yield* all([watchWakeSaga(), watchFadesSaga(), watchBiasBakeSaga(), watchSwapFormatSaga()]);
+    yield* all([watchWakeSaga(), watchFadesSaga(), watchSwapFormatSaga()]);
   });
 
   return { store, reconcile: reconcile as unknown as ReconcileSpies };

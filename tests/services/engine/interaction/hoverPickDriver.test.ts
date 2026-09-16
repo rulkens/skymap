@@ -88,7 +88,6 @@ function makeFakePicker(): {
 // An empty composed resolver — every pick decodes to null (no rows), which is
 // all these scheduling tests need: (e) only checks the null-decode dispatch.
 const emptyResolver = selectionResolverOver({
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 });

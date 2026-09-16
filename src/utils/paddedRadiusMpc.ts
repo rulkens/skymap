@@ -7,7 +7,7 @@
  *
  * The points bake, proceduralDiskSubsystem, and texturedDiskSubsystem
  * all need the same algebra — one constant 4× padding factor + one
- * 30-kpc synthetic-fallback floor. Computed inline at three sites, a
+ * 30-kpc missing-diameter floor. Computed inline at three sites, a
  * change to either (e.g. tightening the padding) must be replicated in
  * lockstep; a missed edit creates a visible size mismatch at the
  * load-fade crossfade boundary.
@@ -29,13 +29,13 @@
  * visible rather than hidden inside the helper.
  */
 
-/** Synthetic-fallback floor (kpc) for galaxies with missing or zero diameter. */
-const SYNTHETIC_FALLBACK_DIAMETER_KPC = 30;
+/** Floor (kpc) for galaxies whose catalog diameter is missing or zero. */
+const FALLBACK_DIAMETER_KPC = 30;
 
 /** Padding multiplier; matches the textured-thumbnail's world footprint. */
 const THUMBNAIL_FOOTPRINT_PADDING = 4;
 
 export function paddedRadiusMpc(diameterKpc: number): number {
-  const safeDKpc = diameterKpc > 0 ? diameterKpc : SYNTHETIC_FALLBACK_DIAMETER_KPC;
+  const safeDKpc = diameterKpc > 0 ? diameterKpc : FALLBACK_DIAMETER_KPC;
   return ((safeDKpc / 2) * THUMBNAIL_FOOTPRINT_PADDING) / 1000;
 }

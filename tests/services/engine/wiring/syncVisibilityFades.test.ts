@@ -22,6 +22,14 @@ import {
   syncVisibilityFades,
   syncVisibilityFadeItem,
 } from '../../../../src/services/engine/wiring/syncVisibilityFades';
+import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
+import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+
+/** Every catalog committed, so the `survey` row's demand-loaded guard passes. */
+const GALAXY_RUNTIME = {
+  pointRenderer: { hasCatalog: () => true },
+} as unknown as GalaxyCatalogRuntime;
 import { GALAXY_CATALOG_IDS } from '../../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../../src/data/bodies/bodyIds';
@@ -34,7 +42,10 @@ import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 // gone, no row closure reads it). We only populate `settings` +
 // `subsystems.fades`; the test rows never read `assetSlots`, so those stay
 // absent and the cast bridges the gap the same way production does.
-type ApplyIntentState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
+type ApplyIntentState = Pick<
+  EngineState,
+  'settings' | 'subsystems' | 'assetSlots' | 'gpu' | 'fadeRows'
+>;
 
 function makeState(): {
   state: ApplyIntentState;
@@ -52,6 +63,7 @@ function makeState(): {
   const state = {
     settings: {} as EngineSettingsState,
     subsystems: { fades: { fadeTo, setImmediate, targetOf } },
+    fadeRows: FADE_LAYERS,
   } as unknown as ApplyIntentState;
   return { state, fadeTo, setImmediate, targetOf };
 }
@@ -197,7 +209,7 @@ describe('applyIntent', () => {
 // we assert the spy calls directly.
 
 // The state slice the bridge feeds the rows — same Pick applyIntent uses.
-type BridgeState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu'>;
+type BridgeState = Pick<EngineState, 'settings' | 'subsystems' | 'assetSlots' | 'gpu' | 'fadeRows'>;
 
 /**
  * Build a state whose settings cover every intent row's leaf, a stubbed fades
@@ -264,6 +276,10 @@ function makeBridgeState(): {
       fades: { fadeTo, setImmediate, targetOf },
       scheduler: { requestRender },
     },
+    // The bridge walks the COMPOSED rows — core's manifest plus the
+    // galaxyCatalog Layer's, which is what `createLayers` writes and what the
+    // `survey` / `surveyLabel` assertions below exercise.
+    fadeRows: [...FADE_LAYERS, ...galaxyCatalogFadeRows(GALAXY_RUNTIME)],
   } as unknown as BridgeState;
 
   return { state, fadeTo, setImmediate, targetOf, requestRender, settings };

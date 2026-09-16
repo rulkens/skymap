@@ -77,13 +77,12 @@ export function fluxSupplementMagLimitFor(source: SourceType): number | undefine
  * tier (see `shipsTierVariants`); a variant-shipping source needs one, and throwing
  * keeps a request that has lost its tier loud instead of building `…-undefined.bin`.
  *
- * Throws on `Source.Synthetic` because synthetic data is generated at runtime
- * and has no filename. Throwing rather than returning a sentinel string keeps
- * a buggy caller loud instead of silently 404-ing.
+ * A non-galaxy-catalog source throws rather than returning a sentinel string,
+ * so a buggy caller stays loud instead of silently 404-ing.
  */
 export function tierFilenameForSource(source: SourceType, tier?: Tier): string {
   const entry = SOURCE_REGISTRY[source];
-  if (entry.type !== 'galaxyCatalog' || entry.binBaseName === null) {
+  if (entry.type !== 'galaxyCatalog') {
     throw new Error(`tierFilenameForSource: no base filename for source ${source}`);
   }
   if (!shipsTierVariants(entry.tierTargets)) {

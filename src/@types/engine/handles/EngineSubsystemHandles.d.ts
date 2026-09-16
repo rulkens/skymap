@@ -9,8 +9,8 @@
  *
  *   - Eager (no GPU dep): `scheduler`, `fades`, `assetQueue` — constructed up-front
  *     so their callbacks can be captured before the GPU IIFE finishes.
- *   - Lazy (inside the GPU init IIFE): `galaxyAtlas`, `proceduralDisks`,
- *     `texturedDisks`, `clickResolver`, `inputBindings`.
+ *   - Lazy (inside the GPU init IIFE): `earthTiles`, `clickResolver`,
+ *     `inputBindings`.
  *
  * The mixed nullability matches `EngineGpuHandles.d.ts` so consumer
  * null-checks stay honest and `destroy()` can null fields back out
@@ -18,14 +18,7 @@
  * helpers accept just the slice they touch rather than the whole state.
  */
 
-import type { TileStreamSubsystem } from '../subsystems/TileStreamSubsystem';
 import type { SurfaceTileSubsystem } from '../subsystems/SurfaceTileSubsystem';
-import type { ProceduralDiskSubsystem } from '../subsystems/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../subsystems/TexturedDiskSubsystem';
-import type { DiskPlannerWalk } from '../subsystems/DiskPlannerWalk';
-import type { HiResFamousSubsystem } from '../subsystems/HiResFamousSubsystem';
-import type { HiResFamousTexture } from '../../rendering/HiResFamousTexture';
-import type { BiasCorrectionSubsystem } from '../subsystems/BiasCorrectionSubsystem';
 import type { Label2DDirector } from '../subsystems/Label2DDirector';
 import type { StructureFocusSubsystem } from '../subsystems/StructureFocusSubsystem';
 import type { ClipPlayer } from '../subsystems/ClipPlayer';
@@ -40,36 +33,6 @@ import type { Destroyable } from '../../rendering/Destroyable';
 import type { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
 
 export type EngineSubsystemHandles = {
-  galaxyAtlas: TileStreamSubsystem<ImageBitmap> | null;
-  proceduralDisks: ProceduralDiskSubsystem | null;
-  texturedDisks: TexturedDiskSubsystem | null;
-  /**
-   * The single per-frame catalog walk shared by the two disk planners
-   * above. `runFrame` drives the procedural body then the textured body
-   * over one shared stride cursor, so each surviving row's geometry is
-   * computed once. Wired in `wireImpostorSubsystems` alongside the two
-   * planners; null until then. Holds no GPU resource — just the cursor
-   * map — so teardown order relative to the atlas is irrelevant.
-   */
-  diskPlannerWalk: DiskPlannerWalk | null;
-  /**
-   * LOD-3 hi-res Famous-galaxy planner. Wired in `wireSlots` alongside
-   * `texturedDisks`, which reads `lastOutput.byFamousIdx` to fold
-   * `hiResLayerIdx` + `hiResCrossfadeAlpha` into the disk instance
-   * buffer. Null until `wireSlots` runs. Destroyed + rebuilt on tier
-   * change so the underlying `texture_2d_array` always matches the
-   * active tier's `layerSide`.
-   */
-  hiResFamous: HiResFamousSubsystem | null;
-  /**
-   * GPU resource handle for the hi-res Famous-galaxy `texture_2d_array`.
-   * Owned at the engine level (not nested inside `hiResFamous`) so
-   * tier-change teardown destroys the GPUTexture symmetrically with the
-   * other per-tier resources, and so the renderer's `bindHiResArray(...)`
-   * has a single obvious source for the new view. Null until `wireSlots`
-   * runs.
-   */
-  hiResFamousTexture: HiResFamousTexture | null;
   /**
    * Earth's surface virtual texture — tile atlas, page table and residency
    * bookkeeping. Constructed in `wireSlots`; allocates no GPU memory until
@@ -110,14 +73,6 @@ export type EngineSubsystemHandles = {
    * IIFE finishes.
    */
   assetQueue: PriorityQueue<void>;
-  /**
-   * Malmquist-bias correction subsystem. Owns the bias-mode flags,
-   * cached per-source ratios/weights, and the async bake state machine.
-   * Constructed eagerly (no GPU dep); the renderer is wired in during
-   * `phases/initGpu.ts` via `attachRenderer(...)`. The reconcile saga
-   * drives bake state via the bias.mode reconcile row.
-   */
-  biasCorrection: BiasCorrectionSubsystem;
   /**
    * Label director — owns `labelRenderer.setLabels` /
    * `markerLineRenderer.setLines`, polls every registered `Label2DProducer`

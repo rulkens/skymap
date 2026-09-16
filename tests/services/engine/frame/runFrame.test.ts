@@ -8,12 +8,10 @@
  * (which runs before `deriveFrameContext`) and the once-per-frame
  * `reevaluateDemand` call.
  *
- * Testing only these slices keeps the test cheap: we don't need a GPU device
- * or any of the rendering subsystems.  The frame body is structured so every
- * "do something" GPU path is gated on a state field (`state.gpu.galaxyPointRenderer`,
- * …) — leaving them all null short-circuits the body before any of the GPU
- * work runs.  See the early-return at `if (!vp || !rendererRef || …) return`
- * inside runFrame for the bail-out that makes this possible.
+ * Testing only these slices keeps the test cheap: no GPU device, no rendering
+ * subsystems. Every "do something" GPU path sits behind `isEngineReady`, so a
+ * fixture with `booted: false` / null `gpu.renderTargets` short-circuits the
+ * body before any of the GPU work runs.
  *
  * ### Camera-driver regression (new architecture)
  *
@@ -809,9 +807,9 @@ describe('runFrame — hover-pick removed from frame body', () => {
     // This test pins that invariant — a re-added hover-pick block in the
     // frame body would be caught here.
     //
-    // The fixture leaves state.gpu.galaxyPointRenderer=null so the frame bails before
-    // the GPU-dispatch section — we only need to confirm pick is not called
-    // during the camera + demand pre-pass, before that bail.
+    // The fixture is not ready, so the frame bails before the GPU-dispatch
+    // section — we only need to confirm pick is not called during the camera +
+    // demand pre-pass, before that bail.
     const store = makeStore();
     const state = makeState();
     const pickSpy = vi.fn<() => Promise<null>>(() => Promise.resolve(null));
@@ -1176,7 +1174,16 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
   }
 
   function makeLayer(name: string, frame: NonNullable<LayerInstance['frame']>): LayerInstance {
-    return { name, selection: [], frame, destroy: () => {} };
+    return {
+      name,
+      passes: [],
+      assets: [],
+      fades: [],
+      labels: [],
+      selection: [],
+      frame,
+      destroy: () => {},
+    };
   }
 
   it("every Layer's frame hook runs once per ready frame, in tuple order, after the focus uniform", () => {

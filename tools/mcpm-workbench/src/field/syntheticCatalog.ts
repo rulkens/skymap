@@ -42,5 +42,5 @@ export function syntheticCatalog(): CatalogPoints {
     }
   }
 
-  return { positions, log10StellarMass, count, sources: [Source.Synthetic] };
+  return { positions, log10StellarMass, count, sources: [Source.SDSS] };
 }

@@ -6,14 +6,12 @@
  * (`gpuHandles/gpuHandleRegistry.ts`) — the totality check fails `tsc` until
  * both exist — unless it belongs in `GpuHandleKey`'s Exclude list
  * (`fadeBgl`, `sourceBgl`, `focusBgl`, `fontAtlases`, `envBrdfLut`, `uiCtx`,
- * `timingService`). `galaxyPickRenderer`/`pickProgram` are rows too, built
+ * `timingService`). `pickProgram` is a row too, built
  * from `wireInput.ts`. Flag `rebuildOnSwapFormat: true` if the new row
  * bakes the swap format, or it silently goes stale on the first HDR toggle.
  */
 
-import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 import type { RenderTargets } from '../../rendering/RenderTargets';
-import type { GalaxyPickRenderer } from '../../rendering/GalaxyPickRenderer';
 import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
 import type { FilamentRenderer } from '../../rendering/FilamentRenderer';
@@ -30,15 +28,12 @@ import type { AdditiveUpsample } from '../../rendering/AdditiveUpsample';
 import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
-import type { TexturedDiskRenderer } from '../../rendering/TexturedDiskRenderer';
-import type { ProceduralDiskRenderer } from '../../rendering/ProceduralDiskRenderer';
 import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
 import type { MilkyWayCloudRenderer } from '../../rendering/MilkyWayCloudRenderer';
 import type { HorizonShellRenderer } from '../../rendering/HorizonShellRenderer';
 import type { ZoneOfAvoidanceRenderer } from '../../rendering/ZoneOfAvoidanceRenderer';
 import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
-import type { DiskRadiusRing } from '../../rendering/DiskRadiusRing';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { EarthSurfaceTileRenderer } from '../../rendering/EarthSurfaceTileRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
@@ -65,15 +60,12 @@ import type { LoadedFontAtlases } from '../../rendering/LoadedFontAtlases';
 import type { GpuContext } from '../../rendering/GpuContext';
 
 export type EngineGpuHandles = {
-  galaxyPointRenderer: GalaxyPointRenderer | null;
-  galaxyPickRenderer: GalaxyPickRenderer | null;
   /**
    * The parallel per-slab pick program over the content-layer registry.
    * Owns the hover / click / debug-overlay pick path: it filters the registry
    * by `drawPick` presence + `enabled`, re-rasterises each pickable slab into
    * its own r32uint target, reads back the cursor texel, and folds the results
-   * near→far. Constructed in `wireInput` (alongside `galaxyPickRenderer`, from which
-   * it borrows the point-pick draw provider) once the registry + GPU handles
+   * near→far. Constructed in `wireInput` once the registry + GPU handles
    * exist; null until then. Destroyed in teardown alongside the other pick
    * providers — it owns per-slab pick + depth textures and staging buffers.
    */
@@ -284,26 +276,6 @@ export type EngineGpuHandles = {
    */
   structureMarkerRenderer: StructureMarkerRenderer | null;
   /**
-   * Atlas-bound 3D-oriented disk renderer for large galaxy thumbnails
-   * (close-approach view).  Null until `initGpu` constructs it from a
-   * `GpuContext` snapshot.  Stored here so `destroy()` can release the
-   * renderer's GPU buffers (uniform + per-instance + corner).
-   *
-   * Excluded from `isEngineReady` — it's set during `initGpu` (well
-   * before `wireSlots`/`wireInput`), and adding fields to that predicate
-   * is a lifecycle hazard: bootstrap progression isn't the inverse of
-   * teardown.  Read sites that run during bootstrap null-check this
-   * field individually.
-   */
-  texturedDiskRenderer: TexturedDiskRenderer | null;
-  /**
-   * Procedural-disk renderer that bridges the visibility band between
-   * point glow (~8 px) and textured disks (~24 px).  Same lifecycle,
-   * same reachability rationale, and same isEngineReady exclusion as
-   * `texturedDiskRenderer` above.
-   */
-  proceduralDiskRenderer: ProceduralDiskRenderer | null;
-  /**
    * GPU-generated Milky-Way star+dust point cloud — the buffer resource
    * (per-tier star/dust instance buffers + regenerate/destroy) that the
    * `milkyWayCloudRenderer` draws.  Null until `initGpu` generates the first
@@ -439,16 +411,6 @@ export type EngineGpuHandles = {
    * owners).
    */
   pickDebugOverlay: PickDebugOverlay | null;
-  /**
-   * Disk-radius debug ring — a world-space line-strip drawn in the disk
-   * plane around the selected galaxy at its catalog disk radius.  Null
-   * until `initGpu` constructs it.  Excluded from `isEngineReady`: a
-   * debug-only overlay, null-checked together with the
-   * `state.settings.debug.overlays['disk-radius-ring']` toggle.  Unlike
-   * `pickDebugOverlay` (which owns no GPU buffers), this pass owns two
-   * uniform buffers, so the `destroy()` chain must release it.
-   */
-  diskRadiusRing: DiskRadiusRing | null;
   /**
    * True-scale, Blue-Marble-textured Earth drawn into the `foreground:0`
    * render-target row (Plan 02 — zoom-to-Earth).  Same UV-sphere mesh as the

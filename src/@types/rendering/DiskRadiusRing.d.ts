@@ -31,24 +31,21 @@ export type DiskRadiusRing = {
    * The ring of `radiusWorld` (Mpc) is centred at `center` (world Mpc)
    * and lies in the disk plane defined by `paDeg` + `axisRatioForTilt`,
    * so it traces the textured quad's outline. `viewProj` is the
-   * column-major camera matrix for the current frame. Must be called
+   * column-major camera matrix for the current frame. `targetFormat` is the
+   * format of the attachment this pass draws into — the pipeline is re-keyed
+   * on a change, so an HDR swap needs no external rebuild (D9). Must be called
    * inside a `beginRenderPass` block on the swap-chain texture (the
    * premultiplied-OVER blend expects an LDR target).
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
+    targetFormat: GPUTextureFormat,
     args: { center: Vec3; radiusWorld: number; axisRatioForTilt: number; paDeg: number },
   ): void;
   /** Release the camera + ring uniform buffers. */
   destroy(): void;
 };
 
-/**
- * Build a `DiskRadiusRing`. `swapChainFormat` is the LDR target format the
- * UI overlay pass renders into (the premultiplied-OVER blend is set on it).
- */
-export function createDiskRadiusRing(
-  device: GPUDevice,
-  swapChainFormat: GPUTextureFormat,
-): DiskRadiusRing;
+/** Build a `DiskRadiusRing`; the pipeline is built lazily, keyed by the format each draw names. */
+export function createDiskRadiusRing(device: GPUDevice): DiskRadiusRing;

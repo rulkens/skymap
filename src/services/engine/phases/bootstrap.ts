@@ -13,7 +13,7 @@ import { wireSlots } from './wireSlots';
 import { wireInput } from './wireInput';
 import { startLoop } from './startLoop';
 
-// createLayers runs right after initGpu (D7): it needs the four LayerCoreDeps
+// createLayers runs right after initGpu (D8): it needs the four LayerCoreDeps
 // prerequisites initGpu just built, and nothing before wireSlots needs it.
 export async function runBootstrapPhases(state: EngineState, deps: BootstrapDeps): Promise<void> {
   await initGpu(state, deps);

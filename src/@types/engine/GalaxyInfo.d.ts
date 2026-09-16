@@ -159,8 +159,8 @@ export type GalaxyInfo = {
    * `Source.Milliquas` rows carry an AGN class (e.g. `"Quasar"`,
    * `"BL Lac"`, `"Seyfert-1 broad"`); `Source.DesiDeep` rows carry the
    * LSS tracer population (e.g. `"Luminous Red Galaxy (LRG)"`,
-   * `"Quasar (QSO)"`).  For SDSS / 2MRS / GLADE / Famous / Synthetic
-   * rows the field is `undefined` and InfoCard consumers are expected
+   * `"Quasar (QSO)"`).  For SDSS / 2MRS / GLADE / Famous rows the field
+   * is `undefined` and InfoCard consumers are expected
    * to hide the row entirely.
    *
    * The field is optional rather than `string | null` to match the
@@ -230,7 +230,7 @@ export type GalaxyInfo = {
   /**
    * External-catalogue links for this object, pre-labelled and ready to render
    * as the InfoCard's "Catalogues" row (each opens in a new tab).  Empty when
-   * the row has no resolvable catalogue page (e.g. Synthetic).
+   * the row has no resolvable catalogue page.
    *
    * The builder picks both the URL and its label per-source so the label can't
    * drift from the page it points at:
@@ -287,8 +287,8 @@ export type GalaxyInfo = {
    * Famous-galaxy enrichment block, present only when `source === Source.FamousGalaxy`.
    *
    * Populated by `buildGalaxyInfo` from the `famous_galaxies_meta.json` sidecar loaded
-   * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE / Synthetic
-   * rows — those never have curated metadata.
+   * at engine startup.  Absent (`undefined`) for SDSS / 2MRS / GLADE rows —
+   * those never have curated metadata.
    */
   famous?: {
     /** Stable machine-readable id, e.g. `"m31"`. Matches the WebP filename. */
@@ -325,7 +325,6 @@ export type GalaxyInfo = {
    *   - SDSS row, mismatch → 'SDSS exp+deV blend'
    *   - 2MRS row, mismatch → '2MASS XSC sup_phi'
    *   - GLADE row, mismatch → 'HyperLEDA PGC'
-   *   - Synthetic row → 'deterministic fallback' (synthetic skips real-data fetch)
    */
   orientation: {
     axisRatio: number;
@@ -340,7 +339,7 @@ export type GalaxyInfo = {
    * `/images/famous-thumb/<id>.webp`.  Galaxy catalog rows use a sky cutout sized to
    * the galaxy's angular extent: SDSS DR18 ImgCutout for SDSS-sourced rows,
    * and the all-sky DSS colour composite via `dssThumbnailUrl` for 2MRS /
-   * GLADE / Synthetic (SDSS only covers ~1/3 of the sky).
+   * GLADE (SDSS only covers ~1/3 of the sky).
    */
   thumbnailUrl: string;
 

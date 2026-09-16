@@ -3,9 +3,8 @@
  * 5-6): one world-arm resolution, the predicate skipped whole while a gesture
  * is in flight, and the normalized arm committed to `camera.base` on the flip.
  *
- * The fixture is minimal on purpose — `gpu.galaxyPointRenderer` stays null, so
- * `deriveFrameContext`'s ready gate bails immediately after the fold, which is
- * the entire slice under test. Fixtures sit at a real body's live position
+ * The fixture is minimal on purpose: `deriveFrameContext`'s ready gate bails
+ * immediately after the fold, which is the entire slice under test. Fixtures sit at a real body's live position
  * (Earth at J2000, ~1 AU out) because that magnitude is where the ruled
  * conversion floor is stated.
  */

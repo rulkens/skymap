@@ -1,15 +1,12 @@
 /**
- * passes/index — the contributed-pass registry: the flat list of every
- * `ContentPass` the renderer can draw. It states no order — `FRAME_ORDER`
- * (`frameOrder.ts`) is the one artifact naming what draws, in what order, into
- * what, and carries the ordering rationale beside the line it explains.
+ * passes/index — CORE's half of the contributed-pass registry; `createLayers`
+ * appends each Layer's own passes onto `state.passes`. It states no order —
+ * `FRAME_ORDER` (`frameOrder.ts`) is the one artifact naming what draws, in what
+ * order, into what, and carries the ordering rationale beside the line it explains.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { scalarVolumePass } from './scalarVolumePass';
-import { galaxyPointSpritesPass } from './galaxyPointSpritesPass';
-import { proceduralDisksPass } from './proceduralDisksPass';
-import { texturedDisksPass } from './texturedDisksPass';
 import { filamentsPass } from './filamentsPass';
 import { flowFieldPass } from './flowFieldPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
@@ -22,7 +19,6 @@ import { zoneOfAvoidanceUpsamplePass } from './zoneOfAvoidanceUpsamplePass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
-import { diskRadiusRingPass } from './diskRadiusRingPass';
 import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
@@ -48,15 +44,12 @@ import { sgrAStarLensingPass } from './sgrAStarLensingPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 
 /**
- * The contributed passes, as a flat set. It states no order and no grouping:
- * `FRAME_ORDER` names each of these on the line that draws it.
+ * Core's contributed passes, as a flat set. It states no order and no grouping:
+ * `FRAME_ORDER` names each of these — and each Layer's — on the line that draws it.
  */
 export const CONTENT_PASSES: readonly ContentPass[] = [
   scalarVolumePass,
-  galaxyPointSpritesPass,
   zoneOfAvoidancePass,
-  proceduralDisksPass,
-  texturedDisksPass,
   filamentsPass,
   flowFieldPass,
   volumeUpsamplePass,
@@ -76,7 +69,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   bodyGlintsPass,
   selectionRingPass,
   near0SelectionRingPass,
-  diskRadiusRingPass,
   markerLinesPass,
   labelsPass,
   earthPass,

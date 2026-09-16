@@ -10,7 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, dirname, relative, resolve } from 'node:path';
 
 function walk(dir: string): string[] {
@@ -67,11 +67,10 @@ function assertSweep(
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
-// The one row Findings records: `settingsSlice.ts` imports the thirteen
-// pre-Layer fragments directly for `liftClusterReducers`'s per-fragment
-// spreads, which need each literal fragment type — this stays until reducers
-// compose at the type level, not this PR. Every other engine/state file
-// allows zero.
+// `settingsSlice.ts` imports each pre-Layer fragment directly, and a formed
+// Layer's settings tuple as one specifier, for `liftClusterReducers`'s
+// per-fragment spreads — each needs its literal fragment type. This stays until
+// reducers compose at the type level, not this PR.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'state/settings/settingsSlice': 13,
 };
@@ -106,9 +105,30 @@ describe('no file under src/layers imports src/state or src/store', () => {
       files,
       ['src/state/', 'src/store/'],
       LAYERS_ALLOWED,
-      'A Layer mints its own createAction(s) rather than importing the slice — ' +
-        "importing settingsSlice from a Layer module closes D1's module-init cycle " +
-        '(settingsSlice -> appSettingsFragments -> app -> this Layer -> settingsSlice).',
+      'A Layer contributes a fact, a dep field or nothing — see the no-dispatch ' +
+        "sweep below; importing settingsSlice from a Layer module also closes D1's " +
+        'module-init cycle (settingsSlice -> appSettingsFragments -> app -> this ' +
+        'Layer -> settingsSlice).',
     );
+  });
+});
+
+// The import ban alone does not close the outbound seam: `LayerCoreDeps.store`
+// is handed to every Layer, so one could mint its own `createAction` and
+// dispatch it — the improvisation the error message above would otherwise
+// invite. Zero at HEAD, and every store write in the sequence is a `deps`
+// field, a published fact, or deleted (Ruling 17).
+describe('no file under src/layers dispatches', () => {
+  const files = walk('src/layers');
+  expect(files.length).toBeGreaterThan(0);
+
+  it('every file is free of a .dispatch( call', () => {
+    const offenders = files.filter((file) => readFileSync(file, 'utf8').includes('.dispatch('));
+    expect(
+      offenders,
+      `${offenders.join(', ')} dispatches from under src/layers. A Layer reports ` +
+        'through a `deps` callback core owns (reportSourceCount) or publishes a ' +
+        'fact (deps.publish) — core decides what the pulse means.',
+    ).toEqual([]);
   });
 });

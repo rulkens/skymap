@@ -1,26 +1,18 @@
 /**
- * ASSET_WIRING — the flat registry of every fetchable asset's lifecycle contract
- * (`key` + `factory` + `req` + `demand`), iterated by `wireSlots` to build the slot
- * table and by `reevaluateDemand` to decide what loads now. Each row's `demand(ctx)`
- * is a pure predicate over `DemandCtx`, re-run whole on any state change, so no edge
- * (tier flip while hidden, toggle mid-flight) can be missed. `built: 'external'` rows
- * are minted in `wireSlots` and appear here only for demand + `req(tier)`; their
- * `factory` throws if the construction pass calls it. The DEV synthetic volumes are
- * absent so Vite tree-shakes the generators.
+ * ASSET_WIRING — core's half of the fetchable-asset registry, AUTHORED: companion
+ * rows are folded by `createLayers`, over these plus every Layer's, into
+ * `state.assetRows`. Each `demand(ctx)` is a pure predicate over `DemandCtx`, re-run
+ * whole on any state change, so no edge (tier flip while hidden, toggle mid-flight)
+ * can be missed. `built: 'external'` rows are minted in `wireSlots` and appear here
+ * only for demand + `req(tier)`; their `factory` throws if the construction pass
+ * calls it. The DEV synthetic volumes are absent so Vite tree-shakes the generators.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { GalaxyCatalogRegistryEntry } from '../../../@types/data/galaxyCatalog/GalaxyCatalogRegistryEntry';
+import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
-import {
-  HI_RES_LAYER_SIDE_BY_TIER,
-  Source,
-  SOURCE_REGISTRY,
-  GALAXY_CATALOG_SOURCES,
-} from '../../../data/sources';
-import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
+import { Source, SOURCE_REGISTRY } from '../../../data/sources';
 import { createFilamentSlot } from '../../loading/slots/filamentSlot';
-import { createFamousGalaxiesMetaSlot } from '../../loading/slots/famousGalaxiesMetaSlot';
 import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
@@ -29,14 +21,12 @@ import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
 import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
-import { createPgcAliasSlot } from '../../loading/slots/pgcAliasSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
-import { galaxyCatalogRequest } from './galaxyCatalogRequest';
 import { clampTier } from '../../../utils/math/clampTier';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
 import { hostBodyId } from '../../../utils/scene/hostBodyId';
@@ -74,30 +64,9 @@ const MCPM_WORKBENCH_FIELD = SOURCE_REGISTRY[Source.McpmWorkbench].id;
 /** Reaching this means the slot builder ignored `built: 'external'` — a wiring bug. */
 const externalFactory = (): never => {
   throw new Error(
-    'assetWiring: externally-built rows (built: "external" — point sources, body textures) are minted outside this registry; the construction pass must not build them',
+    'assetWiring: externally-built rows (built: "external" — body textures, mesh bodies) are minted outside this registry; the construction pass must not build them',
   );
 };
-
-/**
- * One demand+req row per galaxy-catalog entry, derived from the fields it
- * already carries: `category === 'synthetic'` reads the fallback request
- * flag, everything else reads its settings toggle.
- */
-function pointRow(entry: GalaxyCatalogRegistryEntry): AssetWiringRow {
-  const source = entry.code;
-  const id = entry.id;
-  return {
-    key: source,
-    built: 'external',
-    factory: externalFactory,
-    req: (tier) => galaxyCatalogRequest(source, tier),
-    demand: (ctx) =>
-      entry.category === 'synthetic'
-        ? ctx.request('syntheticFallback')
-        : ctx.settings.galaxyCatalogs.items[id]?.enabled === true,
-    priority: entry.priority,
-  };
-}
 
 /**
  * Star-catalog sources that actually ship an asset. A SEEDED catalog
@@ -203,7 +172,7 @@ function meshBodyRow(body: MeshBody): AssetWiringRow {
   };
 }
 
-export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
+export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   // ── Low-resolution all-bodies surface atlas ──────────────────────
   // Rank 0 and deliberately NOT proximity-gated: it is the universal fallback the
   // per-body rows upgrade, so gating it would reinstate the "body reached before its
@@ -215,19 +184,6 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
     req: () => undefined,
     demand: () => true,
     priority: 0,
-  },
-
-  // ── Point sources, Synthetic included — one row per
-  // GALAXY_CATALOG_SOURCES code, demand+req only; slots minted in wireSlots ──
-  ...GALAXY_CATALOG_SOURCES.map((code) => pointRow(SOURCE_REGISTRY[code])),
-
-  // ── Famous-galaxy meta sidecar ───────────────────────────────────
-  // Loads once the Famous slot leaves `idle`, so the InfoCard text rides in
-  // alongside the binary rather than racing ahead of it.
-  {
-    key: 'famousGalaxiesMeta',
-    factory: (deps) => createFamousGalaxiesMetaSlot(deps.state, deps.cb),
-    companionOf: Source.FamousGalaxy,
   },
 
   // ── Famous-star meta sidecar ──────────────────────────────────────
@@ -338,16 +294,6 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
     priority: 30, // a small .ccat that draws across many rungs at once — high value per byte
   },
 
-  // ── PGC alias map ────────────────────────────────────────────────
-  // Lazy: only the one-shot `paletteOpened` request triggers it.
-  {
-    key: 'pgcAlias',
-    factory: (deps) => createPgcAliasSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.request('paletteOpened'),
-    priority: 90, // last: nothing renders from it, and its one-shot trigger tolerates a wait
-  },
-
   // ── Body-surface textures (proximity-demanded + released) ────────
   ...ALL_BODY_TEXTURE_KEYS.map(bodyTextureRow),
 
@@ -357,18 +303,4 @@ export const ASSET_WIRING: readonly AssetWiringRow[] = expandCompanionRows([
   // ── Survey star catalogs ─────────────────────────────────────────
   // One row per `type: 'starCatalog'` entry, so a new catalog joins with no edit here.
   ...STAR_CATALOG_SOURCES.map(starCatalogRow),
-
-  // ── LOD-3 hi-res famous-galaxy array ─────────────────────────────
-  // Externally built: the allocation needs a GPUDevice, which `SlotDeps` does not
-  // carry. `priority: 1` puts a synchronous allocation at the head of the bounded
-  // queue ahead of every download — it holds its pipe for microseconds, and the
-  // alternative is a second "allocate outside the queue" mechanism for one row.
-  {
-    key: 'hiResFamous',
-    built: 'external',
-    factory: externalFactory,
-    req: (tier) => ({ layerSide: HI_RES_LAYER_SIDE_BY_TIER[tier] }),
-    demand: () => true,
-    priority: 1,
-  },
-]);
+];

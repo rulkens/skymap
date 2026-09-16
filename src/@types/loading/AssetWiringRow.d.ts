@@ -1,8 +1,8 @@
 /**
- * AssetWiringRow — one fetchable asset's lifecycle contract; `wireSlots`
- * iterates the registry array to build the engine's slot table. A row that
- * tracks a sibling's demand/priority/request is a `CompanionAssetRow`, folded
- * into one of these by `expandCompanionRows`.
+ * AssetWiringRow — one fetchable asset's lifecycle contract. `createLayers`
+ * composes core's rows with every Layer's into `state.assetRows`; `wireSlots`
+ * walks that list to build the slot table. A row that tracks a sibling's
+ * demand/priority/request is a `CompanionAssetRow`, folded into one of these.
  */
 
 import type { AssetKey } from './AssetKey';

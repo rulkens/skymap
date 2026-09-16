@@ -7,15 +7,13 @@
  * nulls) so the derived rows clear in lockstep with the refs — Esc / InfoCard ×
  * depend on this. The gap-fill re-extracts any slot whose row is still null but
  * whose ref is set (a deep link resolved before its data landed), and it fires
- * on BOTH catalog-commit pulses: catalogLoaded is the galaxy cloud's commit
- * signal, while engineSourceCountReported is every source's count pulse — the
- * one the Gaia star bin emits on commit (it never dispatches catalogLoaded). A
- * star deep link therefore resolves the moment the star catalog lands, not never.
+ * on the catalog-landed pulse: engineSourceCountReported, which every source
+ * reports on commit — the galaxy clouds and the Gaia star bin alike.
  *
- * Keyed on the COMPLETE resolvability set (every selection-slice action ∪ both
- * commit pulses), so the cache can't hand-sync-drift the way two authoritative
- * homes do — this is what justifies materializing a derived value in the store
- * (see the spec's exception note).
+ * Keyed on the COMPLETE resolvability set (every selection-slice action ∪ the
+ * catalog- and structure-landed pulses), so the cache can't hand-sync-drift the
+ * way two authoritative homes do — this is what justifies materializing a
+ * derived value in the store (see the spec's exception note).
  *
  * Every action that writes a selection ref MUST appear here, or its slot's row
  * goes stale — a clear that the UI never sees.
@@ -32,7 +30,6 @@ import {
   updateSelectionFocus,
   clearSelection,
 } from '../selection/selectionSlice';
-import { catalogLoaded } from '../catalog/catalogLoaded';
 import { engineSourceCountReported, engineStructureCountsChanged } from '../engine/engineSlice';
 import { setSelectionRow } from './selectionRowsSlice';
 import { selectTimeState } from '../time/selectors';
@@ -68,19 +65,15 @@ export function* watchSelectionRowsSaga() {
     yield* reextract('focus');
   });
   // A late catalog makes a previously-unresolvable ref resolvable — fill the
-  // gaps. Three commit pulses wake it: catalogLoaded (galaxy cloud),
-  // engineSourceCountReported (every source's count pulse, incl. the star bin,
-  // which never fires catalogLoaded) and engineStructureCountsChanged (the
-  // structure store's only signal). Extra firings for already-filled slots are
-  // guarded no-ops (row === null && ref !== null).
-  yield* takeEvery(
-    [catalogLoaded, engineSourceCountReported, engineStructureCountsChanged],
-    function* () {
-      for (const slot of ['hover', 'select', 'focus'] as const) {
-        const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
-        const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
-        if (row === null && ref !== null) yield* reextract(slot);
-      }
-    },
-  );
+  // gaps. Two commit pulses wake it: engineSourceCountReported (every source's
+  // count pulse) and engineStructureCountsChanged (the structure store's only
+  // signal). Extra firings for already-filled slots are guarded no-ops
+  // (row === null && ref !== null).
+  yield* takeEvery([engineSourceCountReported, engineStructureCountsChanged], function* () {
+    for (const slot of ['hover', 'select', 'focus'] as const) {
+      const row = yield* select((state: RootState) => state[selectionRowsRoute][slot]);
+      const ref = yield* select((state: RootState) => state[selectionRoute][slot]);
+      if (row === null && ref !== null) yield* reextract(slot);
+    }
+  });
 }

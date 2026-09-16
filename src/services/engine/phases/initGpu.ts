@@ -32,8 +32,7 @@ import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
 /**
  * Bootstrap phase 1: GPU device acquisition + renderer construction. Writes
  * every `GPU_HANDLE_ROWS`-owned handle except the `constructPhase: 'wireInput'`
- * rows (`galaxyPickRenderer`/`pickProgram`, built by `wireInput` once
- * `focusUniform` exists). Mints no `state.assetSlots.*` — those are minted
+ * rows (`pickProgram`, built by `wireInput` once `focusUniform` exists). Mints no `state.assetSlots.*` — those are minted
  * in `wireSlots`. Stashes `device`/`context`/`format`/`unwatchHdrCapability` on
  * `deps.phaseLocals` so `createLayers` can build each Layer's `GpuContext` and
  * `engine.ts`'s `destroy()` can remove the HDR listener.
@@ -89,8 +88,6 @@ export async function initGpu(state: EngineState, deps: BootstrapDeps): Promise<
     handleDeps,
   );
 
-  // Post-construction wiring, now reading the walker's output off state.gpu:
-  state.subsystems.biasCorrection.attachRenderer(state.gpu.galaxyPointRenderer!);
   // Label directors: this attach used to run only inside `buildSwapRenderers`,
   // which no longer builds at boot — `attachLabelDirectors` is the shared
   // table both this phase and a later swap-format rebuild call into.

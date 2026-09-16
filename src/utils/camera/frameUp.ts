@@ -14,7 +14,7 @@
  * which for a column-major 3×3 is exactly column 1 — flat indices 3, 4, 5.
  *
  * An absent basis is the identity frame (the pre-feature camera, and every
- * non-engine caller: synthetic clouds, focus tween, dev-tool cameras). There
+ * non-engine caller: focus tween, dev-tool cameras). There
  * the frame up IS world +Y, so we return `[0, 1, 0]` — the literal the
  * consumers used to hardcode. Feeding that back into `imagePlaneBasis` leaves
  * those paths byte-for-byte unchanged.

@@ -19,8 +19,7 @@
  *
  * `RequestKey` names those transient edge-trigger conditions.  The
  * wiring layer sets a `RequestKey` flag in response to a discrete
- * trigger — a UI action (`paletteOpened`) or an internal data-availability
- * gate (`syntheticFallback`) — and the demand predicate reads it via
+ * UI trigger (`paletteOpened`) — and the demand predicate reads it via
  * `DemandCtx.request(k)`.  The flag is never cleared: once set it stays set,
  * and the demand loop's idle-guard keeps the already-loaded slot from
  * re-fetching, so a second trigger is a no-op.  No persistent settings
@@ -32,14 +31,8 @@
  *     Triggers an eager prefetch of the full palette manifest so the
  *     palette thumbnails are available before the popover finishes
  *     animating in.
- *   - `'syntheticFallback'` — every real galaxy catalog settled without a
- *     successful ready+count>0, so the synthetic backstop cloud should
- *     load.  Armed by `createSyntheticFallback`, which runs the precise
- *     gate at the slot-subscription level (it needs each galaxy catalog's loaded
- *     `count`, which `DemandCtx.slotState` cannot expose) and then trips
- *     this flag for the demand loop to pick up.
  *
  * Add members only when a new one-shot trigger cannot be expressed as a
  * persistent settings flag or a slot-state join.
  */
-export type RequestKey = 'paletteOpened' | 'syntheticFallback';
+export type RequestKey = 'paletteOpened';

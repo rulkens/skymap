@@ -36,7 +36,7 @@ const FOVY = 0.8;
 
 const galaxyRow = (over: Partial<GalaxyRow> = {}): GalaxyRow =>
   makeGalaxyRow({
-    source: 0,
+    source: 1,
     index: 7,
     objId: '12345',
     x: 1,

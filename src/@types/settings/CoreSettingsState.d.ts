@@ -7,7 +7,6 @@
  * `state/settings/coreInitialSettings.ts`.
  */
 
-import type { BiasMode } from '../data/galaxyCatalog/BiasMode';
 import type { ToneMapCurve } from '../data/ToneMapCurve';
 import type { HdrSettings } from './HdrSettings';
 import type { LabelSettings } from './LabelSettings';
@@ -36,17 +35,6 @@ export type CoreSettingsState = {
     enabled: boolean;
     strength: number;
     threshold: number;
-  };
-
-  /** The user-tunable half only; bake-derived weights bypass state entirely. */
-  bias: {
-    mode: BiasMode;
-    absMagLimit: number;
-  };
-
-  /** Master toggle for the per-galaxy thumbnail quads drawn on close approach. */
-  thumbnails: {
-    enabled: boolean;
   };
 
   /** Cross-cutting label knobs — they MULTIPLY on top of per-layer label gates. */

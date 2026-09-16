@@ -5,15 +5,15 @@
  * `buildGalaxyInfo` takes a `GalaxyRow` and returns a fully-derived
  * `GalaxyInfo` value. These tests compose
  * `extractGalaxyRow(cloud, idx, source)` → `buildGalaxyInfo(row)` to exercise
- * the per-source dispatch (SDSS / 2MRS / GLADE / Famous / Synthetic /
- * Milliquas / DESI Deep) end-to-end
+ * the per-source dispatch (SDSS / 2MRS / GLADE / Famous / Milliquas /
+ * DESI Deep) end-to-end
  * so any cross-cut regression in thumbnails, explorer URLs, IAU names,
  * orientation provenance, or the famous-galaxies-meta block is caught here.
  */
 
 import { describe, it, expect } from 'vitest';
 import { buildGalaxyInfo } from '../../../../src/services/engine/helpers/buildGalaxyInfo';
-import { extractGalaxyRow } from '../../../../src/services/engine/helpers/extractGalaxyRow';
+import { extractGalaxyRow } from '../../../../src/layers/galaxyCatalog/present/extractGalaxyRow';
 import { Source } from '../../../../src/data/sources';
 import { DESI_TRACER_CLASS } from '../../../../src/data/galaxyCatalog/sourceClass';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -25,7 +25,7 @@ import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
 // ─── Test helpers ───────────────────────────────────────────────────────────
 
 /**
- * Build a synthetic `GalaxyCatalog` of `count` rows via the shared factory,
+ * Build a `GalaxyCatalog` of `count` rows via the shared factory,
  * with the orientation/diameter fields seeded to non-fallback-shaped values
  * (0.7 axis ratio, 45° PA, 30 kpc diameter) — every test in this file relies
  * on that baked-in shape, so it stays a thin local wrapper rather than
@@ -227,8 +227,6 @@ describe('buildGalaxyInfo — Glade source', () => {
     expect(info.catalogues[0]!.href).toContain('PGC+12345');
   });
 });
-
-// ─── buildGalaxyInfo — Synthetic branch ──────────────────────────────────────
 
 // ─── buildGalaxyInfo — Famous branch ─────────────────────────────────────────
 

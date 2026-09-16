@@ -10,22 +10,14 @@
  */
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { VisibilityLayerKey } from '../../../@types/animation/VisibilityLayerKey';
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
-import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { SOURCE_REGISTRY } from '../../../data/sources';
 import { maybeLazyLoadDebugVolume } from '../volume/maybeLazyLoadDebugVolume';
-
-// Erases the Item type for the heterogeneous array while KEEPING the literal
-// `key`, so a type-level test can assert the rows cover VisibilityLayerKey exactly.
-// Sound because seedFades only ever feeds a row's own expand() output back into it.
-const layer = <Item, K extends VisibilityLayerKey>(
-  row: FadeLayer<Item> & { readonly key: K },
-): FadeLayer<unknown> & { readonly key: K } => row as FadeLayer<unknown> & { readonly key: K };
+import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
 // INCLUDING the DEV-only binBaseName:null debug fixtures, unlike
 // `seedVolumeFields` which excludes them from `settings.volumes.items`. Both the
@@ -63,50 +55,41 @@ const DEBUG_VOLUME_FIELD_IDS: ReadonlySet<VolumeFieldId> = new Set(
 );
 
 export const FADE_LAYERS = [
-  layer({
+  fadeLayerRow({
     key: 'milkyWayDisk',
     expand: () => [undefined],
     handle: () => ({ kind: 'milkyWay' }),
     seed: (s) => (s.milkyWay.enabled ? 1 : 0),
     intent: (s) => s.milkyWay.enabled,
   }),
-  layer({
+  fadeLayerRow({
     key: 'proceduralDisks',
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'proceduralDisks' }),
     seed: () => 1,
   }),
-  layer({
+  fadeLayerRow({
     key: 'texturedDisks',
     expand: () => [undefined],
     handle: () => ({ kind: 'overlay', id: 'texturedDisks' }),
     seed: () => 1,
   }),
-  layer({
+  fadeLayerRow({
     key: 'volumesMaster',
     expand: () => [undefined],
     handle: () => ({ kind: 'volumesMaster' }),
     seed: (s) => (s.volumes.enabled ? 1 : 0),
     intent: (s) => s.volumes.enabled,
   }),
-  layer({
+  fadeLayerRow({
     key: 'milkyWayLabel',
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'milkyWay' }),
     seed: (s) => (s.milkyWay.labelEnabled ? 1 : 0),
     intent: (s) => s.milkyWay.labelEnabled,
   }),
-  // The famous-galaxy label fade reuses the galaxy handle and rides the
-  // famous-galaxy "Labels" toggle, so both seed and intent read that one flag.
-  layer({
-    key: 'surveyLabel',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'labelLayer', layer: 'galaxy' }),
-    seed: (s) => (s.galaxyCatalogs.items.famousGalaxy.labelEnabled ? 1 : 0),
-    intent: (s) => s.galaxyCatalogs.items.famousGalaxy.labelEnabled,
-  }),
   // Curated star-map captions: seeded in code, not demand-loaded, so no guard.
-  layer({
+  fadeLayerRow({
     key: 'starCatalogLabel',
     expand: () => LABEL_BEARING_STAR_CATALOG_IDS,
     handle: (id) => ({ kind: 'labelLayer', layer: 'starCatalog', item: id }),
@@ -117,47 +100,34 @@ export const FADE_LAYERS = [
   // (bodies are seeded in code, so no demand-loaded guard). Not every body row
   // captions itself: the S-stars draw 39 dots and no names, and a handle for a
   // caption that cannot exist would be worse than the unread ones below.
-  layer({
+  fadeLayerRow({
     key: 'bodyLabel',
     expand: () => LABEL_BEARING_BODY_IDS,
     handle: (id) => ({ kind: 'labelLayer', layer: 'body', item: id }),
     seed: (s, id) => (s.bodies.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.bodies.items[id].labelEnabled,
   }),
-  layer({
+  fadeLayerRow({
     key: 'scaleBar',
     expand: () => [undefined],
     handle: () => ({ kind: 'labelLayer', layer: 'scaleBar' }),
     seed: () => 1,
   }),
-  layer({
+  fadeLayerRow({
     key: 'structureRing',
     expand: () => STRUCTURE_IDS,
     handle: (id) => ({ kind: 'structure', id }),
     seed: (s, id) => (s.structures.items[id].enabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].enabled,
   }),
-  layer({
+  fadeLayerRow({
     key: 'structureLabel',
     expand: () => STRUCTURE_IDS,
     handle: (id) => ({ kind: 'labelLayer', layer: 'structure', item: id }),
     seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].labelEnabled,
   }),
-  layer({
-    key: 'survey',
-    expand: () => GALAXY_CATALOG_IDS,
-    handle: (id) => ({ kind: 'galaxyCatalog', id }),
-    seed: () => 0,
-    intent: (s, id) => s.galaxyCatalogs.items[id].enabled,
-    // The demand-loaded gate every asset-backed row carries: suppress the fade
-    // until the payload is committed, so an enable that races its download does
-    // not burn the fade window invisibly. The slot commit's per-item re-sync runs
-    // after upload, when the guard already reads true.
-    guard: (state, id) => state.gpu.galaxyPointRenderer?.hasCatalog(id) ?? false,
-    // No `post`: the draw/pick bitmasks are derived per frame in `runFrame`.
-  }),
-  layer({
+  fadeLayerRow({
     key: 'filaments',
     expand: () => [undefined],
     handle: () => ({ kind: 'filament' }),
@@ -168,7 +138,7 @@ export const FADE_LAYERS = [
     // stomps the authored ramp — the layer pops in wherever the invisible fade got.
     guard: (state) => state.gpu.filamentRenderer?.hasCloud() ?? false,
   }),
-  layer({
+  fadeLayerRow({
     key: 'constellations',
     expand: () => [undefined],
     handle: () => ({ kind: 'constellations' }),
@@ -179,7 +149,7 @@ export const FADE_LAYERS = [
   // The conic table is a compile-time constant with no asset slot, so no
   // demand-loaded guard and the seed follows the toggle: a default-on session must
   // not flash the trails in on frame 1.
-  layer({
+  fadeLayerRow({
     key: 'orbitTrails',
     expand: () => [undefined],
     handle: () => ({ kind: 'orbitTrails' }),
@@ -187,14 +157,14 @@ export const FADE_LAYERS = [
     intent: (s) => s.orbitTrails.enabled,
   }),
   // One toggle drives both the band and its lettering — see zoneOfAvoidanceLayer.
-  layer({
+  fadeLayerRow({
     key: 'zoneOfAvoidance',
     expand: () => [undefined],
     handle: () => ({ kind: 'zoneOfAvoidance' }),
     seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0),
     intent: (s) => s.zoneOfAvoidance.enabled,
   }),
-  layer({
+  fadeLayerRow({
     key: 'flow',
     expand: () => [undefined],
     handle: () => ({ kind: 'flow' }),
@@ -204,7 +174,7 @@ export const FADE_LAYERS = [
     // is correct for both the toggle and the slot commit that just uploaded it.
     guard: (state) => state.gpu.flowFieldRenderer?.fieldLoaded() ?? false,
   }),
-  layer<VolumeFieldId, 'volumeField'>({
+  fadeLayerRow<VolumeFieldId, 'volumeField'>({
     key: 'volumeField',
     expand: () => volumeFieldIds(),
     handle: (id) => ({ kind: 'volumeField', id }),
@@ -230,7 +200,7 @@ export const FADE_LAYERS = [
 export function seedFades(state: EngineState): void {
   const { settings } = state;
   const fades = state.subsystems.fades;
-  for (const row of FADE_LAYERS) {
+  for (const row of state.fadeRows) {
     for (const item of row.expand(state)) {
       fades.register(row.handle(item), row.seed(settings, item));
     }

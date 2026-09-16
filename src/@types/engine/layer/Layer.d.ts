@@ -3,13 +3,15 @@
  * runtime-bound ones as closures over the private `Runtime` its own `create` mints
  * (opaque to core, which only hands it back to the same Layer's methods). The trailing
  * type parameters default to their erased bounds, so `Layer<string, unknown>` still
- * works as the composition constraint (`EngineComposition.d.ts`).
+ * works as the composition constraint (`EngineComposition.d.ts`) — `Facts` defaults
+ * to `unknown` for the same reason, so a Layer that publishes facts still satisfies it.
  */
 
 import type { SettingsFragmentLike } from '../../settings/SettingsFragmentLike';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { ContentPass } from '../frame/ContentPass';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
+import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { Label2DProducer } from '../subsystems/Label2DProducer';
 import type { SourceType } from '../../data/SourceType';
@@ -29,7 +31,7 @@ export type Layer<
     SourceType,
     SourceEntry,
   ])[],
-  Facts = undefined,
+  Facts = unknown,
 > = {
   readonly name: Name;
 
@@ -52,10 +54,14 @@ export type Layer<
 
   // Runtime-bound contributions: closures over the Layer's own state.
   passes(runtime: Runtime): readonly ContentPass[];
-  assets?(runtime: Runtime): readonly AssetWiringRow[];
+  assets?(runtime: Runtime): readonly (AssetWiringRow | CompanionAssetRow)[];
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
   labels?(runtime: Runtime): readonly Label2DProducer[];
   selection?(runtime: Runtime): readonly SelectionKindRow[];
-  /** Once per frame, after the focus uniform, before any pass; `true` keeps the loop awake. */
+  /**
+   * Once per frame, after the focus uniform, before any pass; `true` keeps the
+   * loop awake and defers sky captures (`scheduleSkyCaptures` skips a frame any
+   * Layer votes animating, so a capture never bakes half-arrived content).
+   */
   frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => boolean;
 };

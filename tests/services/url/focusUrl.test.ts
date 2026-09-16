@@ -3,8 +3,8 @@
  * `GalaxyInfo` to the `#focus=<id>` payload.
  *
  * The encoder follows the priority ladder: famous seed id > PGC > SDSS
- * objID > pos@ fallback, with Synthetic rows rejected (null).  These tests
- * exercise the full ladder and the round-trip through bigint-precision SDSS
+ * objID > pos@ fallback.  These tests exercise the full ladder and the
+ * round-trip through bigint-precision SDSS
  * objIDs, which exceed JS's Number.MAX_SAFE_INTEGER.
  *
  * Parsing (`parseFocusHash`) was removed in P2.8 — the new codec lives in
@@ -90,9 +90,5 @@ describe('selectionToFocusId', () => {
       dec: -5.4567,
     });
     expect(selectionToFocusId(info)).toBe('pos@10.1235,-5.4567');
-  });
-
-  it('returns null for synthetic-source rows (not link-encodable)', () => {
-    expect(selectionToFocusId(baseInfo({ source: Source.Synthetic }))).toBeNull();
   });
 });

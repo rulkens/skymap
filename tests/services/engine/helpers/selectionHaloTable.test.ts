@@ -98,7 +98,7 @@ describe('selectionHalo', () => {
     expect(starHalo.radiusMpc).toBeGreaterThan(0);
   });
 
-  it('applies the synthetic-fallback floor (diameterKpc = 0) for galaxies', () => {
+  it('applies the missing-diameter floor (diameterKpc = 0) for galaxies', () => {
     const halo = selectionHalo(galaxyRow({ diameterKpc: 0 }));
     expect(halo).not.toBeNull();
     // diameterKpc 0 → fallback 30; radiusMpc = (30 * 2) / 1000 = 0.06

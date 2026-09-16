@@ -9,7 +9,6 @@
 import { runFrame } from '../frame/runFrame';
 import { checkFrameOrder } from '../frame/checkFrameOrder';
 import { FRAME_ORDER } from '../frame/frameOrder';
-import { CONTENT_PASSES } from '../frame/passes';
 import { CAMERA_DRIVERS } from '../camera/cameraDrivers';
 import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
 import { selectTimeState } from '../../../state/time/selectors';
@@ -27,7 +26,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   // Against the ASSEMBLED rows: a freshly derived table would be a second answer.
   checkFrameOrder(
     FRAME_ORDER,
-    CONTENT_PASSES,
+    state.passes,
     // Non-null: `runBootstrapPhases` awaits `initGpu`, which assigns it, first.
     state.gpu.renderTargets!.specs.map((spec) => spec.id),
   );

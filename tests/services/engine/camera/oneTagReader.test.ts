@@ -22,6 +22,7 @@ const SWEPT_DIRS: readonly string[] = [
   'src/services/engine/animation',
   'src/utils/camera',
   'src/components/DebugPanel',
+  'src/layers',
 ];
 
 // `.d.ts` excluded: a type literal `'absolute'` is a declaration of the

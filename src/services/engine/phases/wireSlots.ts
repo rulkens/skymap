@@ -1,40 +1,32 @@
 /**
- * wireSlots — bootstrap phase 2: the demand-driven asset orchestrator.
+ * wireSlots — bootstrap phase 3: core's half of the demand-driven asset
+ * orchestrator. Every Layer's slots already exist (`createLayers` minted them);
+ * this mints core's own and then lets the demand loop decide what loads:
  *
- * Mints every asset slot the engine has and then lets the demand loop decide
- * what actually loads:
- *
- *   1. `buildSlotsFromRegistry` — construct every non-external slot from
- *      `ASSET_WIRING` (sidecars: filaments, famous-galaxies-meta, cluster catalog,
- *      PGC alias, CF-4 + MCPM volumes). Pure: no state writes, no loads.
+ *   1. `buildSlotsFromRegistry` — construct every core, non-external slot from
+ *      the composed rows (sidecars: filaments, cluster catalog, CF-4 + MCPM
+ *      volumes). Pure: no state writes, no loads.
  *   2. `installSlots` — the single mutation site that writes each built slot
  *      onto its named `state.assetSlots` field.
- *   3. The externally-built families — the per-source `points` slots
- *      (`wireGalaxyCatalogSourceSlot`), the keyed `bodyTextures` family
- *      (`wireBodyTextureSlots`), and the keyed `meshBodies` family
- *      (`wireMeshBodySlots`) — minted here, not by `buildSlotsFromRegistry`
- *      (their `ASSET_WIRING` rows carry `built: 'external'`), plus the
- *      `hiResFamous` LOD-3 pair, external for the same reason: it needs the
- *      device.
+ *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
+ *      `meshBodies` (`wireMeshBodySlots`) — minted here, not by
+ *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
  *   4. DEV synthetic-volume fixtures — minted + installed here (not a wiring
  *      row; tree-shaken from production).
- *   5. `wireImpostorSubsystems` / `createSurfaceTileSubsystem` / `seedFades` /
- *      `wireStructureProjection` — the thumbnail/disk subsystems, Earth's
- *      surface virtual texture, the whole fade-ownership manifest (every fade
- *      handle, seeded), and the structure-store anchor + bulk projection.
- *   6. `createSyntheticFallback` — the imperative gate that arms the synthetic
- *      backstop (via the `'syntheticFallback'` request flag) iff every real
- *      galaxy catalog settles without data.
- *   7. `installLoadProgress` — the flat `allSlots` registry + load-progress
- *      emitter, over both point + sidecar slots.
- *   8. `installSlotReadyWake` — one subscription per slot wakes the render
+ *   5. `createSurfaceTileSubsystem` / `seedFades` / `wireStructureProjection` —
+ *      Earth's surface virtual texture, the whole fade-ownership manifest
+ *      (every composed fade handle, seeded), and the structure-store anchor +
+ *      bulk projection.
+ *   6. `installLoadProgress` — the flat `allSlots` registry + load-progress
+ *      emitter, over core's slots and every Layer's.
+ *   7. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
  *      `installFormatVersionAlert` shares the same window and shape: the first
  *      time any slot's error is a `FormatVersionError`, it dispatches a
  *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
  *      visitor's `seenVersion` already hid the splash, so the alert needs
  *      both to actually reach them.
- *   9. `reevaluateDemand` — the single place loads start, awaited on
+ *   8. `reevaluateDemand` — the single place loads start, awaited on
  *      `loadDataManifest` immediately before it so no fetch can race the
  *      manifest. It walks every wiring row and triggers each demanded slot
  *      with its tier-derived request. The same loop re-runs on every state
@@ -43,19 +35,14 @@
  * The phase does not block on data arrival: `engineStatusChanged({ kind:
  * 'loading' })` dispatches synchronously (before the manifest await) and
  * `wireInput`/`startLoop` run immediately after this returns, so the camera
- * and rAF loop come up with whatever has landed. Per-arrival `ready` dispatch
- * and the synthetic fallback run as background subscribers wired here.
+ * and rAF loop come up with whatever has landed.
  *
  * ### State writes
  *
- *   - `state.assetSlots.{filaments,famousGalaxiesMeta,structureCatalog,pgcAlias,
- *     cf4Density,mcpm,flow}` (via `installSlots`) + `.points` (via
- *     `wireGalaxyCatalogSourceSlot`) + `.bodyTextures` (via
- *     `wireBodyTextureSlots`) + `.meshBodies` (via `wireMeshBodySlots`) +
- *     `.syntheticVolumes` (DEV).
- *   - `state.subsystems.{loadProgress, structures, surfaceTiles}` + the impostor
- *     subsystem handles.
- *   - `state.requests` may gain `'syntheticFallback'` (via the gate).
+ *   - `state.assetSlots.{filaments,structureCatalog,cf4Density,mcpm,flow,…}`
+ *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
+ *     `.meshBodies` (via `wireMeshBodySlots`) + `.syntheticVolumes` (DEV).
+ *   - `state.subsystems.{loadProgress, structures, surfaceTiles}`.
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
  *     `installFormatVersionAlert` subscriber; the latter may later dispatch
@@ -67,7 +54,6 @@
  *   - Mutates `deps.allSlots` — populated with every installed slot.
  */
 
-import { ASSET_WIRING } from '../wiring/assetWiring';
 import { buildSlotsFromRegistry } from '../wiring/buildSlotsFromRegistry';
 import { installSlots } from '../wiring/installSlots';
 import { installLoadProgress } from '../wiring/installLoadProgress';
@@ -75,15 +61,10 @@ import { installSlotReadyWake } from '../wiring/installSlotReadyWake';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
-import { wireGalaxyCatalogSourceSlot } from '../wiring/wireGalaxyCatalogSourceSlot';
-import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../../data/sources';
 import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
-import { wireImpostorSubsystems } from '../wiring/wireImpostorSubsystems';
-import { wireHiResFamousSlot } from '../wiring/wireHiResFamousSlot';
 import { createSurfaceTileSubsystem } from '../subsystems/surfaceTileSubsystem';
 import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
-import { createSyntheticFallback } from '../wiring/createSyntheticFallback';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { loadDataManifest } from '../../loading/dataManifest';
 import { engineStatusChanged } from '../../../state/engine/engineSlice';
@@ -94,20 +75,17 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const { cb } = deps;
 
-  // Build every non-external slot from the wiring registry, then install them
-  // in one mutation pass.  Point + body-texture slots are skipped here
-  // (built: 'external' — minted below instead).
-  const slots = buildSlotsFromRegistry(ASSET_WIRING, { state, cb });
+  // Build every core, non-external slot from the composed rows, then install
+  // them in one mutation pass. The keyed families are skipped here
+  // (built: 'external' — minted below); a Layer's rows are skipped because
+  // `createLayers` already minted their slots.
+  const slots = buildSlotsFromRegistry(state.assetRows, { state, cb });
   installSlots(state, slots);
 
-  // The two externally-built families: their `ASSET_WIRING` rows carry
-  // `built: 'external'`, so `buildSlotsFromRegistry` above skips them and
-  // they're minted here directly. Must run before `createSyntheticFallback`
-  // (subscribes to the points slots), `installLoadProgress` (enumerates both
-  // families into `allSlots`), and `reevaluateDemand` (triggers their loads).
-  for (const code of GALAXY_CATALOG_SOURCES) {
-    wireGalaxyCatalogSourceSlot(state, SOURCE_REGISTRY[code], { cb });
-  }
+  // The keyed families: their `ASSET_WIRING` rows carry `built: 'external'`, so
+  // `buildSlotsFromRegistry` above skips them and they're minted here directly.
+  // Must run before `installLoadProgress` (enumerates them into `allSlots`) and
+  // `reevaluateDemand` (triggers their loads).
   wireBodyTextureSlots(state);
   wireMeshBodySlots(state);
 
@@ -116,23 +94,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   // production); minted + installed at the call site under DEV.
   if (import.meta.env.DEV) {
     state.assetSlots.syntheticVolumes = createSyntheticVolumeSlots(state, cb);
-  }
-
-  // Build and wire the four impostor subsystems (galaxy atlas, textured disks,
-  // procedural disks, disk-planner walk), then mint the LOD-3 slot — whose pair
-  // is not built here but appears on the demand loop's first commit. Absent is
-  // legal: a composition that never runs `initGpu`'s disk renderers skips
-  // this cluster and `state.subsystems.texturedDisks` stays null.
-  const { texturedDiskRenderer, proceduralDiskRenderer } = state.gpu;
-  if (texturedDiskRenderer !== null && proceduralDiskRenderer !== null) {
-    wireImpostorSubsystems(state, deps.phaseLocals!.device, {
-      texturedDiskRenderer,
-    });
-    // The LOD-3 pair is minted here rather than by `buildSlotsFromRegistry`
-    // because its allocation needs the device, which `SlotDeps` does not carry.
-    // A composition without the disk renderers mints no slot, so `slotFor`
-    // returns undefined and the demand loop skips the row.
-    wireHiResFamousSlot(state, deps.phaseLocals!.device, texturedDiskRenderer);
   }
 
   // Earth's surface virtual texture. A subsystem, not a renderer — it owns
@@ -152,18 +113,11 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   seedFades(state);
 
   // Wire the structure groups (static anchors + the bulk-cluster
-  // subscription) into the structure store. Famous-galaxy labels are derived
-  // straight from galaxyStore by produceFamousGalaxyLabels — not wired here.
+  // subscription) into the structure store.
   wireStructureProjection(state, cb);
 
-  // Arm the synthetic-fallback gate.  It subscribes to the galaxy catalog slots and
-  // trips the `'syntheticFallback'` request flag (then re-runs demand) iff
-  // every real galaxy catalog settles without data — the count-aware policy a pure
-  // demand predicate can't express.
-  createSyntheticFallback(state, cb);
-
   // Build the flat `allSlots` registry + load-progress emitter over every
-  // installed slot (point + sidecar + DEV synthetic).
+  // installed slot (core, Layer-owned, and DEV synthetic).
   installLoadProgress(state, deps);
 
   // Channel-mouth render wake.  After installLoadProgress (allSlots fully
@@ -171,8 +125,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   installSlotReadyWake(() => state.subsystems.scheduler.requestRender(), deps.allSlots);
 
   // Same window: a stale-.bin version mismatch turns into a splash-visible
-  // error instead of silently falling through to the synthetic backstop
-  // (createSyntheticFallback suppresses arming on the same error type).
+  // error rather than a silent empty sky.
   installFormatVersionAlert(cb.store.dispatch, deps.allSlots);
 
   // Signal loading state immediately so the user sees progress before the

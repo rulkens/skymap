@@ -26,8 +26,8 @@
  */
 
 import { createLoadProgressEmitter } from '../subsystems/loadProgressAggregator';
-import { ASSET_WIRING } from './assetWiring';
 import { isBodyTextureKey } from '../../../utils/scene/isBodyTextureKey';
+import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
 import { isMeshBodyKey } from '../../../utils/scene/isMeshBodyKey';
 import { engineLoadProgressChanged } from '../../../state/engine/engineSlice';
 
@@ -37,11 +37,6 @@ import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 
 export function installLoadProgress(state: EngineState, deps: BootstrapDeps): void {
   const { cb, allSlots } = deps;
-
-  // Point slots (minted earlier in wireSlots, keyed by Source in the points map).
-  for (const [, slot] of state.assetSlots.points) {
-    allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
-  }
 
   // Star-catalog slots (registry-built, keyed by Source in the starCatalogs
   // map). Their wiring rows carry NUMERIC keys, so the string-keyed sidecar
@@ -78,11 +73,22 @@ export function installLoadProgress(state: EngineState, deps: BootstrapDeps): vo
   // with no matching assetSlots field fails to compile — the `isBodyTextureKey`
   // / `isMeshBodyKey` guards narrow the family keys out so only true
   // named-field keys reach the index.
-  for (const row of ASSET_WIRING) {
+  for (const row of state.assetRows) {
     if (typeof row.key !== 'string' || isBodyTextureKey(row.key) || isMeshBodyKey(row.key))
       continue;
+    // A Layer's rows name slots the Layer owns; they have no `assetSlots` field
+    // and are gathered from `layerSlots` below.
+    if (!isCoreSlotFieldKey(state.assetSlots, row.key)) continue;
     const slot = state.assetSlots[row.key];
     if (slot) allSlots.set(slot.name, slot as unknown as AssetSlot<unknown, unknown>);
+  }
+
+  // Layer-owned slots (minted by `createLayers` from each Layer's asset rows).
+  // They live in their own map, so neither the keyed-family walks nor the
+  // named-field walk above reaches them — and a slot absent here gets no
+  // loading-bar progress and no slot-ready render wake.
+  for (const [, slot] of state.layerSlots) {
+    allSlots.set(slot.name, slot);
   }
 
   // DEV synthetic-volume fixtures (present only in dev builds).

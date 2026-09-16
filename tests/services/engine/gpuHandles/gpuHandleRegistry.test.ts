@@ -4,7 +4,7 @@
  * GPU_HANDLE_ROWS table (every key torn down exactly once), a key-
  * uniqueness check (a duplicate row overwrites+leaks silently — the
  * round-trip alone can't see it), the one proven teardown-order constraint
- * (focusUniform outlives galaxyPickRenderer, whose bind group it supplies
+ * (focusUniform outlives the wireInput-phase rows, whose bind group it supplies
  * at construction), and the one row with real boot-time logic beyond a
  * bare factory call (starPointRenderer's epoch-derived seed).
  */
@@ -68,7 +68,7 @@ describe('GPU_HANDLE_ROWS — construct/destroy round-trip', () => {
     expect(new Set(GPU_HANDLE_ROWS.map((row) => row.key)).size).toBe(GPU_HANDLE_ROWS.length);
   });
 
-  it('destroys focusUniform last, strictly after galaxyPickRenderer', () => {
+  it('destroys focusUniform last, strictly after the wireInput-phase rows', () => {
     const order: GpuHandleKey[] = [];
     const rows = stubbedRows((key) => order.push(key));
     const state = makeState();
@@ -76,11 +76,12 @@ describe('GPU_HANDLE_ROWS — construct/destroy round-trip', () => {
     constructGpuHandles(rows, state, deps);
     destroyGpuHandles(rows, state);
 
-    // galaxyPickRenderer captures focusUniform's bind group at construction
-    // (see gpuHandleRegistry.ts); destroying focusUniform first would leave
-    // that captured reference dangling mid-teardown.
+    // A Layer's pick renderer captures focusUniform's bind group at
+    // construction, and `pickProgram` is core's own wireInput-phase row;
+    // destroying focusUniform first would leave those references dangling
+    // mid-teardown.
     expect(order.at(-1)).toBe('focusUniform');
-    expect(order.indexOf('focusUniform')).toBeGreaterThan(order.indexOf('galaxyPickRenderer'));
+    expect(order.indexOf('focusUniform')).toBeGreaterThan(order.indexOf('pickProgram'));
   });
 
   it('declares starCatalogRenderer before its pick twin, which reads it at construction', () => {

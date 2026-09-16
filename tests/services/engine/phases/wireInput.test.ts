@@ -44,7 +44,7 @@ vi.mock('../../../../src/services/camera/orbitControls', () => ({
   attachOrbitControls: (...args: unknown[]) => attachOrbitControlsSpy(...args),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/galaxyCatalog/galaxyPickRenderer', () => ({
+vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPickRenderer', () => ({
   createGalaxyPickRenderer: vi.fn(() => ({ destroy: vi.fn() })),
 }));
 
@@ -315,10 +315,10 @@ describe('wireInput', () => {
     expect(selectFocusRef(root)).toEqual(jupiter);
   });
 
-  it('wires the camera and the input bindings when galaxyPointRenderer is null', async () => {
+  it('wires the camera and the input bindings when the pick renderers are absent', async () => {
     // No renderer must never mean no input and no error.
     const state = makeState();
-    state.gpu.galaxyPointRenderer = null;
+    state.gpu.milkyWayPickRenderer = null;
     const deps = makeDeps();
     attachOrbitControlsSpy.mockClear();
 

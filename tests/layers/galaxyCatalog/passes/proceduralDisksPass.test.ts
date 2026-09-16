@@ -1,0 +1,106 @@
+import { describe, it, expect, vi } from 'vitest';
+import type { Mat4 } from 'wgpu-matrix';
+import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
+import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+
+function makeCam(): OrbitCamera {
+  return {
+    target: [0, 0, 0] as unknown as Float32Array,
+    distance: 5,
+    yaw: 0,
+    pitch: 0,
+    fovYRad: (60 * Math.PI) / 180,
+    aspect: 16 / 9,
+    near: 0.001,
+    far: 10000,
+    position: new Float32Array([0, 0, 5]),
+  } as unknown as OrbitCamera;
+}
+
+function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+  const cam = makeCam();
+  const vp = new Float32Array(16) as unknown as Mat4;
+  return {
+    isReady: true,
+    viewSlot: 0,
+    renderedTargets: new Set<string>(),
+    cam,
+    vp,
+    slabs: [],
+    canvasSize: { width: 1280, height: 720 },
+    drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
+    drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
+    nowMs: 0,
+    simDays: 0,
+    fovYRad: (60 * Math.PI) / 180,
+    focusBlend: 0,
+    layersAnimating: false,
+    visibleSourceMask: 0xffffffff,
+    focus: {
+      center: [0, 0, 0] as Readonly<[number, number, number]>,
+      apparentRadiusMpc: 1,
+      physicalRadiusMpc: 0,
+      blend: 0,
+    },
+    renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
+    // Nothing in this file reads bodyPose — a stub that never resolves a
+    // body is a safe default, overridable like every other field.
+    bodyPose: () => null,
+    ...overrides,
+  };
+}
+
+/** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */
+function makeView(ctx: ReadyFrameContext): SlabView {
+  return {
+    slab: makeCosmoSlab(),
+    vp: ctx.vp as unknown as Float32Array,
+    camPos: [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]],
+    viewportPx: [ctx.canvasSize.width, ctx.canvasSize.height],
+  };
+}
+
+function makeProceduralDiskRenderer() {
+  return { draw: vi.fn() } as any;
+}
+
+describe('proceduralDisksPass', () => {
+  it('enabled() returns false when state.settings.thumbnails.enabled is false', () => {
+    const state = { settings: { thumbnails: { enabled: false } } } as unknown as EngineState;
+    const runtime = { proceduralDisks: { lastOutput: { instances: [{}] } } } as never;
+    const ctx = makeCtx();
+    expect(proceduralDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(false);
+  });
+
+  it('enabled() returns true with a non-empty lastOutput', () => {
+    const state = { settings: { thumbnails: { enabled: true } } } as unknown as EngineState;
+    const runtime = { proceduralDisks: { lastOutput: { instances: [{}] } } } as never;
+    const ctx = makeCtx();
+    expect(proceduralDisksPass(runtime).enabled(state, ctx, makeView(ctx))).toBe(true);
+  });
+
+  it('draw() forwards the planner instances to the runtime renderer', () => {
+    const instances = [{ x: 1 }, { x: 2 }];
+    const focusBindGroup = {} as GPUBindGroup;
+    const proceduralDiskRenderer = makeProceduralDiskRenderer();
+    const state = {
+      gpu: { focusUniform: { bindGroup: focusBindGroup } },
+    } as unknown as EngineState;
+    const runtime = {
+      proceduralDisks: { lastOutput: { instances } },
+      proceduralDiskRenderer,
+    } as never;
+    const pass = {} as GPURenderPassEncoder;
+    const ctx = makeCtx();
+    proceduralDisksPass(runtime).draw(pass, makeView(ctx), ctx, state);
+    expect(proceduralDiskRenderer.draw).toHaveBeenCalledTimes(1);
+    const call = (proceduralDiskRenderer.draw as any).mock.calls[0];
+    // Args: (pass, vp, viewport, camPos, pxPerRad, focusBindGroup, instances).
+    expect(call[5]).toBe(focusBindGroup);
+    expect(call[6]).toBe(instances);
+  });
+});

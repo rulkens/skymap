@@ -34,6 +34,7 @@ const SWEPT_DIRS: readonly string[] = [
   'src/services/engine/camera',
   'src/services/camera',
   'src/@types/camera',
+  'src/layers',
 ];
 
 const FILES: readonly string[] = SWEPT_DIRS.flatMap((dir) => walkFiles(dir, ['.ts', '.d.ts']));
@@ -77,7 +78,7 @@ function regimeBooleanNames(file: string): string[] {
 }
 
 describe('no stored regime flag: camera.base.frame is the only discriminant', () => {
-  it('the sweep found real files across all four swept directories', () => {
+  it('the sweep found real files across every swept directory', () => {
     // Loud-failure guard: a typo'd dir name returns [] silently and every
     // it.each below vacuously passes — see oneMpcSeam.test.ts for the same
     // shape of check.

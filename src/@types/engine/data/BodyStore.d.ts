@@ -7,7 +7,7 @@ import type { EarthBody } from '../../scene/EarthBody';
  * BodyStore — the authoritative app-side home for the scene's true-scale
  * foreground bodies (stars, planets, and the special-cased Earth).
  *
- * Sibling of `GalaxyStore` / `StructureStore`: the same factory-plus-closure
+ * Sibling of `StructureStore`: the same factory-plus-closure
  * shape and the same discipline — READ-ONLY views out (`readonly[]` for the
  * collections, a nullable record for Earth), mutation only through the setters,
  * which the slot commits own. These are seeded authored constants

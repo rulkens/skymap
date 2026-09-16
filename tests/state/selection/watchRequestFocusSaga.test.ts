@@ -4,12 +4,13 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchRequestFocusSaga } from '../../../src/state/selection/watchRequestFocusSaga';
+import { engineSourceCountReported } from '../../../src/state/engine/engineSlice';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { catalogLoaded } from '../../../src/state/catalog/catalogLoaded';
 import { selectionRoute } from '../../../src/store/constants';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
+import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 
@@ -40,17 +41,20 @@ describe('watchRequestFocusSaga', () => {
   function build() {
     const mw = createSagaMiddleware();
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
-    const deps: ResolveDeps = {
-      catalogs: {
-        get: (src) =>
-          cloudPresent && src === Source.SDSS ? makeCloud(1237668393006604288n) : undefined,
-        famousMeta: [],
+    // The galaxyCatalog Layer's slice of the composed resolver, read LIVE so
+    // the deferral cases can land the cloud mid-test.
+    const galaxies = {
+      get catalogs() {
+        return cloudPresent ? new Map([[Source.SDSS, makeCloud(1237668393006604288n)]]) : new Map();
       },
+      famousMeta: [],
+    } as unknown as GalaxyRowFixture;
+    const deps: ResolveDeps = {
       structures: { byId: () => null, byCategory: () => [] },
       stars: { current: () => null },
     };
     mw.run(watchRequestFocusSaga);
-    mw.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps) });
+    mw.setContext({ resolveDeps: () => deps, selection: selectionResolverOver(deps, galaxies) });
     return s;
   }
   beforeEach(() => {
@@ -68,23 +72,23 @@ describe('watchRequestFocusSaga', () => {
   });
 
   it('resolves a body deep link immediately, with no catalog cloud in the path', async () => {
-    // Ruling 4: a static (body/star/structure) focus id resolves off its
-    // table through the composed resolver's core rows — no `catalogLoaded` /
-    // `engineSourceCountReported` pulse required, even with the cloud absent.
+    // Ruling 4: a static (body/star/structure) focus id resolves off its table
+    // through the composed resolver's core rows — no `engineSourceCountReported`
+    // pulse required, even with the cloud absent.
     cloudPresent = false;
     store.dispatch(requestFocus('body-mars'));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({ type: 'body', id: 'mars' });
   });
 
-  it('defers an unresolvable galaxy id, then resolves on catalogLoaded', async () => {
+  it('defers an unresolvable galaxy id, then resolves on the catalog-landed count pulse', async () => {
     cloudPresent = false;
     store.dispatch(requestFocus('sdss-1237668393006604288'));
     await flush();
     expect(store.getState()[selectionRoute].focus).toBeNull();
 
     cloudPresent = true;
-    store.dispatch(catalogLoaded({ source: Source.SDSS }));
+    store.dispatch(engineSourceCountReported({ source: Source.SDSS, count: 1 }));
     await flush();
     expect(store.getState()[selectionRoute].focus).toEqual({
       type: 'galaxyCatalog',

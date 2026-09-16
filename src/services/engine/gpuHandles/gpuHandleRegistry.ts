@@ -2,18 +2,14 @@
  * GPU_HANDLE_ROWS — the declarative table `constructGpuHandles` /
  * `destroyGpuHandles` walk, and the table `initGpu.ts`/`wireInput.ts` call
  * live. One row per `GpuHandleKey`, in today's `initGpu.ts` order
- * (`focusUniform` first), except `galaxyPickRenderer`/`pickProgram` — marked
+ * (`focusUniform` first), except `pickProgram` — marked
  * `constructPhase: 'wireInput'` — declared LAST so reverse-order teardown
- * destroys them first. `rebuildOnSwapFormat: true` marks the 8 rows
+ * destroys it first. `rebuildOnSwapFormat: true` marks the rows
  * `buildSwapRenderers.ts` rebuilds on a format change.
  */
 
-import { createGalaxyPointRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPointRenderer';
-import { createGalaxyPickRenderer } from '../../gpu/renderers/galaxyCatalog/galaxyPickRenderer';
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
-import { createTexturedDiskRenderer } from '../../gpu/renderers/galaxyCatalog/texturedDiskRenderer';
-import { createProceduralDiskRenderer } from '../../gpu/renderers/galaxyCatalog/proceduralDiskRenderer';
 import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
@@ -59,10 +55,8 @@ import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineR
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { createDiskRadiusRing } from '../../gpu/renderers/devTools/diskRadiusRing';
 import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
-import { CONTENT_PASSES } from '../frame/passes';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
 import type { GpuHandleRow } from '../../../@types/engine/handles/GpuHandleRow';
@@ -80,8 +74,8 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 export const GPU_HANDLE_ROWS = [
   // focusUniform first: reversing the array for teardown destroys it LAST,
   // matching its real early construction position (initGpu.ts) and the one
-  // proven destroy-order constraint (galaxyPickRenderer captures its bind
-  // group at construction — see the plan's teardown-order finding).
+  // proven destroy-order constraint — a Layer's pick renderer captures its
+  // bind group at construction, and every Layer is destroyed before core.
   {
     key: 'focusUniform',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
@@ -106,18 +100,6 @@ export const GPU_HANDLE_ROWS = [
         state,
       ),
   },
-  {
-    key: 'galaxyPointRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createGalaxyPointRenderer({
-        device: deps.ctx.device,
-        targetFormat: HDR_TARGET_FORMAT,
-        fadeBgl: deps.fadeBgl,
-        sourceBgl: deps.sourceBgl,
-        focusBgl: deps.focusBgl,
-      }),
-  },
-
   // ── The 8 swap-chain-format rows (buildSwapRenderers.ts order) ──────────
   {
     key: 'labelRenderer',
@@ -154,12 +136,6 @@ export const GPU_HANDLE_ROWS = [
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createPickDebugOverlay(deps.ctx.device, deps.ctx.format),
-  },
-  {
-    key: 'diskRadiusRing',
-    rebuildOnSwapFormat: true,
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createDiskRadiusRing(deps.ctx.device, deps.ctx.format),
   },
   {
     key: 'foregroundLabelRenderer',
@@ -217,31 +193,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'milkyWayPickRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createMilkyWayPickRenderer(deps.ctx, deps.fadeBgl, SLAB_REVERSED_Z[NEAR0]!),
-  },
-  {
-    key: 'texturedDiskRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createTexturedDiskRenderer(
-        {
-          device: deps.ctx.device,
-          context: deps.ctx.context,
-          targetFormat: HDR_TARGET_FORMAT,
-          canvas: deps.ctx.canvas,
-        },
-        deps.focusBgl,
-      ),
-  },
-  {
-    key: 'proceduralDiskRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createProceduralDiskRenderer({
-        device: deps.ctx.device,
-        context: deps.ctx.context,
-        targetFormat: HDR_TARGET_FORMAT,
-        canvas: deps.ctx.canvas,
-        focusBgl: deps.focusBgl,
-        reversedZ: SLAB_REVERSED_Z[COSMO]!,
-      }),
   },
   {
     key: 'horizonShellRenderer',
@@ -491,23 +442,9 @@ export const GPU_HANDLE_ROWS = [
 
   // ── wireInput.ts-phase rows, declared LAST ───────────────────────────────
   // Constructed once `focusUniform` exists (a later bootstrap phase), and
-  // declared last so reverse-order teardown destroys them FIRST — before
-  // `focusUniform`, whose bind group `galaxyPickRenderer` captures below.
+  // declared last so reverse-order teardown destroys them FIRST.
   // `constructPhase: 'wireInput'` is what `initGpu.ts`/`wireInput.ts` filter
   // on — see GpuHandleRow.d.ts.
-  {
-    key: 'galaxyPickRenderer',
-    constructPhase: 'wireInput',
-    construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
-      createGalaxyPickRenderer(
-        deps.ctx.device,
-        deps.fadeBgl,
-        deps.sourceBgl,
-        deps.focusBgl,
-        state.gpu.focusUniform!.bindGroup,
-        SLAB_REVERSED_Z[COSMO]!,
-      ),
-  },
   {
     key: 'pickProgram',
     constructPhase: 'wireInput',
@@ -516,7 +453,7 @@ export const GPU_HANDLE_ROWS = [
         device: deps.ctx.device,
         canvas: deps.ctx.canvas,
         state,
-        passes: CONTENT_PASSES,
+        passes: state.passes,
       }),
   },
 ] as const satisfies readonly GpuHandleRow[];

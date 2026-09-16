@@ -41,6 +41,7 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 }));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -98,12 +99,10 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
     },
     selection: { hover: null, select: null, focus: null },
     tier: 'medium',
-    subsystems: {
-      fades: { isAnyAnimating: () => false },
-      texturedDisks: { hasInFlightWork: () => false },
-    },
+    subsystems: { fades: { isAnyAnimating: () => false } },
     cubemapCaptures: makeCubemapCaptureRuntimes(),
     contentVersion: 0,
+    passes: CONTENT_PASSES,
     ...overrides,
   } as unknown as EngineState;
 }
@@ -112,9 +111,11 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
 function makeCtx(
   drawCamPos: readonly [number, number, number],
   faceSizePx = 256,
+  layersAnimating = false,
 ): ReadyFrameContext {
   return {
     isReady: true,
+    layersAnimating,
     drawCamPos,
     simDays: 0,
     nowMs: 1000,
@@ -368,11 +369,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
     let fadesAnimating = true;
     const state = makeState({
-      subsystems: {
-        fades: { isAnyAnimating: () => fadesAnimating },
-        texturedDisks: { hasInFlightWork: () => false },
-      },
-    } as Partial<EngineState>);
+      subsystems: { fades: { isAnyAnimating: () => fadesAnimating } },
+    } as unknown as Partial<EngineState>);
 
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes (settling).
     cubemapFaceContextMock.mockClear();
@@ -393,21 +391,19 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     expect(cubemapFaceContextMock).not.toHaveBeenCalled();
   });
 
-  it('a thumbnail alone still in flight (fades settled) forces a sweep on an otherwise unchanged frame', () => {
+  it('a Layer alone still settling (fades settled) forces a sweep on an otherwise unchanged frame', () => {
     cubemapFaceContextMock.mockImplementation(
       (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
     );
 
+    // A Layer still settling — the vote `runFrame` stamps on the ctx.
     const state = makeState({
-      subsystems: {
-        fades: { isAnyAnimating: () => false },
-        texturedDisks: { hasInFlightWork: () => true },
-      },
-    } as Partial<EngineState>);
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state)); // band entry ⇒ bakes.
+      subsystems: { fades: { isAnyAnimating: () => false } },
+    } as unknown as Partial<EngineState>);
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, true), state)); // band entry ⇒ bakes.
     cubemapFaceContextMock.mockClear();
 
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, true), state));
 
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
   });

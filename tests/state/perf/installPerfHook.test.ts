@@ -119,7 +119,7 @@ describe('installPerfHook', () => {
 
     // Drive the store to the "settled" reading (engine ready + no load in
     // flight) so the fresh whenStablyReady arms its stability timer.
-    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100, source: Source.SDSS }));
+    store.dispatch(engineStatusChanged({ kind: 'ready', count: 100 }));
     // Not yet: the predicate must HOLD for the full stability window first.
     await Promise.resolve();
     expect(resolved).toBe(false);

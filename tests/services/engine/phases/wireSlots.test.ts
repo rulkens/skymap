@@ -5,15 +5,15 @@
  * `bootstrap.test.ts` mocks this phase at module scope, so its composition
  * has no direct asserts elsewhere; this file pins that wireSlots: (1) returns
  * synchronously and fires one `loading` status; (2) the demand loop loads the
- * default boot set, real-catalog `ready` echoes fire, and the synthetic
- * backstop loads when every catalog errors; (3) the loadProgress emitter is
+ * default boot set and real-catalog `ready` echoes fire; (3) the loadProgress emitter is
  * wired against EVERY installed slot in `deps.allSlots`; (4) every subsystem/
  * fade wire is present after boot, including structures-visibility gating
  * structureCatalog.
  *
- * Mocking: `AssetSlot`s are real (pure CPU state machines); fetchers,
- * thumbnail factory and GPU device are mocked; point slots are pre-seeded
- * fakes since `wireGalaxyCatalogSourceSlot`'s mint loop is mocked to a no-op.
+ * Mocking: `AssetSlot`s are real (pure CPU state machines); fetchers and GPU
+ * device are mocked. The Layer's point slots are pre-seeded fakes injected
+ * into `state.layerSlots` — `createLayers` mints the real ones, and this
+ * suite never runs that phase.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -68,10 +68,6 @@ vi.mock('../../../../src/services/loading/fetchers/filamentFetcher', () => ({
   })),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher', () => ({
-  famousGalaxiesMetaFetcher: vi.fn(async () => ({ meta: [] })),
-}));
-
 // famousStarsMeta demands unconditionally at boot (like bodyTextureAtlas
 // below), so its fetcher fires inside every wireSlots run; mock it so the
 // test doesn't network.
@@ -95,10 +91,6 @@ vi.mock('../../../../src/services/loading/fetchers/structureCatalogFetcher', () 
     },
     meta: [],
   })),
-}));
-
-vi.mock('../../../../src/services/loading/fetchers/pgcAliasFetcher', () => ({
-  pgcAliasFetcher: vi.fn(async () => new Map()),
 }));
 
 // The body-texture atlas row demands unconditionally at boot (`demand: () => true`),
@@ -144,70 +136,6 @@ vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () =
   })),
 }));
 
-// wireSlots constructs three impostor subsystems (galaxyAtlas,
-// proceduralDisk, texturedDisk), each carrying a GPU-device dependency.
-// Hollow factories that satisfy the call sites without touching the
-// stubbed device.
-vi.mock('../../../../src/services/engine/subsystems/galaxyAtlasSubsystem', () => ({
-  createGalaxyAtlasSubsystem: vi.fn(() => ({
-    getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
-    destroy: vi.fn(),
-  })),
-}));
-vi.mock('../../../../src/services/engine/subsystems/proceduralDiskSubsystem', () => ({
-  createProceduralDiskSubsystem: vi.fn(() => ({
-    runFrame: vi.fn(),
-    lastOutput: { instances: [] },
-    destroy: vi.fn(),
-  })),
-}));
-vi.mock('../../../../src/services/engine/subsystems/texturedDiskSubsystem', () => ({
-  createTexturedDiskSubsystem: vi.fn(() => ({
-    runFrame: vi.fn(),
-    lastOutput: { quads: [], disks: [] },
-    hasInFlightWork: vi.fn(() => false),
-    setHiResFamous: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-// LOD-3 hi-res pair: the texture factory would call into
-// `device.createTexture` without a real GPU — stub the resource handle
-// and its consumer subsystem.
-vi.mock('../../../../src/services/gpu/resources/hiResFamousTexture', () => ({
-  createHiResFamousTexture: vi.fn(() => ({
-    initTexture: vi.fn(),
-    getTextureView: vi.fn(() => ({}) as unknown as GPUTextureView),
-    getLayerSide: vi.fn(() => 1024),
-    allocate: vi.fn(() => -1),
-    touch: vi.fn(),
-    release: vi.fn(),
-    isLoaded: vi.fn(() => false),
-    isFailed: vi.fn(() => false),
-    markFailed: vi.fn(),
-    layerForKey: vi.fn(() => undefined),
-    uploadBitmap: vi.fn(),
-    setEvictHandler: vi.fn(),
-    destroy: vi.fn(),
-  })),
-}));
-vi.mock('../../../../src/services/engine/subsystems/hiResFamousSubsystem', () => ({
-  createHiResFamousSubsystem: vi.fn(() => ({
-    runFrame: vi.fn(),
-    lastOutput: { byFamousIdx: new Map() },
-    destroy: vi.fn(),
-  })),
-}));
-
-// wireSlots now mints the per-source point slots directly (moved from
-// initGpu). This suite injects its OWN fake slots into `state.assetSlots.points`
-// (see `bootPointSlots` / per-test `points` maps below) and drives them by
-// hand, so `wireGalaxyCatalogSourceSlot` is stubbed to a no-op here —
-// otherwise it would overwrite those fakes with real slots (whose commits hit
-// the real fetchers, unmocked in this file) before the demand loop ever runs.
-vi.mock('../../../../src/services/engine/wiring/wireGalaxyCatalogSourceSlot', () => ({
-  wireGalaxyCatalogSourceSlot: vi.fn(),
-}));
-
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the
 // moment wireSlots hands the registry off.
@@ -224,12 +152,17 @@ vi.mock('../../../../src/services/engine/subsystems/loadProgressAggregator', () 
 
 // Imported AFTER the mocks so wireSlots picks them up.
 import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
-import { famousGalaxiesMetaFetcher } from '../../../../src/services/loading/fetchers/famousGalaxiesMetaFetcher';
+import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
+import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
+import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
+import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
+import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { structureCatalogFetcher } from '../../../../src/services/loading/fetchers/structureCatalogFetcher';
 import { mcpmFetcher } from '../../../../src/services/loading/fetchers/mcpmFetcher';
 import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
 import { cf4DensityFetcher } from '../../../../src/services/loading/fetchers/cf4DensityFetcher';
-import { pgcAliasFetcher } from '../../../../src/services/loading/fetchers/pgcAliasFetcher';
 import { loadDataManifest } from '../../../../src/services/loading/dataManifest';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -286,8 +219,7 @@ function makeFakeSlot(name: string): FakeSlot {
  * Build a boot-shaped points map: SDSS/2MRS/GLADE galaxy catalog fakes left idle
  * (still "loading" — they never fire), plus a Famous fake pre-fired to
  * `loading` so the famous-galaxies-meta demand predicate (`slotState(Famous) !== 'idle'`)
- * reads true.  Idle galaxy catalog fakes keep the synthetic-fallback gate waiting
- * rather than arming + re-running demand — the live-boot shape.
+ * reads true.  Idle galaxy catalog fakes never re-run demand — the live-boot shape.
  */
 function bootPointSlots(): Map<SourceType, ReturnType<typeof makeFakeSlot>> {
   const famous = makeFakeSlot('famous-points');
@@ -337,6 +269,23 @@ function makeState(
   }> = {},
 ): EngineState {
   const points = overrides.points ?? new Map();
+  // The Layer's slots and the runtime its rows read: `createLayers` would have
+  // minted both before this phase runs.
+  const layerSlots = new Map<AssetKey, never>(points as never);
+  for (const [key, name] of [
+    ['famousGalaxiesMeta', 'famous-galaxies-meta'],
+    ['pgcAlias', 'pgc-aliases'],
+    ['hiResFamous', 'hi-res-famous'],
+  ] as const) {
+    layerSlots.set(key, makeFakeSlot(name) as never);
+  }
+  const galaxyRuntime = {
+    points,
+    famousGalaxiesMeta: layerSlots.get('famousGalaxiesMeta'),
+    pgcAlias: layerSlots.get('pgcAlias'),
+    hiResFamous: layerSlots.get('hiResFamous'),
+    pointRenderer: { hasCatalog: () => true },
+  } as unknown as GalaxyCatalogRuntime;
   const allVisible: Record<string, boolean> = {
     cluster: true,
     supercluster: true,
@@ -364,8 +313,7 @@ function makeState(
   // star-bin fetch this fixture provides no slot for).
   return {
     // Top-level data tier — its own root field on EngineState; the source
-    // expression `req(state.tier)` reads it, and the synthetic-fallback
-    // assertion checks `tier: state.tier`.
+    // expression `req(state.tier)` reads it.
     tier: 'medium',
     settings: {
       galaxyCatalogs: {
@@ -411,8 +359,7 @@ function makeState(
       starCatalogs: { ...INITIAL_SETTINGS.starCatalogs, enabled: false },
     },
     bias: {} as never,
-    // The synthetic-fallback gate writes `state.requests.add('syntheticFallback')`
-    // and the demand loop reads request flags — both need a live Set.
+    // The demand loop reads one-shot request flags off this set.
     requests: new Set(),
     data,
     picking: {} as never,
@@ -421,8 +368,6 @@ function makeState(
       // optional-chain through them.  Filament renderer is set so the
       // filaments slot's commit doesn't bail early; the scalar volume
       // renderer is stubbed so CF-4 and synthetic commits can land.
-      galaxyPointRenderer: { totalCount: () => 0, loadedSources: () => [] as unknown[] } as never,
-      galaxyPickRenderer: null,
       renderTargets: null,
       filamentRenderer: {
         upload: vi.fn(async () => {}),
@@ -430,8 +375,6 @@ function makeState(
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: { bindAtlas: vi.fn() } as never,
-      texturedDiskRenderer: { bindAtlas: vi.fn(), bindHiResArray: vi.fn() } as never,
-      proceduralDiskRenderer: {} as never,
       volumeFieldRenderer: {
         upload: vi.fn(),
       } as never,
@@ -441,11 +384,6 @@ function makeState(
       // `wireSlots` ends with `reevaluateDemand`, which enqueues onto this
       // rather than calling `slot.load()` directly.
       assetQueue: new PriorityQueue<void>(ASSET_QUEUE_CONCURRENCY),
-      galaxyAtlas: null,
-      proceduralDisks: null,
-      texturedDisks: null,
-      hiResFamous: null,
-      hiResFamousTexture: null,
       loadProgress: null,
       // wireStructureProjection (called from wireSlots) writes the static
       // anchors + bulk clusters into `state.data.structures`; tests read them
@@ -481,14 +419,11 @@ function makeState(
       },
     },
     assetSlots: {
-      points: points as Map<SourceType, never>,
       // Real (empty) map: installSlots routes the registry-built star-catalog
       // slots here, so the fixture must carry the destination.
       starCatalogs: new Map(),
       filaments: null,
-      famousGalaxiesMeta: null,
       structureCatalog: null,
-      pgcAlias: null,
       cf4Density: null,
       mcpm: null,
       // Real (empty) map: installLoadProgress walks it, and the body-texture
@@ -496,6 +431,12 @@ function makeState(
       bodyTextures: new Map(),
       meshBodies: new Map(),
     },
+    // The composed lists `createLayers` would have written: core's registries
+    // plus the galaxyCatalog Layer's rows, with its slots in `layerSlots` —
+    // wireSlots itself no longer mints any of them.
+    assetRows: expandCompanionRows([...ASSET_WIRING, ...galaxyCatalogAssetRows(galaxyRuntime)]),
+    fadeRows: [...FADE_LAYERS, ...galaxyCatalogFadeRows(galaxyRuntime)],
+    layerSlots,
   } as unknown as EngineState;
 }
 
@@ -537,10 +478,10 @@ describe('wireSlots', () => {
     emitterSpy.mockClear();
   });
 
-  it('returns synchronously (does not wait on galaxy catalog arrivals) and fires `loading` status', async () => {
-    // Progressive disclosure: wireSlots mints + kicks off loads then
-    // returns. Per-arrival `ready` emissions happen later via the
-    // subscribers it registered, not by awaiting in this body.
+  it('returns synchronously (does not await any slot) and fires `loading` status', async () => {
+    // Progressive disclosure: wireSlots kicks off loads then returns.
+    // Per-arrival `ready` emissions happen later via the subscribers it
+    // registered, not by awaiting in this body.
     const sdssSlot = makeFakeSlot('sdss-points');
     const twoMrsSlot = makeFakeSlot('2mrs-points');
     const gladeSlot = makeFakeSlot('glade-points');
@@ -639,40 +580,6 @@ describe('wireSlots', () => {
     expect(structureCatalogFetcher).toHaveBeenCalled();
   });
 
-  it('assigns all five impostor subsystems onto state.subsystems', async () => {
-    // The downstream frame loop reads these five by name; a missed assignment
-    // is a silent "thumbnails never draw" bug.  The factories are mocked at
-    // module scope to hollow objects, so each assignment is merely truthy here
-    // — the contract under test is "all five slots are populated", not their
-    // internals.  Four come straight from `wireImpostorSubsystems`; the hi-res
-    // pair lands on the demand loop's first commit, hence the drain.
-    const state = makeState({ points: bootPointSlots() });
-    const deps = makeDeps();
-
-    await wireSlots(state, deps);
-    await state.subsystems.assetQueue.drain();
-
-    expect(state.subsystems.galaxyAtlas).not.toBeNull();
-    expect(state.subsystems.proceduralDisks).not.toBeNull();
-    expect(state.subsystems.texturedDisks).not.toBeNull();
-    expect(state.subsystems.hiResFamous).not.toBeNull();
-    expect(state.subsystems.hiResFamousTexture).not.toBeNull();
-  });
-
-  it('boots without the disk renderers, skipping the impostor wiring', async () => {
-    // Absent is legal: a composition that never runs initGpu's disk
-    // renderers must still boot — the impostor cluster just stays unwired.
-    // Fails the day someone reinstates a boot-wide renderer requirement.
-    const state = makeState({ points: bootPointSlots() });
-    state.gpu.texturedDiskRenderer = null;
-    state.gpu.proceduralDiskRenderer = null;
-    const deps = makeDeps();
-
-    await wireSlots(state, deps);
-
-    expect(state.subsystems.texturedDisks).toBeNull();
-  });
-
   it('registers the overlay, volume-master, and label-layer fade handles', async () => {
     // seedFades pins each layer's frame-1 opacity in the fade
     // registry.  A missed handle means that layer's toggle has nothing to
@@ -723,10 +630,8 @@ describe('wireSlots', () => {
     // since the module-scoped mocks persist across tests.
     vi.mocked(mcpmFetcher).mockClear();
     vi.mocked(structureCatalogFetcher).mockClear();
-    vi.mocked(famousGalaxiesMetaFetcher).mockClear();
     vi.mocked(filamentFetcher).mockClear();
     vi.mocked(cf4DensityFetcher).mockClear();
-    vi.mocked(pgcAliasFetcher).mockClear();
 
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
@@ -735,14 +640,15 @@ describe('wireSlots', () => {
     // Drain the asset queue for the same reason as the case above.
     await state.subsystems.assetQueue.drain();
 
-    // Default-on / structures-visible / famous-loading ⇒ fetched.
+    // Default-on / structures-visible ⇒ fetched. The famous-meta sidecar is
+    // the Layer's slot now, so its load is observed on the stub, not its fetcher.
     expect(mcpmFetcher).toHaveBeenCalled();
     expect(structureCatalogFetcher).toHaveBeenCalled();
-    expect(famousGalaxiesMetaFetcher).toHaveBeenCalled();
+    expect(state.layerSlots.get('famousGalaxiesMeta')!.load).toHaveBeenCalled();
     // Default-off / lazy ⇒ never fetched at boot.
     expect(filamentFetcher).not.toHaveBeenCalled();
     expect(cf4DensityFetcher).not.toHaveBeenCalled();
-    expect(pgcAliasFetcher).not.toHaveBeenCalled();
+    expect(state.layerSlots.get('pgcAlias')!.load).not.toHaveBeenCalled();
   });
 
   it('does not load structureCatalog when every structure category is hidden (bug-fix integration pin)', async () => {
@@ -765,81 +671,6 @@ describe('wireSlots', () => {
     await wireSlots(state, deps);
 
     expect(structureCatalogFetcher).not.toHaveBeenCalled();
-  });
-
-  it('fires `ready` status with a running total each time a galaxy catalog arrives', async () => {
-    // Semantic (b): on each per-source `ready` with count > 0, emit
-    // `kind: 'ready'` with the running total from galaxyPointRenderer.totalCount().
-    // The status bar's job here is "the data is appearing" — not "boot
-    // is done" — so emissions repeat.
-    const sdssSlot = makeFakeSlot('sdss-points');
-    const gladeSlot = makeFakeSlot('glade-points');
-    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
-      [Source.SDSS, sdssSlot],
-      [Source.Glade, gladeSlot],
-    ]);
-    const state = makeState({ points });
-    let total = 0;
-    // Drive the galaxyPointRenderer.totalCount() through the fake slot ready firings.
-    state.gpu.galaxyPointRenderer = {
-      totalCount: () => total,
-      loadedSources: () => [] as unknown[],
-    } as never;
-    const deps = makeDeps();
-    const dispatchSpy = vi.spyOn(deps.cb.store, 'dispatch');
-    await wireSlots(state, deps);
-
-    total = 10000;
-    sdssSlot.fire(readyValue(10000));
-    total = 30000;
-    gladeSlot.fire(readyValue(20000));
-
-    const readyStatuses = dispatchSpy.mock.calls
-      .map((c) => c[0] as ReturnType<typeof engineStatusChanged>)
-      .filter((a) => a.type === engineStatusChanged.type && a.payload.kind === 'ready')
-      .map((a) => a.payload);
-    expect(readyStatuses.length).toBe(2);
-    expect(readyStatuses[0]).toMatchObject({ kind: 'ready', count: 10000 });
-    expect(readyStatuses[1]).toMatchObject({ kind: 'ready', count: 30000 });
-  });
-
-  it('synthetic-fallback path fires `load(...)` on the synthetic slot when every real galaxy catalog errors', async () => {
-    // The fallback condition: SDSS, 2MRS, Glade all settle with no
-    // `ready` + `count > 0`. Famous is curated and doesn't count
-    // either way. With the progressive-disclosure refactor the
-    // fallback is a background subscriber registered before loads
-    // fire, so we just need to drive each real slot through `error`
-    // and assert `synthSlot.load` happened.
-    const sdssSlot = makeFakeSlot('sdss-points');
-    const twoMrsSlot = makeFakeSlot('2mrs-points');
-    const gladeSlot = makeFakeSlot('glade-points');
-    const famousSlot = makeFakeSlot('famous-points');
-    const synthSlot = makeFakeSlot('synthetic-points');
-    const points = new Map<SourceType, ReturnType<typeof makeFakeSlot>>([
-      [Source.SDSS, sdssSlot],
-      [Source.TwoMRS, twoMrsSlot],
-      [Source.Glade, gladeSlot],
-      [Source.FamousGalaxy, famousSlot],
-      [Source.Synthetic, synthSlot],
-    ]);
-    const state = makeState({ points });
-    const deps = makeDeps();
-
-    await wireSlots(state, deps);
-
-    sdssSlot.fire(errorValue('sdss boom'));
-    twoMrsSlot.fire(errorValue('2mrs boom'));
-    gladeSlot.fire(errorValue('glade boom'));
-    famousSlot.fire(errorValue('famous boom'));
-
-    // Drain the asset queue for the same reason as the boot cases above: the
-    // fallback's re-evaluation enqueues the synthetic row behind whatever the
-    // boot pass already put in flight.
-    await state.subsystems.assetQueue.drain();
-    expect(synthSlot.load).toHaveBeenCalledTimes(1);
-    // No tier: synthetic is generated at runtime, so there is no per-tier file
-    // for the request to name (and nothing for the drift edge to reload).
-    expect(synthSlot.load).toHaveBeenCalledWith({ source: Source.Synthetic });
   });
 
   it('loadProgress emitter is constructed with a slot registry that includes every minted slot name', async () => {
@@ -871,11 +702,11 @@ describe('wireSlots', () => {
     const capturedRegistry = emitterSpy.mock.calls[0]![0] as Map<string, unknown>;
     expect(capturedRegistry).toBe(deps.allSlots);
 
-    // Registry includes the per-source point slots (by `.name`) plus
-    // the sidecar slots wireSlots itself mints (filaments, famous-galaxies-meta,
-    // pgc-aliases, CF-4, MCPM) plus synthetic fixtures (DEV-only —
-    // vitest runs as DEV). Asserted as a superset so additive changes
-    // don't break the test for the wrong reason.
+    // Registry includes the Layer's slots (the per-source point slots and its
+    // two sidecars, by `.name`) plus the sidecars wireSlots itself mints
+    // (filaments, structure catalog, CF-4, MCPM) plus synthetic fixtures
+    // (DEV-only — vitest runs as DEV). Asserted as a superset so additive
+    // changes don't break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);
@@ -925,7 +756,7 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    // Idle galaxy catalog fakes keep the synthetic gate waiting so demand runs once.
+    // Idle galaxy catalog fakes keep demand to a single run.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();
     await wireSlots(state, deps);
@@ -963,8 +794,8 @@ describe('wireSlots', () => {
       ],
     } as never);
 
-    // Idle galaxy catalog fakes keep the synthetic gate waiting so demand runs once —
-    // a double-run would re-trigger the (non-idempotent) structure-catalog load
+    // Idle galaxy catalog fakes keep demand to a single run — a double-run
+    // would re-trigger the (non-idempotent) structure-catalog load
     // and race the mock once-value against its empty default.
     const state = makeState({ points: bootPointSlots() });
     const deps = makeDeps();

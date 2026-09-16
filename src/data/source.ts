@@ -9,14 +9,13 @@
  * file format AND packed into the pick texture's upper 6 bits. Treat
  * them like API version numbers — append, never renumber. Recycling a
  * code silently breaks every `.bin` ever written and every saved
- * selection URL.
+ * selection URL. Code 0 is retired (the deleted synthetic cloud) and
+ * stays unassigned for that reason.
  *
  * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
  * same "append, never renumber" discipline applies for consistency.
  */
 export const Source = {
-  /** Procedurally-generated stand-in cloud (no real photometry). */
-  Synthetic: 0,
   /** Sloan Digital Sky Galaxy catalog — deep optical spectroscopic galaxy catalog. */
   SDSS: 1,
   /** 2MASS Redshift Galaxy catalog — near-IR all-sky redshift catalog. */

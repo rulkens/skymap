@@ -24,7 +24,7 @@
  */
 
 import { sdssThumbnailUrl, dssThumbnailUrl } from '../math';
-import { GALAXY_ATLAS_SLOT_SIDE } from '../../services/engine/subsystems/galaxyAtlasSubsystem';
+import { GALAXY_ATLAS_SLOT_SIDE } from '../../data/galaxyCatalog/galaxyAtlasSlotSide';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
 import type { FetchGalaxyBitmapInput } from '../../@types/loading/FetchGalaxyBitmapInput';
 

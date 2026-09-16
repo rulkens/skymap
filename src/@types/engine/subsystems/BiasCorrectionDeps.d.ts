@@ -1,14 +1,21 @@
 import type { BiasMode } from '../../data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
 import type { SourceType } from '../../data/SourceType';
+import type { GalaxyPointRenderer } from '../../rendering/GalaxyPointRenderer';
 import type { SchechterRunner } from './SchechterRunner';
 import type { AngularRunner } from './AngularRunner';
 
 export type BiasCorrectionDeps = {
   /**
-   * Current bias mode — read lazily on every bake decision because
-   * the user can flip modes between bakes. Replaces the old
-   * `getState().settings.bias.mode` read.
+   * The renderer whose per-source vertex buffers every bake splices into. A
+   * CONSTRUCTOR dep, not a later attach: the Layer's `create` builds the
+   * renderer first, so there is no pre-attach window to cache results across.
+   */
+  renderer: GalaxyPointRenderer;
+
+  /**
+   * Current bias mode — read lazily on every bake decision, because the user
+   * can flip modes between bakes.
    */
   getMode: () => BiasMode;
 

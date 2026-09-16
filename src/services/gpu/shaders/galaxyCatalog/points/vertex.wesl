@@ -117,11 +117,10 @@ fn vs(
   // Provenance flags: each axis's 'this value was estimated, not measured'
   // bit rides the sign bit of that axis's per-instance attribute.
   //
-  // Synthetic-fallback rows carry NaN in both slots, and 'NaN < 0.0' is
-  // false — so they read as MEASURED on both axes. That is deliberate for
-  // the highlight (nothing to audit on a row with no catalogued value), but
-  // it means an 'estimated'-only filter culls them along with the genuinely
-  // measured galaxies.
+  // A row carrying the format's NaN "no measurement" sentinel in both slots
+  // reads as MEASURED on both axes ('NaN < 0.0' is false). Deliberate for the
+  // highlight (nothing to audit on a row with no catalogued value), but it
+  // means an 'estimated'-only filter culls those rows too.
   let orientEstimated = p.axisRatio < 0.0;
   let sizeEstimated = p.radiusMpc < 0.0;
 
@@ -155,7 +154,7 @@ fn vs(
   // 'still detectable as a glowing dot' floor). The per-instance
   // 'p.radiusMpc' carries the already-padded world-space half-extent —
   // bake site applied the 4× thumbnail-footprint padding and the
-  // synthetic-fallback floor, so the shader reads it directly.
+  // missing-diameter floor, so the shader reads it directly.
   let toGalaxy = p.position - u.camPosWorld;
   let distanceMpc = length(toGalaxy);
   // Guard distanceMpc against 0 so we don't divide-by-zero when the camera
@@ -273,7 +272,7 @@ fn vs(
   // galaxy darkens it rather than making it pop, and the whole point of the
   // overlay is that flagged rows are impossible to miss. Amber / magenta /
   // green are colours no real galaxy SED produces, so a flagged row reads as
-  // unmistakably synthetic against the field — and the overlay deliberately
+  // unmistakably artificial against the field — and the overlay deliberately
   // renders FLAT rather than gradient-modulated for the same reason: a debug
   // marker that shades like a galaxy is a worse debug marker.
   //
@@ -291,8 +290,8 @@ fn vs(
   // safeAB, the ellipse-mask coefficient, is computed here rather than at the
   // 'out.ellipse' packing below because it derives from 'p.axisRatio', which
   // is in scope at this point. It defaults to 1.0 (circle) for invalid / NaN
-  // axis ratios (synthetic-fallback rows): 'abs(NaN) > 0.0' is false, so the
-  // select branch is the correct gate.
+  // axis ratios: 'abs(NaN) > 0.0' is false, so the select branch is the
+  // correct gate.
   let orientHighlight = u.orientationHighlight == 1u && orientEstimated;
   let sizeHighlight = u.sizeHighlight == 1u && sizeEstimated;
 

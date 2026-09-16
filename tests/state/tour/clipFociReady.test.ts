@@ -41,7 +41,6 @@ const id = (s: string): FocusId => s as FocusId;
 // Deps where no catalog is loaded and famousMeta is empty — any
 // famous or galaxy id resolves to null.
 const emptyDeps: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };
@@ -62,7 +61,6 @@ const m87Meta: FamousGalaxyMetaEntry = {
 // Deps with m87 in famousMeta but NO FamousGalaxy cloud loaded.
 // resolveFocusId returns null for 'm87' — the catalog is absent.
 const depsM87NotLoaded: ResolveDeps = {
-  catalogs: { get: () => undefined, famousMeta: [m87Meta] },
   structures: { byId: () => null, byCategory: () => [] },
   stars: { current: () => null },
 };

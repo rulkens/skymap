@@ -190,7 +190,7 @@ return entry.falloffHalfMpc;
 **Behaviour:** returns `falloffHalfMpc` for survey entries; throws for non-survey codes.
 
 - [ ] Add the test `getFalloffHalfMpc returns the survey value` asserting SDSS → 1000.
-- [ ] Add the test `getFalloffHalfMpc throws for synthetic codes` asserting the throw.
+- [ ] Add the test `getFalloffHalfMpc throws for non-survey codes` asserting the throw.
 - [ ] Implement against the existing `SOURCE_REGISTRY` lookup pattern (see
       `getMaxDistMpc` at `sources.ts:142` for the shape).
 - [ ] `npm test -- sources` → both new tests pass.

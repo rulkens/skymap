@@ -68,9 +68,6 @@ const NO_ANIM = {
  * Minimal state covering every term shouldKeepTicking reads. All terms default
  * to their AT-REST value (nothing animating); each test flips exactly one.
  *
- * `subsystems.texturedDisks` is left null (D13: the term reads it directly,
- * `?.hasInFlightWork() ?? false`, with no bootstrap gate), so it short-
- * circuits to false without needing a thumbnail subsystem.
  */
 function makeState(over: {
   flowEnabled?: boolean;
