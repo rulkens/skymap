@@ -84,6 +84,8 @@ export const earthSurfaceTilesPass: ContentPass = {
       // cast shadow and the drawn deck agree by construction.
       cloudShellRadius: CLOUD_SHELL_PARAMS.radiusRatio,
       debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],
+      noDisplacement: state.settings.debug.overlays['terrain-no-displacement'],
+      noSkirts: state.settings.debug.overlays['terrain-no-skirts'],
       surfaceAtlasView: earthTiles.getAtlasView()!,
       heightAtlasView: earthTiles.getHeightAtlasView()!,
       materialView: earthRenderer.getMapView('material'),

@@ -144,6 +144,8 @@ function fieldForExpr(expr: string): string {
   if (/^cloudShadowStrength$/.test(expr)) return 'cloudShadowStrength';
   if (/^cloudShellRadius$/.test(expr)) return 'cloudShellRadius';
   if (/^debugLodOverlay/.test(expr)) return 'debugLodOverlay';
+  if (/^noDisplacement/.test(expr)) return 'noDisplacement';
+  if (/^noSkirts/.test(expr)) return 'noSkirts';
   throw new Error(`writer expression maps to no known field: '${expr}'`);
 }
 

@@ -17,4 +17,10 @@ export const DEBUG_OVERLAY_ROWS = [
   { key: 'disk-radius-ring', label: 'Show disk radius ring' },
   { key: 'orbit-trail-impostor', label: 'Show orbit-trail impostor' },
   { key: 'earth-lod-overlay', label: 'Earth LOD overlay' },
+  {
+    key: 'terrain-no-displacement',
+    label: 'No displacement (flat patches)',
+    section: 'earth-tiles',
+  },
+  { key: 'terrain-no-skirts', label: 'No skirts', section: 'earth-tiles' },
 ] as const satisfies readonly DebugOverlayRow[];
