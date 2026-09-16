@@ -1,6 +1,6 @@
 /**
  * earthPass — unit tests for Earth's two `'body'`-slab content rows: the base
- * globe (`earthPass`) and the detail patches over it (`earthSurfaceTilesPass`).
+ * globe (`earthPass`) and the detail patches over it (`surfaceTilesPass`).
  * One suite because the two rows share every fixture here — the seeded body,
  * the slab view, the pose provider — and split files would duplicate ~200 lines
  * of setup to assert one draw call each.
@@ -34,7 +34,7 @@ import {
   earthPass,
   prepareBodySurfaceFrame,
 } from '../../../../../src/services/engine/frame/passes/earthPass';
-import { earthSurfaceTilesPass } from '../../../../../src/services/engine/frame/passes/earthSurfaceTilesPass';
+import { surfaceTilesPass } from '../../../../../src/services/engine/frame/passes/surfaceTilesPass';
 import { CONTENT_PASSES } from '../../../../../src/services/engine/frame/passes';
 import { FRAME_ORDER } from '../../../../../src/services/engine/frame/frameOrder';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
@@ -67,7 +67,7 @@ import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { EarthSurfaceTileDrawArgs } from '../../../../../src/@types/rendering/EarthSurfaceTileRenderer';
+import type { SurfaceTileDrawArgs } from '../../../../../src/@types/rendering/SurfaceTileRenderer';
 
 // Mock the two body-slab compose primitives so the test can (a) assert which
 // vp/pose they consumed by argument identity and (b) hand the layer
@@ -261,10 +261,10 @@ function makeState(earthRenderer: unknown, earth: EarthBody | null): EngineState
 const HEIGHT_ATLAS_VIEW = {} as GPUTextureView;
 
 /**
- * `makeState`'s tile-draw variant: adds the `earthSurfaceTileRenderer` GPU
+ * `makeState`'s tile-draw variant: adds the `surfaceTileRenderer` GPU
  * handle and a `surfaceTiles` subsystem stub whose cut and two atlas views are
  * caller-controlled — the instanced-draw gate's four inputs
- * (`state.gpu.earthSurfaceTileRenderer`, `getAtlasView()`,
+ * (`state.gpu.surfaceTileRenderer`, `getAtlasView()`,
  * `getHeightAtlasView()`, `getLastCut()`).
  */
 function makeTileDrawState(input: {
@@ -282,7 +282,7 @@ function makeTileDrawState(input: {
     ...base,
     gpu: {
       ...(base as unknown as { gpu: object }).gpu,
-      earthSurfaceTileRenderer: input.tileRenderer,
+      surfaceTileRenderer: input.tileRenderer,
     },
     subsystems: {
       surfaceTiles: {
@@ -373,7 +373,7 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
         atmosphereShellRenderer: null,
         // The detail patches are their own row in this group; a null handle
         // short-circuits their enabled gate like every sibling above.
-        earthSurfaceTileRenderer: null,
+        surfaceTileRenderer: null,
       },
       data: { bodies: { earth: SEEDED_EARTH, planets: [], meshBodies: [], stars: [] } },
     } as unknown as EngineState;
@@ -600,9 +600,9 @@ describe('earthPass.draw', () => {
   });
 });
 
-describe('earthSurfaceTilesPass', () => {
+describe('surfaceTilesPass', () => {
   // A minimal stand-in for `SurfaceCutTile` — `earthPass.draw` forwards it
-  // opaquely to `earthSurfaceTileRenderer.draw`, never reading its fields.
+  // opaquely to `surfaceTileRenderer.draw`, never reading its fields.
   const STUB_CUT = [
     {
       id: { z: 8, x: 1, y: 1 },
@@ -628,16 +628,16 @@ describe('earthSurfaceTilesPass', () => {
         : step.kind === 'capture'
           ? [step.bodyPasses]
           : [],
-    ).filter((roster) => roster.includes('earth-surface-tiles'));
+    ).filter((roster) => roster.includes('surface-tiles'));
     expect(rosters.length).toBeGreaterThan(0);
     for (const roster of rosters) {
-      expect(roster.indexOf('earth-surface-tiles')).toBe(roster.indexOf('earth') + 1);
+      expect(roster.indexOf('surface-tiles')).toBe(roster.indexOf('earth') + 1);
     }
   });
 
   it('forwards the eye-relative pose and the un-rebased view.vp to the tile renderer', () => {
     mvpMock.mockClear();
-    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs) => void>();
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeTileDrawState({
       tileRenderer: { draw: tileDraw },
@@ -648,7 +648,7 @@ describe('earthSurfaceTilesPass', () => {
     // The base row runs first in a real frame; its mvp call is what the
     // eyeRelBodyM assertion below reads back.
     earthPass.draw(PASS_STUB, view, NEAR_CTX, state);
-    earthSurfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
+    surfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
 
     expect(tileDraw).toHaveBeenCalledTimes(1);
     const [pass, args] = tileDraw.mock.calls[0]!;
@@ -669,7 +669,7 @@ describe('earthSurfaceTilesPass', () => {
     // The DebugPanel toggle must reach the tile renderer every draw, not just
     // on change — the fixture's two states below stand in for a checkbox
     // flip between frames.
-    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs) => void>();
+    const tileDraw = vi.fn<(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs) => void>();
     const view = makeEarthBodyView('earth');
     const state = makeTileDrawState({
       tileRenderer: { draw: tileDraw },
@@ -677,13 +677,13 @@ describe('earthSurfaceTilesPass', () => {
       atlasView: ATLAS_VIEW,
     });
 
-    earthSurfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
+    surfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[0]![1].debugLodOverlay).toBe(false);
 
     (state.settings as unknown as { debug: { overlays: Record<string, boolean> } }).debug.overlays[
       'earth-lod-overlay'
     ] = true;
-    earthSurfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
+    surfaceTilesPass.draw(PASS_STUB, view, NEAR_CTX, state);
     expect(tileDraw.mock.calls[1]![1].debugLodOverlay).toBe(true);
   });
 
@@ -694,7 +694,7 @@ describe('earthSurfaceTilesPass', () => {
     // so a cut drawn without it is undefined geometry, not a degraded picture.
     const view = makeEarthBodyView('earth');
     const enabledWith = (input: Parameters<typeof makeTileDrawState>[0]) =>
-      earthSurfaceTilesPass.enabled(makeTileDrawState(input), NEAR_CTX, view);
+      surfaceTilesPass.enabled(makeTileDrawState(input), NEAR_CTX, view);
 
     const live = { tileRenderer: { draw: vi.fn() }, cut: STUB_CUT, atlasView: ATLAS_VIEW };
     expect(enabledWith(live)).toBe(true);
@@ -767,7 +767,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
 
     const ctx = makeAltitudeCtx(1);
     earthPass.draw(PASS_STUB, view, ctx, state);
-    earthSurfaceTilesPass.draw(PASS_STUB, view, ctx, state);
+    surfaceTilesPass.draw(PASS_STUB, view, ctx, state);
 
     expect(baseDraw).toHaveBeenCalledTimes(1);
     expect(tileDraw).toHaveBeenCalledTimes(1);

@@ -396,7 +396,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
           // recycled) — see `uploadBitmapToAtlas`/`closeBitmap`.
           const slot = streams.stream.upload(key, bitmap);
           // Stamped here, at the upload site — REAL time (`performance.now()`,
-          // never sim time), so `earthSurfaceTileRenderer`'s crossfade runs
+          // never sim time), so `surfaceTileRenderer`'s crossfade runs
           // even while the sim clock is paused or scaled.
           const readyAtMs = performance.now();
           pendingLevelOf.delete(key);

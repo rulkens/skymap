@@ -6,7 +6,7 @@ import type { SurfaceTileShading } from '../data/SurfaceTileShading';
 import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
 
 /**
- * `EarthSurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is Task 2's
+ * `SurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is Task 2's
  * already-culled, already-residency-resolved cut (`cutSurfaceTiles`'s `cut`
  * product) -- this renderer does no further culling or ancestor fallback.
  *
@@ -19,7 +19,7 @@ import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
  * the tile atlas nor any effect map -- both are supplied here every draw (see
  * the renderer's module header).
  */
-export type EarthSurfaceTileDrawArgs = {
+export type SurfaceTileDrawArgs = {
   readonly tiles: readonly SurfaceCutTile[];
   /** Eye − body centre, in the body's fixed axes, metres, f64 —
    *  `PreparedBodySurfaceFrame.pose.eyeRelBodyM`. */
@@ -55,10 +55,10 @@ export type EarthSurfaceTileDrawArgs = {
   readonly heightAtlasView: GPUTextureView;
 };
 
-export type EarthSurfaceTileRenderer = Renderer & {
+export type SurfaceTileRenderer = Renderer & {
   /**
    * Rebuild the per-frame `PatchInstance` buffer from `args.tiles` and issue
    * one instanced indexed draw. No-op if `tiles` is empty.
    */
-  draw(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs): void;
+  draw(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs): void;
 };

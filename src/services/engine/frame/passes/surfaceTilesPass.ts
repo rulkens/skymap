@@ -1,5 +1,5 @@
 /**
- * earthSurfaceTilesPass — the resident virtual-texture detail patches over the
+ * surfaceTilesPass — the resident virtual-texture detail patches over the
  * base globe `earthPass` stamps, into the same `foreground:0` target.
  *
  * Its own row rather than a second draw inside `earthPass` for two reasons:
@@ -32,8 +32,8 @@ import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from './earthPass';
 
-export const earthSurfaceTilesPass: ContentPass = {
-  name: 'earth-surface-tiles',
+export const surfaceTilesPass: ContentPass = {
+  name: 'surface-tiles',
 
   enabled(state, ctx, view) {
     if (view.slab.frame.kind !== 'body-m') return false;
@@ -42,7 +42,7 @@ export const earthSurfaceTilesPass: ContentPass = {
     const spec = (SURFACE_TILE_REGISTRY as Partial<Record<BodyId, SurfaceTileSpec>>)[
       view.slab.frame.bodyId
     ];
-    if (spec === undefined || state.gpu.earthSurfaceTileRenderer === null) return false;
+    if (spec === undefined || state.gpu.surfaceTileRenderer === null) return false;
     if (spec.effects.length > 0 && state.gpu.earthRenderer === null) return false;
     if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
     const tiles = state.subsystems.surfaceTiles;
@@ -58,7 +58,7 @@ export const earthSurfaceTilesPass: ContentPass = {
   },
 
   draw(pass, view, ctx, state) {
-    const tileRenderer = state.gpu.earthSurfaceTileRenderer;
+    const tileRenderer = state.gpu.surfaceTileRenderer;
     const surfaceTiles = state.subsystems.surfaceTiles;
     if (tileRenderer === null || view.slab.frame.kind !== 'body-m') return;
     if (surfaceTiles === undefined || surfaceTiles === null) return;

@@ -25,7 +25,7 @@ import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
-import { createEarthSurfaceTileRenderer } from '../../gpu/renderers/bodies/earthSurfaceTileRenderer';
+import { createSurfaceTileRenderer } from '../../gpu/renderers/bodies/surfaceTileRenderer';
 import { EARTH_SURFACE_TILE_MESH_RESOLUTION } from '../../../data/bodies/earthTileParams';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
@@ -375,9 +375,9 @@ export const GPU_HANDLE_ROWS = [
       ),
   },
   {
-    key: 'earthSurfaceTileRenderer',
+    key: 'surfaceTileRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createEarthSurfaceTileRenderer(
+      createSurfaceTileRenderer(
         deps.ctx.device,
         HDR_TARGET_FORMAT,
         FOREGROUND_DEPTH_FORMAT,

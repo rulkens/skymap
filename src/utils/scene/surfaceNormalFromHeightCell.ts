@@ -5,7 +5,7 @@ import { latticePostGradient } from './latticePostGradient';
  *  `(col, row)` of a leaf's sub-rect, in the local (Ê, N̂, Û) frame: the four
  *  posts' own gradients, interpolated across the cell, so the normal is
  *  continuous across every post line where the drawn surface only bends.
- *  TWIN of the gradient in `earthSurfaceTile/surfaceLighting.wesl`. */
+ *  TWIN of the gradient in `surfaceTile/surfaceLighting.wesl`. */
 export function surfaceNormalFromHeightCell(
   postM: (col: number, row: number) => number,
   col: number,

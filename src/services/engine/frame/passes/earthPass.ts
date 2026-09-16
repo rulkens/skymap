@@ -1,6 +1,6 @@
 /**
  * earthPass — Earth's `'body'`-slab content row: the base globe, drawn into
- * `foreground:0`. The detail patches over it are `earthSurfaceTilesPass`.
+ * `foreground:0`. The detail patches over it are `surfaceTilesPass`.
  *
  * Earth's `body-m` slab row IS the visibility gate (Task 1 culls it at
  * sub-pixel), so `enabled` mainly checks `view.slab.frame.bodyId === 'earth'`;

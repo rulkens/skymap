@@ -293,7 +293,7 @@ struct RingUniforms {
 // This struct used to carry the page-table window ('zWin'/'winX0'/'winY0')
 // and a debug LOD-tint toggle in the row 'oceanRoughness' opened. Both died
 // with the page table itself: tile detail now draws in a separate pass
-// ('earthSurfaceTileRenderer', over this base globe) that carries its own
+// ('surfaceTileRenderer', over this base globe) that carries its own
 // per-tile addressing, and the LOD-tint debug view has no per-fragment
 // residency source left in THIS shader to visualise.
 //

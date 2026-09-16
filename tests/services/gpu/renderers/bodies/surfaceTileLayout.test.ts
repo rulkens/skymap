@@ -1,12 +1,12 @@
 /**
- * earthSurfaceTile layout parity — the CPU packer and the WESL structs must
+ * surfaceTile layout parity — the CPU packer and the WESL structs must
  * agree byte-for-byte, the `NodeParams` case `nodeParamsLayout.test.ts`
- * guards for the star pipeline, adapted here for `earthSurfaceTileLayout.ts`'s
+ * guards for the star pipeline, adapted here for `surfaceTileLayout.ts`'s
  * two structs (`PatchInstance`, `SurfaceTileUniforms`).
  *
  * The WESL `struct PatchInstance` / `SurfaceTileUniforms`
- * (`shaders/bodies/earthSurfaceTile/io.wesl`) declare the field order + types
- * the GPU uses to address bytes; `earthSurfaceTileLayout.ts`'s
+ * (`shaders/bodies/surfaceTile/io.wesl`) declare the field order + types
+ * the GPU uses to address bytes; `surfaceTileLayout.ts`'s
  * `writePatchInstance` / `writeSurfaceTileUniforms`
  * restate those same offsets as hand-literal `view.set{Float32,Uint32}(N,
  * expr, true)` calls (the array-element writer adds a `base +`; the singleton
@@ -30,12 +30,12 @@ import {
   PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
   writePatchInstance,
-} from '../../../../../src/services/gpu/renderers/bodies/earthSurfaceTileLayout';
+} from '../../../../../src/services/gpu/renderers/bodies/surfaceTileLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const repoRoot = resolve(here, '../../../../..');
-const ioWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/bodies/earthSurfaceTile/io.wesl');
-const layoutPath = resolve(repoRoot, 'src/services/gpu/renderers/bodies/earthSurfaceTileLayout.ts');
+const ioWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/bodies/surfaceTile/io.wesl');
+const layoutPath = resolve(repoRoot, 'src/services/gpu/renderers/bodies/surfaceTileLayout.ts');
 
 /** WGSL scalar kind a field's bytes carry -- the only distinction the writer makes. */
 type Kind = 'float' | 'uint';
@@ -160,7 +160,7 @@ function writerLayout(source: string, fnName: string): ScalarWrite[] {
   const fnBody = source.match(
     new RegExp(`function ${fnName}\\([^)]*\\)[^{]*\\{([\\s\\S]*?)\\n\\}`),
   )?.[1];
-  if (!fnBody) throw new Error(`function ${fnName} not found in earthSurfaceTileLayout.ts`);
+  if (!fnBody) throw new Error(`function ${fnName} not found in surfaceTileLayout.ts`);
   const calls = fnBody.matchAll(
     /view\.set(Float32|Uint32)\(\s*(?:base \+ )?(\d+),\s*([^,]*),\s*true\s*\)/g,
   );

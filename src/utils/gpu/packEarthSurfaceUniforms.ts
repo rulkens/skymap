@@ -46,7 +46,7 @@
  * This packer used to carry the page-table window (`zWin`/`winX0`/`winY0`) and
  * a debug LOD-tint toggle in `oceanRoughness`'s row. Both died with the page
  * table itself — tile detail now draws through a separate renderer
- * (`earthSurfaceTileRenderer`) with its own per-tile addressing, and this
+ * (`surfaceTileRenderer`) with its own per-tile addressing, and this
  * shader has no per-fragment residency source left to visualise a LOD tint
  * over. The struct is back to its pre-virtual-texture 128 bytes.
  *

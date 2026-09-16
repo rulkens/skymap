@@ -1,5 +1,5 @@
 /**
- * earthSurfaceTileRenderer — one instanced indexed draw of the resident
+ * surfaceTileRenderer — one instanced indexed draw of the resident
  * virtual-texture surface patches (`cutSurfaceTiles`'s cut) over the base
  * globe: one shared template index buffer, one 80-byte `PatchInstance` per
  * patch, all geometry derived in `vertex.wesl`.
@@ -16,22 +16,22 @@
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { SurfaceEffect } from '../../../../@types/data/SurfaceEffect';
 import type {
-  EarthSurfaceTileRenderer,
-  EarthSurfaceTileDrawArgs,
-} from '../../../../@types/rendering/EarthSurfaceTileRenderer';
+  SurfaceTileRenderer,
+  SurfaceTileDrawArgs,
+} from '../../../../@types/rendering/SurfaceTileRenderer';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { patchOriginRelEyeM } from '../../../../utils/scene/patchOriginRelEyeM';
 import { surfacePatchIndices } from '../../../../utils/scene/surfacePatchIndices';
 import { surfaceEffectsKey } from '../../../../utils/scene/surfaceEffectsKey';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import vsCode from '../../shaders/bodies/earthSurfaceTile/vertex.wesl?static';
+import vsCode from '../../shaders/bodies/surfaceTile/vertex.wesl?static';
 import {
   PATCH_INSTANCE_BYTES,
   SURFACE_TILE_UNIFORM_BYTES,
   writePatchInstance,
   writeSurfaceTileUniforms,
-} from './earthSurfaceTileLayout';
+} from './surfaceTileLayout';
 import {
   EARTH_TILE_CROSSFADE_MS,
   HEIGHT_ATLAS_SLOTS_PER_ROW,
@@ -46,13 +46,13 @@ import { SURFACE_TILE_SHADER_VARIANTS } from '../../../../data/bodies/surfaceTil
  * @param reversedZ selects this slab's depth convention, resolved through
  *   `resolveDepthCompare` with intent `'nearer-or-equal'` (see the module header).
  */
-export function createEarthSurfaceTileRenderer(
+export function createSurfaceTileRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
   depthFormat: GPUTextureFormat,
   reversedZ: boolean,
   resolution: number,
-): EarthSurfaceTileRenderer {
+): SurfaceTileRenderer {
   // ── Samplers ──────────────────────────────────────────────────────────
   // baseSampler mirrors earthRenderer's whole-globe sampler (repeat u,
   // clamp v, trilinear — these views carry the base globe's own mip chain).
@@ -122,12 +122,12 @@ export function createEarthSurfaceTileRenderer(
     9: { binding: 9, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
   };
 
-  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'earthSurfaceTile.vertex');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'surfaceTile.vertex');
 
   function buildVariant(key: string) {
     const variant = SURFACE_TILE_SHADER_VARIANTS[key];
     if (variant === undefined) {
-      throw new Error(`earthSurfaceTileRenderer: no shader variant for effects '${key}'`);
+      throw new Error(`surfaceTileRenderer: no shader variant for effects '${key}'`);
     }
     const bindGroupLayout = device.createBindGroupLayout({
       label: `earth-surface-tile-bgl[${key}]`,
@@ -139,7 +139,7 @@ export function createEarthSurfaceTileRenderer(
     const fsModule = createShaderModuleWithDevLog(
       device,
       variant.fragment,
-      `earthSurfaceTile.fragment[${key}]`,
+      `surfaceTile.fragment[${key}]`,
     );
     const pipeline = device.createRenderPipeline({
       label: `earth-surface-tile-pipeline[${key}]`,
@@ -206,7 +206,7 @@ export function createEarthSurfaceTileRenderer(
    * under that invariant — a far-camera call would silently flatten every
    * drawn tile's shading normal toward one direction rather than error.
    */
-  function draw(pass: GPURenderPassEncoder, args: EarthSurfaceTileDrawArgs): void {
+  function draw(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs): void {
     const {
       tiles,
       eyeRelBodyM,
@@ -234,7 +234,7 @@ export function createEarthSurfaceTileRenderer(
     );
     if (suppliedKey !== key) {
       throw new Error(
-        `earthSurfaceTileRenderer: effect inputs '${suppliedKey}' do not match effects '${key}'`,
+        `surfaceTileRenderer: effect inputs '${suppliedKey}' do not match effects '${key}'`,
       );
     }
     let variant = variants.get(key);
@@ -370,8 +370,8 @@ export function createEarthSurfaceTileRenderer(
     uniformBuffer.destroy();
   }
 
-  const renderer: EarthSurfaceTileRenderer = {
-    label: 'earthSurfaceTileRenderer',
+  const renderer: SurfaceTileRenderer = {
+    label: 'surfaceTileRenderer',
     draw,
     destroy,
   };

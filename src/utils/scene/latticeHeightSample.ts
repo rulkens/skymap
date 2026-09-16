@@ -1,6 +1,6 @@
 /** latticeHeightSample — bilinear height at lattice position `p` (posts from
  *  the leaf's sub-rect origin), on the sub-lattice of every `stride`-th post.
- *  TWIN of `latticeHeightM` in `earthSurfaceTile/lattice.wesl`, in f64: the
+ *  TWIN of `latticeHeightM` in `surfaceTile/lattice.wesl`, in f64: the
  *  reference the shader's f32 arithmetic is judged against. `postM` reads one
  *  post by `(col, row)`, rows counting SOUTH as the atlas's do. */
 export function latticeHeightSample(

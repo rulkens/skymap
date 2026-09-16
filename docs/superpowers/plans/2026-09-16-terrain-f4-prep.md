@@ -219,8 +219,8 @@ Tests:
 
 Out of scope: the `earth-tiles` manifest key, `EARTH_TILE_*` constants in `earthTileParams.ts`, debug-overlay ids (`earth-lod-overlay`, persisted settings keys), `earthPass` (the Earth base globe).
 
-- [ ] `npm run move-files -- --manifest <moves.json> --dry`, then for real; `npm run refactor rename` for the symbols; then grep for every old path and name (`package::bodies::earthSurfaceTile`, `?static` imports, `'earth-surface-tiles'`) and fix the stragglers. No new test.
-- [ ] `npm run typecheck && npm test` green. Commit.
+- [x] `npm run move-files -- --manifest <moves.json> --dry`, then for real; `npm run refactor rename` for the symbols; then grep for every old path and name (`package::bodies::earthSurfaceTile`, `?static` imports, `'earth-surface-tiles'`) and fix the stragglers. No new test.
+- [x] `npm run typecheck && npm test` green. Commit.
 
 ---
 

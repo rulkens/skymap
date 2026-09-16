@@ -5,7 +5,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
  * patchVertexOffsetM — a template vertex's offset from its patch's origin
  * corner, in the body's fixed axes, metres. Spec §7.1's derivation, and the
  * TS twin of `patchVertexOffset` in
- * `src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl`: same
+ * `src/services/gpu/shaders/bodies/surfaceTile/vertex.wesl`: same
  * variable names, same order, changed together.
  *
  * `2·sin²(θ/2)` is algebraically `1 − cos θ` and NOT interchangeable with it:

@@ -5,8 +5,8 @@
  * normal map). A registry row whose key is missing here fails a test.
  */
 
-import fragmentBare from '../../services/gpu/shaders/bodies/earthSurfaceTile/fragmentBare.wesl?static';
-import fragmentEarth from '../../services/gpu/shaders/bodies/earthSurfaceTile/fragmentEarth.wesl?static';
+import fragmentBare from '../../services/gpu/shaders/bodies/surfaceTile/fragmentBare.wesl?static';
+import fragmentEarth from '../../services/gpu/shaders/bodies/surfaceTile/fragmentEarth.wesl?static';
 
 export const SURFACE_TILE_SHADER_VARIANTS: Readonly<
   Record<string, { readonly fragment: string; readonly bindings: readonly number[] }>

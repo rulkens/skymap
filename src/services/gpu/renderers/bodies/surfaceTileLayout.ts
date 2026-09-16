@@ -1,12 +1,12 @@
 /**
- * earthSurfaceTileLayout — the CPU-side byte layout for every GPU-visible
- * record `earthSurfaceTileRenderer` writes: the per-frame
+ * surfaceTileLayout — the CPU-side byte layout for every GPU-visible
+ * record `surfaceTileRenderer` writes: the per-frame
  * `array<PatchInstance>` storage buffer (one 64-byte record per cut patch)
  * and the per-draw `SurfaceTileUniforms` uniform block. The authoritative
- * layout is each WESL struct in `shaders/earthSurfaceTile/io.wesl`; this
+ * layout is each WESL struct in `shaders/surfaceTile/io.wesl`; this
  * module is the CPU's single matching statement of both, in the shape
  * `starCatalogLayout.ts` set for the star pipeline — see
- * `earthSurfaceTileLayout.test.ts` for the parity guard between the two.
+ * `surfaceTileLayout.test.ts` for the parity guard between the two.
  *
  * @module
  */
@@ -97,7 +97,7 @@ export const SURFACE_TILE_UNIFORM_BYTES = 176;
  * WESL struct declares. One record per draw call (there is exactly one
  * Earth), so offsets are absolute literals rather than `base +` — no array
  * stride to parameterize. Every write is a literal, hand-listed call
- * (including `vp`'s 16 floats, not a loop) so `earthSurfaceTileLayout.test.ts`
+ * (including `vp`'s 16 floats, not a loop) so `surfaceTileLayout.test.ts`
  * can parse this function the same mechanical way it parses the
  * array-element writer above.
  */

@@ -68,7 +68,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     near0Passes: [],
     bodyPasses: [
       'earth',
-      'earth-surface-tiles',
+      'surface-tiles',
       'cloud-shell',
       'planets',
       'textured-bodies',
@@ -217,7 +217,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     near0Passes: ['star-spheres', 'field-star-sphere'],
     bodyPasses: [
       'earth',
-      'earth-surface-tiles',
+      'surface-tiles',
       'cloud-shell',
       'planets',
       'textured-bodies',

@@ -75,7 +75,7 @@ export const EARTH_SURFACE_TILE_MESH_RESOLUTION = 64;
  *  seam opens is the coarse neighbour's geometric residual, which the fine side
  *  cannot read — this is the heuristic that stands in for it (F2-R3), on every
  *  edge of every patch (R15).
- *  Mirrored into `earthSurfaceTile/vertex.wesl`, parity-tested. */
+ *  Mirrored into `surfaceTile/vertex.wesl`, parity-tested. */
 export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
 
 /**
@@ -85,7 +85,7 @@ export const SURFACE_TILE_SKIRT_DEPTH_FRACTION = 0.05;
  * coarser ancestor imagery it replaces. Long enough to hide the graded-
  * differently band boundaries (BMNG-derived z4-7, EOX z8-13, GeoDanmark
  * z14-19) popping; short enough that a fast descent doesn't trail visible
- * ghosting. See `earthSurfaceTileRenderer.ts`'s per-tile weight and
- * `earthSurfaceTile/surfaceLighting.wesl`'s dual-sample mix.
+ * ghosting. See `surfaceTileRenderer.ts`'s per-tile weight and
+ * `surfaceTile/surfaceLighting.wesl`'s dual-sample mix.
  */
 export const EARTH_TILE_CROSSFADE_MS = 400;

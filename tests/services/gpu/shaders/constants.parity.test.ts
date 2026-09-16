@@ -236,14 +236,14 @@ describe('ISM_MAP_FLUID_EVENT_STRIDE parity (packIsmMapFluidEvents.ts ↔ ismMap
 
 /**
  * EARTH_TILE_ATLAS_SIDE (earthTileParams.ts) is mirrored into
- * earthSurfaceTile/surfaceLighting.wesl to derive the half-atlas-texel inset (C3)
+ * surfaceTile/surfaceLighting.wesl to derive the half-atlas-texel inset (C3)
  * that keeps a resolved tile rect's bilinear sampling from crossing into a
  * neighbour slot's pixels — a drift here would silently widen or shrink
  * that guard band against the atlas's real physical size.
  */
-describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ earthSurfaceTile/surfaceLighting.wesl)', () => {
+describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ surfaceTile/surfaceLighting.wesl)', () => {
   it("surfaceLighting.wesl's EARTH_TILE_ATLAS_SIDE equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/surfaceLighting.wesl';
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/surfaceLighting.wesl';
     const weslValue = readWeslConst(file, 'EARTH_TILE_ATLAS_SIDE');
     expect(weslValue, `EARTH_TILE_ATLAS_SIDE is missing from ${file}`).toBeDefined();
     expect(
@@ -255,15 +255,15 @@ describe('EARTH_TILE_ATLAS_SIDE parity (earthTileParams.ts ↔ earthSurfaceTile/
 
 /**
  * EARTH_TILE_PX (earthTileParams.ts) is mirrored into
- * earthSurfaceTile/surfaceLighting.wesl to derive TILE_SLOT_SCALE, the atlas-uv
+ * surfaceTile/surfaceLighting.wesl to derive TILE_SLOT_SCALE, the atlas-uv
  * width of a tile drawn from its own slot with no ancestor fallback — the
  * `earth-lod-overlay` toggle divides a resolved rect's actual width into
  * this to recover how many pyramid levels the fallback walked. A drift here
  * would silently mis-band every overlay tint.
  */
-describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ earthSurfaceTile/surfaceLighting.wesl)', () => {
+describe('EARTH_TILE_PX parity (earthTileParams.ts ↔ surfaceTile/surfaceLighting.wesl)', () => {
   it("surfaceLighting.wesl's EARTH_TILE_PX equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/surfaceLighting.wesl';
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/surfaceLighting.wesl';
     const weslValue = readWeslConst(file, 'EARTH_TILE_PX');
     expect(weslValue, `EARTH_TILE_PX is missing from ${file}`).toBeDefined();
     expect(
@@ -291,9 +291,9 @@ describe('HEIGHT_POSTS_PER_TILE vs the template (heightTileFormat.ts ↔ earthTi
  * tuning knob for the skirt ring (F2-R3), and the vertex stage is its only
  * consumer — so without this guard the TS export is a knob that turns nothing.
  */
-describe('SURFACE_TILE_SKIRT_DEPTH_FRACTION parity (earthTileParams.ts ↔ earthSurfaceTile/vertex.wesl)', () => {
+describe('SURFACE_TILE_SKIRT_DEPTH_FRACTION parity (earthTileParams.ts ↔ surfaceTile/vertex.wesl)', () => {
   it("vertex.wesl's SURFACE_TILE_SKIRT_DEPTH_FRACTION equals the TS export", () => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/vertex.wesl';
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/vertex.wesl';
     const weslValue = readWeslConst(file, 'SURFACE_TILE_SKIRT_DEPTH_FRACTION');
     expect(weslValue, `SURFACE_TILE_SKIRT_DEPTH_FRACTION is missing from ${file}`).toBeDefined();
     expect(
@@ -346,12 +346,12 @@ describe('SUN_IRRADIANCE parity (earthSurfaceParams.ts ↔ meshBody/fragment.wes
  * either number shifts or scales every displaced vertex against the CPU's
  * subtree bounds, which the walk's cull headroom is built from.
  */
-describe('Terrain-RGB height code parity (heightTileFormat.ts ↔ earthSurfaceTile/lattice.wesl)', () => {
+describe('Terrain-RGB height code parity (heightTileFormat.ts ↔ surfaceTile/lattice.wesl)', () => {
   it.each([
     ['HEIGHT_CODE_OFFSET_M', HEIGHT_CODE_OFFSET_M],
     ['HEIGHT_CODE_STEP_M', HEIGHT_CODE_STEP_M],
   ])("lattice.wesl's %s equals the TS export", (name, tsValue) => {
-    const file = 'src/services/gpu/shaders/bodies/earthSurfaceTile/lattice.wesl';
+    const file = 'src/services/gpu/shaders/bodies/surfaceTile/lattice.wesl';
     expect(readWeslConst(file, name), `${file}: ${name}`).toBe(tsValue);
   });
 });

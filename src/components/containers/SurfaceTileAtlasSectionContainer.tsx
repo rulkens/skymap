@@ -1,6 +1,6 @@
-// src/components/containers/EarthTileAtlasSectionContainer.tsx
+// src/components/containers/SurfaceTileAtlasSectionContainer.tsx
 /**
- * EarthTileAtlasSectionContainer — engine-handle + store boundary for the
+ * SurfaceTileAtlasSectionContainer — engine-handle + store boundary for the
  * Earth tile atlas debug readout. `earthTileDebug` still comes off
  * `engineHandleRef.current.debug` (engine-only data), but `flyToLonLat` now
  * dispatches the `camera/flyToLonLat` request action — the fly-to instrument
@@ -9,7 +9,7 @@
 
 import { memo, useCallback, type ReactElement } from 'react';
 import type { RefObject } from 'react';
-import EarthTileAtlasSection from '../DebugPanel/EarthTileAtlasSection';
+import SurfaceTileAtlasSection from '../DebugPanel/SurfaceTileAtlasSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { selectDebugOverlays } from '../../state/settings/selectors';
@@ -18,13 +18,13 @@ import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 
-export type EarthTileAtlasSectionContainerProps = {
+export type SurfaceTileAtlasSectionContainerProps = {
   readonly engineHandleRef: RefObject<EngineHandle | null>;
 };
 
-function EarthTileAtlasSectionContainer({
+function SurfaceTileAtlasSectionContainer({
   engineHandleRef,
-}: EarthTileAtlasSectionContainerProps): ReactElement | null {
+}: SurfaceTileAtlasSectionContainerProps): ReactElement | null {
   const dispatch = useAppDispatch();
   const overlays = useAppSelector(selectDebugOverlays);
   const onFlyToLonLat = useCallback(
@@ -40,7 +40,7 @@ function EarthTileAtlasSectionContainer({
   const handle = engineHandleRef.current;
   if (!handle) return null;
   return (
-    <EarthTileAtlasSection
+    <SurfaceTileAtlasSection
       earthTileDebug={handle.debug.surfaceTiles}
       flyToLonLat={onFlyToLonLat}
       overlays={overlays}
@@ -49,4 +49,4 @@ function EarthTileAtlasSectionContainer({
   );
 }
 
-export default memo(EarthTileAtlasSectionContainer);
+export default memo(SurfaceTileAtlasSectionContainer);

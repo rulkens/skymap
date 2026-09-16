@@ -23,7 +23,7 @@ import { markerLinesPass } from './markerLinesPass';
 import { labelsPass } from './labelsPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
 import { earthPass } from './earthPass';
-import { earthSurfaceTilesPass } from './earthSurfaceTilesPass';
+import { surfaceTilesPass } from './surfaceTilesPass';
 import { cloudShellPass } from './cloudShellPass';
 import { starSpheresPass } from './starSpheresPass';
 import { fieldStarSpherePass } from './fieldStarSpherePass';
@@ -72,7 +72,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   markerLinesPass,
   labelsPass,
   earthPass,
-  earthSurfaceTilesPass,
+  surfaceTilesPass,
   cloudShellPass,
   starSpheresPass,
   fieldStarSpherePass,

@@ -1,6 +1,6 @@
-// src/components/DebugPanel/EarthTileAtlasSection.tsx
+// src/components/DebugPanel/SurfaceTileAtlasSection.tsx
 /**
- * EarthTileAtlasSection — textual residency readout for Earth's surface
+ * SurfaceTileAtlasSection — textual residency readout for Earth's surface
  * virtual texture: slot pressure, per-level resident/pending counts, the
  * last plan's shape, and the deepest level's resident tile keys.
  *
@@ -24,9 +24,9 @@ import type { BodyId } from '../../@types/data/body/BodyId';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { parseLonLatInput } from '../../utils/scene/parseLonLatInput';
 import DebugSection from './DebugSection';
-import styles from './EarthTileAtlasSection.module.css';
+import styles from './SurfaceTileAtlasSection.module.css';
 
-export type EarthTileAtlasSectionProps = {
+export type SurfaceTileAtlasSectionProps = {
   earthTileDebug: () => SurfaceTileDebugSnapshot;
   /** Fly-to-coordinates debug instrument, from the engine handle's
    *  `debug.flyToLonLat`. `body` omitted keeps `flyToLonLatActions`'s own
@@ -44,12 +44,12 @@ const TERRAIN_ROWS = DEBUG_OVERLAY_ROWS.filter(
 
 const POLL_MS = 250;
 
-function EarthTileAtlasSection({
+function SurfaceTileAtlasSection({
   earthTileDebug,
   flyToLonLat,
   overlays,
   onToggle,
-}: EarthTileAtlasSectionProps): ReactElement {
+}: SurfaceTileAtlasSectionProps): ReactElement {
   const [snap, setSnap] = useState<SurfaceTileDebugSnapshot>(earthTileDebug);
   // Uncontrolled-feeling text box: the panel never reformats what the user
   // typed, so an in-progress edit ("12.53, 5") isn't clobbered by the 4 Hz
@@ -185,4 +185,4 @@ function formatLonLat(lonDeg: number, latDeg: number): string {
   return `${Math.abs(lonDeg).toFixed(5)}°${ew}, ${Math.abs(latDeg).toFixed(5)}°${ns}`;
 }
 
-export default EarthTileAtlasSection;
+export default SurfaceTileAtlasSection;
