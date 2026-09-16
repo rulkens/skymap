@@ -95,7 +95,7 @@ function makeSettings(opts?: {
     bias: { mode: 0, absMagLimit: -20 } as EngineSettingsState['bias'],
     thumbnails: { enabled: true },
     debug: {
-      overlays: { 'pick-buffer': false, 'disk-radius-ring': false },
+      overlays: { 'pick-buffer': false },
       disabledPasses: {},
       renderStrategy: 'auto',
     },

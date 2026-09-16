@@ -133,7 +133,7 @@ export function App(): React.ReactElement {
       >
         <LoadingBarContainer />
         <StatusBarContainer />
-        <InfoCardContainer engineHandleRef={handleRef} />
+        <InfoCardContainer />
         <ScaleBarContainer />
         {/* Self-positioning (fixed, bottom-center) — rides the HUD stack as a
             direct child rather than joining a flex row. */}
@@ -144,7 +144,7 @@ export function App(): React.ReactElement {
           <SettingsPanelContainer />
         </div>
         <TopBarContainer />
-        <CommandPaletteContainer engineHandleRef={handleRef} />
+        <CommandPaletteContainer />
         {/* `handleRef.current` set means the engine finished constructing,
             so the panel can subscribe to slots without racing. */}
         {debugPanelOpen && handleRef.current && (

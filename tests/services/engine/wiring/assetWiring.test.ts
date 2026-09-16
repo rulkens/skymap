@@ -32,7 +32,7 @@ import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
+import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // Core's half of the rows as the demand loop sees them; each Layer's own are
@@ -54,14 +54,14 @@ function rowFor(key: AssetKey) {
  */
 function makeCtx(over: {
   settings?: unknown;
-  requests?: Set<RequestKey>;
+  paletteOpen?: boolean;
   slotStates?: Partial<Record<AssetKey, LoadState<unknown>['kind']>>;
   cameraPosMpc?: Vec3;
   simDays?: number;
 }): DemandCtx {
   return {
     settings: (over.settings ?? {}) as Readonly<EngineSettingsState>,
-    request: (k) => over.requests?.has(k) ?? false,
+    ui: { paletteOpen: over.paletteOpen ?? false } as Readonly<UiState>,
     slotState: (k) => over.slotStates?.[k] ?? 'idle',
     // The body-texture rows read the eye position; a far-away default keeps the
     // surface present without demanding any body texture.

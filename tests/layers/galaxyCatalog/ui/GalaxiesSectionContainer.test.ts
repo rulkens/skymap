@@ -31,15 +31,15 @@ import { describe, it, expect } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import GalaxiesSectionContainer from '../../../src/components/containers/GalaxiesSectionContainer';
-import { createTestStore as createAppStore } from '../../support/createTestStore';
+import GalaxiesSectionContainer from '../../../../src/layers/galaxyCatalog/ui/GalaxiesSectionContainer';
+import { createTestStore as createAppStore } from '../../../support/createTestStore';
 import {
   selectGalaxyCatalogSize,
   selectVisibleSourceMask,
-} from '../../../src/state/settings/selectors';
-import { setGalaxyCatalogSize } from '../../../src/state/settings/settingsSlice';
-import { Source } from '../../../src/data/source';
-import type { AppStore } from '../../../src/store/types';
+} from '../../../../src/state/settings/selectors';
+import { setGalaxyCatalogSize } from '../../../../src/state/settings/settingsSlice';
+import { Source } from '../../../../src/data/source';
+import type { AppStore } from '../../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });

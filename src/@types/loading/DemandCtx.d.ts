@@ -27,11 +27,10 @@
  *      fadeOpacity > 0`) and is not consulted: a just-disabled galaxy catalog
  *      stops demanding immediately while it fades out.
  *
- *   2. `request` — one-shot transient flags (see `RequestKey`).  Covers
+ *   2. `ui` — a read-only view of the shell's UI state (`UiState`).  Covers
  *      discrete UI events that have no persistent settings counterpart, such as
- *      opening the palette picker.
- *      The flag is never cleared; the demand loop's idle-guard stops the
- *      already-loaded slot from re-fetching, so a set-and-leave flag is safe.
+ *      `ui.paletteOpen` gating the PGC-alias fetch — see `watchPaletteWakeSaga`'s
+ *      header for why opening the palette must also wake a frame.
  *
  *   3. `slotState` — the `LoadStateKind` of any slot in the registry.
  *      Used for two patterns described in ADR 0005 §3:
@@ -69,21 +68,21 @@
  *
  * `DemandCtx` is consumed inside `shouldLoad` callbacks; those callbacks
  * must not mutate engine state.  The surfaces are read-only by construction:
- * `settings` is a `Readonly<EngineSettingsState>`, `request`/`slotState` are
- * query functions that return read-only values.
+ * `settings`/`ui` are `Readonly<...>` snapshots, `slotState` is a query
+ * function that returns a read-only value.
  */
 
 import type { EngineSettingsState } from '../settings/EngineSettingsState';
 import type { AssetKey } from './AssetKey';
 import type { LoadState } from './LoadState';
-import type { RequestKey } from './RequestKey';
+import type { UiState } from '../ui/UiState';
 import type { Vec3 } from '../math/Vec3';
 
 export type DemandCtx = {
   /** Read-only view of the user-facing rendering settings. */
   settings: Readonly<EngineSettingsState>;
-  /** Returns true when the given one-shot request flag is pending. */
-  request: (k: RequestKey) => boolean;
+  /** Read-only view of the shell's UI state; `paletteOpen` is the pgcAlias row's trigger. */
+  ui: Readonly<UiState>;
   /**
    * Returns the `kind` discriminant of the slot for the given asset key.
    * Used to express companion joins and fallback gates as predicates over

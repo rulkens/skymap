@@ -22,7 +22,6 @@ export function destroy(runtime: GalaxyCatalogRuntime): void {
   runtime.pickRenderer.destroy();
   runtime.proceduralDiskRenderer.destroy();
   runtime.texturedDiskRenderer.destroy();
-  runtime.diskRadiusRing.destroy();
   runtime.pointRenderer.destroy();
 
   runtime.catalogs.clear();

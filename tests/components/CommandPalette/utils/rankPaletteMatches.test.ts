@@ -23,7 +23,7 @@ const COMA: StructureSearchEntry = {
 };
 
 function alias(names: readonly string[], localIdx: number): AliasIndexEntry {
-  return { pgc: BigInt(localIdx), names, source: Source.Glade, localIdx };
+  return { pgc: localIdx, names, source: Source.Glade, localIdx };
 }
 
 function structure(name: string, abell: string | null, idx: number): StructureSearchEntry {

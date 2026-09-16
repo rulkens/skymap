@@ -2,7 +2,7 @@
  * SettingsPanel — presentational shell for the renderer settings HUD panel.
  *
  * Renders the composed Layers' own `ui` sections (in composition order, D13),
- * then the eight core section containers, wrapped in the shared Panel chrome.
+ * then the seven core section containers, wrapped in the shared Panel chrome.
  * Zero store reach lives here — every selector and dispatch call belongs to
  * the containers/Layers this shell renders. `defaultOpen` is the one prop
  * beyond the Redux store's reach (false on mobile viewports).
@@ -14,7 +14,6 @@ import { Panel } from '../common/Panel/Panel';
 import { APP_COMPOSITION } from '../../compositions/app';
 import type { Layer } from '../../@types/engine/layer/Layer';
 import TierChipContainer from '../containers/TierChipContainer';
-import GalaxiesSectionContainer from '../containers/GalaxiesSectionContainer';
 import StarsSectionContainer from '../containers/StarsSectionContainer';
 import CosmicWebSectionContainer from '../containers/CosmicWebSectionContainer';
 import FlowSectionContainer from '../containers/FlowSectionContainer';
@@ -45,7 +44,6 @@ export const SettingsPanel = memo(function SettingsPanel({
       {APP_COMPOSITION.layers.map((layer: Layer<string, unknown>) =>
         layer.ui ? <layer.ui key={layer.name} /> : null,
       )}
-      <GalaxiesSectionContainer />
       <StarsSectionContainer />
       <CosmicWebSectionContainer />
       <FlowSectionContainer />

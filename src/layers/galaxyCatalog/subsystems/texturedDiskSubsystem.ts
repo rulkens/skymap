@@ -23,8 +23,8 @@ import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
+import type { TexturedDiskDeps } from '../../../@types/engine/subsystems/TexturedDiskDeps';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type {
   TexturedDiskFrameInput,
@@ -48,24 +48,6 @@ import {
 
 /** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;
-
-export type TexturedDiskDeps = {
-  readonly device: GPUDevice;
-  readonly atlas: TileStreamSubsystem<ImageBitmap>;
-  /** For tests.  Defaults to fetchGalaxyBitmap. */
-  readonly fetcher?: (args: {
-    ra: number;
-    dec: number;
-    famousId?: string;
-  }) => Promise<ImageBitmap | null>;
-  /**
-   * Optional LOD-3 source. When provided, the planner folds each famous
-   * galaxy's `hiResLayerIdx` + `hiResCrossfadeAlpha` into its `DiskInstance`;
-   * when omitted, every instance gets the -1 / 0 sentinel and the shader's
-   * `hiResLayerIdx >= 0` gate skips the hi-res sample.
-   */
-  readonly hiResFamous?: HiResFamousSubsystem;
-};
 
 /**
  * A visitor that ignores every walk callback. Returned by `beginFrame` after

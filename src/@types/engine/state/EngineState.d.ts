@@ -7,6 +7,7 @@
  * allocate two objects per slider drag.
  */
 
+import type { Task } from 'redux-saga';
 import type { Tier } from '../../data/Tier';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineData } from '../data/EngineData';
@@ -14,7 +15,6 @@ import type { EnginePickingState } from './EnginePickingState';
 import type { EngineAssetSlots } from './EngineAssetSlots';
 import type { EngineGpuHandles } from '../handles/EngineGpuHandles';
 import type { EngineSubsystemHandles } from '../handles/EngineSubsystemHandles';
-import type { RequestKey } from '../../loading/RequestKey';
 import type { CameraRuntime } from './CameraRuntime';
 import type { CubemapCaptureRuntimes } from './CubemapCaptureRuntimes';
 import type { SelectionState } from '../../store/SelectionState';
@@ -26,7 +26,7 @@ import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
-import type { GalaxyCatalogBridge } from '../layer/GalaxyCatalogBridge';
+import type { UiState } from '../../ui/UiState';
 
 export type EngineState = {
   settings: EngineSettingsState;
@@ -36,6 +36,8 @@ export type EngineState = {
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
   selectionRows: SelectionRowsState;
+  /** A getter onto `store.getState().ui`, the same shape as `selection` above. */
+  ui: UiState;
   /** Per-type data stores — the authoritative app-side home for each. See `EngineData`. */
   data: EngineData;
   picking: EnginePickingState;
@@ -64,19 +66,19 @@ export type EngineState = {
   contentVersion: number;
   assetSlots: EngineAssetSlots;
   /**
-   * One-shot transient request flags read by demand predicates via
-   * `DemandCtx.request(k)`. A flag is set and left set: the demand loop's
-   * idle-guard keeps the triggered slot from re-fetching, so no clear-on-ready
-   * is needed.
-   */
-  requests: Set<RequestKey>;
-  /**
    * Every Layer bound to its runtime by `createLayers`, in composition tuple
    * order. `[]` until that phase runs; `destroy()` tears these down in
    * REVERSE order before any core teardown a Layer's captured core object
    * depends on (D8).
    */
   layers: readonly LayerInstance[];
+  /**
+   * The `Task`s `createLayers` forked for each Layer's declared `sagas` (RunSaga's
+   * doc comment). `destroy()` cancels every one of these BEFORE tearing down
+   * `layers` above, so a re-`createEngine` on the same store never leaves a
+   * watcher from the previous run reacting alongside the new one's.
+   */
+  layerSagaTasks: readonly Task[];
   /**
    * The composed contributions: core's constants followed by each Layer's, in
    * tuple order, assembled once by `createLayers`. Every runtime reader walks
@@ -89,14 +91,6 @@ export type EngineState = {
   assetRows: readonly AssetWiringRow[];
   fadeRows: readonly FadeLayer<unknown>[];
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
-  /**
-   * TEMPORARY (Ruling 5, deleted in 04e): the galaxy runtime, reached by
-   * `EngineHandle.sources` / `.selection` for one PR. Written once by
-   * `createLayers` from the instance whose Layer declared it; `null` in a
-   * composition without that Layer, and before `createLayers` runs — the same
-   * "no cloud yet" answer the shell already tolerates.
-   */
-  galaxyBridge: GalaxyCatalogBridge | null;
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

@@ -1,19 +1,18 @@
 /**
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
- * `create`s every composed Layer in tuple order, seeding its facts key first
- * (D6, Ruling 6), then composes core's contributions with each instance's onto
- * `state.passes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`
- * and asserts the composed sets stay disjoint (D5) — a bad composition throws
- * at boot, not inside a click's swallowed promise.
+ * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
+ * then composes each instance's contributions onto core's `state.passes` /
+ * `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`, asserting
+ * the composed sets stay disjoint (D5) — a bad composition throws at boot.
  */
 
+import type { Task } from 'redux-saga';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
 import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
-import type { GalaxyCatalogBridge } from '../../../@types/engine/layer/GalaxyCatalogBridge';
 
 import { instantiateLayer } from '../layer/instantiateLayer';
 import {
@@ -66,6 +65,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     }
   };
 
+  // Collected here (not read back off `runSaga`'s call sites) so `state.layers = instances`
+  // and `state.layerSagaTasks = layerSagaTasks` assign together below — see `RunSaga`'s
+  // doc comment for why `destroy()` needs these.
+  const layerSagaTasks: Task[] = [];
   const instances = deps.composition.layers.map((layer) => {
     const common = {
       ctx: {
@@ -96,6 +99,10 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
         layerFactsSeeded({ layer: layer.name, facts: layer.facts as Record<string, unknown> }),
       );
     }
+    // The only place a Layer's `sagas` ever run — see `RunSaga`'s doc comment.
+    for (const sagaFactory of layer.sagas ?? []) {
+      layerSagaTasks.push(deps.cb.runSaga(sagaFactory));
+    }
     const coreDeps = declaresFacts
       ? {
           ...common,
@@ -103,14 +110,11 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
             deps.cb.store.dispatch(factsReported({ layer: layer.name, patch })),
         }
       : common;
-    return instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>, (runtime) => {
-      // TEMPORARY (Ruling 5): the galaxy runtime, parked for `EngineHandle`'s two
-      // remaining galaxy reads. 04e deletes this block with the field.
-      if (layer.name === 'galaxyCatalog') state.galaxyBridge = runtime as GalaxyCatalogBridge;
-    });
+    return instantiateLayer(layer, coreDeps as LayerCoreDeps<unknown>);
   });
 
   state.layers = instances;
+  state.layerSagaTasks = layerSagaTasks;
   state.passes = [...CONTENT_PASSES, ...instances.flatMap((instance) => instance.passes)];
   // `expandFrameOrder` resolves a FRAME_ORDER name by the FIRST pass that
   // answers to it, and `checkFrameOrder` counts order lines rather than passes —

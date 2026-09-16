@@ -1,33 +1,15 @@
-// src/components/containers/GalaxiesSectionContainer.tsx
+// src/layers/galaxyCatalog/ui/GalaxiesSectionContainer.tsx
 /**
- * GalaxiesSectionContainer — store boundary for the Galaxies settings section.
- *
- * Owns all Redux reach for the Galaxies group: reads five settings selectors
- * plus `selectSourceCounts` from the engine slice, and wraps five dispatch
- * calls in `useCallback`. The presentational `GalaxiesSection` imports nothing
- * from `store/` or `state/`.
- *
- * `sourceCounts` is read from the engine Redux slice via `useAppSelector`
- * (the engine dispatches `engineSourceCountReported` as each catalog lands).
- * This replaces the old prop-threading path through App → SettingsPanel →
- * GalaxiesSectionContainer, keeping engine state reach in the container layer
- * as the Container convention requires.
- *
- * Why all handlers use `[dispatch]` only: `dispatch` from `useAppDispatch()` is
- * the invariant `store.dispatch` — it never changes across the component's
- * lifetime. Handlers that close over no store-read values only need `dispatch`
- * in their dep array, giving each handler permanent stable identity and letting
- * the presentational child's `memo` bail correctly on parent re-renders.
- *
- * `onToggleSource` calls `galaxyCatalogIdOf` to resolve the numeric source code
- * to a string `GalaxyCatalogId` for `setGalaxyCatalogVisible`. That cast is
- * safe because `TOGGLEABLE_SOURCES` is constrained to galaxy-catalog sources
- * only (see `GalaxiesSection.tsx`).
+ * GalaxiesSectionContainer — store boundary for the Galaxies settings section:
+ * reads five settings selectors plus `selectSourceCounts`, wraps five dispatch
+ * calls in `useCallback` (all keyed on `[dispatch]` only — invariant, so each
+ * handler has stable identity and the presentational child's `memo` bails
+ * correctly). `GalaxiesSection` itself imports nothing from `store/`/`state/`.
  */
 
 import { memo, useCallback } from 'react';
-import GalaxiesSection from '../SettingsPanel/GalaxiesSection';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
+import GalaxiesSection from './GalaxiesSection';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import {
   selectVisibleSourceMask,
   selectGalaxyCatalogSize,
@@ -37,8 +19,8 @@ import {
   selectGalaxySbScale,
   selectGalaxySbMax,
   selectGalaxyFalloffStrength,
-} from '../../state/settings/selectors';
-import { selectSourceCounts } from '../../state/engine/selectors';
+} from '../../../state/settings/selectors';
+import { selectSourceCounts } from '../../../state/engine/selectors';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogSize,
@@ -48,10 +30,10 @@ import {
   setGalaxySbScale,
   setGalaxySbMax,
   setGalaxyFalloffStrength,
-} from '../../state/settings/settingsSlice';
-import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
-import type { SourceType } from '../../@types/data/SourceType';
-import type { BiasMode as BiasModeT } from '../../@types/data/galaxyCatalog/BiasMode';
+} from '../../../state/settings/settingsSlice';
+import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
+import type { SourceType } from '../../../@types/data/SourceType';
+import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';
 
 function GalaxiesSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

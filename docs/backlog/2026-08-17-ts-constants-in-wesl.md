@@ -111,8 +111,8 @@ directly.
 
 ## Existing mirrors this affects
 
-At least six distinct TS↔WESL or WESL↔WESL duplications live in the tree
-today, almost all already guarded by a parity test:
+At least five distinct TS↔WESL duplications live in the tree today, almost
+all already guarded by a parity test:
 `lib/starKnee.wesl` ↔ `src/data/starRenderConstants.ts` (`STAR_KNEE`) and
 `bodies/star/fragment.wesl` (`STAR_EMISSIVE`); `bodies/earth/fragment.wesl`
 ↔ `src/data/bodies/earthTileParams.ts` (three tile constants);
@@ -120,7 +120,7 @@ today, almost all already guarded by a parity test:
 entry); `flow/constants.wesl` ↔ `src/data/flow/flowFieldConstants.ts` (five
 values, plus three more mirrored into ISM-map shaders);
 `bodies/orbitTrail/constants.wesl` (`RIBBON_SEGMENTS`) and
-`starCatalog/vertex.wesl` (frozen LUT dequant windows); and one pure
-WESL↔WESL case, `diskRadiusRing/vertex.wesl`'s geometry literal shared with
-`texturedDisks`, which needs no TS involvement at all — just a shared `.wesl`
-module (rung 2 above).
+`starCatalog/vertex.wesl` (frozen LUT dequant windows). A pure WESL↔WESL
+case — a geometry literal duplicated across two shader modules, needing no
+TS involvement at all, just a shared `.wesl` module (rung 2 above) — would
+also qualify; none is currently known to exist in the tree.

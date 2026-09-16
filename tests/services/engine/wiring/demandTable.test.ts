@@ -15,7 +15,7 @@
  *                                    galaxy catalog's `galaxyCatalogs.items[id].enabled`
  *                                    (the intent bit galaxy catalog demand reads)
  *   - `state.tier`                 — passed to `req(tier)` by `reevaluateDemand`
- *   - `state.requests`             — `Set<RequestKey>`
+ *   - `state.ui`                   — `UiState`; `paletteOpen` is the pgcAlias trigger
  *   - `state.assetSlots`           — `slotFor` dispatch target
  *
  * All other `EngineState` fields are irrelevant to the demand loop; they
@@ -205,7 +205,8 @@ type MakeStateOptions = {
   galaxyCatalogItems?: GalaxyCatalogItemLeaves;
   /** Volume-field params; injected into `settings.volumes.items`. Defaults to boot. */
   volumeFields?: VolumeFieldLeaves;
-  requests?: Set<string>;
+  /** `ui.paletteOpen` — the pgcAlias row's demand trigger. Defaults to closed. */
+  paletteOpen?: boolean;
   /** Per-source point slots. Defaults to a fresh idle stub for every Source. */
   pointSlots?: PointSlotOverrides;
   /** Named asset slots. Each defaults to a fresh idle stub. */
@@ -232,7 +233,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
     settings = BOOT_SETTINGS,
     galaxyCatalogItems = BOOT_GALAXY_CATALOG_ITEMS,
     volumeFields = BOOT_VOLUME_FIELDS,
-    requests = new Set(),
+    paletteOpen = false,
     pointSlots = {},
     namedSlots = {},
   } = opts;
@@ -272,7 +273,7 @@ function makeState(opts: MakeStateOptions = {}): EngineState {
       galaxyCatalogs: { items: galaxyCatalogItems },
       volumes: { items: volumeFields },
     } as unknown as EngineSettingsState,
-    requests: requests as Set<import('../../../../src/@types/loading/RequestKey').RequestKey>,
+    ui: { paletteOpen } as import('../../../../src/@types/ui/UiState').UiState,
     // Far from Earth — buildDemandCtx assembles the eye from pose + projection,
     // so both must be present; a far resting pose keeps the proximity-gated
     // body-texture rows out of the demand set.
@@ -388,7 +389,7 @@ describe('reevaluateDemand demand-table regression', () => {
    * loads because every structure category is visible by default. mcpm IS
    * demanded: the predicate checks `ctx.settings.volumes.items.mcpm?.enabled`,
    * which the construction seed lands as true (registry visible:true). cf4Density
-   * is NOT (seeded enabled:false). filaments: off. pgcAlias: no request.
+   * is NOT (seeded enabled:false). filaments: off. pgcAlias: palette closed.
    * `hiResFamous` demands
    * unconditionally — its "fetch" is a GPU allocation, not a download.
    */

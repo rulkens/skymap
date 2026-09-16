@@ -4,8 +4,8 @@
  * The renderer owns what exists once per pipeline: the shader modules, the
  * render pipeline (and its colour target), the per-frame `@group(0)` uniform
  * buffer, and the draw call. The per-catalog GPU resources it delegates to
- * `catalogStore` — their upload / unload / splice / count contracts are
- * pinned in `catalogStore.test.ts`, not here. What remains here is the
+ * `catalogStore` — their upload / splice / count contracts are pinned in
+ * `catalogStore.test.ts`, not here. What remains here is the
  * pipeline descriptor, the composed `draw()`, and the composed teardown
  * (which must reach through the store as well as its own uniform buffer).
  *
@@ -20,8 +20,7 @@
 
 import { describe, it, expect } from 'vitest';
 import { createGalaxyPointRenderer } from '../../../../src/layers/galaxyCatalog/render/galaxyPointRenderer';
-// `BuildRunner` belongs to the store; the renderer only forwards it.
-import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/render/catalogStore';
+import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/types/BuildRunner';
 import { VIEW_SLOT_COUNT } from '../../../../src/utils/gpu/createViewSlotUniformRing';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';

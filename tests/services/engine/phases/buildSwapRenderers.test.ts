@@ -31,9 +31,6 @@ vi.mock('../../../../src/services/gpu/renderers/selectionRing/selectionRingRende
 vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub()),
 }));
-vi.mock('../../../../src/layers/galaxyCatalog/render/diskRadiusRing', () => ({
-  createDiskRadiusRing: vi.fn(() => makeStub()),
-}));
 
 // Imported AFTER the mocks so buildSwapRenderers picks up the mocked factories.
 import { buildSwapRenderers } from '../../../../src/services/engine/phases/buildSwapRenderers';
@@ -59,7 +56,6 @@ function makeState(): EngineState {
       debugLineRenderer: null,
       selectionRingRenderer: null,
       pickDebugOverlay: null,
-      diskRadiusRing: null,
       foregroundLabelRenderer: null,
       foregroundMarkerLineRenderer: null,
       filamentRenderer: makeStub(),

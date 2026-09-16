@@ -43,6 +43,7 @@ function harness(opts: { enabled?: boolean } = {}) {
   } as never;
   const catalogs = new Map<SourceType, GalaxyCatalog>();
   const provenanceCounts = new Map<SourceType, ProvenanceCounts>();
+  const bumpCatalogsVersion = vi.fn();
   const fades = {
     targetOf: vi.fn(() => 0),
     fadeTo: vi.fn(() => Promise.resolve()),
@@ -61,7 +62,7 @@ function harness(opts: { enabled?: boolean } = {}) {
     reportSourceCount: vi.fn(),
     publish: vi.fn(),
   } as unknown as LayerCoreDeps<GalaxyCatalogFacts>;
-  return { upload, pointRenderer, catalogs, provenanceCounts, fades, deps };
+  return { upload, pointRenderer, catalogs, provenanceCounts, bumpCatalogsVersion, fades, deps };
 }
 
 describe('wireGalaxyCatalogSourceSlot', () => {
@@ -105,6 +106,9 @@ describe('wireGalaxyCatalogSourceSlot', () => {
     expect(h.upload).toHaveBeenCalledOnce();
     expect(h.upload).toHaveBeenCalledWith(SOURCE_REGISTRY[Source.Glade].id, cloud);
     expect(h.catalogs.get(Source.Glade)).toBe(cloud);
+    // A stale alias row set would otherwise linger past this commit — the
+    // alias index reconcile keys on this bump to know its build is out of date.
+    expect(h.bumpCatalogsVersion).toHaveBeenCalledOnce();
   });
 
   it('drives this catalog’s fade-in only, after the upload', async () => {

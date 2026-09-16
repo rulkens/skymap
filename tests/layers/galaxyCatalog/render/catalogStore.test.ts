@@ -20,10 +20,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
-import {
-  createCatalogStore,
-  type BuildRunner,
-} from '../../../../src/layers/galaxyCatalog/render/catalogStore';
+import { createCatalogStore } from '../../../../src/layers/galaxyCatalog/render/catalogStore';
+import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/types/BuildRunner';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -117,41 +115,9 @@ describe('catalogStore.totalCount', () => {
     await store.upload(idOf(Source.Glade), makeCloud(25));
     expect(store.totalCount()).toBe(175);
   });
-
-  it('updates after a source is unloaded', async () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.SDSS), makeCloud(100));
-    await store.upload(idOf(Source.TwoMRS), makeCloud(50));
-    expect(store.totalCount()).toBe(150);
-
-    store.unload(idOf(Source.SDSS));
-    expect(store.totalCount()).toBe(50);
-  });
 });
 
 describe('catalogStore.hasCatalog', () => {
-  it('is false before upload, true after, false again after unload', async () => {
-    // The survey fade row's guard reads this — it reports whether a catalog's
-    // buffer is committed, independent of the slot lifecycle.
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    expect(store.hasCatalog(idOf(Source.SDSS))).toBe(false);
-    await store.upload(idOf(Source.SDSS), makeCloud(10));
-    expect(store.hasCatalog(idOf(Source.SDSS))).toBe(true);
-    expect(store.hasCatalog(idOf(Source.TwoMRS))).toBe(false);
-    store.unload(idOf(Source.SDSS));
-    expect(store.hasCatalog(idOf(Source.SDSS))).toBe(false);
-  });
-
   it('treats a zero-count upload (the unload signal) as not loaded', async () => {
     const store = createCatalogStore({
       device: makeStubDevice(),
@@ -186,25 +152,6 @@ describe('catalogStore.loadedSources', () => {
     expect(entries.map((e) => e.source)).toEqual([Source.TwoMRS, Source.SDSS]);
     expect(entries[0]!.count).toBe(50);
     expect(entries[1]!.count).toBe(100);
-  });
-
-  it('drops an unloaded source from the iterator', async () => {
-    const store = createCatalogStore({
-      device: makeStubDevice(),
-      fadeBgl: makeStubFadeBgl(),
-      sourceBgl: makeStubSourceBgl(),
-      buildRunner: testRunner,
-    });
-    await store.upload(idOf(Source.TwoMRS), makeCloud(50));
-    await store.upload(idOf(Source.SDSS), makeCloud(100));
-    await store.upload(idOf(Source.Glade), makeCloud(25));
-
-    store.unload(idOf(Source.TwoMRS));
-
-    const entries = Array.from(store.loadedSources());
-    expect(entries.map((e) => e.source)).toEqual([Source.SDSS, Source.Glade]);
-    expect(entries[0]!.count).toBe(100);
-    expect(entries[1]!.count).toBe(25);
   });
 });
 

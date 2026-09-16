@@ -31,6 +31,7 @@ export function wireGalaxyCatalogSourceSlot(
     readonly pointRenderer: GalaxyPointRenderer;
     readonly catalogs: Map<SourceType, GalaxyCatalog>;
     readonly provenanceCounts: Map<SourceType, ProvenanceCounts>;
+    readonly bumpCatalogsVersion: () => void;
   },
 ): AssetSlot<GalaxyCatalog, GalaxyCatalogReq> {
   const source = entry.code;
@@ -45,6 +46,10 @@ export function wireGalaxyCatalogSourceSlot(
       // GalaxyPointRenderer keys its catalogs by the string id, not the source code.
       await galaxy.pointRenderer.upload(id, cloud);
       galaxy.catalogs.set(source, cloud);
+      // Every commit replaces (or seeds) this source's array, so a built alias
+      // index's row set goes stale (aliases for galaxies the new array lacks,
+      // none for ones it gained) — bump so `frame` rebuilds it.
+      galaxy.bumpCatalogsVersion();
 
       // The single-ITEM re-sync, not the batch sweep: on a tier swap every
       // visible source reloads concurrently, and a sweep would have this commit

@@ -57,7 +57,8 @@ import {
   GALAXY_POINT_VERTEX_ATTRIBUTES,
   UNIFORM_BYTES,
 } from './galaxyPointVertexLayout';
-import { createCatalogStore, type BuildRunner } from './catalogStore';
+import { createCatalogStore } from './catalogStore';
+import type { BuildRunner } from '../types/BuildRunner';
 
 // The `schechter*` uniform slots at byte offsets 140..155 are
 // dead-but-reserved: the Schechter integral bakes into the per-vertex
@@ -291,14 +292,12 @@ export function createGalaxyPointRenderer(init: {
   const renderer: GalaxyPointRenderer = {
     label: 'galaxyPointRenderer',
     upload: store.upload,
-    unload: store.unload,
     setBiasUploadCallback: store.setBiasUploadCallback,
     setBiasUnloadCallback: store.setBiasUnloadCallback,
     spliceSchechterRatios: store.spliceSchechterRatios,
     spliceAngularWeights: store.spliceAngularWeights,
     clearBiasOverlays: store.clearBiasOverlays,
     totalCount: store.totalCount,
-    countOf: store.countOf,
     hasCatalog: store.hasCatalog,
     loadedSources: store.loadedSources,
     draw,

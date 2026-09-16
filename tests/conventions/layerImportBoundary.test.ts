@@ -91,20 +91,29 @@ describe('engine and state files import nothing from src/layers beyond their ALL
   });
 });
 
-// Free today: zero such imports at HEAD. This is the half that closes D1's
-// cycle, so a Layer importing the slice fails here, naming the file, instead
-// of crashing boot on an uninitialised `const` in a graph no unit test builds.
-const LAYERS_ALLOWED: Readonly<Record<string, number>> = {};
+// A Layer's `ui/` and `sagas/` sections are exempt from BOTH sweeps below:
+// `LayerUiSection` is a hand-written settings container (ADR 0011), and a
+// settings container's whole job — read the store, dispatch on a change —
+// has always meant store reach, in `src/components/containers/` or here. A
+// declared `Layer.sagas` watcher is symmetric: reacting to a core action
+// (`takeEvery(setPaletteOpen, ...)`) and reading store-owned saga-context
+// types is what a saga IS, exactly like every core watcher under
+// `src/state/**`. The ban stays absolute for every other Layer file
+// (create/frame/passes/etc — D1's cycle risk for the import sweep, the
+// outbound seam below for the dispatch sweep).
+const LAYER_STORE_REACH_DIRS = ['/ui/', '/sagas/'];
 
-describe('no file under src/layers imports src/state or src/store', () => {
-  const files = walk('src/layers');
+describe('no file under src/layers imports src/state or src/store (outside ui/sagas)', () => {
+  const files = walk('src/layers').filter(
+    (file) => !LAYER_STORE_REACH_DIRS.some((dir) => file.includes(dir)),
+  );
   expect(files.length).toBeGreaterThan(0);
 
   it('every file matches its ALLOWED row', () => {
     assertSweep(
       files,
       ['src/state/', 'src/store/'],
-      LAYERS_ALLOWED,
+      {},
       'A Layer contributes a fact, a dep field or nothing — see the no-dispatch ' +
         "sweep below; importing settingsSlice from a Layer module also closes D1's " +
         'module-init cycle (settingsSlice -> appSettingsFragments -> app -> this ' +
@@ -116,10 +125,13 @@ describe('no file under src/layers imports src/state or src/store', () => {
 // The import ban alone does not close the outbound seam: `LayerCoreDeps.store`
 // is handed to every Layer, so one could mint its own `createAction` and
 // dispatch it — the improvisation the error message above would otherwise
-// invite. Zero at HEAD, and every store write in the sequence is a `deps`
-// field, a published fact, or deleted (Ruling 17).
-describe('no file under src/layers dispatches', () => {
-  const files = walk('src/layers');
+// invite. Zero at HEAD outside `ui/`/`sagas/`, and every store write in the
+// runtime sequence is a `deps` field, a published fact, `put()` from a
+// declared saga, or deleted (Ruling 17).
+describe('no file under src/layers dispatches (outside ui/sagas)', () => {
+  const files = walk('src/layers').filter(
+    (file) => !LAYER_STORE_REACH_DIRS.some((dir) => file.includes(dir)),
+  );
   expect(files.length).toBeGreaterThan(0);
 
   it('every file is free of a .dispatch( call', () => {

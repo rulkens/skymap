@@ -9,8 +9,6 @@
  * boxes stay inline because those phases write them through the `{current}` pattern.
  */
 
-import type { SourceType } from '../../@types/data/SourceType';
-import type { GalaxyCatalog } from '../../@types/data/galaxyCatalog/GalaxyCatalog';
 import type { EngineCallbacks } from '../../@types/engine/EngineCallbacks';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 import type { EngineComposition } from '../../@types/engine/EngineComposition';
@@ -52,9 +50,6 @@ import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyState } from '../../@types/scene/BodyState';
 import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
-import type { PgcAliasMap } from '../../@types/loading/PgcAliasMap';
-import type { RequestKey } from '../../@types/loading/RequestKey';
-import { awaitSlotReady } from '../loading/awaitSlotReady';
 
 import { runBootstrapPhases } from './phases/bootstrap';
 import type { BootstrapDeps } from '../../@types/engine/BootstrapDeps';
@@ -138,7 +133,7 @@ export function createEngine(
   );
 
   const state: EngineState = {
-    // These five getters delegate straight to the store: sagas and sub-handle
+    // These getters delegate straight to the store: sagas and sub-handle
     // setters own the writes, per-frame readers reach the authoritative object
     // here, and there is no engine-side mirror to drift.
     get settings() {
@@ -152,6 +147,9 @@ export function createEngine(
     },
     get selectionRows() {
       return store.getState().selectionRows;
+    },
+    get ui() {
+      return store.getState().ui;
     },
     data: engineData,
     picking: {
@@ -317,17 +315,12 @@ export function createEngine(
       // untextured while its own map loads.
       bodyTextureAtlas: null,
     },
-    // Edge-triggered UI events driving demand predicates. The wiring layer sets a
-    // key and leaves it set — the demand loop's idle-guard prevents a re-fetch.
-    requests: new Set<RequestKey>(),
     // Both empty until `createLayers` runs (D8); see EngineState.d.ts for why
     // `selectionKindRows` is not named `selectionRows` (that getter, above, is
     // the unrelated saga display cache).
     layers: [],
+    layerSagaTasks: [],
     selectionKindRows: [],
-    // TEMPORARY (Ruling 5): written by `createLayers` from the Layer that
-    // declares it; the two `EngineHandle` galaxy reads below go through it.
-    galaxyBridge: null,
     // Empty until `createLayers` composes core's rows with every Layer's; no
     // phase before it reads any of the four (`pickProgram` is `wireInput`).
     passes: [],
@@ -463,26 +456,6 @@ export function createEngine(
     }
   })();
 
-  // Declared up-front so the handle literal can reference each by name — no forward
-  // references, no `!` assertions.
-  function loadPgcAliasesFn(): Promise<PgcAliasMap> {
-    // The pgcAlias row demands on `request('paletteOpened')`, so setting the flag
-    // and waking the loop is what fires the load. The flag stays set, so a second
-    // open resolves off the ready slot; an errored load isn't retried, and
-    // `awaitSlotReady` then yields the empty-map fallback.
-    state.requests.add('paletteOpened');
-    state.subsystems.scheduler.requestRender();
-    return awaitSlotReady(state.galaxyBridge?.pgcAlias ?? null, new Map() as PgcAliasMap);
-  }
-
-  function getCloud(source: SourceType): GalaxyCatalog | undefined {
-    return state.galaxyBridge?.catalogs.get(source);
-  }
-
-  function getCloudObjIds(source: SourceType): BigUint64Array | undefined {
-    return state.galaxyBridge?.catalogs.get(source)?.objIDs;
-  }
-
   function destroy(): void {
     // Ordering is load-bearing only for the first two groups: the render loop stops
     // before anything it touches is torn down, and DOM listeners detach before the
@@ -502,6 +475,10 @@ export function createEngine(
     // matchMedia listener — `phaseLocals` is assigned immediately after it.
     bootstrapDeps.phaseLocals?.unwatchHdrCapability();
 
+    // Cancelled before a Layer's own `destroy` runs: a still-live saga could
+    // otherwise dispatch into a half-destroyed Layer (see `RunSaga`'s doc comment).
+    for (const task of state.layerSagaTasks) task.cancel();
+    state.layerSagaTasks = [];
     for (const instance of state.layers.slice().reverse()) instance.destroy();
     state.layers = [];
 
@@ -531,20 +508,12 @@ export function createEngine(
     state.gpu.timingService.destroy();
     state.gpu.timingService = createDisabledGpuTimingService();
 
-    state.galaxyBridge = null;
     state.booted = false;
   }
 
   // The engine's only public surface: imperative operations only — store writes go
   // direct to the store.
   const handle: EngineHandle = {
-    selection: {
-      loadAliases: loadPgcAliasesFn,
-    },
-    sources: {
-      getCloud,
-      getCloudObjIds,
-    },
     debug: {
       // The same Map the bootstrap populates, so the dev panel observes slots as
       // they appear. Read-only at the type level, so React-side mutation trips tsc.

@@ -7,7 +7,7 @@
  * set). `settings` is a direct passthrough and needs no behaviour test.
  *
  * Mocking strategy: inject a minimal `state` carrying only the slices the
- * builder reads — `settings`, `requests`, and `assetSlots`. No GPU
+ * builder reads — `settings`, `ui`, and `assetSlots`. No GPU
  * resources are involved.
  */
 
@@ -17,20 +17,20 @@ import { Source } from '../../../../src/data/sources';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { RequestKey } from '../../../../src/@types/loading/RequestKey';
+import type { UiState } from '../../../../src/@types/ui/UiState';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 
 /**
  * Build a minimal EngineState with only the fields buildDemandCtx reads.
- * `requests` defaults to empty, and the slot maps/fields to empty so
+ * `ui.paletteOpen` defaults to false, and the slot maps/fields to empty so
  * `slotState` falls back to 'idle' unless a test supplies a slot.  `tier`
  * lives top-level on `settings` (the builder itself never reads it).
  */
 function makeState(
   opts: {
-    requests?: Set<RequestKey>;
+    paletteOpen?: boolean;
     points?: Map<SourceType, AssetSlot<unknown, unknown>>;
     famousGalaxiesMetaState?: LoadState<unknown>['kind'];
     pose?: { target: [number, number, number]; yaw: number; pitch: number; distance: number };
@@ -56,7 +56,7 @@ function makeState(
       galaxyCatalogs: { items: {} },
       volumes: { items: {} },
     },
-    requests: opts.requests ?? new Set<RequestKey>(),
+    ui: { paletteOpen: opts.paletteOpen ?? false } as UiState,
     assetSlots: {
       points: opts.points ?? new Map(),
       famousGalaxiesMeta,
