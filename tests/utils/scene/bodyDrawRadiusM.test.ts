@@ -3,7 +3,7 @@ import { bodyDrawRadiusM } from '../../../src/utils/scene/bodyDrawRadiusM';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
-import { outerBoundRadiusM } from '../../../src/utils/scene/outerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../src/utils/occlusion/outerBoundRadiusM';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 
 const findPlanet = (id: string) => {

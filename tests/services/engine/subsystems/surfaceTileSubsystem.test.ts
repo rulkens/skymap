@@ -33,7 +33,7 @@
  */
 import { describe, expect, it, vi } from 'vitest';
 
-vi.mock('../../../../src/utils/scene/fetchSurfaceTileManifest', () => ({
+vi.mock('../../../../src/utils/network/fetchSurfaceTileManifest', () => ({
   fetchSurfaceTileManifest: vi.fn(),
 }));
 vi.mock('../../../../src/utils/network/fetchSurfaceTileBitmap', () => ({
@@ -51,10 +51,10 @@ import {
   createSurfaceTileSubsystem,
   EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT,
 } from '../../../../src/services/engine/subsystems/surfaceTileSubsystem';
-import { fetchSurfaceTileManifest } from '../../../../src/utils/scene/fetchSurfaceTileManifest';
+import { fetchSurfaceTileManifest } from '../../../../src/utils/network/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../src/utils/network/fetchHeightTile';
-import { baseLevelForTier } from '../../../../src/utils/scene/baseLevelForTier';
+import { baseLevelForTier } from '../../../../src/utils/surfaceTiles/baseLevelForTier';
 import {
   EARTH_TILE_ATLAS_SIDE,
   EARTH_TILE_PX,

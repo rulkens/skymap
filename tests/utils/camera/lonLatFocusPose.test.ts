@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { lonLatFocusPose } from '../../../src/utils/camera/lonLatFocusPose';
 import { bodyFixedEyeM } from '../../../src/utils/camera/bodyFixedEyeM';
 import { eyeFrameOf } from '../../../src/utils/camera/eyeFrameOf';
-import { directionToLonLatDeg } from '../../../src/utils/scene/directionToLonLatDeg';
+import { directionToLonLatDeg } from '../../../src/utils/geo/directionToLonLatDeg';
 import { normalize3 } from '../../../src/utils/math/normalize3';
 import { BODY_LOCAL_FRAME } from '../../../src/data/camera/bodyLocalFrame';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';

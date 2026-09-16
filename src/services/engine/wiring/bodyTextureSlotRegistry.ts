@@ -13,8 +13,8 @@ import { createAssetSlot } from '../../loading/AssetSlot';
 import { bodyTextureFetcher } from '../../loading/fetchers/bodyTextureFetcher';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
-import { hostBodyId } from '../../../utils/scene/hostBodyId';
-import { bodyTextureSlotKey } from '../../../utils/scene/bodyTextureSlotKey';
+import { hostBodyId } from '../../../utils/bodyTextures/hostBodyId';
+import { bodyTextureSlotKey } from '../../../utils/bodyTextures/bodyTextureSlotKey';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BodyTextureReq } from '../../../@types/loading/BodyTextureReq';

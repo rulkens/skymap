@@ -34,7 +34,7 @@ import { existsSync } from 'node:fs';
 import sharp from 'sharp';
 
 import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../src/data/bodies/earthTileParams';
-import { levelFittingWidth } from '../../src/utils/scene/levelFittingWidth';
+import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 

@@ -20,7 +20,7 @@ import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
-import { surfacePointBodyFixed } from '../../../utils/scene/surfacePointBodyFixed';
+import { surfacePointBodyFixed } from '../../../utils/geo/surfacePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';

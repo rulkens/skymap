@@ -16,7 +16,7 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { innerBoundRadiusM } from '../../../utils/scene/innerBoundRadiusM';
+import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
 import { BODY_GLINT_MAX_PX } from './partitionBodiesByPresentation';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 import { positionedVisibleStars } from './positionedVisibleStars';

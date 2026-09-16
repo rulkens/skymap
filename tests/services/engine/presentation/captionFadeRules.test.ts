@@ -20,7 +20,7 @@ import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/en
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { MILKY_WAY_RADIUS_MPC } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
-import { regionById } from '../../../../src/utils/scene/regionById';
+import { regionById } from '../../../../src/utils/regions/regionById';
 import { distanceMpc } from '../../../../src/utils/math/distanceMpc';
 
 const R0_MPC = distanceMpc(RENDER_ORIGIN_MPC, SGR_A_STAR_ANCHOR.positionMpc);

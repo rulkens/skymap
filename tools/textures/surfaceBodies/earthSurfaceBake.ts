@@ -6,7 +6,7 @@
  */
 
 import { TIER_LADDER } from '../../../src/data/tierLadder';
-import { baseLevelForTier } from '../../../src/utils/scene/baseLevelForTier';
+import { baseLevelForTier } from '../../../src/utils/surfaceTiles/baseLevelForTier';
 import { BMNG_QUADRANT_KEYS } from '../../utils/io/bmngQuadrantKeys';
 import { BMNG_VINTAGE } from '../../utils/io/bmngVintage';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';

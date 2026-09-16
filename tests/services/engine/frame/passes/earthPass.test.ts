@@ -49,7 +49,7 @@ import { frameUp } from '../../../../../src/utils/camera/frameUp';
 import { normalize3 } from '../../../../../src/utils/math/normalize3';
 import { mat3FromColumns } from '../../../../../src/utils/math/mat3FromColumns';
 import { bodyRelativePose } from '../../../../../src/services/engine/camera/bodyRelativePose';
-import { innerBoundRadiusM } from '../../../../../src/utils/scene/innerBoundRadiusM';
+import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { EARTH_SURFACE_PARAMS } from '../../../../../src/data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../../src/data/bodies/cloudShellParams';

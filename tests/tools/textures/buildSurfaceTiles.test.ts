@@ -6,7 +6,7 @@ import { dirname, join } from 'node:path';
 import sharp from 'sharp';
 
 import { bakeAll, bakeCoarserLevel } from '../../../tools/textures/buildSurfaceTiles';
-import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
+import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
 import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
 import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';

@@ -31,7 +31,7 @@ import { toBodyArm } from '../../../../src/services/engine/camera/poseFrameConve
 import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFocusDistance';
 import { bodyFixedEyeM } from '../../../../src/utils/camera/bodyFixedEyeM';
 import { eyeFrameOf } from '../../../../src/utils/camera/eyeFrameOf';
-import { directionToLonLatDeg } from '../../../../src/utils/scene/directionToLonLatDeg';
+import { directionToLonLatDeg } from '../../../../src/utils/geo/directionToLonLatDeg';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { BODY_LOCAL_FRAME } from '../../../../src/data/camera/bodyLocalFrame';
 import { FLY_TO_LON_LAT_TWEEN_MS } from '../../../../src/data/camera/flyToLonLatTweenMs';

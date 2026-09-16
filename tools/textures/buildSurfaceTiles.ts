@@ -49,10 +49,10 @@ import type { SurfaceTileManifestBand } from '../../src/@types/scene/SurfaceTile
 import type { SurfaceTileBand } from '../../src/@types/scene/SurfaceTileBand';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
-import { surfaceTilePath } from '../../src/utils/scene/surfaceTilePath';
-import { surfaceTileBandFromBounds } from '../../src/utils/scene/surfaceTileBandFromBounds';
-import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
-import { surfaceTileInBand } from '../../src/utils/scene/surfaceTileInBand';
+import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
+import { surfaceTileBandFromBounds } from '../../src/utils/surfaceTiles/surfaceTileBandFromBounds';
+import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
+import { surfaceTileInBand } from '../../src/utils/surfaceTiles/surfaceTileInBand';
 import { parseFlags } from '../utils/cli/args';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { mergeSurfaceTileManifest } from '../utils/textures/mergeSurfaceTileManifest';

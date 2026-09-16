@@ -12,7 +12,7 @@ import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { MIN_DISTANCE_MPC, SURFACE_STANDOFF_RADII } from '../../../utils/camera/clampDistance';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { bodyStandoffRadii } from '../../../utils/scene/bodyStandoffRadii';
-import { isMeshBody } from '../../../utils/scene/isMeshBody';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import type { SelectionRow } from '../../../@types/engine/SelectionRow';
 import type { PivotFraming } from '../../../@types/camera/PivotFraming';
 

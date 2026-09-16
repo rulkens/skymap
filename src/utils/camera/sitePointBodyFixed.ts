@@ -6,7 +6,7 @@
 
 import type { SurfaceFixedSite } from '../../@types/scene/SurfaceFixedSite';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { surfacePointBodyFixed } from '../scene/surfacePointBodyFixed';
+import { surfacePointBodyFixed } from '../geo/surfacePointBodyFixed';
 
 export function sitePointBodyFixed(site: SurfaceFixedSite, hostRadiusM: number): Vec3 {
   return surfacePointBodyFixed(site.latDeg, site.lonDeg, hostRadiusM + site.altitudeM);

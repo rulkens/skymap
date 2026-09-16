@@ -22,7 +22,7 @@ import type { SurfaceTileDebugSnapshot } from '../../@types/scene/SurfaceTileDeb
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
-import { parseLonLatInput } from '../../utils/scene/parseLonLatInput';
+import { parseLonLatInput } from '../../utils/geo/parseLonLatInput';
 import DebugSection from './DebugSection';
 import styles from './SurfaceTileAtlasSection.module.css';
 

@@ -53,7 +53,7 @@ import { formatScalar } from '../../../utils/format/formatScalar';
 import { FAMOUS_STAR_IDS } from '../../../data/bodies/famousStarsIndex';
 import { BODY_FACTS } from '../../../data/bodies/bodyFacts.generated';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
-import { isMeshBody } from '../../../utils/scene/isMeshBody';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { starWikipediaTitle } from '../../../utils/format/starWikipediaTitle';
 import CardHeader from '../CardHeader/CardHeader';
 import CardRow from '../CardRow/CardRow';

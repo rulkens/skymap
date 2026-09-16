@@ -9,7 +9,7 @@ import { bakeHeightLevel } from '../../../tools/textures/bakeHeightLevel';
 import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
 import { codeHeightM } from '../../../tools/utils/textures/codeHeightM';
 import { heightCode } from '../../../tools/utils/textures/heightCode';
-import { surfaceTilePath } from '../../../src/utils/scene/surfaceTilePath';
+import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
 import { surfaceTileBounds } from '../../../tools/utils/scene/surfaceTileBounds';
 import { EARTH_TILE_PX } from '../../../src/data/bodies/earthTileParams';
 import { flattenWaterComponents } from '../../../tools/utils/textures/flattenWaterComponents';

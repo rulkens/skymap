@@ -65,7 +65,7 @@ import type { AtlasTileRect } from '../../../../@types/data/AtlasTileRect';
 import type { TextureKind } from '../../../../@types/data/TextureKind';
 import { cubeSphereMesh } from '../../../../utils/math/cubeSphereMesh';
 import { generateMipChain, mipLevelCount } from '../../lib/generateMipChain';
-import { isLinearTextureKind } from '../../../../utils/scene/isLinearTextureKind';
+import { isLinearTextureKind } from '../../../../utils/bodyTextures/isLinearTextureKind';
 import { EARTH_SURFACE_UNIFORM_FLOATS } from '../../../../utils/gpu/packEarthSurfaceUniforms';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import vsCode from '../../shaders/bodies/earth/vertex.wesl?static';

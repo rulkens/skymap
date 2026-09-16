@@ -65,7 +65,7 @@ fn tileAlbedo(
 // Shading normal from the four posts of the height cell 'uv' lies in: each
 // post's own slope, interpolated across the cell, so the normal stays
 // continuous over a post line (one gradient per cell drew every cell as a
-// facet). Twin: src/utils/scene/surfaceNormalFromHeightCell.ts. 'uv.y' runs 0
+// facet). Twin: src/utils/surfaceTiles/surfaceNormalFromHeightCell.ts. 'uv.y' runs 0
 // at the patch's NORTH edge, the lattice's own row order; 'Ng' is the
 // normalized datum normal; 'heightLattice' is (origin.xy, cells) of the leaf.
 fn tileShadingNormal(

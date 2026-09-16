@@ -29,7 +29,7 @@ import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
 import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
 import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
-import { innerBoundRadiusM } from '../../../../utils/scene/innerBoundRadiusM';
+import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packEarthSurfaceUniforms } from '../../../../utils/gpu/packEarthSurfaceUniforms';

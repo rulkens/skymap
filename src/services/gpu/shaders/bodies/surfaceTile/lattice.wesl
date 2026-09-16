@@ -2,7 +2,7 @@
 // its height lattice: the sub-rect of atlas posts 'heightSlotOrigin' and
 // 'heightCells' name (R14 — a leaf may be flattened into an ANCESTOR's slot).
 // Both stages import it, so a vertex and the fragments over it can never
-// disagree about a post. TWIN: src/utils/scene/latticeHeightSample.ts.
+// disagree about a post. TWIN: src/utils/surfaceTiles/latticeHeightSample.ts.
 
 // Mirror HEIGHT_CODE_OFFSET_M / HEIGHT_CODE_STEP_M (heightTileFormat.ts), parity-tested.
 const HEIGHT_CODE_OFFSET_M: f32 = -32768.0;
@@ -38,7 +38,7 @@ fn latticeCellM(tex: texture_2d<f32>, origin: vec2<u32>, cell: vec2<u32>, stride
 // than reading a neighbouring leaf's ground. Two tiles sharing an edge
 // therefore take one-sided slopes from opposite sides of the same post -- a
 // second-order disagreement a post wide, the price of no apron in the tile.
-// TWIN: src/utils/scene/latticePostGradient.ts.
+// TWIN: src/utils/surfaceTiles/latticePostGradient.ts.
 fn latticePostGradient(tex: texture_2d<f32>, origin: vec2<u32>, post: vec2<u32>, cells: u32) -> vec2<f32> {
   let west = max(post.x, 1u) - 1u;
   let east = min(post.x + 1u, cells);

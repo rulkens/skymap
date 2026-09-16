@@ -21,9 +21,9 @@ import type {
 } from '../../../../@types/rendering/SurfaceTileRenderer';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
-import { patchOriginRelEyeM } from '../../../../utils/scene/patchOriginRelEyeM';
-import { surfacePatchIndices } from '../../../../utils/scene/surfacePatchIndices';
-import { surfaceEffectsKey } from '../../../../utils/scene/surfaceEffectsKey';
+import { patchOriginRelEyeM } from '../../../../utils/surfaceTiles/patchOriginRelEyeM';
+import { surfacePatchIndices } from '../../../../utils/surfaceTiles/surfacePatchIndices';
+import { surfaceEffectsKey } from '../../../../utils/surfaceTiles/surfaceEffectsKey';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import vsCode from '../../shaders/bodies/surfaceTile/vertex.wesl?static';
 import {

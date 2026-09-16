@@ -19,7 +19,7 @@ import sharp from 'sharp';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { EARTH_TILE_PX } from '../../src/data/bodies/earthTileParams';
-import { surfaceTileColumns } from '../../src/utils/scene/surfaceTileColumns';
+import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
 
 /** Deepest (and only) level the Søndermarken harvest reaches — the WMS
  *  server rendered z19 natively; every coarser level is a bake-time 2x2

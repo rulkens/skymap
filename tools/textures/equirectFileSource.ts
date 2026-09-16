@@ -19,7 +19,7 @@
 import sharp from 'sharp';
 
 import { EARTH_EQUIRECT_BASE_WIDTH_PX } from '../../src/data/bodies/earthTileParams';
-import { levelFittingWidth } from '../../src/utils/scene/levelFittingWidth';
+import { levelFittingWidth } from '../../src/utils/surfaceTiles/levelFittingWidth';
 import { rawDataPath, type RawDataKey } from '../utils/io/rawDataRegistry';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
 

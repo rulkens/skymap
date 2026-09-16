@@ -37,13 +37,13 @@ import { createTileStreamSubsystem } from './tileStreamSubsystem';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { surfaceTileBandFromBounds } from '../../../utils/scene/surfaceTileBandFromBounds';
-import { surfaceTilePath } from '../../../utils/scene/surfaceTilePath';
-import { fetchSurfaceTileManifest } from '../../../utils/scene/fetchSurfaceTileManifest';
+import { surfaceTileBandFromBounds } from '../../../utils/surfaceTiles/surfaceTileBandFromBounds';
+import { surfaceTilePath } from '../../../utils/surfaceTiles/surfaceTilePath';
+import { fetchSurfaceTileManifest } from '../../../utils/network/fetchSurfaceTileManifest';
 import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../utils/network/fetchHeightTile';
-import { directionToLonLatDeg } from '../../../utils/scene/directionToLonLatDeg';
-import { deepestBandLevelAt } from '../../../utils/scene/deepestBandLevelAt';
+import { directionToLonLatDeg } from '../../../utils/geo/directionToLonLatDeg';
+import { deepestBandLevelAt } from '../../../utils/surfaceTiles/deepestBandLevelAt';
 import {
   EARTH_TILE_ATLAS_SIDE,
   EARTH_TILE_CONCURRENCY,

@@ -38,7 +38,7 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
-import { isMeshBody } from '../../../utils/scene/isMeshBody';
+import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { bodyTextureSpec } from '../../../data/bodies/bodyTextureRegistry';
 
 /**
