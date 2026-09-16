@@ -109,20 +109,21 @@ fn vs(
   // off the end of a 128-cell assumption.
   let cells = f32(inst.heightCells);
   let p = vec2<f32>(f32(i) * cells / f32(n), f32(n - j) * cells / f32(n));
-  let h = latticeHeightM(
+  let latticeH = latticeHeightM(
     heightAtlas,
     inst.heightSlotOrigin,
     p,
     edgeLatticeStride(i, j, n, inst.edgeCoarser),
     cells,
   );
+  let h = select(latticeH, 0.0, u.noDisplacement > 0.5);
 
   // The ring hangs radially inward on EVERY edge (R15): the cut's mesh levels
   // are unbalanced, so any neighbour may have half this patch's vertices along
   // the shared edge, and the wall is what hides the T-junction. No edge code
   // gates it -- 'edge' only picks which boundary post the vertex repeats.
   var depthM = 0.0;
-  if (isSkirt) {
+  if (isSkirt && u.noSkirts < 0.5) {
     depthM = SURFACE_TILE_SKIRT_DEPTH_FRACTION * u.radiusM * inst.dLatRad;
   }
 

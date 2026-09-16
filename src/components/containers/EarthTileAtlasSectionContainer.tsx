@@ -10,8 +10,11 @@
 import { memo, useCallback, type ReactElement } from 'react';
 import type { RefObject } from 'react';
 import EarthTileAtlasSection from '../DebugPanel/EarthTileAtlasSection';
-import { useAppDispatch } from '../../store/hooks';
+import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
+import { selectDebugOverlays } from '../../state/settings/selectors';
+import { setDebugOverlay } from '../../state/settings/settingsSlice';
+import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 
 export type EarthTileAtlasSectionContainerProps = {
@@ -22,15 +25,25 @@ function EarthTileAtlasSectionContainer({
   engineHandleRef,
 }: EarthTileAtlasSectionContainerProps): ReactElement | null {
   const dispatch = useAppDispatch();
+  const overlays = useAppSelector(selectDebugOverlays);
   const onFlyToLonLat = useCallback(
     (lonDeg: number, latDeg: number) => dispatch(flyToLonLat({ lonDeg, latDeg })),
+    [dispatch],
+  );
+  const onToggle = useCallback(
+    (key: DebugOverlayKey, enabled: boolean) => dispatch(setDebugOverlay({ key, enabled })),
     [dispatch],
   );
 
   const handle = engineHandleRef.current;
   if (!handle) return null;
   return (
-    <EarthTileAtlasSection earthTileDebug={handle.debug.surfaceTiles} flyToLonLat={onFlyToLonLat} />
+    <EarthTileAtlasSection
+      earthTileDebug={handle.debug.surfaceTiles}
+      flyToLonLat={onFlyToLonLat}
+      overlays={overlays}
+      onToggle={onToggle}
+    />
   );
 }
 

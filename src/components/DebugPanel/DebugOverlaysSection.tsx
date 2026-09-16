@@ -18,7 +18,7 @@ export type DebugOverlaysSectionProps = {
 function DebugOverlaysSection({ overlays, onToggle }: DebugOverlaysSectionProps) {
   return (
     <DebugSection title="Debug Overlays">
-      {DEBUG_OVERLAY_ROWS.map((row) => (
+      {DEBUG_OVERLAY_ROWS.filter((row) => !('section' in row)).map((row) => (
         <label key={row.key} className={styles.checkRow}>
           <input
             type="checkbox"
