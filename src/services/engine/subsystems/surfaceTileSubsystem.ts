@@ -19,6 +19,7 @@
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
 import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { SurfaceTileSpec } from '../../../@types/data/SurfaceTileSpec';
 import type { SurfaceTileManifest } from '../../../@types/scene/SurfaceTileManifest';
 import type { SurfaceTileBand } from '../../../@types/scene/SurfaceTileBand';
@@ -62,6 +63,7 @@ const HEIGHT_ATLAS_FORMAT: GPUTextureFormat = 'r32float';
  *  restating it. */
 export const EMPTY_SURFACE_TILE_DEBUG_SNAPSHOT: SurfaceTileDebugSnapshot = {
   engaged: false,
+  bodyId: null,
   capacity: 0,
   used: 0,
   height: { used: 0, capacity: 0 },
@@ -496,6 +498,10 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
 
     return {
       engaged: true,
+      // Only reachable via `engage()`, called from `update()` after
+      // `plannerParams` already matched `bodyId` against a registry row —
+      // narrower than `BodyId` for real, not just by assertion.
+      bodyId: atlas.bodyId as SurfaceTileBodyId,
       capacity: atlas.slotsPerRow * atlas.slotsPerRow,
       used: atlas.stream.occupiedCount(),
       height: {

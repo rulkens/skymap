@@ -15,6 +15,7 @@ import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { selectDebugOverlays } from '../../state/settings/selectors';
 import { setDebugOverlay } from '../../state/settings/settingsSlice';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
 
 export type EarthTileAtlasSectionContainerProps = {
@@ -27,7 +28,8 @@ function EarthTileAtlasSectionContainer({
   const dispatch = useAppDispatch();
   const overlays = useAppSelector(selectDebugOverlays);
   const onFlyToLonLat = useCallback(
-    (lonDeg: number, latDeg: number) => dispatch(flyToLonLat({ lonDeg, latDeg })),
+    (lonDeg: number, latDeg: number, body?: BodyId) =>
+      dispatch(flyToLonLat({ lonDeg, latDeg, body })),
     [dispatch],
   );
   const onToggle = useCallback(

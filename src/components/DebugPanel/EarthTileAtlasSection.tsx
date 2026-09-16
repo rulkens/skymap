@@ -20,6 +20,7 @@
 import { Fragment, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { SurfaceTileDebugSnapshot } from '../../@types/scene/SurfaceTileDebugSnapshot';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
+import type { BodyId } from '../../@types/data/body/BodyId';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { parseLonLatInput } from '../../utils/scene/parseLonLatInput';
 import DebugSection from './DebugSection';
@@ -27,8 +28,10 @@ import styles from './EarthTileAtlasSection.module.css';
 
 export type EarthTileAtlasSectionProps = {
   earthTileDebug: () => SurfaceTileDebugSnapshot;
-  /** Fly-to-coordinates debug instrument, from the engine handle's `debug.flyToLonLat`. */
-  flyToLonLat: (lonDeg: number, latDeg: number) => void;
+  /** Fly-to-coordinates debug instrument, from the engine handle's
+   *  `debug.flyToLonLat`. `body` omitted keeps `flyToLonLatActions`'s own
+   *  Earth default — this section passes the snapshot's `bodyId` verbatim. */
+  flyToLonLat: (lonDeg: number, latDeg: number, body?: BodyId) => void;
   readonly overlays: Record<DebugOverlayKey, boolean>;
   readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
 };
@@ -65,7 +68,7 @@ function EarthTileAtlasSection({
     e.preventDefault();
     const point = parseLonLatInput(flyToText);
     if (point === null) return;
-    flyToLonLat(point.lonDeg, point.latDeg);
+    flyToLonLat(point.lonDeg, point.latDeg, snap.bodyId ?? undefined);
   }
 
   const terrainToggles = (
@@ -100,7 +103,7 @@ function EarthTileAtlasSection({
 
   if (!snap.engaged) {
     return (
-      <DebugSection title="Earth Tile Atlas">
+      <DebugSection title="Surface Tiles">
         {flyToForm}
         {terrainToggles}
         <div className={styles.notice}>Not engaged — no manifest, or camera outside Earth.</div>
@@ -113,7 +116,7 @@ function EarthTileAtlasSection({
   const deepestZ = snap.levels.at(-1)?.z;
 
   return (
-    <DebugSection title={`Earth Tile Atlas (${snap.used}/${snap.capacity} slots)`}>
+    <DebugSection title={`Surface Tiles — ${snap.bodyId} (${snap.used}/${snap.capacity} slots)`}>
       {flyToForm}
       {terrainToggles}
       <div className={styles.levels}>
