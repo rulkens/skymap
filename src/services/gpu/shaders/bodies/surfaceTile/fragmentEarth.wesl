@@ -1,14 +1,14 @@
-// earthSurfaceTile/fragmentEarth.wesl — the materialMap + nightLights +
+// surfaceTile/fragmentEarth.wesl — the materialMap + nightLights +
 // cloudShadows variant; mirrors earth/fragment.wesl's shading ('pbrDirect',
 // roughness split, cloud shadow, night lights), see that header for the
 // derivation. Skips the whole-globe NORMAL map: patches shade from the height
 // field alone (spec section 7.2).
 
-import package::bodies::earthSurfaceTile::io::VSOut;
-import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
-import package::bodies::earthSurfaceTile::surfaceLighting::tileAlbedo;
-import package::bodies::earthSurfaceTile::surfaceLighting::tileShadingNormal;
-import package::bodies::earthSurfaceTile::surfaceLighting::tileLodOverlay;
+import package::bodies::surfaceTile::io::VSOut;
+import package::bodies::surfaceTile::io::SurfaceTileUniforms;
+import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
+import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
+import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 import package::lib::nightLights::nightLights;

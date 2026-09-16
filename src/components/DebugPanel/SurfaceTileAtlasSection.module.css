@@ -1,5 +1,5 @@
 /*
- * EarthTileAtlasSection — three-column resident/pending grid (same "cells
+ * SurfaceTileAtlasSection — three-column resident/pending grid (same "cells
  * as direct grid children" trick GalaxyProvenanceSection uses) plus two
  * plain readout lines below it.
  */

@@ -1,4 +1,4 @@
-// earthSurfaceTile/lattice.wesl — the ONE statement of how a leaf addresses
+// surfaceTile/lattice.wesl — the ONE statement of how a leaf addresses
 // its height lattice: the sub-rect of atlas posts 'heightSlotOrigin' and
 // 'heightCells' name (R14 — a leaf may be flattened into an ANCESTOR's slot).
 // Both stages import it, so a vertex and the fragments over it can never

@@ -1,4 +1,4 @@
-// earthSurfaceTile/io.wesl — byte-layout contract (exceeds the usual header
+// surfaceTile/io.wesl — byte-layout contract (exceeds the usual header
 // budget on that basis, per lib/camera.wesl's precedent): the per-patch
 // instance record, the shared inter-stage 'VSOut' (mirroring
 // bodies/earth/io.wesl's shape), and the draw's uniform block.
@@ -6,8 +6,8 @@
 // One 'PatchInstance' per cut tile, selected by '@builtin(instance_index)';
 // there is no vertex data at all -- 'vertex.wesl' derives every position
 // from this record and '@builtin(vertex_index)'. The CPU packer in
-// 'earthSurfaceTileLayout.ts' is the ONE matching statement of these
-// structs' byte layout, and 'earthSurfaceTileLayout.test.ts' the only
+// 'surfaceTileLayout.ts' is the ONE matching statement of these
+// structs' byte layout, and 'surfaceTileLayout.test.ts' the only
 // cross-check: a field reorder on one side alone scrambles every drawn
 // patch with no compiler signal.
 //
@@ -29,7 +29,7 @@ struct PatchInstance {
   // vertex stage reproduces this exactly, so patch corners never crack.
   originRelEyeM: vec3<f32>,
   // clamp((nowMs - readyAtMs) / EARTH_TILE_CROSSFADE_MS, 0, 1), computed
-  // once per tile in earthSurfaceTileRenderer.ts's draw() (nowMs sampled
+  // once per tile in surfaceTileRenderer.ts's draw() (nowMs sampled
   // once per frame, not per tile) -- 1.0 is the "no fade" fast path.
   fadeWeight: f32,
   // The patch's angular footprint (radians), the f32 half of the CPU/GPU
@@ -156,7 +156,7 @@ struct VSOut {
 // DataView (only 'meshResolution', word 23, is written as a u32; word 43
 // is left as the scratch ArrayBuffer's zero fill). The single source of
 // truth for that packing is 'writeSurfaceTileUniforms' in
-// 'earthSurfaceTileLayout.ts'.
+// 'surfaceTileLayout.ts'.
 struct SurfaceTileUniforms {
   vp: mat4x4<f32>,
   rotCol0: vec3<f32>,

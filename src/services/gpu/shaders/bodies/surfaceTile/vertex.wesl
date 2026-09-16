@@ -1,12 +1,12 @@
-// earthSurfaceTile/vertex.wesl — every patch's geometry from an 80-byte
+// surfaceTile/vertex.wesl — every patch's geometry from an 80-byte
 // 'PatchInstance' and the height atlas. The record is 'inst' -- 'patch' is a
 // WGSL RESERVED WORD. 'originRelEyeM' was differenced CPU-side from the SAME
 // f32-rounded anchor rebuilt here, so s = t = 0 lands on it exactly: no cracks.
 
-import package::bodies::earthSurfaceTile::io::VSOut;
-import package::bodies::earthSurfaceTile::io::PatchInstance;
-import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
-import package::bodies::earthSurfaceTile::lattice::latticeHeightM;
+import package::bodies::surfaceTile::io::VSOut;
+import package::bodies::surfaceTile::io::PatchInstance;
+import package::bodies::surfaceTile::io::SurfaceTileUniforms;
+import package::bodies::surfaceTile::lattice::latticeHeightM;
 
 @group(0) @binding(0) var<uniform> u: SurfaceTileUniforms;
 @group(0) @binding(1) var<storage, read> patches: array<PatchInstance>;

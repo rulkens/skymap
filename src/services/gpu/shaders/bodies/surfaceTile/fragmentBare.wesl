@@ -1,13 +1,13 @@
-// earthSurfaceTile/fragmentBare.wesl — the no-effects variant: the tile
+// surfaceTile/fragmentBare.wesl — the no-effects variant: the tile
 // albedo lit by 'pbrDirect' at the row's flat roughness, plus ambient. No
 // material, night or cloud maps, so none of their bindings are declared and
 // a body without Earth's whole-globe maps can still draw its tiles.
 
-import package::bodies::earthSurfaceTile::io::VSOut;
-import package::bodies::earthSurfaceTile::io::SurfaceTileUniforms;
-import package::bodies::earthSurfaceTile::surfaceLighting::tileAlbedo;
-import package::bodies::earthSurfaceTile::surfaceLighting::tileShadingNormal;
-import package::bodies::earthSurfaceTile::surfaceLighting::tileLodOverlay;
+import package::bodies::surfaceTile::io::VSOut;
+import package::bodies::surfaceTile::io::SurfaceTileUniforms;
+import package::bodies::surfaceTile::surfaceLighting::tileAlbedo;
+import package::bodies::surfaceTile::surfaceLighting::tileShadingNormal;
+import package::bodies::surfaceTile::surfaceLighting::tileLodOverlay;
 import package::lib::pbr::pbrDirect;
 import package::lib::pbr::MIN_ROUGHNESS;
 

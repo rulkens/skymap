@@ -1,9 +1,9 @@
-// earthSurfaceTile/surfaceLighting.wesl — what every tile fragment variant
+// surfaceTile/surfaceLighting.wesl — what every tile fragment variant
 // shares: the crossfaded atlas albedo, the height-cell normal and the LOD
 // overlay. Bindings live in the entry files, so textures and uniform fields
 // arrive as parameters (plain values, never a buffer struct by value).
 
-import package::bodies::earthSurfaceTile::lattice::latticePostGradient;
+import package::bodies::surfaceTile::lattice::latticePostGradient;
 
 // Mirrored from 'EARTH_TILE_ATLAS_SIDE' (earthTileParams.ts), parity-tested
 // in constants.parity.test.ts. Half an ATLAS texel in atlas uv: the inset
