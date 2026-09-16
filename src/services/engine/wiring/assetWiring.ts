@@ -201,7 +201,9 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   // ── Cosmic-web filament skeleton ─────────────────────────────────
   {
     key: 'filaments',
-    factory: (deps) => createFilamentSlot(deps.state, deps.cb),
+    // Non-null by phase order: `initGpu` constructs the handle, `wireSlots`
+    // builds this row. The row leaves core once the filaments Layer is composed.
+    factory: (deps) => createFilamentSlot(deps.state.gpu.filamentRenderer!),
     req: (tier) => ({ small: tier === 'small' }),
     demand: (ctx) => ctx.settings.filaments.enabled,
     priority: 80, // cosmic-web overlays sit behind the catalogs they are drawn over
