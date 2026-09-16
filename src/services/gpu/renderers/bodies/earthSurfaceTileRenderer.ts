@@ -201,6 +201,8 @@ export function createEarthSurfaceTileRenderer(
       cloudShadowStrength,
       cloudShellRadius,
       debugLodOverlay,
+      noDisplacement,
+      noSkirts,
       surfaceAtlasView,
       heightAtlasView,
       materialView,
@@ -288,6 +290,8 @@ export function createEarthSurfaceTileRenderer(
       cloudShadowStrength,
       cloudShellRadius,
       debugLodOverlay,
+      noDisplacement,
+      noSkirts,
     );
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
