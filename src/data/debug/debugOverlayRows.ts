@@ -17,12 +17,6 @@ export const DEBUG_OVERLAY_ROWS = [
   { key: 'disk-radius-ring', label: 'Show disk radius ring' },
   { key: 'orbit-trail-impostor', label: 'Show orbit-trail impostor' },
   { key: 'earth-lod-overlay', label: 'Earth LOD overlay' },
-  // Bisect a terrain artifact by removing one of the two things that move a
-  // patch off the datum, without a rebuild: 'terrain-no-displacement' zeroes
-  // the height the vertex stage reads from the atlas (flat patches on the
-  // datum), 'terrain-no-skirts' zeroes the skirt ring's depth. Both land in
-  // the Earth Tile Atlas section, where the residency numbers that explain
-  // what they change already live.
   {
     key: 'terrain-no-displacement',
     label: 'No displacement (flat patches)',
