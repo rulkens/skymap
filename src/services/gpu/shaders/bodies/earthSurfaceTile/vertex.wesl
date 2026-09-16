@@ -115,7 +115,7 @@ fn vs(
     p,
     edgeLatticeStride(i, j, n, inst.edgeCoarser),
     cells,
-  );
+  ) * u.heightScale;
 
   // The ring hangs radially inward on EVERY edge (R15): the cut's mesh levels
   // are unbalanced, so any neighbour may have half this patch's vertices along

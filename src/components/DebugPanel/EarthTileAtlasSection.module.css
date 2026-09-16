@@ -57,3 +57,21 @@
   composes: readout from './debugSection.module.css';
   margin-top: var(--space-2);
 }
+
+/* Terrain bisect toggles — the `section: 'earth-tiles'` overlay rows, set off
+   from the residency numbers below them by the same divider `.total` uses. */
+.toggles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-divider);
+}
+
+.checkRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+}

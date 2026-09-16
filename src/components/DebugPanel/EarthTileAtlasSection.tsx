@@ -19,6 +19,8 @@
 
 import { Fragment, useEffect, useState, type FormEvent, type ReactElement } from 'react';
 import type { SurfaceTileDebugSnapshot } from '../../@types/scene/SurfaceTileDebugSnapshot';
+import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
+import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import { parseLonLatInput } from '../../utils/scene/parseLonLatInput';
 import DebugSection from './DebugSection';
 import styles from './EarthTileAtlasSection.module.css';
@@ -27,13 +29,23 @@ export type EarthTileAtlasSectionProps = {
   earthTileDebug: () => SurfaceTileDebugSnapshot;
   /** Fly-to-coordinates debug instrument, from the engine handle's `debug.flyToLonLat`. */
   flyToLonLat: (lonDeg: number, latDeg: number) => void;
+  readonly overlays: Record<DebugOverlayKey, boolean>;
+  readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
 };
+
+/** The `section: 'earth-tiles'` rows — terrain bisect toggles, which belong
+ *  beside the residency numbers that explain what they change. */
+const TERRAIN_ROWS = DEBUG_OVERLAY_ROWS.filter(
+  (row) => 'section' in row && row.section === 'earth-tiles',
+);
 
 const POLL_MS = 250;
 
 function EarthTileAtlasSection({
   earthTileDebug,
   flyToLonLat,
+  overlays,
+  onToggle,
 }: EarthTileAtlasSectionProps): ReactElement {
   const [snap, setSnap] = useState<SurfaceTileDebugSnapshot>(earthTileDebug);
   // Uncontrolled-feeling text box: the panel never reformats what the user
@@ -56,6 +68,21 @@ function EarthTileAtlasSection({
     flyToLonLat(point.lonDeg, point.latDeg);
   }
 
+  const terrainToggles = (
+    <div className={styles.toggles}>
+      {TERRAIN_ROWS.map((row) => (
+        <label key={row.key} className={styles.checkRow}>
+          <input
+            type="checkbox"
+            checked={overlays[row.key]}
+            onChange={(e) => onToggle(row.key, e.target.checked)}
+          />
+          <span>{row.label}</span>
+        </label>
+      ))}
+    </div>
+  );
+
   const flyToForm = (
     <form className={styles.flyToRow} onSubmit={handleFlyToSubmit}>
       <input
@@ -75,6 +102,7 @@ function EarthTileAtlasSection({
     return (
       <DebugSection title="Earth Tile Atlas">
         {flyToForm}
+        {terrainToggles}
         <div className={styles.notice}>Not engaged — no manifest, or camera outside Earth.</div>
       </DebugSection>
     );
@@ -87,6 +115,7 @@ function EarthTileAtlasSection({
   return (
     <DebugSection title={`Earth Tile Atlas (${snap.used}/${snap.capacity} slots)`}>
       {flyToForm}
+      {terrainToggles}
       <div className={styles.levels}>
         <span className={styles.head}>z</span>
         <span className={styles.head}>resident</span>

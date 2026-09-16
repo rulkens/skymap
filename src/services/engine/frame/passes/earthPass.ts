@@ -252,8 +252,13 @@ export const earthPass: ContentPass = {
         cloudShellRadius: CLOUD_SHELL_PARAMS.radiusRatio,
         // The skirt ring's ceiling: no height seam can open wider than the
         // body's own relief, and past that a skirt only waits for an exposed
-        // edge to draw it (see `surfaceSkirtDepthM`).
-        maxSkirtDepthM: reliefSpanM(body.surface),
+        // edge to draw it (see `surfaceSkirtDepthM`). Zeroed by the
+        // `terrain-no-skirts` toggle, which is the other half of the bisect
+        // `heightScale` starts.
+        maxSkirtDepthM: state.settings.debug.overlays['terrain-no-skirts']
+          ? 0
+          : reliefSpanM(body.surface),
+        heightScale: state.settings.debug.overlays['terrain-no-displacement'] ? 0 : 1,
         // DebugPanel's Earth LOD overlay toggle — read live each frame from the
         // DEBUG_OVERLAY_ROWS-derived record, same as the other overlays.
         debugLodOverlay: state.settings.debug.overlays['earth-lod-overlay'],

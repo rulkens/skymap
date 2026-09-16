@@ -147,13 +147,14 @@ struct VSOut {
 //   offset 156..159: cloudShellRadius    f32
 //   offset 160..163: debugLodOverlay     f32
 //   offset 164..167: maxSkirtDepthM      f32
-//   offset 168..175: padding (true padding -- struct rounds to the mat4x4's
+//   offset 168..171: heightScale         f32
+//   offset 172..175: padding (true padding -- struct rounds to the mat4x4's
 //                     16-byte alignment; nothing writes these bytes)
 //   total: 176 bytes.
 //
 // The CPU side uploads 44 f32 words via a mixed Float32Array/Uint32Array
-// DataView (only 'meshResolution', word 23, is written as a u32; words 42..43
-// are left as the scratch ArrayBuffer's zero fill). The single source of
+// DataView (only 'meshResolution', word 23, is written as a u32; word 43
+// is left as the scratch ArrayBuffer's zero fill). The single source of
 // truth for that packing is 'writeSurfaceTileUniforms' in
 // 'earthSurfaceTileLayout.ts'.
 struct SurfaceTileUniforms {
@@ -183,4 +184,9 @@ struct SurfaceTileUniforms {
   // heuristic scales with the PATCH and asks for 250 km at z3, which any edge
   // whose neighbour has not landed then draws as a sheet -- see vertex.wesl.
   maxSkirtDepthM: f32,
+  // The 'terrain-no-displacement' DebugPanel toggle: 1.0 normally, 0.0 to
+  // flatten every patch onto the datum. A multiplier rather than a branch so
+  // the height atlas is still read -- what it removes is the displacement,
+  // not the sampling, which keeps the two toggles independent.
+  heightScale: f32,
 };

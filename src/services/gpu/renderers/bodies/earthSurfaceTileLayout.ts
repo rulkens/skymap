@@ -123,6 +123,8 @@ export function writeSurfaceTileUniforms(
   debugLodOverlay: boolean,
   /** Ceiling on the vertex stage's skirt depth — the body's `reliefSpanM`. */
   maxSkirtDepthM: number,
+  /** 1, or 0 to flatten every patch onto the datum (debug toggle). */
+  heightScale: number,
 ): void {
   view.setFloat32(0, vp[0]!, true);
   view.setFloat32(4, vp[1]!, true);
@@ -166,5 +168,6 @@ export function writeSurfaceTileUniforms(
   view.setFloat32(156, cloudShellRadius, true);
   view.setFloat32(160, debugLodOverlay ? 1.0 : 0.0, true);
   view.setFloat32(164, maxSkirtDepthM, true);
-  // Bytes 168..175 stay the scratch ArrayBuffer's zero fill (true padding).
+  view.setFloat32(168, heightScale, true);
+  // Bytes 172..175 stay the scratch ArrayBuffer's zero fill (true padding).
 }
