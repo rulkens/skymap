@@ -16,11 +16,8 @@
  * to be implemented twice — once for real cubes, once for the synthetic
  * smoke-test path.
  *
- * Mirrors the `syntheticPointFetcher` precedent — see that file's
- * docblock for the full rationale.  The only structural difference is
- * that the request shape is volume-specific (`SyntheticVolumeReq`)
- * rather than re-using `GalaxyCatalogReq`; this keeps both fetchers'
- * typed request shapes narrow.
+ * The request shape is volume-specific (`SyntheticVolumeReq`) rather than a
+ * shared one, which keeps the typed request narrow.
  *
  * ### Why the fetcher is dev-only but the module is not
  *
@@ -28,8 +25,7 @@
  * tree-shaking handles removal in production because the only call site
  * (`wireSlots.ts`) is guarded with `import.meta.env.DEV`.  Vite's
  * bundler will not include this module in production bundles if nothing
- * else imports it.  Keeping the guard at the call site (not here) is
- * the same convention `syntheticPointFetcher.ts` uses.
+ * else imports it.  The guard belongs at the call site, not here.
  */
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
