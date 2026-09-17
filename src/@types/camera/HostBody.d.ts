@@ -10,6 +10,11 @@ export type HostBody = {
   readonly radiusM: number;
   /** What the descent floor stands off FROM; `radiusM` serves pivot and site maths instead. */
   readonly groundRadiusAtM: GroundRadiusLookup;
+  /** Terrain cannot lie outside these, whatever has streamed in — they come from
+   *  `BodySurface.reliefM`, declared per-body data, not from a tile header. A ray pick
+   *  marches between them (spec §8.1); nothing may read either as a datum. */
+  readonly innerBoundRadiusM: number;
+  readonly outerBoundRadiusM: number;
   /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
   readonly standoffRadii: number;
 };

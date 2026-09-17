@@ -21,6 +21,8 @@ import { hostedFocusPivotM } from '../../../../utils/camera/hostedFocusPivotM';
 import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
 import { surfaceGestureEdge } from '../../../../utils/camera/surfaceGestureEdge';
+import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../../utils/occlusion/outerBoundRadiusM';
 import { bodyStandoffRadii } from '../../../../utils/scene/bodyStandoffRadii';
 import { hOverR } from '../hOverR';
 import { nearestBodyHR } from '../nearestBodyHR';
@@ -57,6 +59,8 @@ export const bodyRung: ClimbRow<'body'> = {
       state,
       radiusM: body.surface.datumRadiusM,
       groundRadiusAtM: (dir) => body.surface.datumRadiusM + ctx.terrainHeightAt(frame.body, dir),
+      innerBoundRadiusM: innerBoundRadiusM(body.surface),
+      outerBoundRadiusM: outerBoundRadiusM(body.surface),
       standoffRadii: bodyStandoffRadii(body),
     };
   },

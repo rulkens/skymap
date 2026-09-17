@@ -12,6 +12,8 @@ import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
 import { bodyStandoffRadii } from '../../../src/utils/scene/bodyStandoffRadii';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { SCENE_CELESTIAL_BODIES } from '../../../src/data/bodies/sceneCelestialBodies';
+import { innerBoundRadiusM } from '../../../src/utils/occlusion/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../src/utils/occlusion/outerBoundRadiusM';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
@@ -24,6 +26,8 @@ const MARS: HostBody = {
   state: deriveBodyStates(CONST_J2000).get('mars')!,
   radiusM: MARS_ROW.surface.datumRadiusM,
   groundRadiusAtM: () => MARS_ROW.surface.datumRadiusM,
+  innerBoundRadiusM: innerBoundRadiusM(MARS_ROW.surface),
+  outerBoundRadiusM: outerBoundRadiusM(MARS_ROW.surface),
   standoffRadii: bodyStandoffRadii(MARS_ROW),
 };
 
