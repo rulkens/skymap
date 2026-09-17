@@ -7,20 +7,19 @@ one component. It is panel-wide.
 
 ## The cost, measured
 
-Adding `hdrKnee` and `hdrHeadroom` to Display (the `?hdr` control work) took nine
+Adding `hdrKnee` and `hdrHeadroom` to Display (the `?hdr` control work) took eight
 hand-edited sites per knob:
 
 | #   | Site                                                                                                                  |
 | --- | --------------------------------------------------------------------------------------------------------------------- |
 | 1   | `data/defaults.ts` — the default constant                                                                             |
-| 2   | `@types/settings/EngineSettingsState.d.ts` — the field                                                                |
-| 3   | `state/settings/coreInitialSettings.ts` — the boot value (plus its import)                                            |
-| 4   | `state/settings/settingsSlice.ts` — the reducer                                                                       |
-| 5   | `state/settings/settingsSlice.ts` — the action export list                                                            |
-| 6   | `state/settings/selectors.ts` — the selector                                                                          |
-| 7   | `components/containers/<X>Container.tsx` — selector import, `useAppSelector`, action import, `useCallback`, prop pass |
-| 8   | `components/SettingsPanel/<X>Section.tsx` — prop pair in the type, in the destructure, and the `<Slider>` block       |
-| 9   | test fixtures — `makeSettingsFixture.ts`, plus any section-props fixture                                              |
+| 2   | `@types/settings/HdrSettings.d.ts` — the field, on the cluster's own type                                             |
+| 3   | `state/settings/core/hdrSlice.ts` — the `initialState` value                                                          |
+| 4   | `state/settings/core/hdrSlice.ts` — the reducer + its action-export line                                              |
+| 5   | `state/settings/selectors.ts` — the selector                                                                          |
+| 6   | `components/containers/<X>Container.tsx` — selector import, `useAppSelector`, action import, `useCallback`, prop pass |
+| 7   | `components/SettingsPanel/<X>Section.tsx` — prop pair in the type, in the destructure, and the `<Slider>` block       |
+| 8   | test fixtures — `makeSettingsFixture.ts`, plus any section-props fixture                                              |
 
 Nothing in that list is a decision. It is the same shape every time, and every step is a
 place to forget one.

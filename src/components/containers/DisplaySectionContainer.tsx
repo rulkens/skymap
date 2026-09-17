@@ -37,17 +37,14 @@ import {
   selectBloomThreshold,
 } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';
+import { setToneMapCurve, setExposure } from '../../state/settings/core/tonemapSlice';
+import { setFovDeg } from '../../state/settings/core/cameraSettingsSlice';
+import { setHdrEnabled, setHdrKnee, setHdrHeadroom } from '../../state/settings/core/hdrSlice';
 import {
-  setToneMapCurve,
-  setExposure,
-  setFovDeg,
-  setHdrEnabled,
-  setHdrKnee,
-  setHdrHeadroom,
   setBloomEnabled,
   setBloomStrength,
   setBloomThreshold,
-} from '../../state/settings/settingsSlice';
+} from '../../state/settings/core/bloomSlice';
 import { requestOrientationChange } from '../../state/camera/orientationActions';
 import type { ToneMapCurve } from '../../@types/data/ToneMapCurve';
 import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId';

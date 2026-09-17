@@ -28,7 +28,7 @@ import { watchHashWriteSaga } from '../../../src/state/url/watchHashWriteSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';

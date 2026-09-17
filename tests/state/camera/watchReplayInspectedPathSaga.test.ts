@@ -21,7 +21,7 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchReplayInspectedPathSaga } from '../../../src/state/camera/watchReplayInspectedPathSaga';
 import { replayInspectedPath } from '../../../src/state/camera/clipActions';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 import type { ClipId } from '../../../src/@types/animation/ClipId';
 import type { OrientationFrameId } from '../../../src/@types/camera/OrientationFrameId';

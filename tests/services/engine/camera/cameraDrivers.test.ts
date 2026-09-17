@@ -45,7 +45,7 @@ import {
   commitCameraPose,
   clipStarted,
 } from '../../../../src/state/camera/cameraSlice';
-import { setOrientation } from '../../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';

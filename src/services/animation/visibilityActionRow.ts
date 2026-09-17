@@ -19,20 +19,23 @@ import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import {
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
-  setFilamentsEnabled,
-  setOrbitTrailsEnabled,
-  setVolumesEnabled,
-  setFlowEnabled,
-  setConstellationsEnabled,
+} from '../../layers/milkyWay/settings/milkyWaySlice';
+import { setFilamentsEnabled } from '../../layers/filaments/settings/filamentsSlice';
+import { setOrbitTrailsEnabled } from '../../layers/body/settings/orbitTrailsSlice';
+import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/settings/volumesSlice';
+import { setFlowEnabled } from '../../layers/flow/settings/flowSlice';
+import { setConstellationsEnabled } from '../../layers/constellations/settings/constellationsSlice';
+import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
-  setStarCatalogLabelEnabled,
-  setBodyLabelEnabled,
+} from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import { setStarCatalogLabelEnabled } from '../../layers/starCatalog/settings/starCatalogsSlice';
+import { setBodyLabelEnabled } from '../../layers/body/settings/bodiesSlice';
+import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  writeVolumeField,
-  setZoneOfAvoidanceEnabled,
-} from '../../state/settings/settingsSlice';
+} from '../../layers/structure/settings/structuresSlice';
+import { setZoneOfAvoidanceEnabled } from '../../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
 
 type VisibilityActionRow = {
   readonly actions: (on: boolean, settings: EngineSettingsState) => readonly Action[];

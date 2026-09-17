@@ -9,12 +9,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
-import {
-  setMilkyWayEnabled,
-  writeVolumeField,
-  setZoneOfAvoidanceEnabled,
-  mergeSnapshot,
-} from '../../../src/state/settings/settingsSlice';
+import { setMilkyWayEnabled } from '../../../src/layers/milkyWay/settings/milkyWaySlice';
+import { writeVolumeField } from '../../../src/layers/volume/settings/volumesSlice';
+import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
+import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { setAutoRotate } from '../../../src/state/camera/cameraSlice';
 
 describe('watchFadesSaga', () => {

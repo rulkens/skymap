@@ -14,7 +14,7 @@ import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
 import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clearSelection } from '../selection/selectionSlice';
-import { setRenderStrategy } from '../settings/settingsSlice';
+import { setRenderStrategy } from '../settings/core/debugSlice';
 import { requestTier } from '../tier/requestTier';
 import { selectTier } from '../tier/selectors';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timing/timedSlotGroups';

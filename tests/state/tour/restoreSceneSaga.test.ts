@@ -17,7 +17,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
 import { restoreSceneSaga } from '../../../src/state/tour/restoreSceneSaga';
-import { mergeSnapshot } from '../../../src/state/settings/settingsSlice';
+import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { watchOrientationChangeSaga } from '../../../src/state/camera/watchOrientationChangeSaga';
 import { requestOrientationChange } from '../../../src/state/camera/orientationActions';
@@ -160,7 +160,7 @@ describe('restoreSceneSaga', () => {
 
     // The merge patch must not carry `orientation` — writing it there would
     // reach `mergeSettingsSnapshot`'s raw field assignment and strand
-    // `camera.base` in the old basis (see settingsSlice's `mergeSnapshot`).
+    // `camera.base` in the old basis (see `mergeSnapshotAction`'s `mergeSnapshot`).
     expect(seen.mergePayload).not.toHaveProperty('orientation');
     // Instead it goes through the same request path an interactive switch
     // uses, carrying the captured pre-tour frame.

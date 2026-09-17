@@ -44,6 +44,7 @@ import { wrapRad } from '../../../utils/math/wrapRad';
 import { EASE } from '../animation/ease';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -209,6 +210,7 @@ function framedClipArm(
     bodies,
     poseBasis: to,
     upBasis: to,
+    terrainHeightAt: datumOnlyTerrainHeight,
   });
   return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }

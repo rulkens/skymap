@@ -50,6 +50,7 @@ import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelesti
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { DEFAULT_CAMERA_TUNING as TUNING } from '../../../../src/data/camera/cameraTuning';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -201,7 +202,12 @@ function regimeTrace(h: ReturnType<typeof makeCameraSimHarness>, frames: number)
 const MARS_R = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!.surface.datumRadiusM;
 const MARS_R_MPC = MARS_R * SCALE_UNITS.M_TO_MPC;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
-const RUNG_CTX = { bodies: BODIES as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B };
+const RUNG_CTX = {
+  bodies: BODIES as ReadonlyMap<BodyId, BodyState>,
+  poseBasis: B,
+  upBasis: B,
+  terrainHeightAt: datumOnlyTerrainHeight,
+};
 const FOV = Math.PI / 3;
 
 /** Metres between a world-Mpc eye and a world-Mpc point. */

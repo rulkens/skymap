@@ -72,11 +72,19 @@ scene depth. Today `atmosphereShellPass` draws full-screen with
 `depthCompare: 'always'` and terminates its ray on the analytic ground sphere, so
 anything opaque silhouetted against sky gets camera-to-space in-scatter painted
 over it — the rover bug stopgapped in #698 by moving `mesh-bodies` after
-`atmosphere-shell` in `FRAME_ORDER`. That work is in flight separately. Two
-couplings: terrain needs the same scene depth, and `innerBoundRadiusM` (§8) is only
-the correct atmosphere ground radius **once** the composite is depth-aware — until
+`atmosphere-shell` in `FRAME_ORDER` (`frameOrder.ts:225-226`). Two couplings:
+terrain needs the same scene depth, and `innerBoundRadiusM` (§8) is only the
+correct atmosphere ground radius **once** the composite is depth-aware — until
 then it over-hazes everything. When it lands, the `mesh-bodies` ordering stopgap
 can move back.
+
+**Nobody is building it.** The one attempt — froxel aerial perspective — was
+abandoned: prep #702 merged, feature PR #709 closed, and its feature commits sit
+on a worktree branch that is not an ancestor of `main`, because 32 distance
+slices cannot resolve planetary-scale fog. No successor plan, no backlog row.
+Anything gated on this is gated indefinitely, which is why F3b splits rather than
+waits — see `docs/backlog/2026-09-17-terrain-f3b-remaining-routing.md`.
+`surface-tiles` (`frameOrder.ts:220`) cannot borrow #698's reordering trick.
 
 ## 3. Ground preparation
 
@@ -952,11 +960,22 @@ land/park call is the user's.
 | F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                                                                       | #713 closed superseded, landed via #719                 |
 | F2  | Displacement, normals, edge collapse, base-globe shrink                                                                                               | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
 | F3a | `SHGT` v3 CPU post grid (§8.4) + height re-bake, `terrainHeightM`, and the three §8.3 rows it serves: camera floor, site placement, altitude readouts | prep PR, then feature PR                                |
-| F3b | `raycast` pick, horizon-cap occludee, cloud-deck clearance, atmosphere rows, remaining routing                                                        | not scoped                                              |
+| F3b | Terrain-aware gesture anchors, cloud-deck-as-altitude; separately, terrain under an atmosphere                                                        | split in two, see below                                 |
 | F4  | Mars: imagery bake, global height, four rover-site bands                                                                                              | prep #738, then feature PR                              |
 
-F3b's atmosphere row waits on the depth-aware composite (§2); everything else in F3b
-is independent of it.
+F3b's atmosphere row waits on the depth-aware composite (§2), which nobody is
+building; everything else in F3b is independent of it, so the two were split rather
+than bundled — `docs/backlog/2026-09-17-terrain-f3b-remaining-routing.md`.
+
+Two rows the §8.3 table still lists as F3b are **already done**, and the table's site
+counts are stale in the strict sense: #704 removed `radiusM` outright, so there is
+nothing left to count. The horizon-cap occludee landed with F1/F2 —
+`cutSurfaceTiles.ts:168,181` widens the cap by `reliefHeadroom`, a per-node maximum
+read from real header data. The atmosphere's ground radius landed with #704 —
+`atmosphereParams.ts:34` already reads `innerBoundRadiusM`. Two of the table's
+figures are also wrong: the pick error is `h·tan θ` (~15 km at 60° incidence), not a
+flat 8.8 km, which is only the nadir case; and the cloud deck's clearance over
+Everest is 68 m, not kilometres.
 
 **F3a depends on F4's prep landing first**, not the other way round: #738 renames the
 tile pass and edits `surfaceTileSubsystem.ts` and `deriveBodyStates.ts`, which are two

@@ -11,10 +11,12 @@ import type { EngineSettingsState } from '../../../src/@types/settings/EngineSet
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
+} from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  setMilkyWayLabelEnabled,
-} from '../../../src/state/settings/settingsSlice';
+} from '../../../src/layers/structure/settings/structuresSlice';
+import { setMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/settings/milkyWaySlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 

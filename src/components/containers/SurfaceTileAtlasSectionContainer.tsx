@@ -13,7 +13,7 @@ import SurfaceTileAtlasSection from '../DebugPanel/SurfaceTileAtlasSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { selectDebugOverlays } from '../../state/settings/selectors';
-import { setDebugOverlay } from '../../state/settings/settingsSlice';
+import { setDebugOverlay } from '../../state/settings/core/debugSlice';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';

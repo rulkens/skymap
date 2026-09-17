@@ -11,7 +11,7 @@ import { memo, useCallback } from 'react';
 import { FlowTuningSection } from '../DebugPanel/FlowTuningSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectFlow } from '../../state/settings/selectors';
-import { setFlow } from '../../state/settings/settingsSlice';
+import { setFlow } from '../../layers/flow/settings/flowSlice';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 
 function FlowTuningSectionContainer(): React.ReactElement {

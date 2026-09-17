@@ -18,14 +18,19 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { OrientDeltas } from '../../@types/camera/OrientDeltas';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
+import type { TerrainHeightAtLookup } from '../../@types/camera/TerrainHeightAtLookup';
 import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
+import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
+import { eyeMpcOf } from './eyeMpcOf';
+import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { isBodyArm } from '../../services/engine/camera/rungs/isBodyArm';
 import { isSiteArm } from '../../services/engine/camera/rungs/isSiteArm';
 import { sameFrame } from '../../services/engine/camera/rungs/sameFrame';
+import { IDENTITY_MAT3 } from '../math/identityMat3';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
 
@@ -47,6 +52,9 @@ export function cameraDebugSnapshotOf(input: {
   readonly tuning: CameraTuning;
   /** `readOrientDeltas()` — measured in the frame loop, never re-derived here. */
   readonly deltas: OrientDeltas;
+  /** `SurfaceTileSubsystem.terrainHeightAt`, bound by the caller (engine.ts)
+   *  — the eye-to-ground row's source (F3a, spec §8.3). */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
 }): CameraDebugSnapshot {
   const {
     storedFrame,
@@ -64,6 +72,7 @@ export function cameraDebugSnapshotOf(input: {
     rememberedTiltRad,
     tuning,
     deltas,
+    terrainHeightAt,
   } = input;
   const renderedFrame = renderedPose.frame;
   const dofs = cameraDofAnglesOf({
@@ -76,12 +85,29 @@ export function cameraDebugSnapshotOf(input: {
     tuning,
   });
   const { bodyId, hOverR: hr } = dofs;
-  // Altitude over the datum, matching `hOverR`'s own denominator. F3 re-bases the
-  // readout on `bestHeightM` so it reads height over the ground actually drawn.
+  // Altitude over the datum, matching `hOverR`'s own denominator, minus the
+  // terrain under the eye (F3a, spec §8.3) — the same `bodyRelativePose`
+  // direction `hOverR` itself derives from (basis argument discarded, per
+  // that file's own comment: only the direction matters).
   const datumRadiusM =
     bodyId !== null
-      ? hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis })?.radiusM
+      ? hostOf(
+          { body: bodyId },
+          { bodies: bodyStates, poseBasis, upBasis, terrainHeightAt: datumOnlyTerrainHeight },
+        )?.radiusM
       : undefined;
+  const engagedBodyState = bodyId !== null ? bodyStates.get(bodyId) : undefined;
+  const terrainM =
+    bodyId !== null && engagedBodyState !== undefined
+      ? terrainHeightAt(
+          bodyId,
+          bodyRelativePose({
+            camPosMpc: eyeMpcOf(worldPose, poseBasis),
+            camBasisWorld: IDENTITY_MAT3,
+            bodyState: engagedBodyState,
+          }).eyeRelBodyM,
+        )
+      : 0;
 
   const engagedPose = isBodyArm(renderedPose) ? renderedPose.pose : null;
   const sitePose = isSiteArm(renderedPose) ? renderedPose.pose : null;
@@ -95,7 +121,7 @@ export function cameraDebugSnapshotOf(input: {
     renderedFrame,
     armMismatch: !sameFrame(storedFrame, renderedFrame),
     hOverR: hr,
-    altitudeM: hr !== null && datumRadiusM !== undefined ? hr * datumRadiusM : null,
+    altitudeM: hr !== null && datumRadiusM !== undefined ? hr * datumRadiusM - terrainM : null,
     distanceMpc: worldPose.distance,
     orientationFrame,
     bandUpWeight: hr !== null ? bodyUpWeight(hr, tuning) : null,

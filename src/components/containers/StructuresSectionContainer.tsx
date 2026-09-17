@@ -29,7 +29,7 @@ import StructuresSection from '../SettingsPanel/StructuresSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectStructureItems } from '../../state/settings/selectors';
 import { selectStructureCounts } from '../../state/engine/selectors';
-import { setStructureItemEnabled } from '../../state/settings/settingsSlice';
+import { setStructureItemEnabled } from '../../layers/structure/settings/structuresSlice';
 import { projectMarkerCategoryVisibility } from '../../state/settings/projectMarkerCategoryVisibility';
 import type { StructureId } from '../../@types/data/structure/StructureId';
 

@@ -45,7 +45,7 @@ describe('StructuresSectionContainer', () => {
     const { store } = createAppStore();
     // Disable 'cluster' before rendering so the checkbox must read from the store.
     store.dispatch({
-      type: 'settings/setStructureItemEnabled',
+      type: 'settings/structures/setStructureItemEnabled',
       payload: { id: 'cluster', enabled: false },
     });
 

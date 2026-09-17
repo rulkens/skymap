@@ -19,7 +19,7 @@ import {
   inspectClipPath,
   recalcClipPath,
   clearClipPath,
-} from '../../../src/state/settings/settingsSlice';
+} from '../../../src/state/settings/core/debugSlice';
 import { clipRegistry } from '../../../src/data/animation/clips/clipRegistry';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';

@@ -1,11 +1,8 @@
-/** The settings root at boot: each Layer fragment's cluster over the core clusters. */
+/** The settings root at boot — every slice's own `initialState`, composed. */
 
-import { APP_SETTINGS_FRAGMENTS } from '../../compositions/appSettingsFragments';
-import { CORE_INITIAL_SETTINGS } from './coreInitialSettings';
-import { composeInitialSettings } from '../../utils/settings/composeInitialSettings';
+import { combinedSettingsReducer } from './combinedSettingsReducer';
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 
-export const INITIAL_SETTINGS: EngineSettingsState = composeInitialSettings(
-  CORE_INITIAL_SETTINGS,
-  APP_SETTINGS_FRAGMENTS,
-);
+export const INITIAL_SETTINGS: EngineSettingsState = combinedSettingsReducer(undefined, {
+  type: '@@settings/INIT',
+});
