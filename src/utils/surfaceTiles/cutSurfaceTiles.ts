@@ -28,6 +28,8 @@ type ResidentLookupResult = {
 
 /** Placeholder until `balanceSurfaceCut` fills the real bits in. */
 const NO_COARSER_EDGES: SurfaceCutTile['edgeCoarser'] = [0, 0, 0, 0];
+/** No resident height ancestor, or one with no bound: the datum. */
+const DATUM_RANGE_M: readonly [number, number] = [0, 0];
 
 /**
  * cutSurfaceTiles — one quadtree walk, two products: `requests` is what to
@@ -52,6 +54,9 @@ export function cutSurfaceTiles(input: {
   /** The body's equatorial radius in metres — was implicit (unit sphere);
    *  the walk's horizon test now scales against this instead. */
   readonly radiusM: number;
+  /** The body's own height bounds above the datum, metres: every subtree
+   *  range is clipped to them, so a corrupt header cannot unbound the culls. */
+  readonly reliefM: readonly [number, number];
   /** The level the whole-globe base texture already delivers — the walk's floor. */
   readonly baseLevel: number;
   /** The manifest's geographic depth bands for the albedo product; a leaf
@@ -79,6 +84,7 @@ export function cutSurfaceTiles(input: {
     viewProjLocal,
     viewportPx,
     radiusM,
+    reliefM,
     baseLevel,
     bands,
     tilePx,
@@ -97,7 +103,7 @@ export function cutSurfaceTiles(input: {
   // A camera on/inside the datum (the F2 orbit target sinking to sea level
   // over relief that reaches above it) has no flat-datum distance to take
   // acos of; clamp it to just outside the sphere so capAngle stays finite —
-  // reliefHeadroom's per-node widening in `probe` is what actually admits
+  // the relief headroom's per-node widening in `probe` is what actually admits
   // terrain in that case, not this floor value.
   const capCamLen = Math.max(camLen, radiusM * (1 + 1e-9));
   const capAngle = Math.acos(radiusM / capCamLen);
@@ -163,15 +169,23 @@ export function cutSurfaceTiles(input: {
       cornerSE[0] * centre[0] + cornerSE[1] * centre[1] + cornerSE[2] * centre[2],
     );
     const patchAngle = Math.acos(Math.min(1, Math.max(-1, minCornerDot)));
-    // Relief this node's subtree can reach, shared by both culls below so the
-    // resident-ancestor walk inside reliefHeadroom() runs once per node.
-    const relief = reliefHeadroom(z, x, y);
+    // Shared by both culls and the footprint below, so the resident-ancestor
+    // walk runs once per node.
+    const rangeM = residentSubtreeRangeM(z, x, y);
+    const loM = Math.min(Math.max(rangeM[0], reliefM[0]), reliefM[1]);
+    const hiM = Math.min(Math.max(rangeM[1], reliefM[0]), reliefM[1]);
+    const relief = Math.max(Math.abs(loM), Math.abs(hiM)) / radiusM;
+    // Footprint sampled at the subtree's LOWEST ground, not the datum (Mars'
+    // sits km under its rover sites): never nearer than the real ground, so
+    // never over-refines or turns a patch into a straddler, and it tightens
+    // monotonically as deeper height tiles land.
+    const lift = 1 + loM / radiusM;
 
     // 1. Horizon, widened by the angle relief lifts a point above the
     // smooth-sphere horizon: a point at radius R+h is visible from a camera
     // at distance d when its angle from the sub-camera point is
     // <= acos(R/d) + acos(R/(R+h)) — the second term is acos(1/(1+relief))
-    // since `relief` is already h/R (reliefHeadroom's own unit).
+    // since `relief` is already h/R.
     const centreAngle = Math.acos(
       Math.min(
         1,
@@ -181,16 +195,23 @@ export function cutSurfaceTiles(input: {
     const horizonCap = relief > 0 ? capAngle + Math.acos(1 / (1 + relief)) : capAngle;
     if (centreAngle - patchAngle > horizonCap) return null;
 
-    // 2. Frustum, conservatively: a sphere about the patch centre, radius to
-    // the farthest corner plus headroom for skirts, plus the relief this
-    // node's subtree can actually reach. The only test a near-plane straddler
-    // gets — its projected bbox below is meaningless — and it also catches
-    // points entirely behind the eye, which fail every plane test at once.
+    // 2. Frustum, conservatively: a sphere about the patch centre lifted to the
+    // subtree's MID height (Mars' ground sits km above its datum, out of reach
+    // of a datum-centred sphere). Any drawn point d·(1+h) lies within
+    // chord·(1+h) + |h − mid| of it; 1.5 chords cover chord·h plus the skirt
+    // (≤ 0.16 chord) for any h under 0.34 radii, and half the spread covers
+    // the rest — unclamped, or deep nodes still on a coarse range go missing.
+    // The only test a near-plane straddler gets, and it also catches points
+    // entirely behind the eye, which fail every plane test at once.
     const cornerChord = Math.sqrt(Math.max(0, 2 - 2 * minCornerDot));
-    const boundRadius = 1.5 * cornerChord + Math.min(relief, cornerChord);
+    const mid = 1 + (loM + hiM) / 2 / radiusM;
+    const boundRadius = 1.5 * cornerChord + (hiM - loM) / 2 / radiusM;
     for (let k = 0; k < 4; k++) {
       const dist =
-        (planeA[k]! * centre[0] + planeB[k]! * centre[1] + planeC[k]! * centre[2] + planeD[k]!) *
+        (planeA[k]! * centre[0] * mid +
+          planeB[k]! * centre[1] * mid +
+          planeC[k]! * centre[2] * mid +
+          planeD[k]!) *
         planeInvLen[k]!;
       if (dist < -boundRadius) return null;
     }
@@ -206,11 +227,14 @@ export function cutSurfaceTiles(input: {
       const su = u0 + ((i % 3) / 2) * (u1 - u0);
       const sv = vNorth + (Math.floor(i / 3) / 2) * (vSouth - vNorth);
       const p = equirectUvToDirection([su, sv]);
-      const w = mw0 * p[0] + mw1 * p[1] + mw2 * p[2] + mw3;
+      const px = p[0] * lift;
+      const py = p[1] * lift;
+      const pz = p[2] * lift;
+      const w = mw0 * px + mw1 * py + mw2 * pz + mw3;
       if (w <= 0) continue;
       nInFront++;
-      const ndcX = (mx0 * p[0] + mx1 * p[1] + mx2 * p[2] + mx3) / w;
-      const ndcY = (my0 * p[0] + my1 * p[1] + my2 * p[2] + my3) / w;
+      const ndcX = (mx0 * px + mx1 * py + mx2 * pz + mx3) / w;
+      const ndcY = (my0 * px + my1 * py + my2 * pz + my3) / w;
       if (ndcX < minX) minX = ndcX;
       if (ndcX > maxX) maxX = ndcX;
       if (ndcY < minY) minY = ndcY;
@@ -242,20 +266,15 @@ export function cutSurfaceTiles(input: {
     return { screenPx, required };
   }
 
-  /** Relief a node's subtree can reach, in the walk's unit-sphere length —
-   *  the deepest resident height ancestor's `subtreeMin/MaxM`, which bounds
-   *  every descendant by construction. 0 when nothing is resident: the datum,
-   *  as F1. A CONSTANT margin instead would inflate every patch near the eye
-   *  plane back into a screen-filling straddler, which is what R14 removed —
-   *  and so does the caller's clamp at the patch's own chord, since before
-   *  deep tiles land the resident ancestor is the base level, whose range is
-   *  the whole body's relief (R15). */
-  function reliefHeadroom(z: number, x: number, y: number): number {
+  /** Relief a node's subtree can reach, in METRES — the deepest resident
+   *  height ancestor's `subtreeMin/MaxM`, which bounds every descendant by
+   *  construction. The datum when nothing is resident, as F1. A CONSTANT
+   *  margin instead would inflate every patch near the eye plane back into a
+   *  screen-filling straddler, which is what R14 removed; a coarse ancestor's
+   *  range still does, until the deeper headers land. */
+  function residentSubtreeRangeM(z: number, x: number, y: number): readonly [number, number] {
     const hit = deepestResidentAncestor({ product: 'height', z, x, y }, baseLevel, residentSlot);
-    if (hit === null) return 0;
-    const range = hit.found.subtreeRangeM;
-    if (range === undefined || range === null) return 0;
-    return Math.max(Math.abs(range[0]), Math.abs(range[1])) / radiusM;
+    return hit?.found.subtreeRangeM ?? DATUM_RANGE_M;
   }
 
   /** Both products of one tile — height rides every albedo request (§6.1),

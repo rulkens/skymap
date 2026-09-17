@@ -24,6 +24,7 @@ import type { ColourTreatment } from '../../src/@types/scene/ColourTreatment';
 import { BODY_TEXTURE_REGISTRY } from '../../src/data/bodies/bodyTextureRegistry';
 import { tierToTexturePx } from '../../src/utils/math/tierToTexturePx';
 import { bodyTextureFilename } from '../../src/utils/bodyTextures/bodyTextureFilename';
+import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { panSharpenRgb } from '../utils/image/panSharpenRgb';
 import { RAW_DATA, rawDataPath } from '../utils/io/rawDataRegistry';
 import { TEXTURE_SOURCES, type TextureSourceRow } from '../utils/io/textureSources';
@@ -205,6 +206,20 @@ async function writeBodyTier(
       await writePanSharpenedTier(srcPath, chromaPath, treatment.calibration, widthPx, outPath);
       return;
     }
+    case 'grade': {
+      // `ensureAlpha` guarantees the stride `gradeRgbaInPlace` assumes even
+      // though the JPEG source and output both carry no real alpha.
+      const { data, info } = await sharp(srcPath, { limitInputPixels: false })
+        .resize({ width: widthPx })
+        .ensureAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+      gradeRgbaInPlace(data, treatment.grade);
+      await sharp(data, { raw: { width: info.width, height: info.height, channels: 4 } })
+        .jpeg({ quality: JPEG_QUALITY })
+        .toFile(outPath);
+      return;
+    }
     default: {
       const _exhaustive: never = treatment;
       throw new Error(`unhandled colour treatment: ${JSON.stringify(_exhaustive)}`);
@@ -314,6 +329,7 @@ const TREATMENT_NOTE: Record<ColourTreatment['kind'], string> = {
   colour: '',
   monoTint: '  (tinted)',
   panSharpen: '  (pan-sharpened)',
+  grade: '  (graded)',
 };
 
 /**

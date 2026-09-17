@@ -11,6 +11,7 @@
 
 import type { BodyTextureId } from '../../@types/data/BodyTextureId';
 import type { BodyTextureSpec } from '../../@types/scene/BodyTextureSpec';
+import { MARS_GLOBE_GRADE } from './marsSurfaceParams';
 
 // Keyed by id rather than an array so a missing or extra body is a compile error,
 // and so the per-body-per-frame proximity-loader lookup stays O(1).
@@ -45,11 +46,12 @@ export const BODY_TEXTURE_REGISTRY: Readonly<Record<BodyTextureId, BodyTextureSp
     provenance: 'nasa',
     treatment: { kind: 'colour' },
   },
+  // Graded to colour-match the tuned Viking surface tiles (marsAlbedoRecipe.ts).
   mars: {
     bodyId: 'mars',
     kinds: { surface: 'large' },
     provenance: 'sss',
-    treatment: { kind: 'colour' },
+    treatment: { kind: 'grade', grade: MARS_GLOBE_GRADE },
   },
   // Jupiter / Saturn: a SOURCE ceiling, not a look one. Their Solar System Scope
   // files are 4096×2048 despite the `8k_` filename prefix, so `large` has no tile to
