@@ -1,8 +1,8 @@
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 
-/** A fitted (or manual) sun-direction field: `g`, a per-cell 2-vector, over a
- *  plain equirect raster — `width × height` cells spanning `bounds`, row 0
- *  the north edge, same convention as `SurfaceImagerySource.readBox`. */
+/** A fitted (or manual) sun-direction field: `g`, a 2-vector per post, over a
+ *  plain equirect raster — `width × height` posts spanning `bounds`, post
+ *  `(0, 0)` at the north-west corner exactly, row 0 the north edge. */
 export type SunField = {
   readonly bounds: LonLatBounds;
   readonly width: number;

@@ -16,9 +16,9 @@ import { readSlopeLattice } from './readSlopeLattice';
 import type { SunField } from './SunField';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
 
-// R-P3: inclusive with a small tolerance, so a box edge that lands a ULP
-// outside `field.bounds` — the same edge, computed a different way by the
-// caller — doesn't throw over a rounding artifact.
+// Inclusive with a small tolerance, so a box edge that lands a ULP outside
+// `field.bounds` — the same edge, computed a different way by the caller —
+// doesn't throw over a rounding artifact.
 const BOUNDS_TOLERANCE_DEG = 1e-9;
 
 function insideBounds(box: LonLatBounds, bounds: LonLatBounds): boolean {

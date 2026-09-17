@@ -1,14 +1,14 @@
 /**
  * albedoFakes — an analytic Mars-scale terrain (design §4): a height field
  * with a known wavelength/amplitude, and an imagery source lit by `(1+g·s)`
- * where `s` is that SAME height's `readSlopeLattice` slope — not an
- * independently-derived formula, so a fit test isolates `fitSunField`'s own
- * windowing and regression rather than also absorbing the central
- * difference's own discretisation error as fit noise (that error is
- * `readSlopeLattice`'s own test's job, not this one's).
+ * where `s` is that SAME height's `readSlopeLattice` slope, so a fit test
+ * isolates `fitSunField`'s own windowing and regression rather than also
+ * absorbing the central difference's own discretisation error as fit noise.
  */
 import type { HeightSource } from '../../../tools/textures/HeightSource';
 import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import { linearToSrgb } from '../../../tools/utils/color/linearToSrgb';
+import { clamp } from '../../../tools/utils/textures/clamp';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
 import { sampleSlope } from '../../../tools/utils/textures/sampleSlope';
 import { readSlopeLattice } from '../../../tools/textures/readSlopeLattice';
@@ -16,7 +16,7 @@ import { readSlopeLattice } from '../../../tools/textures/readSlopeLattice';
 const DEG_TO_RAD = Math.PI / 180;
 
 // A fixed Mars-like radius for these fakes only — real callers thread their
-// own planet's radius through as a parameter (D1-b).
+// own planet's radius through as a parameter.
 const RADIUS_M = 3_390_000;
 
 // Additive (not product) sinusoids, ~15 km wavelength at Mars's radius —
@@ -31,11 +31,6 @@ function heightAt(lon: number, lat: number): number {
     AMPLITUDE_M * Math.sin(CYCLES_PER_REVOLUTION * lon * DEG_TO_RAD) +
     AMPLITUDE_M * Math.sin(CYCLES_PER_REVOLUTION * lat * DEG_TO_RAD)
   );
-}
-
-function linearToSrgb(v: number): number {
-  const c = Math.min(1, Math.max(0, v));
-  return c <= 0.0031308 ? c * 12.92 : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
 }
 
 const WHOLE_GLOBE = [{ west: -180, east: 180, south: -90, north: 90 }] as const;
@@ -85,9 +80,11 @@ export function analyticImagerySource(
           const [sx, sy] = sampleSlope(lattice, lon, lat);
           const shade = Math.max(0, 1 + g[0] * sx + g[1] * sy);
           const i = (py * widthPx + px) * 4;
-          out[i] = Math.round(255 * linearToSrgb(albedo[0] * shade));
-          out[i + 1] = Math.round(255 * linearToSrgb(albedo[1] * shade));
-          out[i + 2] = Math.round(255 * linearToSrgb(albedo[2] * shade));
+          // Clamp to [0,1] before the gamma transfer: `linearToSrgb` doesn't,
+          // and an unclamped byte write above 255 wraps instead of clipping.
+          out[i] = Math.round(255 * linearToSrgb(clamp(albedo[0] * shade, 0, 1)));
+          out[i + 1] = Math.round(255 * linearToSrgb(clamp(albedo[1] * shade, 0, 1)));
+          out[i + 2] = Math.round(255 * linearToSrgb(clamp(albedo[2] * shade, 0, 1)));
           out[i + 3] = 255;
         }
       }

@@ -2,9 +2,7 @@
  * readSlopeLattice — MOLA-post slopes at a fixed lattice level (design §5),
  * always `SLOPE_LEVEL` regardless of the caller's pyramid level, so the same
  * `g` field means the same thing at every zoom. Reads one post of margin
- * beyond `box` so its own edge posts get a true central difference, and two
- * adjacent boxes' shared edge is read from the same global posts and so
- * agrees exactly.
+ * beyond `box` so its own edge posts get a true central difference.
  */
 import type { HeightSource } from './HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';

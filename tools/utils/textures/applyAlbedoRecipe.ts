@@ -1,10 +1,9 @@
 /**
  * applyAlbedoRecipe — the pixel pipeline (design §8): de-shade, knee, keep
- * ice, grade. Pure and per-pixel; `sample` supplies the slope/`g`/latitude
- * a caller already knows how to look up (global lattices for the decorator,
- * a manual constant for the bench's preview), so this file owns none of
- * that lookup. `Y = 0` skips straight to `q = 1` — dividing a true black
- * pixel by itself would otherwise read back as `NaN`, not "unchanged".
+ * ice, grade. Pure and per-pixel; `sample` is the caller's own slope/`g`/
+ * latitude lookup, so this file owns none of it. `Y = 0` skips straight to
+ * `q = 1` — dividing a true black pixel by itself would otherwise read back
+ * as `NaN`, not "unchanged".
  */
 import { srgbToLinear } from '../color/srgbToLinear';
 import { linearToSrgb } from '../color/linearToSrgb';

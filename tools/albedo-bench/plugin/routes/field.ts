@@ -1,6 +1,6 @@
 /**
  * field.ts — POST /api/field: the fitted sun field over a box, as arrows at
- * field cell centres, for the UI's overlay. Goes through the same
+ * the field's own posts, for the UI's overlay. Goes through the same
  * `deps.getField` cache the render route uses, so switching back to a box
  * already fit doesn't refit.
  */
@@ -34,10 +34,14 @@ export async function handleField(opts: {
   const arrows: FieldArrow[] = [];
   for (let j = 0; j < field.height; j++) {
     const lat =
-      field.bounds.north - ((j + 0.5) / field.height) * (field.bounds.north - field.bounds.south);
+      field.height > 1
+        ? field.bounds.north - (j / (field.height - 1)) * (field.bounds.north - field.bounds.south)
+        : field.bounds.north;
     for (let i = 0; i < field.width; i++) {
       const lon =
-        field.bounds.west + ((i + 0.5) / field.width) * (field.bounds.east - field.bounds.west);
+        field.width > 1
+          ? field.bounds.west + (i / (field.width - 1)) * (field.bounds.east - field.bounds.west)
+          : field.bounds.west;
       const idx = j * field.width + i;
       arrows.push({
         lon,
