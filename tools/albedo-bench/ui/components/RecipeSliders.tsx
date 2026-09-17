@@ -3,6 +3,7 @@
  * by the recipe's own step order (design §7/§8) so the layout mirrors the
  * pipeline the values feed.
  */
+import type { ReactNode } from 'react';
 import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe';
 
 export type RecipeSlidersProps = {
@@ -12,6 +13,8 @@ export type RecipeSlidersProps = {
   saveStatus: string;
 };
 
+const slugify = (label: string) => 'sl-' + label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+
 function SliderRow(props: {
   label: string;
   value: number;
@@ -20,10 +23,12 @@ function SliderRow(props: {
   step: number;
   onChange: (v: number) => void;
 }) {
+  const id = slugify(props.label);
   return (
-    <label>
-      {props.label} <span>{props.value.toFixed(3)}</span>
+    <div className="ctl">
+      <label htmlFor={id}>{props.label}</label>
       <input
+        id={id}
         type="range"
         min={props.min}
         max={props.max}
@@ -31,7 +36,17 @@ function SliderRow(props: {
         value={props.value}
         onChange={(e) => props.onChange(Number(e.target.value))}
       />
-    </label>
+      <output htmlFor={id}>{props.value.toFixed(3)}</output>
+    </div>
+  );
+}
+
+function Group(props: { title: string; children: ReactNode }) {
+  return (
+    <div className="group">
+      <span className="label">{props.title}</span>
+      {props.children}
+    </div>
   );
 }
 
@@ -40,9 +55,8 @@ export function RecipeSliders(props: RecipeSlidersProps) {
   const gain = recipe.grade.gain;
   const offset = recipe.grade.offset;
   return (
-    <section className="bench-recipe-sliders">
-      <fieldset>
-        <legend>Sun fit</legend>
+    <>
+      <Group title="Sun fit">
         <SliderRow
           label="window (km)"
           value={recipe.sunFit.windowKm}
@@ -83,9 +97,8 @@ export function RecipeSliders(props: RecipeSlidersProps) {
           step={1}
           onChange={(v) => onRecipe({ ...recipe, sunFit: { ...recipe.sunFit, fillSigmaKm: v } })}
         />
-      </fieldset>
-      <fieldset>
-        <legend>De-shade</legend>
+      </Group>
+      <Group title="De-shade">
         <SliderRow
           label="strength"
           value={recipe.deshade.strength}
@@ -102,9 +115,8 @@ export function RecipeSliders(props: RecipeSlidersProps) {
           step={0.01}
           onChange={(v) => onRecipe({ ...recipe, deshade: { ...recipe.deshade, minShading: v } })}
         />
-      </fieldset>
-      <fieldset>
-        <legend>Knee</legend>
+      </Group>
+      <Group title="Knee">
         <SliderRow
           label="threshold"
           value={recipe.knee.threshold}
@@ -121,9 +133,8 @@ export function RecipeSliders(props: RecipeSlidersProps) {
           step={0.05}
           onChange={(v) => onRecipe({ ...recipe, knee: { ...recipe.knee, softness: v } })}
         />
-      </fieldset>
-      <fieldset>
-        <legend>Ice</legend>
+      </Group>
+      <Group title="Ice">
         <SliderRow
           label="min |lat| (deg)"
           value={recipe.ice.minAbsLatDeg}
@@ -156,9 +167,8 @@ export function RecipeSliders(props: RecipeSlidersProps) {
           step={0.01}
           onChange={(v) => onRecipe({ ...recipe, ice: { ...recipe.ice, minLuminance: v } })}
         />
-      </fieldset>
-      <fieldset>
-        <legend>Grade</legend>
+      </Group>
+      <Group title="Grade">
         <SliderRow
           label="exposure (EV)"
           value={recipe.grade.ev}
@@ -251,11 +261,13 @@ export function RecipeSliders(props: RecipeSlidersProps) {
           step={0.01}
           onChange={(v) => onRecipe({ ...recipe, grade: { ...recipe.grade, gamma: v } })}
         />
-      </fieldset>
-      <div className="bench-save-row">
-        <button onClick={props.onSave}>Save</button>
-        <span>{props.saveStatus}</span>
+      </Group>
+      <div className="foot">
+        <button className="btn primary" onClick={props.onSave}>
+          Save
+        </button>
+        <span className="status">{props.saveStatus}</span>
       </div>
-    </section>
+    </>
   );
 }

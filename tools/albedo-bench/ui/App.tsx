@@ -10,7 +10,7 @@ import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
 import { defaultApi, type FieldArrow, type RenderLight } from './api';
 import { boxFromView, type ViewState } from './viewPresets';
 import { Navigator, type ViewMode } from './components/Navigator';
-import { CompareView } from './components/CompareView';
+import { CompareView, hintFor } from './components/CompareView';
 import { SunPanel, type SunMode } from './components/SunPanel';
 import { RecipeSliders } from './components/RecipeSliders';
 
@@ -159,21 +159,23 @@ export function App() {
   }
 
   if (loadError !== undefined) {
-    return <div className="bench-app bench-error-page">Failed to load recipe: {loadError}</div>;
+    return <div className="wrap">Failed to load recipe: {loadError}</div>;
   }
   if (recipe === undefined) {
-    return <div className="bench-app bench-loading">Loading recipe…</div>;
+    return <div className="wrap">Loading recipe…</div>;
   }
 
   return (
-    <div className="bench-app">
+    <div className="wrap">
       <header>
         <h1>Albedo Bench</h1>
         {renderError !== undefined ? <div className="bench-error">{renderError}</div> : null}
       </header>
-      <div className="bench-layout">
-        <aside>
-          <Navigator view={view} onView={setView} viewMode={viewMode} onViewMode={setViewMode} />
+      <div className="bench">
+        <section className="viewer" aria-label="Comparison">
+          <div className="toolbar">
+            <Navigator view={view} onView={setView} viewMode={viewMode} onViewMode={setViewMode} />
+          </div>
           <SunPanel
             sunMode={sunMode}
             onSunMode={setSunMode}
@@ -186,23 +188,26 @@ export function App() {
             light={light}
             onLight={setLight}
           />
-        </aside>
-        <main>
-          <CompareView
-            originalUrl={originalUrl}
-            adjustedUrl={adjustedUrl}
-            viewMode={viewMode}
-            arrows={sunMode === 'fitted' ? arrows : []}
-            box={box}
-          />
-        </main>
-        <aside>
-          <RecipeSliders
-            recipe={recipe}
-            onRecipe={setRecipe}
-            onSave={() => void onSave()}
-            saveStatus={saveStatus}
-          />
+          <div className="well">
+            <CompareView
+              originalUrl={originalUrl}
+              adjustedUrl={adjustedUrl}
+              viewMode={viewMode}
+              arrows={sunMode === 'fitted' ? arrows : []}
+              box={box}
+            />
+          </div>
+          <p className="hint">{hintFor(viewMode)}</p>
+        </section>
+        <aside className="panel" aria-label="Adjustments">
+          <div className="body">
+            <RecipeSliders
+              recipe={recipe}
+              onRecipe={setRecipe}
+              onSave={() => void onSave()}
+              saveStatus={saveStatus}
+            />
+          </div>
         </aside>
       </div>
     </div>

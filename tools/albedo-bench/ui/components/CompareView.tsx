@@ -1,9 +1,10 @@
 /**
- * CompareView — original vs adjusted, as a wipe, side by side, or flip, with
- * the fitted field drawn as arrows (length ∝ |g|, opacity ∝ confidence) at
- * each arrow's own lon/lat, projected into the box the images cover.
+ * CompareView — original vs adjusted, as a wipe (drag anywhere on the stage,
+ * or the divider's ← → keys), side by side, or click/space-to-flip, with the
+ * fitted field drawn as arrows (length ∝ |g|, opacity ∝ confidence) at each
+ * arrow's own lon/lat, projected into the box the images cover.
  */
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import type { LonLatBounds } from '../../../../src/@types/scene/LonLatBounds';
 import type { FieldArrow } from '../api';
 import type { ViewMode } from './Navigator';
@@ -13,6 +14,7 @@ import type { ViewMode } from './Navigator';
 const ARROW_SCALE_PX = 60;
 const MAX_ARROW_PX = 40;
 const ARROW_REFERENCE_PX = 512;
+const WIPE_KEY_STEP = 2;
 
 function ArrowOverlay(props: { arrows: readonly FieldArrow[]; box: LonLatBounds }) {
   const { arrows, box } = props;
@@ -68,62 +70,116 @@ export type CompareViewProps = {
   box: LonLatBounds;
 };
 
+const HINT: Record<ViewMode, string> = {
+  wipe: 'Drag the divider (or use ← →).',
+  'side-by-side': 'The two images side by side.',
+  flip: 'Click the image (or press space) to flip between them.',
+};
+
+export function hintFor(mode: ViewMode): string {
+  return HINT[mode];
+}
+
 export function CompareView(props: CompareViewProps) {
   const [wipePct, setWipePct] = useState(50);
   const [flipShowing, setFlipShowing] = useState<'original' | 'adjusted'>('adjusted');
+  const stageRef = useRef<HTMLDivElement>(null);
   const { originalUrl, adjustedUrl, viewMode, arrows, box } = props;
 
   if (originalUrl === undefined || adjustedUrl === undefined) {
-    return <div className="bench-compare bench-compare-loading">Rendering…</div>;
+    return <div className="bench-compare-loading">Rendering…</div>;
+  }
+
+  function pctFromClientX(clientX: number): number {
+    const rect = stageRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return wipePct;
+    return Math.min(100, Math.max(0, ((clientX - rect.left) / rect.width) * 100));
   }
 
   if (viewMode === 'side-by-side') {
     return (
-      <div className="bench-compare bench-compare-side-by-side">
-        <div className="bench-pane">
-          <img src={originalUrl} alt="original" />
-          <ArrowOverlay arrows={arrows} box={box} />
-        </div>
-        <div className="bench-pane">
-          <img src={adjustedUrl} alt="adjusted" />
-          <ArrowOverlay arrows={arrows} box={box} />
-        </div>
+      <div className="pair">
+        <figure>
+          <figcaption>Original</figcaption>
+          <div className="stage">
+            <img src={originalUrl} alt="original" />
+            <ArrowOverlay arrows={arrows} box={box} />
+          </div>
+        </figure>
+        <figure>
+          <figcaption>Adjusted</figcaption>
+          <div className="stage">
+            <img src={adjustedUrl} alt="adjusted" />
+            <ArrowOverlay arrows={arrows} box={box} />
+          </div>
+        </figure>
       </div>
     );
   }
 
   if (viewMode === 'flip') {
+    const flip = () => setFlipShowing((s) => (s === 'original' ? 'adjusted' : 'original'));
     return (
-      <div className="bench-compare bench-compare-flip">
-        <button onClick={() => setFlipShowing((s) => (s === 'original' ? 'adjusted' : 'original'))}>
-          showing {flipShowing} — click to flip
-        </button>
-        <div className="bench-pane">
-          <img src={flipShowing === 'original' ? originalUrl : adjustedUrl} alt={flipShowing} />
-          <ArrowOverlay arrows={arrows} box={box} />
-        </div>
+      <div
+        className="stage flip-stage"
+        role="button"
+        tabIndex={0}
+        onClick={flip}
+        onKeyDown={(e) => {
+          if (e.key === ' ' || e.key === 'Enter') {
+            e.preventDefault();
+            flip();
+          }
+        }}
+      >
+        <img src={flipShowing === 'original' ? originalUrl : adjustedUrl} alt={flipShowing} />
+        <span className="tag l">{flipShowing === 'original' ? 'Original' : 'Adjusted'}</span>
+        <ArrowOverlay arrows={arrows} box={box} />
       </div>
     );
   }
 
-  // wipe: adjusted stacked on top of original, clipped to the slider.
+  // wipe: adjusted clipped over original, from the left edge to wipePct —
+  // the divider (and drag anywhere on the stage) moves that boundary.
   return (
-    <div className="bench-compare bench-compare-wipe">
-      <div className="bench-pane bench-wipe-stack">
-        <img src={originalUrl} alt="original" />
-        <div className="bench-wipe-clip" style={{ clipPath: `inset(0 ${100 - wipePct}% 0 0)` }}>
-          <img src={adjustedUrl} alt="adjusted" />
-        </div>
-        <ArrowOverlay arrows={arrows} box={box} />
+    <div
+      ref={stageRef}
+      className="stage"
+      onPointerDown={(e) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setWipePct(pctFromClientX(e.clientX));
+      }}
+      onPointerMove={(e) => {
+        if (e.currentTarget.hasPointerCapture(e.pointerId)) setWipePct(pctFromClientX(e.clientX));
+      }}
+    >
+      <img src={originalUrl} alt="original" />
+      <div className="clip" style={{ clipPath: `inset(0 ${100 - wipePct}% 0 0)` }}>
+        <img src={adjustedUrl} alt="adjusted" />
       </div>
-      <input
+      <div
+        className="divider"
+        style={{ left: `${wipePct}%` }}
+        role="slider"
+        tabIndex={0}
         aria-label="wipe position"
-        type="range"
-        min="0"
-        max="100"
-        value={wipePct}
-        onChange={(e) => setWipePct(Number(e.target.value))}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(wipePct)}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowLeft') {
+            setWipePct((v) => Math.max(0, v - WIPE_KEY_STEP));
+            e.preventDefault();
+          }
+          if (e.key === 'ArrowRight') {
+            setWipePct((v) => Math.min(100, v + WIPE_KEY_STEP));
+            e.preventDefault();
+          }
+        }}
       />
+      <span className="tag l">Adjusted</span>
+      <span className="tag r">Original</span>
+      <ArrowOverlay arrows={arrows} box={box} />
     </div>
   );
 }
