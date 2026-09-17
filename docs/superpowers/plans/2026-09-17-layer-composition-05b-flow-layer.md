@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task, under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Form `src/layers/flow/` as the second sibling Layer, moving the CF4++ peculiar-velocity field's renderer, compute step, pass, asset slot, fade row, source entry and settings section out of core — and extend the `Layer` contract with `computes`, the one member the flow family needs that `filaments` did not.
+**Goal:** Form `src/layers/flow/` as the second sibling Layer, moving the CF4++ peculiar-velocity field's renderer, compute step, pass, asset slot, fade row, source entry and both panel sections out of core — and extend the `Layer` contract with the two members the flow family needs that `filaments` did not: `computes`, and a `ui` that carries a debug section as well as a settings one.
 
-**Architecture:** `flow` is `filaments` plus a compute step and a UI section. Its compute dispatch (`encodeFlowCompute`) is today a hard-coded row in `executeFrame`'s module-level `COMPUTE` table, which no Layer can contribute to — so this PR mirrors the `CONTENT_PASSES` → `state.passes` design one level down: a `ContentCompute` row type, a `CORE_COMPUTES` half, `Layer.computes?(runtime)`, and `createLayers` composing both onto `state.computes`. That extension lands first and alone, with flow's row still core-owned, so the contract change is reviewable independently of the migration that exercises it.
+**Architecture:** `flow` is `filaments` plus a compute step and a UI section. Its compute dispatch (`encodeFlowCompute`) is today a hard-coded row in `executeFrame`'s module-level `COMPUTE` table, which no Layer can contribute to — so this PR mirrors the `CONTENT_PASSES` → `state.passes` design one level down: a `ContentCompute` row type, a `CORE_COMPUTES` half, `Layer.computes?(runtime)`, and `createLayers` composing both onto `state.computes`. That extension lands first and alone, with flow's row still core-owned, so the contract change is reviewable independently of the migration that exercises it. The second extension rides the same task: `Layer.ui` widens from one component to `{ settings?, debug? }`, so the dev panel's Flow tuning knobs travel with their Layer instead of staying behind as a second, core-owned half of the same feature.
 
 **Tech Stack:** TS, WebGPU, WGSL/WESL, RTK, `defineLayer`/`instantiateLayer`/`createLayers`.
 
@@ -27,6 +27,7 @@
 **User rulings carried into this plan:**
 
 - (2026-09-16) small Layers land before `starCatalog`; `filaments` and `flow` are separate PRs; **`flow` carries the `computes` contract extension**; `zoneOfAvoidance` is 05c.
+- (2026-09-17) **`Layer.ui` becomes `{ settings, debug }`** — a Layer owns both of its panel surfaces, so `FlowTuningSection` moves into the Layer rather than being deferred.
 - (2026-09-17) the uniform-Layer-structure / declarative-resource-table work is a SEPARATE effort, parked. **This PR keeps `create.ts` + `destroy.ts` exactly as `filaments` has them** — do not introduce `{ resources, dispose }`, an ownership scope or a resource table here.
 
 ---
@@ -35,75 +36,80 @@
 
 ### Created
 
-| File | Responsibility |
-|---|---|
-| `src/@types/engine/frame/ContentCompute.d.ts` | The compute-row contract: `name` + `encode`. Mirrors `ContentPass`. |
-| `src/services/engine/frame/computes/index.ts` | `CORE_COMPUTES` — core's half of the registry, stating no order. |
-| `src/services/engine/frame/computes/skyViewCompute.ts` | Core's `sky-view` row, wrapping `encodeAtmosphereSkyView`. |
-| `src/layers/flow/layer.ts` | `flowLayer = defineLayer({...})` — the only file naming every contribution. |
-| `src/layers/flow/types/FlowRuntime.ts` | The private `Runtime`: `renderer` + `slot`. Exported. |
-| `src/layers/flow/create.ts` | Mints the renderer, then the slot that commits into it. |
-| `src/layers/flow/destroy.ts` | `runtime.renderer.destroy()`. |
-| `src/layers/flow/frame.ts` | Per-frame `reconcile` + the awake vote. |
-| `src/layers/flow/computes/flowCompute.ts` | The one `ContentCompute` row, gate closing over `runtime`. |
-| `src/layers/flow/load/flowAssetRows.ts` | The one `AssetWiringRow`, `factory: () => runtime.slot`. |
-| `src/layers/flow/present/flowFadeRows.ts` | The one `FadeLayer` row, `guard` closing over `runtime.renderer`. |
-| `src/layers/flow/settings/flowLayerSettings.ts` | `[flowSlice] as const` — the tuple `layer.ts` and `appSettingsSlices` both read. |
-| `src/layers/flow/sources/flowSourceRows.ts` | `[[Source.Flow, FLOW_ENTRY]] as const`. |
+| File                                                   | Responsibility                                                                   |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| `src/@types/engine/frame/ContentCompute.d.ts`          | The compute-row contract: `name` + `encode`. Mirrors `ContentPass`.              |
+| `src/@types/engine/layer/LayerUi.d.ts`                 | A Layer's two panel surfaces: `{ settings?, debug? }`, both `LayerUiSection`.    |
+| `src/services/engine/frame/computes/index.ts`          | `CORE_COMPUTES` — core's half of the registry, stating no order.                 |
+| `src/services/engine/frame/computes/skyViewCompute.ts` | Core's `sky-view` row, wrapping `encodeAtmosphereSkyView`.                       |
+| `src/layers/flow/layer.ts`                             | `flowLayer = defineLayer({...})` — the only file naming every contribution.      |
+| `src/layers/flow/types/FlowRuntime.ts`                 | The private `Runtime`: `renderer` + `slot`. Exported.                            |
+| `src/layers/flow/create.ts`                            | Mints the renderer, then the slot that commits into it.                          |
+| `src/layers/flow/destroy.ts`                           | `runtime.renderer.destroy()`.                                                    |
+| `src/layers/flow/frame.ts`                             | Per-frame `reconcile` + the awake vote.                                          |
+| `src/layers/flow/computes/flowCompute.ts`              | The one `ContentCompute` row, gate closing over `runtime`.                       |
+| `src/layers/flow/load/flowAssetRows.ts`                | The one `AssetWiringRow`, `factory: () => runtime.slot`.                         |
+| `src/layers/flow/present/flowFadeRows.ts`              | The one `FadeLayer` row, `guard` closing over `runtime.renderer`.                |
+| `src/layers/flow/settings/flowLayerSettings.ts`        | `[flowSlice] as const` — the tuple `layer.ts` and `appSettingsSlices` both read. |
+| `src/layers/flow/sources/flowSourceRows.ts`            | `[[Source.Flow, FLOW_ENTRY]] as const`.                                          |
 
 ### Moved (via `npm run move-files`)
 
-| From | To |
-|---|---|
-| `src/services/gpu/renderers/flowField/flowFieldRenderer.ts` | `src/layers/flow/render/flowFieldRenderer.ts` |
-| `src/services/gpu/resources/flowFieldFromCube.ts` | `src/layers/flow/render/flowFieldFromCube.ts` |
-| `src/services/engine/frame/passes/flowFieldPass.ts` | `src/layers/flow/passes/flowFieldPass.ts` |
-| `src/services/engine/frame/computes/flowCompute.ts` | `src/layers/flow/computes/flowCompute.ts` (created by Task 1 out of `encodeFlowCompute.ts`; rewritten as a factory in Task 4 — the move carries the tests) |
-| `src/services/loading/slots/flowFieldSlot.ts` | `src/layers/flow/load/flowFieldSlot.ts` |
-| `src/services/loading/fetchers/flowFieldFetcher.ts` | `src/layers/flow/load/flowFieldFetcher.ts` |
-| `src/data/sources/flow.ts` | `src/layers/flow/sources/flow.ts` |
-| `src/components/SettingsPanel/FlowSection.tsx` | `src/layers/flow/ui/FlowSection.tsx` |
-| `src/components/SettingsPanel/FlowRow.tsx` | `src/layers/flow/ui/FlowRow.tsx` |
-| `src/components/SettingsPanel/FlowRow.module.css` | `src/layers/flow/ui/FlowRow.module.css` (hand-moved — `move-files` handles TS only; grep for the old specifier) |
-| `src/components/containers/FlowSectionContainer.tsx` | `src/layers/flow/ui/FlowSectionContainer.tsx` |
+| From                                                        | To                                                                                                                                                         |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/services/gpu/renderers/flowField/flowFieldRenderer.ts` | `src/layers/flow/render/flowFieldRenderer.ts`                                                                                                              |
+| `src/services/gpu/resources/flowFieldFromCube.ts`           | `src/layers/flow/render/flowFieldFromCube.ts`                                                                                                              |
+| `src/services/engine/frame/passes/flowFieldPass.ts`         | `src/layers/flow/passes/flowFieldPass.ts`                                                                                                                  |
+| `src/services/engine/frame/computes/flowCompute.ts`         | `src/layers/flow/computes/flowCompute.ts` (created by Task 1 out of `encodeFlowCompute.ts`; rewritten as a factory in Task 4 — the move carries the tests) |
+| `src/services/loading/slots/flowFieldSlot.ts`               | `src/layers/flow/load/flowFieldSlot.ts`                                                                                                                    |
+| `src/services/loading/fetchers/flowFieldFetcher.ts`         | `src/layers/flow/load/flowFieldFetcher.ts`                                                                                                                 |
+| `src/data/sources/flow.ts`                                  | `src/layers/flow/sources/flow.ts`                                                                                                                          |
+| `src/components/SettingsPanel/FlowSection.tsx`              | `src/layers/flow/ui/FlowSection.tsx`                                                                                                                       |
+| `src/components/SettingsPanel/FlowRow.tsx`                  | `src/layers/flow/ui/FlowRow.tsx`                                                                                                                           |
+| `src/components/SettingsPanel/FlowRow.module.css`           | `src/layers/flow/ui/FlowRow.module.css` (hand-moved — `move-files` handles TS only; grep for the old specifier)                                            |
+| `src/components/containers/FlowSectionContainer.tsx`        | `src/layers/flow/ui/FlowSectionContainer.tsx`                                                                                                              |
+| `src/components/DebugPanel/FlowTuningSection.tsx`           | `src/layers/flow/ui/FlowTuningSection.tsx`                                                                                                                 |
+| `src/components/containers/FlowTuningSectionContainer.tsx`  | `src/layers/flow/ui/FlowTuningSectionContainer.tsx`                                                                                                        |
 
 Test mirrors ride along (`move-files` drags `tests/`).
 
 **Staying put, with the reason:**
 
-| File | Why it does not move |
-|---|---|
-| `src/services/gpu/shaders/flow/**` | Shader precedent — Layers own no WGSL. |
-| `src/data/flow/flowFieldConstants.ts` | Read by `tools/flow-workbench`, `src/utils/clampFlowParams.ts` and `shaders/flow/constants.wesl`. |
-| `src/data/flow/flowFields.ts` | The slider-field table; read by `src/data/milkyWay/milkyWaySliderFields.ts`. |
-| `src/data/flow/flowFieldMetaFromCube.ts` | Read only by `flowFieldFromCube`, but sits with the other `data/flow` cube helpers. |
-| `src/utils/clampFlowParams.ts` | Read by `src/utils/clampVolumeFieldSettings.ts` — genuinely shared. |
-| `src/utils/flowFrameDeltaSec.ts` | Cross-cutting helper; `utils/` is its home by convention. |
-| `src/@types/data/flow/**`, `src/@types/rendering/FlowFieldRenderer.d.ts` | `filaments` set the precedent: a Layer's renderer type stays under `src/@types/`. |
-| `src/components/DebugPanel/FlowTuningSection.tsx` + its container | `Layer` has one `ui` member (the SettingsPanel section). A debug-panel section has no contract member, and inventing one is out of scope — see *Out of scope*. |
+| File                                                                     | Why it does not move                                                                                                                                                                      |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/services/gpu/shaders/flow/**`                                       | Shader precedent — Layers own no WGSL.                                                                                                                                                    |
+| `src/data/flow/flowFieldConstants.ts`                                    | Read by `tools/flow-workbench`, `src/utils/clampFlowParams.ts` and `shaders/flow/constants.wesl`.                                                                                         |
+| `src/data/flow/flowFields.ts`                                            | The slider-field table; read by `src/data/milkyWay/milkyWaySliderFields.ts`.                                                                                                              |
+| `src/data/flow/flowFieldMetaFromCube.ts`                                 | Read only by `flowFieldFromCube`, but sits with the other `data/flow` cube helpers.                                                                                                       |
+| `src/utils/clampFlowParams.ts`                                           | Read by `src/utils/clampVolumeFieldSettings.ts` — genuinely shared.                                                                                                                       |
+| `src/utils/flowFrameDeltaSec.ts`                                         | Cross-cutting helper; `utils/` is its home by convention.                                                                                                                                 |
+| `src/@types/data/flow/**`, `src/@types/rendering/FlowFieldRenderer.d.ts` | `filaments` set the precedent: a Layer's renderer type stays under `src/@types/`.                                                                                                         |
+| `src/components/DebugPanel/DebugTuningSection.tsx`                       | The shared board every dev-panel tuning section instantiates. The Layer's section imports it across the boundary, exactly as `GalaxiesSection` imports `CollapsibleSection` and `Slider`. |
 
 ### Modified — core shrinks
 
-| File | Change |
-|---|---|
-| `src/@types/engine/layer/Layer.d.ts` | `+ computes?(runtime): readonly ContentCompute[]` |
-| `src/@types/engine/layer/LayerInstance.d.ts` | `+ readonly computes: readonly ContentCompute[]` |
-| `src/@types/engine/state/EngineState.d.ts` | `+ computes: readonly ContentCompute[]`; **`− gpu.flowFieldRenderer`** (in `EngineGpuHandles.d.ts`) |
-| `src/services/engine/layer/instantiateLayer.ts` | `+ computes: layer.computes?.(runtime) ?? []` |
-| `src/services/engine/phases/createLayers.ts` | Composes `state.computes`; duplicate-name throw, mirroring `state.passes` |
-| `src/services/engine/frame/executeFrame.ts` | `− const COMPUTE` table; resolves off `state.computes`, absent name DROPS |
-| `src/services/engine/frame/checkFrameOrder.ts` | `compute` arm returns the contributed row names, so a row `FRAME_ORDER` never names is caught |
-| `src/services/engine/engine.ts` | `− flowFieldRenderer: null`; `+ computes: []` |
-| `src/services/engine/gpuHandles/gpuHandleRegistry.ts` | `−` the `flowFieldRenderer` row |
-| `src/services/engine/frame/passes/index.ts` | `−` `flowFieldPass` |
-| `src/services/engine/wiring/assetWiring.ts` | `−` the `flow` row |
-| `src/services/engine/wiring/fadeLayers.ts` | `−` the `flow` row |
-| `src/services/engine/frame/runFrame.ts` | `−` the `flowFieldRenderer?.reconcile(...)` line |
-| `src/services/engine/helpers/shouldKeepTicking.ts` | `−` the flow term (absorbed by `Layer.frame`'s awake vote) |
-| `src/compositions/app.ts` | `+ flowLayer` |
-| `src/compositions/appSettingsSlices.ts` | `flow` moves out of the unformed list into the Layer's tuple |
-| `src/components/SettingsPanel/SettingsPanel.tsx` | `−` the `FlowSectionContainer` import + element |
-| `src/data/sources.ts` | `flow` source entry now folded in from the Layer's rows |
+| File                                                  | Change                                                                                              |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `src/@types/engine/layer/Layer.d.ts`                  | `+ computes?(runtime): readonly ContentCompute[]`; `ui?` widens from `LayerUiSection` to `LayerUi`  |
+| `src/@types/engine/layer/LayerInstance.d.ts`          | `+ readonly computes: readonly ContentCompute[]`                                                    |
+| `src/@types/engine/state/EngineState.d.ts`            | `+ computes: readonly ContentCompute[]`; **`− gpu.flowFieldRenderer`** (in `EngineGpuHandles.d.ts`) |
+| `src/services/engine/layer/instantiateLayer.ts`       | `+ computes: layer.computes?.(runtime) ?? []`                                                       |
+| `src/services/engine/phases/createLayers.ts`          | Composes `state.computes`; duplicate-name throw, mirroring `state.passes`                           |
+| `src/services/engine/frame/executeFrame.ts`           | `− const COMPUTE` table; resolves off `state.computes`, absent name DROPS                           |
+| `src/services/engine/frame/checkFrameOrder.ts`        | `compute` arm returns the contributed row names, so a row `FRAME_ORDER` never names is caught       |
+| `src/services/engine/engine.ts`                       | `− flowFieldRenderer: null`; `+ computes: []`                                                       |
+| `src/services/engine/gpuHandles/gpuHandleRegistry.ts` | `−` the `flowFieldRenderer` row                                                                     |
+| `src/services/engine/frame/passes/index.ts`           | `−` `flowFieldPass`                                                                                 |
+| `src/services/engine/wiring/assetWiring.ts`           | `−` the `flow` row                                                                                  |
+| `src/services/engine/wiring/fadeLayers.ts`            | `−` the `flow` row                                                                                  |
+| `src/services/engine/frame/runFrame.ts`               | `−` the `flowFieldRenderer?.reconcile(...)` line                                                    |
+| `src/services/engine/helpers/shouldKeepTicking.ts`    | `−` the flow term (absorbed by `Layer.frame`'s awake vote)                                          |
+| `src/compositions/app.ts`                             | `+ flowLayer`                                                                                       |
+| `src/compositions/appSettingsSlices.ts`               | `flow` moves out of the unformed list into the Layer's tuple                                        |
+| `src/components/SettingsPanel/SettingsPanel.tsx`      | Reads `layer.ui?.settings`; `−` the `FlowSectionContainer` import + element                         |
+| `src/components/DebugPanel/DebugPanel.tsx`            | `+` the Layer debug-section group; `−` the `FlowTuningSectionContainer` import + element            |
+| `src/layers/galaxyCatalog/layer.ts`                   | `ui: GalaxiesSectionContainer` → `ui: { settings: GalaxiesSectionContainer }`                       |
+| `src/data/sources.ts`                                 | `flow` source entry now folded in from the Layer's rows                                             |
 
 ---
 
@@ -140,20 +146,48 @@ export type ContentCompute = {
 
 ---
 
-## Task 1: The `computes` contract extension
+## Contract: the `ui` extension
 
-Core-only. Flow's compute row stays in core at the end of this task; only its *dispatch path* changes. This is what makes the extension reviewable on its own.
+```ts
+// src/@types/engine/layer/LayerUi.d.ts
+/**
+ * LayerUi — a Layer's two panel surfaces. Both are hand-written components,
+ * never schemas (ADR 0011): `settings` is explorer-facing, `debug` is the
+ * power-user knobs the dev panel shows. Either may be absent; a Layer with
+ * neither omits `ui` entirely.
+ */
+export type LayerUi = {
+  readonly settings?: LayerUiSection;
+  readonly debug?: LayerUiSection;
+};
+```
+
+`LayerUiSection` (`ComponentType`) is unchanged and stays the member type — a section owns its own store container, so neither surface takes props.
+
+**Decision — where the debug group renders.** `SettingsPanel` renders Layer sections _ahead of_ the core containers; `DebugPanel` does not mirror that. Its top block (asset loading, frame stats, GPU timings, camera state, render toggles) is engine diagnostics that belong to no Layer, so the Layer group renders below it — at the position `FlowTuningSectionContainer` occupies today, between `RenderTogglesSectionContainer` and `MilkyWayTuningSectionContainer`. The flow panel is then visually unchanged, and every later Layer's debug section has a defined home.
+
+---
+
+## Task 1: The contract extensions
+
+Core-only, and deliberately ahead of every migration task: at the end of Task 1 flow's compute row and both its UI sections are still core-owned, so each contract widening is reviewable without the move that exercises it. Two independent parts.
+
+**Part A — `computes`.** As specified above: `ContentCompute`, `CORE_COMPUTES`, `Layer.computes?`, `EngineState.computes`, and the executor resolving off it.
+
+**Part B — `ui: { settings, debug }`.** `Layer.ui` widens from one component to the two-member `LayerUi`. Purely a re-shaping: `galaxyCatalog`'s member becomes `{ settings: GalaxiesSectionContainer }`, `SettingsPanel` reads `layer.ui?.settings`, and `DebugPanel` grows the Layer group at the position the decision above pins — empty for now, since no Layer declares `debug` until Task 5.
 
 **Files:**
 
-- Create: `src/@types/engine/frame/ContentCompute.d.ts`, `src/services/engine/frame/computes/index.ts`, `src/services/engine/frame/computes/skyViewCompute.ts`, `src/services/engine/frame/computes/flowCompute.ts`
+- Create: `src/@types/engine/frame/ContentCompute.d.ts`, `src/@types/engine/layer/LayerUi.d.ts`, `src/services/engine/frame/computes/index.ts`, `src/services/engine/frame/computes/skyViewCompute.ts`, `src/services/engine/frame/computes/flowCompute.ts`
 - Delete: `src/services/engine/frame/encodeFlowCompute.ts` (absorbed by `computes/flowCompute.ts`)
-- Modify: `src/services/engine/frame/encodeAtmosphereSkyView.ts` (param narrowed to `PassState`), `src/@types/engine/layer/Layer.d.ts`, `src/@types/engine/layer/LayerInstance.d.ts`, `src/@types/engine/state/EngineState.d.ts`, `src/services/engine/layer/instantiateLayer.ts`, `src/services/engine/phases/createLayers.ts`, `src/services/engine/frame/executeFrame.ts`, `src/services/engine/frame/checkFrameOrder.ts`, `src/services/engine/engine.ts`
+- Modify: `src/services/engine/frame/encodeAtmosphereSkyView.ts` (param narrowed to `PassState`), `src/@types/engine/layer/Layer.d.ts`, `src/@types/engine/layer/LayerInstance.d.ts`, `src/@types/engine/state/EngineState.d.ts`, `src/services/engine/layer/instantiateLayer.ts`, `src/services/engine/phases/createLayers.ts`, `src/services/engine/frame/executeFrame.ts`, `src/services/engine/frame/checkFrameOrder.ts`, `src/services/engine/engine.ts`, `src/layers/galaxyCatalog/layer.ts`, `src/components/SettingsPanel/SettingsPanel.tsx`, `src/components/DebugPanel/DebugPanel.tsx`
 - Test: `tests/services/engine/phases/createLayers.computes.test.ts`, `tests/services/engine/frame/executeFrame.computes.test.ts`, `tests/services/engine/frame/checkFrameOrder.test.ts`
+
+Part B gets **no new test**: it is a type re-shaping the compiler checks end to end, and a render test asserting "the section appears" would only restate JSX (see `testing.md`).
 
 **Interfaces:**
 
-- Produces: `ContentCompute`; `Layer.computes?(runtime): readonly ContentCompute[]`; `LayerInstance.computes`; `EngineState.computes`; `CORE_COMPUTES`.
+- Produces: `ContentCompute`; `Layer.computes?(runtime): readonly ContentCompute[]`; `LayerInstance.computes`; `EngineState.computes`; `CORE_COMPUTES`; `LayerUi`.
 - Consumes: nothing new.
 
 - [ ] **Step 1: Write the failing composition tests**
@@ -162,13 +196,19 @@ Three behaviours, each pinning a failure the compiler cannot catch:
 
 ```ts
 // createLayers composes a Layer's compute rows onto state.computes
-it('appends each Layer compute row after core rows', async () => { /* … */ });
+it('appends each Layer compute row after core rows', async () => {
+  /* … */
+});
 
 // A duplicate name would let the first row win silently, exactly as for passes
-it('throws when two composed compute rows share a name', async () => { /* … */ });
+it('throws when two composed compute rows share a name', async () => {
+  /* … */
+});
 
 // The composability decision above: FRAME_ORDER may name a row no composition owns
-it('skips a compute step whose name no composed row claims', () => { /* … */ });
+it('skips a compute step whose name no composed row claims', () => {
+  /* … */
+});
 ```
 
 - [ ] **Step 2: Run them to verify they fail**
@@ -202,10 +242,26 @@ The `compute` arm returns the composed rows' names so a contributed row `FRAME_O
 Run: `npm test && npm run typecheck`
 Expected: PASS. Frame behaviour is unchanged — same two rows, same order, same gates.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: Commit Part A**
 
 ```
 feat(engine): compose compute rows like passes
+```
+
+- [ ] **Step 9: Widen `Layer.ui` to `{ settings, debug }`** (Part B)
+
+Add `LayerUi.d.ts` as pinned above; point `Layer.ui?` at it; update `galaxyCatalog/layer.ts` to `ui: { settings: GalaxiesSectionContainer }`. `SettingsPanel.tsx:44-45` reads `layer.ui?.settings` — JSX cannot render an optional member expression directly, so bind it to a capitalised local before returning it.
+
+- [ ] **Step 10: Grow the Layer group in `DebugPanel`**
+
+Map `APP_COMPOSITION.layers` over `layer.ui?.debug` at the position the decision above pins (between `RenderTogglesSectionContainer` and `MilkyWayTuningSectionContainer`). `SettingsPanel.tsx:44-45` is the shape to copy, including the `key={layer.name}`. No Layer declares `debug` yet, so the group renders nothing and the panel is unchanged.
+
+- [ ] **Step 11: Run the gate and commit Part B**
+
+Run: `npm test && npm run typecheck`
+
+```
+refactor(layer): Layer.ui carries a settings and a debug section
 ```
 
 ---
@@ -214,7 +270,7 @@ feat(engine): compose compute rows like passes
 
 Pure moves. No behaviour change, no contract change.
 
-**Files:** every row of the *Moved* table above.
+**Files:** every row of the _Moved_ table above.
 
 - [ ] **Step 1: Move the TS modules**
 
@@ -226,7 +282,7 @@ Run `npm run move-files -- --manifest <moves.json> --dry` first, inspect, then f
 
 - [ ] **Step 3: Grep for what `move-files` cannot see**
 
-Run: `grep -rn "renderers/flowField\|slots/flowFieldSlot\|fetchers/flowFieldFetcher\|gpu/resources/flowFieldFromCube\|data/sources/flow\|SettingsPanel/FlowSection\|SettingsPanel/FlowRow\|containers/FlowSectionContainer\|frame/encodeFlowCompute\|passes/flowFieldPass" src tests tools docs`
+Run: `grep -rn "renderers/flowField\|slots/flowFieldSlot\|fetchers/flowFieldFetcher\|gpu/resources/flowFieldFromCube\|data/sources/flow\|SettingsPanel/FlowSection\|SettingsPanel/FlowRow\|containers/FlowSectionContainer\|DebugPanel/FlowTuningSection\|containers/FlowTuningSectionContainer\|frame/encodeFlowCompute\|passes/flowFieldPass" src tests tools docs`
 Expected: no hits outside the moved files' own headers. `.wesl` `package::` specifiers and string-literal paths are the known blind spots.
 
 - [ ] **Step 4: Verify green and commit**
@@ -300,7 +356,7 @@ Each contribution moves from reading `state.gpu.flowFieldRenderer` to closing ov
 **Files:**
 
 - Create: `src/layers/flow/layer.ts`, `src/layers/flow/settings/flowLayerSettings.ts`, `src/layers/flow/sources/flowSourceRows.ts`
-- Modify: `src/compositions/app.ts`, `src/compositions/appSettingsSlices.ts`, `src/components/SettingsPanel/SettingsPanel.tsx`, `src/data/sources.ts`
+- Modify: `src/compositions/app.ts`, `src/compositions/appSettingsSlices.ts`, `src/components/SettingsPanel/SettingsPanel.tsx`, `src/components/DebugPanel/DebugPanel.tsx`, `src/data/sources.ts`
 - Test: `tests/layers/flow/layer.test.ts`, existing `tests/compositions/*`
 
 **Interfaces:**
@@ -323,11 +379,11 @@ export const flowLayer = defineLayer({
   assets: flowAssetRows,
   fades: flowFadeRows,
   frame,
-  ui: FlowSectionContainer,
+  ui: { settings: FlowSectionContainer, debug: FlowTuningSectionContainer },
 });
 ```
 
-- [ ] **Step 4: Compose it.** Add `flowLayer` to `APP_COMPOSITION.layers`; move `flow` out of the unformed-slices list in `appSettingsSlices.ts`; delete `<FlowSectionContainer />` and its import from `SettingsPanel.tsx` (the Layer's `ui` renders in composition order, ahead of the core sections — a deliberate, visible ordering change, see *Definition of Done*).
+- [ ] **Step 4: Compose it.** Add `flowLayer` to `APP_COMPOSITION.layers`; move `flow` out of the unformed-slices list in `appSettingsSlices.ts`; delete `<FlowSectionContainer />` and its import from `SettingsPanel.tsx`, and `<FlowTuningSectionContainer />` and its import from `DebugPanel.tsx`. Both sections now render from the Layer group Task 1 built: the settings section moves _ahead of_ the core sections (a deliberate, visible ordering change — see _Definition of Done_), while the debug section keeps its current position, which is what the group's placement was chosen for.
 - [ ] **Step 5: Run the tests, verify they pass.**
 - [ ] **Step 6: Commit** — `feat(flow): form the flow Layer and compose it`
 
@@ -370,14 +426,14 @@ Not code. `/dev` in this worktree, then check, in order:
 - [ ] Ribbons animate while enabled and the loop stays awake with the camera still (the `shouldKeepTicking` term Task 6 deleted is genuinely covered by `Layer.frame`).
 - [ ] Toggling off fades out and the loop parks.
 - [ ] The Flow section appears in the Settings panel (now rendered in Layer-composition order, above Stars/Cosmic Web — confirm the new position is acceptable).
-- [ ] The DebugPanel's Flow tuning sliders still drive the field.
+- [ ] The DebugPanel's Flow tuning section is still in its old position (between Render toggles and Milky Way tuning) and its sliders still drive the field — it now renders from `flowLayer.ui.debug`, not from `DebugPanel.tsx`.
 - [ ] The frame-timing panel still bills `flow-compute` under its own slot, and the DebugPanel toggle for it still suppresses the dispatch.
 
 ---
 
 ## Out of scope (deferred)
 
-- **The DebugPanel's `FlowTuningSection`.** `Layer` has exactly one `ui` member — the SettingsPanel section. A second contract member for debug sections is a contract question of its own, and every other Layer will want one. Left in `src/components/DebugPanel/`, importing the Layer's slice like every other core container does. **Follow-up:** raise it when 05c or a later Layer has the same need, so the member is designed against two cases rather than one.
+- **The other DebugPanel tuning sections** (`MilkyWayTuningSection`, `ZoneOfAvoidanceTuningSection`, `SgrAStarLensingTuningSection`). `Layer.ui.debug` now has a home for them, but each belongs to a Layer that is not yet formed; they move with their Layer, not with this PR.
 - **The uniform Layer structure / declarative resource table.** Parked 2026-09-17 by user direction; two decisions and two open questions are recorded in the `project_layer_composition` memory. This Layer follows today's `filaments` shape exactly so it converts cleanly whenever that lands.
 - **`src/data/flow/` and `src/utils/*Flow*`.** Shared with `clampVolumeFieldSettings`, `milkyWaySliderFields`, `tools/flow-workbench` and a `.wesl` import — moving them is a separate un-braid, not this PR's.
 
@@ -386,10 +442,11 @@ Not code. `/dev` in this worktree, then check, in order:
 ## Definition of Done
 
 - [ ] `npm test`, `npm run typecheck` and `npm run build` all green.
-- [ ] `src/layers/flow/` holds the renderer, the compute row, the pass, the slot + fetcher, the fade row, the source entry, the settings slice and the settings UI.
+- [ ] `src/layers/flow/` holds the renderer, the compute row, the pass, the slot + fetcher, the fade row, the source entry, the settings slice and both UI sections.
 - [ ] `EngineState.gpu` no longer has a `flowFieldRenderer` field, and `grep -rn "flowFieldRenderer" src/services` returns only prose citations.
 - [ ] `state.computes` is composed from `CORE_COMPUTES` + every Layer's rows, with a duplicate-name throw and an absent-name drop, and `checkFrameOrder` catches a contributed row `FRAME_ORDER` never names.
 - [ ] `INITIAL_SETTINGS` is byte-identical to `main`'s — assert by dumping it from both trees and diffing, not by reading the code.
 - [ ] Ratchets unchanged or smaller: `layerImportBoundary`, `frameFilePurity`.
-- [ ] Manual smoke attested (Task 7), including the Settings-panel section's new position.
+- [ ] `Layer.ui` is `{ settings?, debug? }`, `SettingsPanel` and `DebugPanel` both render their Layer group from it, and `grep -rn "FlowTuningSection" src/components` returns nothing.
+- [ ] Manual smoke attested (Task 7), including the Settings-panel section's new position and the Debug-panel section's unchanged one.
 - [ ] Landing-diff breakdown reported: src code / src comment / test code / test comment / docs.
