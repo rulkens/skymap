@@ -10,9 +10,9 @@ import { bodyUpWeight } from './bodyUpWeight';
 import { cursorRayBodyLocal } from './cursorRayBodyLocal';
 import { eyeFrameOf } from './eyeFrameOf';
 import { mappedTiltRad } from './mappedTiltRad';
-import { metresPerPixelAtRange } from './metresPerPixelAtRange';
 import { pickOnBody } from './pickOnBody';
 import { raycastTerrain } from './raycastTerrain';
+import { surfacePickToleranceM } from './surfacePickToleranceM';
 import { settledZoomPose } from './settledZoomPose';
 import { spentZoomFactor } from './spentZoomFactor';
 import { dot3 } from '../math/dot3';
@@ -61,8 +61,9 @@ export function surfaceZoomStep(
   // still falls back to the datum sphere rather than leaving the wheel inert.
   const freshPick = (): Readonly<Vec3> | null => {
     const ray = cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad);
-    const toleranceM = metresPerPixelAtRange(
-      Math.hypot(...bodyFixedEyeM(arm)) - bodyRadiusM,
+    const toleranceM = surfacePickToleranceM(
+      bodyFixedEyeM(arm),
+      bodyRadiusM,
       fovYRad,
       viewportPx[1],
     );

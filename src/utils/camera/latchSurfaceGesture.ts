@@ -7,9 +7,9 @@ import type { Vec3 } from '../../@types/math/Vec3';
 import { MIN_INCIDENCE_COS } from './anchoredDragRotation';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
 import { cursorRayBodyLocal } from './cursorRayBodyLocal';
-import { metresPerPixelAtRange } from './metresPerPixelAtRange';
 import { pickOnBody } from './pickOnBody';
 import { raycastTerrain } from './raycastTerrain';
+import { surfacePickToleranceM } from './surfacePickToleranceM';
 import { normalize3 } from '../math/normalize3';
 
 export function latchSurfaceGesture(
@@ -24,11 +24,7 @@ export function latchSurfaceGesture(
 ): SurfaceGesture {
   const prevPixel = step.startPx;
   const ray = cursorRayBodyLocal(arm, prevPixel, viewportPx, fovYRad);
-  const toleranceM = metresPerPixelAtRange(
-    Math.hypot(...bodyFixedEyeM(arm)) - bodyRadiusM,
-    fovYRad,
-    viewportPx[1],
-  );
+  const toleranceM = surfacePickToleranceM(bodyFixedEyeM(arm), bodyRadiusM, fovYRad, viewportPx[1]);
   // "Always answer something" is camera-feel policy, so the datum fallback
   // lives at this call site, not inside the pure marcher (mirrors surfaceZoomStep).
   const pick =

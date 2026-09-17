@@ -30,8 +30,8 @@ const CTX = {
   groundRadiusAtM: () => 1,
   // A no-relief fixture body: tight enough to bracket the flat field without
   // standing in for any real terrain shell.
-  innerBoundRadiusM: 0.999,
-  outerBoundRadiusM: 1.001,
+  innerBoundRadiusM: 1 - 1e-6,
+  outerBoundRadiusM: 1 + 1e-6,
   sceneUpLocal: [0, 0, 1] as const,
   focusPivotM: null,
   tuning: DEFAULT_CAMERA_TUNING,

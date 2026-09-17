@@ -13,6 +13,7 @@ import { RAYCAST_BISECTION_ITERATION_CAP } from '../../data/camera/raycastBisect
 import { RAYCAST_CLOSING_RATE_FLOOR } from '../../data/camera/raycastClosingRateFloor';
 import { RAYCAST_MIN_STEP_M } from '../../data/camera/raycastMinStepM';
 import { RAYCAST_SAMPLE_BUDGET } from '../../data/camera/raycastSampleBudget';
+import { RAYCAST_STEP_CAP_HEADROOM } from '../../data/camera/raycastStepCapHeadroom';
 import { dot3 } from '../math/dot3';
 import { raySphereRoots } from '../math/raySphereRoots';
 
@@ -42,7 +43,12 @@ export function raycastTerrain(
   if (outerRoots === null || outerRoots[1] <= 0) return null;
   const innerRoots = raySphereRoots(originM, dir, centreM, innerRadiusM);
   const t0 = Math.max(0, outerRoots[0]);
-  const t1 = innerRoots !== null ? innerRoots[0] : outerRoots[1];
+  // The inner root only shortens the search when it lies AHEAD. With the eye
+  // inside the relief band — the surface-camera regime — a ray pitched above
+  // the local horizontal has both inner roots behind it, and taking one
+  // unconditionally ends the march before a single sample: no peak above the
+  // horizon could ever be picked.
+  const t1 = innerRoots !== null && innerRoots[0] > t0 ? innerRoots[0] : outerRoots[1];
   if (t1 <= t0) return null;
 
   const p0 = pointAt(t0);
@@ -59,11 +65,21 @@ export function raycastTerrain(
   }
 
   const eDotD = dot3(originM, dir);
-  const stepCapM = (t1 - t0) / RAYCAST_SAMPLE_BUDGET;
+  // Held back from the budget so traversing the bracket cannot consume all of
+  // it: at `(t1-t0)/BUDGET` a plain nadir pick already spends 63 of 64 samples,
+  // and anything that slows the march falls out the bottom as a non-answer.
+  const stepCapM = (t1 - t0) / (RAYCAST_SAMPLE_BUDGET - RAYCAST_STEP_CAP_HEADROOM);
 
   let t = t0;
   let radius = r0;
   let f = f0;
+  // Closest approach so far. An exhausted budget answers with this, never
+  // `null`: the call sites read `null` as "the ray missed the field" and fall
+  // back to the datum sphere, which is the wrong answer this whole function
+  // exists to replace.
+  let bestPoint: Vec3 = p0;
+  let bestRadius = r0;
+  let bestF = f0;
 
   for (let i = 0; i < RAYCAST_SAMPLE_BUDGET && t < t1; i++) {
     // f/closingRate is the secant estimate of distance-to-surface; a fixed
@@ -81,25 +97,32 @@ export function raycastTerrain(
     if (nextF <= 0) {
       let tLo = t;
       let tHi = nextT;
-      let bestPoint = nextPoint;
-      let bestRadius = nextRadius;
-      let bestF = nextF;
+      let hitPoint = nextPoint;
+      let hitRadius = nextRadius;
+      let hitF = nextF;
       for (let b = 0; b < RAYCAST_BISECTION_ITERATION_CAP; b++) {
-        if (Math.abs(bestF) <= toleranceM) break;
+        if (Math.abs(hitF) <= toleranceM) break;
         const midT = (tLo + tHi) / 2;
-        bestPoint = pointAt(midT);
-        bestRadius = Math.hypot(bestPoint[0], bestPoint[1], bestPoint[2]);
-        bestF = bestRadius - groundRadiusAtM(bestPoint);
-        if (bestF > 0) tLo = midT;
+        hitPoint = pointAt(midT);
+        hitRadius = Math.hypot(hitPoint[0], hitPoint[1], hitPoint[2]);
+        hitF = hitRadius - groundRadiusAtM(hitPoint);
+        if (hitF > 0) tLo = midT;
         else tHi = midT;
       }
-      return pickAt(bestPoint, bestRadius);
+      return pickAt(hitPoint, hitRadius);
     }
 
+    if (nextF < bestF) {
+      bestF = nextF;
+      bestPoint = nextPoint;
+      bestRadius = nextRadius;
+    }
     t = nextT;
     radius = nextRadius;
     f = nextF;
   }
 
-  return null;
+  // Reaching `t1` with the field still above the ray is a genuine miss. Running
+  // out of samples first is not, so those two endings answer differently.
+  return t < t1 ? pickAt(bestPoint, bestRadius) : null;
 }
