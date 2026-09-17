@@ -12,6 +12,7 @@ import type { CameraDriver } from './CameraDriver';
 import type { CameraState } from '../../camera/CameraState';
 import type { Epoch } from './Epoch';
 import type { InputStep } from '../../camera/InputStep';
+import type { TerrainHeightAtLookup } from '../../camera/TerrainHeightAtLookup';
 import type { Vec2 } from '../../math/Vec2';
 import type { RootState } from '../../../store/types';
 
@@ -24,6 +25,9 @@ export type StepInputs = {
   readonly aspect: number;
   readonly steps: readonly InputStep[];
   readonly bodies: ReadonlyMap<BodyId, BodyState>;
+  /** `SurfaceTileSubsystem.terrainHeightAt` bound by `runFrame`, or a `() =>
+   *  0` stub pre-boot — the ground-collision row's source (F3a, spec §8.3). */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
   readonly clipEpoch: Epoch<NonNullable<CameraState['clip']>>;
   readonly drivers: readonly CameraDriver[];
 };

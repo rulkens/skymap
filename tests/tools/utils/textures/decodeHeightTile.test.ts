@@ -3,7 +3,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { HeightTile } from '../../../../tools/textures/HeightTile';
 import {
+  HEIGHT_CODE_BYTES,
   HEIGHT_CODE_MAX,
+  HEIGHT_GRID_BYTES,
+  HEIGHT_GRID_POSTS_PER_EDGE,
+  HEIGHT_GRID_STRIDE,
   HEIGHT_POSTS_PER_TILE,
   HEIGHT_TILE_CHUNK_BYTES,
   HEIGHT_TILE_CHUNK_FOURCC,
@@ -12,7 +16,7 @@ import {
 } from '../../../../src/data/scene/heightTileFormat';
 import { readRiffChunk } from '../../../../src/utils/image/readRiffChunk';
 import { mulberry32 } from '../../../../src/utils/random/mulberry32';
-import { codeHeightM } from '../../../../tools/utils/textures/codeHeightM';
+import { codeHeightM } from '../../../../src/utils/surfaceTiles/codeHeightM';
 import { decodeHeightTile } from '../../../../tools/utils/textures/decodeHeightTile';
 import { decodeHeightTileHeader } from '../../../../src/utils/surfaceTiles/decodeHeightTileHeader';
 import { heightCode } from '../../../../tools/utils/textures/heightCode';
@@ -68,7 +72,25 @@ function validChunk(): Uint8Array {
   view.setFloat32(4, -1.5, true);
   view.setFloat32(8, 2.5, true);
   view.setFloat32(12, 0.25, true);
+  for (let i = 0; i < HEIGHT_GRID_BYTES; i++) chunk[16 + i] = (i * 31) & 0xff;
   return chunk;
+}
+
+/** The 16-byte v2 chunk, as a stale cached tile still carries it. */
+function v2Chunk(): Uint8Array {
+  const chunk = new Uint8Array(16);
+  const view = new DataView(chunk.buffer);
+  view.setUint16(0, 2, true);
+  view.setUint16(2, HEIGHT_POSTS_PER_TILE, true);
+  return chunk;
+}
+
+async function encodedGrid(tile: HeightTile): Promise<{ grid: Uint8Array; pixels: Uint8Array }> {
+  const bytes = await encodeHeightTile(tile);
+  const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
+  if (!chunk) throw new Error('missing SHGT chunk');
+  const { data } = await sharp(bytes).raw().toBuffer({ resolveWithObject: true });
+  return { grid: decodeHeightTileHeader(chunk).gridCodes, pixels: new Uint8Array(data) };
 }
 
 function flatPixels(size: number) {
@@ -94,6 +116,45 @@ describe('encodeHeightTile / decodeHeightTile', () => {
   it('round-trips a quantised tile bit-exactly through encode, sharp decode and decodeHeightTile', async () => {
     const tile = quantisedTile();
     expectSameTile(await decodeWithSharp(await encodeHeightTile(tile)), tile);
+  });
+
+  it('encode/decode round-trips the v3 grid', async () => {
+    const tile = quantisedTile();
+    const { grid } = await encodedGrid(tile);
+    expect(grid.length).toBe(HEIGHT_GRID_BYTES);
+    for (let j = 0; j < HEIGHT_GRID_POSTS_PER_EDGE; j++) {
+      for (let i = 0; i < HEIGHT_GRID_POSTS_PER_EDGE; i++) {
+        const b = (j * HEIGHT_GRID_POSTS_PER_EDGE + i) * HEIGHT_CODE_BYTES;
+        const heightM = codeHeightM(grid[b]! * 65536 + grid[b + 1]! * 256 + grid[b + 2]!);
+        const post = j * HEIGHT_GRID_STRIDE * HEIGHT_POSTS_PER_TILE + i * HEIGHT_GRID_STRIDE;
+        if (!Object.is(heightM, tile.heightM[post])) {
+          throw new Error(`grid (${i}, ${j}): ${heightM} !== ${tile.heightM[post]}`);
+        }
+      }
+    }
+  });
+
+  it('grid post (i, j) equals image pixel (8i, 8j)', async () => {
+    // Against the tile's OWN pixels, not a recomputed expectation: this is the one
+    // place the CPU grid and the shader's image can silently disagree (§8.4).
+    const { grid, pixels } = await encodedGrid(quantisedTile());
+    for (let j = 0; j < HEIGHT_GRID_POSTS_PER_EDGE; j++) {
+      for (let i = 0; i < HEIGHT_GRID_POSTS_PER_EDGE; i++) {
+        const b = (j * HEIGHT_GRID_POSTS_PER_EDGE + i) * HEIGHT_CODE_BYTES;
+        const p =
+          (j * HEIGHT_GRID_STRIDE * HEIGHT_POSTS_PER_TILE + i * HEIGHT_GRID_STRIDE) *
+          HEIGHT_CODE_BYTES;
+        const post = [grid[b], grid[b + 1], grid[b + 2]];
+        const pixel = [pixels[p], pixels[p + 1], pixels[p + 2]];
+        if (post.join() !== pixel.join()) {
+          throw new Error(`grid (${i}, ${j}): ${post.join()} !== pixel ${pixel.join()}`);
+        }
+      }
+    }
+  });
+
+  it('decodeHeightTileHeader rejects a v2 chunk', () => {
+    expect(() => decodeHeightTileHeader(v2Chunk())).toThrow(/version 2/);
   });
 
   it('encodeHeightTile refuses a post off the 0.1 m grid', async () => {
@@ -128,6 +189,8 @@ describe('encodeHeightTile / decodeHeightTile', () => {
     expect([header.subtreeMinM, header.subtreeMaxM, header.geometricResidualM]).toEqual([
       -1.5, 2.5, 0.25,
     ]);
+    expect(header.gridCodes.length).toBe(HEIGHT_GRID_BYTES);
+    expect([header.gridCodes[0], header.gridCodes[1], header.gridCodes[2]]).toEqual([0, 31, 62]);
   });
 
   it('decodeHeightTile rejects pixel data that is not packed RGB (e.g. RGBA)', () => {

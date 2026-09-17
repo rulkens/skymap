@@ -1,13 +1,12 @@
 import type { DecodedPixels } from '../../textures/DecodedPixels';
 import type { HeightTile } from '../../textures/HeightTile';
 import {
+  HEIGHT_CODE_BYTES,
   HEIGHT_POSTS_PER_TILE,
   HEIGHT_TILE_POST_COUNT,
 } from '../../../src/data/scene/heightTileFormat';
-import { codeHeightM } from './codeHeightM';
+import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
 import { decodeHeightTileHeader } from '../../../src/utils/surfaceTiles/decodeHeightTileHeader';
-
-const RGB_CHANNELS = 3;
 
 /**
  * decodeHeightTile — decoded Terrain-RGB pixels plus the `SHGT` chunk to posts,
@@ -16,7 +15,7 @@ const RGB_CHANNELS = 3;
  * against NaN posts.
  */
 export function decodeHeightTile(pixels: DecodedPixels, chunk: Uint8Array): HeightTile {
-  const header = decodeHeightTileHeader(chunk);
+  const { subtreeMinM, subtreeMaxM, geometricResidualM } = decodeHeightTileHeader(chunk);
   if (pixels.width !== HEIGHT_POSTS_PER_TILE || pixels.height !== HEIGHT_POSTS_PER_TILE) {
     throw new Error(
       `decodeHeightTile: ${pixels.width}x${pixels.height} image, expected ${HEIGHT_POSTS_PER_TILE}²`,
@@ -25,16 +24,16 @@ export function decodeHeightTile(pixels: DecodedPixels, chunk: Uint8Array): Heig
 
   const { data } = pixels;
   // A short buffer (or one with alpha) would misread posts, or read NaN.
-  if (data.length !== HEIGHT_TILE_POST_COUNT * RGB_CHANNELS) {
+  if (data.length !== HEIGHT_TILE_POST_COUNT * HEIGHT_CODE_BYTES) {
     throw new Error(
-      `decodeHeightTile: ${data.length} pixel bytes, expected ${HEIGHT_TILE_POST_COUNT * RGB_CHANNELS}`,
+      `decodeHeightTile: ${data.length} pixel bytes, expected ${HEIGHT_TILE_POST_COUNT * HEIGHT_CODE_BYTES}`,
     );
   }
   const heightM = new Float32Array(HEIGHT_TILE_POST_COUNT);
   for (let i = 0; i < HEIGHT_TILE_POST_COUNT; i++) {
-    const p = i * RGB_CHANNELS;
+    const p = i * HEIGHT_CODE_BYTES;
     heightM[i] = codeHeightM(data[p]! * 65536 + data[p + 1]! * 256 + data[p + 2]!);
   }
 
-  return { ...header, heightM };
+  return { subtreeMinM, subtreeMaxM, geometricResidualM, heightM };
 }

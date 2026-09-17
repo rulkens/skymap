@@ -2,9 +2,7 @@
  * SURFACE_FIXED_SITES — the authored landing sites: a body, its host, and where
  * on that host it sits. The four rows are where each rover TOUCHED DOWN, not
  * where it stopped — Curiosity has since driven ~35 km up Mount Sharp and
- * Opportunity ~45 km to Perseverance Valley; the fact sheets say so. Heights
- * are measured from Mars's mean 3390 km sphere, so areoid-relative site
- * elevations are not modelled.
+ * Opportunity ~45 km to Perseverance Valley; the fact sheets say so.
  */
 
 import { MESH_ASSETS } from './meshAssets.generated';

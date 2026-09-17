@@ -10,6 +10,7 @@
  */
 
 import type { BodyState } from '../../../@types/scene/BodyState';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { ORBITAL_ELEMENTS } from '../../../data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../data/bodies/sceneAnchors';
@@ -20,7 +21,7 @@ import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
-import { surfacePointBodyFixed } from '../../../utils/geo/surfacePointBodyFixed';
+import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
@@ -37,7 +38,12 @@ const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 let cachedSimDays: number | undefined;
 let cachedStates: ReadonlyMap<string, BodyState> | undefined;
 
-export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState> {
+// The memo keys on `simDays` alone, so a paused clock freezes a rover's height
+// (pinned to the datum if a terrain-less caller reached that instant first); F4 must key it on residency too.
+export function deriveBodyStates(
+  simDays: number,
+  terrainHeightAt: TerrainHeightAtLookup = () => 0,
+): ReadonlyMap<string, BodyState> {
   if (cachedStates !== undefined && simDays === cachedSimDays) {
     return cachedStates;
   }
@@ -81,7 +87,7 @@ export function deriveBodyStates(simDays: number): ReadonlyMap<string, BodyState
     // surface, which is exactly what a mesh body's hull is not.
     const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
     const offsetM = rotateVec3ByTightMat3(
-      surfacePointBodyFixed(site.latDeg, site.lonDeg, surface.datumRadiusM + site.altitudeM),
+      sitePointBodyFixed(site, surface.datumRadiusM, terrainHeightAt),
       orientationForBody(site.hostId, simDays, positions),
     );
     // Metres → Mpc BEFORE the host's heliocentric position joins in: adding

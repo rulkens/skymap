@@ -46,6 +46,7 @@ import { visibleSlabBodies } from './visibleSlabBodies';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 import { visibleStars } from './visibleStars';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
+import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 
 /**
  * Derive the per-frame context from an already-produced pose and projection.
@@ -154,6 +155,7 @@ export function deriveFrameContext(
     bodies: bodyStates as ReadonlyMap<BodyId, BodyState>,
     poseBasis,
     upBasis,
+    terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
   };
   const armHost = hostOf(arm.frame, armBasisCtx);
   const bodyPose: BodyPoseProvider = (bodyId) => {

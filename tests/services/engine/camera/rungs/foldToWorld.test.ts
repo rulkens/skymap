@@ -7,6 +7,7 @@ import { describe, it, expect } from 'vitest';
 
 import { foldToWorld } from '../../../../../src/services/engine/camera/rungs/foldToWorld';
 import { absoluteArm } from '../../../../../src/utils/camera/absoluteArm';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 
@@ -22,6 +23,7 @@ describe('foldToWorld', () => {
       bodies: new Map(),
       poseBasis: IDENTITY,
       upBasis: IDENTITY,
+      terrainHeightAt: datumOnlyTerrainHeight,
     });
     expect(resolved).toBe(pose);
   });

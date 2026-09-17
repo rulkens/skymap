@@ -7,7 +7,7 @@ import { afterAll, describe, expect, it } from 'vitest';
 import type { HeightSource } from '../../../tools/textures/HeightSource';
 import { bakeHeightLevel } from '../../../tools/textures/bakeHeightLevel';
 import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
-import { codeHeightM } from '../../../tools/utils/textures/codeHeightM';
+import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
 import { heightCode } from '../../../tools/utils/textures/heightCode';
 import { surfaceTilePath } from '../../../src/utils/surfaceTiles/surfaceTilePath';
 import { surfaceTileBounds } from '../../../tools/utils/scene/surfaceTileBounds';
