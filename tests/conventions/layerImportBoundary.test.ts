@@ -69,10 +69,11 @@ function assertSweep(
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
-// Both offenders dispatch an action creator whose home is a Layer's own
-// settings module — core writing INTO a Layer's cluster, not the other way.
-// Undoing either means moving the work into the Layer (the volume upload path,
-// the tier -> milkyWay reaction), which is a Layer-structure change, not a row.
+// Both dispatch an action creator a Layer owns — core writing INTO a Layer's
+// cluster. Neither is a decision: both Layers are still settings-only folders,
+// so there is nowhere else for the work to live. DELETE each row as its Layer
+// forms — `uploadVolumeField` becomes volume's slot wiring, and the tier ->
+// milkyWay put becomes a `milkyWay/sagas/` watcher.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'services/engine/volume/uploadVolumeField': 1,
   'state/tier/watchTierSaga': 1,
