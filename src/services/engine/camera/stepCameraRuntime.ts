@@ -59,6 +59,7 @@ export function stepCameraRuntime(
     aspect,
     steps,
     bodies,
+    terrainHeightAt,
     clipEpoch,
     drivers,
   } = inputs;
@@ -88,6 +89,7 @@ export function stepCameraRuntime(
     viewportPx: canvasPx,
     fovYRad: projection.fovYRad,
     tuning,
+    terrainHeightAt,
   };
   const replayCtx: RungCtx = { ...rungFields, upBasis: prev.outputs.upBasis };
 

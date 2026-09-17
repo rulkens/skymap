@@ -65,7 +65,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * a body other than the one currently ENGAGED (§ one engaged): body-generic
    * by construction, so Mars (F4) is a registry row away, not a second query.
    */
-  terrainHeightAt(bodyId: BodyId, dirBodyFixed: Vec3): number;
+  terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number;
 
   /**
    * Store this frame's `cutSurfaceTiles` cut for `earthPass.draw` to read —

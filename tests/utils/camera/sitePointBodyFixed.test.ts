@@ -31,6 +31,21 @@ describe('sitePointBodyFixed', () => {
     expect(p[2]).toBeCloseTo(550, 9);
   });
 
+  it('sits at datum + terrain + wheel lift, not one or the other (F3a)', () => {
+    const site: SurfaceFixedSite = {
+      id: 'fixture',
+      hostId: 'fixture-host',
+      latDeg: 0,
+      lonDeg: 0,
+      altitudeM: 100,
+    };
+    const TERRAIN_M = 50;
+    const p = sitePointBodyFixed(site, 1000, () => TERRAIN_M);
+    const magM = Math.hypot(p[0], p[1], p[2]);
+    // 1150, not 1100 (terrain dropped) and not 1050 (lift dropped).
+    expect(magM).toBeCloseTo(1000 + TERRAIN_M + site.altitudeM, 9);
+  });
+
   it('is the point deriveBodyStates places the rover at', () => {
     const site = SURFACE_FIXED_SITES.find((s) => s.id === 'curiosity')!;
     const mars = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!;

@@ -459,7 +459,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
    * (§ file header) means a stale or wrong-body query has no other body's
    * tiles to fall back to, so it must miss rather than read this one's.
    */
-  function terrainHeightAt(bodyId: BodyId, dirBodyFixed: Vec3): number {
+  function terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number {
     if (atlas === null || atlas.bodyId !== bodyId) return 0;
     if (
       manifest === null ||

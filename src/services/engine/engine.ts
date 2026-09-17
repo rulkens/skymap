@@ -576,6 +576,8 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
+          terrainHeightAt: (bodyId, dir) =>
+            state.subsystems.surfaceTiles?.terrainHeightAt(bodyId, dir) ?? 0,
         });
       },
     },

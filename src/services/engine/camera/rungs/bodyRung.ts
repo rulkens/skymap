@@ -52,13 +52,15 @@ export const bodyRung: ClimbRow<'body'> = {
     const state = ctx.bodies.get(frame.body);
     const body = SCENE_CELESTIAL_BODIES.find((row) => row.id === frame.body);
     if (state === undefined || body === undefined) return null;
+    // Absent for every ctx built for identity/radius reads only (RungBasisCtx
+    // doc comment) — those never call `groundRadiusAtM`, so the fallback is
+    // never exercised outside a test that asks for it directly.
+    const terrainHeightAt = ctx.terrainHeightAt ?? (() => 0);
     return {
       id: frame.body,
       state,
       radiusM: body.surface.datumRadiusM,
-      // F3a returns `datum + terrainHeightM(dir)` here (spec §8.3); until then
-      // every direction answers the datum, so the floor is where it always was.
-      groundRadiusAtM: () => body.surface.datumRadiusM,
+      groundRadiusAtM: (dir) => body.surface.datumRadiusM + terrainHeightAt(frame.body, dir),
       standoffRadii: bodyStandoffRadii(body),
     };
   },

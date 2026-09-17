@@ -69,6 +69,9 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     aspect: 1,
     steps: h.state.subsystems.inputAggregator.drain(),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    // No fixture here engages a real atlas, so the datum-only stub matches
+    // production's own `?? 0` miss (F3a, spec §8.3).
+    terrainHeightAt: () => 0,
     clipEpoch: h.state.cameraRuntime.epochs.clip,
     drivers: CAMERA_DRIVERS,
     ...over,

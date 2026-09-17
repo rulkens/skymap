@@ -16,6 +16,7 @@ import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -110,7 +111,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
   // this call primes the map every later reader gets by reference.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
+  // Bound once, reused below by `deriveBodyStates` (site placement) and
+  // `stepCameraRuntime` (the camera floor) — `?? 0` covers pre-boot (no
+  // subsystem yet) and any body other than the one currently engaged, the
+  // same "miss" semantics the datum fallback answers everywhere in F3a
+  // (spec §8.3).
+  const terrainHeightAt: TerrainHeightAtLookup = (bodyId, dir) =>
+    state.subsystems.surfaceTiles?.terrainHeightAt(bodyId, dir) ?? 0;
+  const bodyStates = deriveBodyStates(simDays, terrainHeightAt) as ReadonlyMap<BodyId, BodyState>;
 
   const {
     next,
@@ -126,6 +134,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
+    terrainHeightAt,
     clipEpoch,
     drivers: deps.drivers,
   });
