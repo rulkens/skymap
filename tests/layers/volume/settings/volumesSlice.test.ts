@@ -1,5 +1,5 @@
 /**
- * volumesSlice — the field add/remove/write behaviour `settingsSlice.test.ts`
+ * volumesSlice — the field add/remove/write behaviour `settingsReducer.test.ts`
  * used to pin at the composed-root level. Kept here: the re-add-preserves-
  * tuning and unknown-id-is-a-no-op guarantees are real behaviour a bug could
  * silently break.

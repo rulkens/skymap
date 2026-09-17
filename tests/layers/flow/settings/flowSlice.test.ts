@@ -1,5 +1,5 @@
 /**
- * flowSlice — the partial-merge behaviour `settingsSlice.test.ts` used to pin
+ * flowSlice — the partial-merge behaviour `settingsReducer.test.ts` used to pin
  * at the composed-root level. Kept here: an untouched leaf surviving a patch
  * is real behaviour a bug in the merge could silently break.
  */

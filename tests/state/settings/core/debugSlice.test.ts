@@ -1,5 +1,5 @@
 /**
- * debugSlice — the clip-path tuning knob coupling `settingsSlice.test.ts` used
+ * debugSlice — the clip-path tuning knob coupling `settingsReducer.test.ts` used
  * to pin at the composed-root level. Kept here, against the slice directly,
  * because the knob-activation rules (which override gate a sub-knob rides)
  * are real behaviour a bug could silently break.

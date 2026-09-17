@@ -3,10 +3,11 @@
  * `create` composes INTO core, never a dependency core reaches back into (the
  * inbound sweep), and keeps a Layer module from importing the slice it will
  * itself mint actions against (the outbound sweep) — D1's module-init cycle
- * risk: `settingsSlice` → `appSettingsFragments` → `app` → a Layer that reads
- * `settingsSlice` at module scope → `settingsSlice` again, the second entry
- * reading an uninitialised `const`. `oneMpcSeam.test.ts` is the ts-morph import
- * walk this copies; `frameFilePurity.test.ts` is the exact-count ALLOWED idiom.
+ * risk: a Layer's own `<cluster>Slice` → `appSettingsSlices` →
+ * `combinedSettingsReducer` → a Layer that reads its own slice module at
+ * module scope → that slice again, the second entry reading an uninitialised
+ * `const`. `oneMpcSeam.test.ts` is the ts-morph import walk this copies;
+ * `frameFilePurity.test.ts` is the exact-count ALLOWED idiom.
  */
 import { describe, it, expect } from 'vitest';
 import { Project } from 'ts-morph';
@@ -32,8 +33,8 @@ const project = new Project({ useInMemoryFileSystem: false });
  * Every specifier this file imports OR re-exports (type-only included — the
  * boundary is about knowledge, not bundles) that resolves under any of
  * `prefixes`, relative to the repo root. A re-export (`export { x } from '…'`)
- * carries the same knowledge as an import — `settingsSlice.ts`'s transitional
- * re-export block would otherwise dodge this sweep entirely. Non-relative
+ * carries the same knowledge as an import — a barrel forwarding a Layer's
+ * action creators would otherwise dodge this sweep entirely. Non-relative
  * specifiers (package imports) never resolve under `src/`, so they never match.
  */
 function specifiersUnder(file: string, prefixes: readonly string[]): string[] {
@@ -68,11 +69,13 @@ function assertSweep(
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
-// `settingsSlice.ts` is now a transitional re-export block: one specifier per
-// Layer settings module whose action creators it forwards, so every call site
-// keeps compiling until Task 4 re-points them and deletes this file.
+// Two real offenders at HEAD: each dispatches an action creator whose home
+// is a Layer's own settings module now that the settingsSlice barrel is gone
+// (before, the barrel's re-export hid the reach-in; the dependency was always
+// there). Both are core writing INTO a Layer's cluster, not the other way.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
-  'state/settings/settingsSlice': 15,
+  'services/engine/volume/uploadVolumeField': 1,
+  'state/tier/watchTierSaga': 1,
 };
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {
@@ -86,7 +89,7 @@ describe('engine and state files import nothing from src/layers beyond their ALL
       ENGINE_AND_STATE_ALLOWED,
       'Over the row: a Layer contributes into core through Layer.create/passes/etc, ' +
         'not the other way — read the value through the composition, or raise the row ' +
-        "here naming why (settingsSlice's row is the one precedent).",
+        'here naming why.',
     );
   });
 });
@@ -115,9 +118,9 @@ describe('no file under src/layers imports src/state or src/store (outside ui/sa
       ['src/state/', 'src/store/'],
       {},
       'A Layer contributes a fact, a dep field or nothing — see the no-dispatch ' +
-        "sweep below; importing settingsSlice from a Layer module also closes D1's " +
-        'module-init cycle (settingsSlice -> appSettingsFragments -> app -> this ' +
-        'Layer -> settingsSlice).',
+        "sweep below; importing state/settings from a Layer module also closes D1's " +
+        "module-init cycle (this Layer's own slice -> appSettingsSlices -> " +
+        'combinedSettingsReducer -> this Layer -> its slice).',
     );
   });
 });

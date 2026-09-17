@@ -3,7 +3,7 @@
  * reads the viewport or the URL at import time. `layers` is no longer pure DATA though
  * (Ruling 16) — a Layer's `create` pulls its renderers and `?worker`/`?static` modules
  * into every graph that value-imports this module, `SettingsPanel.tsx` included. Not the
- * store's: `settingsSlice` reaches each Layer's settings tuple via `appSettingsFragments`.
+ * store's: the settings reducer reaches each Layer's settings tuple via `appSettingsSlices`.
  */
 
 import type { EngineComposition } from '../@types/engine/EngineComposition';

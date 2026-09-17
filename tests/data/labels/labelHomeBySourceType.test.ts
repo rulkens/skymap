@@ -9,7 +9,7 @@ import { describe, it, expect } from 'vitest';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../../src/data/labels/labelHomeBySourceType';
 import { SOURCE_REGISTRY } from '../../../src/data/sources';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
-import settingsReducer from '../../../src/state/settings/settingsSlice';
+import settingsReducer from '../../../src/state/settings/settingsReducer';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { LabelCategory } from '../../../src/@types/engine/data/LabelCategory';

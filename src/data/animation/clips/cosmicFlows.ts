@@ -63,7 +63,7 @@ import {
   seq,
   wait,
 } from '../../../services/engine/animation/effectHelpers';
-import { setFlowEnabled } from '../../../state/settings/settingsSlice';
+import { setFlowEnabled } from '../../../layers/flow/settings/flowSlice';
 
 export const cosmicFlows: Clip = {
   id: 'cosmicFlows',

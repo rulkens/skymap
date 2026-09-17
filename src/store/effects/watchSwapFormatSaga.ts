@@ -9,7 +9,7 @@
 
 import { takeEvery, getContext, select } from 'typed-redux-saga';
 
-import { setHdrEnabled } from '../../state/settings/settingsSlice';
+import { setHdrEnabled } from '../../state/settings/core/hdrSlice';
 import { engineHdrCapabilityChanged } from '../../state/engine/engineSlice';
 import { selectHdrEnabled } from '../../state/settings/selectors';
 import { selectHdrCapable } from '../../state/engine/selectors';

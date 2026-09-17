@@ -30,13 +30,11 @@ import type { BodyId } from '../../@types/data/body/BodyId';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
-import {
-  setStructureLabelEnabled,
-  setMilkyWayLabelEnabled,
-  setGalaxyCatalogLabelEnabled,
-  setStarCatalogLabelEnabled,
-  setBodyLabelEnabled,
-} from '../../state/settings/settingsSlice';
+import { setStructureLabelEnabled } from '../../layers/structure/settings/structuresSlice';
+import { setMilkyWayLabelEnabled } from '../../layers/milkyWay/settings/milkyWaySlice';
+import { setGalaxyCatalogLabelEnabled } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import { setStarCatalogLabelEnabled } from '../../layers/starCatalog/settings/starCatalogsSlice';
+import { setBodyLabelEnabled } from '../../layers/body/settings/bodiesSlice';
 
 export const LABEL_HOME_BY_SOURCE_TYPE: Readonly<Record<LabelBearingSourceType, LabelHome>> = {
   structure: {

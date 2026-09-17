@@ -22,7 +22,7 @@ import {
   seq,
   show,
 } from '../../../src/services/engine/animation/effectHelpers';
-import { setLabelsFocusedOnly } from '../../../src/state/settings/settingsSlice';
+import { setLabelsFocusedOnly } from '../../../src/state/settings/core/labelsSlice';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
 import type { ClipData } from '../../../src/@types/animation/ClipData';

@@ -15,7 +15,7 @@ import { memo, useCallback } from 'react';
 import { RenderTogglesSection } from '../DebugPanel/RenderTogglesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectDisabledPasses } from '../../state/settings/selectors';
-import { setPassDisabled } from '../../state/settings/settingsSlice';
+import { setPassDisabled } from '../../state/settings/core/debugSlice';
 
 export type RenderTogglesSectionContainerProps = {
   /** Pass names in draw order, sourced from the engine handle's `passOverrides.allNames`. */

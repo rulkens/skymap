@@ -30,7 +30,7 @@ import { Provider } from 'react-redux';
 import DisplaySectionContainer from '../../../src/components/containers/DisplaySectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectToneMapCurve } from '../../../src/state/settings/selectors';
-import { setToneMapCurve } from '../../../src/state/settings/settingsSlice';
+import { setToneMapCurve } from '../../../src/state/settings/core/tonemapSlice';
 import { ToneMapCurve } from '../../../src/data/toneMapCurve';
 import type { AppStore } from '../../../src/store/types';
 

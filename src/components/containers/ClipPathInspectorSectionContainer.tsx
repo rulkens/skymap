@@ -45,7 +45,7 @@ import {
   setClipPathPassByOffset,
   setClipPathPassByDir,
   setClipPathTuningActive,
-} from '../../state/settings/settingsSlice';
+} from '../../state/settings/core/debugSlice';
 import { replayInspectedPath } from '../../state/camera/clipActions';
 import type { ClipId } from '../../@types/animation/ClipId';
 import type { SplineMode } from '../../@types/animation/SplineMode';

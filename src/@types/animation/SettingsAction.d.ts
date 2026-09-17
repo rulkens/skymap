@@ -25,16 +25,13 @@
  *     strip so each beat's `focus()` cue names its subject.
  *
  * Add to this union (with a brief rationale comment) when a new tour beat calls
- * `scene(someCreator(…))` for the first time. The canonical creator list lives in
- * `src/state/settings/settingsSlice.ts`.
+ * `scene(someCreator(…))` for the first time. Each creator's canonical home is the
+ * slice module that owns its cluster (imported below).
  */
 
-import type {
-  setFlow,
-  setFlowEnabled,
-  setGalaxyCatalogVisible,
-  setLabelsFocusedOnly,
-} from '../../state/settings/settingsSlice';
+import type { setFlow, setFlowEnabled } from '../../layers/flow/settings/flowSlice';
+import type { setGalaxyCatalogVisible } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import type { setLabelsFocusedOnly } from '../../state/settings/core/labelsSlice';
 
 export type SettingsAction =
   | ReturnType<typeof setFlowEnabled>

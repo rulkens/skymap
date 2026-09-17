@@ -48,7 +48,7 @@
 
 import { put } from 'typed-redux-saga';
 
-import { mergeSnapshot } from '../settings/settingsSlice';
+import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../selection/selectionSlice';
 import { requestOrientationChange } from '../camera/orientationActions';
 import type { SceneSnapshot } from '../../@types/engine/settings/SceneSnapshot';

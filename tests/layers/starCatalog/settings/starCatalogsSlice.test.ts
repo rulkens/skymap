@@ -1,5 +1,5 @@
 /**
- * starCatalogsSlice — the per-item-vs-master-gate split `settingsSlice.test.ts`
+ * starCatalogsSlice — the per-item-vs-master-gate split `settingsReducer.test.ts`
  * used to pin at the composed-root level. Kept here: a per-catalog toggle
  * bleeding into the master `enabled` gate (or vice versa) is real behaviour a
  * bug could silently break.

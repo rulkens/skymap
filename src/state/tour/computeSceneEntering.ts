@@ -10,7 +10,7 @@
  * `SettingsSnapshot`, so the authored pole is carried forward live instead.
  */
 
-import settingsReducer from '../settings/settingsSlice';
+import settingsReducer from '../settings/settingsReducer';
 import { captureSettings } from './captureSettings';
 import { VISIBILITY_ACTION_ROW } from '../../services/animation/visibilityActionRow';
 import { scopedVisibilityActions } from '../../services/animation/scopedVisibilityActions';

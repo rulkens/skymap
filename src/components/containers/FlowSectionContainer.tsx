@@ -24,7 +24,7 @@ import { memo, useCallback } from 'react';
 import FlowSection from '../SettingsPanel/FlowSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectFlow } from '../../state/settings/selectors';
-import { setFlow, setFlowEnabled } from '../../state/settings/settingsSlice';
+import { setFlow, setFlowEnabled } from '../../layers/flow/settings/flowSlice';
 import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
 
 function FlowSectionContainer(): React.ReactElement {

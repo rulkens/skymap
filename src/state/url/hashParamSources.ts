@@ -79,7 +79,7 @@ import { clearSelection } from '../selection/selectionSlice';
 import { selectFocusedFocusable, selectPendingFocusId } from '../selection/selectors';
 import { setSelectionRow } from '../selectionRows/selectionRowsSlice';
 import { selectOrientation } from '../settings/selectors';
-import { setOrientation } from '../settings/settingsSlice';
+import { setOrientation } from '../settings/core/orientationSlice';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
