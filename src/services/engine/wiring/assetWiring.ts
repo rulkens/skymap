@@ -250,9 +250,13 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   // ── CF4++ velocity flow field ────────────────────────────────────
   // A singleton overlay layer, so its gate lives in `settings.flow.enabled`
   // alongside filaments/milkyWay rather than on a bespoke DemandCtx surface.
+  // TEMPORARY: the flow Layer's own `create` mints this slot once formed
+  // (05b Task 5); until then this row stays core-owned. The `!` is safe —
+  // `initGpu` constructs every GPU handle, this one included, before
+  // `wireSlots` ever reads it.
   {
     key: 'flow',
-    factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
+    factory: (deps) => createFlowFieldSlot(deps.state.gpu.flowFieldRenderer!),
     req: () => undefined,
     demand: (ctx) => ctx.settings.flow.enabled,
     priority: 81, // same rung as filaments, behind them by size

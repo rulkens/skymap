@@ -1,42 +1,26 @@
 /**
  * flowFieldSlot — factory for the CF4++ velocity flow field's asset slot.
  *
- * **Lazy / default-off.**  Mirrors `cf4DensitySlot`: the factory mints the
- * slot unconditionally, but the flow layer's enable bit
- * (`state.settings.flow.enabled`) defaults false, so the slot stays idle at
- * boot.  Toggling flow on
- * (Phase D UI) flips the bit and the per-frame `reevaluateDemand` fires
- * `flowFieldFetcher` — the ~tens-of-MB velocity cube is paid only on opt-in,
- * never on every page load.
- *
- * **GPU upload.**  The commit hands the decoded cube to the flow renderer's
- * `upload`, which builds the 3D velocity texture via `flowFieldFromCube` against
- * its own device — the device never leaks to this slot, mirroring
- * `cf4Density → volumeFieldRenderer.upload`.  The slot's own 'ready'
- * transition (read via `slotReady(assetSlots.flow)`) is the authoritative
- * "committed to the renderer" signal — it fires after this commit returns.  The
- * render wake is `installSlotReadyWake`'s job, not the factory's.  A null
- * renderer (pre-bootstrap) is a silent no-op.
- *
- * Construction-pure: builds + subscribes + RETURNS the slot.  The orchestrator
- * (`installSlots`) owns the write to `state.assetSlots`.
+ * Lazy / default-off (mirrors `cf4DensitySlot`): mints unconditionally, but
+ * `settings.flow.enabled` defaults false, so the ~tens-of-MB cube is fetched
+ * only on opt-in. Commit closes over `create`'s own renderer — non-null by
+ * construction, so no `state.gpu` reach and no `?.` guard — and its 'ready'
+ * transition (`slotReady`) IS "uploaded to the renderer", since this commit
+ * returns only after `upload` does.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { flowFieldFetcher } from './flowFieldFetcher';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
-import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRenderer';
 
-export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) => {
+export function createFlowFieldSlot(renderer: FlowFieldRenderer): AssetSlot<ScalarCube, void> {
   const slot = createAssetSlot({
     name: 'flow',
     fetch: flowFieldFetcher,
     commit: async (cube) => {
-      // Hand the cube to the renderer, which uploads it to the GPU and binds
-      // it. The slot transitions to 'ready' AFTER this commit returns, so
-      // slotReady(assetSlots.flow) becomes true exactly when "committed to the
-      // renderer" is true — no separate status mirror needed.
-      state.gpu.flowFieldRenderer?.upload(cube);
+      renderer.upload(cube);
     },
   });
   slot.subscribe((s) => {
@@ -45,4 +29,4 @@ export const createFlowFieldSlot: SlotFactory<ScalarCube, void> = (state, _cb) =
     }
   });
   return slot;
-};
+}
