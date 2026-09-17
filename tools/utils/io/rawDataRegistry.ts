@@ -994,6 +994,143 @@ export const RAW_DATA = {
       'Provenance for ETOPO 2022 — upstream URL, registration convention, NoData, licence, fetch date.',
   },
 
+  // ─── Mars surface sources — fetched by hand, no fetchers ───────────────
+  // Strip-layout upstream files are read through tiled COG copies (README
+  // records the gdal_translate line); worktrees reach them via leaf symlinks.
+
+  'mola.dem463': {
+    path: 'data/raw/mola/Mars_MGS_MOLA_DEM_mosaic_global_463m_f32_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MOLA 463 m global DEM, Float32 tiled COG of the Int16 USGS mosaic (sharp cannot read signed 16-bit): 46080x23040 metres above the areoid, NoData -32768, equirectangular on the 3,396,190 m sphere, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif',
+    readme: 'mola.readme',
+  },
+  'mola.readme': {
+    path: 'data/raw/mola/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the MOLA DEM — upstream, grid, vertical reference, COG conversion.',
+  },
+  'viking.mdim21': {
+    path: 'data/raw/viking/Mars_Viking_MDIM21_ClrMosaic_global_232m_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'Viking MDIM 2.1 colour mosaic, JPEG COG of the USGS 232 m mosaic: 92160x46080 RGB Byte, NoData 0, equirectangular on the 3,396,190 m sphere, edge-registered.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Mars_Viking_MDIM21_ClrMosaic_global_232m.tif',
+    readme: 'viking.readme',
+  },
+  'viking.readme': {
+    path: 'data/raw/viking/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Viking MDIM 2.1 mosaic — upstream, grid, COG conversion.',
+  },
+  'hirise.gale.dtm': {
+    path: 'data/raw/hirise/gale/MSL_Gale_DEM_Mosaic_1m_v3_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'MSL Gale merged 1 m DEM, tiled COG: Float32 metres above the areoid, NoData -32767, 137.124-137.681 E, -5.099 to -4.130.',
+    upstream: 'https://planetarymaps.usgs.gov/mosaic/Mars/MSL/MSL_Gale_DEM_Mosaic_1m_v3.tif',
+    readme: 'hirise.gale.readme',
+  },
+  'hirise.gale.ortho': {
+    path: 'data/raw/hirise/gale/MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE 78-quad colour basemap of Gale, 0.25 m RGB JPEG COG with a per-dataset mask, 137.327-137.479 E, -4.876 to -4.555.',
+    upstream:
+      'https://planetarymaps.usgs.gov/mosaic/Mars/MSL/MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif',
+    readme: 'hirise.gale.readme',
+  },
+  'hirise.gale.readme': {
+    path: 'data/raw/hirise/gale/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Gale DTM and colour ortho.',
+  },
+  'hirise.gusev.dtm': {
+    path: 'data/raw/hirise/gusev/DTEEC_001513_1655_001777_1650_U01.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE controlled stereo DTM of the Columbia Hills, 1 m Float32 COG above the areoid, NoData -3.4e38.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/PSP_001513_1655_PSP_001777_1650/DTEEC_001513_1655_001777_1650_U01.tif',
+    readme: 'hirise.gusev.readme',
+  },
+  'hirise.gusev.ortho': {
+    path: 'data/raw/hirise/gusev/PSP_001513_1655_RED_A_01_ORTHO.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE RED ortho over the Gusev DTM, 0.25 m UInt16 grey COG, NoData 0, same footprint.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/PSP_001513_1655_PSP_001777_1650/PSP_001513_1655_RED_A_01_ORTHO.tif',
+    readme: 'hirise.gusev.readme',
+  },
+  'hirise.gusev.readme': {
+    path: 'data/raw/hirise/gusev/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Gusev DTM and RED ortho.',
+  },
+  'hirise.endeavour.dtm': {
+    path: 'data/raw/hirise/meridiani-endeavour/DTEEC_018701_1775_018846_1775_U01.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE controlled stereo DTM of the Endeavour crater rim, 1 m Float32 COG above the areoid, NoData -3.4e38.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/ESP_018701_1775_ESP_018846_1775/DTEEC_018701_1775_018846_1775_U01.tif',
+    readme: 'hirise.endeavour.readme',
+  },
+  'hirise.endeavour.ortho': {
+    path: 'data/raw/hirise/meridiani-endeavour/ESP_018701_1775_RED_A_01_ORTHO.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'HiRISE RED ortho over the Endeavour DTM, 0.25 m UInt16 grey COG, NoData 0, same footprint.',
+    upstream:
+      'https://astrogeo-ard.s3-us-west-2.amazonaws.com/mars/mro/hirise/controlled/dtm/ESP_018701_1775_ESP_018846_1775/ESP_018701_1775_RED_A_01_ORTHO.tif',
+    readme: 'hirise.endeavour.readme',
+  },
+  'hirise.endeavour.readme': {
+    path: 'data/raw/hirise/meridiani-endeavour/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'Provenance for the Endeavour DTM and RED ortho.',
+  },
+  'hirise.jezero.dtm': {
+    path: 'data/raw/hirise/jezero/MSR_hirise_soc_003_DTM_MOLATopography_DeltaGeoid_1m_Eqc_latTs0_lon0_Blend40.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS MSR HiRISE DTM mosaic of Jezero, 1 m Float32 above the areoid, NoData -32767, 77.058-77.381 E, 18.136-18.588 N; extracted from the release zip.',
+    upstream: 'https://doi.org/10.5066/P13CPYYU',
+    readme: 'hirise.jezero.readme',
+  },
+  'hirise.jezero.ortho': {
+    path: 'data/raw/hirise/jezero/MSR_hirise_soc_003_Orthomosaic_0.25m_Eqc_latTs0_lon0_First_NoBlend.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'USGS MSR HiRISE orthomosaic of Jezero, 0.25 m Byte grey, NoData 0, same footprint as the DTM; extracted from the release zip.',
+    upstream: 'https://doi.org/10.5066/P13CPYYU',
+    readme: 'hirise.jezero.readme',
+  },
+  'hirise.jezero.readme': {
+    path: 'data/raw/hirise/jezero/README.md',
+    kind: 'file',
+    source: 'committed',
+    description: 'USGS archive README for the Jezero mosaics, plus the files skymap bakes.',
+  },
+
   'skadi.dir': {
     path: 'data/raw/skadi',
     kind: 'directory',
