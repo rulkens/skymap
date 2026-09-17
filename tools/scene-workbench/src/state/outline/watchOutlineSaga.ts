@@ -25,6 +25,7 @@ import {
   outlineSaveFailed,
   outlineSlice,
 } from './outlineSlice';
+import { selectIsDrawingOutline } from './selectIsDrawingOutline';
 import { selectMaskRing } from './selectMaskRing';
 
 const outlineUrl = (groupId: string, assetId: string) => `/api/outline/${groupId}/${assetId}`;
@@ -56,15 +57,15 @@ function* loadOutlinesWorker(
 
 function* drawOutlineWorker(action: ReturnType<typeof drawOutlineRequested>) {
   const assetId = action.payload;
-  const { asset, saved, camera, draft } = yield* select((state: RootState) => ({
+  const { asset, saved, camera, drawing } = yield* select((state: RootState) => ({
     asset: state.group.manifest?.assets.find((a) => a.id === assetId),
     saved: state.outline.byAssetId[assetId],
     camera: state.view.camera,
-    draft: state.outline.draft,
+    drawing: selectIsDrawingOutline(state),
   }));
   // A second enter (e.g. a stray click on another mesh's "Draw outline") would overwrite the
   // live draft's returnPose with the already-orthographic camera, stranding the perspective pose.
-  if (draft) return;
+  if (drawing) return;
   if (asset?.kind !== 'mesh') return;
   // Picking maps screen XY through the inverse transform in the plane; a tilt breaks that.
   if (!isZOnlyRotation(asset.transform.rotation)) {

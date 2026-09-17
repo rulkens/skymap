@@ -12,6 +12,7 @@ import {
   outlineSaveRequested,
 } from '../../state/commands';
 import { maskToggled } from '../../state/outline/outlineSlice';
+import { selectIsDrawingOutline } from '../../state/outline/selectIsDrawingOutline';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import styles from './MeshOutlineControls.module.css';
 
@@ -22,6 +23,7 @@ export type MeshOutlineControlsProps = {
 function MeshOutlineControls({ assetId }: MeshOutlineControlsProps): ReactNode {
   const dispatch = useAppDispatch();
   const draft = useAppSelector((state) => state.outline.draft);
+  const isDrawing = useAppSelector(selectIsDrawingOutline);
   const saved = useAppSelector((state) => state.outline.byAssetId[assetId]);
   const saveError = useAppSelector((state) => state.outline.saveError);
 
@@ -40,7 +42,7 @@ function MeshOutlineControls({ assetId }: MeshOutlineControlsProps): ReactNode {
 
   return (
     <div className={styles.root}>
-      <Button disabled={draft !== null} onClick={() => dispatch(drawOutlineRequested(assetId))}>
+      <Button disabled={isDrawing} onClick={() => dispatch(drawOutlineRequested(assetId))}>
         {saved ? 'Edit outline' : 'Draw outline'}
       </Button>
       {saved && (
