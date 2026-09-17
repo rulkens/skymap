@@ -86,11 +86,9 @@ export type ReadyFrameContext = {
   focusBlend: number;
   /**
    * The Layer `frame` votes of this frame, OR-folded by `runFrame` right after
-   * the hooks run, so core asks each question without reaching into a Layer's
-   * own subsystems: the keep-alive predicate reads `layersAwake`, the
-   * sky-capture scheduler `layersSettling`. See `LayerFrameVote`.
+   * the hooks run, so core asks the question without reaching into a Layer's
+   * own subsystems: the sky-capture scheduler reads this. See `LayerFrameVote`.
    */
-  layersAwake: boolean;
   layersSettling: boolean;
   /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
   visibleSourceMask: number;

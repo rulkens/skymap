@@ -115,7 +115,6 @@ function makeCtx(
 ): ReadyFrameContext {
   return {
     isReady: true,
-    layersAwake: layers.awake ?? layers.settling ?? false,
     layersSettling: layers.settling ?? false,
     drawCamPos,
     simDays: 0,

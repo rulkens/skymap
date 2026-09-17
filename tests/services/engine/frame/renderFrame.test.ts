@@ -406,8 +406,7 @@ function makeInput(
   });
   const ctx = {
     isReady: true as const,
-    // `runFrame` stamps these after every Layer's frame hook has voted.
-    layersAwake: false,
+    // `runFrame` stamps this after every Layer's frame hook has voted.
     layersSettling: false,
     viewSlot: 0,
     renderedTargets: new Set<string>(),

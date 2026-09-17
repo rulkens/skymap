@@ -35,7 +35,6 @@ function makeCtx(focusBlend: number): ReadyFrameContext {
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend,
-    layersAwake: false,
     layersSettling: false,
     visibleSourceMask: 0xffffffff,
     focus: {

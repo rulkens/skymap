@@ -38,7 +38,6 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
-    layersAwake: false,
     layersSettling: false,
     visibleSourceMask: 0xffffffff,
     focus: {

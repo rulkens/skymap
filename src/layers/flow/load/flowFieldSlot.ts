@@ -1,12 +1,8 @@
 /**
  * flowFieldSlot — factory for the CF4++ velocity flow field's asset slot.
- *
- * Lazy / default-off (mirrors `cf4DensitySlot`): mints unconditionally, but
- * `settings.flow.enabled` defaults false, so the ~tens-of-MB cube is fetched
- * only on opt-in. Commit closes over `create`'s own renderer — non-null by
- * construction, so no `state.gpu` reach and no `?.` guard — and its 'ready'
- * transition (`slotReady`) IS "uploaded to the renderer", since this commit
- * returns only after `upload` does.
+ * Lazy / default-off (mirrors `cf4DensitySlot`); the 'ready' transition
+ * (`slotReady`) IS "uploaded to the renderer", since this commit returns
+ * only after `upload` does.
  */
 
 import { createAssetSlot } from '../../../services/loading/AssetSlot';

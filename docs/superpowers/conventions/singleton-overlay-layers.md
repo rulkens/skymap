@@ -84,8 +84,5 @@ Flow is the canonical example as of its integration:
 - `settings.flow = { enabled, mode, intensity, count, trail, flowSpeed,
 densityBias, wander }` — see `@types/settings/EngineSettingsState.d.ts`,
   seeded from `DEFAULT_FLOW` in `data/defaults.ts`.
-- `FlowFieldStore = { loaded, setLoaded() }` — status-only, mirrors
-  `FilamentStore`. See `@types/engine/data/FlowFieldStore.d.ts`.
 - Demand: the `flow` row in `layers/flow/load/flowAssetRows.ts` reads
   `(ctx) => ctx.settings.flow.enabled`. No `DemandCtx.flow` surface.
-- Commit: `layers/flow/load/flowFieldSlot.ts` calls `state.data.flow.setLoaded()`.

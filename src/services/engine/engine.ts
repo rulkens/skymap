@@ -300,7 +300,6 @@ export function createEngine(
       // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
       // when the tier changes.
       mcpm: null,
-      flow: null,
       // Tier-aware like mcpm.
       polyphorm2Mrs: null,
       mcpmWorkbench: null,

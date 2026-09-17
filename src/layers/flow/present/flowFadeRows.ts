@@ -18,9 +18,7 @@ export function flowFadeRows(runtime: FlowRuntime): readonly FadeLayer<unknown>[
       handle: () => ({ kind: 'flow' }),
       seed: () => 0,
       intent: (s) => s.flow.enabled,
-      // Keyed on the renderer's own "cube loaded" truth, so one guarded bridge
-      // call is correct for both the toggle and the slot commit that just
-      // uploaded it.
+      // Keyed on the renderer's own "cube loaded" truth — correct for both the toggle and the slot commit.
       guard: () => runtime.renderer.fieldLoaded(),
     }),
   ];

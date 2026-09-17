@@ -223,7 +223,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     if (vote.awake || vote.settling) layersAwake = true;
     if (vote.settling) layersSettling = true;
   }
-  ctx.layersAwake = layersAwake;
   ctx.layersSettling = layersSettling;
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:

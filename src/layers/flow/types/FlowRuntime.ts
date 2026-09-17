@@ -1,8 +1,6 @@
 /**
- * The flow family's whole runtime: the renderer and the slot that commits
- * into it. Non-null throughout — `create` builds both before returning, which
- * is what lets the pass, the compute row and the fade guard read the renderer
- * without a null check.
+ * Non-null throughout — `create` builds both before returning, so the pass,
+ * compute row, and fade guard read `renderer` with no null check.
  */
 
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
