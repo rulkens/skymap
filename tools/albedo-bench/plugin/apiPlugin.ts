@@ -1,21 +1,9 @@
 /**
- * Albedo bench API plugin — full route table.
- *
- * Routes (all under /api/):
- *
- *   POST /api/render   — one PNG, `original` or `adjusted` (+ optional relight)
- *   POST /api/field     — the fitted sun field as arrows, for the overlay
- *   GET  /api/recipe    — the committed recipe
- *   POST /api/recipe    — validate + save the recipe
- *
- * Sources (Viking imagery, MOLA height) and the Mars datum radius are built
- * once at plugin boot and closed over by every route — the routes
- * themselves take injected deps (see routes/render.ts, routes/field.ts) so
- * their own tests can pass the T4 fakes instead.
- *
- * The field cache lives here, not in a route file: both /api/render and
- * /api/field share one `getField`, an LRU of the last 8 `fitSunField`
- * results keyed by `(box, sunFit)` — a grade-slider tweak never refits.
+ * Albedo bench API plugin — routes GET/POST /api/{render,field,recipe}
+ * (see routes/*.ts) to handlers that take injected deps, so their own tests
+ * pass fakes instead of the real Viking/MOLA sources built here at boot.
+ * The field cache lives here, not in a route file, since /api/render and
+ * /api/field share one `getField` keyed by `(box, sunFit)`.
  */
 import type { Plugin } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -73,6 +61,11 @@ function createFieldCache(opts: {
       region,
       sunFit,
       radiusM: opts.radiusM,
+    });
+    // A rejected fit must not stick around: every retry of this key would
+    // otherwise replay the same error until 8 other keys push it out.
+    void promise.catch(() => {
+      if (cache.get(key) === promise) cache.delete(key);
     });
     cache.set(key, promise);
     if (cache.size > MAX_FIELD_CACHE_ENTRIES) {

@@ -1,9 +1,7 @@
 /**
  * handleRender's `adjusted` variant must be exactly what a caller building
- * the same pieces by hand would get (design §10/§11 "same pixels"): this is
- * the route-level half of the regional==global equality R-P2 already pins
- * inside `fitSunField` itself — here it pins that `handleRender` fits over
- * exactly `box` (not some other region) and assembles the decorator
+ * the same pieces by hand would get (design §10/§11 "same pixels"): it fits
+ * over exactly `box` (not some other region) and assembles the decorator
  * identically to a manual `albedoRecipeImagerySource(...).readBox` call.
  */
 import { describe, expect, it } from 'vitest';
@@ -28,7 +26,8 @@ const SUN_FIT: AlbedoRecipe['sunFit'] = {
   fillSigmaKm: 10,
 };
 
-const APPLY: Omit<AlbedoRecipe, 'version'> = {
+const RECIPE: AlbedoRecipe = {
+  version: 1,
   sunFit: SUN_FIT,
   deshade: { strength: 1, minShading: 0.3 },
   knee: { threshold: 1, softness: 1 }, // above 1: never engages
@@ -58,7 +57,7 @@ describe('handleRender', () => {
       sunFit: SUN_FIT,
       radiusM: RADIUS_M,
     });
-    const { sunFit: _sunFit, ...pixelApply } = APPLY;
+    const { version: _version, sunFit: _sunFit, ...pixelApply } = RECIPE;
     const expected = await albedoRecipeImagerySource(imagery, height, bigField, pixelApply).readBox(
       box,
       px,
@@ -67,7 +66,7 @@ describe('handleRender', () => {
     expect(expected).not.toBeNull();
 
     const actual = await handleRender({
-      body: { box, px, apply: APPLY, variant: 'adjusted' },
+      body: { box, px, recipe: RECIPE, variant: 'adjusted' },
       deps: {
         imagery,
         height,
@@ -88,7 +87,7 @@ describe('handleRender', () => {
 
     const expected = await imagery.readBox(box, px, px);
     const actual = await handleRender({
-      body: { box, px, apply: APPLY, variant: 'original' },
+      body: { box, px, recipe: RECIPE, variant: 'original' },
       deps: {
         imagery,
         height,

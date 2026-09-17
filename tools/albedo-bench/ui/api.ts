@@ -5,24 +5,11 @@
  */
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
+import type { RenderBody, RenderLight } from '../plugin/routes/render';
+import type { FieldArrow } from '../plugin/routes/field';
 
-export type RenderVariant = 'original' | 'adjusted';
-export type RenderLight = {
-  azDeg: number;
-  elDeg: number;
-  roughness: number;
-  ambient: number;
-};
-export type RenderParams = {
-  box: LonLatBounds;
-  px: number;
-  apply: Omit<AlbedoRecipe, 'version'>;
-  variant: RenderVariant;
-  light?: RenderLight;
-  manualG?: readonly [number, number];
-};
-
-export type FieldArrow = { lon: number; lat: number; gx: number; gy: number; confidence: number };
+export type { RenderLight, FieldArrow };
+export type RenderParams = RenderBody;
 
 export type Api = {
   getRecipe: () => Promise<AlbedoRecipe>;

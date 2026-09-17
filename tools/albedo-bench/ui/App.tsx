@@ -1,11 +1,11 @@
 /**
- * Albedo Bench App — loads the committed recipe, then debounces (150 ms)
- * a pair of /api/render calls (`original`, `adjusted`) on every box or
- * pixel-step change, and a /api/field refit ONLY when the view box or
- * `sunFit` changes (task 8's request-handling rule) — a grade slider never
- * refits. Save POSTs the recipe; Load (on mount) restores every slider.
+ * Albedo Bench App — loads the committed recipe, then debounces (150 ms) an
+ * `original` /api/render call keyed on `box` alone, an `adjusted` one keyed
+ * on the recipe too (any slider refits it), and a field refit keyed on
+ * `sunFit` alone (a grade slider never refits). Save POSTs the recipe; Load
+ * (on mount) restores every slider.
  */
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
 import { defaultApi, type FieldArrow, type RenderLight } from './api';
 import { boxFromView, type ViewState } from './viewPresets';
@@ -18,13 +18,17 @@ const PX = 512;
 const DEBOUNCE_MS = 150;
 const DEFAULT_LIGHT: RenderLight = { azDeg: 315, elDeg: 45, roughness: 0.9, ambient: 0.08 };
 
+// Manual `g` points down-sun (away from it), so negating turns the slider
+// into the same "sun azimuth" the lighting-preview slider already means.
 function manualGFrom(azDeg: number, strength: number): readonly [number, number] {
   const az = (azDeg * Math.PI) / 180;
-  return [strength * Math.sin(az), strength * Math.cos(az)];
+  return [-strength * Math.sin(az), -strength * Math.cos(az)];
 }
 
 export function App() {
   const [recipe, setRecipe] = useState<AlbedoRecipe>();
+  const recipeRef = useRef(recipe);
+  recipeRef.current = recipe;
   const [loadError, setLoadError] = useState<string>();
   const [view, setView] = useState<ViewState>({ lon: 137.4, lat: -4.6, spanDeg: 2 });
   const [viewMode, setViewMode] = useState<ViewMode>('wipe');
@@ -39,11 +43,13 @@ export function App() {
   const [saveStatus, setSaveStatus] = useState('');
   const [renderError, setRenderError] = useState<string>();
 
-  const box = useMemo(() => boxFromView(view), [view.lon, view.lat, view.spanDeg]);
+  const box = useMemo(() => boxFromView(view), [view]);
   const manualG = useMemo(
     () => manualGFrom(manualAzDeg, manualStrength),
     [manualAzDeg, manualStrength],
   );
+  const recipeLoaded = recipe !== undefined;
+  const sunFit = recipe?.sunFit;
 
   useEffect(() => {
     let cancelled = false;
@@ -60,33 +66,51 @@ export function App() {
     };
   }, []);
 
-  // Render both variants. `apply` carries `sunFit` too (the wire shape) —
-  // extra keys past `Omit<AlbedoRecipe, 'version'>` are harmless, and the
-  // server destructures what it needs.
+  // `original` never depends on the recipe, only on the box — read the
+  // latest recipe through a ref so a grade-slider edit can't retrigger this.
+  useEffect(() => {
+    if (!recipeLoaded) return;
+    const currentRecipe = recipeRef.current;
+    if (currentRecipe === undefined) return;
+    let cancelled = false;
+    const handle = setTimeout(() => {
+      defaultApi
+        .renderPng({ box, px: PX, recipe: currentRecipe, variant: 'original' })
+        .then((blob) => {
+          if (cancelled) return;
+          setOriginalUrl((prev) => {
+            if (prev) URL.revokeObjectURL(prev);
+            return URL.createObjectURL(blob);
+          });
+        })
+        .catch((err) => {
+          if (!cancelled) setRenderError(String(err));
+        });
+    }, DEBOUNCE_MS);
+    return () => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
+  }, [box, recipeLoaded]);
+
   useEffect(() => {
     if (recipe === undefined) return;
     let cancelled = false;
     const handle = setTimeout(() => {
-      Promise.all([
-        defaultApi.renderPng({ box, px: PX, apply: recipe, variant: 'original' }),
-        defaultApi.renderPng({
+      defaultApi
+        .renderPng({
           box,
           px: PX,
-          apply: recipe,
+          recipe,
           variant: 'adjusted',
           light: lightOn ? light : undefined,
           manualG: sunMode === 'manual' ? manualG : undefined,
-        }),
-      ])
-        .then(([origBlob, adjBlob]) => {
+        })
+        .then((blob) => {
           if (cancelled) return;
-          setOriginalUrl((prev) => {
-            if (prev) URL.revokeObjectURL(prev);
-            return URL.createObjectURL(origBlob);
-          });
           setAdjustedUrl((prev) => {
             if (prev) URL.revokeObjectURL(prev);
-            return URL.createObjectURL(adjBlob);
+            return URL.createObjectURL(blob);
           });
           setRenderError(undefined);
         })
@@ -100,16 +124,15 @@ export function App() {
     };
   }, [recipe, box, sunMode, manualG, lightOn, light]);
 
-  // Field refit — box or sunFit only, per task 8's request-handling rule.
-  // `recipe.sunFit` keeps its object identity across an unrelated slider
-  // edit (RecipeSliders spreads `recipe` without touching `sunFit`), so
-  // this effect only fires when it's actually replaced.
+  // Field refit — box or sunFit only. `sunFit` (not `recipe`) is the
+  // dependency so an unrelated slider edit, which replaces `recipe`'s object
+  // identity without touching `sunFit`, never refits.
   useEffect(() => {
-    if (recipe === undefined) return;
+    if (sunFit === undefined) return;
     let cancelled = false;
     const handle = setTimeout(() => {
       defaultApi
-        .getField(box, recipe.sunFit)
+        .getField(box, sunFit)
         .then((r) => {
           if (!cancelled) setArrows(r.arrows);
         })
@@ -121,7 +144,7 @@ export function App() {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [box, recipe?.sunFit]);
+  }, [box, sunFit]);
 
   async function onSave(): Promise<void> {
     if (recipe === undefined) return;

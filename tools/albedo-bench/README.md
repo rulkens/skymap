@@ -18,8 +18,8 @@ Mars is baked with (via `albedoRecipeImagerySource`, wired into
 ## Using it
 
 - Navigate by lon/lat/span, or jump to a preset (Gale, the south polar cap
-  edge, a Viking mosaic strip seam — pick one at the eye check and retarget
-  that preset's placeholder coordinates in `ui/viewPresets.ts`).
+  edge; add a Viking mosaic strip seam to `ui/viewPresets.ts` once the eye
+  check finds one).
 - Compare original vs adjusted as a wipe, side by side, or flip.
 - The arrow overlay draws the fitted shading-direction field (length ∝
   strength, opacity ∝ confidence); the fitted/manual toggle swaps in a
@@ -31,9 +31,11 @@ Mars is baked with (via `albedoRecipeImagerySource`, wired into
 - Every `AlbedoRecipe` field has a slider. Save validates and writes the
   recipe; reloading the page restores every slider from the committed file.
 
-## Known limit
+## Known limits
 
-The shading field comes from 463 m MOLA slopes, so craters smaller than
-about 1 km keep their baked-in shading — there's no elevation signal fine
-enough to de-shade them. A HiRISE-resolution pass is out of scope for this
-bench (design §12).
+- The shading field comes from 463 m MOLA slopes, so craters smaller than
+  about 1 km keep their baked-in shading — there's no elevation signal fine
+  enough to de-shade them. A HiRISE-resolution pass is out of scope for this
+  bench (design §12).
+- The fit doesn't wrap at the antimeridian: a view or a fill cell within
+  `3·fillSigmaKm` of ±180° misses the windows across the seam.

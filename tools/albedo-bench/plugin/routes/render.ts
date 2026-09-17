@@ -2,12 +2,8 @@
  * render.ts — POST /api/render: one raw RGBA raster of a box, either
  * straight off the primary imagery (`original`) or through the recipe's
  * pixel pipeline (`adjusted`), with an optional lighting-preview relight
- * multiplied in afterwards. `apply` carries the recipe's `sunFit` alongside
- * the pixel-step fields — design §1's "what is tuned is what is baked" means
- * a `sunFit` slider must relight `adjusted` live, not only after Save — so
- * `deps.getField` (the plugin's field cache) is keyed on it too. PNG
- * encoding happens one level up, in `apiPlugin.ts`, so this stays a plain,
- * byte-comparable function for the T4-fake equality test.
+ * multiplied in afterwards. A `sunFit` slider must relight `adjusted` live,
+ * not only after Save, so `deps.getField` is keyed on the recipe's `sunFit`.
  */
 import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe.ts';
 import type { HeightSource } from '../../../textures/HeightSource.ts';
@@ -34,7 +30,7 @@ export type RenderLight = {
 export type RenderBody = {
   readonly box: LonLatBounds;
   readonly px: number;
-  readonly apply: Omit<AlbedoRecipe, 'version'>;
+  readonly recipe: AlbedoRecipe;
   readonly variant: 'original' | 'adjusted';
   readonly light?: RenderLight;
   readonly manualG?: readonly [number, number];
@@ -90,14 +86,14 @@ export async function handleRender(opts: {
   readonly body: RenderBody;
   readonly deps: RenderDeps;
 }): Promise<Uint8Array> {
-  const { box, px, apply, variant, light, manualG } = opts.body;
+  const { box, px, recipe, variant, light, manualG } = opts.body;
   const { imagery, height, radiusM, getField } = opts.deps;
 
   let raster: Uint8Array | null;
   if (variant === 'original') {
     raster = await imagery.readBox(box, px, px);
   } else {
-    const { sunFit, ...pixelApply } = apply;
+    const { sunFit, ...pixelApply } = recipe;
     const field =
       manualG !== undefined ? constantSunField(box, manualG, radiusM) : await getField(box, sunFit);
     raster = await albedoRecipeImagerySource(imagery, height, field, pixelApply).readBox(
