@@ -161,11 +161,11 @@ export function RecipeSliders(props: RecipeSlidersProps) {
         <legend>Grade</legend>
         <SliderRow
           label="exposure (EV)"
-          value={recipe.grade.exposureEv}
+          value={recipe.grade.ev}
           min={-3}
           max={3}
           step={0.05}
-          onChange={(v) => onRecipe({ ...recipe, grade: { ...recipe.grade, exposureEv: v } })}
+          onChange={(v) => onRecipe({ ...recipe, grade: { ...recipe.grade, ev: v } })}
         />
         <SliderRow
           label="gain R"

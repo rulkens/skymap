@@ -25,7 +25,7 @@ const RECIPE_SCHEMA: Schema = {
     minLuminance: 'number',
   },
   grade: {
-    exposureEv: 'number',
+    ev: 'number',
     gain: 'tuple3',
     offset: 'tuple3',
     contrast: 'number',

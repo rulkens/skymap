@@ -16,7 +16,7 @@ const APPLY: AlbedoApply = {
   knee: { threshold: 0.6, softness: 1 },
   ice: { minAbsLatDeg: 55, fadeDeg: 8, minWhiteness: 0.6, minLuminance: 0.35 },
   grade: {
-    exposureEv: 0,
+    ev: 0,
     gain: [1, 1, 1],
     offset: [0, 0, 0],
     contrast: 1,

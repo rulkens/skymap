@@ -33,7 +33,7 @@ const RECIPE: AlbedoRecipe = {
   knee: { threshold: 1, softness: 1 }, // above 1: never engages
   ice: { minAbsLatDeg: 90, fadeDeg: 1, minWhiteness: 2, minLuminance: 2 }, // never engages
   grade: {
-    exposureEv: 0,
+    ev: 0,
     gain: [1, 1, 1],
     offset: [0, 0, 0],
     contrast: 1,

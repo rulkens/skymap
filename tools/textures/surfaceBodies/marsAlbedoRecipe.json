@@ -22,7 +22,7 @@
     "minLuminance": 0.35
   },
   "grade": {
-    "exposureEv": 0,
+    "ev": 0,
     "gain": [1, 1, 1],
     "offset": [0, 0, 0],
     "contrast": 1,

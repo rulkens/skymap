@@ -1,6 +1,9 @@
 /** The one flat, versioned object the albedo bench tunes and the bake reads
  *  (design §7): a fixed step order, not a stage list, so the bench and the
- *  bake can never drift into applying steps in a different sequence. */
+ *  bake can never drift into applying steps in a different sequence.
+ *  `grade` is the shared `ColourGrade` main also uses for body-tier bakes. */
+import type { ColourGrade } from '../../src/@types/scene/ColourGrade';
+
 export type AlbedoRecipe = {
   readonly version: 1;
   readonly sunFit: {
@@ -20,12 +23,5 @@ export type AlbedoRecipe = {
     readonly minWhiteness: number;
     readonly minLuminance: number;
   };
-  readonly grade: {
-    readonly exposureEv: number;
-    readonly gain: readonly [number, number, number];
-    readonly offset: readonly [number, number, number];
-    readonly contrast: number;
-    readonly saturation: number;
-    readonly gamma: number;
-  };
+  readonly grade: ColourGrade;
 };

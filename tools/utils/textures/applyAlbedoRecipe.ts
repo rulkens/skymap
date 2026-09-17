@@ -1,14 +1,15 @@
 /**
  * applyAlbedoRecipe — the pixel pipeline (design §8): de-shade, knee, keep
- * ice, grade. Pure and per-pixel; `sample` is the caller's own slope/`g`/
- * latitude lookup, so this file owns none of it. `Y = 0` skips straight to
- * `q = 1` — dividing a true black pixel by itself would otherwise read back
- * as `NaN`, not "unchanged".
+ * ice, grade. De-shade/knee/ice run per pixel; `sample` is the caller's own
+ * slope/`g`/latitude lookup, so this file owns none of it. Grade runs once
+ * over the finished sRGB buffer via the shared `gradeRgbaInPlace`, the last
+ * step per spec. `Y = 0` skips straight to `q = 1` — dividing a true black
+ * pixel by itself would otherwise read back as `NaN`, not "unchanged".
  */
 import { srgbToLinear } from '../color/srgbToLinear';
 import { linearToSrgb } from '../color/linearToSrgb';
+import { gradeRgbaInPlace } from '../image/gradeRgbaInPlace';
 import type { AlbedoApply } from '../../textures/AlbedoApply';
-import { gradeSrgb } from './gradeSrgb';
 import { iceKeepWeight } from './iceKeepWeight';
 import { kneeLuminance } from './kneeLuminance';
 
@@ -52,14 +53,11 @@ export function applyAlbedoRecipe(
         q = ratio + (1 - ratio) * w;
       }
 
-      const srgb = gradeSrgb(
-        [linearToSrgb(r * q), linearToSrgb(g * q), linearToSrgb(b * q)],
-        apply.grade,
-      );
-      out[i] = Math.round(srgb[0] * 255);
-      out[i + 1] = Math.round(srgb[1] * 255);
-      out[i + 2] = Math.round(srgb[2] * 255);
+      out[i] = Math.round(linearToSrgb(r * q) * 255);
+      out[i + 1] = Math.round(linearToSrgb(g * q) * 255);
+      out[i + 2] = Math.round(linearToSrgb(b * q) * 255);
     }
   }
+  gradeRgbaInPlace(out, apply.grade);
   return out;
 }
