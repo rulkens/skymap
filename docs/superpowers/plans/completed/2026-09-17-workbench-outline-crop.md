@@ -671,8 +671,8 @@ export function selectDraftRingGroupM(state: RootState): readonly Vec3[] | null;
 - Vertex and instance buffers grow by reallocation; a zero-length ring draws nothing.
 - `Viewport.tsx`: build the overlay beside `renderers` (`:144-145`), `dispose` on unmount, and after
   `renderers.draw` (`:124`) draw it when `selectDraftRingGroupM(state)` is non-null.
-- [ ] No test — GPU plumbing verified visually; the maths it reads is Task 3's.
-- [ ] Commit.
+- [x] No test — GPU plumbing verified visually; the maths it reads is Task 3's.
+- [x] Commit.
 
 ### Task 17: corner editing input
 
@@ -708,9 +708,9 @@ export function attachOutlineCornerControls(
   cost if wrong: a browser dispatching target-phase listeners in registration order would let the
   pan start too (Chromium runs capture listeners first since M89).
 - `createSceneInput` attaches and detaches the corner controls with the orbit controls.
-- [ ] No automated test — DOM gesture arbitration; the pure maps are Task 3's and the edit rules
+- [x] No automated test — DOM gesture arbitration; the pure maps are Task 3's and the edit rules
       are Task 13's. Verified by the user.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 18: layer-row outline controls
 
@@ -730,23 +730,24 @@ Follow `.claude/skills/create-component/SKILL.md` (own folder, `function Name() 
   exists, a "Mask" checkbox bound to `masked` (`maskToggled`).
 - Draft for this asset: corner count, "Save" (`outlineSaveRequested`, **enabled only when
   `closed`**), "Discard" (`outlineDiscardRequested`), and `saveError` when set.
-- [ ] `Save is enabled only on a closed ring` — render with a store holding an open 3-corner draft
+- [x] `Save is enabled only on a closed ring` — render with a store holding an open 3-corner draft
       (disabled), then a closed one (enabled). Pattern: `tests/tools/scene-workbench/ui/LayerList.test.tsx`.
-- [ ] Commit.
+      Deleted by the final review: the reducer already refuses what the disabled button guards.
+- [x] Commit.
 
 ### Task 19: README
 
 **Files:** `tools/scene-workbench/README.md`
 
-- [ ] Architecture: add the `outline` slice and `watchOutlineSaga` to the slice/saga list, and
+- [x] Architecture: add the `outline` slice and `watchOutlineSaga` to the slice/saga list, and
       `plugin/outlinePlugin.ts` (the workbench's first dev endpoint).
-- [ ] New "Mesh outline" section: draw mode (orthographic nadir, click to add, drag to move, click
+- [x] New "Mesh outline" section: draw mode (orthographic nadir, click to add, drag to move, click
       a corner to delete, first corner closes), the mask toggle, the file at
       `data/geo3d/<groupId>/<assetId>.outline.json` (committed, mesh-local metres), splats
       hidden (neither sorted nor drawn) under orthographic, and
       `npm run crop-mesh -- --group <id> --asset <assetId>` with its sibling `<assetId>-cropped`
       asset and printed numbers.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
@@ -773,33 +774,35 @@ Follow `.claude/skills/create-component/SKILL.md` (own folder, `function Name() 
 
 **Deliverables**
 
-- [ ] `CameraProjection`, `CameraProjectionRow`, `CAMERA_PROJECTIONS` with perspective and
+- [x] `CameraProjection`, `CameraProjectionRow`, `CAMERA_PROJECTIONS` with perspective and
       orthographic rows; `SceneCamera.projection`.
-- [ ] `MeshOutline` type; `meshOutlinePath`; `.gitignore` negation for `*.outline.json`.
-- [ ] `tools/scene-recon/crop/`: `normalizeRing`, `insideRing`, `triangulateOutline`,
+- [x] `MeshOutline` type; `meshOutlinePath`; `.gitignore` negation for `*.outline.json`.
+- [x] `tools/scene-recon/crop/`: `normalizeRing`, `insideRing`, `triangulateOutline`,
       `clipPolygonByHalfPlane`, `cropMeshGeometry`, `segmentsTouch`, `uvCoverage`.
-- [ ] `npm run crop-mesh -- --group <id> --asset <assetId>` publishing `<assetId>-cropped` with a
+- [x] `npm run crop-mesh -- --group <id> --asset <assetId>` publishing `<assetId>-cropped` with a
       `cropMesh` pipeline step; `earcut` devDependency.
-- [ ] `plugin/outlinePlugin.ts` registered in the workbench `vite.config.ts`.
-- [ ] `outline` slice, `selectMaskRing`, `watchOutlineSaga`, three commands.
-- [ ] Mask storage binding in `texturedMesh/` + `packMaskPolygon`/`writeMeshMask`.
-- [ ] Outline overlay renderer; corner controls; `MeshOutlineControls` on mesh layer rows.
-- [ ] README "Mesh outline" section.
-- [ ] P1 is a separate commit ahead of the feature commits.
+- [x] `plugin/outlinePlugin.ts` registered in the workbench `vite.config.ts`.
+- [x] `outline` slice, `selectMaskRing`, `watchOutlineSaga`, three commands.
+- [x] Mask storage binding in `texturedMesh/` + `packMaskPolygon`/`writeMeshMask`.
+- [x] Outline overlay renderer; corner controls; `MeshOutlineControls` on mesh layer rows.
+- [x] README "Mesh outline" section.
+- [x] P1 is a separate commit ahead of the feature commits.
 
 **Observable behaviours — user, at review** (not blocking execution)
 
-- [ ] "Draw outline" on the 2019 crop mesh's row switches to a straight-down orthographic view at
+- [x] "Draw outline" on the 2019 crop mesh's row switches to a straight-down orthographic view at
       about the same scale; wheel zooms, drag pans; leaving restores the previous pose.
-- [ ] Click adds corners; dragging a corner moves it without panning; clicking a corner deletes it;
+- [x] Click adds corners; dragging a corner moves it without panning; clicking a corner deletes it;
       clicking the first corner of a ≥ 3-corner ring closes it; Save enables only then.
-- [ ] While drawing, the mesh outside the draft ring disappears; the wireframe does not.
-- [ ] Save writes `data/geo3d/soendermarken-crop-2019/mesh.outline.json`, which survives a reload,
+- [x] ~~While drawing, the mesh outside the draft ring disappears~~ — superseded at user review: the
+      whole mesh stays visible while drawing; the mask applies only after Save.
+- [x] Save writes `data/geo3d/soendermarken-crop-2019/mesh.outline.json`, which survives a reload,
       and `git status` shows it as untracked (not ignored).
-- [ ] The Mask checkbox toggles the saved mask on and off.
-- [ ] `npm run crop-mesh -- --group soendermarken-crop-2019 --asset mesh` prints triangle counts and
-      atlas coverage; the new `mesh-cropped` row loads and matches the masked `mesh` when toggled
-      against it.
+- [ ] The Mask checkbox toggles the saved mask on and off. (Not attested; merged on the user's word.)
+- [x] `npm run crop-mesh -- --group soendermarken-crop-2019 --asset mesh` prints triangle counts and
+      atlas coverage (470,046 / 660,051 tris, 9.4 %).
+- [ ] The new `mesh-cropped` row loads and matches the masked `mesh` when toggled against it. (Not
+      attested; merged on the user's word.)
 
 **Deferred — do not chase**
 

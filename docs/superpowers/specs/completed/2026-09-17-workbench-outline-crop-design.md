@@ -104,7 +104,7 @@ type OutlineSlice = {
 `watchOutlineSaga` runs on three commands and the group actions:
 `drawOutlineRequested(assetId)` stores the perspective pose as the draft's
 `returnPose` and switches to orthographic; `outlineSaveRequested` PUTs, then
-`outlineSaved` moves the ring into `byAssetId` (or `outlineSaveFailed` sets
+`outlineLoaded` moves the server's ring into `byAssetId` (or `outlineSaveFailed` sets
 `saveError`); `outlineDiscardRequested` and `groupSelected` restore
 `returnPose` and end the draft. Outlines of every `mesh` asset are fetched
 after `manifestLoaded` (404 → absent), cancelled by a later `groupSelected`. The
