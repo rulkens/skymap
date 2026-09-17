@@ -166,11 +166,13 @@ State lives in an RTK store, wired up in `src/store/`; the slices themselves
 live one per domain under `src/state/<domain>/` — `registry` (`scenes.json`'s
 group list), `group` (the selected group's manifest and per-asset load
 status), `view` (camera pose, per-asset visibility, per-layer display knobs,
-device-lost). Three watcher sagas own every side effect: `watchRegistrySaga`
+device-lost), `outline` (each mesh's saved outline, its mask toggle, and the
+draw-mode draft). Four watcher sagas own every side effect: `watchRegistrySaga`
 loads the registry and auto-selects the first group; `watchGroupSaga` disposes
 the previous group, fetches its manifest, then fetches/parses/uploads each
-asset; `watchSplatSortSaga` re-sorts splat draw order at each camera commit.
-All three reach the WebGPU
+asset; `watchSplatSortSaga` re-sorts splat draw order at each camera commit;
+`watchOutlineSaga` loads outlines, runs draw mode's enter/save/discard, and
+writes the GPU preview masks. All four reach the WebGPU
 objects — `gpu`, `gpuAssets`, the renderer, the depth texture — through
 `RenderResources` (`src/render/renderResources.ts`), handed to the saga layer
 once via `registerSagaContext`; `Viewport.tsx` stays a dumb frame driver that
@@ -190,6 +192,11 @@ metres — `GroupAnchor` (`@types/GroupAnchor.d.ts`) is the geodetic anchor that
 places it in the world. The viewport draws them point cloud, then mesh, then
 splats: `SCENE_DRAW_ORDER` (`src/render/sceneRenderers.ts`) is the blend
 contract, opaque kinds writing depth before the splats blend over it.
+
+`plugin/outlinePlugin.ts` is the workbench's one dev endpoint:
+`GET`/`PUT /api/outline/<groupId>/<assetId>` reads and writes a mesh's outline
+file, normalizing the ring (simple, counter-clockwise) on write and answering
+400 with the reason when it is not.
 
 `npm run scene-workbench:probe` runs a headless WebGPU error probe
 (`probeGpuErrors.ts`) against a `?probe` synthetic scene
@@ -225,3 +232,27 @@ be inspected against the texture. Edges shared by exactly two triangles draw
 cyan; edges with one adjacent triangle (a hole's border) or three or more (a
 non-manifold junction) draw orange-red, so reconstruction damage reads at a
 glance.
+
+## Mesh outline
+
+A mesh row's "Draw outline" button (or "Edit outline", once one is saved)
+enters draw mode: the camera switches to a straight-down orthographic view at
+about the same scale, the wheel zooms and every drag pans. Click empty space to
+add a corner, drag a corner to move it, click a corner to delete it; clicking
+the first corner of a ring with three or more corners closes it instead. Save
+is enabled only on a closed ring; Save and Discard both return the camera to
+the pose draw mode left. Draw mode refuses a mesh whose transform rotates about
+anything but Z. Splats are not drawn while the projection is orthographic —
+`splat.wesl` sizes each splat by its view-space depth, which that projection
+lacks.
+
+While drawing, the mesh outside the draft ring is discarded on the GPU (the
+wireframe is not). A saved outline keeps that preview mask, and the row's
+"Mask" checkbox toggles it.
+
+The outline lives at `data/geo3d/<groupId>/<assetId>.outline.json`, committed,
+as a ring in mesh-local metres. `npm run crop-mesh -- --group <id> --asset
+<assetId>` cuts the mesh to it and publishes the sibling asset
+`<assetId>-cropped`, printing kept / source triangle counts and the share of
+the atlas the kept triangles still sample; the atlas itself is carried over
+unchanged.
