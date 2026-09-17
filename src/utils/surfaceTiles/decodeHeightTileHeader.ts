@@ -17,7 +17,7 @@ import {
 export function decodeHeightTileHeader(chunk: Uint8Array): HeightTileHeader {
   if (chunk.length < HEIGHT_TILE_VERSION_OFFSET + HEIGHT_TILE_VERSION_BYTES) {
     throw new Error(
-      `decodeHeightTileHeader: header chunk is ${chunk.length} bytes, need ${HEIGHT_TILE_CHUNK_BYTES}`,
+      `decodeHeightTileHeader: header chunk is ${chunk.length} bytes, need ${HEIGHT_TILE_VERSION_OFFSET + HEIGHT_TILE_VERSION_BYTES} to read the version`,
     );
   }
   const view = new DataView(chunk.buffer, chunk.byteOffset, chunk.byteLength);

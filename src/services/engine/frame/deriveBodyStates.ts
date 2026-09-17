@@ -39,16 +39,8 @@ const FOCUS_ORDER = focusResolveOrder(SCENE_ANCHORS, ORBITAL_ELEMENTS);
 let cachedSimDays: number | undefined;
 let cachedStates: ReadonlyMap<string, BodyState> | undefined;
 
-/**
- * `terrainHeightAt` defaults to 0 (datum only). The memo keys on `simDays` ALONE,
- * so whichever call first reaches an instant decides its heights for every
- * same-instant reader, and a paused clock never recomputes — a rover's height
- * freezes at whatever was resident then, and freezes at the DATUM if one of the
- * terrain-less callers won the instant. Position may freeze with the clock (it is
- * a function of sim time); terrain residency may not. Inert while every
- * `SURFACE_FIXED_SITES` row is Mars and only Earth is engaged; F4 must key this on
- * residency too.
- */
+// The memo keys on `simDays` alone, so a paused clock freezes a rover's height
+// (pinned to the datum if a terrain-less caller reached that instant first); F4 must key it on residency too.
 export function deriveBodyStates(
   simDays: number,
   terrainHeightAt: TerrainHeightAtLookup = () => 0,

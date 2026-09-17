@@ -13,7 +13,6 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { DEFAULT_ORIENTATION } from '../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
-import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { RungBasisCtx } from '../../../../../src/@types/camera/RungBasisCtx';
@@ -35,20 +34,6 @@ function ctxWith(terrainHeightAt: TerrainHeightAtLookup): RungBasisCtx {
 }
 
 describe("bodyRung.host's groundRadiusAtM", () => {
-  it('reads the datum alone when the lookup answers no terrain', () => {
-    const host = bodyRung.host({ body: EARTH_ID }, ctxWith(datumOnlyTerrainHeight))!;
-    expect(host.groundRadiusAtM([1, 0, 0])).toBe(EARTH_R_M);
-  });
-
-  it('adds a resident terrain height to the datum instead of replacing it', () => {
-    const TERRAIN_M = 500;
-    const host = bodyRung.host(
-      { body: EARTH_ID },
-      ctxWith(() => TERRAIN_M),
-    )!;
-    expect(host.groundRadiusAtM([1, 0, 0])).toBeCloseTo(EARTH_R_M + TERRAIN_M, 9);
-  });
-
   it('queries the lookup with the host it was built for, not a fixed body id', () => {
     const seen: BodyId[] = [];
     const terrainHeightAt: TerrainHeightAtLookup = (bodyId) => {

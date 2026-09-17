@@ -78,7 +78,6 @@ describe('terrainHeightM', () => {
   it('returns exactly 0 when no ancestor is resident', () => {
     const result = terrainHeightM([1, 0, 0], 4, BASE_LEVEL, () => null);
     expect(Object.is(result, 0)).toBe(true);
-    expect(Number.isFinite(result)).toBe(true);
   });
 
   it('returns 0 for a zero direction vector', () => {
@@ -89,7 +88,6 @@ describe('terrainHeightM', () => {
     };
     const result = terrainHeightM([0, 0, 0], 4, BASE_LEVEL, resident);
     expect(Object.is(result, 0)).toBe(true);
-    expect(Number.isFinite(result)).toBe(true);
   });
 
   it('returns 0 for a non-finite direction vector', () => {

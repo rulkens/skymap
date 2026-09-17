@@ -62,7 +62,6 @@ export function cameraDofAnglesOf(input: {
   // Engaged body wins outright (spec's own regime predicate: `storedFrame` IS
   // the regime); the roster-wide nearest is only a stand-in for the "where's
   // the hysteresis band?" question while flying free in the absolute arm.
-  // `hostOf` here reads only identity/radius (the regime question below), never ground height.
   const engaged = hostOf(storedFrame, {
     bodies: bodyStates,
     poseBasis,

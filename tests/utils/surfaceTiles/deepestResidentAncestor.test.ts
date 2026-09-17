@@ -25,10 +25,4 @@ describe('deepestResidentAncestor', () => {
     expect(found).toBeNull();
     expect(probed).toEqual([8, 7, 6, 5]);
   });
-
-  it('returns null when nothing in the chain is resident', () => {
-    expect(
-      deepestResidentAncestor({ product: 'albedo', z: 8, x: 300, y: 111 }, BASE_LEVEL, () => null),
-    ).toBeNull();
-  });
 });

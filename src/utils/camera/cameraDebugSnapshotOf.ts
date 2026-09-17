@@ -89,8 +89,6 @@ export function cameraDebugSnapshotOf(input: {
   // terrain under the eye (F3a, spec §8.3) — the same `bodyRelativePose`
   // direction `hOverR` itself derives from (basis argument discarded, per
   // that file's own comment: only the direction matters).
-  // Only `radiusM` is read below; the terrain term for this row comes from
-  // the caller's own `terrainHeightAt`, not `groundRadiusAtM`.
   const datumRadiusM =
     bodyId !== null
       ? hostOf(

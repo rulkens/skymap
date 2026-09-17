@@ -25,7 +25,6 @@ export function toBodyFixedChannels(
   bodies: ReadonlyMap<BodyId, BodyState>,
   basis: Readonly<Mat3>,
 ): CameraPose {
-  // Only `.state` is read below; a channel cross never asks the ground height.
   const bodyState = hostOrThrow(
     { body: bodyId },
     { bodies, poseBasis: basis, upBasis: basis, terrainHeightAt: datumOnlyTerrainHeight },

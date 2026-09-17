@@ -206,7 +206,6 @@ function framedClipArm(
   const { frame, channels } = evaluated;
   // No decode cell reads a basis TODAY. The day one does — a site row reading
   // `upBasis` — it silently gets the current basis `to` where the clip pinned `from`.
-  // `DriverCtx` carries no terrain lookup, so a decoded body arm's ground reads datum only.
   const decoded = rowFor(frame).channels.decode(channels, frame, {
     bodies,
     poseBasis: to,
