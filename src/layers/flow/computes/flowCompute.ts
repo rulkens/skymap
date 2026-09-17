@@ -6,8 +6,8 @@
  * `state.gpu.flowFieldRenderer`; Task 6 deletes this file from core.
  */
 
-import type { ContentCompute } from '../../../../@types/engine/frame/ContentCompute';
-import { slotReady } from '../../../loading/slotReady';
+import type { ContentCompute } from '../../../@types/engine/frame/ContentCompute';
+import { slotReady } from '../../../services/loading/slotReady';
 
 export const flowCompute: ContentCompute = {
   name: 'flow',

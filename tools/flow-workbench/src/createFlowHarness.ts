@@ -38,15 +38,16 @@
  */
 import type { Store } from '../@types/state/Store';
 import type { AppState } from '../@types/state/AppState';
-import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import type { PassState } from '../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Mat4 } from '../../../src/@types/math/Mat4';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
-import { createFlowFieldRenderer } from '../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
-import { encodeFlowCompute } from '../../../src/services/engine/frame/encodeFlowCompute';
+import { createFlowFieldRenderer } from '../../../src/layers/flow/render/flowFieldRenderer';
+import { flowCompute } from '../../../src/layers/flow/computes/flowCompute';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
@@ -146,18 +147,19 @@ export async function createFlowHarness(
     const encoder = device.createCommandEncoder();
 
     // Compute pass (seed-when-armed + integrate). The gate skips entirely when
-    // the layer is off or the cube hasn't loaded. `encodeFlowCompute` reads its
-    // gates off an `EngineState`; the workbench has no engine, so it assembles
-    // just the slice the gate consumes — the renderer handle, the flow settings,
-    // and a ready-when-loaded asset slot (the shape `slotReady` inspects).
-    encodeFlowCompute(
+    // the layer is off or the cube hasn't loaded. `flowCompute.encode` reads its
+    // gates off a `PassState`; the workbench has no engine, so it assembles just
+    // the slice the gate consumes — the renderer handle, the flow settings, and
+    // a ready-when-loaded asset slot (the shape `slotReady` inspects).
+    flowCompute.encode(
       encoder,
+      { nowMs: now } as unknown as ReadyFrameContext,
       {
         gpu: { flowFieldRenderer: renderer },
         settings: { flow: s.flow },
-        assetSlots: { flow: loaded ? { state: () => ({ kind: 'ready' }) } : null },
-      } as unknown as EngineState,
-      now,
+        assetSlots: { flow: loaded ? { committed: () => ({ kind: 'ready' }) } : null },
+      } as unknown as PassState,
+      () => ({}),
     );
 
     // HDR accumulation pass — the renderer draws its additive ribbons into it.

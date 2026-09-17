@@ -77,6 +77,14 @@ function assertSweep(
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'services/engine/volume/uploadVolumeField': 1,
   'state/tier/watchTierSaga': 1,
+  // Flow's modules relocated under src/layers/flow ahead of the flow Layer
+  // itself (05b Tasks 2-4): core's registries still hold flow's old rows and
+  // point at the new paths. DELETE each row when Task 6 deletes the core
+  // holding it names (passes/computes index, the GPU handle, the asset slot).
+  'services/engine/frame/computes/index': 1,
+  'services/engine/frame/passes/index': 1,
+  'services/engine/gpuHandles/gpuHandleRegistry': 1,
+  'services/engine/wiring/assetWiring': 1,
 };
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {

@@ -4,9 +4,9 @@
  * integrated this frame; it owns no compute work itself.
  */
 
-import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { slotReady } from '../../../loading/slotReady';
-import { resolveLayerOpacity } from '../../presentation/focusRecession';
+import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import { slotReady } from '../../../services/loading/slotReady';
+import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 
 export const flowFieldPass: ContentPass = {
   name: 'flow',

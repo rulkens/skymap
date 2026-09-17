@@ -15,10 +15,10 @@
  */
 
 import type { ReactElement } from 'react';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
-import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
-import DebugTuningSection from './DebugTuningSection';
+import type { FlowSettings } from '../../../@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefaults';
+import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../../data/flow/flowFields';
+import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 
 export type FlowTuningSectionProps = {
   flow: FlowSettings;

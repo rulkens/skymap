@@ -8,11 +8,11 @@
  * independently of the draw commands.
  */
 import { describe, it, expect, vi } from 'vitest';
-import { flowFieldPass } from '../../../../../src/services/engine/frame/passes/flowFieldPass';
-import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
+import { flowFieldPass } from '../../../../src/layers/flow/passes/flowFieldPass';
+import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Mat4 } from 'wgpu-matrix';
 
 function makeCtx(): ReadyFrameContext {

@@ -22,8 +22,8 @@
  * (`installSlots`) owns the write to `state.assetSlots`.
  */
 
-import { createAssetSlot } from '../AssetSlot';
-import { flowFieldFetcher } from '../fetchers/flowFieldFetcher';
+import { createAssetSlot } from '../../../services/loading/AssetSlot';
+import { flowFieldFetcher } from './flowFieldFetcher';
 import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
 import type { SlotFactory } from '../../../@types/loading/SlotFactory';
 

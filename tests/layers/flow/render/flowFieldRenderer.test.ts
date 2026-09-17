@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createFlowFieldRenderer } from '../../../../../src/services/gpu/renderers/flowField/flowFieldRenderer';
-import type { ScalarCube } from '../../../../../src/@types/data/volume/ScalarCube';
-import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
-import { HEAD_SPEED_SCALE } from '../../../../../src/data/flow/flowFieldConstants';
+import { createFlowFieldRenderer } from '../../../../src/layers/flow/render/flowFieldRenderer';
+import type { ScalarCube } from '../../../../src/@types/data/volume/ScalarCube';
+import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
+import { HEAD_SPEED_SCALE } from '../../../../src/data/flow/flowFieldConstants';
 
 /**
  * Minimal GPUDevice mock for renderer-construction tests.

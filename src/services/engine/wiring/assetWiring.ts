@@ -17,7 +17,7 @@ import { createStructureCatalogSlot } from '../../loading/slots/structureCatalog
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createPolyphorm2MrsSlot } from '../../loading/slots/polyphorm2MrsSlot';
 import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
-import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
+import { createFlowFieldSlot } from '../../../layers/flow/load/flowFieldSlot';
 import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';

@@ -202,7 +202,7 @@ vi.mock('../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer'
   createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/flowField/flowFieldRenderer', () => ({
+vi.mock('../../../../src/layers/flow/render/flowFieldRenderer', () => ({
   createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
 }));
 

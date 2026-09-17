@@ -6,7 +6,7 @@
  */
 
 import type { ContentCompute } from '../../../../@types/engine/frame/ContentCompute';
-import { flowCompute } from './flowCompute';
+import { flowCompute } from '../../../../layers/flow/computes/flowCompute';
 import { skyViewCompute } from './skyViewCompute';
 
 /** Core's contributed compute rows, as a flat set. States no order or grouping. */

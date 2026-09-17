@@ -28,7 +28,7 @@ import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
 import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
-import { FLOW_ENTRY } from './sources/flow';
+import { FLOW_ENTRY } from '../layers/flow/sources/flow';
 import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';

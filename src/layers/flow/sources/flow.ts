@@ -1,6 +1,6 @@
-import type { FlowSourceEntry } from '../../@types/data/flow/FlowSourceEntry';
-import { Source } from '../source';
-import { MAX_PARTICLES } from '../flow/flowFieldConstants';
+import type { FlowSourceEntry } from '../../../@types/data/flow/FlowSourceEntry';
+import { Source } from '../../../data/source';
+import { MAX_PARTICLES } from '../../../data/flow/flowFieldConstants';
 
 export const FLOW_ENTRY = {
   type: 'flow',

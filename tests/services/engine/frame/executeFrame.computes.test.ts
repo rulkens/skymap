@@ -8,7 +8,7 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { executeFrame } from '../../../../src/services/engine/frame/executeFrame';
-import { flowCompute } from '../../../../src/services/engine/frame/computes/flowCompute';
+import { flowCompute } from '../../../../src/layers/flow/computes/flowCompute';
 import type { ContentCompute } from '../../../../src/@types/engine/frame/ContentCompute';
 import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/ExecuteFrameArgs';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';

@@ -19,7 +19,7 @@ import { createConstellationRenderer } from '../../gpu/renderers/constellations/
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
-import { createFlowFieldRenderer } from '../../gpu/renderers/flowField/flowFieldRenderer';
+import { createFlowFieldRenderer } from '../../../layers/flow/render/flowFieldRenderer';
 import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';

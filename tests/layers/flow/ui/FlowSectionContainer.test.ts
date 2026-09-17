@@ -28,11 +28,11 @@ import { describe, it, expect } from 'vitest';
 import { render, fireEvent } from '@testing-library/react';
 import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
-import FlowSectionContainer from '../../../src/components/containers/FlowSectionContainer';
-import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { selectFlow } from '../../../src/state/settings/selectors';
-import { setFlowEnabled } from '../../../src/layers/flow/settings/flowSlice';
-import type { AppStore } from '../../../src/store/types';
+import FlowSectionContainer from '../../../../src/layers/flow/ui/FlowSectionContainer';
+import { createTestStore as createAppStore } from '../../../support/createTestStore';
+import { selectFlow } from '../../../../src/state/settings/selectors';
+import { setFlowEnabled } from '../../../../src/layers/flow/settings/flowSlice';
+import type { AppStore } from '../../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });

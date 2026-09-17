@@ -7,7 +7,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { scalarVolumePass } from './scalarVolumePass';
-import { flowFieldPass } from './flowFieldPass';
+import { flowFieldPass } from '../../../../layers/flow/passes/flowFieldPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { milkyWayAggregatePass } from './milkyWayAggregatePass';
