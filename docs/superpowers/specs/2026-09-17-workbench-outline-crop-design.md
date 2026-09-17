@@ -109,13 +109,17 @@ layer row.
 ### 4.4 Draw mode
 
 - **Camera.** Orthographic row of `CAMERA_PROJECTIONS`: view built from yaw
-  only (forward exactly −Z, up = yaw direction), `halfHeightM` seeded from the
-  perspective view's half-height at its target distance; wheel zoom scales
-  `halfHeightM`; drag pans. Near/far bracket the group's `boundsM` Z.
-- **Picking.** Screen → group XY through the inverse view-projection, then the
-  inverse asset transform → mesh-local XY. Valid while the asset's rotation is
-  about Z only; draw mode refuses to open otherwise (every current mesh is
+  only (forward exactly −Z, up = yaw direction), eye a fixed 1000 m above the
+  target (near 1 m, far 2000 m — not the group's `boundsM` Z). `distanceM` stays
+  the zoom register: `halfHeightM = distanceM · tan(fov/2)`, so the existing
+  wheel zoom scales it; every drag pans.
+- **Picking.** Screen → group XY through an affine px ↔ group-XY map (the view
+  is orthographic with a horizontal basis, so no inverse view-projection), then
+  the inverse asset transform → mesh-local XY. Valid while the asset's rotation
+  is about Z only; draw mode refuses to open otherwise (every current mesh is
   identity).
+- **Splats.** Skipped while the projection is orthographic — `splat.wesl`
+  scales by view depth.
 - **Editing.** Click empty space: append a corner. Pointer-down within 8 px of a
   corner then drag: move it (suppresses pan). Click a corner without dragging:
   delete it; the first corner of an open ring with ≥ 3 corners closes it

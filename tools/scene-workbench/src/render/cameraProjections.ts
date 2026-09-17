@@ -35,11 +35,11 @@ const ORTHO_EYE_ABOVE_TARGET_M = 1000;
 const ORTHO_NEAR_M = 1;
 const ORTHO_FAR_M = 2000;
 
-type Row<K extends CameraProjection['kind']> = CameraProjectionRow<
-  Extract<CameraProjection, { kind: K }>
->;
-
-export const CAMERA_PROJECTIONS: { readonly [K in CameraProjection['kind']]: Row<K> } = {
+export const CAMERA_PROJECTIONS: {
+  readonly [K in CameraProjection['kind']]: CameraProjectionRow<
+    Extract<CameraProjection, { kind: K }>
+  >;
+} = {
   perspective: {
     view(camera, viewportPx) {
       const { yaw, pitch, distanceM, targetM } = camera;
