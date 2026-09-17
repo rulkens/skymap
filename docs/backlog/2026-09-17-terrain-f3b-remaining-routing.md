@@ -5,6 +5,25 @@
 that the table it descends from is largely already satisfied. §12's row should be
 replaced by the two below.
 
+## Item 1 blocks F4's Mars bake
+
+Found in F3a's F3 review, and it sets the order rather than merely suggesting one.
+
+F3a routes site placement, so a rover is **drawn** at `datum + terrain + altitudeM`.
+The camera still anchors, pivots and pixel-locks at `datum + altitudeM`:
+`siteRung.engage:124`, `sitePoseToBodyArm`/`FromBodyArm` and
+`hostedFocusPivotM:22` all pass a bare datum radius. That is item 1's remaining
+`radiusM` routing.
+
+The mismatch is invisible in F3a because all four `SURFACE_FIXED_SITES` rows are
+Mars-hosted and `terrainHeightAt` answers 0 for any body but the engaged atlas.
+The moment F4 gives Mars tiles it becomes visible: Gale sits about 4.5 km below the
+MOLA datum, so the camera would orbit a point kilometres off the mesh.
+`sitePointBodyFixed`'s own header states the consequence — the rover drifts in frame
+as the camera moves.
+
+**So item 1 lands before F4's Mars bake, or F4 ships that drift.**
+
 ## What the spec claims, and what is actually left
 
 Spec §8.3 opens "`radiusM` ceases to exist. The 215 sites, through ~10 hubs, become
