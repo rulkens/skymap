@@ -25,7 +25,7 @@ import {
   updateSelectionSelect,
   updateSelectionFocus,
 } from '../../../src/state/selection/selectionSlice';
-import { setGalaxyCatalogVisible } from '../../../src/state/settings/settingsSlice';
+import { setGalaxyCatalogVisible } from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
 import { Source } from '../../../src/data/sources';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { selectionResolverOver } from '../../support/selectionResolverOver';

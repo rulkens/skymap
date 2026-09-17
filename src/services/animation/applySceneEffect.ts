@@ -13,7 +13,7 @@ import type { SceneEffect } from '../../@types/animation/SceneEffect';
 import type { EngineState } from '../../@types/engine/state/EngineState';
 import type { AppDispatch } from '../../store/types';
 import { updateSelectionFocus } from '../../state/selection/selectionSlice';
-import { setOrientation } from '../../state/settings/settingsSlice';
+import { setOrientation } from '../../state/settings/core/orientationSlice';
 import { startFrameTween } from '../../state/camera/cameraSlice';
 import { liveUpBasisQuat } from '../engine/camera/liveUpBasisQuat';
 import { syncVisibilityFades } from '../engine/wiring/syncVisibilityFades';

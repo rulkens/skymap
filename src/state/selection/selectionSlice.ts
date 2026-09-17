@@ -7,7 +7,7 @@
  * structural compare a flat-primitive ref allows. This replaces the per-type
  * targetEq the old subsystem carried.
  *
- * Reducers mutate the Immer draft (the settingsSlice style), so an unchanged
+ * Reducers mutate the Immer draft (the settings-slices style), so an unchanged
  * slot is left untouched and Immer returns the same reference for it.
  *
  * Beside the refs sits `pending` — the durable id each request COMMAND asked

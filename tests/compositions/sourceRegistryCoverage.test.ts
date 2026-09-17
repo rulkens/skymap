@@ -2,7 +2,7 @@
  * `Layer.sources` is inert: `data/sources.ts` folds each Layer's rows into
  * `SOURCE_REGISTRY` by direct import, so a Layer can declare rows, skip that edit,
  * and ship with a green suite — its sources simply absent at runtime. The same
- * hole `appSettingsFragments.test.ts` closes for `Layer.settings`.
+ * hole `appSettingsSlices.test.ts` closes for `Layer.settings`.
  */
 
 import { describe, it, expect } from 'vitest';

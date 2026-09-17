@@ -9,7 +9,7 @@ import {
 } from '../../../src/state/camera/watchOrientationChangeSaga';
 import { requestOrientationChange } from '../../../src/state/camera/orientationActions';
 import { commitCameraPose } from '../../../src/state/camera/cameraSlice';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   ORIENTATION_FRAMES,
   ORIENTATION_FRAME_QUATERNIONS,

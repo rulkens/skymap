@@ -12,7 +12,7 @@ import { memo, useCallback } from 'react';
 import { ZoneOfAvoidanceTuningSection } from '../DebugPanel/ZoneOfAvoidanceTuningSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectZoneOfAvoidance } from '../../state/settings/selectors';
-import { setZoneOfAvoidanceTuning } from '../../state/settings/settingsSlice';
+import { setZoneOfAvoidanceTuning } from '../../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
 
 function ZoneOfAvoidanceTuningSectionContainer(): React.ReactElement {

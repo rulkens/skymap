@@ -28,7 +28,7 @@ import {
   setAtmosphereExposure,
   setAmbientLight,
   setOceanRoughness,
-} from '../../state/settings/settingsSlice';
+} from '../../layers/body/settings/earthSlice';
 
 function EarthSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

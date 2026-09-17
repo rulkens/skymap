@@ -13,7 +13,7 @@ import { takeLatest, getContext, put, select } from 'typed-redux-saga';
 import { requestOrientationChange } from './orientationActions';
 import { startFrameTween, commitCameraPose } from './cameraSlice';
 import { selectCameraBase } from './selectors';
-import { setOrientation } from '../settings/settingsSlice';
+import { setOrientation } from '../settings/core/orientationSlice';
 import { selectOrientation } from '../settings/selectors';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { reencodePose } from '../../utils/camera/reencodePose';

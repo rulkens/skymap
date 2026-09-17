@@ -34,7 +34,7 @@ import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../../../src/store/rootReducer';
 import { grandTour } from '../../../../../src/data/animation/tours/grandTour';
-import { mergeSnapshot } from '../../../../../src/state/settings/settingsSlice';
+import { mergeSnapshot } from '../../../../../src/state/settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../../../../../src/state/settings/mergeSettingsSnapshot';
 import { computeSceneEntering } from '../../../../../src/state/tour/computeSceneEntering';
 import { captureScene } from '../../../../../src/state/tour/captureScene';

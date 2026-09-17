@@ -39,9 +39,9 @@ import {
 } from '../../../src/state/settings/selectors';
 import {
   setVolumesEnabled,
-  setFilamentsEnabled,
   addVolumeField,
-} from '../../../src/state/settings/settingsSlice';
+} from '../../../src/layers/volume/settings/volumesSlice';
+import { setFilamentsEnabled } from '../../../src/layers/filaments/settings/filamentsSlice';
 import type { AppStore } from '../../../src/store/types';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 

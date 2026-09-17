@@ -11,7 +11,7 @@ import { memo, useCallback } from 'react';
 import { SgrAStarLensingTuningSection } from '../DebugPanel/SgrAStarLensingTuningSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectSgrAStarLensingTuning } from '../../state/settings/selectors';
-import { setSgrAStarLensingTuning } from '../../state/settings/settingsSlice';
+import { setSgrAStarLensingTuning } from '../../layers/body/settings/sgrAStarLensingTuningSlice';
 import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
 
 function SgrAStarLensingTuningSectionContainer(): React.ReactElement {

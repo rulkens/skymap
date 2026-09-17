@@ -13,23 +13,23 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 **The folder layout is the contract, spelled out.** A contract member that is one
 function is a root file named for it; a member that is a collection is a folder.
 
-| Contract member | Lives in                                      | Notes                                                |
-| --------------- | --------------------------------------------- | ---------------------------------------------------- |
-| `name`          | `layer.ts`                                    | The whole `defineLayer` call, nothing else           |
-| `create`        | `create.ts`                                   | Mints the Runtime — the Layer's private guts         |
-| `destroy`       | `destroy.ts`                                  | Releases exactly what `create` took                  |
-| `frame?`        | `frame.ts`                                    | Per-frame prelude; returns the awake vote            |
-| `settings?`     | `settings/`                                   | One settings cluster per file                        |
-| `sources?`      | `sources/`                                    | One `SOURCE_REGISTRY` row per file, + the rows array |
-| `sagas?`        | `sagas/`                                      | One saga per file                                    |
-| `ui?`           | `ui/`                                         | The SettingsPanel section, hand-written              |
-| `passes`        | `passes/`                                     | One `ContentPass` factory per file                   |
-| `assets?`       | `load/`                                       | The asset-row declaration, beside its slots          |
-| `fades?`        | `present/`                                    |                                                      |
-| `labels?`       | `present/`                                    |                                                      |
-| `selection?`    | `present/`                                    |                                                      |
-| `facts?`        | type in `types/`, initial value in `layer.ts` |                                                      |
-| `targets?`      | `layer.ts`                                    | Declared but NOT consumed yet — 05c wires it         |
+| Contract member | Lives in                                      | Notes                                                                                     |
+| --------------- | --------------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `name`          | `layer.ts`                                    | The whole `defineLayer` call, nothing else                                                |
+| `create`        | `create.ts`                                   | Mints the Runtime — the Layer's private guts                                              |
+| `destroy`       | `destroy.ts`                                  | Releases exactly what `create` took                                                       |
+| `frame?`        | `frame.ts`                                    | Per-frame prelude; returns the awake vote                                                 |
+| `settings?`     | `settings/`                                   | One `createSlice` per cluster; multi-cluster Layers add a `<layer>LayerSettings.ts` tuple |
+| `sources?`      | `sources/`                                    | One `SOURCE_REGISTRY` row per file, + the rows array                                      |
+| `sagas?`        | `sagas/`                                      | One saga per file                                                                         |
+| `ui?`           | `ui/`                                         | The SettingsPanel section, hand-written                                                   |
+| `passes`        | `passes/`                                     | One `ContentPass` factory per file                                                        |
+| `assets?`       | `load/`                                       | The asset-row declaration, beside its slots                                               |
+| `fades?`        | `present/`                                    |                                                                                           |
+| `labels?`       | `present/`                                    |                                                                                           |
+| `selection?`    | `present/`                                    |                                                                                           |
+| `facts?`        | type in `types/`, initial value in `layer.ts` |                                                                                           |
+| `targets?`      | `layer.ts`                                    | Declared but NOT consumed yet — 05c wires it                                              |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
@@ -51,6 +51,10 @@ Three more folders hold the Runtime's private machinery — core never sees thes
 - **Pass names are globally unique.** `createLayers` throws at boot if two Layers
   answer to the same one, which is what catches a half-finished migration where
   core still holds a row the Layer now also declares.
+- **A multi-cluster Layer's settings tuple is imported from the Layer, never off
+  `APP_COMPOSITION`.** Reading it there would make the settings root type depend on
+  the Layer's, which depends (via `ContentPass` → `PassState`) on that same root
+  type — a circular alias.
 - **Shaders do not move into a Layer.** WGSL stays at
   `src/services/gpu/shaders/<family>/`. The `?static` specifiers are invisible to
   `tsc` — only `npm run build` catches a dangling one.

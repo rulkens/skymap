@@ -59,7 +59,7 @@ import {
   show,
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
-import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
+import { setLabelsFocusedOnly } from '../../../../state/settings/core/labelsSlice';
 import { dwellDrift } from '../../../../state/tour/dwellDrift';
 
 const LOCAL_GROUP = focusId('group-local-group');

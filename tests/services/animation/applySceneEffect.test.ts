@@ -27,7 +27,7 @@ import { applySceneEffect } from '../../../src/services/animation/applySceneEffe
 import { frameTo } from '../../../src/services/engine/animation/effectHelpers';
 import { VISIBILITY_ACTION_ROW } from '../../../src/services/animation/visibilityActionRow';
 import { syncVisibilityFades } from '../../../src/services/engine/wiring/syncVisibilityFades';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { startFrameTween } from '../../../src/state/camera/cameraSlice';
 import { matrixToQuaternion } from '../../../src/utils/math/matrixToQuaternion';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
@@ -35,15 +35,17 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
+import { setFilamentsEnabled } from '../../../src/layers/filaments/settings/filamentsSlice';
+import { setFlowEnabled } from '../../../src/layers/flow/settings/flowSlice';
 import {
-  setFilamentsEnabled,
-  setFlowEnabled,
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
+} from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
-  writeVolumeField,
-} from '../../../src/state/settings/settingsSlice';
+} from '../../../src/layers/structure/settings/structuresSlice';
+import { writeVolumeField } from '../../../src/layers/volume/settings/volumesSlice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
