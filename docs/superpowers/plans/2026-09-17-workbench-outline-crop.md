@@ -522,11 +522,11 @@ drops below 3 corners reopens.
 Add `outline: outlineSlice.reducer` to `rootReducer.ts` and drop its stale "arrive with plan 3"
 comment only if it now misleads.
 
-- [ ] `cornerClicked on the first corner of an open triangle closes it`.
-- [ ] `cornerClicked deletes a corner and reopens a ring that falls below three`.
-- [ ] `cornerAppended is ignored on a closed ring`.
-- [ ] `selectMaskRing prefers the draft over a saved ring`; `selectMaskRing is null when masked off`.
-- [ ] Commit.
+- [x] `cornerClicked on the first corner of an open triangle closes it`.
+- [x] `cornerClicked deletes a corner and reopens a ring that falls below three`.
+- [x] `cornerAppended is ignored on a closed ring`.
+- [x] `selectMaskRing prefers the draft over a saved ring`; `selectMaskRing is null when masked off`.
+- [x] Commit.
 
 ### Task 14: `watchOutlineSaga`
 
