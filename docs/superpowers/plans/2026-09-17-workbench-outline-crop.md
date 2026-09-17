@@ -394,8 +394,8 @@ Ruling: coverage is the sum of UV-triangle areas, clamped to 1, not a rasterised
 atlas's charts do not overlap, and a sum is exact then — cost if wrong: overlapping charts
 over-report the fraction part 2 budgets the atlas from.
 
-- [ ] `uvCoverage of two triangles tiling the lower-left quarter is 0.25`.
-- [ ] Commit.
+- [x] `uvCoverage of two triangles tiling the lower-left quarter is 0.25`.
+- [x] Commit.
 
 ### Task 11: `crop-mesh` CLI
 
