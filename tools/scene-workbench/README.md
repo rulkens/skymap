@@ -246,7 +246,7 @@ place corners closer together. Save
 is enabled only on a closed ring; Save and Discard both return the camera to
 the pose draw mode left. Draw mode refuses a mesh whose transform rotates about
 anything but Z. Splats are not drawn while the projection is orthographic —
-`splat.wesl` sizes each splat by its view-space depth, which that projection
+`splat/vertex.wesl` sizes each splat by its view-space depth, which that projection
 lacks.
 
 While drawing, the whole mesh stays visible to trace against. Once saved, the

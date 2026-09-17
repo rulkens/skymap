@@ -71,7 +71,7 @@ export function createSceneRenderers(
   return {
     draw(pass, resources, hiddenAssetIds, display, projection): void {
       for (const kind of SCENE_DRAW_ORDER) {
-        // splat.wesl scales each splat by its view-space depth, which orthographic lacks.
+        // splat/vertex.wesl scales each splat by its view-space depth, which orthographic lacks.
         if (kind === 'gaussianSplat' && projection === 'orthographic') continue;
         // TS can't correlate the key with the row it selects; the table's own
         // type is what proves each row only ever draws its own kind's assets.

@@ -1,14 +1,15 @@
 /**
- * createOutlineOverlayRenderer — the draw-mode ring over the scene (outlineOverlay.wesl): a
+ * createOutlineOverlayRenderer — the draw-mode ring over the scene (shaders/outlineOverlay/): a
  * line list of its edges, then one instanced handle per corner. Depth-tested 'always' and
  * never writing depth, so it must draw after every scene pass.
  */
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
-import outlineOverlayWgsl from './shaders/outlineOverlay.wesl?static';
+import fsCode from './shaders/outlineOverlay/fragment.wesl?static';
+import vsCode from './shaders/outlineOverlay/vertex.wesl?static';
 
-const VERTICES_PER_HANDLE = 6; // outlineOverlay.wesl's two-triangle quad
+const VERTICES_PER_HANDLE = 6; // outlineOverlay/vertex.wesl's two-triangle quad
 const FLOATS_PER_POINT = 3;
 const FLOATS_PER_HANDLE = FLOATS_PER_POINT + 1; // corner, then its width in device px
 /** CSS px, the unit `attachOutlineCornerControls`' hit radius is in. */
@@ -30,7 +31,8 @@ export function createOutlineOverlayRenderer(
   cameraLayout: GPUBindGroupLayout,
 ): OutlineOverlayRenderer {
   const { device } = gpu;
-  const module = createShaderModuleWithDevLog(device, outlineOverlayWgsl, 'scene-outline-overlay');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'scene-outline-overlay-vs');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scene-outline-overlay-fs');
   const layout = device.createPipelineLayout({
     label: 'scene-outline-overlay-layout',
     bindGroupLayouts: [cameraLayout],
@@ -46,12 +48,12 @@ export function createOutlineOverlayRenderer(
       label: `scene-outline-overlay-${name}`,
       layout,
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: name === 'edge' ? 'vsEdge' : 'vsHandle',
         buffers: [buffer],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: name === 'edge' ? 'fsEdge' : 'fsHandle',
         targets: [{ format: targetFormat }],
       },

@@ -1,19 +1,20 @@
 /**
  * createSplatRenderer — Gaussian splats as covariance-projected quads
- * (splat.wesl), one instance per LIVE `order` entry — `drawCount`, which the
+ * (shaders/splat/), one instance per LIVE `order` entry — `drawCount`, which the
  * depth sort shortens to the clip box's survivors — blended back-to-front over
  * the depth the lidar pass already wrote (depth-tested, never depth-writing).
  *
- * Two pipelines from one module: the deg-1 variant binds `sh1` at group 1
+ * Two pipelines from one vertex module: the deg-1 variant binds `sh1` at group 1
  * binding 1, the deg-0 variant's layout omits it — WebGPU validates a layout
  * only against what the entry point statically uses.
  */
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import type { SplatGpuAsset } from './renderResources';
-import splatWgsl from './shaders/splat.wesl?static';
+import fsCode from './shaders/splat/fragment.wesl?static';
+import vsCode from './shaders/splat/vertex.wesl?static';
 
-const VERTICES_PER_SPLAT = 6; // splat.wesl's two-triangle quad
+const VERTICES_PER_SPLAT = 6; // splat/vertex.wesl's two-triangle quad
 
 // Straight (unpremultiplied) alpha: the fragment emits colour and alpha
 // separately, so this is NOT `PREMULTIPLIED_OVER_BLEND`.
@@ -32,7 +33,8 @@ export function createSplatRenderer(
   cameraLayout: GPUBindGroupLayout,
 ): SplatRenderer {
   const { device } = gpu;
-  const module = createShaderModuleWithDevLog(device, splatWgsl, 'scene-splat');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'scene-splat-vs');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scene-splat-fs');
 
   const storageEntry = (binding: number): GPUBindGroupLayoutEntry => ({
     binding,
@@ -58,7 +60,7 @@ export function createSplatRenderer(
         bindGroupLayouts: [cameraLayout, assetLayouts[shDegree]],
       }),
       vertex: {
-        module,
+        module: vsModule,
         entryPoint: `vs_deg${shDegree}`,
         buffers: [
           {
@@ -69,7 +71,7 @@ export function createSplatRenderer(
         ],
       },
       fragment: {
-        module,
+        module: fsModule,
         entryPoint: 'fs',
         targets: [{ format: targetFormat, blend: STRAIGHT_ALPHA_BLEND }],
       },

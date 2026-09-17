@@ -47,7 +47,7 @@ same day from per-group to per-mesh, which removed the shared-bind-group prep).
 | Touchpoint                            | Verdict               | Blocker / seam                                                                                                                                                                                            |
 | ------------------------------------- | --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Orthographic nadir camera             | bolt-on → **prep P1** | perspective hardcoded in `writeSceneCamera.ts:36` and `metresPerPx` (`:46`); pitch clamp `±(π/2−0.01)` (`viewSlice.ts:30`) makes exact nadir unreachable (0.36 m parallax across the mesh's 36 m Z range) |
-| Mask polygon reaching the mesh shader | growth                | a binding in the mesh's per-asset group-1 bind group (`texturedMeshRenderer.ts:111-117`, `texturedMesh.wesl:10-12`)                                                                                       |
+| Mask polygon reaching the mesh shader | growth                | a binding in the mesh's per-asset group-1 bind group (`texturedMeshRenderer.ts:111-117`, `texturedMesh/fragment.wesl:8-10`)                                                                               |
 | Outline slice + load/save saga        | growth                | rows in `rootReducer` / `rootSaga`                                                                                                                                                                        |
 | Dev endpoint                          | growth                | `tools/famous-curator/plugin/apiPlugin.ts:123` pattern, `tools/utils/http` helpers                                                                                                                        |
 | Outline path                          | growth                | a helper in `tools/scene-recon/manifest/geo3dLayout.ts`                                                                                                                                                   |
@@ -123,7 +123,7 @@ mask toggle sits beside Draw outline on the mesh's layer row.
   is about Z only; draw mode refuses to open otherwise (every current mesh is
   identity).
 - **Splats.** Neither sorted nor drawn while the projection is orthographic —
-  `splat.wesl` scales by view depth.
+  `splat/vertex.wesl` scales by view depth.
 - **Editing.** Click empty space: append a corner. Pointer-down within 8 px of a
   corner then drag: move it (suppresses pan). Click a corner without dragging:
   delete it; the first corner of an open ring with ≥ 3 corners closes it
@@ -144,7 +144,7 @@ struct MaskPolygon { count: u32, _pad: u32, cornersM: array<vec2f> };
 fn insideMask(p: vec2f) -> bool;  // even-odd crossing; count < 3 ⇒ true
 ```
 
-`texturedMesh.wesl` passes the mesh-local position to the fragment stage and
+`texturedMesh/` passes the mesh-local position to the fragment stage and
 `discard`s outside. "Masked off" and "no outline" both upload `count = 0`: no
 `enabled` flag, no pipeline variant. The buffer grows by reallocation (and a
 bind-group rebuild) when the ring outgrows it; no corner cap. The wireframe
@@ -241,8 +241,8 @@ Earth" (`needs-design`, gated on this crop's measurement and terrain F3a).
   `tools/scene-recon/cropMesh.ts`, `tools/scene-recon/crop/*`,
   `data/geo3d/soendermarken-crop-2019/mesh.outline.json` (user-drawn), `earcut`
   devDependency, `crop-mesh` npm script. The mask struct and `insideMask` live
-  in `texturedMesh.wesl`.
+  in `texturedMesh/`.
 - Changed: `writeSceneCamera.ts`, `sceneCameraView.ts` (P1);
-  `texturedMeshRenderer.ts`, `uploadTexturedMesh.ts`, `texturedMesh.wesl`;
+  `texturedMeshRenderer.ts`, `uploadTexturedMesh.ts`, `texturedMesh/`;
   `LayerList.tsx`; `geo3dLayout.ts`; `rootReducer.ts`, `rootSaga.ts`;
   workbench `vite.config.ts` and `README.md`.

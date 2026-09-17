@@ -1,22 +1,18 @@
-// splat.wesl — Gaussian splats as screen-space quads, EWA-projected (3DGS).
+// splat/vertex.wesl — Gaussian splats as screen-space quads, EWA-projected (3DGS).
 // The covariance projection (Sigma2D = J W Sigma Wt Jt, eigen bound, conic)
 // follows Brush's WGSL kernels: github.com/ArthurBrussee/brush, Copyright
 // Arthur Brussee, Apache License 2.0 (apache.org/licenses/LICENSE-2.0).
-// 'cam.view' looks down -Z (wgpu-matrix lookAt), so depth is -t.z and the
-// Jacobian's third column carries +t/depth^2, not the +Z-forward paper sign.
-// 'cam.splatScale' scales Sigma2D (not just the quad): enlarging the quad
-// alone would change nothing visible past 3 sigma.
-// One module, two vertex entries: 'vs_deg0' never touches 'sh1', so the deg-0
-// pipeline's group-1 layout legitimately omits binding 1.
 
 import package::lib::sceneCamera::SceneCamera;
+import package::splat::io::Splat;
+import package::splat::io::VsOut;
+import package::splat::io::WORDS_PER_SH1;
+import package::splat::io::WORDS_PER_SPLAT;
 
 @group(0) @binding(0) var<uniform> cam: SceneCamera;
 @group(1) @binding(0) var<storage, read> data: array<u32>;
 @group(1) @binding(1) var<storage, read> sh1: array<u32>;
 
-const WORDS_PER_SPLAT: u32 = 7u;
-const WORDS_PER_SH1: u32 = 3u;
 // Pixel-space variance floor: a sub-pixel splat still covers ~one texel.
 const AA_FLOOR_PX2: f32 = 0.3;
 const SH_C1: f32 = 0.4886025;
@@ -26,25 +22,6 @@ const SH_C1: f32 = 0.4886025;
 // frustum half-angle; only the Jacobian sees the clamped t, never the position.
 const TANGENT_LIMIT: f32 = 1.3;
 
-struct Splat {
-  positionM: vec3<f32>,
-  rotation: vec4<f32>,
-  scaleM: vec3<f32>,
-  opacity: f32,
-  color: vec3<f32>,
-};
-
-struct VsOut {
-  @builtin(position) pos: vec4<f32>,
-  @location(0) @interpolate(flat) color: vec3<f32>,
-  @location(1) @interpolate(flat) alpha: f32,
-  @location(2) @interpolate(flat) conic: vec3<f32>,
-  @location(3) dPx: vec2<f32>,
-};
-
-// Word map is packSplats.ts's: w3 rot i8x4 [x,y,z,w]; w4 logScale.xy f16x2;
-// w5 = logScale.z f16 in the low half + opacity u8 at byte 22 (third byte);
-// w6 = dcColor u8x3.
 fn decodeSplat(idx: u32) -> Splat {
   let base = idx * WORDS_PER_SPLAT;
   var s: Splat;
@@ -92,6 +69,8 @@ fn clippedVertex() -> VsOut {
 }
 
 fn projectSplat(s: Splat, vi: u32, color: vec3<f32>) -> VsOut {
+  // 'cam.view' looks down -Z (wgpu-matrix lookAt), so depth is -t.z and the
+  // Jacobian's third column carries +t/depth^2, not the +Z-forward paper sign.
   let t = (cam.view * vec4<f32>(s.positionM, 1.0)).xyz;
   let depth = -t.z;
   if (depth <= 0.0) {
@@ -116,6 +95,8 @@ fn projectSplat(s: Splat, vi: u32, color: vec3<f32>) -> VsOut {
   ));
   let tt = j * w;
   let cov = tt * sigma * transpose(tt);
+  // 'cam.splatScale' scales Sigma2D (not just the quad): enlarging the quad
+  // alone would change nothing visible past 3 sigma.
   let scale2 = cam.splatScale * cam.splatScale;
   let a = cov[0][0] * scale2 + AA_FLOOR_PX2;
   let b = cov[1][0] * scale2;
@@ -135,7 +116,7 @@ fn projectSplat(s: Splat, vi: u32, color: vec3<f32>) -> VsOut {
   );
   let dPx = corners[vi] * radiusPx;
   // Pixel offset -> world offset along the screen axes (same scheme as
-  // lidarPoint.wesl); rightM/upM are exactly the view matrix's x/y rows.
+  // lidarPoint/vertex.wesl); rightM/upM are exactly the view matrix's x/y rows.
   let offsetM = (cam.rightM * dPx.x + cam.upM * dPx.y) * cam.metresPerPx * depth;
 
   var out: VsOut;
@@ -147,6 +128,8 @@ fn projectSplat(s: Splat, vi: u32, color: vec3<f32>) -> VsOut {
   return out;
 }
 
+// One module, two vertex entries: 'vs_deg0' never touches 'sh1', so the deg-0
+// pipeline's group-1 layout legitimately omits binding 1.
 @vertex
 fn vs_deg0(@builtin(vertex_index) vi: u32, @location(0) idx: u32) -> VsOut {
   let s = decodeSplat(idx);
@@ -158,17 +141,4 @@ fn vs_deg1(@builtin(vertex_index) vi: u32, @location(0) idx: u32) -> VsOut {
   let s = decodeSplat(idx);
   let dir = normalize(s.positionM - cam.eyeM);
   return projectSplat(s, vi, sh1Color(idx, s.color, dir));
-}
-
-@fragment
-fn fs(i: VsOut) -> @location(0) vec4<f32> {
-  let d = i.dPx;
-  let power = -0.5 * (i.conic.x * d.x * d.x + 2.0 * i.conic.y * d.x * d.y + i.conic.z * d.y * d.y);
-  let alpha = i.alpha * exp(power);
-  if (alpha < 1.0 / 255.0) {
-    discard;
-  }
-  // Capped below 1 so no single splat writes full coverage and terminates the
-  // back-to-front chain early — Brush's own kernels cap at the same place.
-  return vec4<f32>(i.color, min(alpha, 0.99));
 }

@@ -568,7 +568,7 @@ Register `watchOutlineSaga()` in `rootSaga.ts`'s `all([...])`.
 `tools/scene-workbench/src/render/renderResources.ts`,
 `tools/scene-workbench/src/render/uploadTexturedMesh.ts`,
 `tools/scene-workbench/src/render/texturedMeshRenderer.ts`,
-`tools/scene-workbench/src/render/shaders/texturedMesh.wesl`,
+`tools/scene-workbench/src/render/shaders/texturedMesh/`,
 `tools/scene-workbench/src/state/outline/watchOutlineSaga.ts`,
 `tests/tools/scene-workbench/render/packMaskPolygon.test.ts` (new),
 `tests/tools/scene-workbench/render/writeMeshMask.test.ts` (new)
@@ -587,7 +587,7 @@ struct MaskPolygon { count: u32, _pad: u32, cornersM: array<vec2f> };
 
 Minimum buffer 16 bytes (header + one element) even at `count = 0`.
 
-Ruling: struct, binding and `insideMask` all live in `texturedMesh.wesl`, not a
+Ruling: struct, binding and `insideMask` all live in `texturedMesh/`, not a
 `lib/maskPolygon.wesl` — WGSL cannot pass a runtime-sized storage array to a function without the
 pointer-parameter extension, so the function must read the module-scope binding, and a lib that
 declares a binding hard-codes the importer's group/binding numbers — cost if wrong: a second masked
@@ -612,7 +612,7 @@ export function writeMeshMask(
 - `texturedMeshRenderer`: `assetLayout` gains binding 2, `FRAGMENT`, `read-only-storage`; the bind
   group cache (`:106-121`) is keyed by the **mask buffer** (`WeakMap<GPUBuffer, GPUBindGroup>`),
   so a reallocation rebuilds the group. The wireframe pass stays unmasked.
-- `texturedMesh.wesl`: `VsOut` gains `@location(1) localXY: vec2<f32>` = the vertex's
+- `texturedMesh/`: `VsOut` gains `@location(1) localXY: vec2<f32>` = the vertex's
   `positionM.xy` (the vertex buffer is already mesh-local); `fs` `discard`s when
   `!insideMask(i.localXY)`. `insideMask` repeats Task 6's half-open even-odd rule exactly;
   `count < 3 ⇒ true`. No `enabled` flag, no pipeline variant.
@@ -637,7 +637,7 @@ export function writeMeshMask(
 ### Task 16: outline overlay renderer
 
 **Files:** `tools/scene-workbench/src/render/outlineOverlayRenderer.ts` (new),
-`tools/scene-workbench/src/render/shaders/outlineOverlay.wesl` (new),
+`tools/scene-workbench/src/render/shaders/outlineOverlay/` (new),
 `tools/scene-workbench/src/state/outline/selectDraftRingGroupM.ts` (new),
 `tools/scene-workbench/src/ui/Viewport/Viewport.tsx`
 **review: yes** — shader.
@@ -760,11 +760,11 @@ Follow `.claude/skills/create-component/SKILL.md` (own folder, `function Name() 
 6. `cropMeshGeometry` takes the ring as well as the pieces (Task 9).
 7. `uvCoverage` sums UV-triangle areas (Task 10).
 8. Slice state types beside the slice, per workbench precedent (Task 13).
-9. Mask struct, binding and `insideMask` in `texturedMesh.wesl`, no `lib/maskPolygon.wesl` (Task 15).
+9. Mask struct, binding and `insideMask` in `texturedMesh/`, no `lib/maskPolygon.wesl` (Task 15).
 10. No `meshMaskWritten` command; the mask write rides the triggering dispatch (Task 15).
 11. Corner drag arbitration by a capture-phase listener, not an `orbitControls.ts` hook (Task 17).
 12. Splats are neither sorted nor drawn under orthographic projection (review fix; originally a
-    README note). Why: `splat.wesl` scales by view depth, and draw mode is a mesh tool. Cost if
+    README note). Why: `splat/vertex.wesl` scales by view depth, and draw mode is a mesh tool. Cost if
     wrong: no splats while drawing.
 13. `.gitignore` gains `!/data/geo3d/**/*.outline.json` — without it the spec's committed outline
     is silently ignored (Task 4).
@@ -782,7 +782,7 @@ Follow `.claude/skills/create-component/SKILL.md` (own folder, `function Name() 
       `cropMesh` pipeline step; `earcut` devDependency.
 - [ ] `plugin/outlinePlugin.ts` registered in the workbench `vite.config.ts`.
 - [ ] `outline` slice, `selectMaskRing`, `watchOutlineSaga`, three commands.
-- [ ] Mask storage binding in `texturedMesh.wesl` + `packMaskPolygon`/`writeMeshMask`.
+- [ ] Mask storage binding in `texturedMesh/` + `packMaskPolygon`/`writeMeshMask`.
 - [ ] Outline overlay renderer; corner controls; `MeshOutlineControls` on mesh layer rows.
 - [ ] README "Mesh outline" section.
 - [ ] P1 is a separate commit ahead of the feature commits.

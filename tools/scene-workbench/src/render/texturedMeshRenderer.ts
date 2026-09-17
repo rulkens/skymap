@@ -1,9 +1,9 @@
 /**
  * createTexturedMeshRenderer — the MVS mesh as an indexed, unlit, opaque pass
- * (texturedMesh.wesl) that writes depth for the splats to blend against, plus
- * the optional wireframe overlay (meshWireframe.wesl) — WebGPU has no wireframe
+ * (shaders/texturedMesh/) that writes depth for the splats to blend against, plus
+ * the optional wireframe overlay (shaders/meshWireframe/) — WebGPU has no wireframe
  * fill mode, so the edges are line-list draws over the same positions, one per
- * edge class (manifold, then open) off one shader with an override constant.
+ * edge class (manifold, then open) off one fragment module with an override constant.
  *
  * 'cullMode: none' is deliberate: MVS triangle winding is not guaranteed
  * consistent, so backface culling drops real surface at random.
@@ -12,8 +12,10 @@ import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import { createShaderModuleWithDevLog } from '../../../../src/services/gpu/shaderCompileLogger';
 import type { SceneDisplay } from '../../@types/SceneDisplay';
 import type { MeshGpuAsset } from './renderResources';
-import meshWireframeWgsl from './shaders/meshWireframe.wesl?static';
-import texturedMeshWgsl from './shaders/texturedMesh.wesl?static';
+import wireframeFsCode from './shaders/meshWireframe/fragment.wesl?static';
+import wireframeVsCode from './shaders/meshWireframe/vertex.wesl?static';
+import fsCode from './shaders/texturedMesh/fragment.wesl?static';
+import vsCode from './shaders/texturedMesh/vertex.wesl?static';
 
 const POSITION_LAYOUT: GPUVertexBufferLayout = {
   arrayStride: 12,
@@ -30,7 +32,8 @@ export function createTexturedMeshRenderer(
   cameraLayout: GPUBindGroupLayout,
 ): TexturedMeshRenderer {
   const { device } = gpu;
-  const module = createShaderModuleWithDevLog(device, texturedMeshWgsl, 'scene-textured-mesh');
+  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'scene-textured-mesh-vs');
+  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'scene-textured-mesh-fs');
 
   const assetLayout = device.createBindGroupLayout({
     label: 'scene-textured-mesh-asset',
@@ -56,7 +59,7 @@ export function createTexturedMeshRenderer(
       bindGroupLayouts: [cameraLayout, assetLayout],
     }),
     vertex: {
-      module,
+      module: vsModule,
       entryPoint: 'vs',
       buffers: [
         POSITION_LAYOUT,
@@ -66,15 +69,20 @@ export function createTexturedMeshRenderer(
         },
       ],
     },
-    fragment: { module, entryPoint: 'fs', targets: [{ format: targetFormat }] },
+    fragment: { module: fsModule, entryPoint: 'fs', targets: [{ format: targetFormat }] },
     primitive: { topology: 'triangle-list', cullMode: 'none' },
     depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
   });
 
-  const wireframeModule = createShaderModuleWithDevLog(
+  const wireframeVsModule = createShaderModuleWithDevLog(
     device,
-    meshWireframeWgsl,
-    'scene-mesh-wireframe',
+    wireframeVsCode,
+    'scene-mesh-wireframe-vs',
+  );
+  const wireframeFsModule = createShaderModuleWithDevLog(
+    device,
+    wireframeFsCode,
+    'scene-mesh-wireframe-fs',
   );
 
   const wireframeLayout = device.createPipelineLayout({
@@ -86,9 +94,9 @@ export function createTexturedMeshRenderer(
     device.createRenderPipeline({
       label: `scene-mesh-wireframe-${openEdge === 1 ? 'open' : 'manifold'}`,
       layout: wireframeLayout,
-      vertex: { module: wireframeModule, entryPoint: 'vs', buffers: [POSITION_LAYOUT] },
+      vertex: { module: wireframeVsModule, entryPoint: 'vs', buffers: [POSITION_LAYOUT] },
       fragment: {
-        module: wireframeModule,
+        module: wireframeFsModule,
         entryPoint: 'fs',
         targets: [{ format: targetFormat }],
         constants: { openEdge },
