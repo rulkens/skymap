@@ -1,7 +1,6 @@
 /**
- * The settings root, composed by RTK. Imports no root type on purpose:
- * `EngineSettingsState` derives from THIS reducer, so a root-type import here
- * would make that alias reference itself.
+ * The settings root. Imports no root type on purpose: `EngineSettingsState`
+ * derives from THIS reducer, so such an import makes that alias self-reference.
  */
 
 import { combineSlices } from '@reduxjs/toolkit';
