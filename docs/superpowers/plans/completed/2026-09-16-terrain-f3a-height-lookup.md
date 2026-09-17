@@ -309,7 +309,9 @@ Spec §8.3's F3a table. Three rows, and only three:
   collapsed onto it.
 - `SHGT` v3 in `src/data/scene/heightTileFormat.ts`, written by the bake and read by
   `decodeHeightTileHeader`.
-- The height product re-baked to v10 and synced to R2.
+- The height product re-baked, in place at `v9` — one `prefix` field covers both
+  products, so bumping it during a height-only bake would point the manifest at `v10`
+  albedo tiles that do not exist. The R2 sync follows the merge, with a purge.
 - `src/utils/surfaceTiles/terrainHeightM.ts` + `src/@types/scene/ResidentHeightLookup.d.ts`.
 - `SurfaceTileSubsystem.terrainHeightAt(bodyId, dirBodyFixed)`.
 - `HostBody.groundRadiusAtM(dirBodyFixed)`.
