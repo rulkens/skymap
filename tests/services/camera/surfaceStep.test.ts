@@ -46,6 +46,10 @@ const CTX = {
   bodyRadiusM: R,
   standoffRadii: SURFACE_STANDOFF_RADII,
   groundRadiusAtM: () => R,
+  // A no-relief fixture body: tight enough to bracket the flat field without
+  // standing in for any real terrain shell.
+  innerBoundRadiusM: R * 0.999,
+  outerBoundRadiusM: R * 1.001,
   sceneUpLocal: POLE,
   focusPivotM: null,
   tuning: TUNING,
@@ -390,7 +394,10 @@ describe('surfaceStep', () => {
     const zoomedEye = eyeOf(apply(c, tilted, zoom(F, true)));
     const rangeTo = (a: Vec3, e: Vec3): number => Math.hypot(e[0] - a[0], e[1] - a[1], e[2] - a[2]);
 
-    expect(rangeTo(fresh, zoomedEye)).toBeCloseTo(F * rangeTo(fresh, eye), 12);
+    // The anchor now marches over terrain to a pixel-sized tolerance rather
+    // than an exact analytic root (F2), so this holds to that scale, not the
+    // bit — the flat fixture field still lands within a few step-widths of it.
+    expect(rangeTo(fresh, zoomedEye)).toBeCloseTo(F * rangeTo(fresh, eye), 3);
     expect(rangeTo(anchor, zoomedEye)).not.toBeCloseTo(F * rangeTo(anchor, eye), 6);
     expect(angleBetween(fresh, anchor)).toBeGreaterThan(0.5);
   });
@@ -409,11 +416,13 @@ describe('surfaceStep', () => {
     // passes through it) and the pixel the anchor sits under.
     const stepped = apply(c, start, zoom(0.5, false, [75, 50]));
     const eye = eyeOf(stepped);
+    // Loosened from bit-exact (F2): the anchor now marches over terrain to a
+    // pixel-sized tolerance, not an exact analytic root.
     expect(Math.hypot(eye[0] - 0.6, eye[1], eye[2] - 0.8)).toBeCloseTo(
       0.5 * Math.hypot(0 - 0.6, 0, 2 - 0.8),
-      12,
+      4,
     );
-    expect(angleBetween(pickThrough(stepped, [75, 50])!, anchor)).toBeLessThan(1e-12);
+    expect(angleBetween(pickThrough(stepped, [75, 50])!, anchor)).toBeLessThan(1e-5);
 
     // …and keeping the wheel turning walks the eye onto that point, which is
     // the user-visible property: what the cursor is over stays put and grows.
@@ -795,8 +804,10 @@ describe('surfaceStep', () => {
       const before = pose;
       pose = apply(c, pose, zoom(0.8, false, [50, 70]));
       maxTurn = Math.max(maxTurn, angleBetween(upOf(before), upOf(pose)));
-      // Pixel lock, every tick of the way down, not merely at the end.
-      expect(angleBetween(pickThrough(pose, [50, 70])!, anchor0)).toBeLessThan(1e-12);
+      // Pixel lock, every tick of the way down, not merely at the end. Loosened
+      // from bit-exact (F2): the anchor marches over terrain to a pixel-sized
+      // tolerance now, not an exact analytic root.
+      expect(angleBetween(pickThrough(pose, [50, 70])!, anchor0)).toBeLessThan(1e-6);
     }
 
     // North is up. (It gets WORSE on the first notch — 1.2 → 2.39 rad — because

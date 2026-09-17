@@ -10,7 +10,9 @@ import { bodyUpWeight } from './bodyUpWeight';
 import { cursorRayBodyLocal } from './cursorRayBodyLocal';
 import { eyeFrameOf } from './eyeFrameOf';
 import { mappedTiltRad } from './mappedTiltRad';
+import { metresPerPixelAtRange } from './metresPerPixelAtRange';
 import { pickOnBody } from './pickOnBody';
+import { raycastTerrain } from './raycastTerrain';
 import { settledZoomPose } from './settledZoomPose';
 import { spentZoomFactor } from './spentZoomFactor';
 import { dot3 } from '../math/dot3';
@@ -26,6 +28,8 @@ export function surfaceZoomStep(
   bodyRadiusM: number,
   standoffRadii: number,
   groundRadiusAtM: GroundRadiusLookup,
+  innerBoundRadiusM: number,
+  outerBoundRadiusM: number,
   sceneUpLocal: Readonly<Vec3>,
   rememberedTiltRad: number,
   tuning: CameraTuning,
@@ -52,12 +56,24 @@ export function surfaceZoomStep(
   // there, which pixel-locks it in BOTH directions and leaves the site engage
   // nothing to re-aim. The cost is deliberate — with a rover focused the wheel
   // is not cursor-directed here, exactly as it is not in the world arm.
-  const anchorM =
-    focusPivotM ??
-    (latched !== null && !stale
-      ? latched
-      : (pickOnBody(cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad), bodyRadiusM)?.pointM ??
-        null));
+  // "Always answer something" is camera-feel policy, so it lives at this call
+  // site, not inside the pure marcher: a terrain miss (a ray past the limb)
+  // still falls back to the datum sphere rather than leaving the wheel inert.
+  const freshPick = (): Readonly<Vec3> | null => {
+    const ray = cursorRayBodyLocal(arm, pixel, viewportPx, fovYRad);
+    const toleranceM = metresPerPixelAtRange(
+      Math.hypot(...bodyFixedEyeM(arm)) - bodyRadiusM,
+      fovYRad,
+      viewportPx[1],
+    );
+    return (
+      raycastTerrain(ray, innerBoundRadiusM, outerBoundRadiusM, groundRadiusAtM, toleranceM)
+        ?.pointM ??
+      pickOnBody(ray, bodyRadiusM)?.pointM ??
+      null
+    );
+  };
+  const anchorM = focusPivotM ?? (latched !== null && !stale ? latched : freshPick());
   const stepped = anchoredZoomStep(
     arm,
     factor,

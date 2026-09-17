@@ -28,6 +28,10 @@ const CTX = {
   bodyRadiusM: 1,
   standoffRadii: SURFACE_STANDOFF_RADII,
   groundRadiusAtM: () => 1,
+  // A no-relief fixture body: tight enough to bracket the flat field without
+  // standing in for any real terrain shell.
+  innerBoundRadiusM: 0.999,
+  outerBoundRadiusM: 1.001,
   sceneUpLocal: [0, 0, 1] as const,
   focusPivotM: null,
   tuning: DEFAULT_CAMERA_TUNING,

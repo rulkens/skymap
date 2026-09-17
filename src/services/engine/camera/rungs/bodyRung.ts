@@ -82,6 +82,8 @@ export const bodyRung: ClimbRow<'body'> = {
       bodyRadiusM: host.radiusM,
       standoffRadii: host.standoffRadii,
       groundRadiusAtM: host.groundRadiusAtM,
+      innerBoundRadiusM: host.innerBoundRadiusM,
+      outerBoundRadiusM: host.outerBoundRadiusM,
       // The body rotates under the scene frame, so this is resampled per drain.
       sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
       // Derived from the FOCUS every drain, never carried in the pose: a

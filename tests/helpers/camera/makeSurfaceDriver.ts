@@ -41,6 +41,10 @@ export function makeSurfaceDriver() {
         bodyRadiusM,
         standoffRadii: SURFACE_STANDOFF_RADII,
         groundRadiusAtM: () => bodyRadiusM,
+        // A no-relief fixture body: tight enough to bracket the flat field
+        // without standing in for any real terrain shell.
+        innerBoundRadiusM: bodyRadiusM * 0.999,
+        outerBoundRadiusM: bodyRadiusM * 1.001,
         sceneUpLocal,
         focusPivotM: null,
         tuning,
