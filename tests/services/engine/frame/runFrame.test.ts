@@ -903,31 +903,6 @@ describe('runFrame — milky-way star count', () => {
   });
 });
 
-describe('runFrame — flow field reconcile', () => {
-  it('calls flowFieldRenderer.reconcile with the live flow settings, every frame', () => {
-    // The flow field's own reseed-on-switch is a value compare (Task 6); this
-    // only pins that runFrame feeds it the settings every frame, the way
-    // milkyWayCloud.reconcile is fed starCount every frame above.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(store);
-
-    const reconcile = vi.fn<(seed: { mode: string; count: number }) => void>();
-    state.gpu.flowFieldRenderer = {
-      reconcile,
-    } as unknown as EngineState['gpu']['flowFieldRenderer'];
-    (state.settings as unknown as { flow: { mode: string; count: number } }).flow = {
-      mode: 'advect',
-      count: 40000,
-    };
-
-    runFrame(state, deps, 0);
-
-    expect(reconcile).toHaveBeenCalledTimes(1);
-    expect(reconcile).toHaveBeenCalledWith(state.settings.flow);
-  });
-});
-
 describe('runFrame — engineScaleChanged dispatch', () => {
   // The scale-dispatch block fires inside the `if (state.booted)` guard —
   // the same guard that emits `onCameraChange`. `makeCamState()` is booted;

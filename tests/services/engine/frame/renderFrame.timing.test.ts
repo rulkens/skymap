@@ -289,7 +289,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         debugLineRenderer: null,
         selectionRingRenderer: null,
         volumeFieldRenderer: null,
-        flowFieldRenderer: null,
         structureMarkerRenderer: null,
         // Near-field handles null → the (hdr, NEAR0) star-point render, the
         // foreground:0 render, and the NEAR0 caption render all select

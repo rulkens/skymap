@@ -479,7 +479,6 @@ function makeInput(
           debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer: null,
-          flowFieldRenderer: null,
           structureMarkerRenderer: null,
           // Near-field handles null → the body layers, star-points,
           // star-catalog, and foregroundLabelsPass all report enabled=false,

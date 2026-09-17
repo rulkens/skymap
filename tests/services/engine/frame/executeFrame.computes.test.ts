@@ -17,16 +17,20 @@ import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime'
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 
+/** A ready asset slot — `slotReady` reads `committed() !== null`. */
+function readySlot() {
+  return { committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }) };
+}
+
 /**
- * `flowCompute` now closes over its own Runtime rather than reading
- * `state.gpu`/`state.assetSlots`; these fixtures still shape those fields
- * (mirroring how core's still-temporary `computes/index.ts` row rebuilds the
- * Runtime per call) so the runtime built here is a thin projection of them.
+ * `flowCompute` closes over its own Runtime, reading neither `state.gpu` nor
+ * `state.assetSlots` — built directly here, exercising `executeFrame`'s
+ * resolve-by-name dispatch with a real row.
  */
-function runtimeOf(state: EngineState): FlowRuntime {
+function makeRuntime(encodeCompute: ReturnType<typeof vi.fn>, ready: boolean): FlowRuntime {
   return {
-    renderer: state.gpu.flowFieldRenderer,
-    slot: state.assetSlots.flow,
+    renderer: { label: 'flowFieldRenderer', encodeCompute },
+    slot: ready ? readySlot() : { committed: () => null },
   } as unknown as FlowRuntime;
 }
 
@@ -58,20 +62,13 @@ function makeArgs(program: readonly FrameStep[], state: EngineState, timing?: Gp
   return args;
 }
 
-/** A ready asset slot — `slotReady` reads `committed() !== null`. */
-function readySlot() {
-  return { committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }) };
-}
-
 describe('executeFrame — compute dispatch', () => {
   it('resolves a compute step against the composed state.computes list', () => {
     const encodeCompute = vi.fn();
     const state = {
       settings: { debug: { disabledPasses: {} }, flow: { enabled: true } },
-      gpu: { flowFieldRenderer: { label: 'flowFieldRenderer', encodeCompute } },
-      assetSlots: { flow: readySlot() },
     } as unknown as EngineState;
-    state.computes = [flowCompute(runtimeOf(state))];
+    state.computes = [flowCompute(makeRuntime(encodeCompute, true))];
 
     executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state));
 
@@ -95,10 +92,8 @@ describe('executeFrame — compute dispatch', () => {
       const encodeCompute = vi.fn();
       const state = {
         settings: { debug: { disabledPasses }, flow: { enabled: true } },
-        gpu: { flowFieldRenderer: { label: 'flowFieldRenderer', encodeCompute } },
-        assetSlots: { flow: readySlot() },
       } as unknown as EngineState;
-      state.computes = [flowCompute(runtimeOf(state))];
+      state.computes = [flowCompute(makeRuntime(encodeCompute, true))];
       executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state));
       return encodeCompute;
     };
@@ -111,12 +106,11 @@ describe('executeFrame — compute dispatch', () => {
   // make the panel report stale ticks as a live reading.
   it('claims a compute step’s timing slot only when the row actually dispatches', () => {
     const descriptorFor = vi.fn(() => undefined);
+    const encodeCompute = vi.fn();
     const state = {
       settings: { debug: { disabledPasses: {} }, flow: { enabled: false } },
-      gpu: { flowFieldRenderer: null },
-      assetSlots: { flow: null },
     } as unknown as EngineState;
-    state.computes = [flowCompute(runtimeOf(state))];
+    state.computes = [flowCompute(makeRuntime(encodeCompute, false))];
 
     executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state, makeTiming(descriptorFor)));
 

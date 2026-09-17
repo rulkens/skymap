@@ -424,11 +424,6 @@ describe('renderFrame visual baseline', () => {
           zoneOfAvoidanceRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
-          // Flow is CONTENT_PASSES row 5 (see passes/index.ts); here it
-          // stays off (null renderer + disabled below) so encodeFlowCompute
-          // is a no-op and the recorded single-vs-split sequence is
-          // unchanged.
-          flowFieldRenderer: null,
           volumeUpsample,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,

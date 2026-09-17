@@ -141,7 +141,6 @@ const STATE_STUB = {
     milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
     milkyWayCloudRenderer: null,
     horizonShellRenderer: null,
-    flowFieldRenderer: null,
     volumeFieldRenderer: null,
   },
 } as unknown as EngineState;

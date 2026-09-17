@@ -97,7 +97,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   });
 
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
-  state.gpu.flowFieldRenderer?.reconcile(state.settings.flow);
   state.gpu.atmosphereShellRenderer?.reconcile({
     skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier],
   });

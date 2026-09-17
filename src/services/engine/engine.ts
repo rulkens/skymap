@@ -195,7 +195,6 @@ export function createEngine(
       zoneOfAvoidanceRenderer: null,
       label3DRenderer: null,
       volumeFieldRenderer: null,
-      flowFieldRenderer: null,
       volumeUpsample: null,
       milkyWayAggregateUpsample: null,
       zoneOfAvoidanceUpsample: null,

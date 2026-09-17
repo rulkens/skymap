@@ -19,7 +19,6 @@ import { createConstellationRenderer } from '../../gpu/renderers/constellations/
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
-import { createFlowFieldRenderer } from '../../../layers/flow/render/flowFieldRenderer';
 import { createAdditiveUpsample } from '../../gpu/passes/additiveUpsample';
 import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsample';
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
@@ -232,11 +231,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'volumeFieldRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createVolumeFieldRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
-  },
-  {
-    key: 'flowFieldRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createFlowFieldRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'volumeUpsample',

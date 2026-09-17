@@ -1,11 +1,9 @@
 /**
  * shouldKeepTicking — the render-on-demand keep-alive predicate. An animated
- * overlay must keep the loop ticking INDEPENDENTLY of whether anything is
- * pickable — the predicate takes no pick/catalog information at all, so
- * 'only flow is on' is a first-class case here rather than needing a full
- * GPU-ready runFrame fixture. runFrame's job is only to REACH this predicate
- * every ready frame, guarded structurally by the pick block not
- * early-returning.
+ * Layer (e.g. flow, mid-advection) must keep the loop ticking INDEPENDENTLY
+ * of whether anything is pickable — that vote arrives pre-folded as
+ * `anim.layersAnimating` (see `runFrame`'s per-Layer `frame` hook loop), so
+ * this predicate itself takes no pick/catalog/Layer information at all.
  *
  * The camera term is `selectCameraActive(s)` over the store `RootState`. The
  * final `anim` parameter is the in-frame-animation vote bag runFrame collects
@@ -70,24 +68,12 @@ const NO_ANIM = {
  *
  */
 function makeState(over: {
-  flowEnabled?: boolean;
-  flowReady?: boolean;
   fadesAnimating?: boolean;
   focusAwake?: boolean;
   followWinner?: boolean;
   followSaturated?: boolean | null;
 }): EngineState {
-  const flowSlot =
-    over.flowReady === true
-      ? ({
-          committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
-        } as unknown)
-      : over.flowReady === false
-        ? ({ committed: () => null } as unknown)
-        : null;
-
   return {
-    settings: { flow: { enabled: over.flowEnabled ?? false } },
     gpu: {
       galaxyPointRenderer: null,
       galaxyPickRenderer: null,
@@ -108,26 +94,12 @@ function makeState(over: {
       fades: { isAnyAnimating: () => over.fadesAnimating ?? false },
       structureFocus: { isAwake: () => over.focusAwake ?? false },
     },
-    assetSlots: { flow: flowSlot },
   } as unknown as EngineState;
 }
 
 describe('shouldKeepTicking', () => {
-  it('REGRESSION: flow enabled + loaded → true even with nothing else animating', () => {
-    // The bug: every galaxy catalog is off (nothing pickable), but the flow
-    // field is on and its cube committed — the loop MUST keep ticking so the
-    // ribbons keep advecting without the cursor poking requestRender.
-    const state = makeState({ flowEnabled: true, flowReady: true });
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(true);
-  });
-
-  it('at rest (flow off, camera at rest, no fades/focus) → false', () => {
+  it('at rest (camera at rest, no fades/focus) → false', () => {
     const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(false);
-  });
-
-  it('flow enabled but NOT loaded → false (the slotReady guard)', () => {
-    const state = makeState({ flowEnabled: true, flowReady: false });
     expect(shouldKeepTicking(state, restingRoot, 1000, NO_ANIM)).toBe(false);
   });
 

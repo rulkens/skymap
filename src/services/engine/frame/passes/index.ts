@@ -7,8 +7,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { scalarVolumePass } from './scalarVolumePass';
-import { flowFieldPass } from '../../../../layers/flow/passes/flowFieldPass';
-import type { FlowRuntime } from '../../../../layers/flow/types/FlowRuntime';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { milkyWayAggregatePass } from './milkyWayAggregatePass';
@@ -44,36 +42,12 @@ import { sgrAStarLensingPass } from './sgrAStarLensingPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 
 /**
- * TEMPORARY: `flowFieldPass` now takes the flow Layer's own Runtime (05b Task
- * 4), which doesn't exist until the Layer forms (Task 5) — core still owns
- * this row until then. Rebuilds the Runtime shape from `state.gpu`/
- * `state.assetSlots` on every call (both non-null by the time a frame draws;
- * `initGpu`/`wireSlots` complete before the render loop starts) rather than
- * duplicating `flowFieldPass`'s body. Deleted along with this whole row in
- * Task 6.
- */
-const flowFieldPassCore: ContentPass = {
-  name: 'flow',
-  enabled: (state, ctx, view) =>
-    flowFieldPass({
-      renderer: state.gpu.flowFieldRenderer,
-      slot: state.assetSlots.flow,
-    } as unknown as FlowRuntime).enabled(state, ctx, view),
-  draw: (pass, view, ctx, state) =>
-    flowFieldPass({
-      renderer: state.gpu.flowFieldRenderer,
-      slot: state.assetSlots.flow,
-    } as unknown as FlowRuntime).draw(pass, view, ctx, state),
-};
-
-/**
  * Core's contributed passes, as a flat set. It states no order and no grouping:
  * `FRAME_ORDER` names each of these — and each Layer's — on the line that draws it.
  */
 export const CONTENT_PASSES: readonly ContentPass[] = [
   scalarVolumePass,
   zoneOfAvoidancePass,
-  flowFieldPassCore,
   volumeUpsamplePass,
   zoneOfAvoidanceUpsamplePass,
   horizonShellPass,

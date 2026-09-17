@@ -17,7 +17,6 @@ import { createStructureCatalogSlot } from '../../loading/slots/structureCatalog
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createPolyphorm2MrsSlot } from '../../loading/slots/polyphorm2MrsSlot';
 import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
-import { createFlowFieldSlot } from '../../../layers/flow/load/flowFieldSlot';
 import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
@@ -245,21 +244,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     req: () => undefined,
     demand: (ctx) => ctx.settings.volumes.items[MCPM_WORKBENCH_FIELD]?.enabled === true,
     priority: 82, // same rung as cf4Density/polyphorm2Mrs; default-off, so it rarely competes at boot
-  },
-
-  // ── CF4++ velocity flow field ────────────────────────────────────
-  // A singleton overlay layer, so its gate lives in `settings.flow.enabled`
-  // alongside filaments/milkyWay rather than on a bespoke DemandCtx surface.
-  // TEMPORARY: the flow Layer's own `create` mints this slot once formed
-  // (05b Task 5); until then this row stays core-owned. The `!` is safe —
-  // `initGpu` constructs every GPU handle, this one included, before
-  // `wireSlots` ever reads it.
-  {
-    key: 'flow',
-    factory: (deps) => createFlowFieldSlot(deps.state.gpu.flowFieldRenderer!),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.flow.enabled,
-    priority: 81, // same rung as filaments, behind them by size
   },
 
   // ── Constellation stick-figure overlay ───────────────────────────
