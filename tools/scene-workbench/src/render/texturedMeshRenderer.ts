@@ -37,6 +37,7 @@ export function createTexturedMeshRenderer(
     entries: [
       { binding: 0, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float' } },
       { binding: 1, visibility: GPUShaderStage.FRAGMENT, sampler: { type: 'filtering' } },
+      { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'read-only-storage' } },
     ],
   });
 
@@ -101,12 +102,12 @@ export function createTexturedMeshRenderer(
   const manifoldWireframePipeline = wireframePipelineFor(0);
   const openWireframePipeline = wireframePipelineFor(1);
 
-  // Bind groups only hold references: the asset's dispose() destroys the
-  // texture and the entry becomes unreachable with the asset.
-  const bindGroups = new WeakMap<MeshGpuAsset, GPUBindGroup>();
+  // Keyed by the mask buffer, not the asset: `writeMeshMask` swaps the buffer to grow it, and
+  // the swap must rebuild the group. One mask per asset, so the key is still one-to-one.
+  const bindGroups = new WeakMap<GPUBuffer, GPUBindGroup>();
 
   function bindGroupFor(asset: MeshGpuAsset): GPUBindGroup {
-    const cached = bindGroups.get(asset);
+    const cached = bindGroups.get(asset.mask);
     if (cached) return cached;
     const bindGroup = device.createBindGroup({
       label: 'scene-textured-mesh-asset',
@@ -114,9 +115,10 @@ export function createTexturedMeshRenderer(
       entries: [
         { binding: 0, resource: asset.texture.createView() },
         { binding: 1, resource: sampler },
+        { binding: 2, resource: { buffer: asset.mask } },
       ],
     });
-    bindGroups.set(asset, bindGroup);
+    bindGroups.set(asset.mask, bindGroup);
     return bindGroup;
   }
 

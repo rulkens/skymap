@@ -3,6 +3,9 @@ import type { TexturedMeshGeometry } from '../../../scene-recon/pack/packMeshGlb
 import { meshEdgeIndices } from './meshEdgeIndices';
 import type { MeshGpuAsset } from './renderResources';
 
+/** Header plus one corner slot — the smallest valid `MaskPolygon` binding. */
+const MASK_MIN_BYTES = 16;
+
 /**
  * Uploads the `mesh.glb` subset as the two vertex buffers, index buffer and
  * atlas the mesh pipeline binds. `flipY: false` is the landmine: glTF's uv
@@ -58,7 +61,13 @@ export function uploadTexturedMesh(
     image.height,
   ]);
 
-  return {
+  const mask = device.createBuffer({
+    label: 'scene-workbench-mesh-mask',
+    size: MASK_MIN_BYTES,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  }); // zero-filled: count 0, no mask
+
+  const asset: MeshGpuAsset = {
     kind: 'mesh',
     positions,
     uvs,
@@ -69,6 +78,7 @@ export function uploadTexturedMesh(
     openEdges,
     openEdgeIndexCount: edgeIndices.open.length,
     texture,
+    mask,
     dispose: () => {
       positions.destroy();
       uvs.destroy();
@@ -76,6 +86,8 @@ export function uploadTexturedMesh(
       manifoldEdges.destroy();
       openEdges.destroy();
       texture.destroy();
+      asset.mask.destroy(); // read at dispose time: writeMeshMask may have swapped it
     },
   };
+  return asset;
 }

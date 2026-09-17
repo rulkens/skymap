@@ -1,17 +1,20 @@
 /**
- * watchOutlineSaga — loads each mesh's outline with its manifest and runs draw
- * mode's enter / save / discard against `/api/outline` (`outlinePlugin`). Camera
+ * watchOutlineSaga — loads each mesh's outline with its manifest, runs draw mode's
+ * enter / save / discard against `/api/outline`, and keeps GPU preview masks in sync. Camera
  * changes are explicit `put`s to `view`: cross-slice extraReducers on outline
  * actions have dropped silently in this project before.
  */
-import { call, put, select, takeEvery, takeLatest } from 'typed-redux-saga';
+import type { Action } from '@reduxjs/toolkit';
+import { call, getContext, put, select, takeEvery, takeLatest } from 'typed-redux-saga';
 
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { MeshOutline } from '../../../@types/MeshOutline';
+import { writeMeshMask } from '../../render/writeMeshMask';
 import { isZOnlyRotation } from '../../scene/isZOnlyRotation';
+import type { SceneSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import { drawOutlineRequested, outlineDiscardRequested, outlineSaveRequested } from '../commands';
-import { manifestLoaded } from '../group/groupSlice';
+import { assetStatusChanged, manifestLoaded } from '../group/groupSlice';
 import { commitCameraPose } from '../view/viewSlice';
 import {
   draftEnded,
@@ -19,7 +22,9 @@ import {
   outlineLoaded,
   outlineSaved,
   outlineSaveFailed,
+  outlineSlice,
 } from './outlineSlice';
+import { selectMaskRing } from './selectMaskRing';
 
 const outlineUrl = (groupId: string, assetId: string) => `/api/outline/${groupId}/${assetId}`;
 
@@ -101,7 +106,25 @@ function* discardOutlineWorker() {
   yield* put(draftEnded());
 }
 
+// Any outline change can move a mask, and a mesh that just finished uploading needs its first.
+const touchesMask = (action: Action): boolean =>
+  action.type.startsWith(`${outlineSlice.name}/`) ||
+  (assetStatusChanged.match(action) && action.payload.status === 'ready');
+
+/** Runs inside the dispatch that already marked the viewport dirty, so the next frame sees it. */
+function* syncMasksWorker() {
+  const resources = yield* getContext<SceneSagaContext['resources']>('resources');
+  if (!resources?.gpu) return;
+  const state = yield* select((s: RootState) => s);
+  for (const [assetId, asset] of resources.gpuAssets) {
+    if (asset.kind === 'mesh') {
+      writeMeshMask(resources.gpu.device, asset, selectMaskRing(state, assetId));
+    }
+  }
+}
+
 export function* watchOutlineSaga() {
+  yield* takeEvery(touchesMask, syncMasksWorker);
   yield* takeLatest(manifestLoaded, loadOutlinesWorker);
   yield* takeEvery(drawOutlineRequested, drawOutlineWorker);
   yield* takeEvery(outlineSaveRequested, saveOutlineWorker);

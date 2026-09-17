@@ -623,12 +623,12 @@ export function writeMeshMask(
   command. Ruling: no `meshMaskWritten` command — cost if wrong: one stale frame until the next
   store write.
 
-- [ ] `packMaskPolygon writes count at byte 0 and corner k at 8 + 8k` — read back through
+- [x] `packMaskPolygon writes count at byte 0 and corner k at 8 + 8k` — read back through
       `DataView`, literal expectations for a 3-corner ring.
-- [ ] `packMaskPolygon of null is a 16-byte zero-count buffer`.
-- [ ] `writeMeshMask reallocates and destroys the old buffer when the ring outgrows it` — fake
+- [x] `packMaskPolygon of null is a 16-byte zero-count buffer`.
+- [x] `writeMeshMask reallocates and destroys the old buffer when the ring outgrows it` — fake
       device recording `createBuffer`/`destroy`/`writeBuffer`.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
