@@ -331,12 +331,12 @@ half-planes (re-orient each triangle CCW before deriving normals — do not trus
 plane (d = 0) are inside and never produce a cut vertex. Cut-vertex key per `ClipVertex`'s doc,
 with the two endpoint keys ordered lexically.
 
-- [ ] `clipPolygonByHalfPlane cuts a vertical triangle and interpolates Z and UV` — triangle
+- [x] `clipPolygonByHalfPlane cuts a vertical triangle and interpolates Z and UV` — triangle
       `(−1,0,0) uv(0,0)`, `(1,0,0) uv(1,0)`, `(1,0,10) uv(1,1)` against plane x ≥ 0; expect the
       cut vertices at `(0,0,0) uv(0.5,0)` and `(0,0,5) uv(0.5,0.5)` (literals).
-- [ ] `clipPolygonByHalfPlane gives a shared edge the same cut key from either winding` —
+- [x] `clipPolygonByHalfPlane gives a shared edge the same cut key from either winding` —
       clip `[a, b, c]` and `[b, a, d]` against one plane; the cut on edge ab has one key.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 9: `cropMeshGeometry`
 
