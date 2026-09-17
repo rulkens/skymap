@@ -1,7 +1,6 @@
 /**
  * debug — developer diagnostic lenses on the rendered scene (overlays, pass
- * disables, GPU-timing strategy override, clip-path inspector). Reducer
- * bodies are verbatim from the old `CORE_REDUCERS`, re-based onto `debug`.
+ * disables, GPU-timing strategy override, clip-path inspector).
  */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
@@ -73,16 +72,10 @@ export const debugSlice = createSlice({
   reducers: {
     // One reducer for every DEBUG_OVERLAY_ROWS toggle — writes one entry
     // in-place (like setPassDisabled below), never the whole record.
-    setDebugOverlay: (
-      debug,
-      action: PayloadAction<{ key: DebugOverlayKey; enabled: boolean }>,
-    ) => {
+    setDebugOverlay: (debug, action: PayloadAction<{ key: DebugOverlayKey; enabled: boolean }>) => {
       debug.overlays[action.payload.key] = action.payload.enabled;
     },
-    setPassDisabled: (
-      debug,
-      action: PayloadAction<{ pass: string; disabled: boolean }>,
-    ) => {
+    setPassDisabled: (debug, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
       debug.disabledPasses[action.payload.pass] = action.payload.disabled;
     },

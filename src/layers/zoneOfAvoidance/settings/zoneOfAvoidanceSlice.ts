@@ -6,7 +6,10 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_ZONE_OF_AVOIDANCE_ENABLED, DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../../data/defaults';
+import {
+  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
+} from '../../../data/defaults';
 import type { ZoneOfAvoidanceSettings } from '../../../@types/settings/ZoneOfAvoidanceSettings';
 import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
 
@@ -37,5 +40,4 @@ export const zoneOfAvoidanceSlice = createSlice({
   },
 });
 
-export const { setZoneOfAvoidanceEnabled, setZoneOfAvoidanceTuning } =
-  zoneOfAvoidanceSlice.actions;
+export const { setZoneOfAvoidanceEnabled, setZoneOfAvoidanceTuning } = zoneOfAvoidanceSlice.actions;

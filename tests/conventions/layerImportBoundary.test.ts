@@ -69,10 +69,10 @@ function assertSweep(
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
-// Two real offenders at HEAD: each dispatches an action creator whose home
-// is a Layer's own settings module now that the settingsSlice barrel is gone
-// (before, the barrel's re-export hid the reach-in; the dependency was always
-// there). Both are core writing INTO a Layer's cluster, not the other way.
+// Both offenders dispatch an action creator whose home is a Layer's own
+// settings module — core writing INTO a Layer's cluster, not the other way.
+// Undoing either means moving the work into the Layer (the volume upload path,
+// the tier -> milkyWay reaction), which is a Layer-structure change, not a row.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'services/engine/volume/uploadVolumeField': 1,
   'state/tier/watchTierSaga': 1,

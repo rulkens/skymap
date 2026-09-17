@@ -1,8 +1,6 @@
 /**
- * volumesSlice — the field add/remove/write behaviour `settingsReducer.test.ts`
- * used to pin at the composed-root level. Kept here: the re-add-preserves-
- * tuning and unknown-id-is-a-no-op guarantees are real behaviour a bug could
- * silently break.
+ * Two guarantees the type system cannot express: re-adding a removed field
+ * keeps its tuning, and a write against an unknown id is a no-op, not a throw.
  */
 import { describe, it, expect } from 'vitest';
 

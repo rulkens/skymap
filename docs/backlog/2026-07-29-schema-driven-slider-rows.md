@@ -7,11 +7,8 @@ one component. It is panel-wide.
 
 ## The cost, measured
 
-Adding `hdrKnee` and `hdrHeadroom` to Display (the `?hdr` control work) took nine
-hand-edited sites per knob. Since the settings-fragments → RTK-slices refactor
-(2026-09-17), the cluster's own slice file carries the default, the field and the
-reducer together, and `EngineSettingsState` derives rather than being hand-edited —
-fewer files, same shape of edit:
+Adding `hdrKnee` and `hdrHeadroom` to Display (the `?hdr` control work) took eight
+hand-edited sites per knob:
 
 | #   | Site                                                                                                                  |
 | --- | --------------------------------------------------------------------------------------------------------------------- |

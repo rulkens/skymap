@@ -5,7 +5,11 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_BLOOM_ENABLED, DEFAULT_BLOOM_STRENGTH, DEFAULT_BLOOM_THRESHOLD } from '../../../data/defaults';
+import {
+  DEFAULT_BLOOM_ENABLED,
+  DEFAULT_BLOOM_STRENGTH,
+  DEFAULT_BLOOM_THRESHOLD,
+} from '../../../data/defaults';
 import type { CoreSettingsState } from '../../../@types/settings/CoreSettingsState';
 
 const initialState: CoreSettingsState['bloom'] = {

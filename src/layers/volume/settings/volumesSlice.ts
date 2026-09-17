@@ -6,7 +6,10 @@
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_VOLUMES_ENABLED } from '../../../data/defaults';
-import { buildVolumeFieldSettings, seedVolumeFields } from '../../../data/volume/volumeFieldDefaults';
+import {
+  buildVolumeFieldSettings,
+  seedVolumeFields,
+} from '../../../data/volume/volumeFieldDefaults';
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 import type { VolumeSettings } from '../../../@types/settings/VolumeSettings';

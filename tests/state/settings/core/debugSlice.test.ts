@@ -1,8 +1,6 @@
 /**
- * debugSlice — the clip-path tuning knob coupling `settingsReducer.test.ts` used
- * to pin at the composed-root level. Kept here, against the slice directly,
- * because the knob-activation rules (which override gate a sub-knob rides)
- * are real behaviour a bug could silently break.
+ * Each clip-path sub-knob rides an override gate; writing a knob without
+ * arming its gate leaves the inspector lens silently inert.
  */
 import { describe, it, expect } from 'vitest';
 
