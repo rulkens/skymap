@@ -29,18 +29,19 @@ function keyOf(file: string): string {
 const project = new Project({ useInMemoryFileSystem: false });
 
 /**
- * Every specifier this file imports (type-only included — the boundary is
- * about knowledge, not bundles) that resolves under any of `prefixes`, relative
- * to the repo root. Non-relative specifiers (package imports) never resolve
- * under `src/`, so they never match.
+ * Every specifier this file imports OR re-exports (type-only included — the
+ * boundary is about knowledge, not bundles) that resolves under any of
+ * `prefixes`, relative to the repo root. A re-export (`export { x } from '…'`)
+ * carries the same knowledge as an import — `settingsSlice.ts`'s transitional
+ * re-export block would otherwise dodge this sweep entirely. Non-relative
+ * specifiers (package imports) never resolve under `src/`, so they never match.
  */
 function specifiersUnder(file: string, prefixes: readonly string[]): string[] {
   const sourceFile = project.addSourceFileAtPath(file);
   const fromDir = dirname(file);
-  return sourceFile
-    .getImportDeclarations()
+  return [...sourceFile.getImportDeclarations(), ...sourceFile.getExportDeclarations()]
     .map((decl) => decl.getModuleSpecifierValue())
-    .filter((specifier) => specifier.startsWith('.'))
+    .filter((specifier): specifier is string => specifier?.startsWith('.') ?? false)
     .filter((specifier) => {
       const resolved = relative(process.cwd(), resolve(fromDir, specifier)).replace(/\\/g, '/');
       return prefixes.some((prefix) => resolved.startsWith(prefix));
@@ -67,12 +68,11 @@ function assertSweep(
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
-// `settingsSlice.ts` imports each pre-Layer fragment directly, and a formed
-// Layer's settings tuple as one specifier, for `liftClusterReducers`'s
-// per-fragment spreads — each needs its literal fragment type. This stays until
-// reducers compose at the type level, not this PR.
+// `settingsSlice.ts` is now a transitional re-export block: one specifier per
+// Layer settings module whose action creators it forwards, so every call site
+// keeps compiling until Task 4 re-points them and deletes this file.
 const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
-  'state/settings/settingsSlice': 13,
+  'state/settings/settingsSlice': 15,
 };
 
 describe('engine and state files import nothing from src/layers beyond their ALLOWED row', () => {

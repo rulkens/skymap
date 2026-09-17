@@ -3,17 +3,11 @@
  * SettingsPanel surfaces, plus the flags the engine forwards into the per-frame
  * uniform buffer.
  *
- * DERIVED, not authored: adding a cluster means adding a Layer settings fragment
- * (or a field to `CoreSettingsState`), never editing this file. The value that
- * fills it is `INITIAL_SETTINGS`, composed from the same two inputs — so a
- * cluster cannot exist in the type without a value, or vice versa.
+ * DERIVED, not authored: adding a cluster means adding a slice to
+ * `CORE_SETTINGS_SLICES` or `APP_SETTINGS_SLICES`, never editing this file —
+ * `combineSlices` is the single source of both the type and the boot value.
  */
 
-import type { APP_SETTINGS_FRAGMENTS } from '../../compositions/appSettingsFragments';
-import type { ComposedSettings } from './ComposedSettings';
-import type { CoreSettingsState } from './CoreSettingsState';
+import type { combinedSettingsReducer } from '../../state/settings/combinedSettingsReducer';
 
-export type EngineSettingsState = ComposedSettings<
-  CoreSettingsState,
-  typeof APP_SETTINGS_FRAGMENTS
->;
+export type EngineSettingsState = ReturnType<typeof combinedSettingsReducer>;

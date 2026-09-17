@@ -3,8 +3,8 @@
  * moved out to its own fragment; `EngineSettingsState` composes the two. A knob
  * lives under exactly one named cluster — a flat duplicate invites split-brain
  * reads/writes. Not `Readonly<>`: leaves are written by dispatched slice actions
- * and read in the per-frame loop. Boot values:
- * `state/settings/coreInitialSettings.ts`.
+ * and read in the per-frame loop. Boot values: each slice's own `initialState`
+ * under `state/settings/core/`.
  */
 
 import type { ToneMapCurve } from '../data/ToneMapCurve';
