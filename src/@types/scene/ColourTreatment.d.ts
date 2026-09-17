@@ -1,5 +1,6 @@
 import type { Vec3 } from '../math/Vec3';
 import type { ChromaCalibration } from './ChromaCalibration';
+import type { ColourGrade } from './ColourGrade';
 
 /**
  * ColourTreatment — how a body's raw albedo source becomes the sRGB texture the
@@ -9,9 +10,11 @@ import type { ChromaCalibration } from './ChromaCalibration';
  * `monoTint` multiplies `tint` in ENCODED (gamma) space — where the tints were
  * calibrated by eye (`writeTintedMonoTier`). `panSharpen` takes luminance from
  * the mono source and chroma from the map named by the `TEXTURE_SOURCES` row's
- * `chroma` key.
+ * `chroma` key. `grade` applies a `ColourGrade` only, no delighting — the
+ * base globe, whose photographic mosaic carries no baked-in sun to remove.
  */
 export type ColourTreatment =
   | { readonly kind: 'colour' }
   | { readonly kind: 'monoTint'; readonly tint: Vec3 }
-  | { readonly kind: 'panSharpen'; readonly calibration: ChromaCalibration };
+  | { readonly kind: 'panSharpen'; readonly calibration: ChromaCalibration }
+  | { readonly kind: 'grade'; readonly grade: ColourGrade };

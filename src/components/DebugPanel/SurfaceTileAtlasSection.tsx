@@ -68,7 +68,9 @@ function SurfaceTileAtlasSection({
     e.preventDefault();
     const point = parseLonLatInput(flyToText);
     if (point === null) return;
-    flyToLonLat(point.lonDeg, point.latDeg, snap.bodyId ?? undefined);
+    // `BodyId` is the body SOURCE-row union, not the scene ids; the saga
+    // resolves any scene id, so the cast only widens the declared type.
+    flyToLonLat(point.lonDeg, point.latDeg, (snap.bodyId ?? undefined) as BodyId | undefined);
   }
 
   const terrainToggles = (

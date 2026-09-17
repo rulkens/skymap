@@ -24,6 +24,7 @@ import { ISM_MAP_WORKGROUP_SIZE } from '../../../../src/services/engine/galaxyGe
 import { SPLAT_CUT_SIGMA } from '../../../../src/services/engine/galaxyGenerator/v2/youngStarChain';
 import { ISM_MAP_AMBIENT_DUST } from '../../../../src/utils/galaxy/ismMapAmbientDust';
 import { ISM_MAP_FLUID_EVENT_STRIDE } from '../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapFluidEvents';
+import { BODY_AMBIENT_LIGHT } from '../../../../src/data/bodies/bodyAmbientLight';
 import { EARTH_SURFACE_PARAMS } from '../../../../src/data/bodies/earthSurfaceParams';
 import {
   SURFACE_TILE_MESH_RESOLUTION,
@@ -231,6 +232,16 @@ describe('ISM_MAP_FLUID_EVENT_STRIDE parity (packIsmMapFluidEvents.ts ↔ ismMap
       weslValue,
       `${file}: WESL EVENT_STRIDE (${weslValue}) does not match TS ISM_MAP_FLUID_EVENT_STRIDE (${ISM_MAP_FLUID_EVENT_STRIDE})`,
     ).toBe(ISM_MAP_FLUID_EVENT_STRIDE);
+  });
+});
+
+/** Bare-body surface tiles light with BODY_AMBIENT_LIGHT while the textured
+ *  globe under them reads AMBIENT: a drift steps the night side at tile hand-off. */
+describe('BODY_AMBIENT_LIGHT parity (bodyAmbientLight.ts ↔ lib/bodyLighting.wesl)', () => {
+  it("bodyLighting.wesl's AMBIENT equals the TS export", () => {
+    expect(readWeslConst('src/services/gpu/shaders/lib/bodyLighting.wesl', 'AMBIENT')).toBe(
+      BODY_AMBIENT_LIGHT,
+    );
   });
 });
 

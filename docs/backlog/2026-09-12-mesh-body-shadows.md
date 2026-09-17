@@ -10,7 +10,16 @@ mast therefore lights the deck it stands on, the wheels light the chassis
 above them, and the ground under the rover is as bright as the ground beside
 it — the rover looks pasted onto Mars rather than standing on it.
 
-## What it needs
+## Stage 1 — contact shadow (user, 2026-09-17, after F4 seated rovers on terrain)
+
+A cheap grounding cue first, before any sun shadows: a soft dark blob under
+each hosted mesh body. A ground-aligned quad at the site's terrain point
+(same `GroundRadiusLookup` path the rover placement uses), sized from the
+mesh footprint, with a baked soft radial falloff (texture or analytic
+`smoothstep`), multiplied onto the surface and depth-tested against the
+terrain tiles. Sun-independent. Fades out with distance like the mesh does.
+
+## Stage 2 — sun shadows
 
 - **Self-shadowing**: a per-body shadow map from the Sun's direction over the
   mesh's bounding sphere (one depth pass per drawn mesh body, ortho, a few

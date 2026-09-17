@@ -86,7 +86,6 @@ export function geoTiffHeightSource(opts: {
         const jjTo = Math.min(ny - 1, jjFrom + postsPerChunk - 1);
         const rowTop = clamp(Math.floor(rowOf(90 - (j0 + jjFrom) * step)), 0, grid.height - 1);
         const rowBottom = clamp(Math.floor(rowOf(90 - (j0 + jjTo) * step)) + 1, 0, grid.height - 1);
-        if (rowBottom < rowTop) continue;
         const winRows = rowBottom - rowTop + 1;
         const window = await readGeoTiffWindow(grid.path, winLeft, rowTop, winWidth, winRows);
 
