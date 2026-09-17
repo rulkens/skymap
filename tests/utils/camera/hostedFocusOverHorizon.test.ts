@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { hostedFocusOverHorizon } from '../../../src/utils/camera/hostedFocusOverHorizon';
+import { siteGroundRadiusM } from '../../../src/utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../src/utils/camera/sitePointBodyFixed';
 import { surfaceFloorM } from '../../../src/utils/camera/surfaceFloorM';
 import { bodyStandoffRadii } from '../../../src/utils/scene/bodyStandoffRadii';
@@ -27,8 +28,10 @@ const MARS: HostBody = {
   standoffRadii: bodyStandoffRadii(MARS_ROW),
 };
 
-const sitePoint = (id: string): Vec3 =>
-  sitePointBodyFixed(SURFACE_FIXED_SITES.find((s) => s.id === id)!, MARS.groundRadiusAtM);
+const sitePoint = (id: string): Vec3 => {
+  const site = SURFACE_FIXED_SITES.find((s) => s.id === id)!;
+  return sitePointBodyFixed(site, siteGroundRadiusM(site, MARS.radiusM));
+};
 
 /** `metresUp` above the site, radially — the eye a landed camera has. */
 const over = (id: string, metresUp: number): Vec3 => {
@@ -50,17 +53,22 @@ describe('hostedFocusOverHorizon', () => {
     expect(hostedFocusOverHorizon(over('curiosity', 1e6), 'curiosity' as BodyId, MARS)).toBe(false);
   });
 
-  it('an eye under the datum is judged from the descent floor', () => {
-    // The follow approach arrives along the chord and parks the eye ~9 m BELOW
-    // Mars's datum, metres from the rover. Read literally, every point on the
-    // planet is behind the eye's horizon and the arm refuses the arrival it
-    // exists to land — so the eye is lifted to the floor `flooredBodyPose`
-    // would push it to anyway.
+  it('an eye under the site is judged from ITS floor, not the bare datum (F4)', () => {
+    // The follow approach arrives along the chord and parks the eye a few
+    // metres below the site's own (baked, well above the bare datum) ground.
+    // Read literally, every point on the planet is behind the eye's horizon
+    // and the arm refuses the arrival it exists to land — so the eye is
+    // lifted to the SITE's floor, not the planet's much lower generic one.
     const p = sitePoint('curiosity');
     const mag = Math.hypot(p[0], p[1], p[2]);
     const sunk = (mag - 9.3) / mag;
     const eye: Vec3 = [p[0] * sunk, p[1] * sunk, p[2] * sunk];
-    expect(Math.hypot(...eye)).toBeLessThan(surfaceFloorM(MARS.radiusM, MARS.standoffRadii));
+    const bareDatumFloorM = surfaceFloorM(MARS.radiusM, MARS.standoffRadii);
+    const siteFloorM = surfaceFloorM(mag, MARS.standoffRadii);
+    expect(Math.hypot(...eye)).toBeLessThan(siteFloorM);
+    // Well above the bare-datum floor — this eye is nowhere near underground
+    // by the planet's own generic standard, only by the site's own altitude.
+    expect(Math.hypot(...eye)).toBeGreaterThan(bareDatumFloorM);
     expect(hostedFocusOverHorizon(eye, 'curiosity' as BodyId, MARS)).toBe(false);
   });
 

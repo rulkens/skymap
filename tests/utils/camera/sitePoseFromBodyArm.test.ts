@@ -57,8 +57,7 @@ const POSES: readonly SitePose[] = [
 ];
 
 function expectRoundTrip(s: SurfaceFixedSite, hostRadiusM: number, pose: SitePose): void {
-  const ground = (): number => hostRadiusM;
-  const back = sitePoseFromBodyArm(sitePoseToBodyArm(pose, s, ground), s, ground, ROVER);
+  const back = sitePoseFromBodyArm(sitePoseToBodyArm(pose, s, hostRadiusM), s, hostRadiusM, ROVER);
   expect(back.siteId).toBe(pose.siteId);
   expect(back.headingRad).toBeCloseTo(pose.headingRad, 9);
   expect(back.elevationRad).toBeCloseTo(pose.elevationRad, 9);
@@ -85,8 +84,8 @@ describe('sitePoseFromBodyArm', () => {
   it('entering the site rung keeps the screen orientation and moves the eye', () => {
     const s = SITES[2]!;
     const pose = POSES[2]!;
-    const arm = sitePoseToBodyArm(pose, s, () => HOST_RADIUS_M);
-    const p = sitePointBodyFixed(s, () => HOST_RADIUS_M);
+    const arm = sitePoseToBodyArm(pose, s, HOST_RADIUS_M);
+    const p = sitePointBodyFixed(s, HOST_RADIUS_M);
     // Same eye, basis swung a quarter turn off the site: the heading rides the
     // basis, so the turntable answers the quarter turn and the eye follows it.
     const aimedAway = {
@@ -98,12 +97,12 @@ describe('sitePoseFromBodyArm', () => {
       ),
     };
 
-    const entered = sitePoseFromBodyArm(aimedAway, s, () => HOST_RADIUS_M, ROVER);
+    const entered = sitePoseFromBodyArm(aimedAway, s, HOST_RADIUS_M, ROVER);
     expect(entered.headingRad).toBeCloseTo(pose.headingRad - Math.PI / 2, 9);
     expect(entered.elevationRad).toBeCloseTo(pose.elevationRad, 9);
     expect(entered.rangeM).toBeCloseTo(pose.rangeM, 6);
 
-    const reEntered = sitePoseToBodyArm(entered, s, () => HOST_RADIUS_M);
+    const reEntered = sitePoseToBodyArm(entered, s, HOST_RADIUS_M);
     for (const i of [0, 1, 2] as const) {
       expect(reEntered.anchorLocalM[i]).toBeCloseTo(arm.anchorLocalM[i], 6);
     }
@@ -124,7 +123,7 @@ describe('sitePoseFromBodyArm', () => {
     // tenth of a millimetre apart used to hand back headings π apart, so the
     // rover landed spun by a different angle every time the user zoomed in.
     const s = SITES[2]!;
-    const p = sitePointBodyFixed(s, () => HOST_RADIUS_M);
+    const p = sitePointBodyFixed(s, HOST_RADIUS_M);
     const frame = siteEyeFrame(p);
     const HEADING_RAD = 0.7;
     const RANGE_M = 50;
@@ -136,7 +135,7 @@ describe('sitePoseFromBodyArm', () => {
       return sitePoseFromBodyArm(
         { bodyId: 'fixture-host' as BodyId, anchorLocalM: p, eyeRelAnchorM, basisLocal },
         s,
-        () => HOST_RADIUS_M,
+        HOST_RADIUS_M,
         ROVER,
       ).headingRad;
     };

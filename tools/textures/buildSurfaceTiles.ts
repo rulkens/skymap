@@ -60,6 +60,7 @@ import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
+import { buildSiteGroundHeights } from './buildSiteGroundHeights';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
 import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
 import type { SurfaceBakeBand } from './SurfaceBakeBand';
@@ -599,11 +600,16 @@ async function main(): Promise<void> {
   const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
   const product = productFlag(argv);
   const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
-  const body = SURFACE_BODY_BAKES[bodyFlag(argv)];
+  const bodyId = bodyFlag(argv);
+  const body = SURFACE_BODY_BAKES[bodyId];
 
   process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, body.tileRoot)}\n`);
   const bands = await body.bands({ dev });
   await bakeAll(body, bands, outDir, products);
+  // Rover sites bake their ground height off these SAME height tiles (F4): a
+  // re-bake regenerates it in the same run, or the two silently drift. Skipped
+  // in `--dev`, whose coarse bands don't reach the sites' own deep tiles.
+  if (bodyId === 'mars' && !dev) await buildSiteGroundHeights();
   process.stderr.write(`done; tiles under ${join(outDir, body.tileRoot)}\n`);
 }
 

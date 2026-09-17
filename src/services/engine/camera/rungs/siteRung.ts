@@ -13,6 +13,7 @@ import { positionDriverById } from '../../../../data/bodies/positionDrivers';
 import { bodyFixedEyeM } from '../../../../utils/camera/bodyFixedEyeM';
 import { findByIdOrThrow } from '../../../../utils/object/findByIdOrThrow';
 import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
+import { siteGroundRadiusM } from '../../../../utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../utils/camera/sitePointBodyFixed';
 import { sitePoseFromBodyArm } from '../../../../utils/camera/sitePoseFromBodyArm';
 import { sitePoseToBodyArm } from '../../../../utils/camera/sitePoseToBodyArm';
@@ -94,20 +95,22 @@ export const siteRung: ClimbRow<'site'> = {
 
   toParent(framed, ctx) {
     const host = hostOrThrow(framed.frame, ctx);
+    const site = siteRowOrThrow(framed.frame.site);
     return {
       frame: { body: host.id },
-      pose: sitePoseToBodyArm(framed.pose, siteRowOrThrow(framed.frame.site), host.groundRadiusAtM),
+      pose: sitePoseToBodyArm(framed.pose, site, siteGroundRadiusM(site, host.radiusM)),
     };
   },
 
   fromParent(parent, frame, ctx) {
     const host = hostOrThrow(frame, ctx);
+    const site = siteRowOrThrow(frame.site);
     return {
       frame,
       pose: sitePoseFromBodyArm(
         parent.pose,
-        siteRowOrThrow(frame.site),
-        host.groundRadiusAtM,
+        site,
+        siteGroundRadiusM(site, host.radiusM),
         meshBodyOf(frame.site),
       ),
     };
@@ -121,7 +124,7 @@ export const siteRung: ClimbRow<'site'> = {
     // never engage — the non-goal, enforced by the driver kind, not by a list.
     if (site === null || site.hostId !== parent.frame.body) return null;
     const host = hostOrThrow(parent.frame, ctx);
-    const p = sitePointBodyFixed(site, host.groundRadiusAtM);
+    const p = sitePointBodyFixed(site, siteGroundRadiusM(site, host.radiusM));
     const eye = bodyFixedEyeM(parent.pose);
     const rangeM = Math.hypot(eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]);
     return rangeM / meshBodyOf(focusId).boundingRadiusM < ctx.tuning.siteEngageR

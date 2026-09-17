@@ -24,9 +24,9 @@ describe('sitePoseToBodyArm', () => {
     const arm = sitePoseToBodyArm(
       { siteId: 'fixture-rover' as BodyId, headingRad: 1.2, elevationRad: 0.4, rangeM: 37 },
       SITE,
-      () => 1000,
+      1000,
     );
-    const p = sitePointBodyFixed(SITE, () => 1000);
+    const p = sitePointBodyFixed(SITE, 1000);
     expect(arm.anchorLocalM[0]).toBeCloseTo(p[0], 9);
     expect(arm.anchorLocalM[1]).toBeCloseTo(p[1], 9);
     expect(arm.anchorLocalM[2]).toBeCloseTo(p[2], 9);

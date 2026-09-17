@@ -33,6 +33,7 @@ import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFo
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
+import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
 import { positionDriverById } from '../../../../src/data/bodies/positionDrivers';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
@@ -221,7 +222,7 @@ function metresBetween(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
 function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
   const driver = positionDriverById('curiosity' as BodyId);
   if (driver.kind !== 'surfaceFixed') throw new Error('curiosity is not a site');
-  const p = sitePointBodyFixed(driver, () => MARS_R);
+  const p = sitePointBodyFixed(driver, siteGroundRadiusM(driver, MARS_R));
   const mars = bodies.get('mars')!;
   const local = rotateVec3ByTightMat3(p as Vec3, mars.orientation);
   return [
@@ -300,7 +301,6 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
 
     h.focus('curiosity');
     const trace = regimeTrace(h, 900);
-
     expect(trace).toEqual(['body:mars', 'absolute', 'body:mars', 'site:curiosity']);
     expect(metresBetween(displayedEye(h.state), roverMpc(BODIES))).toBeCloseTo(ROVER_FRAMING_M, 2);
   });

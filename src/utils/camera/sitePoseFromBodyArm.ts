@@ -6,7 +6,6 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
-import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { MeshBody } from '../../@types/scene/MeshBody';
 import type { SitePose } from '../../@types/camera/SitePose';
@@ -20,10 +19,10 @@ import { sitePointBodyFixed } from './sitePointBodyFixed';
 export function sitePoseFromBodyArm(
   arm: BodyFixedPose,
   site: SurfaceFixedSite,
-  groundRadiusAtM: GroundRadiusLookup,
+  hostRadiusM: number,
   body: MeshBody,
 ): SitePose {
-  const p = sitePointBodyFixed(site, groundRadiusAtM);
+  const p = sitePointBodyFixed(site, hostRadiusM);
   const { east, north, localUp } = siteEyeFrame(p);
   const eye = bodyFixedEyeM(arm);
   const rel = [eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]] as const;

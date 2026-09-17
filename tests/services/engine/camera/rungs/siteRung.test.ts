@@ -11,6 +11,8 @@ import { hostOf } from '../../../../../src/services/engine/camera/rungs/hostOf';
 import { refoldTo } from '../../../../../src/services/engine/camera/rungs/refoldTo';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { pivotFraming } from '../../../../../src/services/engine/camera/pivotRadiusMpc';
+import { siteGroundRadiusM } from '../../../../../src/utils/camera/siteGroundRadiusM';
+import { sitePointBodyFixed } from '../../../../../src/utils/camera/sitePointBodyFixed';
 import { sitePoseToBodyArm } from '../../../../../src/utils/camera/sitePoseToBodyArm';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { SCENE_CELESTIAL_BODIES } from '../../../../../src/data/bodies/sceneCelestialBodies';
@@ -27,7 +29,6 @@ import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
 import type { FrameOf } from '../../../../../src/@types/camera/FrameOf';
 import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
-import type { TerrainHeightAtLookup } from '../../../../../src/@types/camera/TerrainHeightAtLookup';
 import type { SitePose } from '../../../../../src/@types/camera/SitePose';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
@@ -39,17 +40,16 @@ const SITE = findByIdOrThrow(SURFACE_FIXED_SITES, SITE_ID, 'siteRung.test');
 const ROVER = findByIdOrThrow(SCENE_MESH_BODIES, SITE_ID, 'siteRung.test');
 const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'siteRung.test').surface
   .datumRadiusM;
+/** The baked ground radius under Curiosity (F4) — what the rung anchors on now. */
+const SITE_GROUND_R_M = siteGroundRadiusM(SITE, MARS_R_M);
 const ROW = CAMERA_RUNGS.site;
 
-function ctxFor(
-  focusBodyId: BodyId | null,
-  terrainHeightAt: TerrainHeightAtLookup = datumOnlyTerrainHeight,
-): RungCtx {
+function ctxFor(focusBodyId: BodyId | null): RungCtx {
   return {
     bodies: BODIES,
     poseBasis: B,
     upBasis: B,
-    terrainHeightAt,
+    terrainHeightAt: datumOnlyTerrainHeight,
     focusBodyId,
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
@@ -70,7 +70,7 @@ const FIXTURES: readonly SitePose[] = [pose(0.4, 0.3, 50), pose(-2, 1.2, 12), po
 
 const armAt = (rangeM: number): FramedPose<'body'> => ({
   frame: MARS_FRAME,
-  pose: sitePoseToBodyArm(pose(0.4, 0.3, rangeM), SITE, () => MARS_R_M),
+  pose: sitePoseToBodyArm(pose(0.4, 0.3, rangeM), SITE, SITE_GROUND_R_M),
 });
 
 const bandRange = (radii: number): number => radii * ROVER.boundingRadiusM;
@@ -81,11 +81,13 @@ const BETWEEN = bandRange((siteEngageR + siteDisengageR) / 2);
 const OUTSIDE = bandRange(siteDisengageR * 1.5);
 
 describe('the site rung in the ladder', () => {
-  it('anchors the host arm on the terrain, where the rover is drawn', () => {
-    const TERRAIN_M = 2_700;
-    const ctx = ctxFor(SITE_ID, () => TERRAIN_M);
+  it('anchors the host arm on the baked ground, where the rover is drawn', () => {
+    const ctx = ctxFor(SITE_ID);
     const arm = ROW.toParent({ frame: SITE_FRAME, pose: FIXTURES[0]! }, ctx).pose;
-    expect(Math.hypot(...arm.anchorLocalM)).toBeCloseTo(MARS_R_M + TERRAIN_M + SITE.altitudeM, 3);
+    const expected = sitePointBodyFixed(SITE, SITE_GROUND_R_M);
+    expect(arm.anchorLocalM[0]).toBeCloseTo(expected[0], 3);
+    expect(arm.anchorLocalM[1]).toBeCloseTo(expected[1], 3);
+    expect(arm.anchorLocalM[2]).toBeCloseTo(expected[2], 3);
   });
 
   it('refoldTo site → world → site reproduces the pose', () => {

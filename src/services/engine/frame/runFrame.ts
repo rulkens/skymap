@@ -112,11 +112,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
   // this call primes the map every later reader gets by reference.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  // Bound once, reused below by `deriveBodyStates` (site placement) and
-  // `stepCameraRuntime` (the camera floor); `terrainHeightAtOf` is the one
-  // "pre-boot / not-this-body" miss rule shared with `engine.ts`'s reader.
+  // Bound once, reused below by `stepCameraRuntime` (the camera floor);
+  // `terrainHeightAtOf` is the one "pre-boot / not-this-body" miss rule
+  // shared with `engine.ts`'s reader. A site's own ground is baked (F4), so
+  // `deriveBodyStates` no longer needs it.
   const terrainHeightAt: TerrainHeightAtLookup = terrainHeightAtOf(state.subsystems.surfaceTiles);
-  const bodyStates = deriveBodyStates(simDays, terrainHeightAt) as ReadonlyMap<BodyId, BodyState>;
+  const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
 
   const {
     next,

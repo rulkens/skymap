@@ -8,7 +8,8 @@ export type HostBody = {
   readonly state: BodyState;
   /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull; the h/R bands read it. */
   readonly radiusM: number;
-  /** The ground: what the descent floor stands off from, and what sites and pivots sit on. */
+  /** The ground: what the descent floor stands off from. A site's own ground
+   *  is baked (F4, `siteGroundRadiusM`), not read off this live lookup. */
   readonly groundRadiusAtM: GroundRadiusLookup;
   /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
   readonly standoffRadii: number;

@@ -7,6 +7,7 @@ import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { rotationRowById } from '../../../src/data/bodies/rotationElements';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import { siteGroundRadiusM } from '../../../src/utils/camera/siteGroundRadiusM';
 import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
 
 const marsRow = rotationRowById('mars');
@@ -54,15 +55,15 @@ describe('the Mars rover landing sites', () => {
     expect(angleDeg(at, afterQuarterTurn)).toBeCloseTo(expectedDeg, 2);
   });
 
-  it('a rover stands on the surface', () => {
-    // A 3390 km offset recovered by differencing two ~1.5 au doubles: one ulp
+  it('a rover stands on its baked ground height, not the bare datum', () => {
+    // A 3390+ km offset recovered by differencing two ~1.5 au doubles: one ulp
     // at that magnitude is ~50 µm, and the residual lands at ~5 µm. Hence 50 µm
     // rather than the nanometres the metre-space arithmetic would deserve.
     const site = findByIdOrThrow(SURFACE_FIXED_SITES, 'curiosity', 'surfaceFixedSites.test');
     const distanceM =
       Math.hypot(...(offsetFromMarsMpc(CONST_J2000) as number[])) / SCALE_UNITS.M_TO_MPC;
 
-    expect(distanceM).toBeCloseTo(MARS_RADIUS_M + site.altitudeM, 4);
+    expect(distanceM).toBeCloseTo(siteGroundRadiusM(site, MARS_RADIUS_M) + site.altitudeM, 4);
   });
 
   it('every surface-fixed site is lifted by its asset’s ground offset', () => {
