@@ -44,6 +44,7 @@ import { fetchSurfaceTileBitmap } from '../../../utils/network/fetchSurfaceTileB
 import { fetchHeightTile } from '../../../utils/network/fetchHeightTile';
 import { directionToLonLatDeg } from '../../../utils/geo/directionToLonLatDeg';
 import { deepestBandLevelAt } from '../../../utils/surfaceTiles/deepestBandLevelAt';
+import { terrainHeightM } from '../../../utils/surfaceTiles/terrainHeightM';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_CONCURRENCY,
@@ -84,6 +85,10 @@ type ResidentTile = {
   /** HEIGHT only: the `SHGT` chunk's subtree bounds, which the walk turns
    *  into frustum-cull headroom for every descendant. Null for albedo. */
   readonly subtreeRangeM: readonly [number, number] | null;
+  /** HEIGHT only: the chunk's own 17×17 grid (§8.4), kept in its wire
+   *  encoding — 867 B/slot, decoded per query by `terrainHeightAt`'s
+   *  `terrainHeightM` call, never eagerly. Null for albedo. */
+  readonly gridCodes: Uint8Array | null;
 };
 
 export type SurfaceTileDeps = {
@@ -373,6 +378,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
               slot,
               readyAtMs: performance.now(),
               subtreeRangeM: [image.subtreeMinM, image.subtreeMaxM],
+              gridCodes: image.gridCodes,
             });
           },
         });
@@ -401,7 +407,13 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
           const readyAtMs = performance.now();
           pendingLevelOf.delete(key);
           if (slot === null) return;
-          resident.set(key, { tile: request.tile, slot, readyAtMs, subtreeRangeM: null });
+          resident.set(key, {
+            tile: request.tile,
+            slot,
+            readyAtMs,
+            subtreeRangeM: null,
+            gridCodes: null,
+          });
         },
       });
     }
@@ -439,6 +451,44 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       readyAtMs: entry.readyAtMs,
       subtreeRangeM: entry.subtreeRangeM,
     };
+  }
+
+  /**
+   * `terrainHeightM` composed with this subsystem's own residency (F3a).
+   * `0` for any `bodyId` other than the engaged atlas's own — ONE-ENGAGED
+   * (§ file header) means a stale or wrong-body query has no other body's
+   * tiles to fall back to, so it must miss rather than read this one's.
+   */
+  function terrainHeightAt(bodyId: BodyId, dirBodyFixed: Vec3): number {
+    if (atlas === null || atlas.bodyId !== bodyId) return 0;
+    if (
+      manifest === null ||
+      manifestBodyId !== bodyId ||
+      paramsState === null ||
+      paramsState.bodyId !== bodyId ||
+      paramsState.params === null
+    ) {
+      return 0;
+    }
+    const prefix = manifest.prefix;
+    const { baseLevel, params } = paramsState;
+    // No band covers this direction → nothing deeper than the whole-globe
+    // base is ever baked there, so the climb below correctly finds nothing.
+    const deepestLevel =
+      deepestBandLevelAt(params.bands, directionToLonLatDeg(dirBodyFixed)) ?? baseLevel;
+    return terrainHeightM(dirBodyFixed, deepestLevel, baseLevel, (tile) => {
+      const entry = heightResident.get(surfaceTilePath(tile, prefix));
+      if (entry === undefined || entry.gridCodes === null || entry.subtreeRangeM === null)
+        return null;
+      return {
+        subtreeMinM: entry.subtreeRangeM[0],
+        subtreeMaxM: entry.subtreeRangeM[1],
+        // Unread by `terrainHeightM` (it samples `gridCodes` only); residency
+        // never keeps this figure, so there is nothing truthful to put here.
+        geometricResidualM: 0,
+        gridCodes: entry.gridCodes,
+      };
+    });
   }
 
   function isAnimating(): boolean {
@@ -525,6 +575,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     plannerParams,
     update,
     residentSlot,
+    terrainHeightAt,
     setLastCut: (cut) => {
       lastCut = cut;
     },
