@@ -147,29 +147,34 @@ HEIGHT_TILE_CHUNK_BYTES        16 → 883
 `HeightTileHeader` gains `readonly gridCodes: Uint8Array` (867 B, the raw bytes — decode
 to metres at read time via `codeHeightM`, so the header stays allocation-cheap).
 
-- [ ] Bump the version and extend the byte table in the module header. `decimateHeightGrid.ts`
+- [x] Bump the version and extend the byte table in the module header. `decimateHeightGrid.ts`
       already exists — check whether it gives the stride-8 subset directly before writing
       anything new.
-- [ ] Test `encode/decode round-trips the v3 grid` and
+- [x] Test `encode/decode round-trips the v3 grid` and
       `grid post (i, j) equals image pixel (8i, 8j)` — the second is the only place the CPU
       and the shader can silently diverge (§11). Assert against the tile's own pixels, not
       against a recomputed expectation.
-- [ ] Test `decodeHeightTileHeader rejects a v2 chunk` — a stale cached tile must fail
+- [x] Test `decodeHeightTileHeader rejects a v2 chunk` — a stale cached tile must fail
       loudly at the decoder, not read 867 B of neighbouring memory as heights.
-- [ ] `npm test -- heightTile` green.
-- [ ] Commit.
+- [x] `npm test -- heightTile` green.
+- [x] Commit.
 
 ### F0b: re-bake the height product and sync
 
 **Files:** none in `src/`; `public/data/images/earth-tiles/` and R2.
 
-- [ ] Re-bake **height only** — `mergeSurfaceTileManifest.ts` (#738) keeps albedo
+- [x] Re-bake **height only** — `mergeSurfaceTileManifest.ts` (#738) keeps albedo
       provenance, which is what used to make this unsafe. Prefix v9 → v10.
-- [ ] **This worktree's `public/data` is symlinked to main's**, so the bake writes into
+- [x] **This worktree's `public/data` is symlinked to main's**, so the bake writes into
       every server's tiles. Confirm with the user before running it, and never run
       `build-surface-tiles --product albedo` alone.
 - [ ] Sync the height product to R2 and purge; #742 fixed the CORS-variant purge.
-- [ ] 20,684 height tiles, 180 MB → ~198 MB expected (+10%). A materially different figure
+      **After the merge, not before** — the deployed JS decodes v2 only, so shipping
+      v3 tiles early flattens terrain on the live site. The bake kept the `v9` prefix
+      (one `prefix` field covers both products; bumping it during a height-only bake
+      would point the manifest at `v10` albedo tiles that do not exist), so the purge
+      is required rather than optional.
+- [x] 20,684 height tiles, 180 MB → ~198 MB expected (+10%). A materially different figure
       means the grid is not being written, or is being written uncompressed into the image.
 
 ### F1: `terrainHeightM`
@@ -219,20 +224,20 @@ not re-derive:
   return `NaN`. Return `0` (the datum), same as every other miss — and do not "fix" the
   callers' guards in this task.
 
-- [ ] Test `terrainHeightM falls back to the deepest resident ancestor` — the leaf's own
+- [x] Test `terrainHeightM falls back to the deepest resident ancestor` — the leaf's own
       tile absent, an ancestor resident: reads the ancestor's grid, not `0`.
-- [ ] Test `terrainHeightM returns exactly 0 when no ancestor is resident` — asserting
+- [x] Test `terrainHeightM returns exactly 0 when no ancestor is resident` — asserting
       `0`, and `Number.isFinite`. A `NaN` here becomes a `NaN` camera position and a black
       screen with no error.
-- [ ] Test `terrainHeightM returns 0 for a zero direction vector` — the three unguarded
+- [x] Test `terrainHeightM returns 0 for a zero direction vector` — the three unguarded
       call sites above make this reachable in production, and its failure mode is the same
       black screen.
-- [ ] Test `terrainHeightM reads a shared post identically from both levels` — a post
+- [x] Test `terrainHeightM reads a shared post identically from both levels` — a post
       coincident at levels _L_ and _L+1_ (strict decimation, §3.4c-R1, guarantees the
       coarse post _is_ the fine post) reads the same metres from either. This is the
       half-texel and north-flip guard in one, and nothing else in the suite catches it.
-- [ ] `npm test -- terrainHeightM` green.
-- [ ] Commit.
+- [x] `npm test -- terrainHeightM` green.
+- [x] Commit.
 
 ### F2: retain the header grids, expose one query
 
@@ -256,12 +261,12 @@ composing `terrainHeightM` with its own residency and the manifest's deepest ban
 for that direction (`deepestBandLevelAt`, already present). Returns `0` when `bodyId` is
 not the engaged body — body-generic, so Mars is a registry row away.
 
-- [ ] Add the grid to `ResidentTile` and to what the height `onResult` stores.
-- [ ] Test `terrainHeightAt returns 0 for a body that is not engaged` — the body-generic
+- [x] Add the grid to `ResidentTile` and to what the height `onResult` stores.
+- [x] Test `terrainHeightAt returns 0 for a body that is not engaged` — the body-generic
       contract, and the guard against a Mars query silently reading Earth's atlas once F4
       adds the second row.
-- [ ] `npm test -- surfaceTileSubsystem` green.
-- [ ] Commit.
+- [x] `npm test -- surfaceTileSubsystem` green.
+- [x] Commit.
 
 ### F3: route the three consumers
 
@@ -278,21 +283,21 @@ Spec §8.3's F3a table. Three rows, and only three:
 | site placement         | `sitePointBodyFixed.ts` and `deriveBodyStates.ts` use `datumRadiusM + terrainHeightAt(dir) + site.altitudeM`                                           |
 | eye-to-ground readouts | `cameraDebugSnapshotOf.ts`'s `altitudeM` subtracts the terrain height. DebugPanel and `CameraStateSection.tsx` read this snapshot; no UI change needed |
 
-- [ ] **Do not touch the h/R band arithmetic.** `hOverR`, `nearestBodyHR`,
+- [x] **Do not touch the h/R band arithmetic.** `hOverR`, `nearestBodyHR`,
       `bodyUpWeight`, `mappedTiltRad`, `approachTiltedPose`, `releasedWorldRoll`,
       `pivotRadiusMpc` stay on `datumRadiusM` (§8.3). They are behaviour, not readout;
       routing them to terrain would change camera feel and is not in scope.
-- [ ] `site.altitudeM` is the **mesh's wheel lift** read from `MESH_ASSETS`
+- [x] `site.altitudeM` is the **mesh's wheel lift** read from `MESH_ASSETS`
       (`surfaceFixedSites.ts:16-20`), not an elevation — it adds on top of the terrain
       height, it is not replaced by it. No site row changes.
-- [ ] Delete the now-false sentence in `surfaceFixedSites.ts`'s docstring: "Heights are
+- [x] Delete the now-false sentence in `surfaceFixedSites.ts`'s docstring: "Heights are
       measured from Mars's mean 3390 km sphere, so areoid-relative site elevations are not
       modelled."
-- [ ] No new tests — a routing change, per [`testing.md`](../conventions/testing.md). The
+- [x] No new tests — a routing change, per [`testing.md`](../conventions/testing.md). The
       behaviour it produces is the eye-check below.
-- [ ] `npm run typecheck && npm test` green.
-- [ ] `npm run perf` against this worktree's `--url`, compared with the pre-PR-2 baseline.
-- [ ] Commit.
+- [x] `npm run typecheck && npm test` green.
+- [ ] ~~`npm run perf`~~ — **waived by the user, 2026-09-17.** Not run before or after.
+- [x] Commit.
 
 ---
 
