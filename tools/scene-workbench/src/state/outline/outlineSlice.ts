@@ -66,9 +66,6 @@ export const outlineSlice = createSlice({
       draft.ringM.splice(action.payload, 1);
       if (draft.ringM.length < 3) draft.closed = false;
     },
-    outlineSaved: (state, action: PayloadAction<{ assetId: string; ringM: Vec2[] }>) => {
-      state.byAssetId[action.payload.assetId] = { ringM: action.payload.ringM, masked: true };
-    },
     outlineSaveFailed: (state, action: PayloadAction<string>) => {
       state.saveError = action.payload;
     },
@@ -91,7 +88,6 @@ export const {
   cornerInserted,
   cornerMoved,
   cornerClicked,
-  outlineSaved,
   outlineSaveFailed,
   draftEnded,
 } = outlineSlice.actions;

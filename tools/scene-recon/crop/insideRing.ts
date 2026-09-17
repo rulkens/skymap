@@ -5,7 +5,6 @@
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 export function insideRing(p: Vec2, ringM: readonly Vec2[]): boolean {
-  if (ringM.length < 3) return true;
   const [px, py] = p;
   let inside = false;
   for (let i = 0, j = ringM.length - 1; i < ringM.length; j = i++) {

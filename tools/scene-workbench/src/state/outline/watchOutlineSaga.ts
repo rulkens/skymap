@@ -21,7 +21,6 @@ import {
   draftEnded,
   draftStarted,
   outlineLoaded,
-  outlineSaved,
   outlineSaveFailed,
   outlineSlice,
 } from './outlineSlice';
@@ -110,7 +109,7 @@ function* saveOutlineWorker() {
     );
     if (!stillCurrent) return;
     // The server's ring, not the draft's: normalization may have reversed or trimmed it.
-    yield* put(outlineSaved({ assetId: draft.assetId, ringM }));
+    yield* put(outlineLoaded({ assetId: draft.assetId, ringM }));
     yield* put(commitCameraPose(draft.returnPose));
     yield* put(draftEnded());
   } catch (err) {
