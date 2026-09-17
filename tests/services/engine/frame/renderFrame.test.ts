@@ -415,6 +415,7 @@ function makeInput(
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: canvasWidth, height: canvasHeight },
+    cursorTexPx: null,
     drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
     >,

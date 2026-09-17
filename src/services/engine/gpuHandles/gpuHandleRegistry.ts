@@ -25,6 +25,7 @@ import { createStarAggregateUpsample } from '../../gpu/passes/starAggregateUpsam
 import { createBloomPyramid } from '../../gpu/passes/bloomPyramid';
 import { createEarthRenderer } from '../../gpu/renderers/bodies/earthRenderer';
 import { createSurfaceTileRenderer } from '../../gpu/renderers/bodies/surfaceTileRenderer';
+import { createTerrainPickMarkerRenderer } from '../../gpu/renderers/devTools/terrainPickMarkerRenderer';
 import { SURFACE_TILE_MESH_RESOLUTION } from '../../../data/bodies/surfaceTileParams';
 import { createTexturedBodyRenderer } from '../../gpu/renderers/bodies/texturedBodyRenderer';
 import { createMeshBodyRenderer } from '../../gpu/renderers/bodies/meshBodyRenderer';
@@ -377,6 +378,16 @@ export const GPU_HANDLE_ROWS = [
         FOREGROUND_DEPTH_FORMAT,
         SLAB_REVERSED_Z[NEAR0]!,
         SURFACE_TILE_MESH_RESOLUTION,
+      ),
+  },
+  {
+    key: 'terrainPickMarkerRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createTerrainPickMarkerRenderer(
+        deps.ctx.device,
+        HDR_TARGET_FORMAT,
+        FOREGROUND_DEPTH_FORMAT,
+        SLAB_REVERSED_Z[NEAR0]!,
       ),
   },
   {

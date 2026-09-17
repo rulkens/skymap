@@ -57,6 +57,7 @@ function makeCtx(): ReadyFrameContext {
     // slabViewOf(ctx, NEAR0) indexes ctx.slabs[NEAR0] (index 0).
     slabs: [near0Slab, near0Slab],
     canvasSize: { width: 1280, height: 720 },
+    cursorTexPx: null,
     drawCamPos: CAM_POS as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,

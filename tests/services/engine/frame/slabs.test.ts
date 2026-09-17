@@ -631,6 +631,7 @@ describe('slabViewOf', () => {
       cam,
       vp: cosmoVp,
       canvasSize: { width: 1920, height: 1080 },
+      cursorTexPx: null,
       drawCamPos: [cam.position[0], cam.position[1], cam.position[2]],
       drawPxPerRad: 1000,
       nowMs: 0,

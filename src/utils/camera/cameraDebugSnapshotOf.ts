@@ -19,12 +19,15 @@ import type { OrientDeltas } from '../../@types/camera/OrientDeltas';
 import type { PoseFrame } from '../../@types/camera/PoseFrame';
 import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
 import type { TerrainHeightAtLookup } from '../../@types/camera/TerrainHeightAtLookup';
+import type { ResidentHeightLevelLookup } from '../../@types/camera/ResidentHeightLevelLookup';
 import type { TimeState } from '../../@types/time/TimeState';
+import type { Vec2 } from '../../@types/math/Vec2';
 import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
 import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
 import { eyeMpcOf } from './eyeMpcOf';
+import { terrainPickAt } from './terrainPickAt';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { isBodyArm } from '../../services/engine/camera/rungs/isBodyArm';
@@ -55,6 +58,14 @@ export function cameraDebugSnapshotOf(input: {
   /** `SurfaceTileSubsystem.terrainHeightAt`, bound by the caller (engine.ts)
    *  — the eye-to-ground row's source (F3a, spec §8.3). */
   readonly terrainHeightAt: TerrainHeightAtLookup;
+  /** Its sibling, for the resident-level row; same binding site. */
+  readonly residentHeightLevelAt: ResidentHeightLevelLookup;
+  /** Live cursor in texture pixels — non-null ONLY while the
+   *  `terrain-pick-marker` overlay is on, which is what gates the pick row. */
+  readonly cursorTexPx: Readonly<Vec2> | null;
+  /** The viewport `cursorTexPx` is measured in, and the FOV it was drawn with. */
+  readonly viewportPx: Readonly<Vec2>;
+  readonly fovYRad: number;
 }): CameraDebugSnapshot {
   const {
     storedFrame,
@@ -73,6 +84,10 @@ export function cameraDebugSnapshotOf(input: {
     tuning,
     deltas,
     terrainHeightAt,
+    residentHeightLevelAt,
+    cursorTexPx,
+    viewportPx,
+    fovYRad,
   } = input;
   const renderedFrame = renderedPose.frame;
   const dofs = cameraDofAnglesOf({
@@ -97,19 +112,32 @@ export function cameraDebugSnapshotOf(input: {
         )?.radiusM
       : undefined;
   const engagedBodyState = bodyId !== null ? bodyStates.get(bodyId) : undefined;
-  const terrainM =
+  const eyeRelBodyM =
     bodyId !== null && engagedBodyState !== undefined
-      ? terrainHeightAt(
-          bodyId,
-          bodyRelativePose({
-            camPosMpc: eyeMpcOf(worldPose, poseBasis),
-            camBasisWorld: IDENTITY_MAT3,
-            bodyState: engagedBodyState,
-          }).eyeRelBodyM,
-        )
-      : 0;
+      ? bodyRelativePose({
+          camPosMpc: eyeMpcOf(worldPose, poseBasis),
+          camBasisWorld: IDENTITY_MAT3,
+          bodyState: engagedBodyState,
+        }).eyeRelBodyM
+      : null;
+  const terrainM =
+    bodyId !== null && eyeRelBodyM !== null ? terrainHeightAt(bodyId, eyeRelBodyM) : 0;
 
   const engagedPose = isBodyArm(renderedPose) ? renderedPose.pose : null;
+  // The `terrain-pick-marker` overlay's own pick, recomputed from arguments at
+  // this 4 Hz poll rather than read back from the pass that draws it: the
+  // camera path holds no pick state (user ruling 2026-09-17), and a cursor is
+  // only carried while that overlay is on, so this is dead with it off.
+  const pick =
+    cursorTexPx !== null && engagedPose !== null
+      ? terrainPickAt({
+          arm: engagedPose,
+          cursorPx: cursorTexPx,
+          viewportPx,
+          fovYRad,
+          terrainHeightAt,
+        })
+      : null;
   const sitePose = isSiteArm(renderedPose) ? renderedPose.pose : null;
   const epochDeltaDays = liveSimDays - lastRenderedSimDays;
   const epochDeltaEpsDays = Math.abs(
@@ -138,5 +166,11 @@ export function cameraDebugSnapshotOf(input: {
     activeDriverId,
     gestureMode: gesture === null ? null : gesture === 'down' ? 'down (unlatched)' : gesture.mode,
     gestureCursorHit: gesture === null || gesture === 'down' ? null : gesture.anchorLocalM !== null,
+    terrainPickHeightM:
+      pick === null || engagedPose === null
+        ? null
+        : terrainHeightAt(engagedPose.bodyId, pick.pointM),
+    residentHeightLevelAtEye:
+      bodyId !== null && eyeRelBodyM !== null ? residentHeightLevelAt(bodyId, eyeRelBodyM) : null,
   };
 }

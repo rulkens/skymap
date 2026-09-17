@@ -68,6 +68,15 @@ export type SurfaceTileSubsystem = Destroyable & {
   terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number;
 
   /**
+   * The pyramid level `terrainHeightAt`'s ancestor climb actually resolved
+   * under the same direction; `null` when nothing is resident there (or the
+   * body is not the engaged one). A debug readout, because the height alone
+   * cannot tell "sea level" from "no tile": the floor can stand on a level
+   * several coarser than the albedo on screen, and this is what shows it.
+   */
+  residentHeightLevelAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number | null;
+
+  /**
    * Store this frame's `cutSurfaceTiles` cut for `earthPass.draw` to read —
    * the "compute in runFrame, consume in draw" seam `plannerParams`/`update`
    * already use, one field further. Call unconditionally alongside

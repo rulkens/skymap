@@ -11,6 +11,7 @@
 import type { Mat4 } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { Vec2 } from '../../math/Vec2';
 import type { Vec3 } from '../../math/Vec3';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
@@ -43,6 +44,13 @@ export type ReadyFrameContext = {
   bodyPose: BodyPoseProvider;
   /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
   canvasSize: { width: number; height: number };
+  /**
+   * Live pointer position in texture pixels — `state.picking.cursorTexPx`
+   * forwarded, so a pass never reaches back into the picking bag `PassState`
+   * deliberately refuses. `null` unless the `terrain-pick-marker` debug overlay
+   * is on (its sole reader): the listener only writes it then.
+   */
+  cursorTexPx: Readonly<Vec2> | null;
   /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */
   drawCamPos: Readonly<Vec3>;
   /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */

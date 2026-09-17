@@ -71,6 +71,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     // near-field double.
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
+    cursorTexPx: null,
     drawCamPos,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,

@@ -74,6 +74,8 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
     band: [
       { key: 'h_over_R', value: num(snap.hOverR) },
       { key: 'altitude_m', value: num(snap.altitudeM) },
+      { key: 'terrain_pick_height_m', value: num(snap.terrainPickHeightM) },
+      { key: 'resident_height_level_at_eye', value: num(snap.residentHeightLevelAtEye) },
       { key: 'band_up_weight', value: num(snap.bandUpWeight) },
       { key: 'engage/disengage_hr', value: `${tuning.engageHR} / ${tuning.disengageHR}` },
       { key: 'tilt_full/zero_hr', value: `${tuning.tiltFullHR} / ${tuning.tiltZeroHR}` },
