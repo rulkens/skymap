@@ -554,12 +554,12 @@ comment only if it now misleads.
 
 Register `watchOutlineSaga()` in `rootSaga.ts`'s `all([...])`.
 
-- [ ] `save PUTs the draft, stores the server's ring and restores the return pose` — `runSaga` or
+- [x] `save PUTs the draft, stores the server's ring and restores the return pose` — `runSaga` or
       the store from `createSceneStore`, `fetch` stubbed with `vi.stubGlobal`; server returns a
       ring different from the draft's; assert `byAssetId` holds the server's, `draft` is null,
       `view.camera` equals `returnPose` (projection `'perspective'`).
-- [ ] `a failed save keeps draw mode and records the error`.
-- [ ] Commit.
+- [x] `a failed save keeps draw mode and records the error`.
+- [x] Commit.
 
 ### Task 15: the preview mask on the GPU
 
