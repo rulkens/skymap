@@ -3,8 +3,7 @@ import { APP_SETTINGS_SLICES } from '../../src/compositions/appSettingsSlices';
 import { CORE_SETTINGS_SLICES } from '../../src/state/settings/coreSettingsSlices';
 
 describe('APP_SETTINGS_SLICES', () => {
-  // combineSlices would silently let the later slice win the key; the old
-  // composeInitialSettings threw for the same reason.
+  // combineSlices lets the later slice win a duplicated key, silently.
   it('claims each settings-root key once, and none core claims', () => {
     const paths = APP_SETTINGS_SLICES.map((s) => s.reducerPath);
     expect(new Set(paths).size).toBe(paths.length);

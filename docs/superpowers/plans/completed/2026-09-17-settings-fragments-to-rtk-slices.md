@@ -1,6 +1,6 @@
 # Settings fragments → RTK slices Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task, under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task, under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Delete the hand-rolled settings-fragment machinery and let each settings cluster be a plain `createSlice`, composed by RTK's own `combineSlices`.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, Redux Toolkit 2.12 (`combineSlices`, `createSlice({ reducerPath })`), Vitest.
 
-**Spec:** none. The design record is the `RULING 2026-09-17 — settings machinery → RTK slices` section in the user's `project_layer_composition` memory: step 2 of the agreed order, explicitly "behaviour-neutral, no design questions open, no file moves". **Ground preparation:** none needed — this PR *is* ground preparation for step 3 (Layer structure cleanup) and step 5 (the settings type-cycle break).
+**Spec:** none. The design record is the `RULING 2026-09-17 — settings machinery → RTK slices` section in the user's `project_layer_composition` memory: step 2 of the agreed order, explicitly "behaviour-neutral, no design questions open, no file moves". **Ground preparation:** none needed — this PR _is_ ground preparation for step 3 (Layer structure cleanup) and step 5 (the settings type-cycle break).
 
 ## Global Constraints
 
@@ -74,12 +74,14 @@ Each of these turns from a `LayerSettingsFragment` object literal into a `create
 ## Task 1: Core clusters become seven slices
 
 **Files:**
+
 - Create: `src/state/settings/core/{orientationSlice,cameraSettingsSlice,tonemapSlice,hdrSlice,bloomSlice,labelsSlice,debugSlice}.ts`
 - Create: `src/state/settings/coreSettingsSlices.ts`
 - Modify: `src/state/settings/coreInitialSettings.ts` (its seven cluster literals move into the slices; the file is deleted at the end of this task)
 - Test: `tests/state/settings/coreSettingsSlices.test.ts`
 
 **Interfaces:**
+
 - Consumes: `CoreSettingsState` and its member types, `src/data/defaults.ts`, `src/services/engine/animation/pathDefaults.ts`, `DEBUG_OVERLAY_ROWS`.
 - Produces: `CORE_SETTINGS_SLICES` — a `readonly` tuple of the seven slices, in the order above. Each slice's `reducerPath` is its settings-root key; each exports its action creators by name, unchanged from today's `CORE_REDUCERS` keys.
 
@@ -87,7 +89,7 @@ Every core reducer body is copied verbatim from `CORE_REDUCERS` in `src/state/se
 
 `orientation` is the one primitive-state slice: Immer cannot track a mutation on a string, so its reducer **returns** the new value.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/state/settings/coreSettingsSlices.test.ts
@@ -130,12 +132,12 @@ describe('CORE_SETTINGS_SLICES', () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `npx vitest run tests/state/settings/coreSettingsSlices.test.ts`
 Expected: FAIL — cannot resolve `src/state/settings/coreSettingsSlices`.
 
-- [ ] **Step 3: Write the seven slices**
+- [x] **Step 3: Write the seven slices**
 
 Template — every core slice follows it exactly:
 
@@ -148,7 +150,11 @@ Template — every core slice follows it exactly:
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_BLOOM_ENABLED, DEFAULT_BLOOM_STRENGTH, DEFAULT_BLOOM_THRESHOLD } from '../../../data/defaults';
+import {
+  DEFAULT_BLOOM_ENABLED,
+  DEFAULT_BLOOM_STRENGTH,
+  DEFAULT_BLOOM_THRESHOLD,
+} from '../../../data/defaults';
 import type { CoreSettingsState } from '../../../@types/settings/CoreSettingsState';
 
 const initialState: CoreSettingsState['bloom'] = {
@@ -204,16 +210,16 @@ export const CORE_SETTINGS_SLICES = [
 
 `as const` is load-bearing: `combineSlices` derives the root state per element, and a widened `Slice[]` would collapse every cluster's type.
 
-- [ ] **Step 4: Delete `coreInitialSettings.ts`**
+- [x] **Step 4: Delete `coreInitialSettings.ts`**
 
 Nothing should import `CORE_INITIAL_SETTINGS` after the cluster literals move into the slices. `grep -rn CORE_INITIAL_SETTINGS src tests` must come back empty before deleting; `initialSettings.ts` still references it and is repaired in Task 3, so this step may leave a single known break that Task 3 closes — say so in the ledger rather than papering over it.
 
-- [ ] **Step 5: Run the test**
+- [x] **Step 5: Run the test**
 
 Run: `npx vitest run tests/state/settings/coreSettingsSlices.test.ts`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/state/settings/core src/state/settings/coreSettingsSlices.ts tests/state/settings/coreSettingsSlices.test.ts
@@ -225,6 +231,7 @@ git commit -m "refactor(settings): core clusters become seven RTK slices"
 ## Task 2: The fifteen Layer clusters become slices
 
 **Files:**
+
 - Rename + rewrite (via `npm run move-files -- <from> <to>`, one `--manifest` run for all 15): every `src/layers/*/settings/*Settings.ts` listed under File Structure → `*Slice.ts`
 - Modify: `src/layers/filaments/settings/filamentsLayerSettings.ts`, `src/layers/galaxyCatalog/settings/galaxyCatalogLayerSettings.ts`
 - Create: `src/compositions/appSettingsSlices.ts`
@@ -232,6 +239,7 @@ git commit -m "refactor(settings): core clusters become seven RTK slices"
 - Test: `tests/compositions/appSettingsSlices.test.ts`
 
 **Interfaces:**
+
 - Consumes: `CORE_SETTINGS_SLICES` (Task 1) only for the namespacing convention — no import.
 - Produces: `APP_SETTINGS_SLICES`, a `readonly` tuple of 15 slices; `filamentsLayerSettings` and `galaxyCatalogLayerSettings` as `readonly Slice[]` tuples; `Layer`'s `settings?: Settings` where `Settings extends readonly Slice[]`.
 
@@ -239,7 +247,7 @@ Conversion is mechanical and identical for all 15. The fragment's `key` becomes 
 
 `move-files` misses `.wesl` `package::` specifiers and string-literal paths — grep for each old path afterwards.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/compositions/appSettingsSlices.test.ts
@@ -265,12 +273,12 @@ describe('APP_SETTINGS_SLICES', () => {
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `npx vitest run tests/compositions/appSettingsSlices.test.ts`
 Expected: FAIL — cannot resolve `src/compositions/appSettingsSlices`.
 
-- [ ] **Step 3: Convert the fifteen files**
+- [x] **Step 3: Convert the fifteen files**
 
 Template (from `filamentsSettings.ts` → `filamentsSlice.ts`):
 
@@ -307,7 +315,7 @@ export const filamentsSlice = createSlice({
 export const { setFilamentsEnabled, setFilamentIntensity } = filamentsSlice.actions;
 ```
 
-- [ ] **Step 4: Retype the Layer contract**
+- [x] **Step 4: Retype the Layer contract**
 
 In `src/@types/engine/layer/Layer.d.ts`, replace the `SettingsFragmentLike` import with `import type { Slice } from '@reduxjs/toolkit';` and the bound with `readonly Slice[]`:
 
@@ -324,16 +332,16 @@ The member's doc comment changes to name the new composer:
 
 `Layer.d.ts` carries a standing exemption from the comment-ratio budget (not from the ≤ 5-line header rule) — leave its other TSDoc alone.
 
-- [ ] **Step 5: Write `appSettingsSlices.ts`**
+- [x] **Step 5: Write `appSettingsSlices.ts`**
 
 Same two-list shape as `appSettingsFragments.ts` it replaces — `UNFORMED_SETTINGS_SLICES` for the clusters that still predate `Layer.settings`, each formed Layer's tuple spread in beside it. Carry over the header's explanation of why a formed Layer's tuple is imported from the Layer rather than off `APP_COMPOSITION`, and that a cluster lives in one list or the other, never both.
 
-- [ ] **Step 6: Run the test**
+- [x] **Step 6: Run the test**
 
 Run: `npx vitest run tests/compositions/appSettingsSlices.test.ts`
 Expected: PASS. `npm run typecheck` still fails — `settingsSlice.ts` imports the deleted fragments; Task 3 closes it.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/layers src/compositions/appSettingsSlices.ts src/@types/engine/layer/Layer.d.ts tests/compositions/appSettingsSlices.test.ts
@@ -346,6 +354,7 @@ git commit -m "refactor(settings): each Layer cluster is its own RTK slice"
 ## Task 3: `combineSlices` replaces the hand-rolled composition
 
 **Files:**
+
 - Create: `src/state/settings/combinedSettingsReducer.ts`, `src/state/settings/mergeSnapshotAction.ts`, `src/state/settings/settingsReducer.ts`
 - Modify: `src/@types/settings/EngineSettingsState.d.ts`, `src/state/settings/initialSettings.ts`, `src/store/rootReducer.ts`
 - Modify (transitional): `src/state/settings/settingsSlice.ts` — reduced to a re-export block so the 77 call sites keep compiling until Task 4 deletes it
@@ -353,6 +362,7 @@ git commit -m "refactor(settings): each Layer cluster is its own RTK slice"
 - Test: `tests/state/settings/settingsReducer.test.ts` (replaces `settingsSlice.test.ts`)
 
 **Interfaces:**
+
 - Consumes: `CORE_SETTINGS_SLICES` (Task 1), `APP_SETTINGS_SLICES` (Task 2), `mergeSettingsSnapshot`.
 - Produces: `combinedSettingsReducer`, `mergeSnapshot` (an action creator), `settingsReducer` (default export), and `EngineSettingsState = ReturnType<typeof combinedSettingsReducer>`.
 
@@ -362,7 +372,7 @@ git commit -m "refactor(settings): each Layer cluster is its own RTK slice"
 
 `EngineSettingsState` must derive from a module that imports no root type, or the alias references itself through `mergeSettingsSnapshot`. That is why the combine and the snapshot wrapper are two files, not one.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```ts
 // tests/state/settings/settingsReducer.test.ts
@@ -388,19 +398,22 @@ describe('settingsReducer', () => {
 
   // The one reducer that replaces the whole root — it cannot live in a slice.
   it('lays a partial snapshot over the root, cluster by cluster', () => {
-    const next = settingsReducer(INITIAL_SETTINGS, mergeSnapshot({ bloom: { enabled: false, strength: 2, threshold: 1 } }));
+    const next = settingsReducer(
+      INITIAL_SETTINGS,
+      mergeSnapshot({ bloom: { enabled: false, strength: 2, threshold: 1 } }),
+    );
     expect(next.bloom).toEqual({ enabled: false, strength: 2, threshold: 1 });
     expect(next.filaments).toBe(INITIAL_SETTINGS.filaments);
   });
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `npx vitest run tests/state/settings/settingsReducer.test.ts`
 Expected: FAIL — cannot resolve `src/state/settings/settingsReducer`.
 
-- [ ] **Step 3: Write the three new modules**
+- [x] **Step 3: Write the three new modules**
 
 ```ts
 // src/state/settings/combinedSettingsReducer.ts
@@ -455,7 +468,7 @@ export default function settingsReducer(
 }
 ```
 
-- [ ] **Step 4: Re-derive the root type and the boot value**
+- [x] **Step 4: Re-derive the root type and the boot value**
 
 ```ts
 // src/@types/settings/EngineSettingsState.d.ts — body only; keep the ≤5-line header,
@@ -477,22 +490,22 @@ export const INITIAL_SETTINGS: EngineSettingsState = combinedSettingsReducer(und
 });
 ```
 
-- [ ] **Step 5: Point `rootReducer` at it, and shrink `settingsSlice.ts` to a transitional re-export**
+- [x] **Step 5: Point `rootReducer` at it, and shrink `settingsSlice.ts` to a transitional re-export**
 
 `src/store/rootReducer.ts`: `import settingsReducer from '../state/settings/settingsReducer';`.
 
 `src/state/settings/settingsSlice.ts` keeps only `export { … } from '…'` lines for every action creator plus `mergeSnapshot`, with a one-line header saying it is transitional and Task 4 deletes it. This keeps the branch green between tasks; it is **not** the shipped shape.
 
-- [ ] **Step 6: Delete the machinery**
+- [x] **Step 6: Delete the machinery**
 
 `git rm` the five `@types/settings` files, the three `utils/settings` files, and their tests. Replace `tests/state/settings/settingsSlice.test.ts` with the new `settingsReducer.test.ts`. Anything the deleted tests covered that is not covered by Tasks 1–3's tests gets kept as a test here, not silently dropped — say which in the ledger.
 
-- [ ] **Step 7: Run the suite**
+- [x] **Step 7: Run the suite**
 
 Run: `npm test` then `npm run typecheck`
 Expected: both PASS. One known text change: `tests/components/containers/StructuresSectionContainer.test.ts:48` asserts the literal `'settings/setStructureItemEnabled'`, which is now `'settings/structures/setStructureItemEnabled'`.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add src/state/settings src/@types/settings src/store/rootReducer.ts tests/state/settings tests/components/containers/StructuresSectionContainer.test.ts
@@ -505,11 +518,13 @@ git commit -m "refactor(settings): combineSlices replaces the hand-rolled compos
 ## Task 4: Re-point every import site and delete `settingsSlice.ts`
 
 **Files:**
+
 - Modify: the 42 src + 35 test files importing from `src/state/settings/settingsSlice`
 - Modify: `src/@types/animation/SettingsAction.d.ts` (type-imports `setFlow`, `setFlowEnabled`, `setGalaxyCatalogVisible`, `setLabelsFocusedOnly` — now three different modules)
 - Delete: `src/state/settings/settingsSlice.ts`
 
 **Interfaces:**
+
 - Consumes: the action creators each slice module exports (Tasks 1–2).
 - Produces: nothing new. This task is pure churn; the only acceptable diff outside an import statement is the `SettingsAction` type's import block.
 
@@ -517,15 +532,15 @@ Every creator moves to the module that owns its cluster: a `set…` for a Layer 
 
 Prefer `npm run refactor` (the ts-morph CLI) over hand edits where it can move a symbol's references; check its output, it has known blind spots.
 
-- [ ] **Step 1: Re-point the src files**
+- [x] **Step 1: Re-point the src files**
 
 Run: `grep -rln "state/settings/settingsSlice" src` and fix each. `npm run typecheck` after.
 
-- [ ] **Step 2: Re-point the test files**
+- [x] **Step 2: Re-point the test files**
 
 Run: `grep -rln "state/settings/settingsSlice" tests` and fix each.
 
-- [ ] **Step 3: Delete the transitional module**
+- [x] **Step 3: Delete the transitional module**
 
 ```bash
 git rm src/state/settings/settingsSlice.ts
@@ -533,12 +548,12 @@ git rm src/state/settings/settingsSlice.ts
 
 `grep -rn "settingsSlice" src tests` must come back empty.
 
-- [ ] **Step 4: Full green**
+- [x] **Step 4: Full green**
 
 Run: `npm test`, `npm run typecheck`, `npm run format`
 Expected: all PASS, suite count unchanged but for the tests this plan deleted and added.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src tests
@@ -550,18 +565,19 @@ git commit -m "refactor(settings): import action creators from the slice that ow
 ## Task 5: Documentation sweep
 
 **Files:**
+
 - Modify: `src/layers/README.md` (the Layer folder convention — the `settings/` section now describes slices)
 - Modify: any doc naming `LayerSettingsFragment`, `liftClusterReducers` or `appSettingsFragments`
 
-- [ ] **Step 1: Find the stale references**
+- [x] **Step 1: Find the stale references**
 
 Run: `grep -rn "SettingsFragment\|liftClusterReducers\|appSettingsFragments\|composeInitialSettings" docs src/layers/README.md`
 
-- [ ] **Step 2: Rewrite them**
+- [x] **Step 2: Rewrite them**
 
 A Layer's `settings/` folder holds one `createSlice` per cluster it owns, plus a `<layer>LayerSettings.ts` tuple when the Layer owns more than one. Say why the tuple is imported from the Layer rather than off `APP_COMPOSITION`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add docs src/layers/README.md
@@ -578,9 +594,9 @@ git commit -m "docs(settings): the fragment machinery is gone"
 
 ## Definition of Done
 
-- [ ] `npm test` and `npm run typecheck` green; `npm run build` green.
-- [ ] `grep -rn "SettingsFragment\|liftClusterReducers\|composeInitialSettings\|assertUniqueFragmentReducerKeys\|settingsSlice" src tests docs` returns nothing.
-- [ ] `state.settings` is key-for-key identical to `main` at boot — assert by diffing `INITIAL_SETTINGS` against main's, not by reading the code.
-- [ ] `src/state/settings/selectors.ts` diff is import lines only.
-- [ ] Net source lines DOWN — the machinery deleted exceeds the slices added.
-- [ ] Manual smoke: settings panel toggles drive the render, and a guided-tour run restores settings at the end (the `mergeSnapshot` path).
+- [x] `npm test` and `npm run typecheck` green; `npm run build` green.
+- [x] `grep -rn "SettingsFragment\|liftClusterReducers\|composeInitialSettings\|assertUniqueFragmentReducerKeys\|settingsSlice" src tests docs` returns nothing.
+- [x] `state.settings` is key-for-key identical to `main` at boot — assert by diffing `INITIAL_SETTINGS` against main's, not by reading the code.
+- [x] `src/state/settings/selectors.ts` diff is import lines only.
+- [x] Net source lines DOWN — the machinery deleted exceeds the slices added.
+- [x] Manual smoke: settings panel toggles drive the render, and a guided-tour run restores settings at the end (the `mergeSnapshot` path).
