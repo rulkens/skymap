@@ -104,7 +104,7 @@ moved verbatim; its projection is `{ fovYRad: π/4, nearM: 0.5, farM: 5000 }`.
 `writeSceneCamera` reads `matrix` and `metresPerPx` from the row for `view.projection.kind`
 (the dispatch cast pattern is `sceneRenderers.ts:74-80`) and keeps every byte offset.
 
-- [ ] Before touching anything, write a scratch script (scratchpad, not committed) that prints
+- [x] Before touching anything, write a scratch script (scratchpad, not committed) that prints
       `writeSceneCamera`'s 47 floats for two poses (default pose; yaw 1.2, pitch −0.8, distance
       37, target [5, −3, 2]) at viewport [1280, 720]. Re-run it after the refactor; the outputs
       must be bit-identical.
@@ -112,9 +112,9 @@ moved verbatim; its projection is `{ fovYRad: π/4, nearM: 0.5, farM: 5000 }`.
       matrix is a change-detector that breaks on any FOV tweak (`testing.md`), and the parity test
       already pins the layout — cost if wrong: a later perspective regression is caught only by
       the existing `sceneCameraView` tests and the user's eyes.
-- [ ] Update `sceneCameraView.test.ts` for the renamed field; no new test (plumbing).
-- [ ] `npm test -- scene-workbench` and `npm run typecheck` green.
-- [ ] Commit: `refactor(scene-workbench): camera projection as data (P1)`.
+- [x] Update `sceneCameraView.test.ts` for the renamed field; no new test (plumbing).
+- [x] `npm test -- scene-workbench` and `npm run typecheck` green.
+- [x] Commit: `refactor(scene-workbench): camera projection as data (P1)`.
 
 ### Task 2: the orthographic row and the pose's projection
 
