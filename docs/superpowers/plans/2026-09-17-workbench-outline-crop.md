@@ -340,14 +340,14 @@ with the two endpoint keys ordered lexically.
 
 ### Task 9: `cropMeshGeometry`
 
-**Files:** `tools/scene-recon/crop/cropMeshGeometry.ts`, `tools/scene-recon/crop/segmentsCross.ts`,
+**Files:** `tools/scene-recon/crop/cropMeshGeometry.ts`, `tools/scene-recon/crop/segmentsTouch.ts`,
 `tests/tools/scene-recon/crop/cropMeshGeometry.test.ts`
 **review: yes** — index/vertex buffer construction, welding.
 
 **Signatures:**
 
 ```ts
-export function segmentsCross(a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean; // proper crossing only
+export function segmentsTouch(a: Vec2, b: Vec2, c: Vec2, d: Vec2): boolean; // inclusive (review fix)
 export function cropMeshGeometry(
   geometry: TexturedMeshGeometry,
   ringM: readonly Vec2[],
@@ -362,7 +362,7 @@ holds both.
 **Behaviour, per triangle:**
 
 1. XY bbox entirely outside the ring's bbox → drop.
-2. **Fast path:** all three corners `insideRing` and no triangle edge `segmentsCross` any ring
+2. **Fast path:** all three corners `insideRing` and no triangle edge `segmentsTouch` any ring
    edge → keep the triangle with its original indices, untouched.
 3. Otherwise, for each piece `k`, clip the triangle's `ClipVertex[]` (keys `v<i>`) by its three
    planes (plane key `${k}:${j}`); fan-triangulate each result with ≥ 3 vertices.
@@ -743,7 +743,7 @@ Follow `.claude/skills/create-component/SKILL.md` (own folder, `function Name() 
 - [ ] New "Mesh outline" section: draw mode (orthographic nadir, click to add, drag to move, click
       a corner to delete, first corner closes), the mask toggle, the file at
       `data/geo3d/<groupId>/<assetId>.outline.json` (committed, mesh-local metres), splats
-      rendering wrong under orthographic (hide them while drawing), and
+      hidden (neither sorted nor drawn) under orthographic, and
       `npm run crop-mesh -- --group <id> --asset <assetId>` with its sibling `<assetId>-cropped`
       asset and printed numbers.
 - [ ] Commit.
@@ -763,9 +763,9 @@ Follow `.claude/skills/create-component/SKILL.md` (own folder, `function Name() 
 9. Mask struct, binding and `insideMask` in `texturedMesh.wesl`, no `lib/maskPolygon.wesl` (Task 15).
 10. No `meshMaskWritten` command; the mask write rides the triggering dispatch (Task 15).
 11. Corner drag arbitration by a capture-phase listener, not an `orbitControls.ts` hook (Task 17).
-12. Draw-mode splats are not corrected for orthographic projection; the README says to hide them.
-    Why: the splat covariance projection assumes a perspective Jacobian, and draw mode is a mesh
-    tool. Cost if wrong: splats look wrong in draw mode.
+12. Splats are neither sorted nor drawn under orthographic projection (review fix; originally a
+    README note). Why: `splat.wesl` scales by view depth, and draw mode is a mesh tool. Cost if
+    wrong: no splats while drawing.
 13. `.gitignore` gains `!/data/geo3d/**/*.outline.json` — without it the spec's committed outline
     is silently ignored (Task 4).
 
@@ -777,9 +777,9 @@ Follow `.claude/skills/create-component/SKILL.md` (own folder, `function Name() 
       orthographic rows; `SceneCamera.projection`.
 - [ ] `MeshOutline` type; `meshOutlinePath`; `.gitignore` negation for `*.outline.json`.
 - [ ] `tools/scene-recon/crop/`: `normalizeRing`, `insideRing`, `triangulateOutline`,
-      `clipPolygonByHalfPlane`, `cropMeshGeometry`, `segmentsCross`, `uvCoverage`.
+      `clipPolygonByHalfPlane`, `cropMeshGeometry`, `segmentsTouch`, `uvCoverage`.
 - [ ] `npm run crop-mesh -- --group <id> --asset <assetId>` publishing `<assetId>-cropped` with a
-      `cropMesh` pipeline step; `earcut` dependency.
+      `cropMesh` pipeline step; `earcut` devDependency.
 - [ ] `plugin/outlinePlugin.ts` registered in the workbench `vite.config.ts`.
 - [ ] `outline` slice, `selectMaskRing`, `watchOutlineSaga`, three commands.
 - [ ] Mask storage binding in `texturedMesh.wesl` + `packMaskPolygon`/`writeMeshMask`.

@@ -94,17 +94,21 @@ New slice `outline`:
 ```ts
 type OutlineSlice = {
   byAssetId: Record<string, { ringM: Vec2[]; masked: boolean }>; // loaded / last saved
-  draft: { assetId: string; ringM: Vec2[]; closed: boolean } | null; // non-null ⇔ draw mode
+  draft: { assetId: string; ringM: Vec2[]; closed: boolean; returnPose: SceneCamera } | null; // non-null ⇔ draw mode
+  saveError: string | null;
 };
 // selectMaskRing(assetId): draft?.assetId === assetId ? draft.ringM
 //                          : byAssetId[assetId]?.masked ? byAssetId[assetId].ringM : null
 ```
 
-`watchOutlineSaga`: after `manifestLoaded`, GET the outline of every `mesh`
-asset (404 → absent); on `outlineSaved`, PUT, then move the draft into
-`byAssetId`. Entering draw mode stores the perspective pose in the slice;
-leaving restores it. The mask toggle sits beside Draw outline on the mesh's
-layer row.
+`watchOutlineSaga` runs on three commands and the group actions:
+`drawOutlineRequested(assetId)` stores the perspective pose as the draft's
+`returnPose` and switches to orthographic; `outlineSaveRequested` PUTs, then
+`outlineSaved` moves the ring into `byAssetId` (or `outlineSaveFailed` sets
+`saveError`); `outlineDiscardRequested` and `groupSelected` restore
+`returnPose` and end the draft. Outlines of every `mesh` asset are fetched
+after `manifestLoaded` (404 → absent), cancelled by a later `groupSelected`. The
+mask toggle sits beside Draw outline on the mesh's layer row.
 
 ### 4.4 Draw mode
 
@@ -118,15 +122,15 @@ layer row.
   the inverse asset transform → mesh-local XY. Valid while the asset's rotation
   is about Z only; draw mode refuses to open otherwise (every current mesh is
   identity).
-- **Splats.** Skipped while the projection is orthographic — `splat.wesl`
-  scales by view depth.
+- **Splats.** Neither sorted nor drawn while the projection is orthographic —
+  `splat.wesl` scales by view depth.
 - **Editing.** Click empty space: append a corner. Pointer-down within 8 px of a
   corner then drag: move it (suppresses pan). Click a corner without dragging:
   delete it; the first corner of an open ring with ≥ 3 corners closes it
   instead. Save / Discard buttons; Save is enabled only on a closed ring.
-- **Overlay.** The draft ring and corner handles draw as a line-list + point
-  pass over the scene (no depth test), transformed by the asset transform, at
-  `boundsM.max` Z.
+- **Overlay.** The draft ring draws as a line-list and the corner handles as
+  instanced quads, 8 CSS px wide, over the scene (no depth test), mapped through
+  the asset transform at Z 0 (the nadir view ignores Z).
 
 ### 4.5 Preview mask
 
@@ -155,10 +159,10 @@ same algorithm.
 2. Error unless the asset is a `mesh`; `NodeIO().read` → `meshGlbGeometry`
    (positions in mesh-local metres, UVs, indices, image).
 3. `triangulateOutline(ringM)` (earcut) → `HalfPlane2[][]`, one triple per piece.
-4. `cropMeshGeometry(geometry, pieces)`:
+4. `cropMeshGeometry(geometry, ringM, pieces)`:
    - bbox reject against the ring's bbox;
-   - **fast path**: all three corners inside and no triangle edge crosses an
-     outline edge → keep the triangle and its indices untouched;
+   - **fast path**: all three corners inside and no triangle edge touches an
+     outline edge (inclusive, so a reflex corner on an edge still clips) → keep the triangle and its indices untouched;
    - otherwise, per piece, Sutherland–Hodgman against its three half-planes in
      3D, lerping position and UV; fan-triangulate each result polygon;
    - new vertices dedupe by (source edge, lower index first; plane), so
@@ -231,10 +235,11 @@ Earth" (`needs-design`, gated on this crop's measurement and terrain F3a).
 
 - New: `tools/scene-workbench/@types/{MeshOutline,CameraProjection}.d.ts`,
   `plugin/outlinePlugin.ts`, `src/state/outline/{outlineSlice,watchOutlineSaga}.ts`,
-  `src/render/shaders/lib/maskPolygon.wesl`, draw-overlay renderer,
+  draw-overlay renderer + shader, corner-editing input, `MeshOutlineControls`,
   `tools/scene-recon/cropMesh.ts`, `tools/scene-recon/crop/*`,
   `data/geo3d/soendermarken-crop-2019/mesh.outline.json` (user-drawn), `earcut`
-  dependency, `crop-mesh` npm script.
+  devDependency, `crop-mesh` npm script. The mask struct and `insideMask` live
+  in `texturedMesh.wesl`.
 - Changed: `writeSceneCamera.ts`, `sceneCameraView.ts` (P1);
   `texturedMeshRenderer.ts`, `uploadTexturedMesh.ts`, `texturedMesh.wesl`;
   `LayerList.tsx`; `geo3dLayout.ts`; `rootReducer.ts`, `rootSaga.ts`;
