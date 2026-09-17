@@ -457,12 +457,12 @@ Ids must match `^[\w-]+$` (path traversal) or 404. Paths are cwd-relative (`grou
 `meshOutlinePath`), as the bake CLIs' are; `npm run scene-workbench` runs from the repo root.
 Plan 3b's nudge endpoint extends this plugin rather than adding a second (spec §4.2).
 
-- [ ] Test harness: the fake req/res + `configureServer` driver of
+- [x] Test harness: the fake req/res + `configureServer` driver of
       `tests/tools/famous-curator/apiPlugin.routing.test.ts:13-60`, in a tmpdir cwd.
-- [ ] `unknown group returns 404`; `non-mesh asset returns 404`.
-- [ ] `invalid ring returns 400` — a bow-tie.
-- [ ] `PUT then GET round-trips a normalized ring` — PUT a clockwise square, GET returns it CCW.
-- [ ] Commit.
+- [x] `unknown group returns 404`; `non-mesh asset returns 404`.
+- [x] `invalid ring returns 400` — a bow-tie.
+- [x] `PUT then GET round-trips a normalized ring` — PUT a clockwise square, GET returns it CCW.
+- [x] Commit.
 
 ### Task 13: `outline` slice, commands, `selectMaskRing`
 

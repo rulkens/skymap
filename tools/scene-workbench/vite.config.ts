@@ -14,6 +14,7 @@ import { staticBuildExtension } from 'wesl-plugin';
 import viteWesl from 'wesl-plugin/vite';
 
 import { DEV_PORTS } from '../utils/io/devPorts.ts';
+import { outlinePlugin } from './plugin/outlinePlugin.ts';
 
 export default defineConfig({
   root: resolve(import.meta.dirname),
@@ -27,5 +28,6 @@ export default defineConfig({
       weslToml: resolve(import.meta.dirname, 'wesl.toml'),
     }),
     react(),
+    outlinePlugin(),
   ],
 });
