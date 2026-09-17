@@ -39,7 +39,7 @@ const over = (id: string, metresUp: number): Vec3 => {
 
 describe('hostedFocusOverHorizon', () => {
   it('a rover on the far side of the planet is over the horizon', () => {
-    // Bradbury Landing from 60 m over Challenger Memorial Station: 142° around
+    // Curiosity from 60 m over Opportunity: 142° around
     // Mars. Held, the arm serves a point it cannot show and no driver is live.
     expect(hostedFocusOverHorizon(over('opportunity', 60), 'curiosity' as BodyId, MARS)).toBe(true);
   });

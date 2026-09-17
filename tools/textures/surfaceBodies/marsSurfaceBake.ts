@@ -64,11 +64,12 @@ const MARS_COLOUR_MATCH_SIGMA_DEG = 0.01;
 const DATUM_CHECK_LEVEL = 10;
 const DATUM_CHECK_LIMIT_M = 200;
 
-/** UInt16 grey stretches: 0.5 / 99.5 percentiles of non-zero DNs over a 5 %
- *  nearest-neighbour decimation of each whole ortho (gdal_translate
- *  -outsize 5% 5%, 2026-09-17). */
-const GUSEV_GREY_STRETCH = [40, 174] as const;
-const ENDEAVOUR_GREY_STRETCH = [42, 197] as const;
+/** UInt16 grey stretches: 0.1 / 99.9 percentiles of non-zero DNs over the
+ *  rover's own window at full resolution (gdal_translate -projwin +
+ *  gdalinfo -hist, 2026-09-17). A whole-ortho stretch clips Home Plate.
+ *  Re-measure when a rover row moves. */
+const GUSEV_GREY_STRETCH = [10, 206] as const;
+const ENDEAVOUR_GREY_STRETCH = [58, 247] as const;
 
 /** The global mosaics' headers put the outer edges ±0.004° past ±180/±90
  *  (pixel-size rounding on a 128 px/° grid); the true grid is exactly global. */

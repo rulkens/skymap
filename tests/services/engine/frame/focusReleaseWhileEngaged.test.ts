@@ -234,7 +234,7 @@ const ROVER_FRAMING_M =
 
 describe('focus switch between two rovers on one planet (adverse 5)', () => {
   it('from a rover site, focusing another rover flies there and lands its site arm', () => {
-    // Bradbury Landing is 142° of Mars around from Challenger Memorial Station,
+    // Curiosity's site is 142° of Mars around from Opportunity's,
     // so the Mars arm holding Opportunity's focus could serve Curiosity only by
     // seeing through the planet. Held, no driver is live — the pin and the
     // follow pair are inert in a body arm — so the eye sat 6,400 km away
@@ -301,7 +301,7 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
 
   it('a hosted focus the arm can still see keeps it — the §4.8 hold', () => {
     // The other side of the rule, and why it is the horizon and not the focus
-    // edge: an eye overhead of Bradbury IS serving Curiosity, so the arm holds
+    // edge: an eye overhead of Curiosity's site IS serving Curiosity, so the arm holds
     // and a zoom-out from the rover is not yanked to framing distance.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
     h.seedPose(

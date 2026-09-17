@@ -211,7 +211,7 @@ describe('stepRung', () => {
   it("a focus in the rung's host subtree keeps the rung while the arm can serve it", () => {
     // Spec §0's premise correction: releasing on any differing focus made the
     // Mars arm unreachable with a rover focused. The eye is a fraction of a
-    // planet radius up OVER Bradbury Landing — far outside the site band, so
+    // planet radius up OVER Curiosity's site — far outside the site band, so
     // this pins Mars holding, not a descent — and above the rover's horizon,
     // which is what bounds the hold (§4.8).
     const marsRadiusM = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'test').surface

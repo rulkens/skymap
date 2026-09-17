@@ -1,8 +1,8 @@
 /**
  * SURFACE_FIXED_SITES — the authored rover sites: a body, its host, and where
- * on that host it sits. Curiosity and Spirit sit where they TOUCHED DOWN;
- * Opportunity and Perseverance sit where the HiRISE site bands can show them
- * (the Mars terrain bake clips each band to a window around these rows).
+ * on that host it sits. Every rover sits at its current or final position
+ * (plan R5), where the HiRISE site bands can show it (the Mars terrain bake
+ * clips each band to a window around these rows).
  * Heights are measured from Mars's mean 3390 km sphere.
  */
 
@@ -19,12 +19,13 @@ function groundOffsetM(meshKey: string): number {
 }
 
 export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
-  // Bradbury Landing, Gale crater.
+  // Sol 5016 end-of-drive (RMC 125_198, ~2026-09-15), Gale crater:
+  // mars.nasa.gov/mmgis-maps/MSL/Layers/json/MSL_waypoints_current.json.
   {
     id: 'curiosity',
     hostId: 'mars',
-    latDeg: -4.5895,
-    lonDeg: 137.4417,
+    latDeg: -4.8246,
+    lonDeg: 137.38848,
     altitudeM: groundOffsetM('curiosity'),
   },
   // Sol 1980 end-of-drive (RMC 91_970, ~2026-09-14), Jezero crater:
@@ -36,12 +37,15 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     lonDeg: 77.23205,
     altitudeM: groundOffsetM('perseverance'),
   },
-  // Columbia Memorial Station, Gusev crater.
+  // Final resting place at Troy, on Home Plate's west edge, Gusev crater
+  // (Arvidson et al. 2010, doi:10.1029/2010JE003633). A proxy — no lat/lon
+  // fix is published: the rover's bright dot in JPL PIA12205 (HiRISE
+  // ESP_013499_1650), matched by eye onto the baked Gusev ortho.
   {
     id: 'spirit',
     hostId: 'mars',
-    latDeg: -14.5684,
-    lonDeg: 175.4726,
+    latDeg: -14.60036,
+    lonDeg: 175.52576,
     altitudeM: groundOffsetM('mer'),
   },
   // Final resting place, Perseverance Valley on Endeavour's rim: the centre

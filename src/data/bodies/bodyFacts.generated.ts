@@ -358,7 +358,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     dayLength: '24 h 39 m 35 s (1 sol)',
     wikiTitle: 'Curiosity_(rover)',
     description:
-      'Curiosity landed at Bradbury Landing in Gale crater (4.59°S 137.44°E) on 6 August 2012, and its work on ancient lakebed mudstone showed the crater once held a lake that could have supported life. The marker shows the landing site, not the rover: Curiosity is still operating, tens of kilometres on from here, climbing Mount Sharp.',
+      'Curiosity landed at Bradbury Landing in Gale crater (4.59°S 137.44°E) on 6 August 2012, and its work on ancient lakebed mudstone showed the crater once held a lake that could have supported life. The marker shows the rover where it stood on sol 5016 (September 2026), about 14 km south of the landing site on the slopes of Mount Sharp; Curiosity is still driving, so it has moved on since.',
   },
   perseverance: {
     dayLength: '24 h 39 m 35 s (1 sol)',
@@ -370,7 +370,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     dayLength: '24 h 39 m 35 s (1 sol)',
     wikiTitle: 'Spirit_(rover)',
     description:
-      'Spirit landed at Columbia Memorial Station in Gusev crater (14.57°S 175.47°E) on 4 January 2004 for a mission planned to last 90 sols, and kept working for six years before its wheels sank into soft soil. The marker shows the landing site, not the rover, which sent its last signal in 2010 from several kilometres away.',
+      'Spirit landed at Columbia Memorial Station in Gusev crater (14.57°S 175.47°E) on 4 January 2004 for a mission planned to last 90 sols, and kept working for six years before its wheels sank into soft soil. It sent its last signal in 2010 from a sand trap called Troy beside Home Plate, and the marker stands there, about 3.6 km east-southeast of the landing site.',
   },
   opportunity: {
     dayLength: '24 h 39 m 35 s (1 sol)',
