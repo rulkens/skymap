@@ -10,6 +10,12 @@ import { dataUrl } from '../../services/loading/fetchWithProgress';
 // ticking, so a promise that never settles leaks more than a socket.
 const FETCH_DEADLINE_MS = 10_000;
 
+// A tile whose SHGT chunk won't parse is served-but-wrong (a stale format
+// version outliving a re-bake), not absent — and it fails the same silent way
+// a 404 does: flat terrain, no error. Warn ONCE; a format skew hits every tile
+// in the pyramid, so per-tile logging would be tens of thousands of lines.
+let warnedUnreadableHeader = false;
+
 /**
  * fetchHeightTile — one Terrain-RGB WebP height tile as header + still-encoded
  * bitmap, or `null` if absent (404s are normal; so is a missing `SHGT` chunk or
@@ -31,7 +37,16 @@ export async function fetchHeightTile(
     const bytes = new Uint8Array(await res.arrayBuffer());
     const chunk = readRiffChunk(bytes, HEIGHT_TILE_CHUNK_FOURCC);
     if (chunk === null) return null;
-    const header = decodeHeightTileHeader(chunk);
+    let header;
+    try {
+      header = decodeHeightTileHeader(chunk);
+    } catch (err) {
+      if (!warnedUnreadableHeader) {
+        warnedUnreadableHeader = true;
+        console.warn(`fetchHeightTile: unreadable SHGT chunk at ${url} — ${String(err)}`);
+      }
+      return null;
+    }
 
     const bitmap = await createImageBitmap(new Blob([bytes], { type: 'image/webp' }), {
       colorSpaceConversion: 'none',

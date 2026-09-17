@@ -10,8 +10,8 @@ export type HeightTileHeader = {
   /** Max |this level's bilinear − the finest level| inside the tile, metres. */
   readonly geometricResidualM: number;
   /** The §8.4 post grid: `HEIGHT_GRID_POSTS_PER_EDGE²` Terrain-RGB codes, row-major,
-   *  NORTH row first, byte-identical to the image pixels the shader reads. Kept
-   *  encoded — decode a post with `codeHeightM` at read time, so a resident tile
-   *  costs its 867 bytes and not an f32 array four times that. */
+   *  NORTH row first, byte-identical to the image pixels the shader reads. Kept in
+   *  the wire encoding and decoded per read with `codeHeightM`, so the CPU's metres
+   *  are bit-identical to the shader's rather than merely close. */
   readonly gridCodes: Uint8Array;
 };
