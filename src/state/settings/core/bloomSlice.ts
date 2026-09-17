@@ -10,9 +10,9 @@ import {
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
 } from '../../../data/defaults';
-import type { CoreSettingsState } from '../../../@types/settings/CoreSettingsState';
+import type { BloomSettings } from '../../../@types/settings/BloomSettings';
 
-const initialState: CoreSettingsState['bloom'] = {
+const initialState: BloomSettings = {
   enabled: DEFAULT_BLOOM_ENABLED,
   strength: DEFAULT_BLOOM_STRENGTH,
   threshold: DEFAULT_BLOOM_THRESHOLD,

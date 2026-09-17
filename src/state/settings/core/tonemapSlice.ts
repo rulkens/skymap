@@ -3,10 +3,10 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_EXPOSURE, DEFAULT_TONE_MAP_CURVE } from '../../../data/defaults';
-import type { CoreSettingsState } from '../../../@types/settings/CoreSettingsState';
+import type { TonemapSettings } from '../../../@types/settings/TonemapSettings';
 import type { ToneMapCurve } from '../../../@types/data/ToneMapCurve';
 
-const initialState: CoreSettingsState['tonemap'] = {
+const initialState: TonemapSettings = {
   exposure: DEFAULT_EXPOSURE,
   curve: DEFAULT_TONE_MAP_CURVE,
 };

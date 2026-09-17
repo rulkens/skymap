@@ -6,9 +6,9 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_FOV_DEG } from '../../../data/defaults';
-import type { CoreSettingsState } from '../../../@types/settings/CoreSettingsState';
+import type { CameraSettings } from '../../../@types/settings/CameraSettings';
 
-const initialState: CoreSettingsState['camera'] = {
+const initialState: CameraSettings = {
   fovDeg: DEFAULT_FOV_DEG,
 };
 
