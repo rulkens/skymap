@@ -4,12 +4,11 @@
  * reads. `frame`'s reconcile bakes on a mode change.
  */
 
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { DEFAULT_ABS_MAG_LIMIT, DEFAULT_BIAS_MODE } from '../../../data/defaults';
 import type { BiasMode } from '../../../@types/data/galaxyCatalog/BiasMode';
 import type { BiasSettings } from '../../../@types/settings/BiasSettings';
-import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 
 // The -19 default is roughly where the SDSS spectroscopic main sample is
 // volume-complete out to the galaxy catalog's flux limit — bright enough that
@@ -19,15 +18,18 @@ const initialState: BiasSettings = {
   absMagLimit: DEFAULT_ABS_MAG_LIMIT,
 };
 
-export const biasSettingsFragment = {
-  key: 'bias',
+export const biasSlice = createSlice({
+  name: 'settings/bias',
+  reducerPath: 'bias',
   initialState,
   reducers: {
-    setBiasMode: (cluster: BiasSettings, action: PayloadAction<BiasMode>) => {
-      cluster.mode = action.payload;
+    setBiasMode: (bias, action: PayloadAction<BiasMode>) => {
+      bias.mode = action.payload;
     },
-    setAbsMagLimit: (cluster: BiasSettings, action: PayloadAction<number>) => {
-      cluster.absMagLimit = action.payload;
+    setAbsMagLimit: (bias, action: PayloadAction<number>) => {
+      bias.absMagLimit = action.payload;
     },
   },
-} as const satisfies LayerSettingsFragment<'bias', BiasSettings>;
+});
+
+export const { setBiasMode, setAbsMagLimit } = biasSlice.actions;

@@ -1,14 +1,11 @@
 /**
  * structures — the structure-overlay Layer's settings cluster: one item row
- * per category (ring + label axes) and the case reducers that write them.
- * `liftClusterReducers` re-bases those reducers onto the settings root, so
- * their action type strings stay `settings/<key>`.
+ * per category (ring + label axes) and the reducers that write them.
  */
 
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { STRUCTURE_IDS } from '../../../data/structure/structureIds';
-import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../@types/settings/StructureItemSettings';
 import type { StructureSettings } from '../../../@types/settings/StructureSettings';
@@ -23,21 +20,24 @@ const initialState: StructureSettings = {
   ) as Record<StructureId, StructureItemSettings>,
 };
 
-export const structuresSettingsFragment = {
-  key: 'structures',
+export const structuresSlice = createSlice({
+  name: 'settings/structures',
+  reducerPath: 'structures',
   initialState,
   reducers: {
     setStructureItemEnabled: (
-      cluster: StructureSettings,
+      structures,
       action: PayloadAction<{ id: StructureId; enabled: boolean }>,
     ) => {
-      cluster.items[action.payload.id].enabled = action.payload.enabled;
+      structures.items[action.payload.id].enabled = action.payload.enabled;
     },
     setStructureLabelEnabled: (
-      cluster: StructureSettings,
+      structures,
       action: PayloadAction<{ id: StructureId; enabled: boolean }>,
     ) => {
-      cluster.items[action.payload.id].labelEnabled = action.payload.enabled;
+      structures.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
   },
-} as const satisfies LayerSettingsFragment<'structures', StructureSettings>;
+});
+
+export const { setStructureItemEnabled, setStructureLabelEnabled } = structuresSlice.actions;

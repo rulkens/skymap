@@ -6,7 +6,7 @@
  * `Layer<string, unknown>` still satisfies the composition constraint.
  */
 
-import type { SettingsFragmentLike } from '../../settings/SettingsFragmentLike';
+import type { Slice } from '@reduxjs/toolkit';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { ContentPass } from '../frame/ContentPass';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
@@ -25,7 +25,7 @@ import type { PassState } from '../frame/PassState';
 export type Layer<
   Name extends string,
   Runtime,
-  Settings extends readonly SettingsFragmentLike[] = readonly SettingsFragmentLike[],
+  Settings extends readonly Slice[] = readonly Slice[],
   Sources extends readonly (readonly [SourceType, SourceEntry])[] = readonly (readonly [
     SourceType,
     SourceEntry,
@@ -35,7 +35,7 @@ export type Layer<
   /** Unique across the composition; also the key this Layer's `facts` sit under in `state.engine`. */
   readonly name: Name;
 
-  /** Folded into the app's fragment list by `appSettingsFragments`. Absent = no knobs. */
+  /** Folded into the app's slice list by `appSettingsSlices`. Absent = no knobs. */
   readonly settings?: Settings;
 
   // Static contributions: plain data, readable without booting anything.

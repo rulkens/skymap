@@ -1,11 +1,10 @@
 /**
  * galaxyCatalogs — the galaxy-catalog Layer's settings cluster: the shared
- * point-billboard appearance knobs plus one item row per catalog, and the case
- * reducers that write them. `liftClusterReducers` re-bases those reducers onto
- * the settings root, so their action type strings stay `settings/<key>`.
+ * point-billboard appearance knobs plus one item row per catalog, and the
+ * reducers that write them.
  */
 
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import {
@@ -20,7 +19,6 @@ import {
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
 import type { GalaxyCatalogSettings } from '../../../@types/settings/GalaxyCatalogSettings';
-import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 import type { ProvenanceAxisId } from '../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../@types/settings/ProvenanceFilter';
 
@@ -49,63 +47,77 @@ const initialState: GalaxyCatalogSettings = {
   ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
 };
 
-export const galaxyCatalogsSettingsFragment = {
-  key: 'galaxyCatalogs',
+export const galaxyCatalogsSlice = createSlice({
+  name: 'settings/galaxyCatalogs',
+  reducerPath: 'galaxyCatalogs',
   initialState,
   reducers: {
-    setGalaxyCatalogSize: (cluster: GalaxyCatalogSettings, action: PayloadAction<number>) => {
-      cluster.sizePx = action.payload;
+    setGalaxyCatalogSize: (galaxyCatalogs, action: PayloadAction<number>) => {
+      galaxyCatalogs.sizePx = action.payload;
     },
-    setBrightness: (cluster: GalaxyCatalogSettings, action: PayloadAction<number>) => {
-      cluster.brightness = action.payload;
+    setBrightness: (galaxyCatalogs, action: PayloadAction<number>) => {
+      galaxyCatalogs.brightness = action.payload;
     },
-    setDepthFade: (cluster: GalaxyCatalogSettings, action: PayloadAction<boolean>) => {
-      cluster.depthFade = action.payload;
+    setDepthFade: (galaxyCatalogs, action: PayloadAction<boolean>) => {
+      galaxyCatalogs.depthFade = action.payload;
     },
     // Data-quality provenance axes (orientation / size): each axis's highlight
     // overlay and tri-state filter are independent writers, mirroring how
     // `setGalaxyCatalogVisible` / `setGalaxyCatalogLabelEnabled` each own one
     // axis of a per-item row.
     setProvenanceHighlight: (
-      cluster: GalaxyCatalogSettings,
+      galaxyCatalogs,
       action: PayloadAction<{ axis: ProvenanceAxisId; highlight: boolean }>,
     ) => {
-      cluster.provenance[action.payload.axis].highlight = action.payload.highlight;
+      galaxyCatalogs.provenance[action.payload.axis].highlight = action.payload.highlight;
     },
     setProvenanceFilter: (
-      cluster: GalaxyCatalogSettings,
+      galaxyCatalogs,
       action: PayloadAction<{ axis: ProvenanceAxisId; filter: ProvenanceFilter }>,
     ) => {
-      cluster.provenance[action.payload.axis].filter = action.payload.filter;
+      galaxyCatalogs.provenance[action.payload.axis].filter = action.payload.filter;
     },
     // Overall physical-SB → HDR gain, twin of setGalaxyCatalogSize. Rides the
     // points uniform as `galaxySbScale`; the live successor to the old
     // hardcoded `GALAXY_SB_SCALE` shader const.
-    setGalaxySbScale: (cluster: GalaxyCatalogSettings, action: PayloadAction<number>) => {
-      cluster.sbScale = action.payload;
+    setGalaxySbScale: (galaxyCatalogs, action: PayloadAction<number>) => {
+      galaxyCatalogs.sbScale = action.payload;
     },
     // Bloom ceiling — the max baked surface-brightness amplitude a compact
     // galaxy can emit. The vertex stage clamps `sbAmp` to it live
     // (`galaxySbMax` uniform), replacing the old bake-time clamp.
-    setGalaxySbMax: (cluster: GalaxyCatalogSettings, action: PayloadAction<number>) => {
-      cluster.sbMax = action.payload;
+    setGalaxySbMax: (galaxyCatalogs, action: PayloadAction<number>) => {
+      galaxyCatalogs.sbMax = action.payload;
     },
     // Readability-falloff exponent on the resolved-fraction falloff, gated by
     // the depth-fade toggle. Rides the points uniform as `galaxyFalloffStrength`.
-    setGalaxyFalloffStrength: (cluster: GalaxyCatalogSettings, action: PayloadAction<number>) => {
-      cluster.falloffStrength = action.payload;
+    setGalaxyFalloffStrength: (galaxyCatalogs, action: PayloadAction<number>) => {
+      galaxyCatalogs.falloffStrength = action.payload;
     },
     setGalaxyCatalogVisible: (
-      cluster: GalaxyCatalogSettings,
+      galaxyCatalogs,
       action: PayloadAction<{ id: GalaxyCatalogId; enabled: boolean }>,
     ) => {
-      cluster.items[action.payload.id].enabled = action.payload.enabled;
+      galaxyCatalogs.items[action.payload.id].enabled = action.payload.enabled;
     },
     setGalaxyCatalogLabelEnabled: (
-      cluster: GalaxyCatalogSettings,
+      galaxyCatalogs,
       action: PayloadAction<{ id: GalaxyCatalogId; enabled: boolean }>,
     ) => {
-      cluster.items[action.payload.id].labelEnabled = action.payload.enabled;
+      galaxyCatalogs.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
   },
-} as const satisfies LayerSettingsFragment<'galaxyCatalogs', GalaxyCatalogSettings>;
+});
+
+export const {
+  setGalaxyCatalogSize,
+  setBrightness,
+  setDepthFade,
+  setProvenanceHighlight,
+  setProvenanceFilter,
+  setGalaxySbScale,
+  setGalaxySbMax,
+  setGalaxyFalloffStrength,
+  setGalaxyCatalogVisible,
+  setGalaxyCatalogLabelEnabled,
+} = galaxyCatalogsSlice.actions;

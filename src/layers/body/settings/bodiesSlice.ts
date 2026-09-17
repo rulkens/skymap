@@ -1,12 +1,11 @@
 /** bodies — the body Layer's near-field body-gate cluster: one item row per body id. */
 
-import type { PayloadAction } from '@reduxjs/toolkit';
+import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyItemSettings } from '../../../@types/settings/BodyItemSettings';
 import type { BodySettings } from '../../../@types/settings/BodySettings';
-import type { LayerSettingsFragment } from '../../../@types/settings/LayerSettingsFragment';
 
 // Body rows are DERIVED from the registry's body entries, so they can't drift
 // from the body set, and each row's `enabled` comes from that entry's
@@ -22,8 +21,9 @@ const initialState: BodySettings = {
   ) as Record<BodyId, BodyItemSettings>,
 };
 
-export const bodiesSettingsFragment = {
-  key: 'bodies',
+export const bodiesSlice = createSlice({
+  name: 'settings/bodies',
+  reducerPath: 'bodies',
   initialState,
   reducers: {
     // The caption axis is the only WRITABLE one: `bodies.items[id].enabled` is
@@ -33,10 +33,12 @@ export const bodiesSettingsFragment = {
     // to turn it into a knob nothing turns. There is no cluster-level gate
     // either, for the same reason (see EngineSettingsState).
     setBodyLabelEnabled: (
-      cluster: BodySettings,
+      bodies,
       action: PayloadAction<{ id: BodyId; enabled: boolean }>,
     ) => {
-      cluster.items[action.payload.id].labelEnabled = action.payload.enabled;
+      bodies.items[action.payload.id].labelEnabled = action.payload.enabled;
     },
   },
-} as const satisfies LayerSettingsFragment<'bodies', BodySettings>;
+});
+
+export const { setBodyLabelEnabled } = bodiesSlice.actions;
