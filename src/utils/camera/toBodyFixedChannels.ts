@@ -12,6 +12,7 @@ import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { IDENTITY_MAT3 } from '../math/identityMat3';
 import { bodyFixedEyeM } from './bodyFixedEyeM';
+import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
 import { orbitAnglesLookingAlong } from './orbitAnglesLookingAlong';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
 import { toBodyArm } from '../../services/engine/camera/poseFrameConversion';
@@ -24,9 +25,10 @@ export function toBodyFixedChannels(
   bodies: ReadonlyMap<BodyId, BodyState>,
   basis: Readonly<Mat3>,
 ): CameraPose {
+  // Only `.state` is read below; a channel cross never asks the ground height.
   const bodyState = hostOrThrow(
     { body: bodyId },
-    { bodies, poseBasis: basis, upBasis: basis },
+    { bodies, poseBasis: basis, upBasis: basis, terrainHeightAt: datumOnlyTerrainHeight },
   ).state;
   const eyeArm = toBodyArm(pose, basis, basis, bodyId, bodyState);
   const eyeM = bodyFixedEyeM(eyeArm);

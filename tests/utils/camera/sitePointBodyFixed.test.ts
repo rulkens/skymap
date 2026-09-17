@@ -46,10 +46,12 @@ describe('sitePointBodyFixed', () => {
     expect(magM).toBeCloseTo(1000 + TERRAIN_M + site.altitudeM, 9);
   });
 
-  it('is the point deriveBodyStates places the rover at', () => {
+  it('is the point deriveBodyStates places the rover at, terrain term included', () => {
     const site = SURFACE_FIXED_SITES.find((s) => s.id === 'curiosity')!;
     const mars = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!;
-    const states = deriveBodyStates(0);
+    // Non-zero on both sides (Fix 2): a lookup only one reader adds now fails this test.
+    const terrainHeightAt = () => 1234;
+    const states = deriveBodyStates(0, terrainHeightAt);
     const hostState = states.get('mars')!;
     const roverState = states.get('curiosity')!;
 
@@ -61,7 +63,7 @@ describe('sitePointBodyFixed', () => {
       (r[2] - h[2]) * SCALE_UNITS.MPC_TO_M,
     ];
     const cameraM = rotateVec3ByTightMat3(
-      sitePointBodyFixed(site, mars.surface.datumRadiusM),
+      sitePointBodyFixed(site, mars.surface.datumRadiusM, terrainHeightAt),
       hostState.orientation,
     );
 

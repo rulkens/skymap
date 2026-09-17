@@ -31,6 +31,7 @@ import { normalize3 } from '../../../../src/utils/math/normalize3';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -38,7 +39,12 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
-const RUNG_CTX = { bodies: BODIES, poseBasis: B, upBasis: B };
+const RUNG_CTX = {
+  bodies: BODIES,
+  poseBasis: B,
+  upBasis: B,
+  terrainHeightAt: datumOnlyTerrainHeight,
+};
 
 const OPPORTUNITY = {
   frame: { site: 'opportunity' as BodyId },

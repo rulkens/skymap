@@ -23,6 +23,7 @@ import type { TimeState } from '../../@types/time/TimeState';
 import { deriveSimDays } from '../time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from './bodyUpWeight';
+import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
 import { eyeMpcOf } from './eyeMpcOf';
 import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
@@ -88,9 +89,14 @@ export function cameraDebugSnapshotOf(input: {
   // terrain under the eye (F3a, spec §8.3) — the same `bodyRelativePose`
   // direction `hOverR` itself derives from (basis argument discarded, per
   // that file's own comment: only the direction matters).
+  // Only `radiusM` is read below; the terrain term for this row comes from
+  // the caller's own `terrainHeightAt`, not `groundRadiusAtM`.
   const datumRadiusM =
     bodyId !== null
-      ? hostOf({ body: bodyId }, { bodies: bodyStates, poseBasis, upBasis })?.radiusM
+      ? hostOf(
+          { body: bodyId },
+          { bodies: bodyStates, poseBasis, upBasis, terrainHeightAt: datumOnlyTerrainHeight },
+        )?.radiusM
       : undefined;
   const engagedBodyState = bodyId !== null ? bodyStates.get(bodyId) : undefined;
   const terrainM =

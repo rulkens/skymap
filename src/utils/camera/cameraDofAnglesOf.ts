@@ -26,6 +26,7 @@ import { hostOf } from '../../services/engine/camera/rungs/hostOf';
 import { rungKindOf } from '../../services/engine/camera/rungs/rungKindOf';
 import { blendedEnuAt } from './blendedEnuAt';
 import { bodyUpWeight } from './bodyUpWeight';
+import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
 import { eyeMpcOf } from './eyeMpcOf';
 import { frameUp } from './frameUp';
 import { imagePlaneBasis } from './imagePlaneBasis';
@@ -61,7 +62,13 @@ export function cameraDofAnglesOf(input: {
   // Engaged body wins outright (spec's own regime predicate: `storedFrame` IS
   // the regime); the roster-wide nearest is only a stand-in for the "where's
   // the hysteresis band?" question while flying free in the absolute arm.
-  const engaged = hostOf(storedFrame, { bodies: bodyStates, poseBasis, upBasis });
+  // `hostOf` here reads only identity/radius (the regime question below), never ground height.
+  const engaged = hostOf(storedFrame, {
+    bodies: bodyStates,
+    poseBasis,
+    upBasis,
+    terrainHeightAt: datumOnlyTerrainHeight,
+  });
   let bodyId: BodyId | null = engaged?.id ?? null;
   let hr: number | null = engaged === null ? null : hOverR(eyeMpc, engaged.state, engaged.radiusM);
   if (rungKindOf(storedFrame) === 'absolute') {

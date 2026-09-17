@@ -23,6 +23,7 @@ import { decodeBodyFixedChannels } from '../../../../src/utils/camera/decodeBody
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { makeDriverCtx } from '../../../helpers/camera/makeDriverCtx';
 import { rootReducer } from '../../../../src/store/rootReducer';
 import { clipStarted } from '../../../../src/state/camera/cameraSlice';
@@ -47,7 +48,12 @@ const EARTH = { body: 'earth' as BodyId };
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
 const BASIS = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const START: CameraPose = { target: [0, 0, 0], yaw: 0.5, pitch: 0.2, distance: 10 };
-const CTX = { bodies: BODIES, poseBasis: BASIS, upBasis: BASIS };
+const CTX = {
+  bodies: BODIES,
+  poseBasis: BASIS,
+  upBasis: BASIS,
+  terrainHeightAt: datumOnlyTerrainHeight,
+};
 
 /** The body rung's `decode` folded back out; production ships no such inverse. */
 function fromBodyFixedChannels(channels: CameraPose, frame: typeof EARTH): CameraPose {

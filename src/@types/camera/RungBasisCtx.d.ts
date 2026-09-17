@@ -8,13 +8,9 @@ export type RungBasisCtx = {
   readonly bodies: ReadonlyMap<BodyId, BodyState>;
   readonly poseBasis: Readonly<Mat3>;
   readonly upBasis: Readonly<Mat3>;
-  /**
-   * Optional: only `bodyRung.host`'s `groundRadiusAtM` closure reads it
-   * (F3a, spec §8.3). Every other `hostOf`/`foldToWorld` caller wants
-   * identity/radius only and never calls `groundRadiusAtM`, so its bare
-   * `{bodies, poseBasis, upBasis}` literal stays valid without one — only the
-   * production climb ctx (`stepCameraRuntime`'s `rungFields`) supplies the
-   * subsystem-backed lookup.
-   */
-  readonly terrainHeightAt?: TerrainHeightAtLookup;
+  /** Only `bodyRung.host`'s `groundRadiusAtM` closure reads this (F3a, spec
+   *  §8.3); every construction site states its own answer explicitly rather
+   *  than defaulting one in — `datumOnlyTerrainHeight` for a site that cannot
+   *  or need not reach the subsystem, the real lookup where it can. */
+  readonly terrainHeightAt: TerrainHeightAtLookup;
 };

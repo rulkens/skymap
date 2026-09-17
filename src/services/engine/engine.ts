@@ -37,6 +37,7 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
+import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -576,8 +577,7 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
-          terrainHeightAt: (bodyId, dir) =>
-            state.subsystems.surfaceTiles?.terrainHeightAt(bodyId, dir) ?? 0,
+          terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
         });
       },
     },

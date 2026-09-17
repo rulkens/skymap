@@ -72,6 +72,7 @@ function makeState(
     },
     // `slotFor` consults the Layer-owned slots first; none here.
     layerSlots: new Map(),
+    subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }
 

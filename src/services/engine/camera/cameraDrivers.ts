@@ -44,6 +44,7 @@ import { wrapRad } from '../../../utils/math/wrapRad';
 import { EASE } from '../animation/ease';
 import { isWorldArm } from './rungs/isWorldArm';
 import { rowFor } from './rungs/rowFor';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 
 /** The frame's single author: highest `priority` among the active rows. */
 export function pickWinner(
@@ -205,10 +206,12 @@ function framedClipArm(
   const { frame, channels } = evaluated;
   // No decode cell reads a basis TODAY. The day one does — a site row reading
   // `upBasis` — it silently gets the current basis `to` where the clip pinned `from`.
+  // `DriverCtx` carries no terrain lookup, so a decoded body arm's ground reads datum only.
   const decoded = rowFor(frame).channels.decode(channels, frame, {
     bodies,
     poseBasis: to,
     upBasis: to,
+    terrainHeightAt: datumOnlyTerrainHeight,
   });
   return isWorldArm(decoded) ? absoluteArm(reencodePose(decoded.pose, from, to)) : decoded;
 }

@@ -1,8 +1,7 @@
 /**
  * bodyRung.host's `groundRadiusAtM` closure — the ground-collision row's
- * source (F3a, spec §8.3). What can fail here is silent: a missing `?? 0`
- * throws only when a real ctx omits the lookup, and a swapped operand or a
- * hardcoded body id reads a plausible but wrong number, never an error.
+ * source (F3a, spec §8.3). What can fail here is silent: a swapped operand or
+ * a hardcoded body id reads a plausible but wrong number, never an error.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -14,6 +13,7 @@ import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientat
 import { DEFAULT_ORIENTATION } from '../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { RungBasisCtx } from '../../../../../src/@types/camera/RungBasisCtx';
@@ -30,17 +30,13 @@ const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'bodyRung.test'
 const MARS_ID = 'mars' as BodyId;
 const EARTH_ID = 'earth' as BodyId;
 
-/** Omits the field entirely when absent — the shape most real `hostOf`
- *  callers (cameraDofAnglesOf, the debug snapshot) actually pass. */
-function ctxWith(terrainHeightAt?: TerrainHeightAtLookup): RungBasisCtx {
-  return terrainHeightAt === undefined
-    ? { bodies: BODIES, poseBasis: B, upBasis: B }
-    : { bodies: BODIES, poseBasis: B, upBasis: B, terrainHeightAt };
+function ctxWith(terrainHeightAt: TerrainHeightAtLookup): RungBasisCtx {
+  return { bodies: BODIES, poseBasis: B, upBasis: B, terrainHeightAt };
 }
 
 describe("bodyRung.host's groundRadiusAtM", () => {
-  it('falls back to the datum when the ctx carries no terrain lookup', () => {
-    const host = bodyRung.host({ body: EARTH_ID }, ctxWith())!;
+  it('reads the datum alone when the lookup answers no terrain', () => {
+    const host = bodyRung.host({ body: EARTH_ID }, ctxWith(datumOnlyTerrainHeight))!;
     expect(host.groundRadiusAtM([1, 0, 0])).toBe(EARTH_R_M);
   });
 

@@ -38,6 +38,7 @@ import { advanceStarFades } from './passes/starCatalogPass';
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
+import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
@@ -112,12 +113,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // this call primes the map every later reader gets by reference.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
   // Bound once, reused below by `deriveBodyStates` (site placement) and
-  // `stepCameraRuntime` (the camera floor) — `?? 0` covers pre-boot (no
-  // subsystem yet) and any body other than the one currently engaged, the
-  // same "miss" semantics the datum fallback answers everywhere in F3a
-  // (spec §8.3).
-  const terrainHeightAt: TerrainHeightAtLookup = (bodyId, dir) =>
-    state.subsystems.surfaceTiles?.terrainHeightAt(bodyId, dir) ?? 0;
+  // `stepCameraRuntime` (the camera floor); `terrainHeightAtOf` is the one
+  // "pre-boot / not-this-body" miss rule shared with `engine.ts`'s reader.
+  const terrainHeightAt: TerrainHeightAtLookup = terrainHeightAtOf(state.subsystems.surfaceTiles);
   const bodyStates = deriveBodyStates(simDays, terrainHeightAt) as ReadonlyMap<BodyId, BodyState>;
 
   const {
