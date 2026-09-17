@@ -47,3 +47,21 @@ describe("bodyRung.host's groundRadiusAtM", () => {
     expect(seen).toEqual([EARTH_ID, MARS_ID]);
   });
 });
+
+describe("bodyRung.host's relief shells", () => {
+  // Asserted against the DECLARED relief, not against the two helpers that
+  // compute them — a swapped pair type-checks clean and would make a ray pick
+  // march between the wrong two spheres, silently.
+  it('brackets the datum with the body’s own declared relief', () => {
+    const earth = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'earth', 'bodyRung.test').surface;
+    const host = bodyRung.host(
+      { body: EARTH_ID },
+      ctxWith(() => 0),
+    )!;
+    expect(earth.reliefM[0]).toBeLessThan(0);
+    expect(host.innerBoundRadiusM).toBe(EARTH_R_M + earth.reliefM[0]);
+    expect(host.outerBoundRadiusM).toBe(EARTH_R_M + earth.reliefM[1]);
+    expect(host.innerBoundRadiusM).toBeLessThan(host.radiusM);
+    expect(host.radiusM).toBeLessThan(host.outerBoundRadiusM);
+  });
+});
