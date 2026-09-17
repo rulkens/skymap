@@ -313,10 +313,10 @@ two are the same algorithm by contract (spec §4.5). Fewer than 3 corners → `t
 **Behaviour:** `earcut` over the flattened CCW ring; each output triangle becomes three inward
 half-planes (re-orient each triangle CCW before deriving normals — do not trust earcut's winding).
 
-- [ ] `triangulateOutline covers an L-shape without its notch` — sample a 20×20 grid over the
+- [x] `triangulateOutline covers an L-shape without its notch` — sample a 20×20 grid over the
       L's bbox; a sample is in some piece (all three planes ≥ −1e-9) iff `insideRing` says inside
       (skip samples within 1e-6 of an edge).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 8: `clipPolygonByHalfPlane`
 
