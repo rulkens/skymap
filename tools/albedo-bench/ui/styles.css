@@ -1,0 +1,237 @@
+/**
+ * Albedo Bench — visual stylesheet. Same dark local-tool aesthetic as
+ * tools/famous-curator's; a three-column layout (navigator+sun / compare
+ * / recipe sliders) since that's the bench's own mental model, not the
+ * curator's list/canvas/controls one.
+ */
+:root {
+  --c-bg: #0c0e14;
+  --c-surface: #11141d;
+  --c-surface2: #161a26;
+  --c-border: #252c3d;
+  --c-text: #d8dde8;
+  --c-muted: #7c8597;
+  --bench-arrow: #5eb1ff;
+  --c-error: #fb923c;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+
+  --font-body: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bench-app {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.bench-loading,
+.bench-error-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--c-muted);
+}
+
+.bench-app header {
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--c-border);
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.bench-app h1 {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.bench-error {
+  color: var(--c-error);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.bench-layout {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  overflow: hidden;
+}
+
+.bench-layout > aside {
+  overflow-y: auto;
+  padding: var(--space-3);
+  border-right: 1px solid var(--c-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.bench-layout > aside:last-child {
+  border-right: none;
+  border-left: 1px solid var(--c-border);
+}
+
+.bench-layout > main {
+  overflow: auto;
+  padding: var(--space-3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+fieldset {
+  border: 1px solid var(--c-border);
+  border-radius: 4px;
+  padding: var(--space-2);
+  background: var(--c-surface);
+}
+
+legend {
+  color: var(--c-muted);
+  font-size: 12px;
+  padding: 0 var(--space-1);
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+  color: var(--c-muted);
+  margin-bottom: var(--space-2);
+}
+
+label span {
+  font-family: var(--font-mono);
+  color: var(--c-text);
+}
+
+input[type='number'],
+input[type='text'] {
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  padding: var(--space-1);
+  border-radius: 3px;
+}
+
+button {
+  background: var(--c-surface2);
+  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  padding: var(--space-1) var(--space-2);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+button:hover {
+  border-color: var(--bench-arrow);
+}
+
+.bench-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin-bottom: var(--space-2);
+}
+
+.bench-view-mode {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.bench-view-mode label {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.bench-compare {
+  position: relative;
+  max-width: 100%;
+}
+
+.bench-compare-loading {
+  color: var(--c-muted);
+}
+
+.bench-pane {
+  position: relative;
+  display: inline-block;
+}
+
+.bench-pane img {
+  display: block;
+  max-width: 100%;
+  image-rendering: pixelated;
+}
+
+.bench-arrows {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.bench-compare-side-by-side {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.bench-compare-wipe {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: center;
+}
+
+.bench-wipe-stack {
+  position: relative;
+}
+
+.bench-wipe-clip {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+
+.bench-compare-flip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  align-items: flex-start;
+}
+
+.bench-save-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--c-muted);
+}
