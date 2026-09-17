@@ -10,7 +10,6 @@
 import type { HeightSource } from './HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import type { AlbedoRecipe } from './AlbedoRecipe';
-import { SCENE_PLANETS } from '../../src/data/bodies/scenePlanets';
 import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../src/data/bodies/surfaceTileParams';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
 import { fitShadingGradient } from '../utils/textures/fitShadingGradient';
@@ -22,7 +21,6 @@ import type { SurfaceImagerySource } from './SurfaceImagerySource';
 export const FIT_CANVAS_LEVEL = 5;
 
 const DEG_TO_RAD = Math.PI / 180;
-const MARS_RADIUS_M = SCENE_PLANETS.find((body) => body.id === 'mars')!.surface.datumRadiusM;
 const CANVAS_WIDTH_PX = SURFACE_EQUIRECT_BASE_WIDTH_PX << FIT_CANVAS_LEVEL;
 const DEG_PER_PX = 360 / CANVAS_WIDTH_PX;
 
@@ -33,7 +31,7 @@ const DEG_PER_PX = 360 / CANVAS_WIDTH_PX;
 const PRIOR_WEIGHT = 0.25;
 const CONFIDENCE_EPS = 1e-6;
 
-const kmToDeg = (km: number): number => ((km * 1000) / MARS_RADIUS_M) * (180 / Math.PI);
+const kmToDeg = (km: number, radiusM: number): number => ((km * 1000) / radiusM) * (180 / Math.PI);
 
 // sRGB decode only — until Task 5 lands the shared tools/utils/color version,
 // duplicating one 2-line formula is cheaper than a premature cross-task import.
@@ -41,17 +39,23 @@ function srgbToLinear(c: number): number {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
 
-function greatCircleDistanceKm(lon1: number, lat1: number, lon2: number, lat2: number): number {
+function greatCircleDistanceKm(
+  lon1: number,
+  lat1: number,
+  lon2: number,
+  lat2: number,
+  radiusM: number,
+): number {
   const dLat = (lat2 - lat1) * DEG_TO_RAD;
   const dLon = (lon2 - lon1) * DEG_TO_RAD;
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(lat1 * DEG_TO_RAD) * Math.cos(lat2 * DEG_TO_RAD) * Math.sin(dLon / 2) ** 2;
-  return (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * MARS_RADIUS_M) / 1000;
+  return (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)) * radiusM) / 1000;
 }
 
-function growRegion(region: LonLatBounds, marginKm: number): LonLatBounds {
-  const marginLatDeg = kmToDeg(marginKm);
+function growRegion(region: LonLatBounds, marginKm: number, radiusM: number): LonLatBounds {
+  const marginLatDeg = kmToDeg(marginKm, radiusM);
   const north = Math.min(90, region.north + marginLatDeg);
   const south = Math.max(-90, region.south - marginLatDeg);
   const maxAbsLat = Math.min(89, Math.max(Math.abs(north), Math.abs(south)));
@@ -77,15 +81,16 @@ export async function fitSunField(opts: {
   readonly height: HeightSource;
   readonly region: LonLatBounds;
   readonly sunFit: AlbedoRecipe['sunFit'];
+  readonly radiusM: number;
 }): Promise<SunField> {
-  const { imagery, height, region, sunFit } = opts;
+  const { imagery, height, region, sunFit, radiusM } = opts;
   const { windowKm, strideKm, highPassKm, minConfidence, fillSigmaKm } = sunFit;
 
-  const grown = growRegion(region, 3 * fillSigmaKm + windowKm);
-  const latStepDeg = kmToDeg(strideKm);
-  const halfWindowLatDeg = kmToDeg(windowKm / 2);
-  const halfBandLatDeg = kmToDeg((windowKm + strideKm) / 2);
-  const sigmaPx = kmToDeg(highPassKm) / DEG_PER_PX;
+  const grown = growRegion(region, 3 * fillSigmaKm + windowKm, radiusM);
+  const latStepDeg = kmToDeg(strideKm, radiusM);
+  const halfWindowLatDeg = kmToDeg(windowKm / 2, radiusM);
+  const halfBandLatDeg = kmToDeg((windowKm + strideKm) / 2, radiusM);
+  const sigmaPx = kmToDeg(highPassKm, radiusM) / DEG_PER_PX;
 
   const windows: FittedWindow[] = [];
   const kMin = Math.ceil(Math.max(grown.south, -88) / latStepDeg);
@@ -125,7 +130,7 @@ export async function fitSunField(opts: {
     const raster = await imagery.readBox(bandBox, widthPx, heightPx);
     if (raster === null) continue;
 
-    const slopeLattice = await readSlopeLattice(height, bandBox);
+    const slopeLattice = await readSlopeLattice(height, bandBox, radiusM);
     const y = new Float32Array(widthPx * heightPx);
     const sx = new Float32Array(widthPx * heightPx);
     const sy = new Float32Array(widthPx * heightPx);
@@ -205,7 +210,7 @@ export async function fitSunField(opts: {
     }
   }
 
-  return fillOutputGrid(region, sunFit, windows, minConfidence);
+  return fillOutputGrid(region, sunFit, windows, minConfidence, radiusM);
 }
 
 function subtractBlur(
@@ -233,8 +238,9 @@ function fillOutputGrid(
   sunFit: AlbedoRecipe['sunFit'],
   windows: readonly FittedWindow[],
   minConfidence: number,
+  radiusM: number,
 ): SunField {
-  const stepDeg = kmToDeg(sunFit.strideKm / 2);
+  const stepDeg = kmToDeg(sunFit.strideKm / 2, radiusM);
   const iMin = Math.floor((region.west + 180) / stepDeg);
   const iMax = Math.ceil((region.east + 180) / stepDeg);
   const jMin = Math.floor((90 - region.north) / stepDeg);
@@ -263,7 +269,7 @@ function fillOutputGrid(
       let sumWCGy = 0;
       let sumW = 0;
       for (const w of passing) {
-        const d = greatCircleDistanceKm(lon, lat, w.lon, w.lat);
+        const d = greatCircleDistanceKm(lon, lat, w.lon, w.lat, radiusM);
         const weight = Math.exp(-(d * d) / (2 * sigmaKm * sigmaKm));
         sumW += weight;
         sumWC += weight * w.confidence;
@@ -276,5 +282,5 @@ function fillOutputGrid(
       confidence[cell] = sumWC / (sumW + CONFIDENCE_EPS);
     }
   }
-  return { bounds, width, height, gx, gy, confidence };
+  return { bounds, width, height, gx, gy, confidence, radiusM };
 }

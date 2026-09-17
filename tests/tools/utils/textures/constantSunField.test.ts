@@ -6,7 +6,7 @@ import { sampleSunField } from '../../../../tools/utils/textures/sampleSunField'
 describe('constantSunField', () => {
   it('samples the same g everywhere inside its bounds', () => {
     const bounds = { west: 0, east: 10, south: -5, north: 5 };
-    const field = constantSunField(bounds, [0.4, -0.6]);
+    const field = constantSunField(bounds, [0.4, -0.6], 3_390_000);
     expect(field.width).toBe(2);
     expect(field.height).toBe(2);
 

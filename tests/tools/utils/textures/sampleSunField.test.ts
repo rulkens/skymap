@@ -11,6 +11,7 @@ function field(): SunField {
     gx: new Float32Array([0, 0.2, 0.4, 0.6]),
     gy: new Float32Array([1, 1.2, 1.4, 1.6]),
     confidence: new Float32Array(4).fill(1),
+    radiusM: 3_390_000,
   };
 }
 

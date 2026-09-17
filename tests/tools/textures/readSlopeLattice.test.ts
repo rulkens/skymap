@@ -9,6 +9,7 @@ import type { HeightSource } from '../../../tools/textures/HeightSource';
 
 const STEP = heightLatticeStepDeg(SLOPE_LEVEL);
 const DEG_TO_RAD = Math.PI / 180;
+const RADIUS_M = 3_390_000; // a Mars-like literal; the function is body-agnostic
 
 // A bumpy, globally-defined surface: smooth enough that a central-difference
 // slope is well behaved everywhere, curved enough that a wrong index offset
@@ -60,8 +61,8 @@ describe('readSlopeLattice', () => {
       south: 90 - jTo * STEP,
     };
 
-    const latticeA = await readSlopeLattice(height, boxA);
-    const latticeB = await readSlopeLattice(height, boxB);
+    const latticeA = await readSlopeLattice(height, boxA, RADIUS_M);
+    const latticeB = await readSlopeLattice(height, boxB, RADIUS_M);
 
     const jLocal = 5; // an interior row, away from the one-sided north/south edges
     const aIndex = jLocal * latticeA.nx + (latticeA.nx - 1);

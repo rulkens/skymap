@@ -10,4 +10,6 @@ export type SunField = {
   readonly gx: Float32Array;
   readonly gy: Float32Array;
   readonly confidence: Float32Array;
+  /** the planet radius the fit's km-based parameters were converted with. */
+  readonly radiusM: number;
 };

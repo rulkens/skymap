@@ -8,20 +8,16 @@
  */
 import type { HeightSource } from './HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
-import { SCENE_PLANETS } from '../../src/data/bodies/scenePlanets';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { slopeLatticeFromPosts } from '../utils/textures/slopeLatticeFromPosts';
 import type { SlopeLattice } from './SlopeLattice';
 
 export const SLOPE_LEVEL = 8;
 
-// The one place this deliverable needs Mars's radius — read from the seeded
-// planet table rather than restated as a literal.
-const MARS_RADIUS_M = SCENE_PLANETS.find((body) => body.id === 'mars')!.surface.datumRadiusM;
-
 export async function readSlopeLattice(
   height: HeightSource,
   box: LonLatBounds,
+  radiusM: number,
 ): Promise<SlopeLattice> {
   const step = heightLatticeStepDeg(SLOPE_LEVEL);
   const iMin = Math.floor((box.west + 180) / step);
@@ -52,7 +48,7 @@ export async function readSlopeLattice(
     -180 + (iMin - 1) * step,
     90 - (jMin - 1) * step,
     step,
-    MARS_RADIUS_M,
+    radiusM,
   );
 
   // Crop the margin ring back off: it only got a one-sided difference and

@@ -15,6 +15,10 @@ import { readSlopeLattice } from '../../../tools/textures/readSlopeLattice';
 
 const DEG_TO_RAD = Math.PI / 180;
 
+// A fixed Mars-like radius for these fakes only — real callers thread their
+// own planet's radius through as a parameter (D1-b).
+const RADIUS_M = 3_390_000;
+
 // Additive (not product) sinusoids, ~15 km wavelength at Mars's radius —
 // several cycles per test window, for a non-degenerate slope fit. A large
 // amplitude (~35% max slope) keeps the g-driven shading well above 8-bit
@@ -72,7 +76,7 @@ export function analyticImagerySource(
     coverage: WHOLE_GLOBE,
     provenance: { sourceId: 'analytic-fake-imagery', attribution: 'test', vintage: '2026' },
     async readBox(box, widthPx, heightPx) {
-      const lattice = await readSlopeLattice(height, box);
+      const lattice = await readSlopeLattice(height, box, RADIUS_M);
       const out = new Uint8Array(widthPx * heightPx * 4);
       for (let py = 0; py < heightPx; py++) {
         const lat = box.north - ((py + 0.5) / heightPx) * (box.north - box.south);

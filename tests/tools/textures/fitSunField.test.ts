@@ -19,6 +19,10 @@ const SUN_FIT = {
   fillSigmaKm: 25,
 };
 
+// Must match albedoFakes' fixed radius: it bakes the same value into the
+// analytic imagery's slope-driven shading.
+const RADIUS_M = 3_390_000;
+
 function flatImagerySource(rgb: readonly [number, number, number]): SurfaceImagerySource {
   return {
     id: 'flat-fake-imagery',
@@ -46,7 +50,13 @@ describe('fitSunField', () => {
     const imagery = analyticImagerySource(height, [0.3, 0.3, 0.3], g);
     const region = { west: 19, east: 21, south: 14, north: 16 };
 
-    const field = await fitSunField({ imagery, height, region, sunFit: SUN_FIT });
+    const field = await fitSunField({
+      imagery,
+      height,
+      region,
+      sunFit: SUN_FIT,
+      radiusM: RADIUS_M,
+    });
     const [gx, gy] = sampleSunField(field, 20, 15);
 
     expect(Math.abs(gx - g[0])).toBeLessThan(0.1 * Math.abs(g[0]));
@@ -60,8 +70,20 @@ describe('fitSunField', () => {
     const smallRegion = { west: 19, east: 21, south: 14, north: 16 };
     const bigRegion = { west: 17, east: 23, south: 11, north: 19 };
 
-    const smallField = await fitSunField({ imagery, height, region: smallRegion, sunFit: SUN_FIT });
-    const bigField = await fitSunField({ imagery, height, region: bigRegion, sunFit: SUN_FIT });
+    const smallField = await fitSunField({
+      imagery,
+      height,
+      region: smallRegion,
+      sunFit: SUN_FIT,
+      radiusM: RADIUS_M,
+    });
+    const bigField = await fitSunField({
+      imagery,
+      height,
+      region: bigRegion,
+      sunFit: SUN_FIT,
+      radiusM: RADIUS_M,
+    });
 
     let maxDelta = 0;
     for (const [lon, lat] of [
@@ -81,7 +103,13 @@ describe('fitSunField', () => {
     const height = constantHeightSource(0);
     const region = { west: 19, east: 21, south: 14, north: 16 };
 
-    const field = await fitSunField({ imagery, height, region, sunFit: SUN_FIT });
+    const field = await fitSunField({
+      imagery,
+      height,
+      region,
+      sunFit: SUN_FIT,
+      radiusM: RADIUS_M,
+    });
     for (let i = 0; i < field.gx.length; i++) {
       expect(Number.isFinite(field.gx[i])).toBe(true);
       expect(Number.isFinite(field.gy[i])).toBe(true);
