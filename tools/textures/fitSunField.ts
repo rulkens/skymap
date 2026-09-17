@@ -1,16 +1,15 @@
 /**
  * fitSunField — the shading-direction field over a region (design §6):
- * least-squares windows on a physically-uniform sphere lattice feed a
- * Gaussian-weighted fill on a separate, plain equirect output raster. Reads
- * `region` grown by margin so a window near the caller's edge still has the
- * fill's full support — "regional equals global" (R-P2) depends on every
- * fitted window a cell can see existing in both fits, which only holds if
- * the grid is anchored globally rather than shifted per-region.
+ * least-squares windows on a sphere lattice feed a Gaussian-weighted fill on
+ * a separate equirect raster, cut off past `3·fillSigmaKm`. `region` is
+ * grown by that same margin so a cell near its edge still sees every window
+ * a larger region's fit over the same area would also see.
  */
 import type { HeightSource } from './HeightSource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import type { AlbedoRecipe } from './AlbedoRecipe';
 import { SURFACE_EQUIRECT_BASE_WIDTH_PX } from '../../src/data/bodies/surfaceTileParams';
+import { srgbToLinear } from '../utils/color/srgbToLinear';
 import { gaussianBlurFloat32 } from '../utils/image/gaussianBlurFloat32';
 import { fitShadingGradient } from '../utils/textures/fitShadingGradient';
 import { sampleSlope } from '../utils/textures/sampleSlope';
@@ -32,12 +31,6 @@ const PRIOR_WEIGHT = 0.25;
 const CONFIDENCE_EPS = 1e-6;
 
 const kmToDeg = (km: number, radiusM: number): number => ((km * 1000) / radiusM) * (180 / Math.PI);
-
-// sRGB decode only — until Task 5 lands the shared tools/utils/color version,
-// duplicating one 2-line formula is cheaper than a premature cross-task import.
-function srgbToLinear(c: number): number {
-  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-}
 
 function greatCircleDistanceKm(
   lon1: number,
@@ -98,7 +91,6 @@ export async function fitSunField(opts: {
 
   for (let k = kMin; k <= kMax; k++) {
     const latDeg = k * latStepDeg;
-    if (Math.abs(latDeg) > 88) continue;
     const lonStepDeg = latStepDeg / Math.cos(latDeg * DEG_TO_RAD);
     const mMin = Math.ceil((grown.west + 180) / lonStepDeg);
     const mMax = Math.floor((grown.east + 180) / lonStepDeg);
@@ -150,13 +142,11 @@ export async function fitSunField(opts: {
         sy[i] = slopeY;
       }
     }
-    // High-pass removes regional albedo trends that would otherwise
-    // correlate with regional tilt; scaling y and s by the same constant
-    // (the window's mean y) leaves a homogeneous least-squares fit
-    // unchanged, so only y needs the divide-through below.
-    const yHigh = subtractBlur(y, widthPx, heightPx, sigmaPx);
-    const sxHigh = subtractBlur(sx, widthPx, heightPx, sigmaPx);
-    const syHigh = subtractBlur(sy, widthPx, heightPx, sigmaPx);
+    // High-pass removes each band's regional albedo trend and regional
+    // tilt, so the fit sees only the local, slope-correlated part.
+    const yHigh = subtractBlur(y, alpha, widthPx, heightPx, sigmaPx);
+    const sxHigh = subtractBlur(sx, alpha, widthPx, heightPx, sigmaPx);
+    const syHigh = subtractBlur(sy, alpha, widthPx, heightPx, sigmaPx);
 
     for (let m = mMin; m <= mMax; m++) {
       const lonDeg = -180 + m * lonStepDeg;
@@ -197,6 +187,8 @@ export async function fitSunField(opts: {
       if (sumW <= 0) continue;
       const meanY = sumWY / sumW;
       if (!(meanY > 0)) continue;
+      // Divide luminance (only) by its window mean so `y` reads as the
+      // relative-shading scale the model `1 + g·s` assumes.
       for (let i = 0; i < n; i++) yWin[i] = yWin[i]! / meanY;
 
       const fit = fitShadingGradient(yWin, sxWin, syWin, wWin);
@@ -213,15 +205,27 @@ export async function fitSunField(opts: {
   return fillOutputGrid(region, sunFit, windows, minConfidence, radiusM);
 }
 
+// A band is only windowKm+strideKm tall against a highPassKm-scaled kernel
+// radius, so every row's blur is truncated and loses kernel mass — a plain
+// `x - blur(x)` would leak that lost mass back in as a false regional trend.
+// Normalising by `blur(alpha)` cancels the truncation exactly, since the
+// numerator and denominator lose the identical taps at the identical pixel.
 function subtractBlur(
   values: Float32Array,
+  alpha: Float32Array,
   width: number,
   height: number,
   sigmaPx: number,
 ): Float32Array {
-  const blurred = gaussianBlurFloat32(values, width, height, sigmaPx);
+  const weighted = new Float32Array(values.length);
+  for (let i = 0; i < values.length; i++) weighted[i] = values[i]! * alpha[i]!;
+  const blurredWeighted = gaussianBlurFloat32(weighted, width, height, sigmaPx);
+  const blurredAlpha = gaussianBlurFloat32(alpha, width, height, sigmaPx);
   const out = new Float32Array(values.length);
-  for (let i = 0; i < values.length; i++) out[i] = values[i]! - blurred[i]!;
+  for (let i = 0; i < values.length; i++) {
+    const coverage = blurredAlpha[i]!;
+    out[i] = coverage > 1e-6 ? values[i]! - blurredWeighted[i]! / coverage : 0;
+  }
   return out;
 }
 
@@ -259,22 +263,55 @@ function fillOutputGrid(
   const gy = new Float32Array(width * height);
   const confidence = new Float32Array(width * height);
   const sigmaKm = sunFit.fillSigmaKm;
+  const cutoffKm = 3 * sigmaKm;
+  const cutoffLatDeg = kmToDeg(cutoffKm, radiusM);
+
+  // A window beyond 3σ contributes under 1.2e-3 of a cell's weight — skip
+  // it. Bucketed by its generating row (`FittedWindow.lat` is always an
+  // exact multiple of `latStepDeg`, per the fit loop above) and sorted by
+  // longitude within each row, so a cell visits only the nearby rows and a
+  // lon-bounded slice of each, not every window on the globe.
+  const latStepDeg = kmToDeg(sunFit.strideKm, radiusM);
+  const rows = new Map<number, FittedWindow[]>();
+  for (const w of passing) {
+    const k = Math.round(w.lat / latStepDeg);
+    const bucket = rows.get(k);
+    if (bucket === undefined) rows.set(k, [w]);
+    else bucket.push(w);
+  }
+  for (const bucket of rows.values()) bucket.sort((a, b) => a.lon - b.lon);
+  const kRange = Math.ceil(cutoffLatDeg / latStepDeg);
 
   for (let j = 0; j < height; j++) {
     const lat = 90 - (jMin + j) * stepDeg;
+    const kCenter = Math.round(lat / latStepDeg);
+    // The lon margin uses the most poleward latitude a bucket in range could
+    // hold, not just this row's own — same reasoning as growRegion's — so a
+    // window near ±88° is never under-margined by a query row nearer the
+    // equator.
+    const cutoffLonDeg =
+      cutoffLatDeg / Math.cos(Math.min(88, Math.abs(lat) + cutoffLatDeg) * DEG_TO_RAD);
     for (let i = 0; i < width; i++) {
       const lon = -180 + (iMin + i) * stepDeg;
       let sumWC = 0;
       let sumWCGx = 0;
       let sumWCGy = 0;
       let sumW = 0;
-      for (const w of passing) {
-        const d = greatCircleDistanceKm(lon, lat, w.lon, w.lat, radiusM);
-        const weight = Math.exp(-(d * d) / (2 * sigmaKm * sigmaKm));
-        sumW += weight;
-        sumWC += weight * w.confidence;
-        sumWCGx += weight * w.confidence * w.gx;
-        sumWCGy += weight * w.confidence * w.gy;
+      for (let k = kCenter - kRange; k <= kCenter + kRange; k++) {
+        const bucket = rows.get(k);
+        if (bucket === undefined) continue;
+        const lo = lonBoundIndex(bucket, lon - cutoffLonDeg);
+        const hi = lonBoundIndex(bucket, lon + cutoffLonDeg);
+        for (let idx = lo; idx < hi; idx++) {
+          const w = bucket[idx]!;
+          const d = greatCircleDistanceKm(lon, lat, w.lon, w.lat, radiusM);
+          if (d > cutoffKm) continue;
+          const weight = Math.exp(-(d * d) / (2 * sigmaKm * sigmaKm));
+          sumW += weight;
+          sumWC += weight * w.confidence;
+          sumWCGx += weight * w.confidence * w.gx;
+          sumWCGy += weight * w.confidence * w.gy;
+        }
       }
       const cell = j * width + i;
       gx[cell] = sumWCGx / (sumWC + PRIOR_WEIGHT);
@@ -283,4 +320,16 @@ function fillOutputGrid(
     }
   }
   return { bounds, width, height, gx, gy, confidence, radiusM };
+}
+
+// First index in `bucket` (sorted ascending by `lon`) whose lon is >= x.
+function lonBoundIndex(bucket: readonly FittedWindow[], x: number): number {
+  let lo = 0;
+  let hi = bucket.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >>> 1;
+    if (bucket[mid]!.lon < x) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
 }

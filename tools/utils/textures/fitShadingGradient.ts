@@ -7,8 +7,10 @@
 
 // A reference terrain slope variance (m/m)², below which a window has too
 // little relief for its fit to be trusted regardless of R² — an unmodulated
-// flat window can still spuriously align with noise.
-const SLOPE_VARIANCE_REF = 0.01;
+// flat window can still spuriously align with noise. Set to (3% RMS)²: MOLA
+// slopes at 650 m are mostly 1-3% RMS, so a 1% reference would gate out most
+// of Mars.
+const SLOPE_VARIANCE_REF = 0.001;
 
 export function fitShadingGradient(
   y: Float32Array,

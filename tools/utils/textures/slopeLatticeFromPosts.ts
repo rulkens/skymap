@@ -26,15 +26,21 @@ export function slopeLatticeFromPosts(
 
   for (let j = 0; j < ny; j++) {
     const lat = north - j * stepDeg;
-    const eastSpacingM = radiusM * Math.cos(lat * DEG_TO_RAD) * stepDeg * DEG_TO_RAD;
+    const cosLat = Math.cos(lat * DEG_TO_RAD);
+    const eastSpacingM = radiusM * cosLat * stepDeg * DEG_TO_RAD;
     for (let i = 0; i < nx; i++) {
       const here = j * nx + i;
+      // At a pole post, east is undefined and every column sits on the same
+      // point: the finite-difference denominator collapses to ~0, so pin the
+      // east slope to 0 instead of dividing it out to ~1e13.
       sx[here] =
-        i === 0
-          ? (posts[here + 1]! - posts[here]!) / eastSpacingM
-          : i === nx - 1
-            ? (posts[here]! - posts[here - 1]!) / eastSpacingM
-            : (posts[here + 1]! - posts[here - 1]!) / (2 * eastSpacingM);
+        cosLat < 1e-9
+          ? 0
+          : i === 0
+            ? (posts[here + 1]! - posts[here]!) / eastSpacingM
+            : i === nx - 1
+              ? (posts[here]! - posts[here - 1]!) / eastSpacingM
+              : (posts[here + 1]! - posts[here - 1]!) / (2 * eastSpacingM);
       sy[here] =
         j === 0
           ? (posts[here]! - posts[here + nx]!) / northSpacingM
