@@ -11,6 +11,7 @@ import {
   cornerAppended,
   cornerClicked,
 } from '../../../../tools/scene-workbench/src/state/outline/outlineSlice';
+import { groupSelected } from '../../../../tools/scene-workbench/src/state/registry/registrySlice';
 import { commitCameraPose } from '../../../../tools/scene-workbench/src/state/view/viewSlice';
 import { createSceneStore } from '../../../../tools/scene-workbench/src/store/createSceneStore';
 
@@ -30,6 +31,12 @@ const MANIFEST = {
       artifactUrl: 'mesh.glb',
     },
   ],
+} as unknown as SceneManifest;
+
+/** A second mesh alongside `MANIFEST`'s, for the "already drawing" re-entry guard. */
+const TWO_MESH_MANIFEST = {
+  ...MANIFEST,
+  assets: [...MANIFEST.assets, { ...MANIFEST.assets[0], id: 'mesh2', label: 'mesh2' }],
 } as unknown as SceneManifest;
 
 const RETURN_POSE = {
@@ -95,5 +102,86 @@ describe('watchOutlineSaga', () => {
     const state = store.getState();
     expect(state.outline.draft).not.toBeNull();
     expect(state.view.camera.projection).toBe('orthographic');
+  });
+
+  it("a group switch cancels the old group's in-flight outline load", async () => {
+    let resolveOldFetch: (res: Response) => void = () => {};
+    const oldFetch = new Promise<Response>((resolve) => {
+      resolveOldFetch = resolve;
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((url: string) =>
+        url === '/api/outline/gA/mesh'
+          ? oldFetch
+          : Promise.resolve(new Response('{}', { status: 404 })),
+      ),
+    );
+    const { store } = createSceneStore();
+    store.dispatch(manifestLoaded({ ...MANIFEST, groupId: 'gA' } as SceneManifest));
+    store.dispatch(groupSelected('gB'));
+    // Resolve the old group's GET before the new manifest even arrives: only `groupSelected`
+    // itself, not the eventual `manifestLoaded`, is what must cancel the old load.
+    resolveOldFetch(new Response(JSON.stringify({ formatVersion: 1, ringM: DRAFT_RING })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // The old group's late GET must not land in the new group's slice — the asset id ("mesh")
+    // collides between groups, so a leaked write would be silently indistinguishable from real data.
+    expect(store.getState().outline.byAssetId.mesh).toBeUndefined();
+    store.dispatch(manifestLoaded({ ...MANIFEST, groupId: 'gB' } as SceneManifest));
+    expect(store.getState().outline.byAssetId.mesh).toBeUndefined();
+  });
+
+  it('a group switch during save discards the stale PUT response', async () => {
+    let resolvePut: (res: Response) => void = () => {};
+    const putPromise = new Promise<Response>((resolve) => {
+      resolvePut = resolve;
+    });
+    vi.stubGlobal(
+      'fetch',
+      vi.fn((_url: string, init?: RequestInit) =>
+        init?.method === 'PUT' ? putPromise : Promise.resolve(new Response('{}', { status: 404 })),
+      ),
+    );
+    const { store } = createSceneStore();
+    store.dispatch(manifestLoaded(MANIFEST));
+    store.dispatch(commitCameraPose({ ...RETURN_POSE, targetM: [1, 2, 3] }));
+    store.dispatch(drawOutlineRequested('mesh'));
+    for (const corner of DRAFT_RING) store.dispatch(cornerAppended(corner));
+    store.dispatch(cornerClicked(0));
+    store.dispatch(outlineSaveRequested());
+    store.dispatch(groupSelected('other'));
+    resolvePut(new Response(JSON.stringify({ formatVersion: 1, ringM: DRAFT_RING })));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(store.getState().outline.byAssetId.mesh).toBeUndefined();
+    expect(store.getState().group.manifest).toBeNull();
+  });
+
+  it('a group switch while a draft is open restores its return pose', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('{}', { status: 404 }))),
+    );
+    const { store } = createSceneStore();
+    store.dispatch(manifestLoaded(MANIFEST));
+    store.dispatch(commitCameraPose({ ...RETURN_POSE, targetM: [1, 2, 3] }));
+    store.dispatch(drawOutlineRequested('mesh'));
+    expect(store.getState().view.camera.projection).toBe('orthographic');
+    store.dispatch(groupSelected('other'));
+    expect(store.getState().view.camera).toEqual(RETURN_POSE);
+    expect(store.getState().outline.draft).toBeNull();
+  });
+
+  it('drawOutlineRequested is ignored while a draft is already open', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.resolve(new Response('{}', { status: 404 }))),
+    );
+    const { store } = createSceneStore();
+    store.dispatch(manifestLoaded(TWO_MESH_MANIFEST));
+    store.dispatch(commitCameraPose({ ...RETURN_POSE, targetM: [1, 2, 3] }));
+    store.dispatch(drawOutlineRequested('mesh'));
+    const firstDraft = store.getState().outline.draft;
+    store.dispatch(drawOutlineRequested('mesh2'));
+    expect(store.getState().outline.draft).toEqual(firstDraft);
   });
 });

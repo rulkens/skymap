@@ -15,7 +15,8 @@ import type { SceneSagaContext } from '../../store/sagaContext';
 import type { RootState } from '../../store/types';
 import { drawOutlineRequested, outlineDiscardRequested, outlineSaveRequested } from '../commands';
 import { assetStatusChanged, manifestLoaded } from '../group/groupSlice';
-import { commitCameraPose } from '../view/viewSlice';
+import { groupSelected } from '../registry/registrySlice';
+import { commitCameraPose, type SceneCamera } from '../view/viewSlice';
 import {
   draftEnded,
   draftStarted,
@@ -28,7 +29,13 @@ import { selectMaskRing } from './selectMaskRing';
 
 const outlineUrl = (groupId: string, assetId: string) => `/api/outline/${groupId}/${assetId}`;
 
-function* loadOutlinesWorker(action: ReturnType<typeof manifestLoaded>) {
+/** Also matches `groupSelected`, cancelled here rather than let it fall through — a `manifestLoaded`
+ *  in the OLD group's GETs races the picker's `groupSelected` clearing the slice; without cancelling
+ *  right at the switch, a late 200 for the old group's asset id can `outlineLoaded` into the new one. */
+function* loadOutlinesWorker(
+  action: ReturnType<typeof manifestLoaded> | ReturnType<typeof groupSelected>,
+) {
+  if (groupSelected.match(action)) return;
   const { groupId, assets } = action.payload;
   for (const asset of assets) {
     if (asset.kind !== 'mesh') continue;
@@ -49,11 +56,15 @@ function* loadOutlinesWorker(action: ReturnType<typeof manifestLoaded>) {
 
 function* drawOutlineWorker(action: ReturnType<typeof drawOutlineRequested>) {
   const assetId = action.payload;
-  const { asset, saved, camera } = yield* select((state: RootState) => ({
+  const { asset, saved, camera, draft } = yield* select((state: RootState) => ({
     asset: state.group.manifest?.assets.find((a) => a.id === assetId),
     saved: state.outline.byAssetId[assetId],
     camera: state.view.camera,
+    draft: state.outline.draft,
   }));
+  // A second enter (e.g. a stray click on another mesh's "Draw outline") would overwrite the
+  // live draft's returnPose with the already-orthographic camera, stranding the perspective pose.
+  if (draft) return;
   if (asset?.kind !== 'mesh') return;
   // Picking maps screen XY through the inverse transform in the plane; a tilt breaks that.
   if (!isZOnlyRotation(asset.transform.rotation)) {
@@ -90,6 +101,13 @@ function* saveOutlineWorker() {
       if (!res.ok || !body.ringM) throw new Error(body.error ?? res.statusText);
       return body.ringM;
     });
+    // A group switch during the PUT's round trip already cleared this group/draft; applying the
+    // late response would write the new group's asset (ids can collide) or resurrect a dead draft.
+    const stillCurrent = yield* select(
+      (state: RootState) =>
+        state.group.manifest?.groupId === groupId && state.outline.draft?.assetId === draft.assetId,
+    );
+    if (!stillCurrent) return;
     // The server's ring, not the draft's: normalization may have reversed or trimmed it.
     yield* put(outlineSaved({ assetId: draft.assetId, ringM }));
     yield* put(commitCameraPose(draft.returnPose));
@@ -124,8 +142,24 @@ function* syncMasksWorker() {
 }
 
 export function* watchOutlineSaga() {
+  // Mirrors a live draft's returnPose outside the store: redux-saga's middleware runs the
+  // reducers (`next(action)`) before it feeds sagas, so by the time this generator observes
+  // `groupSelected`, `outlineSlice`'s own extraReducer has already reset `draft` to null — reading
+  // `state.outline.draft` here would always see the post-reset value. Kept as a plain local (not
+  // module-scope) so each `watchOutlineSaga()` run — one per `createSceneStore()` — starts clean.
+  let liveReturnPose: SceneCamera | null = null;
+  yield* takeEvery(draftStarted, function* (action) {
+    liveReturnPose = action.payload.returnPose;
+  });
+  yield* takeEvery(draftEnded, function* () {
+    liveReturnPose = null;
+  });
+  yield* takeEvery(groupSelected, function* () {
+    if (liveReturnPose) yield* put(commitCameraPose(liveReturnPose));
+    liveReturnPose = null;
+  });
   yield* takeEvery(touchesMask, syncMasksWorker);
-  yield* takeLatest(manifestLoaded, loadOutlinesWorker);
+  yield* takeLatest([groupSelected, manifestLoaded], loadOutlinesWorker);
   yield* takeEvery(drawOutlineRequested, drawOutlineWorker);
   yield* takeEvery(outlineSaveRequested, saveOutlineWorker);
   yield* takeEvery(outlineDiscardRequested, discardOutlineWorker);

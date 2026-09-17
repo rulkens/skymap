@@ -4,6 +4,7 @@ import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import {
   cornerAppended,
   cornerClicked,
+  cornerMoved,
   defaultOutlineSlice,
   draftStarted,
   outlineSlice,
@@ -44,5 +45,15 @@ describe('outlineSlice', () => {
   it('cornerAppended is ignored on a closed ring', () => {
     const next = outlineSlice.reducer(drafting(TRIANGLE, true), cornerAppended([5, 5]));
     expect(next.draft?.ringM).toEqual(TRIANGLE);
+  });
+
+  it('cornerMoved on an out-of-range index is ignored', () => {
+    const state = drafting(TRIANGLE, false);
+    expect(
+      outlineSlice.reducer(state, cornerMoved({ index: 3, xyM: [9, 9] })).draft?.ringM,
+    ).toEqual(TRIANGLE);
+    expect(
+      outlineSlice.reducer(state, cornerMoved({ index: -1, xyM: [9, 9] })).draft?.ringM,
+    ).toEqual(TRIANGLE);
   });
 });

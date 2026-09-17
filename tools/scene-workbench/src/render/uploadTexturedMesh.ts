@@ -1,10 +1,8 @@
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import type { TexturedMeshGeometry } from '../../../scene-recon/pack/packMeshGlb';
 import { meshEdgeIndices } from './meshEdgeIndices';
+import { packMaskPolygon } from './packMaskPolygon';
 import type { MeshGpuAsset } from './renderResources';
-
-/** Header plus one corner slot — the smallest valid `MaskPolygon` binding. */
-const MASK_MIN_BYTES = 16;
 
 /**
  * Uploads the `mesh.glb` subset as the two vertex buffers, index buffer and
@@ -63,7 +61,9 @@ export function uploadTexturedMesh(
 
   const mask = device.createBuffer({
     label: 'scene-workbench-mesh-mask',
-    size: MASK_MIN_BYTES,
+    // Sized from `packMaskPolygon`'s own layout, not a duplicated literal — its `count = 0`
+    // buffer is exactly this pipeline's initial (unmasked) state.
+    size: packMaskPolygon(null).byteLength,
     usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
   }); // zero-filled: count 0, no mask
 

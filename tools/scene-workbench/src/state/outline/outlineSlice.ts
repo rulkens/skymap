@@ -42,7 +42,11 @@ export const outlineSlice = createSlice({
       if (state.draft && !state.draft.closed) state.draft.ringM.push(action.payload);
     },
     cornerMoved: (state, action: PayloadAction<{ index: number; xyM: Vec2 }>) => {
-      if (state.draft) state.draft.ringM[action.payload.index] = action.payload.xyM;
+      const { index, xyM } = action.payload;
+      // An out-of-range index (a stale drag after a delete) would otherwise append past the end.
+      if (state.draft && index >= 0 && index < state.draft.ringM.length) {
+        state.draft.ringM[index] = xyM;
+      }
     },
     /** First corner of an open ring with ≥ 3 corners closes it; any other click deletes. */
     cornerClicked: (state, action: PayloadAction<number>) => {
