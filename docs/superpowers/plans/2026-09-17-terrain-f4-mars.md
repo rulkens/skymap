@@ -40,14 +40,17 @@ All rasters: equirectangular, lat_ts 0, lon0 0, sphere R = 3,396,190 m (lon = x/
 | `hirise.jezero.dtm`       | `hirise/jezero/MSR_hirise_soc_003_DTM_MOLATopography_DeltaGeoid_1m_Eqc_latTs0_lon0_Blend40.tif` | 712 MB, 19144×26816, LZW tiled 256        | Float32, −32767 (areoid, README) | 1 m     | 77.058–77.381, 18.136–18.588     |
 | `hirise.jezero.ortho`     | `hirise/jezero/MSR_hirise_soc_003_Orthomosaic_0.25m_Eqc_latTs0_lon0_First_NoBlend.tif`          | 4.7 GB, 76576×107264, LZW tiled 256, grey | Byte, 0                          | 0.25 m  | = DTM                            |
 
-Rover rows (`src/data/bodies/surfaceFixedSites.ts:22-55`): curiosity −4.5895, 137.4417 (inside Gale); spirit −14.5684, 175.4726 (inside Gusev); perseverance 18.4447, 77.4508 (landing site — ~4 km EAST of the Jezero box); opportunity −1.9462, 354.4734 (Eagle crater, outside both Meridiani DTMs; moves per R1).
+Rover rows (`src/data/bodies/surfaceFixedSites.ts:22-55`): curiosity −4.5895, 137.4417 (inside Gale); spirit −14.5684, 175.4726 (inside Gusev); perseverance 18.4447, 77.4508 (landing site, ~4 km east of the Jezero box; moves per R4); opportunity −1.9462, 354.4734 (Eagle crater, outside both Meridiani DTMs; moves per R1).
 
 ## Rulings (user, 2026-09-17)
 
-- **R1 Opportunity moves** to its final resting place in Perseverance Valley, inside the Endeavour box (coordinates from the controller's lookup, recorded in the ledger). The Eagle-crater box (`meridiani-landing`) is not baked and gets no registry row.
+- **R1 Opportunity moves** to its final resting place in Perseverance Valley: **−2.336, 354.619 E**, the centre of HiRISE ESP_087985_1780 "Opportunity Rover Position" (uahirise.org, 2025). This is a proxy; no official lat/lon fix was found, since the PDS traverse table is site-frame only. The Eagle-crater box (`meridiani-landing`) is not baked and gets no registry row.
 - **R2 Site boxes are clipped** to a 3 × 3 km window centred on each rover (`MARS_SITE_WINDOW_M = 3000`), intersected with the file's bounds, so about 550 tiles per site per product. The window is a named constant; widening it later is only a re-bake.
 - **R3 Jezero extracted:** the DTM and ortho `.tif` files (plus `.xml` sidecars) sit loose in `data/raw/hirise/jezero/`; the zip stays.
+- **R4 Perseverance moves** to its current position: **18.43687 N, 77.23205 E**, sol 1980 (~2026-09-14), end-of-drive RMC 91_970, from `mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json`. That position is inside the Jezero mosaic with ≥ 8.4 km margin.
 - **O4 Base-globe colour** (still open; decided at the eye-check, Task 6): the tiles use Viking MDIM21 while the base globe uses Solar System Scope's `mars-8192`, so a colour step is expected when tiles engage. Either accept it, or rebuild `mars-*` from MDIM21 (`tools/utils/io/textureSources.ts:42`) in this PR.
+- **C1 (controller) Raw files reach the worktree through leaf symlinks.** `rawDataPath` resolves against the cwd, so the worktree's `data/raw/{mola,viking,hirise/<site>}/` are real directories: the READMEs in them are tracked, and each raster is a symlink to the same file in main's `data/raw` (gitignored by `/data/**`). Never symlink a directory, because a tracked README can't be committed through one.
+- **C2 (controller) Strip rasters were converted to tiled COGs** (a `readBox` on the 12.7 GB strip-layout Viking took 14 s against 9 ms on a tiled COG). The registry points at the converted files: `…global_463m_cog.tif` (DEFLATE), `…ClrMosaic_global_232m_cog.tif` (JPEG q95) and `MSL_Gale_DEM_Mosaic_1m_v3_cog.tif` (DEFLATE). No overviews. Each README records the `gdal_translate` line.
 
 ---
 
@@ -165,7 +168,7 @@ Sites: Gale, Jezero, Gusev, Endeavour (R1), each box = `MARS_SITE_WINDOW_M` squa
 - [ ] `MARS_SURFACE_SHADING`: `sunIrradiance` must give tiles the same brightness as the textured Mars globe (`src/services/gpu/shaders/lib/bodyLighting.wesl`, how `texturedBodyRenderer` scales sun light) so the tile hand-off does not step. Derive from that code, cite it in a comment; `roughnessBase`/`f0` for dry regolith (rough, dielectric: roughness ≈ 0.9, f0 ≈ 0.03). No new test.
 - [ ] Mars `reliefM`: `[min, max]` of MOLA over the whole globe + 6,190 m (read `gdalinfo -mm` or a decimated scan; expected ≈ [−2,011, 27,431]) widened to cover the site DTMs' rebased extremes. Store where Earth's is (`sceneEarth.ts:23` pattern); `heliocentricPlanet` must accept it instead of hardcoding `[0, 0]`.
 - [ ] Bake-time datum check (in `marsSurfaceBake`, printed, not a unit test): per site band, median of (DTM − MOLA) over the box at z10. A value beyond ±200 m means a datum mismatch (a sphere-relative DTM is off by kilometres) — throw.
-- [ ] Move Opportunity's row in `src/data/bodies/surfaceFixedSites.ts` to the final-position lat/lon from the ledger (R1); keep the `// source` comment style of the other rows, citing where the coordinates came from.
+- [ ] Move Opportunity's row in `src/data/bodies/surfaceFixedSites.ts` to R1's lat/lon, and Perseverance's to R4's; keep the `// source` comment style of the other rows, citing where the coordinates came from.
 - [ ] `dev` bands: the global band only, `maxLevel` 4, no height.
 - [ ] `npm run build-surface-tiles -- --body mars --dev` into the linked `public/data` is allowed (writes `mars-tiles/` only); verify the Earth manifest mtime is unchanged. Commit.
 
