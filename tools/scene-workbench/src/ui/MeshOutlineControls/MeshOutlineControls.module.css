@@ -10,7 +10,6 @@
   composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
   flex: 0 1 auto;
   gap: 6px;
-  font-size: var(--font-size-sm);
 }
 
 .checkbox {
