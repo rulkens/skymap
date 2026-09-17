@@ -4,6 +4,7 @@
 // this stage only has to cover the silhouette.
 
 import package::devTools::terrainPickMarker::io::MarkerVSOut;
+import package::devTools::terrainPickMarker::io::MAX_SIN_THETA;
 import package::devTools::terrainPickMarker::io::QUAD_MARGIN;
 import package::devTools::terrainPickMarker::io::TerrainPickMarkerUniforms;
 
@@ -14,7 +15,12 @@ fn vs(@builtin(vertex_index) vi: u32) -> MarkerVSOut {
   // Strip order (0,1,2,3) = (-1,-1), (+1,-1), (-1,+1), (+1,+1).
   let cx = select(-1.0, 1.0, (vi & 1u) == 1u);
   let cy = select(-1.0, 1.0, vi >= 2u);
-  let extent = u.radiusM * QUAD_MARGIN;
+  // Half-extent of the silhouette cone on the plane through the marker centre:
+  // sin(theta) = radius / range, so the cone's radius there is r / cos(theta).
+  // Every ray that can hit the sphere crosses the quad, which is all the proxy
+  // owes the fragment stage.
+  let sinTheta = min(u.radiusM / max(length(u.centreRelEyeM), 1.0e-3), MAX_SIN_THETA);
+  let extent = u.radiusM * QUAD_MARGIN / sqrt(1.0 - sinTheta * sinTheta);
   let posRelEyeM = u.centreRelEyeM + u.camRight * (cx * extent) + u.camUp * (cy * extent);
 
   var out: MarkerVSOut;

@@ -33,11 +33,17 @@ struct TerrainPickMarkerUniforms {
   _pad1: f32,
 };
 
-// The billboard's half-extent in marker radii. The eye is always many radii
-// away (the radius is derived FROM the eye's range, a dozen pixels' worth), so
-// the projected disc never exceeds the quad; the margin only covers the
-// perspective widening a strictly-1.0 quad would shave off the silhouette.
-const QUAD_MARGIN: f32 = 1.25;
+// Slack on the exact silhouette extent 'vertex.wesl' computes. The quad is
+// SCREEN-aligned while the silhouette cone is centred on the direction to the
+// marker, so an off-axis marker's disc is an ellipse on that plane -- half a
+// field of view of obliquity is the worst case, and this covers it.
+const QUAD_MARGIN: f32 = 1.5;
+
+// Ceiling on sin(silhouette half-angle) = radiusM / range. The radius is a
+// USER-SET world size now, so it is no longer small against the range; the pass
+// refuses to draw with the eye inside the sphere, and this bounds the quad over
+// the last stretch approaching that, where the exact extent runs away.
+const MAX_SIN_THETA: f32 = 0.85;
 
 struct MarkerVSOut {
   @builtin(position) clip: vec4<f32>,

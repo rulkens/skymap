@@ -1,10 +1,12 @@
 /**
  * terrainPickMarkerRenderer — the terrain-pick debug marker: one screen-facing
- * proxy quad, one ray-traced sphere, one analytic `frag_depth` written against
- * the SAME depth attachment and convention the surface tiles use, so the
- * terrain occludes the marker and the intersection silhouette is the reading.
- * Depth intent is `'nearer'`, not the tiles' `'nearer-or-equal'`: a tie belongs
- * to the terrain, or a marker exactly on the surface would hide the seam.
+ * proxy quad, one ray-traced sphere, one analytic `frag_depth` against the SAME
+ * depth attachment and convention the surface tiles use. TWO draws of it — a
+ * dim depth-blind underlay, then the depth-tested marker over it — so the part
+ * the terrain hides stays visible AS hidden and the buried fraction is the
+ * measurement. Depth intent is `'nearer'`, not the tiles' `'nearer-or-equal'`:
+ * a tie belongs to the terrain, or a marker exactly on the surface would hide
+ * the seam.
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
@@ -46,29 +48,49 @@ export function createTerrainPickMarkerRenderer(
     ],
   });
 
-  const pipeline = device.createRenderPipeline({
-    label: 'terrain-pick-marker-pipeline',
-    layout: device.createPipelineLayout({
-      label: 'terrain-pick-marker-pipeline-layout',
-      bindGroupLayouts: [bindGroupLayout],
-    }),
-    vertex: {
-      module: createShaderModuleWithDevLog(device, vsCode, 'terrainPickMarker.vertex'),
-      entryPoint: 'vs',
-    },
-    fragment: {
-      module: createShaderModuleWithDevLog(device, fsCode, 'terrainPickMarker.fragment'),
-      entryPoint: 'fs',
-      targets: [{ format: targetFormat }], // opaque replace, alpha=1
-    },
-    // No culling: the quad is built about the camera axes, so its winding
-    // depends on which way those axes happen to face.
-    primitive: { topology: 'triangle-strip', cullMode: 'none' },
-    depthStencil: {
-      format: depthFormat,
-      depthWriteEnabled: true,
-      depthCompare: resolveDepthCompare('nearer', reversedZ),
-    },
+  const layout = device.createPipelineLayout({
+    label: 'terrain-pick-marker-pipeline-layout',
+    bindGroupLayouts: [bindGroupLayout],
+  });
+  const vertexModule = createShaderModuleWithDevLog(device, vsCode, 'terrainPickMarker.vertex');
+  const fragmentModule = createShaderModuleWithDevLog(device, fsCode, 'terrainPickMarker.fragment');
+
+  /** The two draws differ only in fragment entry point and depth state. */
+  function markerPipeline(
+    label: string,
+    entryPoint: string,
+    depthStencil: GPUDepthStencilState,
+  ): GPURenderPipeline {
+    return device.createRenderPipeline({
+      label,
+      layout,
+      vertex: { module: vertexModule, entryPoint: 'vs' },
+      fragment: {
+        module: fragmentModule,
+        entryPoint,
+        targets: [{ format: targetFormat }], // opaque replace, alpha=1
+      },
+      // No culling: the quad is built about the camera axes, so its winding
+      // depends on which way those axes happen to face.
+      primitive: { topology: 'triangle-strip', cullMode: 'none' },
+      depthStencil,
+    });
+  }
+
+  // `'always'` rather than a `resolveDepthCompare` intent because there is no
+  // near/far direction to get wrong: this draw deliberately ignores depth, and
+  // writes none, so it disturbs nothing drawn after it. It lays the WHOLE
+  // silhouette down dim; the pass below then covers the visible part, leaving
+  // the dim residue equal to what the terrain buries.
+  const occludedPipeline = markerPipeline(
+    'terrain-pick-marker-occluded-pipeline',
+    'fsOccluded',
+    { format: depthFormat, depthWriteEnabled: false, depthCompare: 'always' },
+  );
+  const pipeline = markerPipeline('terrain-pick-marker-pipeline', 'fs', {
+    format: depthFormat,
+    depthWriteEnabled: true,
+    depthCompare: resolveDepthCompare('nearer', reversedZ),
   });
 
   const uniformBuffer = device.createBuffer({
@@ -95,8 +117,11 @@ export function createTerrainPickMarkerRenderer(
       uniformScratch.set(args.camUp, F32_CAM_UP);
       device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
-      pass.setPipeline(pipeline);
       pass.setBindGroup(0, bindGroup);
+      // Underlay first: the depth-tested draw has to land ON TOP of it.
+      pass.setPipeline(occludedPipeline);
+      pass.draw(QUAD_VERTEX_COUNT, 1, 0, 0);
+      pass.setPipeline(pipeline);
       pass.draw(QUAD_VERTEX_COUNT, 1, 0, 0);
     },
 

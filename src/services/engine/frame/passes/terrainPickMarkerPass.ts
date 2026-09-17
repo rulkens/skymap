@@ -1,8 +1,9 @@
 /**
  * terrainPickMarkerPass — the `terrain-pick-marker` debug overlay: a fresh
  * terrain pick under the cursor EVERY frame (stateless by ruling 2026-09-17 —
- * no memo, no warm start), drawn as an analytic sphere into the body row's own
- * `foreground:0` step so the tiles occlude it. Nothing here runs with the
+ * no memo, no warm start), drawn as an analytic sphere of the user-set WORLD
+ * radius into the body row's own `foreground:0` step, where the tiles bury part
+ * of it — the buried fraction is the measurement. Nothing here runs with the
  * toggle off, which is what pays for the per-frame march. A MISS draws nothing:
  * `latchSurfaceGesture`'s datum fallback is camera feel, not truth.
  */
@@ -14,7 +15,6 @@ import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
 import { terrainPickAt } from '../../../../utils/camera/terrainPickAt';
-import { terrainPickMarkerRadiusM } from '../../../../utils/camera/terrainPickMarkerRadiusM';
 import { terrainHeightAtOf } from '../../../../utils/surfaceTiles/terrainHeightAtOf';
 
 export const terrainPickMarkerPass: ContentPass = {
@@ -71,12 +71,13 @@ export const terrainPickMarkerPass: ContentPass = {
       pick.pointM[1] - eyeM[1],
       pick.pointM[2] - eyeM[2],
     ];
-    const radiusM = terrainPickMarkerRadiusM(
-      Math.hypot(...centreRelEyeM),
-      ctx.fovYRad,
-      view.viewportPx[1],
-    );
-    if (!(radiusM > 0)) return;
+    // A WORLD radius the user dials in, not a screen-pixel one: the marker is a
+    // gauge of known physical size, and the buried fraction is the measurement.
+    // Nothing is drawn once it would swallow the eye — a gauge you are inside
+    // reads nothing, and the billboard proxy has no plane in front of the eye
+    // there (`terrainPickMarker/io.wesl`'s MAX_SIN_THETA holds the approach).
+    const radiusM = state.settings.debug.terrainPickMarkerRadiusM;
+    if (!(radiusM > 0) || radiusM >= Math.hypot(...centreRelEyeM)) return;
 
     const basis = pose.basisM;
     renderer.draw(pass, {
