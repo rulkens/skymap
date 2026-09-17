@@ -19,7 +19,7 @@
  *      workbench keeps the renderer out of React the same way the runtime does:
  *      store-driven, never a React effect poking the GPU.
  *   3. Encode the flow compute pass (seed-when-armed + integrate) via the shared
- *      `encodeFlowCompute` gate.
+ *      `flowCompute` row the engine composes.
  *   4. Open the HDR accumulation pass; the renderer draws its additive ribbons.
  *   5. Tonemap the HDR target to the swap-chain.
  *   6. Publish `viewProj` back to the store so the React LabelsOverlay projects
@@ -117,6 +117,14 @@ export async function createFlowHarness(
   let lastT = 0;
   let autoYaw = 0;
 
+  // Built once, not per frame. `flowCompute` closes over a `FlowRuntime`; the
+  // workbench has no engine, so it assembles just the slice the gate consumes —
+  // the renderer handle and a slot that reads ready once the cube is uploaded.
+  const flowComputeRow = flowCompute({
+    renderer,
+    slot: { committed: () => (loaded ? { kind: 'ready' } : null) },
+  } as unknown as FlowRuntime);
+
   function tick(now: number): void {
     if (!running) return;
     rafHandle = requestAnimationFrame(tick);
@@ -148,14 +156,8 @@ export async function createFlowHarness(
     const encoder = device.createCommandEncoder();
 
     // Compute pass (seed-when-armed + integrate). The gate skips entirely when
-    // the layer is off or the cube hasn't loaded. `flowCompute` closes over a
-    // `FlowRuntime`; the workbench has no engine, so it assembles just the
-    // slice the gate consumes — the renderer handle and a ready-when-loaded
-    // asset slot (the shape `slotReady` inspects).
-    flowCompute({
-      renderer,
-      slot: loaded ? { committed: () => ({ kind: 'ready' }) } : null,
-    } as unknown as FlowRuntime).encode(
+    // the layer is off or the cube hasn't loaded.
+    flowComputeRow.encode(
       encoder,
       { nowMs: now } as unknown as ReadyFrameContext,
       { settings: { flow: s.flow } } as unknown as PassState,

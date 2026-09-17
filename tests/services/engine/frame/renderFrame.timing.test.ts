@@ -327,7 +327,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
-      // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
       // A null slot → slotReady false → not loaded.
       // The encoders read the renderer-toggle override bag off
       // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
@@ -347,11 +346,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
         constellations: { enabled: false, intensity: 1 },
         volumes: { enabled: settings.volumesEnabled, items: {} },
-        flow: { enabled: false },
         debug: { disabledPasses: {}, renderStrategy: 'auto' },
       },
       selection: { select: settings.selected },
-      assetSlots: { flow: null },
       // Pick-throttle bag; the content passes don't touch it, but the
       // engine-state shape carries it.
       picking: {

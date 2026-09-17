@@ -9,9 +9,9 @@ Settings › Flow with the field on: changing the particle count does nothing vi
 
 ## What is known (read, not yet instrumented)
 
-- The count control dispatches `setFlow({ count })` (`src/components/containers/FlowTuningSectionContainer.tsx:22`).
-- The reseed latch is armed on that change — via `watchFlowReseedSaga` → `maybeReseed()` on main, via `flowFieldRenderer.reconcile({ mode, count })` per frame after 04b — and consumed in `encodeCompute` (`src/services/gpu/renderers/flowField/flowFieldRenderer.ts`, the `reseed.consume()` branch), which dispatches the `seed` kernel before the integrate pass.
-- `count` defaults to `MAX_PARTICLES` = 50 000, which is also the slider ceiling and the buffer capacity (`src/data/flow/flowFieldConstants.ts:30`), so the only reachable change is a decrease; the draw already instances `f.count` (`pass.draw(2 * TRAIL, f.count)`), so fewer ribbons should be visible after a decrease.
+- The count control dispatches `setFlow({ count })` (`src/layers/flow/ui/FlowTuningSectionContainer.tsx`).
+- The reseed latch is armed on that change — via `watchFlowReseedSaga` → `maybeReseed()` on main, via `flowFieldRenderer.reconcile({ mode, count })` per frame after 04b — and consumed in `encodeCompute` (`src/layers/flow/render/flowFieldRenderer.ts`, the `reseed.consume()` branch), which dispatches the `seed` kernel before the integrate pass.
+- `count` defaults to `MAX_PARTICLES` = 50 000, which is also the slider ceiling and the buffer capacity (`src/data/flow/flowFieldConstants.ts`), so the only reachable change is a decrease; the draw already instances `f.count` (`pass.draw(2 * TRAIL, f.count)`), so fewer ribbons should be visible after a decrease.
 
 ## Hypotheses, in the order to test
 
@@ -21,4 +21,4 @@ Settings › Flow with the field on: changing the particle count does nothing vi
 
 ## Fix shape
 
-Whichever hypothesis holds, the fix is renderer-local (seed kernel / trail clear / draw count) and needs one test at `tests/services/gpu/renderers/flowField/flowFieldRenderer.test.ts` that pins "a count change encodes a seed pass and clears the trail".
+Whichever hypothesis holds, the fix is renderer-local (seed kernel / trail clear / draw count) and needs one test at `tests/layers/flow/render/flowFieldRenderer.test.ts` that pins "a count change encodes a seed pass and clears the trail".

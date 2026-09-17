@@ -1,3 +1,7 @@
+/**
+ * flowCompute — the row's own gate (enabled AND the cube committed) and what it
+ * hands the renderer: the frame's single encoder, never an out-of-band submit.
+ */
 import { describe, it, expect, vi } from 'vitest';
 import { flowCompute } from '../../../../src/layers/flow/computes/flowCompute';
 import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime';

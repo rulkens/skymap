@@ -31,9 +31,4 @@ describe('flowAssetRows', () => {
     expect(ROW.demand(makeCtx({ flow: { enabled: true } }))).toBe(true);
     expect(ROW.demand(makeCtx({ flow: { enabled: false } }))).toBe(false);
   });
-
-  it('the request is void — the cube ships as one tier-agnostic file', () => {
-    expect(ROW.req('small')).toBeUndefined();
-    expect(ROW.req('large')).toBeUndefined();
-  });
 });

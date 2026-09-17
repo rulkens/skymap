@@ -8,5 +8,4 @@
 import type { ContentCompute } from '../../../../@types/engine/frame/ContentCompute';
 import { skyViewCompute } from './skyViewCompute';
 
-/** Core's contributed compute rows, as a flat set. States no order or grouping. */
 export const CORE_COMPUTES: readonly ContentCompute[] = [skyViewCompute];

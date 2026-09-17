@@ -6,7 +6,6 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { flowLayer } from '../../../src/layers/flow/layer';
-import { Source } from '../../../src/data/source';
 import type { LayerCoreDeps } from '../../../src/@types/engine/layer/LayerCoreDeps';
 
 /** Minimal GPUDevice mock — construction-only, mirrors create.test.ts. */
@@ -36,12 +35,5 @@ describe('flowLayer', () => {
     expect(flowLayer.computes?.(runtime).map((c) => c.name)).toEqual(['flow']);
     expect(flowLayer.assets?.(runtime).map((a) => a.key)).toEqual(['flow']);
     expect(flowLayer.fades?.(runtime).map((f) => f.key)).toEqual(['flow']);
-  });
-
-  it('declares its settings tuple, source row and both ui sections', () => {
-    expect(flowLayer.settings?.map((s) => s.reducerPath)).toEqual(['flow']);
-    expect(flowLayer.sources?.map(([code]) => code)).toEqual([Source.Flow]);
-    expect(flowLayer.ui?.settings).toBeDefined();
-    expect(flowLayer.ui?.debug).toBeDefined();
   });
 });

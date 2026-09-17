@@ -247,7 +247,7 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
   },
 
   // ── Constellation stick-figure overlay ───────────────────────────
-  // Master-gate demand, the singleton-overlay convention shared with filaments/flow.
+  // Master-gate demand, per the singleton-overlay convention.
   {
     key: 'constellations',
     factory: (deps) => createConstellationsSlot(deps.state, deps.cb),

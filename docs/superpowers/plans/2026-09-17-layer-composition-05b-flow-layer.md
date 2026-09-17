@@ -448,7 +448,7 @@ Not code. `/dev` in this worktree, then check, in order:
 - [ ] `src/layers/flow/` holds the renderer, the compute row, the pass, the slot + fetcher, the fade row, the source entry, the settings slice and both UI sections.
 - [ ] `EngineState.gpu` no longer has a `flowFieldRenderer` field, and `grep -rn "flowFieldRenderer" src/services` returns only prose citations.
 - [ ] `state.computes` is composed from `CORE_COMPUTES` + every Layer's rows, with a duplicate-name throw and an absent-name drop, and `checkFrameOrder` catches a contributed row `FRAME_ORDER` never names.
-- [ ] `INITIAL_SETTINGS` is byte-identical to `main`'s — assert by dumping it from both trees and diffing, not by reading the code.
+- [ ] `INITIAL_SETTINGS` is deep-equal to `main`'s — assert by dumping it from both trees and comparing, not by reading the code. Key ORDER moves (the `flow` slice folds in after `filaments` instead of last) and that is fine: nothing iterates the top-level settings keys positionally, and the guided-tour snapshot merge is key-addressed.
 - [ ] Ratchets unchanged or smaller: `layerImportBoundary`, `frameFilePurity`.
 - [ ] `Layer.ui` is `{ settings?, debug? }`, `SettingsPanel` and `DebugPanel` both render their Layer group from it, and `grep -rn "FlowTuningSection" src/components` returns nothing.
 - [ ] Manual smoke attested (Task 7), including the Settings-panel section's new position and the Debug-panel section's unchanged one.

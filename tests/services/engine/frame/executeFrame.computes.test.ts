@@ -8,30 +8,28 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { executeFrame } from '../../../../src/services/engine/frame/executeFrame';
-import { flowCompute } from '../../../../src/layers/flow/computes/flowCompute';
 import type { ContentCompute } from '../../../../src/@types/engine/frame/ContentCompute';
 import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/ExecuteFrameArgs';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 
-/** A ready asset slot — `slotReady` reads `committed() !== null`. */
-function readySlot() {
-  return { committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }) };
-}
-
 /**
- * `flowCompute` closes over its own Runtime, reading neither `state.gpu` nor
- * `state.assetSlots` — built directly here, exercising `executeFrame`'s
- * resolve-by-name dispatch with a real row.
+ * A stand-in row named for the one Layer case that matters here (`flow` also
+ * names a render pass). `executeFrame` resolves by name and never looks inside
+ * a row, so importing a Layer's real row would only re-couple core's tests to
+ * it. `dispatches: false` stands for a row whose own gate declines.
  */
-function makeRuntime(encodeCompute: ReturnType<typeof vi.fn>, ready: boolean): FlowRuntime {
+function fakeCompute(encodeCompute: () => void, dispatches: boolean): ContentCompute {
   return {
-    renderer: { label: 'flowFieldRenderer', encodeCompute },
-    slot: ready ? readySlot() : { committed: () => null },
-  } as unknown as FlowRuntime;
+    name: 'flow',
+    encode: (_encoder, _ctx, _state, claimTimestampWrites) => {
+      if (!dispatches) return;
+      claimTimestampWrites();
+      encodeCompute();
+    },
+  };
 }
 
 function makeCtx(): ReadyFrameContext {
@@ -66,9 +64,9 @@ describe('executeFrame — compute dispatch', () => {
   it('resolves a compute step against the composed state.computes list', () => {
     const encodeCompute = vi.fn();
     const state = {
-      settings: { debug: { disabledPasses: {} }, flow: { enabled: true } },
+      settings: { debug: { disabledPasses: {} } },
     } as unknown as EngineState;
-    state.computes = [flowCompute(makeRuntime(encodeCompute, true))];
+    state.computes = [fakeCompute(encodeCompute, true)];
 
     executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state));
 
@@ -91,9 +89,9 @@ describe('executeFrame — compute dispatch', () => {
     const run = (disabledPasses: Record<string, boolean>): ReturnType<typeof vi.fn> => {
       const encodeCompute = vi.fn();
       const state = {
-        settings: { debug: { disabledPasses }, flow: { enabled: true } },
+        settings: { debug: { disabledPasses } },
       } as unknown as EngineState;
-      state.computes = [flowCompute(makeRuntime(encodeCompute, true))];
+      state.computes = [fakeCompute(encodeCompute, true)];
       executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state));
       return encodeCompute;
     };
@@ -108,9 +106,9 @@ describe('executeFrame — compute dispatch', () => {
     const descriptorFor = vi.fn(() => undefined);
     const encodeCompute = vi.fn();
     const state = {
-      settings: { debug: { disabledPasses: {} }, flow: { enabled: false } },
+      settings: { debug: { disabledPasses: {} } },
     } as unknown as EngineState;
-    state.computes = [flowCompute(makeRuntime(encodeCompute, false))];
+    state.computes = [fakeCompute(encodeCompute, false)];
 
     executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state, makeTiming(descriptorFor)));
 
