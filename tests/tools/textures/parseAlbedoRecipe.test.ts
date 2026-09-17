@@ -15,31 +15,10 @@ function validRecipe(): Record<string, unknown> {
 describe('parseAlbedoRecipe', () => {
   it('parses the committed Mars recipe', () => {
     const json = readFileSync(RECIPE_PATH, 'utf8');
-    const recipe = parseAlbedoRecipe(json);
-    expect(recipe.version).toBe(1);
-    expect(recipe.sunFit).toEqual({
-      windowKm: 40,
-      strideKm: 20,
-      highPassKm: 15,
-      minConfidence: 0.2,
-      fillSigmaKm: 60,
-    });
-    expect(recipe.deshade).toEqual({ strength: 1, minShading: 0.3 });
-    expect(recipe.knee).toEqual({ threshold: 0.6, softness: 1 });
-    expect(recipe.ice).toEqual({
-      minAbsLatDeg: 55,
-      fadeDeg: 8,
-      minWhiteness: 0.6,
-      minLuminance: 0.35,
-    });
-    expect(recipe.grade).toEqual({
-      exposureEv: 0,
-      gain: [1, 1, 1],
-      offset: [0, 0, 0],
-      contrast: 1,
-      saturation: 1,
-      gamma: 1,
-    });
+    // Not a value-by-value snapshot: the bench exists to change these tuned
+    // numbers (design §11), and a Save would otherwise turn this test red
+    // for nothing wrong.
+    expect(() => parseAlbedoRecipe(json)).not.toThrow();
   });
 
   it('rejects a missing key, naming the path', () => {

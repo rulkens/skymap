@@ -1,5 +1,5 @@
 /** No-seam (the box gets sliced two different ways and must agree) and the
- *  out-of-bounds guard (R-P3) — the decorator's two hard invariants. */
+ *  out-of-bounds guard — the decorator's two hard invariants. */
 import { describe, expect, it } from 'vitest';
 
 import { albedoRecipeImagerySource } from '../../../tools/textures/albedoRecipeImagerySource';
@@ -33,9 +33,12 @@ describe('albedoRecipeImagerySource', () => {
     const field = constantSunField({ west: -10, east: 10, south: -10, north: 10 }, g, RADIUS_M);
     const decorated = albedoRecipeImagerySource(primary, height, field, APPLY);
 
-    const box = { west: -1, east: 1, south: -0.5, north: 0.5 };
-    const widthPx = 16;
-    const heightPx = 8;
+    // 0.1° at 32 px is a 0.003125° pitch, below readSlopeLattice's ~0.011°
+    // post step: every pixel centre lands within one post of the shared
+    // edge, so a dropped margin would fail this, not slide through it.
+    const box = { west: -0.05, east: 0.05, south: -0.025, north: 0.025 };
+    const widthPx = 32;
+    const heightPx = 16;
     const whole = await decorated.readBox(box, widthPx, heightPx);
     expect(whole).not.toBeNull();
 
@@ -52,17 +55,18 @@ describe('albedoRecipeImagerySource', () => {
     expect(westHalf).not.toBeNull();
     expect(eastHalf).not.toBeNull();
 
+    const stitched = new Uint8Array(whole!.length);
     for (let py = 0; py < heightPx; py++) {
-      for (let px = 0; px < widthPx; px++) {
-        const half = px < widthPx / 2 ? westHalf! : eastHalf!;
-        const halfPx = px < widthPx / 2 ? px : px - widthPx / 2;
+      for (let halfPx = 0; halfPx < widthPx / 2; halfPx++) {
         for (let c = 0; c < 4; c++) {
-          const stitched = half[(py * (widthPx / 2) + halfPx) * 4 + c]!;
-          const wholeValue = whole![(py * widthPx + px) * 4 + c]!;
-          expect(Math.abs(stitched - wholeValue)).toBeLessThanOrEqual(1);
+          stitched[(py * widthPx + halfPx) * 4 + c] =
+            westHalf![(py * (widthPx / 2) + halfPx) * 4 + c]!;
+          stitched[(py * widthPx + widthPx / 2 + halfPx) * 4 + c] =
+            eastHalf![(py * (widthPx / 2) + halfPx) * 4 + c]!;
         }
       }
     }
+    expect(stitched).toEqual(whole);
   });
 
   it('a box outside the field bounds throws', async () => {

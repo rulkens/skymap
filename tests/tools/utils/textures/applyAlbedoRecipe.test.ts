@@ -43,7 +43,8 @@ describe('applyAlbedoRecipe', () => {
     const out = applyAlbedoRecipe(rgba, width, 1, FLAT_SAMPLE, NEUTRAL_APPLY);
     expect(out).toEqual(rgba);
 
-    const rand = Array.from({ length: 300 }, () => Math.floor(Math.random() * 256));
+    // Fixed, not Math.random(): a failure must reproduce on the next run.
+    const rand = Array.from({ length: 300 }, (_, i) => (i * 97 + 53) % 256);
     const randomWidth = rand.length / 3;
     const randomRgba = new Uint8Array(randomWidth * 4);
     for (let i = 0; i < randomWidth; i++) {

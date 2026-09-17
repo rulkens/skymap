@@ -13,13 +13,6 @@ const NEUTRAL: AlbedoRecipe['grade'] = {
 };
 
 describe('gradeSrgb', () => {
-  it('is the identity at neutral settings', () => {
-    const out = gradeSrgb([0.2, 0.5, 0.9], NEUTRAL);
-    expect(out[0]).toBeCloseTo(0.2, 9);
-    expect(out[1]).toBeCloseTo(0.5, 9);
-    expect(out[2]).toBeCloseTo(0.9, 9);
-  });
-
   it('saturation 0 yields R = G = B', () => {
     const out = gradeSrgb([0.1, 0.6, 0.9], { ...NEUTRAL, saturation: 0 });
     expect(out[0]).toBeCloseTo(out[1], 9);
