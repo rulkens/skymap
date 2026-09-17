@@ -11,6 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { checkFrameOrder } from '../../../../src/services/engine/frame/checkFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
 
 describe('checkFrameOrder — boot', () => {
@@ -19,6 +20,8 @@ describe('checkFrameOrder — boot', () => {
     // valid format yields the same id list `startLoop` reads off the assembled
     // rows.
     const targetIds = renderTargetRows('bgra8unorm').map((row) => row.id);
-    expect(() => checkFrameOrder(FRAME_ORDER, CONTENT_PASSES, targetIds)).not.toThrow();
+    expect(() =>
+      checkFrameOrder(FRAME_ORDER, CONTENT_PASSES, CORE_COMPUTES, targetIds),
+    ).not.toThrow();
   });
 });

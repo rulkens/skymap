@@ -1176,6 +1176,7 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     return {
       name,
       passes: [],
+      computes: [],
       assets: [],
       fades: [],
       labels: [],

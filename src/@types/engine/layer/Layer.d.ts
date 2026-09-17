@@ -9,6 +9,7 @@
 import type { Slice } from '@reduxjs/toolkit';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { ContentPass } from '../frame/ContentPass';
+import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
@@ -63,6 +64,9 @@ export type Layer<
   /** Appended after `CONTENT_PASSES` in `createLayers`; names are globally unique —
    * a duplicate throws at boot. */
   passes(runtime: Runtime): readonly ContentPass[];
+  /** Appended after `CORE_COMPUTES` in `createLayers`; names are globally unique —
+   * a duplicate throws at boot, and a name `FRAME_ORDER` never lists just never runs. */
+  computes?(runtime: Runtime): readonly ContentCompute[];
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
    * the slots behind them. */
   assets?(runtime: Runtime): readonly (AssetWiringRow | CompanionAssetRow)[];

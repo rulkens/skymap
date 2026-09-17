@@ -16,6 +16,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
@@ -386,6 +387,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
           pointRenderer: galaxyPointRenderer,
         } as unknown as GalaxyCatalogRuntime),
       ],
+      computes: CORE_COMPUTES,
     } as never,
     device,
     context,

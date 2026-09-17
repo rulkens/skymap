@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
-import { encodeFlowCompute } from '../../../../src/services/engine/frame/encodeFlowCompute';
+import { flowCompute } from '../../../../src/services/engine/frame/computes/flowCompute';
 import type { FlowFieldRenderer } from '../../../../src/@types/rendering/FlowFieldRenderer';
 import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
-import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { PassState } from '../../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 
 /** A spy flow renderer — only `encodeCompute` is exercised by these tests. */
 function spyRenderer(): FlowFieldRenderer & { encodeCompute: ReturnType<typeof vi.fn> } {
@@ -37,38 +38,44 @@ function readySlot() {
 }
 
 /**
- * Assemble the minimal `EngineState` the refactored `encodeFlowCompute` reads:
- * the renderer handle off `gpu`, the toggle off `settings.flow`, and the load
- * status off `assetSlots.flow`.
+ * Assemble the minimal `PassState` `flowCompute.encode` reads: the renderer
+ * handle off `gpu`, the toggle off `settings.flow`, and the load status off
+ * `assetSlots.flow`.
  */
 function stateStub(init: {
   renderer: FlowFieldRenderer | null;
   flow?: Partial<FlowSettings>;
   slot?: unknown;
-}): EngineState {
+}): PassState {
   return {
     gpu: { flowFieldRenderer: init.renderer },
     settings: { flow: flowStub(init.flow) },
     // `'slot' in init` (not `??`) so a caller can pass `slot: null` to model
     // the pre-wireSlots window — `null ?? readySlot()` would swallow it.
     assetSlots: { flow: 'slot' in init ? init.slot : readySlot() },
-  } as unknown as EngineState;
+  } as unknown as PassState;
 }
 
 const encoder = {} as unknown as GPUCommandEncoder;
 
 const NOW_MS = 12345;
+const ctxStub = { nowMs: NOW_MS } as unknown as ReadyFrameContext;
 
-describe('encodeFlowCompute', () => {
+describe('flowCompute', () => {
   it('skips when flow.enabled is false', () => {
     const renderer = spyRenderer();
-    encodeFlowCompute(encoder, stateStub({ renderer, flow: { enabled: false } }), NOW_MS);
+    flowCompute.encode(
+      encoder,
+      ctxStub,
+      stateStub({ renderer, flow: { enabled: false } }),
+      () => ({}),
+    );
     expect(renderer.encodeCompute).not.toHaveBeenCalled();
   });
 
   it('skips when the cube is not loaded', () => {
     const renderer = spyRenderer();
-    encodeFlowCompute(encoder, stateStub({ renderer, slot: null }), NOW_MS);
+    flowCompute.encode(encoder, ctxStub, stateStub({ renderer, slot: null }), () => ({}));
     expect(renderer.encodeCompute).not.toHaveBeenCalled();
   });
 
@@ -79,11 +86,11 @@ describe('encodeFlowCompute', () => {
     // the prelude's dispatch is untimed and its cost drains into whichever
     // render pass opens next, reading there as that pass regressing.
     const claim = () => ({});
-    encodeFlowCompute(encoder, state, NOW_MS, claim);
+    flowCompute.encode(encoder, ctxStub, state, claim);
     expect(renderer.encodeCompute).toHaveBeenCalledTimes(1);
     expect(renderer.encodeCompute).toHaveBeenCalledWith(
       encoder,
-      state.settings.flow,
+      (state as unknown as { settings: { flow: FlowSettings } }).settings.flow,
       NOW_MS,
       claim,
     );

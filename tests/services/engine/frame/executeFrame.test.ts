@@ -3,10 +3,11 @@
  *
  * The executor walks a `FrameStep[]` program into one command encoder, drawing
  * each render step's own pass list behind that pass's gate, dispatching
- * composites through the Compositor, and running compute steps through the
- * module-internal COMPUTE table. We mock the encoder, the render passes, the
- * compositor, and the content passes (object literals with spy `enabled`/`draw`),
- * so the whole thing runs without a real WebGPU device.
+ * composites through the Compositor, and resolving compute steps against the
+ * composed `state.computes` list (covered in `executeFrame.computes.test.ts`).
+ * We mock the encoder, the render passes, the compositor, and the content
+ * passes (object literals with spy `enabled`/`draw`), so the whole thing runs
+ * without a real WebGPU device.
  *
  * The behaviour-neutrality contract these tests pin (program order, one-pass-
  * per-non-empty-group under 'merged', per-layer timed passes under
@@ -247,9 +248,6 @@ function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
 type StateInit = {
   disabledPasses?: Record<string, boolean>;
   compositor?: { draw: ReturnType<typeof vi.fn> };
-  flowFieldRenderer?: unknown;
-  flowEnabled?: boolean;
-  flowSlot?: unknown;
   /** The probe row's subject this frame, and the renderer holding its probe. */
   probe?: { subject: string; probeOf: (id: string) => unknown };
 };
@@ -258,14 +256,12 @@ function makeState(init: StateInit = {}): EngineState {
   return {
     settings: {
       debug: { disabledPasses: init.disabledPasses ?? {} },
-      flow: { enabled: init.flowEnabled ?? false },
     },
     gpu: {
       compositor: init.compositor ?? { draw: vi.fn() },
-      flowFieldRenderer: init.flowFieldRenderer ?? null,
       meshBodyRenderer: init.probe ? { probeOf: init.probe.probeOf } : null,
     },
-    assetSlots: { flow: init.flowSlot ?? null },
+    computes: [],
     cubemapCaptures: { probe: { subject: init.probe?.subject ?? null } },
   } as unknown as EngineState;
 }
@@ -552,63 +548,6 @@ describe('executeFrame', () => {
     expect(hidden.draw).not.toHaveBeenCalled();
     expect(shownFalse.draw).toHaveBeenCalledTimes(1);
     expect(shownAbsent.draw).toHaveBeenCalledTimes(1);
-  });
-
-  it('compute steps dispatch through the COMPUTE table (flow → flowFieldRenderer.encodeCompute)', () => {
-    const encodeCompute = vi.fn();
-    const flowFieldRenderer = {
-      label: 'flowFieldRenderer',
-      encodeCompute,
-    };
-    const flowSlot = {
-      committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
-    };
-    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
-    const { args } = makeArgs({
-      program,
-      state: makeState({ flowFieldRenderer, flowEnabled: true, flowSlot }),
-    });
-    executeFrame(args);
-    expect(encodeCompute).toHaveBeenCalledTimes(1);
-    expect(encodeCompute.mock.calls[0]![0]).toBe(args.encoder);
-  });
-
-  // A compute step's prelude dispatch is GPU work no render toggle can reach, so
-  // it gets its own — keyed on the SUFFIXED slot name, because the bare 'flow'
-  // is the ribbon pass's toggle and one checkbox must not disable both.
-  it('a compute step toggles under its own suffixed name, not the bare step name', () => {
-    const flowSlot = {
-      committed: () => ({ kind: 'ready', req: undefined, value: undefined, loadedAtMs: 0 }),
-    };
-    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
-    const run = (disabledPasses: Record<string, boolean>): ReturnType<typeof vi.fn> => {
-      const encodeCompute = vi.fn();
-      const { args } = makeArgs({
-        program,
-        state: makeState({
-          flowFieldRenderer: { label: 'flowFieldRenderer', encodeCompute },
-          flowEnabled: true,
-          flowSlot,
-          disabledPasses,
-        }),
-      });
-      executeFrame(args);
-      return encodeCompute;
-    };
-    expect(run({ 'flow-compute': true })).not.toHaveBeenCalled();
-    expect(run({ flow: true })).toHaveBeenCalledTimes(1);
-  });
-
-  // `descriptorFor` marks a slot live for the frame, and the query set keeps its
-  // last write — so claiming for a step that then dispatches nothing would make
-  // the panel report stale ticks as a live reading.
-  it('claims a compute step’s timing slot only when the row actually dispatches', () => {
-    const descriptorFor = vi.fn(() => undefined);
-    const program: FrameStep[] = [{ kind: 'compute', name: 'flow' }];
-    // flow off ⇒ encodeFlowCompute returns before the renderer opens a pass.
-    const { args } = makeArgs({ program, state: makeState({ flowEnabled: false }) });
-    executeFrame({ ...args, timing: { ...args.timing, descriptorFor } });
-    expect(descriptorFor).not.toHaveBeenCalled();
   });
 
   it("attaches a clearing depth attachment on a depth target's first pass and loads on later passes", () => {

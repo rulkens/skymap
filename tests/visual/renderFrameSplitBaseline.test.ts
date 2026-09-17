@@ -27,6 +27,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
@@ -529,6 +530,7 @@ describe('renderFrame visual baseline', () => {
           texturedDisksPass(galaxyRuntime),
           filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as FilamentsRuntime),
         ],
+        computes: CORE_COMPUTES,
       } as never,
       device,
       context,

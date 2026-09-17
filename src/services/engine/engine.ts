@@ -321,8 +321,9 @@ export function createEngine(
     layerSagaTasks: [],
     selectionKindRows: [],
     // Empty until `createLayers` composes core's rows with every Layer's; no
-    // phase before it reads any of the four (`pickProgram` is `wireInput`).
+    // phase before it reads any of the five (`pickProgram` is `wireInput`).
     passes: [],
+    computes: [],
     assetRows: [],
     fadeRows: [],
     layerSlots: new Map(),
