@@ -98,6 +98,8 @@ pnpm-debug.log*
 !/data/raw/**/README.md
 !/data/raw/**/*.sha256
 !/data/raw/fonts/*.ttf
+# Hand-drawn scene-workbench mesh outlines: authored input, not a bake output.
+!/data/geo3d/**/*.outline.json
 # Vendored d3-celestial constellation line data — a committed raw JSON the
 # common globs above don't cover (they re-include only READMEs / checksums /
 # fonts / seeds). It is external source, not a build artefact, so it lives in

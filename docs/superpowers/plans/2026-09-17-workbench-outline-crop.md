@@ -260,15 +260,15 @@ export const GEO3D_SOURCE_DIR = 'data/geo3d';
 export function meshOutlinePath(groupId: string, assetId: string): string; // data/geo3d/<groupId>/<assetId>.outline.json
 ```
 
-- [ ] `npm install earcut`; add `@types/earcut` as a devDependency only if the installed version
+- [x] `npm install earcut`; add `@types/earcut` as a devDependency only if the installed version
       ships no `.d.ts`.
-- [ ] **`.gitignore` landmine:** `/data/**` is ignored (`.gitignore:94`), so the spec's committed
+- [x] **`.gitignore` landmine:** `/data/**` is ignored (`.gitignore:94`), so the spec's committed
       outline would silently never reach git. Add `!/data/geo3d/**/*.outline.json` beside the
       existing negations (`:95-97`) and verify with
       `git check-ignore -v data/geo3d/g/mesh.outline.json` (must print nothing).
-- [ ] Place `meshOutlinePath` in `geo3dLayout.ts`; update its module header, which today says every
+- [x] Place `meshOutlinePath` in `geo3dLayout.ts`; update its module header, which today says every
       path is under `public/data/`. No tests (types, a path join, config).
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: `normalizeRing`
 
