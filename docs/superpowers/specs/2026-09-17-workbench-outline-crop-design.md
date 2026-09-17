@@ -1,6 +1,6 @@
 # Scene-workbench mesh outline crop: design
 
-> **Status.** Brainstormed and ground-checked with the user; awaiting spec review.
+> **Status.** Ratified by the user; ready to plan.
 > **Date.** 2026-09-17.
 > **Relationship to prior work.** Part 1 of 2 toward landing the Søndermarken
 > 2019 leaf-on MVS mesh as a mesh body on Earth. Part 2 (decimate + atlas
