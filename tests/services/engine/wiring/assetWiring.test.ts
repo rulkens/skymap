@@ -7,11 +7,9 @@
  * `DemandCtx`, so the load policy for each asset is verified in isolation
  * without a full engine.
  *
- * Two of the predicates are bug-fix pins (see the module docstring on
- * `assetWiring.ts`): `filaments` follows `settings.filaments.enabled`, and
- * `structureCatalog` follows structure-category visibility — it loads when any
- * category has its ring (`structures.items[cat].enabled`) OR its label
- * (`.labelEnabled`) on.
+ * `structureCatalog`'s predicate is a bug-fix pin (see the module docstring on
+ * `assetWiring.ts`): it loads when any category has its ring
+ * (`structures.items[cat].enabled`) OR its label (`.labelEnabled`) on.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -98,12 +96,6 @@ describe('ASSET_WIRING membership', () => {
 });
 
 describe('ASSET_WIRING demand predicates', () => {
-  it('filaments demand follows settings.filaments.enabled (bug-fix pin)', () => {
-    const filaments = rowFor('filaments');
-    expect(filaments.demand(makeCtx({ settings: { filaments: { enabled: true } } }))).toBe(true);
-    expect(filaments.demand(makeCtx({ settings: { filaments: { enabled: false } } }))).toBe(false);
-  });
-
   it('cf4Density demand follows its field-enabled flag (default-off ⇒ false)', () => {
     const cf4 = rowFor('cf4Density');
     expect(
@@ -234,16 +226,6 @@ describe('ASSET_WIRING demand predicates', () => {
 });
 
 describe('ASSET_WIRING req builders', () => {
-  it('the filaments request drifts only across the small boundary', () => {
-    const row = rowFor('filaments');
-    // Polarity, not just drift: a flipped flag would fetch the wrong file at
-    // every tier while keeping the drift assertions below green.
-    expect(row.req('small')).toEqual({ small: true });
-    expect(row.req('large')).toEqual({ small: false });
-    expect(sameRequest(row.req('medium'), row.req('large'))).toBe(true);
-    expect(sameRequest(row.req('small'), row.req('medium'))).toBe(false);
-  });
-
   it("the famous-stars-meta row's request is undefined at every tier", () => {
     const row = rowFor('famousStarsMeta');
     for (const tier of ['small', 'medium', 'large'] as const) {

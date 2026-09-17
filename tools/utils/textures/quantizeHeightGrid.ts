@@ -1,4 +1,4 @@
-import { codeHeightM } from './codeHeightM';
+import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
 import { heightCode } from './heightCode';
 
 /** quantizeHeightGrid — snap every post onto the 0.1 m grid in place. The bake

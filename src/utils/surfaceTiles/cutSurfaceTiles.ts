@@ -13,6 +13,7 @@ import { equirectUvToDirection } from '../math/equirectUvToDirection';
 import { surfacePatchAnchor } from './surfacePatchAnchor';
 import { balanceSurfaceCut } from './balanceSurfaceCut';
 import { resolveHeightLattice } from './resolveHeightLattice';
+import { deepestResidentAncestor } from './deepestResidentAncestor';
 
 type ResidentLookupResult = {
   readonly slot: number;
@@ -254,23 +255,14 @@ export function cutSurfaceTiles(input: {
 
   /** Relief a node's subtree can reach, in METRES — the deepest resident
    *  height ancestor's `subtreeMin/MaxM`, which bounds every descendant by
-   *  construction. The datum when nothing is resident, as F1. A CONSTANT margin instead would inflate every patch near the eye
-   *  plane back into a screen-filling straddler, which is what R14 removed —
+   *  construction. The datum when nothing is resident, as F1. A CONSTANT
+   *  margin instead would inflate every patch near the eye plane back into a screen-filling straddler, which is what R14 removed —
    *  and so does the caller's clamp at the patch's own chord, since before
    *  deep tiles land the resident ancestor is the base level, whose range is
    *  the whole body's relief (R15). */
   function residentSubtreeRangeM(z: number, x: number, y: number): readonly [number, number] {
-    for (let levelDelta = 0; z - levelDelta > baseLevel; levelDelta++) {
-      const found = residentSlot({
-        product: 'height',
-        z: z - levelDelta,
-        x: x >> levelDelta,
-        y: y >> levelDelta,
-      });
-      if (found === null) continue;
-      return found.subtreeRangeM ?? DATUM_RANGE_M;
-    }
-    return DATUM_RANGE_M;
+    const hit = deepestResidentAncestor({ product: 'height', z, x, y }, baseLevel, residentSlot);
+    return hit?.found.subtreeRangeM ?? DATUM_RANGE_M;
   }
 
   /** Both products of one tile — height rides every albedo request (§6.1),
@@ -405,8 +397,8 @@ export function cutSurfaceTiles(input: {
  * `levelDelta` 0 the block is `1x1` and the leaf's rect is the ancestor's
  * own, unchanged.
  *
- * The walk doesn't stop at the first hit: it keeps climbing to find a
- * SECOND resident ancestor, strictly shallower than the first — the
+ * The walk doesn't stop at the first hit: it resumes one level above it to
+ * find a SECOND resident ancestor, strictly shallower than the first — the
  * crossfade's `fallback`, flattened into the leaf's own sub-rect the exact
  * same way. `readyAtMs` is only ever the first (resolved/primary) hit's own
  * timestamp; a shallower fallback's own upload time is irrelevant to when
@@ -421,39 +413,42 @@ function resolveCutResidency(input: {
 }): ResolvedTileResidency | null {
   const { z, x, y, baseLevel, residentSlot } = input;
 
-  let primary: {
-    slot: number;
-    atlasUvOrigin: readonly [number, number];
-    atlasUvScale: readonly [number, number];
-    readyAtMs: number;
-  } | null = null;
+  const primary = deepestResidentAncestor({ product: 'albedo', z, x, y }, baseLevel, residentSlot);
+  if (primary === null) return null;
 
-  for (let levelDelta = 0; z - levelDelta > baseLevel; levelDelta++) {
-    const ancestorZ = z - levelDelta;
-    const ancX = x >> levelDelta;
-    const ancY = y >> levelDelta;
-    const found = residentSlot({ product: 'albedo', z: ancestorZ, x: ancX, y: ancY });
-    if (found === null) continue;
-    const span = 1 << levelDelta;
-    const offsetU = (x - ancX * span) / span;
-    const offsetV = (y - ancY * span) / span;
-    const flattened: readonly [readonly [number, number], readonly [number, number]] = [
-      [
-        found.atlasUvOrigin[0] + offsetU * found.atlasUvScale[0],
-        found.atlasUvOrigin[1] + offsetV * found.atlasUvScale[1],
-      ],
-      [found.atlasUvScale[0] / span, found.atlasUvScale[1] / span],
-    ];
-    if (primary === null) {
-      primary = {
-        slot: found.slot,
-        atlasUvOrigin: flattened[0],
-        atlasUvScale: flattened[1],
-        readyAtMs: found.readyAtMs,
-      };
-      continue;
-    }
-    return { ...primary, fallback: { atlasUvOrigin: flattened[0], atlasUvScale: flattened[1] } };
-  }
-  return primary === null ? null : { ...primary, fallback: null };
+  const resumeDelta = primary.levelDelta + 1;
+  const fallback = deepestResidentAncestor(
+    { product: 'albedo', z: z - resumeDelta, x: x >> resumeDelta, y: y >> resumeDelta },
+    baseLevel,
+    residentSlot,
+  );
+  return {
+    slot: primary.found.slot,
+    ...flattenAtlasRect(primary.found, primary.levelDelta, x, y),
+    readyAtMs: primary.found.readyAtMs,
+    fallback:
+      fallback === null
+        ? null
+        : flattenAtlasRect(fallback.found, resumeDelta + fallback.levelDelta, x, y),
+  };
+}
+
+/** An ancestor's own atlas rect, narrowed to leaf `(x, y)`'s share of it —
+ *  the low `levelDelta` bits of each, in the row order the header derives. */
+function flattenAtlasRect(
+  found: NonNullable<ResidentLookupResult>,
+  levelDelta: number,
+  x: number,
+  y: number,
+): Pick<ResolvedTileResidency, 'atlasUvOrigin' | 'atlasUvScale'> {
+  const span = 1 << levelDelta;
+  const offsetU = (x - (x >> levelDelta) * span) / span;
+  const offsetV = (y - (y >> levelDelta) * span) / span;
+  return {
+    atlasUvOrigin: [
+      found.atlasUvOrigin[0] + offsetU * found.atlasUvScale[0],
+      found.atlasUvOrigin[1] + offsetV * found.atlasUvScale[1],
+    ],
+    atlasUvScale: [found.atlasUvScale[0] / span, found.atlasUvScale[1] / span],
+  };
 }

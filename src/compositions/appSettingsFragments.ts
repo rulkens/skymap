@@ -12,7 +12,6 @@
 import { bodiesSettingsFragment } from '../layers/body/settings/bodiesSettings';
 import { constellationsSettingsFragment } from '../layers/constellations/settings/constellationsSettings';
 import { earthSettingsFragment } from '../layers/body/settings/earthSettings';
-import { filamentsSettingsFragment } from '../layers/filaments/settings/filamentsSettings';
 import { flowSettingsFragment } from '../layers/flow/settings/flowSettings';
 import { milkyWaySettingsFragment } from '../layers/milkyWay/settings/milkyWaySettings';
 import { orbitTrailsSettingsFragment } from '../layers/body/settings/orbitTrailsSettings';
@@ -21,6 +20,7 @@ import { starCatalogsSettingsFragment } from '../layers/starCatalog/settings/sta
 import { structuresSettingsFragment } from '../layers/structure/settings/structuresSettings';
 import { volumesSettingsFragment } from '../layers/volume/settings/volumesSettings';
 import { zoneOfAvoidanceSettingsFragment } from '../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSettings';
+import { filamentsLayerSettings } from '../layers/filaments/settings/filamentsLayerSettings';
 import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/settings/galaxyCatalogLayerSettings';
 
 const UNFORMED_SETTINGS_FRAGMENTS = [
@@ -33,7 +33,6 @@ const UNFORMED_SETTINGS_FRAGMENTS = [
   sgrAStarLensingTuningSettingsFragment,
   milkyWaySettingsFragment,
   zoneOfAvoidanceSettingsFragment,
-  filamentsSettingsFragment,
   constellationsSettingsFragment,
   flowSettingsFragment,
 ] as const;
@@ -41,4 +40,5 @@ const UNFORMED_SETTINGS_FRAGMENTS = [
 export const APP_SETTINGS_FRAGMENTS = [
   ...UNFORMED_SETTINGS_FRAGMENTS,
   ...galaxyCatalogLayerSettings,
+  ...filamentsLayerSettings,
 ] as const;

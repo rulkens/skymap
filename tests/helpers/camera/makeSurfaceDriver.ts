@@ -40,6 +40,7 @@ export function makeSurfaceDriver() {
         fovYRad,
         bodyRadiusM,
         standoffRadii: SURFACE_STANDOFF_RADII,
+        groundRadiusAtM: () => bodyRadiusM,
         sceneUpLocal,
         focusPivotM: null,
         tuning,

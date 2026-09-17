@@ -215,6 +215,7 @@ describe('poseFrameConversion', () => {
         f.upBasis,
         f.radiusM,
         SURFACE_STANDOFF_RADII,
+        () => f.radiusM,
       );
 
       const before = worldPoseOf(f.pose, f.poseBasis, f.upBasis);
@@ -242,6 +243,7 @@ describe('poseFrameConversion', () => {
         f.upBasis,
         f.radiusM,
         SURFACE_STANDOFF_RADII,
+        () => f.radiusM,
       );
 
       const targetRelM = eyeRelM(back.target, f.positionMpc);
@@ -275,6 +277,7 @@ describe('poseFrameConversion', () => {
       IDENTITY,
       EARTH_RADIUS_M,
       SURFACE_STANDOFF_RADII,
+      () => EARTH_RADIUS_M,
     );
 
     const before = worldPoseOf(pose, IDENTITY, IDENTITY);
@@ -309,6 +312,7 @@ describe('poseFrameConversion', () => {
       IDENTITY,
       EARTH_RADIUS_M,
       SURFACE_STANDOFF_RADII,
+      () => EARTH_RADIUS_M,
     );
 
     expect(back.distance * SCALE_UNITS.MPC_TO_M).toBeCloseTo(
@@ -454,6 +458,7 @@ describe('toWorldArm across the limb', () => {
         IDENTITY,
         EARTH_RADIUS_M,
         SURFACE_STANDOFF_RADII,
+        () => EARTH_RADIUS_M,
       );
       const { eye, forward } = worldPoseOf(back, IDENTITY, IDENTITY);
 
@@ -485,7 +490,15 @@ describe('toWorldArm across the limb', () => {
   } {
     const state = bodyState([0, 0, 0], IDENTITY);
     const at = (tilt: number): CameraPose =>
-      toWorldArm(limbPose(tilt), state, IDENTITY, IDENTITY, EARTH_RADIUS_M, SURFACE_STANDOFF_RADII);
+      toWorldArm(
+        limbPose(tilt),
+        state,
+        IDENTITY,
+        IDENTITY,
+        EARTH_RADIUS_M,
+        SURFACE_STANDOFF_RADII,
+        () => EARTH_RADIUS_M,
+      );
     const inside = at(LIMB_TANGENT_RAD - epsRad);
     const outside = at(LIMB_TANGENT_RAD + epsRad);
     const a = worldPoseOf(inside, IDENTITY, IDENTITY).forward;

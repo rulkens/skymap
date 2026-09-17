@@ -1,6 +1,7 @@
 import type { SurfaceTileId } from '../../@types/data/SurfaceTileId';
 import type { SurfaceCutTile } from '../../@types/scene/SurfaceCutTile';
 import { HEIGHT_POSTS_PER_TILE } from '../../data/scene/heightTileFormat';
+import { deepestResidentAncestor } from './deepestResidentAncestor';
 
 /**
  * resolveHeightLattice — the height lattice a leaf samples (R14): the deepest
@@ -22,24 +23,27 @@ export function resolveHeightLattice(input: {
   const { z, x, y, baseLevel, minLevelDelta, residentSlot } = input;
 
   const MAX_LEVEL_DELTA = 7;
-  for (
-    let levelDelta = Math.max(0, minLevelDelta);
-    levelDelta <= MAX_LEVEL_DELTA && z - levelDelta > baseLevel;
-    levelDelta++
-  ) {
-    const ancX = x >> levelDelta;
-    const ancY = y >> levelDelta;
-    const found = residentSlot({ product: 'height', z: z - levelDelta, x: ancX, y: ancY });
-    if (found === null) continue;
-    const span = 1 << levelDelta;
-    // Posts, not cells: the leaf's block of the ancestor's 128 cells. Rows are
-    // the atlas's own north-to-south order, as tile `y` already is — no flip.
-    const cells = (HEIGHT_POSTS_PER_TILE - 1) >> levelDelta;
-    return {
-      slot: found.slot,
-      levelDelta,
-      originPosts: [(x - ancX * span) * cells, (y - ancY * span) * cells],
-    };
-  }
-  return null;
+  // The climb starts at the tile `minLevelDelta` levels up, so the shared
+  // helper's deltas are relative to THAT tile — the cap shifts with it.
+  const startDelta = Math.max(0, minLevelDelta);
+  const hit = deepestResidentAncestor(
+    { product: 'height', z: z - startDelta, x: x >> startDelta, y: y >> startDelta },
+    baseLevel,
+    residentSlot,
+    MAX_LEVEL_DELTA - startDelta,
+  );
+  if (hit === null) return null;
+
+  const levelDelta = startDelta + hit.levelDelta;
+  const ancX = x >> levelDelta;
+  const ancY = y >> levelDelta;
+  const span = 1 << levelDelta;
+  // Posts, not cells: the leaf's block of the ancestor's 128 cells. Rows are
+  // the atlas's own north-to-south order, as tile `y` already is — no flip.
+  const cells = (HEIGHT_POSTS_PER_TILE - 1) >> levelDelta;
+  return {
+    slot: hit.found.slot,
+    levelDelta,
+    originPosts: [(x - ancX * span) * cells, (y - ancY * span) * cells],
+  };
 }

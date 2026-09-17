@@ -22,6 +22,7 @@ import { eyeMpcOf } from '../../utils/camera/eyeMpcOf';
 import { centreLookingArm } from '../../utils/camera/centreLookingArm';
 import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 import { bodyFootprintRadiusM } from '../../utils/scene/bodyFootprintRadiusM';
+import { datumOnlyTerrainHeight } from '../../utils/camera/datumOnlyTerrainHeight';
 import { toBodyArm, toWorldArm } from '../../services/engine/camera/poseFrameConversion';
 import { bodyFocusDistance } from '../../services/engine/camera/bodyFocusDistance';
 import { hostOf } from '../../services/engine/camera/rungs/hostOf';
@@ -50,7 +51,12 @@ export function* watchFlyToLonLatSaga() {
     const basis = ORIENTATION_FRAMES[frame];
     const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
     const bodies = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
-    const host = hostOf({ body }, { bodies, poseBasis: basis, upBasis: basis });
+    // No terrain lookup reaches a saga (SagaContext carries none): a lon/lat fly-to
+    // over hilly terrain lands `rangeM` above the datum, not the ground under it.
+    const host = hostOf(
+      { body },
+      { bodies, poseBasis: basis, upBasis: basis, terrainHeightAt: datumOnlyTerrainHeight },
+    );
     if (host === null) return;
 
     const focus = yield* select(selectFocusRef);
@@ -73,7 +79,15 @@ export function* watchFlyToLonLatSaga() {
     // centre: only the target (surface point → centre) and distance change, and
     // the roll carrying the heading survives the re-aim untouched.
     const surface = lonLatFocusPose({ lonDeg, latDeg }, body, host.radiusM, rangeM, heading);
-    const world = toWorldArm(surface, host.state, basis, basis, host.radiusM, host.standoffRadii);
+    const world = toWorldArm(
+      surface,
+      host.state,
+      basis,
+      basis,
+      host.radiusM,
+      host.standoffRadii,
+      host.groundRadiusAtM,
+    );
     const to = centreLookingArm(
       eyeMpcOf(world, basis),
       host.state.positionMpc,

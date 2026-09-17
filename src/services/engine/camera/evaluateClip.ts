@@ -116,6 +116,7 @@ import { lerp } from '../../../utils/math/lerp';
 import { foldToWorld } from './rungs/foldToWorld';
 import { rowFor } from './rungs/rowFor';
 import { sameFrame } from './rungs/sameFrame';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.
@@ -547,7 +548,14 @@ function convertChannels(
   if (sameFrame(from, to)) return channels;
   // The clip's one steady basis serves as BOTH rung bases: its absolute angles
   // were authored through it, and a leg start has no separate up to read.
-  const ctx = { bodies: deps.bodies, poseBasis: deps.basis, upBasis: deps.basis };
+  // No terrain lookup reaches this pure evaluator (`ClipFrameOptions` carries
+  // none), so a clip authored to bank along a slope crosses it at datum height.
+  const ctx = {
+    bodies: deps.bodies,
+    poseBasis: deps.basis,
+    upBasis: deps.basis,
+    terrainHeightAt: datumOnlyTerrainHeight,
+  };
   const world = foldToWorld(rowFor(from).channels.decode(channels, from, ctx), ctx);
   return rowFor(to).channels.encode(world, to, ctx);
 }

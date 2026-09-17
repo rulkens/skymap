@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { filamentFetcher } from '../../../../src/services/loading/fetchers/filamentFetcher';
+import { filamentFetcher } from '../../../../src/layers/filaments/load/filamentFetcher';
 import { encodeFilaments } from '../../../../src/data/filament/filamentBinaryFormat';
 import { useFetchMock } from '../../../setup/fetchMock';
 

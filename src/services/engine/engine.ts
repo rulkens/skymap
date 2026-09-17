@@ -37,6 +37,7 @@ import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsys
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
 import { createInputAggregator } from './subsystems/inputAggregator';
+import { terrainHeightAtOf } from '../../utils/surfaceTiles/terrainHeightAtOf';
 import { FRAME_ORDER } from './frame/frameOrder';
 import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
@@ -173,7 +174,6 @@ export function createEngine(
       focusUniform: null,
       renderTargets: null,
       compositor: null,
-      filamentRenderer: null,
       constellationRenderer: null,
       envBrdfLut: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
@@ -295,7 +295,6 @@ export function createEngine(
     // `initGpu` already assigned them.
     assetSlots: {
       starCatalogs: new Map(),
-      filaments: null,
       famousStarsMeta: null,
       structureCatalog: null,
       cf4Density: null,
@@ -578,6 +577,7 @@ export function createEngine(
           rememberedTiltRad: tilt.rememberedTiltRad,
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
+          terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
         });
       },
     },

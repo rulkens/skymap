@@ -151,7 +151,6 @@ function makeState(): EngineState {
       // needs an opaque bindGroup handle.
       focusUniform: { bindGroup: {} as GPUBindGroup },
       renderTargets: null,
-      filamentRenderer: null,
       labelRenderer: null,
       markerLineRenderer: null,
       texturedQuadRenderer: null,

@@ -55,6 +55,8 @@ import { fetchSurfaceTileManifest } from '../../../../src/utils/network/fetchSur
 import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfaceTileBitmap';
 import { fetchHeightTile } from '../../../../src/utils/network/fetchHeightTile';
 import { baseLevelForTier } from '../../../../src/utils/surfaceTiles/baseLevelForTier';
+import { equirectUvToDirection } from '../../../../src/utils/math/equirectUvToDirection';
+import { codeHeightM } from '../../../../src/utils/surfaceTiles/codeHeightM';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,
@@ -604,6 +606,78 @@ describe('surfaceTileSubsystem height stream', () => {
 
     expect(vi.mocked(fetchSurfaceTileBitmap).mock.calls.length).toBe(albedoCalls + 1);
     expect(vi.mocked(fetchHeightTile).mock.calls.length).toBe(heightCalls + 1);
+  });
+});
+
+/**
+ * F2: `terrainHeightAt` composes `terrainHeightM` with this subsystem's own
+ * residency. The ONE-ENGAGED atlas (`atlas.bodyId`) is the only thing a
+ * `bodyId` is checked against, so the guard test below reuses residency a
+ * DIFFERENT body's query must not read — the leak F4's Mars row would
+ * otherwise hit against Earth's atlas.
+ */
+describe('surfaceTileSubsystem terrainHeightAt', () => {
+  // u/v small enough that `Math.floor(u * cols)` and `(1 - v) * rows` floor to
+  // 0 at BOTH z5 and z6 — the direction the manifest's z5-z6 band makes the
+  // subsystem look up the leaf at, whose z5 ancestor is exactly HEIGHT_TILE.
+  const DIR_IN_HEIGHT_TILE = equirectUvToDirection([0.01, 0.99]);
+  const UNIFORM_CODE = 0x204060;
+
+  /** Every post the same non-zero Terrain-RGB code — bilinear interpolation
+   *  of a uniform grid is that code's height everywhere, so the assertion
+   *  doesn't depend on landing exactly on a post. */
+  function uniformGridCodes(code: number): Uint8Array {
+    const gridCodes = new Uint8Array(HEIGHT_GRID_BYTES);
+    for (let i = 0; i < gridCodes.length; i += 3) {
+      gridCodes[i] = (code >> 16) & 0xff;
+      gridCodes[i + 1] = (code >> 8) & 0xff;
+      gridCodes[i + 2] = code & 0xff;
+    }
+    return gridCodes;
+  }
+
+  async function engagedWithUniformHeight(code: number) {
+    vi.mocked(fetchSurfaceTileManifest).mockResolvedValue(surfaceManifest(SURFACE_TILE_PX));
+    vi.mocked(fetchHeightTile).mockResolvedValue({
+      subtreeMinM: 0,
+      subtreeMaxM: 0,
+      geometricResidualM: 0,
+      gridCodes: uniformGridCodes(code),
+      bitmap: { close: () => {} } as unknown as ImageBitmap,
+    });
+
+    const subsystem = createSurfaceTileSubsystem({
+      device: recordingDevice(),
+      requestRender: () => {},
+    });
+    subsystem.plannerParams('earth', BASE_LEVEL);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    subsystem.update({
+      bodyId: 'earth',
+      plan: {
+        zWin: MIN_TILE_LEVEL,
+        requests: [{ tile: HEIGHT_TILE, screenPx: SURFACE_TILE_PX }],
+        subCameraDirLocal: SUB_CAMERA_EQUATOR_PRIME,
+      },
+    });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    return subsystem;
+  }
+
+  it('reads the resident grid through the deepest resident ancestor for the engaged body', async () => {
+    const subsystem = await engagedWithUniformHeight(UNIFORM_CODE);
+    expect(subsystem.terrainHeightAt('earth', DIR_IN_HEIGHT_TILE)).toBeCloseTo(
+      codeHeightM(UNIFORM_CODE),
+      6,
+    );
+  });
+
+  it('returns 0 for a body that is not engaged', async () => {
+    // Same residency the test above reads a real height from, so this pins
+    // the BODY guard specifically — not merely "nothing is resident".
+    const subsystem = await engagedWithUniformHeight(UNIFORM_CODE);
+    expect(subsystem.terrainHeightAt('earth', DIR_IN_HEIGHT_TILE)).not.toBe(0);
+    expect(subsystem.terrainHeightAt('planet', DIR_IN_HEIGHT_TILE)).toBe(0);
   });
 });
 

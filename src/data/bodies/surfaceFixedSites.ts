@@ -3,7 +3,7 @@
  * on that host it sits. Every rover sits at its current or final position
  * (plan R5), where the HiRISE site bands can show it (the Mars terrain bake
  * clips each band to a window around these rows).
- * Heights are measured from Mars's mean 3390 km sphere.
+ * `altitudeM` is the wheel lift above the terrain, not a height above the datum.
  */
 
 import { MESH_ASSETS } from './meshAssets.generated';

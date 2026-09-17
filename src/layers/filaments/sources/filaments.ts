@@ -1,5 +1,5 @@
-import type { FilamentSourceEntry } from '../../@types/data/filament/FilamentSourceEntry';
-import { Source } from '../source';
+import type { FilamentSourceEntry } from '../../../@types/data/filament/FilamentSourceEntry';
+import { Source } from '../../../data/source';
 
 export const FILAMENTS_ENTRY = {
   type: 'filament',

@@ -10,8 +10,6 @@
  */
 
 import type { AssetSlot } from '../../loading/AssetSlot';
-import type { FilamentCloud } from '../../data/filament/FilamentCloud';
-import type { FilamentReq } from '../../loading/FilamentReq';
 import type { FamousStarsPayload } from '../../loading/FamousStarsPayload';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
@@ -36,8 +34,6 @@ export type EngineAssetSlots = {
    * lives on the galaxyCatalog Layer's runtime.
    */
   starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
-  /** Two files across the three tiers, so it reloads only across the small boundary. */
-  filaments: AssetSlot<FilamentCloud, FilamentReq> | null;
   /** Eager because famous stars are a seeded catalog — no sibling `.bin`, and no tier, to key demand off. */
   famousStarsMeta: AssetSlot<FamousStarsPayload, void> | null;
   /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */

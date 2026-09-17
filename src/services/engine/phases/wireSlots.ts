@@ -4,8 +4,8 @@
  * this mints core's own and then lets the demand loop decide what loads:
  *
  *   1. `buildSlotsFromRegistry` — construct every core, non-external slot from
- *      the composed rows (sidecars: filaments, cluster catalog, CF-4 + MCPM
- *      volumes). Pure: no state writes, no loads.
+ *      the composed rows (sidecars: cluster catalog, CF-4 + MCPM volumes).
+ *      Pure: no state writes, no loads.
  *   2. `installSlots` — the single mutation site that writes each built slot
  *      onto its named `state.assetSlots` field.
  *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
@@ -42,7 +42,7 @@
  *
  * ### State writes
  *
- *   - `state.assetSlots.{filaments,structureCatalog,cf4Density,mcpm,flow,…}`
+ *   - `state.assetSlots.{structureCatalog,cf4Density,mcpm,flow,…}`
  *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
  *     `.meshBodies` (via `wireMeshBodySlots`) + `.syntheticVolumes` (DEV).
  *   - `state.subsystems.{loadProgress, structures, surfaceTiles}`.

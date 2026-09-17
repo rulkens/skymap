@@ -140,7 +140,6 @@ function makeProgressState(): EngineState {
   const assetSlots: EngineAssetSlots = {
     // A keyed family with a member, so the per-source map walk is exercised.
     starCatalogs: new Map([[Source.GaiaStars as SourceType, stubSlot('gaia-stars')]]),
-    filaments: stubSlot('filaments'),
     famousStarsMeta: stubSlot('famous-stars-meta'),
     structureCatalog: stubSlot('structure-catalog'),
     cf4Density: stubSlot('cf4Density'),

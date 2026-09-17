@@ -17,6 +17,7 @@ import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnaps
 import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
 import type { Destroyable } from '../../rendering/Destroyable';
 import type { BodyId } from '../../data/body/BodyId';
+import type { Vec3 } from '../../math/Vec3';
 
 export type SurfaceTileSubsystem = Destroyable & {
   /**
@@ -57,6 +58,14 @@ export type SurfaceTileSubsystem = Destroyable & {
      *  headroom for displaced geometry. Null for albedo. */
     readonly subtreeRangeM: readonly [number, number] | null;
   } | null;
+
+  /**
+   * Terrain height (metres above the datum) under a body-fixed direction —
+   * the CPU twin of the shader's `lattice.wesl` sampler (spec §8.4). `0` for
+   * a body other than the one currently ENGAGED (§ one engaged): body-generic
+   * by construction, so Mars (F4) is a registry row away, not a second query.
+   */
+  terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number;
 
   /**
    * Store this frame's `cutSurfaceTiles` cut for `earthPass.draw` to read —

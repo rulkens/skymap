@@ -51,6 +51,7 @@ function makeState(): EngineState {
         upBasis: ORIENTATION_FRAMES.ecliptic,
       },
     },
+    subsystems: { surfaceTiles: null },
   } as unknown as EngineState;
 }
 

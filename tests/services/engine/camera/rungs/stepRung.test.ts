@@ -22,6 +22,7 @@ import { SCENE_MESH_BODIES } from '../../../../../src/data/bodies/sceneMeshBodie
 import { SURFACE_FIXED_SITES } from '../../../../../src/data/bodies/surfaceFixedSites';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
 import { sitePointBodyFixed } from '../../../../../src/utils/camera/sitePointBodyFixed';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../../src/@types/math/Mat3';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
@@ -85,6 +86,7 @@ function ctxFor(bodies: ReadonlyMap<BodyId, BodyState>, focusBodyId: BodyId | nu
     bodies,
     poseBasis: IDENTITY,
     upBasis: IDENTITY,
+    terrainHeightAt: datumOnlyTerrainHeight,
     focusBodyId,
     pivot: { radiusMpc: null, floorMpc: 0 },
     viewportPx: [1920, 1080],

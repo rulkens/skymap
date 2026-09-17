@@ -3,8 +3,10 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS, elementsById } from '../../../../src/data/bodies/orbitalElements';
 import { SCENE_ANCHORS } from '../../../../src/data/bodies/sceneAnchors';
+import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SURFACE_FIXED_SITES } from '../../../../src/data/bodies/surfaceFixedSites';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { propagateElements } from '../../../../src/utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../../src/utils/orbit/keplerianPositionMpc';
@@ -119,6 +121,28 @@ describe('deriveBodyStates', () => {
     expect(io.positionMpc[0] - jupiter.positionMpc[0]).toBeCloseTo(ioRelative[0], 18);
     expect(io.positionMpc[1] - jupiter.positionMpc[1]).toBeCloseTo(ioRelative[1], 18);
     expect(io.positionMpc[2] - jupiter.positionMpc[2]).toBeCloseTo(ioRelative[2], 18);
+  });
+
+  it("routes a resident terrain height into a surface-fixed site's placement (F3a)", () => {
+    // A `simDays` untouched by every other test in this file: the one-deep
+    // memo hands back whichever call wins a given instant, so reusing one
+    // would silently read another test's terrain-less cached map.
+    const t = CONST_J2000 + 777_777;
+    const TERRAIN_M = 1000;
+    const states = deriveBodyStates(t, () => TERRAIN_M);
+    const site = SURFACE_FIXED_SITES.find((s) => s.id === 'curiosity')!;
+    const mars = SCENE_CELESTIAL_BODIES.find((b) => b.id === 'mars')!;
+    const host = states.get(site.hostId)!;
+    const rover = states.get(site.id)!;
+    // Host-to-site distance is rotation-invariant, so this pins the RADIUS the
+    // loop built without needing a second, terrain-less call at the same instant.
+    const distMpc = Math.hypot(
+      rover.positionMpc[0] - host.positionMpc[0],
+      rover.positionMpc[1] - host.positionMpc[1],
+      rover.positionMpc[2] - host.positionMpc[2],
+    );
+    const expectedM = mars.surface.datumRadiusM + TERRAIN_M + site.altitudeM;
+    expect(distMpc * SCALE_UNITS.MPC_TO_M).toBeCloseTo(expectedM, 3);
   });
 
   it('orientation is identity iff the body is untextured', () => {

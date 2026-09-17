@@ -7,7 +7,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { scalarVolumePass } from './scalarVolumePass';
-import { filamentsPass } from './filamentsPass';
 import { flowFieldPass } from './flowFieldPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
@@ -50,7 +49,6 @@ import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 export const CONTENT_PASSES: readonly ContentPass[] = [
   scalarVolumePass,
   zoneOfAvoidancePass,
-  filamentsPass,
   flowFieldPass,
   volumeUpsamplePass,
   zoneOfAvoidanceUpsamplePass,

@@ -21,7 +21,7 @@ import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
  * (`SCENE_S_STARS`) are all installed now.
  *
  * Filaments, flow, and volume fields have no store: filaments/flow held only a
- * `loaded` bit that mirrored their asset slot (read `slotReady(assetSlots.X)`
+ * `loaded` bit that mirrored their asset slot (read `slotFor(state, key)`
  * instead), and volume fields' only app-side state is settings in
  * `state.settings.volumes.items` (ADR 0006).
  */
