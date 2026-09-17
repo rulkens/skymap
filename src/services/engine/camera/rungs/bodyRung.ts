@@ -56,9 +56,7 @@ export const bodyRung: ClimbRow<'body'> = {
       id: frame.body,
       state,
       radiusM: body.surface.datumRadiusM,
-      // F3a returns `datum + terrainHeightM(dir)` here (spec §8.3); until then
-      // every direction answers the datum, so the floor is where it always was.
-      groundRadiusAtM: () => body.surface.datumRadiusM,
+      groundRadiusAtM: (dir) => body.surface.datumRadiusM + ctx.terrainHeightAt(frame.body, dir),
       standoffRadii: bodyStandoffRadii(body),
     };
   },

@@ -37,6 +37,7 @@ export function simulateCameraFrame(
     aspect: deps.canvas.width / deps.canvas.height,
     steps: state.subsystems.inputAggregator.drain(),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    terrainHeightAt: () => 0,
     clipEpoch,
     drivers: deps.drivers,
   });

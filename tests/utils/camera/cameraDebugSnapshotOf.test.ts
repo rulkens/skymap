@@ -54,6 +54,7 @@ const SNAP_COMMON = {
   gesture: null,
   rememberedTiltRad: 0,
   tuning: DEFAULT_CAMERA_TUNING,
+  terrainHeightAt: () => 0,
   deltas: {
     heading: QUIET_DELTA,
     tilt: QUIET_DELTA,
@@ -149,6 +150,26 @@ describe('cameraDebugSnapshotOf', () => {
     expect(snap.dofs.bodyId).toBe('earth');
     expect(snap.hOverR).toBeCloseTo(1.0, 6);
     expect(snap.altitudeM).toBeCloseTo(EARTH_RADIUS_M, 0);
+  });
+
+  it('subtracts the terrain under the eye from the altitude readout (F3a)', () => {
+    // Same geometry as the ENGAGED-body case above (altitudeM ≈ EARTH_RADIUS_M
+    // at terrain 0); a resident grid must read exactly TERRAIN_M lower, not
+    // the same eye-to-datum number regardless of what is drawn underneath.
+    const TERRAIN_M = 1500;
+    const snap = cameraDebugSnapshotOf({
+      storedFrame: { body: bodyId('earth') },
+      renderedPose: bodyFramed(bodyId('earth'), [0, 0, 0], [m(EARTH_RADIUS_M * 2), 0, 0]),
+      ...SNAP_COMMON,
+      terrainHeightAt: () => TERRAIN_M,
+      worldPose: poseWithEye(eyeAt(EARTH_RADIUS_M, 1.0)),
+      bodyStates: new Map([[bodyId('earth'), bodyState([0, 0, 0])]]),
+      lastRenderedSimDays: 100,
+      liveSimDays: 100,
+      time: LIVE_TIME,
+      activeDriverId: 'resting',
+    });
+    expect(snap.altitudeM).toBeCloseTo(EARTH_RADIUS_M - TERRAIN_M, 0);
   });
 
   it('falls back to the roster-wide nearest body while in the absolute arm', () => {

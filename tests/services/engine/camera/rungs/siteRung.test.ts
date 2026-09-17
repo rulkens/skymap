@@ -20,6 +20,7 @@ import { DEFAULT_CAMERA_TUNING } from '../../../../../src/data/camera/cameraTuni
 import { ORIENTATION_FRAMES } from '../../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../../src/data/defaults';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
+import { datumOnlyTerrainHeight } from '../../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
@@ -44,6 +45,7 @@ function ctxFor(focusBodyId: BodyId | null): RungCtx {
     bodies: BODIES,
     poseBasis: B,
     upBasis: B,
+    terrainHeightAt: datumOnlyTerrainHeight,
     focusBodyId,
     pivot: pivotFraming(null),
     viewportPx: [100, 100],

@@ -10,6 +10,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import { foldToWorld } from '../camera/rungs/foldToWorld';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 
 export function liveWorldPose(state: EngineState): CameraPose {
   return foldToWorld(state.cameraRuntime.outputs.displayed, {
@@ -18,5 +19,6 @@ export function liveWorldPose(state: EngineState): CameraPose {
     // up-basis — the same split `runFrame` feeds the draw path.
     poseBasis: ORIENTATION_FRAMES[state.settings.orientation],
     upBasis: state.cameraRuntime.outputs.upBasis,
+    terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
   });
 }

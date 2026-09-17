@@ -31,6 +31,7 @@ import { selectTimeState } from '../../../../src/state/time/selectors';
 import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -69,6 +70,9 @@ function inputsFor(h: CameraSimHarness, nowMs: number, over: Partial<StepInputs>
     aspect: 1,
     steps: h.state.subsystems.inputAggregator.drain(),
     bodies: deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>,
+    // No fixture here engages a real atlas, so the datum-only stub matches
+    // production's own `?? 0` miss (F3a, spec §8.3).
+    terrainHeightAt: () => 0,
     clipEpoch: h.state.cameraRuntime.epochs.clip,
     drivers: CAMERA_DRIVERS,
     ...over,
@@ -163,6 +167,7 @@ describe('stepCameraRuntime', () => {
           bodies: BODIES,
           poseBasis: B,
           upBasis: B,
+          terrainHeightAt: datumOnlyTerrainHeight,
           focusBodyId: 'earth',
           pivot: pivotFraming(EARTH_ROW),
           viewportPx: [1000, 1000],
@@ -177,7 +182,12 @@ describe('stepCameraRuntime', () => {
     expect(flat.displayed.frame).toEqual({ body: 'earth' });
     expect(flat.actions.map((a) => a.type)).toEqual([commitCameraPose.type]);
     const tiltOf = (out: typeof flat): number => {
-      const world = foldToWorld(out.displayed, { bodies: BODIES, poseBasis: B, upBasis: B });
+      const world = foldToWorld(out.displayed, {
+        bodies: BODIES,
+        poseBasis: B,
+        upBasis: B,
+        terrainHeightAt: datumOnlyTerrainHeight,
+      });
       return tiltOfPose(world, eyeMpcOf(world, B), EARTH);
     };
     expect(tiltOf(flat)).toBeLessThan(1e-6);

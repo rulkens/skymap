@@ -28,6 +28,7 @@ import { raySphereRoots } from '../../../../src/utils/math/raySphereRoots';
 import { SCENE_CELESTIAL_BODIES } from '../../../../src/data/bodies/sceneCelestialBodies';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { earthArm } from '../../../fixtures/earthArm';
@@ -67,6 +68,7 @@ function ctxOf(
       bodies: BODIES,
       poseBasis: B,
       upBasis: B,
+      terrainHeightAt: datumOnlyTerrainHeight,
       focusBodyId: focus?.type === 'body' ? (focus.id as BodyId) : null,
       pivot: pivotFraming(focus),
       viewportPx: [1000, 1000] as const,

@@ -107,6 +107,7 @@ import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
+import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
@@ -195,7 +196,12 @@ function parkAtCuriositySite(h: ReturnType<typeof makeHarness>): void {
   const site = { site: 'curiosity' as BodyId } as const;
   const parked = foldToWorld(
     { frame: site, pose: { siteId: site.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 2e5 } },
-    { bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B },
+    {
+      bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+      poseBasis: B,
+      upBasis: B,
+      terrainHeightAt: datumOnlyTerrainHeight,
+    },
   );
   h.seedPose(absoluteArm(parked));
   h.focus('curiosity');
@@ -724,7 +730,12 @@ describe('runFrame — the regime fold', () => {
     const SITE = { site: 'curiosity' as BodyId };
     const near = foldToWorld(
       { frame: SITE, pose: { siteId: SITE.site, headingRad: 0.4, elevationRad: 0.5, rangeM: 3e5 } },
-      { bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B },
+      {
+        bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
+        poseBasis: B,
+        upBasis: B,
+        terrainHeightAt: datumOnlyTerrainHeight,
+      },
     );
     h.seedPose(absoluteArm(near));
     h.store.dispatch(
@@ -848,6 +859,7 @@ describe('runFrame — the regime fold', () => {
       bodies: deriveBodyStates(SIM) as ReadonlyMap<BodyId, BodyState>,
       poseBasis: B,
       upBasis: B,
+      terrainHeightAt: datumOnlyTerrainHeight,
     };
     // 30 m out at 0.5 rad elevation: inside the site band, above its floors.
     const parked = foldToWorld(
