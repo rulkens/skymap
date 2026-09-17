@@ -424,13 +424,13 @@ the source's `transform`, and `provenance`= the source's plus`{ step: 'cropMesh'
 **Landmine:** in a worktree `public/data` is a symlink into main, so a real run writes main's
 `public/data/geo3d/`. The plan never runs the CLI against real data; the user does.
 
-- [ ] `cropMesh publishes a sibling asset and leaves the source untouched` — tmpdir cwd
+- [x] `cropMesh publishes a sibling asset and leaves the source untouched` — tmpdir cwd
       (`process.chdir`, forks pool, as `tests/tools/scene-recon/bakeMesh.test.ts` does): write a
       two-triangle `mesh.glb` via `packMeshGlb` (a tiny real JPEG from `sharp`), a manifest with
       that mesh asset, and an outline covering one triangle. Assert: manifest now has both ids;
       the cropped asset's `triangleCount` is 1; its last pipeline step is `cropMesh` with a
       12-hex version; the source asset object is unchanged.
-- [ ] Commit.
+- [x] Commit.
 
 ---
 
