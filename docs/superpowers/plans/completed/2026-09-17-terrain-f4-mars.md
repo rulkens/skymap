@@ -194,12 +194,12 @@ review: yes (draw order/depth, uniforms)
 
 - [x] Announce the bake (wall-clock and disk estimate from Task 2's probe) and run `npm run build-surface-tiles -- --body mars` in the background, global band first, then sites. Log to the SDD workspace. — Done 2026-09-17 (run 1 killed by a low-memory OOM mid-Endeavour z17, resumed as run 2; site bands re-baked again after the eye-check's P2/P4 fixes).
 - [x] After each run: Earth manifest mtime unchanged; `mars-tiles/manifest.json` holds every band with `builtFrom` for both products; the datum check printed within ±200 m. — Earth manifest mtime unchanged (baseline 17 Sep 02:20:46); 27,096 tiles indexed after the site re-bake; datum checks gale +47.4, jezero −12.3, gusev −1.3, endeavour −8.2 m, all within ±200 m.
-- [ ] Dev server on this worktree's port. User eye-check poses:
+- [x] Dev server on this worktree's port. User eye-check poses: — Poses 1–3 checked (headless shot rounds 1–3, v2 recipe re-bake; user "looks good" 2026-09-17). Pose 4 (Earth) NOT attested by the user; perf gate waived by the user.
   1. Mars from orbit: Olympus Mons and Valles Marineris read in relief; no colour step at tile engagement (O4).
   2. Hellas basin close up: no base-globe patches poking through (inner bound).
   3. Each rover site at 200 m altitude via `window.__skymapPerf.dispatch(flyToLonLat({ body: 'mars', … }))`: HiRISE detail, no seam to the Viking/MOLA surround.
   4. Earth unchanged at Søndermarken and the terminator.
-- [ ] Record rulings in the ledger; fold any constant changes into a commit.
+- [x] Record rulings in the ledger; fold any constant changes into a commit. — Ledger archived beside this plan; the albedo recipe (de-light + grade, `TILE_PREFIX` v2) landed as its own commits.
 
 ### Task 7: Rovers on the terrain — **gated on F3a's feature PR landing on main**
 
@@ -209,9 +209,9 @@ review: yes (camera/pose)
 
 F3a routes surface-fixed site placement (`deriveBodyStates.ts:84` and `sitePointBodyFixed.ts:12`, which must agree) through `terrainHeightM`. This task only verifies that on Mars.
 
-- [ ] Merge main into this branch; resolve conflicts in `surfaceTileSubsystem.ts`, `deriveBodyStates.ts`, `surfaceTilesPass.ts` in F3a's favour, re-applying this PR's lines.
-- [ ] Eye-check with the user: each rover stands on the ground (not buried, not floating) once tiles are resident; the site camera (`siteRung.ts:124`) frames it; the camera cannot pass under Mars terrain. Note the pop while tiles load (F3a returns the datum when nothing is resident, 1.5–6 km below Mars ground) and ask whether it is acceptable.
-- [ ] Any `groundOffsetM` correction goes in `MESH_ASSETS`, not in site rows. Commit.
+- [x] Merge main into this branch; resolve conflicts in `surfaceTileSubsystem.ts`, `deriveBodyStates.ts`, `surfaceTilesPass.ts` in F3a's favour, re-applying this PR's lines. — 1d5fe2861 (F3a), later 4412360f1 and c61bcc32c.
+- [x] Eye-check with the user: each rover stands on the ground (not buried, not floating) once tiles are resident; the site camera (`siteRung.ts:124`) frames it; the camera cannot pass under Mars terrain. Note the pop while tiles load (F3a returns the datum when nothing is resident, 1.5–6 km below Mars ground) and ask whether it is acceptable. — Ruled 2026-09-17: the live lookup froze rovers under ground on a paused clock (memo keyed on `simDays`), so site ground heights are BAKED (`siteGroundHeights.generated.ts`, 488fd32b4) and the pop is gone. The tile hole under Perseverance was the datum-centred frustum sphere (775a17a66). The site-arm eye can still sink under sloped terrain → handed off (`docs/backlog/2026-09-17-site-arm-eye-terrain-floor.md`).
+- [x] Any `groundOffsetM` correction goes in `MESH_ASSETS`, not in site rows. Commit. — None needed.
 
 ### Task 8: Docs
 
@@ -225,7 +225,7 @@ F3a routes surface-fixed site placement (`deriveBodyStates.ts:84` and `sitePoint
 
 **Deliverables**
 
-- `SURFACE_TILE_REGISTRY.mars` and `SURFACE_BODY_BAKES.mars` (`marsSurfaceBake.ts`, prefix `mars-tiles/v1`).
+- `SURFACE_TILE_REGISTRY.mars` and `SURFACE_BODY_BAKES.mars` (`marsSurfaceBake.ts`, prefix `mars-tiles/v2` after the albedo recipe).
 - `geoTiffHeightSource`, `geoTiffImagerySource`, `readGeoTiffRgbWindow` with their tests; `colourMatchedImagerySource` without a mandatory mask.
 - Raw-data registry rows + READMEs for MOLA, Viking and every baked HiRISE file.
 - Mars `reliefM` from measured data; textured base globe at the inner bound.
