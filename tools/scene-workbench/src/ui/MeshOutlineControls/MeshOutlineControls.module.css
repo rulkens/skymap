@@ -1,0 +1,28 @@
+.root {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: var(--font-size-sm);
+}
+
+.toggleLabel {
+  composes: toggleLabel from '../../../../../src/components/common/shared.module.css';
+  flex: 0 1 auto;
+  gap: 6px;
+  font-size: var(--font-size-sm);
+}
+
+.checkbox {
+  composes: checkbox from '../../../../../src/components/common/shared.module.css';
+}
+
+.readout {
+  font-family: var(--font-family-mono);
+  color: var(--color-fg-muted);
+}
+
+.error {
+  flex-basis: 100%;
+  color: var(--tool-status-bad, #e08a6a);
+}
