@@ -271,6 +271,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
             camPosLocalM: prepared.pose.eyeRelBodyM,
             viewProjLocal: prepared.mvpLocal,
             radiusM: prepared.radiusM,
+            reliefM: prepared.body.surface.reliefM,
             viewportPx: surfaceTilesView.viewportPx,
             residentSlot: surfaceTiles.residentSlot,
           });

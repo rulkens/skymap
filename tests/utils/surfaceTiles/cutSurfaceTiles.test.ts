@@ -12,7 +12,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { mat4 } from 'wgpu-matrix';
+import { mat4, mat4d } from 'wgpu-matrix';
 
 import { cutSurfaceTiles } from '../../../src/utils/surfaceTiles/cutSurfaceTiles';
 import { baseLevelForTier } from '../../../src/utils/surfaceTiles/baseLevelForTier';
@@ -25,8 +25,10 @@ import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import { SURFACE_TILE_LOD_BIAS, SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
 import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { composeBodyMvp } from '../../../src/utils/camera/composeBodyMvp';
+import { composeBodySlabMvp } from '../../../src/utils/camera/composeBodySlabMvp';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
 import { foregroundFrustum } from '../../../src/utils/camera/foregroundFrustum';
+import { MARS_DATUM_RADIUS_M } from '../../../src/data/bodies/marsSurfaceParams';
 import type { SurfaceTileId } from '../../../src/@types/data/SurfaceTileId';
 import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -37,6 +39,9 @@ const MIN_TILE_LEVEL = BASE_LEVEL + 1;
 const EARTH_RADIUS_KM = 6371;
 const FOV_Y_RAD = (40 * Math.PI) / 180;
 const VIEWPORT: [number, number] = [2560, 1440];
+
+/** No body bound: the fixtures' ranges are what the culls see. */
+const UNBOUNDED_RELIEF: readonly [number, number] = [-Infinity, Infinity];
 
 /** The residency record most fixtures below hand back; its rect is the whole
  *  atlas, which no assertion here reads. */
@@ -104,6 +109,7 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
+    reliefM: UNBOUNDED_RELIEF,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands: GLOBAL_BANDS,
@@ -162,6 +168,7 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
+    reliefM: UNBOUNDED_RELIEF,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands,
@@ -214,6 +221,7 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
     camPosLocalM,
     viewProjLocal,
     radiusM: 1,
+    reliefM: UNBOUNDED_RELIEF,
     viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands,
@@ -930,6 +938,7 @@ describe('cutSurfaceTiles', () => {
     // re-inflate every patch near the eye plane into a screen-filling
     // straddler, which is the inflation R14's bounding sphere removed.
     const RADIUS_M = EARTH_RADIUS_KM * 1000;
+    const EARTH_RELIEF_M: readonly [number, number] = [-430, 8849];
     const HEADROOM_BANDS: readonly SurfaceTileBand[] = [
       { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 15 },
     ];
@@ -941,12 +950,13 @@ describe('cutSurfaceTiles', () => {
         tile.product === 'height' ? { ...WHOLE_ATLAS, subtreeRangeM: range } : WHOLE_ATLAS;
     }
 
-    function cutWithRange(range: readonly [number, number]) {
-      const base = tiltedAt(20_000, 60);
+    function cutWithRange(range: readonly [number, number], altitudeM = 20_000, tiltDeg = 60) {
+      const base = tiltedAt(altitudeM, tiltDeg);
       return cutSurfaceTiles({
         ...base,
         camPosLocalM: base.camPosLocalM.map((c) => c * RADIUS_M) as Vec3,
         radiusM: RADIUS_M,
+        reliefM: EARTH_RELIEF_M,
         bands: HEADROOM_BANDS,
         residentSlot: residentWithRange(range),
       });
@@ -956,50 +966,53 @@ describe('cutSurfaceTiles', () => {
      *  requests itself, leaf or not, so this is the cull's own output. The
      *  CUT is not: a newly-visible child turns its parent from a leaf into an
      *  interior node, so the drawn set legitimately changes shape. */
-    function survivors(range: readonly [number, number]): Set<string> {
+    function survivors(
+      range: readonly [number, number],
+      altitudeM?: number,
+      tiltDeg?: number,
+    ): Set<string> {
       return new Set(
-        cutWithRange(range).requests.requests.map(
+        cutWithRange(range, altitudeM, tiltDeg).requests.requests.map(
           (r) => `${r.tile.product}/${r.tile.z}/${r.tile.x}/${r.tile.y}`,
         ),
       );
     }
 
-    /** Two nodes read off the walk's own output at this pose: the first flips
-     *  from culled to kept once Earth's relief is in the margin, the second
-     *  stays culled unless the margin is wrong. Pinned rather than counted —
-     *  a size comparison passes on any inflation, which is the bug. */
-    const ADMITTED_BY_RELIEF = 'height/8/143/53';
+    /** Read off the walk at this pose and checked against exact geometry
+     *  (patch sampled 41×41 × 21 heights, skirts included, against the side
+     *  planes): with Earth's relief a point sits 92 m inside the frustum, on
+     *  the datum every point is 25 m outside, and the flat walk reaches its
+     *  parent. Pinned rather than counted — a size comparison passes on any
+     *  inflation, which is the bug. */
+    const ADMITTED_BY_RELIEF = 'height/13/4546/1702';
+    /** 166 km outside the frustum at any height in Earth's relief. */
     const CULLED_BY_RELIEF = 'height/7/69/26';
-    /** Large enough that the clamp saturates at every node's own chord — and
-     *  exactly what a range left in METRES would do to the same margin. */
-    const SATURATING: readonly [number, number] = [0, 5_000_000];
-    /** Well outside this pose's frustum: no margin the clamp allows reaches
-     *  it, whatever the resident ancestor claims. */
-    const CULLED_AT_ANY_RANGE = 'height/10/555/214';
 
     it('admits patches a flat datum culls, and culls none it kept', () => {
       const flat = survivors([0, 0]);
-      const relief = survivors([-430, 8849]);
+      const relief = survivors(EARTH_RELIEF_M);
 
       for (const id of flat) expect(relief.has(id), `${id} survived the datum cull`).toBe(true);
       expect(flat.has(ADMITTED_BY_RELIEF)).toBe(false);
       expect(relief.has(ADMITTED_BY_RELIEF)).toBe(true);
     });
 
-    it('measures the subtree range in unit-sphere length, not metres', () => {
-      // Undivided, Earth's 8849 m reads as 8849 RADII: past every patch's
-      // chord, so the clamp saturates and the cull collapses onto the
-      // saturating case — which keeps a node the real relief does not.
-      expect(survivors(SATURATING).has(CULLED_BY_RELIEF)).toBe(true);
-      expect(survivors([-430, 8849]).has(CULLED_BY_RELIEF)).toBe(false);
+    it('keeps a deep patch whose coarse range reaches past its own chord', () => {
+      // 2 km up, before deeper headers land: this z15 patch's summit-height
+      // points sit 1.1 km inside the frustum and its parent survives, so a
+      // pad capped at the ~850 m chord would leave a hole.
+      expect(survivors(EARTH_RELIEF_M, 2_000, 70).has('height/15/18204/6824')).toBe(true);
     });
 
-    it('clamps the margin at the patch’s own corner chord', () => {
-      // Unclamped, a range this absurd (157 000 Earth radii) sweeps 3752
-      // nodes into frustum against 254 — the eye-plane inflation R14's
-      // bounding sphere removed, back through the relief margin.
-      expect(survivors([0, 1e12]).has(CULLED_AT_ANY_RANGE)).toBe(false);
-      expect(survivors(SATURATING).has(CULLED_AT_ANY_RANGE)).toBe(false);
+    it('measures the subtree range in unit-sphere length, not metres', () => {
+      // Undivided, Earth's 8849 m reads as 8849 RADII and admits everything.
+      expect(survivors(EARTH_RELIEF_M).has(CULLED_BY_RELIEF)).toBe(false);
+    });
+
+    it('clips a subtree range to the body’s own relief', () => {
+      // Unclipped, a range this absurd (157 000 Earth radii) sweeps every
+      // node on the near hemisphere into frustum.
+      expect(survivors([0, 1e12])).toEqual(survivors([0, EARTH_RELIEF_M[1]]));
     });
   });
 
@@ -1028,7 +1041,7 @@ describe('cutSurfaceTiles', () => {
 
   describe('relief headroom in the horizon cull', () => {
     // Bug repro: Everest, ~2 m above the datum (the orbit target sinks to sea
-    // level — F2), tilted 10-20° above horizontal — a real EOX z8-13 deep
+    // level — F2), looking just below the horizon — a real EOX z8-13 deep
     // band (public/data/images/earth-tiles/manifest.json) plus the shallow
     // global band underneath. Unlike the frustum-sphere test two blocks up,
     // step 1 ("1. Horizon" in `probe`) never read the relief headroom: it culled
@@ -1062,7 +1075,7 @@ describe('cutSurfaceTiles', () => {
     }
 
     function everestRequests(range: readonly [number, number]) {
-      const base = tiltedAt(2, 10, 86.955, 27.932);
+      const base = tiltedAt(2, 85, 86.955, 27.932);
       const { maxLevel: _maxLevel, ...input } = base;
       const result = cutSurfaceTiles({
         ...input,
@@ -1077,10 +1090,11 @@ describe('cutSurfaceTiles', () => {
       );
     }
 
-    // Hand-located via the real walk at this exact pose (not re-derived from
-    // the horizon formula): the one node the flat-datum cull drops and
-    // Everest's own relief admits, stable across 10-20° tilt.
-    const ADMITTED_BY_RELIEF = 'height/13/6076/1412';
+    // Read off the walk at this pose and checked against exact geometry
+    // (patch sampled densely, sight lines tested against the datum sphere):
+    // every datum point lies below the horizon, a summit at Everest's height
+    // sits 3 km inside the frustum and in sight; stable across 80-90° tilt.
+    const ADMITTED_BY_RELIEF = 'height/13/6074/1410';
 
     it('never requests the patch on a flat datum at this pose', () => {
       expect(everestRequests([0, 0]).has(ADMITTED_BY_RELIEF)).toBe(false);
@@ -1170,14 +1184,6 @@ describe('cutSurfaceTiles', () => {
       },
     ];
 
-    function tileUvBounds(z: number, x: number, y: number) {
-      const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
-      const rows = cols / 2;
-      const vNorth = 1 - y / rows;
-      const vSouth = 1 - (y + 1) / rows;
-      return { u0: x / cols, u1: (x + 1) / cols, v0: vSouth, v1: vNorth };
-    }
-
     // Full-residency mock: anything the walk is allowed to request resolves —
     // isolates the walk's cull/refine logic (under test) from any residency-
     // race concern (the exact-repro report's §1 already ruled that out).
@@ -1185,7 +1191,6 @@ describe('cutSurfaceTiles', () => {
       // Height everywhere — the complete pyramid the bake owes the walk — so
       // this fixture keeps testing the bbox cull rather than the height gate.
       if (tile.product === 'height') return WHOLE_ATLAS;
-      const { u0, u1, v0, v1 } = tileUvBounds(tile.z, tile.x, tile.y);
       if (surfaceTileInBand(bands, SURFACE_TILE_PX, tile.z, tile.x, tile.y)) {
         return {
           slot: 0,
@@ -1256,6 +1261,7 @@ describe('cutSurfaceTiles', () => {
         camPosLocalM,
         viewProjLocal,
         radiusM: 1,
+        reliefM: UNBOUNDED_RELIEF,
         viewportPx,
         baseLevel: BASE_LEVEL,
         bands,
@@ -1299,6 +1305,131 @@ describe('cutSurfaceTiles', () => {
         }
       }
       expect(visible).toBeGreaterThan(0);
+    });
+  });
+
+  describe('frustum sphere centred on the height-range midpoint (Jezero repro)', () => {
+    // Bug repro, root-caused in the F4 investigation: at Jezero the ground
+    // sits ~4,250-4,550 m above the 3,390 km datum. A datum-CENTRED node
+    // sphere (the old code) sits kilometres underground near the eye, and its
+    // radius — capped at the patch's own corner chord — can never reach up
+    // to the real surface, so the bottom frustum plane culls the tile under
+    // the rover. Bounds copied inline from the Jezero band in
+    // public/data/images/mars-tiles/manifest.json (min 10, max 17).
+    const R = MARS_DATUM_RADIUS_M;
+    const MARS_BASE_LEVEL = baseLevelForTier('mars', 'large');
+    const JEZERO_BAND: SurfaceTileBand = {
+      uBounds: [(77.20367431640625 + 180) / 360, (77.2613525390625 + 180) / 360],
+      vBounds: [(18.41033935546875 + 90) / 180, (18.4625244140625 + 90) / 180],
+      min: 10,
+      max: 17,
+    };
+    const JEZERO_BANDS: readonly SurfaceTileBand[] = [JEZERO_BAND];
+    // Every tile's SHGT header, real bake or not: the walk only ever reads
+    // the deepest resident ancestor's own subtreeRangeM.
+    const RESIDENT_RANGE: readonly [number, number] = [4246, 4277];
+    const residentSlot = (tile: SurfaceTileId) =>
+      tile.product === 'height' ? { ...WHOLE_ATLAS, subtreeRangeM: RESIDENT_RANGE } : WHOLE_ATLAS;
+
+    const SITE_LAT_DEG = 18.43687;
+    const SITE_LON_DEG = 77.23205;
+    const SITE_GROUND_M = 4260;
+    const RANGE_M = 53.6;
+    const ELEVATION_RAD = 0.863;
+    const FOV_Y_RAD = Math.PI / 3;
+    const VIEWPORT: [number, number] = [3456, 1886];
+
+    const lat = (SITE_LAT_DEG * Math.PI) / 180;
+    const lon = (SITE_LON_DEG * Math.PI) / 180;
+    const up: Vec3 = [Math.cos(lat) * Math.cos(lon), Math.cos(lat) * Math.sin(lon), Math.sin(lat)];
+    const east: Vec3 = [-Math.sin(lon), Math.cos(lon), 0];
+    const north: Vec3 = [
+      up[1] * east[2] - up[2] * east[1],
+      up[2] * east[0] - up[0] * east[2],
+      up[0] * east[1] - up[1] * east[0],
+    ];
+    const addScaled = (a: Vec3, b: Vec3, s: number): Vec3 => [
+      a[0] + b[0] * s,
+      a[1] + b[1] * s,
+      a[2] + b[2] * s,
+    ];
+    const anchor: Vec3 = [
+      up[0] * (R + SITE_GROUND_M),
+      up[1] * (R + SITE_GROUND_M),
+      up[2] * (R + SITE_GROUND_M),
+    ];
+
+    /** The pose's `cutSurfaceTiles` input at a given heading (0 = north, +east). */
+    function poseAtHeading(headingRad: number) {
+      const dirH = addScaled(
+        [
+          north[0] * Math.cos(headingRad),
+          north[1] * Math.cos(headingRad),
+          north[2] * Math.cos(headingRad),
+        ],
+        east,
+        Math.sin(headingRad),
+      );
+      let eye = addScaled(anchor, dirH, RANGE_M * Math.cos(ELEVATION_RAD));
+      eye = addScaled(eye, up, RANGE_M * Math.sin(ELEVATION_RAD));
+
+      // Mirrors composeBodySlabMvp's own contract (see its header): `view`'s
+      // eye-translation is cancelled by re-applying `+eye` so the resulting
+      // `eyeView` is a pure rotation, ready to receive eye-RELATIVE points —
+      // exactly what the model half of composeBodySlabMvp then supplies.
+      const view = mat4d.lookAt(eye, anchor, up, new Float64Array(16));
+      const eyeView = mat4d.multiply(
+        view,
+        mat4d.translation(eye, new Float64Array(16)),
+        new Float64Array(16),
+      );
+      const proj = mat4d.perspective(
+        FOV_Y_RAD,
+        VIEWPORT[0] / VIEWPORT[1],
+        0.05,
+        1e7,
+        new Float64Array(16),
+      );
+      const slabVp = mat4d.multiply(proj, eyeView, new Float64Array(16)) as Float64Array;
+      const viewProjLocal = composeBodySlabMvp(slabVp, eye, R);
+
+      return {
+        camPosLocalM: eye,
+        viewProjLocal,
+        viewportPx: VIEWPORT,
+        radiusM: R,
+        reliefM: UNBOUNDED_RELIEF,
+        baseLevel: MARS_BASE_LEVEL,
+        bands: JEZERO_BANDS,
+        tilePx: SURFACE_TILE_PX,
+        lodBias: 1,
+        residentSlot,
+      };
+    }
+
+    /** Does any drawn leaf, at any level, cover the site direction? Mirrors
+     *  the ancestor-fallback shape of `cut` itself: the rover's own tile need
+     *  not be the deepest one drawn, only SOME ancestor along its column. */
+    function siteIsCovered(cut: ReturnType<typeof cutSurfaceTiles>['cut']): boolean {
+      const uv: [number, number] = [SITE_LON_DEG / 360 + 0.5, SITE_LAT_DEG / 180 + 0.5];
+      for (let z = JEZERO_BAND.max; z > MARS_BASE_LEVEL; z--) {
+        const [x, y] = surfaceTileXyForUv(uv, z, SURFACE_TILE_PX);
+        if (cut.some((c) => c.id.z === z && c.id.x === x && c.id.y === y)) return true;
+      }
+      return false;
+    }
+
+    it('draws a leaf under the rover at the heading the datum-centred sphere used to cull', () => {
+      const result = cutSurfaceTiles(poseAtHeading(0.785));
+      expect(siteIsCovered(result.cut)).toBe(true);
+    });
+
+    it('draws a leaf under the rover across a spread of headings', () => {
+      for (const headingDeg of [0, 45, 90, 135, 180, 225, 270, 315]) {
+        const headingRad = (headingDeg * Math.PI) / 180;
+        const result = cutSurfaceTiles(poseAtHeading(headingRad));
+        expect(siteIsCovered(result.cut), `heading ${headingDeg}deg`).toBe(true);
+      }
     });
   });
 });

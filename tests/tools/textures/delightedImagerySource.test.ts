@@ -54,7 +54,7 @@ function tiltedHeightSource(gradientMPerDeg: number): HeightSource {
     maxLevel: Number.POSITIVE_INFINITY,
     coverage: [{ west: -180, east: 180, south: -90, north: 90 }],
     provenance: { sourceId: 'tilted-plane', attribution, vintage: 'n/a' },
-    async readGrid(z, i0, j0, nx, ny) {
+    async readGrid(z, _i0, j0, nx, ny) {
       const step = heightLatticeStepDeg(z);
       const out = new Float32Array(nx * ny);
       for (let j = 0; j < ny; j++) {
