@@ -17,7 +17,7 @@ import type { Label2DProducer } from '../subsystems/Label2DProducer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
-import type { LayerUiSection } from './LayerUiSection';
+import type { LayerUi } from './LayerUi';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
@@ -49,8 +49,8 @@ export type Layer<
   readonly sources?: Sources;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
-  /** Rendered by `SettingsPanel`: a hand-written component, never generated. */
-  readonly ui?: LayerUiSection;
+  /** The two panel surfaces `SettingsPanel`/`DebugPanel` render for this Layer. */
+  readonly ui?: LayerUi;
 
   // Lifecycle. Every member below is invoked from exactly one place —
   // `instantiateLayer` — which is where to look to see the call shapes together.
