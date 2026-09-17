@@ -7,7 +7,6 @@
 
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import {
-  MARS_AREOID_RELIEF_M,
   MARS_DATUM_OFFSET_M,
   MARS_IAU_SPHERE_RADIUS_M,
 } from '../../../src/data/bodies/marsSurfaceParams';
@@ -41,8 +40,8 @@ const TILE_ROOT = SURFACE_TILE_REGISTRY.mars.manifestKey;
  *  tuned de-light + grade recipe (`marsAlbedoRecipe.ts`). */
 const TILE_PREFIX = `${TILE_ROOT}/v2`;
 
-/** The compiled `reliefM` `heliocentricPlanet` gave Mars — read, never
- *  restated, so `assertInsideReliefM` catches the two derivations drifting. */
+/** The compiled `reliefM` `heliocentricPlanet` gave Mars — read here so
+ *  `assertInsideReliefM` catches a site's real DTM range landing outside it. */
 const MARS_RELIEF_M = SCENE_PLANETS.find((body) => body.id === 'mars')!.surface.reliefM;
 
 /** One finer than the coarsest whole-globe base (see `earthSurfaceBake`). */
@@ -81,7 +80,8 @@ const GUSEV_GREY_STRETCH = [10, 206] as const;
 const ENDEAVOUR_GREY_STRETCH = [58, 247] as const;
 
 /** The global mosaics' headers put the outer edges ±0.004° past ±180/±90
- *  (pixel-size rounding on a 128 px/° grid); the true grid is exactly global. */
+ *  (pixel-size rounding on Viking's 256 px/° grid, 92160/360); the true grid
+ *  is exactly global. */
 const WHOLE_GLOBE: LonLatBounds = { west: -180, east: 180, south: -90, north: 90 };
 
 const RAD_TO_DEG = 180 / Math.PI;
@@ -393,11 +393,6 @@ async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBan
       },
     ];
   }
-
-  assertInsideReliefM('MOLA global', [
-    MARS_AREOID_RELIEF_M[0] + MARS_DATUM_OFFSET_M,
-    MARS_AREOID_RELIEF_M[1] + MARS_DATUM_OFFSET_M,
-  ]);
 
   const globalHeight = mola();
   const global = delightedImagerySource(

@@ -256,10 +256,11 @@ export function cutSurfaceTiles(input: {
   /** Relief a node's subtree can reach, in METRES — the deepest resident
    *  height ancestor's `subtreeMin/MaxM`, which bounds every descendant by
    *  construction. The datum when nothing is resident, as F1. A CONSTANT
-   *  margin instead would inflate every patch near the eye plane back into a screen-filling straddler, which is what R14 removed —
-   *  and so does the caller's clamp at the patch's own chord, since before
-   *  deep tiles land the resident ancestor is the base level, whose range is
-   *  the whole body's relief (R15). */
+   *  margin instead would inflate every patch near the eye plane back into a
+   *  screen-filling straddler, which is what R14 removed — and so does the
+   *  caller's clamp at the patch's own chord, since before deep tiles land
+   *  the resident ancestor is the base level, whose range is the whole
+   *  body's relief (R15). */
   function residentSubtreeRangeM(z: number, x: number, y: number): readonly [number, number] {
     const hit = deepestResidentAncestor({ product: 'height', z, x, y }, baseLevel, residentSlot);
     return hit?.found.subtreeRangeM ?? DATUM_RANGE_M;
