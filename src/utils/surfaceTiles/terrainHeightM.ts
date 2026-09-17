@@ -3,9 +3,7 @@ import type { ResidentHeightLookup } from '../../@types/scene/ResidentHeightLook
 import { SURFACE_TILE_PX } from '../../data/bodies/surfaceTileParams';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../data/bodies/texturePrimeMeridianU';
 import { HEIGHT_CODE_BYTES, HEIGHT_GRID_POSTS_PER_EDGE } from '../../data/scene/heightTileFormat';
-// tools/ → src/ import, precedented by describeGalaxy.ts's `gaussian`: the code→metres
-// mapping must stay the bake's and the CPU's one function, not a second copy in src/.
-import { codeHeightM } from '../../../tools/utils/textures/codeHeightM';
+import { codeHeightM } from './codeHeightM';
 import { deepestResidentAncestor } from './deepestResidentAncestor';
 import { latticeHeightSample } from './latticeHeightSample';
 import { surfaceTileColumns } from './surfaceTileColumns';
@@ -19,10 +17,9 @@ const GRID_CELLS_PER_EDGE = HEIGHT_GRID_POSTS_PER_EDGE - 1;
 /**
  * terrainHeightM — bilinear terrain height (metres above the datum) under a
  * body-fixed direction, read from the deepest resident ancestor's 17×17 SHGT
- * grid (spec §8.4, F1). A zero `dirBodyFixed` reaches this from three
- * unguarded call sites in production; normalizing it would hand `asin`/`atan2`
- * a `NaN` and that becomes a `NaN` camera position, so it is defined here as
- * the same "0" every other miss returns, never derived.
+ * grid (spec §8.4). Three production call sites can pass a degenerate
+ * direction; it must answer 0 like any other miss, because a `NaN` here
+ * becomes a `NaN` camera position and a black screen with no error.
  */
 export function terrainHeightM(
   dirBodyFixed: Readonly<Vec3>,
@@ -32,11 +29,14 @@ export function terrainHeightM(
 ): number {
   const [dx, dy, dz] = dirBodyFixed;
   const magM = Math.hypot(dx, dy, dz);
-  if (magM === 0) return 0;
+  // `isFinite`, not `=== 0`: a NaN or Infinity component has to take this exit
+  // too, or it survives `atan2`/`asin` and lands in the camera position.
+  if (!Number.isFinite(magM) || magM === 0) return 0;
 
-  // Exact inverse of `equirectUvToDirection`'s `lon/lat → direction` (this
-  // codebase's one body-local convention, atan2/asin with local-Z the pole),
-  // then back through the shared prime-meridian registration to mesh uv.
+  // Exact inverse of `equirectUvToDirection`'s `lon/lat → direction` (atan2/asin
+  // with local-Z the pole), then back through the shared prime-meridian
+  // registration to mesh uv. Co-moves with that function and with
+  // `directionToLonLatDeg`, which spells the same inversion in degrees.
   const lon = Math.atan2(dy / magM, dx / magM);
   const lat = Math.asin(Math.min(1, Math.max(-1, dz / magM)));
   const u = lon / (2 * Math.PI) + TEXTURE_PRIME_MERIDIAN_U;
@@ -67,9 +67,9 @@ export function terrainHeightM(
 
   const grid = hit.found.gridCodes;
   const postM = (col: number, row: number): number => {
-    // `colFracInAnc`/`rowFracInAnc` are < 1 by construction (the span/ancX
-    // arithmetic above proves it), but a post exactly on the tile's far edge
-    // is one float rounding away from reading the column that isn't there.
+    // `rowFracInAnc` reaches exactly 1 at the south pole (line 55 clamps it),
+    // and a post on the tile's far edge is one float rounding from the same
+    // place — either way the far post index is 16, never 17.
     const c = Math.min(GRID_CELLS_PER_EDGE, Math.max(0, col));
     const r = Math.min(GRID_CELLS_PER_EDGE, Math.max(0, row));
     const offset = (r * HEIGHT_GRID_POSTS_PER_EDGE + c) * HEIGHT_CODE_BYTES;

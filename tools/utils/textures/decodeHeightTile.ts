@@ -5,7 +5,7 @@ import {
   HEIGHT_POSTS_PER_TILE,
   HEIGHT_TILE_POST_COUNT,
 } from '../../../src/data/scene/heightTileFormat';
-import { codeHeightM } from './codeHeightM';
+import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
 import { decodeHeightTileHeader } from '../../../src/utils/surfaceTiles/decodeHeightTileHeader';
 
 /**

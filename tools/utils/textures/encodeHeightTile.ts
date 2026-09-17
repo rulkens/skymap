@@ -17,7 +17,7 @@ import {
   HEIGHT_TILE_VERSION,
   HEIGHT_TILE_VERSION_OFFSET,
 } from '../../../src/data/scene/heightTileFormat';
-import { codeHeightM } from './codeHeightM';
+import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
 import { heightCode } from './heightCode';
 import { appendWebpChunk } from '../image/appendWebpChunk';
 

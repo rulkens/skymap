@@ -56,7 +56,7 @@ import { fetchSurfaceTileBitmap } from '../../../../src/utils/network/fetchSurfa
 import { fetchHeightTile } from '../../../../src/utils/network/fetchHeightTile';
 import { baseLevelForTier } from '../../../../src/utils/surfaceTiles/baseLevelForTier';
 import { equirectUvToDirection } from '../../../../src/utils/math/equirectUvToDirection';
-import { codeHeightM } from '../../../../tools/utils/textures/codeHeightM';
+import { codeHeightM } from '../../../../src/utils/surfaceTiles/codeHeightM';
 import {
   SURFACE_TILE_ATLAS_SIDE,
   SURFACE_TILE_PX,

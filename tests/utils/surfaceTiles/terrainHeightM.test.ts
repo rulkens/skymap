@@ -20,7 +20,7 @@ import {
   HEIGHT_GRID_POSTS_PER_EDGE,
 } from '../../../src/data/scene/heightTileFormat';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
-import { codeHeightM } from '../../../tools/utils/textures/codeHeightM';
+import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';
 import { terrainHeightM } from '../../../src/utils/surfaceTiles/terrainHeightM';
 
 const BASE_LEVEL = 0;
@@ -90,6 +90,23 @@ describe('terrainHeightM', () => {
     const result = terrainHeightM([0, 0, 0], 4, BASE_LEVEL, resident);
     expect(Object.is(result, 0)).toBe(true);
     expect(Number.isFinite(result)).toBe(true);
+  });
+
+  it('returns 0 for a non-finite direction vector', () => {
+    // A `magM === 0` guard lets these straight through: they survive
+    // `atan2`/`asin` as NaN and end up in the camera position, which is the
+    // same black-screen-with-no-error the zero guard exists to prevent.
+    const resident = (): HeightTileHeader | null => {
+      throw new Error('must not probe residency for a non-finite direction');
+    };
+    for (const dir of [
+      [Number.NaN, 0, 0],
+      [Infinity, 0, 0],
+      [0, -Infinity, 1],
+    ] as const) {
+      const result = terrainHeightM(dir, 4, BASE_LEVEL, resident);
+      expect(Object.is(result, 0)).toBe(true);
+    }
   });
 
   it('reads a shared post identically from both levels', () => {

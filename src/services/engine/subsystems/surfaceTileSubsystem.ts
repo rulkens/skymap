@@ -478,16 +478,8 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       deepestBandLevelAt(params.bands, directionToLonLatDeg(dirBodyFixed)) ?? baseLevel;
     return terrainHeightM(dirBodyFixed, deepestLevel, baseLevel, (tile) => {
       const entry = heightResident.get(surfaceTilePath(tile, prefix));
-      if (entry === undefined || entry.gridCodes === null || entry.subtreeRangeM === null)
-        return null;
-      return {
-        subtreeMinM: entry.subtreeRangeM[0],
-        subtreeMaxM: entry.subtreeRangeM[1],
-        // Unread by `terrainHeightM` (it samples `gridCodes` only); residency
-        // never keeps this figure, so there is nothing truthful to put here.
-        geometricResidualM: 0,
-        gridCodes: entry.gridCodes,
-      };
+      if (entry === undefined || entry.gridCodes === null) return null;
+      return { gridCodes: entry.gridCodes };
     });
   }
 
