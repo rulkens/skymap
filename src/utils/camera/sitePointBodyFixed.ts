@@ -1,10 +1,8 @@
 /**
- * The site point in the HOST's body-fixed metres — deliberately the expression
- * `deriveBodyStates` places the rover with, off the same row and the same
- * ground radius (datum + terrain): diverge and the rover drifts in frame as
- * the camera moves. `terrainHeightAt` defaults to 0 for every existing camera
- * caller, which still wants the datum-only radius (§8.3's remaining
- * `radiusM` routing is F3b); only a caller that hands one in gets terrain.
+ * The site point in the host's body-fixed metres: datum radius + terrain
+ * height + the mesh's wheel lift, along the site's lat/lon direction.
+ * `terrainHeightAt` defaults to 0 because the four camera callers still want
+ * a datum-only radius until F3b routes them.
  */
 
 import type { BodyId } from '../../@types/data/body/BodyId';

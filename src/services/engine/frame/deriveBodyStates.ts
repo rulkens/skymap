@@ -9,7 +9,6 @@
  * reader would tear a mid-frame clock tick between passes.
  */
 
-import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -22,7 +21,7 @@ import { orientationForBody } from '../../../data/bodies/orientationForBody';
 import { propagateElements } from '../../../utils/orbit/propagateElements';
 import { keplerianPositionMpc } from '../../../utils/orbit/keplerianPositionMpc';
 import { focusResolveOrder } from '../../../utils/scene/focusResolveOrder';
-import { surfacePointBodyFixed } from '../../../utils/geo/surfacePointBodyFixed';
+import { sitePointBodyFixed } from '../../../utils/camera/sitePointBodyFixed';
 import { addVec3 } from '../../../utils/math/addVec3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
@@ -87,14 +86,8 @@ export function deriveBodyStates(
     // The ground radius, so `SCENE_CELESTIAL_BODIES`: a site is pinned to a
     // surface, which is exactly what a mesh body's hull is not.
     const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
-    // Mirrors `sitePointBodyFixed`'s own expression (F3a, spec §8.3) — kept as
-    // two independent copies on purpose (that file's header comment), so the
-    // cross-file contract test is what proves they still agree.
-    const dirBodyFixed = surfacePointBodyFixed(site.latDeg, site.lonDeg, 1);
-    const radiusM =
-      surface.datumRadiusM + terrainHeightAt(site.hostId as BodyId, dirBodyFixed) + site.altitudeM;
     const offsetM = rotateVec3ByTightMat3(
-      [dirBodyFixed[0] * radiusM, dirBodyFixed[1] * radiusM, dirBodyFixed[2] * radiusM],
+      sitePointBodyFixed(site, surface.datumRadiusM, terrainHeightAt),
       orientationForBody(site.hostId, simDays, positions),
     );
     // Metres → Mpc BEFORE the host's heliocentric position joins in: adding
