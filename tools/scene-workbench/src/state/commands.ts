@@ -11,3 +11,8 @@ export const splatOrderWritten = createAction<{
   splatCount: number;
   boundsM: BoundsM;
 }>('splatOrderWritten');
+
+/** Saga-only draw-mode commands (`watchOutlineSaga`); no reducer handles them. */
+export const drawOutlineRequested = createAction<string>('drawOutlineRequested'); // assetId
+export const outlineSaveRequested = createAction('outlineSaveRequested');
+export const outlineDiscardRequested = createAction('outlineDiscardRequested');

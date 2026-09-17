@@ -78,7 +78,7 @@ const VIEW: SceneCameraView = {
   targetM: [0, 0, 0],
   rightM: [...RIGHT_M],
   upM: [...UP_M],
-  fovYRad: FOV_Y_RAD,
+  projection: { kind: 'perspective', fovYRad: FOV_Y_RAD, nearM: 0.5, farM: 5000 },
   viewportPx: VIEWPORT_PX,
 };
 

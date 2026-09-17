@@ -66,12 +66,33 @@ describe('createSceneRenderers', () => {
       {} as Parameters<typeof createSceneRenderers>[0],
       'rgba8unorm',
       {} as GPUBindGroupLayout,
-    ).draw(pass, resources, ['hidden-mesh'], display);
+    ).draw(pass, resources, ['hidden-mesh'], display, 'perspective');
 
     expect(drawn).toEqual([
       ['pointCloud', [pass, [resources.gpuAssets.get('cloud')], display]],
       ['mesh', [pass, [resources.gpuAssets.get('mesh')], display]],
       ['gaussianSplat', [pass, [resources.gpuAssets.get('splats')], display]],
     ]);
+  });
+
+  it('skips splats under an orthographic projection', () => {
+    const resources = {
+      gpuAssets: new Map([['splats', { kind: 'gaussianSplat' } as GpuAsset]]),
+    } as RenderResources;
+
+    drawn.length = 0;
+    createSceneRenderers(
+      {} as Parameters<typeof createSceneRenderers>[0],
+      'rgba8unorm',
+      {} as GPUBindGroupLayout,
+    ).draw(
+      {} as GPURenderPassEncoder,
+      resources,
+      [],
+      { mesh: { wireframe: false } },
+      'orthographic',
+    );
+
+    expect(drawn.map(([kind]) => kind)).not.toContain('gaussianSplat');
   });
 });
