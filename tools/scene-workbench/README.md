@@ -246,9 +246,9 @@ anything but Z. Splats are not drawn while the projection is orthographic —
 `splat.wesl` sizes each splat by its view-space depth, which that projection
 lacks.
 
-While drawing, the mesh outside the draft ring is discarded on the GPU (the
-wireframe is not). A saved outline keeps that preview mask, and the row's
-"Mask" checkbox toggles it.
+While drawing, the whole mesh stays visible to trace against. Once saved, the
+mesh outside the outline is discarded on the GPU (the wireframe is not), and
+the row's "Mask" checkbox toggles it.
 
 The outline lives at `data/geo3d/<groupId>/<assetId>.outline.json`, committed,
 as a ring in mesh-local metres. `npm run crop-mesh -- --group <id> --asset

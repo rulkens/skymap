@@ -97,7 +97,7 @@ type OutlineSlice = {
   draft: { assetId: string; ringM: Vec2[]; closed: boolean; returnPose: SceneCamera } | null; // non-null ⇔ draw mode
   saveError: string | null;
 };
-// selectMaskRing(assetId): draft?.assetId === assetId ? draft.ringM
+// selectMaskRing(assetId): draft?.assetId === assetId ? null  (trace against the whole mesh)
 //                          : byAssetId[assetId]?.masked ? byAssetId[assetId].ringM : null
 ```
 

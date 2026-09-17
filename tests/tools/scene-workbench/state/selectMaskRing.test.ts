@@ -18,7 +18,7 @@ const SAVED: Vec2[] = [
 const DRAFT: Vec2[] = [[9, 9]];
 
 describe('selectMaskRing', () => {
-  it('selectMaskRing prefers the draft over a saved ring', () => {
+  it('selectMaskRing leaves the mesh unmasked while its outline is being drawn', () => {
     const { store } = createSceneStore();
     store.dispatch(outlineLoaded({ assetId: 'mesh', ringM: SAVED }));
     store.dispatch(
@@ -29,7 +29,7 @@ describe('selectMaskRing', () => {
         returnPose: defaultViewSlice.camera,
       }),
     );
-    expect(selectMaskRing(store.getState(), 'mesh')).toEqual(DRAFT);
+    expect(selectMaskRing(store.getState(), 'mesh')).toBeNull();
   });
 
   it('selectMaskRing is null when masked off', () => {
