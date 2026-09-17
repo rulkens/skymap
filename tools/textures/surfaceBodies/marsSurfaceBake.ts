@@ -146,6 +146,8 @@ type MarsSite = {
   readonly greyStretch?: readonly [number, number];
   /** Grey orthos take their colour from Viking. */
   readonly grey: boolean;
+  /** Gale only: sidecar alpha mask for the ortho's unreadable GDAL mask (C3). */
+  readonly maskPath?: string;
 };
 
 /** Origins and pixel sizes from each file's `gdalinfo` header (2026-09-17). */
@@ -160,6 +162,7 @@ function marsSites(): readonly MarsSite[] {
       dtm: sphereGrid('hirise.gale.dtm', 8127993.492786024, -244781.075189438, 1, 32980, 57440),
       dtmNodata: -32767,
       ortho: sphereGrid('hirise.gale.ortho', 8140000, -270000, 0.25, 36000, 76000),
+      maskPath: rawDataPath('hirise.gale.mask'),
       grey: false,
     },
     {
@@ -346,6 +349,7 @@ async function siteBand(
       grid: site.ortho,
       maxLevel: SITE_MAX_LEVEL,
       ...(site.greyStretch === undefined ? {} : { greyStretch: site.greyStretch }),
+      ...(site.maskPath === undefined ? {} : { maskPath: site.maskPath }),
     }),
     extent,
   );

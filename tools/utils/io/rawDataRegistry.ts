@@ -1048,6 +1048,14 @@ export const RAW_DATA = {
       'https://planetarymaps.usgs.gov/mosaic/Mars/MSL/MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif',
     readme: 'hirise.gale.readme',
   },
+  'hirise.gale.mask': {
+    path: 'data/raw/hirise/gale/MSL_Gale_HiRISE-LRGB_78quads_sharp_mask_cog.tif',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "The ortho's GDAL internal mask band, extracted to its own single-band COG: Byte 0/255, same 36000x76000 grid as `hirise.gale.ortho`. libvips can't open GDAL's internal TIFF mask IFD directly (see `readGeoTiffRgbWindow`), so `geoTiffImagerySource` reads this sidecar instead.",
+    readme: 'hirise.gale.readme',
+  },
   'hirise.gale.readme': {
     path: 'data/raw/hirise/gale/README.md',
     kind: 'file',

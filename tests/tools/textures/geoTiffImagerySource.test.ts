@@ -95,6 +95,37 @@ describe('geoTiffImagerySource', () => {
     expect([...rgba!.slice(4, 8)]).toEqual([255, 255, 255, 255]);
   });
 
+  it('applies an optional mask, leaving a masked-out pixel transparent even when its RGB is non-zero', async () => {
+    const width = 2;
+    const height = 1;
+    const orthoPath = join(dir, 'masked-ortho.tif');
+    await sharp(new Uint8Array([200, 200, 200, 50, 50, 50]), {
+      raw: { width, height, channels: 3 },
+    })
+      .tiff({ compression: 'none' })
+      .toFile(orthoPath);
+    const maskPath = join(dir, 'masked-ortho-mask.tif');
+    writeGreyTiff(maskPath, width, height, [0, 255], 8);
+
+    const source = geoTiffImagerySource({
+      id: 'masked-test',
+      attribution: 'test',
+      provenance: { sourceId: 'masked-test', attribution: 'test', vintage: '2026' },
+      grid: { path: orthoPath, width, height, bounds: { west: -1, east: 1, north: 1, south: -1 } },
+      maxLevel: 10,
+      maskPath,
+    });
+
+    const rgba = await source.readBox({ west: -1, east: 1, north: 1, south: -1 }, width, height);
+    expect(rgba).not.toBeNull();
+
+    // Pixel 0: mask=0 yet RGB is non-zero — the black-sentinel heuristic
+    // alone (no mask) would have left this opaque.
+    expect([...rgba!.slice(0, 4)]).toEqual([200, 200, 200, 0]);
+    // Pixel 1: mask=255, unaffected.
+    expect([...rgba!.slice(4, 8)]).toEqual([50, 50, 50, 255]);
+  });
+
   it('throws on a box only partly inside its raster bounds rather than stretching it', async () => {
     const width = 2;
     const height = 2;
