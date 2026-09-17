@@ -373,16 +373,16 @@ holds both.
 Known and accepted (spec §6): a piece diagonal crossing one boundary triangle leaves unwelded,
 coincident vertices. Do not try to fix it.
 
-- [ ] `keeps a fully inside triangle with its indices untouched` — assert the kept triangle's
+- [x] `keeps a fully inside triangle with its indices untouched` — assert the kept triangle's
       output positions equal the source's, in order, and no new vertex was created.
-- [ ] `drops a fully outside triangle and compacts its vertices`.
-- [ ] `clips a triangle crossing one edge to the analytic area and UV` — unit square outline;
+- [x] `drops a fully outside triangle and compacts its vertices`.
+- [x] `clips a triangle crossing one edge to the analytic area and UV` — unit square outline;
       a triangle spanning x ∈ [−1, 1]; expected kept XY area and one cut-vertex UV as literals.
-- [ ] `drops a triangle inside a concave notch's bbox but outside the ring`.
-- [ ] `clips a vertical triangle crossing the boundary` — output Z range as literals.
-- [ ] `two triangles sharing a cut edge reuse one new vertex` — count of vertices at the cut
+- [x] `drops a triangle inside a concave notch's bbox but outside the ring`.
+- [x] `clips a vertical triangle crossing the boundary` — output Z range as literals.
+- [x] `two triangles sharing a cut edge reuse one new vertex` — count of vertices at the cut
       point equals 1.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 10: `uvCoverage`
 
