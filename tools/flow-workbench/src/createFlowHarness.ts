@@ -48,6 +48,7 @@ import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
 import { createFlowFieldRenderer } from '../../../src/layers/flow/render/flowFieldRenderer';
 import { flowCompute } from '../../../src/layers/flow/computes/flowCompute';
+import type { FlowRuntime } from '../../../src/layers/flow/types/FlowRuntime';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
@@ -147,18 +148,17 @@ export async function createFlowHarness(
     const encoder = device.createCommandEncoder();
 
     // Compute pass (seed-when-armed + integrate). The gate skips entirely when
-    // the layer is off or the cube hasn't loaded. `flowCompute.encode` reads its
-    // gates off a `PassState`; the workbench has no engine, so it assembles just
-    // the slice the gate consumes — the renderer handle, the flow settings, and
-    // a ready-when-loaded asset slot (the shape `slotReady` inspects).
-    flowCompute.encode(
+    // the layer is off or the cube hasn't loaded. `flowCompute` closes over a
+    // `FlowRuntime`; the workbench has no engine, so it assembles just the
+    // slice the gate consumes — the renderer handle and a ready-when-loaded
+    // asset slot (the shape `slotReady` inspects).
+    flowCompute({
+      renderer,
+      slot: loaded ? { committed: () => ({ kind: 'ready' }) } : null,
+    } as unknown as FlowRuntime).encode(
       encoder,
       { nowMs: now } as unknown as ReadyFrameContext,
-      {
-        gpu: { flowFieldRenderer: renderer },
-        settings: { flow: s.flow },
-        assetSlots: { flow: loaded ? { committed: () => ({ kind: 'ready' }) } : null },
-      } as unknown as PassState,
+      { settings: { flow: s.flow } } as unknown as PassState,
       () => ({}),
     );
 

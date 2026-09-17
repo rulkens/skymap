@@ -13,8 +13,22 @@ import type { ContentCompute } from '../../../../src/@types/engine/frame/Content
 import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/ExecuteFrameArgs';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+
+/**
+ * `flowCompute` now closes over its own Runtime rather than reading
+ * `state.gpu`/`state.assetSlots`; these fixtures still shape those fields
+ * (mirroring how core's still-temporary `computes/index.ts` row rebuilds the
+ * Runtime per call) so the runtime built here is a thin projection of them.
+ */
+function runtimeOf(state: EngineState): FlowRuntime {
+  return {
+    renderer: state.gpu.flowFieldRenderer,
+    slot: state.assetSlots.flow,
+  } as unknown as FlowRuntime;
+}
 
 function makeCtx(): ReadyFrameContext {
   return { renderedTargets: new Set<string>(), nowMs: 12345 } as unknown as ReadyFrameContext;
@@ -56,8 +70,8 @@ describe('executeFrame — compute dispatch', () => {
       settings: { debug: { disabledPasses: {} }, flow: { enabled: true } },
       gpu: { flowFieldRenderer: { label: 'flowFieldRenderer', encodeCompute } },
       assetSlots: { flow: readySlot() },
-      computes: [flowCompute],
     } as unknown as EngineState;
+    state.computes = [flowCompute(runtimeOf(state))];
 
     executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state));
 
@@ -83,8 +97,8 @@ describe('executeFrame — compute dispatch', () => {
         settings: { debug: { disabledPasses }, flow: { enabled: true } },
         gpu: { flowFieldRenderer: { label: 'flowFieldRenderer', encodeCompute } },
         assetSlots: { flow: readySlot() },
-        computes: [flowCompute],
       } as unknown as EngineState;
+      state.computes = [flowCompute(runtimeOf(state))];
       executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state));
       return encodeCompute;
     };
@@ -101,8 +115,8 @@ describe('executeFrame — compute dispatch', () => {
       settings: { debug: { disabledPasses: {} }, flow: { enabled: false } },
       gpu: { flowFieldRenderer: null },
       assetSlots: { flow: null },
-      computes: [flowCompute],
     } as unknown as EngineState;
+    state.computes = [flowCompute(runtimeOf(state))];
 
     executeFrame(makeArgs([{ kind: 'compute', name: 'flow' }], state, makeTiming(descriptorFor)));
 

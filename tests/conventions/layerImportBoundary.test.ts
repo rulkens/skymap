@@ -79,10 +79,12 @@ const ENGINE_AND_STATE_ALLOWED: Readonly<Record<string, number>> = {
   'state/tier/watchTierSaga': 1,
   // Flow's modules relocated under src/layers/flow ahead of the flow Layer
   // itself (05b Tasks 2-4): core's registries still hold flow's old rows and
-  // point at the new paths. DELETE each row when Task 6 deletes the core
-  // holding it names (passes/computes index, the GPU handle, the asset slot).
-  'services/engine/frame/computes/index': 1,
-  'services/engine/frame/passes/index': 1,
+  // point at the new paths. Task 4 also rebuilds a `FlowRuntime` shim locally
+  // in each index (the factory row's shape, one more import). DELETE each row
+  // when Task 6 deletes the core holding it names (passes/computes index, the
+  // GPU handle, the asset slot).
+  'services/engine/frame/computes/index': 2,
+  'services/engine/frame/passes/index': 2,
   'services/engine/gpuHandles/gpuHandleRegistry': 1,
   'services/engine/wiring/assetWiring': 1,
 };
