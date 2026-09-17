@@ -212,12 +212,12 @@ export function isZOnlyRotation(rotation: Vec4): boolean; // |x|, |y| < 1e-9
 
 Reuse `src/utils/math/rotateVec3ByQuat.ts`; inverse rotation is the conjugate.
 
-- [ ] `pxToGroupXY maps the top-right pixel to target + right·h·aspect + up·h` — viewport
+- [x] `pxToGroupXY maps the top-right pixel to target + right·h·aspect + up·h` — viewport
       [800, 400], literal expected numbers.
-- [ ] `groupXYToPx inverts pxToGroupXY` at yaw 0.9 for three pixels.
-- [ ] `groupToAssetXY undoes a 90° Z rotation, scale 2 and translation` — literal expected point.
-- [ ] `isZOnlyRotation rejects a tilt about X`. No test for the identity case.
-- [ ] Commit.
+- [x] `groupXYToPx inverts pxToGroupXY` at yaw 0.9 for three pixels.
+- [x] `groupToAssetXY undoes a 90° Z rotation, scale 2 and translation` — literal expected point.
+- [x] `isZOnlyRotation rejects a tilt about X`. No test for the identity case.
+- [x] Commit.
 
 ---
 
