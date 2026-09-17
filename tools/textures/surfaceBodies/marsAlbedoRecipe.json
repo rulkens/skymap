@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "sunFit": {
+    "windowKm": 40,
+    "strideKm": 20,
+    "highPassKm": 15,
+    "minConfidence": 0.2,
+    "fillSigmaKm": 60
+  },
+  "deshade": {
+    "strength": 1,
+    "minShading": 0.3
+  },
+  "knee": {
+    "threshold": 0.6,
+    "softness": 1
+  },
+  "ice": {
+    "minAbsLatDeg": 55,
+    "fadeDeg": 8,
+    "minWhiteness": 0.6,
+    "minLuminance": 0.35
+  },
+  "grade": {
+    "exposureEv": 0,
+    "gain": [1, 1, 1],
+    "offset": [0, 0, 0],
+    "contrast": 1,
+    "saturation": 1,
+    "gamma": 1
+  }
+}
