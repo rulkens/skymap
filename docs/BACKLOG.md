@@ -35,6 +35,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **Camera floor clips through sharp peaks** `ready` — the floor reads the 17×17 decimated grid while the shader draws 129×129 posts, so a summit narrower than the grid spacing passes over the chord; `geometricResidualM` already bounds the error and is decoded then dropped. → [details](backlog/2026-09-17-camera-floor-clips-sharp-peaks.md)
 - [ ] **Terrain-aware zoom anchor** `ready` — F3a's floor follows the terrain but five camera gestures still anchor on the datum sphere; own PR, straight after F3a. → [details](backlog/2026-09-17-terrain-aware-zoom-anchor.md)
 - [ ] **Terrain F3b — the rest of the per-purpose routing** `needs-design` — most of spec §8.3's table already shipped; what is left is cloud-deck-as-altitude, and terrain under an atmosphere blocked on a composite nobody is building. → [details](backlog/2026-09-17-terrain-f3b-remaining-routing.md)
 - [ ] **Focusable-kind registry** `needs-design` — a focusable/selectable kind is smeared across ~10 per-kind dispatch tables (pick, selection row, framing, halo, URL); consolidate into one descriptor + registry, sibling to the subsystem-bundle work. → [details](backlog/2026-08-17-focusable-kind-registry.md)
