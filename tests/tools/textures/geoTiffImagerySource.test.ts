@@ -95,6 +95,43 @@ describe('geoTiffImagerySource', () => {
     expect([...rgba!.slice(4, 8)]).toEqual([255, 255, 255, 255]);
   });
 
+  it('upsamples a box smaller than one source pixel bilinearly, registered to pixel centres', async () => {
+    // Snapping the box to whole source pixels made every deep underfill tile
+    // one flat block (or no tile at all), blocky once averaged up the pyramid.
+    const path = join(dir, 'ramp.tif');
+    // Blue 50 throughout: an all-black pixel reads as the no-data sentinel.
+    const pixels = new Uint8Array([0, 0, 50, 200, 0, 50, 0, 100, 50, 200, 100, 50]);
+    await sharp(pixels, { raw: { width: 2, height: 2, channels: 3 } })
+      .tiff({ compression: 'none' })
+      .toFile(path);
+    const source = geoTiffImagerySource({
+      id: 'ramp-test',
+      attribution: 'test',
+      provenance: { sourceId: 'ramp-test', attribution: 'test', vintage: '2026' },
+      grid: { path, width: 2, height: 2, bounds: { west: -1, east: 1, north: 1, south: -1 } },
+      maxLevel: 10,
+    });
+
+    const rgba = await source.readBox({ west: -0.25, east: 0.25, north: 0.25, south: -0.25 }, 4, 4);
+
+    // Pixel centres at ±0.5: red is 100 + 200·lon, green 50 − 100·lat.
+    for (let py = 0; py < 4; py++) {
+      const lat = 0.25 - (py + 0.5) / 8;
+      for (let px = 0; px < 4; px++) {
+        const lon = -0.25 + (px + 0.5) / 8;
+        const i = (py * 4 + px) * 4;
+        expect(Math.abs(rgba![i]! - (100 + 200 * lon)), `red (${px}, ${py})`).toBeLessThanOrEqual(
+          1,
+        );
+        expect(
+          Math.abs(rgba![i + 1]! - (50 - 100 * lat)),
+          `green (${px}, ${py})`,
+        ).toBeLessThanOrEqual(1);
+        expect(rgba![i + 3]).toBe(255);
+      }
+    }
+  });
+
   it('throws on a box only partly inside its raster bounds rather than stretching it', async () => {
     const width = 2;
     const height = 2;

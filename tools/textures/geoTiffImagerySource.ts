@@ -1,8 +1,8 @@
 /**
- * geoTiffImagerySource — a `SurfaceImagerySource` over an arbitrary
- * equirectangular colour GeoTIFF (Viking, HiRISE orthos; spec §4.2): 8-bit
- * RGB(A) reads via `readGeoTiffRgbWindow`, UInt16 grey (`greyStretch`) is
- * stretched and replicated to RGB; either way `sharp` resizes the result.
+ * geoTiffImagerySource — a `SurfaceImagerySource` over an equirectangular
+ * colour GeoTIFF (Viking, HiRISE orthos; spec §4.2): 8-bit RGB(A) via
+ * `readGeoTiffRgbWindow`, UInt16 grey (`greyStretch`) stretched to RGB; `sharp`
+ * shrinks the window, and a box finer than the raster is sampled bilinearly.
  */
 
 import sharp from 'sharp';
@@ -12,6 +12,7 @@ import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
 import { clamp } from '../utils/textures/clamp';
 import { readGeoTiffRgbWindow } from '../utils/textures/readGeoTiffRgbWindow';
+import { resampleRgbaBilinear } from '../utils/image/resampleRgbaBilinear';
 
 /**
  * One window of a single-band UInt16 GeoTIFF, native values intact. Sharp
@@ -61,6 +62,45 @@ export function geoTiffImagerySource(opts: {
   const dx = (grid.bounds.east - grid.bounds.west) / grid.width;
   const dy = (grid.bounds.north - grid.bounds.south) / grid.height;
 
+  async function readWindow(
+    left: number,
+    top: number,
+    winWidth: number,
+    winHeight: number,
+  ): Promise<Uint8Array> {
+    let rgba: Uint8Array;
+    if (opts.greyStretch !== undefined) {
+      const [lo, hi] = opts.greyStretch;
+      const scale = 255 / (hi - lo);
+      const grey = await readUInt16GreyWindow(grid.path, left, top, winWidth, winHeight);
+      rgba = new Uint8Array(winWidth * winHeight * 4);
+      for (let i = 0; i < grey.length; i++) {
+        const value = grey[i]!;
+        // 0 is every grey ortho's declared no-data (Gusev, Endeavour),
+        // checked on the RAW value before the stretch: `lo` sits above 0,
+        // so a real dark pixel's raw DN is never exactly 0.
+        const noData = value === 0;
+        const level = noData ? 0 : clamp(Math.round((value - lo) * scale), 0, 255);
+        rgba[i * 4] = level;
+        rgba[i * 4 + 1] = level;
+        rgba[i * 4 + 2] = level;
+        rgba[i * 4 + 3] = noData ? 0 : 255;
+      }
+    } else {
+      rgba = await readGeoTiffRgbWindow(grid.path, left, top, winWidth, winHeight);
+      // Byte RGB carries no separate no-data channel — `readGeoTiffRgbWindow`
+      // does not surface a GDAL internal mask (see its own doc) — so a pixel
+      // that is BOTH fully opaque and exactly black is treated as the
+      // declared 0 sentinel (Viking) instead.
+      for (let i = 0; i < rgba.length; i += 4) {
+        if (rgba[i] === 0 && rgba[i + 1] === 0 && rgba[i + 2] === 0 && rgba[i + 3] === 255) {
+          rgba[i + 3] = 0;
+        }
+      }
+    }
+    return rgba;
+  }
+
   return {
     id: opts.id,
     attribution: opts.attribution,
@@ -84,6 +124,32 @@ export function geoTiffImagerySource(opts: {
         );
       }
 
+      // A box finer than the raster is sampled at its pixel centres: snapping
+      // it to whole source pixels makes each deep tile one flat block.
+      const upsample =
+        (box.east - box.west) / widthPx < dx || (box.north - box.south) / heightPx < dy;
+      if (upsample) {
+        const x0 = (box.west - grid.bounds.west) / dx - 0.5;
+        const y0 = (grid.bounds.north - box.north) / dy - 0.5;
+        const xStep = (box.east - box.west) / widthPx / dx;
+        const yStep = (box.north - box.south) / heightPx / dy;
+        const left = clamp(Math.floor(x0), 0, grid.width - 1);
+        const right = clamp(Math.floor(x0 + widthPx * xStep) + 1, 0, grid.width - 1);
+        const top = clamp(Math.floor(y0), 0, grid.height - 1);
+        const bottom = clamp(Math.floor(y0 + heightPx * yStep) + 1, 0, grid.height - 1);
+        return resampleRgbaBilinear({
+          rgba: await readWindow(left, top, right - left + 1, bottom - top + 1),
+          width: right - left + 1,
+          height: bottom - top + 1,
+          widthPx,
+          heightPx,
+          x0: x0 + xStep / 2 - left,
+          y0: y0 + yStep / 2 - top,
+          xStep,
+          yStep,
+        });
+      }
+
       // Source pixel window covering the box — plain edge arithmetic (no
       // "+0.5"): these are the raster's own pixel EDGES, not lattice posts.
       const left = clamp(Math.round((box.west - grid.bounds.west) / dx), 0, grid.width);
@@ -94,38 +160,9 @@ export function geoTiffImagerySource(opts: {
       const winHeight = bottom - top;
       if (winWidth <= 0 || winHeight <= 0) return null;
 
-      let rgba: Uint8Array;
-      if (opts.greyStretch !== undefined) {
-        const [lo, hi] = opts.greyStretch;
-        const scale = 255 / (hi - lo);
-        const grey = await readUInt16GreyWindow(grid.path, left, top, winWidth, winHeight);
-        rgba = new Uint8Array(winWidth * winHeight * 4);
-        for (let i = 0; i < grey.length; i++) {
-          const value = grey[i]!;
-          // 0 is every grey ortho's declared no-data (Gusev, Endeavour),
-          // checked on the RAW value before the stretch: `lo` sits above 0,
-          // so a real dark pixel's raw DN is never exactly 0.
-          const noData = value === 0;
-          const level = noData ? 0 : clamp(Math.round((value - lo) * scale), 0, 255);
-          rgba[i * 4] = level;
-          rgba[i * 4 + 1] = level;
-          rgba[i * 4 + 2] = level;
-          rgba[i * 4 + 3] = noData ? 0 : 255;
-        }
-      } else {
-        rgba = await readGeoTiffRgbWindow(grid.path, left, top, winWidth, winHeight);
-        // Byte RGB carries no separate no-data channel — `readGeoTiffRgbWindow`
-        // does not surface a GDAL internal mask (see its own doc) — so a pixel
-        // that is BOTH fully opaque and exactly black is treated as the
-        // declared 0 sentinel (Viking) instead.
-        for (let i = 0; i < rgba.length; i += 4) {
-          if (rgba[i] === 0 && rgba[i + 1] === 0 && rgba[i + 2] === 0 && rgba[i + 3] === 255) {
-            rgba[i + 3] = 0;
-          }
-        }
-      }
-
-      return sharp(rgba, { raw: { width: winWidth, height: winHeight, channels: 4 } })
+      return sharp(await readWindow(left, top, winWidth, winHeight), {
+        raw: { width: winWidth, height: winHeight, channels: 4 },
+      })
         .resize(widthPx, heightPx, { fit: 'fill' })
         .raw()
         .toBuffer();
