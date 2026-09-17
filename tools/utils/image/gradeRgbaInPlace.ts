@@ -29,6 +29,14 @@ export function gradeRgbaInPlace(rgba: Uint8Array, grade: ColourGrade): void {
     r = y + (r - y) * grade.saturation;
     g = y + (g - y) * grade.saturation;
     b = y + (b - y) * grade.saturation;
+    // Scale an overflow down across all three channels: clipping one alone
+    // shifts the hue (a red gain turns sunlit rims cyan).
+    const peak = Math.max(r, g, b);
+    if (peak > 1) {
+      r /= peak;
+      g /= peak;
+      b /= peak;
+    }
     r = Math.min(1, Math.max(0, r)) ** invGamma;
     g = Math.min(1, Math.max(0, g)) ** invGamma;
     b = Math.min(1, Math.max(0, b)) ** invGamma;

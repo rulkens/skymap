@@ -299,9 +299,13 @@ export function delightedImagerySource(
               const white = smoothstep(0.55, 0.8, min / Math.max(1, max)) * smoothstep(0.3, 0.5, y);
               q += (1 - q) * white * polar * delight.keepIce;
             }
-            out[i] = Math.round(Math.min(255, Math.max(0, r0 * q)));
-            out[i + 1] = Math.round(Math.min(255, Math.max(0, g0 * q)));
-            out[i + 2] = Math.round(Math.min(255, Math.max(0, b0 * q)));
+            // Darkening scales; brightening ADDS grey: a shadow's colour is mostly
+            // noise, and multiplying it 3-4x paints red and blue rim fringes.
+            const lift = q > 1 ? (q - 1) * y * 255 : 0;
+            const scale = Math.min(q, 1);
+            out[i] = Math.round(Math.min(255, Math.max(0, r0 * scale + lift)));
+            out[i + 1] = Math.round(Math.min(255, Math.max(0, g0 * scale + lift)));
+            out[i + 2] = Math.round(Math.min(255, Math.max(0, b0 * scale + lift)));
           }
         }
       }

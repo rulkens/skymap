@@ -27,6 +27,13 @@ describe('gradeRgbaInPlace', () => {
     expect(Array.from(rgba)).toEqual([54, 54, 54, 128]);
   });
 
+  it('scales an overflowing pixel down across all channels, keeping its hue', () => {
+    // Red gain 2 on (200, 100, 50): r = 1.569 → all three divided by it.
+    const rgba = new Uint8Array([200, 100, 50, 255]);
+    gradeRgbaInPlace(rgba, { ...IDENTITY, gain: [2, 1, 1] });
+    expect(Array.from(rgba)).toEqual([255, 64, 32, 255]);
+  });
+
   it('leaves alpha untouched', () => {
     const rgba = new Uint8Array([0, 0, 0, 37]);
     gradeRgbaInPlace(rgba, { ...IDENTITY, ev: 2, contrast: 1.5 });
