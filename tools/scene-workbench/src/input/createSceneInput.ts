@@ -12,10 +12,14 @@ import { attachOrbitControls } from '../../../../src/services/camera/orbitContro
 import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
+import { cornerAppended } from '../state/outline/outlineSlice';
 import { commitCameraPose, PITCH_LIMIT, type SceneCamera } from '../state/view/viewSlice';
 import type { SceneStore } from '../store/types';
 import { sceneCameraView } from '../render/sceneCameraView';
 import { clampSceneDistanceM } from '../scene/clampSceneDistanceM';
+import { groupToAssetXY } from '../scene/groupToAssetXY';
+import { pxToGroupXY } from '../scene/pxToGroupXY';
+import { attachOutlineCornerControls } from './attachOutlineCornerControls';
 
 // rad/px and screen-constant pan rate — same family as mcpm-workbench/flow-workbench.
 const DRAG_SPEED = 0.005;
@@ -135,12 +139,28 @@ export function createSceneInput(deps: SceneInputDeps): SceneInput {
     register.projection = camera.projection;
   });
 
-  const detachRecognizer = attachOrbitControls(canvas, (event) => aggregator.push(event));
+  // A press near a corner never reaches this click: the corner controls swallow its pointerdown.
+  const appendCorner = (xCss: number, yCss: number): void => {
+    const state = store.getState();
+    const draft = state.outline.draft;
+    const asset = state.group.manifest?.assets.find(({ id }) => id === draft?.assetId);
+    if (!draft || draft.closed || !asset || register.projection !== 'orthographic') return;
+    const rect = canvas.getBoundingClientRect();
+    const view = sceneCameraView(register, [canvas.clientWidth, canvas.clientHeight]);
+    const groupXY = pxToGroupXY(view, [xCss - rect.left, yCss - rect.top]);
+    store.dispatch(cornerAppended(groupToAssetXY(asset.transform, groupXY)));
+  };
+
+  const detachRecognizer = attachOrbitControls(canvas, (event) => aggregator.push(event), {
+    onClick: appendCorner,
+  });
+  const detachCornerControls = attachOutlineCornerControls(canvas, store, getCameraPose);
 
   return {
     drain,
     getCameraPose,
     destroy(): void {
+      detachCornerControls();
       detachRecognizer();
       unsubscribeAdopt();
       aggregator.destroy();
