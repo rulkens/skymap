@@ -17,7 +17,7 @@ import {
   selectDisabledPasses,
   selectGalaxyProvenance,
 } from '../../../src/state/settings/selectors';
-import { setDebugOverlay } from '../../../src/state/settings/settingsSlice';
+import { setDebugOverlay } from '../../../src/state/settings/core/debugSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';
 import type { GpuTimingService } from '../../../src/@types/gpu/timing/GpuTimingService';

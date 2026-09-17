@@ -35,7 +35,7 @@ import {
   strafeId,
 } from '../../../../services/engine/animation/effectHelpers';
 import { focusId } from '../../../../utils/animation/focusId';
-import { setLabelsFocusedOnly } from '../../../../state/settings/settingsSlice';
+import { setLabelsFocusedOnly } from '../../../../state/settings/core/labelsSlice';
 
 const VIRGO = focusId('cluster-virgo-m87');
 

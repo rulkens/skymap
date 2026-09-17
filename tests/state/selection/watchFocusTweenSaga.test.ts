@@ -9,7 +9,7 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { clipStarted } from '../../../src/state/camera/cameraSlice';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   engineStatusChanged,
   engineSourceCountReported,

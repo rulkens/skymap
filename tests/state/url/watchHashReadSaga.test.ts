@@ -45,7 +45,7 @@ import { watchHashReadSaga } from '../../../src/state/url/watchHashReadSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 /**

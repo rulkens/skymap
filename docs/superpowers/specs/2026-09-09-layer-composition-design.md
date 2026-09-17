@@ -176,6 +176,16 @@ allocation site, `destroy` a reverse walk) plus `EngineSubsystemHandles.d.ts`'s
 
 ### 4.3 Composed settings
 
+> **SUPERSEDED 2026-09-17.** The fragment machinery below shipped in (c) and was
+> deleted in step 2 of the post-05a order: every cluster is now a plain RTK
+> `createSlice` with `reducerPath`, composed by `combineSlices`. `LayerSettingsFragment`,
+> `SettingsFragmentLike`, `liftClusterReducers`, `composeInitialSettings` and
+> `assertUniqueFragmentReducerKeys` no longer exist. This section is kept as the
+> decision record for (c)–(e); read it for the WHY, not for the shape. The A3/A8
+> asymmetries in §13 and the D5 corrections in §14 are historical for the same reason.
+> What still stands: §4.3's ruling that `EngineState.settings` narrows to
+> `CoreSettingsState` with one widening accessor per Layer — that is step 5, unbuilt.
+
 ```ts
 // src/@types/settings/LayerSettingsFragment.d.ts
 export type LayerSettingsFragment<Key extends string, Cluster> = {

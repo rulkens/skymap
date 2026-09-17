@@ -56,7 +56,7 @@ import { computeSceneEntering } from './computeSceneEntering';
 import { exitTour } from './tourActions';
 import { tourStarted, tourEnded } from './tourSlice';
 import { clearSelection } from '../selection/selectionSlice';
-import { mergeSnapshot } from '../settings/settingsSlice';
+import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
 import type { RootState } from '../../store/types';
 import type { Tour } from '../../@types/animation/tour/Tour';

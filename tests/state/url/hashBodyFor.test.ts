@@ -11,7 +11,7 @@ import { describe, it, expect } from 'vitest';
 import { hashBodyFor } from '../../../src/state/url/hashBodyFor';
 import { stateAfter } from '../../fixtures/stateAfter';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { manualPausedAtActions } from '../../../src/state/time/enterManualPausedAt';
 
 describe('hashBodyFor', () => {

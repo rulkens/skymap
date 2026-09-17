@@ -18,7 +18,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 
 import { createAppStore } from '../../../src/store/createAppStore';
 import { NOOP_SAGA_CONTEXT, NOOP_RECONCILE } from '../../support/createTestStore';
-import { setHdrEnabled } from '../../../src/state/settings/settingsSlice';
+import { setHdrEnabled } from '../../../src/state/settings/core/hdrSlice';
 import { engineHdrCapabilityChanged } from '../../../src/state/engine/engineSlice';
 
 describe('watchSwapFormatSaga', () => {

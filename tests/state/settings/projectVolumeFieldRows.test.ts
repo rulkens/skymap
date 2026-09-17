@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { projectVolumeFieldRows } from '../../../src/state/settings/projectVolumeFieldRows';
-import reducer, { addVolumeField } from '../../../src/state/settings/settingsSlice';
+import reducer from '../../../src/state/settings/settingsReducer';
+import { addVolumeField } from '../../../src/layers/volume/settings/volumesSlice';
 import { getVolumeFieldDefaults } from '../../../src/data/volume/volumeFieldDefaults';
 import { makeSettingsFixture } from './makeSettingsFixture';
 

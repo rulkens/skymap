@@ -64,11 +64,9 @@ import {
   selectOrbitTrailsEnabled,
   selectZoneOfAvoidanceEnabled,
 } from '../../state/settings/selectors';
-import {
-  setConstellationsEnabled,
-  setOrbitTrailsEnabled,
-  setZoneOfAvoidanceEnabled,
-} from '../../state/settings/settingsSlice';
+import { setConstellationsEnabled } from '../../layers/constellations/settings/constellationsSlice';
+import { setOrbitTrailsEnabled } from '../../layers/body/settings/orbitTrailsSlice';
+import { setZoneOfAvoidanceEnabled } from '../../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
 import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../../data/labels/sourceTypeByLabelCategory';

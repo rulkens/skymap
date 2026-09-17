@@ -10,7 +10,7 @@ import { memo, useCallback } from 'react';
 import DebugOverlaysSection from '../DebugPanel/DebugOverlaysSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectDebugOverlays } from '../../state/settings/selectors';
-import { setDebugOverlay } from '../../state/settings/settingsSlice';
+import { setDebugOverlay } from '../../state/settings/core/debugSlice';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 
 function DebugOverlaysSectionContainer(): React.ReactElement {

@@ -28,7 +28,7 @@
  */
 import { call, select, takeLatest, takeEvery, getContext } from 'typed-redux-saga';
 
-import { inspectClipPath, recalcClipPath, clearClipPath } from '../settings/settingsSlice';
+import { inspectClipPath, recalcClipPath, clearClipPath } from '../settings/core/debugSlice';
 import {
   selectClipPathAlign,
   selectClipPathRampSec,

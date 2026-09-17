@@ -42,7 +42,7 @@ import { sagaContextRegistered } from '../../../src/store/sagaContextRegistered'
 import { watchHashSaga } from '../../../src/state/url/watchHashSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 const write = vi.mocked(writeHashBody);

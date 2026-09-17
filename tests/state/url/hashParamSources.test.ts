@@ -22,7 +22,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
-import { setOrientation } from '../../../src/state/settings/settingsSlice';
+import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';

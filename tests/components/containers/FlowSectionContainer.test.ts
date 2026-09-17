@@ -31,7 +31,7 @@ import { Provider } from 'react-redux';
 import FlowSectionContainer from '../../../src/components/containers/FlowSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectFlow } from '../../../src/state/settings/selectors';
-import { setFlowEnabled } from '../../../src/state/settings/settingsSlice';
+import { setFlowEnabled } from '../../../src/layers/flow/settings/flowSlice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {

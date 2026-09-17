@@ -1,9 +1,9 @@
 /**
  * The Layer's settings tuple — ONE authority, two readers: `layer.ts` and
- * `appSettingsFragments`, which folds it in from HERE for the circular-alias
+ * `appSettingsSlices`, which folds it in from HERE for the circular-alias
  * reason `galaxyCatalogLayerSettings`'s header spells out.
  */
 
-import { filamentsSettingsFragment } from './filamentsSettings';
+import { filamentsSlice } from './filamentsSlice';
 
-export const filamentsLayerSettings = [filamentsSettingsFragment] as const;
+export const filamentsLayerSettings = [filamentsSlice] as const;

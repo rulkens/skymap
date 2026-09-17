@@ -15,11 +15,11 @@ import type { ScopedVisibilityArg } from '../../@types/animation/ScopedVisibilit
 import type { EngineSettingsState } from '../../@types/settings/EngineSettingsState';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { StructureId } from '../../@types/data/structure/StructureId';
+import { setGalaxyCatalogVisible } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
 import {
-  setGalaxyCatalogVisible,
   setStructureItemEnabled,
   setStructureLabelEnabled,
-} from '../../state/settings/settingsSlice';
+} from '../../layers/structure/settings/structuresSlice';
 import { VISIBILITY_ACTION_ROW } from './visibilityActionRow';
 
 type ScopeHandler = (

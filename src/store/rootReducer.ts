@@ -38,7 +38,7 @@ import {
   engineRoute,
   timeRoute,
 } from './constants';
-import settingsReducer from '../state/settings/settingsSlice';
+import settingsReducer from '../state/settings/settingsReducer';
 import uiReducer from '../state/ui/uiSlice';
 import tierReducer from '../state/tier/tierSlice';
 import cameraReducer from '../state/camera/cameraSlice';

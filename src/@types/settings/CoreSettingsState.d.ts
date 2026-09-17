@@ -1,45 +1,25 @@
 /**
- * CoreSettingsState — the settings clusters core owns, once each Layer's cluster
- * moved out to its own fragment; `EngineSettingsState` composes the two. A knob
- * lives under exactly one named cluster — a flat duplicate invites split-brain
- * reads/writes. Not `Readonly<>`: leaves are written by dispatched slice actions
- * and read in the per-frame loop. Boot values:
- * `state/settings/coreInitialSettings.ts`.
+ * CoreSettingsState — the settings clusters core owns, as against the ones each
+ * Layer owns. Every cluster's shape lives in its own file and each slice types
+ * its `initialState` from there, so this composition cannot drift from them.
  */
 
-import type { ToneMapCurve } from '../data/ToneMapCurve';
+import type { OrientationFrameId } from '../camera/OrientationFrameId';
+import type { CameraSettings } from './CameraSettings';
+import type { TonemapSettings } from './TonemapSettings';
 import type { HdrSettings } from './HdrSettings';
+import type { BloomSettings } from './BloomSettings';
 import type { LabelSettings } from './LabelSettings';
 import type { DebugSettings } from './DebugSettings';
-import type { OrientationFrameId } from '../camera/OrientationFrameId';
 
 export type CoreSettingsState = {
   /** Which pole the camera calls "up". World positions never move: J2000 always. */
   orientation: OrientationFrameId;
-
-  /** Vertical field of view in DEGREES; `runFrame` converts to radians once. */
-  camera: {
-    fovDeg: number;
-  };
-
-  tonemap: {
-    exposure: number;
-    curve: ToneMapCurve;
-  };
-
-  /** HDR opt-in + extended-range headroom knobs — see `HdrSettings`. */
+  camera: CameraSettings;
+  tonemap: TonemapSettings;
   hdr: HdrSettings;
-
-  /** `enabled` is read at frame-program BUILD — it changes the pass shape. */
-  bloom: {
-    enabled: boolean;
-    strength: number;
-    threshold: number;
-  };
-
+  bloom: BloomSettings;
   /** Cross-cutting label knobs — they MULTIPLY on top of per-layer label gates. */
   labels: LabelSettings;
-
-  /** Developer diagnostic lenses on the rendered scene — see `DebugSettings`. */
   debug: DebugSettings;
 };
