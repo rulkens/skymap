@@ -1003,12 +1003,35 @@ describe('cutSurfaceTiles', () => {
     });
   });
 
+  describe('relief in the screen-footprint estimate', () => {
+    // Mars' datum lies ~2.7 km under Gale: a patch sized on the datum read a
+    // camera 1 km above the ground as 3.7 km away, two levels short of sharp.
+    const DEEP_BANDS: readonly SurfaceTileBand[] = [
+      { uBounds: [0, 1], vBounds: [0, 1], min: MIN_TILE_LEVEL, max: 19 },
+    ];
+    const GROUND = 2.7 / EARTH_RADIUS_KM;
+
+    function deepestRequested(altitudeKm: number, range: readonly [number, number]): number {
+      const result = cutSurfaceTiles({
+        ...nadirAt(altitudeKm),
+        bands: DEEP_BANDS,
+        residentSlot: (tile: SurfaceTileId) =>
+          tile.product === 'height' ? { ...WHOLE_ATLAS, subtreeRangeM: range } : WHOLE_ATLAS,
+      });
+      return Math.max(...result.requests.requests.map((r) => r.tile.z));
+    }
+
+    it('sizes a patch at its resident ground, not the datum', () => {
+      expect(deepestRequested(1 + 2.7, [GROUND, GROUND])).toBe(deepestRequested(1, [0, 0]));
+    });
+  });
+
   describe('relief headroom in the horizon cull', () => {
     // Bug repro: Everest, ~2 m above the datum (the orbit target sinks to sea
     // level — F2), tilted 10-20° above horizontal — a real EOX z8-13 deep
     // band (public/data/images/earth-tiles/manifest.json) plus the shallow
     // global band underneath. Unlike the frustum-sphere test two blocks up,
-    // step 1 ("1. Horizon" in `probe`) never reads `reliefHeadroom`: it culls
+    // step 1 ("1. Horizon" in `probe`) never read the relief headroom: it culled
     // on the flat-datum angle alone, so a patch whose real relief (Everest's
     // 8849 m) would lift it above the smooth-sphere horizon at this altitude
     // is dropped before the relief-aware frustum test ever runs — visible
