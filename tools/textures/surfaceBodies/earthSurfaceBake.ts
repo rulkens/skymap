@@ -31,13 +31,14 @@ const TILE_ROOT = SURFACE_TILE_REGISTRY.earth.manifestKey;
 
 /**
  * Versioned prefix for the tile bodies themselves. BUMP THIS on any re-bake
- * that changes pixels: the tiles are served `immutable` and never purged, so
- * reusing a version leaves the CDN answering with old imagery against a new
- * manifest for up to a day — mismatched, not merely stale. A new version is
- * new keys, which cost nothing extra and need no purge. v9: height tiles
- * became Terrain-RGB WebP instead of raw f32 (`heightTileFormat.ts`).
+ * that changes bytes, pixels or header alike: tiles are served `immutable,
+ * max-age=1y`, so reusing a version strands the old bytes in edge AND browser
+ * caches, and a browser cache cannot be purged at all — a returning visitor
+ * then mixes old and new tiles. A new version is new keys, which cost nothing
+ * extra and need no purge. v9: height tiles became Terrain-RGB WebP instead of
+ * raw f32. v10: the `SHGT` chunk grew the v3 CPU post grid (`heightTileFormat.ts`).
  */
-const TILE_PREFIX = `${TILE_ROOT}/v9`;
+const TILE_PREFIX = `${TILE_ROOT}/v10`;
 
 /**
  * Shallowest level this bake emits: one finer than the COARSEST whole-globe
