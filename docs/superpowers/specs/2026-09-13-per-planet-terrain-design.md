@@ -728,6 +728,40 @@ type SurfaceHeightField = {
 ray against `terrainHeightM` and bisects the first crossing to convergence. A miss
 returns `null` and the caller falls back to the datum sphere.
 
+**Built in F3c, 2026-09-17, as a free function — not a method.** `raycastTerrain(ray,
+innerRadiusM, outerRadiusM, groundRadiusAtM, toleranceM)` lives in `src/utils/camera/`
+and is a pure function of its arguments: no memo, no cache, and no warm start from the
+previous frame's `t`, which would couple the pick to frame history (user ruling — the
+camera path stays free of local state; `surfaceZoomStep.ts:38` already states the same
+rule for the staleness test). Four rulings shape it:
+
+- **Bounds are declared, not streamed.** The entry and exit shells are
+  `outerBoundRadiusM`/`innerBoundRadiusM` — `datumRadiusM + reliefM[1]` and
+  `+ reliefM[0]`, static per-body data (Earth `[-430, 8849]`). Terrain cannot lie
+  outside them, so no header bound and no residency read is needed to start.
+- **The step is clearance-driven**, `clamp(f(t) / closingRate, minStepM, remaining)`
+  over the signed field `f(t) = |p(t)| − groundRadiusAtM(p̂(t))`. A fixed step is not
+  viable: a grazing ray's chord between the shells is ~670 km on Earth.
+- **The step floor and the tolerance derive from the static band depth**, via
+  `deepestBandLevelAt(params.bands, lonLat)` — the manifest's band boxes, NOT what has
+  streamed in. Deterministic, and it avoids both a wrong global constant and a pick that
+  changes with cache state. It matters because the CPU grid spacing spans four orders of
+  magnitude: 3 m at Copenhagen (z19), 270 m at Everest (z13), 16.7 km over the Dead Sea
+  (z7, the global band). Bisecting tighter than that is false precision.
+- **The eye can start below the terrain** — the floor stands on the 17×17 grid while the
+  shader draws 129², so the eye can be inside the drawn surface (see
+  `docs/backlog/2026-09-17-camera-floor-clips-sharp-peaks.md`). Marching from there finds
+  the exit face on the far side of the mountain, so that case answers the eye's own nadir
+  ground point instead.
+
+The hazard to know: where no tile is resident `terrainHeightM` returns the datum, so a
+ray can pass through an unstreamed massif and land on flat datum far beyond it. This is a
+property of the data source, not the marcher, and it is invisible to any test with full
+local data. The conservative fix is a hierarchical march against the per-node bounds —
+and unlike a greenfield codebase, `subtreeMinM`/`subtreeMaxM` are **already in the `SHGT`
+header**; F3a merely narrowed `ResidentHeightLookup` to `gridCodes`. Widening it back is
+the whole cost, so this is a short path when it is wanted, not a bake change.
+
 ### 8.2 Why the conservative ceiling was withdrawn
 
 **Amended 2026-09-16 (F3a).** This section argued that a `ceilingHeightM` built on the
@@ -782,15 +816,15 @@ nothing now depends on it.
 
 `radiusM` ceases to exist. The 215 sites, through ~10 hubs, become:
 
-| purpose                                                      | sites | reads                                                                                                                                                                                                                          |
-| ------------------------------------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| render footprint, near plane, LOD gates, framing, caption em | 82    | `outerBoundRadiusM` — over-estimating is safe                                                                                                                                                                                  |
-| altitude (h/R, regime bands, drag damping, zoom taper)       | 32    | `datumRadiusM` for the band arithmetic; `bestHeightM` where a readout means eye-to-ground                                                                                                                                      |
-| ground collision                                             | 8     | `datumRadiusM + ceilingHeightM(dir)`, then `standoffRadii`                                                                                                                                                                     |
-| atmosphere bottom, cloud shell                               | 41    | `innerBoundRadiusM` for the march (under-estimate, so a peak is never a hole) — correct only once the composite is depth-aware, §2. Cloud deck becomes **altitude metres above `outerBoundRadiusM`**, not a ratio of the datum |
-| occlusion (trails, captions, umbra, horizon cap)             | 19    | `innerBoundRadiusM` for occluders — they must under-occlude; `boundsM(patch).max` for the occludee in the horizon cap                                                                                                          |
-| pick                                                         | 23    | `raycast` against the height field (§8.1), not `raySphereRoots` — sphere picking is off by up to 8.8 km of parallax at grazing incidence                                                                                       |
-| surface-fixed site placement, orbital elements, InfoCard     | 10    | `bestHeightM` for a rover's ground; `datumRadiusM` for the printed radius — the datum is the mean radius                                                                                                                       |
+| purpose                                                      | sites | reads                                                                                                                                                                                                                                                                    |
+| ------------------------------------------------------------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| render footprint, near plane, LOD gates, framing, caption em | 82    | `outerBoundRadiusM` — over-estimating is safe                                                                                                                                                                                                                            |
+| altitude (h/R, regime bands, drag damping, zoom taper)       | 32    | `datumRadiusM` for the band arithmetic; `bestHeightM` where a readout means eye-to-ground                                                                                                                                                                                |
+| ground collision                                             | 8     | `datumRadiusM + ceilingHeightM(dir)`, then `standoffRadii`                                                                                                                                                                                                               |
+| atmosphere bottom, cloud shell                               | 41    | `innerBoundRadiusM` for the march (under-estimate, so a peak is never a hole) — correct only once the composite is depth-aware, §2. Cloud deck becomes **altitude metres above `outerBoundRadiusM`**, not a ratio of the datum                                           |
+| occlusion (trails, captions, umbra, horizon cap)             | 19    | `innerBoundRadiusM` for occluders — they must under-occlude; `boundsM(patch).max` for the occludee in the horizon cap                                                                                                                                                    |
+| pick                                                         | 23    | `raycast` against the height field (§8.1), not `raySphereRoots` — sphere picking is off by `h·tan θ` of parallax, ~15 km at 60° incidence. **F3c takes the two camera gesture anchors** (zoom pick, drag latch); the object picker keeps the datum until it is asked for |
+| surface-fixed site placement, orbital elements, InfoCard     | 10    | `bestHeightM` for a rover's ground; `datumRadiusM` for the printed radius — the datum is the mean radius                                                                                                                                                                 |
 
 **F3a takes three of those rows**, and reads `terrainHeightM(dir)` (§8.1) wherever the
 table says `ceilingHeightM` or `bestHeightM` — the two names existed because one was
@@ -960,12 +994,36 @@ land/park call is the user's.
 | F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                                                                       | #713 closed superseded, landed via #719                 |
 | F2  | Displacement, normals, edge collapse, base-globe shrink                                                                                               | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
 | F3a | `SHGT` v3 CPU post grid (§8.4) + height re-bake, `terrainHeightM`, and the three §8.3 rows it serves: camera floor, site placement, altitude readouts | prep PR, then feature PR                                |
-| F3b | Terrain-aware gesture anchors, cloud-deck-as-altitude; separately, terrain under an atmosphere                                                        | split in two, see below                                 |
+| F3c | `raycastTerrain` (§8.1) and the two camera gesture anchors it serves: the zoom pick and the drag latch                                                | prep PR, then feature PR                                |
+| F3b | Cloud-deck-as-altitude; separately, terrain under an atmosphere                                                                                       | split in two, see below                                 |
 | F4  | Mars: imagery bake, global height, four rover-site bands                                                                                              | prep #738, then feature PR                              |
 
 F3b's atmosphere row waits on the depth-aware composite (§2), which nobody is
 building; everything else in F3b is independent of it, so the two were split rather
 than bundled — `docs/backlog/2026-09-17-terrain-f3b-remaining-routing.md`.
+
+**F3c's ground preparation** (`refactor-ground`, 2026-09-17 checkpoint, with a
+greenfield cross-check that independently derived the same one-function shape and the
+same declared-shell bounds). Two joints were missing, one prep item survives:
+
+- `HostBody` carries the datum alone (`HostBody.d.ts:9-10`), so the march has no shells.
+  Growth, not a bolt-on: `bodyRung.host()` already holds `body.surface`, and
+  `outerBoundRadiusM`/`innerBoundRadiusM` already exist as helpers. **This is the prep,
+  packaged as its own PR (user, 2026-09-17).**
+- A per-march bound sampler was sketched and then **dropped** — it optimised an unmeasured
+  cost and would have handed a closure over subsystem internals to the camera. If the perf
+  gate shows the per-sample setup hurts (`surfaceTileSubsystem.ts:462-484` re-does a
+  lon/lat conversion, a 20-band scan, and a `SurfaceTileId` + `surfaceTilePath` allocation
+  per level, per sample), the fix goes inside the subsystem, never into the camera path.
+
+The drag keeps its **frozen sphere** (`SurfaceGesture.anchorRadiusM`, C §2.3): the pick
+now lands on rock instead of the datum, and every downstream mode — pan, the
+`MIN_INCIDENCE_COS` degradation, orbit, strafe — inherits through the latched radius with
+**no new field on the gesture**. The cross-check's alternative, storing the point and
+deriving pan from its tangent plane, is geometrically better over varied relief but
+re-opens the drag rate law and grows per-gesture state; rejected on both counts.
+Adjacent, backlogged: `anchoredDragRotation.ts:32` keeps a private `pickDir` copy of
+`pickOnBody`'s ray/sphere maths.
 
 Two rows the §8.3 table still lists as F3b are **already done**, and the table's site
 counts are stale in the strict sense: #704 removed `radiusM` outright, so there is
