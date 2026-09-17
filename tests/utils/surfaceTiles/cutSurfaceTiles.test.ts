@@ -1419,11 +1419,6 @@ describe('cutSurfaceTiles', () => {
       return false;
     }
 
-    it('draws a leaf under the rover at the heading the datum-centred sphere used to cull', () => {
-      const result = cutSurfaceTiles(poseAtHeading(0.785));
-      expect(siteIsCovered(result.cut)).toBe(true);
-    });
-
     it('draws a leaf under the rover across a spread of headings', () => {
       for (const headingDeg of [0, 45, 90, 135, 180, 225, 270, 315]) {
         const headingRad = (headingDeg * Math.PI) / 180;

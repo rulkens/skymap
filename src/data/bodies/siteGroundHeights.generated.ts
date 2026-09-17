@@ -6,9 +6,7 @@
 
 /** Site id -> ground height, metres above the host's datum, bilinearly
  *  sampled from the deepest baked height tile under the site (see the
- *  generator). Placement reads this instead of a live terrain lookup: the
- *  ground under a site never changes, so baking it removes the residency
- *  landmine a live lookup had. */
+ *  generator). */
 export const SITE_GROUND_HEIGHTS: Readonly<Record<string, number>> = {
   curiosity: 2705.26299968123,
   perseverance: 4259.723814802178,

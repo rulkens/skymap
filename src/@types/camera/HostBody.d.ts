@@ -8,8 +8,7 @@ export type HostBody = {
   readonly state: BodyState;
   /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull; the h/R bands read it. */
   readonly radiusM: number;
-  /** The ground: what the descent floor stands off from. A site's own ground
-   *  is baked (F4, `siteGroundRadiusM`), not read off this live lookup. */
+  /** The ground: what the descent floor stands off from. */
   readonly groundRadiusAtM: GroundRadiusLookup;
   /** Terrain cannot lie outside these, whatever has streamed in — they come from
    *  `BodySurface.reliefM`, declared per-body data, not from a tile header. A ray pick

@@ -1,11 +1,7 @@
 /**
  * buildSiteGroundHeights — bakes each `SURFACE_FIXED_SITES` row's ground
  * height (metres above its host's datum) from the deepest baked height tile
- * under its lat/lon, into `siteGroundHeights.generated.ts`. Placement no
- * longer reads a LIVE terrain lookup (F4): the ground under a site never
- * changes, so baking it removes the residency landmine a live lookup had — a
- * paused clock or a not-yet-loaded tile used to freeze the rover at whatever
- * the lookup answered first, usually 0.
+ * under its lat/lon, into `siteGroundHeights.generated.ts`.
  *
  * Samples the full 129x129 Terrain-RGB raster bilinearly, the SAME surface
  * the shader displaces against — not the tile's decimated 17x17 SHGT grid
@@ -159,9 +155,7 @@ function serialize(heights: ReadonlyMap<string, number>): string {
     '\n' +
     "/** Site id -> ground height, metres above the host's datum, bilinearly\n" +
     ' *  sampled from the deepest baked height tile under the site (see the\n' +
-    ' *  generator). Placement reads this instead of a live terrain lookup: the\n' +
-    ' *  ground under a site never changes, so baking it removes the residency\n' +
-    ' *  landmine a live lookup had. */\n' +
+    ' *  generator). */\n' +
     'export const SITE_GROUND_HEIGHTS: Readonly<Record<string, number>> = {\n' +
     `${rows}\n};\n`
   );

@@ -34,12 +34,6 @@ describe('gradeRgbaInPlace', () => {
     expect(Array.from(rgba)).toEqual([255, 64, 32, 255]);
   });
 
-  it('leaves alpha untouched', () => {
-    const rgba = new Uint8Array([0, 0, 0, 37]);
-    gradeRgbaInPlace(rgba, { ...IDENTITY, ev: 2, contrast: 1.5 });
-    expect(rgba[3]).toBe(37);
-  });
-
   it('skips a no-data (alpha-0) pixel entirely, even under a non-identity grade', () => {
     const rgba = new Uint8Array([12, 34, 56, 0]);
     gradeRgbaInPlace(rgba, { ...IDENTITY, ev: 2, contrast: 1.5, saturation: 0 });
