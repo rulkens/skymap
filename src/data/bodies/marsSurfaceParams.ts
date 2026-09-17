@@ -1,6 +1,8 @@
 /** marsSurfaceParams — Mars's IAU sphere, the datum rebase from it (+6,190 m,
- *  spec §4.3), and the tile shading matched to the base globe. */
+ *  spec §4.3), the tile shading matched to the base globe, and the base
+ *  globe's colour grade (`src/` cannot import the `tools/` recipe module). */
 
+import type { ColourGrade } from '../../@types/scene/ColourGrade';
 import type { SurfaceTileShading } from '../../@types/data/SurfaceTileShading';
 import { BODY_AMBIENT_LIGHT } from './bodyAmbientLight';
 
@@ -22,4 +24,15 @@ export const MARS_SURFACE_SHADING: SurfaceTileShading = {
   roughnessBase: MARS_ROUGHNESS,
   f0: 0.03,
   sunIrradiance: ((1 - BODY_AMBIENT_LIGHT) * Math.PI) / OREN_NAYAR_A,
+};
+
+// Solar System Scope base globe grade, tuned in the albedo bench 2026-09-17
+// against the graded Viking tiles (see `marsAlbedoRecipe.ts`'s Viking pair).
+export const MARS_GLOBE_GRADE: ColourGrade = {
+  ev: 0,
+  contrast: 1,
+  gamma: 1.05,
+  saturation: 1,
+  gain: [1.0447, 1.4707, 1.4248],
+  offset: [0.066, 0.049, 0.036],
 };

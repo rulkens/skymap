@@ -25,6 +25,7 @@ import { clippedHeightSource } from '../clippedHeightSource';
 import { clippedImagerySource } from '../clippedImagerySource';
 import { colourMatchedImagerySource } from '../colourMatchedImagerySource';
 import { constantHeightSource } from '../constantHeightSource';
+import { delightedImagerySource } from '../delightedImagerySource';
 import { geoTiffHeightSource } from '../geoTiffHeightSource';
 import { geoTiffImagerySource } from '../geoTiffImagerySource';
 import type { GeoTiffGrid } from '../GeoTiffGrid';
@@ -32,11 +33,13 @@ import type { HeightSource } from '../HeightSource';
 import type { SurfaceBakeBand } from '../SurfaceBakeBand';
 import type { SurfaceBodyBake } from '../SurfaceBodyBake';
 import type { SurfaceImagerySource } from '../SurfaceImagerySource';
+import { MARS_VIKING_DELIGHT, MARS_VIKING_GRADE } from './marsAlbedoRecipe';
 
 const TILE_ROOT = SURFACE_TILE_REGISTRY.mars.manifestKey;
 
-/** Bump on any re-bake that changes pixels (see `earthSurfaceBake`). */
-const TILE_PREFIX = `${TILE_ROOT}/v1`;
+/** Bump on any re-bake that changes pixels (see `earthSurfaceBake`). v2: the
+ *  tuned de-light + grade recipe (`marsAlbedoRecipe.ts`). */
+const TILE_PREFIX = `${TILE_ROOT}/v2`;
 
 /** The compiled `reliefM` `heliocentricPlanet` gave Mars — read, never
  *  restated, so `assertInsideReliefM` catches the two derivations drifting. */
@@ -151,8 +154,6 @@ type MarsSite = {
   readonly ortho: GeoTiffGrid;
   /** Present for the UInt16 grey orthos only. */
   readonly greyStretch?: readonly [number, number];
-  /** Grey orthos take their colour from Viking. */
-  readonly grey: boolean;
 };
 
 /** Origins and pixel sizes from each file's `gdalinfo` header (2026-09-17). */
@@ -167,7 +168,6 @@ function marsSites(): readonly MarsSite[] {
       dtm: sphereGrid('hirise.gale.dtm', 8127993.492786024, -244781.075189438, 1, 32980, 57440),
       dtmNodata: -32767,
       ortho: sphereGrid('hirise.gale.ortho', 8140000, -270000, 0.25, 36000, 76000),
-      grey: false,
     },
     {
       roverId: 'perseverance',
@@ -177,7 +177,6 @@ function marsSites(): readonly MarsSite[] {
       dtm: sphereGrid('hirise.jezero.dtm', 4567580, 1101802, 1, 19144, 26816),
       dtmNodata: -32767,
       ortho: sphereGrid('hirise.jezero.ortho', 4567580, 1101802, 0.25, 76576, 107264),
-      grey: true,
     },
     {
       roverId: 'spirit',
@@ -202,7 +201,6 @@ function marsSites(): readonly MarsSite[] {
         43210,
       ),
       greyStretch: GUSEV_GREY_STRETCH,
-      grey: true,
     },
     {
       roverId: 'opportunity',
@@ -227,7 +225,6 @@ function marsSites(): readonly MarsSite[] {
         85880,
       ),
       greyStretch: ENDEAVOUR_GREY_STRETCH,
-      grey: true,
     },
   ];
 }
@@ -371,9 +368,9 @@ async function siteBand(
     core,
   );
   return {
-    source: site.grey
-      ? colourMatchedImagerySource(ortho, global, { sigmaDeg: MARS_COLOUR_MATCH_SIGMA_DEG })
-      : ortho,
+    // Every site now colour-matches to the graded Viking, not just the grey
+    // orthos: Gale's own colour would otherwise jump against it.
+    source: colourMatchedImagerySource(ortho, global, { sigmaDeg: MARS_COLOUR_MATCH_SIGMA_DEG }),
     minLevel: SITE_MIN_LEVEL,
     underfill: global,
     height: clippedHeightSource(dtm, globalHeight, extent, core),
@@ -383,15 +380,32 @@ async function siteBand(
 }
 
 async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBand[]> {
-  if (dev) return [{ source: viking(DEV_MAX_LEVEL), minLevel: BAKE_MIN_LEVEL }];
+  if (dev) {
+    return [
+      {
+        source: delightedImagerySource(
+          viking(DEV_MAX_LEVEL),
+          mola(),
+          MARS_VIKING_DELIGHT,
+          MARS_VIKING_GRADE,
+        ),
+        minLevel: BAKE_MIN_LEVEL,
+      },
+    ];
+  }
 
   assertInsideReliefM('MOLA global', [
     MARS_AREOID_RELIEF_M[0] + MARS_DATUM_OFFSET_M,
     MARS_AREOID_RELIEF_M[1] + MARS_DATUM_OFFSET_M,
   ]);
 
-  const global = viking(GLOBAL_MAX_LEVEL);
   const globalHeight = mola();
+  const global = delightedImagerySource(
+    viking(GLOBAL_MAX_LEVEL),
+    globalHeight,
+    MARS_VIKING_DELIGHT,
+    MARS_VIKING_GRADE,
+  );
   const sites: SurfaceBakeBand[] = [];
   for (const site of marsSites()) sites.push(await siteBand(site, global, globalHeight));
   return [
