@@ -282,11 +282,11 @@ than 3 distinct corners, zero signed area, and any pair of non-adjacent edges th
 Throws `Error` with a human-readable message on rejection — the endpoint returns it as the 400
 body.
 
-- [ ] `normalizeRing reverses a clockwise ring`.
-- [ ] `normalizeRing drops a repeated closing corner`.
-- [ ] `normalizeRing rejects fewer than three corners`.
-- [ ] `normalizeRing rejects a bow-tie` — `[[0,0],[1,1],[1,0],[0,1]]`.
-- [ ] Commit.
+- [x] `normalizeRing reverses a clockwise ring`.
+- [x] `normalizeRing drops a repeated closing corner`.
+- [x] `normalizeRing rejects fewer than three corners`.
+- [x] `normalizeRing rejects a bow-tie` — `[[0,0],[1,1],[1,0],[0,1]]`.
+- [x] Commit.
 
 ### Task 6: `insideRing`
 
