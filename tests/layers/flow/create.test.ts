@@ -2,7 +2,9 @@
  * create — mints a non-null renderer and a slot whose commit closes over it
  * directly (Task 3's whole point: no `state.gpu` reach, no `?.` guard). The
  * fetcher is mocked so `slot.load` exercises the real commit without a
- * network round-trip, mirroring `volumeSlotIngest.test.ts`'s idiom.
+ * network round-trip, mirroring `volumeSlotIngest.test.ts`'s idiom. Also pins
+ * the Layer's composed shape (folded in from the deleted `layer.test.ts`) —
+ * `FRAME_ORDER` matches passes/computes by these names.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -12,6 +14,7 @@ vi.mock('../../../src/layers/flow/load/flowFieldFetcher', () => ({
 }));
 
 import { create } from '../../../src/layers/flow/create';
+import { flowLayer } from '../../../src/layers/flow/layer';
 import type { LayerCoreDeps } from '../../../src/@types/engine/layer/LayerCoreDeps';
 import type { ScalarCube } from '../../../src/@types/data/volume/ScalarCube';
 
@@ -66,5 +69,15 @@ describe('flow create', () => {
     // there is no `state` argument for it to reach through.
     expect(uploadSpy).toHaveBeenCalledWith(cube);
     expect(runtime.renderer.fieldLoaded()).toBe(true);
+  });
+
+  it('contributes exactly one named "flow" row to each runtime-bound surface', () => {
+    const deps = { ctx: { device: mockDevice() } } as unknown as LayerCoreDeps;
+    const runtime = flowLayer.create(deps);
+
+    expect(flowLayer.passes(runtime).map((p) => p.name)).toEqual(['flow']);
+    expect(flowLayer.computes?.(runtime).map((c) => c.name)).toEqual(['flow']);
+    expect(flowLayer.assets?.(runtime).map((a) => a.key)).toEqual(['flow']);
+    expect(flowLayer.fades?.(runtime).map((f) => f.key)).toEqual(['flow']);
   });
 });

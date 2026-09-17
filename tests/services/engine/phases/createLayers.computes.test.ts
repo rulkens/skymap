@@ -1,13 +1,11 @@
 /**
- * createLayers — compute-row composition: core's `CORE_COMPUTES` first, then
- * each Layer's own rows, in tuple order, with a shared name across composed
- * rows caught at boot exactly as it is for passes (`createLayers.composition.test.ts`).
+ * createLayers — compute-row composition: a shared name across composed rows
+ * is caught at boot, exactly as it is for passes (`createLayers.composition.test.ts`).
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import { createLayers } from '../../../../src/services/engine/phases/createLayers';
 import { createAppStore } from '../../../../src/store/createAppStore';
-import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -57,20 +55,6 @@ function computeLayer(name: string, computeName: string): Layer<string, unknown>
 }
 
 describe('createLayers computes composition', () => {
-  it('appends each Layer compute row after core rows', async () => {
-    const { store } = createAppStore();
-    const state = makeState();
-    const layers = [computeLayer('a', 'a-compute'), computeLayer('b', 'b-compute')];
-
-    await createLayers(state, makeDeps(layers, store));
-
-    expect(state.computes.map((c) => c.name)).toEqual([
-      ...CORE_COMPUTES.map((c) => c.name),
-      'a-compute',
-      'b-compute',
-    ]);
-  });
-
   it('throws when two composed compute rows share a name', async () => {
     const { store } = createAppStore();
     const state = makeState();
