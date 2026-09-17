@@ -3,7 +3,7 @@
  * lon/lat/span coordinate fields; rendered inline in the viewer's toolbar
  * row (App owns the wrapping `.toolbar` div).
  */
-import { VIEW_PRESETS, type ViewState } from '../viewPresets';
+import { MAX_SPAN_DEG, MIN_SPAN_DEG, VIEW_PRESETS, type ViewState } from '../viewPresets';
 
 export type ViewMode = 'wipe' | 'side-by-side' | 'flip';
 const VIEW_MODES: readonly ViewMode[] = ['wipe', 'side-by-side', 'flip'];
@@ -72,7 +72,8 @@ export function Navigator(props: NavigatorProps) {
           <input
             type="number"
             step="0.1"
-            min="0.05"
+            min={MIN_SPAN_DEG}
+            max={MAX_SPAN_DEG}
             value={view.spanDeg}
             onChange={(e) => onView({ ...view, spanDeg: Number(e.target.value) })}
           />

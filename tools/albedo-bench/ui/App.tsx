@@ -7,6 +7,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { AlbedoRecipe } from '../../textures/AlbedoRecipe';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import { defaultApi, type FieldArrow, type RenderLight } from './api';
 import { boxFromView, type ViewState } from './viewPresets';
 import { Navigator, type ViewMode } from './components/Navigator';
@@ -25,6 +26,10 @@ function manualGFrom(azDeg: number, strength: number): readonly [number, number]
   return [-strength * Math.sin(az), -strength * Math.cos(az)];
 }
 
+function boxEquals(a: LonLatBounds, b: LonLatBounds): boolean {
+  return a.west === b.west && a.east === b.east && a.south === b.south && a.north === b.north;
+}
+
 export function App() {
   const [recipe, setRecipe] = useState<AlbedoRecipe>();
   const recipeRef = useRef(recipe);
@@ -39,6 +44,10 @@ export function App() {
   const [light, setLight] = useState<RenderLight>(DEFAULT_LIGHT);
   const [originalUrl, setOriginalUrl] = useState<string>();
   const [adjustedUrl, setAdjustedUrl] = useState<string>();
+  // The box the currently-displayed pair was actually rendered for — lags
+  // `box` while a pan/zoom's render is in flight, driving both the preview
+  // CSS transform and the "still catching up" indicator (see CompareView).
+  const [renderedBox, setRenderedBox] = useState<LonLatBounds>();
   const [arrows, setArrows] = useState<readonly FieldArrow[]>([]);
   const [saveStatus, setSaveStatus] = useState('');
   const [renderError, setRenderError] = useState<string>();
@@ -50,6 +59,7 @@ export function App() {
   );
   const recipeLoaded = recipe !== undefined;
   const sunFit = recipe?.sunFit;
+  const pending = renderedBox === undefined || !boxEquals(renderedBox, box);
 
   useEffect(() => {
     let cancelled = false;
@@ -82,6 +92,7 @@ export function App() {
             if (prev) URL.revokeObjectURL(prev);
             return URL.createObjectURL(blob);
           });
+          setRenderedBox(box);
         })
         .catch((err) => {
           if (!cancelled) setRenderError(String(err));
@@ -112,6 +123,7 @@ export function App() {
             if (prev) URL.revokeObjectURL(prev);
             return URL.createObjectURL(blob);
           });
+          setRenderedBox(box);
           setRenderError(undefined);
         })
         .catch((err) => {
@@ -195,6 +207,10 @@ export function App() {
               viewMode={viewMode}
               arrows={sunMode === 'fitted' ? arrows : []}
               box={box}
+              view={view}
+              onView={setView}
+              renderedBox={renderedBox}
+              pending={pending}
             />
           </div>
           <p className="hint">{hintFor(viewMode)}</p>
