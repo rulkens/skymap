@@ -16,25 +16,26 @@ import { geoTiffImagerySource } from '../../../tools/textures/geoTiffImagerySour
 import { readGeoTiffRgbWindow } from '../../../tools/utils/textures/readGeoTiffRgbWindow';
 
 /**
- * A bare single-band UInt16 TIFF (8-byte header, one strip, ten IFD tags) —
+ * A bare single-band 8- or 16-bit grey TIFF (8-byte header, one strip, ten IFD tags) —
  * `sharp`'s own TIFF encoder converts a single-band raw input into an 8-bit
  * sRGB triple regardless of `depth`, the same silent-corruption failure mode
  * `dhmTerraenHeightSource`'s tests hit for single-band float32.
  */
-function writeUInt16GreyTiff(
+function writeGreyTiff(
   path: string,
   width: number,
   height: number,
   values: ArrayLike<number>,
+  bits: 8 | 16,
 ): void {
-  const pixels = Uint16Array.from(values);
+  const pixels = bits === 8 ? Uint8Array.from(values) : Uint16Array.from(values);
   const pixelBytes = Buffer.from(pixels.buffer, pixels.byteOffset, pixels.byteLength);
   const headerSize = 8;
   const ifdOffset = headerSize + pixelBytes.byteLength;
   const entries: ReadonlyArray<readonly [number, number, number, number]> = [
     [256, 3, 1, width], // ImageWidth (SHORT)
     [257, 3, 1, height], // ImageLength (SHORT)
-    [258, 3, 1, 16], // BitsPerSample
+    [258, 3, 1, bits], // BitsPerSample
     [259, 3, 1, 1], // Compression: none
     [262, 3, 1, 1], // PhotometricInterpretation: BlackIsZero
     [273, 4, 1, headerSize], // StripOffsets (LONG)
@@ -101,6 +102,15 @@ describe('readGeoTiffRgbWindow', () => {
     expect([...window.slice(0, 4)]).toEqual([11, 51, 102, 255]);
     expect([...window.slice(12, 16)]).toEqual([12, 52, 104, 255]);
   });
+
+  it('replicates an 8-bit grey TIFF to opaque RGB', async () => {
+    const path = join(dir, 'grey8.tif');
+    writeGreyTiff(path, 3, 1, [7, 90, 200], 8);
+
+    const window = await readGeoTiffRgbWindow(path, 1, 0, 2, 1);
+
+    expect([...window]).toEqual([90, 90, 90, 255, 200, 200, 200, 255]);
+  });
 });
 
 describe('geoTiffImagerySource', () => {
@@ -109,7 +119,7 @@ describe('geoTiffImagerySource', () => {
     const height = 1;
     const path = join(dir, 'grey.tif');
     // 0 is the declared no-data value; 30000 sits at the stretch's high end.
-    writeUInt16GreyTiff(path, width, height, [0, 30000]);
+    writeGreyTiff(path, width, height, [0, 30000], 16);
 
     const source = geoTiffImagerySource({
       id: 'grey-test',

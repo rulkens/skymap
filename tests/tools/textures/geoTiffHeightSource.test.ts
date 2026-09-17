@@ -12,6 +12,7 @@ import { join } from 'node:path';
 
 import { geoTiffHeightSource } from '../../../tools/textures/geoTiffHeightSource';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
+import { readGeoTiffWindow } from '../../../tools/utils/textures/readGeoTiffWindow';
 
 /**
  * A bare single-band float32 TIFF (8-byte header, one strip, ten IFD tags).
@@ -25,22 +26,23 @@ function writeFloatTiff(
   width: number,
   height: number,
   values: ArrayLike<number>,
+  format: 'float32' | 'int16' = 'float32',
 ): void {
-  const pixels = Float32Array.from(values);
+  const pixels = format === 'int16' ? Int16Array.from(values) : Float32Array.from(values);
   const pixelBytes = Buffer.from(pixels.buffer, pixels.byteOffset, pixels.byteLength);
   const headerSize = 8;
   const ifdOffset = headerSize + pixelBytes.byteLength;
   const entries: ReadonlyArray<readonly [number, number, number, number]> = [
     [256, 3, 1, width], // ImageWidth (SHORT)
     [257, 3, 1, height], // ImageLength (SHORT)
-    [258, 3, 1, 32], // BitsPerSample
+    [258, 3, 1, format === 'int16' ? 16 : 32], // BitsPerSample
     [259, 3, 1, 1], // Compression: none
     [262, 3, 1, 1], // PhotometricInterpretation: BlackIsZero
     [273, 4, 1, headerSize], // StripOffsets (LONG)
     [277, 3, 1, 1], // SamplesPerPixel
     [278, 4, 1, height], // RowsPerStrip: one strip
     [279, 4, 1, pixelBytes.byteLength], // StripByteCounts
-    [339, 3, 1, 3], // SampleFormat: IEEE float
+    [339, 3, 1, format === 'int16' ? 2 : 3], // SampleFormat: signed int / IEEE float
   ];
   const buf = Buffer.alloc(ifdOffset + 2 + entries.length * 12 + 4);
   buf.write('II', 0, 'ascii');
@@ -132,5 +134,35 @@ describe('geoTiffHeightSource', () => {
     // exact declared no-data value.
     const huge = await source().readGrid(Z, I0 + 2, J0 + 1, 1, 1);
     expect(huge![0]).toBeNaN();
+  });
+
+  it('reads the pole rows of a pole-to-pole grid instead of leaving them void', async () => {
+    const globePath = join(dir, 'globe.tif');
+    writeFloatTiff(globePath, 4, 2, [1, 2, 3, 4, 5, 6, 7, 8]);
+    const globe = geoTiffHeightSource({
+      id: 'test-globe',
+      attribution: 'test',
+      provenance: { sourceId: 'test-globe', attribution: 'test', vintage: '2026' },
+      grid: {
+        path: globePath,
+        width: 4,
+        height: 2,
+        bounds: { west: -180, east: 180, north: 90, south: -90 },
+      },
+      nodata: NODATA,
+      offsetM: 0,
+      maxLevel: 0,
+    });
+    // Level 0 rows 0 and 64 are the north and south poles.
+    const north = await globe.readGrid(0, 0, 0, 129, 1);
+    const south = await globe.readGrid(0, 0, 64, 129, 1);
+    expect(north!.every(Number.isFinite)).toBe(true);
+    expect(south!.every(Number.isFinite)).toBe(true);
+  });
+
+  it('refuses an Int16 DEM rather than returning clamped or rescaled metres', async () => {
+    const shortPath = join(dir, 'short.tif');
+    writeFloatTiff(shortPath, 2, 1, [-4500, 20000], 'int16');
+    await expect(readGeoTiffWindow(shortPath, 0, 0, 2, 1)).rejects.toThrow(/depth 'short'/);
   });
 });

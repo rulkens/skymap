@@ -1,10 +1,9 @@
 /**
- * SURFACE_FIXED_SITES — the authored landing sites: a body, its host, and where
- * on that host it sits. The four rows are where each rover TOUCHED DOWN, not
- * where it stopped — Curiosity has since driven ~35 km up Mount Sharp and
- * Opportunity ~45 km to Perseverance Valley; the fact sheets say so. Heights
- * are measured from Mars's mean 3390 km sphere, so areoid-relative site
- * elevations are not modelled.
+ * SURFACE_FIXED_SITES — the authored rover sites: a body, its host, and where
+ * on that host it sits. Curiosity and Spirit sit where they TOUCHED DOWN;
+ * Opportunity and Perseverance sit where the HiRISE site bands can show them
+ * (the Mars terrain bake clips each band to a window around these rows).
+ * Heights are measured from Mars's mean 3390 km sphere.
  */
 
 import { MESH_ASSETS } from './meshAssets.generated';
@@ -28,12 +27,13 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     lonDeg: 137.4417,
     altitudeM: groundOffsetM('curiosity'),
   },
-  // Octavia E. Butler Landing, Jezero crater.
+  // Sol 1980 end-of-drive (RMC 91_970, ~2026-09-14), Jezero crater:
+  // mars.nasa.gov/mmgis-maps/M20/Layers/json/M20_waypoints_current.json.
   {
     id: 'perseverance',
     hostId: 'mars',
-    latDeg: 18.4447,
-    lonDeg: 77.4508,
+    latDeg: 18.43687,
+    lonDeg: 77.23205,
     altitudeM: groundOffsetM('perseverance'),
   },
   // Columbia Memorial Station, Gusev crater.
@@ -44,12 +44,14 @@ export const SURFACE_FIXED_SITES: readonly SurfaceFixedSite[] = [
     lonDeg: 175.4726,
     altitudeM: groundOffsetM('mer'),
   },
-  // Challenger Memorial Station, Meridiani Planum.
+  // Final resting place, Perseverance Valley on Endeavour's rim: the centre
+  // of HiRISE ESP_087985_1780 "Opportunity Rover Position" (uahirise.org). A
+  // proxy — no official lat/lon fix is published.
   {
     id: 'opportunity',
     hostId: 'mars',
-    latDeg: -1.9462,
-    lonDeg: 354.4734,
+    latDeg: -2.336,
+    lonDeg: 354.619,
     altitudeM: groundOffsetM('mer'),
   },
 ];

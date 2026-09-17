@@ -1,8 +1,9 @@
 import sharp from 'sharp';
 
 /**
- * readGeoTiffRgbWindow — one pixel window of an 8-bit colour GeoTIFF (Viking,
- * the HiRISE colour orthos), as RGBA. `ensureAlpha` adds an opaque channel
+ * readGeoTiffRgbWindow — one pixel window of an 8-bit colour or grey GeoTIFF
+ * (Viking, the HiRISE orthos), as RGBA; sharp's raw output replicates grey
+ * (Jezero) to RGB on its own. `ensureAlpha` adds an opaque channel
  * only where the file has none; a real embedded mask band survives it, so a
  * masked COG's transparency reaches the caller rather than being flattened.
  */

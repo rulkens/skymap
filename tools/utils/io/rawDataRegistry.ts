@@ -999,11 +999,11 @@ export const RAW_DATA = {
   // records the gdal_translate line); worktrees reach them via leaf symlinks.
 
   'mola.dem463': {
-    path: 'data/raw/mola/Mars_MGS_MOLA_DEM_mosaic_global_463m_cog.tif',
+    path: 'data/raw/mola/Mars_MGS_MOLA_DEM_mosaic_global_463m_f32_cog.tif',
     kind: 'file',
     source: 'gitignored',
     description:
-      'MOLA 463 m global DEM, tiled COG of the USGS mosaic: 46080x23040 Int16 metres above the areoid, NoData -32768, equirectangular on the 3,396,190 m sphere, edge-registered.',
+      'MOLA 463 m global DEM, Float32 tiled COG of the Int16 USGS mosaic (sharp cannot read signed 16-bit): 46080x23040 metres above the areoid, NoData -32768, equirectangular on the 3,396,190 m sphere, edge-registered.',
     upstream: 'https://planetarymaps.usgs.gov/mosaic/Mars_MGS_MOLA_DEM_mosaic_global_463m.tif',
     readme: 'mola.readme',
   },

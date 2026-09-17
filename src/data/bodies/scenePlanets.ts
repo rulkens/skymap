@@ -8,8 +8,13 @@
  */
 
 import { heliocentricPlanet } from './makers/heliocentricPlanet';
+import { MARS_AREOID_RELIEF_M, MARS_IAU_SPHERE_RADIUS_M } from './marsSurfaceParams';
 import { satelliteBody } from './makers/satelliteBody';
 import type { PlanetBody } from '../../@types/scene/PlanetBody';
+
+const MARS_DATUM_RADIUS_M = 3390000;
+/** Areoid heights rebased onto the datum, the same shift the terrain bake adds. */
+const MARS_DATUM_OFFSET_M = MARS_IAU_SPHERE_RADIUS_M - MARS_DATUM_RADIUS_M;
 
 export const SCENE_PLANETS: readonly PlanetBody[] = [
   heliocentricPlanet({
@@ -27,8 +32,12 @@ export const SCENE_PLANETS: readonly PlanetBody[] = [
   heliocentricPlanet({
     id: 'mars',
     label: 'Mars',
-    datumRadiusM: 3390000,
+    datumRadiusM: MARS_DATUM_RADIUS_M,
     albedo: [0.6, 0.32, 0.23],
+    reliefM: [
+      MARS_AREOID_RELIEF_M[0] + MARS_DATUM_OFFSET_M,
+      MARS_AREOID_RELIEF_M[1] + MARS_DATUM_OFFSET_M,
+    ],
   }),
   heliocentricPlanet({
     id: 'jupiter',

@@ -364,7 +364,7 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     dayLength: '24 h 39 m 35 s (1 sol)',
     wikiTitle: 'Perseverance_(rover)',
     description:
-      'Perseverance landed at Octavia E. Butler Landing in Jezero crater (18.44°N 77.45°E) on 18 February 2021 to search an ancient river delta for traces of microbial life, sealing rock cores for a possible return to Earth. The marker shows the landing site, not the rover: Perseverance is still operating and has driven tens of kilometres beyond it.',
+      'Perseverance landed at Octavia E. Butler Landing in Jezero crater (18.44°N 77.45°E) on 18 February 2021 to search an ancient river delta for traces of microbial life, sealing rock cores for a possible return to Earth. The marker shows the rover where it stood on sol 1980 (September 2026), about 12 km west of the landing site; Perseverance is still driving, so it has moved on since.',
   },
   spirit: {
     dayLength: '24 h 39 m 35 s (1 sol)',
@@ -376,6 +376,6 @@ export const BODY_FACTS: Readonly<Record<string, BodyFacts>> = {
     dayLength: '24 h 39 m 35 s (1 sol)',
     wikiTitle: 'Opportunity_(rover)',
     description:
-      'Opportunity landed at Challenger Memorial Station on Meridiani Planum (1.95°S 354.47°E) on 25 January 2004 and drove more than 45 km over the following fourteen years, far past its 90-sol design life. The marker shows the landing site, not the rover, which fell silent in a planet-wide dust storm in 2018 at Perseverance Valley, on the rim of Endeavour crater.',
+      'Opportunity landed at Challenger Memorial Station on Meridiani Planum (1.95°S 354.47°E) on 25 January 2004 and drove more than 45 km over the following fourteen years, far past its 90-sol design life. It fell silent in a planet-wide dust storm in 2018 in Perseverance Valley, on the rim of Endeavour crater, and the marker stands there, about 25 km from the landing site.',
   },
 };

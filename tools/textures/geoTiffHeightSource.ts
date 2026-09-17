@@ -51,6 +51,10 @@ export function geoTiffHeightSource(opts: {
   // raster's column 0 rather than an off-the-end column; a regional DTM box
   // never reaches its own edge from both sides, so this never engages there.
   const spansFullCircle = Math.abs(grid.bounds.east - grid.bounds.west - 360) < 1e-6;
+  // A pole post sits half a pixel beyond the first row's centre; clamping to
+  // that row is exact (the whole row IS the pole), where NaN would underfill
+  // a spike at each pole.
+  const spansPoleToPole = Math.abs(grid.bounds.north - grid.bounds.south - 180) < 1e-6;
 
   const colOf = (lon: number): number => (lon - grid.bounds.west) / dx - 0.5;
   const rowOf = (lat: number): number => (grid.bounds.north - lat) / dy - 0.5;
@@ -96,9 +100,10 @@ export function geoTiffHeightSource(opts: {
         // actual extent, which is what `outside bounds -> NaN` guards.
         const at = (col: number, row: number): number => {
           const c = wraps ? ((col % grid.width) + grid.width) % grid.width : col;
+          const r = spansPoleToPole ? clamp(row, 0, grid.height - 1) : row;
           if (!wraps && (c < winLeft || c > winLeft + winWidth - 1)) return Number.NaN;
-          if (row < rowTop || row > rowTop + winRows - 1) return Number.NaN;
-          const value = window[(row - rowTop) * winWidth + (c - winLeft)]!;
+          if (r < rowTop || r > rowTop + winRows - 1) return Number.NaN;
+          const value = window[(r - rowTop) * winWidth + (c - winLeft)]!;
           return isNoData(value) ? Number.NaN : value + opts.offsetM;
         };
 

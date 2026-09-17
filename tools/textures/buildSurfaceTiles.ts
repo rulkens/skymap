@@ -61,6 +61,7 @@ import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
+import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
 import type { SurfaceBakeBand } from './SurfaceBakeBand';
 import type { SurfaceBodyBake } from './SurfaceBodyBake';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
@@ -560,10 +561,10 @@ export async function bakeAll(
   process.stderr.write(`  ${sorted.length} tiles indexed\n`);
 }
 
-/** Every body this tool can bake, keyed the same way `SURFACE_TILE_REGISTRY`
- *  is — Mars's own row lands here, not a second switch elsewhere. */
+/** Every body this tool can bake, keyed the same way `SURFACE_TILE_REGISTRY` is. */
 const SURFACE_BODY_BAKES: Record<SurfaceTileBodyId, SurfaceBodyBake> = {
   earth: earthSurfaceBake,
+  mars: marsSurfaceBake,
 };
 
 /** `--product albedo|height`: `parseFlags` stays bool-only by design (see its

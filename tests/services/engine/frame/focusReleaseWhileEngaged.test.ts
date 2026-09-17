@@ -198,8 +198,10 @@ function regimeTrace(h: ReturnType<typeof makeCameraSimHarness>, frames: number)
   return seq;
 }
 
-const MARS_R = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!.surface.datumRadiusM;
-const MARS_R_MPC = MARS_R * SCALE_UNITS.M_TO_MPC;
+const MARS_ROW = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!;
+const MARS_R = MARS_ROW.surface.datumRadiusM;
+// Framing reads the outer bound, like R_MPC above: Mars's relief moves it 27 km off the datum.
+const MARS_R_MPC = bodyFootprintRadiusM(MARS_ROW) * SCALE_UNITS.M_TO_MPC;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const RUNG_CTX = { bodies: BODIES as ReadonlyMap<BodyId, BodyState>, poseBasis: B, upBasis: B };
 const FOV = Math.PI / 3;
