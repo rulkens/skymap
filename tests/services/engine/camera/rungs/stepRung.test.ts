@@ -220,7 +220,7 @@ describe('stepRung', () => {
       .datumRadiusM;
     const site = sitePointBodyFixed(
       findByIdOrThrow(SURFACE_FIXED_SITES, 'curiosity', 'test'),
-      marsRadiusM,
+      () => marsRadiusM,
     );
     const mag = Math.hypot(site[0], site[1], site[2]);
     const up: Vec3 = [site[0] / mag, site[1] / mag, site[2] / mag];

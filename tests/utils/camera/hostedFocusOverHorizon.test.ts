@@ -28,7 +28,7 @@ const MARS: HostBody = {
 };
 
 const sitePoint = (id: string): Vec3 =>
-  sitePointBodyFixed(SURFACE_FIXED_SITES.find((s) => s.id === id)!, MARS.radiusM);
+  sitePointBodyFixed(SURFACE_FIXED_SITES.find((s) => s.id === id)!, MARS.groundRadiusAtM);
 
 /** `metresUp` above the site, radially — the eye a landed camera has. */
 const over = (id: string, metresUp: number): Vec3 => {

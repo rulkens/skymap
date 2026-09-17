@@ -221,7 +221,7 @@ function metresBetween(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
 function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
   const driver = positionDriverById('curiosity' as BodyId);
   if (driver.kind !== 'surfaceFixed') throw new Error('curiosity is not a site');
-  const p = sitePointBodyFixed(driver, MARS_R);
+  const p = sitePointBodyFixed(driver, () => MARS_R);
   const mars = bodies.get('mars')!;
   const local = rotateVec3ByTightMat3(p as Vec3, mars.orientation);
   return [

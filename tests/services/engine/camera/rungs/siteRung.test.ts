@@ -27,6 +27,7 @@ import type { CameraPose } from '../../../../../src/@types/camera/CameraPose';
 import type { FrameOf } from '../../../../../src/@types/camera/FrameOf';
 import type { FramedPose } from '../../../../../src/@types/camera/FramedPose';
 import type { RungCtx } from '../../../../../src/@types/camera/RungCtx';
+import type { TerrainHeightAtLookup } from '../../../../../src/@types/camera/TerrainHeightAtLookup';
 import type { SitePose } from '../../../../../src/@types/camera/SitePose';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
@@ -40,12 +41,15 @@ const MARS_R_M = findByIdOrThrow(SCENE_CELESTIAL_BODIES, 'mars', 'siteRung.test'
   .datumRadiusM;
 const ROW = CAMERA_RUNGS.site;
 
-function ctxFor(focusBodyId: BodyId | null): RungCtx {
+function ctxFor(
+  focusBodyId: BodyId | null,
+  terrainHeightAt: TerrainHeightAtLookup = datumOnlyTerrainHeight,
+): RungCtx {
   return {
     bodies: BODIES,
     poseBasis: B,
     upBasis: B,
-    terrainHeightAt: datumOnlyTerrainHeight,
+    terrainHeightAt,
     focusBodyId,
     pivot: pivotFraming(null),
     viewportPx: [100, 100],
@@ -66,7 +70,7 @@ const FIXTURES: readonly SitePose[] = [pose(0.4, 0.3, 50), pose(-2, 1.2, 12), po
 
 const armAt = (rangeM: number): FramedPose<'body'> => ({
   frame: MARS_FRAME,
-  pose: sitePoseToBodyArm(pose(0.4, 0.3, rangeM), SITE, MARS_R_M),
+  pose: sitePoseToBodyArm(pose(0.4, 0.3, rangeM), SITE, () => MARS_R_M),
 });
 
 const bandRange = (radii: number): number => radii * ROVER.boundingRadiusM;
@@ -77,6 +81,13 @@ const BETWEEN = bandRange((siteEngageR + siteDisengageR) / 2);
 const OUTSIDE = bandRange(siteDisengageR * 1.5);
 
 describe('the site rung in the ladder', () => {
+  it('anchors the host arm on the terrain, where the rover is drawn', () => {
+    const TERRAIN_M = 2_700;
+    const ctx = ctxFor(SITE_ID, () => TERRAIN_M);
+    const arm = ROW.toParent({ frame: SITE_FRAME, pose: FIXTURES[0]! }, ctx).pose;
+    expect(Math.hypot(...arm.anchorLocalM)).toBeCloseTo(MARS_R_M + TERRAIN_M + SITE.altitudeM, 3);
+  });
+
   it('refoldTo site → world → site reproduces the pose', () => {
     const ctx = ctxFor(SITE_ID);
     for (const start of FIXTURES) {

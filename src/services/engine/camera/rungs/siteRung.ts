@@ -96,7 +96,7 @@ export const siteRung: ClimbRow<'site'> = {
     const host = hostOrThrow(framed.frame, ctx);
     return {
       frame: { body: host.id },
-      pose: sitePoseToBodyArm(framed.pose, siteRowOrThrow(framed.frame.site), host.radiusM),
+      pose: sitePoseToBodyArm(framed.pose, siteRowOrThrow(framed.frame.site), host.groundRadiusAtM),
     };
   },
 
@@ -107,7 +107,7 @@ export const siteRung: ClimbRow<'site'> = {
       pose: sitePoseFromBodyArm(
         parent.pose,
         siteRowOrThrow(frame.site),
-        host.radiusM,
+        host.groundRadiusAtM,
         meshBodyOf(frame.site),
       ),
     };
@@ -121,7 +121,7 @@ export const siteRung: ClimbRow<'site'> = {
     // never engage — the non-goal, enforced by the driver kind, not by a list.
     if (site === null || site.hostId !== parent.frame.body) return null;
     const host = hostOrThrow(parent.frame, ctx);
-    const p = sitePointBodyFixed(site, host.radiusM);
+    const p = sitePointBodyFixed(site, host.groundRadiusAtM);
     const eye = bodyFixedEyeM(parent.pose);
     const rangeM = Math.hypot(eye[0] - p[0], eye[1] - p[1], eye[2] - p[2]);
     return rangeM / meshBodyOf(focusId).boundingRadiusM < ctx.tuning.siteEngageR

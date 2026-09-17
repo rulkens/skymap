@@ -5,6 +5,7 @@
  */
 
 import type { BodyFixedPose } from '../../@types/camera/BodyFixedPose';
+import type { GroundRadiusLookup } from '../../@types/camera/GroundRadiusLookup';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { SitePose } from '../../@types/camera/SitePose';
 import type { SurfaceFixedSite } from '../../@types/scene/SurfaceFixedSite';
@@ -16,9 +17,9 @@ import { sitePointBodyFixed } from './sitePointBodyFixed';
 export function sitePoseToBodyArm(
   pose: SitePose,
   site: SurfaceFixedSite,
-  hostRadiusM: number,
+  groundRadiusAtM: GroundRadiusLookup,
 ): BodyFixedPose {
-  const anchorLocalM = sitePointBodyFixed(site, hostRadiusM);
+  const anchorLocalM = sitePointBodyFixed(site, groundRadiusAtM);
   const frame = siteEyeFrame(anchorLocalM);
   const ce = Math.cos(pose.elevationRad);
   const se = Math.sin(pose.elevationRad);

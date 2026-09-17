@@ -17,7 +17,7 @@ export function hostedFocusOverHorizon(
   focusBodyId: BodyId | null,
   host: HostBody,
 ): boolean {
-  const p = hostedFocusPivotM(focusBodyId, host.id, host.radiusM);
+  const p = hostedFocusPivotM(focusBodyId, host.id, host.groundRadiusAtM);
   if (p === null) return false;
   const magM = Math.hypot(eyeM[0], eyeM[1], eyeM[2]);
   const floorM = surfaceFloorM(host.groundRadiusAtM(eyeM), host.standoffRadii);

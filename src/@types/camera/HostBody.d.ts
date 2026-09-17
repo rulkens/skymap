@@ -6,9 +6,9 @@ import type { GroundRadiusLookup } from './GroundRadiusLookup';
 export type HostBody = {
   readonly id: BodyId;
   readonly state: BodyState;
-  /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull. */
+  /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull; the h/R bands read it. */
   readonly radiusM: number;
-  /** What the descent floor stands off FROM; `radiusM` serves pivot and site maths instead. */
+  /** The ground: what the descent floor stands off from, and what sites and pivots sit on. */
   readonly groundRadiusAtM: GroundRadiusLookup;
   /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
   readonly standoffRadii: number;

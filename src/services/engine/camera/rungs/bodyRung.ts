@@ -82,7 +82,7 @@ export const bodyRung: ClimbRow<'body'> = {
       sceneUpLocal: rotateVec3ByTightMat3T(frameUp(ctx.upBasis), host.state.orientation),
       // Derived from the FOCUS every drain, never carried in the pose: a
       // carried anchor decouples from the rover as soon as a drag turns the arm.
-      focusPivotM: hostedFocusPivotM(ctx.focusBodyId, host.id, host.radiusM),
+      focusPivotM: hostedFocusPivotM(ctx.focusBodyId, host.id, host.groundRadiusAtM),
       tuning: ctx.tuning,
     });
     return { pose: stepped.pose, memory: stepped.gesture, tilt: stepped.tilt };

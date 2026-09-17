@@ -9,6 +9,7 @@
  * reader would tear a mid-frame clock tick between passes.
  */
 
+import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -87,7 +88,10 @@ export function deriveBodyStates(
     // surface, which is exactly what a mesh body's hull is not.
     const { surface } = findByIdOrThrow(SCENE_CELESTIAL_BODIES, site.hostId, 'deriveBodyStates');
     const offsetM = rotateVec3ByTightMat3(
-      sitePointBodyFixed(site, surface.datumRadiusM, terrainHeightAt),
+      sitePointBodyFixed(
+        site,
+        (dir) => surface.datumRadiusM + terrainHeightAt(site.hostId as BodyId, dir),
+      ),
       orientationForBody(site.hostId, simDays, positions),
     );
     // Metres → Mpc BEFORE the host's heliocentric position joins in: adding
