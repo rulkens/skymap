@@ -51,6 +51,8 @@ export type MeshGpuAsset = {
   readonly openEdges: GPUBuffer;
   readonly openEdgeIndexCount: number;
   readonly texture: GPUTexture;
+  /** Preview mask (`packMaskPolygon` layout). Not readonly: `writeMeshMask` swaps it to grow. */
+  mask: GPUBuffer;
   dispose(): void;
 };
 

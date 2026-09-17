@@ -1,9 +1,16 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { BoundsM } from '../../../@types/BoundsM';
+import type { CameraProjection } from '../../../@types/CameraProjection';
 import { clampSceneDistanceM } from '../../scene/clampSceneDistanceM';
 
-export type SceneCamera = { yaw: number; pitch: number; distanceM: number; targetM: Vec3 };
+export type SceneCamera = {
+  yaw: number;
+  pitch: number;
+  distanceM: number;
+  targetM: Vec3;
+  projection: CameraProjection['kind'];
+};
 
 /** ViewSlice — camera pose, per-asset visibility overrides, and the
  *  device-lost flag. Visibility is an exclusion list (`hiddenAssetIds`), not
@@ -30,7 +37,7 @@ export type ViewSlice = {
 export const PITCH_LIMIT = Math.PI / 2 - 0.01;
 
 export const defaultViewSlice: ViewSlice = {
-  camera: { yaw: 0, pitch: 0.35, distanceM: 200, targetM: [0, 0, 0] },
+  camera: { yaw: 0, pitch: 0.35, distanceM: 200, targetM: [0, 0, 0], projection: 'perspective' },
   hiddenAssetIds: [],
   deviceLost: false,
   // 2px: closes the gaps a 5cm cloud leaves at building scale without fattening the ground.
@@ -52,16 +59,19 @@ export const viewSlice = createSlice({
       state.camera.pitch = Math.min(PITCH_LIMIT, Math.max(-PITCH_LIMIT, action.payload.pitch));
       state.camera.distanceM = action.payload.distanceM;
       state.camera.targetM = action.payload.targetM;
+      state.camera.projection = action.payload.projection;
     },
     /** Opens a group on its baked extent rather than its anchor, which for the
      *  crop groups sits a few hundred metres outside the box. 0.9 x the wider
-     *  horizontal extent frames it with margin at the default pitch. */
+     *  horizontal extent frames it with margin at the default pitch. A group
+     *  switch never opens in orthographic. */
     frameCamera: (state, action: PayloadAction<BoundsM>) => {
       const { min, max } = action.payload;
       state.camera.targetM = [(min[0] + max[0]) / 2, (min[1] + max[1]) / 2, (min[2] + max[2]) / 2];
       state.camera.distanceM = clampSceneDistanceM(
         Math.max(max[0] - min[0], max[1] - min[1]) * 0.9,
       );
+      state.camera.projection = 'perspective';
     },
     toggleAssetVisibility: (state, action: PayloadAction<string>) => {
       const hidden = new Set(state.hiddenAssetIds);

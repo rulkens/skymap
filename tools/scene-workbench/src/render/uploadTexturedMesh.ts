@@ -1,6 +1,7 @@
 import type { GpuContext } from '../../../../src/@types/rendering/GpuContext';
 import type { TexturedMeshGeometry } from '../../../scene-recon/pack/packMeshGlb';
 import { meshEdgeIndices } from './meshEdgeIndices';
+import { packMaskPolygon } from './packMaskPolygon';
 import type { MeshGpuAsset } from './renderResources';
 
 /**
@@ -58,7 +59,15 @@ export function uploadTexturedMesh(
     image.height,
   ]);
 
-  return {
+  const mask = device.createBuffer({
+    label: 'scene-workbench-mesh-mask',
+    // Sized from `packMaskPolygon`'s own layout, not a duplicated literal — its `count = 0`
+    // buffer is exactly this pipeline's initial (unmasked) state.
+    size: packMaskPolygon(null).byteLength,
+    usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+  }); // zero-filled: count 0, no mask
+
+  const asset: MeshGpuAsset = {
     kind: 'mesh',
     positions,
     uvs,
@@ -69,6 +78,7 @@ export function uploadTexturedMesh(
     openEdges,
     openEdgeIndexCount: edgeIndices.open.length,
     texture,
+    mask,
     dispose: () => {
       positions.destroy();
       uvs.destroy();
@@ -76,6 +86,8 @@ export function uploadTexturedMesh(
       manifoldEdges.destroy();
       openEdges.destroy();
       texture.destroy();
+      asset.mask.destroy(); // read at dispose time: writeMeshMask may have swapped it
     },
   };
+  return asset;
 }
