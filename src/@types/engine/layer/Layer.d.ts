@@ -17,6 +17,7 @@ import type { Label2DProducer } from '../subsystems/Label2DProducer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
+import type { LayerFrameVote } from './LayerFrameVote';
 import type { LayerUi } from './LayerUi';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -81,8 +82,8 @@ export type Layer<
   selection?(runtime: Runtime): readonly SelectionKindRow[];
   /**
    * Called from `runFrame` once a frame, after the focus uniform and before any pass.
-   * `true` keeps the loop awake and defers sky captures, so a capture never bakes
-   * half-arrived content.
+   * Returns two independent votes — keep the loop awake, and hold off sky captures;
+   * see `LayerFrameVote` for why answering one with the other is a defect.
    */
-  frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => boolean;
+  frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => LayerFrameVote;
 };

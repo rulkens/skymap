@@ -406,8 +406,9 @@ function makeInput(
   });
   const ctx = {
     isReady: true as const,
-    // `runFrame` stamps this after every Layer's frame hook has voted.
-    layersAnimating: false,
+    // `runFrame` stamps these after every Layer's frame hook has voted.
+    layersAwake: false,
+    layersSettling: false,
     viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.

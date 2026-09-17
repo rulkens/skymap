@@ -1,3 +1,4 @@
+import type { LayerFrameVote } from './LayerFrameVote';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ContentPass } from '../frame/ContentPass';
 import type { ContentCompute } from '../frame/ContentCompute';
@@ -18,6 +19,6 @@ export type LayerInstance = {
   readonly fades: readonly FadeLayer<unknown>[];
   readonly labels: readonly Label2DProducer[];
   readonly selection: readonly SelectionKindRow[];
-  readonly frame: ((ctx: ReadyFrameContext, state: PassState) => boolean) | null;
+  readonly frame: ((ctx: ReadyFrameContext, state: PassState) => LayerFrameVote) | null;
   destroy(): void;
 };

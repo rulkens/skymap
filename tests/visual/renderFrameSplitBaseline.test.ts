@@ -368,7 +368,8 @@ describe('renderFrame visual baseline', () => {
 
     const ctx = {
       isReady: true as const,
-      layersAnimating: false,
+      layersAwake: false,
+      layersSettling: false,
       // executor populates this as targets render; a later pass reads which rendered this frame.
       renderedTargets: new Set<string>(),
       cam,

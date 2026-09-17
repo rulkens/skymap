@@ -338,14 +338,17 @@ Each contribution moves from reading `state.gpu.flowFieldRenderer` to closing ov
   - the pass draws only when the slot is committed (the `slotReady` gate becomes a runtime read);
   - the compute row encodes nothing when `settings.flow.enabled` is false, and nothing when the cube has not landed;
   - the fade row's `guard` is the renderer's own `fieldLoaded()`;
-  - `frame` calls `reconcile` once and returns `true` exactly while the field is live — the term `shouldKeepTicking` is losing.
+  - `frame` calls `reconcile` once and votes `{ awake, settling }` (`LayerFrameVote`): `awake` exactly
+    while the field is live — the term `shouldKeepTicking` is losing — and `settling: false` always,
+    since flow draws in no capture roster. A single boolean here would braid the keep-alive vote with
+    `scheduleSkyCaptures`'s roster-settling read and re-bake both sky cubemaps every frame.
 - [ ] **Step 2: Run them, verify they fail.**
 - [ ] **Step 3: Rewrite each contribution as a factory over `FlowRuntime`.**
   - `flowFieldPass(runtime)` — `enabled` reads `runtime.slot`'s state rather than `state.assetSlots.flow`; `draw` drops its `=== null` early return.
   - `flowCompute(runtime)` — the three-condition gate becomes two (`settings.flow.enabled` + the slot's committed state); the renderer-null condition is gone by construction. Keep the "no out-of-band submit" and gate rationale from `encodeFlowCompute`'s header, trimmed to the ≤ 5-line budget.
   - `flowAssetRows(runtime)` — `key: 'flow'`, `factory: () => runtime.slot`, `demand: (ctx) => ctx.settings.flow.enabled`, `priority: 81`.
   - `flowFadeRows(runtime)` — the `fadeLayers.ts` row verbatim, `guard: () => runtime.renderer.fieldLoaded()`.
-  - `frame(runtime)` — `reconcile(state.settings.flow)`, then return the awake vote.
+  - `frame(runtime)` — `reconcile(state.settings.flow)`, then return the vote.
 - [ ] **Step 4: Run the tests, verify they pass.**
 - [ ] **Step 5: Commit** — `feat(flow): runtime-bound contributions`
 

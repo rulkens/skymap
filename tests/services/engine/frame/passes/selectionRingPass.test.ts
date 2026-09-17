@@ -40,7 +40,8 @@ function makeCtx(): ReadyFrameContext {
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
-    layersAnimating: false,
+    layersAwake: false,
+    layersSettling: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,

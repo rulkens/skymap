@@ -38,7 +38,7 @@ export function shouldKeepTicking(
     surfaceTilesAnimating: boolean;
     labelsAnimating: boolean;
     probeDue: boolean;
-    layersAnimating: boolean;
+    layersAwake: boolean;
   },
 ): boolean {
   return (
@@ -51,6 +51,6 @@ export function shouldKeepTicking(
     anim.surfaceTilesAnimating ||
     anim.labelsAnimating ||
     anim.probeDue ||
-    anim.layersAnimating
+    anim.layersAwake
   );
 }

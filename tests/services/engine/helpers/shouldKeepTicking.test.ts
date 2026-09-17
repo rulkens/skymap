@@ -2,7 +2,7 @@
  * shouldKeepTicking — the render-on-demand keep-alive predicate. An animated
  * Layer (e.g. flow, mid-advection) must keep the loop ticking INDEPENDENTLY
  * of whether anything is pickable — that vote arrives pre-folded as
- * `anim.layersAnimating` (see `runFrame`'s per-Layer `frame` hook loop), so
+ * `anim.layersAwake` (see `runFrame`'s per-Layer `frame` hook loop), so
  * this predicate itself takes no pick/catalog/Layer information at all.
  *
  * The camera term is `selectCameraActive(s)` over the store `RootState`. The
@@ -59,7 +59,7 @@ const NO_ANIM = {
   surfaceTilesAnimating: false,
   labelsAnimating: false,
   probeDue: false,
-  layersAnimating: false,
+  layersAwake: false,
 };
 
 /**
@@ -183,12 +183,12 @@ describe('shouldKeepTicking', () => {
     ).toBe(true);
   });
 
-  it('layersAnimating is a keep-alive term — true even with everything else at rest', () => {
-    // A Layer's frame hook voted true this frame (D2); runFrame folds every
-    // hook's return into this one bag entry, so the predicate need not know
+  it('layersAwake is a keep-alive term — true even with everything else at rest', () => {
+    // A Layer's frame hook voted awake this frame (D2); runFrame folds every
+    // hook's vote into this one bag entry, so the predicate need not know
     // anything about Layers itself — just this bit.
     const state = makeState({});
-    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAnimating: true })).toBe(
+    expect(shouldKeepTicking(state, restingRoot, 1000, { ...NO_ANIM, layersAwake: true })).toBe(
       true,
     );
   });

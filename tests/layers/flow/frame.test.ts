@@ -1,7 +1,7 @@
 /**
- * flow's `frame` — calls `reconcile` once per call with the live settings,
- * and returns the awake vote `shouldKeepTicking` used to read off core:
- * `settings.flow.enabled && slotReady(assetSlots.flow)`, now a runtime read.
+ * flow's `frame` — calls `reconcile` once per call with the live settings, and
+ * votes: awake on the term `shouldKeepTicking` used to read off core
+ * (`settings.flow.enabled && slotReady(assetSlots.flow)`), never settling.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { frame } from '../../../src/layers/flow/frame';
@@ -33,9 +33,13 @@ describe('flow frame', () => {
     expect(reconcile).toHaveBeenCalledWith(state.settings.flow);
   });
 
-  it('returns true exactly while enabled AND the cube is loaded', () => {
-    expect(frame(makeRuntime(true))(ctxStub, stateStub(true))).toBe(true);
-    expect(frame(makeRuntime(false))(ctxStub, stateStub(true))).toBe(false);
-    expect(frame(makeRuntime(true))(ctxStub, stateStub(false))).toBe(false);
+  it('votes awake exactly while enabled AND the cube is loaded', () => {
+    expect(frame(makeRuntime(true))(ctxStub, stateStub(true)).awake).toBe(true);
+    expect(frame(makeRuntime(false))(ctxStub, stateStub(true)).awake).toBe(false);
+    expect(frame(makeRuntime(true))(ctxStub, stateStub(false)).awake).toBe(false);
+  });
+
+  it('never votes settling — flow draws in no capture roster, so a sky bake stays valid', () => {
+    expect(frame(makeRuntime(true))(ctxStub, stateStub(true)).settling).toBe(false);
   });
 });
