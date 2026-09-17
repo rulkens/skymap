@@ -298,10 +298,10 @@ body.
 a corner counts once. **This exact rule is what Task 15's WGSL `insideMask` must repeat**; the
 two are the same algorithm by contract (spec §4.5). Fewer than 3 corners → `true`.
 
-- [ ] `insideRing puts a point in a concave notch outside` — a U shape, point in the notch.
-- [ ] `insideRing counts a ray through a corner once` — diamond `[[0,-1],[1,0],[0,1],[-1,0]]`,
+- [x] `insideRing puts a point in a concave notch outside` — a U shape, point in the notch.
+- [x] `insideRing counts a ray through a corner once` — diamond `[[0,-1],[1,0],[0,1],[-1,0]]`,
       point `[0.5, 0]` inside, `[-2, 0]` outside.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7: `triangulateOutline`
 
