@@ -35,6 +35,8 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **Terrain-aware zoom anchor** `ready` — F3a's floor follows the terrain but five camera gestures still anchor on the datum sphere; own PR, straight after F3a. → [details](backlog/2026-09-17-terrain-aware-zoom-anchor.md)
+- [ ] **Terrain F3b — the rest of the per-purpose routing** `needs-design` — most of spec §8.3's table already shipped; what is left is cloud-deck-as-altitude, and terrain under an atmosphere blocked on a composite nobody is building. → [details](backlog/2026-09-17-terrain-f3b-remaining-routing.md)
 - [ ] **Focusable-kind registry** `needs-design` — a focusable/selectable kind is smeared across ~10 per-kind dispatch tables (pick, selection row, framing, halo, URL); consolidate into one descriptor + registry, sibling to the subsystem-bundle work. → [details](backlog/2026-08-17-focusable-kind-registry.md)
 - [ ] **Unify `ReadyFrameContext`'s camera-derived fields into one `view` record** `needs-design` — vp/slabs/drawCamPos/billboard basis are separate derivations from `ctx.cam`, and per-frame memos key on `ctx` assuming one camera per frame; surfaced by the Quest VR spike. → [details](backlog/2026-08-23-frame-view-record.md)
 - [ ] **`earthFlyout` stalls the recorder's virtual clock** `needs-debug` — intermittent; the page runs rAF on real time while the granted virtual budget never elapses, with zero requests in flight. → [details](backlog/2026-07-31-earthflyout-virtual-time-stall.md)
