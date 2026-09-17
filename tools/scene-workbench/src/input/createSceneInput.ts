@@ -52,6 +52,7 @@ export function createSceneInput(deps: SceneInputDeps): SceneInput {
     pitch: lastSeenCamera.pitch,
     distanceM: lastSeenCamera.distanceM,
     targetM: cloneTarget(lastSeenCamera.targetM),
+    projection: lastSeenCamera.projection,
   };
 
   // Brackets a whole pointer-down..up gesture (attachOrbitControls emits these
@@ -69,6 +70,7 @@ export function createSceneInput(deps: SceneInputDeps): SceneInput {
       pitch: register.pitch,
       distanceM: register.distanceM,
       targetM: cloneTarget(register.targetM),
+      projection: register.projection,
     };
   }
 
@@ -76,7 +78,8 @@ export function createSceneInput(deps: SceneInputDeps): SceneInput {
     const dx = step.endPx[0] - step.startPx[0];
     const dy = step.endPx[1] - step.startPx[1];
 
-    if (step.mode === 'pan') {
+    // Orthographic has no orbit: every drag pans, at the perspective rate.
+    if (step.mode === 'pan' || register.projection === 'orthographic') {
       const { rightM, upM } = sceneCameraView(register, [canvas.clientWidth, canvas.clientHeight]);
       const k = register.distanceM * PAN_SPEED;
       register.targetM = [
@@ -129,6 +132,7 @@ export function createSceneInput(deps: SceneInputDeps): SceneInput {
     register.pitch = camera.pitch;
     register.distanceM = camera.distanceM;
     register.targetM = cloneTarget(camera.targetM);
+    register.projection = camera.projection;
   });
 
   const detachRecognizer = attachOrbitControls(canvas, (event) => aggregator.push(event));

@@ -176,15 +176,15 @@ Default pose `projection: 'perspective'`. `sceneCameraView` dispatches on `camer
 
 **Tests** (`cameraProjections.test.ts`):
 
-- [ ] `orthographic view looks exactly down -Z` — `eyeM − targetM` is `(0, 0, +1000)` exactly
+- [x] `orthographic view looks exactly down -Z` — `eyeM − targetM` is `(0, 0, +1000)` exactly
       (`toBe`, not `toBeCloseTo`, on X and Y) for yaw 0.7 and pitch 0.35.
-- [ ] `orthographic right matches perspective right at the same yaw` — yaw 2.1; element-wise close.
-- [ ] `orthographic screen corner unprojects to target ± halfHeight·aspect` — write the uniform
+- [x] `orthographic right matches perspective right at the same yaw` — yaw 2.1; element-wise close.
+- [x] `orthographic screen corner unprojects to target ± halfHeight·aspect` — write the uniform
       with `writeSceneCamera` at viewport [1600, 900], invert `viewProj` with `mat4.inverse`,
       unproject NDC (1, 1, 0.5); expect `targetM + rightM·h·(16/9) + upM·h` in X and Y, with
       `h = distanceM · tan(π/8)` computed from literals in the test.
-- [ ] `viewSlice.test.ts`: `frameCamera resets the projection to perspective`.
-- [ ] `npm test -- scene-workbench` green; commit.
+- [x] `viewSlice.test.ts`: `frameCamera resets the projection to perspective`.
+- [x] `npm test -- scene-workbench` green; commit.
 
 ### Task 3: screen ↔ mesh-local XY
 

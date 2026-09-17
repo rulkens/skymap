@@ -22,5 +22,5 @@ export function sceneCameraView(
   camera: SceneCamera,
   viewportPx: readonly [number, number],
 ): SceneCameraView {
-  return CAMERA_PROJECTIONS['perspective'].view(camera, viewportPx);
+  return CAMERA_PROJECTIONS[camera.projection].view(camera, viewportPx);
 }

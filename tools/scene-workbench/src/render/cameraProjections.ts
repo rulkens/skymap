@@ -1,9 +1,7 @@
 /**
- * CAMERA_PROJECTIONS — one row per `CameraProjection` kind: how a pose becomes a
- * view, and how that view's projection becomes a matrix and a pixel scale.
- * The bake is ENU (`+proj=topocentric`, +Z up); `yawPitchToDir`/`frameUp` decode
- * Y-up, so `ENU_UP_BASIS` — a determinant-+1 axis cycle, not a mirroring swap —
- * rotates the decode into world +Z-up before use.
+ * CAMERA_PROJECTIONS — one row per `CameraProjection` kind: pose → view, view → matrix and
+ * pixel scale. The bake is ENU (+Z up); `yawPitchToDir`/`frameUp` decode Y-up, so
+ * `ENU_UP_BASIS` — a determinant-+1 axis cycle, not a mirroring swap — rotates into world.
  */
 import { mat4 } from 'wgpu-matrix';
 
@@ -12,6 +10,7 @@ import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { frameUp } from '../../../../src/utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../../src/utils/camera/imagePlaneBasis';
 import { yawPitchToDir } from '../../../../src/utils/camera/yawPitchToDir';
+import { cross3 } from '../../../../src/utils/math/cross3';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import type { CameraProjection } from '../../@types/CameraProjection';
@@ -23,18 +22,24 @@ import type { CameraProjectionRow } from '../../@types/CameraProjectionRow';
 const ENU_UP_BASIS: Mat3 = mat3FromColumns([0, 1, 0], [0, 0, 1], [1, 0, 0]);
 
 /** π/4 matches mcpm-workbench; near/far span hand-scale detail to the ~2.5 km scene diagonal. */
-const PERSPECTIVE: CameraProjection = {
+const PERSPECTIVE = {
   kind: 'perspective',
   fovYRad: Math.PI / 4,
   nearM: 0.5,
   farM: 5000,
-};
+} as const satisfies CameraProjection;
 
-export const CAMERA_PROJECTIONS: {
-  readonly [K in CameraProjection['kind']]: CameraProjectionRow<
-    Extract<CameraProjection, { kind: K }>
-  >;
-} = {
+// A fixed standoff, not the group's Z bounds: scenes are tens of metres tall, and depth24
+// over this 2 km slab is still sub-millimetre.
+const ORTHO_EYE_ABOVE_TARGET_M = 1000;
+const ORTHO_NEAR_M = 1;
+const ORTHO_FAR_M = 2000;
+
+type Row<K extends CameraProjection['kind']> = CameraProjectionRow<
+  Extract<CameraProjection, { kind: K }>
+>;
+
+export const CAMERA_PROJECTIONS: { readonly [K in CameraProjection['kind']]: Row<K> } = {
   perspective: {
     view(camera, viewportPx) {
       const { yaw, pitch, distanceM, targetM } = camera;
@@ -51,5 +56,34 @@ export const CAMERA_PROJECTIONS: {
     },
     matrix: (p, aspect, dst) => mat4.perspective(p.fovYRad, aspect, p.nearM, p.farM, dst),
     metresPerPx: (p, heightPx) => (2 * Math.tan(p.fovYRad * 0.5)) / heightPx,
+  },
+  orthographic: {
+    // Built directly, never via pitch ±π/2: `lookAt` degenerates looking straight down.
+    // Pitch is ignored; `distanceM` is the zoom register — the half-height matches the
+    // perspective view's at its target, so switching projection keeps the scale on screen.
+    view(camera, viewportPx) {
+      const { yaw, distanceM, targetM } = camera;
+      const level = rotateVec3ByTightMat3(yawPitchToDir(yaw, 0), ENU_UP_BASIS); // Z exactly 0
+      const upM: Vec3 = [-level[0], -level[1], 0];
+      const eyeM: Vec3 = [targetM[0], targetM[1], targetM[2] + ORTHO_EYE_ABOVE_TARGET_M];
+      return {
+        eyeM,
+        targetM,
+        rightM: cross3([0, 0, -1], upM),
+        upM,
+        projection: {
+          kind: 'orthographic',
+          halfHeightM: distanceM * Math.tan(PERSPECTIVE.fovYRad * 0.5),
+          nearM: ORTHO_NEAR_M,
+          farM: ORTHO_FAR_M,
+        },
+        viewportPx,
+      };
+    },
+    matrix: (p, aspect, dst) => {
+      const h = p.halfHeightM;
+      return mat4.ortho(-h * aspect, h * aspect, -h, h, p.nearM, p.farM, dst);
+    },
+    metresPerPx: (p, heightPx) => (2 * p.halfHeightM) / heightPx, // clip w is 1
   },
 };
