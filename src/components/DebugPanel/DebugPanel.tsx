@@ -18,6 +18,7 @@ import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
 import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSectionContainer';
+import TerrainPickMarkerTuningSectionContainer from '../containers/TerrainPickMarkerTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
@@ -43,7 +44,9 @@ export type DebugPanelProps = {
    * the async bootstrap long after the handle is built.
    */
   assetPriorities: () => ReadonlyMap<string, number>;
-  /** Engine-handle ref, threaded to `SurfaceTileAtlasSectionContainer` for its `debug.surfaceTiles` / `debug.flyToLonLat` reach. */
+  /** Engine-handle ref, threaded to the sections that read engine-only data:
+   *  `debug.surfaceTiles` / `debug.flyToLonLat` (atlas), `debug.cameraDebug`
+   *  (camera readout, terrain-pick marker readouts). */
   engineHandleRef: RefObject<EngineHandle | null>;
 };
 
@@ -71,6 +74,7 @@ function DebugPanel({
       <SgrAStarLensingTuningSectionContainer />
       <DebugOverlaysSectionContainer />
       <SurfaceTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
+      <TerrainPickMarkerTuningSectionContainer engineHandleRef={engineHandleRef} />
       <GalaxyProvenanceSectionContainer />
       <ClipTriggersSectionContainer />
       <ClipPathInspectorSectionContainer />

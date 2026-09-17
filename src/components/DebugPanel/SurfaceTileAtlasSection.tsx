@@ -22,7 +22,9 @@ import type { SurfaceTileDebugSnapshot } from '../../@types/scene/SurfaceTileDeb
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
+import { FLY_TO_PRESETS } from '../../data/debug/flyToPresets';
 import { parseLonLatInput } from '../../utils/geo/parseLonLatInput';
+import DebugOverlayToggles from './DebugOverlayToggles';
 import DebugSection from './DebugSection';
 import styles from './SurfaceTileAtlasSection.module.css';
 
@@ -31,7 +33,7 @@ export type SurfaceTileAtlasSectionProps = {
   /** Fly-to-coordinates debug instrument, from the engine handle's
    *  `debug.flyToLonLat`. `body` omitted keeps `flyToLonLatActions`'s own
    *  Earth default — this section passes the snapshot's `bodyId` verbatim. */
-  flyToLonLat: (lonDeg: number, latDeg: number, body?: BodyId) => void;
+  flyToLonLat: (lonDeg: number, latDeg: number, body?: BodyId, altKm?: number) => void;
   readonly overlays: Record<DebugOverlayKey, boolean>;
   readonly onToggle: (key: DebugOverlayKey, enabled: boolean) => void;
 };
@@ -71,18 +73,30 @@ function SurfaceTileAtlasSection({
     flyToLonLat(point.lonDeg, point.latDeg, snap.bodyId ?? undefined);
   }
 
+  // Identical to typing the preset's degrees and submitting — same body
+  // argument, same action — so a button can never fly somewhere the box
+  // cannot.
+  const flyToPresets = (
+    <div className={styles.presets}>
+      {FLY_TO_PRESETS.map((preset) => (
+        <button
+          key={preset.label}
+          type="button"
+          className={styles.button}
+          title={preset.title}
+          onClick={() =>
+            flyToLonLat(preset.lonDeg, preset.latDeg, snap.bodyId ?? undefined, preset.altKm)
+          }
+        >
+          {preset.label}
+        </button>
+      ))}
+    </div>
+  );
+
   const terrainToggles = (
     <div className={styles.toggles}>
-      {TERRAIN_ROWS.map((row) => (
-        <label key={row.key} className={styles.checkRow}>
-          <input
-            type="checkbox"
-            checked={overlays[row.key]}
-            onChange={(e) => onToggle(row.key, e.target.checked)}
-          />
-          <span>{row.label}</span>
-        </label>
-      ))}
+      <DebugOverlayToggles rows={TERRAIN_ROWS} overlays={overlays} onToggle={onToggle} />
     </div>
   );
 
@@ -105,6 +119,7 @@ function SurfaceTileAtlasSection({
     return (
       <DebugSection title="Surface Tiles">
         {flyToForm}
+        {flyToPresets}
         {terrainToggles}
         <div className={styles.notice}>Not engaged — no manifest, or no body engaged.</div>
       </DebugSection>
@@ -118,6 +133,7 @@ function SurfaceTileAtlasSection({
   return (
     <DebugSection title={`Surface Tiles — ${snap.bodyId} (${snap.used}/${snap.capacity} slots)`}>
       {flyToForm}
+      {flyToPresets}
       {terrainToggles}
       <div className={styles.levels}>
         <span className={styles.head}>z</span>

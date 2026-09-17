@@ -7,8 +7,11 @@
 
 import { DEBUG_OVERLAY_ROWS } from '../../data/debug/debugOverlayRows';
 import type { DebugOverlayKey } from '../../@types/data/debug/DebugOverlayKey';
+import DebugOverlayToggles from './DebugOverlayToggles';
 import DebugSection from './DebugSection';
-import styles from './DebugOverlaysSection.module.css';
+
+/** Everything not claimed by a `section` — this list is the default home. */
+const UNSECTIONED_ROWS = DEBUG_OVERLAY_ROWS.filter((row) => !('section' in row));
 
 export type DebugOverlaysSectionProps = {
   readonly overlays: Record<DebugOverlayKey, boolean>;
@@ -18,16 +21,7 @@ export type DebugOverlaysSectionProps = {
 function DebugOverlaysSection({ overlays, onToggle }: DebugOverlaysSectionProps) {
   return (
     <DebugSection title="Debug Overlays">
-      {DEBUG_OVERLAY_ROWS.filter((row) => !('section' in row)).map((row) => (
-        <label key={row.key} className={styles.checkRow}>
-          <input
-            type="checkbox"
-            checked={overlays[row.key]}
-            onChange={(e) => onToggle(row.key, e.target.checked)}
-          />
-          <span>{row.label}</span>
-        </label>
-      ))}
+      <DebugOverlayToggles rows={UNSECTIONED_ROWS} overlays={overlays} onToggle={onToggle} />
     </DebugSection>
   );
 }
