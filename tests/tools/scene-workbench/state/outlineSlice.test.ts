@@ -4,6 +4,7 @@ import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import {
   cornerAppended,
   cornerClicked,
+  cornerInserted,
   cornerMoved,
   defaultOutlineSlice,
   draftStarted,
@@ -45,6 +46,24 @@ describe('outlineSlice', () => {
   it('cornerAppended is ignored on a closed ring', () => {
     const next = outlineSlice.reducer(drafting(TRIANGLE, true), cornerAppended([5, 5]));
     expect(next.draft?.ringM).toEqual(TRIANGLE);
+  });
+
+  it('cornerInserted splices into a closed ring, the closing edge included, and ignores out-of-range', () => {
+    const state = drafting(TRIANGLE, true);
+    expect(
+      outlineSlice.reducer(state, cornerInserted({ index: 1, xyM: [0.5, 0] })).draft?.ringM,
+    ).toEqual([
+      [0, 0],
+      [0.5, 0],
+      [1, 0],
+      [0, 1],
+    ]);
+    expect(
+      outlineSlice.reducer(state, cornerInserted({ index: 3, xyM: [0, 0.5] })).draft?.ringM,
+    ).toEqual([...TRIANGLE, [0, 0.5]]);
+    expect(
+      outlineSlice.reducer(state, cornerInserted({ index: 4, xyM: [9, 9] })).draft?.ringM,
+    ).toEqual(TRIANGLE);
   });
 
   it('cornerMoved on an out-of-range index is ignored', () => {

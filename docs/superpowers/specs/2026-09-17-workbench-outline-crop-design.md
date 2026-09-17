@@ -127,7 +127,9 @@ mask toggle sits beside Draw outline on the mesh's layer row.
 - **Editing.** Click empty space: append a corner. Pointer-down within 8 px of a
   corner then drag: move it (suppresses pan). Click a corner without dragging:
   delete it; the first corner of an open ring with ≥ 3 corners closes it
-  instead. Save / Discard buttons; Save is enabled only on a closed ring.
+  instead. Pointer-down within 6 px of an edge (open or closed ring) and at least
+  8 px from both its corners: insert a corner at the foot and drag it. Save /
+  Discard buttons; Save is enabled only on a closed ring.
 - **Overlay.** The draft ring draws as a line-list and the corner handles as
   instanced quads, 8 CSS px wide, over the scene (no depth test), mapped through
   the asset transform at Z 0 (the nadir view ignores Z).

@@ -41,6 +41,13 @@ export const outlineSlice = createSlice({
     cornerAppended: (state, action: PayloadAction<Vec2>) => {
       if (state.draft && !state.draft.closed) state.draft.ringM.push(action.payload);
     },
+    /** `index` is where the corner lands: an edge's end index, `length` for a closed ring's closing edge. */
+    cornerInserted: (state, action: PayloadAction<{ index: number; xyM: Vec2 }>) => {
+      const { index, xyM } = action.payload;
+      if (state.draft && index > 0 && index <= state.draft.ringM.length) {
+        state.draft.ringM.splice(index, 0, xyM);
+      }
+    },
     cornerMoved: (state, action: PayloadAction<{ index: number; xyM: Vec2 }>) => {
       const { index, xyM } = action.payload;
       // An out-of-range index (a stale drag after a delete) would otherwise append past the end.
@@ -81,6 +88,7 @@ export const {
   maskToggled,
   draftStarted,
   cornerAppended,
+  cornerInserted,
   cornerMoved,
   cornerClicked,
   outlineSaved,

@@ -239,7 +239,10 @@ A mesh row's "Draw outline" button (or "Edit outline", once one is saved)
 enters draw mode: the camera switches to a straight-down orthographic view at
 about the same scale, the wheel zooms and every drag pans. Click empty space to
 add a corner, drag a corner to move it, click a corner to delete it; clicking
-the first corner of a ring with three or more corners closes it instead. Save
+the first corner of a ring with three or more corners closes it instead.
+Pressing within 6 px of an edge inserts a corner there (and drags it), but
+never within 8 px of an existing corner; both are screen pixels, so zoom in to
+place corners closer together. Save
 is enabled only on a closed ring; Save and Discard both return the camera to
 the pose draw mode left. Draw mode refuses a mesh whose transform rotates about
 anything but Z. Splats are not drawn while the projection is orthographic —
