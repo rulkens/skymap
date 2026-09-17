@@ -22,7 +22,6 @@ import { GpuTimingsSection } from './GpuTimingsSection';
 import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
-import FlowTuningSectionContainer from '../../layers/flow/ui/FlowTuningSectionContainer';
 import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
 import ZoneOfAvoidanceTuningSectionContainer from '../containers/ZoneOfAvoidanceTuningSectionContainer';
 import SgrAStarLensingTuningSectionContainer from '../containers/SgrAStarLensingTuningSectionContainer';
@@ -71,7 +70,6 @@ function DebugPanel({
         const Debug = layer.ui?.debug;
         return Debug ? <Debug key={layer.name} /> : null;
       })}
-      <FlowTuningSectionContainer />
       <MilkyWayTuningSectionContainer />
       <ZoneOfAvoidanceTuningSectionContainer />
       <SgrAStarLensingTuningSectionContainer />

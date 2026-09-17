@@ -16,7 +16,6 @@ import type { Layer } from '../../@types/engine/layer/Layer';
 import TierChipContainer from '../containers/TierChipContainer';
 import StarsSectionContainer from '../containers/StarsSectionContainer';
 import CosmicWebSectionContainer from '../containers/CosmicWebSectionContainer';
-import FlowSectionContainer from '../../layers/flow/ui/FlowSectionContainer';
 import StructuresSectionContainer from '../containers/StructuresSectionContainer';
 import LabelsAndGuidesSectionContainer from '../containers/LabelsAndGuidesSectionContainer';
 import DisplaySectionContainer from '../containers/DisplaySectionContainer';
@@ -47,7 +46,6 @@ export const SettingsPanel = memo(function SettingsPanel({
       })}
       <StarsSectionContainer />
       <CosmicWebSectionContainer />
-      <FlowSectionContainer />
       <StructuresSectionContainer />
       <LabelsAndGuidesSectionContainer />
       <DisplaySectionContainer>

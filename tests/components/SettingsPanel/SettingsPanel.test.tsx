@@ -37,9 +37,6 @@ vi.mock('../../../src/components/containers/StarsSectionContainer', () => ({
 vi.mock('../../../src/components/containers/CosmicWebSectionContainer', () => ({
   default: () => <div data-testid="cosmic-web-section" />,
 }));
-vi.mock('../../../src/layers/flow/ui/FlowSectionContainer', () => ({
-  default: () => <div data-testid="flow-section" />,
-}));
 vi.mock('../../../src/components/containers/StructuresSectionContainer', () => ({
   default: () => <div data-testid="structures-section" />,
 }));

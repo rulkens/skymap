@@ -28,7 +28,7 @@ import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
 import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
 import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
-import { FLOW_ENTRY } from '../layers/flow/sources/flow';
+import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
 import { FAMOUS_STAR_ENTRY } from './sources/famous-star';
 import { PLANET_ENTRY } from './sources/planet';
 import { EARTH_ENTRY } from './sources/earth';
@@ -84,7 +84,6 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.DebugCartesian]: DEBUG_CARTESIAN_ENTRY,
   [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
-  [Source.Flow]: FLOW_ENTRY,
   [Source.FamousStar]: FAMOUS_STAR_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
@@ -103,6 +102,7 @@ export const SOURCE_REGISTRY = {
   ...UNFORMED_SOURCE_REGISTRY,
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
+  ...sourceRecordOf(FLOW_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
 // code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every
