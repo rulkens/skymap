@@ -1,10 +1,12 @@
 /**
  * clippedHeightSource — narrow a height source to `extent`: posts outside it
- * are NaN (the band's underfill takes them) and the inner source is asked only
- * for the posts inside, so a coarse tile never scans a whole 1 m DTM.
+ * are NaN (the band's underfill takes them), and across the ring between
+ * `extent` and `core` the posts blend from `underfill` to the source, so the
+ * two surfaces never meet in a step. A coarse tile never scans a whole 1 m DTM.
  */
 
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import { featherWeight } from '../utils/textures/featherWeight';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import type { HeightSource } from './HeightSource';
 
@@ -12,7 +14,13 @@ import type { HeightSource } from './HeightSource';
  *  a coarser tile line, but float division can land a hair either side. */
 const INDEX_EPSILON = 1e-9;
 
-export function clippedHeightSource(source: HeightSource, extent: LonLatBounds): HeightSource {
+export function clippedHeightSource(
+  source: HeightSource,
+  /** Must be the band's own height underfill: its value IS the edge post. */
+  underfill: HeightSource,
+  extent: LonLatBounds,
+  core: LonLatBounds,
+): HeightSource {
   return {
     ...source,
     coverage: [extent],
@@ -27,13 +35,25 @@ export function clippedHeightSource(source: HeightSource, extent: LonLatBounds):
       const jHi = Math.min(j0 + ny - 1, Math.floor((90 - extent.south) / step + INDEX_EPSILON));
       if (iHi < iLo || jHi < jLo) return null;
 
-      const inner = await source.readGrid(z, iLo, jLo, iHi - iLo + 1, jHi - jLo + 1);
-      if (inner === null) return null;
-      const grid = new Float32Array(nx * ny).fill(Number.NaN);
       const innerWidth = iHi - iLo + 1;
+      const innerHeight = jHi - jLo + 1;
+      const inner = await source.readGrid(z, iLo, jLo, innerWidth, innerHeight);
+      if (inner === null) return null;
+      let under: Float32Array | null | undefined;
+      const grid = new Float32Array(nx * ny).fill(Number.NaN);
       for (let j = jLo; j <= jHi; j++) {
-        const row = (j - jLo) * innerWidth;
-        grid.set(inner.subarray(row, row + innerWidth), (j - j0) * nx + (iLo - i0));
+        const lat = 90 - j * step;
+        for (let i = iLo; i <= iHi; i++) {
+          const k = (j - jLo) * innerWidth + (i - iLo);
+          const weight = featherWeight(extent, core, -180 + i * step, lat);
+          let value = inner[k]!;
+          if (weight < 1) {
+            under ??= await underfill.readGrid(z, iLo, jLo, innerWidth, innerHeight);
+            const fill = under?.[k] ?? Number.NaN;
+            value = weight === 0 ? fill : weight * value + (1 - weight) * fill;
+          }
+          grid[(j - j0) * nx + (i - i0)] = value;
+        }
       }
       return grid;
     },

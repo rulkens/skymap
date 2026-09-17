@@ -56,6 +56,12 @@ const SITE_MAX_LEVEL = 17;
 /** Side of the square baked around each rover, ground metres (plan R2). */
 const MARS_SITE_WINDOW_M = 3000;
 
+/** Width of the ring inside the window where HiRISE fades into Viking/MOLA.
+ *  DTM − MOLA runs 10–150 m along the window edges (Endeavour's east rim
+ *  worst, decaying over ~800 m); one MOLA post (463 m) is the narrowest ramp
+ *  MOLA itself can shape, and 500 m caps the added slope near 0.3. */
+const MARS_SITE_FEATHER_M = 500;
+
 /** Colour is pulled onto Viking's below ~600 m, about 2.5 Viking pixels, so
  *  a grey ortho takes Viking's hue and keeps its own fine luminance. */
 const MARS_COLOUR_MATCH_SIGMA_DEG = 0.01;
@@ -264,6 +270,18 @@ function siteExtent(site: MarsSite): LonLatBounds {
   return extent;
 }
 
+/** `extent` shrunk by the feather ring on every side. */
+function siteCore(extent: LonLatBounds): LonLatBounds {
+  const latDeg = (MARS_SITE_FEATHER_M / MARS_IAU_SPHERE_RADIUS_M) * RAD_TO_DEG;
+  const lonDeg = latDeg / Math.cos((extent.north + extent.south) / 2 / RAD_TO_DEG);
+  return {
+    west: extent.west + lonDeg,
+    east: extent.east - lonDeg,
+    south: extent.south + latDeg,
+    north: extent.north - latDeg,
+  };
+}
+
 /** Median of (DTM − MOLA) over the extent's z10 posts; both carry the same
  *  offset, so it cancels. Printed, and fatal past the limit. */
 async function checkDatum(
@@ -318,6 +336,7 @@ async function siteBand(
   globalHeight: HeightSource,
 ): Promise<SurfaceBakeBand> {
   const extent = siteExtent(site);
+  const core = siteCore(extent);
   const provenance = {
     sourceId: `hirise-${site.id}`,
     attribution: site.attribution,
@@ -349,6 +368,7 @@ async function siteBand(
       ...(site.greyStretch === undefined ? {} : { greyStretch: site.greyStretch }),
     }),
     extent,
+    core,
   );
   return {
     source: site.grey
@@ -356,7 +376,7 @@ async function siteBand(
       : ortho,
     minLevel: SITE_MIN_LEVEL,
     underfill: global,
-    height: clippedHeightSource(dtm, extent),
+    height: clippedHeightSource(dtm, globalHeight, extent, core),
     // Also the DTM's void fill: `bakeHeightLevel` fills NaN posts from it.
     heightUnderfill: globalHeight,
   };
