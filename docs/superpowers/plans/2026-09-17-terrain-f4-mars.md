@@ -40,7 +40,7 @@ All rasters: equirectangular, lat_ts 0, lon0 0, sphere R = 3,396,190 m (lon = x/
 | `hirise.jezero.dtm`       | `hirise/jezero/MSR_hirise_soc_003_DTM_MOLATopography_DeltaGeoid_1m_Eqc_latTs0_lon0_Blend40.tif` | 712 MB, 19144×26816, LZW tiled 256        | Float32, −32767 (areoid, README) | 1 m     | 77.058–77.381, 18.136–18.588     |
 | `hirise.jezero.ortho`     | `hirise/jezero/MSR_hirise_soc_003_Orthomosaic_0.25m_Eqc_latTs0_lon0_First_NoBlend.tif`          | 4.7 GB, 76576×107264, LZW tiled 256, grey | Byte, 0                          | 0.25 m  | = DTM                            |
 
-Rover rows (`src/data/bodies/surfaceFixedSites.ts:22-55`): curiosity −4.5895, 137.4417 (inside Gale); spirit −14.5684, 175.4726 (inside Gusev); perseverance 18.4447, 77.4508 (landing site, ~4 km east of the Jezero box; moves per R4); opportunity −1.9462, 354.4734 (Eagle crater, outside both Meridiani DTMs; moves per R1).
+Rover rows (`src/data/bodies/surfaceFixedSites.ts`, as built 2026-09-17 per R5): curiosity −4.8246, 137.38848 (sol 5016 end-of-drive, inside Gale); perseverance 18.43687, 77.23205 (sol 1980 end-of-drive, inside Jezero, per R4); spirit −14.60036, 175.52576 (Troy, Home Plate's west edge, final position, proxy, inside Gusev); opportunity −2.336, 354.619 (Perseverance Valley on Endeavour's rim, final position, proxy, per R1).
 
 ## Rulings (user, 2026-09-17)
 
@@ -192,8 +192,8 @@ review: yes (draw order/depth, uniforms)
 
 **Files:** none committed except the ledger and any constants the eye-check changes.
 
-- [ ] Announce the bake (wall-clock and disk estimate from Task 2's probe) and run `npm run build-surface-tiles -- --body mars` in the background, global band first, then sites. Log to the SDD workspace.
-- [ ] After each run: Earth manifest mtime unchanged; `mars-tiles/manifest.json` holds every band with `builtFrom` for both products; the datum check printed within ±200 m.
+- [x] Announce the bake (wall-clock and disk estimate from Task 2's probe) and run `npm run build-surface-tiles -- --body mars` in the background, global band first, then sites. Log to the SDD workspace. — Done 2026-09-17 (run 1 killed by a low-memory OOM mid-Endeavour z17, resumed as run 2; site bands re-baked again after the eye-check's P2/P4 fixes).
+- [x] After each run: Earth manifest mtime unchanged; `mars-tiles/manifest.json` holds every band with `builtFrom` for both products; the datum check printed within ±200 m. — Earth manifest mtime unchanged (baseline 17 Sep 02:20:46); 27,096 tiles indexed after the site re-bake; datum checks gale +47.4, jezero −12.3, gusev −1.3, endeavour −8.2 m, all within ±200 m.
 - [ ] Dev server on this worktree's port. User eye-check poses:
   1. Mars from orbit: Olympus Mons and Valles Marineris read in relief; no colour step at tile engagement (O4).
   2. Hellas basin close up: no base-globe patches poking through (inner bound).
@@ -217,7 +217,7 @@ F3a routes surface-fixed site placement (`deriveBodyStates.ts:84` and `sitePoint
 
 **Files:** `docs/superpowers/specs/2026-09-13-per-planet-terrain-design.md` (§9, §10 amendments: sources as built, site set, tile counts), `docs/DATA.md`, `docs/DEPLOY.md` if the R2 step needs a Mars line, `docs/BACKLOG.md` (remove nothing unless an item is consumed; add rulings the user declines).
 
-- [ ] Amend in place, marked with the ruling date. Commit.
+- [x] Amend in place, marked with the ruling date. Commit.
 
 ---
 

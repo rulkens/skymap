@@ -788,6 +788,20 @@ Mars needs the imagery path it does not have: today it is one whole-globe
 - A rover's `altitudeM` then reads `bestHeightM` at its site rather than the mean
   sphere, closing the areoid gap `SURFACE_FIXED_SITES` documents.
 
+**As built (2026-09-17).** Each site box is a 3×3 km window (`MARS_SITE_WINDOW_M`)
+centred on the rover's current or final position (rulings R1, R4, R5), grown to
+whole z17 tiles and feathered 500 m into the surrounding global band — height
+MOLA→DTM, ortho alpha→Viking — so the box has no hard edge. z8–z9 sit unbaked
+between the global z7 ceiling and the site z10 floor; a camera there draws the
+nearest resident ancestor. The full bake (global + all four sites) indexed
+27,096 tiles after the site re-bake, ≈410 MB albedo + ≈254 MB height for the
+first full pass. Per-site datum checks (median DTM − MOLA, throw past ±200 m):
+Gale +47.4 m, Jezero −12.3 m, Gusev −1.3 m, Endeavour −8.2 m. MOLA is read from
+a Float32 COG rather than the Int16 original — sharp clamps negative Int16
+samples to 0, which first surfaced as a multi-kilometre datum mismatch. Gale's
+78-quad HiRISE mosaic keeps a ~250 m RED-only grey strip; colour-matching it
+onto Viking dulled the crater floor more than the strip costs, so it stays as is.
+
 ## 10. Budgets
 
 Height bytes are 66,588 per tile (§5.3); a full pyramid to level `L` costs roughly
@@ -812,6 +826,10 @@ interpolated: global z7's 2,446 m posts sit inside ETOPO 30″'s 926 m; the EOX 
 z13 38.2 m posts inside skadi 1″'s 30 m; Søndermarken's z19 0.597 m posts inside DHM's
 0.4 m. Nothing is invented anywhere real data exists — the requirement in §1, and the
 reason these ceilings are not a byte-budget trade.
+
+**As built (2026-09-17):** actual Mars tile and byte counts are in §9, not
+reconciled against the per-band estimates above — the feather ring and the
+grey-stretch bands add overhead the estimate didn't carry.
 
 Total against the existing 425 MB / 19,701-tile Earth albedo set and `public/data`'s
 2.3 GB: ~2.65 GB of new tiles across the rows that have numbers, plus the rover-site
