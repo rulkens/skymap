@@ -6,7 +6,7 @@
  */
 
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -14,56 +14,7 @@ import sharp from 'sharp';
 
 import { geoTiffImagerySource } from '../../../tools/textures/geoTiffImagerySource';
 import { readGeoTiffRgbWindow } from '../../../tools/utils/textures/readGeoTiffRgbWindow';
-
-/**
- * A bare single-band 8- or 16-bit grey TIFF (8-byte header, one strip, ten IFD tags) —
- * `sharp`'s own TIFF encoder converts a single-band raw input into an 8-bit
- * sRGB triple regardless of `depth`, the same silent-corruption failure mode
- * `dhmTerraenHeightSource`'s tests hit for single-band float32.
- */
-function writeGreyTiff(
-  path: string,
-  width: number,
-  height: number,
-  values: ArrayLike<number>,
-  bits: 8 | 16,
-): void {
-  const pixels = bits === 8 ? Uint8Array.from(values) : Uint16Array.from(values);
-  const pixelBytes = Buffer.from(pixels.buffer, pixels.byteOffset, pixels.byteLength);
-  const headerSize = 8;
-  const ifdOffset = headerSize + pixelBytes.byteLength;
-  const entries: ReadonlyArray<readonly [number, number, number, number]> = [
-    [256, 3, 1, width], // ImageWidth (SHORT)
-    [257, 3, 1, height], // ImageLength (SHORT)
-    [258, 3, 1, bits], // BitsPerSample
-    [259, 3, 1, 1], // Compression: none
-    [262, 3, 1, 1], // PhotometricInterpretation: BlackIsZero
-    [273, 4, 1, headerSize], // StripOffsets (LONG)
-    [277, 3, 1, 1], // SamplesPerPixel
-    [278, 4, 1, height], // RowsPerStrip: one strip
-    [279, 4, 1, pixelBytes.byteLength], // StripByteCounts
-    [339, 3, 1, 1], // SampleFormat: unsigned int
-  ];
-  const buf = Buffer.alloc(ifdOffset + 2 + entries.length * 12 + 4);
-  buf.write('II', 0, 'ascii');
-  buf.writeUInt16LE(42, 2);
-  buf.writeUInt32LE(ifdOffset, 4);
-  pixelBytes.copy(buf, headerSize);
-
-  let p = ifdOffset;
-  buf.writeUInt16LE(entries.length, p);
-  p += 2;
-  for (const [tag, type, count, value] of entries) {
-    buf.writeUInt16LE(tag, p);
-    buf.writeUInt16LE(type, p + 2);
-    buf.writeUInt32LE(count, p + 4);
-    buf.writeUInt32LE(value, p + 8);
-    p += 12;
-  }
-  buf.writeUInt32LE(0, p);
-
-  writeFileSync(path, buf);
-}
+import { writeGreyTiff } from '../../fixtures/textures/geoTiffWriters';
 
 let dir = '';
 
@@ -142,5 +93,30 @@ describe('geoTiffImagerySource', () => {
     expect(rgba![3]).toBe(0);
     // Pixel 1 (30000, the stretch's own high end): opaque white.
     expect([...rgba!.slice(4, 8)]).toEqual([255, 255, 255, 255]);
+  });
+
+  it('throws on a box only partly inside its raster bounds rather than stretching it', async () => {
+    const width = 2;
+    const height = 2;
+    const path = join(dir, 'partial.tif');
+    const pixels = new Uint8Array(width * height * 3).fill(100);
+    await sharp(pixels, { raw: { width, height, channels: 3 } })
+      .tiff({ compression: 'none' })
+      .toFile(path);
+
+    const source = geoTiffImagerySource({
+      id: 'partial-test',
+      attribution: 'test',
+      provenance: { sourceId: 'partial-test', attribution: 'test', vintage: '2026' },
+      grid: { path, width, height, bounds: { west: -1, east: 1, north: 1, south: -1 } },
+      maxLevel: 10,
+    });
+
+    // Straddles the raster's east edge (bounds.east = 1) by sharing area with
+    // it, rather than sitting fully inside — the case that used to clamp the
+    // window and stretch it to fill the box.
+    await expect(source.readBox({ west: 0, east: 2, north: 1, south: -1 }, 2, 2)).rejects.toThrow(
+      /partly overlaps/,
+    );
   });
 });

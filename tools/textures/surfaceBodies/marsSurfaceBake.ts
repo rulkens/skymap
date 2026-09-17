@@ -6,7 +6,11 @@
  */
 
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
-import { MARS_IAU_SPHERE_RADIUS_M } from '../../../src/data/bodies/marsSurfaceParams';
+import {
+  MARS_AREOID_RELIEF_M,
+  MARS_DATUM_OFFSET_M,
+  MARS_IAU_SPHERE_RADIUS_M,
+} from '../../../src/data/bodies/marsSurfaceParams';
 import { SCENE_PLANETS } from '../../../src/data/bodies/scenePlanets';
 import { SURFACE_FIXED_SITES } from '../../../src/data/bodies/surfaceFixedSites';
 import { SURFACE_TILE_PX } from '../../../src/data/bodies/surfaceTileParams';
@@ -34,10 +38,9 @@ const TILE_ROOT = SURFACE_TILE_REGISTRY.mars.manifestKey;
 /** Bump on any re-bake that changes pixels (see `earthSurfaceBake`). */
 const TILE_PREFIX = `${TILE_ROOT}/v1`;
 
-const MARS_DATUM_RADIUS_M = SCENE_PLANETS.find((body) => body.id === 'mars')!.surface.datumRadiusM;
-
-/** Added to every source height: areoid-on-the-IAU-sphere to the scene datum. */
-const DATUM_OFFSET_M = MARS_IAU_SPHERE_RADIUS_M - MARS_DATUM_RADIUS_M;
+/** The compiled `reliefM` `heliocentricPlanet` gave Mars — read, never
+ *  restated, so `assertInsideReliefM` catches the two derivations drifting. */
+const MARS_RELIEF_M = SCENE_PLANETS.find((body) => body.id === 'mars')!.surface.reliefM;
 
 /** One finer than the coarsest whole-globe base (see `earthSurfaceBake`). */
 const BAKE_MIN_LEVEL = Math.min(...TIER_LADDER.map((tier) => baseLevelForTier('mars', tier))) + 1;
@@ -126,7 +129,7 @@ function mola(): HeightSource {
       bounds: WHOLE_GLOBE,
     },
     nodata: -32768,
-    offsetM: DATUM_OFFSET_M,
+    offsetM: MARS_DATUM_OFFSET_M,
     maxLevel: MOLA_MAX_LEVEL,
   });
 }
@@ -295,6 +298,19 @@ async function checkDatum(
   }
 }
 
+/** Throws if a rebased `[min, max]` escapes the Mars row's compiled
+ *  `reliefM` (spec §4.3) — a wrong offset or source unit would otherwise
+ *  ship silently instead of clipping in the runtime's height decode. */
+function assertInsideReliefM(id: string, [min, max]: readonly [number, number]): void {
+  const [reliefMin, reliefMax] = MARS_RELIEF_M;
+  if (min < reliefMin || max > reliefMax) {
+    throw new Error(
+      `marsSurfaceBake: ${id}'s rebased range [${min.toFixed(0)}, ${max.toFixed(0)}] ` +
+        `falls outside reliefM [${reliefMin}, ${reliefMax}]`,
+    );
+  }
+}
+
 async function siteBand(
   site: MarsSite,
   global: SurfaceImagerySource,
@@ -312,10 +328,15 @@ async function siteBand(
     provenance,
     grid: site.dtm,
     nodata: site.dtmNodata,
-    offsetM: DATUM_OFFSET_M,
+    offsetM: MARS_DATUM_OFFSET_M,
     maxLevel: SITE_MAX_LEVEL,
   });
   await checkDatum(site, dtm, globalHeight, extent);
+  const dtmRange = await dtm.boundsInBox(extent);
+  if (dtmRange === null) {
+    throw new Error(`marsSurfaceBake: ${site.id} DTM has no valid samples inside its window`);
+  }
+  assertInsideReliefM(`${site.id} DTM`, dtmRange);
 
   const ortho = clippedImagerySource(
     geoTiffImagerySource({
@@ -342,6 +363,11 @@ async function siteBand(
 
 async function bands({ dev }: { dev: boolean }): Promise<readonly SurfaceBakeBand[]> {
   if (dev) return [{ source: viking(DEV_MAX_LEVEL), minLevel: BAKE_MIN_LEVEL }];
+
+  assertInsideReliefM('MOLA global', [
+    MARS_AREOID_RELIEF_M[0] + MARS_DATUM_OFFSET_M,
+    MARS_AREOID_RELIEF_M[1] + MARS_DATUM_OFFSET_M,
+  ]);
 
   const global = viking(GLOBAL_MAX_LEVEL);
   const globalHeight = mola();

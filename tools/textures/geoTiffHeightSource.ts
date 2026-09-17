@@ -1,14 +1,14 @@
 /**
  * geoTiffHeightSource — a `HeightSource` over an arbitrary equirectangular
  * GeoTIFF whose `grid.bounds` are pixel-EDGE registered (spec §4.1: Mars
- * MOLA and every HiRISE DTM), unlike `etopoHeightSource`'s cell-centred
- * product — pixel `i`'s centre still sits at a "+0.5" shift, now measured
- * from the grid's own edges instead of a hardcoded ±180/±90 extent.
+ * MOLA and every HiRISE DTM): pixel `i`'s centre sits at a "+0.5" shift
+ * measured from the grid's own edges, not a hardcoded ±180/±90 extent.
  */
 
 import type { HeightSource } from './HeightSource';
 import type { GeoTiffGrid } from './GeoTiffGrid';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
+import { clamp } from '../utils/textures/clamp';
 import { heightLatticeBounds } from '../utils/textures/heightLatticeBounds';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { readGeoTiffWindow } from '../utils/textures/readGeoTiffWindow';
@@ -21,10 +21,6 @@ const MAX_WINDOW_SAMPLES = 8_000_000;
  *  as no-data regardless of the declared sentinel — a bilinear stencil must
  *  never average a real post against either. */
 const NODATA_FLOOR = -1e30;
-
-function clamp(value: number, lo: number, hi: number): number {
-  return value < lo ? lo : value > hi ? hi : value;
-}
 
 /** A post landing exactly on a source pixel (`fx` or `fy` === 0) gives its
  *  off-side neighbour a zero weight — but `0 * NaN` is NaN, so an unrelated

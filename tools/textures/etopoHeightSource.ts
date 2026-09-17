@@ -9,6 +9,7 @@
 import sharp from 'sharp';
 
 import type { HeightSource } from './HeightSource';
+import { clamp } from '../utils/textures/clamp';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { readGeoTiffWindow } from '../utils/textures/readGeoTiffWindow';
@@ -35,10 +36,6 @@ const ETOPO_PROVENANCE = {
 } as const;
 
 const WHOLE_GLOBE = [{ west: -180, east: 180, south: -90, north: 90 }] as const;
-
-function clamp(value: number, lo: number, hi: number): number {
-  return value < lo ? lo : value > hi ? hi : value;
-}
 
 export async function etopoHeightSource(): Promise<HeightSource> {
   const path = rawDataPath('etopo.surface30s');

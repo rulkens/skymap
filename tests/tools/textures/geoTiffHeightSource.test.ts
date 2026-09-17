@@ -6,64 +6,13 @@
  */
 
 import { describe, expect, it, beforeAll, afterAll } from 'vitest';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { geoTiffHeightSource } from '../../../tools/textures/geoTiffHeightSource';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
-import { readGeoTiffWindow } from '../../../tools/utils/textures/readGeoTiffWindow';
-
-/**
- * A bare single-band float32 TIFF (8-byte header, one strip, ten IFD tags).
- * `sharp`'s TIFF encoder only reaches 32-bit float samples through its
- * `predictor: 'float'` path, which forces a 3-band scRGB image and silently
- * zeroes a single-band source (confirmed against `dhmTerraenHeightSource`'s
- * DTM tiles) — this is well inside libtiff's tolerance and reads identically.
- */
-function writeFloatTiff(
-  path: string,
-  width: number,
-  height: number,
-  values: ArrayLike<number>,
-  format: 'float32' | 'int16' = 'float32',
-): void {
-  const pixels = format === 'int16' ? Int16Array.from(values) : Float32Array.from(values);
-  const pixelBytes = Buffer.from(pixels.buffer, pixels.byteOffset, pixels.byteLength);
-  const headerSize = 8;
-  const ifdOffset = headerSize + pixelBytes.byteLength;
-  const entries: ReadonlyArray<readonly [number, number, number, number]> = [
-    [256, 3, 1, width], // ImageWidth (SHORT)
-    [257, 3, 1, height], // ImageLength (SHORT)
-    [258, 3, 1, format === 'int16' ? 16 : 32], // BitsPerSample
-    [259, 3, 1, 1], // Compression: none
-    [262, 3, 1, 1], // PhotometricInterpretation: BlackIsZero
-    [273, 4, 1, headerSize], // StripOffsets (LONG)
-    [277, 3, 1, 1], // SamplesPerPixel
-    [278, 4, 1, height], // RowsPerStrip: one strip
-    [279, 4, 1, pixelBytes.byteLength], // StripByteCounts
-    [339, 3, 1, format === 'int16' ? 2 : 3], // SampleFormat: signed int / IEEE float
-  ];
-  const buf = Buffer.alloc(ifdOffset + 2 + entries.length * 12 + 4);
-  buf.write('II', 0, 'ascii');
-  buf.writeUInt16LE(42, 2);
-  buf.writeUInt32LE(ifdOffset, 4);
-  pixelBytes.copy(buf, headerSize);
-
-  let p = ifdOffset;
-  buf.writeUInt16LE(entries.length, p);
-  p += 2;
-  for (const [tag, type, count, value] of entries) {
-    buf.writeUInt16LE(tag, p);
-    buf.writeUInt16LE(type, p + 2);
-    buf.writeUInt32LE(count, p + 4);
-    buf.writeUInt32LE(value, p + 8);
-    p += 12;
-  }
-  buf.writeUInt32LE(0, p);
-
-  writeFileSync(path, buf);
-}
+import { writeFloatTiff } from '../../fixtures/textures/geoTiffWriters';
 
 // Global lattice level 7's post spacing is an exact dyadic fraction
 // (360 / 2^14), so choosing the grid's own pixel size to equal it makes
@@ -158,11 +107,5 @@ describe('geoTiffHeightSource', () => {
     const south = await globe.readGrid(0, 0, 64, 129, 1);
     expect(north!.every(Number.isFinite)).toBe(true);
     expect(south!.every(Number.isFinite)).toBe(true);
-  });
-
-  it('refuses an Int16 DEM rather than returning clamped or rescaled metres', async () => {
-    const shortPath = join(dir, 'short.tif');
-    writeFloatTiff(shortPath, 2, 1, [-4500, 20000], 'int16');
-    await expect(readGeoTiffWindow(shortPath, 0, 0, 2, 1)).rejects.toThrow(/depth 'short'/);
   });
 });

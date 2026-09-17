@@ -1,11 +1,8 @@
 /**
  * geoTiffImagerySource — a `SurfaceImagerySource` over an arbitrary
- * equirectangular colour GeoTIFF (Viking, HiRISE orthos; spec §4.2). Two
- * pixel shapes share one box-sampling path: an 8-bit RGB(A) file reads
- * through `readGeoTiffRgbWindow`, a single-band UInt16 grey file (a `greyStretch`
- * is given) is linearly stretched and replicated to RGB — both land as one
- * native-resolution RGBA raster that `sharp` then resizes to the requested box,
- * so alpha (0 at no-data) blends at a shrunk box's edges same as every other source.
+ * equirectangular colour GeoTIFF (Viking, HiRISE orthos; spec §4.2): 8-bit
+ * RGB(A) reads via `readGeoTiffRgbWindow`, UInt16 grey (`greyStretch`) is
+ * stretched and replicated to RGB; either way `sharp` resizes the result.
  */
 
 import sharp from 'sharp';
@@ -13,21 +10,15 @@ import sharp from 'sharp';
 import type { GeoTiffGrid } from './GeoTiffGrid';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
+import { clamp } from '../utils/textures/clamp';
 import { readGeoTiffRgbWindow } from '../utils/textures/readGeoTiffRgbWindow';
 
-function clamp(value: number, lo: number, hi: number): number {
-  return value < lo ? lo : value > hi ? hi : value;
-}
-
 /**
- * One window of a single-band UInt16 GeoTIFF, native values intact.
- * `readGeoTiffWindow` (the DEM reader) forces `.toColourspace('b-w')`, which
- * is a no-op relabel for the DEM formats it targets (short/float/int) but a
- * REAL 0..65535 -> 0..255 rescale for UInt16, whose TIFF `PhotometricInterpretation`
- * tags it `grey16` — a "photographic" space sharp always normalises into any
- * OTHER space on output. Naming it `grey16` again is the escape hatch: sharp
- * then treats the conversion as an identity and `raw({depth:'ushort'})` gets
- * the true sample back (confirmed against lovell/sharp#3808's workaround).
+ * One window of a single-band UInt16 GeoTIFF, native values intact. Sharp
+ * silently rescales UInt16 0..65535 -> 0..255 on any other colourspace
+ * conversion (lovell/sharp#3808); relabelling to `grey16` (its own space)
+ * makes the conversion an identity, so `raw({depth:'ushort'})` returns the
+ * true sample.
  */
 async function readUInt16GreyWindow(
   path: string,
@@ -79,6 +70,19 @@ export function geoTiffImagerySource(opts: {
 
     async readBox(box, widthPx, heightPx) {
       if (!boundsOverlap(box, grid.bounds)) return null;
+      // A box straddling the raster's edge would otherwise clamp to the
+      // available window and get stretched to fill the box — a distorted,
+      // silently-wrong tile rather than a caller that needed to clip first.
+      if (
+        box.west < grid.bounds.west ||
+        box.east > grid.bounds.east ||
+        box.south < grid.bounds.south ||
+        box.north > grid.bounds.north
+      ) {
+        throw new Error(
+          `geoTiffImagerySource: ${opts.id}'s box only partly overlaps its raster bounds`,
+        );
+      }
 
       // Source pixel window covering the box — plain edge arithmetic (no
       // "+0.5"): these are the raster's own pixel EDGES, not lattice posts.
@@ -98,9 +102,9 @@ export function geoTiffImagerySource(opts: {
         rgba = new Uint8Array(winWidth * winHeight * 4);
         for (let i = 0; i < grey.length; i++) {
           const value = grey[i]!;
-          // 0 is every grey ortho's declared no-data (Gusev, Endeavour); a
-          // stretched value never legitimately lands there since `lo` is set
-          // above it, so the check never swallows a real dark pixel.
+          // 0 is every grey ortho's declared no-data (Gusev, Endeavour),
+          // checked on the RAW value before the stretch: `lo` sits above 0,
+          // so a real dark pixel's raw DN is never exactly 0.
           const noData = value === 0;
           const level = noData ? 0 : clamp(Math.round((value - lo) * scale), 0, 255);
           rgba[i * 4] = level;
@@ -110,10 +114,10 @@ export function geoTiffImagerySource(opts: {
         }
       } else {
         rgba = await readGeoTiffRgbWindow(grid.path, left, top, winWidth, winHeight);
-        // Byte RGB carries no separate no-data channel unless the file embeds
-        // a real mask (which `readGeoTiffRgbWindow` preserves as a non-255
-        // alpha already); a pixel that is BOTH fully opaque and exactly black
-        // is the declared 0 sentinel (Viking).
+        // Byte RGB carries no separate no-data channel — `readGeoTiffRgbWindow`
+        // does not surface a GDAL internal mask (see its own doc) — so a pixel
+        // that is BOTH fully opaque and exactly black is treated as the
+        // declared 0 sentinel (Viking) instead.
         for (let i = 0; i < rgba.length; i += 4) {
           if (rgba[i] === 0 && rgba[i + 1] === 0 && rgba[i + 2] === 0 && rgba[i + 3] === 255) {
             rgba[i + 3] = 0;

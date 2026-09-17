@@ -3,9 +3,11 @@ import sharp from 'sharp';
 /**
  * readGeoTiffRgbWindow — one pixel window of an 8-bit colour or grey GeoTIFF
  * (Viking, the HiRISE orthos), as RGBA; sharp's raw output replicates grey
- * (Jezero) to RGB on its own. `ensureAlpha` adds an opaque channel
- * only where the file has none; a real embedded mask band survives it, so a
- * masked COG's transparency reaches the caller rather than being flattened.
+ * (Jezero) to RGB on its own. `ensureAlpha` only synthesises opacity for this
+ * image's own bands — a GDAL internal mask sits in a separate IFD libvips's
+ * tiff reader can't open via `page` ("samples_per_pixel not a whole number
+ * of bytes", confirmed on the Gale ortho COG), so a masked COG's fringe
+ * pixels currently come back opaque, not transparent.
  */
 export async function readGeoTiffRgbWindow(
   path: string,
