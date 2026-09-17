@@ -124,9 +124,9 @@ export function readGeoTiffRgbWindow(path: string, left: number, top: number, wi
 
 Spec §4.2: Gusev and Meridiani orthos are single-band RED; their colour comes from the global base. `colourMatchedImagerySource(primary, reference, { sigmaDeg, waterMaskPath })` already moves a primary's low frequencies onto a reference's; it takes land/water classes from a mask.
 
-- [ ] Make `waterMaskPath` optional. With no mask every pixel is land (one class). No second wrapper.
-- [ ] Check that a grey primary (R = G = B) comes out with the reference's hue below `sigmaDeg`: offsets are added per channel, so a grey input gains the reference's chroma. If the offset maths clamps chroma away, report before changing it.
-- [ ] Test `colourMatchedImagerySource without a water mask gives a grey primary the reference's low-frequency colour` (flat grey primary, flat red-brown reference → output mean ≈ reference mean). Commit.
+- [x] Make `waterMaskPath` optional. With no mask every pixel is land (one class). No second wrapper.
+- [x] Check that a grey primary (R = G = B) comes out with the reference's hue below `sigmaDeg`: offsets are added per channel, so a grey input gains the reference's chroma. If the offset maths clamps chroma away, report before changing it. — Confirmed by the new test: a flat grey primary against a flat red-brown reference lands within 2/255 of the reference's own per-channel values (chroma intact, nothing clamped away); the per-channel offset math never special-cases grey inputs.
+- [x] Test `colourMatchedImagerySource without a water mask gives a grey primary the reference's low-frequency colour` (flat grey primary, flat red-brown reference → output mean ≈ reference mean). Commit.
 
 ### Task 4: The Mars row and bake entry
 
