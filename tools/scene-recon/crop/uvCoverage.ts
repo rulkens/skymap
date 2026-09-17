@@ -1,6 +1,7 @@
 /**
  * The atlas fraction the kept triangles sample: a plain sum of UV-triangle
- * areas, exact because an MVS atlas's charts never overlap; overlapping charts would over-report.
+ * areas, exact because an MVS atlas's charts never overlap; overlapping
+ * charts would over-report.
  */
 export function uvCoverage(uvs: Float32Array, indices: Uint32Array): number {
   let twiceArea = 0;
@@ -13,5 +14,5 @@ export function uvCoverage(uvs: Float32Array, indices: Uint32Array): number {
         (uvs[b + 1]! - uvs[a + 1]!) * (uvs[c]! - uvs[a]!),
     );
   }
-  return Math.min(1, twiceArea / 2);
+  return twiceArea / 2;
 }

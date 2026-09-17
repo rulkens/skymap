@@ -149,4 +149,25 @@ describe('cropMeshGeometry', () => {
     });
     expect(atCut).toHaveLength(1);
   });
+
+  it('clips a triangle whose edge enters the outline only through ring corners', () => {
+    // A V notch whose mouth corners (1, 2) and (3, 2) sit on the triangle's top edge: no
+    // proper crossing anywhere, all three corners inside, yet the V (area 1) is outside.
+    const notched: Vec2[] = [
+      [0, 0],
+      [4, 0],
+      [4, 4],
+      [3, 4],
+      [3, 2],
+      [2, 1],
+      [1, 2],
+      [1, 4],
+      [0, 4],
+    ];
+    const source = geometry([[[[0.5, 2, 0]], [[2, 0.5, 0]], [[3.5, 2, 0]]]]);
+
+    const out = crop(source, notched);
+
+    expect(xyArea(out)).toBeCloseTo(1.25, 6);
+  });
 });

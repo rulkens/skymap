@@ -6,7 +6,7 @@
  */
 import { clipPolygonByHalfPlane } from './clipPolygonByHalfPlane';
 import { insideRing } from './insideRing';
-import { segmentsCross } from './segmentsCross';
+import { segmentsTouch } from './segmentsTouch';
 import type { ClipVertex } from '../@types/ClipVertex';
 import type { HalfPlane2 } from '../@types/HalfPlane2';
 import type { TexturedMeshGeometry } from '../pack/packMeshGlb';
@@ -60,7 +60,7 @@ export function cropMeshGeometry(
     }
 
     const crossesRing = xy.some((a, e) =>
-      ringM.some((c, r) => segmentsCross(a, xy[(e + 1) % 3]!, c, ringM[(r + 1) % ringM.length]!)),
+      ringM.some((c, r) => segmentsTouch(a, xy[(e + 1) % 3]!, c, ringM[(r + 1) % ringM.length]!)),
     );
     if (!crossesRing && xy.every((p) => insideRing(p, ringM))) {
       for (const corner of corners) outIndices.push(emit(corner));

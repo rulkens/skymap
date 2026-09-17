@@ -133,6 +133,7 @@
     "@vitejs/plugin-react": "6.0.1",
     "@vitest/coverage-v8": "4.1.5",
     "@webgpu/types": "0.1.69",
+    "earcut": "3.2.3",
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "7.1.1",
     "jsdom": "27.0.1",
@@ -153,7 +154,6 @@
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",
     "classnames": "2.5.1",
-    "earcut": "3.2.3",
     "hotkeys-js": "4.0.4",
     "react": "19.2.5",
     "react-dom": "19.2.5",
