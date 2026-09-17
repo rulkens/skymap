@@ -134,9 +134,10 @@ function Viewport({ store, registerSagaContext }: ViewportProps): ReactNode {
         state.view.display,
         view.projection.kind,
       );
-      const draftRingGroupM = selectDraftRingGroupM(state);
-      if (draftRingGroupM) {
-        outlineOverlay.draw(pass, draftRingGroupM, state.outline.draft?.closed ?? false);
+      const draftRing = selectDraftRingGroupM(state);
+      if (draftRing) {
+        const devicePxPerCssPx = canvas.width / Math.max(canvas.clientWidth, 1);
+        outlineOverlay.draw(pass, draftRing.ringGroupM, draftRing.closed, devicePxPerCssPx);
       }
       pass.end();
       gpu.device.queue.submit([encoder.finish()]);

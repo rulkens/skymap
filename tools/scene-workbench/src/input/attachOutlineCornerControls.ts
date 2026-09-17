@@ -2,15 +2,18 @@
  * attachOutlineCornerControls — drag a draft corner to move it, click it to delete it (or, on
  * the first corner of an open ring, to close it). The `pointerdown` listener is capture-phase
  * and swallows a press near a corner, so `attachOrbitControls`' own listener never starts a
- * pan for it; that recognizer stays untouched.
+ * pan for it; that recognizer stays untouched. Desktop-only: `setPointerCapture` breaks touch
+ * pointers on iOS, which is why `orbitControls` never calls it.
  */
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
+import type { HeldCorner } from '../../@types/HeldCorner';
 import { sceneCameraView } from '../render/sceneCameraView';
 import { assetToGroupM } from '../scene/assetToGroupM';
 import { groupToAssetXY } from '../scene/groupToAssetXY';
 import { groupXYToPx } from '../scene/groupXYToPx';
 import { pxToGroupXY } from '../scene/pxToGroupXY';
 import { cornerClicked, cornerMoved } from '../state/outline/outlineSlice';
+import { selectDraftAsset } from '../state/outline/selectDraftAsset';
 import type { SceneCamera } from '../state/view/viewSlice';
 import type { SceneStore } from '../store/types';
 
@@ -22,7 +25,7 @@ export function attachOutlineCornerControls(
   store: SceneStore,
   getCameraPose: () => SceneCamera,
 ): () => void {
-  let held: { pointerId: number; index: number; downPx: Vec2; dragging: boolean } | null = null;
+  let held: HeldCorner | null = null;
 
   const localPx = (e: PointerEvent): Vec2 => {
     const rect = canvas.getBoundingClientRect();
@@ -34,7 +37,7 @@ export function attachOutlineCornerControls(
     const state = store.getState();
     const draft = state.outline.draft;
     const pose = getCameraPose();
-    const asset = state.group.manifest?.assets.find(({ id }) => id === draft?.assetId);
+    const asset = selectDraftAsset(state);
     if (!draft || !asset || pose.projection !== 'orthographic') return null;
     const view = sceneCameraView(pose, [canvas.clientWidth, canvas.clientHeight]);
     return { draft, transform: asset.transform, view };
@@ -66,7 +69,7 @@ export function attachOutlineCornerControls(
     if (!held || e.pointerId !== held.pointerId) return;
     const px = localPx(e);
     const movedSq = (px[0] - held.downPx[0]) ** 2 + (px[1] - held.downPx[1]) ** 2;
-    if (!held.dragging && movedSq <= DRAG_THRESHOLD_SQ_PX) return;
+    if (!held.dragging && movedSq < DRAG_THRESHOLD_SQ_PX) return;
     held.dragging = true;
     const context = editContext();
     if (!context) return;

@@ -16,7 +16,7 @@ import type { RootState } from '../../store/types';
 import { drawOutlineRequested, outlineDiscardRequested, outlineSaveRequested } from '../commands';
 import { assetStatusChanged, manifestLoaded } from '../group/groupSlice';
 import { groupSelected } from '../registry/registrySlice';
-import { commitCameraPose, type SceneCamera } from '../view/viewSlice';
+import { commitCameraPose } from '../view/viewSlice';
 import {
   draftEnded,
   draftStarted,
@@ -142,25 +142,10 @@ function* syncMasksWorker() {
 }
 
 export function* watchOutlineSaga() {
-  // Mirrors a live draft's returnPose outside the store: redux-saga's middleware runs the
-  // reducers (`next(action)`) before it feeds sagas, so by the time this generator observes
-  // `groupSelected`, `outlineSlice`'s own extraReducer has already reset `draft` to null — reading
-  // `state.outline.draft` here would always see the post-reset value. Kept as a plain local (not
-  // module-scope) so each `watchOutlineSaga()` run — one per `createSceneStore()` — starts clean.
-  let liveReturnPose: SceneCamera | null = null;
-  yield* takeEvery(draftStarted, function* (action) {
-    liveReturnPose = action.payload.returnPose;
-  });
-  yield* takeEvery(draftEnded, function* () {
-    liveReturnPose = null;
-  });
-  yield* takeEvery(groupSelected, function* () {
-    if (liveReturnPose) yield* put(commitCameraPose(liveReturnPose));
-    liveReturnPose = null;
-  });
   yield* takeEvery(touchesMask, syncMasksWorker);
   yield* takeLatest([groupSelected, manifestLoaded], loadOutlinesWorker);
   yield* takeEvery(drawOutlineRequested, drawOutlineWorker);
   yield* takeEvery(outlineSaveRequested, saveOutlineWorker);
-  yield* takeEvery(outlineDiscardRequested, discardOutlineWorker);
+  // A group switch discards like the button: the draft's asset is gone, its return pose is not.
+  yield* takeEvery([outlineDiscardRequested, groupSelected], discardOutlineWorker);
 }

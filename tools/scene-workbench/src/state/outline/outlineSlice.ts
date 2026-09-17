@@ -70,8 +70,9 @@ export const outlineSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    // Outlines belong to the group's assets; a switch drops them with the manifest.
-    builder.addCase(groupSelected, () => defaultOutlineSlice);
+    // Outlines belong to the group's assets; a switch drops them with the manifest. The draft
+    // survives so watchOutlineSaga can restore its returnPose before ending it.
+    builder.addCase(groupSelected, (state) => ({ ...defaultOutlineSlice, draft: state.draft }));
   },
 });
 

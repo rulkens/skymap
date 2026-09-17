@@ -13,6 +13,7 @@ import type { InputStep } from '../../../../src/@types/camera/InputStep';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { orbitDragDelta } from '../../../utils/camera/orbitDragDelta';
 import { cornerAppended } from '../state/outline/outlineSlice';
+import { selectDraftAsset } from '../state/outline/selectDraftAsset';
 import { commitCameraPose, PITCH_LIMIT, type SceneCamera } from '../state/view/viewSlice';
 import type { SceneStore } from '../store/types';
 import { sceneCameraView } from '../render/sceneCameraView';
@@ -143,7 +144,7 @@ export function createSceneInput(deps: SceneInputDeps): SceneInput {
   const appendCorner = (xCss: number, yCss: number): void => {
     const state = store.getState();
     const draft = state.outline.draft;
-    const asset = state.group.manifest?.assets.find(({ id }) => id === draft?.assetId);
+    const asset = selectDraftAsset(state);
     if (!draft || draft.closed || !asset || register.projection !== 'orthographic') return;
     const rect = canvas.getBoundingClientRect();
     const view = sceneCameraView(register, [canvas.clientWidth, canvas.clientHeight]);

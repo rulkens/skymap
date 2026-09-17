@@ -10,9 +10,17 @@ import outlineOverlayWgsl from './shaders/outlineOverlay.wesl?static';
 
 const VERTICES_PER_HANDLE = 6; // outlineOverlay.wesl's two-triangle quad
 const FLOATS_PER_POINT = 3;
+const FLOATS_PER_HANDLE = FLOATS_PER_POINT + 1; // corner, then its width in device px
+/** CSS px, the unit `attachOutlineCornerControls`' hit radius is in. */
+const HANDLE_CSS_PX = 8;
 
 export type OutlineOverlayRenderer = {
-  draw(pass: GPURenderPassEncoder, ringGroupM: readonly Vec3[], closed: boolean): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    ringGroupM: readonly Vec3[],
+    closed: boolean,
+    devicePxPerCssPx: number,
+  ): void;
   dispose(): void;
 };
 
@@ -27,11 +35,12 @@ export function createOutlineOverlayRenderer(
     label: 'scene-outline-overlay-layout',
     bindGroupLayouts: [cameraLayout],
   });
+  const position: GPUVertexAttribute = { shaderLocation: 0, offset: 0, format: 'float32x3' };
 
   const pipelineFor = (
     name: 'edge' | 'handle',
-    stepMode: GPUVertexStepMode,
     topology: GPUPrimitiveTopology,
+    buffer: GPUVertexBufferLayout,
   ): GPURenderPipeline =>
     device.createRenderPipeline({
       label: `scene-outline-overlay-${name}`,
@@ -39,13 +48,7 @@ export function createOutlineOverlayRenderer(
       vertex: {
         module,
         entryPoint: name === 'edge' ? 'vsEdge' : 'vsHandle',
-        buffers: [
-          {
-            arrayStride: FLOATS_PER_POINT * 4,
-            stepMode,
-            attributes: [{ shaderLocation: 0, offset: 0, format: 'float32x3' }],
-          },
-        ],
+        buffers: [buffer],
       },
       fragment: {
         module,
@@ -56,8 +59,23 @@ export function createOutlineOverlayRenderer(
       depthStencil: { format: 'depth24plus', depthWriteEnabled: false, depthCompare: 'always' },
     });
 
-  const edgePipeline = pipelineFor('edge', 'vertex', 'line-list');
-  const handlePipeline = pipelineFor('handle', 'instance', 'triangle-list');
+  const edgePipeline = pipelineFor('edge', 'line-list', {
+    arrayStride: FLOATS_PER_POINT * Float32Array.BYTES_PER_ELEMENT,
+    stepMode: 'vertex',
+    attributes: [position],
+  });
+  const handlePipeline = pipelineFor('handle', 'triangle-list', {
+    arrayStride: FLOATS_PER_HANDLE * Float32Array.BYTES_PER_ELEMENT,
+    stepMode: 'instance',
+    attributes: [
+      position,
+      {
+        shaderLocation: 1,
+        offset: FLOATS_PER_POINT * Float32Array.BYTES_PER_ELEMENT,
+        format: 'float32',
+      },
+    ],
+  });
 
   let edgeBuffer: GPUBuffer | null = null;
   let cornerBuffer: GPUBuffer | null = null;
@@ -78,7 +96,7 @@ export function createOutlineOverlayRenderer(
   };
 
   return {
-    draw(pass, ringGroupM, closed): void {
+    draw(pass, ringGroupM, closed, devicePxPerCssPx): void {
       const n = ringGroupM.length;
       if (n === 0) return;
 
@@ -95,7 +113,12 @@ export function createOutlineOverlayRenderer(
         pass.draw(edgeCount * 2);
       }
 
-      cornerBuffer = upload(cornerBuffer, new Float32Array(ringGroupM.flat()), 'corners');
+      const handles = new Float32Array(n * FLOATS_PER_HANDLE);
+      ringGroupM.forEach((cornerM, i) => {
+        handles.set(cornerM, i * FLOATS_PER_HANDLE);
+        handles[i * FLOATS_PER_HANDLE + FLOATS_PER_POINT] = HANDLE_CSS_PX * devicePxPerCssPx;
+      });
+      cornerBuffer = upload(cornerBuffer, handles, 'corners');
       pass.setPipeline(handlePipeline);
       pass.setVertexBuffer(0, cornerBuffer);
       pass.draw(VERTICES_PER_HANDLE, n);
