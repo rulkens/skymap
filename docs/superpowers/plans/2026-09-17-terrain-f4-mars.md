@@ -63,9 +63,9 @@ Rover rows (`src/data/bodies/surfaceFixedSites.ts:22-55`): curiosity −4.5895, 
 - Modify: `docs/DATA.md` (source list)
 
 - [x] Confirm how `rawDataPath` resolves from a linked worktree (main's `data/raw` or the worktree's). If the worktree's, stop and report; the controller decides between symlinking `data/raw/{mola,viking,hirise}` and baking from main. — **Resolves to the worktree's own `data/raw`** (`rawDataPath` calls Node's `resolve()` on a relative path against `process.cwd()`; this worktree's `data/raw` is a real, non-symlinked directory that lacks `mola/`, `viking/`, `hirise/` entirely — even `etopo`'s real raster is absent, only its `README.md`/`.sha256` are git-tracked). STOPPED here per instruction; no symlink created. Rest of Task 1 not done — controller to decide symlink vs main-only bake.
-- [ ] Add the keys in the table above (`kind: 'file'`, `source: 'gitignored'`, `upstream` URL, `readme` key). Use `mola.*`/`viking.*`/`hirise.*` names, not `textures.*`, so the `fetchTextures` rule (`tests/tools/utils/io/rawDataRegistry.test.ts:44-73`) does not apply. No fetchers: the files were fetched by hand; the README records the upstream URL and product ID. Jezero rows point at the extracted `.tif` paths (R3); the header facts go in the table above once read.
-- [ ] READMEs, per `docs/DATA.md:214-222`: product, upstream, projection, sphere, **vertical reference** (areoid topography; the +6,190 m rebase is the bake's, per spec §4.3), nodata.
-- [ ] No new test (registry shape is already tested). Commit.
+- [x] Add the keys in the table above (`kind: 'file'`, `source: 'gitignored'`, `upstream` URL, `readme` key). Use `mola.*`/`viking.*`/`hirise.*` names, not `textures.*`, so the `fetchTextures` rule (`tests/tools/utils/io/rawDataRegistry.test.ts:44-73`) does not apply. No fetchers: the files were fetched by hand; the README records the upstream URL and product ID. Jezero rows point at the extracted `.tif` paths (R3); the header facts go in the table above once read.
+- [x] READMEs, per `docs/DATA.md:214-222`: product, upstream, projection, sphere, **vertical reference** (areoid topography; the +6,190 m rebase is the bake's, per spec §4.3), nodata.
+- [x] No new test (registry shape is already tested). Commit.
 
 ### Task 2: Generic GeoTIFF height and imagery sources
 
