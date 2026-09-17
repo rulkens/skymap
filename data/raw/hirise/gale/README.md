@@ -34,16 +34,6 @@ gdal_translate -of COG -co COMPRESS=DEFLATE -co PREDICTOR=3 -co OVERVIEWS=NONE -
 - Upstream note (`.txt` sidecar): several HiRISE RGB strips georectified by
   hand, blended and fused to the MSL HiRISE RED orthomosaic, lightly sharpened
   (GIMP unsharp mask), then converted to a JPEG COG by USGS.
-- The ortho is YCbCr-JPEG with a GDAL internal 1-bit mask band; libvips can't
-  open that mask IFD (`readGeoTiffRgbWindow`), so the near-black JPEG fringe
-  came back opaque instead of transparent. The mask was extracted to its own
-  file, `MSL_Gale_HiRISE-LRGB_78quads_sharp_mask_cog.tif` (Byte 0/255, same
-  grid, DEFLATE COG):
-
-  ```sh
-  gdal_translate -b mask -of COG -co COMPRESS=DEFLATE -co BLOCKSIZE=512 -co NUM_THREADS=ALL_CPUS \
-    MSL_Gale_HiRISE-LRGB_78quads_sharp_cog.tif MSL_Gale_HiRISE-LRGB_78quads_sharp_mask_cog.tif
-  ```
 
 Worktrees reach both rasters through leaf symlinks to main's
 `data/raw/hirise/gale/`.

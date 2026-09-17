@@ -48,31 +48,6 @@ async function readUInt16GreyWindow(
     : new Uint16Array(data.buffer.slice(data.byteOffset, data.byteOffset + width * height * bytes));
 }
 
-/**
- * One window of a single-band Byte mask GeoTIFF (Gale's GDAL internal mask,
- * extracted to its own COG per `readGeoTiffRgbWindow`'s doc), same grid as
- * the ortho it gates: 0 = masked out, 255 = opaque. Same sharp footgun as
- * `readUInt16GreyWindow` above: plain `.raw()` replicates a "b-w" image to
- * 3 channels; relabelling to its own space first keeps it at 1.
- */
-async function readByteMaskWindow(
-  path: string,
-  left: number,
-  top: number,
-  width: number,
-  height: number,
-): Promise<Uint8Array> {
-  const { data, info } = await sharp(path, { limitInputPixels: false, unlimited: true })
-    .extract({ left, top, width, height })
-    .toColourspace('b-w')
-    .raw()
-    .toBuffer({ resolveWithObject: true });
-  if (info.channels !== 1) {
-    throw new Error(`readByteMaskWindow: ${path} yielded ${info.channels} channels, expected 1`);
-  }
-  return new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
-}
-
 export function geoTiffImagerySource(opts: {
   readonly id: string;
   readonly attribution: string;
@@ -81,8 +56,6 @@ export function geoTiffImagerySource(opts: {
   readonly maxLevel: number;
   /** UInt16 grey only: linear stretch `[lo, hi]` -> `0..255`, replicated to RGB. */
   readonly greyStretch?: readonly [number, number];
-  /** Byte RGB only: sidecar alpha mask, same grid as `grid` — see `readByteMaskWindow`. */
-  readonly maskPath?: string;
 }): SurfaceImagerySource {
   const { grid } = opts;
   const dx = (grid.bounds.east - grid.bounds.west) / grid.width;
@@ -141,20 +114,13 @@ export function geoTiffImagerySource(opts: {
         }
       } else {
         rgba = await readGeoTiffRgbWindow(grid.path, left, top, winWidth, winHeight);
-        if (opts.maskPath !== undefined) {
-          const mask = await readByteMaskWindow(opts.maskPath, left, top, winWidth, winHeight);
-          for (let i = 0; i < mask.length; i++) {
-            if (mask[i] === 0) rgba[i * 4 + 3] = 0;
-          }
-        } else {
-          // Byte RGB carries no separate no-data channel — `readGeoTiffRgbWindow`
-          // does not surface a GDAL internal mask (see its own doc) — so a pixel
-          // that is BOTH fully opaque and exactly black is treated as the
-          // declared 0 sentinel (Viking) instead.
-          for (let i = 0; i < rgba.length; i += 4) {
-            if (rgba[i] === 0 && rgba[i + 1] === 0 && rgba[i + 2] === 0 && rgba[i + 3] === 255) {
-              rgba[i + 3] = 0;
-            }
+        // Byte RGB carries no separate no-data channel — `readGeoTiffRgbWindow`
+        // does not surface a GDAL internal mask (see its own doc) — so a pixel
+        // that is BOTH fully opaque and exactly black is treated as the
+        // declared 0 sentinel (Viking) instead.
+        for (let i = 0; i < rgba.length; i += 4) {
+          if (rgba[i] === 0 && rgba[i + 1] === 0 && rgba[i + 2] === 0 && rgba[i + 3] === 255) {
+            rgba[i + 3] = 0;
           }
         }
       }

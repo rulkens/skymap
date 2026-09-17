@@ -7,8 +7,7 @@ import sharp from 'sharp';
  * image's own bands — a GDAL internal mask sits in a separate IFD libvips's
  * tiff reader can't open via `page` ("samples_per_pixel not a whole number
  * of bytes", confirmed on the Gale ortho COG), so a masked COG's fringe
- * pixels come back opaque here; `geoTiffImagerySource`'s optional `maskPath`
- * reads the mask from an extracted sidecar COG instead.
+ * pixels currently come back opaque, not transparent.
  */
 export async function readGeoTiffRgbWindow(
   path: string,
