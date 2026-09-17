@@ -60,6 +60,7 @@ import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
+import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { buildSiteGroundHeights } from './buildSiteGroundHeights';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
 import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
@@ -606,10 +607,12 @@ async function main(): Promise<void> {
   process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, body.tileRoot)}\n`);
   const bands = await body.bands({ dev });
   await bakeAll(body, bands, outDir, products);
-  // Rover sites bake their ground height off these SAME height tiles (F4): a
-  // re-bake regenerates it in the same run, or the two silently drift. Skipped
-  // in `--dev`, whose coarse bands don't reach the sites' own deep tiles.
-  if (bodyId === 'mars' && !dev) await buildSiteGroundHeights();
+  // Surface-fixed sites bake their ground height off these SAME height tiles:
+  // a re-bake of any host regenerates it in the same run, or the two silently
+  // drift. Skipped in `--dev`, whose coarse bands don't reach the sites' tiles.
+  if (!dev && SURFACE_FIXED_SITES.some((site) => site.hostId === bodyId)) {
+    await buildSiteGroundHeights();
+  }
   process.stderr.write(`done; tiles under ${join(outDir, body.tileRoot)}\n`);
 }
 
