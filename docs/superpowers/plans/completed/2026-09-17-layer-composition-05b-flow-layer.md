@@ -190,7 +190,7 @@ Part B gets **no new test**: it is a type re-shaping the compiler checks end to 
 - Produces: `ContentCompute`; `Layer.computes?(runtime): readonly ContentCompute[]`; `LayerInstance.computes`; `EngineState.computes`; `CORE_COMPUTES`; `LayerUi`.
 - Consumes: nothing new.
 
-- [ ] **Step 1: Write the failing composition tests**
+- [x] **Step 1: Write the failing composition tests**
 
 Three behaviours, each pinning a failure the compiler cannot catch:
 
@@ -211,12 +211,12 @@ it('skips a compute step whose name no composed row claims', () => {
 });
 ```
 
-- [ ] **Step 2: Run them to verify they fail**
+- [x] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/services/engine/phases/createLayers.computes.test.ts tests/services/engine/frame/executeFrame.computes.test.ts`
 Expected: FAIL — `state.computes` does not exist.
 
-- [ ] **Step 3: Add the type and core's registry**
+- [x] **Step 3: Add the type and core's registry**
 
 `ContentCompute` as specified above, then core's two rows:
 
@@ -225,38 +225,38 @@ Expected: FAIL — `state.computes` does not exist.
 
 `computes/index.ts` exports `CORE_COMPUTES`, with a header mirroring `passes/index.ts`'s ("states no order; `FRAME_ORDER` names each of these").
 
-- [ ] **Step 4: Thread it through the contract**
+- [x] **Step 4: Thread it through the contract**
 
 `Layer.computes?`, `LayerInstance.computes`, `instantiateLayer`'s `?? []`, `EngineState.computes` (initialised `[]` in `engine.ts`), and `createLayers` composing `[...CORE_COMPUTES, ...instances.flatMap((i) => i.computes)]` with the duplicate-name throw copied from the pass sweep.
 
-- [ ] **Step 5: Switch `executeFrame` to the composed list**
+- [x] **Step 5: Switch `executeFrame` to the composed list**
 
 Delete the module-level `COMPUTE` table and its two imports. Resolve `state.computes.find((c) => c.name === step.name)`; `break` when absent. Keep the debug-toggle check and the lazy claim exactly as they are — only the lookup changes.
 
-- [ ] **Step 6: Close the inverse in `checkFrameOrder`**
+- [x] **Step 6: Close the inverse in `checkFrameOrder`**
 
 The `compute` arm returns the composed rows' names so a contributed row `FRAME_ORDER` never names is reported, matching what the pass arm already does.
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 Run: `npm test && npm run typecheck`
 Expected: PASS. Frame behaviour is unchanged — same two rows, same order, same gates.
 
-- [ ] **Step 8: Commit Part A**
+- [x] **Step 8: Commit Part A**
 
 ```
 feat(engine): compose compute rows like passes
 ```
 
-- [ ] **Step 9: Widen `Layer.ui` to `{ settings, debug }`** (Part B)
+- [x] **Step 9: Widen `Layer.ui` to `{ settings, debug }`** (Part B)
 
 Add `LayerUi.d.ts` as pinned above; point `Layer.ui?` at it; update `galaxyCatalog/layer.ts` to `ui: { settings: GalaxiesSectionContainer }`. `SettingsPanel.tsx:44-45` reads `layer.ui?.settings` — JSX cannot render an optional member expression directly, so bind it to a capitalised local before returning it.
 
-- [ ] **Step 10: Grow the Layer group in `DebugPanel`**
+- [x] **Step 10: Grow the Layer group in `DebugPanel`**
 
 Map `APP_COMPOSITION.layers` over `layer.ui?.debug` at the position the decision above pins (between `RenderTogglesSectionContainer` and `MilkyWayTuningSectionContainer`). `SettingsPanel.tsx:44-45` is the shape to copy, including the `key={layer.name}`. No Layer declares `debug` yet, so the group renders nothing and the panel is unchanged.
 
-- [ ] **Step 11: Run the gate and commit Part B**
+- [x] **Step 11: Run the gate and commit Part B**
 
 Run: `npm test && npm run typecheck`
 
@@ -272,20 +272,20 @@ Pure moves. No behaviour change, no contract change.
 
 **Files:** every row of the _Moved_ table above.
 
-- [ ] **Step 1: Move the TS modules**
+- [x] **Step 1: Move the TS modules**
 
 Run `npm run move-files -- --manifest <moves.json> --dry` first, inspect, then for real. One manifest for all TS moves; the `.module.css` is moved by hand.
 
-- [ ] **Step 2: Move the CSS module and fix its importer**
+- [x] **Step 2: Move the CSS module and fix its importer**
 
 `FlowRow.module.css` beside `FlowRow.tsx`.
 
-- [ ] **Step 3: Grep for what `move-files` cannot see**
+- [x] **Step 3: Grep for what `move-files` cannot see**
 
 Run: `grep -rn "renderers/flowField\|slots/flowFieldSlot\|fetchers/flowFieldFetcher\|gpu/resources/flowFieldFromCube\|data/sources/flow\|SettingsPanel/FlowSection\|SettingsPanel/FlowRow\|containers/FlowSectionContainer\|DebugPanel/FlowTuningSection\|containers/FlowTuningSectionContainer\|frame/encodeFlowCompute\|passes/flowFieldPass" src tests tools docs`
 Expected: no hits outside the moved files' own headers. `.wesl` `package::` specifiers and string-literal paths are the known blind spots.
 
-- [ ] **Step 4: Verify green and commit**
+- [x] **Step 4: Verify green and commit**
 
 Run: `npm test && npm run typecheck && npm run build`
 (`npm run build` because a dangling `?static` shader specifier is invisible to `tsc`.)
@@ -316,11 +316,11 @@ export type FlowRuntime = {
 
 - Consumes: `LayerCoreDeps` (Task 1 unchanged it).
 
-- [ ] **Step 1: Write the failing test** — `create` returns a non-null renderer and a slot whose commit uploads into that renderer, with no reach into `state.gpu`.
-- [ ] **Step 2: Run it, verify it fails.**
-- [ ] **Step 3: Write `FlowRuntime`, `create`, `destroy`.** `create` mints the renderer from `deps.ctx.device` + `HDR_TARGET_FORMAT` + `deps.fadeBgl`, then the slot that commits into it — the `filaments` shape exactly. The slot's `commit` closes over the local `renderer`, replacing `state.gpu.flowFieldRenderer?.upload(cube)`; its `?.` guard disappears, because a Layer's renderer is non-null by construction. `destroy` releases the renderer.
-- [ ] **Step 4: Run the tests, verify they pass.**
-- [ ] **Step 5: Commit** — `feat(flow): mint the flow Runtime`
+- [x] **Step 1: Write the failing test** — `create` returns a non-null renderer and a slot whose commit uploads into that renderer, with no reach into `state.gpu`.
+- [x] **Step 2: Run it, verify it fails.**
+- [x] **Step 3: Write `FlowRuntime`, `create`, `destroy`.** `create` mints the renderer from `deps.ctx.device` + `HDR_TARGET_FORMAT` + `deps.fadeBgl`, then the slot that commits into it — the `filaments` shape exactly. The slot's `commit` closes over the local `renderer`, replacing `state.gpu.flowFieldRenderer?.upload(cube)`; its `?.` guard disappears, because a Layer's renderer is non-null by construction. `destroy` releases the renderer.
+- [x] **Step 4: Run the tests, verify they pass.**
+- [x] **Step 5: Commit** — `feat(flow): mint the flow Runtime`
 
 ---
 
@@ -334,7 +334,7 @@ Each contribution moves from reading `state.gpu.flowFieldRenderer` to closing ov
 - Create: `src/layers/flow/load/flowAssetRows.ts`, `src/layers/flow/present/flowFadeRows.ts`, `src/layers/flow/frame.ts`
 - Test: mirrors under `tests/layers/flow/`
 
-- [ ] **Step 1: Write the failing tests.** Four behaviours worth pinning:
+- [x] **Step 1: Write the failing tests.** Four behaviours worth pinning:
   - the pass draws only when the slot is committed (the `slotReady` gate becomes a runtime read);
   - the compute row encodes nothing when `settings.flow.enabled` is false, and nothing when the cube has not landed;
   - the fade row's `guard` is the renderer's own `fieldLoaded()`;
@@ -342,15 +342,15 @@ Each contribution moves from reading `state.gpu.flowFieldRenderer` to closing ov
     while the field is live — the term `shouldKeepTicking` is losing — and `settling: false` always,
     since flow draws in no capture roster. A single boolean here would braid the keep-alive vote with
     `scheduleSkyCaptures`'s roster-settling read and re-bake both sky cubemaps every frame.
-- [ ] **Step 2: Run them, verify they fail.**
-- [ ] **Step 3: Rewrite each contribution as a factory over `FlowRuntime`.**
+- [x] **Step 2: Run them, verify they fail.**
+- [x] **Step 3: Rewrite each contribution as a factory over `FlowRuntime`.**
   - `flowFieldPass(runtime)` — `enabled` reads `runtime.slot`'s state rather than `state.assetSlots.flow`; `draw` drops its `=== null` early return.
   - `flowCompute(runtime)` — the three-condition gate becomes two (`settings.flow.enabled` + the slot's committed state); the renderer-null condition is gone by construction. Keep the "no out-of-band submit" and gate rationale from `encodeFlowCompute`'s header, trimmed to the ≤ 5-line budget.
   - `flowAssetRows(runtime)` — `key: 'flow'`, `factory: () => runtime.slot`, `demand: (ctx) => ctx.settings.flow.enabled`, `priority: 81`.
   - `flowFadeRows(runtime)` — the `fadeLayers.ts` row verbatim, `guard: () => runtime.renderer.fieldLoaded()`.
   - `frame(runtime)` — `reconcile(state.settings.flow)`, then return the vote.
-- [ ] **Step 4: Run the tests, verify they pass.**
-- [ ] **Step 5: Commit** — `feat(flow): runtime-bound contributions`
+- [x] **Step 4: Run the tests, verify they pass.**
+- [x] **Step 5: Commit** — `feat(flow): runtime-bound contributions`
 
 ---
 
@@ -366,9 +366,9 @@ Each contribution moves from reading `state.gpu.flowFieldRenderer` to closing ov
 
 - Produces: `flowLayer`, `flowLayerSettings`, `FLOW_SOURCE_ROWS`.
 
-- [ ] **Step 1: Write the failing test** — the composed app has exactly one pass, one compute row, one asset row and one fade row named `flow`, and `INITIAL_SETTINGS.flow` is unchanged.
-- [ ] **Step 2: Run it, verify it fails.**
-- [ ] **Step 3: Write `layer.ts`.**
+- [x] **Step 1: Write the failing test** — the composed app has exactly one pass, one compute row, one asset row and one fade row named `flow`, and `INITIAL_SETTINGS.flow` is unchanged.
+- [x] **Step 2: Run it, verify it fails.**
+- [x] **Step 3: Write `layer.ts`.**
 
 ```ts
 export const flowLayer = defineLayer({
@@ -386,9 +386,9 @@ export const flowLayer = defineLayer({
 });
 ```
 
-- [ ] **Step 4: Compose it.** Add `flowLayer` to `APP_COMPOSITION.layers`; move `flow` out of the unformed-slices list in `appSettingsSlices.ts`; delete `<FlowSectionContainer />` and its import from `SettingsPanel.tsx`, and `<FlowTuningSectionContainer />` and its import from `DebugPanel.tsx`. Both sections now render from the Layer group Task 1 built: the settings section moves _ahead of_ the core sections (a deliberate, visible ordering change — see _Definition of Done_), while the debug section keeps its current position, which is what the group's placement was chosen for.
-- [ ] **Step 5: Run the tests, verify they pass.**
-- [ ] **Step 6: Commit** — `feat(flow): form the flow Layer and compose it`
+- [x] **Step 4: Compose it.** Add `flowLayer` to `APP_COMPOSITION.layers`; move `flow` out of the unformed-slices list in `appSettingsSlices.ts`; delete `<FlowSectionContainer />` and its import from `SettingsPanel.tsx`, and `<FlowTuningSectionContainer />` and its import from `DebugPanel.tsx`. Both sections now render from the Layer group Task 1 built: the settings section moves _ahead of_ the core sections (a deliberate, visible ordering change — see _Definition of Done_), while the debug section keeps its current position, which is what the group's placement was chosen for.
+- [x] **Step 5: Run the tests, verify they pass.**
+- [x] **Step 6: Commit** — `feat(flow): form the flow Layer and compose it`
 
 ---
 
@@ -398,7 +398,7 @@ The point of the exercise. Nothing here is optional — a field left behind is a
 
 **Files:** `src/@types/engine/handles/EngineGpuHandles.d.ts`, `src/services/engine/engine.ts`, `src/services/engine/gpuHandles/gpuHandleRegistry.ts`, `src/services/engine/frame/passes/index.ts`, `src/services/engine/frame/computes/index.ts`, `src/services/engine/frame/runFrame.ts`, `src/services/engine/helpers/shouldKeepTicking.ts`, `src/services/engine/wiring/assetWiring.ts`, `src/services/engine/wiring/fadeLayers.ts`
 
-- [ ] **Step 1: Delete each core holding**, in this order (each is independently green):
+- [x] **Step 1: Delete each core holding**, in this order (each is independently green):
   - `passes/index.ts` — the `flowFieldPass` import + row;
   - `computes/index.ts` — the `flowCompute` import + row (Task 1's temporary core row);
   - `assetWiring.ts` — the `flow` row + `createFlowFieldSlot` import;
@@ -407,16 +407,16 @@ The point of the exercise. Nothing here is optional — a field left behind is a
   - `shouldKeepTicking.ts` — the `state.settings.flow.enabled && slotReady(...)` term;
   - `gpuHandleRegistry.ts` — the `flowFieldRenderer` row + import;
   - `EngineGpuHandles.d.ts` + `engine.ts` — the handle field and its `null` seed.
-- [ ] **Step 2: Sweep for stragglers.**
+- [x] **Step 2: Sweep for stragglers.**
 
 Run: `grep -rn "flowFieldRenderer\|assetSlots\.flow\|createFlowFieldSlot" src tests`
 Expected: hits only under `src/layers/flow/` and its test mirror, plus prose references in unrelated headers (`AtmosphereShellRenderer.d.ts` cites the two-pass lesson — leave those).
 
-- [ ] **Step 3: Full gate.**
+- [x] **Step 3: Full gate.**
 
 Run: `npm test && npm run typecheck && npm run build`
 
-- [ ] **Step 4: Commit** — `refactor(engine): delete core's flow holdings`
+- [x] **Step 4: Commit** — `refactor(engine): delete core's flow holdings`
 
 ---
 
@@ -424,13 +424,13 @@ Run: `npm test && npm run typecheck && npm run build`
 
 Not code. `/dev` in this worktree, then check, in order:
 
-- [ ] Flow is OFF at boot and no velocity cube is fetched (Network tab quiet).
-- [ ] Toggling Flow on in the Settings panel fetches the cube once, then the ribbons fade IN rather than popping — the fade-on-arrival edge core owns.
-- [ ] Ribbons animate while enabled and the loop stays awake with the camera still (the `shouldKeepTicking` term Task 6 deleted is genuinely covered by `Layer.frame`).
-- [ ] Toggling off fades out and the loop parks.
-- [ ] The Flow section appears in the Settings panel (now rendered in Layer-composition order, above Stars/Cosmic Web — confirm the new position is acceptable).
-- [ ] The DebugPanel's Flow tuning section is still in its old position (between Render toggles and Milky Way tuning) and its sliders still drive the field — it now renders from `flowLayer.ui.debug`, not from `DebugPanel.tsx`.
-- [ ] The frame-timing panel still bills `flow-compute` under its own slot, and the DebugPanel toggle for it still suppresses the dispatch.
+- [x] Flow is OFF at boot and no velocity cube is fetched (Network tab quiet).
+- [x] Toggling Flow on in the Settings panel fetches the cube once, then the ribbons fade IN rather than popping — the fade-on-arrival edge core owns.
+- [x] Ribbons animate while enabled and the loop stays awake with the camera still (the `shouldKeepTicking` term Task 6 deleted is genuinely covered by `Layer.frame`).
+- [x] Toggling off fades out and the loop parks.
+- [x] The Flow section appears in the Settings panel (now rendered in Layer-composition order, above Stars/Cosmic Web — confirm the new position is acceptable).
+- [x] The DebugPanel's Flow tuning section is still in its old position (between Render toggles and Milky Way tuning) and its sliders still drive the field — it now renders from `flowLayer.ui.debug`, not from `DebugPanel.tsx`.
+- [x] The frame-timing panel still bills `flow-compute` under its own slot, and the DebugPanel toggle for it still suppresses the dispatch.
 
 ---
 
@@ -444,12 +444,12 @@ Not code. `/dev` in this worktree, then check, in order:
 
 ## Definition of Done
 
-- [ ] `npm test`, `npm run typecheck` and `npm run build` all green.
-- [ ] `src/layers/flow/` holds the renderer, the compute row, the pass, the slot + fetcher, the fade row, the source entry, the settings slice and both UI sections.
-- [ ] `EngineState.gpu` no longer has a `flowFieldRenderer` field, and `grep -rn "flowFieldRenderer" src/services` returns only prose citations.
-- [ ] `state.computes` is composed from `CORE_COMPUTES` + every Layer's rows, with a duplicate-name throw and an absent-name drop, and `checkFrameOrder` catches a contributed row `FRAME_ORDER` never names.
-- [ ] `INITIAL_SETTINGS` is deep-equal to `main`'s — assert by dumping it from both trees and comparing, not by reading the code. Key ORDER moves (the `flow` slice folds in after `filaments` instead of last) and that is fine: nothing iterates the top-level settings keys positionally, and the guided-tour snapshot merge is key-addressed.
-- [ ] Ratchets unchanged or smaller: `layerImportBoundary`, `frameFilePurity`.
-- [ ] `Layer.ui` is `{ settings?, debug? }`, `SettingsPanel` and `DebugPanel` both render their Layer group from it, and `grep -rn "FlowTuningSection" src/components` returns nothing.
-- [ ] Manual smoke attested (Task 7), including the Settings-panel section's new position and the Debug-panel section's unchanged one.
-- [ ] Landing-diff breakdown reported: src code / src comment / test code / test comment / docs.
+- [x] `npm test`, `npm run typecheck` and `npm run build` all green.
+- [x] `src/layers/flow/` holds the renderer, the compute row, the pass, the slot + fetcher, the fade row, the source entry, the settings slice and both UI sections.
+- [x] `EngineState.gpu` no longer has a `flowFieldRenderer` field, and `grep -rn "flowFieldRenderer" src/services` returns only prose citations.
+- [x] `state.computes` is composed from `CORE_COMPUTES` + every Layer's rows, with a duplicate-name throw and an absent-name drop, and `checkFrameOrder` catches a contributed row `FRAME_ORDER` never names.
+- [x] `INITIAL_SETTINGS` is deep-equal to `main`'s — assert by dumping it from both trees and comparing, not by reading the code. Key ORDER moves (the `flow` slice folds in after `filaments` instead of last) and that is fine: nothing iterates the top-level settings keys positionally, and the guided-tour snapshot merge is key-addressed.
+- [x] Ratchets unchanged or smaller: `layerImportBoundary`, `frameFilePurity`.
+- [x] `Layer.ui` is `{ settings?, debug? }`, `SettingsPanel` and `DebugPanel` both render their Layer group from it, and `grep -rn "FlowTuningSection" src/components` returns nothing.
+- [x] Manual smoke attested (Task 7), including the Settings-panel section's new position and the Debug-panel section's unchanged one.
+- [x] Landing-diff breakdown reported: src code / src comment / test code / test comment / docs.
