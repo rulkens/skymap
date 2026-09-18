@@ -30,10 +30,9 @@ const NONE: StepFacts = { drawn: [], computed: [], captured: [], targets: [] };
 const STEP_FACTS: {
   [K in FrameStepSpec['kind']]: (spec: Extract<FrameStepSpec, { readonly kind: K }>) => StepFacts;
 } = {
-  compute: (spec) => ({ drawn: [], computed: [spec.name], captured: [], targets: [] }),
+  compute: (spec) => ({ ...NONE, computed: [spec.name] }),
   capture: (spec) => ({
-    drawn: [],
-    computed: [],
+    ...NONE,
     captured: [...spec.cosmoPasses, ...spec.near0Passes, ...spec.bodyPasses],
     // Resolved through the table so the check still proves the capture lands in
     // a declared render-target row; a bogus key is already a typecheck error.
@@ -43,21 +42,15 @@ const STEP_FACTS: {
       return row.kind === 'sky' ? [row.target] : [];
     }),
   }),
-  render: (spec) => ({ drawn: spec.passes, computed: [], captured: [], targets: [spec.target] }),
+  render: (spec) => ({ ...NONE, drawn: spec.passes, targets: [spec.target] }),
   foreground: (spec) => ({
+    ...NONE,
     drawn: [...spec.near0Passes, ...spec.bodyPasses],
-    computed: [],
-    captured: [],
     targets: [spec.target],
   }),
-  composite: (spec) => ({
-    drawn: [],
-    computed: [],
-    captured: [],
-    targets: [spec.source, spec.dest],
-  }),
+  composite: (spec) => ({ ...NONE, targets: [spec.source, spec.dest] }),
   bloom: () => NONE,
-  tonemap: (spec) => ({ drawn: [], computed: [], captured: [], targets: [spec.source, spec.dest] }),
+  tonemap: (spec) => ({ ...NONE, targets: [spec.source, spec.dest] }),
 };
 
 export function checkFrameOrder(
@@ -67,10 +60,8 @@ export function checkFrameOrder(
   targetIds: readonly string[],
 ): void {
   const drawCount = new Map<string, number>();
-  // A separate counter from `drawCount`: a compute row and a pass may share a
-  // name on purpose (`'flow'` names both the integrator and the ribbon draw —
-  // `computeTimingSlotName`'s doc), so folding them into one map would read a
-  // legitimate pair as "listed twice".
+  // Separate from `drawCount`: a pass and a compute row may share a name on
+  // purpose (`'flow'` is both), which one map would misread as "listed twice".
   const computeCount = new Map<string, number>();
   const captured = new Set<string>();
   const targets: string[] = [];
