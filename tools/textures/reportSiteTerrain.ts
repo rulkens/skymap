@@ -1,6 +1,6 @@
 /**
  * reportSiteTerrain — read-only survey of the ground under every
- * `SURFACE_FIXED_SITES` row: the committed height's and up's drift against
+ * `SURFACE_FIXED_SITES` row: the committed seat height's and up's drift against
  * today's tiles, the slope, and the tile's relief. Writes nothing.
  */
 
@@ -17,8 +17,9 @@ import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { tilePostAtLatLon } from '../utils/textures/siteTerrain/tilePostAtLatLon';
 import { deepestBandLevel } from '../utils/textures/siteTerrain/deepestBandLevel';
 import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
-import { siteGroundHeightM } from '../utils/textures/siteTerrain/siteGroundHeightM';
+import { readGroundHeightM } from '../utils/textures/siteTerrain/readGroundHeightM';
 import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
+import { siteSeatHeightM } from '../utils/textures/siteTerrain/siteSeatHeightM';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -26,8 +27,9 @@ export async function reportSiteTerrain(): Promise<void> {
   for (const site of SURFACE_FIXED_SITES) {
     const manifest = readSurfaceTileManifest(site.hostId);
     const z = deepestBandLevel(manifest, site.latDeg, site.lonDeg);
-    const heightM = await siteGroundHeightM(site, manifest);
     const up = await siteGroundUpEnu(site, manifest);
+    const heightM = await siteSeatHeightM(site, manifest, up);
+    const centreM = await readGroundHeightM(manifest, site.latDeg, site.lonDeg, z);
     const tiltDeg = Math.acos(Math.min(1, up[2])) * RAD_TO_DEG;
     const downhillDeg = (Math.atan2(up[0], up[1]) * RAD_TO_DEG + 360) % 360;
 
@@ -46,7 +48,7 @@ export async function reportSiteTerrain(): Promise<void> {
 
     process.stdout.write(
       `${site.id}  (z${z})\n` +
-        `  height      ${heightM.toFixed(3)} m` +
+        `  seat        ${heightM.toFixed(3)} m, ${((heightM - centreM) * 100).toFixed(1)} cm over the centre` +
         `${bakedM === undefined ? '  (not baked)' : `  drift ${(heightM - bakedM).toFixed(4)} m`}\n` +
         `  tilt        ${tiltDeg.toFixed(2)}°, downhill ${downhillDeg.toFixed(0)}°` +
         `${upDriftDeg === undefined ? '  (not baked)' : `  drift ${upDriftDeg.toFixed(3)}°`}\n` +

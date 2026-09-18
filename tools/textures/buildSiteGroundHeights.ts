@@ -1,7 +1,7 @@
 /**
- * buildSiteGroundHeights — bakes each `SURFACE_FIXED_SITES` row's ground
- * height (metres above its host's datum) and ground up vector from the deepest
- * baked height tile under its lat/lon, into `siteGroundHeights.generated.ts`.
+ * buildSiteGroundHeights — bakes each `SURFACE_FIXED_SITES` row's ground up
+ * vector and seat height (metres above its host's datum) from the deepest
+ * baked height tile under it, into `siteGroundHeights.generated.ts`.
  */
 
 import { writeFileSync } from 'node:fs';
@@ -11,8 +11,8 @@ import { fileURLToPath } from 'node:url';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
-import { siteGroundHeightM } from '../utils/textures/siteTerrain/siteGroundHeightM';
 import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
+import { siteSeatHeightM } from '../utils/textures/siteTerrain/siteSeatHeightM';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
@@ -31,9 +31,9 @@ function serialize(heights: ReadonlyMap<string, number>, ups: ReadonlyMap<string
     '\n' +
     "import type { Vec3 } from '../../@types/math/Vec3';\n" +
     '\n' +
-    "/** Site id -> ground height, metres above the host's datum, bilinearly\n" +
-    ' *  sampled from the deepest baked height tile under the site (see the\n' +
-    ' *  generator). */\n' +
+    "/** Site id -> ground height, metres above the host's datum, the posed body\n" +
+    ' *  is seated at: resting on the highest drawn ground under its footprint\n' +
+    ' *  (see the generator). */\n' +
     'export const SITE_GROUND_HEIGHTS: Readonly<Record<string, number>> = {\n' +
     `${heightRows}\n};\n` +
     '\n' +
@@ -49,8 +49,8 @@ export async function buildSiteGroundHeights(): Promise<void> {
   const ups = new Map<string, Vec3>();
   for (const site of SURFACE_FIXED_SITES) {
     const manifest = readSurfaceTileManifest(site.hostId);
-    const m = await siteGroundHeightM(site, manifest);
     const up = await siteGroundUpEnu(site, manifest);
+    const m = await siteSeatHeightM(site, manifest, up);
     heights.set(site.id, m);
     ups.set(site.id, up);
     const tiltDeg = Math.acos(Math.min(1, up[2])) * RAD_TO_DEG;

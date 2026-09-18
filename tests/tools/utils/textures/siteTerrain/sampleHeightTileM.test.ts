@@ -4,6 +4,7 @@ import { sampleHeightTileM } from '../../../../../tools/utils/textures/siteTerra
 import { HEIGHT_POSTS_PER_TILE } from '../../../../../src/data/scene/heightTileFormat';
 
 const N = HEIGHT_POSTS_PER_TILE;
+const CELL = 1 / (N - 1);
 
 function makeTile(heightAt: (col: number, row: number) => number): Float32Array {
   const heightM = new Float32Array(N * N);
@@ -14,10 +15,14 @@ function makeTile(heightAt: (col: number, row: number) => number): Float32Array 
 }
 
 describe('sampleHeightTileM', () => {
-  it('interpolates between adjacent posts, fractions tile-relative not cell-relative', () => {
-    // A transposed row/col index reads a different post pair and misses both.
-    const tile = makeTile((col, row) => (col === 0 ? 100 : 200) + (row === 0 ? 0 : 1000));
-    expect(sampleHeightTileM(tile, 0.5 / (N - 1), 0)).toBeCloseTo(150, 6);
-    expect(sampleHeightTileM(tile, 0, 0.5 / (N - 1))).toBeCloseTo(600, 6);
+  it('interpolates along columns and rows without transposing them', () => {
+    const tile = makeTile((col, row) => col * 10 + row * 1000);
+    expect(sampleHeightTileM(tile, 3 * CELL, 0)).toBeCloseTo(30, 4);
+    expect(sampleHeightTileM(tile, 0, 3 * CELL)).toBeCloseTo(3000, 4);
+  });
+
+  it('reads the drawn mesh, which skips the odd posts between its vertices', () => {
+    const tile = makeTile((col) => (col === 1 ? 50 : 0));
+    expect(sampleHeightTileM(tile, CELL, 0)).toBeCloseTo(0, 6);
   });
 });
