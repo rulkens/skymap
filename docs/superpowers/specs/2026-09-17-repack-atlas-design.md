@@ -99,12 +99,15 @@ at 1.0 and 2048 at ≈ 0.44.
 
 ### 5.3 Placement (`atlas/chartPlacements.ts`)
 
-xatlas only chooses where each chart goes. Per chart, fit the old→new UV map from its vertices
-and snap it to `ChartPlacement = { turns: 0 | 1 | 2 | 3; offsetPx: Vec2 }` (scale 1) or
-`{ turns; scale; offsetPx }` (scale < 1), anchored at xatlas's bounding-box corner so the chart
-stays inside xatlas's (upscaled, padded) footprint. Charts whose fit isn't axis-aligned take the
-turn that matches their bbox dimensions. New UVs are recomputed from the placement, not taken
-from xatlas.
+xatlas only chooses where each chart goes. Per chart, fit the old→new UV map from its vertices and
+snap it to `ChartPlacement = { turns: 0 | 1 | 2 | 3; mirrorX: boolean; scale: number; offsetPx: Vec2 }`
+— `d = R(turns)·M·(s·scale) + offsetPx`, `M` the x-mirror xatlas applies to charts whose source UVs
+are wound negatively, applied *before* the turn. Try all 4 turns × 2 mirrors, keep the one with the
+smallest per-axis residual between the predicted and xatlas's actual positions, and accept it only
+if that spread stays within xatlas's own whole-texel rounding (plus float noise) — wider than that
+means an off-axis rotation or rescale, which none of the 8 transforms can represent, and it throws.
+`offsetPx` is anchored at xatlas's bounding-box corner so the chart stays inside xatlas's (upscaled,
+padded) footprint. New UVs are recomputed from the placement, not taken from xatlas.
 
 **Orphans.** Vertices with `atlasIndex === -1` come from faces whose three UVs coincide (OpenMVS's
 "no camera saw this face" fallback, one point (20, 1) on `mesh-cropped`, 3,801 faces). Group them
@@ -130,8 +133,10 @@ sharp `jpeg({ quality: 90, mozjpeg: true })`; `publishDerivedMesh` with suffix `
 
 ### 5.6 Assertions (throw, never warn)
 
-atlasCount 1 · triangle count unchanged · every triangle's centroid texel written · no two charts
-claim a texel · exact mode: every copy sampled a source texel centre.
+atlasCount 1 · triangle count unchanged · no two charts claim a texel · exact mode: every copy
+sampled a source texel centre. (Every triangle's centroid texel being written is checked by the
+integration test reading back the published atlas, not by a runtime throw — a missed texel would
+otherwise only show up as a colour glitch.)
 
 ## 6. Report
 
