@@ -1,10 +1,16 @@
 /**
- * One named landmark for the Surface Tiles fly-to shortcuts. Carries no body:
- * a preset button is exactly "type these degrees into the box and submit", so
- * it flies on whichever body the section is already reporting.
+ * One named landmark for the Surface Tiles fly-to shortcuts.
  */
+
+import type { SurfaceTileBodyId } from '../SurfaceTileBodyId';
+
 export type FlyToPreset = {
   readonly label: string;
+  /** Which body it is ON — not whichever the section happens to be reporting.
+   *  A landmark is a place, and flying to Everest's degrees on Mars lands in
+   *  Amazonis Planitia. Narrower than `BodyId` on purpose: a landmark only
+   *  reads as one where tiles are baked. */
+  readonly body: SurfaceTileBodyId;
   readonly lonDeg: number;
   readonly latDeg: number;
   /** Altitude to arrive at, km. Required, unlike the action's own optional

@@ -75,9 +75,8 @@ function SurfaceTileAtlasSection({
     flyToLonLat(point.lonDeg, point.latDeg, (snap.bodyId ?? undefined) as BodyId | undefined);
   }
 
-  // Identical to typing the preset's degrees and submitting — same body
-  // argument (same widening cast as `handleFlyToSubmit`), same action — so a
-  // button can never fly somewhere the box cannot.
+  // A landmark is a place, so it carries its own body — Everest's degrees on
+  // Mars land in Amazonis Planitia, not on a mountain.
   const flyToPresets = (
     <div className={styles.presets}>
       {FLY_TO_PRESETS.map((preset) => (
@@ -90,7 +89,9 @@ function SurfaceTileAtlasSection({
             flyToLonLat(
               preset.lonDeg,
               preset.latDeg,
-              (snap.bodyId ?? undefined) as BodyId | undefined,
+              // Same widening cast as `handleFlyToSubmit`: `SurfaceTileBodyId`
+              // isn't assignable to `BodyId`, the saga resolves either way.
+              preset.body as BodyId,
               preset.altKm,
             )
           }
