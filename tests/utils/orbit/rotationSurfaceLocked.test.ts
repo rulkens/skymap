@@ -32,15 +32,29 @@ const SITE_POS: Vec3 = [3, 0, 0];
 
 describe('rotationSurfaceLocked', () => {
   it('builds the local ENU triad', () => {
-    const north = rotationSurfaceLocked(SITE_POS, HOST_POS, HOST_POLE, 0);
+    const north = rotationSurfaceLocked(SITE_POS, HOST_POS, HOST_POLE, 0, [0, 0, 1]);
     expectVec(col(north, 2), [1, 0, 0]);
     expectVec(col(north, 0), [0, 0, 1]);
     expect(det(north)).toBeCloseTo(1, 12);
 
     // A 90° heading swings forward from north onto east.
-    const east = rotationSurfaceLocked(SITE_POS, HOST_POS, HOST_POLE, 90);
+    const east = rotationSurfaceLocked(SITE_POS, HOST_POS, HOST_POLE, 90, [0, 0, 1]);
     expectVec(col(east, 2), [1, 0, 0]);
     expectVec(col(east, 0), [0, 1, 0]);
     expect(det(east)).toBeCloseTo(1, 12);
+  });
+
+  it('stands on the ground up, with heading still an azimuth from north', () => {
+    // Ground tilted toward local north by 10°: up leans from +x toward +z, and
+    // forward at heading 0 is the tilted plane's north, [-sin, 0, cos].
+    const s = Math.sin((10 * Math.PI) / 180);
+    const c = Math.cos((10 * Math.PI) / 180);
+    const north = rotationSurfaceLocked(SITE_POS, HOST_POS, HOST_POLE, 0, [0, s, c]);
+    expectVec(col(north, 2), [c, 0, s]);
+    expectVec(col(north, 0), [-s, 0, c]);
+    expect(det(north)).toBeCloseTo(1, 12);
+
+    const east = rotationSurfaceLocked(SITE_POS, HOST_POS, HOST_POLE, 90, [0, s, c]);
+    expectVec(col(east, 0), [0, 1, 0]);
   });
 });
