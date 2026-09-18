@@ -20,6 +20,15 @@ const MAP_W = 1024;
 const MAP_H = 512;
 const OUT_W = 1280;
 const OUT_H = 720;
+/**
+ * Supersampling factor. The shell is nearly all silhouette and thin creases, so
+ * geometric aliasing on those edges is most of what the eye reads as roughness
+ * — a jagged rim is indistinguishable from a badly tessellated one, which would
+ * make this preview lie about the geometry it exists to judge.
+ */
+const SUPERSAMPLE = 3;
+const RENDER_W = OUT_W * SUPERSAMPLE;
+const RENDER_H = OUT_H * SUPERSAMPLE;
 const RIM_POWER = 3;
 const INTENSITY = 0.5;
 /**
@@ -225,13 +234,13 @@ async function main(): Promise<void> {
       const xr = rel[0] * right[0] + rel[1] * right[1] + rel[2] * right[2];
       const yu = rel[0] * up[0] + rel[1] * up[1] + rel[2] * up[2];
       return [
-        ((xr / (z * tanHalf * aspect)) * 0.5 + 0.5) * OUT_W,
-        (0.5 - (yu / (z * tanHalf)) * 0.5) * OUT_H,
+        ((xr / (z * tanHalf * aspect)) * 0.5 + 0.5) * RENDER_W,
+        (0.5 - (yu / (z * tanHalf)) * 0.5) * RENDER_H,
         z,
       ];
     };
 
-    const accum = new Float32Array(OUT_W * OUT_H);
+    const accum = new Float32Array(RENDER_W * RENDER_H);
     for (const [ia, ib, ic] of mesh.faces) {
       const s0 = project(world[ia]!);
       const s1 = project(world[ib]!);
@@ -246,13 +255,28 @@ async function main(): Promise<void> {
       );
     }
 
-    const lit = [...accum].filter((v) => v > 0).sort((a, b) => a - b);
+    // Box-downsample before tone mapping: the accumulation is linear and
+    // additive, so the mean of a block is exactly that pixel's coverage.
+    const resolved = new Float32Array(OUT_W * OUT_H);
+    const inv = 1 / (SUPERSAMPLE * SUPERSAMPLE);
+    for (let y = 0; y < OUT_H; y++) {
+      for (let x = 0; x < OUT_W; x++) {
+        let sum = 0;
+        for (let sy = 0; sy < SUPERSAMPLE; sy++) {
+          const row = (y * SUPERSAMPLE + sy) * RENDER_W + x * SUPERSAMPLE;
+          for (let sx = 0; sx < SUPERSAMPLE; sx++) sum += accum[row + sx]!;
+        }
+        resolved[y * OUT_W + x] = sum * inv;
+      }
+    }
+
+    const lit = [...resolved].filter((v) => v > 0).sort((a, b) => a - b);
     console.log(
       `preview[${name}]: covered ${lit.length} px, p50=${(lit[lit.length >> 1] ?? 0).toFixed(3)} p99=${(lit[Math.floor(lit.length * 0.99)] ?? 0).toFixed(3)}`,
     );
     const rgb = Buffer.alloc(OUT_W * OUT_H * 3);
-    for (let i = 0; i < accum.length; i++) {
-      const v = Math.min(1, accum[i]! * EXPOSURE);
+    for (let i = 0; i < resolved.length; i++) {
+      const v = Math.min(1, resolved[i]! * EXPOSURE);
       const tone = Math.pow(v, 0.65);
       rgb[i * 3] = Math.round(tone * 214);
       rgb[i * 3 + 1] = Math.round(tone * 222);
@@ -298,9 +322,9 @@ function shadeTriangle(
   const [x1, y1] = screen[1]!;
   const [x2, y2] = screen[2]!;
   const minX = Math.max(0, Math.floor(Math.min(x0, x1, x2)));
-  const maxX = Math.min(OUT_W - 1, Math.ceil(Math.max(x0, x1, x2)));
+  const maxX = Math.min(RENDER_W - 1, Math.ceil(Math.max(x0, x1, x2)));
   const minY = Math.max(0, Math.floor(Math.min(y0, y1, y2)));
-  const maxY = Math.min(OUT_H - 1, Math.ceil(Math.max(y0, y1, y2)));
+  const maxY = Math.min(RENDER_H - 1, Math.ceil(Math.max(y0, y1, y2)));
   const det = (y1 - y2) * (x0 - x2) + (x2 - x1) * (y0 - y2);
   if (Math.abs(det) < 1e-9) return;
 
@@ -327,7 +351,7 @@ function shadeTriangle(
       const vl = Math.hypot(vx, vy, vz) || 1;
 
       const cosTheta = Math.abs((nx * vx + ny * vy + nz * vz) / (nl * vl));
-      const at = y * OUT_W + x;
+      const at = y * RENDER_W + x;
       accum[at] = accum[at]! + Math.pow(1 - cosTheta, RIM_POWER) * INTENSITY;
     }
   }
