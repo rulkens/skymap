@@ -49,7 +49,13 @@ export function* watchFlyToLonLatSaga() {
     // An idle command: the steady frame basis serves as both bases.
     const frame = yield* select(selectOrientation);
     const basis = ORIENTATION_FRAMES[frame];
-    const simDays = deriveSimDays(yield* select(selectTimeState), performance.now());
+    // The body at the flight's END, not at dispatch: `CameraTweenDescriptor`
+    // carries ABSOLUTE world poses, so a target built against where the body is
+    // NOW is where it has already left by the time the tween gets there. Earth
+    // covers ~45 km of its orbit in the default 1.5 s — enough to land the eye
+    // kilometres underground. Only a frame of slack survives this (the tween can
+    // end no sooner than the first frame past `durationMs`).
+    const simDays = deriveSimDays(yield* select(selectTimeState), performance.now() + durationMs);
     const bodies = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
     // No terrain lookup reaches a saga (SagaContext carries none): a lon/lat fly-to
     // over hilly terrain lands `rangeM` above the datum, not the ground under it.

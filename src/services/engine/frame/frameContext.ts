@@ -242,6 +242,9 @@ export function deriveFrameContext(
     slabs,
     bodyPose,
     canvasSize,
+    // Forwarded by reference, not copied: the listener allocates a fresh pair
+    // per pointermove and only while the debug overlay that reads it is on.
+    cursorTexPx: state.picking.cursorTexPx,
     drawCamPos,
     drawPxPerRad,
     nowMs,
@@ -252,7 +255,7 @@ export function deriveFrameContext(
     viewSlot: 0,
     focusBlend: 0,
     // Stamped by `runFrame` once every Layer's frame hook has voted.
-    layersAnimating: false,
+    layersSettling: false,
     visibleSourceMask,
     focus: ZERO_FOCUS,
     renderTargets,

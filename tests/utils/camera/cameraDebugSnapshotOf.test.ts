@@ -55,6 +55,10 @@ const SNAP_COMMON = {
   rememberedTiltRad: 0,
   tuning: DEFAULT_CAMERA_TUNING,
   terrainHeightAt: () => 0,
+  residentHeightLevelAt: () => null,
+  cursorTexPx: null,
+  viewportPx: [1280, 720] as const,
+  fovYRad: 1,
   deltas: {
     heading: QUIET_DELTA,
     tilt: QUIET_DELTA,

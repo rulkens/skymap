@@ -28,8 +28,10 @@ function SurfaceTileAtlasSectionContainer({
   const dispatch = useAppDispatch();
   const overlays = useAppSelector(selectDebugOverlays);
   const onFlyToLonLat = useCallback(
-    (lonDeg: number, latDeg: number, body?: BodyId) =>
-      dispatch(flyToLonLat({ lonDeg, latDeg, body })),
+    // `altKm` omitted keeps the camera's current altitude — what the text box
+    // wants (fly there, stay as high as I am); the landmark buttons pass one.
+    (lonDeg: number, latDeg: number, body?: BodyId, altKm?: number) =>
+      dispatch(flyToLonLat({ lonDeg, latDeg, body, altKm })),
     [dispatch],
   );
   const onToggle = useCallback(
