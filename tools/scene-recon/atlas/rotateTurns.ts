@@ -1,6 +1,5 @@
 import type { Vec2 } from '../../../src/@types/math/Vec2';
-
-export type Turns = 0 | 1 | 2 | 3;
+import type { Turns } from '../@types/Turns';
 
 /** CCW rotation by `turns` × 90°: `R(1)·(x, y) = (−y, x)`. The one convention `chartPlacements`
  *  (forward, source → dest) and `rasterizeCharts` (inverted via `(4 − turns) % 4`) must agree on. */

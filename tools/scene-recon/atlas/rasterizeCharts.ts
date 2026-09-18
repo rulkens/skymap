@@ -6,9 +6,10 @@
  * one transform shared by the whole chart, so every triangle of a chart agrees exactly.
  */
 import { ATLAS_CLAIM } from './atlasClaims';
-import { rotateTurns, type Turns } from './rotateTurns';
+import { rotateTurns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';
 import type { PackedAtlas } from '../@types/PackedAtlas';
+import type { Turns } from '../@types/Turns';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 const EDGE_MARGIN_PX = Math.SQRT1_2;
@@ -65,6 +66,7 @@ export function rasterizeCharts(
 
         const destIndex = dy * destSizePx + dx;
         const existing = claims[destIndex]!;
+        // packCharts's `padding: 2` gap absorbs chartPlacements' ≤0.5px offset rounding, so this never fires.
         if (existing >= 0 && existing !== chartIndex) {
           throw new Error(
             `rasterizeCharts: texel ${destIndex} claimed by both chart ${existing} and chart ${chartIndex}`,

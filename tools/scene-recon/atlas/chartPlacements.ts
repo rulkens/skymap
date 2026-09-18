@@ -1,7 +1,8 @@
-import { rotateTurns, type Turns } from './rotateTurns';
+import { rotateTurns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';
 import type { PackedAtlas } from '../@types/PackedAtlas';
 import type { PackedVertex } from '../@types/PackedVertex';
+import type { Turns } from '../@types/Turns';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 const TURNS: readonly Turns[] = [0, 1, 2, 3];

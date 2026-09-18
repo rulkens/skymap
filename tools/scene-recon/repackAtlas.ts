@@ -43,16 +43,27 @@ export async function repackAtlas(
   }
 
   const usedTexels = uvCoverage(geometry.uvs, geometry.indices) * sourceSizePx * sourceSizePx;
-  const { scale, packed } = await fitAtlasScale(sizePx, usedTexels, (trial) =>
+  const { scale: fitScale, packed } = await fitAtlasScale(sizePx, usedTexels, (trial) =>
     packCharts(geometry.uvs, geometry.indices, sourceSizePx, sizePx, trial),
   );
 
-  const { data: sourceRgb } = await sharp(geometry.image.bytes)
+  const { data: sourceRgb, info: sourceInfo } = await sharp(geometry.image.bytes)
     .removeAlpha()
     .raw()
     .toBuffer({ resolveWithObject: true });
+  if (sourceInfo.channels !== 3) {
+    throw new Error(
+      `repackAtlas: source atlas must decode to 3 channels (RGB), got ${sourceInfo.channels}`,
+    );
+  }
   const sourceImage: AtlasImage = { sizePx: sourceSizePx, rgb: sourceRgb };
 
+  // `shrunkSizePx` rounds to a whole texel, so it's the scale actually achieved by the resize
+  // below — placements (and everything downstream) are built from that ratio, not the unrounded
+  // `fitScale`, or the packed destination positions and the resampled content they point at would
+  // drift apart by the rounding.
+  const shrunkSizePx = fitScale === 1 ? sourceSizePx : Math.round(sourceSizePx * fitScale);
+  const scale = fitScale === 1 ? 1 : shrunkSizePx / sourceSizePx;
   const placements = chartPlacements(packed, geometry.uvs, sourceSizePx, scale);
 
   let atlas: AtlasImage;
@@ -60,7 +71,6 @@ export async function repackAtlas(
   if (scale === 1) {
     ({ atlas, claims } = blitChartsExact(sourceImage, packed, placements, sizePx));
   } else {
-    const shrunkSizePx = Math.round(sourceSizePx * scale);
     const { data: shrunkRgb } = await sharp(geometry.image.bytes)
       .removeAlpha()
       .resize(shrunkSizePx, shrunkSizePx, { fit: 'fill', kernel: 'lanczos3' })

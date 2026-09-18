@@ -11,14 +11,23 @@ import { join } from 'node:path';
 
 import { NodeIO } from '@gltf-transform/core';
 import sharp from 'sharp';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
+import { packCharts } from '../../../tools/scene-recon/atlas/packCharts';
 import { meshGlbGeometry } from '../../../tools/scene-recon/pack/meshGlbGeometry';
 import { packMeshGlb } from '../../../tools/scene-recon/pack/packMeshGlb';
 import { SOENDERMARKEN } from '../../../tools/scene-recon/groups/soendermarken';
 import { repackAtlas } from '../../../tools/scene-recon/repackAtlas';
 import type { SceneManifest } from '../../../tools/scene-workbench/@types/SceneManifest';
 import type { TexturedMeshAsset } from '../../../tools/scene-workbench/@types/TexturedMeshAsset';
+
+// Wraps the real implementation so one test can force a single call (the scale-1 trial) to fail,
+// without faking any of the pixel math the rest of repackAtlas depends on.
+vi.mock('../../../tools/scene-recon/atlas/packCharts', async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import('../../../tools/scene-recon/atlas/packCharts')>();
+  return { ...actual, packCharts: vi.fn(actual.packCharts) };
+});
 
 const SOURCE_SIZE_PX = 256;
 const BLOCK_PX = 64;
@@ -240,6 +249,55 @@ describe('repackAtlas', () => {
         expect(Math.abs(atlasRgb[i + 2]! - eb)).toBeLessThanOrEqual(6);
       }
       expect(foundDegenerate).toBe(true);
+    },
+    REPACK_TIMEOUT_MS,
+  );
+
+  it(
+    'resamples when the destination is too small to fit at scale 1',
+    async () => {
+      // Forcing xatlas's own overflow (a resolution far below a chart's size) makes it silently
+      // rescale a chart instead of returning null — chartPlacements' off-axis guard trips, not the
+      // resample path this test wants. Forcing the scale-1 *trial* to fail instead reaches the
+      // same fitAtlasScale/resampleCharts wiring deterministically, with every other call — the
+      // shrink trial, the resize, the resample — running for real against real image bytes.
+      vi.mocked(packCharts).mockImplementationOnce(async () => null);
+
+      const report = await repackAtlas(SOENDERMARKEN, 'mesh', DEST_SIZE_PX);
+      expect(report.scale).toBeLessThan(1);
+
+      const published = meshGlbGeometry(await new NodeIO().read(assetGlbPath('mesh-2k')));
+      const { data: atlasRgb } = await sharp(published.image.bytes)
+        .removeAlpha()
+        .raw()
+        .toBuffer({ resolveWithObject: true });
+
+      for (let t = 0; t < published.indices.length; t += 3) {
+        const ia = published.indices[t]!;
+        const ib = published.indices[t + 1]!;
+        const ic = published.indices[t + 2]!;
+        const centroidX =
+          (published.positions[3 * ia]! +
+            published.positions[3 * ib]! +
+            published.positions[3 * ic]!) /
+          3;
+        const colorIndex = colorIndexForTriangleCentroidX(centroidX);
+        if (colorIndex === 3) continue; // degenerate face: covered by the other tests
+
+        const [er, eg, eb] = COLORS[colorIndex]!;
+        const centroidU =
+          (published.uvs[2 * ia]! + published.uvs[2 * ib]! + published.uvs[2 * ic]!) / 3;
+        const centroidV =
+          (published.uvs[2 * ia + 1]! + published.uvs[2 * ib + 1]! + published.uvs[2 * ic + 1]!) /
+          3;
+        const sx = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(centroidU * DEST_SIZE_PX)));
+        const sy = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(centroidV * DEST_SIZE_PX)));
+        const i = (sy * DEST_SIZE_PX + sx) * 3;
+
+        expect(Math.abs(atlasRgb[i]! - er)).toBeLessThanOrEqual(16);
+        expect(Math.abs(atlasRgb[i + 1]! - eg)).toBeLessThanOrEqual(16);
+        expect(Math.abs(atlasRgb[i + 2]! - eb)).toBeLessThanOrEqual(16);
+      }
     },
     REPACK_TIMEOUT_MS,
   );
