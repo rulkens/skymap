@@ -78,6 +78,7 @@
     "crop-mesh": "tsx tools/scene-recon/cropMesh.ts",
     "bake-splats": "tsx tools/scene-recon/bakeSplats.ts",
     "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
+    "albedo-bench": "VITE_CONFIG_NATIVE_IGNORE_WARNING=true vite --config tools/albedo-bench/vite.config.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
     "desi-cone-census": "tsx tools/catalog/desiConeCensus.ts",
     "expand-famous": "tsx tools/famous/expandFamousFromCatalogs.ts",
