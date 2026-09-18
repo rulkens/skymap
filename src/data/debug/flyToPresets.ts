@@ -2,14 +2,13 @@
 // regimes that break height code in different ways — a gentle hill inside a
 // deep band, extreme relief, a cliff edge whose ray grazes, land below the
 // datum, and an island where the surrounding ocean floor is the miss case.
-// Each `altKm` is roughly "the relief fills the view": low for a hill you
-// have to be on top of to see, high for a range you need distance to read.
-// The Mars rows are the four rover sites, each verified inside its own baked
-// z10-17 band — the only Mars ground with tiles of its own.
+// Each `altKm` is roughly "the relief fills the view".
 
 import type { FlyToPreset } from '../../@types/data/debug/FlyToPreset';
+import { SURFACE_FIXED_SITES } from '../bodies/surfaceFixedSites';
+import { findByIdOrThrow } from '../../utils/object/findByIdOrThrow';
 
-export const FLY_TO_PRESETS = [
+const EARTH_PRESETS = [
   {
     label: 'Søndermarken',
     body: 'earth',
@@ -58,36 +57,38 @@ export const FLY_TO_PRESETS = [
     altKm: 8,
     title: 'Summit, ~4,207 m — isolated relief ringed by ocean floor',
   },
-  {
-    label: 'Gale',
-    body: 'mars',
-    lonDeg: 137.38848,
-    latDeg: -4.8246,
-    altKm: 4,
-    title: "Curiosity's site — Aeolis Mons rises ~5 km out of the crater floor",
-  },
-  {
-    label: 'Jezero',
-    body: 'mars',
-    lonDeg: 77.23205,
-    latDeg: 18.43687,
-    altKm: 4,
-    title: "Perseverance's site — a delta against the crater rim",
-  },
-  {
-    label: 'Gusev',
-    body: 'mars',
-    lonDeg: 175.52576,
-    latDeg: -14.60036,
-    altKm: 4,
-    title: "Spirit's site — Columbia Hills on an otherwise flat floor",
-  },
-  {
-    label: 'Meridiani',
-    body: 'mars',
-    lonDeg: -5.381,
-    latDeg: -2.336,
-    altKm: 4,
-    title: "Opportunity's site — the flattest Mars band, the low-relief case",
-  },
 ] as const satisfies readonly FlyToPreset[];
+
+/** High enough to hold a whole rover-site band in view, low enough to be
+ *  inside it — the four Mars bands are baked z10-17 and ~0.05° across. */
+const MARS_SITE_ALT_KM = 4;
+
+/**
+ * Read the degrees THROUGH the site table rather than copying them: Curiosity's
+ * and Perseverance's rows are live end-of-drive fixes refreshed from the NASA
+ * waypoint JSON, so a literal here would go on flying to where the rover used
+ * to be, with nothing failing to say so. `findByIdOrThrow` turns a renamed site
+ * id into a loud boot error instead of a button that silently does nothing.
+ * (The table stores Opportunity's longitude as 354.619°E; east-positive degrees
+ * go through `lonLatDegToDirection`'s trig unwrapped, so no normalisation.)
+ */
+function roverPreset(siteId: string, label: string, title: string): FlyToPreset {
+  const site = findByIdOrThrow(SURFACE_FIXED_SITES, siteId, 'flyToPresets');
+  return {
+    label,
+    body: 'mars',
+    lonDeg: site.lonDeg,
+    latDeg: site.latDeg,
+    altKm: MARS_SITE_ALT_KM,
+    title,
+  };
+}
+
+const MARS_PRESETS: readonly FlyToPreset[] = [
+  roverPreset('curiosity', 'Gale', "Curiosity's site — Aeolis Mons rises ~5 km out of it"),
+  roverPreset('perseverance', 'Jezero', "Perseverance's site — a delta against the crater rim"),
+  roverPreset('spirit', 'Gusev', "Spirit's site — Columbia Hills on an otherwise flat floor"),
+  roverPreset('opportunity', 'Meridiani', "Opportunity's site — the low-relief case"),
+];
+
+export const FLY_TO_PRESETS: readonly FlyToPreset[] = [...EARTH_PRESETS, ...MARS_PRESETS];
