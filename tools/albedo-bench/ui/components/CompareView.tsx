@@ -235,7 +235,7 @@ export function CompareView(props: CompareViewProps) {
         <figure>
           <figcaption>Original</figcaption>
           <div className="stage" {...panHandlers}>
-            <img src={originalUrl} alt="original" style={{ transform: xform }} />
+            <img src={originalUrl} alt="original" draggable={false} style={{ transform: xform }} />
             {pendingBadge}
             <ArrowOverlay arrows={arrows} box={box} />
           </div>
@@ -243,7 +243,7 @@ export function CompareView(props: CompareViewProps) {
         <figure>
           <figcaption>Adjusted</figcaption>
           <div className="stage" {...panHandlers}>
-            <img src={adjustedUrl} alt="adjusted" style={{ transform: xform }} />
+            <img src={adjustedUrl} alt="adjusted" draggable={false} style={{ transform: xform }} />
             {pendingBadge}
             <ArrowOverlay arrows={arrows} box={box} />
           </div>
@@ -283,6 +283,7 @@ export function CompareView(props: CompareViewProps) {
         <img
           src={flipShowing === 'original' ? originalUrl : adjustedUrl}
           alt={flipShowing}
+          draggable={false}
           style={{ transform: xform }}
         />
         <span className="tag l">{flipShowing === 'original' ? 'Original' : 'Adjusted'}</span>
@@ -296,12 +297,12 @@ export function CompareView(props: CompareViewProps) {
     // boundary; panning owns the rest of the stage.
     content = (
       <div className="stage" {...panHandlers}>
-        <img src={originalUrl} alt="original" style={{ transform: xform }} />
+        <img src={originalUrl} alt="original" draggable={false} style={{ transform: xform }} />
         <div
           className="clip"
           style={{ clipPath: `inset(0 ${100 - wipePct}% 0 0)`, transform: xform }}
         >
-          <img src={adjustedUrl} alt="adjusted" />
+          <img src={adjustedUrl} alt="adjusted" draggable={false} />
         </div>
         <div
           className="divider"

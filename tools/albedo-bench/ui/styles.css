@@ -245,6 +245,13 @@ input:focus-visible,
   height: auto;
 }
 
+/* Panning is a pointer drag on the stage, so the browser's own image drag
+   (a ghost thumbnail that hijacks the gesture) has to be off everywhere. */
+img {
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
 .clip {
   position: absolute;
   inset: 0;
