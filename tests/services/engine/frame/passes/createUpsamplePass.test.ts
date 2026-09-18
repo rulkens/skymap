@@ -50,7 +50,7 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
-    layersAnimating: false,
+    layersSettling: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,

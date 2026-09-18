@@ -1,4 +1,4 @@
-// src/components/containers/FlowSectionContainer.tsx
+// src/layers/flow/ui/FlowSectionContainer.tsx
 /**
  * FlowSectionContainer — store boundary for the Flow settings section.
  *
@@ -21,11 +21,11 @@
  */
 
 import { memo, useCallback } from 'react';
-import FlowSection from '../SettingsPanel/FlowSection';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectFlow } from '../../state/settings/selectors';
-import { setFlow, setFlowEnabled } from '../../layers/flow/settings/flowSlice';
-import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
+import FlowSection from './FlowSection';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { selectFlow } from '../../../state/settings/selectors';
+import { setFlow, setFlowEnabled } from '../settings/flowSlice';
+import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefaults';
 
 function FlowSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

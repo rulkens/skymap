@@ -8,7 +8,7 @@ const STUB_DEPS = {} as LayerCoreDeps<undefined>;
 describe('instantiateLayer', () => {
   it('binds frame and selection to the runtime create returned', () => {
     const runtime = { tag: 'stub-runtime' };
-    const frameSpy = vi.fn(() => true);
+    const frameSpy = vi.fn(() => ({ awake: true, settling: false }));
     const layer: Layer<'stub', typeof runtime, readonly [], readonly [], undefined> = {
       name: 'stub',
       create: () => runtime,
@@ -27,7 +27,7 @@ describe('instantiateLayer', () => {
     expect(instance.selection).toHaveLength(1);
     const ctx = {} as never;
     const passState = {} as never;
-    expect(instance.frame?.(ctx, passState)).toBe(true);
+    expect(instance.frame?.(ctx, passState)).toEqual({ awake: true, settling: false });
     expect(frameSpy).toHaveBeenCalledWith(ctx, passState);
   });
 });

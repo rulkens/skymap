@@ -46,30 +46,30 @@
  */
 
 import { mat4, type Mat4 } from 'wgpu-matrix';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec4 } from '../../../../@types/math/Vec4';
-import type { ScalarCube } from '../../../../@types/data/volume/ScalarCube';
-import type { FlowField } from '../../../../@types/data/flow/FlowField';
-import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
-import type { ClaimTimestampWrites } from '../../../../@types/gpu/timing/ClaimTimestampWrites';
-import type { FlowFieldRenderer } from '../../../../@types/rendering/FlowFieldRenderer';
-import type { Renderer } from '../../../../@types/rendering/Renderer';
-import { flowFieldFromCube } from '../../resources/flowFieldFromCube';
-import { buildCubeModelMatrix } from '../../../../utils/math/buildCubeModelMatrix';
-import { clampFlowParams } from '../../../../utils/clampFlowParams';
-import { createReseedLatch } from '../../../../utils/createReseedLatch';
-import { flowFrameDeltaSec } from '../../../../utils/flowFrameDeltaSec';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec4 } from '../../../@types/math/Vec4';
+import type { ScalarCube } from '../../../@types/data/volume/ScalarCube';
+import type { FlowField } from '../../../@types/data/flow/FlowField';
+import type { FlowSettings } from '../../../@types/settings/FlowSettings';
+import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
+import type { FlowFieldRenderer } from '../../../@types/rendering/FlowFieldRenderer';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import { flowFieldFromCube } from './flowFieldFromCube';
+import { buildCubeModelMatrix } from '../../../utils/math/buildCubeModelMatrix';
+import { clampFlowParams } from '../../../utils/clampFlowParams';
+import { createReseedLatch } from '../../../utils/createReseedLatch';
+import { flowFrameDeltaSec } from '../../../utils/flowFrameDeltaSec';
 import {
   TRAIL,
   MAX_PARTICLES,
   HEAD_SPEED_SCALE,
   RIBBON_WIDTH,
-} from '../../../../data/flow/flowFieldConstants';
-import flowComputeWgsl from '../../shaders/flow/compute.wesl?static';
-import flowVertexWgsl from '../../shaders/flow/vertex.wesl?static';
-import flowFragmentWgsl from '../../shaders/flow/fragment.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../lib/blendStates';
+} from '../../../data/flow/flowFieldConstants';
+import flowComputeWgsl from '../../../services/gpu/shaders/flow/compute.wesl?static';
+import flowVertexWgsl from '../../../services/gpu/shaders/flow/vertex.wesl?static';
+import flowFragmentWgsl from '../../../services/gpu/shaders/flow/fragment.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 
 const WORKGROUP_SIZE = 64;
 

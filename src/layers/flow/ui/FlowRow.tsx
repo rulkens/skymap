@@ -30,10 +30,10 @@
  * reachable via the DebugPanel, state, or URL/tour, not this panel.)
  */
 import type { ReactNode } from 'react';
-import type { FlowSettings } from '../../@types/settings/FlowSettings';
-import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
-import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../data/flow/flowFields';
-import Slider from '../common/Slider/Slider';
+import type { FlowSettings } from '../../../@types/settings/FlowSettings';
+import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefaults';
+import { FLOW_SLIDER_FIELDS, flowSliderPatch } from '../../../data/flow/flowFields';
+import Slider from '../../../components/common/Slider/Slider';
 import styles from './FlowRow.module.css';
 
 export type FlowRowProps = {

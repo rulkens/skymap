@@ -27,6 +27,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { SourceType } from '../../src/@types/data/SourceType';
 import type { Slab } from '../../src/@types/engine/frame/Slab';
 import { CONTENT_PASSES } from '../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
@@ -367,7 +368,7 @@ describe('renderFrame visual baseline', () => {
 
     const ctx = {
       isReady: true as const,
-      layersAnimating: false,
+      layersSettling: false,
       // executor populates this as targets render; a later pass reads which rendered this frame.
       renderedTargets: new Set<string>(),
       cam,
@@ -423,11 +424,6 @@ describe('renderFrame visual baseline', () => {
           zoneOfAvoidanceRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
-          // Flow is CONTENT_PASSES row 5 (see passes/index.ts); here it
-          // stays off (null renderer + disabled below) so encodeFlowCompute
-          // is a no-op and the recorded single-vs-split sequence is
-          // unchanged.
-          flowFieldRenderer: null,
           volumeUpsample,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
@@ -471,7 +467,6 @@ describe('renderFrame visual baseline', () => {
           // single and split paths, so the sequence stays stable.
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
-        // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
         // A null slot → slotReady false → not loaded.
         // The encoders read the renderer-toggle override bag off
         // `settings.debug.disabledPasses`; empty so every pass fires.
@@ -491,11 +486,9 @@ describe('renderFrame visual baseline', () => {
           filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
           constellations: { enabled: false, intensity: 1 },
           volumes: { enabled: settings.volumesEnabled, items: {} },
-          flow: { enabled: false },
           debug: { disabledPasses: {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
-        assetSlots: { flow: null },
         // Pick-throttle bag; the content passes don't touch it, but the
         // engine-state shape carries it.
         picking: {
@@ -529,6 +522,7 @@ describe('renderFrame visual baseline', () => {
           texturedDisksPass(galaxyRuntime),
           filamentsPass({ renderer: filamentRenderer, slot: {} } as unknown as FilamentsRuntime),
         ],
+        computes: CORE_COMPUTES,
       } as never,
       device,
       context,

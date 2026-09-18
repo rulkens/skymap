@@ -1,14 +1,15 @@
 /**
  * frame — the Layer's per-frame prelude, in order: the aliasIndex reconcile,
  * the structureMemberCount reconcile, the bias-mode reconcile, the hi-res
- * famous planner, then the ONE catalog walk feeding both disk planners. The
- * keep-ticking vote is the textured planner's in-flight thumbnail work.
+ * famous planner, then the ONE catalog walk feeding both disk planners. Both
+ * frame votes are the textured planner's in-flight thumbnail work.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
+import type { LayerFrameVote } from '../../@types/engine/layer/LayerFrameVote';
 import type { GalaxyCatalogRuntime } from './types/GalaxyCatalogRuntime';
 
 import { Source } from '../../data/sources';
@@ -18,7 +19,7 @@ import { structureMemberCount } from '../../utils/structure/structureMemberCount
 
 export function frame(
   runtime: GalaxyCatalogRuntime,
-): (ctx: ReadyFrameContext, state: PassState) => boolean {
+): (ctx: ReadyFrameContext, state: PassState) => LayerFrameVote {
   // Tracks the `catalogsVersion` the alias index was last built against, so a
   // fresh publish fires only on a genuine catalog change (or the pgcAlias
   // sidecar's first arrival), never once per frame.
@@ -119,6 +120,9 @@ export function frame(
       }),
     );
 
-    return runtime.texturedDisks.hasInFlightWork();
+    // Thumbnails arrive async and fade in over 400 ms: in-flight work is both
+    // motion to keep ticking for and half-arrived content no sky face may bake.
+    const inFlight = runtime.texturedDisks.hasInFlightWork();
+    return { awake: inFlight, settling: inFlight };
   };
 }

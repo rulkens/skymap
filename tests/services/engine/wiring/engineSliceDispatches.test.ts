@@ -144,7 +144,6 @@ function makeProgressState(): EngineState {
     structureCatalog: stubSlot('structure-catalog'),
     cf4Density: stubSlot('cf4Density'),
     mcpm: stubSlot('mcpm'),
-    flow: stubSlot('flow'),
     polyphorm2Mrs: stubSlot('polyphorm-2mrs'),
     mcpmWorkbench: stubSlot('mcpm-workbench'),
     constellations: stubSlot('constellations'),

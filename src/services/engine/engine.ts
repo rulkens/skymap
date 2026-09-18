@@ -195,7 +195,6 @@ export function createEngine(
       zoneOfAvoidanceRenderer: null,
       label3DRenderer: null,
       volumeFieldRenderer: null,
-      flowFieldRenderer: null,
       volumeUpsample: null,
       milkyWayAggregateUpsample: null,
       zoneOfAvoidanceUpsample: null,
@@ -301,7 +300,6 @@ export function createEngine(
       // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
       // when the tier changes.
       mcpm: null,
-      flow: null,
       // Tier-aware like mcpm.
       polyphorm2Mrs: null,
       mcpmWorkbench: null,
@@ -321,8 +319,9 @@ export function createEngine(
     layerSagaTasks: [],
     selectionKindRows: [],
     // Empty until `createLayers` composes core's rows with every Layer's; no
-    // phase before it reads any of the four (`pickProgram` is `wireInput`).
+    // phase before it reads any of the five (`pickProgram` is `wireInput`).
     passes: [],
+    computes: [],
     assetRows: [],
     fadeRows: [],
     layerSlots: new Map(),
