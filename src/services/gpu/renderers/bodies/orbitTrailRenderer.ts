@@ -6,8 +6,11 @@
  * to its in-front-of-camera arc, so the vertex stage never needs a second
  * fallback pipeline for the behind-camera case. Same profile as
  * `planetRenderer` otherwise — additive, depthless, cull-none. Every per-orbit
- * quantity rides the instance record; the one bind group is the frame's
- * occluder spheres, written once per draw.
+ * quantity rides the instance record; group 0 is the frame's occluder spheres,
+ * written once per draw, group 1 the shared occlusion-coverage joint whose
+ * alpha settles the fragments a bounding sphere only flags. No un-occluded twin
+ * pipeline as the overlay renderers have: an empty sphere set is what stops the
+ * fragment reading that texture.
  * @module
  */
 
@@ -18,6 +21,11 @@ import fsCode from '../../shaders/bodies/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { MAX_ORBIT_OCCLUDERS, RIBBON_SEGMENTS } from '../../../../data/bodies/orbitTrailConstants';
+import {
+  createOcclusionCoverageBindGroup,
+  OCCLUSION_COVERAGE_GROUP_INDEX,
+  OCCLUSION_COVERAGE_LAYOUT_DESC,
+} from '../labels/occlusionCoverageGroup';
 
 /**
  * Float32 slots per per-instance record: three `Ginv` columns (12) + colour
@@ -98,9 +106,13 @@ export function createOrbitTrailRenderer(
     layout: bindGroupLayout,
     entries: [{ binding: 0, resource: { buffer: occluderBuffer } }],
   });
+  // The shared group(1) coverage joint (`occlusionCoverageGroup.ts`), whose
+  // bind group is rebuilt per draw for the reason stated there: the view it
+  // wraps is recreated on every `renderTargets.reconcile()`.
+  const coverageLayout = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
   const pipelineLayout = device.createPipelineLayout({
     label: 'orbit-trail-pipeline-layout',
-    bindGroupLayouts: [bindGroupLayout],
+    bindGroupLayouts: [bindGroupLayout, coverageLayout],
   });
 
   // Shared with the debug pipeline below — same instance record, same
@@ -158,6 +170,7 @@ export function createOrbitTrailRenderer(
     instances: Float32Array,
     count: number,
     occluders: { readonly count: number; readonly spheresKm: Float32Array },
+    sceneColorView: GPUTextureView,
     showImpostor = false,
   ): void {
     // Zero is a whole-call no-op — no upload, no draw.
@@ -191,6 +204,10 @@ export function createOrbitTrailRenderer(
     occluderSpheres.set(occluders.spheresKm.subarray(0, spheres * 4));
     device.queue.writeBuffer(occluderBuffer, 0, occluderScratch);
     pass.setBindGroup(0, bindGroup);
+    pass.setBindGroup(
+      OCCLUSION_COVERAGE_GROUP_INDEX,
+      createOcclusionCoverageBindGroup(device, coverageLayout, sceneColorView),
+    );
 
     pass.setPipeline(ribbonPipeline);
     pass.draw(RIBBON_SEGMENTS * 6, count, 0, 0);

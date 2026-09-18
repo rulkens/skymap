@@ -44,7 +44,7 @@ import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { findByIdOrThrow } from '../../../../../src/utils/object/findByIdOrThrow';
-import { innerBoundRadiusM } from '../../../../../src/utils/occlusion/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../../../src/utils/occlusion/outerBoundRadiusM';
 
 // Mock composeOrbitConic so the test can (a) assert which vp it consumed by
 // object identity and (b) hand each conic recognisable Float32Arrays. The real
@@ -76,6 +76,15 @@ const PASS_STUB = {
   setVertexBuffer: vi.fn(),
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
+
+// The coverage joint `draw` hands the renderer: `foreground:0`'s colour view is
+// ALWAYS bound (the fragment reads it only inside an occluder sphere), while
+// `renderedTargets` says whether any opaque body actually wrote it this frame.
+const SCENE_COLOR_VIEW = {} as GPUTextureView;
+const FOREGROUND_DRAWN = {
+  renderedTargets: new Set(['foreground:0']),
+  renderTargets: { viewOf: () => SCENE_COLOR_VIEW },
+};
 
 // Bare ctx for the null-handle and draw cases: draw never reads ctx, and
 // enabled's handle check must short-circuit BEFORE the ctx.cam read
@@ -109,6 +118,7 @@ function makeCtx(distance: number): ReadyFrameContext {
 // SCENE_ORBIT_CONICS[0], always visible here).
 function makeDrawCtx(): ReadyFrameContext {
   return {
+    ...FOREGROUND_DRAWN,
     drawCamPos: [1e-13, 0, 0],
     // Matches makeNear0View's viewportPx: the occluder binder reads the canvas
     // (like its sibling body binders) while the per-orbit cull reads the view.
@@ -146,6 +156,7 @@ function makeRendererSpy() {
         instances: Float32Array,
         count: number,
         occluders: { readonly count: number; readonly spheresKm: Float32Array },
+        sceneColorView: GPUTextureView,
         showImpostor?: boolean,
       ) => void
     >(),
@@ -374,7 +385,7 @@ describe('orbitTrailsPass.draw', () => {
     expect(staging[36]).toBeCloseTo((first.centerMpc[2] - cam[2]) * kmPerMpc, 0);
 
     expect(occluders.count).toBe(1);
-    const sunRadiusM = innerBoundRadiusM(findByIdOrThrow(SCENE_STARS, 'sun', 'test').surface);
+    const sunRadiusM = outerBoundRadiusM(findByIdOrThrow(SCENE_STARS, 'sun', 'test').surface);
     expect(occluders.spheresKm[0]).toBeCloseTo(-cam[0] * kmPerMpc, 0);
     expect(occluders.spheresKm[1]).toBeCloseTo(0, 3);
     expect(occluders.spheresKm[2]).toBeCloseTo(0, 3);
@@ -413,6 +424,7 @@ describe('orbitTrailsPass.draw', () => {
     // at the far-off Sun) also compose; the Moon is singled out below by being
     // the one conic whose centre rides ~1 AU out on Earth.
     const ctx = {
+      ...FOREGROUND_DRAWN,
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
@@ -485,6 +497,7 @@ describe('orbitTrailsPass.draw', () => {
     const simDays = CONST_J2000 + 100;
     const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
     const ctx = {
+      ...FOREGROUND_DRAWN,
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
@@ -540,6 +553,7 @@ describe('orbitTrailsPass.draw', () => {
     // Camera 1 Mpc from the Sun — the AU-to-lunar orbits are far below the
     // apparent-size cull threshold, so nothing is packed and no draw is issued.
     const farCtx = {
+      ...FOREGROUND_DRAWN,
       drawCamPos: [1, 0, 0],
       fovYRad: Math.PI / 4,
       cam: { distance: 1 },
@@ -585,12 +599,12 @@ describe('orbitTrailsPass.draw', () => {
   it('the layer forwards the debug flag to the renderer', () => {
     // `enabled()` never forces the layer on for this flag — draw() just reads
     // it alongside settings.orbitTrails.enabled and passes it straight through
-    // as renderer.draw's fifth argument.
+    // as renderer.draw's sixth argument.
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer, { impostorOn: true }));
-    expect(renderer.draw.mock.calls[0]![4]).toBe(true);
+    expect(renderer.draw.mock.calls[0]![5]).toBe(true);
 
     renderer.draw.mockClear();
     orbitTrailsPass.draw(
@@ -599,6 +613,31 @@ describe('orbitTrailsPass.draw', () => {
       makeDrawCtx(),
       makeState(renderer, { impostorOn: false }),
     );
-    expect(renderer.draw.mock.calls[0]![4]).toBe(false);
+    expect(renderer.draw.mock.calls[0]![5]).toBe(false);
+  });
+
+  it('binds the foreground colour view, and empties the occluder set when nothing drew it', () => {
+    // The two halves of one fact. `foreground:0`'s view is always bound — the
+    // pipeline layout demands it — but on a frame that rendered no foreground
+    // the texture holds nothing this frame wrote, and there is also no opaque
+    // body to hide behind. An empty occluder set is what keeps the fragment
+    // from reading it: it consults coverage only inside a sphere.
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+    const [, , , drawnOccluders, drawnView] = renderer.draw.mock.calls[0]!;
+    expect(drawnView).toBe(SCENE_COLOR_VIEW);
+    expect(drawnOccluders.count).toBeGreaterThan(0);
+
+    renderer.draw.mockClear();
+    const noForeground = {
+      ...makeDrawCtx(),
+      renderedTargets: new Set<string>(),
+    } as unknown as ReadyFrameContext;
+    orbitTrailsPass.draw(PASS_STUB, view, noForeground, makeState(renderer));
+    const [, , , skippedOccluders, stillBound] = renderer.draw.mock.calls[0]!;
+    expect(stillBound).toBe(SCENE_COLOR_VIEW);
+    expect(skippedOccluders.count).toBe(0);
   });
 });

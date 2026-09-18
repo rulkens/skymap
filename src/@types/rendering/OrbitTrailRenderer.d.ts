@@ -17,7 +17,8 @@
  * uniform for a later write to clobber (the writeBuffer-vs-submit landmine).
  * The GPU-side instance buffer grows to fit the largest slot count seen so
  * far — no fixed cap. The frame's occluder spheres are the one uniform, and
- * they are per FRAME, written once per draw.
+ * they are per FRAME, written once per draw; the foreground's colour view
+ * rides alongside them as the shared occlusion-coverage joint.
  */
 
 import type { Renderer } from './Renderer';
@@ -30,10 +31,14 @@ export type OrbitTrailRenderer = Renderer & {
    * `instances.length / 46` — the renderer throws rather than read past the
    * caller's array; `count` may be 0, which is a no-op.
    *
-   * `occluders` is the frame's opaque-body sphere list the fragment hides
-   * trail segments behind: `selectOccluderSpheresKm`'s packing (eye-relative
-   * xyz + radius, km, four floats each), `count` live entries, at most
-   * `MAX_ORBIT_OCCLUDERS`.
+   * `occluders` is the frame's opaque-body BOUNDING-sphere list the fragment
+   * hides trail segments behind: `selectOccluderSpheresKm`'s packing
+   * (eye-relative xyz + radius, km, four floats each), `count` live entries, at
+   * most `MAX_ORBIT_OCCLUDERS`.
+   *
+   * `sceneColorView` is `foreground:0`'s colour view, whose alpha settles the
+   * fragments a bounding sphere only flags as maybe-hidden. Always bound; the
+   * fragment reads it only inside a sphere, so an empty `occluders` never does.
    *
    * `showImpostor` (default `false`, the
    * `debug.overlays['orbit-trail-impostor']` toggle) issues one ADDITIONAL
@@ -48,6 +53,7 @@ export type OrbitTrailRenderer = Renderer & {
     instances: Float32Array,
     count: number,
     occluders: { readonly count: number; readonly spheresKm: Float32Array },
+    sceneColorView: GPUTextureView,
     showImpostor?: boolean,
   ): void;
 };

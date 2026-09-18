@@ -10,10 +10,12 @@ import package::bodies::orbitTrail::constants::MAX_OCCLUDERS;
 import package::bodies::orbitTrail::constants::STROKE_PX;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
+import package::lib::sceneDepth::sceneTransmittance;
 
-// The frame's opaque bodies as eye-relative spheres (centre.xyz, radius.w, km),
-// 'count' live entries — orbitTrailRenderer.ts mirrors this layout, pinned by
-// orbitTrailConstants.parity.test.ts.
+// The frame's opaque bodies as eye-relative BOUNDING spheres (centre.xyz,
+// radius.w, km), 'count' live entries — orbitTrailRenderer.ts mirrors this
+// layout, pinned by orbitTrailConstants.parity.test.ts. A zero 'count' is also
+// what keeps the group-1 coverage texture unread on a foreground-less frame.
 struct OcclusionUniforms {
   count: u32,
   pad0: u32,
@@ -33,6 +35,8 @@ const REFINE_TOL: f32 = 0.25;
 // Visibility of the eye->x SEGMENT (eye at the origin) past one sphere
 // (centre.xyz, radius.w, km): 0 inside it, 1 clear of it, one-pixel limb ramp.
 // The [0,1] clamp is what keeps a near arc visible (doc: why occlusion is a segment test).
+// The sphere BOUNDS the body's relief shell, so 0 means the drawn surface MAY
+// be in the way, not that it is; 'fs' settles that against scene coverage.
 fn sphereClearance(x: vec3<f32>, sphere: vec4<f32>) -> f32 {
   let c = sphere.xyz;
   let along = clamp(dot(c, x) / max(dot(x, x), 1e-30), 0.0, 1.0);
@@ -88,7 +92,13 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   for (var i = 0u; i < occ.count; i++) {
     clear *= sphereClearance(x, occ.spheres[i]);
   }
-  if (clear <= 0.0) {
+  // A bounding sphere cannot tell a ridge from the sky over it, so inside one
+  // the foreground's own alpha settles it — the same weight the
+  // 'foreground:0 -> hdr' composite just applied. A MIX, not a second factor:
+  // the near arc (clear == 1, the segment never reaches a sphere) stays whole,
+  // which is the reason these trails draw after that composite at all.
+  let visible = mix(sceneTransmittance(in.clip.xy), 1.0, clear);
+  if (visible <= 0.0) {
     discard;
   }
 
@@ -99,7 +109,7 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   let brightness = TRAIL_FLOOR + (1.0 - TRAIL_FLOOR) * exp(-TRAIL_DECAY * delta);
 
   // 'in.alpha': per-orbit apparent-size fade, ramping to 0 as the orbit nears the cull threshold.
-  return vec4<f32>(in.color * brightness * stroke * clear * in.alpha, 1.0);
+  return vec4<f32>(in.color * brightness * stroke * visible * in.alpha, 1.0);
 }
 
 // Debug lens (debug.overlays['orbit-trail-impostor']): fills the impostor with the orbit's own colour, ignoring fade alpha so a faded-but-drawn orbit still shows its hull.

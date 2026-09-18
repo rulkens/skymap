@@ -3,6 +3,9 @@
  * screen-space conics. Drawn through NEAR0 because AU-to-lunar orbits sit far
  * inside COSMO's 0.01 Mpc near plane, while still accumulating into HDR.
  *
+ * Occlusion is the fragment's own: bounding spheres settled inside by
+ * `foreground:0`'s alpha, so a trail stops at a ridge, not at the datum under it.
+ *
  * HARD INVARIANT: `composeOrbitConic` takes `view.slab.vp`, NOT `view.vp`. It
  * assembles and INVERTS the homography in f64 to resolve the cancellation between
  * the ~1e-12 Mpc centres and the vp's large translation column; fed the narrowed
@@ -153,11 +156,14 @@ export const orbitTrailsPass: ContentPass = {
       );
     }
     if (count > 0) {
+      // The coverage view is ALWAYS bound (the pipeline layout demands it);
+      // an empty sphere set, not a guard here, is what stops it being read.
       renderer.draw(
         pass,
         staging,
         count,
         sceneOccluderSpheres(state, ctx),
+        ctx.renderTargets.viewOf('foreground:0'),
         state.settings.debug.overlays['orbit-trail-impostor'],
       );
     }

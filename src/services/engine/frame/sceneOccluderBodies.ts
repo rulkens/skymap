@@ -7,16 +7,18 @@
  * themselves consume, bound exactly as those binders bind them
  * (`ctx.drawCamPos`, `ctx.canvasSize.height`, `ctx.fovYRad`). "Drawn" would be
  * the wrong fact: a 1–3 px planet is drawn, as an additive glint, and occludes
- * nothing. Radii are the INNER bound — an occluder must under-occlude; an
- * atmosphere, ring or lens quad is not opaque. For a mesh body it is the bake's
- * BOUNDING sphere, so the whale's elongated silhouette hides more than it covers.
+ * nothing; an atmosphere, ring or lens quad is not opaque either. Radii BOUND
+ * the drawn body (datum + max relief; for a mesh, the bake's sphere) — a relief
+ * shell rises 29 km over Mars's datum, and a sphere under it calls terrain
+ * empty sky, a verdict no later pixel can overturn. Every consumer settles the
+ * sphere's inside against `foreground:0`'s coverage, so over-bounding recovers.
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
-import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
+import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { BODY_GLINT_MAX_PX } from './partitionBodiesByPresentation';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 import { positionedVisibleStars } from './positionedVisibleStars';
@@ -41,13 +43,13 @@ export function sceneOccluderBodies(
   for (const body of flat) {
     occluders.push({
       positionMpc: states.get(body.id)!.positionMpc,
-      radiusM: innerBoundRadiusM(body.surface),
+      radiusM: outerBoundRadiusM(body.surface),
     });
   }
   for (const body of textured) {
     occluders.push({
       positionMpc: states.get(body.id)!.positionMpc,
-      radiusM: innerBoundRadiusM(body.surface),
+      radiusM: outerBoundRadiusM(body.surface),
     });
   }
   // Mesh bodies carry a second gate `drawableMeshBodies` also applies: inside
@@ -62,7 +64,7 @@ export function sceneOccluderBodies(
     });
   }
   for (const star of spheres) {
-    occluders.push({ positionMpc: star.positionMpc, radiusM: innerBoundRadiusM(star.surface) });
+    occluders.push({ positionMpc: star.positionMpc, radiusM: outerBoundRadiusM(star.surface) });
   }
 
   // Earth sits in neither partition — `earthPass` draws it alone, and it has no
@@ -72,7 +74,7 @@ export function sceneOccluderBodies(
   const earth = state.data.bodies.earth;
   if (earth !== null) {
     const positionMpc = states.get(earth.id)!.positionMpc;
-    const radiusM = innerBoundRadiusM(earth.surface);
+    const radiusM = outerBoundRadiusM(earth.surface);
     const diameterPx = bodyApparentDiameterPx({
       positionMpc,
       radiusM,

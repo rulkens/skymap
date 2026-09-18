@@ -49,6 +49,7 @@ function makeCtx(bodyId: string, offsetKm: number): ReadyFrameContext {
     canvasSize: { width: 1280, height: 720 },
     fovYRad: Math.PI / 4,
     simDays: CONST_J2000,
+    renderedTargets: new Set(['foreground:0']),
   } as unknown as ReadyFrameContext;
 }
 
@@ -105,5 +106,36 @@ describe('sceneOccluderSpheres', () => {
     const radii = occluderRadiiKm(makeCtx('jupiter', 1e7));
     expect(radii.some((r) => Math.abs(r - sunRadiusKm) < 1)).toBe(false);
     expect(has(radii, 'jupiter')).toBe(true);
+  });
+
+  // A relief-bearing body is DRAWN as its terrain shell: the surface tiles
+  // displace off the datum out to `reliefM[1]` (Mars: +27 km over the datum).
+  // A sphere stopping below that leaves a band — ~4° deep seen from the
+  // ground — where an orbit trail paints straight over the terrain in front
+  // of it, which is the whole reason the fragment now defers to the
+  // foreground's own coverage inside it.
+  it("reaches a relief-bearing body's DRAWN surface, not its datum floor", () => {
+    const mars = findByIdOrThrow(SCENE_PLANETS, 'mars', 'test');
+    const drawnRadiusKm =
+      (mars.surface.datumRadiusM + mars.surface.reliefM[1]) * SCALE_UNITS.M_TO_KM;
+    // 5000 km out along +x, so Mars is the sphere centred that far from the eye.
+    const { count, spheresKm } = sceneOccluderSpheres(STATE, makeCtx('mars', 5e3));
+    const marsRadiusKm = Array.from({ length: count }, (_unused, i) => i).find(
+      (i) =>
+        Math.abs(
+          Math.hypot(spheresKm[i * 4]!, spheresKm[i * 4 + 1]!, spheresKm[i * 4 + 2]!) - 5e3,
+        ) < 1,
+    );
+    expect(marsRadiusKm).toBeDefined();
+    // `Math.fround`: the packed radius is f32, the expectation f64.
+    expect(spheresKm[marsRadiusKm! * 4 + 3]!).toBeGreaterThanOrEqual(Math.fround(drawnRadiusKm));
+  });
+
+  it('packs nothing on a frame that rendered no foreground', () => {
+    // Same rule as the undecoded mesh above, one level up: nothing drew, so
+    // nothing occludes — and with no sphere the conic fragment never samples
+    // the `foreground:0` coverage its verdict would otherwise defer to.
+    const ctx = { ...makeCtx('jupiter', 1e6), renderedTargets: new Set<string>() };
+    expect(sceneOccluderSpheres(STATE, ctx as unknown as ReadyFrameContext).count).toBe(0);
   });
 });

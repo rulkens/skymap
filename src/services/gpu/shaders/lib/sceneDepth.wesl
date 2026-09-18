@@ -19,7 +19,8 @@ import package::lib::math::saturate;
  * by it; 'saturate' guards the loud failure mode, since an a > 1 producer would
  * give a negative factor, which BRIGHTENS an overlay under premultiplied OVER.
  * 'fragXY' ('@builtin(position).xy') indexes the texel 1:1 because
- * 'foreground:0' and 'swap' both render at scale 1.
+ * 'foreground:0' and every target that reads it here ('swap', and 'hdr' for the
+ * orbit trails) render at scale 1.
  */
 fn sceneTransmittance(fragXY: vec2f) -> f32 {
   return saturate(1.0 - textureLoad(sceneColorTex, vec2i(fragXY), 0).a);
