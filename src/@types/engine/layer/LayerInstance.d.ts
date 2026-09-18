@@ -1,5 +1,7 @@
+import type { LayerFrameVote } from './LayerFrameVote';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ContentPass } from '../frame/ContentPass';
+import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
@@ -11,11 +13,12 @@ import type { PassState } from '../frame/PassState';
 export type LayerInstance = {
   readonly name: string;
   readonly passes: readonly ContentPass[];
+  readonly computes: readonly ContentCompute[];
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly fades: readonly FadeLayer<unknown>[];
   readonly labels: readonly Label2DProducer[];
   readonly selection: readonly SelectionKindRow[];
-  readonly frame: ((ctx: ReadyFrameContext, state: PassState) => boolean) | null;
+  readonly frame: ((ctx: ReadyFrameContext, state: PassState) => LayerFrameVote) | null;
   destroy(): void;
 };

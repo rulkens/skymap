@@ -1,4 +1,4 @@
-// src/components/containers/FlowTuningSectionContainer.tsx
+// src/layers/flow/ui/FlowTuningSectionContainer.tsx
 /**
  * FlowTuningSectionContainer — store boundary for the DebugPanel's flow
  * power-user tuning knobs (count / trail / flowSpeed / densityBias / wander /
@@ -8,11 +8,11 @@
  */
 
 import { memo, useCallback } from 'react';
-import { FlowTuningSection } from '../DebugPanel/FlowTuningSection';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectFlow } from '../../state/settings/selectors';
-import { setFlow } from '../../layers/flow/settings/flowSlice';
-import type { FlowFieldDefaults } from '../../@types/data/flow/FlowFieldDefaults';
+import { FlowTuningSection } from './FlowTuningSection';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { selectFlow } from '../../../state/settings/selectors';
+import { setFlow } from '../settings/flowSlice';
+import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefaults';
 
 function FlowTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

@@ -47,5 +47,5 @@ export const galaxyCatalogLayer = defineLayer({
   labels: (runtime) => [{ id: 'famousLabels', produceLabels: produceFamousGalaxyLabels(runtime) }],
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   frame,
-  ui: GalaxiesSectionContainer,
+  ui: { settings: GalaxiesSectionContainer },
 });

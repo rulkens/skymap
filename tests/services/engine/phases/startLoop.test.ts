@@ -53,6 +53,7 @@ vi.mock('../../../../src/services/engine/frame/runFrame', () => ({
 // Imported AFTER the mocks so startLoop picks them up.
 import { startLoop } from '../../../../src/services/engine/phases/startLoop';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { goLive } from '../../../../src/state/time/timeSlice';
 import { renderTargetRows } from '../../../../src/services/gpu/renderTargets';
 import { STUB_COMPOSITION } from '../../../helpers/engine/stubComposition';
@@ -87,6 +88,7 @@ function makeState({ cloudCount = 1 } = {}): EngineState {
     // `checkFrameOrder` runs against the COMPOSED rows; over an empty layer
     // tuple that is core's own registry.
     passes: CONTENT_PASSES,
+    computes: CORE_COMPUTES,
   } as unknown as EngineState;
 }
 

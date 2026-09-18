@@ -9,7 +9,6 @@
 import { bodiesSlice } from '../layers/body/settings/bodiesSlice';
 import { constellationsSlice } from '../layers/constellations/settings/constellationsSlice';
 import { earthSlice } from '../layers/body/settings/earthSlice';
-import { flowSlice } from '../layers/flow/settings/flowSlice';
 import { milkyWaySlice } from '../layers/milkyWay/settings/milkyWaySlice';
 import { orbitTrailsSlice } from '../layers/body/settings/orbitTrailsSlice';
 import { sgrAStarLensingTuningSlice } from '../layers/body/settings/sgrAStarLensingTuningSlice';
@@ -18,6 +17,7 @@ import { structuresSlice } from '../layers/structure/settings/structuresSlice';
 import { volumesSlice } from '../layers/volume/settings/volumesSlice';
 import { zoneOfAvoidanceSlice } from '../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
 import { filamentsLayerSettings } from '../layers/filaments/settings/filamentsLayerSettings';
+import { flowLayerSettings } from '../layers/flow/settings/flowLayerSettings';
 import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/settings/galaxyCatalogLayerSettings';
 
 const UNFORMED_SETTINGS_SLICES = [
@@ -31,11 +31,11 @@ const UNFORMED_SETTINGS_SLICES = [
   milkyWaySlice,
   zoneOfAvoidanceSlice,
   constellationsSlice,
-  flowSlice,
 ] as const;
 
 export const APP_SETTINGS_SLICES = [
   ...UNFORMED_SETTINGS_SLICES,
   ...galaxyCatalogLayerSettings,
   ...filamentsLayerSettings,
+  ...flowLayerSettings,
 ] as const;

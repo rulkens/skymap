@@ -16,6 +16,7 @@ import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/data/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
@@ -288,7 +289,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         debugLineRenderer: null,
         selectionRingRenderer: null,
         volumeFieldRenderer: null,
-        flowFieldRenderer: null,
         structureMarkerRenderer: null,
         // Near-field handles null → the (hdr, NEAR0) star-point render, the
         // foreground:0 render, and the NEAR0 caption render all select
@@ -327,7 +327,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         compositor: { label: 'compositor', draw: vi.fn(), destroy: vi.fn() },
         focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
       },
-      // encodeFlowCompute (pre-HDR) reads these; default-off → gate returns.
       // A null slot → slotReady false → not loaded.
       // The encoders read the renderer-toggle override bag off
       // `settings.debug.disabledPasses`; empty by default so no pass is skipped.
@@ -347,11 +346,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
         constellations: { enabled: false, intensity: 1 },
         volumes: { enabled: settings.volumesEnabled, items: {} },
-        flow: { enabled: false },
         debug: { disabledPasses: {}, renderStrategy: 'auto' },
       },
       selection: { select: settings.selected },
-      assetSlots: { flow: null },
       // Pick-throttle bag; the content passes don't touch it, but the
       // engine-state shape carries it.
       picking: {
@@ -386,6 +383,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
           pointRenderer: galaxyPointRenderer,
         } as unknown as GalaxyCatalogRuntime),
       ],
+      computes: CORE_COMPUTES,
     } as never,
     device,
     context,

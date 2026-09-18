@@ -78,7 +78,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
-    layersAnimating: false,
+    layersSettling: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -142,7 +142,6 @@ const STATE_STUB = {
     milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
     milkyWayCloudRenderer: null,
     horizonShellRenderer: null,
-    flowFieldRenderer: null,
     volumeFieldRenderer: null,
   },
 } as unknown as EngineState;

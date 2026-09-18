@@ -255,7 +255,7 @@ export function deriveFrameContext(
     viewSlot: 0,
     focusBlend: 0,
     // Stamped by `runFrame` once every Layer's frame hook has voted.
-    layersAnimating: false,
+    layersSettling: false,
     visibleSourceMask,
     focus: ZERO_FOCUS,
     renderTargets,

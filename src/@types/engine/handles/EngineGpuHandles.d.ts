@@ -22,7 +22,6 @@ import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
-import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { AdditiveUpsample } from '../../rendering/AdditiveUpsample';
 import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
@@ -321,17 +320,6 @@ export type EngineGpuHandles = {
    * buffers, corner / index VBOs).
    */
   volumeFieldRenderer: VolumeFieldRenderer | null;
-  /**
-   * CF4++ peculiar-velocity flow-field renderer — the engine's first compute
-   * renderer. Null until `initGpu` constructs it (same phase as the other
-   * optional renderers). Excluded from the `isEngineReady` predicate: the layer
-   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldPass`
-   * null-check the handle alongside the `settings.flow.enabled` +
-   * `slotReady(assetSlots.flow)` gate, so a null handle is a silent no-op. Stored here so
-   * `destroy()` can release the particle buffers, the three compute pipelines,
-   * the ribbon pipeline, and the velocity texture.
-   */
-  flowFieldRenderer: FlowFieldRenderer | null;
   /**
    * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).

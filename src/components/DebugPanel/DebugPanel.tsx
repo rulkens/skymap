@@ -14,6 +14,8 @@ import type { AssetSlot } from '../../@types/loading/AssetSlot';
 import type { GpuTimingService } from '../../@types/gpu/timing/GpuTimingService';
 import type { FrameStats } from '../../@types/engine/FrameStats';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
+import type { Layer } from '../../@types/engine/layer/Layer';
+import { APP_COMPOSITION } from '../../compositions/app';
 import AssetLoadingSection from './AssetLoadingSection';
 import { FrameStatsRow } from './FrameStatsRow';
 import { GpuTimingsSection } from './GpuTimingsSection';
@@ -21,7 +23,6 @@ import SurfaceTileAtlasSectionContainer from '../containers/SurfaceTileAtlasSect
 import TerrainPickMarkerTuningSectionContainer from '../containers/TerrainPickMarkerTuningSectionContainer';
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
-import FlowTuningSectionContainer from '../containers/FlowTuningSectionContainer';
 import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
 import ZoneOfAvoidanceTuningSectionContainer from '../containers/ZoneOfAvoidanceTuningSectionContainer';
 import SgrAStarLensingTuningSectionContainer from '../containers/SgrAStarLensingTuningSectionContainer';
@@ -68,7 +69,10 @@ function DebugPanel({
       <GpuTimingsSection service={timingService} />
       <CameraStateSectionContainer engineHandleRef={engineHandleRef} />
       <RenderTogglesSectionContainer passNames={passNames} />
-      <FlowTuningSectionContainer />
+      {APP_COMPOSITION.layers.map((layer: Layer<string, unknown>) => {
+        const Debug = layer.ui?.debug;
+        return Debug ? <Debug key={layer.name} /> : null;
+      })}
       <MilkyWayTuningSectionContainer />
       <ZoneOfAvoidanceTuningSectionContainer />
       <SgrAStarLensingTuningSectionContainer />

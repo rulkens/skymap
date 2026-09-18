@@ -22,7 +22,7 @@ import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,
 } from '../../../data/volume/scalarFieldFormat';
-import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
+import { dataUrl, fetchWithProgress } from '../../../services/loading/fetchWithProgress';
 
 export const flowFieldFetcher: Fetcher<ScalarCube, void> = async (_req, signal, onProgress) => {
   const buf = await fetchWithProgress(

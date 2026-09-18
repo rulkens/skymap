@@ -24,6 +24,7 @@ export function instantiateLayer<
   return {
     name: layer.name,
     passes: layer.passes(runtime),
+    computes: layer.computes?.(runtime) ?? [],
     assets: layer.assets?.(runtime) ?? [],
     fades: layer.fades?.(runtime) ?? [],
     labels: layer.labels?.(runtime) ?? [],
