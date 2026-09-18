@@ -235,7 +235,14 @@ export function CompareView(props: CompareViewProps) {
     onPointerMove: onPanPointerMove,
     onPointerUp: onPanPointerUp,
   };
-  const pendingBadge = pending ? <span className="pending-badge">Rendering…</span> : null;
+  // A veil over the whole stage, not a corner badge: the stale image stays
+  // readable underneath, but it never passes for the current view.
+  const pendingBadge = pending ? (
+    <div className="pending-veil">
+      <span className="spinner" />
+      <span>Rendering…</span>
+    </div>
+  ) : null;
   const coarseFitBadge =
     fitCoarsened && arrows.length > 0 ? (
       <span className="coarse-fit-badge">preview fit — coarser than the recipe</span>

@@ -312,6 +312,42 @@ img {
   right: 8px;
 }
 
+/* The stale image keeps showing through, dimmed, so a pan or zoom never looks
+   finished before its render is. */
+.pending-veil {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 8px;
+  background: rgba(20, 22, 25, 0.45);
+  color: #fff;
+  font: 500 11px var(--mono);
+  pointer-events: none;
+}
+
+.spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spinner {
+    animation: none;
+  }
+}
+
 /* Subtle — the CSS-transformed stale image is still fully visible under it. */
 .pending-badge {
   position: absolute;
