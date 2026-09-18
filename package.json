@@ -75,6 +75,7 @@
     "bake-lidar": "tsx tools/scene-recon/bakeLidar.ts",
     "bake-mesh": "tsx tools/scene-recon/bakeMesh.ts",
     "crop-mesh": "tsx tools/scene-recon/cropMesh.ts",
+    "repack-atlas": "tsx tools/scene-recon/repackAtlas.ts",
     "bake-splats": "tsx tools/scene-recon/bakeSplats.ts",
     "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
