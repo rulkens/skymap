@@ -36,6 +36,7 @@
     "build-cf4-density": "tsx tools/volumes/buildCf4Density.ts && npm run build-data-manifest",
     "build-surface-tiles": "tsx tools/textures/buildSurfaceTiles.ts",
     "build-site-ground-heights": "tsx tools/textures/buildSiteGroundHeights.ts",
+    "report-site-terrain": "tsx tools/textures/reportSiteTerrain.ts",
     "build-flow-field": "tsx tools/flow/buildFlowField.ts && npm run build-data-manifest",
     "verify-flow-field": "tsx tools/flow/verifyFlowField.ts",
     "build-structures": "tsx tools/structures/buildStructures.ts && npm run build-data-manifest",
