@@ -40,7 +40,12 @@ describe('resampleCharts', () => {
     // scale 0.5 with a quarter-texel offset — an integer offset degenerates every tap to nearest
     // (the offset a chartPlacements-derived placement always carries); this one exercises the
     // actual bilinear blend and does not coincide with the "forgot the ratio" answer either.
-    const placement: ChartPlacement = { turns: 0, scale: 0.5, offsetPx: [0.25, 0.25] };
+    const placement: ChartPlacement = {
+      turns: 0,
+      mirrorX: false,
+      scale: 0.5,
+      offsetPx: [0.25, 0.25],
+    };
     const { atlas } = resampleCharts(
       shrunkImage(),
       SOURCE_SIZE_PX,

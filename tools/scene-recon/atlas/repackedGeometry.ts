@@ -4,26 +4,11 @@
  * xatlas's own `uvPx` still carries the sub-texel residual the placement's integer offset rounded
  * away, and the bake sampled from the rounded placement, not from that residual.
  */
+import { rotateTurns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';
 import type { PackedAtlas } from '../@types/PackedAtlas';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import type { TexturedMeshGeometry } from '../pack/packMeshGlb';
-
-const TURNS = [0, 1, 2, 3] as const;
-
-/** Same CCW convention as chartPlacements' `rotate` — the forward half its offset was fit to. */
-function rotate([x, y]: Vec2, turns: (typeof TURNS)[number]): Vec2 {
-  switch (turns) {
-    case 0:
-      return [x, y];
-    case 1:
-      return [-y, x];
-    case 2:
-      return [-x, -y];
-    default:
-      return [y, -x];
-  }
-}
 
 export function repackedGeometry(
   source: TexturedMeshGeometry,
@@ -53,11 +38,12 @@ export function repackedGeometry(
     let destPx: Vec2;
     if (v.chartIndex >= 0) {
       const placement = placements[v.chartIndex]!;
+      const sourceX = source.uvs[2 * v.xref]! * sourceSizePx * placement.scale;
       const sourcePx: Vec2 = [
-        source.uvs[2 * v.xref]! * sourceSizePx * placement.scale,
+        placement.mirrorX ? -sourceX : sourceX,
         source.uvs[2 * v.xref + 1]! * sourceSizePx * placement.scale,
       ];
-      const turned = rotate(sourcePx, placement.turns);
+      const turned = rotateTurns(sourcePx, placement.turns);
       destPx = [turned[0] + placement.offsetPx[0], turned[1] + placement.offsetPx[1]];
     } else {
       const orphan = orphanUvPxByVertex.get(i);

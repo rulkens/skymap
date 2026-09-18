@@ -42,8 +42,8 @@ describe('chartPlacements', () => {
 
     const [p0, p1] = chartPlacements(packed, SOURCE_UVS, SOURCE_SIZE_PX, 1);
 
-    expect(p0).toEqual({ turns: 0, scale: 1, offsetPx: [10, 20] });
-    expect(p1).toEqual({ turns: 1, scale: 1, offsetPx: [5, 7] });
+    expect(p0).toEqual({ turns: 0, mirrorX: false, scale: 1, offsetPx: [10, 20] });
+    expect(p1).toEqual({ turns: 1, mirrorX: false, scale: 1, offsetPx: [5, 7] });
   });
 
   it('folds the scale into the placement', () => {
@@ -66,7 +66,72 @@ describe('chartPlacements', () => {
 
     // dMin [3,5] − scaled source min [1,1] = [2,4]; with `* scale` dropped, source min would
     // instead be [2,2] (unscaled), giving offset [1,3] — this fixture tells the two apart.
-    expect(p0).toEqual({ turns: 0, scale: 0.5, offsetPx: [2, 4] });
+    expect(p0).toEqual({ turns: 0, mirrorX: false, scale: 0.5, offsetPx: [2, 4] });
+  });
+
+  it('recovers the x-mirror xatlas applies to a negatively wound chart', () => {
+    // The square mirrored in x (x -> -x, vertex order kept), then shifted by [20, 3]. Half of
+    // mesh-cropped's 12,945 charts land this way; fitting them to a turn alone misses by the
+    // chart's whole width, and the bake would copy a mirrored region of the source.
+    const mirrored: PackedVertex[] = [
+      vertex(0, [20, 3], 0),
+      vertex(1, [12, 3], 0),
+      vertex(2, [12, 11], 0),
+      vertex(3, [20, 11], 0),
+    ];
+
+    const packed: PackedAtlas = {
+      chartCount: 1,
+      vertices: mirrored,
+      indices: new Uint32Array(),
+    };
+
+    const [p0] = chartPlacements(packed, SOURCE_UVS, SOURCE_SIZE_PX, 1);
+
+    expect(p0).toEqual({ turns: 0, mirrorX: true, scale: 1, offsetPx: [20, 3] });
+  });
+
+  it('accepts the sub-texel stretch of xatlas rounding a chart up to whole texels', () => {
+    // The 4x4-texel source square (2,2)-(6,6) at scale 0.9, i.e. 3.6 texels across, is what
+    // xatlas rounds out to 4: its packed corners sit 0.4 px apart from a rigid fit. That is
+    // legitimate, so the placement must come back (dropping the stretch, anchored at the min
+    // corner) rather than throw.
+    const stretched: PackedVertex[] = [
+      vertex(0, [5, 7], 0),
+      vertex(1, [9, 7], 0),
+      vertex(2, [9, 11], 0),
+      vertex(3, [5, 11], 0),
+    ];
+
+    const packed: PackedAtlas = {
+      chartCount: 1,
+      vertices: stretched,
+      indices: new Uint32Array(),
+    };
+
+    const [p0] = chartPlacements(packed, SOURCE_UVS_OFF_ORIGIN, SOURCE_SIZE_PX, 0.9);
+
+    // Scaled source min is (1.8, 1.8); dest min (5, 7) puts the offset at [3.2, 5.2] -> [3, 5].
+    expect(p0).toEqual({ turns: 0, mirrorX: false, scale: 0.9, offsetPx: [3, 5] });
+  });
+
+  it('throws when a chart was rescaled past the texel rounding', () => {
+    // The same square blown up 2x: every turn and mirror leaves a residual spread of 8 px, far
+    // past the one texel xatlas's per-axis rounding can add.
+    const doubled: PackedVertex[] = [
+      vertex(0, [0, 0], 0),
+      vertex(1, [16, 0], 0),
+      vertex(2, [16, 16], 0),
+      vertex(3, [0, 16], 0),
+    ];
+
+    const packed: PackedAtlas = {
+      chartCount: 1,
+      vertices: doubled,
+      indices: new Uint32Array(),
+    };
+
+    expect(() => chartPlacements(packed, SOURCE_UVS, SOURCE_SIZE_PX, 1)).toThrow(/chart 0/);
   });
 
   it('throws when a chart has no member vertices', () => {

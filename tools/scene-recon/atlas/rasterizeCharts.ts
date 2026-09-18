@@ -3,7 +3,7 @@
  * visit any texel whose centre is inside it or within `EDGE_MARGIN_PX` (half a texel diagonal) of
  * an edge, so bilinear sampling never reads an unwritten border texel. Source coordinates come
  * from inverting the triangle's chart placement, not barycentric interpolation — the placement is
- * a rigid transform shared by the whole chart, so every triangle of a chart agrees exactly.
+ * one transform shared by the whole chart, so every triangle of a chart agrees exactly.
  */
 import { ATLAS_CLAIM } from './atlasClaims';
 import { rotateTurns, type Turns } from './rotateTurns';
@@ -72,11 +72,12 @@ export function rasterizeCharts(
         }
         claims[destIndex] = chartIndex;
 
+        // Inverse of `d = R·M·s + offset`, so the mirror undoes AFTER the turn, not before.
         const [sx, sy] = rotateTurns(
           [cx - placement.offsetPx[0], cy - placement.offsetPx[1]],
           invTurns,
         );
-        visit(destIndex, sx / placement.scale, sy / placement.scale);
+        visit(destIndex, (placement.mirrorX ? -sx : sx) / placement.scale, sy / placement.scale);
       }
     }
   }

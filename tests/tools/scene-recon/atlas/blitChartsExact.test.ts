@@ -33,7 +33,7 @@ function packedTriangle(): PackedAtlas {
 
 describe('blitChartsExact', () => {
   it('reproduces the source texels', () => {
-    const placement: ChartPlacement = { turns: 1, scale: 1, offsetPx: [13, 2] };
+    const placement: ChartPlacement = { turns: 1, mirrorX: false, scale: 1, offsetPx: [13, 2] };
     const { atlas } = blitChartsExact(sourceImage(), packedTriangle(), [placement], DEST_SIZE_PX);
 
     // Destination texel (5,5), centre (5.5,5.5): R(3)·((5.5,5.5) - (13,2)) = R(3)·(-7.5,3.5) =
@@ -48,7 +48,7 @@ describe('blitChartsExact', () => {
 
   it('throws when a placement lands off a texel centre', () => {
     // A half-texel offset shifts every destination texel centre off the source's texel grid.
-    const placement: ChartPlacement = { turns: 1, scale: 1, offsetPx: [13.5, 2] };
+    const placement: ChartPlacement = { turns: 1, mirrorX: false, scale: 1, offsetPx: [13.5, 2] };
     expect(() =>
       blitChartsExact(sourceImage(), packedTriangle(), [placement], DEST_SIZE_PX),
     ).toThrow();

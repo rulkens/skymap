@@ -5,14 +5,21 @@ import type { PackedVertex } from '../@types/PackedVertex';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 
 const TURNS: readonly Turns[] = [0, 1, 2, 3];
+const MIRRORS: readonly boolean[] = [false, true];
 
-// A genuine 90°-turn fit's residual spread is float32 noise; xatlas can also rotate a chart by a
-// non-90° angle or shrink one past the resolution, which lands the fit off by more than this and
-// must throw rather than silently copy from the wrong source region (spec §5.6).
-const MAX_FIT_RESIDUAL_SPREAD_PX = 0.05;
+// xatlas places a chart by a turn, an x-mirror (for charts whose source UVs are wound negatively)
+// and a translation, then rounds its width and height UP to whole texels INDEPENDENTLY — a stretch
+// of strictly under one texel per axis, which the placement drops to keep the copy texel-exact and
+// the chart anchored inside xatlas's footprint. So a residual spread wider than that rounding means
+// the fit is none of the 8 transforms xatlas can produce (an off-axis rotation, a rescale) and the
+// bake would silently copy the wrong source region. Measured over both real packs of mesh-cropped:
+// the winner's per-axis spread never passes 0.99997 px, and the runner-up only comes within a texel
+// for charts under 6 px across, which are symmetric at texel resolution anyway.
+const XATLAS_AXIS_ROUNDING_PX = 1;
+const FIT_NOISE_PX = 1 / 64; // f32 source UVs × 8192 source texels, with room to spare
 
-/** One placement per chart index; xatlas chooses WHERE a chart goes, this snaps HOW it got there
- *  to a 90° turn plus an integer offset, so the bake can invert it exactly. */
+/** One placement per chart index; xatlas chooses WHERE a chart goes, this recovers HOW it got
+ *  there — turn, mirror, integer offset — so the bake can invert it exactly. */
 export function chartPlacements(
   packed: PackedAtlas,
   sourceUvs: Float32Array, // 0..1
@@ -35,57 +42,59 @@ export function chartPlacements(
       dMin[1] = Math.min(dMin[1], v.uvPx[1]);
     }
 
-    let bestTurns: ChartPlacement['turns'] = 0;
+    let bestTurns: Turns = 0;
+    let bestMirrorX = false;
     let bestSpread = Infinity;
     let bestSourceMin: Vec2 = [0, 0];
 
-    for (const turns of TURNS) {
-      let minX = Infinity;
-      let maxX = -Infinity;
-      let minY = Infinity;
-      let maxY = -Infinity;
-      let sourceMinX = Infinity;
-      let sourceMinY = Infinity;
+    for (const mirrorX of MIRRORS) {
+      for (const turns of TURNS) {
+        let minX = Infinity;
+        let maxX = -Infinity;
+        let minY = Infinity;
+        let maxY = -Infinity;
+        let sourceMinX = Infinity;
+        let sourceMinY = Infinity;
 
-      for (const v of members) {
-        const turned = rotateTurns(
-          [
-            sourceUvs[2 * v.xref]! * sourceSizePx * scale,
-            sourceUvs[2 * v.xref + 1]! * sourceSizePx * scale,
-          ],
-          turns,
-        );
-        sourceMinX = Math.min(sourceMinX, turned[0]);
-        sourceMinY = Math.min(sourceMinY, turned[1]);
+        for (const v of members) {
+          const sourceX = sourceUvs[2 * v.xref]! * sourceSizePx * scale;
+          const turned = rotateTurns(
+            [mirrorX ? -sourceX : sourceX, sourceUvs[2 * v.xref + 1]! * sourceSizePx * scale],
+            turns,
+          );
+          sourceMinX = Math.min(sourceMinX, turned[0]);
+          sourceMinY = Math.min(sourceMinY, turned[1]);
 
-        const residualX = v.uvPx[0] - turned[0];
-        const residualY = v.uvPx[1] - turned[1];
-        minX = Math.min(minX, residualX);
-        maxX = Math.max(maxX, residualX);
-        minY = Math.min(minY, residualY);
-        maxY = Math.max(maxY, residualY);
-      }
+          const residualX = v.uvPx[0] - turned[0];
+          const residualY = v.uvPx[1] - turned[1];
+          minX = Math.min(minX, residualX);
+          maxX = Math.max(maxX, residualX);
+          minY = Math.min(minY, residualY);
+          maxY = Math.max(maxY, residualY);
+        }
 
-      // True turn's residual is constant across the chart's vertices (rotateChartsToAxis: false),
-      // so its spread is ~0 — a wrong turn scrambles the residual per vertex instead.
-      const spread = maxX - minX + (maxY - minY);
-      if (spread < bestSpread) {
-        bestSpread = spread;
-        bestTurns = turns;
-        bestSourceMin = [sourceMinX, sourceMinY];
+        // Per axis, not summed: the rounding budget is one texel on each axis separately.
+        const spread = Math.max(maxX - minX, maxY - minY);
+        if (spread < bestSpread) {
+          bestSpread = spread;
+          bestTurns = turns;
+          bestMirrorX = mirrorX;
+          bestSourceMin = [sourceMinX, sourceMinY];
+        }
       }
     }
 
-    if (bestSpread > MAX_FIT_RESIDUAL_SPREAD_PX) {
+    if (bestSpread > XATLAS_AXIS_ROUNDING_PX + FIT_NOISE_PX) {
       throw new Error(
-        `chartPlacements: chart ${chartIndex} best-turn residual spread ${bestSpread.toFixed(3)}px exceeds ${MAX_FIT_RESIDUAL_SPREAD_PX}px — xatlas likely rotated it off-axis or shrank it past the atlas resolution`,
+        `chartPlacements: chart ${chartIndex} best fit (turns ${bestTurns}${bestMirrorX ? ', mirrored' : ''}) leaves a per-axis residual spread of ${bestSpread.toFixed(3)}px, wider than xatlas's ${XATLAS_AXIS_ROUNDING_PX}px texel rounding — it rotated the chart off-axis or rescaled it`,
       );
     }
 
-    // Integer offset: a texel centre survives a 90° turn only when the translation lands it back
-    // on a texel centre. xatlas's `padding: 2` absorbs the ≤0.5 px rounding this introduces.
+    // Integer offset: a texel centre survives a turn and a mirror only when the translation lands
+    // it back on a texel centre. xatlas's `padding: 2` absorbs the ≤0.5 px rounding this adds.
     return {
       turns: bestTurns,
+      mirrorX: bestMirrorX,
       scale,
       offsetPx: [
         Math.round(dMin[0] - bestSourceMin[0]),

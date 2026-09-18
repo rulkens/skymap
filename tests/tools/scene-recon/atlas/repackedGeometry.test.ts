@@ -36,8 +36,8 @@ describe('repackedGeometry', () => {
   it('gathers positions through xref and derives UVs from the placement', () => {
     const { source, packed } = twoChartQuad();
     const placements: ChartPlacement[] = [
-      { turns: 0, scale: 1, offsetPx: [2, 2] },
-      { turns: 1, scale: 1, offsetPx: [10, 2] },
+      { turns: 0, mirrorX: false, scale: 1, offsetPx: [2, 2] },
+      { turns: 1, mirrorX: false, scale: 1, offsetPx: [10, 2] },
     ];
 
     const out = repackedGeometry(
@@ -71,6 +71,31 @@ describe('repackedGeometry', () => {
     expect([out.uvs[10], out.uvs[11]]).toEqual([2 / 16, 2 / 16]); // xref 3: rotate(0,8) = (-8,0)
 
     expect(Array.from(out.indices)).toEqual([0, 1, 2, 3, 4, 5]);
+  });
+
+  it('mirrors before the turn when the placement is mirrored', () => {
+    // Chart 0 of the quad with `mirrorX`: sourcePx -> M -> R(1) -> + offset. Mirroring after the
+    // turn instead would send xref 1 to (14, 22) — off the atlas — so this pins the order the
+    // raster's inverse assumes.
+    const { source, packed } = twoChartQuad();
+    const placements: ChartPlacement[] = [
+      { turns: 1, mirrorX: true, scale: 1, offsetPx: [14, 14] },
+      { turns: 0, mirrorX: false, scale: 1, offsetPx: [0, 0] },
+    ];
+
+    const out = repackedGeometry(
+      source,
+      SOURCE_SIZE_PX,
+      packed,
+      placements,
+      new Map(),
+      DEST_SIZE_PX,
+      IMAGE,
+    );
+
+    expect([out.uvs[0], out.uvs[1]]).toEqual([14 / 16, 14 / 16]); // xref 0: sourcePx (0,0)
+    expect([out.uvs[2], out.uvs[3]]).toEqual([14 / 16, 6 / 16]); // xref 1: (8,0) -> (-8,0) -> (0,-8)
+    expect([out.uvs[4], out.uvs[5]]).toEqual([6 / 16, 6 / 16]); // xref 2: (8,8) -> (-8,8) -> (-8,-8)
   });
 
   it('gives an orphan vertex its block centre', () => {
@@ -110,7 +135,7 @@ describe('repackedGeometry', () => {
   it('throws when a face was dropped', () => {
     const { source, packed } = twoChartQuad();
     const droppedFace: PackedAtlas = { ...packed, indices: new Uint32Array([0, 1, 2]) };
-    const placements: ChartPlacement[] = [{ turns: 0, scale: 1, offsetPx: [0, 0] }];
+    const placements: ChartPlacement[] = [{ turns: 0, mirrorX: false, scale: 1, offsetPx: [0, 0] }];
 
     expect(() =>
       repackedGeometry(
