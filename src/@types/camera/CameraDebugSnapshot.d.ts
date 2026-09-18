@@ -45,4 +45,17 @@ export type CameraDebugSnapshot = {
   readonly gestureMode: string | null;
   /** Whether the latched gesture holds a cursor ground hit; null without a latch. */
   readonly gestureCursorHit: boolean | null;
+  /**
+   * Terrain height above the datum under the `terrain-pick-marker` overlay's
+   * own pick, metres — the number the marker is standing on. Null without that
+   * overlay (no cursor is carried otherwise), off a body arm, or on a miss.
+   */
+  readonly terrainPickHeightM: number | null;
+  /**
+   * The pyramid level the height lattice UNDER THE EYE actually resolved to
+   * (`SurfaceTileSubsystem.residentHeightLevelAt`). Null when nothing is
+   * resident there — which `altitudeM` alone cannot show, since an unresident
+   * direction and sea level both read 0 metres.
+   */
+  readonly residentHeightLevelAtEye: number | null;
 };

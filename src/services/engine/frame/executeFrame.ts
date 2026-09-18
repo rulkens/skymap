@@ -86,40 +86,10 @@ import {
   renderStepTimingSlotName,
 } from './slabs';
 import { computeTimingSlotName } from './timing/computeTimingSlotName';
-import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { captureFaceAttachment } from './captureFaceAttachment';
-import { encodeFlowCompute } from './encodeFlowCompute';
-import { encodeAtmosphereSkyView } from './encodeAtmosphereSkyView';
 import { runBloom } from './runBloom';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { timestampSpread } from '../../../utils/gpu/timestampSpread';
-
-/**
- * COMPUTE — the name→fn table a `'compute'` step dispatches through. Two rows
- * today (`'flow'` and `'sky-view'`); a new compute pre-pass is a new row, not a
- * new branch. Every row takes the uniform
- * `(encoder, ctx, state, claimTimestampWrites)` shape — `flow` reads `ctx.nowMs`
- * as its real-time advection clock, while `sky-view` reads the rendered pose off
- * it so its baked LUT matches what the shell fragment samples.
- *
- * A row claims the step's timing slot at the moment it opens a pass and not
- * before (see `ClaimTimestampWrites`), and attaches it to the one pass that runs
- * every frame the step runs at all — a row that opens several (flow's
- * conditional reseed) leaves the rest untimed rather than letting the last pass
- * overwrite the slot.
- */
-const COMPUTE: Record<
-  string,
-  (
-    encoder: GPUCommandEncoder,
-    ctx: ReadyFrameContext,
-    state: EngineState,
-    claimTimestampWrites: ClaimTimestampWrites,
-  ) => void
-> = {
-  flow: (encoder, ctx, state, claim) => encodeFlowCompute(encoder, state, ctx.nowMs, claim),
-  'sky-view': (encoder, ctx, state, claim) => encodeAtmosphereSkyView(encoder, ctx, state, claim),
-};
 
 /**
  * Resolve a render-target id to its texture view. The swap-vs-offscreen branch
@@ -208,10 +178,12 @@ export function executeFrame(args: ExecuteFrameArgs): void {
   for (const step of program) {
     switch (step.kind) {
       case 'compute': {
-        const compute = COMPUTE[step.name];
-        if (!compute) {
-          throw new Error(`executeFrame: no COMPUTE row for '${step.name}'`);
-        }
+        // Mirrors `expandFrameOrder`'s `resolve()`: absent names drop rather than
+        // throw, so a composition missing the flow Layer still walks a
+        // `FRAME_ORDER` that names it (the inverse — a contributed row no line
+        // names — is `checkFrameOrder`'s to catch, at boot).
+        const compute = state.computes.find((c) => c.name === step.name);
+        if (compute === undefined) break;
         // The same one-way DebugPanel override the render rows take below: a
         // toggle hides work the frame would otherwise do, and can never force
         // a dispatch the row's own gate declined. Toggle key and timing slot
@@ -223,7 +195,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // this frame, and these rows carry their own gates (an empty atmosphere
         // draw list, flow switched off) — claiming up front would leave a row
         // reporting the query set's stale ticks from when it last ran.
-        compute(encoder, ctx, state, () => timestampSpread(timing, slot));
+        compute.encode(encoder, ctx, state, () => timestampSpread(timing, slot));
         break;
       }
       case 'render': {

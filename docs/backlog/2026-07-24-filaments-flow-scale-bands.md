@@ -17,11 +17,11 @@ content instead of dissolving out like their siblings.
   `fadeBand(band, value)` (`src/utils/math/fadeBand.ts`). Existing rows:
   `surveyDeepZoom`, `milkyWayApproachSun`, `starCaption`, `starBackdrop`,
   `bodyGlintBackdrop`, `sunCaption`, `constellations`, `bodyGlint`.
-- `src/services/engine/frame/passes/filamentsPass.ts:81-90` — `enabled()`
+- `src/layers/filaments/passes/filamentsPass.ts` — `enabled()`
   reads only `state.settings.filaments.enabled` (plus the fade-out tail via
   `state.subsystems.fades.opacityOf`); no scale term at all.
-- `src/services/engine/frame/passes/flowFieldPass.ts:42-50` — same shape:
-  `enabled()` reads `slotReady(state.assetSlots.flow)` and
+- `src/layers/flow/passes/flowFieldPass.ts` — same shape:
+  `enabled()` reads `slotReady` on the Layer's own slot and
   `state.settings.flow.enabled`; no scale term.
 - The flow field (CF4++ peculiar-velocity cube) is roughly **1000 Mpc across**
   — its band needs to hold full opacity out to large camera distances and

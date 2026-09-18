@@ -115,7 +115,6 @@ function makeEngineState(settings?: EngineSettingsState): EngineState {
       fades: { fadeTo: vi.fn<() => Promise<void>>(() => Promise.resolve()), setImmediate: vi.fn() },
       scheduler: { requestRender: vi.fn() },
     },
-    gpu: { flowFieldRenderer: { fieldLoaded: () => false } },
     assetSlots: {},
   } as unknown as EngineState;
 }

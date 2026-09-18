@@ -17,7 +17,6 @@ import { createStructureCatalogSlot } from '../../loading/slots/structureCatalog
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createPolyphorm2MrsSlot } from '../../loading/slots/polyphorm2MrsSlot';
 import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
-import { createFlowFieldSlot } from '../../loading/slots/flowFieldSlot';
 import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
@@ -247,19 +246,8 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     priority: 82, // same rung as cf4Density/polyphorm2Mrs; default-off, so it rarely competes at boot
   },
 
-  // ── CF4++ velocity flow field ────────────────────────────────────
-  // A singleton overlay layer, so its gate lives in `settings.flow.enabled`
-  // alongside filaments/milkyWay rather than on a bespoke DemandCtx surface.
-  {
-    key: 'flow',
-    factory: (deps) => createFlowFieldSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.flow.enabled,
-    priority: 81, // same rung as filaments, behind them by size
-  },
-
   // ── Constellation stick-figure overlay ───────────────────────────
-  // Master-gate demand, the singleton-overlay convention shared with filaments/flow.
+  // Master-gate demand, per the singleton-overlay convention.
   {
     key: 'constellations',
     factory: (deps) => createConstellationsSlot(deps.state, deps.cb),

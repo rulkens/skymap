@@ -202,10 +202,6 @@ vi.mock('../../../../src/services/gpu/renderers/volumeField/volumeFieldRenderer'
   createVolumeFieldRenderer: vi.fn(() => makeStub('volumeFieldRenderer')),
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/flowField/flowFieldRenderer', () => ({
-  createFlowFieldRenderer: vi.fn(() => makeStub('flowFieldRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
   createAdditiveUpsample: vi.fn(() => makeStub('additiveUpsample')),
 }));
@@ -399,7 +395,6 @@ function makeState(): EngineState {
       horizonShellRenderer: null,
       zoneOfAvoidanceRenderer: null,
       volumeFieldRenderer: null,
-      flowFieldRenderer: null,
       volumeUpsample: null,
       zoneOfAvoidanceUpsample: null,
       starAggregateUpsample: null,

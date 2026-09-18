@@ -41,6 +41,27 @@ describe('directionToLonLatDeg', () => {
     expect(point.latDeg).toBeCloseTo(0, 9);
   });
 
+  it('reads a non-unit vector as its own direction, not as the pole', () => {
+    // `heightQueryAt` hands this the eye's body-fixed POSITION in metres, so a
+    // bare `asin(z)` clamped every such vector to +-90 and left the band lookup
+    // permanently at the pole — where only the whole-globe band covers, pinning
+    // every CPU terrain read to the base level (2026-09-18).
+    const unit = dirFromLonLatDeg(12.53, 55.67);
+    const eyeM: Vec3 = [unit[0] * 6_377_000, unit[1] * 6_377_000, unit[2] * 6_377_000];
+    const point = directionToLonLatDeg(eyeM);
+    expect(point.lonDeg).toBeCloseTo(12.53, 9);
+    expect(point.latDeg).toBeCloseTo(55.67, 9);
+  });
+
+  it('answers a degenerate vector without NaN, which would match every band', () => {
+    // `deepestBandLevelAt` rejects a point with `u < lo || u > hi`; both are
+    // false for NaN, so a NaN lon/lat would be INSIDE every band rather than
+    // outside all of them — the loudest possible failure, silently.
+    const zero = directionToLonLatDeg([0, 0, 0]);
+    expect(Number.isNaN(zero.lonDeg)).toBe(false);
+    expect(Number.isNaN(zero.latDeg)).toBe(false);
+  });
+
   it('east and west of the prime meridian carry opposite-sign longitude', () => {
     const east = directionToLonLatDeg(dirFromLonLatDeg(30, 0));
     const west = directionToLonLatDeg(dirFromLonLatDeg(-30, 0));

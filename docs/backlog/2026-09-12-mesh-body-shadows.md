@@ -1,4 +1,4 @@
-# Mesh bodies: self-shadowing and a shadow on the ground
+# Mesh bodies: sun shadows (self-shadowing and a cast ground shadow)
 
 **Raised:** 2026-09-12, user visual pass on PR #693 (Mars rovers). User ruled:
 backlog, not this PR.
@@ -10,14 +10,12 @@ mast therefore lights the deck it stands on, the wheels light the chassis
 above them, and the ground under the rover is as bright as the ground beside
 it — the rover looks pasted onto Mars rather than standing on it.
 
-## Stage 1 — contact shadow (user, 2026-09-17, after F4 seated rovers on terrain)
+## Stage 1 — contact shadow: MOVED
 
-A cheap grounding cue first, before any sun shadows: a soft dark blob under
-each hosted mesh body. A ground-aligned quad at the site's terrain point
-(same `GroundRadiusLookup` path the rover placement uses), sized from the
-mesh footprint, with a baked soft radial falloff (texture or analytic
-`smoothstep`), multiplied onto the surface and depth-tested against the
-terrain tiles. Sun-independent. Fades out with distance like the mesh does.
+The soft dark blob under each hosted rover moved to
+[mesh-body-ambient-occlusion](2026-09-18-mesh-body-ambient-occlusion.md) (effort B),
+where the same Cycles bake that darkens a rover's underside also produces the decal
+and the ground plane it is cast onto. The rendering route is still open there.
 
 ## Stage 2 — sun shadows
 
@@ -30,6 +28,6 @@ terrain tiles. Sun-independent. Fades out with distance like the mesh does.
   onto Mars. A hostless body (a Voyager) has no ground and needs only the first.
 - Both are Sun-only; the environment term stays unshadowed.
 
-Sequencing: after the PBR effort
-(`docs/superpowers/specs/2026-09-12-mesh-body-pbr-design.md`), which reshapes the
-mesh uniforms and bind groups the shadow map would join.
+Sequencing: the PBR effort this waited on has shipped — the mesh shader carries
+`envSplitSum` and the probe — so the mesh uniforms and bind groups a shadow map
+would join are settled.

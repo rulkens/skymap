@@ -103,6 +103,7 @@ const posB: CssPx = { x: 150, y: 250 };
 let picker: ReturnType<typeof makeFakePicker>;
 let pickingState: {
   pickInFlight: boolean;
+  cursorTexPx: null;
   pointerDown: boolean;
 };
 let dispatchSpy: ReturnType<typeof vi.fn<(action: unknown) => void>>;
@@ -113,6 +114,7 @@ beforeEach(() => {
 
   pickingState = {
     pickInFlight: false,
+    cursorTexPx: null,
     pointerDown: false,
   };
 

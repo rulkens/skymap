@@ -14,11 +14,13 @@ import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 import { filamentsFadeRows } from '../../../src/layers/filaments/present/filamentsFadeRows';
 import { galaxyCatalogFadeRows } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { FilamentsRuntime } from '../../../src/layers/filaments/types/FilamentsRuntime';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { FlowRuntime } from '../../../src/layers/flow/types/FlowRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
 
 /** Every catalog committed, so the `survey` row's demand-loaded guard passes. */
@@ -29,6 +31,11 @@ const GALAXY_RUNTIME = {
 const FILAMENTS_RUNTIME = {
   renderer: { hasCloud: () => true },
 } as unknown as FilamentsRuntime;
+
+/** `fieldLoaded` true, so the `flow` row's demand-loaded guard passes. */
+const FLOW_RUNTIME = {
+  renderer: { fieldLoaded: () => true },
+} as unknown as FlowRuntime;
 
 export function makeFadeBridgeState(): {
   state: FadeBridgeState;
@@ -80,7 +87,6 @@ export function makeFadeBridgeState(): {
     settings,
     gpu: {
       galaxyPointRenderer: { hasCatalog: () => true },
-      flowFieldRenderer: { fieldLoaded: () => true },
       volumeFieldRenderer: { listIds: () => [] },
     },
     subsystems: {
@@ -93,6 +99,7 @@ export function makeFadeBridgeState(): {
       ...FADE_LAYERS,
       ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
       ...filamentsFadeRows(FILAMENTS_RUNTIME),
+      ...flowFadeRows(FLOW_RUNTIME),
     ],
   } as unknown as FadeBridgeState;
 

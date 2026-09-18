@@ -218,6 +218,11 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     bodyPasses: [
       'earth',
       'surface-tiles',
+      // Debug-only, and directly after the tiles on purpose: the marker writes
+      // an analytic depth against the depth THEY just stamped, so where it
+      // cuts the ground is the reading. Not in the probe roster above — a
+      // cursor has no meaning on a capture face.
+      'terrain-pick-marker',
       'cloud-shell',
       'planets',
       'textured-bodies',

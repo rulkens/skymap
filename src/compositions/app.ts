@@ -9,9 +9,12 @@
 import type { EngineComposition } from '../@types/engine/EngineComposition';
 import { EARTH_HOME } from '../data/selection/earthHome';
 import { filamentsLayer } from '../layers/filaments/layer';
+import { flowLayer } from '../layers/flow/layer';
 import { galaxyCatalogLayer } from '../layers/galaxyCatalog/layer';
 
 export const APP_COMPOSITION = {
-  layers: [galaxyCatalogLayer, filamentsLayer] as const,
+  layers: [galaxyCatalogLayer, filamentsLayer, flowLayer] as const,
   home: EARTH_HOME,
-} satisfies EngineComposition<readonly [typeof galaxyCatalogLayer, typeof filamentsLayer]>;
+} satisfies EngineComposition<
+  readonly [typeof galaxyCatalogLayer, typeof filamentsLayer, typeof flowLayer]
+>;

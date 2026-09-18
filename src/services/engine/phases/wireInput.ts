@@ -167,6 +167,14 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     scheduler: state.subsystems.scheduler,
     onPointerMove: (cssPx) => {
       hoverPickDriver.onPointerMove(cssPx);
+      // The terrain-pick marker is drawn where the cursor is, so it needs a
+      // frame to follow it — the one place a pointermove earns the wake this
+      // input mouth otherwise refuses (`inputBindings`' contract). Both the
+      // write and the wake are gated on the toggle, so hover stays wake-free
+      // and this whole debug path is unreachable with the overlay off.
+      if (!state.settings.debug.overlays['terrain-pick-marker']) return;
+      state.picking.cursorTexPx = [cssToTexPx(cssPx.x), cssToTexPx(cssPx.y)];
+      state.subsystems.scheduler.requestRender();
     },
     onPointerLeave: () => {
       store.dispatch(updateSelectionHover(null));

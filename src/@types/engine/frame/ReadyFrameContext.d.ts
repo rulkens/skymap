@@ -11,6 +11,7 @@
 import type { Mat4 } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { Vec2 } from '../../math/Vec2';
 import type { Vec3 } from '../../math/Vec3';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
@@ -43,6 +44,13 @@ export type ReadyFrameContext = {
   bodyPose: BodyPoseProvider;
   /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
   canvasSize: { width: number; height: number };
+  /**
+   * Live pointer position in texture pixels — `state.picking.cursorTexPx`
+   * forwarded, so a pass never reaches back into the picking bag `PassState`
+   * deliberately refuses. `null` unless the `terrain-pick-marker` debug overlay
+   * is on (its sole reader): the listener only writes it then.
+   */
+  cursorTexPx: Readonly<Vec2> | null;
   /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */
   drawCamPos: Readonly<Vec3>;
   /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */
@@ -85,12 +93,11 @@ export type ReadyFrameContext = {
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**
-   * True when any Layer's `frame` hook voted to keep ticking this frame —
-   * "this Layer's content is still settling". `runFrame` stamps it right after
-   * the hooks run; the sky-capture scheduler reads it so core can ask that
-   * question without reaching into a Layer's own subsystems.
+   * The Layer `frame` votes of this frame, OR-folded by `runFrame` right after
+   * the hooks run, so core asks the question without reaching into a Layer's
+   * own subsystems: the sky-capture scheduler reads this. See `LayerFrameVote`.
    */
-  layersAnimating: boolean;
+  layersSettling: boolean;
   /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
   visibleSourceMask: number;
   /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */

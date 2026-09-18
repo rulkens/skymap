@@ -15,7 +15,7 @@
  * drops the row rather than showing a stale 0.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { atmosphereDrawList } from './atmosphereDrawList';
@@ -23,7 +23,7 @@ import { atmosphereDrawList } from './atmosphereDrawList';
 export function encodeAtmosphereSkyView(
   encoder: GPUCommandEncoder,
   ctx: ReadyFrameContext,
-  state: EngineState,
+  state: PassState,
   claimTimestampWrites?: ClaimTimestampWrites,
 ): void {
   const renderer = state.gpu.atmosphereShellRenderer;

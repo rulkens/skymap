@@ -903,31 +903,6 @@ describe('runFrame — milky-way star count', () => {
   });
 });
 
-describe('runFrame — flow field reconcile', () => {
-  it('calls flowFieldRenderer.reconcile with the live flow settings, every frame', () => {
-    // The flow field's own reseed-on-switch is a value compare (Task 6); this
-    // only pins that runFrame feeds it the settings every frame, the way
-    // milkyWayCloud.reconcile is fed starCount every frame above.
-    const store = makeStore();
-    const state = makeState();
-    const deps = makeDeps(store);
-
-    const reconcile = vi.fn<(seed: { mode: string; count: number }) => void>();
-    state.gpu.flowFieldRenderer = {
-      reconcile,
-    } as unknown as EngineState['gpu']['flowFieldRenderer'];
-    (state.settings as unknown as { flow: { mode: string; count: number } }).flow = {
-      mode: 'advect',
-      count: 40000,
-    };
-
-    runFrame(state, deps, 0);
-
-    expect(reconcile).toHaveBeenCalledTimes(1);
-    expect(reconcile).toHaveBeenCalledWith(state.settings.flow);
-  });
-});
-
 describe('runFrame — engineScaleChanged dispatch', () => {
   // The scale-dispatch block fires inside the `if (state.booted)` guard —
   // the same guard that emits `onCameraChange`. `makeCamState()` is booted;
@@ -1172,10 +1147,13 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     } as unknown as EngineState;
   }
 
+  const AT_REST = { awake: false, settling: false } as const;
+
   function makeLayer(name: string, frame: NonNullable<LayerInstance['frame']>): LayerInstance {
     return {
       name,
       passes: [],
+      computes: [],
       assets: [],
       fades: [],
       labels: [],
@@ -1191,11 +1169,11 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     const layerA = makeLayer('a', (ctx) => {
       order.push('a');
       focusSeenByA.current = ctx.focus;
-      return false;
+      return AT_REST;
     });
     const layerB = makeLayer('b', () => {
       order.push('b');
-      return false;
+      return AT_REST;
     });
     const state = makeLayerState([layerA, layerB]);
     const deps = makeCamDeps(state);
@@ -1206,23 +1184,30 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     expect(focusSeenByA.current).toBe(SENTINEL_FOCUS);
   });
 
-  it('a hook returning true keeps the loop ticking; a Layer-free frame with everything else at rest does not', () => {
+  it('an awake vote keeps the loop ticking; a Layer-free frame with everything else at rest does not', () => {
     const stillState = makeLayerState([]);
     runFrame(stillState, makeCamDeps(stillState), 0);
     expect(stillState.subsystems.scheduler.requestRender).not.toHaveBeenCalled();
 
-    const wakingLayer = makeLayer('wakes', () => true);
+    const wakingLayer = makeLayer('wakes', () => ({ awake: true, settling: false }));
     const wakingState = makeLayerState([wakingLayer]);
     runFrame(wakingState, makeCamDeps(wakingState), 0);
     expect(wakingState.subsystems.scheduler.requestRender).toHaveBeenCalled();
   });
 
-  it('a second hook still runs when the first returned true — no short-circuit', () => {
+  it('a settling vote keeps the loop ticking too — the fold, not the Layer, owns the implication', () => {
+    const settlingLayer = makeLayer('settles', () => ({ awake: false, settling: true }));
+    const state = makeLayerState([settlingLayer]);
+    runFrame(state, makeCamDeps(state), 0);
+    expect(state.subsystems.scheduler.requestRender).toHaveBeenCalled();
+  });
+
+  it('a second hook still runs when the first voted awake — no short-circuit', () => {
     const secondCalled = { value: false };
-    const layerA = makeLayer('a', () => true);
+    const layerA = makeLayer('a', () => ({ awake: true, settling: false }));
     const layerB = makeLayer('b', () => {
       secondCalled.value = true;
-      return false;
+      return AT_REST;
     });
     const state = makeLayerState([layerA, layerB]);
 

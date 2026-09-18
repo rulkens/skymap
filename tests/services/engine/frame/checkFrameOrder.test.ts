@@ -10,9 +10,11 @@ import { describe, it, expect, vi } from 'vitest';
 import { checkFrameOrder } from '../../../../src/services/engine/frame/checkFrameOrder';
 import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
+import type { ContentCompute } from '../../../../src/@types/engine/frame/ContentCompute';
 import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameStepSpec';
 
 const TARGETS = ['hdr', 'sky-cubemap', 'foreground:0', 'swap'];
+const NO_COMPUTES: readonly ContentCompute[] = [];
 
 function fakePass(name: string): ContentPass {
   return {
@@ -22,6 +24,10 @@ function fakePass(name: string): ContentPass {
   };
 }
 
+function fakeCompute(name: string): ContentCompute {
+  return { name, encode: vi.fn<ContentCompute['encode']>() };
+}
+
 const drawing = (...names: string[]): FrameStepSpec[] => [
   { kind: 'render', target: 'hdr', slab: COSMO, passes: names },
 ];
@@ -29,7 +35,7 @@ const drawing = (...names: string[]): FrameStepSpec[] => [
 describe('checkFrameOrder', () => {
   it('throws naming a contributed pass no FRAME_ORDER line draws', () => {
     expect(() =>
-      checkFrameOrder(drawing('a'), [fakePass('a'), fakePass('ghost-pass')], TARGETS),
+      checkFrameOrder(drawing('a'), [fakePass('a'), fakePass('ghost-pass')], NO_COMPUTES, TARGETS),
     ).toThrow(/ghost-pass/);
   });
 
@@ -38,7 +44,7 @@ describe('checkFrameOrder', () => {
       { kind: 'render', target: 'hdr', slab: COSMO, passes: ['a'] },
       { kind: 'render', target: 'hdr', slab: NEAR0, passes: ['a'] },
     ];
-    expect(() => checkFrameOrder(order, [fakePass('a')], TARGETS)).toThrow(/'a'/);
+    expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).toThrow(/'a'/);
   });
 
   it('accepts a pass that only a capture line rosters', () => {
@@ -59,6 +65,7 @@ describe('checkFrameOrder', () => {
       checkFrameOrder(
         order,
         [fakePass('a'), fakePass('capture-only'), fakePass('body-capture-only')],
+        NO_COMPUTES,
         TARGETS,
       ),
     ).not.toThrow();
@@ -71,12 +78,12 @@ describe('checkFrameOrder', () => {
       { kind: 'capture', captures: ['probe'], cosmoPasses: [], near0Passes: [], bodyPasses: [] },
       ...drawing('a'),
     ];
-    expect(() => checkFrameOrder(order, [fakePass('a')], TARGETS)).not.toThrow();
+    expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).not.toThrow();
   });
 
   it('throws naming a step target that is not a declared render-target id', () => {
     const order: FrameStepSpec[] = [{ kind: 'render', target: 'hrd', slab: COSMO, passes: ['a'] }];
-    expect(() => checkFrameOrder(order, [fakePass('a')], TARGETS)).toThrow(/hrd/);
+    expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).toThrow(/hrd/);
   });
 
   it('throws naming a composite endpoint that is not a declared render-target id', () => {
@@ -84,6 +91,31 @@ describe('checkFrameOrder', () => {
       ...drawing('a'),
       { kind: 'tonemap', source: 'hdr', dest: 'swop' },
     ];
-    expect(() => checkFrameOrder(order, [fakePass('a')], TARGETS)).toThrow(/swop/);
+    expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).toThrow(/swop/);
+  });
+
+  it('throws naming a contributed compute row no FRAME_ORDER line runs', () => {
+    const order: FrameStepSpec[] = [{ kind: 'compute', name: 'sky-view' }];
+    expect(() =>
+      checkFrameOrder(order, [], [fakeCompute('sky-view'), fakeCompute('ghost-compute')], TARGETS),
+    ).toThrow(/ghost-compute/);
+  });
+
+  it('throws naming a compute row listed on two lines', () => {
+    const order: FrameStepSpec[] = [
+      { kind: 'compute', name: 'flow' },
+      { kind: 'compute', name: 'flow' },
+    ];
+    expect(() => checkFrameOrder(order, [], [fakeCompute('flow')], TARGETS)).toThrow(/'flow'/);
+  });
+
+  it('a compute row and a pass sharing one name do not collide in the count', () => {
+    // 'flow' names both the ribbon integrator (compute) and the ribbon draw
+    // (pass) on purpose — one FRAME_ORDER line of each must not read as
+    // "listed twice".
+    const order: FrameStepSpec[] = [{ kind: 'compute', name: 'flow' }, ...drawing('flow')];
+    expect(() =>
+      checkFrameOrder(order, [fakePass('flow')], [fakeCompute('flow')], TARGETS),
+    ).not.toThrow();
   });
 });

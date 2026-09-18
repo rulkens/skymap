@@ -8,6 +8,7 @@
 
 import { rotationRowById } from './rotationElements';
 import { bodyHostId } from './positionDrivers';
+import { SITE_GROUND_UPS_ENU } from './siteGroundHeights.generated';
 import { CONST_J2000 } from '../time/constJ2000';
 import { rotationFromIau } from '../../utils/orbit/rotationFromIau';
 import { rotationLookAt } from '../../utils/orbit/rotationLookAt';
@@ -66,11 +67,16 @@ export function orientationForBody(
       }
       const hostOrientation = orientationForBody(hostId, simDays, positions);
       const hostPoleWorld: Vec3 = [hostOrientation[6], hostOrientation[7], hostOrientation[8]];
+      const groundUpEnu = SITE_GROUND_UPS_ENU[id];
+      if (groundUpEnu === undefined) {
+        throw new Error(`orientationForBody: no baked SITE_GROUND_UPS_ENU entry for '${id}'`);
+      }
       return rotationSurfaceLocked(
         positionOrThrow(positions, id, id),
         positionOrThrow(positions, hostId, id),
         hostPoleWorld,
         row.headingDeg,
+        groundUpEnu,
       );
     }
     default: {
