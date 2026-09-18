@@ -149,7 +149,8 @@
     "vitest": "4.1.5",
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
-    "wrangler": "4.123.0"
+    "wrangler": "4.123.0",
+    "xatlas-wasm": "0.1.3"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",
