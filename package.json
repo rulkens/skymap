@@ -77,6 +77,7 @@
     "bake-lidar": "tsx tools/scene-recon/bakeLidar.ts",
     "bake-mesh": "tsx tools/scene-recon/bakeMesh.ts",
     "crop-mesh": "tsx tools/scene-recon/cropMesh.ts",
+    "repack-atlas": "tsx tools/scene-recon/repackAtlas.ts",
     "bake-splats": "tsx tools/scene-recon/bakeSplats.ts",
     "curate-famous": "vite --config tools/famous-curator/vite.config.ts",
     "deploy": "git push origin main && echo 'Pushed.  Cloudflare Workers Assets is rebuilding — watch https://dash.cloudflare.com/?to=/:account/workers-and-pages'",
@@ -151,7 +152,8 @@
     "vitest": "4.1.5",
     "wesl": "0.7.26",
     "wesl-plugin": "0.6.74",
-    "wrangler": "4.123.0"
+    "wrangler": "4.123.0",
+    "xatlas-wasm": "0.1.3"
   },
   "dependencies": {
     "@reduxjs/toolkit": "2.12.0",
