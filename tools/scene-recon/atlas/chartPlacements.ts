@@ -13,9 +13,7 @@ const MIRRORS: readonly boolean[] = [false, true];
 // of strictly under one texel per axis, which the placement drops to keep the copy texel-exact and
 // the chart anchored inside xatlas's footprint. So a residual spread wider than that rounding means
 // the fit is none of the 8 transforms xatlas can produce (an off-axis rotation, a rescale) and the
-// bake would silently copy the wrong source region. Measured over both real packs of mesh-cropped:
-// the winner's per-axis spread never passes 0.99997 px, and the runner-up only comes within a texel
-// for charts under 6 px across, which are symmetric at texel resolution anyway.
+// bake would silently copy the wrong source region.
 const XATLAS_AXIS_ROUNDING_PX = 1;
 const FIT_NOISE_PX = 1 / 64; // f32 source UVs × 8192 source texels, with room to spare
 

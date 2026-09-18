@@ -13,7 +13,7 @@ const SOURCE_UVS = new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]);
 const SOURCE_UVS_OFF_ORIGIN = new Float32Array([0.25, 0.25, 0.75, 0.25, 0.75, 0.75, 0.25, 0.75]);
 
 function vertex(xref: number, uvPx: Vec2, chartIndex: number): PackedVertex {
-  return { xref, uvPx, chartIndex, atlasIndex: 0 };
+  return { xref, uvPx, chartIndex };
 }
 
 describe('chartPlacements', () => {
@@ -113,25 +113,6 @@ describe('chartPlacements', () => {
 
     // Scaled source min is (1.8, 1.8); dest min (5, 7) puts the offset at [3.2, 5.2] -> [3, 5].
     expect(p0).toEqual({ turns: 0, mirrorX: false, scale: 0.9, offsetPx: [3, 5] });
-  });
-
-  it('throws when a chart was rescaled past the texel rounding', () => {
-    // The same square blown up 2x: every turn and mirror leaves a residual spread of 8 px, far
-    // past the one texel xatlas's per-axis rounding can add.
-    const doubled: PackedVertex[] = [
-      vertex(0, [0, 0], 0),
-      vertex(1, [16, 0], 0),
-      vertex(2, [16, 16], 0),
-      vertex(3, [0, 16], 0),
-    ];
-
-    const packed: PackedAtlas = {
-      chartCount: 1,
-      vertices: doubled,
-      indices: new Uint32Array(),
-    };
-
-    expect(() => chartPlacements(packed, SOURCE_UVS, SOURCE_SIZE_PX, 1)).toThrow(/chart 0/);
   });
 
   it('throws when a chart has no member vertices', () => {

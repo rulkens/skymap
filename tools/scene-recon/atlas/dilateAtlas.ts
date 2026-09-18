@@ -1,8 +1,7 @@
 /**
  * 16 passes of empty-takes-the-mean-of-its-filled-8-neighbours, then the atlas mean colour for
- * whatever is still empty: a black texel bleeds into every chart at low mips. Double-buffered —
- * a pass reads only the previous pass's claims, so it grows exactly one ring; single-buffering
- * would let a just-filled texel feed its neighbour in the same pass and flood the atlas.
+ * whatever is still empty (a black texel bleeds into every chart at low mips). Double-buffered: a
+ * pass reads only the previous pass's claims, so single-buffering can't flood the atlas in one pass.
  */
 import { ATLAS_CLAIM } from './atlasClaims';
 import type { AtlasImage } from '../@types/AtlasImage';

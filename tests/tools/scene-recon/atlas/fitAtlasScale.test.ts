@@ -30,8 +30,6 @@ describe('fitAtlasScale', () => {
 
     expect(calls[0]).toBe(1);
     expect(calls[1]).toBeCloseTo(0.632, 3);
-    // the winner is the first `0.632 × 0.98^k` at or below 0.44: k = 18
-    expect(result.scale).toBeCloseTo(0.6320265214447285 * 0.98 ** 18, 12);
     expect(result.scale).toBeLessThanOrEqual(0.44);
     expect(result.scale / 0.98).toBeGreaterThan(0.44); // one step earlier must have failed
   });

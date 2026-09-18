@@ -1,10 +1,8 @@
 #!/usr/bin/env node
 /**
- * repack-atlas — re-packs one mesh asset's UV atlas with xatlas-wasm at a fixed
- * output size (`--group <id> --asset <assetId> --size 4096|2048`), publishing
- * the sibling `<assetId>-4k` / `-2k` (spec §3). A scale-1 fit blits the source
- * pixel-exact; a smaller fit resamples a pre-shrunk copy — exact-vs-resampled
- * follows from `fitAtlasScale`'s result, never a flag.
+ * repack-atlas — re-packs one mesh asset's UV atlas with xatlas-wasm at a fixed output size
+ * (`--group <id> --asset <assetId> --size 4096|2048`), publishing `<assetId>-4k` / `-2k` (spec §3).
+ * Exact-vs-resampled follows from `fitAtlasScale`'s result, never a flag.
  */
 import { fileURLToPath } from 'node:url';
 
@@ -58,12 +56,10 @@ export async function repackAtlas(
   }
   const sourceImage: AtlasImage = { sizePx: sourceSizePx, rgb: sourceRgb };
 
-  // `shrunkSizePx` rounds to a whole texel, so it's the scale actually achieved by the resize
-  // below — placements (and everything downstream) are built from that ratio, not the unrounded
-  // `fitScale`, or the packed destination positions and the resampled content they point at would
-  // drift apart by the rounding.
-  const shrunkSizePx = fitScale === 1 ? sourceSizePx : Math.round(sourceSizePx * fitScale);
-  const scale = fitScale === 1 ? 1 : shrunkSizePx / sourceSizePx;
+  // `scale` is recomputed from the whole-texel-rounded `shrunkSizePx`, not the unrounded `fitScale`
+  // — placements and the resampled content must key off the ratio actually achieved by the resize.
+  const shrunkSizePx = Math.round(sourceSizePx * fitScale);
+  const scale = shrunkSizePx / sourceSizePx;
   const placements = chartPlacements(packed, geometry.uvs, sourceSizePx, scale);
 
   let atlas: AtlasImage;
@@ -103,9 +99,10 @@ export async function repackAtlas(
     { bytes: jpeg, mimeType: 'image/jpeg' },
   );
 
+  const size = sizePx === 4096 ? '4k' : '2k';
   const asset = await publishDerivedMesh(group, source, {
-    idSuffix: sizePx === 4096 ? '4k' : '2k',
-    labelSuffix: sizePx === 4096 ? '4K atlas' : '2K atlas',
+    idSuffix: size,
+    labelSuffix: `${size.toUpperCase()} atlas`,
     step: {
       step: 'repackAtlas',
       version: `${sizePx}@${scale.toFixed(3)} xatlas-wasm@${XATLAS_WASM_VERSION} q${JPEG_QUALITY}`,

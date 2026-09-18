@@ -6,5 +6,4 @@ export type PackedVertex = {
   readonly xref: number; // index into the SOURCE mesh's vertices
   readonly uvPx: Vec2; // destination texels, not normalized
   readonly chartIndex: number; // -1 ⇔ orphan (see ChartPlacement)
-  readonly atlasIndex: number; // -1 ⇔ orphan
 };

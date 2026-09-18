@@ -12,7 +12,7 @@ const DEST_SIZE_PX = 16;
 const IMAGE: TexturedMeshGeometry['image'] = { bytes: new Uint8Array(), mimeType: 'image/jpeg' };
 
 function vertex(xref: number, chartIndex: number): PackedVertex {
-  return { xref, uvPx: [0, 0], chartIndex, atlasIndex: chartIndex };
+  return { xref, uvPx: [0, 0], chartIndex };
 }
 
 // A unit-square quad, split into 2 triangles that xatlas has placed on 2 different charts —

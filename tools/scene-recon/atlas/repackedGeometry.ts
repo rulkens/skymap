@@ -1,8 +1,7 @@
 /**
  * The source mesh re-indexed onto the packed atlas: xatlas splits vertices along chart seams, so
- * positions are gathered through `xref` and UVs come from the placements, never from xatlas —
- * xatlas's own `uvPx` still carries the sub-texel residual the placement's integer offset rounded
- * away, and the bake sampled from the rounded placement, not from that residual.
+ * positions are gathered through `xref`, and UVs come from the placements — never from xatlas's
+ * own `uvPx`, which still carries the sub-texel residual the bake's rounded placement dropped.
  */
 import { rotateTurns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';

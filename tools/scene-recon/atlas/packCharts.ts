@@ -59,7 +59,6 @@ export async function packCharts(
         xref: v.xref,
         uvPx: v.uv,
         chartIndex: v.chartIndex,
-        atlasIndex: v.atlasIndex,
       })),
       indices: mesh.indices,
     };

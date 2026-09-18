@@ -1,8 +1,7 @@
 /**
  * The 2K (and any scale < 1) bake: `shrunk` is the source pre-shrunk by sharp, so a source texel
- * coordinate from `rasterizeCharts` must be re-scaled into the shrunk grid before sampling —
- * `shrunk.sizePx / sourceSizePx` is the only place the two grids meet, and the one place a dropped
- * ratio would silently shift the whole atlas.
+ * coordinate from `rasterizeCharts` must be re-scaled via `shrunk.sizePx / sourceSizePx` before
+ * sampling — the one place a dropped ratio would silently shift the whole atlas.
  */
 import { rasterizeCharts } from './rasterizeCharts';
 import type { AtlasImage } from '../@types/AtlasImage';
@@ -17,8 +16,8 @@ function sampleBilinear(image: AtlasImage, xPx: number, yPx: number): [number, n
   const y0 = Math.min(Math.max(Math.floor(fy), 0), last);
   const x1 = Math.min(x0 + 1, last);
   const y1 = Math.min(y0 + 1, last);
-  const tx = Math.min(Math.max(fx - Math.floor(fx), 0), 1);
-  const ty = Math.min(Math.max(fy - Math.floor(fy), 0), 1);
+  const tx = fx - Math.floor(fx);
+  const ty = fy - Math.floor(fy);
 
   const at = (x: number, y: number, c: number): number =>
     image.rgb[(y * image.sizePx + x) * 3 + c]!;

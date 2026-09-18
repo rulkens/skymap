@@ -27,7 +27,7 @@ function shrunkImage(): AtlasImage {
 }
 
 function vertex(xref: number, uvPx: Vec2): PackedVertex {
-  return { xref, uvPx, chartIndex: 0, atlasIndex: 0 };
+  return { xref, uvPx, chartIndex: 0 };
 }
 
 function packedTriangle(): PackedAtlas {

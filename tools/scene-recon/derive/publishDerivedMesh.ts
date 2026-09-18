@@ -1,7 +1,7 @@
 /**
  * Writes a derived mesh's `mesh.glb` and publishes it to the group manifest
  * as `<source.id>-<idSuffix>` — the write half every derived-mesh CLI shares;
- * `cropMesh` and `repackAtlas` (part 2) differ only in `derived`.
+ * `cropMesh` and `repackAtlas` differ only in `derived`.
  */
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';

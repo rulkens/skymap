@@ -1,8 +1,7 @@
 /**
- * The exact bake: `rasterizeCharts` at scale 1 lands every destination texel centre back on a
- * source texel centre, so this is a nearest copy — no blur, no round-trip loss beyond the JPEG
- * encode. The centre assertion is what proves that claim; a scale bug elsewhere would surface here
- * as a throw, not a silently soft atlas.
+ * The exact bake: at scale 1 every destination texel centre lands back on a source texel centre,
+ * so this is a nearest copy — no blur, no round-trip loss beyond the JPEG encode. The centre
+ * assertion proves that claim; a scale bug elsewhere would surface here as a throw, not a soft atlas.
  */
 import { rasterizeCharts } from './rasterizeCharts';
 import type { AtlasImage } from '../@types/AtlasImage';

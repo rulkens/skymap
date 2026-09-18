@@ -16,8 +16,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { packCharts } from '../../../tools/scene-recon/atlas/packCharts';
 import { meshGlbGeometry } from '../../../tools/scene-recon/pack/meshGlbGeometry';
 import { packMeshGlb } from '../../../tools/scene-recon/pack/packMeshGlb';
+import type { TexturedMeshGeometry } from '../../../tools/scene-recon/pack/packMeshGlb';
 import { SOENDERMARKEN } from '../../../tools/scene-recon/groups/soendermarken';
 import { repackAtlas } from '../../../tools/scene-recon/repackAtlas';
+import type { RepackAtlasReport } from '../../../tools/scene-recon/@types/RepackAtlasReport';
 import type { SceneManifest } from '../../../tools/scene-workbench/@types/SceneManifest';
 import type { TexturedMeshAsset } from '../../../tools/scene-workbench/@types/TexturedMeshAsset';
 
@@ -165,58 +167,76 @@ function colorIndexForTriangleCentroidX(x: number): number {
   return 3;
 }
 
+type TriangleCentroid = { colorIndex: number; centroidU: number; centroidV: number };
+
+/** Shared by every colour-checking test: one pass over a published mesh's triangles, pairing
+ *  each with the source colour its (verbatim) positions identify and the UV its bake landed at. */
+function walkTriangleCentroids(
+  published: TexturedMeshGeometry,
+  visit: (t: TriangleCentroid) => void,
+): void {
+  for (let t = 0; t < published.indices.length; t += 3) {
+    const ia = published.indices[t]!;
+    const ib = published.indices[t + 1]!;
+    const ic = published.indices[t + 2]!;
+    const centroidX =
+      (published.positions[3 * ia]! + published.positions[3 * ib]! + published.positions[3 * ic]!) /
+      3;
+    const centroidU =
+      (published.uvs[2 * ia]! + published.uvs[2 * ib]! + published.uvs[2 * ic]!) / 3;
+    const centroidV =
+      (published.uvs[2 * ia + 1]! + published.uvs[2 * ib + 1]! + published.uvs[2 * ic + 1]!) / 3;
+    visit({ colorIndex: colorIndexForTriangleCentroidX(centroidX), centroidU, centroidV });
+  }
+}
+
+function expectAtlasColorNear(
+  atlasRgb: Buffer,
+  destSizePx: number,
+  u: number,
+  v: number,
+  [er, eg, eb]: readonly [number, number, number],
+  tolerance: number,
+): void {
+  const sx = Math.min(destSizePx - 1, Math.max(0, Math.floor(u * destSizePx)));
+  const sy = Math.min(destSizePx - 1, Math.max(0, Math.floor(v * destSizePx)));
+  const i = (sy * destSizePx + sx) * 3;
+  expect(Math.abs(atlasRgb[i]! - er)).toBeLessThanOrEqual(tolerance);
+  expect(Math.abs(atlasRgb[i + 1]! - eg)).toBeLessThanOrEqual(tolerance);
+  expect(Math.abs(atlasRgb[i + 2]! - eb)).toBeLessThanOrEqual(tolerance);
+}
+
 // dilateAtlas's 16 passes over a mostly-empty 2048² atlas (the size DoD ships) take a few
 // seconds in plain JS — the price of testing what ships, not a hung test.
 const REPACK_TIMEOUT_MS = 30_000;
 
 describe('repackAtlas', () => {
-  it(
-    'publishes a sibling whose charts carry the source colours',
-    async () => {
-      const report = await repackAtlas(SOENDERMARKEN, 'mesh', DEST_SIZE_PX);
-      expect(report.scale).toBe(1);
+  describe('at scale 1', () => {
+    // The three assertions below all read one repack — running it per-test tripled a ~6s bake for
+    // no independent coverage, since none of them mutate the published asset they inspect.
+    let report: RepackAtlasReport;
+    let published: TexturedMeshGeometry;
+    let atlasRgb: Buffer;
 
-      const published = meshGlbGeometry(await new NodeIO().read(assetGlbPath('mesh-2k')));
-      const { data: atlasRgb } = await sharp(published.image.bytes)
+    beforeAll(async () => {
+      report = await repackAtlas(SOENDERMARKEN, 'mesh', DEST_SIZE_PX);
+      published = meshGlbGeometry(await new NodeIO().read(assetGlbPath('mesh-2k')));
+      ({ data: atlasRgb } = await sharp(published.image.bytes)
         .removeAlpha()
         .raw()
-        .toBuffer({ resolveWithObject: true });
+        .toBuffer({ resolveWithObject: true }));
+    }, REPACK_TIMEOUT_MS);
 
-      for (let t = 0; t < published.indices.length; t += 3) {
-        const ia = published.indices[t]!;
-        const ib = published.indices[t + 1]!;
-        const ic = published.indices[t + 2]!;
-        const centroidX =
-          (published.positions[3 * ia]! +
-            published.positions[3 * ib]! +
-            published.positions[3 * ic]!) /
-          3;
-        const [er, eg, eb] = COLORS[colorIndexForTriangleCentroidX(centroidX)]!;
+    it('carries the source colours', () => {
+      expect(report.scale).toBe(1);
+      walkTriangleCentroids(published, ({ colorIndex, centroidU, centroidV }) => {
+        expectAtlasColorNear(atlasRgb, DEST_SIZE_PX, centroidU, centroidV, COLORS[colorIndex]!, 6);
+      });
+    });
 
-        const centroidU =
-          (published.uvs[2 * ia]! + published.uvs[2 * ib]! + published.uvs[2 * ic]!) / 3;
-        const centroidV =
-          (published.uvs[2 * ia + 1]! + published.uvs[2 * ib + 1]! + published.uvs[2 * ic + 1]!) /
-          3;
-        const sx = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(centroidU * DEST_SIZE_PX)));
-        const sy = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(centroidV * DEST_SIZE_PX)));
-        const i = (sy * DEST_SIZE_PX + sx) * 3;
-
-        expect(Math.abs(atlasRgb[i]! - er)).toBeLessThanOrEqual(6);
-        expect(Math.abs(atlasRgb[i + 1]! - eg)).toBeLessThanOrEqual(6);
-        expect(Math.abs(atlasRgb[i + 2]! - eb)).toBeLessThanOrEqual(6);
-      }
-    },
-    REPACK_TIMEOUT_MS,
-  );
-
-  it(
-    'keeps every triangle, including the degenerate one',
-    async () => {
-      const report = await repackAtlas(SOENDERMARKEN, 'mesh', DEST_SIZE_PX);
+    it('keeps every triangle, including the degenerate one', () => {
       expect(report.asset.triangleCount).toBe(SOURCE_TRIANGLE_COUNT);
 
-      const published = meshGlbGeometry(await new NodeIO().read(assetGlbPath('mesh-2k')));
       let foundDegenerate = false;
       for (let t = 0; t < published.indices.length; t += 3) {
         const ia = published.indices[t]!;
@@ -235,23 +255,24 @@ describe('repackAtlas', () => {
         const uc = [published.uvs[2 * ic]!, published.uvs[2 * ic + 1]!];
         expect(ua).toEqual(ub);
         expect(ub).toEqual(uc);
-
-        const { data: atlasRgb } = await sharp(published.image.bytes)
-          .removeAlpha()
-          .raw()
-          .toBuffer({ resolveWithObject: true });
-        const sx = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(ua[0]! * DEST_SIZE_PX)));
-        const sy = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(ua[1]! * DEST_SIZE_PX)));
-        const i = (sy * DEST_SIZE_PX + sx) * 3;
-        const [er, eg, eb] = COLORS[3]!;
-        expect(Math.abs(atlasRgb[i]! - er)).toBeLessThanOrEqual(6);
-        expect(Math.abs(atlasRgb[i + 1]! - eg)).toBeLessThanOrEqual(6);
-        expect(Math.abs(atlasRgb[i + 2]! - eb)).toBeLessThanOrEqual(6);
+        expectAtlasColorNear(atlasRgb, DEST_SIZE_PX, ua[0]!, ua[1]!, COLORS[3]!, 6);
       }
       expect(foundDegenerate).toBe(true);
-    },
-    REPACK_TIMEOUT_MS,
-  );
+    });
+
+    it('records the pack in provenance', () => {
+      const manifest = JSON.parse(readFileSync(manifestPath(), 'utf8')) as SceneManifest;
+      expect(manifest.assets.map(({ id }) => id)).toEqual(['mesh', 'mesh-2k']);
+      expect(manifest.assets[0]).toEqual(SOURCE);
+
+      const asset = manifest.assets[1] as TexturedMeshAsset;
+      expect(asset.label).toBe(`${SOURCE.label} — 2K atlas`);
+      expect(asset.provenance.pipeline.at(-1)!.step).toBe('repackAtlas');
+      expect(asset.provenance.pipeline.at(-1)!.version).toMatch(
+        /^2048@1\.000 xatlas-wasm@\d+\.\d+\.\d+ q90$/,
+      );
+    });
+  });
 
   it(
     'resamples when the destination is too small to fit at scale 1',
@@ -272,51 +293,10 @@ describe('repackAtlas', () => {
         .raw()
         .toBuffer({ resolveWithObject: true });
 
-      for (let t = 0; t < published.indices.length; t += 3) {
-        const ia = published.indices[t]!;
-        const ib = published.indices[t + 1]!;
-        const ic = published.indices[t + 2]!;
-        const centroidX =
-          (published.positions[3 * ia]! +
-            published.positions[3 * ib]! +
-            published.positions[3 * ic]!) /
-          3;
-        const colorIndex = colorIndexForTriangleCentroidX(centroidX);
-        if (colorIndex === 3) continue; // degenerate face: covered by the other tests
-
-        const [er, eg, eb] = COLORS[colorIndex]!;
-        const centroidU =
-          (published.uvs[2 * ia]! + published.uvs[2 * ib]! + published.uvs[2 * ic]!) / 3;
-        const centroidV =
-          (published.uvs[2 * ia + 1]! + published.uvs[2 * ib + 1]! + published.uvs[2 * ic + 1]!) /
-          3;
-        const sx = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(centroidU * DEST_SIZE_PX)));
-        const sy = Math.min(DEST_SIZE_PX - 1, Math.max(0, Math.floor(centroidV * DEST_SIZE_PX)));
-        const i = (sy * DEST_SIZE_PX + sx) * 3;
-
-        expect(Math.abs(atlasRgb[i]! - er)).toBeLessThanOrEqual(16);
-        expect(Math.abs(atlasRgb[i + 1]! - eg)).toBeLessThanOrEqual(16);
-        expect(Math.abs(atlasRgb[i + 2]! - eb)).toBeLessThanOrEqual(16);
-      }
-    },
-    REPACK_TIMEOUT_MS,
-  );
-
-  it(
-    'records the pack in provenance',
-    async () => {
-      await repackAtlas(SOENDERMARKEN, 'mesh', DEST_SIZE_PX);
-
-      const manifest = JSON.parse(readFileSync(manifestPath(), 'utf8')) as SceneManifest;
-      expect(manifest.assets.map(({ id }) => id)).toEqual(['mesh', 'mesh-2k']);
-      expect(manifest.assets[0]).toEqual(SOURCE);
-
-      const asset = manifest.assets[1] as TexturedMeshAsset;
-      expect(asset.label).toBe(`${SOURCE.label} — 2K atlas`);
-      expect(asset.provenance.pipeline.at(-1)!.step).toBe('repackAtlas');
-      expect(asset.provenance.pipeline.at(-1)!.version).toMatch(
-        /^2048@1\.000 xatlas-wasm@\d+\.\d+\.\d+ q90$/,
-      );
+      walkTriangleCentroids(published, ({ colorIndex, centroidU, centroidV }) => {
+        if (colorIndex === 3) return; // degenerate face: covered by the scale-1 tests
+        expectAtlasColorNear(atlasRgb, DEST_SIZE_PX, centroidU, centroidV, COLORS[colorIndex]!, 16);
+      });
     },
     REPACK_TIMEOUT_MS,
   );

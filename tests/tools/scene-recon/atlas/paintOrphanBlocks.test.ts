@@ -43,8 +43,8 @@ describe('paintOrphanBlocks', () => {
     const packed: PackedAtlas = {
       chartCount: 0,
       vertices: [
-        { xref: 0, uvPx: [0, 0], chartIndex: -1, atlasIndex: -1 },
-        { xref: 1, uvPx: [0, 0], chartIndex: -1, atlasIndex: -1 },
+        { xref: 0, uvPx: [0, 0], chartIndex: -1 },
+        { xref: 1, uvPx: [0, 0], chartIndex: -1 },
       ],
       indices: new Uint32Array(),
     };
@@ -86,7 +86,7 @@ describe('paintOrphanBlocks', () => {
     const sourceUvs = new Float32Array([0.5, 0.5]);
     const packed: PackedAtlas = {
       chartCount: 0,
-      vertices: [{ xref: 0, uvPx: [0, 0], chartIndex: -1, atlasIndex: -1 }],
+      vertices: [{ xref: 0, uvPx: [0, 0], chartIndex: -1 }],
       indices: new Uint32Array(),
     };
 

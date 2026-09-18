@@ -1,9 +1,7 @@
 /**
- * The conservative raster both bakes share: per destination triangle, walk its texel bbox and
- * visit any texel whose centre is inside it or within `EDGE_MARGIN_PX` (half a texel diagonal) of
- * an edge, so bilinear sampling never reads an unwritten border texel. Source coordinates come
- * from inverting the triangle's chart placement, not barycentric interpolation — the placement is
- * one transform shared by the whole chart, so every triangle of a chart agrees exactly.
+ * The conservative raster both bakes share: per destination triangle, visit every texel whose
+ * centre lies inside its bbox or within `EDGE_MARGIN_PX` of an edge, so bilinear sampling never
+ * reads an unwritten border texel — inverted from the chart's one shared placement, never barycentric.
  */
 import { ATLAS_CLAIM } from './atlasClaims';
 import { rotateTurns } from './rotateTurns';

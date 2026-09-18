@@ -21,7 +21,7 @@ function sourceImage(): AtlasImage {
 }
 
 function vertex(xref: number, uvPx: Vec2): PackedVertex {
-  return { xref, uvPx, chartIndex: 0, atlasIndex: 0 };
+  return { xref, uvPx, chartIndex: 0 };
 }
 
 // One chart, turned once (turns: 1), integer offset chosen so R(-1)·(d - offset) lands on

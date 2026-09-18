@@ -11,7 +11,7 @@ const DEST_SIZE_PX = 16;
 const IDENTITY: ChartPlacement = { turns: 0, mirrorX: false, scale: 1, offsetPx: [0, 0] };
 
 function vertex(xref: number, uvPx: Vec2, chartIndex: number): PackedVertex {
-  return { xref, uvPx, chartIndex, atlasIndex: chartIndex };
+  return { xref, uvPx, chartIndex };
 }
 
 // A right triangle over the destination, unturned: (4,4)-(12,4)-(4,12). Chosen away from the

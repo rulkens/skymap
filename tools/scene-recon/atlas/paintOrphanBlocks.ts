@@ -1,5 +1,5 @@
 /**
- * Vertices xatlas placed nowhere (`atlasIndex === -1`) come from faces whose three UVs coincide —
+ * Vertices xatlas placed nowhere (`chartIndex === -1`) come from faces whose three UVs coincide —
  * OpenMVS's "no camera saw this face" fallback (one point, 3,801 faces, on mesh-cropped). Each
  * distinct source UV gets a flat block of its own colour so no face is ever dropped.
  */

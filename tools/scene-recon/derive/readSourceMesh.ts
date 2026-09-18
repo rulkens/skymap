@@ -1,7 +1,6 @@
 /**
  * The manifest lookup and GLB decode every derived-mesh CLI starts from: find
  * the source asset by id, then read its `mesh.glb` into working geometry.
- * Lifted out of `cropMesh` so `repackAtlas` (part 2) shares it verbatim.
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
