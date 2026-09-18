@@ -15,18 +15,16 @@ import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { tilePostAtLatLon } from '../utils/textures/tilePostAtLatLon';
-import {
-  deepestBandLevel,
-  manifestFor,
-  siteGroundHeightM,
-  siteGroundUpEnu,
-} from './buildSiteGroundHeights';
+import { deepestBandLevel } from '../utils/textures/deepestBandLevel';
+import { readSurfaceTileManifest } from '../utils/textures/readSurfaceTileManifest';
+import { siteGroundHeightM } from '../utils/textures/siteGroundHeightM';
+import { siteGroundUpEnu } from '../utils/textures/siteGroundUpEnu';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
 export async function reportSiteTerrain(): Promise<void> {
   for (const site of SURFACE_FIXED_SITES) {
-    const manifest = manifestFor(site.hostId);
+    const manifest = readSurfaceTileManifest(site.hostId);
     const z = deepestBandLevel(manifest, site.latDeg, site.lonDeg);
     const heightM = await siteGroundHeightM(site, manifest);
     const up = await siteGroundUpEnu(site, manifest);
