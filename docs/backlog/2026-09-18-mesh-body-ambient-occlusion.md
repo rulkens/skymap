@@ -1,8 +1,9 @@
-# Mesh bodies: ambient occlusion and seated orientation
+# Mesh bodies: ambient occlusion and a contact decal
 
 **Raised:** 2026-09-18, user asked how to get AO onto the mesh bodies. Brainstormed
 to convergence that session; the measurements landed as `npm run report-site-terrain`
-(#756). Three separable efforts — only the third has open questions.
+(#756), which also seated the rovers on the terrain slope. Two separable efforts —
+only the second has open questions.
 
 The mesh shader's environment term (`envSplitSum`) is the body's only ambient and it
 reaches every texel unattenuated — `meshBody/fragment.wesl`'s header says as much.
@@ -65,45 +66,20 @@ along the surface normal, so an underbelly normal already points at Mars and pic
 Mars-coloured bounce. AO multiplies that — the hue survives, only the intensity goes.
 
 The plane stays flat in the model's own source frame; terrain slope is handled at
-runtime by tilting the whole rover (effort B). The two never interact.
+runtime by `SITE_GROUND_UPS_ENU` tilting the whole rover (#756). The two never interact.
 
 Smell worth a guard: "is this thing seated?" is scene knowledge, living in
 `surfaceFixedSites.ts`, and a `SOURCES` flag is a second hand-maintained copy of it.
 Cheap test — every flagged key is referenced by a `SURFACE_FIXED_SITES` row, and no
 unflagged key is.
 
-## B — seated orientation from the height tiles (ready)
-
-`rotationSurfaceLocked` derives up from `normalize(bodyPos − hostPos)`, the radial
-direction, so a rover stands bolt upright while the ground tilts under it. Measured
-2026-09-18 with `npm run report-site-terrain`: Curiosity 9.67° (84.5 cm of gap across
-the vehicle), Perseverance 9.91° (69.5 cm), Spirit 3.59° (15.1 cm). Re-run the tool
-rather than trusting these numbers after a re-bake.
-
-Bake a `Vec3` up per site beside `SITE_GROUND_HEIGHTS` and substitute it for the radial
-`up`. NOT a quaternion applied afterwards: that rotates the heading too, so
-`headingDeg` would stop meaning azimuth from north. Substituting `up` lets the existing
-north/east/heading construction re-derive around it for free — one parameter, one line.
-There is no `Quat` type in `@types/math/` in any case; orientation data here is `Mat3`.
-
-`buildSiteGroundHeights` already re-runs at the end of a non-dev Mars tile bake, so a
-baked up-vector row is self-maintaining the way `groundOffsetM` already is. Both
-helpers exist: `terrainUpEnu` and `tilePostAtLatLon` (#756).
-
-Baseline is the body's own footprint, not one post — though measured sensitivity is
-only ~0.5° out of ~10°, so any sane baseline does. One post reads tile quantisation.
-
-Add a small deliberate sink (`contactSinkM`) alongside. At the 1 m HiRISE DTM posts the
-terrain does not know about the rock under a wheel, so residual error is guaranteed,
-and floating reads far worse than slight clipping — especially with a decal under it.
-
-## C — the contact decal (needs design)
+## B — the contact decal (needs design)
 
 This is stage 1 of [mesh-body-shadows](2026-09-12-mesh-body-shadows.md); that item
 keeps stage 2. The same Cycles bake produces it: with the ground plane present, the
 plane's own AO atlas IS the contact shadow, sun-independent, exactly as that item
-describes it. Once B lands, the decal orients with the same plane the wheels were
-seated against — one derivation, so wheels and shadow cannot disagree.
+describes it. Orient it by `SITE_GROUND_UPS_ENU`, the plane the wheels are
+seated on — one derivation, so wheels and shadow cannot disagree.
 
 OPEN — the rendering route:
 
@@ -117,17 +93,6 @@ If the quad wins: `geometricResidualM` is decoded in `decodeHeightTileHeader.ts`
 then dropped (`ResidentHeightLookup` keeps none), so an offset derived from it needs
 new plumbing. A constant is fine in practice — the decal is only legible close up,
 where the deepest band is resident.
-
-## Data note — Opportunity's site has no terrain under it
-
-Its z17 tiles carry 0.66 m of relief across a whole 163 m tile, against 12–32 m at the
-other three. One metre over 163 m on Endeavour's rim is fill, not data: its 1.04° tilt
-is noise and the ground renders flat. `marsSurfaceBake.ts`'s window check passes
-because it tests the declared band bounds, not data coverage.
-
-OPEN — fix here (re-bake against a DTM that covers it, or move the proxy lat/lon),
-defer, or accept. Both MER lat/lons are eyeballed proxies already, as
-`surfaceFixedSites.ts` says.
 
 ## Ground preparation
 
