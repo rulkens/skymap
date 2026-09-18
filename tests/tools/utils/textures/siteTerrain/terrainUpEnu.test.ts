@@ -6,7 +6,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { terrainUpEnu } from '../../../../tools/utils/textures/terrainUpEnu';
+import { terrainUpEnu } from '../../../../../tools/utils/textures/siteTerrain/terrainUpEnu';
 
 const ROOT_HALF = Math.SQRT1_2;
 

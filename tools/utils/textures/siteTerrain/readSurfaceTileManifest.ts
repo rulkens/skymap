@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
-import { SURFACE_TILE_REGISTRY } from '../../../src/data/bodies/surfaceTileRegistry';
+import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
+import { SURFACE_TILE_REGISTRY } from '../../../../src/data/bodies/surfaceTileRegistry';
 
 /** readSurfaceTileManifest — a host's locally baked tile manifest; throws when
  *  the host has no tile pyramid or has not been baked here. */

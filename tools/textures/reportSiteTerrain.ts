@@ -14,11 +14,11 @@ import {
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
 import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
-import { tilePostAtLatLon } from '../utils/textures/tilePostAtLatLon';
-import { deepestBandLevel } from '../utils/textures/deepestBandLevel';
-import { readSurfaceTileManifest } from '../utils/textures/readSurfaceTileManifest';
-import { siteGroundHeightM } from '../utils/textures/siteGroundHeightM';
-import { siteGroundUpEnu } from '../utils/textures/siteGroundUpEnu';
+import { tilePostAtLatLon } from '../utils/textures/siteTerrain/tilePostAtLatLon';
+import { deepestBandLevel } from '../utils/textures/siteTerrain/deepestBandLevel';
+import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
+import { siteGroundHeightM } from '../utils/textures/siteTerrain/siteGroundHeightM';
+import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
 
 const RAD_TO_DEG = 180 / Math.PI;
 

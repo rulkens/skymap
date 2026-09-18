@@ -7,7 +7,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { tilePostAtLatLon } from '../../../../tools/utils/textures/tilePostAtLatLon';
+import { tilePostAtLatLon } from '../../../../../tools/utils/textures/siteTerrain/tilePostAtLatLon';
 
 const Z = 4;
 

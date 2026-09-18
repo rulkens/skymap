@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { sampleHeightTileM } from '../../../../tools/utils/textures/sampleHeightTileM';
-import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
+import { sampleHeightTileM } from '../../../../../tools/utils/textures/siteTerrain/sampleHeightTileM';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../../src/data/scene/heightTileFormat';
 
 const N = HEIGHT_POSTS_PER_TILE;
 

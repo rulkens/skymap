@@ -1,4 +1,4 @@
-import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
 
 /** deepestBandLevel — the deepest band covering `(latDeg, lonDeg)`. Several
  *  bands can overlap (a regional site window nested inside the whole-globe

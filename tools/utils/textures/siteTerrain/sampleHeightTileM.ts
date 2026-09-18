@@ -1,5 +1,5 @@
-import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
-import { latticeHeightSample } from '../../../src/utils/surfaceTiles/latticeHeightSample';
+import { HEIGHT_POSTS_PER_TILE } from '../../../../src/data/scene/heightTileFormat';
+import { latticeHeightSample } from '../../../../src/utils/surfaceTiles/latticeHeightSample';
 
 /** Cells across the full raster (129 posts, 128 cells) — the same ×16 vs ×17
  *  trap `terrainHeightM.ts` guards against, here at the raster's own stride. */

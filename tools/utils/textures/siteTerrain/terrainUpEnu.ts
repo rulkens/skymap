@@ -1,4 +1,4 @@
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 /**
  * terrainUpEnu — the ground's up vector at a point, as (east, north, up), from

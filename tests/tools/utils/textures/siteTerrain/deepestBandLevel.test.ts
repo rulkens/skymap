@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { deepestBandLevel } from '../../../../tools/utils/textures/deepestBandLevel';
-import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
+import { deepestBandLevel } from '../../../../../tools/utils/textures/siteTerrain/deepestBandLevel';
+import type { SurfaceTileManifest } from '../../../../../src/@types/scene/SurfaceTileManifest';
 
 const GLOBAL: SurfaceTileManifest['bands'][number] = {
   bounds: { west: -180, east: 180, south: -90, north: 90 },

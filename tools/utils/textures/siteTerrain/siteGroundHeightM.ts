@@ -1,5 +1,5 @@
-import type { SurfaceFixedSite } from '../../../src/@types/scene/SurfaceFixedSite';
-import type { SurfaceTileManifest } from '../../../src/@types/scene/SurfaceTileManifest';
+import type { SurfaceFixedSite } from '../../../../src/@types/scene/SurfaceFixedSite';
+import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
 import { deepestBandLevel } from './deepestBandLevel';
 import { readGroundHeightM } from './readGroundHeightM';
 

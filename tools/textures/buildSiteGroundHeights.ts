@@ -10,9 +10,9 @@ import { fileURLToPath } from 'node:url';
 
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
-import { readSurfaceTileManifest } from '../utils/textures/readSurfaceTileManifest';
-import { siteGroundHeightM } from '../utils/textures/siteGroundHeightM';
-import { siteGroundUpEnu } from '../utils/textures/siteGroundUpEnu';
+import { readSurfaceTileManifest } from '../utils/textures/siteTerrain/readSurfaceTileManifest';
+import { siteGroundHeightM } from '../utils/textures/siteTerrain/siteGroundHeightM';
+import { siteGroundUpEnu } from '../utils/textures/siteTerrain/siteGroundUpEnu';
 
 const RAD_TO_DEG = 180 / Math.PI;
 
