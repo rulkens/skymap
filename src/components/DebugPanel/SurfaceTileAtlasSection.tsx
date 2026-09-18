@@ -76,8 +76,8 @@ function SurfaceTileAtlasSection({
   }
 
   // Identical to typing the preset's degrees and submitting — same body
-  // argument, same action — so a button can never fly somewhere the box
-  // cannot.
+  // argument (same widening cast as `handleFlyToSubmit`), same action — so a
+  // button can never fly somewhere the box cannot.
   const flyToPresets = (
     <div className={styles.presets}>
       {FLY_TO_PRESETS.map((preset) => (
@@ -87,7 +87,12 @@ function SurfaceTileAtlasSection({
           className={styles.button}
           title={preset.title}
           onClick={() =>
-            flyToLonLat(preset.lonDeg, preset.latDeg, snap.bodyId ?? undefined, preset.altKm)
+            flyToLonLat(
+              preset.lonDeg,
+              preset.latDeg,
+              (snap.bodyId ?? undefined) as BodyId | undefined,
+              preset.altKm,
+            )
           }
         >
           {preset.label}
