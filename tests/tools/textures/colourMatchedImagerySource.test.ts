@@ -336,6 +336,38 @@ describe('colourMatchedImagerySource', () => {
     ).toThrow(/canvas pixel/);
   });
 
+  it("without a water mask gives a grey primary the reference's low-frequency colour", async () => {
+    // Grey primary (R=G=B) against a chromatic reference: per-channel offsets
+    // are added independently, so a grey input picks up the reference's hue —
+    // the case the two grey HiRISE orthos (Gusev, Endeavour) need, with no
+    // mask at all rather than an all-land one.
+    const GREY = [100, 100, 100] as const;
+    const RED_BROWN = [150, 100, 70] as const;
+    const primary = stubSource({
+      id: 'primary',
+      maxLevel: PRIMARY_LEVEL,
+      coverage: [COVERAGE],
+      rgb: GREY,
+    });
+    const reference = stubSource({
+      id: 'reference',
+      maxLevel: REFERENCE_LEVEL,
+      coverage: [WHOLE_GLOBE],
+      rgb: RED_BROWN,
+    });
+
+    const matched = colourMatchedImagerySource(primary, reference, { sigmaDeg: SIGMA_DEG });
+
+    const rgba = await matched.readBox(tileBox(PRIMARY_LEVEL, 4001, 1001, 1, 1), TILE_PX, TILE_PX);
+    expect(rgba).not.toBeNull();
+
+    const centre = (TILE_PX * (TILE_PX / 2) + TILE_PX / 2) * 4;
+    for (let c = 0; c < 3; c++) {
+      expect(Math.abs(rgba![centre + c]! - RED_BROWN[c]!)).toBeLessThanOrEqual(2);
+    }
+    expect(rgba![centre + 3]).toBe(255);
+  });
+
   it('declines where the primary declines, without reading the reference', async () => {
     const primary = stubSource({
       id: 'primary',

@@ -18,17 +18,20 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
+import type { BodyTextureId } from '../../../../@types/data/BodyTextureId';
 import type { SurfaceTileSpec } from '../../../../@types/data/SurfaceTileSpec';
 import type { SurfaceEffect } from '../../../../@types/data/SurfaceEffect';
 import type { SurfaceEffectInputs } from '../../../../@types/rendering/SurfaceEffectInputs';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
+import { BODY_AMBIENT_LIGHT } from '../../../../data/bodies/bodyAmbientLight';
 import { EARTH_SURFACE_PARAMS } from '../../../../data/bodies/earthSurfaceParams';
 import { CLOUD_SHELL_PARAMS } from '../../../../data/bodies/cloudShellParams';
 import { SURFACE_TILE_REGISTRY } from '../../../../data/bodies/surfaceTileRegistry';
 import { bodyCameraDistanceMpc } from '../../../../utils/scene/bodyCameraDistanceMpc';
 import { cloudDeckFade } from '../../../../utils/scene/cloudDeckFade';
 import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
+import { isTexturedBodyKey } from '../../../../utils/bodyTextures/isTexturedBodyKey';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { prepareBodySurfaceFrame } from './earthPass';
 
@@ -117,7 +120,10 @@ export const surfaceTilesPass: ContentPass = {
       effects: spec.effects,
       effectInputs,
       shading: spec.shading,
-      ambientLight: state.settings.earth.ambientLight,
+      // Earth's floor is its live slider; any other body matches its textured globe.
+      ambientLight: isTexturedBodyKey(view.slab.frame.bodyId as BodyTextureId)
+        ? BODY_AMBIENT_LIGHT
+        : state.settings.earth.ambientLight,
       debugLodOverlay: state.settings.debug.overlays['surface-lod-overlay'],
       noDisplacement: state.settings.debug.overlays['terrain-no-displacement'],
       noSkirts: state.settings.debug.overlays['terrain-no-skirts'],

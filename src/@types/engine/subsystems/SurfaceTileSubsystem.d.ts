@@ -63,7 +63,7 @@ export type SurfaceTileSubsystem = Destroyable & {
    * Terrain height (metres above the datum) under a body-fixed direction —
    * the CPU twin of the shader's `lattice.wesl` sampler (spec §8.4). `0` for
    * a body other than the one currently ENGAGED (§ one engaged): body-generic
-   * by construction, so Mars (F4) is a registry row away, not a second query.
+   * by construction, so a new body is a registry row away, not a second query.
    */
   terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number;
 

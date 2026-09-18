@@ -13,8 +13,8 @@
  * just a caller's `if` — a drive-site `if` once left stale tiles drawing
  * after the camera pulled back out. Allocation is lazy: the 67 MB atlas is
  * created by the first engaged `update()`. A `bodyId` change (R7's switch
- * path, untested until F4's Mars row) stands the old body's atlas and
- * residency down before engaging the new one — see `standDown`.
+ * path) stands the old body's atlas and residency down before engaging the
+ * new one — see `standDown`.
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
