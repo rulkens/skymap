@@ -282,7 +282,7 @@ async function main(): Promise<void> {
       rgb[i * 3 + 1] = Math.round(tone * 222);
       rgb[i * 3 + 2] = Math.round(tone * 255);
     }
-    const outPath = join('docs/screenshots', `local-bubble-preview-${name}.png`);
+    const outPath = join('data/localBubble/previews', `local-bubble-preview-${name}.png`);
     mkdirSync(dirname(outPath), { recursive: true });
     await sharp(rgb, { raw: { width: OUT_W, height: OUT_H, channels: 3 } })
       .png()

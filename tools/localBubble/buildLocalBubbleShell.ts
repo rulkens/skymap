@@ -30,13 +30,13 @@ const CHANNELS = ['d', 'd_inner', 'd_outer', 'thick'] as const;
 /**
  * Angular smoothing radius, degrees. The raw fit jumps between candidate dust
  * walls along adjacent sight lines; displaced unsmoothed it renders as radial
- * spikes, not a membrane (docs/screenshots/local-bubble-preview-*.png). Override
+ * spikes, not a membrane (data/localBubble/previews/local-bubble-preview-*.png). Override
  * with --smooth-deg to re-tune against the preview.
  */
 const DEFAULT_SMOOTH_DEG = 2.5;
 
 const OUT_DIR = 'public/data/local-bubble/v1';
-const PREVIEW_DIR = 'docs/screenshots';
+const PREVIEW_DIR = 'data/localBubble/previews';
 
 function readColumn(
   view: DataView,
