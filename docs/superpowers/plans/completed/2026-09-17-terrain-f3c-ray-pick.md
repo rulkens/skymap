@@ -194,15 +194,36 @@ datum. Both fail today and would fail again if a future change reverted either s
 
 ## Definition of Done
 
-- [ ] `npm test` green; `npm run typecheck` clean.
-- [ ] `npm run perf` run before F1 and after F2, same URL, result recorded here.
-- [ ] Every new test mutation-verified.
-- [ ] No new `TODO`/`FIXME` without an owner and a date.
-- [ ] The backlog item's index line **and** detail file are gone (PR 1).
-- [ ] Spec §8.1/§8.3/§12 match what shipped.
-- [ ] `deletion-audit` run once, at `/feature-done` on PR 2.
-- [ ] Eye-check by the user, on these poses: a wheel descent onto Everest (the steps
+- [x] `npm test` green; `npm run typecheck` clean. — 8772 tests / 1307 files, typecheck
+      clean on both projects, at `ffcde125b`.
+- [x] `npm run perf` run before F1 and after F2, same URL, result recorded here.
+      **The GPU harness holds a fixed pose and never drags or wheels, so it cannot reach
+      the gesture path at all** — its numbers do not close this gate on their own, and a
+      first run against a freshly-started Vite server reads ~2x slow. A-B-A-B across two
+      servers (scratch worktree at the pre-F2 commit, `node_modules` + `public/data`
+      symlinked): before 34.0 / 33.9 / 37.2 (mean 35.0), after 33.8 / 37.8 / 38.5 (mean
+      36.7). Within-arm spread ~3.3 ms exceeds the 1.7 ms gap, so the result is noise.
+      The measurement that does bite is a lookup count: **2 field lookups near-nadir, 2
+      at 60°, 47 grazing**, hard ceiling `SAMPLE_BUDGET`(64) + bisection cap(24) = **≤88
+      per pick, once per gesture tick**.
+- [x] Every new test mutation-verified. — the two `raycastTerrain` cases repaired in
+      `f7c043a30` were (sign flip; bisection→false position). The F1/F2-era cases are
+      **not independently attested**: ticked on the user's ruling, 2026-09-18.
+- [x] No new `TODO`/`FIXME` without an owner and a date. — zero markers on the branch.
+- [x] The backlog item's index line **and** detail file are gone (PR 1).
+- [x] Spec §8.1/§8.3/§12 match what shipped.
+- [x] `deletion-audit` run once, at `/feature-done` on PR 2. — ~265 LOC found; the
+      safe-now bin landed as `ffcde125b` (net −7). The needs-ruling bin was put to the
+      user and **declined in full, 2026-09-18**: the Mars presets keep their copied
+      coordinates, `raycastStepCapHeadroom` stays a second knob, and the five
+      `raycast*.ts` constant files stay five files.
+- [x] Eye-check by the user, on these poses: a wheel descent onto Everest (the steps
       should shorten as the summit nears, not slam); a descent to the Dead Sea (no crawl
       through the last 400 m); a drag starting on a summit and crossing a valley (the
       ground must not slide under the cursor); a drag latched near the limb.
-- [ ] No local state added to the camera path.
+      Attested 2026-09-18, plus the pick marker on both Earth and Mars. One bug surfaced
+      and was deferred by the user: orbit trails draw through terrain at the Dead Sea —
+      `docs/backlog/2026-09-18-orbit-trails-draw-through-terrain.md`.
+- [x] No local state added to the camera path. — verified file by file: no module-level
+      mutable binding in `raycastTerrain`, `terrainPickAt`, `latchSurfaceGesture`,
+      `surfacePickToleranceM`, `surfaceStep` or `terrainPickMarkerPass`.
