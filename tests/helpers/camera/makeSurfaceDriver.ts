@@ -41,8 +41,6 @@ export function makeSurfaceDriver() {
         bodyRadiusM,
         standoffRadii: SURFACE_STANDOFF_RADII,
         groundRadiusAtM: () => bodyRadiusM,
-        // A no-relief fixture body: tight enough to bracket the flat field
-        // without standing in for any real terrain shell.
         // No-relief fixture: tight shells, since their separation sets the
         // marcher's step cap and any slack becomes pick error (see the note in
         // surfaceStep.test.ts's CTX).

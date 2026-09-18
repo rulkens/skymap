@@ -9,6 +9,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { surfaceZoomStep } from '../../../src/utils/camera/surfaceZoomStep';
+import { distance3 } from '../../../src/utils/math/distance3';
 import { bodyFixedEyeM } from '../../../src/utils/camera/bodyFixedEyeM';
 import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
 import { SURFACE_STANDOFF_RADII } from '../../../src/utils/camera/clampDistance';
@@ -65,14 +66,15 @@ describe('surfaceZoomStep', () => {
       null,
     );
     const newEye = bodyFixedEyeM(stepped);
-    const rangeTo = (a: Readonly<Vec3>, b: Readonly<Vec3>): number =>
-      Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]);
 
     // Loosened to metres (not the bit): the anchor marches over terrain to a
     // pixel-sized tolerance rather than an exact analytic root (F2).
-    expect(rangeTo(anchorPeak, newEye)).toBeCloseTo(factor * rangeTo(anchorPeak, eye), -1);
+    expect(distance3(anchorPeak, newEye)).toBeCloseTo(factor * distance3(anchorPeak, eye), -1);
     // A `pickOnBody`-against-the-datum regression would satisfy this law
     // instead — off by the full 8 km peak height, nowhere near this margin.
-    expect(rangeTo(anchorDatum, newEye)).not.toBeCloseTo(factor * rangeTo(anchorDatum, eye), -1);
+    expect(distance3(anchorDatum, newEye)).not.toBeCloseTo(
+      factor * distance3(anchorDatum, eye),
+      -1,
+    );
   });
 });

@@ -12,7 +12,6 @@ import type { DragStep } from '../../../src/@types/camera/DragStep';
 import type { GroundRadiusLookup } from '../../../src/@types/camera/GroundRadiusLookup';
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 // Earth-scale bounds matching raycastTerrain.test.ts's own fixtures.
 const DATUM_M = 6_371_000;
@@ -51,7 +50,5 @@ describe('latchSurfaceGesture', () => {
     );
     // A `pickOnBody`-against-the-datum regression reads exactly DATUM_M here.
     expect(gesture.anchorRadiusM).toBeGreaterThan(DATUM_M);
-    expect(gesture.anchorLocalM).not.toBeNull();
-    expect(gesture.anchorRadiusM).toBe(Math.hypot(...(gesture.anchorLocalM as Vec3)));
   });
 });

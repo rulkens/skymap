@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { raycastTerrain } from '../../../src/utils/camera/raycastTerrain';
 import { raySphereRoots } from '../../../src/utils/math/raySphereRoots';
 import { distance3 } from '../../../src/utils/math/distance3';
+import { normalize3 } from '../../../src/utils/math/normalize3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
 import type { GroundRadiusLookup } from '../../../src/@types/camera/GroundRadiusLookup';
 
@@ -14,11 +15,6 @@ const DATUM_M = 6_371_000;
 const INNER_RADIUS_M = DATUM_M - 500;
 const OUTER_RADIUS_M = DATUM_M + 9000;
 const CENTRE_M: Vec3 = [0, 0, 0];
-
-function normalize(v: Vec3): Vec3 {
-  const len = Math.hypot(v[0], v[1], v[2]);
-  return [v[0] / len, v[1] / len, v[2] / len];
-}
 
 describe('raycastTerrain', () => {
   it('matches the analytic sphere root for a flat field, near-nadir ray', () => {
@@ -84,7 +80,7 @@ describe('raycastTerrain', () => {
     const ridgeHeightM = 4000;
     const ridgeRadiusM = DATUM_M + ridgeHeightM;
     const origin: Vec3 = [0, 0, DATUM_M + 50_000];
-    const dir = normalize([1, 0, -2]);
+    const dir = normalize3([1, 0, -2]);
 
     const ridgeRoots = raySphereRoots(origin, dir, CENTRE_M, ridgeRadiusM);
     expect(ridgeRoots).not.toBeNull();
@@ -232,7 +228,7 @@ describe('raycastTerrain', () => {
     const cliffRadiusM = DATUM_M + cliffHeightM;
     const EDGE_CLEARANCE_M = 1;
     const origin: Vec3 = [-1000, 0, cliffRadiusM + EDGE_CLEARANCE_M + 4000];
-    const dir = normalize([1, 0, -4]);
+    const dir = normalize3([1, 0, -4]);
     const toleranceM = 0.001;
     const cliffField: GroundRadiusLookup = (p) =>
       Math.atan2(p[0], p[2]) >= 0 ? cliffRadiusM : DATUM_M;
