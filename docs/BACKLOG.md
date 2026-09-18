@@ -78,6 +78,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Rendering
 
+- [ ] **Render the Local Bubble as a Fresnel shell** `needs-design` — the bake shipped (PR #755); the renderer design is converged but unspecced, and `refactor-ground` runs before the spec. → [details](backlog/2026-09-18-local-bubble-shell-render.md)
 - [ ] **Deselecting a volume field never frees its VRAM** `needs-design` — untick fades but keeps the cube resident; polyphorm-2mrs strands 217 MB until reload. Blocker: `DemandCtx` has no fade surface to gate `release` on. → [details](backlog/2026-09-13-volume-field-vram-release.md)
 - [ ] **S-stars are not lensed by Sgr A\*** `needs-design` — never enter the cubemap (capture-pose gate), and at-infinity is wrong for them anyway; analytic finite-distance images prototyped on branch worktree-s-star-analytic-lensing, parked on look (adaptive exposure needed). → [details](backlog/2026-09-03-s-star-analytic-lensing.md)
 - [ ] **Sky-cubemap face seams where Gaia aggregates draw** `ready` — face edges show in the lens band, worst when strafing (seen again 2026-09-14 on the deployed build); aggregate splats spilling across a 90° face edge are culled on the neighbour face; add the angular floor to the cull radius or skip the cull in capture. → [details](backlog/2026-09-03-sky-cubemap-face-seams-star-aggregates.md)
@@ -224,6 +225,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Saga-context boot-ordering argument told nine times** `ready` — one causal chain restated across nine docblocks; keep it in `sagaContextRegistered.ts` and point the rest there. → [details](backlog/2026-07-30-boot-ordering-argument-nine-copies.md)
 - [ ] **Plan `Needs:` lines for wave dispatch** `needs-design` — SDD serializes plans; mined dependency graphs from completed plans understate real depth, so the DAG must be authored, not mined. → [details](backlog/2026-07-31-plan-needs-lines-wave-dispatch.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
+- [ ] **Repo is not prettier-clean** `needs-verification` — a `prettier --write` over `tests/tools/` alone reformatted ~20 untouched files (2026-09-18), so `npm run format` would produce a large diff unrelated to any change and every incidental format sweep pollutes a PR. Confirm the scope, then either sweep once or narrow the format script.
 - [ ] **Comment prune to the 5-line budget** `ready` — script-listed files only; landmine memories + RENDERER.md protected. → [details](backlog/2026-09-15-comment-prune.md)
 
 ## External / blocked
