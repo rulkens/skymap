@@ -44,10 +44,12 @@ export function App() {
   const [light, setLight] = useState<RenderLight>(DEFAULT_LIGHT);
   const [originalUrl, setOriginalUrl] = useState<string>();
   const [adjustedUrl, setAdjustedUrl] = useState<string>();
-  // The box the currently-displayed pair was actually rendered for — lags
-  // `box` while a pan/zoom's render is in flight, driving both the preview
-  // CSS transform and the "still catching up" indicator (see CompareView).
-  const [renderedBox, setRenderedBox] = useState<LonLatBounds>();
+  // The box each displayed image was actually rendered for — they lag `box`
+  // while a pan/zoom's render is in flight, and they lag SEPARATELY: at wide
+  // spans `original` returns in milliseconds while `adjusted` still has a sun
+  // fit to run, so the pair is only caught up once both agree.
+  const [originalBox, setOriginalBox] = useState<LonLatBounds>();
+  const [adjustedBox, setAdjustedBox] = useState<LonLatBounds>();
   const [arrows, setArrows] = useState<readonly FieldArrow[]>([]);
   const [fitCoarsened, setFitCoarsened] = useState(false);
   const [showArrows, setShowArrows] = useState(true);
@@ -61,7 +63,14 @@ export function App() {
   );
   const recipeLoaded = recipe !== undefined;
   const sunFit = recipe?.sunFit;
-  const pending = renderedBox === undefined || !boxEquals(renderedBox, box);
+  const pending =
+    originalBox === undefined ||
+    adjustedBox === undefined ||
+    !boxEquals(originalBox, box) ||
+    !boxEquals(adjustedBox, box);
+  // The transform anchors on what is actually on screen, so it follows the
+  // image that has NOT caught up yet whenever the two disagree.
+  const renderedBox = pending ? (adjustedBox ?? originalBox) : box;
 
   useEffect(() => {
     let cancelled = false;
@@ -94,7 +103,7 @@ export function App() {
             if (prev) URL.revokeObjectURL(prev);
             return URL.createObjectURL(blob);
           });
-          setRenderedBox(box);
+          setOriginalBox(box);
         })
         .catch((err) => {
           if (!cancelled) setRenderError(String(err));
@@ -125,7 +134,7 @@ export function App() {
             if (prev) URL.revokeObjectURL(prev);
             return URL.createObjectURL(blob);
           });
-          setRenderedBox(box);
+          setAdjustedBox(box);
           setRenderError(undefined);
         })
         .catch((err) => {

@@ -5,7 +5,10 @@ the sun shading baked into the Viking MDIM 2.1 colour mosaic, compresses
 blown crater rims while keeping the polar ice bright, and grades the colour,
 so the Mars tiles carry albedo that the renderer's own lighting shades once.
 Run with `npm run albedo-bench` from the repo root; opens on
-http://localhost:5700 (see `tools/utils/io/devPorts.ts`).
+http://localhost:5700 (see `tools/utils/io/devPorts.ts`). The script sets
+`VITE_CONFIG_NATIVE_IGNORE_WARNING`: Vite 8's future `configLoader: 'native'`
+would reject this repo's extensionless imports, which every module the plugin
+reaches uses, and the warning lists all ~35 of them on every boot.
 
 Spec: `docs/superpowers/specs/2026-09-17-albedo-bench-design.md`.
 
