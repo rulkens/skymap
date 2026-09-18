@@ -101,6 +101,10 @@ export type CompareViewProps = {
   adjustedUrl: string | undefined;
   viewMode: ViewMode;
   arrows: readonly FieldArrow[];
+  // True when /api/field fit a coarser stride than the committed recipe's
+  // own (previewSunFit, wide boxes only) — the arrows are a preview, not
+  // what the bake would compute.
+  fitCoarsened: boolean;
   box: LonLatBounds;
   view: ViewState;
   onView: (view: ViewState) => void;
@@ -136,8 +140,18 @@ export function CompareView(props: CompareViewProps) {
   // pointerup was the end of a drag, not a click" for the one tick it's needed.
   const suppressNextClickRef = useRef(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  const { originalUrl, adjustedUrl, viewMode, arrows, box, view, onView, renderedBox, pending } =
-    props;
+  const {
+    originalUrl,
+    adjustedUrl,
+    viewMode,
+    arrows,
+    fitCoarsened,
+    box,
+    view,
+    onView,
+    renderedBox,
+    pending,
+  } = props;
 
   // React's onWheel is attached passively (can't preventDefault, so the page
   // would scroll under the zoom); a native listener can opt out. The ref
@@ -222,6 +236,10 @@ export function CompareView(props: CompareViewProps) {
     onPointerUp: onPanPointerUp,
   };
   const pendingBadge = pending ? <span className="pending-badge">Rendering…</span> : null;
+  const coarseFitBadge =
+    fitCoarsened && arrows.length > 0 ? (
+      <span className="coarse-fit-badge">preview fit — coarser than the recipe</span>
+    ) : null;
 
   // The wheel listener is native (see above) and attaches to `rootRef`, so
   // that element has to be on every path — loading included — or a mount
@@ -238,6 +256,7 @@ export function CompareView(props: CompareViewProps) {
             <img src={originalUrl} alt="original" draggable={false} style={{ transform: xform }} />
             {pendingBadge}
             <ArrowOverlay arrows={arrows} box={box} />
+            {coarseFitBadge}
           </div>
         </figure>
         <figure>
@@ -246,6 +265,7 @@ export function CompareView(props: CompareViewProps) {
             <img src={adjustedUrl} alt="adjusted" draggable={false} style={{ transform: xform }} />
             {pendingBadge}
             <ArrowOverlay arrows={arrows} box={box} />
+            {coarseFitBadge}
           </div>
         </figure>
       </div>
@@ -289,6 +309,7 @@ export function CompareView(props: CompareViewProps) {
         <span className="tag l">{flipShowing === 'original' ? 'Original' : 'Adjusted'}</span>
         {pendingBadge}
         <ArrowOverlay arrows={arrows} box={box} />
+        {coarseFitBadge}
       </div>
     );
   } else {
@@ -336,6 +357,7 @@ export function CompareView(props: CompareViewProps) {
         <span className="tag r">Original</span>
         {pendingBadge}
         <ArrowOverlay arrows={arrows} box={box} />
+        {coarseFitBadge}
       </div>
     );
   }

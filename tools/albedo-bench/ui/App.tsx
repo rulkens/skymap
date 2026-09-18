@@ -49,6 +49,7 @@ export function App() {
   // CSS transform and the "still catching up" indicator (see CompareView).
   const [renderedBox, setRenderedBox] = useState<LonLatBounds>();
   const [arrows, setArrows] = useState<readonly FieldArrow[]>([]);
+  const [fitCoarsened, setFitCoarsened] = useState(false);
   const [saveStatus, setSaveStatus] = useState('');
   const [renderError, setRenderError] = useState<string>();
 
@@ -146,7 +147,10 @@ export function App() {
       defaultApi
         .getField(box, sunFit)
         .then((r) => {
-          if (!cancelled) setArrows(r.arrows);
+          if (!cancelled) {
+            setArrows(r.arrows);
+            setFitCoarsened(r.coarsened);
+          }
         })
         .catch((err) => {
           if (!cancelled) setRenderError(String(err));
@@ -206,6 +210,7 @@ export function App() {
               adjustedUrl={adjustedUrl}
               viewMode={viewMode}
               arrows={sunMode === 'fitted' ? arrows : []}
+              fitCoarsened={sunMode === 'fitted' && fitCoarsened}
               box={box}
               view={view}
               onView={setView}

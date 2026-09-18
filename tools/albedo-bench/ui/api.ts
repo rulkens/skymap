@@ -18,7 +18,7 @@ export type Api = {
   getField: (
     box: LonLatBounds,
     sunFit: AlbedoRecipe['sunFit'],
-  ) => Promise<{ arrows: FieldArrow[] }>;
+  ) => Promise<{ arrows: FieldArrow[]; coarsened: boolean }>;
 };
 
 async function messageOf(res: Response): Promise<string> {

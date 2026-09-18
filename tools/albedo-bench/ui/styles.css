@@ -328,6 +328,22 @@ img {
   pointer-events: none;
 }
 
+/* Unobtrusive — sits with the arrows it describes, never fights for attention
+   with the pending badge above it. */
+.coarse-fit-badge {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font: 500 10px var(--mono);
+  color: #fff;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 2px 8px;
+  border-radius: 3px;
+  pointer-events: none;
+  opacity: 0.75;
+}
+
 .pair {
   display: grid;
   grid-template-columns: 1fr 1fr;

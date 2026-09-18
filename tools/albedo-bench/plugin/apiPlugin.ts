@@ -164,7 +164,7 @@ export function apiPlugin(): Plugin {
 
           if (method === 'POST' && path === '/api/field') {
             const body = (await readJsonBody(req)) as FieldBody;
-            const out = await handleField({ body, deps: { getField } });
+            const out = await handleField({ body, deps: { getField, radiusM } });
             sendJson(res, 200, out);
             return;
           }

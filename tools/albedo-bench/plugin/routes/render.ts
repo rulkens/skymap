@@ -4,6 +4,8 @@
  * pixel pipeline (`adjusted`), with an optional lighting-preview relight
  * multiplied in afterwards. A `sunFit` slider must relight `adjusted` live,
  * not only after Save, so `deps.getField` is keyed on the recipe's `sunFit`.
+ * Wide boxes fit at `previewSunFit`'s coarser stride (see `field.ts`), so
+ * the two routes' calls land on the same cached fit.
  */
 import type { AlbedoRecipe } from '../../../textures/AlbedoRecipe.ts';
 import type { HeightSource } from '../../../textures/HeightSource.ts';
@@ -19,6 +21,7 @@ import { sampleSlope } from '../../../utils/textures/sampleSlope.ts';
 import { srgbToLinear } from '../../../utils/color/srgbToLinear.ts';
 import { linearToSrgb } from '../../../utils/color/linearToSrgb.ts';
 import { orenNayarPreview } from '../orenNayarPreview.ts';
+import { previewSunFit } from '../previewSunFit.ts';
 
 export type RenderLight = {
   readonly azDeg: number;
@@ -95,7 +98,9 @@ export async function handleRender(opts: {
   } else {
     const { sunFit, ...pixelApply } = recipe;
     const field =
-      manualG !== undefined ? constantSunField(box, manualG, radiusM) : await getField(box, sunFit);
+      manualG !== undefined
+        ? constantSunField(box, manualG, radiusM)
+        : await getField(box, previewSunFit({ sunFit, box, radiusM }).sunFit);
     raster = await albedoRecipeImagerySource(imagery, height, field, pixelApply).readBox(
       box,
       px,
