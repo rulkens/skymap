@@ -18,16 +18,12 @@ import sharp from 'sharp';
 import type { SurfaceFixedSite } from '../../src/@types/scene/SurfaceFixedSite';
 import type { SurfaceTileManifest } from '../../src/@types/scene/SurfaceTileManifest';
 import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
-import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
 import { SURFACE_TILE_REGISTRY } from '../../src/data/bodies/surfaceTileRegistry';
-import { TEXTURE_PRIME_MERIDIAN_U } from '../../src/data/bodies/texturePrimeMeridianU';
 import { HEIGHT_POSTS_PER_TILE } from '../../src/data/scene/heightTileFormat';
-import { degToRad } from '../../src/utils/math/degToRad';
 import { codeHeightM } from '../../src/utils/surfaceTiles/codeHeightM';
 import { latticeHeightSample } from '../../src/utils/surfaceTiles/latticeHeightSample';
-import { surfaceTileColumns } from '../../src/utils/surfaceTiles/surfaceTileColumns';
 import { surfaceTilePath } from '../../src/utils/surfaceTiles/surfaceTilePath';
-import { surfaceTileXyForUv } from '../../src/utils/surfaceTiles/surfaceTileXyForUv';
+import { tilePostAtLatLon } from '../utils/textures/tilePostAtLatLon';
 
 /** Cells across the full raster (129 posts, 128 cells) — the same ×16 vs ×17
  *  trap `terrainHeightM.ts` guards against, here at the raster's own stride. */
@@ -40,7 +36,7 @@ const GENERATED_BANNER =
   '// of a non-dev Mars tile bake)\n' +
   "// Source of truth:  the host's own baked height tiles\n";
 
-function manifestFor(hostId: string): SurfaceTileManifest {
+export function manifestFor(hostId: string): SurfaceTileManifest {
   const registry = SURFACE_TILE_REGISTRY as Record<string, { manifestKey: string } | undefined>;
   const key = registry[hostId]?.manifestKey;
   if (key === undefined) {
@@ -120,16 +116,7 @@ async function sampleGroundHeightM(
   manifest: SurfaceTileManifest,
 ): Promise<number> {
   const z = deepestBandLevel(manifest, site.latDeg, site.lonDeg);
-  const lon = degToRad(site.lonDeg);
-  const lat = degToRad(site.latDeg);
-  const u = lon / (2 * Math.PI) + TEXTURE_PRIME_MERIDIAN_U;
-  const v = lat / Math.PI + 0.5;
-
-  const cols = surfaceTileColumns(z, SURFACE_TILE_PX);
-  const rows = cols / 2;
-  const [x, y] = surfaceTileXyForUv([u, v], z, SURFACE_TILE_PX);
-  const colFrac = u * cols - Math.floor(u * cols);
-  const rowFrac = Math.min(1, Math.max(0, (1 - v) * rows - y));
+  const { x, y, colFrac, rowFrac } = tilePostAtLatLon(site.latDeg, site.lonDeg, z);
 
   const tilePath = resolve(
     `public/data/images/${surfaceTilePath({ product: 'height', z, x, y }, manifest.prefix)}`,
