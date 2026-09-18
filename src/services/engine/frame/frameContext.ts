@@ -242,6 +242,9 @@ export function deriveFrameContext(
     slabs,
     bodyPose,
     canvasSize,
+    // Forwarded by reference, not copied: the listener allocates a fresh pair
+    // per pointermove and only while the debug overlay that reads it is on.
+    cursorTexPx: state.picking.cursorTexPx,
     drawCamPos,
     drawPxPerRad,
     nowMs,

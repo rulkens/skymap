@@ -46,6 +46,13 @@ const CTX = {
   bodyRadiusM: R,
   standoffRadii: SURFACE_STANDOFF_RADII,
   groundRadiusAtM: () => R,
+  // A no-relief fixture body, so these bracket the flat field as tightly as the
+  // march needs. They are NOT a stand-in for real relief: the shell separation
+  // alone sets the marcher's step cap, so slack here shows up as pick error and
+  // would force this file's bit-exact assertions to be loosened for no reason
+  // in the code under test.
+  innerBoundRadiusM: R * (1 - 1e-6),
+  outerBoundRadiusM: R * (1 + 1e-6),
   sceneUpLocal: POLE,
   focusPivotM: null,
   tuning: TUNING,
@@ -390,7 +397,10 @@ describe('surfaceStep', () => {
     const zoomedEye = eyeOf(apply(c, tilted, zoom(F, true)));
     const rangeTo = (a: Vec3, e: Vec3): number => Math.hypot(e[0] - a[0], e[1] - a[1], e[2] - a[2]);
 
-    expect(rangeTo(fresh, zoomedEye)).toBeCloseTo(F * rangeTo(fresh, eye), 12);
+    // 10, not bit-exact: the anchor is a marched pick now, and its residual here
+    // measures 1.7e-11. A regression that picked the datum instead misses by a
+    // body radius, so the two orders of headroom cost nothing.
+    expect(rangeTo(fresh, zoomedEye)).toBeCloseTo(F * rangeTo(fresh, eye), 10);
     expect(rangeTo(anchor, zoomedEye)).not.toBeCloseTo(F * rangeTo(anchor, eye), 6);
     expect(angleBetween(fresh, anchor)).toBeGreaterThan(0.5);
   });
@@ -411,7 +421,7 @@ describe('surfaceStep', () => {
     const eye = eyeOf(stepped);
     expect(Math.hypot(eye[0] - 0.6, eye[1], eye[2] - 0.8)).toBeCloseTo(
       0.5 * Math.hypot(0 - 0.6, 0, 2 - 0.8),
-      12,
+      11, // measured residual 1.2e-12
     );
     expect(angleBetween(pickThrough(stepped, [75, 50])!, anchor)).toBeLessThan(1e-12);
 
@@ -795,8 +805,11 @@ describe('surfaceStep', () => {
       const before = pose;
       pose = apply(c, pose, zoom(0.8, false, [50, 70]));
       maxTurn = Math.max(maxTurn, angleBetween(upOf(before), upOf(pose)));
-      // Pixel lock, every tick of the way down, not merely at the end.
-      expect(angleBetween(pickThrough(pose, [50, 70])!, anchor0)).toBeLessThan(1e-12);
+      // Pixel lock, every tick of the way down, not merely at the end. Looser
+      // than the single-notch checks above (measured 2.1e-8) because this walks
+      // many notches and each one re-picks: the marcher's residual compounds
+      // down the descent where an analytic root's would not.
+      expect(angleBetween(pickThrough(pose, [50, 70])!, anchor0)).toBeLessThan(1e-7);
     }
 
     // North is up. (It gets WORSE on the first notch — 1.2 → 2.39 rad — because

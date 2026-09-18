@@ -1012,7 +1012,7 @@ land/park call is the user's.
 | F1  | P2–P5 as commits + height bake + height atlas + two-product cut                                                                                       | #713 closed superseded, landed via #719                 |
 | F2  | Displacement, normals, edge collapse, base-globe shrink                                                                                               | #719 — landed (squashed onto `main` with F1, 343fd14c0) |
 | F3a | `SHGT` v3 CPU post grid (§8.4) + height re-bake, `terrainHeightM`, and the three §8.3 rows it serves: camera floor, site placement, altitude readouts | prep PR, then feature PR                                |
-| F3c | `raycastTerrain` (§8.1) and the two camera gesture anchors it serves: the zoom pick and the drag latch                                                | prep PR, then feature PR                                |
+| F3c | `raycastTerrain` (§8.1) and the two camera gesture anchors it serves: the zoom pick and the drag latch                                                | prep #751 → `597d0fe58`, feature #753                   |
 | F3b | Cloud-deck-as-altitude; separately, terrain under an atmosphere                                                                                       | split in two, see below                                 |
 | F4  | Mars: imagery bake, global height, four rover-site bands                                                                                              | prep #738, then feature PR                              |
 

@@ -34,6 +34,7 @@ import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { SurfaceTileRenderer } from '../../rendering/SurfaceTileRenderer';
+import type { TerrainPickMarkerRenderer } from '../../rendering/TerrainPickMarkerRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
@@ -416,6 +417,13 @@ export type EngineGpuHandles = {
    * re-nulled by `destroy()`.
    */
   surfaceTileRenderer: SurfaceTileRenderer | null;
+  /**
+   * The `terrain-pick-marker` debug overlay's analytic sphere, drawn into the
+   * same `foreground:0` body step (and against the same depth) as
+   * `surfaceTileRenderer`, so the terrain occludes it. Null until `initGpu`
+   * constructs it; nothing reads it unless that toggle is on.
+   */
+  terrainPickMarkerRenderer: TerrainPickMarkerRenderer | null;
   /**
    * Flat-emissive resolved stars (the `spheres` branch of
    * `partitionStarsByResolution` — any star whose apparent size crosses

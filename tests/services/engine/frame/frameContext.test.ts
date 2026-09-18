@@ -104,6 +104,7 @@ function makeState(
       starCatalogs: { enabled: false, items: { famousStar: { enabled: false } } },
       bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
     },
+    picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
   } as unknown as EngineState;
 }
 

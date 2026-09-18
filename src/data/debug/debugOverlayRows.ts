@@ -11,6 +11,11 @@ import type { DebugOverlayRow } from '../../@types/data/debug/DebugOverlayRow';
 // rect fell back from the leaf it's shading (green = the leaf's own tile,
 // yellow/orange/red = 1/2/3+ levels coarser) — see
 // surfaceTile/surfaceLighting.wesl's `tileLodOverlayColor`.
+// terrain-pick-marker: a fresh ray/terrain pick under the cursor every frame,
+// drawn as a depth-tested analytic sphere (`terrainPickMarkerPass`); it also
+// turns on the Camera section's `terrain_pick_height_m` row, since the cursor
+// is only carried while this is on. Sectioned to its own tuning board so the
+// switch sits with the radius knob that only means anything while it is on.
 export const DEBUG_OVERLAY_ROWS = [
   { key: 'pick-buffer', label: 'Show pick buffer' },
   { key: 'orbit-trail-impostor', label: 'Show orbit-trail impostor' },
@@ -21,4 +26,9 @@ export const DEBUG_OVERLAY_ROWS = [
     section: 'surface-tiles',
   },
   { key: 'terrain-no-skirts', label: 'No skirts', section: 'surface-tiles' },
+  {
+    key: 'terrain-pick-marker',
+    label: 'Terrain pick marker',
+    section: 'terrain-pick-marker',
+  },
 ] as const satisfies readonly DebugOverlayRow[];

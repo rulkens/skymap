@@ -34,6 +34,7 @@ function makeCtx(): ReadyFrameContext {
     vp,
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
+    cursorTexPx: null,
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
     nowMs: 0,

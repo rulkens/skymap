@@ -83,6 +83,7 @@ import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/st
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
+import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
@@ -186,6 +187,7 @@ export function makeSettingsFixture(
         DebugOverlayKey,
         boolean
       >,
+      terrainPickMarkerRadiusM: TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M,
       disabledPasses: {},
       renderStrategy: 'auto',
       clipPathInspect: {
