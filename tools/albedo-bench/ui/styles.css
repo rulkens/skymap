@@ -107,6 +107,11 @@ h1 {
   gap: 10px;
 }
 
+.view-panel {
+  display: grid;
+  gap: 8px;
+}
+
 .toolbar {
   display: flex;
   flex-wrap: wrap;

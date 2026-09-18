@@ -50,6 +50,7 @@ export function App() {
   const [renderedBox, setRenderedBox] = useState<LonLatBounds>();
   const [arrows, setArrows] = useState<readonly FieldArrow[]>([]);
   const [fitCoarsened, setFitCoarsened] = useState(false);
+  const [showArrows, setShowArrows] = useState(true);
   const [saveStatus, setSaveStatus] = useState('');
   const [renderError, setRenderError] = useState<string>();
 
@@ -139,9 +140,14 @@ export function App() {
 
   // Field refit — box or sunFit only. `sunFit` (not `recipe`) is the
   // dependency so an unrelated slider edit, which replaces `recipe`'s object
-  // identity without touching `sunFit`, never refits.
+  // identity without touching `sunFit`, never refits. Overlay off skips the
+  // fit outright — the fast way to pan/zoom without paying for one.
   useEffect(() => {
-    if (sunFit === undefined) return;
+    if (sunFit === undefined || !showArrows) {
+      setArrows([]);
+      setFitCoarsened(false);
+      return;
+    }
     let cancelled = false;
     const handle = setTimeout(() => {
       defaultApi
@@ -160,7 +166,7 @@ export function App() {
       cancelled = true;
       clearTimeout(handle);
     };
-  }, [box, sunFit]);
+  }, [box, sunFit, showArrows]);
 
   async function onSave(): Promise<void> {
     if (recipe === undefined) return;
@@ -189,8 +195,24 @@ export function App() {
       </header>
       <div className="bench">
         <section className="viewer" aria-label="Comparison">
-          <div className="toolbar">
-            <Navigator view={view} onView={setView} viewMode={viewMode} onViewMode={setViewMode} />
+          <div className="view-panel">
+            <span className="label">View</span>
+            <div className="toolbar">
+              <Navigator
+                view={view}
+                onView={setView}
+                viewMode={viewMode}
+                onViewMode={setViewMode}
+              />
+              <label className="switch">
+                <input
+                  type="checkbox"
+                  checked={showArrows}
+                  onChange={(e) => setShowArrows(e.target.checked)}
+                />
+                Arrows
+              </label>
+            </div>
           </div>
           <SunPanel
             sunMode={sunMode}
