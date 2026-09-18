@@ -82,10 +82,10 @@ report.
 Ruling: the two throw messages are re-prefixed to the new function names — a shared helper cannot
 claim to be `cropMesh` — cost if wrong: none; no test asserts the text.
 
-- [ ] Extract both files; rewire `cropMesh.ts`.
-- [ ] No new test — `tests/tools/scene-recon/cropMesh.test.ts` is the guard and must pass unchanged.
-- [ ] `npm test -- scene-recon` and `npm run typecheck:fast` green.
-- [ ] Commit: `refactor(scene-recon): derived-mesh read and publish out of cropMesh (P1)`.
+- [x] Extract both files; rewire `cropMesh.ts`.
+- [x] No new test — `tests/tools/scene-recon/cropMesh.test.ts` is the guard and must pass unchanged.
+- [x] `npm test -- scene-recon` and `npm run typecheck:fast` green.
+- [x] Commit: `refactor(scene-recon): derived-mesh read and publish out of cropMesh (P1)`.
 
 ---
 
@@ -101,7 +101,7 @@ All under `tools/scene-recon/atlas/`, tests under `tests/tools/scene-recon/atlas
 `tools/scene-recon/atlas/atlasClaims.ts` (new)
 **review:** no — types, a dependency and three constants.
 
-- [ ] `npm install --save-dev xatlas-wasm@0.1.3`. It ships `lib/xatlas.d.ts`; no `@types` package.
+- [x] `npm install --save-dev xatlas-wasm@0.1.3`. It ships `lib/xatlas.d.ts`; no `@types` package.
 
 ```ts
 // @types/PackedVertex.d.ts — one output vertex of a pack
@@ -154,8 +154,8 @@ with negative codes for the non-chart fills — the double-claim assertion needs
 orphan search and the dilation need only free/filled, and two parallel masks would drift — cost if
 wrong: a reader must know `!== free` means filled while `>= 0` means "a chart wrote it".
 
-- [ ] No tests (types, a dependency, three constants).
-- [ ] Commit.
+- [x] No tests (types, a dependency, three constants).
+- [x] Commit.
 
 ### Task 3: `packCharts` — the xatlas wrapper
 
@@ -197,11 +197,11 @@ and `atlas.atlasCount`. `atlas.destroy()` in a `finally`.
   blur the user saw on the first spike preview. It must be `false`.
 - Throw when `getMesh(0).indices.length !== indices.length`: a dropped face must never be quiet.
 
-- [ ] `XATLAS_WASM_VERSION matches the installed dependency` — read `package.json` through
+- [x] `XATLAS_WASM_VERSION matches the installed dependency` — read `package.json` through
       `new URL('../../../package.json', import.meta.url)`. Real bug: a dependency bump leaves every
       future asset's provenance claiming the old packer, and nothing else sees it.
-- [ ] No functional unit test: the wrapper is IO over a wasm module, and Task 9 packs end to end.
-- [ ] Commit.
+- [x] No functional unit test: the wrapper is IO over a wasm module, and Task 9 packs end to end.
+- [x] Commit.
 
 ### Task 4: `fitAtlasScale`
 
@@ -228,16 +228,16 @@ Ruling: the trial is a callback rather than `packCharts` called directly — it 
 the sequence be tested without loading wasm, and the sequence (not the pack) is where the bugs are
 — cost if wrong: one more parameter at the single call site.
 
-- [ ] `fitAtlasScale takes scale 1 when it fits` — `attempt` always succeeds; asserts the returned
+- [x] `fitAtlasScale takes scale 1 when it fits` — `attempt` always succeeds; asserts the returned
       scale is exactly 1 and that `attempt` was called once (a seed computed before trying 1 would
       resample a mesh that could have been exact).
-- [ ] `fitAtlasScale seeds from the used-texel estimate and steps down by 2%` — `attempt` succeeds
+- [x] `fitAtlasScale seeds from the used-texel estimate and steps down by 2%` — `attempt` succeeds
       only at `scale <= 0.44`; assert the first two trials are `1` and `0.632` (literal, from
       `destSizePx = 2048`, `usedTexels = 6_300_000`) and that the winner is the first
       `0.632 × 0.98^k` at or below 0.44.
-- [ ] `fitAtlasScale throws when nothing fits` — `attempt` always null; assert the message names the
+- [x] `fitAtlasScale throws when nothing fits` — `attempt` always null; assert the message names the
       size. Guards against a loop that never terminates.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 5: `chartPlacements`
 
@@ -270,13 +270,13 @@ Why integers: a texel centre `(i + 0.5, j + 0.5)` turns into `(−j − 0.5, i +
 offset lands on a texel centre again. A fractional offset makes even the scale-1 bake resample.
 New UVs are recomputed from the placement (Task 8), never taken from xatlas.
 
-- [ ] `chartPlacements recovers a 90° turn and an integer offset` — hand-built `PackedAtlas`
+- [x] `chartPlacements recovers a 90° turn and an integer offset` — hand-built `PackedAtlas`
       (no xatlas): chart 0 a 4-vertex square placed unturned at an integer offset, chart 1 the same
       square turned once with a **fractional** xatlas offset (e.g. +0.3 px on both axes). Assert
       `turns` 0 and 1 and both `offsetPx` integral, with literal expected values.
-- [ ] `chartPlacements folds the scale into the placement` — same fixture at `scale = 0.5`; assert
+- [x] `chartPlacements folds the scale into the placement` — same fixture at `scale = 0.5`; assert
       the returned `scale` and that the offset still lands at the packed bbox corner.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 6: `rasterizeCharts`, `blitChartsExact`, `resampleCharts`
 
@@ -331,20 +331,20 @@ coordinate is a texel centre** (`|frac(s) − 0.5| < 1e-6`) — the assertion th
 lost nothing but the JPEG round trip. **`resampleCharts`:** bilinear sample of `shrunk` at
 `s × (shrunk.sizePx / sourceSizePx)` — that ratio is the only place the two texel grids meet.
 
-- [ ] `rasterizeCharts fills the texels a triangle covers and the margin around its edge` — one
+- [x] `rasterizeCharts fills the texels a triangle covers and the margin around its edge` — one
       unturned chart, a right triangle over a 16² destination; assert an interior texel, a texel
       just outside an edge (within 0.707) and a texel 2 px outside, by literal index.
-- [ ] `rasterizeCharts throws when two charts claim one texel` — two placements landing on the same
+- [x] `rasterizeCharts throws when two charts claim one texel` — two placements landing on the same
       destination square.
-- [ ] `blitChartsExact reproduces the source texels` — 8² source of distinct byte values, one chart
+- [x] `blitChartsExact reproduces the source texels` — 8² source of distinct byte values, one chart
       placed with `turns: 1` and an integer offset; assert the destination bytes equal the turned
       source bytes exactly, and that a placement with a half-texel offset throws.
-- [ ] `resampleCharts samples the shrunk grid, not the source grid` — `sourceSizePx = 8`, a 4²
+- [x] `resampleCharts samples the shrunk grid, not the source grid` — `sourceSizePx = 8`, a 4²
       `shrunk` image, one unturned chart at `scale = 0.5`; assert one destination texel equals the
       literal bilinear tap. Real bug: forgetting the `shrunk.sizePx / sourceSizePx` ratio, which
       halves or doubles the sampled position and shifts the whole 2K atlas — no other test sees it,
       since Task 9's integration run takes the exact path.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 7: `paintOrphanBlocks` and `dilateAtlas`
 
@@ -378,16 +378,16 @@ destination texels. Throw when no block is free.
 **`dilateAtlas`:** each pass reads the claims of the previous pass (double-buffer, so one pass grows
 exactly one ring — single-buffered, one pass floods the atlas), writes `ATLAS_CLAIM.dilated`.
 
-- [ ] `paintOrphanBlocks places a block clear of claimed texels and returns its centre` — 32²
+- [x] `paintOrphanBlocks places a block clear of claimed texels and returns its centre` — 32²
       destination with a claimed region; one orphan point; assert the block's texels carry the
       source colour, that no claimed texel was overwritten, that the 2-texel border touched nothing
       claimed, and that both vertices of the point map to the same centre.
-- [ ] `paintOrphanBlocks throws when the atlas has no room` — a fully claimed atlas.
-- [ ] `dilateAtlas grows one ring per pass and leaves no empty texel` — 64² atlas, a single filled
+- [x] `paintOrphanBlocks throws when the atlas has no room` — a fully claimed atlas.
+- [x] `dilateAtlas grows one ring per pass and leaves no empty texel` — 64² atlas, a single filled
       red texel: assert the 8 neighbours are red, a texel 17 rings out is the atlas mean (not red,
       not zero), and that no texel is left at the fill sentinel. Real bug it catches: the
       single-buffered pass that floods everything red, and black texels surviving to the encoder.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 8: `repackedGeometry`
 
@@ -415,12 +415,12 @@ the vertex's source texel mapped through its chart's placement (for `chartIndex 
 `orphanUvPxByVertex.get(i)`, throwing if it is missing). `indices = packed.indices`. Throw when the
 triangle count differs from the source's — no face is dropped (spec §3, §5.3).
 
-- [ ] `repackedGeometry gathers positions through xref and derives UVs from the placement` — a
+- [x] `repackedGeometry gathers positions through xref and derives UVs from the placement` — a
       2-triangle source whose second chart is turned once; assert every output position equals its
       `xref`'s source position and the UVs equal the placement mapping over `destSizePx`, literal.
-- [ ] `repackedGeometry gives an orphan vertex its block centre`.
-- [ ] `repackedGeometry throws when a face was dropped` — a `packed` with one triangle missing.
-- [ ] Commit.
+- [x] `repackedGeometry gives an orphan vertex its block centre`.
+- [x] `repackedGeometry throws when a face was dropped` — a `packed` with one triangle missing.
+- [x] Commit.
 
 ---
 
@@ -479,34 +479,34 @@ are the same point inside a fourth colour, and a manifest holding it. Run at `si
 signature admits only the two shipped sizes, so a real one it is; a mostly-empty 2048² atlas costs
 the dilation a second or two, which is the price of testing what ships.
 
-- [ ] `repackAtlas publishes a sibling whose charts carry the source colours` — decode the published
+- [x] `repackAtlas publishes a sibling whose charts carry the source colours` — decode the published
       GLB's JPEG with sharp, sample each output triangle's centroid through its new UVs, assert the
       colour is the source chart's within ±3 per channel (flat blocks survive q90), and that `scale`
       is exactly 1 (the exact path).
-- [ ] `repackAtlas keeps every triangle, including the degenerate one` — `asset.triangleCount`
+- [x] `repackAtlas keeps every triangle, including the degenerate one` — `asset.triangleCount`
       equals the source's; the degenerate face's three output UVs are equal and sample its source
       colour within ±3. Real bug: xatlas dropping the point-UV faces silently.
-- [ ] `repackAtlas records the pack in provenance` — the asset is `mesh-2k`, labelled
+- [x] `repackAtlas records the pack in provenance` — the asset is `mesh-2k`, labelled
       `<source label> — 2K atlas`, its last pipeline step is `repackAtlas` with a version matching
       `/^2048@1\.000 xatlas-wasm@\d+\.\d+\.\d+ q90$/`, the source asset object is untouched, and the
       manifest holds both ids.
-- [ ] **Landmine:** if vitest's SSR transform cannot load the wasm module, add `xatlas-wasm` to
+- [x] **Landmine:** if vitest's SSR transform cannot load the wasm module, add `xatlas-wasm` to
       `test.server.deps.external` in `vitest.config.ts` — do not delete or skip the test.
-- [ ] Commit.
+- [x] Commit.
 
 ### Task 10: README
 
 **Files:** `tools/scene-workbench/README.md`
 **review:** no — prose; the whole-branch review reads it.
 
-- [ ] Extend the "Mesh outline" section's closing paragraph (`README.md:256-262`), which today ends
+- [x] Extend the "Mesh outline" section's closing paragraph (`README.md:256-262`), which today ends
       at "the atlas itself is carried over unchanged": add
       `npm run repack-atlas -- --group <id> --asset <assetId> --size 4096|2048`, the sibling
       `<assetId>-4k` / `-2k` assets, that 4096 re-packs the existing charts pixel-exactly (only the
       JPEG re-encode is lost) while 2048 resamples at the largest scale that fits one atlas, and
       that exact-vs-resampled follows from the fit rather than a flag.
-- [ ] Note what the printed line reports (charts, orphan blocks, triangles, both file sizes).
-- [ ] Commit.
+- [x] Note what the printed line reports (charts, orphan blocks, triangles, both file sizes).
+- [x] Commit.
 
 ---
 
@@ -522,37 +522,46 @@ the dilation a second or two, which is the price of testing what ships.
 5. `fitAtlasScale` takes the pack attempt as a callback and returns the winning pack (Task 4).
 6. `chartPlacements` picks the turn by minimal residual spread, and anchors the rounded integer
    offset at the xatlas bbox corner (Task 5).
+   **As built:** the source mesh has mixed UV winding, so xatlas MIRRORS 6,393 of its 12,945
+   charts and no 90° turn fits them; the fit searches all 8 dihedral transforms, `ChartPlacement`
+   carries `mirrorX` (applied before the turn), and the residual bound is xatlas's per-axis
+   ceil-to-whole-texel (≤ 1 px + noise) rather than an epsilon. Found by the first real run.
 7. The raster is one shared `rasterizeCharts`; the spec's two bake files differ only in their
    sampler (Task 6).
 8. `repackedGeometry` is a named function the spec does not list — the vertex/UV rebuild is real
    work with a real bug class and is otherwise buried in the CLI (Task 8).
 9. `--size` accepts only 2048 and 4096 (Task 9).
+10. **As built:** `repackedGeometry` takes `sourceSizePx` (glTF UVs are normalized, the placement
+    maths is in source texels), and the CLI derives the placement scale from
+    `shrunkSizePx / sourceSizePx` so it matches the resample ratio exactly (Tasks 8–9).
+11. Chroma stays at sharp's 4:2:0 default; 4:4:4 costs +17.7 % (4.58 → 5.39 MB at 4K) and the
+    user's eye check found no fringing.
 
 ## Definition of Done
 
 **Deliverables**
 
-- [ ] `tools/scene-recon/derive/`: `readSourceMesh`, `publishDerivedMesh`, with `cropMesh.ts`
+- [x] `tools/scene-recon/derive/`: `readSourceMesh`, `publishDerivedMesh`, with `cropMesh.ts`
       rewired and its test unchanged — as the first commit on the branch.
-- [ ] `tools/scene-recon/atlas/`: `packCharts`, `fitAtlasScale`, `chartPlacements`,
+- [x] `tools/scene-recon/atlas/`: `packCharts`, `fitAtlasScale`, `chartPlacements`,
       `rasterizeCharts`, `blitChartsExact`, `resampleCharts`, `paintOrphanBlocks`, `dilateAtlas`,
       `repackedGeometry`, `atlasClaims`.
-- [ ] `@types/`: `PackedVertex`, `PackedAtlas`, `ChartPlacement`, `AtlasImage`, `RepackAtlasReport`.
-- [ ] `npm run repack-atlas -- --group <id> --asset <assetId> --size 4096|2048` publishing
+- [x] `@types/`: `PackedVertex`, `PackedAtlas`, `ChartPlacement`, `AtlasImage`, `RepackAtlasReport`.
+- [x] `npm run repack-atlas -- --group <id> --asset <assetId> --size 4096|2048` publishing
       `<assetId>-4k` / `-2k` with a `repackAtlas` pipeline step; `xatlas-wasm` devDependency.
-- [ ] README paragraph covering the CLI and the exact-vs-resampled rule.
+- [x] README paragraph covering the CLI and the exact-vs-resampled rule.
 
 **Observable behaviours — user, at review** (not blocking execution)
 
-- [ ] `npm run repack-atlas -- --group soendermarken-crop-2019 --asset mesh-cropped --size 4096`
+- [x] `npm run repack-atlas -- --group soendermarken-crop-2019 --asset mesh-cropped --size 4096`
       prints one line reporting scale 1.000, one atlas, ~12,9xx charts, 470,046 triangles and a
       ~4.3 MB atlas against the 9.3 MB source.
-- [ ] The same at `--size 2048` reports a scale near 0.44 and a ~1.2 MB atlas.
-- [ ] In the workbench, `mesh-cropped-4k` is indistinguishable from `mesh-cropped` at close range —
+- [x] The same at `--size 2048` reports a scale near 0.44 and a ~1.2 MB atlas.
+- [x] In the workbench, `mesh-cropped-4k` is indistinguishable from `mesh-cropped` at close range —
       no blur, no chart seams, no black speckle.
-- [ ] `mesh-cropped-2k` is softer but has the same colours and no seams; neither mesh has a hole
+- [x] `mesh-cropped-2k` is softer but has the same colours and no seams; neither mesh has a hole
       where the source's degenerate faces are.
-- [ ] Re-running the same command overwrites the same sibling asset rather than adding one.
+- [x] Re-running the same command overwrites the same sibling asset rather than adding one.
 
 **Deferred — do not chase**
 

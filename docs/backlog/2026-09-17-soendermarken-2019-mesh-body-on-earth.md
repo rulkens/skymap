@@ -2,9 +2,10 @@
 
 **Status:** part 2 of 2; part 1 shipped
 (`docs/superpowers/specs/completed/2026-09-17-workbench-outline-crop-design.md`)
-and F3a landed. Slice 1 in flight: `repack-atlas`
-(`docs/superpowers/specs/2026-09-17-repack-atlas-design.md`) — 4K exact, 2K
-resampled; user ruling: 4K → main-app medium tier, 2K → small tier.
+and F3a landed. Slice 1 shipped: `repack-atlas`
+(`docs/superpowers/specs/completed/2026-09-17-repack-atlas-design.md`) — 4K exact
+(4.18 MB), 2K resampled at 0.422 (1.29 MB), both published as siblings of
+`mesh-cropped`; user ruling: 4K → main-app medium tier, 2K → small tier.
 
 **Measured (2026-09-17 `crop-mesh`).** 470,046 / 660,051 tris kept. One
 8192² JPEG (9.3 MB); the source used 13.8 % of it (all UVs in V ≤ 0.362),
