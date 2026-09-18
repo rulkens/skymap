@@ -175,7 +175,7 @@ function vertexNormals(
 }
 
 async function main(): Promise<void> {
-  const binPath = 'public/data/local-bubble/v1/local-bubble-shell.f32';
+  const binPath = 'data/localBubble/local-bubble-shell.f32';
   const buf = readFileSync(binPath);
   const planeLength = MAP_W * MAP_H;
   const radius = new Float32Array(

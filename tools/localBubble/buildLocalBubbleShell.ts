@@ -35,7 +35,7 @@ const CHANNELS = ['d', 'd_inner', 'd_outer', 'thick'] as const;
  */
 const DEFAULT_SMOOTH_DEG = 2.5;
 
-const OUT_DIR = 'public/data/local-bubble/v1';
+const OUT_DIR = 'data/localBubble';
 const PREVIEW_DIR = 'data/localBubble/previews';
 
 function readColumn(

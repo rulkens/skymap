@@ -8,7 +8,7 @@ section.
 ## What already shipped (PR #755)
 
 `npm run fetch-local-bubble` + `npm run build-local-bubble` bake O'Neill+ 2024's
-shell surface into `public/data/local-bubble/v1/local-bubble-shell.f32`. Column
+shell surface into the gitignored `data/localBubble/local-bubble-shell.f32`. Column
 layout, frame, licence and provenance are in
 [`data/raw/localBubble/README.md`](../../data/raw/localBubble/README.md) — read
 that first, it is not repeated here.
