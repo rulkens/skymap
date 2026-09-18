@@ -38,4 +38,21 @@ gdal_translate -of COG -ot Float32 -co COMPRESS=DEFLATE -co PREDICTOR=3 -co OVER
 An earlier Int16 COG (`…_463m_cog.tif`, `PREDICTOR=2`, 662,268,513 B) sits
 beside it unused and can be deleted.
 
+## Overviews (added 2026-09-18, 1,233,089,812 B)
+
+Six levels were appended in place for the same reason as Viking's (see that
+README): a wide box otherwise decodes the whole raster. The full-resolution
+samples are untouched, and re-running the `gdal_translate` above alone would
+drop the pyramid.
+
+```sh
+gdaladdo -oo IGNORE_COG_LAYOUT_BREAK=YES -r average --config COMPRESS_OVERVIEW DEFLATE \
+  Mars_MGS_MOLA_DEM_mosaic_global_463m_f32_cog.tif 2 4 8 16 32 64
+```
+
+`-r average` over a Float32 DEM averages the −32768 no-data samples with real
+heights, so a coarse level's values near a gap are meaningless; only
+`geoTiffImagerySource` selects levels today, and `geoTiffHeightSource` still
+reads level 0 exclusively.
+
 Worktrees reach the file through a leaf symlink to main's `data/raw/mola/`.
