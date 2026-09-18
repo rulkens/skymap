@@ -10,7 +10,9 @@ import sharp from 'sharp';
 import type { GeoTiffGrid } from './GeoTiffGrid';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
+import { chooseGeoTiffOverviewLevel } from '../utils/textures/chooseGeoTiffOverviewLevel';
 import { clamp } from '../utils/textures/clamp';
+import { geoTiffOverviewLevels } from '../utils/textures/geoTiffOverviewLevels';
 import { readGeoTiffRgbWindow } from '../utils/textures/readGeoTiffRgbWindow';
 import { resampleRgbaBilinear } from '../utils/image/resampleRgbaBilinear';
 
@@ -27,8 +29,9 @@ async function readUInt16GreyWindow(
   top: number,
   width: number,
   height: number,
+  page = 0,
 ): Promise<Uint16Array> {
-  const image = sharp(path, { limitInputPixels: false, unlimited: true });
+  const image = sharp(path, { limitInputPixels: false, unlimited: true, page });
   const depth = (await image.metadata()).depth;
   if (depth !== 'ushort') {
     throw new Error(`readUInt16GreyWindow: ${path} has depth '${depth}', expected UInt16 grey`);
@@ -67,12 +70,13 @@ export function geoTiffImagerySource(opts: {
     top: number,
     winWidth: number,
     winHeight: number,
+    page = 0,
   ): Promise<Uint8Array> {
     let rgba: Uint8Array;
     if (opts.greyStretch !== undefined) {
       const [lo, hi] = opts.greyStretch;
       const scale = 255 / (hi - lo);
-      const grey = await readUInt16GreyWindow(grid.path, left, top, winWidth, winHeight);
+      const grey = await readUInt16GreyWindow(grid.path, left, top, winWidth, winHeight, page);
       rgba = new Uint8Array(winWidth * winHeight * 4);
       for (let i = 0; i < grey.length; i++) {
         const value = grey[i]!;
@@ -87,7 +91,7 @@ export function geoTiffImagerySource(opts: {
         rgba[i * 4 + 3] = noData ? 0 : 255;
       }
     } else {
-      rgba = await readGeoTiffRgbWindow(grid.path, left, top, winWidth, winHeight);
+      rgba = await readGeoTiffRgbWindow(grid.path, left, top, winWidth, winHeight, page);
       // Byte RGB carries no separate no-data channel — `readGeoTiffRgbWindow`
       // does not surface a GDAL internal mask (see its own doc) — so a pixel
       // that is BOTH fully opaque and exactly black is treated as the
@@ -160,8 +164,34 @@ export function geoTiffImagerySource(opts: {
       const winHeight = bottom - top;
       if (winWidth <= 0 || winHeight <= 0) return null;
 
-      return sharp(await readWindow(left, top, winWidth, winHeight), {
-        raw: { width: winWidth, height: winHeight, channels: 4 },
+      // A whole-planet box asks for the same `widthPx` an eye-level tile
+      // does, over a window thousands of times wider — decoding it at the
+      // native level (as every level-0-only file still does) reads and
+      // resizes billions of pixels for a few hundred in the end. The level
+      // whose OWN width, scaled by this box's fraction of the full raster,
+      // would still meet `widthPx` is the coarsest one worth decoding.
+      const levels = await geoTiffOverviewLevels(grid.path);
+      const requiredWidth = widthPx * (grid.width / winWidth);
+      const requiredHeight = heightPx * (grid.height / winHeight);
+      const level = chooseGeoTiffOverviewLevel(levels, requiredWidth, requiredHeight);
+      const { width: levelWidth, height: levelHeight } = levels[level]!;
+      const scaleX = levelWidth / grid.width;
+      const scaleY = levelHeight / grid.height;
+      const levelLeft = clamp(Math.round(left * scaleX), 0, levelWidth);
+      const levelRight = clamp(Math.round(right * scaleX), 0, levelWidth);
+      const levelTop = clamp(Math.round(top * scaleY), 0, levelHeight);
+      const levelBottom = clamp(Math.round(bottom * scaleY), 0, levelHeight);
+      const levelWinWidth = Math.max(1, levelRight - levelLeft);
+      const levelWinHeight = Math.max(1, levelBottom - levelTop);
+
+      return sharp(await readWindow(levelLeft, levelTop, levelWinWidth, levelWinHeight, level), {
+        raw: { width: levelWinWidth, height: levelWinHeight, channels: 4 },
+        // The window above is already downsampled at the file level, but a
+        // level-less (or not-yet-downsampled) file can still hand this a
+        // window past sharp's default ~268 Mpx guard — unlike the two
+        // decode helpers above, this constructs an image from a raw buffer
+        // rather than a file, so it needs the same opt-out spelled out again.
+        limitInputPixels: false,
       })
         .resize(widthPx, heightPx, { fit: 'fill' })
         .raw()
