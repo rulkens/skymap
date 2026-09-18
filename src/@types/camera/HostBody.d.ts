@@ -6,10 +6,15 @@ import type { GroundRadiusLookup } from './GroundRadiusLookup';
 export type HostBody = {
   readonly id: BodyId;
   readonly state: BodyState;
-  /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull. */
+  /** Datum radius, metres — SCENE_CELESTIAL_BODIES, never a bounding hull; the h/R bands read it. */
   readonly radiusM: number;
-  /** What the descent floor stands off FROM; `radiusM` serves pivot and site maths instead. */
+  /** The ground: what the descent floor stands off from. */
   readonly groundRadiusAtM: GroundRadiusLookup;
+  /** Terrain cannot lie outside these, whatever has streamed in — they come from
+   *  `BodySurface.reliefM`, declared per-body data, not from a tile header. A ray pick
+   *  marches between them (spec §8.1); nothing may read either as a datum. */
+  readonly innerBoundRadiusM: number;
+  readonly outerBoundRadiusM: number;
   /** Descent-floor multiple of the datum (`bodyStandoffRadii`); a body may override the global. */
   readonly standoffRadii: number;
 };

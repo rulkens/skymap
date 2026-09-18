@@ -374,6 +374,8 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
         // The detail patches are their own row in this group; a null handle
         // short-circuits their enabled gate like every sibling above.
         surfaceTileRenderer: null,
+        // The terrain-pick debug marker rides this group too; same short-circuit.
+        terrainPickMarkerRenderer: null,
       },
       data: { bodies: { earth: SEEDED_EARTH, planets: [], meshBodies: [], stars: [] } },
     } as unknown as EngineState;

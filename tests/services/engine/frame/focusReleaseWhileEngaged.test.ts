@@ -33,6 +33,7 @@ import { bodyFocusDistance } from '../../../../src/services/engine/camera/bodyFo
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { liveWorldPose } from '../../../../src/services/engine/helpers/liveWorldPose';
+import { siteGroundRadiusM } from '../../../../src/utils/camera/siteGroundRadiusM';
 import { sitePointBodyFixed } from '../../../../src/utils/camera/sitePointBodyFixed';
 import { positionDriverById } from '../../../../src/data/bodies/positionDrivers';
 import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintRadiusM';
@@ -199,8 +200,10 @@ function regimeTrace(h: ReturnType<typeof makeCameraSimHarness>, frames: number)
   return seq;
 }
 
-const MARS_R = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!.surface.datumRadiusM;
-const MARS_R_MPC = MARS_R * SCALE_UNITS.M_TO_MPC;
+const MARS_ROW = SCENE_CELESTIAL_BODIES.find((row) => row.id === 'mars')!;
+const MARS_R = MARS_ROW.surface.datumRadiusM;
+// Framing reads the outer bound, like R_MPC above: Mars's relief moves it 27 km off the datum.
+const MARS_R_MPC = bodyFootprintRadiusM(MARS_ROW) * SCALE_UNITS.M_TO_MPC;
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const RUNG_CTX = {
   bodies: BODIES as ReadonlyMap<BodyId, BodyState>,
@@ -219,7 +222,7 @@ function metresBetween(a: Readonly<Vec3>, b: Readonly<Vec3>): number {
 function roverMpc(bodies: ReadonlyMap<string, BodyState>): Vec3 {
   const driver = positionDriverById('curiosity' as BodyId);
   if (driver.kind !== 'surfaceFixed') throw new Error('curiosity is not a site');
-  const p = sitePointBodyFixed(driver, MARS_R);
+  const p = sitePointBodyFixed(driver, siteGroundRadiusM(driver, MARS_R));
   const mars = bodies.get('mars')!;
   const local = rotateVec3ByTightMat3(p as Vec3, mars.orientation);
   return [
@@ -238,7 +241,7 @@ const ROVER_FRAMING_M =
 
 describe('focus switch between two rovers on one planet (adverse 5)', () => {
   it('from a rover site, focusing another rover flies there and lands its site arm', () => {
-    // Bradbury Landing is 142° of Mars around from Challenger Memorial Station,
+    // Curiosity's site is 142° of Mars around from Opportunity's,
     // so the Mars arm holding Opportunity's focus could serve Curiosity only by
     // seeing through the planet. Held, no driver is live — the pin and the
     // follow pair are inert in a body arm — so the eye sat 6,400 km away
@@ -298,14 +301,13 @@ describe('focus switch between two rovers on one planet (adverse 5)', () => {
 
     h.focus('curiosity');
     const trace = regimeTrace(h, 900);
-
     expect(trace).toEqual(['body:mars', 'absolute', 'body:mars', 'site:curiosity']);
     expect(metresBetween(displayedEye(h.state), roverMpc(BODIES))).toBeCloseTo(ROVER_FRAMING_M, 2);
   });
 
   it('a hosted focus the arm can still see keeps it — the §4.8 hold', () => {
     // The other side of the rule, and why it is the horizon and not the focus
-    // edge: an eye overhead of Bradbury IS serving Curiosity, so the arm holds
+    // edge: an eye overhead of Curiosity's site IS serving Curiosity, so the arm holds
     // and a zoom-out from the rover is not yanked to framing distance.
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
     h.seedPose(

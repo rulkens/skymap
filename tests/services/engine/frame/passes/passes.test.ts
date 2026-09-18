@@ -71,13 +71,14 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     // near-field double.
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
+    cursorTexPx: null,
     drawCamPos,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
     simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
     focusBlend: 0,
-    layersAnimating: false,
+    layersSettling: false,
     visibleSourceMask: 0xffffffff,
     focus: {
       center: [0, 0, 0] as Readonly<[number, number, number]>,
@@ -141,7 +142,6 @@ const STATE_STUB = {
     milkyWayCloud: { buffers: () => MW_CLOUD_BUFFERS },
     milkyWayCloudRenderer: null,
     horizonShellRenderer: null,
-    flowFieldRenderer: null,
     volumeFieldRenderer: null,
   },
 } as unknown as EngineState;

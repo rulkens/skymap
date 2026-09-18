@@ -97,6 +97,7 @@ function makeState(
       register: { pose: LAST_POSE },
       outputs: { projection: PROJECTION, simDays: LAST_SIM_DAYS },
     },
+    picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
   } as unknown as EngineState;
 }
 

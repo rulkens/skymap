@@ -314,7 +314,12 @@ describe('replayInput', () => {
     if (!isBodyArm(committed)) throw new Error('the arm flipped');
     const got = committed.pose.eyeRelAnchorM;
     const cursorAnchor = anchorFor([700, 500]);
-    expect(rangeTo(cursorAnchor, got)).toBeCloseTo(f * rangeTo(cursorAnchor, eyeM), 3);
+    // Loosened from millimetre-tight (F2): the anchor now marches over
+    // terrain to a pixel-sized tolerance rather than an exact analytic root,
+    // so this holds to metres on a multi-Mm range, not the bit — a real
+    // regression (e.g. reverting to the screen-centre anchor) misses by
+    // ~500 km, six orders of magnitude past this margin.
+    expect(rangeTo(cursorAnchor, got)).toBeCloseTo(f * rangeTo(cursorAnchor, eyeM), -1);
     const centreAnchor = anchorFor([500, 500]);
     expect(rangeTo(centreAnchor, cursorAnchor)).toBeGreaterThan(100_000);
     expect(Math.abs(rangeTo(centreAnchor, got) - f * rangeTo(centreAnchor, eyeM))).toBeGreaterThan(

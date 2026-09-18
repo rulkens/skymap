@@ -60,7 +60,10 @@ import { readHeightTileFile } from '../utils/textures/readHeightTileFile';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
 import { bakeHeightLevel } from './bakeHeightLevel';
+import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
+import { buildSiteGroundHeights } from './buildSiteGroundHeights';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
+import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
 import type { SurfaceBakeBand } from './SurfaceBakeBand';
 import type { SurfaceBodyBake } from './SurfaceBodyBake';
 import type { SurfaceImagerySource } from './SurfaceImagerySource';
@@ -560,10 +563,10 @@ export async function bakeAll(
   process.stderr.write(`  ${sorted.length} tiles indexed\n`);
 }
 
-/** Every body this tool can bake, keyed the same way `SURFACE_TILE_REGISTRY`
- *  is — Mars's own row lands here, not a second switch elsewhere. */
+/** Every body this tool can bake, keyed the same way `SURFACE_TILE_REGISTRY` is. */
 const SURFACE_BODY_BAKES: Record<SurfaceTileBodyId, SurfaceBodyBake> = {
   earth: earthSurfaceBake,
+  mars: marsSurfaceBake,
 };
 
 /** `--product albedo|height`: `parseFlags` stays bool-only by design (see its
@@ -598,11 +601,18 @@ async function main(): Promise<void> {
   const { '--dev': dev } = parseFlags(argv, { '--dev': 'bool' });
   const product = productFlag(argv);
   const products = new Set<SurfaceTileProduct>(product ? [product] : ['albedo', 'height']);
-  const body = SURFACE_BODY_BAKES[bodyFlag(argv)];
+  const bodyId = bodyFlag(argv);
+  const body = SURFACE_BODY_BAKES[bodyId];
 
   process.stderr.write(`buildSurfaceTiles: -> ${join(outDir, body.tileRoot)}\n`);
   const bands = await body.bands({ dev });
   await bakeAll(body, bands, outDir, products);
+  // Surface-fixed sites bake their ground height off these SAME height tiles:
+  // a re-bake of any host regenerates it in the same run, or the two silently
+  // drift. Skipped in `--dev`, whose coarse bands don't reach the sites' tiles.
+  if (!dev && SURFACE_FIXED_SITES.some((site) => site.hostId === bodyId)) {
+    await buildSiteGroundHeights();
+  }
   process.stderr.write(`done; tiles under ${join(outDir, body.tileRoot)}\n`);
 }
 

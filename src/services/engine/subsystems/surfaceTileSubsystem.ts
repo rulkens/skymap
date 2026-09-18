@@ -13,8 +13,8 @@
  * just a caller's `if` — a drive-site `if` once left stale tiles drawing
  * after the camera pulled back out. Allocation is lazy: the 67 MB atlas is
  * created by the first engaged `update()`. A `bodyId` change (R7's switch
- * path, untested until F4's Mars row) stands the old body's atlas and
- * residency down before engaging the new one — see `standDown`.
+ * path) stands the old body's atlas and residency down before engaging the
+ * new one — see `standDown`.
  */
 
 import type { SurfaceTileId } from '../../../@types/data/SurfaceTileId';
@@ -33,6 +33,7 @@ import type { SurfaceTileSubsystem } from '../../../@types/engine/subsystems/Sur
 import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ResidentHeightLookup } from '../../../@types/scene/ResidentHeightLookup';
 import { createTileStreamSubsystem } from './tileStreamSubsystem';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
@@ -454,13 +455,20 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
   }
 
   /**
-   * `terrainHeightM` composed with this subsystem's own residency (F3a).
-   * `0` for any `bodyId` other than the engaged atlas's own — ONE-ENGAGED
-   * (§ file header) means a stale or wrong-body query has no other body's
-   * tiles to fall back to, so it must miss rather than read this one's.
+   * Everything `terrainHeightM` needs under one direction, or `null` for any
+   * `bodyId` other than the engaged atlas's own — ONE-ENGAGED (§ file header)
+   * means a stale or wrong-body query has no other body's tiles to fall back
+   * to, so it must miss rather than read this one's.
    */
-  function terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number {
-    if (atlas === null || atlas.bodyId !== bodyId) return 0;
+  function heightQueryAt(
+    bodyId: BodyId,
+    dirBodyFixed: Readonly<Vec3>,
+  ): {
+    readonly deepestLevel: number;
+    readonly baseLevel: number;
+    readonly resident: ResidentHeightLookup;
+  } | null {
+    if (atlas === null || atlas.bodyId !== bodyId) return null;
     if (
       manifest === null ||
       manifestBodyId !== bodyId ||
@@ -468,19 +476,49 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
       paramsState.bodyId !== bodyId ||
       paramsState.params === null
     ) {
-      return 0;
+      return null;
     }
     const prefix = manifest.prefix;
     const { baseLevel, params } = paramsState;
-    // No band covers this direction → nothing deeper than the whole-globe
-    // base is ever baked there, so the climb below correctly finds nothing.
-    const deepestLevel =
-      deepestBandLevelAt(params.bands, directionToLonLatDeg(dirBodyFixed)) ?? baseLevel;
-    return terrainHeightM(dirBodyFixed, deepestLevel, baseLevel, (tile) => {
-      const entry = heightResident.get(surfaceTilePath(tile, prefix));
-      if (entry === undefined || entry.gridCodes === null) return null;
-      return { gridCodes: entry.gridCodes };
+    return {
+      // No band covers this direction → nothing deeper than the whole-globe
+      // base is ever baked there, so the climb correctly finds nothing.
+      deepestLevel:
+        deepestBandLevelAt(params.bands, directionToLonLatDeg(dirBodyFixed)) ?? baseLevel,
+      baseLevel,
+      resident: (tile) => {
+        const entry = heightResident.get(surfaceTilePath(tile, prefix));
+        if (entry === undefined || entry.gridCodes === null) return null;
+        return { gridCodes: entry.gridCodes };
+      },
+    };
+  }
+
+  /** `terrainHeightM` composed with this subsystem's own residency (F3a). */
+  function terrainHeightAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number {
+    const query = heightQueryAt(bodyId, dirBodyFixed);
+    if (query === null) return 0;
+    return terrainHeightM(dirBodyFixed, query.deepestLevel, query.baseLevel, query.resident);
+  }
+
+  /**
+   * Which level the SAME climb actually landed on — see the type's doc for why
+   * the height alone cannot answer that. Runs the real query with an
+   * instrumented lookup rather than a second address derivation, so the level
+   * reported is by construction the one the height came from.
+   */
+  function residentHeightLevelAt(bodyId: BodyId, dirBodyFixed: Readonly<Vec3>): number | null {
+    const query = heightQueryAt(bodyId, dirBodyFixed);
+    if (query === null) return null;
+    let level: number | null = null;
+    terrainHeightM(dirBodyFixed, query.deepestLevel, query.baseLevel, (tile) => {
+      const found = query.resident(tile);
+      // The climb stops at its first non-null, so the tile it accepts is the
+      // one the lattice was read from.
+      if (found !== null) level = tile.z;
+      return found;
     });
+    return level;
   }
 
   function isAnimating(): boolean {
@@ -568,6 +606,7 @@ export function createSurfaceTileSubsystem(deps: SurfaceTileDeps): SurfaceTileSu
     update,
     residentSlot,
     terrainHeightAt,
+    residentHeightLevelAt,
     setLastCut: (cut) => {
       lastCut = cut;
     },

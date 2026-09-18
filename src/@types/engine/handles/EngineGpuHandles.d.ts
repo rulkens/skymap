@@ -22,7 +22,6 @@ import type { DebugLineRenderer } from '../../rendering/DebugLineRenderer';
 import type { SelectionRingRenderer } from '../../rendering/SelectionRingRenderer';
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
-import type { FlowFieldRenderer } from '../../rendering/FlowFieldRenderer';
 import type { AdditiveUpsample } from '../../rendering/AdditiveUpsample';
 import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
@@ -35,6 +34,7 @@ import type { Label3DRenderer } from '../../rendering/Label3DRenderer';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { SurfaceTileRenderer } from '../../rendering/SurfaceTileRenderer';
+import type { TerrainPickMarkerRenderer } from '../../rendering/TerrainPickMarkerRenderer';
 import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
@@ -321,17 +321,6 @@ export type EngineGpuHandles = {
    */
   volumeFieldRenderer: VolumeFieldRenderer | null;
   /**
-   * CF4++ peculiar-velocity flow-field renderer — the engine's first compute
-   * renderer. Null until `initGpu` constructs it (same phase as the other
-   * optional renderers). Excluded from the `isEngineReady` predicate: the layer
-   * is default-off and demand-loaded, and `encodeFlowCompute` / `flowFieldPass`
-   * null-check the handle alongside the `settings.flow.enabled` +
-   * `slotReady(assetSlots.flow)` gate, so a null handle is a silent no-op. Stored here so
-   * `destroy()` can release the particle buffers, the three compute pipelines,
-   * the ribbon pipeline, and the velocity texture.
-   */
-  flowFieldRenderer: FlowFieldRenderer | null;
-  /**
    * Half-res-to-HDR volume upsample pass.  Null until `initGpu`
    * constructs it (same phase as the other optional renderers).
    * Excluded from the `isEngineReady` predicate — when null, the
@@ -428,6 +417,13 @@ export type EngineGpuHandles = {
    * re-nulled by `destroy()`.
    */
   surfaceTileRenderer: SurfaceTileRenderer | null;
+  /**
+   * The `terrain-pick-marker` debug overlay's analytic sphere, drawn into the
+   * same `foreground:0` body step (and against the same depth) as
+   * `surfaceTileRenderer`, so the terrain occludes it. Null until `initGpu`
+   * constructs it; nothing reads it unless that toggle is on.
+   */
+  terrainPickMarkerRenderer: TerrainPickMarkerRenderer | null;
   /**
    * Flat-emissive resolved stars (the `spheres` branch of
    * `partitionStarsByResolution` — any star whose apparent size crosses

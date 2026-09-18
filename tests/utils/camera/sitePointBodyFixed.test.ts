@@ -1,5 +1,5 @@
 /**
- * sitePointBodyFixed — the hand-computed point: datum + terrain + wheel lift
+ * sitePointBodyFixed — the hand-computed point: ground radius + wheel lift
  * along the site's lat/lon direction.
  */
 
@@ -23,20 +23,5 @@ describe('sitePointBodyFixed', () => {
     expect(p[0]).toBeCloseTo(275 * Math.sqrt(3), 9);
     expect(p[1]).toBeCloseTo(825, 9);
     expect(p[2]).toBeCloseTo(550, 9);
-  });
-
-  it('sits at datum + terrain + wheel lift, not one or the other (F3a)', () => {
-    const site: SurfaceFixedSite = {
-      id: 'fixture',
-      hostId: 'fixture-host',
-      latDeg: 0,
-      lonDeg: 0,
-      altitudeM: 100,
-    };
-    const TERRAIN_M = 50;
-    const p = sitePointBodyFixed(site, 1000, () => TERRAIN_M);
-    const magM = Math.hypot(p[0], p[1], p[2]);
-    // 1150, not 1100 (terrain dropped) and not 1050 (lift dropped).
-    expect(magM).toBeCloseTo(1000 + TERRAIN_M + site.altitudeM, 9);
   });
 });

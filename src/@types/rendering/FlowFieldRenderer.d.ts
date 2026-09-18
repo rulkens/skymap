@@ -73,8 +73,8 @@ export type FlowFieldRenderer = {
    * streamline pulse phase. `nowMs` is the caller's real elapsed-time clock
    * (`ctx.nowMs`) — the renderer derives real elapsed seconds from it against
    * its own last-call timestamp, so advection speed and lifetime read in
-   * seconds, not rendered frames. Caller gates on enabled + loaded (see
-   * `encodeFlowCompute`).
+   * seconds, not rendered frames. Caller gates on enabled + loaded (see the flow
+   * Layer's `flowCompute` row).
    *
    * `claimTimestampWrites` bills the step's GPU-timing slot. It is called at,
    * and only at, the INTEGRATE pass — the one that runs on every call, past the

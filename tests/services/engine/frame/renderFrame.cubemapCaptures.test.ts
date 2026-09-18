@@ -111,11 +111,11 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
 function makeCtx(
   drawCamPos: readonly [number, number, number],
   faceSizePx = 256,
-  layersAnimating = false,
+  layers: { awake?: boolean; settling?: boolean } = {},
 ): ReadyFrameContext {
   return {
     isReady: true,
-    layersAnimating,
+    layersSettling: layers.settling ?? false,
     drawCamPos,
     simDays: 0,
     nowMs: 1000,
@@ -400,12 +400,34 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     const state = makeState({
       subsystems: { fades: { isAnyAnimating: () => false } },
     } as unknown as Partial<EngineState>);
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, true), state)); // band entry ⇒ bakes.
+    const settling = { settling: true };
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, settling), state)); // band entry ⇒ bakes.
     cubemapFaceContextMock.mockClear();
 
-    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, true), state));
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, settling), state));
 
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
+  });
+
+  it('a Layer awake forever but never settling (flow) leaves the bake recorded and sweeps once', () => {
+    // Flow advects for as long as it is enabled and sits in no capture roster.
+    // Reading its keep-alive vote as "still settling" re-baked all six faces
+    // EVERY frame for the whole session — the defect this pins.
+    cubemapFaceContextMock.mockImplementation(
+      (input: { face: CubeFace }) => ({ __face: input.face }) as unknown as ReadyFrameContext,
+    );
+
+    const state = makeState({
+      subsystems: { fades: { isAnyAnimating: () => false } },
+    } as unknown as Partial<EngineState>);
+    const awake = { awake: true };
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, awake), state)); // band entry ⇒ bakes.
+    expect(state.cubemapCaptures.sgrAStar.bakedSettings).not.toBeNull();
+    cubemapFaceContextMock.mockClear();
+
+    renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc, 256, awake), state));
+
+    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
   });
 
   it('replacing settings with a new (same-content) object triggers a full six-face sweep', () => {

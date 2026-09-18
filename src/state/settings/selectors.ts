@@ -245,6 +245,9 @@ export const selectFlow = (state: RootState): FlowSettings => selectSettings(sta
 export const selectDebugOverlays = (state: RootState): Record<DebugOverlayKey, boolean> =>
   selectSettings(state).debug.overlays;
 
+export const selectTerrainPickMarkerRadiusM = (state: RootState): number =>
+  selectSettings(state).debug.terrainPickMarkerRadiusM;
+
 export const selectDisabledPasses = (state: RootState): Record<string, boolean> =>
   selectSettings(state).debug.disabledPasses;
 

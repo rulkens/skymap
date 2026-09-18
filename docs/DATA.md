@@ -199,6 +199,10 @@ The same three bands carry a second product, **height**: `earth-tiles/v10/height
 
 At runtime [`surfaceTileSubsystem.ts`](../src/services/engine/subsystems/surfaceTileSubsystem.ts) fetches the manifest (any failure degrades to the base globe, never an error), then streams tiles through a 256-slot LRU atlas (8192 px, 512 px slots) at 4 concurrent fetches. On R2 the tiles are immutable and bulk-uploaded via rclone; any re-bake that changes pixels bumps the `TILE_PREFIX` version, and the day-cached manifest uploads last ([`syncR2.ts`](../tools/deploy/syncR2.ts), [DEPLOY.md](DEPLOY.md)). Earth tiles never appear in the data `manifest.json`, so `npm run fetch-data` skips them by construction; dev serves whatever `public/data/images/earth-tiles/` holds locally.
 
+### Mars surface sources
+
+`npm run build-surface-tiles -- --body mars` bakes `mars-tiles/` from files fetched by hand (no fetchers yet), one README each: MOLA 463 m heights and Viking MDIM 2.1 232 m colour globally ([`data/raw/mola/`](../data/raw/mola/README.md), [`data/raw/viking/`](../data/raw/viking/README.md)), and HiRISE 1 m DTM + 25 cm ortho pairs at the rover sites under `data/raw/hirise/{gale,jezero,gusev,meridiani-endeavour}/`. All are equirectangular on the 3,396,190 m sphere with areoid-relative heights; the bake adds +6,190 m to land them on the scene's 3,390 km datum. The strip-layout MOLA, Viking and Gale DTM files are read through tiled COG copies (each README records the `gdal_translate` line), because a window read on a strip TIFF decodes whole rows (~14 s per Viking box against ~9 ms on the COG). MOLA's copy is also Float32, since sharp clamps signed 16-bit samples to 0. The Gusev and Endeavour orthos are grey RED, colour-matched to Viking at bake time. A worktree reaches the rasters through per-file symlinks to main's `data/raw/`, never a directory symlink, so the READMEs stay committable.
+
 ## Data-refresh re-run orders
 
 Every refresh shares one shape: fetch, build, then `npm run sync-r2-secure` from the **main worktree only** (a worktree's `data/` is its own; see the deploy doc). The sync step is the deploy path, covered in [docs/DEPLOY.md](DEPLOY.md).

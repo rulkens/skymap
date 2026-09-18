@@ -17,6 +17,7 @@ import {
   DEFAULT_TURN_DELAY,
 } from '../../../services/engine/animation/pathDefaults';
 import { DEBUG_OVERLAY_ROWS } from '../../../data/debug/debugOverlayRows';
+import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../data/debug/terrainPickMarkerSliderFields';
 import type { DebugSettings } from '../../../@types/settings/DebugSettings';
 import type { DebugOverlayKey } from '../../../@types/data/debug/DebugOverlayKey';
 import type { ClipId } from '../../../@types/animation/ClipId';
@@ -32,6 +33,7 @@ const initialState: DebugSettings = {
     DebugOverlayKey,
     boolean
   >,
+  terrainPickMarkerRadiusM: TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M,
   // Empty in production: a developer populates it from the DebugPanel's
   // renderer-toggle section. A fresh record per engine — never persisted.
   disabledPasses: {},
@@ -74,6 +76,11 @@ export const debugSlice = createSlice({
     // in-place (like setPassDisabled below), never the whole record.
     setDebugOverlay: (debug, action: PayloadAction<{ key: DebugOverlayKey; enabled: boolean }>) => {
       debug.overlays[action.payload.key] = action.payload.enabled;
+    },
+    // World metres, not a slider position: the UI owns the log10 mapping so the
+    // store holds the physical quantity the pass and the readout both want.
+    setTerrainPickMarkerRadiusM: (debug, action: PayloadAction<number>) => {
+      debug.terrainPickMarkerRadiusM = action.payload;
     },
     setPassDisabled: (debug, action: PayloadAction<{ pass: string; disabled: boolean }>) => {
       // Open-world membership record (any pass name): `[name] === true` disables.
@@ -175,6 +182,7 @@ export const debugSlice = createSlice({
 
 export const {
   setDebugOverlay,
+  setTerrainPickMarkerRadiusM,
   setPassDisabled,
   setRenderStrategy,
   inspectClipPath,

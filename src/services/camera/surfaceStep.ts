@@ -36,6 +36,10 @@ type SurfaceStepCtx = {
   readonly standoffRadii: number;
   /** What the floor stands off from, per direction; `bodyRadiusM` keeps the band arithmetic. */
   readonly groundRadiusAtM: GroundRadiusLookup;
+  /** Relief shells the gesture/zoom pick marches between (spec §8.1); the datum-sphere
+   *  fallback on a miss is the call sites' own policy, not this ctx's. */
+  readonly innerBoundRadiusM: number;
+  readonly outerBoundRadiusM: number;
   /** Scene-frame up in BODY-FIXED axes (unit); the body rotates under it, so resample per drain. */
   readonly sceneUpLocal: Readonly<Vec3>;
   /** A focus HOSTED on this body, body-fixed metres — it owns the zoom's pivot. */
@@ -63,6 +67,8 @@ export function surfaceStep(
     bodyRadiusM,
     standoffRadii,
     groundRadiusAtM,
+    innerBoundRadiusM,
+    outerBoundRadiusM,
     sceneUpLocal,
     focusPivotM,
     tuning,
@@ -79,6 +85,8 @@ export function surfaceStep(
         bodyRadiusM,
         standoffRadii,
         groundRadiusAtM,
+        innerBoundRadiusM,
+        outerBoundRadiusM,
         sceneUpLocal,
         tilt.rememberedTiltRad,
         tuning,
@@ -93,7 +101,16 @@ export function surfaceStep(
   if (step.kind !== 'drag' || prev.gesture === null) return { pose: arm, gesture: prev, tilt };
   const gesture =
     prev.gesture === 'down'
-      ? latchSurfaceGesture(arm, step, viewportPx, fovYRad, bodyRadiusM)
+      ? latchSurfaceGesture(
+          arm,
+          step,
+          viewportPx,
+          fovYRad,
+          bodyRadiusM,
+          groundRadiusAtM,
+          innerBoundRadiusM,
+          outerBoundRadiusM,
+        )
       : prev.gesture;
   // The step's ENTRY heading, which pan transports. Drags level against the
   // PURE body ENU — the band blend is the zoom's authority; a drag-created

@@ -12,6 +12,7 @@ import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
+import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
@@ -406,7 +407,7 @@ function makeInput(
   const ctx = {
     isReady: true as const,
     // `runFrame` stamps this after every Layer's frame hook has voted.
-    layersAnimating: false,
+    layersSettling: false,
     viewSlot: 0,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
@@ -415,6 +416,7 @@ function makeInput(
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: canvasWidth, height: canvasHeight },
+    cursorTexPx: null,
     drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
     >,
@@ -478,7 +480,6 @@ function makeInput(
           debugLineRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer: null,
-          flowFieldRenderer: null,
           structureMarkerRenderer: null,
           // Near-field handles null → the body layers, star-points,
           // star-catalog, and foregroundLabelsPass all report enabled=false,
@@ -532,10 +533,8 @@ function makeInput(
           compositor,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
         },
-        // encodeFlowCompute (pre-HDR) reads these; flow is default-off so the
-        // gate early-returns once the renderer is null.  A null slot →
-        // slotReady false → not loaded.  The encoders read the DebugPanel
-        // renderer-toggle override bag off `settings.debug.disabledPasses`:
+        // The encoders read the DebugPanel renderer-toggle override bag off
+        // `settings.debug.disabledPasses`:
         // most tests pass no overrides so the default is an empty record (matches
         // production); the skip-on-toggle test passes `overrides.disabledPasses`.
         settings: {
@@ -563,11 +562,9 @@ function makeInput(
           filaments: { enabled: settings.filamentsEnabled, intensity: settings.filamentIntensity },
           constellations: { enabled: false, intensity: 1 },
           volumes: { enabled: settings.volumesEnabled, items: {} },
-          flow: { enabled: false },
           debug: { disabledPasses: overrides.disabledPasses ?? {}, renderStrategy: 'auto' },
         },
         selection: { select: settings.selected },
-        assetSlots: { flow: null },
         // Pick-throttle bag; the content passes don't touch it, but the
         // engine-state shape carries it — fields sit at their default
         // 'nothing in flight' values.
@@ -602,6 +599,7 @@ function makeInput(
           proceduralDisksPass(galaxyRuntime),
           texturedDisksPass(galaxyRuntime),
         ],
+        computes: CORE_COMPUTES,
       } as never,
       device,
       context,

@@ -74,7 +74,6 @@ function makeEngineState(settings: EngineSettingsState): EngineState {
       },
       scheduler: { requestRender: vi.fn<() => void>() },
     },
-    gpu: { flowFieldRenderer: { fieldLoaded: () => false } },
     assetSlots: {},
     fadeRows: FADE_LAYERS,
   } as unknown as EngineState;

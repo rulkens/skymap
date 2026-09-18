@@ -17,6 +17,7 @@ import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
 import { frameKey } from '../../services/engine/camera/rungs/frameKey';
 import { selectCameraTuning } from '../../state/camera/selectors';
+import { selectTerrainPickMarkerRadiusM } from '../../state/settings/selectors';
 import { useAppSelector } from '../../store/hooks';
 import DebugSection from './DebugSection';
 import OrientationTuning from './OrientationTuning';
@@ -60,7 +61,11 @@ function deg(rad: number | null): string {
   return rad === null ? '—' : `${(rad * RAD_TO_DEG).toFixed(1)}°`;
 }
 
-function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
+function modelOf(
+  snap: CameraDebugSnapshot,
+  tuning: CameraTuning,
+  markerRadiusM: number,
+): PanelModel {
   const { dofs, deltas } = snap;
   const off = !tuning.northUp;
   return {
@@ -74,6 +79,11 @@ function modelOf(snap: CameraDebugSnapshot, tuning: CameraTuning): PanelModel {
     band: [
       { key: 'h_over_R', value: num(snap.hOverR) },
       { key: 'altitude_m', value: num(snap.altitudeM) },
+      { key: 'terrain_pick_height_m', value: num(snap.terrainPickHeightM) },
+      // The gauge's own size: a height written down beside a buried fraction
+      // means nothing without the sphere radius it was read against.
+      { key: 'terrain_pick_marker_radius_m', value: num(markerRadiusM) },
+      { key: 'resident_height_level_at_eye', value: num(snap.residentHeightLevelAtEye) },
       { key: 'band_up_weight', value: num(snap.bandUpWeight) },
       { key: 'engage/disengage_hr', value: `${tuning.engageHR} / ${tuning.disengageHR}` },
       { key: 'tilt_full/zero_hr', value: `${tuning.tiltFullHR} / ${tuning.tiltZeroHR}` },
@@ -159,6 +169,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
   // The ONE reader of the live tuning: two readers at two rates (here and the
   // 4 Hz snapshot) would be a 250 ms mirror of the value the sliders write.
   const tuning = useAppSelector(selectCameraTuning);
+  const markerRadiusM = useAppSelector(selectTerrainPickMarkerRadiusM);
 
   useEffect(() => {
     // This mount is what turns the frame loop's Δ/peak record on.
@@ -170,7 +181,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
     };
   }, [cameraDebug]);
 
-  const model = modelOf(snap, tuning);
+  const model = modelOf(snap, tuning, markerRadiusM);
 
   return (
     <DebugSection title="Camera">
@@ -248,7 +259,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
         onClick={() => {
           // A fresh snapshot, not the 4 Hz-stale one, so the paste is current.
           void navigator.clipboard
-            .writeText(copyTextOf(modelOf(cameraDebug(), tuning)))
+            .writeText(copyTextOf(modelOf(cameraDebug(), tuning, markerRadiusM)))
             .then(() => {
               setCopied(true);
               setTimeout(() => setCopied(false), 1200);

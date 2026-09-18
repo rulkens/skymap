@@ -45,8 +45,6 @@ export type EngineAssetSlots = {
    * voxels native in three tiers. Tier-aware and default-on, so `setTier` reloads it.
    */
   mcpm: AssetSlot<ScalarCube, MCPMReq> | null;
-  /** CF4++ `flowfield.scfd`, SCFD v3 `channels = 4`: rgb = velocity, a = overdensity δ. Tier-agnostic, default-off. */
-  flow: AssetSlot<ScalarCube, void> | null;
   /**
    * `polyphorm-2mrs-{small,medium,large}.scfd` — 2MRS Polyphorm-derived cosmic-web
    * density volume. Tier-aware like `mcpm`, default-off.

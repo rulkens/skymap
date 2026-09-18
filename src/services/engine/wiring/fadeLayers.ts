@@ -153,16 +153,6 @@ export const FADE_LAYERS = [
     seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0),
     intent: (s) => s.zoneOfAvoidance.enabled,
   }),
-  fadeLayerRow({
-    key: 'flow',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'flow' }),
-    seed: () => 0,
-    intent: (s) => s.flow.enabled,
-    // Keyed on the renderer's own "cube loaded" truth, so one guarded bridge call
-    // is correct for both the toggle and the slot commit that just uploaded it.
-    guard: (state) => state.gpu.flowFieldRenderer?.fieldLoaded() ?? false,
-  }),
   fadeLayerRow<VolumeFieldId, 'volumeField'>({
     key: 'volumeField',
     expand: () => volumeFieldIds(),

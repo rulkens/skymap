@@ -2,7 +2,7 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`, asserting
+ * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`, asserting
  * the composed sets stay disjoint (D5) — a bad composition throws at boot.
  */
 
@@ -24,6 +24,7 @@ import {
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { CONTENT_PASSES } from '../frame/passes';
+import { CORE_COMPUTES } from '../frame/computes';
 import { ASSET_WIRING } from '../wiring/assetWiring';
 import { FADE_LAYERS } from '../wiring/fadeLayers';
 
@@ -128,6 +129,17 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       );
     }
     passNames.add(pass.name);
+  }
+  state.computes = [...CORE_COMPUTES, ...instances.flatMap((instance) => instance.computes)];
+  const computeNames = new Set<string>();
+  for (const compute of state.computes) {
+    if (computeNames.has(compute.name)) {
+      throw new Error(
+        `createLayers: two composed compute rows are named '${compute.name}'; ` +
+          'the frame order resolves a name to one row, so the second never runs',
+      );
+    }
+    computeNames.add(compute.name);
   }
   // One fold over the whole list: a companion's parent may sit in the other
   // half, and `expandCompanionRows` is only correct over a list holding both.

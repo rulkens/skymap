@@ -16,7 +16,6 @@ import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
-import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
 
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -97,7 +96,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   });
 
   state.gpu.milkyWayCloud?.reconcile(state.settings.milkyWay.starCount);
-  state.gpu.flowFieldRenderer?.reconcile(state.settings.flow);
   state.gpu.atmosphereShellRenderer?.reconcile({
     skyViewLutSize: SKY_VIEW_LUT_SIZE_BY_TIER[state.tier],
   });
@@ -112,11 +110,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the body is this frame, and `deriveBodyStates` is memoised one-deep, so
   // this call primes the map every later reader gets by reference.
   const simDays = deriveSimDays(selectTimeState(stored), nowMs);
-  // Bound once, reused below by `deriveBodyStates` (site placement) and
-  // `stepCameraRuntime` (the camera floor); `terrainHeightAtOf` is the one
-  // "pre-boot / not-this-body" miss rule shared with `engine.ts`'s reader.
-  const terrainHeightAt: TerrainHeightAtLookup = terrainHeightAtOf(state.subsystems.surfaceTiles);
-  const bodyStates = deriveBodyStates(simDays, terrainHeightAt) as ReadonlyMap<BodyId, BodyState>;
+  const bodyStates = deriveBodyStates(simDays) as ReadonlyMap<BodyId, BodyState>;
 
   const {
     next,
@@ -132,7 +126,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     aspect: deps.canvas.width / deps.canvas.height,
     steps,
     bodies: bodyStates,
-    terrainHeightAt,
+    terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
     clipEpoch,
     drivers: deps.drivers,
   });
@@ -213,13 +207,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Each Layer's `frame` hook, in tuple order, right after the focus uniform
   // and before any planner. No short-circuit: every hook runs every frame, so a
   // later Layer's vote is never skipped by an earlier `true`.
-  let layersAnimating = false;
+  let layersAwake = false;
+  let layersSettling = false;
   for (const layer of state.layers) {
-    if (layer.frame !== null && layer.frame(ctx, state)) layersAnimating = true;
+    if (layer.frame === null) continue;
+    const vote = layer.frame(ctx, state);
+    // `settling` is folded into `awake` here rather than trusted to each Layer,
+    // so the implication holds structurally: content too unsettled to bake is
+    // by definition still changing.
+    if (vote.awake || vote.settling) layersAwake = true;
+    if (vote.settling) layersSettling = true;
   }
-  // Published on the ctx so the sky-capture scheduler can read "a Layer's
-  // content is still settling" without reaching into a Layer's subsystems.
-  ctx.layersAnimating = layersAnimating;
+  ctx.layersSettling = layersSettling;
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
@@ -270,6 +269,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
             camPosLocalM: prepared.pose.eyeRelBodyM,
             viewProjLocal: prepared.mvpLocal,
             radiusM: prepared.radiusM,
+            reliefM: prepared.body.surface.reliefM,
             viewportPx: surfaceTilesView.viewportPx,
             residentSlot: surfaceTiles.residentSlot,
           });
@@ -337,7 +337,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,
-    layersAnimating,
+    layersAwake,
   });
 
   if (keepTicking) {

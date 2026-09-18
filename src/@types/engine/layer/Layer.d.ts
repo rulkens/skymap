@@ -9,6 +9,7 @@
 import type { Slice } from '@reduxjs/toolkit';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { ContentPass } from '../frame/ContentPass';
+import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
@@ -16,7 +17,8 @@ import type { Label2DProducer } from '../subsystems/Label2DProducer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
-import type { LayerUiSection } from './LayerUiSection';
+import type { LayerFrameVote } from './LayerFrameVote';
+import type { LayerUi } from './LayerUi';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
@@ -48,8 +50,8 @@ export type Layer<
   readonly sources?: Sources;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
-  /** Rendered by `SettingsPanel`: a hand-written component, never generated. */
-  readonly ui?: LayerUiSection;
+  /** The two panel surfaces `SettingsPanel`/`DebugPanel` render for this Layer. */
+  readonly ui?: LayerUi;
 
   // Lifecycle. Every member below is invoked from exactly one place —
   // `instantiateLayer` — which is where to look to see the call shapes together.
@@ -63,6 +65,9 @@ export type Layer<
   /** Appended after `CONTENT_PASSES` in `createLayers`; names are globally unique —
    * a duplicate throws at boot. */
   passes(runtime: Runtime): readonly ContentPass[];
+  /** Appended after `CORE_COMPUTES` in `createLayers`; names are globally unique —
+   * a duplicate throws at boot, and a name `FRAME_ORDER` never lists just never runs. */
+  computes?(runtime: Runtime): readonly ContentCompute[];
   /** Rows join core's table in `createLayers`, which builds, wires and demand-drives
    * the slots behind them. */
   assets?(runtime: Runtime): readonly (AssetWiringRow | CompanionAssetRow)[];
@@ -77,8 +82,8 @@ export type Layer<
   selection?(runtime: Runtime): readonly SelectionKindRow[];
   /**
    * Called from `runFrame` once a frame, after the focus uniform and before any pass.
-   * `true` keeps the loop awake and defers sky captures, so a capture never bakes
-   * half-arrived content.
+   * Returns two independent votes — keep the loop awake, and hold off sky captures;
+   * see `LayerFrameVote` for why answering one with the other is a defect.
    */
-  frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => boolean;
+  frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => LayerFrameVote;
 };

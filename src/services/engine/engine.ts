@@ -157,6 +157,7 @@ export function createEngine(
       // Pick-throttle state only; hover/select live on the Redux `selection` slice.
       pickInFlight: false,
       pointerDown: false,
+      cursorTexPx: null,
     },
     gpu: {
       // Every handle here is null until the async bootstrap constructs it and is
@@ -195,7 +196,6 @@ export function createEngine(
       zoneOfAvoidanceRenderer: null,
       label3DRenderer: null,
       volumeFieldRenderer: null,
-      flowFieldRenderer: null,
       volumeUpsample: null,
       milkyWayAggregateUpsample: null,
       zoneOfAvoidanceUpsample: null,
@@ -206,6 +206,7 @@ export function createEngine(
       pickDebugOverlay: null,
       earthRenderer: null,
       surfaceTileRenderer: null,
+      terrainPickMarkerRenderer: null,
       starRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,
@@ -301,7 +302,6 @@ export function createEngine(
       // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
       // when the tier changes.
       mcpm: null,
-      flow: null,
       // Tier-aware like mcpm.
       polyphorm2Mrs: null,
       mcpmWorkbench: null,
@@ -321,8 +321,9 @@ export function createEngine(
     layerSagaTasks: [],
     selectionKindRows: [],
     // Empty until `createLayers` composes core's rows with every Layer's; no
-    // phase before it reads any of the four (`pickProgram` is `wireInput`).
+    // phase before it reads any of the five (`pickProgram` is `wireInput`).
     passes: [],
+    computes: [],
     assetRows: [],
     fadeRows: [],
     layerSlots: new Map(),
@@ -578,6 +579,15 @@ export function createEngine(
           tuning: rootState.camera.tuning,
           deltas: readOrientDeltas(),
           terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
+          residentHeightLevelAt: (bodyId, dir) =>
+            state.subsystems.surfaceTiles?.residentHeightLevelAt(bodyId, dir) ?? null,
+          // Null unless the `terrain-pick-marker` overlay is on — its listener
+          // is the only writer, so the pick row is dead with the toggle off.
+          cursorTexPx: state.picking.cursorTexPx,
+          viewportPx: [canvas.width, canvas.height],
+          // What the last frame DREW with (`FrameOutputs`), the same rule this
+          // whole snapshot follows — a mid-poll resize must not retro-change it.
+          fovYRad: outputs.projection.fovYRad,
         });
       },
     },

@@ -7,7 +7,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { scalarVolumePass } from './scalarVolumePass';
-import { flowFieldPass } from './flowFieldPass';
 import { volumeUpsamplePass } from './volumeUpsamplePass';
 import { milkyWayPass } from './milkyWayPass';
 import { milkyWayAggregatePass } from './milkyWayAggregatePass';
@@ -23,6 +22,7 @@ import { labelsPass } from './labelsPass';
 import { clipPathDebugPass } from './clipPathDebugPass';
 import { earthPass } from './earthPass';
 import { surfaceTilesPass } from './surfaceTilesPass';
+import { terrainPickMarkerPass } from './terrainPickMarkerPass';
 import { cloudShellPass } from './cloudShellPass';
 import { starSpheresPass } from './starSpheresPass';
 import { fieldStarSpherePass } from './fieldStarSpherePass';
@@ -49,7 +49,6 @@ import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 export const CONTENT_PASSES: readonly ContentPass[] = [
   scalarVolumePass,
   zoneOfAvoidancePass,
-  flowFieldPass,
   volumeUpsamplePass,
   zoneOfAvoidanceUpsamplePass,
   horizonShellPass,
@@ -71,6 +70,7 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   labelsPass,
   earthPass,
   surfaceTilesPass,
+  terrainPickMarkerPass,
   cloudShellPass,
   starSpheresPass,
   fieldStarSpherePass,

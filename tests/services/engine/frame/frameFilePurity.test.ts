@@ -41,7 +41,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/cosmoLabelProjection': 1,
   'frame/cubemapFaceContext': 4,
   'frame/deriveBodyStates': 3,
-  'frame/executeFrame': 6,
+  'frame/executeFrame': 5,
   'frame/expandFrameOrder': 6,
   'frame/foregroundMaxDistance': 1,
   'frame/milkyWayCloudLiveness': 1,
@@ -127,12 +127,15 @@ describe.each([
   ['frame', FRAME_DIR] as const,
   ['frame/timing', FRAME_DIR + 'timing/'] as const,
   ['frame/passes', FRAME_DIR + 'passes/'] as const,
+  ['frame/computes', FRAME_DIR + 'computes/'] as const,
   ...LAYER_PASS_DIRS,
 ])('%s files declare only their own symbol', (label, dir) => {
-  // `passes/index.ts` is the registry barrel, not a pass; the other dirs have
-  // no barrel and CLAUDE.md forbids adding one.
+  // `passes/index.ts` and `computes/index.ts` are registry barrels, not rows;
+  // the other dirs have no barrel and CLAUDE.md forbids adding one.
   const files = readdirSync(dir).filter(
-    (f) => f.endsWith('.ts') && !(label === 'frame/passes' && f === 'index.ts'),
+    (f) =>
+      f.endsWith('.ts') &&
+      !((label === 'frame/passes' || label === 'frame/computes') && f === 'index.ts'),
   );
   expect(files.length).toBeGreaterThan(0);
 
