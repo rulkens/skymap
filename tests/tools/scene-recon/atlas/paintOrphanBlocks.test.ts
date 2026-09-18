@@ -41,7 +41,6 @@ describe('paintOrphanBlocks', () => {
     // Two vertices, different xref, same source UV — one orphan point, both faces.
     const sourceUvs = new Float32Array([0.5, 0.5, 0.5, 0.5]);
     const packed: PackedAtlas = {
-      sizePx: DEST_SIZE_PX,
       chartCount: 0,
       vertices: [
         { xref: 0, uvPx: [0, 0], chartIndex: -1, atlasIndex: -1 },
@@ -86,7 +85,6 @@ describe('paintOrphanBlocks', () => {
     const source = sourceImage();
     const sourceUvs = new Float32Array([0.5, 0.5]);
     const packed: PackedAtlas = {
-      sizePx: DEST_SIZE_PX,
       chartCount: 0,
       vertices: [{ xref: 0, uvPx: [0, 0], chartIndex: -1, atlasIndex: -1 }],
       indices: new Uint32Array(),

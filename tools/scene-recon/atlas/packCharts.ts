@@ -18,8 +18,8 @@ export async function packCharts(
   destSizePx: number,
   scale: number,
 ): Promise<PackedAtlas | null> {
-  if (scale <= 0) {
-    throw new Error(`packCharts: scale must be > 0, got ${scale}`);
+  if (!Number.isFinite(scale) || scale <= 0) {
+    throw new Error(`packCharts: scale must be finite and > 0, got ${scale}`);
   }
 
   // Source texel units, never 0–1: xatlas drops faces under its area epsilon at 0–1 scale.
@@ -54,7 +54,6 @@ export async function packCharts(
     }
 
     return {
-      sizePx: atlas.width,
       chartCount: mesh.chartCount,
       vertices: mesh.vertices.map((v) => ({
         xref: v.xref,

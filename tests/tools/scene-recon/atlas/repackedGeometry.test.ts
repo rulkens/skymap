@@ -25,7 +25,6 @@ function twoChartQuad(): { source: TexturedMeshGeometry; packed: PackedAtlas } {
     image: IMAGE,
   };
   const packed: PackedAtlas = {
-    sizePx: DEST_SIZE_PX,
     chartCount: 2,
     vertices: [vertex(0, 0), vertex(1, 0), vertex(2, 0), vertex(0, 1), vertex(2, 1), vertex(3, 1)],
     indices: new Uint32Array([0, 1, 2, 3, 4, 5]),
@@ -82,7 +81,6 @@ describe('repackedGeometry', () => {
       image: IMAGE,
     };
     const packed: PackedAtlas = {
-      sizePx: DEST_SIZE_PX,
       chartCount: 0,
       vertices: [vertex(0, -1), vertex(1, -1), vertex(2, -1)],
       indices: new Uint32Array([0, 1, 2]),

@@ -32,7 +32,7 @@ function vertex(xref: number, uvPx: Vec2): PackedVertex {
 
 function packedTriangle(): PackedAtlas {
   const vertices = [vertex(0, [0, 0]), vertex(1, [8, 0]), vertex(2, [0, 8])];
-  return { sizePx: DEST_SIZE_PX, chartCount: 1, vertices, indices: new Uint32Array([0, 1, 2]) };
+  return { chartCount: 1, vertices, indices: new Uint32Array([0, 1, 2]) };
 }
 
 describe('resampleCharts', () => {

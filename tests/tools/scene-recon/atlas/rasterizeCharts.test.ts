@@ -18,7 +18,7 @@ function vertex(xref: number, uvPx: Vec2, chartIndex: number): PackedVertex {
 // atlas border so both an inside-margin and a beyond-margin texel exist off its diagonal edge.
 function oneChartTriangle(): PackedAtlas {
   const vertices = [vertex(0, [4, 4], 0), vertex(1, [12, 4], 0), vertex(2, [4, 12], 0)];
-  return { sizePx: DEST_SIZE_PX, chartCount: 1, vertices, indices: new Uint32Array([0, 1, 2]) };
+  return { chartCount: 1, vertices, indices: new Uint32Array([0, 1, 2]) };
 }
 
 describe('rasterizeCharts', () => {
@@ -53,7 +53,6 @@ describe('rasterizeCharts', () => {
       vertex(5, [4, 12], 1),
     ];
     const packed: PackedAtlas = {
-      sizePx: DEST_SIZE_PX,
       chartCount: 2,
       vertices,
       indices: new Uint32Array([0, 1, 2, 3, 4, 5]),

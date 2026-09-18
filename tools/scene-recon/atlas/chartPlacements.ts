@@ -1,23 +1,15 @@
+import { rotateTurns, type Turns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';
 import type { PackedAtlas } from '../@types/PackedAtlas';
 import type { PackedVertex } from '../@types/PackedVertex';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 
-const TURNS = [0, 1, 2, 3] as const;
+const TURNS: readonly Turns[] = [0, 1, 2, 3];
 
-/** Mathematical CCW rotation by `turns` × 90° — the same convention `rasterizeCharts` inverts. */
-function rotate([x, y]: Vec2, turns: (typeof TURNS)[number]): Vec2 {
-  switch (turns) {
-    case 0:
-      return [x, y];
-    case 1:
-      return [-y, x];
-    case 2:
-      return [-x, -y];
-    default:
-      return [y, -x];
-  }
-}
+// A genuine 90°-turn fit's residual spread is float32 noise; xatlas can also rotate a chart by a
+// non-90° angle or shrink one past the resolution, which lands the fit off by more than this and
+// must throw rather than silently copy from the wrong source region (spec §5.6).
+const MAX_FIT_RESIDUAL_SPREAD_PX = 0.05;
 
 /** One placement per chart index; xatlas chooses WHERE a chart goes, this snaps HOW it got there
  *  to a 90° turn plus an integer offset, so the bake can invert it exactly. */
@@ -32,7 +24,11 @@ export function chartPlacements(
     if (v.chartIndex >= 0) membersByChart[v.chartIndex]!.push(v); // orphans get no placement
   }
 
-  return membersByChart.map((members) => {
+  return membersByChart.map((members, chartIndex) => {
+    if (members.length === 0) {
+      throw new Error(`chartPlacements: chart ${chartIndex} has no member vertices`);
+    }
+
     const dMin: Vec2 = [Infinity, Infinity];
     for (const v of members) {
       dMin[0] = Math.min(dMin[0], v.uvPx[0]);
@@ -52,7 +48,7 @@ export function chartPlacements(
       let sourceMinY = Infinity;
 
       for (const v of members) {
-        const turned = rotate(
+        const turned = rotateTurns(
           [
             sourceUvs[2 * v.xref]! * sourceSizePx * scale,
             sourceUvs[2 * v.xref + 1]! * sourceSizePx * scale,
@@ -78,6 +74,12 @@ export function chartPlacements(
         bestTurns = turns;
         bestSourceMin = [sourceMinX, sourceMinY];
       }
+    }
+
+    if (bestSpread > MAX_FIT_RESIDUAL_SPREAD_PX) {
+      throw new Error(
+        `chartPlacements: chart ${chartIndex} best-turn residual spread ${bestSpread.toFixed(3)}px exceeds ${MAX_FIT_RESIDUAL_SPREAD_PX}px — xatlas likely rotated it off-axis or shrank it past the atlas resolution`,
+      );
     }
 
     // Integer offset: a texel centre survives a 90° turn only when the translation lands it back

@@ -14,7 +14,11 @@ export async function fitAtlasScale(
   const exact = await attempt(1);
   if (exact) return { scale: 1, packed: exact };
 
-  let scale = Math.min(1, Math.sqrt((destSizePx * destSizePx * SEED_FILL_RATIO) / usedTexels));
+  // Seed capped at SCALE_STEP, not 1: scale 1 already failed the `exact` attempt above.
+  let scale = Math.min(
+    SCALE_STEP,
+    Math.sqrt((destSizePx * destSizePx * SEED_FILL_RATIO) / usedTexels),
+  );
   while (scale >= MIN_TRIAL_SCALE) {
     const packed = await attempt(scale);
     if (packed) return { scale, packed };

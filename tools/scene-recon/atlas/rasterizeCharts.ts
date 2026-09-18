@@ -6,25 +6,10 @@
  * a rigid transform shared by the whole chart, so every triangle of a chart agrees exactly.
  */
 import { ATLAS_CLAIM } from './atlasClaims';
+import { rotateTurns, type Turns } from './rotateTurns';
 import type { ChartPlacement } from '../@types/ChartPlacement';
 import type { PackedAtlas } from '../@types/PackedAtlas';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
-
-const TURNS = [0, 1, 2, 3] as const;
-
-/** Same CCW convention as chartPlacements' `rotate` — inverted here via `(4 - turns) % 4`. */
-function rotate([x, y]: Vec2, turns: (typeof TURNS)[number]): Vec2 {
-  switch (turns) {
-    case 0:
-      return [x, y];
-    case 1:
-      return [-y, x];
-    case 2:
-      return [-x, -y];
-    default:
-      return [y, -x];
-  }
-}
 
 const EDGE_MARGIN_PX = Math.SQRT1_2;
 
@@ -44,7 +29,7 @@ export function rasterizeCharts(
 
     const chartIndex = va.chartIndex;
     const placement = placements[chartIndex]!;
-    const invTurns = ((4 - placement.turns) % 4) as (typeof TURNS)[number];
+    const invTurns = ((4 - placement.turns) % 4) as Turns;
     const dest: readonly Vec2[] = [va.uvPx, vb.uvPx, vc.uvPx];
 
     const xs = dest.map((d) => d[0]);
@@ -87,7 +72,10 @@ export function rasterizeCharts(
         }
         claims[destIndex] = chartIndex;
 
-        const [sx, sy] = rotate([cx - placement.offsetPx[0], cy - placement.offsetPx[1]], invTurns);
+        const [sx, sy] = rotateTurns(
+          [cx - placement.offsetPx[0], cy - placement.offsetPx[1]],
+          invTurns,
+        );
         visit(destIndex, sx / placement.scale, sy / placement.scale);
       }
     }

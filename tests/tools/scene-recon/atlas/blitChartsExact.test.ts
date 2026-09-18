@@ -28,7 +28,7 @@ function vertex(xref: number, uvPx: Vec2): PackedVertex {
 // non-negative source coordinates for the triangle's interior.
 function packedTriangle(): PackedAtlas {
   const vertices = [vertex(0, [4, 4]), vertex(1, [12, 4]), vertex(2, [4, 12])];
-  return { sizePx: DEST_SIZE_PX, chartCount: 1, vertices, indices: new Uint32Array([0, 1, 2]) };
+  return { chartCount: 1, vertices, indices: new Uint32Array([0, 1, 2]) };
 }
 
 describe('blitChartsExact', () => {

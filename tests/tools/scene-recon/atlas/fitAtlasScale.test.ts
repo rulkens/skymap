@@ -4,7 +4,6 @@ import { fitAtlasScale } from '../../../../tools/scene-recon/atlas/fitAtlasScale
 import type { PackedAtlas } from '../../../../tools/scene-recon/@types/PackedAtlas';
 
 const STUB_PACKED: PackedAtlas = {
-  sizePx: 2048,
   chartCount: 1,
   vertices: [],
   indices: new Uint32Array(),
