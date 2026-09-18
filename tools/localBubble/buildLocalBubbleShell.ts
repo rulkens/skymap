@@ -14,7 +14,8 @@ import { dirname, join } from 'node:path';
 
 import sharp from 'sharp';
 
-import { parseFitsBinTable } from '../parsers/desiFits';
+import type { FitsColumn } from '../parsers/@types/FitsColumn';
+import { parseFitsBinTable } from '../parsers/parseFitsBinTable';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 import { resampleSkyToEquirect } from '../utils/geo/resampleSkyToEquirect';
 import { smoothEquirectSphere } from '../utils/geo/smoothEquirectSphere';
@@ -37,14 +38,12 @@ const DEFAULT_SMOOTH_DEG = 2.5;
 const OUT_DIR = 'public/data/local-bubble/v1';
 const PREVIEW_DIR = 'docs/screenshots';
 
-type Column = { readonly byteOffset: number; readonly form: string };
-
 function readColumn(
   view: DataView,
   dataOffset: number,
   rowLengthBytes: number,
   rowCount: number,
-  column: Column,
+  column: FitsColumn,
 ): Float64Array {
   if (column.form !== 'D') {
     throw new Error(`buildLocalBubbleShell: expected a float64 ('D') column, got '${column.form}'`);
@@ -108,7 +107,7 @@ async function main(): Promise<void> {
   );
 
   const byName = new Map(table.columns.map((c) => [c.name, c]));
-  const need = (name: string): Column => {
+  const need = (name: string): FitsColumn => {
     const column = byName.get(name);
     if (!column) throw new Error(`buildLocalBubbleShell: table has no '${name}' column`);
     return column;
