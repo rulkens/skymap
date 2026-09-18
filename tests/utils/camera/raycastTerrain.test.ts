@@ -22,11 +22,14 @@ function normalize(v: Vec3): Vec3 {
 
 describe('raycastTerrain', () => {
   it('matches the analytic sphere root for a flat field, near-nadir ray', () => {
-    // Straight down from 100 km up: m=[0,0,DATUM+1e5], b=-(DATUM+1e5),
-    // c=(DATUM+1e5)²-DATUM², discr=DATUM² (diff-of-squares cancels the
-    // 1e5² term) — the near root is exactly 1e5, landing on [0,0,DATUM].
+    // 100 km up, aimed 5° off nadir. The tilt is load-bearing: a ray straight
+    // down the z axis meets the datum exactly where the eye's OWN radial does,
+    // so it cannot tell a march along the ray from an answer that merely drops
+    // the eye onto the ground — leaving the signed field's sign unconstrained.
+    // At 5° the two land ~8.7 km apart, orders past the 1 m assertion.
     const origin: Vec3 = [0, 0, DATUM_M + 100_000];
-    const dir: Vec3 = [0, 0, -1];
+    const tiltRad = (5 * Math.PI) / 180;
+    const dir: Vec3 = [Math.sin(tiltRad), 0, -Math.cos(tiltRad)];
     const flatField: GroundRadiusLookup = () => DATUM_M;
     const roots = raySphereRoots(origin, dir, CENTRE_M, DATUM_M);
     expect(roots).not.toBeNull();
@@ -213,14 +216,22 @@ describe('raycastTerrain', () => {
   });
 
   it('honours a tight tolerance across a steep (cliff) field', () => {
-    // A hard step in groundRadiusAtM — the steepest possible spatial
-    // slope — crossed by a ray with a lateral component: the forward
-    // march's step size is set by the bracket's overall depth (hundreds
-    // of metres here), so accepting its first bracket sample unrefined
-    // would miss a 1 mm tolerance by orders of magnitude.
+    // A hard step in groundRadiusAtM at the x = 0 lip, aimed at so the bracket
+    // the refinement resolves STRADDLES it — the point of the case: land deep
+    // in the plateau instead and the field is locally constant, so any
+    // tolerance is met for free. Geometry (y = 0, so a radius on the z axis is
+    // just z, and the field's sign is the sign of x): dir drops 4 m of z per
+    // 1 m of x, so an origin 1000 m west of the lip and 4000 m above it clears
+    // the lip by EDGE_CLEARANCE_M. West of the lip the ground is the datum
+    // 3 km down, so every step runs at the ~138 m cap and the march brackets
+    // x = -29 m (f ≈ +3116) against x = +5 m (f ≈ -18) — |f| jumps ~3000 m
+    // across the step. The root is EDGE_CLEARANCE_M of altitude past the lip,
+    // i.e. x = 0.25 m on the 4:1 slope, which the second assertion pins so a
+    // re-aim that drifts back into the plateau fails instead of passing free.
     const cliffHeightM = 3000;
     const cliffRadiusM = DATUM_M + cliffHeightM;
-    const origin: Vec3 = [-1000, 0, DATUM_M + 30_000];
+    const EDGE_CLEARANCE_M = 1;
+    const origin: Vec3 = [-1000, 0, cliffRadiusM + EDGE_CLEARANCE_M + 4000];
     const dir = normalize([1, 0, -4]);
     const toleranceM = 0.001;
     const cliffField: GroundRadiusLookup = (p) =>
@@ -236,5 +247,7 @@ describe('raycastTerrain', () => {
     expect(pick).not.toBeNull();
     const radiusM = Math.hypot(pick!.pointM[0], pick!.pointM[1], pick!.pointM[2]);
     expect(Math.abs(radiusM - cliffField(pick!.pointM))).toBeLessThanOrEqual(toleranceM);
+    expect(pick!.pointM[0]).toBeGreaterThan(0);
+    expect(pick!.pointM[0]).toBeLessThan(1);
   });
 });
