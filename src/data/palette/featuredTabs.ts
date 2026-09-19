@@ -380,7 +380,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       },
       {
         id: 'c77',
-        label: 'C77',
+        label: 'Centaurus A',
         blurb: 'TODO',
         image: '/images/famous/c77.webp',
         action: { kind: 'focus', focusId: 'c77' },
@@ -429,7 +429,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       },
       {
         id: 'm74',
-        label: 'M74',
+        label: 'Phantom Galaxy',
         blurb: 'TODO',
         image: '/images/famous/m74.webp',
         action: { kind: 'focus', focusId: 'm74' },
@@ -443,14 +443,14 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       },
       {
         id: 'c45',
-        label: 'C45',
+        label: 'NGC 5248',
         blurb: 'TODO',
         image: '/images/famous/c45.webp',
         action: { kind: 'focus', focusId: 'c45' },
       },
       {
         id: 'c12',
-        label: 'C12',
+        label: 'Fireworks Galaxy',
         blurb: 'TODO',
         image: '/images/famous/c12.webp',
         action: { kind: 'focus', focusId: 'c12' },
