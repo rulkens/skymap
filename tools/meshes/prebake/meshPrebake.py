@@ -4,6 +4,7 @@ points at the OUTPUT. Decimate BEFORE the unwrap+bake: baking into UVs that deci
 moves mis-registers the atlas against the triangles that survive.
 Run:  npm run prebake-mesh -- <key>   (Blender 5.2 LTS; not run in CI)"""
 
+import argparse
 import os
 import sys
 import time
@@ -337,10 +338,26 @@ def bounds(obj):
     return lo, hi
 
 
+def ground_up_arg(value):
+    parts = value.split(",")
+    if len(parts) != 3:
+        raise argparse.ArgumentTypeError("--ground-up wants x,y,z, got %r" % value)
+    return tuple(float(p) for p in parts)
+
+
+def parse_args(argv):
+    """`argv` is the tail after Blender's own `--`; the driver (`prebakeMesh.ts`)
+    is the only caller, so a bad key or vector is its bug, not a user's."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("key", choices=sorted(SOURCES))
+    parser.add_argument("--ground-up", dest="ground_up", type=ground_up_arg, default=None)
+    return parser.parse_args(argv)
+
+
 def main():
-    key = sys.argv[-1]
-    if key not in SOURCES:
-        raise SystemExit("prebake: pass one of %s" % sorted(SOURCES))
+    args = parse_args(sys.argv[sys.argv.index("--") + 1:])
+    key = args.key
+    ground_up = args.ground_up  # tuple or None; Task 4 bakes the ground plane from it.
     cfg = SOURCES[key]
     started = time.time()
 
