@@ -287,6 +287,8 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "NASA's car-sized rover in Gale Crater, on Mars since 2012. It showed that the crater once held a lake that could have supported microbes.",
         action: { kind: 'focus', focusId: 'body-curiosity' },
+        // Gale Crater's local midday; the default instant is night there.
+        capture: { t: '2026-09-18T02:00:00Z' },
       },
       {
         id: 'body-perseverance',
@@ -302,6 +304,8 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "One of NASA's twin Mars Exploration Rovers, in Gusev Crater. Planned for 90 days, it worked for six years before it got stuck in soft sand.",
         action: { kind: 'focus', focusId: 'body-spirit' },
+        // Gusev Crater's local midday; the default instant is night there.
+        capture: { t: '2026-09-17T23:20:00Z' },
       },
       {
         id: 'body-opportunity',
