@@ -77,15 +77,15 @@ def restore_emission(undo):
 
 
 # (name, `bpy.ops.object.bake` kwargs, atlas colourspace, optional material
-# preparation returning its own undo) — one atlas per row, `bake_pass` runs a
-# row start to finish. Every row but albedo is DATA: an atlas of slopes or
-# material values saved through the sRGB view transform comes out gamma-bent,
-# and the runtime decodes `_normal` and `_mr` linearly.
+# preparation returning its own undo, Cycles sample count) — one atlas per
+# row, `bake_pass` runs a row start to finish. Every row but albedo is DATA: an
+# atlas of slopes or material values saved through the sRGB view transform
+# comes out gamma-bent, and the runtime decodes `_normal` and `_mr` linearly.
 BAKE_PASSES = [
-    ("albedo", dict(type="EMIT"), "sRGB", swap_to_emission("Base Color")),
-    ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None),
-    ("roughness", dict(type="ROUGHNESS"), "Non-Color", None),
-    ("metallic", dict(type="EMIT"), "Non-Color", swap_to_emission("Metallic")),
+    ("albedo", dict(type="EMIT"), "sRGB", swap_to_emission("Base Color"), 1),
+    ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None, 1),
+    ("roughness", dict(type="ROUGHNESS"), "Non-Color", None, 1),
+    ("metallic", dict(type="EMIT"), "Non-Color", swap_to_emission("Metallic"), 1),
 ]
 
 
@@ -228,7 +228,7 @@ def arm_materials(obj):
         mat.node_tree.nodes.active = node
 
 
-def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare):
+def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples):
     """One BAKE_PASSES row start to finish: its atlas image, the bake, the save."""
     is_data = colourspace != "sRGB"
     image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX,
@@ -242,8 +242,9 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
-    # Colour only — no light in the scene to sample, so one sample is exact.
-    scene.cycles.samples = 1
+    # Material passes have no light to sample — 1 is exact; a row that adds
+    # light of its own (AO) asks for more through its own row count.
+    scene.cycles.samples = samples
     scene.render.bake.use_pass_direct = False
     scene.render.bake.use_pass_indirect = False
     scene.render.bake.use_pass_color = True
@@ -359,8 +360,8 @@ def main():
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
     arm_materials(obj)
     images = {}
-    for name, settings, colourspace, prepare in BAKE_PASSES:
-        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare)
+    for name, settings, colourspace, prepare, samples in BAKE_PASSES:
+        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples)
         log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
             % (ATLAS_PX, name, images[name].filepath_raw, time.time() - started))
 
