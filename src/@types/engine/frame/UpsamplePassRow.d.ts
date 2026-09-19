@@ -24,7 +24,7 @@ export type UpsamplePassRow = {
    * Extra draw work after the blit, into the same pass — e.g. ZoA's full-res
    * curved lettering. Runs regardless of whether `handleOf` returned a
    * handle this frame: the blit and `postBlit` guard themselves
-   * independently (see `zoneOfAvoidanceUpsamplePass.ts:30-38`), so one
+   * independently (see `src/layers/zoneOfAvoidance/passes/zoneOfAvoidanceUpsamplePass.ts`), so one
    * being absent must never suppress the other.
    */
   postBlit?(

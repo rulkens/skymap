@@ -4,7 +4,7 @@
  * screen-space blit of a reduced-res offscreen into HDR, ignoring the
  * resolved `SlabView`, gated by one liveness projection its producer shares
  * (see `UpsamplePassRow.d.ts`). `postBlit` guards itself independently of
- * the blit handle (`zoneOfAvoidanceUpsamplePass.ts:30-38`) — a missing
+ * the blit handle (ZoA's `zoneOfAvoidanceUpsamplePass.ts`) — a missing
  * handle must never suppress it.
  */
 

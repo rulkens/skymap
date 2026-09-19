@@ -1,5 +1,5 @@
 /**
- * zoneOfAvoidanceLiveness — one derivation of "is the ZoA guide band live this
+ * deriveZoneOfAvoidanceLiveness — one derivation of "is the ZoA guide band live this
  * frame, and at what opacity?", shared by producer (`zoneOfAvoidancePass`) and
  * consumer (`zoneOfAvoidanceUpsamplePass`) so their gates can't disagree about
  * which offscreen has live content. `null` rather than 0 for "not live", so a

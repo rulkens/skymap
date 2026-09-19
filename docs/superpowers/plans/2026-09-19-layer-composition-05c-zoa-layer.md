@@ -312,9 +312,9 @@ Controller inline. **Pass/orchestration files declare ONLY their one export** (n
 
 No test (prose only).
 
-- [ ] `src/layers/README.md`: the `targets?` row drops "Declared but NOT consumed yet — 05c wires it" and says the targets are appended after core's rows and allocated by core.
-- [ ] Re-point every old-path citation the Task 2/3 greps listed to the new path (`zoneOfAvoidanceUpsamplePass.ts:30-38` in `UpsamplePassRow.d.ts` / `createUpsamplePass.ts`; `ZoneOfAvoidanceTuningSection.tsx` in the two SgrAStar files; `LABEL_3D_PRODUCERS` in the `runLabel3DProducers` test header). Leave `docs/superpowers/**/completed/**` as history.
-- [ ] Final grep over `src tests tools docs` for every old path in the _Moved_ table: zero hits outside completed plans/specs.
+- [x] `src/layers/README.md`: the `targets?` row drops "Declared but NOT consumed yet — 05c wires it" and says the targets are appended after core's rows and allocated by core.
+- [x] Re-point every old-path citation the Task 2/3 greps listed to the new path (`zoneOfAvoidanceUpsamplePass.ts:30-38` in `UpsamplePassRow.d.ts` / `createUpsamplePass.ts`; `ZoneOfAvoidanceTuningSection.tsx` in the two SgrAStar files; `LABEL_3D_PRODUCERS` in the `runLabel3DProducers` test header). Leave `docs/superpowers/**/completed/**` as history.
+- [x] Final grep over `src tests tools docs` for every old path in the _Moved_ table: zero hits outside completed plans/specs.
 - [ ] `npm test` → green. Commit `docs(zoa): re-point citations to the Layer`.
 
 ## Task 5: Manual smoke (user)

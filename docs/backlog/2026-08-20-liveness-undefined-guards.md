@@ -6,8 +6,9 @@ Surfaced by rung 7's T7 review (`.superpowers/sdd/2026-08-20-fade-rows/task-7-re
 findings 2 and 4, adjudicated concern 2), two related "fixtures escape the
 type system at an `as unknown as` seam" gaps:
 
-**Null-vs-undefined guard drift.** `zoneOfAvoidanceLiveness.ts:18` guards
-`state.gpu.zoneOfAvoidanceRenderer === null`, so a state object (typically a
+**Null-vs-undefined guard drift.** `volumeLiveness.ts` guards its renderer
+handle `=== null` (ZoA's copy left with #763: its renderer is Layer-runtime
+owned and never null), so a state object (typically a
 test fixture built via `as unknown as EngineState`) with the field simply
 absent — `undefined`, not `null` — slips past the "not live" gate instead of
 being caught by it. This is the actual mechanism behind a
@@ -16,8 +17,6 @@ being caught by it. This is the actual mechanism behind a
 The local fix each time is to null the renderer explicitly in the fixture;
 the guard itself is the landmine that will keep re-surfacing until every
 `EngineState`-shaped fixture is disciplined about `null` vs omitted fields.
-Same class of gap as `volumeLiveness.ts`'s matching renderer-null check,
-which this module deliberately mirrors.
 
 **`focusBlend` required-but-fixture-omittable → `NaN` alpha.**
 `ReadyFrameContext.focusBlend` is a required `number`
@@ -33,7 +32,7 @@ defensive guard in production code.
 
 ## Why file it rather than fix inline
 
-Both gaps were adjudicated during rung 7's review as correct *not* to patch
+Both gaps were adjudicated during rung 7's review as correct _not_ to patch
 in that task's diff — a runtime guard against a type-system-covered case is
 the speculative defence the project's simplicity convention rejects, and
 the `zoneOfAvoidanceLiveness` guard's local fix (null the fixture) was

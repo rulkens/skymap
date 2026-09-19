@@ -1,7 +1,7 @@
 // src/components/DebugPanel/SgrAStarLensingTuningSection.tsx
 /**
  * Sgr A* lens pass tuning subsection (see `SgrAStarLensingTuning`'s own
- * docblock). Structural precedent: `ZoneOfAvoidanceTuningSection.tsx`.
+ * docblock). Structural precedent: `src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx`.
  * `cubemapResolutionPx` gets a `<select>` (four meaningful values) instead of
  * riding the generic slider board — the same "bespoke control after the rows"
  * shape ZoA's colour pickers use.
