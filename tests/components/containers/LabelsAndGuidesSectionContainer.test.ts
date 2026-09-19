@@ -191,7 +191,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
     expect(selectOrbitTrailsEnabled(store.getState())).toBe(false);
   });
 
-  // ── layerRows (P1) ─────────────────────────────────────────────────────────────
+  // ── layerRows ──────────────────────────────────────────────────────────────────
 
   it('appends a Layer settings row after the core guide rows', () => {
     const { store } = createAppStore();

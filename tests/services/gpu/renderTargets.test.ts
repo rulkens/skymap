@@ -426,9 +426,9 @@ describe('createRenderTargets', () => {
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
-  // Pins the P3 contract: `createRenderTargets` allocates whatever table its
-  // caller hands it, not just core's own `renderTargetRows` — the shape a
-  // Layer's `targets` (via `composeRenderTargetRows`) relies on.
+  // `createRenderTargets` allocates whatever table its caller hands it, not
+  // just core's own `renderTargetRows` — the shape a Layer's `targets` (via
+  // `composeRenderTargetRows`) relies on.
   it('allocates a caller-supplied row beyond core’s and keeps it across setSwapFormat', () => {
     const device = mockDevice();
     const stubRow: RenderTargetSpec = {

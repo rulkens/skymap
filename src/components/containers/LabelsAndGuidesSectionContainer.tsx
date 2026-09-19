@@ -14,7 +14,7 @@
  * is assembled into one uniform `SectionRow` array; the presentational
  * `LabelsAndGuidesSection` imports nothing from `store/` or `state/` and has
  * no notion of where any row's bit lives. `layerRows` (a Layer's `labelsAndGuides`
- * `ui` entries) are appended after the guide rows, one `useAppSelector` + `shallowEqual`.
+ * `ui` entries) are appended after the guide rows.
  *
  * ### Label-visibility projection
  *
@@ -147,10 +147,8 @@ function LabelsAndGuidesSectionContainer({
     [dispatch],
   );
 
-  // One hook for every Layer row rather than one per row in a loop (banned):
-  // `shallowEqual` is required here because the mapped array is a fresh
-  // reference on every store write, which would otherwise re-render this
-  // section on any unrelated state change.
+  // `shallowEqual` is required: the mapped array is a fresh reference on
+  // every store write, which would otherwise re-render this section on any unrelated state change.
   const layerValues = useAppSelector((s) => layerRows.map((row) => row.select(s)), shallowEqual);
 
   // Every checkbox the section renders, in one uniform shape: the label rows

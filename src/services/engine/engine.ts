@@ -325,7 +325,7 @@ export function createEngine(
     // BEFORE `createLayers`.
     layerTargets: composition.layers.map((layer) => layer.targets ?? []),
     // Empty until `createLayers` composes core's rows with every Layer's; no
-    // phase before it reads any of the five (`pickProgram` is `wireInput`).
+    // phase before it reads any of these (`pickProgram` is `wireInput`).
     passes: [],
     computes: [],
     assetRows: [],

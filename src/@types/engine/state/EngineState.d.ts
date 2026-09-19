@@ -101,7 +101,7 @@ export type EngineState = {
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
   /** Core's `LABEL_3D_PRODUCERS` followed by each Layer's `worldLabels`, composed
    * once by `createLayers`; `runLabel3DProducers` walks this, not the core
-   * constant. `engine.ts` initialises `[]`. */
+   * constant. */
   label3DProducers: readonly Label3DProducer[];
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
@@ -114,5 +114,5 @@ export type EngineState = {
   selectionKindRows: readonly SelectionKindRow[];
   /** Every Layer's static `targets`, in tuple order — seeded by `createEngine`, read by the
    * `renderTargets` GPU-handle row, which runs before `createLayers`. */
-  layerTargets: readonly (readonly RenderTargetSpec[])[];
+  readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

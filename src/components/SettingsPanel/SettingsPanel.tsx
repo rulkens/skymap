@@ -8,7 +8,7 @@
  * beyond the Redux store's reach (false on mobile viewports).
  */
 
-import { memo } from 'react';
+import { memo, useMemo } from 'react';
 import type { ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
 import { APP_COMPOSITION } from '../../compositions/app';
@@ -33,6 +33,11 @@ type SettingsPanelProps = {
 export const SettingsPanel = memo(function SettingsPanel({
   defaultOpen,
 }: SettingsPanelProps): ReactNode {
+  const mainSections = useMemo(() => layerUiContents(APP_COMPOSITION.layers, 'main'), []);
+  const labelsAndGuidesRows = useMemo(
+    () => layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides'),
+    [],
+  );
   return (
     <Panel
       title="Settings"
@@ -40,15 +45,13 @@ export const SettingsPanel = memo(function SettingsPanel({
       defaultOpen={defaultOpen}
       headerExtra={<TierChipContainer />}
     >
-      {layerUiContents(APP_COMPOSITION.layers, 'main').map((Section, index) => (
+      {mainSections.map((Section, index) => (
         <Section key={index} />
       ))}
       <StarsSectionContainer />
       <CosmicWebSectionContainer />
       <StructuresSectionContainer />
-      <LabelsAndGuidesSectionContainer
-        layerRows={layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides')}
-      />
+      <LabelsAndGuidesSectionContainer layerRows={labelsAndGuidesRows} />
       <DisplaySectionContainer>
         <EarthSectionContainer />
       </DisplaySectionContainer>

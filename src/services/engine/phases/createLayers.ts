@@ -2,8 +2,9 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`, asserting
- * the composed sets stay disjoint (D5) — a bad composition throws at boot.
+ * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows` /
+ * `.label3DProducers`, asserting the composed sets stay disjoint (D5) — a bad
+ * composition throws at boot.
  */
 
 import type { Task } from 'redux-saga';
@@ -141,8 +142,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     ]),
   );
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
-  // No dedupe, core first: mirrors every other composed list here, and (d)
-  // ships a single world producer, so an id collision has nothing to collide with yet.
+  // No dedupe, core first: the spec rules none, and a single world producer exists.
   state.label3DProducers = [
     ...LABEL_3D_PRODUCERS,
     ...instances.flatMap((instance) => instance.worldLabels),

@@ -1,9 +1,8 @@
 /**
  * composeRenderTargetRows — core's `renderTargetRows` followed by every
- * Layer's static `targets`, in tuple order, guarded by `concatUniqueRows`
- * (the render-target table's fourth caller). Shared by the `renderTargets`
- * GPU-handle row and `frameOrderBoot.test.ts`, so boot allocation and the
- * boot check walk the identical composed table.
+ * Layer's static `targets`, in tuple order, guarded by `concatUniqueRows`.
+ * Shared by the `renderTargets` GPU-handle row and `frameOrderBoot.test.ts`,
+ * so boot allocation and the boot check walk the identical composed table.
  */
 
 import type { RenderTargetSpec } from '../../../@types/engine/frame/RenderTargetSpec';

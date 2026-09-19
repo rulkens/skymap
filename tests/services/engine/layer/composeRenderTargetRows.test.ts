@@ -1,7 +1,6 @@
 /**
  * composeRenderTargetRows — core's `renderTargetRows` plus every Layer's
- * `targets`, guarded by `concatUniqueRows` (the render-target table's fourth
- * caller, after passes/computes/asset keys in `createLayers`).
+ * `targets`, guarded by `concatUniqueRows`.
  */
 import { describe, it, expect } from 'vitest';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
