@@ -80,7 +80,7 @@
  * 'chromium' channel installed.
  */
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import {
   existsSync,
@@ -103,6 +103,7 @@ import type { Clip } from '../../src/@types/animation/Clip';
 import type { ClipId } from '../../src/@types/animation/ClipId';
 import type { RecorderWindow } from '../../src/@types/recorder/RecorderWindow';
 import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
+import { launchChromium } from '../utils/browser/launchChromium';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
 import { parsePreviewUrl } from '../utils/record/parsePreviewUrl';
@@ -303,28 +304,6 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     );
   }
   return options;
-}
-
-/**
- * Launch pattern per the Task 1 ledger: the 'chromium' channel first (full
- * build, WebGPU with no flags), falling back to the headless shell with the
- * WebGPU flags only if the channel is not installed. The fallback prints a
- * warning rather than failing outright so a machine without the channel can
- * still record, but the fix worth making is 'npx playwright install chromium'.
- */
-async function launchChromium(): Promise<Browser> {
-  try {
-    return await chromium.launch({ channel: 'chromium' });
-  } catch (err) {
-    console.warn(
-      `chromium channel launch failed (${err instanceof Error ? err.message.split('\n')[0] : String(err)})`,
-    );
-    console.warn(
-      "falling back to the headless shell with '--enable-unsafe-webgpu --use-angle=metal'; " +
-        "prefer 'npx playwright install chromium' for the proven full-build path",
-    );
-    return chromium.launch({ args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
-  }
 }
 
 // Virtual-time stepping: grantAndAwaitExpiry.ts carries the CDP invariants.

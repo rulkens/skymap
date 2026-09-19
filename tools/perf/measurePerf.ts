@@ -47,7 +47,8 @@
  * ('npx playwright install chromium').
  */
 
-import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page } from '@playwright/test';
+import { launchChromium } from '../utils/browser/launchChromium';
 import { PERF_SCENARIOS, type PerfScenario } from './perfScenarios';
 import type { ScenarioReport, LayerStat } from './scenarioReport';
 import type { SweepReport, SweepScale, SweepPass } from './sweepReport';
@@ -177,26 +178,6 @@ function parseArgs(argv: readonly string[]): PerfOptions {
     throw new Error('--tier conflicts with --compare-tiers');
   }
   return options;
-}
-
-/**
- * Launch pattern mirrored from record.ts: the 'chromium' channel first (full
- * build, WebGPU with no flags), falling back to the headless shell with the
- * WebGPU flags only if the channel is not installed.
- */
-async function launchChromium(): Promise<Browser> {
-  try {
-    return await chromium.launch({ channel: 'chromium' });
-  } catch (err) {
-    console.warn(
-      `chromium channel launch failed (${err instanceof Error ? err.message.split('\n')[0] : String(err)})`,
-    );
-    console.warn(
-      "falling back to the headless shell with '--enable-unsafe-webgpu --use-angle=metal'; " +
-        "prefer 'npx playwright install chromium' for the proven full-build path",
-    );
-    return chromium.launch({ args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
-  }
 }
 
 /**
