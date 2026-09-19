@@ -27,18 +27,15 @@ later without reshaping it.
 ### View rig — the one seam
 
 ```ts
-// @types/engine/frame/ViewProjection.d.ts
-type ViewProjection = {
-  clipFromView: Mat4; // any frustum: symmetric 90° face, asymmetric XR eye
-  pxPerRad: number; // derived once from clipFromView + sizePx (vertical)
-  fovYRad: number; // effective vertical fov, for readers that still take one
-};
+// @types/camera/ViewFrustum.d.ts — tangent (OpenXR "fov") form: every slab
+// builds its own matrix from it with its own near/far, which one Mat4 cannot do
+type ViewFrustum = { tanLeft: number; tanRight: number; tanDown: number; tanUp: number };
 
 // @types/engine/frame/ViewSpec.d.ts
 type ViewSpec = {
-  rotation: Mat3; // view basis relative to the frame camera's basis
-  eyeOffsetMpc: Vec3; // in the rotated view frame; zero for dome/captures
-  projection: ViewProjection;
+  rotation: Mat3; // view basis relative to the camera's image-plane basis
+  eyeOffsetMpc: Vec3; // in the rotated view frame; zero for dome
+  frustum: ViewFrustum; // symmetric 90° face, asymmetric XR eye
   sizePx: Size;
   slot: number; // view-slot uniform ring index
   output?: GPUTextureView; // where this view's `swap` resolves; absent = canvas
@@ -49,18 +46,21 @@ type FrameSection = { scope: 'once' | 'perView'; steps: readonly FrameStepSpec[]
 
 // @types/engine/frame/ViewRig.d.ts
 type ViewRig = {
-  views: (main: ReadyFrameContext, state: EngineState) => readonly ViewSpec[];
+  views: (main: ReadyFrameContext, state: EngineState) => readonly ReadyFrameContext[];
   program: readonly FrameSection[];
 };
 ```
 
-- `deriveViewContext(main, spec): ReadyFrameContext` builds a whole per-view
-  context (vp, slabs, `drawPxPerRad`, `canvasSize`, body-frustum gate, star
-  partition) from the frame's one camera pose plus the spec — the
-  generalisation of today's `cubemapFaceContext`. Sky/probe captures become
-  `ViewSpec` builders on top of it; no second per-view derivation remains.
-- `deriveFrameContext` takes a `ViewProjection` instead of a fov/aspect
-  `CameraProjection`. The camera's own `CameraProjection` stays the
+- `deriveViewContext(state, main, spec): ReadyFrameContext` builds a whole
+  per-view context (vp, slabs, `drawPxPerRad`, `canvasSize`, body-frustum
+  gate, star partition) from the frame's one camera pose **and arm** plus the
+  spec, so a surface camera keeps its metre-native body path in every view.
+  Sky/probe captures stay on `cubemapFaceContext`: they have their own eye,
+  absolute or host axes and near plane, not a camera-relative view (plan-time
+  amendment 2026-09-19).
+- The three perspective sites (`computeViewProj`, `computeForegroundViewProj`,
+  `deriveSlabs`) build from a `ViewFrustum` instead of fov/aspect; `pxPerRad =
+height / (tanUp − tanDown)`. The camera's own `CameraProjection` stays the
   _framing_ input (clip foci, focus distance) — a view's projection never
   feeds the camera path, so every view of a frame shares one deterministic
   pose.
@@ -155,8 +155,8 @@ keys.
 
 - **P1** `FrameSection` + `ViewRig` + `VIEW_RIGS.mono`; `renderFrame` walks the
   rig. Test: the mono program expands to today's step list.
-- **P2** `ViewProjection` + `ViewSpec` + `deriveViewContext`;
-  `deriveFrameContext` takes a `ViewProjection`; captures migrate onto
+- **P2** `ViewFrustum` + `ViewSpec` + `deriveViewContext`;
+  perspective sites build from a `ViewFrustum`; captures stay on
   `ViewSpec` builders; `ViewSpec.output` resolves `swap`.
 - **P3** Planning over the rig's frusta: `cutSurfaceTiles` over N
   view-projections; star cut prepared once per frame with `originMpc` and
