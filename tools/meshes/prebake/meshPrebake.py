@@ -424,9 +424,9 @@ def contact_decal_stamp(plane, span):
     rot = plane.matrix_world.to_3x3()
     half = span / 2
     return {
-        "centre": list(plane.matrix_world.translation),
-        "u": list(rot.col[0] * half),
-        "v": list(rot.col[1] * half),
+        "centre": gltf_from_blender(plane.matrix_world.translation),
+        "u": gltf_from_blender(rot.col[0] * half),
+        "v": gltf_from_blender(rot.col[1] * half),
     }
 
 
@@ -434,6 +434,17 @@ def remove_ground_plane(plane):
     mesh = plane.data
     bpy.data.objects.remove(plane, do_unlink=True)
     bpy.data.meshes.remove(mesh)
+
+
+# The glTF frame (+Y up) is the one `--ground-up` and the stamps speak; the
+# scene is Blender's +Z-up, the frame the glTF importer and exporter
+# (`export_yup`) convert to and from.
+def blender_from_gltf(v):
+    return (v[0], -v[2], v[1])
+
+
+def gltf_from_blender(v):
+    return [v[0], v[2], -v[1]]
 
 
 def ground_up_arg(value):
@@ -470,7 +481,8 @@ def main():
     lo, hi = bounds(obj)
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
     set_ao_distance(scene, lo, hi)
-    plane, plane_span = ground_plane(obj, lo, hi, ground_up) if ground_up is not None else (None, None)
+    plane, plane_span = (ground_plane(obj, lo, hi, blender_from_gltf(ground_up))
+                         if ground_up is not None else (None, None))
     log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
 
     uv_name = unwrap(obj, source_name)
