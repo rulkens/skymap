@@ -8,6 +8,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { zoneOfAvoidancePass } from '../../../../../src/services/engine/frame/passes/zoneOfAvoidancePass';
+import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -97,17 +98,14 @@ describe('zoneOfAvoidancePass.draw', () => {
     zoneOfAvoidancePass.draw(PASS_STUB, {} as never, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
-    // draw(pass, cam, viewport, tuning, inner, outer, bulge, anticenter, opacity)
+    // draw(pass, cam, viewport, tuning, shell, opacity)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
     // Downsampled viewport — matches the actual fragment count.
     expect(args[2]).toEqual([Math.floor(1280 / ZOA_SCALE), Math.floor(720 / ZOA_SCALE)]);
     expect(args[3]).toBe(state.settings.zoneOfAvoidance);
-    expect(typeof args[4]).toBe('number'); // innerRadiusMpc
-    expect(typeof args[5]).toBe('number'); // outerRadiusMpc
-    expect(typeof args[6]).toBe('number'); // bulgeDeg
-    expect(typeof args[7]).toBe('number'); // anticenterDeg
-    expect(args[8]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
+    expect(args[4]).toBe(ZONE_OF_AVOIDANCE_SHELL);
+    expect(args[5]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
   });
 });
 
@@ -119,13 +117,13 @@ describe('zoneOfAvoidancePass.drawPick', () => {
     zoneOfAvoidancePass.drawPick!(PASS_STUB, {} as never, ctx, state);
     expect(drawPickSpy).toHaveBeenCalledTimes(1);
     const args = drawPickSpy.mock.calls[0]!;
-    // drawPick(pass, cam, viewport, tuning, inner, outer, bulge, anticenter, opacity)
+    // drawPick(pass, cam, viewport, tuning, shell, opacity)
     expect(args[0]).toBe(PASS_STUB);
     expect(args[1]).toBe(ctx.cam);
     // Full-res viewport — NOT the 'zoa' target's downsampled one `draw` uses,
     // because the pick pass rasterises at full canvas resolution.
     expect(args[2]).toEqual([1280, 720]);
     expect(args[3]).toBe(state.settings.zoneOfAvoidance);
-    expect(args[8]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
+    expect(args[5]).toBeCloseTo(1, 6); // opacity — full toggle, inside the window
   });
 });

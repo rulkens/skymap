@@ -236,13 +236,13 @@ export const zoneOfAvoidanceSettingsRow: LayerSettingsRow = {
 
 No new test. The object param removes the `bulgeDeg`/`anticenterDeg` swap hazard by construction (the compiler is the check), and the purity ratchet covers the move. Existing renderer tests that assert uniform floats 11/19/20 keep guarding the packing.
 
-- [ ] Add `ZONE_OF_AVOIDANCE_SHELL` per the contract. Carry the "visual-pass placeholders, Mpc / degrees" note from `zoneOfAvoidancePass.ts:15`.
-- [ ] Add `ZoneOfAvoidanceShell` per the contract. `ZoneOfAvoidanceRenderer.d.ts` and `zoneOfAvoidanceRenderer.ts` (`draw` ~:241, `drawPick` ~:213, `writeUniforms` ~:146): replace the four positional numbers with `shell: ZoneOfAvoidanceShell`, reading `shell.innerRadiusMpc` etc. inside `writeUniforms`. Uniform packing (floats 11, 19, 20) is unchanged. Update the renderer test's call sites.
-- [ ] `zoneOfAvoidancePass.ts`: delete lines 15-19. `draw` and `drawPick` pass `ZONE_OF_AVOIDANCE_SHELL`.
-- [ ] `defaults.ts:253`: replace the "currently ~377 Mpc" restatement with a pointer to `ZONE_OF_AVOIDANCE_SHELL` (no number restated).
-- [ ] Backlog: this lands the item's record + object-param half. Rewrite `docs/backlog/2026-08-17-zone-of-avoidance-shape-constants.md` down to the remaining half (the `LABEL_RADIUS_MPC` / `LABEL_EM_MPC` coupling → arc-angle em-height; drop the resolved sections and the stale "lives in zoneOfAvoidancePass.ts" citation), and retitle its `docs/BACKLOG.md` line to match (e.g. "ZoA label em-height not radius-invariant"). Paths inside it get re-pointed in Task 4.
-- [ ] `frameFilePurity.test.ts`: delete the `'frame/passes/zoneOfAvoidancePass': 4` row. The file now has 0 strays, and a row at 0 is deleted.
-- [ ] `npx vitest run tests/services/engine/frame` → green. Commit `refactor(zoa): shell constants to src/data, passed as one object`.
+- [x] Add `ZONE_OF_AVOIDANCE_SHELL` per the contract. Carry the "visual-pass placeholders, Mpc / degrees" note from `zoneOfAvoidancePass.ts:15`.
+- [x] Add `ZoneOfAvoidanceShell` per the contract. `ZoneOfAvoidanceRenderer.d.ts` and `zoneOfAvoidanceRenderer.ts` (`draw` ~:241, `drawPick` ~:213, `writeUniforms` ~:146): replace the four positional numbers with `shell: ZoneOfAvoidanceShell`, reading `shell.innerRadiusMpc` etc. inside `writeUniforms`. Uniform packing (floats 11, 19, 20) is unchanged. Update the renderer test's call sites.
+- [x] `zoneOfAvoidancePass.ts`: delete lines 15-19. `draw` and `drawPick` pass `ZONE_OF_AVOIDANCE_SHELL`.
+- [x] `defaults.ts:253`: replace the "currently ~377 Mpc" restatement with a pointer to `ZONE_OF_AVOIDANCE_SHELL` (no number restated).
+- [x] Backlog: this lands the item's record + object-param half. Rewrite `docs/backlog/2026-08-17-zone-of-avoidance-shape-constants.md` down to the remaining half (the `LABEL_RADIUS_MPC` / `LABEL_EM_MPC` coupling → arc-angle em-height; drop the resolved sections and the stale "lives in zoneOfAvoidancePass.ts" citation), and retitle its `docs/BACKLOG.md` line to match (e.g. "ZoA label em-height not radius-invariant"). Paths inside it get re-pointed in Task 4.
+- [x] `frameFilePurity.test.ts`: delete the `'frame/passes/zoneOfAvoidancePass': 4` row. The file now has 0 strays, and a row at 0 is deleted.
+- [x] `npx vitest run tests/services/engine/frame` → green. Commit `refactor(zoa): shell constants to src/data, passed as one object`.
 
 ## Task 2: Move the UI and source modules
 

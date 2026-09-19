@@ -10,13 +10,8 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../data/zoneOfAvoidance/zoneOfAvoidanceShell';
 import { deriveZoneOfAvoidanceLiveness } from '../zoneOfAvoidanceLiveness';
-
-// Shell shape — visual-pass placeholders, Mpc / degrees.
-const INNER_RADIUS_MPC = 3;
-const OUTER_RADIUS_MPC = 380;
-const BULGE_DEG = 10;
-const ANTICENTER_DEG = 3;
 
 export const zoneOfAvoidancePass: ContentPass = {
   name: 'zone-of-avoidance',
@@ -41,10 +36,7 @@ export const zoneOfAvoidancePass: ContentPass = {
       ctx.cam,
       [vw, vh],
       state.settings.zoneOfAvoidance,
-      INNER_RADIUS_MPC,
-      OUTER_RADIUS_MPC,
-      BULGE_DEG,
-      ANTICENTER_DEG,
+      ZONE_OF_AVOIDANCE_SHELL,
       opacity,
     );
   },
@@ -63,10 +55,7 @@ export const zoneOfAvoidancePass: ContentPass = {
       ctx.cam,
       [ctx.canvasSize.width, ctx.canvasSize.height],
       state.settings.zoneOfAvoidance,
-      INNER_RADIUS_MPC,
-      OUTER_RADIUS_MPC,
-      BULGE_DEG,
-      ANTICENTER_DEG,
+      ZONE_OF_AVOIDANCE_SHELL,
       opacity,
     );
   },
