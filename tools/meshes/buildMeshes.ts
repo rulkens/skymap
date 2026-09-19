@@ -25,6 +25,7 @@ import type { Vec3 } from '../../src/@types/math/Vec3';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
+import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 import { quote } from '../utils/codegen/quote';
 import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
@@ -50,6 +51,8 @@ export type MeshBuildTarget = {
   readonly licence: string;
   readonly attribution: string;
   readonly bodyFromSource?: Mat3;
+  /** Undefined for a floating source; see `meshGroundUpSource`. */
+  readonly groundUp?: Vec3;
 };
 
 type Geometry = {
@@ -424,6 +427,7 @@ async function writeTexture(
   texture: Texture | null,
   fallback: { r: number; g: number; b: number },
   path: string,
+  forceR255 = false,
 ): Promise<void> {
   const image = texture?.getImage();
   const pipeline = image
@@ -434,12 +438,45 @@ async function writeTexture(
         withoutEnlargement: true,
       })
     : sharp({ create: { width: 1, height: 1, channels: 3, background: fallback } });
-  await pipeline.png().toFile(path);
+  // R carries baked occlusion only for a texture the caller has confirmed is
+  // shared with metallic-roughness (the ORM convention); everywhere else R
+  // must read as "no occlusion" rather than whatever the source left there.
+  const oriented = forceR255 ? pipeline.linear([0, 1, 1], [255, 0, 0]) : pipeline;
+  await oriented.png().toFile(path);
+}
+
+/**
+ * The prebake stamps `extras.aoGroundUp` on the one node it baked against a
+ * ground plane; absent on a floating source, or on one not yet re-baked.
+ */
+function readGroundUpStamp(doc: Document): Vec3 | undefined {
+  for (const node of doc.getRoot().listNodes()) {
+    const stamp = node.getExtras().aoGroundUp;
+    if (stamp !== undefined) return stamp as Vec3;
+  }
+  return undefined;
+}
+
+/** `undefined` on both sides is agreement, not a missing value to diff. */
+function groundUpDiffers(stamp: Vec3 | undefined, expected: Vec3 | undefined): boolean {
+  if (stamp === undefined || expected === undefined) return stamp !== expected;
+  return stamp.some((c, i) => Math.abs(c - expected[i]!) > 1e-6);
+}
+
+function formatGroundUp(v: Vec3 | undefined): string {
+  return v ? `[${v.join(', ')}]` : 'none';
 }
 
 async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetRow> {
   const { key } = target;
   const doc = await new NodeIO().read(target.glbPath);
+  const stamp = readGroundUpStamp(doc);
+  if (groundUpDiffers(stamp, target.groundUp)) {
+    throw new Error(
+      `buildMeshes: ${key} was prebaked for ground ${formatGroundUp(stamp)}, the scene seats it ` +
+        `on ${formatGroundUp(target.groundUp)} — re-run npm run prebake-mesh -- ${key}`,
+    );
+  }
   deRig(doc);
   const material = soleMaterial(doc, key);
 
@@ -466,16 +503,23 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
 
   const factor = material.getBaseColorFactor();
   const baseColorTexture = material.getBaseColorTexture();
+  const metalRoughTexture = material.getMetallicRoughnessTexture();
+  // The ORM convention: a prebake packs baked occlusion into R of the SAME
+  // texture it packs roughness/metallic into. Any other pairing (or none) has
+  // no occlusion bake behind it, so R must not carry through whatever the
+  // source image happened to leave there.
+  const occlusionPacked =
+    metalRoughTexture !== null && material.getOcclusionTexture() === metalRoughTexture;
   const sources: Record<MeshTextureField, TextureSource> = {
     albedo: {
       texture: baseColorTexture,
       fallback: srgbByte(factor[0], factor[1], factor[2]),
     },
     metalRough: {
-      texture: material.getMetallicRoughnessTexture(),
-      // glTF packs roughness in G and metallic in B; R is unused by the spec.
+      texture: metalRoughTexture,
+      // glTF packs roughness in G and metallic in B; R is glTF's occlusion.
       fallback: {
-        r: 0,
+        r: 255,
         g: Math.round(material.getRoughnessFactor() * 255),
         b: Math.round(material.getMetallicFactor() * 255),
       },
@@ -490,7 +534,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     const { texture, fallback } = sources[slot.field];
     const path = join(outDir, `${key}${slot.suffix}.png`);
     if (slot.field === 'albedo') albedoPath = path;
-    await writeTexture(texture, fallback, path);
+    await writeTexture(texture, fallback, path, slot.field === 'metalRough' && !occlusionPacked);
   }
 
   const substituted = MESH_TEXTURE_SLOTS.filter((slot) => sources[slot.field].texture === null).map(
@@ -623,6 +667,7 @@ async function main(): Promise<void> {
       licence: entry.licence,
       attribution: entry.attribution,
       bodyFromSource: entry.bodyFromSource,
+      groundUp: meshGroundUpSource(key),
     };
   });
   await buildMeshes({
