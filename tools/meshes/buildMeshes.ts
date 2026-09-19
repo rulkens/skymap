@@ -11,7 +11,7 @@
  * docs/superpowers/specs/2026-09-10-mesh-bodies-design.md ("Tool").
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
 
@@ -19,6 +19,7 @@ import { Document, NodeIO, Primitive, type Material, type Texture } from '@gltf-
 import sharp from 'sharp';
 
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
+import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Vec3 } from '../../src/@types/math/Vec3';
@@ -63,6 +64,9 @@ type Geometry = {
   readonly indices: Uint32Array;
   readonly boundingRadiusM: number;
   readonly groundOffsetM: number;
+  /** The area-weighted centroid `mergeGeometry` subtracted, body frame — the
+   *  contact decal shifts by the same amount rather than recomputing it. */
+  readonly centroidM: Vec3;
 };
 
 /**
@@ -166,6 +170,17 @@ function premultiplyMat3(r: Mat3, m: readonly number[]): number[] {
     );
   }
   return out;
+}
+
+/** Column-major mat3 vector transform — the same `bodyFromSource` remap
+ *  `mergeGeometry` folds into every vertex, applied here to a decal point or
+ *  half-axis instead. */
+function mulMat3Vec3(m: Mat3, v: Vec3): Vec3 {
+  return [
+    m[0] * v[0] + m[3] * v[1] + m[6] * v[2],
+    m[1] * v[0] + m[4] * v[1] + m[7] * v[2],
+    m[2] * v[0] + m[5] * v[1] + m[8] * v[2],
+  ];
 }
 
 /** Column-major mat4 point transform; glTF node matrices are column-major. */
@@ -404,6 +419,7 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     // Seeding minZ at 0 is the >= 0 clamp; a centroid inside the convex hull
     // means a real minimum is never positive anyway.
     groundOffsetM: -minZ,
+    centroidM: [cx, cy, cz] as Vec3,
   };
   return {
     ...geometry,
@@ -453,6 +469,16 @@ function readGroundUpStamp(doc: Document): Vec3 | undefined {
   return undefined;
 }
 
+/** Same prebake stamp mechanism as `readGroundUpStamp`, the glTF-frame decal
+ *  `buildMeshes` remaps into the body frame below. */
+function readContactDecalStamp(doc: Document): { centre: Vec3; u: Vec3; v: Vec3 } | undefined {
+  for (const node of doc.getRoot().listNodes()) {
+    const stamp = node.getExtras().contactDecal;
+    if (stamp !== undefined) return stamp as { centre: Vec3; u: Vec3; v: Vec3 };
+  }
+  return undefined;
+}
+
 /** `undefined` on both sides is agreement, not a missing value to diff. */
 function groundUpDiffers(stamp: Vec3 | undefined, expected: Vec3 | undefined): boolean {
   if (stamp === undefined || expected === undefined) return stamp !== expected;
@@ -463,6 +489,24 @@ function formatGroundUp(v: Vec3 | undefined): string {
   return v ? `[${v.join(', ')}]` : 'none';
 }
 
+/**
+ * `centre` is a point (remap, then the same centroid shift `mergeGeometry`
+ * applied to the vertices); `u`/`v` are half-axes, so only the remap applies.
+ */
+function bakeContactDecal(
+  stamp: { readonly centre: Vec3; readonly u: Vec3; readonly v: Vec3 },
+  bodyFromSource: Mat3 | undefined,
+  centroidM: Vec3,
+): ContactDecal {
+  const remap = (p: Vec3): Vec3 => (bodyFromSource ? mulMat3Vec3(bodyFromSource, p) : p);
+  const centre = remap(stamp.centre);
+  return {
+    centre: [centre[0] - centroidM[0], centre[1] - centroidM[1], centre[2] - centroidM[2]],
+    halfU: remap(stamp.u),
+    halfV: remap(stamp.v),
+  };
+}
+
 async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetRow> {
   const { key } = target;
   const doc = await new NodeIO().read(target.glbPath);
@@ -471,6 +515,13 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     throw new Error(
       `buildMeshes: ${key} was prebaked for ground ${formatGroundUp(stamp)}, the scene seats it ` +
         `on ${formatGroundUp(target.groundUp)} — re-run npm run prebake-mesh -- ${key}`,
+    );
+  }
+  const decalStamp = readContactDecalStamp(doc);
+  if ((decalStamp === undefined) !== (stamp === undefined)) {
+    const missing = decalStamp === undefined ? 'contactDecal' : 'aoGroundUp';
+    throw new Error(
+      `buildMeshes: ${key} has one of aoGroundUp/contactDecal without the other (missing ${missing})`,
     );
   }
   deRig(doc);
@@ -496,6 +547,27 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
 
   const geometry = mergeGeometry(doc, target.bodyFromSource);
   writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(writeMeshBinary(geometry)));
+
+  const contactDecal =
+    decalStamp === undefined
+      ? undefined
+      : bakeContactDecal(decalStamp, target.bodyFromSource, geometry.centroidM);
+  if (contactDecal !== undefined) {
+    const contactSourcePath = target.glbPath.replace(/\.glb$/, '.contact.png');
+    if (!existsSync(contactSourcePath)) {
+      throw new Error(`buildMeshes: ${key} has a contactDecal but no file at ${contactSourcePath}`);
+    }
+    await sharp(contactSourcePath)
+      .toColourspace('b-w')
+      .resize({
+        width: TEXTURE_SIZE_BUDGET,
+        height: TEXTURE_SIZE_BUDGET,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .png()
+      .toFile(join(outDir, `${key}_contact.png`));
+  }
 
   const factor = material.getBaseColorFactor();
   const baseColorTexture = material.getBaseColorTexture();
@@ -560,6 +632,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     meanAlbedo: mean.map((c) => Number(c.toFixed(6))) as Vec3,
     triangleCount: geometry.indices.length / 3,
     substituted,
+    contactDecal,
     source: target.source,
     licence: target.licence,
     attribution: target.attribution,
@@ -600,17 +673,26 @@ export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
     .map((row) =>
       [
         `  ${/^[A-Za-z_$][\w$]*$/.test(row.key) ? row.key : quote(row.key)}: {`,
-        ...MESH_ASSET_ROW_FIELDS.map((f) => field(f.name, f.emit(row))),
+        // An optional field whose row value is absent emits no line at all —
+        // a floating mesh's row stays byte-identical whether or not the
+        // column exists, rather than growing a `contactDecal: undefined,`.
+        ...MESH_ASSET_ROW_FIELDS.flatMap((f) => {
+          const value = f.emit(row);
+          return value === undefined ? [] : [field(f.name, value)];
+        }),
         '  },',
       ].join('\n'),
     )
     .join('\n');
   const rowType = MESH_ASSET_ROW_FIELDS.map(
-    (f) => (f.doc ? docBlock(f.doc) : '') + `  readonly ${f.name}: ${f.tsType};\n`,
+    (f) =>
+      (f.doc ? docBlock(f.doc) : '') +
+      `  readonly ${f.name}${f.optional ? '?' : ''}: ${f.tsType};\n`,
   ).join('');
   return (
     GENERATED_BANNER +
     "import type { Vec3 } from '../../@types/math/Vec3';\n" +
+    "import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';\n" +
     "import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';\n" +
     '\n' +
     `export type MeshAssetRow = {\n${rowType}};\n` +

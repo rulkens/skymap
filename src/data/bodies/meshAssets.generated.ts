@@ -3,6 +3,7 @@
 // Regenerate with:  npm run build-meshes
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 
 export type MeshAssetRow = {
@@ -21,6 +22,9 @@ export type MeshAssetRow = {
   readonly licence: string;
   /** author + URL; empty string for CC0 */
   readonly attribution: string;
+  /** The ground-contact box `contactShadow` projects into, body frame,
+   *  metres; absent for a floating mesh. */
+  readonly contactDecal?: ContactDecal;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {

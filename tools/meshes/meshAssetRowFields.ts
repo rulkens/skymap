@@ -12,9 +12,12 @@ import { quote } from '../utils/codegen/quote';
 export type MeshAssetRowField = {
   readonly name: keyof MeshAssetRow & string;
   readonly tsType: string;
+  /** Marks the field `?` in the generated type; `emit` returning `undefined`
+   *  then skips the row line entirely rather than writing a literal `undefined`. */
+  readonly optional?: boolean;
   /** Rendered as a docblock above the field, one array entry per line. */
   readonly doc?: readonly string[];
-  readonly emit: (row: MeshAssetRow) => string;
+  readonly emit: (row: MeshAssetRow) => string | undefined;
 };
 
 export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
@@ -46,5 +49,20 @@ export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
     tsType: 'string',
     doc: ['author + URL; empty string for CC0'],
     emit: (row) => quote(row.attribution),
+  },
+  {
+    name: 'contactDecal',
+    tsType: 'ContactDecal',
+    optional: true,
+    doc: [
+      'The ground-contact box `contactShadow` projects into, body frame,',
+      'metres; absent for a floating mesh.',
+    ],
+    emit: (row) =>
+      row.contactDecal === undefined
+        ? undefined
+        : `{ centre: [${row.contactDecal.centre.join(', ')}], ` +
+          `halfU: [${row.contactDecal.halfU.join(', ')}], ` +
+          `halfV: [${row.contactDecal.halfV.join(', ')}] }`,
   },
 ];
