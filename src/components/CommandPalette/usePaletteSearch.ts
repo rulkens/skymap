@@ -13,7 +13,6 @@ import { actionForRow } from './utils/actionForRow';
 import { wrapIndex } from './utils/wrapIndex';
 import { gridIndexStep } from './utils/gridIndexStep';
 import { measureGridColumns } from './utils/measureGridColumns';
-import type { GridKey } from './utils/gridIndexStep';
 import type { ScoredRow } from './paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
@@ -21,7 +20,7 @@ import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEn
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { PaletteCard } from '../../@types/palette/PaletteCard';
 
-const GRID_KEYS: readonly GridKey[] = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
+const GRID_KEYS: readonly string[] = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 export type UsePaletteSearchInput = {
   entries: readonly FamousGalaxyMetaEntry[];
@@ -133,10 +132,10 @@ export function usePaletteSearch({
         onTabStep(e.key === 'ArrowLeft' ? -1 : 1);
         return;
       }
-      if (GRID_KEYS.includes(e.key as GridKey)) {
+      if (GRID_KEYS.includes(e.key)) {
         e.preventDefault();
         const columns = gridRef.current ? measureGridColumns(gridRef.current) : 1;
-        setActiveCard((i) => gridIndexStep(i, e.key as GridKey, columns, cards.length));
+        setActiveCard((i) => gridIndexStep(i, e.key, columns, cards.length));
         return;
       }
       if (e.key === 'Enter') {

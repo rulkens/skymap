@@ -1,7 +1,5 @@
 import { wrapIndex } from './wrapIndex';
 
-export type GridKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
-
 /**
  * gridIndexStep — move the featured grid's keyboard highlight by one arrow
  * press. Only the grid's LAST row can be short (a row-major grid fills every
@@ -10,7 +8,7 @@ export type GridKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
  * wrapping past it, while ↑ off the top skips straight to the nearest row
  * that actually has the pressed column.
  */
-export function gridIndexStep(index: number, key: GridKey, columns: number, count: number): number {
+export function gridIndexStep(index: number, key: string, columns: number, count: number): number {
   if (key === 'ArrowLeft') return wrapIndex(index, -1, count);
   if (key === 'ArrowRight') return wrapIndex(index, 1, count);
 

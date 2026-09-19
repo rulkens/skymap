@@ -12,14 +12,14 @@ import type { ReactNode } from 'react';
 import styles from './FeaturedCardTip.module.css';
 
 export type FeaturedCardTipProps = {
-  readonly aliases?: readonly string[];
+  readonly aliases: readonly string[];
   readonly blurb: string;
 };
 
 function FeaturedCardTip({ aliases, blurb }: FeaturedCardTipProps): ReactNode {
   return (
     <div className={styles.root}>
-      {aliases && aliases.length > 0 && (
+      {aliases.length > 0 && (
         <div className={styles.aliases}>
           <span className={styles.aliasesLabel}>Also known as </span>
           {aliases.join(' · ')}
