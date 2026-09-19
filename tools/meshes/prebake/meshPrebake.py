@@ -24,10 +24,6 @@ AO_SAMPLES = 128
 # to stop counting as occluded" — `scene.world.light_settings.distance`, the
 # one world-level knob that pass reads regardless of the World AO toggle.
 AO_DISTANCE_FRACTION = 0.25
-# Multiple of the largest extent so the ground occluder reaches well past the
-# hull's silhouette in every direction — short of that, AO rays that skim the
-# plane's edge see open sky and under-occlude the rim.
-GROUND_PLANE_SPAN = 4
 GLTF_MATERIAL_OUTPUT = "glTF Material Output"
 
 
@@ -338,16 +334,19 @@ def keep_only_bake_uv(obj, uv_name):
     obj.data.uv_layers[0].active_render = True
 
 
-def export(obj, out, ground_up):
+def export(obj, out, ground_up, contact_decal):
     """`ground_up` stamps `extras.aoGroundUp` on the exported node — the only
     way `buildMeshes` can tell which ground a GLB was baked against without
     re-deriving it; `export_extras` stays off for a floating mesh so no other
-    custom property leaks into the glTF as a stray extra."""
+    custom property leaks into the glTF as a stray extra. `contact_decal` rides
+    the same extras, seated meshes only."""
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
     if ground_up is not None:
         obj["aoGroundUp"] = list(ground_up)
+    if contact_decal is not None:
+        obj["contactDecal"] = contact_decal
     bpy.ops.export_scene.gltf(
         filepath=out,
         export_format="GLB",
@@ -389,20 +388,46 @@ def ground_plane(obj, lo, hi, up):
     the AO bake sees a floor: without one a rover's underside reads as open
     sky, no darker than its sunlit hull. Deselected and inactive on return —
     an occluder, not a bake target — and gone again before `flatten_materials`
-    swaps in the real material, or it would export as part of the mesh."""
+    swaps in the real material, or it would export as part of the mesh. Span
+    stops at AO_DISTANCE_FRACTION's own reach — nothing farther out can occlude
+    anyway — which also buys the contact decal a denser atlas than the body's."""
     extent = max(hi[i] - lo[i] for i in range(3))
+    span = (1 + 2 * AO_DISTANCE_FRACTION) * extent
     up_v = mathutils.Vector(up).normalized()
     centre = mathutils.Vector([(lo[i] + hi[i]) / 2 for i in range(3)])
     lowest = min((obj.matrix_world @ v.co).dot(up_v) for v in obj.data.vertices)
     location = centre + (lowest - centre.dot(up_v)) * up_v
 
-    bpy.ops.mesh.primitive_plane_add(size=GROUND_PLANE_SPAN * extent, location=location)
+    bpy.ops.mesh.primitive_plane_add(size=span, location=location)
     plane = bpy.context.view_layer.objects.active
     plane.rotation_mode = "QUATERNION"
     plane.rotation_quaternion = mathutils.Vector((0, 0, 1)).rotation_difference(up_v)
     plane.select_set(False)
     bpy.context.view_layer.objects.active = obj
-    return plane
+    return plane, span
+
+
+def bake_contact_decal(plane, cfg):
+    """The plane's own AO with the body as sole occluder (it is never
+    selected) — the raw contact shadow effort B will composite at runtime."""
+    mat = bpy.data.materials.new("%s_contact" % cfg["key"])
+    mat.use_nodes = True
+    plane.data.materials.append(mat)
+    arm_materials(plane)
+    uv_name = plane.data.uv_layers[0].name
+    return bake_pass(plane, uv_name, cfg, "contact", dict(type="AO"), "Non-Color", None, AO_SAMPLES)
+
+
+def contact_decal_stamp(plane, span):
+    """u/v half-vectors read off the plane's own (already rotated) world
+    matrix, so they can never disagree with the rotation `ground_plane` used."""
+    rot = plane.matrix_world.to_3x3()
+    half = span / 2
+    return {
+        "centre": list(plane.matrix_world.translation),
+        "u": list(rot.col[0] * half),
+        "v": list(rot.col[1] * half),
+    }
 
 
 def remove_ground_plane(plane):
@@ -445,7 +470,7 @@ def main():
     lo, hi = bounds(obj)
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
     set_ao_distance(scene, lo, hi)
-    plane = ground_plane(obj, lo, hi, ground_up) if ground_up is not None else None
+    plane, plane_span = ground_plane(obj, lo, hi, ground_up) if ground_up is not None else (None, None)
     log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
 
     uv_name = unwrap(obj, source_name)
@@ -457,11 +482,16 @@ def main():
         log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
             % (ATLAS_PX, name, images[name].filepath_raw, time.time() - started))
 
+    contact_decal = None
     if plane is not None:
+        contact = bake_contact_decal(plane, cfg)
+        log("baked contact decal -> %s (%.0fs elapsed)"
+            % (contact.filepath_raw, time.time() - started))
+        contact_decal = contact_decal_stamp(plane, plane_span)
         remove_ground_plane(plane)
     flatten_materials(obj, key, images)
     keep_only_bake_uv(obj, uv_name)
-    export(obj, cfg["out"], ground_up)
+    export(obj, cfg["out"], ground_up, contact_decal)
     log("wrote %s (%d tris, %d verts, %.0fs total)"
         % (cfg["out"], triangles(obj), len(obj.data.vertices), time.time() - started))
 
