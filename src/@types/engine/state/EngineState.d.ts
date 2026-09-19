@@ -27,6 +27,7 @@ import type { AssetSlot } from '../../loading/AssetSlot';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
+import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { UiState } from '../../ui/UiState';
 
 export type EngineState = {
@@ -97,6 +98,10 @@ export type EngineState = {
   assetRows: readonly AssetWiringRow[];
   fadeRows: readonly FadeLayer<unknown>[];
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
+  /** Core's `LABEL_3D_PRODUCERS` followed by each Layer's `worldLabels`, composed
+   * once by `createLayers`; `runLabel3DProducers` walks this, not the core
+   * constant. `engine.ts` initialises `[]`. */
+  label3DProducers: readonly Label3DProducer[];
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

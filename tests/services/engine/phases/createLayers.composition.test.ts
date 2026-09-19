@@ -9,6 +9,7 @@ import { createLayers } from '../../../../src/services/engine/phases/createLayer
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
+import { LABEL_3D_PRODUCERS } from '../../../../src/services/engine/presentation/label3DProducers';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -65,7 +66,18 @@ function contributingLayer(
       { key: assetKey, factory, req: () => undefined, demand: () => false, priority: 1 },
     ],
     fades: () => [{ key: `${tag}-fade`, expand: () => [], handle: () => ({}), seed: () => 0 }],
-    labels: () => [{ id: `${tag}-labels`, produceLabels: () => ({}) }],
+    labels: () => ({ screen: [{ id: `${tag}-labels`, produceLabels: () => ({}) }] }),
+  } as unknown as Layer<string, unknown>;
+}
+
+/** A Layer contributing only a world-space label producer, tagged `<tag>-world`. */
+function worldLabelLayer(tag: string): Layer<string, unknown> {
+  return {
+    name: tag,
+    create: () => ({}),
+    destroy: () => {},
+    passes: () => [],
+    labels: () => ({ world: [{ id: `${tag}-world`, produceLabels3D: () => ({}) }] }),
   } as unknown as Layer<string, unknown>;
 }
 
@@ -103,6 +115,20 @@ describe('createLayers composition', () => {
     expect(registerProducer.mock.calls.map(([producer]) => producer.id)).toEqual([
       'a-labels',
       'b-labels',
+    ]);
+  });
+
+  it("composes Layer world label producers after core's onto state.label3DProducers", async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const layers = [worldLabelLayer('a'), worldLabelLayer('b')];
+
+    await createLayers(state, makeDeps(layers, store));
+
+    expect(state.label3DProducers.map((producer) => producer.id)).toEqual([
+      ...LABEL_3D_PRODUCERS.map((producer) => producer.id),
+      'a-world',
+      'b-world',
     ]);
   });
 

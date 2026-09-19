@@ -21,13 +21,15 @@ export function instantiateLayer<
   deps: LayerCoreDeps<Facts>,
 ): LayerInstance {
   const runtime = layer.create(deps);
+  const labels = layer.labels?.(runtime);
   return {
     name: layer.name,
     passes: layer.passes(runtime),
     computes: layer.computes?.(runtime) ?? [],
     assets: layer.assets?.(runtime) ?? [],
     fades: layer.fades?.(runtime) ?? [],
-    labels: layer.labels?.(runtime) ?? [],
+    screenLabels: labels?.screen ?? [],
+    worldLabels: labels?.world ?? [],
     selection: layer.selection?.(runtime) ?? [],
     frame: layer.frame?.(runtime) ?? null,
     destroy: () => layer.destroy(runtime),

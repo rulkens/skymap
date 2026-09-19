@@ -28,6 +28,7 @@ import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
 import { ASSET_WIRING } from '../wiring/assetWiring';
 import { FADE_LAYERS } from '../wiring/fadeLayers';
+import { LABEL_3D_PRODUCERS } from '../presentation/label3DProducers';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -140,6 +141,12 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     ]),
   );
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
+  // No dedupe, core first: mirrors every other composed list here, and (d)
+  // ships a single world producer, so an id collision has nothing to collide with yet.
+  state.label3DProducers = [
+    ...LABEL_3D_PRODUCERS,
+    ...instances.flatMap((instance) => instance.worldLabels),
+  ];
 
   const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>();
   for (const instance of instances) {
@@ -151,7 +158,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     }
     // The COSMO slab is the only director a Layer contributes to in (d); NEAR0's
     // producers are core's foreground captions.
-    for (const producer of instance.labels) {
+    for (const producer of instance.screenLabels) {
       state.subsystems.cosmoLabelDirector.registerProducer(producer);
     }
   }

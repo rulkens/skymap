@@ -13,11 +13,11 @@ import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
-import type { Label2DProducer } from '../subsystems/Label2DProducer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerFrameVote } from './LayerFrameVote';
+import type { LayerLabels } from './LayerLabels';
 import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -76,9 +76,11 @@ export type Layer<
   /** Rows join `FADE_LAYERS` in `createLayers`. Declares only: core owns the arrival
    * edge (`installFadeOnArrival`), so never drive a fade from `create`. */
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
-  /** Registered with the label director in `createLayers`, then polled once a frame;
-   * each `id` must be stable across frames. */
-  labels?(runtime: Runtime): readonly Label2DProducer[];
+  /** `screen` rows register with `cosmoLabelDirector` in `createLayers`, then poll
+   * once a frame like any other screen-space producer; `world` rows join
+   * `state.label3DProducers`, walked by `runLabel3DProducers`. Each `id` must be
+   * stable across frames, in either half. */
+  labels?(runtime: Runtime): LayerLabels;
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
    * asserted at boot. */
   selection?(runtime: Runtime): readonly SelectionKindRow[];

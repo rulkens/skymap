@@ -326,6 +326,7 @@ export function createEngine(
     computes: [],
     assetRows: [],
     fadeRows: [],
+    label3DProducers: [],
     layerSlots: new Map(),
   };
 
