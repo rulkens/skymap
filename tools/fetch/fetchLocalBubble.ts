@@ -16,7 +16,7 @@ import { dirname } from 'node:path';
 import { rawDataPath } from '../utils/io/rawDataRegistry';
 
 /** Dataverse file id for ONeill2024_LocalBubble_ShellProperties_A0.5.fits (doi:10.7910/DVN/INB1RB). */
-export const LOCAL_BUBBLE_SHELL_URL = 'https://dataverse.harvard.edu/api/access/datafile/8943783';
+const LOCAL_BUBBLE_SHELL_URL = 'https://dataverse.harvard.edu/api/access/datafile/8943783';
 
 /** Exact upstream size — a short read means a truncated transfer, not a new release. */
 const EXPECTED_BYTES = 138421440;

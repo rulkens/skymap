@@ -73,4 +73,10 @@ describe('shell mesh format (SHEL v1)', () => {
     expect(() => decodeShellMesh(buf)).toThrow(/frame/);
     expect(() => decodeShellMesh(buf)).toThrow(/build-local-bubble/);
   });
+
+  it('rejects a truncated buffer', () => {
+    const buf = encodeShellMesh(makeFixture('f32'));
+    const truncated = buf.slice(0, buf.byteLength - 4);
+    expect(() => decodeShellMesh(truncated)).toThrow(/build-local-bubble/);
+  });
 });

@@ -1,17 +1,18 @@
 /**
- * LocalBubbleRenderer — GPU pipeline for the Local Bubble cavity-wall shell:
- * two vertex buffers (position/normal, format resolved from the mesh's own
- * dtype) plus a u32 index buffer, one additive `drawIndexed`. No depth: the
- * hdr NEAR0 target carries none (`renderTargets.ts:198`), and neither wall of
- * the shell should occlude the other — both read additively.
+ * LocalBubbleRenderer — GPU pipeline for the Local Bubble cavity-wall shell.
+ * Byte-layout contract (see comments.md), so the two tables below stay fully
+ * spelled out rather than trimmed to the usual budget: two vertex buffers
+ * (position/normal, format resolved from the mesh's own dtype) plus a u32
+ * index buffer, one additive `drawIndexed`. No depth: the hdr NEAR0 target
+ * (`HDR_TARGET_FORMAT`) carries none, and neither wall of the shell should
+ * occlude the other — both read additively.
  *
- * Uniforms (@group(0), byte-exact with `shaders/localBubble/{vertex,fragment}.wesl`):
+ * Uniforms (@group(0), byte-exact with `shaders/localBubble/shell.wesl`):
  *   0..63   model      mat4x4<f32> — FRAME_TO_WORLD[frame] ×
  *                       translate(centrePc·PC_TO_MPC) × scale(PC_TO_MPC).
  *                       Written once at `upload` — fixed for the mesh's life.
- *   64..75  tint       vec3<f32>   — written every `draw`.
+ *   64..75  tint       vec3<f32>   — LOCAL_BUBBLE_TINT, written once at `upload`.
  *   76..79  opacity    f32         — written every `draw`.
- *   80..95  _reserved  vec4<f32>   — never written; stays zero.
  *
  * Camera (@group(1)) is renderer-private, NOT `lib::camera`'s shared
  * CameraUniforms — that struct deliberately excludes eye position (see its
@@ -24,26 +25,30 @@
 import { mat4 } from 'wgpu-matrix';
 
 import type { ShellMesh } from '../../../@types/data/shellMesh/ShellMesh';
-import type { ShellMeshDtype } from '../../../@types/data/shellMesh/ShellMeshDtype';
 import type { LocalBubbleRenderer } from '../../../@types/rendering/LocalBubbleRenderer';
 import type { Renderer } from '../../../@types/rendering/Renderer';
 import type { Vec3 } from '../../../@types/math/Vec3';
 
-import vsCode from '../../../services/gpu/shaders/localBubble/vertex.wesl?static';
-import fsCode from '../../../services/gpu/shaders/localBubble/fragment.wesl?static';
+import shellCode from '../../../services/gpu/shaders/localBubble/shell.wesl?static';
 import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { SHELL_VERTEX_FORMAT } from '../../../data/localBubble/shellVertexFormats';
 import { FRAME_TO_WORLD } from '../../../data/frameToWorld';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
+import { LOCAL_BUBBLE_TINT } from '../../../data/localBubble/localBubbleTint';
 
-const UNIFORMS_BYTES = 96;
+const UNIFORMS_BYTES = 80;
 const TINT_F32_INDEX = 16; // byte 64 — see module header's byte table
+const OPACITY_BYTE_OFFSET = 76;
 const CAMERA_BYTES = 80;
 const EYE_F32_INDEX = 16; // byte 64 — see module header's byte table
 
 const COMPONENTS_PER_VERTEX = 4;
-const BYTES_PER_COMPONENT: Record<ShellMeshDtype, number> = { f16: 2, f32: 4 };
+
+// Per-frame scratch, hoisted out of `draw` — the CPU cost that scales with
+// on-screen galaxy count leaves no budget for a per-frame allocation here.
+const camScratch = new Float32Array(CAMERA_BYTES / 4);
+const opacityScratch = new Float32Array(1);
 
 /**
  * FRAME_TO_WORLD[frame] × translate(centrePc·PC_TO_MPC) × scale(PC_TO_MPC).
@@ -67,8 +72,7 @@ export function createLocalBubbleRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): LocalBubbleRenderer {
-  const vsModule = createShaderModuleWithDevLog(device, vsCode, 'local-bubble.vertex');
-  const fsModule = createShaderModuleWithDevLog(device, fsCode, 'local-bubble.fragment');
+  const shellModule = createShaderModuleWithDevLog(device, shellCode, 'local-bubble.shell');
 
   const uniformsBgl = device.createBindGroupLayout({
     label: 'local-bubble-bgl-uniforms',
@@ -117,51 +121,11 @@ export function createLocalBubbleRenderer(
     bindGroupLayouts: [uniformsBgl, cameraBgl],
   });
 
-  // One pipeline per dtype, built lazily on first upload of that dtype — the
-  // vertex layout is the only thing dtype changes, and a session only ever
-  // sees whichever dtype the bake shipped.
-  const pipelines = new Map<ShellMeshDtype, GPURenderPipeline>();
-
-  function pipelineFor(dtype: ShellMeshDtype): GPURenderPipeline {
-    const cached = pipelines.get(dtype);
-    if (cached) return cached;
-    const stride = COMPONENTS_PER_VERTEX * BYTES_PER_COMPONENT[dtype];
-    const pipeline = device.createRenderPipeline({
-      label: `local-bubble-pipeline-${dtype}`,
-      layout: pipelineLayout,
-      vertex: {
-        module: vsModule,
-        entryPoint: 'vs',
-        buffers: [
-          {
-            arrayStride: stride,
-            attributes: [{ shaderLocation: 0, offset: 0, format: SHELL_VERTEX_FORMAT[dtype] }],
-          },
-          {
-            arrayStride: stride,
-            attributes: [{ shaderLocation: 1, offset: 0, format: SHELL_VERTEX_FORMAT[dtype] }],
-          },
-        ],
-      },
-      fragment: {
-        module: fsModule,
-        entryPoint: 'fs',
-        targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
-      },
-      primitive: { topology: 'triangle-list', cullMode: 'none' },
-      // No depthStencil block: the hdr NEAR0 target has no depth attachment,
-      // and both walls of the shell contribute additively regardless of
-      // which one a fragment happens to belong to.
-    });
-    pipelines.set(dtype, pipeline);
-    return pipeline;
-  }
-
+  let pipeline: GPURenderPipeline | null = null;
   let positionBuffer: GPUBuffer | null = null;
   let normalBuffer: GPUBuffer | null = null;
   let indexBuffer: GPUBuffer | null = null;
   let indexCount = 0;
-  let currentDtype: ShellMeshDtype | null = null;
 
   function destroyMeshBuffers(): void {
     positionBuffer?.destroy();
@@ -171,6 +135,7 @@ export function createLocalBubbleRenderer(
     normalBuffer = null;
     indexBuffer = null;
     indexCount = 0;
+    pipeline = null;
   }
 
   function upload(mesh: ShellMesh): void {
@@ -197,13 +162,40 @@ export function createLocalBubbleRenderer(
     });
     device.queue.writeBuffer(indexBuffer, 0, mesh.indices);
     indexCount = mesh.indices.length;
-    currentDtype = mesh.dtype;
-    pipelineFor(mesh.dtype);
 
-    // Model only — tint/opacity/reserved stay zero here and are written per
-    // draw (tint/opacity) or never (reserved); see the module header.
+    const stride = mesh.positions.BYTES_PER_ELEMENT * COMPONENTS_PER_VERTEX;
+    pipeline = device.createRenderPipeline({
+      label: `local-bubble-pipeline-${mesh.dtype}`,
+      layout: pipelineLayout,
+      vertex: {
+        module: shellModule,
+        entryPoint: 'vs',
+        buffers: [
+          {
+            arrayStride: stride,
+            attributes: [{ shaderLocation: 0, offset: 0, format: SHELL_VERTEX_FORMAT[mesh.dtype] }],
+          },
+          {
+            arrayStride: stride,
+            attributes: [{ shaderLocation: 1, offset: 0, format: SHELL_VERTEX_FORMAT[mesh.dtype] }],
+          },
+        ],
+      },
+      fragment: {
+        module: shellModule,
+        entryPoint: 'fs',
+        targets: [{ format: targetFormat, blend: ADDITIVE_BLEND }],
+      },
+      primitive: { topology: 'triangle-list', cullMode: 'none' },
+    });
+
+    // Model + tint; opacity is written per draw.
     const buf = new ArrayBuffer(UNIFORMS_BYTES);
-    new Float32Array(buf).set(buildModelMatrix(mesh), 0);
+    const f32 = new Float32Array(buf);
+    f32.set(buildModelMatrix(mesh), 0);
+    f32[TINT_F32_INDEX] = LOCAL_BUBBLE_TINT[0];
+    f32[TINT_F32_INDEX + 1] = LOCAL_BUBBLE_TINT[1];
+    f32[TINT_F32_INDEX + 2] = LOCAL_BUBBLE_TINT[2];
     device.queue.writeBuffer(uniformsBuffer, 0, buf);
   }
 
@@ -219,28 +211,20 @@ export function createLocalBubbleRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     eyeMpc: Readonly<Vec3>,
-    tint: Readonly<Vec3>,
     opacity: number,
   ): void {
-    if (!positionBuffer || !normalBuffer || !indexBuffer || currentDtype === null) return;
+    if (!positionBuffer || !normalBuffer || !indexBuffer || !pipeline) return;
 
-    const camBuf = new ArrayBuffer(CAMERA_BYTES);
-    const camF32 = new Float32Array(camBuf);
-    camF32.set(viewProj, 0);
-    camF32[EYE_F32_INDEX] = eyeMpc[0];
-    camF32[EYE_F32_INDEX + 1] = eyeMpc[1];
-    camF32[EYE_F32_INDEX + 2] = eyeMpc[2];
-    device.queue.writeBuffer(cameraBuffer, 0, camBuf);
+    camScratch.set(viewProj, 0);
+    camScratch[EYE_F32_INDEX] = eyeMpc[0];
+    camScratch[EYE_F32_INDEX + 1] = eyeMpc[1];
+    camScratch[EYE_F32_INDEX + 2] = eyeMpc[2];
+    device.queue.writeBuffer(cameraBuffer, 0, camScratch);
 
-    const tintOpacityBuf = new ArrayBuffer(16);
-    const tintOpacityF32 = new Float32Array(tintOpacityBuf);
-    tintOpacityF32[0] = tint[0];
-    tintOpacityF32[1] = tint[1];
-    tintOpacityF32[2] = tint[2];
-    tintOpacityF32[3] = opacity;
-    device.queue.writeBuffer(uniformsBuffer, TINT_F32_INDEX * 4, tintOpacityBuf);
+    opacityScratch[0] = opacity;
+    device.queue.writeBuffer(uniformsBuffer, OPACITY_BYTE_OFFSET, opacityScratch);
 
-    pass.setPipeline(pipelineFor(currentDtype));
+    pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformsBindGroup);
     pass.setBindGroup(1, cameraBindGroup);
     pass.setVertexBuffer(0, positionBuffer);

@@ -45,7 +45,7 @@ mesh.
 | `gamma`, `sig_gamma`         | deg  | inclination of the surface to the plane of sky                   |
 | `nx`, `ny`, `nz` (+ `sig_*`) | —    | surface normal                                                   |
 
-**Frame:** galactic, as above — _not_ skymap's supergalactic draw frame. The bake
+**Frame:** galactic, as above — _not_ skymap's equatorial world frame. The bake
 (`tools/localBubble/buildLocalBubbleShell.ts`) deliberately preserves the source
 frame; the rotation belongs to the renderer, where a frame error shows up as a
 visible rotation rather than as wrong bytes on disk.

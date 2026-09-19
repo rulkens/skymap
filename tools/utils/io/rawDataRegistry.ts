@@ -290,7 +290,7 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'gitignored',
     description:
-      "O'Neill+ 2024 Local Bubble shell surface at the fiducial A_0.5' edge threshold — one BINTABLE row per HEALPix Nside=256 direction (786,432 rows × 216 B), carrying the shell's radius, inner/outer walls, thickness and normal along that sight line. The surface is star-shaped (one radius per direction), which is why the bake emits a 2D map and not a mesh.",
+      "O'Neill+ 2024 Local Bubble shell surface at the fiducial A_0.5' edge threshold — one BINTABLE row per HEALPix Nside=256 direction (786,432 rows × 216 B), carrying the shell's radius, inner/outer walls, thickness and normal along that sight line. The surface is star-shaped (one radius per direction).",
     upstream: 'https://doi.org/10.7910/DVN/INB1RB',
     fetcher: 'tools/fetch/fetchLocalBubble.ts',
     readme: 'localbubble.readme',

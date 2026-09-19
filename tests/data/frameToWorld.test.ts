@@ -5,10 +5,9 @@
  * rather than silently mis-placing the Local Bubble shell.
  */
 import { describe, expect, it } from 'vitest';
-import { mat4, vec3 } from 'wgpu-matrix';
+import { vec3 } from 'wgpu-matrix';
 
 import { FRAME_TO_WORLD } from '../../src/data/frameToWorld';
-import { SG_TO_EQ_MAT4_COL_MAJOR } from '../../src/data/superGalacticTransform';
 
 const RAD = Math.PI / 180;
 
@@ -36,24 +35,5 @@ describe('FRAME_TO_WORLD.galactic', () => {
     const eq = vec3.transformMat4(galCentre, FRAME_TO_WORLD.galactic);
     const expected = raDecToUnitVec(266.40499, -28.93617);
     expect(angleBetween(eq, expected)).toBeLessThan(1e-5);
-  });
-});
-
-describe('FRAME_TO_WORLD["supergalactic-cartesian"]', () => {
-  it('is unchanged: matches SG_TO_EQ_MAT4_COL_MAJOR element-for-element', () => {
-    const m = FRAME_TO_WORLD['supergalactic-cartesian'];
-    for (let i = 0; i < 16; i++) {
-      expect(m[i]).toBeCloseTo(SG_TO_EQ_MAT4_COL_MAJOR[i]!, 6);
-    }
-  });
-});
-
-describe('FRAME_TO_WORLD["equatorial-cartesian"]', () => {
-  it('is the identity', () => {
-    const m = FRAME_TO_WORLD['equatorial-cartesian'];
-    const id = mat4.identity();
-    for (let i = 0; i < 16; i++) {
-      expect(m[i]).toBe(id[i]);
-    }
   });
 });

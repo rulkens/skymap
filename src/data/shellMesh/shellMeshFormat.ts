@@ -97,18 +97,12 @@ export function encodeShellMesh(mesh: ShellMesh): ArrayBuffer {
   return buf;
 }
 
-/**
- * Decode an ArrayBuffer to a `ShellMesh`. Returns views over `buf`, not
- * copies — the caller owns `buf`'s lifetime (matches the fetch-then-decode
- * shape every other loader here uses; the slot commits the whole mesh in one
- * step, so there's no reason to pay a copy).
- *
- * Throws on bad magic, unsupported version, unknown dtype or unknown frame,
- * each naming the rebuild command.
- */
+/** Decode an ArrayBuffer to a `ShellMesh` — views, not copies; throws on bad magic, version, dtype, frame or size, each naming the rebuild command. */
 export function decodeShellMesh(buf: ArrayBuffer): ShellMesh {
   if (buf.byteLength < HEADER_BYTES) {
-    throw new Error(`decodeShellMesh: buffer too small (${buf.byteLength} < ${HEADER_BYTES})`);
+    throw new Error(
+      `decodeShellMesh: buffer too small (${buf.byteLength} < ${HEADER_BYTES}) — ${REGENERATE_HINT}`,
+    );
   }
   const dv = new DataView(buf);
   const magic = dv.getUint32(0, true);
@@ -145,6 +139,13 @@ export function decodeShellMesh(buf: ArrayBuffer): ShellMesh {
   const positionsOffset = HEADER_BYTES;
   const normalsOffset = positionsOffset + vertexBlockBytes;
   const indicesOffset = normalsOffset + vertexBlockBytes;
+
+  const expectedBytes = indicesOffset + indexCount * 4;
+  if (buf.byteLength !== expectedBytes) {
+    throw new Error(
+      `decodeShellMesh: buffer size ${buf.byteLength} does not match expected ${expectedBytes} — ${REGENERATE_HINT}`,
+    );
+  }
 
   const positions =
     dtype === 'f16'

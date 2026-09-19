@@ -1,15 +1,12 @@
-// localBubble/vertex.wesl — vertex stage for the Local Bubble cavity-wall
-// shell mesh. 'position'/'normal' arrive as vec4 (w=1/w=0 respectively — see
-// shellMeshFormat.ts) because WebGPU has no float16x3 vertex format; the w
-// lane is discarded here. 'Camera' is renderer-private, not lib::camera's
-// shared CameraUniforms: the shell's Fresnel term needs an eye position,
-// which that shared struct deliberately excludes (see its own header).
+// localBubble/shell.wesl — the Local Bubble cavity-wall shell: vertex stage
+// projects the baked mesh; fragment stage shades it with the same additive
+// Fresnel rim as horizonShell/fragment.wesl (pow(1 - |N·V|, 3)), renormalising
+// the interpolated normal so flat per-vertex normals don't show as facets.
 
 struct Uniforms {
   model: mat4x4<f32>,
   tint: vec3<f32>,
   opacity: f32,
-  _reserved: vec4<f32>,
 };
 
 struct Camera {
@@ -27,6 +24,8 @@ struct VSOut {
 @group(0) @binding(0) var<uniform> u: Uniforms;
 @group(1) @binding(0) var<uniform> cam: Camera;
 
+const RIM_POWER: f32 = 3.0;
+
 @vertex
 fn vs(
   @location(0) position: vec4<f32>,
@@ -38,4 +37,13 @@ fn vs(
   out.worldNormal = (u.model * vec4<f32>(normal.xyz, 0.0)).xyz;
   out.clipPos = cam.viewProj * worldPos4;
   return out;
+}
+
+@fragment
+fn fs(input: VSOut) -> @location(0) vec4<f32> {
+  let n = normalize(input.worldNormal);
+  let v = normalize(cam.eye - input.worldPos);
+  let rim = pow(1.0 - abs(dot(n, v)), RIM_POWER);
+  let value = rim * u.opacity;
+  return vec4<f32>(u.tint * value, value);
 }

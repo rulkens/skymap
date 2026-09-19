@@ -17,7 +17,6 @@ export type LocalBubbleRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     eyeMpc: Readonly<Vec3>,
-    tint: Readonly<Vec3>,
     opacity: number,
   ): void;
   destroy(): void;

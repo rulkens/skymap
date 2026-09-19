@@ -80,14 +80,6 @@ const R_SG_TO_GAL = buildSgToGal();
 const R_GAL_TO_EQ = buildGalToEq();
 
 /**
- * Rotation matrix taking galactic Cartesian → equatorial Cartesian, stored
- * as a flat column-major 9-tuple `Mat3`. Built directly from cross products
- * (no composition, so no accumulated error to reorthonormalise away) —
- * `FRAME_TO_WORLD.galactic` (`frameToWorld.ts`) is this matrix's mat4 form.
- */
-export const GAL_TO_EQ_MATRIX: Mat3 = R_GAL_TO_EQ;
-
-/**
  * Rotation matrix taking supergalactic Cartesian → equatorial Cartesian,
  * stored as a flat column-major 9-tuple `Mat3`.
  */
@@ -143,19 +135,19 @@ export const SG_TO_EQ_MAT4_COL_MAJOR: Mat4 = Object.freeze([
   1,
 ]) as Mat4;
 
-/** `GAL_TO_EQ_MATRIX` as a 16-element column-major `Mat4`; same layout as `SG_TO_EQ_MAT4_COL_MAJOR`. */
+/** `R_GAL_TO_EQ` as a 16-element column-major `Mat4`; same layout as `SG_TO_EQ_MAT4_COL_MAJOR`. */
 export const GAL_TO_EQ_MAT4_COL_MAJOR: Mat4 = Object.freeze([
-  GAL_TO_EQ_MATRIX[0]!,
-  GAL_TO_EQ_MATRIX[1]!,
-  GAL_TO_EQ_MATRIX[2]!,
+  R_GAL_TO_EQ[0]!,
+  R_GAL_TO_EQ[1]!,
+  R_GAL_TO_EQ[2]!,
   0,
-  GAL_TO_EQ_MATRIX[3]!,
-  GAL_TO_EQ_MATRIX[4]!,
-  GAL_TO_EQ_MATRIX[5]!,
+  R_GAL_TO_EQ[3]!,
+  R_GAL_TO_EQ[4]!,
+  R_GAL_TO_EQ[5]!,
   0,
-  GAL_TO_EQ_MATRIX[6]!,
-  GAL_TO_EQ_MATRIX[7]!,
-  GAL_TO_EQ_MATRIX[8]!,
+  R_GAL_TO_EQ[6]!,
+  R_GAL_TO_EQ[7]!,
+  R_GAL_TO_EQ[8]!,
   0,
   0,
   0,

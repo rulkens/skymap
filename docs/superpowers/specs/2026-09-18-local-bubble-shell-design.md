@@ -100,7 +100,7 @@ Everything on PR #755, by the user's ruling: prep, feature and docs as separate 
 4. **Chimney assertion**: the mean direction of the outermost 5% of radii must lie within 30° of the north galactic pole, else the bake throws. The FITS header names no frame, so this pins the source's frame at its source.
 5. `encodeShellMesh` → `public/data/local-bubble/v1/local-bubble.shell`, f16 by default, `--dtype f32` to override.
 
-The smoothed radius map and previews still go to the gitignored `data/localBubble/`; the offline preview reads the `.shell` file, so it predicts the renderer from the same bytes.
+The radius preview PNG still goes to the gitignored `data/localBubble/previews/`; the eye-check for the mesh itself happens in-app now (the offline 3D preview was deleted once the pass landed).
 
 ### 4.2 `.shell` format v1 (little-endian)
 
@@ -138,6 +138,7 @@ The smoothed radius map and previews still go to the gitignored `data/localBubbl
 - **Shaders**: vertex → world position, normal, view vector; fragment `pow(1 − |N·V|, 3) × tint × opacity`, normal renormalised per pixel (flat normals make every edge visible). Fresnel line borrowed from `shaders/horizonShell/fragment.wesl`.
 - **Slab: NEAR0 only.** `COSMO_NEAR_MPC = 0.01` (10 kpc, `slabs.ts:120`) and the bubble is 0.07–0.6 kpc, entirely inside COSMO's near plane; the visibility window also straddles 10 kpc. NEAR0 is infinite-far reversed-Z with the Sun as origin, so the shell can be neither far- nor near-clipped. **Do not widen NEAR0's `distanceRangeM`**: it is the painter key merging NEAR0 with body rows, and an additive, depthless shell adds no depth-bearing content.
 - **Pass**: `localBubblePass`, placed in the hdr NEAR0 roster after `milky-way` so the multiplicative dust does not dim it. `enabled = slot resident && opacity > 0`: at zero it does not run.
+- **Deviation from the plan**: the uniform block is 80 B, not the plan's 96 — the speculative `_reserved` vec4 was cut in review since nothing wrote or read it, and tint moved to a write-once field (`LOCAL_BUBBLE_TINT`) rather than a per-draw one.
 
 ## 7. Visibility, settings, UI
 

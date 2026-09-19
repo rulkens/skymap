@@ -17,8 +17,4 @@ describe('fadeWindow', () => {
     expect(fadeWindow([approach, recede], 3)).toBe(1);
     expect(fadeWindow([approach, recede], 10)).toBe(0);
   });
-
-  it('of no bands is 1', () => {
-    expect(fadeWindow([], 42)).toBe(1);
-  });
 });

@@ -1,22 +1,9 @@
 /**
- * refineMeshByEdgeLength — adaptive refinement of a unit-sphere triangle mesh
- * until every DISPLACED edge is under a target length.
- *
- * One criterion covers both reasons a shell's triangles get too big: a far
- * region (the chimney at 536 pc) stretches a fixed angular edge into a long
- * one, and a steep radial slope puts an edge's two ends at very different
- * radii. Both show up as displaced edge length, so neither needs its own rule.
- *
- * Conformal BY CONSTRUCTION, with no closure pass and no cascade: the split
- * decision for an edge reads only that edge's two endpoints, so the two faces
- * sharing it always decide alike. Each face then splits on whichever of its
- * three edges were marked (1 → 2 faces, 2 → 3, 3 → 4), which is why the
- * two-edge case picks a diagonal — that choice is interior to the face and
- * cannot disagree with a neighbour.
- *
- * Uniform subdivision is the alternative and it is not competitive here: the
- * Local Bubble's edge lengths span 20× between median and max, so matching the
- * tail uniformly costs ~21M triangles against a few hundred thousand.
+ * refineMeshByEdgeLength — adaptive refinement of a unit-sphere mesh until
+ * every DISPLACED edge is under a target length: one criterion catches both
+ * a stretched-thin chimney region and a steep radial slope. Conformal by
+ * construction — a split decision reads only its own edge's two endpoints,
+ * so neighbouring faces always agree, with no closure pass needed.
  */
 
 import type { Vec3 } from '../../../src/@types/math/Vec3';

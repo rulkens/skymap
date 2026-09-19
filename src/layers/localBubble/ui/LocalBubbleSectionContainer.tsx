@@ -1,10 +1,8 @@
-// src/layers/localBubble/ui/LocalBubbleSectionContainer.tsx
 /**
  * LocalBubbleSectionContainer — the Local Bubble section's store boundary
  * AND its presentation, combined: two controls (a master toggle, an
  * intensity slider) don't earn the Container/Section split heavier
- * multi-control layers like Flow use — see that layer's `ui/` for the
- * pattern when this section grows a second row.
+ * multi-control layers like Flow use.
  */
 
 import { memo, useCallback } from 'react';

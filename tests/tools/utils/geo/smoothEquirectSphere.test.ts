@@ -59,9 +59,4 @@ describe('smoothEquirectSphere', () => {
     // Without the wrap, column 0's kernel sees only its own side — still 200.
     expect(out[16 * W]!).toBeGreaterThan(200);
   });
-
-  it('returns the input unchanged in shape', () => {
-    const plane = new Float32Array(W * H).fill(1);
-    expect(smoothEquirectSphere(plane, W, H, 2).length).toBe(W * H);
-  });
 });

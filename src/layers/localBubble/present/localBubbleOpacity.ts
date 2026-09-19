@@ -1,7 +1,6 @@
 /**
  * localBubbleOpacity — the shell's visible opacity: the distance window ×
- * the toggle fade row's opacity × the intensity slider. `fadeAlpha` is a
- * plain 1 until Task 7 wires the toggle fade row's opacity into the pass.
+ * the toggle fade row's opacity × the intensity slider.
  */
 
 import { fadeWindow } from '../../../utils/math/fadeWindow';

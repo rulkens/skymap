@@ -1,10 +1,9 @@
 /**
  * The Layer's one asset row — demand + request only; the `factory` hands
  * back the slot `create` already minted, so core folds this over its own
- * rows (Ruling 10) without ever building one. Distance-gated on the
- * camera's proximity to the Sun (`RENDER_ORIGIN_MPC`), not the settings
- * toggle alone: the ~11 MB `.shell` file stays off the boot path until the
- * camera actually nears the solar neighbourhood.
+ * rows without ever building one. Distance-gated on the camera's proximity
+ * to the Sun, not the settings toggle alone: the ~11 MB `.shell` file stays
+ * off the boot path until the camera nears the solar neighbourhood.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';

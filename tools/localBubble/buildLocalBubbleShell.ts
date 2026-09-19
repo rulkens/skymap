@@ -1,14 +1,10 @@
 #!/usr/bin/env node
 /**
- * buildLocalBubbleShell — bake O'Neill+2024's Local Bubble shell table into
- * the runtime `.shell` mesh (`public/data/local-bubble/v1/local-bubble.shell`),
- * plus preview PNGs of the intermediate radius map.
- *
- * The source table is a STAR-SHAPED surface (one radius per sky direction,
- * Sun at the origin), stored in its own GALACTIC frame; rotating to skymap's
- * draw frame at render time (`FRAME_TO_WORLD.galactic`) is the renderer's
- * job, not the bake's, so a frame bug stays visible as a rotation rather than
- * baked into the bytes.
+ * buildLocalBubbleShell — bakes O'Neill+2024's Local Bubble shell table into
+ * the runtime `.shell` mesh, plus preview PNGs of the radius map. The source
+ * table is a STAR-SHAPED surface in its own GALACTIC frame; rotating to
+ * skymap's draw frame is the renderer's job, so a frame bug shows as a
+ * rotation rather than baked-in bytes.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
