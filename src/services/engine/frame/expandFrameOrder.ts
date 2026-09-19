@@ -14,6 +14,8 @@ import type { CaptureFaceInput } from '../../../@types/engine/frame/CaptureFaceI
 import type { CompositeBlend } from '../../../@types/rendering/CompositeBlend';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { ToneMap } from '../../../@types/rendering/ToneMap';
+import { bodyRowSteps } from './bodyRowSteps';
+import { resolvePassNames } from './resolvePassNames';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
 
 export type FrameInputs = {
@@ -35,13 +37,6 @@ type ExpandStep<K extends FrameStepSpec['kind']> = (
   passes: readonly ContentPass[],
   frame: FrameInputs,
 ) => readonly FrameStep[];
-
-/** Authored names → the contributed rows, in authored order; absent names drop. */
-function resolve(names: readonly string[], passes: readonly ContentPass[]): readonly ContentPass[] {
-  return names
-    .map((name) => passes.find((pass) => pass.name === name))
-    .filter((pass): pass is ContentPass => pass !== undefined);
-}
 
 /** `composite` and `tonemap` differ only in blend and whether a tone curve rides. */
 function merge(
@@ -66,13 +61,13 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
           kind: 'render',
           slab: COSMO,
           capture: { key, face },
-          passes: resolve(spec.cosmoPasses, passes),
+          passes: resolvePassNames(spec.cosmoPasses, passes),
         },
         {
           kind: 'render',
           slab: NEAR0,
           capture: { key, face },
-          passes: resolve(spec.near0Passes, passes),
+          passes: resolvePassNames(spec.near0Passes, passes),
         },
         // The foreground line's painter-chain rule: every body row restarts depth.
         ...bodySlabs.map(
@@ -81,7 +76,7 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
             slab,
             capture: { key, face },
             depth: 'clear',
-            passes: resolve(spec.bodyPasses, passes),
+            passes: resolvePassNames(spec.bodyPasses, passes),
           }),
         ),
       ]),
@@ -91,18 +86,24 @@ const EXPAND_STEP: { [K in FrameStepSpec['kind']]: ExpandStep<K> } = {
       kind: 'render',
       target: spec.target,
       slab,
-      passes: resolve(spec.passes, passes),
+      passes: resolvePassNames(spec.passes, passes),
       ...(spec.depth === undefined ? {} : { depth: spec.depth }),
       ...(spec.slot === undefined ? {} : { slot: spec.slot }),
     })),
   foreground: (spec, passes, frame) =>
-    frame.foregroundChain.map((slab) => ({
-      kind: 'render',
-      target: spec.target,
-      slab,
-      depth: 'clear',
-      passes: resolve(isBodySlabIndex(slab) ? spec.bodyPasses : spec.near0Passes, passes),
-    })),
+    frame.foregroundChain.flatMap((slab): readonly FrameStep[] =>
+      isBodySlabIndex(slab)
+        ? bodyRowSteps(spec, slab, passes)
+        : [
+            {
+              kind: 'render',
+              target: spec.target,
+              slab,
+              depth: 'clear',
+              passes: resolvePassNames(spec.near0Passes, passes),
+            },
+          ],
+    ),
   composite: (spec) => [merge(spec.source, spec.dest, 'over', null)],
   bloom: (_spec, _passes, frame) => (frame.bloomEnabled ? [{ kind: 'bloom' }] : []),
   tonemap: (spec, _passes, frame) => [merge(spec.source, spec.dest, 'replace', frame.tone)],

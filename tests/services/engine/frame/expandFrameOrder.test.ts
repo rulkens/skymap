@@ -311,6 +311,51 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     });
   });
 
+  /** One foreground line over `chain`, every name a fake pass. */
+  function foreground(
+    chain: readonly number[],
+    bodyPasses: Extract<FrameStepSpec, { kind: 'foreground' }>['bodyPasses'],
+  ): readonly FrameStep[] {
+    const order: FrameStepSpec[] = [
+      { kind: 'foreground', target: 'foreground:0', near0Passes: ['stars'], bodyPasses },
+    ];
+    return expandFrameOrder(order, ['stars', 'a', 'b', 'd'].map(fakePass), {
+      tone: TONE,
+      bloomEnabled: false,
+      foregroundChain: chain,
+      captureFaces: new Map(),
+      bodyRowSlabs: { lens: [], insideAtmosphere: [] },
+    });
+  }
+
+  it('a depth-sampling marker splits a body row into clear, sample and load', () => {
+    const steps = foreground([3], ['a', { sampleDepth: ['d'] }, 'b']);
+    expect(
+      steps.map((step) =>
+        step.kind === 'render' ? [namesOf(step), step.depth, step.slot, step.slab] : null,
+      ),
+    ).toEqual([
+      [['a'], 'clear', undefined, 3],
+      [['d'], 'sample', 'SAMPLE_DEPTH_0', 3],
+      [['b'], 'load', 'AFTER_DEPTH_0', 3],
+    ]);
+  });
+
+  it('a marker at the end emits no empty load step', () => {
+    const steps = foreground([3], ['a', { sampleDepth: ['d'] }]);
+    expect(steps.map((step) => (step.kind === 'render' ? step.depth : null))).toEqual([
+      'clear',
+      'sample',
+    ]);
+  });
+
+  it("a NEAR0 chain entry ignores the body roster's marker", () => {
+    const steps = foreground([NEAR0], ['a', { sampleDepth: ['d'] }, 'b']);
+    expect(
+      steps.map((step) => (step.kind === 'render' ? [namesOf(step), step.depth] : null)),
+    ).toEqual([[['stars'], 'clear']]);
+  });
+
   it('emits no foreground chain step for an empty chain, but keeps the composite', () => {
     // No star sphere resolved and no bodies visible. A frame with no bodies must
     // still composite a CLEARED target: `executeFrame`'s composite step skips on
