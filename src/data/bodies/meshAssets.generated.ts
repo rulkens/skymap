@@ -94,7 +94,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
     contactDecal: {
-      centre: [-0.14926457100756546, -0.005141867351485026, -0.913145561665616],
+      centre: [-0.14952298327985314, -0.005148384292582237, -0.9143134790374972],
       halfU: [0, 2.331205129623413, 0],
       halfV: [-2.331205129623413, 0, 0],
     },
