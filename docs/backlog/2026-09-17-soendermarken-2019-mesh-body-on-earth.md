@@ -16,10 +16,10 @@ mesh body at its real location.
 
 **Open questions (from the 2026-09-17 brainstorm).**
 
-- Budget: shared 150k tris / 2048² (`tools/meshes/buildMeshes.ts`) or a
-  per-body override. Either way the pipeline needs decimation (meshoptimizer,
-  seams locked so charts survive a re-pack done first).
-- Tiers: mesh bodies have none — `buildMeshes.ts:40-41` fixes the budget and
+- Budget: the shared `MESH_TRIANGLE_BUDGET` (600k) and 2048² atlases, or a
+  per-body override. Decimation happens in the Blender prebake, so a re-packed
+  atlas must survive it (seams locked).
+- Tiers: mesh bodies have none — `MESH_TRIANGLE_BUDGET` fixes the budget and
   `meshFetcher.ts:51` loads one path; only planet textures tier
   (`tierToTexturePx`: small 2048, medium 4096). Shipping 2K/4K per tier needs a
   per-tier mesh texture path.

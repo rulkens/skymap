@@ -29,16 +29,14 @@ export const MESH_STREAM_ALIGN_BYTES = 4;
 
 /** Positions and UVs are unorm16; the octahedral filter decodes to snorm16. */
 export const MESH_UNORM16_MAX = 65535;
-export const MESH_SNORM16_MAX = 32767;
+const MESH_SNORM16_MAX = 32767;
 export const MESH_OCT_BITS = 10;
 /** An octahedral element: i16×4, xyz then w (0 for a normal, handedness for a tangent). */
 export const MESH_OCT_BYTES = 8;
 /** A position element: u16×4, w = 0 padding — meshopt wants a 4-byte-multiple element. */
-export const MESH_POS_BYTES = 8;
-/** A UV element: u16×2. */
-export const MESH_UV_BYTES = 4;
-/** An index element: u32. */
-export const MESH_INDEX_BYTES = 4;
+const MESH_POS_BYTES = 8;
+const MESH_UV_BYTES = 4;
+const MESH_INDEX_BYTES = 4;
 
 /**
  * The streams in file order (the order is the format; nothing in the file names

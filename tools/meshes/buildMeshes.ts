@@ -258,8 +258,8 @@ function transformTangent(m: readonly number[], n: Vec3, x: number, y: number, z
 
 /**
  * Whether a triangle's winding agrees with the authored NORMAL it interpolates.
- * A SketchUp two-sided face exports wound either way (34k of the petunias'
- * 150k disagree), so winding is normalised at bake time rather than trusted —
+ * A SketchUp two-sided face exports wound either way (a fifth of the
+ * petunias' triangles disagree), so winding is normalised at bake time rather than trusted —
  * the mean of the three normals, since a smooth-shaded corner has no one truth.
  * A degenerate triangle has no facing and keeps its authored order.
  */

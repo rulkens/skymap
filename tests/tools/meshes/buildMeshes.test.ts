@@ -91,12 +91,12 @@ function faceFacing(decoded: DecodedMeshGeometry): number {
   return face.reduce((sum, f, i) => sum + f * decoded.normals[n + i]!, 0);
 }
 
-/** Assert `expected` is *some* decoded vertex's position: the writer's vertex-cache
- * reorder means source index order no longer matches decoded index order. */
 function near(actual: ArrayLike<number>, expected: number[]): void {
   expected.forEach((e, i) => expect(actual[i]).toBeCloseTo(e, 4));
 }
 
+/** Assert `expected` is *some* decoded vertex's position: the writer's vertex-cache
+ * reorder means source index order no longer matches decoded index order. */
 function expectVertexNear(
   file: ArrayBuffer,
   decoded: DecodedMeshGeometry,

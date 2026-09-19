@@ -33,10 +33,7 @@ def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None, w
         # An object whose materials are ALL in this set goes; the raise guards
         # against the name drifting upstream and the marker silently shipping.
         "drop_materials": set(drop_materials),
-        # Merge-by-distance threshold in metres, or None to skip. SketchUp
-        # exports every face as its own island of loose vertices; unwelded,
-        # smart_project yields ~150k one-triangle islands and COLLAPSE
-        # decimation has no edges to collapse along.
+        # Merge-by-distance threshold in metres, or None to skip (see weld()).
         "weld": weld,
     }
 

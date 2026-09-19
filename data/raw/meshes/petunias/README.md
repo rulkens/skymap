@@ -48,9 +48,9 @@ npm run prebake-mesh -- petunias    # Blender 5.2 LTS; not run in CI
 ```
 
 `tools/meshes/prebake/meshPrebake.py` joins the parts (leaving behind any
-face-less/materialless leftovers), decimates to its row's triangle target,
+face-less/materialless leftovers), decimates to `MESH_TRIANGLE_BUDGET` when over it,
 smart-UV-projects and bakes the material stack into the five `BAKE_PASSES`
-atlases per `MESH_TRIANGLE_BUDGET` — albedo, normal, roughness, metallic and
+atlases — albedo, normal, roughness, metallic and
 occlusion. Its output and the loose `petunias.prebaked.*.png` atlases beside it
 are both gitignored build products — regenerate them, don't archive them.
 
