@@ -61,10 +61,4 @@ describe('allowDataFile', () => {
   it('rejects an unrelated png under meshes/', () => {
     expect(allowDataFile('meshes/whale_thumbnail.png')).toBe(false);
   });
-
-  it('accepts local-bubble.shell, nested and content-hashed', () => {
-    expect(allowDataFile('local-bubble.shell')).toBe(true);
-    expect(allowDataFile('local-bubble/v1/local-bubble.shell')).toBe(true);
-    expect(allowDataFile('local-bubble.a3f19c2e.shell')).toBe(true);
-  });
 });

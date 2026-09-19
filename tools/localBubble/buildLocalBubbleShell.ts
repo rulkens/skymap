@@ -1,14 +1,12 @@
 #!/usr/bin/env node
 /**
  * buildLocalBubbleShell — bakes O'Neill+2024's Local Bubble shell table into
- * the runtime `.shell` mesh, plus preview PNGs of the radius map. Source
- * table is STAR-SHAPED in its own GALACTIC frame; rotating to skymap's draw
- * frame is the renderer's job, so a frame bug shows as rotation, not bytes.
+ * the runtime `.shell` mesh. Source table is STAR-SHAPED in its own GALACTIC
+ * frame; rotating to skymap's draw frame is the renderer's job, so a frame
+ * bug shows as rotation, not bytes.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-
-import sharp from 'sharp';
+import { dirname } from 'node:path';
 
 import type { ShellMesh } from '../../src/@types/data/shellMesh/ShellMesh';
 import type { ShellMeshDtype } from '../../src/@types/data/shellMesh/ShellMeshDtype';
@@ -30,15 +28,9 @@ import { vertexNormals } from '../utils/geo/vertexNormals';
 const WIDTH_PX = 1024;
 const HEIGHT_PX = 512;
 
-/**
- * Angular smoothing radius, degrees. The raw fit jumps between candidate dust
- * walls along adjacent sight lines; displaced unsmoothed it renders as radial
- * spikes, not a membrane (data/localBubble/previews/local-bubble-radius.png).
- * Override with --smooth-deg to re-tune against the preview.
- */
-const DEFAULT_SMOOTH_DEG = 2.5;
+/** Angular smoothing radius, degrees; heals the source table's NaN texels as a side effect (verified: 0 left at this radius) and turns its raw radial spikes into a membrane. */
+const SMOOTH_DEG = 2.5;
 
-const PREVIEW_DIR = 'data/localBubble/previews';
 const SHELL_OUT_PATH = 'public/data/local-bubble/v1/local-bubble.shell';
 
 /** Uniform base before adaptive refinement — enough that the first pass sees sane shapes. */
@@ -75,86 +67,6 @@ function readColumn(
     out[i] = view.getFloat64(dataOffset + i * rowLengthBytes + column.byteOffset);
   }
   return out;
-}
-
-function describe(name: string, values: Float64Array | Float32Array): string {
-  let min = Infinity;
-  let max = -Infinity;
-  let sum = 0;
-  let bad = 0;
-  for (const v of values) {
-    if (!Number.isFinite(v)) {
-      bad++;
-      continue;
-    }
-    if (v < min) min = v;
-    if (v > max) max = v;
-    sum += v;
-  }
-  const good = values.length - bad;
-  return `${name.padEnd(8)} min=${min.toFixed(1)} max=${max.toFixed(1)} mean=${(sum / good).toFixed(1)} non-finite=${bad}`;
-}
-
-/** Grey preview, linearly stretched over the plane's own range — shape first, absolute scale second. */
-async function writePreview(plane: Float32Array, label: string, outPath: string): Promise<void> {
-  let min = Infinity;
-  let max = -Infinity;
-  for (const v of plane) {
-    if (!Number.isFinite(v)) continue;
-    if (v < min) min = v;
-    if (v > max) max = v;
-  }
-  const span = max - min || 1;
-  const grey = Buffer.alloc(plane.length);
-  for (let i = 0; i < plane.length; i++) {
-    const v = Number.isFinite(plane[i]!) ? plane[i]! : min;
-    grey[i] = Math.round(((v - min) / span) * 255);
-  }
-  mkdirSync(dirname(outPath), { recursive: true });
-  await sharp(grey, { raw: { width: WIDTH_PX, height: HEIGHT_PX, channels: 1 } })
-    .png()
-    .toFile(outPath);
-  console.log(`  ${label}: ${outPath}  [${min.toFixed(1)} … ${max.toFixed(1)} pc]`);
-}
-
-/** Fills non-finite texels in place with the mean of the finite ones, so a meshed sight line never NaNs a vertex. */
-function healNonFinite(plane: Float32Array): number {
-  let sum = 0;
-  let finiteCount = 0;
-  for (const v of plane) {
-    if (Number.isFinite(v)) {
-      sum += v;
-      finiteCount++;
-    }
-  }
-  const mean = finiteCount > 0 ? sum / finiteCount : 0;
-  let filled = 0;
-  for (let i = 0; i < plane.length; i++) {
-    if (!Number.isFinite(plane[i]!)) {
-      plane[i] = mean;
-      filled++;
-    }
-  }
-  return filled;
-}
-
-function longestEdge(
-  positions: readonly Vec3[],
-  faces: readonly (readonly [number, number, number])[],
-): number {
-  let worst = 0;
-  for (const [a, b, c] of faces) {
-    for (const [p, q] of [
-      [a, b],
-      [b, c],
-      [c, a],
-    ]) {
-      const wp = positions[p!]!;
-      const wq = positions[q!]!;
-      worst = Math.max(worst, Math.hypot(wp[0] - wq[0], wp[1] - wq[1], wp[2] - wq[2]));
-    }
-  }
-  return worst;
 }
 
 function angleBetweenDeg(a: Vec3, b: Vec3): number {
@@ -229,30 +141,12 @@ async function main(): Promise<void> {
   const b = read('b');
   const d = read('d');
 
-  console.log('source columns:');
-  console.log(`  ${describe('l', l)}`);
-  console.log(`  ${describe('b', b)}`);
-  console.log(`  ${describe('d', d)}`);
-
   console.log(`resampling → ${WIDTH_PX}×${HEIGHT_PX} equirect (galactic)`);
   const [raw] = resampleSkyToEquirect(l, b, [d], WIDTH_PX, HEIGHT_PX);
-
-  const smoothArg = process.argv.indexOf('--smooth-deg');
-  const smoothDeg = smoothArg >= 0 ? Number(process.argv[smoothArg + 1]) : DEFAULT_SMOOTH_DEG;
-  const plane =
-    smoothDeg > 0 ? smoothEquirectSphere(raw!, WIDTH_PX, HEIGHT_PX, smoothDeg) : raw!;
-  console.log(`baked plane (smoothing ${smoothDeg}°):`);
-  console.log(`  ${describe('d', plane)}`);
-
-  console.log('previews:');
-  await writePreview(plane, 'd_peak', join(PREVIEW_DIR, 'local-bubble-radius.png'));
+  const plane = smoothEquirectSphere(raw!, WIDTH_PX, HEIGHT_PX, SMOOTH_DEG);
 
   console.log('meshing displaced icosphere...');
-  const radiusPlane = plane;
-  const healed = healNonFinite(radiusPlane);
-  if (healed > 0) console.log(`  healed ${healed} non-finite radius texels with the plane mean`);
-
-  const radiusOf = (dir: Vec3): number => radiusAtDirection(radiusPlane, WIDTH_PX, HEIGHT_PX, dir);
+  const radiusOf = (dir: Vec3): number => radiusAtDirection(plane, WIDTH_PX, HEIGHT_PX, dir);
   const base = icosphere(BASE_SUBDIV);
   const refined = refineMeshByEdgeLength(
     base.directions,
@@ -271,7 +165,6 @@ async function main(): Promise<void> {
   console.log(
     `  ${base.faces.length} base faces → ${refined.faces.length} after adaptive refinement (target ${TARGET_EDGE_PC} pc, cap ${MAX_FACES})`,
   );
-  console.log(`  longest displaced edge: ${longestEdge(positions, refined.faces).toFixed(2)} pc`);
 
   const chimneyDir = meanDirectionOfLargest(refined.directions, radii, CHIMNEY_FRACTION);
   const chimneyAngleDeg = angleBetweenDeg(chimneyDir, GALACTIC_NORTH);

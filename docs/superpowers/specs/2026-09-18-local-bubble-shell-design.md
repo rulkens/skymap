@@ -100,7 +100,7 @@ Everything on PR #755, by the user's ruling: prep, feature and docs as separate 
 4. **Chimney assertion**: the mean direction of the outermost 5% of radii must lie within 30° of the north galactic pole, else the bake throws. The FITS header names no frame, so this pins the source's frame at its source.
 5. `encodeShellMesh` → `public/data/local-bubble/v1/local-bubble.shell`, f16 by default, `--dtype f32` to override.
 
-The radius preview PNG still goes to the gitignored `data/localBubble/previews/`; the eye-check for the mesh itself happens in-app now (the offline 3D preview was deleted once the pass landed).
+The tuning-era radius preview PNG and column-stats logging were deleted once the smoothing radius settled; the eye-check for the mesh itself happens in-app now (the offline 3D preview was deleted once the pass landed).
 
 ### 4.2 `.shell` format v1 (little-endian)
 
@@ -176,7 +176,7 @@ A `localBubble` fade kind, filaments pattern: `FadeId`, `serializeFadeId` (`fade
 ## 9. Open questions (settled in the app, not here)
 
 1. **Does it read against the background?** The window sits where the Milky Way impostor is at full strength and Gaia is crossfaded in. The biggest risk to the feature; if a thin additive membrane does not read, tint/intensity and the bands are the first levers.
-2. **Smoothing radius.** 2.5° is eye-tuned; `--smooth-deg` re-bakes.
+2. **Smoothing radius.** 2.5° is eye-tuned and now hard-coded (the `--smooth-deg` knob was deleted once the value settled — it also leaves 0 non-finite texels, healing the source table's NaNs as a side effect).
 3. **Band edges** (§7.1) are eye-tuned.
 
 ## 10. Commit sequence on #755
