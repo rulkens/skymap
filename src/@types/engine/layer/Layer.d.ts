@@ -18,7 +18,7 @@ import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerFrameVote } from './LayerFrameVote';
-import type { LayerUi } from './LayerUi';
+import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
@@ -50,8 +50,10 @@ export type Layer<
   readonly sources?: Sources;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
-  /** The two panel surfaces `SettingsPanel`/`DebugPanel` render for this Layer. */
-  readonly ui?: LayerUi;
+  /** Contributions to the three `LayerUiSlots`: whole sections (`main` in
+   * SettingsPanel, `debug` in DebugPanel) or a `labelsAndGuides` data row,
+   * appended after the core rows in `LabelsAndGuidesSectionContainer`. */
+  readonly ui?: readonly LayerUiEntry[];
 
   // Lifecycle. Every member below is invoked from exactly one place —
   // `instantiateLayer` — which is where to look to see the call shapes together.

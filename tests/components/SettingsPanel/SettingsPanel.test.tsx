@@ -17,7 +17,7 @@ const { layersRef } = vi.hoisted(() => ({
   layersRef: {
     current: [] as ReadonlyArray<{
       name: string;
-      ui?: { settings?: () => React.ReactElement };
+      ui?: ReadonlyArray<{ slot: string; content: () => React.ReactElement }>;
     }>,
   },
 }));
@@ -57,7 +57,10 @@ import { SettingsPanel } from '../../../src/components/SettingsPanel/SettingsPan
 describe('SettingsPanel — composition order (D13)', () => {
   it('renders a present Layer’s ui section before the core sections', () => {
     layersRef.current = [
-      { name: 'stub', ui: { settings: () => <div data-testid="stub-layer-section" /> } },
+      {
+        name: 'stub',
+        ui: [{ slot: 'main', content: () => <div data-testid="stub-layer-section" /> }],
+      },
     ];
     const { getByTestId, container } = render(<SettingsPanel />);
 

@@ -12,7 +12,7 @@ import { memo } from 'react';
 import type { ReactNode } from 'react';
 import { Panel } from '../common/Panel/Panel';
 import { APP_COMPOSITION } from '../../compositions/app';
-import type { Layer } from '../../@types/engine/layer/Layer';
+import { layerUiContents } from '../../utils/layer/layerUiContents';
 import TierChipContainer from '../containers/TierChipContainer';
 import StarsSectionContainer from '../containers/StarsSectionContainer';
 import CosmicWebSectionContainer from '../containers/CosmicWebSectionContainer';
@@ -40,10 +40,9 @@ export const SettingsPanel = memo(function SettingsPanel({
       defaultOpen={defaultOpen}
       headerExtra={<TierChipContainer />}
     >
-      {APP_COMPOSITION.layers.map((layer: Layer<string, unknown>) => {
-        const Settings = layer.ui?.settings;
-        return Settings ? <Settings key={layer.name} /> : null;
-      })}
+      {layerUiContents(APP_COMPOSITION.layers, 'main').map((Section, index) => (
+        <Section key={index} />
+      ))}
       <StarsSectionContainer />
       <CosmicWebSectionContainer />
       <StructuresSectionContainer />
