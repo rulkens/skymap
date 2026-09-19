@@ -1,7 +1,7 @@
 # Mesh-body baked ambient occlusion — design
 
-Effort A of `docs/backlog/2026-09-18-mesh-body-ambient-occlusion.md`. The contact
-decal (effort B) stays in the backlog.
+Effort A of `docs/backlog/2026-09-18-mesh-body-ambient-occlusion.md`, plus the bake
+half of effort B: the contact decal's texture. Drawing the decal stays in the backlog.
 
 ## Goal
 
@@ -22,6 +22,11 @@ plane, so their undersides darken the way a body resting on the ground does.
 - **Ground fact:** a node `extras.aoGroundUp: [x, y, z]` on seated keys' prebaked GLB:
   the ground's up in the SOURCE frame the plane was baked against. Absent = baked
   without a ground plane.
+- **Contact decal (seated only):** `data/raw/meshes/<key>/<key>.prebaked.contact.png`,
+  the ground plane's own AO with the body as occluder (1 = unshadowed), over the
+  plane's UV square. Placement: node `extras.contactDecal: {centre, u, v}`, source
+  frame, metres: the plane's centre and its half-side vectors along UV u and v. A
+  raw prebake product only; the runtime does not read it until effort B.
 
 ## Where the ground fact comes from
 
@@ -50,10 +55,12 @@ meshPrebake.py
     parse optional --ground-up
     world AO distance = AO_DISTANCE_FRACTION × largest extent from bounds(obj)
     ground plane (seated only): created after join_meshes, at the model's bottom along
-      the ground up, sized from the bounds, not selected; removed before
+      the ground up, side (1 + 2·AO_DISTANCE_FRACTION) × largest extent — nothing
+      beyond the AO distance can occlude; not selected during the body rows; then
+      baked itself (AO, body as occluder) → the contact decal; removed before
       flatten_materials
   flatten_materials: occlusion atlas → the glTF Material Output group's Occlusion input
-  export: stamp extras.aoGroundUp; export_extras on
+  export: stamp extras.aoGroundUp and extras.contactDecal; export_extras on
 
 buildMeshes.ts
   refuse a key whose GLB stamp ≠ meshGroundUpSource(key)  ("re-run prebake-mesh <key>")

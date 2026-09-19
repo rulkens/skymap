@@ -91,6 +91,31 @@ and both body ids).
 - [ ] No test (Blender-only; Task 7 verifies). Commit
       `feat(meshes): bake ambient occlusion, against the ground for seated meshes`.
 
+## Task 4b: bake the contact decal texture
+
+**Files:** `tools/meshes/prebake/meshPrebake.py`
+
+User-requested addition (2026-09-19): the decal's texture is baked here; drawing it
+is effort B.
+
+- [ ] `GROUND_PLANE_SPAN` is no longer a free constant: side = `(1 + 2 ×
+      AO_DISTANCE_FRACTION)` × the largest extent (nothing beyond the AO distance can
+      occlude, so the body bake is unchanged and the decal gets 3× the texel density).
+- [ ] Seated only: after the `BAKE_PASSES` loop, bake the plane itself: AO, AO_SAMPLES,
+      the plane active + selected alone, its own default 0..1 UV, a material with the
+      target image node, through `bake_pass` where it fits (a second caller, not a
+      copy). Output `<key>.prebaked.contact.png` (Non-Color) beside the other atlases.
+      The body occludes the plane; it is not selected.
+- [ ] Stamp `obj["contactDecal"] = {"centre": [..], "u": [..], "v": [..]}`: source
+      frame, metres, the plane's world centre and half-side vectors along its UV u and
+      v (read them from the plane's world matrix, so they cannot disagree with the
+      rotation used). Rides the same `export_extras` as `aoGroundUp`.
+- [ ] Verify: `npm run prebake-mesh -- mer`; the contact PNG is white at the edges and
+      darkens under the wheels and body; the GLB node carries `contactDecal` whose
+      centre lies under the body and whose `u`/`v` are perpendicular to `aoGroundUp`
+      with half-length 0.75 × largest extent. Commit
+      `feat(meshes): bake the ground plane's own occlusion as a contact decal texture`.
+
 ## Task 5: `buildMeshes` — stamp check and the R rule
 
 **Files:** `tools/meshes/buildMeshes.ts`, `tests/tools/meshes/buildMeshes.test.ts`
@@ -143,18 +168,20 @@ and both body ids).
 - [ ] Inspect the `_mr` PNGs: rovers' undersides dark in R; floating meshes R < 255
       only in crevices.
 - [ ] Backlog: delete effort A from `docs/backlog/2026-09-18-mesh-body-ambient-occlusion.md`
-      (effort B, the contact decal, stays; retitle) and update its `BACKLOG.md` line;
+      (effort B, the contact decal, stays — rewritten to start from the baked
+      `contact.png` + `extras.contactDecal`; retitle) and update its `BACKLOG.md` line;
       add the adjacent finding (AO for petunias = fold `petuniasPrebake.py` into
       `meshPrebake.py` first; whale has no prebake).
 
 ## Definition of Done
 
 - Deliverables: `meshGroundUpSource.ts`, `prebakeMesh.ts`; `meshPrebake.py` AO row,
-  ground plane, ORM export, `aoGroundUp` stamp; `buildMeshes` stamp check + R rule;
+  ground plane, ORM export, `aoGroundUp` stamp; seated keys' `contact.png` +
+  `contactDecal` stamp; `buildMeshes` stamp check + R rule;
   `envSplitSum(…, ao)`; re-baked prebaked GLBs + `.mesh`/PNGs for five meshes.
 - Observable (user eye-check, f.lux off): rover undersides and wheel wells darker
   under the probe light; Voyager's dish interior darker; sunlit faces unchanged;
   whale and petunias look as before.
 - `build-meshes` refuses a rover prebaked without its ground.
-- Out of scope: the contact decal (effort B), multi-bounce AO, AO for whale and
+- Out of scope: drawing or shipping the contact decal (effort B), multi-bounce AO, AO for whale and
   petunias, AO on the direct sun term, R2 sync (main session, after merge).
