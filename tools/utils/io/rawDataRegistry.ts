@@ -286,7 +286,7 @@ export const RAW_DATA = {
   // ─── Local Bubble shell surface (O'Neill+ 2024) ───────────────────────
 
   'localbubble.shell': {
-    path: 'data/raw/localBubble/ONeill2024_LocalBubble_ShellProperties_A0.5.fits',
+    path: 'data/raw/localbubble/ONeill2024_LocalBubble_ShellProperties_A0.5.fits',
     kind: 'file',
     source: 'gitignored',
     description:
@@ -296,7 +296,7 @@ export const RAW_DATA = {
     readme: 'localbubble.readme',
   },
   'localbubble.readme': {
-    path: 'data/raw/localBubble/README.md',
+    path: 'data/raw/localbubble/README.md',
     kind: 'file',
     source: 'committed',
     description:

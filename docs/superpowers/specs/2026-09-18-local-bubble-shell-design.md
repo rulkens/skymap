@@ -5,7 +5,7 @@
 
 ## 1. Purpose
 
-Draw the Local Bubble, the ~300 pc cavity of hot gas around the Sun, as a glowing Fresnel membrane that appears as the camera leaves the solar neighbourhood and recedes before the Galaxy becomes the subject. Source: O'Neill, Zucker, Goodman & Edenhofer (2024), CC0, already fetched and baked by PR #755 (`data/raw/localBubble/README.md`).
+Draw the Local Bubble, the ~300 pc cavity of hot gas around the Sun, as a glowing Fresnel membrane that appears as the camera leaves the solar neighbourhood and recedes before the Galaxy becomes the subject. Source: O'Neill, Zucker, Goodman & Edenhofer (2024), CC0, already fetched and baked by PR #755 (`data/raw/localbubble/README.md`).
 
 ## 2. Scope
 

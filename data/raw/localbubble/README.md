@@ -1,4 +1,4 @@
-# `data/raw/localBubble/` — Local Bubble shell surface
+# `data/raw/localbubble/` — Local Bubble shell surface
 
 ## Provenance
 

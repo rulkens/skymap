@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 /**
  * fetchLocalBubble — download O'Neill+ 2024's Local Bubble shell-properties
- * table from Harvard Dataverse to data/raw/localBubble/.
+ * table from Harvard Dataverse to data/raw/localbubble/.
  *
  * One 138 MB FITS BINTABLE, fetched by Dataverse file id rather than by name:
  * the dataset holds sixteen sibling tables (twelve posterior draws, two edge
  * thresholds, a mean) whose filenames differ by a suffix, and the id pins the
  * fiducial A_0.5' one unambiguously.
  *
- * See data/raw/localBubble/README.md for the in-repo provenance header.
+ * See data/raw/localbubble/README.md for the in-repo provenance header.
  */
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
