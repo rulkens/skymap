@@ -162,7 +162,7 @@ keys.
   view-projections; star cut prepared once per frame with `originMpc` and
   fades once. Consumes backlog _star-cut-origin-carrying_.
 - **P4** `ReadyFrameContext.viewKind` replaces `viewSlot !== 0`.
-- **P5** Photometry by `pxPerRad` (WGSL + TS twin).
+- **P5** Photometry by `pxPerRad` (WGSL only; a TS twin would only restate the formula).
 
 **Kept deliberately:** one `ReadyFrameContext` per view rather than a
 frame-pose / view-context split (greenfield's shape). A per-view context
@@ -193,4 +193,4 @@ _frame-view-record_ stays open for it.
 - Fisheye twin: centre → zenith; the camera's forward lands at 30° elevation
   on the front meridian (r = 2/3 below centre at tilt 60); r > 1 → none;
   each face reached; continuity across face edges.
-- Photometry twin: identical at 60°; per-solid-angle constant across fov.
+- Photometry (eye-check): identical at 60°; per-solid-angle constant across fov.
