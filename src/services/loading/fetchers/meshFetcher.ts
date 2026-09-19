@@ -50,7 +50,7 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
           [
             slot.field,
             await fetchTexture(
-              dataUrl(`${prefix}${slot.suffix}.png`),
+              dataUrl(`${prefix}${slot.suffix}.webp`),
               signal,
               !slot.format.endsWith('-srgb'),
             ),
@@ -59,7 +59,7 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
     ).then((entries) => Object.fromEntries(entries) as Record<MeshTextureField, ImageBitmap>),
     // The shadow is garnish: a missing mask drops it, never the rover.
     hasContactDecal
-      ? fetchTexture(dataUrl(`${prefix}_contact.png`), signal, true).catch((err: Error) => {
+      ? fetchTexture(dataUrl(`${prefix}_contact.webp`), signal, true).catch((err: Error) => {
           if (err.name === 'AbortError') throw err;
           return undefined;
         })

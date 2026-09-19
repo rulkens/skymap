@@ -504,10 +504,10 @@ describe('buildMeshes()', () => {
     const row = (await run(await writeGlb(doc)))[0]!;
 
     expect(row.substituted).toEqual(['metalRough', 'normalMap']);
-    const normalPx = await sharp(join(dir, 'out', 'testmesh_normal.png'))
+    const normalPx = await sharp(join(dir, 'out', 'testmesh_normal.webp'))
       .raw()
       .toBuffer();
-    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.png'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.webp'))
       .raw()
       .toBuffer();
     expect([...normalPx.subarray(0, 3)]).toEqual([128, 128, 255]);
@@ -515,8 +515,9 @@ describe('buildMeshes()', () => {
     // R is glTF's occlusion — 255 (no occlusion) absent a packed AO bake.
     expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
     expect(warn.mock.calls.flat().join(' ')).toMatch(/testmesh/);
-    // Pure red albedo — the mean the glint fallback reads back.
-    expect(row.meanAlbedo).toEqual([1, 0, 0]);
+    // Pure red albedo — the mean the glint fallback reads back, through a
+    // lossy codec.
+    row.meanAlbedo.forEach((c, i) => expect(c).toBeCloseTo([1, 0, 0][i]!, 2));
     expect(readFileSync(join(dir, 'meshAssets.generated.ts'), 'utf8')).toContain(
       "path: 'meshes/testmesh.mesh'",
     );
@@ -545,7 +546,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.png'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.webp'))
       .raw()
       .toBuffer();
     expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
@@ -566,7 +567,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.png'))
+    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.webp'))
       .raw()
       .toBuffer();
     expect([...mrPx.subarray(0, 3)]).toEqual([77, 255, 0]);
@@ -582,7 +583,7 @@ describe('buildMeshes()', () => {
     await run(await writeGlb(doc));
 
     for (const slot of MESH_TEXTURE_SLOTS) {
-      expect(existsSync(join(dir, 'out', `testmesh${slot.suffix}.png`))).toBe(true);
+      expect(existsSync(join(dir, 'out', `testmesh${slot.suffix}.webp`))).toBe(true);
     }
   });
 
@@ -644,7 +645,7 @@ describe('buildMeshes()', () => {
 
     const glbPath = await writeGlb(doc);
     await sharp({
-      create: { width: 8, height: 8, channels: 3, background: { r: 128, g: 128, b: 128 } },
+      create: { width: 1024, height: 1024, channels: 3, background: { r: 128, g: 128, b: 128 } },
     })
       .png()
       .toFile(glbPath.replace(/\.glb$/, '.contact.png'));
@@ -657,8 +658,8 @@ describe('buildMeshes()', () => {
     near(row.contactDecal!.halfU, [0, 1, 0]);
     near(row.contactDecal!.halfV, [-1, 0, 0]);
 
-    const meta = await sharp(join(dir, 'out', 'testmesh_contact.png')).metadata();
-    expect(meta.channels).toBe(1);
+    const meta = await sharp(join(dir, 'out', 'testmesh_contact.webp')).metadata();
+    expect([meta.width, meta.height]).toEqual([512, 512]);
   });
 
   it('refuses a contact decal without a ground stamp', async () => {

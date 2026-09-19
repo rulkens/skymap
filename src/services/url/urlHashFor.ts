@@ -35,7 +35,7 @@ export const URL_HASH_FOR: Record<FocusableTargetType, (t: FocusableTarget) => s
   zoneOfAvoidance: () => null,
   // Scene body (any SCENE_BODIES entry — famous star, planet, or Earth) →
   // its seed id under the shared BODY_FOCUS_PREFIX (`body-sirius`). The same
-  // prefix `focusIdForRow` and the resolver's focusIdOf emit, and its
+  // prefix `actionForRow` and the resolver's focusIdOf emit, and its
   // resolveFocusId strips, closing the `#focus=body-<id>` round-trip. A bare
   // `t.id` would collide with the famous-galaxy character class and mis-decode.
   body: (t) => (t.type === 'body' ? `${BODY_FOCUS_PREFIX}${t.id}` : null),

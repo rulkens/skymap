@@ -60,6 +60,7 @@ describe('useSplash — slice-backed visibility', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
     };
     const { store, result } = renderSplash(ui);
@@ -89,6 +90,7 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
     };
     const { store, result } = renderSplash(ui);
@@ -106,6 +108,7 @@ describe('useSplash — dispatch on dismiss + reopen', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: false, dismissedVersion: CURRENT_SPLASH_VERSION },
     };
     const { store, result } = renderSplash(ui);
@@ -130,6 +133,7 @@ describe('useSplash — blocked state', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui });
@@ -156,6 +160,7 @@ describe('useSplash — blocked state', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
     };
     const { store } = createAppStore({ settings: INITIAL_SETTINGS, ui });
@@ -185,6 +190,7 @@ describe('useSplash — 8 s "Continue anyway" timer', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: true, dismissedVersion: null },
     };
     // Default engine state is `initializing` → hook reads blocked=true.
@@ -201,6 +207,7 @@ describe('useSplash — 8 s "Continue anyway" timer', () => {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: false, dismissedVersion: null },
     };
     const { result } = renderSplash(ui);
@@ -221,6 +228,7 @@ describe('useSplash error mapping', () => {
     paletteOpen: false,
     uiHidden: false,
     debugPanelOpen: false,
+    paletteTab: 'highlights',
     splash: { visible: true, dismissedVersion: null },
   };
 

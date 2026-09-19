@@ -14,6 +14,7 @@ const base = (): UiState => ({
   paletteOpen: false,
   uiHidden: false,
   debugPanelOpen: false,
+  paletteTab: 'highlights',
   splash: {
     visible: false,
     dismissedVersion: null,

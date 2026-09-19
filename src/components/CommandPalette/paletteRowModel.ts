@@ -26,8 +26,8 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
 
 /**
  * One scored row, ready to render.  `kind` discriminates the payload shapes;
- * `ROW_VIEW` dispatches on it for the rendered text and `utils/focusIdForRow`
- * for the durable focus id.  `milkyWay` carries no payload — it's the singleton
+ * `ROW_VIEW` dispatches on it for the rendered text and `utils/actionForRow`
+ * for the resulting `PaletteAction`.  `milkyWay` carries no payload — it's the singleton
  * FocusableTarget, resolved by the saga.  `body` carries a seeded scene body
  * (Earth, the stars, the planets — the `SceneBody` union; the row only reads
  * the shared `id`/`label` fields); it's scored and ranked in like a famous

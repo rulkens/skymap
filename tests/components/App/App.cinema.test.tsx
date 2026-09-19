@@ -70,6 +70,7 @@ function makeStore(): Store {
       paletteOpen: false,
       uiHidden: false,
       debugPanelOpen: false,
+      paletteTab: 'highlights',
       splash: { visible: false, dismissedVersion: 1 },
     },
   }).store;

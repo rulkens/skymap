@@ -40,6 +40,7 @@ const ui = (paletteOpen: boolean): UiState => ({
   paletteOpen,
   uiHidden: false,
   debugPanelOpen: false,
+  paletteTab: 'highlights',
   splash: { visible: false, dismissedVersion: null },
 });
 
