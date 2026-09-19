@@ -633,6 +633,7 @@ describe('slabViewOf', () => {
     return {
       isReady: true,
       viewSlot: 0,
+      viewKind: 'frame',
       renderedTargets: new Set<string>(),
       cam,
       vp: cosmoVp,

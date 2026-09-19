@@ -19,8 +19,12 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
+import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { symmetricFrustum } from '../../../utils/camera/symmetricFrustum';
+import { viewFromCameraEye } from '../../../utils/camera/viewFromCameraEye';
+import { multiply3x3 } from '../../../utils/math/multiply3x3';
+import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
@@ -29,7 +33,7 @@ import { starSphereRangeM } from '../../../utils/star/starSphereRangeM';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
-import { bodyRelativePose } from '../camera/bodyRelativePose';
+import { bodyRelativePose, viewBodyPose } from '../camera/bodyRelativePose';
 import { hostOf } from '../camera/rungs/hostOf';
 import { isBodyArm } from '../camera/rungs/isBodyArm';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
@@ -71,6 +75,10 @@ import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf
  * from; absent, it is derived from `pose` and the focused pivot. A capture
  * face passes its own: its synthetic pose orbits no pivot, and the real
  * focus's radius taken off a metre-scale probe distance goes hugely negative.
+ *
+ * `view` is a rig view (`deriveViewContext`): the SAME pose and arm, turned and
+ * offset, through its own frustum and size. Absent = the camera's own view,
+ * built with no extra arithmetic so mono stays bit-identical.
  */
 export function deriveFrameContext(
   state: EngineState,
@@ -84,6 +92,7 @@ export function deriveFrameContext(
   nowMs: number,
   simDays: number,
   altitudeMpc?: number,
+  view?: ViewSpec,
 ): FrameContext {
   if (!isEngineReady(state)) {
     return { isReady: false };
@@ -92,9 +101,12 @@ export function deriveFrameContext(
 
   const cam = assembleOrbitCamera(pose, projection, poseBasis, upBasis);
 
-  const canvasSize = { width: canvas.width, height: canvas.height };
-  const frustum = symmetricFrustum(cam.fovYRad, cam.aspect);
-  const vp = computeViewProj(cam, frustum);
+  const canvasSize = view?.sizePx ?? { width: canvas.width, height: canvas.height };
+  const frustum = view?.frustum ?? symmetricFrustum(cam.fovYRad, cam.aspect);
+  const fovYRad =
+    view === undefined ? cam.fovYRad : Math.atan(frustum.tanUp) - Math.atan(frustum.tanDown);
+  const viewFromCamEye = view && viewFromCameraEye(view.rotation, view.eyeOffsetMpc);
+  const vp = computeViewProj(cam, frustum, viewFromCamEye);
 
   // This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes one
   // deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call this
@@ -102,6 +114,33 @@ export function deriveFrameContext(
   const bodyStates = deriveBodyStates(simDays);
 
   const camForward = orbitForwardOf(cam);
+
+  // `camBasisWorld` reruns the SAME roll NEAR0's own vp derivation uses
+  // (`imagePlaneBasis` is the shared seam both call, not a copy) so a body row's
+  // screen orientation matches NEAR0's — reading `cam.roll` rather than
+  // hard-coding 0 is what keeps that true once something sets a non-zero roll.
+  // The closure below is forwarded onto `ReadyFrameContext.bodyPose` (the SAME
+  // closure, not a second one) so a body-slab layer's own pose read can never
+  // drift from the one `slabs` was built from.
+  const { right: camRight, up: camUp } = imagePlaneBasis(
+    camForward,
+    cam.roll ?? 0,
+    frameUp(cam.upBasis),
+  );
+  const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
+  const viewBasisWorld =
+    view === undefined ? camBasisWorld : multiply3x3(camBasisWorld, view.rotation);
+  const viewForward: Vec3 = [viewBasisWorld[6], viewBasisWorld[7], viewBasisWorld[8]];
+  const eyeOffset =
+    view === undefined ? null : rotateVec3ByTightMat3(view.eyeOffsetMpc, viewBasisWorld);
+  const drawCamPos: Readonly<Vec3> =
+    eyeOffset === null
+      ? [cam.position[0]!, cam.position[1]!, cam.position[2]!]
+      : [
+          cam.position[0]! + eyeOffset[0],
+          cam.position[1]! + eyeOffset[1],
+          cam.position[2]! + eyeOffset[2],
+        ];
 
   const { earth, planets, meshBodies } = state.data.bodies;
   // A mesh body whose driver hangs off something with no row of its own gets
@@ -115,11 +154,11 @@ export function deriveFrameContext(
 
   const slabGate = {
     bodyStates,
-    camPosMpc: cam.position,
-    camForwardMpc: camForward,
+    camPosMpc: drawCamPos,
+    camForwardMpc: viewForward,
     viewportWidthPx: canvasSize.width,
     viewportHeightPx: canvasSize.height,
-    fovYRad: cam.fovYRad,
+    fovYRad,
   };
   const gatedBodies = visibleSlabBodies({ ...slabGate, bodies: slabBodyCandidates });
   // A hosted mesh body owns no slab row — it rides its host's
@@ -136,19 +175,6 @@ export function deriveFrameContext(
     slabBodyCandidates.filter((body) => meshHostIds.has(body.id) && !gatedBodies.includes(body)),
   );
 
-  // `camBasisWorld` reruns the SAME roll NEAR0's own vp derivation uses
-  // (`imagePlaneBasis` is the shared seam both call, not a copy) so a body row's
-  // screen orientation matches NEAR0's — reading `cam.roll` rather than
-  // hard-coding 0 is what keeps that true once something sets a non-zero roll.
-  // The closure below is forwarded onto `ReadyFrameContext.bodyPose` (the SAME
-  // closure, not a second one) so a body-slab layer's own pose read can never
-  // drift from the one `slabs` was built from.
-  const { right: camRight, up: camUp } = imagePlaneBasis(
-    camForward,
-    cam.roll ?? 0,
-    frameUp(cam.upBasis),
-  );
-  const camBasisWorld = mat3FromColumns(camRight, camUp, camForward);
   // Provider B serves ONLY the engaged body, straight from its own stored
   // pose — no Mpc round trip. Every other body, and the whole absolute arm,
   // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Gated on the
@@ -160,7 +186,7 @@ export function deriveFrameContext(
     terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
   };
   const armHost = hostOf(arm.frame, armBasisCtx);
-  const bodyPose: BodyPoseProvider = (bodyId) => {
+  const camBodyPose: BodyPoseProvider = (bodyId) => {
     if (!isWorldArm(arm) && armHost?.id === bodyId) {
       // A rung BELOW its host (a site on its planet) folds up to the host's own
       // arm first — by reference when the arm already is one, so the body arm's
@@ -172,6 +198,14 @@ export function deriveFrameContext(
     if (bodyState === undefined) return null;
     return bodyRelativePose({ camPosMpc: cam.position, camBasisWorld, bodyState });
   };
+  // Both providers' output turned and offset alike, so a body arm stays metre-native.
+  const bodyPose: BodyPoseProvider =
+    view === undefined
+      ? camBodyPose
+      : (bodyId) => {
+          const relPose = camBodyPose(bodyId);
+          return relPose && viewBodyPose(relPose, view.rotation, view.eyeOffsetMpc);
+        };
 
   // Host body id → the mesh bodies riding its slab row (spec's fifth
   // `SceneBody` arm), each resolved into the host's own frame — the SAME
@@ -202,10 +236,10 @@ export function deriveFrameContext(
   }));
   const { spheres } = partitionStarsByResolution({
     stars: positionedStars,
-    camPosMpc: cam.position,
+    camPosMpc: drawCamPos,
     thresholdPx: STAR_RESOLVE_PX,
     viewportHeightPx: canvasSize.height,
-    fovYRad: cam.fovYRad,
+    fovYRad,
   });
   const starRangeM = starSphereRangeM({
     // Outer: distanceRangeM is the painter-sort interval and must SPAN the row's
@@ -215,7 +249,7 @@ export function deriveFrameContext(
       positionMpc: star.positionMpc,
       radiusM: outerBoundRadiusM(star.surface),
     })),
-    camPosMpc: cam.position,
+    camPosMpc: drawCamPos,
   });
 
   // Frame-aware, so an engaged body arm's eye→ground range is not decremented a
@@ -223,6 +257,7 @@ export function deriveFrameContext(
   const slabs = deriveSlabs({
     cam,
     frustum,
+    viewFromCamEye,
     cosmoVp: vp,
     altitudeMpc: altitudeMpc ?? pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
     pose: bodyPose,
@@ -231,8 +266,8 @@ export function deriveFrameContext(
     starSphereRangeM: starRangeM,
     attachedBodiesByHostId,
   });
-  const drawCamPos: Readonly<Vec3> = [cam.position[0]!, cam.position[1]!, cam.position[2]!];
-  const drawPxPerRad = canvasSize.height / (2 * Math.tan(cam.fovYRad / 2));
+  // Symmetric: `tanUp − tanDown` is exactly `2·tan(fovY/2)`, the pre-rig form.
+  const drawPxPerRad = canvasSize.height / (frustum.tanUp - frustum.tanDown);
 
   // `focusBlend` and `focus` are at-rest placeholders that `runFrame` overwrites
   // the moment the ready gate passes, before any consumer reads them: deriving
@@ -252,10 +287,12 @@ export function deriveFrameContext(
     drawPxPerRad,
     nowMs,
     simDays,
-    fovYRad: cam.fovYRad,
-    // The main view. `cubemapFaceContext` overrides this to `viewSlotBase + face` on
-    // the contexts it derives — see `ReadyFrameContext.viewSlot`'s doc.
-    viewSlot: 0,
+    fovYRad,
+    // The main view is slot 0; `cubemapFaceContext` overrides this to
+    // `viewSlotBase + face` — see `ReadyFrameContext.viewSlot`'s doc.
+    viewSlot: view?.slot ?? 0,
+    viewKind: 'frame',
+    output: view?.output,
     focusBlend: 0,
     // Stamped by `runFrame` once every Layer's frame hook has voted.
     layersSettling: false,

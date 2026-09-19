@@ -409,6 +409,7 @@ function makeInput(
     // `runFrame` stamps this after every Layer's frame hook has voted.
     layersSettling: false,
     viewSlot: 0,
+    viewKind: 'frame' as const,
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,

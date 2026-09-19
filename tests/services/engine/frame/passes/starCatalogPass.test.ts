@@ -53,8 +53,10 @@ function camAtPc(distPc: number): Vec3 {
  * A fresh ctx per call — `prepareStarCut` memoises on the ctx object, so a
  * distinct object per frame keeps every draw a clean recompute.
  */
+// A capture ctx: its cut draws at full opacity with no fade state to seed first
+// (what the old slot-less fixture got implicitly, `undefined !== 0`).
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
-  return { drawCamPos: camPos, nowMs } as unknown as ReadyFrameContext;
+  return { drawCamPos: camPos, nowMs, viewKind: 'capture' } as unknown as ReadyFrameContext;
 }
 
 /** A single-leaf catalog: `walkStarOctreeCut` returns one leaf draw. */

@@ -129,5 +129,5 @@ export function cubemapFaceContext(input: {
   // In place is safe: `deriveFrameContext` freshly allocated these arrays.
   flipClipY(ctx.vp);
   for (const slab of ctx.slabs) flipClipY(slab.vp);
-  return { ...ctx, viewSlot: viewSlotBase + face };
+  return { ...ctx, viewSlot: viewSlotBase + face, viewKind: 'capture' };
 }

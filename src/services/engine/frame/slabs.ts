@@ -244,6 +244,9 @@ export function bodySlabRow(input: {
 export function deriveSlabs(input: {
   readonly cam: OrbitCamera;
   readonly frustum: ViewFrustum;
+  /** A rig view's eye transform for NEAR0 (`viewFromCameraEye`); body rows get
+   * theirs through `pose`, already turned and offset. Omitted = the camera's view. */
+  readonly viewFromCamEye?: Float64Array;
   readonly cosmoVp: Mat4;
   /**
    * Range from the eye to the pivot's surface, or raw orbit distance when the
@@ -264,6 +267,7 @@ export function deriveSlabs(input: {
   const {
     cam,
     frustum,
+    viewFromCamEye,
     cosmoVp,
     altitudeMpc,
     pose,
@@ -293,6 +297,7 @@ export function deriveSlabs(input: {
     near,
     far,
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
+    viewFromCamEye,
   });
 
   const near0: Slab = {

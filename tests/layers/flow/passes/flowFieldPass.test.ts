@@ -16,6 +16,7 @@ function makeCtx(): ReadyFrameContext {
   return {
     isReady: true,
     viewSlot: 0,
+    viewKind: 'frame',
     renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,

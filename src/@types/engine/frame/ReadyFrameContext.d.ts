@@ -17,6 +17,7 @@ import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { Slab } from './Slab';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
+import type { ViewKind } from './ViewKind';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -51,9 +52,9 @@ export type ReadyFrameContext = {
    * is on (its sole reader): the listener only writes it then.
    */
   cursorTexPx: Readonly<Vec2> | null;
-  /** Snapshot of `cam.position` as a readonly tuple (no live Float32Array aliasing). */
+  /** This view's eye as a readonly tuple: `cam.position`, plus a rig view's eye offset. */
   drawCamPos: Readonly<Vec3>;
-  /** `canvasSize.height / (2·tan(fovY/2))` — pinhole radian→pixel conversion. */
+  /** `canvasSize.height / (tanUp − tanDown)` of this view's frustum — pinhole radian→pixel conversion. */
   drawPxPerRad: number;
   /**
    * The frame's stamped clock — `performance.now()`-shaped, taken from
@@ -73,7 +74,7 @@ export type ReadyFrameContext = {
    * A paused clock holds it steady; live/manual playback advances it each frame.
    */
   simDays: number;
-  /** Vertical field-of-view in radians (`cam.fovYRad`) — the source `drawPxPerRad` is derived from. */
+  /** This view's vertical field of view in radians — `cam.fovYRad` for the main view. */
   fovYRad: number;
   /**
    * Which physical GPU destination this frame's draws land in: `0` = the
@@ -86,10 +87,13 @@ export type ReadyFrameContext = {
    * write. A roster renderer keys its per-frame writes on this field (via a
    * view-slot buffer helper, `src/utils/gpu/`) instead of overwriting one
    * shared destination, so each call's bytes survive to its own draw.
-   * `deriveFrameContext` stamps `0`; only `cubemapFaceContext` stamps a
-   * face slot.
+   * `deriveFrameContext` stamps `0` for the main view and a rig view its
+   * `ViewSpec.slot`; `cubemapFaceContext` stamps a face slot. Not a capture
+   * test — that is `viewKind`.
    */
   viewSlot: number;
+  /** `'capture'` only on `cubemapFaceContext`'s faces — see `ViewKind`. */
+  viewKind: ViewKind;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**

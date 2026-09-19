@@ -51,11 +51,15 @@ function camAtPc(distPc: number): Vec3 {
 
 /**
  * A FRESH ctx per call — prepareStarCut memoises on the ctx object. `viewSlot`
- * defaults to 0 (main view; a real `ReadyFrameContext.viewSlot` is always a
- * number, never undefined) — pass 1-6 for a sky-cubemap capture face.
+ * defaults to 0, the main view; 1-6 builds a sky-cubemap capture face's ctx.
  */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): ReadyFrameContext {
-  return { drawCamPos: camPos, nowMs, viewSlot } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: camPos,
+    nowMs,
+    viewSlot,
+    viewKind: viewSlot === 0 ? 'frame' : 'capture',
+  } as unknown as ReadyFrameContext;
 }
 
 function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[]) {
@@ -364,7 +368,7 @@ describe('prepareStarCut stream aliasing across views (regression)', () => {
   });
 });
 
-describe('prepareStarCut capture views (viewSlot !== 0)', () => {
+describe('prepareStarCut capture views (viewKind capture)', () => {
   // A sky-cubemap capture face shares the catalog's fade state with the main
   // view (it's keyed per CATALOG, not per ctx) but must not participate in it —
   // it has no temporal continuity to protect, and up to six of these run before

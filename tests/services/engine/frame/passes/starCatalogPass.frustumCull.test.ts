@@ -42,8 +42,15 @@ function camAtPc(distPc: number): Vec3 {
 }
 
 /** A fresh ctx per call — `prepareStarCut` memoises on the ctx object. */
+// A capture ctx: its cut draws at full opacity with no fade state to seed first
+// (what the old slot-less fixture got implicitly, `undefined !== 0`).
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
-  return { drawCamPos: camPos, nowMs, fovYRad: DEFAULT_FOV_Y_RAD } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: camPos,
+    nowMs,
+    fovYRad: DEFAULT_FOV_Y_RAD,
+    viewKind: 'capture',
+  } as unknown as ReadyFrameContext;
 }
 
 /** A single-leaf catalog: `walkStarOctreeCut` returns one leaf draw. */

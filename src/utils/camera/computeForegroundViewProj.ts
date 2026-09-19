@@ -97,6 +97,8 @@ import { frustumPerspectiveF64 } from './frustumPerspectiveF64';
  *                            small to avoid f32 precision loss at the upload
  *                            boundary.
  * @param input.frustum       The view's frustum edges, tangent form.
+ * @param input.viewFromCamEye  A rig view's turn + eye offset (`viewFromCameraEye`),
+ *                            pre-multiplied onto the lookAt view; omitted = none.
  * @param input.near          Near clip plane distance in Mpc.
  * @param input.far           Far clip plane distance in Mpc (finite branch only).
  * @param input.reversedZ     When true, build an infinite-far reversed-Z
@@ -115,8 +117,10 @@ export function computeForegroundViewProj(input: {
   readonly near: number;
   readonly far: number;
   readonly reversedZ: boolean;
+  readonly viewFromCamEye?: Float64Array;
 }): Float64Array {
-  const { eyeMpc, targetMpc, up, renderOrigin, frustum, near, far, reversedZ } = input;
+  const { eyeMpc, targetMpc, up, renderOrigin, frustum, near, far, reversedZ, viewFromCamEye } =
+    input;
 
   // Subtract renderOrigin from eye and target in f64 before lookAt.
   // This keeps the view-matrix translation small regardless of where the
@@ -136,7 +140,8 @@ export function computeForegroundViewProj(input: {
   // ── View matrix ──────────────────────────────────────────────────────────
   // mat4d defaults to Float64Array — no dtype argument needed.
   // up is a direction vector; it is NOT shifted by renderOrigin.
-  const view = mat4d.lookAt(eyeRel, targetRel, up);
+  const camView = mat4d.lookAt(eyeRel, targetRel, up);
+  const view = viewFromCamEye === undefined ? camView : mat4d.multiply(viewFromCamEye, camView);
 
   // ── Projection matrix ────────────────────────────────────────────────────
   // Non-reversed: finite ZO depth [0, 1] — matches the f32 path and WebGPU's

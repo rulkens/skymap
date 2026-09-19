@@ -73,9 +73,15 @@ const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], u
  *
  * @param cam  The orbit camera whose state to snapshot into matrices.
  * @param frustum  The view's frustum; the camera's own is `symmetricFrustum(cam.fovYRad, cam.aspect)`.
+ * @param viewFromCamEye  A rig view's turn + eye offset (`viewFromCameraEye`);
+ *                 omitted = the camera's own view, with no extra multiply.
  * @returns A new `Mat4` representing the combined view-projection transform.
  */
-export function computeViewProj(cam: OrbitCamera, frustum: ViewFrustum): Mat4 {
+export function computeViewProj(
+  cam: OrbitCamera,
+  frustum: ViewFrustum,
+  viewFromCamEye?: Float64Array,
+): Mat4 {
   // ── View matrix ──────────────────────────────────────────────────────────
   //
   // `lookAt` needs an "up" vector.  By default this is world +Y, which works
@@ -104,7 +110,7 @@ export function computeViewProj(cam: OrbitCamera, frustum: ViewFrustum): Mat4 {
   // wgpu-matrix ops take the destination as an optional LAST argument and
   // return it.  Omitting it allocates a fresh Mat4 (Float32Array) — same
   // allocation behaviour as the previous `mat4.create()` + write-into-dst.
-  const view = mat4.lookAt(
+  const camView = mat4.lookAt(
     cam.position, // eye: where the camera is
     aimScratch, // center: a point along the view direction
     basis.rolledUp, // up: world +Y by default; rotated by roll when non-zero
@@ -113,6 +119,7 @@ export function computeViewProj(cam: OrbitCamera, frustum: ViewFrustum): Mat4 {
     // produces a degenerate matrix in that case.  The controls module
     // prevents this by clamping pitch to ±(π/2 − ε).
   );
+  const view = viewFromCamEye === undefined ? camView : mat4.multiply(viewFromCamEye, camView);
 
   // ── Projection matrix ────────────────────────────────────────────────────
   // Depth maps to [0, 1] — required for WebGPU.

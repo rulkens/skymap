@@ -49,13 +49,13 @@ export const starAggregatesPass: ContentPass = {
     // RASTERISED, so the canvas size would make the floor 0.75 texels here and
     // land floor-clamped aggregates sub-texel (dropout and flicker, not wrong
     // brightness — `toRefPx` keeps the photometry viewport-independent).
-    // `viewSlot !== 0` marks a capture draw (see `ReadyFrameContext.viewSlot`),
+    // `viewKind === 'capture'` marks a capture draw (see `ReadyFrameContext.viewKind`),
     // whose destination is the capture face: `cubemapFaceContext` builds the
     // synthetic ctx at the row's declared face size, so `canvasSize` already IS
     // that size. The view is COPIED rather than mutated: one `SlabView` is
     // shared by every pass in the render step.
     const { width: vw, height: vh } =
-      ctx.viewSlot !== 0 ? ctx.canvasSize : ctx.renderTargets.sizeOf('star-aggregates');
+      ctx.viewKind === 'capture' ? ctx.canvasSize : ctx.renderTargets.sizeOf('star-aggregates');
 
     drawStream(
       renderer,
@@ -65,6 +65,7 @@ export const starAggregatesPass: ContentPass = {
       'aggregate',
       ctx.fovYRad,
       ctx.viewSlot,
+      ctx.viewKind,
     );
   },
 };

@@ -38,15 +38,16 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 // The layer reads its viewport via `sizeOf('star-aggregates')` — the fixture
 // hardcodes the size the production table's scale: 2 implies for the 1280x720
 // canvas below (floor(1280 / 2), floor(720 / 2)). During a capture draw
-// (`viewSlot !== 0`) the ctx IS the synthetic face camera `cubemapFaceContext`
+// (`viewKind: 'capture'`) the ctx IS the synthetic face camera `cubemapFaceContext`
 // builds, whose `canvasSize` is the row's 256 px face; `sizeOf` has no row for
 // it, so a layer that reached for the capture target instead would throw here.
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): ReadyFrameContext {
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, capture = false): ReadyFrameContext {
   return {
     drawCamPos: camPos,
     nowMs,
-    viewSlot,
-    canvasSize: viewSlot === 0 ? { width: 1280, height: 720 } : { width: 256, height: 256 },
+    viewSlot: capture ? 1 : 0,
+    viewKind: capture ? 'capture' : 'frame',
+    canvasSize: capture ? { width: 256, height: 256 } : { width: 1280, height: 720 },
     renderTargets: {
       specs: [{ id: 'star-aggregates', scale: 2 }],
       sizeOf: (id: string) => {
@@ -136,11 +137,11 @@ describe('starAggregatesPass', () => {
     expect(view.viewportPx).toEqual([1280, 720]);
   });
 
-  it('sizes sprites against the capture face during a capture draw (viewSlot !== 0), not star-aggregates', () => {
+  it('sizes sprites against the capture face during a capture draw (viewKind capture), not star-aggregates', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
     const view = makeNear0View(camPos);
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, 1), makeState(renderer));
+    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, true), makeState(renderer));
 
     const args = renderer.draw.mock.calls[0]![1];
     expect(args.viewportPx).toEqual([256, 256]);
@@ -158,7 +159,7 @@ describe('starAggregatesPass', () => {
     starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos), state);
     expect(renderer.draw.mock.calls[0]![1].knee).toBe(false);
 
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, 1), state);
+    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, true), state);
     expect(renderer.draw.mock.calls[1]![1].knee).toBe(true);
   });
 });

@@ -105,7 +105,7 @@
  * reads as a lag, the fix is to seed frustum-driven newcomers at opacity 1
  * (distinguishing them from LOD-split newcomers, which must still start at 0) —
  * deliberately left out of this change so the prune lands as a pure, measurable
- * optimisation first. A sky-cubemap capture face (`ctx.viewSlot !== 0`) sidesteps
+ * optimisation first. A sky-cubemap capture face (`ctx.viewKind === 'capture'`) sidesteps
  * this entirely: it shares no temporal state with the main view's fade, so every
  * one of its cut nodes draws at opacity 1 (see `computeStarCut`'s capture branch).
  *
@@ -137,6 +137,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { ViewKind } from '../../../../@types/engine/frame/ViewKind';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
@@ -815,14 +816,14 @@ function computeStarCut(
       );
     };
 
-    // A capture view (a sky-cubemap face, `viewSlot !== 0`) renders one static
+    // A capture view (a sky-cubemap face, `viewKind === 'capture'`) renders one static
     // frame with no temporal continuity to protect, so it must not read or write
     // the main view's per-node fade state — that state is keyed per CATALOG (see
     // `StarFadeState`), not per ctx, and up to six face contexts run before the
     // main view each real frame. Every cut node draws at full opacity instead of
     // entering as a fade-from-0 NEWCOMER; `anyNodeFading` is left untouched (a
     // capture never votes to keep the loop ticking).
-    if (ctx.viewSlot !== 0) {
+    if (ctx.viewKind === 'capture') {
       for (let i = 0; i < cut.count; i++) emitNode(cut.nodeIndex[i]!, 1);
       sources.push({ source, leaf, aggregate });
       continue;
@@ -939,6 +940,7 @@ function drawStream(
   stream: StarDrawStream,
   fovYRad: number,
   viewSlot: number,
+  viewKind: ViewKind,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
@@ -948,12 +950,12 @@ function drawStream(
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
   const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], fovYRad).leaf;
   // The aggregate stream's knee normally lands in `star-upsample`, over the
-  // summed half-res field. A sky-cubemap capture face (`viewSlot !== 0`) has
+  // summed half-res field. A sky-cubemap capture face (`viewKind` 'capture') has
   // no such pass behind it — the face IS the sky the lens samples — so the
   // aggregate quads carry the knee themselves there, or captured glows read
   // brighter and more saturated than the same stars in the direct view drawn
   // beside them at the band crossfade.
-  const knee = stream === 'leaf' || viewSlot !== 0;
+  const knee = stream === 'leaf' || viewKind === 'capture';
   for (const s of prep.sources) {
     const nodes = s[stream];
     if (nodes.count === 0) continue;
@@ -995,7 +997,7 @@ export const starCatalogPass: ContentPass = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
     // The LEAF stream: full-resolution point stars into HDR, per-glow knee.
-    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad, ctx.viewSlot);
+    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad, ctx.viewSlot, ctx.viewKind);
   },
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the

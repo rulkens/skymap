@@ -27,6 +27,7 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
   return {
     isReady: true,
     viewSlot: 0,
+    viewKind: 'frame',
     renderedTargets: new Set<string>(),
     cam,
     vp,
