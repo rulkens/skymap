@@ -1,6 +1,6 @@
 /**
  * LocalBubbleRenderer — GPU pipeline for the Local Bubble cavity-wall shell.
- * Byte-layout contract (see comments.md), so the two tables below stay fully
+ * Byte-layout contract (see comments.md), so the table below stays fully
  * spelled out rather than trimmed to the usual budget: two vertex buffers
  * (position/normal, format resolved from the mesh's own dtype) plus a u32
  * index buffer, one additive `drawIndexed`. No depth: the hdr NEAR0 target
@@ -8,18 +8,15 @@
  * occlude the other — both read additively.
  *
  * Uniforms (@group(0), byte-exact with `shaders/localBubble/shell.wesl`):
- *   0..63   model      mat4x4<f32> — FRAME_TO_WORLD[frame] ×
- *                       translate(centrePc·PC_TO_MPC) × scale(PC_TO_MPC).
- *                       Written once at `upload` — fixed for the mesh's life.
- *   64..75  tint       vec3<f32>   — LOCAL_BUBBLE_TINT, written once at `upload`.
- *   76..79  opacity    f32         — written every `draw`.
- *
- * Camera (@group(1)) is renderer-private, NOT `lib::camera`'s shared
- * CameraUniforms — that struct deliberately excludes eye position (see its
- * own header), and the shell's Fresnel view vector needs one:
- *   0..63   viewProj   mat4x4<f32>
- *   64..75  eye        vec3<f32>
- *   76..79  _pad       f32
+ *   0..79    cam       lib::camera CameraUniforms — viewProj per `draw`;
+ *                       viewportPx stays 0 (the shell never reads it).
+ *   80..143  model     mat4x4<f32> — FRAME_TO_WORLD[frame] ×
+ *                       translate(centrePc·PC_TO_MPC) × scale(PC_TO_MPC),
+ *                       written at `upload` — fixed for the mesh's life.
+ *   144..155 eye       vec3<f32>   — per `draw`.
+ *   156..159 opacity   f32         — per `draw`.
+ *   160..171 tint      vec3<f32>   — LOCAL_BUBBLE_TINT, written at `upload`.
+ *   172..175 _pad      f32
  */
 
 import { mat4 } from 'wgpu-matrix';
@@ -37,18 +34,17 @@ import { FRAME_TO_WORLD } from '../../../data/frameToWorld';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { LOCAL_BUBBLE_TINT } from '../../../data/localBubble/localBubbleTint';
 
-const UNIFORMS_BYTES = 80;
-const TINT_F32_INDEX = 16; // byte 64 — see module header's byte table
-const OPACITY_BYTE_OFFSET = 76;
-const CAMERA_BYTES = 80;
-const EYE_F32_INDEX = 16; // byte 64 — see module header's byte table
+// f32 indices into the uniform block — see module header's byte table.
+const UNIFORMS_BYTES = 176;
+const VIEW_PROJ_F32_INDEX = 0;
+const MODEL_F32_INDEX = 20;
+const EYE_F32_INDEX = 36;
+const OPACITY_F32_INDEX = 39;
+const TINT_F32_INDEX = 40;
+// Bytes 0..159: everything `draw` rewrites; tint above it is upload-only.
+const PER_DRAW_BYTES = 160;
 
 const COMPONENTS_PER_VERTEX = 4;
-
-// Per-frame scratch, hoisted out of `draw` — the CPU cost that scales with
-// on-screen galaxy count leaves no budget for a per-frame allocation here.
-const camScratch = new Float32Array(CAMERA_BYTES / 4);
-const opacityScratch = new Float32Array(1);
 
 /**
  * FRAME_TO_WORLD[frame] × translate(centrePc·PC_TO_MPC) × scale(PC_TO_MPC).
@@ -95,30 +91,13 @@ export function createLocalBubbleRenderer(
     entries: [{ binding: 0, resource: { buffer: uniformsBuffer } }],
   });
 
-  const cameraBgl = device.createBindGroupLayout({
-    label: 'local-bubble-bgl-camera',
-    entries: [
-      {
-        binding: 0,
-        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
-        buffer: { type: 'uniform' },
-      },
-    ],
-  });
-  const cameraBuffer = device.createBuffer({
-    label: 'local-bubble-camera-buffer',
-    size: CAMERA_BYTES,
-    usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-  });
-  const cameraBindGroup = device.createBindGroup({
-    label: 'local-bubble-bg-camera',
-    layout: cameraBgl,
-    entries: [{ binding: 0, resource: { buffer: cameraBuffer } }],
-  });
+  // Per-renderer CPU mirror of the uniform block, hoisted out of `draw` — no
+  // per-frame allocation. Model + tint land at `upload`; `draw` patches the rest.
+  const uniformsScratch = new Float32Array(UNIFORMS_BYTES / 4);
 
   const pipelineLayout = device.createPipelineLayout({
     label: 'local-bubble-pipeline-layout',
-    bindGroupLayouts: [uniformsBgl, cameraBgl],
+    bindGroupLayouts: [uniformsBgl],
   });
 
   let pipeline: GPURenderPipeline | null = null;
@@ -189,14 +168,9 @@ export function createLocalBubbleRenderer(
       primitive: { topology: 'triangle-list', cullMode: 'none' },
     });
 
-    // Model + tint; opacity is written per draw.
-    const buf = new ArrayBuffer(UNIFORMS_BYTES);
-    const f32 = new Float32Array(buf);
-    f32.set(buildModelMatrix(mesh), 0);
-    f32[TINT_F32_INDEX] = LOCAL_BUBBLE_TINT[0];
-    f32[TINT_F32_INDEX + 1] = LOCAL_BUBBLE_TINT[1];
-    f32[TINT_F32_INDEX + 2] = LOCAL_BUBBLE_TINT[2];
-    device.queue.writeBuffer(uniformsBuffer, 0, buf);
+    uniformsScratch.set(buildModelMatrix(mesh), MODEL_F32_INDEX);
+    uniformsScratch.set(LOCAL_BUBBLE_TINT, TINT_F32_INDEX);
+    device.queue.writeBuffer(uniformsBuffer, 0, uniformsScratch);
   }
 
   function hasMesh(): boolean {
@@ -215,18 +189,13 @@ export function createLocalBubbleRenderer(
   ): void {
     if (!positionBuffer || !normalBuffer || !indexBuffer || !pipeline) return;
 
-    camScratch.set(viewProj, 0);
-    camScratch[EYE_F32_INDEX] = eyeMpc[0];
-    camScratch[EYE_F32_INDEX + 1] = eyeMpc[1];
-    camScratch[EYE_F32_INDEX + 2] = eyeMpc[2];
-    device.queue.writeBuffer(cameraBuffer, 0, camScratch);
-
-    opacityScratch[0] = opacity;
-    device.queue.writeBuffer(uniformsBuffer, OPACITY_BYTE_OFFSET, opacityScratch);
+    uniformsScratch.set(viewProj, VIEW_PROJ_F32_INDEX);
+    uniformsScratch.set(eyeMpc, EYE_F32_INDEX);
+    uniformsScratch[OPACITY_F32_INDEX] = opacity;
+    device.queue.writeBuffer(uniformsBuffer, 0, uniformsScratch, 0, PER_DRAW_BYTES / 4);
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformsBindGroup);
-    pass.setBindGroup(1, cameraBindGroup);
     pass.setVertexBuffer(0, positionBuffer);
     pass.setVertexBuffer(1, normalBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint32');
@@ -236,7 +205,6 @@ export function createLocalBubbleRenderer(
   function destroy(): void {
     destroyMeshBuffers();
     uniformsBuffer.destroy();
-    cameraBuffer.destroy();
   }
 
   const renderer: LocalBubbleRenderer = {
