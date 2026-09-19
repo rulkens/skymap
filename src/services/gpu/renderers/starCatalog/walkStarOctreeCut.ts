@@ -201,9 +201,14 @@ export type StarCutFrustum = {
    * Six unit-normalized `(nx, ny, nz, d)` planes per view in the camera-relative
    * parsec frame — 24 floats per view, inside is `n·p + d ≥ 0`, a node kept if
    * any view keeps it. The layer derives these from each view's NEAR0 rebased vp
-   * and scales the distance term into parsecs.
+   * and scales the distance term into parsecs. A grow-only scratch buffer (the
+   * layer's own capacity/view-count churn — a single capture/pick view vs a
+   * multi-view rig), so its `length` can exceed the live data: `viewCount` is
+   * the authoritative bound, never `planesPc.length / 24`.
    */
   readonly planesPc: Float64Array;
+  /** Views actually written into `planesPc` this call — see `planesPc`. */
+  readonly viewCount: number;
   /** Leaf angular slack, radians of on-screen spill per parsec of distance. */
   readonly angularMarginRad: number;
   /** Aggregate glow spread as a half-diagonal multiplier (`≥ 1`). */
@@ -314,7 +319,9 @@ export function walkStarOctreeCut(
     const radius = edge * 0.8660254 * frustum!.worldSpread + dist * frustum!.angularMarginRad;
     const negR = -radius;
     // Outside the union of the views' frusta: outside SOME plane of EVERY view.
-    for (let f = 0; f < planes.length; f += 24) {
+    // Bounded by `viewCount`, not `planes.length` — the scratch is grow-only
+    // and may carry a wider capacity than this call's live view count.
+    for (let f = 0; f < frustum!.viewCount * 24; f += 24) {
       let outsideView = false;
       for (let b = f; b < f + 24; b += 4) {
         if (planes[b]! * cx + planes[b + 1]! * cy + planes[b + 2]! * cz + planes[b + 3]! < negR) {

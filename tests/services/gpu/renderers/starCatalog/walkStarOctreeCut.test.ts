@@ -211,6 +211,7 @@ describe('walkStarOctreeCut', () => {
     const vp = mat4.multiply(proj, view) as Float32Array;
     return {
       planesPc: Float64Array.from(frustumPlanesFromViewProj(vp)),
+      viewCount: 1,
       angularMarginRad: 0.0001,
       worldSpread: 1,
     };
@@ -275,6 +276,7 @@ describe('walkStarOctreeCut', () => {
     const vp = mat4.multiply(proj, view) as Float32Array;
     const backward: StarCutFrustum = {
       planesPc: Float64Array.from(frustumPlanesFromViewProj(vp)),
+      viewCount: 1,
       angularMarginRad: 0.0001,
       worldSpread: 1,
     };

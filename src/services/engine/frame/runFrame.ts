@@ -16,6 +16,7 @@ import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
@@ -272,25 +273,31 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       if (params !== null) {
         const prepared = prepareBodySurfaceFrame(state, ctx, surfaceTilesView);
         if (prepared !== null) {
-          // Each view's own body slab vp (mono: `ctx`'s, the memo hit above),
-          // so one cut and one fetch queue cover every view the frame draws.
-          const viewProjsLocal: Float64Array[] = [];
+          // Each view's own body slab vp AND viewport (mono: `ctx`'s, the memo
+          // hit above), so one cut and one fetch queue cover every view the
+          // frame draws — an XR eye sized differently than the main view
+          // scales its own NDC against its own target, not a shared one.
+          const rigViews: { viewProjLocal: Float64Array; viewportPx: Readonly<Vec2> }[] = [];
           for (const view of views) {
             const slab = view.slabs.find(
               (s) => s.frame.kind === 'body-m' && s.frame.bodyId === bodyId,
             );
             if (slab === undefined) continue;
-            const viewPrepared = prepareBodySurfaceFrame(state, view, slabViewOf(view, slab.index));
-            if (viewPrepared !== null) viewProjsLocal.push(viewPrepared.mvpLocal);
+            const viewSlabView = slabViewOf(view, slab.index);
+            const viewPrepared = prepareBodySurfaceFrame(state, view, viewSlabView);
+            if (viewPrepared !== null)
+              rigViews.push({
+                viewProjLocal: viewPrepared.mvpLocal,
+                viewportPx: viewSlabView.viewportPx,
+              });
           }
           // One walk yields both the draw cut and the fetch requests.
           const result = cutSurfaceTiles({
             ...params,
             camPosLocalM: prepared.pose.eyeRelBodyM,
-            viewProjsLocal,
+            views: rigViews,
             radiusM: prepared.radiusM,
             reliefM: prepared.body.surface.reliefM,
-            viewportPx: surfaceTilesView.viewportPx,
             residentSlot: surfaceTiles.residentSlot,
           });
           cut = result.cut;

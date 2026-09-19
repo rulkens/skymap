@@ -106,7 +106,6 @@ import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../data/famousStarPickRadiu
 import { regionById } from '../../../../utils/regions/regionById';
 import { regionOfBody } from '../../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../../utils/camera/projectToScreenPx';
-import { targetPxPerRad } from '../../../../utils/camera/targetPxPerRad';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render
 // origin — is what the dissolve band measures the camera against, so the band
@@ -269,7 +268,10 @@ export const starPointsPass: ContentPass = {
     renderer.draw(pass, rebasedVp, view.viewportPx, {
       sizePx,
       brightness,
-      pxPerRad: targetPxPerRad(ctx, view.viewportPx[1]),
+      // This row draws straight into `hdr` at the view's own size (the NEAR0
+      // slab's viewport is `ctx.canvasSize`), so the view's `drawPxPerRad`
+      // already is the target's — no offscreen-height rescale needed here.
+      pxPerRad: ctx.drawPxPerRad,
       viewSlot: ctx.viewSlot,
     });
   },

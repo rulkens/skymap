@@ -103,7 +103,7 @@ function frustumFor(camPosPc: readonly [number, number, number]): StarCutFrustum
   // layer's buildCutFrustum, so the harness prunes exactly what the app prunes.
   const angularMarginRad = Math.max(1.5 * sizeScale, 3.5) * radiansPerPx;
   const worldSpread = Math.max(1, sizeScale * GLOW_OVERLAP);
-  return { planesPc, angularMarginRad, worldSpread };
+  return { planesPc, viewCount: 1, angularMarginRad, worldSpread };
 }
 
 // ── Faithful replicas of the layer's partition + the renderer's pack ─────────

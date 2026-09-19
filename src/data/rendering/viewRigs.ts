@@ -1,7 +1,7 @@
 /**
  * VIEW_RIGS — every `ViewRigKey`'s roster. `mono` is today's frame: one view,
  * identically the main context, over the four sections in their authored
- * order — the byte-identical baseline the dome rig (PR 2) is added beside.
+ * order.
  */
 
 import type { ViewRig } from '../../@types/engine/frame/ViewRig';

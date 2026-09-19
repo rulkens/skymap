@@ -42,16 +42,20 @@ export function cutSurfaceTiles(input: {
   /** Eye − body centre, in the body's fixed axes, METRES (was body-radii
    *  units — see `radiusM` below, the walk's new length scale). */
   readonly camPosLocalM: Readonly<Vec3>;
-  /** Every view's body slab f64 vp, built about the eye, in metres; a node
-   *  survives if ANY view keeps it, and refines to the finest view's footprint.
-   *  Only x/y extent is read, so the depth convention doesn't matter here.
-   *  Stays `Float64Array` as a belt-and-braces contract: the `w`-row
+  /** Every view's body slab f64 vp, paired with ITS OWN viewport size — an
+   *  XR eye sized differently than the main view must scale its NDC by its
+   *  own target, not a shared one. A node survives if ANY view keeps it, and
+   *  refines to the finest view's footprint. Only x/y extent of `viewProjLocal`
+   *  is read, so the depth convention doesn't matter here. `viewProjLocal`
+   *  stays `Float64Array` as a belt-and-braces contract: the `w`-row
    *  cancellation that forced it under the old Mpc-frame walk
    *  (`composeBodyMvp`'s header) no longer occurs — metres is already the
    *  small, well-conditioned unit — but keeping the type honest costs nothing
    *  and guards a future caller that narrows too early. */
-  readonly viewProjsLocal: readonly Float64Array[];
-  readonly viewportPx: Readonly<Vec2>;
+  readonly views: readonly {
+    readonly viewProjLocal: Float64Array;
+    readonly viewportPx: Readonly<Vec2>;
+  }[];
   /** The body's equatorial radius in metres — was implicit (unit sphere);
    *  the walk's horizon test now scales against this instead. */
   readonly radiusM: number;
@@ -82,8 +86,7 @@ export function cutSurfaceTiles(input: {
 } {
   const {
     camPosLocalM,
-    viewProjsLocal,
-    viewportPx,
+    views: viewInputs,
     radiusM,
     reliefM,
     baseLevel,
@@ -117,13 +120,13 @@ export function cutSurfaceTiles(input: {
   // never touched) and the four side planes of the frustum in the walk's own
   // frame (Gribb–Hartmann): inside is `w ± x >= 0`, `w ± y >= 0`. Normalised so
   // a signed distance compares against a bounding radius.
-  const views = viewProjsLocal.map((m) => {
+  const views = viewInputs.map(({ viewProjLocal: m, viewportPx }) => {
     const planeA = [m[3]! + m[0]!, m[3]! - m[0]!, m[3]! + m[1]!, m[3]! - m[1]!];
     const planeB = [m[7]! + m[4]!, m[7]! - m[4]!, m[7]! + m[5]!, m[7]! - m[5]!];
     const planeC = [m[11]! + m[8]!, m[11]! - m[8]!, m[11]! + m[9]!, m[11]! - m[9]!];
     const planeD = [m[15]! + m[12]!, m[15]! - m[12]!, m[15]! + m[13]!, m[15]! - m[13]!];
     const planeInvLen = planeA.map((a, k) => 1 / Math.hypot(a, planeB[k]!, planeC[k]!));
-    return { m, planeA, planeB, planeC, planeD, planeInvLen };
+    return { m, planeA, planeB, planeC, planeD, planeInvLen, viewportPx };
   });
 
   // `probe`'s nine lifted sample points, xyz-packed; reused across nodes.
@@ -202,10 +205,13 @@ export function cutSurfaceTiles(input: {
     const mid = 1 + (loM + hiM) / 2 / radiusM;
     const boundRadius = 1.5 * cornerChord + (hiM - loM) / 2 / radiusM;
 
-    // The finest view's footprint wins; a node no view keeps is culled.
-    let best: { screenPx: number; required: number } | null = null;
+    // The finest view's footprint wins; a node no view keeps is culled. Two
+    // numbers, not a `best` object re-allocated per view: this runs once per
+    // view per node, a hot inner loop.
+    let bestScreenPx = -1;
+    let bestRequired = -1;
     let sampled = false;
-    for (const { m, planeA, planeB, planeC, planeD, planeInvLen } of views) {
+    for (const { m, planeA, planeB, planeC, planeD, planeInvLen, viewportPx } of views) {
       let culled = false;
       for (let k = 0; k < 4; k++) {
         const dist =
@@ -275,15 +281,15 @@ export function cutSurfaceTiles(input: {
           );
       // Maxed separately: a straddler's `required` is the deepest level
       // whatever its nominal `screenPx`.
-      best =
-        best === null
-          ? { screenPx, required }
-          : {
-              screenPx: Math.max(best.screenPx, screenPx),
-              required: Math.max(best.required, required),
-            };
+      if (bestScreenPx < 0) {
+        bestScreenPx = screenPx;
+        bestRequired = required;
+      } else {
+        bestScreenPx = Math.max(bestScreenPx, screenPx);
+        bestRequired = Math.max(bestRequired, required);
+      }
     }
-    return best;
+    return bestScreenPx < 0 ? null : { screenPx: bestScreenPx, required: bestRequired };
   }
 
   /** Relief a node's subtree can reach, in METRES — the deepest resident

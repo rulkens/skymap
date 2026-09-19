@@ -108,10 +108,9 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
     camPosLocalM,
-    viewProjsLocal: [viewProjLocal],
+    views: [{ viewProjLocal, viewportPx: VIEWPORT }],
     radiusM: 1,
     reliefM: UNBOUNDED_RELIEF,
-    viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands: GLOBAL_BANDS,
     tilePx: SURFACE_TILE_PX,
@@ -167,10 +166,9 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   ];
   return {
     camPosLocalM,
-    viewProjsLocal: [viewProjLocal],
+    views: [{ viewProjLocal, viewportPx: VIEWPORT }],
     radiusM: 1,
     reliefM: UNBOUNDED_RELIEF,
-    viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands,
     tilePx: SURFACE_TILE_PX,
@@ -220,10 +218,9 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
   ];
   return {
     camPosLocalM,
-    viewProjsLocal: [viewProjLocal],
+    views: [{ viewProjLocal, viewportPx: VIEWPORT }],
     radiusM: 1,
     reliefM: UNBOUNDED_RELIEF,
-    viewportPx: VIEWPORT,
     baseLevel: BASE_LEVEL,
     bands,
     tilePx: SURFACE_TILE_PX,
@@ -1259,10 +1256,9 @@ describe('cutSurfaceTiles', () => {
 
       const result = cutSurfaceTiles({
         camPosLocalM,
-        viewProjsLocal: [viewProjLocal],
+        views: [{ viewProjLocal, viewportPx }],
         radiusM: 1,
         reliefM: UNBOUNDED_RELIEF,
-        viewportPx,
         baseLevel: BASE_LEVEL,
         bands,
         tilePx: SURFACE_TILE_PX,
@@ -1395,8 +1391,7 @@ describe('cutSurfaceTiles', () => {
 
       return {
         camPosLocalM: eye,
-        viewProjsLocal: [viewProjLocal],
-        viewportPx: VIEWPORT,
+        views: [{ viewProjLocal, viewportPx: VIEWPORT }],
         radiusM: R,
         reliefM: UNBOUNDED_RELIEF,
         baseLevel: MARS_BASE_LEVEL,
@@ -1439,7 +1434,7 @@ describe('cutSurfaceTiles', () => {
       const once = cutSurfaceTiles(input);
       const twice = cutSurfaceTiles({
         ...input,
-        viewProjsLocal: [...input.viewProjsLocal, ...input.viewProjsLocal],
+        views: [...input.views, ...input.views],
       });
       expect(twice).toEqual(once);
     });
@@ -1454,12 +1449,11 @@ describe('cutSurfaceTiles', () => {
       const level = mat4.lookAt(eye, [eye[0] + tangent[0], eye[1] + tangent[1], eye[2]], up);
       const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
       const levelVp = new Float64Array(mat4.multiply(proj, level));
+      const levelView = { viewProjLocal: levelVp, viewportPx: VIEWPORT };
 
       const nadirOnly = tileKeys(cutSurfaceTiles(input));
-      const levelOnly = tileKeys(cutSurfaceTiles({ ...input, viewProjsLocal: [levelVp] }));
-      const both = tileKeys(
-        cutSurfaceTiles({ ...input, viewProjsLocal: [...input.viewProjsLocal, levelVp] }),
-      );
+      const levelOnly = tileKeys(cutSurfaceTiles({ ...input, views: [levelView] }));
+      const both = tileKeys(cutSurfaceTiles({ ...input, views: [...input.views, levelView] }));
 
       const onlySecond = [...levelOnly].filter((key) => !nadirOnly.has(key));
       expect(onlySecond.length).toBeGreaterThan(0);

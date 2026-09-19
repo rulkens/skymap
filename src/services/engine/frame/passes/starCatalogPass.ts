@@ -147,10 +147,9 @@ import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFra
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
-import { NEAR0, slabViewOf } from '../slabs';
+import { NEAR0 } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
-import { targetPxPerRad } from '../../../../utils/camera/targetPxPerRad';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
@@ -194,6 +193,7 @@ const cutPlanesMpcScratch = new Float32Array(24);
 // assignable to the readonly `StarCutFrustum` parameter.
 const cutFrustumScratch = {
   planesPc: new Float64Array(24),
+  viewCount: 0,
   angularMarginRad: 0,
   worldSpread: 1,
 };
@@ -281,9 +281,13 @@ function buildCutFrustum(
   // full (un-pruned) walk. In a real frame `deriveSlabs` always yields NEAR0, so
   // this only trips for hand-built test contexts.
   if (views.some((view) => view.slabs?.[NEAR0] === undefined)) return null;
-  if (cutFrustumScratch.planesPc.length !== 24 * views.length) {
+  // Grow-only: capture/pick call with one view, the rig with N, every frame —
+  // reallocating on every shrink back to one would thrash. `viewCount` (not
+  // `planesPc.length`) is what tells the walk how much of the buffer is live.
+  if (cutFrustumScratch.planesPc.length < 24 * views.length) {
     cutFrustumScratch.planesPc = new Float64Array(24 * views.length);
   }
+  cutFrustumScratch.viewCount = views.length;
   const planesPc = cutFrustumScratch.planesPc;
   const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
   let radiansPerPx = 0;
@@ -970,7 +974,10 @@ function drawStream(
   // and forwarded identically to every source's draw (the shared-vp invariant).
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
   const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], ctx.fovYRad).leaf;
-  const pxPerRad = targetPxPerRad(ctx, view.viewportPx[1]);
+  // This view's own pixels per radian: `drawPxPerRad` holds for the view's own
+  // size, and a target spanning the same frustum in fewer rows (the aggregate
+  // stream's half-res offscreen) scales with its height.
+  const pxPerRad = ctx.drawPxPerRad * (view.viewportPx[1] / ctx.canvasSize.height);
   // The aggregate stream's knee normally lands in `star-upsample`, over the
   // summed half-res field. A sky-cubemap capture face (`viewKind` 'capture') has
   // no such pass behind it — the face IS the sky the lens samples — so the

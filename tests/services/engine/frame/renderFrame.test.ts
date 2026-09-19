@@ -946,9 +946,9 @@ describe('renderFrame', () => {
   // ── View rig walking ───────────────────────────────────────────────────
 
   it('mono rig submits the same step list as FRAME_ORDER', () => {
-    // The rig split (Task 1) must expand to exactly the same steps whether
-    // walked as one flat list or as four sections concatenated — and
-    // VIEW_RIGS.mono IS those four sections, against the main ctx alone.
+    // The rig split must expand to exactly the same steps whether walked as
+    // one flat list or as four sections concatenated — and VIEW_RIGS.mono IS
+    // those four sections, against the main ctx alone.
     const options = {
       tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
       bloomEnabled: false,

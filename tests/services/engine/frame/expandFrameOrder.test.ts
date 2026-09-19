@@ -8,7 +8,6 @@ import type { Mat4 } from 'wgpu-matrix';
 
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
-import { OVERLAYS, POST, PRELUDE, SCENE } from '../../../../src/data/rendering/frameSections';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { FRAME_ORDER_PASS_NAMES } from '../../../../src/services/engine/frame/frameOrderPassNames';
 import { COSMO, NEAR0, deriveSlabs } from '../../../../src/services/engine/frame/slabs';
@@ -87,16 +86,6 @@ function makeCam(): OrbitCamera {
 }
 
 describe('expandFrameOrder', () => {
-  it('the four sections concatenate to FRAME_ORDER in order', () => {
-    // The split's own guard: PRELUDE/SCENE/POST/OVERLAYS moved no line — a
-    // ViewRig walks the sections instead of FRAME_ORDER, so a rearrangement
-    // here that silently reordered a step would otherwise show up only as
-    // pixels.
-    expect([...PRELUDE.steps, ...SCENE.steps, ...POST.steps, ...OVERLAYS.steps]).toEqual(
-      FRAME_ORDER,
-    );
-  });
-
   it('merges the split hdr roster when the lens emits nothing', () => {
     const program = expandFrameOrder(FRAME_ORDER, COMPOSED_PASSES, {
       tone: TONE,
