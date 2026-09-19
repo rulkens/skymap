@@ -46,12 +46,12 @@ export function actionForRow(row: ScoredRow): PaletteAction;
 onSelect: (action: PaletteAction) => void;
 ```
 
-- [ ] `npm run move-files -- --dry src/components/CommandPalette/utils/focusIdForRow.ts src/components/CommandPalette/utils/actionForRow.ts`, then run it for real. Rename the function to `actionForRow` (`npm run refactor` rename, see `.claude/skills/refactor/SKILL.md`), and grep `src/` and `tests/` for `focusIdForRow` until nothing is left.
-- [ ] Keep the per-kind table (`actionForRow.ts`, today `focusIdForRow.ts:36-54`). It still yields the focus id string, and the exported function wraps it as `{ kind: 'focus', focusId }`. Update the module header to match.
-- [ ] Thread `PaletteAction` through `usePaletteSearch` (`dispatchSelection` calls `onSelect(actionForRow(m))`) and `CommandPalette`'s `onSelect` prop.
-- [ ] The container dispatches through one table keyed by `action.kind`, so PR3 adds rows here rather than branches: `focus` → `requestSelect(focusId)` then `requestFocus(focusId)`, the same pair `CommandPaletteContainer.tsx:35-38` fires today.
-- [ ] Tests: update the existing assertions in `actionForRow.test.ts` and `CommandPalette.test.ts` to expect `{ kind: 'focus', focusId: … }`. **No new test:** the spec's "table-coverage test" (§8) can't fail. The `Record<ScoredRow['kind'], …>` table already makes a missing kind a compile error.
-- [ ] `npm test -- CommandPalette` passes. Commit as `prep(palette): selection emits a PaletteAction (actionForRow)`.
+- [x] `npm run move-files -- --dry src/components/CommandPalette/utils/focusIdForRow.ts src/components/CommandPalette/utils/actionForRow.ts`, then run it for real. Rename the function to `actionForRow` (`npm run refactor` rename, see `.claude/skills/refactor/SKILL.md`), and grep `src/` and `tests/` for `focusIdForRow` until nothing is left.
+- [x] Keep the per-kind table (`actionForRow.ts`, today `focusIdForRow.ts:36-54`). It still yields the focus id string, and the exported function wraps it as `{ kind: 'focus', focusId }`. Update the module header to match.
+- [x] Thread `PaletteAction` through `usePaletteSearch` (`dispatchSelection` calls `onSelect(actionForRow(m))`) and `CommandPalette`'s `onSelect` prop.
+- [x] The container dispatches through one table keyed by `action.kind`, so PR3 adds rows here rather than branches: `focus` → `requestSelect(focusId)` then `requestFocus(focusId)`, the same pair `CommandPaletteContainer.tsx:35-38` fires today.
+- [x] Tests: update the existing assertions in `actionForRow.test.ts` and `CommandPalette.test.ts` to expect `{ kind: 'focus', focusId: … }`. **No new test:** the spec's "table-coverage test" (§8) can't fail. The `Record<ScoredRow['kind'], …>` table already makes a missing kind a compile error.
+- [x] `npm test -- CommandPalette` passes. Commit as `prep(palette): selection emits a PaletteAction (actionForRow)`.
 
 ### Task 2: Palette types and the two card helpers
 
@@ -88,11 +88,11 @@ export function cardAliases(card: PaletteCard, famous: readonly FamousGalaxyMeta
 - For a `focus` card whose `focusId` equals a famous entry's `id`, return that entry's `names` with `card.label` removed.
 - Every other card gets `[]`.
 
-- [ ] Tests in `cardAliases.test.ts`:
+- [x] Tests in `cardAliases.test.ts`:
   - `a famous focus card lists the entry's other names`: card `m31` labelled `Andromeda Galaxy`, names `['M31','NGC 224','Andromeda Galaxy']` → `['M31','NGC 224']`.
   - `a non-famous focus card has no aliases`: `body-earth` → `[]`.
-- [ ] Implement both helpers. **No test for `cardImageSrc`:** it's a one-line `??`, and a broken path shows up as text tiles on every card at the first look. This departs from spec §8; say so in the commit body.
-- [ ] Commit.
+- [x] Implement both helpers. **No test for `cardImageSrc`:** it's a one-line `??`, and a broken path shows up as text tiles on every card at the first look. This departs from spec §8; say so in the commit body.
+- [x] Commit.
 
 ### Task 3: `featuredTabs.ts`, the curated tab data
 
@@ -119,9 +119,9 @@ export function cardAliases(card: PaletteCard, famous: readonly FamousGalaxyMeta
 \* The Milky Way's focus id is `MILKY_WAY_FOCUS_ID` (`src/services/url/milkyWayFocusId.ts`). Import it; don't retype the literal.
 All the star ids and `s2` are verified present (`famousStars.generated.ts`, `sceneSStars.ts`).
 
-- [ ] Write the file, with the ids checked against `SCENE_BODIES` / `famousStars.generated.ts` and the grep of structure ids in `src/`.
-- [ ] **No test:** the content is curation, not logic (spec Q8), and TS checks the shape.
-- [ ] Commit. This ends Dispatch A.
+- [x] Write the file, with the ids checked against `SCENE_BODIES` / `famousStars.generated.ts` and the grep of structure ids in `src/`.
+- [x] **No test:** the content is curation, not logic (spec Q8), and TS checks the shape.
+- [x] Commit. This ends Dispatch A.
 
 ### Task 4: The grid renders cards: tooltip, fallback tile, empty state
 
@@ -168,11 +168,11 @@ type FeaturedCardTipProps = { aliases?: readonly string[]; blurb: string };
 
 **Empty state (spec Q1):** an empty query shows the tabs + grid only; typing shows `ResultsList` only. `rankPaletteMatches`'s empty-query branch (`rankPaletteMatches.ts:73-76`, famous-all + Milky Way) then has no reader. Delete it (empty query → `[]`) along with its test cases.
 
-- [ ] Update `CommandPalette.test.ts`. The `NGC1300` "not in FEATURED_IDS" fixture comment goes stale; drop it and pass fixture tabs instead. Add:
+- [x] Update `CommandPalette.test.ts`. The `NGC1300` "not in FEATURED_IDS" fixture comment goes stale; drop it and pass fixture tabs instead. Add:
   - `clicking a card selects its action`: one fixture tab with a focus card → `onSelect({ kind: 'focus', focusId })`.
   - `a card whose image fails shows its label as a text tile`: fire `error` on the `img`, and the label is still visible with no `img` left.
-- [ ] Implement. Delete `resolveFeaturedEntries` + its test, then grep for `resolveFeaturedEntries` and `FEATURED_IDS` until nothing is left.
-- [ ] Commit.
+- [x] Implement. Delete `resolveFeaturedEntries` + its test, then grep for `resolveFeaturedEntries` and `FEATURED_IDS` until nothing is left.
+- [x] Commit.
 
 ### Task 5: Tab strip and tab state (review: yes, ui slice)
 
@@ -213,10 +213,10 @@ type PaletteTabsProps = { tabs: readonly PaletteTab[]; active: PaletteTabId; onC
   - Active: `var(--color-fg)` with a 1px bottom border in `var(--color-accent-gradient-mid)`.
 - The grid below gets `role="tabpanel"`.
 
-- [ ] Test in `uiSlice.test.ts`: `paletteTab survives closing and reopening the palette`. `setPaletteTab('missions')`, then `setPaletteOpen(false)`, then `setPaletteOpen(true)`: the tab is still `'missions'`, and a fresh store starts on `'highlights'`.
-- [ ] Test in `CommandPalette.test.ts`: `clicking a tab asks for it` → `onTabChange('<id>')`.
-- [ ] Implement. The container reads `selectPaletteTab` and dispatches `setPaletteTab`.
-- [ ] Commit.
+- [x] Test in `uiSlice.test.ts`: `paletteTab survives closing and reopening the palette`. `setPaletteTab('missions')`, then `setPaletteOpen(false)`, then `setPaletteOpen(true)`: the tab is still `'missions'`, and a fresh store starts on `'highlights'`.
+- [x] Test in `CommandPalette.test.ts`: `clicking a tab asks for it` → `onTabChange('<id>')`.
+- [x] Implement. The container reads `selectPaletteTab` and dispatches `setPaletteTab`.
+- [x] Commit.
 
 ### Task 6: Keyboard: grid arrows, Enter, ⌥←/→ between tabs
 
@@ -257,16 +257,16 @@ activeCard: number;
 - With a non-empty query, today's results-list handling runs unchanged.
 - One empty-query test picks the navigator, the same one that picks the view.
 
-- [ ] Tests in `gridIndexStep.test.ts` (5 columns, 12 cards = rows of 5, 5, 2):
+- [x] Tests in `gridIndexStep.test.ts` (5 columns, 12 cards = rows of 5, 5, 2):
   - `right from the last card wraps to the first`: 11 → 0.
   - `down from row 1 column 4 lands on the last card of a partial row`: 8 → 11.
   - `down from the last row wraps to the same column on top`: 10 → 0; 11 → 1.
   - `up from the top row lands in the last row that has that column`: 1 → 11; 3 → 8.
   - `an empty grid has no active card`: count 0 → −1.
-- [ ] Tests in `CommandPalette.test.ts`:
+- [x] Tests in `CommandPalette.test.ts`:
   - `ArrowRight then Enter selects the second card`.
   - `Alt+ArrowRight asks for the next tab and wraps from the last`.
-- [ ] Implement. Then commit. This ends Dispatch B.
+- [x] Implement. Then commit. This ends Dispatch B.
 
 ---
 
