@@ -46,7 +46,9 @@ export const SettingsPanel = memo(function SettingsPanel({
       <StarsSectionContainer />
       <CosmicWebSectionContainer />
       <StructuresSectionContainer />
-      <LabelsAndGuidesSectionContainer />
+      <LabelsAndGuidesSectionContainer
+        layerRows={layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides')}
+      />
       <DisplaySectionContainer>
         <EarthSectionContainer />
       </DisplaySectionContainer>

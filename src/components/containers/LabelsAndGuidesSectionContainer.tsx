@@ -13,7 +13,8 @@
  * their own setters. All of it
  * is assembled into one uniform `SectionRow` array; the presentational
  * `LabelsAndGuidesSection` imports nothing from `store/` or `state/` and has
- * no notion of where any row's bit lives.
+ * no notion of where any row's bit lives. `layerRows` (a Layer's `labelsAndGuides`
+ * `ui` entries) are appended after the guide rows, one `useAppSelector` + `shallowEqual`.
  *
  * ### Label-visibility projection
  *
@@ -52,6 +53,7 @@
  */
 
 import { memo, useCallback, useMemo } from 'react';
+import { shallowEqual } from 'react-redux';
 import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
@@ -74,8 +76,16 @@ import { LABEL_CATEGORIES } from '../../data/structure/labelCategories';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import type { LabelCategory } from '../../@types/engine/data/LabelCategory';
 import type { SectionRow } from '../../@types/components/SectionRow';
+import type { LayerSettingsRow } from '../../@types/engine/layer/LayerSettingsRow';
 
-function LabelsAndGuidesSectionContainer(): React.ReactElement {
+type LabelsAndGuidesSectionContainerProps = {
+  /** Every composed Layer's `labelsAndGuides` `ui` entry, in composition order. */
+  readonly layerRows: readonly LayerSettingsRow[];
+};
+
+function LabelsAndGuidesSectionContainer({
+  layerRows,
+}: LabelsAndGuidesSectionContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
 
   const structureItems = useAppSelector(selectStructureItems);
@@ -137,13 +147,20 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
     [dispatch],
   );
 
+  // One hook for every Layer row rather than one per row in a loop (banned):
+  // `shallowEqual` is required here because the mapped array is a fresh
+  // reference on every store write, which would otherwise re-render this
+  // section on any unrelated state change.
+  const layerValues = useAppSelector((s) => layerRows.map((row) => row.select(s)), shallowEqual);
+
   // Every checkbox the section renders, in one uniform shape: the label rows
   // derived from the registry, plus the hand-authored guide rows. There is no
   // other way to build a "rows" array — constellations, orbitTrails, and the
   // zone-of-avoidance band gate LINE/overlay geometry, not labels, so they
   // have no registry row's label axis to derive from and stay hand-authored
   // here. The band's lettering has no toggle of its own — it rides this same
-  // row (see zoneOfAvoidancePass.ts).
+  // row (see zoneOfAvoidancePass.ts). Layer rows are appended last, in
+  // composition order.
   const rows: ReadonlyArray<SectionRow> = useMemo(
     () => [
       ...LABEL_CATEGORIES.map((cat) => ({
@@ -170,6 +187,12 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
         enabled: zoneOfAvoidanceEnabled,
         onChange: onToggleZoneOfAvoidance,
       },
+      ...layerRows.map((row, index) => ({
+        id: row.id,
+        label: row.label,
+        enabled: layerValues[index]!,
+        onChange: (enabled: boolean) => dispatch(row.set(enabled)),
+      })),
     ],
     [
       labelCategoryVisibility,
@@ -180,6 +203,9 @@ function LabelsAndGuidesSectionContainer(): React.ReactElement {
       onToggleOrbitTrails,
       zoneOfAvoidanceEnabled,
       onToggleZoneOfAvoidance,
+      layerRows,
+      layerValues,
+      dispatch,
     ],
   );
 
