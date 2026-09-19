@@ -65,7 +65,7 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
         })
       : undefined,
   ]);
-  const geometry = decodeMesh(buf);
+  const geometry = await decodeMesh(buf);
 
   return { ...geometry, ...textures, ...(contactShadow ? { contactShadow } : {}) };
 };

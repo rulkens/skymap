@@ -495,8 +495,9 @@ All public domain; NASA asks that credit go to the named observatory / program.
 ### "Flowers Petunia White" — Marianne Goudriaan
 
 - **Use:** The bowl of petunias trailing the whale. Shipped as a derivative:
-  a headless Blender pre-bake (`npm run prebake-petunias`) decimates the mesh
-  and bakes the author's six textures into one albedo atlas, which
+  a headless Blender import (`npm run import-mesh -- petunias`) and pre-bake
+  (`npm run prebake-mesh -- petunias`) bake the author's six textures into one
+  set of PBR atlases, which
   `npm run build-meshes` then bakes to `public/data/meshes/petunias.*`. The raw
   GLB and the pre-bake output are gitignored; provenance lives in
   `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/petunias/README.md`.

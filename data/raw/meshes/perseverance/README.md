@@ -49,8 +49,7 @@ materials, save, update this file's line in `../meshes.sha256`, then
 ## The pre-bake — what `build-meshes` actually reads
 
 `MESH_SOURCES.perseverance` points at `perseverance.prebaked.glb`, **not**
-`perseverance.blend`: the source carries 47 materials and is over the
-triangle budget. `buildMeshes` refuses multi-material input by design, so the
+`perseverance.blend`: the source carries 47 materials. `buildMeshes` refuses multi-material input by design, so the
 flattening happens upstream, once:
 
 ```
@@ -59,7 +58,7 @@ npm run prebake-mesh -- perseverance    # Blender 5.2 LTS; ~20 s, not run in CI
 
 `tools/meshes/prebake/meshPrebake.py` joins the 68 remaining parts (leaving
 behind any face-less/materialless leftovers, such as the `Icosphere` ground
-helper), decimates 199,482 → 100,000 tris, smart-UV-projects and bakes all 47
+helper), keeps all 199,482 tris (under `MESH_TRIANGLE_BUDGET`), smart-UV-projects and bakes all 47
 materials into one 2048² atlas per `BAKE_PASSES` row — albedo, normal,
 roughness and metallic. Its output and the four loose
 `perseverance.prebaked.*.png` atlases beside it are gitignored build products

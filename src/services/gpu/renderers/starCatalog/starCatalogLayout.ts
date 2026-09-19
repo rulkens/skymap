@@ -25,6 +25,7 @@
  */
 
 import { CAMERA_UNIFORM_BYTES } from '../../lib/cameraUniforms';
+import { roundUpToMultiple } from '../../../../utils/math/roundUpToMultiple';
 
 /**
  * Bytes of one `NodeParams` element in the `array<NodeParams>` storage buffer:
@@ -42,11 +43,6 @@ export const NODE_PARAMS_BYTES = 32;
 /** Bytes of one `prefix` element (a `u32` exclusive instance-start index). */
 export const PREFIX_BYTES = 4;
 
-/** Round `value` up to the next multiple of `align` (a power of two). */
-function alignUp(value: number, align: number): number {
-  return Math.ceil(value / align) * align;
-}
-
 /**
  * Byte size of the star `StarUniforms` @group(0) buffer: the shared
  * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32
@@ -58,7 +54,7 @@ function alignUp(value: number, align: number): number {
  * `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced, the way the
  * galaxy points `Uniforms` struct appends its own scalars.
  */
-export const STAR_UNIFORM_BYTES = alignUp(CAMERA_UNIFORM_BYTES + 20, 16);
+export const STAR_UNIFORM_BYTES = roundUpToMultiple(CAMERA_UNIFORM_BYTES + 20, 16);
 
 /**
  * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
