@@ -73,6 +73,8 @@ function serializeFadeId(h: FadeId): string {
       return 'milkyWay';
     case 'filament':
       return 'filament';
+    case 'localBubble':
+      return 'localBubble';
     case 'flow':
       return 'flow';
     case 'constellations':

@@ -51,6 +51,7 @@ export const allowDataFile = (path: string): boolean => {
     name === 'mcpm-workbench.scfd' ||
     name === 'structures.ccat' ||
     name === 'structures_meta.json' ||
+    name === 'local-bubble.shell' ||
     name === 'constellations.json' ||
     name === 'pgc_aliases.json'
   );

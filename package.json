@@ -56,6 +56,8 @@
     "build-famous-thumbs": "tsx tools/famous/buildFamousThumbs.ts",
     "build-pgc-aliases": "tsx tools/fetch/buildPgcAliases.ts",
     "build-filaments": "tsx tools/filaments/buildFilaments.ts && npm run build-data-manifest",
+    "fetch-local-bubble": "tsx tools/fetch/fetchLocalBubble.ts",
+    "build-local-bubble": "tsx tools/localBubble/buildLocalBubbleShell.ts && npm run build-data-manifest",
     "build-filaments-sdss": "tsx tools/filaments/buildFilaments.ts --sources sdss --output public/data/filament/v1/filaments-sdss.bin && npm run build-data-manifest",
     "build-filaments-small": "tsx tools/filaments/buildFilaments.ts --cut 7 --output public/data/filament/v1/filaments-small.bin && npm run build-data-manifest",
     "build-fonts": "tsx tools/fonts/buildFontAtlas.ts",

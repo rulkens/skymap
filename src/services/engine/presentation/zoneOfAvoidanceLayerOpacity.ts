@@ -7,13 +7,14 @@
  * both the band and label draws, which share one fade toggle.
  */
 
-import { fadeBand } from '../../../utils/math/fadeBand';
+import { fadeWindow } from '../../../utils/math/fadeWindow';
 import { SCALE_FADE_BANDS } from './scaleFadeBands';
 
 export function zoneOfAvoidanceLayerOpacity(camDistMpc: number, layerFadeOpacity: number): number {
   return (
-    fadeBand(SCALE_FADE_BANDS.zoneOfAvoidance, camDistMpc) *
-    fadeBand(SCALE_FADE_BANDS.zoneOfAvoidanceRecede, camDistMpc) *
-    layerFadeOpacity
+    fadeWindow(
+      [SCALE_FADE_BANDS.zoneOfAvoidance, SCALE_FADE_BANDS.zoneOfAvoidanceRecede],
+      camDistMpc,
+    ) * layerFadeOpacity
   );
 }
