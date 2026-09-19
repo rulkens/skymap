@@ -289,23 +289,28 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
   it('expands the foreground chain in painter order', () => {
     // Chain [NEAR0, 3, 2] — an out-of-numeric-order chain, as a painter-order
     // chain legitimately is (index order is assignment order, not draw order):
-    // three consecutive foreground:0 steps in that exact sequence, each
-    // `depth: 'clear'` so a nearer row's depth test starts fresh rather than
-    // fighting a farther row's. The following composite is unmoved.
+    // consecutive foreground:0 steps in that exact sequence, each row opening
+    // with `depth: 'clear'` so a nearer row's depth test starts fresh rather than
+    // fighting a farther row's; a body row then splits around its contact-shadow
+    // depth sample. The following composite is unmoved.
     const steps = program({ foregroundChain: [NEAR0, 3, 2] });
     const first = steps.findIndex(
       (step) => step.kind === 'render' && step.target === 'foreground:0',
     );
     expect(
       steps
-        .slice(first, first + 3)
+        .slice(first, first + 7)
         .map((step) => (step.kind === 'render' ? [step.slab, step.depth] : null)),
     ).toEqual([
       [NEAR0, 'clear'],
       [3, 'clear'],
+      [3, 'sample'],
+      [3, 'load'],
       [2, 'clear'],
+      [2, 'sample'],
+      [2, 'load'],
     ]);
-    expect(steps[first + 3]).toEqual({
+    expect(steps[first + 7]).toEqual({
       kind: 'composite',
       step: { source: 'foreground:0', dest: 'hdr', blend: 'over', tone: null },
     });

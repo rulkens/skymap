@@ -125,10 +125,14 @@ function stubPass(): GPURenderPassEncoder & { setBindGroup: ReturnType<typeof vi
 }
 
 describe('createMeshBodyRenderer', () => {
-  it('mints two bind-group layouts: the per-body one carries the uniform, MESH_TEXTURE_SLOTS and probe-cube bindings and no sampler', () => {
+  it('mints the body, global and contact layouts; the per-body one carries the uniform, MESH_TEXTURE_SLOTS and probe-cube bindings and no sampler', () => {
     const bindGroupLayouts: GPUBindGroupLayoutDescriptor[] = [];
     makeRenderer(mockDevice({ bindGroupLayouts }));
-    expect(bindGroupLayouts).toHaveLength(2);
+    expect(bindGroupLayouts.map((l) => l.label)).toEqual([
+      'meshBody-body-bgl',
+      'meshBody-global-bgl',
+      'meshBody-contact-bgl',
+    ]);
 
     // Binding 5 is the probe cube the fragment declares after the material maps.
     const bodyEntries = Array.from(bindGroupLayouts[0]!.entries);

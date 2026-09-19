@@ -223,6 +223,8 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
       // cuts the ground is the reading. Not in the probe roster above — a
       // cursor has no meaning on a capture face.
       'terrain-pick-marker',
+      // Depth now holds the ground; the rover and the haze over it come after.
+      { sampleDepth: ['contact-shadows'] },
       'cloud-shell',
       'planets',
       'textured-bodies',
