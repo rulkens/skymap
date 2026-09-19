@@ -230,6 +230,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Plan `Needs:` lines for wave dispatch** `needs-design` — SDD serializes plans; mined dependency graphs from completed plans understate real depth, so the DAG must be authored, not mined. → [details](backlog/2026-07-31-plan-needs-lines-wave-dispatch.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
 - [ ] **Repo is not prettier-clean** `needs-verification` — `prettier --write` over `tests/tools/` alone reformatted ~20 untouched files (2026-09-18); sweep once or narrow the format script.
+- [ ] **Split the repo into workspace packages** `needs-design` — web app, `tools/`, and each workbench into `packages/*` after the desktop app; gated on a shared-code package for `src/`. → [details](backlog/2026-09-19-packages-split.md)
 - [ ] **Comment prune to the 5-line budget** `ready` — script-listed files only; landmine memories + RENDERER.md protected. → [details](backlog/2026-09-15-comment-prune.md)
 
 ## External / blocked
@@ -246,7 +247,7 @@ Per-task plan tree under [`superpowers/plans/2026-05-05-outreach-and-promotion/`
 - [ ] **JOSS submission** `ready` — `paper/paper.md` + `paper/paper.bib` (Task 3).
 - [ ] **Remaining Reddit posts** `ready` — r/Astronomy (video), r/WebGPU (video) (Task 4).
 - [ ] **Academic outreach emails** `ready` — SDSS, GLADE, AAS WWT, CDS (Task 5).
-- [ ] **Museum kiosk mode** `needs-design` — attract-loop + locked-down + offline install build; playback half exists (`?cinema`, recorder harness), robustness + offline thumbnails don't. → [details](backlog/2026-08-31-museum-kiosk-mode.md)
+- [ ] **Museum kiosk mode** `needs-design` — attract loop + idle reset + thumbnail pack on top of the desktop offline app (own spec); playback half exists (`?cinema`, recorder harness). → [details](backlog/2026-08-31-museum-kiosk-mode.md)
 
 ---
 
