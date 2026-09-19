@@ -213,67 +213,67 @@ readonly layerTargets: readonly (readonly RenderTargetSpec[])[];
 
 **Files:** Create `src/utils/object/concatUniqueRows.ts`, `tests/utils/object/concatUniqueRows.test.ts`. Modify `src/services/engine/phases/createLayers.ts`.
 
-- [ ] Test `returns every row, lists in order then rows in order`. Passes resolve a `FRAME_ORDER` name to the FIRST match, so a reordering bug would change which pass draws.
-- [ ] Test `throws naming the table and the key on a duplicate across lists`, asserting the message is exactly `t: two rows share the key 'k'`.
-- [ ] Test `throws on a duplicate within one list`.
-- [ ] Implement per the P0 contract.
-- [ ] Replace the three `createLayers` sites per the site audit table. Keep each WHY comment above the call, and update it where the asset-key comment's reasoning about "`slotFor` consults the Layer one first" still applies.
-- [ ] Leave `composeSelectionRows.ts` and `assertSelectionRowsDisjoint` untouched (see audit).
-- [ ] The existing `rejects.toThrow(/dup-compute/)`, `/shared-asset/` and `/structureCatalog/` tests in `tests/services/engine/phases/createLayers*.test.ts` stay green unedited. They are the per-site wiring proof, so no new site test.
-- [ ] `npx vitest run tests/utils/object tests/services/engine/phases` → green. Commit.
+- [x] Test `returns every row, lists in order then rows in order`. Passes resolve a `FRAME_ORDER` name to the FIRST match, so a reordering bug would change which pass draws.
+- [x] Test `throws naming the table and the key on a duplicate across lists`, asserting the message is exactly `t: two rows share the key 'k'`.
+- [x] Test `throws on a duplicate within one list`.
+- [x] Implement per the P0 contract.
+- [x] Replace the three `createLayers` sites per the site audit table. Keep each WHY comment above the call, and update it where the asset-key comment's reasoning about "`slotFor` consults the Layer one first" still applies.
+- [x] Leave `composeSelectionRows.ts` and `assertSelectionRowsDisjoint` untouched (see audit).
+- [x] The existing `rejects.toThrow(/dup-compute/)`, `/shared-asset/` and `/structureCatalog/` tests in `tests/services/engine/phases/createLayers*.test.ts` stay green unedited. They are the per-site wiring proof, so no new site test.
+- [x] `npx vitest run tests/utils/object tests/services/engine/phases` → green. Commit.
 
 ## Task 2: P1 — `Layer.ui` becomes an entry list
 
 **Files:** Create `LayerUiSlots.d.ts`, `LayerUiEntry.d.ts`, `LayerSettingsRow.d.ts` (all under `src/@types/engine/layer/`), `src/utils/layer/layerUiContents.ts`, `tests/utils/layer/layerUiContents.test.ts`. Delete `src/@types/engine/layer/LayerUi.d.ts`. Modify `Layer.d.ts`, `LayerUiSection.d.ts` (doc), `SettingsPanel.tsx`, `DebugPanel.tsx`, `src/layers/galaxyCatalog/layer.ts`, `src/layers/flow/layer.ts`, `tests/components/SettingsPanel/SettingsPanel.test.tsx` (stub shape only).
 
-- [ ] Test `layerUiContents keeps only the asked slot, in layer then entry order`: two stub Layers holding mixed `main` / `debug` / `labelsAndGuides` entries. A filter bug would render a debug section in the Settings panel, and no other test would catch it.
-- [ ] Add the three types and the helper per the P1 contract. `Layer.ui?: readonly LayerUiEntry[]`, and the doc comment names the three slots and where each renders.
-- [ ] Migrate: galaxyCatalog → `ui: [{ slot: 'main', content: GalaxiesSectionContainer }]`. flow → `[{ slot: 'main', content: FlowSectionContainer }, { slot: 'debug', content: FlowTuningSectionContainer }]`.
-- [ ] `SettingsPanel` / `DebugPanel` render `layerUiContents(..., 'main' | 'debug')` at the positions pinned above. Update `SettingsPanel.test.tsx`'s stub to `ui: [{ slot: 'main', content: … }]`. Its two D13 tests stay otherwise as they are.
-- [ ] Delete `LayerUi.d.ts`. `grep -rn "LayerUi\b" src tests` returns nothing.
-- [ ] `npx vitest run tests/utils/layer tests/components/SettingsPanel tests/components/DebugPanel` → green. Commit.
+- [x] Test `layerUiContents keeps only the asked slot, in layer then entry order`: two stub Layers holding mixed `main` / `debug` / `labelsAndGuides` entries. A filter bug would render a debug section in the Settings panel, and no other test would catch it.
+- [x] Add the three types and the helper per the P1 contract. `Layer.ui?: readonly LayerUiEntry[]`, and the doc comment names the three slots and where each renders.
+- [x] Migrate: galaxyCatalog → `ui: [{ slot: 'main', content: GalaxiesSectionContainer }]`. flow → `[{ slot: 'main', content: FlowSectionContainer }, { slot: 'debug', content: FlowTuningSectionContainer }]`.
+- [x] `SettingsPanel` / `DebugPanel` render `layerUiContents(..., 'main' | 'debug')` at the positions pinned above. Update `SettingsPanel.test.tsx`'s stub to `ui: [{ slot: 'main', content: … }]`. Its two D13 tests stay otherwise as they are.
+- [x] Delete `LayerUi.d.ts`. `grep -rn "LayerUi\b" src tests` returns nothing.
+- [x] `npx vitest run tests/utils/layer tests/components/SettingsPanel tests/components/DebugPanel` → green. Commit.
 
 ## Task 3: P1 — the `labelsAndGuides` slot reaches its section
 
 **Files:** Modify `src/components/containers/LabelsAndGuidesSectionContainer.tsx`, `src/components/SettingsPanel/SettingsPanel.tsx`, `tests/components/containers/LabelsAndGuidesSectionContainer.test.ts`.
 
-- [ ] Test `appends a Layer settings row after the core guide rows`. Render the container with one stub `LayerSettingsRow` whose `select` / `set` are `selectZoneOfAvoidanceEnabled` / `setZoneOfAvoidanceEnabled` under a distinct `id` (e.g. `toggle-stub-layer`). Assert its checkbox comes after `toggle-zone-of-avoidance`.
-- [ ] Test `a Layer row reads its value from the store and dispatches its own action`. Toggle the stub checkbox, assert `selectZoneOfAvoidanceEnabled(store.getState())` flipped, and assert the stub checkbox's `checked` follows it.
-- [ ] Update existing renders of the container in that test file to pass `layerRows={[]}`.
-- [ ] Implement per the P1 contract: one `useAppSelector` + `shallowEqual`, and rows mapped to `SectionRow`s inside the existing `rows` memo. Add one clause to the module header naming the appended Layer rows. Keep the header within budget.
-- [ ] `SettingsPanel` passes `layerRows={layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides')}`. Today that is `[]`, so nothing visible changes.
-- [ ] `npx vitest run tests/components/containers/LabelsAndGuidesSectionContainer.test.ts tests/components/SettingsPanel` → green. Commit.
+- [x] Test `appends a Layer settings row after the core guide rows`. Render the container with one stub `LayerSettingsRow` whose `select` / `set` are `selectZoneOfAvoidanceEnabled` / `setZoneOfAvoidanceEnabled` under a distinct `id` (e.g. `toggle-stub-layer`). Assert its checkbox comes after `toggle-zone-of-avoidance`.
+- [x] Test `a Layer row reads its value from the store and dispatches its own action`. Toggle the stub checkbox, assert `selectZoneOfAvoidanceEnabled(store.getState())` flipped, and assert the stub checkbox's `checked` follows it.
+- [x] Update existing renders of the container in that test file to pass `layerRows={[]}`.
+- [x] Implement per the P1 contract: one `useAppSelector` + `shallowEqual`, and rows mapped to `SectionRow`s inside the existing `rows` memo. Add one clause to the module header naming the appended Layer rows. Keep the header within budget.
+- [x] `SettingsPanel` passes `layerRows={layerUiContents(APP_COMPOSITION.layers, 'labelsAndGuides')}`. Today that is `[]`, so nothing visible changes.
+- [x] `npx vitest run tests/components/containers/LabelsAndGuidesSectionContainer.test.ts tests/components/SettingsPanel` → green. Commit.
 
 ## Task 4: P2 — world-space labels from a Layer
 
 **Files:** Create `src/@types/engine/layer/LayerLabels.d.ts`, `tests/services/engine/frame/runLabel3DProducers.test.ts`. Modify `Layer.d.ts`, `LayerInstance.d.ts`, `instantiateLayer.ts`, `createLayers.ts`, `EngineState.d.ts`, `engine.ts`, `src/services/engine/frame/runLabel3DProducers.ts`, `src/services/engine/presentation/label3DProducers.ts` (header), `src/layers/galaxyCatalog/layer.ts`, `tests/services/engine/phases/createLayers.composition.test.ts`, `tests/services/engine/layer/instantiateLayer.test.ts` (shape only), plus any test state builder the compiler flags for the new `EngineState` field.
 
-- [ ] Test (createLayers.composition) `composes Layer world label producers after core's onto state.label3DProducers`. Two stub Layers each return `{ world: [{ id: '<tag>-world', … }] }`. Assert ids equal `[...LABEL_3D_PRODUCERS.map((p) => p.id), 'a-world', 'b-world']`. Re-shape the existing `labels: () => [...]` stub to `{ screen: [...] }`, and keep its `registerProducer` assertion.
-- [ ] Test `tests/services/engine/frame/runLabel3DProducers.test.ts` `walks state.label3DProducers, not the core constant`. Put a single stub producer on state, assert `label3DRenderer.setLabels` receives its labels, and assert `awake` folds its output. Without this, a Layer's world producer could silently never run and nothing would fail.
-- [ ] Implement per the P2 contract. galaxyCatalog → `labels: (runtime) => ({ screen: [{ id: 'famousLabels', produceLabels: produceFamousGalaxyLabels(runtime) }] })`. The `labels` doc comment on `Layer.d.ts` names both halves and where each is registered or walked.
-- [ ] `runLabel3DProducers.ts` still exports only `runLabel3DProducers` (frameFilePurity).
-- [ ] `npx vitest run tests/services/engine/phases tests/services/engine/layer tests/services/engine/frame` → green. Commit.
+- [x] Test (createLayers.composition) `composes Layer world label producers after core's onto state.label3DProducers`. Two stub Layers each return `{ world: [{ id: '<tag>-world', … }] }`. Assert ids equal `[...LABEL_3D_PRODUCERS.map((p) => p.id), 'a-world', 'b-world']`. Re-shape the existing `labels: () => [...]` stub to `{ screen: [...] }`, and keep its `registerProducer` assertion.
+- [x] Test `tests/services/engine/frame/runLabel3DProducers.test.ts` `walks state.label3DProducers, not the core constant`. Put a single stub producer on state, assert `label3DRenderer.setLabels` receives its labels, and assert `awake` folds its output. Without this, a Layer's world producer could silently never run and nothing would fail.
+- [x] Implement per the P2 contract. galaxyCatalog → `labels: (runtime) => ({ screen: [{ id: 'famousLabels', produceLabels: produceFamousGalaxyLabels(runtime) }] })`. The `labels` doc comment on `Layer.d.ts` names both halves and where each is registered or walked.
+- [x] `runLabel3DProducers.ts` still exports only `runLabel3DProducers` (frameFilePurity).
+- [x] `npx vitest run tests/services/engine/phases tests/services/engine/layer tests/services/engine/frame` → green. Commit.
 
 ## Task 5: P3 — core allocates Layer render targets
 
 **Files:** Create `src/services/engine/layer/composeRenderTargetRows.ts`, `tests/services/engine/layer/composeRenderTargetRows.test.ts`. Modify `src/services/gpu/renderTargets.ts`, `src/services/engine/gpuHandles/gpuHandleRegistry.ts`, `src/@types/engine/state/EngineState.d.ts`, `src/services/engine/engine.ts`, `src/@types/engine/layer/Layer.d.ts` (doc), plus any test state builder the compiler flags for the new `EngineState` field, `tests/services/gpu/renderTargets.test.ts`, `tests/services/engine/frame/frameOrderBoot.test.ts`.
 
-- [ ] Test `composeRenderTargetRows appends each Layer's targets after core's rows`, using a stub Layer with `targets: [{ id: 'stub-target', … }]`.
-- [ ] Test `composeRenderTargetRows throws when a Layer target reuses a core id`, where the stub's id is `'hdr'` and the assertion is `toThrow(/'hdr'/)`. This proves the P0 helper guards the fourth table.
-- [ ] Test (renderTargets.test) `allocates a caller-supplied row beyond core's and keeps it across setSwapFormat`. Pass `[...renderTargetRows(SWAP_FORMAT), stubRow]`, reconcile, assert `viewOf('stub-target')` resolves, call `setSwapFormat('rgba8unorm')`, then assert `specOf('stub-target')` is unchanged and `specOf('swap').format` moved. Re-point every existing `createRenderTargets(device, SWAP_FORMAT, …)` call in that file to `renderTargetRows(SWAP_FORMAT)`. That is mechanical and needs no new assertions.
-- [ ] Implement per the P3 contract: the `createRenderTargets` signature, the `state.layerTargets` seed in `engine.ts`, and the registry row composing `renderTargetRows(deps.ctx.format)` with it. `GpuHandleConstructDeps` stays untouched. Update the `offscreenSpecs` comment in `renderTargets.ts` (~:324-326) if its "computed once" reasoning now reads wrong. It still holds, because the rows are fixed at construction.
-- [ ] `Layer.targets` doc comment per the P3 contract.
-- [ ] `frameOrderBoot.test.ts` builds `targetIds` from `composeRenderTargetRows('bgra8unorm', APP_COMPOSITION.layers.map((l) => l.targets ?? []))` (`tests/compositions/sourceRegistryCoverage.test.ts` already imports `APP_COMPOSITION` in a node test). Its header comment gets one clause saying Layer targets are included.
-- [ ] `npx vitest run tests/services/gpu/renderTargets.test.ts tests/services/engine/layer tests/services/engine/frame/frameOrderBoot.test.ts tests/services/engine/phases` → green. `npm run build` → green. Commit.
+- [x] Test `composeRenderTargetRows appends each Layer's targets after core's rows`, using a stub Layer with `targets: [{ id: 'stub-target', … }]`.
+- [x] Test `composeRenderTargetRows throws when a Layer target reuses a core id`, where the stub's id is `'hdr'` and the assertion is `toThrow(/'hdr'/)`. This proves the P0 helper guards the fourth table.
+- [x] Test (renderTargets.test) `allocates a caller-supplied row beyond core's and keeps it across setSwapFormat`. Pass `[...renderTargetRows(SWAP_FORMAT), stubRow]`, reconcile, assert `viewOf('stub-target')` resolves, call `setSwapFormat('rgba8unorm')`, then assert `specOf('stub-target')` is unchanged and `specOf('swap').format` moved. Re-point every existing `createRenderTargets(device, SWAP_FORMAT, …)` call in that file to `renderTargetRows(SWAP_FORMAT)`. That is mechanical and needs no new assertions.
+- [x] Implement per the P3 contract: the `createRenderTargets` signature, the `state.layerTargets` seed in `engine.ts`, and the registry row composing `renderTargetRows(deps.ctx.format)` with it. `GpuHandleConstructDeps` stays untouched. Update the `offscreenSpecs` comment in `renderTargets.ts` (~:324-326) if its "computed once" reasoning now reads wrong. It still holds, because the rows are fixed at construction.
+- [x] `Layer.targets` doc comment per the P3 contract.
+- [x] `frameOrderBoot.test.ts` builds `targetIds` from `composeRenderTargetRows('bgra8unorm', APP_COMPOSITION.layers.map((l) => l.targets ?? []))` (`tests/compositions/sourceRegistryCoverage.test.ts` already imports `APP_COMPOSITION` in a node test). Its header comment gets one clause saying Layer targets are included.
+- [x] `npx vitest run tests/services/gpu/renderTargets.test.ts tests/services/engine/layer tests/services/engine/frame/frameOrderBoot.test.ts tests/services/engine/phases` → green. `npm run build` → green. Commit.
 
 ## Task 6: Manual smoke (user)
 
 The user starts the dev server and checks against `main`:
 
-- [ ] **Settings panel** is unchanged: Galaxies and Flow sections are at the top in the same order, and "Labels & guides" has the same rows in the same order, ending with Zone of Avoidance. Its master checkbox tri-state still toggles all rows.
-- [ ] **Debug panel** (`d`) is unchanged: Flow tuning sits between Render toggles and Milky Way tuning.
-- [ ] **Labels**: famous-galaxy labels render on approach. The Zone of Avoidance curved lettering renders along the band and follows its toggle.
-- [ ] **Resize**: resizing the window reallocates targets with no GPU validation error in the console. Toggling HDR / swap format (if available on this display) still works.
+- [x] **Settings panel** is unchanged: Galaxies and Flow sections are at the top in the same order, and "Labels & guides" has the same rows in the same order, ending with Zone of Avoidance. Its master checkbox tri-state still toggles all rows.
+- [x] **Debug panel** (`d`) is unchanged: Flow tuning sits between Render toggles and Milky Way tuning.
+- [x] **Labels**: famous-galaxy labels render on approach. The Zone of Avoidance curved lettering renders along the band and follows its toggle.
+- [x] **Resize**: resizing the window reallocates targets with no GPU validation error in the console. Toggling HDR / swap format (if available on this display) still works.
 
 ---
 
@@ -286,10 +286,10 @@ The user starts the dev server and checks against `main`:
 
 ## Definition of Done
 
-- [ ] `concatUniqueRows` exists in `src/utils/object/` and guards the passes, computes, asset keys and render targets. `grep -rn "two composed" src` returns nothing.
-- [ ] `Layer.ui` is `readonly LayerUiEntry[]` typed by `LayerUiSlots` (`main`, `debug`, `labelsAndGuides`). `LayerUi.d.ts` is deleted. galaxyCatalog and flow are migrated. A test drives a stub `labelsAndGuides` row end to end (store read, dispatch, order).
-- [ ] `Layer.labels` returns `LayerLabels`. `state.label3DProducers` is composed from core plus Layers, and `runLabel3DProducers` walks it.
-- [ ] `createRenderTargets` takes its rows from the caller. The `renderTargets` handle row composes them via `composeRenderTargetRows` from `state.layerTargets`; `GpuHandleConstructDeps` is unchanged. A stub Layer row is allocated and survives `setSwapFormat`. `Layer.targets` no longer says "DECLARED BUT NOT CONSUMED".
-- [ ] Ratchets unchanged or smaller: `frameFilePurity`, `layerImportBoundary`.
-- [ ] Manual smoke attested (Task 6): Settings and Debug panels unchanged, galaxy labels and ZoA lettering render, resize is clean.
-- [ ] Landing-diff breakdown reported: src code / src comment / test code / test comment / docs.
+- [x] `concatUniqueRows` exists in `src/utils/object/` and guards the passes, computes, asset keys and render targets. `grep -rn "two composed" src` returns nothing.
+- [x] `Layer.ui` is `readonly LayerUiEntry[]` typed by `LayerUiSlots` (`main`, `debug`, `labelsAndGuides`). `LayerUi.d.ts` is deleted. galaxyCatalog and flow are migrated. A test drives a stub `labelsAndGuides` row end to end (store read, dispatch, order).
+- [x] `Layer.labels` returns `LayerLabels`. `state.label3DProducers` is composed from core plus Layers, and `runLabel3DProducers` walks it.
+- [x] `createRenderTargets` takes its rows from the caller. The `renderTargets` handle row composes them via `composeRenderTargetRows` from `state.layerTargets`; `GpuHandleConstructDeps` is unchanged. A stub Layer row is allocated and survives `setSwapFormat`. `Layer.targets` no longer says "DECLARED BUT NOT CONSUMED".
+- [x] Ratchets unchanged or smaller: `frameFilePurity`, `layerImportBoundary`.
+- [x] Manual smoke attested (Task 6): Settings and Debug panels unchanged, galaxy labels and ZoA lettering render, resize is clean.
+- [x] Landing-diff breakdown reported: src code / src comment / test code / test comment / docs.
