@@ -47,7 +47,10 @@
  * ('npx playwright install chromium').
  */
 
-import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import type { Browser, BrowserContext, Page } from '@playwright/test';
+import { launchChromium } from '../utils/browser/launchChromium';
+import { bootHookedPage } from '../utils/browser/bootHookedPage';
+import { collectPageErrors } from '../utils/browser/collectPageErrors';
 import { PERF_SCENARIOS, type PerfScenario } from './perfScenarios';
 import type { ScenarioReport, LayerStat } from './scenarioReport';
 import type { SweepReport, SweepScale, SweepPass } from './sweepReport';
@@ -180,63 +183,22 @@ function parseArgs(argv: readonly string[]): PerfOptions {
 }
 
 /**
- * Launch pattern mirrored from record.ts: the 'chromium' channel first (full
- * build, WebGPU with no flags), falling back to the headless shell with the
- * WebGPU flags only if the channel is not installed.
- */
-async function launchChromium(): Promise<Browser> {
-  try {
-    return await chromium.launch({ channel: 'chromium' });
-  } catch (err) {
-    console.warn(
-      `chromium channel launch failed (${err instanceof Error ? err.message.split('\n')[0] : String(err)})`,
-    );
-    console.warn(
-      "falling back to the headless shell with '--enable-unsafe-webgpu --use-angle=metal'; " +
-        "prefer 'npx playwright install chromium' for the proven full-build path",
-    );
-    return chromium.launch({ args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
-  }
-}
-
-/**
- * bootPerfPage — open a page in `context`, wire the page-error collectors, wait
- * for the `__skymapPerf` hook + its `ready` gate, and read the `slotGroups`
- * map. Returns everything a measurement path needs to start sampling.
+ * bootPerfPage — open a page, collect page errors, boot the `__skymapPerf`
+ * hook (see bootHookedPage), and read the `slotGroups` map. Shared by
+ * `measureScenario` and `measureSweep` so their boot sequences can't drift.
  *
- * Extracted so BOTH the single-viewport `measureScenario` and the multi-scale
- * `measureSweep` boot identically — the sequence (handlers, `goto ?perf`, wait
- * for hook, await `ready`, snapshot `slotGroups`) is the exact contract the app
- * seam expects, and duplicating it invites the two paths to drift.
- *
- * Page errors are collected rather than warned inline: a noisy page would spam
- * stderr and (in --json mode) risk leaking onto stdout. The formatters collapse
- * them to a ⚠ summary; JSON mode surfaces them raw. Mirrors record.ts's
- * handlers, but stores instead of printing. The returned `pageErrors` array is
- * live — it keeps filling as the page runs, so callers read it AFTER sampling.
+ * Page errors are collected rather than warned inline: a noisy page would
+ * spam stderr and (in --json mode) risk leaking onto stdout — the formatters
+ * collapse them to a summary, and JSON mode surfaces them raw. The returned
+ * array is live, so callers read it AFTER sampling.
  */
 async function bootPerfPage(
   context: BrowserContext,
   url: string,
 ): Promise<{ page: Page; slotGroups: Record<string, string>; pageErrors: string[] }> {
   const page = await context.newPage();
-  const pageErrors: string[] = [];
-  page.on('pageerror', (err) => pageErrors.push(`error: ${err.message}`));
-  page.on('console', (msg) => {
-    if (msg.type() === 'error') pageErrors.push(`console.error: ${msg.text()}`);
-  });
-
-  await page.goto(`${url}/?perf`, { waitUntil: 'load' });
-  await page.waitForFunction(
-    () => (window as unknown as { __skymapPerf?: unknown }).__skymapPerf !== undefined,
-    undefined,
-    { polling: 100 },
-  );
-  // `ready` already debounces "engine ready + loads settled" over a ~1 s
-  // window, so awaiting it (no harness-side timeout) is the whole boot wait.
-  await page.evaluate(
-    () => (window as unknown as { __skymapPerf: { ready: Promise<void> } }).__skymapPerf.ready,
-  );
+  const pageErrors = collectPageErrors(page);
+  await bootHookedPage(page, `${url}/?perf`, '__skymapPerf');
   const slotGroups = (await page.evaluate(
     () =>
       (window as unknown as { __skymapPerf: { slotGroups: Record<string, string> } }).__skymapPerf

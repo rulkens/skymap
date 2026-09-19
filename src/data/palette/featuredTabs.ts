@@ -6,6 +6,33 @@
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
+import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
+
+// `target` is ignored: the focus pins the pivot to the body. `keepFocus` is
+// required because the pose is relative to a moving body.
+const HUBBLE_CAPTURE: PaletteCardCapture = {
+  t: '2026-09-18T13:00:12Z',
+  keepFocus: true,
+  pose: {
+    target: [0, 0, 0],
+    yaw: -1.938340168882169,
+    pitch: 0.09915032713380474,
+    distance: 6.55234811878065e-22,
+  },
+};
+const VOYAGER1_CAPTURE: PaletteCardCapture = {
+  t: '2026-09-18T12:56:32Z',
+  keepFocus: true,
+  pose: {
+    target: [0, 0, 0],
+    yaw: 3.8408163993487223,
+    pitch: -0.6565563346622649,
+    distance: 2.356833031514677e-22,
+  },
+};
+// Default site framing, lit at this instant. The user's own site pose needs
+// the site-pose seam, which is deferred.
+const PERSEVERANCE_CAPTURE: PaletteCardCapture = { t: '2026-09-18T06:00:00Z' };
 
 export const FEATURED_TABS: readonly PaletteTab[] = [
   {
@@ -18,6 +45,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "NASA's rover in Jezero Crater on Mars, landed in 2021. It collects rock samples from an ancient river delta for a future return to Earth.",
         action: { kind: 'focus', focusId: 'body-perseverance' },
+        capture: PERSEVERANCE_CAPTURE,
       },
       {
         id: 'body-hubble',
@@ -25,6 +53,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A space telescope orbiting about 540 km above Earth since 1990. Its images of distant galaxies helped pin down the age of the universe.',
         action: { kind: 'focus', focusId: 'body-hubble' },
+        capture: HUBBLE_CAPTURE,
       },
       {
         id: 'body-earth',
@@ -57,6 +86,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'Launched in 1977, it is the most distant object people have built. It crossed into interstellar space in 2012 and still sends data home.',
         action: { kind: 'focus', focusId: 'body-voyager1' },
+        capture: VOYAGER1_CAPTURE,
       },
       {
         id: 'body-sgr-a-star',
@@ -71,6 +101,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'Our galaxy, a barred spiral about 100,000 light-years across. The Sun sits some 26,000 light-years from its centre.',
         action: { kind: 'focus', focusId: MILKY_WAY_FOCUS_ID },
+        capture: { keepFocus: true },
       },
       {
         id: 'm31',
@@ -78,6 +109,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The nearest large spiral galaxy, 2.5 million light-years away and visible to the naked eye on a dark night. It is on course to merge with the Milky Way.',
         action: { kind: 'focus', focusId: 'm31' },
+        capture: { keepFocus: true },
       },
       {
         id: 'group-local-group',
@@ -85,6 +117,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
         action: { kind: 'focus', focusId: 'group-local-group' },
+        capture: { keepFocus: true },
       },
       {
         id: 'cluster-virgo-m87',
@@ -92,6 +125,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
         action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
+        capture: { keepFocus: true },
       },
       {
         id: 'cosmicFlows',
@@ -230,6 +264,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A space telescope orbiting about 540 km above Earth since 1990. Its images of distant galaxies helped pin down the age of the universe.',
         action: { kind: 'focus', focusId: 'body-hubble' },
+        capture: HUBBLE_CAPTURE,
       },
       {
         id: 'body-voyager1',
@@ -237,6 +272,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'Launched in 1977, it is the most distant object people have built. It crossed into interstellar space in 2012 and still sends data home.',
         action: { kind: 'focus', focusId: 'body-voyager1' },
+        capture: VOYAGER1_CAPTURE,
       },
       {
         id: 'body-voyager2',
@@ -251,6 +287,8 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "NASA's car-sized rover in Gale Crater, on Mars since 2012. It showed that the crater once held a lake that could have supported microbes.",
         action: { kind: 'focus', focusId: 'body-curiosity' },
+        // Gale Crater's local midday; the default instant is night there.
+        capture: { t: '2026-09-18T02:00:00Z' },
       },
       {
         id: 'body-perseverance',
@@ -258,6 +296,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "NASA's rover in Jezero Crater on Mars, landed in 2021. It collects rock samples from an ancient river delta for a future return to Earth.",
         action: { kind: 'focus', focusId: 'body-perseverance' },
+        capture: PERSEVERANCE_CAPTURE,
       },
       {
         id: 'body-spirit',
@@ -265,6 +304,8 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "One of NASA's twin Mars Exploration Rovers, in Gusev Crater. Planned for 90 days, it worked for six years before it got stuck in soft sand.",
         action: { kind: 'focus', focusId: 'body-spirit' },
+        // Gusev Crater's local midday; the default instant is night there.
+        capture: { t: '2026-09-17T23:20:00Z' },
       },
       {
         id: 'body-opportunity',
@@ -285,6 +326,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'Our galaxy, a barred spiral about 100,000 light-years across. The Sun sits some 26,000 light-years from its centre.',
         action: { kind: 'focus', focusId: MILKY_WAY_FOCUS_ID },
+        capture: { keepFocus: true },
       },
       {
         id: 'body-sgr-a-star',
@@ -368,6 +410,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
           'The nearest large spiral galaxy, 2.5 million light-years away and visible to the naked eye on a dark night. It is on course to merge with the Milky Way.',
         image: '/images/famous/m31.webp',
         action: { kind: 'focus', focusId: 'm31' },
+        capture: { keepFocus: true },
       },
       {
         id: 'm51',
@@ -492,6 +535,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "The Milky Way's neighbourhood: our galaxy, Andromeda, Triangulum and dozens of dwarf galaxies, within about 10 million light-years.",
         action: { kind: 'focus', focusId: 'group-local-group' },
+        capture: { keepFocus: true },
       },
       {
         id: 'group-m81-group',
@@ -499,6 +543,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A nearby group of about 30 galaxies around M81 and M82, some 12 million light-years away.',
         action: { kind: 'focus', focusId: 'group-m81-group' },
+        capture: { keepFocus: true },
       },
       {
         id: 'cluster-virgo-m87',
@@ -506,6 +551,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The nearest large galaxy cluster, about 54 million light-years away, with more than a thousand member galaxies. The giant elliptical M87 sits near its centre.',
         action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
+        capture: { keepFocus: true },
       },
       {
         id: 'supercluster-laniakea-sc',
@@ -513,6 +559,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The supercluster that contains the Milky Way, defined by the way its galaxies flow. It spans about 500 million light-years and holds some 100,000 galaxies.',
         action: { kind: 'focus', focusId: 'supercluster-laniakea-sc' },
+        capture: { keepFocus: true },
       },
       {
         id: 'supercluster-coma-sc',
@@ -520,6 +567,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A supercluster about 300 million light-years away, built around the Coma and Leo clusters.',
         action: { kind: 'focus', focusId: 'supercluster-coma-sc' },
+        capture: { keepFocus: true },
       },
       {
         id: 'void-bootes-void',
@@ -527,6 +575,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A nearly empty region about 330 million light-years across, holding only a few dozen known galaxies.',
         action: { kind: 'focus', focusId: 'void-bootes-void' },
+        capture: { keepFocus: true },
       },
     ],
   },

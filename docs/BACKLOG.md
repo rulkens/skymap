@@ -216,6 +216,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`cosmicFlows` beat D never plays** `ready` — its `fade()` cue lands exactly on the compiled clip duration and is wiped by the completion-tick reset one frame later. → [details](backlog/2026-08-20-cosmicflows-beat-d-unreachable.md)
 - [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
+- [ ] **Break up `tools/record/record.ts`** `ready` — move the ffmpeg pipe and the preview-build server into `tools/utils/record/`, leaving argv + the frame loop; own PR, smoke a clip before/after.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 
 ## Docs & process

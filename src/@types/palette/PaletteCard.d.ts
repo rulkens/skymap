@@ -1,4 +1,5 @@
 import type { PaletteAction } from './PaletteAction';
+import type { PaletteCardCapture } from './PaletteCardCapture';
 
 /** One image-led card in a browse tab's grid. */
 export type PaletteCard = {
@@ -11,4 +12,6 @@ export type PaletteCard = {
   /** Override only; the default is `/images/featured/<id>.webp`. */
   image?: string;
   action: PaletteAction;
+  /** How `npm run capture-featured` frames this card; see `PaletteCardCapture`. */
+  capture?: PaletteCardCapture;
 };
