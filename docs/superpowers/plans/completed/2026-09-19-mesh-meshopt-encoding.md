@@ -47,12 +47,12 @@
 
 No new automated test: this is Blender-only code, and CI never runs it.
 
-- [ ] Inspect the source for the duplicate-shell question above; STOP if it is face-level.
-- [ ] Implement the contract.
-- [ ] `npm run import-mesh -- petunias`: the log shows the welded vertex count and the marker drop.
-- [ ] `npm run prebake-mesh -- petunias`: the log shows joined tris, the decimated count (≤ 150k for now; Task 2 changes the budget), and all five atlases written. Nothing raises.
-- [ ] `git grep -n petuniasPrebake` returns only `docs/superpowers/**` history.
-- [ ] Commit: `refactor(meshes): petunias through importMesh + meshPrebake`.
+- [x] Inspect the source for the duplicate-shell question above; STOP if it is face-level.
+- [x] Implement the contract.
+- [x] `npm run import-mesh -- petunias`: the log shows the welded vertex count and the marker drop.
+- [x] `npm run prebake-mesh -- petunias`: the log shows joined tris, the decimated count (≤ 150k for now; Task 2 changes the budget), and all five atlases written. Nothing raises.
+- [x] `git grep -n petuniasPrebake` returns only `docs/superpowers/**` history.
+- [x] Commit: `refactor(meshes): petunias through importMesh + meshPrebake`.
 
 ---
 
@@ -84,11 +84,11 @@ The header comment says why the constant lives in `src/data`: it describes what 
 
 No new test: the guard is a three-line comparison against a constant, and a fixture over 600k triangles would cost more than the bug it could catch (`docs/superpowers/conventions/testing.md`).
 
-- [ ] Implement the contract.
-- [ ] `git grep -nE "150_000|TRIANGLE_TARGET|TRIANGLE_BUDGET\b|triangles=" -- tools .claude/skills` returns nothing budget-related.
-- [ ] `npm run prebake-mesh -- perseverance` (copy `data/raw/meshes/perseverance/` from main first): the log shows no decimation (the source is ~200k tris, under 600k).
-- [ ] `npm test -- tests/tools/meshes` is green.
-- [ ] Commit: `refactor(meshes): one MESH_TRIANGLE_BUDGET (600k)`.
+- [x] Implement the contract.
+- [x] `git grep -nE "150_000|TRIANGLE_TARGET|TRIANGLE_BUDGET\b|triangles=" -- tools .claude/skills` returns nothing budget-related.
+- [x] `npm run prebake-mesh -- perseverance` (copy `data/raw/meshes/perseverance/` from main first): the log shows no decimation (the source is ~200k tris, under 600k).
+- [x] `npm test -- tests/tools/meshes` is green.
+- [x] Commit: `refactor(meshes): one MESH_TRIANGLE_BUDGET (600k)`.
 
 ---
 
@@ -163,19 +163,19 @@ export async function decodeMesh(buf: ArrayBuffer): Promise<DecodedMeshGeometry>
   - Exact `toEqual` on positions, normals or tangents becomes the same tolerances as above.
   - The exact index-order assertion at ~line 365 (`[0, 2, 1]`) becomes a winding assertion on the triangle's position triple: its intent is the winding flip, so assert the face normal's sign, not the index order.
 
-- [ ] Write the new writer tests (and adjust the reader tests); run them; they fail.
-- [ ] Implement the writer and reader, and move the dependency.
-- [ ] `npm test -- tests/tools/meshes tests/data/mesh` is green, and `npm run typecheck:fast` is clean.
-- [ ] Commit: `perf(meshes): .mesh v3 — quantised + meshopt-encoded, unpacked on load`.
+- [x] Write the new writer tests (and adjust the reader tests); run them; they fail.
+- [x] Implement the writer and reader, and move the dependency.
+- [x] `npm test -- tests/tools/meshes tests/data/mesh` is green, and `npm run typecheck:fast` is clean.
+- [x] Commit: `perf(meshes): .mesh v3 — quantised + meshopt-encoded, unpacked on load`.
 
 ---
 
 ### Task 4 (controller, not dispatched): bake and eye-check in the worktree
 
-- [ ] Copy every other key's `data/raw/meshes/<key>/` (downloads, `.blend`, prebaked GLB + atlases) from main into the worktree. Otherwise `build-meshes` deletes their generated rows.
-- [ ] `npm run build-meshes`. Check that `meshAssets.generated.ts` changes only where expected: the petunias row picks up PBR/AO slots, and the perseverance row changes. Total `public/data/meshes/*.mesh` size is ≈ 5–6 MB gzipped.
-- [ ] Start `/dev` in the worktree, **without** `/link-data` for meshes, so that the worktree's own bake is what renders.
-- [ ] Ask the user to eye-check:
+- [x] Copy every other key's `data/raw/meshes/<key>/` (downloads, `.blend`, prebaked GLB + atlases) from main into the worktree. Otherwise `build-meshes` deletes their generated rows.
+- [x] `npm run build-meshes`. Check that `meshAssets.generated.ts` changes only where expected: the petunias row picks up PBR/AO slots, and the perseverance row changes. Total `public/data/meshes/*.mesh` size is ≈ 5–6 MB gzipped.
+- [x] Start `/dev` in the worktree, **without** `/link-data` for meshes, so that the worktree's own bake is what renders.
+- [x] Ask the user to eye-check:
   - petunias against its old look (the new `_mr`/`_normal`/AO, no confetti atlas, no white pot);
   - perseverance at full resolution;
   - Hubble's foil highlights, to catch any banding from the 10-bit normals.

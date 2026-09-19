@@ -1,7 +1,7 @@
 /**
  * meshBinaryFormat — the `.mesh` v3 byte layout and its runtime decoder.
  * `writeMeshBinary` is the inverse. Spec:
- * docs/superpowers/specs/2026-09-19-mesh-meshopt-encoding-design.md ("Data
+ * docs/superpowers/specs/completed/2026-09-19-mesh-meshopt-encoding-design.md ("Data
  * delta"). The GPU still gets v2's float32 arrays: quantisation is wire-only.
  */
 
