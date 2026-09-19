@@ -12,7 +12,7 @@
 
 **Execution:** two grouped dispatches in this worktree (Sonnet implementers), CI as the gate, one whole-branch review at the end.
 - **Dispatch A:** Tasks 1–3 (prep, card data, pure helpers).
-- **Dispatch B:** Task 4 (the tool).
+- **Dispatch B:** Task 1b (shared page boot, added after Dispatch A started) and Task 4 (the tool).
 - **Controller + user:** Task 5 (the capture run and image commit). It needs the dev server, a GPU and the user's eyes.
 - **No perf gate:** the only thing that reaches the app is a debug setting that already exists.
 
@@ -44,6 +44,33 @@
 - [ ] Create the file from the `measurePerf.ts` copy, with a ≤ 5-line header (why the channel comes first). Replace both local copies with an import, and drop any Playwright imports that go unused.
 - [ ] **No test:** a launch wrapper, and both harnesses exercise it on their next run.
 - [ ] `npm run typecheck:fast` passes. Commit as `prep(tools): one launchChromium for perf and record`.
+
+### Task 1b: Prep, one page boot for perf, record and capture
+
+User ruling 2026-09-19: the harness seams the capture tool needs are extracted first, in this PR. The wider `record.ts` breakup (ffmpeg pipe, preview server) is a separate PR.
+
+**Files:**
+- Create: `tools/utils/browser/bootHookedPage.ts`, `tools/utils/browser/isNavigationInterruption.ts`, `tools/utils/browser/collectPageErrors.ts`
+- Modify: `tools/perf/measurePerf.ts` (`bootPerfPage`, `:199-227`), `tools/record/record.ts` (`isNavigationInterruption` `:536`, `awaitCaptureReady` `:559`, the goto + retry loop in `captureTake` `:740-761`)
+
+**Contract:**
+
+```ts
+// Navigate, wait for window[hook], await its `ready`. Retries the wait (not the
+// goto) up to 2 times when a navigation interrupts it: Vite's one-time dep-optimize
+// reload on a cold cache. The hook wait times out at 15 s with an error naming
+// the hook and the URL; the `ready` await has no harness timeout (cold loads are slow).
+export async function bootHookedPage(page: Page, url: string, hook: '__skymapPerf' | '__skymapRecorder'): Promise<void>;
+export function isNavigationInterruption(err: unknown): boolean;          // moved from record.ts as is
+// Attach pageerror + console.error listeners; the returned array fills as they fire.
+export function collectPageErrors(page: Page): string[];                  // entries `error: …` / `console.error: …`
+```
+
+- [ ] `bootPerfPage` becomes `newPage` + `collectPageErrors` + `bootHookedPage(page, `${url}/?perf`, '__skymapPerf')` + the `slotGroups` read. Its return shape is unchanged.
+- [ ] `record.ts` replaces `awaitCaptureReady`, its local `isNavigationInterruption` and the retry loop with one `bootHookedPage(page, captureUrl, '__skymapRecorder')` call. Keep the recorder's own live `pageerror`/`console` logging (it prints as it goes and feeds `[diag]`), and keep everything after the boot (reload suppression, virtual-time pause) where it is. Move the cold-cache retry rationale into `bootHookedPage`'s header, within the 5-line budget.
+- [ ] **No test:** the boot is Playwright plumbing with no pure core. `isNavigationInterruption` is a moved one-line regex.
+- [ ] Smoke both harnesses once against this worktree's dev server: a short `npm run perf -- --url <Local: URL>` run, and `npm run record-clip -- <shortest clip> --url <Local: URL> --frames 30`. Both reach their first measurement or frame. Delete the recording with `rm -f`.
+- [ ] `npm run typecheck` passes. Commit as `prep(tools): one page boot for perf and record`.
 
 ### Task 2: The capture override type and the framed poses (review: yes, camera poses)
 
@@ -178,8 +205,8 @@ CLI: `npm run capture-featured -- [--url <base>] [--force <cardId> …]`.
 2. `launchChromium()` (Task 1), with one context at the viewport above.
 
 **Per target, in this order.** The order is the landmine fix: a focus fly-in overwrites any `setPose` issued before it settles.
-1. Open a new page, collect `pageerror` + `console.error`, and navigate to `${base}/?perf&cinema#focus=<focusId>` plus `&t=<capture.t ?? DEFAULT_CAPTURE_T>` (always pinned). `#focus=` and `#t=` are the hash rows in `src/state/url/hashParamSources.ts:113,193`.
-2. Wait for `window.__skymapPerf`, then await its `ready`. The sequence is `measurePerf.ts`'s `bootPerfPage` (`:219-245`), but with this URL.
+1. Open a new page and `collectPageErrors(page)` (Task 1b). The URL is `${base}/?perf&cinema#focus=<focusId>` plus `&t=<capture.t ?? DEFAULT_CAPTURE_T>` (always pinned). `#focus=` and `#t=` are the hash rows in `src/state/url/hashParamSources.ts:113,193`.
+2. `bootHookedPage(page, url, '__skymapPerf')` (Task 1b).
 3. **Declutter**, in one `page.evaluate` over `__skymapPerf.getState().settings` (structured-cloned):
    - set every nested `labelEnabled` key to `false`;
    - set `orbitTrails.enabled = false`;
@@ -225,6 +252,7 @@ At the end, print a summary (captured / failed with reasons / warnings over 40 K
 **Deliverables:**
 - `npm run capture-featured` (`tools/capture/captureFeatured.ts`) with `--url` and `--force`, plus `tools/capture/README.md` and a Commands line in `CLAUDE.md`.
 - `tools/utils/browser/launchChromium.ts`, the only copy; `measurePerf.ts` and `record.ts` import it.
+- `bootHookedPage`, `isNavigationInterruption`, `collectPageErrors` under `tools/utils/browser/`; perf, record and capture boot through `bootHookedPage`.
 - `selectCaptureTargets`, `poseMismatch`, `CaptureTarget` under `tools/utils/capture/`; `CAPTURE_HIDDEN_PASSES` under `tools/capture/`.
 - `PaletteCardCapture` and `PaletteCard.capture`; the Hubble, Voyager 1 and Perseverance captures plus `keepFocus` cards in `featuredTabs.ts`.
 - A committed webp for every focus card without an `image` override.
@@ -240,6 +268,7 @@ At the end, print a summary (captured / failed with reasons / warnings over 40 K
 - Every file is ≤ 40 KB.
 
 **Deferred (not this PR):**
+- Breaking up `record.ts`: the ffmpeg pipe (`spawnFfmpeg`, `writeFrame`, `ffprobeReport`) and the preview server (`ensureServeBuild`, `ensureDataSymlink`, `spawnPreviewServer`) into `tools/utils/record/` (user ruling 2026-09-19: its own PR).
 - View-card captures, and the `target` check in `poseMismatch` for focus-less poses (PR3).
 - `PerfPose` rebased on `CameraPose`, including what `roll` means for `setPose` (PR3).
 - The rover site-pose seam (a `setPose` site-frame arm), and with it the user's framed Perseverance pose (heading −2.084675604349344, elevation 0.2050471166478657, range 5.160687610215391 m, t=2026-09-19T10:14:04Z).
