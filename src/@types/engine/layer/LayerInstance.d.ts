@@ -6,6 +6,7 @@ import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { Label2DProducer } from '../subsystems/Label2DProducer';
+import type { Label3DProducer } from '../subsystems/Label3DProducer';
 import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
 import type { PassState } from '../frame/PassState';
 
@@ -17,7 +18,8 @@ export type LayerInstance = {
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly fades: readonly FadeLayer<unknown>[];
-  readonly labels: readonly Label2DProducer[];
+  readonly screenLabels: readonly Label2DProducer[];
+  readonly worldLabels: readonly Label3DProducer[];
   readonly selection: readonly SelectionKindRow[];
   readonly frame: ((ctx: ReadyFrameContext, state: PassState) => LayerFrameVote) | null;
   destroy(): void;

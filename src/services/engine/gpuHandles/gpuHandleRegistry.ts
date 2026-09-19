@@ -10,6 +10,7 @@
 
 import { createCompositor } from '../../gpu/passes/compositor';
 import { createRenderTargets } from '../../gpu/renderTargets';
+import { composeRenderTargetRows } from '../layer/composeRenderTargetRows';
 import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
@@ -94,7 +95,7 @@ export const GPU_HANDLE_ROWS = [
     construct: (state: EngineState, deps: GpuHandleConstructDeps) =>
       createRenderTargets(
         deps.ctx.device,
-        deps.ctx.format,
+        composeRenderTargetRows(deps.ctx.format, state.layerTargets),
         { width: deps.ctx.canvas.width, height: deps.ctx.canvas.height },
         state,
       ),

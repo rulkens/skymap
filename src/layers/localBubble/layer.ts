@@ -1,7 +1,7 @@
 /**
  * The Local Bubble Layer: an additive Fresnel shell over the baked cavity
- * mesh — one renderer, one asset slot, one pass, one fade row, one settings
- * section.
+ * mesh — one renderer, one asset slot, one pass, one fade row, a toggle row in
+ * "Labels & guides" and a DebugPanel tuning section.
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
@@ -11,7 +11,8 @@ import { destroy } from './destroy';
 import { localBubbleAssetRows } from './load/localBubbleAssetRows';
 import { localBubblePass } from './passes/localBubblePass';
 import { localBubbleFadeRows } from './present/localBubbleFadeRows';
-import LocalBubbleSectionContainer from './ui/LocalBubbleSectionContainer';
+import LocalBubbleTuningSectionContainer from './ui/LocalBubbleTuningSectionContainer';
+import { localBubbleSettingsRow } from './ui/localBubbleSettingsRow';
 
 export const localBubbleLayer = defineLayer({
   name: 'localBubble',
@@ -23,5 +24,8 @@ export const localBubbleLayer = defineLayer({
   passes: (runtime) => [localBubblePass(runtime)],
   assets: localBubbleAssetRows,
   fades: localBubbleFadeRows,
-  ui: { settings: LocalBubbleSectionContainer },
+  ui: [
+    { slot: 'labelsAndGuides', content: localBubbleSettingsRow },
+    { slot: 'debug', content: LocalBubbleTuningSectionContainer },
+  ],
 });
