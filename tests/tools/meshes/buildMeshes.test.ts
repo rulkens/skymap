@@ -632,6 +632,8 @@ describe('buildMeshes()', () => {
         .setExtras({ contactDecal: { centre: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] } }),
     );
 
-    await expect(run(await writeGlb(doc))).rejects.toThrow(/aoGroundUp|contactDecal/);
+    await expect(run(await writeGlb(doc))).rejects.toThrow(
+      'has one of aoGroundUp/contactDecal without the other (missing aoGroundUp)',
+    );
   });
 });

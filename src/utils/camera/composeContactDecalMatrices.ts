@@ -7,6 +7,7 @@
 
 import { mat4d } from 'wgpu-matrix';
 import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
+import type { ContactDecalMatrices } from '../../@types/data/mesh/ContactDecalMatrices';
 import type { Mat3 } from '../../@types/math/Mat3';
 import type { Vec3 } from '../../@types/math/Vec3';
 import { CONTACT_SHADOW_HALF_HEIGHT_M } from '../../data/bodies/contactShadowHalfHeightM';
@@ -18,7 +19,7 @@ export function composeContactDecalMatrices(
   eyeRelBodyM: Readonly<Vec3>,
   rotM: Readonly<Mat3>,
   decal: ContactDecal,
-): { boxToClip: Float64Array; clipToBox: Float64Array } {
+): ContactDecalMatrices {
   const { centre, halfU: u, halfV: v } = decal;
   const n: Vec3 = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
   const up = CONTACT_SHADOW_HALF_HEIGHT_M / Math.hypot(n[0], n[1], n[2]);

@@ -23,7 +23,9 @@ import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
+import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
@@ -170,17 +172,6 @@ function premultiplyMat3(r: Mat3, m: readonly number[]): number[] {
     );
   }
   return out;
-}
-
-/** Column-major mat3 vector transform — the same `bodyFromSource` remap
- *  `mergeGeometry` folds into every vertex, applied here to a decal point or
- *  half-axis instead. */
-function mulMat3Vec3(m: Mat3, v: Vec3): Vec3 {
-  return [
-    m[0] * v[0] + m[3] * v[1] + m[6] * v[2],
-    m[1] * v[0] + m[4] * v[1] + m[7] * v[2],
-    m[2] * v[0] + m[5] * v[1] + m[8] * v[2],
-  ];
 }
 
 /** Column-major mat4 point transform; glTF node matrices are column-major. */
@@ -471,10 +462,10 @@ function readGroundUpStamp(doc: Document): Vec3 | undefined {
 
 /** Same prebake stamp mechanism as `readGroundUpStamp`, the glTF-frame decal
  *  `buildMeshes` remaps into the body frame below. */
-function readContactDecalStamp(doc: Document): { centre: Vec3; u: Vec3; v: Vec3 } | undefined {
+function readContactDecalStamp(doc: Document): ContactDecalStamp | undefined {
   for (const node of doc.getRoot().listNodes()) {
     const stamp = node.getExtras().contactDecal;
-    if (stamp !== undefined) return stamp as { centre: Vec3; u: Vec3; v: Vec3 };
+    if (stamp !== undefined) return stamp as ContactDecalStamp;
   }
   return undefined;
 }
@@ -494,16 +485,15 @@ function formatGroundUp(v: Vec3 | undefined): string {
  * applied to the vertices); `u`/`v` are half-axes, so only the remap applies.
  */
 function bakeContactDecal(
-  stamp: { readonly centre: Vec3; readonly u: Vec3; readonly v: Vec3 },
+  stamp: ContactDecalStamp,
   bodyFromSource: Mat3 | undefined,
   centroidM: Vec3,
 ): ContactDecal {
-  const remap = (p: Vec3): Vec3 => (bodyFromSource ? mulMat3Vec3(bodyFromSource, p) : p);
-  const centre = remap(stamp.centre);
+  const centre = rotateVec3ByTightMat3(stamp.centre, bodyFromSource);
   return {
     centre: [centre[0] - centroidM[0], centre[1] - centroidM[1], centre[2] - centroidM[2]],
-    halfU: remap(stamp.u),
-    halfV: remap(stamp.v),
+    halfU: rotateVec3ByTightMat3(stamp.u, bodyFromSource),
+    halfV: rotateVec3ByTightMat3(stamp.v, bodyFromSource),
   };
 }
 

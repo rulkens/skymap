@@ -1,11 +1,12 @@
 /**
- * bodyRowSteps — one foreground body row, split at each `DepthSampledPasses`
- * marker: a marker's passes sample the depth the passes before it wrote, so they
- * take a depthless step and the rest of the row reloads depth. Each later
- * segment gets its own timing slot — the row's group key bills only the first.
+ * bodyRowSteps — one foreground body row, split at its `DepthSampledPasses`
+ * marker (at most one): the marker's passes sample the depth the passes before
+ * it wrote, so they take a depthless step and the rest of the row reloads depth;
+ * those two get their own timing slots — the row's group key bills only the first.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
+import type { DepthSampledPasses } from '../../../@types/engine/frame/DepthSampledPasses';
 import type { ForegroundStepSpec } from '../../../@types/engine/frame/ForegroundStepSpec';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import { resolvePassNames } from './resolvePassNames';
@@ -15,34 +16,30 @@ export function bodyRowSteps(
   slab: number,
   passes: readonly ContentPass[],
 ): readonly FrameStep[] {
-  const steps: FrameStep[] = [];
-  const emit = (names: readonly string[], depth: 'clear' | 'load' | 'sample', slot?: string) => {
-    if (names.length === 0) return;
-    steps.push({
+  // Empty segments are left to `expandFrameOrder`'s `draws` filter.
+  const step = (
+    entries: readonly (string | DepthSampledPasses)[],
+    depth: 'clear' | 'load' | 'sample',
+    slot?: string,
+  ): FrameStep => {
+    if (entries.some((entry) => typeof entry !== 'string')) {
+      throw new Error('bodyRowSteps: a body roster takes at most one sampleDepth marker');
+    }
+    return {
       kind: 'render',
       target: spec.target,
       slab,
       depth,
-      passes: resolvePassNames(names, passes),
+      passes: resolvePassNames(entries as readonly string[], passes),
       ...(slot === undefined ? {} : { slot }),
-    });
+    };
   };
-  let run: string[] = [];
-  let runDepth: 'clear' | 'load' = 'clear';
-  let runSlot: string | undefined;
-  let marker = 0;
-  for (const entry of spec.bodyPasses) {
-    if (typeof entry === 'string') {
-      run.push(entry);
-      continue;
-    }
-    emit(run, runDepth, runSlot);
-    emit(entry.sampleDepth, 'sample', `SAMPLE_DEPTH_${marker}`);
-    run = [];
-    runDepth = 'load';
-    runSlot = `AFTER_DEPTH_${marker}`;
-    marker += 1;
-  }
-  emit(run, runDepth, runSlot);
-  return steps;
+  const roster = spec.bodyPasses;
+  const at = roster.findIndex((entry) => typeof entry !== 'string');
+  if (at === -1) return [step(roster, 'clear')];
+  return [
+    step(roster.slice(0, at), 'clear'),
+    step((roster[at] as DepthSampledPasses).sampleDepth, 'sample', 'SAMPLE_DEPTH'),
+    step(roster.slice(at + 1), 'load', 'AFTER_DEPTH'),
+  ];
 }

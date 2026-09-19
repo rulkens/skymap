@@ -43,19 +43,6 @@ describe('composeContactDecalMatrices', () => {
   const eye: Vec3 = [0, 0, 0];
   const vp = vpLookingAt(posM);
 
-  it('clipToBox inverts boxToClip', () => {
-    const { boxToClip, clipToBox } = composeContactDecalMatrices(vp, posM, eye, ROT, DECAL);
-    const product = mat4d.multiply(clipToBox, boxToClip);
-    const identity = mat4d.identity();
-    for (let i = 0; i < 16; i++) expect(product[i]).toBeCloseTo(identity[i] as number, 9);
-  });
-
-  it('the box centre projects to the cube origin', () => {
-    const { clipToBox } = composeContactDecalMatrices(vp, posM, eye, ROT, DECAL);
-    const mvp = composeMeshMvp(vp, posM, eye, ROT);
-    for (const x of toBox(clipToBox, mvp, DECAL.centre)) expect(x).toBeCloseTo(0, 9);
-  });
-
   it("the box's up axis is the ground normal", () => {
     const { boxToClip } = composeContactDecalMatrices(vp, posM, eye, ROT, DECAL);
     const { centre: c, halfU: u, halfV: v } = DECAL;

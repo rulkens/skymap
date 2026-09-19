@@ -341,8 +341,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       ),
     ).toEqual([
       [['a'], 'clear', undefined, 3],
-      [['d'], 'sample', 'SAMPLE_DEPTH_0', 3],
-      [['b'], 'load', 'AFTER_DEPTH_0', 3],
+      [['d'], 'sample', 'SAMPLE_DEPTH', 3],
+      [['b'], 'load', 'AFTER_DEPTH', 3],
     ]);
   });
 
@@ -352,6 +352,12 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       'clear',
       'sample',
     ]);
+  });
+
+  it('refuses a body roster with a second marker', () => {
+    expect(() =>
+      foreground([3], ['a', { sampleDepth: ['d'] }, 'b', { sampleDepth: ['d'] }]),
+    ).toThrow('at most one sampleDepth marker');
   });
 
   it("a NEAR0 chain entry ignores the body roster's marker", () => {

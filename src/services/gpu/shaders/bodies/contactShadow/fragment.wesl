@@ -2,9 +2,6 @@
 // point under this pixel from the row's own depth, take it into the box's unit
 // cube, and darken by the baked contact mask. The blend multiplies the target
 // by the output, so 1 leaves the ground untouched.
-//
-// Reversed-Z: depth 0 is the far plane AND the cleared sky, so d == 0 is
-// discarded before the homogeneous divide ('p.w' is finite for any d > 0).
 
 import package::bodies::contactShadow::io::ContactShadowUniforms;
 
@@ -20,6 +17,8 @@ const FADE_START: f32 = 0.5;
 @fragment
 fn fs(@builtin(position) fragCoord: vec4<f32>) -> @location(0) vec4<f32> {
   let d = textureLoad(sceneDepth, vec2<i32>(fragCoord.xy), 0);
+  // Reversed-Z: depth 0 is the far plane AND the cleared sky; dropping it before
+  // the homogeneous divide keeps 'h.w' finite (it is for any d > 0).
   if (d == 0.0) {
     discard;
   }
