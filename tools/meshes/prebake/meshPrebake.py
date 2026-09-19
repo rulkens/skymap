@@ -220,6 +220,11 @@ def unwrap(obj, source_name):
     # of whichever source image happens to be active — so the packing lurches
     # whenever the material set changes. The atlas is square; opt out.
     bpy.ops.uv.smart_project(angle_limit=1.15192, island_margin=0.001, correct_aspect=False)
+    # smart_project packs by bounding box and left Perseverance's atlas 6.6%
+    # covered; a concave, rotating repack of the same islands covers 36%.
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.pack_islands(rotate=True, rotate_method="ANY", scale=True, margin_method="FRACTION",
+                            margin=0.001, shape_method="CONCAVE")
     bpy.ops.object.mode_set(mode="OBJECT")
     return uv_name
 
