@@ -7,16 +7,14 @@
  * into one ordered `ScoredRow[]` ready to render.  Pulled out of the component
  * so it has no React / DOM dependency and can be tested in isolation.
  *
- * Empty query shows the full famous atlas in seed-file order so the user can
- * browse without typing — alias, body, and structure entries are NOT shown for
- * empty queries (48k aliases / ~370 structures) because rendering the full list
- * every time the palette opens would be a DOM-thrashing disaster.
+ * An empty query yields no rows — the featured grid owns browsing
+ * (`FeaturedGrid` over `FEATURED_TABS`), so this only scores non-empty queries.
  *
- * Non-empty query: score every index and sort.  Famous rows and seeded scene
- * bodies (Earth, the planets, the stars) are one class of "primary named
- * object" and share a single score-sorted list, so an exact body match like
- * "earth" outranks a famous row that only matched "earth" in its description.
- * The alias and structure lists are scored, capped, and appended after.
+ * Famous rows and seeded scene bodies (Earth, the planets, the stars) are one
+ * class of "primary named object" and share a single score-sorted list, so an
+ * exact body match like "earth" outranks a famous row that only matched
+ * "earth" in its description. The alias and structure lists are scored,
+ * capped, and appended after.
  */
 import { scoreFamousMatch } from './scoreFamousMatch';
 import { scoreAliasMatch } from './scoreAliasMatch';
@@ -60,20 +58,15 @@ export function rankPaletteMatches(
   structures: readonly StructureSearchEntry[] | undefined,
   query: string,
 ): ScoredRow[] {
-  // The Milky Way row is always present (no catalog membership): on an empty
-  // query it heads the list as the most-asked-after object; on a query it's
-  // scored over MILKY_WAY_NAMES like a famous row and only kept if it hits.
-  const mwScore =
-    query.trim().length === 0
-      ? 0
-      : scoreFamousMatch({ id: 'milky-way', names: MILKY_WAY_NAMES, description: '' }, query);
-  const milkyWayRow: ScoredRow | null =
-    query.trim().length === 0 || mwScore > 0 ? { kind: 'milkyWay', score: mwScore } : null;
+  if (query.trim().length === 0) return [];
 
-  if (query.trim().length === 0) {
-    const famousAll = entries.map<ScoredRow>((e) => ({ kind: 'famous', entry: e, score: 0 }));
-    return milkyWayRow ? [milkyWayRow, ...famousAll] : famousAll;
-  }
+  // The Milky Way row has no catalog membership; scored over MILKY_WAY_NAMES
+  // like a famous row and only kept if it hits.
+  const mwScore = scoreFamousMatch(
+    { id: 'milky-way', names: MILKY_WAY_NAMES, description: '' },
+    query,
+  );
+  const milkyWayRow: ScoredRow | null = mwScore > 0 ? { kind: 'milkyWay', score: mwScore } : null;
 
   const famousScored: ScoredRow[] = entries
     .map<ScoredRow>((entry) => {
@@ -82,11 +75,10 @@ export function rankPaletteMatches(
     })
     .filter((s) => s.score > 0);
 
-  // Seeded scene bodies (Earth, the stars, the planets) are scored like a famous
-  // row; they skip the empty-query browse list (like aliases/structures) so
-  // browsing stays famous + Milky Way. The wheel-zoom floor (clampDistance.ts)
-  // is derived from the focused body's own radius, so a picked body always
-  // resolves to a reachable, non-sub-pixel focus target.
+  // Seeded scene bodies (Earth, the stars, the planets) are scored like a
+  // famous row. The wheel-zoom floor (clampDistance.ts) is derived from the
+  // focused body's own radius, so a picked body always resolves to a
+  // reachable, non-sub-pixel focus target.
   //
   // A body scores over its full alias list (BODY_SEARCH_NAMES), so a Bayer
   // designation ("Alpha Canis Majoris") surfaces the same row as the common

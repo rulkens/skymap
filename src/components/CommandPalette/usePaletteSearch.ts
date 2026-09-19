@@ -1,33 +1,39 @@
 /**
  * usePaletteSearch — owns the command palette's transient search state and
- * keyboard navigation: the query string, the active-row highlight, the input
- * ref, the ranked `matches` memo, the open/query reset effects, and the
- * select + key-down handlers.
- *
- * Pulled out of the `CommandPalette` shell so the component is reduced to
- * layout + subcomponent wiring; everything stateful lives here.  On select it
- * maps the chosen row to its durable focus id (`focusIdForRow`) and hands that
- * to the single `onSelect(focusId)` callback — the shell's parent fires
- * `requestFocus` with it.
+ * keyboard navigation: the query string, the active-row/active-card
+ * highlights, the input + grid refs, the ranked `matches` memo, the
+ * open/query/tab reset effects, and the select + key-down handlers. Pulled
+ * out of the `CommandPalette` shell so that file is reduced to layout +
+ * subcomponent wiring; everything stateful lives here.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject, KeyboardEvent } from 'react';
 import { rankPaletteMatches } from './utils/rankPaletteMatches';
-import { focusIdForRow } from './utils/focusIdForRow';
+import { actionForRow } from './utils/actionForRow';
 import { wrapIndex } from './utils/wrapIndex';
+import { gridIndexStep } from './utils/gridIndexStep';
+import { measureGridColumns } from './utils/measureGridColumns';
 import type { ScoredRow } from './paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { PaletteAction } from '../../@types/palette/PaletteAction';
+import type { PaletteCard } from '../../@types/palette/PaletteCard';
+
+const GRID_KEYS: readonly string[] = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
 export type UsePaletteSearchInput = {
   entries: readonly FamousGalaxyMetaEntry[];
   aliasIndex?: readonly AliasIndexEntry[];
   structures?: readonly StructureSearchEntry[];
+  /** The shown tab's cards — drives the grid navigator and its Enter target. */
+  cards: readonly PaletteCard[];
+  /** ⌥←/⌥→ in the grid navigator; the parent maps it to the next/previous shown tab. */
+  onTabStep: (delta: 1 | -1) => void;
   open: boolean;
   onClose: () => void;
-  /** Fired with the picked row's durable focus id; the parent runs `requestFocus`. */
-  onSelect: (focusId: string) => void;
+  /** Fired with the picked row's action; the parent dispatches on `action.kind`. */
+  onSelect: (action: PaletteAction) => void;
 };
 
 export type UsePaletteSearch = {
@@ -37,21 +43,30 @@ export type UsePaletteSearch = {
   setActiveIdx: (i: number) => void;
   matches: ScoredRow[];
   inputRef: RefObject<HTMLInputElement | null>;
+  gridRef: RefObject<HTMLUListElement | null>;
+  activeCard: number;
   onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
   dispatchSelection: (m: ScoredRow) => void;
+  /** Card selection: same action→close bracket as a row pick, but the source
+   * is already a `PaletteAction` — a grid card has no `ScoredRow` to map. */
+  dispatchAction: (action: PaletteAction) => void;
 };
 
 export function usePaletteSearch({
   entries,
   aliasIndex,
   structures,
+  cards,
+  onTabStep,
   open,
   onClose,
   onSelect,
 }: UsePaletteSearchInput): UsePaletteSearch {
   const [query, setQuery] = useState('');
   const [activeIdx, setActiveIdx] = useState(0);
+  const [activeCard, setActiveCard] = useState(0);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const gridRef = useRef<HTMLUListElement | null>(null);
 
   const matches = useMemo(
     () => rankPaletteMatches(entries, aliasIndex, structures, query),
@@ -64,6 +79,12 @@ export function usePaletteSearch({
     setActiveIdx(0);
   }, [query]);
 
+  // Reset the grid highlight on a tab change — otherwise it could point past
+  // the end of a shorter tab's card list.
+  useEffect(() => {
+    setActiveCard(0);
+  }, [cards]);
+
   // Focus the input when the palette opens.  The next tick is needed
   // because the input only enters the DOM in the same render that flips
   // `open` to true.
@@ -74,31 +95,59 @@ export function usePaletteSearch({
       // mid-fade.
       requestAnimationFrame(() => inputRef.current?.focus());
       setQuery('');
+      setActiveCard(0);
     }
   }, [open]);
 
-  /**
-   * Resolve the selected row to its durable focus id and hand it to the
-   * parent, then close.  Centralised so the click and keyboard paths can't
-   * drift apart silently — `focusIdForRow` names every kind, and the parent
-   * fires the single `requestFocus` command with the result.
-   */
-  const dispatchSelection = (m: ScoredRow): void => {
-    onSelect(focusIdForRow(m));
+  const dispatchAction = (action: PaletteAction): void => {
+    onSelect(action);
     onClose();
   };
 
+  const dispatchSelection = (m: ScoredRow): void => dispatchAction(actionForRow(m));
+
   // ── Keyboard handling ──────────────────────────────────────────────────────
   //
-  // Up/Down arrows navigate (wrapping past either end so Up on the top row
-  // jumps to the bottom), Enter selects, Esc closes.  All other keys pass
-  // through to the input so the user can type.
+  // Esc always closes. With an empty query the grid navigator owns the
+  // arrows/Enter/⌥-arrows, but only when the input is focused — the grid's
+  // own cards and the tab strip are keyboard-focusable buttons, and stealing
+  // their Enter/arrow keys would cancel a focused button's native click (Tab
+  // to a tab, press Enter: the browser fires the tab's click) or fight the
+  // browser's own left/right focus movement between buttons. With a query,
+  // the results-list navigator (wrap past either end, Enter selects) runs.
+  // All other keys pass through so the user can type.
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault();
       onClose();
       return;
     }
+
+    if (query.trim().length === 0) {
+      if (e.target !== inputRef.current) return;
+      // Alt-arrow switches tabs — checked before the plain-arrow branch, and
+      // preventDefault'd, since macOS otherwise moves the input's caret.
+      if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {
+        e.preventDefault();
+        onTabStep(e.key === 'ArrowLeft' ? -1 : 1);
+        return;
+      }
+      if (GRID_KEYS.includes(e.key)) {
+        e.preventDefault();
+        const columns = gridRef.current ? measureGridColumns(gridRef.current) : 1;
+        setActiveCard((i) => gridIndexStep(i, e.key, columns, cards.length));
+        return;
+      }
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const card = cards[activeCard];
+        // Placeholder card until PR3 — its button is `disabled`, so route
+        // Enter the same way a click would be ignored.
+        if (card && card.action.kind !== 'view') dispatchAction(card.action);
+      }
+      return;
+    }
+
     if (e.key === 'ArrowDown') {
       e.preventDefault();
       setActiveIdx((i) => wrapIndex(i, 1, matches.length));
@@ -123,7 +172,10 @@ export function usePaletteSearch({
     setActiveIdx,
     matches,
     inputRef,
+    gridRef,
+    activeCard,
     onKeyDown,
     dispatchSelection,
+    dispatchAction,
   };
 }
