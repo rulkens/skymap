@@ -23,6 +23,7 @@ import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
+import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
@@ -33,12 +34,11 @@ import { meanAlbedo } from './meanAlbedo';
 import { writeMeshBinary } from './writeMeshBinary';
 
 /**
- * Both budgets are constants rather than CLI flags: they describe what the
- * renderer can afford, which does not vary per invocation. The triangle
- * ceiling leaves room for the petunia model's ~150k post-prebake tris; the
- * texture ceiling matches the 2048^2 atlas that bake emits.
+ * A constant rather than a CLI flag: it describes what the renderer can afford,
+ * which does not vary per invocation, and matches the 2048^2 atlas the prebake
+ * emits. The triangle half of the budget is the shared `MESH_TRIANGLE_BUDGET`,
+ * which the prebake decimates to; this build only refuses a GLB over it.
  */
-const TRIANGLE_BUDGET = 150_000;
 const TEXTURE_SIZE_BUDGET = 2048;
 
 /** Tangent-space "straight out", the substitute for a missing normal map. */
@@ -477,21 +477,11 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   const material = soleMaterial(doc, key);
 
   const triangles = countTriangles(doc);
-  if (triangles > TRIANGLE_BUDGET) {
-    const { simplify } = await import('@gltf-transform/functions');
-    const { MeshoptSimplifier } = await import('meshoptimizer');
-    await MeshoptSimplifier.ready;
-    await doc.transform(
-      simplify({ simplifier: MeshoptSimplifier, ratio: TRIANGLE_BUDGET / triangles, error: 0.001 }),
+  if (triangles > MESH_TRIANGLE_BUDGET) {
+    throw new Error(
+      `buildMeshes: ${key} has ${triangles} tris, over MESH_TRIANGLE_BUDGET ` +
+        `(${MESH_TRIANGLE_BUDGET}); re-run npm run prebake-mesh -- ${key}`,
     );
-    // meshopt stops early rather than wreck topology, so the budget is a target
-    // it can miss — say so instead of shipping a silently over-budget mesh.
-    const after = countTriangles(doc);
-    if (after > TRIANGLE_BUDGET) {
-      console.warn(
-        `buildMeshes: ${key} is still ${after} tris after decimation (budget ${TRIANGLE_BUDGET})`,
-      );
-    }
   }
 
   const geometry = mergeGeometry(doc, target.bodyFromSource);

@@ -141,7 +141,8 @@ Every step is a literal edit site. Tick them all.
    line to `meshes.sha256`. Edits the row cannot express are hand edits in
    Blender 5.2 LTS that a re-import overwrites, so the README lists each one.
 4. **Prebake** — `tools/meshes/prebake/meshPrebake.py` `SOURCES`: one
-   `source("<key>", triangles=…)` row, `triangles` when over the 150k budget.
+   `source("<key>")` row, no per-row `triangles=`: the prebake decimates to the
+   one `MESH_TRIANGLE_BUDGET` (`src/data/mesh/meshTriangleBudget.ts`).
    Run `npm run prebake-mesh -- <key>` (Blender 5.2, ~10–30 s) and read the
    log: extent in metres must match the fact sheet.
 5. **Mesh source row** — `tools/utils/io/meshSources.ts`: `native:
