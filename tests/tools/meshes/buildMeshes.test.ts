@@ -8,9 +8,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
-import { decodeMesh } from '../../../src/data/mesh/meshBinaryFormat';
+import { decodeMesh, type DecodedMeshGeometry } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
 import { buildMeshes } from '../../../tools/meshes/buildMeshes';
+import { expectDirectionNear } from '../../helpers/meshes/expectDirectionNear';
+import { expectPositionNear } from '../../helpers/meshes/expectPositionNear';
 
 // Every fixture is synthesised here rather than read from data/raw/meshes:
 // the real sources are gitignored downloads that only exist after the human
@@ -68,8 +70,25 @@ function addPrim(
   return prim;
 }
 
-function near(actual: ArrayLike<number>, expected: number[]): void {
-  expected.forEach((e, i) => expect(actual[i]).toBeCloseTo(e, 4));
+/**
+ * The first triangle's geometric normal dotted with its first vertex's normal:
+ * positive when the winding agrees with the shading. The writer may reorder and
+ * rotate triangles, so winding is judged by facing, never by index order.
+ */
+function faceFacing(decoded: DecodedMeshGeometry): number {
+  const [a, b, c] = [0, 1, 2].map((k) => {
+    const v = decoded.indices[k]!;
+    return [0, 1, 2].map((i) => decoded.positions[v * 3 + i]!);
+  }) as [number[], number[], number[]];
+  const e1 = [0, 1, 2].map((i) => b[i]! - a[i]!);
+  const e2 = [0, 1, 2].map((i) => c[i]! - a[i]!);
+  const face = [
+    e1[1]! * e2[2]! - e1[2]! * e2[1]!,
+    e1[2]! * e2[0]! - e1[0]! * e2[2]!,
+    e1[0]! * e2[1]! - e1[1]! * e2[0]!,
+  ];
+  const n = decoded.indices[0]! * 3;
+  return face.reduce((sum, f, i) => sum + f * decoded.normals[n + i]!, 0);
 }
 
 async function solidPng(r: number, g: number, b: number): Promise<Uint8Array> {
@@ -204,7 +223,7 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
     expect(decoded.vertexCount).toBe(6);
     expect(decoded.indexCount).toBe(6);
     expect(row.triangleCount).toBe(2);
@@ -239,11 +258,12 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
     expect(decoded.vertexCount).toBe(3);
     // The joint/weight attributes left without taking the rest of the vertex.
     expect([...decoded.uvs]).toEqual([0, 0, 1, 0, 0, 1]);
-    expect([...decoded.normals]).toEqual([0, 0, 1, 0, 0, 1, 0, 0, 1]);
+    for (let v = 0; v < 3; v++)
+      expectDirectionNear(decoded.normals.slice(v * 3, v * 3 + 3), [0, 0, 1]);
     expect(row.attribution).toBe('A. Modeller — https://example.invalid/author');
   });
 
@@ -275,17 +295,24 @@ describe('buildMeshes()', () => {
     doc.createScene('s').addChild(parent);
 
     const row = (await run(await writeGlb(doc)))[0]!;
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // (1,0,0) -> (0,2,0) and (0,1,0) -> (-3,0,0); third vertex of each triangle
     // stays (0,0,0). Triangle A = (0,2,0),(-3,0,0),(0,0,0), area 3, own centroid
     // (-1, 2/3, 0). Triangle B = (0,4,0),(0,0,0),(0,0,1), area 2, own centroid
     // (0, 4/3, 1/3). Area-weighted: (3*A + 2*B) / 5 = (-3/5, 14/15, 2/15).
-    near(decoded.positions.slice(0, 6), [0.6, 16 / 15, -2 / 15, -2.4, -14 / 15, -2 / 15]);
-    near(decoded.normals.slice(0, 3), [0, 0, 1]);
+    expectPositionNear(readMesh(), decoded.positions.slice(0, 6), [
+      0.6,
+      16 / 15,
+      -2 / 15,
+      -2.4,
+      -14 / 15,
+      -2 / 15,
+    ]);
+    expectDirectionNear(decoded.normals.slice(0, 3), [0, 0, 1]);
     // The tangent takes the PLAIN 3x3 — (1,1,0) -> (-3,2,0) normalised. Running
     // it through the cofactor matrix normals use would give (-2,3,0) instead.
-    near(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
+    expectDirectionNear(decoded.tangents.slice(0, 4), [-0.83205, 0.5547, 0, 1]);
     // Farthest vertex from the centroid is (0,4,0), at distance sqrt(2201)/15.
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(2201) / 15, 4);
   });
@@ -307,13 +334,20 @@ describe('buildMeshes()', () => {
 
     // 90 deg about Z: x -> +y, y -> -x.
     await run(await writeGlb(doc), [0, 1, 0, -1, 0, 0, 0, 0, 1]);
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // (1,0,0) -> (0,1,0), (0,1,0) -> (-1,0,0), (0,0,0) -> (0,0,0). One triangle,
     // so its area-weighted centroid is just the plain vertex average: (-1/3, 1/3, 0).
-    near(decoded.positions.slice(0, 6), [1 / 3, 2 / 3, 0, -2 / 3, -1 / 3, 0]);
-    near(decoded.normals.slice(0, 3), [-0.6, 0, 0.8]);
-    near(decoded.tangents.slice(0, 4), [0, 1, 0, 1]);
+    expectPositionNear(readMesh(), decoded.positions.slice(0, 6), [
+      1 / 3,
+      2 / 3,
+      0,
+      -2 / 3,
+      -1 / 3,
+      0,
+    ]);
+    expectDirectionNear(decoded.normals.slice(0, 3), [-0.6, 0, 0.8]);
+    expectDirectionNear(decoded.tangents.slice(0, 4), [0, 1, 0, 1]);
   });
 
   it('flips normals, handedness and winding for a mirrored node', async () => {
@@ -333,16 +367,16 @@ describe('buildMeshes()', () => {
     doc.createScene('s').addChild(node);
 
     await run(await writeGlb(doc));
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // (1,0,0) -> (-1,0,0), (0,1,0) -> (0,1,0), (0,0,0) -> (0,0,0). One triangle,
     // so its area-weighted centroid is the plain vertex average: (-1/3, 1/3, 0).
-    near(decoded.positions.slice(0, 3), [-2 / 3, -1 / 3, 0]);
+    expectPositionNear(readMesh(), decoded.positions.slice(0, 3), [-2 / 3, -1 / 3, 0]);
     // The cofactor matrix alone hands back (0,0,-1) here — a mirrored node needs
     // the determinant's sign put back, or every normal points into the surface.
-    near(decoded.normals.slice(0, 3), [0, 0, 1]);
-    near(decoded.tangents.slice(0, 4), [-1, 0, 0, -1]);
-    expect([...decoded.indices]).toEqual([0, 2, 1]);
+    expectDirectionNear(decoded.normals.slice(0, 3), [0, 0, 1]);
+    expectDirectionNear(decoded.tangents.slice(0, 4), [-1, 0, 0, -1]);
+    expect(faceFacing(decoded)).toBeGreaterThan(0);
   });
 
   it('rewinds a triangle whose order disagrees with its authored normal', async () => {
@@ -362,7 +396,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    expect([...decodeMesh(readMesh()).indices]).toEqual([0, 2, 1]);
+    expect(faceFacing(await decodeMesh(readMesh()))).toBeGreaterThan(0);
   });
 
   it('recentres an off-origin authored pivot instead of inflating the radius', async () => {
@@ -376,7 +410,11 @@ describe('buildMeshes()', () => {
 
     // The triangle's own centroid — (1000+1001+1000)/3, (0+0+1)/3 — not its
     // ~1000 m distance from the origin.
-    near(decodeMesh(readMesh()).positions.slice(0, 3), [-1 / 3, -1 / 3, 0]);
+    expectPositionNear(readMesh(), (await decodeMesh(readMesh())).positions.slice(0, 3), [
+      -1 / 3,
+      -1 / 3,
+      0,
+    ]);
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(5) / 3, 4);
   });
 
@@ -399,14 +437,14 @@ describe('buildMeshes()', () => {
     doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
 
     await run(await writeGlb(doc));
-    const decoded = decodeMesh(readMesh());
+    const decoded = await decodeMesh(readMesh());
 
     // Body centroid (4/3, 4/3, 0) at area 8; sliver centroid (301/3, 1/3, 0) at
     // area 0.5. Weighted: (8*(4/3) + 0.5*(301/3)) / 8.5 = 365/51, and
     // (8*(4/3) + 0.5*(1/3)) / 8.5 = 65/51 — nowhere near the bbox centre of
     // (50.5, 2, 0) a naive min/max midpoint would give.
-    near(decoded.positions.slice(0, 3), [-365 / 51, -65 / 51, 0]);
-    near(decoded.positions.slice(9, 12), [100 - 365 / 51, -65 / 51, 0]);
+    expectPositionNear(readMesh(), decoded.positions.slice(0, 3), [-365 / 51, -65 / 51, 0]);
+    expectPositionNear(readMesh(), decoded.positions.slice(9, 12), [100 - 365 / 51, -65 / 51, 0]);
   });
 
   it('ignores geometry orphaned off the scene graph', async () => {
@@ -424,7 +462,7 @@ describe('buildMeshes()', () => {
 
     const row = (await run(await writeGlb(doc)))[0]!;
 
-    expect(decodeMesh(readMesh()).vertexCount).toBe(3);
+    expect((await decodeMesh(readMesh())).vertexCount).toBe(3);
     expect(row.triangleCount).toBe(1);
   });
 
@@ -449,7 +487,7 @@ describe('buildMeshes()', () => {
 
     await run(await writeGlb(doc));
 
-    expect([...decodeMesh(readMesh()).tangents.slice(0, 4)]).toEqual([0, 1, 0, -1]);
+    expectDirectionNear((await decodeMesh(readMesh())).tangents.slice(0, 4), [0, 1, 0, -1]);
   });
 
   it('substitutes a flat normal and a constant mr map when the source has neither', async () => {

@@ -485,7 +485,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   }
 
   const geometry = mergeGeometry(doc, target.bodyFromSource);
-  writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(writeMeshBinary(geometry)));
+  writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
 
   const factor = material.getBaseColorFactor();
   const baseColorTexture = material.getBaseColorTexture();

@@ -37,7 +37,7 @@ async function fetchTexture(
 export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onProgress) => {
   const prefix = `meshes/${req.meshKey}`;
   const buf = await fetchWithProgress(dataUrl(`${prefix}.mesh`), signal, onProgress);
-  const geometry = decodeMesh(buf);
+  const geometry = await decodeMesh(buf);
 
   // `fromEntries` widens the key back to `string`; the slot table is what makes
   // the record exhaustive, so the assertion is restating it, not hiding a gap.
