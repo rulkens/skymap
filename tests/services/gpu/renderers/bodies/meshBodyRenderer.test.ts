@@ -110,6 +110,10 @@ function stubAsset(): MeshAsset {
   };
 }
 
+function stubAssetWithContactShadow(): MeshAsset {
+  return { ...stubAsset(), contactShadow: { width: 4, height: 4 } as unknown as ImageBitmap };
+}
+
 function stubPass(): GPURenderPassEncoder & { setBindGroup: ReturnType<typeof vi.fn> } {
   return {
     setPipeline: vi.fn(),
@@ -186,6 +190,23 @@ describe('createMeshBodyRenderer', () => {
     expect(cube.destroy).toHaveBeenCalledTimes(1);
     expect(depth.destroy).toHaveBeenCalledTimes(1);
     expect(renderer.probeOf('a')).toBeNull();
+  });
+
+  it('uploads a contact shadow as r8unorm and frees it on clear', () => {
+    const textures: TextureStub[] = [];
+    const renderer = makeRenderer(mockDevice({ textures }));
+
+    renderer.setMesh('a', stubAsset());
+    expect(textures.some((t) => t.desc.format === 'r8unorm')).toBe(false);
+
+    renderer.setMesh('b', stubAssetWithContactShadow());
+    const shadow = textures.find((t) => t.desc.format === 'r8unorm')!;
+    expect(shadow.desc.size).toEqual([4, 4, 1]);
+    // No mip chain: only mip 0 is ever sampled, unlike the material maps.
+    expect(shadow.desc.mipLevelCount ?? 1).toBe(1);
+
+    renderer.clearMesh('b');
+    expect(shadow.destroy).toHaveBeenCalledTimes(1);
   });
 
   it("draw binds the body's own group at index 0 and the shared group at index 1", () => {

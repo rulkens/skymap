@@ -158,6 +158,7 @@ export function createMeshBodyRenderer(init: {
     res.probe.cube.destroy();
     res.probe.depth.destroy();
     res.uniformBuffer.destroy();
+    res.contactShadow?.destroy();
   }
 
   // The capture writes the cube's mip 0 face by face and `prefilterCubeGgx`
@@ -210,6 +211,24 @@ export function createMeshBodyRenderer(init: {
     return texture;
   }
 
+  // No mip chain and no RENDER_ATTACHMENT usage: the contact-shadows pass
+  // samples mip 0 only (`textureSampleLevel(..., 0)`), unlike the material
+  // maps `uploadTexture` mips for trilinear filtering across the mesh.
+  function uploadContactShadow(id: string, src: ImageBitmap): GPUTexture {
+    const texture = device.createTexture({
+      label: `meshBody-contact-${id}`,
+      size: [src.width, src.height, 1],
+      format: 'r8unorm',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+    });
+    device.queue.copyExternalImageToTexture({ source: src }, { texture }, [
+      src.width,
+      src.height,
+      1,
+    ]);
+    return texture;
+  }
+
   function setMesh(id: string, asset: MeshAsset): void {
     const existing = meshes.get(id);
     if (existing !== undefined) {
@@ -242,6 +261,7 @@ export function createMeshBodyRenderer(init: {
     );
 
     const probe = mintProbe(id);
+    const contactShadow = asset.contactShadow && uploadContactShadow(id, asset.contactShadow);
 
     const uniformBuffer = device.createBuffer({
       label: `meshBody-uniform-${id}`,
@@ -256,6 +276,7 @@ export function createMeshBodyRenderer(init: {
       textures,
       probe,
       uniformBuffer,
+      contactShadow,
       bindGroup: device.createBindGroup({
         label: `meshBody-bg-${id}`,
         layout: bodyBindGroupLayout,

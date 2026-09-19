@@ -14,4 +14,7 @@ export type MeshResources = {
   probe: MeshProbe;
   uniformBuffer: GPUBuffer;
   bindGroup: GPUBindGroup;
+  /** Ground-contact mask, present only when the asset shipped one; the
+   *  contact-shadows pass samples it, not the mesh's own bind group. */
+  contactShadow?: GPUTexture;
 };
