@@ -8,11 +8,9 @@ const EMPTY_DEPS: ResolveDeps = {
 };
 
 describe('coreSelectionRows', () => {
-  it('one row per core SelectionRef type; galaxyCatalog is its Layer’s', () => {
+  it('one row per core SelectionRef type; galaxyCatalog and zoneOfAvoidance are their own Layers’', () => {
     const types = coreSelectionRows(() => EMPTY_DEPS).map((r) => r.type);
     expect(new Set(types).size).toBe(types.length);
-    expect(types.sort()).toEqual(
-      ['body', 'milkyWay', 'star', 'structure', 'zoneOfAvoidance'].sort(),
-    );
+    expect(types.sort()).toEqual(['body', 'milkyWay', 'star', 'structure'].sort());
   });
 });

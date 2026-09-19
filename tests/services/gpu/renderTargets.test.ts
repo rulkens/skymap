@@ -101,13 +101,13 @@ describe('createRenderTargets', () => {
     );
 
     // Construction allocated the offscreen rows: hdr @ scale 1 (colour),
-    // volume @ scale 3 (colour), zoa @ scale 5 (colour), star-aggregates @
-    // scale 2 (colour), mw-aggregate @ scale 2 (colour), foreground:0 @
-    // scale 1 (colour + depth), the five bloom-pyramid mips bloom0..bloom4 @
-    // scale 2/4/8/16/32 (colour only), and sky-cubemap @ fixedSizePx (colour)
-    // → 13 textures. hdr at full size, volume at floor(size/3),
+    // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour),
+    // mw-aggregate @ scale 2 (colour), foreground:0 @ scale 1 (colour +
+    // depth), the five bloom-pyramid mips bloom0..bloom4 @ scale 2/4/8/16/32
+    // (colour only), and sky-cubemap @ fixedSizePx (colour)
+    // → 12 textures. hdr at full size, volume at floor(size/3),
     // star-aggregates and mw-aggregate at floor(size/2).
-    expect(create.mock.calls).toHaveLength(13);
+    expect(create.mock.calls).toHaveLength(12);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     const aggDesc = create.mock.calls.find(
@@ -125,10 +125,10 @@ describe('createRenderTargets', () => {
     const aggViewBefore = targets.viewOf('star-aggregates');
     targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 1200, height: 900 });
 
-    // Each SCALE-driven offscreen row reallocated at the new canvas size → 12
+    // Each SCALE-driven offscreen row reallocated at the new canvas size → 11
     // more textures; sky-cubemap's fixedSizePx row holds its declared size
     // and is not one of them.
-    expect(create.mock.calls).toHaveLength(25);
+    expect(create.mock.calls).toHaveLength(23);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
@@ -460,10 +460,8 @@ describe('createRenderTargets', () => {
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
-    // volume @ scale 3 -> floor(900/3), floor(600/3); zoa @ scale 5 ->
-    // floor(900/5), floor(600/5).
+    // volume @ scale 3 -> floor(900/3), floor(600/3).
     expect(targets.sizeOf('volume')).toEqual({ width: 300, height: 200 });
-    expect(targets.sizeOf('zoa')).toEqual({ width: 180, height: 120 });
     expect(() => targets.sizeOf('swap')).toThrow();
     expect(() => targets.sizeOf('nope')).toThrow();
   });

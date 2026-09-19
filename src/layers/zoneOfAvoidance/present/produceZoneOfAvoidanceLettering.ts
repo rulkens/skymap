@@ -10,7 +10,7 @@ import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Label3DProducerOutput } from '../../../@types/engine/subsystems/Label3DProducerOutput';
 import type { Label3D } from '../../../@types/rendering/Label3D';
-import { deriveZoneOfAvoidanceLiveness } from '../frame/zoneOfAvoidanceLiveness';
+import { deriveZoneOfAvoidanceLiveness } from './deriveZoneOfAvoidanceLiveness';
 import { GAL_X_EQ, GAL_Z_EQ } from '../../../data/orientation/orientationFrames';
 import { FONT_IDS } from '../../../data/fonts';
 import {

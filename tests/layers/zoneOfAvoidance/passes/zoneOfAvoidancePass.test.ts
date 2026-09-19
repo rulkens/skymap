@@ -7,12 +7,13 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { zoneOfAvoidancePass } from '../../../../../src/services/engine/frame/passes/zoneOfAvoidancePass';
-import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
-import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
+import { zoneOfAvoidancePass } from '../../../../src/layers/zoneOfAvoidance/passes/zoneOfAvoidancePass';
+import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
+import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
+import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/types/ZoneOfAvoidanceRuntime';
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -56,17 +57,9 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-/** A live state: renderer present, toggle opacity 1. */
-function liveState(
-  over: { draw?: ReturnType<typeof vi.fn>; drawPick?: ReturnType<typeof vi.fn> } = {},
-): EngineState {
+/** A live state: toggle opacity 1. */
+function liveState(): EngineState {
   return {
-    gpu: {
-      zoneOfAvoidanceRenderer: {
-        draw: over.draw ?? vi.fn(),
-        drawPick: over.drawPick ?? vi.fn(),
-      },
-    },
     settings: { zoneOfAvoidance: { color: [1, 1, 1], intensity: 1, edgeSharpness: 1 } },
     subsystems: {
       fades: { opacityOf: () => 1 },
@@ -75,27 +68,43 @@ function liveState(
   } as unknown as EngineState;
 }
 
+/** A runtime stub: the band renderer, mocked. */
+function makeRuntime(
+  over: { draw?: ReturnType<typeof vi.fn>; drawPick?: ReturnType<typeof vi.fn> } = {},
+): ZoneOfAvoidanceRuntime {
+  return {
+    renderer: {
+      draw: over.draw ?? vi.fn(),
+      drawPick: over.drawPick ?? vi.fn(),
+    },
+  } as unknown as ZoneOfAvoidanceRuntime;
+}
+
 // `enabled` never reads `view` — an opaque stub satisfies the 3-arg signature.
 const VIEW_STUB = {} as unknown as SlabView;
 
 describe('zoneOfAvoidancePass.enabled', () => {
   it('is enabled when the camera sits inside the visibility window', () => {
-    expect(zoneOfAvoidancePass.enabled(liveState(), makeCtx(), VIEW_STUB)).toBe(true);
+    const pass = zoneOfAvoidancePass(makeRuntime());
+    expect(pass.enabled(liveState(), makeCtx(), VIEW_STUB)).toBe(true);
   });
 
   it('is disabled once the camera is past the recede band (Local Group framed up)', () => {
     const { goneAt } = SCALE_FADE_BANDS.zoneOfAvoidanceRecede;
     const ctx = makeCtx({ drawCamPos: [0, 0, goneAt * 10] as Readonly<[number, number, number]> });
-    expect(zoneOfAvoidancePass.enabled(liveState(), ctx, VIEW_STUB)).toBe(false);
+    const pass = zoneOfAvoidancePass(makeRuntime());
+    expect(pass.enabled(liveState(), ctx, VIEW_STUB)).toBe(false);
   });
 });
 
 describe('zoneOfAvoidancePass.draw', () => {
   it('draws with ctx.cam, the downsampled viewport, and the composed opacity', () => {
     const drawSpy = vi.fn();
-    const state = liveState({ draw: drawSpy });
+    const runtime = makeRuntime({ draw: drawSpy });
+    const pass = zoneOfAvoidancePass(runtime);
+    const state = liveState();
     const ctx = makeCtx();
-    zoneOfAvoidancePass.draw(PASS_STUB, {} as never, ctx, state);
+    pass.draw(PASS_STUB, {} as never, ctx, state);
     expect(drawSpy).toHaveBeenCalledTimes(1);
     const args = drawSpy.mock.calls[0]!;
     // draw(pass, cam, viewport, tuning, shell, opacity)
@@ -112,9 +121,11 @@ describe('zoneOfAvoidancePass.draw', () => {
 describe('zoneOfAvoidancePass.drawPick', () => {
   it('draws with ctx.cam, the FULL canvas viewport, and the composed opacity', () => {
     const drawPickSpy = vi.fn();
-    const state = liveState({ drawPick: drawPickSpy });
+    const runtime = makeRuntime({ drawPick: drawPickSpy });
+    const pass = zoneOfAvoidancePass(runtime);
+    const state = liveState();
     const ctx = makeCtx();
-    zoneOfAvoidancePass.drawPick!(PASS_STUB, {} as never, ctx, state);
+    pass.drawPick!(PASS_STUB, {} as never, ctx, state);
     expect(drawPickSpy).toHaveBeenCalledTimes(1);
     const args = drawPickSpy.mock.calls[0]!;
     // drawPick(pass, cam, viewport, tuning, shell, opacity)

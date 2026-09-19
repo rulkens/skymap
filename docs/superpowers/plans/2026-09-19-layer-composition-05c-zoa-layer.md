@@ -270,17 +270,17 @@ No new test (pure move).
 
 **No new test file.** Flow's `create.test` pinned its slot→renderer commit, and ZoA has no slot. `destroy` releases a renderer and an upsample whose `destroy` is a no-op (`additiveUpsample.ts:124`). The moved pass/liveness tests already pin the gates, and `frameOrderBoot.test.ts` fails if the Layer forgets its `zoa` target, because `FRAME_ORDER` names it. The steps below re-shape existing tests. One of them swaps a stub for the real row, and that swap is the only new assertion.
 
-- [ ] **Step 1: Move.** One `move-files` manifest covering the seven Task 3 rows (`--dry` first). `zoneOfAvoidanceLiveness.ts` is renamed to `deriveZoneOfAvoidanceLiveness.ts`; check that its test mirror followed. Re-point the renderer's three `?static` shader specifiers (`zoneOfAvoidanceRenderer.ts:17-19`) to `../../../services/gpu/shaders/zoneOfAvoidance/…?static`, matching `src/layers/flow/render/flowFieldRenderer.ts:68-70`.
-- [ ] **Step 2: Runtime, `create`, `destroy`.** `create(deps)` = `{ renderer: createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT), upsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT) }`, the args used by today's registry rows. `destroy` calls both `.destroy()`. `src/layers/localBubble/create.ts` / `destroy.ts` / `types/LocalBubbleRuntime.ts` are the shape to copy.
-- [ ] **Step 3: Runtime-bound contributions.**
+- [x] **Step 1: Move.** One `move-files` manifest covering the seven Task 3 rows (`--dry` first). `zoneOfAvoidanceLiveness.ts` is renamed to `deriveZoneOfAvoidanceLiveness.ts`; check that its test mirror followed. Re-point the renderer's three `?static` shader specifiers (`zoneOfAvoidanceRenderer.ts:17-19`) to `../../../services/gpu/shaders/zoneOfAvoidance/…?static`, matching `src/layers/flow/render/flowFieldRenderer.ts:68-70`.
+- [x] **Step 2: Runtime, `create`, `destroy`.** `create(deps)` = `{ renderer: createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT), upsample: createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT) }`, the args used by today's registry rows. `destroy` calls both `.destroy()`. `src/layers/localBubble/create.ts` / `destroy.ts` / `types/LocalBubbleRuntime.ts` are the shape to copy.
+- [x] **Step 3: Runtime-bound contributions.**
   - `deriveZoneOfAvoidanceLiveness`: delete the `state.gpu.zoneOfAvoidanceRenderer === null` line. Nothing else changes.
   - `zoneOfAvoidancePass(runtime)`: const → factory. `draw` and `drawPick` read `runtime.renderer` and drop their `=== null` returns. The liveness re-derive and the full-res pick viewport comment stay.
   - `zoneOfAvoidanceUpsamplePass(runtime)`: `createUpsamplePass({ …, handleOf: () => runtime.upsample, … })`. `postBlit` is unchanged (it still reads core's `state.gpu.label3DRenderer`).
   - `zoneOfAvoidanceFadeRows()`: the `fadeLayers.ts:149-155` row verbatim (seed follows the toggle, no guard, because nothing is demand-loaded). The header copies `localBubbleFadeRows.ts`'s "key and handle are load-bearing" clause and swaps its seed/guard sentence for the seed-follows-toggle reason.
   - `zoneOfAvoidanceSettingsRow`, `zoneOfAvoidanceLayerSettings`, `ZONE_OF_AVOIDANCE_SOURCE_ROWS` per the contract. `localBubbleSettingsRow.ts`, `localBubbleLayerSettings.ts` and `flowSourceRows.ts` are the shapes.
-- [ ] **Step 4: `layer.ts`** per the contract. The `targets` row is `renderTargets.ts:212-219` verbatim with `scale: 5` and a one-line WHY taken from `ZONE_OF_AVOIDANCE_DIVISOR`'s doc (1/25th the fragments; the band is smooth haze an upsample reconstructs).
-- [ ] **Step 5: Compose.** `app.ts` gets `zoneOfAvoidanceLayer` between `flowLayer` and `localBubbleLayer`, in both the tuple and the `satisfies` list. In `appSettingsSlices.ts`, remove `zoneOfAvoidanceSlice` from `UNFORMED_SETTINGS_SLICES` and add `...zoneOfAvoidanceLayerSettings`; a slice in both lists throws at import (Ruling 15). In `data/sources.ts`, drop the unformed row and add `...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS)`.
-- [ ] **Step 6: Delete core's holdings** (the _Modified: core shrinks_ Task 3 rows):
+- [x] **Step 4: `layer.ts`** per the contract. The `targets` row is `renderTargets.ts:212-219` verbatim with `scale: 5` and a one-line WHY taken from `ZONE_OF_AVOIDANCE_DIVISOR`'s doc (1/25th the fragments; the band is smooth haze an upsample reconstructs).
+- [x] **Step 5: Compose.** `app.ts` gets `zoneOfAvoidanceLayer` between `flowLayer` and `localBubbleLayer`, in both the tuple and the `satisfies` list. In `appSettingsSlices.ts`, remove `zoneOfAvoidanceSlice` from `UNFORMED_SETTINGS_SLICES` and add `...zoneOfAvoidanceLayerSettings`; a slice in both lists throws at import (Ruling 15). In `data/sources.ts`, drop the unformed row and add `...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS)`.
+- [x] **Step 6: Delete core's holdings** (the _Modified: core shrinks_ Task 3 rows):
   - `passes/index.ts`: remove both imports and both rows.
   - `gpuHandleRegistry.ts`: remove both rows and the renderer import.
   - `EngineGpuHandles.d.ts` and `engine.ts`: remove both fields, their docs, the type import and the seeds. Keep `label3DRenderer`'s doc, which names `produceZoneOfAvoidanceLettering` and stays true.
@@ -290,7 +290,7 @@ No new test (pure move).
   - `coreSelectionRows.ts`: remove the row and import; the header says four rows.
   - `LabelsAndGuidesSectionContainer.tsx`: remove the hardcoded row, `selectZoneOfAvoidanceEnabled`, the `setZoneOfAvoidanceEnabled` import, `onToggleZoneOfAvoidance` and their two memo deps. Drop "the zone-of-avoidance band" from the header's guide-row list and from the rows comment (`:154-161`), including the `zoneOfAvoidancePass.ts` citation.
   - `DebugPanel.tsx`: remove the ZoA tuning import and element. The Layer's `debug` entry now renders it.
-- [ ] **Step 7: Tests.**
+- [x] **Step 7: Tests.**
   - The moved pass / upsample / liveness tests take a runtime stub (`{ renderer, upsample } as unknown as ZoneOfAvoidanceRuntime`) in place of `state.gpu.zoneOfAvoidance*`, and call the factory once per test. **Delete** `skips the blit but still draws labels when zoneOfAvoidanceUpsample is null`, because the upsample is non-null by construction. Keep the two label-side skip tests, which still guard `postBlit`'s own gate. The liveness fixture loses its `gpu` field and its `renderer` param.
   - `coreSelectionRows.test.ts`: the expected list loses `'zoneOfAvoidance'`, and the test name notes that ZoA is its Layer's.
   - `createLayers.composition.test.ts:12,125-130`: drop the `LABEL_3D_PRODUCERS` import; expect exactly `['a-world', 'b-world']`.
@@ -300,9 +300,9 @@ No new test (pure move).
   - `initGpu.hdrCapabilityWiring.test.ts`: delete the `vi.mock` of the old renderer path (`:156-157`) and the two null fields (`:399,402`).
   - `renderFrame.test.ts`: delete the two `gpu` fields (`:526,531`). The four comments (`:140-146`, `:640`, `:788`, `:840`, `:897`) now credit the dropped `zoa` step to "no composed ZoA pass", not "renderer null". Delete the fixture's `zoa` target row (`:146`) if the test stays green without it.
   - `renderFrameSplitBaseline.test.ts:424`: delete the field and its comment.
-- [ ] **Step 8: Sweep.** Grep `src tests` for `zoneOfAvoidanceRenderer`, `zoneOfAvoidanceUpsample`, `LABEL_3D_PRODUCERS`, `ZONE_OF_AVOIDANCE_DIVISOR`, `frame/zoneOfAvoidanceLiveness`, `passes/zoneOfAvoidance`, `renderers/zoneOfAvoidance`, `presentation/produceZoneOfAvoidanceLettering`, `presentation/zoneOfAvoidanceLayerOpacity` and `selection/zoneOfAvoidanceSelectionRow`. The only hits allowed are under `src/layers/zoneOfAvoidance/`, its test mirror, the `EngineGpuHandles` `label3DRenderer` doc, and prose left for Task 4.
-- [ ] **Step 9: Gate.** `npm test && npm run typecheck && npm run build` → green. `layerImportBoundary` and `frameFilePurity` must pass with no row added.
-- [ ] **Step 10:** Commit `feat(zoa): form the zoneOfAvoidance Layer and compose it`.
+- [x] **Step 8: Sweep.** Grep `src tests` for `zoneOfAvoidanceRenderer`, `zoneOfAvoidanceUpsample`, `LABEL_3D_PRODUCERS`, `ZONE_OF_AVOIDANCE_DIVISOR`, `frame/zoneOfAvoidanceLiveness`, `passes/zoneOfAvoidance`, `renderers/zoneOfAvoidance`, `presentation/produceZoneOfAvoidanceLettering`, `presentation/zoneOfAvoidanceLayerOpacity` and `selection/zoneOfAvoidanceSelectionRow`. The only hits allowed are under `src/layers/zoneOfAvoidance/`, its test mirror, the `EngineGpuHandles` `label3DRenderer` doc, and prose left for Task 4.
+- [x] **Step 9: Gate.** `npm test && npm run typecheck && npm run build` → green. `layerImportBoundary` and `frameFilePurity` must pass with no row added.
+- [x] **Step 10:** Commit `feat(zoa): form the zoneOfAvoidance Layer and compose it`.
 
 ## Task 4: Prose and README sweep
 
@@ -333,7 +333,7 @@ Not code. `/dev` in this worktree (run `/link-data` first if the sky is empty), 
 ## Out of scope (deferred)
 
 - **The label3DRenderer draw living in ZoA's `postBlit`.** Core's `label3DRenderer` is drawn only inside the Layer's upsample pass, so a second world-label producer (from another Layer) would draw only while ZoA is live. There is one producer today (§9(e) ruled no walk `order`), so this stays for now. It becomes live the day a second `labels.world` producer lands.
-- **A composition without ZoA.** `checkFrameOrder` forgives absent pass names but not absent **targets**. `FRAME_ORDER`'s `zoa` line would throw at boot in a composition that omits this Layer. Only the app composition exists, so nothing fails today. This is the first Layer-owned target, so the gap is new with this PR and is flagged for the reference-engine work.
+- ~~**A composition without ZoA.**~~ Fixed in `d4bea6d43`: the stub composition in `startLoop.test.ts` hit it, and `checkFrameOrder` now skips the target of a render line with no present pass, matching `expandFrameOrder`'s `draws` drop.
 - **The label em-height/radius coupling** (the shrunk `docs/backlog/2026-08-17-zone-of-avoidance-shape-constants.md`). Task 1 lands the record and the object param (user ruling 2026-09-19); `LABEL_RADIUS_MPC` / `LABEL_EM_MPC` stay in the lettering producer, and the arc-angle em-height remains that item's scope.
 - **The uniform Layer structure / declarative resource table** (parked). `create.ts` / `destroy.ts` follow localBubble exactly.
 - **Stays-core tables** listed in the inventory (InfoCard, focus, halo, URL, `FadeId`/visibility vocabulary, `FRAME_ORDER`).

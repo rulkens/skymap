@@ -37,7 +37,7 @@ import { SGR_A_STAR_ENTRY } from './sources/sgr-a-star';
 import { S_STAR_ENTRY } from './sources/s-star';
 import { MESH_BODY_ENTRY } from './sources/mesh-body';
 import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
-import { ZONE_OF_AVOIDANCE_ENTRY } from '../layers/zoneOfAvoidance/sources/zone-of-avoidance';
+import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from '../layers/zoneOfAvoidance/sources/zoneOfAvoidanceSourceRows';
 
 export { Source } from './source';
 
@@ -92,7 +92,6 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Sun]: SUN_ENTRY,
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
   [Source.SStar]: S_STAR_ENTRY,
-  [Source.ZoneOfAvoidance]: ZONE_OF_AVOIDANCE_ENTRY,
   [Source.Polyphorm2MRS]: POLYPHORM_2MRS_ENTRY,
   [Source.McpmWorkbench]: MCPM_WORKBENCH_ENTRY,
   [Source.MeshBody]: MESH_BODY_ENTRY,
@@ -103,6 +102,7 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(GALAXY_CATALOG_SOURCE_ROWS),
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
   ...sourceRecordOf(FLOW_SOURCE_ROWS),
+  ...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
 // code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every

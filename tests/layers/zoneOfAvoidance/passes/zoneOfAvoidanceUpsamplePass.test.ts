@@ -1,22 +1,23 @@
 /**
  * zoneOfAvoidanceUpsamplePass tests — the consumer half of the reduced-res
- * band: the hdr-target layer that composites the reduced-res `zoa` offscreen into HDR
- * (`state.gpu.zoneOfAvoidanceUpsample`) and then draws the full-res curved
- * lettering via the shared `label3DRenderer.draw` — the two halves are
- * independently null-guarded, so either GPU handle being absent
- * pre-bootstrap doesn't silence the other.
+ * band: the hdr-target layer that composites the reduced-res `zoa` offscreen
+ * into HDR (`runtime.upsample`) and then draws the full-res curved lettering
+ * via the shared `label3DRenderer.draw` — `postBlit` guards itself
+ * independently, so `label3DRenderer` being absent pre-bootstrap doesn't
+ * silence the blit.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 
-import { zoneOfAvoidanceUpsamplePass } from '../../../../../src/services/engine/frame/passes/zoneOfAvoidanceUpsamplePass';
-import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
-import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
-import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
+import { zoneOfAvoidanceUpsamplePass } from '../../../../src/layers/zoneOfAvoidance/passes/zoneOfAvoidanceUpsamplePass';
+import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
+import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
+import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { Slab } from '../../../../src/@types/engine/frame/Slab';
+import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/types/ZoneOfAvoidanceRuntime';
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
@@ -48,24 +49,22 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
+function makeRuntime(upsampleDraw?: ReturnType<typeof vi.fn>): ZoneOfAvoidanceRuntime {
+  return {
+    renderer: { draw: vi.fn(), drawPick: vi.fn() },
+    upsample: { draw: upsampleDraw ?? vi.fn(), destroy: vi.fn() },
+  } as unknown as ZoneOfAvoidanceRuntime;
+}
+
 function makeState(
   over: {
-    upsampleDraw?: ReturnType<typeof vi.fn>;
     labelDraw?: ReturnType<typeof vi.fn>;
     glyphCount?: number;
-    upsample?: unknown;
     label3D?: unknown;
-    renderer?: unknown;
   } = {},
 ): EngineState {
   return {
     gpu: {
-      zoneOfAvoidanceUpsample:
-        over.upsample === undefined
-          ? { draw: over.upsampleDraw ?? vi.fn(), destroy: vi.fn() }
-          : over.upsample,
-      zoneOfAvoidanceRenderer:
-        over.renderer === undefined ? { draw: vi.fn(), drawPick: vi.fn() } : over.renderer,
       label3DRenderer:
         over.label3D === undefined
           ? { draw: over.labelDraw ?? vi.fn(), glyphCount: () => over.glyphCount ?? 1 }
@@ -83,10 +82,11 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
   it('composites the zoa offscreen into HDR and draws the full-res lettering', () => {
     const upsampleDraw = vi.fn();
     const labelDraw = vi.fn();
-    const state = makeState({ upsampleDraw, labelDraw });
+    const pass = zoneOfAvoidanceUpsamplePass(makeRuntime(upsampleDraw));
+    const state = makeState({ labelDraw });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    zoneOfAvoidanceUpsamplePass.draw(PASS_STUB, view, ctx, state);
+    pass.draw(PASS_STUB, view, ctx, state);
 
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(upsampleDraw.mock.calls[0]![0]).toBe(PASS_STUB);
@@ -101,31 +101,24 @@ describe('zoneOfAvoidanceUpsamplePass.draw', () => {
     expect(labelArgs[2]).toEqual(view.viewportPx);
   });
 
-  it('skips the blit but still draws labels when zoneOfAvoidanceUpsample is null', () => {
-    const labelDraw = vi.fn();
-    const state = makeState({ upsample: null, labelDraw });
-    const ctx = makeCtx();
-    const view = slabViewOf(ctx, COSMO);
-    expect(() => zoneOfAvoidanceUpsamplePass.draw(PASS_STUB, view, ctx, state)).not.toThrow();
-    expect(labelDraw).toHaveBeenCalledTimes(1);
-  });
-
   it('skips the labels but still blits when label3DRenderer is null', () => {
     const upsampleDraw = vi.fn();
-    const state = makeState({ upsampleDraw, label3D: null });
+    const pass = zoneOfAvoidanceUpsamplePass(makeRuntime(upsampleDraw));
+    const state = makeState({ label3D: null });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    expect(() => zoneOfAvoidanceUpsamplePass.draw(PASS_STUB, view, ctx, state)).not.toThrow();
+    expect(() => pass.draw(PASS_STUB, view, ctx, state)).not.toThrow();
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
   });
 
   it('skips the labels but still blits when glyphCount is 0 (no lettering to draw)', () => {
     const upsampleDraw = vi.fn();
     const labelDraw = vi.fn();
-    const state = makeState({ upsampleDraw, labelDraw, glyphCount: 0 });
+    const pass = zoneOfAvoidanceUpsamplePass(makeRuntime(upsampleDraw));
+    const state = makeState({ labelDraw, glyphCount: 0 });
     const ctx = makeCtx();
     const view = slabViewOf(ctx, COSMO);
-    zoneOfAvoidanceUpsamplePass.draw(PASS_STUB, view, ctx, state);
+    pass.draw(PASS_STUB, view, ctx, state);
     expect(upsampleDraw).toHaveBeenCalledTimes(1);
     expect(labelDraw).not.toHaveBeenCalled();
   });

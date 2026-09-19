@@ -156,13 +156,6 @@ import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
  */
 const STAR_AGGREGATE_DIVISOR = 2;
 
-/**
- * Downsample divisor for the reduced-res `zoa` row — total fragment
- * reduction is its square (5 → 1/25th the fragments). Named here for the
- * same one-line-change reason as `STAR_AGGREGATE_DIVISOR`.
- */
-const ZONE_OF_AVOIDANCE_DIVISOR = 5;
-
 /** A row's divisor for this state — constant rows ignore the state entirely. */
 function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
   return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
@@ -207,14 +200,6 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 3,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    },
-    // Zone-of-avoidance band raymarch — same reason as `volume`.
-    {
-      id: 'zoa',
-      format: HDR_TARGET_FORMAT,
-      depth: null,
-      scale: ZONE_OF_AVOIDANCE_DIVISOR,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
     // Same reason as `volume`.

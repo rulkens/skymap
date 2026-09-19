@@ -10,24 +10,24 @@
  */
 
 import { vec3 } from 'wgpu-matrix';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import vsCode from '../../shaders/zoneOfAvoidance/vertex.wesl?static';
-import fsCode from '../../shaders/zoneOfAvoidance/fragment.wesl?static';
-import fsPickCode from '../../shaders/zoneOfAvoidance/fragmentPick.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { Source } from '../../../../data/source';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { ZoneOfAvoidanceRenderer } from '../../../../@types/rendering/ZoneOfAvoidanceRenderer';
-import type { ZoneOfAvoidanceShell } from '../../../../@types/rendering/ZoneOfAvoidanceShell';
-import type { ZoneOfAvoidanceTuning } from '../../../../@types/settings/ZoneOfAvoidanceTuning';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import vsCode from '../../../services/gpu/shaders/zoneOfAvoidance/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragment.wesl?static';
+import fsPickCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';
+import { Source } from '../../../data/source';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { ZoneOfAvoidanceRenderer } from '../../../@types/rendering/ZoneOfAvoidanceRenderer';
+import type { ZoneOfAvoidanceShell } from '../../../@types/rendering/ZoneOfAvoidanceShell';
+import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
 export const ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE = 112;

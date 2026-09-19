@@ -12,8 +12,6 @@ import { milkyWayPass } from './milkyWayPass';
 import { milkyWayAggregatePass } from './milkyWayAggregatePass';
 import { milkyWayUpsamplePass } from './milkyWayUpsamplePass';
 import { horizonShellPass } from './horizonShellPass';
-import { zoneOfAvoidancePass } from './zoneOfAvoidancePass';
-import { zoneOfAvoidanceUpsamplePass } from './zoneOfAvoidanceUpsamplePass';
 import { structureMarkersPass } from './structureMarkersPass';
 import { selectionRingPass } from './selectionRingPass';
 import { near0SelectionRingPass } from './near0SelectionRingPass';
@@ -48,9 +46,7 @@ import { skyCubemapBlitPass } from './skyCubemapBlitPass';
  */
 export const CONTENT_PASSES: readonly ContentPass[] = [
   scalarVolumePass,
-  zoneOfAvoidancePass,
   volumeUpsamplePass,
-  zoneOfAvoidanceUpsamplePass,
   horizonShellPass,
   structureMarkersPass,
   milkyWayAggregatePass,
