@@ -252,10 +252,10 @@ Pure moves. Each moved file's importers (`DebugPanel.tsx`, `data/sources.ts`) li
 
 No new test (pure move).
 
-- [ ] `npm run move-files -- --manifest <moves.json> --dry`, inspect the output, then run it for real.
-- [ ] `ZoneOfAvoidanceTuningSection.tsx` imports `./DebugTuningSection`, `./DebugSlider.module.css` and `../common/CopyButton/CopyButton`. Re-point the CSS-module specifier by hand if `move-files` left it, and check the other two. `FlowTuningSection.tsx` is the precedent for the cross-boundary `components/DebugPanel/...` imports.
-- [ ] Grep `src tests tools docs` for `DebugPanel/ZoneOfAvoidanceTuningSection`, `containers/ZoneOfAvoidanceTuningSectionContainer` and `data/sources/zone-of-avoidance`. Code hits must be zero. Prose hits wait for Task 4.
-- [ ] `npm test && npm run typecheck && npm run build` → green. Commit `refactor(zoa): relocate the tuning section and source entry into the Layer`.
+- [x] `npm run move-files -- --manifest <moves.json> --dry`, inspect the output, then run it for real.
+- [x] `ZoneOfAvoidanceTuningSection.tsx` imports `./DebugTuningSection`, `./DebugSlider.module.css` and `../common/CopyButton/CopyButton`. Re-point the CSS-module specifier by hand if `move-files` left it, and check the other two. `FlowTuningSection.tsx` is the precedent for the cross-boundary `components/DebugPanel/...` imports.
+- [x] Grep `src tests tools docs` for `DebugPanel/ZoneOfAvoidanceTuningSection`, `containers/ZoneOfAvoidanceTuningSectionContainer` and `data/sources/zone-of-avoidance`. Code hits must be zero. Prose hits wait for Task 4.
+- [x] `npm test && npm run typecheck && npm run build` → green. Commit `refactor(zoa): relocate the tuning section and source entry into the Layer`.
 
 ## Task 3: Form the Layer, compose it, delete core's holdings
 

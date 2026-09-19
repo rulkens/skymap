@@ -37,7 +37,7 @@ import { SGR_A_STAR_ENTRY } from './sources/sgr-a-star';
 import { S_STAR_ENTRY } from './sources/s-star';
 import { MESH_BODY_ENTRY } from './sources/mesh-body';
 import { GAIA_STARS_ENTRY } from './sources/gaia-stars';
-import { ZONE_OF_AVOIDANCE_ENTRY } from './sources/zone-of-avoidance';
+import { ZONE_OF_AVOIDANCE_ENTRY } from '../layers/zoneOfAvoidance/sources/zone-of-avoidance';
 
 export { Source } from './source';
 

@@ -1,4 +1,4 @@
-// src/components/DebugPanel/ZoneOfAvoidanceTuningSection.tsx
+// src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx
 /**
  * Zone of Avoidance tuning subsection; look knobs from `ZONE_OF_AVOIDANCE_SLIDER_FIELDS`.
  * Color pickers (LINEAR RGB values) convert via sRGB↔linear for the widget.
@@ -6,19 +6,19 @@
  */
 
 import type { ReactElement } from 'react';
-import type { ZoneOfAvoidanceSettings } from '../../@types/settings/ZoneOfAvoidanceSettings';
-import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
-import type { HexString } from '../../@types/math/HexString';
-import { hexToLinearRgb } from '../../utils/color/hexToLinearRgb';
-import { linearRgbToHex } from '../../utils/color/linearRgbToHex';
-import { formatZoneOfAvoidanceTuningDefaults } from '../../utils/format/formatZoneOfAvoidanceTuningDefaults';
+import type { ZoneOfAvoidanceSettings } from '../../../@types/settings/ZoneOfAvoidanceSettings';
+import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { HexString } from '../../../@types/math/HexString';
+import { hexToLinearRgb } from '../../../utils/color/hexToLinearRgb';
+import { linearRgbToHex } from '../../../utils/color/linearRgbToHex';
+import { formatZoneOfAvoidanceTuningDefaults } from '../../../utils/format/formatZoneOfAvoidanceTuningDefaults';
 import {
   ZONE_OF_AVOIDANCE_SLIDER_FIELDS,
   zoneOfAvoidanceSliderPatch,
-} from '../../data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
-import CopyButton from '../common/CopyButton/CopyButton';
-import DebugTuningSection from './DebugTuningSection';
-import sliderStyles from './DebugSlider.module.css';
+} from '../../../data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
+import CopyButton from '../../../components/common/CopyButton/CopyButton';
+import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
+import sliderStyles from '../../../components/DebugPanel/DebugSlider.module.css';
 
 export type ZoneOfAvoidanceTuningSectionProps = {
   zoneOfAvoidance: ZoneOfAvoidanceSettings;
