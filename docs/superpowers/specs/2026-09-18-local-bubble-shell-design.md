@@ -147,11 +147,11 @@ The radius preview PNG still goes to the gitignored `data/localBubble/previews/`
 Keyed on the camera's distance from the Sun (NEAR0's origin and the shell's centre):
 
 ```ts
-localBubble:       { fullAt: 1.5 kpc, goneAt: 0.6 kpc },  // out of the shell
+localBubble:       { fullAt: 1 kpc,   goneAt: 0.4 kpc },  // out of the shell
 localBubbleRecede: { fullAt: 4 kpc,   goneAt: 10 kpc },   // before the Galaxy
 ```
 
-`localBubbleOpacity = fadeWindow([localBubble, localBubbleRecede], camDistMpc)`. Invisible from inside (0.6 kpc > the 536 pc maximum radius), absent at solar-system scale. Eye-tuned, not derived; sized from apparent diameter (1.5 kpc → ~22°, 10 kpc → ~3.4°). The outer edge matches the constellations recede band.
+`localBubbleOpacity = fadeWindow([localBubble, localBubbleRecede], camDistMpc)`. Invisible from deep inside and absent at solar-system scale; 0.4 kpc sits below the 536 pc maximum radius, so the fade-in starts while the camera is still inside the far lobes (user eye-tune, 2026-09-19). Eye-tuned, not derived (1 kpc → ~22° at the ~190 pc mean radius, 10 kpc → ~3.4°). The outer edge matches the constellations recede band.
 
 ### 7.2 Opacity
 

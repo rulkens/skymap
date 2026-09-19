@@ -136,11 +136,11 @@ export const SCALE_FADE_BANDS = {
   zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
 
   // Keyed on: CAMERA distance from the render origin, Mpc — the Sun, and the
-  // Local Bubble shell's own centre. An APPROACH fade: invisible from inside
-  // (goneAt is above the mesh's ~536 pc max radius, so the near wall never
-  // clips through it), full by ~1.5 kpc (~22° apparent diameter). Eye-tuned,
-  // not derived.
-  localBubble: { fullAt: 1.5 * SCALE_UNITS.KPC_TO_MPC, goneAt: 0.6 * SCALE_UNITS.KPC_TO_MPC },
+  // Local Bubble shell's own centre. An APPROACH fade: invisible from deep
+  // inside; goneAt sits below the mesh's ~536 pc max radius, so the camera is
+  // still inside the far lobes (the chimney) as it starts to fade in. Full by
+  // 1 kpc (~22° apparent diameter at the ~190 pc mean radius). Eye-tuned.
+  localBubble: { fullAt: 1 * SCALE_UNITS.KPC_TO_MPC, goneAt: 0.4 * SCALE_UNITS.KPC_TO_MPC },
 
   // Keyed on: the same quantity — composed with `localBubble` into a
   // visibility WINDOW, the same shape as `zoneOfAvoidance`/`-Recede`: the
