@@ -1,6 +1,6 @@
 # Layer composition 05c — the `zoneOfAvoidance` Layer Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task, under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development to implement this plan task-by-task, under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Form `src/layers/zoneOfAvoidance/` in today's flow/filaments/localBubble shape. It owns the band renderer and its additive upsample, both passes, the `zoa` render target, the fade row, the world-space lettering, the selection row, the source entry, its settings slice, its "Labels & guides" toggle row and its Debug tuning section. Core loses every one of those holdings. `LABEL_3D_PRODUCERS` is deleted outright because ZoA's lettering is its only row.
 
@@ -315,18 +315,18 @@ No test (prose only).
 - [x] `src/layers/README.md`: the `targets?` row drops "Declared but NOT consumed yet — 05c wires it" and says the targets are appended after core's rows and allocated by core.
 - [x] Re-point every old-path citation the Task 2/3 greps listed to the new path (`zoneOfAvoidanceUpsamplePass.ts:30-38` in `UpsamplePassRow.d.ts` / `createUpsamplePass.ts`; `ZoneOfAvoidanceTuningSection.tsx` in the two SgrAStar files; `LABEL_3D_PRODUCERS` in the `runLabel3DProducers` test header). Leave `docs/superpowers/**/completed/**` as history.
 - [x] Final grep over `src tests tools docs` for every old path in the _Moved_ table: zero hits outside completed plans/specs.
-- [ ] `npm test` → green. Commit `docs(zoa): re-point citations to the Layer`.
+- [x] `npm test` → green. Commit `docs(zoa): re-point citations to the Layer`.
 
 ## Task 5: Manual smoke (user)
 
 Not code. `/dev` in this worktree (run `/link-data` first if the sky is empty), then check against `main`:
 
-- [ ] **Band renders**: the galactic-plane dust band draws at Local Group scale. It fades in on approach, recedes past its `zoneOfAvoidanceRecede` window, and does not pop.
-- [ ] **Toggle in Labels & guides**: the "Zone of Avoidance" row is still there, and its position is unchanged (after Orbit trails, before Local Bubble). Toggling it fades the band **and** its lettering out and in together (one fade row drives both). The section's master tri-state checkbox still includes it.
-- [ ] **Lettering**: the curved "Zone of Avoidance" caption renders full-res along the band, three repeats, legible and not blurred.
-- [ ] **Debug tuning** (`d`): the Zone of Avoidance tuning section renders in the Layer group, between Flow tuning and Local Bubble tuning, which puts it above Milky Way tuning (the one intentional position change, user-approved). Its sliders and both colour pickers still drive the band and lettering live, and the copy button still emits the defaults.
-- [ ] **Pick**: clicking the band still opens the ZoA InfoCard, with no Focus pill.
-- [ ] **Resize**: resizing the window reallocates the `zoa` target with no GPU validation error, and the band stays aligned.
+- [x] **Band renders**: the galactic-plane dust band draws at Local Group scale. It fades in on approach, recedes past its `zoneOfAvoidanceRecede` window, and does not pop.
+- [x] **Toggle in Labels & guides**: the "Zone of Avoidance" row is still there, and its position is unchanged (after Orbit trails, before Local Bubble). Toggling it fades the band **and** its lettering out and in together (one fade row drives both). The section's master tri-state checkbox still includes it.
+- [x] **Lettering**: the curved "Zone of Avoidance" caption renders full-res along the band, three repeats, legible and not blurred.
+- [x] **Debug tuning** (`d`): the Zone of Avoidance tuning section renders in the Layer group, between Flow tuning and Local Bubble tuning, which puts it above Milky Way tuning (the one intentional position change, user-approved). Its sliders and both colour pickers still drive the band and lettering live, and the copy button still emits the defaults.
+- [x] **Pick**: clicking the band still opens the ZoA InfoCard, with no Focus pill.
+- [x] **Resize**: resizing the window reallocates the `zoa` target with no GPU validation error, and the band stays aligned.
 
 ---
 
@@ -335,17 +335,18 @@ Not code. `/dev` in this worktree (run `/link-data` first if the sky is empty), 
 - **The label3DRenderer draw living in ZoA's `postBlit`.** Core's `label3DRenderer` is drawn only inside the Layer's upsample pass, so a second world-label producer (from another Layer) would draw only while ZoA is live. There is one producer today (§9(e) ruled no walk `order`), so this stays for now. It becomes live the day a second `labels.world` producer lands.
 - ~~**A composition without ZoA.**~~ Fixed in `d4bea6d43`: the stub composition in `startLoop.test.ts` hit it, and `checkFrameOrder` now skips the target of a render line with no present pass, matching `expandFrameOrder`'s `draws` drop.
 - **The label em-height/radius coupling** (the shrunk `docs/backlog/2026-08-17-zone-of-avoidance-shape-constants.md`). Task 1 lands the record and the object param (user ruling 2026-09-19); `LABEL_RADIUS_MPC` / `LABEL_EM_MPC` stay in the lettering producer, and the arc-angle em-height remains that item's scope.
+- **`postBlit` on `createUpsamplePass`.** ZoA is its only user; ruled (a) at `/feature-done` 2026-09-19: the null-handle case and prose dropped here, while folding ZoA's upsample into a plain `ContentPass` and deleting `postBlit` rides the structure cleanup.
 - **The uniform Layer structure / declarative resource table** (parked). `create.ts` / `destroy.ts` follow localBubble exactly.
 - **Stays-core tables** listed in the inventory (InfoCard, focus, halo, URL, `FadeId`/visibility vocabulary, `FRAME_ORDER`).
 
 ## Definition of Done
 
-- [ ] `src/layers/zoneOfAvoidance/` holds the renderer, both pass factories, the liveness gate and opacity, the lettering producer, the selection row, the fade row, the source entry + rows, the settings tuple, the Labels & guides row and the Debug tuning section + container. `layer.ts` declares the `zoa` target inline.
-- [ ] `EngineGpuHandles` has no `zoneOfAvoidanceRenderer` / `zoneOfAvoidanceUpsample` field, and `grep -rn "zoneOfAvoidanceRenderer\|zoneOfAvoidanceUpsample" src/services` returns only prose.
-- [ ] `src/services/engine/presentation/label3DProducers.ts` is deleted. `state.label3DProducers` is composed from Layers alone.
-- [ ] `renderTargetRows` has no `zoa` row, and the target is allocated from `zoneOfAvoidanceLayer.targets` (`frameOrderBoot.test.ts` green).
-- [ ] `LabelsAndGuidesSectionContainer` no longer names ZoA, and the row reaches it only through `ui`. `DebugPanel.tsx` no longer imports a ZoA section.
-- [ ] `ZONE_OF_AVOIDANCE_SHELL` lives in `src/data/zoneOfAvoidance/` and reaches the renderer as one `ZoneOfAvoidanceShell` object (no positional shell args remain). The `frameFilePurity` ZoA row is gone and no row was added. `layerImportBoundary` is unchanged or smaller.
-- [ ] `INITIAL_SETTINGS` is deep-equal to `main`'s (dump both trees and compare). Key order may move.
-- [ ] Manual smoke attested (Task 5), including the DebugPanel's new ZoA tuning position.
-- [ ] Landing-diff breakdown reported: src code / src comment / test code / test comment / docs.
+- [x] `src/layers/zoneOfAvoidance/` holds the renderer, both pass factories, the liveness gate and opacity, the lettering producer, the selection row, the fade row, the source entry + rows, the settings tuple, the Labels & guides row and the Debug tuning section + container. `layer.ts` declares the `zoa` target inline.
+- [x] `EngineGpuHandles` has no `zoneOfAvoidanceRenderer` / `zoneOfAvoidanceUpsample` field, and `grep -rn "zoneOfAvoidanceRenderer\|zoneOfAvoidanceUpsample" src/services` returns only prose.
+- [x] `src/services/engine/presentation/label3DProducers.ts` is deleted. `state.label3DProducers` is composed from Layers alone.
+- [x] `renderTargetRows` has no `zoa` row, and the target is allocated from `zoneOfAvoidanceLayer.targets` (`frameOrderBoot.test.ts` green).
+- [x] `LabelsAndGuidesSectionContainer` no longer names ZoA, and the row reaches it only through `ui`. `DebugPanel.tsx` no longer imports a ZoA section.
+- [x] `ZONE_OF_AVOIDANCE_SHELL` lives in `src/data/zoneOfAvoidance/` and reaches the renderer as one `ZoneOfAvoidanceShell` object (no positional shell args remain). The `frameFilePurity` ZoA row is gone and no row was added. `layerImportBoundary` is unchanged or smaller.
+- [x] `INITIAL_SETTINGS` is deep-equal to `main`'s (dump both trees and compare). Key order may move.
+- [x] Manual smoke attested (Task 5), including the DebugPanel's new ZoA tuning position.
+- [x] Landing-diff breakdown reported: src code / src comment / test code / test comment / docs.
