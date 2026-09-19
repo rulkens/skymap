@@ -23,12 +23,12 @@ import { sunDirLocal } from '../../../../utils/camera/sunDirLocal';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packMeshBodyUniforms } from '../../../../utils/gpu/packMeshBodyUniforms';
 import { bodyStateInHostFrame } from '../../../../utils/scene/bodyStateInHostFrame';
-import { hostBodyFrame } from '../../../../utils/scene/hostBodyFrame';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';
 import { sinSunAngularRadius } from '../../../../utils/occlusion/sinSunAngularRadius';
 import { sunVisibleFraction } from '../../../../utils/occlusion/sunVisibleFraction';
 import { bodySlabFlooredPick } from '../../helpers/bodySlabFlooredPick';
 import { drawableMeshBodies } from '../drawableMeshBodies';
+import { sceneBodyStates } from '../sceneBodyStates';
 import { seedIndexOfBody } from '../../../../utils/picking/seedIndexOfBody';
 
 export const meshBodiesPass: ContentPass = {
@@ -45,12 +45,16 @@ export const meshBodiesPass: ContentPass = {
     const hostId = view.slab.frame.bodyId;
     const bodies = drawableMeshBodies(state, ctx, hostId);
     if (bodies.length === 0) return;
-    const hostFrame = hostBodyFrame(state, ctx, hostId);
-    if (hostFrame === null) return;
-    const { bodyStates, hostState, hostPose } = hostFrame;
+    const bodyStates = sceneBodyStates(state, ctx);
+    const hostState = bodyStates.get(hostId);
     // The umbra is ground geometry, so the host comes from the CELESTIAL roster;
     // a hostless body misses (see below).
     const host = SCENE_CELESTIAL_BODIES.find((body) => body.id === hostId);
+    if (hostState === undefined) return;
+    // The SAME pose-provider closure `deriveSlabs` built this row's
+    // `view.slab.vp` from — read, never re-derived.
+    const hostPose = ctx.bodyPose(hostId);
+    if (hostPose === null) return;
     const sunRadiusM = SOLAR_RADIUS_KM * SCALE_UNITS.KM_TO_M;
 
     for (const body of bodies) {
@@ -103,9 +107,11 @@ export const meshBodiesPass: ContentPass = {
     const hostId = view.slab.frame.bodyId;
     const bodies = drawableMeshBodies(state, ctx, hostId);
     if (bodies.length === 0) return;
-    const hostFrame = hostBodyFrame(state, ctx, hostId);
-    if (hostFrame === null) return;
-    const { bodyStates, hostState, hostPose } = hostFrame;
+    const bodyStates = sceneBodyStates(state, ctx);
+    const hostState = bodyStates.get(hostId);
+    if (hostState === undefined) return;
+    const hostPose = ctx.bodyPose(hostId);
+    if (hostPose === null) return;
 
     for (const body of bodies) {
       const { posM } = bodyStateInHostFrame(bodyStates.get(body.id)!, hostState);

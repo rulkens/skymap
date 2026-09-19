@@ -11,8 +11,8 @@ import { composeContactDecalMatrices } from '../../../../utils/camera/composeCon
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { packContactShadowUniforms } from '../../../../utils/gpu/packContactShadowUniforms';
 import { bodyStateInHostFrame } from '../../../../utils/scene/bodyStateInHostFrame';
-import { hostBodyFrame } from '../../../../utils/scene/hostBodyFrame';
 import { drawableMeshBodies } from '../drawableMeshBodies';
+import { sceneBodyStates } from '../sceneBodyStates';
 
 export const contactShadowsPass: ContentPass = {
   name: 'contact-shadows',
@@ -30,9 +30,11 @@ export const contactShadowsPass: ContentPass = {
     const renderer = state.gpu.meshBodyRenderer;
     if (renderer === null || view.slab.frame.kind !== 'body-m') return;
     const hostId = view.slab.frame.bodyId;
-    const hostFrame = hostBodyFrame(state, ctx, hostId);
-    if (hostFrame === null) return;
-    const { bodyStates, hostState, hostPose } = hostFrame;
+    const bodyStates = sceneBodyStates(state, ctx);
+    const hostState = bodyStates.get(hostId);
+    if (hostState === undefined) return;
+    const hostPose = ctx.bodyPose(hostId);
+    if (hostPose === null) return;
     const depthView = ctx.renderTargets.depthViewOf('foreground:0');
 
     for (const body of drawableMeshBodies(state, ctx, hostId)) {
