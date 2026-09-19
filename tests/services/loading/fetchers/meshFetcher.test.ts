@@ -8,10 +8,10 @@ vi.mock('../../../../src/data/mesh/meshBinaryFormat', () => ({
 
 const fetch = useFetchMock();
 
-/** `perseverance` ships a contact decal; its `_contact.png` answers `contact`. */
+/** `perseverance` ships a contact decal; its `_contact.webp` answers `contact`. */
 function serve(contact: () => Promise<Response>): void {
   fetch.mock.mockImplementation((url: RequestInfo | URL) =>
-    String(url).endsWith('_contact.png')
+    String(url).endsWith('_contact.webp')
       ? contact()
       : Promise.resolve(
           new Response(new Blob(['x']), { status: 200, headers: { 'content-type': 'image/png' } }),

@@ -55,14 +55,14 @@ describe('allowDataFile', () => {
 
   it('rejects a mesh file with the same basename outside meshes/', () => {
     expect(allowDataFile('whale.mesh')).toBe(false);
-    expect(allowDataFile('other/whale_albedo.png')).toBe(false);
+    expect(allowDataFile('other/whale_albedo.webp')).toBe(false);
   });
 
   it('accepts a seated mesh contact shadow under meshes/', () => {
-    expect(allowDataFile('meshes/mer_contact.png')).toBe(true);
+    expect(allowDataFile('meshes/mer_contact.webp')).toBe(true);
   });
 
-  it('rejects an unrelated png under meshes/', () => {
-    expect(allowDataFile('meshes/whale_thumbnail.png')).toBe(false);
+  it('rejects an unrelated webp under meshes/', () => {
+    expect(allowDataFile('meshes/whale_thumbnail.webp')).toBe(false);
   });
 });
