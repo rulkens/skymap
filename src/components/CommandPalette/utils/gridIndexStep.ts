@@ -11,7 +11,6 @@ export type GridKey = 'ArrowLeft' | 'ArrowRight' | 'ArrowUp' | 'ArrowDown';
  * that actually has the pressed column.
  */
 export function gridIndexStep(index: number, key: GridKey, columns: number, count: number): number {
-  if (count === 0) return -1;
   if (key === 'ArrowLeft') return wrapIndex(index, -1, count);
   if (key === 'ArrowRight') return wrapIndex(index, 1, count);
 

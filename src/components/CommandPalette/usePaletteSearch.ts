@@ -100,21 +100,12 @@ export function usePaletteSearch({
     }
   }, [open]);
 
-  /**
-   * Resolve the selected row to its `PaletteAction` and hand it to the
-   * parent, then close.  Centralised so the click and keyboard paths can't
-   * drift apart silently — `actionForRow` names every kind, and the parent
-   * dispatches on `action.kind` with the result.
-   */
-  const dispatchSelection = (m: ScoredRow): void => {
-    onSelect(actionForRow(m));
-    onClose();
-  };
-
   const dispatchAction = (action: PaletteAction): void => {
     onSelect(action);
     onClose();
   };
+
+  const dispatchSelection = (m: ScoredRow): void => dispatchAction(actionForRow(m));
 
   // ── Keyboard handling ──────────────────────────────────────────────────────
   //

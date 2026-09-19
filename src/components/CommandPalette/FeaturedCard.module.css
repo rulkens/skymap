@@ -29,8 +29,7 @@
   color: inherit;
   transition:
     transform 140ms ease,
-    border-color 140ms ease,
-    box-shadow 140ms ease;
+    border-color 140ms ease;
   /*
    * Stack context so the hovered card's scale-up sits above
    * neighbours instead of being clipped by their borders.
@@ -46,13 +45,7 @@
 .card:focus-visible,
 .card.active {
   transform: scale(1.04);
-  /*
-   * Muted hover affordance — the previous accent-blue ring competed
-   * with the cards' own colour palette (which already has bright
-   * nuclei and saturated dust lanes in many thumbnails).  Lifted
-   * rim from `--border-hover` is enough cue without painting blue
-   * on top of the picture.
-   */
+  /* Lifted rim, no ring — doesn't compete with the thumbnail's own colours. */
   border-color: var(--border-hover);
   outline: none;
   z-index: 1;
@@ -68,12 +61,8 @@
 }
 
 /*
- * Name strip floats over the bottom of the thumbnail with a soft
- * dark-to-transparent gradient for legibility against bright
- * thumbnails (M82's blowout core, Centaurus A's nucleus).  Single
- * line, ellipsised — names like "Centaurus A" fit; rare longer
- * names get clipped, which the user resolves by hovering for the
- * full name in the tooltip.
+ * Dark-to-transparent gradient for legibility against bright thumbnails
+ * (M82's blowout core, Centaurus A's nucleus).
  */
 .name {
   position: absolute;

@@ -23,8 +23,4 @@ describe('gridIndexStep', () => {
     expect(gridIndexStep(1, 'ArrowUp', COLUMNS, COUNT)).toBe(11);
     expect(gridIndexStep(3, 'ArrowUp', COLUMNS, COUNT)).toBe(8);
   });
-
-  it('an empty grid has no active card', () => {
-    expect(gridIndexStep(0, 'ArrowRight', COLUMNS, 0)).toBe(-1);
-  });
 });

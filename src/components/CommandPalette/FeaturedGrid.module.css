@@ -4,10 +4,6 @@
  * active) lives in `FeaturedCard.module.css`; this file owns only the grid
  * layout. No scroll box: a tab holds at most 15 cards (three rows), and a
  * scroll box would clip the card tooltips.
- *
- * The grid is hidden the moment the user starts typing (the shell drops it on
- * a non-empty query) so search-driven workflows get the full results list at
- * full height. All atoms reference tokens from `src/styles/global.css`.
  */
 
 .root {

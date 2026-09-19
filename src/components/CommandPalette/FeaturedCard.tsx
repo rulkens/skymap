@@ -1,8 +1,7 @@
 /**
  * FeaturedCard — one card in the palette's browse grid: an InfoTip-wrapped
  * button showing the card's image (or, once it 404s, a dashed text tile) plus
- * its name. Owns its own image-failed state so a missing thumbnail is a local
- * concern, not something the grid or its parent needs to track per card.
+ * its name.
  */
 import { useState } from 'react';
 import type { ReactNode } from 'react';

@@ -2,8 +2,7 @@
  * FeaturedGrid — the card grid the palette shows for the active browse tab
  * when it opens with no query, replacing the results list. Purely
  * presentational: it renders whatever `PaletteCard[]` it's handed and knows
- * nothing about galaxies, tabs, or the ranking pipeline. Returns null when
- * the tab has no cards.
+ * nothing about galaxies, tabs, or the ranking pipeline.
  */
 import type { ReactNode, RefObject } from 'react';
 import FeaturedCard from './FeaturedCard';
@@ -15,7 +14,7 @@ export type FeaturedGridProps = {
   readonly cards: readonly PaletteCard[];
   /** Resolves a card's tooltip aliases — the grid itself never reads a galaxy's fields. */
   readonly aliasesFor: (card: PaletteCard) => readonly string[];
-  /** Keyboard highlight; -1 = none. */
+  /** Keyboard highlight. */
   readonly activeIdx: number;
   readonly gridRef: RefObject<HTMLUListElement | null>;
   readonly label: string;
@@ -30,7 +29,6 @@ function FeaturedGrid({
   label,
   onSelect,
 }: FeaturedGridProps): ReactNode {
-  if (cards.length === 0) return null;
   return (
     <ul ref={gridRef} className={styles.root} role="tabpanel" aria-label={label}>
       {cards.map((card, i) => (
