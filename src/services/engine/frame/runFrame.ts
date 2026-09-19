@@ -195,11 +195,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
-  // The frame's views, once — mono is `[ctx]` itself. Computed ahead of the
-  // view-independent planners below (surface cut, star cut) so they can walk
-  // every view's frustum without re-deriving this per planner.
-  const views = VIEW_RIGS[state.viewRig].views(ctx, state);
-
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
   // render settings); all of them read the captured value, never a fresh call.
@@ -225,6 +220,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     if (vote.settling) layersSettling = true;
   }
   ctx.layersSettling = layersSettling;
+
+  // The frame's views, once — mono is `[ctx]` itself. AFTER the focusBlend /
+  // focus / layersSettling stamps above: `deriveViewContext` copies those
+  // from `main` onto every view, so computing views any earlier would hand
+  // them last frame's values. Ahead of the view-independent planners below
+  // (surface cut, star cut) so they can walk every view's frustum without
+  // re-deriving this per planner.
+  const views = VIEW_RIGS[state.viewRig].views(ctx, state);
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this

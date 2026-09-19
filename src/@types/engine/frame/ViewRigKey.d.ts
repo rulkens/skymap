@@ -1,2 +1,2 @@
-/** Which `ViewRig` the frame renders through — `state.viewRig`. `'dome'` arrives in PR 2. */
+/** Which `ViewRig` the frame renders through — `state.viewRig`. */
 export type ViewRigKey = 'mono';

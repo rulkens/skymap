@@ -1,13 +1,9 @@
 /**
- * renderFrame — the per-frame WebGPU command-encoder lifecycle: focus-uniform
- * write, encoder create + submit, the timing window, and the one call into
- * `scheduleCubemapCaptures`. Order of operations is DATA (the rig's
- * `program`), so this module knows no individual pass.
- *
- * Each capture face and each `perView` section run submits its OWN command
- * buffer ahead of the rest: a body renderer rewrites its per-body uniform
- * buffer per draw, so two draws sharing a destination buffer cannot share a
- * submission (`docs/RENDERER.md`'s `queue.writeBuffer` race).
+ * renderFrame — the per-frame command-encoder lifecycle: steps accumulate into
+ * one pending program per view, flushed (executed, then submitted) only when
+ * the next batch's view differs — the only place the `queue.writeBuffer` race
+ * (`docs/RENDERER.md`) applies. Mono's one view never differs, so the whole
+ * frame lands in a single submit, as today.
  */
 
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
@@ -35,10 +31,10 @@ export function renderFrame(input: RenderFrameInput): void {
 
   const swapView = context.getCurrentTexture().createView();
 
-  // One timing window spans every submit below (faces, and every `once`/
-  // `perView` batch): the query set is shared and `endFrame` resolves the
-  // whole of it, so a face pass's or a view's timestamps land in the same
-  // readback as the frame's.
+  // One timing window spans every submit below (faces, and every flushed
+  // batch): the query set is shared and `endFrame` resolves the whole of it,
+  // so a face pass's or a view's timestamps land in the same readback as the
+  // frame's.
   const timingCtx = timingService.beginFrame();
   // 'auto' = per-layer timed passes when timing is on, else the merged
   // tile-local passes OVER blends need on Apple Silicon.
@@ -85,57 +81,76 @@ export function renderFrame(input: RenderFrameInput): void {
       bodyRowSlabs: bodyRowSlabs(state, viewCtx),
     });
 
-  const rig = VIEW_RIGS[state.viewRig];
+  // The batch building up for `currentView` — several sections' steps land in
+  // ONE encoder as long as the view encoding into it doesn't change (`===`;
+  // mono's rig hands back `ctx` itself for every section, so this never
+  // changes and the whole frame lands in one submit, exactly as before the
+  // rig split).
+  let pending: FrameStep[] = [];
+  let currentView: ReadyFrameContext | null = null;
 
-  // Every batch this frame still has to submit, in program order — each gets
-  // its OWN encoder below: a `once` section's non-capture steps are one
-  // batch, and a `perView` section contributes one batch per view (the
-  // writeBuffer race this guards against — docs/RENDERER.md). Captures are
-  // the exception, submitted eagerly per face as the loop reaches them
-  // (unaffected by which section-batch follows).
-  const mainBatches: {
-    readonly viewCtx: ReadyFrameContext;
-    readonly steps: readonly FrameStep[];
-  }[] = [];
+  /** Execute + submit whatever's pending, folding a non-main view's first-touch set into `ctx`'s. */
+  const flush = (isFinal: boolean): void => {
+    if (currentView === null) {
+      if (!isFinal) return;
+      // Guaranteed once per `beginFrame`, even on an otherwise-empty frame.
+      const encoder = device.createCommandEncoder();
+      timingService.endFrame(timingCtx, encoder);
+      device.queue.submit([encoder.finish()]);
+      return;
+    }
+    const view = currentView;
+    const encoder = device.createCommandEncoder();
+    executeFrame({ ...shared, ctx: view, encoder, program: pending });
+    // First-touch across views: fold a rig view's OWN renderedTargets (a
+    // second view clears `hdr` rather than loading the first view's pixels —
+    // `deriveViewContext` mints one per view) into the main ctx's, now that
+    // `executeFrame` just populated it — so a later batch against `ctx` sees
+    // these targets as already rendered. Mono's one view IS `ctx`, so this
+    // never runs there.
+    if (view !== ctx) {
+      const mainTouched = ctx.renderedTargets as Set<string>;
+      for (const target of view.renderedTargets) mainTouched.add(target);
+    }
+    if (isFinal) timingService.endFrame(timingCtx, encoder);
+    device.queue.submit([encoder.finish()]);
+    pending = [];
+    currentView = null;
+  };
 
-  for (const section of rig.program) {
+  /** Queue `steps` against `view`, flushing first if the running batch belongs to a different one. */
+  const accumulate = (view: ReadyFrameContext, steps: readonly FrameStep[]): void => {
+    if (steps.length === 0) return;
+    if (view !== currentView) {
+      flush(false);
+      currentView = view;
+    }
+    pending.push(...steps);
+  };
+
+  for (const section of VIEW_RIGS[state.viewRig].program) {
     if (section.scope === 'once') {
       const program = expand(section.steps, ctx);
       const { faces, frame } = partitionCaptureSteps(program);
-      for (const face of faces) {
-        const faceEncoder = device.createCommandEncoder();
-        executeFrame({ ...shared, ctx, encoder: faceEncoder, program: face.steps });
-        device.queue.submit([faceEncoder.finish()]);
+      if (faces.length > 0) {
+        // A capture face always gets its own encoder and submit, ahead of
+        // the running batch — flush that out of the way first so a body
+        // drawn for both never shares a submission (docs/RENDERER.md).
+        flush(false);
+        for (const face of faces) {
+          const faceEncoder = device.createCommandEncoder();
+          executeFrame({ ...shared, ctx, encoder: faceEncoder, program: face.steps });
+          device.queue.submit([faceEncoder.finish()]);
+        }
+        for (const key of new Set(faces.map((face) => face.key))) {
+          finishCubemapCapture(key, state, device);
+        }
       }
-      for (const key of new Set(faces.map((face) => face.key))) {
-        finishCubemapCapture(key, state, device);
-      }
-      if (frame.length > 0) mainBatches.push({ viewCtx: ctx, steps: frame });
+      accumulate(ctx, frame);
     } else {
-      for (const view of views) {
-        const program = expand(section.steps, view);
-        if (program.length > 0) mainBatches.push({ viewCtx: view, steps: program });
-      }
-      // First-touch across views: each view keeps its OWN renderedTargets
-      // (a second view clears `hdr` rather than loading the first view's
-      // pixels — `deriveViewContext`, a later task, is what mints one per
-      // view). Folding the union into the main ctx's set here is what lets a
-      // following `once` section see those targets as already rendered.
-      // Mono's views are `[ctx]` itself, so this is a no-op there.
-      const mainTouched = ctx.renderedTargets as Set<string>;
-      for (const view of views) {
-        for (const target of view.renderedTargets) mainTouched.add(target);
-      }
+      for (const view of views) accumulate(view, expand(section.steps, view));
     }
   }
 
-  mainBatches.forEach(({ viewCtx, steps }, i) => {
-    const encoder = device.createCommandEncoder();
-    executeFrame({ ...shared, ctx: viewCtx, encoder, program: steps });
-    // The resolve + copy commands ride the FRAME's last submit, whichever
-    // batch that turns out to be — attached before `finish()` so they land in
-    // the same command buffer as that batch's draws.
-    if (i === mainBatches.length - 1) timingService.endFrame(timingCtx, encoder);
-    device.queue.submit([encoder.finish()]);
-  });
+  flush(true);
 }

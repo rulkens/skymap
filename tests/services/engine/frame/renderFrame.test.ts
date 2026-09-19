@@ -11,6 +11,11 @@ import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
+import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
+import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
+import { foregroundChainOrder } from '../../../../src/services/engine/frame/slabs';
+import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
@@ -19,6 +24,7 @@ import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/t
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
@@ -627,26 +633,23 @@ describe('renderFrame', () => {
     fx = makeInput();
   });
 
-  it('creates one command encoder per non-empty section batch on a frame with no capture faces', () => {
-    // Mono walks PRELUDE (computes only, no capture faces) → SCENE (the
-    // frame's one view) → POST → OVERLAYS, each its own batch/encoder —
-    // four, none of them empty in this fixture (OVERLAYS' render steps still
-    // resolve passes even though every renderer they'd draw with is null).
+  it('creates exactly one command encoder on a frame with no capture faces', () => {
+    // Mono's rig hands every section the same view (`ctx` itself), so
+    // PRELUDE/SCENE/POST/OVERLAYS all accumulate into the one running batch —
+    // one encoder for the whole frame, same as before the rig split.
     renderFrame(fx.input);
-    expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(4);
+    expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
   });
 
-  it('submits once per batch, each with its own encoder.finish() output, on a frame with no capture faces', () => {
+  it('submits exactly once, with the encoder.finish() output, on a frame with no capture faces', () => {
     renderFrame(fx.input);
     const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
-    expect(submit).toHaveBeenCalledTimes(4);
-    expect(fx.env.finish).toHaveBeenCalledTimes(4);
-    // Every submit carries the single buffer that call's own finish() returned.
-    for (let i = 0; i < 4; i++) {
-      const submitted = submit.mock.calls[i]![0] as ReadonlyArray<GPUCommandBuffer>;
-      expect(submitted).toHaveLength(1);
-      expect(submitted[0]).toBe((fx.env.finish.mock.results[i] as any).value);
-    }
+    expect(submit).toHaveBeenCalledTimes(1);
+    expect(fx.env.finish).toHaveBeenCalledTimes(1);
+    // The submitted buffer is the one finish() returned.
+    const submitted = (submit as any).lastBuffers as ReadonlyArray<GPUCommandBuffer>;
+    expect(submitted).toHaveLength(1);
+    expect(submitted[0]).toBe((fx.env.finish.mock.results[0] as any).value);
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
@@ -797,23 +800,18 @@ describe('renderFrame', () => {
     expect(tone.hdrHeadroom).toBe(0);
   });
 
-  it('records the full frame in canonical order: PRELUDE batch → SCENE batch (points → cloud stars → cloud dust) → POST batch (compositor.draw) → OVERLAYS batch', () => {
+  it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
     // No-timing 'merged' path: zoneOfAvoidanceRenderer is null in this
     // fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO) step
-    // off entirely — no pass opens for it. PRELUDE's two computes are either
-    // unregistered ('flow') or gated off by a null renderer ('sky-view'), so
-    // its batch opens no pass at all — createEncoder/finish/submit with
-    // nothing between. SCENE's (hdr, COSMO) render step opens a pass holding
-    // the enabled COSMO hdr draws (here point-sprites; the impostor
-    // subsystems are nulled out), closes it; the (mw-aggregate, NEAR0) step
-    // opens a pass against the cloud's own offscreen for its additive star
-    // billboards, closes it; the (hdr, NEAR0) step opens an hdr pass for the
-    // cloud's multiplicative dust draw (the cloud's slab, since the fixed
-    // COSMO near plane clipped its disc mid-descent), closes it — its own
-    // finish + submit. POST's hdr→swap composite opens its own batch, draws
-    // the tone-map, closes — its own finish + submit. OVERLAYS' two render
-    // steps resolve passes but every renderer they'd draw with is null, so
-    // its batch also opens no pass.
+    // off entirely — no pass opens for it. The (hdr, COSMO) render step
+    // opens a pass holding the enabled COSMO hdr draws (here point-sprites;
+    // the impostor subsystems are nulled out), closes it; the
+    // (mw-aggregate, NEAR0) step opens a pass against the cloud's own
+    // offscreen for its additive star billboards, closes it; the (hdr,
+    // NEAR0) step opens an hdr pass for the cloud's multiplicative dust draw
+    // (the cloud's slab, since the fixed COSMO near plane clipped its disc
+    // mid-descent), closes it; then the hdr→swap composite opens a final
+    // pass, draws the tone-map, and closes it — then finish + submit.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
@@ -828,11 +826,6 @@ describe('renderFrame', () => {
     ];
     const filtered = fx.callLog.filter((e) => interesting.includes(e));
     expect(filtered).toEqual([
-      // PRELUDE
-      'device.createCommandEncoder',
-      'encoder.finish',
-      'device.queue.submit',
-      // SCENE
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'galaxyPointRenderer.draw',
@@ -843,17 +836,9 @@ describe('renderFrame', () => {
       'encoder.beginRenderPass',
       'milkyWayCloudRenderer.drawDust',
       'pass.end',
-      'encoder.finish',
-      'device.queue.submit',
-      // POST
-      'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'compositor.draw',
       'pass.end',
-      'encoder.finish',
-      'device.queue.submit',
-      // OVERLAYS
-      'device.createCommandEncoder',
       'encoder.finish',
       'device.queue.submit',
     ]);
@@ -956,5 +941,110 @@ describe('renderFrame', () => {
     const fx2 = makeInput({ disabledPasses: { 'point-sprites': false } });
     renderFrame(fx2.input);
     expect(fx2.galaxyPointRenderer.draw).toHaveBeenCalledTimes(1);
+  });
+
+  // ── View rig walking ───────────────────────────────────────────────────
+
+  it('mono rig submits the same step list as FRAME_ORDER', () => {
+    // The rig split (Task 1) must expand to exactly the same steps whether
+    // walked as one flat list or as four sections concatenated — and
+    // VIEW_RIGS.mono IS those four sections, against the main ctx alone.
+    const options = {
+      tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
+      bloomEnabled: false,
+      foregroundChain: foregroundChainOrder(fx.input.ctx.slabs),
+      captureFaces: new Map(),
+      bodyRowSlabs: bodyRowSlabs(fx.input.state as any, fx.input.ctx),
+    };
+    const passes = (fx.input.state as any).passes;
+    const whole = expandFrameOrder(FRAME_ORDER, passes, options);
+    const bySections = VIEW_RIGS.mono.program.flatMap((section) =>
+      expandFrameOrder(section.steps, passes, options),
+    );
+    expect(bySections).toEqual(whole);
+    expect(VIEW_RIGS.mono.views(fx.input.ctx, fx.input.state as any)).toEqual([fx.input.ctx]);
+  });
+
+  it('a perView section with two views submits twice, each expanded from its own view', () => {
+    const stubPass = { name: 'stub-foreground', enabled: () => true, draw: vi.fn() };
+    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubPass];
+
+    // view1's chain is NEAR0 alone (one foreground step); view2 adds a
+    // body-m row (a second, distinct-slab step) — the counts must track
+    // each view's OWN slabs, not the main ctx's.
+    const near0Slab = makeSlab();
+    const bodySlab = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'earth' as any } });
+    const view1 = { ...fx.input.ctx, slabs: [near0Slab], renderedTargets: new Set<string>() };
+    const view2 = {
+      ...fx.input.ctx,
+      slabs: [near0Slab, makeCosmoSlab(), bodySlab],
+      renderedTargets: new Set<string>(),
+    };
+
+    (VIEW_RIGS as any).__twoViewsTest = {
+      views: () => [],
+      program: [
+        {
+          scope: 'perView',
+          steps: [
+            {
+              kind: 'foreground',
+              target: 'hdr',
+              near0Passes: ['stub-foreground'],
+              bodyPasses: ['stub-foreground'],
+            },
+          ],
+        },
+      ],
+    };
+    (fx.input.state as any).viewRig = '__twoViewsTest';
+
+    try {
+      renderFrame({ ...fx.input, views: [view1, view2] } as any);
+    } finally {
+      delete (VIEW_RIGS as any).__twoViewsTest;
+    }
+
+    const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
+    expect(submit).toHaveBeenCalledTimes(2);
+    const beginCalls = (fx.env.beginRenderPass as any).mock.calls as Array<
+      [GPURenderPassDescriptor]
+    >;
+    // view1's one-entry chain opens one pass, view2's two-entry chain two —
+    // 3 total, each view's own submit carrying only its own passes.
+    expect(beginCalls.length).toBe(3);
+  });
+
+  it('a once section after a perView section sees targets the views rendered', () => {
+    // The regression this pins: the union fold used to run at EXPAND time,
+    // before the perView batch had actually executed, so the following
+    // `once` section always found an empty `renderedTargets` — here, the
+    // hdr→swap composite would have skipped its draw (`touched.has('hdr')`
+    // false) exactly as POST/OVERLAYS would in a real frame.
+    const stubPass = { name: 'stub-hdr', enabled: () => true, draw: vi.fn() };
+    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubPass];
+
+    const view = { ...fx.input.ctx, slabs: [makeSlab()], renderedTargets: new Set<string>() };
+
+    (VIEW_RIGS as any).__foldTest = {
+      views: () => [],
+      program: [
+        {
+          scope: 'perView',
+          steps: [{ kind: 'render', target: 'hdr', slab: 0, passes: ['stub-hdr'] }],
+        },
+        { scope: 'once', steps: [{ kind: 'composite', source: 'hdr', dest: 'swap' }] },
+      ],
+    };
+    (fx.input.state as any).viewRig = '__foldTest';
+
+    try {
+      renderFrame({ ...fx.input, views: [view] } as any);
+    } finally {
+      delete (VIEW_RIGS as any).__foldTest;
+    }
+
+    expect(fx.input.ctx.renderedTargets.has('hdr')).toBe(true);
+    expect(fx.compositor.draw).toHaveBeenCalledTimes(1);
   });
 });
