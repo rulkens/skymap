@@ -58,6 +58,10 @@ describe('allowDataFile', () => {
     expect(allowDataFile('other/whale_albedo.png')).toBe(false);
   });
 
+  it('accepts a seated mesh contact shadow under meshes/', () => {
+    expect(allowDataFile('meshes/mer_contact.png')).toBe(true);
+  });
+
   it('rejects an unrelated png under meshes/', () => {
     expect(allowDataFile('meshes/whale_thumbnail.png')).toBe(false);
   });
