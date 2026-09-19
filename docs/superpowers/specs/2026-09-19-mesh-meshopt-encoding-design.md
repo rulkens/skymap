@@ -117,7 +117,8 @@ steps run back to back from the main checkout: `npm run import-mesh -- petunias`
   sign exact; UV error ≤ 0.5 / 65535.
 - The writer throws on a UV outside [0, 1].
 - `decodeMesh` rejects bad magic and a v2 header (existing tests, re-pointed).
-- `buildMeshes` throws on a GLB over the budget (replaces any decimation test).
+- No test for the budget guard: it is a single comparison against the constant, and
+  a fixture over 600k triangles would cost more than the bug it could catch.
 
 ## Ground preparation
 
