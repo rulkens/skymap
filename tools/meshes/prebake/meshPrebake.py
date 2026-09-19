@@ -10,6 +10,7 @@ import sys
 import time
 
 import bpy
+import mathutils
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
@@ -17,6 +18,17 @@ ATLAS_PX = 2048
 
 EMISSION_COLOUR = "Emission Color"
 EMISSION_STRENGTH = "Emission Strength"
+
+AO_SAMPLES = 128
+# Fraction of the mesh's largest extent Cycles' AO bake treats as "far enough
+# to stop counting as occluded" — `scene.world.light_settings.distance`, the
+# one world-level knob that pass reads regardless of the World AO toggle.
+AO_DISTANCE_FRACTION = 0.25
+# Multiple of the largest extent so the ground occluder reaches well past the
+# hull's silhouette in every direction — short of that, AO rays that skim the
+# plane's edge see open sky and under-occlude the rim.
+GROUND_PLANE_SPAN = 4
+GLTF_MATERIAL_OUTPUT = "glTF Material Output"
 
 
 def socket_state(socket):
@@ -87,6 +99,7 @@ BAKE_PASSES = [
     ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None, 1),
     ("roughness", dict(type="ROUGHNESS"), "Non-Color", None, 1),
     ("metallic", dict(type="EMIT"), "Non-Color", swap_to_emission("Metallic"), 1),
+    ("occlusion", dict(type="AO"), "Non-Color", None, AO_SAMPLES),
 ]
 
 
@@ -271,11 +284,26 @@ def atlas_node(tree, image):
     return node
 
 
+def gltf_material_output_group():
+    """The Principled BSDF has no Occlusion socket, so the Blender glTF
+    exporter finds a packed occlusion image only through a node group of this
+    exact name with a float `Occlusion` input — never evaluated as a shader,
+    read by name. The exporter then packs it as R, roughness G, metallic B
+    into one `metallicRoughnessTexture`."""
+    group = bpy.data.node_groups.get(GLTF_MATERIAL_OUTPUT)
+    if group is not None:
+        return group
+    group = bpy.data.node_groups.new(GLTF_MATERIAL_OUTPUT, "ShaderNodeTree")
+    group.interface.new_socket("Occlusion", in_out="INPUT", socket_type="NodeSocketFloat")
+    return group
+
+
 def flatten_materials(obj, key, images):
     """One material sampling the baked atlases, replacing the whole stack.
-    Roughness and Metallic are linked as separate images on purpose: the glTF
-    exporter is what packs them into the single `metallicRoughnessTexture`
-    (roughness G, metallic B) the runtime samples."""
+    Roughness, Metallic and Occlusion are linked as separate images on
+    purpose: the glTF exporter is what packs them into the single
+    `metallicRoughnessTexture` (occlusion R, roughness G, metallic B) the
+    runtime samples."""
     obj.data.materials.clear()
     mat = bpy.data.materials.new(key)
     mat.use_nodes = True
@@ -290,6 +318,11 @@ def flatten_materials(obj, key, images):
     normal_map.space = "TANGENT"
     tree.links.new(normal_map.inputs["Color"], atlas_node(tree, images["normal"]).outputs["Color"])
     tree.links.new(bsdf.inputs["Normal"], normal_map.outputs["Normal"])
+    if "occlusion" in images:
+        occlusion = tree.nodes.new("ShaderNodeGroup")
+        occlusion.node_tree = gltf_material_output_group()
+        tree.links.new(occlusion.inputs["Occlusion"],
+                       atlas_node(tree, images["occlusion"]).outputs["Color"])
     obj.data.materials.append(mat)
 
 
@@ -305,10 +338,16 @@ def keep_only_bake_uv(obj, uv_name):
     obj.data.uv_layers[0].active_render = True
 
 
-def export(obj, out):
+def export(obj, out, ground_up):
+    """`ground_up` stamps `extras.aoGroundUp` on the exported node — the only
+    way `buildMeshes` can tell which ground a GLB was baked against without
+    re-deriving it; `export_extras` stays off for a floating mesh so no other
+    custom property leaks into the glTF as a stray extra."""
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
+    if ground_up is not None:
+        obj["aoGroundUp"] = list(ground_up)
     bpy.ops.export_scene.gltf(
         filepath=out,
         export_format="GLB",
@@ -322,7 +361,7 @@ def export(obj, out):
         export_morph=False,
         export_cameras=False,
         export_lights=False,
-        export_extras=False,
+        export_extras=ground_up is not None,
         export_image_format="AUTO",
     )
 
@@ -336,6 +375,40 @@ def bounds(obj):
             lo[i] = min(lo[i], w[i])
             hi[i] = max(hi[i], w[i])
     return lo, hi
+
+
+def set_ao_distance(scene, lo, hi):
+    if scene.world is None:
+        scene.world = bpy.data.worlds.new("World")
+    extent = max(hi[i] - lo[i] for i in range(3))
+    scene.world.light_settings.distance = AO_DISTANCE_FRACTION * extent
+
+
+def ground_plane(obj, lo, hi, up):
+    """A large flat occluder resting under `obj`'s lowest point along `up`, so
+    the AO bake sees a floor: without one a rover's underside reads as open
+    sky, no darker than its sunlit hull. Deselected and inactive on return —
+    an occluder, not a bake target — and gone again before `flatten_materials`
+    swaps in the real material, or it would export as part of the mesh."""
+    extent = max(hi[i] - lo[i] for i in range(3))
+    up_v = mathutils.Vector(up).normalized()
+    centre = mathutils.Vector([(lo[i] + hi[i]) / 2 for i in range(3)])
+    lowest = min((obj.matrix_world @ v.co).dot(up_v) for v in obj.data.vertices)
+    location = centre + (lowest - centre.dot(up_v)) * up_v
+
+    bpy.ops.mesh.primitive_plane_add(size=GROUND_PLANE_SPAN * extent, location=location)
+    plane = bpy.context.view_layer.objects.active
+    plane.rotation_mode = "QUATERNION"
+    plane.rotation_quaternion = mathutils.Vector((0, 0, 1)).rotation_difference(up_v)
+    plane.select_set(False)
+    bpy.context.view_layer.objects.active = obj
+    return plane
+
+
+def remove_ground_plane(plane):
+    mesh = plane.data
+    bpy.data.objects.remove(plane, do_unlink=True)
+    bpy.data.meshes.remove(mesh)
 
 
 def ground_up_arg(value):
@@ -357,7 +430,7 @@ def parse_args(argv):
 def main():
     args = parse_args(sys.argv[sys.argv.index("--") + 1:])
     key = args.key
-    ground_up = args.ground_up  # tuple or None; Task 4 bakes the ground plane from it.
+    ground_up = args.ground_up  # tuple or None: seated meshes bake against a ground plane.
     cfg = SOURCES[key]
     started = time.time()
 
@@ -371,6 +444,8 @@ def main():
         % (triangles(obj), len(obj.material_slots), [l.name for l in obj.data.uv_layers]))
     lo, hi = bounds(obj)
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
+    set_ao_distance(scene, lo, hi)
+    plane = ground_plane(obj, lo, hi, ground_up) if ground_up is not None else None
     log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
 
     uv_name = unwrap(obj, source_name)
@@ -382,9 +457,11 @@ def main():
         log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
             % (ATLAS_PX, name, images[name].filepath_raw, time.time() - started))
 
+    if plane is not None:
+        remove_ground_plane(plane)
     flatten_materials(obj, key, images)
     keep_only_bake_uv(obj, uv_name)
-    export(obj, cfg["out"])
+    export(obj, cfg["out"], ground_up)
     log("wrote %s (%d tris, %d verts, %.0fs total)"
         % (cfg["out"], triangles(obj), len(obj.data.vertices), time.time() - started))
 
