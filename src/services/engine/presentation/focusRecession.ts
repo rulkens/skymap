@@ -50,8 +50,7 @@ const RECESSION_BY_LABEL_LAYER = {
 
 const RECESSION_BY_KIND = {
   filament: FILAMENT_RECESSION,
-  localBubble: undefined, // a distance-windowed backdrop, not scenery a focus should dim further
-
+  localBubble: FILAMENT_RECESSION,
   volumesMaster: VOLUME_RECESSION,
   structure: MARKER_RECESSION, // all structure sources recede
   galaxyCatalog: undefined,
