@@ -22,6 +22,11 @@
 /images/famous/*.webp
   Cache-Control: public, max-age=86400
 
+# Self-hosted webfont — stable filename, not content-hashed, but the
+# subset only changes when someone re-runs pyftsubset by hand.
+/fonts/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # Belt-and-braces only: `npm run build` ends in `rm -rf dist/data`, so in
 # production every data byte is served from R2 under the buildGroups()
 # policy in tools/deploy/syncR2.ts — that group cacheControl is the
