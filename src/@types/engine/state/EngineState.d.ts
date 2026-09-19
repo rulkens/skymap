@@ -28,6 +28,7 @@ import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
+import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
 
 export type EngineState = {
@@ -111,4 +112,7 @@ export type EngineState = {
    * resolver's dispatch table.
    */
   selectionKindRows: readonly SelectionKindRow[];
+  /** Every Layer's static `targets`, in tuple order — seeded by `createEngine`, read by the
+   * `renderTargets` GPU-handle row, which runs before `createLayers`. */
+  layerTargets: readonly (readonly RenderTargetSpec[])[];
 };

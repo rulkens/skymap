@@ -314,13 +314,13 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
 
 export function createRenderTargets(
   device: GPUDevice,
-  swapFormat: GPUTextureFormat,
+  rows: readonly RenderTargetSpec[],
   size: Size,
   state: EngineState,
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = [...renderTargetRows(swapFormat)];
+  let specs = [...rows];
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.
