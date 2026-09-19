@@ -14,7 +14,7 @@ REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..")
 SOURCE_UV = "source"
 
 
-def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None):
+def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None, weld=None):
     return {
         "filename": filename,
         # Modellers author in whatever unit suits them — Hubble in inches — and
@@ -33,6 +33,11 @@ def source(filename, frame=None, drop_materials=(), scale=1.0, materials=None):
         # An object whose materials are ALL in this set goes; the raise guards
         # against the name drifting upstream and the marker silently shipping.
         "drop_materials": set(drop_materials),
+        # Merge-by-distance threshold in metres, or None to skip. SketchUp
+        # exports every face as its own island of loose vertices; unwelded,
+        # smart_project yields ~150k one-triangle islands and COLLAPSE
+        # decimation has no edges to collapse along.
+        "weld": weld,
     }
 
 
@@ -54,6 +59,7 @@ SOURCES = {
         "hbltel_4": dict(metallic=1.0, roughness=0.2, bump=0.08),
         "hbltel_3": dict(metallic=0.8, roughness=0.35, bump=0.04),
     }),
+    "petunias": source("petunias.glb", weld=0.0002, drop_materials=("material",)),
 }
 
 
@@ -270,6 +276,21 @@ def unify_source_uvs(meshes):
     log("re-pointed %d uv references at '%s'" % (repointed, SOURCE_UV))
 
 
+def weld(meshes, threshold):
+    """SketchUp exports every face as its own island of loose vertices.
+    Unwelded, smart_project yields ~150k one-triangle islands (an atlas of
+    unusable confetti) and COLLAPSE decimation has no edges to collapse along."""
+    welded = 0
+    for obj in meshes:
+        select([obj])
+        bpy.ops.object.mode_set(mode="EDIT")
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.mesh.remove_doubles(threshold=threshold)
+        bpy.ops.object.mode_set(mode="OBJECT")
+        welded += len(obj.data.vertices)
+    return welded
+
+
 def repoint_uv_references():
     """Shader nodes that name a UV map by STRING — every glTF-imported Normal
     Map node does — go dangling when the rename above lands, and a Normal Map
@@ -328,6 +349,8 @@ def main():
     if cfg["scale"] != 1.0:
         log("scaled %d root objects by %g -> metres" % (scale_roots(scene, cfg["scale"]), cfg["scale"]))
     unify_source_uvs(surfaces(scene))
+    if cfg["weld"] is not None:
+        log("welded %d meshes -> %d verts" % (len(surfaces(scene)), weld(surfaces(scene), cfg["weld"])))
 
     log("packed images (%d missing images removed)" % pack_images())
     bpy.ops.wm.save_as_mainfile(filepath=out)

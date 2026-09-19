@@ -115,7 +115,8 @@ def atlas_path(cfg, name):
 
 
 SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance", triangles=100_000),
-                                 source("curiosity"), source("mer"), source("hubble")]}
+                                 source("curiosity"), source("mer"), source("hubble"),
+                                 source("petunias", triangles=150_000)]}
 
 
 def log(msg):
