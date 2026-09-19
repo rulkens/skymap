@@ -6,19 +6,20 @@
  *
  * Pulled out of the `CommandPalette` shell so the component is reduced to
  * layout + subcomponent wiring; everything stateful lives here.  On select it
- * maps the chosen row to its durable focus id (`focusIdForRow`) and hands that
- * to the single `onSelect(focusId)` callback — the shell's parent fires
- * `requestFocus` with it.
+ * maps the chosen row to its `PaletteAction` (`actionForRow`) and hands that
+ * to the single `onSelect(action)` callback — the shell's parent dispatches
+ * on `action.kind`.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject, KeyboardEvent } from 'react';
 import { rankPaletteMatches } from './utils/rankPaletteMatches';
-import { focusIdForRow } from './utils/focusIdForRow';
+import { actionForRow } from './utils/actionForRow';
 import { wrapIndex } from './utils/wrapIndex';
 import type { ScoredRow } from './paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { PaletteAction } from '../../@types/palette/PaletteAction';
 
 export type UsePaletteSearchInput = {
   entries: readonly FamousGalaxyMetaEntry[];
@@ -26,8 +27,8 @@ export type UsePaletteSearchInput = {
   structures?: readonly StructureSearchEntry[];
   open: boolean;
   onClose: () => void;
-  /** Fired with the picked row's durable focus id; the parent runs `requestFocus`. */
-  onSelect: (focusId: string) => void;
+  /** Fired with the picked row's action; the parent dispatches on `action.kind`. */
+  onSelect: (action: PaletteAction) => void;
 };
 
 export type UsePaletteSearch = {
@@ -78,13 +79,13 @@ export function usePaletteSearch({
   }, [open]);
 
   /**
-   * Resolve the selected row to its durable focus id and hand it to the
+   * Resolve the selected row to its `PaletteAction` and hand it to the
    * parent, then close.  Centralised so the click and keyboard paths can't
-   * drift apart silently — `focusIdForRow` names every kind, and the parent
-   * fires the single `requestFocus` command with the result.
+   * drift apart silently — `actionForRow` names every kind, and the parent
+   * dispatches on `action.kind` with the result.
    */
   const dispatchSelection = (m: ScoredRow): void => {
-    onSelect(focusIdForRow(m));
+    onSelect(actionForRow(m));
     onClose();
   };
 

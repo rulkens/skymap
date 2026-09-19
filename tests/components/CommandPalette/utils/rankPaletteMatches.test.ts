@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { rankPaletteMatches } from '../../../../src/components/CommandPalette/utils/rankPaletteMatches';
-import { focusIdForRow } from '../../../../src/components/CommandPalette/utils/focusIdForRow';
+import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';

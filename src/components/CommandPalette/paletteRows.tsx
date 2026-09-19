@@ -7,8 +7,8 @@
  * Split from `paletteRowModel` (the non-JSX type/const seam) so the pure
  * ranking pipeline can import the row vocabulary without pulling in React +
  * the CSS module.  A new row kind is one entry here, not a new render branch.
- * Selection routing is NOT here — every row maps to a durable focus id via
- * `utils/focusIdForRow` and fires the single `requestFocus` command.
+ * Selection routing is NOT here — every row maps to a `PaletteAction` via
+ * `utils/actionForRow` and fires the single `requestFocus` command.
  *
  * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
  * composes ResultsList's module rather than carrying its own — the row styles

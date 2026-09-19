@@ -1,6 +1,7 @@
 /**
- * focusIdForRow — map a selected `ScoredRow` to its durable `#focus=<id>`
- * string, the same id scheme the URL deep-link layer uses.
+ * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the
+ * container dispatches on, today always `{ kind: 'focus', focusId }` using
+ * the same id scheme the URL deep-link layer uses.
  *
  * Every palette pick routes through the ONE selection command, `requestFocus`,
  * whose saga (`watchRequestFocusSaga`) resolves a durable id to a `SelectionRef`
@@ -31,6 +32,7 @@ import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import type { ScoredRow } from '../paletteRowModel';
+import type { PaletteAction } from '../../../@types/palette/PaletteAction';
 
 const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
   famous: (row) => (row.kind === 'famous' ? row.entry.id : ''),
@@ -54,6 +56,6 @@ const FOCUS_ID: Record<ScoredRow['kind'], (row: ScoredRow) => string> = {
   body: (row) => (row.kind === 'body' ? `${BODY_FOCUS_PREFIX}${row.body.id}` : ''),
 };
 
-export function focusIdForRow(row: ScoredRow): string {
-  return FOCUS_ID[row.kind](row);
+export function actionForRow(row: ScoredRow): PaletteAction {
+  return { kind: 'focus', focusId: FOCUS_ID[row.kind](row) };
 }

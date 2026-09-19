@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { focusIdForRow } from '../../../../src/components/CommandPalette/utils/focusIdForRow';
+import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
@@ -28,12 +28,18 @@ const COMA: StructureSearchEntry = {
   description: '',
 };
 
-describe('focusIdForRow', () => {
+describe('actionForRow', () => {
   it('an alias row → the shared galaxy-id ladder pgc- rung', () => {
-    expect(focusIdForRow({ kind: 'alias', entry: NGC4565, score: 0 })).toBe('pgc-42038');
+    expect(actionForRow({ kind: 'alias', entry: NGC4565, score: 0 })).toEqual({
+      kind: 'focus',
+      focusId: 'pgc-42038',
+    });
   });
 
   it('a structure row → its own durable category-prefixed id, verbatim', () => {
-    expect(focusIdForRow({ kind: 'structure', entry: COMA, score: 0 })).toBe('cluster-coma');
+    expect(actionForRow({ kind: 'structure', entry: COMA, score: 0 })).toEqual({
+      kind: 'focus',
+      focusId: 'cluster-coma',
+    });
   });
 });

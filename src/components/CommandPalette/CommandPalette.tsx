@@ -23,9 +23,9 @@
  * FocusableTarget rather than a catalog object, so it carries no id or
  * alias tuple and renders a glyph instead of an atlas thumbnail.
  *
- * Selection: every row maps to a durable `#focus=<id>` string via
- * `utils/focusIdForRow` and is handed to the single `onSelect(focusId)`
- * callback.  The container fires `requestFocus(focusId)` — the one
+ * Selection: every row maps to a `PaletteAction` via `utils/actionForRow` and
+ * is handed to the single `onSelect(action)` callback.  The container
+ * dispatches on `action.kind` — for `focus`, `requestFocus(focusId)`, the one
  * command→ref bridge — so the palette never resolves a ref itself; famous,
  * alias, and Milky-Way picks all flow through the same path a deep-link does.
  *
@@ -46,6 +46,7 @@ import ResultsList from './ResultsList';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import styles from './CommandPalette.module.css';
 
 export type CommandPaletteProps = {
@@ -71,11 +72,10 @@ export type CommandPaletteProps = {
   /** Close handler — called on Esc, click-outside, or after a successful selection. */
   readonly onClose: () => void;
   /**
-   * Selection handler — receives the picked row's durable `#focus=<id>` string
-   * (famous seed id, `pgc-<n>`, or the Milky-Way literal).  The container fires
-   * `requestFocus(focusId)`; the palette resolves nothing itself.
+   * Selection handler — receives the picked row's `PaletteAction`.  The
+   * container dispatches on `action.kind`; the palette resolves nothing itself.
    */
-  readonly onSelect: (focusId: string) => void;
+  readonly onSelect: (action: PaletteAction) => void;
 };
 
 function CommandPalette({

@@ -92,11 +92,11 @@ describe('CommandPalette', () => {
     // grid button and the results-list row).
     await user.click(screen.getByText('NGC 1300'));
     expect(onSelect).toHaveBeenCalledOnce();
-    expect(onSelect).toHaveBeenCalledWith('ngc1300');
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'focus', focusId: 'ngc1300' });
   });
 
   it('surfaces a structure when searched and routes it to onSelect by its durable id', async () => {
-    const onSelect = vi.fn<(focusId: string) => void>();
+    const onSelect = vi.fn<(action: { kind: 'focus'; focusId: string }) => void>();
     const user = userEvent.setup();
     render(
       createElement(CommandPalette, {
@@ -111,7 +111,7 @@ describe('CommandPalette', () => {
     // Search by the Abell number to also exercise the abell→names fold.
     await user.type(input, 'A1656');
     await user.click(await screen.findByText('Coma Cluster'));
-    expect(onSelect).toHaveBeenCalledWith('cluster-coma');
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'focus', focusId: 'cluster-coma' });
   });
 
   it('calls onClose when the user presses Escape', async () => {
