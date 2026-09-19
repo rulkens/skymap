@@ -95,7 +95,7 @@ Everything on PR #755, by the user's ruling: prep, feature and docs as separate 
 `npm run build-local-bubble` (then `build-data-manifest`):
 
 1. FITS → `l, b, d` → equirect 1024×512 → median-then-mean smoothing at 2.5° (unchanged; smoothing is load-bearing, raw displaced data renders as radial spikes).
-2. Icosphere displaced by the smoothed map, refined with `refineMeshByEdgeLength` to ≤4 pc displaced edges (~570k triangles, measured: a uniform sphere would need ~21M to match the tail).
+2. Icosphere displaced by the smoothed map, refined with `refineMeshByEdgeLength` toward a 4 pc displaced-edge target (8 passes: 569k triangles, longest edge 7.66 pc in the measured tail; a uniform sphere would need ~21M to match that tail). Whether the tail reads is an eye-check.
 3. Smooth vertex normals from the refined mesh. The table's own `nx, ny, nz` describe the unsmoothed surface and are not used.
 4. **Chimney assertion**: the mean direction of the outermost 5% of radii must lie within 30° of the north galactic pole, else the bake throws. The FITS header names no frame, so this pins the source's frame at its source.
 5. `encodeShellMesh` → `public/data/local-bubble/v1/local-bubble.shell`, f16 by default, `--dtype f32` to override.
