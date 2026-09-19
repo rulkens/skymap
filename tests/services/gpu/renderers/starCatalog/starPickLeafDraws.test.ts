@@ -66,6 +66,7 @@ describe('starPickLeafDraws', () => {
           aggregate: streamOf(aggregate, 0.9, 1),
         },
       ],
+      originMpc: [0, 0, 0],
       sizePx: 2,
       brightness: 1,
       glowOverlap: 1,

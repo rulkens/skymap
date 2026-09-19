@@ -61,9 +61,9 @@
  *
  * ── Optional frustum cull: prune off-screen subtrees during descent ────────
  *
- * Given a `StarCutFrustum` (six camera-relative parsec-space planes plus a
- * conservative slack model), the walk drops any node whose slack-grown bounding
- * sphere is fully outside the frustum — and because a parent box geometrically
+ * Given a `StarCutFrustum` (six camera-relative parsec-space planes per view
+ * plus a conservative slack model), the walk drops any node whose slack-grown
+ * bounding sphere is fully outside every view's frustum — and because a parent box geometrically
  * encloses every descendant box, dropping an interior node prunes its WHOLE
  * subtree unvisited. That is the win: at a star-field pose most of the cut's
  * nodes are off-screen, and pruning them at their common ancestor turns a ~44k
@@ -198,9 +198,10 @@ export type StarCutSnapshot = {
  */
 export type StarCutFrustum = {
   /**
-   * Six unit-normalized `(nx, ny, nz, d)` planes in the camera-relative parsec
-   * frame — 24 floats, inside is `n·p + d ≥ 0`. The layer derives these from the
-   * NEAR0 rebased vp and scales the distance term into parsecs.
+   * Six unit-normalized `(nx, ny, nz, d)` planes per view in the camera-relative
+   * parsec frame — 24 floats per view, inside is `n·p + d ≥ 0`, a node kept if
+   * any view keeps it. The layer derives these from each view's NEAR0 rebased vp
+   * and scales the distance term into parsecs.
    */
   readonly planesPc: Float64Array;
   /** Leaf angular slack, radians of on-screen spill per parsec of distance. */
@@ -312,11 +313,18 @@ export function walkStarOctreeCut(
     // subtree holds. Conservative: this only ever enlarges the sphere.
     const radius = edge * 0.8660254 * frustum!.worldSpread + dist * frustum!.angularMarginRad;
     const negR = -radius;
-    for (let b = 0; b < 24; b += 4) {
-      if (planes[b]! * cx + planes[b + 1]! * cy + planes[b + 2]! * cz + planes[b + 3]! < negR)
-        return true;
+    // Outside the union of the views' frusta: outside SOME plane of EVERY view.
+    for (let f = 0; f < planes.length; f += 24) {
+      let outsideView = false;
+      for (let b = f; b < f + 24; b += 4) {
+        if (planes[b]! * cx + planes[b + 1]! * cy + planes[b + 2]! * cz + planes[b + 3]! < negR) {
+          outsideView = true;
+          break;
+        }
+      }
+      if (!outsideView) return false;
     }
-    return false;
+    return true;
   };
 
   // Classify a node the walk has reached: an off-screen box is pruned outright

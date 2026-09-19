@@ -108,7 +108,7 @@ function nadirAt(altitudeKm: number, lonDeg = 20, latDeg = 15) {
   const viewProjLocal = new Float64Array(mat4.multiply(proj, view));
   return {
     camPosLocalM,
-    viewProjLocal,
+    viewProjsLocal: [viewProjLocal],
     radiusM: 1,
     reliefM: UNBOUNDED_RELIEF,
     viewportPx: VIEWPORT,
@@ -167,7 +167,7 @@ function tiltedAt(altitudeM: number, tiltDeg: number, lonDeg = 20, latDeg = 15) 
   ];
   return {
     camPosLocalM,
-    viewProjLocal,
+    viewProjsLocal: [viewProjLocal],
     radiusM: 1,
     reliefM: UNBOUNDED_RELIEF,
     viewportPx: VIEWPORT,
@@ -220,7 +220,7 @@ function aimedAt(camLatDeg: number, altitudeKm: number, target: Vec3, maxLevel: 
   ];
   return {
     camPosLocalM,
-    viewProjLocal,
+    viewProjsLocal: [viewProjLocal],
     radiusM: 1,
     reliefM: UNBOUNDED_RELIEF,
     viewportPx: VIEWPORT,
@@ -1259,7 +1259,7 @@ describe('cutSurfaceTiles', () => {
 
       const result = cutSurfaceTiles({
         camPosLocalM,
-        viewProjLocal,
+        viewProjsLocal: [viewProjLocal],
         radiusM: 1,
         reliefM: UNBOUNDED_RELIEF,
         viewportPx,
@@ -1395,7 +1395,7 @@ describe('cutSurfaceTiles', () => {
 
       return {
         camPosLocalM: eye,
-        viewProjLocal,
+        viewProjsLocal: [viewProjLocal],
         viewportPx: VIEWPORT,
         radiusM: R,
         reliefM: UNBOUNDED_RELIEF,
@@ -1425,6 +1425,46 @@ describe('cutSurfaceTiles', () => {
         const result = cutSurfaceTiles(poseAtHeading(headingRad));
         expect(siteIsCovered(result.cut), `heading ${headingDeg}deg`).toBe(true);
       }
+    });
+  });
+
+  describe('over several views', () => {
+    const tileKeys = (result: ReturnType<typeof cutSurfaceTiles>): Set<string> =>
+      new Set(
+        result.requests.requests.map(({ tile }) => `${tile.product}/${tile.z}/${tile.x}/${tile.y}`),
+      );
+
+    it('one frustum given twice gives the one-frustum cut', () => {
+      const input = nadirAt(400);
+      const once = cutSurfaceTiles(input);
+      const twice = cutSurfaceTiles({
+        ...input,
+        viewProjsLocal: [...input.viewProjsLocal, ...input.viewProjsLocal],
+      });
+      expect(twice).toEqual(once);
+    });
+
+    it('keeps a patch only the second frustum sees', () => {
+      const input = nadirAt(400);
+      const eye = input.camPosLocalM;
+      const d = Math.hypot(eye[0], eye[1], eye[2]);
+      const up: Vec3 = [eye[0] / d, eye[1] / d, eye[2] / d];
+      // Same eye, looking level along a tangent: the limb, which nadir never sees.
+      const tangent: Vec3 = [-up[1], up[0], 0];
+      const level = mat4.lookAt(eye, [eye[0] + tangent[0], eye[1] + tangent[1], eye[2]], up);
+      const proj = mat4.perspective(FOV_Y_RAD, VIEWPORT[0] / VIEWPORT[1], 0.001, 100);
+      const levelVp = new Float64Array(mat4.multiply(proj, level));
+
+      const nadirOnly = tileKeys(cutSurfaceTiles(input));
+      const levelOnly = tileKeys(cutSurfaceTiles({ ...input, viewProjsLocal: [levelVp] }));
+      const both = tileKeys(
+        cutSurfaceTiles({ ...input, viewProjsLocal: [...input.viewProjsLocal, levelVp] }),
+      );
+
+      const onlySecond = [...levelOnly].filter((key) => !nadirOnly.has(key));
+      expect(onlySecond.length).toBeGreaterThan(0);
+      for (const key of onlySecond) expect(both.has(key), key).toBe(true);
+      for (const key of nadirOnly) expect(both.has(key), key).toBe(true);
     });
   });
 });

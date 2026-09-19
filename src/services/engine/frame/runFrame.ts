@@ -224,7 +224,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The frame's views, once — mono is `[ctx]` itself. AFTER the focusBlend /
   // focus / layersSettling stamps above: `deriveViewContext` copies those
   // from `main` onto every view, so computing views any earlier would hand
-  // them last frame's values. Ahead of the view-independent planners below
+  // them last frame's values. Ahead of the view-dependent planners below
   // (surface cut, star cut) so they can walk every view's frustum without
   // re-deriving this per planner.
   const views = VIEW_RIGS[state.viewRig].views(ctx, state);
@@ -272,11 +272,22 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       if (params !== null) {
         const prepared = prepareBodySurfaceFrame(state, ctx, surfaceTilesView);
         if (prepared !== null) {
+          // Each view's own body slab vp (mono: `ctx`'s, the memo hit above),
+          // so one cut and one fetch queue cover every view the frame draws.
+          const viewProjsLocal: Float64Array[] = [];
+          for (const view of views) {
+            const slab = view.slabs.find(
+              (s) => s.frame.kind === 'body-m' && s.frame.bodyId === bodyId,
+            );
+            if (slab === undefined) continue;
+            const viewPrepared = prepareBodySurfaceFrame(state, view, slabViewOf(view, slab.index));
+            if (viewPrepared !== null) viewProjsLocal.push(viewPrepared.mvpLocal);
+          }
           // One walk yields both the draw cut and the fetch requests.
           const result = cutSurfaceTiles({
             ...params,
             camPosLocalM: prepared.pose.eyeRelBodyM,
-            viewProjLocal: prepared.mvpLocal,
+            viewProjsLocal,
             radiusM: prepared.radiusM,
             reliefM: prepared.body.surface.reliefM,
             viewportPx: surfaceTilesView.viewportPx,
@@ -303,22 +314,22 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const label3DAnimating = runLabel3DProducers(state, ctx);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
-  // ── Star-cut planner (advances the LOD fades, primes the per-ctx memo) ────
+  // ── Star-cut planner (advances the LOD fades, one cut for every view) ─────
   //
   // Advance the survey-star per-node LOD fades ONCE here, as a planner peer of
   // the disk/label planners above — the ONLY call in a real frame that mutates
   // the fade ramps (see `advanceStarFades`'s own doc). Two reasons it lives at
   // frame-body level rather than only inside the star draw:
   //   1. The three star layers (leaf / aggregate / upsample) call the READ-ONLY
-  //      `prepareStarCut` during the GPU dispatch, which hits the per-ctx memo
-  //      this primes — so the walk still runs exactly once for the frame.
+  //      `prepareStarCut` during the GPU dispatch, which finds the cut this
+  //      registers under every view — so the walk runs exactly once per frame.
   //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
   //      wake vote used to fire from inside the pass (a `requestRender` scattered
   //      away from the single authority); now the pass computes the vote and
   //      `shouldKeepTicking` decides.
   // `advanceStarFades` is a no-op returning null when the star pass isn't live
   // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  const starCut = advanceStarFades(state, ctx);
+  const starCut = advanceStarFades(state, ctx, views);
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {

@@ -45,7 +45,8 @@
  * `ctx.drawCamPos` which equals the NEAR0 view origin; the math mirrors
  * `starNodeOriginRelCamMpc`, still the standalone home `resolveStarRecord`
  * reuses) — and each layer narrows the vp via
- * `narrowMat4(rebaseViewProj(view.slab.vp, camPos))`. The renderer stays a dumb
+ * `narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc))`, the SAME origin
+ * the cut was baked about whichever view draws it. The renderer stays a dumb
  * f32 pipeline; the precision seam lives here.
  *
  * ### The shared-vp invariant (load-bearing)
@@ -117,9 +118,9 @@
  * still > 0. An additive pass drawing nothing is correctly invisible, but
  * skipping it wholesale also skips the `beginRenderPass` and the tile-RAM
  * round-trip — so a fully-faded or toggled-off bubble costs zero GPU. It reads
- * the absolute camera (`ctx.drawCamPos`) while `draw` reads NEAR0's
- * origin-relative `view.camPos`; the two coincide because `RENDER_ORIGIN_MPC`
- * is the heliocentric origin.
+ * the absolute camera (`ctx.drawCamPos`) while `draw` rebases NEAR0's
+ * origin-relative vp; the two frames coincide because `RENDER_ORIGIN_MPC` is
+ * the heliocentric origin.
  *
  * ### Pickable (leaf stars only), and the Sun-exclusion note
  *
@@ -179,21 +180,20 @@ const frustumScratch = new Float32Array(24);
 
 /**
  * Scratch for the WALK's off-screen prune (distinct from `frustumScratch`, which
- * the draw/pick passes reuse later in the same frame). `computeStarCut` derives
- * the NEAR0 rebased vp once per frame, extracts its six clip planes into
+ * the draw/pick passes reuse later in the same frame). `buildCutFrustum` derives
+ * each view's NEAR0 rebased vp once per frame, extracts its six clip planes into
  * `cutPlanesMpcScratch` (scene-Mpc units), then rescales the distance term into
- * parsecs in `cutPlanesPcScratch` — the frame the walk's box math already lives
- * in. Reused across frames and per-source within a frame (the frustum is
+ * parsecs in `cutFrustumScratch.planesPc` — the frame the walk's box math
+ * already lives in. Reused across frames and per-source within a frame (the frustum is
  * source-independent); the walk reads it synchronously, the same non-reentrant
  * discipline the rest of this pass follows.
  */
 const cutPlanesMpcScratch = new Float32Array(24);
-const cutPlanesPcScratch = new Float64Array(24);
-// Inferred-mutable (no `StarCutFrustum` annotation) so the two margins can be
-// rewritten each frame; a mutable object is still assignable to the readonly
-// `StarCutFrustum` parameter.
+// Inferred-mutable (no `StarCutFrustum` annotation) so the margins and the
+// per-view plane buffer can be rewritten each frame; a mutable object is still
+// assignable to the readonly `StarCutFrustum` parameter.
 const cutFrustumScratch = {
-  planesPc: cutPlanesPcScratch,
+  planesPc: new Float64Array(24),
   angularMarginRad: 0,
   worldSpread: 1,
 };
@@ -258,41 +258,49 @@ function starCullMargins(
 }
 
 /**
- * Build this frame's WALK off-screen-prune frustum from the NEAR0 rebased vp —
- * the exact matrix the star draws clip against, so the coarse prune agrees with
- * what the GPU would keep. Returns the reused `cutFrustumScratch`; its planes are
- * rescaled from scene-Mpc into the parsec frame the walk's box math lives in, and
- * its slack is sized to the WIDEST downstream footprint so the prune can never
- * wrong-drop a node the exact per-node renderer cull would still paint:
+ * Build this frame's WALK off-screen-prune frustum from every view's NEAR0 vp,
+ * rebased about the cut's one origin — the matrices the star draws clip
+ * against, so the coarse prune agrees with what the GPU would keep. A node
+ * survives if ANY view's six planes keep it. Returns the reused
+ * `cutFrustumScratch`; its planes are rescaled from scene-Mpc into the parsec
+ * frame the walk's box math lives in, and its slack is sized to the WIDEST
+ * downstream footprint so the prune can never wrong-drop a node the exact
+ * per-node renderer cull would still paint:
  *   - leaves spill an angular amount (fixed-pixel dot), sized to the PICK 3.5px
  *     clickable floor (≥ the visual glow) because the pick pass recomputes the
  *     SAME cut and a clickable edge star must survive — mirrors `starCullMargins`;
  *   - aggregates spread their glow by the dot-size/overlap scale (world slack).
  */
 function buildCutFrustum(
-  ctx: ReadyFrameContext,
+  originMpc: Readonly<Vec3>,
+  views: readonly ReadyFrameContext[],
   sizePx: number,
   glowOverlap: number,
 ): StarCutFrustum | null {
-  // No NEAR0 slab resolvable ⇒ no frustum to prune against: fall back to the
+  // A view with no NEAR0 slab has no frustum to prune against: fall back to the
   // full (un-pruned) walk. In a real frame `deriveSlabs` always yields NEAR0, so
-  // this only trips for hand-built test contexts — the walk stays correct either
-  // way, just cheaper when a frustum is available.
-  if (ctx.slabs?.[NEAR0] === undefined) return null;
-  const near0 = slabViewOf(ctx, NEAR0);
-  const rebasedVp = narrowMat4(rebaseViewProj(near0.slab.vp, near0.camPos));
-  const planesMpc = frustumPlanesFromViewProj(rebasedVp, cutPlanesMpcScratch);
-  // A plane test `n·p_mpc + d ≥ 0` with `p_mpc = p_pc · PC_TO_MPC` divides
-  // through by `PC_TO_MPC` to `n·p_pc + d·MPC_TO_PC ≥ 0`: unit normals carry
-  // over, only the distance term rescales into parsecs.
-  for (let b = 0; b < 24; b += 4) {
-    cutPlanesPcScratch[b] = planesMpc[b]!;
-    cutPlanesPcScratch[b + 1] = planesMpc[b + 1]!;
-    cutPlanesPcScratch[b + 2] = planesMpc[b + 2]!;
-    cutPlanesPcScratch[b + 3] = planesMpc[b + 3]! * MPC_TO_PC;
+  // this only trips for hand-built test contexts.
+  if (views.some((view) => view.slabs?.[NEAR0] === undefined)) return null;
+  if (cutFrustumScratch.planesPc.length !== 24 * views.length) {
+    cutFrustumScratch.planesPc = new Float64Array(24 * views.length);
   }
+  const planesPc = cutFrustumScratch.planesPc;
   const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
-  const radiansPerPx = ctx.fovYRad / ctx.canvasSize.height;
+  let radiansPerPx = 0;
+  views.forEach((view, v) => {
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slabs[NEAR0]!.vp, originMpc));
+    const planesMpc = frustumPlanesFromViewProj(rebasedVp, cutPlanesMpcScratch);
+    // A plane test `n·p_mpc + d ≥ 0` with `p_mpc = p_pc · PC_TO_MPC` divides
+    // through by `PC_TO_MPC` to `n·p_pc + d·MPC_TO_PC ≥ 0`: unit normals carry
+    // over, only the distance term rescales into parsecs.
+    for (let b = 0; b < 24; b += 4) {
+      planesPc[v * 24 + b] = planesMpc[b]!;
+      planesPc[v * 24 + b + 1] = planesMpc[b + 1]!;
+      planesPc[v * 24 + b + 2] = planesMpc[b + 2]!;
+      planesPc[v * 24 + b + 3] = planesMpc[b + 3]! * MPC_TO_PC;
+    }
+    radiansPerPx = Math.max(radiansPerPx, view.fovYRad / view.canvasSize.height);
+  });
   const leafPxRadius = STAR_GLOW_MIN_PX * sizeScale;
   cutFrustumScratch.angularMarginRad =
     Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
@@ -527,6 +535,10 @@ export type PreparedStarSource = {
  */
 export type PreparedStarCut = {
   sources: PreparedStarSource[];
+  /** The origin every node's `originRelCamMpc` is relative to; draws rebase
+   *  their vp about THIS, never the drawing view's own `camPos`, so a view
+   *  whose eye differs from the cut's still lands every node where it is. */
+  originMpc: Readonly<Vec3>;
   sizePx: number;
   brightness: number;
   glowOverlap: number;
@@ -648,12 +660,12 @@ function streamsFor(catalog: StarCatalog, viewSlot: number): CatalogStreams {
 }
 
 /**
- * Per-frame memo, shared by `prepareStarCut` and `advanceStarFades`: whichever
- * runs first for a `ctx` object caches the result, so a repeat call for that
- * SAME ctx never re-walks. `deriveFrameContext` mints a fresh `ctx` each real
- * frame, so the previous entry is GC'd with it. `advanceStarFades` is the ONLY
- * writer of `fadeStateByCatalog`; the memo is what stops a second call for the
- * same ctx from double-advancing the ramps.
+ * Per-frame lookup from a view `ctx` to the cut it draws: `advanceStarFades`
+ * registers the frame's ONE cut under every frame view, and `prepareStarCut`
+ * caches its own walk (a capture face, the pick path) under its ctx.
+ * `deriveFrameContext` mints fresh contexts each real frame, so the previous
+ * entries are GC'd with them. `advanceStarFades` is the ONLY writer of
+ * `fadeStateByCatalog`.
  */
 const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
 
@@ -671,31 +683,34 @@ const preparedByCtx = new WeakMap<ReadyFrameContext, PreparedStarCut | null>();
 export function prepareStarCut(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
   if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
 
-  const result = computeStarCut(state, ctx, false);
+  const result = computeStarCut(state, ctx, [ctx], false);
   preparedByCtx.set(ctx, result);
   return result;
 }
 
 /**
- * Advance every loaded catalog's per-node LOD fade by one frame step (see
- * `NODE_FADE_MS`) for the main view's `ctx`, and cache the resulting cut under
- * it. Called exactly once per real frame by runFrame, BEFORE any layer calls
- * `prepareStarCut` — that ordering plus the shared `preparedByCtx` memo is what
- * makes "advance runs once" hold without a viewSlot or ctx-identity special
- * case at the call sites. Returns the same shape as `prepareStarCut` (its
- * `anyNodeFading` is the frame's keep-ticking wake vote).
+ * The frame's star cut: walked once over the union of `views`' frusta about
+ * `main`'s eye, advancing every loaded catalog's per-node LOD fade by one frame
+ * step (see `NODE_FADE_MS`), and registered under every view. Called exactly
+ * once per real frame by runFrame, BEFORE any layer calls `prepareStarCut` —
+ * that ordering is what makes every frame view draw the one advanced cut.
+ * Returns the same shape as `prepareStarCut` (its `anyNodeFading` is the
+ * frame's keep-ticking wake vote).
  */
-export function advanceStarFades(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
-  if (preparedByCtx.has(ctx)) return preparedByCtx.get(ctx)!;
-
-  const result = computeStarCut(state, ctx, true);
-  preparedByCtx.set(ctx, result);
+export function advanceStarFades(
+  state: PassState,
+  main: ReadyFrameContext,
+  views: readonly ReadyFrameContext[],
+): PreparedStarCut | null {
+  const result = computeStarCut(state, main, views, true);
+  for (const view of views) preparedByCtx.set(view, result);
   return result;
 }
 
 function computeStarCut(
   state: PassState,
   ctx: ReadyFrameContext,
+  views: readonly ReadyFrameContext[],
   advanceFades: boolean,
 ): PreparedStarCut | null {
   const renderer = state.gpu.starCatalogRenderer;
@@ -705,7 +720,7 @@ function computeStarCut(
   // The camera-relative parsec position the walk keys off, and the heliocentric
   // distance the crossfade + exposure ramp read. `ctx.drawCamPos` equals the
   // NEAR0 view origin (RENDER_ORIGIN_MPC is the heliocentric origin), so the
-  // walk is a pure function of (state, ctx) — no SlabView needed here.
+  // walk is a pure function of (state, ctx, views) — no SlabView needed here.
   const camPos: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
   const camPosPc: Vec3 = [camPos[0] * MPC_TO_PC, camPos[1] * MPC_TO_PC, camPos[2] * MPC_TO_PC];
   const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
@@ -735,7 +750,7 @@ function computeStarCut(
   // the NEAR0 rebased vp and handed to every source's walk. See `buildCutFrustum`
   // and `walkStarOctreeCut`'s header for why pruning off-screen subtrees at their
   // common ancestor is the dominant CPU win.
-  const cutFrustum = buildCutFrustum(ctx, sizePx, glowOverlap);
+  const cutFrustum = buildCutFrustum(camPos, views, sizePx, glowOverlap);
 
   const sources: PreparedStarSource[] = [];
   // Tracks whether ANY node is mid-fade across ALL sources this frame. Surfaced
@@ -922,7 +937,15 @@ function computeStarCut(
     sources.push({ source, leaf, aggregate });
   }
 
-  return { sources, sizePx, brightness, glowOverlap, aggregateIntensityCap, anyNodeFading };
+  return {
+    sources,
+    originMpc: camPos,
+    sizePx,
+    brightness,
+    glowOverlap,
+    aggregateIntensityCap,
+    anyNodeFading,
+  };
 }
 
 /**
@@ -942,7 +965,7 @@ function drawStream(
   viewSlot: number,
   viewKind: ViewKind,
 ): void {
-  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
   // exact matrix the GPU clips against, which is what makes the cull visually
   // lossless — and derive the leaf angular slack once. Both are source-independent
@@ -1035,7 +1058,7 @@ export const starCatalogPass: ContentPass = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
 
-    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+    const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
     // Same once-per-draw plane extraction as `drawStream`, off the identical
     // rebased vp — the pick cull must agree with the visual cull so a picked and
     // a drawn star always partition the frustum the same way. The margin uses the
