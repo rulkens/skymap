@@ -21,6 +21,7 @@ export const VISIBILITY_LAYER_ROWS = {
   structureRing: {},
   survey: {},
   filaments: {},
+  localBubble: {},
   flow: {},
   constellations: {},
   orbitTrails: {},
