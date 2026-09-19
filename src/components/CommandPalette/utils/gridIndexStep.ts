@@ -25,8 +25,9 @@ export function gridIndexStep(index: number, key: GridKey, columns: number, coun
     return candidate < count ? candidate : count - 1;
   }
 
-  // ArrowUp: every row above the top is full, so only wrapping off row 0
-  // can land on a missing cell — fall back one row further when it does.
+  // ArrowUp: every row but the last is full, so moving up from row > 0 always
+  // lands on a card; only wrapping off row 0 into a partial last row can land
+  // on a missing cell — fall back one row further when it does.
   if (row > 0) return (row - 1) * columns + col;
   const lastRow = numRows - 1;
   const wrapped = lastRow * columns + col;

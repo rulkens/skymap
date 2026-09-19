@@ -47,6 +47,8 @@ import FeaturedGrid from './FeaturedGrid';
 import PaletteTabs from './PaletteTabs';
 import ResultsList from './ResultsList';
 import { wrapIndex } from './utils/wrapIndex';
+import { cardAliases } from './utils/cardAliases';
+import type { PaletteCard } from '../../@types/palette/PaletteCard';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
@@ -107,7 +109,8 @@ function CommandPalette({
   const activeTab = shownTabs.find((t) => t.id === tab) ?? shownTabs[0];
 
   const onTabStep = (delta: 1 | -1): void => {
-    const idx = activeTab ? shownTabs.findIndex((t) => t.id === activeTab.id) : 0;
+    if (!activeTab) return;
+    const idx = shownTabs.findIndex((t) => t.id === activeTab.id);
     const next = shownTabs[wrapIndex(idx, delta, shownTabs.length)];
     if (next) onTabChange(next.id);
   };
@@ -137,6 +140,8 @@ function CommandPalette({
 
   if (!open) return null;
 
+  const aliasesFor = (card: PaletteCard): readonly string[] => cardAliases(card, entries);
+
   return (
     <div className={styles.root} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
       <div
@@ -153,21 +158,20 @@ function CommandPalette({
           onChange={(e) => setQuery(e.target.value)}
         />
         {query.trim().length === 0 ? (
-          <>
-            {shownTabs.length > 0 && (
-              <PaletteTabs tabs={shownTabs} active={activeTab?.id ?? tab} onChange={onTabChange} />
-            )}
-            {activeTab && (
+          activeTab && (
+            <>
+              <PaletteTabs tabs={shownTabs} active={activeTab.id} onChange={onTabChange} />
               <FeaturedGrid
+                key={activeTab.id}
                 cards={activeTab.cards}
-                famous={entries}
+                aliasesFor={aliasesFor}
                 activeIdx={activeCard}
                 gridRef={gridRef}
                 label={activeTab.label}
                 onSelect={dispatchAction}
               />
-            )}
-          </>
+            </>
+          )
         ) : (
           <ResultsList
             matches={matches}

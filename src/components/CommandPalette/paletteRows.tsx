@@ -8,7 +8,7 @@
  * ranking pipeline can import the row vocabulary without pulling in React +
  * the CSS module.  A new row kind is one entry here, not a new render branch.
  * Selection routing is NOT here — every row maps to a `PaletteAction` via
- * `utils/actionForRow` and fires the single `requestFocus` command.
+ * `utils/actionForRow`, and the container dispatches on `action.kind`.
  *
  * Styling: ROW_VIEW emits the per-row internals into ResultsList's <li>, so it
  * composes ResultsList's module rather than carrying its own — the row styles

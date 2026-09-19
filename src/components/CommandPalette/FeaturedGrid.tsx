@@ -1,22 +1,21 @@
 /**
  * FeaturedGrid — the card grid the palette shows for the active browse tab
- * when it opens with no query. Purely presentational: it renders whatever
- * `PaletteCard[]` it's handed and knows nothing about galaxies, tabs, or the
- * ranking pipeline. Returns null when the tab has no cards.
+ * when it opens with no query, replacing the results list. Purely
+ * presentational: it renders whatever `PaletteCard[]` it's handed and knows
+ * nothing about galaxies, tabs, or the ranking pipeline. Returns null when
+ * the tab has no cards.
  */
 import type { ReactNode, RefObject } from 'react';
 import FeaturedCard from './FeaturedCard';
-import { cardAliases } from './utils/cardAliases';
 import type { PaletteCard } from '../../@types/palette/PaletteCard';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
-import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import styles from './FeaturedGrid.module.css';
 
 export type FeaturedGridProps = {
   readonly cards: readonly PaletteCard[];
-  /** For `cardAliases` only — the grid itself never reads a galaxy's fields. */
-  readonly famous: readonly FamousGalaxyMetaEntry[];
-  /** Keyboard highlight (wired in Task 6); -1 = none. */
+  /** Resolves a card's tooltip aliases — the grid itself never reads a galaxy's fields. */
+  readonly aliasesFor: (card: PaletteCard) => readonly string[];
+  /** Keyboard highlight; -1 = none. */
   readonly activeIdx: number;
   readonly gridRef: RefObject<HTMLUListElement | null>;
   readonly label: string;
@@ -25,7 +24,7 @@ export type FeaturedGridProps = {
 
 function FeaturedGrid({
   cards,
-  famous,
+  aliasesFor,
   activeIdx,
   gridRef,
   label,
@@ -38,7 +37,7 @@ function FeaturedGrid({
         <FeaturedCard
           key={card.id}
           card={card}
-          aliases={cardAliases(card, famous)}
+          aliases={aliasesFor(card)}
           active={i === activeIdx}
           onSelect={onSelect}
         />

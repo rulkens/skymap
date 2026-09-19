@@ -2,20 +2,9 @@
  * usePaletteSearch — owns the command palette's transient search state and
  * keyboard navigation: the query string, the active-row/active-card
  * highlights, the input + grid refs, the ranked `matches` memo, the
- * open/query/tab reset effects, and the select + key-down handlers.
- *
- * Pulled out of the `CommandPalette` shell so the component is reduced to
- * layout + subcomponent wiring; everything stateful lives here.  On select it
- * maps the chosen row to its `PaletteAction` (`actionForRow`) and hands that
- * to the single `onSelect(action)` callback — the shell's parent dispatches
- * on `action.kind`.  A grid card already carries its own `PaletteAction`, so
- * `dispatchAction` skips the row-mapping step but runs the same close.
- *
- * Two keyboard navigators share one `onKeyDown`, picked by the same
- * empty-query test that picks the view (grid vs results list): the grid
- * navigator moves `activeCard` via `gridIndexStep`, measuring the rendered
- * grid's column count at key time so CSS stays its only home; the list
- * navigator is the original wrap-and-select behaviour, unchanged.
+ * open/query/tab reset effects, and the select + key-down handlers. Pulled
+ * out of the `CommandPalette` shell so that file is reduced to layout +
+ * subcomponent wiring; everything stateful lives here.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject, KeyboardEvent } from 'react';
@@ -97,6 +86,13 @@ export function usePaletteSearch({
     setActiveCard(0);
   }, [cards]);
 
+  // Keep the keyboard highlight in view — the grid scrolls internally
+  // (max-height) and nothing else scrolls it. Optional chaining because
+  // jsdom has no layout and so no `scrollIntoView`.
+  useEffect(() => {
+    gridRef.current?.children[activeCard]?.scrollIntoView?.({ block: 'nearest' });
+  }, [activeCard]);
+
   // Focus the input when the palette opens.  The next tick is needed
   // because the input only enters the DOM in the same render that flips
   // `open` to true.
@@ -107,6 +103,7 @@ export function usePaletteSearch({
       // mid-fade.
       requestAnimationFrame(() => inputRef.current?.focus());
       setQuery('');
+      setActiveCard(0);
     }
   }, [open]);
 
@@ -129,9 +126,13 @@ export function usePaletteSearch({
   // ── Keyboard handling ──────────────────────────────────────────────────────
   //
   // Esc always closes. With an empty query the grid navigator owns the
-  // arrows/Enter/⌥-arrows; with a query the original results-list navigator
-  // (wrap past either end, Enter selects) is unchanged. All other keys pass
-  // through to the input so the user can type.
+  // arrows/Enter/⌥-arrows, but only when the input is focused — the grid's
+  // own cards and the tab strip are keyboard-focusable buttons, and stealing
+  // their Enter/arrow keys would cancel a focused button's native click (Tab
+  // to a tab, press Enter: the browser fires the tab's click) or fight the
+  // browser's own left/right focus movement between buttons. With a query,
+  // the results-list navigator (wrap past either end, Enter selects) runs.
+  // All other keys pass through so the user can type.
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Escape') {
       e.preventDefault();
@@ -140,6 +141,7 @@ export function usePaletteSearch({
     }
 
     if (query.trim().length === 0) {
+      if (e.target !== inputRef.current) return;
       // Alt-arrow switches tabs — checked before the plain-arrow branch, and
       // preventDefault'd, since macOS otherwise moves the input's caret.
       if (e.altKey && (e.key === 'ArrowLeft' || e.key === 'ArrowRight')) {

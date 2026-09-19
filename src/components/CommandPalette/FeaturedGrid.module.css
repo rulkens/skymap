@@ -1,5 +1,5 @@
 /*
- * FeaturedGrid — 5-column card grid shown above the results list when the
+ * FeaturedGrid — 5-column card grid that replaces the results list when the
  * palette opens with no query. Card-level styling (image/text tile, hover,
  * active) lives in `FeaturedCard.module.css`; this file owns only the grid
  * layout. `max-height` caps the panel at roughly three rows so a long tab

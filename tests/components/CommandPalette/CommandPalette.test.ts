@@ -187,4 +187,68 @@ describe('CommandPalette', () => {
     await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
     expect(onTabChange).toHaveBeenCalledWith('highlights');
   });
+
+  it('a card’s failed image does not carry over to the same card in another tab', () => {
+    // Same card id ('m31') in two tabs: Highlights uses the convention path
+    // (no `image` override, so it 404s in the real app); Galaxies overrides it.
+    const tabsWithSharedM31: readonly PaletteTab[] = [
+      {
+        id: 'highlights',
+        label: 'Highlights',
+        cards: [
+          {
+            id: 'm31',
+            label: 'Andromeda Galaxy',
+            blurb: '',
+            action: { kind: 'focus', focusId: 'm31' },
+          },
+        ],
+      },
+      {
+        id: 'galaxies',
+        label: 'Galaxies',
+        cards: [
+          {
+            id: 'm31',
+            label: 'Andromeda Galaxy',
+            blurb: '',
+            image: '/images/famous/m31.webp',
+            action: { kind: 'focus', focusId: 'm31' },
+          },
+        ],
+      },
+    ];
+    const onTabChange = vi.fn();
+    const { rerender } = renderPalette({ tabs: tabsWithSharedM31, tab: 'highlights', onTabChange });
+    const img = screen.getByRole('button', { name: 'Andromeda Galaxy' }).querySelector('img');
+    fireEvent.error(img as HTMLImageElement);
+    expect(
+      screen.getByRole('button', { name: 'Andromeda Galaxy' }).querySelector('img'),
+    ).toBeNull();
+
+    rerender(
+      createElement(CommandPalette, {
+        ...DEFAULTS,
+        tabs: tabsWithSharedM31,
+        tab: 'galaxies',
+        onTabChange,
+      }),
+    );
+    const switchedImg = screen
+      .getByRole('button', { name: 'Andromeda Galaxy' })
+      .querySelector('img');
+    expect(switchedImg).not.toBeNull();
+    expect(switchedImg).toHaveAttribute('src', '/images/famous/m31.webp');
+  });
+
+  it('Enter on a focused tab button switches tab instead of selecting the highlighted card', async () => {
+    const user = userEvent.setup();
+    const onTabChange = vi.fn();
+    const onSelect = vi.fn();
+    renderPalette({ onTabChange, onSelect });
+    screen.getByRole('tab', { name: 'Missions' }).focus();
+    await user.keyboard('{Enter}');
+    expect(onTabChange).toHaveBeenCalledWith('missions');
+    expect(onSelect).not.toHaveBeenCalled();
+  });
 });

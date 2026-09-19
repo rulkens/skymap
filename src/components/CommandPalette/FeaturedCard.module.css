@@ -68,8 +68,8 @@
  * dark-to-transparent gradient for legibility against bright
  * thumbnails (M82's blowout core, Centaurus A's nucleus).  Single
  * line, ellipsised — names like "Centaurus A" fit; rare longer
- * names get clipped, which the user resolves by hovering for
- * focus-visible (no extra UI) or scanning the full list below.
+ * names get clipped, which the user resolves by hovering for the
+ * full name in the tooltip.
  */
 .name {
   position: absolute;

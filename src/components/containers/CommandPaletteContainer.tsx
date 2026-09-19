@@ -1,13 +1,10 @@
 // src/components/containers/CommandPaletteContainer.tsx
 /**
  * CommandPaletteContainer — store boundary for the command palette: the
- * famous/alias/structure index reads (all published Layer facts or store
- * selectors, no engine-handle poll), the `paletteOpen`/`paletteTab` slice
- * reads, and the per-kind dispatch table a pick runs through (PR3 adds rows,
- * not branches). `focus` fires the two selection commands a pick fires —
- * `requestSelect` pins the InfoCard, `requestFocus` flies the camera — so a
- * pick looks like a click plus a fly. `FEATURED_TABS` is hand-edited data,
- * not a store read, so it's imported directly rather than selected.
+ * famous/alias/structure index reads, the `paletteOpen`/`paletteTab` slice
+ * reads, and the per-kind dispatch table a pick runs through. `focus` fires
+ * `requestSelect` (pins the InfoCard) then `requestFocus` (flies the camera),
+ * so a pick looks like a click plus a fly.
  */
 import { memo } from 'react';
 import CommandPalette from '../CommandPalette/CommandPalette';

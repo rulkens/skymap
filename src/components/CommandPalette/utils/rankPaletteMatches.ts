@@ -7,7 +7,7 @@
  * into one ordered `ScoredRow[]` ready to render.  Pulled out of the component
  * so it has no React / DOM dependency and can be tested in isolation.
  *
- * An empty query yields no rows — the featured grid owns browsing now
+ * An empty query yields no rows — the featured grid owns browsing
  * (`FeaturedGrid` over `FEATURED_TABS`), so this only scores non-empty queries.
  *
  * Famous rows and seeded scene bodies (Earth, the planets, the stars) are one
@@ -60,8 +60,8 @@ export function rankPaletteMatches(
 ): ScoredRow[] {
   if (query.trim().length === 0) return [];
 
-  // The Milky Way row is always present (no catalog membership), scored over
-  // MILKY_WAY_NAMES like a famous row and only kept if it hits.
+  // The Milky Way row has no catalog membership; scored over MILKY_WAY_NAMES
+  // like a famous row and only kept if it hits.
   const mwScore = scoreFamousMatch(
     { id: 'milky-way', names: MILKY_WAY_NAMES, description: '' },
     query,
