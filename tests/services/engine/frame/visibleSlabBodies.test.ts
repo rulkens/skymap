@@ -15,9 +15,11 @@ import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { AnchorPointBody } from '../../../../src/@types/scene/AnchorPointBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const FORWARD_X: Vec3 = [1, 0, 0];
+const SQUARE_90 = symmetricFrustum(Math.PI / 2, 1);
 
 function makeState(positionMpc: Vec3 = [1000, 0, 0]): BodyState {
   return { positionMpc, orientation: [...IDENTITY], meanAnomalyRad: 0 };
@@ -61,7 +63,7 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
+      frustum: SQUARE_90,
       viewportHeightPx: 1000,
       fovYRad: Math.PI / 2,
     });
@@ -88,7 +90,7 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [1000, 0, 0], // camera AT earth's stored position ⇒ distance 0 ⇒ inside its own shell, always kept
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
+      frustum: SQUARE_90,
       viewportHeightPx: 1000,
       fovYRad: Math.PI / 2,
     });
@@ -115,7 +117,7 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
+      frustum: SQUARE_90,
       viewportHeightPx: 1000,
       fovYRad: Math.PI / 2,
     });
@@ -145,7 +147,7 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
+        frustum: SQUARE_90,
         viewportHeightPx: 1000,
         fovYRad: Math.PI / 2,
       });
@@ -187,7 +189,7 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
+        frustum: SQUARE_90,
         viewportHeightPx: 1000,
         fovYRad: Math.PI / 2,
       });
@@ -215,12 +217,31 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: (1000 * 16) / 9,
+        frustum: symmetricFrustum(Math.PI / 3, 16 / 9),
         viewportHeightPx: 1000,
         fovYRad: Math.PI / 3,
       });
 
       expect(visible.map((b) => b.id)).toEqual(['saturn']);
+    });
+
+    it('keeps a body just inside the long edge of an off-axis frustum', () => {
+      // tanRight = 3 puts the right edge at atan(3) ≈ 71.6° off-axis. A
+      // symmetric reading of the same fovY/aspect (90°, 1.5) culls past
+      // ≈ 70.1°; the far-edge half-diagonal (≈ 72.5°, ×1.15) keeps it.
+      const bodyStates = new Map<string, BodyState>([
+        ['wide', makeState(offAxisPositionMpc(71, 1000))],
+      ]);
+      const visible = visibleSlabBodies({
+        bodies: [wideBody],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: { tanLeft: 0, tanRight: 3, tanDown: -1, tanUp: 1 },
+        viewportHeightPx: 1000,
+        fovYRad: Math.PI / 2,
+      });
+      expect(visible.map((b) => b.id)).toEqual(['wide']);
     });
   });
 
@@ -245,7 +266,7 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
+      frustum: SQUARE_90,
       viewportHeightPx: 1000,
       fovYRad: Math.PI / 2,
     });
@@ -276,7 +297,7 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
+        frustum: SQUARE_90,
         viewportHeightPx: 1000,
         fovYRad: Math.PI / 2,
       });

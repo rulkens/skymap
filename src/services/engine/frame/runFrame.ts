@@ -179,7 +179,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // The 'not ready' branch is the window before cam + GPU handles populate.
   const ctx = deriveFrameContext(
     state,
-    deps.canvas,
+    { width: deps.canvas.width, height: deps.canvas.height },
     worldPose,
     renderPose,
     projection,

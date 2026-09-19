@@ -15,8 +15,6 @@ import type { BodyState } from '../../../@types/scene/BodyState';
 import type { BodyRelativePose } from '../../../@types/engine/camera/BodyRelativePose';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { rotateByTranspose } from '../../../utils/math/rotateByTranspose';
-import { multiply3x3 } from '../../../utils/math/multiply3x3';
-import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 
 export function bodyRelativePose(input: {
   readonly camPosMpc: Readonly<Vec3>;
@@ -62,25 +60,4 @@ export function bodyRelativePose(input: {
   ];
 
   return { eyeRelBodyM, basisM };
-}
-
-// A `ViewSpec`'s turn and eye offset applied to either provider's pose, so the
-// engaged body arm keeps its metre-native path in every view. Lives in this seam
-// file because the offset crosses Mpc → m (`oneMpcSeam.test.ts`).
-export function viewBodyPose(
-  pose: BodyRelativePose,
-  rotation: Readonly<Mat3>,
-  eyeOffsetMpc: Readonly<Vec3>,
-): BodyRelativePose {
-  const basisM = multiply3x3(pose.basisM, rotation as Mat3);
-  const offsetM = rotateVec3ByTightMat3(
-    [
-      eyeOffsetMpc[0] * SCALE_UNITS.MPC_TO_M,
-      eyeOffsetMpc[1] * SCALE_UNITS.MPC_TO_M,
-      eyeOffsetMpc[2] * SCALE_UNITS.MPC_TO_M,
-    ],
-    basisM,
-  );
-  const { eyeRelBodyM: e } = pose;
-  return { eyeRelBodyM: [e[0] + offsetM[0], e[1] + offsetM[1], e[2] + offsetM[2]], basisM };
 }

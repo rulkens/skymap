@@ -19,7 +19,7 @@ export function pickFrameContext(
   const nowMs = performance.now();
   const ctx = deriveFrameContext(
     state,
-    canvas,
+    { width: canvas.width, height: canvas.height },
     liveWorldPose(state),
     // The DISPLAYED pose, not the authored register: the authored register is
     // untilted in-window and a pick against it misses (round-12c two-box contract).

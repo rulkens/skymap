@@ -1,6 +1,7 @@
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { bodyDrawRadiusM } from '../../../utils/scene/bodyDrawRadiusM';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
@@ -47,7 +48,7 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
   readonly bodyStates: ReadonlyMap<string, BodyState>;
   readonly camPosMpc: Readonly<Vec3>;
   readonly camForwardMpc: Readonly<Vec3>;
-  readonly viewportWidthPx: number;
+  readonly frustum: ViewFrustum;
   readonly viewportHeightPx: number;
   readonly fovYRad: number;
 }): readonly T[] {
@@ -56,7 +57,7 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
     bodyStates,
     camPosMpc,
     camForwardMpc,
-    viewportWidthPx,
+    frustum,
     viewportHeightPx,
     fovYRad,
   } = input;
@@ -64,9 +65,11 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
   // Half-diagonal (corner, not edge — the widest off-axis angle a fully
   // on-screen body can have), padded by FRUSTUM_CULL_MARGIN_FACTOR: this is
   // a perf cull, so a missed cull costs a pass but a false cull vanishes a
-  // visible body — the margin leans toward keeping.
-  const aspect = viewportWidthPx / viewportHeightPx;
-  const halfDiagRad = Math.atan(Math.tan(fovYRad / 2) * Math.hypot(1, aspect));
+  // visible body — the margin leans toward keeping. The FARTHER edge per axis,
+  // so an off-axis frustum's long side is covered.
+  const tanX = Math.max(Math.abs(frustum.tanLeft), Math.abs(frustum.tanRight));
+  const tanY = Math.max(Math.abs(frustum.tanDown), Math.abs(frustum.tanUp));
+  const halfDiagRad = Math.atan(Math.hypot(tanX, tanY));
   const cullThresholdRad = halfDiagRad * FRUSTUM_CULL_MARGIN_FACTOR;
 
   return candidates.filter((body) => {

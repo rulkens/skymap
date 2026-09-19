@@ -300,7 +300,6 @@ describe('deriveSlabs', () => {
         symmetricFrustum(cam.fovYRad, cam.aspect),
         row.near,
         dM + rMaxM,
-        false,
       );
       const expectedVp = mat4d.multiply(expectedProj, view);
       expect(Array.from(row.vp)).toEqual(Array.from(expectedVp));

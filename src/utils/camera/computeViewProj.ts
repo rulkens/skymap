@@ -52,7 +52,8 @@ const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], u
  * ### Projection matrix — `frustumPerspective`
  *
  * Built from the view's tangent-form `frustum`, in `mat4.perspective`'s
- * convention (a symmetric frustum reproduces it): wgpu-matrix's `mat4.perspective` maps the view frustum to clip-space depth
+ * convention (a symmetric frustum reproduces it): wgpu-matrix's
+ * `mat4.perspective` maps the view frustum to clip-space depth
  * **[0, 1]** — the WebGPU / Direct3D / Metal convention ("Zero to One") — by
  * default.  That matches WebGPU's NDC depth range directly, so there is no
  * separate "ZO vs NO" choice to make (unlike gl-matrix, which defaulted to the
@@ -72,7 +73,8 @@ const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], u
  * clip).  This is the standard MVP formula with M = Identity.
  *
  * @param cam  The orbit camera whose state to snapshot into matrices.
- * @param frustum  The view's frustum; the camera's own is `symmetricFrustum(cam.fovYRad, cam.aspect)`.
+ * @param frustum  The view's frustum; the camera's own is
+ *                 `symmetricFrustum(cam.fovYRad, cam.aspect)`.
  * @param viewFromCamEye  A rig view's turn + eye offset (`viewFromCameraEye`);
  *                 omitted = the camera's own view, with no extra multiply.
  * @returns A new `Mat4` representing the combined view-projection transform.

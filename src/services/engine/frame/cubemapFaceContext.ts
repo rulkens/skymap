@@ -99,8 +99,7 @@ export function cubemapFaceContext(input: {
 
   const ctx = deriveFrameContext(
     state,
-    // Only `.width`/`.height` are read, and an offscreen capture has no canvas.
-    { width: faceSizePx, height: faceSizePx } as unknown as HTMLCanvasElement,
+    { width: faceSizePx, height: faceSizePx },
     pose,
     // The capture pose is synthetic and world-absolute, so the pose-provider
     // seam routes every body through the Mpc path — no body arm can be engaged

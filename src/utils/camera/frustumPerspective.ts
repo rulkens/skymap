@@ -9,5 +9,5 @@ import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import { frustumPerspectiveF64 } from './frustumPerspectiveF64';
 
 export function frustumPerspective(frustum: ViewFrustum, near: number, far: number): Mat4 {
-  return Float32Array.from(frustumPerspectiveF64(frustum, near, far, false));
+  return Float32Array.from(frustumPerspectiveF64(frustum, near, far));
 }

@@ -36,32 +36,24 @@ describe('frustumPerspective', () => {
   // The scales land within an ulp or two; they reach the GPU narrowed to f32.
   it('symmetric frustum matches mat4d.perspective to within 2 ulps (f64)', () => {
     for (const [fov, aspect, near, far] of SPREAD) {
-      const got = frustumPerspectiveF64(symmetricFrustum(fov, aspect), near, far, false);
+      const got = frustumPerspectiveF64(symmetricFrustum(fov, aspect), near, far);
       const want = mat4d.perspective(fov, aspect, near, far);
       for (let i = 0; i < 16; i++) expectUlps(got[i]!, want[i]!, i === 0 || i === 5 ? 2 : 0);
     }
   });
 
-  it('symmetric frustum reproduces perspectiveReverseZ, x scale to within 1 ulp', () => {
-    for (const [fov, aspect, near, far] of SPREAD) {
-      const f = symmetricFrustum(fov, aspect);
-      const pairs = [
-        [frustumPerspectiveF64(f, near, null, true), mat4d.perspectiveReverseZ(fov, aspect, near)],
-        [
-          frustumPerspectiveF64(f, near, far, true),
-          mat4d.perspectiveReverseZ(fov, aspect, near, far),
-        ],
-      ] as const;
-      for (const [got, want] of pairs) {
-        for (let i = 0; i < 16; i++) expectUlps(got[i]!, want[i]!, i === 0 ? 1 : 0);
-      }
+  it('symmetric frustum reproduces infinite perspectiveReverseZ, x scale to within 1 ulp', () => {
+    for (const [fov, aspect, near] of SPREAD) {
+      const got = frustumPerspectiveF64(symmetricFrustum(fov, aspect), near, null);
+      const want = mat4d.perspectiveReverseZ(fov, aspect, near);
+      for (let i = 0; i < 16; i++) expectUlps(got[i]!, want[i]!, i === 0 ? 1 : 0);
     }
   });
 
   it('asymmetric frustum maps its edges to clip ±1', () => {
     const f = { tanLeft: -0.4, tanRight: 1.3, tanDown: -0.9, tanUp: 0.2 };
-    for (const reverseZ of [false, true]) {
-      const proj = frustumPerspectiveF64(f, 0.1, 100, reverseZ);
+    for (const far of [100, null]) {
+      const proj = frustumPerspectiveF64(f, 0.1, far);
       // View space looks down −z: a direction at depth 1 is (tan, tan, −1).
       const ndc = (x: number, y: number): [number, number] => {
         const c = vec4.transformMat4([x, y, -1, 1], proj, new Float64Array(4));

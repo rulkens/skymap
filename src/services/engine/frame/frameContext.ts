@@ -10,6 +10,7 @@
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
+import type { Size } from '../../../@types/rendering/Size';
 import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
@@ -23,6 +24,7 @@ import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
 import { symmetricFrustum } from '../../../utils/camera/symmetricFrustum';
 import { viewFromCameraEye } from '../../../utils/camera/viewFromCameraEye';
+import { turnedOrbitCamera } from '../../../utils/camera/turnedOrbitCamera';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -33,7 +35,8 @@ import { starSphereRangeM } from '../../../utils/star/starSphereRangeM';
 import { outerBoundRadiusM } from '../../../utils/occlusion/outerBoundRadiusM';
 import { isEngineReady } from '../helpers/engineReady';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
-import { bodyRelativePose, viewBodyPose } from '../camera/bodyRelativePose';
+import { bodyRelativePose } from '../camera/bodyRelativePose';
+import { viewBodyPose } from '../camera/viewBodyPose';
 import { hostOf } from '../camera/rungs/hostOf';
 import { isBodyArm } from '../camera/rungs/isBodyArm';
 import { isWorldArm } from '../camera/rungs/isWorldArm';
@@ -82,7 +85,7 @@ import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf
  */
 export function deriveFrameContext(
   state: EngineState,
-  canvas: HTMLCanvasElement,
+  canvasSize: Readonly<Size>,
   pose: CameraPose,
   arm: FramedCameraPose,
   projection: CameraProjection,
@@ -101,10 +104,7 @@ export function deriveFrameContext(
 
   const cam = assembleOrbitCamera(pose, projection, poseBasis, upBasis);
 
-  const canvasSize = view?.sizePx ?? { width: canvas.width, height: canvas.height };
   const frustum = view?.frustum ?? symmetricFrustum(cam.fovYRad, cam.aspect);
-  const fovYRad =
-    view === undefined ? cam.fovYRad : Math.atan(frustum.tanUp) - Math.atan(frustum.tanDown);
   const viewFromCamEye = view && viewFromCameraEye(view.rotation, view.eyeOffsetMpc);
   const vp = computeViewProj(cam, frustum, viewFromCamEye);
 
@@ -141,6 +141,12 @@ export function deriveFrameContext(
           cam.position[1]! + eyeOffset[1],
           cam.position[2]! + eyeOffset[2],
         ];
+  // Derivation below stays on `cam` (pose, arm, NEAR0 all turn via `view`);
+  // the context carries the view's own camera so no `ctx.cam` reader draws the
+  // main orientation. Never fed back to the camera path: framing reads state.
+  const viewCam =
+    view === undefined ? cam : turnedOrbitCamera(cam, viewBasisWorld, drawCamPos, frustum);
+  const { fovYRad } = viewCam;
 
   const { earth, planets, meshBodies } = state.data.bodies;
   // A mesh body whose driver hangs off something with no row of its own gets
@@ -156,7 +162,7 @@ export function deriveFrameContext(
     bodyStates,
     camPosMpc: drawCamPos,
     camForwardMpc: viewForward,
-    viewportWidthPx: canvasSize.width,
+    frustum,
     viewportHeightPx: canvasSize.height,
     fovYRad,
   };
@@ -275,7 +281,7 @@ export function deriveFrameContext(
   // side effect this (speculatively callable) function must not have.
   return {
     isReady: true,
-    cam,
+    cam: viewCam,
     vp,
     slabs,
     bodyPose,

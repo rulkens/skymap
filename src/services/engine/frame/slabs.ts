@@ -199,7 +199,7 @@ export function bodySlabRow(input: {
   // hard-coding the reversed branch is what keeps a flip from half-landing.
   const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
   const view = mat4d.lookAt([0, 0, 0], forward, up);
-  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : dM + rMaxM, reversedZ);
+  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : dM + rMaxM);
   const vp = mat4d.multiply(proj, view) as Float64Array;
 
   // DEV-only, like the §7.2 scan that reads it — a prod frame skips both.

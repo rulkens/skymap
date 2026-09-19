@@ -18,8 +18,7 @@ export function deriveViewContext(
   const { cam } = main;
   const ctx = deriveFrameContext(
     state,
-    // Only `.width`/`.height` are read, and the spec's size wins over them.
-    spec.sizePx as unknown as HTMLCanvasElement,
+    spec.sizePx,
     { target: cam.target, yaw: cam.yaw, pitch: cam.pitch, distance: cam.distance, roll: cam.roll },
     // The arm `runFrame` derived `main` from: it assigns the stepped runtime
     // before deriving, and `main.cam` carries no arm of its own.

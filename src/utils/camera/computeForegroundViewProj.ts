@@ -38,7 +38,8 @@
  * ### Projection matrix — `frustumPerspectiveF64`
  *
  * Built from the view's tangent-form `frustum`, in the conventions of
- * `mat4d.perspective` / `mat4d.perspectiveReverseZ` described here. Non-reversed (the default, `reversedZ === false`): `mat4d.perspective` maps
+ * `mat4d.perspective` / `mat4d.perspectiveReverseZ` described here.
+ * Non-reversed (the default, `reversedZ === false`): `mat4d.perspective` maps
  * the view frustum to clip-space depth **[0, 1]** — the WebGPU Zero-to-One
  * convention. This is identical to `mat4.perspective` in the f32 path; no
  * separate ZO call is needed.
@@ -147,7 +148,7 @@ export function computeForegroundViewProj(input: {
   // Non-reversed: finite ZO depth [0, 1] — matches the f32 path and WebGPU's
   // NDC range. Reversed: infinite-far reversed-Z (zFar omitted; near→1, ∞→0),
   // which ignores `far`. See the '### Projection matrix' docblock section.
-  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : far, reversedZ);
+  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : far);
 
   // ── Combined view-projection ─────────────────────────────────────────────
   // mat4d.multiply(a, b) computes a * b (column-major: view applied first).

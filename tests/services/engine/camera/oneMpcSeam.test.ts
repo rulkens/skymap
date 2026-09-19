@@ -12,7 +12,8 @@
  * The camera-pivot work (spec §10) added a second legitimate seam,
  * `poseFrameConversion.ts`'s world-arm/body-arm pair, and put the ENGAGED
  * camera path (`services/engine/camera`, `services/camera`, `utils/camera`)
- * under the same gate as the render path above.
+ * under the same gate as the render path above. `viewBodyPose.ts` is the third:
+ * a rig view's eye offset added to either provider's metre-native pose.
  *
  * This is an import-graph assertion (ts-morph, real property-access AST
  * nodes), not a source-text grep: `conventions/testing.md` bans a substring
@@ -34,11 +35,12 @@ import { walkFiles } from '../../../helpers/conventions/walkFiles';
 
 const FORBIDDEN_MEMBERS = ['MPC_TO_M', 'M_TO_MPC'];
 
-// The two seams themselves: deliberately excluded from TS_FILES below (they
+// The seams themselves: deliberately excluded from TS_FILES below (they
 // ARE the allowed conversion sites), documented instead in the first `it`.
 const SEAM_FILES: readonly string[] = [
   'src/services/engine/camera/bodyRelativePose.ts',
   'src/services/engine/camera/poseFrameConversion.ts',
+  'src/services/engine/camera/viewBodyPose.ts',
 ];
 
 // The body-slab path AND the engaged camera path, DERIVED by sweeping the
@@ -79,8 +81,7 @@ const KNOWN_ANCHOR_FILES: readonly string[] = [
 const WESL_FILES: readonly string[] = walkFiles('src/services/gpu/shaders/bodies', ['.wesl']);
 
 // The ONE table of "files on the body-slab path or the engaged camera path
-// allowed to bridge Mpc<->m outside the two seams (bodyRelativePose.ts,
-// poseFrameConversion.ts), and why" (see radar findings 1+2 in
+// allowed to bridge Mpc<->m outside the seams (SEAM_FILES), and why" (see radar findings 1+2 in
 // .superpowers/sdd/2026-08-26-body-render-slabs/radar-seams-tests.md). Each
 // entry names the category so a NEW use beyond these needs its own line —
 // keeping this a real (if per-file) gate, not a rubber stamp.

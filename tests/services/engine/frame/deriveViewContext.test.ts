@@ -5,6 +5,9 @@ import { deriveFrameContext } from '../../../../src/services/engine/frame/frameC
 import { deriveViewContext } from '../../../../src/services/engine/frame/deriveViewContext';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
+import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
+import { cameraBillboardBasis } from '../../../../src/utils/camera/cameraBillboardBasis';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
@@ -58,7 +61,7 @@ function mainContext(arm: FramedCameraPose = absoluteArm(POSE)): {
   const state = makeState(arm);
   const ctx = deriveFrameContext(
     state,
-    { width: 1920, height: 1080 } as unknown as HTMLCanvasElement,
+    { width: 1920, height: 1080 },
     POSE,
     arm,
     PROJECTION,
@@ -126,6 +129,21 @@ describe('deriveViewContext', () => {
     expectVec(basisOf(v.vp).up, basisOf(main.vp).up);
   });
 
+  it("a turned view's ctx.cam is that view's camera, so every ctx.cam reader draws it", () => {
+    const { main, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
+    const want = basisOf(v.vp);
+    expectVec(orbitForwardOf(v.cam), want.forward);
+    expectVec(basisOf(main.vp).right, want.forward);
+    // The billboard axes the Milky Way passes read, and the shells' target − eye.
+    const billboard = cameraBillboardBasis(v.cam);
+    expectVec(billboard.right, want.right);
+    expectVec(billboard.up, want.up);
+    const aim = [0, 1, 2].map((i) => v.cam.target[i]! - v.cam.position[i]!) as Vec3;
+    expectVec(normalize3(aim), want.forward);
+    const camVp = computeViewProj(v.cam, spec().frustum);
+    for (let i = 0; i < 16; i++) expect(camVp[i]).toBeCloseTo(v.vp[i]!, 4);
+  });
+
   it('five dome-like specs derive five distinct vps from one pose', () => {
     const { state, main } = mainContext();
     const cam = basisOf(main.vp);
@@ -141,8 +159,6 @@ describe('deriveViewContext', () => {
           slot,
         }),
       )!;
-      // One pose: every face is the main camera, turned.
-      expect(face.cam.position).toEqual(main.cam.position);
       expect(face.viewSlot).toBe(slot);
       const want = multiply3x3(camBasis, rotation);
       expectVec(basisOf(face.vp).forward, [want[6], want[7], want[8]]);
@@ -156,7 +172,19 @@ describe('deriveViewContext', () => {
   it('an asymmetric frustum survives into ctx.vp and drawPxPerRad', () => {
     const frustum: ViewFrustum = { tanLeft: -0.3, tanRight: 0.9, tanDown: -0.5, tanUp: 0.4 };
     const { main, v } = view({ frustum, sizePx: { width: 800, height: 600 } });
-    expect(Array.from(v.vp)).toEqual(Array.from(computeViewProj(main.cam, frustum)));
+    // Each frustum edge, one unit deep along the camera's own axes, lands on NDC ±1.
+    const { right, up, forward } = basisOf(main.vp);
+    const ndc = (tx: number, ty: number): [number, number] => {
+      const p = [0, 1, 2].map(
+        (i) => v.drawCamPos[i]! + 10 * (right[i]! * tx + up[i]! * ty + forward[i]!),
+      );
+      const c = vec4.transformMat4([p[0]!, p[1]!, p[2]!, 1], Float64Array.from(v.vp));
+      return [c[0]! / c[3]!, c[1]! / c[3]!];
+    };
+    expect(ndc(frustum.tanLeft, 0)[0]).toBeCloseTo(-1, 4);
+    expect(ndc(frustum.tanRight, 0)[0]).toBeCloseTo(1, 4);
+    expect(ndc(0, frustum.tanDown)[1]).toBeCloseTo(-1, 4);
+    expect(ndc(0, frustum.tanUp)[1]).toBeCloseTo(1, 4);
     expect(v.drawPxPerRad).toBe(600 / 0.9);
     expect(v.fovYRad).toBeCloseTo(Math.atan(0.4) + Math.atan(0.5), 12);
     expect(v.canvasSize).toEqual({ width: 800, height: 600 });
@@ -165,8 +193,8 @@ describe('deriveViewContext', () => {
   it('an eye offset moves drawCamPos by the rotated offset and leaves the pose untouched', () => {
     // Half a unit along the turned view's right, which is the camera's back.
     const { main, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
-    expect(v.cam.position).toEqual(main.cam.position);
-    expect(v.cam.target).toEqual(main.cam.target);
+    expect(v.cam.position).toEqual(v.drawCamPos);
+    expect(v.cam.distance).toBe(main.cam.distance);
     const back = basisOf(main.vp).forward.map((x) => -0.5 * x) as Vec3;
     expectVec([0, 1, 2].map((i) => v.drawCamPos[i]! - main.drawCamPos[i]!) as Vec3, back);
     // Both matrices put the moved eye at the eye-space origin: clip (0, 0, ·, 0).
@@ -190,10 +218,13 @@ describe('deriveViewContext', () => {
       pose: { bodyId: 'earth', anchorLocalM: [10, 20, 30], eyeRelAnchorM: [1, 2, 3], basisLocal },
     };
     const { state, main } = mainContext(arm);
-    const v = deriveViewContext(state, main, spec({ rotation: YAW_RIGHT }))!;
+    // 2 m along the TURNED view's right: basisLocal·YAW_RIGHT's first column is
+    // local +y (the unturned basis would put it on +x).
+    const eyeOffsetMpc: Vec3 = [2 * SCALE_UNITS.M_TO_MPC, 0, 0];
+    const v = deriveViewContext(state, main, spec({ rotation: YAW_RIGHT, eyeOffsetMpc }))!;
     const pose = v.bodyPose('earth');
     expect(pose).not.toBeNull();
-    expect(pose!.eyeRelBodyM).toEqual([11, 22, 33]);
+    expectVec(pose!.eyeRelBodyM, [11, 24, 33], 9);
     expect(pose!.basisM).toEqual(multiply3x3(basisLocal, YAW_RIGHT));
   });
 });
