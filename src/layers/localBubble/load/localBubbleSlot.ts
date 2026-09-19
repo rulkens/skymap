@@ -18,5 +18,6 @@ export function createLocalBubbleSlot(renderer: LocalBubbleRenderer): AssetSlot<
     commit: async (mesh) => {
       renderer.upload(mesh);
     },
+    onRelease: () => renderer.clearMesh(),
   });
 }

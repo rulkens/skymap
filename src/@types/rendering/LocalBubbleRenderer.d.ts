@@ -11,6 +11,8 @@ export type LocalBubbleRenderer = {
   upload(mesh: ShellMesh): void;
   /** True once a drawable mesh is committed — the fade row's guard reads this. */
   hasMesh(): boolean;
+  /** Frees the GPU vertex/index buffers uploaded by `upload`; `hasMesh()` is false after. */
+  clearMesh(): void;
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,

@@ -211,6 +211,10 @@ export function createLocalBubbleRenderer(
     return indexBuffer !== null;
   }
 
+  function clearMesh(): void {
+    destroyMeshBuffers();
+  }
+
   function draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
@@ -255,6 +259,7 @@ export function createLocalBubbleRenderer(
     label: 'localBubbleRenderer',
     upload,
     hasMesh,
+    clearMesh,
     draw,
     destroy,
   };
