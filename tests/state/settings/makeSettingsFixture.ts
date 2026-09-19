@@ -150,7 +150,7 @@ export function makeSettingsFixture(
     },
     // Mirrors localBubbleSlice.ts's boot value — no registry entry to derive
     // a default off of (see that slice's header).
-    localBubble: { enabled: true, intensity: 1 },
+    localBubble: { enabled: false, intensity: 1 },
     constellations: {
       enabled: SOURCE_REGISTRY[Source.Constellations].visible,
       intensity: SOURCE_REGISTRY[Source.Constellations].intensity,

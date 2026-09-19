@@ -163,7 +163,7 @@ A `localBubble` fade kind, filaments pattern: `FadeId`, `serializeFadeId` (`fade
 
 ### 7.4 Settings and UI
 
-`{ enabled: true, intensity: 1 }`, intensity 0–2. On by default: the window already keeps it invisible outside 0.6–10 kpc. The layer's own settings-panel section holds the toggle and the slider.
+`{ enabled: false, intensity: 1 }`, intensity 0–2. Off by default for now (user ruling 2026-09-19, after the eye-check); when on, the window keeps it invisible outside 0.4–10 kpc. The layer's own settings-panel section holds the toggle and the slider.
 
 ## 8. Testing
 
