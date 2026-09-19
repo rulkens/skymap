@@ -208,6 +208,9 @@ describe('createMeshBodyRenderer', () => {
     expect(shadow.desc.size).toEqual([4, 4, 1]);
     // No mip chain: only mip 0 is ever sampled, unlike the material maps.
     expect(shadow.desc.mipLevelCount ?? 1).toBe(1);
+    // copyExternalImageToTexture rejects a destination without RENDER_ATTACHMENT,
+    // leaving the mask all zeros — a black patch under the rover.
+    expect(shadow.desc.usage & GPUTextureUsage.RENDER_ATTACHMENT).not.toBe(0);
 
     renderer.clearMesh('b');
     expect(shadow.destroy).toHaveBeenCalledTimes(1);

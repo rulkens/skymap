@@ -271,15 +271,18 @@ export function createMeshBodyRenderer(init: {
     return texture;
   }
 
-  // No mip chain and no RENDER_ATTACHMENT usage: the contact-shadows pass
-  // samples mip 0 only (`textureSampleLevel(..., 0)`), unlike the material
-  // maps `uploadTexture` mips for trilinear filtering across the mesh.
+  // No mip chain: the contact-shadows pass samples mip 0 only. RENDER_ATTACHMENT
+  // is still required — copyExternalImageToTexture rejects a destination
+  // without it, which silently leaves the mask all zeros.
   function uploadContactShadow(id: string, src: ImageBitmap): ContactShadowResources {
     const texture = device.createTexture({
       label: `meshBody-contact-${id}`,
       size: [src.width, src.height, 1],
       format: 'r8unorm',
-      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      usage:
+        GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST |
+        GPUTextureUsage.RENDER_ATTACHMENT,
     });
     device.queue.copyExternalImageToTexture({ source: src }, { texture }, [
       src.width,
