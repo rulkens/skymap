@@ -1,6 +1,6 @@
 # Local Bubble shell Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Render the Local Bubble as an additive Fresnel shell, in a new `localBubble` Layer fed by a baked `.shell` mesh.
 
@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, WebGPU + WESL, Redux Toolkit, Vitest, tsx build tools.
 
-**Spec:** `docs/superpowers/specs/2026-09-18-local-bubble-shell-design.md`
+**Spec:** `docs/superpowers/specs/completed/2026-09-18-local-bubble-shell-design.md`
 
 ## Global Constraints
 
@@ -35,11 +35,11 @@ A = Tasks 1–2 (prep) · B = Tasks 3–4 (format + bake) · C = Tasks 5–8 (la
 export function fadeWindow(bands: readonly FadeBand[], value: number): number; // ∏ fadeBand(band, value)
 ```
 
-- [ ] Test `fadeWindow is 0 below the in-band, 1 inside the window, 0 past the out-band` with an approach band `{ fullAt: 2, goneAt: 1 }` and a recede band `{ fullAt: 4, goneAt: 8 }` at values 0.5, 3, 10.
-- [ ] Test `fadeWindow of no bands is 1`.
-- [ ] Implement over `fadeBand` (`src/utils/math/fadeBand.ts:33`).
-- [ ] `zoneOfAvoidanceLayerOpacity` becomes `fadeWindow([zoneOfAvoidance, zoneOfAvoidanceRecede], camDistMpc) * layerFadeOpacity`; its existing tests stay green unchanged.
-- [ ] Commit `prep(presentation): fadeWindow composes fade bands; ZoA onto it`.
+- [x] Test `fadeWindow is 0 below the in-band, 1 inside the window, 0 past the out-band` with an approach band `{ fullAt: 2, goneAt: 1 }` and a recede band `{ fullAt: 4, goneAt: 8 }` at values 0.5, 3, 10.
+- [x] Test `fadeWindow of no bands is 1`.
+- [x] Implement over `fadeBand` (`src/utils/math/fadeBand.ts:33`).
+- [x] `zoneOfAvoidanceLayerOpacity` becomes `fadeWindow([zoneOfAvoidance, zoneOfAvoidanceRecede], camDistMpc) * layerFadeOpacity`; its existing tests stay green unchanged.
+- [x] Commit `prep(presentation): fadeWindow composes fade bands; ZoA onto it`.
 
 ### Task 2: shared `FRAME_TO_WORLD` with the real galactic rotation
 
@@ -59,12 +59,12 @@ export const FRAME_TO_WORLD: Readonly<Record<ScalarFieldFrameKind, Mat4>>;
 //   'galactic' → GAL→EQ (was an identity stub)
 ```
 
-- [ ] Test `galactic north pole maps to J2000 RA 192.85948°, Dec +27.12825°` (unit vector, tolerance 1e-5 rad) through `FRAME_TO_WORLD.galactic`.
-- [ ] Test `galactic l=0, b=0 maps to RA 266.40499°, Dec −28.93617°`.
-- [ ] Test `supergalactic entry is unchanged` against the existing `SG_TO_EQ_MAT4_COL_MAJOR`.
-- [ ] Export `R_GAL_TO_EQ` (`superGalacticTransform.ts:80`) as the pair above; lift the table out of `buildCubeModelMatrix.ts` into `frameToWorld.ts` and import it back. Existing `buildCubeModelMatrix` tests stay green.
-- [ ] Update the `buildDustVolume.ts` comment: the galactic rotation now exists.
-- [ ] Commit `prep(frames): FRAME_TO_WORLD in its own module, galactic is a real rotation`.
+- [x] Test `galactic north pole maps to J2000 RA 192.85948°, Dec +27.12825°` (unit vector, tolerance 1e-5 rad) through `FRAME_TO_WORLD.galactic`.
+- [x] Test `galactic l=0, b=0 maps to RA 266.40499°, Dec −28.93617°`.
+- [x] Test `supergalactic entry is unchanged` against the existing `SG_TO_EQ_MAT4_COL_MAJOR`.
+- [x] Export `R_GAL_TO_EQ` (`superGalacticTransform.ts:80`) as the pair above; lift the table out of `buildCubeModelMatrix.ts` into `frameToWorld.ts` and import it back. Existing `buildCubeModelMatrix` tests stay green.
+- [x] Update the `buildDustVolume.ts` comment: the galactic rotation now exists.
+- [x] Commit `prep(frames): FRAME_TO_WORLD in its own module, galactic is a real rotation`.
 
 ### Task 3: the `.shell` format
 
@@ -107,10 +107,10 @@ export function encodeShellMesh(mesh: ShellMesh): ArrayBuffer;
 export function decodeShellMesh(buf: ArrayBuffer): ShellMesh; // views, not copies
 ```
 
-- [ ] Test `round-trips an f16 mesh` and `round-trips an f32 mesh` (two triangles, a non-zero centre, frame galactic).
-- [ ] Test `rejects a bad magic`, `rejects an unknown version`, `rejects an unknown dtype`, `rejects an unknown frame`; each message names `npm run build-local-bubble`, as `scalarFieldFormat.ts` does for its rebuild command.
-- [ ] Implement; the layout comment in the module header states units (pc) and the w conventions.
-- [ ] Commit `feat(localbubble): the .shell mesh format`.
+- [x] Test `round-trips an f16 mesh` and `round-trips an f32 mesh` (two triangles, a non-zero centre, frame galactic).
+- [x] Test `rejects a bad magic`, `rejects an unknown version`, `rejects an unknown dtype`, `rejects an unknown frame`; each message names `npm run build-local-bubble`, as `scalarFieldFormat.ts` does for its rebuild command.
+- [x] Implement; the layout comment in the module header states units (pc) and the w conventions.
+- [x] Commit `feat(localbubble): the .shell mesh format`.
 
 ### Task 4: the bake writes `.shell`
 
@@ -137,10 +137,10 @@ export function vertexNormals(
 ): Vec3[];
 ```
 
-- [ ] Test `vertexNormals of a unit icosphere point radially outward` (dot with the position > 0.99 for every vertex). Catches a winding flip that would invert the Fresnel term.
-- [ ] Extract, implement, wire; `allowDataFile` gains `name === 'local-bubble.shell'`.
-- [ ] Delete the stale RMAP/f32-plane remnants from both tool headers.
-- [ ] Commit `feat(localbubble): bake the shell mesh to .shell`.
+- [x] Test `vertexNormals of a unit icosphere point radially outward` (dot with the position > 0.99 for every vertex). Catches a winding flip that would invert the Fresnel term.
+- [x] Extract, implement, wire; `allowDataFile` gains `name === 'local-bubble.shell'`.
+- [x] Delete the stale RMAP/f32-plane remnants from both tool headers.
+- [x] Commit `feat(localbubble): bake the shell mesh to .shell`.
 
 ### Task 5: Layer scaffold, settings, loading
 
@@ -159,9 +159,9 @@ type LocalBubbleRuntime = { renderer: LocalBubbleRenderer; slot: AssetSlot<Shell
 
 Asset row: `key: 'localBubble'`, tier-agnostic request, `demand = settings.localBubble.enabled && |cameraPosMpc| < 0.020` (Mpc; the Sun is `RENDER_ORIGIN_MPC = [0,0,0]`, `src/data/renderOrigin.ts:27`, so distance is `|cameraPosMpc|`), `release = |cameraPosMpc| > 0.040`, priority below filaments' 80 ranking (it is a near-scale overlay; pick the next free rank and say which).
 
-- [ ] Test `demands only when enabled and within 20 kpc`, `releases beyond 40 kpc, holds in between`.
-- [ ] Scaffold. `create` builds the renderer, so this commit adds `render/localBubbleRenderer.ts` with `upload(mesh)`, `hasMesh()` and `destroy()` only (buffers, no pipeline, no draw); Task 6 adds the pipeline and draw. Each commit typechecks.
-- [ ] Commit `feat(localbubble): layer scaffold, settings and distance-gated loading`.
+- [x] Test `demands only when enabled and within 20 kpc`, `releases beyond 40 kpc, holds in between`.
+- [x] Scaffold. `create` builds the renderer, so this commit adds `render/localBubbleRenderer.ts` with `upload(mesh)`, `hasMesh()` and `destroy()` only (buffers, no pipeline, no draw); Task 6 adds the pipeline and draw. Each commit typechecks.
+- [x] Commit `feat(localbubble): layer scaffold, settings and distance-gated loading`.
 
 ### Task 6: renderer, shaders, pass, distance window
 
@@ -199,9 +199,9 @@ Pipeline: `ADDITIVE_BLEND` (`gpu/lib/blendStates`), **no depthStencil** (the `hd
 
 Pass: `enabled = slot ready && localBubbleOpacity(...) > 0`; `'local-bubble'` added to the hdr NEAR0 roster after `'milky-way'`. Do not touch `foregroundChainOrder` or NEAR0's `distanceRangeM`.
 
-- [ ] Test `localBubbleOpacity is 0 inside 0.6 kpc, 1 between 1.5 and 4 kpc, 0 beyond 10 kpc` (fadeAlpha 1, intensity 1) and `scales with intensity and fadeAlpha`.
-- [ ] Implement renderer + shaders + pass + bands; `checkFrameOrder` passes at boot.
-- [ ] Commit `feat(localbubble): the shell renderer, pass and distance window`.
+- [x] Test `localBubbleOpacity is 0 inside 0.6 kpc, 1 between 1.5 and 4 kpc, 0 beyond 10 kpc` (fadeAlpha 1, intensity 1) and `scales with intensity and fadeAlpha`.
+- [x] Implement renderer + shaders + pass + bands; `checkFrameOrder` passes at boot.
+- [x] Commit `feat(localbubble): the shell renderer, pass and distance window`.
 
 ### Task 7: toggle fade row
 
@@ -211,8 +211,8 @@ Pass: `enabled = slot ready && localBubbleOpacity(...) > 0`; `'local-bubble'` ad
 
 Pattern: `filaments` everywhere (grep `'filament'` / `filaments` in each file above). Fade kind `{ kind: 'localBubble' }`, row key `'localBubble'`, `seed: () => 0`, `intent: (s) => s.localBubble.enabled`, `guard: () => runtime.renderer.hasMesh()`.
 
-- [ ] No new test: the tables are exhaustive `Record`s over the kind union, so the compiler catches a missed entry. Say so in the commit body.
-- [ ] Commit `feat(localbubble): the toggle fade row`.
+- [x] No new test: the tables are exhaustive `Record`s over the kind union, so the compiler catches a missed entry. Say so in the commit body.
+- [x] Commit `feat(localbubble): the toggle fade row`.
 
 ### Task 8: settings section
 
@@ -220,14 +220,14 @@ Pattern: `filaments` everywhere (grep `'filament'` / `filaments` in each file ab
 
 Follow the `create-component` skill conventions; model on `src/layers/flow/ui/FlowSectionContainer.tsx`. Contents: a "Local Bubble" toggle bound to `enabled`, an intensity slider 0–2 (step 0.05) using the shared slider component the flow section uses.
 
-- [ ] No new test (a two-control container); the manual smoke covers it.
-- [ ] Commit `feat(localbubble): settings section`.
+- [x] No new test (a two-control container); the manual smoke covers it.
+- [x] Commit `feat(localbubble): settings section`.
 
 ### Task 9: docs (controller, inline)
 
 **Files:** `docs/DATA.md` (formats table row `SHEL` v1 → `shellMeshFormat.ts`; "Six formats"; layout line `local-bubble/v1/: local-bubble.shell`), PR #755 description (data + layer, the three open eye-check questions).
 
-- [ ] Commit `docs(localbubble): DATA.md for the .shell format`.
+- [x] Commit `docs(localbubble): DATA.md for the .shell format`.
 
 ---
 
