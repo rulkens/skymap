@@ -69,22 +69,22 @@ describe('collectDataFiles', () => {
     expect(() => collectDataFiles(dir)).toThrow('npm run build-data-manifest');
   });
 
-  it('uploads a baked mesh set and ignores a stray png beside it', () => {
+  it('uploads a baked mesh set and ignores a stray webp beside it', () => {
     mkdirSync(join(dir, 'meshes'), { recursive: true });
     writeFileSync(join(dir, 'meshes/whale.a3f19c2e.mesh'), 'mesh-bytes');
-    writeFileSync(join(dir, 'meshes/whale_albedo.b1c2d3e4.png'), 'albedo-bytes');
+    writeFileSync(join(dir, 'meshes/whale_albedo.b1c2d3e4.webp'), 'albedo-bytes');
     // Not a builder output, and not in the manifest — must be ignored rather
     // than tripping the drift guard the way an un-hashed tracked file would.
-    writeFileSync(join(dir, 'meshes/whale_thumbnail.png'), 'thumbnail-bytes');
+    writeFileSync(join(dir, 'meshes/whale_thumbnail.webp'), 'thumbnail-bytes');
     writeManifest({
       'meshes/whale.mesh': 'meshes/whale.a3f19c2e.mesh',
-      'meshes/whale_albedo.png': 'meshes/whale_albedo.b1c2d3e4.png',
+      'meshes/whale_albedo.webp': 'meshes/whale_albedo.b1c2d3e4.webp',
     });
 
     const uploads = collectDataFiles(dir);
     const keys = uploads.map((u) => u.r2Key).sort();
     expect(keys).toEqual(
-      ['data/meshes/whale.a3f19c2e.mesh', 'data/meshes/whale_albedo.b1c2d3e4.png'].sort(),
+      ['data/meshes/whale.a3f19c2e.mesh', 'data/meshes/whale_albedo.b1c2d3e4.webp'].sort(),
     );
   });
 

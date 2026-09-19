@@ -43,6 +43,14 @@ import { writeMeshBinary } from './writeMeshBinary';
  */
 const TRIANGLE_BUDGET = 150_000;
 const TEXTURE_SIZE_BUDGET = 2048;
+// The contact shadow is a soft blur under a few-metre footprint: 512^2 is
+// ~1 cm/texel there, and nothing sharper survives the blur.
+const CONTACT_SIZE_BUDGET = 512;
+// Lossy only where the eye is the judge: colour maps and the shadow mask.
+// Normal and metal-rough maps are data — a lossy codec bends slopes and
+// roughness — so they ship lossless.
+const LOSSY_WEBP = { quality: 90 };
+const LOSSLESS_WEBP = { lossless: true };
 
 /** Tangent-space "straight out", the substitute for a missing normal map. */
 const FLAT_NORMAL = { r: 128, g: 128, b: 255 };
@@ -434,6 +442,7 @@ async function writeTexture(
   texture: Texture | null,
   fallback: { r: number; g: number; b: number },
   path: string,
+  lossless: boolean,
   forceR255 = false,
 ): Promise<void> {
   const image = texture?.getImage();
@@ -445,7 +454,9 @@ async function writeTexture(
         withoutEnlargement: true,
       })
     : sharp({ create: { width: 1, height: 1, channels: 3, background: fallback } });
-  await (forceR255 ? pipeline.linear([0, 1, 1], [255, 0, 0]) : pipeline).png().toFile(path);
+  await (forceR255 ? pipeline.linear([0, 1, 1], [255, 0, 0]) : pipeline)
+    .webp(lossless ? LOSSLESS_WEBP : LOSSY_WEBP)
+    .toFile(path);
 }
 
 /**
@@ -550,13 +561,13 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     await sharp(contactSourcePath)
       .toColourspace('b-w')
       .resize({
-        width: TEXTURE_SIZE_BUDGET,
-        height: TEXTURE_SIZE_BUDGET,
+        width: CONTACT_SIZE_BUDGET,
+        height: CONTACT_SIZE_BUDGET,
         fit: 'inside',
         withoutEnlargement: true,
       })
-      .png()
-      .toFile(join(outDir, `${key}_contact.png`));
+      .webp(LOSSY_WEBP)
+      .toFile(join(outDir, `${key}_contact.webp`));
   }
 
   const factor = material.getBaseColorFactor();
@@ -590,9 +601,15 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   let albedoPath = '';
   for (const slot of MESH_TEXTURE_SLOTS) {
     const { texture, fallback } = sources[slot.field];
-    const path = join(outDir, `${key}${slot.suffix}.png`);
+    const path = join(outDir, `${key}${slot.suffix}.webp`);
     if (slot.field === 'albedo') albedoPath = path;
-    await writeTexture(texture, fallback, path, slot.field === 'metalRough' && !occlusionPacked);
+    await writeTexture(
+      texture,
+      fallback,
+      path,
+      !slot.format.endsWith('-srgb'),
+      slot.field === 'metalRough' && !occlusionPacked,
+    );
   }
 
   const substituted = MESH_TEXTURE_SLOTS.filter((slot) => sources[slot.field].texture === null).map(
