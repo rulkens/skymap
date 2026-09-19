@@ -54,13 +54,9 @@ fn fs(in: MeshBodyVSOut, @builtin(front_facing) frontFacing: bool) -> @location(
   let diffuseAlbedo = albedo * (1.0 - metallic);
 
   let v = normalize(u.camPosLocal - in.localPos);
-  // Micro-shadowing (Chan 2018): with no shadow map, the baked AO read as a
-  // visibility cone is the only self-shadowing the sun gets -- a crevice goes
-  // dark as the sun grazes it, an open face (ao = 1) keeps full sun.
-  let microShadow = saturate(abs(dot(n, u.sunDirLocal)) + 2.0 * ao * ao - 1.0);
   let direct =
     pbrDirectSphere(n, v, u.sunDirLocal, diffuseAlbedo, roughness, f0, u.sinSunAngularRadius) *
-    SUN_IRRADIANCE * u.sunVisibleFraction * microShadow;
+    SUN_IRRADIANCE * u.sunVisibleFraction;
   let env = envSplitSum(
     n, v, diffuseAlbedo, roughness, f0, probeTexture, meshSampler, envBrdfLut, lutSampler, ao,
   );
