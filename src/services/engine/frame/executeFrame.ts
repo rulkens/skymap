@@ -121,7 +121,7 @@ function colorAttachment(
  * already written. A step that declares one overrides that — depth is the only
  * attachment where sharing a target must not imply sharing its contents.
  * `'sample'` gets none at all, so it neither clears the target's depth nor
- * preserves it — never make it a target's first.
+ * preserves it.
  */
 function depthLoadOpFor(
   depth: 'clear' | 'load' | 'sample' | undefined,
@@ -174,6 +174,8 @@ export function executeFrame(args: ExecuteFrameArgs): void {
   // apart. Private to this call because `renderedTargets` is a public consumer
   // surface keyed by bare target id.
   const touchedFaces = new Set<string>();
+  // `<target>:<slab>` rows whose depth an opened step has cleared this frame.
+  const depthClearedRows = new Set<string>();
 
   for (const step of program) {
     switch (step.kind) {
@@ -245,8 +247,16 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // on `'foreground:0'`, and no composite sources a capture row.
         let destination: Destination;
         if (step.capture === undefined) {
+          // A split row's `'clear'` segment is skipped when its group is empty
+          // (a body with no terrain): its `'load'` must not inherit the previous
+          // row's depth, and its `'sample'` has no ground to project onto.
+          const row = `${step.target}:${step.slab}`;
+          const rowCleared = depthClearedRows.has(row);
+          if (step.depth === 'sample' && !rowCleared) break;
+          const depth = step.depth === 'load' && !rowCleared ? 'clear' : step.depth;
           const spec = ctx.renderTargets.specOf(step.target);
-          const loadOp = depthLoadOpFor(step.depth, touched.has(step.target));
+          const loadOp = depthLoadOpFor(depth, touched.has(step.target));
+          if (loadOp === 'clear') depthClearedRows.add(row);
           destination = {
             label: step.target,
             dest: { view: viewFor(step.target, ctx, swapView), clearValue: spec.clearValue },

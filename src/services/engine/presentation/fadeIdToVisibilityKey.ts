@@ -80,6 +80,7 @@ const VISIBILITY_KEY_BY_KIND = {
   volumeField: 'volumeField',
   milkyWay: 'milkyWayDisk',
   filament: 'filaments',
+  localBubble: 'localBubble',
   flow: 'flow',
   constellations: 'constellations',
   orbitTrails: 'orbitTrails',

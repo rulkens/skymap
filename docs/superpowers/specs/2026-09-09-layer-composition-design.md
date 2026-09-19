@@ -1266,6 +1266,26 @@ detail file; `2026-09-11-layer-settings-tuple-seam.md` (D) with PR-B; the galaxy
 twin. `2026-06-29-source-registry-factory.md` (A) is half-consumed: PR-C closes it for the galaxy
 family, and its detail file is rewritten down to the star and volume remainder rather than deleted.
 
+### (e) 05c `zoneOfAvoidance`: contract prep (ratified 2026-09-19)
+
+ZoA is the first Layer that owns a render target, a world-space label and a row in a shared
+settings section. Three touchpoints were bolt-ons against the contract as it stood; a separate prep
+PR creates the joints, sequenced P0 → P3, before the Layer PR.
+
+| Touchpoint | Blocker | Joint |
+|---|---|---|
+| `zoa` target | `createRenderTargets` allocates only core's `renderTargetRows`, inside a GPU-handle row whose construct deps cannot see the composition | P3: the allocator takes core rows + every Layer's static `targets`, merged in `initGpu`; `Layer.targets` stops being declared-only |
+| curved lettering | `Layer.labels` carries screen-space producers only; `LABEL_3D_PRODUCERS` is a core list | P2: `labels?(runtime): { screen?: Label2DProducer[]; world?: Label3DProducer[] }` |
+| toggle in "Labels & guides" | `LayerUi` can only add whole sections | P1: `ui?: readonly LayerUiEntry[]`, `{ slot, content }` typed by one `LayerUiSlots` map (`main`, `debug`, `labelsAndGuides`); a shared-section row is DATA (`id`, `label`, `select`, `set`) so the section still derives its master tri-state. `LayerUi { settings, debug }` dissolves |
+| duplicate-name guards | hand-written four times (`createLayers` ×3, `composeSelectionRows`); P3 would add a fifth | P0: one merge helper that throws on a duplicate key, naming table and key |
+
+Everything else ZoA holds is growth at existing members (Runtime handles, `passes` incl. the
+upsample pass built by core's `createUpsamplePass`, `fades`, `selection`). It has no `frame` vote.
+InfoCard, focus, halo and URL-hash tables stay core: they are keyed by the shared `SelectionRef`
+union and still carry a `galaxyCatalog` arm too. A greenfield cross-check derived the same three
+shapes; it diverged only on grouping the UI by slot (the entry list was ruled) and on an explicit
+walk `order` for 3D producers (not needed with one producer).
+
 ## 10. Migration sequence
 
 Each item is one PR unless stated. (a)-(c) are §9's prep.

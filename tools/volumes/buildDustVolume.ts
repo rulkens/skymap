@@ -118,15 +118,13 @@ export async function buildDustVolume(args: {
     voxels,
     // Native frame is galactic — Edenhofer's HEALPix maps and
     // interp2box.py's cartesian box are both galactic, not equatorial.
-    // `FRAME_TO_WORLD['galactic']` (buildCubeModelMatrix.ts) is an
-    // unexercised identity stub today (no shipped cube used 'galactic'
-    // before this one); it gets the real GAL→EQ rotation in the
-    // renderer-slice PR, this cube's first consumer. `rotation` stays
-    // identity regardless — it's reserved for per-cube tilt on top of
-    // FRAME_TO_WORLD, and baking the frame rotation in here would
-    // compound with FRAME_TO_WORLD once that entry is fixed (the
-    // double-rotation bug buildCf4Density.ts's step 5 comment warns
-    // about for the supergalactic case).
+    // `FRAME_TO_WORLD.galactic` (`src/data/frameToWorld.ts`) carries the
+    // real GAL→EQ rotation, so this cube is drawn correctly once rendered.
+    // `rotation` stays identity regardless — it's reserved for per-cube
+    // tilt on top of FRAME_TO_WORLD, and baking the frame rotation in here
+    // would compound with FRAME_TO_WORLD (the double-rotation bug
+    // buildCf4Density.ts's step 5 comment warns about for the
+    // supergalactic case).
     frameKind: 'galactic',
     origin,
     voxelSize: voxelSizeMpc,

@@ -22,6 +22,13 @@ a scoped tidy or a gap in the extract closure worth capturing before it is lost.
   export statement. Add a refusal or handle the form, with a test.
 - **default / namespace import carry.** The default-import and namespace-import
   carry, plus the re-import / prune combination, are untested. Add fixtures.
+- **TYPE import carry is broken, not just untested** (confirmed 2026-09-18).
+  `extract tools/parsers/desiFits.ts#parseFitsBinTable` emitted a file
+  referencing `FitsBinTable` and `FitsColumn` with no import for either, so the
+  extracted file did not compile — `tsc` caught it as `TS2304: Cannot find
+name`. The types were exported from the source file and used only in the
+  target's signature; nothing carried them or refused. A type-only reference in
+  the moved symbol's signature is the reproduction.
 
 ## Refusal / dry ergonomics
 

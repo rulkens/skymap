@@ -11,6 +11,7 @@ import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { MeshReq } from '../../../@types/loading/MeshReq';
 import type { MeshAsset } from '../../../@types/data/mesh/MeshAsset';
 import type { MeshTextureField } from '../../../@types/data/mesh/MeshTextureField';
+import { MESH_ASSETS } from '../../../data/bodies/meshAssets.generated';
 import { decodeMesh } from '../../../data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../data/mesh/meshTextureSlots';
 import { dataUrl, fetchWithProgress } from '../fetchWithProgress';
@@ -36,13 +37,14 @@ async function fetchTexture(
 
 export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onProgress) => {
   const prefix = `meshes/${req.meshKey}`;
-  const buf = await fetchWithProgress(dataUrl(`${prefix}.mesh`), signal, onProgress);
-  const geometry = decodeMesh(buf);
+  const hasContactDecal = MESH_ASSETS[req.meshKey]?.contactDecal !== undefined;
 
-  // `fromEntries` widens the key back to `string`; the slot table is what makes
-  // the record exhaustive, so the assertion is restating it, not hiding a gap.
-  const textures = Object.fromEntries(
-    await Promise.all(
+  const [buf, textures, contactShadow] = await Promise.all([
+    fetchWithProgress(dataUrl(`${prefix}.mesh`), signal, onProgress),
+    // `fromEntries` widens the key back to `string`; the slot table is what
+    // makes the record exhaustive, so the assertion is restating it, not
+    // hiding a gap.
+    Promise.all(
       MESH_TEXTURE_SLOTS.map(
         async (slot) =>
           [
@@ -54,8 +56,16 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
             ),
           ] as const,
       ),
-    ),
-  ) as Record<MeshTextureField, ImageBitmap>;
+    ).then((entries) => Object.fromEntries(entries) as Record<MeshTextureField, ImageBitmap>),
+    // The shadow is garnish: a missing mask drops it, never the rover.
+    hasContactDecal
+      ? fetchTexture(dataUrl(`${prefix}_contact.png`), signal, true).catch((err: Error) => {
+          if (err.name === 'AbortError') throw err;
+          return undefined;
+        })
+      : undefined,
+  ]);
+  const geometry = decodeMesh(buf);
 
-  return { ...geometry, ...textures };
+  return { ...geometry, ...textures, ...(contactShadow ? { contactShadow } : {}) };
 };

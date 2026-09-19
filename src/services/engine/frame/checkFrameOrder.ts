@@ -13,6 +13,7 @@ import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ContentCompute } from '../../../@types/engine/frame/ContentCompute';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
+import { rosterPassNames } from '../../../utils/render/rosterPassNames';
 
 type StepFacts = {
   /** Names this line draws for the real view — the "exactly once" domain. */
@@ -45,7 +46,7 @@ const STEP_FACTS: {
   render: (spec) => ({ ...NONE, drawn: spec.passes, targets: [spec.target] }),
   foreground: (spec) => ({
     ...NONE,
-    drawn: [...spec.near0Passes, ...spec.bodyPasses],
+    drawn: [...spec.near0Passes, ...rosterPassNames(spec.bodyPasses)],
     targets: [spec.target],
   }),
   composite: (spec) => ({ ...NONE, targets: [spec.source, spec.dest] }),

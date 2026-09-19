@@ -320,12 +320,17 @@ export function createEngine(
     layers: [],
     layerSagaTasks: [],
     selectionKindRows: [],
+    // Static per Layer, known before any GPU phase runs — the `renderTargets`
+    // GPU-handle row reads this to compose its table, and that row constructs
+    // BEFORE `createLayers`.
+    layerTargets: composition.layers.map((layer) => layer.targets ?? []),
     // Empty until `createLayers` composes core's rows with every Layer's; no
-    // phase before it reads any of the five (`pickProgram` is `wireInput`).
+    // phase before it reads any of these (`pickProgram` is `wireInput`).
     passes: [],
     computes: [],
     assetRows: [],
     fadeRows: [],
+    label3DProducers: [],
     layerSlots: new Map(),
   };
 

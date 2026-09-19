@@ -259,3 +259,13 @@ as a ring in mesh-local metres. `npm run crop-mesh -- --group <id> --asset
 `<assetId>-cropped`, printing kept / source triangle counts and the share of
 the atlas the kept triangles still sample; the atlas itself is carried over
 unchanged.
+
+Once the atlas coverage from a crop is worth reclaiming, `npm run repack-atlas
+-- --group <id> --asset <assetId> --size 4096|2048` re-packs it with xatlas
+and publishes the sibling `<assetId>-4k` / `<assetId>-2k`. 4096 re-packs the
+existing charts pixel-exactly — the source atlas fits the new one at scale 1,
+so nothing but the JPEG re-encode is lost — while 2048 resamples at the
+largest scale that still fits one atlas; which of the two happens follows from
+the fit itself, never a flag. The printed line reports chart count, orphan
+vertex count and block count (xatlas's "no camera saw this face" fallback),
+triangle count, and both the new and source atlas file sizes.

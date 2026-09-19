@@ -3,6 +3,7 @@
 // Regenerate with:  npm run build-meshes
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 
 export type MeshAssetRow = {
@@ -21,6 +22,9 @@ export type MeshAssetRow = {
   readonly licence: string;
   /** author + URL; empty string for CC0 */
   readonly attribution: string;
+  /** The ground-contact box `contactShadow` projects into, body frame,
+   *  metres; absent for a floating mesh. */
+  readonly contactDecal?: ContactDecal;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
@@ -55,7 +59,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     path: 'meshes/voyager.mesh',
     boundingRadiusM: 14.544853697326353,
     groundOffsetM: 4.791086139044178,
-    meanAlbedo: [0.098529, 0.094666, 0.089745],
+    meanAlbedo: [0.104348, 0.099987, 0.094487],
     triangleCount: 20378,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
@@ -68,7 +72,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     path: 'meshes/hubble.mesh',
     boundingRadiusM: 8.786712680737544,
     groundOffsetM: 6.5379468441961155,
-    meanAlbedo: [0.168474, 0.155995, 0.134209],
+    meanAlbedo: [0.166187, 0.153584, 0.133085],
     triangleCount: 7672,
     substituted: [],
     source:
@@ -82,38 +86,53 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     path: 'meshes/perseverance.mesh',
     boundingRadiusM: 1.9895822183466751,
     groundOffsetM: 0.9125953290707832,
-    meanAlbedo: [0.068496, 0.066304, 0.065025],
+    meanAlbedo: [0.271358, 0.262801, 0.257053],
     triangleCount: 100000,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
+    contactDecal: {
+      centre: [-0.14926457100756546, -0.005141867351485026, -0.913145561665616],
+      halfU: [0, 2.331205129623413, 0],
+      halfV: [-2.331205129623413, 0, 0],
+    },
   },
   curiosity: {
     key: 'curiosity',
     path: 'meshes/curiosity.mesh',
     boundingRadiusM: 2.4789837008600912,
     groundOffsetM: 0.8980751162248013,
-    meanAlbedo: [0.077987, 0.076399, 0.075039],
+    meanAlbedo: [0.169979, 0.166527, 0.16356],
     triangleCount: 48384,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/curiosity-rover-msl/',
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Curiosity Rover (MSL) (Clean)" (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)',
+    contactDecal: {
+      centre: [0.23637191809611996, -0.026815513198097236, -0.8980751758294461],
+      halfU: [0, 2.9585468769073486, 0],
+      halfV: [-2.9585468769073486, 0, 0],
+    },
   },
   mer: {
     key: 'mer',
     path: 'meshes/mer.mesh',
     boundingRadiusM: 1.2008228521056163,
     groundOffsetM: 0.574356440144803,
-    meanAlbedo: [0.113629, 0.095048, 0.068025],
+    meanAlbedo: [0.16812, 0.140585, 0.100566],
     triangleCount: 32562,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/',
     licence: 'Public domain (NASA)',
     attribution:
       'NASA/JPL-Caltech, "Mars Exploration Rover - Spirit and Opportunity" (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)',
+    contactDecal: {
+      centre: [-0.07798823068739452, -0.01337763976239624, -0.5743564252436418],
+      halfU: [0, 1.709266185760498, 0],
+      halfV: [-1.709266185760498, 0, 0],
+    },
   },
 };

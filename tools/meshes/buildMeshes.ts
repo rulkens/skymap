@@ -11,7 +11,7 @@
  * docs/superpowers/specs/2026-09-10-mesh-bodies-design.md ("Tool").
  */
 
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, resolve } from 'node:path';
 
@@ -19,12 +19,16 @@ import { Document, NodeIO, Primitive, type Material, type Texture } from '@gltf-
 import sharp from 'sharp';
 
 import type { MeshAssetRow } from '../../src/data/bodies/meshAssets.generated';
+import type { ContactDecal } from '../../src/@types/data/mesh/ContactDecal';
 import type { Mat3 } from '../../src/@types/math/Mat3';
 import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureField';
 import type { Vec3 } from '../../src/@types/math/Vec3';
+import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
+import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
+import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 import { quote } from '../utils/codegen/quote';
 import { MESH_ASSET_ROW_FIELDS } from './meshAssetRowFields';
 import { generateTangents } from './generateTangents';
@@ -50,6 +54,8 @@ export type MeshBuildTarget = {
   readonly licence: string;
   readonly attribution: string;
   readonly bodyFromSource?: Mat3;
+  /** Undefined for a floating source; see `meshGroundUpSource`. */
+  readonly groundUp?: Vec3;
 };
 
 type Geometry = {
@@ -60,6 +66,9 @@ type Geometry = {
   readonly indices: Uint32Array;
   readonly boundingRadiusM: number;
   readonly groundOffsetM: number;
+  /** The area-weighted centroid `mergeGeometry` subtracted, body frame — the
+   *  contact decal shifts by the same amount rather than recomputing it. */
+  readonly centroidM: Vec3;
 };
 
 /**
@@ -401,6 +410,7 @@ function mergeGeometry(doc: Document, bodyFromSource?: Mat3): Geometry {
     // Seeding minZ at 0 is the >= 0 clamp; a centroid inside the convex hull
     // means a real minimum is never positive anyway.
     groundOffsetM: -minZ,
+    centroidM: [cx, cy, cz] as Vec3,
   };
   return {
     ...geometry,
@@ -424,6 +434,7 @@ async function writeTexture(
   texture: Texture | null,
   fallback: { r: number; g: number; b: number },
   path: string,
+  forceR255 = false,
 ): Promise<void> {
   const image = texture?.getImage();
   const pipeline = image
@@ -434,12 +445,75 @@ async function writeTexture(
         withoutEnlargement: true,
       })
     : sharp({ create: { width: 1, height: 1, channels: 3, background: fallback } });
-  await pipeline.png().toFile(path);
+  await (forceR255 ? pipeline.linear([0, 1, 1], [255, 0, 0]) : pipeline).png().toFile(path);
+}
+
+/**
+ * The prebake stamps `extras.aoGroundUp` on the one node it baked against a
+ * ground plane; absent on a floating source, or on one not yet re-baked.
+ */
+function readGroundUpStamp(doc: Document): Vec3 | undefined {
+  for (const node of doc.getRoot().listNodes()) {
+    const stamp = node.getExtras().aoGroundUp;
+    if (stamp !== undefined) return stamp as Vec3;
+  }
+  return undefined;
+}
+
+/** Same prebake stamp mechanism as `readGroundUpStamp`, the glTF-frame decal
+ *  `buildMeshes` remaps into the body frame below. */
+function readContactDecalStamp(doc: Document): ContactDecalStamp | undefined {
+  for (const node of doc.getRoot().listNodes()) {
+    const stamp = node.getExtras().contactDecal;
+    if (stamp !== undefined) return stamp as ContactDecalStamp;
+  }
+  return undefined;
+}
+
+/** `undefined` on both sides is agreement, not a missing value to diff. */
+function groundUpDiffers(stamp: Vec3 | undefined, expected: Vec3 | undefined): boolean {
+  if (stamp === undefined || expected === undefined) return stamp !== expected;
+  return stamp.some((c, i) => Math.abs(c - expected[i]!) > 1e-6);
+}
+
+function formatGroundUp(v: Vec3 | undefined): string {
+  return v ? `[${v.join(', ')}]` : 'none';
+}
+
+/**
+ * `centre` is a point (remap, then the same centroid shift `mergeGeometry`
+ * applied to the vertices); `u`/`v` are half-axes, so only the remap applies.
+ */
+function bakeContactDecal(
+  stamp: ContactDecalStamp,
+  bodyFromSource: Mat3 | undefined,
+  centroidM: Vec3,
+): ContactDecal {
+  const centre = rotateVec3ByTightMat3(stamp.centre, bodyFromSource);
+  return {
+    centre: [centre[0] - centroidM[0], centre[1] - centroidM[1], centre[2] - centroidM[2]],
+    halfU: rotateVec3ByTightMat3(stamp.u, bodyFromSource),
+    halfV: rotateVec3ByTightMat3(stamp.v, bodyFromSource),
+  };
 }
 
 async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetRow> {
   const { key } = target;
   const doc = await new NodeIO().read(target.glbPath);
+  const stamp = readGroundUpStamp(doc);
+  if (groundUpDiffers(stamp, target.groundUp)) {
+    throw new Error(
+      `buildMeshes: ${key} was prebaked for ground ${formatGroundUp(stamp)}, the scene seats it ` +
+        `on ${formatGroundUp(target.groundUp)} — re-run npm run prebake-mesh -- ${key}`,
+    );
+  }
+  const decalStamp = readContactDecalStamp(doc);
+  if ((decalStamp === undefined) !== (stamp === undefined)) {
+    const missing = decalStamp === undefined ? 'contactDecal' : 'aoGroundUp';
+    throw new Error(
+      `buildMeshes: ${key} has one of aoGroundUp/contactDecal without the other (missing ${missing})`,
+    );
+  }
   deRig(doc);
   const material = soleMaterial(doc, key);
 
@@ -464,18 +538,46 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   const geometry = mergeGeometry(doc, target.bodyFromSource);
   writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(writeMeshBinary(geometry)));
 
+  const contactDecal =
+    decalStamp === undefined
+      ? undefined
+      : bakeContactDecal(decalStamp, target.bodyFromSource, geometry.centroidM);
+  if (contactDecal !== undefined) {
+    const contactSourcePath = target.glbPath.replace(/\.glb$/, '.contact.png');
+    if (!existsSync(contactSourcePath)) {
+      throw new Error(`buildMeshes: ${key} has a contactDecal but no file at ${contactSourcePath}`);
+    }
+    await sharp(contactSourcePath)
+      .toColourspace('b-w')
+      .resize({
+        width: TEXTURE_SIZE_BUDGET,
+        height: TEXTURE_SIZE_BUDGET,
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .png()
+      .toFile(join(outDir, `${key}_contact.png`));
+  }
+
   const factor = material.getBaseColorFactor();
   const baseColorTexture = material.getBaseColorTexture();
+  const metalRoughTexture = material.getMetallicRoughnessTexture();
+  // The ORM convention: a prebake packs baked occlusion into R of the SAME
+  // texture it packs roughness/metallic into. Any other pairing (or none) has
+  // no occlusion bake behind it, so R must not carry through whatever the
+  // source image happened to leave there.
+  const occlusionPacked =
+    metalRoughTexture !== null && material.getOcclusionTexture() === metalRoughTexture;
   const sources: Record<MeshTextureField, TextureSource> = {
     albedo: {
       texture: baseColorTexture,
       fallback: srgbByte(factor[0], factor[1], factor[2]),
     },
     metalRough: {
-      texture: material.getMetallicRoughnessTexture(),
-      // glTF packs roughness in G and metallic in B; R is unused by the spec.
+      texture: metalRoughTexture,
+      // glTF packs roughness in G and metallic in B; R is glTF's occlusion.
       fallback: {
-        r: 0,
+        r: 255,
         g: Math.round(material.getRoughnessFactor() * 255),
         b: Math.round(material.getMetallicFactor() * 255),
       },
@@ -490,7 +592,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     const { texture, fallback } = sources[slot.field];
     const path = join(outDir, `${key}${slot.suffix}.png`);
     if (slot.field === 'albedo') albedoPath = path;
-    await writeTexture(texture, fallback, path);
+    await writeTexture(texture, fallback, path, slot.field === 'metalRough' && !occlusionPacked);
   }
 
   const substituted = MESH_TEXTURE_SLOTS.filter((slot) => sources[slot.field].texture === null).map(
@@ -520,6 +622,7 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
     meanAlbedo: mean.map((c) => Number(c.toFixed(6))) as Vec3,
     triangleCount: geometry.indices.length / 3,
     substituted,
+    contactDecal,
     source: target.source,
     licence: target.licence,
     attribution: target.attribution,
@@ -546,7 +649,7 @@ const GENERATED_BANNER =
  */
 function field(name: string, value: string): string {
   const flat = `    ${name}: ${value},`;
-  return flat.length <= 100 ? flat : `    ${name}:\n      ${value},`;
+  return flat.length <= 100 || value.includes('\n') ? flat : `    ${name}:\n      ${value},`;
 }
 
 /** Prettier leaves comments alone, so the continuation indent is ours to hold. */
@@ -560,17 +663,26 @@ export function serializeMeshAssets(rows: readonly MeshAssetRow[]): string {
     .map((row) =>
       [
         `  ${/^[A-Za-z_$][\w$]*$/.test(row.key) ? row.key : quote(row.key)}: {`,
-        ...MESH_ASSET_ROW_FIELDS.map((f) => field(f.name, f.emit(row))),
+        // An optional field whose row value is absent emits no line at all —
+        // a floating mesh's row stays byte-identical whether or not the
+        // column exists, rather than growing a `contactDecal: undefined,`.
+        ...MESH_ASSET_ROW_FIELDS.flatMap((f) => {
+          const value = f.emit(row);
+          return value === undefined ? [] : [field(f.name, value)];
+        }),
         '  },',
       ].join('\n'),
     )
     .join('\n');
   const rowType = MESH_ASSET_ROW_FIELDS.map(
-    (f) => (f.doc ? docBlock(f.doc) : '') + `  readonly ${f.name}: ${f.tsType};\n`,
+    (f) =>
+      (f.doc ? docBlock(f.doc) : '') +
+      `  readonly ${f.name}${f.optional ? '?' : ''}: ${f.tsType};\n`,
   ).join('');
   return (
     GENERATED_BANNER +
     "import type { Vec3 } from '../../@types/math/Vec3';\n" +
+    "import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';\n" +
     "import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';\n" +
     '\n' +
     `export type MeshAssetRow = {\n${rowType}};\n` +
@@ -623,6 +735,7 @@ async function main(): Promise<void> {
       licence: entry.licence,
       attribution: entry.attribution,
       bodyFromSource: entry.bodyFromSource,
+      groundUp: meshGroundUpSource(key),
     };
   });
   await buildMeshes({
