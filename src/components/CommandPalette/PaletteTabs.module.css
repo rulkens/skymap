@@ -13,10 +13,10 @@
 }
 
 .tab {
+  position: relative;
   flex: none;
   background: none;
   border: none;
-  border-bottom: 1px solid transparent;
   padding: 11px 0 8px;
   font: 600 16px/1 var(--font-family-display);
   color: var(--color-fg-dim);
@@ -25,5 +25,15 @@
 
 .active {
   color: var(--color-fg);
-  border-bottom-color: var(--color-accent-gradient-mid);
+}
+
+/* bottom: 0, not the canvas's -1px: the strip's overflow-x also clips y, which would hide a bar drawn over the border. */
+.active::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: var(--gradient-accent-bar);
 }
