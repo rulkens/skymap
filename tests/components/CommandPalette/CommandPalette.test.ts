@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import CommandPalette from '../../../src/components/CommandPalette/CommandPalette';
@@ -253,6 +253,9 @@ describe('CommandPalette', () => {
     const onTabChange = vi.fn();
     const onSelect = vi.fn();
     renderPalette({ onTabChange, onSelect });
+    // Let the open-time rAF focus the input first, or it can fire during the
+    // keypress and pull focus off the tab (a slow-runner race).
+    await waitFor(() => expect(screen.getByPlaceholderText(/search galaxies/i)).toHaveFocus());
     screen.getByRole('tab', { name: 'Missions' }).focus();
     await user.keyboard('{Enter}');
     expect(onTabChange).toHaveBeenCalledWith('missions');
