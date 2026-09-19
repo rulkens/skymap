@@ -31,12 +31,9 @@ function structure(name: string, abell: string | null, idx: number): StructureSe
 }
 
 describe('rankPaletteMatches', () => {
-  it('empty query → Milky Way heads the list, then all famous, no alias/structure rows', () => {
+  it('empty query yields no rows — the featured grid owns browsing', () => {
     const rows = rankPaletteMatches([M31], [alias(['NGC 4565'], 1)], [COMA], '');
-    expect(rows[0]?.kind).toBe('milkyWay');
-    expect(rows.filter((r) => r.kind === 'famous')).toHaveLength(1);
-    expect(rows.some((r) => r.kind === 'alias')).toBe(false);
-    expect(rows.some((r) => r.kind === 'structure')).toBe(false);
+    expect(rows).toEqual([]);
   });
 
   it('ranks an equally-matching famous row above an alias row (famous tiebreak)', () => {

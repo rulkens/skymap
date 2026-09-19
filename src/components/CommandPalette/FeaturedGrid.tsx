@@ -1,64 +1,48 @@
 /**
- * FeaturedGrid — the 5×3 thumbnail grid the palette shows above the results
- * list when it opens with no query.  Resolves the curated featured ids against
- * the loaded famous catalog, renders each as a hoverable card (InfoTip body),
- * and reports a click back up via `onSelect`.  Returns null when nothing
- * resolves so the shell can render the results list alone.
+ * FeaturedGrid — the card grid the palette shows for the active browse tab
+ * when it opens with no query. Purely presentational: it renders whatever
+ * `PaletteCard[]` it's handed and knows nothing about galaxies, tabs, or the
+ * ranking pipeline. Returns null when the tab has no cards.
  */
-import { useMemo } from 'react';
-import type { ReactNode } from 'react';
-import { InfoTip } from '../InfoTip/InfoTip';
-import FeaturedCardTip from './FeaturedCardTip';
-import { pickProperName } from './utils/pickProperName';
-import { resolveFeaturedEntries } from './utils/resolveFeaturedEntries';
+import type { ReactNode, RefObject } from 'react';
+import FeaturedCard from './FeaturedCard';
+import { cardAliases } from './utils/cardAliases';
+import type { PaletteCard } from '../../@types/palette/PaletteCard';
+import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import styles from './FeaturedGrid.module.css';
 
 export type FeaturedGridProps = {
-  readonly entries: readonly FamousGalaxyMetaEntry[];
-  readonly onSelect: (entry: FamousGalaxyMetaEntry) => void;
+  readonly cards: readonly PaletteCard[];
+  /** For `cardAliases` only — the grid itself never reads a galaxy's fields. */
+  readonly famous: readonly FamousGalaxyMetaEntry[];
+  /** Keyboard highlight (wired in Task 6); -1 = none. */
+  readonly activeIdx: number;
+  readonly gridRef: RefObject<HTMLUListElement | null>;
+  readonly label: string;
+  readonly onSelect: (action: PaletteAction) => void;
 };
 
-function FeaturedGrid({ entries, onSelect }: FeaturedGridProps): ReactNode {
-  const featuredEntries = useMemo(() => resolveFeaturedEntries(entries), [entries]);
-
-  if (featuredEntries.length === 0) return null;
+function FeaturedGrid({
+  cards,
+  famous,
+  activeIdx,
+  gridRef,
+  label,
+  onSelect,
+}: FeaturedGridProps): ReactNode {
+  if (cards.length === 0) return null;
   return (
-    <ul className={styles.root} aria-label="Featured galaxies">
-      {featuredEntries.map((entry) => {
-        const properName = pickProperName(entry.names);
-        return (
-          <li key={`featured:${entry.id}`}>
-            <InfoTip
-              interactive
-              placement="bottom"
-              title={properName}
-              body={
-                <FeaturedCardTip
-                  names={entry.names}
-                  description={entry.description}
-                  type={entry.type}
-                />
-              }
-            >
-              <button
-                type="button"
-                className={styles.card}
-                onClick={() => onSelect(entry)}
-                aria-label={`Focus ${properName}`}
-              >
-                <img
-                  className={styles.thumb}
-                  src={`/images/famous/${entry.id}.webp`}
-                  alt=""
-                  loading="lazy"
-                />
-                <span className={styles.name}>{properName}</span>
-              </button>
-            </InfoTip>
-          </li>
-        );
-      })}
+    <ul ref={gridRef} className={styles.root} role="tabpanel" aria-label={label}>
+      {cards.map((card, i) => (
+        <FeaturedCard
+          key={card.id}
+          card={card}
+          aliases={cardAliases(card, famous)}
+          active={i === activeIdx}
+          onSelect={onSelect}
+        />
+      ))}
     </ul>
   );
 }

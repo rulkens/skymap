@@ -8,7 +8,8 @@
  * layout + subcomponent wiring; everything stateful lives here.  On select it
  * maps the chosen row to its `PaletteAction` (`actionForRow`) and hands that
  * to the single `onSelect(action)` callback — the shell's parent dispatches
- * on `action.kind`.
+ * on `action.kind`.  A grid card already carries its own `PaletteAction`, so
+ * `dispatchAction` skips the row-mapping step but runs the same close.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { RefObject, KeyboardEvent } from 'react';
@@ -40,6 +41,9 @@ export type UsePaletteSearch = {
   inputRef: RefObject<HTMLInputElement | null>;
   onKeyDown: (e: KeyboardEvent<HTMLDivElement>) => void;
   dispatchSelection: (m: ScoredRow) => void;
+  /** Card selection: same action→close bracket as a row pick, but the source
+   * is already a `PaletteAction` — a grid card has no `ScoredRow` to map. */
+  dispatchAction: (action: PaletteAction) => void;
 };
 
 export function usePaletteSearch({
@@ -89,6 +93,11 @@ export function usePaletteSearch({
     onClose();
   };
 
+  const dispatchAction = (action: PaletteAction): void => {
+    onSelect(action);
+    onClose();
+  };
+
   // ── Keyboard handling ──────────────────────────────────────────────────────
   //
   // Up/Down arrows navigate (wrapping past either end so Up on the top row
@@ -126,5 +135,6 @@ export function usePaletteSearch({
     inputRef,
     onKeyDown,
     dispatchSelection,
+    dispatchAction,
   };
 }

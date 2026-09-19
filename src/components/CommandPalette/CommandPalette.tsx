@@ -23,11 +23,11 @@
  * FocusableTarget rather than a catalog object, so it carries no id or
  * alias tuple and renders a glyph instead of an atlas thumbnail.
  *
- * Selection: every row maps to a `PaletteAction` via `utils/actionForRow` and
- * is handed to the single `onSelect(action)` callback.  The container
- * dispatches on `action.kind` — for `focus`, `requestFocus(focusId)`, the one
- * command→ref bridge — so the palette never resolves a ref itself; famous,
- * alias, and Milky-Way picks all flow through the same path a deep-link does.
+ * Selection: every row maps to a `PaletteAction` via `utils/actionForRow`; a
+ * featured-grid card already carries its own.  Either way it reaches the
+ * single `onSelect(action)` callback, and the container dispatches on
+ * `action.kind` — for `focus`, `requestFocus(focusId)`, the one command→ref
+ * bridge — so the palette never resolves a ref itself.
  *
  * This file is the shell only: layout + subcomponent wiring.  The transient
  * search state + keyboard nav live in `usePaletteSearch`; the ranking pipeline
@@ -39,10 +39,12 @@
  * value-add from cmdk/kbar, and the project bans component-level
  * barrel exports many of those libraries assume.
  */
+import { useRef } from 'react';
 import type { ReactNode } from 'react';
 import { usePaletteSearch } from './usePaletteSearch';
 import FeaturedGrid from './FeaturedGrid';
 import ResultsList from './ResultsList';
+import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
@@ -95,7 +97,11 @@ function CommandPalette({
     inputRef,
     onKeyDown,
     dispatchSelection,
+    dispatchAction,
   } = usePaletteSearch({ entries, aliasIndex, structures, open, onClose, onSelect });
+  // Fixed to the first tab for now — no tab strip or `ui.paletteTab` yet.
+  const gridRef = useRef<HTMLUListElement | null>(null);
+  const activeTab = FEATURED_TABS[0];
 
   if (!open) return null;
   return (
@@ -113,18 +119,25 @@ function CommandPalette({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {query.trim().length === 0 && (
-          <FeaturedGrid
-            entries={entries}
-            onSelect={(entry) => dispatchSelection({ kind: 'famous', entry, score: 0 })}
+        {query.trim().length === 0 ? (
+          activeTab && (
+            <FeaturedGrid
+              cards={activeTab.cards}
+              famous={entries}
+              activeIdx={-1}
+              gridRef={gridRef}
+              label={activeTab.label}
+              onSelect={dispatchAction}
+            />
+          )
+        ) : (
+          <ResultsList
+            matches={matches}
+            activeIdx={activeIdx}
+            onActivate={setActiveIdx}
+            onSelect={dispatchSelection}
           />
         )}
-        <ResultsList
-          matches={matches}
-          activeIdx={activeIdx}
-          onActivate={setActiveIdx}
-          onSelect={dispatchSelection}
-        />
       </div>
     </div>
   );
