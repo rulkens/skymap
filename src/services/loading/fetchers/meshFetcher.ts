@@ -57,7 +57,13 @@ export const meshFetcher: Fetcher<MeshAsset, MeshReq> = async (req, signal, onPr
           ] as const,
       ),
     ).then((entries) => Object.fromEntries(entries) as Record<MeshTextureField, ImageBitmap>),
-    hasContactDecal ? fetchTexture(dataUrl(`${prefix}_contact.png`), signal, true) : undefined,
+    // The shadow is garnish: a missing mask drops it, never the rover.
+    hasContactDecal
+      ? fetchTexture(dataUrl(`${prefix}_contact.png`), signal, true).catch((err: Error) => {
+          if (err.name === 'AbortError') throw err;
+          return undefined;
+        })
+      : undefined,
   ]);
   const geometry = decodeMesh(buf);
 
