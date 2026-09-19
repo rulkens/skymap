@@ -128,6 +128,9 @@ vi.mock('../../../../src/layers/galaxyCatalog/render/galaxyPointRenderer', () =>
 
 vi.mock('../../../../src/services/gpu/renderTargets', () => ({
   createRenderTargets: vi.fn(() => makeStub('renderTargets')),
+  // `composeRenderTargetRows` (real, unmocked) calls this to build its core
+  // half — the renderTargets row's construct closure now goes through it.
+  renderTargetRows: vi.fn(() => []),
 }));
 
 vi.mock('../../../../src/services/gpu/passes/compositor', () => ({
@@ -415,6 +418,9 @@ function makeState(): EngineState {
     // planetRenderer fed by bodies.planets, and initGpu partitions
     // bodies.stars for setStars.
     data: createEngineData(),
+    // Read by the `renderTargets` row's construct closure via
+    // `composeRenderTargetRows`; no Layer targets in this fixture.
+    layerTargets: [],
     subsystems: {
       biasCorrection: {
         attachRenderer: vi.fn(),

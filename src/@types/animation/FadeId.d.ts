@@ -27,6 +27,8 @@
  *                    smoothly on toggle. No discriminator.
  *   - filament     — the single cosmic-web filament skeleton. Fades in on
  *                    first load. No discriminator.
+ *   - localBubble  — the Local Bubble cavity-wall shell. Fades in on first
+ *                    load, like filament. No discriminator.
  *   - flow         — the CF4++ peculiar-velocity flow overlay. Fades in on
  *                    first load (the slot commit), like filament/galaxy catalog;
  *                    fades out on disable. No discriminator.
@@ -83,6 +85,7 @@ export type FadeId =
   | { readonly kind: 'volumeField'; readonly id: VolumeFieldId }
   | { readonly kind: 'milkyWay' }
   | { readonly kind: 'filament' }
+  | { readonly kind: 'localBubble' }
   | { readonly kind: 'flow' }
   | { readonly kind: 'constellations' }
   | { readonly kind: 'orbitTrails' }

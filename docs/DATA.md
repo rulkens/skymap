@@ -20,7 +20,7 @@ Most sources also have a per-directory README under `data/raw/<source>/` with th
 
 ## Binary formats
 
-Five formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
+Six formats, each a magic + version header followed by fixed- or variable-size records. A version bump makes the decoder reject old files loudly with a "regenerate" error rather than misread stale bytes; the fix is always to re-run the matching build command.
 
 | Format | Magic        | Version | Contents                                                                                                                                                          | Authority                                                                      |
 | ------ | ------------ | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
@@ -29,6 +29,7 @@ Five formats, each a magic + version header followed by fixed- or variable-size 
 | CCAT   | `0x54414343` | 1       | Featured structures (clusters, superclusters). 16-byte header + 28 bytes/record.                                                                                  | [`structureCatalogFormat.ts`](../src/data/structure/structureCatalogFormat.ts) |
 | SCFD   | `0x44464353` | 3       | Self-describing scalar or vector field cube (density volumes, the CF4++ flow field). 96-byte header + f16 voxel array.                                            | [`scalarFieldFormat.ts`](../src/data/volume/scalarFieldFormat.ts)              |
 | FILA   | `0x414C4946` | 1       | DisPerSE filament skeleton as variable-length polyline strips. 16-byte header + strip-offset table + vertex array.                                                | [`filamentBinaryFormat.ts`](../src/data/filament/filamentBinaryFormat.ts)      |
+| SHEL   | `0x4C454853` | 1       | Baked Local Bubble shell mesh: f16 or f32 positions + normals (pc, 4 components each) and u32 indices, frame tag and centre in a 32-byte header.                  | [`shellMeshFormat.ts`](../src/data/shellMesh/shellMeshFormat.ts)               |
 
 ## `public/data/` layout
 
@@ -39,6 +40,7 @@ Each format has its own `<family>/v<N>/` folder, where `N` is that format's curr
 - `structure-catalog/v1/`: `structures.ccat` + `structures_meta.json`
 - `scalar-field/v3/`: `cf4_density`, `flowfield`, `mcpm-*`, `polyphorm-2mrs-*`, `edenhofer-dust-*`, `mcpm-workbench` `.scfd`
 - `filament/v1/`: `filaments{,-small}.bin`
+- `local-bubble/v1/`: `local-bubble.shell`
 
 Loose JSON (`famous_galaxies_meta`, `famous_stars_meta`, `structures_meta`, `constellations`, `pgc_aliases`) and `images/` stay at the data root: no version gate, since their schemas evolve compatibly and `images/` is unhashed and path-stable.
 

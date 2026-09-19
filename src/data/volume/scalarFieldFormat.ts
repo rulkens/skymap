@@ -84,13 +84,16 @@ export const SCFD_HEADER_BYTES = 96;
 // TILE_PREFIX precedent).
 export const SCALAR_FIELD_DATA_PREFIX = `scalar-field/v${VERSION}`;
 
-const FRAME_KIND_TO_ID: Record<ScalarFieldFrameKind, number> = {
+// Exported for shellMeshFormat.ts: the `.shell` format's frame byte reuses
+// this numbering rather than declaring its own, so the two formats can never
+// disagree on what the byte means.
+export const FRAME_KIND_TO_ID: Record<ScalarFieldFrameKind, number> = {
   'supergalactic-cartesian': 0,
   'equatorial-cartesian': 1,
   galactic: 2,
 };
 
-const ID_TO_FRAME_KIND: ReadonlyArray<ScalarFieldFrameKind> = [
+export const ID_TO_FRAME_KIND: ReadonlyArray<ScalarFieldFrameKind> = [
   'supergalactic-cartesian',
   'equatorial-cartesian',
   'galactic',

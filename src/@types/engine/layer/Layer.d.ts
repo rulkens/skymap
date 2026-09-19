@@ -13,12 +13,12 @@ import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
-import type { Label2DProducer } from '../subsystems/Label2DProducer';
 import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerFrameVote } from './LayerFrameVote';
-import type { LayerUi } from './LayerUi';
+import type { LayerLabels } from './LayerLabels';
+import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
 import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
@@ -41,7 +41,9 @@ export type Layer<
   readonly settings?: Settings;
 
   // Static contributions: plain data, readable without booting anything.
-  /** DECLARED BUT NOT CONSUMED — nothing reads this yet; 05c wires it. */
+  /** Appended after core's `renderTargetRows` by the `renderTargets` GPU-handle
+   * row (`composeRenderTargetRows`); ids are globally unique — a duplicate
+   * throws at boot. */
   readonly targets?: readonly RenderTargetSpec[];
   /** Each runs as its own root task via `createLayers`, cancelled at teardown — not
    * folded into `rootSaga`. Factories, not running sagas. */
@@ -50,8 +52,10 @@ export type Layer<
   readonly sources?: Sources;
   /** Seeded into `state.engine[name]` by `createLayers`; const-inferred, read back via `FactsOf`. */
   readonly facts?: Facts;
-  /** The two panel surfaces `SettingsPanel`/`DebugPanel` render for this Layer. */
-  readonly ui?: LayerUi;
+  /** Contributions to the three `LayerUiSlots`: whole sections (`main` in
+   * SettingsPanel, `debug` in DebugPanel) or a `labelsAndGuides` data row,
+   * appended after the core rows in `LabelsAndGuidesSectionContainer`. */
+  readonly ui?: readonly LayerUiEntry[];
 
   // Lifecycle. Every member below is invoked from exactly one place —
   // `instantiateLayer` — which is where to look to see the call shapes together.
@@ -74,9 +78,11 @@ export type Layer<
   /** Rows join `FADE_LAYERS` in `createLayers`. Declares only: core owns the arrival
    * edge (`installFadeOnArrival`), so never drive a fade from `create`. */
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
-  /** Registered with the label director in `createLayers`, then polled once a frame;
-   * each `id` must be stable across frames. */
-  labels?(runtime: Runtime): readonly Label2DProducer[];
+  /** `screen` rows register with `cosmoLabelDirector` in `createLayers`, then poll
+   * once a frame like any other screen-space producer; `world` rows join
+   * `state.label3DProducers`, walked by `runLabel3DProducers`. Each `id` must be
+   * stable across frames, in either half. */
+  labels?(runtime: Runtime): LayerLabels;
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
    * asserted at boot. */
   selection?(runtime: Runtime): readonly SelectionKindRow[];

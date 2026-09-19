@@ -106,6 +106,7 @@ describe('expandFrameOrder', () => {
     expect(namesOf(merged)).toEqual([
       'milky-way-upsample',
       'milky-way',
+      'local-bubble',
       'star-points',
       'star-catalog',
       'star-upsample',

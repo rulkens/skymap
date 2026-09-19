@@ -77,13 +77,15 @@ function buildGalToEq(): Mat3 {
 }
 
 const R_SG_TO_GAL = buildSgToGal();
-const R_GAL_TO_EQ = buildGalToEq();
+
+/** `R_GAL_to_EQ`: galactic Cartesian → equatorial Cartesian, as a flat column-major `Mat3`. */
+export const GAL_TO_EQ_MATRIX: Mat3 = buildGalToEq();
 
 /**
  * Rotation matrix taking supergalactic Cartesian → equatorial Cartesian,
  * stored as a flat column-major 9-tuple `Mat3`.
  */
-export const SG_TO_EQ_MATRIX: Mat3 = reorthonormalise(multiply3x3(R_GAL_TO_EQ, R_SG_TO_GAL));
+export const SG_TO_EQ_MATRIX: Mat3 = reorthonormalise(multiply3x3(GAL_TO_EQ_MATRIX, R_SG_TO_GAL));
 
 /** Same rotation as a unit quaternion (x, y, z, w). For SCFD header. */
 export const SG_TO_EQ_QUATERNION: Readonly<Vec4> = matrixToQuaternion(SG_TO_EQ_MATRIX);

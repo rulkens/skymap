@@ -64,6 +64,7 @@ export type VisibilityLayerKey =
   | 'structureLabel'
   | 'survey'
   | 'filaments'
+  | 'localBubble'
   | 'flow'
   | 'constellations'
   | 'orbitTrails'

@@ -135,6 +135,19 @@ export const SCALE_FADE_BANDS = {
   // them from.
   zoneOfAvoidanceRecede: { fullAt: 2, goneAt: 6 },
 
+  // Keyed on: CAMERA distance from the render origin, Mpc — the Sun, and the
+  // Local Bubble shell's own centre. An APPROACH fade: invisible from deep
+  // inside; goneAt sits below the mesh's ~536 pc max radius, so the camera is
+  // still inside the far lobes (the chimney) as it starts to fade in. Full by
+  // 1 kpc (~22° apparent diameter at the ~190 pc mean radius). Eye-tuned.
+  localBubble: { fullAt: 1 * SCALE_UNITS.KPC_TO_MPC, goneAt: 0.4 * SCALE_UNITS.KPC_TO_MPC },
+
+  // Keyed on: the same quantity — composed with `localBubble` into a
+  // visibility WINDOW, the same shape as `zoneOfAvoidance`/`-Recede`: the
+  // shell recedes before the Galaxy becomes the subject. Outer edge matches
+  // `constellations`'s recede band (10 kpc, ~3.4° apparent diameter there).
+  localBubbleRecede: { fullAt: 4 * SCALE_UNITS.KPC_TO_MPC, goneAt: 10 * SCALE_UNITS.KPC_TO_MPC },
+
   // Keyed on: a scene BODY's apparent diameter, px — a recede fade, glint full
   // at/below 1 px. Over the BODY_GLINT_MAX_PX→1 px band the glint fades in
   // while the mesh still draws: a popless handoff, BY CONSTRUCTION only while
