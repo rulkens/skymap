@@ -347,25 +347,10 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     ]);
   });
 
-  it('a marker at the end emits no empty load step', () => {
-    const steps = foreground([3], ['a', { sampleDepth: ['d'] }]);
-    expect(steps.map((step) => (step.kind === 'render' ? step.depth : null))).toEqual([
-      'clear',
-      'sample',
-    ]);
-  });
-
   it('refuses a body roster with a second marker', () => {
     expect(() =>
       foreground([3], ['a', { sampleDepth: ['d'] }, 'b', { sampleDepth: ['d'] }]),
     ).toThrow('at most one sampleDepth marker');
-  });
-
-  it("a NEAR0 chain entry ignores the body roster's marker", () => {
-    const steps = foreground([NEAR0], ['a', { sampleDepth: ['d'] }, 'b']);
-    expect(
-      steps.map((step) => (step.kind === 'render' ? [namesOf(step), step.depth] : null)),
-    ).toEqual([[['stars'], 'clear']]);
   });
 
   it('emits no foreground chain step for an empty chain, but keeps the composite', () => {

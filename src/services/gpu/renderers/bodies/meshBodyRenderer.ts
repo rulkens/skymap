@@ -156,14 +156,6 @@ export function createMeshBodyRenderer(init: {
     },
   });
 
-  const contactSampler = device.createSampler({
-    label: 'meshBody-contact-sampler',
-    magFilter: 'linear',
-    minFilter: 'linear',
-    addressModeU: 'clamp-to-edge',
-    addressModeV: 'clamp-to-edge',
-  });
-
   const contactBindGroupLayout = device.createBindGroupLayout({
     label: 'meshBody-contact-bgl',
     entries: [
@@ -196,10 +188,9 @@ export function createMeshBodyRenderer(init: {
           format: targetFormat,
           // colour × shade. Alpha is the overlays' transmittance and stays put.
           blend: {
-            color: { srcFactor: 'dst', dstFactor: 'zero', operation: 'add' },
-            alpha: { srcFactor: 'zero', dstFactor: 'one', operation: 'add' },
+            color: { srcFactor: 'dst', dstFactor: 'zero' },
+            alpha: { srcFactor: 'zero', dstFactor: 'one' },
           },
-          writeMask: GPUColorWrite.RED | GPUColorWrite.GREEN | GPUColorWrite.BLUE,
         },
       ],
     },
@@ -414,7 +405,8 @@ export function createMeshBodyRenderer(init: {
         entries: [
           { binding: 0, resource: { buffer: contact.uniformBuffer } },
           { binding: 1, resource: contact.texture.createView() },
-          { binding: 2, resource: contactSampler },
+          // The LUT's sampler is exactly the mask's: linear, clamp-to-edge.
+          { binding: 2, resource: lutSampler },
           { binding: 3, resource: depthView },
         ],
       });

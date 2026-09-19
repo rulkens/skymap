@@ -55,14 +55,6 @@
   RENDER_ATTACHMENT: 0x10,
 };
 
-(globalThis as unknown as { GPUColorWrite: unknown }).GPUColorWrite = {
-  RED: 0x1,
-  GREEN: 0x2,
-  BLUE: 0x4,
-  ALPHA: 0x8,
-  ALL: 0xf,
-};
-
 (globalThis as unknown as { GPUMapMode: unknown }).GPUMapMode = {
   READ: 0x0001,
   WRITE: 0x0002,
