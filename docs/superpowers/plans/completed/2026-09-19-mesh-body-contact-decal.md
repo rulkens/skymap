@@ -1,6 +1,6 @@
 # Mesh-body contact decal — plan
 
-Spec: `docs/superpowers/specs/2026-09-19-mesh-body-contact-decal-design.md`.
+Spec: `docs/superpowers/specs/completed/2026-09-19-mesh-body-contact-decal-design.md`.
 Branch `mesh-body-contact-decal` (off main 41e3952e8), one PR, prep commit first.
 
 Strategy: the frame-order split (Task 1) is behaviour-neutral and lands first. The data
@@ -52,15 +52,15 @@ expands exactly as today — one `'clear'` step, no slot. Timing slots need no c
 `checkFrameOrder`, `frameOrderPassNames`, `passSlabOf` read `bodyPasses` as names —
 flatten markers there (a marker's passes count as drawn, exactly once).
 
-- [ ] Test `a depth-sampling marker splits a body row into clear, sample and load`:
+- [x] Test `a depth-sampling marker splits a body row into clear, sample and load`:
       roster `['a', { sampleDepth: ['d'] }, 'b']`, one body slab → three steps with
       passes `[a] / [d] / [b]`, depths `clear / sample / load`, slots
       `undefined / SAMPLE_DEPTH_0 / AFTER_DEPTH_0`.
-- [ ] Test `a marker at the end emits no empty load step`.
-- [ ] Test `a NEAR0 chain entry ignores the body roster's marker` (its step is the
+- [x] Test `a marker at the end emits no empty load step`.
+- [x] Test `a NEAR0 chain entry ignores the body roster's marker` (its step is the
       near0 roster, one `clear` step).
-- [ ] Existing expand/check/boot tests stay green unchanged (no marker in `FRAME_ORDER`).
-- [ ] Commit `refactor(frame): a foreground body roster can split around a depth-sampling pass`.
+- [x] Existing expand/check/boot tests stay green unchanged (no marker in `FRAME_ORDER`).
+- [x] Commit `refactor(frame): a foreground body roster can split around a depth-sampling pass`.
 
 ## Task 2: `buildMeshes` ships the decal
 
@@ -92,12 +92,12 @@ readonly contactDecal?: ContactDecal;
 - `MESH_ASSET_ROW_FIELDS` gains `contactDecal`; an absent value emits no line (the
   generated rows stay byte-identical for floating keys).
 
-- [ ] Test `carries the contact decal into the body frame`: a stamped fixture with a
+- [x] Test `carries the contact decal into the body frame`: a stamped fixture with a
       non-identity `bodyFromSource` and an off-origin centroid, so dropping either the
       remap or the shift fails; assert the row's centre/halfU/halfV and that
       `testmesh_contact.png` exists with one channel.
-- [ ] Test `refuses a contact decal without a ground stamp`.
-- [ ] Commit `feat(meshes): ship the contact decal and its box in the body frame`.
+- [x] Test `refuses a contact decal without a ground stamp`.
+- [x] Commit `feat(meshes): ship the contact decal and its box in the body frame`.
 
 ## Task 3: fetch and upload the decal texture
 
@@ -113,10 +113,10 @@ readonly contactDecal?: ContactDecal;
 (`colorSpaceConversion: 'none'`). `setMesh` uploads it as `r8unorm`
 (`copyExternalImageToTexture`) into the body's entry; `clearMesh` destroys it.
 
-- [ ] Renderer test `uploads a contact shadow as r8unorm and frees it on clear`, in
+- [x] Renderer test `uploads a contact shadow as r8unorm and frees it on clear`, in
       the style of the existing texture assertions in `meshBodyRenderer.test.ts`.
-- [ ] No fetcher test: a routing change the eye-check covers.
-- [ ] Commit `feat(meshBody): load the contact-shadow texture with the mesh`.
+- [x] No fetcher test: a routing change the eye-check covers.
+- [x] Commit `feat(meshBody): load the contact-shadow texture with the mesh`.
 
 ## Task 4: the decal's matrices
 
@@ -140,15 +140,15 @@ unit cube [-1,1]³ onto the box: columns `halfU`, `halfV`,
 `normalize(halfU × halfV) · CONTACT_SHADOW_HALF_HEIGHT_M`, translation `centre`.
 `clipToBox = inverse(boxToClip)`. `CONTACT_SHADOW_HALF_HEIGHT_M = 0.25`.
 
-- [ ] Test `clipToBox inverts boxToClip`: product ≈ identity (1e-9).
-- [ ] Test `the box centre projects to the cube origin`: the decal centre (body frame)
+- [x] Test `clipToBox inverts boxToClip`: product ≈ identity (1e-9).
+- [x] Test `the box centre projects to the cube origin`: the decal centre (body frame)
       through `composeMeshMvp(...)` to clip, then `clipToBox`, divided by w → ≈ (0,0,0).
-- [ ] Test `the box's up axis is the ground normal`: `B`'s third column is parallel to
+- [x] Test `the box's up axis is the ground normal`: `B`'s third column is parallel to
       `halfU × halfV`, length 0.25 — a swapped cross product fails.
-- [ ] Test `keeps the round trip tight far from the origin`: `eyeRelBodyM` and `posM`
+- [x] Test `keeps the round trip tight far from the origin`: `eyeRelBodyM` and `posM`
       ~3.4e6 m (a Mars surface site), rover 20 m from the eye → a ground point maps into
       the cube within 1e-6.
-- [ ] Commit `feat(meshBody): compose the contact decal's box and inverse matrices`.
+- [x] Commit `feat(meshBody): compose the contact decal's box and inverse matrices`.
 
 ## Task 5: the contact-shadows pass
 
@@ -194,18 +194,18 @@ with the same pose reads as `meshBodiesPass.ts:56-94` (`bodyStateInHostFrame`,
 after `'terrain-pick-marker'`; extend the roster comment by one line on why (depth holds
 the ground; rover and haze come after). Add the pass to `CONTENT_PASSES`.
 
-- [ ] naga validation of the linked shader (scratch `dumpWgsl` route as in #758).
-- [ ] No new unit test: the gate and draw are plumbing; Task 4 carries the maths, the
+- [x] naga validation of the linked shader (scratch `dumpWgsl` route as in #758).
+- [x] No new unit test: the gate and draw are plumbing; Task 4 carries the maths, the
       eye-check carries the rest.
-- [ ] Commit `feat(meshBody): draw each seated rover's contact shadow on the terrain`.
+- [x] Commit `feat(meshBody): draw each seated rover's contact shadow on the terrain`.
 
 ## Task 6 (controller): data, measurement, eye-check
 
-- [ ] `npm run build-meshes` (writes `_contact.png` + rows into main's `public/data`
+- [x] `npm run build-meshes` (writes `_contact.png` + rows into main's `public/data`
       via the symlink), then rebuild main's manifest (scratch `manifestMain.ts`).
-- [ ] `npm run perf -- --url http://localhost:5173` before (Task 1 commit) and after
+- [x] `npm run perf -- --url http://localhost:5173` before (Task 1 commit) and after
       (Task 5) at a rover site; record the delta in the PR body.
-- [ ] User eye-check, f.lux off: Curiosity, Perseverance, Spirit, Opportunity.
+- [x] User eye-check, f.lux off: Curiosity, Perseverance, Spirit, Opportunity.
 
 ## Definition of Done
 
