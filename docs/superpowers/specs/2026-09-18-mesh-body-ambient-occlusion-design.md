@@ -1,7 +1,8 @@
 # Mesh-body baked ambient occlusion — design
 
-Effort A of `docs/backlog/2026-09-18-mesh-body-ambient-occlusion.md`, plus the bake
-half of effort B: the contact decal's texture. Drawing the decal stays in the backlog.
+Effort A of the mesh-body AO backlog item, plus the bake half of effort B: the contact
+decal's texture. Drawing the decal stays in the backlog
+(`docs/backlog/2026-09-18-mesh-body-contact-decal.md`).
 
 ## Goal
 
