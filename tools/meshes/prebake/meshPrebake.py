@@ -344,7 +344,7 @@ def export(obj, out, ground_up, contact_decal):
     way `buildMeshes` can tell which ground a GLB was baked against without
     re-deriving it; `export_extras` stays off for a floating mesh so no other
     custom property leaks into the glTF as a stray extra. `contact_decal` rides
-    the same extras, seated meshes only."""
+    the same extras: main() passes both or neither."""
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
@@ -437,8 +437,11 @@ def contact_decal_stamp(plane, span):
 
 def remove_ground_plane(plane):
     mesh = plane.data
+    materials = [m for m in mesh.materials if m is not None]
     bpy.data.objects.remove(plane, do_unlink=True)
     bpy.data.meshes.remove(mesh)
+    for material in materials:
+        bpy.data.materials.remove(material)
 
 
 # The glTF frame (+Y up) is the one `--ground-up` and the stamps speak; the

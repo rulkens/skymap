@@ -173,6 +173,10 @@ describe('buildMeshes()', () => {
     await expect(run(await writeGlb(stamped))).rejects.toThrow(
       /prebaked for ground \[0, 1, 0\], the scene seats it on none/,
     );
+    // Seated on both sides, but on different grounds.
+    await expect(run(await writeGlb(stamped), undefined, [0, 0, 1])).rejects.toThrow(
+      /prebaked for ground \[0, 1, 0\], the scene seats it on \[0, 0, 1\]/,
+    );
 
     const unstamped = new Document();
     unstamped.createBuffer();

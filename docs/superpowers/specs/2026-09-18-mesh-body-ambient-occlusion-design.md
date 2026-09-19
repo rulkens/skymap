@@ -94,13 +94,13 @@ AO-baked as a floating body.
 
 Refactor-ground checkpoint posted and ruled 2026-09-18.
 
-| Touchpoint | Verdict |
-| --- | --- |
-| `BAKE_PASSES` AO row | bolt-on today: `bake_pass` hardcodes `scene.cycles.samples = 1` (`meshPrebake.py:246`) → **prep:** rows carry their samples |
+| Touchpoint                  | Verdict                                                                                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BAKE_PASSES` AO row        | bolt-on today: `bake_pass` hardcodes `scene.cycles.samples = 1` (`meshPrebake.py:246`) → **prep:** rows carry their samples                                   |
 | AO distance from model size | growth: Cycles' AO bake reads the scene-level world AO distance, set once in `main()` from `bounds(obj)` (already computed, `:354`). No row needs the object. |
-| Occlusion into `_mr` | growth: exporter packing (verified), plus the R rule in `buildMeshes.ts:474` |
-| `envSplitSum` `ao` | growth: one caller (`fragment.wesl:58`) |
-| Seated fact | growth: new pure function + driver; no existing list gains an entry |
+| Occlusion into `_mr`        | growth: exporter packing (verified), plus the R rule in `buildMeshes.ts:474`                                                                                  |
+| `envSplitSum` `ao`          | growth: one caller (`fragment.wesl:58`)                                                                                                                       |
+| Seated fact                 | growth: new pure function + driver; no existing list gains an entry                                                                                           |
 
 Prep: one commit, `BAKE_PASSES` rows carry their own sample count (behaviour-neutral:
 every existing row keeps 1). Ruled: rides the feature PR as its first commit.
@@ -115,8 +115,8 @@ petunias means folding it into `meshPrebake.py` first; whale has no prebake at a
 
 ## Verification
 
-- `meshGroundUpSource`: rovers give source +Y; a floating key gives undefined; a mixed
-  key throws.
+- `meshGroundUpSource`: rovers give source +Y; a floating key gives undefined. The
+  mixed-key throw is untested: no real data reaches it.
 - The `buildMeshes` R rule: an MR texture whose R is garbage and no occlusionTexture
   gives R = 255.
 - Re-bake voyager, perseverance, curiosity, mer, hubble; `build-meshes`; user eye-check

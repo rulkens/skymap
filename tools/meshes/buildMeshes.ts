@@ -438,11 +438,7 @@ async function writeTexture(
         withoutEnlargement: true,
       })
     : sharp({ create: { width: 1, height: 1, channels: 3, background: fallback } });
-  // R carries baked occlusion only for a texture the caller has confirmed is
-  // shared with metallic-roughness (the ORM convention); everywhere else R
-  // must read as "no occlusion" rather than whatever the source left there.
-  const oriented = forceR255 ? pipeline.linear([0, 1, 1], [255, 0, 0]) : pipeline;
-  await oriented.png().toFile(path);
+  await (forceR255 ? pipeline.linear([0, 1, 1], [255, 0, 0]) : pipeline).png().toFile(path);
 }
 
 /**

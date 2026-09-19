@@ -8,18 +8,13 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-import { MESH_SOURCES } from '../utils/io/meshSources';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 
 const DEFAULT_BLENDER = '/Applications/Blender.app/Contents/MacOS/Blender';
 const MESH_PREBAKE_PY = 'tools/meshes/prebake/meshPrebake.py';
 
-export function prebakeMesh(key: string): number {
-  if (!(key in MESH_SOURCES)) {
-    throw new Error(
-      `prebakeMesh: pass one of ${Object.keys(MESH_SOURCES).sort().join(', ')}, not '${key}'`,
-    );
-  }
+// An unknown key is refused by meshPrebake.py's argparse `choices`, with the valid list.
+function prebakeMesh(key: string): number {
   const groundUp = meshGroundUpSource(key);
   const args = [
     '--background',
