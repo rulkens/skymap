@@ -141,6 +141,12 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // dust shared one encoder. Swapping those two leaves the cloud's stars
   // un-extincted.
   //
+  // `local-bubble` FOLLOWS `milky-way` immediately, and that is NOT a listing
+  // choice: the dust multiply already ran as part of `milky-way`'s own draw
+  // call, so anything accumulated into hdr AFTER it is untouched by that
+  // extinction — the shell's additive Fresnel glow would otherwise darken
+  // along with the cosmological background behind it.
+  //
   // The rest is additive and so a listing choice: `star-upsample` sits beside
   // the `star-catalog` leaf draw for GPU-timing legibility, and the
   // constellation figures trail the star streams they connect. `constellations`
@@ -152,6 +158,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     passes: [
       'milky-way-upsample',
       'milky-way',
+      'local-bubble',
       'star-points',
       'star-catalog',
       'star-upsample',

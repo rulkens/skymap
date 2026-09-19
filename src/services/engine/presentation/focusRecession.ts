@@ -50,6 +50,7 @@ const RECESSION_BY_LABEL_LAYER = {
 
 const RECESSION_BY_KIND = {
   filament: FILAMENT_RECESSION,
+  localBubble: FILAMENT_RECESSION,
   volumesMaster: VOLUME_RECESSION,
   structure: MARKER_RECESSION, // all structure sources recede
   galaxyCatalog: undefined,

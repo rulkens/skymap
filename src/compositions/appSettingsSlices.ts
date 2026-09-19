@@ -19,6 +19,7 @@ import { zoneOfAvoidanceSlice } from '../layers/zoneOfAvoidance/settings/zoneOfA
 import { filamentsLayerSettings } from '../layers/filaments/settings/filamentsLayerSettings';
 import { flowLayerSettings } from '../layers/flow/settings/flowLayerSettings';
 import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/settings/galaxyCatalogLayerSettings';
+import { localBubbleLayerSettings } from '../layers/localBubble/settings/localBubbleLayerSettings';
 
 const UNFORMED_SETTINGS_SLICES = [
   starCatalogsSlice,
@@ -38,4 +39,5 @@ export const APP_SETTINGS_SLICES = [
   ...galaxyCatalogLayerSettings,
   ...filamentsLayerSettings,
   ...flowLayerSettings,
+  ...localBubbleLayerSettings,
 ] as const;
