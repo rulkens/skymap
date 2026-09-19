@@ -578,4 +578,62 @@ describe('buildMeshes()', () => {
 
     expect(row.groundOffsetM).toBeCloseTo(1, 5);
   });
+
+  it('carries the contact decal into the body frame', async () => {
+    // Same one-triangle fixture and 90-deg-about-Z remap as the "reorients
+    // every attribute" case above, so its area-weighted centroid is known:
+    // remapped vertices average to (-1/3, 1/3, 0).
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const prim = addPrim(doc, material, {
+      positions: [1, 0, 0, 0, 1, 0, 0, 0, 0],
+      normals: [0, 0, 1, 0, 0, 1, 0, 0, 1],
+    });
+    const node = doc
+      .createNode('n')
+      .setMesh(doc.createMesh('m').addPrimitive(prim))
+      .setExtras({
+        aoGroundUp: [0, 1, 0],
+        // Off-origin and distinct from the geometry, so dropping either the
+        // remap or the centroid shift below lands on the wrong number.
+        contactDecal: { centre: [2, 3, 5], u: [1, 0, 0], v: [0, 1, 0] },
+      });
+    doc.createScene('s').addChild(node);
+
+    const glbPath = await writeGlb(doc);
+    await sharp({
+      create: { width: 8, height: 8, channels: 3, background: { r: 128, g: 128, b: 128 } },
+    })
+      .png()
+      .toFile(glbPath.replace(/\.glb$/, '.contact.png'));
+
+    // x -> +y, y -> -x.
+    const row = (await run(glbPath, [0, 1, 0, -1, 0, 0, 0, 0, 1], [0, 1, 0]))[0]!;
+
+    // remap(2,3,5) = (-3,2,5); minus the centroid (-1/3, 1/3, 0).
+    near(row.contactDecal!.centre, [-3 + 1 / 3, 2 - 1 / 3, 5]);
+    near(row.contactDecal!.halfU, [0, 1, 0]);
+    near(row.contactDecal!.halfV, [-1, 0, 0]);
+
+    const meta = await sharp(join(dir, 'out', 'testmesh_contact.png')).metadata();
+    expect(meta.channels).toBe(1);
+  });
+
+  it('refuses a contact decal without a ground stamp', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('one'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(
+      doc
+        .createNode('n')
+        .setMesh(mesh)
+        .setExtras({ contactDecal: { centre: [0, 0, 0], u: [1, 0, 0], v: [0, 1, 0] } }),
+    );
+
+    await expect(run(await writeGlb(doc))).rejects.toThrow(
+      'has one of aoGroundUp/contactDecal without the other (missing aoGroundUp)',
+    );
+  });
 });

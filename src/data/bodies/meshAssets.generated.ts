@@ -3,6 +3,7 @@
 // Regenerate with:  npm run build-meshes
 // Source of truth:  data/raw/meshes/**
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ContactDecal } from '../../@types/data/mesh/ContactDecal';
 import type { MeshTextureField } from '../../@types/data/mesh/MeshTextureField';
 
 export type MeshAssetRow = {
@@ -21,6 +22,9 @@ export type MeshAssetRow = {
   readonly licence: string;
   /** author + URL; empty string for CC0 */
   readonly attribution: string;
+  /** The ground-contact box `contactShadow` projects into, body frame,
+   *  metres; absent for a floating mesh. */
+  readonly contactDecal?: ContactDecal;
 };
 
 export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
@@ -89,6 +93,11 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
+    contactDecal: {
+      centre: [-0.14926457100756546, -0.005141867351485026, -0.913145561665616],
+      halfU: [0, 2.331205129623413, 0],
+      halfV: [-2.331205129623413, 0, 0],
+    },
   },
   curiosity: {
     key: 'curiosity',
@@ -102,6 +111,11 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Curiosity Rover (MSL) (Clean)" (https://science.nasa.gov/3d-resources/curiosity-rover-msl/)',
+    contactDecal: {
+      centre: [0.23637191809611996, -0.026815513198097236, -0.8980751758294461],
+      halfU: [0, 2.9585468769073486, 0],
+      halfV: [-2.9585468769073486, 0, 0],
+    },
   },
   mer: {
     key: 'mer',
@@ -115,5 +129,10 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     licence: 'Public domain (NASA)',
     attribution:
       'NASA/JPL-Caltech, "Mars Exploration Rover - Spirit and Opportunity" (https://science.nasa.gov/3d-resources/mars-exploration-rover-spirit-and-opportunity/)',
+    contactDecal: {
+      centre: [-0.07798823068739452, -0.01337763976239624, -0.5743564252436418],
+      halfU: [0, 1.709266185760498, 0],
+      halfV: [-1.709266185760498, 0, 0],
+    },
   },
 };

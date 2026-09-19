@@ -5,9 +5,12 @@
  * rows, and which roster a chain entry draws is the distinction the body-drawn
  * rows carry.
  */
+
+import type { DepthSampledPasses } from './DepthSampledPasses';
+
 export type ForegroundStepSpec = {
   readonly kind: 'foreground';
   readonly target: string;
   readonly near0Passes: readonly string[];
-  readonly bodyPasses: readonly string[];
+  readonly bodyPasses: readonly (string | DepthSampledPasses)[];
 };
