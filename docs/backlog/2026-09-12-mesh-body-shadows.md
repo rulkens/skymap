@@ -13,9 +13,8 @@ it — the rover looks pasted onto Mars rather than standing on it.
 ## Stage 1 — contact shadow: MOVED
 
 The soft dark blob under each hosted rover moved to
-[mesh-body-ambient-occlusion](2026-09-18-mesh-body-ambient-occlusion.md) (effort B),
-where the same Cycles bake that darkens a rover's underside also produces the decal
-and the ground plane it is cast onto. The rendering route is still open there.
+[mesh-body-contact-decal](2026-09-18-mesh-body-contact-decal.md): the same Cycles
+bake that darkens a rover's underside already produces the decal texture.
 
 ## Stage 2 — sun shadows
 

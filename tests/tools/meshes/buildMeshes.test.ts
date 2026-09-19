@@ -7,6 +7,7 @@ import sharp from 'sharp';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { Mat3 } from '../../../src/@types/math/Mat3';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 import { decodeMesh } from '../../../src/data/mesh/meshBinaryFormat';
 import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
 import { buildMeshes } from '../../../tools/meshes/buildMeshes';
@@ -123,7 +124,7 @@ function readMesh(): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
 }
 
-function run(glbPath: string, bodyFromSource?: Mat3) {
+function run(glbPath: string, bodyFromSource?: Mat3, groundUp?: Vec3) {
   return buildMeshes({
     targets: [
       {
@@ -133,6 +134,7 @@ function run(glbPath: string, bodyFromSource?: Mat3) {
         licence: 'CC BY 4.0',
         attribution: 'A. Modeller — https://example.invalid/author',
         bodyFromSource,
+        groundUp,
       },
     ],
     outDir: join(dir, 'out'),
@@ -152,6 +154,42 @@ describe('buildMeshes()', () => {
     }
 
     await expect(run(await writeGlb(doc))).rejects.toThrow(/material/i);
+  });
+
+  it('refuses a GLB prebaked for a different ground than the scene seats it on', async () => {
+    const stamped = new Document();
+    stamped.createBuffer();
+    const stampedMaterial = await withBaseColour(stamped, stamped.createMaterial('one'));
+    const stampedMesh = stamped
+      .createMesh('m')
+      .addPrimitive(addTriangle(stamped, stampedMaterial, 0));
+    const stampedNode = stamped
+      .createNode('n')
+      .setMesh(stampedMesh)
+      .setExtras({ aoGroundUp: [0, 1, 0] });
+    stamped.createScene('s').addChild(stampedNode);
+
+    // Stamped for a ground, but the scene (no `groundUp` passed) floats it.
+    await expect(run(await writeGlb(stamped))).rejects.toThrow(
+      /prebaked for ground \[0, 1, 0\], the scene seats it on none/,
+    );
+    // Seated on both sides, but on different grounds.
+    await expect(run(await writeGlb(stamped), undefined, [0, 0, 1])).rejects.toThrow(
+      /prebaked for ground \[0, 1, 0\], the scene seats it on \[0, 0, 1\]/,
+    );
+
+    const unstamped = new Document();
+    unstamped.createBuffer();
+    const unstampedMaterial = await withBaseColour(unstamped, unstamped.createMaterial('one'));
+    const unstampedMesh = unstamped
+      .createMesh('m')
+      .addPrimitive(addTriangle(unstamped, unstampedMaterial, 0));
+    unstamped.createScene('s').addChild(unstamped.createNode('n').setMesh(unstampedMesh));
+
+    // The reverse: never baked against a ground, but the scene seats it.
+    await expect(run(await writeGlb(unstamped), undefined, [0, 1, 0])).rejects.toThrow(
+      /prebaked for ground none, the scene seats it on \[0, 1, 0\]/,
+    );
   });
 
   it('merges several primitives sharing one material', async () => {
@@ -433,7 +471,8 @@ describe('buildMeshes()', () => {
       .toBuffer();
     expect([...normalPx.subarray(0, 3)]).toEqual([128, 128, 255]);
     // glTF packs roughness in G and metallic in B; the material set 1 and 0.
-    expect([...mrPx.subarray(0, 3)]).toEqual([0, 255, 0]);
+    // R is glTF's occlusion — 255 (no occlusion) absent a packed AO bake.
+    expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
     expect(warn.mock.calls.flat().join(' ')).toMatch(/testmesh/);
     // Pure red albedo — the mean the glint fallback reads back.
     expect(row.meanAlbedo).toEqual([1, 0, 0]);
@@ -453,6 +492,43 @@ describe('buildMeshes()', () => {
 
     expect(row.substituted).toEqual([]);
     expect(warn.mock.calls.flat().join(' ')).not.toMatch(/substituting/);
+  });
+
+  it('writes R = 255 when the mr texture carries no occlusion', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    // withEveryMap's mr texture is solid rgb(0, 255, 0) with no occlusionTexture.
+    const material = await withEveryMap(doc, doc.createMaterial('everyMap'));
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    await run(await writeGlb(doc));
+
+    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.png'))
+      .raw()
+      .toBuffer();
+    expect([...mrPx.subarray(0, 3)]).toEqual([255, 255, 0]);
+  });
+
+  it('keeps R when occlusion is packed into the mr texture', async () => {
+    const doc = new Document();
+    doc.createBuffer();
+    const material = await withBaseColour(doc, doc.createMaterial('packedOcclusion'));
+    // Same Texture object on both slots — the ORM convention a real prebake emits.
+    const orm = doc
+      .createTexture('orm')
+      .setImage(await solidPng(77, 255, 0))
+      .setMimeType('image/png');
+    material.setMetallicRoughnessTexture(orm).setOcclusionTexture(orm);
+    const mesh = doc.createMesh('m').addPrimitive(addTriangle(doc, material, 0));
+    doc.createScene('s').addChild(doc.createNode('n').setMesh(mesh));
+
+    await run(await writeGlb(doc));
+
+    const mrPx = await sharp(join(dir, 'out', 'testmesh_mr.png'))
+      .raw()
+      .toBuffer();
+    expect([...mrPx.subarray(0, 3)]).toEqual([77, 255, 0]);
   });
 
   it('writes every MESH_TEXTURE_SLOTS suffix, so a slot added to the table lands on disk', async () => {

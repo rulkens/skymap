@@ -4,11 +4,13 @@ points at the OUTPUT. Decimate BEFORE the unwrap+bake: baking into UVs that deci
 moves mis-registers the atlas against the triangles that survive.
 Run:  npm run prebake-mesh -- <key>   (Blender 5.2 LTS; not run in CI)"""
 
+import argparse
 import os
 import sys
 import time
 
 import bpy
+import mathutils
 
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
 
@@ -16,6 +18,13 @@ ATLAS_PX = 2048
 
 EMISSION_COLOUR = "Emission Color"
 EMISSION_STRENGTH = "Emission Strength"
+
+AO_SAMPLES = 128
+# Fraction of the mesh's largest extent Cycles' AO bake treats as "far enough
+# to stop counting as occluded" — `scene.world.light_settings.distance`, the
+# one world-level knob that pass reads regardless of the World AO toggle.
+AO_DISTANCE_FRACTION = 0.25
+GLTF_MATERIAL_OUTPUT = "glTF Material Output"
 
 
 def socket_state(socket):
@@ -77,15 +86,16 @@ def restore_emission(undo):
 
 
 # (name, `bpy.ops.object.bake` kwargs, atlas colourspace, optional material
-# preparation returning its own undo) — one atlas per row, `bake_pass` runs a
-# row start to finish. Every row but albedo is DATA: an atlas of slopes or
-# material values saved through the sRGB view transform comes out gamma-bent,
-# and the runtime decodes `_normal` and `_mr` linearly.
+# preparation returning its own undo, Cycles sample count) — one atlas per
+# row, `bake_pass` runs a row start to finish. Every row but albedo is DATA: an
+# atlas of slopes or material values saved through the sRGB view transform
+# comes out gamma-bent, and the runtime decodes `_normal` and `_mr` linearly.
 BAKE_PASSES = [
-    ("albedo", dict(type="EMIT"), "sRGB", swap_to_emission("Base Color")),
-    ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None),
-    ("roughness", dict(type="ROUGHNESS"), "Non-Color", None),
-    ("metallic", dict(type="EMIT"), "Non-Color", swap_to_emission("Metallic")),
+    ("albedo", dict(type="EMIT"), "sRGB", swap_to_emission("Base Color"), 1),
+    ("normal", dict(type="NORMAL", normal_space="TANGENT"), "Non-Color", None, 1),
+    ("roughness", dict(type="ROUGHNESS"), "Non-Color", None, 1),
+    ("metallic", dict(type="EMIT"), "Non-Color", swap_to_emission("Metallic"), 1),
+    ("occlusion", dict(type="AO"), "Non-Color", None, AO_SAMPLES),
 ]
 
 
@@ -210,6 +220,11 @@ def unwrap(obj, source_name):
     # of whichever source image happens to be active — so the packing lurches
     # whenever the material set changes. The atlas is square; opt out.
     bpy.ops.uv.smart_project(angle_limit=1.15192, island_margin=0.001, correct_aspect=False)
+    # smart_project packs by bounding box and left Perseverance's atlas 6.6%
+    # covered; a concave, rotating repack of the same islands covers 36%.
+    bpy.ops.uv.select_all(action="SELECT")
+    bpy.ops.uv.pack_islands(rotate=True, rotate_method="ANY", scale=True, margin_method="FRACTION",
+                            margin=0.001, shape_method="CONCAVE")
     bpy.ops.object.mode_set(mode="OBJECT")
     return uv_name
 
@@ -228,7 +243,7 @@ def arm_materials(obj):
         mat.node_tree.nodes.active = node
 
 
-def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare):
+def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples):
     """One BAKE_PASSES row start to finish: its atlas image, the bake, the save."""
     is_data = colourspace != "sRGB"
     image = bpy.data.images.new("%s_%s" % (cfg["key"], name), ATLAS_PX, ATLAS_PX,
@@ -242,8 +257,9 @@ def bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare):
     scene = bpy.context.scene
     scene.render.engine = "CYCLES"
     scene.cycles.device = "CPU"
-    # Colour only — no light in the scene to sample, so one sample is exact.
-    scene.cycles.samples = 1
+    # Material passes have no light to sample — 1 is exact; a row that adds
+    # light of its own (AO) asks for more through its own row count.
+    scene.cycles.samples = samples
     scene.render.bake.use_pass_direct = False
     scene.render.bake.use_pass_indirect = False
     scene.render.bake.use_pass_color = True
@@ -269,11 +285,26 @@ def atlas_node(tree, image):
     return node
 
 
+def gltf_material_output_group():
+    """The Principled BSDF has no Occlusion socket, so the Blender glTF
+    exporter finds a packed occlusion image only through a node group of this
+    exact name with a float `Occlusion` input — never evaluated as a shader,
+    read by name. The exporter then packs it as R, roughness G, metallic B
+    into one `metallicRoughnessTexture`."""
+    group = bpy.data.node_groups.get(GLTF_MATERIAL_OUTPUT)
+    if group is not None:
+        return group
+    group = bpy.data.node_groups.new(GLTF_MATERIAL_OUTPUT, "ShaderNodeTree")
+    group.interface.new_socket("Occlusion", in_out="INPUT", socket_type="NodeSocketFloat")
+    return group
+
+
 def flatten_materials(obj, key, images):
     """One material sampling the baked atlases, replacing the whole stack.
-    Roughness and Metallic are linked as separate images on purpose: the glTF
-    exporter is what packs them into the single `metallicRoughnessTexture`
-    (roughness G, metallic B) the runtime samples."""
+    Roughness, Metallic and Occlusion are linked as separate images on
+    purpose: the glTF exporter is what packs them into the single
+    `metallicRoughnessTexture` (occlusion R, roughness G, metallic B) the
+    runtime samples."""
     obj.data.materials.clear()
     mat = bpy.data.materials.new(key)
     mat.use_nodes = True
@@ -288,6 +319,11 @@ def flatten_materials(obj, key, images):
     normal_map.space = "TANGENT"
     tree.links.new(normal_map.inputs["Color"], atlas_node(tree, images["normal"]).outputs["Color"])
     tree.links.new(bsdf.inputs["Normal"], normal_map.outputs["Normal"])
+    if "occlusion" in images:
+        occlusion = tree.nodes.new("ShaderNodeGroup")
+        occlusion.node_tree = gltf_material_output_group()
+        tree.links.new(occlusion.inputs["Occlusion"],
+                       atlas_node(tree, images["occlusion"]).outputs["Color"])
     obj.data.materials.append(mat)
 
 
@@ -303,10 +339,19 @@ def keep_only_bake_uv(obj, uv_name):
     obj.data.uv_layers[0].active_render = True
 
 
-def export(obj, out):
+def export(obj, out, ground_up, contact_decal):
+    """`ground_up` stamps `extras.aoGroundUp` on the exported node — the only
+    way `buildMeshes` can tell which ground a GLB was baked against without
+    re-deriving it; `export_extras` stays off for a floating mesh so no other
+    custom property leaks into the glTF as a stray extra. `contact_decal` rides
+    the same extras: main() passes both or neither."""
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
     bpy.context.view_layer.objects.active = obj
+    if ground_up is not None:
+        obj["aoGroundUp"] = list(ground_up)
+    if contact_decal is not None:
+        obj["contactDecal"] = contact_decal
     bpy.ops.export_scene.gltf(
         filepath=out,
         export_format="GLB",
@@ -320,7 +365,7 @@ def export(obj, out):
         export_morph=False,
         export_cameras=False,
         export_lights=False,
-        export_extras=False,
+        export_extras=ground_up is not None,
         export_image_format="AUTO",
     )
 
@@ -336,10 +381,81 @@ def bounds(obj):
     return lo, hi
 
 
+def set_ao_distance(scene, extent):
+    if scene.world is None:
+        scene.world = bpy.data.worlds.new("World")
+    scene.world.light_settings.distance = AO_DISTANCE_FRACTION * extent
+
+
+def ground_plane(obj, lo, hi, extent, up):
+    """A large flat occluder resting under `obj`'s lowest point along `up`, so
+    the AO bake sees a floor: without one a rover's underside reads as open
+    sky, no darker than its sunlit hull. Deselected and inactive on return —
+    an occluder, not a bake target, so the selection-only export never takes it. Span
+    stops at AO_DISTANCE_FRACTION's own reach — nothing farther out can occlude
+    anyway — which also buys the contact decal a denser atlas than the body's."""
+    span = (1 + 2 * AO_DISTANCE_FRACTION) * extent
+    up_v = mathutils.Vector(up).normalized()
+    centre = mathutils.Vector([(lo[i] + hi[i]) / 2 for i in range(3)])
+    lowest = min((obj.matrix_world @ v.co).dot(up_v) for v in obj.data.vertices)
+    location = centre + (lowest - centre.dot(up_v)) * up_v
+
+    bpy.ops.mesh.primitive_plane_add(size=span, location=location)
+    plane = bpy.context.view_layer.objects.active
+    plane.rotation_mode = "QUATERNION"
+    plane.rotation_quaternion = mathutils.Vector((0, 0, 1)).rotation_difference(up_v)
+    plane.select_set(False)
+    bpy.context.view_layer.objects.active = obj
+    return plane, span
+
+
+def bake_contact_decal(plane, cfg):
+    """The plane's own AO with the body as sole occluder (it is never
+    selected) — the raw contact shadow effort B will composite at runtime."""
+    mat = bpy.data.materials.new("%s_contact" % cfg["key"])
+    mat.use_nodes = True
+    plane.data.materials.append(mat)
+    arm_materials(plane)
+    uv_name = plane.data.uv_layers[0].name
+    return bake_pass(plane, uv_name, cfg, "contact", dict(type="AO"), "Non-Color", None, AO_SAMPLES)
+
+
+def contact_decal_stamp(plane, span):
+    """u/v half-vectors read off the plane's own (already rotated) world
+    matrix, so they can never disagree with the rotation `ground_plane` used."""
+    rot = plane.matrix_world.to_3x3()
+    half = span / 2
+    return {
+        "centre": gltf_from_blender(plane.matrix_world.translation),
+        "u": gltf_from_blender(rot.col[0] * half),
+        "v": gltf_from_blender(rot.col[1] * half),
+    }
+
+
+# The glTF frame (+Y up) is the one `--ground-up` and the stamps speak; the
+# scene is Blender's +Z-up, the frame the glTF importer and exporter
+# (`export_yup`) convert to and from.
+def blender_from_gltf(v):
+    return (v[0], -v[2], v[1])
+
+
+def gltf_from_blender(v):
+    return [v[0], v[2], -v[1]]
+
+
+def parse_args(argv):
+    """`argv` is the tail after Blender's own `--`; the driver (`prebakeMesh.ts`)
+    is the only caller, so a bad key or vector is its bug, not a user's."""
+    parser = argparse.ArgumentParser()
+    parser.add_argument("key", choices=sorted(SOURCES))
+    parser.add_argument("--ground-up", dest="ground_up", nargs=3, type=float, default=None)
+    return parser.parse_args(argv)
+
+
 def main():
-    key = sys.argv[-1]
-    if key not in SOURCES:
-        raise SystemExit("prebake: pass one of %s" % sorted(SOURCES))
+    args = parse_args(sys.argv[sys.argv.index("--") + 1:])
+    key = args.key
+    ground_up = args.ground_up  # tuple or None: seated meshes bake against a ground plane.
     cfg = SOURCES[key]
     started = time.time()
 
@@ -353,20 +469,30 @@ def main():
         % (triangles(obj), len(obj.material_slots), [l.name for l in obj.data.uv_layers]))
     lo, hi = bounds(obj)
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
+    extent = max(hi[i] - lo[i] for i in range(3))
+    set_ao_distance(scene, extent)
+    plane, plane_span = (ground_plane(obj, lo, hi, extent, blender_from_gltf(ground_up))
+                         if ground_up is not None else (None, None))
     log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
 
     uv_name = unwrap(obj, source_name)
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
     arm_materials(obj)
     images = {}
-    for name, settings, colourspace, prepare in BAKE_PASSES:
-        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare)
+    for name, settings, colourspace, prepare, samples in BAKE_PASSES:
+        images[name] = bake_pass(obj, uv_name, cfg, name, settings, colourspace, prepare, samples)
         log("baked %d^2 %s atlas -> %s (%.0fs elapsed)"
             % (ATLAS_PX, name, images[name].filepath_raw, time.time() - started))
 
+    contact_decal = None
+    if plane is not None:
+        contact = bake_contact_decal(plane, cfg)
+        log("baked contact decal -> %s (%.0fs elapsed)"
+            % (contact.filepath_raw, time.time() - started))
+        contact_decal = contact_decal_stamp(plane, plane_span)
     flatten_materials(obj, key, images)
     keep_only_bake_uv(obj, uv_name)
-    export(obj, cfg["out"])
+    export(obj, cfg["out"], ground_up, contact_decal)
     log("wrote %s (%d tris, %d verts, %.0fs total)"
         % (cfg["out"], triangles(obj), len(obj.data.vertices), time.time() - started))
 
