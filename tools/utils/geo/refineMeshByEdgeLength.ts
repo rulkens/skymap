@@ -1,9 +1,8 @@
 /**
  * refineMeshByEdgeLength — adaptive refinement of a unit-sphere mesh until
- * every DISPLACED edge is under a target length: one criterion catches both
- * a stretched-thin chimney region and a steep radial slope. Conformal by
- * construction — a split decision reads only its own edge's two endpoints,
- * so neighbouring faces always agree, with no closure pass needed.
+ * every DISPLACED edge is under a target length: catches both a stretched
+ * chimney region and a steep radial slope. Conformal by construction — a
+ * split decision reads only its own edge's two endpoints, so faces agree.
  */
 
 import type { Vec3 } from '../../../src/@types/math/Vec3';

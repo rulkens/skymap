@@ -77,13 +77,15 @@ function buildGalToEq(): Mat3 {
 }
 
 const R_SG_TO_GAL = buildSgToGal();
-const R_GAL_TO_EQ = buildGalToEq();
+
+/** `R_GAL_to_EQ`: galactic Cartesian → equatorial Cartesian, as a flat column-major `Mat3`. */
+export const GAL_TO_EQ_MATRIX: Mat3 = buildGalToEq();
 
 /**
  * Rotation matrix taking supergalactic Cartesian → equatorial Cartesian,
  * stored as a flat column-major 9-tuple `Mat3`.
  */
-export const SG_TO_EQ_MATRIX: Mat3 = reorthonormalise(multiply3x3(R_GAL_TO_EQ, R_SG_TO_GAL));
+export const SG_TO_EQ_MATRIX: Mat3 = reorthonormalise(multiply3x3(GAL_TO_EQ_MATRIX, R_SG_TO_GAL));
 
 /** Same rotation as a unit quaternion (x, y, z, w). For SCFD header. */
 export const SG_TO_EQ_QUATERNION: Readonly<Vec4> = matrixToQuaternion(SG_TO_EQ_MATRIX);
@@ -129,26 +131,6 @@ export const SG_TO_EQ_MAT4_COL_MAJOR: Mat4 = Object.freeze([
   SG_TO_EQ_MATRIX[8]!,
   0,
   // Column 3: translation = none, w = 1.
-  0,
-  0,
-  0,
-  1,
-]) as Mat4;
-
-/** `R_GAL_TO_EQ` as a 16-element column-major `Mat4`; same layout as `SG_TO_EQ_MAT4_COL_MAJOR`. */
-export const GAL_TO_EQ_MAT4_COL_MAJOR: Mat4 = Object.freeze([
-  R_GAL_TO_EQ[0]!,
-  R_GAL_TO_EQ[1]!,
-  R_GAL_TO_EQ[2]!,
-  0,
-  R_GAL_TO_EQ[3]!,
-  R_GAL_TO_EQ[4]!,
-  R_GAL_TO_EQ[5]!,
-  0,
-  R_GAL_TO_EQ[6]!,
-  R_GAL_TO_EQ[7]!,
-  R_GAL_TO_EQ[8]!,
-  0,
   0,
   0,
   0,

@@ -7,7 +7,6 @@ export type ShellMesh = {
   dtype: ShellMeshDtype;
   frame: ScalarFieldFrameKind;
   centrePc: Vec3;
-  vertexCount: number;
   positions: Uint16Array | Float32Array; // 4 components/vertex, w = 1
   normals: Uint16Array | Float32Array; // 4 components/vertex, w = 0
   indices: Uint32Array;

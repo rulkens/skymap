@@ -1,10 +1,9 @@
 #!/usr/bin/env node
 /**
  * buildLocalBubbleShell — bakes O'Neill+2024's Local Bubble shell table into
- * the runtime `.shell` mesh, plus preview PNGs of the radius map. The source
- * table is a STAR-SHAPED surface in its own GALACTIC frame; rotating to
- * skymap's draw frame is the renderer's job, so a frame bug shows as a
- * rotation rather than baked-in bytes.
+ * the runtime `.shell` mesh, plus preview PNGs of the radius map. Source
+ * table is STAR-SHAPED in its own GALACTIC frame; rotating to skymap's draw
+ * frame is the renderer's job, so a frame bug shows as rotation, not bytes.
  */
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -30,9 +29,6 @@ import { vertexNormals } from '../utils/geo/vertexNormals';
 /** Output grid. 0.35°/px at the equator — a shade coarser than the table's own 13.7′ pixels. */
 const WIDTH_PX = 1024;
 const HEIGHT_PX = 512;
-
-/** The columns the bake reads, in the order they land in the output planes. */
-const CHANNELS = ['d'] as const;
 
 /**
  * Angular smoothing radius, degrees. The raw fit jumps between candidate dust
@@ -202,7 +198,6 @@ function packShellMesh(
     dtype,
     frame: 'galactic',
     centrePc: [0, 0, 0],
-    vertexCount,
     positions: positionsFlat as ShellMesh['positions'],
     normals: normalsFlat as ShellMesh['normals'],
     indices,
@@ -232,30 +227,28 @@ async function main(): Promise<void> {
 
   const l = read('l');
   const b = read('b');
-  const channels = CHANNELS.map(read);
+  const d = read('d');
 
   console.log('source columns:');
   console.log(`  ${describe('l', l)}`);
   console.log(`  ${describe('b', b)}`);
-  CHANNELS.forEach((name, i) => console.log(`  ${describe(name, channels[i]!)}`));
+  console.log(`  ${describe('d', d)}`);
 
   console.log(`resampling → ${WIDTH_PX}×${HEIGHT_PX} equirect (galactic)`);
-  const raw = resampleSkyToEquirect(l, b, channels, WIDTH_PX, HEIGHT_PX);
+  const [raw] = resampleSkyToEquirect(l, b, [d], WIDTH_PX, HEIGHT_PX);
 
   const smoothArg = process.argv.indexOf('--smooth-deg');
   const smoothDeg = smoothArg >= 0 ? Number(process.argv[smoothArg + 1]) : DEFAULT_SMOOTH_DEG;
-  const planes =
-    smoothDeg > 0
-      ? raw.map((plane) => smoothEquirectSphere(plane, WIDTH_PX, HEIGHT_PX, smoothDeg))
-      : raw;
-  console.log(`baked planes (smoothing ${smoothDeg}°):`);
-  CHANNELS.forEach((name, i) => console.log(`  ${describe(name, planes[i]!)}`));
+  const plane =
+    smoothDeg > 0 ? smoothEquirectSphere(raw!, WIDTH_PX, HEIGHT_PX, smoothDeg) : raw!;
+  console.log(`baked plane (smoothing ${smoothDeg}°):`);
+  console.log(`  ${describe('d', plane)}`);
 
   console.log('previews:');
-  await writePreview(planes[0]!, 'd_peak', join(PREVIEW_DIR, 'local-bubble-radius.png'));
+  await writePreview(plane, 'd_peak', join(PREVIEW_DIR, 'local-bubble-radius.png'));
 
   console.log('meshing displaced icosphere...');
-  const radiusPlane = planes[0]!;
+  const radiusPlane = plane;
   const healed = healNonFinite(radiusPlane);
   if (healed > 0) console.log(`  healed ${healed} non-finite radius texels with the plane mean`);
 

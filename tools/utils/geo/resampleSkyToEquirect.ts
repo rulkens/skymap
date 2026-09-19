@@ -1,16 +1,8 @@
 /**
  * resampleSkyToEquirect — nearest-neighbour resample of scattered all-sky
- * samples onto an equirectangular grid, in whatever spherical frame the
- * caller's angles are in.
- *
- * Written for HEALPix tables that ship their own (l, b) per row: reading the
- * angles off the table sidesteps knowing whether the file is RING- or
- * NESTED-ordered, which nothing in the header states and guessing wrong
- * scrambles the sky silently rather than loudly.
- *
- * Nearest-neighbour, not bilinear: the inputs are a piecewise-constant
- * tessellation already, and interpolating across a pixel boundary would invent
- * intermediate radii the underlying fit never produced.
+ * samples onto an equirectangular grid. Reads (l, b) off each row rather
+ * than assume RING order: HEALPix ordering isn't stated in the header, and
+ * guessing wrong scrambles the sky silently.
  */
 
 const BUCKET_DEG = 1;

@@ -48,22 +48,18 @@ const BYTES_PER_COMPONENT: Record<ShellMeshDtype, number> = { f16: 2, f32: 4 };
 /**
  * Encode a `ShellMesh` to an ArrayBuffer. Pure — no I/O.
  *
- * Throws on a positions/normals length that disagrees with
- * `vertexCount × 4` — a malformed mesh is a caller bug the decoder should
- * never have to defend against.
+ * Throws if positions/normals disagree in length — a malformed mesh is a
+ * caller bug the decoder should never have to defend against. `vertexCount`
+ * isn't part of the runtime type; the header still stores it, derived here.
  */
 export function encodeShellMesh(mesh: ShellMesh): ArrayBuffer {
-  const componentCount = mesh.vertexCount * COMPONENTS_PER_VERTEX;
-  if (mesh.positions.length !== componentCount) {
+  if (mesh.positions.length !== mesh.normals.length) {
     throw new Error(
-      `encodeShellMesh: positions length ${mesh.positions.length} does not match vertexCount×4 = ${componentCount}`,
+      `encodeShellMesh: positions length ${mesh.positions.length} does not match normals length ${mesh.normals.length}`,
     );
   }
-  if (mesh.normals.length !== componentCount) {
-    throw new Error(
-      `encodeShellMesh: normals length ${mesh.normals.length} does not match vertexCount×4 = ${componentCount}`,
-    );
-  }
+  const componentCount = mesh.positions.length;
+  const vertexCount = componentCount / COMPONENTS_PER_VERTEX;
 
   const bytesPerComponent = BYTES_PER_COMPONENT[mesh.dtype];
   const vertexBlockBytes = componentCount * bytesPerComponent;
@@ -75,7 +71,7 @@ export function encodeShellMesh(mesh: ShellMesh): ArrayBuffer {
   dv.setUint8(8, DTYPE_TO_ID[mesh.dtype]);
   dv.setUint8(9, FRAME_KIND_TO_ID[mesh.frame]);
   dv.setUint16(10, 0, true); // reserved
-  dv.setUint32(12, mesh.vertexCount, true);
+  dv.setUint32(12, vertexCount, true);
   dv.setUint32(16, indexCount, true);
   dv.setFloat32(20, mesh.centrePc[0], true);
   dv.setFloat32(24, mesh.centrePc[1], true);
@@ -157,5 +153,5 @@ export function decodeShellMesh(buf: ArrayBuffer): ShellMesh {
       : new Float32Array(buf, normalsOffset, componentCount);
   const indices = new Uint32Array(buf, indicesOffset, indexCount);
 
-  return { dtype, frame, centrePc, vertexCount, positions, normals, indices };
+  return { dtype, frame, centrePc, positions, normals, indices };
 }

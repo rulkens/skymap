@@ -1,6 +1,4 @@
 import { describe, it, expect, vi } from 'vitest';
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 
 import { parseDesiClustering, type DesiTracer } from '../../../tools/parsers/desiFits';
 import { DESI_TRACER_DISPLAY } from '../../../tools/parsers/desiTracerDisplay';

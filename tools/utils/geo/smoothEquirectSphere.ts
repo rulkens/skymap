@@ -1,13 +1,8 @@
 /**
  * smoothEquirectSphere — angular median-then-mean smoothing of an
- * equirectangular scalar map, with the longitude kernel widened by 1/cos(b) so
- * the footprint stays circular ON THE SPHERE rather than on the grid.
- *
- * Median BEFORE mean, and that order is the whole point: a fitted radius map
- * jumps between two candidate walls along adjacent sight lines, and averaging
- * across such a jump invents a radius sitting in the cavity between two real
- * surfaces. A median picks a side. Only then does the mean take the stair-steps
- * off what survives.
+ * equirectangular scalar map; longitude kernel widened by 1/cos(b) to stay
+ * circular on the sphere. Median BEFORE mean is the whole point: it picks a
+ * side before averaging can invent a radius in the cavity between two walls.
  */
 
 const RAD = Math.PI / 180;

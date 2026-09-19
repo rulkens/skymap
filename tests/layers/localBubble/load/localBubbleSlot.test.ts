@@ -18,7 +18,6 @@ function fixtureBuffer(): ArrayBuffer {
     dtype: 'f32',
     frame: 'galactic',
     centrePc: [0, 0, 0],
-    vertexCount: 1,
     positions: new Float32Array([0, 0, 300, 1]),
     normals: new Float32Array([0, 0, 1, 0]),
     indices: new Uint32Array([0, 0, 0]),
@@ -26,23 +25,18 @@ function fixtureBuffer(): ArrayBuffer {
 }
 
 function makeRenderer(): LocalBubbleRenderer {
-  let has = false;
   return {
     label: 'stub',
-    upload: vi.fn(() => {
-      has = true;
-    }),
-    hasMesh: vi.fn(() => has),
-    clearMesh: vi.fn(() => {
-      has = false;
-    }),
+    upload: vi.fn(),
+    hasMesh: vi.fn(),
+    clearMesh: vi.fn(),
     draw: vi.fn(),
     destroy: vi.fn(),
   };
 }
 
 describe('createLocalBubbleSlot', () => {
-  it('release() frees the renderer buffers via onRelease, and hasMesh() goes false', async () => {
+  it('release() frees the renderer buffers via onRelease', async () => {
     fetch.mock.mockResolvedValue(new Response(fixtureBuffer(), { status: 200 }));
     const renderer = makeRenderer();
     const slot = createLocalBubbleSlot(renderer);
@@ -50,10 +44,8 @@ describe('createLocalBubbleSlot', () => {
     slot.load();
     await vi.waitFor(() => expect(slot.state().kind).toBe('ready'));
     expect(renderer.upload).toHaveBeenCalledTimes(1);
-    expect(renderer.hasMesh()).toBe(true);
 
     slot.release();
     expect(renderer.clearMesh).toHaveBeenCalledTimes(1);
-    expect(renderer.hasMesh()).toBe(false);
   });
 });

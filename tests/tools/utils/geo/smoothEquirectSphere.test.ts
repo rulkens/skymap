@@ -1,12 +1,8 @@
 /**
- * smoothEquirectSphere.test.ts — the two properties the shell bake depends on.
- *
- * `median-then-mean` exists so a two-valued step (the fit jumping between
- * candidate dust walls) resolves to one side rather than to the empty middle;
- * a plain blur would pass the first test's spirit while producing exactly the
- * radius the real surface does not have. NaN healing is the second: upstream
- * ships a handful of failed sight lines, and a kernel that propagates them
- * would punch holes through the baked map.
+ * smoothEquirectSphere.test.ts — the two properties the shell bake depends
+ * on. Median-then-mean resolves a two-valued step (the fit jumping between
+ * candidate dust walls) to one side, not the empty middle. NaN healing is
+ * the second: upstream ships failed sight lines a kernel must not propagate.
  */
 import { describe, expect, it } from 'vitest';
 

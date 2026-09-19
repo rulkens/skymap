@@ -1,9 +1,8 @@
 /**
  * The Layer's one asset row — demand + request only; the `factory` hands
- * back the slot `create` already minted, so core folds this over its own
- * rows without ever building one. Distance-gated on the camera's proximity
- * to the Sun, not the settings toggle alone: the ~11 MB `.shell` file stays
- * off the boot path until the camera nears the solar neighbourhood.
+ * back the slot `create` already minted. Distance-gated on the camera's
+ * proximity to the Sun: the ~11 MB `.shell` file stays off the boot path
+ * until the camera nears the solar neighbourhood.
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
@@ -21,10 +20,7 @@ export function localBubbleAssetRows(runtime: LocalBubbleRuntime): readonly Asse
       demand: (ctx) =>
         ctx.settings.localBubble.enabled && Math.hypot(...ctx.cameraPosMpc) < DEMAND_DISTANCE_MPC,
       release: (ctx) => Math.hypot(...ctx.cameraPosMpc) > RELEASE_DISTANCE_MPC,
-      // Next free rung after filaments (80) / flow (81) / cf4Density et al.
-      // (82): on by default, but the distance gate above keeps it out of the
-      // boot-time queue for every session that never nears the Sun.
-      priority: 83,
+      priority: 83, // next free rung after filaments (80) / flow (81) / cf4Density et al. (82)
     },
   ];
 }

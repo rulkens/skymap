@@ -18,7 +18,6 @@ function makeFixture(dtype: ShellMeshDtype): ShellMesh {
     dtype,
     frame: 'galactic',
     centrePc: [1.5, -2.5, 0.25],
-    vertexCount: 4,
     positions,
     normals,
     indices: new Uint32Array([0, 1, 2, 0, 2, 3]),
@@ -32,7 +31,6 @@ describe('shell mesh format (SHEL v1)', () => {
     expect(decoded.dtype).toBe('f16');
     expect(decoded.frame).toBe('galactic');
     expect(Array.from(decoded.centrePc)).toEqual([1.5, -2.5, 0.25]);
-    expect(decoded.vertexCount).toBe(4);
     expect(Array.from(decoded.positions)).toEqual(Array.from(original.positions));
     expect(Array.from(decoded.normals)).toEqual(Array.from(original.normals));
     expect(Array.from(decoded.indices)).toEqual([0, 1, 2, 0, 2, 3]);
@@ -57,26 +55,23 @@ describe('shell mesh format (SHEL v1)', () => {
     const buf = encodeShellMesh(makeFixture('f32'));
     new DataView(buf).setUint32(4, 99, true);
     expect(() => decodeShellMesh(buf)).toThrow(/version/);
-    expect(() => decodeShellMesh(buf)).toThrow(/build-local-bubble/);
   });
 
   it('rejects an unknown dtype', () => {
     const buf = encodeShellMesh(makeFixture('f32'));
     new DataView(buf).setUint8(8, 7);
     expect(() => decodeShellMesh(buf)).toThrow(/dtype/);
-    expect(() => decodeShellMesh(buf)).toThrow(/build-local-bubble/);
   });
 
   it('rejects an unknown frame', () => {
     const buf = encodeShellMesh(makeFixture('f32'));
     new DataView(buf).setUint8(9, 9);
     expect(() => decodeShellMesh(buf)).toThrow(/frame/);
-    expect(() => decodeShellMesh(buf)).toThrow(/build-local-bubble/);
   });
 
   it('rejects a truncated buffer', () => {
     const buf = encodeShellMesh(makeFixture('f32'));
     const truncated = buf.slice(0, buf.byteLength - 4);
-    expect(() => decodeShellMesh(truncated)).toThrow(/build-local-bubble/);
+    expect(() => decodeShellMesh(truncated)).toThrow(/buffer size/);
   });
 });

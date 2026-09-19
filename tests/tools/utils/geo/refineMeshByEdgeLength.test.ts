@@ -1,11 +1,8 @@
 /**
- * refineMeshByEdgeLength.test.ts — the crack-free invariant, first and foremost.
- *
- * Adaptive refinement's classic failure is the T-junction: a split edge whose
- * neighbour did not split leaves a hairline gap that, on an additively blended
- * shell, reads as a dark seam through the surface. On a closed mesh that shows
- * up as an edge used by one face instead of two, which is what the first test
- * asserts — it is the reason the split decision reads only an edge's endpoints.
+ * refineMeshByEdgeLength.test.ts — the crack-free invariant, first and
+ * foremost. A split edge whose neighbour did not split leaves a T-junction:
+ * on a closed mesh, an edge used by one face instead of two — which is what
+ * the first test asserts.
  */
 import { describe, expect, it } from 'vitest';
 

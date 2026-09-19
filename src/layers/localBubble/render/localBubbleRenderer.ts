@@ -12,11 +12,14 @@
  *                       viewportPx stays 0 (the shell never reads it).
  *   80..143  model     mat4x4<f32> — FRAME_TO_WORLD[frame] ×
  *                       translate(centrePc·PC_TO_MPC) × scale(PC_TO_MPC),
- *                       written at `upload` — fixed for the mesh's life.
+ *                       set into the scratch at `upload` — fixed for the mesh's life.
  *   144..155 eye       vec3<f32>   — per `draw`.
  *   156..159 opacity   f32         — per `draw`.
- *   160..171 tint      vec3<f32>   — LOCAL_BUBBLE_TINT, written at `upload`.
+ *   160..171 tint      vec3<f32>   — LOCAL_BUBBLE_TINT, set into the scratch at `upload`.
  *   172..175 _pad      f32
+ *
+ * `draw` always flushes the whole 176-byte scratch, so model/tint (set once,
+ * at `upload`) reach the GPU on the first `draw` after an `upload`.
  */
 
 import { mat4 } from 'wgpu-matrix';
@@ -41,8 +44,6 @@ const MODEL_F32_INDEX = 20;
 const EYE_F32_INDEX = 36;
 const OPACITY_F32_INDEX = 39;
 const TINT_F32_INDEX = 40;
-// Bytes 0..159: everything `draw` rewrites; tint above it is upload-only.
-const PER_DRAW_BYTES = 160;
 
 const COMPONENTS_PER_VERTEX = 4;
 
@@ -170,15 +171,10 @@ export function createLocalBubbleRenderer(
 
     uniformsScratch.set(buildModelMatrix(mesh), MODEL_F32_INDEX);
     uniformsScratch.set(LOCAL_BUBBLE_TINT, TINT_F32_INDEX);
-    device.queue.writeBuffer(uniformsBuffer, 0, uniformsScratch);
   }
 
   function hasMesh(): boolean {
     return indexBuffer !== null;
-  }
-
-  function clearMesh(): void {
-    destroyMeshBuffers();
   }
 
   function draw(
@@ -192,7 +188,7 @@ export function createLocalBubbleRenderer(
     uniformsScratch.set(viewProj, VIEW_PROJ_F32_INDEX);
     uniformsScratch.set(eyeMpc, EYE_F32_INDEX);
     uniformsScratch[OPACITY_F32_INDEX] = opacity;
-    device.queue.writeBuffer(uniformsBuffer, 0, uniformsScratch, 0, PER_DRAW_BYTES / 4);
+    device.queue.writeBuffer(uniformsBuffer, 0, uniformsScratch);
 
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, uniformsBindGroup);
@@ -211,7 +207,7 @@ export function createLocalBubbleRenderer(
     label: 'localBubbleRenderer',
     upload,
     hasMesh,
-    clearMesh,
+    clearMesh: destroyMeshBuffers,
     draw,
     destroy,
   };

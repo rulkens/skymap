@@ -1,12 +1,8 @@
 /**
  * resampleSkyToEquirect.test.ts — orientation and pole-coverage contract.
- *
- * The bug this exists to catch is a silently transposed or flipped sky: a map
- * baked with l and b swapped, or v running the wrong way, still produces a
- * plausible-looking image and only shows up as a rotated shell much later. So
- * the assertions pin WHERE a known direction lands, not merely that values came
- * out. The pole rows are the second trap — a longitude kernel that ignores
- * cos(b) leaves them unfilled, which reads as a hole in the surface.
+ * Catches a silently transposed or flipped sky (l/b swapped, or v run the
+ * wrong way): assertions pin WHERE a known direction lands. Pole rows are
+ * the second trap — a longitude kernel ignoring cos(b) leaves them unfilled.
  */
 import { describe, expect, it } from 'vitest';
 
