@@ -46,6 +46,7 @@ import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 import { createFlowFieldRenderer } from '../../../src/layers/flow/render/flowFieldRenderer';
 import { flowCompute } from '../../../src/layers/flow/computes/flowCompute';
 import type { FlowRuntime } from '../../../src/layers/flow/types/FlowRuntime';
@@ -144,7 +145,7 @@ export async function createFlowHarness(
     cam.distance = s.camera.distance;
     cam.aspect = canvas.width / canvas.height || 1;
     updatePosition(cam);
-    const viewProj = computeViewProj(cam);
+    const viewProj = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
 
     resizeCanvasToDisplay(canvas);
     renderGraph.resize(canvas.width, canvas.height);

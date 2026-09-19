@@ -5,6 +5,7 @@ import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustu
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../src/services/engine/frame/slabs';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const M = SCALE_UNITS.M_TO_MPC;
 
@@ -27,8 +28,7 @@ function near0Ctx(): ReadyFrameContext {
     targetMpc: [eye[0] + camDistance, 0, 0],
     up: [0, 1, 0],
     renderOrigin: [0, 0, 0],
-    fovYRad: Math.PI / 4,
-    aspect: 16 / 9,
+    frustum: symmetricFrustum(Math.PI / 4, 16 / 9),
     near,
     far,
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,

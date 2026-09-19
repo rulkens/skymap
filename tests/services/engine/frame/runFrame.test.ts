@@ -129,6 +129,7 @@ import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -684,7 +685,7 @@ describe('runFrame — orientation-frame roll', () => {
       for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
       // The view-projection is where a degenerate near-pole lookAt would surface
       // NaN; assert every entry is finite.
-      const vp = computeViewProj(cam);
+      const vp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
       for (const m of vp) expect(Number.isFinite(m)).toBe(true);
     }
   });

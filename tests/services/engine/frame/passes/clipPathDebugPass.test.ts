@@ -10,6 +10,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ClipPathSnapshot } from '../../../../../src/@types/engine/debug/ClipPathSnapshot';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { Mat4 } from 'wgpu-matrix';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 
 /**
  * The clip-path overlay projects through NEAR0 (see the layer header): a
@@ -30,8 +31,7 @@ function makeCtx(): ReadyFrameContext {
     targetMpc: TARGET_POS,
     up: [0, 1, 0],
     renderOrigin: [0, 0, 0],
-    fovYRad: (60 * Math.PI) / 180,
-    aspect: 1280 / 720,
+    frustum: symmetricFrustum((60 * Math.PI) / 180, 1280 / 720),
     near,
     far,
     reversedZ: true,

@@ -32,6 +32,7 @@ import { MARS_DATUM_RADIUS_M } from '../../../src/data/bodies/marsSurfaceParams'
 import type { SurfaceTileId } from '../../../src/@types/data/SurfaceTileId';
 import type { SurfaceTileBand } from '../../../src/@types/scene/SurfaceTileBand';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 const BASE_LEVEL = baseLevelForTier('earth', 'large');
 const MIN_TILE_LEVEL = BASE_LEVEL + 1;
@@ -1237,8 +1238,7 @@ describe('cutSurfaceTiles', () => {
         targetMpc,
         up: genericUp,
         renderOrigin,
-        fovYRad,
-        aspect,
+        frustum: symmetricFrustum(fovYRad, aspect),
         near,
         far,
         reversedZ: true,

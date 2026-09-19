@@ -35,9 +35,10 @@
  * with `up` as the image-plane up direction.  The result transforms
  * origin-relative world coordinates into camera space.
  *
- * ### Projection matrix — `mat4d.perspective` / `mat4d.perspectiveReverseZ`
+ * ### Projection matrix — `frustumPerspectiveF64`
  *
- * Non-reversed (the default, `reversedZ === false`): `mat4d.perspective` maps
+ * Built from the view's tangent-form `frustum`, in the conventions of
+ * `mat4d.perspective` / `mat4d.perspectiveReverseZ` described here. Non-reversed (the default, `reversedZ === false`): `mat4d.perspective` maps
  * the view frustum to clip-space depth **[0, 1]** — the WebGPU Zero-to-One
  * convention. This is identical to `mat4.perspective` in the f32 path; no
  * separate ZO call is needed.
@@ -77,6 +78,8 @@
 
 import { mat4d } from 'wgpu-matrix';
 import type { Vec3 } from '../../@types/math/Vec3';
+import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
+import { frustumPerspectiveF64 } from './frustumPerspectiveF64';
 
 /**
  * Compute the f64 foreground view-projection matrix, expressed relative to
@@ -93,8 +96,7 @@ import type { Vec3 } from '../../@types/math/Vec3';
  *                            before `lookAt`; keeps the view-matrix translation
  *                            small to avoid f32 precision loss at the upload
  *                            boundary.
- * @param input.fovYRad       Vertical field of view in radians.
- * @param input.aspect        Viewport width / height ratio.
+ * @param input.frustum       The view's frustum edges, tangent form.
  * @param input.near          Near clip plane distance in Mpc.
  * @param input.far           Far clip plane distance in Mpc (finite branch only).
  * @param input.reversedZ     When true, build an infinite-far reversed-Z
@@ -109,13 +111,12 @@ export function computeForegroundViewProj(input: {
   readonly targetMpc: Readonly<Vec3>;
   readonly up: Readonly<Vec3>;
   readonly renderOrigin: Readonly<Vec3>;
-  readonly fovYRad: number;
-  readonly aspect: number;
+  readonly frustum: ViewFrustum;
   readonly near: number;
   readonly far: number;
   readonly reversedZ: boolean;
 }): Float64Array {
-  const { eyeMpc, targetMpc, up, renderOrigin, fovYRad, aspect, near, far, reversedZ } = input;
+  const { eyeMpc, targetMpc, up, renderOrigin, frustum, near, far, reversedZ } = input;
 
   // Subtract renderOrigin from eye and target in f64 before lookAt.
   // This keeps the view-matrix translation small regardless of where the
@@ -141,9 +142,7 @@ export function computeForegroundViewProj(input: {
   // Non-reversed: finite ZO depth [0, 1] — matches the f32 path and WebGPU's
   // NDC range. Reversed: infinite-far reversed-Z (zFar omitted; near→1, ∞→0),
   // which ignores `far`. See the '### Projection matrix' docblock section.
-  const proj = reversedZ
-    ? mat4d.perspectiveReverseZ(fovYRad, aspect, near)
-    : mat4d.perspective(fovYRad, aspect, near, far);
+  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : far, reversedZ);
 
   // ── Combined view-projection ─────────────────────────────────────────────
   // mat4d.multiply(a, b) computes a * b (column-major: view applied first).

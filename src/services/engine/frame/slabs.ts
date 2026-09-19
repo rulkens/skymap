@@ -10,6 +10,7 @@ import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
@@ -24,6 +25,7 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
+import { frustumPerspectiveF64 } from '../../../utils/camera/frustumPerspectiveF64';
 import { foregroundFrustum, MIN_NEAR_M, NEAR_RATIO } from '../../../utils/camera/foregroundFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
@@ -138,8 +140,7 @@ const NEAR_MARGIN_EPS = 1e-3;
 export function bodySlabRow(input: {
   readonly body: SceneBody;
   readonly pose: BodyPoseProvider;
-  readonly fovYRad: number;
-  readonly aspect: number;
+  readonly frustum: ViewFrustum;
   readonly viewportPx: Readonly<Vec2>;
   /**
    * Mesh bodies riding THIS row's slab (see `meshBodiesAttachedTo.ts`):
@@ -156,7 +157,7 @@ export function bodySlabRow(input: {
   readonly chainRow: Omit<ChainRow, 'index'>;
   readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the drawn radius)
 } | null {
-  const { body, pose, fovYRad, aspect, viewportPx, attachedBodies } = input;
+  const { body, pose, frustum, viewportPx, attachedBodies } = input;
   const relPose = pose(body.id as BodyId);
   if (relPose === null) return null;
   const { eyeRelBodyM, basisM } = relPose;
@@ -198,9 +199,7 @@ export function bodySlabRow(input: {
   // hard-coding the reversed branch is what keeps a flip from half-landing.
   const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
   const view = mat4d.lookAt([0, 0, 0], forward, up);
-  const proj = reversedZ
-    ? mat4d.perspectiveReverseZ(fovYRad, aspect, near)
-    : mat4d.perspective(fovYRad, aspect, near, dM + rMaxM);
+  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : dM + rMaxM, reversedZ);
   const vp = mat4d.multiply(proj, view) as Float64Array;
 
   // DEV-only, like the §7.2 scan that reads it — a prod frame skips both.
@@ -214,7 +213,7 @@ export function bodySlabRow(input: {
         radiusM: rMaxM,
         camPosMpc: [0, 0, 0],
         viewportHeightPx: viewportPx[1],
-        fovYRad,
+        fovYRad: Math.atan(frustum.tanUp) - Math.atan(frustum.tanDown),
       }) / 2
     : 0;
 
@@ -244,6 +243,7 @@ export function bodySlabRow(input: {
  */
 export function deriveSlabs(input: {
   readonly cam: OrbitCamera;
+  readonly frustum: ViewFrustum;
   readonly cosmoVp: Mat4;
   /**
    * Range from the eye to the pivot's surface, or raw orbit distance when the
@@ -261,8 +261,16 @@ export function deriveSlabs(input: {
    * Earth has an entry today; every other host's row is unaffected. */
   readonly attachedBodiesByHostId?: ReadonlyMap<string, readonly HostFrameSphere[]>;
 }): readonly Slab[] {
-  const { cam, cosmoVp, altitudeMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
-    input;
+  const {
+    cam,
+    frustum,
+    cosmoVp,
+    altitudeMpc,
+    pose,
+    visibleBodies,
+    viewportPx,
+    attachedBodiesByHostId,
+  } = input;
   const { near, far } = foregroundFrustum(altitudeMpc);
   orbitForwardOf(cam, forwardScratch);
   const { rolledUp } = imagePlaneBasis(
@@ -281,8 +289,7 @@ export function deriveSlabs(input: {
     ],
     up: rolledUp,
     renderOrigin: RENDER_ORIGIN_MPC,
-    fovYRad: cam.fovYRad,
-    aspect: cam.aspect,
+    frustum,
     near,
     far,
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
@@ -320,8 +327,7 @@ export function deriveSlabs(input: {
       bodySlabRow({
         body,
         pose,
-        fovYRad: cam.fovYRad,
-        aspect: cam.aspect,
+        frustum,
         viewportPx,
         attachedBodies: attachedBodiesByHostId?.get(body.id),
       }),

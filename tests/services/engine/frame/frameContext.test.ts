@@ -46,6 +46,7 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const RESTING_POSE: CameraPose = { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
@@ -226,7 +227,10 @@ describe('deriveFrameContext — ready branch', () => {
     );
     expect(ctx.isReady).toBe(true);
     if (!ctx.isReady) return;
-    const expected = computeViewProj(assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS));
+    const expected = computeViewProj(
+      assembleOrbitCamera(pose, PROJECTION, BASIS, BASIS),
+      symmetricFrustum(PROJECTION.fovYRad, PROJECTION.aspect),
+    );
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected));
   });
 
@@ -252,7 +256,8 @@ describe('deriveFrameContext — ready branch', () => {
     // matching what `deriveFrameContext` itself derives from `makeState()`.
     const expected = deriveSlabs({
       cam,
-      cosmoVp: computeViewProj(cam),
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
+      cosmoVp: computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect)),
       altitudeMpc: cam.distance,
       pose: () => null,
       visibleBodies: [],

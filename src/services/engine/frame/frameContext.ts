@@ -20,6 +20,7 @@ import type { BodyPoseProvider } from '../../../@types/engine/camera/BodyPosePro
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { computeViewProj } from '../../../utils/camera/computeViewProj';
+import { symmetricFrustum } from '../../../utils/camera/symmetricFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { orbitForwardOf } from '../../../utils/camera/orbitForwardOf';
@@ -92,7 +93,8 @@ export function deriveFrameContext(
   const cam = assembleOrbitCamera(pose, projection, poseBasis, upBasis);
 
   const canvasSize = { width: canvas.width, height: canvas.height };
-  const vp = computeViewProj(cam);
+  const frustum = symmetricFrustum(cam.fovYRad, cam.aspect);
+  const vp = computeViewProj(cam, frustum);
 
   // This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes one
   // deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call this
@@ -220,6 +222,7 @@ export function deriveFrameContext(
   // second time — see `slabs.ts: deriveSlabs`.
   const slabs = deriveSlabs({
     cam,
+    frustum,
     cosmoVp: vp,
     altitudeMpc: altitudeMpc ?? pivotSurfaceRangeMpc(arm, pose.distance, state.selectionRows.focus),
     pose: bodyPose,

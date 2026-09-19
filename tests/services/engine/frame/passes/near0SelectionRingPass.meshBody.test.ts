@@ -39,6 +39,7 @@ import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -90,7 +91,8 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
 
   const slabs = deriveSlabs({
     cam,
-    cosmoVp: computeViewProj(cam),
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
+    cosmoVp: computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect)),
     // Altitude over the hull — what NEAR0's near-plane floor is being tested
     // against, and what a real frame would key off at this standoff.
     altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,

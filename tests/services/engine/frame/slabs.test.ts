@@ -43,6 +43,8 @@ import type { BodyRelativePose } from '../../../../src/@types/engine/camera/Body
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustumPerspectiveF64';
 
 function makeCam(distance: number): OrbitCamera {
   return createOrbitCamera({
@@ -85,6 +87,7 @@ function baseInput(
   const cam = overrides.cam ?? makeCam(100);
   return {
     cam,
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     cosmoVp: makeCosmoVp(),
     altitudeMpc: cam.distance,
     pose: NO_POSE,
@@ -160,8 +163,7 @@ describe('deriveSlabs', () => {
       ],
       up: [0, 1, 0],
       renderOrigin: RENDER_ORIGIN_MPC,
-      fovYRad: cam.fovYRad,
-      aspect: cam.aspect,
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
       near,
       far,
       // NEAR0 is reversed-Z (`SLAB_REVERSED_Z[NEAR0] === true`), so the derived
@@ -276,8 +278,8 @@ describe('deriveSlabs', () => {
     // header's "partial flip impossible" claim is false. `computeForegroundViewProj`
     // pins the identical NEAR0-side coupling by rebuilding the expected
     // matrix from the same util this test rebuilds by hand for the body row
-    // (no shared "foreground" util exists for body rows, so the two mat4d
-    // calls are inlined here).
+    // (no shared "foreground" util exists for body rows, so the lookAt and
+    // projection are inlined here).
     const body = makePlanet({ id: 'flip-body', surface: { datumRadiusM: 1e5, reliefM: [0, 0] } });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [0, 0, -1e9],
@@ -294,7 +296,12 @@ describe('deriveSlabs', () => {
       const view = mat4d.lookAt([0, 0, 0], [0, 0, 1], [0, 1, 0]);
       const dM = 1e9;
       const rMaxM = 1e5; // no atmosphere/ring/cloud widens a bare radiusM body.
-      const expectedProj = mat4d.perspective(cam.fovYRad, cam.aspect, row.near, dM + rMaxM);
+      const expectedProj = frustumPerspectiveF64(
+        symmetricFrustum(cam.fovYRad, cam.aspect),
+        row.near,
+        dM + rMaxM,
+        false,
+      );
       const expectedVp = mat4d.multiply(expectedProj, view);
       expect(Array.from(row.vp)).toEqual(Array.from(expectedVp));
     } finally {
@@ -427,7 +434,7 @@ describe('deriveSlabs', () => {
       far: 10000,
       roll,
     });
-    const cosmoVp = computeViewProj(cam);
+    const cosmoVp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
     const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
 
     // An off-axis point: 20 Mpc lateral of the target at 100 Mpc range
@@ -524,8 +531,7 @@ describe('bodySlabRow attachedBodies widening', () => {
     return bodySlabRow({
       body,
       pose,
-      fovYRad: 1,
-      aspect: 16 / 9,
+      frustum: symmetricFrustum(1, 16 / 9),
       viewportPx: [1920, 1080] as Vec2,
       attachedBodies,
     })!;
