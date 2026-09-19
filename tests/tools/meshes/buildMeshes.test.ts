@@ -91,6 +91,29 @@ function faceFacing(decoded: DecodedMeshGeometry): number {
   return face.reduce((sum, f, i) => sum + f * decoded.normals[n + i]!, 0);
 }
 
+/** Assert `expected` is *some* decoded vertex's position: the writer's vertex-cache
+ * reorder means source index order no longer matches decoded index order. */
+function expectVertexNear(
+  file: ArrayBuffer,
+  decoded: DecodedMeshGeometry,
+  expected: number[],
+): void {
+  let best = 0;
+  let bestDist = Infinity;
+  for (let v = 0; v < decoded.vertexCount; v++) {
+    const dist = Math.hypot(...[0, 1, 2].map((c) => decoded.positions[v * 3 + c]! - expected[c]!));
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = v;
+    }
+  }
+  expectPositionNear(
+    file,
+    [0, 1, 2].map((c) => decoded.positions[best * 3 + c]!),
+    expected,
+  );
+}
+
 async function solidPng(r: number, g: number, b: number): Promise<Uint8Array> {
   const png = await sharp({ create: { width: 4, height: 4, channels: 3, background: { r, g, b } } })
     .png()
@@ -301,14 +324,8 @@ describe('buildMeshes()', () => {
     // stays (0,0,0). Triangle A = (0,2,0),(-3,0,0),(0,0,0), area 3, own centroid
     // (-1, 2/3, 0). Triangle B = (0,4,0),(0,0,0),(0,0,1), area 2, own centroid
     // (0, 4/3, 1/3). Area-weighted: (3*A + 2*B) / 5 = (-3/5, 14/15, 2/15).
-    expectPositionNear(readMesh(), decoded.positions.slice(0, 6), [
-      0.6,
-      16 / 15,
-      -2 / 15,
-      -2.4,
-      -14 / 15,
-      -2 / 15,
-    ]);
+    expectVertexNear(readMesh(), decoded, [0.6, 16 / 15, -2 / 15]);
+    expectVertexNear(readMesh(), decoded, [-2.4, -14 / 15, -2 / 15]);
     expectDirectionNear(decoded.normals.slice(0, 3), [0, 0, 1]);
     // The tangent takes the PLAIN 3x3 — (1,1,0) -> (-3,2,0) normalised. Running
     // it through the cofactor matrix normals use would give (-2,3,0) instead.
@@ -338,14 +355,8 @@ describe('buildMeshes()', () => {
 
     // (1,0,0) -> (0,1,0), (0,1,0) -> (-1,0,0), (0,0,0) -> (0,0,0). One triangle,
     // so its area-weighted centroid is just the plain vertex average: (-1/3, 1/3, 0).
-    expectPositionNear(readMesh(), decoded.positions.slice(0, 6), [
-      1 / 3,
-      2 / 3,
-      0,
-      -2 / 3,
-      -1 / 3,
-      0,
-    ]);
+    expectVertexNear(readMesh(), decoded, [1 / 3, 2 / 3, 0]);
+    expectVertexNear(readMesh(), decoded, [-2 / 3, -1 / 3, 0]);
     expectDirectionNear(decoded.normals.slice(0, 3), [-0.6, 0, 0.8]);
     expectDirectionNear(decoded.tangents.slice(0, 4), [0, 1, 0, 1]);
   });
@@ -371,7 +382,7 @@ describe('buildMeshes()', () => {
 
     // (1,0,0) -> (-1,0,0), (0,1,0) -> (0,1,0), (0,0,0) -> (0,0,0). One triangle,
     // so its area-weighted centroid is the plain vertex average: (-1/3, 1/3, 0).
-    expectPositionNear(readMesh(), decoded.positions.slice(0, 3), [-2 / 3, -1 / 3, 0]);
+    expectVertexNear(readMesh(), decoded, [-2 / 3, -1 / 3, 0]);
     // The cofactor matrix alone hands back (0,0,-1) here — a mirrored node needs
     // the determinant's sign put back, or every normal points into the surface.
     expectDirectionNear(decoded.normals.slice(0, 3), [0, 0, 1]);
@@ -410,11 +421,7 @@ describe('buildMeshes()', () => {
 
     // The triangle's own centroid — (1000+1001+1000)/3, (0+0+1)/3 — not its
     // ~1000 m distance from the origin.
-    expectPositionNear(readMesh(), (await decodeMesh(readMesh())).positions.slice(0, 3), [
-      -1 / 3,
-      -1 / 3,
-      0,
-    ]);
+    expectVertexNear(readMesh(), await decodeMesh(readMesh()), [-1 / 3, -1 / 3, 0]);
     expect(row.boundingRadiusM).toBeCloseTo(Math.sqrt(5) / 3, 4);
   });
 
@@ -443,8 +450,8 @@ describe('buildMeshes()', () => {
     // area 0.5. Weighted: (8*(4/3) + 0.5*(301/3)) / 8.5 = 365/51, and
     // (8*(4/3) + 0.5*(1/3)) / 8.5 = 65/51 — nowhere near the bbox centre of
     // (50.5, 2, 0) a naive min/max midpoint would give.
-    expectPositionNear(readMesh(), decoded.positions.slice(0, 3), [-365 / 51, -65 / 51, 0]);
-    expectPositionNear(readMesh(), decoded.positions.slice(9, 12), [100 - 365 / 51, -65 / 51, 0]);
+    expectVertexNear(readMesh(), decoded, [-365 / 51, -65 / 51, 0]);
+    expectVertexNear(readMesh(), decoded, [100 - 365 / 51, -65 / 51, 0]);
   });
 
   it('ignores geometry orphaned off the scene graph', async () => {

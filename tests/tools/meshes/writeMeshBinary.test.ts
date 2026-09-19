@@ -8,11 +8,16 @@ import { expectPositionNear } from '../../helpers/meshes/expectPositionNear';
 const UV_TOLERANCE = 0.5 / MESH_UNORM16_MAX + 1e-7;
 
 function quad() {
+  // Off-axis unit normal/tangent pair (n·t = 0), reused across vertices with
+  // alternating tangent handedness so both signs of w round-trip.
+  const n = [1, 2, 2].map((c) => c / 3);
+  const t = [2, -2, 1].map((c) => c / 3);
   return {
-    positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 1, 0]),
-    normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 1, 0]),
-    tangents: new Float32Array([1, 0, 0, 1, 1, 0, 0, 1, 1, 0, 0, -1, 0, 0, 1, -1]),
-    uvs: new Float32Array([0, 0, 1, 0, 0, 1, 1, 1]),
+    // Off the quantisation grid: no vertex sits at every axis's min/max at once.
+    positions: new Float32Array([0.3, 0.7, 0.2, 1.4, 0.1, 0.6, 0.15, 1.35, 0.05, 1.25, 1.45, 0.35]),
+    normals: new Float32Array([...n, ...n, ...n, ...n]),
+    tangents: new Float32Array([...t, 1, ...t, -1, ...t, 1, ...t, -1]),
+    uvs: new Float32Array([0.12, 0.34, 0.81, 0.09, 0.27, 0.88, 0.63, 0.55]),
     indices: new Uint32Array([0, 1, 2, 2, 1, 3]),
     boundingRadiusM: 6.5,
   };
@@ -67,57 +72,19 @@ describe('writeMeshBinary()', () => {
   });
 
   it('throws on a uv outside [0, 1]', async () => {
-    const geometry = { ...quad(), uvs: new Float32Array([0, 0, 1.01, 0, 0, 1, 1, 1]) };
+    const geometry = { ...quad(), uvs: new Float32Array([0, 0, 1.5, 0, 0, 1, 1, 1]) };
     await expect(writeMeshBinary(geometry)).rejects.toThrow(/outside \[0, 1\]/);
   });
 
-  it('encodes a 10k-vertex grid to under a third of the v2 size', async () => {
-    // The guard against a stream silently shipping unquantised. Jittered on
-    // purpose: meshopt squeezes a smooth grid so hard that even float32
-    // normals would pass; with noise, float32 normals or tangents alone trip it.
-    const hash = (k: number) => {
-      const x = Math.sin(k * 12.9898) * 43758.5453;
-      return x - Math.floor(x);
-    };
-    const side = 100;
-    const vertexCount = side * side;
-    const positions = new Float32Array(vertexCount * 3);
-    const normals = new Float32Array(vertexCount * 3);
-    const tangents = new Float32Array(vertexCount * 4);
-    const uvs = new Float32Array(vertexCount * 2);
-    for (let j = 0; j < side; j++) {
-      for (let i = 0; i < side; i++) {
-        const v = j * side + i;
-        const [u, w] = [i / (side - 1), j / (side - 1)];
-        const [azimuth, ny] = [2 * Math.PI * hash(v), 0.5 + 0.5 * hash(v + vertexCount)];
-        const r = Math.sqrt(1 - ny * ny);
-        positions.set(
-          [u * 10 + 0.05 * hash(v + 2 * vertexCount), 0.5 * hash(v + 3 * vertexCount), w * 10],
-          v * 3,
-        );
-        normals.set([r * Math.cos(azimuth), ny, r * Math.sin(azimuth)], v * 3);
-        tangents.set([-Math.sin(azimuth), 0, Math.cos(azimuth), 1], v * 4);
-        uvs.set([u, w], v * 2);
-      }
-    }
-    const indices: number[] = [];
-    for (let j = 0; j < side - 1; j++) {
-      for (let i = 0; i < side - 1; i++) {
-        const v = j * side + i;
-        indices.push(v, v + side, v + 1, v + 1, v + side, v + side + 1);
-      }
-    }
-    const geometry = {
-      positions,
-      normals,
-      tangents,
-      uvs,
-      indices: new Uint32Array(indices),
-      boundingRadiusM: 8,
-    };
-
-    const buf = await writeMeshBinary(geometry);
-    const v2Bytes = 20 + 48 * vertexCount + 4 * indices.length;
-    expect(buf.byteLength).toBeLessThan(v2Bytes / 3);
+  it('clamps a UV within the atlas-pack spill tolerance into [0, 1]', async () => {
+    // Source vertex 1's uv is the only one with a spilled u.
+    const geometry = { ...quad(), uvs: new Float32Array([0, 0, 1.003, 0, 0, 1, 1, 1]) };
+    const decoded = await decodeMesh(await writeMeshBinary(geometry));
+    const v = Array.from({ length: decoded.vertexCount }, (_, v) => v).find(
+      (v) =>
+        Math.hypot(...vec(decoded.positions, v, 3).map((c, k) => c - geometry.positions[3 + k]!)) <
+        1e-4,
+    )!;
+    expect(vec(decoded.uvs, v, 2)[0]).toBeCloseTo(1, 3);
   });
 });

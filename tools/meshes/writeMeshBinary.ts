@@ -29,6 +29,9 @@ import { roundUpToMultiple } from '../../src/utils/math/roundUpToMultiple';
 /** `reorderMesh`'s remap entry for a vertex no index references. */
 const UNREFERENCED = 0xffffffff;
 
+/** Blender's atlas pack can spill a UV this far past [0, 1]; beyond it, the UV is tiling, not a rounding spill. */
+const UV_CLAMP_TOLERANCE = 0.01;
+
 export async function writeMeshBinary(geometry: {
   readonly positions: Float32Array;
   readonly normals: Float32Array;
@@ -37,13 +40,15 @@ export async function writeMeshBinary(geometry: {
   readonly indices: Uint32Array;
   readonly boundingRadiusM: number;
 }): Promise<ArrayBuffer> {
-  const { positions, normals, tangents, uvs, boundingRadiusM } = geometry;
-  // UVs are atlas coordinates; a unorm16 has nowhere to put one outside [0, 1].
-  for (const uv of uvs) {
-    if (!(uv >= 0 && uv <= 1)) {
-      throw new Error(`writeMeshBinary: uv ${uv} outside [0, 1] — the .mesh stores UVs as unorm16`);
-    }
-  }
+  const { positions, normals, tangents, boundingRadiusM } = geometry;
+  // UVs are atlas coordinates; a unorm16 has nowhere to put one outside [0, 1]. A
+  // near-edge spill is clamped in place; anything further out is a tiling UV.
+  const uvs = Float32Array.from(geometry.uvs, (uv) => {
+    if (uv >= 0 && uv <= 1) return uv;
+    if (uv >= -UV_CLAMP_TOLERANCE && uv <= 1 + UV_CLAMP_TOLERANCE)
+      return Math.min(1, Math.max(0, uv));
+    throw new Error(`writeMeshBinary: uv ${uv} outside [0, 1] — the .mesh stores UVs as unorm16`);
+  });
 
   await MeshoptEncoder.ready;
   // reorderMesh rewrites the indices it is handed, so it gets a copy.

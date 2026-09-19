@@ -1,7 +1,7 @@
 /**
- * meshBinaryFormat — the `.mesh` v3 byte layout (a wire-format contract, so over
- * the comment budget) and its runtime decoder. `writeMeshBinary` is the inverse.
- * Spec: docs/superpowers/specs/2026-09-19-mesh-meshopt-encoding-design.md ("Data
+ * meshBinaryFormat — the `.mesh` v3 byte layout and its runtime decoder.
+ * `writeMeshBinary` is the inverse. Spec:
+ * docs/superpowers/specs/2026-09-19-mesh-meshopt-encoding-design.md ("Data
  * delta"). The GPU still gets v2's float32 arrays: quantisation is wire-only.
  */
 
@@ -33,19 +33,24 @@ export const MESH_SNORM16_MAX = 32767;
 export const MESH_OCT_BITS = 10;
 /** An octahedral element: i16×4, xyz then w (0 for a normal, handedness for a tangent). */
 export const MESH_OCT_BYTES = 8;
+/** A position element: u16×4, w = 0 padding — meshopt wants a 4-byte-multiple element. */
+export const MESH_POS_BYTES = 8;
+/** A UV element: u16×2. */
+export const MESH_UV_BYTES = 4;
+/** An index element: u32. */
+export const MESH_INDEX_BYTES = 4;
 
 /**
  * The streams in file order (the order is the format; nothing in the file names
  * them). Attribute streams hold `vertexCount` elements, the index stream
- * `indexCount`. Positions are u16×4 (w = 0: meshopt wants a 4-byte-multiple
- * element); UVs u16×2; indices u32.
+ * `indexCount`.
  */
 export const MESH_STREAMS = [
-  { name: 'positions', bytes: 8, mode: 'ATTRIBUTES', filter: 'NONE' },
+  { name: 'positions', bytes: MESH_POS_BYTES, mode: 'ATTRIBUTES', filter: 'NONE' },
   { name: 'normals', bytes: MESH_OCT_BYTES, mode: 'ATTRIBUTES', filter: 'OCTAHEDRAL' },
   { name: 'tangents', bytes: MESH_OCT_BYTES, mode: 'ATTRIBUTES', filter: 'OCTAHEDRAL' },
-  { name: 'uvs', bytes: 4, mode: 'ATTRIBUTES', filter: 'NONE' },
-  { name: 'indices', bytes: 4, mode: 'TRIANGLES', filter: 'NONE' },
+  { name: 'uvs', bytes: MESH_UV_BYTES, mode: 'ATTRIBUTES', filter: 'NONE' },
+  { name: 'indices', bytes: MESH_INDEX_BYTES, mode: 'TRIANGLES', filter: 'NONE' },
 ] as const;
 
 export type DecodedMeshGeometry = Omit<MeshAsset, 'albedo' | 'metalRough' | 'normalMap'>;
