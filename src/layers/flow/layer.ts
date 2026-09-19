@@ -30,5 +30,8 @@ export const flowLayer = defineLayer({
   assets: flowAssetRows,
   fades: flowFadeRows,
   frame,
-  ui: { settings: FlowSectionContainer, debug: FlowTuningSectionContainer },
+  ui: [
+    { slot: 'main', content: FlowSectionContainer },
+    { slot: 'debug', content: FlowTuningSectionContainer },
+  ],
 });

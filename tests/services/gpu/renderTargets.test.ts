@@ -12,6 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
+import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
 import { makeCubemapCaptureRuntimes } from '../../helpers/engine/makeCubemapCaptureRuntimes';
 
 function mockDevice(): GPUDevice {
@@ -76,7 +77,7 @@ describe('createRenderTargets', () => {
   it('viewOf returns a live view per offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -94,7 +95,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -150,7 +151,7 @@ describe('createRenderTargets', () => {
     const device = mockDevice();
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -165,7 +166,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR, 256),
     );
@@ -194,7 +195,7 @@ describe('createRenderTargets', () => {
     const canvas = { width: 900, height: 600 };
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       canvas,
       stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, false),
     );
@@ -238,7 +239,7 @@ describe('createRenderTargets', () => {
     const canvas = { width: 900, height: 600 };
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       canvas,
       stateWithDivisor(MW_DIVISOR, SKY_CUBEMAP_RESOLUTION_PX, true, 0),
     );
@@ -268,7 +269,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(2),
     );
@@ -302,7 +303,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -316,7 +317,12 @@ describe('createRenderTargets', () => {
   it('clamps volume to a 1 px minimum when floor(size/scale) is 0', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
-    createRenderTargets(device, SWAP_FORMAT, { width: 2, height: 2 }, stateWithDivisor(MW_DIVISOR));
+    createRenderTargets(
+      device,
+      renderTargetRows(SWAP_FORMAT),
+      { width: 2, height: 2 },
+      stateWithDivisor(MW_DIVISOR),
+    );
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     // floor(2 / 3) = 0 → clamped up to 1.
     expect(volDesc.size).toEqual({ width: 1, height: 1, depthOrArrayLayers: 1 });
@@ -327,7 +333,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -369,7 +375,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -387,7 +393,7 @@ describe('createRenderTargets', () => {
     const create = device.createTexture as ReturnType<typeof vi.fn>;
     const targets = createRenderTargets(
       device,
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -420,10 +426,37 @@ describe('createRenderTargets', () => {
     expect(targets.viewOf('foreground:0')).toBe(fgViewBefore);
   });
 
+  // `createRenderTargets` allocates whatever table its caller hands it, not
+  // just core's own `renderTargetRows` — the shape a Layer's `targets` (via
+  // `composeRenderTargetRows`) relies on.
+  it('allocates a caller-supplied row beyond core’s and keeps it across setSwapFormat', () => {
+    const device = mockDevice();
+    const stubRow: RenderTargetSpec = {
+      id: 'stub-target',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      clearValue: { r: 0, g: 0, b: 0, a: 0 },
+    };
+    const targets = createRenderTargets(
+      device,
+      [...renderTargetRows(SWAP_FORMAT), stubRow],
+      { width: 800, height: 600 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+
+    expect(targets.viewOf('stub-target')).toBeDefined();
+
+    targets.setSwapFormat('rgba8unorm');
+
+    expect(targets.specOf('stub-target')).toBe(stubRow);
+    expect(targets.specOf('swap').format).toBe('rgba8unorm');
+  });
+
   it('sizeOf returns the allocated pixel size of an offscreen row and throws for swap', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );
@@ -444,7 +477,7 @@ describe('createRenderTargets', () => {
   it('only hdr and swap clear to opaque alpha', () => {
     const targets = createRenderTargets(
       mockDevice(),
-      SWAP_FORMAT,
+      renderTargetRows(SWAP_FORMAT),
       { width: 800, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );

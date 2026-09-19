@@ -255,6 +255,9 @@ function makeState(): EngineState {
         projection: { fovYRad: 0.8, aspect: 1, near: 0.01, far: 1000 },
       },
     },
+    // The ready-frame fixtures below (makeReadyState, makeLayerState) reach
+    // `runLabel3DProducers`, which iterates this — empty is the boot value.
+    label3DProducers: [],
   } as unknown as EngineState;
 }
 
@@ -1156,7 +1159,8 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
       computes: [],
       assets: [],
       fades: [],
-      labels: [],
+      screenLabels: [],
+      worldLabels: [],
       selection: [],
       frame,
       destroy: () => {},

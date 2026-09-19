@@ -42,7 +42,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/cubemapFaceContext': 4,
   'frame/deriveBodyStates': 3,
   'frame/executeFrame': 5,
-  'frame/expandFrameOrder': 6,
+  'frame/expandFrameOrder': 5,
   'frame/foregroundMaxDistance': 1,
   'frame/milkyWayCloudLiveness': 1,
   'frame/near0LabelProjection': 1,

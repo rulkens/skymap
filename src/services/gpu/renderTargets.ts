@@ -108,11 +108,11 @@
  * draws OPAQUE geometry (Earth, Moon, Sun) that must occlude the background
  * by depth-test, and WebGPU runs a depth-test only against a bound depth
  * attachment — so a row that declares depth gets a second texture allocated
- * and resized in lockstep with its colour texture. The depth texture carries
- * ONLY `RENDER_ATTACHMENT` (it feeds the depth-test as the pass draws) —
- * nothing samples it downstream: each painter-chain row clears its own depth
- * (spec §7.3), so the buffer only ever holds the LAST row's value and can't
- * back a cross-row occlusion test. The caption occlusion pass
+ * and resized in lockstep with its colour texture. The depth texture is also
+ * `TEXTURE_BINDING`, but only a `sampleDepth` step INSIDE a row reads it
+ * (`contactShadowsPass`): each painter-chain row clears its own depth (spec
+ * §7.3), so it never holds more than the current row and can't back a
+ * cross-row occlusion test. The caption occlusion pass
  * (`foregroundLabelsPass` and the other overlay layers, via
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
@@ -314,13 +314,13 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
 
 export function createRenderTargets(
   device: GPUDevice,
-  swapFormat: GPUTextureFormat,
+  rows: readonly RenderTargetSpec[],
   size: Size,
   state: EngineState,
 ): RenderTargets {
   // `let`, not `const`: setSwapFormat below replaces this array wholesale
   // rather than mutating a row in place (house preference for immutability).
-  let specs = [...renderTargetRows(swapFormat)];
+  let specs = [...rows];
   // Only offscreen rows get textures — the swap row is executor-resolved
   // from the acquired frame view (see the module header). Computed once:
   // setSwapFormat never touches an offscreen row, so this stays valid.

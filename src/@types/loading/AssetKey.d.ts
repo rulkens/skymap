@@ -18,6 +18,7 @@ export type AssetKey =
   | 'famousStarsMeta'
   | 'pgcAlias'
   | 'filaments'
+  | 'localBubble'
   | 'cf4Density' // the DEV-only `debug-*` synthetic cubes are deliberately absent — they live in `assetSlots.syntheticVolumes`, outside the demand-driven asset set
   | 'mcpm'
   | 'flow'

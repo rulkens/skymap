@@ -4,11 +4,11 @@
  *
  * ### What it draws
  *
- * A static UV-sphere mesh centred at the world origin with a Fresnel-
- * rim fragment shader, so the silhouette reads as a soft glowing
- * shell.  The shell radius is fixed at construction time (see
- * `HORIZON_RADIUS_MPC` in `horizonShellRenderer.ts`); only the
- * per-frame camera pose updates the uniform block.
+ * A fullscreen ray-march of an analytic sphere centred at the world
+ * origin, with a Fresnel-rim fragment shader, so the silhouette reads
+ * as a soft glowing shell.  The shell radius is fixed at construction
+ * time (see `HORIZON_RADIUS_MPC` in `horizonShellRenderer.ts`); only
+ * the per-frame camera pose updates the uniform block.
  *
  * ### When it draws
  *

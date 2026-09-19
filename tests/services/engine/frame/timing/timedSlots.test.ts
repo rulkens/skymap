@@ -20,7 +20,8 @@ describe('TIMED_SLOTS — body slot pool', () => {
     // contains — the query-set size is a registry fact, not a per-frame one.
     // Asserting the endpoints + count (not the full literal run) means a new
     // SCENE_PLANETS row moves the count without rewriting this test.
-    const bodySlots = TIMED_SLOTS.filter((name) => name.startsWith('foreground:0·BODY['));
+    // The bare key only: a row split around a depth sample adds suffixed slots.
+    const bodySlots = TIMED_SLOTS.filter((name) => /^foreground:0·BODY\[\d+\]$/.test(name));
     expect(bodySlots).toHaveLength(BODY_SLAB_CAPACITY);
     expect(bodySlots[0]).toBe('foreground:0·BODY[0]');
     expect(bodySlots[bodySlots.length - 1]).toBe(`foreground:0·BODY[${BODY_SLAB_CAPACITY - 1}]`);

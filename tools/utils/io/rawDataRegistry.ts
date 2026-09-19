@@ -283,6 +283,26 @@ export const RAW_DATA = {
       'Per-tier mean/std .npy cubes produced by tools/volumes/extractDustCube.py (edenhofer_{mean,std}_{128,256,384}.npy), consumed by tools/volumes/buildDustVolume.ts.',
   },
 
+  // ─── Local Bubble shell surface (O'Neill+ 2024) ───────────────────────
+
+  'localbubble.shell': {
+    path: 'data/raw/localbubble/ONeill2024_LocalBubble_ShellProperties_A0.5.fits',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      "O'Neill+ 2024 Local Bubble shell surface at the fiducial A_0.5' edge threshold — one BINTABLE row per HEALPix Nside=256 direction (786,432 rows × 216 B), carrying the shell's radius, inner/outer walls, thickness and normal along that sight line. The surface is star-shaped (one radius per direction).",
+    upstream: 'https://doi.org/10.7910/DVN/INB1RB',
+    fetcher: 'tools/fetch/fetchLocalBubble.ts',
+    readme: 'localbubble.readme',
+  },
+  'localbubble.readme': {
+    path: 'data/raw/localbubble/README.md',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'Provenance for the Local Bubble shell table — upstream DOI, licence, column layout and the frame its angles are in.',
+  },
+
   // ─── Polyphorm (MCPM rhizome sim exports) ─────────────────────────────
 
   'polyphorm.dir': {

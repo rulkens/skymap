@@ -21,6 +21,7 @@ import {
   setMilkyWayLabelEnabled,
 } from '../../layers/milkyWay/settings/milkyWaySlice';
 import { setFilamentsEnabled } from '../../layers/filaments/settings/filamentsSlice';
+import { setLocalBubbleEnabled } from '../../layers/localBubble/settings/localBubbleSlice';
 import { setOrbitTrailsEnabled } from '../../layers/body/settings/orbitTrailsSlice';
 import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/settings/volumesSlice';
 import { setFlowEnabled } from '../../layers/flow/settings/flowSlice';
@@ -46,6 +47,7 @@ export const VISIBILITY_ACTION_ROW: Record<VisibilityLayerKey, VisibilityActionR
   milkyWayDisk: { actions: (on) => [setMilkyWayEnabled(on)] },
   milkyWayLabel: { actions: (on) => [setMilkyWayLabelEnabled(on)] },
   filaments: { actions: (on) => [setFilamentsEnabled(on)] },
+  localBubble: { actions: (on) => [setLocalBubbleEnabled(on)] },
   orbitTrails: { actions: (on) => [setOrbitTrailsEnabled(on)] },
   volumesMaster: { actions: (on) => [setVolumesEnabled(on)] },
   flow: { actions: (on) => [setFlowEnabled(on)] },

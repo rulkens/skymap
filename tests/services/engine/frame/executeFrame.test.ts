@@ -588,28 +588,59 @@ describe('executeFrame', () => {
     expect(secondDepth?.depthLoadOp).toBe('load');
   });
 
-  it("a step's explicit depth overrides the first-touch rule in both directions", () => {
-    // Same two-step shape as above, but each step names its own depth op: the
-    // first loads where the rule would clear, the second clears where the rule
-    // would load (the restart a back-to-front slab run needs mid-frame).
+  /** The depth load-op of the pass a spy's `call`th draw landed in. */
+  const depthOpOf = (
+    env: ReturnType<typeof makeEncoderEnv>,
+    spy: SpyPass,
+    call = 0,
+  ): string | undefined =>
+    (
+      env.passes.find((p) => p.pass === spy.draw.mock.calls[call]![0])!.desc as {
+        depthStencilAttachment?: { depthLoadOp: string };
+      }
+    ).depthStencilAttachment?.depthLoadOp;
+
+  it("a step's explicit 'clear' restarts depth on an already-touched target", () => {
     const env = makeEncoderEnv();
     const a = makeContentPass({ name: 'a' });
     const program: FrameStep[] = [
-      { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'load', passes: [a] },
+      { kind: 'render', target: 'foreground:0', slab: COSMO, passes: [a] },
       { kind: 'render', target: 'foreground:0', slab: COSMO, depth: 'clear', passes: [a] },
     ];
     const { args } = makeArgs({ program, env });
     executeFrame(args);
+    expect(depthOpOf(env, a, 1)).toBe('clear');
+  });
 
-    const depthOpOf = (pass: GPURenderPassEncoder): string | undefined =>
-      (
-        env.passes.find((p) => p.pass === pass)!.desc as {
-          depthStencilAttachment?: { depthLoadOp: string };
-        }
-      ).depthStencilAttachment?.depthLoadOp;
+  it("a 'load' step clears when its row's clearing step drew nothing", () => {
+    // Venus's row splits around a depth sampler but its first segment is gated
+    // off (no terrain) — loading would inherit Mars's depth.
+    const env = makeEncoderEnv();
+    const mars = makeContentPass({ name: 'mars' });
+    const off = makeContentPass({ name: 'off', enabled: false });
+    const after = makeContentPass({ name: 'after' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: 2, depth: 'clear', passes: [mars] },
+      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'clear', passes: [off] },
+      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'load', passes: [after] },
+    ];
+    const { args } = makeArgs({ program, env, ctx: makeBodyCtx(['mars', 'venus']) });
+    executeFrame(args);
+    expect(depthOpOf(env, after)).toBe('clear');
+  });
 
-    expect(depthOpOf(a.draw.mock.calls[0]![0] as GPURenderPassEncoder)).toBe('load');
-    expect(depthOpOf(a.draw.mock.calls[1]![0] as GPURenderPassEncoder)).toBe('clear');
+  it("skips a 'sample' step whose row's clearing step drew nothing", () => {
+    const mars = makeContentPass({ name: 'mars' });
+    const off = makeContentPass({ name: 'off', enabled: false });
+    const sampler = makeContentPass({ name: 'sampler' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: 2, depth: 'clear', passes: [mars] },
+      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'clear', passes: [off] },
+      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'sample', passes: [sampler] },
+    ];
+    const { args } = makeArgs({ program, ctx: makeBodyCtx(['mars', 'venus']) });
+    executeFrame(args);
+    expect(sampler.draw).not.toHaveBeenCalled();
   });
 
   it('opens no depthStencilAttachment for depthless targets', () => {
