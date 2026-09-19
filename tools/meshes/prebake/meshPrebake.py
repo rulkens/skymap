@@ -381,22 +381,19 @@ def bounds(obj):
     return lo, hi
 
 
-def set_ao_distance(scene, lo, hi):
+def set_ao_distance(scene, extent):
     if scene.world is None:
         scene.world = bpy.data.worlds.new("World")
-    extent = max(hi[i] - lo[i] for i in range(3))
     scene.world.light_settings.distance = AO_DISTANCE_FRACTION * extent
 
 
-def ground_plane(obj, lo, hi, up):
+def ground_plane(obj, lo, hi, extent, up):
     """A large flat occluder resting under `obj`'s lowest point along `up`, so
     the AO bake sees a floor: without one a rover's underside reads as open
     sky, no darker than its sunlit hull. Deselected and inactive on return —
-    an occluder, not a bake target — and gone again before `flatten_materials`
-    swaps in the real material, or it would export as part of the mesh. Span
+    an occluder, not a bake target, so the selection-only export never takes it. Span
     stops at AO_DISTANCE_FRACTION's own reach — nothing farther out can occlude
     anyway — which also buys the contact decal a denser atlas than the body's."""
-    extent = max(hi[i] - lo[i] for i in range(3))
     span = (1 + 2 * AO_DISTANCE_FRACTION) * extent
     up_v = mathutils.Vector(up).normalized()
     centre = mathutils.Vector([(lo[i] + hi[i]) / 2 for i in range(3)])
@@ -435,15 +432,6 @@ def contact_decal_stamp(plane, span):
     }
 
 
-def remove_ground_plane(plane):
-    mesh = plane.data
-    materials = [m for m in mesh.materials if m is not None]
-    bpy.data.objects.remove(plane, do_unlink=True)
-    bpy.data.meshes.remove(mesh)
-    for material in materials:
-        bpy.data.materials.remove(material)
-
-
 # The glTF frame (+Y up) is the one `--ground-up` and the stamps speak; the
 # scene is Blender's +Z-up, the frame the glTF importer and exporter
 # (`export_yup`) convert to and from.
@@ -455,19 +443,12 @@ def gltf_from_blender(v):
     return [v[0], v[2], -v[1]]
 
 
-def ground_up_arg(value):
-    parts = value.split(",")
-    if len(parts) != 3:
-        raise argparse.ArgumentTypeError("--ground-up wants x,y,z, got %r" % value)
-    return tuple(float(p) for p in parts)
-
-
 def parse_args(argv):
     """`argv` is the tail after Blender's own `--`; the driver (`prebakeMesh.ts`)
     is the only caller, so a bad key or vector is its bug, not a user's."""
     parser = argparse.ArgumentParser()
     parser.add_argument("key", choices=sorted(SOURCES))
-    parser.add_argument("--ground-up", dest="ground_up", type=ground_up_arg, default=None)
+    parser.add_argument("--ground-up", dest="ground_up", nargs=3, type=float, default=None)
     return parser.parse_args(argv)
 
 
@@ -488,8 +469,9 @@ def main():
         % (triangles(obj), len(obj.material_slots), [l.name for l in obj.data.uv_layers]))
     lo, hi = bounds(obj)
     log("extent %s .. %s" % ([round(x, 3) for x in lo], [round(x, 3) for x in hi]))
-    set_ao_distance(scene, lo, hi)
-    plane, plane_span = (ground_plane(obj, lo, hi, blender_from_gltf(ground_up))
+    extent = max(hi[i] - lo[i] for i in range(3))
+    set_ao_distance(scene, extent)
+    plane, plane_span = (ground_plane(obj, lo, hi, extent, blender_from_gltf(ground_up))
                          if ground_up is not None else (None, None))
     log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
 
@@ -508,7 +490,6 @@ def main():
         log("baked contact decal -> %s (%.0fs elapsed)"
             % (contact.filepath_raw, time.time() - started))
         contact_decal = contact_decal_stamp(plane, plane_span)
-        remove_ground_plane(plane)
     flatten_materials(obj, key, images)
     keep_only_bake_uv(obj, uv_name)
     export(obj, cfg["out"], ground_up, contact_decal)

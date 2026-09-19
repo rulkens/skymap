@@ -6,36 +6,27 @@
  */
 
 import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 
 const DEFAULT_BLENDER = '/Applications/Blender.app/Contents/MacOS/Blender';
 const MESH_PREBAKE_PY = 'tools/meshes/prebake/meshPrebake.py';
 
+const key = process.argv[2];
+if (!key) {
+  process.stderr.write('prebakeMesh: pass a mesh key, e.g. `npm run prebake-mesh -- mer`\n');
+  process.exit(1);
+}
 // An unknown key is refused by meshPrebake.py's argparse `choices`, with the valid list.
-function prebakeMesh(key: string): number {
-  const groundUp = meshGroundUpSource(key);
-  const args = [
-    '--background',
-    '--factory-startup',
-    '--python',
-    MESH_PREBAKE_PY,
-    '--',
-    key,
-    ...(groundUp ? ['--ground-up', groundUp.join(',')] : []),
-  ];
-  const blender = process.env.BLENDER ?? DEFAULT_BLENDER;
-  const result = spawnSync(blender, args, { stdio: 'inherit' });
-  return result.status ?? 1;
-}
-
-const invokedDirectly = process.argv[1] === fileURLToPath(import.meta.url);
-if (invokedDirectly) {
-  const key = process.argv[2];
-  if (!key) {
-    process.stderr.write('prebakeMesh: pass a mesh key, e.g. `npm run prebake-mesh -- mer`\n');
-    process.exit(1);
-  }
-  process.exit(prebakeMesh(key));
-}
+const groundUp = meshGroundUpSource(key);
+const args = [
+  '--background',
+  '--factory-startup',
+  '--python',
+  MESH_PREBAKE_PY,
+  '--',
+  key,
+  ...(groundUp ? ['--ground-up', ...groundUp.map(String)] : []),
+];
+const result = spawnSync(process.env.BLENDER ?? DEFAULT_BLENDER, args, { stdio: 'inherit' });
+process.exit(result.status ?? 1);
