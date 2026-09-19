@@ -53,6 +53,7 @@ export function buildInitialUiState(): UiState {
     paletteOpen: false,
     uiHidden: false,
     debugPanelOpen: false,
+    paletteTab: 'highlights',
     splash: {
       visible: splashVisible,
       dismissedVersion: seen,

@@ -43,12 +43,14 @@ import { useRef } from 'react';
 import type { ReactNode } from 'react';
 import { usePaletteSearch } from './usePaletteSearch';
 import FeaturedGrid from './FeaturedGrid';
+import PaletteTabs from './PaletteTabs';
 import ResultsList from './ResultsList';
-import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
+import type { PaletteTab } from '../../@types/palette/PaletteTab';
+import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
 import styles from './CommandPalette.module.css';
 
 export type CommandPaletteProps = {
@@ -69,6 +71,12 @@ export type CommandPaletteProps = {
    * hidden).
    */
   readonly structures?: readonly StructureSearchEntry[];
+  /** The browse tabs shown in the empty-query state — the container passes `FEATURED_TABS`. */
+  readonly tabs: readonly PaletteTab[];
+  /** The stored active tab id (`ui.paletteTab`); falls back to the first shown tab if absent. */
+  readonly tab: PaletteTabId;
+  /** Fired when the user picks a tab. */
+  readonly onTabChange: (id: PaletteTabId) => void;
   /** Whether the palette is currently shown. */
   readonly open: boolean;
   /** Close handler — called on Esc, click-outside, or after a successful selection. */
@@ -84,6 +92,9 @@ function CommandPalette({
   entries,
   aliasIndex,
   structures,
+  tabs,
+  tab,
+  onTabChange,
   open,
   onClose,
   onSelect,
@@ -99,11 +110,15 @@ function CommandPalette({
     dispatchSelection,
     dispatchAction,
   } = usePaletteSearch({ entries, aliasIndex, structures, open, onClose, onSelect });
-  // Fixed to the first tab for now — no tab strip or `ui.paletteTab` yet.
   const gridRef = useRef<HTMLUListElement | null>(null);
-  const activeTab = FEATURED_TABS[0];
 
   if (!open) return null;
+
+  // Hide any tab with no cards (PR1 has none; PR3's Tours tab will), and
+  // fall back to the first shown tab when the stored one no longer qualifies.
+  const shownTabs = tabs.filter((t) => t.cards.length > 0);
+  const activeTab = shownTabs.find((t) => t.id === tab) ?? shownTabs[0];
+
   return (
     <div className={styles.root} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
       <div
@@ -120,16 +135,21 @@ function CommandPalette({
           onChange={(e) => setQuery(e.target.value)}
         />
         {query.trim().length === 0 ? (
-          activeTab && (
-            <FeaturedGrid
-              cards={activeTab.cards}
-              famous={entries}
-              activeIdx={-1}
-              gridRef={gridRef}
-              label={activeTab.label}
-              onSelect={dispatchAction}
-            />
-          )
+          <>
+            {shownTabs.length > 0 && (
+              <PaletteTabs tabs={shownTabs} active={activeTab?.id ?? tab} onChange={onTabChange} />
+            )}
+            {activeTab && (
+              <FeaturedGrid
+                cards={activeTab.cards}
+                famous={entries}
+                activeIdx={-1}
+                gridRef={gridRef}
+                label={activeTab.label}
+                onSelect={dispatchAction}
+              />
+            )}
+          </>
         ) : (
           <ResultsList
             matches={matches}

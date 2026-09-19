@@ -2,11 +2,12 @@
 /**
  * CommandPaletteContainer — store boundary for the command palette: the
  * famous/alias/structure index reads (all published Layer facts or store
- * selectors, no engine-handle poll), the `paletteOpen` slice, and the
- * per-kind dispatch table a pick runs through (PR3 adds rows, not branches).
- * `focus` fires the two selection commands a pick fires — `requestSelect`
- * pins the InfoCard, `requestFocus` flies the camera — so a pick looks like
- * a click plus a fly.
+ * selectors, no engine-handle poll), the `paletteOpen`/`paletteTab` slice
+ * reads, and the per-kind dispatch table a pick runs through (PR3 adds rows,
+ * not branches). `focus` fires the two selection commands a pick fires —
+ * `requestSelect` pins the InfoCard, `requestFocus` flies the camera — so a
+ * pick looks like a click plus a fly. `FEATURED_TABS` is hand-edited data,
+ * not a store read, so it's imported directly rather than selected.
  */
 import { memo } from 'react';
 import CommandPalette from '../CommandPalette/CommandPalette';
@@ -16,10 +17,11 @@ import {
   selectAliasIndex,
   selectStructureSearchList,
 } from '../../state/engine/selectors';
-import { selectPaletteOpen } from '../../state/ui/selectors';
-import { setPaletteOpen } from '../../state/ui/uiSlice';
+import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
+import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
+import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { AppDispatch } from '../../store/types';
 
@@ -37,6 +39,7 @@ const RUN_ACTION: Record<
 function CommandPaletteContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
   const paletteOpen = useAppSelector(selectPaletteOpen);
+  const paletteTab = useAppSelector(selectPaletteTab);
   const famousGalaxiesMeta = useAppSelector(selectFamousGalaxiesMeta);
   const aliasIndex = useAppSelector(selectAliasIndex);
   const structures = useAppSelector(selectStructureSearchList);
@@ -45,6 +48,9 @@ function CommandPaletteContainer(): React.ReactElement {
       entries={famousGalaxiesMeta}
       aliasIndex={aliasIndex}
       structures={structures}
+      tabs={FEATURED_TABS}
+      tab={paletteTab}
+      onTabChange={(id) => dispatch(setPaletteTab(id))}
       open={paletteOpen}
       onClose={() => dispatch(setPaletteOpen(false))}
       onSelect={(action) => RUN_ACTION[action.kind](dispatch, action)}

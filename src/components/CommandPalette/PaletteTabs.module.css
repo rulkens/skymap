@@ -1,0 +1,29 @@
+/*
+ * PaletteTabs — one serif-typeset row, scrolling sideways when the strip
+ * overflows (phone width). All atoms reference tokens from
+ * `src/styles/global.css`.
+ */
+
+.root {
+  display: flex;
+  overflow-x: auto;
+  gap: 16px;
+  padding: 0 var(--space-7);
+  border-bottom: 1px solid var(--border-default);
+}
+
+.tab {
+  flex: none;
+  background: none;
+  border: none;
+  border-bottom: 1px solid transparent;
+  padding: 11px 0 8px;
+  font: 600 16px/1 var(--font-family-display);
+  color: var(--color-fg-dim);
+  cursor: pointer;
+}
+
+.active {
+  color: var(--color-fg);
+  border-bottom-color: var(--color-accent-gradient-mid);
+}

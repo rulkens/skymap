@@ -5,28 +5,11 @@ import userEvent from '@testing-library/user-event';
 import { createElement } from 'react';
 import CommandPalette from '../../../src/components/CommandPalette/CommandPalette';
 import { Source } from '../../../src/data/sources';
+import type { CommandPaletteProps } from '../../../src/components/CommandPalette/CommandPalette';
 import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
-
-// The empty-query grid renders this one fixture tab instead of the real
-// (75-card) FEATURED_TABS, so a card lookup by name is unambiguous.
-vi.mock('../../../src/data/palette/featuredTabs', () => ({
-  FEATURED_TABS: [
-    {
-      id: 'highlights',
-      label: 'Highlights',
-      cards: [
-        {
-          id: 'body-earth',
-          label: 'Earth',
-          blurb: 'A rocky planet.',
-          action: { kind: 'focus', focusId: 'body-earth' },
-        },
-      ],
-    },
-  ],
-}));
+import type { PaletteTab } from '../../../src/@types/palette/PaletteTab';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
@@ -50,30 +33,58 @@ const COMA: StructureSearchEntry = {
   description: 'X-ray cluster · z = 0.023',
 };
 
+// Two tabs, one card each — enough to exercise tab filtering/switching
+// without depending on the real (75-card) FEATURED_TABS.
+const FIXTURE_TABS: readonly PaletteTab[] = [
+  {
+    id: 'highlights',
+    label: 'Highlights',
+    cards: [
+      {
+        id: 'body-earth',
+        label: 'Earth',
+        blurb: 'A rocky planet.',
+        action: { kind: 'focus', focusId: 'body-earth' },
+      },
+    ],
+  },
+  {
+    id: 'missions',
+    label: 'Missions',
+    cards: [
+      {
+        id: 'body-hubble',
+        label: 'Hubble',
+        blurb: 'A telescope.',
+        action: { kind: 'focus', focusId: 'body-hubble' },
+      },
+    ],
+  },
+];
+
+const DEFAULTS: CommandPaletteProps = {
+  entries: [],
+  tabs: FIXTURE_TABS,
+  tab: 'highlights',
+  onTabChange: () => {},
+  open: true,
+  onClose: () => {},
+  onSelect: () => {},
+};
+
+function renderPalette(overrides: Partial<CommandPaletteProps> = {}) {
+  return render(createElement(CommandPalette, { ...DEFAULTS, ...overrides }));
+}
+
 describe('CommandPalette', () => {
   it('renders nothing when closed', () => {
-    const { container } = render(
-      createElement(CommandPalette, {
-        entries: [M31],
-        open: false,
-        onClose: () => {},
-        onSelect: () => {},
-      }),
-    );
+    const { container } = renderPalette({ entries: [M31], open: false });
     expect(container).toBeEmptyDOMElement();
   });
 
   it('reveals matching alias rows when the user types', async () => {
     const user = userEvent.setup();
-    render(
-      createElement(CommandPalette, {
-        entries: [M31],
-        aliasIndex: [NGC4565],
-        open: true,
-        onClose: () => {},
-        onSelect: () => {},
-      }),
-    );
+    renderPalette({ entries: [M31], aliasIndex: [NGC4565] });
     // The input has no explicit role override; the default role for
     // an <input> with no `type` attribute is "textbox".  Querying by
     // placeholder is the most stable selector since the placeholder
@@ -86,14 +97,7 @@ describe('CommandPalette', () => {
   it('calls onSelect when the user clicks a result', async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
-    render(
-      createElement(CommandPalette, {
-        entries: [M31],
-        open: true,
-        onClose: () => {},
-        onSelect,
-      }),
-    );
+    renderPalette({ entries: [M31], onSelect });
     // Typing hides the featured grid (Q1), so the only 'M31' node left is
     // the results-list row — no ambiguity with the grid's own card.
     const input = screen.getByPlaceholderText(/search galaxies/i);
@@ -106,15 +110,7 @@ describe('CommandPalette', () => {
   it('surfaces a structure when searched and routes it to onSelect by its durable id', async () => {
     const onSelect = vi.fn<(action: { kind: 'focus'; focusId: string }) => void>();
     const user = userEvent.setup();
-    render(
-      createElement(CommandPalette, {
-        entries: [],
-        structures: [COMA],
-        open: true,
-        onClose: () => {},
-        onSelect,
-      }),
-    );
+    renderPalette({ structures: [COMA], onSelect });
     const input = screen.getByPlaceholderText(/search galaxies/i);
     // Search by the Abell number to also exercise the abell→names fold.
     await user.type(input, 'A1656');
@@ -125,14 +121,7 @@ describe('CommandPalette', () => {
   it('calls onClose when the user presses Escape', async () => {
     const onClose = vi.fn();
     const user = userEvent.setup();
-    render(
-      createElement(CommandPalette, {
-        entries: [M31],
-        open: true,
-        onClose,
-        onSelect: () => {},
-      }),
-    );
+    renderPalette({ entries: [M31], onClose });
     // The keydown handler is bound to the backdrop div; focus needs
     // to be inside the dialog for the event to bubble up to it.  The
     // input auto-focuses on open via requestAnimationFrame, but that
@@ -145,32 +134,26 @@ describe('CommandPalette', () => {
   it('clicking a card selects its action', async () => {
     const onSelect = vi.fn();
     const user = userEvent.setup();
-    render(
-      createElement(CommandPalette, {
-        entries: [],
-        open: true,
-        onClose: () => {},
-        onSelect,
-      }),
-    );
+    renderPalette({ onSelect });
     await user.click(screen.getByRole('button', { name: 'Earth' }));
     expect(onSelect).toHaveBeenCalledWith({ kind: 'focus', focusId: 'body-earth' });
   });
 
   it('a card whose image fails shows its label as a text tile', () => {
-    render(
-      createElement(CommandPalette, {
-        entries: [],
-        open: true,
-        onClose: () => {},
-        onSelect: () => {},
-      }),
-    );
+    renderPalette();
     const card = screen.getByRole('button', { name: 'Earth' });
     const img = card.querySelector('img');
     expect(img).not.toBeNull();
     fireEvent.error(img as HTMLImageElement);
     expect(card.querySelector('img')).toBeNull();
     expect(card).toHaveTextContent('Earth');
+  });
+
+  it('clicking a tab asks for it', async () => {
+    const onTabChange = vi.fn();
+    const user = userEvent.setup();
+    renderPalette({ onTabChange });
+    await user.click(screen.getByRole('tab', { name: 'Missions' }));
+    expect(onTabChange).toHaveBeenCalledWith('missions');
   });
 });
