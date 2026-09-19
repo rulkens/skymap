@@ -2,10 +2,8 @@
  * FeaturedGrid — 5-column card grid that replaces the results list when the
  * palette opens with no query. Card-level styling (image/text tile, hover,
  * active) lives in `FeaturedCard.module.css`; this file owns only the grid
- * layout. `max-height` caps the panel at roughly three rows so a long tab
- * (Solar System, 25 cards) scrolls inside the panel instead of pushing the
- * search input off-screen — an approximation since card size is a fraction
- * of the panel's own width, not a fixed px.
+ * layout. No scroll box: a tab holds at most 15 cards (three rows), and a
+ * scroll box would clip the card tooltips.
  *
  * The grid is hidden the moment the user starts typing (the shell drops it on
  * a non-empty query) so search-driven workflows get the full results list at
@@ -20,6 +18,4 @@
   grid-template-columns: repeat(5, 1fr);
   gap: var(--space-3);
   border-bottom: 1px solid var(--border-default);
-  max-height: 340px;
-  overflow-y: auto;
 }

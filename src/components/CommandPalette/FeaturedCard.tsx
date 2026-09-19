@@ -26,9 +26,10 @@ function FeaturedCard({ card, aliases, active, onSelect }: FeaturedCardProps): R
 
   return (
     <li className={styles.root}>
+      {/* 'auto', not 'bottom': the panel's backdrop-filter makes it the tip's
+          containing block and it clips, so bottom-row tips must flip upward. */}
       <InfoTip
         interactive
-        placement="bottom"
         title={card.label}
         body={<FeaturedCardTip aliases={aliases} blurb={card.blurb} />}
       >

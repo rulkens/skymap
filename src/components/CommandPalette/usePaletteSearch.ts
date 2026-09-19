@@ -86,13 +86,6 @@ export function usePaletteSearch({
     setActiveCard(0);
   }, [cards]);
 
-  // Keep the keyboard highlight in view — the grid scrolls internally
-  // (max-height) and nothing else scrolls it. Optional chaining because
-  // jsdom has no layout and so no `scrollIntoView`.
-  useEffect(() => {
-    gridRef.current?.children[activeCard]?.scrollIntoView?.({ block: 'nearest' });
-  }, [activeCard]);
-
   // Focus the input when the palette opens.  The next tick is needed
   // because the input only enters the DOM in the same render that flips
   // `open` to true.
