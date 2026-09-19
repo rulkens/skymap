@@ -48,7 +48,8 @@ export const starAggregatesPass: ContentPass = {
     // STAR_GLOW_MIN_PX floors the glow radius in pixels OF THE TARGET BEING
     // RASTERISED, so the canvas size would make the floor 0.75 texels here and
     // land floor-clamped aggregates sub-texel (dropout and flicker, not wrong
-    // brightness — `toRefPx` keeps the photometry viewport-independent).
+    // brightness — `toRefPx` normalises by this target's own `pxPerRad`, so
+    // the photometry holds per solid angle at any target size and fov).
     // `viewKind === 'capture'` marks a capture draw (see `ReadyFrameContext.viewKind`),
     // whose destination is the capture face: `cubemapFaceContext` builds the
     // synthetic ctx at the row's declared face size, so `canvasSize` already IS
@@ -57,15 +58,6 @@ export const starAggregatesPass: ContentPass = {
     const { width: vw, height: vh } =
       ctx.viewKind === 'capture' ? ctx.canvasSize : ctx.renderTargets.sizeOf('star-aggregates');
 
-    drawStream(
-      renderer,
-      pass,
-      { ...view, viewportPx: [vw, vh] },
-      prep,
-      'aggregate',
-      ctx.fovYRad,
-      ctx.viewSlot,
-      ctx.viewKind,
-    );
+    drawStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate', ctx);
   },
 };

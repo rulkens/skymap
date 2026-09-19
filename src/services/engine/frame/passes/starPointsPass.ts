@@ -106,6 +106,7 @@ import { FAMOUS_STAR_PICK_RADIUS_PX } from '../../../../data/famousStarPickRadiu
 import { regionById } from '../../../../utils/regions/regionById';
 import { regionOfBody } from '../../../../utils/regions/regionOfBody';
 import { projectToScreenPx } from '../../../../utils/camera/projectToScreenPx';
+import { targetPxPerRad } from '../../../../utils/camera/targetPxPerRad';
 
 // The scale regime the star backdrop belongs to. Its anchor — not the render
 // origin — is what the dissolve band measures the camera against, so the band
@@ -265,7 +266,12 @@ export const starPointsPass: ContentPass = {
         state.settings.starCatalogs.exposureMidX,
         state.settings.starCatalogs.exposureFarX,
       );
-    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness, viewSlot: ctx.viewSlot });
+    renderer.draw(pass, rebasedVp, view.viewportPx, {
+      sizePx,
+      brightness,
+      pxPerRad: targetPxPerRad(ctx, view.viewportPx[1]),
+      viewSlot: ctx.viewSlot,
+    });
   },
 
   // Pick aspect — stamps the POINT-partition scene stars into the NEAR0 r32uint

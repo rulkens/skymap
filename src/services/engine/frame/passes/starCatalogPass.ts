@@ -138,7 +138,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import type { ViewKind } from '../../../../@types/engine/frame/ViewKind';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
@@ -151,6 +150,7 @@ import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatal
 import { NEAR0, slabViewOf } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { targetPxPerRad } from '../../../../utils/camera/targetPxPerRad';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
@@ -961,9 +961,7 @@ function drawStream(
   view: SlabView,
   prep: PreparedStarCut,
   stream: StarDrawStream,
-  fovYRad: number,
-  viewSlot: number,
-  viewKind: ViewKind,
+  ctx: ReadyFrameContext,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
   // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
@@ -971,14 +969,15 @@ function drawStream(
   // lossless — and derive the leaf angular slack once. Both are source-independent
   // and forwarded identically to every source's draw (the shared-vp invariant).
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
-  const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], fovYRad).leaf;
+  const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], ctx.fovYRad).leaf;
+  const pxPerRad = targetPxPerRad(ctx, view.viewportPx[1]);
   // The aggregate stream's knee normally lands in `star-upsample`, over the
   // summed half-res field. A sky-cubemap capture face (`viewKind` 'capture') has
   // no such pass behind it — the face IS the sky the lens samples — so the
   // aggregate quads carry the knee themselves there, or captured glows read
   // brighter and more saturated than the same stars in the direct view drawn
   // beside them at the band crossfade.
-  const knee = stream === 'leaf' || viewKind === 'capture';
+  const knee = stream === 'leaf' || ctx.viewKind === 'capture';
   for (const s of prep.sources) {
     const nodes = s[stream];
     if (nodes.count === 0) continue;
@@ -988,6 +987,7 @@ function drawStream(
       knee,
       vp: rebasedVp,
       viewportPx: view.viewportPx,
+      pxPerRad,
       drawCount: nodes.count,
       firstRecord: nodes.firstRecord,
       recordCount: nodes.recordCount,
@@ -1002,7 +1002,7 @@ function drawStream(
       aggregateIntensityCap: prep.aggregateIntensityCap,
       frustumPlanes,
       glowMarginAngleRad,
-      viewSlot,
+      viewSlot: ctx.viewSlot,
     });
   }
 }
@@ -1020,7 +1020,7 @@ export const starCatalogPass: ContentPass = {
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
     // The LEAF stream: full-resolution point stars into HDR, per-glow knee.
-    drawStream(renderer, pass, view, prep, 'leaf', ctx.fovYRad, ctx.viewSlot, ctx.viewKind);
+    drawStream(renderer, pass, view, prep, 'leaf', ctx);
   },
 
   // Pick aspect — stamps every visible LEAF star's packed identity into the

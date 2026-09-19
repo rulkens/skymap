@@ -56,7 +56,13 @@ function camAtPc(distPc: number): Vec3 {
 // A capture ctx: its cut draws at full opacity with no fade state to seed first
 // (what the old slot-less fixture got implicitly, `undefined !== 0`).
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
-  return { drawCamPos: camPos, nowMs, viewKind: 'capture' } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: camPos,
+    nowMs,
+    viewKind: 'capture',
+    canvasSize: { width: 1280, height: 720 },
+    drawPxPerRad: 623.5,
+  } as unknown as ReadyFrameContext;
 }
 
 /** A single-leaf catalog: `walkStarOctreeCut` returns one leaf draw. */
@@ -220,6 +226,7 @@ describe('starCatalogPass.draw', () => {
       expect(call[1].sizePx).toBe(6.25);
       expect(call[1].glowOverlap).toBe(2.2);
       expect(call[1].aggregateIntensityCap).toBe(0.15);
+      expect(call[1].pxPerRad).toBe(623.5);
       expect(call[1].brightness).toBeCloseTo(expectedBrightness, 10);
     }
   });

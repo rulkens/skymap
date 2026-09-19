@@ -119,22 +119,23 @@ const MIN_D2_MPC2: f32 = 1e-14; // (1e-7)^2
 // constant here is structural.
 const STAR_FLUX_EXPOSURE: f32 = 2400.0;
 
-// Canvas height the exposure baseline above is calibrated at. Radii are
+// Pixels per radian the exposure baseline above is calibrated at: a 1080 px
+// canvas at the default 60-degree fov, 1080 / (2 tan 30deg). Radii are
 // converted to this reference unit (toRefPx) before the peak, so a record
-// deposits light per unit SOLID ANGLE rather than per device pixel -- without
-// it, halving canvas height quadrupled deposited luminance (measured 270p at
-// 3.6x the mean luminance of 1080p, same scene). Trades off exactly against
-// STAR_FLUX_EXPOSURE -- moving one is equivalent to rescaling the other, one
+// deposits light per unit SOLID ANGLE rather than per device pixel -- at any
+// canvas height (270p once read 3.6x brighter than 1080p) and any fov (a 90deg
+// dome face, an XR eye). Trades off exactly against STAR_FLUX_EXPOSURE -- one
 // degree of freedom between the pair -- so STAR_FLUX_EXPOSURE alone is the
 // look knob; this stays fixed.
-const REF_VIEWPORT_PX_Y: f32 = 1080.0;
+const REF_PX_PER_RAD: f32 = 935.3074360871938;
 
-// Converts a device-pixel radius into REF_VIEWPORT_PX_Y-relative reference px,
-// the resolution-independent unit starPeakIntensity's peak is calibrated in.
+// Converts a device-pixel radius into REF_PX_PER_RAD-relative reference px,
+// the solid-angle unit starPeakIntensity's peak is calibrated in; 'pxPerRad'
+// is the drawn target's own (its height over the frustum's tangent span).
 // Both vertex stages MUST route their radius through this before the peak, or
 // the pixel-parity contract between them breaks.
-fn toRefPx(rPx: f32, viewportPxY: f32) -> f32 {
-  return rPx * (REF_VIEWPORT_PX_Y / viewportPxY);
+fn toRefPx(rPx: f32, pxPerRad: f32) -> f32 {
+  return rPx * (REF_PX_PER_RAD / pxPerRad);
 }
 
 // ── starPeakIntensity ────────────────────────────────────────────────────────

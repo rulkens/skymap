@@ -105,7 +105,7 @@ fn vs(
   // the dot's luminance per unit SOLID ANGLE equals EXPOSURE * brightness *
   // fluxApp wherever the ceiling is not biting — the shared convention with
   // the survey stage (lib/starPhotometry.wesl).
-  let intensity = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.cam.viewportPx.y));
+  let intensity = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.pxPerRad));
 
   let offset = expandBillboardScreen(u.cam, center, rPx, corner);
 

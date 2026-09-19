@@ -81,14 +81,15 @@ const STAR_STRIDE = FLOATS_PER_STAR * 4; // 28 bytes
 
 /**
  * Uniform-buffer size for `StarPointUniforms` (`starPoints/io.wesl`): the shared
- * 80-byte `CameraUniforms` prefix + a `sizePx` / `brightness` tail rounded up to
- * the 16-byte alignment the prefix's `mat4x4` demands. `sizePx` lands at float
- * index 20 (byte 80), `brightness` at 21 (byte 84); floats 22..23 are the
- * alignment pad (Float32Array zero-init, never written).
+ * 80-byte `CameraUniforms` prefix + a `sizePx` / `brightness` / `pxPerRad` tail
+ * rounded up to the 16-byte alignment the prefix's `mat4x4` demands. `sizePx`
+ * lands at float index 20 (byte 80), `brightness` at 21 (byte 84), `pxPerRad`
+ * at 22 (byte 88); float 23 is the alignment pad (zero-init, never written).
  */
 const STAR_POINT_UNIFORM_BYTES = 96;
 const UNIFORM_SIZEPX_INDEX = 20;
 const UNIFORM_BRIGHTNESS_INDEX = 21;
+const UNIFORM_PX_PER_RAD_INDEX = 22;
 
 export function createStarPointRenderer(
   device: GPUDevice,
@@ -97,8 +98,8 @@ export function createStarPointRenderer(
   // ── Uniform ring + CPU scratch ─────────────────────────────────────────────
   //
   // The 80-byte CameraUniforms prefix (floats 0..15 = viewProj, 16..17 =
-  // viewportPx, 18..19 = named pads, stay 0) plus the sizePx / brightness tail
-  // at floats 20 / 21 (22..23 pad, stay 0). See STAR_POINT_UNIFORM_BYTES.
+  // viewportPx, 18..19 = named pads, stay 0) plus the sizePx / brightness /
+  // pxPerRad tail at floats 20..22 (23 pad, stays 0). See STAR_POINT_UNIFORM_BYTES.
   const uniformScratch = new Float32Array(STAR_POINT_UNIFORM_BYTES / 4);
 
   // ── Bind group layout (explicit, not 'auto') ──────────────────────────────
@@ -233,21 +234,22 @@ export function createStarPointRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
-    opts: { sizePx: number; brightness: number; viewSlot: number },
+    opts: { sizePx: number; brightness: number; pxPerRad: number; viewSlot: number },
   ): void {
     const { viewSlot } = opts;
     const instanceBuffer = instanceBuffers[viewSlot]!;
     const starCount = starCounts[viewSlot]!;
     if (instanceBuffer === null || starCount === 0) return;
 
-    // uniformScratch[18..19] are CameraUniforms' named pads and [22..23] the
-    // tail's alignment pad — never written, so they hold their construction-time
-    // zeros across frames. sizePx / brightness ride the tail at floats 20 / 21
-    // (byte-exact with StarPointUniforms in starPoints/io.wesl). Written into
+    // uniformScratch[18..19] are CameraUniforms' named pads and [23] the tail's
+    // alignment pad — never written, so they hold their construction-time zeros
+    // across frames. sizePx / brightness / pxPerRad ride the tail at floats
+    // 20..22 (byte-exact with StarPointUniforms in starPoints/io.wesl). Written into
     // THIS call's own `viewSlot` buffer — see the ring's doc.
     writeCameraPrefix(uniformScratch, viewProj, viewportPx);
     uniformScratch[UNIFORM_SIZEPX_INDEX] = opts.sizePx;
     uniformScratch[UNIFORM_BRIGHTNESS_INDEX] = opts.brightness;
+    uniformScratch[UNIFORM_PX_PER_RAD_INDEX] = opts.pxPerRad;
     uniformRing.writeSlot(viewSlot, uniformScratch);
 
     pass.setPipeline(pipeline);

@@ -72,6 +72,8 @@ export type StarCatalogDrawArgs = {
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
   readonly viewportPx: Vec2;
+  /** The drawn target's pixels per radian — `toRefPx`'s solid-angle normaliser. */
+  readonly pxPerRad: number;
   /**
    * How many drawn nodes this stream carries — the count of valid entries in
    * every flat per-node array below. Those arrays are the star cut's REUSED
