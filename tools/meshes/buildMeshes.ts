@@ -659,7 +659,7 @@ const GENERATED_BANNER =
  */
 function field(name: string, value: string): string {
   const flat = `    ${name}: ${value},`;
-  return flat.length <= 100 ? flat : `    ${name}:\n      ${value},`;
+  return flat.length <= 100 || value.includes('\n') ? flat : `    ${name}:\n      ${value},`;
 }
 
 /** Prettier leaves comments alone, so the continuation indent is ours to hold. */

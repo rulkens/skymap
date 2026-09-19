@@ -61,8 +61,9 @@ export const MESH_ASSET_ROW_FIELDS: readonly MeshAssetRowField[] = [
     emit: (row) =>
       row.contactDecal === undefined
         ? undefined
-        : `{ centre: [${row.contactDecal.centre.join(', ')}], ` +
-          `halfU: [${row.contactDecal.halfU.join(', ')}], ` +
-          `halfV: [${row.contactDecal.halfV.join(', ')}] }`,
+        : // Pre-broken the way prettier prints an object too wide for one line.
+          `{\n      centre: [${row.contactDecal.centre.join(', ')}],\n` +
+          `      halfU: [${row.contactDecal.halfU.join(', ')}],\n` +
+          `      halfV: [${row.contactDecal.halfV.join(', ')}],\n    }`,
   },
 ];
