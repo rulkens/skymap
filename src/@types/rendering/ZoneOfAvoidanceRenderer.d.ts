@@ -17,6 +17,7 @@
 import type { OrbitCamera } from '../camera/OrbitCamera';
 import type { Vec2 } from '../math/Vec2';
 import type { ZoneOfAvoidanceTuning } from '../settings/ZoneOfAvoidanceTuning';
+import type { ZoneOfAvoidanceShell } from './ZoneOfAvoidanceShell';
 import type { Renderer } from './Renderer';
 
 export type ZoneOfAvoidanceRenderer = Renderer & {
@@ -24,8 +25,7 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
    * Issue the fullscreen-quad draw. Encodes the uniform write and a single
    * `draw(6, 1)` call.
    *
-   * `innerRadiusMpc` / `outerRadiusMpc` bound the visible shell;
-   * `bulgeDeg` / `anticenterDeg` are the two ends of the longitude-dependent
+   * `shell` bounds the visible radii and the longitude-dependent
    * latitude-limit curve; `fadeAlpha` is the caller's per-frame opacity
    * (`zoneOfAvoidanceLayerOpacity` composed with the fade registry) — the
    * fragment shader multiplies it into the additive contribution alongside
@@ -36,10 +36,7 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
     cam: OrbitCamera,
     viewport: Vec2,
     tuning: ZoneOfAvoidanceTuning,
-    innerRadiusMpc: number,
-    outerRadiusMpc: number,
-    bulgeDeg: number,
-    anticenterDeg: number,
+    shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void;
 
@@ -54,10 +51,7 @@ export type ZoneOfAvoidanceRenderer = Renderer & {
     cam: OrbitCamera,
     viewport: Vec2,
     tuning: ZoneOfAvoidanceTuning,
-    innerRadiusMpc: number,
-    outerRadiusMpc: number,
-    bulgeDeg: number,
-    anticenterDeg: number,
+    shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void;
 };

@@ -1,8 +1,7 @@
 /**
- * runLabel3DProducers — pins the walk to `state.label3DProducers` (the
- * composed list `createLayers` builds), not `LABEL_3D_PRODUCERS`, the
- * core-only constant. Without this, a Layer's world producer could land on
- * state and never actually run.
+ * runLabel3DProducers — pins the walk to `state.label3DProducers`, the list
+ * `createLayers` composes from Layers' world producers. Without this, a
+ * Layer's world producer could land on state and never actually run.
  */
 import { describe, it, expect, vi } from 'vitest';
 import { runLabel3DProducers } from '../../../../src/services/engine/frame/runLabel3DProducers';

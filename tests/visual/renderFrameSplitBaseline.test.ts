@@ -419,9 +419,6 @@ describe('renderFrame visual baseline', () => {
           // Null so clipPathDebugPass stays disabled and the recorded
           // draw-command sequence baseline is unchanged.
           debugLineRenderer: null,
-          // Null so the ZoA guide band stays out of the pinned sequence — it
-          // was held out only by the fixture's absent focusBlend before.
-          zoneOfAvoidanceRenderer: null,
           selectionRingRenderer: null,
           volumeFieldRenderer,
           volumeUpsample,

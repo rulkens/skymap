@@ -193,12 +193,10 @@ export function createEngine(
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      zoneOfAvoidanceRenderer: null,
       label3DRenderer: null,
       volumeFieldRenderer: null,
       volumeUpsample: null,
       milkyWayAggregateUpsample: null,
-      zoneOfAvoidanceUpsample: null,
       starAggregateUpsample: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.

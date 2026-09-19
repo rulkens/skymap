@@ -66,13 +66,17 @@ export function checkFrameOrder(
   const computeCount = new Map<string, number>();
   const captured = new Set<string>();
   const targets: string[] = [];
+  const present = new Set(passes.map((pass) => pass.name));
   for (const spec of order) {
     const factsOf = STEP_FACTS[spec.kind] as (s: FrameStepSpec) => StepFacts;
     const facts = factsOf(spec);
+    // `expandFrameOrder` drops a render line none of whose passes is present, so
+    // its target — Layer-owned, left out with the Layer — is never touched.
+    const drops = spec.kind === 'render' && !facts.drawn.some((name) => present.has(name));
     for (const name of facts.drawn) drawCount.set(name, (drawCount.get(name) ?? 0) + 1);
     for (const name of facts.computed) computeCount.set(name, (computeCount.get(name) ?? 0) + 1);
     for (const name of facts.captured) captured.add(name);
-    targets.push(...facts.targets);
+    if (!drops) targets.push(...facts.targets);
   }
 
   for (const pass of passes) {

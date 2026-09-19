@@ -10,23 +10,24 @@
  */
 
 import { vec3 } from 'wgpu-matrix';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { ImagePlaneBasis } from '../../../../@types/camera/ImagePlaneBasis';
-import { imagePlaneBasis } from '../../../../utils/camera/imagePlaneBasis';
-import { frameUp } from '../../../../utils/camera/frameUp';
-import vsCode from '../../shaders/zoneOfAvoidance/vertex.wesl?static';
-import fsCode from '../../shaders/zoneOfAvoidance/fragment.wesl?static';
-import fsPickCode from '../../shaders/zoneOfAvoidance/fragmentPick.wesl?static';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { ADDITIVE_BLEND } from '../../lib/blendStates';
-import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
-import { Source } from '../../../../data/source';
-import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';
-import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { ZoneOfAvoidanceRenderer } from '../../../../@types/rendering/ZoneOfAvoidanceRenderer';
-import type { ZoneOfAvoidanceTuning } from '../../../../@types/settings/ZoneOfAvoidanceTuning';
-import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
-import type { Vec2 } from '../../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import type { ImagePlaneBasis } from '../../../@types/camera/ImagePlaneBasis';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { frameUp } from '../../../utils/camera/frameUp';
+import vsCode from '../../../services/gpu/shaders/zoneOfAvoidance/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragment.wesl?static';
+import fsPickCode from '../../../services/gpu/shaders/zoneOfAvoidance/fragmentPick.wesl?static';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
+import { resolveDepthCompare } from '../../../utils/gpu/resolveDepthCompare';
+import { Source } from '../../../data/source';
+import { packSelection, PICK_SENTINEL_OFFSET } from '../../../data/selectionEncoding';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { ZoneOfAvoidanceRenderer } from '../../../@types/rendering/ZoneOfAvoidanceRenderer';
+import type { ZoneOfAvoidanceShell } from '../../../@types/rendering/ZoneOfAvoidanceShell';
+import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
 export const ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE = 112;
@@ -143,10 +144,7 @@ export function createZoneOfAvoidanceRenderer(
     cam: OrbitCamera,
     viewport: Vec2,
     tuning: ZoneOfAvoidanceTuning,
-    innerRadiusMpc: number,
-    outerRadiusMpc: number,
-    bulgeDeg: number,
-    anticenterDeg: number,
+    shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void {
     // ── Camera basis (matches gl-matrix lookAt in computeViewProj) ────
@@ -167,7 +165,7 @@ export function createZoneOfAvoidanceRenderer(
     // length, so convert here — the ONE place this currency change happens,
     // rather than splitting the multiply across the shader (which would
     // leave the uniform holding a value with no name of its own).
-    const radialFalloffMpc = tuning.radialFalloff * (outerRadiusMpc - innerRadiusMpc);
+    const radialFalloffMpc = tuning.radialFalloff * (shell.outerRadiusMpc - shell.innerRadiusMpc);
 
     // camForward (floats 0..2) + tanHalfFovY (float 3).
     f32[0] = fwd[0];
@@ -183,19 +181,19 @@ export function createZoneOfAvoidanceRenderer(
     f32[8] = up[0];
     f32[9] = up[1];
     f32[10] = up[2];
-    f32[11] = innerRadiusMpc;
+    f32[11] = shell.innerRadiusMpc;
     // cameraPosMpc (floats 12..14) + outerRadiusMpc (float 15).
     f32[12] = cam.position[0]!;
     f32[13] = cam.position[1]!;
     f32[14] = cam.position[2]!;
-    f32[15] = outerRadiusMpc;
+    f32[15] = shell.outerRadiusMpc;
     // color (floats 16..18) + bulgeDeg (float 19).
     f32[16] = tuning.color[0];
     f32[17] = tuning.color[1];
     f32[18] = tuning.color[2];
-    f32[19] = bulgeDeg;
+    f32[19] = shell.bulgeDeg;
     // anticenterDeg, intensity, radialFalloffMpc, edgeSharpness (floats 20..23).
-    f32[20] = anticenterDeg;
+    f32[20] = shell.anticenterDeg;
     f32[21] = tuning.intensity;
     f32[22] = radialFalloffMpc;
     f32[23] = tuning.edgeSharpness;
@@ -210,22 +208,10 @@ export function createZoneOfAvoidanceRenderer(
     cam: OrbitCamera,
     viewport: Vec2,
     tuning: ZoneOfAvoidanceTuning,
-    innerRadiusMpc: number,
-    outerRadiusMpc: number,
-    bulgeDeg: number,
-    anticenterDeg: number,
+    shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void {
-    writeUniforms(
-      cam,
-      viewport,
-      tuning,
-      innerRadiusMpc,
-      outerRadiusMpc,
-      bulgeDeg,
-      anticenterDeg,
-      fadeAlpha,
-    );
+    writeUniforms(cam, viewport, tuning, shell, fadeAlpha);
     pass.setPipeline(pipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);
@@ -238,22 +224,10 @@ export function createZoneOfAvoidanceRenderer(
     cam: OrbitCamera,
     viewport: Vec2,
     tuning: ZoneOfAvoidanceTuning,
-    innerRadiusMpc: number,
-    outerRadiusMpc: number,
-    bulgeDeg: number,
-    anticenterDeg: number,
+    shell: ZoneOfAvoidanceShell,
     fadeAlpha: number,
   ): void {
-    writeUniforms(
-      cam,
-      viewport,
-      tuning,
-      innerRadiusMpc,
-      outerRadiusMpc,
-      bulgeDeg,
-      anticenterDeg,
-      fadeAlpha,
-    );
+    writeUniforms(cam, viewport, tuning, shell, fadeAlpha);
     pass.setPipeline(pickPipeline);
     pass.setBindGroup(0, bindGroup);
     pass.draw(6, 1);

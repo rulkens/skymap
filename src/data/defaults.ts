@@ -250,9 +250,9 @@ export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
  * linear RGB below), not a warm interstellar-dust extinction color.
  *
  * `radialFalloff` is a normalised [0, 1] fraction of the shell's radial span
- * (`outerRadiusMpc - innerRadiusMpc`, currently ~377 Mpc for the shell's
- * radii) — the renderer converts it to an absolute Mpc e-folding length
- * before it reaches the shader, which decays density from the inner rim
+ * (`outerRadiusMpc - innerRadiusMpc`, see `ZONE_OF_AVOIDANCE_SHELL`) — the
+ * renderer converts it to an absolute Mpc e-folding length before it
+ * reaches the shader, which decays density from the inner rim
  * outward (`exp(-(r - inner) / radialFalloffMpc)`). 0.1 (~38 Mpc) collapses
  * the veil to a puff hugging the inner rim; the shipped default, 0.46
  * (~173 Mpc), keeps haze visible across the catalog volume while still

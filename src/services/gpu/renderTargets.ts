@@ -88,20 +88,6 @@
  * anywhere: the allocated texture size (`sizeOf`) is the record of the size in
  * force, and `reconcile` compares against it.
  *
- * ### Why the zone-of-avoidance row renders at 1/5 scale
- *
- * The band is a fullscreen 32-step ray march — the heaviest per-pixel
- * additive overlay after the scalar-volume raymarch, too costly to run at
- * full res. Same remedy as `volume` /
- * `star-aggregates` / `mw-aggregate`: the band is smooth low-frequency haze
- * with no high-frequency detail, so a 1/5-res raymarch bilinearly upsampled
- * into HDR is visually free while dropping fragment cost by the square of
- * the divisor (5 → 1/25th). The curved "Zone of Avoidance" lettering does
- * NOT ride this row — MSDF text needs crisp edges at any zoom, so it draws
- * straight into full-res HDR from the upsample layer, after the band
- * composites in. Clears to a=0 for the same additive-identity reason as its
- * three siblings.
- *
  * ### Why the foreground row carries a depth texture
  *
  * `foreground:0` is the first row to declare `depth`. The foreground pass
@@ -156,13 +142,6 @@ import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
  */
 const STAR_AGGREGATE_DIVISOR = 2;
 
-/**
- * Downsample divisor for the reduced-res `zoa` row — total fragment
- * reduction is its square (5 → 1/25th the fragments). Named here for the
- * same one-line-change reason as `STAR_AGGREGATE_DIVISOR`.
- */
-const ZONE_OF_AVOIDANCE_DIVISOR = 5;
-
 /** A row's divisor for this state — constant rows ignore the state entirely. */
 function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
   return typeof spec.scale === 'function' ? spec.scale(state) : spec.scale;
@@ -207,14 +186,6 @@ export function renderTargetRows(swapFormat: GPUTextureFormat): readonly RenderT
       format: HDR_TARGET_FORMAT,
       depth: null,
       scale: 3,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    },
-    // Zone-of-avoidance band raymarch — same reason as `volume`.
-    {
-      id: 'zoa',
-      format: HDR_TARGET_FORMAT,
-      depth: null,
-      scale: ZONE_OF_AVOIDANCE_DIVISOR,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
     // Same reason as `volume`.
