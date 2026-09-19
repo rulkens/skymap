@@ -46,6 +46,12 @@ const FIXTURE_TABS: readonly PaletteTab[] = [
         blurb: 'A rocky planet.',
         action: { kind: 'focus', focusId: 'body-earth' },
       },
+      {
+        id: 'body-saturn',
+        label: 'Saturn',
+        blurb: 'A ringed planet.',
+        action: { kind: 'focus', focusId: 'body-saturn' },
+      },
     ],
   },
   {
@@ -155,5 +161,30 @@ describe('CommandPalette', () => {
     renderPalette({ onTabChange });
     await user.click(screen.getByRole('tab', { name: 'Missions' }));
     expect(onTabChange).toHaveBeenCalledWith('missions');
+  });
+
+  it('ArrowRight then Enter selects the second card', async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    renderPalette({ onSelect });
+    screen.getByPlaceholderText(/search galaxies/i).focus();
+    await user.keyboard('{ArrowRight}{Enter}');
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'focus', focusId: 'body-saturn' });
+  });
+
+  it('Alt+ArrowRight asks for the next tab and wraps from the last', async () => {
+    const user = userEvent.setup();
+    const onTabChange = vi.fn();
+    const first = renderPalette({ onTabChange });
+    screen.getByPlaceholderText(/search galaxies/i).focus();
+    await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
+    expect(onTabChange).toHaveBeenCalledWith('missions');
+    first.unmount();
+
+    onTabChange.mockClear();
+    renderPalette({ tab: 'missions', onTabChange });
+    screen.getByPlaceholderText(/search galaxies/i).focus();
+    await user.keyboard('{Alt>}{ArrowRight}{/Alt}');
+    expect(onTabChange).toHaveBeenCalledWith('highlights');
   });
 });

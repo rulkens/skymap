@@ -15,7 +15,9 @@
  *   - Alias matches are capped at 50 per query so a query that hits
  *     "MCG" (which matches thousands of rows) doesn't drown the famous
  *     hits or balloon the DOM.
- *   - Up/Down arrows move the highlight; Enter selects.
+ *   - Arrow keys move the highlight (the grid in every direction on an empty
+ *     query, the results list up/down on a typed one); Enter selects; ⌥←/⌥→
+ *     switch tabs on an empty query.
  *   - Esc closes without action.
  *   - Click outside the panel closes.
  *
@@ -39,12 +41,12 @@
  * value-add from cmdk/kbar, and the project bans component-level
  * barrel exports many of those libraries assume.
  */
-import { useRef } from 'react';
 import type { ReactNode } from 'react';
 import { usePaletteSearch } from './usePaletteSearch';
 import FeaturedGrid from './FeaturedGrid';
 import PaletteTabs from './PaletteTabs';
 import ResultsList from './ResultsList';
+import { wrapIndex } from './utils/wrapIndex';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
@@ -99,6 +101,17 @@ function CommandPalette({
   onClose,
   onSelect,
 }: CommandPaletteProps): ReactNode {
+  // Hide any tab with no cards (PR1 has none; PR3's Tours tab will), and
+  // fall back to the first shown tab when the stored one no longer qualifies.
+  const shownTabs = tabs.filter((t) => t.cards.length > 0);
+  const activeTab = shownTabs.find((t) => t.id === tab) ?? shownTabs[0];
+
+  const onTabStep = (delta: 1 | -1): void => {
+    const idx = activeTab ? shownTabs.findIndex((t) => t.id === activeTab.id) : 0;
+    const next = shownTabs[wrapIndex(idx, delta, shownTabs.length)];
+    if (next) onTabChange(next.id);
+  };
+
   const {
     query,
     setQuery,
@@ -106,18 +119,23 @@ function CommandPalette({
     setActiveIdx,
     matches,
     inputRef,
+    gridRef,
+    activeCard,
     onKeyDown,
     dispatchSelection,
     dispatchAction,
-  } = usePaletteSearch({ entries, aliasIndex, structures, open, onClose, onSelect });
-  const gridRef = useRef<HTMLUListElement | null>(null);
+  } = usePaletteSearch({
+    entries,
+    aliasIndex,
+    structures,
+    cards: activeTab?.cards ?? [],
+    onTabStep,
+    open,
+    onClose,
+    onSelect,
+  });
 
   if (!open) return null;
-
-  // Hide any tab with no cards (PR1 has none; PR3's Tours tab will), and
-  // fall back to the first shown tab when the stored one no longer qualifies.
-  const shownTabs = tabs.filter((t) => t.cards.length > 0);
-  const activeTab = shownTabs.find((t) => t.id === tab) ?? shownTabs[0];
 
   return (
     <div className={styles.root} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
@@ -143,7 +161,7 @@ function CommandPalette({
               <FeaturedGrid
                 cards={activeTab.cards}
                 famous={entries}
-                activeIdx={-1}
+                activeIdx={activeCard}
                 gridRef={gridRef}
                 label={activeTab.label}
                 onSelect={dispatchAction}
