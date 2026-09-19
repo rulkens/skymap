@@ -59,6 +59,10 @@ meshPrebake.py
       beyond the AO distance can occlude; not selected during the body rows; then
       baked itself (AO, body as occluder) → the contact decal; removed before
       flatten_materials
+  frames: the bake scene is Blender +Z up, every stamp and --ground-up is glTF +Y up;
+    convert at the boundary (blender_from_gltf / gltf_from_blender)
+  unwrap: smart_project, then a concave rotating pack_islands — smart_project's own
+    packing left perseverance's atlas 6.6 % covered (35.7 % after)
   flatten_materials: occlusion atlas → the glTF Material Output group's Occlusion input
   export: stamp extras.aoGroundUp and extras.contactDecal; export_extras on
 
@@ -79,7 +83,8 @@ AO-baked as a floating body.
 
 ## Not changed
 
-- Direct sun lighting and shadows are untouched.
+- Direct sun lighting and shadows are untouched. Micro-shadowing the sun with the AO
+  (Chan 2018) was tried and reverted on the user's eye-check.
 - Whale (no prebake) and petunias (own prebake script) get R = 255: no AO, identical
   to today.
 - The plane is flat in the source frame; terrain slope is still the runtime
@@ -105,7 +110,7 @@ flag); exporter packing + force 255 (not an explicit composite); ground plane pr
 for the whole bake (harmless to the EMIT/normal/roughness rows, which trace nothing
 and never select it).
 
-Adjacent findings, backlogged: two prebake scripts (petunias has its own), so AO for
+Adjacent findings, not picked up: two prebake scripts (petunias has its own), so AO for
 petunias means folding it into `meshPrebake.py` first; whale has no prebake at all.
 
 ## Verification
