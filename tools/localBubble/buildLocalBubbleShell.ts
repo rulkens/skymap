@@ -36,17 +36,16 @@ const WIDTH_PX = 1024;
 const HEIGHT_PX = 512;
 
 /** The columns the bake reads, in the order they land in the output planes. */
-const CHANNELS = ['d', 'd_inner', 'd_outer', 'thick'] as const;
+const CHANNELS = ['d'] as const;
 
 /**
  * Angular smoothing radius, degrees. The raw fit jumps between candidate dust
  * walls along adjacent sight lines; displaced unsmoothed it renders as radial
- * spikes, not a membrane (data/localBubble/previews/local-bubble-preview-*.png). Override
- * with --smooth-deg to re-tune against the preview.
+ * spikes, not a membrane (data/localBubble/previews/local-bubble-radius.png).
+ * Override with --smooth-deg to re-tune against the preview.
  */
 const DEFAULT_SMOOTH_DEG = 2.5;
 
-const OUT_DIR = 'data/localBubble';
 const PREVIEW_DIR = 'data/localBubble/previews';
 const SHELL_OUT_PATH = 'public/data/local-bubble/v1/local-bubble.shell';
 
@@ -256,19 +255,8 @@ async function main(): Promise<void> {
   console.log(`baked planes (smoothing ${smoothDeg}°):`);
   CHANNELS.forEach((name, i) => console.log(`  ${describe(name, planes[i]!)}`));
 
-  // Planes back to back, f32 little-endian, no header yet: this intermediate
-  // radius map only ever feeds the mesher below and the preview PNGs; it is
-  // not a runtime asset, so it carries no format of its own.
-  const bytes = Buffer.alloc(planes.length * planes[0]!.byteLength);
-  planes.forEach((plane, i) => Buffer.from(plane.buffer).copy(bytes, i * plane.byteLength));
-  mkdirSync(OUT_DIR, { recursive: true });
-  const binPath = join(OUT_DIR, 'local-bubble-shell.f32');
-  writeFileSync(binPath, bytes);
-  console.log(`wrote ${binPath} (${(bytes.length / 1e6).toFixed(2)} MB)`);
-
   console.log('previews:');
   await writePreview(planes[0]!, 'd_peak', join(PREVIEW_DIR, 'local-bubble-radius.png'));
-  await writePreview(planes[3]!, 'thick', join(PREVIEW_DIR, 'local-bubble-thickness.png'));
 
   console.log('meshing displaced icosphere...');
   const radiusPlane = planes[0]!;
