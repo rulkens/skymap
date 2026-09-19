@@ -410,9 +410,13 @@ describe('renderFrame visual baseline', () => {
 
     renderFrame({
       ctx,
+      // Mono's own contract: the frame's one view is the main ctx itself.
+      views: [ctx],
       // Engine state with every optional renderer wired in — this is what
       // makes all eight HDR passes fire.
       state: {
+        // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+        viewRig: 'mono',
         gpu: {
           labelRenderer,
           markerLineRenderer,

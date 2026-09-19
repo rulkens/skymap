@@ -98,9 +98,14 @@ import { timestampSpread } from '../../../utils/gpu/timestampSpread';
  * site: every other id resolves through the render-target table, which throws
  * for ids it never allocated. A capture face has no id here at all — its
  * texture belongs to a capture row (`captureFaceAttachment`).
+ *
+ * `'swap'` prefers `ctx.output` — a view's own offscreen (a dome face, PR 2) —
+ * over the acquired swap-chain view; unset for the main context and every
+ * mono view, so this frame's `swap` steps land in the real swap chain exactly
+ * as they do today.
  */
 function viewFor(id: string, ctx: ReadyFrameContext, swapView: GPUTextureView): GPUTextureView {
-  if (id === 'swap') return swapView;
+  if (id === 'swap') return ctx.output ?? swapView;
   return ctx.renderTargets.viewOf(id);
 }
 

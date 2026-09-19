@@ -282,7 +282,11 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
 
   const input: RenderFrameInput = {
     ctx,
+    // Mono's own contract: the frame's one view is the main ctx itself.
+    views: [ctx],
     state: {
+      // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+      viewRig: 'mono',
       gpu: {
         labelRenderer: null,
         markerLineRenderer: null,

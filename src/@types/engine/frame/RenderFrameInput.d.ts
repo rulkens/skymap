@@ -34,6 +34,12 @@ export type RenderFrameInput = {
    */
   ctx: ReadyFrameContext;
   /**
+   * The frame's views (`VIEW_RIGS[state.viewRig].views(ctx, state)`),
+   * computed once by `runFrame` ahead of the view-independent planners
+   * (surface cut, star cut) that also walk this. Mono is `[ctx]` itself.
+   */
+  views: readonly ReadyFrameContext[];
+  /**
    * Engine state — forwarded to each `ContentPass.draw` so per-layer logic
    * can read selection / picking / source-state / settings / `state.gpu.*`
    * renderer handles.

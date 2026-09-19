@@ -9,6 +9,7 @@
 
 import type { Task } from 'redux-saga';
 import type { Tier } from '../../data/Tier';
+import type { ViewRigKey } from '../frame/ViewRigKey';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
@@ -35,6 +36,8 @@ export type EngineState = {
   settings: EngineSettingsState;
   /** A getter onto `store.getState().tier` — no engine-side mirror to drift. */
   tier: Tier;
+  /** Which `ViewRig` (`VIEW_RIGS`) `renderFrame` walks this frame. Seeded `'mono'`. */
+  viewRig: ViewRigKey;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */

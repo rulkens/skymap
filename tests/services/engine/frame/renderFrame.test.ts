@@ -465,11 +465,17 @@ function makeInput(
     settings,
     input: {
       ctx,
+      // Mono's own contract: the frame's one view is the main ctx itself
+      // (`VIEW_RIGS.mono.views`), which `renderFrame` would otherwise compute
+      // via `state.viewRig` — this fixture hands it straight in.
+      views: [ctx],
       // ContentPasses read engine state via `input.state`. The label +
       // marker-line layers read `state.gpu.*` in their `enabled()` gates;
       // nulling those handles makes the layers skip (enabled → false), so
       // these tests stay focused on point + milky-way ordering.
       state: {
+        // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+        viewRig: 'mono',
         // focusUniform: renderFrame writes it once per frame and
         // galaxyPointSpritesPass binds its group; a no-op write + opaque bind
         // group keeps the mock encoder happy.
@@ -620,20 +626,26 @@ describe('renderFrame', () => {
     fx = makeInput();
   });
 
-  it('creates exactly one command encoder on a frame with no capture faces', () => {
+  it('creates one command encoder per non-empty section batch on a frame with no capture faces', () => {
+    // Mono walks PRELUDE (computes only, no capture faces) → SCENE (the
+    // frame's one view) → POST → OVERLAYS, each its own batch/encoder —
+    // four, none of them empty in this fixture (OVERLAYS' render steps still
+    // resolve passes even though every renderer they'd draw with is null).
     renderFrame(fx.input);
-    expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
+    expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(4);
   });
 
-  it('submits exactly once, with the encoder.finish() output, on a frame with no capture faces', () => {
+  it('submits once per batch, each with its own encoder.finish() output, on a frame with no capture faces', () => {
     renderFrame(fx.input);
     const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
-    expect(submit).toHaveBeenCalledTimes(1);
-    expect(fx.env.finish).toHaveBeenCalledTimes(1);
-    // The submitted buffer is the one finish() returned.
-    const submitted = (submit as any).lastBuffers as ReadonlyArray<GPUCommandBuffer>;
-    expect(submitted).toHaveLength(1);
-    expect(submitted[0]).toBe((fx.env.finish.mock.results[0] as any).value);
+    expect(submit).toHaveBeenCalledTimes(4);
+    expect(fx.env.finish).toHaveBeenCalledTimes(4);
+    // Every submit carries the single buffer that call's own finish() returned.
+    for (let i = 0; i < 4; i++) {
+      const submitted = submit.mock.calls[i]![0] as ReadonlyArray<GPUCommandBuffer>;
+      expect(submitted).toHaveLength(1);
+      expect(submitted[0]).toBe((fx.env.finish.mock.results[i] as any).value);
+    }
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
@@ -784,18 +796,23 @@ describe('renderFrame', () => {
     expect(tone.hdrHeadroom).toBe(0);
   });
 
-  it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
+  it('records the full frame in canonical order: PRELUDE batch → SCENE batch (points → cloud stars → cloud dust) → POST batch (compositor.draw) → OVERLAYS batch', () => {
     // No-timing 'merged' path: zoneOfAvoidanceRenderer is null in this
     // fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO) step
-    // off entirely — no pass opens for it. The (hdr, COSMO) render step
-    // opens a pass holding the enabled COSMO hdr draws (here point-sprites;
-    // the impostor subsystems are nulled out), closes it; the
-    // (mw-aggregate, NEAR0) step opens a pass against the cloud's own
-    // offscreen for its additive star billboards, closes it; the (hdr,
-    // NEAR0) step opens an hdr pass for the cloud's multiplicative dust draw
-    // (the cloud's slab, since the fixed COSMO near plane clipped its disc
-    // mid-descent), closes it; then the hdr→swap composite opens a final
-    // pass, draws the tone-map, and closes it — then finish + submit.
+    // off entirely — no pass opens for it. PRELUDE's two computes are either
+    // unregistered ('flow') or gated off by a null renderer ('sky-view'), so
+    // its batch opens no pass at all — createEncoder/finish/submit with
+    // nothing between. SCENE's (hdr, COSMO) render step opens a pass holding
+    // the enabled COSMO hdr draws (here point-sprites; the impostor
+    // subsystems are nulled out), closes it; the (mw-aggregate, NEAR0) step
+    // opens a pass against the cloud's own offscreen for its additive star
+    // billboards, closes it; the (hdr, NEAR0) step opens an hdr pass for the
+    // cloud's multiplicative dust draw (the cloud's slab, since the fixed
+    // COSMO near plane clipped its disc mid-descent), closes it — its own
+    // finish + submit. POST's hdr→swap composite opens its own batch, draws
+    // the tone-map, closes — its own finish + submit. OVERLAYS' two render
+    // steps resolve passes but every renderer they'd draw with is null, so
+    // its batch also opens no pass.
     renderFrame(fx.input);
     const interesting = [
       'device.createCommandEncoder',
@@ -810,6 +827,11 @@ describe('renderFrame', () => {
     ];
     const filtered = fx.callLog.filter((e) => interesting.includes(e));
     expect(filtered).toEqual([
+      // PRELUDE
+      'device.createCommandEncoder',
+      'encoder.finish',
+      'device.queue.submit',
+      // SCENE
       'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'galaxyPointRenderer.draw',
@@ -820,9 +842,17 @@ describe('renderFrame', () => {
       'encoder.beginRenderPass',
       'milkyWayCloudRenderer.drawDust',
       'pass.end',
+      'encoder.finish',
+      'device.queue.submit',
+      // POST
+      'device.createCommandEncoder',
       'encoder.beginRenderPass',
       'compositor.draw',
       'pass.end',
+      'encoder.finish',
+      'device.queue.submit',
+      // OVERLAYS
+      'device.createCommandEncoder',
       'encoder.finish',
       'device.queue.submit',
     ]);

@@ -230,6 +230,8 @@ function makeState(): EngineState {
       loadProgress: null,
     },
     booted: false,
+    // runFrame looks up VIEW_RIGS[viewRig].views(ctx, state) once, ready-gated.
+    viewRig: 'mono',
     assetSlots: {
       points: new Map(),
       filaments: null,

@@ -40,6 +40,7 @@ import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { computeScaleInfo } from '../helpers/scaleBar';
@@ -194,6 +195,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     return;
   }
 
+  // The frame's views, once — mono is `[ctx]` itself. Computed ahead of the
+  // view-independent planners below (surface cut, star cut) so they can walk
+  // every view's frustum without re-deriving this per planner.
+  const views = VIEW_RIGS[state.viewRig].views(ctx, state);
+
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
   // render settings); all of them read the captured value, never a fresh call.
@@ -318,6 +324,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   renderFrame({
     ctx,
+    views,
     state,
     device: deps.device,
     context: deps.context,

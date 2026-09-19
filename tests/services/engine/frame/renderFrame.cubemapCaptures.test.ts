@@ -89,6 +89,8 @@ function programFaces(): readonly CubeFace[] {
 
 function makeState(overrides: Partial<EngineState> = {}): EngineState {
   return {
+    // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+    viewRig: 'mono',
     // No mesh renderer ⇒ the probe scheduler idles; the sky sweeps are the subject here.
     gpu: { focusUniform: null, meshBodyRenderer: null },
     settings: {
@@ -116,6 +118,9 @@ function makeCtx(
   return {
     isReady: true,
     layersSettling: layers.settling ?? false,
+    // renderFrame folds every view's set into this one after a `perView`
+    // section — mono's views are `[ctx]` itself, so it folds into its own.
+    renderedTargets: new Set<string>(),
     drawCamPos,
     simDays: 0,
     nowMs: 1000,
@@ -143,6 +148,8 @@ function makeCtx(
 function makeInput(ctx: ReadyFrameContext, state: EngineState) {
   return {
     ctx,
+    // Mono's own contract: the frame's one view is the main ctx itself.
+    views: [ctx],
     state,
     device: {
       createCommandEncoder: vi.fn(
@@ -198,8 +205,9 @@ describe('renderFrame — cubemap-capture hand-off', () => {
       ...ALL_CUBE_FACES,
     ]);
 
-    // Six face submissions, then the frame's own.
-    expect(executeFrameMock).toHaveBeenCalledTimes(7);
+    // Six face submissions, then the frame's own section batches: PRELUDE's
+    // compute remainder, SCENE (the one view), POST, OVERLAYS.
+    expect(executeFrameMock).toHaveBeenCalledTimes(10);
     const handedOff = handedOffContexts();
     expect(handedOff.size).toBe(6);
     for (const face of ALL_CUBE_FACES) {
@@ -209,11 +217,13 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     expect(programFaces()).toEqual([...ALL_CUBE_FACES]);
   });
 
-  it("submits each scheduled face in its own command buffer, in program order, before the frame's", () => {
+  it("submits each scheduled face in its own command buffer, in program order, before the frame's own section batches", () => {
     // Landmine #1 (docs/RENDERER.md): a body renderer rewrites its uniform
     // buffer per draw, so a body drawn for a face and for the view cannot
     // share one submission. Two faces of one row ⇒ two face buffers, each
-    // holding only that face's steps, then the frame's — which holds none.
+    // holding only that face's steps, then the frame's own section batches
+    // (PRELUDE's compute remainder, SCENE, POST, OVERLAYS) — none of which
+    // carry a capture step.
     const face3 = { ctx: makeCtx([1000, 0, 0]), bodySlabs: [] };
     const face5 = { ctx: makeCtx([1000, 0, 0]), bodySlabs: [] };
     scheduleMock.mockReturnValueOnce(
@@ -231,21 +241,25 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     renderFrame(input);
 
     const submit = input.device.queue.submit as unknown as ReturnType<typeof vi.fn>;
-    expect(submit).toHaveBeenCalledTimes(3);
-    expect(input.device.createCommandEncoder).toHaveBeenCalledTimes(3);
+    expect(submit).toHaveBeenCalledTimes(6);
+    expect(input.device.createCommandEncoder).toHaveBeenCalledTimes(6);
     const facesOf = (program: readonly FrameStep[]): readonly (CubeFace | undefined)[] => [
       ...new Set(program.map((step) => (step.kind === 'render' ? step.capture?.face : undefined))),
     ];
-    const [first, second, frame] = programs();
+    const [first, second, ...rest] = programs();
     expect(facesOf(first!)).toEqual([3]);
     expect(facesOf(second!)).toEqual([5]);
-    expect(frame!.some((step) => step.kind === 'render' && step.capture !== undefined)).toBe(false);
-    expect(frame!.length).toBeGreaterThan(0);
+    expect(rest.length).toBeGreaterThan(0);
+    expect(
+      rest.every((program) =>
+        program.every((step) => step.kind !== 'render' || step.capture === undefined),
+      ),
+    ).toBe(true);
     // Every buffer submitted is one executeFrame call's own encoder, finished.
     const recorded = executeFrameMock.mock.calls.map(
       (call) => (call[0].encoder.finish as ReturnType<typeof vi.fn>).mock.results[0]!.value,
     );
-    expect(new Set(recorded).size).toBe(3);
+    expect(new Set(recorded).size).toBe(6);
     submit.mock.calls.forEach((call, i) => expect(call[0][0]).toBe(recorded[i]));
   });
 
@@ -276,11 +290,12 @@ describe('renderFrame — cubemap-capture hand-off', () => {
       'probe',
     ]);
     expect(finishMock).toHaveBeenCalledWith('solarSystem', state, input.device);
-    // Every face's submit precedes every finish; the frame's submit follows.
+    // Every face's submit precedes every finish; the frame's own section
+    // batches (PRELUDE's compute remainder, SCENE, POST, OVERLAYS) follow.
     const submit = input.device.queue.submit as unknown as ReturnType<typeof vi.fn>;
     const submitOrder = submit.mock.invocationCallOrder;
     const finishOrder = finishMock.mock.invocationCallOrder;
-    expect(submitOrder).toHaveLength(5);
+    expect(submitOrder).toHaveLength(8);
     expect(Math.max(...submitOrder.slice(0, 4))).toBeLessThan(Math.min(...finishOrder));
     expect(Math.max(...finishOrder)).toBeLessThan(submitOrder[4]!);
   });

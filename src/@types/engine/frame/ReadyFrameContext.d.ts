@@ -118,4 +118,11 @@ export type ReadyFrameContext = {
    * executor skips an empty render step, leaving that depth stale/uninitialised).
    */
   renderedTargets: ReadonlySet<string>;
+  /**
+   * Where a `swap`-targeted step's `viewFor('swap', …)` resolves for THIS
+   * view — a dome face's own offscreen, once PR 2 derives one per view; unset
+   * for the main context and every mono view, so `viewFor` falls back to the
+   * acquired swap-chain view as it does today.
+   */
+  output?: GPUTextureView;
 };
