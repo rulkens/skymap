@@ -25,6 +25,7 @@ import type { MeshTextureField } from '../../src/@types/data/mesh/MeshTextureFie
 import type { Vec3 } from '../../src/@types/math/Vec3';
 import type { ContactDecalStamp } from './@types/ContactDecalStamp';
 import { MESH_TEXTURE_SLOTS } from '../../src/data/mesh/meshTextureSlots';
+import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
 import { rotateVec3ByTightMat3 } from '../../src/utils/math/rotateVec3ByTightMat3';
 import { RAW_DATA, rawDataPath, type RawDataEntry } from '../utils/io/rawDataRegistry';
 import { MESH_SOURCES } from '../utils/io/meshSources';
@@ -35,13 +36,7 @@ import { generateTangents } from './generateTangents';
 import { meanAlbedo } from './meanAlbedo';
 import { writeMeshBinary } from './writeMeshBinary';
 
-/**
- * Both budgets are constants rather than CLI flags: they describe what the
- * renderer can afford, which does not vary per invocation. The triangle
- * ceiling leaves room for the petunia model's ~150k post-prebake tris; the
- * texture ceiling matches the 2048^2 atlas that bake emits.
- */
-const TRIANGLE_BUDGET = 150_000;
+/** Matches the 2048^2 atlas the prebake emits; the triangle budget is `MESH_TRIANGLE_BUDGET`. */
 const TEXTURE_SIZE_BUDGET = 2048;
 // The contact shadow is a soft blur under a few-metre footprint: 512^2 is
 // ~1 cm/texel there, and nothing sharper survives the blur.
@@ -266,8 +261,8 @@ function transformTangent(m: readonly number[], n: Vec3, x: number, y: number, z
 
 /**
  * Whether a triangle's winding agrees with the authored NORMAL it interpolates.
- * A SketchUp two-sided face exports wound either way (34k of the petunias'
- * 150k disagree), so winding is normalised at bake time rather than trusted —
+ * A SketchUp two-sided face exports wound either way (a fifth of the
+ * petunias' triangles disagree), so winding is normalised at bake time rather than trusted —
  * the mean of the three normals, since a smooth-shaded corner has no one truth.
  * A degenerate triangle has no facing and keeps its authored order.
  */
@@ -529,25 +524,15 @@ async function bake(target: MeshBuildTarget, outDir: string): Promise<MeshAssetR
   const material = soleMaterial(doc, key);
 
   const triangles = countTriangles(doc);
-  if (triangles > TRIANGLE_BUDGET) {
-    const { simplify } = await import('@gltf-transform/functions');
-    const { MeshoptSimplifier } = await import('meshoptimizer');
-    await MeshoptSimplifier.ready;
-    await doc.transform(
-      simplify({ simplifier: MeshoptSimplifier, ratio: TRIANGLE_BUDGET / triangles, error: 0.001 }),
+  if (triangles > MESH_TRIANGLE_BUDGET) {
+    throw new Error(
+      `buildMeshes: ${key} has ${triangles} tris, over MESH_TRIANGLE_BUDGET ` +
+        `(${MESH_TRIANGLE_BUDGET}); re-run npm run prebake-mesh -- ${key}`,
     );
-    // meshopt stops early rather than wreck topology, so the budget is a target
-    // it can miss — say so instead of shipping a silently over-budget mesh.
-    const after = countTriangles(doc);
-    if (after > TRIANGLE_BUDGET) {
-      console.warn(
-        `buildMeshes: ${key} is still ${after} tris after decimation (budget ${TRIANGLE_BUDGET})`,
-      );
-    }
   }
 
   const geometry = mergeGeometry(doc, target.bodyFromSource);
-  writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(writeMeshBinary(geometry)));
+  writeFileSync(join(outDir, `${key}.mesh`), Buffer.from(await writeMeshBinary(geometry)));
 
   const contactDecal =
     decalStamp === undefined

@@ -99,14 +99,13 @@ BAKE_PASSES = [
 ]
 
 
-def source(key, triangles=None):
+def source(key):
     d = os.path.join(REPO, "data/raw/meshes", key)
     return {
         "key": key,
         "dir": d,
         "src": os.path.join(d, "%s.blend" % key),
         "out": os.path.join(d, "%s.prebaked.glb" % key),
-        "triangles": triangles,
     }
 
 
@@ -114,8 +113,8 @@ def atlas_path(cfg, name):
     return os.path.join(cfg["dir"], "%s.prebaked.%s.png" % (cfg["key"], name))
 
 
-SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance", triangles=100_000),
-                                 source("curiosity"), source("mer"), source("hubble")]}
+SOURCES = {s["key"]: s for s in [source("voyager"), source("perseverance"), source("curiosity"),
+                                 source("mer"), source("hubble"), source("petunias")]}
 
 
 def log(msg):
@@ -187,7 +186,7 @@ def triangles(obj):
 
 def decimate(obj, target):
     have = triangles(obj)
-    if target is None or have <= target:
+    if have <= target:
         return have
     mod = obj.modifiers.new("decimate", "DECIMATE")
     mod.decimate_type = "COLLAPSE"
@@ -448,6 +447,8 @@ def parse_args(argv):
     is the only caller, so a bad key or vector is its bug, not a user's."""
     parser = argparse.ArgumentParser()
     parser.add_argument("key", choices=sorted(SOURCES))
+    # MESH_TRIANGLE_BUDGET (src/data/mesh/meshTriangleBudget.ts), passed in so it has one home.
+    parser.add_argument("--triangles", type=int, required=True)
     parser.add_argument("--ground-up", dest="ground_up", nargs=3, type=float, default=None)
     return parser.parse_args(argv)
 
@@ -473,7 +474,7 @@ def main():
     set_ao_distance(scene, extent)
     plane, plane_span = (ground_plane(obj, lo, hi, extent, blender_from_gltf(ground_up))
                          if ground_up is not None else (None, None))
-    log("decimated -> %d tris" % decimate(obj, cfg["triangles"]))
+    log("decimated -> %d tris" % decimate(obj, args.triangles))
 
     uv_name = unwrap(obj, source_name)
     log("smart-projected uv '%s' (%.0fs elapsed)" % (uv_name, time.time() - started))
