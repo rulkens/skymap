@@ -36,12 +36,7 @@ import { generateTangents } from './generateTangents';
 import { meanAlbedo } from './meanAlbedo';
 import { writeMeshBinary } from './writeMeshBinary';
 
-/**
- * A constant rather than a CLI flag: it describes what the renderer can afford,
- * which does not vary per invocation, and matches the 2048^2 atlas the prebake
- * emits. The triangle half of the budget is the shared `MESH_TRIANGLE_BUDGET`,
- * which the prebake decimates to; this build only refuses a GLB over it.
- */
+/** Matches the 2048^2 atlas the prebake emits; the triangle budget is `MESH_TRIANGLE_BUDGET`. */
 const TEXTURE_SIZE_BUDGET = 2048;
 
 /** Tangent-space "straight out", the substitute for a missing normal map. */

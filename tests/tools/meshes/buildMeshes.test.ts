@@ -13,6 +13,7 @@ import { MESH_TEXTURE_SLOTS } from '../../../src/data/mesh/meshTextureSlots';
 import { buildMeshes } from '../../../tools/meshes/buildMeshes';
 import { expectDirectionNear } from '../../helpers/meshes/expectDirectionNear';
 import { expectPositionNear } from '../../helpers/meshes/expectPositionNear';
+import { nearestVertex } from '../../helpers/meshes/nearestVertex';
 
 // Every fixture is synthesised here rather than read from data/raw/meshes:
 // the real sources are gitignored downloads that only exist after the human
@@ -95,22 +96,13 @@ function near(actual: ArrayLike<number>, expected: number[]): void {
   expected.forEach((e, i) => expect(actual[i]).toBeCloseTo(e, 4));
 }
 
-/** Assert `expected` is *some* decoded vertex's position: the writer's vertex-cache
- * reorder means source index order no longer matches decoded index order. */
+/** Assert `expected` is *some* decoded vertex's position (order-free, see `nearestVertex`). */
 function expectVertexNear(
   file: ArrayBuffer,
   decoded: DecodedMeshGeometry,
   expected: number[],
 ): void {
-  let best = 0;
-  let bestDist = Infinity;
-  for (let v = 0; v < decoded.vertexCount; v++) {
-    const dist = Math.hypot(...[0, 1, 2].map((c) => decoded.positions[v * 3 + c]! - expected[c]!));
-    if (dist < bestDist) {
-      bestDist = dist;
-      best = v;
-    }
-  }
+  const best = nearestVertex(decoded.positions, expected);
   expectPositionNear(
     file,
     [0, 1, 2].map((c) => decoded.positions[best * 3 + c]!),

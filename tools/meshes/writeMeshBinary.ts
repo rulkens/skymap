@@ -72,18 +72,14 @@ export async function writeMeshBinary(geometry: {
   });
 
   // Rounded to f32 BEFORE quantising, so the decoder's f32 header values invert exactly.
-  const posMin = [0, 1, 2].map((c) => {
-    let min = Infinity;
-    for (let v = 0; v < vertexCount; v++) min = Math.min(min, pos[v * 3 + c]!);
-    return Math.fround(vertexCount > 0 ? min : 0);
-  });
-  const extent = Math.max(
-    ...[0, 1, 2].map((c) => {
-      let max = -Infinity;
-      for (let v = 0; v < vertexCount; v++) max = Math.max(max, pos[v * 3 + c]!);
-      return vertexCount > 0 ? max - posMin[c]! : 0;
-    }),
-  );
+  const lo = [Infinity, Infinity, Infinity];
+  const hi = [-Infinity, -Infinity, -Infinity];
+  for (let i = 0; i < vertexCount * 3; i++) {
+    lo[i % 3] = Math.min(lo[i % 3]!, pos[i]!);
+    hi[i % 3] = Math.max(hi[i % 3]!, pos[i]!);
+  }
+  const posMin = lo.map(Math.fround);
+  const extent = Math.max(...hi.map((h, c) => h - posMin[c]!));
   const posScale = Math.fround(extent > 0 ? extent / MESH_UNORM16_MAX : 1);
   const qPositions = new Uint16Array(vertexCount * 4);
   for (let v = 0; v < vertexCount; v++) {

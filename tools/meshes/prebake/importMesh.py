@@ -277,15 +277,12 @@ def weld(meshes, threshold):
     """SketchUp exports every face as its own island of loose vertices.
     Unwelded, smart_project yields ~150k one-triangle islands (an atlas of
     unusable confetti) and COLLAPSE decimation has no edges to collapse along."""
-    welded = 0
     for obj in meshes:
         select([obj])
         bpy.ops.object.mode_set(mode="EDIT")
         bpy.ops.mesh.select_all(action="SELECT")
         bpy.ops.mesh.remove_doubles(threshold=threshold)
         bpy.ops.object.mode_set(mode="OBJECT")
-        welded += len(obj.data.vertices)
-    return welded
 
 
 def repoint_uv_references():
@@ -347,7 +344,8 @@ def main():
         log("scaled %d root objects by %g -> metres" % (scale_roots(scene, cfg["scale"]), cfg["scale"]))
     unify_source_uvs(surfaces(scene))
     if cfg["weld"] is not None:
-        log("welded %d meshes -> %d verts" % (len(surfaces(scene)), weld(surfaces(scene), cfg["weld"])))
+        weld(surfaces(scene), cfg["weld"])
+        log("welded %d meshes" % len(surfaces(scene)))
 
     log("packed images (%d missing images removed)" % pack_images())
     bpy.ops.wm.save_as_mainfile(filepath=out)

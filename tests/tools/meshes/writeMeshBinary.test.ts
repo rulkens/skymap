@@ -4,6 +4,7 @@ import { decodeMesh, MESH_UNORM16_MAX } from '../../../src/data/mesh/meshBinaryF
 import { writeMeshBinary } from '../../../tools/meshes/writeMeshBinary';
 import { expectDirectionNear } from '../../helpers/meshes/expectDirectionNear';
 import { expectPositionNear } from '../../helpers/meshes/expectPositionNear';
+import { nearestVertex } from '../../helpers/meshes/nearestVertex';
 
 const UV_TOLERANCE = 0.5 / MESH_UNORM16_MAX + 1e-7;
 
@@ -49,13 +50,9 @@ describe('writeMeshBinary()', () => {
     expect(decoded.boundingRadiusM).toBe(6.5);
 
     // The writer reorders vertices; each decoded one is paired with its source by position.
-    const sourceOf = Array.from({ length: decoded.vertexCount }, (_, v) => {
-      const p = vec(decoded.positions, v, 3);
-      const dists = [0, 1, 2, 3].map((s) =>
-        Math.hypot(...p.map((c, k) => c - geometry.positions[s * 3 + k]!)),
-      );
-      return dists.indexOf(Math.min(...dists));
-    });
+    const sourceOf = Array.from({ length: decoded.vertexCount }, (_, v) =>
+      nearestVertex(geometry.positions, vec(decoded.positions, v, 3)),
+    );
     expect(new Set(sourceOf).size).toBe(4);
     expect(triangleSet(decoded.indices, (v) => sourceOf[v]!)).toEqual(
       triangleSet(geometry.indices, (v) => v),
@@ -80,11 +77,7 @@ describe('writeMeshBinary()', () => {
     // Source vertex 1's uv is the only one with a spilled u.
     const geometry = { ...quad(), uvs: new Float32Array([0, 0, 1.003, 0, 0, 1, 1, 1]) };
     const decoded = await decodeMesh(await writeMeshBinary(geometry));
-    const v = Array.from({ length: decoded.vertexCount }, (_, v) => v).find(
-      (v) =>
-        Math.hypot(...vec(decoded.positions, v, 3).map((c, k) => c - geometry.positions[3 + k]!)) <
-        1e-4,
-    )!;
+    const v = nearestVertex(decoded.positions, vec(geometry.positions, 1, 3));
     expect(vec(decoded.uvs, v, 2)[0]).toBeCloseTo(1, 3);
   });
 });
