@@ -38,6 +38,10 @@
   isolation: isolate;
 }
 
+.card:disabled {
+  cursor: default;
+}
+
 .card:hover,
 .card:focus-visible,
 .card.active {

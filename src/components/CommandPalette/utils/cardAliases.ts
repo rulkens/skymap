@@ -11,8 +11,9 @@ export function cardAliases(
   card: PaletteCard,
   famous: readonly FamousGalaxyMetaEntry[],
 ): readonly string[] {
-  if (card.action.kind !== 'focus') return [];
-  const entry = famous.find((f) => f.id === card.action.focusId);
+  const { action } = card;
+  if (action.kind !== 'focus') return [];
+  const entry = famous.find((f) => f.id === action.focusId);
   if (!entry) return [];
   return entry.names.filter((name) => name !== card.label);
 }

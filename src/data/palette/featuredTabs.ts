@@ -43,6 +43,12 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         action: { kind: 'focus', focusId: 'body-sun' },
       },
       {
+        id: 'solarSystem',
+        label: 'Solar System',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'solarSystem' },
+      },
+      {
         id: 'body-voyager1',
         label: 'Voyager 1',
         blurb: 'TODO',
@@ -77,6 +83,24 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Virgo Cluster',
         blurb: 'TODO',
         action: { kind: 'focus', focusId: 'cluster-virgo-m87' },
+      },
+      {
+        id: 'cosmicFlows',
+        label: 'Cosmic Flows',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'cosmicFlows' },
+      },
+      {
+        id: 'cosmicWeb',
+        label: 'Cosmic Web',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'cosmicWeb' },
+      },
+      {
+        id: 'observableUniverse',
+        label: 'Observable Universe',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'observableUniverse' },
       },
     ],
   },

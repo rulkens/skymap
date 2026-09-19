@@ -31,6 +31,8 @@ const RUN_ACTION: Record<
     dispatch(requestSelect(action.focusId));
     dispatch(requestFocus(action.focusId));
   },
+  // Placeholder until PR3, which dispatches `openView` here.
+  view: () => {},
 };
 
 function CommandPaletteContainer(): React.ReactElement {

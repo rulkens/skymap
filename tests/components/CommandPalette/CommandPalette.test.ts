@@ -10,6 +10,7 @@ import type { FamousGalaxyMetaEntry } from '../../../src/@types/loading/FamousGa
 import type { AliasIndexEntry } from '../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../src/@types/engine/StructureSearchEntry';
 import type { PaletteTab } from '../../../src/@types/palette/PaletteTab';
+import type { PaletteAction } from '../../../src/@types/palette/PaletteAction';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
@@ -51,6 +52,12 @@ const FIXTURE_TABS: readonly PaletteTab[] = [
         label: 'Saturn',
         blurb: 'A ringed planet.',
         action: { kind: 'focus', focusId: 'body-saturn' },
+      },
+      {
+        id: 'solarSystem',
+        label: 'Solar System',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'solarSystem' },
       },
     ],
   },
@@ -114,7 +121,7 @@ describe('CommandPalette', () => {
   });
 
   it('surfaces a structure when searched and routes it to onSelect by its durable id', async () => {
-    const onSelect = vi.fn<(action: { kind: 'focus'; focusId: string }) => void>();
+    const onSelect = vi.fn<(action: PaletteAction) => void>();
     const user = userEvent.setup();
     renderPalette({ structures: [COMA], onSelect });
     const input = screen.getByPlaceholderText(/search galaxies/i);
@@ -250,5 +257,15 @@ describe('CommandPalette', () => {
     await user.keyboard('{Enter}');
     expect(onTabChange).toHaveBeenCalledWith('missions');
     expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('a view placeholder card does not select or close', async () => {
+    const onSelect = vi.fn();
+    const onClose = vi.fn();
+    const user = userEvent.setup();
+    renderPalette({ onSelect, onClose });
+    await user.click(screen.getByRole('button', { name: 'Solar System' }));
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
   });
 });
