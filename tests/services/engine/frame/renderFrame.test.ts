@@ -613,9 +613,8 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
-    // No-timing path → 'merged' strategy: this fixture's `state.passes` has no
-    // composed ZoA pass, so the (zoa, COSMO) step never runs — the (hdr, COSMO)
-    // render step opens the FIRST
+    // No-timing path → 'merged' strategy: the (hdr, COSMO) render step opens
+    // the FIRST
     // `beginRenderPass(loadOp: 'clear')` holding the enabled COSMO hdr draws,
     // the (mw-aggregate, NEAR0) step opens a SECOND pass against the cloud's
     // own offscreen for its star billboards, the (hdr, NEAR0) step opens a
@@ -761,9 +760,7 @@ describe('renderFrame', () => {
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
-    // No-timing 'merged' path: this fixture's `state.passes` has no composed
-    // ZoA pass, so the (zoa, COSMO) step never runs — no pass opens for it.
-    // The (hdr, COSMO) render step
+    // No-timing 'merged' path: the (hdr, COSMO) render step
     // opens a pass holding the enabled COSMO hdr draws (here point-sprites;
     // the impostor subsystems are nulled out), closes it; the
     // (mw-aggregate, NEAR0) step opens a pass against the cloud's own
@@ -813,8 +810,7 @@ describe('renderFrame', () => {
     // cloud's own offscreen pass; the foreground:0 render selects nothing, so
     // foreground:0 is never touched and the foreground:0→swap composite is
     // touched-set-skipped. Net: exactly four passes (hdr COSMO + mw-aggregate
-    // + hdr NEAR0 + hdr→swap — this fixture's `state.passes` has no composed
-    // ZoA pass, so the zoa step never runs) and one compositor draw — no
+    // + hdr NEAR0 + hdr→swap) and one compositor draw — no
     // foreground:0 anywhere.
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
@@ -869,15 +865,13 @@ describe('renderFrame', () => {
     // Default fixture: volumeFieldRenderer null → deriveVolumeLiveness null →
     // BOTH the scalar-volume producer and the volume-upsample consumer gate
     // off the same fact, so they cannot disagree. Wire a volumeUpsample spy to
-    // prove the consumer is also hidden. Only the hdr + composite passes open
-    // — this fixture's `state.passes` has no composed ZoA pass either, so
-    // the zoa step never runs.
+    // prove the consumer is also hidden. Only the hdr + composite passes open.
     const upsampleDraw = vi.fn();
     (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     // hdr COSMO + mw-aggregate (cloud stars) + hdr NEAR0 (cloud dust) +
-    // composite, no volume pass, no zoa pass.
+    // composite, no volume pass.
     expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();

@@ -1,6 +1,5 @@
 /**
- * create — the band renderer and its additive upsample. No fade is driven
- * here; core owns the arrival edge (`installFadeOnArrival`).
+ * create — the band renderer and its additive upsample.
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

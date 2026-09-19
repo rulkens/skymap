@@ -68,7 +68,6 @@ function liveState(): EngineState {
   } as unknown as EngineState;
 }
 
-/** A runtime stub: the band renderer, mocked. */
 function makeRuntime(
   over: { draw?: ReturnType<typeof vi.fn>; drawPick?: ReturnType<typeof vi.fn> } = {},
 ): ZoneOfAvoidanceRuntime {

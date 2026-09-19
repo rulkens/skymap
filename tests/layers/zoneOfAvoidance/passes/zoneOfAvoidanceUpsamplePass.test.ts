@@ -51,7 +51,6 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
 
 function makeRuntime(upsampleDraw?: ReturnType<typeof vi.fn>): ZoneOfAvoidanceRuntime {
   return {
-    renderer: { draw: vi.fn(), drawPick: vi.fn() },
     upsample: { draw: upsampleDraw ?? vi.fn(), destroy: vi.fn() },
   } as unknown as ZoneOfAvoidanceRuntime;
 }
