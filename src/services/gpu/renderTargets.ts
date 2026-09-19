@@ -88,20 +88,6 @@
  * anywhere: the allocated texture size (`sizeOf`) is the record of the size in
  * force, and `reconcile` compares against it.
  *
- * ### Why the zone-of-avoidance row renders at 1/5 scale
- *
- * The band is a fullscreen 32-step ray march — the heaviest per-pixel
- * additive overlay after the scalar-volume raymarch, too costly to run at
- * full res. Same remedy as `volume` /
- * `star-aggregates` / `mw-aggregate`: the band is smooth low-frequency haze
- * with no high-frequency detail, so a 1/5-res raymarch bilinearly upsampled
- * into HDR is visually free while dropping fragment cost by the square of
- * the divisor (5 → 1/25th). The curved "Zone of Avoidance" lettering does
- * NOT ride this row — MSDF text needs crisp edges at any zoom, so it draws
- * straight into full-res HDR from the upsample layer, after the band
- * composites in. Clears to a=0 for the same additive-identity reason as its
- * three siblings.
- *
  * ### Why the foreground row carries a depth texture
  *
  * `foreground:0` is the first row to declare `depth`. The foreground pass

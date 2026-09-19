@@ -1,11 +1,8 @@
 /**
  * zoneOfAvoidanceUpsamplePass — composites the reduced-res `zoa` offscreen
- * into HDR, then draws the full-res curved lettering via `postBlit` — MSDF
- * text at reduced res would blur past legibility, so captions can't ride
- * the producer's reduced-res target.
- *
- * `postBlit` guards itself independently of the blit handle: the blit and
- * the caption must never suppress each other.
+ * into HDR, then draws the curved lettering full-res via `postBlit` (MSDF
+ * text at reduced res blurs past legibility). `postBlit` guards itself
+ * independently of the blit handle, so neither suppresses the other.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';

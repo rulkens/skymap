@@ -1,7 +1,6 @@
 /**
- * create — the band renderer and its additive upsample, in the order
- * `gpuHandleRegistry.ts` used to build them. No fade is driven here; core
- * owns the arrival edge (`installFadeOnArrival`).
+ * create — the band renderer and its additive upsample. No fade is driven
+ * here; core owns the arrival edge (`installFadeOnArrival`).
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';

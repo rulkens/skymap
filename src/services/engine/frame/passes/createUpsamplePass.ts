@@ -1,11 +1,9 @@
 /**
- * createUpsamplePass — shared factory behind the four HDR upsample content
- * layers (volume, star-aggregate, milky-way, zone-of-avoidance): a
- * screen-space blit of a reduced-res offscreen into HDR, ignoring the
+ * createUpsamplePass — shared factory behind the HDR upsample content passes:
+ * a screen-space blit of a reduced-res offscreen into HDR, ignoring the
  * resolved `SlabView`, gated by one liveness projection its producer shares
  * (see `UpsamplePassRow.d.ts`). `postBlit` guards itself independently of
- * the blit handle (ZoA's `zoneOfAvoidanceUpsamplePass.ts`) — a missing
- * handle must never suppress it.
+ * the blit handle — a missing handle must never suppress it.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
