@@ -76,7 +76,7 @@ import {
   DEFAULT_STAR_EXPOSURE_FAR_X,
   DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_SIZE_PX,
-  DEFAULT_REFINE_THRESHOLD,
+  DEFAULT_STAR_REFINE_THRESHOLD,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
@@ -167,7 +167,7 @@ export function makeSettingsFixture(
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
-      refineThreshold: DEFAULT_REFINE_THRESHOLD,
+      refineThreshold: DEFAULT_STAR_REFINE_THRESHOLD,
       glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
       exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
       exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,

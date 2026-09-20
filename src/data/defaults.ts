@@ -63,42 +63,27 @@ export const DEFAULT_STAR_BRIGHTNESS = 1.0;
  *
  * 3.0 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
  * shows the octree's box lattice as faceted seams between aggregates (see
- * `DEFAULT_REFINE_THRESHOLD` below for why a proxy threshold alone can't fully
+ * `DEFAULT_STAR_REFINE_THRESHOLD` below for why a proxy threshold alone can't fully
  * hide it). Spreading each aggregate's glow to 3.0x its box radius overlaps
  * neighbours enough to dissolve the lattice into a continuous far field. Tuned
- * together with `DEFAULT_REFINE_THRESHOLD` — see that constant's comment for
+ * together with `DEFAULT_STAR_REFINE_THRESHOLD` — see that constant's comment for
  * how the two compensate.
  */
 export const DEFAULT_STAR_GLOW_OVERLAP = 3.0;
 
 /**
- * Default refine threshold — seeds `settings.starCatalogs.refineThreshold` (the
- * "Detail" slider) and `walkStarOctreeCut`'s fallback when called with no
- * explicit threshold. A node refines while its box edge subtends more than
- * this fraction of its distance (`edgePc / distancePc > threshold`) — a
- * dimensionless distance-per-box-edge proxy for on-screen angle (radians-ish;
- * small-angle `edge/distance ≈ tan(angle) ≈ angle`). Below it the box is treated
- * as sub-pixel and drawn as one aggregate. 0.16 ≈ a box refines once it would
- * subtend more than ~9°, keeping every drawn aggregate visually small so the
- * octree's box lattice stays invisible instead of showing through as
- * faceted seams. That trades more draw calls (more refined nodes at a given
- * distance) for far-field continuity — it's the eye-tuning knob for that
- * trade, not a physical constant. With the flux-glow shader the *photometry*
- * of a coarse aggregate is already correct at any threshold (it's the
- * subtree's summed flux); what a threshold this loose exposes is the
- * *structure* — the aggregate's box edge itself becomes a visible seam
- * before it's small enough to read as a point.
+ * Default star-octree refine threshold — seeds `settings.starCatalogs.refineThreshold`
+ * (the "Detail" slider) and `walkStarOctreeCut`'s fallback; see there for the
+ * `edgePc / distancePc` proxy it compares against. Eye-tuned, not physical:
+ * a coarse aggregate's photometry is right at any threshold, what a loose one
+ * exposes is the octree's box lattice as faceted seams.
  *
- * 0.16 was eye-tuned together with `DEFAULT_STAR_GLOW_OVERLAP` (1.0 → 4.0),
- * not in isolation: the two knobs compensate for each other. A coarser cut
- * (higher threshold) collapses more of the far field into aggregates —
- * fewer drawn nodes, cheaper frame — but leaves bigger, more visible box
- * seams; the wider glow overlap then smooths those seams away. Retuning one
- * without the other reintroduces either a visible lattice (glow too narrow
- * for this coarse a cut) or a soft, aggregate-count-heavy far field (cut too
- * fine for this wide a glow) — check both together.
+ * LANDMINE: tuned jointly with `DEFAULT_STAR_GLOW_OVERLAP`, which hides the
+ * seams a coarser cut leaves. Moving one alone gives either a visible lattice
+ * (glow too narrow for the cut) or a soft, aggregate-heavy far field (cut too
+ * fine for the glow) — re-check both together.
  */
-export const DEFAULT_REFINE_THRESHOLD = 0.16;
+export const DEFAULT_STAR_REFINE_THRESHOLD = 0.16;
 
 /**
  * Default near-anchor star display exposure — seeds

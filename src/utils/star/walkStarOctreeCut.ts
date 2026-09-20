@@ -74,7 +74,7 @@ import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
 import type { StarCutSnapshot } from '../../@types/rendering/StarCutSnapshot';
 import type { StarCutFrustum } from '../../@types/rendering/StarCutFrustum';
 import { starOctreeIndex } from './starOctreeIndex';
-import { DEFAULT_REFINE_THRESHOLD } from '../../data/defaults';
+import { DEFAULT_STAR_REFINE_THRESHOLD } from '../../data/defaults';
 
 /** Guards the `edge / distance` ratio when the camera sits inside a box. */
 const MIN_DISTANCE_PC = 1e-6;
@@ -88,7 +88,7 @@ export function walkStarOctreeCut(
   // The user's live "Detail" knob. LOWER threshold ⇒ boxes split earlier
   // (fewer visible far-aggregate seams) at the cost of more drawn nodes.
   // Squared once here to match the squared on-screen-size proxy.
-  refineThreshold: number = DEFAULT_REFINE_THRESHOLD,
+  refineThreshold: number = DEFAULT_STAR_REFINE_THRESHOLD,
   // `null` (default) disables the off-screen prune; see the header.
   frustum: StarCutFrustum | null = null,
 ): StarCutSnapshot {

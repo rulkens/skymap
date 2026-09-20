@@ -17,7 +17,7 @@ import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import {
   DEFAULT_FLOW,
   DEFAULT_POINT_SIZE_PX,
-  DEFAULT_REFINE_THRESHOLD,
+  DEFAULT_STAR_REFINE_THRESHOLD,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
@@ -47,7 +47,7 @@ describe('INITIAL_SETTINGS', () => {
     expect(INITIAL_SETTINGS.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(INITIAL_SETTINGS.starCatalogs.sizePx).toBe(DEFAULT_STAR_SIZE_PX);
     expect(INITIAL_SETTINGS.starCatalogs.brightness).toBe(DEFAULT_STAR_BRIGHTNESS);
-    expect(INITIAL_SETTINGS.starCatalogs.refineThreshold).toBe(DEFAULT_REFINE_THRESHOLD);
+    expect(INITIAL_SETTINGS.starCatalogs.refineThreshold).toBe(DEFAULT_STAR_REFINE_THRESHOLD);
     expect(INITIAL_SETTINGS.starCatalogs.glowOverlap).toBe(DEFAULT_STAR_GLOW_OVERLAP);
     expect(INITIAL_SETTINGS.flow).toEqual(DEFAULT_FLOW);
   });

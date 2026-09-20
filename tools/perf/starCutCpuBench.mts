@@ -47,7 +47,7 @@ import {
   NODE_PARAMS_BYTES,
 } from '../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
-import { DEFAULT_STAR_SIZE_PX, DEFAULT_REFINE_THRESHOLD } from '../../src/data/defaults';
+import { DEFAULT_STAR_SIZE_PX, DEFAULT_STAR_REFINE_THRESHOLD } from '../../src/data/defaults';
 import {
   STAR_SIZE_REF_PX,
   STAR_GLOW_MIN_PX,
@@ -296,13 +296,13 @@ async function main(): Promise<void> {
 
       // A: walk with the prune OFF (baseline).
       const a0 = performance.now();
-      const off = walkStarOctreeCut(catalog, camPc, BUDGET, DEFAULT_REFINE_THRESHOLD);
+      const off = walkStarOctreeCut(catalog, camPc, BUDGET, DEFAULT_STAR_REFINE_THRESHOLD);
       const a1 = performance.now();
       const offCount = off.count;
 
       // B: walk with the prune ON, then partition + pack that (real) cut.
       const b0 = performance.now();
-      const on = walkStarOctreeCut(catalog, camPc, BUDGET, DEFAULT_REFINE_THRESHOLD, frustum);
+      const on = walkStarOctreeCut(catalog, camPc, BUDGET, DEFAULT_STAR_REFINE_THRESHOLD, frustum);
       const b1 = performance.now();
       partition(on, camMpc, nowMs);
       const b2 = performance.now();

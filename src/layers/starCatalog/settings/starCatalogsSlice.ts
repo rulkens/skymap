@@ -8,7 +8,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import {
-  DEFAULT_REFINE_THRESHOLD,
+  DEFAULT_STAR_REFINE_THRESHOLD,
   DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_EXPOSURE_FAR_X,
@@ -33,7 +33,7 @@ const initialState: StarCatalogSettings = {
   enabled: true,
   sizePx: DEFAULT_STAR_SIZE_PX,
   brightness: DEFAULT_STAR_BRIGHTNESS,
-  refineThreshold: DEFAULT_REFINE_THRESHOLD,
+  refineThreshold: DEFAULT_STAR_REFINE_THRESHOLD,
   glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
   exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
   exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
