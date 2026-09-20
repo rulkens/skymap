@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { captureEqual } from '../../../../tools/utils/capture/captureEqual';
+import { captureEqual } from '../../../tools/capture/captureEqual';
 
 describe('captureEqual', () => {
   it('ignores key order, so two copies authored in either order still agree', () => {

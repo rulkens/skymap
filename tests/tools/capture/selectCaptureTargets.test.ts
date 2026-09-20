@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { selectCaptureTargets } from '../../../../tools/utils/capture/selectCaptureTargets';
-import type { PaletteTab } from '../../../../src/@types/palette/PaletteTab';
-import type { PaletteCard } from '../../../../src/@types/palette/PaletteCard';
+import { selectCaptureTargets } from '../../../tools/capture/selectCaptureTargets';
+import type { PaletteTab } from '../../../src/@types/palette/PaletteTab';
+import type { PaletteCard } from '../../../src/@types/palette/PaletteCard';
 
 function focusCard(id: string, overrides: Partial<PaletteCard> = {}): PaletteCard {
   return {

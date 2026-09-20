@@ -1,5 +1,5 @@
-import type { PaletteTab } from '../../../src/@types/palette/PaletteTab';
-import type { PaletteCardCapture } from '../../../src/@types/palette/PaletteCardCapture';
+import type { PaletteTab } from '../../src/@types/palette/PaletteTab';
+import type { PaletteCardCapture } from '../../src/@types/palette/PaletteCardCapture';
 import type { CaptureTarget } from './CaptureTarget';
 import { captureEqual } from './captureEqual';
 import { isCapturableCopy } from './isCapturableCopy';
