@@ -15,8 +15,8 @@ import { poseMismatch } from './poseMismatch';
 import { shotPose } from './shotPose';
 import { writeThumbnail } from './writeThumbnail';
 import { POST_ESC_WAIT_MS, VIEWPORT } from './shotDefaults';
-import type { SceneShot } from './SceneShot';
-import type { ShotOutcome } from './ShotOutcome';
+import type { SceneShot } from '../../@types/capture/SceneShot';
+import type { ShotOutcome } from '../../@types/capture/ShotOutcome';
 
 export async function captureScene(
   browser: Browser,

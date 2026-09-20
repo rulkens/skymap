@@ -11,8 +11,8 @@ import { selectCaptureTargets } from './selectCaptureTargets';
 import { parseArgs } from './parseFeaturedArgs';
 import { DEFAULT_CAPTURE_T, OUTPUT_DIR } from './featuredDefaults';
 import { FEATURED_TABS } from '../../src/data/palette/featuredTabs';
-import type { CaptureTarget } from './CaptureTarget';
-import type { SceneShot } from '../utils/capture/SceneShot';
+import type { CaptureTarget } from './@types/CaptureTarget';
+import type { SceneShot } from '../@types/capture/SceneShot';
 
 function shotFor(target: CaptureTarget): SceneShot {
   return {
