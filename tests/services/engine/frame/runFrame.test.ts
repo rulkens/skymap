@@ -231,7 +231,7 @@ function makeState(): EngineState {
       loadProgress: null,
     },
     booted: false,
-    // runFrame looks up VIEW_RIGS[viewRig].views(ctx, state) once, ready-gated.
+    // runFrame looks up VIEW_RIGS[viewRig].views(canvas, state) once, ready-gated.
     viewRig: 'mono',
     assetSlots: {
       points: new Map(),
@@ -1095,9 +1095,9 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
   /**
    * A fully READY fixture, mirroring the label-director block's shape, plus
    * a spy'd `structureFocus` whose `produceFocusUniforms` returns a distinct
-   * sentinel object — so a hook's captured `ctx.focus` can be checked for
-   * reference equality against it, proving the hook runs AFTER the
-   * `ctx.focus = focusUniforms` assignment, not before.
+   * sentinel object — so a hook's captured `ctx.snapshot.focus` can be checked
+   * for reference equality against it, proving the hook runs AFTER the
+   * `snapshot.focus = focusUniforms` assignment, not before.
    */
   const SENTINEL_FOCUS: FocusUniformsValue = {
     center: [1, 2, 3],
@@ -1175,7 +1175,7 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     const focusSeenByA: { current: unknown } = { current: undefined };
     const layerA = makeLayer('a', (ctx) => {
       order.push('a');
-      focusSeenByA.current = ctx.focus;
+      focusSeenByA.current = ctx.snapshot.focus;
       return AT_REST;
     });
     const layerB = makeLayer('b', () => {

@@ -180,12 +180,12 @@ const views = VIEW_RIGS[state.viewRig].views(canvas, state);
 pickFrameContext(state, canvas): FrameView | null               // deriveView(deriveFrameContext(…pick mask…), mainViewSpec(…))
 ```
 
-- [ ] Both callers assemble their own `OrbitCamera` (`assembleOrbitCamera(pose, projection, poseBasis, upBasis)`) from what they already hold — `runFrame` from `worldPose` + `next.outputs.projection` + `ORIENTATION_FRAMES[…]` + `upBasis`; `pickFrameContext` from `liveWorldPose(state)` + the displayed outputs + the orientation frame twice.
-- [ ] Hoist `pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus)` out of the `if (state.booted)` scale-bar gate (`runFrame.ts:165-169`) and pass it as `altitudeMpc`: it is the same expression `frameContext.ts:268` computes today, so one call replaces two and the value is bit-identical. `pickFrameContext` computes its own from `state.cameraRuntime.outputs.displayed`, `liveWorldPose(state).distance` and `state.selectionRows.focus`.
-- [ ] `views` may now be computed **before** the stamps (they share `snapshot`). Delete the "AFTER the stamps" comment at `runFrame.ts:225-231`; keep the "ahead of the view-dependent planners" reason.
-- [ ] Every `ctx.` between `:199` and the `renderFrame` call becomes `canvas.` (view fields) or `canvas.snapshot.` (`nowMs`, `focus`, `simDays` via `sceneBodyStates`) — Task 8 owns the sweep's full census; do this file's now.
-- [ ] No new test: `runFrame.test.ts`, `poseFold.test.ts` and `engagedArmClock.test.ts` already pin the ordering these edits could break; re-point them and keep them green (`npm test -- runFrame poseFold engagedArmClock pickFrameContext meshBodyHost`).
-- [ ] Commit.
+- [x] Both callers assemble their own `OrbitCamera` (`assembleOrbitCamera(pose, projection, poseBasis, upBasis)`) from what they already hold — `runFrame` from `worldPose` + `next.outputs.projection` + `ORIENTATION_FRAMES[…]` + `upBasis`; `pickFrameContext` from `liveWorldPose(state)` + the displayed outputs + the orientation frame twice.
+- [x] Hoist `pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus)` out of the `if (state.booted)` scale-bar gate (`runFrame.ts:165-169`) and pass it as `altitudeMpc`: it is the same expression `frameContext.ts:268` computes today, so one call replaces two and the value is bit-identical. `pickFrameContext` computes its own from `state.cameraRuntime.outputs.displayed`, `liveWorldPose(state).distance` and `state.selectionRows.focus`.
+- [x] `views` may now be computed **before** the stamps (they share `snapshot`). Delete the "AFTER the stamps" comment at `runFrame.ts:225-231`; keep the "ahead of the view-dependent planners" reason.
+- [x] Every `ctx.` between `:199` and the `renderFrame` call becomes `canvas.` (view fields) or `canvas.snapshot.` (`nowMs`, `focus`, `simDays` via `sceneBodyStates`) — Task 8 owns the sweep's full census; do this file's now.
+- [x] No new test: `runFrame.test.ts`, `poseFold.test.ts` and `engagedArmClock.test.ts` already pin the ordering these edits could break; re-point them and keep them green (`npm test -- runFrame poseFold engagedArmClock pickFrameContext meshBodyHost`).
+- [x] Commit.
 
 ### Task 5: Captures derive the frame once per row
 

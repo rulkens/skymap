@@ -21,13 +21,16 @@ import type { Vec2 } from '../../../@types/math/Vec2';
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
+import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { cameraDofAnglesOf } from '../../../utils/camera/cameraDofAnglesOf';
+import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runMarkerProducers } from './runMarkerProducers';
 import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
+import { deriveView } from './deriveView';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
@@ -160,15 +163,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
+  // Eye→pivot-surface range NEAR0's bracket is sized from — the scale bar's
+  // `snap.distance` and `FrameContextInput.altitudeMpc` are the SAME line
+  // (`frameContext.ts` used to recompute it), so one call feeds both.
+  const altitudeMpc = pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus);
+
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
   // silently breaks the bar on retina.
   if (state.booted) {
-    const snap = {
-      distance: pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus),
-      fovYRad: projection.fovYRad,
-    };
     const scaleInfo = computeScaleInfo({
-      cam: snap,
+      cam: { distance: altitudeMpc, fovYRad: projection.fovYRad },
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
     });
@@ -177,24 +181,34 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
+  const cam = assembleOrbitCamera(worldPose, projection, poseBasis, upBasis);
+
   // The 'not ready' branch is the window before cam + GPU handles populate.
-  const ctx = deriveFrameContext(
-    state,
-    { width: deps.canvas.width, height: deps.canvas.height },
-    worldPose,
-    renderPose,
-    projection,
-    poseBasis,
-    upBasis,
-    masks.draw,
+  const snapshot = deriveFrameContext(state, {
+    cam,
+    arm: renderPose,
+    altitudeMpc,
     nowMs,
     simDays,
-  );
-  if (!ctx.isReady) {
+    visibleSourceMask: masks.draw,
+  });
+  if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
     return;
   }
+
+  // The frame's views, once — mono is `[canvas]` itself. `deriveView` reads
+  // no stamp: focus/focusBlend/layersSettling live only on `snapshot`, reached
+  // by reference from every view, so this can run ahead of them. It must
+  // still run ahead of the view-dependent planners below (surface cut, star
+  // cut) so they can walk every view's frustum without re-deriving this per
+  // planner.
+  const canvas = deriveView(
+    snapshot,
+    mainViewSpec(snapshot.cam, { width: deps.canvas.width, height: deps.canvas.height }),
+  );
+  const views = VIEW_RIGS[state.viewRig].views(canvas, state);
 
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
@@ -203,8 +217,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
-  ctx.focusBlend = focusUniforms.blend;
-  ctx.focus = focusUniforms;
+  snapshot.focusBlend = focusUniforms.blend;
+  snapshot.focus = focusUniforms;
 
   // Each Layer's `frame` hook, in tuple order, right after the focus uniform
   // and before any planner. No short-circuit: every hook runs every frame, so a
@@ -213,22 +227,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   let layersSettling = false;
   for (const layer of state.layers) {
     if (layer.frame === null) continue;
-    const vote = layer.frame(ctx, state);
+    const vote = layer.frame(canvas, state);
     // `settling` is folded into `awake` here rather than trusted to each Layer,
     // so the implication holds structurally: content too unsettled to bake is
     // by definition still changing.
     if (vote.awake || vote.settling) layersAwake = true;
     if (vote.settling) layersSettling = true;
   }
-  ctx.layersSettling = layersSettling;
-
-  // The frame's views, once — mono is `[ctx]` itself. AFTER the focusBlend /
-  // focus / layersSettling stamps above: `deriveViewContext` copies those
-  // from `main` onto every view, so computing views any earlier would hand
-  // them last frame's values. Ahead of the view-dependent planners below
-  // (surface cut, star cut) so they can walk every view's frustum without
-  // re-deriving this per planner.
-  const views = VIEW_RIGS[state.viewRig].views(ctx, state);
+  snapshot.layersSettling = layersSettling;
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
@@ -236,9 +242,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (publishBodyDistanceGate(nowMs)) {
     let focusedBodyDistanceMpc: number | null = null;
     if (focusRow !== null && focusRow.type === 'body') {
-      const bodyState = sceneBodyStates(state, ctx).get(focusRow.id);
+      const bodyState = sceneBodyStates(state, canvas).get(focusRow.id);
       if (bodyState !== undefined) {
-        focusedBodyDistanceMpc = distanceMpc(ctx.drawCamPos, bodyState.positionMpc);
+        focusedBodyDistanceMpc = distanceMpc(canvas.drawCamPos, bodyState.positionMpc);
       }
     }
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
@@ -251,7 +257,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // body `sceneBodyPartition` actually iterated, so its presence already
   // implies the body itself is seeded; no separate null check needed.
   const surfaceTiles = state.subsystems.surfaceTiles;
-  const surfaceTileSlab = ctx.slabs.find(
+  const surfaceTileSlab = canvas.slabs.find(
     (
       slab,
     ): slab is Slab & {
@@ -261,8 +267,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (surfaceTiles !== null && surfaceTileSlab !== undefined) {
     const bodyId = surfaceTileSlab.frame.bodyId;
     // The same slab view `earthPass.draw` samples into.
-    const surfaceTilesView = slabViewOf(ctx, surfaceTileSlab.index);
-    if (surfaceTilesEngaged(state, ctx, surfaceTilesView)) {
+    const surfaceTilesView = slabViewOf(canvas, surfaceTileSlab.index);
+    if (surfaceTilesEngaged(state, canvas, surfaceTilesView)) {
       // The tier off the COMMITTED texture slot, so a swap in flight cannot make
       // the planner believe in detail that is not on the GPU yet.
       const baseLevel = baseLevelForTier(bodyId, bodySurfaceTier(state, bodyId));
@@ -271,11 +277,11 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // nothing stale rather than last frame's cut.
       let cut: readonly SurfaceCutTile[] = [];
       if (params !== null) {
-        const prepared = prepareBodySurfaceFrame(state, ctx, surfaceTilesView);
+        const prepared = prepareBodySurfaceFrame(state, canvas, surfaceTilesView);
         if (prepared !== null) {
-          // Each view's own body slab vp AND viewport (mono: `ctx`'s, the memo
-          // hit above), so one cut and one fetch queue cover every view the
-          // frame draws — an XR eye sized differently than the main view
+          // Each view's own body slab vp AND viewport (mono: `canvas`'s, the
+          // memo hit above), so one cut and one fetch queue cover every view
+          // the frame draws — an XR eye sized differently than the main view
           // scales its own NDC against its own target, not a shared one.
           const rigViews: { viewProjLocal: Float64Array; viewportPx: Readonly<Vec2> }[] = [];
           for (const view of views) {
@@ -316,9 +322,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
   // short-circuits.
-  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, ctx);
-  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
-  const label3DAnimating = runLabel3DProducers(state, ctx);
+  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
   // ── Star-cut planner (advances the LOD fades, one cut for every view) ─────
@@ -336,15 +342,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //      `shouldKeepTicking` decides.
   // `advanceStarCut` is a no-op returning null when the star pass isn't live
   // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  const starCut = advanceStarCut(state, ctx, views);
+  const starCut = advanceStarCut(state, canvas, views);
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {
-    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
+    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, canvas));
   }
 
   renderFrame({
-    ctx,
+    ctx: canvas,
     views,
     state,
     device: deps.device,
