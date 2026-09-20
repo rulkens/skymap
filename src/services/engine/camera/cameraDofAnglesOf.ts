@@ -9,34 +9,34 @@
  * the 4 Hz debug snapshot and `runFrame`'s delta record both read THIS.
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyState } from '../../@types/scene/BodyState';
-import type { CameraDofAngles } from '../../@types/camera/CameraDofAngles';
-import type { CameraDofRow } from '../../@types/camera/CameraDofRow';
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { Mat3 } from '../../@types/math/Mat3';
-import type { PoseFrame } from '../../@types/camera/PoseFrame';
-import type { Vec3 } from '../../@types/math/Vec3';
-import { hOverR } from '../../services/engine/camera/hOverR';
-import { nearestBodyHR } from '../../services/engine/camera/nearestBodyHR';
-import { bandRollTarget } from '../../services/engine/camera/frameAlignedRoll';
-import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
-import { hostOf } from '../../services/engine/camera/rungs/hostOf';
-import { rungKindOf } from '../../services/engine/camera/rungs/rungKindOf';
-import { blendedEnuAt } from './blendedEnuAt';
-import { bodyUpWeight } from './bodyUpWeight';
-import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
-import { eyeMpcOf } from './eyeMpcOf';
-import { frameUp } from './frameUp';
-import { imagePlaneBasis } from './imagePlaneBasis';
-import { mappedTiltRad } from './mappedTiltRad';
-import { refAzimuthOf } from './refAzimuthOf';
-import { tiltFromNadirRad } from './tiltFromNadirRad';
-import { mat3FromColumns } from '../math/mat3FromColumns';
-import { normalize3 } from '../math/normalize3';
-import { rotateVec3ByTightMat3T } from '../math/rotateVec3ByTightMat3T';
-import { wrapRad } from '../math/wrapRad';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { CameraDofAngles } from '../../../@types/camera/CameraDofAngles';
+import type { CameraDofRow } from '../../../@types/camera/CameraDofRow';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
+import type { Mat3 } from '../../../@types/math/Mat3';
+import type { PoseFrame } from '../../../@types/camera/PoseFrame';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { hOverR } from './hOverR';
+import { nearestBodyHR } from './nearestBodyHR';
+import { bandRollTarget } from './frameAlignedRoll';
+import { bodyRelativePose } from './bodyRelativePose';
+import { hostOf } from './rungs/hostOf';
+import { rungKindOf } from './rungs/rungKindOf';
+import { blendedEnuAt } from '../../../utils/camera/blendedEnuAt';
+import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
+import { frameUp } from '../../../utils/camera/frameUp';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
+import { refAzimuthOf } from '../../../utils/camera/refAzimuthOf';
+import { tiltFromNadirRad } from '../../../utils/camera/tiltFromNadirRad';
+import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
+import { normalize3 } from '../../../utils/math/normalize3';
+import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
+import { wrapRad } from '../../../utils/math/wrapRad';
 
 const ABSENT: CameraDofRow = { currentRad: null, targetRad: null, residualRad: null };
 

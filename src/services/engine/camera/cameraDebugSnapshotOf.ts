@@ -23,7 +23,7 @@ import type { ResidentHeightLevelLookup } from '../../../@types/camera/ResidentH
 import type { TimeState } from '../../../@types/time/TimeState';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import { deriveSimDays } from '../../../utils/time/deriveSimDays';
-import { cameraDofAnglesOf } from '../../../utils/camera/cameraDofAnglesOf';
+import { cameraDofAnglesOf } from './cameraDofAnglesOf';
 import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
