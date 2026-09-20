@@ -155,17 +155,17 @@ The file's 137-line module header redistributes; nothing load-bearing is lost.
 
 ## Task 6 — User smoke test
 
-- [ ] Star bubble at solar-neighbourhood zoom: dots unchanged, no popping.
-- [ ] Pan/rotate fast at star-field zoom: no stars winking out at the screen edge
+- [x] Star bubble at solar-neighbourhood zoom: dots unchanged, no popping.
+- [x] Pan/rotate fast at star-field zoom: no stars winking out at the screen edge
       (the cull-slack fix should make this _less_ likely, never more).
-- [ ] Click a field star: still selectable, including near the screen edge.
-- [ ] Pull back through the ~2→5 kpc band: crossfade to the Milky Way cloud unchanged.
+- [x] Click a field star: still selectable, including near the screen edge.
+- [x] Pull back through the ~2→5 kpc band: crossfade to the Milky Way cloud unchanged.
 
 ## Definition of Done
 
-- [ ] `npm test`, `npm run typecheck`, `npm run build` green.
-- [ ] `frameFilePurity` has no `starCatalogPass` row.
-- [ ] No file imports from `frame/passes/starCatalogPass` except the frame order.
-- [ ] `src/utils/star/` holds only one-symbol-per-file pure helpers.
-- [ ] `renderers/starCatalog/` root holds only renderers + `starCatalogLayout`.
-- [ ] Task 6 smoke attested by the user.
+- [x] `npm test`, `npm run typecheck`, `npm run build` green.
+- [x] `frameFilePurity` has no `starCatalogPass` row.
+- [x] No file imports from `frame/passes/starCatalogPass` except the frame order.
+- [x] `src/utils/star/` holds only one-symbol-per-file pure helpers.
+- [x] `renderers/starCatalog/` root holds only renderers + `starCatalogLayout`.
+- [x] Task 6 smoke attested by the user.
