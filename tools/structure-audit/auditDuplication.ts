@@ -19,7 +19,6 @@ export async function auditDuplication(
     minLines: threshold.minLines,
     minTokens: threshold.minTokens,
     format: ['typescript', 'tsx'],
-    ignore: ['**/*.d.ts'],
     silent: true,
     reporters: [],
   });

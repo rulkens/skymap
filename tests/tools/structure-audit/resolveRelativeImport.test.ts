@@ -3,7 +3,13 @@ import { resolveRelativeImport } from '../../../tools/structure-audit/resolveRel
 
 describe('resolveRelativeImport', () => {
   const src = '/repo/src';
-  const known = new Set(['utils/a.ts', 'components/B/B.tsx', 'utils/math/index.ts', 'data/x.wesl']);
+  const known = new Set([
+    'utils/a.ts',
+    'components/B/B.tsx',
+    'utils/math/index.ts',
+    'data/x.wesl',
+    '@types/T.d.ts',
+  ]);
   const r = (fromAbs: string, spec: string) => resolveRelativeImport(fromAbs, spec, src, known);
 
   it('resolves .ts, .tsx and index forms, strips vite suffixes, ignores packages', () => {
@@ -12,6 +18,7 @@ describe('resolveRelativeImport', () => {
     expect(r('/repo/src/utils/b.ts', './math')).toBe('utils/math/index.ts');
     expect(r('/repo/src/utils/b.ts', '../data/x.wesl?static')).toBe('data/x.wesl');
     expect(r('/repo/src/utils/b.ts', 'react')).toBeNull();
+    expect(r('/repo/src/utils/b.ts', '../@types/T')).toBe('@types/T.d.ts');
     expect(r('/repo/src/utils/b.ts', './missing')).toBeNull();
   });
 

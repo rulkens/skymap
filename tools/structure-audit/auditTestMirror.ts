@@ -15,6 +15,7 @@ export function auditTestMirror(graph: ImportGraph, testFiles: readonly string[]
   }
   const mirror = new Map<string, { files: number; tested: number; untested: string[] }>();
   for (const [f, node] of Object.entries(graph.nodes)) {
+    if (f.endsWith('.d.ts')) continue;
     const stem = basename(f).replace(/\.tsx?$/, '');
     const twins = byDir.get(dirname(f)) ?? [];
     const tested = twins.some((t) => t.startsWith(`${stem}.`));
