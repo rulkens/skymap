@@ -85,7 +85,7 @@ import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { BodyPointPick } from '../../../../@types/rendering/BodyPickRenderer';
+import type { BodyPointPick } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPick';
 import { NEAR0 } from '../slabs';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from '../partitionStarsByResolution';
 import { positionedVisibleStars } from '../positionedVisibleStars';

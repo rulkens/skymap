@@ -67,7 +67,7 @@ import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { SurfaceTileDrawArgs } from '../../../../../src/@types/rendering/SurfaceTileRenderer';
+import type { SurfaceTileDrawArgs } from '../../../../../src/@types/rendering/surfaceTileRenderer/SurfaceTileDrawArgs';
 
 // Mock the two body-slab compose primitives so the test can (a) assert which
 // vp/pose they consumed by argument identity and (b) hand the layer

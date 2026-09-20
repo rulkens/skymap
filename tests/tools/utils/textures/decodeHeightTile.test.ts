@@ -1,7 +1,7 @@
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
-import type { HeightTile } from '../../../../tools/textures/HeightTile';
+import type { HeightTile } from '../../../../tools/textures/@types/HeightTile';
 import {
   HEIGHT_CODE_BYTES,
   HEIGHT_CODE_MAX,

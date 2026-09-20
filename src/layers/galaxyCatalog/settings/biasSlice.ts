@@ -6,7 +6,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_ABS_MAG_LIMIT, DEFAULT_BIAS_MODE } from '../../../data/defaults';
+import { DEFAULT_ABS_MAG_LIMIT, DEFAULT_BIAS_MODE } from './defaults';
 import type { BiasMode } from '../../../@types/data/galaxyCatalog/BiasMode';
 import type { BiasSettings } from '../../../@types/settings/BiasSettings';
 

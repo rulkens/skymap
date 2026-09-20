@@ -47,7 +47,10 @@ import {
   NODE_PARAMS_BYTES,
 } from '../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
-import { DEFAULT_STAR_SIZE_PX, DEFAULT_STAR_REFINE_THRESHOLD } from '../../src/data/defaults';
+import {
+  DEFAULT_STAR_SIZE_PX,
+  DEFAULT_STAR_REFINE_THRESHOLD,
+} from '../../src/layers/starCatalog/settings/defaults';
 import {
   STAR_SIZE_REF_PX,
   STAR_GLOW_MIN_PX,

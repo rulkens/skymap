@@ -18,9 +18,9 @@ import { flowFadeRows } from '../../../src/layers/flow/present/flowFadeRows';
 
 import type { FadeId } from '../../../src/@types/animation/FadeId';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { FilamentsRuntime } from '../../../src/layers/filaments/types/FilamentsRuntime';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
-import type { FlowRuntime } from '../../../src/layers/flow/types/FlowRuntime';
+import type { FilamentsRuntime } from '../../../src/layers/filaments/@types/FilamentsRuntime';
+import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import type { FadeBridgeState } from './FadeBridgeState';
 
 /** Every catalog committed, so the `survey` row's demand-loaded guard passes. */

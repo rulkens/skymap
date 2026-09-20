@@ -26,8 +26,8 @@ import { mat4 } from 'wgpu-matrix';
 import { createStarCatalogPickRenderer } from '../../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
 import { Source } from '../../../../../src/data/sources';
-import type { StarCatalogPickResources } from '../../../../../src/@types/rendering/StarCatalogRenderer';
-import type { StarCatalogPickDrawArgs } from '../../../../../src/@types/rendering/StarCatalogPickRenderer';
+import type { StarCatalogPickResources } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogPickResources';
+import type { StarCatalogPickDrawArgs } from '../../../../../src/@types/rendering/starCatalogPickRenderer/StarCatalogPickDrawArgs';
 
 // A GPU device stub: every `create*` returns a plausibly-shaped stand-in and
 // `queue.writeBuffer` is spied. Buffers carry their `label` so a test can prove

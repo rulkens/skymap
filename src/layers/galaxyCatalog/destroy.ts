@@ -3,7 +3,7 @@
  * hi-res pair are destroyed by hand, subsystems before the renderers they hold.
  */
 
-import type { GalaxyCatalogRuntime } from './types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
 export function destroy(runtime: GalaxyCatalogRuntime): void {
   runtime.biasCorrection.destroy();

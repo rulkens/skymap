@@ -19,7 +19,7 @@ import { DEFAULT_FOV_Y_RAD } from '../../../../../src/services/engine/camera/cam
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
-import { DEFAULT_STAR_SIZE_PX } from '../../../../../src/data/defaults';
+import { DEFAULT_STAR_SIZE_PX } from '../../../../../src/layers/starCatalog/settings/defaults';
 import { STAR_SIZE_REF_PX, STAR_GLOW_MIN_PX } from '../../../../../src/data/starCullSlack';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
@@ -27,8 +27,8 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
-import type { StarCatalogPickDrawArgs } from '../../../../../src/@types/rendering/StarCatalogPickRenderer';
+import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
+import type { StarCatalogPickDrawArgs } from '../../../../../src/@types/rendering/starCatalogPickRenderer/StarCatalogPickDrawArgs';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const PASS_STUB = {

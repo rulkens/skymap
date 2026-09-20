@@ -12,7 +12,7 @@ import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { FILAMENT_RECESSION } from '../../../../src/services/engine/presentation/focusRecession';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FilamentsRuntime } from '../../../../src/layers/filaments/types/FilamentsRuntime';
+import type { FilamentsRuntime } from '../../../../src/layers/filaments/@types/FilamentsRuntime';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 

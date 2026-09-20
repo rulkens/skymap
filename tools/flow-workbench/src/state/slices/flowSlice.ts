@@ -31,7 +31,7 @@
  */
 import type { FlowSettings } from '../../../../../src/@types/settings/FlowSettings';
 import type { FlowMode } from '../../../../../src/@types/data/flow/FlowMode';
-import { DEFAULT_FLOW } from '../../../../../src/data/defaults';
+import { DEFAULT_FLOW } from '../../../../../src/layers/flow/settings/defaults';
 
 export const defaultFlowSlice: FlowSettings = { ...DEFAULT_FLOW, enabled: true };
 

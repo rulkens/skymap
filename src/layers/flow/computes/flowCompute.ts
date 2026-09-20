@@ -7,7 +7,7 @@
  */
 
 import type { ContentCompute } from '../../../@types/engine/frame/ContentCompute';
-import type { FlowRuntime } from '../types/FlowRuntime';
+import type { FlowRuntime } from '../@types/FlowRuntime';
 import { slotReady } from '../../../services/loading/slotReady';
 
 export function flowCompute(runtime: FlowRuntime): ContentCompute {

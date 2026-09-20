@@ -10,7 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { FLOW_SLIDER_FIELDS } from '../../../src/data/flow/flowFields';
-import { DEFAULT_FLOW } from '../../../src/data/defaults';
+import { DEFAULT_FLOW } from '../../../src/layers/flow/settings/defaults';
 
 describe('FLOW_SLIDER_FIELDS — parity with FlowSettings numeric leaves', () => {
   it('covers exactly the number-valued keys of DEFAULT_FLOW', () => {

@@ -2,7 +2,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_ORBIT_TRAILS_ENABLED } from '../../../data/defaults';
+import { DEFAULT_ORBIT_TRAILS_ENABLED } from './defaults';
 import type { OrbitTrailsSettings } from '../../../@types/settings/OrbitTrailsSettings';
 
 // Orbit-trails singleton overlay: the master gate on the near-field Keplerian

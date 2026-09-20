@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { frame } from '../../../src/layers/flow/frame';
-import type { FlowRuntime } from '../../../src/layers/flow/types/FlowRuntime';
+import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 

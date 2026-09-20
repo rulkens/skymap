@@ -64,9 +64,9 @@ import { SURFACE_FIXED_SITES } from '../../src/data/bodies/surfaceFixedSites';
 import { buildSiteGroundHeights } from './buildSiteGroundHeights';
 import { earthSurfaceBake } from './surfaceBodies/earthSurfaceBake';
 import { marsSurfaceBake } from './surfaceBodies/marsSurfaceBake';
-import type { SurfaceBakeBand } from './SurfaceBakeBand';
-import type { SurfaceBodyBake } from './SurfaceBodyBake';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceBakeBand } from './@types/SurfaceBakeBand';
+import type { SurfaceBodyBake } from './@types/SurfaceBodyBake';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { underfillImagerySource } from './underfillImagerySource';
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 

@@ -63,7 +63,7 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
-import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalog } from '../../../@types/data/galaxyCatalog/GalaxyCatalog';
 import { Source } from '../../../data/sources';

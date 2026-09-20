@@ -36,7 +36,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
-import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../../../../src/@types/loading/structureCatalogPayload/StructureCatalogPayload';
 
 // ── Module mocks ───────────────────────────────────────────────────────
 

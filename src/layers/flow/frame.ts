@@ -6,7 +6,7 @@
 import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { LayerFrameVote } from '../../@types/engine/layer/LayerFrameVote';
-import type { FlowRuntime } from './types/FlowRuntime';
+import type { FlowRuntime } from './@types/FlowRuntime';
 import { slotReady } from '../../services/loading/slotReady';
 
 export function frame(runtime: FlowRuntime): (ctx: FrameView, state: PassState) => LayerFrameVote {

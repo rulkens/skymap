@@ -8,7 +8,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { frame } from '../../../src/layers/galaxyCatalog/frame';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 

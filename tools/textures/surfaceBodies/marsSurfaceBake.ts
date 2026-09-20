@@ -27,11 +27,11 @@ import { constantHeightSource } from '../constantHeightSource';
 import { delightedImagerySource } from '../delightedImagerySource';
 import { geoTiffHeightSource } from '../geoTiffHeightSource';
 import { geoTiffImagerySource } from '../geoTiffImagerySource';
-import type { GeoTiffGrid } from '../GeoTiffGrid';
-import type { HeightSource } from '../HeightSource';
-import type { SurfaceBakeBand } from '../SurfaceBakeBand';
-import type { SurfaceBodyBake } from '../SurfaceBodyBake';
-import type { SurfaceImagerySource } from '../SurfaceImagerySource';
+import type { GeoTiffGrid } from '../@types/GeoTiffGrid';
+import type { HeightSource } from '../@types/HeightSource';
+import type { SurfaceBakeBand } from '../@types/SurfaceBakeBand';
+import type { SurfaceBodyBake } from '../@types/SurfaceBodyBake';
+import type { SurfaceImagerySource } from '../@types/SurfaceImagerySource';
 import { MARS_VIKING_DELIGHT, MARS_VIKING_GRADE } from './marsAlbedoRecipe';
 
 const TILE_ROOT = SURFACE_TILE_REGISTRY.mars.manifestKey;

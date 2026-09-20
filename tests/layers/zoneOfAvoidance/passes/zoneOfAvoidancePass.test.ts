@@ -13,7 +13,7 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
-import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/types/ZoneOfAvoidanceRuntime';
+import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime';
 
 const PASS_STUB = {
   setPipeline: vi.fn(),
