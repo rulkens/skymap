@@ -18,11 +18,8 @@ export function auditDeadExports(graph: ImportGraph, roots: DeadExportRoots): De
   const files = Object.keys(graph.nodes);
   const known = new Set(files);
   const exportsOf = new Map<string, Set<string>>();
-  for (const f of files) {
-    const source = readFileSync(join(roots.src, f), 'utf8');
-    exportsOf.set(f, new Set(exportedNames(source)));
-  }
-
+  const usedInSrc = new Map<string, Set<string>>();
+  const usedElsewhere = new Map<string, Set<string>>();
   const mark = (importerAbs: string, source: string, into: Map<string, Set<string>>): void => {
     for (const imp of parseImports(source)) {
       const target = resolveRelativeImport(importerAbs, imp.spec, roots.src, known);
@@ -31,10 +28,11 @@ export function auditDeadExports(graph: ImportGraph, roots: DeadExportRoots): De
       for (const n of imp.names) set.add(n);
     }
   };
-  const usedInSrc = new Map<string, Set<string>>();
-  const usedElsewhere = new Map<string, Set<string>>();
-  for (const f of files)
-    mark(join(roots.src, f), readFileSync(join(roots.src, f), 'utf8'), usedInSrc);
+  for (const f of files) {
+    const source = readFileSync(join(roots.src, f), 'utf8');
+    exportsOf.set(f, new Set(exportedNames(source)));
+    mark(join(roots.src, f), source, usedInSrc);
+  }
   for (const abs of roots.others) mark(abs, readFileSync(abs, 'utf8'), usedElsewhere);
 
   const dead: ExportRef[] = [];

@@ -7,7 +7,7 @@ export const OUT_FILE = join(ROOT, 'tools', 'structure-audit', 'out', 'structure
 export const STRICT_CLONES = { minLines: 8, minTokens: 60 };
 export const LOOSE_CLONES = { minLines: 5, minTokens: 40 };
 /** How many fan-in / fan-out hub files the Hubs tab lists. */
-export const TOP_HUBS = 40;
+export const TOP_HUBS = 20;
 /** How many largest cycles (by file count) the Cycles tab lists. */
 export const TOP_CYCLES = 40;
 /** Bundle entry points: nothing imports them by design, so the dead-export audit skips them. */

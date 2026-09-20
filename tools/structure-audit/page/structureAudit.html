@@ -17,7 +17,6 @@
     --accent-soft: #cde2fb;
     --critical: #d03b3b;
     --critical-soft: #f8dcdc;
-    --warn: #c98500;
     --g-leaves: #2a78d6;
     --g-services: #eb6834;
     --g-engine: #1baf7a;
@@ -46,7 +45,6 @@
       --accent-soft: #1c3a5e;
       --critical: #e66767;
       --critical-soft: #4a2020;
-      --warn: #e0a04c;
       --g-leaves: #3987e5;
       --g-services: #d95926;
       --g-engine: #199e70;
@@ -59,31 +57,6 @@
       --seq4: #3987e5;
       --seq5: #86b6ef;
     }
-  }
-  :root[data-theme='dark'] {
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --ink: #ffffff;
-    --ink2: #c3c2b7;
-    --muted: #898781;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --accent: #3987e5;
-    --accent-soft: #1c3a5e;
-    --critical: #e66767;
-    --critical-soft: #4a2020;
-    --warn: #e0a04c;
-    --g-leaves: #3987e5;
-    --g-services: #d95926;
-    --g-engine: #199e70;
-    --g-state: #c98500;
-    --g-layers: #d55181;
-    --g-ui: #3fa03f;
-    --seq1: #184f95;
-    --seq2: #1c5cab;
-    --seq3: #256abf;
-    --seq4: #3987e5;
-    --seq5: #86b6ef;
   }
   * {
     box-sizing: border-box;
@@ -124,8 +97,7 @@
   .lede {
     color: var(--ink2);
   }
-  code,
-  .mono {
+  code {
     font-family: var(--mono);
     font-size: 12.5px;
   }
@@ -359,10 +331,6 @@
     inset: 2px;
     border: 2px solid var(--critical);
     border-radius: 2px;
-  }
-  .matrix td.hot {
-    outline: 2px solid var(--ink);
-    z-index: 1;
   }
   .matrix tr.gstart td,
   .matrix tr.gstart th.row {
@@ -804,9 +772,9 @@
         <dt>Area</dt>
         <dd>
           A top-level folder of <code>src/</code>, split one level deeper for
-          <code>services/</code>, <code>services/engine/</code> and <code>layers/</code>. 43 areas.
-          Imports inside one area are ignored everywhere on this page; only imports that cross an
-          area boundary are shown.
+          <code>services/</code>, <code>services/engine/</code> and <code>layers/</code>.
+          <span id="area-count"></span> areas. Imports inside one area are ignored everywhere on
+          this page; only imports that cross an area boundary are shown.
         </dd>
         <dt>Tier</dt>
         <dd>
@@ -994,6 +962,7 @@
 
 <script>
   const D = __DATA__;
+  document.getElementById('area-count').textContent = D.areas.length;
   const GROUP_LABEL = {
     leaves: 'Leaves',
     services: 'Services',
@@ -1359,173 +1328,6 @@
     });
   }
 
-  // ---------- state
-  {
-    const st = D.state;
-    const byArea = (rows, key = 'f') => {
-      const m = {};
-      for (const r of rows) m[r.area] = (m[r.area] ?? 0) + (r.n ?? 1);
-      return Object.entries(m).sort((a, b) => b[1] - a[1]);
-    };
-    const bars = (rows) => {
-      const max = Math.max(...rows.map((r) => r[1]));
-      const b = el('div', { class: 'bars' });
-      for (const [a, n] of rows)
-        b.append(
-          el('span', { class: 'lab' }, a),
-          el(
-            'div',
-            {},
-            el('div', {
-              class: 'bar',
-              style: 'width:' + (100 * n) / max + '%;--gc:var(--g-' + groupOf[a] + ')',
-            }),
-          ),
-          el('span', {}, n),
-        );
-      return b;
-    };
-    const fileList = (rows, right) =>
-      el(
-        'ul',
-        { class: 'list' },
-        rows.map((r) =>
-          el(
-            'li',
-            {},
-            el(
-              'span',
-              {},
-              el('b', {}, r.f),
-              r.text ? ' · ' + r.text : '',
-              r.role ? el('span', { class: 'pill ' + r.role }, r.role) : null,
-            ),
-            el('em', {}, right(r)),
-          ),
-        ),
-      );
-    const tabs = [
-      [
-        'Module-level let',
-        st.moduleLet.length,
-        () => [
-          el(
-            'p',
-            { class: 'note', style: 'margin:0 0 10px' },
-            'Bare mutable variables at module scope: the strongest signal of state outside RTK. Most are lazy caches; all of them are process-global singletons.',
-          ),
-          fileList(st.moduleLet, (r) => 'line ' + r.line),
-        ],
-      ],
-      [
-        'Module-level Map/Set',
-        st.containers.length,
-        () => [
-          el(
-            'p',
-            { class: 'note', style: 'margin:0 0 10px' },
-            'Containers built once at import time. Lookup = immutable index over static data (fine). Cache = WeakMap or named cache, keyed by an object (memo state). Mutable = written after construction.',
-          ),
-          fileList(
-            st.containers.sort((a, b) => a.role.localeCompare(b.role)),
-            (r) => r.kind + ' · line ' + r.line,
-          ),
-        ],
-      ],
-      [
-        'Closure cells',
-        st.closure.length,
-        () => [
-          el(
-            'p',
-            { class: 'note', style: 'margin:0 0 10px' },
-            'let declarations directly inside a top-level function body: the private state of factories (renderers, subsystems, sagas). Legitimate engine runtime state, but this is where non-RTK state actually lives. Counted per file, top 60 shown.',
-          ),
-          bars(byArea(st.closure)),
-          el('div', { style: 'height:16px' }),
-          fileList(st.closure.slice(0, 60), (r) => r.n + ' cells · ' + r.code + ' lines'),
-        ],
-      ],
-      [
-        'RTK slices',
-        st.slices.length,
-        () => [
-          el(
-            'p',
-            { class: 'note', style: 'margin:0 0 10px' },
-            'createSlice call sites by area. Layer-owned slices under layers/*/settings are the layer-composition target.',
-          ),
-          bars(byArea(st.slices)),
-          el('div', { style: 'height:16px' }),
-          fileList(st.slices, (r) => 'line ' + r.line),
-        ],
-      ],
-      [
-        'React local state',
-        st.reactState.length,
-        () => [
-          el(
-            'p',
-            { class: 'note', style: 'margin:0 0 10px' },
-            'useState / useRef / useReducer per component file. Small; UI-only conveniences.',
-          ),
-          fileList(st.reactState, (r) => r.n + ' hook' + (r.n > 1 ? 's' : '')),
-        ],
-      ],
-      [
-        'Classes',
-        st.classes.length,
-        () => [
-          el(
-            'p',
-            { class: 'note', style: 'margin:0 0 10px' },
-            'class declarations in src. The codebase is factory-closure style; these are the exceptions.',
-          ),
-          fileList(st.classes, (r) => 'line ' + r.line),
-        ],
-      ],
-    ];
-    const tabBar = document.getElementById('state-tabs'),
-      body = document.getElementById('state-body');
-    let active = 0;
-    const draw = () => {
-      tabBar.innerHTML = '';
-      body.innerHTML = '';
-      tabs.forEach(([l, n, render], i) => {
-        tabBar.append(
-          el(
-            'button',
-            {
-              class: 'tab',
-              role: 'tab',
-              type: 'button',
-              id: 'state-tab-' + i,
-              'aria-selected': String(i === active),
-              onclick: () => {
-                active = i;
-                draw();
-              },
-            },
-            l + ' ',
-            el('b', {}, '(' + n + ')'),
-          ),
-        );
-      });
-      body.append(...tabs[active][2]());
-    };
-    draw();
-  }
-
-  // ---------- hubs
-  {
-    const fi = document.getElementById('fanin'),
-      fo = document.getElementById('fanout');
-    for (const [f, n] of D.fanIn.slice(0, 20))
-      fi.append(el('li', {}, el('span', {}, el('b', {}, f)), el('em', {}, n + ' importers')));
-    for (const [f, n] of D.fanOut.slice(0, 20))
-      fo.append(el('li', {}, el('span', {}, el('b', {}, f)), el('em', {}, n + ' imports')));
-  }
-
   // ---------- shared tab helper
   const tabbed = (barId, bodyId, tabs) => {
     const bar = document.getElementById(barId),
@@ -1583,11 +1385,96 @@
       );
     return b;
   };
-  const byAreaCount = (items) => {
+  const byArea = (rows) => {
     const m = {};
-    for (const r of items) m[r.area] = (m[r.area] ?? 0) + 1;
+    for (const r of rows) m[r.area] = (m[r.area] ?? 0) + (r.n ?? 1);
     return Object.entries(m).sort((a, b) => b[1] - a[1]);
   };
+
+  // ---------- state
+  {
+    const st = D.state;
+    const left = (r) => [
+      el('b', {}, r.f),
+      r.text ? ' · ' + r.text : '',
+      r.role ? el('span', { class: 'pill ' + r.role }, r.role) : null,
+    ];
+    const tabs = [
+      [
+        'Module-level let',
+        st.moduleLet.length,
+        () => [
+          note(
+            'Bare mutable variables at module scope: the strongest signal of state outside RTK. Most are lazy caches; all of them are process-global singletons.',
+          ),
+          rows(st.moduleLet, left, (r) => 'line ' + r.line),
+        ],
+      ],
+      [
+        'Module-level Map/Set',
+        st.containers.length,
+        () => [
+          note(
+            'Containers built once at import time. Lookup = immutable index over static data (fine). Cache = WeakMap or named cache, keyed by an object (memo state). Mutable = written after construction.',
+          ),
+          rows(st.containers, left, (r) => r.kind + ' · line ' + r.line),
+        ],
+      ],
+      [
+        'Closure cells',
+        st.closure.length,
+        () => [
+          note(
+            'let declarations directly inside a top-level function body: the private state of factories (renderers, subsystems, sagas). Legitimate engine runtime state, but this is where non-RTK state actually lives. Counted per file, top 60 shown.',
+          ),
+          areaBars(byArea(st.closure)),
+          el('div', { style: 'height:16px' }),
+          rows(st.closure.slice(0, 60), left, (r) => r.n + ' cells · ' + r.code + ' lines'),
+        ],
+      ],
+      [
+        'RTK slices',
+        st.slices.length,
+        () => [
+          note(
+            'createSlice call sites by area. Layer-owned slices under layers/*/settings are the layer-composition target.',
+          ),
+          areaBars(byArea(st.slices)),
+          el('div', { style: 'height:16px' }),
+          rows(st.slices, left, (r) => 'line ' + r.line),
+        ],
+      ],
+      [
+        'React local state',
+        st.reactState.length,
+        () => [
+          note('useState / useRef / useReducer per component file. Small; UI-only conveniences.'),
+          rows(st.reactState, left, (r) => r.n + ' hook' + (r.n > 1 ? 's' : '')),
+        ],
+      ],
+      [
+        'Classes',
+        st.classes.length,
+        () => [
+          note(
+            'class declarations in src. The codebase is factory-closure style; these are the exceptions.',
+          ),
+          rows(st.classes, left, (r) => 'line ' + r.line),
+        ],
+      ],
+    ];
+    tabbed('state-tabs', 'state-body', tabs);
+  }
+
+  // ---------- hubs
+  {
+    const fi = document.getElementById('fanin'),
+      fo = document.getElementById('fanout');
+    for (const [f, n] of D.fanIn)
+      fi.append(el('li', {}, el('span', {}, el('b', {}, f)), el('em', {}, n + ' importers')));
+    for (const [f, n] of D.fanOut)
+      fo.append(el('li', {}, el('span', {}, el('b', {}, f)), el('em', {}, n + ' imports')));
+  }
 
   // ---------- conventions
   {
@@ -1643,7 +1530,7 @@
             'Rule: types never live inline in implementation files (a component’s own Props excepted). Files outside @types/ and */types/ that export a type. Some are Layer contract types that the convention says belong in the Layer’s types/ folder.',
           ),
           areaBars(
-            byAreaCount(
+            byArea(
               c.inlineTypes.map((r) => ({
                 area: (D.areas.find((a) => r.f.startsWith(a.name + '/')) || { name: '(root)' })
                   .name,
@@ -1767,7 +1654,7 @@
           note(
             'Files whose exports are imported by tests/ or tools/ but by nothing in src/. Either the feature that used them was deleted and the test survived, or they are test fixtures living in src. Either way, a deletion candidate together with its test.',
           ),
-          areaBars(byAreaCount(a.testOnlyFiles)),
+          areaBars(byArea(a.testOnlyFiles)),
           el('div', { style: 'height:16px' }),
           rows(
             a.testOnlyFiles,
@@ -1795,7 +1682,7 @@
           note(
             'Exported constants and functions imported nowhere in src, tests or tools. Either delete, or drop the export keyword if the file uses it internally.',
           ),
-          areaBars(byAreaCount(deadVals)),
+          areaBars(byArea(deadVals)),
           el('div', { style: 'height:16px' }),
           rows(
             deadVals,
@@ -1825,7 +1712,7 @@
           note(
             'Exports imported by tests/ or tools/ only, from files that src does otherwise use. Test seams, or leftovers.',
           ),
-          areaBars(byAreaCount(a.testOnly)),
+          areaBars(byArea(a.testOnly)),
           el('div', { style: 'height:16px' }),
           rows(
             a.testOnly,
@@ -1867,7 +1754,11 @@
         d.strict.clones.length,
         () => [
           note(
-            'jscpd, minimum 8 lines and 60 tokens. ' +
+            'jscpd, minimum ' +
+              d.strict.threshold.minLines +
+              ' lines and ' +
+              d.strict.threshold.minTokens +
+              ' tokens. ' +
               d.strict.duplicatedLines +
               ' duplicated lines of ' +
               d.strict.totalLines.toLocaleString() +
@@ -1883,7 +1774,11 @@
         d.loose.clones.length,
         () => [
           note(
-            'Minimum 5 lines and 40 tokens. ' +
+            'Minimum ' +
+              d.loose.threshold.minLines +
+              ' lines and ' +
+              d.loose.threshold.minTokens +
+              ' tokens. ' +
               d.loose.duplicatedLines +
               ' duplicated lines (' +
               ((100 * d.loose.duplicatedLines) / d.loose.totalLines).toFixed(2) +

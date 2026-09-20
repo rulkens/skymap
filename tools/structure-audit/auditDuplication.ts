@@ -49,5 +49,10 @@ export async function auditDuplication(
     })
     .sort((x, y) => y.lines - x.lines);
   const totalLines = Object.values(graph.nodes).reduce((s, n) => s + n.lines, 0);
-  return { clones, duplicatedLines: clones.reduce((s, c) => s + c.lines, 0), totalLines };
+  return {
+    clones,
+    duplicatedLines: clones.reduce((s, c) => s + c.lines, 0),
+    totalLines,
+    threshold,
+  };
 }

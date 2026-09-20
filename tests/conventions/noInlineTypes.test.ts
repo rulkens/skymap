@@ -1,9 +1,7 @@
 /**
- * noInlineTypes — CLAUDE.md: "types never live inline in implementation
- * files", a `.tsx` component's own `Props` the one exception. No compiler
- * check enforces this, so it's a sweep, same ratchet idiom as
- * typeFilesAreDeclarations.test.ts and frameFilePurity.test.ts: an entry
- * must still exist and still violate, so a fixed file has to be removed.
+ * CLAUDE.md: "types never live inline in implementation files", a `.tsx` component's own `Props`
+ * the one exception. No compiler check enforces this, so it's a sweep, same ratchet idiom as
+ * typeFilesAreDeclarations.test.ts: an entry must still exist and still violate, or be removed.
  */
 import { readdirSync } from 'node:fs';
 import { join } from 'node:path';

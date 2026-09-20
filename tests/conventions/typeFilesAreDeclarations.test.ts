@@ -1,9 +1,7 @@
 /**
- * typeFilesAreDeclarations — CLAUDE.md's `@types/` file shape: the file is
- * `.d.ts`, and it exports at most one symbol, which must be a `type` alias
- * named for the file (zero exports = an ambient shim, always fine). Both
- * debt ledgers are ratchets, same idiom as frameFilePurity.test.ts: an entry
- * must still exist and still violate, so a fixed file has to be removed.
+ * CLAUDE.md's `@types/` file shape: `.d.ts`, exporting at most one `type` alias named for the
+ * file (zero exports = an ambient shim, always fine). Both debt ledgers are ratchets, same idiom
+ * as frameFilePurity.test.ts: an entry must still exist and still violate, or be removed.
  */
 import { readdirSync } from 'node:fs';
 import { basename, join } from 'node:path';
