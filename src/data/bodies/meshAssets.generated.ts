@@ -44,11 +44,11 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   petunias: {
     key: 'petunias',
     path: 'meshes/petunias.mesh',
-    boundingRadiusM: 0.49782164777444815,
-    groundOffsetM: 0.26998730477355426,
-    meanAlbedo: [0.095259, 0.106092, 0.068474],
-    triangleCount: 150000,
-    substituted: ['metalRough', 'normalMap'],
+    boundingRadiusM: 0.4978227272024157,
+    groundOffsetM: 0.26998705849627713,
+    meanAlbedo: [0.184625, 0.20743, 0.132015],
+    triangleCount: 222249,
+    substituted: [],
     source: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
     licence: 'CC BY 4.0',
     attribution:
@@ -72,7 +72,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     path: 'meshes/hubble.mesh',
     boundingRadiusM: 8.786712680737544,
     groundOffsetM: 6.5379468441961155,
-    meanAlbedo: [0.166248, 0.153756, 0.133543],
+    meanAlbedo: [0.154997, 0.143332, 0.12433],
     triangleCount: 7672,
     substituted: [],
     source:
@@ -84,17 +84,17 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
   perseverance: {
     key: 'perseverance',
     path: 'meshes/perseverance.mesh',
-    boundingRadiusM: 1.9895822183466751,
-    groundOffsetM: 0.9125953290707832,
-    meanAlbedo: [0.272276, 0.263351, 0.257794],
-    triangleCount: 100000,
+    boundingRadiusM: 1.9901394895098548,
+    groundOffsetM: 0.9143134790374972,
+    meanAlbedo: [0.260541, 0.252103, 0.246785],
+    triangleCount: 199482,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/',
     licence: 'Public domain (NASA)',
     attribution:
       'Brian Kumanchik, NASA/JPL-Caltech, "Mars 2020 Perseverance Rover" (https://science.nasa.gov/3d-resources/mars-2020-perseverance-rover/)',
     contactDecal: {
-      centre: [-0.14926457100756546, -0.005141867351485026, -0.913145561665616],
+      centre: [-0.14952298327985314, -0.005148384292582237, -0.9143134790374972],
       halfU: [0, 2.331205129623413, 0],
       halfV: [-2.331205129623413, 0, 0],
     },

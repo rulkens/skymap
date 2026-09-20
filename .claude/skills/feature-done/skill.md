@@ -209,6 +209,11 @@ lands on the feature branch / PR without a manual follow-up:
 - `git push` to the current branch's upstream if it has one, so the
   commit lands on the open PR. If the branch has no upstream yet, leave
   the first push to the user and say so.
+- **Watch CI unprompted.** Right after the push, run
+  `gh pr checks <n> --watch --interval 30` in the background and report
+  the settled result (on red: read the failed log and diagnose). Never
+  wait for the user to ask "is CI green?" — and never merge on green
+  without the user's word.
 
 Don't update CLAUDE.md, and don't commit anything beyond the completion
 moves — the implementation should already be committed; this commit is

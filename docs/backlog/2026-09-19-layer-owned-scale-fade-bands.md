@@ -10,11 +10,11 @@ A Layer's distance-fade tuning lives outside the Layer.
 is one engine-wide table holding every scale crossfade. Some rows belong to
 a single Layer:
 
-| Rows | Only reader |
-| --- | --- |
-| `localBubble`, `localBubbleRecede` | `src/layers/localBubble/present/localBubbleOpacity.ts` |
-| `zoneOfAvoidance`, `zoneOfAvoidanceRecede` | `services/engine/presentation/zoneOfAvoidanceLayerOpacity.ts` |
-| `constellations` | `services/engine/presentation/constellationLayerOpacity.ts` |
+| Rows                                       | Only reader                                                         |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| `localBubble`, `localBubbleRecede`         | `src/layers/localBubble/present/localBubbleOpacity.ts`              |
+| `zoneOfAvoidance`, `zoneOfAvoidanceRecede` | `src/layers/zoneOfAvoidance/present/zoneOfAvoidanceLayerOpacity.ts` |
+| `constellations`                           | `services/engine/presentation/constellationLayerOpacity.ts`         |
 
 So tuning or reading a Layer means visiting a second, central place.
 

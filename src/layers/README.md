@@ -29,7 +29,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `labels?`       | `present/`                                    |                                                                                           |
 | `selection?`    | `present/`                                    |                                                                                           |
 | `facts?`        | type in `types/`, initial value in `layer.ts` |                                                                                           |
-| `targets?`      | `layer.ts`                                    | Declared but NOT consumed yet — 05c wires it                                              |
+| `targets?`      | `layer.ts`                                    | Appended after core's rows; core allocates and resizes them                               |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 

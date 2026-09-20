@@ -15,7 +15,9 @@
  *   - Alias matches are capped at 50 per query so a query that hits
  *     "MCG" (which matches thousands of rows) doesn't drown the famous
  *     hits or balloon the DOM.
- *   - Up/Down arrows move the highlight; Enter selects.
+ *   - Arrow keys move the highlight (the grid in every direction on an empty
+ *     query, the results list up/down on a typed one); Enter selects; ⌥←/⌥→
+ *     switch tabs on an empty query.
  *   - Esc closes without action.
  *   - Click outside the panel closes.
  *
@@ -23,11 +25,11 @@
  * FocusableTarget rather than a catalog object, so it carries no id or
  * alias tuple and renders a glyph instead of an atlas thumbnail.
  *
- * Selection: every row maps to a durable `#focus=<id>` string via
- * `utils/focusIdForRow` and is handed to the single `onSelect(focusId)`
- * callback.  The container fires `requestFocus(focusId)` — the one
- * command→ref bridge — so the palette never resolves a ref itself; famous,
- * alias, and Milky-Way picks all flow through the same path a deep-link does.
+ * Selection: every row maps to a `PaletteAction` via `utils/actionForRow`; a
+ * featured-grid card already carries its own.  Either way it reaches the
+ * single `onSelect(action)` callback, and the container dispatches on
+ * `action.kind` — for `focus`, `requestFocus(focusId)`, the one command→ref
+ * bridge — so the palette never resolves a ref itself.
  *
  * This file is the shell only: layout + subcomponent wiring.  The transient
  * search state + keyboard nav live in `usePaletteSearch`; the ranking pipeline
@@ -42,10 +44,17 @@
 import type { ReactNode } from 'react';
 import { usePaletteSearch } from './usePaletteSearch';
 import FeaturedGrid from './FeaturedGrid';
+import PaletteTabs from './PaletteTabs';
 import ResultsList from './ResultsList';
+import { wrapIndex } from './utils/wrapIndex';
+import { cardAliases } from './utils/cardAliases';
+import type { PaletteCard } from '../../@types/palette/PaletteCard';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
+import type { PaletteAction } from '../../@types/palette/PaletteAction';
+import type { PaletteTab } from '../../@types/palette/PaletteTab';
+import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
 import styles from './CommandPalette.module.css';
 
 export type CommandPaletteProps = {
@@ -66,26 +75,46 @@ export type CommandPaletteProps = {
    * hidden).
    */
   readonly structures?: readonly StructureSearchEntry[];
+  /** The browse tabs shown in the empty-query state — the container passes `FEATURED_TABS`. */
+  readonly tabs: readonly PaletteTab[];
+  /** The stored active tab id (`ui.paletteTab`); falls back to the first shown tab if absent. */
+  readonly tab: PaletteTabId;
+  /** Fired when the user picks a tab. */
+  readonly onTabChange: (id: PaletteTabId) => void;
   /** Whether the palette is currently shown. */
   readonly open: boolean;
   /** Close handler — called on Esc, click-outside, or after a successful selection. */
   readonly onClose: () => void;
   /**
-   * Selection handler — receives the picked row's durable `#focus=<id>` string
-   * (famous seed id, `pgc-<n>`, or the Milky-Way literal).  The container fires
-   * `requestFocus(focusId)`; the palette resolves nothing itself.
+   * Selection handler — receives the picked row's `PaletteAction`.  The
+   * container dispatches on `action.kind`; the palette resolves nothing itself.
    */
-  readonly onSelect: (focusId: string) => void;
+  readonly onSelect: (action: PaletteAction) => void;
 };
 
 function CommandPalette({
   entries,
   aliasIndex,
   structures,
+  tabs,
+  tab,
+  onTabChange,
   open,
   onClose,
   onSelect,
 }: CommandPaletteProps): ReactNode {
+  // Hide any tab with no cards (PR1 has none; PR3's Tours tab will), and
+  // fall back to the first shown tab when the stored one no longer qualifies.
+  const shownTabs = tabs.filter((t) => t.cards.length > 0);
+  const activeTab = shownTabs.find((t) => t.id === tab) ?? shownTabs[0];
+
+  const onTabStep = (delta: 1 | -1): void => {
+    if (!activeTab) return;
+    const idx = shownTabs.findIndex((t) => t.id === activeTab.id);
+    const next = shownTabs[wrapIndex(idx, delta, shownTabs.length)];
+    if (next) onTabChange(next.id);
+  };
+
   const {
     query,
     setQuery,
@@ -93,11 +122,26 @@ function CommandPalette({
     setActiveIdx,
     matches,
     inputRef,
+    gridRef,
+    activeCard,
     onKeyDown,
     dispatchSelection,
-  } = usePaletteSearch({ entries, aliasIndex, structures, open, onClose, onSelect });
+    dispatchAction,
+  } = usePaletteSearch({
+    entries,
+    aliasIndex,
+    structures,
+    cards: activeTab?.cards ?? [],
+    onTabStep,
+    open,
+    onClose,
+    onSelect,
+  });
 
   if (!open) return null;
+
+  const aliasesFor = (card: PaletteCard): readonly string[] => cardAliases(card, entries);
+
   return (
     <div className={styles.root} onClick={onClose} onKeyDown={onKeyDown} role="presentation">
       <div
@@ -113,18 +157,29 @@ function CommandPalette({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        {query.trim().length === 0 && (
-          <FeaturedGrid
-            entries={entries}
-            onSelect={(entry) => dispatchSelection({ kind: 'famous', entry, score: 0 })}
+        {query.trim().length === 0 ? (
+          activeTab && (
+            <>
+              <PaletteTabs tabs={shownTabs} active={activeTab.id} onChange={onTabChange} />
+              <FeaturedGrid
+                key={activeTab.id}
+                cards={activeTab.cards}
+                aliasesFor={aliasesFor}
+                activeIdx={activeCard}
+                gridRef={gridRef}
+                label={activeTab.label}
+                onSelect={dispatchAction}
+              />
+            </>
+          )
+        ) : (
+          <ResultsList
+            matches={matches}
+            activeIdx={activeIdx}
+            onActivate={setActiveIdx}
+            onSelect={dispatchSelection}
           />
         )}
-        <ResultsList
-          matches={matches}
-          activeIdx={activeIdx}
-          onActivate={setActiveIdx}
-          onSelect={dispatchSelection}
-        />
       </div>
     </div>
   );

@@ -50,6 +50,15 @@
  * ─────────────────────────────────────────────────────────────────────────
  */
 
+/* Self-hosted (no Google Fonts request): subset to Latin + general
+ * punctuation, matching the glyphs the DOM actually sets in this face. */
+@font-face {
+  font-family: 'Cormorant Garamond';
+  font-weight: 600;
+  font-display: swap;
+  src: url('/fonts/CormorantGaramond-SemiBold.woff2') format('woff2');
+}
+
 :root {
   /* ── Color palette ──────────────────────────────────────────────────────
    *
@@ -212,8 +221,8 @@
    * into the MSDF label atlas (see src/data/fonts.ts).  Reserved for
    * marquee text that should echo the in-scene labels (splash title,
    * onboarding headlines).  Falls back to the mono stack while the
-   * Google-hosted webfont is in flight so first paint never shows a
-   * generic browser serif.
+   * self-hosted webfont (@font-face above) is in flight so first paint
+   * never shows a generic browser serif.
    */
   --font-family-display: 'Cormorant Garamond', ui-serif, Georgia, serif;
 
@@ -341,8 +350,7 @@
    * Promoting it here means a future card variant gets the same
    * "floating sheet of cosmic glass" identity for free.
    */
-  --shadow-card:
-    0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
+  --shadow-card: 0 8px 32px var(--shadow-card-outer), 0 0 0 1px var(--shadow-card-inset) inset;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────

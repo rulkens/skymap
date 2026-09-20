@@ -9,7 +9,6 @@ import { createLayers } from '../../../../src/services/engine/phases/createLayer
 import { createAppStore } from '../../../../src/store/createAppStore';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
-import { LABEL_3D_PRODUCERS } from '../../../../src/services/engine/presentation/label3DProducers';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
@@ -118,18 +117,14 @@ describe('createLayers composition', () => {
     ]);
   });
 
-  it("composes Layer world label producers after core's onto state.label3DProducers", async () => {
+  it('composes Layer world label producers onto state.label3DProducers', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
     const layers = [worldLabelLayer('a'), worldLabelLayer('b')];
 
     await createLayers(state, makeDeps(layers, store));
 
-    expect(state.label3DProducers.map((producer) => producer.id)).toEqual([
-      ...LABEL_3D_PRODUCERS.map((producer) => producer.id),
-      'a-world',
-      'b-world',
-    ]);
+    expect(state.label3DProducers.map((producer) => producer.id)).toEqual(['a-world', 'b-world']);
   });
 
   it('throws at boot when two Layers mint the same slot key', async () => {

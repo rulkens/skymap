@@ -1273,17 +1273,27 @@ export const RAW_DATA = {
     upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
     readme: 'meshes.petunias.readme',
   },
+  'meshes.petuniasBlend': {
+    path: 'data/raw/meshes/petunias/petunias.blend',
+    kind: 'file',
+    source: 'gitignored',
+    description:
+      'petunias.blend — the edited source the pre-bake opens, imported from the pristine download and hand-edited in Blender 5.2 LTS. Regenerate the import (discarding edits) with `npm run import-mesh -- petunias`; older Blender versions cannot open it.',
+    upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
+    fetcher: 'tools/meshes/prebake/importMesh.py',
+    readme: 'meshes.petunias.readme',
+  },
   'meshes.petunias': {
     path: 'data/raw/meshes/petunias/petunias.prebaked.glb',
     kind: 'file',
     source: 'gitignored',
     description:
-      'The petunia model flattened to one material over one baked 2048^2 albedo atlas — what MESH_SOURCES.petunias actually points at. Regenerate with `npm run prebake-petunias` (Blender, not CI), never by hand.',
+      'The petunia model flattened to one material over its baked atlases — what MESH_SOURCES.petunias actually points at. Baked from `petunias.blend`; regenerate with `npm run prebake-mesh -- petunias` (Blender, not CI), never by hand.',
     // `upstream` is the model this file DERIVES from, not a download URL: it is
     // what buildMeshes copies onto the generated row's `source`, and a local
     // path there would credit nothing.
     upstream: 'https://sketchfab.com/3d-models/74c653b4413f40ba8ec753004b2deea0',
-    fetcher: 'tools/meshes/prebake/petuniasPrebake.py',
+    fetcher: 'tools/meshes/prebake/meshPrebake.py',
     readme: 'meshes.petunias.readme',
   },
   'meshes.petunias.readme': {

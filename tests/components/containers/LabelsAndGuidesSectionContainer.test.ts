@@ -57,18 +57,8 @@ import {
   selectOrbitTrailsEnabled,
   selectZoneOfAvoidanceEnabled,
 } from '../../../src/state/settings/selectors';
-import { setZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
+import { zoneOfAvoidanceSettingsRow } from '../../../src/layers/zoneOfAvoidance/ui/zoneOfAvoidanceSettingsRow';
 import type { AppStore } from '../../../src/store/types';
-import type { LayerSettingsRow } from '../../../src/@types/engine/layer/LayerSettingsRow';
-
-// A stub Layer row riding the real ZoA toggle: proves the container reads a
-// Layer row's `select` and dispatches its `set` action rather than special-casing it.
-const STUB_LAYER_ROW: LayerSettingsRow = {
-  id: 'toggle-stub-layer',
-  label: 'Stub layer row',
-  select: selectZoneOfAvoidanceEnabled,
-  set: setZoneOfAvoidanceEnabled,
-};
 
 function makeWrapper(store: AppStore) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
@@ -193,10 +183,31 @@ describe('LabelsAndGuidesSectionContainer', () => {
 
   // ── layerRows ──────────────────────────────────────────────────────────────────
 
-  it('appends a Layer settings row after the core guide rows', () => {
+  it('appends the ZoA Layer row after the core guide rows', () => {
     const { store } = createAppStore();
     const { container } = render(
-      createElement(LabelsAndGuidesSectionContainer, { layerRows: [STUB_LAYER_ROW] }),
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [zoneOfAvoidanceSettingsRow] }),
+      { wrapper: makeWrapper(store) },
+    );
+
+    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
+    fireEvent.click(expandButton);
+
+    const orbitTrailsCheckbox = container.querySelector<HTMLInputElement>('#toggle-orbit-trails')!;
+    const zoaCheckbox = container.querySelector<HTMLInputElement>('#toggle-zone-of-avoidance')!;
+    expect(orbitTrailsCheckbox).not.toBeNull();
+    expect(zoaCheckbox).not.toBeNull();
+    expect(
+      orbitTrailsCheckbox.compareDocumentPosition(zoaCheckbox) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+  });
+
+  it('the ZoA Layer row reads the store and dispatches its own action', () => {
+    const { store } = createAppStore();
+    expect(selectZoneOfAvoidanceEnabled(store.getState())).toBe(true);
+
+    const { container } = render(
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [zoneOfAvoidanceSettingsRow] }),
       { wrapper: makeWrapper(store) },
     );
 
@@ -204,31 +215,10 @@ describe('LabelsAndGuidesSectionContainer', () => {
     fireEvent.click(expandButton);
 
     const zoaCheckbox = container.querySelector<HTMLInputElement>('#toggle-zone-of-avoidance')!;
-    const stubCheckbox = container.querySelector<HTMLInputElement>('#toggle-stub-layer')!;
-    expect(zoaCheckbox).not.toBeNull();
-    expect(stubCheckbox).not.toBeNull();
-    expect(
-      zoaCheckbox.compareDocumentPosition(stubCheckbox) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
-  });
-
-  it('a Layer row reads its value from the store and dispatches its own action', () => {
-    const { store } = createAppStore();
-    expect(selectZoneOfAvoidanceEnabled(store.getState())).toBe(true);
-
-    const { container } = render(
-      createElement(LabelsAndGuidesSectionContainer, { layerRows: [STUB_LAYER_ROW] }),
-      { wrapper: makeWrapper(store) },
-    );
-
-    const expandButton = container.querySelector<HTMLButtonElement>('button[type=button]')!;
-    fireEvent.click(expandButton);
-
-    const stubCheckbox = container.querySelector<HTMLInputElement>('#toggle-stub-layer')!;
-    expect(stubCheckbox.checked).toBe(true);
-    fireEvent.click(stubCheckbox);
+    expect(zoaCheckbox.checked).toBe(true);
+    fireEvent.click(zoaCheckbox);
 
     expect(selectZoneOfAvoidanceEnabled(store.getState())).toBe(false);
-    expect(stubCheckbox.checked).toBe(false);
+    expect(zoaCheckbox.checked).toBe(false);
   });
 });

@@ -495,8 +495,9 @@ All public domain; NASA asks that credit go to the named observatory / program.
 ### "Flowers Petunia White" — Marianne Goudriaan
 
 - **Use:** The bowl of petunias trailing the whale. Shipped as a derivative:
-  a headless Blender pre-bake (`npm run prebake-petunias`) decimates the mesh
-  and bakes the author's six textures into one albedo atlas, which
+  a headless Blender import (`npm run import-mesh -- petunias`) and pre-bake
+  (`npm run prebake-mesh -- petunias`) bake the author's six textures into one
+  set of PBR atlases, which
   `npm run build-meshes` then bakes to `public/data/meshes/petunias.*`. The raw
   GLB and the pre-bake output are gitignored; provenance lives in
   `tools/utils/io/rawDataRegistry.ts` and `data/raw/meshes/petunias/README.md`.
@@ -581,8 +582,9 @@ All public domain; NASA asks that credit go to the named observatory / program.
   places — `data/raw/fonts/` (baked into the MSDF label atlas by
   `tools/fonts/buildFontAtlas.ts`) and `tools/site/fonts/` (rasterised into
   `public/og-image.jpg` by `tools/site/makeOgImage.ts`) — and additionally
-  loaded live from Google Fonts by `index.html` for the 2D UI chrome
-  (`--font-family-display` in `src/styles/global.css`).
+  self-hosted as a subsetted `public/fonts/CormorantGaramond-SemiBold.woff2`
+  (`@font-face` in `src/styles/global.css`) for the 2D UI chrome
+  (`--font-family-display`), rather than loaded from Google Fonts.
 - **Designer:** Christian Thalmann (Catharsis Fonts).
 - **Source:** <https://fonts.google.com/specimen/Cormorant+Garamond>.
 - **Licence:** SIL Open Font License 1.1.

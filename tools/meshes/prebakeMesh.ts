@@ -7,6 +7,7 @@
 
 import { spawnSync } from 'node:child_process';
 
+import { MESH_TRIANGLE_BUDGET } from '../../src/data/mesh/meshTriangleBudget';
 import { meshGroundUpSource } from '../utils/meshes/meshGroundUpSource';
 
 const DEFAULT_BLENDER = '/Applications/Blender.app/Contents/MacOS/Blender';
@@ -26,6 +27,8 @@ const args = [
   MESH_PREBAKE_PY,
   '--',
   key,
+  '--triangles',
+  String(MESH_TRIANGLE_BUDGET),
   ...(groundUp ? ['--ground-up', ...groundUp.map(String)] : []),
 ];
 const result = spawnSync(process.env.BLENDER ?? DEFAULT_BLENDER, args, { stdio: 'inherit' });

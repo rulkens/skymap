@@ -12,10 +12,14 @@
  * `beatIndex`), keeping this slice to app-level chrome.
  */
 
+import type { PaletteTabId } from '../palette/PaletteTabId';
+
 export type UiState = {
   paletteOpen: boolean;
   uiHidden: boolean;
   debugPanelOpen: boolean;
+  /** The palette's active browse tab. Not persisted — a reload opens on 'highlights'. */
+  paletteTab: PaletteTabId;
   splash: {
     visible: boolean;
     dismissedVersion: number | null;

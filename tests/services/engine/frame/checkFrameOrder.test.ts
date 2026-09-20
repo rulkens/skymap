@@ -86,6 +86,15 @@ describe('checkFrameOrder', () => {
     expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).toThrow(/hrd/);
   });
 
+  // A Layer-owned target leaves with its Layer; the line naming it expands to nothing.
+  it('accepts an undeclared target on a render line whose passes no present Layer owns', () => {
+    const order: FrameStepSpec[] = [
+      ...drawing('a'),
+      { kind: 'render', target: 'layer-only', slab: COSMO, passes: ['absent'] },
+    ];
+    expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).not.toThrow();
+  });
+
   it('throws naming a composite endpoint that is not a declared render-target id', () => {
     const order: FrameStepSpec[] = [
       ...drawing('a'),

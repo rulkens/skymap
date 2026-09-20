@@ -15,7 +15,6 @@ import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
-import { createZoneOfAvoidanceRenderer } from '../../gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer';
 import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
@@ -200,11 +199,6 @@ export const GPU_HANDLE_ROWS = [
       createHorizonShellRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
-    key: 'zoneOfAvoidanceRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createZoneOfAvoidanceRenderer(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
     // Draws into HDR (rgba16float), not the swap chain — no
     // rebuildOnSwapFormat (that's only the 8 swap-chain-format rows above).
     key: 'label3DRenderer',
@@ -241,11 +235,6 @@ export const GPU_HANDLE_ROWS = [
   },
   {
     key: 'milkyWayAggregateUpsample',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
-  },
-  {
-    key: 'zoneOfAvoidanceUpsample',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createAdditiveUpsample(deps.ctx.device, HDR_TARGET_FORMAT),
   },

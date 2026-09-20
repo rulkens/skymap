@@ -24,10 +24,13 @@
 import { uiRoute } from '../../store/constants';
 import type { RootState } from '../../store/types';
 import type { UiState } from '../../@types/ui/UiState';
+import type { PaletteTabId } from '../../@types/palette/PaletteTabId';
 
 const selectUi = (state: RootState): UiState => state[uiRoute];
 
 export const selectPaletteOpen = (state: RootState): boolean => selectUi(state).paletteOpen;
+
+export const selectPaletteTab = (state: RootState): PaletteTabId => selectUi(state).paletteTab;
 
 export const selectUiHidden = (state: RootState): boolean => selectUi(state).uiHidden;
 
