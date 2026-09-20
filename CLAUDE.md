@@ -62,6 +62,7 @@ npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/
 npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
+npm run atlas       # import matrix + structure/quality audits page → tools/atlas/README.md
 ```
 
 `typecheck:fast` is the tsgo inner loop; `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug.

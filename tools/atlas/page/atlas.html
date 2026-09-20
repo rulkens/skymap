@@ -1,0 +1,1959 @@
+<title>Skymap Import Atlas</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link
+  rel="stylesheet"
+  href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
+/>
+<style>
+  :root {
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --accent: #2a78d6;
+    --accent-soft: #cde2fb;
+    --critical: #d03b3b;
+    --critical-soft: #f8dcdc;
+    --warn: #c98500;
+    --g-leaves: #2a78d6;
+    --g-services: #eb6834;
+    --g-engine: #1baf7a;
+    --g-state: #eda100;
+    --g-layers: #e87ba4;
+    --g-ui: #008300;
+    --seq1: #cde2fb;
+    --seq2: #9ec5f4;
+    --seq3: #5598e7;
+    --seq4: #2a78d6;
+    --seq5: #184f95;
+    --font: 'IBM Plex Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+    --display: 'IBM Plex Sans Condensed', 'IBM Plex Sans', system-ui, sans-serif;
+    --mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme='light']) {
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #ffffff;
+      --ink2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --accent: #3987e5;
+      --accent-soft: #1c3a5e;
+      --critical: #e66767;
+      --critical-soft: #4a2020;
+      --warn: #e0a04c;
+      --g-leaves: #3987e5;
+      --g-services: #d95926;
+      --g-engine: #199e70;
+      --g-state: #c98500;
+      --g-layers: #d55181;
+      --g-ui: #3fa03f;
+      --seq1: #184f95;
+      --seq2: #1c5cab;
+      --seq3: #256abf;
+      --seq4: #3987e5;
+      --seq5: #86b6ef;
+    }
+  }
+  :root[data-theme='dark'] {
+    --page: #0d0d0d;
+    --surface: #1a1a19;
+    --ink: #ffffff;
+    --ink2: #c3c2b7;
+    --muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --accent: #3987e5;
+    --accent-soft: #1c3a5e;
+    --critical: #e66767;
+    --critical-soft: #4a2020;
+    --warn: #e0a04c;
+    --g-leaves: #3987e5;
+    --g-services: #d95926;
+    --g-engine: #199e70;
+    --g-state: #c98500;
+    --g-layers: #d55181;
+    --g-ui: #3fa03f;
+    --seq1: #184f95;
+    --seq2: #1c5cab;
+    --seq3: #256abf;
+    --seq4: #3987e5;
+    --seq5: #86b6ef;
+  }
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--ink);
+    font: 14px/1.5 var(--font);
+    padding-inline: clamp(16px, 3vw, 40px);
+    padding-block: 0 64px;
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--display);
+    text-wrap: balance;
+    margin: 0;
+  }
+  h1 {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-block: 0 4px;
+  }
+  h3 {
+    font-size: 15px;
+    font-weight: 600;
+  }
+  p {
+    max-width: 68ch;
+    margin: 0;
+  }
+  .lede {
+    color: var(--ink2);
+  }
+  code,
+  .mono {
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  a {
+    color: var(--accent);
+  }
+  header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px 32px;
+    padding-block: 28px 20px;
+    border-bottom: 1px solid var(--grid);
+  }
+  .totals {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 28px;
+    font-variant-numeric: tabular-nums;
+  }
+  .totals div {
+    display: flex;
+    flex-direction: column;
+  }
+  .totals b {
+    font-family: var(--display);
+    font-size: 22px;
+    font-weight: 600;
+    line-height: 1.1;
+  }
+  .totals span {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  section {
+    padding-block: 32px;
+    border-bottom: 1px solid var(--grid);
+  }
+  .sec-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 20px;
+    margin-bottom: 16px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+    gap: 24px 32px;
+  }
+  @media (max-width: 900px) {
+    .cols {
+      grid-template-columns: 1fr;
+    }
+  }
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--grid);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+  .tiers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .tier {
+    border-left: 3px solid var(--tc);
+    padding-left: 10px;
+  }
+  .tier-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .tier-head h3 {
+    color: var(--tc);
+  }
+  .tier-head .n {
+    font-size: 11px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .tier ul {
+    list-style: none;
+    margin: 4px 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .tier li {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--page);
+    border: 1px solid var(--grid);
+    border-radius: 4px;
+    padding: 1px 4px 1px 8px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .tier li select {
+    font: inherit;
+    font-size: 11px;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    padding: 0;
+    cursor: pointer;
+    max-width: 70px;
+  }
+  .tier li select:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .rules {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-block: 12px 16px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--grid);
+    background: var(--surface);
+    border-radius: 999px;
+    padding: 4px 12px 4px 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .chip:hover {
+    border-color: var(--axis);
+  }
+  .chip:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .chip b {
+    font-family: var(--display);
+    font-size: 16px;
+    min-width: 2.2em;
+    text-align: center;
+    border-radius: 999px;
+    padding: 0 8px;
+    font-variant-numeric: tabular-nums;
+  }
+  .chip b.bad {
+    background: var(--critical-soft);
+    color: var(--critical);
+  }
+  .chip b.ok {
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+  .matrix-wrap {
+    overflow-x: auto;
+    padding-bottom: 6px;
+  }
+  .matrix {
+    border-collapse: collapse;
+    font-size: 10.5px;
+    font-family: var(--mono);
+  }
+  .matrix th {
+    font-weight: 400;
+    color: var(--ink2);
+    white-space: nowrap;
+  }
+  .matrix th.col {
+    height: 118px;
+    vertical-align: bottom;
+    width: 15px;
+    padding: 0;
+  }
+  .matrix th.col div {
+    transform: rotate(-90deg) translate(-4px, 0);
+    transform-origin: left bottom;
+    width: 14px;
+    text-align: left;
+    white-space: nowrap;
+    position: relative;
+    left: 10px;
+  }
+  .matrix th.row {
+    text-align: right;
+    padding: 0 6px 0 0;
+    border-right: 1px solid var(--axis);
+  }
+  .matrix td {
+    width: 15px;
+    height: 15px;
+    padding: 0;
+    border: 1px solid var(--grid);
+    position: relative;
+    cursor: default;
+  }
+  .matrix td.diag {
+    background: var(--grid);
+  }
+  .matrix td.q1 {
+    background: var(--seq1);
+  }
+  .matrix td.q2 {
+    background: var(--seq2);
+  }
+  .matrix td.q3 {
+    background: var(--seq3);
+  }
+  .matrix td.q4 {
+    background: var(--seq4);
+  }
+  .matrix td.q5 {
+    background: var(--seq5);
+  }
+  .matrix td.against::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border: 2px solid var(--critical);
+    border-radius: 2px;
+  }
+  .matrix td.hot {
+    outline: 2px solid var(--ink);
+    z-index: 1;
+  }
+  .matrix tr.gstart td,
+  .matrix tr.gstart th.row {
+    border-top: 2px solid var(--axis);
+  }
+  .matrix td.gstart,
+  .matrix th.gstart {
+    border-left: 2px solid var(--axis);
+  }
+  .matrix td:hover {
+    outline: 2px solid var(--ink);
+    z-index: 1;
+  }
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    align-items: center;
+    font-size: 12px;
+    color: var(--ink2);
+    margin-top: 10px;
+  }
+  .legend .sw {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 1px solid var(--grid);
+    vertical-align: -3px;
+    margin-right: 4px;
+  }
+  .tip {
+    position: fixed;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--page);
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: var(--mono);
+    z-index: 10;
+    max-width: 360px;
+    display: none;
+  }
+  .edges {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 8px;
+  }
+  .edge {
+    background: var(--surface);
+    border: 1px solid var(--grid);
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+  }
+  .edge:hover {
+    border-color: var(--axis);
+  }
+  .edge.open {
+    grid-column: 1/-1;
+  }
+  .edge-line {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+  .edge-line .n {
+    margin-left: auto;
+    font-family: var(--display);
+    font-size: 16px;
+    font-variant-numeric: tabular-nums;
+    color: var(--critical);
+  }
+  .edge-line .n.neutral {
+    color: var(--ink2);
+  }
+  .arrow {
+    color: var(--muted);
+  }
+  .edge ul {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 8px 0 0;
+    border-top: 1px dashed var(--grid);
+    font-family: var(--mono);
+    font-size: 11.5px;
+    columns: 2;
+    column-gap: 24px;
+    max-height: 320px;
+    overflow: auto;
+  }
+  @media (max-width: 700px) {
+    .edge ul {
+      columns: 1;
+    }
+  }
+  .edge li {
+    break-inside: avoid;
+    padding: 1px 0;
+    color: var(--ink2);
+  }
+  .edge li b {
+    font-weight: 500;
+    color: var(--ink);
+  }
+  .edge li .t {
+    color: var(--muted);
+  }
+  .count-note {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .scc {
+    margin-bottom: 12px;
+  }
+  .scc summary {
+    cursor: pointer;
+    font-family: var(--mono);
+    font-size: 13px;
+  }
+  .scc summary b {
+    font-family: var(--display);
+    font-size: 16px;
+    margin-right: 8px;
+  }
+  .scc ul {
+    columns: 3;
+    column-gap: 24px;
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: var(--ink2);
+  }
+  @media (max-width: 900px) {
+    .scc ul {
+      columns: 2;
+    }
+  }
+  @media (max-width: 600px) {
+    .scc ul {
+      columns: 1;
+    }
+  }
+  .tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 14px;
+  }
+  .tab {
+    border: 1px solid var(--grid);
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 5px 12px;
+    font: inherit;
+    color: var(--ink2);
+    cursor: pointer;
+  }
+  .tab[aria-selected='true'] {
+    background: var(--ink);
+    color: var(--page);
+    border-color: var(--ink);
+  }
+  .tab:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .tab b {
+    font-variant-numeric: tabular-nums;
+    font-weight: 500;
+  }
+  .list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .list li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 16px;
+    padding: 4px 0;
+    border-bottom: 1px solid var(--grid);
+  }
+  .list li span {
+    color: var(--ink2);
+    overflow-wrap: anywhere;
+  }
+  .list li span b {
+    color: var(--ink);
+    font-weight: 500;
+  }
+  .list li em {
+    font-style: normal;
+    color: var(--muted);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .bars {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 4px 12px;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+  }
+  .bars .bar {
+    height: 10px;
+    background: var(--gc);
+    border-radius: 2px;
+  }
+  .bars .lab {
+    text-align: right;
+    color: var(--ink2);
+  }
+  .hubs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 24px;
+  }
+  .note {
+    font-size: 12.5px;
+    color: var(--ink2);
+    max-width: 68ch;
+    margin-top: 10px;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 0 6px;
+    border-radius: 3px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    margin-left: 6px;
+    vertical-align: 1px;
+  }
+  .pill.cache {
+    background: var(--critical-soft);
+    color: var(--critical);
+  }
+  .pill.mutable {
+    background: var(--critical-soft);
+    color: var(--critical);
+  }
+
+  .guide {
+    display: grid;
+    grid-template-columns: minmax(280px, 1fr) minmax(0, 1.4fr);
+    gap: 24px 40px;
+  }
+  @media (max-width: 900px) {
+    .guide {
+      grid-template-columns: 1fr;
+    }
+  }
+  .defs {
+    margin: 10px 0 0;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 8px 14px;
+  }
+  .defs dt {
+    font-family: var(--display);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .defs dd {
+    margin: 0;
+    color: var(--ink2);
+    max-width: 52ch;
+  }
+  .steps {
+    margin: 10px 0 0;
+    padding-left: 1.4em;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    max-width: 68ch;
+  }
+  .steps li::marker {
+    font-family: var(--display);
+    font-weight: 600;
+    color: var(--accent);
+  }
+  .steps li {
+    color: var(--ink2);
+  }
+  .steps li b {
+    color: var(--ink);
+  }
+
+  .topnav {
+    position: sticky;
+    top: env(safe-area-inset-top, 0px);
+    z-index: 5;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    background: var(--page);
+    border-bottom: 1px solid var(--grid);
+    padding-block: 8px;
+    margin-inline: calc(-1 * clamp(16px, 3vw, 40px));
+    padding-inline: clamp(16px, 3vw, 40px);
+  }
+  .topnav button {
+    border: 0;
+    background: transparent;
+    font: inherit;
+    font-family: var(--display);
+    font-weight: 500;
+    font-size: 14px;
+    color: var(--ink2);
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+  }
+  .topnav button[aria-selected='true'] {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+  }
+  .topnav button:hover {
+    color: var(--ink);
+  }
+  .topnav button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  body > section[hidden] {
+    display: none;
+  }
+
+  .stab {
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    min-width: 520px;
+  }
+  .stab th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--muted);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 4px 12px 6px 0;
+    border-bottom: 1px solid var(--axis);
+  }
+  .stab td {
+    padding: 3px 12px 3px 0;
+    border-bottom: 1px solid var(--grid);
+    white-space: nowrap;
+  }
+  .stab td.flag {
+    color: var(--muted);
+    font-family: var(--font);
+  }
+  .stab td.flag.bad {
+    color: var(--critical);
+  }
+  .ibar {
+    display: inline-block;
+    width: 60px;
+    height: 8px;
+    background: var(--grid);
+    border-radius: 2px;
+    margin-right: 8px;
+    vertical-align: middle;
+    overflow: hidden;
+  }
+  .ibar span {
+    display: block;
+    height: 100%;
+    background: var(--accent);
+  }
+  .sample {
+    color: var(--muted);
+    font-size: 11px;
+    margin-top: 2px;
+    overflow-wrap: anywhere;
+  }
+  select#tests-area {
+    font: inherit;
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 3px 6px;
+    border: 1px solid var(--grid);
+    border-radius: 4px;
+    background: var(--surface);
+    color: var(--ink);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .edge,
+    .chip,
+    .tab {
+      transition: border-color 0.12s;
+    }
+  }
+</style>
+
+<header>
+  <div>
+    <div class="eyebrow">skymap · src/ · relative imports · snapshot __GENERATED__</div>
+    <h1>Skymap Import Atlas</h1>
+    <p class="lede">
+      Which area imports which, where the cycles are, and where mutable state sits outside Redux
+      Toolkit. Tier assignment below is a proposal you can change; everything red recomputes.
+    </p>
+  </div>
+  <div class="totals" id="totals"></div>
+</header>
+
+<nav class="topnav" id="topnav" role="tablist" aria-label="Sections"></nav>
+
+<section id="guide">
+  <div class="sec-head">
+    <h2>How to read this</h2>
+    <span class="eyebrow">five minutes, top to bottom</span>
+  </div>
+  <div class="guide">
+    <div>
+      <h3>The vocabulary</h3>
+      <dl class="defs">
+        <dt>Import</dt>
+        <dd>
+          One file naming another in an <code>import … from './…'</code> line. Type-only imports
+          count too, because they still tie the two files together in the module graph.
+        </dd>
+        <dt>Area</dt>
+        <dd>
+          A top-level folder of <code>src/</code>, split one level deeper for
+          <code>services/</code>, <code>services/engine/</code> and <code>layers/</code>. 43 areas.
+          Imports inside one area are ignored everywhere on this page; only imports that cross an
+          area boundary are shown.
+        </dd>
+        <dt>Tier</dt>
+        <dd>
+          A group of areas that sit at the same height in the intended architecture. The rule is one
+          sentence:
+          <b>a file may import from its own tier or any tier below it, never from above.</b> Leaves
+          sit at the bottom, UI at the top. The six tiers here are a proposal, not a fact about the
+          code.
+        </dd>
+        <dt>Against the grain</dt>
+        <dd>
+          An import that breaks the rule: a lower tier importing a higher one. Two more rules apply
+          regardless of tier: a Layer never imports a sibling Layer, and nothing but
+          <code>compositions/</code> imports a Layer.
+        </dd>
+        <dt>Cycle</dt>
+        <dd>
+          A set of files where every file can reach every other by following imports. Cycles make
+          files impossible to understand or test one at a time.
+        </dd>
+        <dt>Closure cell</dt>
+        <dd>
+          A <code>let</code> inside a factory function such as <code>createFooRenderer()</code>. It
+          is state, but private to one object rather than in the Redux store.
+        </dd>
+      </dl>
+    </div>
+    <div>
+      <h3>A walkthrough</h3>
+      <ol class="steps">
+        <li>
+          <b>Start at the matrix.</b> Each row is an importing area, each column an imported area,
+          and a cell's shade is how many files cross that boundary. Because rows and columns share
+          the tier order, a healthy codebase paints only the triangle <em>above</em> the diagonal.
+          Every filled cell <em>below</em> the diagonal is an import going the wrong way, and gets a
+          red ring. Hover a cell for the count, click it to open the file pairs.
+        </li>
+        <li>
+          <b>Read the three chips.</b> They total the red rings by rule. Click one to list only
+          those area pairs, densest first, and click any pair to see exactly which files are
+          involved. That list is the future allow-list of the ratchet test.
+        </li>
+        <li>
+          <b>Argue with the tiers.</b> Every area in the left panel has a dropdown. Move an area and
+          the matrix, chips and list recompute. If moving <code>services/animation</code> up to the
+          State tier makes its red rings disappear, that tells you where the tour machinery really
+          belongs. When you find an arrangement where the remaining red is only things you agree are
+          wrong, that arrangement is the answer to Q2.
+        </li>
+        <li>
+          <b>Check the cycles.</b> They cannot be fixed by reordering tiers; a cycle is a knot
+          inside one or more areas. The largest one is usually the biggest single structural finding
+          on the page.
+        </li>
+        <li>
+          <b>Inventory the state.</b> The tabs go from strongest signal to weakest. Module-level
+          <code>let</code> and mutable containers are process-wide singletons and deserve a look one
+          by one. Closure cells are the engine's legitimate runtime state; the per-area bars show
+          where it concentrates.
+        </li>
+      </ol>
+      <p class="note">
+        What the page cannot see: shader <code>package::</code> imports, string-literal paths, and
+        anything under <code>tools/</code> or <code>tests/</code>. It also cannot judge whether an
+        import is <em>right</em>, only whether it agrees with the tiers you set.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section id="layering">
+  <div class="sec-head">
+    <h2>Layering</h2>
+    <span class="eyebrow">rows import columns · red ring = against the tier order</span>
+  </div>
+  <div class="rules" id="rules"></div>
+  <div class="cols">
+    <div class="panel tiers" id="tiers"></div>
+    <div>
+      <div class="matrix-wrap" id="matrix"></div>
+      <div class="legend">
+        <span><i class="sw" style="background: var(--seq1)"></i>1–2</span>
+        <span><i class="sw" style="background: var(--seq2)"></i>3–5</span>
+        <span><i class="sw" style="background: var(--seq3)"></i>6–15</span>
+        <span><i class="sw" style="background: var(--seq4)"></i>16–50</span>
+        <span><i class="sw" style="background: var(--seq5)"></i>51+ files</span>
+        <span><i class="sw" style="border: 2px solid var(--critical)"></i>against tier order</span>
+        <span>hover a cell for counts · click to open it below</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="against">
+  <div class="sec-head">
+    <h2 id="against-title">Against the grain</h2>
+    <span class="eyebrow" id="against-sub"></span>
+  </div>
+  <div class="edges" id="edges"></div>
+</section>
+
+<section id="cycles">
+  <div class="sec-head">
+    <h2>Import cycles</h2>
+    <span class="eyebrow" id="cycles-sub"></span>
+  </div>
+  <div id="sccs"></div>
+  <p class="note">
+    A cycle is a strongly connected set of files: every file can reach every other by following
+    imports. Type-only imports are included, so a cycle here is a module-graph fact even if it never
+    bites at runtime.
+  </p>
+</section>
+
+<section id="state">
+  <div class="sec-head">
+    <h2>Where state lives</h2>
+    <span class="eyebrow">outside the RTK slices</span>
+  </div>
+  <div class="tabs" role="tablist" id="state-tabs"></div>
+  <div id="state-body"></div>
+</section>
+
+<section id="conventions">
+  <div class="sec-head">
+    <h2>Conventions</h2>
+    <span class="eyebrow">the CLAUDE.md rules, measured</span>
+  </div>
+  <div class="tabs" role="tablist" id="conv-tabs"></div>
+  <div id="conv-body"></div>
+</section>
+
+<section id="tests">
+  <div class="sec-head">
+    <h2>Test mirror</h2>
+    <span class="eyebrow">does a src file have a tests/ twin at all</span>
+  </div>
+  <div id="tests-body"></div>
+</section>
+
+<section id="stability">
+  <div class="sec-head">
+    <h2>Stability</h2>
+    <span class="eyebrow">per area · afferent vs efferent coupling</span>
+  </div>
+  <div id="stability-body"></div>
+</section>
+
+<section id="dead">
+  <div class="sec-head">
+    <h2>Dead and test-only</h2>
+    <span class="eyebrow">exports nothing in src imports</span>
+  </div>
+  <div class="tabs" role="tablist" id="dead-tabs"></div>
+  <div id="dead-body"></div>
+</section>
+
+<section id="dup">
+  <div class="sec-head">
+    <h2>Duplication</h2>
+    <span class="eyebrow">jscpd 4 · exact token clones</span>
+  </div>
+  <div class="tabs" role="tablist" id="dup-tabs"></div>
+  <div id="dup-body"></div>
+</section>
+
+<section id="hubs">
+  <div class="sec-head">
+    <h2>Hubs</h2>
+    <span class="eyebrow">most imported · most importing</span>
+  </div>
+  <div class="hubs">
+    <div>
+      <h3>Fan-in · files that import this one</h3>
+      <ul class="list" id="fanin"></ul>
+    </div>
+    <div>
+      <h3>Fan-out · files this one imports</h3>
+      <ul class="list" id="fanout"></ul>
+    </div>
+  </div>
+</section>
+
+<div class="tip" id="tip"></div>
+
+<script>
+  const D = __DATA__;
+  const GROUP_LABEL = {
+    leaves: 'Leaves',
+    services: 'Services',
+    engine: 'Engine',
+    state: 'State',
+    layers: 'Layers',
+    ui: 'UI',
+  };
+  const GROUP_HINT = {
+    leaves: '@types · data · utils — import nothing above',
+    services: 'GPU, loading, url, input, camera, tour clips',
+    engine: 'services/engine/* — internal order is a later question',
+    state: 'RTK slices, sagas, store',
+    layers: 'one Layer per folder — never each other',
+    ui: 'compositions, components, hooks, main',
+  };
+  const groupOf = {};
+  for (const a of D.areas) groupOf[a.name] = a.group;
+  const rank = (g) => D.groups.indexOf(g);
+  const isLayer = (a) => a.startsWith('layers/');
+  const el = (tag, attrs = {}, ...kids) => {
+    const e = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs)) {
+      if (k === 'class') e.className = v;
+      else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+      else if (k === 'style') e.style.cssText = v;
+      else e.setAttribute(k, v);
+    }
+    for (const c of kids.flat())
+      if (c != null) e.append(c.nodeType ? c : document.createTextNode(String(c)));
+    return e;
+  };
+  const fmt = (n) => n.toLocaleString('en-US');
+  const tip = document.getElementById('tip');
+  const showTip = (ev, text) => {
+    tip.textContent = text;
+    tip.style.display = 'block';
+    moveTip(ev);
+  };
+  const moveTip = (ev) => {
+    tip.style.left = Math.min(ev.clientX + 14, innerWidth - 380) + 'px';
+    tip.style.top = ev.clientY + 14 + 'px';
+  };
+  const hideTip = () => (tip.style.display = 'none');
+
+  // ---------- totals
+  {
+    const crossArea = D.areaEdges.reduce((s, e) => s + e.n, 0);
+    const t = document.getElementById('totals');
+    for (const [v, l] of [
+      [D.totals.files, 'files'],
+      [D.totals.edges, 'imports'],
+      [crossArea, 'cross-area'],
+      [D.areas.length, 'areas'],
+      [D.sccStats.count, 'cycles'],
+      [D.sccStats.filesInCycles, 'files in cycles'],
+    ])
+      t.append(el('div', {}, el('b', {}, fmt(v)), el('span', {}, l)));
+  }
+
+  // ---------- derived: against-grain classification
+  function classify(e) {
+    const gA = groupOf[e.s],
+      gB = groupOf[e.t];
+    if (isLayer(e.s) && isLayer(e.t)) return 'layer→layer';
+    if (isLayer(e.t) && !isLayer(e.s) && e.s !== 'compositions') return 'core→layer';
+    if (rank(gA) > rank(gB)) return 'downward';
+    return null;
+  }
+  let filter = { kind: 'all' };
+
+  function renderRules() {
+    const r = document.getElementById('rules');
+    r.innerHTML = '';
+    const counts = { downward: 0, 'core→layer': 0, 'layer→layer': 0 };
+    const kinds = {};
+    for (const e of D.areaEdges) {
+      const k = classify(e);
+      if (k) {
+        counts[k] += e.n;
+        (kinds[k] ??= []).push(e);
+      }
+    }
+    const mk = (label, key, n, hint) =>
+      el(
+        'button',
+        {
+          class: 'chip',
+          type: 'button',
+          title: hint,
+          onclick: () => {
+            filter = { kind: key };
+            renderEdges();
+            showSection('against');
+          },
+        },
+        el('b', { class: n ? 'bad' : 'ok' }, fmt(n)),
+        label,
+      );
+    r.append(
+      mk(
+        'imports going down the tier order',
+        'downward',
+        counts.downward,
+        'a file in a higher tier imported by a lower one',
+      ),
+      mk(
+        'core → a Layer',
+        'core→layer',
+        counts['core→layer'],
+        'anything but compositions/ importing layers/*',
+      ),
+      mk(
+        'Layer → Layer',
+        'layer→layer',
+        counts['layer→layer'],
+        'a Layer importing a sibling Layer',
+      ),
+      el(
+        'button',
+        {
+          class: 'chip',
+          type: 'button',
+          onclick: () => {
+            filter = { kind: 'all' };
+            renderEdges();
+          },
+        },
+        el('b', { class: 'ok' }, fmt(D.areaEdges.length)),
+        'all area pairs',
+      ),
+    );
+  }
+
+  // ---------- tiers editor
+  function renderTiers() {
+    const t = document.getElementById('tiers');
+    t.innerHTML = '';
+    t.append(
+      el(
+        'div',
+        { class: 'eyebrow' },
+        "Proposed tiers · bottom imports nothing above · change any area's tier",
+      ),
+    );
+    for (const g of D.groups) {
+      const members = D.areas.filter((a) => a.group === g);
+      const files = members.reduce((s, a) => s + a.files, 0);
+      const box = el(
+        'div',
+        { class: 'tier', style: '--tc:var(--g-' + g + ')' },
+        el(
+          'div',
+          { class: 'tier-head' },
+          el('h3', {}, GROUP_LABEL[g]),
+          el('span', { class: 'n' }, fmt(files) + ' files'),
+        ),
+        el('div', { class: 'count-note', style: 'margin-top:0' }, GROUP_HINT[g]),
+        el(
+          'ul',
+          {},
+          members.map((a) => {
+            const sel = el(
+              'select',
+              {
+                'aria-label': 'tier of ' + a.name,
+                id: 'tier-' + a.name.replace(/[^a-z0-9]/gi, '_'),
+                onchange: (ev) => {
+                  a.group = ev.target.value;
+                  groupOf[a.name] = a.group;
+                  renderAll();
+                },
+              },
+              D.groups.map((x) => {
+                const o = el('option', { value: x }, GROUP_LABEL[x]);
+                if (x === g) o.selected = true;
+                return o;
+              }),
+            );
+            return el(
+              'li',
+              { title: a.files + ' files · ' + fmt(a.code) + ' code lines' },
+              a.name
+                .replace('services/engine/', 'engine/')
+                .replace('services/', 'svc/')
+                .replace('layers/', 'L/'),
+              sel,
+            );
+          }),
+        ),
+      );
+      t.append(box);
+    }
+  }
+
+  // ---------- matrix
+  function renderMatrix() {
+    const order = [...D.areas].sort(
+      (x, y) => rank(x.group) - rank(y.group) || x.name.localeCompare(y.name),
+    );
+    const idx = new Map(order.map((a, i) => [a.name, i]));
+    const cell = {};
+    for (const e of D.areaEdges) cell[e.s + '|' + e.t] = e;
+    const q = (n) =>
+      n <= 0 ? '' : n <= 2 ? 'q1' : n <= 5 ? 'q2' : n <= 15 ? 'q3' : n <= 50 ? 'q4' : 'q5';
+    const table = el('table', { class: 'matrix' });
+    const head = el('tr', {}, el('th', {}));
+    order.forEach((a, i) =>
+      head.append(
+        el(
+          'th',
+          {
+            class: 'col' + (i > 0 && order[i - 1].group !== a.group ? ' gstart' : ''),
+            style: 'color:var(--g-' + a.group + ')',
+          },
+          el('div', {}, a.name.replace('services/', '').replace('layers/', 'L/')),
+        ),
+      ),
+    );
+    table.append(head);
+    order.forEach((a, i) => {
+      const tr = el('tr', { class: i > 0 && order[i - 1].group !== a.group ? 'gstart' : '' });
+      tr.append(
+        el(
+          'th',
+          { class: 'row', style: 'color:var(--g-' + a.group + ')' },
+          a.name.replace('services/', '').replace('layers/', 'L/'),
+        ),
+      );
+      order.forEach((b, j) => {
+        const e = cell[a.name + '|' + b.name];
+        const n = e ? e.n : 0;
+        const td = el('td', {
+          class: [
+            a.name === b.name ? 'diag' : q(n),
+            e && classify(e) ? 'against' : '',
+            j > 0 && order[j - 1].group !== b.group ? 'gstart' : '',
+          ]
+            .join(' ')
+            .trim(),
+        });
+        if (e) {
+          td.addEventListener('mouseenter', (ev) =>
+            showTip(
+              ev,
+              a.name +
+                ' → ' +
+                b.name +
+                ' · ' +
+                n +
+                ' import' +
+                (n > 1 ? 's' : '') +
+                (e.typeOnly ? ' · ' + e.typeOnly + ' type-only' : '') +
+                (classify(e) ? ' · ' + classify(e) : ''),
+            ),
+          );
+          td.addEventListener('mousemove', moveTip);
+          td.addEventListener('mouseleave', hideTip);
+          td.addEventListener('click', () => {
+            filter = { kind: 'pair', s: a.name, t: b.name };
+            renderEdges();
+            showSection('against');
+          });
+        }
+        tr.append(td);
+      });
+      table.append(tr);
+    });
+    const m = document.getElementById('matrix');
+    m.innerHTML = '';
+    m.append(table);
+  }
+
+  // ---------- edges list
+  function renderEdges() {
+    const wrap = document.getElementById('edges');
+    wrap.innerHTML = '';
+    let list, title, sub;
+    if (filter.kind === 'pair') {
+      list = D.areaEdges.filter((e) => e.s === filter.s && e.t === filter.t);
+      title = 'One area pair';
+      sub = filter.s + ' → ' + filter.t;
+    } else if (filter.kind === 'all') {
+      list = D.areaEdges;
+      title = 'All area pairs';
+      sub = list.length + ' pairs, densest first';
+    } else {
+      list = D.areaEdges.filter((e) => classify(e) === filter.kind);
+      title = 'Against the grain · ' + filter.kind;
+      sub = list.length + ' area pairs · ' + fmt(list.reduce((s, e) => s + e.n, 0)) + ' imports';
+    }
+    list = [...list].sort((x, y) => y.n - x.n);
+    document.getElementById('against-title').textContent = title;
+    document.getElementById('against-sub').textContent = sub;
+    if (!list.length)
+      wrap.append(el('p', { class: 'note' }, 'Nothing here under the current tiers.'));
+    for (const e of list) {
+      const k = classify(e);
+      const card = el('div', { class: 'edge', tabindex: '0', role: 'button' });
+      const line = el(
+        'div',
+        { class: 'edge-line' },
+        el('span', { style: 'color:var(--g-' + groupOf[e.s] + ')' }, e.s),
+        el('span', { class: 'arrow' }, '→'),
+        el('span', { style: 'color:var(--g-' + groupOf[e.t] + ')' }, e.t),
+        k ? el('span', { class: 'pill' }, k) : null,
+        el('span', { class: 'n' + (k ? '' : ' neutral') }, e.n),
+      );
+      card.append(line);
+      const open = () => {
+        if (card.classList.toggle('open')) {
+          if (!card.querySelector('ul')) {
+            const files = D.pairFiles[e.s + '|' + e.t] ?? [];
+            card.append(
+              el(
+                'ul',
+                {},
+                files.map(([a, b, t]) =>
+                  el(
+                    'li',
+                    {},
+                    el('b', {}, a.slice(e.s.length + 1)),
+                    ' → ',
+                    b.slice(e.t.length + 1),
+                    t ? el('span', { class: 't' }, ' type') : null,
+                  ),
+                ),
+              ),
+            );
+          }
+        } else {
+          card.querySelector('ul')?.remove();
+        }
+      };
+      card.addEventListener('click', open);
+      card.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Enter' || ev.key === ' ') {
+          ev.preventDefault();
+          open();
+        }
+      });
+      wrap.append(card);
+    }
+  }
+
+  // ---------- cycles
+  {
+    const s = document.getElementById('sccs');
+    document.getElementById('cycles-sub').textContent =
+      D.sccStats.count + ' cycles · largest ' + D.sccStats.largest + ' files';
+    D.sccs.forEach((c, i) => {
+      const d = el(
+        'details',
+        { class: 'scc', ...(i < 2 ? { open: '' } : {}) },
+        el('summary', {}, el('b', {}, c.size + ' files'), c.areas.join(' · ')),
+        el(
+          'ul',
+          {},
+          c.files.map((f) => el('li', {}, f)),
+        ),
+      );
+      s.append(d);
+    });
+  }
+
+  // ---------- state
+  {
+    const st = D.state;
+    const byArea = (rows, key = 'f') => {
+      const m = {};
+      for (const r of rows) m[r.area] = (m[r.area] ?? 0) + (r.n ?? 1);
+      return Object.entries(m).sort((a, b) => b[1] - a[1]);
+    };
+    const bars = (rows) => {
+      const max = Math.max(...rows.map((r) => r[1]));
+      const b = el('div', { class: 'bars' });
+      for (const [a, n] of rows)
+        b.append(
+          el('span', { class: 'lab' }, a),
+          el(
+            'div',
+            {},
+            el('div', {
+              class: 'bar',
+              style: 'width:' + (100 * n) / max + '%;--gc:var(--g-' + groupOf[a] + ')',
+            }),
+          ),
+          el('span', {}, n),
+        );
+      return b;
+    };
+    const fileList = (rows, right) =>
+      el(
+        'ul',
+        { class: 'list' },
+        rows.map((r) =>
+          el(
+            'li',
+            {},
+            el(
+              'span',
+              {},
+              el('b', {}, r.f),
+              r.text ? ' · ' + r.text : '',
+              r.role ? el('span', { class: 'pill ' + r.role }, r.role) : null,
+            ),
+            el('em', {}, right(r)),
+          ),
+        ),
+      );
+    const tabs = [
+      [
+        'Module-level let',
+        st.moduleLet.length,
+        () => [
+          el(
+            'p',
+            { class: 'note', style: 'margin:0 0 10px' },
+            'Bare mutable variables at module scope: the strongest signal of state outside RTK. Most are lazy caches; all of them are process-global singletons.',
+          ),
+          fileList(st.moduleLet, (r) => 'line ' + r.line),
+        ],
+      ],
+      [
+        'Module-level Map/Set',
+        st.containers.length,
+        () => [
+          el(
+            'p',
+            { class: 'note', style: 'margin:0 0 10px' },
+            'Containers built once at import time. Lookup = immutable index over static data (fine). Cache = WeakMap or named cache, keyed by an object (memo state). Mutable = written after construction.',
+          ),
+          fileList(
+            st.containers.sort((a, b) => a.role.localeCompare(b.role)),
+            (r) => r.kind + ' · line ' + r.line,
+          ),
+        ],
+      ],
+      [
+        'Closure cells',
+        st.closure.length,
+        () => [
+          el(
+            'p',
+            { class: 'note', style: 'margin:0 0 10px' },
+            'let declarations directly inside a top-level function body: the private state of factories (renderers, subsystems, sagas). Legitimate engine runtime state, but this is where non-RTK state actually lives. Counted per file, top 60 shown.',
+          ),
+          bars(byArea(st.closure)),
+          el('div', { style: 'height:16px' }),
+          fileList(st.closure.slice(0, 60), (r) => r.n + ' cells · ' + r.code + ' lines'),
+        ],
+      ],
+      [
+        'RTK slices',
+        st.slices.length,
+        () => [
+          el(
+            'p',
+            { class: 'note', style: 'margin:0 0 10px' },
+            'createSlice call sites by area. Layer-owned slices under layers/*/settings are the layer-composition target.',
+          ),
+          bars(byArea(st.slices)),
+          el('div', { style: 'height:16px' }),
+          fileList(st.slices, (r) => 'line ' + r.line),
+        ],
+      ],
+      [
+        'React local state',
+        st.reactState.length,
+        () => [
+          el(
+            'p',
+            { class: 'note', style: 'margin:0 0 10px' },
+            'useState / useRef / useReducer per component file. Small; UI-only conveniences.',
+          ),
+          fileList(st.reactState, (r) => r.n + ' hook' + (r.n > 1 ? 's' : '')),
+        ],
+      ],
+      [
+        'Classes',
+        st.classes.length,
+        () => [
+          el(
+            'p',
+            { class: 'note', style: 'margin:0 0 10px' },
+            'class declarations in src. The codebase is factory-closure style; these are the exceptions.',
+          ),
+          fileList(st.classes, (r) => 'line ' + r.line),
+        ],
+      ],
+    ];
+    const tabBar = document.getElementById('state-tabs'),
+      body = document.getElementById('state-body');
+    let active = 0;
+    const draw = () => {
+      tabBar.innerHTML = '';
+      body.innerHTML = '';
+      tabs.forEach(([l, n, render], i) => {
+        tabBar.append(
+          el(
+            'button',
+            {
+              class: 'tab',
+              role: 'tab',
+              type: 'button',
+              id: 'state-tab-' + i,
+              'aria-selected': String(i === active),
+              onclick: () => {
+                active = i;
+                draw();
+              },
+            },
+            l + ' ',
+            el('b', {}, '(' + n + ')'),
+          ),
+        );
+      });
+      body.append(...tabs[active][2]());
+    };
+    draw();
+  }
+
+  // ---------- hubs
+  {
+    const fi = document.getElementById('fanin'),
+      fo = document.getElementById('fanout');
+    for (const [f, n] of D.fanIn.slice(0, 20))
+      fi.append(el('li', {}, el('span', {}, el('b', {}, f)), el('em', {}, n + ' importers')));
+    for (const [f, n] of D.fanOut.slice(0, 20))
+      fo.append(el('li', {}, el('span', {}, el('b', {}, f)), el('em', {}, n + ' imports')));
+  }
+
+  // ---------- shared tab helper
+  const tabbed = (barId, bodyId, tabs) => {
+    const bar = document.getElementById(barId),
+      body = document.getElementById(bodyId);
+    let active = 0;
+    const draw = () => {
+      bar.innerHTML = '';
+      body.innerHTML = '';
+      tabs.forEach(([l, n, render], i) =>
+        bar.append(
+          el(
+            'button',
+            {
+              class: 'tab',
+              role: 'tab',
+              type: 'button',
+              id: barId + '-' + i,
+              'aria-selected': String(i === active),
+              onclick: () => {
+                active = i;
+                draw();
+              },
+            },
+            l + ' ',
+            el('b', {}, '(' + n + ')'),
+          ),
+        ),
+      );
+      body.append(...tabs[active][2]());
+    };
+    draw();
+  };
+  const note = (t) => el('p', { class: 'note', style: 'margin:0 0 10px' }, t);
+  const rows = (items, left, right) =>
+    el(
+      'ul',
+      { class: 'list' },
+      items.map((r) => el('li', {}, el('span', {}, ...[].concat(left(r))), el('em', {}, right(r)))),
+    );
+  const areaBars = (pairs) => {
+    const max = Math.max(1, ...pairs.map((r) => r[1]));
+    const b = el('div', { class: 'bars' });
+    for (const [a, n, label] of pairs)
+      b.append(
+        el('span', { class: 'lab' }, a),
+        el(
+          'div',
+          {},
+          el('div', {
+            class: 'bar',
+            style: 'width:' + (100 * n) / max + '%;--gc:var(--g-' + (groupOf[a] ?? 'ui') + ')',
+          }),
+        ),
+        el('span', {}, label ?? n),
+      );
+    return b;
+  };
+  const byAreaCount = (items) => {
+    const m = {};
+    for (const r of items) m[r.area] = (m[r.area] ?? 0) + 1;
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  };
+
+  // ---------- conventions
+  {
+    const c = D.audit.conv;
+    tabbed('conv-tabs', 'conv-body', [
+      [
+        'interface',
+        c.interfaces.length,
+        () => [
+          note('Rule: type aliases, never interface. Zero is the target.'),
+          c.interfaces.length
+            ? rows(
+                c.interfaces,
+                (r) => [el('b', {}, r.f), ' · ' + r.text],
+                (r) => 'line ' + r.line,
+              )
+            : el('p', { class: 'note' }, 'Clean.'),
+        ],
+      ],
+      [
+        'Barrels',
+        c.barrels.length,
+        () => [
+          note(
+            'Rule: no index.ts re-export files. Barrels also tend to be the largest fan-out files on the Hubs tab.',
+          ),
+          rows(
+            c.barrels,
+            (r) => [el('b', {}, r.f)],
+            (r) => r.exports + ' exports',
+          ),
+        ],
+      ],
+      [
+        'Multi-export in utils/@types',
+        c.multiExport.length,
+        () => [
+          note(
+            'Rule: one symbol per file under utils/ and @types/. Each of these files exports more than one declaration.',
+          ),
+          rows(
+            c.multiExport,
+            (r) => [el('b', {}, r.f), ' · ' + r.names.join(', ')],
+            (r) => r.names.length + ' exports',
+          ),
+        ],
+      ],
+      [
+        'Inline types',
+        c.inlineTypes.length,
+        () => [
+          note(
+            'Rule: types never live inline in implementation files (a component’s own Props excepted). Files outside @types/ and */types/ that export a type. Some are Layer contract types that the convention says belong in the Layer’s types/ folder.',
+          ),
+          areaBars(
+            byAreaCount(
+              c.inlineTypes.map((r) => ({
+                area: (D.areas.find((a) => r.f.startsWith(a.name + '/')) || { name: '(root)' })
+                  .name,
+              })),
+            ),
+          ),
+          el('div', { style: 'height:16px' }),
+          rows(
+            c.inlineTypes,
+            (r) => [el('b', {}, r.f), ' · ' + r.names.join(', ')],
+            (r) => r.names.length + ' type' + (r.names.length > 1 ? 's' : ''),
+          ),
+        ],
+      ],
+    ]);
+  }
+
+  // ---------- tests mirror
+  {
+    const m = [...D.audit.mirror].sort((a, b) => a.tested / a.files - b.tested / b.files);
+    const total = m.reduce((s, r) => s + r.files, 0),
+      tested = m.reduce((s, r) => s + r.tested, 0);
+    const body = document.getElementById('tests-body');
+    body.append(
+      note(
+        'A src file counts as mirrored when tests/ holds a file at the same path with a .test suffix (suffixed variants like x.frustumCull.test.ts count). This is presence, not coverage: it says whether the mirror convention was followed, not whether the test is any good. Repo-wide: ' +
+          tested +
+          ' of ' +
+          total +
+          ' files have a twin. @types/ is expected to sit at zero.',
+      ),
+    );
+    body.append(areaBars(m.map((r) => [r.area, r.tested / r.files, r.tested + ' / ' + r.files])));
+    body.append(el('div', { style: 'height:16px' }));
+    const sel = el(
+      'select',
+      { id: 'tests-area', 'aria-label': 'area' },
+      m.map((r) =>
+        el('option', { value: r.area }, r.area + ' · ' + r.untested.length + ' untested'),
+      ),
+    );
+    const list = el('div');
+    const draw = () => {
+      const r = m.find((x) => x.area === sel.value);
+      list.innerHTML = '';
+      list.append(
+        rows(
+          r.untested,
+          (f) => [el('b', {}, f)],
+          () => 'no test file',
+        ),
+      );
+    };
+    sel.addEventListener('change', draw);
+    body.append(
+      el(
+        'div',
+        { style: 'margin-bottom:8px' },
+        el('span', { class: 'eyebrow', style: 'margin-right:8px' }, 'untested files in'),
+        sel,
+      ),
+      list,
+    );
+    draw();
+  }
+
+  // ---------- stability
+  {
+    const inst = [...D.audit.inst].sort((a, b) => b.ca + b.ce - (a.ca + a.ce));
+    const body = document.getElementById('stability-body');
+    body.append(
+      note(
+        'Ca = imports coming in from other areas (afferent), Ce = imports going out (efferent). Instability I = Ce / (Ca + Ce): 0 means everything depends on it and it depends on nothing (a stable leaf), 1 means the reverse. The dangerous quadrant is high Ca with high Ce: heavily depended on and heavily dependent, so a change anywhere ripples through it.',
+      ),
+    );
+    const t = el(
+      'table',
+      { class: 'stab' },
+      el('tr', {}, ...['area', 'Ca in', 'Ce out', 'I', 'read'].map((h) => el('th', {}, h))),
+    );
+    for (const r of inst) {
+      const flag =
+        r.ca >= 80 && r.ce >= 80
+          ? 'both directions · refactor target'
+          : r.i <= 0.2
+            ? 'stable leaf'
+            : r.i >= 0.8
+              ? 'top of the stack'
+              : '';
+      t.append(
+        el(
+          'tr',
+          {},
+          el('td', { style: 'color:var(--g-' + groupOf[r.area] + ')' }, r.area),
+          el('td', {}, r.ca),
+          el('td', {}, r.ce),
+          el(
+            'td',
+            {},
+            el('span', { class: 'ibar' }, el('span', { style: 'width:' + r.i * 100 + '%' })),
+            r.i.toFixed(2),
+          ),
+          el('td', { class: 'flag' + (flag.includes('refactor') ? ' bad' : '') }, flag),
+        ),
+      );
+    }
+    body.append(el('div', { class: 'matrix-wrap' }, t));
+  }
+
+  // ---------- dead / test-only
+  {
+    const a = D.audit.dead;
+    const isType = (n) => /^[A-Z]/.test(n) && !/^[A-Z0-9_]+$/.test(n);
+    const deadVals = a.dead.filter((d) => !isType(d.name)),
+      deadTypes = a.dead.filter((d) => isType(d.name));
+    tabbed('dead-tabs', 'dead-body', [
+      [
+        'Whole files, test-only',
+        a.testOnlyFiles.length,
+        () => [
+          note(
+            'Files whose exports are imported by tests/ or tools/ but by nothing in src/. Either the feature that used them was deleted and the test survived, or they are test fixtures living in src. Either way, a deletion candidate together with its test.',
+          ),
+          areaBars(byAreaCount(a.testOnlyFiles)),
+          el('div', { style: 'height:16px' }),
+          rows(
+            a.testOnlyFiles,
+            (r) => [el('b', {}, r.f)],
+            (r) => r.exports + ' export' + (r.exports > 1 ? 's' : ''),
+          ),
+        ],
+      ],
+      [
+        'Whole files, dead',
+        a.deadFiles.length,
+        () => [
+          note('Files nothing imports, not even a test.'),
+          rows(
+            a.deadFiles,
+            (r) => [el('b', {}, r.f)],
+            (r) => r.exports + ' export' + (r.exports > 1 ? 's' : ''),
+          ),
+        ],
+      ],
+      [
+        'Dead values',
+        deadVals.length,
+        () => [
+          note(
+            'Exported constants and functions imported nowhere in src, tests or tools. Either delete, or drop the export keyword if the file uses it internally.',
+          ),
+          areaBars(byAreaCount(deadVals)),
+          el('div', { style: 'height:16px' }),
+          rows(
+            deadVals,
+            (r) => [el('b', {}, r.f), ' · ' + r.name],
+            (r) => r.area,
+          ),
+        ],
+      ],
+      [
+        'Dead types',
+        deadTypes.length,
+        () => [
+          note(
+            'Exported types imported nowhere. Often used only inside their own file, so the fix is usually to un-export rather than delete.',
+          ),
+          rows(
+            deadTypes,
+            (r) => [el('b', {}, r.f), ' · ' + r.name],
+            (r) => r.area,
+          ),
+        ],
+      ],
+      [
+        'Test-only symbols',
+        a.testOnly.length,
+        () => [
+          note(
+            'Exports imported by tests/ or tools/ only, from files that src does otherwise use. Test seams, or leftovers.',
+          ),
+          areaBars(byAreaCount(a.testOnly)),
+          el('div', { style: 'height:16px' }),
+          rows(
+            a.testOnly,
+            (r) => [el('b', {}, r.f), ' · ' + r.name],
+            (r) => r.area,
+          ),
+        ],
+      ],
+    ]);
+  }
+
+  // ---------- duplication
+  {
+    const d = D.audit.dup;
+    const cloneRows = (cs) =>
+      el(
+        'ul',
+        { class: 'list' },
+        cs.map((c) =>
+          el(
+            'li',
+            {},
+            el(
+              'span',
+              {},
+              el('b', {}, c.a + ':' + c.la),
+              ' ~ ',
+              el('b', {}, c.b + ':' + c.lb),
+              c.areaA !== c.areaB ? el('span', { class: 'pill' }, 'cross-area') : null,
+              el('div', { class: 'sample' }, c.sample),
+            ),
+            el('em', {}, c.lines + ' lines · ' + c.tokens + ' tokens'),
+          ),
+        ),
+      );
+    tabbed('dup-tabs', 'dup-body', [
+      [
+        'Strict',
+        d.strict.clones.length,
+        () => [
+          note(
+            'jscpd, minimum 8 lines and 60 tokens. ' +
+              d.strict.duplicatedLines +
+              ' duplicated lines of ' +
+              d.strict.totalLines.toLocaleString() +
+              ' (' +
+              ((100 * d.strict.duplicatedLines) / d.strict.totalLines).toFixed(2) +
+              '%). Exact token-level clones, so a copy with one renamed identifier does not match: real duplication is higher than this.',
+          ),
+          cloneRows(d.strict.clones),
+        ],
+      ],
+      [
+        'Loose',
+        d.loose.clones.length,
+        () => [
+          note(
+            'Minimum 5 lines and 40 tokens. ' +
+              d.loose.duplicatedLines +
+              ' duplicated lines (' +
+              ((100 * d.loose.duplicatedLines) / d.loose.totalLines).toFixed(2) +
+              '%). Catches the shorter boilerplate blocks: pipeline descriptors, bind-group layouts, uniform packing.',
+          ),
+          areaBars(
+            (() => {
+              const m = {};
+              for (const c of d.loose.clones)
+                for (const a of [c.areaA, c.areaB]) m[a] = (m[a] ?? 0) + c.lines;
+              return Object.entries(m)
+                .sort((a, b) => b[1] - a[1])
+                .map(([a, n]) => [a, n, n + ' lines']);
+            })(),
+          ),
+          el('div', { style: 'height:16px' }),
+          cloneRows(d.loose.clones),
+        ],
+      ],
+    ]);
+  }
+
+  // ---------- section tabs
+  {
+    const SECTIONS = [
+      ['guide', 'How to read'],
+      ['layering', 'Layering'],
+      ['against', 'Against the grain'],
+      ['cycles', 'Cycles'],
+      ['state', 'State'],
+      ['conventions', 'Conventions'],
+      ['tests', 'Tests'],
+      ['stability', 'Stability'],
+      ['dead', 'Dead code'],
+      ['dup', 'Duplication'],
+      ['hubs', 'Hubs'],
+    ];
+    const nav = document.getElementById('topnav');
+    let current = null;
+    try {
+      current = sessionStorage.getItem('atlas-tab');
+    } catch {}
+    if (!SECTIONS.some(([id]) => id === current)) current = 'guide';
+    const show = (id) => {
+      current = id;
+      for (const [sid] of SECTIONS) document.getElementById(sid).hidden = sid !== id;
+      for (const b of nav.children) b.setAttribute('aria-selected', String(b.dataset.id === id));
+      try {
+        sessionStorage.setItem('atlas-tab', id);
+      } catch {}
+      window.scrollTo({ top: 0 });
+    };
+    for (const [id, label] of SECTIONS)
+      nav.append(
+        el(
+          'button',
+          { type: 'button', role: 'tab', id: 'nav-' + id, 'data-id': id, onclick: () => show(id) },
+          label,
+        ),
+      );
+    window.showSection = show;
+    show(current);
+  }
+
+  function renderAll() {
+    renderRules();
+    renderTiers();
+    renderMatrix();
+    renderEdges();
+  }
+  filter = { kind: 'downward' };
+  renderAll();
+</script>
