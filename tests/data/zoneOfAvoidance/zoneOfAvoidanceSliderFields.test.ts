@@ -10,7 +10,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { ZONE_OF_AVOIDANCE_SLIDER_FIELDS } from '../../../src/data/zoneOfAvoidance/zoneOfAvoidanceSliderFields';
-import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../../src/data/defaults';
+import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../../src/layers/zoneOfAvoidance/settings/defaults';
 import type { ZoneOfAvoidanceTuning } from '../../../src/@types/settings/ZoneOfAvoidanceTuning';
 
 describe('ZONE_OF_AVOIDANCE_SLIDER_FIELDS — parity with the tuning knobs', () => {

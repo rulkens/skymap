@@ -64,6 +64,16 @@ export type TexturedDiskSubsystem = Destroyable & {
   hasInFlightWork(): boolean;
 
   /**
+   * The LANDED half of `hasInFlightWork` alone: true only while a bitmap that
+   * actually arrived is inside its 400 ms load-fade window. What the Layer's
+   * `settling` vote reads, and through it every sky capture's per-frame
+   * re-bake — an outstanding fetch is NOT content, and a thumbnail host that
+   * hangs for ~30 s would otherwise re-bake six faces per frame for its whole
+   * duration while nothing on screen changed.
+   */
+  hasFadingContent(): boolean;
+
+  /**
    * Swap the hi-res LOD-3 planner read per frame. The pair lives behind
    * the `hi-res-famous` asset slot (`wireHiResFamousSlot.ts`): its
    * `commit` binds the new texture view and calls this BEFORE destroying

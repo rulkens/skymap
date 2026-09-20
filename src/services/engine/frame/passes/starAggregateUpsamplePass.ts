@@ -12,7 +12,7 @@
 
 import { createUpsamplePass } from './createUpsamplePass';
 import { NEAR0 } from '../slabs';
-import { starCatalogVisible } from './starCatalogPass';
+import { starCatalogVisible } from '../../../gpu/renderers/starCatalog/cut/starCatalogVisible';
 
 export const starAggregateUpsamplePass = createUpsamplePass({
   name: 'star-upsample',

@@ -14,14 +14,14 @@ import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
+import { DEFAULT_FLOW } from '../../../src/layers/flow/settings/defaults';
+import { DEFAULT_POINT_SIZE_PX } from '../../../src/layers/galaxyCatalog/settings/defaults';
 import {
-  DEFAULT_FLOW,
-  DEFAULT_POINT_SIZE_PX,
+  DEFAULT_STAR_REFINE_THRESHOLD,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
-} from '../../../src/data/defaults';
-import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+} from '../../../src/layers/starCatalog/settings/defaults';
 
 describe('INITIAL_SETTINGS', () => {
   it('derives one galaxy-catalog item row per id, enabled from registry visible', () => {
@@ -47,7 +47,7 @@ describe('INITIAL_SETTINGS', () => {
     expect(INITIAL_SETTINGS.galaxyCatalogs.sizePx).toBe(DEFAULT_POINT_SIZE_PX);
     expect(INITIAL_SETTINGS.starCatalogs.sizePx).toBe(DEFAULT_STAR_SIZE_PX);
     expect(INITIAL_SETTINGS.starCatalogs.brightness).toBe(DEFAULT_STAR_BRIGHTNESS);
-    expect(INITIAL_SETTINGS.starCatalogs.refineThreshold).toBe(DEFAULT_REFINE_THRESHOLD);
+    expect(INITIAL_SETTINGS.starCatalogs.refineThreshold).toBe(DEFAULT_STAR_REFINE_THRESHOLD);
     expect(INITIAL_SETTINGS.starCatalogs.glowOverlap).toBe(DEFAULT_STAR_GLOW_OVERLAP);
     expect(INITIAL_SETTINGS.flow).toEqual(DEFAULT_FLOW);
   });

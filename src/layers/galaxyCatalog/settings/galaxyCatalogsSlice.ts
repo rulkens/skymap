@@ -15,7 +15,7 @@ import {
   DEFAULT_GALAXY_SB_MAX,
   DEFAULT_GALAXY_SB_SCALE,
   DEFAULT_POINT_SIZE_PX,
-} from '../../../data/defaults';
+} from './defaults';
 import type { GalaxyCatalogId } from '../../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../../@types/settings/GalaxyCatalogItemSettings';
 import type { GalaxyCatalogSettings } from '../../../@types/settings/GalaxyCatalogSettings';

@@ -49,7 +49,7 @@ import { writeVolumeField } from '../../../src/layers/volume/settings/volumesSli
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/layers/galaxyCatalog/settings/defaults';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

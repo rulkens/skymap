@@ -137,8 +137,9 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Bright star clump at ~5.9 kpc** `deferred` — flux verified conserved; residual over-exposure is display policy (mid-anchor slider + summed knee shipped; retune or tone-map shoulder next). → [details](backlog/2026-07-17-star-clump-brightness-5-9kpc.md)
 - [ ] **Foreground body draw/drawPick share a per-frame resolved set** `deferred` — mirrored partition/cull invocations can desync under future edits; star partition runs up to 4×/frame at deep zoom. → [details](backlog/2026-07-17-foreground-body-resolved-set.md)
 - [ ] **Hoist the three per-call-site solar-system derivations onto the planner pattern** `ready` — `sceneBodyPartition`/`partitionStarsByResolution`/`atmosphereDrawList` recompute per call site instead of hoisted like `prepareStarCut`. → [details](backlog/2026-08-20-hoist-solar-system-derivations.md)
-- [ ] **`starCatalogPass` god-layer split (three owned concerns, layer-imports-layer)** `needs-design` — 983 LoC owns visibility, the shared octree walk, and stream SoA bookkeeping; two sibling layers import its `enabled`. → [details](backlog/2026-08-20-star-catalog-layer-god-layer-split.md)
+- [ ] **`computeStarCut`'s stream SoA crossfade bookkeeping braided into its `advanceFades` flag** `needs-design` — one function toggles between pure and mutating by boolean; that plus the `DEFAULT_STAR_*` move into the Layer's own `settings/defaults.ts` is design work for the `starCatalog` Layer PR. → [details](backlog/2026-08-20-star-catalog-layer-god-layer-split.md)
 - [ ] **Star cut bakes one camera origin at prepare time, draw rebases about another** `ready` — mono-invisible since the two origins currently agree; port the spike's `originMpc`-carrying fix + regression test. → [details](backlog/2026-08-23-star-cut-origin-carrying.md)
+- [ ] **Star cut frustum prune fades newcomers on re-entry** `needs-design` — a node rotating back on-screen re-enters as an opacity-0 newcomer instead of popping in at 1, showing a ~250ms fade band on the leading edge during fast rotation. → [details](backlog/2026-09-20-star-cut-frustum-newcomer-seeding.md)
 - [ ] **Label-entanglement residuals from the rung-8 radar pass** `needs-design` — duplicated structure fade curve, hand-picked `signatureOf` re-upload fields, and a foreground label capacity that presumes a closed producer set. → [details](backlog/2026-08-22-label-entanglement-residuals.md)
 - [ ] **Star drawBudget small-tier mobile cap + iOS device pass** `deferred` — lower `hardCap` for `tier === 'small'` in `gaia-stars.ts`, tuned on a real device; verify the new vertex-stage storage bindings under WebKit's stricter WebGPU in the same pass.
 - [ ] **Celestial-sphere morph toggle** `needs-design` — morph stars (and constellation lines) between true 3D and a fixed celestial sphere; star-shader hot path + tour primitive. → [details](backlog/2026-07-22-celestial-sphere-morph.md)
@@ -216,6 +217,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **`cosmicFlows` beat D never plays** `ready` — its `fade()` cue lands exactly on the compiled clip duration and is wiped by the completion-tick reset one frame later. → [details](backlog/2026-08-20-cosmicflows-beat-d-unreachable.md)
 - [ ] **`emphasize()` clip cue** `ready` — per-structure spotlight lift composing with `fade` dims (staggered group highlights in the tour's neighbourhood beat). → [details](backlog/2026-07-07-emphasize-clip-cue.md)
 - [ ] **Greek letters in star labels** `needs-design` — font atlas lacks Greek glyphs, so Bayer names are spelled out ("Delta Velorum" vs δ Velorum); add the range + swap seed display names. → [details](backlog/2026-07-22-greek-letters-in-star-labels.md)
+- [ ] **Break up `tools/record/record.ts`** `ready` — move the ffmpeg pipe and the preview-build server into `tools/utils/record/`, leaving argv + the frame loop; own PR, smoke a clip before/after.
 - [ ] **Tour-recorder follow-ups** `ready` — small post-merge items from the recorder's final review (observable settle discard, two test/diagnostic tidies). → [details](backlog/2026-07-08-tour-recorder-follow-ups.md)
 
 ## Docs & process
@@ -231,6 +233,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Plan `Needs:` lines for wave dispatch** `needs-design` — SDD serializes plans; mined dependency graphs from completed plans understate real depth, so the DAG must be authored, not mined. → [details](backlog/2026-07-31-plan-needs-lines-wave-dispatch.md)
 - [ ] **CLAUDE.md compaction pass** `ready` — the file has grown; tighten it without losing load-bearing content.
 - [ ] **Repo is not prettier-clean** `needs-verification` — `prettier --write` over `tests/tools/` alone reformatted ~20 untouched files (2026-09-18); sweep once or narrow the format script.
+- [ ] **Split the repo into workspace packages** `needs-design` — web app, `tools/`, and each workbench into `packages/*` after the desktop app; gated on a shared-code package for `src/`. → [details](backlog/2026-09-19-packages-split.md)
 - [ ] **Comment prune to the 5-line budget** `ready` — script-listed files only; landmine memories + RENDERER.md protected. → [details](backlog/2026-09-15-comment-prune.md)
 
 ## External / blocked
@@ -247,7 +250,7 @@ Per-task plan tree under [`superpowers/plans/2026-05-05-outreach-and-promotion/`
 - [ ] **JOSS submission** `ready` — `paper/paper.md` + `paper/paper.bib` (Task 3).
 - [ ] **Remaining Reddit posts** `ready` — r/Astronomy (video), r/WebGPU (video) (Task 4).
 - [ ] **Academic outreach emails** `ready` — SDSS, GLADE, AAS WWT, CDS (Task 5).
-- [ ] **Museum kiosk mode** `needs-design` — attract-loop + locked-down + offline install build; playback half exists (`?cinema`, recorder harness), robustness + offline thumbnails don't. → [details](backlog/2026-08-31-museum-kiosk-mode.md)
+- [ ] **Museum kiosk mode** `needs-design` — attract loop + idle reset + thumbnail pack on top of the desktop offline app (own spec); playback half exists (`?cinema`, recorder harness). → [details](backlog/2026-08-31-museum-kiosk-mode.md)
 
 ---
 

@@ -183,6 +183,47 @@ describe('createTexturedDiskSubsystem', () => {
     expect(sys.hasInFlightWork()).toBe(false);
   });
 
+  // The two halves of `hasInFlightWork` drive different consumers: the loop
+  // must stay awake for an outstanding fetch, but a sky capture may only
+  // re-bake for content that actually LANDED. A fetch to an unreachable host
+  // hangs for ~30 s, so folding the two would re-bake six faces per frame for
+  // its whole duration — see frame.settlingVote.test.ts.
+  it('reports a merely-outstanding fetch as in-flight work but NOT as fading content', () => {
+    const pending: Array<(b: ImageBitmap | null) => void> = [];
+    const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createTexturedDiskSubsystem({ device, atlas, fetcher });
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+
+    runTexturedSolo(walk, sys, makeInput(clouds));
+    expect(sys.hasInFlightWork()).toBe(true);
+    expect(sys.hasFadingContent()).toBe(false);
+  });
+
+  it('reports a landed bitmap as fading content only inside its load-fade window', async () => {
+    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
+    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
+    const sys = createTexturedDiskSubsystem({
+      device,
+      atlas,
+      fetcher: async () => makeFakeBitmap(),
+    });
+    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
+
+    // Frame 1 (nowMs=0) enqueues; the bitmap lands and stamps its arrival.
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // Inside LOAD_FADE_MS (400 ms): content is visibly changing.
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 100));
+    expect(sys.hasFadingContent()).toBe(true);
+
+    // Past it: settled, nothing left to track.
+    runTexturedSolo(walk, sys, makeInput(clouds, undefined, [], 1000));
+    expect(sys.hasFadingContent()).toBe(false);
+  });
+
   // ── Hi-res LOD fold-in ──────────────────────────────────────────────
   // The planner emits two extra fields per DiskInstance:
   // `hiResLayerIdx` (sentinel -1 = no hi-res layer assigned) and

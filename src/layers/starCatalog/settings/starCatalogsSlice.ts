@@ -8,6 +8,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
 import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import {
+  DEFAULT_STAR_REFINE_THRESHOLD,
   DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_EXPOSURE_FAR_X,
@@ -15,10 +16,7 @@ import {
   DEFAULT_STAR_EXPOSURE_NEAR_X,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
-} from '../../../data/defaults';
-// The "Detail" knob's default is owned by the walk it feeds (single source of
-// truth), so seed the setting straight from it rather than restating that number here.
-import { DEFAULT_REFINE_THRESHOLD } from '../../../services/gpu/renderers/starCatalog/walkStarOctreeCut';
+} from './defaults';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../@types/settings/StarCatalogItemSettings';
 import type { StarCatalogSettings } from '../../../@types/settings/StarCatalogSettings';
@@ -35,7 +33,7 @@ const initialState: StarCatalogSettings = {
   enabled: true,
   sizePx: DEFAULT_STAR_SIZE_PX,
   brightness: DEFAULT_STAR_BRIGHTNESS,
-  refineThreshold: DEFAULT_REFINE_THRESHOLD,
+  refineThreshold: DEFAULT_STAR_REFINE_THRESHOLD,
   glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
   exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
   exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,

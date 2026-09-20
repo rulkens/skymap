@@ -28,7 +28,7 @@
  * renderer reconstructs the physically-correct summed flux on the GPU by
  * multiplying the record's per-star flux back up by the subtree star count `N`
  * (which the runtime derives from the node table — see the vertex shader and
- * `subtreeStarCounts.ts`). Summing on read rather than on write keeps the
+ * `starOctreeIndex`'s `subtreeCounts`). Summing on read rather than on write keeps the
  * additive-flux photometry exact while keeping every stored magnitude inside
  * the single-star window.
  *
