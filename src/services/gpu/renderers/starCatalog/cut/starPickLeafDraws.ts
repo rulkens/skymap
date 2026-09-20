@@ -5,7 +5,10 @@
  * not-yet-visible newcomer, or a fully-faded leaf not yet pruned): "you can
  * only click what you can see" is the engine's usual opacity-0-⇒-no-render
  * rule. `<=` rather than `===` is belt-and-braces against a future underflow;
- * today `opacity` (crossfade × nodeFade) is always `>= 0`.
+ * today `opacity` (crossfade × nodeFade) is always `>= 0`. No leaf here ever
+ * names the Sun: it is excluded from the catalog at build time (drawn by the
+ * true-scale seed passes as the scene origin), so the octree carries no
+ * record at [0,0,0].
  */
 
 import type { PreparedStarCut } from '../../../../../@types/rendering/PreparedStarCut';

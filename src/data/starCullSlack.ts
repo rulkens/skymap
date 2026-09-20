@@ -2,6 +2,8 @@
  * starCullSlack — px constants the star-catalog CPU cull's angular slack is
  * sized from, each a WESL twin (parity-tested). Independent of
  * `DEFAULT_STAR_SIZE_PX` (`data/defaults.ts`), which only seeds the slider.
+ * The cull slack is sized off the glow FLOOR, never `STAR_GLOW_MAX_PX` — a
+ * false cull would wink a visible star out, and over-keeping is free.
  */
 
 /** Reference star-dot size in px — the shader's `sizePx` divisor. WESL twin. */
