@@ -1,4 +1,4 @@
-// src/components/containers/ZoneOfAvoidanceTuningSectionContainer.tsx
+// src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSectionContainer.tsx
 /**
  * ZoneOfAvoidanceTuningSectionContainer — store boundary for the DebugPanel's
  * Zone-of-Avoidance guide-band tuning knobs. `selectZoneOfAvoidance` returns
@@ -9,11 +9,11 @@
  */
 
 import { memo, useCallback } from 'react';
-import { ZoneOfAvoidanceTuningSection } from '../DebugPanel/ZoneOfAvoidanceTuningSection';
-import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectZoneOfAvoidance } from '../../state/settings/selectors';
-import { setZoneOfAvoidanceTuning } from '../../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
-import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
+import { ZoneOfAvoidanceTuningSection } from './ZoneOfAvoidanceTuningSection';
+import { useAppDispatch, useAppSelector } from '../../../store/hooks';
+import { selectZoneOfAvoidance } from '../../../state/settings/selectors';
+import { setZoneOfAvoidanceTuning } from '../settings/zoneOfAvoidanceSlice';
+import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
 
 function ZoneOfAvoidanceTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

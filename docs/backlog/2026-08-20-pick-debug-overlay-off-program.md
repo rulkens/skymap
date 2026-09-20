@@ -43,7 +43,7 @@ off-program draw.
 Verdict: **SAFE-WITH-CONDITIONS**. Eleven of twelve pickable rows are clean; one
 is a blocker.
 
-**Blocker** — `zoneOfAvoidanceRenderer.ts:70`'s single `uniformBuffer` is
+**Blocker** — `src/layers/zoneOfAvoidance/render/zoneOfAvoidanceRenderer.ts`'s single `uniformBuffer` is
 written by both the visual `draw()` (`:434`) and `drawPick()` (`:464`) through
 one `writeUniforms()` (`:420`), with **different values**: the visual write
 uses the reduced `zoa` viewport and the LIVE tween-interpolated `upBasis`, the
@@ -79,7 +79,7 @@ the audit:**
 3. The gizmo-over-overlay stacking flip (`clipPathDebugPass`'s gizmo would
    paint OVER the pick overlay instead of under it, as it does today) needs
    the user's explicit acceptance — a product call, not an engineering one.
-4. The `zoneOfAvoidanceRenderer.ts:70` blocker above is fixed first (or as
+4. The `zoneOfAvoidanceRenderer.ts` uniform-buffer blocker above is fixed first (or as
    part of the same rung).
 
 ## What it buys

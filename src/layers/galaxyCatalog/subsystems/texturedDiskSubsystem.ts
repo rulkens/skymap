@@ -263,9 +263,7 @@ export function createTexturedDiskSubsystem(
     return visitor;
   }
 
-  function hasInFlightWork(): boolean {
-    if (atlas.inFlightCount() > 0) return true;
-    if (bitmapReadyTime.size === 0) return false;
+  function hasFadingContent(): boolean {
     // Read at the last frame's stamped clock: this predicate is consumed by
     // the same frame loop that stamps it, so "one frame stale" just extends
     // a 400 ms fade window by one frame — a no-op visually, and it keeps
@@ -274,6 +272,10 @@ export function createTexturedDiskSubsystem(
       if (lastFrameNowMs - t < LOAD_FADE_MS) return true;
     }
     return false;
+  }
+
+  function hasInFlightWork(): boolean {
+    return atlas.inFlightCount() > 0 || hasFadingContent();
   }
 
   function destroy(): void {
@@ -294,6 +296,7 @@ export function createTexturedDiskSubsystem(
       return lastOutput;
     },
     hasInFlightWork,
+    hasFadingContent,
     setHiResFamous,
     destroy,
     __testGetState() {

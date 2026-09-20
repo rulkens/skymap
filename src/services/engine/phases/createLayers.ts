@@ -29,7 +29,6 @@ import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
 import { ASSET_WIRING } from '../wiring/assetWiring';
 import { FADE_LAYERS } from '../wiring/fadeLayers';
-import { LABEL_3D_PRODUCERS } from '../presentation/label3DProducers';
 
 export async function createLayers(state: EngineState, deps: BootstrapDeps): Promise<void> {
   const phaseLocals = deps.phaseLocals;
@@ -142,11 +141,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
     ]),
   );
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
-  // No dedupe, core first: the spec rules none, and a single world producer exists.
-  state.label3DProducers = [
-    ...LABEL_3D_PRODUCERS,
-    ...instances.flatMap((instance) => instance.worldLabels),
-  ];
+  state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
 
   const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>();
   for (const instance of instances) {

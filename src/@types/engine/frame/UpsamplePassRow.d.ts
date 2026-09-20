@@ -22,10 +22,7 @@ export type UpsamplePassRow = {
   enabled(state: PassState, ctx: ReadyFrameContext): boolean;
   /**
    * Extra draw work after the blit, into the same pass — e.g. ZoA's full-res
-   * curved lettering. Runs regardless of whether `handleOf` returned a
-   * handle this frame: the blit and `postBlit` guard themselves
-   * independently (see `zoneOfAvoidanceUpsamplePass.ts:30-38`), so one
-   * being absent must never suppress the other.
+   * curved lettering.
    */
   postBlit?(
     pass: GPURenderPassEncoder,

@@ -45,7 +45,11 @@ function makeRuntime(opts: {
     hiResFamous: { committed: () => null },
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-    texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+    texturedDisks: {
+      beginFrame: vi.fn(() => ({})),
+      hasInFlightWork: () => false,
+      hasFadingContent: () => false,
+    },
     catalogs,
     famousMeta: [],
     get catalogsVersion() {
@@ -119,7 +123,11 @@ describe('galaxyCatalog frame — alias index reconcile', () => {
       hiResFamous: { committed: () => null },
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-      texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+      texturedDisks: {
+        beginFrame: vi.fn(() => ({})),
+        hasInFlightWork: () => false,
+        hasFadingContent: () => false,
+      },
       catalogs,
       famousMeta: [],
       get catalogsVersion() {

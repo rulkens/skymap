@@ -8,7 +8,7 @@
  */
 
 import { fadeWindow } from '../../../utils/math/fadeWindow';
-import { SCALE_FADE_BANDS } from './scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
 
 export function zoneOfAvoidanceLayerOpacity(camDistMpc: number, layerFadeOpacity: number): number {
   return (

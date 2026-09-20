@@ -70,7 +70,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/starCatalogPass': 25,
   'frame/passes/starPointsPass': 3,
   'frame/passes/texturedBodiesPass': 2,
-  'frame/passes/zoneOfAvoidancePass': 4,
 };
 
 type Declared = { readonly name: string; readonly exported: boolean };

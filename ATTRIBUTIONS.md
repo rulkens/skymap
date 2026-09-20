@@ -582,8 +582,9 @@ All public domain; NASA asks that credit go to the named observatory / program.
   places — `data/raw/fonts/` (baked into the MSDF label atlas by
   `tools/fonts/buildFontAtlas.ts`) and `tools/site/fonts/` (rasterised into
   `public/og-image.jpg` by `tools/site/makeOgImage.ts`) — and additionally
-  loaded live from Google Fonts by `index.html` for the 2D UI chrome
-  (`--font-family-display` in `src/styles/global.css`).
+  self-hosted as a subsetted `public/fonts/CormorantGaramond-SemiBold.woff2`
+  (`@font-face` in `src/styles/global.css`) for the 2D UI chrome
+  (`--font-family-display`), rather than loaded from Google Fonts.
 - **Designer:** Christian Thalmann (Catharsis Fonts).
 - **Source:** <https://fonts.google.com/specimen/Cormorant+Garamond>.
 - **Licence:** SIL Open Font License 1.1.

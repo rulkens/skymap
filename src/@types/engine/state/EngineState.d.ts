@@ -102,9 +102,8 @@ export type EngineState = {
   assetRows: readonly AssetWiringRow[];
   fadeRows: readonly FadeLayer<unknown>[];
   layerSlots: ReadonlyMap<AssetKey, AssetSlot<unknown, unknown>>;
-  /** Core's `LABEL_3D_PRODUCERS` followed by each Layer's `worldLabels`, composed
-   * once by `createLayers`; `runLabel3DProducers` walks this, not the core
-   * constant. */
+  /** Every Layer's `worldLabels`, in composition order, composed once by
+   * `createLayers`; `runLabel3DProducers` walks this. */
   label3DProducers: readonly Label3DProducer[];
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,

@@ -15,11 +15,11 @@ import { sgrAStarLensingTuningSlice } from '../layers/body/settings/sgrAStarLens
 import { starCatalogsSlice } from '../layers/starCatalog/settings/starCatalogsSlice';
 import { structuresSlice } from '../layers/structure/settings/structuresSlice';
 import { volumesSlice } from '../layers/volume/settings/volumesSlice';
-import { zoneOfAvoidanceSlice } from '../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
 import { filamentsLayerSettings } from '../layers/filaments/settings/filamentsLayerSettings';
 import { flowLayerSettings } from '../layers/flow/settings/flowLayerSettings';
 import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/settings/galaxyCatalogLayerSettings';
 import { localBubbleLayerSettings } from '../layers/localBubble/settings/localBubbleLayerSettings';
+import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/settings/zoneOfAvoidanceLayerSettings';
 
 const UNFORMED_SETTINGS_SLICES = [
   starCatalogsSlice,
@@ -30,7 +30,6 @@ const UNFORMED_SETTINGS_SLICES = [
   orbitTrailsSlice,
   sgrAStarLensingTuningSlice,
   milkyWaySlice,
-  zoneOfAvoidanceSlice,
   constellationsSlice,
 ] as const;
 
@@ -39,5 +38,6 @@ export const APP_SETTINGS_SLICES = [
   ...galaxyCatalogLayerSettings,
   ...filamentsLayerSettings,
   ...flowLayerSettings,
+  ...zoneOfAvoidanceLayerSettings,
   ...localBubbleLayerSettings,
 ] as const;

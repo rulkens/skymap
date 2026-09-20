@@ -145,14 +145,6 @@ export const FADE_LAYERS = [
     seed: (s) => (s.orbitTrails.enabled ? 1 : 0),
     intent: (s) => s.orbitTrails.enabled,
   }),
-  // One toggle drives both the band and its lettering — see zoneOfAvoidanceLayer.
-  fadeLayerRow({
-    key: 'zoneOfAvoidance',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'zoneOfAvoidance' }),
-    seed: (s) => (s.zoneOfAvoidance.enabled ? 1 : 0),
-    intent: (s) => s.zoneOfAvoidance.enabled,
-  }),
   fadeLayerRow<VolumeFieldId, 'volumeField'>({
     key: 'volumeField',
     expand: () => volumeFieldIds(),

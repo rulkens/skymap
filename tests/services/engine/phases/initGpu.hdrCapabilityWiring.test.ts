@@ -153,10 +153,6 @@ vi.mock('../../../../src/services/gpu/renderers/horizonShell/horizonShellRendere
   HORIZON_RADIUS_GPC: 14.3,
 }));
 
-vi.mock('../../../../src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer', () => ({
-  createZoneOfAvoidanceRenderer: vi.fn(() => makeStub('zoneOfAvoidanceRenderer')),
-}));
-
 vi.mock('../../../../src/services/gpu/renderers/labels3d/label3DRenderer', () => ({
   createLabel3DRenderer: vi.fn(() => makeStub('label3DRenderer')),
 }));
@@ -396,10 +392,8 @@ function makeState(): EngineState {
       milkyWayCloud: null,
       milkyWayCloudRenderer: null,
       horizonShellRenderer: null,
-      zoneOfAvoidanceRenderer: null,
       volumeFieldRenderer: null,
       volumeUpsample: null,
-      zoneOfAvoidanceUpsample: null,
       starAggregateUpsample: null,
       pickDebugOverlay: null,
       earthRenderer: null,

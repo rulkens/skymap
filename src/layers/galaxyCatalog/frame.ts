@@ -1,8 +1,9 @@
 /**
  * frame — the Layer's per-frame prelude, in order: the aliasIndex reconcile,
  * the structureMemberCount reconcile, the bias-mode reconcile, the hi-res
- * famous planner, then the ONE catalog walk feeding both disk planners. Both
- * frame votes are the textured planner's in-flight thumbnail work.
+ * famous planner, then the ONE catalog walk feeding both disk planners. The
+ * two frame votes read different halves of the textured planner's thumbnail
+ * work — see the vote at the tail.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
@@ -120,9 +121,14 @@ export function frame(
       }),
     );
 
-    // Thumbnails arrive async and fade in over 400 ms: in-flight work is both
-    // motion to keep ticking for and half-arrived content no sky face may bake.
-    const inFlight = runtime.texturedDisks.hasInFlightWork();
-    return { awake: inFlight, settling: inFlight };
+    // The two votes are NOT the same predicate. An outstanding fetch is motion
+    // to keep ticking for, but only a thumbnail that LANDED is content a sky
+    // capture must re-bake for: a hung thumbnail host holds `hasInFlightWork`
+    // true for its ~30 s timeout, and voting that as `settling` re-bakes six
+    // faces every frame of it while nothing on screen changes.
+    return {
+      awake: runtime.texturedDisks.hasInFlightWork(),
+      settling: runtime.texturedDisks.hasFadingContent(),
+    };
   };
 }
