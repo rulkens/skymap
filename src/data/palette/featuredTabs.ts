@@ -1,7 +1,7 @@
 /**
  * FEATURED_TABS — the palette's curated browse tabs. Hand-edited: order on
  * screen is order in this file, and nothing generates or rewrites it. A
- * card's image is the atlas default (`cardImageSrc`, `/images/featured/<id>.webp`)
+ * card's image is the atlas default (`cardImageSrc`, `<id>.webp` under `CARD_IMAGE_DIR`)
  * unless `image` overrides it, which only the Galaxies tab's cards do.
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';

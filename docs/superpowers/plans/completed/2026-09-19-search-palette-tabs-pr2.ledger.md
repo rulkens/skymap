@@ -1,10 +1,11 @@
 # SDD ledger — search palette tabs PR2 (thumbnail capture)
 
-Plan: docs/superpowers/plans/2026-09-19-search-palette-tabs-pr2.md · Spec: docs/superpowers/specs/2026-09-19-search-palette-tabs-design.md
+Plan: docs/superpowers/plans/completed/2026-09-19-search-palette-tabs-pr2.md · Spec: docs/superpowers/specs/2026-09-19-search-palette-tabs-design.md
 Branch: worktree-search-tabs-pr2 (wt .claude/worktrees/search-tabs-pr2, public/data linked to main) · Draft PR #765 · BASE 56e3971c0 (PR1 merged) · plan commit 1dd751a62
 User go: "ok pr 2" (2026-09-19). PR1 wt `search-tabs` is kept on disk; its dev server :5174 (bg bqrv7dcfn) still runs. Don't remove it unasked.
 
 ## Dispatches
+
 - A (T1–T3, sonnet): dispatched.
 - A done: a85a2cbc5 (launchChromium), 3112a4412 (capture overrides), 7a5a732bd (selectCaptureTargets + poseMismatch, 13 tests). typecheck clean.
 - User ruling: harness prep "A" in this PR = Task 1b (bootHookedPage, isNavigationInterruption, collectPageErrors); record.ts breakup = own PR, backlogged (3b17ea096).
@@ -73,6 +74,7 @@ User go: "ok pr 2" (2026-09-19). PR1 wt `search-tabs` is kept on disk; its dev s
 ## Deletion-audit rulings (user, 2026-09-20): LEAVE ALL FOUR AS-IS
 
 Settled — do not re-open or re-audit these:
+
 1. Collapsing `declutterActions` into `CAPTURE_HIDDEN_PASSES` pass names (~27 LOC): PARKED.
    It should be pixel-identical but would cost a full 42-card re-capture + a fresh user
    eye-check. Two mechanisms for one job is the known, accepted shape here.
@@ -83,3 +85,63 @@ Settled — do not re-open or re-audit these:
 4. `bodyPhasePose.test.ts` 'frames every body to the same apparent size': KEEP. Near-
    tautological (the radius cancels), but it would catch a swap to `bodyDrawRadiusM` on
    bodies with atmosphere shells. The two reviewers split; the user kept it.
+
+## Capture-tool restructure (user asked mid-landing, 2026-09-20) — DONE, 552c6b256
+
+User rulings that drove it:
+
+- "captureFeatured.ts should be broken up into one entry point file and all helpers
+  separately" + "constants and types need to be extracted".
+- "it doesnt only capture featured, its a generic image capture tool, right?" — yes; the
+  generic/palette line is the split.
+- "palette/ is a bit ambiguous name" (it collides with COLOUR palettes, `data/<domain>/palette.ts`)
+  -> chose layout B: NO new folder. `tools/capture/` = this tool, `tools/utils/*` = reusable.
+
+Shape now (entry went 345 -> 82 lines):
+
+- tools/capture/ — the only place that knows what a palette card is: captureFeatured.ts,
+  selectCaptureTargets, isCapturableCopy, captureEqual, CaptureTarget.d.ts,
+  parseFeaturedArgs, featuredDefaults (OUTPUT_DIR, DEFAULT_CAPTURE_T), README.
+- tools/utils/capture/ — imports NOTHING from src/@types/palette: captureScene,
+  SceneShot.d.ts, ShotOutcome.d.ts, shotDefaults (curator knobs), declutterActions
+  (now absorbs the pass disables), writeThumbnail, hiddenPasses, bodyPhasePose, poseMismatch.
+- tools/utils/browser/ — talks to the running app: waitSettled, applyPose,
+  readLiveCameraState, dispatchActions + the 4 existing.
+- `CaptureTarget` -> `SceneShot` is the load-bearing rename: focus + instant + framing +
+  outPath + label. captureScene returns a `ShotOutcome` instead of mutating an accumulator.
+
+Verified behaviour-preserving: body-mars / body-hubble / milkyWay re-captured BYTE-IDENTICAL;
+m31 differed over an 11x15 px patch by <=7/255 at the same file size (render jitter) and was
+restored with `git checkout`. tests/tools 1557 green, typecheck clean.
+
+## DROPPED: `featured` -> `curated` rename
+
+User 2026-09-20: "lets skip featured->curated". The `featured` naming stays everywhere —
+featuredTabs.ts/FEATURED_TABS, FeaturedCard/FeaturedGrid/FeaturedCardTip, the
+`capture-featured` script, `public/images/featured/`. Do not revive this without a new ask.
+(The structure catalog's own unrelated `featured` flag was never in scope either way.)
+
+## Second round of user-driven cleanup (2026-09-20, all landed on #765)
+
+- `shotPose.ts` extracted from captureScene, so captureScene declares only its own symbol;
+  POST_ESC_WAIT_MS joined shotDefaults. 4 tests, the load-bearing one pinning the phase path
+  to the app's default fov.
+- Voyager 2 had NO capture at all -> fly-in standoff derived from the mesh's 14.5 m bounding
+  sphere, which the magnetometer BOOM dominates, so the probe sat tiny. Voyager 1's curator
+  pose is at 7.27 m, INSIDE that sphere. Voyager 2 now reuses that distance with a
+  phase-315 angle. LANDMINE: a computed frame is wrong for any boom/antenna mesh.
+- `FILL` -> `SUBJECT_FILL` in shotDefaults; only computed poses honour it.
+- `captureFeatured.ts` -> `capture.ts` (folder-name precedent: tools/record/record.ts).
+- Capture types into @types: CaptureTarget -> tools/capture/@types/, SceneShot + ShotOutcome
+  -> tools/@types/capture/. CLAUDE.md now states the tools rule (tool app -> its own
+  @types/, shared helpers -> tools/@types/<area>/). The other 16 offenders swept in #775.
+- CARD_IMAGE_DIR (src/data/palette/cardImageDir.ts) is now the single home for the card
+  image path; cardImageSrc and the capture tool's OUTPUT_DIR both derive from it. They used
+  to be two copies whose drift would break every card silently.
+
+## Queued
+
+1. Squash-merge #765 — AUTHORIZED by the user 2026-09-20 ("merge 765 when CI lands"),
+   conditional on CI green.
+2. Then merge #775 (tools .d.ts sweep) — also authorized; mark it ready first, it is a draft.
+3. Then remove the agent isolation worktree agent-ab857b19a1db4158e (+ its branch).

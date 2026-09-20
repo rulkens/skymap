@@ -2,7 +2,8 @@
 
 `npm run capture-featured` drives a running dev server headlessly and writes one 204×204 webp
 thumbnail per focus card in `src/data/palette/featuredTabs.ts` to
-`public/images/featured/<cardId>.webp` — the path `cardImageSrc` reads by default.
+`<cardId>.webp` under `public/` + `CARD_IMAGE_DIR` (`src/data/palette/cardImageDir.ts`), which is
+the path `cardImageSrc` reads by default.
 
 ## Prerequisites
 
