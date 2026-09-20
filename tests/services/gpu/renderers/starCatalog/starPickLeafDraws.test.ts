@@ -10,11 +10,9 @@
  */
 import { describe, expect, it } from 'vitest';
 import { starPickLeafDraws } from '../../../../../src/services/gpu/renderers/starCatalog/starPickLeafDraws';
-import type {
-  PreparedStarCut,
-  StarNodeStream,
-} from '../../../../../src/services/engine/frame/passes/starCatalogPass';
-import type { StarNodeDraw } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import type { PreparedStarCut } from '../../../../../src/@types/rendering/PreparedStarCut';
+import type { StarNodeStream } from '../../../../../src/@types/rendering/StarNodeStream';
+import type { StarNodeDraw } from '../../../../../src/@types/rendering/StarNodeDraw';
 import { Source } from '../../../../../src/data/sources';
 
 /** Build a one-node flat stream fixture at a given opacity + aggregate flag. */

@@ -38,23 +38,8 @@
  * work for it.
  */
 
-import type { SourceType } from '../../../../@types/data/SourceType';
-import type { PreparedStarCut } from '../../../engine/frame/passes/starCatalogPass';
-
-/**
- * One source's pick draw: the compacted flat leaf arrays the pick renderer packs
- * verbatim. `drawCount` valid entries; the scalar arrays index `[i]`, the origin
- * vec3 indexes `[3*i]` — the same flat shape the visual `StarNodeStream` carries,
- * so the pick renderer's pack loop is identical to the visual one.
- */
-export type StarPickLeafDraw = {
-  source: SourceType;
-  drawCount: number;
-  firstRecord: Uint32Array;
-  recordCount: Uint32Array;
-  originRelCamMpc: Float32Array;
-  cellScaleMpc: Float32Array;
-};
+import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
+import type { StarPickLeafDraw } from '../../../../@types/rendering/StarPickLeafDraw';
 
 export function starPickLeafDraws(prep: PreparedStarCut): readonly StarPickLeafDraw[] {
   const draws: StarPickLeafDraw[] = [];

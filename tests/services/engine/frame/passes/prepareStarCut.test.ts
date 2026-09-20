@@ -24,9 +24,9 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   prepareStarCut,
   advanceStarFades,
-  type PreparedStarCut,
-  type StarNodeStream,
 } from '../../../../../src/services/engine/frame/passes/starCatalogPass';
+import type { PreparedStarCut } from '../../../../../src/@types/rendering/PreparedStarCut';
+import type { StarNodeStream } from '../../../../../src/@types/rendering/StarNodeStream';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';

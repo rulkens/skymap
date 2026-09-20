@@ -47,59 +47,8 @@
  * `walkStarOctreeCut`'s `distanceToBox` and `starNodeOriginRelCamMpc` invert.
  */
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
+import type { StarOctreeIndex } from '../../../../@types/rendering/StarOctreeIndex';
 import { mortonDecode3 } from '../../../../utils/math/mortonDecode3';
-
-/**
- * The load-time index of a star catalog: flat, parallel-to-`catalog.nodes`
- * typed arrays the per-frame walk and the count derivation read. All arrays are
- * indexed by node index `i ∈ [0, nodeCount)`, except `childIndex` (8 octant
- * slots per node) and `boxOriginPc` (3 axes per node).
- */
-export type StarOctreeIndex = {
-  /**
-   * `childIndex[i*8 + k]` is the node index of node `i`'s child in octant `k`,
-   * or `-1` when that octant is absent. Resolves the whole descent with no
-   * hashing — replaces the per-call `(level, morton) → index` Map.
-   */
-  readonly childIndex: Int32Array;
-  /**
-   * Per-node octree level, lifted out of the node objects. Sizes the node's box
-   * (`cellEdgePc · 2^level`); it does NOT discriminate leaf from aggregate — a
-   * fat leaf lives at `level > 0` yet is a leaf. `childMask === 0` is the
-   * leaf-vs-aggregate test (see `buildStarOctree`).
-   */
-  readonly level: Uint8Array;
-  /**
-   * Per-node `childMask` (an 8-bit octant occupancy, one byte per node), lifted
-   * so neither the walk nor the layer's partition loop touches the node objects
-   * per frame. It is the leaf-vs-aggregate discriminant: `0 ⇒ leaf` (a childless
-   * node whose records are real stars — a fat leaf lives at `level > 0` yet is a
-   * leaf), `!== 0 ⇒ aggregate` (an interior flux-mip standing in for a subtree).
-   * The walk classifies with `childMask[i] === 0` instead of scanning
-   * `childIndex`'s 8 octant slots; the layer partitions with `childMask[idx] !== 0`.
-   */
-  readonly childMask: Uint8Array;
-  /** Per-node record-slice base (`node.firstRecord`). */
-  readonly firstRecord: Uint32Array;
-  /** Per-node record-slice length (`node.recordCount`). */
-  readonly recordCount: Uint32Array;
-  /**
-   * Per-node box origin in parsecs, 3 axes each (`boxOriginPc[i*3 + axis]`).
-   * Float64 because the box distance is a large-minus-large subtraction against
-   * a parsec-scale grid corner that can sit thousands of pc from the Sun — the
-   * same precision the walk's `distanceToBox` did in JS numbers.
-   */
-  readonly boxOriginPc: Float64Array;
-  /** Per-node box edge in parsecs (`cellEdgePc · 2^level`). */
-  readonly boxEdgePc: Float64Array;
-  /**
-   * Per-node subtree leaf-star count: a leaf's own `recordCount`, an aggregate's
-   * sum over its present children. The multiplier the flux-glow shader uses to
-   * rebuild summed light from a record's stored MEAN flux. Exact in `u32` (the
-   * largest tier holds ~13.36 M stars < 2³²).
-   */
-  readonly subtreeCounts: Uint32Array;
-};
 
 /** Per-catalog memo: the index is a pure function of the (immutable) node table. */
 const cache = new WeakMap<StarCatalog, StarOctreeIndex>();

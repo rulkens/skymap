@@ -138,7 +138,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
 import type { SurveyStarCatalogSourceEntry } from '../../../../@types/data/starCatalog/SurveyStarCatalogSourceEntry';
 import type { StarDrawStream } from '../../../../@types/rendering/StarCatalogRenderer';
@@ -146,6 +145,12 @@ import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFra
 import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { SlabView } from '../../../../@types/engine/frame/SlabView';
 import type { StarCatalogRenderer } from '../../../../@types/rendering/StarCatalogRenderer';
+import type { StarNodeStream } from '../../../../@types/rendering/StarNodeStream';
+import type { PreparedStarSource } from '../../../../@types/rendering/PreparedStarSource';
+import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
+import type { StarFadeState } from '../../../../@types/rendering/StarFadeState';
+import type { StarCatalogStreams } from '../../../../@types/rendering/StarCatalogStreams';
+import type { StarCutFrustum } from '../../../../@types/rendering/StarCutFrustum';
 import { NEAR0, slabViewOf } from '../slabs';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
@@ -157,10 +162,7 @@ import {
   STAR_PICK_MIN_RADIUS_PX,
 } from '../../../../data/starCullSlack';
 import { NODE_FADE_MS } from '../../../../data/starNodeFade';
-import {
-  walkStarOctreeCut,
-  type StarCutFrustum,
-} from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
+import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
 import { starOctreeIndex } from '../../../gpu/renderers/starCatalog/starOctreeIndex';
 import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/starPickLeafDraws';
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
@@ -341,24 +343,6 @@ function buildCutFrustum(
  * and only later membership CHANGES animate — the same first-frame rule
  * `foregroundLabelsPass` uses.
  */
-type StarFadeState = {
-  /** Per-node current LOD opacity; meaningful only while the node is active. */
-  opacity: Float32Array;
-  /** Frame stamp: node was in THIS frame's walk cut (target 1). Set in pass 1. */
-  inCutFrame: Uint32Array;
-  /** Frame stamp: node was appended to THIS frame's active list (drawn ≥ 0). */
-  activeFrame: Uint32Array;
-  /** This frame's active node indices, filled `[0, activeCount)`; sized to N. */
-  activeList: Int32Array;
-  /** The PREVIOUS frame's active node indices, `[0, prevActiveCount)`. */
-  prevActiveList: Int32Array;
-  /** Number of nodes appended to `prevActiveList` (last frame's active count). */
-  prevActiveCount: number;
-  /** The catalog's own last-drawn frame time; `null` snaps the first frame. */
-  clockMs: number | null;
-  /** Monotonic per-catalog counter; `++`ed each advance, so stamp 0 is never live. */
-  frame: number;
-};
 const fadeStateByCatalog = new WeakMap<StarCatalog, StarFadeState>();
 
 function fadeStateFor(catalog: StarCatalog): StarFadeState {
@@ -423,12 +407,6 @@ export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): bo
 }
 
 /**
- * One draw stream's per-source node data, as REUSED grow-only flat typed arrays.
- * The leaf stream carries only childless (real-star) nodes with `isAggregate`
- * all 0; the aggregate stream only interior flux-mip nodes with `isAggregate`
- * all 1. Each layer assembles `StarCatalogDrawArgs` from one of these plus the
- * per-frame shared scalars.
- *
  * ── Flat typed arrays, not arrays-of-objects (the allocation fix) ───────────
  *
  * At star-field zoom the cut draws tens of thousands of nodes EVERY frame. The
@@ -453,56 +431,6 @@ export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): bo
  * Leaf and aggregate are SEPARATE stream objects, so both coexist for the whole
  * frame; a consumer that must hold two frames' data at once copies out first.
  */
-export type StarNodeStream = {
-  /** Number of valid drawn nodes — read only `[0, count)` of every array below. */
-  count: number;
-  /** Per-node `catalog.nodes` slot (parallel; used by `starPickLeafDraws` + debug). */
-  nodeIndex: Int32Array;
-  /** Per-node record-slice base (`node.firstRecord`). */
-  firstRecord: Uint32Array;
-  /** Per-node instance count (leaf → N stars; aggregate → 1). */
-  recordCount: Uint32Array;
-  /** Per-node box origin, camera-relative Mpc — THREE f32 per node (`[3*i + k]`). */
-  originRelCamMpc: Float32Array;
-  /** Per-node box edge in Mpc (the in-cell offset unit = /1024). */
-  cellScaleMpc: Float32Array;
-  /** Per-node leaf-vs-aggregate flag: 0 = leaf, 1 = aggregate. */
-  isAggregate: Uint8Array;
-  /** Per-node flux-reconstruction multiplier (1 for a leaf; subtree count for an aggregate). */
-  subtreeStarCount: Float32Array;
-  /** Per-node draw opacity (source crossfade × node LOD fade). */
-  opacity: Float32Array;
-};
-
-/** One source's partitioned cut: the leaf stream and the aggregate stream. */
-export type PreparedStarSource = {
-  source: SourceType;
-  leaf: StarNodeStream;
-  aggregate: StarNodeStream;
-};
-
-/**
- * The per-frame star cut, shared by the leaf / aggregate / upsample layers. The
- * per-source partitioned streams plus the source-independent shader scalars
- * (base dot size, exposure-ramped brightness trim, aggregate glow spread,
- * aggregate peak ceiling) — each computed once and forwarded identically to
- * every source's draw.
- *
- * `anyNodeFading` is the render-on-demand wake VOTE, surfaced as data rather
- * than fired here: true while any node's LOD ramp is mid-flight this frame, so
- * the loop must schedule another frame to finish the dissolve. It is read by
- * `shouldKeepTicking` (via runFrame's planner step) — the single authority on
- * must-the-loop-tick, the same gate-at-one-place discipline `starCatalogVisible`
- * already follows for the draw decision. See the module header.
- */
-export type PreparedStarCut = {
-  sources: PreparedStarSource[];
-  sizePx: number;
-  brightness: number;
-  glowOverlap: number;
-  aggregateIntensityCap: number;
-  anyNodeFading: boolean;
-};
 
 /** A fresh stream with backing arrays at `cap` node capacity (grown as needed). */
 function createStream(cap: number): StarNodeStream {
@@ -600,10 +528,9 @@ function pushStreamNode(
  * references. A replaced catalog (tier swap) is a new object, so it starts
  * fresh and the old map is GC'd with the WeakMap.
  */
-type CatalogStreams = { leaf: StarNodeStream; aggregate: StarNodeStream };
-const streamsByCatalog = new WeakMap<StarCatalog, Map<number, CatalogStreams>>();
+const streamsByCatalog = new WeakMap<StarCatalog, Map<number, StarCatalogStreams>>();
 
-function streamsFor(catalog: StarCatalog, viewSlot: number): CatalogStreams {
+function streamsFor(catalog: StarCatalog, viewSlot: number): StarCatalogStreams {
   let byViewSlot = streamsByCatalog.get(catalog);
   if (byViewSlot === undefined) {
     byViewSlot = new Map();

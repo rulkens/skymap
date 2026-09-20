@@ -6,12 +6,10 @@ import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/Sta
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { mortonEncode3 } from '../../../../../src/utils/math/mortonEncode3';
 import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
-import {
-  walkStarOctreeCut,
-  type StarCutFrustum,
-  type StarCutSnapshot,
-  type StarNodeDraw,
-} from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import { walkStarOctreeCut } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import type { StarCutFrustum } from '../../../../../src/@types/rendering/StarCutFrustum';
+import type { StarCutSnapshot } from '../../../../../src/@types/rendering/StarCutSnapshot';
+import type { StarNodeDraw } from '../../../../../src/@types/rendering/StarNodeDraw';
 
 /**
  * Materialise the walk's reused SoA snapshot into a plain draw array. The

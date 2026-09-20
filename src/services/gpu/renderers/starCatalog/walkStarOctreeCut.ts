@@ -141,73 +141,10 @@
  */
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
+import type { StarNodeDraw } from '../../../../@types/rendering/StarNodeDraw';
+import type { StarCutSnapshot } from '../../../../@types/rendering/StarCutSnapshot';
+import type { StarCutFrustum } from '../../../../@types/rendering/StarCutFrustum';
 import { starOctreeIndex } from './starOctreeIndex';
-
-/**
- * One instanced draw the cut selected: a contiguous slice of the catalog's
- * record buffer. A leaf draw's `recordCount` is its cell's real star count; an
- * aggregate draw's is always 1 (its single flux-mip record). This is the shape
- * the layer's per-node draw list carries; the walk itself returns the parallel
- * `StarCutSnapshot` below.
- */
-export type StarNodeDraw = {
-  /** Index into `catalog.nodes` of the chosen node. */
-  readonly nodeIndex: number;
-  /** Base offset into the record buffer for this draw (`node.firstRecord`). */
-  readonly firstRecord: number;
-  /** Instance count: leaf → N stars in the cell; aggregate → 1. */
-  readonly recordCount: number;
-};
-
-/**
- * The per-frame cut as a struct-of-arrays view over the walk's reused scratch:
- * `count` valid draws, each described by index `i ∈ [0, count)` of the three
- * parallel arrays. The arrays are the full grow-only capacity — read only the
- * first `count` — and are INVALIDATED by the next `walkStarOctreeCut` call.
- */
-export type StarCutSnapshot = {
-  /** Number of valid draws — only `[0, count)` of the arrays below are live. */
-  readonly count: number;
-  /** Per-draw node index (`catalog.nodes` slot). */
-  readonly nodeIndex: Int32Array;
-  /** Per-draw record-slice base (`node.firstRecord`). */
-  readonly firstRecord: Uint32Array;
-  /** Per-draw instance count (leaf → N stars; aggregate → 1). */
-  readonly recordCount: Uint32Array;
-};
-
-/**
- * The frustum-cull descriptor the walk prunes off-screen subtrees with. All in
- * the CAMERA-RELATIVE PARSEC frame the walk already works in (box centre =
- * `boxOriginPc + edge/2 − camPc`), so the cull needs no unit conversion inside
- * the hot loop — the layer bakes the scene-unit → parsec scale into `planesPc`'s
- * distance term once (see `starCatalogPass`).
- *
- * The slack is intentionally generous — this is a coarse pre-filter that must
- * never wrong-drop a node any downstream consumer would still paint, with the
- * renderer's exact per-node cull the precise filter:
- *   - `angularMarginRad`: a leaf draws as a fixed-PIXEL dot, so its world spill
- *     grows with distance; the cull sphere gains `dist · angularMarginRad`.
- *     Sized to the PICK footprint (the 3.5px clickable floor ≥ the visual glow),
- *     so a pick recompute of the same cut never drops a clickable edge star.
- *   - `worldSpread`: an aggregate fills its box footprint with glow that spreads
- *     with the dot-size/overlap scale — a WORLD slack, applied as a multiplier on
- *     the box half-diagonal (`≥ 1`).
- * A subtree holds both species, so the sphere grows by BOTH terms (their sum ≥
- * either alone) — over-keeping is free, a false drop is forbidden.
- */
-export type StarCutFrustum = {
-  /**
-   * Six unit-normalized `(nx, ny, nz, d)` planes in the camera-relative parsec
-   * frame — 24 floats, inside is `n·p + d ≥ 0`. The layer derives these from the
-   * NEAR0 rebased vp and scales the distance term into parsecs.
-   */
-  readonly planesPc: Float64Array;
-  /** Leaf angular slack, radians of on-screen spill per parsec of distance. */
-  readonly angularMarginRad: number;
-  /** Aggregate glow spread as a half-diagonal multiplier (`≥ 1`). */
-  readonly worldSpread: number;
-};
 
 /**
  * Default refine threshold — seeds `settings.starCatalogs.refineThreshold` (the
