@@ -104,7 +104,7 @@ import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
 import { sphereOutsideFrustum } from '../../../../utils/camera/sphereOutsideFrustum';
-import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
+import { STAR_SIZE_REF_PX } from '../../../../data/starCullSlack';
 import {
   createViewSlotUniformRing,
   VIEW_SLOT_COUNT,
@@ -484,7 +484,7 @@ export function createStarCatalogRenderer(
           // floor never binds. If the walk's LOD threshold is ever lowered
           // enough that an aggregate's box could shrink toward ~1px on
           // screen, this cull would need the pick-style angular floor too.
-          const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
+          const sizeScale = sizePx / STAR_SIZE_REF_PX;
           const spread = sizeScale * glowOverlap;
           cullRadius = baseRadius * (spread > 1 ? spread : 1);
         } else {

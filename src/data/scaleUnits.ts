@@ -29,6 +29,9 @@ const AU_IN_KM = 1.495978707e8;
 
 // Named locals: unit conversion exponents.
 const PC_TO_MPC = 1e-6;
+// Derived, not a second literal — the star octree grid is parsec-based while
+// the scene frame is Mpc, and a hand-typed 1e6 has drifted from PC_TO_MPC before.
+const MPC_TO_PC = 1 / PC_TO_MPC;
 const KPC_TO_MPC = 1e-3;
 const MPC_TO_MPC = 1;
 const GPC_TO_MPC = 1e3;
@@ -61,6 +64,7 @@ export const SCALE_UNITS: Readonly<{
   readonly KM_TO_MPC: number;
   readonly AU_TO_MPC: number;
   readonly PC_TO_MPC: number;
+  readonly MPC_TO_PC: number;
   readonly KPC_TO_MPC: number;
   readonly MPC_TO_MPC: number;
   readonly GPC_TO_MPC: number;
@@ -73,6 +77,7 @@ export const SCALE_UNITS: Readonly<{
   KM_TO_MPC,
   AU_TO_MPC,
   PC_TO_MPC,
+  MPC_TO_PC,
   KPC_TO_MPC,
   MPC_TO_MPC,
   GPC_TO_MPC,

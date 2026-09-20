@@ -36,10 +36,10 @@ export const DEFAULT_POINT_SIZE_PX = 2.5;
 
 /**
  * Default star-billboard pixel radius — the star-catalog twin of
- * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. 4.7 px within
- * the shared 1–8 px user range, diverged larger than the 2.5 px galaxy point
- * size; kept a separate constant so the two layers can diverge without one
- * silently dragging the other.
+ * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx` only; it is
+ * NOT the shader's `sizePx` divisor (that's `STAR_SIZE_REF_PX` in
+ * `data/starCullSlack.ts`, independently 2.5). 4.7 px within the shared 1–8 px
+ * user range, deliberately 1.88x that divisor — the shipped, tuned look.
  */
 export const DEFAULT_STAR_SIZE_PX = 4.7;
 

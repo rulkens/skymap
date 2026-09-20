@@ -151,7 +151,12 @@ import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../utils/camera/frustumPlanesFromViewProj';
 import { fadeBand } from '../../../../utils/math/fadeBand';
-import { DEFAULT_STAR_SIZE_PX } from '../../../../data/defaults';
+import {
+  STAR_SIZE_REF_PX,
+  STAR_GLOW_MIN_PX,
+  STAR_PICK_MIN_RADIUS_PX,
+} from '../../../../data/starCullSlack';
+import { NODE_FADE_MS } from '../../../../data/starNodeFade';
 import {
   walkStarOctreeCut,
   type StarCutFrustum,
@@ -161,10 +166,6 @@ import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/starPickLe
 import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
 import { SOURCE_REGISTRY } from '../../../../data/sources';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
-
-// The star octree grid is parsec-based; the scene frame is Mpc. This is the
-// inverse of PC_TO_MPC, kept a single source of truth off SCALE_UNITS.
-const MPC_TO_PC = 1 / SCALE_UNITS.PC_TO_MPC;
 
 /**
  * The 24-float destination `frustumPlanesFromViewProj` writes each frame — six
@@ -198,27 +199,6 @@ const cutFrustumScratch = {
 };
 
 /**
- * A leaf star's minimum on-screen glow radius, in pixels. It has no shared TS
- * home — keep in sync with `lib/starPhotometry.wesl` STAR_GLOW_MIN_PX (the
- * WESL/TS twin discipline this subsystem uses). Used to size the leaf cull
- * sphere's angular slack; the `STAR_GLOW_MAX_PX` cap is intentionally ignored
- * (this is conservative cull slack, not photometry — over-keeping is free, a
- * false cull would wink a visible star out).
- */
-const STAR_GLOW_MIN_PX = 1.5;
-
-/**
- * The pick pass floors every leaf billboard to this clickable pixel radius (a
- * 7 px footprint) so a sub-pixel star stays clickable — keep in sync with
- * `starCatalog/vertex.wesl` STAR_PICK_MIN_RADIUS_PX. The pick cull sphere must
- * cover that inflated footprint, or a node whose dot has left the screen but
- * whose clickable floor still touches the edge would be culled (an unclickable
- * edge star). So the pick margin floors the leaf px radius at this value where
- * the visual margin uses the bare `STAR_GLOW_MIN_PX`.
- */
-const STAR_PICK_MIN_RADIUS_PX = 3.5;
-
-/**
  * Derive the per-frame angular cull slack (radians per unit camera distance) for
  * the leaf cull sphere — the `glowMarginAngleRad` the renderers add as
  * `length(center) · margin` (see `StarCatalogDrawArgs.glowMarginAngleRad`). A
@@ -231,7 +211,8 @@ const STAR_PICK_MIN_RADIUS_PX = 3.5;
  *     stage's pixel-size-to-clip math inverts.
  *   - `leafPxRadius = STAR_GLOW_MIN_PX · (sizePx / STAR_SIZE_REF_PX)` — the dot's
  *     glow radius in pixels, scaled by the user's dot size relative to the
- *     reference size (`DEFAULT_STAR_SIZE_PX`, the WESL STAR_SIZE_REF_PX twin).
+ *     shader's reference size (`STAR_SIZE_REF_PX`, the WESL divisor twin —
+ *     independent of `DEFAULT_STAR_SIZE_PX`, which only seeds the slider).
  *
  * Two margins because the pick pass inflates every leaf to the 3.5 px clickable
  * floor: `pick` floors `leafPxRadius` at `STAR_PICK_MIN_RADIUS_PX` BEFORE the
@@ -250,7 +231,7 @@ function starCullMargins(
   fovYRad: number,
 ): typeof marginScratch {
   const radiansPerPx = fovYRad / viewportHeightPx;
-  const leafPxRadius = STAR_GLOW_MIN_PX * (sizePx / DEFAULT_STAR_SIZE_PX);
+  const leafPxRadius = STAR_GLOW_MIN_PX * (sizePx / STAR_SIZE_REF_PX);
   marginScratch.leaf = leafPxRadius * radiansPerPx;
   marginScratch.pick = Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
   return marginScratch;
@@ -288,9 +269,9 @@ function buildCutFrustum(
     cutPlanesPcScratch[b] = planesMpc[b]!;
     cutPlanesPcScratch[b + 1] = planesMpc[b + 1]!;
     cutPlanesPcScratch[b + 2] = planesMpc[b + 2]!;
-    cutPlanesPcScratch[b + 3] = planesMpc[b + 3]! * MPC_TO_PC;
+    cutPlanesPcScratch[b + 3] = planesMpc[b + 3]! * SCALE_UNITS.MPC_TO_PC;
   }
-  const sizeScale = sizePx / DEFAULT_STAR_SIZE_PX;
+  const sizeScale = sizePx / STAR_SIZE_REF_PX;
   const radiansPerPx = ctx.fovYRad / ctx.canvasSize.height;
   const leafPxRadius = STAR_GLOW_MIN_PX * sizeScale;
   cutFrustumScratch.angularMarginRad =
@@ -298,17 +279,6 @@ function buildCutFrustum(
   cutFrustumScratch.worldSpread = Math.max(1, sizeScale * glowOverlap);
   return cutFrustumScratch;
 }
-
-/**
- * Milliseconds for a node's LOD fade to travel the full 0→1 (or 1→0). Linear
- * ramp: complementary linear fades conserve total glow flux EXACTLY across a
- * split/merge, because a record's integrated screen luminance is linear in its
- * opacity, and an aggregate's flux equals the summed flux of the children that
- * replace it — so `parentFlux·(1−t) + childrenFlux·t = F` for all t. An eased
- * ramp would momentarily under- or over-count. 250 ms is quick enough to feel
- * instant while still killing the single-frame box-pop.
- */
-const NODE_FADE_MS = 250;
 
 /**
  * A catalog's per-node LOD-fade state, persisted across frames. The best-first
@@ -437,7 +407,8 @@ export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): bo
   if (renderer === null) return false;
   if (!state.settings.starCatalogs.enabled) return false;
 
-  const camDistPc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]) * MPC_TO_PC;
+  const camDistPc =
+    Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]) * SCALE_UNITS.MPC_TO_PC;
 
   for (const { source } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
@@ -706,7 +677,11 @@ function computeStarCut(
   // NEAR0 view origin (RENDER_ORIGIN_MPC is the heliocentric origin), so the
   // walk is a pure function of (state, ctx) — no SlabView needed here.
   const camPos: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
-  const camPosPc: Vec3 = [camPos[0] * MPC_TO_PC, camPos[1] * MPC_TO_PC, camPos[2] * MPC_TO_PC];
+  const camPosPc: Vec3 = [
+    camPos[0] * SCALE_UNITS.MPC_TO_PC,
+    camPos[1] * SCALE_UNITS.MPC_TO_PC,
+    camPos[2] * SCALE_UNITS.MPC_TO_PC,
+  ];
   const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
 
   const nowMs = ctx.nowMs;
