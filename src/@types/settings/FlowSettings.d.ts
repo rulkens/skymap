@@ -10,12 +10,12 @@
  * Named (rather than inlined into `EngineSettingsState`) because three
  * consumers reference the same shape and would otherwise re-spell it: the
  * settings bag itself (`EngineSettingsState.flow`), the `DEFAULT_FLOW` seed in
- * `data/defaults.ts`, and the flow renderer's per-frame param argument
- * (`flowFieldRenderer.encodeCompute` / `draw` / `isAnimating`). One type, one
- * source of truth.
+ * `layers/flow/settings/defaults.ts`, and the flow renderer's per-frame param
+ * argument (`flowFieldRenderer.encodeCompute` / `draw` / `isAnimating`). One
+ * type, one source of truth.
  *
  * The tunable defaults are the spike's hand-dialled advect look — see
- * `DEFAULT_FLOW`, which derives them from the SOURCE_REGISTRY flow row.
+ * `DEFAULT_FLOW`, which owns those values outright.
  */
 import type { FlowFieldDefaults } from '../data/flow/FlowFieldDefaults';
 

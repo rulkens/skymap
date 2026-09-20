@@ -1,10 +1,10 @@
 /**
- * flow — the Layer's user-settable defaults, seeding `flowSlice`. Every field
- * is registry-derived: `sources/flow.ts` is the authority, so retune the
- * hand-dialled advect look THERE, not here.
+ * flow — the Layer's user-settable defaults, seeding `flowSlice`. These values
+ * ARE the spike's hand-dialled advect look; the SOURCE_REGISTRY flow row
+ * carries the asset, not the look, so retune them here.
  */
 
-import { SOURCE_REGISTRY, Source } from '../../../data/sources';
+import { MAX_PARTICLES } from '../../../data/flow/flowFieldConstants';
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 
 /**
@@ -12,19 +12,23 @@ import type { FlowSettings } from '../../../@types/settings/FlowSettings';
  * shared seed for `settings.flow` (engine) and the SettingsPanel store
  * fallback (App.tsx).
  *
- * Derived from the SOURCE_REGISTRY flow row: `enabled` from its `visible`
- * gate, the eight look/motion knobs from the `FlowFieldDefaults` it carries.
- * The registry row is the single source of truth — to retune the hand-dialled
- * advect look, edit `sources/flow.ts`, not here.
+ * `enabled` is off because the velocity cube is tens of MB and demand-loads on
+ * the first enable, so a fresh session pays nothing until the user asks for it.
+ * A plain literal like `DEFAULT_ZONE_OF_AVOIDANCE_ENABLED`: `FLOW_ENTRY.visible`
+ * exists for registry consistency but is not itself this default's source.
+ *
+ * The eight look/motion knobs are the spike's hand-dialled advect look. Do not
+ * "tidy" them; they ARE the look. `count` starts at the buffer ceiling so the
+ * field reads dense the moment it's enabled; the slider trims downward.
  */
 export const DEFAULT_FLOW: FlowSettings = {
-  enabled: SOURCE_REGISTRY[Source.Flow].visible,
-  mode: SOURCE_REGISTRY[Source.Flow].mode,
-  intensity: SOURCE_REGISTRY[Source.Flow].intensity,
-  count: SOURCE_REGISTRY[Source.Flow].count,
-  trail: SOURCE_REGISTRY[Source.Flow].trail,
-  flowSpeed: SOURCE_REGISTRY[Source.Flow].flowSpeed,
-  densityBias: SOURCE_REGISTRY[Source.Flow].densityBias,
-  wander: SOURCE_REGISTRY[Source.Flow].wander,
-  boundaryFadeWidth: SOURCE_REGISTRY[Source.Flow].boundaryFadeWidth,
+  enabled: false,
+  mode: 'advect',
+  intensity: 0.18,
+  count: MAX_PARTICLES,
+  trail: 0.002,
+  flowSpeed: 0.02,
+  densityBias: 0.98,
+  wander: 0.15,
+  boundaryFadeWidth: 0.1,
 };
