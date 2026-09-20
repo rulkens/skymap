@@ -26,6 +26,7 @@ import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { isWorldArm } from '../../../../src/services/engine/camera/rungs/isWorldArm';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../../src/state/time/selectors';
 import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
@@ -215,5 +216,54 @@ describe('stepCameraRuntime', () => {
       near: NEAR_CLIP_MPC,
       far: FAR_CLIP_MPC,
     });
+  });
+});
+
+describe('a commit from outside the loop is authoritative', () => {
+  it('a body-arm commit under a followed focus renders and stays, unbaked', () => {
+    // A real body arm, reached the way the app reaches one (engage on close approach).
+    const engaged = makeCameraSimHarness({ bootHR: 0.1 });
+    engaged.frame(2);
+    const bodyArm = engaged.store.getState().camera.base;
+    expect(bodyArm.frame).toEqual({ body: 'earth' });
+
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+
+    h.store.dispatch(commitCameraPose(bodyArm));
+    h.frame(1);
+
+    // Nothing baked over the commit: `followHold` is arm-gated out by the body
+    // arm and `resting` (not `followHold`) reads as last frame's author, so
+    // `commitOnEdge` sees no departure to bake.
+    expect(h.store.getState().camera.base).toBe(bodyArm);
+    expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
+    expect(h.state.cameraRuntime.register.winner).toBe('resting');
+
+    h.frame(1);
+    expect(h.store.getState().camera.base).toBe(bodyArm);
+  });
+
+  it('a world-arm commit under a followed focus is adopted, distance included', () => {
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    const before = h.store.getState().camera.base;
+    if (!isWorldArm(before)) throw new Error('expected a world arm base');
+
+    h.store.dispatch(
+      commitCameraPose(absoluteArm({ ...before.pose, distance: before.pose.distance * 2 })),
+    );
+    h.frame(1);
+
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    const world = foldToWorld(h.state.cameraRuntime.outputs.displayed, {
+      bodies: BODIES,
+      poseBasis: B,
+      upBasis: B,
+      terrainHeightAt: datumOnlyTerrainHeight,
+    });
+    expect(world.distance).toBeCloseTo(before.pose.distance * 2, 5);
   });
 });
