@@ -26,7 +26,7 @@ import { pushStarNode } from './starNodeStream';
  * stream (real-star nodes) and an aggregate stream (flux-mip nodes), reading
  * each node's current LOD-fade opacity — pure when `advanceFades` is false,
  * and the only place that advances the fade ramp when true (see
- * `prepareStarCut` / `advanceStarFades`, its two callers). `null` when the
+ * `readStarCut` / `advanceStarCut`, its two callers). `null` when the
  * star pass is not live (no renderer, master off).
  *
  * NEAR0 + the f64 rebase seam (catastrophic cancellation, same trap
@@ -170,7 +170,7 @@ export function computeStarCut(
     const fadeState = fadeStateFor(catalog);
 
     if (!advanceFades) {
-      // Read-only: emits at whatever opacity `advanceStarFades` left this
+      // Read-only: emits at whatever opacity `advanceStarCut` left this
       // frame's ONE call at, so the pick path's fresh post-frame ctx can
       // recompute the cut without perturbing the ramps.
       const { opacity } = fadeState;

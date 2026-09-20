@@ -12,7 +12,7 @@
  * (`starCatalogPass`).
  *
  * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
- * ALL shared with the other two star layers via `prepareStarCut` (memoised on
+ * ALL shared with the other two star layers via `readStarCut` (memoised on
  * `ctx`): this layer draws first in program order (its `star-aggregates` render
  * step precedes the hdr NEAR0 step), so its `draw` typically triggers the walk,
  * and the leaf + upsample layers read the cached result. This layer records
@@ -32,7 +32,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { starCatalogVisible } from '../../../gpu/renderers/starCatalog/cut/starCatalogVisible';
-import { prepareStarCut } from '../../../gpu/renderers/starCatalog/cut/prepareStarCut';
+import { readStarCut } from '../../../gpu/renderers/starCatalog/cut/readStarCut';
 import { drawStarStream } from '../../../gpu/renderers/starCatalog/cut/drawStarStream';
 
 export const starAggregatesPass: ContentPass = {
@@ -43,7 +43,7 @@ export const starAggregatesPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.starCatalogRenderer;
     if (renderer === null) return;
-    const prep = prepareStarCut(state, ctx);
+    const prep = readStarCut(state, ctx);
     if (prep === null) return;
 
     // Viewport is the DESTINATION target's allocated size, not the canvas:

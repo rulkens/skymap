@@ -43,7 +43,7 @@ function camAtPc(distPc: number): Vec3 {
   return [0, 0, distPc * SCALE_UNITS.PC_TO_MPC];
 }
 
-/** A fresh ctx per call — `prepareStarCut` memoises on the ctx object. */
+/** A fresh ctx per call — `readStarCut` memoises on the ctx object. */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
   return { drawCamPos: camPos, nowMs, fovYRad: DEFAULT_FOV_Y_RAD } as unknown as ReadyFrameContext;
 }

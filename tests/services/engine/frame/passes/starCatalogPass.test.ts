@@ -1,7 +1,7 @@
 /**
  * starCatalogPass — unit tests for the survey (Gaia bin) star LEAF content
  * row. The walk / fade / partition that feeds both streams lives in
- * `prepareStarCut` and is tested in `prepareStarCut.test.ts`; here we pin only
+ * `readStarCut` and is tested in `readStarCut.test.ts`; here we pin only
  * the layer's own behaviour:
  *
  *   1. `enabled` delegates to `starCatalogVisible` — the toggles AND the
@@ -50,7 +50,7 @@ function camAtPc(distPc: number): Vec3 {
 }
 
 /**
- * A fresh ctx per call — `prepareStarCut` memoises on the ctx object, so a
+ * A fresh ctx per call — `readStarCut` memoises on the ctx object, so a
  * distinct object per frame keeps every draw a clean recompute.
  */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {

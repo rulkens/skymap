@@ -5,10 +5,10 @@ import { computeStarCut } from './computeStarCut';
 import { starCutOncePerCtx } from './starCutOncePerCtx';
 
 /**
- * This frame's star cut, READ-ONLY — it never advances a fade ramp, so the
- * pick path's fresh post-frame ctx can recompute without perturbing them.
- * `advanceStarFades` is the writer; both share `starCutOncePerCtx`.
+ * The READ half of the star cut: it never advances a fade ramp, so the pick
+ * path's fresh post-frame ctx can recompute the cut without perturbing them.
+ * `advanceStarCut` is the write half; both share `starCutOncePerCtx`.
  */
-export function prepareStarCut(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
+export function readStarCut(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
   return starCutOncePerCtx(ctx, () => computeStarCut(state, ctx, false));
 }

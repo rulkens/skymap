@@ -2,11 +2,11 @@ import type { ReadyFrameContext } from '../../../../../@types/engine/frame/Ready
 import type { PreparedStarCut } from '../../../../../@types/rendering/PreparedStarCut';
 
 /**
- * At most ONE star cut per frame context, shared by `advanceStarFades` (the
- * writer) and `prepareStarCut` (the readers). Two properties depend on it, so
+ * At most ONE star cut per frame context, shared by `advanceStarCut` (the
+ * writer) and `readStarCut` (the readers). Two properties depend on it, so
  * it is correctness, not just a cache:
  *
- *   - The ramps advance once. `advanceStarFades` runs first each real frame;
+ *   - The ramps advance once. `advanceStarCut` runs first each real frame;
  *     every later call for that ctx returns its result instead of walking
  *     again, which is what makes "advance runs once" hold with no viewSlot or
  *     ctx-identity special case at the four call sites.
