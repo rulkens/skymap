@@ -14,7 +14,7 @@
  */
 import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
 import type { Vec3 } from '../../@types/math/Vec3';
-import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../data/defaults';
+import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../layers/zoneOfAvoidance/settings/defaults';
 
 const DECIMALS = 4;
 

@@ -5,7 +5,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_GALAXY_TEXTURES_ENABLED } from '../../../data/defaults';
+import { DEFAULT_GALAXY_TEXTURES_ENABLED } from './defaults';
 import type { ThumbnailsSettings } from '../../../@types/settings/ThumbnailsSettings';
 
 const initialState: ThumbnailsSettings = {

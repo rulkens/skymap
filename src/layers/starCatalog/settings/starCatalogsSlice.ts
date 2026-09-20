@@ -16,7 +16,7 @@ import {
   DEFAULT_STAR_EXPOSURE_NEAR_X,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
-} from '../../../data/defaults';
+} from './defaults';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../@types/settings/StarCatalogItemSettings';
 import type { StarCatalogSettings } from '../../../@types/settings/StarCatalogSettings';

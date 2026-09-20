@@ -13,7 +13,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../src/layers/galaxyCatalog/settings/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';

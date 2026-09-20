@@ -2,7 +2,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from '../../../data/defaults';
+import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from './defaults';
 import type { SgrAStarLensingTuning } from '../../../@types/settings/SgrAStarLensingTuning';
 
 // The Sgr A* lens knobs; see `SgrAStarLensingTuning` for the tier
@@ -16,10 +16,7 @@ export const sgrAStarLensingTuningSlice = createSlice({
   reducers: {
     // Leaf-by-leaf patch, no visibility axis to protect (this cluster is
     // pure knobs, not a singleton overlay).
-    setSgrAStarLensingTuning: (
-      cluster,
-      action: PayloadAction<Partial<SgrAStarLensingTuning>>,
-    ) => {
+    setSgrAStarLensingTuning: (cluster, action: PayloadAction<Partial<SgrAStarLensingTuning>>) => {
       Object.assign(cluster, action.payload);
     },
   },
