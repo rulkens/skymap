@@ -76,10 +76,10 @@ import {
   DEFAULT_STAR_EXPOSURE_FAR_X,
   DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_SIZE_PX,
+  DEFAULT_REFINE_THRESHOLD,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
-import { DEFAULT_REFINE_THRESHOLD } from '../../../src/utils/star/walkStarOctreeCut';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';

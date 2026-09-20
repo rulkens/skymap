@@ -17,13 +17,13 @@
 
 import { describe, it, expect } from 'vitest';
 
+import { starExposureRamp } from '../../../src/utils/star/starExposureRamp';
 import {
-  starExposureRamp,
   RAMP_NEAR_MPC,
   RAMP_MID_MPC,
   RAMP_FAR_MPC,
   SHADER_BAKED_NEAR_EXPOSURE,
-} from '../../../src/utils/star/starExposureRamp';
+} from '../../../src/data/starExposureRamp';
 
 // The pre-mid-anchor two-point ramp, recomputed as the regression reference:
 // a single geometric interpolation from `nearX/6` to `farX/6` across the whole
