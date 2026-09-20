@@ -1,9 +1,8 @@
-import type { Renderer } from './Renderer';
-import type { SurfaceCutTile } from '../scene/SurfaceCutTile';
-import type { Vec3 } from '../math/Vec3';
-import type { SurfaceEffect } from '../data/SurfaceEffect';
-import type { SurfaceTileShading } from '../data/SurfaceTileShading';
-import type { SurfaceEffectInputs } from './SurfaceEffectInputs';
+import type { SurfaceCutTile } from '../../scene/SurfaceCutTile';
+import type { Vec3 } from '../../math/Vec3';
+import type { SurfaceEffect } from '../../data/SurfaceEffect';
+import type { SurfaceTileShading } from '../../data/SurfaceTileShading';
+import type { SurfaceEffectInputs } from '../SurfaceEffectInputs';
 
 /**
  * `SurfaceTileRenderer.draw`'s per-frame arguments. `tiles` is Task 2's
@@ -53,12 +52,4 @@ export type SurfaceTileDrawArgs = {
    *  `textureLoad` at each patch's own slot. Mandatory: every vertex position
    *  reads it, so a cut must never be drawn without it. Not owned here. */
   readonly heightAtlasView: GPUTextureView;
-};
-
-export type SurfaceTileRenderer = Renderer & {
-  /**
-   * Rebuild the per-frame `PatchInstance` buffer from `args.tiles` and issue
-   * one instanced indexed draw. No-op if `tiles` is empty.
-   */
-  draw(pass: GPURenderPassEncoder, args: SurfaceTileDrawArgs): void;
 };

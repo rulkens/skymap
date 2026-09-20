@@ -31,7 +31,7 @@ import {
   seq,
   all,
 } from '../../../../src/services/engine/animation/effectHelpers';
-import type { BaseSegment } from '../../../../src/@types/animation/CompiledClip';
+import type { BaseSegment } from '../../../../src/@types/animation/compiledClip/BaseSegment';
 import type { Channel } from '../../../../src/@types/animation/Channel';
 
 // ---------------------------------------------------------------------------

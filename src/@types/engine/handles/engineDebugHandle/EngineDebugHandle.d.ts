@@ -9,22 +9,12 @@
  * eager stub — or at nothing — forever.
  */
 
-import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
-import type { FrameStats } from '../FrameStats';
-import type { SurfaceTileDebugSnapshot } from '../../scene/SurfaceTileDebugSnapshot';
-import type { CameraDebugSnapshot } from '../../camera/CameraDebugSnapshot';
-import type { AssetSlot } from '../../loading/AssetSlot';
-
-/**
- * Read-only pass-name list for the DebugPanel's renderer-toggle section.
- * Toggle writes go to the store via `setPassDisabled`; the one-way override
- * semantics (can hide a passing pass, cannot force-enable a gated one) are
- * enforced in the encoder loop.
- */
-export type PassOverridesHandle = {
-  /** Every pass name across the HDR + UI registries, in draw order. */
-  readonly allNames: readonly string[];
-};
+import type { GpuTimingService } from '../../../gpu/timing/GpuTimingService';
+import type { FrameStats } from '../../FrameStats';
+import type { SurfaceTileDebugSnapshot } from '../../../scene/SurfaceTileDebugSnapshot';
+import type { CameraDebugSnapshot } from '../../../camera/CameraDebugSnapshot';
+import type { AssetSlot } from '../../../loading/AssetSlot';
+import type { PassOverridesHandle } from './PassOverridesHandle';
 
 export type EngineDebugHandle = {
   /**

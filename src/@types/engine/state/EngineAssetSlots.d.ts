@@ -15,7 +15,7 @@ import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { Polyphorm2MRSReq } from '../../loading/Polyphorm2MRSReq';
-import type { StructureCatalogPayload } from '../../loading/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../../loading/structureCatalogPayload/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
 import type { ConstellationsArtifact } from '../../loading/ConstellationsArtifact';
 import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
