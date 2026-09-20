@@ -225,7 +225,7 @@ async function readLiveCameraState(
 }
 
 type RunAccumulator = {
-  captured: string[];
+  captured: number;
   failed: { cardId: string; reason: string }[];
   warnings: string[];
 };
@@ -293,7 +293,7 @@ async function captureCard(
     if (webp.length > WARN_BYTES) {
       acc.warnings.push(`${target.cardId}: ${kb.toFixed(1)} KB (> ${WARN_BYTES / 1024} KB)`);
     }
-    acc.captured.push(target.cardId);
+    acc.captured += 1;
   } catch (err) {
     const reason = err instanceof Error ? err.message : String(err);
     console.error(`  ${target.cardId} FAILED: ${reason}`);
@@ -317,7 +317,7 @@ async function main(): Promise<void> {
   console.log(`capture-featured: ${targets.length} target(s)`);
   if (targets.length === 0) return;
 
-  const acc: RunAccumulator = { captured: [], failed: [], warnings: [] };
+  const acc: RunAccumulator = { captured: 0, failed: [], warnings: [] };
   const browser = await launchChromium();
   try {
     for (const target of targets) {
@@ -327,7 +327,7 @@ async function main(): Promise<void> {
     await browser.close();
   }
 
-  console.log(`\ncaptured ${acc.captured.length}/${targets.length}`);
+  console.log(`\ncaptured ${acc.captured}/${targets.length}`);
   if (acc.warnings.length > 0) {
     console.log('warnings:');
     for (const w of acc.warnings) console.log(`  ${w}`);

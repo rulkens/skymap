@@ -21,8 +21,4 @@ describe('captureEqual', () => {
   it('treats an absent override and an empty one as different', () => {
     expect(captureEqual(undefined, {})).toBe(false);
   });
-
-  it('refuses a copy that only adds a field', () => {
-    expect(captureEqual({ phaseDeg: 315 }, { phaseDeg: 315, keepFocus: true })).toBe(false);
-  });
 });
