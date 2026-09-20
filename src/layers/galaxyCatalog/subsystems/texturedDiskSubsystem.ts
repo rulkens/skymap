@@ -274,10 +274,6 @@ export function createTexturedDiskSubsystem(
     return false;
   }
 
-  function hasInFlightWork(): boolean {
-    return atlas.inFlightCount() > 0 || hasFadingContent();
-  }
-
   function destroy(): void {
     destroyed = true;
     atlas.setEvictHandler(undefined);
@@ -295,7 +291,6 @@ export function createTexturedDiskSubsystem(
     get lastOutput() {
       return lastOutput;
     },
-    hasInFlightWork,
     hasFadingContent,
     setHiResFamous,
     destroy,

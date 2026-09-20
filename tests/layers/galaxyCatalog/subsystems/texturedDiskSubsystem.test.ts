@@ -6,8 +6,7 @@
  *   - schedules a fetch (idempotent on in-flight keys)
  *   - emits a DiskInstance when orientation is finite (px > 24 path)
  *   - emits a ThumbnailInstance when orientation is NaN
- *   - hasInFlightWork() flips with queue activity AND with the load-fade
- *     window
+ *   - hasFadingContent() tracks the load-fade window and NOT outstanding fetches
  *   - the atlas-eviction handler clears bitmapReadyTime
  */
 
@@ -165,30 +164,11 @@ describe('createTexturedDiskSubsystem', () => {
     expect(quarterOpacity).toBeCloseTo(fullOpacity * 0.25, 5);
   });
 
-  it('hasInFlightWork is true during fetch and false after it settles', async () => {
-    const pending: Array<(b: ImageBitmap | null) => void> = [];
-    const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
-    const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
-    const walk = createDiskPlannerWalk({ decimationFactor: 1 });
-    const sys = createTexturedDiskSubsystem({
-      device,
-      atlas,
-      fetcher,
-    });
-    const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
-    runTexturedSolo(walk, sys, makeInput(clouds));
-    expect(sys.hasInFlightWork()).toBe(true);
-    pending[0]!(null);
-    await new Promise((r) => setTimeout(r, 0));
-    expect(sys.hasInFlightWork()).toBe(false);
-  });
-
-  // The two halves of `hasInFlightWork` drive different consumers: the loop
-  // must stay awake for an outstanding fetch, but a sky capture may only
-  // re-bake for content that actually LANDED. A fetch to an unreachable host
-  // hangs for ~30 s, so folding the two would re-bake six faces per frame for
-  // its whole duration — see frame.settlingVote.test.ts.
-  it('reports a merely-outstanding fetch as in-flight work but NOT as fading content', () => {
+  // The planner's only work vote, so what it EXCLUDES is the point: an
+  // outstanding fetch is not content. A fetch to an unreachable host hangs for
+  // its whole 30 s deadline, and reporting that would both spin the render
+  // loop and re-bake six cubemap faces per frame — see frame.settlingVote.test.ts.
+  it('does not report a merely-outstanding fetch as fading content', () => {
     const pending: Array<(b: ImageBitmap | null) => void> = [];
     const fetcher = vi.fn(() => new Promise<ImageBitmap | null>((res) => pending.push(res)));
     const atlas = createGalaxyAtlasSubsystem({ device, requestRender: () => {} });
@@ -197,7 +177,7 @@ describe('createTexturedDiskSubsystem', () => {
     const clouds = new Map([[Source.SDSS, makeDenseCloud(1)]]);
 
     runTexturedSolo(walk, sys, makeInput(clouds));
-    expect(sys.hasInFlightWork()).toBe(true);
+    expect(pending.length).toBe(1); // the fetch really is outstanding
     expect(sys.hasFadingContent()).toBe(false);
   });
 
