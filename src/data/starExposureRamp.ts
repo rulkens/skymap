@@ -14,6 +14,3 @@ export const RAMP_MID_MPC = 3e-3;
 
 /** Far anchor: 10 kpc in Mpc — whole-galaxy view, Milky Way surface brightness. */
 export const RAMP_FAR_MPC = 1e-2;
-
-/** Default far/near exposure ratio (28x / 6x); the ramp's regression pin. */
-export const RAMP_FAR_SCALE = 28 / 6;

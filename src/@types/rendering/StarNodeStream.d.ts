@@ -6,8 +6,6 @@
 
 export type StarNodeStream = {
   count: number;
-  /** Per-node `catalog.nodes` slot (used by `starPickLeafDraws` + debug). */
-  nodeIndex: Int32Array;
   /** Per-node record-slice base (`node.firstRecord`). */
   firstRecord: Uint32Array;
   /** Per-node instance count (leaf → N stars; aggregate → 1). */

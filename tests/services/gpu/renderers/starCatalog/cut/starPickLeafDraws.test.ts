@@ -19,7 +19,6 @@ import { Source } from '../../../../../../src/data/sources';
 function streamOf(draw: StarNodeDraw, opacity: number, isAggregate: number): StarNodeStream {
   return {
     count: 1,
-    nodeIndex: new Int32Array([draw.nodeIndex]),
     firstRecord: new Uint32Array([draw.firstRecord]),
     recordCount: new Uint32Array([draw.recordCount]),
     originRelCamMpc: new Float32Array([draw.nodeIndex, 0, 0]),
@@ -37,7 +36,6 @@ function leafStream(
 ): StarNodeStream {
   return {
     count: 2,
-    nodeIndex: new Int32Array([a.draw.nodeIndex, b.draw.nodeIndex]),
     firstRecord: new Uint32Array([a.draw.firstRecord, b.draw.firstRecord]),
     recordCount: new Uint32Array([a.draw.recordCount, b.draw.recordCount]),
     originRelCamMpc: new Float32Array([a.draw.nodeIndex, 0, 0, b.draw.nodeIndex, 0, 0]),

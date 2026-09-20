@@ -2,9 +2,9 @@ import type { StarNodeStream } from '../../../../../@types/rendering/StarNodeStr
 
 /**
  * Flat typed arrays, not arrays-of-objects: at star-field zoom the cut draws
- * tens of thousands of nodes EVERY frame, and a `{ nodeIndex, firstRecord,
- * recordCount }` object plus a `Vec3` origin per node — ~5 short-lived
- * objects each — measured at 10-12 ms/frame of GC churn during navigation.
+ * tens of thousands of nodes EVERY frame, and a `{ firstRecord, recordCount }`
+ * object plus a `Vec3` origin per node — ~5 short-lived objects each —
+ * measured at 10-12 ms/frame of GC churn during navigation.
  * `count` valid entries index into persistent typed arrays that GROW BY
  * DOUBLING but never shrink or reallocate steady-state (same trick
  * `walkStarOctreeCut`'s own output snapshot uses). Scalar fields index `[i]`;
@@ -19,7 +19,6 @@ import type { StarNodeStream } from '../../../../../@types/rendering/StarNodeStr
 export function createStarNodeStream(cap: number): StarNodeStream {
   return {
     count: 0,
-    nodeIndex: new Int32Array(cap),
     firstRecord: new Uint32Array(cap),
     recordCount: new Uint32Array(cap),
     originRelCamMpc: new Float32Array(cap * 3),
@@ -37,11 +36,8 @@ export function createStarNodeStream(cap: number): StarNodeStream {
  * steady-state frames never reallocate.
  */
 function growStream(stream: StarNodeStream, min: number): void {
-  let cap = stream.nodeIndex.length;
+  let cap = stream.firstRecord.length;
   while (cap < min) cap *= 2;
-  const nodeIndex = new Int32Array(cap);
-  nodeIndex.set(stream.nodeIndex);
-  stream.nodeIndex = nodeIndex;
   const firstRecord = new Uint32Array(cap);
   firstRecord.set(stream.firstRecord);
   stream.firstRecord = firstRecord;
@@ -68,7 +64,6 @@ function growStream(stream: StarNodeStream, min: number): void {
 /** Append one drawn node to `stream`, growing the backing arrays if full. */
 export function pushStarNode(
   stream: StarNodeStream,
-  nodeIndex: number,
   firstRecord: number,
   recordCount: number,
   ox: number,
@@ -80,8 +75,7 @@ export function pushStarNode(
   opacity: number,
 ): void {
   const i = stream.count;
-  if (i >= stream.nodeIndex.length) growStream(stream, i + 1);
-  stream.nodeIndex[i] = nodeIndex;
+  if (i >= stream.firstRecord.length) growStream(stream, i + 1);
   stream.firstRecord[i] = firstRecord;
   stream.recordCount[i] = recordCount;
   const o = i * 3;

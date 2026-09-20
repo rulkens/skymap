@@ -22,8 +22,8 @@ export function drawStarPick(
   pickRenderer: StarCatalogPickRenderer,
   pass: GPURenderPassEncoder,
   view: SlabView,
-  fovYRad: number,
   prep: PreparedStarCut,
+  fovYRad: number,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);

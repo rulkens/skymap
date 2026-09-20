@@ -1,10 +1,7 @@
 import type { StarCutFrustum } from '../../@types/rendering/StarCutFrustum';
 import { frustumPlanesFromViewProj } from '../camera/frustumPlanesFromViewProj';
-import {
-  STAR_SIZE_REF_PX,
-  STAR_GLOW_MIN_PX,
-  STAR_PICK_MIN_RADIUS_PX,
-} from '../../data/starCullSlack';
+import { starCullMargins } from './starCullMargins';
+import { STAR_SIZE_REF_PX } from '../../data/starCullSlack';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 
 const cutPlanesMpcScratch = new Float32Array(24);
@@ -49,11 +46,9 @@ export function buildStarCutFrustum(
     cutPlanesPcScratch[b + 2] = planesMpc[b + 2]!;
     cutPlanesPcScratch[b + 3] = planesMpc[b + 3]! * SCALE_UNITS.MPC_TO_PC;
   }
-  const sizeScale = sizePx / STAR_SIZE_REF_PX;
-  const radiansPerPx = fovYRad / canvasHeightPx;
-  const leafPxRadius = STAR_GLOW_MIN_PX * sizeScale;
-  cutFrustumScratch.angularMarginRad =
-    Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
-  cutFrustumScratch.worldSpread = Math.max(1, sizeScale * glowOverlap);
+  // Pick, not leaf: this prune must never wrong-drop a node the pick pass
+  // would still floor to the clickable radius (see the header's PICK-SLACK FLOOR).
+  cutFrustumScratch.angularMarginRad = starCullMargins(sizePx, canvasHeightPx, fovYRad).pick;
+  cutFrustumScratch.worldSpread = Math.max(1, (sizePx / STAR_SIZE_REF_PX) * glowOverlap);
   return cutFrustumScratch;
 }

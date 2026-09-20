@@ -101,12 +101,10 @@ function makeCatalog(): StarCatalog {
   };
 }
 
-// A single leaf (index 0) parented by a level-1 aggregate root (index 1),
-// shifted 10 kpc from the Sun so the walk REFINES to the leaf on the box
-// (CLOSE) and COARSENS to the root aggregate to the side (FAR) — both inside
-// the crossfade band, so only the cut MEMBERSHIP flips.
-const LEAF_INDEX = 0;
-const ROOT_INDEX = 1;
+// A single leaf parented by a level-1 aggregate root, shifted 10 kpc from the
+// Sun so the walk REFINES to the leaf on the box (CLOSE) and COARSENS to the
+// root aggregate to the side (FAR) — both inside the crossfade band, so only
+// the cut MEMBERSHIP flips.
 const CLOSE_PC: Vec3 = [10_000, 0, 0];
 const FAR_PC: Vec3 = [10_000, 5_000, 0];
 
@@ -154,15 +152,17 @@ function makeAggregateCatalog(): StarCatalog {
   };
 }
 
-/** Index of a node in a stream's flat arrays (scan `[0, count)`), or -1. */
-function indexInStream(stream: StarNodeStream, nodeIndex: number): number {
-  for (let i = 0; i < stream.count; i++) if (stream.nodeIndex[i] === nodeIndex) return i;
-  return -1;
+/**
+ * Index of a stream's one entry, or -1 if empty — every fixture below draws
+ * at most one node per stream, so "present" and "at slot 0" coincide.
+ */
+function soleIndex(stream: StarNodeStream): number {
+  return stream.count > 0 ? 0 : -1;
 }
 
-/** The opacity of a node in a stream, or undefined if it is not in that stream. */
-function opacityInStream(stream: StarNodeStream, nodeIndex: number): number | undefined {
-  const i = indexInStream(stream, nodeIndex);
+/** The opacity of a stream's one entry, or undefined if it has none. */
+function soleOpacity(stream: StarNodeStream): number | undefined {
+  const i = soleIndex(stream);
   return i === -1 ? undefined : stream.opacity[i];
 }
 
@@ -244,7 +244,7 @@ describe('prepareStarCut partition', () => {
       prepareStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5))),
     );
     expect(aggregate.count).toBe(0);
-    const i = indexInStream(leaf, 0);
+    const i = soleIndex(leaf);
     expect(i).toBeGreaterThanOrEqual(0);
     expect(leaf.isAggregate[i]).toBe(0);
     expect(leaf.subtreeStarCount[i]).toBe(1);
@@ -256,7 +256,7 @@ describe('prepareStarCut partition', () => {
       prepareStarCut(makeState(renderer), makeCtx(camAtPcVec(FAR_PC), 0)),
     );
     expect(leaf.count).toBe(0);
-    const i = indexInStream(aggregate, ROOT_INDEX);
+    const i = soleIndex(aggregate);
     expect(i).toBeGreaterThanOrEqual(0);
     expect(aggregate.isAggregate[i]).toBe(1);
     expect(aggregate.subtreeStarCount[i]).toBe(3);
@@ -277,21 +277,21 @@ describe('prepareStarCut per-node LOD fades', () => {
     // Frame 1: far → only the root aggregate is in the cut (aggregate stream),
     // snapped full. The leaf is in neither stream.
     const f1 = onlySource(advanceStarFades(state, makeCtx(camAtPcVec(FAR_PC), 0)));
-    expect(opacityInStream(f1.leaf, LEAF_INDEX)).toBeUndefined();
-    expect(opacityInStream(f1.aggregate, ROOT_INDEX)).toBeCloseTo(crossfadeAt(FAR_PC), 6);
+    expect(soleOpacity(f1.leaf)).toBeUndefined();
+    expect(soleOpacity(f1.aggregate)).toBeCloseTo(crossfadeAt(FAR_PC), 6);
 
     // Frame 2: camera closes → the leaf enters, drawn PARTWAY (50/250) through
     // its fade; the root leaves and fades out but is still in the aggregate
     // stream. Their opacities are each the crossfade × their own fade.
     const f2 = onlySource(advanceStarFades(state, makeCtx(camAtPcVec(CLOSE_PC), 50)));
     const crossClose = crossfadeAt(CLOSE_PC);
-    expect(opacityInStream(f2.leaf, LEAF_INDEX)).toBeCloseTo(crossClose * (50 / 250), 6);
-    expect(opacityInStream(f2.aggregate, ROOT_INDEX)).toBeCloseTo(crossClose * (1 - 50 / 250), 6);
+    expect(soleOpacity(f2.leaf)).toBeCloseTo(crossClose * (50 / 250), 6);
+    expect(soleOpacity(f2.aggregate)).toBeCloseTo(crossClose * (1 - 50 / 250), 6);
 
     // Frame 3: ≥250 ms more → the leaf reaches full and the root drops entirely.
     const f3 = onlySource(advanceStarFades(state, makeCtx(camAtPcVec(CLOSE_PC), 350)));
-    expect(opacityInStream(f3.leaf, LEAF_INDEX)).toBeCloseTo(crossClose, 6);
-    expect(opacityInStream(f3.aggregate, ROOT_INDEX)).toBeUndefined();
+    expect(soleOpacity(f3.leaf)).toBeCloseTo(crossClose, 6);
+    expect(soleOpacity(f3.aggregate)).toBeUndefined();
   });
 
   it('reports anyNodeFading while a node fade is in flight (the keep-ticking vote)', () => {
@@ -322,16 +322,16 @@ describe('prepareStarCut per-node LOD fades', () => {
 
     advanceStarFades(state, makeCtx(camAtPcVec(FAR_PC), 0));
     const first = onlySource(advanceStarFades(state, makeCtx(camAtPcVec(CLOSE_PC), 50)));
-    const firstLeafOp = opacityInStream(first.leaf, LEAF_INDEX);
+    const firstLeafOp = soleOpacity(first.leaf);
 
     // A second, unrelated ctx (same nowMs, as a pick recompute right after the
     // frame that just advanced would be) reads the cut via prepareStarCut.
     const second = onlySource(prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50)));
-    expect(opacityInStream(second.leaf, LEAF_INDEX)).toBe(firstLeafOp);
+    expect(soleOpacity(second.leaf)).toBe(firstLeafOp);
 
     // A THIRD such read-only call still leaves it unchanged.
     const third = onlySource(prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50)));
-    expect(opacityInStream(third.leaf, LEAF_INDEX)).toBe(firstLeafOp);
+    expect(soleOpacity(third.leaf)).toBe(firstLeafOp);
   });
 });
 
@@ -351,7 +351,7 @@ describe('prepareStarCut stream aliasing across views (regression)', () => {
     // Main view (viewSlot 0) close in → its cut is the leaf alone.
     const main = onlySource(prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 0)));
     expect(main.leaf.count).toBe(1);
-    expect(main.leaf.nodeIndex[0]).toBe(LEAF_INDEX);
+    expect(main.leaf.firstRecord[0]).toBe(0);
 
     // A capture face (viewSlot 1) walks the SAME catalog from far away → its
     // cut is the root aggregate alone, a different partition entirely.
@@ -360,7 +360,7 @@ describe('prepareStarCut stream aliasing across views (regression)', () => {
     // The main view's already-prepared leaf stream must still hold ITS OWN
     // node — not have been reset/refilled by the capture face's walk.
     expect(main.leaf.count).toBe(1);
-    expect(main.leaf.nodeIndex[0]).toBe(LEAF_INDEX);
+    expect(main.leaf.firstRecord[0]).toBe(0);
   });
 });
 
@@ -382,8 +382,8 @@ describe('prepareStarCut capture views (viewSlot !== 0)', () => {
     // pinning a NEWCOMER at opacity 0) but a different camera — its cut is just
     // the leaf. It must draw at full opacity, not fade in from 0.
     const capture = onlySource(prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 0, 1)));
-    expect(opacityInStream(capture.leaf, LEAF_INDEX)).toBeCloseTo(crossfadeAt(CLOSE_PC), 6);
-    expect(opacityInStream(capture.aggregate, ROOT_INDEX)).toBeUndefined();
+    expect(soleOpacity(capture.leaf)).toBeCloseTo(crossfadeAt(CLOSE_PC), 6);
+    expect(soleOpacity(capture.aggregate)).toBeUndefined();
   });
 
   it("a capture call between two main-view calls does not perturb the main view's fade progression", () => {
@@ -401,10 +401,10 @@ describe('prepareStarCut capture views (viewSlot !== 0)', () => {
     );
     advanceStarFades(controlState, makeCtx(camAtPcVec(FAR_PC), 0));
     const control2 = onlySource(advanceStarFades(controlState, makeCtx(camAtPcVec(CLOSE_PC), 50)));
-    const controlLeaf2 = opacityInStream(control2.leaf, LEAF_INDEX);
-    const controlAgg2 = opacityInStream(control2.aggregate, ROOT_INDEX);
+    const controlLeaf2 = soleOpacity(control2.leaf);
+    const controlAgg2 = soleOpacity(control2.aggregate);
     const control3 = onlySource(advanceStarFades(controlState, makeCtx(camAtPcVec(CLOSE_PC), 350)));
-    const controlLeaf3 = opacityInStream(control3.leaf, LEAF_INDEX);
+    const controlLeaf3 = soleOpacity(control3.leaf);
     const controlAgg3Count = control3.aggregate.count;
 
     // Test: identical main-view frames, but with capture ctxs (different
@@ -414,11 +414,11 @@ describe('prepareStarCut capture views (viewSlot !== 0)', () => {
     advanceStarFades(testState, makeCtx(camAtPcVec(FAR_PC), 0));
     prepareStarCut(testState, makeCtx(camAtPcVec(CLOSE_PC), 25, 1));
     const test2 = onlySource(advanceStarFades(testState, makeCtx(camAtPcVec(CLOSE_PC), 50)));
-    const testLeaf2 = opacityInStream(test2.leaf, LEAF_INDEX);
-    const testAgg2 = opacityInStream(test2.aggregate, ROOT_INDEX);
+    const testLeaf2 = soleOpacity(test2.leaf);
+    const testAgg2 = soleOpacity(test2.aggregate);
     prepareStarCut(testState, makeCtx(camAtPcVec(CLOSE_PC), 200, 6));
     const test3 = onlySource(advanceStarFades(testState, makeCtx(camAtPcVec(CLOSE_PC), 350)));
-    const testLeaf3 = opacityInStream(test3.leaf, LEAF_INDEX);
+    const testLeaf3 = soleOpacity(test3.leaf);
     const testAgg3Count = test3.aggregate.count;
 
     expect(testLeaf2).toBeCloseTo(controlLeaf2!, 6);

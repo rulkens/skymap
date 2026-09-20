@@ -94,18 +94,14 @@ export function computeStarCut(
   // header). `slabs?.[NEAR0]` is absent only for a hand-built test ctx.
   let rebasedVp: Float32Array | null = null;
   let canvasHeightPx = 0;
+  let fovYRad = 0;
   if (ctx.slabs?.[NEAR0] !== undefined) {
     const near0 = slabViewOf(ctx, NEAR0);
     rebasedVp = narrowMat4(rebaseViewProj(near0.slab.vp, near0.camPos));
     canvasHeightPx = ctx.canvasSize.height;
+    fovYRad = ctx.fovYRad;
   }
-  const cutFrustum = buildStarCutFrustum(
-    rebasedVp,
-    ctx.fovYRad,
-    canvasHeightPx,
-    sizePx,
-    glowOverlap,
-  );
+  const cutFrustum = buildStarCutFrustum(rebasedVp, fovYRad, canvasHeightPx, sizePx, glowOverlap);
 
   const sources: PreparedStarSource[] = [];
   // Render-on-demand wake vote across all sources this frame (see the header).
@@ -151,7 +147,6 @@ export function computeStarCut(
 
       pushStarNode(
         stream,
-        idx,
         firstRecord[idx]!,
         recordCount[idx]!,
         ox,

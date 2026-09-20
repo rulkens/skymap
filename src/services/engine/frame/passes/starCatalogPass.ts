@@ -30,6 +30,6 @@ export const starCatalogPass: ContentPass = {
     if (pickRenderer === null) return;
     const prep = prepareStarCut(state, ctx);
     if (prep === null) return;
-    drawStarPick(pickRenderer, pass, view, ctx.fovYRad, prep);
+    drawStarPick(pickRenderer, pass, view, prep, ctx.fovYRad);
   },
 };
