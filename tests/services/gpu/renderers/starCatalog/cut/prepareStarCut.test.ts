@@ -25,6 +25,7 @@ import {
   prepareStarCut,
   advanceStarFades,
 } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/prepareStarCut';
+import { starCatalogVisible } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/starCatalogVisible';
 import type { PreparedStarCut } from '../../../../../../src/@types/rendering/PreparedStarCut';
 import type { StarNodeStream } from '../../../../../../src/@types/rendering/StarNodeStream';
 import { fadeBand } from '../../../../../../src/utils/math/fadeBand';
@@ -439,5 +440,49 @@ describe('prepareStarCut capture views (viewSlot !== 0)', () => {
 
     const capture = prepareStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50, 1));
     expect(capture!.anyNodeFading).toBe(false);
+  });
+});
+
+/**
+ * `starCatalogVisible` is a SECOND copy of the predicate `computeStarCut` runs
+ * to decide whether a source contributes: renderer, master toggle, per-item
+ * toggle, crossfade band. Two copies is deliberate — the gate must answer
+ * without walking the octree, which is what `enabled` running before the pass
+ * is allocated buys (a faded-out bubble costs zero GPU, not an empty
+ * `beginRenderPass`). The cost of that choice is that the copies can drift
+ * apart silently, and nothing else would catch it.
+ */
+describe('starCatalogVisible agrees with the cut it gates', () => {
+  const agrees = (state: EngineState, camPos: Readonly<Vec3>): void => {
+    const ctx = makeCtx(camPos);
+    const drawsSomething = (prepareStarCut(state, ctx)?.sources.length ?? 0) > 0;
+    expect(starCatalogVisible(state, ctx)).toBe(drawsSomething);
+  };
+
+  const withCatalog = (opts: { master?: boolean; item?: boolean } = {}): EngineState =>
+    makeState(makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]), opts);
+
+  it('agrees when no renderer has bootstrapped yet', () => {
+    agrees(makeState(null), camAtPc(inner / 2));
+  });
+
+  it('agrees with the master toggle off', () => {
+    agrees(withCatalog({ master: false }), camAtPc(inner / 2));
+  });
+
+  it('agrees with the per-item toggle off', () => {
+    agrees(withCatalog({ item: false }), camAtPc(inner / 2));
+  });
+
+  // The band edges are where a drifting copy would first disagree: `inner` and
+  // `outer` bracket the only camera range in which the two can differ at all.
+  it.each([
+    ['well inside the band', inner / 2],
+    ['at the full edge', inner],
+    ['mid-band', (inner + outer) / 2],
+    ['at the gone edge', outer],
+    ['past the gone edge', outer * 2],
+  ])('agrees %s', (_label, distPc) => {
+    agrees(withCatalog(), camAtPc(distPc));
   });
 });

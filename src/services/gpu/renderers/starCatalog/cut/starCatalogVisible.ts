@@ -1,6 +1,6 @@
 import type { PassState } from '../../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../../@types/engine/frame/ReadyFrameContext';
-import { starCrossfadeOpacity } from '../../../../../utils/star/starCrossfadeOpacity';
+import { starSourceDrawOpacity } from '../../../../../utils/star/starSourceDrawOpacity';
 import { SOURCE_REGISTRY } from '../../../../../data/sources';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
 
@@ -21,10 +21,7 @@ export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): bo
 
   for (const { source } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
-    // `binBaseName` narrows the type; only a SURVEY row ever reaches here.
-    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
-    if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
-    if (starCrossfadeOpacity(entry.crossfadePc, camDistPc) > 0) return true;
+    if (starSourceDrawOpacity(entry, state.settings.starCatalogs, camDistPc) > 0) return true;
   }
   return false;
 }

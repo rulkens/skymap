@@ -10,7 +10,7 @@ import { NODE_FADE_MS } from '../../../../../data/starNodeFade';
 import { walkStarOctreeCut } from '../../../../../utils/star/walkStarOctreeCut';
 import { starOctreeIndex } from '../../../../../utils/star/starOctreeIndex';
 import { starExposureRamp } from '../../../../../utils/star/starExposureRamp';
-import { starCrossfadeOpacity } from '../../../../../utils/star/starCrossfadeOpacity';
+import { starSourceDrawOpacity } from '../../../../../utils/star/starSourceDrawOpacity';
 import { buildStarCutFrustum } from '../../../../../utils/star/buildStarCutFrustum';
 import { SOURCE_REGISTRY } from '../../../../../data/sources';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
@@ -109,13 +109,11 @@ export function computeStarCut(
 
   for (const { source, catalog } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
-    // See `starCatalogVisible`: a loaded catalog is always a SURVEY row; the
-    // null check narrows to the variant carrying `drawBudget` / `crossfadePc`.
-    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
-    if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
-
-    const sourceCrossfade = starCrossfadeOpacity(entry.crossfadePc, camDistPc);
+    const sourceCrossfade = starSourceDrawOpacity(entry, state.settings.starCatalogs, camDistPc);
     if (sourceCrossfade <= 0) continue; // faded out — additive draw of nothing
+    // Re-narrows to the variant carrying `drawBudget`; the compiler, not a
+    // second copy of the gate, keeps this in step with the predicate above.
+    if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
 
     const cut = walkStarOctreeCut(catalog, camPosPc, entry.drawBudget, refineThreshold, cutFrustum);
 
