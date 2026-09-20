@@ -29,7 +29,11 @@ function makeRuntime(startMode: BiasMode) {
     publish: vi.fn(),
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-    texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+    texturedDisks: {
+      beginFrame: vi.fn(() => ({})),
+      hasInFlightWork: () => false,
+      hasFadingContent: () => false,
+    },
   } as unknown as GalaxyCatalogRuntime;
   return { runtime, setMode };
 }
