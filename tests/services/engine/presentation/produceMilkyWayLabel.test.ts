@@ -10,7 +10,7 @@ import {
   MIN_LABEL_CLEARANCE_PX,
 } from '../../../../src/services/engine/presentation/leaderLineStyle';
 import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -64,7 +64,7 @@ function makeState(
 function makeCtx(
   camDistMpc: number,
   opts: { up?: Vec3; width?: number; height?: number } = {},
-): ReadyFrameContext {
+): FrameView {
   const width = opts.width ?? 1920;
   const height = opts.height ?? 1080;
   const fovYRad = (60 * Math.PI) / 180;
@@ -73,19 +73,18 @@ function makeCtx(
     mat4.lookAt([camDistMpc, 0, 0], [0, 0, 0], opts.up ?? [0, 1, 0]),
   );
   return {
+    // resolveLayerOpacity lerps its recession factor on snapshot.focusBlend;
+    // an absent one makes the composed alpha NaN.
+    snapshot: { nowMs: 0, focusBlend: 0 },
     drawCamPos: [camDistMpc, 0, 0],
     vp,
     canvasSize: { width, height },
     fovYRad,
-    nowMs: 0,
-    // resolveLayerOpacity lerps its recession factor on this; an absent one
-    // makes the composed alpha NaN.
-    focusBlend: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** Project a world point through the ctx's vp to screen pixels (+Y down). */
-function screenOf(ctx: ReadyFrameContext, p: readonly number[]): Vec2 {
+function screenOf(ctx: FrameView, p: readonly number[]): Vec2 {
   const m = ctx.vp;
   const clipX = m[0]! * p[0]! + m[4]! * p[1]! + m[8]! * p[2]! + m[12]!;
   const clipY = m[1]! * p[0]! + m[5]! * p[1]! + m[9]! * p[2]! + m[13]!;

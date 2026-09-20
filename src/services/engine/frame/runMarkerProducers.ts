@@ -6,13 +6,13 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import { MARKER_PRODUCERS } from '../presentation/markerProducers';
 
 export function runMarkerProducers(
   state: EngineState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];
   for (const producer of MARKER_PRODUCERS) {

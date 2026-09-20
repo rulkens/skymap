@@ -11,7 +11,7 @@ import { createUpsamplePass } from '../../../../../src/services/engine/frame/pas
 import type { UpsamplePassRow } from '../../../../../src/@types/engine/frame/UpsamplePassRow';
 import type { Upsample } from '../../../../../src/@types/rendering/Upsample';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Mat4 } from 'wgpu-matrix';
 
@@ -32,10 +32,47 @@ const FIXTURE_SPECS = [
   },
 ];
 
-/** Minimal ReadyFrameContext whose 'test-target' row resolves to `offscreenView`. */
-function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFrameContext {
+/** Minimal FrameView whose 'test-target' row resolves to `offscreenView`. */
+function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): FrameView {
+  const renderTargets = {
+    specs: FIXTURE_SPECS,
+    specOf: (id: string) => {
+      const spec = FIXTURE_SPECS.find((s) => s.id === id);
+      if (!spec) throw new Error(`fixture renderTargets: no spec row for '${id}'`);
+      return spec;
+    },
+    sizeOf: vi.fn(),
+    viewOf: (id: string) => (id === 'test-target' ? offscreenView : ({} as GPUTextureView)),
+    cubeViewOf: (id: string): GPUTextureView => {
+      throw new Error(`fixture renderTargets: no cube view for '${id}'`);
+    },
+    layerViewOf: (id: string, layer: number): GPUTextureView => {
+      throw new Error(`fixture renderTargets: no layer view for '${id}' layer ${layer}`);
+    },
+    depthViewOf: (id: string): GPUTextureView => {
+      throw new Error(`fixture renderTargets: no depth view for '${id}'`);
+    },
+    reconcile: vi.fn(),
+    setSwapFormat: vi.fn(),
+    destroy: vi.fn(),
+  };
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      layersSettling: false,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets,
+      cursorTexPx: null,
+    },
     viewSlot: 0,
     viewKind: 'frame',
     renderedTargets: new Set<string>(),
@@ -45,44 +82,10 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): ReadyFra
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
     canvasSize: { width: 1280, height: 720 },
-    cursorTexPx: null,
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    nowMs: 0,
-    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersSettling: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: {
-      specs: FIXTURE_SPECS,
-      specOf: (id: string) => {
-        const spec = FIXTURE_SPECS.find((s) => s.id === id);
-        if (!spec) throw new Error(`fixture renderTargets: no spec row for '${id}'`);
-        return spec;
-      },
-      sizeOf: vi.fn(),
-      viewOf: (id: string) => (id === 'test-target' ? offscreenView : ({} as GPUTextureView)),
-      cubeViewOf: (id: string): GPUTextureView => {
-        throw new Error(`fixture renderTargets: no cube view for '${id}'`);
-      },
-      layerViewOf: (id: string, layer: number): GPUTextureView => {
-        throw new Error(`fixture renderTargets: no layer view for '${id}' layer ${layer}`);
-      },
-      depthViewOf: (id: string): GPUTextureView => {
-        throw new Error(`fixture renderTargets: no depth view for '${id}'`);
-      },
-      reconcile: vi.fn(),
-      setSwapFormat: vi.fn(),
-      destroy: vi.fn(),
-    },
-  };
+  } as unknown as FrameView;
 }
 
 const VIEW_STUB = {} as SlabView;

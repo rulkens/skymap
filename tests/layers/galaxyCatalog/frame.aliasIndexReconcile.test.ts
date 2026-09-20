@@ -11,14 +11,13 @@ import { Source } from '../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
 const CTX = {
+  snapshot: { visibleSourceMask: 0xffffffff, nowMs: 0 },
   cam: {},
-  visibleSourceMask: 0xffffffff,
   drawPxPerRad: 100,
-  nowMs: 0,
-} as unknown as ReadyFrameContext;
+} as unknown as FrameView;
 
 const STATE = {
   settings: {

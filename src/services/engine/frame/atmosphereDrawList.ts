@@ -12,7 +12,7 @@
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { ATMOSPHERE_PARAMS } from '../../../data/bodies/atmosphereParams';
@@ -28,7 +28,7 @@ import { atmosphereDrawListCache } from './atmosphereDrawListCache';
 
 export function atmosphereDrawList(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): readonly AtmosphereDrawEntry[] {
   const cached = atmosphereDrawListCache.get(ctx);
   if (cached !== undefined) return cached;

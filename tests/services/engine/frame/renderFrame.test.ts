@@ -407,6 +407,8 @@ function makeInput(
     arm: null as unknown as never,
     camBasisWorld: null as unknown as never,
     bodyStates: new Map(),
+    // Nothing in this file reads bodyPose (frame or view level).
+    bodyPose: () => null,
     slabBodyCandidates: [] as never[],
     meshBodies: [] as never[],
     positionedStars: [] as never[],

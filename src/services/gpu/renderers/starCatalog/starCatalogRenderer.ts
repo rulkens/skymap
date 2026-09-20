@@ -132,7 +132,7 @@ import {
  * One draw stream's per-source, per-view-slot storage buffers: the
  * contiguous NodeParams block and the parallel prefix sum, plus their shared
  * grow-only capacity. A stream (leaf or aggregate) owns its OWN pair per
- * `ReadyFrameContext.viewSlot` — a sky-cubemap capture sweep draws
+ * `FrameView.viewSlot` — a sky-cubemap capture sweep draws
  * a source's cut once per face plus once for the real view, ALL before one
  * `submit()`, and every one of those calls is a DIFFERENT cut (different
  * camera), so a pair shared across view slots would read only the

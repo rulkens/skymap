@@ -13,7 +13,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { constellationCaptions } from './constellationCaptions';
@@ -48,7 +48,7 @@ const CONSTELLATION_PROMINENCE_PX = CAPTION_PRIORITY.constellation * CAPTION_TIE
 
 export function produceConstellationCaptions(
   state: EngineState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): Label2DProducerOutput {
   const artifact = state.assetSlots.constellations?.committed()?.value;
   const captions = captionsFor(artifact);

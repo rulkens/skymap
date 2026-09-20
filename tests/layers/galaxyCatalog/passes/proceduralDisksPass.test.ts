@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import type { Mat4 } from 'wgpu-matrix';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
@@ -21,11 +21,26 @@ function makeCam(): OrbitCamera {
   } as unknown as OrbitCamera;
 }
 
-function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(overrides: Partial<FrameView> = {}): FrameView {
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      layersSettling: false,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
+      cursorTexPx: null,
+    },
     viewSlot: 0,
     viewKind: 'frame',
     renderedTargets: new Set<string>(),
@@ -33,31 +48,18 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     vp,
     slabs: [],
     canvasSize: { width: 1280, height: 720 },
-    cursorTexPx: null,
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-    nowMs: 0,
-    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersSettling: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any,
     // Nothing in this file reads bodyPose — a stub that never resolves a
     // body is a safe default, overridable like every other field.
     bodyPose: () => null,
     ...overrides,
-  };
+  } as unknown as FrameView;
 }
 
 /** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */
-function makeView(ctx: ReadyFrameContext): SlabView {
+function makeView(ctx: FrameView): SlabView {
   return {
     slab: makeCosmoSlab(),
     vp: ctx.vp as unknown as Float32Array,

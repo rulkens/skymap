@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { StructureInfo } from '../../../../../src/@types/data/structure/StructureInfo';
@@ -13,7 +13,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
-const CTX = { renderedTargets: new Set<string>() } as unknown as ReadyFrameContext;
+const CTX = { renderedTargets: new Set<string>() } as unknown as FrameView;
 const VIEW_STUB = {} as unknown as SlabView;
 
 // A minimal stand-in for the shared selection-ring renderer handle.
@@ -127,9 +127,10 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
     const farMpc = 1e-6; // far below the anchor distance ⇒ would clip un-clamped
     const view = farClippingView(farMpc);
     const ctx = {
+      snapshot: { simDays: 0 },
       drawPxPerRad: 1000,
       renderedTargets: new Set<string>(),
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     const pass = {} as unknown as GPURenderPassEncoder;
     near0SelectionRingPass.draw(pass, view, ctx, state);
@@ -181,10 +182,10 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     const state = stateWith(staleRow, renderer);
     const view = farClippingView(1); // farMpc 1 Mpc ⇒ no clamp at this scale
     const ctx = {
-      simDays,
+      snapshot: { simDays },
       drawPxPerRad: 1000,
       renderedTargets: new Set<string>(),
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     near0SelectionRingPass.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);
 

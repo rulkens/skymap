@@ -15,7 +15,7 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const PC = SCALE_UNITS.PC_TO_MPC;
@@ -37,16 +37,14 @@ function makeState(): EngineState {
   } as unknown as EngineState;
 }
 
-function makeCtx(camPosMpc: Vec3): ReadyFrameContext {
+function makeCtx(camPosMpc: Vec3): FrameView {
   return {
-    nowMs: 0,
-    focusBlend: 0,
-    simDays: CONST_J2000,
+    snapshot: { nowMs: 0, focusBlend: 0, simDays: CONST_J2000 },
     drawCamPos: camPosMpc,
     fovYRad: FOV_Y_RAD,
     canvasSize: CANVAS,
     vp: new Float32Array(16) as unknown as Mat4,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** A point `distMpc` from Sgr A*, offset along its own local x-axis. */

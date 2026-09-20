@@ -367,8 +367,17 @@ describe('renderFrame visual baseline', () => {
     } as unknown as GalaxyCatalogRuntime;
 
     const ctx = {
-      isReady: true as const,
-      layersSettling: false,
+      snapshot: {
+        isReady: true as const,
+        layersSettling: false,
+        nowMs: 0,
+        // resolveLayerOpacity's recession factor lerps on this; production
+        // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
+        focusBlend: 0,
+        // The executor resolves hdr/volume attachments — and
+        // volumeUpsamplePass its source texture — via ctx.snapshot.renderTargets.viewOf(id).
+        renderTargets,
+      },
       // executor populates this as targets render; a later pass reads which rendered this frame.
       renderedTargets: new Set<string>(),
       cam,
@@ -379,14 +388,7 @@ describe('renderFrame visual baseline', () => {
         [number, number, number]
       >,
       drawPxPerRad,
-      nowMs: 0,
-      // resolveLayerOpacity's recession factor lerps on this; production seeds
-      // it to 0 in frameContext, and an absent one yields NaN alphas here.
-      focusBlend: 0,
       fovYRad: FIXTURE_FOV_Y_RAD,
-      // The executor resolves hdr/volume attachments — and volumeUpsamplePass
-      // its source texture — via ctx.renderTargets.viewOf(id).
-      renderTargets,
     } as never;
 
     const settings = {
@@ -409,8 +411,8 @@ describe('renderFrame visual baseline', () => {
     };
 
     renderFrame({
-      ctx,
-      // Mono's own contract: the frame's one view is the main ctx itself.
+      canvas: ctx,
+      // Mono's own contract: the frame's one view is the canvas itself.
       views: [ctx],
       // Engine state with every optional renderer wired in — this is what
       // makes all eight HDR passes fire.

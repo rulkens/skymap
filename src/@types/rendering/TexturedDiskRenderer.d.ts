@@ -51,7 +51,7 @@ export type TexturedDiskRenderer = {
      * Which `@group(0)` buffer+bindGroup copy this call writes/binds.
      * Defaults to 0 (the main view). `texturedDisksPass` is on the
      * black-hole lens's sky-cubemap capture roster (Task 13b, Ruling 6) and
-     * forwards `ReadyFrameContext.viewSlot`, so a capture sweep's several
+     * forwards `FrameView.viewSlot`, so a capture sweep's several
      * `draw()` calls in the same frame (different faces, one submit) each
      * land in their OWN physical buffer instead of racing on a shared one.
      */

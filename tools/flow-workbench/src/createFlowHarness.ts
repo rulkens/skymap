@@ -39,7 +39,7 @@
 import type { Store } from '../@types/state/Store';
 import type { AppState } from '../@types/state/AppState';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Mat4 } from '../../../src/@types/math/Mat4';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device';
@@ -160,7 +160,7 @@ export async function createFlowHarness(
     // the layer is off or the cube hasn't loaded.
     flowComputeRow.encode(
       encoder,
-      { nowMs: now } as unknown as ReadyFrameContext,
+      { snapshot: { nowMs: now } } as unknown as FrameView,
       { settings: { flow: s.flow } } as unknown as PassState,
       () => ({}),
     );

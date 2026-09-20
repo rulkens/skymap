@@ -37,6 +37,7 @@ import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
@@ -625,35 +626,36 @@ describe('foregroundChainOrder', () => {
 });
 
 describe('slabViewOf', () => {
-  function makeReadyCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
-    const cam = makeCam(100);
+  function makeReadyCtx(overrides: { cam?: OrbitCamera } = {}): FrameView {
+    const cam = overrides.cam ?? makeCam(100);
     const cosmoVp = makeCosmoVp();
     const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
     return {
-      isReady: true,
+      snapshot: {
+        isReady: true,
+        nowMs: 0,
+        simDays: 0,
+        focusBlend: 0,
+        layersSettling: false,
+        visibleSourceMask: 0xffffffff,
+        focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
+        renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
+        cursorTexPx: null,
+      },
       viewSlot: 0,
       viewKind: 'frame',
       renderedTargets: new Set<string>(),
       cam,
       vp: cosmoVp,
       canvasSize: { width: 1920, height: 1080 },
-      cursorTexPx: null,
       drawCamPos: [cam.position[0], cam.position[1], cam.position[2]],
       drawPxPerRad: 1000,
-      nowMs: 0,
-      simDays: 0,
       fovYRad: cam.fovYRad,
-      focusBlend: 0,
-      layersSettling: false,
-      visibleSourceMask: 0xffffffff,
-      focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
-      renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
       slabs,
       // Nothing in this file reads bodyPose — a stub that never resolves a
-      // body is a safe default, overridable like every other field.
+      // body is a safe default.
       bodyPose: () => null,
-      ...overrides,
-    };
+    } as unknown as FrameView;
   }
 
   it('slabViewOf(ctx, COSMO).vp is byte-equal to ctx.vp', () => {

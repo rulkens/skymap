@@ -8,7 +8,7 @@ import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime'
 import type { FlowFieldRenderer } from '../../../../src/@types/rendering/FlowFieldRenderer';
 import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 /** A spy flow renderer — only `encodeCompute` is exercised by these tests. */
 function spyRenderer(): FlowFieldRenderer & { encodeCompute: ReturnType<typeof vi.fn> } {
@@ -60,7 +60,7 @@ function stateStub(flow?: Partial<FlowSettings>): PassState {
 const encoder = {} as unknown as GPUCommandEncoder;
 
 const NOW_MS = 12345;
-const ctxStub = { nowMs: NOW_MS } as unknown as ReadyFrameContext;
+const ctxStub = { snapshot: { nowMs: NOW_MS } } as unknown as FrameView;
 
 describe('flowCompute', () => {
   it('skips when flow.enabled is false', () => {

@@ -36,7 +36,7 @@ import { propagateElements } from '../../../../../src/utils/orbit/propagateEleme
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
@@ -80,21 +80,21 @@ const PASS_STUB = {
 // Bare ctx for the null-handle and draw cases: draw never reads ctx, and
 // enabled's handle check must short-circuit BEFORE the ctx.cam read
 // (renderFrame fixtures carry null handles and a bare ctx).
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
 // Beyond the handle check, enabled reads ctx.cam.distance (the shared
 // foreground gate) and the camera POSITION + projection knobs (the
 // whole-layer sub-pixel cull). The fixture camera sits AT the origin —
 // inside the system's reach — where the cull always stays enabled, so the
 // `distance` argument alone drives the foreground-gate assertions.
-function makeCtx(distance: number): ReadyFrameContext {
+function makeCtx(distance: number): FrameView {
   return {
+    snapshot: { nowMs: 0 },
     cam: { distance },
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: Math.PI / 4,
-    nowMs: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 // draw reads ctx.drawCamPos + ctx.fovYRad for the per-orbit apparent-size
@@ -107,18 +107,16 @@ function makeCtx(distance: number): ReadyFrameContext {
 // (planets and their moons want opposite zooms), so the test asserts the seam
 // for ALL composed conics and the layout for the first (Mercury,
 // SCENE_ORBIT_CONICS[0], always visible here).
-function makeDrawCtx(): ReadyFrameContext {
+function makeDrawCtx(): FrameView {
   return {
+    snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0 },
     drawCamPos: [1e-13, 0, 0],
     // Matches makeNear0View's viewportPx: the occluder binder reads the canvas
     // (like its sibling body binders) while the per-orbit cull reads the view.
     canvasSize: { width: 1280, height: 720 },
     fovYRad: Math.PI / 4,
     cam: { distance: 1e-13 },
-    simDays: CONST_J2000,
-    focusBlend: 0,
-    nowMs: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**
@@ -249,11 +247,12 @@ describe('orbitTrailsPass.enabled', () => {
     // pass plan instead of packing zero records.
     const state = makeState(makeRendererSpy());
     const ctx = {
+      snapshot: { simDays: CONST_J2000 },
       cam: { distance: 1e-6 },
       drawCamPos: [1e-6, 0, 0],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
     expect(orbitTrailsPass.enabled(state, ctx, makeNear0View())).toBe(false);
   });
 
@@ -263,12 +262,12 @@ describe('orbitTrailsPass.enabled', () => {
     // region cull can drop the layer; the AU-to-lunar trails are ~1e-5 px there.
     const state = makeState(makeRendererSpy());
     const ctx = {
+      snapshot: { simDays: CONST_J2000 },
       cam: { distance: 8.178e-3 },
       drawCamPos: [8.178e-3, 0, 0],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
-      simDays: CONST_J2000,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
     expect(ctx.cam.distance).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(orbitTrailsPass.enabled(state, ctx, makeNear0View())).toBe(false);
   });
@@ -413,14 +412,12 @@ describe('orbitTrailsPass.draw', () => {
     // at the far-off Sun) also compose; the Moon is singled out below by being
     // the one conic whose centre rides ~1 AU out on Earth.
     const ctx = {
+      snapshot: { simDays, focusBlend: 0, nowMs: 0 },
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
       cam: { distance: 1e-13 },
-      simDays,
-      focusBlend: 0,
-      nowMs: 0,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
 
@@ -485,14 +482,12 @@ describe('orbitTrailsPass.draw', () => {
     const simDays = CONST_J2000 + 100;
     const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
     const ctx = {
+      snapshot: { simDays, focusBlend: 0, nowMs: 0 },
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
       canvasSize: { width: 1280, height: 720 },
       fovYRad: Math.PI / 4,
       cam: { distance: 1e-13 },
-      simDays,
-      focusBlend: 0,
-      nowMs: 0,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
 
@@ -540,13 +535,11 @@ describe('orbitTrailsPass.draw', () => {
     // Camera 1 Mpc from the Sun — the AU-to-lunar orbits are far below the
     // apparent-size cull threshold, so nothing is packed and no draw is issued.
     const farCtx = {
+      snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0 },
       drawCamPos: [1, 0, 0],
       fovYRad: Math.PI / 4,
       cam: { distance: 1 },
-      simDays: CONST_J2000,
-      focusBlend: 0,
-      nowMs: 0,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));
     expect(renderer.draw).not.toHaveBeenCalled();
     expect(composeMock).not.toHaveBeenCalled(); // culled before composing Ginv

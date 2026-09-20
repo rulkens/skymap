@@ -60,7 +60,7 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
@@ -169,7 +169,7 @@ const PASS_STUB = {
 // Bare ctx for the null-handle and draw cases: draw never reads ctx, and
 // enabled's handle check must short-circuit BEFORE the ctx.cam read
 // (renderFrame fixtures carry null handles and a bare ctx).
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
 /**
  * A ctx whose camera sits `distance` Mpc from Earth's centre along +x,
@@ -180,7 +180,7 @@ const CTX_STUB = {} as ReadyFrameContext;
  * actual position, exactly as before: the two gates it and the sub-pixel
  * cull key off are meant to vary independently across these tests.
  */
-function makeCtx(distance: number): ReadyFrameContext {
+function makeCtx(distance: number): FrameView {
   const drawCamPos: Vec3 = [
     SEEDED_EARTH.positionMpc[0] + 1e-13,
     SEEDED_EARTH.positionMpc[1],
@@ -193,7 +193,7 @@ function makeCtx(distance: number): ReadyFrameContext {
     canvasSize: { width: 1280, height: 720 },
     fovYRad: (60 * Math.PI) / 180,
     drawPxPerRad: 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 // A camera comfortably inside the shared foreground gate. Reused by reference
@@ -384,7 +384,7 @@ describe("the (foreground:0, 'body') render group above the foreground gate", ()
     const bodyRoster = FRAME_ORDER.flatMap((step) =>
       step.kind === 'foreground' ? step.bodyPasses : [],
     );
-    const groupAt = (ctx: ReadyFrameContext) =>
+    const groupAt = (ctx: FrameView) =>
       CONTENT_PASSES.filter(
         (pass) => bodyRoster.includes(pass.name) && pass.enabled(state, ctx, VIEW_STUB),
       );
@@ -586,7 +586,7 @@ describe('earthPass.draw', () => {
       bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     earthPass.draw(PASS_STUB, view, closeCtx, state);
 
@@ -724,7 +724,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
   const ATLAS_VIEW = {} as GPUTextureView;
 
   /** ctx whose `drawCamPos` sits `altitudeKm` above Earth's surface along +x. */
-  function makeAltitudeCtx(altitudeKm: number): ReadyFrameContext {
+  function makeAltitudeCtx(altitudeKm: number): FrameView {
     const radiusMpc = SEEDED_EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
     const altitudeMpc = altitudeKm * SCALE_UNITS.KM_TO_MPC;
     const drawCamPos: Vec3 = [
@@ -742,7 +742,7 @@ describe('earthPass.draw — the base globe is always drawn', () => {
       bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
       fovYRad: (60 * Math.PI) / 180,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
   }
 
   /** Installs a spy on `state.gpu.earthRenderer.draw`, replacing the

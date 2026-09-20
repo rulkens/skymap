@@ -352,7 +352,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   renderFrame({
-    ctx: canvas,
+    canvas,
     views,
     state,
     device: deps.device,

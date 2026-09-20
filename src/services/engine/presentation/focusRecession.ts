@@ -12,7 +12,7 @@
 import type { FadeId } from '../../../@types/animation/FadeId';
 import type { LabelLayerId } from '../../../@types/animation/LabelLayerId';
 import type { ClipPlayer } from '../../../@types/engine/subsystems/ClipPlayer';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { lerp } from '../../../utils/math/lerp';
 import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
@@ -85,13 +85,12 @@ function clipFactorFor(clip: ClipPlayer, h: FadeId, now: number): number {
  */
 export function resolveLayerOpacity(
   state: Pick<EngineState, 'subsystems'>,
-  ctx: Pick<ReadyFrameContext, 'focusBlend' | 'nowMs'>,
+  ctx: FrameView,
   h: FadeId,
 ): number {
   const { fades, clipPlayer } = state.subsystems;
+  const { nowMs, focusBlend } = ctx.snapshot;
   return (
-    fades.opacityOf(h, ctx.nowMs) *
-    focusRecession(h, ctx.focusBlend) *
-    clipFactorFor(clipPlayer, h, ctx.nowMs)
+    fades.opacityOf(h, nowMs) * focusRecession(h, focusBlend) * clipFactorFor(clipPlayer, h, nowMs)
   );
 }

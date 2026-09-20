@@ -33,7 +33,7 @@ export const constellationsPass: ContentPass = {
     // Opacity 1 reduces the shared product to the raw band.
     if (constellationLayerOpacity(camDistMpc, 1) === 0) return false;
     if (state.settings.constellations.enabled) return true;
-    return state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs) > 0;
+    return state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.snapshot.nowMs) > 0;
   },
 
   draw(pass, view, ctx, state) {

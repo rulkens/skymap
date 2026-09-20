@@ -40,7 +40,7 @@ export const orbitTrailsPass: ContentPass = {
     // (hdr, NEAR0) pass drops — opacity 0 ⇒ no render.
     if (
       !state.settings.orbitTrails.enabled &&
-      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.nowMs) <= 0
+      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.snapshot.nowMs) <= 0
     ) {
       return false;
     }
@@ -96,7 +96,7 @@ export const orbitTrailsPass: ContentPass = {
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place focus fold below cannot alias a
       // shared scratch across orbits.
-      const propagated = propagateElements(elements, ctx.simDays);
+      const propagated = propagateElements(elements, ctx.snapshot.simDays);
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
       // The snapshot seeds anchors (the Sun) alongside every element row, so a
       // heliocentric focus and a moving parent are the same lookup.

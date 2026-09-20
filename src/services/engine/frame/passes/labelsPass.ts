@@ -68,7 +68,7 @@ export const labelsPass: ContentPass = {
     // undefined, the occlusion renderer falls back to its plain pipeline and
     // draws the captions un-occluded. Mirrors `foregroundLabelsPass`'s guard.
     const colorView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.viewOf('foreground:0')
+      ? ctx.snapshot.renderTargets.viewOf('foreground:0')
       : undefined;
     state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
   },

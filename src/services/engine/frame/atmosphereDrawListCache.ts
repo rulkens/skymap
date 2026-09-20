@@ -2,9 +2,6 @@
  * a retired context takes its list with it. */
 
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 
-export const atmosphereDrawListCache = new WeakMap<
-  ReadyFrameContext,
-  readonly AtmosphereDrawEntry[]
->();
+export const atmosphereDrawListCache = new WeakMap<FrameView, readonly AtmosphereDrawEntry[]>();

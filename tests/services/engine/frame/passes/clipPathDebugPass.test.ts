@@ -5,7 +5,7 @@ import { foregroundFrustum } from '../../../../../src/utils/camera/foregroundFru
 import { computeForegroundViewProj } from '../../../../../src/utils/camera/computeForegroundViewProj';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ClipPathSnapshot } from '../../../../../src/@types/engine/debug/ClipPathSnapshot';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -24,7 +24,7 @@ import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrust
 const CAM_POS: Vec3 = [3e-7, -1e-7, 2e-7]; // parsec-scale eye (starSpiral regime)
 const TARGET_POS: Vec3 = [3.2e-7, -1e-7, 2e-7];
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   const { near, far } = foregroundFrustum(2e-7);
   const near0Vp = computeForegroundViewProj({
     eyeMpc: CAM_POS,
@@ -47,7 +47,22 @@ function makeCtx(): ReadyFrameContext {
     reversedZ: true,
   };
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      layersSettling: false,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: {} as never,
+      cursorTexPx: null,
+    },
     viewSlot: 0,
     viewKind: 'frame',
     renderedTargets: new Set<string>(),
@@ -58,23 +73,10 @@ function makeCtx(): ReadyFrameContext {
     // slabViewOf(ctx, NEAR0) indexes ctx.slabs[NEAR0] (index 0).
     slabs: [near0Slab, near0Slab],
     canvasSize: { width: 1280, height: 720 },
-    cursorTexPx: null,
     drawCamPos: CAM_POS as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    nowMs: 0,
-    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersSettling: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: {} as never,
-  };
+  } as unknown as FrameView;
 }
 
 function makeRendererSpy() {

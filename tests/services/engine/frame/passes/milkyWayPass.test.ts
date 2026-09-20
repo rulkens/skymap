@@ -12,7 +12,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { milkyWayPass } from '../../../../../src/services/engine/frame/passes/milkyWayPass';
 import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentation/scaleFadeBands';
 
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -32,18 +32,17 @@ const STATE = {
   },
 } as unknown as EngineState;
 
-function makeCtx(camDistMpc: number): ReadyFrameContext {
+function makeCtx(camDistMpc: number): FrameView {
   const camPos: Vec3 = [0, 0, camDistMpc];
   return {
+    // resolveLayerOpacity lerps its recession factor on snapshot.focusBlend;
+    // an absent one makes the composed alpha NaN.
+    snapshot: { nowMs: 0, focusBlend: 0 },
     cam: { distance: camDistMpc },
     drawCamPos: camPos,
     fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
-    nowMs: 0,
-    // resolveLayerOpacity lerps its recession factor on this; an absent one
-    // makes the composed alpha NaN.
-    focusBlend: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 describe('milkyWayPass pick vs draw', () => {

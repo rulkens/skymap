@@ -273,10 +273,12 @@ Deviation (group B2): `starCatalogPass.ts` and `starAggregatesPass.ts` needed no
 - `src/services/engine/presentation/`: `focusRecession.ts`, `produceConstellationCaptions.ts`, `produceMilkyWayLabel.ts`, `produceSceneBodyCaptions.ts`, `produceStructureLabels.ts`, `produceStructureMarkers.ts`; `src/services/engine/subsystems/label2DDirector.ts`; `src/services/engine/wiring/assetWiring.ts`; `src/services/gpu/passes/compositor.ts`; `src/services/gpu/renderers/starCatalog/starCatalogRenderer.ts`; `src/utils/surfaceTiles/surfaceTilesEngaged.ts`.
 - `tests/`: the ~75 files `rg -l "ReadyFrameContext" tests` names, plus any that build a context literal (`rg -n "isReady: true" tests`). Most are one-line fixture edits: a test's hand-built context becomes a `FrameView` with a `snapshot` object.
 
-- [ ] Sweep frame-field reads with `rg -n '\b(ctx|view|viewCtx|main)\.(nowMs|simDays|renderTargets|visibleSourceMask|focusBlend|focus\b|layersSettling|cursorTexPx)' src tests` and prefix each with `.snapshot` — note `renderTargets` moves and `renderedTargets` does NOT. Densest: `executeFrame.ts` (8), `galaxyCatalog/frame.ts` (7), `assetWiring.ts` (5), `scheduleSkyCaptures.ts` (5).
-- [ ] Rebuild every hand-built test context through a shared `tests/helpers/frame/` factory only where a file already has one; do NOT introduce a new universal fixture — a factory that grows a knob per call site is worse than the literals.
-- [ ] No new test: a type sweep the compiler checks end to end.
-- [ ] `npm run typecheck:fast` clean (first green typecheck since Task 1) and `npm test` full. Commit.
+- [x] Sweep frame-field reads with `rg -n '\b(ctx|view|viewCtx|main)\.(nowMs|simDays|renderTargets|visibleSourceMask|focusBlend|focus\b|layersSettling|cursorTexPx)' src tests` and prefix each with `.snapshot` — note `renderTargets` moves and `renderedTargets` does NOT. Densest: `executeFrame.ts` (8), `galaxyCatalog/frame.ts` (7), `assetWiring.ts` (5), `scheduleSkyCaptures.ts` (5).
+- [x] Rebuild every hand-built test context through a shared `tests/helpers/frame/` factory only where a file already has one; do NOT introduce a new universal fixture — a factory that grows a knob per call site is worse than the literals.
+- [x] No new test: a type sweep the compiler checks end to end.
+- [x] `npm run typecheck:fast` clean (first green typecheck since Task 1) and `npm test` full. Commit.
+
+Deviation (group B2): the sweep agent was killed at ~800k tokens after it ran repo-wide prettier (796 dirty files); the controller salvaged the 145 real sweep files from a parked WIP commit and committed them as Task 8, so this commit is the agent's edits under the controller's gate (typecheck 0 errors, 354 targeted test files green, census clean), not the agent's own commit.
 
 ### Task 9: Re-point the dome plan, free the `FrameView` name, consume the backlog item
 

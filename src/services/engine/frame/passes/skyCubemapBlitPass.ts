@@ -26,6 +26,10 @@ export const skyCubemapBlitPass: ContentPass = {
     if (basis === undefined) {
       throw new Error('skyCubemapBlitPass: the face context carries no poseBasis');
     }
-    renderer.draw(pass, basis, ctx.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.solarSystem.target));
+    renderer.draw(
+      pass,
+      basis,
+      ctx.snapshot.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.solarSystem.target),
+    );
   },
 };

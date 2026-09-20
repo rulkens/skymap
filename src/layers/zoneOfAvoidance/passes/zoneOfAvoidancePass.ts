@@ -26,7 +26,7 @@ export function zoneOfAvoidancePass(runtime: ZoneOfAvoidanceRuntime): ContentPas
       if (opacity === null) return;
 
       // Viewport is the 'zoa' target's allocated size (see `sizeOf`).
-      const { width: vw, height: vh } = ctx.renderTargets.sizeOf('zoa');
+      const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf('zoa');
 
       runtime.renderer.draw(
         pass,

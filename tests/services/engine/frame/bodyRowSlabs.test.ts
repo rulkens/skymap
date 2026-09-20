@@ -19,7 +19,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
@@ -36,8 +36,12 @@ function camAtAuFromSgrAStar(au: number): Vec3 {
 }
 
 /** Only `drawCamPos`, `simDays` and `slabs` are read; the rest never loads. */
-function makeCtx(camPos: Vec3, slabs: readonly Slab[]): ReadyFrameContext {
-  return { drawCamPos: camPos, simDays: SIM_DAYS, slabs } as unknown as ReadyFrameContext;
+function makeCtx(camPos: Vec3, slabs: readonly Slab[]): FrameView {
+  return {
+    snapshot: { simDays: SIM_DAYS },
+    drawCamPos: camPos,
+    slabs,
+  } as unknown as FrameView;
 }
 
 const STATE = {} as unknown as EngineState;

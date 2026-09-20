@@ -19,7 +19,7 @@
  * Viewport is the DOWNSCALED size, not the canvas: `stars.wesl` clamps each
  * sprite's half-extent to `[starPxMin, starPxMax]` pixels OF THE TARGET BEING
  * RENDERED, so the canvas size would make every clamped sprite `scale` times
- * too big once upsampled — read via `ctx.renderTargets.sizeOf('mw-aggregate')`.
+ * too big once upsampled — read via `ctx.snapshot.renderTargets.sizeOf('mw-aggregate')`.
  *
  * Slab is NEAR0, not COSMO: COSMO's near plane is fixed at 10 kpc, but the
  * disc's near edge sits ~9.5 kpc out, so that plane would slice the cloud
@@ -60,7 +60,7 @@ export const milkyWayAggregatePass: ContentPass = {
     // Viewport is the mw-aggregate target's allocated size (see `sizeOf`) —
     // see the module header on why the px sprite clamp makes this
     // load-bearing rather than cosmetic.
-    const { width: vw, height: vh } = ctx.renderTargets.sizeOf('mw-aggregate');
+    const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf('mw-aggregate');
 
     const { right: camRight, up: camUp } = cameraBillboardBasis(ctx.cam);
 

@@ -61,7 +61,7 @@ export type GalaxyPointDrawSettings = {
    */
   readonly fadeOpacityOf: (source: SourceType) => number;
   /**
-   * `ReadyFrameContext.viewSlot` — which view-slot buffer this call's
+   * `FrameView.viewSlot` — which view-slot buffer this call's
    * per-frame uniform/fade writes land in (Task 13b). `0` for the main view;
    * `viewSlotBase + face` for a capture face. Lets several `draw()` calls with
    * different cameras share one submit without one overwriting another's

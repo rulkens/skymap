@@ -59,7 +59,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
@@ -164,9 +164,9 @@ function deriveFamousLabelInputs(
 export function produceFamousGalaxyLabels(
   runtime: Pick<GalaxyCatalogRuntime, 'catalogs' | 'famousMeta'>,
 ): Label2DProducer['produceLabels'] {
-  return (state: EngineState, ctx: ReadyFrameContext): Label2DProducerOutput => {
+  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
     const fades = state.subsystems.fades;
-    const now = ctx.nowMs;
+    const now = ctx.snapshot.nowMs;
     const empty: Label2DProducerOutput = { labels: [], awake: false };
     // Render while the user wants famous labels OR the `galaxy` fade-out
     // tail is still non-zero — so a toggle-off fades out smoothly instead of
@@ -217,7 +217,7 @@ export function produceFamousGalaxyLabels(
     const clipFactor = state.subsystems.clipPlayer.clipOpacityOf('surveyLabel', now);
     const layerAlpha =
       fades.opacityOf({ kind: 'labelLayer', layer: 'galaxy' }, now) *
-      focusRecession({ kind: 'labelLayer', layer: 'galaxy' }, ctx.focusBlend) *
+      focusRecession({ kind: 'labelLayer', layer: 'galaxy' }, ctx.snapshot.focusBlend) *
       clipFactor;
 
     for (let i = 0; i < inputs.length; i += 1) {

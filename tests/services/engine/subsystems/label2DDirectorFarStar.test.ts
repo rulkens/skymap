@@ -51,7 +51,7 @@ import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../src/@types/rendering/MarkerLineRenderer';
@@ -145,16 +145,15 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
   };
 }
 
-function makeCtx(eye: Vec3, slab: Slab): ReadyFrameContext {
+function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
+    snapshot: { nowMs: 0, simDays: CONST_J2000 },
     slabs: [slab],
     drawCamPos: eye,
     canvasSize: { width: 1280, height: 720 },
     cam: { distance: 1e-13 },
     fovYRad: 1,
-    nowMs: 0,
-    simDays: CONST_J2000,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 // The farthest star still inside the star-caption full-alpha band, seen from

@@ -3,15 +3,13 @@
  * a reseed on either change, mirroring `milkyWayCloud.reconcile`), then vote.
  */
 
-import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { LayerFrameVote } from '../../@types/engine/layer/LayerFrameVote';
 import type { FlowRuntime } from './types/FlowRuntime';
 import { slotReady } from '../../services/loading/slotReady';
 
-export function frame(
-  runtime: FlowRuntime,
-): (ctx: ReadyFrameContext, state: PassState) => LayerFrameVote {
+export function frame(runtime: FlowRuntime): (ctx: FrameView, state: PassState) => LayerFrameVote {
   return (_ctx, state) => {
     runtime.renderer.reconcile(state.settings.flow);
     return {

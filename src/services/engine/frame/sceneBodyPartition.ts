@@ -30,7 +30,7 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../@types/scene/PlanetBody';
 import type { MeshBody } from '../../../@types/scene/MeshBody';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
@@ -39,7 +39,7 @@ import { sceneBodyStates } from './sceneBodyStates';
 
 export function sceneBodyPartition(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): {
   glints: readonly (PlanetBody | MeshBody)[];
   flat: readonly PlanetBody[];

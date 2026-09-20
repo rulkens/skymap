@@ -157,9 +157,6 @@ function makeCtx(
     drawCamPos,
     slabs: [],
     canvasSize: { width: 800, height: 600 },
-    // Kept flat too, for this fixture's own `ctx.renderTargets.reconcile`
-    // assertions below — the same object `snapshot.renderTargets` is.
-    renderTargets,
   } as unknown as FrameView;
 }
 
@@ -352,17 +349,17 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     const state = makeState();
     const inBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
     renderFrame(makeInput(inBand, state));
-    expect(inBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
+    expect(inBand.snapshot.renderTargets.reconcile).toHaveBeenCalledTimes(1);
     expect(state.cubemapCaptures.sgrAStar.lastBandActive).toBe(true);
 
     // Still in-band: nothing about the row's existence changed.
     const stillInBand = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
     renderFrame(makeInput(stillInBand, state));
-    expect(stillInBand.renderTargets.reconcile).not.toHaveBeenCalled();
+    expect(stillInBand.snapshot.renderTargets.reconcile).not.toHaveBeenCalled();
 
     const outOfBand = makeCtx([1000, 0, 0]);
     renderFrame(makeInput(outOfBand, state));
-    expect(outOfBand.renderTargets.reconcile).toHaveBeenCalledTimes(1);
+    expect(outOfBand.snapshot.renderTargets.reconcile).toHaveBeenCalledTimes(1);
     expect(state.cubemapCaptures.sgrAStar.lastBandActive).toBe(false);
   });
 

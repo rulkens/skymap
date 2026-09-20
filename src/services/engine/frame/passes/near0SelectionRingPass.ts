@@ -182,7 +182,7 @@ export const near0SelectionRingPass: ContentPass = {
       rebasedVp,
       view.viewportPx,
       { worldPos: clampedCentre, ringRadiusPx, alpha },
-      occluded ? ctx.renderTargets.viewOf('foreground:0') : undefined,
+      occluded ? ctx.snapshot.renderTargets.viewOf('foreground:0') : undefined,
     );
   },
 };

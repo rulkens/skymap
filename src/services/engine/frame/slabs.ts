@@ -13,7 +13,7 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { Vec2 } from '../../../@types/math/Vec2';
@@ -386,7 +386,7 @@ function nearestM(slab: Slab): number {
  * `ctx.slabs` is indexed by array position === `Slab.index`, so this is a direct
  * lookup rather than a scan.
  */
-export function slabViewOf(ctx: ReadyFrameContext, slabIndex: number): SlabView {
+export function slabViewOf(ctx: FrameView, slabIndex: number): SlabView {
   const slab = ctx.slabs[slabIndex];
   if (!slab) {
     throw new Error(`slabViewOf: no slab at index ${slabIndex}`);

@@ -15,7 +15,7 @@ import { COSMO, slabViewOf } from '../../../../src/services/engine/frame/slabs';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/types/ZoneOfAvoidanceRuntime';
 
@@ -31,22 +31,23 @@ const INSIDE_CAM_DIST = SCALE_FADE_BANDS.zoneOfAvoidance.fullAt;
 
 const ZOA_VIEW = { __id: 'zoa-view' } as unknown as GPUTextureView;
 
-function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(): FrameView {
   const vp = new Float32Array(16) as unknown as Mat4;
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      focusBlend: 0,
+      renderTargets: {
+        viewOf: (id: string) => (id === 'zoa' ? ZOA_VIEW : ({} as GPUTextureView)),
+      } as never,
+    },
     vp,
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, INSIDE_CAM_DIST] as Readonly<[number, number, number]>,
-    nowMs: 0,
-    focusBlend: 0,
-    renderTargets: {
-      viewOf: (id: string) => (id === 'zoa' ? ZOA_VIEW : ({} as GPUTextureView)),
-    } as never,
-    ...over,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function makeRuntime(upsampleDraw?: ReturnType<typeof vi.fn>): ZoneOfAvoidanceRuntime {

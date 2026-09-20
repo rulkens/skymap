@@ -62,7 +62,7 @@
 import type { PickProgram } from '../../../@types/engine/frame/PickProgram';
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { PickResult } from '../../../@types/data/PickResult';
 import { pickFrameContext } from '../helpers/pickFrameContext';
@@ -276,7 +276,7 @@ export function createPickProgram(deps: {
     slabIndex: number,
     target: PickSlabTarget,
     view: SlabView,
-    ctx: ReadyFrameContext,
+    ctx: FrameView,
     slabPickables: readonly ContentPass[],
     timing: GPURenderPassTimestampWrites | undefined,
   ): void {
@@ -326,7 +326,7 @@ export function createPickProgram(deps: {
   // sort let any NEAR0(0) star hit beat a genuinely nearer body/planet hit,
   // and even let COSMO(1) beat a body row(2+).
   function pickablesBySlab(
-    ctx: ReadyFrameContext,
+    ctx: FrameView,
   ): { slabIndex: number; view: SlabView; passes: ContentPass[] }[] {
     // A pass with no FRAME_ORDER line draws nowhere, so it picks nowhere —
     // `checkFrameOrder` is what makes that unreachable for a real registry.

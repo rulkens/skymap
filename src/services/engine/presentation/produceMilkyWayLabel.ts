@@ -11,7 +11,7 @@
 
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec2 } from '../../../@types/math/Vec2';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { Source } from '../../../data/sources';
@@ -32,12 +32,9 @@ const LABEL_TEXT = 'You are here';
 
 const LAYER_ID = { kind: 'labelLayer', layer: 'milkyWay' } as const;
 
-export function produceMilkyWayLabel(
-  state: EngineState,
-  ctx: ReadyFrameContext,
-): Label2DProducerOutput {
+export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2DProducerOutput {
   const fades = state.subsystems.fades;
-  const now = ctx.nowMs;
+  const now = ctx.snapshot.nowMs;
 
   // Two reads of the same row, answering different questions: the RAW intent
   // opacity decides whether the producer emits at all, so a clip fade to 0 cannot

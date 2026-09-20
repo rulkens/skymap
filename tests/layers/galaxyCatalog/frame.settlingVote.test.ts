@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { frame } from '../../../src/layers/galaxyCatalog/frame';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
 // Same inert fixture as the other `frame` reconcile tests: nothing committed,
 // a no-op planner walk, no selection row — only the two disk-work predicates
@@ -45,11 +45,10 @@ const STATE = {
 } as unknown as PassState;
 
 const CTX = {
+  snapshot: { visibleSourceMask: 0xffffffff, nowMs: 0 },
   cam: {},
-  visibleSourceMask: 0xffffffff,
   drawPxPerRad: 100,
-  nowMs: 0,
-} as unknown as ReadyFrameContext;
+} as unknown as FrameView;
 
 describe('galaxyCatalog frame — settling vote', () => {
   it('votes awake but NOT settling while a thumbnail fetch is merely outstanding', () => {

@@ -4,7 +4,7 @@ import { computeForegroundViewProj } from '../../../../src/utils/camera/computeF
 import { foregroundFrustum } from '../../../../src/utils/camera/foregroundFrustum';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { NEAR0, SLAB_REVERSED_Z } from '../../../../src/services/engine/frame/slabs';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const M = SCALE_UNITS.M_TO_MPC;
@@ -19,7 +19,7 @@ function project(m: Float32Array | Float64Array, p: readonly [number, number, nu
  * The pose the shrink was measured at: camera a solar-system distance from the
  * render origin (which is what forces the f64 rebase) and 31 m off a body.
  */
-function near0Ctx(): ReadyFrameContext {
+function near0Ctx(): FrameView {
   const camDistance = 31 * M;
   const eye: [number, number, number] = [SCALE_UNITS.AU_TO_MPC, 0, 0];
   const { near, far } = foregroundFrustum(camDistance);
@@ -37,7 +37,7 @@ function near0Ctx(): ReadyFrameContext {
     slabs: [{ near, far, vp }],
     drawCamPos: eye,
     canvasSize: { width: 1600, height: 900 },
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 // ~10 m ahead of the eye, a little off-axis so the NDC comparison has signal.

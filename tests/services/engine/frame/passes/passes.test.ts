@@ -17,7 +17,7 @@ import { starAggregateUpsamplePass } from '../../../../../src/services/engine/fr
 import { structureMarkersPass } from '../../../../../src/services/engine/frame/passes/structureMarkersPass';
 import { COSMO, NEAR0, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { OrbitCamera } from '../../../../../src/@types/camera/OrbitCamera';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -44,7 +44,7 @@ function makeCam(): OrbitCamera {
 }
 
 /**
- * Build a ReadyFrameContext with stub GPU/subsystem handles. The tests
+ * Build a FrameView with stub GPU/subsystem handles. The tests
  * only inspect a subset (camera position, vp, canvas size, plus the
  * renderer mock for `draw`); the rest satisfy the type.
  *
@@ -53,14 +53,29 @@ function makeCam(): OrbitCamera {
  * production encoders perform once per frame — works against these
  * fixtures without a bespoke double.
  */
-function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } = {}): FrameView {
   const cam = makeCam();
   const vp = new Float32Array(16) as unknown as Mat4;
   const renderTargets = { viewOf: vi.fn(() => ({}) as GPUTextureView) } as any;
   const drawCamPos = [0, 0, 5] as Readonly<[number, number, number]>;
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      layersSettling: false,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets,
+      cursorTexPx: null,
+    },
     viewSlot: 0,
     viewKind: 'frame',
     renderedTargets: new Set<string>(),
@@ -72,27 +87,14 @@ function makeCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext 
     // near-field double.
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
-    cursorTexPx: null,
     drawCamPos,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-    nowMs: 0,
-    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersSettling: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets,
     // Nothing in this file reads bodyPose — a stub that never resolves a
-    // body is a safe default, overridable like every other field.
+    // body is a safe default.
     bodyPose: () => null,
     ...overrides,
-  };
+  } as unknown as FrameView;
 }
 
 // Knob-derived camera distances for the Milky-Way apparent-size fade band,

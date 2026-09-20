@@ -25,7 +25,7 @@ export const terrainPickMarkerPass: ContentPass = {
     // before any other bag is touched.
     if (state.gpu.terrainPickMarkerRenderer === null) return false;
     if (!state.settings.debug.overlays['terrain-pick-marker']) return false;
-    if (ctx.cursorTexPx === null) return false;
+    if (ctx.snapshot.cursorTexPx === null) return false;
     if (view.slab.frame.kind !== 'body-m') return false;
     // Cast: the registry stays a literal (a row typo is a compile error), which
     // makes it non-indexable by the wider `BodyId` — mirrors `surfaceTilesPass`.
@@ -40,7 +40,7 @@ export const terrainPickMarkerPass: ContentPass = {
 
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.terrainPickMarkerRenderer;
-    const cursorTexPx = ctx.cursorTexPx;
+    const cursorTexPx = ctx.snapshot.cursorTexPx;
     if (renderer === null || cursorTexPx === null || view.slab.frame.kind !== 'body-m') return;
     const bodyId = view.slab.frame.bodyId;
     const pose = ctx.bodyPose(bodyId);

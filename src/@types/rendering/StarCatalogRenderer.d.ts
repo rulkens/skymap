@@ -200,7 +200,7 @@ export type StarCatalogDrawArgs = {
    */
   readonly glowMarginAngleRad: number;
   /**
-   * `ReadyFrameContext.viewSlot` (Task 13b) — which view-slot's camera
+   * `FrameView.viewSlot` (Task 13b) — which view-slot's camera
    * uniform + NodeParams/prefix buffer PAIR this call's writes land in. `0`
    * for the main view; `viewSlotBase + face` for a capture face. A capture
    * sweep calls `draw` once per face plus once for the real view, all before

@@ -41,7 +41,7 @@ export const foregroundLabelsPass: ContentPass = {
     // Valid only when the body pass ran this frame — else `foreground:0`'s
     // colour is stale/uninitialised and would blank every caption.
     const colorView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.viewOf('foreground:0')
+      ? ctx.snapshot.renderTargets.viewOf('foreground:0')
       : undefined;
 
     // Lines before captions, so the glyphs composite OVER the connector where

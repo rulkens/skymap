@@ -35,7 +35,7 @@ export const contactShadowsPass: ContentPass = {
     if (hostState === undefined) return;
     const hostPose = ctx.bodyPose(hostId);
     if (hostPose === null) return;
-    const depthView = ctx.renderTargets.depthViewOf('foreground:0');
+    const depthView = ctx.snapshot.renderTargets.depthViewOf('foreground:0');
 
     for (const body of drawableMeshBodies(state, ctx, hostId)) {
       const decal = MESH_ASSETS[body.meshKey]?.contactDecal;

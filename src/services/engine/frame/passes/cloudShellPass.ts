@@ -61,7 +61,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { EarthBody } from '../../../../@types/scene/EarthBody';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
@@ -98,11 +98,7 @@ type CloudShellDraw = {
  * whether the shell renders. Mirrors `earthPass`'s near-field gate plus the
  * ring's residency gate.
  */
-function cloudShellDraw(
-  state: PassState,
-  ctx: ReadyFrameContext,
-  bodyId: BodyId,
-): CloudShellDraw | null {
+function cloudShellDraw(state: PassState, ctx: FrameView, bodyId: BodyId): CloudShellDraw | null {
   const earth = state.data.bodies.earth;
   if (earth === null || earth.id !== bodyId) return null;
   // Resident iff the clouds slot holds a committed bitmap; otherwise the shell

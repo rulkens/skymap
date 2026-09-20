@@ -54,7 +54,7 @@ export const markerLinesPass: ContentPass = {
     // undefined, the occlusion renderer falls back to its plain pipeline and
     // draws the lines un-occluded. Mirrors `foregroundLabelsPass`'s guard.
     const colorView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.viewOf('foreground:0')
+      ? ctx.snapshot.renderTargets.viewOf('foreground:0')
       : undefined;
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the framework only calls

@@ -13,7 +13,7 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { bodyApparentDiameterPx } from '../../../utils/scene/bodyApparentDiameterPx';
 import { innerBoundRadiusM } from '../../../utils/occlusion/innerBoundRadiusM';
@@ -25,7 +25,7 @@ import { sceneBodyStates } from './sceneBodyStates';
 
 export function sceneOccluderBodies(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): readonly { readonly positionMpc: Readonly<Vec3>; readonly radiusM: number }[] {
   const states = sceneBodyStates(state, ctx);
   const { flat, textured, meshes } = sceneBodyPartition(state, ctx);

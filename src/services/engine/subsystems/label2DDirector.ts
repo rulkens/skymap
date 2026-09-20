@@ -53,7 +53,7 @@
  * `applySmoothstepEnvelope` (COSMO) and `applyExponentialEnvelope` (NEAR0)
  * resolve it per `config.envelope.mode` — see their docblocks for the
  * fade-out mechanics and the three axes they differ on (target shape, seed
- * value, absence rule; spec §4.6). Both are pure functions of `ctx.nowMs`
+ * value, absence rule; spec §4.6). Both are pure functions of `ctx.snapshot.nowMs`
  * given their entry's state, so a stepped recorder clock replays identical
  * fades. COSMO's envelope MULTIPLIES the producer's own `fadeAlpha` (both
  * continuous, so the product is too; a first appearance therefore stacks
@@ -90,7 +90,7 @@ import type { LabelRenderer } from '../../../@types/rendering/LabelRenderer';
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { MarkerLineRenderer } from '../../../@types/rendering/MarkerLineRenderer';
 import type { MarkerLine } from '../../../@types/rendering/MarkerLine';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
@@ -406,7 +406,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * survivors, so a culled-but-still-emitted label eases toward 0 instead of
    * popping — see `applyExponentialEnvelope`).
    */
-  function declutter(labels: readonly Label2D[], ctx: ReadyFrameContext): DeclutterResult {
+  function declutter(labels: readonly Label2D[], ctx: FrameView): DeclutterResult {
     const projection = config.project(ctx);
     const projected = projectLabels(labels, projection);
     const policy = config.declutter;
@@ -625,7 +625,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
    * constellation captions (which anchor in empty space and have no subject
    * to float above) simply never carry one.
    */
-  function applyLift(labels: readonly Label2D[], ctx: ReadyFrameContext): readonly Label2D[] {
+  function applyLift(labels: readonly Label2D[], ctx: FrameView): readonly Label2D[] {
     const policy = config.lift;
     if (!policy) return labels;
     const slab = ctx.slabs[policy.slab];
@@ -707,7 +707,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     return out;
   }
 
-  function runFrame(state: EngineState, ctx: ReadyFrameContext): boolean {
+  function runFrame(state: EngineState, ctx: FrameView): boolean {
     if (!labelRenderer || !lineRenderer) return false;
 
     // Collect outputs.  Producers are pure of state, so we just call
@@ -735,7 +735,7 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
     const { labels: enveloped, anyRamping } = applyEnvelope(
       mergedLabels,
       declutterResult,
-      ctx.nowMs,
+      ctx.snapshot.nowMs,
     );
 
     // Lift stage (NEAR0 only — a no-op array pass-through when
