@@ -64,7 +64,11 @@ function makeRuntime(catalogs: Map<number, GalaxyCatalog>) {
     hiResFamous: { committed: () => null },
     diskPlannerWalk: { runFrame: vi.fn() },
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-    texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+    texturedDisks: {
+      beginFrame: vi.fn(() => ({})),
+      hasInFlightWork: () => false,
+      hasFadingContent: () => false,
+    },
     catalogs,
     famousMeta: [],
     catalogsVersion: 0,
@@ -128,7 +132,11 @@ describe('galaxyCatalog frame — structureMemberCount reconcile', () => {
       hiResFamous: { committed: () => null },
       diskPlannerWalk: { runFrame: vi.fn() },
       proceduralDisks: { beginFrame: vi.fn(() => ({})) },
-      texturedDisks: { beginFrame: vi.fn(() => ({})), hasInFlightWork: () => false },
+      texturedDisks: {
+        beginFrame: vi.fn(() => ({})),
+        hasInFlightWork: () => false,
+        hasFadingContent: () => false,
+      },
       get catalogs() {
         return catalogs;
       },
