@@ -46,14 +46,16 @@ const MILKY_WAY_CAPTURE: PaletteCardCapture = {
     distance: 0.06,
   },
 };
+// Unlike a body focus, a galaxy focus does NOT pin the pivot, so `target` is
+// live here: the origin would frame the Milky Way instead of M31.
 const M31_CAPTURE: PaletteCardCapture = {
   keepFocus: true,
   hideGalaxyField: true,
   pose: {
-    target: [0, 0, 0],
+    target: [0.5765054821968079, 0.10877224802970886, 0.5148458480834961],
     yaw: -2.2209262353413513,
     pitch: 0.9180546455226823,
-    distance: 0.07,
+    distance: 0.24,
   },
 };
 
