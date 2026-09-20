@@ -1,18 +1,10 @@
 /**
  * oneSymbolPerFile — CLAUDE.md's per-file export shape, enforced structurally:
- * "every file in src/@types/ exports exactly one type" and "every file in
- * src/utils/ exports exactly one function". A per-file AST convention like
- * this has no compiler check of its own — `tsc` is happy with ten types in
- * one file — so it needs a sweep, same spirit as forbiddenPaths.test.ts.
- *
- * ### src/@types
- *
- * The tree is almost entirely `.d.ts` ambient shims (Window augmentations,
- * ambient module ".wesl" declarations, …), which legitimately declare zero
- * or many types — the one-type-per-file rule targets the plain `.ts` files,
- * where a real project `type` lives. Those are asserted to export exactly
- * one symbol, and that symbol must be a `type` alias (not a value, not a
- * second type smuggled in under a different name).
+ * "every file in src/utils/ exports exactly one function" (the `src/@types/`
+ * half of this rule is `typeFilesAreDeclarations.test.ts`). A per-file AST
+ * convention like this has no compiler check of its own — `tsc` is happy with
+ * ten functions in one file — so it needs a sweep, same spirit as
+ * forbiddenPaths.test.ts.
  *
  * ### src/utils
  *
@@ -40,27 +32,9 @@
  * expression) — see `isFunctionShaped`.
  */
 import { describe, it, expect } from 'vitest';
-import { SyntaxKind } from 'ts-morph';
 import { exportedDeclarations } from '../helpers/conventions/exportedDeclarations';
 import { isFunctionShaped } from '../helpers/conventions/isFunctionShaped';
 import { utilsFunctionSweepFiles } from '../helpers/conventions/utilsFunctionSweepFiles';
-import { walkFiles } from '../helpers/conventions/walkFiles';
-
-describe('src/@types: one export type per file', () => {
-  const files = walkFiles('src/@types', ['.ts']).filter((f) => !f.endsWith('.d.ts'));
-  // Sanity check on the sweep itself: if this tree ever became empty (a
-  // reorg moved every plain .ts to .d.ts) the it.each below would pass
-  // vacuously and silently stop protecting anything.
-  expect(files.length).toBeGreaterThan(0);
-
-  it.each(files)('%s exports exactly one type alias', (file) => {
-    const exported = exportedDeclarations(file);
-    expect(exported.size).toBe(1);
-    const decls = [...exported.values()][0]!;
-    expect(decls).toHaveLength(1);
-    expect(decls[0]!.getKind()).toBe(SyntaxKind.TypeAliasDeclaration);
-  });
-});
 
 describe('src/utils: one exported function per file', () => {
   expect(utilsFunctionSweepFiles.length).toBeGreaterThan(0);
