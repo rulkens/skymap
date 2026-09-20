@@ -3,7 +3,20 @@
 Plan: `docs/superpowers/plans/2026-09-20-star-catalog-pass-extraction.md`
 Worktree: `.claude/worktrees/star-catalog-pass-extraction`
 Branch: `worktree-star-catalog-pass-extraction` (base `d992ee9cc` = plan commit)
-PR: not opened yet
+PR: #771 — READY for review, CI green as of `301d0a8ae`, re-running on `654ae1c14`
+
+## NEXT ACTIONS (verbatim, in order)
+
+1. Confirm CI green on `654ae1c14`.
+2. MERGE ONLY ON THE USER'S EXPLICIT WORD, via
+   `gh api -X PUT repos/rulkens/skymap/pulls/771/merge -f merge_method=squash`.
+   Never `gh pr merge` from a worktree.
+3. Close-out: stop dev servers on :5178 (branch) and :5179 (baseline), then
+   `git worktree remove .claude/worktrees/perf-baseline-main` (detached at
+   `dcfff1ed9`, created only for the perf A/B; its `node_modules` and
+   `public/data` are symlinks into main), then `/wt-close` for this worktree.
+4. Update memory: `project_layer_composition.md` — extraction SHIPPED, NEXT is
+   step (3) Layer structure cleanup.
 
 User rulings carried in:
 
@@ -42,6 +55,47 @@ User rulings carried in:
 - [x] Deletion audit (opus, legacy framing): safe-now −17 LOC applied in `a8723a6cf`,
       which also fixed the CPU bench's divisor (it read 2.6 — neither 4.7 nor 2.5).
       Needs-ruling bin reported to the user; see the PR thread.
+
+## Post-audit polish (all AFTER the user's smoke test; none changes rendering)
+
+Driven by user review of the landed code. PR left ready-for-review throughout.
+
+- `e8022e28b` — `starSourceDrawOpacity`: one home for the per-source draw
+  decision, which `starCatalogVisible` and `computeStarCut` each carried a copy
+  of. The type narrowing stays duplicated on purpose — the compiler enforces it.
+  Agreement test added first (kept, now pinning structural overlap).
+- `301d0a8ae` — `starCutOncePerCtx`: the shared per-ctx memo becomes a named
+  module instead of an unnamed WeakMap inside a file named for one of its two
+  consumers. Two symbols in one file → three files, one symbol each.
+- `04e242786` — `prepareStarCut` → `readStarCut`, `advanceStarFades` →
+  `advanceStarCut`. USER RULING: full symmetry (same noun, verb carries the
+  read/write distinction), and `advanceStarCut`'s doc must say what it advances
+  (the per-node LOD fade ramps), which the old name carried.
+- `4cb2747fe` — `DEFAULT_REFINE_THRESHOLD` → `DEFAULT_STAR_REFINE_THRESHOLD`
+  (its five siblings in `defaults.ts` all carry `STAR`), comment trimmed 27 → 11
+  lines; it claimed co-tuning with `DEFAULT_STAR_GLOW_OVERLAP` "(1.0 → 4.0)"
+  where that constant is 3.0.
+- `654ae1c14` — stage 1 of the star-defaults move: `walkStarOctreeCut`'s
+  `refineThreshold` is now REQUIRED (only tests used the default; a pure util
+  was importing a UI default). Stage 2 — moving all eight `DEFAULT_STAR_*` to
+  `src/layers/starCatalog/settings/defaults.ts` — is DEFERRED to the Layer PR
+  and recorded in `docs/backlog/2026-08-20-star-catalog-layer-god-layer-split.md`.
+
+## Deletion-audit findings the user has NOT ruled on
+
+Reported; no decision taken. Not blockers.
+
+- `drawStarPick` duplicates `drawStarStream`'s 3-line preamble; folding it back
+  into the pass re-adds symbols the purity ratchet cleared.
+- `StarNodeDraw` is test-only surface after the unused import was dropped.
+- `readStarCut.test.ts` covers three modules, so the `tests/` mirror is not exact;
+  offered a split, user did not take it.
+- One assertion in `readStarCut.test.ts` (settings fields copied through,
+  `brightness > 0`) is compiler-checked shape — a deletion candidate per `testing.md`.
+- Seam unification: `starNodeOriginRelCamMpc` and `emitNode`'s inline math are two
+  spellings of one formula. User declined a backlog item; rationale for keeping
+  both is in `computeStarCut`'s header (allocation-free hot loop, bit-identical).
+
 - [x] User ruling: comment pass stands as-is. The four MOVED files
       (`walkStarOctreeCut`, `starOctreeIndex`, `starExposureRamp`,
       `starNodeOriginRelCamMpc`) had comments cut 952 → 514 lines with their code
