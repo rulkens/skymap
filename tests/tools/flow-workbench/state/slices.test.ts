@@ -12,7 +12,7 @@ import {
   defaultFlowSlice,
   setFlowParam,
 } from '../../../../tools/flow-workbench/src/state/slices/flowSlice';
-import { DEFAULT_FLOW } from '../../../../src/data/defaults';
+import { DEFAULT_FLOW } from '../../../../src/layers/flow/settings/defaults';
 import {
   defaultCameraSlice,
   setCameraYawPitch,

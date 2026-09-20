@@ -1,6 +1,6 @@
 /**
  * Format a live `ZoneOfAvoidanceTuning` as a paste-ready object-literal body
- * for `DEFAULT_ZONE_OF_AVOIDANCE_TUNING` in `defaults.ts`.
+ * for `DEFAULT_ZONE_OF_AVOIDANCE_TUNING` in this Layer's `settings/defaults.ts`.
  *
  * Emits the WHOLE cluster (unlike `formatMilkyWayTuningDefaults`'s diff) —
  * few enough knobs that a full literal beats a partial diff. Rounds to 4
@@ -12,9 +12,9 @@
  * `ZoneOfAvoidanceTuning` param type), and walking its keys would leak an
  * `enabled: 1,` line the destination literal has no place for.
  */
-import type { ZoneOfAvoidanceTuning } from '../../@types/settings/ZoneOfAvoidanceTuning';
-import type { Vec3 } from '../../@types/math/Vec3';
-import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../../data/defaults';
+import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../settings/defaults';
 
 const DECIMALS = 4;
 
