@@ -602,6 +602,24 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         action: { kind: 'focus', focusId: 'void-bootes-void' },
         capture: { keepFocus: true },
       },
+      {
+        id: 'cosmicFlows',
+        label: 'Cosmic Flows',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'cosmicFlows' },
+      },
+      {
+        id: 'cosmicWeb',
+        label: 'Cosmic Web',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'cosmicWeb' },
+      },
+      {
+        id: 'observableUniverse',
+        label: 'Observable Universe',
+        blurb: 'Coming soon',
+        action: { kind: 'view', viewId: 'observableUniverse' },
+      },
     ],
   },
 ];
