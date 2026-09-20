@@ -34,6 +34,8 @@ import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
+import { reencodePose } from '../../../../src/utils/camera/reencodePose';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -265,5 +267,71 @@ describe('a commit from outside the loop is authoritative', () => {
       terrainHeightAt: datumOnlyTerrainHeight,
     });
     expect(world.distance).toBeCloseTo(before.pose.distance * 2, 5);
+  });
+});
+
+describe('the loop re-encodes base on an orientation switch', () => {
+  it('holds the eye and keeps a wheel zoom across the switch', () => {
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+
+    const worldOf = (basis: typeof B) =>
+      foldToWorld(h.state.cameraRuntime.outputs.displayed, {
+        bodies: BODIES,
+        poseBasis: basis,
+        upBasis: basis,
+        terrainHeightAt: datumOnlyTerrainHeight,
+      });
+    const distanceBeforeZoom = worldOf(B).distance;
+
+    h.wheel(-100);
+    h.wheel(-100);
+    h.wheel(-100);
+
+    const zoomed = worldOf(B);
+    expect(zoomed.distance).toBeLessThan(distanceBeforeZoom);
+    const eyeBefore = eyeMpcOf(zoomed, B);
+
+    // Reproduces today's production path (`watchOrientationChangeSaga`, which
+    // the harness's saga-less store cannot run itself): persist the frame,
+    // then re-encode `base` — stale distance included, per `replayInput`
+    // ~L212 — into it from OUTSIDE the loop.
+    const before = h.store.getState().camera.base;
+    if (!isWorldArm(before)) throw new Error('expected a world arm base');
+    const GAL = ORIENTATION_FRAMES.galactic;
+    h.store.dispatch(setOrientation('galactic'));
+    h.store.dispatch(commitCameraPose(absoluteArm(reencodePose(before.pose, B, GAL))));
+    h.frame(2);
+
+    const after = worldOf(GAL);
+    expect(Math.abs(after.distance - zoomed.distance) / zoomed.distance).toBeLessThan(1e-6);
+    const eyeAfter = eyeMpcOf(after, GAL);
+    const eyeDelta = Math.hypot(
+      eyeAfter[0] - eyeBefore[0],
+      eyeAfter[1] - eyeBefore[1],
+      eyeAfter[2] - eyeBefore[2],
+    );
+    expect(eyeDelta / zoomed.distance).toBeLessThan(1e-6);
+  });
+});
+
+describe('a commit mid-approach', () => {
+  it('lands: the loop stops flying and adopts it', () => {
+    const engaged = makeCameraSimHarness({ bootHR: 0.1 });
+    engaged.frame(2);
+    const bodyArm = engaged.store.getState().camera.base;
+    expect(bodyArm.frame).toEqual({ body: 'earth' });
+
+    const h = makeCameraSimHarness();
+    h.frame(5);
+    expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
+
+    h.store.dispatch(commitCameraPose(bodyArm));
+    h.frame(1);
+
+    expect(h.store.getState().camera.base).toBe(bodyArm);
+    expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
+    expect(h.state.cameraRuntime.register.winner).not.toBe('followApproach');
   });
 });
