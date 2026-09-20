@@ -11,7 +11,7 @@
 import { describe, it, expect } from 'vitest';
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { S_STAR_ENTRY } from '../../../src/data/sources/s-star';
-import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
+import { BODY_IDS } from '../../fixtures/bodyIds';
 import { LABEL_CATEGORIES } from '../../../src/data/structure/labelCategories';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { SELECTION_SOURCE_SHIFT } from '../../../src/data/selectionEncoding';
