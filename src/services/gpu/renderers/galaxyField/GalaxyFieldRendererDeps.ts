@@ -1,4 +1,4 @@
-import type { GalaxyIsmMapGridRadius } from '../../services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 
 export type GalaxyFieldRendererDeps = {
   readonly makeShader: (code: string, label: string) => GPUShaderModule;

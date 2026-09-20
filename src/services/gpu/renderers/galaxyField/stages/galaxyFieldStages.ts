@@ -9,7 +9,7 @@
  * to precede it (`orientation:data` alone submits nothing: the readback hook).
  */
 
-import type { GalaxyFieldStageContext } from '../../../../../@types/galaxy/GalaxyFieldStageContext';
+import type { GalaxyFieldStageContext } from '../GalaxyFieldStageContext';
 import type { GalaxyFieldStageName } from '../../../../../@types/galaxy/GalaxyFieldStageName';
 import type { Stage } from '../../../../../@types/gpu/Stage';
 import {

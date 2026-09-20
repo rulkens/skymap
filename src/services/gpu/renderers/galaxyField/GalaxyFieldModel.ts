@@ -4,13 +4,13 @@
  * exactly when its own declared key moves, so none of them has (or needs) an
  * invalidation site.
  */
-import type { Derived } from '../gpu/Derived';
-import type { DigVeilBudget } from '../../services/gpu/renderers/galaxyField/ismMap/computeDigVeilBudget';
-import type { PlaceDustBudget } from '../../services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
-import type { DustHeaderLanes } from './DustHeaderLanes';
-import type { FieldSliceCounts } from './FieldSliceCounts';
-import type { GalaxyFieldMixtureResult } from './GalaxyFieldMixtureResult';
-import type { HiiSegment } from './HiiSegment';
+import type { Derived } from '../../../../@types/gpu/Derived';
+import type { DigVeilBudget } from './ismMap/computeDigVeilBudget';
+import type { PlaceDustBudget } from './ismMap/computePlaceDustBudget';
+import type { DustHeaderLanes } from '../../../../@types/galaxy/DustHeaderLanes';
+import type { FieldSliceCounts } from '../../../../@types/galaxy/FieldSliceCounts';
+import type { GalaxyFieldMixtureResult } from '../../../../@types/galaxy/GalaxyFieldMixtureResult';
+import type { HiiSegment } from '../../../../@types/galaxy/HiiSegment';
 
 export type GalaxyFieldModel = {
   readonly centralField: Derived<GalaxyFieldMixtureResult>;

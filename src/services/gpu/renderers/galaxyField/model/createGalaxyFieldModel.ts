@@ -15,7 +15,7 @@ import type { GalaxyFieldComponent } from '../../../../../@types/galaxy/GalaxyFi
 import type { GalaxyFieldExtra } from '../../../../../@types/galaxy/GalaxyFieldExtra';
 import type { GalaxyFieldMixtureInput } from '../../../../../@types/galaxy/GalaxyFieldMixtureInput';
 import type { GalaxyFieldMixtureResult } from '../../../../../@types/galaxy/GalaxyFieldMixtureResult';
-import type { GalaxyFieldModel } from '../../../../../@types/galaxy/GalaxyFieldModel';
+import type { GalaxyFieldModel } from '../GalaxyFieldModel';
 import type { HiiSegment } from '../../../../../@types/galaxy/HiiSegment';
 import { transformGalaxyFieldComponent } from '../../../../../utils/galaxy/transformGalaxyFieldComponent';
 import { buildGalaxyFieldMixture } from '../../../../engine/galaxyGenerator/v2/galaxyFieldMixture';

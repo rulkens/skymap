@@ -2,7 +2,7 @@
 
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldMixtureResult } from '../../../../../@types/galaxy/GalaxyFieldMixtureResult';
-import type { GalaxyFieldStageContext } from '../../../../../@types/galaxy/GalaxyFieldStageContext';
+import type { GalaxyFieldStageContext } from '../GalaxyFieldStageContext';
 import type { PlaceArmCloudDispatchInput } from '../ismMap/createIsmMapPlaceArmCloud';
 
 export function buildArmCloudDispatchInput(

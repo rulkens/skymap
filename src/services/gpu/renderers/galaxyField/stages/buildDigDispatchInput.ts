@@ -1,7 +1,7 @@
 /** Shared by the `place:dig` stage and the debug readback. */
 
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldStageContext } from '../../../../../@types/galaxy/GalaxyFieldStageContext';
+import type { GalaxyFieldStageContext } from '../GalaxyFieldStageContext';
 import {
   ISM_MAP_AZ,
   ISM_MAP_RINGS,
