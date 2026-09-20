@@ -35,9 +35,16 @@ function camAtAuFromSgrAStar(au: number): Vec3 {
   return [x + au * SCALE_UNITS.AU_TO_MPC, y, z];
 }
 
-/** Only `drawCamPos`, `simDays` and `slabs` are read; the rest never loads. */
+/** `drawCamPos`, `simDays` and `slabs` for the lens row; `cam.distance` is what
+ *  short-circuits `atmosphereDrawList`, the OTHER source resolved here — past
+ *  the foreground cull there is no inside body to find and nothing else loads. */
 function makeCtx(camPos: Vec3, slabs: readonly Slab[]): ReadyFrameContext {
-  return { drawCamPos: camPos, simDays: SIM_DAYS, slabs } as unknown as ReadyFrameContext;
+  return {
+    drawCamPos: camPos,
+    simDays: SIM_DAYS,
+    slabs,
+    cam: { distance: 1 },
+  } as unknown as ReadyFrameContext;
 }
 
 const STATE = {} as unknown as EngineState;

@@ -46,8 +46,6 @@
 
 import package::lib::sphere::AtmosphereUniforms;
 import package::lib::sphere::clip_from_local;
-import package::lib::fullscreenTri::FullscreenOut;
-import package::lib::fullscreenTri::fullscreenVertex;
 
 @group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
 
@@ -65,13 +63,4 @@ fn vs(@location(0) position: vec3<f32>) -> VsOut {
   out.clip = clip_from_local(u.mvp, position);
   out.localPos = position;
   return out;
-}
-
-// The inside-shell full-screen pass: no proxy
-// mesh, no vertex buffer -- just the covering triangle. The fragment
-// reconstructs the view ray by unprojecting through 'u.invMvp' instead of
-// reading an interpolated local position.
-@vertex
-fn insideVs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
-  return fullscreenVertex(vi);
 }

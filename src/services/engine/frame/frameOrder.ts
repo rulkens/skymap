@@ -205,19 +205,11 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // `earth` surface it depth-tests against.
   //
   // `mesh-bodies` draws LAST, after both shells, and that is NOT the
-  // depth-tested listing choice the rest of this roster is. Inside an
-  // atmosphere the shell abandons its proxy mesh for a full-screen pass with
-  // `depthCompare: 'always'` (`atmosphereShellRenderer`), and its ray
-  // terminates on the analytic ground sphere — so an opaque mesh standing ON
-  // that ground is invisible to it, and a rover silhouetted against Mars sky
-  // was drawn over with the full camera-to-space in-scatter. Ordering after
-  // the shell is the stopgap: the shells write no depth, so a mesh drawn last
-  // still depth-tests correctly against every opaque sphere, and only the
-  // shells' own fragments are overdrawn. The cost is that mesh bodies take no
-  // aerial perspective at all — negligible at the metres-to-km range a rover
-  // is ever framed from, wrong for a mesh genuinely behind a limb (the whale's
-  // 400 km orbit crossing Earth's). The real fix is the froxel LUT, which
-  // gives the inside path scene depth and lets this line move back.
+  // depth-tested listing choice the rest of this roster is. The shells write no
+  // depth, so a mesh drawn last still depth-tests correctly against every opaque
+  // sphere and only the shells' own fragments are overdrawn — which is also what
+  // leaves the mesh's own distance in the depth the aerial line below samples,
+  // so a rover silhouetted against Mars sky is fogged at its range, not space's.
   {
     kind: 'foreground',
     target: 'foreground:0',
@@ -239,6 +231,21 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
       'atmosphere-shell',
       'mesh-bodies',
     ],
+  },
+  // The aerial-perspective apply, on the enclosing body's own painter row — the
+  // row that stamped the depth it samples, since `deriveSlabs`' deepest-inside
+  // tie-break puts that row last in the chain. AFTER the chain so every opaque
+  // row has stamped that depth; BEFORE the composite so the fog rides one curve.
+  // Never `foreground:0`'s first step: it attaches no depth yet marks the target
+  // touched, which would cost the chain its colour clear.
+  // `slot` keeps its timing row apart from the chain step for that same row.
+  {
+    kind: 'render',
+    target: 'foreground:0',
+    slab: 'insideAtmosphere',
+    depth: 'sample',
+    passes: ['aerial-perspective'],
+    slot: 'AERIAL',
   },
   // The bodies join the HDR accumulator in LINEAR space, before the tone-map,
   // so they ride the SAME single tone curve as the stars and galaxies — there

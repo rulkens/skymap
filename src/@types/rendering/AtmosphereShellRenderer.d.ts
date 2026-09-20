@@ -127,20 +127,29 @@ export type AtmosphereShellRenderer = Renderer & {
    * destination) then ADD (the exposed in-scatter). The order is load-bearing —
    * see the renderer's `draw`.
    *
-   * `inside` selects which pipeline pair runs. `false` (camera outside the
-   * atmosphere top) draws the proxy sphere (both walls, depth-tested against the
-   * opaque scene). `true` (camera past the atmosphere top) draws a full-screen
-   * triangle instead — no vertex/index buffer bound, no scene-depth test
-   * (`depthCompare: 'always'`; there is no proxy-mesh silhouette to test from
-   * inside) — reconstructing the view ray by unprojecting through the uniforms'
-   * inverse MVP rather than interpolating a proxy-mesh local position.
+   * OUTSIDE the atmosphere top only. A camera inside it has no proxy-mesh
+   * silhouette to rasterise and wants scene depth besides, so that regime is
+   * `drawAerialPerspective` instead — one path each, never both for one body.
    *
    * `uniforms` is the 176-byte `AtmosphereUniforms` record from
    * `packAtmosphereUniforms` (MVP + inverse MVP + body-local sun dir +
    * bottomRadius + camPosLocal + exposure + ring ratios). THROWS on an unknown
    * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
    */
-  draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array, inside: boolean): void;
+  draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void;
+
+  /**
+   * Fog the open pass from inside body `bodyId`'s shell — delegated verbatim to
+   * the `AerialPerspectiveRenderer` this renderer owns, where the depth-keying
+   * contract is documented. `depthView` is `foreground:0`'s depth, bound as a
+   * sampled texture (the apply fragment's binding 8).
+   */
+  drawAerialPerspective(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    depthView: GPUTextureView,
+  ): void;
 
   /**
    * Called once per frame with the live tier's sky-view LUT texel size

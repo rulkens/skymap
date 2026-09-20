@@ -25,6 +25,7 @@ import {
   SCATTERING_PARAMS_BYTES,
 } from '../../../../utils/gpu/packScatteringParams';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import { createAerialPerspectiveRenderer } from './aerialPerspectiveRenderer';
 import transmittanceCode from '../../shaders/atmosphere/transmittanceLut.wesl?static';
 import multiScatterCode from '../../shaders/atmosphere/multiScatterLut.wesl?static';
 import skyViewCode from '../../shaders/atmosphere/skyViewLut.wesl?static';
@@ -322,51 +323,18 @@ export function createAtmosphereShellRenderer(
     depthCompare: resolveDepthCompare('nearer-or-equal', reversedZ),
   };
 
-  // Inside-shell state (camera inside the atmosphere top): a full-screen
-  // triangle, no vertex buffer, and an always-pass depth test — there is no
-  // scene depth to test against from inside (spec §4.4). NOT routed through
-  // `resolveDepthCompare`: that helper resolves a reversed-Z-dependent INTENT,
-  // and 'always' has no such intent to resolve.
-  const insideVertexState: GPUVertexState = { module: shellVsModule, entryPoint: 'insideVs' };
-  const insidePrimitiveState: GPUPrimitiveState = { topology: 'triangle-list' };
-  const insideDepthState: GPUDepthStencilState = {
-    format: depthFormat,
-    depthWriteEnabled: false,
-    depthCompare: 'always',
-  };
-
-  /** The outside (proxy-sphere) and inside (full-screen) draws differ only in
-   *  this triple — vertex/primitive/depthStencil are otherwise identical
-   *  across all four shell pipelines. */
-  type ShellPipelineState = {
-    vertex: GPUVertexState;
-    primitive: GPUPrimitiveState;
-    depthStencil: GPUDepthStencilState;
-  };
-  const outsideShellState: ShellPipelineState = {
-    vertex: shellVertexState,
-    primitive: shellPrimitiveState,
-    depthStencil: shellDepthState,
-  };
-  const insideShellState: ShellPipelineState = {
-    vertex: insideVertexState,
-    primitive: insidePrimitiveState,
-    depthStencil: insideDepthState,
-  };
-
   function createShellPipeline(
     label: string,
     entryPoint: string,
     blend: GPUBlendState,
-    state: ShellPipelineState,
   ): GPURenderPipeline {
     return device.createRenderPipeline({
       label,
       layout: shellPipelineLayout,
-      vertex: state.vertex,
+      vertex: shellVertexState,
       fragment: { module: shellFsModule, entryPoint, targets: [{ format: targetFormat, blend }] },
-      primitive: state.primitive,
-      depthStencil: state.depthStencil,
+      primitive: shellPrimitiveState,
+      depthStencil: shellDepthState,
     });
   }
 
@@ -377,9 +345,6 @@ export function createAtmosphereShellRenderer(
   // luminance-collapsed alpha let a λ⁻⁴ Rayleigh ramp add blue to the disc
   // without removing blue from it (cyan wash).
   //
-  // Hoisted (not inlined) so the inside pair below shares the SAME blend object —
-  // multiply/add semantics do not change between the outside proxy-mesh draw and
-  // the inside full-screen draw, only the vertex/depth state does.
   const multiplyBlend: GPUBlendState = {
     color: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
     alpha: { srcFactor: 'zero', dstFactor: 'src', operation: 'add' },
@@ -388,7 +353,6 @@ export function createAtmosphereShellRenderer(
     'atmosphere-shell-multiply-pipeline',
     'fsMultiply',
     multiplyBlend,
-    outsideShellState,
   );
 
   // Pass 2 — ADD. Straight accumulation of the exposed in-scatter. Its alpha
@@ -399,26 +363,7 @@ export function createAtmosphereShellRenderer(
     color: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
     alpha: { srcFactor: 'one', dstFactor: 'one', operation: 'add' },
   };
-  const shellAddPipeline = createShellPipeline(
-    'atmosphere-shell-add-pipeline',
-    'fsAdd',
-    addBlend,
-    outsideShellState,
-  );
-
-  // Inside pair — SAME blend objects as the outside pair (see above).
-  const shellInsideMultiplyPipeline = createShellPipeline(
-    'atmosphere-shell-inside-multiply-pipeline',
-    'fsInsideMultiply',
-    multiplyBlend,
-    insideShellState,
-  );
-  const shellInsideAddPipeline = createShellPipeline(
-    'atmosphere-shell-inside-add-pipeline',
-    'fsInsideAdd',
-    addBlend,
-    insideShellState,
-  );
+  const shellAddPipeline = createShellPipeline('atmosphere-shell-add-pipeline', 'fsAdd', addBlend);
 
   // ── Per-body bundles ───────────────────────────────────────────────────────
   //
@@ -625,6 +570,17 @@ export function createAtmosphereShellRenderer(
     device.queue.submit([encoder.finish()]);
   }
 
+  // The inside-the-shell half, over the SAME bundles: one atmosphere, two
+  // consumers. Built after the bundle loop so every body's resources exist.
+  const placeholderRingView = placeholderRing.createView();
+  const aerial = createAerialPerspectiveRenderer(
+    device,
+    targetFormat,
+    sampler,
+    placeholderRingView,
+    bundles,
+  );
+
   /** Look up a body's bundle. An unknown id is a programming error: callers only
    *  ever pass `atmosphereDrawList` ids, which come from the same `paramsById`
    *  table this renderer bundles — so a miss means the two drifted. */
@@ -674,6 +630,7 @@ export function createAtmosphereShellRenderer(
       // it keeps pointing at the destroyed texture until replaced.
       bundle.skyViewBindGroup = buildSkyViewBindGroup(bodyId, bundle);
       bundle.shellBindGroup = buildShellBindGroup(bodyId, bundle);
+      aerial.rebind(bodyId, bundle);
     }
   }
 
@@ -708,35 +665,30 @@ export function createAtmosphereShellRenderer(
 
   // ── draw ───────────────────────────────────────────────────────────────────
 
-  function draw(
-    pass: GPURenderPassEncoder,
-    bodyId: string,
-    uniforms: Float32Array,
-    inside: boolean,
-  ): void {
+  function draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void {
     // Write THIS body's own shell uniform buffer immediately before its draw — no
     // shared buffer for a later body's write to race (see the module header).
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
     pass.setBindGroup(0, bundle.shellBindGroup);
-    // `inside` selects the full-screen no-scene-depth pipeline pair (camera past
-    // the atmosphere top, no proxy-mesh silhouette to rasterise) over the
-    // proxy-sphere pair. MULTIPLY strictly BEFORE ADD in both branches: the
-    // multiply pass scales whatever is already in the target, so running it
-    // second would attenuate this body's own in-scatter by its own transmittance.
-    if (inside) {
-      pass.setPipeline(shellInsideMultiplyPipeline);
-      pass.draw(3);
-      pass.setPipeline(shellInsideAddPipeline);
-      pass.draw(3);
-      return;
-    }
+    // MULTIPLY strictly BEFORE ADD: the multiply pass scales whatever is already
+    // in the target, so running it second would attenuate this body's own
+    // in-scatter by its own transmittance.
     pass.setVertexBuffer(0, positionBuffer);
     pass.setIndexBuffer(indexBuffer, 'uint16');
     pass.setPipeline(shellMultiplyPipeline);
     pass.drawIndexed(indexCount);
     pass.setPipeline(shellAddPipeline);
     pass.drawIndexed(indexCount);
+  }
+
+  function drawAerialPerspective(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    depthView: GPUTextureView,
+  ): void {
+    aerial.draw(pass, bodyId, uniforms, depthView);
   }
 
   // ── destroy ────────────────────────────────────────────────────────────────
@@ -752,6 +704,7 @@ export function createAtmosphereShellRenderer(
       bundle.shellUniformBuffer.destroy();
     }
     bundles.clear();
+    aerial.destroy();
     placeholderRing.destroy();
     positionBuffer.destroy();
     indexBuffer.destroy();
@@ -762,6 +715,7 @@ export function createAtmosphereShellRenderer(
     dispatchSkyView,
     setRingTexture,
     draw,
+    drawAerialPerspective,
     destroy,
     reconcile,
   };

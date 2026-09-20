@@ -119,6 +119,9 @@ function makeCtx(
     drawCamPos,
     simDays: 0,
     nowMs: 1000,
+    // Past the foreground cull, so `bodyRowSlabs`' insideAtmosphere lookup
+    // short-circuits instead of reaching for body poses this fixture has none of.
+    cam: { distance: 1 },
     focus: {},
     slabs: [],
     canvasSize: { width: 800, height: 600 },
