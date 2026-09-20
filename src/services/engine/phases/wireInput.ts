@@ -127,8 +127,9 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
     pitch: initialCam.pitch,
     distance: initialCam.distance,
   });
+  store.dispatch(commitCameraPose(committed));
   state.cameraRuntime = seedCameraRuntime({
-    committed,
+    state: store.getState(),
     projection: {
       fovYRad: initialCam.fovYRad,
       aspect: canvas.width / canvas.height,
@@ -136,7 +137,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       far: initialCam.far,
     },
   });
-  store.dispatch(commitCameraPose(committed));
 
   // Boot IS the home state: the sim clock boots live, so Earth moves from the
   // first frame and a bare pose would let the globe slide out of frame.

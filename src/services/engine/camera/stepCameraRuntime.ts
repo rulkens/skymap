@@ -21,20 +21,24 @@ import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
 
 import { replayInput } from './replayInput';
-import { pickWinner, elapsedForWinner } from './cameraDrivers';
+import { pickWinner, elapsedForWinner, settledMemory } from './cameraDrivers';
 import { advanceEpochs, elapsedMs } from './cameraEpochs';
 import { commitOnEdge } from './commitOnEdge';
 import { pivotFraming } from './pivotRadiusMpc';
 import { releasedWorldArm } from './releasedWorldArm';
 import { frameKey } from './rungs/frameKey';
 import { rowFor } from './rungs/rowFor';
+import { isWorldArm } from './rungs/isWorldArm';
 import { resolveFrameBasis } from './resolveFrameBasis';
 import { NEAR_CLIP_MPC, FAR_CLIP_MPC } from './cameraFraming';
 import { projectFramePose } from '../frame/projectFramePose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
+import { reencodePose } from '../../../utils/camera/reencodePose';
+import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import cameraReducer, {
   cancelCameraTween,
   clearFrameTween,
+  commitCameraPose,
 } from '../../../state/camera/cameraSlice';
 
 export function stepCameraRuntime(
@@ -55,7 +59,7 @@ export function stepCameraRuntime(
   const {
     nowMs,
     simDays,
-    rootState: stored,
+    rootState: rawStored,
     canvasPx,
     aspect,
     steps,
@@ -66,9 +70,32 @@ export function stepCameraRuntime(
   } = inputs;
   // A `base` the loop did not write is a commit from outside: `resting`
   // authored it verbatim, so last frame's author reads as `resting` — the
-  // departing row bakes nothing over it and the follow rows adopt it.
-  const winnerLastFrame: DriverId =
-    stored.camera.base === prev.base ? prev.register.winner : 'resting';
+  // departing row bakes nothing over it and the follow rows adopt it. Read off
+  // the RAW snapshot: our own re-encode below is about to change `base`'s
+  // identity too, and that must never itself read as an outside commit.
+  const external = rawStored.camera.base !== prev.base;
+  const winnerLastFrame: DriverId = external ? 'resting' : prev.register.winner;
+
+  // The loop, not the orientation saga, re-encodes: the outgoing basis is what
+  // `base`'s angles are valid in, never a mid-slerp one. Folded in BEFORE the
+  // replay so every stage below reads a `base` already valid in the frame
+  // `settings.orientation` names, and pushed first into `actions` so it lands
+  // as this frame's own commit (never as an outside one — see `external` above).
+  const orientationActions: UnknownAction[] = [];
+  let stored = rawStored;
+  if (rawStored.settings.orientation !== prev.orientation && isWorldArm(rawStored.camera.base)) {
+    const reencodeAction = commitCameraPose(
+      absoluteArm(
+        reencodePose(
+          rawStored.camera.base.pose,
+          ORIENTATION_FRAMES[prev.orientation],
+          ORIENTATION_FRAMES[rawStored.settings.orientation],
+        ),
+      ),
+    );
+    orientationActions.push(reencodeAction);
+    stored = { ...rawStored, camera: cameraReducer(rawStored.camera, reencodeAction) };
+  }
   const focus = stored.selectionRows.focus;
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
@@ -115,7 +142,7 @@ export function stepCameraRuntime(
       autoRotateEpoch: prev.epochs.autoRotate,
     },
   );
-  const actions: UnknownAction[] = [...drained.actions];
+  const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
   // The drivers must see this frame's commits (`endDrag` above all, or
   // `orbitDrag` wins one frame too long). Identity on a steady frame, so a
   // memoised selector keyed on the root object keeps its cache.
@@ -126,9 +153,11 @@ export function stepCameraRuntime(
 
   // The approach hands off on a frame it SATURATED, never on a clock the pick
   // reads independently: a fresh focus row starts a new approach whatever the
-  // old memory said, so the two are one fact and cannot disagree on phase.
+  // old memory said, so the two are one fact and cannot disagree on phase. An
+  // outside commit hands off too: the commit IS the framing, so no approach
+  // is owed, whatever the epoch reads.
   const approachDone =
-    focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false;
+    external || (focus === prev.epochs.follow.ref ? (drained.follow?.saturated ?? false) : false);
   // ONE pick per frame: the epoch advance, the commit gate and the produced pose
   // read the same driver object, so they cannot disagree on who won.
   const winner = pickWinner(drivers, rootState, approachDone);
@@ -174,7 +203,9 @@ export function stepCameraRuntime(
       bodies,
       followDistanceTarget: drained.followDistanceTarget,
     },
-    followIn,
+    // Same status a tween or clip has: an outside commit delivers the framing
+    // itself, so the follow row that resumes owes it no approach.
+    external ? settledMemory(followIn) : followIn,
   );
 
   // The runtime keeps `upBasis`, NOT `poseBasis`: it seeds the next switch's
@@ -243,6 +274,9 @@ export function stepCameraRuntime(
       // returns `stored.camera` itself), which is what `winnerLastFrame` above
       // compares against next frame.
       base: actions.reduce(cameraReducer, stored.camera).base,
+      // Tracks the frame `base` is now valid in, whatever this frame did with
+      // it — a body arm sees no re-encode above but the switch still lands.
+      orientation: stored.settings.orientation,
       epochs,
       follow: memory,
       gesture,

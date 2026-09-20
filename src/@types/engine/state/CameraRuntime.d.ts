@@ -9,6 +9,7 @@ import type { CameraEpochs } from '../camera/CameraEpochs';
 import type { DriverId } from '../camera/DriverId';
 import type { FollowMemory } from '../camera/FollowMemory';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { OrientationFrameId } from '../../camera/OrientationFrameId';
 import type { RungMemory } from '../../camera/RungMemory';
 import type { TiltMemory } from '../../camera/TiltMemory';
 import type { FrameOutputs } from './FrameOutputs';
@@ -21,6 +22,10 @@ export type CameraRuntime = {
    * by IDENTITY — a store `base` that differs next frame was committed from
    * outside the loop. */
   readonly base: FramedCameraPose;
+  /** The orientation frame `base`'s angles were last reconciled in — a store
+   * value that differs means the frame switched since (`stepCameraRuntime`
+   * re-encodes `base` into it before anything else reads `base`). */
+  readonly orientation: OrientationFrameId;
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;
   /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */

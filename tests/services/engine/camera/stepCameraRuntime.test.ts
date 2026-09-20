@@ -35,7 +35,6 @@ import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
 import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
-import { reencodePose } from '../../../../src/utils/camera/reencodePose';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -293,15 +292,11 @@ describe('the loop re-encodes base on an orientation switch', () => {
     expect(zoomed.distance).toBeLessThan(distanceBeforeZoom);
     const eyeBefore = eyeMpcOf(zoomed, B);
 
-    // Reproduces today's production path (`watchOrientationChangeSaga`, which
-    // the harness's saga-less store cannot run itself): persist the frame,
-    // then re-encode `base` — stale distance included, per `replayInput`
-    // ~L212 — into it from OUTSIDE the loop.
-    const before = h.store.getState().camera.base;
-    if (!isWorldArm(before)) throw new Error('expected a world arm base');
+    // Production dispatches only `setOrientation` (the saga's other effect is
+    // the up-basis roll, irrelevant here): the LOOP re-encodes `base` itself,
+    // on the frame it sees `settings.orientation` differ from its own record.
     const GAL = ORIENTATION_FRAMES.galactic;
     h.store.dispatch(setOrientation('galactic'));
-    h.store.dispatch(commitCameraPose(absoluteArm(reencodePose(before.pose, B, GAL))));
     h.frame(2);
 
     const after = worldOf(GAL);

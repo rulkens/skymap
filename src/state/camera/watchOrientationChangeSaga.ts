@@ -1,24 +1,17 @@
 /**
- * watchOrientationChangeSaga — the three effects of an orientation switch.
+ * watchOrientationChangeSaga — the two effects of an orientation switch.
  *
- * `requestOrientationChange(frame)` becomes: persist the frame, re-express
- * `camera.base` into it so the eye holds still the instant `poseBasis` flips, then
- * roll the up-basis toward it. The re-encode's `from` and the roll's `fromQuat`
- * deliberately read DIFFERENT bases: `from` is the OUTGOING REGISTRY frame
- * (`poseBasis` never mid-slerps, so that is what `base`'s angles are valid in);
- * `fromQuat` is the LIVE up-basis. Do not unify.
+ * `requestOrientationChange(frame)` becomes: persist the frame, then roll the
+ * up-basis toward it. Re-expressing `camera.base` into the new frame is the
+ * LOOP's job now (`stepCameraRuntime`, on the frame it sees `settings.orientation`
+ * differ from the runtime's own record) — the saga fires before `wireInput`
+ * seeds the camera on some paths, where a direct commit here would be overwritten.
  */
-import { takeLatest, getContext, put, select } from 'typed-redux-saga';
+import { takeLatest, getContext, put } from 'typed-redux-saga';
 
 import { requestOrientationChange } from './orientationActions';
-import { startFrameTween, commitCameraPose } from './cameraSlice';
-import { selectCameraBase } from './selectors';
+import { startFrameTween } from './cameraSlice';
 import { setOrientation } from '../settings/core/orientationSlice';
-import { selectOrientation } from '../settings/selectors';
-import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
-import { reencodePose } from '../../utils/camera/reencodePose';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
-import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import type { SagaContext } from '../../store/types';
 
 // Frame-roll duration (~1 s, spec §8); co-located since only this saga uses it.
@@ -29,26 +22,10 @@ export function* watchOrientationChangeSaga() {
     const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
     const frame = action.payload;
 
-    // Read the OUTGOING frame and pose before either write below lands — `base`'s
-    // (yaw, pitch) are angles in this basis, never a mid-slerp one (see header).
-    const previous = yield* select(selectOrientation);
-    const base = yield* select(selectCameraBase);
-
     yield* put(setOrientation(frame));
-    // World arm only: a body arm's pose is stored in the body's own axes, so no
-    // (yaw, pitch) is expressed against the pole that just moved.
-    if (isWorldArm(base)) {
-      yield* put(
-        commitCameraPose(
-          absoluteArm(
-            reencodePose(base.pose, ORIENTATION_FRAMES[previous], ORIENTATION_FRAMES[frame]),
-          ),
-        ),
-      );
-    }
 
-    // The re-encode above needs no camera (pure store + registry); only the
-    // roll does. Pre-bootstrap/post-destroy, the frame and pose already landed.
+    // Pre-bootstrap/post-destroy, the frame already landed and there is no
+    // live pole to roll from.
     const runtime = cameraRuntime();
     if (runtime === null) return;
 

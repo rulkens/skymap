@@ -82,7 +82,7 @@ export const NO_FOLLOW_MEMORY: FollowMemory = {
  * exists — a pan strafe and a committed zoom are the focus row's, not the
  * delivering driver's — and a fresh memory carries none, so the first produce
  * reads the delivered pose itself. */
-function settledMemory(mem: FollowMemory | null): FollowMemory {
+export function settledMemory(mem: FollowMemory | null): FollowMemory {
   return { ...(mem ?? NO_FOLLOW_MEMORY), saturated: true };
 }
 

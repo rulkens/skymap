@@ -244,6 +244,11 @@ function makeState(): EngineState {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         winner: 'resting',
       },
+      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
+      // Must match the store's actual orientation (`settings.orientation`'s
+      // default), or the loop reads a phantom frame switch on frame one and
+      // re-encodes `base` through an undefined outgoing basis.
+      orientation: DEFAULT_ORIENTATION,
       epochs: UNSTARTED_EPOCHS,
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,
