@@ -16,7 +16,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { restoreSceneSaga } from '../../../src/state/tour/restoreSceneSaga';
+import { restoreSceneSaga } from '../../../src/state/scene/restoreSceneSaga';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { watchOrientationChangeSaga } from '../../../src/state/camera/watchOrientationChangeSaga';

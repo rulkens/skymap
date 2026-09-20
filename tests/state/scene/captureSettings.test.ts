@@ -20,7 +20,7 @@
 
 import { describe, it, expect } from 'vitest';
 import type { RootState } from '../../../src/store/types';
-import { captureSettings } from '../../../src/state/tour/captureSettings';
+import { captureSettings } from '../../../src/state/scene/captureSettings';
 import { makeSettingsFixture } from '../settings/makeSettingsFixture';
 
 const SNAPSHOT_KEYS = [

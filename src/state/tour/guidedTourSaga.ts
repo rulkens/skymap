@@ -50,8 +50,8 @@ import { call, put, select, take, race, cancelled, delay } from 'typed-redux-sag
 
 import { visitBeatSaga } from './visitBeatSaga';
 import { FOLD_SETTLE_MS } from './foldSettleMs';
-import { captureScene } from './captureScene';
-import { restoreSceneSaga } from './restoreSceneSaga';
+import { captureScene } from '../scene/captureScene';
+import { restoreSceneSaga } from '../scene/restoreSceneSaga';
 import { computeSceneEntering } from './computeSceneEntering';
 import { exitTour } from './tourActions';
 import { tourStarted, tourEnded } from './tourSlice';
