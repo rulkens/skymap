@@ -1,9 +1,6 @@
-/**
- * The PROPOSED tier of an area, bottom to top. The page lets you move areas between tiers
- * live; this is only the starting arrangement. Unratified: see the Q2 note in the README.
- */
-export const TIERS = ['leaves', 'services', 'engine', 'state', 'layers', 'ui'] as const;
+import { TIERS } from './structureAuditDefaults';
 
+/** The PROPOSED tier of an area; the page lets you move areas live, this is only the start. */
 export function tierOf(area: string): (typeof TIERS)[number] {
   if (area === '@types' || area === 'data' || area === 'utils') return 'leaves';
   if (area.startsWith('services/engine')) return 'engine';

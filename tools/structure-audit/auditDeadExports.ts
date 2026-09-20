@@ -1,40 +1,26 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { exportedNames } from './exportedNames';
 import { parseImports } from './parseImports';
 import { resolveRelativeImport } from './resolveRelativeImport';
-import type { DeadExportAudit, ExportRef, FileRef } from './types/DeadExportAudit';
-import type { ImportGraph } from './types/ImportGraph';
-
-const EXPORT_DECL =
-  /^export (?:const|function|async function|type|class|enum|let|abstract class) (\w+)/gm;
-const EXPORT_LIST = /^export \{([^}]+)\}(?!\s*from)/gm;
-/** Bundle entry points: nothing imports them by design. */
-const ENTRIES = new Set(['main.tsx', 'worker.ts', 'unsupportedPage.ts']);
-
-type Roots = { readonly src: string; readonly others: readonly string[] };
+import { BUNDLE_ENTRIES } from './structureAuditDefaults';
+import type { DeadExportAudit } from './@types/DeadExportAudit';
+import type { DeadExportRoots } from './@types/DeadExportRoots';
+import type { ExportRef } from './@types/ExportRef';
+import type { FileRef } from './@types/FileRef';
+import type { ImportGraph } from './@types/ImportGraph';
 
 /**
  * Exported names nothing imports. `src` usage is authoritative; `others` (tests/, tools/) only
  * moves a symbol from "dead" to "test-only". A component's own `Props` type is exempt.
  */
-export function auditDeadExports(graph: ImportGraph, roots: Roots): DeadExportAudit {
+export function auditDeadExports(graph: ImportGraph, roots: DeadExportRoots): DeadExportAudit {
   const files = Object.keys(graph.nodes);
   const known = new Set(files);
   const exportsOf = new Map<string, Set<string>>();
   for (const f of files) {
     const source = readFileSync(join(roots.src, f), 'utf8');
-    const names = new Set<string>();
-    for (const m of source.matchAll(EXPORT_DECL)) if (m[1]) names.add(m[1]);
-    for (const m of source.matchAll(EXPORT_LIST))
-      for (const part of (m[1] ?? '').split(',')) {
-        const exported = part
-          .trim()
-          .split(/\s+as\s+/)
-          .pop();
-        if (exported) names.add(exported);
-      }
-    if (/^export default /m.test(source)) names.add('default');
-    exportsOf.set(f, names);
+    exportsOf.set(f, new Set(exportedNames(source)));
   }
 
   const mark = (importerAbs: string, source: string, into: Map<string, Set<string>>): void => {
@@ -56,7 +42,7 @@ export function auditDeadExports(graph: ImportGraph, roots: Roots): DeadExportAu
   const deadFiles: FileRef[] = [];
   const testOnlyFiles: FileRef[] = [];
   for (const [f, names] of exportsOf) {
-    if (ENTRIES.has(f) || names.size === 0) continue;
+    if (BUNDLE_ENTRIES.has(f) || names.size === 0) continue;
     const area = graph.nodes[f]?.area ?? '?';
     const src = usedInSrc.get(f) ?? new Set<string>();
     const other = usedElsewhere.get(f) ?? new Set<string>();

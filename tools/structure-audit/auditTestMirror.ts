@@ -1,6 +1,6 @@
 import { basename, dirname } from 'node:path';
-import type { ImportGraph } from './types/ImportGraph';
-import type { TestMirror } from './types/TestMirror';
+import type { ImportGraph } from './@types/ImportGraph';
+import type { TestMirror } from './@types/TestMirror';
 
 /**
  * Presence, not coverage: a src file is mirrored when `tests/<same dir>/<stem>.test.ts(x)` or a

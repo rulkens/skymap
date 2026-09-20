@@ -1,9 +1,4 @@
-export type ParsedImport = {
-  readonly spec: string;
-  readonly typeOnly: boolean;
-  /** Imported names; `'*'` for namespace, dynamic and `export *` forms, `'default'` for default. */
-  readonly names: readonly string[];
-};
+import type { ParsedImport } from './@types/ParsedImport';
 
 const STATIC =
   /(?:^|\n)\s*(import|export)\s+(type\s+)?(?:(\w+)\s*,?\s*)?(?:\*\s+as\s+\w+)?\s*(?:\{([^}]*)\})?\s*from\s*['"]([^'"]+)['"]/g;

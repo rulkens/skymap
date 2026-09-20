@@ -1,19 +1,5 @@
-export type StateSite = {
-  readonly f: string;
-  readonly area: string;
-  readonly line: number;
-  readonly text?: string;
-  readonly name?: string;
-  readonly kind?: string;
-  readonly role?: 'lookup' | 'cache' | 'mutable';
-};
-
-export type StateCount = {
-  readonly f: string;
-  readonly area: string;
-  readonly n: number;
-  readonly code?: number;
-};
+import type { StateCount } from './StateCount';
+import type { StateSite } from './StateSite';
 
 /** Where mutable state sits outside RTK; every list is a regex heuristic, see README. */
 export type StateInventory = {

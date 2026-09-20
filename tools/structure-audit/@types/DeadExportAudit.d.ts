@@ -1,5 +1,5 @@
-export type ExportRef = { readonly f: string; readonly name: string; readonly area: string };
-export type FileRef = { readonly f: string; readonly area: string; readonly exports: number };
+import type { ExportRef } from './ExportRef';
+import type { FileRef } from './FileRef';
 
 /** Exports nothing in `src/` imports: `dead` = nowhere at all, `testOnly` = only tests/ or tools/. */
 export type DeadExportAudit = {

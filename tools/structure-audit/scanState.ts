@@ -1,7 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { ImportGraph } from './types/ImportGraph';
-import type { StateCount, StateInventory, StateSite } from './types/StateInventory';
+import type { ImportGraph } from './@types/ImportGraph';
+import type { StateCount } from './@types/StateCount';
+import type { StateInventory } from './@types/StateInventory';
+import type { StateSite } from './@types/StateSite';
 
 const MODULE_LET = /^(export )?let /;
 const CONTAINER = /^(export )?const (\w+)(?::\s*([^=]+?))?\s*=\s*new (Map|Set|WeakMap)/;

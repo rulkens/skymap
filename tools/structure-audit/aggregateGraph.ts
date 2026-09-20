@@ -1,22 +1,9 @@
 import { stronglyConnectedComponents } from './stronglyConnectedComponents';
-import type { AreaEdge } from './types/AreaEdge';
-import type { AreaStability } from './types/AreaStability';
-import type { StructureAuditCycle } from './types/StructureAuditData';
-import type { ImportGraph } from './types/ImportGraph';
-
-export type GraphAggregate = {
-  readonly areaEdges: readonly AreaEdge[];
-  readonly pairFiles: Readonly<Record<string, readonly (readonly [string, string, boolean])[]>>;
-  readonly stability: readonly AreaStability[];
-  readonly sccs: readonly StructureAuditCycle[];
-  readonly fanIn: readonly (readonly [string, number])[];
-  readonly fanOut: readonly (readonly [string, number])[];
-};
-
-const TOP_HUBS = 40;
+import type { GraphAggregate } from './@types/GraphAggregate';
+import type { ImportGraph } from './@types/ImportGraph';
 
 /** Area-level view of the file graph: cross-area counts, instability, cycles and hub files. */
-export function aggregateGraph(graph: ImportGraph): GraphAggregate {
+export function aggregateGraph(graph: ImportGraph, topHubs: number): GraphAggregate {
   const areaEdges = new Map<string, { s: string; t: string; n: number; typeOnly: number }>();
   const pairFiles: Record<string, [string, string, boolean][]> = {};
   const stab = new Map<string, { ca: number; ce: number }>();
@@ -48,7 +35,7 @@ export function aggregateGraph(graph: ImportGraph): GraphAggregate {
     files,
   }));
   const top = (m: ReadonlyMap<string, number>): [string, number][] =>
-    [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, TOP_HUBS);
+    [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, topHubs);
 
   return {
     areaEdges: [...areaEdges.values()],

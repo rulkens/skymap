@@ -40,6 +40,11 @@ and `layers/` (`areaOf.ts`). The tier assignment in `tierOf.ts` is a proposal fr
 grill session and has **not** been ratified; the ratchet test that would enforce it does not exist
 yet. Change `tierOf.ts` once the arrangement is agreed, then write the ratchet.
 
+## Enforced by
+
+`tests/conventions/typeFilesAreDeclarations.test.ts` ratchets one named `type` per `@types/` file; `tests/conventions/noInlineTypes.test.ts`
+ratchets no top-level `type`/`interface` outside a types home. `tools/structure-audit/` itself is swept by both.
+
 ## Heuristics, honestly
 
 Every list under State and Conventions is a regex over source lines, not a type-checked analysis.

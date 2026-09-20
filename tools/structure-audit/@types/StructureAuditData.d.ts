@@ -4,28 +4,19 @@ import type { CloneReport } from './CloneReport';
 import type { ConventionAudit } from './ConventionAudit';
 import type { DeadExportAudit } from './DeadExportAudit';
 import type { StateInventory } from './StateInventory';
+import type { StructureAuditArea } from './StructureAuditArea';
+import type { StructureAuditCycle } from './StructureAuditCycle';
 import type { TestMirror } from './TestMirror';
 
-export type StructureAuditArea = {
-  readonly name: string;
-  readonly group: string;
-  readonly files: number;
-  readonly code: number;
-};
-
-export type StructureAuditCycle = {
-  readonly size: number;
-  readonly areas: readonly string[];
-  readonly files: readonly string[];
-};
-
-/** Everything the page renders, embedded as one JSON literal. */
+/** Everything the page renders, embedded as one JSON literal; `generated` is the ISO date of the run. */
 export type StructureAuditData = {
   readonly generated: string;
   readonly totals: { readonly files: number; readonly edges: number };
+  /** Tier names low to high; the page ranks areas by index into this list. */
   readonly groups: readonly string[];
   readonly areas: readonly StructureAuditArea[];
   readonly areaEdges: readonly AreaEdge[];
+  /** `"<from area>|<to area>"` → its `[from file, to file, typeOnly]` edges; feeds the matrix cell drill-down. */
   readonly pairFiles: Readonly<Record<string, readonly (readonly [string, string, boolean])[]>>;
   readonly sccs: readonly StructureAuditCycle[];
   readonly sccStats: {

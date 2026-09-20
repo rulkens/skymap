@@ -1,12 +1,12 @@
 import { createRequire } from 'node:module';
 import { posix, relative } from 'node:path';
-import type { ImportGraph } from './types/ImportGraph';
-import type { Clone, CloneReport } from './types/CloneReport';
+import type { ImportGraph } from './@types/ImportGraph';
+import type { Clone } from './@types/Clone';
+import type { CloneThreshold } from './@types/CloneThreshold';
+import type { CloneReport } from './@types/CloneReport';
 
 /** jscpd's ESM build does named imports from the CJS `colors/safe`, which Node rejects; the CJS build is fine. */
 const { detectClones } = createRequire(import.meta.url)('jscpd') as typeof import('jscpd');
-
-export type CloneThreshold = { readonly minLines: number; readonly minTokens: number };
 
 /** jscpd exact token clones over `srcDir`; identifiers count, so a copy with one rename is missed. */
 export async function auditDuplication(

@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { StructureAuditData } from './types/StructureAuditData';
+import type { StructureAuditData } from './@types/StructureAuditData';
 
 /** The static page with the data literal spliced in; `</script>` inside JSON is neutralised. */
 export function renderPage(data: StructureAuditData): string {

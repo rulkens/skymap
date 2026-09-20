@@ -4,9 +4,9 @@ import { walkTsFiles } from '../utils/io/walkTsFiles';
 import { areaOf } from './areaOf';
 import { parseImports } from './parseImports';
 import { resolveRelativeImport } from './resolveRelativeImport';
-import type { FileNode } from './types/FileNode';
-import type { ImportEdge } from './types/ImportEdge';
-import type { ImportGraph } from './types/ImportGraph';
+import type { FileNode } from './@types/FileNode';
+import type { ImportEdge } from './@types/ImportEdge';
+import type { ImportGraph } from './@types/ImportGraph';
 
 /** Relative-import graph of `srcDir`. Shader `package::` imports and string paths are invisible here. */
 export function scanImportGraph(srcDir: string): ImportGraph {

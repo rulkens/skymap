@@ -1,8 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename, join } from 'node:path';
-import type { ConventionAudit } from './types/ConventionAudit';
-
-const EXPORT_DECL = /^export (?:const|function|async function|type|class|enum|let) (\w+)/gm;
+import { exportedNames } from './exportedNames';
+import type { ConventionAudit } from './@types/ConventionAudit';
 
 /** The CLAUDE.md file-shape rules, measured: no `interface`, no barrels, one symbol per utils/@types file, no inline types. */
 export function auditConventions(srcDir: string, files: readonly string[]): ConventionAudit {
@@ -19,7 +18,7 @@ export function auditConventions(srcDir: string, files: readonly string[]): Conv
     if (/^index\.tsx?$/.test(basename(f)))
       barrels.push({ f, exports: source.match(/^export /gm)?.length ?? 0 });
     if (/^(utils|@types)\//.test(f)) {
-      const names = [...source.matchAll(EXPORT_DECL)].map((m) => m[1] ?? '');
+      const names = exportedNames(source).filter((n) => n !== 'default');
       if (names.length > 1) multiExport.push({ f, names });
     }
     const typesHome = f.startsWith('@types/') || f.includes('/types/');
