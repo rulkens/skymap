@@ -34,6 +34,14 @@ function toDraws(cut: StarCutSnapshot): StarNodeDraw[] {
 const GRID: StarOctreeGrid = { mortonBitsPerAxis: 9, cellEdgePc: 1.0, gridOrigin: [0, 0, 0] };
 const BIG = { typical: 100000, hardCap: 100000 };
 
+/**
+ * The threshold these cases walk at. Its own constant, not the settings
+ * default: the walk takes it as a required argument precisely so it stays
+ * ignorant of what seeds the slider, and a test that re-imported that default
+ * would reintroduce the coupling while looking like a fixture.
+ */
+const THRESHOLD = 0.16;
+
 function sortedStars(stars: OctreeLeafStar[]): OctreeLeafStar[] {
   return [...stars].sort((a, b) => a.mortonIndex - b.mortonIndex);
 }
@@ -93,7 +101,7 @@ describe('walkStarOctreeCut', () => {
     // level 0) — otherwise the property below would be vacuous.
     expect(catalog.nodes.some((n) => n.level > 0 && n.childMask === 0)).toBe(true);
 
-    const draws = toDraws(walkStarOctreeCut(catalog, [0.5, 0.5, 0.5], BIG));
+    const draws = toDraws(walkStarOctreeCut(catalog, [0.5, 0.5, 0.5], BIG, THRESHOLD));
 
     // Each committed node's subtree of terminal leaves, unioned, must be every
     // terminal leaf exactly once, and the reachable star total must equal
@@ -144,12 +152,17 @@ describe('walkStarOctreeCut', () => {
     const cam: Vec3 = [6.5, 0.5, 0.5]; // on the box (grid 6..7 on x)
 
     // Generous budget fully refines to the two dense leaves.
-    const generous = toDraws(walkStarOctreeCut(catalog, cam, BIG));
+    const generous = toDraws(walkStarOctreeCut(catalog, cam, BIG, THRESHOLD));
     expect(generous.reduce((s, d) => s + d.recordCount, 0)).toBe(catalog.starCount);
 
     // A hard cap below the star count forces the parent aggregate (1 instance).
     const capped = toDraws(
-      walkStarOctreeCut(catalog, cam, { typical: BIG.typical, hardCap: STAR_LEAF_CAPACITY }),
+      walkStarOctreeCut(
+        catalog,
+        cam,
+        { typical: BIG.typical, hardCap: STAR_LEAF_CAPACITY },
+        THRESHOLD,
+      ),
     );
     const cappedInstances = capped.reduce((s, d) => s + d.recordCount, 0);
     expect(cappedInstances).toBeLessThanOrEqual(STAR_LEAF_CAPACITY);
@@ -169,7 +182,7 @@ describe('walkStarOctreeCut', () => {
       GRID,
     );
 
-    const draws = toDraws(walkStarOctreeCut(far, [0.5, 0.5, 0.5], BIG));
+    const draws = toDraws(walkStarOctreeCut(far, [0.5, 0.5, 0.5], BIG, THRESHOLD));
     const nearDraws = draws.filter((d) => far.nodes[d.nodeIndex]!.childMask === 0);
     const farDraws = draws.filter((d) => far.nodes[d.nodeIndex]!.childMask !== 0);
 
@@ -226,14 +239,14 @@ describe('walkStarOctreeCut', () => {
     expect(backLeaf).toBeGreaterThanOrEqual(0);
 
     // Control: no frustum → the walk covers BOTH cells (byte-identical to before).
-    const uncut = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG));
+    const uncut = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG, THRESHOLD));
     expect(uncut.some((d) => d.nodeIndex === frontLeaf)).toBe(true);
     expect(uncut.some((d) => d.nodeIndex === backLeaf)).toBe(true);
 
     // With the forward frustum: FRONT survives, BACK (behind the near clip) is
     // pruned along with its whole subtree.
     const culled = toDraws(
-      walkStarOctreeCut(catalog, CULL_CAM, BIG, undefined, forwardFrustumPc()),
+      walkStarOctreeCut(catalog, CULL_CAM, BIG, THRESHOLD, forwardFrustumPc()),
     );
     expect(culled.some((d) => d.nodeIndex === frontLeaf)).toBe(true);
     expect(culled.some((d) => d.nodeIndex === backLeaf)).toBe(false);
@@ -242,7 +255,7 @@ describe('walkStarOctreeCut', () => {
   it('a cull keeps a covering partition of the VISIBLE leaves (no double-draw)', () => {
     const catalog = frontBackCatalog();
     const keys = indexByKey(catalog);
-    const draws = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG, undefined, forwardFrustumPc()));
+    const draws = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG, THRESHOLD, forwardFrustumPc()));
 
     // Every committed node's terminal leaves, unioned, are still unique — a
     // frustum removes leaves from the cut but must never double-cover a survivor.
@@ -276,7 +289,7 @@ describe('walkStarOctreeCut', () => {
       angularMarginRad: 0.0001,
       worldSpread: 1,
     };
-    const draws = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG, undefined, backward));
+    const draws = toDraws(walkStarOctreeCut(catalog, CULL_CAM, BIG, THRESHOLD, backward));
     expect(draws.length).toBe(0);
   });
 

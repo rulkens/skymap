@@ -16,11 +16,26 @@ two of the three mechanically and left this one, by design, for the
   two sibling passes (`starAggregatesPass`, `starAggregateUpsamplePass`)
   import it directly instead of reaching into a layer-shaped pass file's
   internals.
-- **The shared octree walk** — `computeStarCut` / `prepareStarCut` /
-  `advanceStarFades` are their own module
-  (`src/services/gpu/renderers/starCatalog/cut/prepareStarCut.ts` +
-  `computeStarCut.ts`), memoised on `ctx` and shared by all three star-catalog
-  layers.
+- **The shared octree walk** — `computeStarCut` / `readStarCut` /
+  `advanceStarCut` are their own modules under
+  `src/services/gpu/renderers/starCatalog/cut/`, sharing one `ctx`-keyed memo
+  (`starCutOncePerCtx`) across all three star-catalog layers.
+
+## Also carried by the Layer PR: the star defaults move
+
+The eight `DEFAULT_STAR_*` constants in `src/data/defaults.ts` (`sizePx`,
+`brightness`, `glowOverlap`, `refineThreshold`, the three exposure anchors, and
+the aggregate intensity cap) belong in
+**`src/layers/starCatalog/settings/defaults.ts`** — the Layer already owns the
+slice that seeds them, and after the 2026-09-20 extraction nothing in core reads
+them: `walkStarOctreeCut`'s `refineThreshold` is a required argument precisely so
+that walk stays ignorant of the slider's default, and the only remaining external
+reader is `tools/perf/starCutCpuBench.mts`, which is a tool, not core.
+
+Not done in the extraction PR because galaxyCatalog, zoneOfAvoidance and body all
+still read their defaults from `data/defaults.ts`; moving star's alone makes it
+the first Layer to own them, which is a change of pattern that belongs with the
+Layer work rather than bolted onto a refactor.
 
 ## What's left
 
