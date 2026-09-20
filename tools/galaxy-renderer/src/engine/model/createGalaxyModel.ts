@@ -34,7 +34,7 @@ import {
 } from '../../../../../src/services/engine/galaxyGenerator/v2/dustBubblePlacements';
 import { DEFAULT_GALAXY_FIELD_TUNING } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyFieldMixture';
 import { ismMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../../../src/services/engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../src/@types/galaxy/GalaxyIsmMapGridRadius';
 import { normalizeGenerationSeed } from '../../../../../src/utils/galaxy/normalizeGenerationSeed';
 import { areaWeightedMeanIsmMapChannel } from '../../../../../src/utils/galaxy/areaWeightedMeanIsmMapChannel';
 import { ismMapRingMeans } from '../../../../../src/utils/galaxy/ismMapRingMeans';

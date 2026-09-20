@@ -14,7 +14,7 @@ import {
   ISM_MAP_RINGS,
   ISM_MAP_WORKGROUP_SIZE,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 import { buildGalaxyIsmMapFluidEvents } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';
 import { ISM_MAP_FLUID_MAX_EVENTS } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';

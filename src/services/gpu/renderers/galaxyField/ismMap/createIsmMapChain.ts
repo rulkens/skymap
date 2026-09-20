@@ -13,9 +13,9 @@ import {
 import { createIsmMapDustCdfScan } from './createIsmMapDustCdfScan';
 import type { IsmMapDustCdfScan } from './createIsmMapDustCdfScan';
 import { createIsmMapGenerator } from './createIsmMapGenerator';
-import type { IsmMapGenerator } from './createIsmMapGenerator';
+import type { IsmMapGenerator } from '../../../../../@types/galaxy/IsmMapGenerator';
 import { createIsmMapOrientation } from './createIsmMapOrientation';
-import type { IsmMapOrientation } from './createIsmMapOrientation';
+import type { IsmMapOrientation } from '../../../../../@types/galaxy/IsmMapOrientation';
 import { createIsmMapPlaceArmCloud } from './createIsmMapPlaceArmCloud';
 import type { IsmMapPlaceArmCloud } from './createIsmMapPlaceArmCloud';
 import { createIsmMapPlaceArmSpurCloud } from './createIsmMapPlaceArmSpurCloud';

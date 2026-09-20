@@ -22,7 +22,7 @@ import {
 } from './armRidgeGeometry';
 import { armAgeWeight } from './dustLaneFeatures';
 import { ismMapGridRadius, ISM_MAP_AZ, ISM_MAP_RINGS } from './galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from './galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 import { buildGalaxyIsmMapFluidEvents, ismMapFluidEventWindow } from './galaxyIsmMapFluidEvents';
 import { buildSfEventCatalog } from './sfEventCatalog';
 import {

@@ -12,7 +12,7 @@ import {
   ISM_MAP_AZ,
   ISM_MAP_RINGS,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 import { alignedBytesPerRow } from '../../../../../utils/gpu/alignedBytesPerRow';
 
 import ismMapPresentWgsl from '../../../shaders/milkyWay/ismMap/ismMapPresent.wesl?static';
