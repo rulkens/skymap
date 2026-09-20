@@ -59,7 +59,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     path: 'meshes/voyager.mesh',
     boundingRadiusM: 14.544853697326353,
     groundOffsetM: 4.791086139044178,
-    meanAlbedo: [0.098196, 0.094982, 0.090364],
+    meanAlbedo: [0.104209, 0.100278, 0.094753],
     triangleCount: 20378,
     substituted: [],
     source: 'https://science.nasa.gov/3d-resources/voyager-probe-b/',
@@ -72,7 +72,7 @@ export const MESH_ASSETS: Readonly<Record<string, MeshAssetRow>> = {
     path: 'meshes/hubble.mesh',
     boundingRadiusM: 8.786712680737544,
     groundOffsetM: 6.5379468441961155,
-    meanAlbedo: [0.168332, 0.156153, 0.13491],
+    meanAlbedo: [0.154997, 0.143332, 0.12433],
     triangleCount: 7672,
     substituted: [],
     source:

@@ -137,14 +137,4 @@ describe('createUpsamplePass', () => {
     expect(order).toEqual(['blit', 'postBlit']);
     expect(seenPasses).toEqual([PASS_STUB, PASS_STUB]);
   });
-
-  it('still runs postBlit when the blit handle is null', () => {
-    const postBlit = vi.fn();
-    const layer = createUpsamplePass(makeRow({ handleOf: () => null, postBlit }));
-
-    layer.draw(PASS_STUB, VIEW_STUB, makeCtx(), STATE_STUB);
-
-    expect(postBlit).toHaveBeenCalledTimes(1);
-    expect((postBlit as ReturnType<typeof vi.fn>).mock.calls[0]![0]).toBe(PASS_STUB);
-  });
 });

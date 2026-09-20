@@ -23,6 +23,7 @@ import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/fadeLayers';
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
+import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceFadeRows';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
 
 /** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
@@ -75,9 +76,6 @@ function makeState(
         enabled: opts.milkyWayEnabled ?? true,
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
-      // zoneOfAvoidance mirrors milkyWay's `enabled` axis; no test below
-      // exercises it yet, so it defaults on like the live scene.
-      zoneOfAvoidance: { enabled: true },
       volumes: { enabled: opts.volumesMasterEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
@@ -267,7 +265,11 @@ describe('FADE_LAYERS intent subset', () => {
     settings.volumes.items = {
       'debug-gaussian': { enabled: true },
     } as unknown as EngineSettingsState['volumes']['items'];
-    for (const row of [...FADE_LAYERS, ...galaxyCatalogFadeRows(GALAXY_RUNTIME)]) {
+    for (const row of [
+      ...FADE_LAYERS,
+      ...galaxyCatalogFadeRows(GALAXY_RUNTIME),
+      ...zoneOfAvoidanceFadeRows(),
+    ]) {
       const writesASetting = VISIBILITY_ACTION_ROW[row.key].actions(true, settings).length > 0;
       expect(row.intent === undefined, `${row.key}: intent vs actions`).toBe(!writesASetting);
     }

@@ -225,7 +225,28 @@ def unwrap(obj, source_name):
     bpy.ops.uv.pack_islands(rotate=True, rotate_method="ANY", scale=True, margin_method="FRACTION",
                             margin=0.001, shape_method="CONCAVE")
     bpy.ops.object.mode_set(mode="OBJECT")
+    fit_unit_square(obj.data.uv_layers[uv_name])
     return uv_name
+
+
+def fit_unit_square(layer):
+    """The CONCAVE pack can overhang [0, 1] (Hubble by 3.9%): those texels bake
+    off the image, and the `.mesh` stores UVs as unorm16. One uniform scale +
+    shift pulls the layout back inside without changing texel aspect."""
+    uvs = [0.0] * (len(layer.data) * 2)
+    layer.data.foreach_get("uv", uvs)
+    lo = (min(uvs[0::2]), min(uvs[1::2]))
+    hi = (max(uvs[0::2]), max(uvs[1::2]))
+    if min(lo) >= 0.0 and max(hi) <= 1.0:
+        return
+    scale = min(1.0, 1.0 / max(hi[0] - lo[0], hi[1] - lo[1]))
+    # After scaling, the span fits; slide whichever edge overhangs back to 0 or 1.
+    shift = [-lo[c] * scale if lo[c] < 0.0 else min(0.0, 1.0 - hi[c] * scale) for c in (0, 1)]
+    for i in range(0, len(uvs), 2):
+        uvs[i] = uvs[i] * scale + shift[0]
+        uvs[i + 1] = uvs[i + 1] * scale + shift[1]
+    layer.data.foreach_set("uv", uvs)
+    log("fitted uv layout [%.4f, %.4f]..[%.4f, %.4f] into the unit square" % (lo + hi))
 
 
 def arm_materials(obj):

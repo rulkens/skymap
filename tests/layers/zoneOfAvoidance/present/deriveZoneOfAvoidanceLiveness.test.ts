@@ -1,12 +1,11 @@
 /**
  * deriveZoneOfAvoidanceLiveness — the one projection the band's producer and
- * consumer share, so they cannot disagree, including the renderer-null gate that
- * keeps an empty pass from opening pre-bootstrap.
+ * consumer share, so they cannot disagree about opacity.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { deriveZoneOfAvoidanceLiveness } from '../../../../src/services/engine/frame/zoneOfAvoidanceLiveness';
+import { deriveZoneOfAvoidanceLiveness } from '../../../../src/layers/zoneOfAvoidance/present/deriveZoneOfAvoidanceLiveness';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
@@ -24,13 +23,8 @@ function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-/** Default renderer is a non-null stub so tests exercise the opacity math; pass `renderer: null` to hit the gate. */
-function makeState({
-  toggleOpacity = 1,
-  renderer = {} as unknown,
-}: { toggleOpacity?: number; renderer?: unknown } = {}): EngineState {
+function makeState({ toggleOpacity = 1 }: { toggleOpacity?: number } = {}): EngineState {
   return {
-    gpu: { zoneOfAvoidanceRenderer: renderer },
     subsystems: {
       fades: { opacityOf: vi.fn(() => toggleOpacity) },
       clipPlayer: { clipOpacityOf: () => 1 },

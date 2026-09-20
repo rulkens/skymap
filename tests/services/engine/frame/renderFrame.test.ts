@@ -137,18 +137,6 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       scale: 3,
       clearValue: { r: 0, g: 0, b: 0, a: 0 },
     },
-    // zoneOfAvoidancePass.draw reads this row's `scale` to size the
-    // downscaled viewport it hands the band raymarch. The default fixture
-    // keeps zoneOfAvoidanceRenderer null, so deriveZoneOfAvoidanceLiveness
-    // gates the 'zoa' step off (mirrors volumeLiveness's renderer-null
-    // gate) — the row still has to exist for the spec lookup, though.
-    {
-      id: 'zoa',
-      format: 'rgba16float',
-      depth: null,
-      scale: 5,
-      clearValue: { r: 0, g: 0, b: 0, a: 0 },
-    },
     // milkyWayAggregatePass.draw reads this row's `scale` to size the
     // downscaled viewport it hands the star pass (the sprite clamp is in
     // TARGET pixels), so the row has to be here, not just a view.
@@ -350,7 +338,6 @@ function makeInput(
   const renderTargetViews: Record<string, GPUTextureView> = {
     hdr: hdrTargetView,
     volume: {} as GPUTextureView,
-    zoa: { __id: 'zoa-view' } as unknown as GPUTextureView,
     'mw-aggregate': { __id: 'mw-aggregate-view' } as unknown as GPUTextureView,
   };
   const renderTargets = makeMockRenderTargets(renderTargetViews);
@@ -518,17 +505,6 @@ function makeInput(
           horizonShellRenderer,
           texturedDiskRenderer,
           proceduralDiskRenderer,
-          // zoneOfAvoidancePass.draw (the band) and zoneOfAvoidanceUpsamplePass.draw
-          // (the lettering) both read this off state.gpu.* directly, behind a
-          // `=== null` early-return guard; the key must EXIST
-          // (undefined would slip past `=== null`) — see the
-          // milkyWayAggregateUpsample comment above for the same landmine.
-          zoneOfAvoidanceRenderer: null,
-          // zoneOfAvoidanceUpsamplePass's offscreen blit shares the same
-          // key-must-exist landmine as milkyWayAggregateUpsample above — the
-          // fixture camera sits inside the band's visibility window, so this
-          // layer's `enabled` is true and `draw` runs every frame here.
-          zoneOfAvoidanceUpsample: null,
           // The FRAME program's hdr→swap composite reads state.gpu.compositor.
           compositor,
           focusUniform: { bindGroup: {}, write: () => {}, destroy: () => {} },
@@ -637,9 +613,8 @@ describe('renderFrame', () => {
   });
 
   it("begins the HDR render pass with the target table's hdr view as the colour attachment", () => {
-    // No-timing path → 'merged' strategy: zoneOfAvoidanceRenderer is null in
-    // this fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO)
-    // step off entirely — the (hdr, COSMO) render step opens the FIRST
+    // No-timing path → 'merged' strategy: the (hdr, COSMO) render step opens
+    // the FIRST
     // `beginRenderPass(loadOp: 'clear')` holding the enabled COSMO hdr draws,
     // the (mw-aggregate, NEAR0) step opens a SECOND pass against the cloud's
     // own offscreen for its star billboards, the (hdr, NEAR0) step opens a
@@ -785,9 +760,7 @@ describe('renderFrame', () => {
   });
 
   it('records the full frame in canonical order: createEncoder → hdr COSMO pass (points) → mw-aggregate pass (cloud stars) → hdr NEAR0 pass (cloud dust) → composite pass → compositor.draw → finish → submit', () => {
-    // No-timing 'merged' path: zoneOfAvoidanceRenderer is null in this
-    // fixture, so deriveZoneOfAvoidanceLiveness gates the (zoa, COSMO) step
-    // off entirely — no pass opens for it. The (hdr, COSMO) render step
+    // No-timing 'merged' path: the (hdr, COSMO) render step
     // opens a pass holding the enabled COSMO hdr draws (here point-sprites;
     // the impostor subsystems are nulled out), closes it; the
     // (mw-aggregate, NEAR0) step opens a pass against the cloud's own
@@ -837,9 +810,8 @@ describe('renderFrame', () => {
     // cloud's own offscreen pass; the foreground:0 render selects nothing, so
     // foreground:0 is never touched and the foreground:0→swap composite is
     // touched-set-skipped. Net: exactly four passes (hdr COSMO + mw-aggregate
-    // + hdr NEAR0 + hdr→swap — zoneOfAvoidanceRenderer is null so the zoa
-    // step stays gated off) and one compositor draw — no foreground:0
-    // anywhere.
+    // + hdr NEAR0 + hdr→swap) and one compositor draw — no
+    // foreground:0 anywhere.
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     expect(calls).toHaveLength(4);
@@ -893,14 +865,13 @@ describe('renderFrame', () => {
     // Default fixture: volumeFieldRenderer null → deriveVolumeLiveness null →
     // BOTH the scalar-volume producer and the volume-upsample consumer gate
     // off the same fact, so they cannot disagree. Wire a volumeUpsample spy to
-    // prove the consumer is also hidden. Only the hdr + composite passes open
-    // — zoneOfAvoidanceRenderer is null too, so the zoa step stays gated off.
+    // prove the consumer is also hidden. Only the hdr + composite passes open.
     const upsampleDraw = vi.fn();
     (fx.input.state as any).gpu.volumeUpsample = { draw: upsampleDraw, destroy: vi.fn() };
     renderFrame(fx.input);
     const calls = (fx.env.beginRenderPass as any).mock.calls as Array<[GPURenderPassDescriptor]>;
     // hdr COSMO + mw-aggregate (cloud stars) + hdr NEAR0 (cloud dust) +
-    // composite, no volume pass, no zoa pass.
+    // composite, no volume pass.
     expect(calls).toHaveLength(4);
     // Neither the raymarch nor the upsample ran — the shared gate hid both.
     expect(upsampleDraw).not.toHaveBeenCalled();

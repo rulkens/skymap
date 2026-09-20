@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createZoneOfAvoidanceRenderer } from '../../../../../src/services/gpu/renderers/zoneOfAvoidance/zoneOfAvoidanceRenderer';
+import { createZoneOfAvoidanceRenderer } from '../../../../src/layers/zoneOfAvoidance/render/zoneOfAvoidanceRenderer';
 
 // Minimal mock GPUDevice — Vitest runs in Node without a WebGPU surface.
 // Mirrors horizonShellRenderer.test.ts / labelRenderer.test.ts's pattern:

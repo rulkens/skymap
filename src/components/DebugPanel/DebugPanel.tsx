@@ -24,7 +24,6 @@ import TerrainPickMarkerTuningSectionContainer from '../containers/TerrainPickMa
 import CameraStateSectionContainer from '../containers/CameraStateSectionContainer';
 import RenderTogglesSectionContainer from '../containers/RenderTogglesSectionContainer';
 import MilkyWayTuningSectionContainer from '../containers/MilkyWayTuningSectionContainer';
-import ZoneOfAvoidanceTuningSectionContainer from '../containers/ZoneOfAvoidanceTuningSectionContainer';
 import SgrAStarLensingTuningSectionContainer from '../containers/SgrAStarLensingTuningSectionContainer';
 import DebugOverlaysSectionContainer from '../containers/DebugOverlaysSectionContainer';
 import GalaxyProvenanceSectionContainer from '../containers/GalaxyProvenanceSectionContainer';
@@ -73,7 +72,6 @@ function DebugPanel({
         <Section key={index} />
       ))}
       <MilkyWayTuningSectionContainer />
-      <ZoneOfAvoidanceTuningSectionContainer />
       <SgrAStarLensingTuningSectionContainer />
       <DebugOverlaysSectionContainer />
       <SurfaceTileAtlasSectionContainer engineHandleRef={engineHandleRef} />
