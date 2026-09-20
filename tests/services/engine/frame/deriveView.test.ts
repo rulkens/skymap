@@ -2,11 +2,13 @@ import { describe, it, expect } from 'vitest';
 import { vec4 } from 'wgpu-matrix';
 
 import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
-import { deriveViewContext } from '../../../../src/services/engine/frame/deriveViewContext';
+import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import { computeViewProj } from '../../../../src/utils/camera/computeViewProj';
 import { orbitForwardOf } from '../../../../src/utils/camera/orbitForwardOf';
 import { cameraBillboardBasis } from '../../../../src/utils/camera/cameraBillboardBasis';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { mainViewSpec } from '../../../../src/utils/camera/mainViewSpec';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
@@ -16,29 +18,31 @@ import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 import type { ViewFrustum } from '../../../../src/@types/camera/ViewFrustum';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import type { Size } from '../../../../src/@types/rendering/Size';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 // Roll and a rotated orientation basis keep every lookAt element off ±0, so the
-// identity test compares real values rather than the sign of a zero.
+// pin below compares real values rather than the sign of a zero.
 const POSE: CameraPose = { target: [1, 2, 3], yaw: 0.3, pitch: 0.1, distance: 100, roll: 0.2 };
 const PROJECTION: CameraProjection = { fovYRad: 1, aspect: 16 / 9, near: 0.1, far: 10000 };
+const CANVAS: Size = { width: 1920, height: 1080 };
 const C = Math.cos(0.4);
 const S = Math.sin(0.4);
 const BASIS: Mat3 = [C, 0, -S, 0, 1, 0, S, 0, C];
-const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 // Columns are the view's right | up | forward in camera image-plane coordinates.
 const YAW_RIGHT: Mat3 = [0, 0, -1, 0, 1, 0, 1, 0, 0];
 const YAW_LEFT: Mat3 = [0, 0, 1, 0, 1, 0, -1, 0, 0];
 const BACK: Mat3 = [-1, 0, 0, 0, 1, 0, 0, 0, -1];
 const UP: Mat3 = [1, 0, 0, 0, 0, -1, 0, 1, 0];
 
-function makeState(arm: FramedCameraPose): EngineState {
+function makeState(): EngineState {
   return {
     booted: true,
     gpu: { galaxyPointRenderer: {}, renderTargets: {}, galaxyPickRenderer: {}, compositor: {} },
@@ -50,50 +54,43 @@ function makeState(arm: FramedCameraPose): EngineState {
       bodies: { items: { sun: { enabled: false }, 's-star': { enabled: false } } },
     },
     picking: { pickInFlight: false, pointerDown: false, cursorTexPx: null },
-    cameraRuntime: { outputs: { displayed: arm } },
   } as unknown as EngineState;
 }
 
-function mainContext(arm: FramedCameraPose = absoluteArm(POSE)): {
-  state: EngineState;
-  main: ReadyFrameContext;
-} {
-  const state = makeState(arm);
-  const ctx = deriveFrameContext(
-    state,
-    { width: 1920, height: 1080 },
-    POSE,
+function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
+  const ctx = deriveFrameContext(makeState(), {
+    cam: assembleOrbitCamera(POSE, PROJECTION, BASIS, BASIS),
     arm,
-    PROJECTION,
-    BASIS,
-    BASIS,
-    0,
-    0,
-    CONST_J2000,
-  );
+    // No focused pivot in this fixture, so `pivotSurfaceRangeMpc` answers the
+    // raw orbit distance — what `runFrame` would pass for this pose.
+    altitudeMpc: POSE.distance,
+    nowMs: 0,
+    simDays: CONST_J2000,
+    visibleSourceMask: 0,
+  });
   if (!ctx.isReady) throw new Error('fixture not ready');
-  return { state, main: ctx };
+  return ctx;
 }
 
 function spec(overrides: Partial<ViewSpec> = {}): ViewSpec {
   return {
-    rotation: IDENTITY,
+    rotation: [1, 0, 0, 0, 1, 0, 0, 0, 1],
     eyeOffsetMpc: [0, 0, 0],
     frustum: symmetricFrustum(PROJECTION.fovYRad, PROJECTION.aspect),
-    sizePx: { width: 1920, height: 1080 },
+    sizePx: CANVAS,
     slot: 0,
+    kind: 'frame',
     ...overrides,
   };
 }
 
-function view(overrides: Partial<ViewSpec> = {}): {
-  main: ReadyFrameContext;
-  v: ReadyFrameContext;
-} {
-  const { state, main } = mainContext();
-  const v = deriveViewContext(state, main, spec(overrides));
-  if (v === null) throw new Error('view not ready');
-  return { main, v };
+/** A turned view beside the canvas view of the SAME frame, to compare against. */
+function view(overrides: Partial<ViewSpec> = {}): { canvas: FrameView; v: FrameView } {
+  const snapshot = frame();
+  return {
+    canvas: deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS)),
+    v: deriveView(snapshot, spec(overrides)),
+  };
 }
 
 // A symmetric perspective vp's rows 0/1 run along right/up and its w row along
@@ -110,30 +107,18 @@ function expectVec(got: Readonly<Vec3>, want: Readonly<Vec3>, digits = 6): void 
   for (let i = 0; i < 3; i++) expect(got[i]).toBeCloseTo(want[i]!, digits);
 }
 
-describe('deriveViewContext', () => {
-  it('identity view spec derives the same context as no spec', () => {
-    const { main, v } = view();
-    expect(Array.from(v.vp)).toEqual(Array.from(main.vp));
-    expect(v.slabs.length).toBe(main.slabs.length);
-    v.slabs.forEach((slab, i) =>
-      expect(Array.from(slab.vp)).toEqual(Array.from(main.slabs[i]!.vp)),
-    );
-    expect(v.drawCamPos).toEqual(main.drawCamPos);
-    expect(v.drawPxPerRad).toBe(main.drawPxPerRad);
-    expect(v.viewKind).toBe('frame');
-  });
-
+describe('deriveView', () => {
   it("a 90° yaw rotation turns the view's forward to the camera's right", () => {
-    const { main, v } = view({ rotation: YAW_RIGHT });
-    expectVec(basisOf(v.vp).forward, basisOf(main.vp).right);
-    expectVec(basisOf(v.vp).up, basisOf(main.vp).up);
+    const { canvas, v } = view({ rotation: YAW_RIGHT });
+    expectVec(basisOf(v.vp).forward, basisOf(canvas.vp).right);
+    expectVec(basisOf(v.vp).up, basisOf(canvas.vp).up);
   });
 
   it("a turned view's ctx.cam is that view's camera, so every ctx.cam reader draws it", () => {
-    const { main, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
+    const { canvas, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
     const want = basisOf(v.vp);
     expectVec(orbitForwardOf(v.cam), want.forward);
-    expectVec(basisOf(main.vp).right, want.forward);
+    expectVec(basisOf(canvas.vp).right, want.forward);
     // The billboard axes the Milky Way passes read, and the shells' target − eye.
     const billboard = cameraBillboardBasis(v.cam);
     expectVec(billboard.right, want.right);
@@ -144,36 +129,37 @@ describe('deriveViewContext', () => {
     for (let i = 0; i < 16; i++) expect(camVp[i]).toBeCloseTo(v.vp[i]!, 4);
   });
 
-  it('five dome-like specs derive five distinct vps from one pose', () => {
-    const { state, main } = mainContext();
-    const cam = basisOf(main.vp);
+  it('five dome-like specs derive five distinct vps from one frame', () => {
+    const snapshot = frame();
+    const cam = basisOf(deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS)).vp);
     const camBasis: Mat3 = [...cam.right, ...cam.up, ...cam.forward];
-    const faces = [IDENTITY, YAW_LEFT, YAW_RIGHT, BACK, UP].map((rotation, slot) => {
-      const face = deriveViewContext(
-        state,
-        main,
-        spec({
-          rotation,
-          frustum: symmetricFrustum(Math.PI / 2, 1),
-          sizePx: { width: 512, height: 512 },
-          slot,
-        }),
-      )!;
-      expect(face.viewSlot).toBe(slot);
-      const want = multiply3x3(camBasis, rotation);
-      expectVec(basisOf(face.vp).forward, [want[6], want[7], want[8]]);
-      return Array.from(face.vp);
-    });
+    const faces = [[1, 0, 0, 0, 1, 0, 0, 0, 1] as Mat3, YAW_LEFT, YAW_RIGHT, BACK, UP].map(
+      (rotation, slot) => {
+        const face = deriveView(
+          snapshot,
+          spec({
+            rotation,
+            frustum: symmetricFrustum(Math.PI / 2, 1),
+            sizePx: { width: 512, height: 512 },
+            slot,
+          }),
+        );
+        expect(face.viewSlot).toBe(slot);
+        const want = multiply3x3(camBasis, rotation);
+        expectVec(basisOf(face.vp).forward, [want[6], want[7], want[8]]);
+        return Array.from(face.vp);
+      },
+    );
     for (let a = 0; a < faces.length; a++) {
       for (let b = a + 1; b < faces.length; b++) expect(faces[a]).not.toEqual(faces[b]);
     }
   });
 
-  it('an asymmetric frustum survives into ctx.vp and drawPxPerRad', () => {
+  it('an asymmetric frustum survives into view.vp and drawPxPerRad', () => {
     const frustum: ViewFrustum = { tanLeft: -0.3, tanRight: 0.9, tanDown: -0.5, tanUp: 0.4 };
-    const { main, v } = view({ frustum, sizePx: { width: 800, height: 600 } });
+    const { canvas, v } = view({ frustum, sizePx: { width: 800, height: 600 } });
     // Each frustum edge, one unit deep along the camera's own axes, lands on NDC ±1.
-    const { right, up, forward } = basisOf(main.vp);
+    const { right, up, forward } = basisOf(canvas.vp);
     const ndc = (tx: number, ty: number): [number, number] => {
       const p = [0, 1, 2].map(
         (i) => v.drawCamPos[i]! + 10 * (right[i]! * tx + up[i]! * ty + forward[i]!),
@@ -190,13 +176,14 @@ describe('deriveViewContext', () => {
     expect(v.canvasSize).toEqual({ width: 800, height: 600 });
   });
 
-  it('an eye offset moves drawCamPos by the rotated offset and leaves the pose untouched', () => {
+  it("an eye offset moves drawCamPos by the rotated offset and leaves the frame's pose untouched", () => {
     // Half a unit along the turned view's right, which is the camera's back.
-    const { main, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
+    const { canvas, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
     expect(v.cam.position).toEqual(v.drawCamPos);
-    expect(v.cam.distance).toBe(main.cam.distance);
-    const back = basisOf(main.vp).forward.map((x) => -0.5 * x) as Vec3;
-    expectVec([0, 1, 2].map((i) => v.drawCamPos[i]! - main.drawCamPos[i]!) as Vec3, back);
+    expect(v.cam.distance).toBe(v.snapshot.cam.distance);
+    expect(v.snapshot.cam.position).toEqual(canvas.drawCamPos);
+    const back = basisOf(canvas.vp).forward.map((x) => -0.5 * x) as Vec3;
+    expectVec([0, 1, 2].map((i) => v.drawCamPos[i]! - canvas.drawCamPos[i]!) as Vec3, back);
     // Both matrices put the moved eye at the eye-space origin: clip (0, 0, ·, 0).
     const eye = v.drawCamPos;
     const cosmo = vec4.transformMat4([eye[0], eye[1], eye[2], 1], Float64Array.from(v.vp));
@@ -217,14 +204,67 @@ describe('deriveViewContext', () => {
       frame: { body: 'earth' },
       pose: { bodyId: 'earth', anchorLocalM: [10, 20, 30], eyeRelAnchorM: [1, 2, 3], basisLocal },
     };
-    const { state, main } = mainContext(arm);
     // 2 m along the TURNED view's right: basisLocal·YAW_RIGHT's first column is
     // local +y (the unturned basis would put it on +x).
     const eyeOffsetMpc: Vec3 = [2 * SCALE_UNITS.M_TO_MPC, 0, 0];
-    const v = deriveViewContext(state, main, spec({ rotation: YAW_RIGHT, eyeOffsetMpc }))!;
+    const v = deriveView(frame(arm), spec({ rotation: YAW_RIGHT, eyeOffsetMpc }));
     const pose = v.bodyPose('earth');
     expect(pose).not.toBeNull();
     expectVec(pose!.eyeRelBodyM, [11, 24, 33], 9);
     expect(pose!.basisM).toEqual(multiply3x3(basisLocal, YAW_RIGHT));
+  });
+
+  it('two views of one frame share the snapshot by reference', () => {
+    const snapshot = frame();
+    const a = deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS));
+    const b = deriveView(snapshot, spec({ rotation: YAW_RIGHT, slot: 1 }));
+    // Reference equality, not value: a copied context would drift the moment
+    // `runFrame` stamps focus on one of them, and the clock and body sample
+    // would stop being one thing.
+    expect(a.snapshot).toBe(snapshot);
+    expect(b.snapshot).toBe(a.snapshot);
+    expect(b.snapshot.bodyStates).toBe(a.snapshot.bodyStates);
+    expect(b.snapshot.nowMs).toBe(a.snapshot.nowMs);
+  });
+
+  it('each view keeps its own first-touch set', () => {
+    const snapshot = frame();
+    const a = deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS));
+    const b = deriveView(snapshot, spec({ rotation: YAW_RIGHT, slot: 1 }));
+    expect(a.renderedTargets).not.toBe(b.renderedTargets);
+    // The executor's first touch of `hdr` in view A must still CLEAR in view B.
+    (a.renderedTargets as Set<string>).add('hdr');
+    expect(b.renderedTargets.has('hdr')).toBe(false);
+  });
+});
+
+describe('deriveView — the canvas view is the pre-split one', () => {
+  // Captured from this branch's HEAD before the split, through the SAME fixture
+  // and today's `deriveFrameContext` with no view spec. Element-wise `toBe`:
+  // the ruling was that the canvas view goes through `turnedOrbitCamera` like
+  // every other view BECAUSE an identity turn and a zero offset are exact, and
+  // this is the only guard that the ruling held.
+  const VP = [
+    0.7586652040481567, -0.39352402091026306, -0.6410056948661804, -0.6409992575645447,
+    0.20353782176971436, 1.7850372791290283, -0.09983441233634949, -0.0998334139585495,
+    -0.6657156348228455, 0.09729325771331787, -0.7610287666320801, -0.7610211372375488,
+    0.8314024209976196, -3.46842885017395, 103.0247573852539, 103.12372589111328,
+  ];
+  const DRAW_CAM_POS = [65.0999282147279, 11.983341664682815, 79.10211621284218];
+  const NEAR0_VP = [
+    0.75866515407635, -0.39352398195397276, 0, -0.6409992821472812, 0.20353779933753682,
+    1.7850373105212385, 0, -0.09983341664682821, -0.6657156440444009, 0.09729324238731396, 0,
+    -0.7610211621284202, 0.8314061793820496, -3.4684303662505402, 0.01, 103.1237296018262,
+  ];
+
+  it('the canvas view’s vp, drawCamPos and slab vps are bit-identical to the pre-split values', () => {
+    const snapshot = frame();
+    const canvas = deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS));
+    for (let i = 0; i < 16; i++) expect(canvas.vp[i]).toBe(VP[i]);
+    for (let i = 0; i < 3; i++) expect(canvas.drawCamPos[i]).toBe(DRAW_CAM_POS[i]);
+    expect(canvas.slabs).toHaveLength(2);
+    for (let i = 0; i < 16; i++) expect(canvas.slabs[0]!.vp[i]).toBe(NEAR0_VP[i]);
+    for (let i = 0; i < 16; i++) expect(canvas.slabs[1]!.vp[i]).toBe(VP[i]);
+    expect(canvas.drawPxPerRad).toBe(988.4633697247241);
   });
 });

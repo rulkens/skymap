@@ -12,7 +12,6 @@ import type { OrbitCamera } from '../../camera/OrbitCamera';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
 import type { Vec2 } from '../../math/Vec2';
-import type { BodyId } from '../../data/body/BodyId';
 import type { BodyState } from '../../scene/BodyState';
 import type { MeshBody } from '../../scene/MeshBody';
 import type { PositionedStar } from '../../scene/PositionedStar';
@@ -41,8 +40,10 @@ export type ReadyFrameContext = {
    * This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes
    * one deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call
    * this frame returns this SAME Map by reference — no second cache, no drift.
+   * Keyed by the raw orbital-element id string, one level wider than `BodyId`
+   * — the boundary `slabs.ts`/`liveWorldPose.ts` already cast at.
    */
-  bodyStates: ReadonlyMap<BodyId, BodyState>;
+  bodyStates: ReadonlyMap<string, BodyState>;
   /**
    * The UN-turned pose provider (spec §5's provider seam), built once here so
    * a body-slab layer's own `bodyRelativePose` read can never drift from the
