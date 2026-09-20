@@ -7,15 +7,13 @@
 
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';
 import type { Size } from '../../@types/rendering/Size';
-import type { Mat3 } from '../../@types/math/Mat3';
 import type { ViewSpec } from '../../@types/engine/frame/ViewSpec';
+import { IDENTITY_MAT3 } from '../math/identityMat3';
 import { symmetricFrustum } from './symmetricFrustum';
-
-const IDENTITY: Mat3 = [1, 0, 0, 0, 1, 0, 0, 0, 1];
 
 export function mainViewSpec(cam: OrbitCamera, sizePx: Size): ViewSpec {
   return {
-    rotation: IDENTITY,
+    rotation: IDENTITY_MAT3,
     eyeOffsetMpc: [0, 0, 0],
     frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     sizePx,

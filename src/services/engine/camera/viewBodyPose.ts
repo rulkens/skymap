@@ -17,7 +17,7 @@ export function viewBodyPose(
   rotation: Readonly<Mat3>,
   eyeOffsetMpc: Readonly<Vec3>,
 ): BodyRelativePose {
-  const basisM = multiply3x3(pose.basisM, rotation as Mat3);
+  const basisM = multiply3x3(pose.basisM, rotation);
   const offsetM = rotateVec3ByTightMat3(
     [
       eyeOffsetMpc[0] * SCALE_UNITS.MPC_TO_M,

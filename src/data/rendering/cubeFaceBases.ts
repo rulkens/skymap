@@ -21,7 +21,7 @@ export const FACE_FORWARD: readonly Vec3[] = [
   [0, 0, 1],
   [0, 0, -1],
 ];
-export const FACE_UP: readonly Vec3[] = [
+const FACE_UP: readonly Vec3[] = [
   [0, -1, 0],
   [0, -1, 0],
   [0, 0, 1],

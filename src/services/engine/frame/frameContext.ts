@@ -60,11 +60,13 @@ export function deriveFrameContext(state: EngineState, input: FrameContextInput)
   // pose — no Mpc round trip. Every other body, and the whole absolute arm,
   // stay on provider A (spec §5.2, ruled S1: "B keeps A"). Gated on the
   // HOST, not the frame: a rung not its own host must still fall through here.
-  // `assembleOrbitCamera` always sets both bases; optional only on `OrbitCameraInit`.
+  // `input.cam` is an `AssembledOrbitCamera`: both bases are required, not
+  // asserted — `assembleOrbitCamera` always sets them, optional only on
+  // `OrbitCameraInit`.
   const armBasisCtx = {
     bodies: bodyStates as ReadonlyMap<BodyId, BodyState>,
-    poseBasis: cam.poseBasis!,
-    upBasis: cam.upBasis!,
+    poseBasis: cam.poseBasis,
+    upBasis: cam.upBasis,
     terrainHeightAt: terrainHeightAtOf(state.subsystems.surfaceTiles),
   };
   const armHost = hostOf(arm.frame, armBasisCtx);

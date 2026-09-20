@@ -12,7 +12,7 @@ import type { ViewKind } from './ViewKind';
 
 export type ViewSpec = {
   /** View right | up | forward as columns, in the camera's right | up | forward basis. */
-  readonly rotation: Mat3;
+  readonly rotation: Readonly<Mat3>;
   /** Eye offset from the camera eye, in the ROTATED view basis. */
   readonly eyeOffsetMpc: Vec3;
   readonly frustum: ViewFrustum;

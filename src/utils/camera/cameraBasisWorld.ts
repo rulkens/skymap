@@ -13,7 +13,7 @@ import { mat3FromColumns } from '../math/mat3FromColumns';
 
 /** `upBasis` absent ⇒ the identity frame, screen-up world +Y (`frameUp`). */
 export function cameraBasisWorld(
-  forward: Vec3,
+  forward: Readonly<Vec3>,
   rollRad: number,
   upBasis: Readonly<Mat3> | undefined,
 ): Mat3 {

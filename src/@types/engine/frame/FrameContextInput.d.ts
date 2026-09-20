@@ -6,7 +6,7 @@
  * `cam` is this `cam`, by reference.
  */
 
-import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { AssembledOrbitCamera } from '../../camera/AssembledOrbitCamera';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 
 export type FrameContextInput = {
@@ -17,7 +17,7 @@ export type FrameContextInput = {
    * `resolveFrameBasis` result) decodes screen-up. The split is what makes an
    * orientation-frame switch roll the horizon instead of sweeping the view.
    */
-  readonly cam: OrbitCamera;
+  readonly cam: AssembledOrbitCamera;
   /**
    * The SAME framed pose `cam`'s pose was folded from (`foldToWorld`, called
    * once by the caller) — it serves the pose-provider seam only (spec §5.2).
@@ -31,12 +31,8 @@ export type FrameContextInput = {
    * taken off a metre-scale probe distance goes hugely negative.
    */
   readonly altitudeMpc: number;
-  /**
-   * Wall-clock ms (fades, ramps) and scene time in Julian days (where the
-   * planets are). The two decouple whenever the clock is paused or scrubbed,
-   * and threading them rather than sampling per consumer is the seam a
-   * frame-by-frame recorder needs to step time deterministically.
-   */
+  /** Wall-clock ms and scene time (Julian days) — decouple under pause/scrub;
+   *  see `ReadyFrameContext.nowMs`/`.simDays` for how each is read. */
   readonly nowMs: number;
   readonly simDays: number;
   /** Galaxy-catalog draw mask (`deriveSourceMasks(state).draw`), this frame. */
