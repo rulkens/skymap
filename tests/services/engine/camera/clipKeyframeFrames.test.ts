@@ -37,9 +37,11 @@ import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { RootState } from '../../../../src/store/types';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
-vi.mock('../../../../src/utils/camera/toBodyFixedChannels', async (importOriginal) => {
+vi.mock('../../../../src/services/engine/camera/toBodyFixedChannels', async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import('../../../../src/services/engine/camera/toBodyFixedChannels')>();
+    await importOriginal<
+      typeof import('../../../../src/services/engine/camera/toBodyFixedChannels')
+    >();
   return { ...actual, toBodyFixedChannels: vi.fn(actual.toBodyFixedChannels) };
 });
 import { toBodyFixedChannels } from '../../../../src/services/engine/camera/toBodyFixedChannels';
