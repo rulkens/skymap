@@ -35,7 +35,7 @@ import {
 } from '../../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
 import { SURFACE_TILE_SHADER_VARIANTS } from '../../../../data/bodies/surfaceTileShaderVariants';
-import { SurfaceTileDrawArgs } from '../../../../@types/rendering/surfaceTileRenderer/SurfaceTileDrawArgs';
+import type { SurfaceTileDrawArgs } from '../../../../@types/rendering/surfaceTileRenderer/SurfaceTileDrawArgs';
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and

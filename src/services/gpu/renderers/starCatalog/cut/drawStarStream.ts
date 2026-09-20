@@ -5,7 +5,7 @@ import { rebaseViewProj } from '../../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../utils/math/narrowMat4';
 import { frustumPlanesFromViewProj } from '../../../../../utils/camera/frustumPlanesFromViewProj';
 import { starCullMargins } from '../../../../../utils/star/starCullMargins';
-import { StarDrawStream } from '../../../../../@types/rendering/starCatalogRenderer/StarDrawStream';
+import type { StarDrawStream } from '../../../../../@types/rendering/starCatalogRenderer/StarDrawStream';
 
 /**
  * Six unit-normalized `(nx, ny, nz, d)` clip planes, rewritten each frame.

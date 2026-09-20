@@ -37,7 +37,7 @@ import {
   STRUCTURE_CATALOG_DATA_PREFIX,
 } from '../../../data/structure/structureCatalogFormat';
 import { HttpError, dataUrl } from '../fetchWithProgress';
-import { StructureMetaEntry } from '../../../@types/loading/structureCatalogPayload/StructureMetaEntry';
+import type { StructureMetaEntry } from '../../../@types/loading/structureCatalogPayload/StructureMetaEntry';
 
 /**
  * Parse `structures_meta.json` content. Throws on a non-array root. Public so it

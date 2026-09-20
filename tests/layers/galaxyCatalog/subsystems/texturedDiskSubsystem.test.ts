@@ -23,8 +23,8 @@ import type { SourceType } from '../../../../src/@types/data/SourceType';
 import type { HiResFamousSubsystem } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import { makeGalaxyCatalog } from '../../../fixtures/makeGalaxyCatalog';
-import { HiResFamousPerGalaxyState } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
-import { HiResFamousFrameOutput } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
+import type { HiResFamousPerGalaxyState } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
+import type { HiResFamousFrameOutput } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
 
 function makeFakeDevice(): GPUDevice {
   const fakeTexture = { createView: () => ({}) as GPUTextureView };

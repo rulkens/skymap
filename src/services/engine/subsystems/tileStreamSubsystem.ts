@@ -18,7 +18,7 @@ import type { TileStreamDeps } from '../../../@types/engine/subsystems/TileStrea
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
-import { TileStreamFetchInput } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamFetchInput';
+import type { TileStreamFetchInput } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamFetchInput';
 
 export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStreamSubsystem<T> {
   const {

@@ -28,7 +28,7 @@
  */
 
 import type { HiResFamousTexture } from '../../../@types/rendering/hiResFamousTexture/HiResFamousTexture';
-import { CreateHiResFamousTextureArgs } from '../../../@types/rendering/hiResFamousTexture/CreateHiResFamousTextureArgs';
+import type { CreateHiResFamousTextureArgs } from '../../../@types/rendering/hiResFamousTexture/CreateHiResFamousTextureArgs';
 
 /**
  * Per-layer bookkeeping. 'recentPx' drives eviction (see module header).

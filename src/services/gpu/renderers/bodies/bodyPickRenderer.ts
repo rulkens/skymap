@@ -86,8 +86,8 @@ import spherePickCode from '../../shaders/bodies/spherePick.wesl?static';
 import starPointPickCode from '../../shaders/bodies/starPointPick.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { writeCameraPrefix } from '../../lib/cameraUniforms';
-import { BodySpherePickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodySpherePickArgs';
-import { BodyPointPickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPickArgs';
+import type { BodySpherePickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodySpherePickArgs';
+import type { BodyPointPickArgs } from '../../../../@types/rendering/bodyPickRenderer/BodyPointPickArgs';
 
 /**
  * `SpherePickUniforms` byte size (spherePick.wesl): mat4x4<f32> (64) +

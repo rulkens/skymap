@@ -67,11 +67,11 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { buildPathTrack } from './buildPathTrack';
-import { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
-import { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
-import { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
-import { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
-import { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
+import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
+import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
+import type { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
+import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 
 // ---------------------------------------------------------------------------
 // Zero pose — used when start is 'live' or absent (placeholder; resolved by

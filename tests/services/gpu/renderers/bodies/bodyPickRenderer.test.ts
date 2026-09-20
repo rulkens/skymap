@@ -21,7 +21,7 @@ import { createBodyPickRenderer } from '../../../../../src/services/gpu/renderer
 import type { BodyGlintPick } from '../../../../../src/@types/rendering/bodyPickRenderer/BodyGlintPick';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { BodyPointPick } from '../../../../../src/@types/rendering/bodyPickRenderer/BodyPointPick';
+import type { BodyPointPick } from '../../../../../src/@types/rendering/bodyPickRenderer/BodyPointPick';
 
 function mockDevice(): GPUDevice {
   return {

@@ -112,9 +112,9 @@ import { foldToWorld } from './rungs/foldToWorld';
 import { rowFor } from './rungs/rowFor';
 import { sameFrame } from './rungs/sameFrame';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
-import { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
-import { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
-import { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
+import type { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
+import type { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.

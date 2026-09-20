@@ -15,10 +15,10 @@ import type { DiskPlannerWalk } from '../../../../src/@types/engine/subsystems/D
 import type { DiskRowVisitor } from '../../../../src/@types/engine/subsystems/DiskRowVisitor';
 import type { ProceduralDiskSubsystem } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
 import type { TexturedDiskSubsystem } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
-import { TexturedDiskFrameInput } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
-import { TexturedDiskFrameOutput } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
-import { ProceduralDiskFrameInput } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
-import { ProceduralDiskFrameOutput } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
+import type { TexturedDiskFrameInput } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
+import type { TexturedDiskFrameOutput } from '../../../../src/@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
+import type { ProceduralDiskFrameInput } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
+import type { ProceduralDiskFrameOutput } from '../../../../src/@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
 
 /** A visitor that ignores every walk callback — the "other slot" in solo runs. */
 export function noopDiskRowVisitor(): DiskRowVisitor {

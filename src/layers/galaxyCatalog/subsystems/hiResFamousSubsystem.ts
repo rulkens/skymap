@@ -41,9 +41,9 @@ import { HI_RES_TRIGGER_PX, HI_RES_FADE_BAND_PX } from '../../../data/galaxyLodB
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { HiResFamousDeps } from '../../../@types/engine/subsystems/HiResFamousDeps';
 import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
-import { HiResFamousFrameInput } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameInput';
-import { HiResFamousPerGalaxyState } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
-import { HiResFamousFrameOutput } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
+import type { HiResFamousFrameInput } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameInput';
+import type { HiResFamousPerGalaxyState } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
+import type { HiResFamousFrameOutput } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousFrameOutput';
 
 /**
  * Upper-bound clamp for the squared-distance early-out, tuned higher

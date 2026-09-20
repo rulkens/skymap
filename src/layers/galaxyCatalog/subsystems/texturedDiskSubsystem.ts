@@ -41,8 +41,8 @@ import {
   FADE_BAND_PX,
   DISK_THRESHOLD_PX,
 } from '../../../data/galaxyLodBands';
-import { TexturedDiskFrameInput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
-import { TexturedDiskFrameOutput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
+import type { TexturedDiskFrameInput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
+import type { TexturedDiskFrameOutput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
 
 /** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;

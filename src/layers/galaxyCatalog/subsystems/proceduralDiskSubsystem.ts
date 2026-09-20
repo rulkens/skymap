@@ -39,8 +39,8 @@ import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tile
 import type { ProceduralDiskInstance } from '../../../@types/rendering/ProceduralDiskInstance';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
-import { ProceduralDiskFrameInput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
-import { ProceduralDiskFrameOutput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
+import type { ProceduralDiskFrameInput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameInput';
+import type { ProceduralDiskFrameOutput } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskFrameOutput';
 
 export type ProceduralDiskDeps = {
   /**

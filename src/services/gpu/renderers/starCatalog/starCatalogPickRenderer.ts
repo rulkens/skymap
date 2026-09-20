@@ -69,7 +69,7 @@ import {
   PICK_PASS_U32_INDEX,
   writeStarNodeParams,
 } from './starCatalogLayout';
-import { StarCatalogPickDrawArgs } from '../../../../@types/rendering/starCatalogPickRenderer/StarCatalogPickDrawArgs';
+import type { StarCatalogPickDrawArgs } from '../../../../@types/rendering/starCatalogPickRenderer/StarCatalogPickDrawArgs';
 
 /**
  * One source's per-source pick buffers: the contiguous NodeParams block and its

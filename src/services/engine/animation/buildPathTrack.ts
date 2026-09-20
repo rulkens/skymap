@@ -86,7 +86,7 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from './pathDefaults';
 import { EASE } from './ease';
-import { PathSample } from '../../../@types/animation/compiledClip/PathSample';
+import type { PathSample } from '../../../@types/animation/compiledClip/PathSample';
 
 /** A waypoint after focus resolution — always concrete (`at` + `distance`). */
 type AtWaypoint = {
