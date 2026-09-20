@@ -48,7 +48,7 @@ import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
 import { createFlowFieldRenderer } from '../../../src/layers/flow/render/flowFieldRenderer';
 import { flowCompute } from '../../../src/layers/flow/computes/flowCompute';
-import type { FlowRuntime } from '../../../src/layers/flow/types/FlowRuntime';
+import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import {
   decodeScalarField,
   SCALAR_FIELD_DATA_PREFIX,

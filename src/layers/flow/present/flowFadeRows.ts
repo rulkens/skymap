@@ -8,7 +8,7 @@
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { FlowRuntime } from '../types/FlowRuntime';
+import type { FlowRuntime } from '../@types/FlowRuntime';
 
 export function flowFadeRows(runtime: FlowRuntime): readonly FadeLayer<unknown>[] {
   return [

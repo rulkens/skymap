@@ -5,7 +5,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { FlowRuntime } from '../types/FlowRuntime';
+import type { FlowRuntime } from '../@types/FlowRuntime';
 import { slotReady } from '../../../services/loading/slotReady';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 

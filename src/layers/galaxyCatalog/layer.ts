@@ -20,7 +20,7 @@ import { galaxyCatalogSelectionRow } from './present/galaxyCatalogSelectionRow';
 import { produceFamousGalaxyLabels } from './present/produceFamousGalaxyLabels';
 import { watchPaletteWakeSaga } from './sagas/watchPaletteWakeSaga';
 import GalaxiesSectionContainer from './ui/GalaxiesSectionContainer';
-import type { GalaxyCatalogFacts } from './types/GalaxyCatalogFacts';
+import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
   name: 'galaxyCatalog',

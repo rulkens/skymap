@@ -7,7 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { flowFieldPass } from '../../../../src/layers/flow/passes/flowFieldPass';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime';
+import type { FlowRuntime } from '../../../../src/layers/flow/@types/FlowRuntime';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Mat4 } from 'wgpu-matrix';

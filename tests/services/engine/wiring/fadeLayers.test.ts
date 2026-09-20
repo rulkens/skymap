@@ -24,7 +24,7 @@ import { FADE_LAYERS, seedFades } from '../../../../src/services/engine/wiring/f
 import { VISIBILITY_ACTION_ROW } from '../../../../src/services/animation/visibilityActionRow';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
 import { zoneOfAvoidanceFadeRows } from '../../../../src/layers/zoneOfAvoidance/present/zoneOfAvoidanceFadeRows';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
 /** The galaxyCatalog Layer's rows are half of the composed manifest; its own suite covers their behaviour. */
 const GALAXY_RUNTIME = {

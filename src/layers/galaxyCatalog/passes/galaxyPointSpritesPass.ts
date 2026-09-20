@@ -8,7 +8,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 import { Source } from '../../../data/sources';
 import { packSelection, SELECTION_NONE_SENTINEL } from '../../../data/selectionEncoding';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';

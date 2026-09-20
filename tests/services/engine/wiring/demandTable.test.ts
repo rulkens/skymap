@@ -66,7 +66,7 @@ import type { EngineSettingsState } from '../../../../src/@types/settings/Engine
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 
 // ── Stub slot factory ────────────────────────────────────────────────────────
 

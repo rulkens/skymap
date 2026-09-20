@@ -6,7 +6,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { LocalBubbleRuntime } from '../types/LocalBubbleRuntime';
+import type { LocalBubbleRuntime } from '../@types/LocalBubbleRuntime';
 
 const DEMAND_DISTANCE_MPC = 0.02; // 20 kpc
 const RELEASE_DISTANCE_MPC = 0.04; // 40 kpc

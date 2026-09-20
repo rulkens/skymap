@@ -11,7 +11,7 @@ import type { PassState } from '../../@types/engine/frame/PassState';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
 import type { LayerFrameVote } from '../../@types/engine/layer/LayerFrameVote';
-import type { GalaxyCatalogRuntime } from './types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
 import { Source } from '../../data/sources';
 import { galaxyCatalogIdOf } from '../../utils/galaxyCatalogIdOf';
