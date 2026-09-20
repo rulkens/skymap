@@ -462,34 +462,6 @@ export const DEFAULT_VOLUMES_ENABLED = true;
  * SettingsPanel slider lets the user tune per field.
  */
 export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
-
-/**
- * Default trim (low-end deadband cutoff) for volume fields that don't
- * specify one.  0 = no trim — the neutral identity.
- */
-export const DEFAULT_VOLUME_FIELD_TRIM = 0.0;
-
-/**
- * Default per-field contrast (gamma-style LUT-coordinate remap around
- * the 0.5 pivot, see `VolumeFieldSettings.contrast` and the
- * scalar-volume fragment shader).  1.0 is identity — the value at
- * which the slider has no effect.  Cubes are encoded for that
- * baseline; the user dials upward to expose structure or downward
- * to flatten.
- */
-export const DEFAULT_VOLUME_FIELD_CONTRAST = 1.0;
-
-/**
- * Neutral-no-tuning default for per-field densityScale.  Every volume
- * carries its own value on its SOURCE_REGISTRY entry; this constant is
- * the safe fallback when something queries before registration.
- *
- * 1.0 corresponds to the shader's identity case: each voxel-step
- * contributes `1 - exp(-sample * step)` to the alpha integral, so the
- * raw cube data drives the overlay's opacity directly.
- */
-export const DEFAULT_VOLUME_FIELD_DENSITY_SCALE = 1.0;
-
 /**
  * Default renderer-wide palette LUT for the scalar-volume overlay.
  * 'viridis' is matplotlib's perceptually-uniform default — neutral
