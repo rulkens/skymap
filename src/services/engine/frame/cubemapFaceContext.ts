@@ -17,42 +17,9 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
-import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
-import { cross3 } from '../../../utils/math/cross3';
+import { FACE_BASES, FACE_FORWARD } from '../../../data/rendering/cubeFaceBases';
 import { multiply3x3 } from '../../../utils/math/multiply3x3';
 import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
-
-/**
- * Forward axis per `CubeFace` (±X/±Y/±Z) and the `texture_cube` convention's
- * per-face up — the ±Y faces borrow world ±Z. The cube-view bind relies on both.
- */
-const FACE_FORWARD: readonly Vec3[] = [
-  [1, 0, 0],
-  [-1, 0, 0],
-  [0, 1, 0],
-  [0, -1, 0],
-  [0, 0, 1],
-  [0, 0, -1],
-];
-const FACE_UP: readonly Vec3[] = [
-  [0, -1, 0],
-  [0, -1, 0],
-  [0, 0, 1],
-  [0, 0, -1],
-  [0, -1, 0],
-  [0, -1, 0],
-];
-
-/**
- * One basis per face, serving as both `poseBasis` and `upBasis` so the two cannot
- * drift. `updatePosition` decodes local +Z through the THIRD column, so that column
- * is `-forward`; `frameUp` reads the MIDDLE for screen-up, so it carries `FACE_UP`.
- */
-const FACE_BASES: readonly Mat3[] = FACE_FORWARD.map((forward, i): Mat3 => {
-  const up = FACE_UP[i]!;
-  const back: Vec3 = [-forward[0], -forward[1], -forward[2]];
-  return mat3FromColumns(cross3(up, back), up, back);
-});
 
 /**
  * Negate a vp's clip-Y row (column-major 1/5/9/13). `FACE_UP` is the GL

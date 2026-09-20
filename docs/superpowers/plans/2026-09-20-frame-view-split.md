@@ -120,10 +120,10 @@ faceViewSpec(face: CubeFace, faceSizePx: number, viewSlotBase: number): ViewSpec
 
 `FACE_VIEW_ROTATIONS[face]` column _j_ is that face's image-plane axis _j_ (right | up | forward, the `FACE_FORWARD`/`FACE_UP` pair today's `FACE_BASES` encodes) expressed in the **capture camera's own** image-plane basis — the capture frame's camera looks along its axes' −Z with +Y up (Task 5). Every entry is 0/±1, so the product with any `axes` in `deriveView` is exact, and the table is `axes`-independent: `faceViewSpec` takes no `axes`.
 
-- [ ] `src/data/rendering/cubeFaceBases.ts` takes `FACE_FORWARD`, `FACE_UP` and `FACE_BASES` verbatim, with their doc comments (`cubemapFaceContext.ts:25-55`). `cubemapFaceContext` keeps only `flipClipY`, so its purity row drops 4 → 1 (the ratchet only shrinks — change the number in the same commit).
-- [ ] Test `every face rotation is a signed permutation`: each `FACE_VIEW_ROTATIONS[face]` has one ±1 per row and per column and zeros elsewhere — the property the exactness claim rests on. (The per-face `vp` equality against pre-split is Task 5's test; don't duplicate it here.)
-- [ ] No test for `mainViewSpec`: `deriveView`'s canvas-identity test (Task 3) is the one that can fail.
-- [ ] Commit.
+- [x] `src/data/rendering/cubeFaceBases.ts` takes `FACE_FORWARD`, `FACE_UP` and `FACE_BASES` verbatim, with their doc comments (`cubemapFaceContext.ts:25-55`). `cubemapFaceContext` keeps only `flipClipY`, so its purity row drops 4 → 1 (the ratchet only shrinks — change the number in the same commit).
+- [x] Test `every face rotation is a signed permutation`: each `FACE_VIEW_ROTATIONS[face]` has one ±1 per row and per column and zeros elsewhere — the property the exactness claim rests on. (The per-face `vp` equality against pre-split is Task 5's test; don't duplicate it here.)
+- [x] No test for `mainViewSpec`: `deriveView`'s canvas-identity test (Task 3) is the one that can fail.
+- [x] Commit. `FACE_VIEW_ROTATIONS` lives beside the tables it derives from (`cubeFaceBases.ts`), not in `faceViewSpec.ts` — a `utils/` file declares its one function.
 
 ### Task 3: Split `deriveFrameContext` / `deriveView`
 
