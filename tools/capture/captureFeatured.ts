@@ -72,9 +72,15 @@ function parseArgs(argv: readonly string[]): CaptureOptions {
  * clusters go on the patch (never a partial `items` row) because the reducer
  * REPLACES each cluster the patch carries rather than deep-merging it.
  */
-function declutterPatch(settings: EngineSettingsState): Partial<SettingsSnapshot> {
+function declutterPatch(
+  settings: EngineSettingsState,
+  hideGalaxyField: boolean,
+): Partial<SettingsSnapshot> {
   const galaxyCatalogs = structuredClone(settings.galaxyCatalogs);
-  for (const item of Object.values(galaxyCatalogs.items)) item.labelEnabled = false;
+  for (const item of Object.values(galaxyCatalogs.items)) {
+    item.labelEnabled = false;
+    if (hideGalaxyField) item.enabled = false;
+  }
 
   const starCatalogs = structuredClone(settings.starCatalogs);
   for (const item of Object.values(starCatalogs.items)) item.labelEnabled = false;
@@ -98,11 +104,11 @@ function declutterPatch(settings: EngineSettingsState): Partial<SettingsSnapshot
   };
 }
 
-async function declutter(page: Page): Promise<void> {
+async function declutter(page: Page, hideGalaxyField: boolean): Promise<void> {
   const settings = await page.evaluate(
     () => (window as unknown as { __skymapPerf: SkymapPerfHook }).__skymapPerf.getState().settings,
   );
-  const patch = declutterPatch(settings);
+  const patch = declutterPatch(settings, hideGalaxyField);
   const mergeAction = mergeSnapshot(patch);
   const passActions = CAPTURE_HIDDEN_PASSES.map((pass) =>
     setPassDisabled({ pass, disabled: true }),
@@ -214,7 +220,7 @@ async function captureCard(
     const url = `${base}/?perf&cinema#focus=${target.focusId}&t=${t}`;
     await bootHookedPage(page, url, '__skymapPerf');
 
-    await declutter(page);
+    await declutter(page, target.capture.hideGalaxyField === true);
     await waitSettled(page, target.cardId);
 
     if (target.capture.pose !== undefined) {

@@ -34,6 +34,29 @@ const VOYAGER1_CAPTURE: PaletteCardCapture = {
 // the site-pose seam, which is deferred.
 const PERSEVERANCE_CAPTURE: PaletteCardCapture = { t: '2026-09-18T06:00:00Z' };
 
+// Both galaxies sit small in the fly-in's default frame (0.15 / 0.323 Mpc) on
+// a busy point cloud: closer in, cloud off. Yaw/pitch are the fly-in's own.
+const MILKY_WAY_CAPTURE: PaletteCardCapture = {
+  keepFocus: true,
+  hideGalaxyField: true,
+  pose: {
+    target: [0, 0, 0],
+    yaw: -2.2209284168162022,
+    pitch: 0.9180546247898071,
+    distance: 0.06,
+  },
+};
+const M31_CAPTURE: PaletteCardCapture = {
+  keepFocus: true,
+  hideGalaxyField: true,
+  pose: {
+    target: [0, 0, 0],
+    yaw: -2.2209262353413513,
+    pitch: 0.9180546455226823,
+    distance: 0.07,
+  },
+};
+
 export const FEATURED_TABS: readonly PaletteTab[] = [
   {
     id: 'highlights',
@@ -101,7 +124,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'Our galaxy, a barred spiral about 100,000 light-years across. The Sun sits some 26,000 light-years from its centre.',
         action: { kind: 'focus', focusId: MILKY_WAY_FOCUS_ID },
-        capture: { keepFocus: true },
+        capture: MILKY_WAY_CAPTURE,
       },
       {
         id: 'm31',
@@ -109,7 +132,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The nearest large spiral galaxy, 2.5 million light-years away and visible to the naked eye on a dark night. It is on course to merge with the Milky Way.',
         action: { kind: 'focus', focusId: 'm31' },
-        capture: { keepFocus: true },
+        capture: M31_CAPTURE,
       },
       {
         id: 'group-local-group',
@@ -326,7 +349,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'Our galaxy, a barred spiral about 100,000 light-years across. The Sun sits some 26,000 light-years from its centre.',
         action: { kind: 'focus', focusId: MILKY_WAY_FOCUS_ID },
-        capture: { keepFocus: true },
+        capture: MILKY_WAY_CAPTURE,
       },
       {
         id: 'body-sgr-a-star',
@@ -410,7 +433,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
           'The nearest large spiral galaxy, 2.5 million light-years away and visible to the naked eye on a dark night. It is on course to merge with the Milky Way.',
         image: '/images/famous/m31.webp',
         action: { kind: 'focus', focusId: 'm31' },
-        capture: { keepFocus: true },
+        capture: M31_CAPTURE,
       },
       {
         id: 'm51',
