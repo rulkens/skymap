@@ -1,21 +1,8 @@
 import type { PaletteTab } from '../../../src/@types/palette/PaletteTab';
-import type { PaletteCard } from '../../../src/@types/palette/PaletteCard';
 import type { PaletteCardCapture } from '../../../src/@types/palette/PaletteCardCapture';
 import type { CaptureTarget } from './CaptureTarget';
-
-// Plain-JSON structural equality (no key-order assumption): a card's
-// `capture` is authored data — numbers, strings, booleans, one Vec3 — never
-// a class instance, so recursing on own keys is exact for this shape.
-function captureEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (typeof a !== 'object' || typeof b !== 'object' || a === null || b === null) return false;
-  const aKeys = Object.keys(a);
-  const bKeys = Object.keys(b);
-  if (aKeys.length !== bKeys.length) return false;
-  return aKeys.every((key) =>
-    captureEqual((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key]),
-  );
-}
+import { captureEqual } from './captureEqual';
+import { isCapturableCopy } from './isCapturableCopy';
 
 /**
  * selectCaptureTargets — which cards `npm run capture-featured` should shoot,
@@ -70,8 +57,4 @@ export function selectCaptureTargets(
     }
   }
   return targets;
-}
-
-function isCapturableCopy(card: PaletteCard): boolean {
-  return card.action.kind === 'focus' && card.image === undefined;
 }
