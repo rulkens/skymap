@@ -1,5 +1,5 @@
 /**
- * captureFeatured — writes one thumbnail per capturable palette card, by mapping
+ * capture — writes one thumbnail per capturable palette card, by mapping
  * each card onto a `SceneShot` and handing it to the generic capturer. This is
  * the only file here that knows what a palette card is.
  */

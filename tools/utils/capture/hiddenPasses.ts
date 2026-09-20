@@ -1,5 +1,5 @@
 /**
- * CAPTURE_HIDDEN_PASSES — the render passes `captureFeatured` hides so a
+ * CAPTURE_HIDDEN_PASSES — the render passes the capture tool hides so a
  * thumbnail shows no selection chrome. Spelled as strings, not imported from
  * `CONTENT_PASSES`: that registry's transitive `.wesl?static` shader imports
  * only resolve under Vite, never `tsx`. A test keeps the names honest.
