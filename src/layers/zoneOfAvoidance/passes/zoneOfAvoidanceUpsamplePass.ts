@@ -5,7 +5,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { ZoneOfAvoidanceRuntime } from '../types/ZoneOfAvoidanceRuntime';
+import type { ZoneOfAvoidanceRuntime } from '../@types/ZoneOfAvoidanceRuntime';
 import { createUpsamplePass } from '../../../services/engine/frame/passes/createUpsamplePass';
 import { deriveZoneOfAvoidanceLiveness } from '../present/deriveZoneOfAvoidanceLiveness';
 

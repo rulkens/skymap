@@ -5,6 +5,16 @@
  * test fails on the row that no longer violates.
  */
 export const TYPE_FILES_PENDING_DTS: ReadonlySet<string> = new Set([
+  'src/layers/filaments/@types/FilamentsRuntime.ts',
+  'src/layers/flow/@types/FlowRuntime.ts',
+  'src/layers/galaxyCatalog/@types/BuildRunner.ts',
+  'src/layers/galaxyCatalog/@types/CatalogDrawEntry.ts',
+  'src/layers/galaxyCatalog/@types/CatalogStore.ts',
+  'src/layers/galaxyCatalog/@types/GalaxyCatalogFacts.ts',
+  'src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime.ts',
+  'src/layers/galaxyCatalog/@types/LoadedSource.ts',
+  'src/layers/localBubble/@types/LocalBubbleRuntime.ts',
+  'src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime.ts',
   'src/@types/animation/Clip.ts',
   'src/@types/animation/ClipId.ts',
   'src/@types/animation/FocusBoundEffect.ts',

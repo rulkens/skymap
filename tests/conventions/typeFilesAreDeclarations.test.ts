@@ -17,10 +17,10 @@ import { walkFiles } from '../helpers/conventions/walkFiles';
 const SKIP_NAMES = new Set(['node_modules']);
 const SKIP_PATHS = new Set(['tools/stars-rs/target', 'tools/vendor-types']);
 
-// `@types/` folders live at different depths per tool (`tools/@types`,
-// `tools/mcpm-workbench/@types`, …), so this walks `tools/` looking for the
-// folder name rather than trusting a fixed depth — a new tool's `@types/`
-// is swept the day it appears.
+// `@types/` folders live at different depths (`src/@types`, each Layer's own
+// `src/layers/<name>/@types`, `tools/@types`, `tools/mcpm-workbench/@types`,
+// …), so this walks looking for the folder name rather than trusting a fixed
+// depth — a new Layer's or tool's `@types/` is swept the day it appears.
 function typesDirsUnder(root: string): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(root, { withFileTypes: true })) {
@@ -33,7 +33,7 @@ function typesDirsUnder(root: string): string[] {
   return out;
 }
 
-const TYPES_DIRS = ['src/@types', ...typesDirsUnder('tools')];
+const TYPES_DIRS = [...typesDirsUnder('src'), ...typesDirsUnder('tools')];
 const files = TYPES_DIRS.flatMap((dir) => walkFiles(dir, ['.ts']));
 expect(files.length).toBeGreaterThan(0);
 

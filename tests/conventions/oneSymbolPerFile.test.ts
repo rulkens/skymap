@@ -1,10 +1,10 @@
 /**
  * oneSymbolPerFile — CLAUDE.md's per-file export shape, enforced structurally:
- * "every file in src/utils/ exports exactly one function" (the `src/@types/`
- * half of this rule is `typeFilesAreDeclarations.test.ts`). A per-file AST
- * convention like this has no compiler check of its own — `tsc` is happy with
- * ten functions in one file — so it needs a sweep, same spirit as
- * forbiddenPaths.test.ts.
+ * "every file in src/utils/ exports exactly one function" (the `@types/`
+ * half of this rule, including each Layer's own and every tool's, is
+ * `typeFilesAreDeclarations.test.ts`). A per-file AST convention like
+ * this has no compiler check of its own — `tsc` is happy with ten functions
+ * in one file — so it needs a sweep, same spirit as forbiddenPaths.test.ts.
  *
  * ### src/utils
  *

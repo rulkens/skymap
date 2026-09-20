@@ -6,7 +6,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { LocalBubbleRuntime } from '../types/LocalBubbleRuntime';
+import type { LocalBubbleRuntime } from '../@types/LocalBubbleRuntime';
 import { localBubbleOpacity } from '../present/localBubbleOpacity';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 

@@ -26,7 +26,7 @@ import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCor
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { ProvenanceCounts } from '../../../../src/@types/engine/ProvenanceCounts';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
-import type { GalaxyCatalogFacts } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogFacts';
+import type { GalaxyCatalogFacts } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogFacts';
 
 /** Only `count` is read by the subscriber and the upload log line. */
 function fakeCloud(count: number): GalaxyCatalog {

@@ -5,7 +5,7 @@
  * otherwise), so a band whose source has holes needs this rather than a sentinel.
  */
 
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 
 export function voidFilledHeightSource(
   primary: HeightSource,

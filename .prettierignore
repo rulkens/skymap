@@ -10,3 +10,12 @@ package-lock.json
 # can corrupt them (mass-format files outside the active worktree's
 # git index, then surface as huge cross-worktree diffs).
 .claude/worktrees
+
+# Prose, historical plans, curated/raw JSON and vendored fixtures gain
+# nothing from prettier and are where most of the repo-wide diff lives.
+docs
+public
+data
+.claude
+.design-sync
+tests/**/fixtures

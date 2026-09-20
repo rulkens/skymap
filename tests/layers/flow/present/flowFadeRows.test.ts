@@ -5,7 +5,7 @@
  */
 import { describe, it, expect } from 'vitest';
 import { flowFadeRows } from '../../../../src/layers/flow/present/flowFadeRows';
-import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime';
+import type { FlowRuntime } from '../../../../src/layers/flow/@types/FlowRuntime';
 
 function makeRuntime(fieldLoaded: boolean): FlowRuntime {
   return { renderer: { fieldLoaded: () => fieldLoaded } } as unknown as FlowRuntime;
