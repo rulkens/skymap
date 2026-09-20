@@ -46,18 +46,19 @@ type FrameSection = { scope: 'once' | 'perView'; steps: readonly FrameStepSpec[]
 
 // @types/engine/frame/ViewRig.d.ts
 type ViewRig = {
-  views: (main: ReadyFrameContext, state: EngineState) => readonly ReadyFrameContext[];
+  /** The rig's views off the frame's canvas view; mono returns `[canvas]`. */
+  views: (canvas: FrameView, state: EngineState) => readonly FrameView[];
   program: readonly FrameSection[];
 };
 ```
 
-- `deriveViewContext(state, main, spec): ReadyFrameContext` builds a whole
-  per-view context (vp, slabs, `drawPxPerRad`, `canvasSize`, body-frustum
-  gate, star partition) from the frame's one camera pose **and arm** plus the
-  spec, so a surface camera keeps its metre-native body path in every view.
-  Sky/probe captures stay on `cubemapFaceContext`: they have their own eye,
-  absolute or host axes and near plane, not a camera-relative view (plan-time
-  amendment 2026-09-19).
+- `deriveView(frame, spec): FrameView` builds one view (vp, slabs,
+  `drawPxPerRad`, `canvasSize`, body-frustum gate, star partition) from the
+  frame's one camera pose **and arm** plus the spec, so a surface camera keeps
+  its metre-native body path in every view (P6; was `deriveViewContext`).
+  Sky/probe captures build their own frame on `cubemapFaceContext` — own eye,
+  absolute or host axes and near plane — then six face views through the same
+  `deriveView` (plan-time amendment 2026-09-19, reshaped by P6).
 - The three perspective sites (`computeViewProj`, `computeForegroundViewProj`,
   `deriveSlabs`) build from a `ViewFrustum` instead of fov/aspect; `pxPerRad =
 height / (tanUp − tanDown)`. The camera's own `CameraProjection` stays the
@@ -164,11 +165,28 @@ keys.
 - **P4** `ReadyFrameContext.viewKind` replaces `viewSlot !== 0`.
 - **P5** Photometry by `pxPerRad` (WGSL only; a TS twin would only restate the formula).
 
-**Kept deliberately:** one `ReadyFrameContext` per view rather than a
-frame-pose / view-context split (greenfield's shape). A per-view context
-already makes every ctx-keyed cache per-view; the split would rename every
-`ctx.vp`/`slabs`/`drawCamPos` reader for no dome gain. Backlog
-_frame-view-record_ stays open for it.
+- **P6** (added 2026-09-20 after P1–P5 landed) Frame / view split — the
+  greenfield shape P2 had deferred. `deriveFrameContext(state, camera, clock)`
+  derives the frame (orbit camera, arm, body states, un-turned pose provider,
+  clock, targets, the one `renderedTargets` set, `runFrame`'s stamps);
+  `deriveView(frame, spec: ViewSpec)` derives one `FrameView` (turned `cam`,
+  `vp`, `slabs`, turned `bodyPose`, `canvasSize`, `drawCamPos`, `drawPxPerRad`,
+  `fovYRad`, `viewSlot`, `viewKind`, `output?`, its own `renderedTargets`)
+  holding the frame context by reference as `snapshot` (not `frame`: that
+  word is a rung tag and a coordinate frame elsewhere). `mainViewSpec` is
+  the canvas view; a capture derives its frame once and six face views.
+  `RenderFrameInput` is `{ canvas, views }` — the frame's own swap-chain
+  view for `once` sections, the rig's views for `perView`. Passes take a
+  `FrameView`; frame fields read `ctx.snapshot.x`.
+  Plan: `docs/superpowers/plans/2026-09-20-frame-view-split.md`.
+
+**Reversed 2026-09-20:** P2 kept one `ReadyFrameContext` per view to avoid
+renaming every `ctx.vp`/`slabs`/`drawCamPos` reader. Executed, that shape cost
+an optional `view?` parameter with five `view === undefined` branches, a
+re-pack round trip in `deriveViewContext`, captures re-deriving the frame six
+times and a per-view `renderedTargets` fold in `renderFrame` — P6 pays the
+rename instead (view fields keep `ctx.x`; only frame fields move). Backlog
+_frame-view-record_ is consumed by it.
 
 ## Risks and eye-checks
 
