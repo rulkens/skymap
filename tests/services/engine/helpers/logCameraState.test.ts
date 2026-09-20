@@ -1,16 +1,15 @@
 /**
- * logCameraState — verifies the `l`-key dump stays lossless and reports what
- * it's handed. The caller (engine.ts / makeReconcileEffects.ts) is now
- * responsible for assembling the LIVE camera/focus/simDays; this module just
- * trusts and serialises them, so these tests feed it synthetic live-looking
- * values rather than any stale `state.cam`/`SelectionRow` register.
+ * logCameraState — verifies the `l`-key dump reports what it's handed, and
+ * that `out.framed` is the exact round-trip key (the `target`/`yaw`/`pitch`/
+ * `distanceMpc` rows drop `roll` and are lossy in the surface regime, kept
+ * only for reading). The caller assembles the LIVE camera/focus/simDays, so
+ * these tests feed synthetic live-looking values, not a stale register.
  *
- * The lossless-round-trip regression this guards: the previous implementation
- * ran `distance`/`target` through `toPrecision(8)` and `yaw`/`pitch`/`fovYRad`
- * through `toFixed(4)`, which rounds away exactly the sub-radian pitch
- * difference that separates a grazing surface-tile view from a clean one.
- * `JSON.parse` round-tripping the logged blob back to the input numbers is the
- * property that catches a reintroduced `toFixed`/`toPrecision` call.
+ * The full-f64-precision regression this also guards: the previous
+ * implementation ran `distance`/`target` through `toPrecision(8)` and
+ * `yaw`/`pitch`/`fovYRad` through `toFixed(4)`, rounding away exactly the
+ * sub-radian pitch difference between a grazing surface-tile view and a clean
+ * one; `JSON.parse` round-tripping the reading rows catches a reintroduced call.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
@@ -174,6 +173,7 @@ describe('logCameraState', () => {
     // Metres, at full precision: the 50 m standoff must survive the print.
     expect(out.bodyArmMetres.eyeRelAnchorM).toEqual([0, 0, EARTH_RADIUS_M + 50]);
     expect(out.bodyArmMetres.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);
+    expect(out.framed).toEqual(bodyArm);
 
     // Untagged input (and every world-arm frame) reads as absolute.
     logSpy.mockClear();
@@ -181,6 +181,7 @@ describe('logCameraState', () => {
     const [, world] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(world).frame).toBe('absolute');
     expect(JSON.parse(world).bodyArmMetres).toBeNull();
+    expect(JSON.parse(world).framed).toBeNull();
   });
 
   it('names the frame and derives eye height in a site arm', () => {
