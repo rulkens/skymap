@@ -6,14 +6,8 @@
  * what `T` is — see `TileStreamDeps<T>` for the payload-specific seam.
  */
 
-import type { Destroyable } from '../../rendering/Destroyable';
-
-export type TileStreamFetchInput<T> = {
-  readonly key: string;
-  readonly priority: number;
-  readonly fetcher: () => Promise<T | null>;
-  readonly onResult: (payload: T | null) => void;
-};
+import type { Destroyable } from '../../../rendering/Destroyable';
+import type { TileStreamFetchInput } from './TileStreamFetchInput';
 
 export type TileStreamSubsystem<T> = Destroyable & {
   /**

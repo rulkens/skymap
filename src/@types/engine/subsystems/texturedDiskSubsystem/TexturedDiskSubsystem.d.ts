@@ -14,36 +14,11 @@
  * slot is recycled.
  */
 
-import type { Destroyable } from '../../rendering/Destroyable';
-import type { DiskInstance } from '../../rendering/DiskInstance';
-import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
-import type { DiskRowVisitor } from './DiskRowVisitor';
-import type { DiskWalkInput } from './DiskWalkInput';
-import type { HiResFamousSubsystem } from './HiResFamousSubsystem';
-
-/**
- * The textured body IS the one with extras beyond the geometry-bearing walk
- * input: the per-row famous calibration lookup (`famousGalaxiesMeta`) and the stamped
- * frame clock (`nowMs`). Everything the shared walk actually reads lives in
- * `DiskWalkInput`; this type intersects those extras onto it so the walk never
- * sees fields it doesn't use.
- */
-export type TexturedDiskFrameInput = DiskWalkInput & {
-  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
-  /**
-   * The frame's stamped clock (`ctx.nowMs`). Drives the load-fade ramp and
-   * the arrival timestamps, so crossfade alphas are a pure function of
-   * stamped time — deterministic under a stepped recorder clock — instead
-   * of sampling `performance.now()` inside the planner.
-   */
-  readonly nowMs: number;
-};
-
-export type TexturedDiskFrameOutput = {
-  /** LOD-2 — galaxies with finite orientation, sorted back-to-front. */
-  readonly disks: readonly DiskInstance[];
-};
-
+import type { Destroyable } from '../../../rendering/Destroyable';
+import type { DiskRowVisitor } from '../DiskRowVisitor';
+import type { HiResFamousSubsystem } from '../hiResFamousSubsystem/HiResFamousSubsystem';
+import type { TexturedDiskFrameInput } from './TexturedDiskFrameInput';
+import type { TexturedDiskFrameOutput } from './TexturedDiskFrameOutput';
 export type TexturedDiskSubsystem = Destroyable & {
   /**
    * Start a frame: returns the `DiskRowVisitor` the shared walk drives for
@@ -93,16 +68,4 @@ export type TexturedDiskSubsystem = Destroyable & {
    * installed.
    */
   setHiResFamous(hiResFamous: HiResFamousSubsystem | undefined): void;
-};
-
-/**
- * Test/inspection seam — `__testGetState` lets the planner's
- * bookkeeping be asserted from tests.
- */
-export type TexturedDiskTestState = {
-  readonly bitmapReadyTime: ReadonlyMap<string, number>;
-};
-
-export type TexturedDiskSubsystemWithTestSeam = TexturedDiskSubsystem & {
-  __testGetState(): TexturedDiskTestState;
 };

@@ -22,36 +22,9 @@
  * `full.webp`, tier-change rebuilds).
  */
 
-import type { Destroyable } from '../../rendering/Destroyable';
-import type { GalaxyCatalog } from '../../data/galaxyCatalog/GalaxyCatalog';
-import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { FamousGalaxyMetaEntry } from '../../loading/FamousGalaxyMetaEntry';
-import type { SourceType } from '../../data/SourceType';
-
-export type HiResFamousFrameInput = {
-  readonly cam: OrbitCamera;
-  readonly catalogs: ReadonlyMap<SourceType, GalaxyCatalog>;
-  readonly visibleSourceMask: number;
-  readonly pxPerRad: number;
-  readonly famousGalaxiesMeta: readonly FamousGalaxyMetaEntry[];
-};
-
-export type HiResFamousPerGalaxyState = {
-  /** Layer index in the hi-res `texture_2d_array`, or -1 if no slot is allocated. */
-  readonly hiResLayerIdx: number;
-  /** Smoothstep alpha in [0, 1] across the 200 → 260 px crossfade band. */
-  readonly hiResCrossfadeAlpha: number;
-};
-
-export type HiResFamousFrameOutput = {
-  /**
-   * Per-Famous-source local index → state.  Missing keys default to
-   * `{ hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 }` at the consumer
-   * (so galaxies under the gate, mid-fetch, or without a curated
-   * `full.webp` simply fall through to atlas-tile-only rendering).
-   */
-  readonly byFamousIdx: ReadonlyMap<number, HiResFamousPerGalaxyState>;
-};
+import type { Destroyable } from '../../../rendering/Destroyable';
+import type { HiResFamousFrameInput } from './HiResFamousFrameInput';
+import type { HiResFamousFrameOutput } from './HiResFamousFrameOutput';
 
 export type HiResFamousSubsystem = Destroyable & {
   /**

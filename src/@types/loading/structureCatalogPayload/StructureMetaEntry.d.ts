@@ -1,5 +1,3 @@
-import type { StructureCatalog } from '../data/structure/StructureCatalog';
-
 /**
  * One entry of the `structures_meta.json` sidecar — the string/identity fields
  * that the numeric `.ccat` deliberately omits.  Position in the meta array
@@ -22,15 +20,4 @@ export type StructureMetaEntry = {
   abell: string | null;
   /** One-liner shown in the structure info panel. */
   description: string;
-};
-
-/**
- * The decoded structure-catalog asset: the numeric `.ccat` catalog paired with
- * its string sidecar.  The two are built in lock-step and index-parallel —
- * `catalog.count === meta.length` is an invariant the fetcher enforces — so a
- * later merge step can attach names + descriptions to each record by localIdx.
- */
-export type StructureCatalogPayload = {
-  catalog: StructureCatalog;
-  meta: readonly StructureMetaEntry[];
 };

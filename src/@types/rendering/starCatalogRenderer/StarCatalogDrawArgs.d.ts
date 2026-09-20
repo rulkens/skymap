@@ -1,56 +1,13 @@
-/**
- * StarCatalogRenderer — handle for the survey (Gaia bin) stars drawn as
- * additive point sprites into the depthless HDR accumulation.
- *
- * This is the wide-field twin of `StarPointRenderer`: where that renderer
- * draws a handful of hand-seeded neighbourhood stars from a flat instance
- * buffer, this one draws millions of catalogued stars streamed from disk as
- * an in-file octree of cell-quantized 6-byte records. The octree lets the
- * renderer draw a flux mip — near cells refined to their real leaf stars,
- * far/sub-pixel subtrees collapsed to one aggregate record — so the drawn
- * instance count stays inside a per-frame budget regardless of catalog size.
- *
- * ### The upload / draw split (mirrors `catalogStore`)
- *
- * A catalog's record blob is a static, per-source GPU resource: uploaded
- * once, keyed by source code, kept for the session. The per-frame cut over
- * the octree is a different concern — it changes every frame as the camera
- * moves, and it is computed CPU-side by `walkStarOctreeCut` (in the layer,
- * not here). So `upload` commits the records buffer once, `loadedCatalogs`
- * exposes every committed catalog so the layer can walk each octree per
- * frame, and `draw` renders one source's freshly-walked cut. This is the
- * same storage-vs-frame seam `catalogStore` draws for the galaxy points.
- *
- * ### Precision — camera-relative node origins, then f32 narrowing
- *
- * Each drawn node's box origin arrives already rebased into the
- * camera-relative frame in float64 (`starNodeOriginRelCamMpc`), paired with
- * a rebased view-projection, exactly as `StarPointRenderer` receives its
- * anchors. The renderer narrows those small camera-relative values into the
- * per-node uniform with no catastrophic cancellation; the vertex stage
- * reconstructs each record's position from the node origin + the record's
- * in-cell offset. This renderer stays a dumb pipeline: the f64 seam lives in
- * the layer.
- */
-
-import type { Renderer } from './Renderer';
-import type { Vec2 } from '../math/Vec2';
-import type { SourceType } from '../data/SourceType';
-import type { StarCatalog } from '../data/starCatalog/StarCatalog';
+import type { Vec2 } from '../../math/Vec2';
+import type { SourceType } from '../../data/SourceType';
+import type { StarDrawStream } from './StarDrawStream';
 
 /**
- * Which of the two star draw streams a `draw` call records. The survey stars
- * split at the octree cut: `'leaf'` nodes (childless, real point-source stars)
- * draw full-resolution into the HDR target with the per-fragment hue-preserving
- * knee; `'aggregate'` nodes (interior flux-mip glows) draw LINEAR into the
- * half-res `star-aggregates` offscreen, whose upsample composite applies the
- * knee to the summed field. The renderer keeps a DEDICATED per-source buffer
- * pair per stream (never one shared pair) so the two draws — encoded into
- * different passes in the same frame — cannot clobber each other's data before
- * submit (the writeBuffer/submit ordering landmine).
+ * Everything one `StarCatalogRenderer.draw` call needs for a single source's
+ * per-frame octree cut. Every per-node field is a flat typed array indexed by
+ * node, not an object array — the cut REUSES grow-only buffers, so `.length`
+ * is capacity and only `[0, drawCount)` is live. See `StarCatalogRenderer`.
  */
-export type StarDrawStream = 'aggregate' | 'leaf';
-
 export type StarCatalogDrawArgs = {
   /** Which loaded catalog's records buffer to bind. */
   readonly source: SourceType;
@@ -206,62 +163,4 @@ export type StarCatalogDrawArgs = {
    * `createViewSlotUniformRing`'s doc for the race this closes).
    */
   readonly viewSlot: number;
-};
-
-/**
- * The GPU resources the sibling `starCatalogPickRenderer` must SHARE with the
- * visual star renderer so its own r32uint pick pipeline stays bind-group
- * compatible — the star analogue of the galaxy points pipeline handing its
- * canonical `sourceBgl` to the point `GalaxyPickRenderer`.
- *
- * Two things are shared:
- *
- *   - **The three explicit bind-group layouts** (`cameraBgl` @group(0),
- *     `drawBgl` @group(1), `recordsBgl` @group(2)). The pick renderer builds its
- *     OWN pick pipeline layout from these exact objects, so its pipeline is
- *     group-equivalent to the visual one and the shared records bind group (built
- *     against `recordsBgl`) is valid on it. The pick renderer also builds its own
- *     @group(0)/@group(1) bind groups — over its OWN uniform/params buffers, so
- *     the writeBuffer/submit ordering trap can never let a pick draw scribble on
- *     the visual buffers — against these same layouts.
- *   - **A per-source records bind group lookup.** The record blob is a static
- *     per-source resource the visual renderer uploads ONCE (`upload`); the pick
- *     draw binds it verbatim rather than re-uploading, so the two pipelines pull
- *     the identical record bytes. The lookup is a live function (a tier swap
- *     unloads/reloads a source), returning `null` when the source has no catalog.
- */
-export type StarCatalogPickResources = {
-  readonly cameraBgl: GPUBindGroupLayout;
-  readonly drawBgl: GPUBindGroupLayout;
-  readonly recordsBgl: GPUBindGroupLayout;
-  /** The @group(2) records bind group for `source`, or `null` if not loaded. */
-  recordsBindGroup(source: SourceType): GPUBindGroup | null;
-};
-
-export type StarCatalogRenderer = Renderer & {
-  /**
-   * Commit one catalog's records to a per-source GPU storage buffer (once),
-   * keyed by source code, and keep its octree CPU-side for the layer to walk.
-   * Replaces any previous upload for the same source.
-   */
-  upload(source: SourceType, catalog: StarCatalog): void;
-  /**
-   * Every committed catalog, so the layer can walk each octree per frame —
-   * the star-renderer analogue of `catalogStore.entries()`.
-   */
-  loadedCatalogs(): Iterable<{ source: SourceType; catalog: StarCatalog }>;
-  /**
-   * Draw one source's per-frame cut: one instanced billboard draw over the
-   * `drawCount` walked nodes in the flat per-node arrays. No-op if the source has
-   * no committed catalog or the cut is empty. The layer gates visibility/opacity
-   * before calling — an additive pass drawing nothing is correctly invisible.
-   */
-  draw(pass: GPURenderPassEncoder, args: StarCatalogDrawArgs): void;
-  /**
-   * Expose the resources the sibling `starCatalogPickRenderer` shares to stay
-   * bind-group compatible: the three explicit BGLs plus a per-source records
-   * bind group lookup. See {@link StarCatalogPickResources}. A pure accessor
-   * over already-constructed resources — no per-frame cost.
-   */
-  pickResources(): StarCatalogPickResources;
 };
