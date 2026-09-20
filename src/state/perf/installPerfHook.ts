@@ -51,10 +51,6 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
 async function setPose(store: AppStore, pose: PerfPose): Promise<void> {
   if (pose.clearFocus === true) {
     store.dispatch(clearSelection());
-    // Let one frame elapse first: the deactivating follow driver's commit-on-edge
-    // bake writes its stale last pose into `camera.base` on the next produce, and
-    // must land BEFORE the commit below or it overwrites this pose's target.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   }
   store.dispatch(cancelCameraTween());
   store.dispatch(
