@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import type { HeightSource } from '../../../tools/textures/HeightSource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
 import { bakeHeightLevel } from '../../../tools/textures/bakeHeightLevel';
 import { HEIGHT_POSTS_PER_TILE } from '../../../src/data/scene/heightTileFormat';
 import { codeHeightM } from '../../../src/utils/surfaceTiles/codeHeightM';

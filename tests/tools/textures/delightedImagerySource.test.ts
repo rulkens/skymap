@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import type { ColourGrade } from '../../../src/@types/scene/ColourGrade';
-import type { AlbedoDelight } from '../../../tools/textures/AlbedoDelight';
+import type { AlbedoDelight } from '../../../tools/textures/@types/AlbedoDelight';
 import { constantHeightSource } from '../../../tools/textures/constantHeightSource';
 import { delightedImagerySource } from '../../../tools/textures/delightedImagerySource';
-import type { HeightSource } from '../../../tools/textures/HeightSource';
-import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import type { HeightSource } from '../../../tools/textures/@types/HeightSource';
+import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
 import { heightLatticeStepDeg } from '../../../tools/utils/textures/heightLatticeStepDeg';
 
 const IDENTITY_GRADE: ColourGrade = {

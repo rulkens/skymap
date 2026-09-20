@@ -22,7 +22,7 @@ import { join } from 'node:path';
 import { rotatedExtract, type RotatedCrop } from '../famous-curator/plugin/cropExtract.ts';
 import { runStarnet, type StarnetConfig } from '../famous-curator/plugin/starnet.ts';
 import { applyLuminanceAsAlpha } from '../utils/image/applyLuminanceAsAlpha.ts';
-import type { LuminanceAsAlphaOptions } from '../utils/image/LuminanceAsAlphaOptions';
+import type { LuminanceAsAlphaOptions } from '../@types/image/LuminanceAsAlphaOptions';
 
 // StarNet working size, applied to the SHORTER edge (fit: 'outside').  A
 // foreshortened crop (e.g. an edge-on disk at b/a≈0.4 → ~2.5:1) must still

@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import type { HeightTile } from '../../../textures/HeightTile';
+import type { HeightTile } from '../../../textures/@types/HeightTile';
 import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';
 import { surfaceTilePath } from '../../../../src/utils/surfaceTiles/surfaceTilePath';
 import { readHeightTileFile } from '../readHeightTileFile';

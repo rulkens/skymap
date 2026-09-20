@@ -1,4 +1,4 @@
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 /** An equirectangular GeoTIFF on a sphere, as `geoTiffHeightSource` and
  *  `geoTiffImagerySource` need it: `bounds` are the raster's OUTER pixel

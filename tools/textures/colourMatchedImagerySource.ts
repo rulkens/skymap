@@ -13,11 +13,11 @@ import sharp from 'sharp';
 
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { SURFACE_TILE_PX } from '../../src/data/bodies/surfaceTileParams';
-import type { GreyRaster } from '../utils/image/GreyRaster';
+import type { GreyRaster } from '../@types/image/GreyRaster';
 import { surfaceTileBounds } from '../utils/scene/surfaceTileBounds';
 import { surfaceTileIndicesForBounds } from '../utils/scene/surfaceTileIndicesForBounds';
-import type { TileIndexRect } from '../utils/scene/TileIndexRect';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { TileIndexRect } from '../@types/scene/TileIndexRect';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { colourOffsetFields } from './colourOffsetFields';
 
 /** Canvas-space offset fields for one contiguous group of `primary`'s coverage,

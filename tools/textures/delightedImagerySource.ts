@@ -16,9 +16,9 @@ import type { ColourGrade } from '../../src/@types/scene/ColourGrade';
 import { MARS_IAU_SPHERE_RADIUS_M } from '../../src/data/bodies/marsSurfaceParams';
 import { gradeRgbaInPlace } from '../utils/image/gradeRgbaInPlace';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
-import type { AlbedoDelight } from './AlbedoDelight';
-import type { HeightSource } from './HeightSource';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { AlbedoDelight } from './@types/AlbedoDelight';
+import type { HeightSource } from './@types/HeightSource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 
 /** The coarse field's level: fine enough to resolve MOLA's own relief, coarse
  *  enough that a whole-globe field is a few million cells, not billions. */

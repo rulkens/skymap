@@ -1,4 +1,4 @@
-import type { GroundSample } from '../../../textures/GroundSample';
+import type { GroundSample } from '../../../textures/@types/GroundSample';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 /**
