@@ -1,6 +1,6 @@
 /**
- * The knobs a curator actually tunes: how big a shot is and how hard it is
- * compressed. Timeouts stay private to the step that waits — nobody tunes those.
+ * The knobs a shot is taken with: how big it is rendered, how hard it is
+ * compressed, and how long the scene is given to settle between steps.
  */
 
 /** Rendered square; big enough that the downscale hides aliasing. */
@@ -15,3 +15,6 @@ export const WEBP_QUALITY = 82;
 
 /** Past this, a shot is probably framed on noise rather than on its subject. */
 export const WARN_BYTES = 40 * 1024;
+
+/** Clearing the focus re-settles the camera; this is that settle. */
+export const POST_ESC_WAIT_MS = 1500;

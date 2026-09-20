@@ -11,28 +11,12 @@ import { waitSettled } from '../browser/waitSettled';
 import { applyPose } from '../browser/applyPose';
 import { readLiveCameraState } from '../browser/readLiveCameraState';
 import { declutterActions } from './declutterActions';
-import { bodyPhasePose } from './bodyPhasePose';
 import { poseMismatch } from './poseMismatch';
+import { shotPose } from './shotPose';
 import { writeThumbnail } from './writeThumbnail';
-import { VIEWPORT } from './shotDefaults';
-import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import { POST_ESC_WAIT_MS, VIEWPORT } from './shotDefaults';
 import type { SceneShot } from './SceneShot';
 import type { ShotOutcome } from './ShotOutcome';
-
-/** Clearing the focus re-settles the camera; this is that settle. */
-const POST_ESC_WAIT_MS = 1500;
-// A phase pose frames the body from its angular size, so it must assume the
-// same field of view the capture runs at — the app's default, never touched here.
-const DEFAULT_FOV_Y_RAD = (DEFAULT_FOV_DEG * Math.PI) / 180;
-
-function poseFor(shot: SceneShot): CameraPose | undefined {
-  if (shot.pose !== undefined && shot.phaseDeg !== undefined) {
-    throw new Error(`'${shot.label}' sets both 'pose' and 'phaseDeg' — phaseDeg computes one`);
-  }
-  if (shot.phaseDeg === undefined) return shot.pose;
-  return bodyPhasePose(shot.focusId, shot.t, shot.phaseDeg, DEFAULT_FOV_Y_RAD);
-}
 
 export async function captureScene(
   browser: Browser,
@@ -43,7 +27,7 @@ export async function captureScene(
   const page = await context.newPage();
   const pageErrors = collectPageErrors(page);
   try {
-    const pose = poseFor(shot);
+    const pose = shotPose(shot);
     await bootHookedPage(
       page,
       `${base}/?perf&cinema#focus=${shot.focusId}&t=${shot.t}`,
