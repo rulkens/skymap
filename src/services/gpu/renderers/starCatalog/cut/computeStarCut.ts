@@ -1,6 +1,6 @@
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { PassState } from '../../../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../@types/engine/frame/FrameView';
 import type { PreparedStarSource } from '../../../../../@types/rendering/PreparedStarSource';
 import type { PreparedStarCut } from '../../../../../@types/rendering/PreparedStarCut';
 import { NEAR0 } from '../../../../engine/frame/slabs';
@@ -51,22 +51,22 @@ import { pushStarNode } from './starNodeStream';
  * wake vote (`runFrame`'s `shouldKeepTicking`) — this function only surfaces
  * the flag, never fires a wake itself.
  *
- * A sky-cubemap capture face (`ctx.viewKind === 'capture'`) shares no temporal
+ * A sky-cubemap capture face (`view.viewKind === 'capture'`) shares no temporal
  * state with the main view's fade: every one of its cut nodes draws at opacity
  * 1, and `anyNodeFading` is left untouched.
  */
 export function computeStarCut(
   state: PassState,
-  ctx: ReadyFrameContext,
-  views: readonly ReadyFrameContext[],
+  view: FrameView,
+  views: readonly FrameView[],
   advanceFades: boolean,
 ): PreparedStarCut | null {
   const renderer = state.gpu.starCatalogRenderer;
   if (renderer === null) return null;
   if (!state.settings.starCatalogs.enabled) return null;
 
-  // `ctx.drawCamPos` equals the NEAR0 view origin.
-  const camPos: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
+  // `view.drawCamPos` equals the NEAR0 view origin.
+  const camPos: Vec3 = [view.drawCamPos[0], view.drawCamPos[1], view.drawCamPos[2]];
   const camPosPc: Vec3 = [
     camPos[0] * SCALE_UNITS.MPC_TO_PC,
     camPos[1] * SCALE_UNITS.MPC_TO_PC,
@@ -74,7 +74,7 @@ export function computeStarCut(
   ];
   const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
 
-  const nowMs = ctx.nowMs;
+  const nowMs = view.snapshot.nowMs;
   const sizePx = state.settings.starCatalogs.sizePx;
 
   // DISPLAY exposure (see `starExposureRamp`), on the same `camDistPc` the
@@ -101,12 +101,12 @@ export function computeStarCut(
   // The widest view drives the angular slack (see `buildStarCutFrustum`).
   let canvasHeightPx = 1;
   let fovYRad = 0;
-  if (views.every((view) => view.slabs?.[NEAR0] !== undefined)) {
-    for (const view of views) {
-      rebasedVps.push(narrowMat4(rebaseViewProj(view.slabs[NEAR0]!.vp, camPos)));
-      if (view.fovYRad / view.canvasSize.height > fovYRad / canvasHeightPx) {
-        fovYRad = view.fovYRad;
-        canvasHeightPx = view.canvasSize.height;
+  if (views.every((rigView) => rigView.slabs?.[NEAR0] !== undefined)) {
+    for (const rigView of views) {
+      rebasedVps.push(narrowMat4(rebaseViewProj(rigView.slabs[NEAR0]!.vp, camPos)));
+      if (rigView.fovYRad / rigView.canvasSize.height > fovYRad / canvasHeightPx) {
+        fovYRad = rigView.fovYRad;
+        canvasHeightPx = rigView.canvasSize.height;
       }
     }
   }
@@ -133,7 +133,7 @@ export function computeStarCut(
 
     // Reuse this catalog's persistent stream pair rather than allocating
     // fresh arrays every frame (see `starNodeStream`).
-    const { leaf, aggregate } = streamsFor(catalog, ctx.viewSlot);
+    const { leaf, aggregate } = streamsFor(catalog, view.viewSlot);
     leaf.count = 0;
     aggregate.count = 0;
 
@@ -170,7 +170,7 @@ export function computeStarCut(
 
     // A capture view shares no temporal state with the main view's fade (see
     // the header).
-    if (ctx.viewKind === 'capture') {
+    if (view.viewKind === 'capture') {
       for (let i = 0; i < cut.count; i++) emitNode(cut.nodeIndex[i]!, 1);
       sources.push({ source, leaf, aggregate });
       continue;

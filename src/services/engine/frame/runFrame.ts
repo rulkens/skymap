@@ -342,7 +342,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //      `shouldKeepTicking` decides.
   // `advanceStarCut` is a no-op returning null when the star pass isn't live
   // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  const starCut = advanceStarCut(state, canvas, views);
+  // `views[0]` is `canvas` itself (mono; every rig's views are derived off it),
+  // so the walk's origin is the canvas view with no separate argument needed.
+  const starCut = advanceStarCut(state, views);
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {

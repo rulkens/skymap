@@ -254,9 +254,11 @@ starCutOncePerCtx(views: readonly FrameView[], compute: () => PreparedStarCut | 
 computeStarCut(state, view: FrameView, views: readonly FrameView[], advanceFades: boolean)
 ```
 
-- [ ] The memo keyed on `views[0]` stays as is; only the key type changes. Update `starCutOncePerCtx`'s docblock: `deriveView` mints the per-view key now, and "`views[0]` is the main view" becomes "`views[0]` is the canvas view the walk's origin comes from".
-- [ ] No new test: the registration change is type-level and the existing `readStarCut`/`starCatalogPass` cases already pin "advance runs once" and the origin rebase.
-- [ ] `npm test -- starCut starCatalogPass starAggregatesPass` green. Commit.
+- [x] The memo keyed on `views[0]` stays as is; only the key type changes. Update `starCutOncePerCtx`'s docblock: `deriveView` mints the per-view key now, and "`views[0]` is the main view" becomes "`views[0]` is the canvas view the walk's origin comes from".
+- [x] No new test: the registration change is type-level and the existing `readStarCut`/`starCatalogPass` cases already pin "advance runs once" and the origin rebase.
+- [x] `npm test -- starCut starCatalogPass starAggregatesPass` green. Commit.
+
+Deviation (group B2): `starCatalogPass.ts` and `starAggregatesPass.ts` needed no code change — their `readStarCut(state, ctx)` call sites are unaffected by the signature moves (the object flowing through is already a `FrameView` at runtime since Task 3). `starPointsPass.ts` needed no change either: it never calls any star-cut function (`advanceStarCut`/`readStarCut`/`computeStarCut`), and every `ctx.x` it reads (`cam`, `drawCamPos`, `canvasSize`, `fovYRad`, `viewSlot`) is a view field already — nothing there is frame-owned. `computeStarCut`'s second param is renamed `ctx` → `view` per the contract's literal signature; its inner `for (const view of views)` loop (Task 3's code) is renamed to `rigView` to avoid shadowing the new outer `view` parameter. Test fixtures for `starAggregatesPass.test.ts` keep `renderTargets` both flat and under `snapshot`, same temporary compatibility duplication as T6 (`starAggregatesPass.ts` itself is unswept until Task 8).
 
 ### Task 8: The sweep — `ReadyFrameContext` → `FrameView`, `ctx.x` → `ctx.snapshot.x`
 

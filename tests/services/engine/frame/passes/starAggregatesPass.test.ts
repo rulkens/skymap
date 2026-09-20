@@ -15,7 +15,7 @@ import { Source } from '../../../../../src/data/source';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
@@ -41,21 +41,25 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 // (`viewKind: 'capture'`) the ctx IS the synthetic face camera `cubemapFaceContext`
 // builds, whose `canvasSize` is the row's 256 px face; `sizeOf` has no row for
 // it, so a layer that reached for the capture target instead would throw here.
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, capture = false): ReadyFrameContext {
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, capture = false): FrameView {
+  const renderTargets = {
+    specs: [{ id: 'star-aggregates', scale: 2 }],
+    sizeOf: (id: string) => {
+      if (id === 'star-aggregates') return { width: 640, height: 360 };
+      throw new Error(`fixture renderTargets: no size for '${id}'`);
+    },
+  };
   return {
+    // Frame-owned (`ReadyFrameContext`): nested for `computeStarCut`, and
+    // ALSO flat — `starAggregatesPass.ts` still reads `ctx.renderTargets`
+    // directly until Task 8 sweeps it onto `ctx.snapshot.renderTargets`.
+    snapshot: { nowMs, renderTargets },
     drawCamPos: camPos,
-    nowMs,
     viewSlot: capture ? 1 : 0,
     viewKind: capture ? 'capture' : 'frame',
     canvasSize: capture ? { width: 256, height: 256 } : { width: 1280, height: 720 },
-    renderTargets: {
-      specs: [{ id: 'star-aggregates', scale: 2 }],
-      sizeOf: (id: string) => {
-        if (id === 'star-aggregates') return { width: 640, height: 360 };
-        throw new Error(`fixture renderTargets: no size for '${id}'`);
-      },
-    },
-  } as unknown as ReadyFrameContext;
+    renderTargets,
+  } as unknown as FrameView;
 }
 
 /** A dense level-0 leaf (3 stars) under a level-1 aggregate root. */

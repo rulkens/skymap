@@ -36,7 +36,7 @@ import { fadeBand } from '../../../../../../src/utils/math/fadeBand';
 import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../../src/data/sources/gaia-stars';
-import type { ReadyFrameContext } from '../../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
@@ -57,19 +57,20 @@ function camAtPc(distPc: number): Vec3 {
 /**
  * A FRESH ctx per call — readStarCut memoises on the ctx object. `viewSlot`
  * defaults to 0, the main view; 1-6 builds a sky-cubemap capture face's ctx.
+ * `nowMs` is frame-owned (`ReadyFrameContext`), so it nests under `snapshot`.
  */
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): ReadyFrameContext {
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): FrameView {
   return {
+    snapshot: { nowMs },
     drawCamPos: camPos,
-    nowMs,
     viewSlot,
     viewKind: viewSlot === 0 ? 'frame' : 'capture',
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** A mono frame: the main ctx is its one view. */
-function advance(state: EngineState, ctx: ReadyFrameContext): PreparedStarCut | null {
-  return advanceStarCut(state, ctx, [ctx]);
+function advance(state: EngineState, ctx: FrameView): PreparedStarCut | null {
+  return advanceStarCut(state, [ctx]);
 }
 
 function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[]) {
@@ -456,19 +457,19 @@ describe('the frame star cut over several views', () => {
   const VIEWPORT = { width: 1000, height: 1000 };
 
   /** A frame view at `eyeMpc` looking at `targetMpc`, with a real NEAR0 slab. */
-  function viewCtx(eyeMpc: Vec3, targetMpc: Vec3, nowMs = 0): ReadyFrameContext {
+  function viewCtx(eyeMpc: Vec3, targetMpc: Vec3, nowMs = 0): FrameView {
     const proj = mat4d.perspective(FOV, 1, 1e-9, 1, new Float64Array(16));
     const look = mat4d.lookAt(eyeMpc, targetMpc, [0, 1, 0], new Float64Array(16));
     const vp = mat4d.multiply(proj, look, new Float64Array(16)) as Float64Array;
     return {
+      snapshot: { nowMs },
       drawCamPos: eyeMpc,
-      nowMs,
       viewSlot: 0,
       viewKind: 'frame',
       fovYRad: FOV,
       canvasSize: VIEWPORT,
       slabs: [makeSlab({ vp })],
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
   }
 
   // The single leaf box spans [0, 78] pc; the eye sits mid-band out along +z.
@@ -481,7 +482,6 @@ describe('the frame star cut over several views', () => {
     const away = viewCtx(EYE, AWAY);
     const awayOnly = advanceStarCut(
       makeState(makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }])),
-      away,
       [away],
     );
     expect(onlySource(awayOnly).leaf.count).toBe(0);
@@ -490,7 +490,7 @@ describe('the frame star cut over several views', () => {
     // rig adds a view looking AT the box: the union of the frusta keeps it.
     const main = viewCtx(EYE, AWAY);
     const state = makeState(makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]));
-    const both = onlySource(advanceStarCut(state, main, [main, viewCtx(EYE, TOWARD)]));
+    const both = onlySource(advanceStarCut(state, [main, viewCtx(EYE, TOWARD)]));
     expect(both.leaf.count).toBe(1);
   });
 
@@ -501,7 +501,7 @@ describe('the frame star cut over several views', () => {
 
     const main = makeCtx(camAtPcVec(CLOSE_PC), 50);
     const second = makeCtx(camAtPcVec(CLOSE_PC), 50);
-    const cut = advanceStarCut(state, main, [main, second]);
+    const cut = advanceStarCut(state, [main, second]);
     // One 50 ms step, not two.
     expect(soleOpacity(onlySource(cut).leaf)).toBeCloseTo(crossfadeAt(CLOSE_PC) * (50 / 250), 6);
     expect(readStarCut(state, second)).toBe(cut);
@@ -512,7 +512,7 @@ describe('the frame star cut over several views', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const state = makeState(renderer);
     const a = viewCtx(EYE, TOWARD);
-    const cut = advanceStarCut(state, a, [a]);
+    const cut = advanceStarCut(state, [a]);
     expect(onlySource(cut).leaf.count).toBe(1);
 
     const b: Vec3 = [EYE[0] + 1e-6, EYE[1], EYE[2]];

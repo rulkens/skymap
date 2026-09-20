@@ -1,4 +1,4 @@
-import type { ReadyFrameContext } from '../../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../@types/engine/frame/SlabView';
 import type {
   StarCatalogRenderer,
@@ -31,7 +31,7 @@ export function drawStarStream(
   view: SlabView,
   prep: PreparedStarCut,
   stream: StarDrawStream,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): void {
   // About the CUT's origin, not this view's eye: a rig view whose eye differs
   // from the one the cut was baked about still lands every node where it is.

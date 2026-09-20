@@ -29,7 +29,7 @@ import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
@@ -42,7 +42,7 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
 /** A camera down +z at the given heliocentric distance, in parsecs. */
 function camAtPc(distPc: number): Vec3 {
@@ -55,14 +55,14 @@ function camAtPc(distPc: number): Vec3 {
  */
 // A capture ctx: its cut draws at full opacity with no fade state to seed first
 // (what the old slot-less fixture got implicitly, `undefined !== 0`).
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): FrameView {
   return {
+    snapshot: { nowMs },
     drawCamPos: camPos,
-    nowMs,
     viewKind: 'capture',
     canvasSize: { width: 1280, height: 720 },
     drawPxPerRad: 623.5,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** A single-leaf catalog: `walkStarOctreeCut` returns one leaf draw. */

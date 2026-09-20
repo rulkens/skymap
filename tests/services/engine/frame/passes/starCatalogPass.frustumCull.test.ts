@@ -24,7 +24,7 @@ import { STAR_SIZE_REF_PX, STAR_GLOW_MIN_PX } from '../../../../../src/data/star
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
@@ -46,15 +46,15 @@ function camAtPc(distPc: number): Vec3 {
 /** A fresh ctx per call — `readStarCut` memoises on the ctx object. */
 // A capture ctx: its cut draws at full opacity with no fade state to seed first
 // (what the old slot-less fixture got implicitly, `undefined !== 0`).
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): FrameView {
   return {
+    snapshot: { nowMs },
     drawCamPos: camPos,
-    nowMs,
     fovYRad: DEFAULT_FOV_Y_RAD,
     viewKind: 'capture',
     canvasSize: { width: 1280, height: 720 },
     drawPxPerRad: 623.5,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** A single-leaf catalog: `walkStarOctreeCut` returns one leaf draw. */

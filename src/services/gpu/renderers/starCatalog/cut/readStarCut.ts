@@ -1,5 +1,5 @@
 import type { PassState } from '../../../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../@types/engine/frame/FrameView';
 import type { PreparedStarCut } from '../../../../../@types/rendering/PreparedStarCut';
 import { computeStarCut } from './computeStarCut';
 import { starCutOncePerCtx } from './starCutOncePerCtx';
@@ -11,6 +11,6 @@ import { starCutOncePerCtx } from './starCutOncePerCtx';
  * view normally hits the cut that call already registered; a walk that lands
  * here (a capture face, the pick path) is this one ctx's own view alone.
  */
-export function readStarCut(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null {
+export function readStarCut(state: PassState, ctx: FrameView): PreparedStarCut | null {
   return starCutOncePerCtx([ctx], () => computeStarCut(state, ctx, [ctx], false));
 }
