@@ -23,9 +23,17 @@
  * before React mounts; the splash never sees it.
  */
 
-import { useEffect, useRef, type MouseEvent, type ReactNode } from 'react';
+import { Fragment, type MouseEvent, type ReactNode, useEffect, useRef } from 'react';
 import cx from 'classnames';
 import SplashProgress from './SplashProgress';
+import {
+  BODY_DATA_ID,
+  BODY_ID,
+  CREDIT_GROUPS,
+  DESCRIBED_BY,
+  ERROR_COPY,
+  TITLE_ID,
+} from './Splash.constants';
 import type { SplashError } from '../../@types/splash/SplashError';
 import type { LoadProgressState } from '../../@types/loading/LoadProgressState';
 import styles from './Splash.module.css';
@@ -39,19 +47,6 @@ export type SplashProps = {
   readonly onTour: () => void;
   readonly onContinueAnyway: () => void;
   readonly onReload: () => void;
-};
-
-const TITLE_ID = 'splash-title';
-const BODY_ID = 'splash-body';
-
-// Copy keyed by SplashError['kind'] — the project's >2-way rule: a Record
-// scales to a new error kind by adding a row, not another ternary branch.
-const ERROR_COPY: Record<SplashError['kind'], string> = {
-  'webgpu-init-failed':
-    'WebGPU failed to initialize on this device. Try reloading, or use a recent version of Chrome or Edge.',
-  'catalog-fetch-failed':
-    'Failed to load the galaxy data. Check your connection and try reloading.',
-  'data-version-mismatch': 'Skymap was updated — reload the page to fetch matching data',
 };
 
 function Splash({
@@ -125,22 +120,26 @@ function Splash({
       role="dialog"
       aria-modal="true"
       aria-labelledby={TITLE_ID}
-      aria-describedby={BODY_ID}
+      aria-describedby={DESCRIBED_BY}
       onClick={onBackdropClick}
     >
       <div className={styles.vignette} aria-hidden="true" />
 
       <section className={styles.column}>
-        <div className={styles.label}>SKYMAP · INTRO</div>
+        <div className={styles.label}>SKYMAP</div>
         <h1 id={TITLE_ID} className={styles.title}>
-          Have a look at
+          Welcome
           <br />
-          the neighbours
+          to the universe
         </h1>
         <p id={BODY_ID} className={styles.body}>
-          About 2.5 million of them, give or take, mapped from four catalogues that took decades to
-          put together. The cosmic web runs through the middle; quasars sit much further out, well
-          past the galaxies. The bright glow near the centre is home (our Milky Way).
+          Hey traveler 👋 <br />
+          Have you ever wondered what the universe looks like in 3D? Skymap gives you the chance to
+          explore Earth, the Solar System, the Milky Way, other galaxies and much more!
+        </p>
+        <p id={BODY_DATA_ID} className={styles.body}>
+          Everything you see here is based on real astronomical data, and the code is fully open
+          source (MIT).
         </p>
 
         {error ? (
@@ -194,44 +193,31 @@ function Splash({
 
         <div className={styles.footer}>
           <p className={styles.credits}>
-            Drawn from the{' '}
-            <a href="https://www.sdss.org/" target="_blank" rel="noopener noreferrer">
-              SDSS
-            </a>
-            ,{' '}
-            <a href="https://glade.elte.hu/" target="_blank" rel="noopener noreferrer">
-              GLADE
-            </a>
-            ,{' '}
-            <a
-              href="https://lambda.gsfc.nasa.gov/product/2mass/"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              2MRS
-            </a>
-            ,{' '}
-            <a
-              href="https://heasarc.gsfc.nasa.gov/W3Browse/all/milliquas.html"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Milliquas
-            </a>{' '}
-            and{' '}
-            <a href="https://data.desi.lbl.gov/" target="_blank" rel="noopener noreferrer">
-              DESI DR1
-            </a>{' '}
-            (CC&nbsp;BY&nbsp;4.0) catalogues. Planet, moon and ring textures from{' '}
-            <a href="https://www.solarsystemscope.com/" target="_blank" rel="noopener noreferrer">
-              Solar System Scope
-            </a>{' '}
-            (solarsystemscope.com), CC&nbsp;BY&nbsp;4.0, with Earth from NASA Earth Observatory
-            (Blue Marble) and the Galilean moons from NASA/USGS.
+            Skymap aims to accurately represent data from{' '}
+            {CREDIT_GROUPS.map(({ label, sources }, gi) => (
+              <Fragment key={label}>
+                {gi > 0 ? ', ' : ''}
+                {label} (
+                {sources.map(({ name, url }, si) => (
+                  <Fragment key={url}>
+                    {si > 0 ? ', ' : ''}
+                    <a href={url} target="_blank" rel="noopener noreferrer">
+                      {name}
+                    </a>
+                  </Fragment>
+                ))}
+                )
+              </Fragment>
+            ))}
+            , and more.
           </p>
           <p className={styles.attribution}>
-            by Alexander Rulkens
+            &copy; 2026 by{' '}
+            <a href="https://rulkens.com/about" target="_blank" rel="noopener noreferrer">
+              Alexander Rulkens
+            </a>
             <br />
+            Code at{' '}
             <a href="https://github.com/rulkens/skymap" target="_blank" rel="noopener noreferrer">
               github.com/rulkens/skymap
             </a>
