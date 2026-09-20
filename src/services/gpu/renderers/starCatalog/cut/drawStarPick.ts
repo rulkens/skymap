@@ -7,29 +7,16 @@ import { frustumPlanesFromViewProj } from '../../../../../utils/camera/frustumPl
 import { starCullMargins } from '../../../../../utils/star/starCullMargins';
 import { starPickLeafDraws } from './starPickLeafDraws';
 
-/**
- * The 24-float clip-plane destination, owned by this file alone — see
- * `drawStarStream`'s identical scratch for why splitting the old shared
- * `starCatalogPass.ts` scratch in two is behaviour-identical: this and
- * `drawStarStream` run at disjoint times in a frame (visual draw, then pick).
- */
+/** Owned by this file alone; see `drawStarStream`'s identical scratch. */
 const frustumScratch = new Float32Array(24);
 
 /**
  * Stamp every visible LEAF star's packed identity into the NEAR0 r32uint pick
- * pass — via `pickRenderer` and the leaf-only, visible-only `starPickLeafDraws`
- * filter — so a hover/click over a resolved star yields a Field-star selection.
- * AGGREGATE glows are never pickable: a flux mip that stands in for a whole
- * subtree has no single star to name.
- *
- * The rebased vp is computed ONCE before the per-source loop — the same
- * shared-vp discipline `drawStarStream` follows (every source in a frame
- * receives the identical `narrowMat4(rebaseViewProj(...))` matrix; the pick
- * renderer's camera uniform is one shared buffer, safe only under that
- * invariant). The margin uses the PICK branch of `starCullMargins`: every leaf
- * is floored to the 3.5 px clickable footprint, so the cull sphere must cover
- * that inflated dot (a false cull here = an unclickable edge star, forbidden),
- * which the visual 1.5 px slack would undercover.
+ * pass, so a hover/click over a resolved star yields a Field-star selection.
+ * AGGREGATE glows are never pickable — a flux mip standing in for a whole
+ * subtree has no single star to name. Follows `drawStarStream`'s shared-vp
+ * discipline and the pick floor of `starCullMargins` (see `buildStarCutFrustum`
+ * for the pick-slack rationale).
  */
 export function drawStarPick(
   pickRenderer: StarCatalogPickRenderer,

@@ -1,20 +1,18 @@
 import type { StarNodeStream } from '../../../../../@types/rendering/StarNodeStream';
 
 /**
- * ── Flat typed arrays, not arrays-of-objects (the allocation fix) ───────────
- *
- * At star-field zoom the cut draws tens of thousands of nodes EVERY frame. The
- * old shape allocated a `{ nodeIndex, firstRecord, recordCount }` object, a
- * `Vec3` origin, and pushed onto six growing JS arrays PER node — ~5 short-lived
- * objects per drawn node, a measured 10-12 ms/frame of GC churn during
- * navigation. This mirrors the trick `walkStarOctreeCut`'s own snapshot already
- * uses: `count` valid entries indexed into persistent typed arrays that GROW BY
- * DOUBLING but never shrink or reallocate steady-state. The scalar fields index
- * `[i]`; the origin packs THREE f32 per node, indexed `[3*i + k]`.
+ * Flat typed arrays, not arrays-of-objects: at star-field zoom the cut draws
+ * tens of thousands of nodes EVERY frame, and a `{ nodeIndex, firstRecord,
+ * recordCount }` object plus a `Vec3` origin per node — ~5 short-lived
+ * objects each — measured at 10-12 ms/frame of GC churn during navigation.
+ * `count` valid entries index into persistent typed arrays that GROW BY
+ * DOUBLING but never shrink or reallocate steady-state (same trick
+ * `walkStarOctreeCut`'s own output snapshot uses). Scalar fields index `[i]`;
+ * the origin packs THREE f32 per node, indexed `[3*i + k]`.
  *
  * A stream is reused across frames — `computeStarCut` resets `count` to 0 (no
- * `resetStream` symbol: a one-line reset is inlined at its two call sites) and
- * refills via `pushStarNode` — never reallocated except to grow.
+ * `resetStream` symbol: inlined at its two call sites) and refills via
+ * `pushStarNode` — never reallocated except to grow.
  */
 
 /** A fresh stream with backing arrays at `cap` node capacity (grown as needed). */

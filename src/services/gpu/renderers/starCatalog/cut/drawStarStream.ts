@@ -10,22 +10,19 @@ import { frustumPlanesFromViewProj } from '../../../../../utils/camera/frustumPl
 import { starCullMargins } from '../../../../../utils/star/starCullMargins';
 
 /**
- * The 24-float destination `frustumPlanesFromViewProj` writes each frame — six
- * unit-normalized `(nx, ny, nz, d)` planes. Owned by this file alone (its
- * sibling `drawStarPick` keeps its own copy): the two used to share one
- * module-level scratch when both lived in `starCatalogPass.ts`, which was safe
- * only because they ran at disjoint times in a frame (draw, then drawPick);
- * splitting the scratch per file changes nothing about that.
+ * Six unit-normalized `(nx, ny, nz, d)` clip planes, rewritten each frame.
+ * Owned by this file alone — `drawStarPick` keeps its own copy, safe because
+ * the two run at disjoint times in a frame (draw, then pick).
  */
 const frustumScratch = new Float32Array(24);
 
 /**
- * Draw one stream of a prepared cut into the open pass: compute the rebased vp
- * once (the shared-vp invariant — every source in a frame receives the
- * IDENTICAL rebased vp, the only safe use of the renderer's one shared camera
- * uniform buffer) and issue one `renderer.draw` per source that has nodes in
- * the stream. Shared by the leaf and aggregate layers — the only difference is
- * which `StarDrawStream` (and which per-source sub-stream) each selects.
+ * Draw one stream of a prepared cut: compute the rebased vp once — the
+ * SHARED-VP INVARIANT, every source in a frame must get the IDENTICAL
+ * rebased vp, the only safe use of the renderer's one shared camera uniform
+ * buffer that every draw call in the loop below rewrites — then issue one
+ * `renderer.draw` per source with nodes in the stream. Shared by the leaf and
+ * aggregate layers; only the selected `StarDrawStream` differs.
  */
 export function drawStarStream(
   renderer: StarCatalogRenderer,
@@ -37,18 +34,14 @@ export function drawStarStream(
   viewSlot: number,
 ): void {
   const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
-  // Extract the six clip planes ONCE from the SAME rebased vp the draws use — the
-  // exact matrix the GPU clips against, which is what makes the cull visually
-  // lossless — and derive the leaf angular slack once. Both are source-independent
-  // and forwarded identically to every source's draw (the shared-vp invariant).
+  // Same rebased vp the GPU clips against, so the CPU cull is visually
+  // lossless; source-independent, forwarded identically to every draw.
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
   const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], fovYRad).leaf;
-  // The aggregate stream's knee normally lands in `star-upsample`, over the
-  // summed half-res field. A sky-cubemap capture face (`viewSlot !== 0`) has
-  // no such pass behind it — the face IS the sky the lens samples — so the
-  // aggregate quads carry the knee themselves there, or captured glows read
-  // brighter and more saturated than the same stars in the direct view drawn
-  // beside them at the band crossfade.
+  // A sky-cubemap capture face (`viewSlot !== 0`) has no `star-upsample` pass
+  // behind it to carry the aggregate knee, so the aggregate quads knee
+  // themselves here instead — else a captured glow reads brighter/more
+  // saturated than the same star in the direct view beside it.
   const knee = stream === 'leaf' || viewSlot !== 0;
   for (const s of prep.sources) {
     const nodes = s[stream];

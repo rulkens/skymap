@@ -1,9 +1,5 @@
-/**
- * StarNodeDraw — one instanced draw `walkStarOctreeCut` selected: a
- * contiguous slice of the catalog's record buffer. A leaf draw's
- * `recordCount` is its cell's real star count; an aggregate draw's is
- * always 1 (its single flux-mip record).
- */
+/** One instanced draw `walkStarOctreeCut` selected: a contiguous slice of
+ * the catalog's record buffer. */
 
 export type StarNodeDraw = {
   /** Index into `catalog.nodes` of the chosen node. */

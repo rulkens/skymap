@@ -1,9 +1,5 @@
-/**
- * StarCatalogStreams — the leaf + aggregate stream pair `computeStarCut`
- * persists per (catalog, viewSlot); see `streamsByCatalog` in
- * `renderers/starCatalog/cut/starCatalogStreams.ts` for why the key includes
- * viewSlot (up to seven contexts walk one catalog per frame).
- */
+/** The leaf + aggregate stream pair `computeStarCut` persists per (catalog,
+ * viewSlot) — see `starCatalogStreams.ts` for the viewSlot-keying rationale. */
 
 import type { StarNodeStream } from './StarNodeStream';
 

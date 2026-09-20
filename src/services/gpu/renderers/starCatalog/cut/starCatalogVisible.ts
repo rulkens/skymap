@@ -5,12 +5,11 @@ import { SOURCE_REGISTRY } from '../../../../../data/sources';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
 
 /**
- * The shared visibility gate for all three star layers (leaf, aggregate,
- * upsample). Enabled if the renderer exists, the master toggle is on, and ANY
- * loaded catalog is toggled on and still inside its crossfade band. All three
- * layers delegate their `enabled` here so the aggregate producer and its
- * upsample consumer never disagree — the same shared-projection discipline the
- * volume liveness gate uses.
+ * Shared visibility gate for all three star layers (leaf, aggregate,
+ * upsample): the renderer exists, the master toggle is on, and ANY loaded
+ * catalog is on and inside its crossfade band. All three delegate their
+ * `enabled` here so the aggregate producer and its upsample consumer never
+ * disagree.
  */
 export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): boolean {
   const renderer = state.gpu.starCatalogRenderer;
@@ -22,9 +21,7 @@ export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): bo
 
   for (const { source } of renderer.loadedCatalogs()) {
     const entry = SOURCE_REGISTRY[source];
-    // Only a SURVEY catalog can be in `loadedCatalogs` (a seeded one ships no
-    // bin), so the `binBaseName` half of the guard is a narrowing device rather
-    // than a live filter — it buys the crossfade band this layer draws by.
+    // `binBaseName` narrows the type; only a SURVEY row ever reaches here.
     if (entry.type !== 'starCatalog' || entry.binBaseName === null) continue;
     if (!state.settings.starCatalogs.items[entry.id].enabled) continue;
     if (starCrossfadeOpacity(entry.crossfadePc, camDistPc) > 0) return true;
