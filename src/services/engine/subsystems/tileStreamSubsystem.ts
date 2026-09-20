@@ -13,14 +13,12 @@
  * it, a dead end nothing revisits.
  */
 
-import type {
-  TileStreamFetchInput,
-  TileStreamSubsystem,
-} from '../../../@types/engine/subsystems/TileStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { TileStreamDeps } from '../../../@types/engine/subsystems/TileStreamDeps';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import { TextureAtlas } from '../../gpu/resources/textureAtlas';
 import { PriorityQueue } from '../../../utils/concurrency/priorityQueue';
+import { TileStreamFetchInput } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamFetchInput';
 
 export function createTileStreamSubsystem<T>(deps: TileStreamDeps<T>): TileStreamSubsystem<T> {
   const {

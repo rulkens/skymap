@@ -25,7 +25,7 @@ import { createStarCatalogRenderer } from '../../../../../src/services/gpu/rende
 import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
 import { Source } from '../../../../../src/data/sources';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
+import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogRenderer';
 
 // A GPU device stub: every `create*` returns a plausibly-shaped stand-in and
 // `queue.writeBuffer` is spied. Buffers carry their `label` so a test can prove

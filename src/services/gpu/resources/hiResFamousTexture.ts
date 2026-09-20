@@ -27,10 +27,8 @@
  * in 'texturedDiskRenderer.ts'.
  */
 
-import type {
-  HiResFamousTexture,
-  CreateHiResFamousTextureArgs,
-} from '../../../@types/rendering/HiResFamousTexture';
+import type { HiResFamousTexture } from '../../../@types/rendering/hiResFamousTexture/HiResFamousTexture';
+import { CreateHiResFamousTextureArgs } from '../../../@types/rendering/hiResFamousTexture/CreateHiResFamousTextureArgs';
 
 /**
  * Per-layer bookkeeping. 'recentPx' drives eviction (see module header).
@@ -46,9 +44,7 @@ type LayerEntry = {
   failed: boolean;
 };
 
-export function createHiResFamousTexture(
-  args: CreateHiResFamousTextureArgs,
-): HiResFamousTexture {
+export function createHiResFamousTexture(args: CreateHiResFamousTextureArgs): HiResFamousTexture {
   const { device, layerSide, layerCount } = args;
 
   // The entry carries its own layerIdx so 'layerForKey' is O(1) without

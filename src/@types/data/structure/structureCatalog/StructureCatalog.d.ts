@@ -28,17 +28,12 @@
  *   0 = cluster       (MCXC origin)
  *   1 = supercluster  (MSCC origin)
  * Higher values are reserved for a future void source and must be treated
- * as "unknown" by current consumers rather than crashed on.
+ * as "unknown" by current consumers rather than crashed on. See
+ * `StructureCategoryByte` (sibling file) for the same two values as a
+ * standalone type, used where a build-time producer wants the literal
+ * union rather than this struct's raw `Uint8Array` column.
  *
  * All distance / radius units are megaparsecs (Mpc).
- */
-
-/** Cluster (0) vs. supercluster (1) marker; higher values reserved. */
-export type StructureCategoryByte = 0 | 1;
-
-/**
- * Cluster / supercluster catalog in renderer-ready layout — a struct of
- * arrays rather than an array of objects.  Parallel to `GalaxyCatalog`.
  */
 export type StructureCatalog = {
   /** Number of structures. All typed arrays derive their length from this. */

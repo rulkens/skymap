@@ -26,7 +26,7 @@ import type { EngineState } from '../../../../src/@types/engine/state/EngineStat
 import type { EngineCallbacks } from '../../../../src/@types/engine/EngineCallbacks';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
 import type { LoadProgressState } from '../../../../src/@types/loading/LoadProgressState';
-import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../../../../src/@types/loading/structureCatalogPayload/StructureCatalogPayload';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
 
 // ── Module mocks needed for wiring helpers ──────────────────────────────────

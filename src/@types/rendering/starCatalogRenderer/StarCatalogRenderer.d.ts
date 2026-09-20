@@ -33,23 +33,12 @@
  * the layer.
  */
 
-import type { Renderer } from './Renderer';
-import type { Vec2 } from '../math/Vec2';
-import type { SourceType } from '../data/SourceType';
-import type { StarCatalog } from '../data/starCatalog/StarCatalog';
-
-/**
- * Which of the two star draw streams a `draw` call records. The survey stars
- * split at the octree cut: `'leaf'` nodes (childless, real point-source stars)
- * draw full-resolution into the HDR target with the per-fragment hue-preserving
- * knee; `'aggregate'` nodes (interior flux-mip glows) draw LINEAR into the
- * half-res `star-aggregates` offscreen, whose upsample composite applies the
- * knee to the summed field. The renderer keeps a DEDICATED per-source buffer
- * pair per stream (never one shared pair) so the two draws — encoded into
- * different passes in the same frame — cannot clobber each other's data before
- * submit (the writeBuffer/submit ordering landmine).
- */
-export type StarDrawStream = 'aggregate' | 'leaf';
+import type { Renderer } from '../Renderer';
+import type { Vec2 } from '../../math/Vec2';
+import type { SourceType } from '../../data/SourceType';
+import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
+import type { StarDrawStream } from './StarDrawStream';
+import type { StarCatalogPickResources } from './StarCatalogPickResources';
 
 export type StarCatalogDrawArgs = {
   /** Which loaded catalog's records buffer to bind. */
@@ -207,37 +196,6 @@ export type StarCatalogDrawArgs = {
    */
   readonly viewSlot: number;
 };
-
-/**
- * The GPU resources the sibling `starCatalogPickRenderer` must SHARE with the
- * visual star renderer so its own r32uint pick pipeline stays bind-group
- * compatible — the star analogue of the galaxy points pipeline handing its
- * canonical `sourceBgl` to the point `GalaxyPickRenderer`.
- *
- * Two things are shared:
- *
- *   - **The three explicit bind-group layouts** (`cameraBgl` @group(0),
- *     `drawBgl` @group(1), `recordsBgl` @group(2)). The pick renderer builds its
- *     OWN pick pipeline layout from these exact objects, so its pipeline is
- *     group-equivalent to the visual one and the shared records bind group (built
- *     against `recordsBgl`) is valid on it. The pick renderer also builds its own
- *     @group(0)/@group(1) bind groups — over its OWN uniform/params buffers, so
- *     the writeBuffer/submit ordering trap can never let a pick draw scribble on
- *     the visual buffers — against these same layouts.
- *   - **A per-source records bind group lookup.** The record blob is a static
- *     per-source resource the visual renderer uploads ONCE (`upload`); the pick
- *     draw binds it verbatim rather than re-uploading, so the two pipelines pull
- *     the identical record bytes. The lookup is a live function (a tier swap
- *     unloads/reloads a source), returning `null` when the source has no catalog.
- */
-export type StarCatalogPickResources = {
-  readonly cameraBgl: GPUBindGroupLayout;
-  readonly drawBgl: GPUBindGroupLayout;
-  readonly recordsBgl: GPUBindGroupLayout;
-  /** The @group(2) records bind group for `source`, or `null` if not loaded. */
-  recordsBindGroup(source: SourceType): GPUBindGroup | null;
-};
-
 export type StarCatalogRenderer = Renderer & {
   /**
    * Commit one catalog's records to a per-source GPU storage buffer (once),

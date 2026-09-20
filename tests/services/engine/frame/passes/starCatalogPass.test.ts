@@ -32,7 +32,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
+import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogRenderer';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 const PASS_STUB = {

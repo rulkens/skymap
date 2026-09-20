@@ -42,7 +42,7 @@
  * silently producing a malformed clip that produces visual glitches at playback.
  */
 
-import type { BaseSegment } from '../../../@types/animation/CompiledClip';
+import type { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
 import type { Channel } from '../../../@types/animation/Channel';
 
 /**

@@ -59,14 +59,7 @@
  */
 
 import type { ClipData } from '../../../@types/animation/ClipData';
-import type {
-  CompiledClip,
-  BaseSegment,
-  VelRamp,
-  OscTrack,
-  SceneCue,
-  PathTrack,
-} from '../../../@types/animation/CompiledClip';
+import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { Effect } from '../../../@types/animation/Effect';
 import type { Channel } from '../../../@types/animation/Channel';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -74,6 +67,11 @@ import type { Mat3 } from '../../../@types/math/Mat3';
 import { CHANNEL_SPACE } from './channelSpace';
 import { validateSingleWriter } from './validateSingleWriter';
 import { buildPathTrack } from './buildPathTrack';
+import { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
+import { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
+import { OscTrack } from '../../../@types/animation/compiledClip/OscTrack';
+import { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
+import { SceneCue } from '../../../@types/animation/compiledClip/SceneCue';
 
 // ---------------------------------------------------------------------------
 // Zero pose — used when start is 'live' or absent (placeholder; resolved by

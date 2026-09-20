@@ -15,10 +15,7 @@
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { SurfaceEffect } from '../../../../@types/data/SurfaceEffect';
-import type {
-  SurfaceTileRenderer,
-  SurfaceTileDrawArgs,
-} from '../../../../@types/rendering/SurfaceTileRenderer';
+import type { SurfaceTileRenderer } from '../../../../@types/rendering/surfaceTileRenderer/SurfaceTileRenderer';
 import { resolveDepthCompare } from '../../../../utils/gpu/resolveDepthCompare';
 import { IDENTITY_MAT3 } from '../../../../utils/math/identityMat3';
 import { patchOriginRelEyeM } from '../../../../utils/surfaceTiles/patchOriginRelEyeM';
@@ -38,6 +35,7 @@ import {
 } from '../../../../data/bodies/surfaceTileParams';
 import { HEIGHT_POSTS_PER_TILE } from '../../../../data/scene/heightTileFormat';
 import { SURFACE_TILE_SHADER_VARIANTS } from '../../../../data/bodies/surfaceTileShaderVariants';
+import { SurfaceTileDrawArgs } from '../../../../@types/rendering/surfaceTileRenderer/SurfaceTileDrawArgs';
 
 /**
  * @param resolution The template's `n`: it sizes the shared index buffer and

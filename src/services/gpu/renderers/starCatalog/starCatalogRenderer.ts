@@ -92,9 +92,7 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type {
   StarCatalogRenderer,
   StarCatalogDrawArgs,
-  StarCatalogPickResources,
-  StarDrawStream,
-} from '../../../../@types/rendering/StarCatalogRenderer';
+} from '../../../../@types/rendering/starCatalogRenderer/StarCatalogRenderer';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
 import { RECORD_BYTES } from '../../../../data/starCatalog/starCatalogFormat';
@@ -126,6 +124,8 @@ import {
   AGG_INTENSITY_CAP_FLOAT_INDEX,
   writeStarNodeParams,
 } from './starCatalogLayout';
+import { StarDrawStream } from '../../../../@types/rendering/starCatalogRenderer/StarDrawStream';
+import { StarCatalogPickResources } from '../../../../@types/rendering/starCatalogRenderer/StarCatalogPickResources';
 
 /**
  * One draw stream's per-source, per-view-slot storage buffers: the

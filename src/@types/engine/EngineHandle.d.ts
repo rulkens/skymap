@@ -7,7 +7,7 @@
  * plain store dispatch or a published Layer fact, read via a selector.
  */
 
-import type { EngineDebugHandle } from './handles/EngineDebugHandle';
+import type { EngineDebugHandle } from './handles/engineDebugHandle/EngineDebugHandle';
 
 export type EngineHandle = {
   debug: EngineDebugHandle;

@@ -74,7 +74,7 @@ import type { PassState } from '../../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
 import type { Vec3 } from '../../../../@types/math/Vec3';
 import type { BodyState } from '../../../../@types/scene/BodyState';
-import type { BodyGlintPick } from '../../../../@types/rendering/BodyPickRenderer';
+import type { BodyGlintPick } from '../../../../@types/rendering/bodyPickRenderer/BodyGlintPick';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { Source } from '../../../../data/sources';

@@ -94,12 +94,7 @@
 import type { ClipData } from '../../../@types/animation/ClipData';
 import type { ClipFrameOptions } from '../../../@types/animation/ClipFrameOptions';
 import type { FramedClipPose } from '../../../@types/animation/FramedClipPose';
-import type {
-  CompiledClip,
-  BaseSegment,
-  VelRamp,
-  PathTrack,
-} from '../../../@types/animation/CompiledClip';
+import type { CompiledClip } from '../../../@types/animation/compiledClip/CompiledClip';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
@@ -117,6 +112,9 @@ import { foldToWorld } from './rungs/foldToWorld';
 import { rowFor } from './rungs/rowFor';
 import { sameFrame } from './rungs/sameFrame';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { BaseSegment } from '../../../@types/animation/compiledClip/BaseSegment';
+import { VelRamp } from '../../../@types/animation/compiledClip/VelRamp';
+import { PathTrack } from '../../../@types/animation/compiledClip/PathTrack';
 
 // ---------------------------------------------------------------------------
 // Module-level compile cache — keyed on ClipData reference identity.

@@ -23,14 +23,10 @@ import { Source } from '../../../data/sources';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { DiskInstance } from '../../../@types/rendering/DiskInstance';
 import type { DiskRowVisitor } from '../../../@types/engine/subsystems/DiskRowVisitor';
-import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
+import type { HiResFamousSubsystem } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousSubsystem';
 import type { TexturedDiskDeps } from '../../../@types/engine/subsystems/TexturedDiskDeps';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type {
-  TexturedDiskFrameInput,
-  TexturedDiskFrameOutput,
-  TexturedDiskSubsystemWithTestSeam,
-} from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
+import type { TexturedDiskSubsystemWithTestSeam } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystemWithTestSeam';
 import { fetchGalaxyBitmap } from '../../../utils/network/fetchGalaxyBitmap';
 import { cartesianToRaDec, smoothstep } from '../../../utils/math/index';
 import { diskQuadExtentMpc } from '../../../utils/render/disk/diskQuadExtentMpc';
@@ -45,6 +41,8 @@ import {
   FADE_BAND_PX,
   DISK_THRESHOLD_PX,
 } from '../../../data/galaxyLodBands';
+import { TexturedDiskFrameInput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameInput';
+import { TexturedDiskFrameOutput } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskFrameOutput';
 
 /** Load-fade duration once a bitmap lands (ms). */
 const LOAD_FADE_MS = 400;
