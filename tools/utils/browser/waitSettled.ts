@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { cameraRoute, engineRoute } from '../../../src/store/constants';
 import type { RootState } from '../../../src/store/types';
-import type { SkymapPerfHook } from '../../../src/@types/perf/SkymapPerfHook';
+import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
 
 const SETTLE_HOLD_MS = 1000;
 

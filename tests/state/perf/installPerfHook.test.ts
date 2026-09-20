@@ -28,8 +28,8 @@ import { engineStatusChanged } from '../../../src/state/engine/engineSlice';
 import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
 import { Source } from '../../../src/data/sources';
 import type { EngineHandle } from '../../../src/@types/engine/EngineHandle';
-import type { SkymapPerfHook } from '../../../src/state/perf/SkymapPerfHook';
-import type { PerfWindow } from '../../../src/state/perf/PerfWindow';
+import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
+import type { PerfWindow } from '../../../src/state/perf/@types/PerfWindow';
 import type { GpuTimingFrame } from '../../../src/@types/gpu/timing/GpuTimingFrame';
 
 vi.mock('../../../src/utils/url/isPerfMode', () => ({
