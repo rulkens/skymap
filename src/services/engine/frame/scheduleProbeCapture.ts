@@ -16,6 +16,7 @@ import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameC
 import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../data/rendering/probeRefreshIntervalMs';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
+import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { cubemapFaceContext } from './cubemapFaceContext';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -53,20 +54,18 @@ export function scheduleProbeCapture(input: {
   const hostId = meshBodySlabHostId(subject);
   // Cube axes = the host axes `meshBodiesPass` shades in (io.wesl's contract).
   const axes = bodyStates.get(hostId)!.orientation;
+  // One frame for the whole row: null only pre-bootstrap, so the next frame retries.
+  const snapshot = cubemapCaptureFrame({
+    state,
+    eyeMpc,
+    nearMpc: row.nearMpc,
+    nowMs: ctx.nowMs,
+    axes,
+  });
+  if (!snapshot.isReady) return null;
   const faces = new Map<CubeFace, CaptureFace>();
   for (const face of ALL_CUBE_FACES) {
-    const faceCtx = cubemapFaceContext({
-      state,
-      eyeMpc,
-      face,
-      faceSizePx: row.faceSizePx,
-      nearMpc: row.nearMpc,
-      viewSlotBase: row.viewSlotBase,
-      nowMs: ctx.nowMs,
-      axes,
-    });
-    // Null only pre-bootstrap: nothing is recorded, so the next frame retries.
-    if (faceCtx === null) return null;
+    const faceCtx = cubemapFaceContext(snapshot, face, row.faceSizePx, row.viewSlotBase);
     // The host's row is looked up in the FACE's own slab table — its painter
     // index there has nothing to do with the frame's. A face the host falls
     // outside of (looking away from it) draws no body row; a hostless body

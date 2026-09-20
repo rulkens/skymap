@@ -1,31 +1,20 @@
 /**
- * cubemapFaceContext — one face of a cubemap capture's camera, as a value.
- * Mirrors `pickFrameContext.ts`: roster layers read `ctx.fovYRad`/
- * `canvasSize`/`drawPxPerRad` as frame-globals, not just `viewProj`, so a
- * whole synthetic `ReadyFrameContext` is cheaper than threading a swapped
- * vp through every consumer. The row's `nearMpc` is the near plane and the
- * altitude NEAR0's bracket is sized from. The face's forward is its basis,
- * decoded by `orbitForwardOf` — never `target − eye`, which a 1 m probe near
- * rounds away at a far eye.
+ * cubemapFaceContext — one face of a cubemap capture's frame, turned through
+ * `faceViewSpec` and flipped for WebGPU's top-left origin. The frame itself
+ * (the synthetic camera, once per capture row) is `cubemapCaptureFrame`.
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
-import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
-import type { Vec3 } from '../../../@types/math/Vec3';
-import type { Mat3 } from '../../../@types/math/Mat3';
-import { deriveFrameContext } from './frameContext';
-import { deriveSourceMasks } from './deriveSourceMasks';
-import { FACE_BASES, FACE_FORWARD } from '../../../data/rendering/cubeFaceBases';
-import { multiply3x3 } from '../../../utils/math/multiply3x3';
-import { rotateVec3ByTightMat3 } from '../../../utils/math/rotateVec3ByTightMat3';
+import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
+import { deriveView } from './deriveView';
 
 /**
- * Negate a vp's clip-Y row (column-major 1/5/9/13). `FACE_UP` is the GL
- * capture table, upright only under GL's bottom-left origin; WebGPU
- * rasterizes top-left, so every face would sample flipped (v = 1 − t) and no
- * rotation absorbs a reflection. The winding reversal is harmless here.
+ * Negate a vp's clip-Y row (column-major 1/5/9/13). The cube-face basis table
+ * is the GL capture convention, upright only under GL's bottom-left origin;
+ * WebGPU rasterizes top-left, so every face would sample flipped (v = 1 − t)
+ * and no rotation absorbs a reflection. The winding reversal is harmless here.
  */
 function flipClipY(vp: Float32Array | Float64Array): void {
   vp[1] = -vp[1]!;
@@ -34,66 +23,15 @@ function flipClipY(vp: Float32Array | Float64Array): void {
   vp[13] = -vp[13]!;
 }
 
-export function cubemapFaceContext(input: {
-  readonly state: EngineState;
-  readonly eyeMpc: Readonly<Vec3>;
-  readonly face: CubeFace;
-  readonly faceSizePx: number;
-  /** Capture-camera near plane, Mpc — the row's `nearMpc`. */
-  readonly nearMpc: number;
-  /** This capture's first view slot; the face stamps `viewSlotBase + face`. */
-  readonly viewSlotBase: number;
-  /** The FRAME's clock, so a `nowMs`-animated roster layer ticks identically
-   *  on a captured face and in the direct view. */
-  readonly nowMs: number;
-  /** World-from-cube axes; omitted = world axes. A probe passes its shading
-   *  host's orientation, because the fragment samples the cube along host-axis
-   *  `n`/`r` — a world-axis probe reads back rotated by the host's spin. */
-  readonly axes?: Readonly<Mat3>;
-}): ReadyFrameContext | null {
-  const { state, eyeMpc, face, faceSizePx, nearMpc, viewSlotBase, nowMs, axes } = input;
-  const forward = rotateVec3ByTightMat3(FACE_FORWARD[face]!, axes);
-  const basis =
-    axes === undefined ? FACE_BASES[face]! : multiply3x3(axes as Mat3, FACE_BASES[face]!);
-  // The distance stays under the foreground reach body passes gate
-  // `ctx.cam.distance` on: a capture posed 1 Mpc out would draw no body at all.
-  const target: Vec3 = [
-    eyeMpc[0] + forward[0] * nearMpc,
-    eyeMpc[1] + forward[1] * nearMpc,
-    eyeMpc[2] + forward[2] * nearMpc,
-  ];
-  const pose: CameraPose = { target, yaw: 0, pitch: 0, distance: nearMpc };
-
-  const ctx = deriveFrameContext(
-    state,
-    { width: faceSizePx, height: faceSizePx },
-    pose,
-    // The capture pose is synthetic and world-absolute, so the pose-provider
-    // seam routes every body through the Mpc path — no body arm can be engaged
-    // on a face.
-    { frame: 'absolute', pose },
-    // 90° symmetric frustum, one cube face; `far` rides the live projection.
-    {
-      fovYRad: Math.PI / 2,
-      aspect: 1,
-      near: nearMpc,
-      far: state.cameraRuntime.outputs.projection.far,
-    },
-    basis,
-    basis,
-    // draw mask: a capture, not a click target. Sampled at the FRAME's nowMs
-    // (not the registry's last-ticked clock) so a just-settled fade-out never
-    // gets baked into the capture — see deriveSourceMasks's nowMs docblock.
-    deriveSourceMasks(state, nowMs).draw,
-
-    nowMs,
-    state.cameraRuntime.outputs.simDays,
-    // The synthetic pose orbits no pivot: its altitude is its own distance.
-    nearMpc,
-  );
-  if (!ctx.isReady) return null;
-  // In place is safe: `deriveFrameContext` freshly allocated these arrays.
-  flipClipY(ctx.vp);
-  for (const slab of ctx.slabs) flipClipY(slab.vp);
-  return { ...ctx, viewSlot: viewSlotBase + face, viewKind: 'capture' };
+export function cubemapFaceContext(
+  snapshot: ReadyFrameContext,
+  face: CubeFace,
+  faceSizePx: number,
+  viewSlotBase: number,
+): FrameView {
+  const view = deriveView(snapshot, faceViewSpec(face, faceSizePx, viewSlotBase));
+  // In place is safe: `deriveView` freshly allocated these arrays.
+  flipClipY(view.vp);
+  for (const slab of view.slabs) flipClipY(slab.vp);
+  return view;
 }

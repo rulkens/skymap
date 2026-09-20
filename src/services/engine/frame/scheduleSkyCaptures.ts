@@ -18,6 +18,7 @@ import {
   CUBEMAP_CAPTURES,
   SKY_CAPTURE_KEYS,
 } from '../../../data/rendering/cubemapCaptures';
+import { cubemapCaptureFrame } from './cubemapCaptureFrame';
 import { cubemapFaceContext } from './cubemapFaceContext';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
@@ -74,21 +75,24 @@ export function scheduleSkyCaptures(input: {
     // `selection` (a stale halo in the lensed sky is accepted).
     const faces = new Map<CubeFace, CaptureFace>();
     const faceSizePx = ctx.renderTargets.sizeOf(row.target).width;
-    for (const face of ALL_CUBE_FACES) {
-      const faceCtx = cubemapFaceContext({
-        state,
-        eyeMpc: ctx.drawCamPos,
-        face,
-        faceSizePx,
-        nearMpc: row.nearMpc,
-        viewSlotBase: row.viewSlotBase,
-        nowMs: ctx.nowMs,
-      });
-      // A sky face draws no body: the roster is the sky alone.
-      if (faceCtx !== null) faces.set(face, { ctx: faceCtx, bodySlabs: [] });
+    // One frame for the whole row (world axes: no host to rotate into).
+    const snapshot = cubemapCaptureFrame({
+      state,
+      eyeMpc: ctx.drawCamPos,
+      nearMpc: row.nearMpc,
+      nowMs: ctx.nowMs,
+    });
+    if (snapshot.isReady) {
+      for (const face of ALL_CUBE_FACES) {
+        // A sky face draws no body: the roster is the sky alone.
+        faces.set(face, {
+          ctx: cubemapFaceContext(snapshot, face, faceSizePx, row.viewSlotBase),
+          bodySlabs: [],
+        });
+      }
     }
-    // A face's context comes back null pre-bootstrap: schedule nothing and leave
-    // `bakedSettings` untouched, so the next frame retries the whole sweep.
+    // Pre-bootstrap, `snapshot` comes back not-ready: schedule nothing and
+    // leave `bakedSettings` untouched, so the next frame retries the whole sweep.
     if (faces.size !== ALL_CUBE_FACES.length) continue;
     scheduled.set(key, faces);
     // Only a settled bake is recorded: while the roster moves, null keeps the
