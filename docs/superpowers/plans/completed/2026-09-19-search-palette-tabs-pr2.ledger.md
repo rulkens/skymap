@@ -69,3 +69,17 @@ User go: "ok pr 2" (2026-09-19). PR1 wt `search-tabs` is kept on disk; its dev s
   4. Watch CI in background, report unprompted.
   5. Squash-merge #765 ONLY on the user's explicit word. Mark the PR ready (currently draft) first.
 - CI GREEN on 4d542a1c5 (run 35535006556, 5m16s, + Cloudflare build). Landing note cleared.
+
+## Deletion-audit rulings (user, 2026-09-20): LEAVE ALL FOUR AS-IS
+
+Settled — do not re-open or re-audit these:
+1. Collapsing `declutterActions` into `CAPTURE_HIDDEN_PASSES` pass names (~27 LOC): PARKED.
+   It should be pixel-identical but would cost a full 42-card re-capture + a fresh user
+   eye-check. Two mechanisms for one job is the known, accepted shape here.
+2. `selectCaptureTargets`'s `knownId` set and its second `--force` error message: KEEP.
+   The vaguer single message is worse curator DX than the ~12 LOC is worth.
+3. `WARN_BYTES` (40 KB thumbnail warning, never fired; largest is 13.7 KB): KEEP as a
+   regression sentinel for future capture runs.
+4. `bodyPhasePose.test.ts` 'frames every body to the same apparent size': KEEP. Near-
+   tautological (the radius cancels), but it would catch a swap to `bodyDrawRadiusM` on
+   bodies with atmosphere shells. The two reviewers split; the user kept it.
