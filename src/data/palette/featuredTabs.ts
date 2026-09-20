@@ -30,6 +30,18 @@ const VOYAGER1_CAPTURE: PaletteCardCapture = {
     distance: 2.356833031514677e-22,
   },
 };
+// Same mesh as Voyager 1, so the same distance frames it the same; the angle is
+// the body cards' 315° (waning gibbous), which is the one part worth computing.
+const VOYAGER2_CAPTURE: PaletteCardCapture = {
+  t: '2026-09-18T12:56:32Z',
+  keepFocus: true,
+  pose: {
+    target: [0, 0, 0],
+    yaw: -1.8732995647667687,
+    pitch: 0.4557706224258967,
+    distance: 2.356833031514677e-22,
+  },
+};
 // Default site framing, lit at this instant. The user's own site pose needs
 // the site-pose seam, which is deferred.
 const PERSEVERANCE_CAPTURE: PaletteCardCapture = { t: '2026-09-18T06:00:00Z' };
@@ -326,6 +338,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'Launched in 1977, the only spacecraft to have visited Uranus and Neptune. It reached interstellar space in 2018.',
         action: { kind: 'focus', focusId: 'body-voyager2' },
+        capture: VOYAGER2_CAPTURE,
       },
       {
         id: 'body-curiosity',
