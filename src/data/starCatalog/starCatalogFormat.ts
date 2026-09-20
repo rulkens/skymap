@@ -66,7 +66,7 @@ import type { StarCatalogNode } from '../../@types/data/starCatalog/StarCatalogN
 import { compressStarBin, decompressStarBin } from './starBinCodec';
 
 /** File magic "SKST" (little-endian ASCII), distinct from the galaxy "SKMP". */
-export const MAGIC = 0x54534b53;
+const MAGIC = 0x54534b53;
 
 /** On-disk format version. Bumping this rejects every older `.bin` on load. */
 export const VERSION = 1;
@@ -127,7 +127,7 @@ export const STAR_COLORIDX_LEVELS = 64;
 export const STAR_COLORIDX_MIN = -0.6;
 
 /** BP-RP colour window ceiling (reddest bin edge). */
-export const STAR_COLORIDX_MAX = 4.4;
+const STAR_COLORIDX_MAX = 4.4;
 
 /** Width of one BP-RP colour bin, derived from the frozen window. */
 export const STAR_COLORIDX_STEP = (STAR_COLORIDX_MAX - STAR_COLORIDX_MIN) / STAR_COLORIDX_LEVELS;

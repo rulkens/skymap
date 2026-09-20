@@ -24,7 +24,7 @@
 import type { Vec4 } from '../../../@types/math/Vec4';
 
 /** Style fields the Milky Way label producer reads. */
-export type MilkyWayLabelStyle = {
+type MilkyWayLabelStyle = {
   /** Label glyph fill (straight RGBA — renderer premultiplies). */
   readonly labelColor: Vec4;
   /** Colour of the vertical marker-line stem lifting the label off the origin. */

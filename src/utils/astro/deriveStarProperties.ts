@@ -27,7 +27,7 @@ import { starLuminositySolar } from './starLuminositySolar';
 import { starRadiusSolar } from './starRadiusSolar';
 import { STAR_TEFF_COEFFICIENTS } from './starTeffCoefficients';
 
-export type DerivedStarProperties = {
+type DerivedStarProperties = {
   teffK: number;
   luminositySolar: number;
   radiusSolar: number;

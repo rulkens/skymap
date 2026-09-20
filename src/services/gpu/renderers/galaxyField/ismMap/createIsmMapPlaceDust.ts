@@ -18,14 +18,14 @@ import { MAX_PARTICLE_COUNT } from '../../../../engine/galaxyGenerator/v2/dustPa
 
 const PLACE_DUST_WORKGROUP_SIZE = 256;
 
-export type PlaceDustGrid = {
+type PlaceDustGrid = {
   readonly rings: number;
   readonly az: number;
   readonly rMin: number;
   readonly rMax: number;
 };
 
-export type PlaceDustWarp = {
+type PlaceDustWarp = {
   readonly warpStrength: number;
   readonly warpTwist: number;
   readonly warpStartRadius: number;

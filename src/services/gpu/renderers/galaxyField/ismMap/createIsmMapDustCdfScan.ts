@@ -21,9 +21,9 @@ import type { IsmMapCdfArmEnvelopeEntry } from './packIsmMapCdfArmEnvelope';
 export type { IsmMapCdfChannelWeights, IsmMapCdfArmEnvelopeEntry };
 
 /** Headroom over any real preset's arm count (hiiRegions.ts callers run well under this) — just sizes the fixed armEnvelopeBuffer allocation. */
-export const ISM_MAP_CDF_MAX_ARM_COUNT = 8;
+const ISM_MAP_CDF_MAX_ARM_COUNT = 8;
 
-export type IsmMapCdfScanGrid = {
+type IsmMapCdfScanGrid = {
   readonly rings: number;
   readonly az: number;
   readonly rMin: number;
@@ -42,7 +42,7 @@ export type IsmMapCdfScanGrid = {
  * armCount` — see `packIsmMapCdfArmEnvelope.ts`'s own doc for how a caller
  * fills it (one `refresh(radius)` per ring, not per texel).
  */
-export type IsmMapCdfWeightTable =
+type IsmMapCdfWeightTable =
   | {
       readonly kind: 'channel';
       readonly channelWeights: IsmMapCdfChannelWeights;

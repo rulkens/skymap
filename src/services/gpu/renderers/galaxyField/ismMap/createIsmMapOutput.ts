@@ -30,7 +30,7 @@ const DUST_BLUR_FACTOR = 8;
  * the escalation is a two-level cascade (fine inner tile + this coarser
  * outer one), not a blanket resolution bump.
  */
-export const ISM_MAP_CARTESIAN_SIZE = 2048;
+const ISM_MAP_CARTESIAN_SIZE = 2048;
 
 export type IsmMapOutput = {
   /** The packed, presentable output (gas / recent SF / older SF / dust) the orientation chain and the CPU readback both read. */
