@@ -27,11 +27,11 @@
 
 **Dome basis** (camera-from-dome), with τ = `tiltDeg` = 60. Its columns are the dome axes in camera coordinates:
 
-| dome axis | camera coords          | at τ = 60           |
-| --------- | ---------------------- | ------------------- |
-| right     | (1, 0, 0)              | (1, 0, 0)           |
-| zenith    | (0, sin τ, cos τ)      | (0, 0.866, 0.5)     |
-| front     | (0, −cos τ, sin τ)     | (0, −0.5, 0.866)    |
+| dome axis | camera coords      | at τ = 60        |
+| --------- | ------------------ | ---------------- |
+| right     | (1, 0, 0)          | (1, 0, 0)        |
+| zenith    | (0, sin τ, cos τ)  | (0, 0.866, 0.5)  |
+| front     | (0, −cos τ, sin τ) | (0, −0.5, 0.866) |
 
 So the zenith is the camera forward pitched up by τ. The camera forward sits at dome coordinates (0, cos τ, sin τ): 30° elevation on the front meridian.
 
@@ -191,14 +191,14 @@ export function domeFaceViews(main: ReadyFrameContext, state: EngineState): read
 
 **What `domeFaceViews` builds.** One `ViewSpec` per layer i, passed to `deriveViewContext(state, main, spec)`. A null result is dropped (pre-bootstrap only).
 
-| ViewSpec field | value                                                  |
-| -------------- | ------------------------------------------------------ |
-| `rotation`     | `domeFaceRotations(DOME_PARAMS.tiltDeg)[i]`            |
-| `eyeOffsetMpc` | `[0, 0, 0]`                                            |
-| `frustum`      | `symmetricFrustum(Math.PI / 2, 1)`                     |
-| `sizePx`       | `main.canvasSize` (the dome canvas is square: Task 5)  |
-| `slot`         | `DOME_PARAMS.viewSlotBase + i`                         |
-| `output`       | `main.renderTargets.layerViewOf('dome-cube', i)`       |
+| ViewSpec field | value                                                 |
+| -------------- | ----------------------------------------------------- |
+| `rotation`     | `domeFaceRotations(DOME_PARAMS.tiltDeg)[i]`           |
+| `eyeOffsetMpc` | `[0, 0, 0]`                                           |
+| `frustum`      | `symmetricFrustum(Math.PI / 2, 1)`                    |
+| `sizePx`       | `main.canvasSize` (the dome canvas is square: Task 5) |
+| `slot`         | `DOME_PARAMS.viewSlotBase + i`                        |
+| `output`       | `main.renderTargets.layerViewOf('dome-cube', i)`      |
 
 **How the rig runs:**
 
@@ -272,8 +272,11 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
 - **`ffprobeReport`** also returns and prints `profile`, `level`, `pix_fmt` and `r_frame_rate`. They are already in `-show_streams` JSON.
 - **README:** add a `--dome` row to the flag table, plus a short "Fulldome (Wisdome)" section giving the command and the expected ffprobe values.
 
+**`--frames N`** (user-ruled 2026-09-20, applies to every take, not just dome): stop after N captured frames and close the file cleanly. N is a positive integer; the take ends at `min(natural end, loopFrames, N)` — the capture loop already bounds on `frameCap` and a looping clip's `loopFrames` (`record.ts:874`, `:904`), so this is a third bound on the same comparison, not a new stop path. `--frames` beyond the take's own length is clamped, never a way to run a loop twice. It is the FIRST N frames only: no start offset (tours window with `--beats`; a clip start offset is out of scope). Its value: a 4096² dome frame renders five faces, so an early Wisdome test file costs minutes at `--frames 150` (5 s) instead of 4440 frames.
+
 - [ ] Test `dome capture URL carries both gates` in `buildCaptureUrl.test.ts`.
 - [ ] Test `dome encode pins the Wisdome H.264 argv`: full-array `toEqual`. A dropped `-level 6.1` or `-pix_fmt` produces a file that only fails on the venue's player.
+- [ ] Add `--frames`: parse + validate in `parseArgs`, clamp into the loop's bound, name it in the progress line and the README table. No test (argv plumbing over an existing bound; Task 7 exercises it).
 - [ ] Commit.
 
 ### Task 7: Test film to Wisdome
@@ -281,9 +284,9 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
 **Files:** none committed (`recordings/` is gitignored).
 
 - [ ] If `public/data` in the worktree is empty, run `/link-data` first.
-- [ ] Run `npm run record-clip -- earthUniverseLoop --dome --serve --rebuild`. `--serve` means a production build with no HMR reloads mid-take, and `--rebuild` because the app changed.
-  - The take is one loop cycle: 148 s, which is 4440 frames at 30 fps.
-  - Time the first progress lines (they print every 60 frames). If a frame takes more than about 2 s (over 2.5 h total), stop and ask the user whether to take a shorter film (Open points #4).
+- [ ] Take the short film FIRST: `npm run record-clip -- earthUniverseLoop --dome --frames 150 --serve --rebuild` (5 s at 30 fps). `--serve` means a production build with no HMR reloads mid-take, and `--rebuild` because the app changed. This is the file Wisdome gets early, and it proves the format before any long render.
+- [ ] Then the full take, `npm run record-clip -- earthUniverseLoop --dome --serve` (drop `--frames`), one loop cycle: 148 s, 4440 frames at 30 fps.
+  - Time the first progress lines (they print every 60 frames). If a frame takes more than about 2 s (over 2.5 h total), report the rate to the user before committing to the full run.
 - [ ] Probe the file:
 
   ```bash
@@ -293,6 +296,7 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
   ```
 
   Expect `codec_name=h264`, `profile=Main`, `level=61`, `pix_fmt=yuv420p`, `width=4096`, `height=4096` and `r_frame_rate=30/1`.
+
 - [ ] Extract stills with `ffmpeg -ss <t> -i <out> -frames:v 1 still-<t>.png` at t = 2 s (Earth close-up: face seams over Earth), 35 s (galaxy field: dot/glow floors at face edges) and 74 s (far turn-around).
   - Check each still: the disc is black outside, the horizon sits about 30° up from the bottom edge, and there are no seams.
   - Show the stills to the user.
@@ -310,10 +314,10 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
 1. **Canvas-sized layered target.** The spec wants `dome-cube` as a "2d-array, 5 layers, N²" row, but today a row can have layers only through `fixedSizePx`, whose size comes from state and not from the canvas (`RenderTargetSpec.d.ts` `fixedSizePx.layers`; `renderTargets.ts:366,377,388,409,463-466`). Task 2 hoists `layers` to its own field instead of working around it.
 2. **Terrain pick marker placement.** The spec lists the marker among the things that are off in dome, beside `OVERLAYS`, but it is drawn inside `SCENE`'s foreground line (`frameSections.ts:236`). Leaving `OVERLAYS` out does not turn it off. Task 5 gates it at the cursor write instead.
 3. **Encoder.** The recorder encodes with `h264_videotoolbox` at 60 Mbit/s, not libx264 (`buildFfmpegArgs.ts:29-44`, with the reasoning in its header). The spec's libx264 args apply under `--dome` only; non-dome takes keep VideoToolbox. Apple's H.264 encoder very likely rejects 4096² anyway.
-4. **"Short" test clip.** The recorder has no frame cap, and a loop take records exactly one cycle: 148 s, i.e. 4440 frames at 30 fps (`makeEarthLoop.ts:23-24,53`; `record.ts` loop-frame stop). Task 7 records the full cycle. A `--frames` cap would be a new knob, so it needs the user's call.
+4. **"Short" test clip — RULED 2026-09-20.** A loop take records exactly one cycle: 148 s, i.e. 4440 frames at 30 fps (`makeEarthLoop.ts:23-24,53`; `record.ts` loop-frame stop). The user asked for a `--frames N` cap; Task 6 adds it and Task 7 takes the short film first.
 5. **Boot check assumes one order.** `checkFrameOrder` checks "exactly once" over one order (`checkFrameOrder.ts:56-116`, `startLoop.ts:27-33`), which contradicts a second rig reusing `SCENE`. Task 4 makes the check per-rig.
 6. **Planning on the main context only.** The spec's union planning covers the surface cut and the star cut only. Some SCENE data is still planned once, from the main 60° context: the galaxy disk LOD (`src/layers/galaxyCatalog/frame.ts:83-119` plans at `drawPxPerRad` ≈ 0.87 N, while faces render at 0.5 N), structure markers (`runFrame.ts:315-317`) and the label directors (`runFrame.ts:292-295`, which feed overlays that dome doesn't draw). This plan leaves them as is: expect LOD thresholds to shift in the dome frames; it is not a correctness break. Eye-check it on the stills.
-7. **README drift (ask).** `tools/record/README.md` says `--dpr` defaults to 2, but the code defaults to 1 (`record.ts:196-199`). Fix it in Task 6 only if the user says yes.
+7. **README drift — FIXED** on the prep PR (`965979a9b`, `ea4ccaa0c`): `tools/record/README.md` claimed `--dpr` defaults to 2 where the code defaults to 1 (`record.ts:196-199`).
 
 ## Definition of Done
 
@@ -324,7 +328,7 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
 - Frame and rig: `RenderTargetSpec.layers`, the `dome-cube` row, `VIEW_SLOT_COUNT = 24`, `CopyStepSpec` and the executor `copy` case, `ViewRigKey 'dome'`, `ViewRig.pickable`, `SCENE_TO_DOME_CUBE`/`DOME_RESAMPLE`, `VIEW_RIGS.dome`, `domeFaceViews`, and `checkFrameOrder` over every rig.
 - Resample: `domeResample.wesl`, `domeResampleRenderer`, `domeResamplePass`.
 - Boot and input: `?dome` seeding plus the square-canvas CSS, and the pick and cursor gates.
-- Recorder: `record-clip --dome`.
+- Recorder: `record-clip --dome`, and `--frames N` on every take.
 - The Task 7 film is on disk, and its ffprobe values are recorded in the ledger.
 
 **Smoke (dev server):**
