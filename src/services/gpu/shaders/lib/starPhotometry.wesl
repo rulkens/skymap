@@ -29,11 +29,11 @@
 // drift a value apart and silently break the parity — the same single-source
 // discipline lib/starKnee.wesl states for the compression constant.
 
-// Reference star-dot size in px — mirrors DEFAULT_STAR_SIZE_PX
-// (src/data/defaults.ts; consume, never diverge). Dividing the user's
-// 'sizePx' slider by it makes the DEFAULT setting the identity ('sizeScale'
-// == 1), so the tuned look holds at the default and only slider movement away
-// from it rescales the whole starfield's spread.
+// Reference star-dot size in px — the divisor for the user's 'sizePx' slider.
+// Its TS twin is STAR_SIZE_REF_PX in src/data/starCullSlack.ts (pinned by a
+// parity test), NOT DEFAULT_STAR_SIZE_PX (src/data/defaults.ts) — that constant
+// only seeds the slider's starting value and is deliberately larger (4.7), so
+// the shipped default already draws at 1.88x this reference, the tuned look.
 const STAR_SIZE_REF_PX: f32 = 2.5;
 
 // Legibility floor for a POINT source in px (at the default size). A leaf star

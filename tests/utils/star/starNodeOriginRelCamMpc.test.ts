@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { starNodeOriginRelCamMpc } from '../../../../../src/services/gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
-import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogNode } from '../../../../../src/@types/data/starCatalog/StarCatalogNode';
+import { starNodeOriginRelCamMpc } from '../../../src/utils/star/starNodeOriginRelCamMpc';
+import { SCALE_UNITS } from '../../../src/data/scaleUnits';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
+import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarCatalogNode } from '../../../src/@types/data/starCatalog/StarCatalogNode';
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC; // 1e-6
 

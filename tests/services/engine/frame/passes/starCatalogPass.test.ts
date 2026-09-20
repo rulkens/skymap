@@ -1,7 +1,7 @@
 /**
  * starCatalogPass — unit tests for the survey (Gaia bin) star LEAF content
  * row. The walk / fade / partition that feeds both streams lives in
- * `prepareStarCut` and is tested in `prepareStarCut.test.ts`; here we pin only
+ * `readStarCut` and is tested in `readStarCut.test.ts`; here we pin only
  * the layer's own behaviour:
  *
  *   1. `enabled` delegates to `starCatalogVisible` — the toggles AND the
@@ -22,7 +22,7 @@ import { starCatalogPass } from '../../../../../src/services/engine/frame/passes
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
-import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
+import { starExposureRamp } from '../../../../../src/utils/star/starExposureRamp';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
@@ -50,7 +50,7 @@ function camAtPc(distPc: number): Vec3 {
 }
 
 /**
- * A fresh ctx per call — `prepareStarCut` memoises on the ctx object, so a
+ * A fresh ctx per call — `readStarCut` memoises on the ctx object, so a
  * distinct object per frame keeps every draw a clean recompute.
  */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {

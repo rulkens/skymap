@@ -36,10 +36,10 @@ export const DEFAULT_POINT_SIZE_PX = 2.5;
 
 /**
  * Default star-billboard pixel radius — the star-catalog twin of
- * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx`. 4.7 px within
- * the shared 1–8 px user range, diverged larger than the 2.5 px galaxy point
- * size; kept a separate constant so the two layers can diverge without one
- * silently dragging the other.
+ * `DEFAULT_POINT_SIZE_PX`. Seeds `settings.starCatalogs.sizePx` only; it is
+ * NOT the shader's `sizePx` divisor (that's `STAR_SIZE_REF_PX` in
+ * `data/starCullSlack.ts`, independently 2.5). 4.7 px within the shared 1–8 px
+ * user range, deliberately 1.88x that divisor — the shipped, tuned look.
  */
 export const DEFAULT_STAR_SIZE_PX = 4.7;
 
@@ -63,13 +63,27 @@ export const DEFAULT_STAR_BRIGHTNESS = 1.0;
  *
  * 3.0 is eye-tuned, not the 1.0 physical identity: at 1.0 the far field still
  * shows the octree's box lattice as faceted seams between aggregates (see
- * `walkStarOctreeCut`'s `DEFAULT_REFINE_THRESHOLD` header for why a proxy
- * threshold alone can't fully hide it). Spreading each aggregate's glow to
- * 3.0x its box radius overlaps neighbours enough to dissolve the lattice into
- * a continuous far field. Tuned together with `DEFAULT_REFINE_THRESHOLD` — see
- * that constant's comment for how the two compensate.
+ * `DEFAULT_STAR_REFINE_THRESHOLD` below for why a proxy threshold alone can't fully
+ * hide it). Spreading each aggregate's glow to 3.0x its box radius overlaps
+ * neighbours enough to dissolve the lattice into a continuous far field. Tuned
+ * together with `DEFAULT_STAR_REFINE_THRESHOLD` — see that constant's comment for
+ * how the two compensate.
  */
 export const DEFAULT_STAR_GLOW_OVERLAP = 3.0;
+
+/**
+ * Default star-octree refine threshold — seeds `settings.starCatalogs.refineThreshold`
+ * (the "Detail" slider) and `walkStarOctreeCut`'s fallback; see there for the
+ * `edgePc / distancePc` proxy it compares against. Eye-tuned, not physical:
+ * a coarse aggregate's photometry is right at any threshold, what a loose one
+ * exposes is the octree's box lattice as faceted seams.
+ *
+ * LANDMINE: tuned jointly with `DEFAULT_STAR_GLOW_OVERLAP`, which hides the
+ * seams a coarser cut leaves. Moving one alone gives either a visible lattice
+ * (glow too narrow for the cut) or a soft, aggregate-heavy far field (cut too
+ * fine for the glow) — re-check both together.
+ */
+export const DEFAULT_STAR_REFINE_THRESHOLD = 0.16;
 
 /**
  * Default near-anchor star display exposure — seeds

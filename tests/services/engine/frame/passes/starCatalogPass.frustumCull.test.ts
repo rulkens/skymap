@@ -19,6 +19,8 @@ import { DEFAULT_FOV_Y_RAD } from '../../../../../src/services/engine/camera/cam
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
+import { DEFAULT_STAR_SIZE_PX } from '../../../../../src/data/defaults';
+import { STAR_SIZE_REF_PX, STAR_GLOW_MIN_PX } from '../../../../../src/data/starCullSlack';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
@@ -41,7 +43,7 @@ function camAtPc(distPc: number): Vec3 {
   return [0, 0, distPc * SCALE_UNITS.PC_TO_MPC];
 }
 
-/** A fresh ctx per call — `prepareStarCut` memoises on the ctx object. */
+/** A fresh ctx per call — `readStarCut` memoises on the ctx object. */
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): ReadyFrameContext {
   return { drawCamPos: camPos, nowMs, fovYRad: DEFAULT_FOV_Y_RAD } as unknown as ReadyFrameContext;
 }
@@ -75,14 +77,14 @@ function makePickRenderer() {
   };
 }
 
-function makeState(renderer: unknown, pickRenderer: unknown): EngineState {
+function makeState(renderer: unknown, pickRenderer: unknown, sizePx = 2.5): EngineState {
   return {
     gpu: { starCatalogRenderer: renderer, starCatalogPickRenderer: pickRenderer },
     subsystems: { scheduler: { requestRender: vi.fn() } },
     settings: {
       starCatalogs: {
         enabled: true,
-        sizePx: 2.5,
+        sizePx,
         brightness: 1.0,
         refineThreshold: 0.05,
         glowOverlap: 1.0,
@@ -132,5 +134,29 @@ describe('starCatalogPass frustum cull wiring', () => {
     expect(args.frustumPlanes).not.toBeNull();
     expect(args.frustumPlanes!.length).toBe(24);
     expect(args.glowMarginAngleRad).toBeGreaterThan(0);
+  });
+
+  // Regression for the STAR_SIZE_REF_PX/DEFAULT_STAR_SIZE_PX divergence: the
+  // shader divides sizePx by STAR_SIZE_REF_PX (2.5), so at the DEFAULT sizePx
+  // (4.7) the drawn glow is 1.88x the reference footprint. The CPU margin must
+  // cover that same footprint or a false cull can wink a visible star out.
+  it('drawStream forwards a leaf margin covering the shader footprint at the default sizePx', () => {
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
+    const camPos = camAtPc(MID_BAND_PC);
+    const view = makeNear0View(camPos);
+
+    starCatalogPass.draw(
+      PASS_STUB,
+      view,
+      makeCtx(camPos),
+      makeState(renderer, makePickRenderer(), DEFAULT_STAR_SIZE_PX),
+    );
+
+    const args = renderer.draw.mock.calls[0]![1];
+    const radiansPerPx = DEFAULT_FOV_Y_RAD / view.viewportPx[1];
+    const shaderFootprintPx = STAR_GLOW_MIN_PX * (DEFAULT_STAR_SIZE_PX / STAR_SIZE_REF_PX);
+    expect(args.glowMarginAngleRad).toBeGreaterThanOrEqual(
+      shaderFootprintPx * radiansPerPx - 1e-12,
+    );
   });
 });

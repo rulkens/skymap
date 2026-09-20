@@ -1,7 +1,7 @@
 /**
  * starAggregatesPass — the survey-star AGGREGATE stream into the half-res
- * offscreen. Its walk/partition is `prepareStarCut`, fed by `advanceStarFades`
- * (both tested in `prepareStarCut.test.ts`); here we pin only that it shares
+ * offscreen. Its walk/partition is `readStarCut`, fed by `advanceStarCut`
+ * (both tested in `readStarCut.test.ts`); here we pin only that it shares
  * the star gate and records the AGGREGATE sub-stream (never the leaf one)
  * into its pass.
  */

@@ -142,7 +142,8 @@ struct VSOut {
 // LUT — see mergeFluxAggregate), so the vertex stage multiplies the dequantized
 // mean flux by this count to recover the subtree's summed light. It is 1 for a
 // leaf (each leaf record is one star), which makes the multiply a branchless
-// identity there. The runtime derives it from the node table (subtreeStarCounts).
+// identity there. The runtime derives it from the node table
+// (`starOctreeIndex`'s `subtreeCounts`).
 struct NodeParams {
   originRelCamMpc: vec3<f32>,
   cellScaleMpc: f32,

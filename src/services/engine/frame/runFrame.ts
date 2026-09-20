@@ -33,7 +33,7 @@ import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
 import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { advanceStarFades } from './passes/starCatalogPass';
+import { advanceStarCut } from '../../gpu/renderers/starCatalog/cut/advanceStarCut';
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
@@ -298,18 +298,18 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // Advance the survey-star per-node LOD fades ONCE here, as a planner peer of
   // the disk/label planners above — the ONLY call in a real frame that mutates
-  // the fade ramps (see `advanceStarFades`'s own doc). Two reasons it lives at
+  // the fade ramps (see `advanceStarCut`'s own doc). Two reasons it lives at
   // frame-body level rather than only inside the star draw:
   //   1. The three star layers (leaf / aggregate / upsample) call the READ-ONLY
-  //      `prepareStarCut` during the GPU dispatch, which hits the per-ctx memo
+  //      `readStarCut` during the GPU dispatch, which hits the per-ctx memo
   //      this primes — so the walk still runs exactly once for the frame.
   //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
   //      wake vote used to fire from inside the pass (a `requestRender` scattered
   //      away from the single authority); now the pass computes the vote and
   //      `shouldKeepTicking` decides.
-  // `advanceStarFades` is a no-op returning null when the star pass isn't live
+  // `advanceStarCut` is a no-op returning null when the star pass isn't live
   // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  const starCut = advanceStarFades(state, ctx);
+  const starCut = advanceStarCut(state, ctx);
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {

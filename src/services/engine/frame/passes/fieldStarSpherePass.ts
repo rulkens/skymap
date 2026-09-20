@@ -42,7 +42,7 @@
  * clearly moved to it), but a merely-nearer star still in the band does not
  * dislodge the one already shown. The present star is remembered per catalog in a
  * `WeakMap` — the same catalog-keyed, tier-swap-isolated pattern
- * `starCatalogPass`'s fade state uses.
+ * `starFadeState` uses for the star catalog's own per-node fades.
  *
  * `enabled` runs the query and STORES the result; `draw` / `drawPick` READ the
  * stored star (never re-query), so the sphere they stamp and the presence flag
@@ -143,7 +143,7 @@ const OFF_FRACTION = 0.8;
 
 /**
  * Per-catalog presence memory. Keyed by the CATALOG object (like
- * `starCatalogPass`'s fade state) so a tier swap — a fresh catalog object —
+ * `starFadeState`) so a tier swap — a fresh catalog object —
  * starts empty and the old entry is GC'd with the WeakMap. Holds the currently
  * shown star, or `null` once nothing is present (both read as "not present").
  */

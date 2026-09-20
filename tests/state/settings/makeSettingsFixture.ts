@@ -76,10 +76,10 @@ import {
   DEFAULT_STAR_EXPOSURE_FAR_X,
   DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_SIZE_PX,
+  DEFAULT_STAR_REFINE_THRESHOLD,
   DEFAULT_TONE_MAP_CURVE,
   DEFAULT_VOLUMES_ENABLED,
 } from '../../../src/data/defaults';
-import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
@@ -167,7 +167,7 @@ export function makeSettingsFixture(
       enabled: true,
       sizePx: DEFAULT_STAR_SIZE_PX,
       brightness: DEFAULT_STAR_BRIGHTNESS,
-      refineThreshold: DEFAULT_REFINE_THRESHOLD,
+      refineThreshold: DEFAULT_STAR_REFINE_THRESHOLD,
       glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
       exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
       exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
