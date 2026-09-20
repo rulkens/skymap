@@ -1,6 +1,6 @@
 # Search palette tabs — PR2 implementation plan: thumbnail capture
 
-> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: superpowers:subagent-driven-development under the lean protocol in `docs/superpowers/conventions/sdd-execution.md`. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** `npm run capture-featured` drives the running dev server headlessly and writes one thumbnail per focus card to `public/images/featured/<cardId>.webp`, the path `cardImageSrc` already reads. The PR commits the images, so every captured card shows a real thumbnail instead of the dashed text tile.
 
@@ -41,9 +41,9 @@
 
 **Contract:** `export async function launchChromium(): Promise<Browser>`. Same behaviour as both copies: the `'chromium'` channel first, then the headless shell with `--enable-unsafe-webgpu --use-angle=metal` and the two warnings.
 
-- [ ] Create the file from the `measurePerf.ts` copy, with a ≤ 5-line header (why the channel comes first). Replace both local copies with an import, and drop any Playwright imports that go unused.
-- [ ] **No test:** a launch wrapper, and both harnesses exercise it on their next run.
-- [ ] `npm run typecheck:fast` passes. Commit as `prep(tools): one launchChromium for perf and record`.
+- [x] Create the file from the `measurePerf.ts` copy, with a ≤ 5-line header (why the channel comes first). Replace both local copies with an import, and drop any Playwright imports that go unused.
+- [x] **No test:** a launch wrapper, and both harnesses exercise it on their next run.
+- [x] `npm run typecheck:fast` passes. Commit as `prep(tools): one launchChromium for perf and record`.
 
 ### Task 1b: Prep, one page boot for perf, record and capture
 
@@ -66,11 +66,11 @@ export function isNavigationInterruption(err: unknown): boolean;          // mov
 export function collectPageErrors(page: Page): string[];                  // entries `error: …` / `console.error: …`
 ```
 
-- [ ] `bootPerfPage` becomes `newPage` + `collectPageErrors` + `bootHookedPage(page, `${url}/?perf`, '__skymapPerf')` + the `slotGroups` read. Its return shape is unchanged.
-- [ ] `record.ts` replaces `awaitCaptureReady`, its local `isNavigationInterruption` and the retry loop with one `bootHookedPage(page, captureUrl, '__skymapRecorder')` call. Keep the recorder's own live `pageerror`/`console` logging (it prints as it goes and feeds `[diag]`), and keep everything after the boot (reload suppression, virtual-time pause) where it is. Move the cold-cache retry rationale into `bootHookedPage`'s header, within the 5-line budget.
-- [ ] **No test:** the boot is Playwright plumbing with no pure core. `isNavigationInterruption` is a moved one-line regex.
-- [ ] Smoke both harnesses once against this worktree's dev server: a short `npm run perf -- --url <Local: URL>` run, and `npm run record-clip -- <shortest clip> --url <Local: URL> --frames 30`. Both reach their first measurement or frame. Delete the recording with `rm -f`.
-- [ ] `npm run typecheck` passes. Commit as `prep(tools): one page boot for perf and record`.
+- [x] `bootPerfPage` becomes `newPage` + `collectPageErrors` + `bootHookedPage(page, `${url}/?perf`, '__skymapPerf')` + the `slotGroups` read. Its return shape is unchanged.
+- [x] `record.ts` replaces `awaitCaptureReady`, its local `isNavigationInterruption` and the retry loop with one `bootHookedPage(page, captureUrl, '__skymapRecorder')` call. Keep the recorder's own live `pageerror`/`console` logging (it prints as it goes and feeds `[diag]`), and keep everything after the boot (reload suppression, virtual-time pause) where it is. Move the cold-cache retry rationale into `bootHookedPage`'s header, within the 5-line budget.
+- [x] **No test:** the boot is Playwright plumbing with no pure core. `isNavigationInterruption` is a moved one-line regex.
+- [x] Smoke both harnesses once against this worktree's dev server: a short `npm run perf -- --url <Local: URL>` run, and `npm run record-clip -- <shortest clip> --url <Local: URL> --frames 30`. Both reach their first measurement or frame. Delete the recording with `rm -f`.
+- [x] `npm run typecheck` passes. Commit as `prep(tools): one page boot for perf and record`.
 
 ### Task 2: The capture override type and the framed poses (review: yes, camera poses)
 
@@ -104,9 +104,9 @@ capture?: PaletteCardCapture;
 - No other card gets `capture`.
 - Update the module header's "nothing generates or rewrites it" line only if it no longer holds. It still holds: the tool reads this file and writes images only.
 
-- [ ] Write the type and the data.
-- [ ] **No test:** it is curation, and TS checks the shape.
-- [ ] Commit.
+- [x] Write the type and the data.
+- [x] **No test:** it is curation, and TS checks the shape.
+- [x] Commit.
 
 ### Task 3: Pure helpers, capture targets and pose verification
 
@@ -151,7 +151,7 @@ export function poseMismatch(
 - `distance`: **relative** difference ≤ 1e-3. Framed spacecraft distances are ~1e-22 Mpc, and any absolute tolerance passes them all.
 - `target` is not compared. Every posed card in PR2 keeps a focus, which overwrites the target with the body. PR3's view poses add the target check.
 
-- [ ] Tests in `selectCaptureTargets.test.ts`. Use a small fixture tab set, not `FEATURED_TABS`.
+- [x] Tests in `selectCaptureTargets.test.ts`. Use a small fixture tab set, not `FEATURED_TABS`.
   - `a card whose webp exists is skipped`.
   - `--force recaptures a card whose webp exists`.
   - `a card with an image override is never a target`.
@@ -160,12 +160,12 @@ export function poseMismatch(
   - `a card is captured from a copy without an image override`: the same id as a plain card in tab 1 and an `image`-override card in tab 2 → one target (the `m31` case).
   - `forcing an unknown or uncapturable id throws`: an unknown id, then an id whose only copy has an `image` override; both throw.
   - `copies of one card with different capture overrides throw`.
-- [ ] Tests in `poseMismatch.test.ts` (hand-computed values):
+- [x] Tests in `poseMismatch.test.ts` (hand-computed values):
   - `a yaw a full turn away matches`: requested yaw 3.8408, live 3.8408 − 2π → `[]`.
   - `a sub-metre distance mismatch is caught by relative error`: 6.55e-22 vs 7.0e-22 → `['distance']`; 6.55e-22 vs 6.5503e-22 → `[]`.
   - `pitch outside tolerance is reported`: 0.0992 vs 0.1100 → `['pitch']`.
-- [ ] Implement. `npm test -- tools/utils/capture` passes.
-- [ ] Commit. This ends Dispatch A.
+- [x] Implement. `npm test -- tools/utils/capture` passes.
+- [x] Commit. This ends Dispatch A.
 
 ### Task 4: The capture tool (review: yes, landmine-ordered browser sequence)
 
@@ -232,18 +232,18 @@ At the end, print a summary (captured / failed with reasons / warnings over 40 K
 - Where the per-card overrides live (`capture` in `featuredTabs.ts`), and that the `l` key's log gives the pose units.
 - The two landmines: the fly-in overwrites an early pose; the ring passes are hidden through `disabledPasses`.
 
-- [ ] Test in `captureHiddenPasses.test.ts`: `every pass the capture hides is a real content pass`. Each `CAPTURE_HIDDEN_PASSES` name is in `CONTENT_PASSES.map(p => p.name)` (`src/services/engine/frame/passes/index.ts`). A renamed pass would otherwise bring the ring back into every shot, with no error.
-- [ ] Implement the tool, the script entry, the README and the CLAUDE.md line.
-- [ ] Smoke it once against the running dev server: `npm run capture-featured -- --url <this worktree's Local: URL> --force body-earth`. Check that it writes `public/images/featured/body-earth.webp` at 204×204. **Don't commit the image** (Task 5 does). Delete it afterwards with `rm -f`.
-- [ ] Commit. This ends Dispatch B.
+- [x] Test in `captureHiddenPasses.test.ts`: `every pass the capture hides is a real content pass`. Each `CAPTURE_HIDDEN_PASSES` name is in `CONTENT_PASSES.map(p => p.name)` (`src/services/engine/frame/passes/index.ts`). A renamed pass would otherwise bring the ring back into every shot, with no error.
+- [x] Implement the tool, the script entry, the README and the CLAUDE.md line.
+- [x] Smoke it once against the running dev server: `npm run capture-featured -- --url <this worktree's Local: URL> --force body-earth`. Check that it writes `public/images/featured/body-earth.webp` at 204×204. **Don't commit the image** (Task 5 does). Delete it afterwards with `rm -f`.
+- [x] Commit. This ends Dispatch B.
 
 ### Task 5: Capture run and images (controller + user)
 
 **Files:** Create `public/images/featured/*.webp` (one per capturable card; about 45 once duplicates across tabs are merged).
 
-- [ ] With the worktree's dev server running: `npm run capture-featured -- --url <Local: URL>`. Re-run failed cards with `--force <id>…` until the run exits 0.
-- [ ] The user looks at every tab in the palette in the dev server. For a bad shot: adjust that card's `capture` in `featuredTabs.ts` (the `l` key logs a pose), then `--force` it.
-- [ ] Stage `public/images/featured/` by path, plus any `featuredTabs.ts` capture edits. Commit as `feat(palette): featured thumbnails`.
+- [x] With the worktree's dev server running: `npm run capture-featured -- --url <Local: URL>`. Re-run failed cards with `--force <id>…` until the run exits 0.
+- [x] The user looks at every tab in the palette in the dev server. For a bad shot: adjust that card's `capture` in `featuredTabs.ts` (the `l` key logs a pose), then `--force` it.
+- [x] Stage `public/images/featured/` by path, plus any `featuredTabs.ts` capture edits. Commit as `feat(palette): featured thumbnails`.
 
 ---
 
