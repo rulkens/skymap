@@ -12,13 +12,16 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
 import type { CameraDofRow } from '../../@types/camera/CameraDofRow';
+import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { OrientDofDelta } from '../../@types/camera/OrientDofDelta';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
 import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camera/orientDeltas';
 import { frameKey } from '../../services/engine/camera/rungs/frameKey';
-import { selectCameraTuning } from '../../state/camera/selectors';
+import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
+import { selectCameraBase, selectCameraTuning } from '../../state/camera/selectors';
 import { selectTerrainPickMarkerRadiusM } from '../../state/settings/selectors';
 import { useAppSelector } from '../../store/hooks';
+import CopyButton from '../common/CopyButton/CopyButton';
 import DebugSection from './DebugSection';
 import OrientationTuning from './OrientationTuning';
 import styles from './CameraStateSection.module.css';
@@ -163,6 +166,19 @@ function copyTextOf(model: PanelModel): string {
   return lines.join('\n');
 }
 
+/**
+ * Paste-ready `viewRegistry.ts` pose field, full JS precision like `copyTextOf`
+ * — a view's framing is Mpc-scale, and a rounded target reads as a different
+ * galaxy than the one the curator actually stood at.
+ */
+function poseSnippetOf(pose: CameraPose): string {
+  const [x, y, z] = pose.target;
+  return (
+    `pose: { target: [${num(x)}, ${num(y)}, ${num(z)}], ` +
+    `yaw: ${num(pose.yaw)}, pitch: ${num(pose.pitch)}, distance: ${num(pose.distance)} }`
+  );
+}
+
 function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElement {
   const [snap, setSnap] = useState<CameraDebugSnapshot>(cameraDebug);
   const [copied, setCopied] = useState(false);
@@ -170,6 +186,11 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
   // 4 Hz snapshot) would be a 250 ms mirror of the value the sliders write.
   const tuning = useAppSelector(selectCameraTuning);
   const markerRadiusM = useAppSelector(selectTerrainPickMarkerRadiusM);
+  // `camera.base` (not the 4 Hz snap) so this is never behind the poll; a
+  // view's pose is only meaningful in the absolute/world arm — body- and
+  // site-anchored poses carry no `target`/`yaw`/`pitch` to paste.
+  const base = useAppSelector(selectCameraBase);
+  const viewPoseText = isWorldArm(base) ? poseSnippetOf(base.pose) : '';
 
   useEffect(() => {
     // This mount is what turns the frame loop's Δ/peak record on.
@@ -268,6 +289,11 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
       >
         {copied ? 'copied ✓' : 'copy all'}
       </button>
+      <CopyButton
+        text={viewPoseText}
+        label="copy view pose"
+        title="Paste into a viewRegistry.ts entry's pose field (world arm only)"
+      />
     </DebugSection>
   );
 }
