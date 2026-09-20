@@ -1,57 +1,57 @@
-# `starCatalogPass` god-layer split (three owned concerns, layer-imports-layer)
+# `computeStarCut`'s stream SoA crossfade bookkeeping stays braided into one boolean flag
 
 Surfaced by the 2026-08-17 renderer/layer sweep
 ([`renderer-layer-outliers.md`](../research/engine/renderer-layer-outliers.md):74,
-"God-layers" table, and :206, ladder-assignments table). `ORPHAN` in the
-2026-08-20 carry-forward audit: explicitly ruled "worthwhile but not
-contract-blocking … backlog" but no `docs/backlog/` file or `BACKLOG.md` line
-was ever filed for it — distinct from `foregroundLabelsPass`'s 812-LoC split,
-which rung 8 does own.
+"God-layers" table). Originally filed against `starCatalogPass` (983 LoC,
+three braided concerns); the 2026-09-20 `starCatalogPass` extraction
+(`docs/superpowers/plans/2026-09-20-star-catalog-pass-extraction.md`) resolved
+two of the three mechanically and left this one, by design, for the
+`starCatalog` Layer PR (spec `docs/superpowers/specs/2026-09-09-layer-composition-design.md`
+§6.4, §10e).
 
-## What it is
+## What's already resolved
 
-`starCatalogPass` is 983 LoC and owns three separable concerns in one file:
+- **Visibility gate** — `starCatalogVisible` is its own module
+  (`src/services/gpu/renderers/starCatalog/cut/starCatalogVisible.ts`); the
+  two sibling passes (`starAggregatesPass`, `starAggregateUpsamplePass`)
+  import it directly instead of reaching into a layer-shaped pass file's
+  internals.
+- **The shared octree walk** — `computeStarCut` / `readStarCut` /
+  `advanceStarCut` are their own modules under
+  `src/services/gpu/renderers/starCatalog/cut/`, sharing one `ctx`-keyed memo
+  (`starCutOncePerCtx`) across all three star-catalog layers.
 
-- `starCatalogVisible` — the layer's own visibility/liveness gate.
-- `prepareStarCut` — the shared octree walk hoisted to `runFrame` and
-  memoised on `ctx`, feeding all three star-catalog layers
-  (`star-aggregates`, `star-catalog`, `star-upsample`; see
-  [`subsystem-sweep.md`](../research/engine/subsystem-sweep.md) row "Star
-  catalog (Gaia survey)").
-- The stream SoA (structure-of-arrays) bookkeeping for the crossfade.
+## Also carried by the Layer PR: the star defaults move
 
-Two sibling layers import `starCatalogPass`'s `enabled` directly — a layer
-importing another layer's internals, rather than each layer deriving its own
-gate from a shared function. The renderer sweep's median layer size is ~100
-LoC; this one is roughly 10× that.
+The eight `DEFAULT_STAR_*` constants in `src/data/defaults.ts` (`sizePx`,
+`brightness`, `glowOverlap`, `refineThreshold`, the three exposure anchors, and
+the aggregate intensity cap) belong in
+**`src/layers/starCatalog/settings/defaults.ts`** — the Layer already owns the
+slice that seeds them, and after the 2026-09-20 extraction nothing in core reads
+them: `walkStarOctreeCut`'s `refineThreshold` is a required argument precisely so
+that walk stays ignorant of the slider's default, and the only remaining external
+reader is `tools/perf/starCutCpuBench.mts`, which is a tool, not core.
+
+Not done in the extraction PR because galaxyCatalog, zoneOfAvoidance and body all
+still read their defaults from `data/defaults.ts`; moving star's alone makes it
+the first Layer to own them, which is a change of pattern that belongs with the
+Layer work rather than bolted onto a refactor.
+
+## What's left
+
+`computeStarCut(state, ctx, advanceFades: boolean)` still switches between a
+pure read (`advanceFades: false`, used by the pick path and capture faces)
+and a mutating fade-ramp advance (`advanceFades: true`, `runFrame`'s one real
+call per frame) via a boolean flag rather than two distinct functions or a
+before/after split. Un-braiding it is design work — it touches the two-stamp
+fade scheme, the double-buffered active-node lists, and the per-catalog
+`StarFadeState` — not mechanical prep, so it stays deferred to the
+`starCatalog` Layer PR rather than riding this extraction.
 
 ## Why it matters
 
-Cleanup, not a correctness bug today. The risk is maintainability: three
-concerns compacted into one file with cross-layer imports makes it harder to
-reason about which sibling depends on which internal, and raises the odds a
-future edit to one concern (say, the SoA layout) silently breaks a sibling
-that imported `enabled` rather than going through a declared seam.
-
-## Approach
-
-No design has been done yet — this needs a `needs-design` pass before a plan,
-because the split boundary isn't obvious from the audit alone. Starting
-points to weigh:
-
-- Whether `prepareStarCut`'s hoisted-and-memoised walk should live in its own
-  module (it already conceptually stands apart — it's the "shared derivation,
-  hoisted to runFrame" pattern decisions.md #7 wants the four solar-system
-  derivations to follow too; see the companion orphan item
-  [hoist the solar-system derivations](2026-08-20-hoist-solar-system-derivations.md)).
-- Whether the two sibling layers' `enabled` import should become a shared
-  liveness function (`deriveStarCatalogLiveness`-style) instead of a
-  layer-importing-layer edge — matching the `deriveXLiveness` convention
-  already used for the two dedicated liveness files in the codebase.
-- Whether the SoA stream bookkeeping is cleanly separable from the layer's
-  `draw`/`drawPick`, or whether it's load-bearing enough to stay put.
-
-Sequencing note: `foregroundLabelsPass`'s god-layer split (the sibling
-finding in the same table row) falls out of rung 8 (label/marker-mechanism
-unification) as a side effect. This item does not ride rung 8 — nothing in
-the ladder currently owns it.
+Cleanup, not a correctness bug today. A boolean that switches a function
+between pure and side-effecting is a shape that's easy to call wrong (the
+pick-path double-advance bug class the fade tests guard against); splitting
+it removes that whole failure class instead of relying on call-site
+discipline.

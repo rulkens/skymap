@@ -9,19 +9,16 @@
  * wholesale, and within the leaf stream only opacity > 0 survives.
  */
 import { describe, expect, it } from 'vitest';
-import { starPickLeafDraws } from '../../../../../src/services/gpu/renderers/starCatalog/starPickLeafDraws';
-import type {
-  PreparedStarCut,
-  StarNodeStream,
-} from '../../../../../src/services/engine/frame/passes/starCatalogPass';
-import type { StarNodeDraw } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
-import { Source } from '../../../../../src/data/sources';
+import { starPickLeafDraws } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/starPickLeafDraws';
+import type { PreparedStarCut } from '../../../../../../src/@types/rendering/PreparedStarCut';
+import type { StarNodeStream } from '../../../../../../src/@types/rendering/StarNodeStream';
+import type { StarNodeDraw } from '../../../../../../src/@types/rendering/StarNodeDraw';
+import { Source } from '../../../../../../src/data/sources';
 
 /** Build a one-node flat stream fixture at a given opacity + aggregate flag. */
 function streamOf(draw: StarNodeDraw, opacity: number, isAggregate: number): StarNodeStream {
   return {
     count: 1,
-    nodeIndex: new Int32Array([draw.nodeIndex]),
     firstRecord: new Uint32Array([draw.firstRecord]),
     recordCount: new Uint32Array([draw.recordCount]),
     originRelCamMpc: new Float32Array([draw.nodeIndex, 0, 0]),
@@ -39,7 +36,6 @@ function leafStream(
 ): StarNodeStream {
   return {
     count: 2,
-    nodeIndex: new Int32Array([a.draw.nodeIndex, b.draw.nodeIndex]),
     firstRecord: new Uint32Array([a.draw.firstRecord, b.draw.firstRecord]),
     recordCount: new Uint32Array([a.draw.recordCount, b.draw.recordCount]),
     originRelCamMpc: new Float32Array([a.draw.nodeIndex, 0, 0, b.draw.nodeIndex, 0, 0]),

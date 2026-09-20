@@ -64,8 +64,8 @@ Three kinds of content share the scene; this section says which is which.
 
 ### Stars and the Sun
 
-- **Octree cut**: subtrees too small on screen collapse into flux-weighted aggregate points on a half-resolution glow target; resolved leaves draw as full-resolution additive sprites ([walkStarOctreeCut.ts](../src/services/gpu/renderers/starCatalog/walkStarOctreeCut.ts)).
-- **Photometry**: Pogson flux `10^(−0.4·M)` anchored at 10 pc, inverse-square dimming, and a camera-distance exposure ramp ([starPhotometry.wesl](../src/services/gpu/shaders/lib/starPhotometry.wesl), [starExposureRamp.ts](../src/services/gpu/renderers/starCatalog/starExposureRamp.ts)).
+- **Octree cut**: subtrees too small on screen collapse into flux-weighted aggregate points on a half-resolution glow target; resolved leaves draw as full-resolution additive sprites ([walkStarOctreeCut.ts](../src/utils/star/walkStarOctreeCut.ts)).
+- **Photometry**: Pogson flux `10^(−0.4·M)` anchored at 10 pc, inverse-square dimming, and a camera-distance exposure ramp ([starPhotometry.wesl](../src/services/gpu/shaders/lib/starPhotometry.wesl), [starExposureRamp.ts](../src/utils/star/starExposureRamp.ts)).
 - **True-scale spheres**: past 4 px of apparent disc a star becomes an emissive sphere ([partitionStarsByResolution.ts](../src/services/engine/frame/partitionStarsByResolution.ts)); the Sun is simply the nearest such star, with the bloom threshold calibrated so its disc blooms.
 - **Tint**: BP−RP through spectral-class anchors for points ([starTintFromBpRp.ts](../src/utils/color/starTintFromBpRp.ts)); a blackbody-locus polynomial in temperature for resolved spheres ([temperatureToLinearRgb.ts](../src/utils/color/temperatureToLinearRgb.ts)).
 

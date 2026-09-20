@@ -31,7 +31,7 @@ import { SCALE_FADE_BANDS } from '../../../../../src/services/engine/presentatio
 import { fadeBand } from '../../../../../src/utils/math/fadeBand';
 import { rebaseViewProj } from '../../../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
-import { starExposureRamp } from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
+import { starExposureRamp } from '../../../../../src/utils/star/starExposureRamp';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
 import { SCENE_ANCHORS } from '../../../../../src/data/bodies/sceneAnchors';
 import { SGR_A_STAR_ANCHOR } from '../../../../../src/data/bodies/sceneSgrAStar';

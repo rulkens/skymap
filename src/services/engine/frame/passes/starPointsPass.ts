@@ -98,7 +98,7 @@ import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelat
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
 import { sgrAStarCaptionTarget } from '../../presentation/sgrAStarCaptionTarget';
-import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
+import { starExposureRamp } from '../../../../utils/star/starExposureRamp';
 import { SGR_A_STAR } from '../../../../data/bodies/sceneSgrAStar';
 import { Source } from '../../../../data/sources';
 import { packSelection, PICK_SENTINEL_OFFSET } from '../../../../data/selectionEncoding';

@@ -58,8 +58,8 @@ function sceneBodyForId(state: PassState, bodyId: BodyId): CelestialBody | null 
  * One body-slab-row derivation, shared by `draw`, `drawPick`, and
  * `runFrame`'s tile planner — the three sites that each used to
  * independently look up the body's state and recompute the same body-local
- * MVP + camera. Memoised per `(ctx, bodyId)` (mirrors `prepareStarCut` in
- * `starCatalogPass.ts`), so whichever call site reaches it first in a frame
+ * MVP + camera. Memoised per `(ctx, bodyId)` (mirrors `readStarCut` in
+ * `renderers/starCatalog/cut/readStarCut.ts`), so whichever call site reaches it first in a frame
  * does the work and the rest read the cache — keyed on `bodyId`, not just
  * `ctx`, because a single ctx now serves every body-slab row and a `ctx`-only
  * memo would return Earth's frame for any other body sharing the same frame.

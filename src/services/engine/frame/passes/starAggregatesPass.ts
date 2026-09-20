@@ -12,11 +12,11 @@
  * (`starCatalogPass`).
  *
  * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
- * ALL shared with the other two star layers via `prepareStarCut` (memoised on
+ * ALL shared with the other two star layers via `readStarCut` (memoised on
  * `ctx`): this layer draws first in program order (its `star-aggregates` render
  * step precedes the hdr NEAR0 step), so its `draw` typically triggers the walk,
  * and the leaf + upsample layers read the cached result. This layer records
- * ONLY the aggregate sub-stream, via the shared `drawStream` helper with
+ * ONLY the aggregate sub-stream, via the shared `drawStarStream` helper with
  * `stream: 'aggregate'` — the renderer's `fsLinear` pipeline into the offscreen.
  *
  * ### Why `enabled` shares `starCatalogVisible`
@@ -31,7 +31,9 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
-import { starCatalogVisible, prepareStarCut, drawStream } from './starCatalogPass';
+import { starCatalogVisible } from '../../../gpu/renderers/starCatalog/cut/starCatalogVisible';
+import { readStarCut } from '../../../gpu/renderers/starCatalog/cut/readStarCut';
+import { drawStarStream } from '../../../gpu/renderers/starCatalog/cut/drawStarStream';
 
 export const starAggregatesPass: ContentPass = {
   name: 'star-aggregates',
@@ -41,7 +43,7 @@ export const starAggregatesPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.starCatalogRenderer;
     if (renderer === null) return;
-    const prep = prepareStarCut(state, ctx);
+    const prep = readStarCut(state, ctx);
     if (prep === null) return;
 
     // Viewport is the DESTINATION target's allocated size, not the canvas:
@@ -58,6 +60,6 @@ export const starAggregatesPass: ContentPass = {
     const { width: vw, height: vh } =
       ctx.viewKind === 'capture' ? ctx.canvasSize : ctx.renderTargets.sizeOf('star-aggregates');
 
-    drawStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate', ctx);
+    drawStarStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate', ctx);
   },
 };

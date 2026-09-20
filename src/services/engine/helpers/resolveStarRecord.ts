@@ -42,7 +42,7 @@ import {
   RECORD_BYTES,
   STAR_OFFSET_LEVELS,
 } from '../../../data/starCatalog/starCatalogFormat';
-import { starNodeOriginRelCamMpc } from '../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
+import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];
