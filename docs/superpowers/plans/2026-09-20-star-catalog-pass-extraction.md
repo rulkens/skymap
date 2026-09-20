@@ -38,9 +38,9 @@ wink a visible star out", "forbidden").
 The WESL value is NOT the thing to change: at 2.5 the shipped starfield draws
 1.88× the reference and that is the tuned look. The TS twin is what is missing.
 
-- [ ] Failing test first: at default settings, the CPU leaf cull slack covers the
+- [x] Failing test first: at default settings, the CPU leaf cull slack covers the
       shader's drawn footprint (`STAR_GLOW_MIN_PX × sizePx / STAR_SIZE_REF_PX`).
-- [ ] `src/data/starCullSlack.ts` — the three px constants, WESL twins all:
+- [x] `src/data/starCullSlack.ts` — the three px constants, WESL twins all:
 
 ```ts
 /** Reference star-dot size in px — the `sizePx` divisor. WESL twin. */
@@ -51,18 +51,18 @@ export const STAR_GLOW_MIN_PX = 1.5;
 export const STAR_PICK_MIN_RADIUS_PX = 3.5;
 ```
 
-- [ ] Parity test pinning all three against `lib/starPhotometry.wesl` and
+- [x] Parity test pinning all three against `lib/starPhotometry.wesl` and
       `starCatalog/vertex.wesl`, following
       `tests/services/gpu/shaders/famousStarPickRadius.parity.test.ts`.
-- [ ] Switch the three divisor sites off `DEFAULT_STAR_SIZE_PX` onto
+- [x] Switch the three divisor sites off `DEFAULT_STAR_SIZE_PX` onto
       `STAR_SIZE_REF_PX`: `starCatalogPass.ts` `starCullMargins` + `buildCutFrustum`,
       and `starCatalogRenderer.ts`'s aggregate cull sphere.
-- [ ] Correct the stale prose claiming the two are twins, in
+- [x] Correct the stale prose claiming the two are twins, in
       `lib/starPhotometry.wesl` and `src/data/defaults.ts`.
-- [ ] `MPC_TO_PC` onto `SCALE_UNITS`; delete both re-derivations
+- [x] `MPC_TO_PC` onto `SCALE_UNITS`; delete both re-derivations
       (`starCatalogPass.ts`, `engine/helpers/nearestResolvableStar.ts`).
-- [ ] `NODE_FADE_MS` → `src/data/starNodeFade.ts`.
-- [ ] Delete `subtreeStarCounts.ts` + its test — dead. Its only consumer is its own
+- [x] `NODE_FADE_MS` → `src/data/starNodeFade.ts`.
+- [x] Delete `subtreeStarCounts.ts` + its test — dead. Its only consumer is its own
       test; `starOctreeIndex` builds `subtreeCounts` internally and its header says
       so ("`subtreeStarCounts` is now a thin accessor onto `subtreeCounts` here").
 
@@ -71,9 +71,9 @@ export const STAR_PICK_MIN_RADIUS_PX = 3.5;
 One type per file. Also kills a back-edge: `renderers/starCatalog/starPickLeafDraws.ts`
 currently imports `PreparedStarCut` _from a frame pass file_.
 
-- [ ] From `starCatalogPass.ts`: `StarNodeStream`, `PreparedStarSource`,
+- [x] From `starCatalogPass.ts`: `StarNodeStream`, `PreparedStarSource`,
       `PreparedStarCut`, `StarFadeState`, `CatalogStreams` (→ `StarCatalogStreams`).
-- [ ] From the renderer helpers: `StarNodeDraw`, `StarCutSnapshot`,
+- [x] From the renderer helpers: `StarNodeDraw`, `StarCutSnapshot`,
       `StarCutFrustum` (`walkStarOctreeCut.ts`), `StarOctreeIndex`
       (`starOctreeIndex.ts`), `StarPickLeafDraw` (`starPickLeafDraws.ts`).
 
@@ -85,13 +85,13 @@ subjects; `move-files` drags the `tests/` mirror along.
 
 Pure — no GPU, no engine types → `src/utils/star/`:
 
-- [ ] `starExposureRamp` (zero imports; consumed by `starPointsPass` _and_
+- [x] `starExposureRamp` (zero imports; consumed by `starPointsPass` _and_
       `starCatalogPass`), `starNodeOriginRelCamMpc` (consumed only by
       `engine/helpers`), `starOctreeIndex`, `walkStarOctreeCut`.
 
 Renderer-coupled → `renderers/starCatalog/cut/`:
 
-- [ ] `starPickLeafDraws`.
+- [x] `starPickLeafDraws`.
 
 `renderers/starCatalog/` root keeps only the two renderers plus
 `starCatalogLayout.ts`, the bind-group plumbing both renderers import.
@@ -102,9 +102,9 @@ Every file in `cut/` either produces or consumes a `PreparedStarCut`.
 
 → `src/utils/star/` (pure):
 
-- [ ] `starCrossfadeOpacity` — takes `crossfadePc` + `camDistPc`, not a registry row.
-- [ ] `starCullMargins` — carries its scratch.
-- [ ] `buildStarCutFrustum` — made pure by taking the resolved matrix instead of `ctx`:
+- [x] `starCrossfadeOpacity` — takes `crossfadePc` + `camDistPc`, not a registry row.
+- [x] `starCullMargins` — carries its scratch.
+- [x] `buildStarCutFrustum` — made pure by taking the resolved matrix instead of `ctx`:
 
 ```ts
 export function buildStarCutFrustum(
@@ -118,31 +118,39 @@ export function buildStarCutFrustum(
 
 → `renderers/starCatalog/cut/`:
 
-- [ ] `starNodeStream` (create + push; `growStream` stays file-local, `resetStream`
+- [x] `starNodeStream` (create + push; `growStream` stays file-local, `resetStream`
       inlines away to `stream.count = 0` at its two call sites).
-- [ ] `starFadeState`, `starCatalogStreams` — the two per-catalog WeakMap caches.
-- [ ] `starCatalogVisible` — the gate `starAggregatesPass` and
+- [x] `starFadeState`, `starCatalogStreams` — the two per-catalog WeakMap caches.
+- [x] `starCatalogVisible` — the gate `starAggregatesPass` and
       `starAggregateUpsamplePass` import; they stop importing from a sibling pass file.
-- [ ] `computeStarCut`, `prepareStarCut` (memo + `advanceStarFades`).
-- [ ] `drawStarStream`, `drawStarPick` — each owns its own 24-float frustum scratch;
+- [x] `computeStarCut`, `prepareStarCut` (memo + `advanceStarFades`).
+- [x] `drawStarStream`, `drawStarPick` — each owns its own 24-float frustum scratch;
       they run at disjoint times, so splitting the shared one changes nothing.
-- [ ] `starCatalogPass.ts` ends as imports + the `ContentPass` literal.
-- [ ] Delete the `'frame/passes/starCatalogPass': 26` row from
+- [x] `starCatalogPass.ts` ends as imports + the `ContentPass` literal.
+- [x] Delete the `'frame/passes/starCatalogPass'` row from
       `tests/services/engine/frame/frameFilePurity.test.ts` — the row goes away, it
-      does not shrink.
+      does not shrink. (Task 1 ratcheted it 26 → 22 en route.)
+
+Fallout from Task 3, found by its implementer: two moved files carried tuning
+constants into `src/utils/star/`, which is one-symbol-per-file. They are data, so:
+
+- [x] `SHADER_BAKED_NEAR_EXPOSURE`, `RAMP_NEAR_MPC`, `RAMP_MID_MPC`, `RAMP_FAR_MPC`,
+      `RAMP_FAR_SCALE` out of `utils/star/starExposureRamp.ts` → `src/data/starExposureRamp.ts`.
+- [x] `DEFAULT_REFINE_THRESHOLD` out of `utils/star/walkStarOctreeCut.ts` →
+      `src/data/defaults.ts`, beside the sibling defaults that already cite it in prose.
 
 ## Task 5 — Comment budget
 
 The file's 137-line module header redistributes; nothing load-bearing is lost.
 
-- [ ] Each file: header ≤ 5 lines, comment lines ≤ half its code lines.
-- [ ] Each landmine lands in the one file that owns it — f64 rebase seam →
+- [x] Each file: header ≤ 5 lines, comment lines ≤ half its code lines.
+- [x] Each landmine lands in the one file that owns it — f64 rebase seam →
       `computeStarCut`; shared-vp invariant → `drawStarStream`; flux-linear ramp →
       `starFadeState`; pick-slack floor → `buildStarCutFrustum`; two-stream split →
       `starCatalogPass`.
-- [ ] Collapse the rationale stated three times (the allocation fix) and twice (the
+- [x] Collapse the rationale stated three times (the allocation fix) and twice (the
       double buffer) to one statement each.
-- [ ] Resolve the header's `(REVIEW THIS)` block — the frustum-prune fade-in
+- [x] Resolve the header's `(REVIEW THIS)` block — the frustum-prune fade-in
       behaviour note. Two lines, or a backlog item; not carried as-is.
 
 ## Task 6 — User smoke test
