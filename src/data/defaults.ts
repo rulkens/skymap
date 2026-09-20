@@ -1,35 +1,17 @@
 /**
- * Renderer / engine default settings — the single source of truth for every
- * user-controllable setting's INITIAL value (sliders, toggles, mode
- * selectors, the visible-source bitmask).
- *
- * `INITIAL_SETTINGS` (`state/settings/initialSettings.ts`) assembles these
- * into the Redux `EngineSettingsState` the settings slice seeds; a handful of
- * other sites import a constant directly when they need the same default
- * outside the store. Out of scope: per-source astrophysics constants
- * (`data/sources.ts` et al. — domain data, not settings) and GPU-pipeline
- * constants, which live with their consumers in `services/gpu/`.
+ * The defaults CORE owns — display and camera settings belonging to no Layer.
+ * A Layer's own seeds live beside its slice, in
+ * `src/layers/<name>/settings/defaults.ts`; only what core itself reads is here.
  */
 
-import { BiasMode } from './galaxyCatalog/biasMode';
-import type { BiasMode as BiasModeT } from '../@types/data/galaxyCatalog/BiasMode';
 import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
 import type { ToneMapCurve as ToneMapCurveT } from '../@types/data/ToneMapCurve';
-import type { FlowSettings } from '../@types/settings/FlowSettings';
-import type { ZoneOfAvoidanceTuning } from '../@types/settings/ZoneOfAvoidanceTuning';
-import type { SgrAStarLensingTuning } from '../@types/settings/SgrAStarLensingTuning';
-import { BLACK_HOLES } from './blackHoles';
-import { SGR_A_STAR } from './bodies/sceneSgrAStar';
 import type { OrientationFrameId } from '../@types/camera/OrientationFrameId';
-import type { GalaxyProvenanceSettings } from '../@types/settings/GalaxyProvenanceSettings';
-import { SOURCE_REGISTRY, Source } from './sources';
 
-// ── Rendering knobs ─────────────────────────────────────────────────────────
+// ── Camera drift ────────────────────────────────────────────────────────────
 
 /** Auto-rotate (yaw drift) defaults OFF — most users want a static frame to explore. */
 export const DEFAULT_AUTO_ROTATE = false;
-
-// ── Galaxy thumbnails / orientation toggles ─────────────────────────────────
 
 // ── HDR tone-mapping ────────────────────────────────────────────────────────
 
@@ -119,8 +101,6 @@ export const DEFAULT_BLOOM_STRENGTH = 0.8;
  */
 export const DEFAULT_BLOOM_THRESHOLD = 2.0;
 
-// ── Malmquist-bias correction ────────────────────────────────────────────────
-
 // ── Scalar-volume overlay ────────────────────────────────────────────────────
 
 /**
@@ -130,6 +110,7 @@ export const DEFAULT_BLOOM_THRESHOLD = 2.0;
  * SettingsPanel slider lets the user tune per field.
  */
 export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
+
 /**
  * Default renderer-wide palette LUT for the scalar-volume overlay.
  * 'viridis' is matplotlib's perceptually-uniform default — neutral
@@ -138,8 +119,6 @@ export const DEFAULT_VOLUME_FIELD_INTENSITY = 0.5;
  * to localStorage by the App shell so reloads keep the user's choice.
  */
 export const DEFAULT_VOLUME_PALETTE_ID = 'viridis' as const;
-
-// ── CF4++ flow-field overlay ─────────────────────────────────────────────────
 
 // ── Camera lens ───────────────────────────────────────────────────────────────
 
