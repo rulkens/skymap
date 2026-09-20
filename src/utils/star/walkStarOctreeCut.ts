@@ -71,7 +71,6 @@
  */
 import type { Vec3 } from '../../@types/math/Vec3';
 import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
-import type { StarNodeDraw } from '../../@types/rendering/StarNodeDraw';
 import type { StarCutSnapshot } from '../../@types/rendering/StarCutSnapshot';
 import type { StarCutFrustum } from '../../@types/rendering/StarCutFrustum';
 import { starOctreeIndex } from './starOctreeIndex';

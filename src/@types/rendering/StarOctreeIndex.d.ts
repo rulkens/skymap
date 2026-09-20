@@ -8,9 +8,6 @@
 export type StarOctreeIndex = {
   /** `childIndex[i*8 + k]` = node `i`'s child in octant `k`, or `-1`. */
   readonly childIndex: Int32Array;
-  /** Per-node octree level; does NOT discriminate leaf from aggregate (a fat
-   * leaf lives at `level > 0`) — `childMask === 0` is that test. */
-  readonly level: Uint8Array;
   /** Per-node `childMask`: `0 ⇒ leaf`, `!== 0 ⇒ aggregate`. */
   readonly childMask: Uint8Array;
   /** Per-node record-slice base (`node.firstRecord`). */

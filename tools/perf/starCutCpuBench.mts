@@ -47,15 +47,19 @@ import {
   NODE_PARAMS_BYTES,
 } from '../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
+import { DEFAULT_STAR_SIZE_PX, DEFAULT_REFINE_THRESHOLD } from '../../src/data/defaults';
+import {
+  STAR_SIZE_REF_PX,
+  STAR_GLOW_MIN_PX,
+  STAR_PICK_MIN_RADIUS_PX,
+} from '../../src/data/starCullSlack';
+import { NODE_FADE_MS } from '../../src/data/starNodeFade';
 import type { StarCatalog } from '../../src/@types/data/starCatalog/StarCatalog';
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
 // The Gaia row's shipped budget + default Detail knob (see data/sources/gaia-stars.ts).
 const BUDGET = { typical: 1_500_000, hardCap: 2_500_000 };
-const REFINE_THRESHOLD = 0.16;
-const NODE_FADE_MS = 250;
-const DEFAULT_STAR_SIZE_PX = 2.6;
-const SIZE_PX = 2.6;
+const SIZE_PX = DEFAULT_STAR_SIZE_PX;
 const GLOW_OVERLAP = 4.0;
 const VIEWPORT_H = 1440;
 const FOV_Y = (45 * Math.PI) / 180;
@@ -95,11 +99,12 @@ function frustumFor(camPosPc: readonly [number, number, number]): StarCutFrustum
   const proj = mat4.perspective(FOV_Y, 16 / 9, 1e-3, 1e7);
   const vp = mat4.multiply(proj, view) as Float32Array;
   const planesPc = Float64Array.from(frustumPlanesFromViewProj(vp));
-  const sizeScale = SIZE_PX / DEFAULT_STAR_SIZE_PX;
+  const sizeScale = SIZE_PX / STAR_SIZE_REF_PX;
   const radiansPerPx = FOV_Y / VIEWPORT_H;
   // Pick-covering leaf slack (3.5px floor) + aggregate glow spread — mirrors the
   // layer's buildCutFrustum, so the harness prunes exactly what the app prunes.
-  const angularMarginRad = Math.max(1.5 * sizeScale, 3.5) * radiansPerPx;
+  const angularMarginRad =
+    Math.max(STAR_GLOW_MIN_PX * sizeScale, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
   const worldSpread = Math.max(1, sizeScale * GLOW_OVERLAP);
   return { planesPc, angularMarginRad, worldSpread };
 }
@@ -224,7 +229,7 @@ async function main(): Promise<void> {
       const baseRadius = edge * 0.8660254;
       let cullRadius: number;
       if (s.isAggregate[i]! !== 0) {
-        const spread = (SIZE_PX / DEFAULT_STAR_SIZE_PX) * GLOW_OVERLAP;
+        const spread = (SIZE_PX / STAR_SIZE_REF_PX) * GLOW_OVERLAP;
         cullRadius = baseRadius * (spread > 1 ? spread : 1);
       } else {
         cullRadius = baseRadius + Math.sqrt(cx * cx + cy * cy + cz * cz) * angularMarginRad;
@@ -291,13 +296,13 @@ async function main(): Promise<void> {
 
       // A: walk with the prune OFF (baseline).
       const a0 = performance.now();
-      const off = walkStarOctreeCut(catalog, camPc, BUDGET, REFINE_THRESHOLD);
+      const off = walkStarOctreeCut(catalog, camPc, BUDGET, DEFAULT_REFINE_THRESHOLD);
       const a1 = performance.now();
       const offCount = off.count;
 
       // B: walk with the prune ON, then partition + pack that (real) cut.
       const b0 = performance.now();
-      const on = walkStarOctreeCut(catalog, camPc, BUDGET, REFINE_THRESHOLD, frustum);
+      const on = walkStarOctreeCut(catalog, camPc, BUDGET, DEFAULT_REFINE_THRESHOLD, frustum);
       const b1 = performance.now();
       partition(on, camMpc, nowMs);
       const b2 = performance.now();

@@ -37,7 +37,6 @@ export function starOctreeIndex(catalog: StarCatalog): StarOctreeIndex {
   const n = nodes.length;
 
   const childIndex = new Int32Array(n * 8).fill(-1);
-  const level = new Uint8Array(n);
   const childMask = new Uint8Array(n);
   const firstRecord = new Uint32Array(n);
   const recordCount = new Uint32Array(n);
@@ -58,7 +57,6 @@ export function starOctreeIndex(catalog: StarCatalog): StarOctreeIndex {
   for (let i = 0; i < n; i++) {
     const node = nodes[i]!;
     const lvl = node.level;
-    level[i] = lvl;
     childMask[i] = node.childMask;
     firstRecord[i] = node.firstRecord;
     recordCount[i] = node.recordCount;
@@ -94,7 +92,6 @@ export function starOctreeIndex(catalog: StarCatalog): StarOctreeIndex {
 
   const index: StarOctreeIndex = {
     childIndex,
-    level,
     childMask,
     firstRecord,
     recordCount,
