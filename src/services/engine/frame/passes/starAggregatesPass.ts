@@ -16,7 +16,7 @@
  * `ctx`): this layer draws first in program order (its `star-aggregates` render
  * step precedes the hdr NEAR0 step), so its `draw` typically triggers the walk,
  * and the leaf + upsample layers read the cached result. This layer records
- * ONLY the aggregate sub-stream, via the shared `drawStream` helper with
+ * ONLY the aggregate sub-stream, via the shared `drawStarStream` helper with
  * `stream: 'aggregate'` — the renderer's `fsLinear` pipeline into the offscreen.
  *
  * ### Why `enabled` shares `starCatalogVisible`
@@ -31,7 +31,9 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
-import { starCatalogVisible, prepareStarCut, drawStream } from './starCatalogPass';
+import { starCatalogVisible } from '../../../gpu/renderers/starCatalog/cut/starCatalogVisible';
+import { prepareStarCut } from '../../../gpu/renderers/starCatalog/cut/prepareStarCut';
+import { drawStarStream } from '../../../gpu/renderers/starCatalog/cut/drawStarStream';
 
 export const starAggregatesPass: ContentPass = {
   name: 'star-aggregates',
@@ -57,7 +59,7 @@ export const starAggregatesPass: ContentPass = {
     const { width: vw, height: vh } =
       ctx.viewSlot !== 0 ? ctx.canvasSize : ctx.renderTargets.sizeOf('star-aggregates');
 
-    drawStream(
+    drawStarStream(
       renderer,
       pass,
       { ...view, viewportPx: [vw, vh] },

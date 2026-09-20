@@ -1,9 +1,10 @@
 /**
  * StarNodeStream — one draw stream's (leaf or aggregate) per-source node
  * data, as reused grow-only flat typed arrays; only `[0, count)` of each is
- * live. Refilled every frame by `starCatalogPass`'s cut; a stream is
- * invalidated by the next cut for the same (catalog, viewSlot) pair — see
- * `createStream` in `starCatalogPass.ts` for the allocation rationale.
+ * live. Refilled every frame by `computeStarCut`; a stream is invalidated by
+ * the next cut for the same (catalog, viewSlot) pair — see
+ * `createStarNodeStream` in `renderers/starCatalog/cut/starNodeStream.ts` for
+ * the allocation rationale.
  */
 
 export type StarNodeStream = {

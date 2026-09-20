@@ -1,6 +1,6 @@
 /**
  * PreparedStarSource — one loaded source's per-frame cut, partitioned by
- * `starCatalogPass` into its leaf stream (real-star nodes) and aggregate
+ * `computeStarCut` into its leaf stream (real-star nodes) and aggregate
  * stream (interior flux-mip nodes).
  */
 

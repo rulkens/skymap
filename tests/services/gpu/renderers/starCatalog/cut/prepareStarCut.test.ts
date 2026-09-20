@@ -24,17 +24,17 @@ import { describe, it, expect, vi } from 'vitest';
 import {
   prepareStarCut,
   advanceStarFades,
-} from '../../../../../src/services/engine/frame/passes/starCatalogPass';
-import type { PreparedStarCut } from '../../../../../src/@types/rendering/PreparedStarCut';
-import type { StarNodeStream } from '../../../../../src/@types/rendering/StarNodeStream';
-import { fadeBand } from '../../../../../src/utils/math/fadeBand';
-import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import { Source } from '../../../../../src/data/source';
-import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
-import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+} from '../../../../../../src/services/gpu/renderers/starCatalog/cut/prepareStarCut';
+import type { PreparedStarCut } from '../../../../../../src/@types/rendering/PreparedStarCut';
+import type { StarNodeStream } from '../../../../../../src/@types/rendering/StarNodeStream';
+import { fadeBand } from '../../../../../../src/utils/math/fadeBand';
+import { SCALE_UNITS } from '../../../../../../src/data/scaleUnits';
+import { Source } from '../../../../../../src/data/source';
+import { GAIA_STARS_ENTRY } from '../../../../../../src/data/sources/gaia-stars';
+import type { ReadyFrameContext } from '../../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { EngineState } from '../../../../../../src/@types/engine/state/EngineState';
+import type { StarCatalog } from '../../../../../../src/@types/data/starCatalog/StarCatalog';
+import type { Vec3 } from '../../../../../../src/@types/math/Vec3';
 
 const PC_TO_MPC = SCALE_UNITS.PC_TO_MPC;
 const { inner, outer } = GAIA_STARS_ENTRY.crossfadePc;

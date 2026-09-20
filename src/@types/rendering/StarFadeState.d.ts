@@ -2,7 +2,8 @@
  * StarFadeState — one catalog's persistent per-node LOD-fade bookkeeping:
  * flat typed arrays indexed by node index, plus a two-stamp scheme (`inCutFrame`
  * / `activeFrame`) that replaces a `Map<nodeIndex, …>`'s membership test. See
- * `fadeStateByCatalog` in `starCatalogPass.ts` for the full scheme.
+ * `fadeStateByCatalog` in `renderers/starCatalog/cut/starFadeState.ts` for the
+ * full scheme.
  */
 
 export type StarFadeState = {
