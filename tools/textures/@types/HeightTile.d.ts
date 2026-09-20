@@ -1,4 +1,4 @@
-import type { HeightTileHeader } from '../../src/@types/scene/HeightTileHeader';
+import type { HeightTileHeader } from '../../../src/@types/scene/HeightTileHeader';
 
 /** HeightTile — one Terrain-RGB WebP tile (`heightTileFormat.ts`) decoded on
  *  the CPU, as the tools see it: the header plus 129² posts of elevation in

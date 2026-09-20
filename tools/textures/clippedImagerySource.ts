@@ -8,7 +8,7 @@
 
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { featherWeight } from '../utils/textures/featherWeight';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 
 export function clippedImagerySource(
   source: SurfaceImagerySource,

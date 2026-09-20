@@ -7,8 +7,8 @@
 
 import sharp from 'sharp';
 
-import type { GeoTiffGrid } from './GeoTiffGrid';
-import type { SurfaceImagerySource } from './SurfaceImagerySource';
+import type { GeoTiffGrid } from './@types/GeoTiffGrid';
+import type { SurfaceImagerySource } from './@types/SurfaceImagerySource';
 import { boundsOverlap } from '../utils/textures/boundsOverlap';
 import { clamp } from '../utils/textures/clamp';
 import { readGeoTiffRgbWindow } from '../utils/textures/readGeoTiffRgbWindow';

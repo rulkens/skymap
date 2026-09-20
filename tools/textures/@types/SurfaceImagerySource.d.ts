@@ -1,5 +1,5 @@
-import type { SurfaceTileProvenance } from '../../src/@types/scene/SurfaceTileProvenance';
-import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
+import type { SurfaceTileProvenance } from '../../../src/@types/scene/SurfaceTileProvenance';
+import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 
 /**
  * SurfaceImagerySource — the one seam between `buildSurfaceTiles` and wherever

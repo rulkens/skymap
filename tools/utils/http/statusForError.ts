@@ -1,4 +1,4 @@
-import type { ErrorStatusRule } from './ErrorStatusRule';
+import type { ErrorStatusRule } from '../../@types/http/ErrorStatusRule';
 
 /** Ordered rules; first match wins. `undefined` means none matched — the
  *  caller supplies its own default (typically 500). */
