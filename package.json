@@ -32,6 +32,7 @@
   "scripts": {
     "build": "tsc --noEmit && vite build && rm -rf dist/data && npm run galaxy-renderer:build && npm run mcpm-workbench:build && npm run flow-workbench:build",
     "build-data-manifest": "tsx tools/deploy/buildDataManifest.ts",
+    "structure-audit": "tsx tools/structure-audit/structureAudit.ts",
     "build-all": "tsx tools/catalog/buildAllBins.ts && npm run build-data-manifest",
     "build-cf4-density": "tsx tools/volumes/buildCf4Density.ts && npm run build-data-manifest",
     "build-surface-tiles": "tsx tools/textures/buildSurfaceTiles.ts",
@@ -142,6 +143,7 @@
     "earcut": "3.2.3",
     "eslint": "9.39.5",
     "eslint-plugin-react-hooks": "7.1.1",
+    "jscpd": "4.3.0",
     "jsdom": "27.0.1",
     "msdf-bmfont-xml": "2.8.0",
     "prettier": "3.8.3",
