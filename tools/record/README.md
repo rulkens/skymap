@@ -39,8 +39,8 @@ full design and the spike's findings.
 ## Usage
 
 Full take, defaults (`grandTour`, all beats, 3840×2160 output @ 60 fps —
-rendered in a 1920×1080 viewport at `deviceScaleFactor: 2` so captions keep
-their designed proportions — H.264 `-crf 16`, output
+rendered in a 3840×2160 viewport at `deviceScaleFactor: 1` — H.264 `-crf 16`,
+output
 `recordings/grandTour-3840x2160-60fps-<timestamp>.mp4`):
 
 ```bash
