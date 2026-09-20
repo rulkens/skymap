@@ -18,3 +18,10 @@ export const WARN_BYTES = 40 * 1024;
 
 /** Clearing the focus re-settles the camera; this is that settle. */
 export const POST_ESC_WAIT_MS = 1500;
+
+/**
+ * Fraction of the frame's half-height a computed pose gives the subject's disc.
+ * Only poses derived from a body's own size honour it — a curator's hand-framed
+ * pose is a distance, and may well sit closer than the body's bounding sphere.
+ */
+export const SUBJECT_FILL = 0.55;

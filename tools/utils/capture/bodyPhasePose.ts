@@ -18,9 +18,7 @@ import { normalize3 } from '../../../src/utils/math/normalize3';
 import { cross3 } from '../../../src/utils/math/cross3';
 import { orbitAnglesLookingAlong } from '../../../src/utils/camera/orbitAnglesLookingAlong';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
-
-/** Fraction of the frame's half-height the body's disc spans. */
-const FILL = 0.55;
+import { SUBJECT_FILL } from './shotDefaults';
 
 /**
  * `phaseDeg` swings the camera around the body from the sunward direction: 0°
@@ -70,6 +68,6 @@ export function bodyPhasePose(
     target: [position[0], position[1], position[2]],
     yaw,
     pitch,
-    distance: radiusMpc / (FILL * Math.tan(fovYRad / 2)),
+    distance: radiusMpc / (SUBJECT_FILL * Math.tan(fovYRad / 2)),
   };
 }
