@@ -14,11 +14,11 @@
  * internals, exactly as the recorder seam does.
  */
 
-import type { PerfPose } from './PerfPose';
-import type { PerfSample } from './PerfSample';
-import type { RenderStrategy } from '../engine/frame/RenderStrategy';
-import type { TimingSlotName } from '../gpu/timing/TimingSlotName';
-import type { Tier } from '../data/Tier';
+import type { PerfPose } from '../../@types/perf/PerfPose';
+import type { PerfSample } from '../../@types/perf/PerfSample';
+import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
+import type { TimingSlotName } from '../../@types/gpu/timing/TimingSlotName';
+import type { Tier } from '../../@types/data/Tier';
 import type { AppDispatch } from '../../store/types';
 import type { RootState } from '../../store/types';
 
