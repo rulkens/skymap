@@ -13,7 +13,7 @@ import { cartesianToRaDec } from '../../../utils/math/cartesianToRaDec';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { GalaxyCatalogSourceType } from '../../../@types/data/galaxyCatalog/GalaxyCatalogSourceType';
-import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 type GalaxyCatalogRef = Extract<SelectionRef, { type: 'galaxyCatalog' }>;
 /** The two live reads every branch here makes; the runtime satisfies it. */

@@ -12,7 +12,7 @@ import { ALL_VISIBLE_MASK } from '../../../src/utils/allVisibleMask';
 import { maskWith } from '../../../src/utils/maskWith';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';

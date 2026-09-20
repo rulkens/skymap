@@ -16,7 +16,7 @@ import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';

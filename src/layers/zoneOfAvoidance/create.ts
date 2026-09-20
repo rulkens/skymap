@@ -3,7 +3,7 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { ZoneOfAvoidanceRuntime } from './types/ZoneOfAvoidanceRuntime';
+import type { ZoneOfAvoidanceRuntime } from './@types/ZoneOfAvoidanceRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createZoneOfAvoidanceRenderer } from './render/zoneOfAvoidanceRenderer';

@@ -6,7 +6,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { FlowRuntime } from '../types/FlowRuntime';
+import type { FlowRuntime } from '../@types/FlowRuntime';
 
 export function flowAssetRows(runtime: FlowRuntime): readonly AssetWiringRow[] {
   return [

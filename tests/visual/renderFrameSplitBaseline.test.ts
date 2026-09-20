@@ -32,8 +32,8 @@ import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/ga
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { filamentsPass } from '../../src/layers/filaments/passes/filamentsPass';
-import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
-import type { FilamentsRuntime } from '../../src/layers/filaments/types/FilamentsRuntime';
+import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { FilamentsRuntime } from '../../src/layers/filaments/@types/FilamentsRuntime';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //

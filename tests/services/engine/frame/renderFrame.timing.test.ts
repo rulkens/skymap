@@ -18,7 +18,7 @@ import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {

@@ -16,7 +16,7 @@ import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';

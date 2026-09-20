@@ -9,7 +9,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { frame } from '../../../src/layers/galaxyCatalog/frame';
 import { Source } from '../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
-import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 

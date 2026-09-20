@@ -7,7 +7,7 @@
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
-import type { FilamentsRuntime } from '../types/FilamentsRuntime';
+import type { FilamentsRuntime } from '../@types/FilamentsRuntime';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 import { FILAMENT_LINE_HALFWIDTH_PX } from '../../../data/filament/filamentLineHalfwidthPx';
 import { FILAMENT_BASE_TINT } from '../../../data/filament/filamentBaseTint';

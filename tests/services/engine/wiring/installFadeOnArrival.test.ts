@@ -18,8 +18,8 @@ import type { FadeLayer } from '../../../../src/@types/animation/FadeLayer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { AssetSlot } from '../../../../src/@types/loading/AssetSlot';
 import type { LoadState } from '../../../../src/@types/loading/LoadState';
-import type { FilamentsRuntime } from '../../../../src/layers/filaments/types/FilamentsRuntime';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { FilamentsRuntime } from '../../../../src/layers/filaments/@types/FilamentsRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { FadeBridgeState } from '../../../helpers/engine/FadeBridgeState';
 
 /** One slot whose `ready` notification the test issues by hand, as a commit would. */
