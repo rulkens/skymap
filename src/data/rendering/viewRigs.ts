@@ -10,7 +10,7 @@ import { OVERLAYS, POST, PRELUDE, SCENE } from './frameSections';
 
 export const VIEW_RIGS: Readonly<Record<ViewRigKey, ViewRig>> = {
   mono: {
-    views: (main) => [main],
+    views: (canvas) => [canvas],
     program: [PRELUDE, SCENE, POST, OVERLAYS],
   },
 };

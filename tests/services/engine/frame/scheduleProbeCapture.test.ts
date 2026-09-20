@@ -30,7 +30,7 @@ import { makeSlab } from '../../../fixtures/makeSlab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 const SIM_DAYS = 0;
 const NOW_MS = 100_000;
@@ -42,15 +42,18 @@ const WHALE = SCENE_MESH_BODIES.find((body) => body.id === 'whale')!;
 const PETUNIAS = SCENE_MESH_BODIES.find((body) => body.id === 'petunias')!;
 
 /** The camera parked at a body: the partition then resolves it as a mesh. */
-function ctxAt(bodyId: string, nowMs = NOW_MS): ReadyFrameContext {
+function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   const positionMpc = deriveBodyStates(SIM_DAYS).get(bodyId)!.positionMpc;
   return {
-    drawCamPos: positionMpc,
+    // Frame-owned: `scheduleProbeCapture` reads these off `ctx.snapshot.x`.
+    // Also flat: `sceneBodyPartition`/`sceneBodyStates` (Task 8) still read
+    // `ctx.simDays` directly, so both must resolve until that sweep lands.
+    snapshot: { simDays: SIM_DAYS, nowMs },
     simDays: SIM_DAYS,
-    nowMs,
+    drawCamPos: positionMpc,
     canvasSize: { width: 800, height: 600 },
     fovYRad: 1,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function makeState(resident: readonly string[]): EngineState {
@@ -65,11 +68,11 @@ function makeState(resident: readonly string[]): EngineState {
 }
 
 /** A face ctx whose slab table carries Mars's body-m row at index 3. */
-function faceCtxWithMarsRow(face: CubeFace): ReadyFrameContext {
+function faceCtxWithMarsRow(face: CubeFace): FrameView {
   return {
     __face: face,
     slabs: [makeSlab(), makeSlab({ index: 1 }), makeSlab({ index: 2 }), marsSlab(3)],
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function marsSlab(index: number) {
@@ -79,7 +82,7 @@ function marsSlab(index: number) {
 describe('scheduleProbeCapture', () => {
   beforeEach(() => {
     cubemapCaptureFrameMock.mockReset();
-    cubemapCaptureFrameMock.mockReturnValue({ isReady: true } as unknown as ReadyFrameContext);
+    cubemapCaptureFrameMock.mockReturnValue({ isReady: true } as unknown as FrameView);
     cubemapFaceContextMock.mockReset();
     cubemapFaceContextMock.mockImplementation((_snapshot: unknown, face: CubeFace) =>
       faceCtxWithMarsRow(face),
@@ -188,7 +191,7 @@ describe('scheduleProbeCapture', () => {
             makeSlab({ index: 1 }),
             makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'voyager1' as BodyId } }),
           ],
-        }) as unknown as ReadyFrameContext,
+        }) as unknown as FrameView,
     );
     const state = makeState(['voyager1']);
     const faces = scheduleProbeCapture({ state, ctx: ctxAt('voyager1') });
@@ -199,7 +202,7 @@ describe('scheduleProbeCapture', () => {
 
   it('schedules nothing and records no refresh when the row is not ready', () => {
     // Pre-bootstrap only: nothing is recorded, so the next frame retries.
-    cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as ReadyFrameContext);
+    cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as FrameView);
     const state = makeState(['curiosity']);
 
     expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).toBeNull();

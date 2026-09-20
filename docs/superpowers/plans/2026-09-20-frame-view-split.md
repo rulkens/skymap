@@ -234,10 +234,12 @@ type RenderFrameInput = {
 };
 ```
 
-- [ ] `flush` loses the `renderedTargets` fold (`renderFrame.ts:105-114`): each view carries its own set and `once` sections run against `canvas`, so nothing needs folding back. `state.gpu.focusUniform?.write(canvas.snapshot.focus)`; `hdrActiveOf(canvas.snapshot.renderTargets)`; `scheduleCubemapCaptures({ state, ctx: canvas })`.
-- [ ] `VIEW_RIGS.mono.views` becomes `(canvas) => [canvas]`; the `view !== currentView` batching and the per-section encoder/submit rules are unchanged.
-- [ ] No new test: the existing `renderFrame.test.ts` cases (`mono rig submits the same step list`, the two-view expansion, the once-after-perView case) cover this; re-point them to `{ canvas, views }`. The `a once section after a perView section sees targets the views rendered` case now holds through `canvas`'s own set — rewrite its setup, don't delete it; Task 3's per-view-set test is the unit-level half.
-- [ ] `npm test -- renderFrame executeFrame` green. Commit.
+- [x] `flush` loses the `renderedTargets` fold (`renderFrame.ts:105-114`): each view carries its own set and `once` sections run against `canvas`, so nothing needs folding back. `state.gpu.focusUniform?.write(canvas.snapshot.focus)`; `hdrActiveOf(canvas.snapshot.renderTargets)`; `scheduleCubemapCaptures({ state, ctx: canvas })`.
+- [x] `VIEW_RIGS.mono.views` becomes `(canvas) => [canvas]`; the `view !== currentView` batching and the per-section encoder/submit rules are unchanged.
+- [x] No new test: the existing `renderFrame.test.ts` cases (`mono rig submits the same step list`, the two-view expansion, the once-after-perView case) cover this; re-point them to `{ canvas, views }`. The `a once section after a perView section sees targets the views rendered` case now holds through `canvas`'s own set — rewrite its setup, don't delete it; Task 3's per-view-set test is the unit-level half.
+- [x] `npm test -- renderFrame executeFrame` green. Commit.
+
+Deviation (group B2): `scheduleSkyCaptures.ts`, `scheduleProbeCapture.ts`, `captureFaceAttachment.ts` and `bodyRowSlabs.ts` also moved their own `ctx: ReadyFrameContext` parameter to `ctx: FrameView` and their OWN direct frame-field reads (`nowMs`, `layersSettling`, `renderTargets`) to `ctx.snapshot.x` in this task — the plan's Task 6 contract only named the fields `renderFrame.ts`/`executeFrame.ts` touch, but these four files' `ctx` is the same object flowing through `scheduleCubemapCaptures`, so leaving them on the old flat contract would have made Task 6 non-compiling-and-non-running on its own. They still pass their `ctx` through unchanged to Task 8-owned callees (`sceneBodyStates`, `sceneBodyPartition`, `skyCaptureBandAlpha`), which keep reading flat `ctx.x` until Task 8 sweeps them. Test fixtures for these files (and the collateral `renderFrame.timing.test.ts`, `scheduleProbeCapture.test.ts`, not in the plan's Task 6 file list but broken by the same edits) carry their frame fields BOTH flat and under `snapshot` for this same reason — a temporary compatibility duplication removed in Task 8 once every consumer reads `ctx.snapshot.x`.
 
 ### Task 7: Star cut over the views
 

@@ -11,7 +11,7 @@
  */
 
 import type { CaptureFaceContexts } from './CaptureFaceContexts';
-import type { ReadyFrameContext } from './ReadyFrameContext';
+import type { FrameView } from './FrameView';
 import type { FrameStep } from './FrameStep';
 import type { RenderStrategy } from './RenderStrategy';
 import type { EngineState } from '../state/EngineState';
@@ -20,8 +20,9 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 export type ExecuteFrameArgs = {
   /** The single per-frame command encoder every step records into. */
   encoder: GPUCommandEncoder;
-  /** This frame's ready context — slab table, render targets, camera snapshot. */
-  ctx: ReadyFrameContext;
+  /** This view — slab table, camera, its own `renderedTargets`; frame-wide
+   *  facts (render targets, clock) are `ctx.snapshot.*`. */
+  ctx: FrameView;
   /** Live engine state — layers read their renderers/gates off `state.*`. */
   state: EngineState;
   /** The ordered step program to walk (`expandFrameOrder(FRAME_ORDER, …)`). */

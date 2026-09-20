@@ -65,7 +65,7 @@ import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapC
 import type { CaptureFace } from '../../../../src/@types/engine/frame/CaptureFace';
 import type { CaptureFaceContexts } from '../../../../src/@types/engine/frame/CaptureFaceContexts';
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureKey';
@@ -125,41 +125,48 @@ function makeCtx(
   drawCamPos: readonly [number, number, number],
   faceSizePx = 256,
   layers: { awake?: boolean; settling?: boolean } = {},
-): ReadyFrameContext {
+): FrameView {
+  // Frame-owned (`ReadyFrameContext`): `scheduleSkyCaptures` reads these off
+  // `ctx.snapshot.x`, so they nest under `snapshot`, not the view's own `ctx.x`.
+  const renderTargets = {
+    reconcile: vi.fn(),
+    specOf: (id: string) => {
+      if (CAPTURE_TARGET_IDS.includes(id)) return { fixedSizePx: { size: faceSizePx, layers: 6 } };
+      if (id === 'swap') return { format: 'bgra8unorm' };
+      throw new Error(`mock renderTargets: no spec row for '${id}'`);
+    },
+    // The sweep reads the ALLOCATED size, not the spec's `fixedSizePx.size`
+    // (a live setting) — see `scheduleSkyCaptures`'s `faceSizePx`.
+    sizeOf: (id: string) => {
+      if (CAPTURE_TARGET_IDS.includes(id)) return { width: faceSizePx, height: faceSizePx };
+      throw new Error(`mock renderTargets: no allocated size for '${id}'`);
+    },
+  };
   return {
-    isReady: true,
-    layersSettling: layers.settling ?? false,
-    // renderFrame folds every view's set into this one after a `perView`
-    // section — mono's views are `[ctx]` itself, so it folds into its own.
+    snapshot: {
+      isReady: true,
+      layersSettling: layers.settling ?? false,
+      simDays: 0,
+      nowMs: 1000,
+      focus: {},
+      renderTargets,
+    },
+    // renderFrame's `once` sections run against the canvas view itself — mono's
+    // views are `[ctx]` itself, so its own set is what a later section reads.
     renderedTargets: new Set<string>(),
     drawCamPos,
-    simDays: 0,
-    nowMs: 1000,
-    focus: {},
     slabs: [],
     canvasSize: { width: 800, height: 600 },
-    renderTargets: {
-      reconcile: vi.fn(),
-      specOf: (id: string) => {
-        if (CAPTURE_TARGET_IDS.includes(id))
-          return { fixedSizePx: { size: faceSizePx, layers: 6 } };
-        if (id === 'swap') return { format: 'bgra8unorm' };
-        throw new Error(`mock renderTargets: no spec row for '${id}'`);
-      },
-      // The sweep reads the ALLOCATED size, not the spec's `fixedSizePx.size`
-      // (a live setting) — see `scheduleSkyCaptures`'s `faceSizePx`.
-      sizeOf: (id: string) => {
-        if (CAPTURE_TARGET_IDS.includes(id)) return { width: faceSizePx, height: faceSizePx };
-        throw new Error(`mock renderTargets: no allocated size for '${id}'`);
-      },
-    },
-  } as unknown as ReadyFrameContext;
+    // Kept flat too, for this fixture's own `ctx.renderTargets.reconcile`
+    // assertions below — the same object `snapshot.renderTargets` is.
+    renderTargets,
+  } as unknown as FrameView;
 }
 
-function makeInput(ctx: ReadyFrameContext, state: EngineState) {
+function makeInput(ctx: FrameView, state: EngineState) {
   return {
-    ctx,
-    // Mono's own contract: the frame's one view is the main ctx itself.
+    canvas: ctx,
+    // Mono's own contract: the frame's one view is the canvas itself.
     views: [ctx],
     state,
     device: {
@@ -179,16 +186,16 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   beforeEach(() => {
     executeFrameMock.mockClear();
     cubemapCaptureFrameMock.mockReset();
-    cubemapCaptureFrameMock.mockReturnValue({ isReady: true } as unknown as ReadyFrameContext);
+    cubemapCaptureFrameMock.mockReturnValue({ isReady: true } as unknown as FrameView);
     cubemapFaceContextMock.mockClear();
     scheduleMock.mockClear();
     finishMock.mockClear();
   });
 
   it('derives one frame via cubemapCaptureFrame(eye=camera), then each face via cubemapFaceContext(faceSizePx=row size), and threads the map into executeFrame', () => {
-    const faceCtxByFace = new Map<CubeFace, ReadyFrameContext>();
+    const faceCtxByFace = new Map<CubeFace, FrameView>();
     cubemapFaceContextMock.mockImplementation((snapshot: unknown, face: CubeFace) => {
-      const ctx = { __face: face } as unknown as ReadyFrameContext;
+      const ctx = { __face: face } as unknown as FrameView;
       faceCtxByFace.set(face, ctx);
       return ctx;
     });
@@ -309,7 +316,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
   });
 
   it('omits every face from the hand-off map when cubemapCaptureFrame is not ready, and leaves bakedSettings unset so the next frame retries', () => {
-    cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as ReadyFrameContext);
+    cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as FrameView);
     const state = makeState();
     const ctx = makeCtx(SGR_A_STAR_ANCHOR.positionMpc);
     renderFrame(makeInput(ctx, state));
@@ -322,7 +329,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
     // Next frame retries the full sweep, since nothing was ever baked.
     cubemapCaptureFrameMock.mockClear();
-    cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as ReadyFrameContext);
+    cubemapCaptureFrameMock.mockReturnValue({ isReady: false } as unknown as FrameView);
     renderFrame(makeInput(makeCtx(SGR_A_STAR_ANCHOR.positionMpc), state));
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
   });
@@ -361,7 +368,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a second in-band frame with the same state and a moved camera captures nothing', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();
@@ -389,7 +396,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('roster settling (fades animating) forces a sweep every frame, one more on the settle edge, then none once settled', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     let fadesAnimating = true;
@@ -418,7 +425,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a Layer alone still settling (fades settled) forces a sweep on an otherwise unchanged frame', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     // A Layer still settling — the vote `runFrame` stamps on the ctx.
@@ -439,7 +446,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     // Reading its keep-alive vote as "still settling" re-baked all six faces
     // EVERY frame for the whole session — the defect this pins.
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState({
@@ -457,7 +464,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('replacing settings with a new (same-content) object triggers a full six-face sweep', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();
@@ -474,7 +481,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a content-version bump alone triggers a full six-face sweep', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();
@@ -489,7 +496,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a row with rebakeOnSettings false bakes on band entry and ignores a settings replacement until the band re-enters', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     // At the Sun: inside `solarSystem`'s band and far outside the lens's, so
@@ -512,7 +519,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('band close then re-entry triggers a full six-face sweep', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as ReadyFrameContext,
+      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();

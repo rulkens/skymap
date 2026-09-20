@@ -8,7 +8,7 @@
 
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { RenderFrameInput } from '../../../@types/engine/frame/RenderFrameInput';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
 import { executeFrame } from './executeFrame';
@@ -23,11 +23,11 @@ import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
 export function renderFrame(input: RenderFrameInput): void {
-  const { ctx, views, state, device, context, timingService } = input;
+  const { canvas, views, state, device, context, timingService } = input;
 
   // The shared cluster-focus uniform, before any pass or the later pick submit
   // reads it; blend=0 at rest makes the per-vertex multiplier a no-op.
-  state.gpu.focusUniform?.write(ctx.focus);
+  state.gpu.focusUniform?.write(canvas.snapshot.focus);
 
   const swapView = context.getCurrentTexture().createView();
 
@@ -45,7 +45,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // Both conjuncts: the swap-format saga and the settings write it reacts to
   // land in separate frames, and headroom 0 is exactly SDR, so gating on both
   // keeps that in-between frame correct.
-  const hdrActive = hdrActiveOf(ctx.renderTargets);
+  const hdrActive = hdrActiveOf(canvas.snapshot.renderTargets);
   const hdrOn = hdrActive && state.settings.hdr.enabled;
   const tone = {
     exposure: state.settings.tonemap.exposure,
@@ -57,7 +57,7 @@ export function renderFrame(input: RenderFrameInput): void {
   // list; strength/threshold are read live by the bloom passes each draw.
   const bloomEnabled = state.settings.bloom.enabled;
 
-  const captureContexts = scheduleCubemapCaptures({ state, ctx });
+  const captureContexts = scheduleCubemapCaptures({ state, ctx: canvas });
   // Derived from the one map, so the step list and the per-face cameras
   // cannot drift: a face is expanded iff it has a context.
   const captureFaces = new Map(
@@ -69,10 +69,7 @@ export function renderFrame(input: RenderFrameInput): void {
   const shared = { state, strategy, timing: timingService, swapView, captureContexts };
 
   /** One section's steps, expanded from `viewCtx` — captures/bloom/tone are frame-wide, the rest view-derived. */
-  const expand = (
-    steps: readonly FrameStepSpec[],
-    viewCtx: ReadyFrameContext,
-  ): readonly FrameStep[] =>
+  const expand = (steps: readonly FrameStepSpec[], viewCtx: FrameView): readonly FrameStep[] =>
     expandFrameOrder(steps, state.passes, {
       tone,
       bloomEnabled,
@@ -83,13 +80,14 @@ export function renderFrame(input: RenderFrameInput): void {
 
   // The batch building up for `currentView` — several sections' steps land in
   // ONE encoder as long as the view encoding into it doesn't change (`===`;
-  // mono's rig hands back `ctx` itself for every section, so this never
+  // mono's rig hands back `canvas` itself for every section, so this never
   // changes and the whole frame lands in one submit, exactly as before the
   // rig split).
   let pending: FrameStep[] = [];
-  let currentView: ReadyFrameContext | null = null;
+  let currentView: FrameView | null = null;
 
-  /** Execute + submit whatever's pending, folding a non-main view's first-touch set into `ctx`'s. */
+  /** Execute + submit whatever's pending. Each view mints its own `renderedTargets` (`deriveView`), so
+   *  there is nothing to fold back into `canvas`'s — a `perView` section already reads its own set. */
   const flush = (isFinal: boolean): void => {
     if (currentView === null) {
       if (!isFinal) return;
@@ -102,16 +100,6 @@ export function renderFrame(input: RenderFrameInput): void {
     const view = currentView;
     const encoder = device.createCommandEncoder();
     executeFrame({ ...shared, ctx: view, encoder, program: pending });
-    // First-touch across views: fold a rig view's OWN renderedTargets (a
-    // second view clears `hdr` rather than loading the first view's pixels —
-    // `deriveViewContext` mints one per view) into the main ctx's, now that
-    // `executeFrame` just populated it — so a later batch against `ctx` sees
-    // these targets as already rendered. Mono's one view IS `ctx`, so this
-    // never runs there.
-    if (view !== ctx) {
-      const mainTouched = ctx.renderedTargets as Set<string>;
-      for (const target of view.renderedTargets) mainTouched.add(target);
-    }
     if (isFinal) timingService.endFrame(timingCtx, encoder);
     device.queue.submit([encoder.finish()]);
     pending = [];
@@ -119,7 +107,7 @@ export function renderFrame(input: RenderFrameInput): void {
   };
 
   /** Queue `steps` against `view`, flushing first if the running batch belongs to a different one. */
-  const accumulate = (view: ReadyFrameContext, steps: readonly FrameStep[]): void => {
+  const accumulate = (view: FrameView, steps: readonly FrameStep[]): void => {
     if (steps.length === 0) return;
     if (view !== currentView) {
       flush(false);
@@ -130,7 +118,7 @@ export function renderFrame(input: RenderFrameInput): void {
 
   for (const section of VIEW_RIGS[state.viewRig].program) {
     if (section.scope === 'once') {
-      const program = expand(section.steps, ctx);
+      const program = expand(section.steps, canvas);
       const { faces, frame } = partitionCaptureSteps(program);
       if (faces.length > 0) {
         // A capture face always gets its own encoder and submit, ahead of
@@ -139,14 +127,14 @@ export function renderFrame(input: RenderFrameInput): void {
         flush(false);
         for (const face of faces) {
           const faceEncoder = device.createCommandEncoder();
-          executeFrame({ ...shared, ctx, encoder: faceEncoder, program: face.steps });
+          executeFrame({ ...shared, ctx: canvas, encoder: faceEncoder, program: face.steps });
           device.queue.submit([faceEncoder.finish()]);
         }
         for (const key of new Set(faces.map((face) => face.key))) {
           finishCubemapCapture(key, state, device);
         }
       }
-      accumulate(ctx, frame);
+      accumulate(canvas, frame);
     } else {
       for (const view of views) accumulate(view, expand(section.steps, view));
     }

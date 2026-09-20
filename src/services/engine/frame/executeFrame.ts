@@ -71,7 +71,7 @@
  */
 
 import type { ExecuteFrameArgs } from '../../../@types/engine/frame/ExecuteFrameArgs';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy';
@@ -104,9 +104,9 @@ import { timestampSpread } from '../../../utils/gpu/timestampSpread';
  * view, so this frame's `swap` steps land in the real swap chain exactly as
  * they do today.
  */
-function viewFor(id: string, ctx: ReadyFrameContext, swapView: GPUTextureView): GPUTextureView {
+function viewFor(id: string, ctx: FrameView, swapView: GPUTextureView): GPUTextureView {
   if (id === 'swap') return ctx.output ?? swapView;
-  return ctx.renderTargets.viewOf(id);
+  return ctx.snapshot.renderTargets.viewOf(id);
 }
 
 /** Build a colour attachment that clears (first touch) or loads (later). */
@@ -168,11 +168,11 @@ export function executeFrame(args: ExecuteFrameArgs): void {
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it, flipping subsequent passes from
-  // 'clear' to 'load'. This is the SAME object exposed on the ready context as
+  // 'clear' to 'load'. This is the SAME object exposed on the view as
   // `renderedTargets`: the public type is `ReadonlySet` (the consumer surface),
-  // but the concrete object `deriveFrameContext` builds is a real `Set`, so the
+  // but the concrete object `deriveView` mints per view is a real `Set`, so the
   // executor populates it here and later layers read which targets rendered this
-  // frame via `ctx.renderedTargets`.
+  // view via `ctx.renderedTargets`.
   const touched = ctx.renderedTargets as Set<string>;
   // Capture steps' own first-touch bookkeeping, keyed `<capture key>:<face>` —
   // see the module header. The key is what keeps two capture rows' face 0
@@ -259,7 +259,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           const rowCleared = depthClearedRows.has(row);
           if (step.depth === 'sample' && !rowCleared) break;
           const depth = step.depth === 'load' && !rowCleared ? 'clear' : step.depth;
-          const spec = ctx.renderTargets.specOf(step.target);
+          const spec = ctx.snapshot.renderTargets.specOf(step.target);
           const loadOp = depthLoadOpFor(depth, touched.has(step.target));
           if (loadOp === 'clear') depthClearedRows.add(row);
           destination = {
@@ -267,7 +267,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
             dest: { view: viewFor(step.target, ctx, swapView), clearValue: spec.clearValue },
             depth:
               spec.depth && loadOp !== undefined
-                ? { view: ctx.renderTargets.depthViewOf(step.target), loadOp }
+                ? { view: ctx.snapshot.renderTargets.depthViewOf(step.target), loadOp }
                 : undefined,
             touchSet: touched,
             touchKey: step.target,
@@ -318,7 +318,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           colorAttachments: [
             colorAttachment(
               viewFor(dest, ctx, swapView),
-              ctx.renderTargets.specOf(dest).clearValue,
+              ctx.snapshot.renderTargets.specOf(dest).clearValue,
               touched.has(dest),
             ),
           ],
@@ -339,7 +339,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // from the acquired frame texture, not the target table — the FORMAT is
         // a spec-table fact for every row including `swap` (whose spec carries
         // the swap-chain format), so it resolves uniformly with no swap branch.
-        const dstFormat = ctx.renderTargets.specOf(dest).format;
+        const dstFormat = ctx.snapshot.renderTargets.specOf(dest).format;
         compositor.draw(pass, viewFor(source, ctx, swapView), blend, tone, dstFormat);
         pass.end();
         touched.add(dest);
@@ -364,7 +364,7 @@ function renderGroup(
   strategy: RenderStrategy,
   p: {
     encoder: GPUCommandEncoder;
-    ctx: ReadyFrameContext;
+    ctx: FrameView;
     state: EngineState;
     timing: GpuTimingService;
     /** Pass-label stem — the destination's own name (target id or capture key). */

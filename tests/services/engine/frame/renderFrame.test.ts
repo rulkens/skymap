@@ -385,9 +385,9 @@ function makeInput(
     ...(overrides.settings ?? {}),
   };
 
-  // Per-frame derived snapshot under `input.ctx` (a `ReadyFrameContext`):
-  // `runFrame` derives these once via `deriveFrameContext()` and forwards
-  // a single struct. The test mirrors that wiring.
+  // Per-frame derived snapshot under `input.canvas` (a `FrameView`):
+  // `runFrame` derives it via `deriveFrameContext()` + `deriveView()` and
+  // forwards a single struct. The test mirrors that wiring.
   const canvasWidth = 1280;
   const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
   const viewProj = new Float32Array(16) as unknown as Mat4;
@@ -397,27 +397,25 @@ function makeInput(
   const cosmoSlab: Slab = makeCosmoSlab({
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
-  const ctx = {
+  // Frame-owned fields (`ReadyFrameContext`). Spread onto `ctx` BELOW as well
+  // as nested under `snapshot`: this file exercises real `ContentPass`es
+  // Task 8 hasn't swept onto `ctx.snapshot.x` yet, so both must resolve to
+  // the same value until that sweep lands.
+  const snapshotFields = {
     isReady: true as const,
+    cam,
+    arm: null as unknown as never,
+    camBasisWorld: null as unknown as never,
+    bodyStates: new Map(),
+    slabBodyCandidates: [] as never[],
+    meshBodies: [] as never[],
+    positionedStars: [] as never[],
     // `runFrame` stamps this after every Layer's frame hook has voted.
     layersSettling: false,
-    viewSlot: 0,
-    viewKind: 'frame' as const,
-    renderedTargets: new Set<string>(),
-    // Nothing in this file reads bodyPose.
-    bodyPose: () => null,
-    cam,
-    vp: viewProj,
-    slabs: [cosmoSlab, cosmoSlab],
-    canvasSize: { width: canvasWidth, height: canvasHeight },
     cursorTexPx: null,
-    drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
-      [number, number, number]
-    >,
-    drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
     simDays: 0,
-    fovYRad: FIXTURE_FOV_Y_RAD,
+    altitudeMpc: 0,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
     focus: {
@@ -427,6 +425,24 @@ function makeInput(
       blend: 0,
     },
     renderTargets,
+  };
+  const ctx = {
+    ...snapshotFields,
+    snapshot: snapshotFields,
+    viewSlot: 0,
+    viewKind: 'frame' as const,
+    renderedTargets: new Set<string>(),
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
+    cam,
+    vp: viewProj,
+    slabs: [cosmoSlab, cosmoSlab],
+    canvasSize: { width: canvasWidth, height: canvasHeight },
+    drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
+      [number, number, number]
+    >,
+    drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    fovYRad: FIXTURE_FOV_Y_RAD,
   };
 
   return {
@@ -449,7 +465,7 @@ function makeInput(
     proceduralDiskRenderer,
     cam,
     // Mirror these on the fixture root so tests read them directly
-    // instead of reaching into `input.ctx.*` for every assertion.
+    // instead of reaching into `input.canvas.*` for every assertion.
     canvasWidth,
     canvasHeight,
     viewProj,
@@ -458,8 +474,8 @@ function makeInput(
     // field of its own.
     settings,
     input: {
-      ctx,
-      // Mono's own contract: the frame's one view is the main ctx itself
+      canvas: ctx,
+      // Mono's own contract: the frame's one view is the canvas itself
       // (`VIEW_RIGS.mono.views`), which `renderFrame` would otherwise compute
       // via `state.viewRig` — this fixture hands it straight in.
       views: [ctx],
@@ -923,9 +939,9 @@ describe('renderFrame', () => {
     const options = {
       tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
       bloomEnabled: false,
-      foregroundChain: foregroundChainOrder(fx.input.ctx.slabs),
+      foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
       captureFaces: new Map(),
-      bodyRowSlabs: bodyRowSlabs(fx.input.state as any, fx.input.ctx),
+      bodyRowSlabs: bodyRowSlabs(fx.input.state as any, fx.input.canvas),
     };
     const passes = (fx.input.state as any).passes;
     const whole = expandFrameOrder(FRAME_ORDER, passes, options);
@@ -933,7 +949,7 @@ describe('renderFrame', () => {
       expandFrameOrder(section.steps, passes, options),
     );
     expect(bySections).toEqual(whole);
-    expect(VIEW_RIGS.mono.views(fx.input.ctx, fx.input.state as any)).toEqual([fx.input.ctx]);
+    expect(VIEW_RIGS.mono.views(fx.input.canvas, fx.input.state as any)).toEqual([fx.input.canvas]);
   });
 
   it('a perView section with two views submits twice, each expanded from its own view', () => {
@@ -945,9 +961,9 @@ describe('renderFrame', () => {
     // each view's OWN slabs, not the main ctx's.
     const near0Slab = makeSlab();
     const bodySlab = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'earth' as any } });
-    const view1 = { ...fx.input.ctx, slabs: [near0Slab], renderedTargets: new Set<string>() };
+    const view1 = { ...fx.input.canvas, slabs: [near0Slab], renderedTargets: new Set<string>() };
     const view2 = {
-      ...fx.input.ctx,
+      ...fx.input.canvas,
       slabs: [near0Slab, makeCosmoSlab(), bodySlab],
       renderedTargets: new Set<string>(),
     };
@@ -987,15 +1003,13 @@ describe('renderFrame', () => {
   });
 
   it('a once section after a perView section sees targets the views rendered', () => {
-    // The regression this pins: the union fold used to run at EXPAND time,
-    // before the perView batch had actually executed, so the following
-    // `once` section always found an empty `renderedTargets` — here, the
-    // hdr→swap composite would have skipped its draw (`touched.has('hdr')`
-    // false) exactly as POST/OVERLAYS would in a real frame.
+    // The regression this pins: a `once` section running against `canvas`
+    // must see what a PRECEDING `perView` section drew — true for free when
+    // mono's one view IS `canvas` (no fold needed, per the Global Constraints
+    // ruling), so here the hdr→swap composite draws (`touched.has('hdr')`
+    // true) exactly as POST/OVERLAYS would in a real mono frame.
     const stubPass = { name: 'stub-hdr', enabled: () => true, draw: vi.fn() };
     (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubPass];
-
-    const view = { ...fx.input.ctx, slabs: [makeSlab()], renderedTargets: new Set<string>() };
 
     (VIEW_RIGS as any).__foldTest = {
       views: () => [],
@@ -1010,12 +1024,12 @@ describe('renderFrame', () => {
     (fx.input.state as any).viewRig = '__foldTest';
 
     try {
-      renderFrame({ ...fx.input, views: [view] } as any);
+      renderFrame({ ...fx.input, views: [fx.input.canvas] } as any);
     } finally {
       delete (VIEW_RIGS as any).__foldTest;
     }
 
-    expect(fx.input.ctx.renderedTargets.has('hdr')).toBe(true);
+    expect(fx.input.canvas.renderedTargets.has('hdr')).toBe(true);
     expect(fx.compositor.draw).toHaveBeenCalledTimes(1);
   });
 });

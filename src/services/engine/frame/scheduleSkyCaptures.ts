@@ -12,7 +12,7 @@ import type { CaptureFaceContexts } from '../../../@types/engine/frame/CaptureFa
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import {
   ALL_CUBE_FACES,
   CUBEMAP_CAPTURES,
@@ -26,14 +26,15 @@ import { sceneBodyStates } from './sceneBodyStates';
 
 export function scheduleSkyCaptures(input: {
   readonly state: EngineState;
-  readonly ctx: ReadyFrameContext;
+  readonly ctx: FrameView;
 }): CaptureFaceContexts {
   const { state, ctx } = input;
   const bodyStates = sceneBodyStates(state, ctx);
   // Two roster inputs move with no settings write: a source-visibility ramp
   // (the write fires at its START) and a Layer still settling — a thumbnail's
   // async 400 ms load fade is the one that motivated this.
-  const rosterSettling = state.subsystems.fades.isAnyAnimating(ctx.nowMs) || ctx.layersSettling;
+  const rosterSettling =
+    state.subsystems.fades.isAnyAnimating(ctx.snapshot.nowMs) || ctx.snapshot.layersSettling;
 
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
   for (const key of SKY_CAPTURE_KEYS) {
@@ -50,7 +51,7 @@ export function scheduleSkyCaptures(input: {
     // for the sweep. `bakedSettings` is null while shut, so entry always bakes.
     if (bandActive !== runtime.lastBandActive) {
       runtime.lastBandActive = bandActive;
-      ctx.renderTargets.reconcile(state, ctx.canvasSize);
+      ctx.snapshot.renderTargets.reconcile(state, ctx.canvasSize);
       if (!bandActive) {
         runtime.bakedSettings = null;
         runtime.bakedContentVersion = null;
@@ -74,13 +75,13 @@ export function scheduleSkyCaptures(input: {
     // `faceSizePx` (its knob IS a settings write, reconciled above first),
     // `selection` (a stale halo in the lensed sky is accepted).
     const faces = new Map<CubeFace, CaptureFace>();
-    const faceSizePx = ctx.renderTargets.sizeOf(row.target).width;
+    const faceSizePx = ctx.snapshot.renderTargets.sizeOf(row.target).width;
     // One frame for the whole row (world axes: no host to rotate into).
     const snapshot = cubemapCaptureFrame({
       state,
       eyeMpc: ctx.drawCamPos,
       nearMpc: row.nearMpc,
-      nowMs: ctx.nowMs,
+      nowMs: ctx.snapshot.nowMs,
     });
     if (snapshot.isReady) {
       for (const face of ALL_CUBE_FACES) {

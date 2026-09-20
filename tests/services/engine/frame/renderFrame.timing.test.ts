@@ -241,8 +241,21 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
 
-  const ctx = {
+  // Frame-owned fields (`ReadyFrameContext`). Spread onto `ctx` BELOW as well
+  // as nested under `snapshot`: this file exercises real `ContentPass`es Task
+  // 8 hasn't swept onto `ctx.snapshot.x` yet, so both must resolve to the
+  // same value until that sweep lands (see renderFrame.test.ts's fixture).
+  const snapshotFields = {
     isReady: true as const,
+    nowMs: 0,
+    // resolveLayerOpacity's recession factor lerps on this; production seeds it
+    // to 0 in frameContext, and an absent one yields NaN alphas here.
+    focusBlend: 0,
+    renderTargets,
+  };
+  const ctx = {
+    ...snapshotFields,
+    snapshot: snapshotFields,
     // executor populates this as targets render; a later pass reads which rendered this frame.
     renderedTargets: new Set<string>(),
     cam,
@@ -253,12 +266,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
-    nowMs: 0,
-    // resolveLayerOpacity's recession factor lerps on this; production seeds it
-    // to 0 in frameContext, and an absent one yields NaN alphas here.
-    focusBlend: 0,
     fovYRad: FIXTURE_FOV_Y_RAD,
-    renderTargets,
   } as never;
 
   const settings = {
@@ -281,8 +289,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   };
 
   const input: RenderFrameInput = {
-    ctx,
-    // Mono's own contract: the frame's one view is the main ctx itself.
+    canvas: ctx,
+    // Mono's own contract: the frame's one view is the canvas itself.
     views: [ctx],
     state: {
       // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.

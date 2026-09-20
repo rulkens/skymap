@@ -1,44 +1,23 @@
 /**
- * RenderFrameInput — per-frame inputs for `renderFrame()`.
- *
- * Every field is read; nothing is mutated.  The encoder is created
- * and finished inside `renderFrame` so no GPU lifecycle leaks back
- * to the caller.
- *
- * ### `state` arrived in D.2
- *
- * Pre-D.2, `renderFrame` consumed only the per-frame snapshot
- * (`ctx`) plus a flat settings bag — engine state was never read
- * directly here.  The flat bag is now dissolved: every pass reads
- * `state.settings.*` directly, so the only non-state inputs are
- * the GPU device/context, the per-frame snapshot (`ctx`), and the
- * timing service.
- *
- * ### Why no renderer fields
- *
- * Every `ContentPass` — hdr-target and swap-target alike — reads its
- * renderer straight off `state.gpu.*` (see `passes/index.ts`), so `state`
- * is the only per-frame renderer source this type needs to carry.
+ * RenderFrameInput — per-frame inputs for `renderFrame()`. Every field is
+ * read; nothing is mutated. The encoder is created and finished inside
+ * `renderFrame`, so no GPU lifecycle leaks back to the caller.
  */
 
 import type { EngineState } from '../state/EngineState';
 import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
-import type { ReadyFrameContext } from './ReadyFrameContext';
+import type { FrameView } from './FrameView';
 
 export type RenderFrameInput = {
   /**
-   * Per-frame derived snapshot.  Carries the camera, view-projection
-   * matrix, viewport size, camera-position tuple, pixel-per-radian
-   * scalar, plus the post-bootstrap-narrowed `renderer`, `renderTargets`,
-   * and `thumbnails` handles.  See `frameContext.ts`.
+   * The frame's own view of the swap chain — what `once` sections run
+   * against. They DO read view fields: composite/tonemap resolve
+   * `viewFor(dest, ctx, swapView)` through `ctx.output`, and the sky-view
+   * compute's `atmosphereDrawList` reads `ctx.cam.distance` / `drawCamPos`.
    */
-  ctx: ReadyFrameContext;
-  /**
-   * The frame's views (`VIEW_RIGS[state.viewRig].views(ctx, state)`),
-   * computed once by `runFrame` ahead of the view-independent planners
-   * (surface cut, star cut) that also walk this. Mono is `[ctx]` itself.
-   */
-  views: readonly ReadyFrameContext[];
+  canvas: FrameView;
+  /** What `perView` sections iterate; mono is `[canvas]`. */
+  views: readonly FrameView[];
   /**
    * Engine state — forwarded to each `ContentPass.draw` so per-layer logic
    * can read selection / picking / source-state / settings / `state.gpu.*`
