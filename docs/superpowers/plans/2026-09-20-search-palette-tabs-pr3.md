@@ -21,6 +21,26 @@
 - **Types live in `@types/`**, one type per file; `utils/` is one function per file. Under `tools/`, a tool app's types go in `tools/<tool>/@types/` and shared-helper types in `tools/@types/<area>/`.
 - **Comment budget:** module header ≤ 5 lines, comment lines ≤ half the code lines; explain _why_, never _what_.
 
+## Landing in three PRs
+
+Decided 2026-09-21. The cuts are the dependency seams, and the order front-loads
+the pose helper because the user cannot frame two of the four views without it.
+
+| PR                        | Tasks              | Lands                                                                     |
+| ------------------------- | ------------------ | ------------------------------------------------------------------------- |
+| **3a** — the bracket      | 10, 1, 2, 3        | Pure refactor, no user-visible change. `#781`.                            |
+| **3b** — views live       | 4, 5, 6, 8         | View cards stop being inert; placeholder copy, two placeholder poses.      |
+| **3c** — the rest         | 7, 9, 11, 12       | Tours tab, search rows, capture change, six thumbnails, copy, smoke.      |
+
+Task 10 rides 3a despite being a views task: it is ~20 lines against the debug
+panel, touches nothing else, and merging it first lets the user frame the
+`solarSystem` and `observableUniverse` poses while 3b is being written.
+
+Thumbnails must trail into 3c because capture needs the final poses. The four
+view cards already render a broken thumbnail on `main` today (`featuredTabs.ts`
+:125, :178-190 carry no `image` override and no webp exists), so 3b does not
+make that worse.
+
 ---
 
 ### Task 1: Prep P2 — move the scene snapshot helpers out of `tour/`
