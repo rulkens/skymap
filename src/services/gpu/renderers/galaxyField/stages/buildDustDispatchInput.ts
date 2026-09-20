@@ -1,14 +1,14 @@
 /** Shared by the `place:dust` stage and the debug readback — one input shape, one place that assembles it. */
 
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldStageContext } from '../GalaxyFieldStageContext';
+import type { GalaxyFieldStageContext } from '../../../../../@types/galaxy/GalaxyFieldStageContext';
 import {
   ISM_MAP_AZ,
   ISM_MAP_RINGS,
   ismMapGridRadiusOrDefault,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { PlaceDustBudget } from '../ismMap/computePlaceDustBudget';
-import type { PlaceDustDispatchInput } from '../ismMap/createIsmMapPlaceDust';
+import type { PlaceDustBudget } from '../../../../../@types/galaxy/PlaceDustBudget';
+import type { PlaceDustDispatchInput } from '../../../../../@types/galaxy/PlaceDustDispatchInput';
 
 export function buildDustDispatchInput(
   ctx: GalaxyFieldStageContext,

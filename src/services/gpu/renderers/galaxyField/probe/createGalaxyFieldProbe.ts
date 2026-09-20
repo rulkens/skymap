@@ -7,7 +7,7 @@
  */
 
 import type { GalaxyFieldProbe } from '../../../../../@types/galaxy/GalaxyFieldProbe';
-import type { GalaxyFieldStageContext } from '../GalaxyFieldStageContext';
+import type { GalaxyFieldStageContext } from '../../../../../@types/galaxy/GalaxyFieldStageContext';
 import type { FieldBindGroups } from '../field/createFieldPipelines';
 import { findHiiSegment } from '../field/findHiiSegment';
 import { FIELD_COMPONENT_FLOATS } from '../field/packFieldUniforms';

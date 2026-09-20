@@ -43,7 +43,7 @@ import { arrayMean } from '../../../../../src/utils/math/arrayMean';
 import { DEBUG_VIEWS } from '../../data/debugViews';
 import { createKeyedRebuild } from '../../../../../src/services/gpu/lib/createKeyedRebuild';
 import { createGrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
-import type { GrowOnlyRecordBuffer } from '../../../../../src/services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
+import type { GrowOnlyRecordBuffer } from '../../../../../src/@types/galaxy/GrowOnlyRecordBuffer';
 import { generateGalaxy } from '../sprites/generateGalaxy';
 import { orientationCoherenceStats } from '../ismMap/orientationCoherenceStats';
 import { createIsmMapReadbacks } from '../ismMap/createIsmMapReadbacks';

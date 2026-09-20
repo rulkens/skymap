@@ -2,8 +2,8 @@
 
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldMixtureResult } from '../../../../../@types/galaxy/GalaxyFieldMixtureResult';
-import type { GalaxyFieldStageContext } from '../GalaxyFieldStageContext';
-import type { PlaceArmSpurCloudDispatchInput } from '../ismMap/createIsmMapPlaceArmSpurCloud';
+import type { GalaxyFieldStageContext } from '../../../../../@types/galaxy/GalaxyFieldStageContext';
+import type { PlaceArmSpurCloudDispatchInput } from '../../../../../@types/galaxy/PlaceArmSpurCloudDispatchInput';
 
 export function buildSpurCloudDispatchInput(
   ctx: GalaxyFieldStageContext,

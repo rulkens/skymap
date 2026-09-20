@@ -17,7 +17,7 @@ import {
 import { ismMapRingRadius } from '../../../../../utils/galaxy/ismMapRingRadius';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldTuning } from '../../../../../@types/galaxy/GalaxyFieldTuning';
-import type { IsmMapCdfArmEnvelopeEntry } from './packIsmMapCdfArmEnvelope';
+import type { IsmMapCdfArmEnvelopeEntry } from '../../../../../@types/galaxy/IsmMapCdfArmEnvelopeEntry';
 
 export function buildDigArmEnvelopeTable(
   geometry: GalaxyDescription,

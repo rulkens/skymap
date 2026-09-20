@@ -15,7 +15,7 @@ import type { GalaxyFieldComponent } from '../../../../../@types/galaxy/GalaxyFi
 import type { GalaxyFieldExtra } from '../../../../../@types/galaxy/GalaxyFieldExtra';
 import type { GalaxyFieldMixtureInput } from '../../../../../@types/galaxy/GalaxyFieldMixtureInput';
 import type { GalaxyFieldMixtureResult } from '../../../../../@types/galaxy/GalaxyFieldMixtureResult';
-import type { GalaxyFieldModel } from '../GalaxyFieldModel';
+import type { GalaxyFieldModel } from '../../../../../@types/galaxy/GalaxyFieldModel';
 import type { HiiSegment } from '../../../../../@types/galaxy/HiiSegment';
 import { transformGalaxyFieldComponent } from '../../../../../utils/galaxy/transformGalaxyFieldComponent';
 import { buildGalaxyFieldMixture } from '../../../../engine/galaxyGenerator/v2/galaxyFieldMixture';
@@ -30,9 +30,9 @@ import { deriveDustHeaderLanes } from '../field/deriveDustHeaderLanes';
 import { packFieldSlices } from '../field/packFieldSlices';
 import { packHiiSlices } from '../field/packHiiSlices';
 import { computeDigVeilBudget } from '../ismMap/computeDigVeilBudget';
-import type { DigVeilBudget } from '../ismMap/computeDigVeilBudget';
+import type { DigVeilBudget } from '../../../../../@types/galaxy/DigVeilBudget';
 import { computePlaceDustBudget } from '../ismMap/computePlaceDustBudget';
-import type { PlaceDustBudget } from '../ismMap/computePlaceDustBudget';
+import type { PlaceDustBudget } from '../../../../../@types/galaxy/PlaceDustBudget';
 
 export function createGalaxyFieldModel(deps: {
   readonly input: () => GalaxyFieldMixtureInput;

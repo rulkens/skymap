@@ -15,9 +15,9 @@ import type { GalaxyFieldMixtureInput } from '../../../../@types/galaxy/GalaxyFi
 import type { GalaxyFieldMixtureResult } from '../../../../@types/galaxy/GalaxyFieldMixtureResult';
 import type { GalaxyFieldOverlays } from '../../../../@types/galaxy/GalaxyFieldOverlays';
 import type { GalaxyFieldRenderer } from '../../../../@types/galaxy/GalaxyFieldRenderer';
-import type { GalaxyFieldRendererDeps } from './GalaxyFieldRendererDeps';
+import type { GalaxyFieldRendererDeps } from '../../../../@types/galaxy/GalaxyFieldRendererDeps';
 import type { GalaxyFieldRenderTargets } from '../../../../@types/galaxy/GalaxyFieldRenderTargets';
-import type { GalaxyFieldStageContext } from './GalaxyFieldStageContext';
+import type { GalaxyFieldStageContext } from '../../../../@types/galaxy/GalaxyFieldStageContext';
 import type { HiiSegment } from '../../../../@types/galaxy/HiiSegment';
 import type { HiiTextureLanes } from '../../../../@types/galaxy/HiiTextureLanes';
 import type { HiiTier } from '../../../../@types/galaxy/HiiTier';

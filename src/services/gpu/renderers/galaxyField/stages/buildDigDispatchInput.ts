@@ -1,15 +1,15 @@
 /** Shared by the `place:dig` stage and the debug readback. */
 
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
-import type { GalaxyFieldStageContext } from '../GalaxyFieldStageContext';
+import type { GalaxyFieldStageContext } from '../../../../../@types/galaxy/GalaxyFieldStageContext';
 import {
   ISM_MAP_AZ,
   ISM_MAP_RINGS,
   ismMapGridRadiusOrDefault,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 import { findHiiSegment } from '../field/findHiiSegment';
-import type { DigVeilBudget } from '../ismMap/computeDigVeilBudget';
-import type { PlaceDigVeilDispatchInput } from '../ismMap/createIsmMapPlaceDigVeil';
+import type { DigVeilBudget } from '../../../../../@types/galaxy/DigVeilBudget';
+import type { PlaceDigVeilDispatchInput } from '../../../../../@types/galaxy/PlaceDigVeilDispatchInput';
 
 export function buildDigDispatchInput(
   ctx: GalaxyFieldStageContext,
