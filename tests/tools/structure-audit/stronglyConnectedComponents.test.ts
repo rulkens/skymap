@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { stronglyConnectedComponents } from '../../../tools/atlas/stronglyConnectedComponents';
+import { stronglyConnectedComponents } from '../../../tools/structure-audit/stronglyConnectedComponents';
 
 describe('stronglyConnectedComponents', () => {
   it('returns only cycles, largest first, and leaves acyclic files out', () => {

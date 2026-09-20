@@ -1,14 +1,14 @@
 import { stronglyConnectedComponents } from './stronglyConnectedComponents';
 import type { AreaEdge } from './types/AreaEdge';
 import type { AreaStability } from './types/AreaStability';
-import type { AtlasCycle } from './types/AtlasData';
+import type { StructureAuditCycle } from './types/StructureAuditData';
 import type { ImportGraph } from './types/ImportGraph';
 
 export type GraphAggregate = {
   readonly areaEdges: readonly AreaEdge[];
   readonly pairFiles: Readonly<Record<string, readonly (readonly [string, string, boolean])[]>>;
   readonly stability: readonly AreaStability[];
-  readonly sccs: readonly AtlasCycle[];
+  readonly sccs: readonly StructureAuditCycle[];
   readonly fanIn: readonly (readonly [string, number])[];
   readonly fanOut: readonly (readonly [string, number])[];
 };

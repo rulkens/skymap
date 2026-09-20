@@ -1,5 +1,5 @@
 /**
- * `npm run atlas` — one static HTML page over src/: area import matrix with editable tiers,
+ * `npm run structure-audit` — one static HTML page over src/: area import matrix with editable tiers,
  * cycles, non-RTK state, convention/test-mirror/dead-export/duplication audits. README beside.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -14,11 +14,11 @@ import { renderPage } from './renderPage';
 import { scanImportGraph } from './scanImportGraph';
 import { scanState } from './scanState';
 import { tierOf, TIERS } from './tierOf';
-import type { AtlasData } from './types/AtlasData';
+import type { StructureAuditData } from './types/StructureAuditData';
 
 const ROOT = resolve(import.meta.dirname, '..', '..');
 const SRC = join(ROOT, 'src');
-const OUT = join(ROOT, 'tools', 'atlas', 'out', 'atlas.html');
+const OUT = join(ROOT, 'tools', 'structure-audit', 'out', 'structureAudit.html');
 const STRICT = { minLines: 8, minTokens: 60 };
 const LOOSE = { minLines: 5, minTokens: 40 };
 
@@ -39,7 +39,7 @@ for (const node of Object.values(graph.nodes)) {
   row.code += node.code;
 }
 
-const data: AtlasData = {
+const data: StructureAuditData = {
   generated: new Date().toISOString().slice(0, 10),
   totals: { files: files.length, edges: graph.edges.length },
   groups: TIERS,

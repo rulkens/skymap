@@ -1,13 +1,13 @@
-# Import atlas — structure and quality audits over `src/`
+# Structure audit — import matrix and quality audits over `src/`
 
-`npm run atlas` scans `src/` and writes one self-contained page to `tools/atlas/out/atlas.html`
+`npm run structure-audit` scans `src/` and writes one self-contained page to `tools/structure-audit/out/structureAudit.html`
 (gitignored). Open it in a browser. It exists to replace "the structure feels tangled" with a
 picture: which area imports which, where the cycles are, where mutable state sits outside Redux
 Toolkit, and where the CLAUDE.md conventions are not yet met.
 
 ```bash
-npm run atlas
-open tools/atlas/out/atlas.html
+npm run structure-audit
+open tools/structure-audit/out/structureAudit.html
 ```
 
 Takes a few seconds; the two jscpd passes are most of it.

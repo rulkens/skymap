@@ -6,28 +6,28 @@ import type { DeadExportAudit } from './DeadExportAudit';
 import type { StateInventory } from './StateInventory';
 import type { TestMirror } from './TestMirror';
 
-export type AtlasArea = {
+export type StructureAuditArea = {
   readonly name: string;
   readonly group: string;
   readonly files: number;
   readonly code: number;
 };
 
-export type AtlasCycle = {
+export type StructureAuditCycle = {
   readonly size: number;
   readonly areas: readonly string[];
   readonly files: readonly string[];
 };
 
 /** Everything the page renders, embedded as one JSON literal. */
-export type AtlasData = {
+export type StructureAuditData = {
   readonly generated: string;
   readonly totals: { readonly files: number; readonly edges: number };
   readonly groups: readonly string[];
-  readonly areas: readonly AtlasArea[];
+  readonly areas: readonly StructureAuditArea[];
   readonly areaEdges: readonly AreaEdge[];
   readonly pairFiles: Readonly<Record<string, readonly (readonly [string, string, boolean])[]>>;
-  readonly sccs: readonly AtlasCycle[];
+  readonly sccs: readonly StructureAuditCycle[];
   readonly sccStats: {
     readonly count: number;
     readonly filesInCycles: number;

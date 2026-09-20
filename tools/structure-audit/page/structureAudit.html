@@ -1,4 +1,4 @@
-<title>Skymap Import Atlas</title>
+<title>Skymap Structure Audit</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link
   rel="stylesheet"
@@ -776,7 +776,7 @@
 <header>
   <div>
     <div class="eyebrow">skymap · src/ · relative imports · snapshot __GENERATED__</div>
-    <h1>Skymap Import Atlas</h1>
+    <h1>Skymap Structure Audit</h1>
     <p class="lede">
       Which area imports which, where the cycles are, and where mutable state sits outside Redux
       Toolkit. Tier assignment below is a proposal you can change; everything red recomputes.
@@ -1924,7 +1924,7 @@
     const nav = document.getElementById('topnav');
     let current = null;
     try {
-      current = sessionStorage.getItem('atlas-tab');
+      current = sessionStorage.getItem('structure-audit-tab');
     } catch {}
     if (!SECTIONS.some(([id]) => id === current)) current = 'guide';
     const show = (id) => {
@@ -1932,7 +1932,7 @@
       for (const [sid] of SECTIONS) document.getElementById(sid).hidden = sid !== id;
       for (const b of nav.children) b.setAttribute('aria-selected', String(b.dataset.id === id));
       try {
-        sessionStorage.setItem('atlas-tab', id);
+        sessionStorage.setItem('structure-audit-tab', id);
       } catch {}
       window.scrollTo({ top: 0 });
     };

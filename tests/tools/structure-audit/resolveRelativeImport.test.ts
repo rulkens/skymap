@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resolveRelativeImport } from '../../../tools/atlas/resolveRelativeImport';
+import { resolveRelativeImport } from '../../../tools/structure-audit/resolveRelativeImport';
 
 describe('resolveRelativeImport', () => {
   const src = '/repo/src';

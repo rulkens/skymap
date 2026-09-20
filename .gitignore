@@ -38,8 +38,8 @@ playwright-report/
 # committed (it pins the exact dependency graph the reproducible builder needs).
 /tools/stars-rs/target/
 
-# `npm run atlas` output — a generated page, rebuilt on every run.
-/tools/atlas/out/
+# `npm run structure-audit` output — a generated page, rebuilt on every run.
+/tools/structure-audit/out/
 
 # ── Environment files ─────────────────────────────────────────────────────────
 # Default-deny `.env*` keeps secrets out by accident.  The carve-out below

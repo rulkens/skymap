@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseImports } from '../../../tools/atlas/parseImports';
+import { parseImports } from '../../../tools/structure-audit/parseImports';
 
 describe('parseImports', () => {
   it('reads every import form the dead-export audit depends on', () => {
