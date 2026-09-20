@@ -1,0 +1,44 @@
+/**
+ * FrameContextInput — everything `deriveFrameContext` needs that is not the
+ * store: ONE bag in place of twelve positionals. No pose-shaped type is minted
+ * — `OrbitCamera` already carries pose, projection, both bases and `position`,
+ * and the CALLER assembles it (`assembleOrbitCamera`), so the frame context's
+ * `cam` is this `cam`, by reference.
+ */
+
+import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+
+export type FrameContextInput = {
+  /**
+   * The frame's one camera, pose-true. `poseBasis` (the committed
+   * `ORIENTATION_FRAMES[orientation]`, which does not move during a roll)
+   * decoded its eye position; `upBasis` (the live, possibly mid-slerp
+   * `resolveFrameBasis` result) decodes screen-up. The split is what makes an
+   * orientation-frame switch roll the horizon instead of sweeping the view.
+   */
+  readonly cam: OrbitCamera;
+  /**
+   * The SAME framed pose `cam`'s pose was folded from (`foldToWorld`, called
+   * once by the caller) — it serves the pose-provider seam only (spec §5.2).
+   */
+  readonly arm: FramedCameraPose;
+  /**
+   * Eye→pivot-surface range NEAR0's bracket is sized from. REQUIRED, not
+   * optional: `runFrame` already computes it for the scale bar and passes that
+   * one, `pickFrameContext` computes the same line, and a capture passes its
+   * `nearMpc` — a synthetic pose orbits no pivot, and the real focus's radius
+   * taken off a metre-scale probe distance goes hugely negative.
+   */
+  readonly altitudeMpc: number;
+  /**
+   * Wall-clock ms (fades, ramps) and scene time in Julian days (where the
+   * planets are). The two decouple whenever the clock is paused or scrubbed,
+   * and threading them rather than sampling per consumer is the seam a
+   * frame-by-frame recorder needs to step time deterministically.
+   */
+  readonly nowMs: number;
+  readonly simDays: number;
+  /** Galaxy-catalog draw mask (`deriveSourceMasks(state).draw`), this frame. */
+  readonly visibleSourceMask: number;
+};

@@ -1,61 +1,70 @@
 /**
- * ReadyFrameContext — the discriminated-ready case of `FrameContext`, one
- * named struct derived once at the top of the frame body for every
- * downstream site that asks "what's the camera doing this frame?". `renderTargets`
- * rides along narrowed (from `isEngineReady`'s gate) so a pass reads
- * `ctx.renderTargets` with no `!`; the galaxy/textured-disk handles do NOT
- * (D8) — a pass reads those off `state.gpu.*` behind its own null guard,
- * the convention `ContentPass.d.ts` states.
+ * ReadyFrameContext — the ready case of `FrameContext`: what is true of the
+ * FRAME rather than of one view of it. Derived ONCE per frame and held by
+ * every `FrameView` BY REFERENCE (never spread, never copied — sharing is what
+ * makes the clock, the body-state sample and the stamps one thing rather than
+ * N drifting ones). `renderTargets` rides along narrowed from `isEngineReady`'s
+ * gate, so a pass reads it with no `!`; the galaxy/textured-disk handles do NOT
+ * (D8) — a pass reads those off `state.gpu.*` behind its own null guard.
  */
 
-import type { Mat4 } from 'wgpu-matrix';
-
 import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { FramedCameraPose } from '../../camera/FramedCameraPose';
+import type { Mat3 } from '../../math/Mat3';
 import type { Vec2 } from '../../math/Vec2';
-import type { Vec3 } from '../../math/Vec3';
+import type { BodyId } from '../../data/body/BodyId';
+import type { BodyState } from '../../scene/BodyState';
+import type { MeshBody } from '../../scene/MeshBody';
+import type { PositionedStar } from '../../scene/PositionedStar';
+import type { SceneBody } from '../../scene/SceneBody';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
-import type { Slab } from './Slab';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
-import type { ViewKind } from './ViewKind';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
   isReady: true;
-  /** Live camera reference. */
+  /** The frame's orbit camera, pose-true — yaw/pitch/roll intact. A view's own
+   *  turned camera is `FrameView.cam`; anything wanting the true pose reads this. */
   cam: OrbitCamera;
-  /** Combined view-projection matrix, computed once per frame. */
-  vp: Mat4;
+  /** The framed pose `cam` was folded from — the pose-provider seam's input. */
+  arm: FramedCameraPose;
   /**
-   * This frame's slab table (`deriveSlabs`) — array position === `Slab.index`.
-   * `slabViewOf` resolves a `FrameStep`'s `slab: number` into a `SlabView`
-   * by indexing straight into this array.
+   * The camera's world-space right | up | forward as columns — the basis every
+   * world-frame consumer (`bodyRelativePose`, a `ViewSpec.rotation`) is
+   * relative to. Reruns the SAME roll NEAR0's own vp derivation uses
+   * (`imagePlaneBasis` is the shared seam both call, not a copy), so a body
+   * row's screen orientation matches NEAR0's.
    */
-  slabs: readonly Slab[];
+  camBasisWorld: Mat3;
   /**
-   * The SAME pose-provider closure `deriveSlabs` was fed to build `slabs`
-   * (spec §5's provider seam) — `frameContext.ts` builds it once, here and
-   * for `deriveSlabs`, so a body-slab layer's own `bodyRelativePose` read
-   * can never drift from the one the slab's `vp` was built from. A layer
-   * that re-derives the pose itself (a second `camBasisWorld` computation)
-   * is the exact bug this field exists to make impossible: correct today by
-   * coincidence, wrong the moment a future pose provider swaps in behind
-   * `BodyPoseProvider` and this ctx field doesn't move with it.
+   * This frame's ONE R_body(t) sample (spec §4). `deriveBodyStates` memoizes
+   * one deep on `simDays`, so every later `sceneBodyStates(state, ctx)` call
+   * this frame returns this SAME Map by reference — no second cache, no drift.
+   */
+  bodyStates: ReadonlyMap<BodyId, BodyState>;
+  /**
+   * The UN-turned pose provider (spec §5's provider seam), built once here so
+   * a body-slab layer's own `bodyRelativePose` read can never drift from the
+   * one a slab's `vp` was built from. A layer that re-derives the pose itself
+   * (a second `camBasisWorld` computation) is the exact bug this field exists
+   * to make impossible. A view turns its output through `viewBodyPose` and
+   * publishes that as `FrameView.bodyPose` — the one `deriveSlabs` was fed.
    */
   bodyPose: BodyPoseProvider;
-  /** Backing-store-pixel viewport size; same as `canvas.{width,height}`. */
-  canvasSize: { width: number; height: number };
   /**
-   * Live pointer position in texture pixels — `state.picking.cursorTexPx`
-   * forwarded, so a pass never reaches back into the picking bag `PassState`
-   * deliberately refuses. `null` unless the `terrain-pick-marker` debug overlay
-   * is on (its sole reader): the listener only writes it then.
+   * The bodies eligible for a slab row before any view's frustum gate: Earth,
+   * the planets, the scene anchors and the mesh bodies that host their own row.
+   * Frame-wide because the roster is a store read, not a camera one — a view
+   * culls it (`visibleSlabBodies`), it never re-assembles it.
    */
-  cursorTexPx: Readonly<Vec2> | null;
-  /** This view's eye as a readonly tuple: `cam.position`, plus a rig view's eye offset. */
-  drawCamPos: Readonly<Vec3>;
-  /** `canvasSize.height / (tanUp − tanDown)` of this view's frustum — pinhole radian→pixel conversion. */
-  drawPxPerRad: number;
+  slabBodyCandidates: readonly SceneBody[];
+  /** The full mesh-body roster — a view runs the SAME gate over it to re-admit
+   *  the hosts of mesh bodies riding someone else's slab row. */
+  meshBodies: readonly MeshBody[];
+  /** The visible seeded stars with this frame's positions resolved — a view
+   *  partitions them by apparent size (`partitionStarsByResolution`). */
+  positionedStars: readonly PositionedStar[];
   /**
    * The frame's stamped clock — `performance.now()`-shaped, taken from
    * `runFrame`'s single wall-clock sample.  Every per-frame-evaluated
@@ -74,26 +83,19 @@ export type ReadyFrameContext = {
    * A paused clock holds it steady; live/manual playback advances it each frame.
    */
   simDays: number;
-  /** This view's vertical field of view in radians — `cam.fovYRad` for the main view. */
-  fovYRad: number;
+  /** Eye→pivot-surface range NEAR0's bracket is sized from — `FrameContextInput.altitudeMpc`. */
+  altitudeMpc: number;
+  /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
+  visibleSourceMask: number;
   /**
-   * Which physical GPU destination this frame's draws land in: `0` = the
-   * main view, and a capture row's six faces claim
-   * `viewSlotBase … viewSlotBase + 5` (`cubemapFaceContext`, keyed per row in
-   * `src/data/rendering/cubemapCaptures.ts`). A capture sweep records several `draw()` calls
-   * against DIFFERENT synthetic contexts before one `submit()` — the
-   * `queue.writeBuffer`-before-`submit` landmine (docs/RENDERER.md #1) means a
-   * renderer-owned buffer shared across those calls would keep only the LAST
-   * write. A roster renderer keys its per-frame writes on this field (via a
-   * view-slot buffer helper, `src/utils/gpu/`) instead of overwriting one
-   * shared destination, so each call's bytes survive to its own draw.
-   * `deriveFrameContext` stamps `0` for the main view and a rig view its
-   * `ViewSpec.slot`; `cubemapFaceContext` stamps a face slot. Not a capture
-   * test — that is `viewKind`.
+   * The offscreen render-target table (`hdr`, `volume`, …).  Forwarded
+   * here from `state.gpu.renderTargets` — same reference, no allocation —
+   * so the executor's `viewFor` and any layer that samples an offscreen
+   * (`ctx.snapshot.renderTargets.viewOf('volume')`) never reach back into `state`.
    */
-  viewSlot: number;
-  /** `'capture'` only on `cubemapFaceContext`'s faces — see `ViewKind`. */
-  viewKind: ViewKind;
+  renderTargets: RenderTargets;
+  /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */
+  focus: FocusUniformsValue;
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**
@@ -102,31 +104,11 @@ export type ReadyFrameContext = {
    * own subsystems: the sky-capture scheduler reads this. See `LayerFrameVote`.
    */
   layersSettling: boolean;
-  /** Galaxy-catalog draw mask (deriveSourceMasks(state).draw), this frame. */
-  visibleSourceMask: number;
-  /** Full cluster-focus uniform value (produceFocusUniforms, ticked once/frame). */
-  focus: FocusUniformsValue;
   /**
-   * The offscreen render-target table (`hdr`, `volume`, …).  Forwarded
-   * here from `state.gpu.renderTargets` — same reference, no allocation —
-   * so the executor's `viewFor` and any layer that samples an offscreen
-   * (`ctx.renderTargets.viewOf('volume')`) never reach back into `state`.
+   * Live pointer position in texture pixels — `state.picking.cursorTexPx`
+   * forwarded, so a pass never reaches back into the picking bag `PassState`
+   * deliberately refuses. `null` unless the `terrain-pick-marker` debug overlay
+   * is on (its sole reader): the listener only writes it then.
    */
-  renderTargets: RenderTargets;
-  /**
-   * The set of render-target ids drawn into so far THIS frame. A later pass
-   * that samples an earlier target's texture guards on this — mirroring the
-   * executor's composite step, which skips compositing a source that was never
-   * rendered this frame. The near-field caption occlusion reads it to avoid
-   * sampling the `foreground:0` depth on a frame where no body drew (the
-   * executor skips an empty render step, leaving that depth stale/uninitialised).
-   */
-  renderedTargets: ReadonlySet<string>;
-  /**
-   * Where a `swap`-targeted step's `viewFor('swap', …)` resolves for THIS
-   * view — a rig view's own offscreen destination; unset for the main
-   * context and every mono view, so `viewFor` falls back to the acquired
-   * swap-chain view as it does today.
-   */
-  output?: GPUTextureView;
+  cursorTexPx: Readonly<Vec2> | null;
 };

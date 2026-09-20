@@ -100,8 +100,9 @@ type FrameView = {
 // ViewRig.views: (canvas: FrameView, state: EngineState) => readonly FrameView[]
 ```
 
-- [ ] Move each doc comment with its field: the long `viewSlot`, `renderedTargets`, `bodyPose`, `nowMs`/`simDays` docs are load-bearing and land on whichever type now owns the field. `FrameView`'s header says the `snapshot` back-reference is shared, never copied. `FrameView` stays flat: `canvasSize`, `viewSlot`, `viewKind` and `output?` are fields, not a `spec` held by reference.
-- [ ] No test: a type sweep the compiler checks.
+- [x] Move each doc comment with its field: the long `viewSlot`, `renderedTargets`, `bodyPose`, `nowMs`/`simDays` docs are load-bearing and land on whichever type now owns the field. `FrameView`'s header says the `snapshot` back-reference is shared, never copied. `FrameView` stays flat: `canvasSize`, `viewSlot`, `viewKind` and `output?` are fields, not a `spec` held by reference.
+- [x] No test: a type sweep the compiler checks.
+- Deviation: `ReadyFrameContext` also carries `altitudeMpc` and the three frame-wide rosters the view derivation culls (`slabBodyCandidates`, `meshBodies`, `positionedStars`). `deriveView(snapshot, spec)` takes no `EngineState`, and `frameContext.ts:151-159` / `:239` read one — the contract's field list omitted them.
 
 ### Task 2: `mainViewSpec`, `faceViewSpec`, cube-face tables out of `cubemapFaceContext`
 
