@@ -58,7 +58,7 @@ positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 | `--sim-time` | now, resolved once at take start                    | ISO 8601 instant (e.g. `2026-07-31T12:00:00.000Z`); pins the sim clock — see [Reproducibility](#reproducibility)                                                                      |
 | `--fps`      | `60`                                                | positive integer                                                                                                                                                                      |
 | `--size`     | `3840x2160`                                         | `WIDTHxHEIGHT` — the OUTPUT film resolution                                                                                                                                           |
-| `--dpr`      | `2`                                                 | viewport = size/dpr; `1` for CSS-px-native capture                                                                                                                                    |
+| `--dpr`      | `1`                                                 | viewport = size/dpr; `2` only to reproduce older, softer takes — it halves the rendered resolution                                                                                    |
 | `--out`      | `recordings/<take>-<size>-<fps>fps-<timestamp>.mp4` | never overwrites a previous take; pass `--out` for a fixed name (dir auto-created); `<take>` is the tour or clip id                                                                   |
 | `--url`      | `http://localhost:5173`                             | trailing slash stripped; must carry NO query or hash of its own — the harness appends `?cinema#t=<ISO>` itself and throws if `--url` already has either; rejected alongside `--serve` |
 | `--serve`    | off                                                 | self-host a production build instead of `--url` — see [Serving a production build (`--serve`)](#serving-a-production-build---serve); rejected alongside `--url`                       |
@@ -66,29 +66,32 @@ positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 | positional   | `grandTour`                                         | tour id, must exist in `tourRegistry`; rejected alongside `--clip`                                                                                                                    |
 
 `--size` always means the pixels that land in the mp4; `--dpr` only chooses
-how they are produced. At the default `--dpr 2` the page runs in a size/2
-viewport at `deviceScaleFactor: 2`: DOM captions are typeset in CSS pixels,
-so this renders them at the relative size a designer sees on a 2× display,
-while the app's DPR-capped canvas sizing (`min(devicePixelRatio, 2)` in
-`src/services/gpu/device.ts`) rasterizes the identical native canvas either
-way — dpr 2 costs nothing. The harness captures with an explicit screenshot
-clip at `scale = dpr` (unclipped CDP captures come back in CSS pixels), so
-the output stays size-exact. Both `--size` dimensions must divide evenly by
-`--dpr`.
+how they are produced. At the default `--dpr 1` the viewport IS the film
+resolution. `--dpr 2` runs the page in a size/2 viewport at
+`deviceScaleFactor: 2`, which typesets DOM captions as a 2× display would —
+but it also **halves the rendered resolution**: the first clipped capture
+drops the page's `devicePixelRatio` to 1 permanently, the canvas backing
+store follows it down, and every later frame is a half-size render upscaled
+into the file (soft stars, px-clamped labels twice their intended size). It
+survives only to reproduce the older, softer takes. The harness captures
+with an explicit screenshot clip at `scale = dpr` (unclipped CDP captures
+come back in CSS pixels), so the output stays size-exact. Both `--size`
+dimensions must divide evenly by `--dpr`.
 
 Beat indices are the 0-based numbers `npm run tour-length` prints for a tour
 — use that command first to find the range you want.
 
 Partial take for iteration, against a dev server on a non-standard port
-(1920×1080 output, i.e. a 960×540 viewport at the default dpr 2):
+(1920×1080 output, i.e. a 1920×1080 viewport at the default dpr 1):
 
 ```bash
 npm run record-tour -- --beats 4..6 --fps 30 --size 1920x1080 \
   --url http://localhost:5174 --out recordings/beat-4-6.mp4
 ```
 
-Add `--dpr 1` to capture CSS-px-native instead (viewport = `--size` exactly,
-captions proportionally smaller — how the app looks on a 1× monitor).
+Add `--dpr 2` to typeset captions as a 2× display would (viewport = size/2,
+captions proportionally larger) — at the cost of the resolution collapse
+described above.
 
 A windowed take (`--beats` with a nonzero start) automatically burns and
 discards `FOLD_SETTLE_MS` (1 s) of virtual time before capturing — the saga's
