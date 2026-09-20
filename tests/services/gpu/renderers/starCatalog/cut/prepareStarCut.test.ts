@@ -21,10 +21,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-import {
-  prepareStarCut,
-  advanceStarFades,
-} from '../../../../../../src/services/gpu/renderers/starCatalog/cut/prepareStarCut';
+import { prepareStarCut } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/prepareStarCut';
+import { advanceStarFades } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/advanceStarFades';
 import { starCatalogVisible } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/starCatalogVisible';
 import type { PreparedStarCut } from '../../../../../../src/@types/rendering/PreparedStarCut';
 import type { StarNodeStream } from '../../../../../../src/@types/rendering/StarNodeStream';

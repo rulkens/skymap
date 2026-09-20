@@ -33,7 +33,7 @@ import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
 import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { advanceStarFades } from '../../gpu/renderers/starCatalog/cut/prepareStarCut';
+import { advanceStarFades } from '../../gpu/renderers/starCatalog/cut/advanceStarFades';
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
