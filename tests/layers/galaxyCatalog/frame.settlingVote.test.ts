@@ -1,9 +1,10 @@
 /**
- * The Layer's `frame` settling vote. `settling` gates every sky capture's
- * per-frame re-bake, so a fetch that hangs on an unreachable thumbnail host
- * must NOT hold it true — measured at boot: 32 s of outstanding hips2fits
- * requests kept it true for ~1450 six-face sweeps of the solar-system row.
- * `awake` must still track the fetch, or the arrival never gets drawn.
+ * The Layer's `frame` work votes. Both read the LANDED half of the textured
+ * planner's thumbnail work, never the outstanding-fetch half: `tileStream`
+ * calls `requestRender()` on every settle (success AND failure), so an arrival
+ * wakes a frame by itself and neither vote has to hold the loop open for a
+ * fetch. Measured at boot: alasky hips2fits requests run to the 30 s deadline,
+ * and voting them kept the loop at ~45 fps for 32 s with nothing to show.
  */
 import { describe, it, expect, vi } from 'vitest';
 
@@ -13,9 +14,9 @@ import type { PassState } from '../../../src/@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 
 // Same inert fixture as the other `frame` reconcile tests: nothing committed,
-// a no-op planner walk, no selection row — only the two disk-work predicates
-// vary, which is what the vote reads.
-function makeRuntime(work: { inFlight: boolean; fading: boolean }) {
+// a no-op planner walk, no selection row — only the disk-work predicate
+// varies, which is what the votes read.
+function makeRuntime(fading: boolean) {
   return {
     biasLastApplied: 0,
     biasCorrection: { setMode: vi.fn() },
@@ -29,8 +30,7 @@ function makeRuntime(work: { inFlight: boolean; fading: boolean }) {
     proceduralDisks: { beginFrame: vi.fn(() => ({})) },
     texturedDisks: {
       beginFrame: vi.fn(() => ({})),
-      hasInFlightWork: () => work.inFlight,
-      hasFadingContent: () => work.fading,
+      hasFadingContent: () => fading,
     },
   } as unknown as GalaxyCatalogRuntime;
 }
@@ -51,19 +51,17 @@ const CTX = {
   nowMs: 0,
 } as unknown as ReadyFrameContext;
 
-describe('galaxyCatalog frame — settling vote', () => {
-  it('votes awake but NOT settling while a thumbnail fetch is merely outstanding', () => {
-    const tick = frame(makeRuntime({ inFlight: true, fading: false }));
-    expect(tick(CTX, STATE)).toEqual({ awake: true, settling: false });
-  });
-
-  it('votes settling while a landed thumbnail is inside its load fade', () => {
-    const tick = frame(makeRuntime({ inFlight: true, fading: true }));
+describe('galaxyCatalog frame — work votes', () => {
+  it('votes both while a landed thumbnail is inside its load fade', () => {
+    const tick = frame(makeRuntime(true));
     expect(tick(CTX, STATE)).toEqual({ awake: true, settling: true });
   });
 
-  it('votes neither once the fetches and fades are done', () => {
-    const tick = frame(makeRuntime({ inFlight: false, fading: false }));
+  // The regression this file exists for: a thumbnail host that hangs for its
+  // whole 30 s deadline must cost neither a woken loop nor a sky re-bake. The
+  // fixture has no `hasInFlightWork` at all — reading it here would throw.
+  it('votes neither while a fetch is merely outstanding', () => {
+    const tick = frame(makeRuntime(false));
     expect(tick(CTX, STATE)).toEqual({ awake: false, settling: false });
   });
 });
