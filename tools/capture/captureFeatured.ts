@@ -38,6 +38,7 @@ import { logCameraState } from '../../src/state/camera/logCameraState';
 import { DEFAULT_FOV_DEG } from '../../src/data/defaults';
 import { cameraRoute, engineRoute } from '../../src/store/constants';
 import type { CameraPose } from '../../src/@types/camera/CameraPose';
+import type { RootState } from '../../src/store/types';
 import type { SkymapPerfHook } from '../../src/@types/perf/SkymapPerfHook';
 import type { GalaxyCatalogId } from '../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 
@@ -53,6 +54,7 @@ const SETTLE_HOLD_MS = 1000;
 const SETTLE_POLL_MS = 250;
 const SETTLE_TIMEOUT_MS = 90_000;
 const POST_ESC_WAIT_MS = 1500;
+const CAMERA_LOG_TIMEOUT_MS = 15_000;
 // The capture-spike day: keeps the framed poses (13:00, 12:56) lit consistently.
 const DEFAULT_CAPTURE_T = '2026-09-18T12:00:00Z';
 // A phase pose frames the body from its angular size, so it must assume the
@@ -135,14 +137,13 @@ async function waitSettled(page: Page, cardId: string): Promise<void> {
     const settled = await page.evaluate(
       ({ cameraKey, engineKey }) => {
         const h = (window as unknown as { __skymapPerf: SkymapPerfHook }).__skymapPerf;
-        const state = h.getState() as unknown as Record<string, Record<string, unknown>>;
-        const camera = state[cameraKey] as {
-          clip: unknown;
-          tween: unknown;
-          frameTween: unknown;
-        };
+        // Typed against the real store: these four field names are the whole
+        // settle contract, and an unchecked read of a renamed one is silently
+        // never-settled — 90 s per card, blaming the wrong thing.
+        const state = h.getState() as unknown as RootState;
+        const camera = state[cameraKey];
         const busy = camera.clip !== null || camera.tween !== null || camera.frameTween !== null;
-        const loading = (state[engineKey] as { loadProgress: unknown }).loadProgress !== null;
+        const loading = state[engineKey].loadProgress !== null;
         return !busy && !loading;
       },
       { cameraKey: cameraRoute, engineKey: engineRoute },
@@ -181,13 +182,21 @@ async function applyPose(page: Page, pose: CameraPose): Promise<void> {
 async function readLiveCameraState(
   page: Page,
 ): Promise<Pick<CameraPose, 'yaw' | 'pitch' | 'distance'>> {
-  const messagePromise = new Promise<ConsoleMessage>((resolve) => {
+  const messagePromise = new Promise<ConsoleMessage>((resolve, reject) => {
     const onMessage = (msg: ConsoleMessage): void => {
       if (msg.text().includes('camera state (full precision)')) {
         page.off('console', onMessage);
+        clearTimeout(timer);
         resolve(msg);
       }
     };
+    // Bounded like every other wait here: if the `l`-key log stops arriving —
+    // unwired saga, renamed line — the card fails and the run goes on, rather
+    // than the whole run hanging on one silent page.
+    const timer = setTimeout(() => {
+      page.off('console', onMessage);
+      reject(new Error(`no camera state logged within ${CAMERA_LOG_TIMEOUT_MS} ms`));
+    }, CAMERA_LOG_TIMEOUT_MS);
     page.on('console', onMessage);
   });
   await page.evaluate((action) => {
@@ -203,7 +212,16 @@ async function readLiveCameraState(
     pitch: number;
     distanceMpc: number;
   };
-  return { yaw: parsed.yaw, pitch: parsed.pitch, distance: parsed.distanceMpc };
+  const live = { yaw: parsed.yaw, pitch: parsed.pitch, distance: parsed.distanceMpc };
+  // LANDMINE: `poseMismatch` compares with `>`, and every comparison against a
+  // NaN is false — a renamed key here would turn the verification step into a
+  // silent pass, shipping whatever the fly-in happened to leave on screen.
+  for (const [field, value] of Object.entries(live)) {
+    if (!Number.isFinite(value)) {
+      throw new Error(`camera state '${field}' came back as ${String(value)}, not a number`);
+    }
+  }
+  return live;
 }
 
 type RunAccumulator = {
@@ -223,6 +241,11 @@ async function captureCard(
   const pageErrors = collectPageErrors(page);
   try {
     const t = target.capture.t ?? DEFAULT_CAPTURE_T;
+    if (target.capture.pose !== undefined && target.capture.phaseDeg !== undefined) {
+      throw new Error(
+        `card '${target.cardId}' sets both 'pose' and 'phaseDeg' — phaseDeg computes one`,
+      );
+    }
     const pose =
       target.capture.phaseDeg === undefined
         ? target.capture.pose

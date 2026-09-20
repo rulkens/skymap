@@ -13,22 +13,14 @@ import { ECLIPTIC_FRAME } from '../../../src/data/bodies/orbitPlaneFrames';
 import { ORIENTATION_FRAMES } from '../../../src/data/orientation/orientationFrames';
 import { deriveBodyStates } from '../../../src/services/engine/frame/deriveBodyStates';
 import { bodyFootprintRadiusM } from '../../../src/utils/scene/bodyFootprintRadiusM';
+import { findByIdOrThrow } from '../../../src/utils/object/findByIdOrThrow';
+import { normalize3 } from '../../../src/utils/math/normalize3';
+import { cross3 } from '../../../src/utils/math/cross3';
 import { orbitAnglesLookingAlong } from '../../../src/utils/camera/orbitAnglesLookingAlong';
 import { unixMsToJulianDays } from '../../../src/utils/time/unixMsToJulianDays';
 
 /** Fraction of the frame's half-height the body's disc spans. */
 const FILL = 0.55;
-
-const norm = (v: Vec3): Vec3 => {
-  const l = Math.hypot(v[0], v[1], v[2]) || 1;
-  return [v[0] / l, v[1] / l, v[2] / l];
-};
-
-const cross = (a: Vec3, b: Vec3): Vec3 => [
-  a[1] * b[2] - a[2] * b[1],
-  a[2] * b[0] - a[0] * b[2],
-  a[0] * b[1] - a[1] * b[0],
-];
 
 /**
  * `phaseDeg` swings the camera around the body from the sunward direction: 0°
@@ -45,8 +37,7 @@ export function bodyPhasePose(
   const bodyId = focusId.startsWith(BODY_FOCUS_PREFIX)
     ? focusId.slice(BODY_FOCUS_PREFIX.length)
     : focusId;
-  const body = SCENE_BODIES.find((b) => b.id === bodyId);
-  if (body === undefined) throw new Error(`no scene body '${bodyId}' to pose against`);
+  const body = findByIdOrThrow(SCENE_BODIES, bodyId, 'bodyPhasePose');
   const instantMs = Date.parse(instantIso);
   if (Number.isNaN(instantMs)) throw new Error(`capture instant '${instantIso}' is not a date`);
   const state = deriveBodyStates(unixMsToJulianDays(instantMs)).get(bodyId);
@@ -55,10 +46,10 @@ export function bodyPhasePose(
 
   const position = state.positionMpc;
   // The Sun sits at the heliocentric origin, so this is the lit direction.
-  const sunward = norm([-position[0], -position[1], -position[2]]);
+  const sunward = normalize3([-position[0], -position[1], -position[2]]);
   // Swing off it about the ecliptic pole, which screen-up derives from, so the
   // terminator runs down the frame rather than across it.
-  const side = norm(cross(sunward, ECLIPTIC_FRAME.normal as Vec3));
+  const side = normalize3(cross3(sunward, ECLIPTIC_FRAME.normal as Vec3));
   const phaseRad = (phaseDeg * Math.PI) / 180;
   const cos = Math.cos(phaseRad);
   const sin = Math.sin(phaseRad);

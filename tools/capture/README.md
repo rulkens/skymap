@@ -29,10 +29,17 @@ id repeated across tabs is captured once, from its first capturable copy.
 
 ## Per-card framing
 
-Some cards carry a `capture` override on their `featuredTabs.ts` entry — a `pose` re-applied
-after the focus fly-in settles, a `t` pinning the lit instant, and `keepFocus` to leave the
-selection (focus dim) in the shot. Fly to the vantage in the app and press `l` to log the pose in
-the units `capture.pose` takes (Mpc, radians).
+Some cards carry a `capture` override on their `featuredTabs.ts` entry:
+
+| field             | what it does                                                                                                                                                                                               |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `pose`            | Re-applied after the focus fly-in settles. Fly to the vantage in the app and press `l` to log one in the units it takes (Mpc, radians).                                                                    |
+| `phaseDeg`        | Frames a focused body lit to this phase instead, computing `pose` from the body's place at `t` — 0 full, 180 new, under 180 lit on the right and over 180 on the left. The Solar System cards share `315`. |
+| `t`               | Pins the lit instant (the same string `#t=` takes).                                                                                                                                                        |
+| `keepFocus`       | Leaves the selection (focus dim) in the shot.                                                                                                                                                              |
+| `hideGalaxyField` | Hides the survey point clouds, for a card whose subject is one galaxy rather than the field.                                                                                                               |
+
+`pose` and `phaseDeg` are alternatives — setting both fails the card.
 
 ## Landmines
 

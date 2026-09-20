@@ -23,6 +23,7 @@ export async function bootHookedPage(
       return;
     } catch (err) {
       if (!isNavigationInterruption(err) || navigations >= MAX_BOOT_NAVIGATIONS) throw err;
+      console.warn(`[boot] page navigated during the ready wait (${url}) — retrying`);
     }
   }
 }
@@ -36,9 +37,12 @@ async function waitForHookReady(page: Page, url: string, hook: string): Promise<
     );
   } catch (err) {
     if (isNavigationInterruption(err)) throw err;
+    // Name the two ways it is normally absent rather than just the server:
+    // the hooks install only in their own mode, on a build that ships them.
     throw new Error(
       `window.${hook} never appeared within ${HOOK_TIMEOUT_MS} ms at ${url} — ` +
-        'is the dev server running this branch?',
+        'is the dev server running this branch, with the mode this hook installs in ' +
+        '(`?perf` for __skymapPerf, `?cinema` for __skymapRecorder)?',
     );
   }
   // `ready` already debounces "engine ready + loads settled" over a ~1 s

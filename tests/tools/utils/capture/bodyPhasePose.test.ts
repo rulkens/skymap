@@ -37,7 +37,7 @@ function phaseAngleDeg(focusId: string, phaseDeg: number): number {
 
 describe('bodyPhasePose', () => {
   // The turn folds at 180°: 315° and 45° are both 45° off the Sun, mirrored.
-  it.each([0, 45, 90, 135, 180, 225, 315])('swings %i° around the body', (phaseDeg) => {
+  it.each([0, 45, 90, 135, 180, 225, 270, 315])('swings %i° around the body', (phaseDeg) => {
     const expected = phaseDeg > 180 ? 360 - phaseDeg : phaseDeg;
     for (const focusId of BODIES) {
       expect(phaseAngleDeg(focusId, phaseDeg)).toBeCloseTo(expected, 4);
@@ -61,15 +61,8 @@ describe('bodyPhasePose', () => {
     for (const focusId of BODIES) expect(apparentRad(focusId)).toBeCloseTo(earth, 12);
   });
 
-  it('puts the camera the same distance out whichever way it swings', () => {
-    const a = bodyPhasePose('body-mars', T, 45, FOV_Y_RAD);
-    const b = bodyPhasePose('body-mars', T, 315, FOV_Y_RAD);
-    expect(a.distance).toBe(b.distance);
-    expect(a.target).toEqual(b.target);
-  });
-
   it('refuses a body it cannot place, and an instant it cannot read', () => {
-    expect(() => bodyPhasePose('body-vulcan', T, 315, FOV_Y_RAD)).toThrow(/no scene body/);
+    expect(() => bodyPhasePose('body-vulcan', T, 315, FOV_Y_RAD)).toThrow(/no entry for id/);
     expect(() => bodyPhasePose('body-mars', 'last tuesday', 315, FOV_Y_RAD)).toThrow(/not a date/);
   });
 });

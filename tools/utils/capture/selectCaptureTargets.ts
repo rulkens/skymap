@@ -41,7 +41,7 @@ export function selectCaptureTargets(
       } else {
         captureById.set(card.id, card.capture);
       }
-      if (card.action.kind === 'focus' && card.image === undefined) capturableCard.add(card.id);
+      if (isCapturableCopy(card)) capturableCard.add(card.id);
     }
   }
 
