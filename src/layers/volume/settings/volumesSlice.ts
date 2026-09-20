@@ -5,7 +5,7 @@
 
 import { createSlice, type Draft, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_VOLUMES_ENABLED } from '../../../data/defaults';
+import { DEFAULT_VOLUMES_ENABLED } from './defaults';
 import {
   buildVolumeFieldSettings,
   seedVolumeFields,

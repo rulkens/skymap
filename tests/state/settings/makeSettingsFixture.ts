@@ -43,32 +43,42 @@ import {
   DEFAULT_PASS_BY_DIR,
 } from '../../../src/services/engine/animation/pathDefaults';
 import {
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_BIAS_MODE,
   DEFAULT_BLOOM_ENABLED,
   DEFAULT_BLOOM_STRENGTH,
   DEFAULT_BLOOM_THRESHOLD,
-  DEFAULT_BRIGHTNESS,
-  DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_EXPOSURE,
   DEFAULT_FOV_DEG,
   DEFAULT_HDR_ENABLED,
   DEFAULT_HDR_KNEE,
   DEFAULT_HDR_HEADROOM,
-  DEFAULT_FLOW,
+  DEFAULT_ORIENTATION,
+  DEFAULT_TONE_MAP_CURVE,
+} from '../../../src/data/defaults';
+import { DEFAULT_ORBIT_TRAILS_ENABLED } from '../../../src/layers/body/settings/defaults';
+import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from '../../../src/layers/body/settings/defaults';
+import { DEFAULT_FLOW } from '../../../src/layers/flow/settings/defaults';
+import { DEFAULT_VOLUMES_ENABLED } from '../../../src/layers/volume/settings/defaults';
+import {
+  DEFAULT_MILKY_WAY_ENABLED,
+  DEFAULT_MILKY_WAY_LABEL_ENABLED,
+} from '../../../src/layers/milkyWay/settings/defaults';
+import {
+  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
+  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
+} from '../../../src/layers/zoneOfAvoidance/settings/defaults';
+import {
+  DEFAULT_ABS_MAG_LIMIT,
+  DEFAULT_BIAS_MODE,
+  DEFAULT_BRIGHTNESS,
+  DEFAULT_DEPTH_FADE_ENABLED,
   DEFAULT_GALAXY_FALLOFF_STRENGTH,
   DEFAULT_GALAXY_PROVENANCE,
   DEFAULT_GALAXY_SB_MAX,
   DEFAULT_GALAXY_SB_SCALE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_ORIENTATION,
-  DEFAULT_MILKY_WAY_ENABLED,
-  DEFAULT_MILKY_WAY_LABEL_ENABLED,
-  DEFAULT_ORBIT_TRAILS_ENABLED,
-  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
-  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
-  DEFAULT_SGR_A_STAR_LENSING_TUNING,
   DEFAULT_POINT_SIZE_PX,
+} from '../../../src/layers/galaxyCatalog/settings/defaults';
+import {
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_EXPOSURE_NEAR_X,
@@ -77,9 +87,7 @@ import {
   DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_SIZE_PX,
   DEFAULT_STAR_REFINE_THRESHOLD,
-  DEFAULT_TONE_MAP_CURVE,
-  DEFAULT_VOLUMES_ENABLED,
-} from '../../../src/data/defaults';
+} from '../../../src/layers/starCatalog/settings/defaults';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
