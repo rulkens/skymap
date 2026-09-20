@@ -25,6 +25,9 @@ export function seedCameraRuntime(args: {
   const pose: FramedCameraPose = { ...args.committed };
   return {
     register: { pose, winner: 'resting' },
+    // BY IDENTITY (not a copy, unlike `pose` above): the loop compares this
+    // against the store's `base` next frame to detect an outside commit.
+    base: args.committed,
     epochs: UNSTARTED_EPOCHS,
     follow: null,
     gesture: { key: frameKey(pose.frame), value: rowFor(pose.frame).emptyMemory },

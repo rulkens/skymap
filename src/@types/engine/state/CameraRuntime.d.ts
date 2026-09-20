@@ -17,6 +17,10 @@ export type CameraRuntime = {
   /** The AUTHORED pose (pre-projection — a projected one walks ~8,500 km/frame,
    * R12b-1) and the driver id that wrote it. */
   readonly register: { readonly pose: FramedCameraPose; readonly winner: DriverId };
+  /** The store's `camera.base` this loop last reconciled against (post-actions),
+   * by IDENTITY — a store `base` that differs next frame was committed from
+   * outside the loop. */
+  readonly base: FramedCameraPose;
   readonly epochs: CameraEpochs;
   readonly follow: FollowMemory | null;
   /** Keyed by the register's `frameKey`: a rung change wipes it to that rung's `emptyMemory`. */

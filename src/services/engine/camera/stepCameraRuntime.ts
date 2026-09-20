@@ -15,6 +15,7 @@ import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { CameraRuntime } from '../../../@types/engine/state/CameraRuntime';
+import type { DriverId } from '../../../@types/engine/camera/DriverId';
 import type { RungCtx } from '../../../@types/camera/RungCtx';
 import type { StepInputs } from '../../../@types/engine/camera/StepInputs';
 import type { RootState } from '../../../store/types';
@@ -63,6 +64,11 @@ export function stepCameraRuntime(
     clipEpoch,
     drivers,
   } = inputs;
+  // A `base` the loop did not write is a commit from outside: `resting`
+  // authored it verbatim, so last frame's author reads as `resting` — the
+  // departing row bakes nothing over it and the follow rows adopt it.
+  const winnerLastFrame: DriverId =
+    stored.camera.base === prev.base ? prev.register.winner : 'resting';
   const focus = stored.selectionRows.focus;
   // Re-derived every frame: the FOV slider can change with no resize event.
   const projection: CameraProjection = {
@@ -105,7 +111,7 @@ export function stepCameraRuntime(
       ctx: replayCtx,
       rootState: stored,
       nowMs,
-      winnerLastFrame: prev.register.winner,
+      winnerLastFrame,
       autoRotateEpoch: prev.epochs.autoRotate,
     },
   );
@@ -142,7 +148,7 @@ export function stepCameraRuntime(
   const edge = commitOnEdge({
     register: drained.register,
     displayed: prev.outputs.displayed,
-    prevWinner: prev.register.winner,
+    prevWinner: winnerLastFrame,
     winner,
     drivers,
   });
@@ -161,7 +167,7 @@ export function stepCameraRuntime(
       // Post-edge: a follow row taking over from a tween adopts where the tween
       // LANDED, not the pose the tween departed from (still `base` this frame).
       committedWorld: releasedWorldArm(edge.committed ?? rootState.camera.base, replayCtx, tuning),
-      winnerLastFrame: prev.register.winner,
+      winnerLastFrame,
       poseBasis,
       simDays,
       projection,
@@ -232,6 +238,11 @@ export function stepCameraRuntime(
   return {
     next: {
       register: { pose: projected.register, winner: winnerId },
+      // The camera the store will hold once `runFrame` dispatches these
+      // `actions`; by identity on an idle frame (empty `actions`, `reduce`
+      // returns `stored.camera` itself), which is what `winnerLastFrame` above
+      // compares against next frame.
+      base: actions.reduce(cameraReducer, stored.camera).base,
       epochs,
       follow: memory,
       gesture,
