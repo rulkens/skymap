@@ -162,10 +162,10 @@ import {
   STAR_PICK_MIN_RADIUS_PX,
 } from '../../../../data/starCullSlack';
 import { NODE_FADE_MS } from '../../../../data/starNodeFade';
-import { walkStarOctreeCut } from '../../../gpu/renderers/starCatalog/walkStarOctreeCut';
-import { starOctreeIndex } from '../../../gpu/renderers/starCatalog/starOctreeIndex';
-import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/starPickLeafDraws';
-import { starExposureRamp } from '../../../gpu/renderers/starCatalog/starExposureRamp';
+import { walkStarOctreeCut } from '../../../../utils/star/walkStarOctreeCut';
+import { starOctreeIndex } from '../../../../utils/star/starOctreeIndex';
+import { starPickLeafDraws } from '../../../gpu/renderers/starCatalog/cut/starPickLeafDraws';
+import { starExposureRamp } from '../../../../utils/star/starExposureRamp';
 import { SOURCE_REGISTRY } from '../../../../data/sources';
 import { SCALE_UNITS } from '../../../../data/scaleUnits';
 

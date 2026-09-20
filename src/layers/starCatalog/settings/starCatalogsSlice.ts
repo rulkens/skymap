@@ -18,7 +18,7 @@ import {
 } from '../../../data/defaults';
 // The "Detail" knob's default is owned by the walk it feeds (single source of
 // truth), so seed the setting straight from it rather than restating that number here.
-import { DEFAULT_REFINE_THRESHOLD } from '../../../services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import { DEFAULT_REFINE_THRESHOLD } from '../../../utils/star/walkStarOctreeCut';
 import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../@types/settings/StarCatalogItemSettings';
 import type { StarCatalogSettings } from '../../../@types/settings/StarCatalogSettings';

@@ -9,11 +9,11 @@
  * wholesale, and within the leaf stream only opacity > 0 survives.
  */
 import { describe, expect, it } from 'vitest';
-import { starPickLeafDraws } from '../../../../../src/services/gpu/renderers/starCatalog/starPickLeafDraws';
-import type { PreparedStarCut } from '../../../../../src/@types/rendering/PreparedStarCut';
-import type { StarNodeStream } from '../../../../../src/@types/rendering/StarNodeStream';
-import type { StarNodeDraw } from '../../../../../src/@types/rendering/StarNodeDraw';
-import { Source } from '../../../../../src/data/sources';
+import { starPickLeafDraws } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/starPickLeafDraws';
+import type { PreparedStarCut } from '../../../../../../src/@types/rendering/PreparedStarCut';
+import type { StarNodeStream } from '../../../../../../src/@types/rendering/StarNodeStream';
+import type { StarNodeDraw } from '../../../../../../src/@types/rendering/StarNodeDraw';
+import { Source } from '../../../../../../src/data/sources';
 
 /** Build a one-node flat stream fixture at a given opacity + aggregate flag. */
 function streamOf(draw: StarNodeDraw, opacity: number, isAggregate: number): StarNodeStream {

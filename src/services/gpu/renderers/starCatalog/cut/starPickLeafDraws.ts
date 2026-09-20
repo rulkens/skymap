@@ -38,8 +38,8 @@
  * work for it.
  */
 
-import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
-import type { StarPickLeafDraw } from '../../../../@types/rendering/StarPickLeafDraw';
+import type { PreparedStarCut } from '../../../../../@types/rendering/PreparedStarCut';
+import type { StarPickLeafDraw } from '../../../../../@types/rendering/StarPickLeafDraw';
 
 export function starPickLeafDraws(prep: PreparedStarCut): readonly StarPickLeafDraw[] {
   const draws: StarPickLeafDraw[] = [];

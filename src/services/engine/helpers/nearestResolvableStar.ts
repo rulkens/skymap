@@ -50,8 +50,8 @@ import {
   STAR_OFFSET_LEVELS,
 } from '../../../data/starCatalog/starCatalogFormat';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
-import { starOctreeIndex } from '../../gpu/renderers/starCatalog/starOctreeIndex';
-import { starNodeOriginRelCamMpc } from '../../gpu/renderers/starCatalog/starNodeOriginRelCamMpc';
+import { starOctreeIndex } from '../../../utils/star/starOctreeIndex';
+import { starNodeOriginRelCamMpc } from '../../../utils/star/starNodeOriginRelCamMpc';
 
 /** Heliocentric camera position — the reconstruction wants the world origin. */
 const SUN: Vec3 = [0, 0, 0];

@@ -21,7 +21,7 @@ import {
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
 } from '../../../src/data/defaults';
-import { DEFAULT_REFINE_THRESHOLD } from '../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
+import { DEFAULT_REFINE_THRESHOLD } from '../../../src/utils/star/walkStarOctreeCut';
 
 describe('INITIAL_SETTINGS', () => {
   it('derives one galaxy-catalog item row per id, enabled from registry visible', () => {

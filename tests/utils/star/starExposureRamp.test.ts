@@ -23,7 +23,7 @@ import {
   RAMP_MID_MPC,
   RAMP_FAR_MPC,
   SHADER_BAKED_NEAR_EXPOSURE,
-} from '../../../../../src/services/gpu/renderers/starCatalog/starExposureRamp';
+} from '../../../src/utils/star/starExposureRamp';
 
 // The pre-mid-anchor two-point ramp, recomputed as the regression reference:
 // a single geometric interpolation from `nearX/6` to `farX/6` across the whole

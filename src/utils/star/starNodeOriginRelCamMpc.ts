@@ -45,11 +45,11 @@
  * camera (the Sun's own cell during Sun-exclusion) yields `[0, 0, 0]` and a
  * finite `cellScaleMpc` — no divide-by-zero to guard.
  */
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
-import type { StarCatalogNode } from '../../../../@types/data/starCatalog/StarCatalogNode';
-import { mortonDecode3 } from '../../../../utils/math/mortonDecode3';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import type { Vec3 } from '../../@types/math/Vec3';
+import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
+import type { StarCatalogNode } from '../../@types/data/starCatalog/StarCatalogNode';
+import { mortonDecode3 } from '../math/mortonDecode3';
+import { SCALE_UNITS } from '../../data/scaleUnits';
 
 export function starNodeOriginRelCamMpc(
   catalog: StarCatalog,

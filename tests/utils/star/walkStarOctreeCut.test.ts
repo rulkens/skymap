@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
-import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../../../tools/stars/buildStarOctree';
-import type { OctreeLeafStar, StarOctreeGrid } from '../../../../../tools/stars/buildStarOctree';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import { mortonEncode3 } from '../../../../../src/utils/math/mortonEncode3';
-import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
-import { walkStarOctreeCut } from '../../../../../src/services/gpu/renderers/starCatalog/walkStarOctreeCut';
-import type { StarCutFrustum } from '../../../../../src/@types/rendering/StarCutFrustum';
-import type { StarCutSnapshot } from '../../../../../src/@types/rendering/StarCutSnapshot';
-import type { StarNodeDraw } from '../../../../../src/@types/rendering/StarNodeDraw';
+import { buildStarOctree, STAR_LEAF_CAPACITY } from '../../../tools/stars/buildStarOctree';
+import type { OctreeLeafStar, StarOctreeGrid } from '../../../tools/stars/buildStarOctree';
+import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { mortonEncode3 } from '../../../src/utils/math/mortonEncode3';
+import { frustumPlanesFromViewProj } from '../../../src/utils/camera/frustumPlanesFromViewProj';
+import { walkStarOctreeCut } from '../../../src/utils/star/walkStarOctreeCut';
+import type { StarCutFrustum } from '../../../src/@types/rendering/StarCutFrustum';
+import type { StarCutSnapshot } from '../../../src/@types/rendering/StarCutSnapshot';
+import type { StarNodeDraw } from '../../../src/@types/rendering/StarNodeDraw';
 
 /**
  * Materialise the walk's reused SoA snapshot into a plain draw array. The

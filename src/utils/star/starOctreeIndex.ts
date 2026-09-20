@@ -46,9 +46,9 @@
  * `gridOrigin + mortonDecode3(M) · (cellEdgePc · 2^L)` — the same reconstruction
  * `walkStarOctreeCut`'s `distanceToBox` and `starNodeOriginRelCamMpc` invert.
  */
-import type { StarCatalog } from '../../../../@types/data/starCatalog/StarCatalog';
-import type { StarOctreeIndex } from '../../../../@types/rendering/StarOctreeIndex';
-import { mortonDecode3 } from '../../../../utils/math/mortonDecode3';
+import type { StarCatalog } from '../../@types/data/starCatalog/StarCatalog';
+import type { StarOctreeIndex } from '../../@types/rendering/StarOctreeIndex';
+import { mortonDecode3 } from '../math/mortonDecode3';
 
 /** Per-catalog memo: the index is a pure function of the (immutable) node table. */
 const cache = new WeakMap<StarCatalog, StarOctreeIndex>();
