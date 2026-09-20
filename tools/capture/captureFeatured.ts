@@ -13,6 +13,7 @@ import { bootHookedPage } from '../utils/browser/bootHookedPage';
 import { collectPageErrors } from '../utils/browser/collectPageErrors';
 import { selectCaptureTargets } from '../utils/capture/selectCaptureTargets';
 import { poseMismatch } from '../utils/capture/poseMismatch';
+import { bodyPhasePose } from '../utils/capture/bodyPhasePose';
 import type { CaptureTarget } from '../utils/capture/CaptureTarget';
 import { CAPTURE_HIDDEN_PASSES } from './captureHiddenPasses';
 import { FEATURED_TABS } from '../../src/data/palette/featuredTabs';
@@ -34,6 +35,7 @@ import { setMilkyWayLabelEnabled } from '../../src/layers/milkyWay/settings/milk
 import { setOrbitTrailsEnabled } from '../../src/layers/body/settings/orbitTrailsSlice';
 import { setPassDisabled } from '../../src/state/settings/core/debugSlice';
 import { logCameraState } from '../../src/state/camera/logCameraState';
+import { DEFAULT_FOV_DEG } from '../../src/data/defaults';
 import { cameraRoute, engineRoute } from '../../src/store/constants';
 import type { CameraPose } from '../../src/@types/camera/CameraPose';
 import type { SkymapPerfHook } from '../../src/@types/perf/SkymapPerfHook';
@@ -53,6 +55,9 @@ const SETTLE_TIMEOUT_MS = 90_000;
 const POST_ESC_WAIT_MS = 1500;
 // The capture-spike day: keeps the framed poses (13:00, 12:56) lit consistently.
 const DEFAULT_CAPTURE_T = '2026-09-18T12:00:00Z';
+// A phase pose frames the body from its angular size, so it must assume the
+// same field of view the capture runs at — the app's default, never touched here.
+const DEFAULT_FOV_Y_RAD = (DEFAULT_FOV_DEG * Math.PI) / 180;
 const OUTPUT_DIR = 'public/images/featured';
 
 type CaptureOptions = { url: string; force: string[] };
@@ -218,14 +223,18 @@ async function captureCard(
   const pageErrors = collectPageErrors(page);
   try {
     const t = target.capture.t ?? DEFAULT_CAPTURE_T;
+    const pose =
+      target.capture.phaseDeg === undefined
+        ? target.capture.pose
+        : bodyPhasePose(target.focusId, t, target.capture.phaseDeg, DEFAULT_FOV_Y_RAD);
     const url = `${base}/?perf&cinema#focus=${target.focusId}&t=${t}`;
     await bootHookedPage(page, url, '__skymapPerf');
 
     await declutter(page, target.capture.hideGalaxyField === true);
     await waitSettled(page, target.cardId);
 
-    if (target.capture.pose !== undefined) {
-      await applyPose(page, target.capture.pose);
+    if (pose !== undefined) {
+      await applyPose(page, pose);
       await waitSettled(page, target.cardId);
     }
 
@@ -234,8 +243,7 @@ async function captureCard(
       await page.waitForTimeout(POST_ESC_WAIT_MS);
     }
 
-    if (target.capture.pose !== undefined) {
-      const pose = target.capture.pose;
+    if (pose !== undefined) {
       let live = await readLiveCameraState(page);
       if (poseMismatch(pose, live).length > 0) {
         await applyPose(page, pose);

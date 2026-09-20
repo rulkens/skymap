@@ -4,6 +4,12 @@ import type { CameraPose } from '../camera/CameraPose';
 export type PaletteCardCapture = {
   /** Re-applied after the focus fly-in settles; `l`-key log units (Mpc, radians). */
   pose?: CameraPose;
+  /**
+   * Frame a focused body lit to this phase, degrees around it from the sunward
+   * direction: 0 full, 180 new, under 180 lit on the right and over 180 on the
+   * left. Computes `pose`, so the two are alternatives.
+   */
+  phaseDeg?: number;
   /** ISO instant, pinned via `#t=` (same string `#t=` takes). */
   t?: string;
   /** Keep the selection (focus dim) in the shot; default: clear it before capture. */

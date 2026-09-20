@@ -59,6 +59,11 @@ const M31_CAPTURE: PaletteCardCapture = {
   },
 };
 
+// Every Solar System body is shot at the same phase, so the tabs read as one
+// set rather than a lighting accident of each body's date. 315 deg puts the
+// terminator down the right of the disc — see `bodyPhasePose` for the turn.
+const WANING_GIBBOUS: PaletteCardCapture = { phaseDeg: 315 };
+
 export const FEATURED_TABS: readonly PaletteTab[] = [
   {
     id: 'highlights',
@@ -85,6 +90,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Earth',
         blurb: 'Our home planet, and the only world known to carry life.',
         action: { kind: 'focus', focusId: 'body-earth' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-saturn',
@@ -92,6 +98,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A gas giant circled by rings of ice and rock. The rings span hundreds of thousands of kilometres but are mostly only tens of metres thick.',
         action: { kind: 'focus', focusId: 'body-saturn' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-sun',
@@ -187,6 +194,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Mercury',
         blurb: 'The smallest planet and the closest to the Sun. A year there lasts 88 Earth days.',
         action: { kind: 'focus', focusId: 'body-mercury' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-venus',
@@ -194,12 +202,14 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "Almost Earth's size, under a thick carbon-dioxide atmosphere. Its surface is hot enough to melt lead.",
         action: { kind: 'focus', focusId: 'body-venus' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-earth',
         label: 'Earth',
         blurb: 'Our home planet, and the only world known to carry life.',
         action: { kind: 'focus', focusId: 'body-earth' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-mars',
@@ -207,6 +217,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A cold desert planet with the largest volcano in the Solar System, Olympus Mons. Water once flowed across its surface.',
         action: { kind: 'focus', focusId: 'body-mars' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-jupiter',
@@ -214,6 +225,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The largest planet, more massive than all the others combined. The Great Red Spot is a storm wider than Earth.',
         action: { kind: 'focus', focusId: 'body-jupiter' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-saturn',
@@ -221,12 +233,14 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A gas giant circled by rings of ice and rock. The rings span hundreds of thousands of kilometres but are mostly only tens of metres thick.',
         action: { kind: 'focus', focusId: 'body-saturn' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-uranus',
         label: 'Uranus',
         blurb: 'An ice giant tipped on its side, so each pole faces the Sun for decades at a time.',
         action: { kind: 'focus', focusId: 'body-uranus' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-neptune',
@@ -234,6 +248,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'The outermost planet, an ice giant with the fastest winds measured in the Solar System. It was predicted by calculation before anyone saw it.',
         action: { kind: 'focus', focusId: 'body-neptune' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-pluto',
@@ -241,6 +256,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A dwarf planet in the Kuiper Belt, reclassified in 2006. New Horizons flew past in 2015 and found a heart-shaped plain of nitrogen ice.',
         action: { kind: 'focus', focusId: 'body-pluto' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-moon',
@@ -248,6 +264,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "Earth's only natural satellite, probably formed from debris after a Mars-sized body hit the young Earth. Twelve people have walked on it.",
         action: { kind: 'focus', focusId: 'body-moon' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-io',
@@ -255,6 +272,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "Jupiter's innermost large moon and the most volcanically active body in the Solar System, kept hot by Jupiter's tides.",
         action: { kind: 'focus', focusId: 'body-io' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-europa',
@@ -262,6 +280,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'An icy moon of Jupiter with a salty ocean under its crust, one of the likeliest places to look for life beyond Earth.',
         action: { kind: 'focus', focusId: 'body-europa' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-titan',
@@ -269,6 +288,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           "Saturn's largest moon, with a thick nitrogen atmosphere and lakes of liquid methane and ethane.",
         action: { kind: 'focus', focusId: 'body-titan' },
+        capture: WANING_GIBBOUS,
       },
       {
         id: 'body-enceladus',
@@ -276,6 +296,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         blurb:
           'A small icy moon of Saturn that sprays water into space from its south pole, fed by an ocean under the ice.',
         action: { kind: 'focus', focusId: 'body-enceladus' },
+        capture: WANING_GIBBOUS,
       },
     ],
   },
