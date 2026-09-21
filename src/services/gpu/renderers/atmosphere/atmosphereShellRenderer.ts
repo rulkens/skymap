@@ -682,13 +682,20 @@ export function createAtmosphereShellRenderer(
     pass.drawIndexed(indexCount);
   }
 
+  function bakeAerialPerspective(
+    pass: GPUComputePassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+  ): void {
+    aerial.bake(pass, bodyId, uniforms);
+  }
+
   function drawAerialPerspective(
     pass: GPURenderPassEncoder,
     bodyId: string,
-    uniforms: Float32Array,
     depthView: GPUTextureView,
   ): void {
-    aerial.draw(pass, bodyId, uniforms, depthView);
+    aerial.draw(pass, bodyId, depthView);
   }
 
   // ── destroy ────────────────────────────────────────────────────────────────
@@ -715,6 +722,7 @@ export function createAtmosphereShellRenderer(
     dispatchSkyView,
     setRingTexture,
     draw,
+    bakeAerialPerspective,
     drawAerialPerspective,
     destroy,
     reconcile,

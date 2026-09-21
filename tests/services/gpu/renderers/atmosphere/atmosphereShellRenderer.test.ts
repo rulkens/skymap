@@ -30,7 +30,9 @@ type Harness = {
   shaderCode: string[];
   descOf: Map<unknown, GPURenderPipelineDescriptor>;
   texturesByLabel: Map<string, StubTexture>;
-  bindGroupCreations: () => number;
+  /** Every bind group built so far, by label — so a `reconcile` test can say
+   *  WHICH groups were rebuilt, not merely how many. */
+  bindGroupLabels: string[];
 };
 
 function mockDevice(): Harness {
@@ -44,7 +46,11 @@ function mockDevice(): Harness {
     dispatchWorkgroups: vi.fn(),
     end: vi.fn(),
   };
-  const createBindGroup = vi.fn(() => ({}));
+  const bindGroupLabels: string[] = [];
+  const createBindGroup = vi.fn((desc: GPUBindGroupDescriptor) => {
+    bindGroupLabels.push(desc.label ?? '');
+    return {};
+  });
   const device = {
     createSampler: vi.fn(() => ({})),
     createShaderModule: vi.fn((desc: GPUShaderModuleDescriptor) => {
@@ -80,7 +86,7 @@ function mockDevice(): Harness {
     shaderCode,
     descOf,
     texturesByLabel,
-    bindGroupCreations: () => createBindGroup.mock.calls.length,
+    bindGroupLabels,
   };
 }
 
@@ -154,26 +160,25 @@ describe('createAtmosphereShellRenderer — the MULTIPLY/ADD pair', () => {
 
     expect(order).toEqual(['multiply', 'draw', 'add', 'draw']);
   });
-
 });
 
 describe('reconcile — tier-switchable sky-view LUT size', () => {
   it('is a no-op when the size matches what is already built (the every-frame common case)', () => {
-    const { renderer, texturesByLabel, bindGroupCreations } = build();
+    const { renderer, texturesByLabel, bindGroupLabels } = build();
     const before = texturesByLabel.get('atmosphere-skyview-lut-earth');
-    const bindGroupsBefore = bindGroupCreations();
+    const bindGroupsBefore = bindGroupLabels.length;
 
     // Matches the construction-time default (SKY_VIEW_LUT_SIZE) — nothing to do.
     renderer.reconcile({ skyViewLutSize: [192, 108] });
 
     expect(texturesByLabel.get('atmosphere-skyview-lut-earth')).toBe(before);
-    expect(bindGroupCreations()).toBe(bindGroupsBefore);
+    expect(bindGroupLabels.length).toBe(bindGroupsBefore);
   });
 
-  it('recreates skyViewTex and rebuilds both bind groups that reference it on a size change', () => {
-    const { renderer, texturesByLabel, bindGroupCreations } = build();
+  it('recreates skyViewTex and rebuilds every bind group that references it, the aerial renderer included', () => {
+    const { renderer, texturesByLabel, bindGroupLabels } = build();
     const before = texturesByLabel.get('atmosphere-skyview-lut-earth')!;
-    const bindGroupsBefore = bindGroupCreations();
+    const bindGroupsBefore = bindGroupLabels.length;
 
     renderer.reconcile({ skyViewLutSize: [64, 36] });
 
@@ -183,8 +188,13 @@ describe('reconcile — tier-switchable sky-view LUT size', () => {
     const after = texturesByLabel.get('atmosphere-skyview-lut-earth');
     expect(after).not.toBe(before);
     // skyViewBindGroup (binding 5, storage output) and shellBindGroup
-    // (binding 2, sampled) both reference the resized texture and must be
-    // rebuilt; transmittance/multi-scatter bind groups do not.
-    expect(bindGroupCreations()).toBe(bindGroupsBefore + 2);
+    // (binding 2, sampled) reference the resized texture; the aerial renderer
+    // holds views of the same bundle, so `rebind` must reach it too — its apply
+    // entries are rebuilt lazily, its bake group here.
+    expect(bindGroupLabels.slice(bindGroupsBefore)).toEqual([
+      'atmosphere-skyview-bg-earth',
+      'atmosphere-shell-bg-earth',
+      'atmosphere-froxel-bg-earth',
+    ]);
   });
 });

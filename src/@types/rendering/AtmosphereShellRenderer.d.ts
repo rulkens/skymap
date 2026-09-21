@@ -102,11 +102,7 @@ export type AtmosphereShellRenderer = Renderer & {
    *           alongside `twilightSoftness`, likewise sourced from the body's
    *           `AtmosphereParams` row.
    */
-  dispatchSkyView(
-    pass: GPUComputePassEncoder,
-    bodyId: string,
-    skyViewUniforms: Float32Array,
-  ): void;
+  dispatchSkyView(pass: GPUComputePassEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 
   /**
    * Upload the host body's ring-alpha strip and rebind it at the shell's
@@ -139,15 +135,23 @@ export type AtmosphereShellRenderer = Renderer & {
   draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void;
 
   /**
+   * Bake body `bodyId`'s camera-local froxel volumes into the caller's compute
+   * pass — delegated verbatim to the `AerialPerspectiveRenderer` this renderer
+   * owns. `uniforms` is the same `packAtmosphereUniforms` record `draw` takes,
+   * and this is the frame's only write of it for an inside-the-shell body.
+   */
+  bakeAerialPerspective(pass: GPUComputePassEncoder, bodyId: string, uniforms: Float32Array): void;
+
+  /**
    * Fog the open pass from inside body `bodyId`'s shell — delegated verbatim to
    * the `AerialPerspectiveRenderer` this renderer owns, where the depth-keying
-   * contract is documented. `depthView` is `foreground:0`'s depth, bound as a
-   * sampled texture (the apply fragment's binding 8).
+   * contract is documented. Writes no uniform: it reads the record
+   * `bakeAerialPerspective` wrote this frame. `depthView` is `foreground:0`'s
+   * depth, bound as a sampled texture (the apply fragment's binding 8).
    */
   drawAerialPerspective(
     pass: GPURenderPassEncoder,
     bodyId: string,
-    uniforms: Float32Array,
     depthView: GPUTextureView,
   ): void;
 

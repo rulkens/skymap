@@ -4,14 +4,12 @@
  * Its `FRAME_ORDER` line samples `foreground:0`'s depth and it hands the
  * renderer that texture (`view.sampledDepth`, the apply fragment's binding 8),
  * which is what lets the fog key on scene distance rather than the analytic
- * ground sphere alone. Argued elsewhere: this row's order in
- * `frameOrder.ts`, the march in `aerialPerspectiveRenderer`, the uniform record
- * in `atmosphereShellUniforms`.
+ * ground sphere alone. Argued elsewhere: this row's order in `frameOrder.ts`,
+ * the froxel volumes it reads in `aerialPerspectiveRenderer`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { atmosphereDrawList } from '../atmosphereDrawList';
-import { atmosphereShellUniforms } from '../atmosphereShellUniforms';
 
 export const aerialPerspectivePass: ContentPass = {
   name: 'aerial-perspective',
@@ -30,11 +28,6 @@ export const aerialPerspectivePass: ContentPass = {
     const bodyId = view.slab.frame.bodyId;
     const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
     if (entry === undefined) return;
-    renderer.drawAerialPerspective(
-      pass,
-      entry.body.id,
-      atmosphereShellUniforms(entry, view.slab, ctx, state),
-      view.sampledDepth!.view,
-    );
+    renderer.drawAerialPerspective(pass, entry.body.id, view.sampledDepth!.view);
   },
 };
