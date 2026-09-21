@@ -84,7 +84,7 @@ describe('scheduleProbeCapture', () => {
     cubemapCaptureFrameMock.mockReset();
     cubemapCaptureFrameMock.mockReturnValue({ isReady: true } as unknown as FrameView);
     cubemapFaceContextMock.mockReset();
-    cubemapFaceContextMock.mockImplementation((_snapshot: unknown, face: CubeFace) =>
+    cubemapFaceContextMock.mockImplementation((_snapshot: unknown, _cam: unknown, face: CubeFace) =>
       faceCtxWithMarsRow(face),
     );
   });
@@ -161,8 +161,8 @@ describe('scheduleProbeCapture', () => {
     // Six faces off that one frame, each stamped with the row's slot base and size.
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
     for (const call of cubemapFaceContextMock.mock.calls) {
-      expect(call[2]).toBe(row.faceSizePx);
-      expect(call[3]).toBe(row.viewSlotBase);
+      expect(call[3]).toBe(row.faceSizePx);
+      expect(call[4]).toBe(row.viewSlotBase);
     }
     for (const face of ALL_CUBE_FACES) {
       const scheduled = faces!.get(face)!;
@@ -183,7 +183,7 @@ describe('scheduleProbeCapture', () => {
     // Even a face whose table carries a row for the body itself: the subject
     // must not draw into its own probe.
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) =>
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
         ({
           __face: face,
           slabs: [

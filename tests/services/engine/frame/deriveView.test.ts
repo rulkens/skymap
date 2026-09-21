@@ -41,6 +41,10 @@ const YAW_RIGHT: Mat3 = [0, 0, -1, 0, 1, 0, 1, 0, 0];
 const YAW_LEFT: Mat3 = [0, 0, 1, 0, 1, 0, -1, 0, 0];
 const BACK: Mat3 = [-1, 0, 0, 0, 1, 0, 0, 0, -1];
 const UP: Mat3 = [1, 0, 0, 0, 0, -1, 0, 1, 0];
+// The frame's pose-true camera: a pure function of the constants above, so
+// every fixture below can pass this SAME value rather than reading it off
+// `snapshot.cam`, which K2 removed.
+const CAM = assembleOrbitCamera(POSE, PROJECTION, BASIS, BASIS);
 
 function makeState(): EngineState {
   return {
@@ -59,7 +63,7 @@ function makeState(): EngineState {
 
 function frame(arm: FramedCameraPose = absoluteArm(POSE)): ReadyFrameContext {
   const ctx = deriveFrameContext(makeState(), {
-    cam: assembleOrbitCamera(POSE, PROJECTION, BASIS, BASIS),
+    cam: CAM,
     arm,
     // No focused pivot in this fixture, so `pivotSurfaceRangeMpc` answers the
     // raw orbit distance — what `runFrame` would pass for this pose.
@@ -88,8 +92,8 @@ function spec(overrides: Partial<ViewSpec> = {}): ViewSpec {
 function view(overrides: Partial<ViewSpec> = {}): { canvas: FrameView; v: FrameView } {
   const snapshot = frame();
   return {
-    canvas: deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS)),
-    v: deriveView(snapshot, spec(overrides)),
+    canvas: deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS)),
+    v: deriveView(snapshot, CAM, spec(overrides)),
   };
 }
 
@@ -131,12 +135,13 @@ describe('deriveView', () => {
 
   it('five dome-like specs derive five distinct vps from one frame', () => {
     const snapshot = frame();
-    const cam = basisOf(deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS)).vp);
+    const cam = basisOf(deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS)).vp);
     const camBasis: Mat3 = [...cam.right, ...cam.up, ...cam.forward];
     const faces = [[1, 0, 0, 0, 1, 0, 0, 0, 1] as Mat3, YAW_LEFT, YAW_RIGHT, BACK, UP].map(
       (rotation, slot) => {
         const face = deriveView(
           snapshot,
+          CAM,
           spec({
             rotation,
             frustum: symmetricFrustum(Math.PI / 2, 1),
@@ -180,8 +185,8 @@ describe('deriveView', () => {
     // Half a unit along the turned view's right, which is the camera's back.
     const { canvas, v } = view({ rotation: YAW_RIGHT, eyeOffsetMpc: [0.5, 0, 0] });
     expect(v.cam.position).toEqual(v.drawCamPos);
-    expect(v.cam.distance).toBe(v.snapshot.cam.distance);
-    expect(v.snapshot.cam.position).toEqual(canvas.drawCamPos);
+    expect(v.cam.distance).toBe(CAM.distance);
+    expect(CAM.position).toEqual(canvas.drawCamPos);
     const back = basisOf(canvas.vp).forward.map((x) => -0.5 * x) as Vec3;
     expectVec([0, 1, 2].map((i) => v.drawCamPos[i]! - canvas.drawCamPos[i]!) as Vec3, back);
     // Both matrices put the moved eye at the eye-space origin: clip (0, 0, ·, 0).
@@ -207,7 +212,7 @@ describe('deriveView', () => {
     // 2 m along the TURNED view's right: basisLocal·YAW_RIGHT's first column is
     // local +y (the unturned basis would put it on +x).
     const eyeOffsetMpc: Vec3 = [2 * SCALE_UNITS.M_TO_MPC, 0, 0];
-    const v = deriveView(frame(arm), spec({ rotation: YAW_RIGHT, eyeOffsetMpc }));
+    const v = deriveView(frame(arm), CAM, spec({ rotation: YAW_RIGHT, eyeOffsetMpc }));
     const pose = v.bodyPose('earth');
     expect(pose).not.toBeNull();
     expectVec(pose!.eyeRelBodyM, [11, 24, 33], 9);
@@ -216,8 +221,8 @@ describe('deriveView', () => {
 
   it('two views of one frame share the snapshot by reference', () => {
     const snapshot = frame();
-    const a = deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS));
-    const b = deriveView(snapshot, spec({ rotation: YAW_RIGHT, slot: 1 }));
+    const a = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
+    const b = deriveView(snapshot, CAM, spec({ rotation: YAW_RIGHT, slot: 1 }));
     // Reference equality, not value: a copied context would drift the moment
     // `runFrame` stamps focus on one of them, and the clock and body sample
     // would stop being one thing.
@@ -227,10 +232,17 @@ describe('deriveView', () => {
     expect(b.snapshot.nowMs).toBe(a.snapshot.nowMs);
   });
 
+  it('the frame camera is unreachable off snapshot — it travels only as deriveView’s own argument (K2)', () => {
+    const { v } = view();
+    // @ts-expect-error — ReadyFrameContext carries no `cam`; a pass wanting the
+    // pose-true camera has no field to reach for besides the view's own `cam`.
+    expect(v.snapshot.cam).toBeUndefined();
+  });
+
   it('each view keeps its own first-touch set', () => {
     const snapshot = frame();
-    const a = deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS));
-    const b = deriveView(snapshot, spec({ rotation: YAW_RIGHT, slot: 1 }));
+    const a = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
+    const b = deriveView(snapshot, CAM, spec({ rotation: YAW_RIGHT, slot: 1 }));
     expect(a.renderedTargets).not.toBe(b.renderedTargets);
     // The executor's first touch of `hdr` in view A must still CLEAR in view B.
     (a.renderedTargets as Set<string>).add('hdr');
@@ -259,7 +271,7 @@ describe('deriveView — the canvas view is the pre-split one', () => {
 
   it('the canvas view’s vp, drawCamPos and slab vps are bit-identical to the pre-split values', () => {
     const snapshot = frame();
-    const canvas = deriveView(snapshot, mainViewSpec(snapshot.cam, CANVAS));
+    const canvas = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
     for (let i = 0; i < 16; i++) expect(canvas.vp[i]).toBe(VP[i]);
     for (let i = 0; i < 3; i++) expect(canvas.drawCamPos[i]).toBe(DRAW_CAM_POS[i]);
     expect(canvas.slabs).toHaveLength(2);

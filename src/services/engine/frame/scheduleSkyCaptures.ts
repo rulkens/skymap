@@ -77,17 +77,23 @@ export function scheduleSkyCaptures(input: {
     const faces = new Map<CubeFace, CaptureFace>();
     const faceSizePx = ctx.snapshot.renderTargets.sizeOf(row.target).width;
     // One frame for the whole row (world axes: no host to rotate into).
-    const snapshot = cubemapCaptureFrame({
+    const capture = cubemapCaptureFrame({
       state,
       eyeMpc: ctx.drawCamPos,
       nearMpc: row.nearMpc,
       nowMs: ctx.snapshot.nowMs,
     });
-    if (snapshot.isReady) {
+    if (capture.isReady) {
       for (const face of ALL_CUBE_FACES) {
         // A sky face draws no body: the roster is the sky alone.
         faces.set(face, {
-          ctx: cubemapFaceContext(snapshot, face, faceSizePx, row.viewSlotBase),
+          ctx: cubemapFaceContext(
+            capture.snapshot,
+            capture.cam,
+            face,
+            faceSizePx,
+            row.viewSlotBase,
+          ),
           bodySlabs: [],
         });
       }

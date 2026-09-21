@@ -191,7 +191,7 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('derives one frame via cubemapCaptureFrame(eye=camera), then each face via cubemapFaceContext(faceSizePx=row size), and threads the map into executeFrame', () => {
     const faceCtxByFace = new Map<CubeFace, FrameView>();
-    cubemapFaceContextMock.mockImplementation((snapshot: unknown, face: CubeFace) => {
+    cubemapFaceContextMock.mockImplementation((snapshot: unknown, cam: unknown, face: CubeFace) => {
       const ctx = { __face: face } as unknown as FrameView;
       faceCtxByFace.set(face, ctx);
       return ctx;
@@ -218,10 +218,10 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     // Six faces off that one frame, each stamped with the row's slot base and size.
     expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
     for (const call of cubemapFaceContextMock.mock.calls) {
-      expect(call[2]).toBe(256);
-      expect(call[3]).toBe(CUBEMAP_CAPTURES.sgrAStar.viewSlotBase);
+      expect(call[3]).toBe(256);
+      expect(call[4]).toBe(CUBEMAP_CAPTURES.sgrAStar.viewSlotBase);
     }
-    expect(cubemapFaceContextMock.mock.calls.map((c) => c[1] as CubeFace).sort()).toEqual([
+    expect(cubemapFaceContextMock.mock.calls.map((c) => c[2] as CubeFace).sort()).toEqual([
       ...ALL_CUBE_FACES,
     ]);
 
@@ -365,7 +365,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a second in-band frame with the same state and a moved camera captures nothing', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();
@@ -393,7 +394,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('roster settling (fades animating) forces a sweep every frame, one more on the settle edge, then none once settled', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     let fadesAnimating = true;
@@ -422,7 +424,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a Layer alone still settling (fades settled) forces a sweep on an otherwise unchanged frame', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     // A Layer still settling — the vote `runFrame` stamps on the ctx.
@@ -443,7 +446,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
     // Reading its keep-alive vote as "still settling" re-baked all six faces
     // EVERY frame for the whole session — the defect this pins.
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState({
@@ -461,7 +465,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('replacing settings with a new (same-content) object triggers a full six-face sweep', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();
@@ -478,7 +483,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a content-version bump alone triggers a full six-face sweep', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();
@@ -493,7 +499,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('a row with rebakeOnSettings false bakes on band entry and ignores a settings replacement until the band re-enters', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     // At the Sun: inside `solarSystem`'s band and far outside the lens's, so
@@ -516,7 +523,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
 
   it('band close then re-entry triggers a full six-face sweep', () => {
     cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, face: CubeFace) => ({ __face: face }) as unknown as FrameView,
+      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+        ({ __face: face }) as unknown as FrameView,
     );
 
     const state = makeState();

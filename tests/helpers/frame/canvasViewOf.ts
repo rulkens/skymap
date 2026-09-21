@@ -18,5 +18,5 @@ export function canvasViewOf(
   sizePx: Size,
 ): FrameView | null {
   const snapshot = deriveFrameContext(state, input);
-  return snapshot.isReady ? deriveView(snapshot, mainViewSpec(snapshot.cam, sizePx)) : null;
+  return snapshot.isReady ? deriveView(snapshot, input.cam, mainViewSpec(input.cam, sizePx)) : null;
 }

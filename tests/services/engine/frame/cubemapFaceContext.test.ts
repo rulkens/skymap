@@ -22,7 +22,7 @@ import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
 import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { CaptureFrame } from '../../../../src/@types/engine/frame/CaptureFrame';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
 import type { CameraProjection } from '../../../../src/@types/camera/CameraProjection';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
@@ -108,15 +108,15 @@ function makeState(
 function captureFrame(
   state: EngineState,
   overrides: { nearMpc?: number; axes?: Parameters<typeof cubemapCaptureFrame>[0]['axes'] } = {},
-): ReadyFrameContext | null {
-  const snapshot = cubemapCaptureFrame({
+): CaptureFrame | null {
+  const capture = cubemapCaptureFrame({
     state,
     eyeMpc: EYE_MPC,
     nearMpc: overrides.nearMpc ?? CAPTURE_NEAR_MPC,
     nowMs: 0,
     axes: overrides.axes,
   });
-  return snapshot.isReady ? snapshot : null;
+  return capture.isReady ? capture : null;
 }
 
 describe('cubemapFaceContext', () => {
@@ -125,7 +125,13 @@ describe('cubemapFaceContext', () => {
     expect(snapshot).not.toBeNull();
     if (snapshot === null) return;
     for (let face = 0; face < 6; face++) {
-      const view = cubemapFaceContext(snapshot, face as CubeFace, 256, VIEW_SLOT_BASE);
+      const view = cubemapFaceContext(
+        snapshot.snapshot,
+        snapshot.cam,
+        face as CubeFace,
+        256,
+        VIEW_SLOT_BASE,
+      );
 
       expect(view.drawCamPos).toEqual(EYE_MPC);
       expect(view.viewSlot).toBe(VIEW_SLOT_BASE + face);
@@ -180,7 +186,7 @@ describe('cubemapFaceContext', () => {
     const snapshot = captureFrame(state);
     expect(snapshot).not.toBeNull();
     if (snapshot === null) return;
-    expect(snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).draw);
+    expect(snapshot.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).draw);
   });
 
   it('renders a cube-axis direction to the exact (s,t) the WGSL cube sampler computes for it, under world and host axes', () => {
@@ -239,7 +245,13 @@ describe('cubemapFaceContext', () => {
         const s = (sc / ma + 1) / 2;
         const t = (tc / ma + 1) / 2;
 
-        const view = cubemapFaceContext(snapshot, face as CubeFace, 256, VIEW_SLOT_BASE);
+        const view = cubemapFaceContext(
+          snapshot.snapshot,
+          snapshot.cam,
+          face as CubeFace,
+          256,
+          VIEW_SLOT_BASE,
+        );
 
         const w = rotateVec3ByTightMat3(d as Vec3, axes);
         // World point 1 Mpc out along axes·d, through the face's cosmo vp
@@ -267,7 +279,7 @@ describe('cubemapFaceContext', () => {
     const snapshot = captureFrame(makeState());
     expect(snapshot).not.toBeNull();
     if (snapshot === null) return;
-    const view = cubemapFaceContext(snapshot, 0, 256, VIEW_SLOT_BASE);
+    const view = cubemapFaceContext(snapshot.snapshot, snapshot.cam, 0, 256, VIEW_SLOT_BASE);
     expect(view.cam.near).toBe(CAPTURE_NEAR_MPC);
   });
 
@@ -277,7 +289,7 @@ describe('cubemapFaceContext', () => {
     const snapshot = captureFrame(makeState());
     expect(snapshot).not.toBeNull();
     if (snapshot === null) return;
-    const view = cubemapFaceContext(snapshot, 0, 256, VIEW_SLOT_BASE);
+    const view = cubemapFaceContext(snapshot.snapshot, snapshot.cam, 0, 256, VIEW_SLOT_BASE);
     expect(view.cam.distance).toBe(CAPTURE_NEAR_MPC);
   });
 
@@ -290,7 +302,9 @@ describe('cubemapFaceContext', () => {
       const state = makeState();
       (state as unknown as { selectionRows: { focus: unknown } }).selectionRows.focus = focus;
       const snapshot = captureFrame(state);
-      return snapshot === null ? null : cubemapFaceContext(snapshot, 0, 256, VIEW_SLOT_BASE);
+      return snapshot === null
+        ? null
+        : cubemapFaceContext(snapshot.snapshot, snapshot.cam, 0, 256, VIEW_SLOT_BASE);
     };
     // A star half the capture distance across: the subtraction, if applied,
     // halves the altitude and with it the bracket.
@@ -327,7 +341,7 @@ describe('cubemapFaceContext', () => {
     });
     expect(snapshot.isReady).toBe(true);
     if (!snapshot.isReady) return;
-    const view = cubemapFaceContext(snapshot, 4, 256, VIEW_SLOT_BASE);
+    const view = cubemapFaceContext(snapshot.snapshot, snapshot.cam, 4, 256, VIEW_SLOT_BASE);
     expect(Array.from(view.vp).every(Number.isFinite)).toBe(true);
     expect(Array.from(view.slabs[0]!.vp).every(Number.isFinite)).toBe(true);
     const { basisM } = view.bodyPose('voyager1' as BodyId)!;
@@ -340,7 +354,7 @@ describe('cubemapFaceContext', () => {
     const snapshot = captureFrame(makeState());
     expect(snapshot).not.toBeNull();
     if (snapshot === null) return;
-    const view = cubemapFaceContext(snapshot, 2, 256, 7);
+    const view = cubemapFaceContext(snapshot.snapshot, snapshot.cam, 2, 256, 7);
     expect(view.viewSlot).toBe(9);
   });
 
@@ -381,7 +395,13 @@ describe('cubemapFaceContext', () => {
     expect(snapshot).not.toBeNull();
     if (snapshot === null) return;
     for (let face = 0; face < 6; face++) {
-      const view = cubemapFaceContext(snapshot, face as CubeFace, 256, VIEW_SLOT_BASE);
+      const view = cubemapFaceContext(
+        snapshot.snapshot,
+        snapshot.cam,
+        face as CubeFace,
+        256,
+        VIEW_SLOT_BASE,
+      );
       for (let i = 0; i < 16; i++) pin(view.vp[i]!, VP[face]![i]!);
       for (let i = 0; i < 9; i++) pin(view.cam.poseBasis![i]!, POSE_BASIS[face]![i]!);
     }

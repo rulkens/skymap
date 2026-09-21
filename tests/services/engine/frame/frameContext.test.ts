@@ -150,20 +150,15 @@ describe('deriveFrameContext — not-ready branch', () => {
 });
 
 describe('deriveFrameContext — ready branch', () => {
-  it('keeps the pose-true camera on the frame and the projection on the view', () => {
+  it("derives a ready context whose canvas view carries the caller's projection and orbit distance", () => {
     const pose: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
     const projection: CameraProjection = { fovYRad: 1.2, aspect: 2, near: 0.01, far: 5000 };
     const input = frameInput(pose, { projection });
-    const ctx = deriveFrameContext(makeState(), input);
-    expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return;
-    // The frame's camera IS the caller's, pose intact — anything wanting the
-    // true orientation reads it here, not off a view.
-    expect(ctx.cam).toBe(input.cam);
-    expect(ctx.cam.yaw).toBeCloseTo(0.5);
-    expect(ctx.cam.pitch).toBeCloseTo(0.1);
+    expect(deriveFrameContext(makeState(), input).isReady).toBe(true);
     // The canvas view's camera is the TURNED one: same projection and orbit
     // distance (the foreground gates read it), pose carried by its bases.
+    // The pose-true camera itself is never published on the snapshot (K2) —
+    // `input.cam` is its one home, threaded explicitly into `deriveView`.
     const canvas = canvasView(makeState(), input);
     expect(canvas.cam.fovYRad).toBeCloseTo(1.2, 12);
     expect(canvas.cam.aspect).toBeCloseTo(2, 12);

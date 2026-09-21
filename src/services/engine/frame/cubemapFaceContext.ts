@@ -5,6 +5,7 @@
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
@@ -25,11 +26,12 @@ function flipClipY(vp: Float32Array | Float64Array): void {
 
 export function cubemapFaceContext(
   snapshot: ReadyFrameContext,
+  cam: OrbitCamera,
   face: CubeFace,
   faceSizePx: number,
   viewSlotBase: number,
 ): FrameView {
-  const view = deriveView(snapshot, faceViewSpec(face, faceSizePx, viewSlotBase));
+  const view = deriveView(snapshot, cam, faceViewSpec(face, faceSizePx, viewSlotBase));
   // In place is safe: `deriveView` freshly allocated these arrays.
   flipClipY(view.vp);
   for (const slab of view.slabs) flipClipY(slab.vp);

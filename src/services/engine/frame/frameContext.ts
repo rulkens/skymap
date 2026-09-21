@@ -99,8 +99,6 @@ export function deriveFrameContext(state: EngineState, input: FrameContextInput)
   // side effect this (speculatively callable) function must not have.
   return {
     isReady: true,
-    cam,
-    arm,
     camBasisWorld,
     bodyStates,
     bodyPose,

@@ -10,7 +10,8 @@ import type { Vec3 } from '../../../@types/math/Vec3';
 import type { Mat3 } from '../../../@types/math/Mat3';
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { FrameContext } from '../../../@types/engine/frame/FrameContext';
+import type { CaptureFrame } from '../../../@types/engine/frame/CaptureFrame';
+import type { NotReadyFrameContext } from '../../../@types/engine/frame/NotReadyFrameContext';
 import { deriveFrameContext } from './frameContext';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
@@ -24,7 +25,7 @@ export function cubemapCaptureFrame(input: {
   readonly nowMs: number;
   /** World-from-cube axes; omitted = world axes. */
   readonly axes?: Readonly<Mat3>;
-}): FrameContext {
+}): CaptureFrame | NotReadyFrameContext {
   const { state, eyeMpc, nearMpc, nowMs, axes } = input;
   const basis = (axes ?? IDENTITY_MAT3) as Mat3;
   // `updatePosition` decodes local +Z through poseBasis's THIRD column, so
@@ -48,7 +49,7 @@ export function cubemapCaptureFrame(input: {
     basis,
     basis,
   );
-  return deriveFrameContext(state, {
+  const snapshot = deriveFrameContext(state, {
     cam,
     // The capture pose is synthetic and world-absolute, so the pose-provider
     // seam routes every body through the Mpc path — no body arm can be
@@ -63,4 +64,6 @@ export function cubemapCaptureFrame(input: {
     // gets baked into the capture — see `deriveSourceMasks`'s nowMs docblock.
     visibleSourceMask: deriveSourceMasks(state, nowMs).draw,
   });
+  if (!snapshot.isReady) return { isReady: false };
+  return { isReady: true, snapshot, cam };
 }

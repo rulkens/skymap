@@ -56,17 +56,23 @@ export function scheduleProbeCapture(input: {
   // Cube axes = the host axes `meshBodiesPass` shades in (io.wesl's contract).
   const axes = bodyStates.get(hostId)!.orientation;
   // One frame for the whole row: null only pre-bootstrap, so the next frame retries.
-  const snapshot = cubemapCaptureFrame({
+  const capture = cubemapCaptureFrame({
     state,
     eyeMpc,
     nearMpc: row.nearMpc,
     nowMs: ctx.snapshot.nowMs,
     axes,
   });
-  if (!snapshot.isReady) return null;
+  if (!capture.isReady) return null;
   const faces = new Map<CubeFace, CaptureFace>();
   for (const face of ALL_CUBE_FACES) {
-    const faceCtx = cubemapFaceContext(snapshot, face, row.faceSizePx, row.viewSlotBase);
+    const faceCtx = cubemapFaceContext(
+      capture.snapshot,
+      capture.cam,
+      face,
+      row.faceSizePx,
+      row.viewSlotBase,
+    );
     // The host's row is looked up in the FACE's own slab table — its painter
     // index there has nothing to do with the frame's. A face the host falls
     // outside of (looking away from it) draws no body row; a hostless body

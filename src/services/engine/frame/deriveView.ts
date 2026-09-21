@@ -1,12 +1,14 @@
 /**
- * deriveView — one view of a frame: the frame's one camera and arm, turned and
- * offset by a `ViewSpec`, through that view's own frustum and size. The frame
- * context rides along by reference as `snapshot`, so every view of a frame
- * shares its clock, body states and stamps. A view's frustum never feeds the
- * camera path: framing reads state.
+ * deriveView — one view of a frame: the frame camera (pose-true, passed in
+ * beside the snapshot — never read off `snapshot.cam`, which no longer
+ * exists), turned and offset by a `ViewSpec`, through that view's own frustum
+ * and size. The frame context rides along by reference as `snapshot`, so
+ * every view of a frame shares its clock, body states and stamps. A view's
+ * frustum never feeds the camera path: framing reads state.
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
+import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { ViewSpec } from '../../../@types/engine/frame/ViewSpec';
 import type { HostFrameSphere } from '../../../@types/scene/HostFrameSphere';
@@ -28,8 +30,12 @@ import { deriveSlabs } from './slabs';
 import { visibleSlabBodies } from './visibleSlabBodies';
 import { partitionStarsByResolution, STAR_RESOLVE_PX } from './partitionStarsByResolution';
 
-export function deriveView(snapshot: ReadyFrameContext, spec: ViewSpec): FrameView {
-  const { cam, bodyStates, slabBodyCandidates, meshBodies, positionedStars } = snapshot;
+export function deriveView(
+  snapshot: ReadyFrameContext,
+  cam: OrbitCamera,
+  spec: ViewSpec,
+): FrameView {
+  const { bodyStates, slabBodyCandidates, meshBodies, positionedStars } = snapshot;
   const { rotation, eyeOffsetMpc, frustum, sizePx } = spec;
 
   const viewFromCamEye = viewFromCameraEye(rotation, eyeOffsetMpc);
@@ -43,9 +49,9 @@ export function deriveView(snapshot: ReadyFrameContext, spec: ViewSpec): FrameVi
     cam.position[1]! + eyeOffset[1],
     cam.position[2]! + eyeOffset[2],
   ];
-  // The derivation below stays on `snapshot.cam` — pose, arm and NEAR0 all turn
-  // through `viewFromCamEye` — but the view carries its own camera, so no
-  // `ctx.cam` reader draws the frame's orientation instead of this view's.
+  // The derivation below stays on the pose-true `cam` — pose, arm and NEAR0
+  // all turn through `viewFromCamEye` — but the view carries its own camera,
+  // so no `ctx.cam` reader draws the frame's orientation instead of this view's.
   const viewCam = turnedOrbitCamera(cam, viewBasisWorld, drawCamPos, frustum);
   const { fovYRad } = viewCam;
   // Symmetric: `tanUp − tanDown` is exactly `2·tan(fovY/2)`, the pre-rig form.

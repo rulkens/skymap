@@ -8,8 +8,6 @@
  * (D8) — a pass reads those off `state.gpu.*` behind its own null guard.
  */
 
-import type { OrbitCamera } from '../../camera/OrbitCamera';
-import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 import type { Mat3 } from '../../math/Mat3';
 import type { Vec2 } from '../../math/Vec2';
 import type { BodyState } from '../../scene/BodyState';
@@ -23,11 +21,6 @@ import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
   isReady: true;
-  /** The frame's orbit camera, pose-true — yaw/pitch/roll intact. A view's own
-   *  turned camera is `FrameView.cam`; anything wanting the true pose reads this. */
-  cam: OrbitCamera;
-  /** The framed pose `cam` was folded from — the pose-provider seam's input. */
-  arm: FramedCameraPose;
   /**
    * The camera's world-space right | up | forward as columns — the basis every
    * world-frame consumer (`bodyRelativePose`, a `ViewSpec.rotation`) is

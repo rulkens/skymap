@@ -42,6 +42,7 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
   if (!snapshot.isReady) return null;
   return deriveView(
     snapshot,
-    mainViewSpec(snapshot.cam, { width: canvas.width, height: canvas.height }),
+    cam,
+    mainViewSpec(cam, { width: canvas.width, height: canvas.height }),
   );
 }

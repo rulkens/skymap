@@ -206,7 +206,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // planner.
   const canvas = deriveView(
     snapshot,
-    mainViewSpec(snapshot.cam, { width: deps.canvas.width, height: deps.canvas.height }),
+    cam,
+    mainViewSpec(cam, { width: deps.canvas.width, height: deps.canvas.height }),
   );
   const views = VIEW_RIGS[state.viewRig].views(canvas, state);
 
