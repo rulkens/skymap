@@ -2,7 +2,7 @@
  * AtmosphereShellRenderer — Earth's physically-based in-scatter atmosphere,
  * drawn as a translucent shell just outside the cloud shell (spec §8).
  *
- * This is the renderer that composes the six Task-E4 WESL modules into a working
+ * This is the renderer that composes the shell's WESL modules into a working
  * layer: three LUT bakes plus a shell draw. It owns three `rgba16float` lookup
  * textures and their compute pipelines, the proxy sphere geometry, the shell
  * render pipeline, and the three uniform buffers (`ScatteringParams`,
@@ -167,10 +167,11 @@ export type AtmosphereShellRenderer = Renderer & {
    * (mirrors `flowFieldRenderer.reconcile(seed)` — an object param, not
    * positionals). A no-op when `skyViewLutSize` matches the size last built
    * (the common case, every frame); on a change, every bundle's `skyViewTex`
-   * is destroyed and recreated at the new size and both bind groups that
-   * reference it (`skyViewBindGroup`, `shellBindGroup`) are rebuilt. The
-   * shader itself needs no change — `skyViewLut.wesl` derives its bounds from
-   * `textureDimensions(outTex)`.
+   * is destroyed and recreated at the new size, `skyViewBindGroup` is rebuilt
+   * immediately, `shellBindGroup` is set to `null` and rebuilt lazily at the
+   * next draw (it also binds a depth view reconcile does not know), and the
+   * aerial renderer's apply entries are rebound. The shader itself needs no
+   * change — `skyViewLut.wesl` derives its bounds from `textureDimensions(outTex)`.
    */
   reconcile(config: { readonly skyViewLutSize: readonly [number, number] }): void;
 };

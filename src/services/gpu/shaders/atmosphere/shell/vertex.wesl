@@ -10,15 +10,6 @@
 // and forwards the unit-atmosphere-top LOCAL position to the fragment, which
 // reconstructs the view ray from it and 'u.camPosLocal'.
 //
-// ## Both-wall draw (the renderer's 'cullMode:\'none\'')
-//
-// The pipeline draws BOTH walls, and the fragment splits duty by
-// '@builtin(front_facing)': the NEAR (front) wall carries the over-disc aerial
-// perspective (haze on the lit disc), the FAR (back) wall the limb + sky.
-// Depth-testing each wall against the already-stamped opaque scene keeps
-// cross-body occlusion for both. This vertex stage is unaware of that -- it just
-// projects; the split is pure pipeline + fragment geometry.
-//
 // ## Bindings
 //
 // '@group(0) @binding(0)' holds 'AtmosphereUniforms' (176 bytes: the mat4x4<f32>
@@ -40,8 +31,7 @@
 // ## Inter-stage contract (matched by @location, NOT a shared struct)
 //
 // 'VsOut.localPos' at @location(0) MUST match 'fragment.wesl's input at
-// @location(0). Kept as two independent structs (not a shared 'io.wesl') to stay
-// within this task's six-file budget; the pairing is by location, which WGSL
+// @location(0) — two independent structs, paired by location, which WGSL
 // guarantees. If you reorder or renumber here, mirror it in the fragment.
 
 import package::lib::sphere::AtmosphereUniforms;

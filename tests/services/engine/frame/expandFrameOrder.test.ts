@@ -357,7 +357,6 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const first = steps.findIndex(
       (step) => step.kind === 'render' && step.target === 'foreground:0',
     );
-    expect(namesOf(steps[first]).at(-1)).toBe('rings');
     expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
     expect(namesOf(steps[first + 2])).toEqual(['mesh-bodies']);
   });

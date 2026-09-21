@@ -89,7 +89,7 @@ export function createAerialPerspectiveRenderer(
   );
 
   // Mirrors the fragment's `@group(0)`: the shell's five (hoisted by importing
-  // `sampleShellRay`) plus `ScatteringParams`, the two volumes and scene depth.
+  // `sampleShellSegment`) plus `ScatteringParams`, the two volumes and scene depth.
   // Binding 0 is FRAGMENT-only here — the covering triangle reads no uniform,
   // so the vertex stage has no resource interface at all.
   const applyBgl = device.createBindGroupLayout({
@@ -193,7 +193,7 @@ export function createAerialPerspectiveRenderer(
       { binding: 3, resource: bundle.transmittanceTex.createView() },
       // ALWAYS the placeholder strip, never the body's real ring: inside the
       // shell `tNear` is 0, far short of any seeded ring's `tRing`, so
-      // `sampleShellRay`'s ring-in-front branch (`tRing > 0 && tRing < tNear`)
+      // `sampleShellSegment`'s ring-in-front branch (`tRing > 0 && tRing < tNear`)
       // is unreachable — which keeps this group keyed on the depth view alone.
       { binding: 4, resource: placeholderRingView },
       { binding: 5, resource: { buffer: bundle.scatteringBuffer } },

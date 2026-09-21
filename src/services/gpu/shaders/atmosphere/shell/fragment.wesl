@@ -116,7 +116,7 @@ struct ShellDepthFrame {
 // the 1x1 far-cleared placeholder, never the real view -- that is what makes
 // the FAR_DEPTH arm, not an assumption about who cleared the target, the thing
 // keeping it safe. Reached only from 'sampleShell': the inside path imports
-// 'sampleShellRay', and would hoist these on top of its own 5 and 6.
+// 'sampleShellSegment', and would hoist these on top of its own 5 and 6.
 @group(0) @binding(5) var sceneDepth: texture_depth_2d;
 @group(0) @binding(6) var<uniform> depthFrame: ShellDepthFrame;
 
@@ -154,12 +154,6 @@ struct ShellSample {
   coverage: f32,
   hit: bool,
 };
-
-// The inside path's door onto the shared core: its ray end is the froxel
-// volume's business, so it marches to the analytic bound alone.
-fn sampleShellRay(dir: vec3<f32>) -> ShellSample {
-  return sampleShellSegment(dir, 0.0, false);
-}
 
 // Shared core: the analytic march bound, the two LUT lookups, and the ring
 // occlusion -- everything 'sampleShell' used to do EXCEPT deriving 'dir' from

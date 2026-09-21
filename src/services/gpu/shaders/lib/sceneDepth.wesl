@@ -41,22 +41,19 @@ fn sceneTransmittance(fragXY: vec2f) -> f32 {
 /**
  * 1 where the sampled scene stands nearer than 'nearKm', else 0 — the second
  * occluder channel, covering the terrain and meshes of the ONE row that last
- * cleared this depth, which the analytic body spheres under-report by the whole
- * relief. Callers take 'max' with their own sphere verdict and mix
+ * cleared this depth, which the analytic body spheres under-report by the
+ * whole relief. Callers take 'max' with their own sphere verdict and mix
  * 'sceneTransmittance' in by the result.
  *
- * 'nearKm' is the subject's NEAR surface (centre minus radius) so a body never
- * occludes its own caption, and an eye inside the subject makes it negative,
- * which this never satisfies. The depth texture need not match the viewport
- * (the far placeholder is 1x1), so the texel is rescaled while the ray keeps
- * the fragment's own uv.
+ * 'nearKm' is the subject's NEAR surface (centre minus radius), so a body
+ * never occludes its own caption, and an eye inside the subject makes it
+ * negative, which this never satisfies. The depth texture need not match the
+ * viewport (the far placeholder is 1x1), so the texel is rescaled while the
+ * ray keeps the fragment's own uv.
  *
- * Called from the VERTEX stage (`labels/vertexOcclude.wesl`,
- * `markerLines/vertexOcclude.wesl`), once per subject, at that subject's own
- * window position — not per rendered text/line pixel. A caption's rendered
- * pixels sit wherever its lift places them on screen, which can be tens of km
- * of relief away from the subject itself; judging occlusion there instead of
- * at the subject reads the wrong ground.
+ * Called from the vertex stage, once per subject at that subject's own window
+ * position — not per rendered text/line pixel, which can sit tens of km of
+ * relief away.
  */
 fn sceneDepthOccludes(fragXY: vec2f, nearKm: f32) -> f32 {
   let texel = vec2i(fragXY * vec2f(textureDimensions(sceneDepthTex)) / depthFrame.viewportPx);

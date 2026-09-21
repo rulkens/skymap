@@ -4,7 +4,7 @@
 // answer; a geometry ray reads 'bake.wesl''s froxel volume at its own
 // depth-buffer distance — two samples, no march.
 
-// Bindings 0-4 are the SHELL's, hoisted by importing 'sampleShellRay';
+// Bindings 0-4 are the SHELL's, hoisted by importing 'sampleShellSegment';
 // redeclaring any of them is a duplicate-binding error, and naming one hoisted
 // without being imported ('skyViewLut') fails 'unresolved identifier' — hence
 // the by-name imports of 'u' and 'lutSamp'.
@@ -12,7 +12,6 @@ import package::atmosphere::aerialPerspective::froxelSlices::froxelCoord;
 import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceStartKm;
 import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::shell::fragment::lutSamp;
-import package::atmosphere::shell::fragment::sampleShellRay;
 import package::atmosphere::shell::fragment::sampleShellSegment;
 import package::atmosphere::shell::fragment::u;
 import package::lib::fullscreenTri::FullscreenOut;
@@ -67,7 +66,7 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
     // SKY — today's shell answer, with its alpha semantics untouched: the star
     // and deep-space washout the compositor derives from 'foreground:0's alpha
     // is exactly what the multiply/add pair wrote before this pass existed.
-    let s = sampleShellRay(dir);
+    let s = sampleShellSegment(dir, 0.0, false);
     out.transmit = vec4<f32>(s.transmit, 1.0 - s.coverage);
     out.emission = vec4<f32>(s.emission, s.coverage);
     out.hit = s.hit;
