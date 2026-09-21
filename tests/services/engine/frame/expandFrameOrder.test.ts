@@ -214,7 +214,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // sample a cubemap this frame actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
-    expect(steps[2]).toBe(capture[0]);
+    expect(steps[2]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
+    expect(steps[3]).toBe(capture[0]);
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {

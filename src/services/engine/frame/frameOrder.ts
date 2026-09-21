@@ -21,8 +21,15 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // write before the later fragment read. Each step bills `<name>-compute` and
   // toggles under it (`computeTimingSlotName`); the suffix is what keeps `flow`
   // here apart from the ribbon pass of that name.
+  //
+  // `aerial-perspective` FOLLOWS `sky-view`, and that is load-bearing twice
+  // over: this bake writes the enclosing body's shell uniform record that
+  // `aerial-perspective`'s apply row (`foreground:0`, below) reads with no
+  // other writer, and the apply's sky branch reads the LUT `sky-view` just
+  // baked — so both orderings resolve the same way, sky-view first.
   { kind: 'compute', name: 'flow' },
   { kind: 'compute', name: 'sky-view' },
+  { kind: 'compute', name: 'aerial-perspective' },
   // The sky captures, in the compute prelude's wake and ahead of every
   // other render step so a same-frame lensing draw can sample a cubemap this
   // frame actually wrote. The frame's face list for a key is empty most

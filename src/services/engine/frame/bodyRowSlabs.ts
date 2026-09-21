@@ -6,14 +6,14 @@
  */
 
 import type { BodyRowSource } from '../../../@types/engine/frame/BodyRowSource';
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import { atmosphereDrawList } from './atmosphereDrawList';
 import { skyCaptureBandAlpha } from './skyCaptureBandAlpha';
 
 export function bodyRowSlabs(
-  state: EngineState,
+  state: PassState,
   ctx: ReadyFrameContext,
 ): Record<BodyRowSource, readonly number[]> {
   const sgrAStar =
