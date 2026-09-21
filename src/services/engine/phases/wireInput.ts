@@ -29,6 +29,7 @@ import { selectSelectedRef, selectHasSelectionIntent } from '../../../state/sele
 import { selectOrientation } from '../../../state/settings/selectors';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { isCinemaMode } from '../../../utils/url/isCinemaMode';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../@types/engine/BootstrapDeps';
@@ -181,8 +182,12 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       // frame to follow it — the one place a pointermove earns the wake this
       // input mouth otherwise refuses (`inputBindings`' contract). Both the
       // write and the wake are gated on the toggle, so hover stays wake-free
-      // and this whole debug path is unreachable with the overlay off.
+      // and this whole debug path is unreachable with the overlay off. Also
+      // gated on the rig's `pickable` flag: a dome frame has no single cursor
+      // ray, so `terrainPickMarkerPass`'s `cursorTexPx === null` gate must stay
+      // satisfied there.
       if (!state.settings.debug.overlays['terrain-pick-marker']) return;
+      if (!VIEW_RIGS[state.viewRig].pickable) return;
       state.picking.cursorTexPx = [cssToTexPx(cssPx.x), cssToTexPx(cssPx.y)];
       state.subsystems.scheduler.requestRender();
     },

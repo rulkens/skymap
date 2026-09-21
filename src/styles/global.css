@@ -396,3 +396,12 @@ body {
   height: 100vh;
   touch-action: none;
 }
+
+/* Dome rig draws a fisheye disc, which only reads correctly on a square
+   backing store — `resizeCanvasToDisplay` follows this box, not the 100vw
+   above. */
+#c[data-view-rig='dome'] {
+  width: min(100vw, 100vh);
+  height: min(100vw, 100vh);
+  margin-inline: auto;
+}
