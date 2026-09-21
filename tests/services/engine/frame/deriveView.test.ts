@@ -253,16 +253,6 @@ describe('deriveView', () => {
     expect(v.snapshot.cam).toBeUndefined();
   });
 
-  it('each view keeps its own first-touch set', () => {
-    const snapshot = frame();
-    const a = deriveView(snapshot, CAM, mainViewSpec(CAM, CANVAS));
-    const b = deriveView(snapshot, CAM, spec({ rotation: YAW_RIGHT, slot: 1 }));
-    expect(a.renderedTargets).not.toBe(b.renderedTargets);
-    // The executor's first touch of `hdr` in view A must still CLEAR in view B.
-    (a.renderedTargets as Set<string>).add('hdr');
-    expect(b.renderedTargets.has('hdr')).toBe(false);
-  });
-
   it('clipYFlip negates the projected clip-Y row on the view AND every slab — a spec property, never a post-derive mutation', () => {
     // The ruling: the flip lives where every projection (the view's own vp
     // and each slab's) is BUILT, not patched onto `deriveView`'s output

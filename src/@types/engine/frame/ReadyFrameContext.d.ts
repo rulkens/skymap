@@ -105,4 +105,15 @@ export type ReadyFrameContext = {
    * is on (its sole reader): the listener only writes it then.
    */
   cursorTexPx: Readonly<Vec2> | null;
+  /**
+   * Which render-target ids hold THIS FRAME's content — a target first-touched
+   * in any view of this frame holds it, regardless of which view's program did
+   * the touching. Minted once per frame (`frameContext.ts`) and unioned into by
+   * `executeFrame` as it opens each pass; the type here is read-only for a pass
+   * (only the executor holds the mutable reference). Distinct from a view's own
+   * per-program first-touch clear decision (`executeFrame`'s private `touched`),
+   * which resets per program run and answers a different question — see
+   * `executeFrame`'s header for both.
+   */
+  renderedTargets: ReadonlySet<string>;
 };

@@ -53,8 +53,4 @@ export type FrameView = {
   /** Where a `swap`-targeted step resolves for THIS view; unset falls back
    *  to the acquired swap-chain view (the canvas view, every mono view). */
   output?: GPUTextureView;
-  /** The render-target ids THIS view's program has drawn into so far — minted
-   *  fresh per `deriveView`, populated by the executor per opened pass. Per
-   *  view, not per frame: a target first-touched in view A still CLEARS in B. */
-  renderedTargets: ReadonlySet<string>;
 };

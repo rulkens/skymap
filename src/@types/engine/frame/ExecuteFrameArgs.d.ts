@@ -20,8 +20,8 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 export type ExecuteFrameArgs = {
   /** The single per-frame command encoder every step records into. */
   encoder: GPUCommandEncoder;
-  /** This view — slab table, camera, its own `renderedTargets`; frame-wide
-   *  facts (render targets, clock) are `ctx.snapshot.*`. */
+  /** This view — slab table, camera; frame-wide facts (render targets,
+   *  clock, which targets hold this frame's content) are `ctx.snapshot.*`. */
   ctx: FrameView;
   /** Live engine state — layers read their renderers/gates off `state.*`. */
   state: EngineState;

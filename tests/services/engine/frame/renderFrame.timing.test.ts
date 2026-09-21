@@ -251,11 +251,12 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     // to 0 in frameContext, and an absent one yields NaN alphas here.
     focusBlend: 0,
     renderTargets,
+    // Frame-wide: which targets hold this frame's content — the executor
+    // unions into this as it opens each render step; a later pass reads it.
+    renderedTargets: new Set<string>(),
   };
   const ctx = {
     snapshot: snapshotFields,
-    // executor populates this as targets render; a later pass reads which rendered this frame.
-    renderedTargets: new Set<string>(),
     cam,
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],

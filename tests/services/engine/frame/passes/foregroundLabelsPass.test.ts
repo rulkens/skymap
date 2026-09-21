@@ -90,11 +90,14 @@ function makeState(
 function makeCtx(nowMs = 0): FrameView {
   const slab: Slab = makeSlab();
   return {
-    snapshot: { nowMs, renderTargets: { viewOf: () => ({}) as GPUTextureView } },
+    snapshot: {
+      nowMs,
+      renderTargets: { viewOf: () => ({}) as GPUTextureView },
+      renderedTargets: new Set(['foreground:0']),
+    },
     slabs: [slab],
     drawCamPos: [2, 3, 5],
     canvasSize: { width: 1280, height: 720 },
-    renderedTargets: new Set(['foreground:0']),
   } as unknown as FrameView;
 }
 

@@ -117,5 +117,10 @@ export function deriveFrameContext(state: EngineState, input: FrameContextInput)
     // Forwarded by reference, not copied: the listener allocates a fresh pair
     // per pointermove and only while the debug overlay that reads it is on.
     cursorTexPx: state.picking.cursorTexPx,
+    // Fresh and empty: nothing has drawn yet this frame. `executeFrame` holds
+    // the mutable reference and unions into it as every view's program opens
+    // a pass — see its own doc for why this is a SEPARATE fact from a view's
+    // per-program first-touch clear decision.
+    renderedTargets: new Set<string>(),
   };
 }

@@ -146,10 +146,10 @@ function makeCtx(
       nowMs: 1000,
       focus: {},
       renderTargets,
+      // Frame-wide: which targets hold this frame's content — the executor
+      // unions into this as it opens each render step.
+      renderedTargets: new Set<string>(),
     },
-    // renderFrame's `once` sections run against the canvas view itself — mono's
-    // views are `[ctx]` itself, so its own set is what a later section reads.
-    renderedTargets: new Set<string>(),
     drawCamPos,
     slabs: [],
     canvasSize: { width: 800, height: 600 },

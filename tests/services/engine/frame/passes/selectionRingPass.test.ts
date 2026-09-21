@@ -40,10 +40,10 @@ function makeCtx(): FrameView {
       },
       renderTargets: {} as never,
       cursorTexPx: null,
+      renderedTargets: new Set<string>(),
     },
     viewSlot: 0,
     viewKind: 'frame',
-    renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam: {} as never,
@@ -286,10 +286,10 @@ describe('selectionRingPass.draw', () => {
     const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = {
       ...makeCtx(),
-      renderedTargets: new Set(['foreground:0']),
       snapshot: {
         ...makeCtx().snapshot,
         renderTargets: { viewOf, depthViewOf } as unknown as FrameView['snapshot']['renderTargets'],
+        renderedTargets: new Set(['foreground:0']),
       },
     };
 

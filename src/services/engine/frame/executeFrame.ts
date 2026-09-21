@@ -38,26 +38,30 @@
  *
  * ### First-touch clear
  *
- * A per-frame `touched` set tracks which render targets have been drawn into.
- * The first pass opened against a target this frame uses `loadOp: 'clear'` with
- * that target's clear value; later passes use `'load'`. A render step with a
- * non-empty group marks its target touched; a composite marks its dest touched.
- * Unlike the old split path's dedicated no-draw clear pass, folding the clear
- * into the first enabled layer's pass is safe here because the group is already
- * filtered to enabled layers — a non-empty group always has a first layer to
- * carry the clear.
+ * A `touched` set, private to one `executeFrame` call, tracks which render
+ * targets have been drawn into by THIS program run. The first pass opened
+ * against a target uses `loadOp: 'clear'` with that target's clear value;
+ * later passes use `'load'`. A render step with a non-empty group marks its
+ * target touched; a composite marks its dest touched. Unlike the old split
+ * path's dedicated no-draw clear pass, folding the clear into the first
+ * enabled layer's pass is safe here because the group is already filtered to
+ * enabled layers — a non-empty group always has a first layer to carry the
+ * clear. A SEPARATE, frame-wide fact — which targets hold this FRAME's
+ * content, for the overlay passes that sample `foreground:0` — lives on
+ * `ctx.snapshot.renderedTargets` instead; see that field's own doc for why it
+ * is not the same set as `touched`.
  *
  * A capture render step (`step.capture !== undefined`) is the one exception: it
  * names a capture ROW, whose six faces are LAYERS of one texture, but `touched`
  * tracks by target id alone — so it can't distinguish "this face's first pass
- * this frame" from "a DIFFERENT face already rendered this frame". Capture
+ * this run" from "a DIFFERENT face already rendered this run". Capture
  * steps therefore take their first-touch fact from a private
- * `<capture key>:<face>`-keyed set instead, rather than growing the public
- * `renderedTargets` surface to that granularity. That granularity is
- * load-bearing in BOTH directions: the roster spans two slabs, so the
- * capture line expands to TWO steps per face (COSMO then NEAR0) — a
- * blanket always-clear made the NEAR0 step wipe the COSMO step's galaxy
- * points and textured disks off the face it had just drawn them into.
+ * `<capture key>:<face>`-keyed set instead, rather than growing `touched` to
+ * that granularity. That granularity is load-bearing in BOTH directions: the
+ * roster spans two slabs, so the capture line expands to TWO steps per face
+ * (COSMO then NEAR0) — a blanket always-clear made the NEAR0 step wipe the
+ * COSMO step's galaxy points and textured disks off the face it had just
+ * drawn them into.
  *
  * The same `touched` fact drives depth: a render step whose target row declares
  * `depth` (only `foreground:0` today) attaches a depth texture whose load-op is
@@ -170,18 +174,25 @@ export function executeFrame(args: ExecuteFrameArgs): void {
   const { encoder, ctx, state, program, strategy, timing, swapView, captureContexts } = args;
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
-  // first time a pass is opened against it, flipping subsequent passes from
-  // 'clear' to 'load'. This is the SAME object exposed on the view as
-  // `renderedTargets`: the public type is `ReadonlySet` (the consumer surface),
-  // but the concrete object `deriveView` mints per view is a real `Set`, so the
-  // executor populates it here and later layers read which targets rendered this
-  // view via `ctx.renderedTargets`.
-  const touched = ctx.renderedTargets as Set<string>;
+  // first time a pass is opened against it THIS PROGRAM RUN, flipping
+  // subsequent passes from 'clear' to 'load'. Private to this call — mono's
+  // one call spans the whole frame, so this is unobservably the same lifetime
+  // as before the frame/snapshot split; a future rig whose program for one
+  // view splits across several `executeFrame` calls is out of scope here.
+  const touched = new Set<string>();
   // Capture steps' own first-touch bookkeeping, keyed `<capture key>:<face>` —
   // see the module header. The key is what keeps two capture rows' face 0
-  // apart. Private to this call because `renderedTargets` is a public consumer
-  // surface keyed by bare target id.
+  // apart. Private to this call for the same reason `touched` is.
   const touchedFaces = new Set<string>();
+  // The FRAME-WIDE fact `touched` is not: which targets hold THIS FRAME's
+  // content, read by five overlay passes as `ctx.snapshot.renderedTargets` to
+  // decide whether `foreground:0` is sampleable. One object for the whole
+  // frame (minted by `frameContext.ts`), unioned into below by every ordinary
+  // render step's group, regardless of which view's program it belongs to —
+  // never by a capture step (its row no overlay read or composite ever
+  // sources) and never by a composite step (its gate is `touched`, a
+  // per-program-run question about ITS OWN view's content, not the frame's).
+  const frameRendered = ctx.snapshot.renderedTargets as Set<string>;
   // TARGET id → the slab whose depth-clearing step wrote it last this frame.
   // Keyed by target alone, not `(target, slab)`: the depth texture is one
   // buffer per target, so it only ever holds the most recent row's contents
@@ -267,11 +278,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const groupKey = renderStepTimingSlotName(groupKeyOf(step), step.capture?.face, step.slot);
         // The destination, resolved once — the executor's only branch on what a
         // step writes into. An ordinary step names a render-target row; a
-        // capture step names a capture ROW, which owns the texture its faces are
-        // layers of and takes its first touch per FACE rather than from
-        // `touched` (the object layers read as `ctx.renderedTargets`). Leaving
-        // capture rows out of that set is unobservable: every read of it guards
-        // on `'foreground:0'`, and no composite sources a capture row.
+        // capture step names a capture ROW, which owns the texture its faces
+        // are layers of and takes its first touch per FACE rather than from
+        // `touched`, and never unions into `frameRendered` — no overlay read
+        // or composite ever names a capture row's `<key>:<face>` touch key.
         let destination: Destination;
         if (step.capture === undefined) {
           // A split row's `'clear'` segment is skipped when its group is empty
@@ -326,6 +336,10 @@ export function executeFrame(args: ExecuteFrameArgs): void {
           alreadyTouched: destination.touchSet.has(destination.touchKey),
         });
         destination.touchSet.add(destination.touchKey);
+        // Frame-wide content fact: only an ordinary (non-capture) target — a
+        // capture row's touch key is `<key>:<face>`, which no overlay read or
+        // composite ever names (see the comment above `destination`'s branch).
+        if (step.capture === undefined) frameRendered.add(destination.touchKey);
         break;
       }
       case 'composite': {

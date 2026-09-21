@@ -377,9 +377,10 @@ describe('renderFrame visual baseline', () => {
         // The executor resolves hdr/volume attachments — and
         // volumeUpsamplePass its source texture — via ctx.snapshot.renderTargets.viewOf(id).
         renderTargets,
+        // Frame-wide: which targets hold this frame's content — the executor
+        // unions into this as it opens each render step; a later pass reads it.
+        renderedTargets: new Set<string>(),
       },
-      // executor populates this as targets render; a later pass reads which rendered this frame.
-      renderedTargets: new Set<string>(),
       cam,
       vp: viewProj,
       slabs: [cosmoSlab, cosmoSlab],

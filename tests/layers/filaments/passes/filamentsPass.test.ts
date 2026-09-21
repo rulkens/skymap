@@ -35,10 +35,10 @@ function makeCtx(focusBlend: number): FrameView {
       },
       renderTargets: {} as never,
       cursorTexPx: null,
+      renderedTargets: new Set<string>(),
     },
     viewSlot: 0,
     viewKind: 'frame',
-    renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam: {} as never,

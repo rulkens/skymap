@@ -160,8 +160,5 @@ export function deriveView(
     viewSlot: spec.slot,
     viewKind: spec.kind,
     output: spec.output,
-    // The executor populates this as it opens the first pass against each
-    // target; per view, so a target first-touched in another view still clears.
-    renderedTargets: new Set<string>(),
   };
 }

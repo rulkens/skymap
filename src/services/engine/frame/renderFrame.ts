@@ -86,8 +86,11 @@ export function renderFrame(input: RenderFrameInput): void {
   let pending: FrameStep[] = [];
   let currentView: FrameView | null = null;
 
-  /** Execute + submit whatever's pending. Each view mints its own `renderedTargets` (`deriveView`), so
-   *  there is nothing to fold back into `canvas`'s — a `perView` section already reads its own set. */
+  /** Execute + submit whatever's pending. `executeFrame`'s own per-run first-touch
+   *  bookkeeping is private to each call; the frame-wide "does target X hold this
+   *  frame's content" fact every overlay pass reads lives on `canvas.snapshot`,
+   *  shared by every view, so a `perView` section's draws are visible to the
+   *  `once` overlays with no folding-back needed here. */
   const flush = (isFinal: boolean): void => {
     if (currentView === null) {
       if (!isFinal) return;

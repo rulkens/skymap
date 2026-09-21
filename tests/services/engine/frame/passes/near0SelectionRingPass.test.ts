@@ -13,7 +13,7 @@ import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { makeGalaxyRow } from '../../../../fixtures/makeGalaxyRow';
 
 // The enable gate never touches ctx or view — bare casts stand in for both.
-const CTX = { renderedTargets: new Set<string>() } as unknown as FrameView;
+const CTX = { snapshot: { renderedTargets: new Set<string>() } } as unknown as FrameView;
 const VIEW_STUB = {} as unknown as SlabView;
 
 // A minimal stand-in for the shared selection-ring renderer handle.
@@ -127,9 +127,8 @@ describe('near0SelectionRingPass.draw — far-plane clamp regression', () => {
     const farMpc = 1e-6; // far below the anchor distance ⇒ would clip un-clamped
     const view = farClippingView(farMpc);
     const ctx = {
-      snapshot: { simDays: 0 },
+      snapshot: { simDays: 0, renderedTargets: new Set<string>() },
       drawPxPerRad: 1000,
-      renderedTargets: new Set<string>(),
     } as unknown as FrameView;
 
     const pass = {} as unknown as GPURenderPassEncoder;
@@ -182,9 +181,8 @@ describe('near0SelectionRingPass.draw — live body position', () => {
     const state = stateWith(staleRow, renderer);
     const view = farClippingView(1); // farMpc 1 Mpc ⇒ no clamp at this scale
     const ctx = {
-      snapshot: { simDays },
+      snapshot: { simDays, renderedTargets: new Set<string>() },
       drawPxPerRad: 1000,
-      renderedTargets: new Set<string>(),
     } as unknown as FrameView;
 
     near0SelectionRingPass.draw({} as unknown as GPURenderPassEncoder, view, ctx, state);

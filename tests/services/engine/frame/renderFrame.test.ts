@@ -35,6 +35,7 @@ import {
   MILKY_WAY_RADIUS_MPC,
 } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
@@ -433,12 +434,14 @@ function makeInput(
       blend: 0,
     },
     renderTargets,
+    // Frame-wide: which targets hold this frame's content, unioned into by
+    // `executeFrame` as it opens each pass — see `ReadyFrameContext`'s doc.
+    renderedTargets: new Set<string>(),
   };
   const ctx = {
     snapshot: snapshotFields,
     viewSlot: 0,
     viewKind: 'frame' as const,
-    renderedTargets: new Set<string>(),
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam,
@@ -985,12 +988,8 @@ describe('renderFrame', () => {
     // each view's OWN slabs, not the main ctx's.
     const near0Slab = makeSlab();
     const bodySlab = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'earth' as any } });
-    const view1 = { ...fx.input.canvas, slabs: [near0Slab], renderedTargets: new Set<string>() };
-    const view2 = {
-      ...fx.input.canvas,
-      slabs: [near0Slab, makeCosmoSlab(), bodySlab],
-      renderedTargets: new Set<string>(),
-    };
+    const view1 = { ...fx.input.canvas, slabs: [near0Slab] };
+    const view2 = { ...fx.input.canvas, slabs: [near0Slab, makeCosmoSlab(), bodySlab] };
 
     (VIEW_RIGS as any).__twoViewsTest = {
       views: () => [],
@@ -1026,14 +1025,31 @@ describe('renderFrame', () => {
     expect(beginCalls.length).toBe(3);
   });
 
-  it('a once section after a perView section sees targets the views rendered', () => {
-    // The regression this pins: a `once` section running against `canvas`
-    // must see what a PRECEDING `perView` section drew — true for free when
-    // mono's one view IS `canvas` (no fold needed, per the Global Constraints
-    // ruling), so here the hdr→swap composite draws (`touched.has('hdr')`
-    // true) exactly as POST/OVERLAYS would in a real mono frame.
-    const stubPass = { name: 'stub-hdr', enabled: () => true, draw: vi.fn() };
-    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubPass];
+  it('a once section sees the frame-wide content fact across views, while each view still clears its own first touch (radar K4)', () => {
+    // The regression K4 fixes: `renderedTargets` used to be a per-VIEW set
+    // (minted fresh by `deriveView`), so a `once` section against `canvas`
+    // could never see what a DIFFERENT view's `perView` section drew — the
+    // five overlay passes would silently read "not rendered". Now the
+    // content question is frame-wide (`ctx.snapshot.renderedTargets`), read
+    // here through a stub overlay pass, while the executor's per-call
+    // `touched` set — which decides clear-vs-load — stays private: view B's
+    // own first touch of `hdr` still CLEARS, even though view A already
+    // drew into it moments earlier in the same frame.
+    const stubHdrPass = { name: 'stub-hdr', enabled: () => true, draw: vi.fn() };
+    const seenContentFact: boolean[] = [];
+    const overlayPass = {
+      name: 'stub-overlay',
+      enabled: () => true,
+      draw: vi.fn((_pass: unknown, _view: unknown, ctx: FrameView) => {
+        seenContentFact.push(ctx.snapshot.renderedTargets.has('hdr'));
+      }),
+    };
+    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubHdrPass, overlayPass];
+
+    // Neither view is `canvas` — the fact must be visible to canvas's `once`
+    // section without being tied to `canvas === views[0]`.
+    const viewA = { ...fx.input.canvas, viewSlot: 1, slabs: [makeSlab()] };
+    const viewB = { ...fx.input.canvas, viewSlot: 2, slabs: [makeSlab()] };
 
     (VIEW_RIGS as any).__foldTest = {
       views: () => [],
@@ -1042,18 +1058,27 @@ describe('renderFrame', () => {
           scope: 'perView',
           steps: [{ kind: 'render', target: 'hdr', slab: 0, passes: ['stub-hdr'] }],
         },
-        { scope: 'once', steps: [{ kind: 'composite', source: 'hdr', dest: 'swap' }] },
+        {
+          scope: 'once',
+          steps: [{ kind: 'render', target: 'swap', slab: 0, passes: ['stub-overlay'] }],
+        },
       ],
     };
     (fx.input.state as any).viewRig = '__foldTest';
 
     try {
-      renderFrame({ ...fx.input, views: [fx.input.canvas] } as any);
+      renderFrame({ ...fx.input, views: [viewA, viewB] } as any);
     } finally {
       delete (VIEW_RIGS as any).__foldTest;
     }
 
-    expect(fx.input.canvas.renderedTargets.has('hdr')).toBe(true);
-    expect(fx.compositor.draw).toHaveBeenCalledTimes(1);
+    expect(seenContentFact).toEqual([true]);
+
+    const hdrCalls = (fx.env.beginRenderPass as any).mock.calls.filter(
+      ([desc]: [any]) => desc.colorAttachments[0].view === fx.hdrTargetView,
+    );
+    expect(hdrCalls).toHaveLength(2);
+    expect(hdrCalls[0]![0].colorAttachments[0].loadOp).toBe('clear');
+    expect(hdrCalls[1]![0].colorAttachments[0].loadOp).toBe('clear');
   });
 });

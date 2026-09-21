@@ -202,7 +202,7 @@ export function domeFaceSpecs(canvas: FrameView, state: EngineState): readonly V
 
 **How the rig runs:**
 
-- The `DOME_RESAMPLE` section runs after the faces, and PR 1's first-touch union marks `hdr` as rendered, so the resample loads `hdr`. That is harmless because it writes every pixel.
+- `DOME_RESAMPLE` and `POST` both run `once` against `canvas`, back to back with no intervening view — one `executeFrame` call, separate from each face's own. `hdr`'s first touch in THAT call is `DOME_RESAMPLE`'s own render step (clears, not loads — harmless, since the resample writes every pixel), and `POST`'s hdr→swap composite reads `touched.has('hdr')` true from that same call, no frame-wide fact needed (radar K4: the per-call `touched` set and the frame-wide `ctx.snapshot.renderedTargets` content fact are separate — this sequencing relies on neither view's face steps).
 - `POST` then blooms and tonemaps the fisheye into the canvas: the main ctx has no `output`.
 
 **Check this PR 1 assumption.** `renderFrame` must submit the `PRELUDE` encoder (the `sky-view` compute and captures) **before** the face submits, because `atmosphere-shell` in every face samples that LUT. If PR 1 submits once-section work at the end of the frame, fix the ordering here and say so in the commit.

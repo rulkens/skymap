@@ -75,10 +75,10 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
       },
       renderTargets,
       cursorTexPx: null,
+      renderedTargets: new Set<string>(),
     },
     viewSlot: 0,
     viewKind: 'frame',
-    renderedTargets: new Set<string>(),
     cam,
     vp,
     // Index 0 (NEAR0) duplicates the cosmological row: the milky-way draw

@@ -226,14 +226,17 @@ function makeCtx(): FrameView {
     farDepthView: vi.fn(() => FAR_VIEW),
   };
   return {
-    snapshot: { renderTargets } as unknown as FrameView['snapshot'],
+    snapshot: {
+      renderTargets,
+      // Frame-wide: which targets hold this frame's content, unioned into by
+      // `executeFrame` as it opens each ordinary render step — a fresh empty
+      // Set per frame, mirroring `frameContext.ts`. Distinct from the
+      // executor's own per-call `touched`, which this fixture never sees.
+      renderedTargets: new Set<string>(),
+    } as unknown as FrameView['snapshot'],
     slabs: [slab, slab],
     canvasSize: { width: 100, height: 50 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
-    // The executor uses this as its first-touch `touched` set (the same object
-    // it exposes to layers as `renderedTargets`): a fresh empty Set per frame,
-    // populated as passes open. Mirrors `deriveView`.
-    renderedTargets: new Set<string>(),
   } as unknown as FrameView;
 }
 

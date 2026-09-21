@@ -34,8 +34,7 @@ function fakeCompute(encodeCompute: () => void, dispatches: boolean): ContentCom
 
 function makeCtx(): FrameView {
   return {
-    renderedTargets: new Set<string>(),
-    snapshot: { nowMs: 12345 },
+    snapshot: { nowMs: 12345, renderedTargets: new Set<string>() },
   } as unknown as FrameView;
 }
 

@@ -42,9 +42,9 @@ function makeCtx(
   depthViewOf: (id: string) => GPUTextureView,
 ): FrameView {
   return {
-    renderedTargets,
     snapshot: {
       renderTargets: { viewOf, depthViewOf } as unknown as FrameView['snapshot']['renderTargets'],
+      renderedTargets,
     },
   } as unknown as FrameView;
 }
