@@ -21,8 +21,9 @@ two of the three mechanically and left this one, by design, for the
   `src/services/gpu/renderers/starCatalog/cut/`, sharing one `ctx`-keyed memo
   (`starCutOncePerCtx`) across all three star-catalog layers.
 
-- **The star defaults** — the eight `DEFAULT_STAR_*` constants now live in
-  `src/layers/starCatalog/settings/defaults.ts`. They were deferred here only
+- **The star defaults** — the star boot values now live in
+  `src/layers/starCatalog/state/starCatalogs/initialState.ts` (+ `state/defaults.ts`
+  for the one shared constant). They were deferred here only
   because moving star's alone would have made it the first Layer to own its
   defaults; the 2026-09-20 defaults sweep moved all seven Layers' at once, so
   the objection is gone.
