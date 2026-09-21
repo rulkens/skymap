@@ -32,7 +32,8 @@ export type MarkerLine = {
   occludeWeight?: number;
   /**
    * The sampled-depth channel's cutoff (default 0), copied from the owning
-   * label alongside `occludeWeight` — see `Label2D.occludeNearKm`.
+   * label alongside `occludeWeight` — see `Label2D.occludeNearKm`. Judged
+   * once, at `fromWorld` (the connector's subject end) in the vertex stage.
    */
   occludeNearKm?: number;
 };

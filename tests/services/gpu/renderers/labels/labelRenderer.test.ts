@@ -112,6 +112,20 @@ describe('LabelRenderer occlusion variant', () => {
     expect(Array.from(pipelineLayouts[1]!.bindGroupLayouts)).toHaveLength(2); // occlusion
   });
 
+  it('draws the occlusion pipeline through vsOcclude, never vs — vs must stay clear of group(1)', () => {
+    // vertex.wesl's 'vs' cannot statically reference lib::sceneDepth's group(1)
+    // bindings (the plain pipeline's layout has none), so the occlusion
+    // pipeline's vertex stage MUST come from the separate vertexOcclude.wesl
+    // module's 'vsOcclude' entry — a device-only pipeline-validation error
+    // (group(1) used but not in the layout) never surfaces in this headless
+    // suite, so pin the entry point here.
+    const { renderPipelines } = buildOccluding();
+    const plain = renderPipelines.find((p) => p.label === 'label-pipeline');
+    const occlude = renderPipelines.find((p) => p.label === 'label-pipeline-occlude');
+    expect(plain!.vertex.entryPoint).toBe('vs');
+    expect(occlude!.vertex.entryPoint).toBe('vsOcclude');
+  });
+
   it('blends the occlusion pipeline PREMULTIPLIED — the contract sceneTransmittance depends on', () => {
     // `fragmentOcclude.wesl` returns `shade(...) * sceneTransmittance(...)`:
     // one scalar scaling an already-premultiplied rgba. That is only a fade

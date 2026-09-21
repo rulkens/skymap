@@ -69,6 +69,7 @@ import type { MarkerLine } from '../../../../@types/rendering/MarkerLine';
 import type { MarkerLineRenderer } from '../../../../@types/rendering/MarkerLineRenderer';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import vsCode from '../../shaders/markerLines/vertex.wesl?static';
+import vsOccludeCode from '../../shaders/markerLines/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/markerLines/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/markerLines/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -277,6 +278,16 @@ export function createMarkerLineRenderer(
         fsOccludeCode,
         'markerLines.fragmentOcclude',
       );
+      // A SEPARATE vertex module, not 'vsModule' + a different entry point:
+      // vertexOcclude.wesl imports lib::sceneDepth, which statically pulls in
+      // group(1) bindings — vertex.wesl's 'vs' must stay clear of those for
+      // the plain pipeline's group(1)-less layout to accept it (see
+      // vertexOcclude.wesl's header).
+      const vsOccludeModule = createShaderModuleWithDevLog(
+        device,
+        vsOccludeCode,
+        'markerLines.vertexOcclude',
+      );
       occludePipeline = device.createRenderPipeline({
         label: 'marker-line-pipeline-occlude',
         layout: device.createPipelineLayout({
@@ -284,7 +295,7 @@ export function createMarkerLineRenderer(
           // group 0 = the marker-line BGL; group 1 = the shared coverage joint.
           bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
-        vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+        vertex: { module: vsOccludeModule, entryPoint: 'vsOcclude', buffers: vertexBuffers },
         fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
         primitive: { topology: 'triangle-strip' },
       });

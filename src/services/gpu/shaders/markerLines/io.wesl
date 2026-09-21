@@ -71,12 +71,14 @@ struct VsIn {
   // Premultiplied rgba — colour is constant along the line; the
   // fragment stage multiplies in fadeAlpha and the soft-edge falloff.
   @location(3) color: vec4<f32>,
-  // How much per-pixel scene attenuation the occlusion fragment variant
-  // applies (1 = fully, 0 = draw over the bodies).  Mirrors the owning
-  // caption's weight so connector and text agree.
+  // How much of the occlusion variant's scene attenuation this line takes
+  // (1 = fully, 0 = draw over the bodies).  Mirrors the owning caption's
+  // weight so connector and text agree.  'vsOcclude' reads this AND folds in
+  // its own anchor-depth verdict before writing VsOut's copy of the field.
   @location(4) occludeWeight: f32,
   // Eye to the subject's NEAR surface, km — the sampled-depth channel's
-  // cutoff, copied from the caption for the same reason.
+  // cutoff, copied from the caption for the same reason.  Read by
+  // 'vsOcclude' at the connector's subject end, not per fragment.
   @location(5) occludeNearKm: f32,
 };
 

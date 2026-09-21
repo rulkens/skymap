@@ -50,6 +50,18 @@ describe('occlusionCoverageGroup', () => {
     expect(entries[2]!.buffer?.type).toBe('uniform');
   });
 
+  it('binds 1 and 2 VERTEX-visible too — the overlays vsOcclude entries read them for the anchor verdict', () => {
+    // Binding 0 (sceneColorTex) stays FRAGMENT-only: sceneTransmittance is a
+    // fragment-only per-pixel read, never called from a vertex stage. A
+    // pipeline whose layout omits VERTEX here rejects vsOcclude at device
+    // creation — the exact class of error this file exists to pin on the CPU.
+    const entries = [...OCCLUSION_COVERAGE_LAYOUT_DESC.entries];
+    const byBinding = new Map(entries.map((e) => [e.binding, e]));
+    expect(byBinding.get(0)!.visibility).toBe(GPUShaderStage.FRAGMENT);
+    expect(byBinding.get(1)!.visibility).toBe(GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX);
+    expect(byBinding.get(2)!.visibility).toBe(GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX);
+  });
+
   it('names the binding-2 offsets in the order and at the strides WGSL lays the struct out', () => {
     // Reordering the WESL struct moves every field the TS offsets name, and
     // writes the camera where the shader reads padding — silently.

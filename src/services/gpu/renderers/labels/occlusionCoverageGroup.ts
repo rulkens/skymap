@@ -46,6 +46,12 @@ export const OCCLUSION_COVERAGE_GROUP_INDEX = 1;
 // The bind-group-layout descriptor for the occlusion joint. Binding 0 matches
 // the WESL `texture_2d<f32>` read via `textureLoad` — `unfilterable-float` is
 // the narrowest sampleType a `rgba16float` target needs for an unfiltered load.
+// Bindings 1 and 2 add VERTEX visibility: the overlays' `vsOcclude` entries
+// (labels/markerLines) call `sceneDepthOccludes` once at the SUBJECT's own
+// anchor, in the vertex stage, so they statically read the depth texture and
+// the km frame there too. Binding 0 (`sceneColorTex`) stays FRAGMENT-only —
+// `sceneTransmittance` is a fragment-only per-pixel read, never called from a
+// vertex stage.
 export const OCCLUSION_COVERAGE_LAYOUT_DESC: GPUBindGroupLayoutDescriptor = {
   label: 'occlusion-coverage-bgl',
   entries: [
@@ -54,8 +60,16 @@ export const OCCLUSION_COVERAGE_LAYOUT_DESC: GPUBindGroupLayoutDescriptor = {
       visibility: GPUShaderStage.FRAGMENT,
       texture: { sampleType: 'unfilterable-float' },
     },
-    { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
-    { binding: 2, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+    {
+      binding: 1,
+      visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
+      texture: { sampleType: 'depth' },
+    },
+    {
+      binding: 2,
+      visibility: GPUShaderStage.FRAGMENT | GPUShaderStage.VERTEX,
+      buffer: { type: 'uniform' },
+    },
   ],
 };
 

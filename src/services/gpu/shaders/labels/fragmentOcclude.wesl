@@ -8,15 +8,13 @@
 // itself is the plain 'fs' entry's: both reuse 'shadeMsdf' (lib/msdf.wesl) so
 // glyph colour has one source of truth.
 //
-// That per-pixel rule cannot tell a subject in FRONT of a body from one behind
-// it, so 'occludeWeight' (per label, decided on the CPU against the body
-// spheres) mixes it in: 1 keeps it, 0 lets the caption paint over the disc its
-// subject floats in front of.
-//
-// Those spheres stop at the relief FLOOR, so every ray above a mountain's limb
-// reports 'not occluded' and a caption paints over the peak. 'sceneDepthOccludes'
-// is the second channel that sees it, per pixel, off the row that stamped the
-// sampled depth; either channel firing restores the attenuation.
+// 'occludeWeight' carries the whole occlusion verdict now: the CPU's own-body
+// sphere test (produceSceneBodyCaptions), maxed in the VERTEX stage
+// (vertexOcclude.wesl) with the sampled-depth channel's per-SUBJECT verdict —
+// the second channel that sees the terrain the analytic spheres stop short of
+// at the relief floor. Judged once per label at its anchor, not once per
+// fragment: a fragment-side sample here would again clip a caption along
+// whatever silhouette crosses its rendered text, the bug task 15 fixed.
 //
 // Because 'shadeMsdf' returns PREMULTIPLIED rgba, one scalar multiply dims the
 // colour and drops the coverage together — no separate alpha handling.
@@ -26,12 +24,10 @@
 
 import package::labels::io::VsOut;
 import package::lib::msdf::shadeMsdf;
-import package::lib::sceneDepth::sceneDepthOccludes;
 import package::lib::sceneDepth::sceneTransmittance;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let shaded = shadeMsdf(input.uv, input.fontIndex, input.color, input.outlineColor, input.outlineSdf);
-  let weight = max(input.occludeWeight, sceneDepthOccludes(input.pos.xy, input.occludeNearKm));
-  return shaded * mix(1.0, sceneTransmittance(input.pos.xy), weight);
+  return shaded * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight);
 }

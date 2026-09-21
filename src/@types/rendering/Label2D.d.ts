@@ -102,8 +102,10 @@ export type Label2D = {
    * Eye to the subject's NEAR surface (centre distance minus its radius), in
    * km: the cutoff of the SECOND occluder channel, which reads the sampled
    * scene depth and so sees the terrain the body spheres stop short of. The
-   * fragment takes whichever channel fires. Default 0 leaves it inert — right
-   * for every producer whose `occludeWeight` is already 1.
+   * shader takes whichever channel fires. Judged once, at the label's own
+   * anchor in the vertex stage — not per rendered text pixel — so a caption
+   * hides whole instead of half-cut. Default 0 leaves it inert — right for
+   * every producer whose `occludeWeight` is already 1.
    */
   readonly occludeNearKm?: number;
   /**

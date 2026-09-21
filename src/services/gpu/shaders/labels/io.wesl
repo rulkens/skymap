@@ -112,10 +112,13 @@ struct VsOut {
   // Converted CPU-side at the vertex stage so the fragment shader has
   // the value ready without re-deriving from per-label data.
   @location(4) outlineSdf: f32,
-  // Per-label share of the scene attenuation, forwarded from LabelData
-  // because labels[] is bound to the VERTEX stage only.  Constant per
-  // label, so interpolating it is exact.
+  // Per-label share of the scene attenuation.  'vsOcclude' resolves this to
+  // 'max(LabelData.occludeWeight, the anchor-depth verdict)' before writing
+  // it here; 'vs' forwards LabelData's own value unchanged.  Constant per
+  // label either way, so interpolating it is exact.
   @location(5) occludeWeight: f32,
-  // The sampled-depth channel's cutoff, forwarded for the same reason.
+  // Carried through for layout stability (the CPU writer's LABEL_DATA_BYTES
+  // stride).  'vsOcclude' already folds this into 'occludeWeight' above at
+  // the label's own anchor; the fragment stage no longer reads it per pixel.
   @location(6) occludeNearKm: f32,
 };

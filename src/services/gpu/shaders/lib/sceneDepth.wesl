@@ -50,6 +50,13 @@ fn sceneTransmittance(fragXY: vec2f) -> f32 {
  * which this never satisfies. The depth texture need not match the viewport
  * (the far placeholder is 1x1), so the texel is rescaled while the ray keeps
  * the fragment's own uv.
+ *
+ * Called from the VERTEX stage (`labels/vertexOcclude.wesl`,
+ * `markerLines/vertexOcclude.wesl`), once per subject, at that subject's own
+ * window position — not per rendered text/line pixel. A caption's rendered
+ * pixels sit wherever its lift places them on screen, which can be tens of km
+ * of relief away from the subject itself; judging occlusion there instead of
+ * at the subject reads the wrong ground.
  */
 fn sceneDepthOccludes(fragXY: vec2f, nearKm: f32) -> f32 {
   let texel = vec2i(fragXY * vec2f(textureDimensions(sceneDepthTex)) / depthFrame.viewportPx);

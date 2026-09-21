@@ -7,22 +7,23 @@
 // by 'sceneTransmittance' (lib/sceneDepth.wesl) — 0 under an opaque body, 1
 // over empty sky. This is the leader-line mirror of labels/fragmentOcclude.wesl;
 // the shading itself is the plain 'fs' entry's ('shadeLine', premultiplied, so
-// one scalar multiply dims colour and coverage together). 'occludeWeight' mixes
-// that rule in per instance for the same reason the captions carry one: a
-// connector whose subject is in FRONT of a body must not fade into its disc.
-// 'sceneDepthOccludes' is the second channel, seeing the terrain the analytic
-// spheres stop short of (labels/fragmentOcclude.wesl has the derivation).
+// one scalar multiply dims colour and coverage together).
+//
+// 'occludeWeight' carries the whole occlusion verdict now: the CPU's own-body
+// sphere test, maxed in the VERTEX stage (vertexOcclude.wesl) with the
+// sampled-depth channel's verdict at the connector's SUBJECT end — the second
+// channel that sees the terrain the analytic spheres stop short of at the
+// relief floor. Judged once per line at that one end, not once per fragment
+// along the connector.
 //
 // In the fragment stage the VsOut builtin-position field 'input.pos' holds the
 // framebuffer position: '.xy' is window pixels.
 
 import package::markerLines::io::VsOut;
 import package::markerLines::fragment::shadeLine;
-import package::lib::sceneDepth::sceneDepthOccludes;
 import package::lib::sceneDepth::sceneTransmittance;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  let weight = max(input.occludeWeight, sceneDepthOccludes(input.pos.xy, input.occludeNearKm));
-  return shadeLine(input) * mix(1.0, sceneTransmittance(input.pos.xy), weight);
+  return shadeLine(input) * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight);
 }

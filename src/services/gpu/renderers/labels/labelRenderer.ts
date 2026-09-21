@@ -79,6 +79,7 @@ import { layoutLabel } from '../../labelLayout/labelLayout';
 import { measureLabel } from '../../labelLayout/measureLabel';
 import type { LabelBBox } from '../../../../@types/rendering/LabelBBox';
 import vsCode from '../../shaders/labels/vertex.wesl?static';
+import vsOccludeCode from '../../shaders/labels/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/labels/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/labels/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -358,6 +359,16 @@ export function createLabelRenderer(
         fsOccludeCode,
         'labels.fragmentOcclude',
       );
+      // A SEPARATE vertex module, not 'vsModule' + a different entry point:
+      // vertexOcclude.wesl imports lib::sceneDepth, which statically pulls in
+      // group(1) bindings — vertex.wesl's 'vs' must stay clear of those for
+      // the plain pipeline's group(1)-less layout to accept it (see
+      // vertexOcclude.wesl's header).
+      const vsOccludeModule = createShaderModuleWithDevLog(
+        device,
+        vsOccludeCode,
+        'labels.vertexOcclude',
+      );
       occludePipeline = device.createRenderPipeline({
         label: 'label-pipeline-occlude',
         layout: device.createPipelineLayout({
@@ -365,7 +376,7 @@ export function createLabelRenderer(
           // group 0 = the label BGL; group 1 = the shared coverage joint.
           bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
-        vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+        vertex: { module: vsOccludeModule, entryPoint: 'vsOcclude', buffers: vertexBuffers },
         fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
         primitive: { topology: 'triangle-strip' },
       });
