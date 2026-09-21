@@ -123,7 +123,6 @@ fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
     outOutlineColor,
     outlineSdf,
     occludeWeight,
-    label.occludeNearKm,
   );
 }
 

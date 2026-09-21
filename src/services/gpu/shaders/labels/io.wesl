@@ -123,8 +123,4 @@ struct VsOut {
   // it here; 'vs' forwards LabelData's own value unchanged.  Constant per
   // label either way, so interpolating it is exact.
   @location(5) occludeWeight: f32,
-  // Carried through for layout stability (the CPU writer's LABEL_DATA_BYTES
-  // stride).  'vsOcclude' already folds this into 'occludeWeight' above at
-  // the label's own anchor; the fragment stage no longer reads it per pixel.
-  @location(6) occludeNearKm: f32,
 };

@@ -1,27 +1,12 @@
-// markerLines/vertexOcclude.wesl — the scene-attenuated variant of the
-// thick-line vertex stage, mirroring fragmentOcclude.wesl's role one stage
-// earlier (see labels/vertexOcclude.wesl, this file's twin, for the full
-// rationale — same fix, same module-split reason: importing
-// 'lib::sceneDepth' hoists its group(1) bindings, and the plain pipeline's
-// layout has none, so 'vs' (vertex.wesl) must stay clear of this file's
-// imports).
-//
-// The verdict is judged at the connector's SUBJECT end, not per rendered
-// line pixel. 'label2DDirector' synthesizes each caption's leader line with
-// 'fromWorld' near the subject (label2DDirector.applyLift lerps it off the
-// body's own anchor, clearing the rim by 'lineBottomLiftPx') and 'toWorld' at
-// the caption's own lifted position — the same point 'labels/vertexOcclude
-// .wesl' judges for the caption. Judging 'fromWorld' here means the
-// connector and its caption each answer for the end they actually draw
-// nearest to.
+// markerLines/vertexOcclude.wesl — the scene-attenuated thick-line vertex
+// stage, this file's twin to labels/vertexOcclude.wesl (same own-module
+// reason: no group(1) in the plain pipeline's layout). Judges the
+// connector's 'fromWorld' — the subject end — not per line pixel.
 
 import package::markerLines::io::VsIn;
 import package::markerLines::io::VsOut;
-// 'u' is imported, not redeclared: vertex.wesl already binds group(0)
-// binding(0), and 'expandMarkerLineQuad' below pulls that same declaration
-// into this linked module — a second '@group(0) @binding(0)' here would be a
-// SEPARATE naga global at the same slot, which a device (and naga) rejects
-// as a binding conflict, not a duplicate-but-equal declaration.
+// 'u' is imported, not redeclared: a second '@group(0) @binding(0)' here
+// would conflict with vertex.wesl's existing declaration.
 import package::markerLines::vertex::u;
 import package::markerLines::vertex::expandMarkerLineQuad;
 import package::lib::camera::worldToClip;

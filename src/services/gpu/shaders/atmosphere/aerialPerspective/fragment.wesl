@@ -74,41 +74,31 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
     return out;
   }
 
-  // GEOMETRY past the froxel far bound (or past the atmosphere top): the
-  // volume is 32x32 texels across the screen, so a column-dependent total
-  // there would blend across the limb silhouette (task 13). The shell's
-  // segment is per pixel and is what the outside limb already draws, so
-  // handing it this ray renders the inside limb like the outside one — its
-  // in-scatter is the sky-view LUT's whole-ray answer, its transmittance is to
-  // the pixel's own depth ('skyUv' in shell/fragment.wesl). 'tNear' is 0
-  // inside the shell, so the segment's front-body discard never fires here.
-  // The froxel branch below only ever runs for 'tEndKm < boundKm'.
   let tEnd = sceneRayDistance(in.uv, depth, u.invMvp, u.camPosLocal);
   let top = raySphere(u.camPosLocal, dir, PLANET_CENTER, 1.0);
   let tEndKm = tEnd * params.atmosphereTopKm;
   let boundKm = froxelSliceStartKm(textureDimensions(froxelInScatter).z, u.froxelSliceKm);
-  if (tEndKm >= boundKm || tEnd >= top.y) {
-    let s = sampleShellSegment(dir, tEnd, true);
-    out.transmit = vec4<f32>(s.transmit, 1.0);
-    out.emission = vec4<f32>(s.emission, 0.0);
-    out.hit = s.hit;
-    return out;
-  }
 
   // Same altitude every pixel this frame sees, but nothing in the bound
   // uniforms carries it as its own field: it is cheaper to re-derive from
   // 'u.camPosLocal'/'u.bottomRadius' per fragment than to grow the record for
   // one per-frame scalar. Below 'HANDOFF_HORIZON_START' the horizon is still
-  // short of the froxel bound, so no ray can see the seam; above
-  // 'HANDOFF_HORIZON_END' the shell alone reaches every geometry ray in
-  // frame, so the froxel reads below are skipped outright.
+  // short of the froxel bound, so no ray can see the seam.
   let viewHeight = length(u.camPosLocal);
   let horizonKm = sqrt(max(viewHeight * viewHeight - u.bottomRadius * u.bottomRadius, 0.0)) *
     params.atmosphereTopKm;
   let shellWeight =
     smoothstep(HANDOFF_HORIZON_START, HANDOFF_HORIZON_END, horizonKm / boundKm);
 
-  if (shellWeight >= 1.0) {
+  // Past the bound or past the top: the froxel volume is 32x32 texels across
+  // the screen, so a column-dependent total there would blend across the limb
+  // silhouette (task 13) — the shell's per-pixel segment is what the outside
+  // limb already draws, so handing it this ray renders the inside limb like
+  // the outside one. Weight 1: above 'HANDOFF_HORIZON_END' the horizon-reach
+  // blend already says the shell alone reaches every geometry ray in frame,
+  // so the froxel reads are skipped outright either way. 'tNear' is 0 inside
+  // the shell, so the segment's front-body discard never fires on this path.
+  if (tEndKm >= boundKm || tEnd >= top.y || shellWeight >= 1.0) {
     let s = sampleShellSegment(dir, tEnd, true);
     out.transmit = vec4<f32>(s.transmit, 1.0);
     out.emission = vec4<f32>(s.emission, 0.0);

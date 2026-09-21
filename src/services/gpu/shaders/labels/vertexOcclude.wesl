@@ -1,44 +1,13 @@
-// labels/vertexOcclude.wesl — the scene-attenuated variant of the MSDF
-// labels vertex stage, mirroring fragmentOcclude.wesl's role one stage
-// earlier.
-//
-// This is a SEPARATE module from vertex.wesl, not a branch inside 'vs',
-// because importing 'lib::sceneDepth' hoists its group(1) bindings into
-// whichever module calls into it — the plain pipeline's layout has no
-// group(1), so a vertex module that statically references those bindings
-// fails pipeline creation on a device. 'vs' (vertex.wesl) must therefore
-// never import this file's dependencies; 'vsOcclude' here is the only vertex
-// entry allowed to.
-//
-// ## Why the verdict moves here from the fragment stage
-//
-// Task 10's fragment-stage channel sampled scene depth under every rendered
-// TEXT pixel. A caption is lifted screen-up from its subject with a leader
-// line (label2DDirector's applyLift); where that lift lands can be tens of
-// km of relief away from the subject itself (Mars' limb bulges toward the
-// camera in exactly the "up" direction a caption lifts toward), so glyphs at
-// one end of a caption could sample nearer terrain than glyphs at the other
-// — a caption cut in half instead of shown or hidden as a whole. Judging the
-// verdict ONCE per label, here, replaces N per-pixel samples with one, so a
-// caption is either fully shown or fully hidden — see lib/sceneDepth.wesl's
-// 'sceneDepthOccludes' doc for the occluder-channel contract this folds in.
-//
-// The point judged is 'label.subjectPos', NOT the label's own 'worldPos':
-// a first attempt at this task judged 'worldPos', which for a LIFTED label
-// is the lifted screen-up point itself — still just one sample instead of
-// per-glyph, but the wrong point (it can stand over terrain nearer OR
-// farther than the actual subject, which a headless check caught: it hid
-// captions the old per-pixel code had shown correctly). 'subjectPos' is the
-// pre-lift anchor label2DDirector's applyLift carries alongside the lift for
-// exactly this — see io.wesl's LabelData.subjectPos doc.
+// labels/vertexOcclude.wesl — the scene-attenuated MSDF labels vertex
+// stage. It lives in its own module because a pipeline whose layout has no
+// group(1) rejects a vertex module that statically uses 'lib::sceneDepth'
+// bindings. The verdict is judged once at 'label.subjectPos', the
+// pre-lift point, since the lifted anchor can stand over other terrain.
 
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
-// 'u' and 'labels' are imported, not redeclared: vertex.wesl already binds
-// group(0) 0/1, and 'expandLabelQuad' below pulls that same declaration into
-// this linked module — a second '@group(0) @binding(0)' here would be a
-// SEPARATE naga global at the same slot, which a device (and naga) rejects
-// as a binding conflict, not a duplicate-but-equal declaration.
+// 'u' and 'labels' are imported, not redeclared: a second '@group(0)
+// @binding(0)' here would conflict with vertex.wesl's existing declaration.
 import package::labels::vertex::u;
 import package::labels::vertex::labels;
 import package::labels::vertex::expandLabelQuad;
