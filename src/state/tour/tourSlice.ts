@@ -1,7 +1,7 @@
 /**
  * tourSlice — the guided-tour runtime state, authored with inline Immer case
- * reducers. Single-writer: only the tour sagas dispatch these; the keyboard /
- * nav request actions (`advanceTour`, `prevBeat`, `togglePause`, `exitTour`)
+ * reducers. Single-writer: only `tourBody` dispatches these; the keyboard /
+ * nav request actions (`advanceTour`, `prevBeat`, `togglePause`, `exitTakeover`)
  * are reducer-less signals the sagas consume, then translate into the writes
  * here. Routing pause through the saga (not letting `togglePause` flip the flag
  * directly) is deliberate — it keeps `paused` from ever drifting from the
@@ -10,9 +10,10 @@
  * The slice holds only the irreducible facts (see `TourRuntimeState`): the
  * label, beat count, active caption, and dwell duration the overlay renders are
  * all DERIVED by `selectors` from `tourId` + `beatIndex` through the registry.
+ * Whether a tour is active lives on the `takeover` slice, not here.
  *
  * Reducer roles:
- *   - `tourStarted`  — a run begins: activate, record the id, reset to beat 0.
+ *   - `tourStarted`  — a run begins: record the id, reset to beat 0.
  *   - `beatChanged`  — a beat's establishing fly is starting: set the index and
  *                      clear `paused` (a fresh beat is never inherited-paused).
  *                      Does NOT bump the dwell nonce — the ring waits for the
@@ -30,7 +31,6 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import type { TourRuntimeState } from '../../@types/animation/tour/TourRuntimeState';
 
 const initialState: TourRuntimeState = {
-  active: false,
   tourId: '',
   beatIndex: 0,
   paused: false,
@@ -43,7 +43,6 @@ const tourSlice = createSlice({
   initialState,
   reducers: {
     tourStarted: (state, action: PayloadAction<{ tourId: string }>) => {
-      state.active = true;
       state.tourId = action.payload.tourId;
       state.beatIndex = 0;
       state.paused = false;
@@ -62,7 +61,6 @@ const tourSlice = createSlice({
       state.paused = action.payload;
     },
     tourEnded: (state) => {
-      state.active = false;
       state.tourId = '';
       state.beatIndex = 0;
       state.paused = false;

@@ -48,7 +48,7 @@ import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 export const NOOP_RECONCILE: ReconcileEffects = {
   requestRender: () => {},
   syncFades: () => {},
-  logCameraState: () => {},
+  logCameraState: () => null,
   applySwapFormat: () => {},
 };
 

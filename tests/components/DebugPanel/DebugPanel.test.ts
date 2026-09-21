@@ -12,11 +12,8 @@ import { createElement, type ReactNode, createRef } from 'react';
 import { Provider } from 'react-redux';
 import DebugPanel from '../../../src/components/DebugPanel/DebugPanel';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import {
-  selectDebugOverlays,
-  selectDisabledPasses,
-  selectGalaxyProvenance,
-} from '../../../src/state/settings/selectors';
+import { selectDebugOverlays, selectDisabledPasses } from '../../../src/state/settings/selectors';
+import { selectGalaxyProvenance } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { setDebugOverlay } from '../../../src/state/settings/core/debugSlice';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { startTour } from '../../../src/state/tour/tourActions';

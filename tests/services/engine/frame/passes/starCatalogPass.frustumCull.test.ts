@@ -19,7 +19,7 @@ import { DEFAULT_FOV_Y_RAD } from '../../../../../src/services/engine/camera/cam
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
-import { DEFAULT_STAR_SIZE_PX } from '../../../../../src/layers/starCatalog/settings/defaults';
+import { DEFAULT_STAR_SIZE_PX } from '../../../../../src/layers/starCatalog/state/defaults';
 import { STAR_SIZE_REF_PX, STAR_GLOW_MIN_PX } from '../../../../../src/data/starCullSlack';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';

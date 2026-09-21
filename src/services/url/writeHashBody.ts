@@ -55,13 +55,21 @@
  * ### The `typeof window` guard is load-bearing, not SSR insurance
  *
  * See `readHashBody` — same reason, and the same suite breaks without it.
+ *
+ * ### `mode`
+ *
+ * `'replace'` is for exactly one caller: the write saga's first settled
+ * publish after a boot read that applied a non-empty URL, canonicalizing an
+ * arrival (see `hashArrivalApplied`) in place instead of pushing over it.
  */
 
 import { readHashBody } from './readHashBody';
 
-export function writeHashBody(body: string): void {
+export function writeHashBody(body: string, mode: 'push' | 'replace'): void {
   if (typeof window === 'undefined') return;
   if (readHashBody() === body) return;
   const base = window.location.pathname + window.location.search;
-  window.history.pushState(null, '', body ? `${base}#${body}` : base);
+  const url = body ? `${base}#${body}` : base;
+  if (mode === 'replace') window.history.replaceState(null, '', url);
+  else window.history.pushState(null, '', url);
 }

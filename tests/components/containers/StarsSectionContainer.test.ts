@@ -21,7 +21,7 @@
  *    `selectStarCatalogSize(store.getState())` reflects the new value.
  *  - The Advanced star-brightness slider reflects the seeded
  *    `starCatalogs.brightness`, and moving it dispatches
- *    `setStarCatalogBrightness`, so `selectStarCatalogBrightness(store.getState())`
+ *    `setStarCatalogBrightness`, so `selectStarCatalogs(store.getState()).brightness`
  *    reflects the new value.
  *
  * Why assert on `store.getState()` rather than re-reading the DOM: RTK
@@ -38,11 +38,8 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import StarsSectionContainer from '../../../src/components/containers/StarsSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import {
-  selectStarCatalogs,
-  selectStarCatalogBrightness,
-} from '../../../src/state/settings/selectors';
-import { setStarCatalogBrightness } from '../../../src/layers/starCatalog/settings/starCatalogsSlice';
+import { selectStarCatalogs } from '../../../src/layers/starCatalog/state/starCatalogs/selectors';
+import { setStarCatalogBrightness } from '../../../src/layers/starCatalog/state/starCatalogs/slice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -150,6 +147,6 @@ describe('StarsSectionContainer', () => {
 
     fireEvent.keyDown(sliderByLabel(container, 'Star brightness'), { key: 'ArrowRight' });
 
-    expect(selectStarCatalogBrightness(store.getState())).toBeCloseTo(1.06);
+    expect(selectStarCatalogs(store.getState()).brightness).toBeCloseTo(1.06);
   });
 });

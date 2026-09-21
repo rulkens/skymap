@@ -55,17 +55,15 @@ import { memo, useCallback, useMemo } from 'react';
 import { shallowEqual } from 'react-redux';
 import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import {
-  selectStructureItems,
-  selectGalaxyCatalogItems,
-  selectStarCatalogItems,
-  selectBodyItems,
-  selectMilkyWayLabelEnabled,
-  selectConstellationsEnabled,
-  selectOrbitTrailsEnabled,
-} from '../../state/settings/selectors';
-import { setConstellationsEnabled } from '../../layers/constellations/settings/constellationsSlice';
-import { setOrbitTrailsEnabled } from '../../layers/body/settings/orbitTrailsSlice';
+import { selectStructureItems } from '../../layers/structure/state/structures/selectors';
+import { selectGalaxyCatalogItems } from '../../layers/galaxyCatalog/state/galaxyCatalogs/selectors';
+import { selectStarCatalogItems } from '../../layers/starCatalog/state/starCatalogs/selectors';
+import { selectBodyItems } from '../../layers/body/state/bodies/selectors';
+import { selectMilkyWayLabelEnabled } from '../../layers/milkyWay/state/milkyWay/selectors';
+import { selectConstellationsEnabled } from '../../layers/constellations/state/constellations/selectors';
+import { selectOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/selectors';
+import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';
+import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
 import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../../data/labels/sourceTypeByLabelCategory';

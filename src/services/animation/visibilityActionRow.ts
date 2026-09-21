@@ -19,24 +19,24 @@ import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import {
   setMilkyWayEnabled,
   setMilkyWayLabelEnabled,
-} from '../../layers/milkyWay/settings/milkyWaySlice';
-import { setFilamentsEnabled } from '../../layers/filaments/settings/filamentsSlice';
-import { setLocalBubbleEnabled } from '../../layers/localBubble/settings/localBubbleSlice';
-import { setOrbitTrailsEnabled } from '../../layers/body/settings/orbitTrailsSlice';
-import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/settings/volumesSlice';
-import { setFlowEnabled } from '../../layers/flow/settings/flowSlice';
-import { setConstellationsEnabled } from '../../layers/constellations/settings/constellationsSlice';
+} from '../../layers/milkyWay/state/milkyWay/slice';
+import { setFilamentsEnabled } from '../../layers/filaments/state/filaments/slice';
+import { setLocalBubbleEnabled } from '../../layers/localBubble/state/localBubble/slice';
+import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
+import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/state/volumes/slice';
+import { setFlowEnabled } from '../../layers/flow/state/flow/slice';
+import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
-} from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
-import { setStarCatalogLabelEnabled } from '../../layers/starCatalog/settings/starCatalogsSlice';
-import { setBodyLabelEnabled } from '../../layers/body/settings/bodiesSlice';
+} from '../../layers/galaxyCatalog/state/galaxyCatalogs/slice';
+import { setStarCatalogLabelEnabled } from '../../layers/starCatalog/state/starCatalogs/slice';
+import { setBodyLabelEnabled } from '../../layers/body/state/bodies/slice';
 import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
-} from '../../layers/structure/settings/structuresSlice';
-import { setZoneOfAvoidanceEnabled } from '../../layers/zoneOfAvoidance/settings/zoneOfAvoidanceSlice';
+} from '../../layers/structure/state/structures/slice';
+import { setZoneOfAvoidanceEnabled } from '../../layers/zoneOfAvoidance/state/zoneOfAvoidance/slice';
 
 type VisibilityActionRow = {
   readonly actions: (on: boolean, settings: EngineSettingsState) => readonly Action[];

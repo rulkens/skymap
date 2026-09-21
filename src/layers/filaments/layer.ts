@@ -6,7 +6,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { filamentsLayerSettings } from './settings/filamentsLayerSettings';
+import { filamentsLayerSettings } from './state/slices';
 import { FILAMENTS_SOURCE_ROWS } from './sources/filamentsSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';
