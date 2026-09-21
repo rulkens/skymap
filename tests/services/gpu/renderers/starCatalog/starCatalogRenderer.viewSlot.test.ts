@@ -15,7 +15,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createStarCatalogRenderer } from '../../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer';
 import { Source } from '../../../../../src/data/sources';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/StarCatalogRenderer';
+import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
 
 function mockDevice(): GPUDevice {
   return {

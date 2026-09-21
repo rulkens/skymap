@@ -41,7 +41,7 @@
  * the single source of truth for "do I understand this file?".
  */
 
-import type { StructureCatalog } from '../../@types/data/structure/StructureCatalog';
+import type { StructureCatalog } from '../../@types/data/structure/structureCatalog/StructureCatalog';
 
 // "CCAT" as a little-endian uint32:
 //   bytes in memory order: C=0x43, C=0x43, A=0x41, T=0x54

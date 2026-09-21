@@ -50,7 +50,7 @@
  * them as non-deep-linkable (the URL drain only resolves featured ids).
  */
 
-import type { StructureCatalogPayload } from '../../../@types/loading/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../../../@types/loading/structureCatalogPayload/StructureCatalogPayload';
 import type { StructureInfo } from '../../../@types/data/structure/StructureInfo';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import { minOf } from '../../../utils/math/minOf';
