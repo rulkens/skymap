@@ -19,11 +19,18 @@
 // camera in exactly the "up" direction a caption lifts toward), so glyphs at
 // one end of a caption could sample nearer terrain than glyphs at the other
 // — a caption cut in half instead of shown or hidden as a whole. Judging the
-// verdict ONCE per label, here, at its own anchor (the same worldPos 'vs'
-// already projects for placement) replaces N per-pixel samples with one,
-// so a caption is either fully shown or fully hidden — see
-// lib/sceneDepth.wesl's 'sceneDepthOccludes' doc for the occluder-channel
-// contract this folds in.
+// verdict ONCE per label, here, replaces N per-pixel samples with one, so a
+// caption is either fully shown or fully hidden — see lib/sceneDepth.wesl's
+// 'sceneDepthOccludes' doc for the occluder-channel contract this folds in.
+//
+// The point judged is 'label.subjectPos', NOT the label's own 'worldPos':
+// a first attempt at this task judged 'worldPos', which for a LIFTED label
+// is the lifted screen-up point itself — still just one sample instead of
+// per-glyph, but the wrong point (it can stand over terrain nearer OR
+// farther than the actual subject, which a headless check caught: it hid
+// captions the old per-pixel code had shown correctly). 'subjectPos' is the
+// pre-lift anchor label2DDirector's applyLift carries alongside the lift for
+// exactly this — see io.wesl's LabelData.subjectPos doc.
 
 import package::labels::io::VsIn;
 import package::labels::io::VsOut;
@@ -42,7 +49,7 @@ import package::lib::sceneDepth::sceneDepthOccludes;
 @vertex
 fn vsOcclude(input: VsIn) -> VsOut {
   let label = labels[input.labelIndex];
-  let clip = worldToClip(u.cam, label.worldPos.xyz);
+  let clip = worldToClip(u.cam, label.subjectPos.xyz);
 
   var verdict = 0.0;
   if (clip.w > 0.0) {

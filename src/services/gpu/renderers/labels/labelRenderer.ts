@@ -111,14 +111,17 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
  *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
  *   bytes 64..67  occludeWeight f32        — share of the scene attenuation
  *   bytes 68..71  occludeNearKm f32        — the sampled-depth channel's cutoff
+ *   bytes 80..95  subjectPos    vec4<f32>  — xyz = the depth verdict's own
+ *                                             world point (falls back to
+ *                                             worldPos), w unused
  *
- * The struct's vec4 members give it 16-byte alignment, so the array element
- * stride rounds 72 UP to 80 — the 8 trailing bytes are padding the CPU never
- * writes.  `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the
- * shader since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a
- * fresh vec4 for one scalar.
+ * The trailing vec4 needs 16-byte alignment, so bytes 72..79 are now genuine
+ * padding ahead of it (not slack) and the stride is 96, not 72 rounded up.
+ * `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the shader
+ * since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a fresh
+ * vec4 for one scalar.
  */
-const LABEL_DATA_BYTES = 80;
+const LABEL_DATA_BYTES = 96;
 
 /**
  * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
@@ -519,6 +522,7 @@ export function createLabelRenderer(
       //   [12..15] outlineColor (r*a, g*a, b*a, a)
       //   [16]     occludeWeight
       //   [17]     occludeNearKm        ([18..19] are struct padding)
+      //   [20..23] subjectPos   (x, y, z, 0 — the depth verdict's own point)
       const labelBase = li * (LABEL_DATA_BYTES / 4);
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
@@ -560,6 +564,14 @@ export function createLabelRenderer(
       // Default 0 leaves the sampled-depth channel inert: no scene texel is
       // nearer than the eye, and at weight 1 the `max` already saturates.
       labelBuf[labelBase + 17] = label.occludeNearKm ?? 0;
+
+      // Falls back to worldPos when unset (every label the director never
+      // lifts, where the two already coincide) — see Label2D.occludeSubjectPos.
+      const subjectPos = label.occludeSubjectPos ?? label.worldPos;
+      labelBuf[labelBase + 20] = subjectPos[0];
+      labelBuf[labelBase + 21] = subjectPos[1];
+      labelBuf[labelBase + 22] = subjectPos[2];
+      labelBuf[labelBase + 23] = 0; // w unused
 
       // Resolve the label's font to its GPU texture-array layer index
       // ONCE per label, outside the inner glyph loop — every glyph in

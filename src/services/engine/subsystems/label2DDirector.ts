@@ -694,6 +694,10 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       out.push({
         ...label,
         worldPos: placement.labelWorldPos,
+        // The depth-occlusion verdict must be judged where the SUBJECT is,
+        // not at the lifted caption's own worldPos above — 'anchor' is the
+        // pre-lift point, the same one 'leader.fromWorld' lerps from.
+        occludeSubjectPos: anchor,
         worldEmMpc: liftEmMpc,
         leader:
           placement.line === null

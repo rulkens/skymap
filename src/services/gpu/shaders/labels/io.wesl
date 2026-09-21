@@ -69,9 +69,15 @@ struct LabelData {
   occludeWeight: f32,
   // Eye to the subject's NEAR surface, km: the sampled-depth channel's cutoff
   // (lib/sceneDepth.wesl).  Bytes 68..71, taken out of the padding the struct's
-  // vec4 alignment already held, so 'LABEL_DATA_BYTES' in labelRenderer.ts
-  // stays 80.
+  // vec4 alignment already held.
   occludeNearKm: f32,
+  // World position the sampled-depth channel judges instead of 'worldPos':
+  // a LIFTED label's own worldPos sits screen-up over OTHER terrain than its
+  // subject (label2DDirector's applyLift), so occlusion is judged here
+  // instead.  xyz = world Mpc, same frame as worldPos; w unused (zero).
+  // Bytes 80..95 — bytes 72..79 are now genuine alignment padding ahead of
+  // this vec4, not slack; 'LABEL_DATA_BYTES' in labelRenderer.ts is 96.
+  subjectPos: vec4<f32>,
 };
 
 struct VsIn {
