@@ -45,6 +45,9 @@ export function selectCaptureTargets(
     for (const card of t.cards) {
       if (resolved.has(card.id)) continue;
       if (!isCapturableCopy(card)) continue;
+      // Tour cards have no pose to frame from yet — wiring a 'tour' CaptureTarget
+      // kind is a later task; skip rather than fabricate a focus/view shot.
+      if (card.action.kind === 'tour') continue;
       resolved.add(card.id);
       if (existing.has(card.id) && !force.includes(card.id)) continue;
       targets.push(

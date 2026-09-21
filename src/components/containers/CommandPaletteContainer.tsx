@@ -18,6 +18,7 @@ import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
 import { openView } from '../../state/views/viewActions';
+import { startTour } from '../../state/tour/tourActions';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { AppDispatch } from '../../store/types';
@@ -34,6 +35,10 @@ const RUN_ACTION: Record<
   view: (dispatch, action) => {
     if (action.kind !== 'view') return;
     dispatch(openView(action.viewId));
+  },
+  tour: (dispatch, action) => {
+    if (action.kind !== 'tour') return;
+    dispatch(startTour(action.tourId));
   },
 };
 

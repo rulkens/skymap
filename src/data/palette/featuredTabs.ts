@@ -670,4 +670,22 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       },
     ],
   },
+  {
+    id: 'tours',
+    label: 'Tours',
+    cards: [
+      {
+        id: 'grandTour',
+        label: 'The Long Way Out',
+        blurb: 'Coming soon',
+        action: { kind: 'tour', tourId: 'grandTour' },
+      },
+      {
+        id: 'webShowcase',
+        label: 'Named Cosmic Web',
+        blurb: 'Coming soon',
+        action: { kind: 'tour', tourId: 'webShowcase' },
+      },
+    ],
+  },
 ];
