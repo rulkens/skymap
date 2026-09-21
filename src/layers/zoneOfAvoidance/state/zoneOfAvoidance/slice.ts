@@ -6,17 +6,8 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_ZONE_OF_AVOIDANCE_ENABLED, DEFAULT_ZONE_OF_AVOIDANCE_TUNING } from '../defaults';
-import type { ZoneOfAvoidanceSettings } from '../../../../@types/settings/ZoneOfAvoidanceSettings';
+import { initialState } from './initialState';
 import type { ZoneOfAvoidanceTuning } from '../../../../@types/settings/ZoneOfAvoidanceTuning';
-
-// Zone of Avoidance is a singleton overlay layer like `milkyWay`: one
-// visibility toggle (band + lettering) plus the band's look knobs, read
-// from `DEFAULT_ZONE_OF_AVOIDANCE_TUNING`.
-const initialState: ZoneOfAvoidanceSettings = {
-  enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
-  ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
-};
 
 export const zoneOfAvoidanceSlice = createSlice({
   name: 'settings/zoneOfAvoidance',

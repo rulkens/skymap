@@ -7,12 +7,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import type { LocalBubbleSettings } from '../../../../@types/settings/LocalBubbleSettings';
-
-const initialState: LocalBubbleSettings = {
-  enabled: false,
-  intensity: 1,
-};
+import { initialState } from './initialState';
 
 export const localBubbleSlice = createSlice({
   name: 'settings/localBubble',

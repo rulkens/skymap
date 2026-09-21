@@ -6,46 +6,10 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { SOURCE_ENTRIES } from '../../../../data/sourceEntries';
-import {
-  DEFAULT_BRIGHTNESS,
-  DEFAULT_DEPTH_FADE_ENABLED,
-  DEFAULT_GALAXY_FALLOFF_STRENGTH,
-  DEFAULT_GALAXY_PROVENANCE,
-  DEFAULT_GALAXY_SB_MAX,
-  DEFAULT_GALAXY_SB_SCALE,
-  DEFAULT_POINT_SIZE_PX,
-} from '../defaults';
+import { initialState } from './initialState';
 import type { GalaxyCatalogId } from '../../../../@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { GalaxyCatalogItemSettings } from '../../../../@types/settings/GalaxyCatalogItemSettings';
-import type { GalaxyCatalogSettings } from '../../../../@types/settings/GalaxyCatalogSettings';
 import type { ProvenanceAxisId } from '../../../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../../../@types/settings/ProvenanceFilter';
-
-// Rows are DERIVED from the galaxy-catalog registry entries so they can't
-// drift from the galaxy catalog set — and, critically, each row's `enabled`
-// comes from that entry's `visible` field, making SOURCE_REGISTRY the single
-// source of truth for default visibility. The alternative — hardcoding
-// `enabled: true` — silently overrode a registry entry that asked to boot
-// hidden (DesiDeep's `visible: false`), so a default-off source came up drawn
-// anyway; reading `visible` closes that gap. `labelEnabled` is inert for
-// every galaxy catalog except famousGalaxy (the only one that renders a name
-// label) — uniformly true.
-const initialState: GalaxyCatalogSettings = {
-  sizePx: DEFAULT_POINT_SIZE_PX,
-  brightness: DEFAULT_BRIGHTNESS,
-  depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-  provenance: DEFAULT_GALAXY_PROVENANCE,
-  sbScale: DEFAULT_GALAXY_SB_SCALE,
-  sbMax: DEFAULT_GALAXY_SB_MAX,
-  falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
-  items: Object.fromEntries(
-    SOURCE_ENTRIES.filter((e) => e.type === 'galaxyCatalog').map((e) => [
-      e.id,
-      { enabled: e.visible, labelEnabled: true },
-    ]),
-  ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
-};
 
 export const galaxyCatalogsSlice = createSlice({
   name: 'settings/galaxyCatalogs',

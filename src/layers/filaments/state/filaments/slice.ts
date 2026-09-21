@@ -5,13 +5,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { Source, SOURCE_REGISTRY } from '../../../../data/sources';
-import type { FilamentsSettings } from '../../../../@types/settings/FilamentsSettings';
-
-const initialState: FilamentsSettings = {
-  enabled: SOURCE_REGISTRY[Source.Filaments].visible,
-  intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
-};
+import { initialState } from './initialState';
 
 export const filamentsSlice = createSlice({
   name: 'settings/filaments',

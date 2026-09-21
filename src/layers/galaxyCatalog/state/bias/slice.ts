@@ -6,17 +6,8 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_ABS_MAG_LIMIT, DEFAULT_BIAS_MODE } from '../defaults';
+import { initialState } from './initialState';
 import type { BiasMode } from '../../../../@types/data/galaxyCatalog/BiasMode';
-import type { BiasSettings } from '../../../../@types/settings/BiasSettings';
-
-// The -19 default is roughly where the SDSS spectroscopic main sample is
-// volume-complete out to the galaxy catalog's flux limit — bright enough that
-// nearly every catalog galaxy has a spectrum, dim enough to keep structure.
-const initialState: BiasSettings = {
-  mode: DEFAULT_BIAS_MODE,
-  absMagLimit: DEFAULT_ABS_MAG_LIMIT,
-};
 
 export const biasSlice = createSlice({
   name: 'settings/bias',

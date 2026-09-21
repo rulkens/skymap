@@ -2,13 +2,8 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_FLOW } from '../defaults';
+import { initialState } from './initialState';
 import type { FlowFieldDefaults } from '../../../../@types/data/flow/FlowFieldDefaults';
-import type { FlowSettings } from '../../../../@types/settings/FlowSettings';
-
-// No data-layer store — "loaded" is the asset slot's own `ready` state
-// (`slotReady(assetSlots.flow)`).
-const initialState: FlowSettings = { ...DEFAULT_FLOW };
 
 export const flowSlice = createSlice({
   name: 'settings/flow',

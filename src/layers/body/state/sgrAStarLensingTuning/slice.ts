@@ -2,12 +2,8 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from '../defaults';
+import { initialState } from './initialState';
 import type { SgrAStarLensingTuning } from '../../../../@types/settings/SgrAStarLensingTuning';
-
-// The Sgr A* lens knobs; see `SgrAStarLensingTuning` for the tier
-// breakdown and which module owns each default.
-const initialState: SgrAStarLensingTuning = { ...DEFAULT_SGR_A_STAR_LENSING_TUNING };
 
 export const sgrAStarLensingTuningSlice = createSlice({
   name: 'settings/sgrAStarLensingTuning',

@@ -1,20 +1,10 @@
 /**
- * zoneOfAvoidance — the Layer's user-settable defaults, seeding
- * `zoneOfAvoidanceSlice`: the visibility toggle plus the band's look knobs,
- * which are dialled live in the DebugPanel's tuning section.
+ * zoneOfAvoidance — the Layer's externally-read default, seeding
+ * `zoneOfAvoidanceSlice.initialState`'s tuning knobs and re-used by the
+ * DebugPanel's "paste defaults" affordance and its slider-field test.
  */
 
 import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
-
-/**
- * Zone-of-Avoidance overlay default — ON.  The galactic-plane dust band is
- * meant to be visible from first paint, explaining the catalog thin-out near
- * b=0 rather than leaving it looking like a data gap.  A plain `true` literal
- * like `DEFAULT_ORBIT_TRAILS_ENABLED`, not registry-derived like
- * `DEFAULT_MILKY_WAY_ENABLED`: `ZONE_OF_AVOIDANCE_ENTRY.visible` exists for
- * internal registry consistency but is not itself this default's source.
- */
-export const DEFAULT_ZONE_OF_AVOIDANCE_ENABLED: boolean = true;
 
 /**
  * Zone-of-Avoidance look-knob starting values, tuned live via the

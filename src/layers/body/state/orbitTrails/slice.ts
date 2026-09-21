@@ -2,15 +2,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_ORBIT_TRAILS_ENABLED } from '../defaults';
-import type { OrbitTrailsSettings } from '../../../../@types/settings/OrbitTrailsSettings';
-
-// Orbit-trails singleton overlay: the master gate on the near-field Keplerian
-// orbit trails, defaulting on (the trails are part of the baseline
-// solar-system scene). A flat `enabled` field like `milkyWay` / `filaments`.
-const initialState: OrbitTrailsSettings = {
-  enabled: DEFAULT_ORBIT_TRAILS_ENABLED,
-};
+import { initialState } from './initialState';
 
 export const orbitTrailsSlice = createSlice({
   name: 'settings/orbitTrails',
