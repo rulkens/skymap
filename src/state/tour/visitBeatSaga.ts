@@ -1,8 +1,8 @@
 /**
  * visitBeatSaga — the per-beat worker of the guided tour. Returns the outcome
  * the outer loop steers by: `'next'` (advance / auto-advance) or `'prev'`
- * (step back). `exitTour` is NOT handled here — it aborts the whole run via
- * `guidedTourSaga`'s outer race, which cancels this worker mid-flight.
+ * (step back). `exitTakeover` is NOT handled here — it aborts the whole run via
+ * `tourBody`'s outer race, which cancels this worker mid-flight.
  *
  * ### What each step does and why
  *

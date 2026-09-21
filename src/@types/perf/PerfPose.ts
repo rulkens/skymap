@@ -15,13 +15,9 @@
  * restate the default at every call site.
  */
 
-import type { Vec3 } from '../math/Vec3';
+import type { CameraPose } from '../camera/CameraPose';
 
-export type PerfPose = {
-  target: Vec3;
-  yaw: number;
-  pitch: number;
-  distance: number;
+export type PerfPose = CameraPose & {
   /** Per-frame yaw advance; omitted → the installer's PERF_AUTO_ROTATE_RATE fallback. */
   rate?: number;
   /**

@@ -51,6 +51,7 @@ import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
+import { selectTakeoverActive } from '../../state/takeover/selectors';
 import {
   selectPaletteOpen,
   selectUiHidden,
@@ -79,9 +80,13 @@ export function App(): React.ReactElement {
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
   // A running guided tour hides the whole HUD stack and mounts its own overlay
-  // (caption + nav). HUD-hidden-during-tour is DERIVED from `tour.active`, not a
-  // separate `setUiHidden` write — see guidedTourSaga's "no setUiHidden" note.
+  // (caption + nav); a view will do the same once ViewOverlay lands. HUD-hidden
+  // is DERIVED from `takeoverActive` (any takeover, tour or view), not a
+  // separate `setUiHidden` write — see runTakeover's module header. The overlay
+  // and beat rail below stay gated on `tourActive` specifically: they are tour
+  // chrome, not generic takeover chrome.
   const tourActive = useAppSelector(selectTourActive);
+  const takeoverActive = useAppSelector(selectTakeoverActive);
 
   // The full splash state surface lives in `SplashContainer` so its churn
   // re-renders only that subtree. App needs just one fact: whether the splash
@@ -127,7 +132,7 @@ export function App(): React.ReactElement {
       <div
         className={cx(
           appStyles.uiStack,
-          (uiHidden || splashVisible || tourActive) && appStyles.uiStackHidden,
+          (uiHidden || splashVisible || takeoverActive) && appStyles.uiStackHidden,
           selected != null && isMobile && appStyles.hasSelection,
         )}
       >
