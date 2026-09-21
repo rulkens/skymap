@@ -1,12 +1,9 @@
 /**
- * checkFrameOrder — the once-at-boot cross-check on `FRAME_ORDER`. Nothing
- * type-checks a pass/compute name or a target string, so each failure it
- * catches would otherwise be silent: a Layer that adds a pass or a compute row
- * and forgets the order line never runs, a name listed twice runs twice, a
- * mistyped target filters to nothing. Names no present Layer owns are NOT an
- * error — that is how a Layer left out of a composition is omitted. Nor is a
- * pass that only a capture line rosters — a probe's sky blit exists for the
- * capture alone.
+ * checkFrameOrder — the once-at-boot cross-check over every `ViewRig`'s
+ * program: catches a pass/compute a Layer contributes but no line draws, a
+ * name listed twice, or a mistyped target — all invisible to `tsc`.
+ * "Listed twice" is checked PER PROGRAM, so a section two rigs share
+ * (`PRELUDE`) is fine; "some program draws it" runs ACROSS every program.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
@@ -66,56 +63,69 @@ const STEP_FACTS: {
 };
 
 export function checkFrameOrder(
-  order: readonly FrameStepSpec[],
+  programs: readonly (readonly FrameStepSpec[])[],
   passes: readonly ContentPass[],
   computes: readonly ContentCompute[],
   targets: readonly Pick<RenderTargetSpec, 'id' | 'depth'>[],
 ): void {
-  const drawCount = new Map<string, number>();
-  // Separate from `drawCount`: a pass and a compute row may share a name on
-  // purpose (`'flow'` is both), which one map would misread as "listed twice".
-  const computeCount = new Map<string, number>();
+  const present = new Set(passes.map((pass) => pass.name));
+  const drawnAnywhere = new Set<string>();
+  const computedAnywhere = new Set<string>();
   const captured = new Set<string>();
   const touchedTargets: string[] = [];
   const sampled: string[] = [];
-  const present = new Set(passes.map((pass) => pass.name));
-  for (const spec of order) {
-    const factsOf = STEP_FACTS[spec.kind] as (s: FrameStepSpec) => StepFacts;
-    const facts = factsOf(spec);
-    // `expandFrameOrder` drops a render line none of whose passes is present, so
-    // its target — Layer-owned, left out with the Layer — is never touched.
-    const drops = spec.kind === 'render' && !facts.drawn.some((name) => present.has(name));
-    for (const name of facts.drawn) drawCount.set(name, (drawCount.get(name) ?? 0) + 1);
-    for (const name of facts.computed) computeCount.set(name, (computeCount.get(name) ?? 0) + 1);
-    for (const name of facts.captured) captured.add(name);
-    if (!drops) {
-      touchedTargets.push(...facts.targets);
-      sampled.push(...facts.sampled);
+
+  for (const order of programs) {
+    // Fresh per program: two rigs sharing a section (`PRELUDE`) each submit it
+    // in their own encoder, so only a repeat WITHIN one program is the silent
+    // double-draw this guards against — a pass/compute name may share both,
+    // on purpose (`'flow'` is both a compute and a pass), hence two maps.
+    const drawCount = new Map<string, number>();
+    const computeCount = new Map<string, number>();
+    for (const spec of order) {
+      const factsOf = STEP_FACTS[spec.kind] as (s: FrameStepSpec) => StepFacts;
+      const facts = factsOf(spec);
+      // `expandFrameOrder` drops a render line none of whose passes is present, so
+      // its target — Layer-owned, left out with the Layer — is never touched.
+      const drops = spec.kind === 'render' && !facts.drawn.some((name) => present.has(name));
+      for (const name of facts.drawn) {
+        drawCount.set(name, (drawCount.get(name) ?? 0) + 1);
+        drawnAnywhere.add(name);
+      }
+      for (const name of facts.computed) {
+        computeCount.set(name, (computeCount.get(name) ?? 0) + 1);
+        computedAnywhere.add(name);
+      }
+      for (const name of facts.captured) captured.add(name);
+      if (!drops) {
+        touchedTargets.push(...facts.targets);
+        sampled.push(...facts.sampled);
+      }
+    }
+    for (const [name, count] of drawCount) {
+      if (count > 1) {
+        throw new Error(`checkFrameOrder: pass '${name}' is listed on ${count} FRAME_ORDER lines`);
+      }
+    }
+    for (const [name, count] of computeCount) {
+      if (count > 1) {
+        throw new Error(
+          `checkFrameOrder: compute '${name}' is listed on ${count} FRAME_ORDER lines`,
+        );
+      }
     }
   }
 
   for (const pass of passes) {
-    const count = drawCount.get(pass.name) ?? 0;
-    if (count === 0 && !captured.has(pass.name)) {
+    if (!drawnAnywhere.has(pass.name) && !captured.has(pass.name)) {
       throw new Error(`checkFrameOrder: no FRAME_ORDER line draws contributed pass '${pass.name}'`);
-    }
-    if (count > 1) {
-      throw new Error(
-        `checkFrameOrder: pass '${pass.name}' is listed on ${count} FRAME_ORDER lines`,
-      );
     }
   }
 
   for (const compute of computes) {
-    const count = computeCount.get(compute.name) ?? 0;
-    if (count === 0) {
+    if (!computedAnywhere.has(compute.name)) {
       throw new Error(
         `checkFrameOrder: no FRAME_ORDER line runs contributed compute '${compute.name}'`,
-      );
-    }
-    if (count > 1) {
-      throw new Error(
-        `checkFrameOrder: compute '${compute.name}' is listed on ${count} FRAME_ORDER lines`,
       );
     }
   }

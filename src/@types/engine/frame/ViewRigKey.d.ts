@@ -1,4 +1,3 @@
-/** Which `ViewRig` the frame renders through — `state.viewRig`. `dome`'s
- *  program lands in a later dome-fisheye task; today it is a placeholder key
- *  the `dome-cube` render-target row's `allocateWhen` compares against. */
+/** Which `ViewRig` (`VIEW_RIGS`) the frame renders through — `state.viewRig`.
+ *  Seeded `'mono'`; nothing sets `'dome'` yet (a later task). */
 export type ViewRigKey = 'mono' | 'dome';

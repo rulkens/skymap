@@ -8,7 +8,7 @@
 
 import { runFrame } from '../frame/runFrame';
 import { checkFrameOrder } from '../frame/checkFrameOrder';
-import { FRAME_ORDER } from '../frame/frameOrder';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { CAMERA_DRIVERS } from '../camera/cameraDrivers';
 import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
 import { selectTimeState } from '../../../state/time/selectors';
@@ -23,9 +23,12 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
   }
   const phaseLocals = deps.phaseLocals;
 
-  // Against the ASSEMBLED rows: a freshly derived table would be a second answer.
+  // Against the ASSEMBLED rows: a freshly derived table would be a second
+  // answer. Every rig's program, not just the live `state.viewRig` — a pass
+  // only the dome rig draws must still pass boot before the user ever
+  // switches to it.
   checkFrameOrder(
-    FRAME_ORDER,
+    Object.values(VIEW_RIGS).map((rig) => rig.program.flatMap((section) => section.steps)),
     state.passes,
     state.computes,
     // Non-null: `runBootstrapPhases` awaits `initGpu`, which assigns it, first.
