@@ -75,13 +75,24 @@
  * action creators, or a bare predicate); collapsing them into the one form both
  * can spell (`.match` already is a predicate) deleted the fork and let a single
  * row mix named actions with a computed test, which `focus` now does.
+ *
+ * ### Canonicalizing an arrival instead of pushing over it
+ *
+ * A row that never writes (`pose`) can still arrive on the URL, so the boot
+ * read's settled body can differ from what the visitor followed in even
+ * though nothing is stale — pushing there would be a Back trap. The forked
+ * one-shot listener arms `canonicalizeArrival` from `hashArrivalApplied`
+ * (`watchHashReadSaga`, dispatched only for a non-empty boot read) and the
+ * NEXT debounce firing — whichever burst that turns out to be — spends it on
+ * one `replaceState` rather than a `pushState`.
  */
 
-import { debounce, call, select } from 'typed-redux-saga';
+import { debounce, call, select, fork, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { hashBodyFor } from './hashBodyFor';
+import { hashArrivalApplied } from './hashArrivalApplied';
 import { writeHashBody } from '../../services/url/writeHashBody';
 import type { RootState } from '../../store/types';
 
@@ -89,12 +100,28 @@ const isHashWrite = (action: Action): boolean =>
   HASH_PARAM_SOURCES.some((source) => source.writesOn.some((triggers) => triggers(action)));
 
 export function* watchHashWriteSaga() {
+  // A plain closure variable, not store state: it is consumed by the very
+  // next debounce firing regardless of which action's burst produced it, so a
+  // torn-read follow-up landing after `hashArrivalApplied` (seen in
+  // `hashHistoryIntegrity`) cannot un-arm it early or miss it late.
+  let canonicalizeArrival = false;
+  yield* fork(function* () {
+    yield* take(hashArrivalApplied.match);
+    canonicalizeArrival = true;
+  });
+
   yield* debounce(0, isHashWrite, function* () {
     // The whole state, because `write` takes `RootState` — the rows name the
     // selectors they need, so nothing here has to know which slices the hash
     // reads. Read AFTER the debounce window, so this is the state the burst
     // settled on rather than the state the trigger that opened it produced.
     const state = yield* select((s: RootState) => s);
-    yield* call(writeHashBody, hashBodyFor(state));
+    const mode = canonicalizeArrival ? 'replace' : 'push';
+    canonicalizeArrival = false;
+    const body = hashBodyFor(state);
+    // Wrapped rather than `call(writeHashBody, body, mode)`: typed-redux-saga's
+    // `call` overload resolution rejects a 2-arg target whose second parameter
+    // has a default, so a zero-arg closure sidesteps the inference entirely.
+    yield* call(() => writeHashBody(body, mode));
   });
 }

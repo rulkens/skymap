@@ -8,9 +8,9 @@
  * `pushState` would leave the location frozen and the compare-and-skip would look
  * broken for a reason that has nothing to do with the code.
  *
- * Not tested here: that `pushState` is used rather than `replaceState`. Vitest
- * cannot observe the history stack's depth, so the only assertion available would
- * be "the spy on pushState fired", which the skip test already implies.
+ * `mode: 'replace'` is exercised directly here (spy on `replaceState` calls
+ * through same as `pushState`'s), since it is now a parameter rather than an
+ * unobservable implementation choice.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } from 'vitest';
@@ -19,12 +19,14 @@ import { writeHashBody } from '../../../src/services/url/writeHashBody';
 
 describe('writeHashBody', () => {
   let pushState: MockInstance<History['pushState']>;
+  let replaceState: MockInstance<History['replaceState']>;
 
   beforeEach(() => {
     window.history.replaceState(null, '', '/');
     // Spy WITHOUT an implementation: vitest calls through, so the real jsdom
     // push still updates window.location for the next call to read.
     pushState = vi.spyOn(window.history, 'pushState');
+    replaceState = vi.spyOn(window.history, 'replaceState');
   });
 
   afterEach(() => {
@@ -57,5 +59,20 @@ describe('writeHashBody', () => {
 
     expect(window.location.search).toBe('?tour');
     expect(window.location.hash).toBe('#focus=m31');
+  });
+
+  it("calls replaceState, not pushState, when mode is 'replace'", () => {
+    writeHashBody('focus=m31', 'replace');
+
+    expect(replaceState).toHaveBeenCalledTimes(1);
+    expect(pushState).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe('#focus=m31');
+  });
+
+  it("still skips a redundant write under mode 'replace'", () => {
+    writeHashBody('focus=m31');
+    writeHashBody('focus=m31', 'replace');
+
+    expect(replaceState).not.toHaveBeenCalled();
   });
 });

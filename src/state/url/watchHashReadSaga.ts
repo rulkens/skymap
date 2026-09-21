@@ -73,6 +73,7 @@
 import { take, call, put } from 'typed-redux-saga';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
+import { hashArrivalApplied } from './hashArrivalApplied';
 import { createHashChangeChannel } from '../../services/url/createHashChangeChannel';
 import { readHashBody } from '../../services/url/readHashBody';
 import { parseHashParams } from '../../utils/url/parseHashParams';
@@ -118,7 +119,13 @@ export function* watchHashReadSaga() {
     // The boot read sits INSIDE the try. It is the pass most likely to throw —
     // it is the only one fed a URL nobody in this session composed — and a
     // throw outside would leave the DOM listener attached with no owner.
-    yield* call(applyHash, yield* call(readHashBody), true);
+    const arrivalBody = yield* call(readHashBody);
+    yield* call(applyHash, arrivalBody, true);
+    // A non-empty arrival may compose a DIFFERENT settled body than the URL
+    // carried in (e.g. `pose`, which never writes) — this signal is what lets
+    // the write half canonicalize that one publish with `replaceState` rather
+    // than pushing over the link the visitor followed.
+    if (arrivalBody) yield* put(hashArrivalApplied());
     while (true) {
       yield* call(applyHash, yield* take(channel), false);
     }

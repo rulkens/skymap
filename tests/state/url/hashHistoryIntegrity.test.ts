@@ -80,6 +80,24 @@ import { describe, it, expect, beforeEach, afterEach, vi, type MockInstance } fr
 
 import { createTestStore } from '../../support/createTestStore';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
+import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
+import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
+
+/**
+ * A body arm fixture for the `#pose=` arrival case below — `earth` rather
+ * than `mars` so `bodyId` needs no `BodyId` cast (see `decodeFramedPose`'s
+ * header on why most scene body ids do); the numbers are otherwise arbitrary,
+ * only the shape (a valid `b`-tagged, 17-field encode) matters.
+ */
+const EARTH_ARM: FramedCameraPose = {
+  frame: { body: 'earth' },
+  pose: {
+    bodyId: 'earth',
+    anchorLocalM: [0, 0, 0],
+    eyeRelAnchorM: [1000, 2000, 3000],
+    basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+  },
+};
 
 /** A macrotask, so the write saga's debounce window has closed. */
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -176,6 +194,22 @@ describe('hash history integrity', () => {
     // entries deep in a history they never navigated, every one of them the same
     // URL, and Back does nothing visible.
     expect(pushedHashes()).toEqual([]);
+  });
+
+  it('canonicalizes a #pose= arrival with replaceState instead of pushing', async () => {
+    // `pose` never writes (`poseSource.write` is `() => null`), so the
+    // settled body of this arrival omits it — a plain push here would be the
+    // Back trap: Back returns to this same URL, re-applies, and pushes again,
+    // truncating the forward stack on every visit. The arrival must instead
+    // be canonicalized IN PLACE.
+    const iso = '2000-01-01T12:00:00.000Z';
+    seedHash(`focus=body-mars&t=${iso}&pose=${encodeFramedPose(EARTH_ARM)}`);
+
+    boot();
+    await flush();
+
+    expect(pushedHashes()).toEqual([]);
+    expect(window.location.hash).not.toContain('pose=');
   });
 
   it('pushes exactly once for a selection the store makes on its own', async () => {
