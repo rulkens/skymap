@@ -108,7 +108,7 @@ function frustumFor(camPosPc: readonly [number, number, number]): StarCutFrustum
   // app prunes.
   const angularMarginRad = starCullMargins(SIZE_PX, pxPerRad).pick;
   const worldSpread = Math.max(1, sizeScale * GLOW_OVERLAP);
-  return { planesPc, viewCount: 1, angularMarginRad, worldSpread };
+  return { planesPc, angularMarginRad, worldSpread };
 }
 
 // ── Faithful replicas of the layer's partition + the renderer's pack ─────────

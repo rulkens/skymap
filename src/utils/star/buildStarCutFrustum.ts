@@ -5,14 +5,12 @@ import { STAR_SIZE_REF_PX } from '../../data/starCullSlack';
 import { SCALE_UNITS } from '../../data/scaleUnits';
 
 const cutPlanesMpcScratch = new Float32Array(24);
-// Inferred-mutable so the margins and the grow-only plane buffer can be
-// rewritten each frame.
-const cutFrustumScratch = {
-  planesPc: new Float64Array(24),
-  viewCount: 0,
-  angularMarginRad: 0,
-  worldSpread: 1,
-};
+// Grow-only backing buffer for `planesPc` — a capture/pick call carries one
+// view, the rig N, every frame, so reallocating on every shrink back to one
+// would thrash. The RETURNED `StarCutFrustum.planesPc` is a `subarray` of
+// this, sized to the call's live view count, minted fresh once per call (not
+// per node) — a small view object, not a copy of the plane data.
+let planesPcScratch = new Float64Array(24);
 
 /**
  * This frame's WALK off-screen-prune frustum, from every view's already-rebased
@@ -41,28 +39,25 @@ export function buildStarCutFrustum(
   glowOverlap: number,
 ): StarCutFrustum | null {
   if (rebasedVps.length === 0) return null;
-  // Grow-only: a capture/pick call carries one view, the rig N, every frame —
-  // reallocating on every shrink back to one would thrash. `viewCount` (not
-  // `planesPc.length`) tells the walk how much of the buffer is live.
-  if (cutFrustumScratch.planesPc.length < 24 * rebasedVps.length) {
-    cutFrustumScratch.planesPc = new Float64Array(24 * rebasedVps.length);
+  if (planesPcScratch.length < 24 * rebasedVps.length) {
+    planesPcScratch = new Float64Array(24 * rebasedVps.length);
   }
-  cutFrustumScratch.viewCount = rebasedVps.length;
-  const planesPc = cutFrustumScratch.planesPc;
   rebasedVps.forEach((rebasedVp, v) => {
     const planesMpc = frustumPlanesFromViewProj(rebasedVp, cutPlanesMpcScratch);
     // A plane test `n·p_mpc + d ≥ 0` with `p_mpc = p_pc · PC_TO_MPC` divides
     // through by `PC_TO_MPC`: unit normals carry over, only `d` rescales.
     for (let b = 0; b < 24; b += 4) {
-      planesPc[v * 24 + b] = planesMpc[b]!;
-      planesPc[v * 24 + b + 1] = planesMpc[b + 1]!;
-      planesPc[v * 24 + b + 2] = planesMpc[b + 2]!;
-      planesPc[v * 24 + b + 3] = planesMpc[b + 3]! * SCALE_UNITS.MPC_TO_PC;
+      planesPcScratch[v * 24 + b] = planesMpc[b]!;
+      planesPcScratch[v * 24 + b + 1] = planesMpc[b + 1]!;
+      planesPcScratch[v * 24 + b + 2] = planesMpc[b + 2]!;
+      planesPcScratch[v * 24 + b + 3] = planesMpc[b + 3]! * SCALE_UNITS.MPC_TO_PC;
     }
   });
-  // Pick, not leaf: this prune must never wrong-drop a node the pick pass
-  // would still floor to the clickable radius (see the header's PICK-SLACK FLOOR).
-  cutFrustumScratch.angularMarginRad = starCullMargins(sizePx, pxPerRad).pick;
-  cutFrustumScratch.worldSpread = Math.max(1, (sizePx / STAR_SIZE_REF_PX) * glowOverlap);
-  return cutFrustumScratch;
+  return {
+    planesPc: planesPcScratch.subarray(0, 24 * rebasedVps.length),
+    // Pick, not leaf: this prune must never wrong-drop a node the pick pass
+    // would still floor to the clickable radius (see the header's PICK-SLACK FLOOR).
+    angularMarginRad: starCullMargins(sizePx, pxPerRad).pick,
+    worldSpread: Math.max(1, (sizePx / STAR_SIZE_REF_PX) * glowOverlap),
+  };
 }

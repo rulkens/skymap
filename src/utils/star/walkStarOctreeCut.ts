@@ -132,10 +132,9 @@ export function walkStarOctreeCut(
     // conservative, only ever enlarges the sphere.
     const radius = edge * 0.8660254 * frustum!.worldSpread + dist * frustum!.angularMarginRad;
     const negR = -radius;
-    // Outside the union: outside SOME plane of EVERY view. Bounded by
-    // `viewCount`, not `planes.length` — the scratch is grow-only and may
-    // carry a wider capacity than this call's live view count.
-    for (let f = 0; f < frustum!.viewCount * 24; f += 24) {
+    // Outside the union: outside SOME plane of EVERY view. `planes.length` IS
+    // the live view count × 24 — a `subarray`, not a grow-only buffer read past.
+    for (let f = 0; f < planes.length; f += 24) {
       let outsideView = false;
       for (let b = f; b < f + 24; b += 4) {
         if (planes[b]! * cx + planes[b + 1]! * cy + planes[b + 2]! * cz + planes[b + 3]! < negR) {

@@ -7,14 +7,12 @@
 export type StarCutFrustum = {
   /**
    * Six unit-normalized `(nx, ny, nz, d)` planes PER VIEW — 24 floats each,
-   * inside is `n·p + d ≥ 0`, a node kept if ANY view keeps it. A grow-only
-   * scratch buffer (one capture/pick view vs a multi-view rig, every frame),
-   * so its `length` can exceed the live data: `viewCount` is the authoritative
-   * bound, never `planesPc.length / 24`.
+   * inside is `n·p + d ≥ 0`, a node kept if ANY view keeps it. A `subarray`
+   * over a grow-only backing buffer (one capture/pick view vs a multi-view
+   * rig, every frame), so `length` IS the live view count × 24 — never a
+   * separate field to fall out of step with it.
    */
   readonly planesPc: Float64Array;
-  /** Views actually written into `planesPc` this call — see `planesPc`. */
-  readonly viewCount: number;
   /** Leaf angular slack, radians of on-screen spill per parsec of distance. */
   readonly angularMarginRad: number;
   /** Aggregate glow spread as a half-diagonal multiplier (`≥ 1`). */
