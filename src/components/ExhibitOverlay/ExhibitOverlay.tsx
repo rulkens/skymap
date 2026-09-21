@@ -74,7 +74,7 @@ function ExhibitOverlay({
         <span className={styles.exitIcon}>
           <StopIcon />
         </span>
-        <span className={styles.exitLabel}>Exit exhibit</span>
+        <span className={styles.exitLabel}>Exit view</span>
         <span className={styles.exitKey}>Esc</span>
       </button>
     </div>
