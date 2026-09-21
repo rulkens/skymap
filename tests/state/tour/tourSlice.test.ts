@@ -18,16 +18,26 @@ import type { TourRuntimeState } from '../../../src/@types/animation/tour/TourRu
 import type { RootState } from '../../../src/store/types';
 
 const initial = (): TourRuntimeState => tourReducer(undefined, { type: '@@INIT' });
-const asState = (tour: TourRuntimeState): RootState => ({ tour }) as unknown as RootState;
+
+// `selectTourActive` (and everything derived from it) now reads the
+// `takeover` slice, not a boolean on `tour` — so a state fixture for the
+// selector tests needs both routes: `tour` for the id/beat bookkeeping,
+// `takeover` for whether it counts as "active". `tourId` is a plain string on
+// `TourRuntimeState`, hence the loose cast rather than threading `TourId`
+// through this fixture.
+const asState = (tour: TourRuntimeState, active: boolean): RootState =>
+  ({
+    tour,
+    takeover: { active: active ? { kind: 'tour', id: tour.tourId } : null },
+  }) as unknown as RootState;
 
 describe('tourSlice reducers', () => {
-  it('tourStarted activates, records the id, resets to beat 0', () => {
+  it('tourStarted records the id, resets to beat 0', () => {
     const s = tourReducer(
-      { active: false, tourId: '', beatIndex: 3, paused: true, dwellNonce: 7, dwellSec: 5 },
+      { tourId: '', beatIndex: 3, paused: true, dwellNonce: 7, dwellSec: 5 },
       tourStarted({ tourId: 'webShowcase' }),
     );
     expect(s).toEqual({
-      active: true,
       tourId: 'webShowcase',
       beatIndex: 0,
       paused: false,
@@ -40,7 +50,6 @@ describe('tourSlice reducers', () => {
     // The nonce must wait for the fly to land (dwellStarted), not move on the
     // fly start — otherwise the countdown ring would deplete during the fly.
     const before = {
-      active: true,
       tourId: 'webShowcase',
       beatIndex: 0,
       paused: true,
@@ -56,7 +65,6 @@ describe('tourSlice reducers', () => {
   it('dwellStarted bumps the nonce and records the dwell length', () => {
     const s = tourReducer(
       {
-        active: true,
         tourId: 'webShowcase',
         beatIndex: 1,
         paused: false,
@@ -73,7 +81,6 @@ describe('tourSlice reducers', () => {
   it('tourEnded returns to the inert initial state', () => {
     const s = tourReducer(
       {
-        active: true,
         tourId: 'webShowcase',
         beatIndex: 2,
         paused: true,
@@ -88,57 +95,37 @@ describe('tourSlice reducers', () => {
 
 describe('tour selectors', () => {
   it('selectActiveTour resolves from the registry only when active', () => {
-    expect(
-      selectActiveTour(
-        asState({
-          active: false,
-          tourId: 'webShowcase',
-          beatIndex: 0,
-          paused: false,
-          dwellNonce: 0,
-          dwellSec: 0,
-        }),
-      ),
-    ).toBeNull();
-    expect(
-      selectActiveTour(
-        asState({
-          active: true,
-          tourId: 'webShowcase',
-          beatIndex: 0,
-          paused: false,
-          dwellNonce: 0,
-          dwellSec: 0,
-        }),
-      ),
-    ).toBe(tourRegistry.webShowcase);
-  });
-
-  it('selectActiveTour returns null for an unknown id', () => {
-    expect(
-      selectActiveTour(
-        asState({
-          active: true,
-          tourId: 'nope',
-          beatIndex: 0,
-          paused: false,
-          dwellNonce: 0,
-          dwellSec: 0,
-        }),
-      ),
-    ).toBeNull();
-  });
-
-  it('selectTourBeatTitles maps beat titles with null for silent beats', () => {
-    const st = asState({
-      active: true,
+    const runtime: TourRuntimeState = {
       tourId: 'webShowcase',
       beatIndex: 0,
       paused: false,
       dwellNonce: 0,
       dwellSec: 0,
-    });
-    const titles = selectTourBeatTitles(st);
+    };
+    expect(selectActiveTour(asState(runtime, false))).toBeNull();
+    expect(selectActiveTour(asState(runtime, true))).toBe(tourRegistry.webShowcase);
+  });
+
+  it('selectActiveTour returns null for an unknown id', () => {
+    const runtime: TourRuntimeState = {
+      tourId: 'nope',
+      beatIndex: 0,
+      paused: false,
+      dwellNonce: 0,
+      dwellSec: 0,
+    };
+    expect(selectActiveTour(asState(runtime, true))).toBeNull();
+  });
+
+  it('selectTourBeatTitles maps beat titles with null for silent beats', () => {
+    const runtime: TourRuntimeState = {
+      tourId: 'webShowcase',
+      beatIndex: 0,
+      paused: false,
+      dwellNonce: 0,
+      dwellSec: 0,
+    };
+    const titles = selectTourBeatTitles(asState(runtime, true));
     expect(titles).toHaveLength(tourRegistry.webShowcase.beats.length);
     titles.forEach((title, i) => {
       expect(title).toBe(tourRegistry.webShowcase.beats[i]?.caption?.title ?? null);
@@ -146,31 +133,20 @@ describe('tour selectors', () => {
   });
 
   it('selectTourBeatTitles is empty when inactive and referentially stable across the run', () => {
-    expect(
-      selectTourBeatTitles(
-        asState({
-          active: false,
-          tourId: 'webShowcase',
-          beatIndex: 0,
-          paused: false,
-          dwellNonce: 0,
-          dwellSec: 0,
-        }),
-      ),
-    ).toEqual([]);
+    const inactiveRuntime: TourRuntimeState = {
+      tourId: 'webShowcase',
+      beatIndex: 0,
+      paused: false,
+      dwellNonce: 0,
+      dwellSec: 0,
+    };
+    expect(selectTourBeatTitles(asState(inactiveRuntime, false))).toEqual([]);
 
     // Different runtime states, same registry tour → the memo must hold the
     // array's identity, or the rail re-renders on every dispatch.
     const at = (beatIndex: number, paused: boolean) =>
       selectTourBeatTitles(
-        asState({
-          active: true,
-          tourId: 'webShowcase',
-          beatIndex,
-          paused,
-          dwellNonce: 0,
-          dwellSec: 0,
-        }),
+        asState({ tourId: 'webShowcase', beatIndex, paused, dwellNonce: 0, dwellSec: 0 }, true),
       );
     expect(at(0, false)).toBe(at(2, true));
   });
@@ -178,14 +154,10 @@ describe('tour selectors', () => {
   it('selectTourCanPrev is false on the first beat and when inactive', () => {
     const at = (beatIndex: number, active = true) =>
       selectTourCanPrev(
-        asState({
+        asState(
+          { tourId: 'webShowcase', beatIndex, paused: false, dwellNonce: 0, dwellSec: 0 },
           active,
-          tourId: 'webShowcase',
-          beatIndex,
-          paused: false,
-          dwellNonce: 0,
-          dwellSec: 0,
-        }),
+        ),
       );
     expect(at(0)).toBe(false);
     expect(at(1)).toBe(true);

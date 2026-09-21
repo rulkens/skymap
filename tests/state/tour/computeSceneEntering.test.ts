@@ -12,7 +12,7 @@ import { describe, it, expect } from 'vitest';
 
 import { computeSceneEntering } from '../../../src/state/tour/computeSceneEntering';
 import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
-import { captureSettings } from '../../../src/state/tour/captureSettings';
+import { captureSettings } from '../../../src/state/scene/captureSettings';
 import {
   all,
   fork,

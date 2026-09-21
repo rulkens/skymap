@@ -21,14 +21,16 @@ export function makeReconcileEffects(
     syncFades: () => syncVisibilityFades(state, { animate: true }),
     logCameraState: () => {
       const simDays = state.cameraRuntime.outputs.simDays;
+      const cam = liveRenderCamera(state);
       logCameraState(
-        liveRenderCamera(state),
+        cam,
         canvas,
         liveFocusRow(state.selectionRows.focus, simDays),
         simDays,
         state.subsystems.surfaceTiles?.getDebugSnapshot().subCamera ?? null,
         state.cameraRuntime.outputs.displayed,
       );
+      return cam === null ? null : { framed: state.cameraRuntime.outputs.displayed, simDays };
     },
     applySwapFormat: (desired) => applySwapFormat(state, desired),
   };

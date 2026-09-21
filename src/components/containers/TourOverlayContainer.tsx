@@ -8,8 +8,8 @@
  * presentational `TourOverlay` imports nothing from `store/` or `state/`.
  *
  * The four controls converge on the SAME tour signals the keyboard will dispatch
- * (`prevBeat` / `advanceTour` / `togglePause` / `exitTour`) — `pausableDwellSaga`
- * and `guidedTourSaga` are the single home that acts on them, so the button and
+ * (`prevBeat` / `advanceTour` / `togglePause` / `exitTakeover`) — `pausableDwellSaga`
+ * and `tourBody` are the single home that acts on them, so the button and
  * keyboard surfaces share one behaviour with no duplicated logic.
  *
  * App mounts this only while `selectTourActive` is true, so the container does
@@ -37,7 +37,8 @@ import {
   selectTourDwellNonce,
   selectTourCanPrev,
 } from '../../state/tour/selectors';
-import { prevBeat, advanceTour, togglePause, exitTour } from '../../state/tour/tourActions';
+import { prevBeat, advanceTour, togglePause } from '../../state/tour/tourActions';
+import { exitTakeover } from '../../state/takeover/takeoverActions';
 
 function TourOverlayContainer(): React.ReactElement {
   const caption = useAppSelector(selectTourCaption);
@@ -54,7 +55,7 @@ function TourOverlayContainer(): React.ReactElement {
   const onPrev = useCallback(() => dispatch(prevBeat()), [dispatch]);
   const onNext = useCallback(() => dispatch(advanceTour()), [dispatch]);
   const onTogglePause = useCallback(() => dispatch(togglePause()), [dispatch]);
-  const onExit = useCallback(() => dispatch(exitTour()), [dispatch]);
+  const onExit = useCallback(() => dispatch(exitTakeover()), [dispatch]);
 
   return (
     <TourOverlay

@@ -43,7 +43,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import StarsSection from '../SettingsPanel/StarsSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectStarCatalogs } from '../../state/settings/selectors';
+import { selectStarCatalogs } from '../../layers/starCatalog/state/starCatalogs/selectors';
 import { selectSourceCounts } from '../../state/engine/selectors';
 import {
   setStarCatalogEnabled,
@@ -56,7 +56,7 @@ import {
   setStarCatalogExposureFarX,
   setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
-} from '../../layers/starCatalog/settings/starCatalogsSlice';
+} from '../../layers/starCatalog/state/starCatalogs/slice';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';

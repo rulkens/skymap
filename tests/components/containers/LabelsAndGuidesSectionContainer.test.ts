@@ -50,13 +50,11 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import LabelsAndGuidesSectionContainer from '../../../src/components/containers/LabelsAndGuidesSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import {
-  selectStructureItems,
-  selectGalaxyCatalogItems,
-  selectMilkyWayLabelEnabled,
-  selectOrbitTrailsEnabled,
-  selectZoneOfAvoidanceEnabled,
-} from '../../../src/state/settings/selectors';
+import { selectStructureItems } from '../../../src/layers/structure/state/structures/selectors';
+import { selectGalaxyCatalogItems } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
+import { selectMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/state/milkyWay/selectors';
+import { selectOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/selectors';
+import { selectZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/selectors';
 import { zoneOfAvoidanceSettingsRow } from '../../../src/layers/zoneOfAvoidance/ui/zoneOfAvoidanceSettingsRow';
 import type { AppStore } from '../../../src/store/types';
 

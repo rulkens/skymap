@@ -35,21 +35,21 @@ import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { AppStore } from '../../../src/store/types';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import { setFilamentsEnabled } from '../../../src/layers/filaments/settings/filamentsSlice';
-import { setFlowEnabled } from '../../../src/layers/flow/settings/flowSlice';
+import { setFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/slice';
+import { setFlowEnabled } from '../../../src/layers/flow/state/flow/slice';
 import {
   setGalaxyCatalogVisible,
   setGalaxyCatalogLabelEnabled,
-} from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+} from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
-} from '../../../src/layers/structure/settings/structuresSlice';
-import { writeVolumeField } from '../../../src/layers/volume/settings/volumesSlice';
+} from '../../../src/layers/structure/state/structures/slice';
+import { writeVolumeField } from '../../../src/layers/volume/state/volumes/slice';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/layers/galaxyCatalog/settings/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../../src/layers/galaxyCatalog/state/defaults';
 
 // ── Fixtures ─────────────────────────────────────────────────────────────────
 

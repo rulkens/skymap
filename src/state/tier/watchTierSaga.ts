@@ -39,7 +39,7 @@ import { selectTier } from './selectors';
 import { captureGalaxyFocusIds } from '../selection/captureGalaxyFocusIds';
 import { SELECTION_WRITE_BY_SLOT } from '../selection/selectionWriteBySlot';
 import { updateSelectionHover } from '../selection/selectionSlice';
-import { setMilkyWayTuning } from '../../layers/milkyWay/settings/milkyWaySlice';
+import { setMilkyWayTuning } from '../../layers/milkyWay/state/milkyWay/slice';
 import { engineSourceCountReported } from '../engine/engineSlice';
 import { MILKY_WAY_STARS_PER_TIER } from '../../services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { RootState, SagaContext } from '../../store/types';

@@ -6,7 +6,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { galaxyCatalogLayerSettings } from './settings/galaxyCatalogLayerSettings';
+import { galaxyCatalogLayerSettings } from './state/slices';
 import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';

@@ -43,6 +43,7 @@ import { watchHashSaga } from '../../../src/state/url/watchHashSaga';
 import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { hashArrivalApplied } from '../../../src/state/url/hashArrivalApplied';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 const write = vi.mocked(writeHashBody);
@@ -106,7 +107,7 @@ describe('watchHashSaga', () => {
     register();
     await settle();
 
-    expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31')]);
+    expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31'), hashArrivalApplied()]);
   });
 
   it('holds the write half until the saga context is registered', async () => {

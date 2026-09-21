@@ -15,7 +15,8 @@
  *                    write because a row whose target hasn't moved costs
  *                    `applyIntent` one `targetOf` lookup, not a fade restart
  *   logCameraState — prints the current orbit-camera pose (debug aid, the
- *                    `l` key)
+ *                    `l` key) and returns the rendered pose + sim instant for
+ *                    the share-URL log, or null when the camera isn't ready
  *   applySwapFormat — reconfigures the swap chain to the given format and
  *                    rebuilds the renderers whose pipelines bake it (the HDR
  *                    display toggle and display-capability changes)
@@ -28,9 +29,11 @@
  * effect is added here.
  */
 
+import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
+
 export type ReconcileEffects = {
   requestRender: () => void;
   syncFades: () => void;
-  logCameraState: () => void;
+  logCameraState: () => { readonly framed: FramedCameraPose; readonly simDays: number } | null;
   applySwapFormat: (desired: GPUTextureFormat) => void;
 };
