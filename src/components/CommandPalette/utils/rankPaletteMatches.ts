@@ -94,9 +94,9 @@ export function rankPaletteMatches(
 
   // Views and tours are scored on their registry label alone — only a
   // registry row gets a search row (spec §7.4), so a focus card never
-  // duplicates the object it takes over to. `tourRegistry` includes `demo`,
-  // a developer-only tour; there is no "user-facing" flag on `Tour` to gate
-  // it out, so it gets a row like any other until one exists.
+  // duplicates the object it takes over to. `Tour.dev` tours are harnesses for
+  // the tour machinery and stay out of search; they remain launchable from the
+  // debug panel and by id.
   const viewScored: ScoredRow[] = Object.values(viewRegistry)
     .map<ScoredRow>((view) => {
       const raw = scoreFamousMatch({ id: view.id, names: [view.label], description: '' }, query);
@@ -105,6 +105,7 @@ export function rankPaletteMatches(
     .filter((s) => s.score > 0);
 
   const tourScored: ScoredRow[] = Object.values(tourRegistry)
+    .filter((tour) => tour.dev !== true)
     .map<ScoredRow>((tour) => {
       const raw = scoreFamousMatch({ id: tour.id, names: [tour.label], description: '' }, query);
       return { kind: 'tour', tour, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };

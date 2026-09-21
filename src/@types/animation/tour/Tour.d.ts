@@ -25,4 +25,11 @@ export type Tour = {
   readonly id: TourId;
   readonly label: string;
   readonly beats: readonly BeatData[];
+  /**
+   * A harness for exercising the tour machinery, not a thing to show anyone.
+   * Dev tours stay out of user-facing surfaces — today the palette's search
+   * rows — while still being launchable from the debug panel and by id.
+   * Absent means user-facing, so a new tour is public unless it says otherwise.
+   */
+  readonly dev?: boolean;
 };
