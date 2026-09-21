@@ -1,11 +1,7 @@
 /**
- * viewActions — the reducer-less signal a view's takeover starts on.
- *
- * `openView(id)` looks the id up in `viewRegistry` and runs `viewBody` under
- * `runTakeover({ kind: 'view', id })`, exactly as `startTour` does for tours
- * (`watchTakeoverSaga` picks up both via its `startRequests` loop). Ending a
- * view is `exitTakeover` (`state/takeover/takeoverActions.ts`), shared with
- * tours — a view has no start-specific teardown of its own.
+ * viewActions — `openView(id)`, the reducer-less signal `watchTakeoverSaga`
+ * picks up to start a view's takeover; `exitTakeover` ends it, shared with
+ * tours.
  */
 import { createAction } from '@reduxjs/toolkit';
 

@@ -1,7 +1,7 @@
 /**
  * View — a `viewRegistry` row: a scene takeover addressed by a pose rather than
- * a focus. `openView` (Task 6) applies `settings` via `mergeSnapshot`, flies to
- * `pose`, and shows `body` in the `ViewOverlay`; `runTakeover` owns restore.
+ * a focus. `openView` applies `settings` via `mergeSnapshot`, flies to `pose`,
+ * and shows `body` in the `ViewOverlay`; `runTakeover` owns restore.
  */
 
 import type { CameraPose } from '../camera/CameraPose';

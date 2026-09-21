@@ -42,7 +42,7 @@ function* waitingBody(): Generator {
 }
 
 describe('runTakeover', () => {
-  it('a view restores its settings and toggle changes on exit', async () => {
+  it('a view restores its settings changes on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
     store.dispatch(setVolumesEnabled(true));
 

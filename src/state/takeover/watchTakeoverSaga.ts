@@ -50,8 +50,13 @@ export function* watchTakeoverSaga() {
       source = { kind: 'view', id: view.id };
       body = () => viewBody(view);
     } else {
-      // `startRequests` is exhaustive over `[startTour, openView]`; unreachable.
-      continue;
+      // `take(startRequests)` widens `action` to `any` — typed-redux-saga
+      // can't narrow a `take` over a mixed-creator array — so this branch is
+      // load-bearing for `source`/`body`'s definite assignment below, not
+      // dead code. It should never actually run; if it does, silently
+      // `continue`-ing would leave `running`/`settled` pointing at the
+      // previous run while the user sees a takeover that never starts.
+      throw new Error(`watchTakeoverSaga: unrecognized start request: ${JSON.stringify(action)}`);
     }
 
     let markSettled = () => {};

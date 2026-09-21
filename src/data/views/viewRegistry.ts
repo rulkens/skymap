@@ -38,8 +38,8 @@ export const viewRegistry: Record<ViewId, View> = {
       milkyWay: MILKY_WAY_OFF,
     },
     // Same world bearing the shipped `cosmicFlows` clip's `start` frames the
-    // Local Group with (src/data/animation/clips/cosmicFlows.ts:74) — copied,
-    // not imported, since that field's type is `CameraPose | 'live'`.
+    // Local Group with — copied, not imported, since that field's type is
+    // `CameraPose | 'live'`.
     pose: { target: [0, -0.01, 0], yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
     body: [{ heading: 'Cosmic Flows', text: 'Coming soon — the user writes this view’s copy.' }],
   },
@@ -80,8 +80,8 @@ export const viewRegistry: Record<ViewId, View> = {
       },
     ],
   },
-  // PLACEHOLDER pose — awaiting the user's "copy view pose" capture (Task 10)
-  // before merge; target/yaw/pitch/distance below are stand-ins only.
+  // PLACEHOLDER pose — awaiting the user's "copy view pose" capture before
+  // merge; target/yaw/pitch/distance below are stand-ins only.
   solarSystem: {
     id: 'solarSystem',
     label: 'Solar System',
@@ -89,8 +89,8 @@ export const viewRegistry: Record<ViewId, View> = {
     pose: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 3e-9 },
     body: [{ heading: 'Solar System', text: 'Coming soon — the user writes this view’s copy.' }],
   },
-  // PLACEHOLDER pose — awaiting the user's "copy view pose" capture (Task 10)
-  // before merge; target/yaw/pitch/distance below are stand-ins only.
+  // PLACEHOLDER pose — awaiting the user's "copy view pose" capture before
+  // merge; target/yaw/pitch/distance below are stand-ins only.
   observableUniverse: {
     id: 'observableUniverse',
     label: 'Observable Universe',
