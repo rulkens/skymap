@@ -25,7 +25,8 @@ const VIEW: View = {
   label: 'Cosmic Flows',
   settings: { flow: { ...flowInitialState, enabled: true } },
   pose: { target: [0, -0.01, 0], yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
-  body: [{ heading: 'Cosmic Flows', text: 'test' }],
+  lede: 'test',
+  body: [{ kind: 'prose', heading: 'Cosmic Flows', text: 'test' }],
 };
 
 function buildStore(playClip: (clip: ClipData) => Promise<void>) {

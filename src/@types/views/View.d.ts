@@ -15,5 +15,7 @@ export type View = {
   /** Applied through `mergeSnapshot`; the takeover bracket restores it on exit. */
   settings: Partial<SettingsSnapshot>;
   pose: CameraPose;
+  /** The italic line under the title — the view's one-sentence claim. */
+  lede: string;
   body: readonly ViewSection[];
 };
