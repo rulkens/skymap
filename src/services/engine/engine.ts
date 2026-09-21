@@ -32,7 +32,6 @@ import { FOREGROUND_LABEL_DIRECTOR } from '../../data/labels/foregroundLabelDire
 import { produceMilkyWayLabel } from './presentation/produceMilkyWayLabel';
 import { produceStructureLabels } from './presentation/produceStructureLabels';
 import { produceSceneBodyCaptions } from './presentation/produceSceneBodyCaptions';
-import { produceConstellationCaptions } from './presentation/produceConstellationCaptions';
 import { createStructureFocusSubsystem } from './subsystems/structureFocusSubsystem';
 import { createClipPlayer } from './subsystems/clipPlayer';
 import { createClipPathInspector } from './subsystems/clipPathInspector';
@@ -175,7 +174,6 @@ export function createEngine(
       focusUniform: null,
       renderTargets: null,
       compositor: null,
-      constellationRenderer: null,
       envBrdfLut: null,
       // Read by buildSwapRenderers to rebuild the swap-format renderers on a later
       // format change without re-threading bootstrap deps.
@@ -303,7 +301,6 @@ export function createEngine(
       // Tier-aware like mcpm.
       polyphorm2Mrs: null,
       mcpmWorkbench: null,
-      constellations: null,
       bodyTextures: new Map(),
       // Keyed mesh-body family (whale, petunias, …), minted in wireSlots.
       // Empty map at construction — mirrors `bodyTextures`, un-keyed.
@@ -336,7 +333,8 @@ export function createEngine(
   // the director declutters by prominence otherwise. The constellation figure NAMES
   // are deliberately NOT here: their anchors sit at parsec distances, inside the
   // COSMO slab's fixed 0.01-Mpc near plane, so a label here could never draw — they
-  // register on `foregroundLabelDirector` (NEAR0) below.
+  // register on `foregroundLabelDirector` (NEAR0) from the constellations Layer,
+  // later in boot (`createLayers`).
   state.subsystems.cosmoLabelDirector.registerProducer({
     id: 'milkyWayLabel',
     produceLabels: produceMilkyWayLabel,
@@ -347,14 +345,11 @@ export function createEngine(
   });
 
   // Scene-body captions first so an equal-prominence tiebreak favours the
-  // navigation aid over the diffuse constellation overlay.
+  // navigation aid over the diffuse constellation overlay — the constellations
+  // Layer's own producer registers later, from `createLayers`, landing second.
   state.subsystems.foregroundLabelDirector.registerProducer({
     id: 'sceneBodyCaptions',
     produceLabels: produceSceneBodyCaptions,
-  });
-  state.subsystems.foregroundLabelDirector.registerProducer({
-    id: 'constellationCaptions',
-    produceLabels: produceConstellationCaptions,
   });
 
   // Orbit-controls attachment lives outside `inputBindings` because it needs a

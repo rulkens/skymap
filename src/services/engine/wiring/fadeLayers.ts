@@ -127,14 +127,6 @@ export const FADE_LAYERS = [
     seed: (s, id) => (s.structures.items[id].labelEnabled ? 1 : 0),
     intent: (s, id) => s.structures.items[id].labelEnabled,
   }),
-  fadeLayerRow({
-    key: 'constellations',
-    expand: () => [undefined],
-    handle: () => ({ kind: 'constellations' }),
-    seed: () => 0,
-    intent: (s) => s.constellations.enabled,
-    guard: (state) => state.gpu.constellationRenderer?.hasData() ?? false,
-  }),
   // The conic table is a compile-time constant with no asset slot, so no
   // demand-loaded guard and the seed follows the toggle: a default-on session must
   // not flash the trails in on frame 1.
