@@ -3,7 +3,7 @@
  * true-3D constellation stick-figure names, mirroring
  * `produceSceneBodyCaptions`: declutter, envelope, and lift run in
  * `label2DDirector`. Every figure shares ONE fade target this frame
- * (`constellationLayerOpacity`, the same home the stick-figure pass reads)
+ * (`constellationsFade`, the same home the stick-figure pass reads)
  * and is emitted even at target 0 — only a genuinely unloaded artifact
  * returns no candidates at all. No `lift` field: the anchor is empty space
  * at a figure centroid, not a body, so there is nothing to float a caption
@@ -19,8 +19,7 @@ import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DP
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
 import { constellationCaptions } from './constellationCaptions';
-import { constellationLayerOpacity } from './constellationLayerOpacity';
-import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
+import { constellationsFade } from './constellationsFade';
 import {
   CAPTION_PRIORITY,
   CAPTION_TIER_SCALE,
@@ -62,11 +61,9 @@ export function produceConstellationCaptions(
     if (captions.length === 0) return { labels: [], awake: false };
 
     const camPos = ctx.drawCamPos;
-    const constellationLayerFade = resolveLayerOpacity(state, ctx, { kind: 'constellations' });
-    // ORIGIN distance, not the per-anchor distance the body captions read:
-    // every figure shares this one heliocentric-band target.
-    const constellationCamDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
-    const fadeAlpha = constellationLayerOpacity(constellationCamDistMpc, constellationLayerFade);
+    // ORIGIN distance, not the per-anchor distance the body captions read —
+    // see `constellationsBand`.
+    const fadeAlpha = constellationsFade(state, ctx);
 
     const labels: Label2D[] = captions.map((label) => {
       const anchor: Vec3 = [
