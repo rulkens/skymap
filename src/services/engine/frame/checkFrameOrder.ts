@@ -60,6 +60,9 @@ const STEP_FACTS: {
   composite: (spec) => ({ ...NONE, targets: [spec.source, spec.dest] }),
   bloom: () => NONE,
   tonemap: (spec) => ({ ...NONE, targets: [spec.source, spec.dest] }),
+  // The dest is a VIEW's own output, not a named target row, so only the
+  // source enters the declared-target check.
+  copy: (spec) => ({ ...NONE, targets: [spec.source] }),
 };
 
 export function checkFrameOrder(

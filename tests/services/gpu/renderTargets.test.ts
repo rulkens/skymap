@@ -170,6 +170,51 @@ describe('createRenderTargets', () => {
     expect(() => targets.cubeViewOf('nope')).toThrow();
   });
 
+  // `layers` is independent of `fixedSizePx` — a canvas-scaled row (the
+  // dome-cube row) can carry array layers too, sized off the canvas like any
+  // other `scale: 1` row rather than a fixed declared size.
+  it('a canvas-scaled layered row allocates canvas-sized with one layer view per layer and reallocates on resize', () => {
+    const device = mockDevice();
+    const create = device.createTexture as ReturnType<typeof vi.fn>;
+    const layeredRow: RenderTargetSpec = {
+      id: 'layered-canvas',
+      format: 'rgba16float',
+      depth: null,
+      scale: 1,
+      layers: 5,
+      clearValue: { r: 0, g: 0, b: 0, a: 1 },
+    };
+    const targets = createRenderTargets(
+      device,
+      [...renderTargetRows(SWAP_FORMAT), layeredRow],
+      { width: 64, height: 64 },
+      stateWithDivisor(MW_DIVISOR),
+    );
+    const desc = create.mock.calls.find((c) => c[0].label === 'render-target-layered-canvas')![0];
+    expect(desc.size).toEqual({ width: 64, height: 64, depthOrArrayLayers: 5 });
+
+    // The default view spans the whole array (P4: `viewOf` of a non-6-layer
+    // row is still the WHOLE 2d-array view, not a per-layer one) — Task 3's
+    // cube sampling depends on this for any layer count, not just 6.
+    expect(targets.viewOf('layered-canvas')).toBeDefined();
+    // One single-layer view per layer, all distinct.
+    const layerViews = [0, 1, 2, 3, 4].map((layer) => targets.layerViewOf('layered-canvas', layer));
+    expect(new Set(layerViews).size).toBe(5);
+    expect(() => targets.layerViewOf('layered-canvas', 5)).toThrow();
+    // Not 6 layers — no cube view.
+    expect(() => targets.cubeViewOf('layered-canvas')).toThrow();
+
+    targets.reconcile(stateWithDivisor(MW_DIVISOR), { width: 128, height: 128 });
+    const resized = create.mock.calls
+      .filter((c) => c[0].label === 'render-target-layered-canvas')
+      .at(-1)![0];
+    expect(resized.size).toEqual({ width: 128, height: 128, depthOrArrayLayers: 5 });
+    const layerViewsAfter = [0, 1, 2, 3, 4].map((layer) =>
+      targets.layerViewOf('layered-canvas', layer),
+    );
+    for (const view of layerViewsAfter) expect(layerViews).not.toContain(view);
+  });
+
   it('a fixedSizePx row whose size is a function resolves it against live state, and reconcile reallocates when the resolved size moves', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
@@ -481,7 +526,7 @@ describe('createRenderTargets', () => {
   // copy-pasted from `hdr` keeping its a=1): `hdr`/`swap` are the only two
   // rows that clear opaque; every other row must clear to zero coverage so
   // its upsample/composite adds nothing for a fragment it didn't reach.
-  it('only hdr and swap clear to opaque alpha', () => {
+  it('only hdr, swap, and dome-cube clear to opaque alpha', () => {
     const targets = createRenderTargets(
       mockDevice(),
       renderTargetRows(SWAP_FORMAT),
@@ -489,7 +534,10 @@ describe('createRenderTargets', () => {
       stateWithDivisor(MW_DIVISOR),
     );
     for (const spec of targets.specs) {
-      const expectedAlpha = spec.id === 'hdr' || spec.id === 'swap' ? 1 : 0;
+      // dome-cube holds five DISPLAY-READY composited faces (each copied in
+      // whole, not accumulated into), same as hdr/swap.
+      const expectedAlpha =
+        spec.id === 'hdr' || spec.id === 'swap' || spec.id === 'dome-cube' ? 1 : 0;
       // Every row in this table is written as a `{r,g,b,a}` dict (never the
       // 4-tuple alternative `GPUColor` also allows), so this cast is safe.
       const clearValue = spec.clearValue as GPUColorDict;

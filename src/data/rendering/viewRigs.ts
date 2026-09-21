@@ -14,4 +14,11 @@ export const VIEW_RIGS: Readonly<Record<ViewRigKey, ViewRig>> = {
     views: () => null,
     program: [PRELUDE, SCENE, POST, OVERLAYS],
   },
+  // Placeholder: `ViewRigKey` needs 'dome' for the `dome-cube` render-target
+  // row's `allocateWhen` to typecheck. Nothing sets `state.viewRig` to 'dome'
+  // yet, so this never runs; the real face views + program are a later task.
+  dome: {
+    views: () => null,
+    program: [],
+  },
 };

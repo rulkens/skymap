@@ -390,6 +390,36 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         touched.add(dest);
         break;
       }
+      case 'copy': {
+        // Skip unless the source was drawn into this frame — same gate as
+        // 'composite'.
+        if (!touched.has(step.source)) break;
+        // A copy writes THIS view's own output (a dome face's `dome-cube`
+        // layer) and has no other destination — a missing `ctx.output` is a
+        // wiring bug, not a frame-skippable condition.
+        if (ctx.output === undefined) {
+          throw new Error('executeFrame: copy step has no view output');
+        }
+        const pass = encoder.beginRenderPass({
+          label: `copy-${step.source}`,
+          colorAttachments: [
+            {
+              view: ctx.output,
+              loadOp: 'clear',
+              clearValue: { r: 0, g: 0, b: 0, a: 1 },
+              storeOp: 'store',
+            },
+          ],
+        });
+        const compositor = state.gpu.compositor;
+        if (!compositor) {
+          throw new Error('executeFrame: compositor missing for copy step');
+        }
+        const dstFormat = ctx.snapshot.renderTargets.specOf(step.source).format;
+        compositor.draw(pass, viewFor(step.source, ctx, swapView), 'replace', null, dstFormat);
+        pass.end();
+        break;
+      }
       case 'bloom': {
         // The bloom sub-pipeline runs its own strictly-ordered passes (bright →
         // downsample×4 → upsample×4 → fold), so unlike a `'render'` step it does

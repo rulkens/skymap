@@ -47,4 +47,7 @@ export type FrameStep =
       | { target?: undefined; capture: CaptureFaceRef }
     ))
   | { kind: 'composite'; step: CompositeStep }
-  | { kind: 'bloom' };
+  | { kind: 'bloom' }
+  /** Draws `source` into THIS view's own `ctx.output` (a dome face's
+   *  `dome-cube` layer) — no blend, no tone. See `CopyStepSpec`. */
+  | { kind: 'copy'; source: string };
