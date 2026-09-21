@@ -10,7 +10,6 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ConstellationsRuntime } from '../@types/ConstellationsRuntime';
-import { NEAR0 } from '../../../services/engine/frame/slabs';
 import { rebaseViewProj } from '../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../utils/math/narrowMat4';
 import { constellationLayerOpacity } from '../present/constellationLayerOpacity';
