@@ -21,7 +21,7 @@ export function filamentsPass(runtime: FilamentsRuntime): ContentPass {
       // Either-or on purpose: the setting is intent, opacity is the visual state,
       // so a fade-out keeps drawing after the toggle flips off until it hits 0.
       if (state.settings.filaments.enabled) return true;
-      return state.subsystems.fades.opacityOf({ kind: 'filament' }, ctx.nowMs) > 0;
+      return state.subsystems.fades.opacityOf({ kind: 'filament' }, ctx.snapshot.nowMs) > 0;
     },
 
     draw(pass, view, ctx, state) {

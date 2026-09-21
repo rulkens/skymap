@@ -59,6 +59,18 @@ describe('MarkerLineRenderer occlusion variant', () => {
     expect(Array.from(pipelineLayouts[1]!.bindGroupLayouts)).toHaveLength(2); // occlusion
   });
 
+  it('draws the occlusion pipeline through vsOcclude, never vs — vs must stay clear of group(1)', () => {
+    // See labelRenderer.test.ts's twin: vertex.wesl's 'vs' cannot statically
+    // reference lib::sceneDepth's group(1) bindings, so the occlusion
+    // pipeline's vertex stage comes from the separate vertexOcclude.wesl
+    // module's 'vsOcclude' entry.
+    const { renderPipelines } = buildOccluding();
+    const plain = renderPipelines.find((p) => p.label === 'marker-line-pipeline');
+    const occlude = renderPipelines.find((p) => p.label === 'marker-line-pipeline-occlude');
+    expect(plain!.vertex.entryPoint).toBe('vs');
+    expect(occlude!.vertex.entryPoint).toBe('vsOcclude');
+  });
+
   it('blends the occlusion pipeline PREMULTIPLIED — the contract sceneTransmittance depends on', () => {
     // See labelRenderer.test.ts's twin for the mechanism: `shadeLine(...) *
     // sceneTransmittance(...)` is a scalar on premultiplied rgba, which only

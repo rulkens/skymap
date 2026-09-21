@@ -12,9 +12,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
-import { produceConstellationCaptions } from '../../../../src/services/engine/presentation/produceConstellationCaptions';
+import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
 import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
-import { constellationLayerOpacity } from '../../../../src/services/engine/presentation/constellationLayerOpacity';
+import { constellationLayerOpacity } from '../../../../src/layers/constellations/present/constellationLayerOpacity';
 import {
   sceneBodyLabels,
   sceneBodyLabelId,
@@ -32,8 +32,9 @@ import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -55,15 +56,17 @@ function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
 }
 
-function makeCtx(camPos: Vec3, distance = 5e-4): ReadyFrameContext {
+// 720-px viewport, fovY 1 rad, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
+
+function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
+    snapshot: { simDays: CONST_J2000, nowMs: 0 },
     cam: { distance },
     drawCamPos: camPos,
-    fovYRad: 1,
-    simDays: CONST_J2000,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
     canvasSize: { width: 1280, height: 720 },
-    nowMs: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**
@@ -442,33 +445,32 @@ describe('produceSceneBodyCaptions', () => {
 
     const layerFade = 0.5;
     const camPos: Vec3 = [5e-4, 0, 0];
-    const state = {
-      assetSlots: {
-        constellations: {
-          committed: () => ({
-            kind: 'ready' as const,
-            req: undefined,
-            loadedAtMs: 0,
-            value: {
-              version: 1 as const,
-              constellations: [{ name: 'Orion', labelAnchorPc: [1, 2, 3] as Vec3, segments: [] }],
-            },
-          }),
-        },
+    const runtime = {
+      slot: {
+        committed: () => ({
+          kind: 'ready' as const,
+          req: undefined,
+          loadedAtMs: 0,
+          value: {
+            version: 1 as const,
+            constellations: [{ name: 'Orion', labelAnchorPc: [1, 2, 3] as Vec3, segments: [] }],
+          },
+        }),
       },
+    } as unknown as ConstellationsRuntime;
+    const state = {
       subsystems: {
         fades: { opacityOf: () => layerFade },
         clipPlayer: { clipOpacityOf: () => 1 },
       },
     } as unknown as EngineState;
     const ctx = {
+      snapshot: { focusBlend: 0, nowMs: 0 },
       cam: { distance: 5e-4 },
       drawCamPos: camPos,
-      focusBlend: 0,
-      nowMs: 0,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
-    const out = produceConstellationCaptions(state, ctx);
+    const out = produceConstellationCaptions(runtime)(state, ctx);
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(constellationLayerOpacity(camDistMpc, layerFade));
   });
@@ -509,6 +511,30 @@ describe('produceSceneBodyCaptions occlude weight', () => {
     const whale = worldPosOf(WHALE_LABEL_ID);
     const camPos = step(whale, direction(EARTH_POS, whale), 200);
     expect(occludeWeightOf(camPos, WHALE_LABEL_ID)).toBe(0);
+  });
+
+  it('carries the subject’s NEAR-surface distance in km as the depth channel’s cutoff', () => {
+    // The sampled-depth channel compares a scene texel's distance against this.
+    // The subject's own front surface sits exactly AT it, so a body never
+    // occludes its own caption — which is why it is centre MINUS radius.
+    const moon = worldPosOf(MOON_LABEL_ID);
+    const camPos = step(EARTH_POS, direction(moon, EARTH_POS), 20000);
+    const label = produceSceneBodyCaptions(makeState(), makeCtx(camPos)).labels.find(
+      (l) => l.id === MOON_LABEL_ID,
+    )!;
+    const base = BASE.find((l) => l.id === MOON_LABEL_ID)!;
+    const centreMpc = Math.hypot(
+      base.worldPos[0] - camPos[0],
+      base.worldPos[1] - camPos[1],
+      base.worldPos[2] - camPos[2],
+    );
+    expect(label.occludeNearKm).toBeCloseTo(
+      (centreMpc - base.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
+      0,
+    );
+    // A subject the sphere test calls occluded keeps weight 1 — the two
+    // channels are independent, and the fragment takes whichever fires.
+    expect(label.occludeWeight).toBe(1);
   });
 
   it('keeps the per-pixel rule for a subject Earth really hides', () => {

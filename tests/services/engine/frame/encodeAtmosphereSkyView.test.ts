@@ -31,7 +31,7 @@ import { sunDirLocal } from '../../../../src/utils/camera/sunDirLocal';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
@@ -108,11 +108,14 @@ function makeBodyPose(eyeRelBodyM: Vec3): BodyPoseProvider {
     bodyId === 'earth' ? { eyeRelBodyM, basisM: [...IDENTITY_MAT3] as Mat3 } : null;
 }
 
+// 1080-px viewport, fovYRad π/4, tangent-exact.
+const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(Math.PI / 4 / 2));
+
 /**
- * The minimal ReadyFrameContext the encode reads: `bodyPose` (the M1 seam the
+ * The minimal FrameView the encode reads: `bodyPose` (the M1 seam the
  * camera altitude now derives from), `drawCamPos` + `cam.distance` (still read
  * by `atmosphereDrawList`'s OWN near-field + sub-pixel disc culls, decoupled
- * from the sky-view math itself), and `canvasSize` + `fovYRad` (that same
+ * from the sky-view math itself), and `drawPxPerRad` (that same
  * cull). `camDistance` defaults to 0 — inside the near-field edge, the common
  * Earth-framed path. `drawCamPos` is sized so Earth's disc resolves well above
  * sub-pixel, clearing the cull the bake shares with the draw.
@@ -121,14 +124,13 @@ function makeCtx(input: {
   bodyPose: BodyPoseProvider;
   drawCamPos?: Vec3;
   camDistance?: number;
-}): ReadyFrameContext {
+}): FrameView {
   return {
     bodyPose: input.bodyPose,
     drawCamPos: input.drawCamPos ?? DRAW_CAM_POS,
     cam: { distance: input.camDistance ?? 0 },
-    canvasSize: { width: 1920, height: 1080 },
-    fovYRad: Math.PI / 4,
-  } as unknown as ReadyFrameContext;
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 // Clears `atmosphereDrawList`'s sub-pixel disc cull — a few Earth radii off the

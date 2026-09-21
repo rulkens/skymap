@@ -16,30 +16,35 @@ import type { SurfaceTileBodyId } from '../../../@types/data/SurfaceTileBodyId';
 import type { BodyState } from '../../../@types/scene/BodyState';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
+import type { Vec2 } from '../../../@types/math/Vec2';
 
-import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
 import { cameraDofAnglesOf } from '../camera/cameraDofAnglesOf';
+import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
 import { runMarkerProducers } from './runMarkerProducers';
 import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
+import { deriveView } from './deriveView';
+import { frameContextInputOf } from './frameContextInputOf';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
 import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { advanceStarCut } from '../../gpu/renderers/starCatalog/cut/advanceStarCut';
+import { computeStarCut } from '../../gpu/renderers/starCatalog/cut/computeStarCut';
+import { advanceStarFades } from '../../gpu/renderers/starCatalog/cut/advanceStarFades';
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
 import { terrainHeightAtOf } from '../../../utils/surfaceTiles/terrainHeightAtOf';
 import { deriveSourceMasks } from './deriveSourceMasks';
 import { renderFrame } from './renderFrame';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { drawPickDebugOverlay } from './drawPickDebugOverlay';
 import { reevaluateDemand } from '../wiring/reevaluateDemand';
 import { computeScaleInfo } from '../helpers/scaleBar';
@@ -48,6 +53,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { focusDriverId } from '../../../utils/camera/focusDriverId';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
@@ -136,9 +142,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   for (const action of actions) deps.cb.store.dispatch(action);
   if (requestRender) state.subsystems.scheduler.requestRender();
 
-  const { displayed: renderPose, projection, upBasis } = next.outputs;
+  const upBasis = next.outputs.upBasis;
   const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
-  const pivotFocus = stored.selectionRows.focus;
 
   // The debug panel's Δ/peak columns, at FRAME rate: its 4 Hz poll averages
   // ~15 frames into one reading, which is precisely how a per-frame decay
@@ -158,15 +163,25 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
+  // The camera assembly + altitude line, shared with `pickFrameContext`:
+  // `nowMs`/`visibleSourceMask`/`poseBasis`/`upBasis`/`simDays` are the only
+  // fields the two callers vary on purpose; everything else reads off `state`
+  // identically — safe to call here because `state.cameraRuntime = next` above
+  // already made `state`'s view of the runtime THIS frame's.
+  const { input, cam } = frameContextInputOf(state, {
+    worldPose,
+    nowMs,
+    visibleSourceMask: masks.draw,
+    poseBasis,
+    upBasis,
+    simDays,
+  });
+
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
   // silently breaks the bar on retina.
   if (state.booted) {
-    const snap = {
-      distance: pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus),
-      fovYRad: projection.fovYRad,
-    };
     const scaleInfo = computeScaleInfo({
-      cam: snap,
+      cam: { distance: input.altitudeMpc, fovYRad: cam.fovYRad },
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
     });
@@ -175,24 +190,38 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
+  // This frame's one `renderedTargets` fact — minted here so `runFrame` can
+  // hand the SAME mutable `Set` to `renderFrame` below, while every pass sees
+  // only the narrower `ReadonlySet` riding `snapshot.renderedTargets`.
+  const renderedTargets = new Set<string>();
   // The 'not ready' branch is the window before cam + GPU handles populate.
-  const ctx = deriveFrameContext(
-    state,
-    deps.canvas,
-    worldPose,
-    renderPose,
-    projection,
-    poseBasis,
-    upBasis,
-    masks.draw,
-    nowMs,
-    simDays,
-  );
-  if (!ctx.isReady) {
+  const snapshot = deriveFrameContext(state, input, renderedTargets);
+  if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
     return;
   }
+
+  // The frame's views, once — mono is `[canvas]` itself. `deriveView` reads
+  // no stamp: focus/focusBlend/layersSettling live only on `snapshot`, reached
+  // by reference from every view, so this can run ahead of them. It must
+  // still run ahead of the view-dependent planners below (surface cut, star
+  // cut) so they can walk every view's frustum without re-deriving this per
+  // planner.
+  const canvas = deriveView(
+    snapshot,
+    cam,
+    mainViewSpec(cam, { width: deps.canvas.width, height: deps.canvas.height }),
+  );
+  // The rig hands back specs, not views (`ViewRig.views`'s doc): deriving them
+  // HERE, off the one `snapshot` every other view already shares, is what
+  // makes the shared-snapshot invariant structural rather than a rig author's
+  // promise.
+  const viewSpecs = VIEW_RIGS[state.viewRig].views(canvas, state);
+  const views =
+    viewSpecs === null || viewSpecs.length === 0
+      ? [canvas]
+      : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
 
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
@@ -201,8 +230,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusedStructure = focusRow !== null && focusRow.type === 'structure' ? focusRow : null;
   state.subsystems.structureFocus.update(focusedStructure, nowMs);
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
-  ctx.focusBlend = focusUniforms.blend;
-  ctx.focus = focusUniforms;
+  snapshot.focusBlend = focusUniforms.blend;
+  snapshot.focus = focusUniforms;
 
   // Each Layer's `frame` hook, in tuple order, right after the focus uniform
   // and before any planner. No short-circuit: every hook runs every frame, so a
@@ -211,24 +240,25 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   let layersSettling = false;
   for (const layer of state.layers) {
     if (layer.frame === null) continue;
-    const vote = layer.frame(ctx, state);
+    const vote = layer.frame(canvas, state);
     // `settling` is folded into `awake` here rather than trusted to each Layer,
     // so the implication holds structurally: content too unsettled to bake is
     // by definition still changing.
     if (vote.awake || vote.settling) layersAwake = true;
     if (vote.settling) layersSettling = true;
   }
-  ctx.layersSettling = layersSettling;
+  snapshot.layersSettling = layersSettling;
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
   // frame's snapshot is focused.
   if (publishBodyDistanceGate(nowMs)) {
     let focusedBodyDistanceMpc: number | null = null;
-    if (focusRow !== null && focusRow.type === 'body') {
-      const bodyState = sceneBodyStates(state, ctx).get(focusRow.id);
+    const focusId = focusDriverId(focusRow);
+    if (focusId !== null) {
+      const bodyState = sceneBodyStates(state, canvas).get(focusId);
       if (bodyState !== undefined) {
-        focusedBodyDistanceMpc = distanceMpc(ctx.drawCamPos, bodyState.positionMpc);
+        focusedBodyDistanceMpc = distanceMpc(canvas.drawCamPos, bodyState.positionMpc);
       }
     }
     deps.cb.store.dispatch(engineBodyDistanceReported(focusedBodyDistanceMpc));
@@ -241,7 +271,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // body `sceneBodyPartition` actually iterated, so its presence already
   // implies the body itself is seeded; no separate null check needed.
   const surfaceTiles = state.subsystems.surfaceTiles;
-  const surfaceTileSlab = ctx.slabs.find(
+  const surfaceTileSlab = canvas.slabs.find(
     (
       slab,
     ): slab is Slab & {
@@ -251,8 +281,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   if (surfaceTiles !== null && surfaceTileSlab !== undefined) {
     const bodyId = surfaceTileSlab.frame.bodyId;
     // The same slab view `earthPass.draw` samples into.
-    const surfaceTilesView = slabViewOf(ctx, surfaceTileSlab.index);
-    if (surfaceTilesEngaged(state, ctx, surfaceTilesView)) {
+    const surfaceTilesView = slabViewOf(canvas, surfaceTileSlab.index);
+    if (surfaceTilesEngaged(state, canvas, surfaceTilesView)) {
       // The tier off the COMMITTED texture slot, so a swap in flight cannot make
       // the planner believe in detail that is not on the GPU yet.
       const baseLevel = baseLevelForTier(bodyId, bodySurfaceTier(state, bodyId));
@@ -261,16 +291,33 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
       // nothing stale rather than last frame's cut.
       let cut: readonly SurfaceCutTile[] = [];
       if (params !== null) {
-        const prepared = prepareBodySurfaceFrame(state, ctx, surfaceTilesView);
+        const prepared = prepareBodySurfaceFrame(state, canvas, surfaceTilesView);
         if (prepared !== null) {
+          // Each view's own body slab vp AND viewport (mono: `canvas`'s, the
+          // memo hit above), so one cut and one fetch queue cover every view
+          // the frame draws — an XR eye sized differently than the main view
+          // scales its own NDC against its own target, not a shared one.
+          const rigViews: { viewProjLocal: Float64Array; viewportPx: Readonly<Vec2> }[] = [];
+          for (const view of views) {
+            const slab = view.slabs.find(
+              (s) => s.frame.kind === 'body-m' && s.frame.bodyId === bodyId,
+            );
+            if (slab === undefined) continue;
+            const viewSlabView = slabViewOf(view, slab.index);
+            const viewPrepared = prepareBodySurfaceFrame(state, view, viewSlabView);
+            if (viewPrepared !== null)
+              rigViews.push({
+                viewProjLocal: viewPrepared.mvpLocal,
+                viewportPx: viewSlabView.viewportPx,
+              });
+          }
           // One walk yields both the draw cut and the fetch requests.
           const result = cutSurfaceTiles({
             ...params,
             camPosLocalM: prepared.pose.eyeRelBodyM,
-            viewProjLocal: prepared.mvpLocal,
+            views: rigViews,
             radiusM: prepared.radiusM,
             reliefM: prepared.body.surface.reliefM,
-            viewportPx: surfaceTilesView.viewportPx,
             residentSlot: surfaceTiles.residentSlot,
           });
           cut = result.cut;
@@ -289,39 +336,35 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // Before the GPU dispatch (they upload the label buffers). Three statements,
   // not `a() || b() || c()`: each call FLUSHES as a side effect and `||`
   // short-circuits.
-  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, ctx);
-  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, ctx);
-  const label3DAnimating = runLabel3DProducers(state, ctx);
+  const cosmoLabelsAnimating = state.subsystems.cosmoLabelDirector.runFrame(state, canvas);
+  const nearLabelsAnimating = state.subsystems.foregroundLabelDirector.runFrame(state, canvas);
+  const label3DAnimating = runLabel3DProducers(state, canvas);
   const labelsAnimating = cosmoLabelsAnimating || nearLabelsAnimating || label3DAnimating;
 
-  // ── Star-cut planner (advances the LOD fades, primes the per-ctx memo) ────
+  // ── Star-cut planner (advances the LOD fades, one cut for every view) ─────
   //
-  // Advance the survey-star per-node LOD fades ONCE here, as a planner peer of
-  // the disk/label planners above — the ONLY call in a real frame that mutates
-  // the fade ramps (see `advanceStarCut`'s own doc). Two reasons it lives at
-  // frame-body level rather than only inside the star draw:
-  //   1. The three star layers (leaf / aggregate / upsample) call the READ-ONLY
-  //      `readStarCut` during the GPU dispatch, which hits the per-ctx memo
-  //      this primes — so the walk still runs exactly once for the frame.
-  //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
-  //      wake vote used to fire from inside the pass (a `requestRender` scattered
-  //      away from the single authority); now the pass computes the vote and
-  //      `shouldKeepTicking` decides.
-  // `advanceStarCut` is a no-op returning null when the star pass isn't live
-  // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  const starCut = advanceStarCut(state, ctx);
+  // A planner peer of the disk/label planners above: `advanceStarFades` is the
+  // ONLY call in a real frame that steps the survey-star fade ramps, and its
+  // vote feeds the keep-ticking predicate below. The cut itself is handed to
+  // the renderer as a value (`setFrameCut`, mirrors `surfaceTiles.setLastCut`),
+  // so every rig view's `starCutFor` reads the one cut. `computeStarCut`'s
+  // header states the `views[0]`-is-anchor contract both calls share.
+  const starFadeAnimating = advanceStarFades(state, views);
+  state.gpu.starCatalogRenderer?.setFrameCut(computeStarCut(state, views));
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {
-    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, ctx));
+    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, canvas));
   }
 
   renderFrame({
-    ctx,
+    canvas,
+    views,
     state,
     device: deps.device,
     context: deps.context,
     timingService: deps.timingService,
+    renderedTargets,
   });
 
   // After the submit as a latency choice only; it owns its own encoder with
@@ -333,7 +376,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
-    starFadeAnimating: starCut?.anyNodeFading ?? false,
+    starFadeAnimating,
     surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,

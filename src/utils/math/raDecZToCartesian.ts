@@ -39,11 +39,7 @@ import { redshiftToDistanceMpc } from './redshiftToDistanceMpc';
  * @param decDeg Declination in degrees, [-90, +90].
  * @param z      Redshift (dimensionless). z = 0 returns the origin.
  */
-export function raDecZToCartesian(
-  raDeg: number,
-  decDeg: number,
-  z: number,
-): Vec3 {
+export function raDecZToCartesian(raDeg: number, decDeg: number, z: number): Vec3 {
   const d = redshiftToDistanceMpc(z);
   // Math.cos / Math.sin take radians; SDSS gives us degrees.
   const ra = (raDeg * Math.PI) / 180;

@@ -1,4 +1,3 @@
-// src/components/AutoRotateToggle/PauseIcon.tsx
 /**
  * PauseIcon — two rounded vertical bars. Inherits currentColor from
  * its parent button.

@@ -36,7 +36,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PassState } from '../../../../../src/@types/engine/frame/PassState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
@@ -136,15 +136,17 @@ const PASS_STUB = {
   draw: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
-function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+
+function makeCtx(camPos: Readonly<Vec3>): FrameView {
   return {
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
-    fovYRad: Math.PI / 3,
-    canvasSize: { width: 1280, height: 720 },
-  } as unknown as ReadyFrameContext;
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 /** A SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT

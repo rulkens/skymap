@@ -1,4 +1,3 @@
-// src/components/containers/ClipTriggersSectionContainer.tsx
 /**
  * ClipTriggersSectionContainer — store boundary for the clips + tours trigger
  * controls.

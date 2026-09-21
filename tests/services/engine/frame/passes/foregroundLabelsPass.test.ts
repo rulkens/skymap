@@ -17,7 +17,7 @@ import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregr
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
@@ -26,10 +26,21 @@ import type { Label2DProducer } from '../../../../../src/@types/engine/subsystem
 
 const PASS_STUB = { draw: vi.fn() } as unknown as GPURenderPassEncoder;
 
-// `draw` no longer reads its `view` argument — the projection comes from
-// `near0LabelProjection(ctx)` instead (the shared lookup the director itself
-// uses) — so every test hands it an otherwise-empty stub.
-const VIEW_STUB = {} as unknown as SlabView;
+// `draw` reads its `view` argument for ONE thing — the sampled depth the
+// occlusion joint binds. The projection comes from `near0LabelProjection(ctx)`
+// instead (the shared lookup the director itself uses), so the stub carries
+// nothing else. A null row leaves the frame unresolved, which is what pins the
+// far-placeholder pairing below.
+const VIEW_STUB = {
+  sampledDepth: { view: {} as GPUTextureView, row: null },
+} as unknown as SlabView;
+
+// `ctx.renderTargets`' two views, distinct objects so the pairing is provable.
+const COLOR_VIEW = {} as GPUTextureView;
+const FAR_DEPTH_VIEW = {} as GPUTextureView;
+
+// What both renderers must receive as their occlusion joint.
+const SCENE_STUB = { colorView: COLOR_VIEW, depthView: FAR_DEPTH_VIEW, frame: null };
 
 function makeRenderer(glyphCount: number): LabelRenderer {
   return {
@@ -87,16 +98,18 @@ function makeState(
 // tests (which don't animate); the gate test below steps it explicitly, and
 // builds a FRESH ctx object per frame — `near0LabelProjection` memoises per
 // ctx identity, matching how `runFrame` mints a new ctx every frame for real.
-function makeCtx(nowMs = 0): ReadyFrameContext {
+function makeCtx(nowMs = 0): FrameView {
   const slab: Slab = makeSlab();
   return {
+    snapshot: {
+      nowMs,
+      renderTargets: { viewOf: () => COLOR_VIEW, farDepthView: () => FAR_DEPTH_VIEW },
+      renderedTargets: new Set(['foreground:0']),
+    },
     slabs: [slab],
     drawCamPos: [2, 3, 5],
     canvasSize: { width: 1280, height: 720 },
-    nowMs,
-    renderTargets: { viewOf: () => ({}) as GPUTextureView },
-    renderedTargets: new Set(['foreground:0']),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 describe('foregroundLabelsPass.enabled', () => {
@@ -178,7 +191,12 @@ describe('foregroundLabelsPass.draw', () => {
     const projection = near0LabelProjection(ctx);
     const drawSpy = renderer.draw as unknown as ReturnType<typeof vi.fn>;
     expect(drawSpy).toHaveBeenCalledTimes(1);
-    expect(drawSpy.mock.calls[0]).toEqual([PASS_STUB, projection.vpF32, projection.viewportPx, {}]);
+    expect(drawSpy.mock.calls[0]).toEqual([
+      PASS_STUB,
+      projection.vpF32,
+      projection.viewportPx,
+      SCENE_STUB,
+    ]);
   });
 
   it('draws the leader-line renderer through the same shared projection, before the labels', () => {
@@ -203,7 +221,7 @@ describe('foregroundLabelsPass.draw', () => {
       PASS_STUB,
       projection.vpF32,
       projection.viewportPx,
-      {},
+      SCENE_STUB,
     ]);
     expect(order).toEqual(['line', 'label']);
   });

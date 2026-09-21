@@ -39,6 +39,7 @@ import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { COSMO } from '../slabs';
 import { selectionHalo } from '../../helpers/selectionHaloTable';
 import { selectionRingRadiusPx } from '../../helpers/selectionRingRadiusPx';
+import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 
 export const selectionRingPass: ContentPass = {
   name: 'selection-ring',
@@ -75,15 +76,6 @@ export const selectionRingPass: ContentPass = {
       state.settings.galaxyCatalogs.sizePx,
     );
 
-    // Occlude the ring per-pixel behind an opaque body ONLY when the body pass
-    // actually ran this frame — else the `foreground:0` colour is stale/absent
-    // and would spuriously blank the whole ring. When undefined, the
-    // occlusion renderer falls back to its plain pipeline and draws the ring
-    // un-occluded. Mirrors `markerLinesPass`'s guard.
-    const colorView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.viewOf('foreground:0')
-      : undefined;
-
     state.gpu.selectionRingRenderer!.draw(
       pass,
       view.vp,
@@ -91,7 +83,9 @@ export const selectionRingPass: ContentPass = {
       // Opaque: the overflow fade the NEAR0 sibling rides is about a subject
       // that fills the viewport, which a COSMO galaxy at Mpc range never does.
       { worldPos, ringRadiusPx, alpha: 1 },
-      colorView,
+      // The ring has no per-subject weight, so handing this over IS the
+      // verdict: it attenuates wherever the coverage says a body covers it.
+      overlaySceneOcclusion(ctx, view),
     );
   },
 };

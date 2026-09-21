@@ -1,6 +1,6 @@
 /**
  * ViewSlotUniformRing — a fixed-size uniform buffer, multiplexed across the
- * frame's view slots (`ReadyFrameContext.viewSlot`) so a sky-cubemap capture
+ * frame's view slots (`FrameView.viewSlot`) so a sky-cubemap capture
  * sweep's several `draw()` calls (different synthetic contexts, one shared
  * `submit()`) never overwrite each other's bytes before the GPU reads them —
  * see `createViewSlotUniformRing`'s doc for the write-before-submit race this

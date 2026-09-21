@@ -28,7 +28,10 @@
  * contract — a behavioural round-trip, not a constant restatement.
  */
 import { describe, it, expect } from 'vitest';
-import { packStarRecord, RECORD_BYTES } from '../../../../../src/data/starCatalog/starCatalogFormat';
+import {
+  packStarRecord,
+  RECORD_BYTES,
+} from '../../../../../src/data/starCatalog/starCatalogFormat';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 
 /** Reproduces starCatalogRenderer.ts `repackRecords`: bytes 0..2 → lo, 3..5 → hi. */
@@ -39,7 +42,10 @@ function repackToU32(rec: Uint8Array): { lo: number; hi: number } {
 }
 
 /** Reproduces vertex.wesl's field extraction from the two u32 halves. */
-function shaderUnpack(lo: number, hi: number): { offset: Vec3; absMagIdx: number; colorIdx: number } {
+function shaderUnpack(
+  lo: number,
+  hi: number,
+): { offset: Vec3; absMagIdx: number; colorIdx: number } {
   const ox = lo & 0x3ff;
   const oy = (lo >>> 10) & 0x3ff;
   // offsetZ straddles the 24-bit boundary: low 4 bits in lo, high 6 bits in hi.

@@ -16,8 +16,6 @@ import { filamentsFadeRows } from './present/filamentsFadeRows';
 
 export const filamentsLayer = defineLayer({
   name: 'filaments',
-  // A fragment listed here may not also sit in `UNFORMED_SETTINGS_FRAGMENTS`:
-  // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: filamentsLayerSettings,
   sources: FILAMENTS_SOURCE_ROWS,
   create,

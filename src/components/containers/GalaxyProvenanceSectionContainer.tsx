@@ -1,4 +1,3 @@
-// src/components/containers/GalaxyProvenanceSectionContainer.tsx
 /**
  * GalaxyProvenanceSectionContainer — store boundary for the catalog-audit
  * table. The provenance settings live in the RTK settings slice and the

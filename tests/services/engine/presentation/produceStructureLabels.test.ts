@@ -7,7 +7,7 @@ import { createFadeRegistry } from '../../../../src/services/animation/fadeRegis
 import { STRUCTURE_ID_CODES, STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 
@@ -82,16 +82,18 @@ function registerAllCategories(fades: FadeRegistry): void {
 // structure distances the apparent-size fades read are unchanged.
 const CAM_Z = 5;
 
-function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+/** `focusBlend` (frame-owned) nests under `snapshot`; every other override is a view field. */
+function makeCtx(
+  over: { drawCamPos?: Readonly<[number, number, number]>; focusBlend?: number } = {},
+): FrameView {
+  const { focusBlend = 0, ...viewOver } = over;
   return {
+    snapshot: { focusBlend, nowMs: 0 },
     drawCamPos: [0, 0, CAM_Z],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    nowMs: 0,
-    ...over,
-  } as unknown as ReadyFrameContext;
+    ...viewOver,
+  } as unknown as FrameView;
 }
 
 const rec = (id: string, over: Partial<StructureInfo> = {}): StructureInfo =>

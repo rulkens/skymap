@@ -15,7 +15,7 @@
 import type { CameraPose } from '../../../@types/camera/CameraPose';
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
 import type { Mat3 } from '../../../@types/math/Mat3';
-import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { AssembledOrbitCamera } from '../../../@types/camera/AssembledOrbitCamera';
 import { updatePosition } from '../../../utils/camera/updatePosition';
 
 /**
@@ -39,8 +39,8 @@ export function assembleOrbitCamera(
   projection: CameraProjection,
   poseBasis: Mat3,
   upBasis: Mat3,
-): OrbitCamera {
-  const cam: OrbitCamera = {
+): AssembledOrbitCamera {
+  const cam: AssembledOrbitCamera = {
     // Fresh target copy — never alias the store's frozen pose array.
     target: [pose.target[0], pose.target[1], pose.target[2]],
     yaw: pose.yaw,

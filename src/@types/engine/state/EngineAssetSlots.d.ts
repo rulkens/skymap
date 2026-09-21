@@ -17,7 +17,6 @@ import type { MCPMReq } from '../../loading/MCPMReq';
 import type { Polyphorm2MRSReq } from '../../loading/Polyphorm2MRSReq';
 import type { StructureCatalogPayload } from '../../loading/structureCatalogPayload/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
-import type { ConstellationsArtifact } from '../../loading/ConstellationsArtifact';
 import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
 import type { StarCatalogReq } from '../../loading/StarCatalogReq';
 import type { SourceType } from '../../data/SourceType';
@@ -56,12 +55,6 @@ export type EngineAssetSlots = {
    * request), default-off, hidden pending a promotion decision.
    */
   mcpmWorkbench: AssetSlot<ScalarCube, void> | null;
-  /**
-   * Opt-in on `settings.constellations.enabled`. The commit uploads the static
-   * segment buffer and kicks `syncVisibilityFades`, ramping the seeded-0
-   * demand-loaded fade up to the toggle's intent; the pass itself only draws.
-   */
-  constellations: AssetSlot<ConstellationsArtifact, void> | null;
   /**
    * One slot per `(bodyId, kind)` map, keyed by the composite `BodyTextureSlotKey`
    * (`'earth:surface'`, the ring strip `'saturn-ring:surface'`, …). Proximity-gated

@@ -30,6 +30,7 @@ function makeState(): EngineState {
       fades: {},
       scheduler: { requestRender: vi.fn() },
       cosmoLabelDirector: { registerProducer: vi.fn() },
+      foregroundLabelDirector: { registerProducer: vi.fn() },
     },
     contentVersion: 0,
     layers: [],

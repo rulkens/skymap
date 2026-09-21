@@ -2,9 +2,9 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows` /
- * `.label3DProducers`, asserting the composed sets stay disjoint (D5) — a bad
- * composition throws at boot.
+ * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`,
+ * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
+ * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
  */
 
 import type { Task } from 'redux-saga';
@@ -14,8 +14,10 @@ import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { AssetKey } from '../../../@types/loading/AssetKey';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
+import type { Label2DDirector } from '../../../@types/engine/subsystems/Label2DDirector';
 
 import { instantiateLayer } from '../layer/instantiateLayer';
+import { NEAR0, COSMO, slabName } from '../frame/slabs';
 import {
   factsReported,
   layerFactsSeeded,
@@ -25,6 +27,7 @@ import {
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
+import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
 import { ASSET_WIRING } from '../wiring/assetWiring';
@@ -142,6 +145,18 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   );
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
   state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
+  state.orbitTrailRows = [
+    ...CORE_TRAIL_ELEMENTS,
+    ...instances.flatMap((instance) => instance.orbitTrails),
+  ];
+
+  // Two directors, each owning one slab's screen-space projection — a
+  // producer names the slab whose director it registers on (`LayerGuides`'s
+  // header explains why NEAR0 vs COSMO matters).
+  const screenLabelDirectors: Readonly<Record<number, Label2DDirector>> = {
+    [NEAR0]: state.subsystems.foregroundLabelDirector,
+    [COSMO]: state.subsystems.cosmoLabelDirector,
+  };
 
   const layerSlots = new Map<AssetKey, AssetSlot<unknown, unknown>>();
   for (const instance of instances) {
@@ -151,10 +166,12 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
       // passed for signature parity; a Layer row's factory ignores it.
       layerSlots.set(row.key, row.factory({ state, cb: deps.cb }) as AssetSlot<unknown, unknown>);
     }
-    // The COSMO slab is the only director a Layer contributes to in (d); NEAR0's
-    // producers are core's foreground captions.
-    for (const producer of instance.screenLabels) {
-      state.subsystems.cosmoLabelDirector.registerProducer(producer);
+    for (const { slab, ...producer } of instance.screenLabels) {
+      const director = screenLabelDirectors[slab];
+      if (!director) {
+        throw new Error(`createLayers: no label director for slab ${slabName(slab)}`);
+      }
+      director.registerProducer(producer);
     }
   }
   state.layerSlots = layerSlots;

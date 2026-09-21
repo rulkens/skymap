@@ -15,7 +15,6 @@ import { createMilkyWayCloud } from '../galaxyGenerator/v1/milkyWayCloud';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../galaxyGenerator/v1/milkyWayCalibration';
 import { createMilkyWayCloudRenderer } from '../../gpu/renderers/milkyWay/milkyWayCloudRenderer';
 import { createHorizonShellRenderer } from '../../gpu/renderers/horizonShell/horizonShellRenderer';
-import { createConstellationRenderer } from '../../gpu/renderers/constellations/constellationRenderer';
 import { createStructureMarkerRenderer } from '../../gpu/renderers/structureMarker/structureMarkerRenderer';
 import { createMilkyWayPickRenderer } from '../../gpu/renderers/milkyWay/milkyWayPickRenderer';
 import { createVolumeFieldRenderer } from '../../gpu/renderers/volumeField/volumeFieldRenderer';
@@ -54,7 +53,6 @@ import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineR
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
@@ -104,7 +102,7 @@ export const GPU_HANDLE_ROWS = [
     key: 'labelRenderer',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, undefined, undefined, {
+      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, {
         occludeAgainstScene: true,
       }),
   },
@@ -144,8 +142,6 @@ export const GPU_HANDLE_ROWS = [
         deps.ctx,
         deps.ctx.format,
         deps.fontAtlases,
-        FOREGROUND_LABEL_CAPACITY,
-        undefined,
         // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
         // packs must be in those clip units too — the pair the vertex stage
         // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
@@ -204,11 +200,6 @@ export const GPU_HANDLE_ROWS = [
     key: 'label3DRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createLabel3DRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fontAtlases),
-  },
-  {
-    key: 'constellationRenderer',
-    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createConstellationRenderer(deps.ctx.device, HDR_TARGET_FORMAT, deps.fadeBgl),
   },
   {
     // `MILKY_WAY_TUNING_DEFAULTS.starCount`, not `state.settings.milkyWay`:
@@ -420,13 +411,7 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'atmosphereShellRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAtmosphereShellRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-        ATMOSPHERE_PARAMS,
-      ),
+      createAtmosphereShellRenderer(deps.ctx.device, HDR_TARGET_FORMAT, ATMOSPHERE_PARAMS),
   },
 
   // ── wireInput.ts-phase rows, declared LAST ───────────────────────────────

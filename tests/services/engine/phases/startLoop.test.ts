@@ -1,4 +1,3 @@
-// tests/services/engine/phases/startLoop.test.ts
 /**
  * startLoop — focused test for the highest-leverage invariants of the
  * fourth (and last) bootstrap phase.

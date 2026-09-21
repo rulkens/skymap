@@ -49,25 +49,25 @@ describe('milkyWayVisible', () => {
   it('returns false when the toggle is off and the fade tail has finished', () => {
     // Not drawn → not visible, no matter how close the camera is.
     const state = makeState({ mwEnabled: false, fadeOpacity: 0 });
-    expect(milkyWayVisible(state, camAt(FULL_DIST_MPC / 2), FOV_Y_RAD, CANVAS_H, 0)).toBe(false);
+    expect(milkyWayVisible(state, camAt(FULL_DIST_MPC / 2), PX_PER_RAD, 0)).toBe(false);
   });
 
   it('returns true during the toggle fade-out tail (opacity > 0)', () => {
     // The disk is still drawing its ~100 ms fade-out ramp — the pass keeps
     // rendering and the pick gate keeps accepting through the tail.
     const state = makeState({ mwEnabled: false, fadeOpacity: 0.5 });
-    expect(milkyWayVisible(state, camAt(FULL_DIST_MPC / 2), FOV_Y_RAD, CANVAS_H, 0)).toBe(true);
+    expect(milkyWayVisible(state, camAt(FULL_DIST_MPC / 2), PX_PER_RAD, 0)).toBe(true);
   });
 
   it('resolves the apparent-size fade band from the injected camera', () => {
     const state = makeState({ mwEnabled: true });
     // Inside the full-strength regime: disc spans more than FULL_PX.
-    expect(milkyWayVisible(state, camAt(FULL_DIST_MPC / 2), FOV_Y_RAD, CANVAS_H, 0)).toBe(true);
+    expect(milkyWayVisible(state, camAt(FULL_DIST_MPC / 2), PX_PER_RAD, 0)).toBe(true);
     // Past the GONE edge: the disc spans fewer px than GONE_PX → alpha 0.
-    expect(milkyWayVisible(state, camAt(GONE_DIST_MPC * 2), FOV_Y_RAD, CANVAS_H, 0)).toBe(false);
+    expect(milkyWayVisible(state, camAt(GONE_DIST_MPC * 2), PX_PER_RAD, 0)).toBe(false);
     // Mid-band: alpha is fractional but nonzero → still visible.
     const midDist = (FULL_DIST_MPC + GONE_DIST_MPC) / 2;
-    expect(milkyWayVisible(state, camAt(midDist), FOV_Y_RAD, CANVAS_H, 0)).toBe(true);
+    expect(milkyWayVisible(state, camAt(midDist), PX_PER_RAD, 0)).toBe(true);
   });
 
   it('derives the origin distance from the full 3D camera position', () => {
@@ -76,6 +76,6 @@ describe('milkyWayVisible', () => {
     const state = makeState({ mwEnabled: true });
     const d = FULL_DIST_MPC / 2;
     const diag = d / Math.sqrt(3);
-    expect(milkyWayVisible(state, [diag, diag, diag], FOV_Y_RAD, CANVAS_H, 0)).toBe(true);
+    expect(milkyWayVisible(state, [diag, diag, diag], PX_PER_RAD, 0)).toBe(true);
   });
 });

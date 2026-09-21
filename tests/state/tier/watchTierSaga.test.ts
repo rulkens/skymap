@@ -45,6 +45,7 @@ import { Source } from '../../../src/data/sources';
 import { MILKY_WAY_STARS_PER_TIER } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { galaxyCatalogSelectionRow } from '../../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
 import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
@@ -100,10 +101,10 @@ describe('watchTierSaga', () => {
     });
     sagaMiddleware.run(watchTierSaga);
     sagaMiddleware.setContext({
-      selection: composeSelectionRows(() => [
-        ...coreSelectionRows(resolveDeps),
-        galaxyCatalogSelectionRow(galaxies),
-      ]),
+      selection: composeSelectionRows(
+        () => [...coreSelectionRows(resolveDeps), galaxyCatalogSelectionRow(galaxies)],
+        () => ALL_KINDS_ENABLED,
+      ),
     });
     return built;
   }

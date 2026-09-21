@@ -5,10 +5,13 @@
  * value, how to write that value out of the store, and how to read a present or
  * absent value back into actions.
  *
- * Table order fixes the on-URL layout — the body is composed in this order — so
- * two identical states always produce byte-identical hashes, and the table is
- * APPEND-ONLY: a new row goes at the end so links already in the wild keep
- * parsing to the same bytes they were shared as.
+ * Table order fixes the on-URL layout — the body is composed in this order —
+ * so two identical states always produce byte-identical hashes. That binds
+ * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
+ * already in the wild keep parsing to the same bytes they were shared as. A
+ * read-only row (`write: () => null`, `pose` today) composes nothing into the
+ * body, so this rule says nothing about its position — its place in the table
+ * is fixed by READ order instead (below).
  *
  * ### The `writesOn` completeness contract
  *
@@ -83,7 +86,7 @@ import { setOrientation } from '../settings/core/orientationSlice';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
-import { applyUrlPose } from '../camera/applyUrlPose';
+import { applyUrlPose, commitCameraPose } from '../camera/cameraSlice';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
@@ -232,11 +235,14 @@ const orientationSource: HashParamSource = {
   // `orientation` lives on `SceneSnapshot`, not `SettingsSnapshot` (see that
   // type's header), so the bulk settings restore (`mergeSnapshot`) provably
   // cannot move it — a raw settings patch of that shape has no `orientation`
-  // key to carry. The tour's own restore (`restoreSceneSaga`) and its
-  // beat-boundary reconstruction (`guidedTourSaga`) both go through
-  // `requestOrientationChange` → `setOrientation` instead, which IS covered
-  // below. If `orientation` ever moves back onto `SettingsSnapshot`, this
-  // list must grow to include `mergeSnapshot`.
+  // key to carry. `computeSceneEntering`'s beat-boundary fold excludes
+  // `frameTo` for the same reason (see its header): orientation carries
+  // forward live instead. The tour's own restore (`restoreSceneSaga`, via
+  // `requestOrientationChange`) and a beat's live `frameTo` cue (dispatched
+  // directly by `applySceneEffect` as the clip plays) both reach
+  // `setOrientation` by those other paths, covered below. If `orientation`
+  // ever moves back onto `SettingsSnapshot`, this list must grow to include
+  // `mergeSnapshot`.
   writesOn: [setOrientation.match],
   write: (state) => {
     const orientation = selectOrientation(state);
@@ -251,9 +257,15 @@ const orientationSource: HashParamSource = {
  * (`hashBodyFor` never composes a `pose` param): the rendered pose lands a
  * `commitCameraPose` every frame of a drag, and a row that tried to keep up
  * would fight `watchHashWriteSaga`'s own coalescing for no reader anyone
- * shares. Absence means "leave the camera alone" — at boot (the engine's own
- * seed stands) and on a Back/Forward across the entry alike, which is why
- * `readAbsent` also returns nothing.
+ * shares. Absence means "leave the camera alone", boot and navigation alike.
+ *
+ * `read` both commits the pose (so it draws immediately) and parks it in
+ * `camera.urlPose` — the link owns the camera until the arrival focus spends
+ * the park (`spendUrlPose`, in `watchFocusTweenSaga`). Must run BEFORE
+ * `focusSource` (table order below) so a `#focus=…&pose=…` link's fly-to
+ * tween sees the park and stands down. The commit gets its OWN object: the
+ * loop detects `wireInput`'s boot commit by `base` identity, and a commit
+ * aliasing the park would make that boot commit invisible to frame one.
  */
 const poseSource: HashParamSource = {
   key: 'pose',
@@ -266,14 +278,14 @@ const poseSource: HashParamSource = {
       console.warn(`hashParamSources: malformed pose param, ignoring: ${value}`);
       return [];
     }
-    return [applyUrlPose(framed)];
+    return [applyUrlPose(framed), commitCameraPose({ ...framed })];
   },
   readAbsent: () => [],
 };
 
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
+  poseSource,
   focusSource,
   timeSource,
   orientationSource,
-  poseSource,
 ];

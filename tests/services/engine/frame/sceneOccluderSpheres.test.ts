@@ -19,7 +19,7 @@ import { findByIdOrThrow } from '../../../../src/utils/object/findByIdOrThrow';
 import { innerBoundRadiusM } from '../../../../src/utils/occlusion/innerBoundRadiusM';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { MeshBody } from '../../../../src/@types/scene/MeshBody';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const KM_TO_MPC = SCALE_UNITS.KM_TO_MPC;
@@ -40,20 +40,22 @@ function makeState(meshBodies: readonly MeshBody[], meshResident = true): Engine
 
 const STATE = makeState([]);
 
+// 720-px viewport, 45° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
+
 /** Eye `offsetKm` along +x from `bodyId`, on a 1280×720 viewport at fovY 45°. */
-function makeCtx(bodyId: string, offsetKm: number): ReadyFrameContext {
+function makeCtx(bodyId: string, offsetKm: number): FrameView {
   const p = STATES.get(bodyId)!.positionMpc;
   const drawCamPos: Vec3 = [p[0] + offsetKm * KM_TO_MPC, p[1], p[2]];
   return {
+    snapshot: { simDays: CONST_J2000 },
     drawCamPos,
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 4,
-    simDays: CONST_J2000,
-  } as unknown as ReadyFrameContext;
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 /** Packed sphere radii (km), which identify the bodies in the set. */
-function occluderRadiiKm(ctx: ReadyFrameContext, state: EngineState = STATE): number[] {
+function occluderRadiiKm(ctx: FrameView, state: EngineState = STATE): number[] {
   const { count, spheresKm } = sceneOccluderSpheres(state, ctx);
   return Array.from({ length: count }, (_, i) => spheresKm[i * 4 + 3]!);
 }

@@ -1,4 +1,3 @@
-// src/components/DebugPanel/CameraStateSection.tsx
 /**
  * CameraStateSection — the camera-pivot readout, organised by the question it
  * answers (grill 2026-09-10): who is driving (header), is each DOF where it
@@ -169,7 +168,7 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
       <CopyButton
         text={viewPoseText}
         label="copy view pose"
-        title="Paste into a viewRegistry.ts entry's pose field (world arm only)"
+        title="Paste into an exhibitRegistry.ts entry's pose field (world arm only)"
       />
     </DebugSection>
   );

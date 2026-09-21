@@ -12,8 +12,14 @@ import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { BootstrapDeps } from '../../../../src/@types/engine/BootstrapDeps';
+import { NEAR0, COSMO } from '../../../../src/services/engine/frame/slabs';
+import { CORE_TRAIL_ELEMENTS } from '../../../../src/data/bodies/coreTrailElements';
+import type { OrbitalElements } from '../../../../src/@types/scene/OrbitalElements';
 
-function makeState(registerProducer: ReturnType<typeof vi.fn>): EngineState {
+function makeState(
+  registerProducer: ReturnType<typeof vi.fn>,
+  foregroundRegisterProducer: ReturnType<typeof vi.fn> = vi.fn(),
+): EngineState {
   return {
     gpu: {
       fadeBgl: {},
@@ -26,6 +32,7 @@ function makeState(registerProducer: ReturnType<typeof vi.fn>): EngineState {
       fades: {},
       scheduler: { requestRender: vi.fn() },
       cosmoLabelDirector: { registerProducer },
+      foregroundLabelDirector: { registerProducer: foregroundRegisterProducer },
     },
     layers: [],
     selectionKindRows: [],
@@ -65,7 +72,9 @@ function contributingLayer(
       { key: assetKey, factory, req: () => undefined, demand: () => false, priority: 1 },
     ],
     fades: () => [{ key: `${tag}-fade`, expand: () => [], handle: () => ({}), seed: () => 0 }],
-    labels: () => ({ screen: [{ id: `${tag}-labels`, produceLabels: () => ({}) }] }),
+    guides: () => ({
+      screenLabels: [{ id: `${tag}-labels`, slab: COSMO, produceLabels: () => ({}) }],
+    }),
   } as unknown as Layer<string, unknown>;
 }
 
@@ -76,7 +85,18 @@ function worldLabelLayer(tag: string): Layer<string, unknown> {
     create: () => ({}),
     destroy: () => {},
     passes: () => [],
-    labels: () => ({ world: [{ id: `${tag}-world`, produceLabels3D: () => ({}) }] }),
+    guides: () => ({ worldLabels: [{ id: `${tag}-world`, produceLabels3D: () => ({}) }] }),
+  } as unknown as Layer<string, unknown>;
+}
+
+/** A Layer contributing one orbit-trail row and nothing else. */
+function orbitTrailLayer(tag: string, row: OrbitalElements): Layer<string, unknown> {
+  return {
+    name: tag,
+    create: () => ({}),
+    destroy: () => {},
+    passes: () => [],
+    guides: () => ({ orbitTrails: [row] }),
   } as unknown as Layer<string, unknown>;
 }
 
@@ -117,6 +137,22 @@ describe('createLayers composition', () => {
     ]);
   });
 
+  it("composes core's orbit-trail rows then every Layer's guides.orbitTrails, in tuple order", async () => {
+    const { store } = createAppStore();
+    const state = makeState(vi.fn());
+    const aRow = { id: 'a-trail' } as unknown as OrbitalElements;
+    const bRow = { id: 'b-trail' } as unknown as OrbitalElements;
+    const layers = [orbitTrailLayer('a', aRow), orbitTrailLayer('b', bRow)];
+
+    await createLayers(state, makeDeps(layers, store));
+
+    // By reference, row for row: a structural compare would pass a copy that lost
+    // the identity `orbitTrailsPass` walks.
+    const expected = [...CORE_TRAIL_ELEMENTS, aRow, bRow];
+    expect(state.orbitTrailRows).toHaveLength(expected.length);
+    expected.forEach((row, i) => expect(state.orbitTrailRows[i]).toBe(row));
+  });
+
   it('composes Layer world label producers onto state.label3DProducers', async () => {
     const { store } = createAppStore();
     const state = makeState(vi.fn());
@@ -144,5 +180,42 @@ describe('createLayers composition', () => {
     const layer = contributingLayer('a', 'structureCatalog', () => ({}));
 
     await expect(createLayers(state, makeDeps([layer], store))).rejects.toThrow(/structureCatalog/);
+  });
+
+  it('routes a screen label producer to the director owning its named slab, and throws for one naming an unknown slab', async () => {
+    const { store } = createAppStore();
+    const cosmoRegisterProducer = vi.fn();
+    const foregroundRegisterProducer = vi.fn();
+    const nearLayer = {
+      name: 'near',
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      guides: () => ({
+        screenLabels: [{ id: 'near-label', slab: NEAR0, produceLabels: () => ({}) }],
+      }),
+    } as unknown as Layer<string, unknown>;
+
+    await createLayers(
+      makeState(cosmoRegisterProducer, foregroundRegisterProducer),
+      makeDeps([nearLayer], store),
+    );
+
+    expect(foregroundRegisterProducer.mock.calls.map(([producer]) => producer.id)).toEqual([
+      'near-label',
+    ]);
+    expect(cosmoRegisterProducer).not.toHaveBeenCalled();
+
+    const bodySlabLayer = {
+      name: 'body',
+      create: () => ({}),
+      destroy: () => {},
+      passes: () => [],
+      guides: () => ({ screenLabels: [{ id: 'body-label', slab: 2, produceLabels: () => ({}) }] }),
+    } as unknown as Layer<string, unknown>;
+
+    await expect(
+      createLayers(makeState(vi.fn()), makeDeps([bodySlabLayer], store)),
+    ).rejects.toThrow(/BODY\[0\]/);
   });
 });

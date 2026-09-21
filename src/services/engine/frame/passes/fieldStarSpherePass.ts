@@ -163,13 +163,8 @@ function currentCatalog(state: PassState): StarCatalog | null {
  * diameter is `2 × SOLAR_RADIUS_KM`. Presence turns on at the `STAR_RESOLVE_PX`
  * distance and off at the (larger) `OFF_FRACTION × STAR_RESOLVE_PX` distance.
  */
-function resolveDistanceMpc(
-  thresholdPx: number,
-  viewportHeightPx: number,
-  fovYRad: number,
-): number {
+function resolveDistanceMpc(thresholdPx: number, pxPerRad: number): number {
   const diameterKpc = (SOLAR_RADIUS_KM * 2 * SCALE_UNITS.KM_TO_MPC) / SCALE_UNITS.KPC_TO_MPC;
-  const pxPerRad = viewportHeightPx / (2 * Math.tan(fovYRad / 2));
   return (diameterKpc * pxPerRad) / (thresholdPx * 1000);
 }
 
@@ -221,12 +216,8 @@ export const fieldStarSpherePass: ContentPass = {
     const catalog = currentCatalog(state);
     if (catalog === null) return false;
 
-    const onMpc = resolveDistanceMpc(STAR_RESOLVE_PX, ctx.canvasSize.height, ctx.fovYRad);
-    const offMpc = resolveDistanceMpc(
-      STAR_RESOLVE_PX * OFF_FRACTION,
-      ctx.canvasSize.height,
-      ctx.fovYRad,
-    );
+    const onMpc = resolveDistanceMpc(STAR_RESOLVE_PX, ctx.drawPxPerRad);
+    const offMpc = resolveDistanceMpc(STAR_RESOLVE_PX * OFF_FRACTION, ctx.drawPxPerRad);
 
     // Search out to the OFF radius (the farthest a present star can linger); the
     // ON/OFF gate then decides adopt/keep/drop. Idempotent for a fixed camera —

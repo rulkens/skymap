@@ -368,7 +368,7 @@ fn vs(
   // identity -- see the header). 'fluxApp' is the inverse-square-dimmed
   // apparent flux (header 'Apparent flux'). The peak-from-flux relation is
   // shared with the famous / scene star stage (lib/starPhotometry.wesl).
-  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.cam.viewportPx.y));
+  let intensityRaw = starPeakIntensity(u.brightness, fluxApp, toRefPx(rPxRaw, u.pxPerRad));
 
   // Aggregate surface-brightness cap -- the user's live 'Fog cap' setting
   // ('u.aggregateIntensityCap', settings.starCatalogs.aggregateIntensityCap). A

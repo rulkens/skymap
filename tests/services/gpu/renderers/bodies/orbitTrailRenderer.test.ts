@@ -17,6 +17,7 @@ import {
   createOrbitTrailRenderer,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
+  OCCLUDER_VIEWPORT_OFFSET,
 } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 import {
   MAX_ORBIT_OCCLUDERS,
@@ -26,11 +27,23 @@ import {
 // An empty per-frame occluder list — every draw below takes one.
 const NO_OCCLUDERS = { count: 0, spheresKm: new Float32Array(MAX_ORBIT_OCCLUDERS * 4) };
 
+function mockDepthView(): GPUTextureView {
+  return {} as GPUTextureView;
+}
+
+// The sampled-depth binding every draw below takes: no body row cleared
+// depth, so the pass hands a null frame alongside the far-cleared placeholder
+// view (the same shape sampledDepthBinding returns in that case).
+function noDepthFrame(view: GPUTextureView = mockDepthView()) {
+  return { frame: null, view };
+}
+
 type BufferDesc = { label?: string; size: number };
 
 function mockDevice(opts?: {
   renderPipelines?: GPURenderPipelineDescriptor[];
   buffers?: BufferDesc[];
+  bindGroups?: GPUBindGroupDescriptor[];
 }): GPUDevice {
   return {
     createShaderModule: vi.fn(() => ({
@@ -41,7 +54,10 @@ function mockDevice(opts?: {
       return { destroy: vi.fn() };
     }),
     createBindGroupLayout: vi.fn(() => ({})),
-    createBindGroup: vi.fn(() => ({})),
+    createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
+      opts?.bindGroups?.push(desc);
+      return {};
+    }),
     createPipelineLayout: vi.fn(() => ({})),
     createRenderPipeline: vi.fn((desc: GPURenderPipelineDescriptor) => {
       opts?.renderPipelines?.push(desc);
@@ -144,7 +160,7 @@ describe('createOrbitTrailRenderer', () => {
     const instances = new Float32Array(slots * INSTANCE_FLOATS);
     const count = 7;
 
-    renderer.draw(pass, instances, count, NO_OCCLUDERS);
+    renderer.draw(pass, { instances, count, occluders: NO_OCCLUDERS, depth: noDepthFrame() });
 
     const calls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(1);
@@ -160,7 +176,12 @@ describe('createOrbitTrailRenderer', () => {
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear();
 
-    renderer.draw(pass, new Float32Array(slots * INSTANCE_FLOATS), 0, NO_OCCLUDERS);
+    renderer.draw(pass, {
+      instances: new Float32Array(slots * INSTANCE_FLOATS),
+      count: 0,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(),
+    });
 
     expect(pass.draw).not.toHaveBeenCalled();
     expect(writeMock).not.toHaveBeenCalled();
@@ -175,7 +196,7 @@ describe('createOrbitTrailRenderer', () => {
 
     const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
     writeMock.mockClear();
-    renderer.draw(pass, instances, 4, NO_OCCLUDERS);
+    renderer.draw(pass, { instances, count: 4, occluders: NO_OCCLUDERS, depth: noDepthFrame() });
 
     // One instance upload + one occluder-uniform upload, nothing per orbit.
     expect(writeMock).toHaveBeenCalledTimes(2);
@@ -189,10 +210,76 @@ describe('createOrbitTrailRenderer', () => {
     expect((pass.setVertexBuffer as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual([
       0,
     ]);
-    // The one bind group: the frame's occluder spheres, set once per draw.
+    // The one bind group: the frame's occluder spheres plus the sampled scene
+    // depth, set once per draw.
     expect((pass.setBindGroup as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0])).toEqual([
       0,
     ]);
+  });
+
+  it('packs the occluder uniform viewport from the instance record, not a re-derived value', () => {
+    // `occluderViewport.set(instances.subarray(18, 20))` is a hand-written
+    // index into a foreign record — nothing else in this suite reads the
+    // packed bytes back, so a drifted offset or a wrong slice would pass
+    // silently.
+    const device = mockDevice();
+    const renderer = createOrbitTrailRenderer(device, 'rgba16float');
+    const pass = mockPass();
+    const instances = new Float32Array(1 * INSTANCE_FLOATS);
+    instances[18] = 1920;
+    instances[19] = 1080;
+
+    const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
+    renderer.draw(pass, { instances, count: 1, occluders: NO_OCCLUDERS, depth: noDepthFrame() });
+
+    const occluderScratch = writeMock.mock.calls[1]![2] as ArrayBuffer;
+    const viewport = new Float32Array(occluderScratch, OCCLUDER_VIEWPORT_OFFSET, 2);
+    expect(Array.from(viewport)).toEqual([1920, 1080]);
+  });
+
+  it('rebuilds the bind group only when the depth view identity changes', () => {
+    // Same bind-group-cache-by-view-identity pattern as the source's
+    // `bindGroup` local — see its comment for why. Rebuilding every frame
+    // instead would be pure per-frame garbage.
+    const bindGroups: GPUBindGroupDescriptor[] = [];
+    const device = mockDevice({ bindGroups });
+    const renderer = createOrbitTrailRenderer(device, 'rgba16float');
+    const pass = mockPass();
+    const instances = new Float32Array(2 * INSTANCE_FLOATS);
+    const first = mockDepthView();
+    const second = mockDepthView();
+
+    // Nothing is built at construction: there is no depth view to build over yet.
+    expect(bindGroups).toHaveLength(0);
+
+    renderer.draw(pass, {
+      instances,
+      count: 2,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(first),
+    });
+    expect(bindGroups).toHaveLength(1);
+    expect(bindGroups[0]!.entries).toHaveLength(2);
+    expect(Array.from(bindGroups[0]!.entries)[1]!.resource).toBe(first);
+
+    // Same view again — reuse.
+    renderer.draw(pass, {
+      instances,
+      count: 2,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(first),
+    });
+    expect(bindGroups).toHaveLength(1);
+
+    // A new view — one rebuild, over that view.
+    renderer.draw(pass, {
+      instances,
+      count: 2,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(second),
+    });
+    expect(bindGroups).toHaveLength(2);
+    expect(Array.from(bindGroups[1]!.entries)[1]!.resource).toBe(second);
   });
 
   it('the trail buffer grows past the initial capacity, sized on total slots', () => {
@@ -206,14 +293,24 @@ describe('createOrbitTrailRenderer', () => {
     const pass = mockPass();
 
     // First draw establishes an initial capacity of 3 slots.
-    renderer.draw(pass, new Float32Array(3 * INSTANCE_FLOATS), 3, NO_OCCLUDERS);
+    renderer.draw(pass, {
+      instances: new Float32Array(3 * INSTANCE_FLOATS),
+      count: 3,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(),
+    });
     const afterFirst = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
     expect(afterFirst).toHaveLength(1);
     expect(afterFirst[0]!.size).toBe(3 * INSTANCE_STRIDE);
 
     // A later draw asking for more slots than that capacity must grow the
     // buffer (a second allocation), not truncate to the first one's size.
-    renderer.draw(pass, new Float32Array(7 * INSTANCE_FLOATS), 7, NO_OCCLUDERS);
+    renderer.draw(pass, {
+      instances: new Float32Array(7 * INSTANCE_FLOATS),
+      count: 7,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(),
+    });
     const afterSecond = buffers.filter((b) => b.label === 'orbit-trail-instance-vbo');
     expect(afterSecond).toHaveLength(2);
     expect(afterSecond[1]!.size).toBe(7 * INSTANCE_STRIDE);
@@ -238,7 +335,7 @@ describe('createOrbitTrailRenderer', () => {
 
     // Flag omitted (defaults false) — only the one production pipeline
     // exists, and only the one production draw is issued.
-    renderer.draw(pass, instances, count, NO_OCCLUDERS);
+    renderer.draw(pass, { instances, count, occluders: NO_OCCLUDERS, depth: noDepthFrame() });
     expect(renderPipelines).toHaveLength(1);
     expect((pass.draw as ReturnType<typeof vi.fn>).mock.calls).toHaveLength(1);
 
@@ -247,7 +344,13 @@ describe('createOrbitTrailRenderer', () => {
     // Flag true — the debug pipeline is built now (first enable), and
     // exactly one ADDITIONAL draw lands, matching the production draw's
     // vertex count exactly.
-    renderer.draw(pass, instances, count, NO_OCCLUDERS, true);
+    renderer.draw(pass, {
+      instances,
+      count,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(),
+      showImpostor: true,
+    });
     expect(renderPipelines).toHaveLength(2);
     const calls = (pass.draw as ReturnType<typeof vi.fn>).mock.calls;
     expect(calls).toHaveLength(2);
@@ -255,7 +358,13 @@ describe('createOrbitTrailRenderer', () => {
     expect(calls[1]).toEqual([RIBBON_SEGMENTS * 6, count, 0, 0]);
 
     // A later enabled call does not rebuild the debug pipeline again.
-    renderer.draw(pass, instances, count, NO_OCCLUDERS, true);
+    renderer.draw(pass, {
+      instances,
+      count,
+      occluders: NO_OCCLUDERS,
+      depth: noDepthFrame(),
+      showImpostor: true,
+    });
     expect(renderPipelines).toHaveLength(2);
   });
 
@@ -267,7 +376,11 @@ describe('createOrbitTrailRenderer', () => {
     const renderer = createOrbitTrailRenderer(mockDevice(), 'rgba16float');
     const pass = mockPass();
     const instances = new Float32Array(4 * INSTANCE_FLOATS); // only 4 slots
-    expect(() => renderer.draw(pass, instances, 5, NO_OCCLUDERS)).toThrow(); // 5 > 4
-    expect(() => renderer.draw(pass, instances, -1, NO_OCCLUDERS)).toThrow(); // negative
+    expect(() =>
+      renderer.draw(pass, { instances, count: 5, occluders: NO_OCCLUDERS, depth: noDepthFrame() }),
+    ).toThrow(); // 5 > 4
+    expect(() =>
+      renderer.draw(pass, { instances, count: -1, occluders: NO_OCCLUDERS, depth: noDepthFrame() }),
+    ).toThrow(); // negative
   });
 });

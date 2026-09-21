@@ -5,12 +5,6 @@
 
 import { bodiesSlice } from './bodies/slice';
 import { earthSlice } from './earth/slice';
-import { orbitTrailsSlice } from './orbitTrails/slice';
 import { sgrAStarLensingTuningSlice } from './sgrAStarLensingTuning/slice';
 
-export const bodyLayerSettings = [
-  bodiesSlice,
-  earthSlice,
-  orbitTrailsSlice,
-  sgrAStarLensingTuningSlice,
-] as const;
+export const bodyLayerSettings = [bodiesSlice, earthSlice, sgrAStarLensingTuningSlice] as const;

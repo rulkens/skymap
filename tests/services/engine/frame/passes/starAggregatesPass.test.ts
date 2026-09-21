@@ -1,6 +1,6 @@
 /**
  * starAggregatesPass — the survey-star AGGREGATE stream into the half-res
- * offscreen. Its walk/partition is `readStarCut`, fed by `advanceStarCut`
+ * offscreen. Its walk/partition is `readStarCut`, fed by `computeStarCut`
  * (both tested in `readStarCut.test.ts`); here we pin only that it shares
  * the star gate and records the AGGREGATE sub-stream (never the leaf one)
  * into its pass.
@@ -10,12 +10,14 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
 import { starCatalogPass } from '../../../../../src/services/engine/frame/passes/starCatalogPass';
+import { computeStarCut } from '../../../../../src/services/gpu/renderers/starCatalog/cut/computeStarCut';
+import { advanceStarFades } from '../../../../../src/services/gpu/renderers/starCatalog/cut/advanceStarFades';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
 import type { StarCatalogDrawArgs } from '../../../../../src/@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
@@ -38,23 +40,26 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 // The layer reads its viewport via `sizeOf('star-aggregates')` — the fixture
 // hardcodes the size the production table's scale: 2 implies for the 1280x720
 // canvas below (floor(1280 / 2), floor(720 / 2)). During a capture draw
-// (`viewSlot !== 0`) the ctx IS the synthetic face camera `cubemapFaceContext`
-// builds, whose `canvasSize` is the row's 256 px face; `sizeOf` has no row for
+// (`viewKind: 'capture'`) the ctx IS the synthetic face camera
+// `deriveView(faceViewSpec(...))` builds, whose `canvasSize` is the row's 256 px face; `sizeOf` has no row for
 // it, so a layer that reached for the capture target instead would throw here.
-function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): ReadyFrameContext {
-  return {
-    drawCamPos: camPos,
-    nowMs,
-    viewSlot,
-    canvasSize: viewSlot === 0 ? { width: 1280, height: 720 } : { width: 256, height: 256 },
-    renderTargets: {
-      specs: [{ id: 'star-aggregates', scale: 2 }],
-      sizeOf: (id: string) => {
-        if (id === 'star-aggregates') return { width: 640, height: 360 };
-        throw new Error(`fixture renderTargets: no size for '${id}'`);
-      },
+function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, capture = false): FrameView {
+  const renderTargets = {
+    specs: [{ id: 'star-aggregates', scale: 2 }],
+    sizeOf: (id: string) => {
+      if (id === 'star-aggregates') return { width: 640, height: 360 };
+      throw new Error(`fixture renderTargets: no size for '${id}'`);
     },
-  } as unknown as ReadyFrameContext;
+  };
+  return {
+    // Frame-owned (`ReadyFrameContext`), nested for `computeStarCut` and
+    // `starAggregatesPass.ts`'s `ctx.snapshot.renderTargets` read.
+    snapshot: { nowMs, renderTargets },
+    drawCamPos: camPos,
+    viewSlot: capture ? 1 : 0,
+    viewKind: capture ? 'capture' : 'frame',
+    canvasSize: capture ? { width: 256, height: 256 } : { width: 1280, height: 720 },
+  } as unknown as FrameView;
 }
 
 /** A dense level-0 leaf (3 stars) under a level-1 aggregate root. */
@@ -73,12 +78,27 @@ function makeAggregateCatalog(): StarCatalog {
   };
 }
 
+/** A spy renderer whose `setFrameCut`/`getFrameCut` are a real in-memory pair —
+ *  `starCutFor` reads the frame cut off exactly these for a non-capture ctx. */
 function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[]) {
+  let frameCut: unknown = null;
   return {
     upload: vi.fn(),
     loadedCatalogs: vi.fn(() => loaded[Symbol.iterator]()),
     draw: vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogDrawArgs) => void>(),
+    setFrameCut: vi.fn((cut: unknown) => {
+      frameCut = cut;
+    }),
+    getFrameCut: vi.fn(() => frameCut),
   };
+}
+
+/** Mirrors `runFrame`'s `advanceStarFades` → `computeStarCut` → `setFrameCut`
+ *  sequence for a non-capture ctx, so `starCutFor` has a frame cut to read. */
+function primeFrameCut(state: EngineState, ctx: FrameView): void {
+  advanceStarFades(state, [ctx]);
+  const cut = computeStarCut(state, [ctx]);
+  state.gpu.starCatalogRenderer!.setFrameCut(cut);
 }
 
 function makeState(renderer: unknown): EngineState {
@@ -112,7 +132,10 @@ describe('starAggregatesPass', () => {
   it('records the AGGREGATE stream (stream tag, isAggregate all 1) into its pass', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
-    starAggregatesPass.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(renderer));
+    const state = makeState(renderer);
+    const ctx = makeCtx(camPos);
+    primeFrameCut(state, ctx);
+    starAggregatesPass.draw(PASS_STUB, makeNear0View(camPos), ctx, state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const args = renderer.draw.mock.calls[0]![1];
@@ -126,7 +149,10 @@ describe('starAggregatesPass', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
     const view = makeNear0View(camPos);
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer));
+    const state = makeState(renderer);
+    const ctx = makeCtx(camPos);
+    primeFrameCut(state, ctx);
+    starAggregatesPass.draw(PASS_STUB, view, ctx, state);
 
     const args = renderer.draw.mock.calls[0]![1];
     expect(args.viewportPx).toEqual([640, 360]);
@@ -136,11 +162,11 @@ describe('starAggregatesPass', () => {
     expect(view.viewportPx).toEqual([1280, 720]);
   });
 
-  it('sizes sprites against the capture face during a capture draw (viewSlot !== 0), not star-aggregates', () => {
+  it('sizes sprites against the capture face during a capture draw (viewKind capture), not star-aggregates', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
     const view = makeNear0View(camPos);
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, 1), makeState(renderer));
+    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, true), makeState(renderer));
 
     const args = renderer.draw.mock.calls[0]![1];
     expect(args.viewportPx).toEqual([256, 256]);
@@ -154,11 +180,13 @@ describe('starAggregatesPass', () => {
     const camPos = camAtPcVec(FAR_PC);
     const view = makeNear0View(camPos);
     const state = makeState(renderer);
+    const ctx = makeCtx(camPos);
+    primeFrameCut(state, ctx);
 
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos), state);
+    starAggregatesPass.draw(PASS_STUB, view, ctx, state);
     expect(renderer.draw.mock.calls[0]![1].knee).toBe(false);
 
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, 1), state);
+    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, true), state);
     expect(renderer.draw.mock.calls[1]![1].knee).toBe(true);
   });
 });

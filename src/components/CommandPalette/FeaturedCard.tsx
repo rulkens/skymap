@@ -38,8 +38,6 @@ function FeaturedCard({ card, aliases, active, onSelect }: FeaturedCardProps): R
           onClick={() => onSelect(card.action)}
           aria-label={card.label}
           aria-current={active ? true : undefined}
-          // Placeholder until PR3 wires up the view feature.
-          disabled={card.action.kind === 'view'}
         >
           {imageFailed ? (
             <span className={styles.fallbackLabel}>{card.label}</span>

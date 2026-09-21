@@ -8,7 +8,9 @@ import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { applyUrlPose, clipStarted } from '../../../src/state/camera/cameraSlice';
+import { selectUrlPose } from '../../../src/state/camera/selectors';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   engineStatusChanged,
@@ -26,6 +28,7 @@ import {
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { resolveStarRecord } from '../../../src/services/engine/helpers/resolveStarRecord';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -92,10 +95,13 @@ describe('watchFocusTweenSaga', () => {
     const mw = createSagaMiddleware({ onError: (error) => sagaErrors.push(error) });
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
       resolveDeps,
-      selection: composeSelectionRows(() => coreSelectionRows(resolveDeps)),
+      selection: composeSelectionRows(
+        () => coreSelectionRows(resolveDeps),
+        () => ALL_KINDS_ENABLED,
+      ),
       cameraRuntime: () => cameraRuntime(),
     });
     return s;
@@ -117,6 +123,20 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
     expect(tween!.to.yaw).toBe(FROM.yaw);
+  });
+
+  it('stands down when a #pose= link is pending, and spends the park — the link IS the destination', async () => {
+    store.dispatch(applyUrlPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 })));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(selectUrlPose(store.getState())).toBeNull();
+
+    // The park is spent, so a SECOND focus tweens normally rather than
+    // standing down forever.
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
 
   it('a select (non-focus) write does NOT start a tween', async () => {
@@ -147,7 +167,7 @@ describe('watchFocusTweenSaga', () => {
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1 }));
     await flush();
 

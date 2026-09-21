@@ -25,7 +25,7 @@ import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/Execu
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { RenderStrategy } from '../../../../src/@types/engine/frame/RenderStrategy';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { TimingSlotName } from '../../../../src/@types/gpu/timing/TimingSlotName';
@@ -187,50 +187,57 @@ const EXEC_SPECS = [
   },
 ];
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   const slab: Slab = makeCosmoSlab();
+  // Offscreen view resolution goes through the target table's viewOf —
+  // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
+  // + `depthViewOf` let the executor discover which target rows declare a
+  // depth attachment (only `foreground:0` here). `specOf` is what
+  // `colorAttachment`/`depthAttachment`/the composite's dstFormat read —
+  // clear values here match production (`hdr`/`swap` at a=1, the rest
+  // a=0) so a clear-value regression would show up in the clear/load
+  // assertions below. Frame-owned (`ReadyFrameContext.renderTargets`), so it
+  // nests under `snapshot` — `executeFrame` reads it as `ctx.snapshot.renderTargets`.
+  const renderTargets = {
+    specs: EXEC_SPECS,
+    specOf: (id: string) => {
+      const spec = EXEC_SPECS.find((s) => s.id === id);
+      if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+      return spec;
+    },
+    viewOf: (id: string) => {
+      if (id === 'hdr') return HDR_VIEW;
+      if (id === 'volume') return VOLUME_VIEW;
+      if (id === 'foreground:0') return FG_VIEW;
+      if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
+      throw new Error(`mock renderTargets: no view for '${id}'`);
+    },
+    layerViewOf: (id: string, face: number) => {
+      const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
+      if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
+      return view;
+    },
+    depthViewOf: (id: string) => {
+      if (id === 'foreground:0') return FG_DEPTH_VIEW;
+      throw new Error(`mock renderTargets: no depth view for '${id}'`);
+    },
+    // Fallback for a sampling step whose source row nothing has cleared yet —
+    // the 1×1 far-cleared placeholder `SampledDepth.view` carries with `row: null`.
+    farDepthView: vi.fn(() => FAR_VIEW),
+  };
   return {
+    snapshot: {
+      renderTargets,
+      // Frame-wide: which targets hold this frame's content, unioned into by
+      // `executeFrame` as it opens each ordinary render step — a fresh empty
+      // Set per frame, mirroring `frameContext.ts`. Distinct from the
+      // executor's own per-call `touched`, which this fixture never sees.
+      renderedTargets: new Set<string>(),
+    } as unknown as FrameView['snapshot'],
     slabs: [slab, slab],
     canvasSize: { width: 100, height: 50 },
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
-    // The executor uses this as its first-touch `touched` set (the same object
-    // it exposes to layers as `renderedTargets`): a fresh empty Set per frame,
-    // populated as passes open. Mirrors `deriveFrameContext`.
-    renderedTargets: new Set<string>(),
-    // Offscreen view resolution goes through the target table's viewOf —
-    // the executor's viewFor keeps only the swap-vs-offscreen branch. `specs`
-    // + `depthViewOf` let the executor discover which target rows declare a
-    // depth attachment (only `foreground:0` here). `specOf` is what
-    // `colorAttachment`/`depthAttachment`/the composite's dstFormat read —
-    // clear values here match production (`hdr`/`swap` at a=1, the rest
-    // a=0) so a clear-value regression would show up in the clear/load
-    // assertions below.
-    renderTargets: {
-      specs: EXEC_SPECS,
-      specOf: (id: string) => {
-        const spec = EXEC_SPECS.find((s) => s.id === id);
-        if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
-        return spec;
-      },
-      viewOf: (id: string) => {
-        if (id === 'hdr') return HDR_VIEW;
-        if (id === 'volume') return VOLUME_VIEW;
-        if (id === 'foreground:0') return FG_VIEW;
-        if (id === 'sky-cubemap') return SKY_CUBEMAP_VIEW;
-        throw new Error(`mock renderTargets: no view for '${id}'`);
-      },
-      layerViewOf: (id: string, face: number) => {
-        const view = id === 'sky-cubemap' ? SKY_CUBEMAP_FACE_VIEWS[face] : undefined;
-        if (!view) throw new Error(`mock renderTargets: no layer view for '${id}' layer ${face}`);
-        return view;
-      },
-      depthViewOf: (id: string) => {
-        if (id === 'foreground:0') return FG_DEPTH_VIEW;
-        throw new Error(`mock renderTargets: no depth view for '${id}'`);
-      },
-      farDepthView: vi.fn(() => FAR_VIEW),
-    },
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**
@@ -239,7 +246,7 @@ function makeCtx(): ReadyFrameContext {
  * `makeSlab` overrides per the fixture convention, rather than a hand
  * literal, so a future `Slab` field addition is one edit in the fixture.
  */
-function makeBodyCtx(bodyIds: readonly string[]): ReadyFrameContext {
+function makeBodyCtx(bodyIds: readonly string[]): FrameView {
   const base = makeCtx();
   const bodySlabs: Slab[] = bodyIds.map((bodyId, i) =>
     makeSlab({ index: i + 2, frame: { kind: 'body-m', bodyId: bodyId as BodyId } }),
@@ -276,15 +283,15 @@ function makeArgs(over: {
   timing?: GpuTimingService;
   state?: EngineState;
   env?: ReturnType<typeof makeEncoderEnv>;
-  ctx?: ReadyFrameContext;
+  ctx?: FrameView;
   /** The `sgrAStar` row's faces, body-less — wrapped into the keyed `captureContexts`. */
-  faceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
+  faceContexts?: ReadonlyMap<CubeFace, FrameView>;
   /** The whole keyed map, for a row whose faces draw body rows. */
   captureContexts?: CaptureFaceContexts;
 }): {
   args: ExecuteFrameArgs;
   env: ReturnType<typeof makeEncoderEnv>;
-  renderTargets: ReadyFrameContext['renderTargets'];
+  renderTargets: FrameView['snapshot']['renderTargets'];
 } {
   const env = over.env ?? makeEncoderEnv();
   const ctx = over.ctx ?? makeCtx();
@@ -296,6 +303,7 @@ function makeArgs(over: {
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
+    renderedTargets: new Set<string>(),
     captureContexts:
       over.captureContexts ??
       (over.faceContexts &&
@@ -306,7 +314,7 @@ function makeArgs(over: {
           ],
         ])),
   };
-  return { args, env, renderTargets: ctx.renderTargets };
+  return { args, env, renderTargets: ctx.snapshot.renderTargets };
 }
 
 /** The recorded attachment of the pass a given layer.draw spy's `callIndex` call drew into. */
@@ -768,7 +776,7 @@ describe('executeFrame', () => {
   describe('sky-cubemap capture hand-off (Task 12)', () => {
     // A step carrying `face` must resolve its OWN camera (`enabled`/`draw`'s
     // `ctx`), not the frame-wide `args.ctx` — the runtime hand-off `renderFrame`
-    // derives per scheduled face via `cubemapFaceContext` and threads in as
+    // derives per scheduled face via `deriveView(faceViewSpec(...))` and threads in as
     // `faceContexts`. Two distinct fixture contexts stand in for two
     // faces' synthetic cameras; identity (`toBe`), not content, is what proves
     // routing, since a real face ctx and the frame ctx share the same shape.
@@ -790,7 +798,7 @@ describe('executeFrame', () => {
           passes: [contentPass],
         },
       ];
-      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, FrameView>([
         [0, face0Ctx],
         [1, face1Ctx],
       ]);
@@ -809,7 +817,7 @@ describe('executeFrame', () => {
       expect(contentPass.draw.mock.calls[1]![2]).not.toBe(args.ctx);
     });
 
-    it('skips a capture step cleanly when its face has no context (cubemapFaceContext returned null)', () => {
+    it('skips a capture step cleanly when its face has no context (the row was not ready to bake)', () => {
       const contentPass = makeContentPass({ name: 'probe' });
       const program: FrameStep[] = [
         {
@@ -820,7 +828,7 @@ describe('executeFrame', () => {
         },
       ];
       // Map has no entry for face 2 — mirrors renderFrame omitting a face whose
-      // cubemapFaceContext call returned null (pre-bootstrap frame).
+      // the row's bake was skipped (pre-bootstrap frame).
       const { args } = makeArgs({ program, faceContexts: new Map() });
       expect(() => executeFrame(args)).not.toThrow();
       expect(contentPass.enabled).not.toHaveBeenCalled();
@@ -852,7 +860,7 @@ describe('executeFrame', () => {
         }),
       );
       const faceCtx = makeCtx();
-      const faceContexts = new Map<CubeFace, ReadyFrameContext>(
+      const faceContexts = new Map<CubeFace, FrameView>(
         [0, 1, 2, 3, 4, 5].map((face) => [face as CubeFace, faceCtx]),
       );
       const { args, env } = makeArgs({ program, faceContexts });
@@ -924,7 +932,7 @@ describe('executeFrame', () => {
         },
       ];
       const faceCtx = makeCtx();
-      const faceContexts = new Map<CubeFace, ReadyFrameContext>([
+      const faceContexts = new Map<CubeFace, FrameView>([
         [0, faceCtx],
         [1, faceCtx],
       ]);

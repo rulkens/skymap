@@ -11,6 +11,15 @@ import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { deriveView } from '../../../../src/services/engine/frame/deriveView';
+import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
+import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
+import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
+import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
+import { foregroundChainOrder } from '../../../../src/services/engine/frame/slabs';
+import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
@@ -19,12 +28,15 @@ import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/t
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
+import { makeSlab } from '../../../fixtures/makeSlab';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import {
   MILKY_WAY_FADE_FULL_PX,
   MILKY_WAY_RADIUS_MPC,
 } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -112,6 +124,9 @@ function makeFakeHdrView(): GPUTextureView {
   return { __id: 'hdr-view' } as unknown as GPUTextureView;
 }
 
+/** The 1×1 far-cleared depth every `{ sample }` step falls back to here. */
+const FAR_DEPTH_VIEW = { __id: 'far-depth-view' } as unknown as GPUTextureView;
+
 /**
  * Mock the offscreen render-target table. Executor + layers resolve views
  * via `viewOf(id)`; the backing `views` record is handed in by reference so
@@ -178,6 +193,10 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
+    // What a `{ sample }` step reads: no row in this fixture clears depth, so
+    // every sampling step gets the far-cleared placeholder — `depthViewOf`
+    // is unreachable here and deliberately absent.
+    farDepthView: () => FAR_DEPTH_VIEW,
     destroy: vi.fn(),
   } as any;
 }
@@ -379,11 +398,12 @@ function makeInput(
     ...(overrides.settings ?? {}),
   };
 
-  // Per-frame derived snapshot under `input.ctx` (a `ReadyFrameContext`):
-  // `runFrame` derives these once via `deriveFrameContext()` and forwards
-  // a single struct. The test mirrors that wiring.
+  // Per-frame derived snapshot under `input.canvas` (a `FrameView`):
+  // `runFrame` derives it via `deriveFrameContext()` + `deriveView()` and
+  // forwards a single struct. The test mirrors that wiring.
   const canvasWidth = 1280;
   const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
+  const frustum = symmetricFrustum(FIXTURE_FOV_Y_RAD, canvasWidth / canvasHeight);
   const viewProj = new Float32Array(16) as unknown as Mat4;
   // The HDR encoders resolve one SlabView (COSMO) before the layer loop
   // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
@@ -391,26 +411,31 @@ function makeInput(
   const cosmoSlab: Slab = makeCosmoSlab({
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
-  const ctx = {
+  // Shared by identity with `input.renderedTargets` below — the same object
+  // `executeFrame` unions into and the five overlay passes read back off
+  // `ctx.snapshot.renderedTargets`.
+  const renderedTargets = new Set<string>();
+  // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
+  // `ContentPass` in this file reads `ctx.snapshot.x`.
+  const snapshotFields = {
     isReady: true as const,
+    cam,
+    arm: null as unknown as never,
+    // Only `deriveView`'s basis product reads this; a real identity keeps
+    // that call well-defined for the view-rig test below.
+    camBasisWorld: [...IDENTITY_MAT3] as Mat3,
+    bodyStates: new Map(),
+    // Nothing in this file reads bodyPose (frame or view level).
+    bodyPose: () => null,
+    slabBodyCandidates: [] as never[],
+    meshBodies: [] as never[],
+    positionedStars: [] as never[],
     // `runFrame` stamps this after every Layer's frame hook has voted.
     layersSettling: false,
-    viewSlot: 0,
-    renderedTargets: new Set<string>(),
-    // Nothing in this file reads bodyPose.
-    bodyPose: () => null,
-    cam,
-    vp: viewProj,
-    slabs: [cosmoSlab, cosmoSlab],
-    canvasSize: { width: canvasWidth, height: canvasHeight },
     cursorTexPx: null,
-    drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
-      [number, number, number]
-    >,
-    drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
     nowMs: 0,
     simDays: 0,
-    fovYRad: FIXTURE_FOV_Y_RAD,
+    altitudeMpc: 0,
     focusBlend: 0,
     visibleSourceMask: 0xffffffff,
     focus: {
@@ -420,6 +445,25 @@ function makeInput(
       blend: 0,
     },
     renderTargets,
+    // Frame-wide: which targets hold this frame's content, unioned into by
+    // `executeFrame` as it opens each pass — see `ReadyFrameContext`'s doc.
+    renderedTargets,
+  };
+  const ctx = {
+    snapshot: snapshotFields,
+    viewSlot: 0,
+    viewKind: 'frame' as const,
+    // Nothing in this file reads bodyPose.
+    bodyPose: () => null,
+    cam,
+    vp: viewProj,
+    slabs: [cosmoSlab, cosmoSlab],
+    canvasSize: { width: canvasWidth, height: canvasHeight },
+    drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
+      [number, number, number]
+    >,
+    frustum,
+    drawPxPerRad: canvasHeight / (frustum.tanUp - frustum.tanDown),
   };
 
   return {
@@ -442,7 +486,7 @@ function makeInput(
     proceduralDiskRenderer,
     cam,
     // Mirror these on the fixture root so tests read them directly
-    // instead of reaching into `input.ctx.*` for every assertion.
+    // instead of reaching into `input.canvas.*` for every assertion.
     canvasWidth,
     canvasHeight,
     viewProj,
@@ -451,12 +495,18 @@ function makeInput(
     // field of its own.
     settings,
     input: {
-      ctx,
+      canvas: ctx,
+      // Mono's own contract: the frame's one view is the canvas itself
+      // (`VIEW_RIGS.mono.views`), which `renderFrame` would otherwise compute
+      // via `state.viewRig` — this fixture hands it straight in.
+      views: [ctx],
       // ContentPasses read engine state via `input.state`. The label +
       // marker-line layers read `state.gpu.*` in their `enabled()` gates;
       // nulling those handles makes the layers skip (enabled → false), so
       // these tests stay focused on point + milky-way ordering.
       state: {
+        // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+        viewRig: 'mono',
         // focusUniform: renderFrame writes it once per frame and
         // galaxyPointSpritesPass binds its group; a no-op write + opaque bind
         // group keeps the mock encoder happy.
@@ -583,6 +633,7 @@ function makeInput(
       // the single-pass branch. Active-mode behaviour lives in
       // `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),
+      renderedTargets,
     },
   };
 }
@@ -597,6 +648,9 @@ describe('renderFrame', () => {
   });
 
   it('creates exactly one command encoder on a frame with no capture faces', () => {
+    // Mono's rig hands every section the same view (`ctx` itself), so
+    // PRELUDE/SCENE/POST/OVERLAYS all accumulate into the one running batch —
+    // one encoder for the whole frame.
     renderFrame(fx.input);
     expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
   });
@@ -896,5 +950,154 @@ describe('renderFrame', () => {
     const fx2 = makeInput({ disabledPasses: { 'point-sprites': false } });
     renderFrame(fx2.input);
     expect(fx2.galaxyPointRenderer.draw).toHaveBeenCalledTimes(1);
+  });
+
+  // ── View rig walking ───────────────────────────────────────────────────
+
+  it('mono rig submits the same step list as FRAME_ORDER', () => {
+    // The rig split must expand to exactly the same steps whether walked as
+    // one flat list or as four sections concatenated — and VIEW_RIGS.mono IS
+    // those four sections, against the main ctx alone.
+    const options = {
+      tone: { exposure: 1, curve: ToneMapCurve.Reinhard, hdrKnee: 0, hdrHeadroom: 0 },
+      bloomEnabled: false,
+      foregroundChain: foregroundChainOrder(fx.input.canvas.slabs),
+      captureFaces: new Map(),
+      bodyRowSlabs: bodyRowSlabs(fx.input.state as any, fx.input.canvas),
+    };
+    const passes = (fx.input.state as any).passes;
+    const whole = expandFrameOrder(FRAME_ORDER, passes, options);
+    const bySections = VIEW_RIGS.mono.program.flatMap((section) =>
+      expandFrameOrder(section.steps, passes, options),
+    );
+    expect(bySections).toEqual(whole);
+    // mono returns null, never its own spec — see `ViewRig.views`'s doc: a
+    // spec would derive the canvas view a second time and split the submit.
+    expect(VIEW_RIGS.mono.views(fx.input.canvas, fx.input.state as any)).toBeNull();
+  });
+
+  it('a registered rig returning two specs yields two views sharing the frame snapshot', () => {
+    // The shared-snapshot invariant is structural: `ViewSpec`s carry no
+    // snapshot of their own, so a rig's specs, derived exactly as `runFrame`
+    // derives them (`rig.views(canvas, state)` → `deriveView` per spec), can
+    // only ever produce views of THIS canvas's snapshot.
+    (VIEW_RIGS as any).__snapshotIdentityTest = {
+      views: () => [faceViewSpec(0, 64, 0), faceViewSpec(1, 64, 1)],
+      program: [],
+    };
+    (fx.input.state as any).viewRig = '__snapshotIdentityTest';
+    try {
+      const specs = (VIEW_RIGS as any).__snapshotIdentityTest.views(
+        fx.input.canvas,
+        fx.input.state,
+      );
+      const views = specs.map((spec: any) => deriveView(fx.input.canvas.snapshot, fx.cam, spec));
+      renderFrame({ ...fx.input, views } as any);
+      expect(views[0].snapshot).toBe(fx.input.canvas.snapshot);
+      expect(views[1].snapshot).toBe(fx.input.canvas.snapshot);
+    } finally {
+      delete (VIEW_RIGS as any).__snapshotIdentityTest;
+    }
+  });
+
+  it('a perView section with two views submits twice, each expanded from its own view', () => {
+    const stubPass = { name: 'stub-foreground', enabled: () => true, draw: vi.fn() };
+    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubPass];
+
+    // view1's chain is NEAR0 alone (one foreground step); view2 adds a
+    // body-m row (a second, distinct-slab step) — the counts must track
+    // each view's OWN slabs, not the main ctx's.
+    const near0Slab = makeSlab();
+    const bodySlab = makeSlab({ index: 2, frame: { kind: 'body-m', bodyId: 'earth' as any } });
+    const view1 = { ...fx.input.canvas, slabs: [near0Slab] };
+    const view2 = { ...fx.input.canvas, slabs: [near0Slab, makeCosmoSlab(), bodySlab] };
+
+    (VIEW_RIGS as any).__twoViewsTest = {
+      views: () => [],
+      program: [
+        {
+          scope: 'perView',
+          steps: [
+            {
+              kind: 'foreground',
+              target: 'hdr',
+              near0Passes: ['stub-foreground'],
+              bodyPasses: ['stub-foreground'],
+            },
+          ],
+        },
+      ],
+    };
+    (fx.input.state as any).viewRig = '__twoViewsTest';
+
+    try {
+      renderFrame({ ...fx.input, views: [view1, view2] } as any);
+    } finally {
+      delete (VIEW_RIGS as any).__twoViewsTest;
+    }
+
+    const submit = fx.device.queue.submit as any as ReturnType<typeof vi.fn>;
+    expect(submit).toHaveBeenCalledTimes(2);
+    const beginCalls = (fx.env.beginRenderPass as any).mock.calls as Array<
+      [GPURenderPassDescriptor]
+    >;
+    // view1's one-entry chain opens one pass, view2's two-entry chain two —
+    // 3 total, each view's own submit carrying only its own passes.
+    expect(beginCalls.length).toBe(3);
+  });
+
+  it('a once section sees the frame-wide content fact across views, while each view still clears its own first touch (radar K4)', () => {
+    // A `once` section against `canvas` sees what a DIFFERENT view's
+    // `perView` section drew: the content question is frame-wide
+    // (`ctx.snapshot.renderedTargets`), read here through a stub overlay
+    // pass, while the executor's per-call `touched` set — which decides
+    // clear-vs-load — stays private: view B's own first touch of `hdr`
+    // still CLEARS, even though view A already drew into it moments
+    // earlier in the same frame.
+    const stubHdrPass = { name: 'stub-hdr', enabled: () => true, draw: vi.fn() };
+    const seenContentFact: boolean[] = [];
+    const overlayPass = {
+      name: 'stub-overlay',
+      enabled: () => true,
+      draw: vi.fn((_pass: unknown, _view: unknown, ctx: FrameView) => {
+        seenContentFact.push(ctx.snapshot.renderedTargets.has('hdr'));
+      }),
+    };
+    (fx.input.state as any).passes = [...(fx.input.state as any).passes, stubHdrPass, overlayPass];
+
+    // Neither view is `canvas` — the fact must be visible to canvas's `once`
+    // section without being tied to `canvas === views[0]`.
+    const viewA = { ...fx.input.canvas, viewSlot: 1, slabs: [makeSlab()] };
+    const viewB = { ...fx.input.canvas, viewSlot: 2, slabs: [makeSlab()] };
+
+    (VIEW_RIGS as any).__foldTest = {
+      views: () => [],
+      program: [
+        {
+          scope: 'perView',
+          steps: [{ kind: 'render', target: 'hdr', slab: 0, passes: ['stub-hdr'] }],
+        },
+        {
+          scope: 'once',
+          steps: [{ kind: 'render', target: 'swap', slab: 0, passes: ['stub-overlay'] }],
+        },
+      ],
+    };
+    (fx.input.state as any).viewRig = '__foldTest';
+
+    try {
+      renderFrame({ ...fx.input, views: [viewA, viewB] } as any);
+    } finally {
+      delete (VIEW_RIGS as any).__foldTest;
+    }
+
+    expect(seenContentFact).toEqual([true]);
+
+    const hdrCalls = (fx.env.beginRenderPass as any).mock.calls.filter(
+      ([desc]: [any]) => desc.colorAttachments[0].view === fx.hdrTargetView,
+    );
+    expect(hdrCalls).toHaveLength(2);
+    expect(hdrCalls[0]![0].colorAttachments[0].loadOp).toBe('clear');
+    expect(hdrCalls[1]![0].colorAttachments[0].loadOp).toBe('clear');
   });
 });

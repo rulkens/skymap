@@ -21,8 +21,6 @@ import ZoneOfAvoidanceTuningSectionContainer from './ui/ZoneOfAvoidanceTuningSec
 
 export const zoneOfAvoidanceLayer = defineLayer({
   name: 'zoneOfAvoidance',
-  // A fragment listed here may not also sit in `UNFORMED_SETTINGS_FRAGMENTS`:
-  // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: zoneOfAvoidanceLayerSettings,
   sources: ZONE_OF_AVOIDANCE_SOURCE_ROWS,
   targets: [
@@ -40,8 +38,10 @@ export const zoneOfAvoidanceLayer = defineLayer({
   destroy,
   passes: (runtime) => [zoneOfAvoidancePass(runtime), zoneOfAvoidanceUpsamplePass(runtime)],
   fades: zoneOfAvoidanceFadeRows,
-  labels: () => ({
-    world: [{ id: 'zoneOfAvoidanceLettering', produceLabels3D: produceZoneOfAvoidanceLettering }],
+  guides: () => ({
+    worldLabels: [
+      { id: 'zoneOfAvoidanceLettering', produceLabels3D: produceZoneOfAvoidanceLettering },
+    ],
   }),
   selection: () => [zoneOfAvoidanceSelectionRow()],
   ui: [

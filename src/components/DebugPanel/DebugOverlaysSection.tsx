@@ -1,4 +1,3 @@
-// src/components/DebugPanel/DebugOverlaysSection.tsx
 /**
  * DebugOverlaysSection — checkbox list for the renderer's raw debug
  * overlays, row-driven from `DEBUG_OVERLAY_ROWS` (see that table for what

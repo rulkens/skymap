@@ -15,6 +15,7 @@ import { findByIdOrThrow } from '../../../utils/object/findByIdOrThrow';
 import { isMeshBody } from '../../../utils/meshBodies/isMeshBody';
 import { hOverR } from './hOverR';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
+import { focusDriverId } from '../../../utils/camera/focusDriverId';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { frameUp } from '../../../utils/camera/frameUp';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
@@ -41,14 +42,13 @@ export function approachTiltedPose(
 ): FramedCameraPose {
   if (!isWorldArm(framed)) return framed;
   if (!pivotsOnFocusedBody || rememberedTiltRad === 0) return framed;
-  if (focusRow === null || focusRow.type !== 'body' || !bodyMovesThisFrame(focusRow)) {
-    return framed;
-  }
+  const focusId = focusDriverId(focusRow);
+  if (focusId === null || !bodyMovesThisFrame(focusRow)) return framed;
   // No ground, no nadir to tilt off: a mesh body's radius is a hull.
-  const body = findByIdOrThrow(SCENE_BODIES, focusRow.id, 'approachTiltedPose');
+  const body = findByIdOrThrow(SCENE_BODIES, focusId, 'approachTiltedPose');
   if (isMeshBody(body)) return framed;
   // `hOverR` is the sanctioned Mpc↔metre seam for the altitude.
-  const bodyState = bodies.get(focusRow.id);
+  const bodyState = bodies.get(focusId);
   if (bodyState === undefined) return framed;
   const centreMpc = bodyState.positionMpc;
 

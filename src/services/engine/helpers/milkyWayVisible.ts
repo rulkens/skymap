@@ -14,8 +14,7 @@ import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 export function milkyWayVisible(
   state: PassState,
   camPos: Readonly<Vec3>,
-  fovYRad: number,
-  viewportHeightPx: number,
+  pxPerRad: number,
   nowMs: number,
 ): boolean {
   const togglePart =
@@ -23,5 +22,5 @@ export function milkyWayVisible(
     state.subsystems.fades.opacityOf({ kind: 'milkyWay' }, nowMs) > 0;
   if (!togglePart) return false;
   const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
-  return milkyWayFadeAlpha(camDistMpc, fovYRad, viewportHeightPx) > 0;
+  return milkyWayFadeAlpha(camDistMpc, pxPerRad) > 0;
 }

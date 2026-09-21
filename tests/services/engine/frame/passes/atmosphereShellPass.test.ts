@@ -27,10 +27,11 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../../fixtures/makeSlab';
+import type { AtmosphereShellDepth } from '../../../../../src/@types/rendering/AtmosphereShellDepth';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
@@ -43,7 +44,12 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // ARGUMENTS the layer feeds them, and lets packAtmosphereUniforms run for
 // real so the packed bottomRadius reveals which ATMOSPHERE_PARAMS row fed it.
 const MOCK_MVP = new Float64Array(16);
-const MOCK_CAM_LOCAL: Vec3 = [0.1, 0.2, 0.3];
+// OUTSIDE the atmosphere top (radius 1 in this frame): this layer is the
+// outside-only half, and a camLocal inside the shell routes every row to
+// `aerialPerspectivePass` instead.
+const MOCK_CAM_LOCAL: Vec3 = [1.0, 2.0, 3.0];
+/** Well under `isInsideAtmosphereShell`'s 1.005 ratio — `aerial-perspective`'s camera. */
+const MOCK_CAM_LOCAL_INSIDE: Vec3 = [0.0, 0.0, 0.5];
 vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
@@ -119,17 +125,23 @@ const PASS_STUB = {
  * is mocked, so the pose's actual geometry never matters, only that it is
  * non-null and gets forwarded.
  */
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext {
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
-    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
-  } as unknown as ReadyFrameContext;
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+    snapshot: { renderTargets: { farDepthView: () => FAR_DEPTH_VIEW } },
+  } as unknown as FrameView;
 }
 
-const CTX_STUB = {} as ReadyFrameContext;
+const FAR_DEPTH_VIEW = { label: 'far-placeholder' } as unknown as GPUTextureView;
+const ROW_DEPTH_VIEW = { label: 'foreground:0-depth' } as unknown as GPUTextureView;
+
+const CTX_STUB = {} as FrameView;
 
 function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
@@ -153,6 +165,20 @@ describe('atmosphereShellPass.enabled', () => {
     expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('earth' as BodyId))).toBe(true);
     expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(true);
     expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
+  });
+
+  it('is false for a camera the shell encloses — that row is aerialPerspectivePass’s', () => {
+    // Both draws on one body would double its in-scatter, and the proxy mesh
+    // loses its near wall from inside; the two passes split on this one flag.
+    camLocalMock.mockImplementation(() => MOCK_CAM_LOCAL_INSIDE);
+    try {
+      const state = makeState({ draw: vi.fn() });
+      expect(atmosphereShellPass.enabled(state, makeCtx(), makeBodyView('earth' as BodyId))).toBe(
+        false,
+      );
+    } finally {
+      camLocalMock.mockImplementation(() => MOCK_CAM_LOCAL);
+    }
   });
 
   it('is false while the atmosphereShellRenderer handle is null, even for a bare ctx (handle short-circuits first)', () => {
@@ -219,6 +245,42 @@ describe('atmosphereShellPass.draw', () => {
     expect(earthUniforms[19]).toBeCloseTo(expectedEarthBottom);
     expect(marsUniforms[19]).toBeCloseTo(expectedMarsBottom);
     expect(earthUniforms[19]).not.toBeCloseTo(marsUniforms[19]!, 3);
+  });
+
+  it('hands the row’s sampled depth over with the frame that unprojects it, scaled to this body', () => {
+    // The fragment ends every ray at this depth, in atmosphere-top units — so
+    // a `kmToLocal` taken from the wrong body (or dropped) would cut the march
+    // at a distance that is right in km and wrong by a factor of the radius.
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const state = makeState({ draw: drawSpy });
+    const view = makeBodyView('mars' as BodyId);
+
+    atmosphereShellPass.draw(
+      PASS_STUB,
+      { ...view, sampledDepth: { view: ROW_DEPTH_VIEW, row: view.slab } },
+      makeCtx(),
+      state,
+    );
+
+    const depth = drawSpy.mock.calls[0]![3] as AtmosphereShellDepth;
+    expect(depth.view).toBe(ROW_DEPTH_VIEW);
+    expect(depth.frame).not.toBeNull();
+    expect(depth.viewportPx).toBe(view.viewportPx);
+    expect(depth.kmToLocal).toBeCloseTo(1 / ATMOSPHERE_PARAMS.mars!.atmosphereTopKm);
+  });
+
+  it('binds the far placeholder, never the real view, when no depth row resolves', () => {
+    // A step with no `{ sample }` marker (a capture face) leaves `sampledDepth`
+    // undefined; pairing a null frame with the real texture would let the
+    // fragment unproject live depth through an identity matrix.
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const state = makeState({ draw: drawSpy });
+
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), makeCtx(), state);
+
+    const depth = drawSpy.mock.calls[0]![3] as AtmosphereShellDepth;
+    expect(depth.frame).toBeNull();
+    expect(depth.view).toBe(FAR_DEPTH_VIEW);
   });
 });
 

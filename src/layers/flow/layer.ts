@@ -19,8 +19,6 @@ import FlowTuningSectionContainer from './ui/FlowTuningSectionContainer';
 
 export const flowLayer = defineLayer({
   name: 'flow',
-  // A fragment listed here may not also sit in `UNFORMED_SETTINGS_FRAGMENTS`:
-  // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: flowLayerSettings,
   sources: FLOW_SOURCE_ROWS,
   create,

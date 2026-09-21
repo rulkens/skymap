@@ -57,7 +57,7 @@ const FIXTURE_TABS: readonly PaletteTab[] = [
         id: 'solarSystem',
         label: 'Solar System',
         blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'solarSystem' },
+        action: { kind: 'exhibit', exhibitId: 'solarSystem' },
       },
     ],
   },
@@ -262,13 +262,22 @@ describe('CommandPalette', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('a view placeholder card does not select or close', async () => {
+  it('ArrowRight ArrowRight then Enter selects an exhibit card', async () => {
+    const onSelect = vi.fn();
+    const user = userEvent.setup();
+    renderPalette({ onSelect });
+    screen.getByPlaceholderText(/search galaxies/i).focus();
+    await user.keyboard('{ArrowRight}{ArrowRight}{Enter}');
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'exhibit', exhibitId: 'solarSystem' });
+  });
+
+  it('clicking an exhibit card selects its action and closes', async () => {
     const onSelect = vi.fn();
     const onClose = vi.fn();
     const user = userEvent.setup();
     renderPalette({ onSelect, onClose });
     await user.click(screen.getByRole('button', { name: 'Solar System' }));
-    expect(onSelect).not.toHaveBeenCalled();
-    expect(onClose).not.toHaveBeenCalled();
+    expect(onSelect).toHaveBeenCalledWith({ kind: 'exhibit', exhibitId: 'solarSystem' });
+    expect(onClose).toHaveBeenCalledOnce();
   });
 });

@@ -51,13 +51,14 @@ import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const SUN_LABEL_ID = sceneBodyLabelId('sun');
 const J2000_STATES = deriveBodyStates(CONST_J2000);
@@ -127,8 +128,7 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
     targetMpc: target,
     up: [0, 1, 0],
     renderOrigin: RENDER_ORIGIN_MPC,
-    fovYRad: 1,
-    aspect: 1280 / 720,
+    frustum: symmetricFrustum(1, 1280 / 720),
     near,
     far,
     reversedZ: false,
@@ -145,16 +145,20 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
   };
 }
 
-function makeCtx(eye: Vec3, slab: Slab): ReadyFrameContext {
+// Matches the NEAR0 slab's own frustum (`symmetricFrustum(1, 1280 / 720)`
+// above) — tangent-exact, so `drawPxPerRad` and the slab's projection agree.
+const FIXTURE_FRUSTUM = symmetricFrustum(1, 1280 / 720);
+const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDown);
+
+function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
+    snapshot: { nowMs: 0, simDays: CONST_J2000 },
     slabs: [slab],
     drawCamPos: eye,
     canvasSize: { width: 1280, height: 720 },
     cam: { distance: 1e-13 },
-    fovYRad: 1,
-    nowMs: 0,
-    simDays: CONST_J2000,
-  } as unknown as ReadyFrameContext;
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 // The farthest star still inside the star-caption full-alpha band, seen from

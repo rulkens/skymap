@@ -9,6 +9,7 @@
 
 import type { Task } from 'redux-saga';
 import type { Tier } from '../../data/Tier';
+import type { ViewRigKey } from '../frame/ViewRigKey';
 import type { EngineSettingsState } from '../../settings/EngineSettingsState';
 import type { EngineData } from '../data/EngineData';
 import type { EnginePickingState } from './EnginePickingState';
@@ -28,6 +29,7 @@ import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { SelectionKindRow } from '../layer/SelectionKindRow';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
+import type { OrbitalElements } from '../../scene/OrbitalElements';
 import type { RenderTargetSpec } from '../frame/RenderTargetSpec';
 import type { UiState } from '../../ui/UiState';
 
@@ -35,6 +37,8 @@ export type EngineState = {
   settings: EngineSettingsState;
   /** A getter onto `store.getState().tier` — no engine-side mirror to drift. */
   tier: Tier;
+  /** Which `ViewRig` (`VIEW_RIGS`) `renderFrame` walks this frame. Seeded `'mono'`. */
+  viewRig: ViewRigKey;
   /** A getter onto `store.getState().selection`; the pick path dispatches the writes. */
   selection: SelectionState;
   /** A getter onto `store.getState().selectionRows` — the saga-reconciled display rows. */
@@ -102,6 +106,9 @@ export type EngineState = {
   /** Every Layer's `worldLabels`, in composition order, composed once by
    * `createLayers`; `runLabel3DProducers` walks this. */
   label3DProducers: readonly Label3DProducer[];
+  /** Core's conics then every Layer's `guides.orbitTrails`, composed once by
+   * `createLayers`; `orbitTrailsPass` walks this. */
+  orbitTrailRows: readonly OrbitalElements[];
   /**
    * The one selection-row array core owns (D5, Ruling 4): `[]` here,
    * populated by Task 8's core rows and appended to once, by `createLayers`,

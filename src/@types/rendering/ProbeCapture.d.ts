@@ -11,6 +11,6 @@ export type ProbeCapture = {
   readonly faceSizePx: number;
   /** Capture-camera near plane, Mpc — the same role as `SkyCapture.nearMpc`. */
   readonly nearMpc: number;
-  /** First `ReadyFrameContext.viewSlot` this capture's faces claim (base … base+5). */
+  /** First `FrameView.viewSlot` this capture's faces claim (base … base+5). */
   readonly viewSlotBase: number;
 };

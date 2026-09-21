@@ -23,8 +23,9 @@
  * Store reach: App itself keeps only shell-level reach. `selectSelectedFocusable`
  * drives the `uiStack` "has a pinned mobile selection" className;
  * `selectPaletteOpen`, `selectUiHidden`,
- * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX; and
- * `selectTourActive` picks the tour-overlay/beat-rail branch. Everything
+ * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX;
+ * `selectTourActive` picks the tour-overlay/beat-rail branch; and
+ * `selectTakeoverSource` picks the exhibit-overlay branch the same way. Everything
  * else — hover/selection detail, engine status/scale/load-progress, settings,
  * navigation, the top-pill row's dispatches — is owned by the container it
  * feeds, not App.
@@ -49,9 +50,10 @@ import { selectSelectedFocusable } from '../../state/selection/selectors';
 import DebugPanel from '../DebugPanel/DebugPanel';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
+import ExhibitOverlayContainer from '../containers/ExhibitOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
-import { selectTakeoverActive } from '../../state/takeover/selectors';
+import { selectTakeoverActive, selectTakeoverSource } from '../../state/takeover/selectors';
 import {
   selectPaletteOpen,
   selectUiHidden,
@@ -80,13 +82,20 @@ export function App(): React.ReactElement {
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
   // A running guided tour hides the whole HUD stack and mounts its own overlay
-  // (caption + nav); a view will do the same once ViewOverlay lands. HUD-hidden
-  // is DERIVED from `takeoverActive` (any takeover, tour or view), not a
-  // separate `setUiHidden` write — see runTakeover's module header. The overlay
-  // and beat rail below stay gated on `tourActive` specifically: they are tour
-  // chrome, not generic takeover chrome.
+  // (caption + nav); an exhibit does the same through `ExhibitOverlay`.
+  // HUD-hidden is DERIVED from `takeoverActive` (any takeover, tour or
+  // exhibit), not a separate `setUiHidden` write — see runTakeover's module
+  // header. The overlay and beat rail below stay gated on `tourActive`
+  // specifically: they are tour chrome, not generic takeover chrome.
   const tourActive = useAppSelector(selectTourActive);
   const takeoverActive = useAppSelector(selectTakeoverActive);
+
+  // Exhibit takeover mirrors the tour branch above: App resolves which
+  // exhibit (if any) owns the scene and hands the id down, so
+  // ExhibitOverlayContainer does not re-derive `kind` from the takeover slice
+  // itself.
+  const takeoverSource = useAppSelector(selectTakeoverSource);
+  const exhibitId = takeoverSource?.kind === 'exhibit' ? takeoverSource.id : null;
 
   // The full splash state surface lives in `SplashContainer` so its churn
   // re-renders only that subtree. App needs just one fact: whether the splash
@@ -105,6 +114,10 @@ export function App(): React.ReactElement {
   // normal branch it sits as a SIBLING of the HUD stack, not inside it, so the
   // `uiStackHidden` fade (which the tour triggers) doesn't also fade it.
   const tourOverlay = tourActive && <TourOverlayContainer />;
+  // Exhibit overlay — mounted only while an exhibit owns the scene. Not part
+  // of the cinema-mode capture surface below: the recorder only ever plays
+  // tours.
+  const exhibitOverlay = exhibitId && <ExhibitOverlayContainer id={exhibitId} />;
 
   // Cinema mode (`?cinema`) — the recorder's capture surface: the canvas plus
   // the tour overlay (captions + nav), nothing else. The recorder harness
@@ -164,6 +177,7 @@ export function App(): React.ReactElement {
         )}
       </div>
       {tourOverlay}
+      {exhibitOverlay}
       {/* Beat rail rides the interactive session only — it is progress
           chrome, so the cinema branch (captions-only film frames) omits it
           just like TourNav and the beat counter. */}

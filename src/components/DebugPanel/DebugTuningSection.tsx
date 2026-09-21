@@ -1,4 +1,3 @@
-// src/components/DebugPanel/DebugTuningSection.tsx
 /**
  * DebugTuningSection — the shared board every `*TuningSection` instantiates:
  * one `DebugSlider` row per field inside a `DebugSection`, then `children`.

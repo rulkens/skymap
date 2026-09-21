@@ -62,11 +62,11 @@ describe('starPickLeafDraws', () => {
           aggregate: streamOf(aggregate, 0.9, 1),
         },
       ],
+      originMpc: [0, 0, 0],
       sizePx: 2,
       brightness: 1,
       glowOverlap: 1,
       aggregateIntensityCap: 0.06,
-      anyNodeFading: false,
     };
 
     const draws = starPickLeafDraws(prep);

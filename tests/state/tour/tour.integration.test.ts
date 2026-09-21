@@ -29,7 +29,7 @@ import type { VisibilityLayerKey } from '../../../src/@types/animation/Visibilit
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { FadeId } from '../../../src/@types/animation/FadeId';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 
@@ -88,7 +88,9 @@ describe('three-way opacity product: intent × focus × clip', () => {
     const clipAtZero = makeClipStub(0);
     const stateAtZero = makeResolveOpacityState(fades, clipAtZero);
     // 1 (intent) × 1 (no focus recession for flow) × 0 (clip) = 0
-    expect(resolveLayerOpacity(stateAtZero, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0);
+    expect(
+      resolveLayerOpacity(stateAtZero, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0);
   });
 
   it('a clip factor of 1 is neutral — composed alpha is the bare intent × recession product', () => {
@@ -100,7 +102,9 @@ describe('three-way opacity product: intent × focus × clip', () => {
     const clipAtOne = makeClipStub(1);
     const state = makeResolveOpacityState(fades, clipAtOne);
     // Hand-computed: intent 0.8 × recession 1 (galaxyCatalog never recedes) × clip 1 = 0.8.
-    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0.8);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0.8);
   });
 });
 
@@ -205,7 +209,11 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
 
     const clipAtOne = makeClipStub(1); // factor 1 = clip is gone
     const state = makeResolveOpacityState(fades, clipAtOne);
-    const composed = resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, flowHandle);
+    const composed = resolveLayerOpacity(
+      state,
+      { snapshot: { focusBlend: 0, nowMs: 0 } } as never,
+      flowHandle,
+    );
     // 1 (intent) × 1 (no recession for flow) × 1 (clip gone) = 1
     expect(composed).toBe(1);
 
@@ -227,19 +235,14 @@ describe('cosmicFlows clip — clipOpacity end-to-end', () => {
   const CANVAS = { width: 1280, height: 720 };
 
   // `galaxyPointRenderer` rides `state.gpu` now (D13), not this ctx.
-  function makeDrawCtx(
-    nowMs: number,
-    camPos: Readonly<[number, number, number]>,
-  ): ReadyFrameContext {
+  function makeDrawCtx(nowMs: number, camPos: Readonly<[number, number, number]>): FrameView {
     return {
-      nowMs,
-      focusBlend: 0,
+      snapshot: { nowMs, focusBlend: 0, visibleSourceMask: 0xffffffff },
       drawCamPos: camPos,
       fovYRad: FOV_Y_RAD,
       canvasSize: CANVAS,
       drawPxPerRad: CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2)),
-      visibleSourceMask: 0xffffffff,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
   }
 
   function makeDrawState(

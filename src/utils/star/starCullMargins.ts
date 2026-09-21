@@ -13,14 +13,9 @@ import {
  */
 const marginScratch = { leaf: 0, pick: 0 };
 
-export function starCullMargins(
-  sizePx: number,
-  viewportHeightPx: number,
-  fovYRad: number,
-): typeof marginScratch {
-  const radiansPerPx = fovYRad / viewportHeightPx;
+export function starCullMargins(sizePx: number, pxPerRad: number): typeof marginScratch {
   const leafPxRadius = STAR_GLOW_MIN_PX * (sizePx / STAR_SIZE_REF_PX);
-  marginScratch.leaf = leafPxRadius * radiansPerPx;
-  marginScratch.pick = Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
+  marginScratch.leaf = leafPxRadius / pxPerRad;
+  marginScratch.pick = Math.max(leafPxRadius, STAR_PICK_MIN_RADIUS_PX) / pxPerRad;
   return marginScratch;
 }

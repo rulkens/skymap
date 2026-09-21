@@ -10,7 +10,7 @@ import { frame } from '../../../src/layers/galaxyCatalog/frame';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
 // The reconcile runs early in `frame`, ahead of the hi-res/disk-walk limbs —
 // this fixture keeps those inert (no committed hi-res pair, a no-op planner
@@ -50,11 +50,10 @@ function makeState(mode: BiasMode): PassState {
 }
 
 const CTX = {
+  snapshot: { visibleSourceMask: 0xffffffff, nowMs: 0 },
   cam: {},
-  visibleSourceMask: 0xffffffff,
   drawPxPerRad: 100,
-  nowMs: 0,
-} as unknown as ReadyFrameContext;
+} as unknown as FrameView;
 
 describe('galaxyCatalog frame — bias reconcile', () => {
   it('re-bakes once per bias-mode change, not once per frame', () => {

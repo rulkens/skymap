@@ -10,15 +10,14 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { TRAIL_ELEMENTS } from '../../../../data/bodies/trailElements';
 import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';
 import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
+import { sampledDepthBinding } from '../sampledDepthBinding';
 import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -27,9 +26,10 @@ import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRendere
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
-// Reused across frames so the hot path allocates nothing. Sized from the
-// compile-time elements table — a fixed size, not a cap.
-const staging = new Float32Array(TRAIL_ELEMENTS.length * INSTANCE_FLOATS);
+// Reused across frames so the hot path allocates nothing. The roster is composed
+// at boot (core's rows plus every Layer's `guides.orbitTrails`), so the buffer is
+// grown on the first frame that needs more room rather than sized once here.
+let staging = new Float32Array(0);
 
 export const orbitTrailsPass: ContentPass = {
   name: 'orbit-trails',
@@ -40,7 +40,7 @@ export const orbitTrailsPass: ContentPass = {
     // (hdr, NEAR0) pass drops — opacity 0 ⇒ no render.
     if (
       !state.settings.orbitTrails.enabled &&
-      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.nowMs) <= 0
+      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.snapshot.nowMs) <= 0
     ) {
       return false;
     }
@@ -60,8 +60,7 @@ export const orbitTrailsPass: ContentPass = {
       const maxDiameterPx = apparentSizePx({
         diameterKpc: 2 * reachMpc * 1000,
         distanceMpc: nearestMpc,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (maxDiameterPx >= CULL_PX) return true;
     }
@@ -74,9 +73,12 @@ export const orbitTrailsPass: ContentPass = {
     // Reading the shared snapshot — never re-deriving — is what welds each trail
     // to the exact instant its body is drawn at.
     const states = sceneBodyStates(state, ctx);
-    const limit = TRAIL_ELEMENTS.length;
+    const rows = state.orbitTrailRows;
+    const limit = rows.length;
+    if (staging.length < limit * INSTANCE_FLOATS) {
+      staging = new Float32Array(limit * INSTANCE_FLOATS);
+    }
     const camPos = ctx.drawCamPos;
-    const viewportHeightPx = view.viewportPx[1];
 
     // Multiplied into every orbit's apparent-size alpha below, so a hide dissolves
     // the layer rather than popping it.
@@ -92,11 +94,11 @@ export const orbitTrailsPass: ContentPass = {
     //   floats 34..45 — eye-relative 3D basis, km (loc10/11/12 at byte 136/152/168)
     let count = 0;
     for (let i = 0; i < limit; i++) {
-      const elements = TRAIL_ELEMENTS[i]!;
+      const elements = rows[i]!;
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place focus fold below cannot alias a
       // shared scratch across orbits.
-      const propagated = propagateElements(elements, ctx.simDays);
+      const propagated = propagateElements(elements, ctx.snapshot.simDays);
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
       // The snapshot seeds anchors (the Sun) alongside every element row, so a
       // heliocentric focus and a moving parent are the same lookup.
@@ -114,8 +116,7 @@ export const orbitTrailsPass: ContentPass = {
       const diameterPx = apparentSizePx({
         diameterKpc: 2 * semiMajorLenMpc * 1000,
         distanceMpc,
-        viewportHeightPx,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
@@ -153,13 +154,17 @@ export const orbitTrailsPass: ContentPass = {
       );
     }
     if (count > 0) {
-      renderer.draw(
-        pass,
-        staging,
+      // The second occluder channel: the terrain and meshes of the row that last
+      // cleared the sampled depth. Its own f64 `vp` (the invariant above), scaled
+      // by metres-per-km so the fragment's reconstructed distances land in the
+      // same km as the eye-relative orbit points it compares them against.
+      renderer.draw(pass, {
+        instances: staging,
         count,
-        sceneOccluderSpheres(state, ctx),
-        state.settings.debug.overlays['orbit-trail-impostor'],
-      );
+        occluders: sceneOccluderSpheres(state, ctx),
+        depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
+        showImpostor: state.settings.debug.overlays['orbit-trail-impostor'],
+      });
     }
   },
 };

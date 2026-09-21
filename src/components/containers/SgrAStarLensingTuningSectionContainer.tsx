@@ -1,4 +1,3 @@
-// src/components/containers/SgrAStarLensingTuningSectionContainer.tsx
 /**
  * Store boundary for the DebugPanel's Sgr A* lens tuning knobs. Mirrors
  * `ZoneOfAvoidanceTuningSectionContainer`: `selectSgrAStarLensingTuning`

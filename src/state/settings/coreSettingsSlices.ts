@@ -5,7 +5,9 @@ import { cameraSettingsSlice } from './core/cameraSettingsSlice';
 import { debugSlice } from './core/debugSlice';
 import { hdrSlice } from './core/hdrSlice';
 import { labelsSlice } from './core/labelsSlice';
+import { orbitTrailsSlice } from './core/orbitTrails/slice';
 import { orientationSlice } from './core/orientationSlice';
+import { pickingSlice } from './core/pickingSlice';
 import { tonemapSlice } from './core/tonemapSlice';
 
 export const CORE_SETTINGS_SLICES = [
@@ -15,5 +17,7 @@ export const CORE_SETTINGS_SLICES = [
   hdrSlice,
   bloomSlice,
   labelsSlice,
+  orbitTrailsSlice,
+  pickingSlice,
   debugSlice,
 ] as const;

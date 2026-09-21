@@ -1,4 +1,3 @@
-// src/components/containers/EarthSectionContainer.tsx
 /**
  * EarthSectionContainer — store boundary for the Earth settings subgroup.
  *

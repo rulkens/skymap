@@ -3,7 +3,7 @@ import { selectionRingPass } from '../../../../../src/services/engine/frame/pass
 import { near0SelectionRingPass } from '../../../../../src/services/engine/frame/passes/near0SelectionRingPass';
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Mat4 } from 'wgpu-matrix';
 import { Source } from '../../../../../src/data/sources';
@@ -21,36 +21,38 @@ import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
  * `slabs.ts`), so every fixture needs a real cosmological row there —
  * mirroring the pattern `passes.test.ts` uses for the HDR layers.
  */
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   const vp = new Float32Array(16) as unknown as Mat4;
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp) });
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      layersSettling: false,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: {} as never,
+      cursorTexPx: null,
+      renderedTargets: new Set<string>(),
+    },
     viewSlot: 0,
-    renderedTargets: new Set<string>(),
+    viewKind: 'frame',
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize: { width: 1280, height: 720 },
-    cursorTexPx: null,
     drawCamPos: [0, 0, 0] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    nowMs: 0,
-    simDays: 0,
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersSettling: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: {} as never,
-  };
+  } as unknown as FrameView;
 }
 
 function makeStateWithSizePx(row: SelectionRow | null, sizePx: number): EngineState {
@@ -271,20 +273,29 @@ describe('selectionRingPass.draw', () => {
     expect(rendererSpy.draw.mock.calls[0]![2]).toEqual([1280, 720]);
   });
 
-  // Cross-file contract (Task 12): the occlusion joint now reads
-  // 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl), not its
+  // Cross-file contract (Task 12): the occlusion joint's COVERAGE half reads
+  // 'foreground:0's colour view (its alpha, via lib/sceneDepth.wesl), not its
   // depth view — each painter-chain row clears its own depth (spec §7.3), so
-  // the depth buffer can no longer back a coverage test. This fails if the
-  // layer is ever pointed back at `depthViewOf`.
-  it('passes the foreground colour view (not the depth view) to the renderer as the 5th arg', () => {
+  // the depth buffer can no longer back a coverage test. Its depth half comes
+  // from the step's own `view.sampledDepth`, so this still fails if the layer
+  // is ever pointed back at `depthViewOf`.
+  it('passes the foreground colour view (not a depthViewOf lookup) in the joint', () => {
     const state = makeStateWithSizePx(galaxyRow(), 4);
     const sentinelColorView = {} as GPUTextureView;
+    const farDepthView = {} as GPUTextureView;
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelColorView);
     const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = {
       ...makeCtx(),
-      renderedTargets: new Set(['foreground:0']),
-      renderTargets: { viewOf, depthViewOf } as unknown as ReadyFrameContext['renderTargets'],
+      snapshot: {
+        ...makeCtx().snapshot,
+        renderTargets: {
+          viewOf,
+          depthViewOf,
+          farDepthView: () => farDepthView,
+        } as unknown as FrameView['snapshot']['renderTargets'],
+        renderedTargets: new Set(['foreground:0']),
+      },
     };
 
     selectionRingPass.draw(PASS_STUB, slabViewOf(ctx, COSMO), ctx, state);
@@ -294,6 +305,10 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    expect(rendererSpy.draw.mock.calls[0]![4]).toBe(sentinelColorView);
+    expect(rendererSpy.draw.mock.calls[0]![4]).toEqual({
+      colorView: sentinelColorView,
+      depthView: farDepthView,
+      frame: null,
+    });
   });
 });

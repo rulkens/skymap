@@ -3,7 +3,10 @@
  * boot placeholder and `wireInput`'s first real pose both come through here, so
  * no seed site can leave a half-built bag. Displayed = authored at the seed:
  * nothing has been projected yet (`projectFramePose` splits them thereafter).
- * A caller dispatches first, then seeds, so the runtime starts reconciled.
+ * A caller dispatches first, then seeds, so the runtime starts reconciled —
+ * `wireInput`'s BOOT seed is the one exception (seeds off the PRE-commit
+ * store, then dispatches, so frame 1 reads its own commit as outside; see its
+ * own comment for why).
  */
 
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';

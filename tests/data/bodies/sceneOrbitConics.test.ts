@@ -1,7 +1,7 @@
 /**
  * sceneOrbitConics — structural tests for the absolute-world orbit ellipse table.
  *
- * The table is DERIVED from `TRAIL_ELEMENTS` + `keplerianEllipse` + parent
+ * The table is DERIVED from `CORE_TRAIL_ELEMENTS` + `keplerianEllipse` + parent
  * resolution, so these tests pin INVARIANTS of that derivation, not re-typed
  * decimals:
  *
@@ -74,7 +74,7 @@ describe('SCENE_ORBIT_CONICS', () => {
 
   it('the conic table excludes mesh bodies', () => {
     // Guards the default table: walking ORBITAL_ELEMENTS instead of
-    // TRAIL_ELEMENTS would grow a conic for a row that draws no trail.
+    // CORE_TRAIL_ELEMENTS would grow a conic for a row that draws no trail.
     expect(SCENE_ORBIT_CONICS.some((c) => c.id === 'whale')).toBe(false);
   });
 

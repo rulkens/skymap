@@ -6,14 +6,14 @@
  */
 
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { subjectProbe } from './subjectProbe';
 
 export function captureFaceAttachment(
   capture: CaptureFaceRef,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   state: EngineState,
 ): {
   readonly view: GPUTextureView;
@@ -25,8 +25,8 @@ export function captureFaceAttachment(
   if (row.kind === 'sky') {
     return {
       // One array LAYER: `viewOf` spans all six, which WebGPU rejects as a colour attachment.
-      view: ctx.renderTargets.layerViewOf(row.target, capture.face),
-      clearValue: ctx.renderTargets.specOf(row.target).clearValue,
+      view: ctx.snapshot.renderTargets.layerViewOf(row.target, capture.face),
+      clearValue: ctx.snapshot.renderTargets.specOf(row.target).clearValue,
       depthView: null,
     };
   }

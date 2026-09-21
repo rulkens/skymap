@@ -11,13 +11,13 @@ import type { CaptureFaceContexts } from '../../../@types/engine/frame/CaptureFa
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { scheduleProbeCapture } from './scheduleProbeCapture';
 import { scheduleSkyCaptures } from './scheduleSkyCaptures';
 
 export function scheduleCubemapCaptures(input: {
   readonly state: EngineState;
-  readonly ctx: ReadyFrameContext;
+  readonly ctx: FrameView;
 }): CaptureFaceContexts {
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>(
     scheduleSkyCaptures(input),

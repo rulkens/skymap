@@ -1,4 +1,3 @@
-// src/components/HomeButton/HomeIcon.tsx
 /**
  * HomeIcon — outlined house glyph. Inline SVG so it inherits
  * currentColor from the button it sits inside; PillButton hover/focus

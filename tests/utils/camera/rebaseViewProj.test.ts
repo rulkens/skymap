@@ -24,6 +24,7 @@ import { SCALE_UNITS } from '../../../src/data/scaleUnits';
 import { computeForegroundViewProj } from '../../../src/utils/camera/computeForegroundViewProj';
 import { rebaseViewProj } from '../../../src/utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../src/utils/math/narrowMat4';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 // ── Geometry: anchor at 1 AU, camera at the deep-zoom floor ─────────────────
 
@@ -52,8 +53,7 @@ const vpF64 = computeForegroundViewProj({
   targetMpc: target,
   up: [0, 1, 0],
   renderOrigin,
-  fovYRad: Math.PI / 4,
-  aspect: 1,
+  frustum: symmetricFrustum(Math.PI / 4, 1),
   near,
   far,
   reversedZ: false,

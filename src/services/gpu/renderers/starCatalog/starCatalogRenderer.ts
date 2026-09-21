@@ -119,17 +119,19 @@ import {
   BRIGHTNESS_FLOAT_INDEX,
   GLOW_OVERLAP_FLOAT_INDEX,
   AGG_INTENSITY_CAP_FLOAT_INDEX,
+  PX_PER_RAD_FLOAT_INDEX,
   writeStarNodeParams,
 } from './starCatalogLayout';
 import type { StarDrawStream } from '../../../../@types/rendering/starCatalogRenderer/StarDrawStream';
 import type { StarCatalogPickResources } from '../../../../@types/rendering/starCatalogRenderer/StarCatalogPickResources';
 import type { StarCatalogDrawArgs } from '../../../../@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
+import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
 
 /**
  * One draw stream's per-source, per-view-slot storage buffers: the
  * contiguous NodeParams block and the parallel prefix sum, plus their shared
  * grow-only capacity. A stream (leaf or aggregate) owns its OWN pair per
- * `ReadyFrameContext.viewSlot` — a sky-cubemap capture sweep draws
+ * `FrameView.viewSlot` — a sky-cubemap capture sweep draws
  * a source's cut once per face plus once for the real view, ALL before one
  * `submit()`, and every one of those calls is a DIFFERENT cut (different
  * camera), so a pair shared across view slots would read only the
@@ -172,6 +174,12 @@ export function createStarCatalogRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): StarCatalogRenderer {
+  // The frame's one star cut (see `setFrameCut`'s doc) — written once by
+  // `runFrame` right after `computeStarCut`, read by every real frame view's
+  // draw. Plain closure state, not a WeakMap keyed per ctx: this is ONE fact
+  // for the whole frame, so it needs no key at all.
+  let frameCut: PreparedStarCut | null = null;
+
   // ── Camera uniform (shared across sources — see the module header) ────────
   // Sized to STAR_UNIFORM_BYTES: the 80-byte CameraUniforms prefix plus the
   // source-independent `sizePx` + `brightness` + `glowOverlap` scalars, matching
@@ -408,6 +416,7 @@ export function createStarCatalogRenderer(
       brightness,
       glowOverlap,
       aggregateIntensityCap,
+      pxPerRad,
       frustumPlanes,
       glowMarginAngleRad,
       viewSlot,
@@ -433,6 +442,7 @@ export function createStarCatalogRenderer(
     cameraScratch[BRIGHTNESS_FLOAT_INDEX] = brightness;
     cameraScratch[GLOW_OVERLAP_FLOAT_INDEX] = glowOverlap;
     cameraScratch[AGG_INTENSITY_CAP_FLOAT_INDEX] = aggregateIntensityCap;
+    cameraScratch[PX_PER_RAD_FLOAT_INDEX] = pxPerRad;
     cameraRing.writeSlot(viewSlot, cameraScratch);
 
     // Pack every SURVIVING draw's params contiguously and build the exclusive
@@ -587,6 +597,10 @@ export function createStarCatalogRenderer(
     loadedCatalogs,
     draw,
     pickResources,
+    setFrameCut: (cut) => {
+      frameCut = cut;
+    },
+    getFrameCut: () => frameCut,
     destroy,
   };
   renderer satisfies Renderer;

@@ -1,4 +1,3 @@
-// src/components/containers/StarsSectionContainer.tsx
 /**
  * StarsSectionContainer — store boundary for the star-catalogs settings section.
  *

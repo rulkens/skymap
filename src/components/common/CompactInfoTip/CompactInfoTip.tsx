@@ -1,4 +1,3 @@
-// src/components/common/CompactInfoTip/CompactInfoTip.tsx
 /**
  * CompactInfoTip — a self-contained hover/focus label for chrome that lives
  * inside a frosted-glass surface.
