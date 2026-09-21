@@ -142,6 +142,23 @@
   text-wrap: pretty;
 }
 
+/* An inline link in body copy. Underlined at rest, unlike the source rows,
+   which are whole clickable blocks — here the link is a few words inside a
+   sentence and needs to read as one without a hover. */
+.inlineLink {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--color-accent);
+  text-underline-offset: 3px;
+}
+.inlineLink:hover {
+  color: var(--color-accent);
+}
+.inlineLink:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 /* A hairline fading out to the right, ruled above each data block. */
 .rule {
   height: 1px;

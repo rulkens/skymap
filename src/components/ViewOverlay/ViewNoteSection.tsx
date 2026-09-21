@@ -11,7 +11,7 @@ import type { ReactNode } from 'react';
 import cx from 'classnames';
 
 import ExternalLinkIcon from './ExternalLinkIcon';
-import { emphasisSegments } from '../../utils/text/emphasisSegments';
+import { inlineSegments } from '../../utils/text/inlineSegments';
 import type { ViewSection } from '../../@types/views/ViewSection';
 import type { ViewToggle } from '../../@types/views/ViewToggle';
 import styles from './ViewOverlay.module.css';
@@ -28,9 +28,23 @@ function ViewNoteSection({ section, toggleOn, onToggle }: ViewNoteSectionProps):
       <div className={styles.section}>
         <h2 className={styles.sectionHeading}>{section.heading}</h2>
         <p className={styles.sectionBody}>
-          {emphasisSegments(section.text).map((segment, i) =>
-            i % 2 === 1 ? <i key={i}>{segment}</i> : segment,
-          )}
+          {inlineSegments(section.text).map((segment, i) => {
+            if (segment.kind === 'em') return <i key={i}>{segment.text}</i>;
+            if (segment.kind === 'link') {
+              return (
+                <a
+                  key={i}
+                  className={styles.inlineLink}
+                  href={segment.href}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {segment.text}
+                </a>
+              );
+            }
+            return segment.text;
+          })}
         </p>
       </div>
     );

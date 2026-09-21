@@ -92,7 +92,7 @@ export const viewRegistry: Record<ViewId, View> = {
       {
         kind: 'prose',
         heading: 'How it was made',
-        text: 'The web can’t be photographed. This map was computed from the positions of about 325,000 SDSS galaxies by a simulation modelled on a slime mould, <i>Physarum polycephalum</i>, which grows efficient networks between food sources. Here the galaxies are the food; the network the swarm settles into traces the filaments between them.',
+        text: 'The web can’t be photographed. This map was computed from the positions of about 325,000 SDSS galaxies by a simulation modelled on a <a href="https://en.wikipedia.org/wiki/Physarum_polycephalum">slime mould</a>, <i>Physarum polycephalum</i>, which grows efficient networks between food sources. Here the galaxies are the food; the network the swarm settles into traces the filaments between them.',
       },
       {
         kind: 'key',
