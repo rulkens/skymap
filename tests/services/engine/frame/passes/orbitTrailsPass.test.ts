@@ -40,7 +40,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { SampledDepthKmFrame } from '../../../../../src/@types/rendering/SampledDepthKmFrame';
+import type { OrbitTrailDrawArgs } from '../../../../../src/@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
@@ -181,17 +181,7 @@ function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
 
 function makeRendererSpy() {
   return {
-    draw: vi.fn<
-      (
-        pass: GPURenderPassEncoder,
-        instances: Float32Array,
-        count: number,
-        occluders: { readonly count: number; readonly spheresKm: Float32Array },
-        depthFrame: SampledDepthKmFrame | null,
-        depthView: GPUTextureView,
-        showImpostor?: boolean,
-      ) => void
-    >(),
+    draw: vi.fn<(pass: GPURenderPassEncoder, args: OrbitTrailDrawArgs) => void>(),
   };
 }
 
@@ -358,7 +348,8 @@ describe('orbitTrailsPass.draw', () => {
     // Exactly one draw for the whole batch, one packed record per composed
     // conic — count == number composed.
     expect(renderer.draw).toHaveBeenCalledTimes(1);
-    const [passArg, staging, count] = renderer.draw.mock.calls[0]!;
+    const [passArg, args] = renderer.draw.mock.calls[0]!;
+    const { instances: staging, count } = args;
     expect(passArg).toBe(PASS_STUB);
     expect(count).toBe(n);
     expect(staging).toBeInstanceOf(Float32Array);
@@ -388,7 +379,7 @@ describe('orbitTrailsPass.draw', () => {
 
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
 
-    const [, staging] = renderer.draw.mock.calls[0]!;
+    const [, { instances: staging }] = renderer.draw.mock.calls[0]!;
     expect(staging[18]).toBe(view.viewportPx[0]);
     expect(staging[19]).toBe(view.viewportPx[1]);
     // clipBasis = [Cc, Ac, Bc], each a length-4 padded sentinel from the mock.
@@ -408,7 +399,7 @@ describe('orbitTrailsPass.draw', () => {
     const renderer = makeRendererSpy();
     const ctx = makeDrawCtx();
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(), ctx, makeState(renderer));
-    const [, staging, , occluders] = renderer.draw.mock.calls[0]!;
+    const [, { instances: staging, occluders }] = renderer.draw.mock.calls[0]!;
     const first = SCENE_ORBIT_CONICS[0]!;
     const cam = ctx.drawCamPos;
     const kmPerMpc = 1 / SCALE_UNITS.KM_TO_MPC;
@@ -432,7 +423,8 @@ describe('orbitTrailsPass.draw', () => {
     const view = makeNear0View();
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
 
-    const [, , , , depthFrame, depthView] = renderer.draw.mock.calls[0]!;
+    const [, { depth }] = renderer.draw.mock.calls[0]!;
+    const { frame: depthFrame, view: depthView } = depth;
     expect(depthView).toBe(DEPTH_VIEW_STUB);
     expect(depthFrame).not.toBeNull();
 
@@ -457,13 +449,13 @@ describe('orbitTrailsPass.draw', () => {
     const renderer = makeRendererSpy();
 
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(null), makeDrawCtx(), makeState(renderer));
-    expect(renderer.draw.mock.calls[0]![4]).toBeNull();
-    expect(renderer.draw.mock.calls[0]![5]).toBe(FAR_DEPTH_VIEW_STUB);
+    expect(renderer.draw.mock.calls[0]![1].depth.frame).toBeNull();
+    expect(renderer.draw.mock.calls[0]![1].depth.view).toBe(FAR_DEPTH_VIEW_STUB);
 
     renderer.draw.mockClear();
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(makeSlab()), makeDrawCtx(), makeState(renderer));
-    expect(renderer.draw.mock.calls[0]![4]).toBeNull();
-    expect(renderer.draw.mock.calls[0]![5]).toBe(FAR_DEPTH_VIEW_STUB);
+    expect(renderer.draw.mock.calls[0]![1].depth.frame).toBeNull();
+    expect(renderer.draw.mock.calls[0]![1].depth.view).toBe(FAR_DEPTH_VIEW_STUB);
   });
 
   it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
@@ -478,7 +470,7 @@ describe('orbitTrailsPass.draw', () => {
       makeDrawCtx(),
       makeState(renderer, { orbitTrailsEnabled: false, layerOpacity: 0.5 }),
     );
-    const [, staging] = renderer.draw.mock.calls[0]!;
+    const [, { instances: staging }] = renderer.draw.mock.calls[0]!;
     expect(staging[17]).toBeCloseTo(0.5);
   });
 
@@ -651,7 +643,7 @@ describe('orbitTrailsPass.draw', () => {
     renderer.draw.mockClear();
 
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
-    const baselineCount = renderer.draw.mock.calls[0]![2] as number;
+    const baselineCount = renderer.draw.mock.calls[0]![1].count;
     expect(baselineCount).toBeGreaterThan(1); // need a second composed orbit to single out below
 
     const defaultImpl = composeMock.getMockImplementation() as unknown as (
@@ -666,7 +658,7 @@ describe('orbitTrailsPass.draw', () => {
     renderer.draw.mockClear();
 
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
-    expect(renderer.draw.mock.calls[0]![2]).toBe(baselineCount - 1);
+    expect(renderer.draw.mock.calls[0]![1].count).toBe(baselineCount - 1);
 
     composeMock.mockImplementation(defaultImpl); // restore the default for later tests
   });
@@ -679,7 +671,7 @@ describe('orbitTrailsPass.draw', () => {
     const view = makeNear0View();
 
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer, { impostorOn: true }));
-    expect(renderer.draw.mock.calls[0]![6]).toBe(true);
+    expect(renderer.draw.mock.calls[0]![1].showImpostor).toBe(true);
 
     renderer.draw.mockClear();
     orbitTrailsPass.draw(
@@ -688,6 +680,6 @@ describe('orbitTrailsPass.draw', () => {
       makeDrawCtx(),
       makeState(renderer, { impostorOn: false }),
     );
-    expect(renderer.draw.mock.calls[0]![6]).toBe(false);
+    expect(renderer.draw.mock.calls[0]![1].showImpostor).toBe(false);
   });
 });
