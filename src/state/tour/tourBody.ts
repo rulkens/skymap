@@ -27,12 +27,11 @@
  * ### tourStarted/tourEnded stay local, guarded the same way `runTakeover` is
  *
  * `runTakeover` (generic over tour and view) owns the takeover-wide
- * start/restore/end bracket; it knows nothing about `tour.tourId`/`beatIndex`
- * bookkeeping, so this body dispatches its OWN `tourStarted`/`tourEnded` around
- * the beat loop. The `cancelled()` guard on `tourEnded` mirrors `runTakeover`'s
- * for the same reason: on a tour-to-tour `takeLatest` supersede the incoming
- * run's `tourStarted` may already have landed by the time this finally runs,
- * and an unconditional `tourEnded` here would clobber its `tourId` back to ''.
+ * start/restore/end bracket and knows nothing about `tour.tourId`/`beatIndex`,
+ * so this body dispatches its OWN `tourStarted`/`tourEnded` around the beat
+ * loop. `cancelled()` guards the latter: a superseded run hands the takeover
+ * on rather than ending it, so clearing `tourId` here would flash a tour-less
+ * state between the two tours.
  */
 
 import { call, put, select, take, race, cancelled, delay } from 'typed-redux-saga';
