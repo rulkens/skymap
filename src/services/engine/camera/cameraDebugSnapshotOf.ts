@@ -8,32 +8,32 @@
  * slope over two seconds of poll jitter is the floor (I4).
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyState } from '../../@types/scene/BodyState';
-import type { CameraDebugSnapshot } from '../../@types/camera/CameraDebugSnapshot';
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
-import type { Mat3 } from '../../@types/math/Mat3';
-import type { OrientDeltas } from '../../@types/camera/OrientDeltas';
-import type { PoseFrame } from '../../@types/camera/PoseFrame';
-import type { SurfaceGesture } from '../../@types/camera/SurfaceGesture';
-import type { TerrainHeightAtLookup } from '../../@types/camera/TerrainHeightAtLookup';
-import type { ResidentHeightLevelLookup } from '../../@types/camera/ResidentHeightLevelLookup';
-import type { TimeState } from '../../@types/time/TimeState';
-import type { Vec2 } from '../../@types/math/Vec2';
-import { deriveSimDays } from '../time/deriveSimDays';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { CameraDebugSnapshot } from '../../../@types/camera/CameraDebugSnapshot';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
+import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
+import type { Mat3 } from '../../../@types/math/Mat3';
+import type { OrientDeltas } from '../../../@types/camera/OrientDeltas';
+import type { PoseFrame } from '../../../@types/camera/PoseFrame';
+import type { SurfaceGesture } from '../../../@types/camera/SurfaceGesture';
+import type { TerrainHeightAtLookup } from '../../../@types/camera/TerrainHeightAtLookup';
+import type { ResidentHeightLevelLookup } from '../../../@types/camera/ResidentHeightLevelLookup';
+import type { TimeState } from '../../../@types/time/TimeState';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { cameraDofAnglesOf } from './cameraDofAnglesOf';
-import { bodyUpWeight } from './bodyUpWeight';
-import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
-import { eyeMpcOf } from './eyeMpcOf';
-import { terrainPickAt } from './terrainPickAt';
-import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
-import { hostOf } from '../../services/engine/camera/rungs/hostOf';
-import { isBodyArm } from '../../services/engine/camera/rungs/isBodyArm';
-import { isSiteArm } from '../../services/engine/camera/rungs/isSiteArm';
-import { sameFrame } from '../../services/engine/camera/rungs/sameFrame';
-import { IDENTITY_MAT3 } from '../math/identityMat3';
+import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
+import { terrainPickAt } from '../../../utils/camera/terrainPickAt';
+import { bodyRelativePose } from './bodyRelativePose';
+import { hostOf } from './rungs/hostOf';
+import { isBodyArm } from './rungs/isBodyArm';
+import { isSiteArm } from './rungs/isSiteArm';
+import { sameFrame } from './rungs/sameFrame';
+import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
 
 const EPOCH_DELTA_TOLERANCE_MS = 2_000;
 

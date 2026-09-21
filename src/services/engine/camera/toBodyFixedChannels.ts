@@ -5,18 +5,18 @@
  * (spec §10, `oneMpcSeam`).
  */
 
-import type { BodyId } from '../../@types/data/body/BodyId';
-import type { BodyState } from '../../@types/scene/BodyState';
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { Mat3 } from '../../@types/math/Mat3';
-import type { Vec3 } from '../../@types/math/Vec3';
-import { IDENTITY_MAT3 } from '../math/identityMat3';
-import { bodyFixedEyeM } from './bodyFixedEyeM';
-import { datumOnlyTerrainHeight } from './datumOnlyTerrainHeight';
-import { orbitAnglesLookingAlong } from './orbitAnglesLookingAlong';
-import { bodyRelativePose } from '../../services/engine/camera/bodyRelativePose';
-import { toBodyArm } from '../../services/engine/camera/poseFrameConversion';
-import { hostOrThrow } from '../../services/engine/camera/rungs/hostOrThrow';
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { Mat3 } from '../../../@types/math/Mat3';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { IDENTITY_MAT3 } from '../../../utils/math/identityMat3';
+import { bodyFixedEyeM } from '../../../utils/camera/bodyFixedEyeM';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { orbitAnglesLookingAlong } from '../../../utils/camera/orbitAnglesLookingAlong';
+import { bodyRelativePose } from './bodyRelativePose';
+import { toBodyArm } from './poseFrameConversion';
+import { hostOrThrow } from './rungs/hostOrThrow';
 
 /** Absolute Mpc channels → the same camera in `bodyId`'s fixed axes, metres. */
 export function toBodyFixedChannels(
