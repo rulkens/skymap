@@ -14,7 +14,7 @@ import { starCatalogPass } from '../../../../../src/services/engine/frame/passes
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../../src/data/sources/gaia-stars';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
@@ -31,14 +31,16 @@ const PASS_STUB = {
 } as unknown as GPURenderPassEncoder;
 
 /** ctx whose 'star-aggregates' offscreen view is a captured sentinel. */
-function makeCtx(offscreenView: GPUTextureView, camPos: Readonly<Vec3>): ReadyFrameContext {
+function makeCtx(offscreenView: GPUTextureView, camPos: Readonly<Vec3>): FrameView {
   return {
-    drawCamPos: camPos,
-    nowMs: 0,
-    renderTargets: {
-      viewOf: (id: string) => (id === 'star-aggregates' ? offscreenView : ({} as GPUTextureView)),
+    snapshot: {
+      nowMs: 0,
+      renderTargets: {
+        viewOf: (id: string) => (id === 'star-aggregates' ? offscreenView : ({} as GPUTextureView)),
+      },
     },
-  } as unknown as ReadyFrameContext;
+    drawCamPos: camPos,
+  } as unknown as FrameView;
 }
 
 function makeCatalog(): StarCatalog {

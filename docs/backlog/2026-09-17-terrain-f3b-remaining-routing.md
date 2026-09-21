@@ -1,9 +1,10 @@
 # Terrain F3b — the rest of the per-purpose routing
 
 `needs-design` — spec §12's `F3b` row, ground-truthed against the tree after #704,
-#719, #736, #738 and F3a (#744). The research says it is **two items, not one**, and
-that the table it descends from is largely already satisfied. §12's row should be
-replaced by the two below.
+#719, #736, #738 and F3a (#744). The table it descends from is largely already
+satisfied; §12's row should be replaced by the item below (terrain under an
+atmosphere, once listed here as a second item, is owned by the 2026-09-21
+local-froxel aerial-perspective spec).
 
 ## Item 1 blocks F4's Mars bake
 
@@ -153,48 +154,6 @@ Readers, and what each would need:
 
 Price the march before committing: it runs per gesture event, not per frame, but it
 walks `terrainHeightAt` — a resident-ancestor lookup and a bilinear per step.
-
----
-
-## Item 2 — Terrain under an atmosphere (blocked)
-
-`src/services/gpu/shaders/atmosphere/shell/fragment.wesl:171` terminates every ray on
-`raySphere(ro, dir, PLANET_CENTER, u.bottomRadius)` — the analytic inner-bound sphere,
-from `atmosphereShellUniforms.ts:36`. Inside the shell the pass is full-screen with
-`depthCompare: 'always'`
-(`src/services/gpu/renderers/atmosphere/atmosphereShellRenderer.ts:335`; the outside
-proxy path at `:322` is depth-tested and unaffected), so it paints the whole
-camera-to-space in-scatter over whatever opaque geometry stands on the ground.
-
-For terrain the error is a column of phantom air: the shell's ground is at
-6,370,570 m and Everest's displaced surface is at 6,379,849 m, so a ray onto the summit
-integrates **9,279 m** of atmosphere that is not there.
-
-The #698 stopgap is **still in place**: `src/services/engine/frame/frameOrder.ts:226`
-lists `mesh-bodies` last in `bodyPasses`, after `atmosphere-shell` at `:225`, with the
-rationale at `:200-213`. Note `surface-tiles` sits at `:220`, _before_ the shell — the
-same reordering trick is not available to it, because the tiles are the thing the
-haze is supposed to sit in front of.
-
-**The work this is blocked on is unstarted.** The only attempt was the froxel aerial
-perspective: prep PR #702 merged (`059623802`), and the feature PR #709 was closed
-2026-09-15 with 32 distance slices unable to resolve planetary-scale fog. Its four
-feature commits (`6a3addcad`, `929c9f3d1`, `5b7e96fb6`, `596da6a3a`) live only on
-`worktree-atmosphere-froxel-aerial-perspective` and are not ancestors of `main`.
-Nothing tracks the replacement: `docs/BACKLOG.md` has no row, `docs/backlog/` has no
-detail file, and `docs/superpowers/plans/` and `specs/` still carry the froxel plan
-and design **unmarked**, sitting in the active directories as though they were live.
-A successor design (per-constituent Bruneton tables) was brainstormed and parked
-pending the 3D terrain surface mesh, and left no artifact in the repo.
-
-So this item's dependency is not "in flight" — it is a hole. Two consequences:
-
-- Filing item 2 as a backlog row would file an indefinite promise, the same failure
-  the zoom-anchor file was split out to avoid. It is better recorded here, against
-  item 1, until the composite has an owner.
-- The froxel plan and spec should be moved out of the active directories or given a
-  status line. As written they misrepresent the state of the work. (Not done here —
-  this task wrote one file.)
 
 ## Not in scope
 

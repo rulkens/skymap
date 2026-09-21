@@ -19,6 +19,7 @@ import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
 import { openExhibit } from '../../state/exhibits/exhibitActions';
 import { startTour } from '../../state/tour/tourActions';
+import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { AppDispatch } from '../../store/types';
@@ -39,6 +40,17 @@ const RUN_ACTION: Record<
   tour: (dispatch, action) => {
     if (action.kind !== 'tour') return;
     dispatch(startTour(action.tourId));
+  },
+  flyTo: (dispatch, action) => {
+    if (action.kind !== 'flyTo') return;
+    dispatch(
+      flyToLonLat({
+        lonDeg: action.lonDeg,
+        latDeg: action.latDeg,
+        body: 'earth',
+        altKm: action.altKm,
+      }),
+    );
   },
 };
 

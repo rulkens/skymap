@@ -6,4 +6,5 @@ import type { TourId } from '../animation/tour/TourId';
 export type PaletteAction =
   | { kind: 'focus'; focusId: string }
   | { kind: 'exhibit'; exhibitId: ExhibitId }
-  | { kind: 'tour'; tourId: TourId };
+  | { kind: 'tour'; tourId: TourId }
+  | { kind: 'flyTo'; lonDeg: number; latDeg: number; altKm: number };

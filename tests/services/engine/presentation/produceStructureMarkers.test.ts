@@ -10,7 +10,7 @@ import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry
 function makeRegistry(): FadeRegistry {
   return createFadeRegistry({ requestRender: () => {} });
 }
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { StructureInfo } from '../../../../src/@types/data/structure/StructureInfo';
 import { STRUCTURE_IDS } from '../../../../src/data/structure/structureIds';
@@ -59,16 +59,14 @@ function makeState(
   } as unknown as TestState;
 }
 
-function makeCtx(focusBlend = 0): ReadyFrameContext {
+function makeCtx(focusBlend = 0): FrameView {
   return {
+    snapshot: { focusBlend, nowMs: 0 },
     drawCamPos: [0, 0, 0],
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend,
-    nowMs: 0,
     vp: mat4.identity(),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 const rec = (

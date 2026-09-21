@@ -38,6 +38,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 
 export const markerLinesPass: ContentPass = {
   name: 'marker-lines',
@@ -48,17 +49,14 @@ export const markerLinesPass: ContentPass = {
   },
 
   draw(pass, view, ctx, state) {
-    // Occlude the leader lines per-pixel behind an opaque body ONLY when the
-    // body pass actually ran this frame — else the `foreground:0` colour is
-    // stale/uninitialised and would spuriously blank every line. When
-    // undefined, the occlusion renderer falls back to its plain pipeline and
-    // draws the lines un-occluded. Mirrors `foregroundLabelsPass`'s guard.
-    const colorView = ctx.renderedTargets.has('foreground:0')
-      ? ctx.renderTargets.viewOf('foreground:0')
-      : undefined;
     // `enabled()` proved markerLineRenderer is non-null and has at least
     // one line.  The `!` assertion is safe: the framework only calls
     // `draw` when `enabled` returns true.
-    state.gpu.markerLineRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
+    state.gpu.markerLineRenderer!.draw(
+      pass,
+      view.vp,
+      view.viewportPx,
+      overlaySceneOcclusion(ctx, view),
+    );
   },
 };

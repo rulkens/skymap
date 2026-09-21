@@ -64,10 +64,9 @@ export function partitionStarsByResolution(input: {
   stars: readonly PositionedStar[];
   camPosMpc: Readonly<Vec3>;
   thresholdPx: number;
-  viewportHeightPx: number;
-  fovYRad: number;
+  pxPerRad: number;
 }): { spheres: readonly PositionedStar[]; points: readonly PositionedStar[] } {
-  const { stars, camPosMpc, thresholdPx, viewportHeightPx, fovYRad } = input;
+  const { stars, camPosMpc, thresholdPx, pxPerRad } = input;
   const spheres: PositionedStar[] = [];
   const points: PositionedStar[] = [];
   for (const star of stars) {
@@ -80,8 +79,7 @@ export function partitionStarsByResolution(input: {
       positionMpc: star.positionMpc,
       radiusM: star.surface.datumRadiusM,
       camPosMpc,
-      viewportHeightPx,
-      fovYRad,
+      pxPerRad,
     });
     const resolved = resolvesToSphere({
       apparentSizePx: diameterPx,

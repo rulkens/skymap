@@ -8,12 +8,12 @@
  * and later the lift stage — reads the cached record rather than recomputing.
  */
 
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Label2DProjection } from '../../../@types/rendering/Label2DProjection';
 
-const cache = new WeakMap<ReadyFrameContext, Label2DProjection>();
+const cache = new WeakMap<FrameView, Label2DProjection>();
 
-export function cosmoLabelProjection(ctx: ReadyFrameContext): Label2DProjection {
+export function cosmoLabelProjection(ctx: FrameView): Label2DProjection {
   const cached = cache.get(ctx);
   if (cached) return cached;
 

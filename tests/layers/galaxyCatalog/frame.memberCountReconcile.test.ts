@@ -14,7 +14,7 @@ import { makeGalaxyCatalog } from '../../fixtures/makeGalaxyCatalog';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
 /** A cluster at the origin with a 10 Mpc core radius — mirrors structureMemberCount.test.ts. */
@@ -34,13 +34,12 @@ function catalogAt(positions: ReadonlyArray<readonly [number, number, number]>):
   return makeGalaxyCatalog(positions.length, { positions: flat });
 }
 
-function makeCtx(visibleSourceMask: number): ReadyFrameContext {
+function makeCtx(visibleSourceMask: number): FrameView {
   return {
+    snapshot: { visibleSourceMask, nowMs: 0 },
     cam: {},
-    visibleSourceMask,
     drawPxPerRad: 100,
-    nowMs: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function makeState(select: SelectionRow | null): PassState {

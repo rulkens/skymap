@@ -6,7 +6,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { runLabel3DProducers } from '../../../../src/services/engine/frame/runLabel3DProducers';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 describe('runLabel3DProducers', () => {
   it('walks state.label3DProducers, not the core constant', () => {
@@ -22,7 +22,7 @@ describe('runLabel3DProducers', () => {
       gpu: { label3DRenderer: { setLabels } },
     } as unknown as EngineState;
 
-    const awake = runLabel3DProducers(state, {} as ReadyFrameContext);
+    const awake = runLabel3DProducers(state, {} as FrameView);
 
     expect(setLabels).toHaveBeenCalledWith([stubLabel]);
     expect(awake).toBe(true);

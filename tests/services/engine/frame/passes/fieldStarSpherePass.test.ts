@@ -34,7 +34,7 @@ import { unpackPick } from '../../../../../src/data/selectionEncoding';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { Source } from '../../../../../src/data/sources';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
@@ -80,13 +80,12 @@ function camAt(starPos: Readonly<Vec3>, distMpc: number): Vec3 {
   return [starPos[0] + distMpc, starPos[1], starPos[2]];
 }
 
-function makeCtx(camPos: Vec3): ReadyFrameContext {
+function makeCtx(camPos: Vec3): FrameView {
   return {
     drawCamPos: camPos,
-    fovYRad: FOV,
     canvasSize: { width: 1280, height: VIEWPORT_H },
     drawPxPerRad: VIEWPORT_H / (2 * Math.tan(FOV / 2)),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**

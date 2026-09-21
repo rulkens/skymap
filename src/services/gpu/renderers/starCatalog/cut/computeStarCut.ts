@@ -1,9 +1,9 @@
 import type { Vec3 } from '../../../../../@types/math/Vec3';
 import type { PassState } from '../../../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../@types/engine/frame/FrameView';
 import type { PreparedStarSource } from '../../../../../@types/rendering/PreparedStarSource';
 import type { PreparedStarCut } from '../../../../../@types/rendering/PreparedStarCut';
-import { NEAR0, slabViewOf } from '../../../../engine/frame/slabs';
+import { NEAR0 } from '../../../../engine/frame/slabs';
 import { rebaseViewProj } from '../../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../../utils/math/narrowMat4';
 import { NODE_FADE_MS } from '../../../../../data/starNodeFade';
@@ -24,10 +24,9 @@ import { pushStarNode } from './starNodeStream';
  *
  * Walk every loaded catalog's octree and partition the cut into a leaf
  * stream (real-star nodes) and an aggregate stream (flux-mip nodes), reading
- * each node's current LOD-fade opacity — pure when `advanceFades` is false,
- * and the only place that advances the fade ramp when true (see
- * `readStarCut` / `advanceStarCut`, its two callers). `null` when the
- * star pass is not live (no renderer, master off).
+ * each node's current LOD-fade opacity — see `advanceFades` below for the
+ * read/write split. `null` when the star pass is not live (no renderer,
+ * master off).
  *
  * NEAR0 + the f64 rebase seam (catastrophic cancellation, same trap
  * `starPointsPass` documents): COSMO's near plane (0.01 Mpc) would clip the
@@ -39,9 +38,10 @@ import { pushStarNode } from './starNodeStream';
  * on the array write in `pushStarNode`; this mirrors `starNodeOriginRelCamMpc`
  * (the standalone home `resolveStarRecord` reuses), kept in lockstep with it.
  * The off-screen-prune frustum narrows the SAME rebased vp via
- * `buildStarCutFrustum`; with no NEAR0 slab resolvable (a hand-built test
- * context) the frustum is `null` and the walk falls back to its full,
- * un-pruned form.
+ * `buildStarCutFrustum` — one per view of `views`, all rebased about THIS
+ * cut's origin, so the walk runs once over the union of the rig's frusta; with
+ * no NEAR0 slab resolvable (a hand-built test context) the frustum is `null`
+ * and the walk falls back to its full, un-pruned form.
  *
  * Per-node LOD fades (see `starFadeState` for the bookkeeping, the two-stamp
  * scheme, the double buffer, and why the ramp is linear) dissolve the cut's
@@ -50,21 +50,31 @@ import { pushStarNode } from './starNodeStream';
  * wake vote (`runFrame`'s `shouldKeepTicking`) — this function only surfaces
  * the flag, never fires a wake itself.
  *
- * A sky-cubemap capture face (`ctx.viewSlot !== 0`) shares no temporal state
- * with the main view's fade: every one of its cut nodes draws at opacity 1,
- * and `anyNodeFading` is left untouched.
+ * A sky-cubemap capture face (`view.viewKind === 'capture'`) shares no temporal
+ * state with the main view's fade: every one of its cut nodes draws at opacity
+ * 1, and `anyNodeFading` is left untouched.
+ *
+ * `views[0]` is the anchor: its eye becomes `originMpc`, its `viewSlot` picks
+ * the CPU stream pair, its `viewKind` decides the capture path, its
+ * `snapshot.nowMs` stamps the fades. `views` is the frusta to union for the
+ * off-screen prune. Both callers pass the same list for both — a lone view
+ * anchors itself; `runFrame`'s call anchors on its canvas view.
  */
 export function computeStarCut(
   state: PassState,
-  ctx: ReadyFrameContext,
+  views: readonly FrameView[],
+  /** `true` ticks the fade ramp — `runFrame` is the ONLY call site that
+   *  passes it, once per real frame; every other caller (`readStarCut`, the
+   *  pick path) passes `false` and reads the ramp as-is. */
   advanceFades: boolean,
 ): PreparedStarCut | null {
   const renderer = state.gpu.starCatalogRenderer;
   if (renderer === null) return null;
   if (!state.settings.starCatalogs.enabled) return null;
 
-  // `ctx.drawCamPos` equals the NEAR0 view origin.
-  const camPos: Vec3 = [ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]];
+  const view = views[0]!;
+  // `view.drawCamPos` equals the NEAR0 view origin.
+  const camPos: Vec3 = [view.drawCamPos[0], view.drawCamPos[1], view.drawCamPos[2]];
   const camPosPc: Vec3 = [
     camPos[0] * SCALE_UNITS.MPC_TO_PC,
     camPos[1] * SCALE_UNITS.MPC_TO_PC,
@@ -72,7 +82,7 @@ export function computeStarCut(
   ];
   const camDistPc = Math.hypot(camPosPc[0], camPosPc[1], camPosPc[2]);
 
-  const nowMs = ctx.nowMs;
+  const nowMs = view.snapshot.nowMs;
   const sizePx = state.settings.starCatalogs.sizePx;
 
   // DISPLAY exposure (see `starExposureRamp`), on the same `camDistPc` the
@@ -91,17 +101,22 @@ export function computeStarCut(
   const aggregateIntensityCap = state.settings.starCatalogs.aggregateIntensityCap;
 
   // This frame's off-screen prune frustum, source-independent (see the
-  // header). `slabs?.[NEAR0]` is absent only for a hand-built test ctx.
-  let rebasedVp: Float32Array | null = null;
-  let canvasHeightPx = 0;
-  let fovYRad = 0;
-  if (ctx.slabs?.[NEAR0] !== undefined) {
-    const near0 = slabViewOf(ctx, NEAR0);
-    rebasedVp = narrowMat4(rebaseViewProj(near0.slab.vp, near0.camPos));
-    canvasHeightPx = ctx.canvasSize.height;
-    fovYRad = ctx.fovYRad;
+  // header): one plane set per view, each rebased about THIS cut's origin
+  // rather than the view's own eye, so every view prunes in the frame the
+  // walk's boxes live in. `slabs?.[NEAR0]` is absent only for a hand-built
+  // test ctx — then there is nothing to prune against at all.
+  const rebasedVps: Float32Array[] = [];
+  // The widest view drives the angular slack (see `buildStarCutFrustum`): the
+  // SMALLEST `drawPxPerRad` — fewer pixels per radian means more radians per
+  // pixel, so that view needs the most slack.
+  let pxPerRad = Infinity;
+  if (views.every((rigView) => rigView.slabs?.[NEAR0] !== undefined)) {
+    for (const rigView of views) {
+      rebasedVps.push(narrowMat4(rebaseViewProj(rigView.slabs[NEAR0]!.vp, camPos)));
+      if (rigView.drawPxPerRad < pxPerRad) pxPerRad = rigView.drawPxPerRad;
+    }
   }
-  const cutFrustum = buildStarCutFrustum(rebasedVp, fovYRad, canvasHeightPx, sizePx, glowOverlap);
+  const cutFrustum = buildStarCutFrustum(rebasedVps, pxPerRad, sizePx, glowOverlap);
 
   const sources: PreparedStarSource[] = [];
   // Render-on-demand wake vote across all sources this frame (see the header).
@@ -124,7 +139,7 @@ export function computeStarCut(
 
     // Reuse this catalog's persistent stream pair rather than allocating
     // fresh arrays every frame (see `starNodeStream`).
-    const { leaf, aggregate } = streamsFor(catalog, ctx.viewSlot);
+    const { leaf, aggregate } = streamsFor(catalog, view.viewSlot);
     leaf.count = 0;
     aggregate.count = 0;
 
@@ -161,7 +176,7 @@ export function computeStarCut(
 
     // A capture view shares no temporal state with the main view's fade (see
     // the header).
-    if (ctx.viewSlot !== 0) {
+    if (view.viewKind === 'capture') {
       for (let i = 0; i < cut.count; i++) emitNode(cut.nodeIndex[i]!, 1);
       sources.push({ source, leaf, aggregate });
       continue;
@@ -170,9 +185,9 @@ export function computeStarCut(
     const fadeState = fadeStateFor(catalog);
 
     if (!advanceFades) {
-      // Read-only: emits at whatever opacity `advanceStarCut` left this
-      // frame's ONE call at, so the pick path's fresh post-frame ctx can
-      // recompute the cut without perturbing the ramps.
+      // Read-only: emits at whatever opacity this frame's ONE `advanceFades`
+      // call left the ramp at, so the pick path's fresh post-frame ctx can
+      // recompute the cut without perturbing it.
       const { opacity } = fadeState;
       for (let i = 0; i < cut.count; i++) {
         const idx = cut.nodeIndex[i]!;
@@ -245,5 +260,13 @@ export function computeStarCut(
     sources.push({ source, leaf, aggregate });
   }
 
-  return { sources, sizePx, brightness, glowOverlap, aggregateIntensityCap, anyNodeFading };
+  return {
+    sources,
+    originMpc: camPos,
+    sizePx,
+    brightness,
+    glowOverlap,
+    aggregateIntensityCap,
+    anyNodeFading,
+  };
 }

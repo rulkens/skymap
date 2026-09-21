@@ -6,10 +6,10 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Label3D } from '../../../@types/rendering/Label3D';
 
-export function runLabel3DProducers(state: EngineState, ctx: ReadyFrameContext): boolean {
+export function runLabel3DProducers(state: EngineState, ctx: FrameView): boolean {
   const labels: Label3D[] = [];
   let awake = false;
   for (const producer of state.label3DProducers) {

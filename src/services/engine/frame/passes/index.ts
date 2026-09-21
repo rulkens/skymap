@@ -34,10 +34,10 @@ import { bodyGlintsPass } from './bodyGlintsPass';
 import { starCatalogPass } from './starCatalogPass';
 import { starAggregatesPass } from './starAggregatesPass';
 import { starAggregateUpsamplePass } from './starAggregateUpsamplePass';
-import { constellationsPass } from './constellationsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
+import { aerialPerspectivePass } from './aerialPerspectivePass';
 import { sgrAStarLensingPass } from './sgrAStarLensingPass';
 import { skyCubemapBlitPass } from './skyCubemapBlitPass';
 
@@ -57,7 +57,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   starAggregatesPass,
   starCatalogPass,
   starAggregateUpsamplePass,
-  constellationsPass,
   sgrAStarLensingPass,
   orbitTrailsPass,
   bodyGlintsPass,
@@ -79,5 +78,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   foregroundLabelsPass,
   clipPathDebugPass,
   atmosphereShellPass,
+  aerialPerspectivePass,
   skyCubemapBlitPass,
 ];

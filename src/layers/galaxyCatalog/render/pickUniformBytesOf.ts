@@ -39,7 +39,7 @@ import {
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../data/galaxyLodBands';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PassState } from '../../../@types/engine/frame/PassState';
 
 /**
@@ -49,11 +49,7 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
  * none-selection sentinel, the `+PICK_PADDING_PX` point size, and `pickPass = 1`.
  * The pick renderer uploads these bytes verbatim.
  */
-export function pickUniformBytesOf(
-  view: SlabView,
-  ctx: ReadyFrameContext,
-  state: PassState,
-): ArrayBuffer {
+export function pickUniformBytesOf(view: SlabView, ctx: FrameView, state: PassState): ArrayBuffer {
   const g = state.settings.galaxyCatalogs;
   const bias = state.settings.bias;
 

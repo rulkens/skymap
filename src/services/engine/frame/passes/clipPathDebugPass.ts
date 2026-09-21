@@ -50,8 +50,8 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { DebugLine } from '../../../../@types/rendering/DebugLine';
 import type { Vec3 } from '../../../../@types/math/Vec3';
-import { NEAR0 } from '../slabs';
 import { buildClipPathLines } from '../../presentation/buildClipPathLines';
+import { frustumFovYRad } from '../../../../utils/camera/frustumFovYRad';
 import { rebaseViewProj } from '../../../../utils/camera/rebaseViewProj';
 import { narrowMat4 } from '../../../../utils/math/narrowMat4';
 
@@ -68,7 +68,7 @@ export const clipPathDebugPass: ContentPass = {
     const snapshot = state.subsystems.clipPathInspector.current()!;
     const aspect = view.viewportPx[0] / view.viewportPx[1];
     const lines = buildClipPathLines(snapshot, state.settings.debug.clipPathInspect.scrub01, {
-      fovYRad: ctx.fovYRad,
+      fovYRad: frustumFovYRad(ctx.frustum),
       aspect,
     });
 

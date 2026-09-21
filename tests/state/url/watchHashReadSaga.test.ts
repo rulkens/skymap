@@ -47,6 +47,9 @@ import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { hashArrivalApplied } from '../../../src/state/url/hashArrivalApplied';
+import { applyUrlPose, commitCameraPose } from '../../../src/state/camera/cameraSlice';
+import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 /**
@@ -149,6 +152,25 @@ describe('watchHashReadSaga', () => {
     // `focus.read`, requesting the id `''`.
     expect(recorded).toContainEqual(clearSelection());
     expect(recorded.map((action) => action.type)).not.toContain(requestFocus.type);
+  });
+
+  it('applies AND parks a pose the same way on arrival and on a later navigation', () => {
+    // The codec round-trips an explicit `roll`, which `absoluteArm` leaves off.
+    const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
+    const { recorded, emit } = buildHarness(`pose=${encodeFramedPose(pose)}`);
+
+    // Both actions fire at boot too — the camera doesn't exist yet, but a
+    // commit lands in the store regardless (the seed re-commits the same
+    // object) and the park is what the arrival focus later spends.
+    expect(recorded).toEqual([applyUrlPose(pose), commitCameraPose(pose), hashArrivalApplied()]);
+    recorded.length = 0;
+
+    emit(`pose=${encodeFramedPose(pose)}`);
+
+    // Same row order on a hashchange: pose is read first (table order), so it
+    // applies before the other rows' absent arms (focus, t, orientation) fire.
+    expect(recorded[0]).toEqual(applyUrlPose(pose));
+    expect(recorded[1]).toEqual(commitCameraPose(pose));
   });
 
   it('detaches the channel subscriber when cancelled', () => {

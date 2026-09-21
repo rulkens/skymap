@@ -1,8 +1,10 @@
 /**
  * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the
  * container dispatches on. Five kinds resolve to a focus id via the same
- * scheme the URL deep-link layer uses; `exhibit` and `tour` resolve to their
- * own action kinds instead, since picking one is a takeover, not a focus.
+ * scheme the URL deep-link layer uses. Three do not: `exhibit` and `tour`
+ * resolve to their own action kinds, since picking one is a takeover rather
+ * than a focus, and `place` to a `flyTo` — an Earth place is a camera command,
+ * not a focusable ref.
  *
  * The five focus kinds route through the ONE selection command, `requestFocus`,
  * whose saga (`watchRequestFocusSaga`) resolves a durable id to a `SelectionRef`
@@ -25,6 +27,7 @@
  *                which the resolver's `resolveFocusId` strips back to a body ref.
  *   - exhibit  → `{ kind: 'exhibit', exhibitId }`, the row's own registry id.
  *   - tour     → `{ kind: 'tour', tourId }`, the row's own registry id.
+ *   - place    → the entry's own lon/lat/alt, verbatim, as a `flyTo`.
  *
  * TABLE-DISPATCH on `row.kind` (simplicity convention item 7): a new row kind is
  * one row here, not a new predicate branch. The fallback arms are unreachable —
@@ -37,9 +40,9 @@ import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import type { ScoredRow } from '../paletteRowModel';
 import type { PaletteAction } from '../../../@types/palette/PaletteAction';
 
-// `exhibit`/`tour` carry a closed-union id (ExhibitId/TourId), unlike the
-// other kinds' plain-string focusId, so their unreachable fallback can't be ''
-// — it has to be a real narrowing failure instead.
+// The non-focus kinds have no harmless stand-in for their unreachable arm:
+// `exhibit`/`tour` carry a closed-union id, and a `flyTo` fallback of 0,0,0 is
+// a real place in the Gulf of Guinea. So they throw rather than fly somewhere.
 function unreachableRow(): never {
   throw new Error('actionForRow: row.kind did not match its own table entry');
 }
@@ -73,6 +76,15 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
   exhibit: (row) =>
     row.kind === 'exhibit' ? { kind: 'exhibit', exhibitId: row.exhibit.id } : unreachableRow(),
   tour: (row) => (row.kind === 'tour' ? { kind: 'tour', tourId: row.tour.id } : unreachableRow()),
+  place: (row) =>
+    row.kind === 'place'
+      ? {
+          kind: 'flyTo',
+          lonDeg: row.entry.lonDeg,
+          latDeg: row.entry.latDeg,
+          altKm: row.entry.altKm,
+        }
+      : unreachableRow(),
 };
 
 export function actionForRow(row: ScoredRow): PaletteAction {

@@ -19,6 +19,7 @@ import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameSte
 import type { FrameInputs } from '../../../../src/services/engine/frame/expandFrameOrder';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
@@ -214,7 +215,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // sample a cubemap this frame actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
-    expect(steps[2]).toBe(capture[0]);
+    expect(steps[2]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
+    expect(steps[3]).toBe(capture[0]);
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {
@@ -347,6 +349,19 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     ]);
   });
 
+  it('the real body roster samples depth after every opaque row and both shells', () => {
+    // The two rows in the marker READ that depth: the contact decals project
+    // onto it, and the atmosphere shell classifies each ray by it. Anything
+    // that stamps depth must therefore be listed before them, and only the
+    // meshes — which want the shell already drawn behind them — after.
+    const steps = program({ foregroundChain: [3] });
+    const first = steps.findIndex(
+      (step) => step.kind === 'render' && step.target === 'foreground:0',
+    );
+    expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
+    expect(namesOf(steps[first + 2])).toEqual(['mesh-bodies']);
+  });
+
   it('refuses a body roster with a second marker', () => {
     expect(() =>
       foreground([3], ['a', { sampleDepth: ['d'] }, 'b', { sampleDepth: ['d'] }]),
@@ -439,6 +454,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const cam = makeCam();
     const slabs = deriveSlabs({
       cam,
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
       cosmoVp: new Float32Array(16) as unknown as Mat4,
       altitudeMpc: cam.distance,
       pose: () => null,

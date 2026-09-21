@@ -1,42 +1,46 @@
 /**
- * pickFrameContext — the pick camera as a plain derivation of engine state, so a
- * pick can run between frames. Returns `null` until the engine has bootstrapped
- * (`FrameContext.isReady`); safe to call speculatively — `deriveFrameContext`
- * advances no clock and no fade controller.
+ * pickFrameContext — the pick camera as a value, so a pick can run between
+ * frames. Returns `null` until the engine has bootstrapped; safe to call
+ * speculatively — `deriveFrameContext` advances no clock and no fade
+ * controller.
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { deriveFrameContext } from '../frame/frameContext';
+import { deriveView } from '../frame/deriveView';
 import { deriveSourceMasks } from '../frame/deriveSourceMasks';
+import { frameContextInputOf } from '../frame/frameContextInputOf';
+import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { liveWorldPose } from './liveWorldPose';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 
-export function pickFrameContext(
-  state: EngineState,
-  canvas: HTMLCanvasElement,
-): ReadyFrameContext | null {
+export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement): FrameView | null {
   const nowMs = performance.now();
-  const ctx = deriveFrameContext(
-    state,
-    canvas,
-    liveWorldPose(state),
-    // The DISPLAYED pose, not the authored register: the authored register is
-    // untilted in-window and a pick against it misses (round-12c two-box contract).
-    state.cameraRuntime.outputs.displayed,
-    state.cameraRuntime.outputs.projection,
-    // A demand read at rest, where the live `upBasis` equals the steady frame.
-    ORIENTATION_FRAMES[state.settings.orientation],
-    ORIENTATION_FRAMES[state.settings.orientation],
-    // Pick mask, not draw mask: pickability follows intent, not the fade-out tail.
-    // `enabled` alone drives the pick bit, so the nowMs sample only matters for
-    // `.draw` — passed anyway so this call site never relies on the registry's
-    // stale last-ticked clock.
-    deriveSourceMasks(state, nowMs).pick,
+  // One read of the committed orientation for this call — `poseBasis` and the
+  // at-rest `upBasis` are the SAME frame, unlike `runFrame`'s live mid-slerp one.
+  const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
+  const { input, cam } = frameContextInputOf(state, {
+    worldPose: liveWorldPose(state),
     nowMs,
+    // Pick mask, not draw mask: pickability follows intent, not the fade-out
+    // tail. `enabled` alone drives the pick bit, so the nowMs sample only
+    // matters for `.draw` — passed anyway so this call site never relies on
+    // the registry's stale last-ticked clock.
+    visibleSourceMask: deriveSourceMasks(state, nowMs).pick,
+    poseBasis,
+    upBasis: poseBasis,
     // The instant the last frame derived its bodies at, so pickable body sprites
     // are re-derived exactly where they were drawn.
-    state.cameraRuntime.outputs.simDays,
+    simDays: state.cameraRuntime.outputs.simDays,
+  });
+  // Pick never runs a view through `executeFrame` (see `pickProgram.ts`'s
+  // header), so the default `renderedTargets` is fine here.
+  const snapshot = deriveFrameContext(state, input);
+  if (!snapshot.isReady) return null;
+  return deriveView(
+    snapshot,
+    cam,
+    mainViewSpec(cam, { width: canvas.width, height: canvas.height }),
   );
-  return ctx.isReady ? ctx : null;
 }

@@ -1,4 +1,4 @@
-# Hoist the three per-call-site solar-system derivations onto the planner pattern
+# Hoist the two per-call-site solar-system derivations onto the planner pattern
 
 Surfaced by [`subsystem-sweep.md`](../research/engine/subsystem-sweep.md)'s
 "Solar-system bodies" table row (planner/prepare column, `:18`) and misfit #4
@@ -11,7 +11,7 @@ turn up in unrelated backlog files.
 
 ## What it is
 
-Three shared per-frame derivations for the solar-system-bodies subsystem (12
+Two shared per-frame derivations for the solar-system-bodies subsystem (12
 `ContentPass` rows: earth, cloud-shell, atmosphere-shell, star-spheres,
 field-star-sphere, planets, textured-bodies, rings, star-points, body-glints,
 orbit-trails, foreground-labels) are recomputed independently at every call
@@ -19,7 +19,6 @@ site instead of hoisted to `runFrame` and memoised once:
 
 - `sceneBodyPartition` — shared by 3 layers (glints/flat/textured split).
 - `partitionStarsByResolution` — shared by 2 layers (spheres/points split).
-- `atmosphereDrawList` — own derivation.
 
 (`ringsPass`'s rings derivation was hoisted since this item was filed —
 `enabled()` and `draw()` now share one `ringDrawForBody` call — so it drops
@@ -51,7 +50,7 @@ The pattern to follow already exists in the codebase (`prepareStarCut`), so
 this is closer to `ready` than `needs-design` once someone reads that
 implementation as the template. Shape:
 
-1. For each of the three derivations, hoist the computation into `runFrame`
+1. For each of the two derivations, hoist the computation into `runFrame`
    (or a shared planner step alongside `prepareStarCut`'s), memoised on
    `ctx` for the frame's duration.
 2. Update every consuming layer's `enabled()` and `draw()` to read the
@@ -63,14 +62,3 @@ implementation as the template. Shape:
    re-doing the other's diff.
 4. Not gated on any ladder rung — decisions.md #7 names it as long-tail work
    independent of the umbrella `SubsystemBundle` reassessment.
-
-## Partial progress
-
-The [inside-atmosphere-rendering spec](../superpowers/specs/2026-08-24-inside-atmosphere-rendering-design.md)
-(§5a) hoisted a fifth, closely-related pair onto `AtmosphereDrawEntry`
-(551f62357) — but #634's body-slab restructure superseded that hoist with its
-own pose seam: at HEAD, `atmosphereShellPass.ts` and
-`encodeAtmosphereSkyView.ts` each derive `camLocal`/`sunDirLocal`
-independently from `ctx.bodyPose` via the `bodySlabCamLocal`/`sunDirLocal`
-utils, not from a shared `AtmosphereDrawEntry` field. The atmosphere pair is
-STILL OPEN scope for this item, alongside the derivations listed above.

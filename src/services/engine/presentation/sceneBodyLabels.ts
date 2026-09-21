@@ -47,32 +47,12 @@ import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { scaleToUnitMax } from '../../../utils/color/scaleToUnitMax';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SUN_ENTRY } from '../../../data/sources/sun';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { FAMOUS_LABEL_STYLE } from './famousLabelStyle';
-import { CONSTELLATION_COUNT } from './constellationCaptions';
 import { sceneBodyPickId } from '../../../utils/picking/sceneBodyPickId';
 import { bodyFootprintRadiusM } from '../../../utils/scene/bodyFootprintRadiusM';
-
-/**
- * GPU buffer capacity for the foreground caption renderer — the `maxLabels`
- * `initGpu` hands `createLabelRenderer`. `setLabels` silently CLAMPS at
- * `maxLabels` (`Math.min(labels.length, maxLabels)`), so a caption set that
- * outgrew a fixed cap would drop names with NO error.
- *
- * The layer draws captions from BOTH producers into this one renderer, so the
- * capacity reserves one slot per `SCENE_BODIES` entry PLUS one per constellation
- * (`CONSTELLATION_COUNT`), rounded UP to the next power of two so the buffer
- * stays ahead of both rosters by construction. The famous-stars seed climbs
- * toward ~130 bodies across the five expansion batches; each power-of-two step
- * (…, 128, 256, …) absorbs a whole batch of growth without a hand-retuned
- * number, and the constant can never lag the rosters because it is computed
- * FROM them at module load.
- */
-export const FOREGROUND_LABEL_CAPACITY =
-  2 ** Math.ceil(Math.log2(SCENE_BODIES.length + CONSTELLATION_COUNT));
 
 /**
  * Earth's caption tint. `EarthBody` carries a texture rather than a colour,

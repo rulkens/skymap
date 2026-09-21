@@ -37,9 +37,13 @@ const CLIP_Z_EPS: f32 = 1e-4;
 @group(0) @binding(0) var<uniform> u: Uniforms;
 @group(0) @binding(1) var<storage, read> labels: array<LabelData>;
 
-@vertex
-fn vs(input: VsIn) -> VsOut {
-  let label = labels[input.labelIndex];
+// expandLabelQuad — the quad-expansion body shared by 'vs' (this file) and
+// 'vsOcclude' (vertexOcclude.wesl). Takes the RESOLVED occlude weight as a
+// parameter rather than reading 'label.occludeWeight' itself: 'vsOcclude'
+// resolves it beforehand by folding in an anchor-depth verdict against
+// group(1) bindings this module must stay clear of (see vertexOcclude.wesl's
+// header for why). One definition of the corner math either way.
+fn expandLabelQuad(input: VsIn, label: LabelData, occludeWeight: f32) -> VsOut {
   let worldPos       = label.worldPos.xyz;
   let worldEmMpc     = label.worldPos.w;
   let outlineEmFrac  = label.sizing.x;
@@ -118,6 +122,12 @@ fn vs(input: VsIn) -> VsOut {
     input.fontIndex,
     outOutlineColor,
     outlineSdf,
-    label.occludeWeight,
+    occludeWeight,
   );
+}
+
+@vertex
+fn vs(input: VsIn) -> VsOut {
+  let label = labels[input.labelIndex];
+  return expandLabelQuad(input, label, label.occludeWeight);
 }

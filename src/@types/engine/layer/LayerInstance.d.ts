@@ -5,9 +5,9 @@ import type { ContentCompute } from '../frame/ContentCompute';
 import type { AssetWiringRow } from '../../loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
-import type { Label2DProducer } from '../subsystems/Label2DProducer';
+import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
-import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
+import type { FrameView } from '../frame/FrameView';
 import type { PassState } from '../frame/PassState';
 
 /** A Layer bound to its own `Runtime` by `instantiateLayer`, once, at `createLayers`. */
@@ -18,9 +18,9 @@ export type LayerInstance = {
   /** Authored rows: core folds companions once, over core's rows and every Layer's. */
   readonly assets: readonly (AssetWiringRow | CompanionAssetRow)[];
   readonly fades: readonly FadeLayer<unknown>[];
-  readonly screenLabels: readonly Label2DProducer[];
+  readonly screenLabels: readonly LayerScreenLabel[];
   readonly worldLabels: readonly Label3DProducer[];
   readonly selection: readonly SelectionKindRow[];
-  readonly frame: ((ctx: ReadyFrameContext, state: PassState) => LayerFrameVote) | null;
+  readonly frame: ((ctx: FrameView, state: PassState) => LayerFrameVote) | null;
   destroy(): void;
 };

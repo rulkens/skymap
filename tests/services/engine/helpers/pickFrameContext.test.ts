@@ -1,11 +1,11 @@
 /**
  * pickFrameContext — unit tests for the pick-time camera as a value.
  *
- * `pickFrameContext` re-derives a `ReadyFrameContext` from the last RENDERED
- * pose (`state.cameraRuntime.register.pose`) and the live projection, using
- * the PICK source mask so `ctx.visibleSourceMask` means "pickable sources". It
- * returns `null` before the engine is ready. These tests pin all three
- * properties.
+ * `pickFrameContext` re-derives a `FrameView` from the last RENDERED pose
+ * (`state.cameraRuntime.register.pose`) and the live projection, using the
+ * PICK source mask so `ctx.snapshot.visibleSourceMask` means "pickable
+ * sources". It returns `null` before the engine is ready. These tests pin
+ * all three properties.
  *
  * The fixture composes the two upstream fixtures this helper's inputs come from:
  * the bootstrap-gate handles that `frameContext.test.ts` builds (`cam`,
@@ -17,7 +17,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { pickFrameContext } from '../../../../src/services/engine/helpers/pickFrameContext';
-import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
+import { pivotSurfaceRangeMpc } from '../../../../src/services/engine/camera/pivotSurfaceRangeMpc';
 import { deriveSourceMasks } from '../../../../src/services/engine/frame/deriveSourceMasks';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
@@ -33,8 +35,9 @@ import type { FadeId } from '../../../../src/@types/animation/FadeId';
 
 const LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
 const PROJECTION: CameraProjection = { fovYRad: 1.2, aspect: 16 / 9, near: 0.1, far: 10000 };
-// A distinct non-J2000 instant so the pick's epoch is observable on `ctx.simDays`
-// and separable from the J2000 seed a construction-time derive would poison with.
+// A distinct non-J2000 instant so the pick's epoch is observable on
+// `ctx.snapshot.simDays` and separable from the J2000 seed a construction-time
+// derive would poison with.
 const LAST_SIM_DAYS = 2460000.0;
 
 /**
@@ -132,25 +135,23 @@ describe('pickFrameContext', () => {
 
     // The camera the pick pass draws from must equal the one `deriveFrameContext`
     // produces for the SAME register.pose + projection the last frame rendered.
-    const expected = deriveFrameContext(
+    const basis = ORIENTATION_FRAMES[state.settings.orientation];
+    const expected = canvasViewOf(
       state,
-      canvas,
-      LAST_POSE,
-      absoluteArm(LAST_POSE),
-      state.cameraRuntime.outputs.projection,
-      // Same steady basis `pickFrameContext` resolves internally for BOTH
-      // halves, so the two cameras decode position and screen-up through the
-      // same pole and their vp matches.
-      ORIENTATION_FRAMES[state.settings.orientation],
-      ORIENTATION_FRAMES[state.settings.orientation],
-      deriveSourceMasks(state, 0).pick,
-      0,
-      // simDays does not affect the view-projection this test compares; any
-      // valid epoch reproduces the same vp.
-      0,
+      {
+        cam: assembleOrbitCamera(LAST_POSE, state.cameraRuntime.outputs.projection, basis, basis),
+        arm: absoluteArm(LAST_POSE),
+        altitudeMpc: pivotSurfaceRangeMpc(absoluteArm(LAST_POSE), LAST_POSE.distance, null),
+        nowMs: 0,
+        // simDays does not affect the view-projection this test compares; any
+        // valid epoch reproduces the same vp.
+        simDays: 0,
+        visibleSourceMask: deriveSourceMasks(state, 0).pick,
+      },
+      { width: canvas.width, height: canvas.height },
     );
-    expect(expected.isReady).toBe(true);
-    if (!expected.isReady) return;
+    expect(expected).not.toBeNull();
+    if (expected === null) return;
     expect(Array.from(ctx.vp)).toEqual(Array.from(expected.vp));
   });
 
@@ -167,8 +168,8 @@ describe('pickFrameContext', () => {
     const ctx = pickFrameContext(state, makeCanvas());
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.simDays).toBe(LAST_SIM_DAYS);
-    expect(ctx.simDays).not.toBe(CONST_J2000);
+    expect(ctx.snapshot.simDays).toBe(LAST_SIM_DAYS);
+    expect(ctx.snapshot.simDays).not.toBe(CONST_J2000);
   });
 
   it('carries the pick mask as visibleSourceMask', () => {
@@ -179,6 +180,6 @@ describe('pickFrameContext', () => {
     const ctx = pickFrameContext(state, makeCanvas());
     expect(ctx).not.toBeNull();
     if (ctx === null) return;
-    expect(ctx.visibleSourceMask).toBe(deriveSourceMasks(state, 0).pick);
+    expect(ctx.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).pick);
   });
 });

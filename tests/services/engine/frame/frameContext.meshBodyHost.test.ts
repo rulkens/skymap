@@ -8,7 +8,8 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { deriveFrameContext } from '../../../../src/services/engine/frame/frameContext';
+import { canvasViewOf } from '../../../helpers/frame/canvasViewOf';
+import { assembleOrbitCamera } from '../../../../src/services/engine/camera/assembleOrbitCamera';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { normalize3 } from '../../../../src/utils/math/normalize3';
@@ -69,23 +70,25 @@ describe('deriveFrameContext — a host carrying an on-screen mesh body', () => 
       distance: EYE_STANDOFF_M * SCALE_UNITS.M_TO_MPC,
     };
 
-    const ctx = deriveFrameContext(
+    const view = canvasViewOf(
       STATE,
-      { width: 1920, height: 1080 } as unknown as HTMLCanvasElement,
-      pose,
-      absoluteArm(pose),
-      PROJECTION,
-      IDENTITY,
-      IDENTITY,
-      0,
-      0,
-      CONST_J2000,
+      {
+        cam: assembleOrbitCamera(pose, PROJECTION, IDENTITY, IDENTITY),
+        arm: absoluteArm(pose),
+        // World arm, no focus: the same value `pivotSurfaceRangeMpc` used to
+        // fall back to when this test omitted `altitudeMpc`.
+        altitudeMpc: pose.distance,
+        nowMs: 0,
+        simDays: CONST_J2000,
+        visibleSourceMask: 0,
+      },
+      { width: 1920, height: 1080 },
     );
 
-    expect(ctx.isReady).toBe(true);
-    if (!ctx.isReady) return;
+    expect(view).not.toBeNull();
+    if (view === null) return;
     expect(
-      ctx.slabs.some((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth'),
+      view.slabs.some((slab) => slab.frame.kind === 'body-m' && slab.frame.bodyId === 'earth'),
     ).toBe(true);
   });
 });

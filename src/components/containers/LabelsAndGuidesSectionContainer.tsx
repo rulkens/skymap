@@ -6,13 +6,12 @@
  * `selectStructureItems`, `selectGalaxyCatalogItems`, `selectStarCatalogItems`,
  * `selectBodyItems` and `selectMilkyWayLabelEnabled`, bundles them into the
  * `LabelHomes` the label-projection reads, and wraps the label dispatch in a
- * `useCallback`. It also owns the overlay guide rows — constellations (the
- * stick figures, whose name captions ride the same gate) and orbit trails —
- * flat singleton settings that route straight to their own setters. All of it
- * is assembled into one uniform `SectionRow` array; the presentational
- * `LabelsAndGuidesSection` imports nothing from `store/` or `state/` and has
- * no notion of where any row's bit lives. `layerRows` (a Layer's `labelsAndGuides`
- * `ui` entries) are appended after the guide rows.
+ * `useCallback`. It also owns the orbit-trails guide row — a flat singleton
+ * setting that routes straight to its own setter. All of it is assembled into
+ * one uniform `SectionRow` array; the presentational `LabelsAndGuidesSection`
+ * imports nothing from `store/` or `state/` and has no notion of where any
+ * row's bit lives. `layerRows` (a Layer's `labelsAndGuides` `ui` entries,
+ * constellations among them) are appended after the guide rows.
  *
  * ### Label-visibility projection
  *
@@ -59,9 +58,7 @@ import { selectGalaxyCatalogItems } from '../../layers/galaxyCatalog/state/galax
 import { selectStarCatalogItems } from '../../layers/starCatalog/state/starCatalogs/selectors';
 import { selectBodyItems } from '../../layers/body/state/bodies/selectors';
 import { selectMilkyWayLabelEnabled } from '../../layers/milkyWay/state/milkyWay/selectors';
-import { selectConstellationsEnabled } from '../../layers/constellations/state/constellations/selectors';
 import { selectOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/selectors';
-import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';
 import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
@@ -87,7 +84,6 @@ function LabelsAndGuidesSectionContainer({
   const starCatalogItems = useAppSelector(selectStarCatalogItems);
   const bodyItems = useAppSelector(selectBodyItems);
   const milkyWayLabelEnabled = useAppSelector(selectMilkyWayLabelEnabled);
-  const constellationsEnabled = useAppSelector(selectConstellationsEnabled);
   const orbitTrailsEnabled = useAppSelector(selectOrbitTrailsEnabled);
 
   // Bundle the label homes, then project them → flat label-visibility record.
@@ -119,13 +115,6 @@ function LabelsAndGuidesSectionContainer({
     [dispatch],
   );
 
-  const onToggleConstellations = useCallback(
-    (enabled: boolean) => {
-      dispatch(setConstellationsEnabled(enabled));
-    },
-    [dispatch],
-  );
-
   const onToggleOrbitTrails = useCallback(
     (enabled: boolean) => {
       dispatch(setOrbitTrailsEnabled(enabled));
@@ -138,11 +127,10 @@ function LabelsAndGuidesSectionContainer({
   const layerValues = useAppSelector((s) => layerRows.map((row) => row.select(s)), shallowEqual);
 
   // Every checkbox the section renders, in one uniform shape: the label rows
-  // derived from the registry, plus the hand-authored guide rows. There is no
-  // other way to build a "rows" array — constellations and orbitTrails gate
-  // LINE/overlay geometry, not labels, so they have no registry row's label
-  // axis to derive from and stay hand-authored here. Layer rows are appended
-  // last, in composition order.
+  // derived from the registry, plus the hand-authored orbitTrails row. There is
+  // no other way to build a "rows" array — orbitTrails gates LINE geometry, not
+  // labels, so it has no registry row's label axis to derive from and stays
+  // hand-authored here. Layer rows are appended last, in composition order.
   const rows: ReadonlyArray<SectionRow> = useMemo(
     () => [
       ...LABEL_CATEGORIES.map((cat) => ({
@@ -151,12 +139,6 @@ function LabelsAndGuidesSectionContainer({
         enabled: labelCategoryVisibility[cat],
         onChange: (enabled: boolean) => onSetLabelCategoryVisibility(cat, enabled),
       })),
-      {
-        id: 'toggle-constellations',
-        label: 'Constellations',
-        enabled: constellationsEnabled,
-        onChange: onToggleConstellations,
-      },
       {
         id: 'toggle-orbit-trails',
         label: 'Orbit trails',
@@ -173,8 +155,6 @@ function LabelsAndGuidesSectionContainer({
     [
       labelCategoryVisibility,
       onSetLabelCategoryVisibility,
-      constellationsEnabled,
-      onToggleConstellations,
       orbitTrailsEnabled,
       onToggleOrbitTrails,
       layerRows,

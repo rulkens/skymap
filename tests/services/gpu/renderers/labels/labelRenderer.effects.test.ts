@@ -41,18 +41,47 @@ const newRenderer = () =>
   );
 
 describe('LabelRenderer effect-field pack layout', () => {
-  it('per-label storage record is 20 f32 slots (80-byte stride)', () => {
+  it('per-label storage record is 24 f32 slots (96-byte stride)', () => {
     const r = newRenderer();
     r.setLabels([
       { id: 'a', worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' },
       { id: 'b', worldPos: [7, 8, 9], text: 'A', pixelSize: 0, font: 'cormorant' },
     ]);
     const buf = (r as unknown as { __debugLabelBuf(): Float32Array }).__debugLabelBuf();
-    // Second label's worldPos starts at slot 20 (= 80-byte stride / 4): the
-    // struct's 68 written bytes round up to 80 on its vec4 alignment.
-    expect(buf[20]).toBe(7);
-    expect(buf[21]).toBe(8);
-    expect(buf[22]).toBe(9);
+    // Second label's worldPos starts at slot 24 (= 96-byte stride / 4): the
+    // trailing subjectPos vec4 needs 16-byte alignment, so the struct's 72
+    // written bytes round up to 96, not 80.
+    expect(buf[24]).toBe(7);
+    expect(buf[25]).toBe(8);
+    expect(buf[26]).toBe(9);
+  });
+
+  it('defaults subjectPos to worldPos when occludeSubjectPos is unset', () => {
+    const r = newRenderer();
+    r.setLabels([{ id: 'a', worldPos: [1, 2, 3], text: 'A', pixelSize: 0, font: 'cormorant' }]);
+    const buf = (r as unknown as { __debugLabelBuf(): Float32Array }).__debugLabelBuf();
+    expect(buf[20]).toBe(1);
+    expect(buf[21]).toBe(2);
+    expect(buf[22]).toBe(3);
+    expect(buf[23]).toBe(0); // w unused
+  });
+
+  it('writes occludeSubjectPos at slots 20..22 when a producer sets it', () => {
+    const r = newRenderer();
+    r.setLabels([
+      {
+        id: 'a',
+        worldPos: [1, 2, 3],
+        occludeSubjectPos: [4, 5, 6],
+        text: 'A',
+        pixelSize: 0,
+        font: 'cormorant',
+      },
+    ]);
+    const buf = (r as unknown as { __debugLabelBuf(): Float32Array }).__debugLabelBuf();
+    expect(buf[20]).toBe(4);
+    expect(buf[21]).toBe(5);
+    expect(buf[22]).toBe(6);
   });
 
   it('writes outlineColor (premultiplied) at slots 12..15', () => {

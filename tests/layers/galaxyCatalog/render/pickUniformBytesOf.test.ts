@@ -32,7 +32,7 @@ import {
   PROCEDURAL_DISK_FADE_END_PX,
 } from '../../../../src/data/galaxyLodBands';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 
 // Distinct, non-round sentinel values per slot so a mis-mapped field would
@@ -51,7 +51,7 @@ const VIEW: SlabView = {
   viewportPx: VIEWPORT_PX,
 };
 
-const CTX = { drawPxPerRad: PX_PER_RAD } as unknown as ReadyFrameContext;
+const CTX = { drawPxPerRad: PX_PER_RAD } as unknown as FrameView;
 
 const STATE = {
   settings: {

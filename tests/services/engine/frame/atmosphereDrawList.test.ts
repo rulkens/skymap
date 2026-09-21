@@ -24,7 +24,7 @@ import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
 import { outerBoundRadiusM } from '../../../../src/utils/occlusion/outerBoundRadiusM';
 import type { BodySurface } from '../../../../src/@types/scene/BodySurface';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
@@ -85,10 +85,14 @@ function makeState(init: {
   } as unknown as EngineState;
 }
 
+// 1080-px viewport, fovYRad 1.0, tangent-exact — matches `symmetricFrustum`'s
+// form so the fixture's `drawPxPerRad` is what `deriveView` would have set.
+const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(1.0 / 2));
+
 /**
- * The minimal ReadyFrameContext the derivation reads: `drawCamPos` (per-body
+ * The minimal FrameView the derivation reads: `drawCamPos` (per-body
  * sub-pixel distance source), `cam.distance` (the whole-list near-field cull),
- * `canvasSize`/`fovYRad` (the sub-pixel projection), and `bodyPose` (the
+ * `drawPxPerRad` (the sub-pixel projection), and `bodyPose` (the
  * body-slab seam the entry's camera-local fields come from). `camDistance`
  * defaults to 0 — inside the near-field edge, the common body-framed path.
  */
@@ -96,14 +100,13 @@ function makeCtx(
   drawCamPos: Vec3,
   camDistance = 0,
   bodyPose: BodyPoseProvider = poseFrom(drawCamPos),
-): ReadyFrameContext {
+): FrameView {
   return {
     drawCamPos,
     cam: { distance: camDistance },
-    canvasSize: { width: 1920, height: 1080 },
-    fovYRad: 1.0,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
     bodyPose,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**

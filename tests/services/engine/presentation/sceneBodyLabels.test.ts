@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  sceneBodyLabels,
-  FOREGROUND_LABEL_CAPACITY,
-} from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
 import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
@@ -44,15 +41,6 @@ describe('sceneBodyLabels', () => {
     expect(sgrA.kind).toBe('sgrAStar');
     expect(sgrA.text).toBe(SGR_A_STAR_ENTRY.label);
     expect(sgrA.text).not.toContain('Sgr');
-  });
-
-  it('fits inside the foreground label renderer capacity (no silent caption drop)', () => {
-    // initGpu sizes the caption renderer with FOREGROUND_LABEL_CAPACITY (not
-    // createLabelRenderer's 64-label default); setLabels silently clamps at
-    // maxLabels, so a roster that outgrew the buffer would drop captions
-    // without a trace. Both the capacity and this label set derive from the
-    // same roster, so this pins that the derived buffer actually covers it.
-    expect(labels.length).toBeLessThanOrEqual(FOREGROUND_LABEL_CAPACITY);
   });
 
   it('anchors each label at its body position (renderOrigin is the Sun, so == positionMpc)', () => {

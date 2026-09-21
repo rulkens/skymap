@@ -29,6 +29,8 @@ export type StarCatalogDrawArgs = {
   readonly vp: Float32Array;
   /** Viewport size in physical pixels — feeds the pixel-size-to-clip conversion. */
   readonly viewportPx: Vec2;
+  /** The drawn target's pixels per radian — `toRefPx`'s solid-angle normaliser. */
+  readonly pxPerRad: number;
   /**
    * How many drawn nodes this stream carries — the count of valid entries in
    * every flat per-node array below. Those arrays are the star cut's REUSED
@@ -155,7 +157,7 @@ export type StarCatalogDrawArgs = {
    */
   readonly glowMarginAngleRad: number;
   /**
-   * `ReadyFrameContext.viewSlot` (Task 13b) — which view-slot's camera
+   * `FrameView.viewSlot` (Task 13b) — which view-slot's camera
    * uniform + NodeParams/prefix buffer PAIR this call's writes land in. `0`
    * for the main view; `viewSlotBase + face` for a capture face. A capture
    * sweep calls `draw` once per face plus once for the real view, all before
