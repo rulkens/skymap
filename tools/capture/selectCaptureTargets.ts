@@ -1,8 +1,20 @@
 import type { PaletteTab } from '../../src/@types/palette/PaletteTab';
+import type { PaletteCard } from '../../src/@types/palette/PaletteCard';
 import type { PaletteCardCapture } from '../../src/@types/palette/PaletteCardCapture';
 import type { CaptureTarget } from './@types/CaptureTarget';
 import { captureEqual } from './captureEqual';
 import { isCapturableCopy } from './isCapturableCopy';
+
+/** Table dispatch on the card's action: a new action kind is one arm here. */
+function targetFor(
+  cardId: string,
+  action: PaletteCard['action'],
+  capture: PaletteCardCapture,
+): CaptureTarget {
+  if (action.kind === 'focus') return { cardId, kind: 'focus', focusId: action.focusId, capture };
+  if (action.kind === 'view') return { cardId, kind: 'view', viewId: action.viewId, capture };
+  return { cardId, kind: 'pose', capture };
+}
 
 /**
  * selectCaptureTargets — which cards `npm run capture-featured` should shoot,
@@ -45,26 +57,16 @@ export function selectCaptureTargets(
     for (const card of t.cards) {
       if (resolved.has(card.id)) continue;
       if (!isCapturableCopy(card)) continue;
-      // Tour cards have no pose to frame from yet — wiring a 'tour' CaptureTarget
-      // kind is a later task; skip rather than fabricate a focus/view shot.
-      if (card.action.kind === 'tour') continue;
+      // A tour card has nothing to fly to: its beats carry clips, not a focus
+      // id, and it has no registry pose the way a view card does. So its own
+      // `capture.pose` is the whole framing, and a tour card without one is a
+      // curator error — the same call `shotPose` makes for a poseless shot.
+      if (card.action.kind === 'tour' && card.capture?.pose === undefined) {
+        throw new Error(`tour card '${card.id}' needs a capture.pose — it has nothing to fly to`);
+      }
       resolved.add(card.id);
       if (existing.has(card.id) && !force.includes(card.id)) continue;
-      targets.push(
-        card.action.kind === 'focus'
-          ? {
-              cardId: card.id,
-              kind: 'focus',
-              focusId: card.action.focusId,
-              capture: card.capture ?? {},
-            }
-          : {
-              cardId: card.id,
-              kind: 'view',
-              viewId: card.action.viewId,
-              capture: card.capture ?? {},
-            },
-      );
+      targets.push(targetFor(card.id, card.action, card.capture ?? {}));
     }
   }
   return targets;

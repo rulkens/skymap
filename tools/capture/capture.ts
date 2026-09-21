@@ -17,11 +17,12 @@ import type { SceneShot } from '../@types/capture/SceneShot';
 
 function shotFor(target: CaptureTarget): SceneShot {
   // A view card carries its own settings + pose in the registry — no takeover,
-  // no `#focus=`; a focus card falls to the existing focus-fly-in path.
+  // no `#focus=`; a focus card falls to the existing focus-fly-in path. A pose
+  // card (a tour) has neither, so `capture.pose` below is its only framing.
   const view = target.kind === 'view' ? viewRegistry[target.viewId] : undefined;
   return {
     focusId: target.kind === 'focus' ? target.focusId : undefined,
-    settings: view?.settings,
+    settings: target.capture.settings ?? view?.settings,
     t: target.capture.t ?? DEFAULT_CAPTURE_T,
     pose: target.capture.pose ?? view?.pose,
     phaseDeg: target.capture.phaseDeg,

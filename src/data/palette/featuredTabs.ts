@@ -5,8 +5,24 @@
  * unless `image` overrides it, which only the Galaxies tab's cards do.
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
+import { VOLUMES_OFF } from '../views/utils/volumesOff';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
+
+// A tour card has no registry pose to inherit, so its whole framing lives here.
+// Both mirror their tour's opening scene strip rather than the default sky, so
+// the thumbnail is a frame the viewer will actually see.
+const GRAND_TOUR_CAPTURE: PaletteCardCapture = {
+  settings: { volumes: VOLUMES_OFF },
+  pose: { target: [0, 0, 0], yaw: 0.9, pitch: 0.55, distance: 1500 },
+};
+// Volumes off is webShowcase's beat-1 `hide()` sweep in settings form: the tour
+// reads the NAMED web — structure rings and their labels — not the density
+// field the Cosmic Web card already shows.
+const WEB_SHOWCASE_CAPTURE: PaletteCardCapture = {
+  settings: { volumes: VOLUMES_OFF },
+  pose: { target: [0, 0, 0], yaw: 2.1, pitch: 0.35, distance: 220 },
+};
 
 // `target` is ignored: the focus pins the pivot to the body. `keepFocus` is
 // required because the pose is relative to a moving body.
@@ -679,12 +695,14 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'The Long Way Out',
         blurb: 'Coming soon',
         action: { kind: 'tour', tourId: 'grandTour' },
+        capture: GRAND_TOUR_CAPTURE,
       },
       {
         id: 'webShowcase',
         label: 'Named Cosmic Web',
         blurb: 'Coming soon',
         action: { kind: 'tour', tourId: 'webShowcase' },
+        capture: WEB_SHOWCASE_CAPTURE,
       },
     ],
   },
