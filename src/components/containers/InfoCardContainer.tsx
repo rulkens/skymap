@@ -1,4 +1,3 @@
-// src/components/containers/InfoCardContainer.tsx
 /**
  * InfoCardContainer — store boundary for the hover/selection detail card.
  *

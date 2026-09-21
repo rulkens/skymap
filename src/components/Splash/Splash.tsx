@@ -1,4 +1,3 @@
-// src/components/Splash/Splash.tsx
 /**
  * Splash — first-paint onboarding overlay, film-title style.
  *

@@ -1,4 +1,3 @@
-// src/components/SettingsPanel/CosmicWebSection.tsx
 /**
  * CosmicWebSection — presentational component for the Cosmic web thematic
  * group inside the SettingsPanel.

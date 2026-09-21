@@ -1,4 +1,3 @@
-// src/layers/galaxyCatalog/ui/GalaxiesSectionContainer.tsx
 /**
  * GalaxiesSectionContainer — store boundary for the Galaxies settings section:
  * reads five settings selectors plus `selectSourceCounts`, wraps five dispatch

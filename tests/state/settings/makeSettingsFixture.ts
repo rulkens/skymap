@@ -54,10 +54,11 @@ import {
   DEFAULT_TONE_MAP_CURVE,
 } from '../../../src/data/defaults';
 import { initialState as sgrAStarLensingTuningInitialState } from '../../../src/layers/body/state/sgrAStarLensingTuning/initialState';
-import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
+import { initialState as orbitTrailsInitialState } from '../../../src/state/settings/core/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/volume/state/volumes/initialState';
+import { pickingInitialState } from '../../../src/state/settings/core/pickingSlice';
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/initialState';
@@ -133,6 +134,7 @@ export function makeSettingsFixture(
     volumes: { ...volumesInitialState, items: seedVolumeFields() },
     flow: { ...flowInitialState },
     labels: { focusedOnly: false },
+    picking: { ...pickingInitialState },
     debug: {
       overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<
         DebugOverlayKey,

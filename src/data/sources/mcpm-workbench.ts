@@ -19,7 +19,8 @@ export const MCPM_WORKBENCH_ENTRY = {
   tiered: false, // one cube per workbench run; no per-tier variants
   // Same physical quantity as MCPM/Polyphorm2MRS (log-normalized MCPM trace
   // density), so its presentation defaults mirror theirs — distinct palette
-  // (magma, not MCPM's inferno or Polyphorm2MRS's viridis) to tell the three apart.
+  // (magma, where the two shipping runs both use inferno) so a promoted
+  // workbench cube is unmistakable beside the reference it is judged against.
   paletteId: 'magma',
   contrast: 1.7,
   contrastCenter: 0.0,

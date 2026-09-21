@@ -88,8 +88,17 @@ export type RunSaga = (saga: SagaFactory) => Task;
  * up-basis quaternion resolved THIS frame, so a re-switch mid-slerp composes
  * continuously instead of snapping the pole back to the committed frame. The
  * name is frame-agnostic (not `Focus…`) because both sagas share the snapshot.
+ *
+ * `aspect` rides beside `fovYRad` for `sphereFitDistance` — a view's fit-to-
+ * radius pose needs both to resolve the limiting (horizontal vs vertical) FOV
+ * at the live viewport shape, not just the vertical lens angle.
  */
-export type LiveCameraRuntime = { from: CameraPose; fovYRad: number; upBasisQuat: Vec4 };
+export type LiveCameraRuntime = {
+  from: CameraPose;
+  fovYRad: number;
+  aspect: number;
+  upBasisQuat: Vec4;
+};
 /**
  * The debug clip-path inspector seam — the non-reactive bridge the
  * `watchClipPathInspectSaga` calls to (re)sample a clip's camera route into the

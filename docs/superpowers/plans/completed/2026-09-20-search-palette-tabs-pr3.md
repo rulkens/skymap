@@ -187,8 +187,8 @@ export type ViewSection = { heading: string; text: string };
 
 Copy is placeholder prose in every entry; the user writes it. The Cosmic Web draft content (sections, facts, sources from `docs/DATA.md`) is on the V6 artboard and in the grill transcript's Design pass — use it for that one entry.
 
-- [ ] **No tests.** Registry content is data (spec §8: no tests for `featuredTabs.ts` content, and this is its sibling). The compiler proves the shape; the user proves the copy.
-- [ ] `npm run typecheck` silent, commit.
+- [x] **No tests.** Registry content is data (spec §8: no tests for `featuredTabs.ts` content, and this is its sibling). The compiler proves the shape; the user proves the copy.
+- [x] `npm run typecheck` silent, commit.
 
 ---
 
@@ -202,10 +202,10 @@ Copy is placeholder prose in every entry; the user writes it. The Cosmic Web dra
 
 **Behaviour:** same shape as `flyToClip` — `start: 'live'`, one `timeline` entry wrapping `all([...])`, same `FLY_SEC` and `'easeInOutCubic'` — but built from the concrete arms `moveTarget(to: Vec3, over, ease)` (`src/services/engine/animation/effectHelpers.ts:122`) and `dollyTo(mpc: number, over, ease?)` (`:110`), reading `pose.target` and `pose.distance`. No `resolveClipFoci` pass.
 
-- [ ] Add the test `flyToPoseClip targets the pose without a focus lookup`, asserting the returned `ClipData` carries the pose's `target` and `distance` and that `start` is `'live'`.
-- [ ] Implement against `flyToClip.ts:30-44` as the shape reference.
-- [ ] **Decide and record in a comment:** `flyToClip` moves target and distance only, not bearing, so `pose.yaw`/`pose.pitch` are unused here. If a view needs its bearing honoured, that is an `aimAt` arm and belongs in this task — check the Cosmic Web pose before deciding, since a wrong bearing is invisible to the test but obvious on screen.
-- [ ] `npm test -- flyToPoseClip` green, commit.
+- [x] Add the test `flyToPoseClip targets the pose without a focus lookup`, asserting the returned `ClipData` carries the pose's `target` and `distance` and that `start` is `'live'`.
+- [x] Implement against `flyToClip.ts:30-44` as the shape reference.
+- [x] **Decide and record in a comment:** `flyToClip` moves target and distance only, not bearing, so `pose.yaw`/`pose.pitch` are unused here. If a view needs its bearing honoured, that is an `aimAt` arm and belongs in this task — check the Cosmic Web pose before deciding, since a wrong bearing is invisible to the test but obvious on screen.
+- [x] `npm test -- flyToPoseClip` green, commit.
 
 ---
 
@@ -225,13 +225,13 @@ Copy is placeholder prose in every entry; the user writes it. The Cosmic Web dra
 
 **`viewBody` does three things, in order** (spec §7.2): `put(mergeSnapshot(view.settings))`; play `flyToPoseClip(view.pose)`; wait for `exitTakeover`. It does **not** snapshot, restore, or dispatch start/end — the bracket owns all of that.
 
-- [ ] Add `openView` to `watchTakeoverSaga`'s `takeLatest` alongside `startTour`, running `viewBody` under `runTakeover({ kind: 'view', id })`.
-- [ ] `CommandPaletteContainer.tsx:32-35`: replace the `view: () => {}` stub (marked "Placeholder until PR3") with `dispatch(openView(action.viewId))`.
-- [ ] Write `tests/state/views/viewBody.test.ts` with these names:
+- [x] Add `openView` to `watchTakeoverSaga`'s `takeLatest` alongside `startTour`, running `viewBody` under `runTakeover({ kind: 'view', id })`.
+- [x] `CommandPaletteContainer.tsx:32-35`: replace the `view: () => {}` stub (marked "Placeholder until PR3") with `dispatch(openView(action.viewId))`.
+- [x] Write `tests/state/views/viewBody.test.ts` with these names:
   - `viewBody applies the view settings before playing the clip`
   - `viewBody waits for exitTakeover and does not restore on its own`
-- [ ] **Orbiting must not end a view** (spec §7.2). The `exitTakeover` race is the only abort arm — do not race camera-input actions. `guidedTourSaga.ts:78-82` carries a comment explaining why; read it before wiring the race.
-- [ ] `npm run typecheck` silent, `npm test` green, commit.
+- [x] **Orbiting must not end a view** (spec §7.2). The `exitTakeover` race is the only abort arm — do not race camera-input actions. `guidedTourSaga.ts:78-82` carries a comment explaining why; read it before wiring the race.
+- [x] `npm run typecheck` silent, `npm test` green, commit.
 
 ---
 
@@ -245,11 +245,11 @@ PR1 shipped the Tours tab **hidden**, because it had no cards until now (spec §
 
 **New union member:** `| { kind: 'tour'; tourId: TourId }`, alongside the existing `focus` and `view`.
 
-- [ ] Add the `tour` member to `PaletteAction`, and a `tour` entry to the container's `RUN_ACTION` table dispatching `startTour(action.tourId)`. Follow the `focus` entry's `if (action.kind !== 'tour') return;` narrowing at `CommandPaletteContainer.tsx:27`.
-- [ ] Add the Tours tab's two cards to `featuredTabs.ts` — `grandTour` and `webShowcase` (spec §5.1 table) — with placeholder blurbs the user replaces.
-- [ ] Unhide the Tours tab.
-- [ ] **No new test here** — Task 8's all-kinds `actionForRow` coverage and the existing tab test carry it.
-- [ ] `npm run typecheck` silent, `npm test` green, commit.
+- [x] Add the `tour` member to `PaletteAction`, and a `tour` entry to the container's `RUN_ACTION` table dispatching `startTour(action.tourId)`. Follow the `focus` entry's `if (action.kind !== 'tour') return;` narrowing at `CommandPaletteContainer.tsx:27`.
+- [x] Add the Tours tab's two cards to `featuredTabs.ts` — `grandTour` and `webShowcase` (spec §5.1 table) — with placeholder blurbs the user replaces.
+- [x] Unhide the Tours tab.
+- [x] **No new test here** — Task 8's all-kinds `actionForRow` coverage and the existing tab test carry it.
+- [x] `npm run typecheck` silent, `npm test` green, commit.
 
 ---
 
@@ -263,10 +263,10 @@ PR1 shipped the Tours tab **hidden**, because it had no cards until now (spec §
 
 Notes on the scene, no card (spec §4.2 — read it for the visual design, and the V6 artboard it references). Mount it as a sibling of `tourOverlay` (`App.tsx:102`), gated on `selectTakeoverSource(state)?.kind === 'view'`. It renders the active view's `label` and `body` sections and an Exit control dispatching `exitTakeover()`.
 
-- [ ] Load Sora (weight 100) in `index.html` beside Cormorant, and use it **only** in `ViewOverlay` (spec §4.3). Adding a `--font-family-body` token and switching InfoCard and tour captions to it is a **separate PR** — do not do it here.
-- [ ] **No tests** — presentational, gated by a selector the Task 3 tests already cover.
-- [ ] **User eye-check, mandatory:** at weight 100 over bright filaments, legibility is the open risk the spec flags. If it is thin, **raise the size before raising the weight**.
-- [ ] `npm run typecheck` silent, commit.
+- [x] Load Sora (weight 100) in `index.html` beside Cormorant, and use it **only** in `ViewOverlay` (spec §4.3). Adding a `--font-family-body` token and switching InfoCard and tour captions to it is a **separate PR** — do not do it here.
+- [x] **No tests** — presentational, gated by a selector the Task 3 tests already cover.
+- [x] **User eye-check, mandatory:** at weight 100 over bright filaments, legibility is the open risk the spec flags. If it is thin, **raise the size before raising the weight**.
+- [x] `npm run typecheck` silent, commit.
 
 ---
 
@@ -283,9 +283,9 @@ Notes on the scene, no card (spec §4.2 — read it for the visual design, and t
 
 **`actionForRow`** — `FOCUS_ID` (`actionForRow.ts:37-57`) currently maps every kind to a focus id, and the function hard-codes `{ kind: 'focus', ... }` at `:59-61`. The two new kinds do **not** produce a focus action, so this shape has to change: make the table map each kind directly to a `PaletteAction`. That is the un-braiding, not a special case for two kinds.
 
-- [ ] **The existing test is thinner than the spec claims.** Spec §8 calls `actionForRow` "a table-coverage test", but `tests/components/CommandPalette/utils/actionForRow.test.ts:32-44` only covers `alias` and `structure`. Add the missing coverage as part of this task: one assertion per `ScoredRow` kind, all seven, so a future kind added to the union without a table row fails here rather than at runtime.
-- [ ] Add a `ROW_VIEW` entry per new kind (`paletteRows.tsx`), matching the `RowView` shape at `:27-33`.
-- [ ] `npm test -- actionForRow` green, `npm run typecheck` silent, commit.
+- [x] **The existing test is thinner than the spec claims.** Spec §8 calls `actionForRow` "a table-coverage test", but `tests/components/CommandPalette/utils/actionForRow.test.ts:32-44` only covers `alias` and `structure`. Add the missing coverage as part of this task: one assertion per `ScoredRow` kind, all seven, so a future kind added to the union without a table row fails here rather than at runtime.
+- [x] Add a `ROW_VIEW` entry per new kind (`paletteRows.tsx`), matching the `RowView` shape at `:27-33`.
+- [x] `npm test -- actionForRow` green, `npm run typecheck` silent, commit.
 
 ---
 
@@ -316,11 +316,11 @@ The four view cards need thumbnails like every other card, and today they cannot
 
 **Change:** `focusId` becomes optional. When absent, boot without the `#focus=` fragment and rely on the shot's `pose` alone; when absent **and** no `pose` is given, throw — a shot with neither is a curator error, not a default.
 
-- [ ] Extend `tests/tools/utils/capture/shotPose.test.ts` with `a shot with neither focusId nor pose is refused`, asserting the throw.
-- [ ] Add the boot branch in `captureScene.ts`. Everything downstream (`applyPose`, `poseMismatch`, `readLiveCameraState`) already works on a pose alone — note that `readLiveCameraState` returns only `yaw`/`pitch`/`distance`, not `target` (`tools/utils/browser/readLiveCameraState.ts:46`), which is why `poseMismatch` never compares targets.
-- [ ] Give the four view cards a `capture` in `featuredTabs.ts` carrying each view's registry pose. The two Tours-tab cards from Task 7 need thumbnails too — a tour's first beat is a focus, so those shoot the ordinary way with a `focusId`.
-- [ ] Run `npm run capture-featured -- --url http://localhost:<port> --force <the six card ids>` and commit the webps. **In a worktree, pass your own server's port** or you capture another branch's build.
-- [ ] `npm test -- shotPose` green, commit.
+- [x] Extend `tests/tools/utils/capture/shotPose.test.ts` with `a shot with neither focusId nor pose is refused`, asserting the throw.
+- [x] Add the boot branch in `captureScene.ts`. Everything downstream (`applyPose`, `poseMismatch`, `readLiveCameraState`) already works on a pose alone — note that `readLiveCameraState` returns only `yaw`/`pitch`/`distance`, not `target` (`tools/utils/browser/readLiveCameraState.ts:46`), which is why `poseMismatch` never compares targets.
+- [x] Give the four view cards a `capture` in `featuredTabs.ts` carrying each view's registry pose. The two Tours-tab cards from Task 7 need thumbnails too — a tour's first beat is a focus, so those shoot the ordinary way with a `focusId`.
+- [x] Run `npm run capture-featured -- --url http://localhost:<port> --force <the six card ids>` and commit the webps. **In a worktree, pass your own server's port** or you capture another branch's build.
+- [x] `npm test -- shotPose` green, commit.
 
 ---
 
@@ -328,10 +328,10 @@ The four view cards need thumbnails like every other card, and today they cannot
 
 Not an implementation task — the checkpoint PR1 had as its step 7.
 
-- [ ] Hand the user Task 9's helper and ask for the `solarSystem` and `observableUniverse` poses.
-- [ ] Hand the user the registry and ask for the four views' copy.
-- [ ] Re-run Task 10's capture for any card whose pose changed.
-- [ ] User smoke pass against the dev server — the named behaviours in the DoD below.
+- [x] Hand the user Task 9's helper and ask for the `solarSystem` and `observableUniverse` poses.
+- [x] Hand the user the registry and ask for the four views' copy.
+- [x] Re-run Task 10's capture for any card whose pose changed.
+- [x] User smoke pass against the dev server — the named behaviours in the DoD below.
 
 ---
 
@@ -362,3 +362,34 @@ Not an implementation task — the checkpoint PR1 had as its step 7.
 - The `--font-family-body` token, and switching InfoCard and tour captions to it — separate PR (spec §4.3).
 - Consolidating the Esc action list at `keyboardShortcuts.ts:54` — its own backlog item (spec §3.7).
 - The `featured` → `curated` rename — dropped by the user, not deferred.
+
+---
+
+## Landed as — deviations from the plan
+
+The plan's prose above is left as written on 2026-09-20; these are the places
+the shipped code went elsewhere, so a reader is not sent to files that do not
+exist.
+
+- **"View" is now "Exhibit"** (`7c3c2ca03`). `view` collided with the
+  renderer's 1407 uses of view / viewport / viewProj, so every symbol, folder
+  and type above reads `exhibit` in the tree: `ViewId` → `ExhibitId`,
+  `src/data/views/viewRegistry.ts` → `src/data/exhibits/exhibitRegistry.ts`,
+  `ViewOverlay` → `ExhibitOverlay`, `openView` → `openExhibit`,
+  `viewBody` → `src/state/exhibits/exhibitBodySaga.ts`.
+- **Five exhibits, not four.** `zoneOfAvoidance` was added beside the planned
+  four, so seven thumbnails shipped rather than six.
+- **`flyToPoseClip` lives in `src/data/animation/clips/makers/`**, not
+  `src/state/scene/` — clips already had a home.
+- **Task 11's premise was wrong.** It assumed "a tour's first beat is a focus,
+  so those shoot the ordinary way with a `focusId`". `BeatData` carries no
+  focus field; a beat's focus lives inside a clip cue. So `CaptureTarget` grew
+  a third `'pose'` kind and a tour card without a `capture.pose` now throws.
+- **`composeSelectionRows`' `kindsEnabled` is required**, not defaulted — a
+  caller that forgot it would silently ignore every exhibit's pick
+  restriction. `tests/support/allKindsEnabled.ts` is the test-only fixture.
+- **`Tour.dev`** was added (not planned) to keep the demo tour out of palette
+  search while leaving it launchable from the debug panel.
+- **The zoom envelope moved for one exhibit**: `MAX_DISTANCE_MPC` 30k → 60k
+  and `FAR_CLIP_MPC` 50k → 80k, so the Observable Universe shell fits a
+  portrait phone. App-wide change, exhibit-driven.

@@ -1,4 +1,3 @@
-// src/layers/flow/ui/FlowTuningSectionContainer.tsx
 /**
  * FlowTuningSectionContainer — store boundary for the DebugPanel's flow
  * power-user tuning knobs (count / trail / flowSpeed / densityBias / wander /

@@ -1,4 +1,3 @@
-// src/components/containers/TierChipContainer.tsx
 /**
  * TierChipContainer — store boundary for the tier selector chip.
  *

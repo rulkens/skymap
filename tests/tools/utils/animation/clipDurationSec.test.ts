@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { clipDurationSec } from '../../../../tools/utils/animation/clipDurationSec';
 import { compileClip } from '../../../../src/services/engine/animation/compileClip';
-import { all, dollyToId, lookAtId, seq, wait } from '../../../../src/services/engine/animation/effectHelpers';
+import {
+  all,
+  dollyToId,
+  lookAtId,
+  seq,
+  wait,
+} from '../../../../src/services/engine/animation/effectHelpers';
 import { focusId } from '../../../../src/utils/animation/focusId';
 import { dwellDrift } from '../../../../src/state/tour/dwellDrift';
 import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';

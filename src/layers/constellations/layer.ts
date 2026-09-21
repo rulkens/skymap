@@ -25,8 +25,8 @@ export const constellationsLayer = defineLayer({
   passes: (runtime) => [constellationsPass(runtime)],
   assets: constellationsAssetRows,
   fades: constellationsFadeRows,
-  labels: (runtime) => ({
-    screen: [
+  guides: (runtime) => ({
+    screenLabels: [
       // NEAR0, not COSMO: the figure anchors sit at parsec distances, inside
       // COSMO's fixed 0.01 Mpc near plane, so a COSMO-projected label could
       // never draw (full story in `constellationCaptions.ts`'s header).

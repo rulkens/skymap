@@ -1,11 +1,11 @@
 /**
- * runTakeover tests — the shared bracket tours and views both run under:
+ * runTakeover tests — the shared bracket tours and exhibits both run under:
  * snapshot → start → body → restore → end, with `takeoverEnded` suppressed on
  * a superseded (externally cancelled) run.
  *
  * `body` is a plain stub here — `runTakeover` is generic over its caller, so
  * these tests drive it directly with synthetic `TakeoverSource` values rather
- * than through the real tour/view registries.
+ * than through the real tour/exhibit registries.
  *
  * Supersede ORDERING is not testable at this level: cancelling a `Task` from
  * plain test code runs the restore's `put`s synchronously, which a real
@@ -24,6 +24,8 @@ import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
+import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -36,18 +38,37 @@ function buildStore() {
   return { store, sagaMiddleware };
 }
 
-// Stands in for a real tour/view body: parks until exitTakeover.
+// Stands in for a real tour/exhibit body: parks until exitTakeover.
 function* waitingBody(): Generator {
   yield* take(exitTakeover);
 }
 
 describe('runTakeover', () => {
-  it('a view restores its settings and toggle changes on exit', async () => {
+  // The poses every takeover flies to are authored at the default lens, and a
+  // fit-derived distance clamps silently at MAX_DISTANCE_MPC once the FOV
+  // narrows — so a viewer who left the slider narrow must not carry it in.
+  it('pins the FOV to the default and gives the viewer theirs back on exit', async () => {
+    const { store, sagaMiddleware } = buildStore();
+    const narrowed = DEFAULT_FOV_DEG / 3;
+    store.dispatch(setFovDeg(narrowed));
+
+    sagaMiddleware.run(function* () {
+      yield* runTakeover({ kind: 'tour', id: 'grandTour' }, waitingBody);
+    });
+    await flush();
+    expect(store.getState().settings.camera.fovDeg).toBe(DEFAULT_FOV_DEG);
+
+    store.dispatch(exitTakeover());
+    await flush();
+    expect(store.getState().settings.camera.fovDeg).toBe(narrowed);
+  });
+
+  it('an exhibit restores its settings changes on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
     store.dispatch(setVolumesEnabled(true));
 
     sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'view', id: 'solarSystem' }, function* () {
+      yield* runTakeover({ kind: 'exhibit', id: 'solarSystem' }, function* () {
         yield* put(setVolumesEnabled(false));
         yield* take(exitTakeover);
       });

@@ -26,7 +26,7 @@ function is a root file named for it; a member that is a collection is a folder.
 | `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                    |
 | `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                           |
 | `fades?`        | `present/`                                     |                                                                                                                       |
-| `labels?`       | `present/`                                     |                                                                                                                       |
+| `guides?`       | `present/`                                     |                                                                                                                       |
 | `selection?`    | `present/`                                     |                                                                                                                       |
 | `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
 | `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                           |
@@ -77,7 +77,7 @@ and expect both to be ruled on when the Layer structure is cleaned up:
    machinery" is a real category distinct from "GPU pipeline object", or one folder
    should absorb the other.
 2. **Where declarations live.** `assets?` sits in `load/` while `fades?`,
-   `labels?` and `selection?` sit in `present/`, though all four are the same kind
+   `guides?` and `selection?` sit in `present/`, though all four are the same kind
    of thing: a plain row declaring a contribution. One of the two placements is
    wrong.
 

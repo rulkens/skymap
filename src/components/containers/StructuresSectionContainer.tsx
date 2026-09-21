@@ -1,4 +1,3 @@
-// src/components/containers/StructuresSectionContainer.tsx
 /**
  * StructuresSectionContainer — store boundary for the Structures settings section.
  *

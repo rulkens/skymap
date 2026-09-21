@@ -2,24 +2,23 @@
  * grandTour frame ladder — the EFFECTIVE `settings.orientation` the tour runs
  * each beat under, not the raw `frameTo` literals.
  *
- * The old version of this file asserted the authored `frameTo(...)` calls
- * directly against each clip's timeline. That passed throughout the Critical
- * this suite now guards: `guidedTourSaga`'s beat-boundary `mergeSnapshot`
- * used to revert `settings.orientation` to its pre-tour value at every beat
- * boundary, even though the `frameTo` literals themselves were always
- * correct — a literal restatement of authored content cannot catch a bug in
- * how that content gets APPLIED. Per the project's testing convention (a test
- * must be able to fail on a real bug no other test or compiler check
- * catches), that restatement didn't earn its place.
+ * A literal restatement of the authored `frameTo(...)` calls against each
+ * clip's timeline cannot catch a bug in how that content gets APPLIED: the
+ * Critical this suite guards is `tourBody`'s beat-boundary `mergeSnapshot`
+ * reverting `settings.orientation` to its pre-tour value at every beat
+ * boundary, even though the `frameTo` literals themselves stay correct. Per
+ * the project's testing convention (a test must be able to fail on a real
+ * bug no other test or compiler check catches), that restatement wouldn't
+ * earn its place.
  *
- * This version drives the two production mechanisms `guidedTourSaga` composes
+ * This version drives the two production mechanisms `tourBody` composes
  * at every beat boundary — the reconstruction fold (`computeSceneEntering` →
- * `mergeSnapshot`, copied verbatim from `guidedTourSaga.ts`) and the beat's
+ * `mergeSnapshot`, copied verbatim from `tourBody.ts`) and the beat's
  * own cues actually firing (`applySceneEffect`, the same dispatch table
  * `clipPlayer` calls from) — against the REAL `grandTour` beats, and asserts
  * the resulting `settings.orientation` after each beat.
  *
- * Deliberately NOT run through `guidedTourSaga`/`visitBeatSaga` end to end:
+ * Deliberately NOT run through `tourBody`/`visitBeatSaga` end to end:
  * a real playthrough gates every beat's fly behind `resolveClipFoci`, which
  * needs real loaded catalog / famous-galaxy / structure data for every
  * id-bearing cue in EVERY beat (Local Group members, Virgo, Laniakea, …) —
@@ -102,10 +101,9 @@ describe('grand tour frame ladder — effective orientation per beat', () => {
 
     const orientationPerBeat: OrientationFrameId[] = [];
     for (let i = 0; i < grandTour.beats.length; i++) {
-      // The exact beat-boundary dispatch guidedTourSaga performs at the top
-      // of every loop iteration (guidedTourSaga.ts) — this is the site the
-      // Critical lived in: a raw write here used to sweep `orientation` back
-      // to `snapshot`'s pre-tour value on every beat.
+      // The exact beat-boundary dispatch tourBody performs at the top
+      // of every loop iteration (tourBody.ts) — a raw write here would sweep
+      // `orientation` back to `snapshot`'s pre-tour value on every beat.
       const live = store.getState().settings;
       const baseline = mergeSettingsSnapshot(live, snapshot.settings);
       store.dispatch(mergeSnapshot(computeSceneEntering(baseline, grandTour.beats, i)));

@@ -1,4 +1,3 @@
-// src/components/Splash/InfoIcon.tsx
 /**
  * InfoIcon — circled-? glyph. Inline SVG so it inherits currentColor
  * from the button it sits inside; no separate CSS module since the

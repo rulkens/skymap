@@ -66,7 +66,7 @@ export type { BeatOutcome };
 
 /**
  * Play one beat: announce the index, wait for clip data, resolve foci, fly,
- * then hand off to the pausable dwell. The outer `guidedTourSaga` loop adjusts
+ * then hand off to the pausable dwell. The outer `tourBody` loop adjusts
  * its index from the returned outcome.
  */
 export function* visitBeatSaga(beat: BeatData, index: number): Generator<unknown, BeatOutcome> {

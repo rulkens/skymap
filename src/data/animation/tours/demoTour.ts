@@ -30,6 +30,7 @@ import { focusId } from '../../../utils/animation/focusId';
 export const demoTour: Tour = {
   id: 'demo',
   label: 'Demo Tour',
+  dev: true,
   beats: [
     {
       enterClip: flyAndFocusOnClip(focusId('milkyWay')),

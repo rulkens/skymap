@@ -20,7 +20,7 @@
  * `focus`. But it must NOT ride inside `settings`: `mergeSettingsSnapshot` is
  * a raw field assignment, and `computeSceneEntering` reconstructs
  * `settings` at every beat boundary from the captured baseline (see
- * `guidedTourSaga`). If `orientation` were part of that payload, EVERY
+ * `tourBody`). If `orientation` were part of that payload, EVERY
  * beat-entry `mergeSnapshot` dispatch would carry the PRE-TOUR pole and
  * silently revert whatever the tour's own `frameTo` cues had set — the frame
  * would keep resetting itself the moment the next beat starts. Restore

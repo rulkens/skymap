@@ -1,5 +1,3 @@
-// src/services/gpu/shaders/scalarVolume/fragment.wesl
-//
 // Fragment stage for the scalar volume renderer.  Front-face culling at
 // the pipeline level means only back faces of the cube rasterise.  This
 // is the production-standard pattern that handles both inside-the-cube

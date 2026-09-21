@@ -1,7 +1,4 @@
-/**
- * PaletteTabId — the browse tabs shown in the palette's empty-query state.
- * PR3 adds 'tours'.
- */
+/** PaletteTabId — the browse tabs shown in the palette's empty-query state. */
 
 export type PaletteTabId =
   | 'highlights'
@@ -9,4 +6,5 @@ export type PaletteTabId =
   | 'missions'
   | 'milkyWay'
   | 'galaxies'
-  | 'deepSpace';
+  | 'deepSpace'
+  | 'tours';

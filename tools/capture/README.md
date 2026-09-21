@@ -1,7 +1,7 @@
 # Capture — palette-card thumbnails
 
 `npm run capture-featured` drives a running dev server headlessly and writes one 204×204 webp
-thumbnail per focus card in `src/data/palette/featuredTabs.ts` to
+thumbnail per capturable card in `src/data/palette/featuredTabs.ts` to
 `<cardId>.webp` under `public/` + `CARD_IMAGE_DIR` (`src/data/palette/cardImageDir.ts`), which is
 the path `cardImageSrc` reads by default.
 
@@ -24,9 +24,29 @@ already exists.
 
 ## Skip rules
 
-A card is never a target when: its action is a view (not `focus`), it carries an `image`
-override (the Galaxies tab), or its webp already exists and it isn't named in `--force`. A card
-id repeated across tabs is captured once, from its first capturable copy.
+A card is never a target when: it carries an `image` override (the Galaxies tab), or its webp
+already exists and it isn't named in `--force`. A card id repeated across tabs is captured once,
+from its first capturable copy.
+
+## Exhibit cards
+
+A `kind: 'exhibit'` card (`cosmicFlows`, `cosmicWeb`, `solarSystem`, `observableUniverse`) is shot
+without running its takeover — no `openExhibit`, no fly-in, no `#exhibit=` boot. Its
+`exhibitRegistry` entry already carries what a shot needs: `settings` is merged in, and `pose`
+frames it, so no `capture` override is needed unless a card wants to frame it differently. A
+`capture.pose` on the card still wins over the registry's.
+
+**Decluttering splits in two, and which half runs is the difference between the two card kinds.**
+`labelDeclutterActions` (every label, plus the selection passes) runs for every shot — no
+thumbnail wants text burned into it. `sceneDeclutterActions` (structure rings, orbit trails, and
+with `hideGalaxyField` the survey clouds) runs for FOCUS shots only: a focus card's subject is one
+object and the rest is backdrop, but an exhibit's subject IS the scene, and its own `settings`
+decide what belongs in it. Run the scene half over the Solar System exhibit and the thumbnail
+loses the orbit rings that are the whole picture.
+
+Order within the dispatch is load-bearing: scene declutter, then the exhibit's settings, then the
+labels. A settings snapshot is a whole-cluster replacement, so an exhibit's `galaxyCatalogs`
+carries its Layer's default `labelEnabled: true` — land it after the labels and they come back on.
 
 ## Per-card framing
 

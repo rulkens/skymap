@@ -1,4 +1,3 @@
-// src/components/TourOverlay/TourOverlay.tsx
 /**
  * TourOverlay — composes the guided-tour HUD over the live 3D scene: a
  * localized vignette + the per-beat caption + the always-on navigation

@@ -28,11 +28,7 @@ declare module 'msdf-bmfont-xml' {
   };
   type TexturePage = { filename: string; texture: Buffer };
   type FontData = { filename: string; data: string };
-  type GenerateCallback = (
-    err: Error | null,
-    textures: TexturePage[],
-    font: FontData,
-  ) => void;
+  type GenerateCallback = (err: Error | null, textures: TexturePage[], font: FontData) => void;
   function generateBMFont(
     input: string | Buffer,
     options: GenerateOptions,

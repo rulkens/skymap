@@ -1,4 +1,3 @@
-// src/components/DebugPanel/GalaxyProvenanceSection.tsx
 /**
  * GalaxyProvenanceSection — the catalog-audit table for the DebugPanel.
  *

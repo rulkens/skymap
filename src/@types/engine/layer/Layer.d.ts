@@ -17,7 +17,7 @@ import type { SourceType } from '../../data/SourceType';
 import type { SourceEntry } from '../../data/SourceEntry';
 import type { LayerCoreDeps } from './LayerCoreDeps';
 import type { LayerFrameVote } from './LayerFrameVote';
-import type { LayerLabels } from './LayerLabels';
+import type { LayerGuides } from './LayerGuides';
 import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
@@ -78,11 +78,13 @@ export type Layer<
   /** Rows join `FADE_LAYERS` in `createLayers`. Declares only: core owns the arrival
    * edge (`installFadeOnArrival`), so never drive a fade from `create`. */
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
-  /** `screen` rows register with `cosmoLabelDirector` in `createLayers`, then poll
-   * once a frame like any other screen-space producer; `world` rows join
-   * `state.label3DProducers`, walked by `runLabel3DProducers`. Each `id` must be
-   * stable across frames, in either half. */
-  labels?(runtime: Runtime): LayerLabels;
+  /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
+   * with the director of the slab they name, then poll once a frame like any
+   * other screen-space producer; `worldLabels` rows join
+   * `state.label3DProducers`, walked by `runLabel3DProducers`; `orbitTrails` rows
+   * join `state.orbitTrailRows`, walked by `orbitTrailsPass`. Each label `id`
+   * must be stable across frames. */
+  guides?(runtime: Runtime): LayerGuides;
   /** Folded by `composeSelectionRows`; `pickSources` are disjoint across Layers,
    * asserted at boot. */
   selection?(runtime: Runtime): readonly SelectionKindRow[];

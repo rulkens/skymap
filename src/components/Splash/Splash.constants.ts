@@ -1,4 +1,3 @@
-// src/components/Splash/Splash.constants.ts
 /**
  * Splash copy tables. The credit groups are the splash's public-facing
  * summary of ATTRIBUTIONS.md — the full licence terms live there, not here.

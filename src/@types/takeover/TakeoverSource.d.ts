@@ -4,6 +4,6 @@
  */
 
 import type { TourId } from '../animation/tour/TourId';
-import type { ViewId } from '../views/ViewId';
+import type { ExhibitId } from '../exhibits/ExhibitId';
 
-export type TakeoverSource = { kind: 'tour'; id: TourId } | { kind: 'view'; id: ViewId };
+export type TakeoverSource = { kind: 'tour'; id: TourId } | { kind: 'exhibit'; id: ExhibitId };

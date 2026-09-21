@@ -124,4 +124,25 @@ describe('rankPaletteMatches — scene-body rows', () => {
     const rows = rankPaletteMatches([M31], [], [], 'sagittarius');
     expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')).toBe(true);
   });
+
+  it('keeps dev tours out of search while user-facing ones rank', () => {
+    // `demoTour` is a harness for the tour machinery and carries `dev: true`.
+    // Nothing else hides it: it is a full `tourRegistry` row, so its label
+    // scores like any other and only the flag keeps it out of a user's results.
+    expect(rankPaletteMatches([M31], [], [], 'demo tour')).toEqual([]);
+    const rows = rankPaletteMatches([M31], [], [], 'named cosmic web');
+    expect(rows.some((r) => r.kind === 'tour' && r.tour.id === 'webShowcase')).toBe(true);
+  });
+});
+
+describe('rankPaletteMatches — Earth place rows', () => {
+  it("surfaces Paris for the query 'paris'", () => {
+    const rows = rankPaletteMatches([], [], [], 'paris');
+    expect(rows.some((r) => r.kind === 'place' && r.entry.id === 'paris')).toBe(true);
+  });
+
+  it("surfaces Søndermarken for the query 'sondermarken' (no diacritic)", () => {
+    const rows = rankPaletteMatches([], [], [], 'sondermarken');
+    expect(rows.some((r) => r.kind === 'place' && r.entry.id === 'sondermarken')).toBe(true);
+  });
 });

@@ -1,6 +1,6 @@
 /**
  * sceneOrbitConics — the per-orbit absolute-world ellipse table the trail layer
- * draws, DERIVED from `TRAIL_ELEMENTS` (spec §5) and frozen at J2000. The live
+ * draws, DERIVED from `CORE_TRAIL_ELEMENTS` (spec §5) and frozen at J2000. The live
  * trails do NOT read it: `orbitTrailsPass` re-derives every conic per frame off
  * the body snapshot. That snapshot-reading stays in the services layer BY
  * DESIGN — this data-layer file takes no upward, layer-crossing import and
@@ -9,7 +9,7 @@
  * orbit at the origin.
  */
 
-import { TRAIL_ELEMENTS } from './trailElements';
+import { CORE_TRAIL_ELEMENTS } from './coreTrailElements';
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { focusResolveOrder } from '../../utils/scene/focusResolveOrder';
 import { keplerianEllipse } from '../../utils/orbit/keplerianEllipse';
@@ -45,7 +45,7 @@ function worldPositionsMpc(
  */
 export function deriveOrbitConics(
   anchors: readonly AnchorBody[] = SCENE_ANCHORS,
-  elements: readonly OrbitalElements[] = TRAIL_ELEMENTS,
+  elements: readonly OrbitalElements[] = CORE_TRAIL_ELEMENTS,
 ): readonly OrbitConic[] {
   const worldPositions = worldPositionsMpc(anchors, elements);
   return elements.map((el) => {

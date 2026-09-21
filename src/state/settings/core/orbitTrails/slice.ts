@@ -1,4 +1,4 @@
-/** orbitTrails — the body Layer's near-field Keplerian orbit-trails singleton overlay. */
+/** orbitTrails — core's near-field Keplerian orbit-trails singleton overlay. */
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 

@@ -5,8 +5,24 @@
  * unless `image` overrides it, which only the Galaxies tab's cards do.
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
+import { VOLUMES_OFF } from '../exhibits/utils/volumesOff';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
+
+// A tour card has no registry pose to inherit, so its whole framing lives here.
+// Both mirror their tour's opening scene strip rather than the default sky, so
+// the thumbnail is a frame the viewer will actually see.
+const GRAND_TOUR_CAPTURE: PaletteCardCapture = {
+  settings: { volumes: VOLUMES_OFF },
+  pose: { target: [0, 0, 0], yaw: 0.9, pitch: 0.55, distance: 1500 },
+};
+// Volumes off is webShowcase's beat-1 `hide()` sweep in settings form: the tour
+// reads the NAMED web — structure rings and their labels — not the density
+// field the Cosmic Web card already shows.
+const WEB_SHOWCASE_CAPTURE: PaletteCardCapture = {
+  settings: { volumes: VOLUMES_OFF },
+  pose: { target: [0, 0, 0], yaw: 2.1, pitch: 0.35, distance: 220 },
+};
 
 // `target` is ignored: the focus pins the pivot to the body. `keepFocus` is
 // required because the pose is relative to a moving body.
@@ -121,8 +137,9 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'solarSystem',
         label: 'Solar System',
-        blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'solarSystem' },
+        blurb:
+          'Eight planets on their real orbits, seen from above the ecliptic. Mercury goes round in 88 days; Neptune takes 165 years.',
+        action: { kind: 'exhibit', exhibitId: 'solarSystem' },
       },
       {
         id: 'body-voyager1',
@@ -174,20 +191,23 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'cosmicFlows',
         label: 'Cosmic Flows',
-        blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'cosmicFlows' },
+        blurb:
+          'What galaxies do besides expand apart: fall towards the mass nearest them, at hundreds of kilometres a second.',
+        action: { kind: 'exhibit', exhibitId: 'cosmicFlows' },
       },
       {
         id: 'cosmicWeb',
         label: 'Cosmic Web',
-        blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'cosmicWeb' },
+        blurb:
+          'The largest structure there is: filaments and knots of galaxies around empty voids, hundreds of millions of light-years across.',
+        action: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
       },
       {
         id: 'observableUniverse',
         label: 'Observable Universe',
-        blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'observableUniverse' },
+        blurb:
+          'Everything whose light has had time to reach us: a sphere reaching some 46 billion light-years in every direction.',
+        action: { kind: 'exhibit', exhibitId: 'observableUniverse' },
       },
     ],
   },
@@ -386,6 +406,13 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
           'Our galaxy, a barred spiral about 100,000 light-years across. The Sun sits some 26,000 light-years from its centre.',
         action: { kind: 'focus', focusId: MILKY_WAY_FOCUS_ID },
         capture: MILKY_WAY_CAPTURE,
+      },
+      {
+        id: 'zoneOfAvoidance',
+        label: 'Zone of Avoidance',
+        blurb:
+          'The strip of sky our own galaxy hides. Dust and stars in the Milky Way’s disc block about a fifth of the extragalactic sky, and the catalogues stop at its edge.',
+        action: { kind: 'exhibit', exhibitId: 'zoneOfAvoidance' },
       },
       {
         id: 'body-sgr-a-star',
@@ -639,20 +666,45 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'cosmicFlows',
         label: 'Cosmic Flows',
-        blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'cosmicFlows' },
+        blurb:
+          'What galaxies do besides expand apart: fall towards the mass nearest them, at hundreds of kilometres a second.',
+        action: { kind: 'exhibit', exhibitId: 'cosmicFlows' },
       },
       {
         id: 'cosmicWeb',
         label: 'Cosmic Web',
-        blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'cosmicWeb' },
+        blurb:
+          'The largest structure there is: filaments and knots of galaxies around empty voids, hundreds of millions of light-years across.',
+        action: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
       },
       {
         id: 'observableUniverse',
         label: 'Observable Universe',
-        blurb: 'Coming soon',
-        action: { kind: 'view', viewId: 'observableUniverse' },
+        blurb:
+          'Everything whose light has had time to reach us: a sphere reaching some 46 billion light-years in every direction.',
+        action: { kind: 'exhibit', exhibitId: 'observableUniverse' },
+      },
+    ],
+  },
+  {
+    id: 'tours',
+    label: 'Tours',
+    cards: [
+      {
+        id: 'grandTour',
+        label: 'The Long Way Out',
+        blurb:
+          'Fourteen stops from the Milky Way to the edge of the observable universe, and home again. Andromeda, Virgo, Laniakea, the cosmic web, the voids.',
+        action: { kind: 'tour', tourId: 'grandTour' },
+        capture: GRAND_TOUR_CAPTURE,
+      },
+      {
+        id: 'webShowcase',
+        label: 'Named Cosmic Web',
+        blurb:
+          'Clusters and superclusters with their names on, over the bare galaxy field. Three stops, ending on M87 at the heart of Virgo.',
+        action: { kind: 'tour', tourId: 'webShowcase' },
+        capture: WEB_SHOWCASE_CAPTURE,
       },
     ],
   },

@@ -5,7 +5,7 @@
  *
  * The cinematic tour captures the scene before playing a beat (which may call
  * `focus()`, mutate visibility knobs, or fire a `frameTo` cue), then restores
- * the capture in `guidedTourSaga`'s `finally`. The saga reads it with
+ * the capture in `runTakeover`'s `finally`. The saga reads it with
  * `yield* select(captureScene)` — a pure store read, so capture needs no
  * engine effect at all (the matching restore, by contrast, dispatches and so
  * lives in `restoreSceneSaga`).

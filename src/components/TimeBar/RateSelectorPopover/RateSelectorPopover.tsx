@@ -1,4 +1,3 @@
-// src/components/TimeBar/RateSelectorPopover/RateSelectorPopover.tsx
 /**
  * RateSelectorPopover — pick any playback detent directly.
  *
