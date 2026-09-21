@@ -9,6 +9,8 @@
 import { initialState as flowInitialState } from '../../layers/flow/state/flow/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
+import { initialState as volumesInitialState } from '../../layers/volume/state/volumes/initialState';
+import { buildVolumeFieldSettings } from '../volume/volumeFieldDefaults';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
 import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
 import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
@@ -28,6 +30,19 @@ const GALAXIES_OFF = {
 };
 
 const MILKY_WAY_OFF = { ...milkyWayInitialState, enabled: false, labelEnabled: false };
+
+// The 2MRS Polyphorm run rides with MCPM in the Cosmic Web view: same quantity,
+// but an all-sky footprint where MCPM only covers the SDSS wedge, so the web
+// closes up behind the viewer. Its registry row is default-off (a panel toggle),
+// so the view turns it on explicitly — built from the registry defaults rather
+// than indexed out of the seed, which is `Partial` by type.
+const VOLUMES_WITH_2MRS = {
+  ...volumesInitialState,
+  items: {
+    ...volumesInitialState.items,
+    'polyphorm-2mrs': { ...buildVolumeFieldSettings('polyphorm-2mrs'), enabled: true },
+  },
+};
 
 // Matplotlib's inferno, six stops — the same ramp the filament volume samples,
 // so the legend reads as the field's own colours rather than a lookalike.
@@ -58,7 +73,7 @@ export const viewRegistry: Record<ViewId, View> = {
   cosmicWeb: {
     id: 'cosmicWeb',
     label: 'Cosmic Web',
-    settings: { galaxyCatalogs: GALAXIES_OFF },
+    settings: { galaxyCatalogs: GALAXIES_OFF, volumes: VOLUMES_WITH_2MRS },
     // User-framed and verified live 2026-09-18 (docs/grill-sessions/search-palette-tabs-2026-09-18.md,
     // "Capture spike findings"): no focus, target/yaw/pitch/distance below.
     pose: {
