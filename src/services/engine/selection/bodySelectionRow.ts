@@ -11,6 +11,7 @@ import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { SCENE_STARS } from '../../../data/bodies/sceneStars';
 import { BODY_PICK_ROWS } from '../../../data/bodies/bodyPickRows';
 import { BODY_FOCUS_PREFIX } from '../../url/bodyFocusId';
+import { isSceneBodyId } from '../../../utils/scene/isSceneBodyId';
 import { deriveBodyStates } from '../frame/deriveBodyStates';
 import type { SelectionRef } from '../../../@types/engine/SelectionRef';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
@@ -51,7 +52,7 @@ export function bodySelectionRow(): SelectionKindRow<BodyRef> {
       claims: (id) => id.startsWith(BODY_FOCUS_PREFIX),
       decode: (id) => {
         const seedId = id.slice(BODY_FOCUS_PREFIX.length);
-        return SCENE_BODIES.some((b) => b.id === seedId) ? { type: 'body', id: seedId } : null;
+        return isSceneBodyId(seedId) ? { type: 'body', id: seedId } : null;
       },
       encode: (ref) => `${BODY_FOCUS_PREFIX}${ref.id}`,
     },

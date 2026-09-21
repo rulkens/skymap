@@ -21,6 +21,7 @@ import { watchRequestSelectSaga } from '../state/selection/watchRequestSelectSag
 import { watchFocusTweenSaga } from '../state/selection/watchFocusTweenSaga';
 import { watchOrientationChangeSaga } from '../state/camera/watchOrientationChangeSaga';
 import { watchFlyToLonLatSaga } from '../state/camera/watchFlyToLonLatSaga';
+import { watchUrlPoseSaga } from '../state/camera/watchUrlPoseSaga';
 import { watchTakeoverSaga } from '../state/takeover/watchTakeoverSaga';
 import { watchKeyboardEventsSaga } from '../state/input/watchKeyboardEventsSaga';
 import { watchLogCameraStateSaga } from '../state/camera/watchLogCameraStateSaga';
@@ -43,6 +44,7 @@ export function* mainSaga() {
     watchFocusTweenSaga(),
     watchOrientationChangeSaga(),
     watchFlyToLonLatSaga(),
+    watchUrlPoseSaga(),
     watchTakeoverSaga(),
     watchKeyboardEventsSaga(),
     watchLogCameraStateSaga(),

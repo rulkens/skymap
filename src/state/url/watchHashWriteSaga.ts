@@ -77,11 +77,12 @@
  * row mix named actions with a computed test, which `focus` now does.
  */
 
-import { debounce, call, select } from 'typed-redux-saga';
+import { debounce, call, select, fork, take } from 'typed-redux-saga';
 import type { Action } from '@reduxjs/toolkit';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { hashBodyFor } from './hashBodyFor';
+import { hashArrivalApplied } from './hashArrivalApplied';
 import { writeHashBody } from '../../services/url/writeHashBody';
 import type { RootState } from '../../store/types';
 
@@ -89,12 +90,26 @@ const isHashWrite = (action: Action): boolean =>
   HASH_PARAM_SOURCES.some((source) => source.writesOn.some((triggers) => triggers(action)));
 
 export function* watchHashWriteSaga() {
+  // A plain closure variable, not store state: it is consumed by the very
+  // next debounce firing regardless of which action's burst produced it, so a
+  // torn-read follow-up landing after `hashArrivalApplied` (seen in
+  // `hashHistoryIntegrity`) cannot un-arm it early or miss it late.
+  let canonicalizeArrival = false;
+  yield* fork(function* () {
+    yield* take(hashArrivalApplied.match);
+    canonicalizeArrival = true;
+  });
+
   yield* debounce(0, isHashWrite, function* () {
     // The whole state, because `write` takes `RootState` — the rows name the
     // selectors they need, so nothing here has to know which slices the hash
     // reads. Read AFTER the debounce window, so this is the state the burst
     // settled on rather than the state the trigger that opened it produced.
     const state = yield* select((s: RootState) => s);
-    yield* call(writeHashBody, hashBodyFor(state));
+    const mode = canonicalizeArrival ? 'replace' : 'push';
+    canonicalizeArrival = false;
+    const body = hashBodyFor(state);
+    // Wrapped: typed-redux-saga's `call` overload resolution still rejects the direct 3-arg form here.
+    yield* call(() => writeHashBody(body, mode));
   });
 }
