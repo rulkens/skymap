@@ -82,7 +82,7 @@ export function App(): React.ReactElement {
   const debugPanelOpen = useAppSelector(selectDebugPanelOpen);
 
   // A running guided tour hides the whole HUD stack and mounts its own overlay
-  // (caption + nav); an exhibit will do the same once ExhibitOverlay lands.
+  // (caption + nav); an exhibit does the same through `ExhibitOverlay`.
   // HUD-hidden is DERIVED from `takeoverActive` (any takeover, tour or
   // exhibit), not a separate `setUiHidden` write — see runTakeover's module
   // header. The overlay and beat rail below stay gated on `tourActive`

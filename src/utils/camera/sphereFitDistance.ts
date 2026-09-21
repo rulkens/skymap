@@ -13,11 +13,7 @@ import { clampDistance, MIN_DISTANCE_MPC } from './clampDistance';
 /** Headroom past exact edge-to-edge fit, so the shell doesn't touch the frustum border. */
 const FIT_MARGIN = 1.05;
 
-/**
- * Camera distance (Mpc) that fits a sphere of `radiusMpc` inside the frustum
- * described by `fovYRad` (vertical FOV, radians) and `aspect` (width/height),
- * clamped through the shared zoom envelope.
- */
+/** `fovYRad` is the VERTICAL FOV in radians, `aspect` is width/height. */
 export function sphereFitDistance(radiusMpc: number, fovYRad: number, aspect: number): number {
   const halfFov = Math.atan(Math.tan(fovYRad / 2) * Math.min(1, aspect));
   const raw = (radiusMpc / Math.sin(halfFov)) * FIT_MARGIN;
