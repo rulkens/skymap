@@ -82,11 +82,11 @@ export function createTerrainPickMarkerRenderer(
   // writes none, so it disturbs nothing drawn after it. It lays the WHOLE
   // silhouette down dim; the pass below then covers the visible part, leaving
   // the dim residue equal to what the terrain buries.
-  const occludedPipeline = markerPipeline(
-    'terrain-pick-marker-occluded-pipeline',
-    'fsOccluded',
-    { format: depthFormat, depthWriteEnabled: false, depthCompare: 'always' },
-  );
+  const occludedPipeline = markerPipeline('terrain-pick-marker-occluded-pipeline', 'fsOccluded', {
+    format: depthFormat,
+    depthWriteEnabled: false,
+    depthCompare: 'always',
+  });
   const pipeline = markerPipeline('terrain-pick-marker-pipeline', 'fs', {
     format: depthFormat,
     depthWriteEnabled: true,

@@ -1,4 +1,3 @@
-// src/components/TimeBar/DateEntryPopover/DateEntryPopover.tsx
 /**
  * DateEntryPopover — jump the sim clock to an exact instant.
  *
@@ -122,11 +121,7 @@ function DateEntryPopover({ initial, onCommit, onCancel }: DateEntryPopoverProps
         onChange={(event) => setValue(event.target.value)}
         aria-label="Date and time (UTC)"
       />
-      <Button
-        className={styles.now}
-        onClick={fillNow}
-        aria-label="Fill with current time"
-      >
+      <Button className={styles.now} onClick={fillNow} aria-label="Fill with current time">
         Now
       </Button>
       <Button className={styles.set} variant="primary" onClick={commit}>

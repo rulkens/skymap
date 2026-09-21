@@ -1,4 +1,3 @@
-// src/components/DebugPanel/SurfaceTileAtlasSection.tsx
 /**
  * SurfaceTileAtlasSection — textual residency readout for the engaged body's
  * surface virtual texture: slot pressure, per-level resident/pending counts,

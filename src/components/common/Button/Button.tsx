@@ -1,4 +1,3 @@
-// src/components/common/Button/Button.tsx
 /**
  * Button — the HUD's single push-button primitive.
  *

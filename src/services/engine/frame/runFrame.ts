@@ -37,6 +37,7 @@ import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
 import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
 import { computeStarCut } from '../../gpu/renderers/starCatalog/cut/computeStarCut';
+import { advanceStarFades } from '../../gpu/renderers/starCatalog/cut/advanceStarFades';
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
@@ -52,6 +53,7 @@ import { deriveSimDays } from '../../../utils/time/deriveSimDays';
 import { selectTimeState, selectIsLiveTicking } from '../../../state/time/selectors';
 import { throttleByTime } from '../../../utils/throttle/throttleByTime';
 import { distanceMpc } from '../../../utils/math/distanceMpc';
+import { focusDriverId } from '../../../utils/camera/focusDriverId';
 import { SKY_VIEW_LUT_SIZE_BY_TIER } from '../../../data/bodies/skyViewLutSizeByTier';
 
 /**
@@ -252,8 +254,9 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // frame's snapshot is focused.
   if (publishBodyDistanceGate(nowMs)) {
     let focusedBodyDistanceMpc: number | null = null;
-    if (focusRow !== null && focusRow.type === 'body') {
-      const bodyState = sceneBodyStates(state, canvas).get(focusRow.id);
+    const focusId = focusDriverId(focusRow);
+    if (focusId !== null) {
+      const bodyState = sceneBodyStates(state, canvas).get(focusId);
       if (bodyState !== undefined) {
         focusedBodyDistanceMpc = distanceMpc(canvas.drawCamPos, bodyState.positionMpc);
       }
@@ -340,22 +343,14 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   // ── Star-cut planner (advances the LOD fades, one cut for every view) ─────
   //
-  // Advance the survey-star per-node LOD fades ONCE here, as a planner peer of
-  // the disk/label planners above — the ONLY call in a real frame that mutates
-  // the fade ramps (`computeStarCut`'s `advanceFades` doc). Two reasons it
-  // lives at frame-body level rather than only inside the star draw:
-  //   1. Its result is handed to the renderer as a value (`setFrameCut`,
-  //      mirrors `surfaceTiles.setLastCut` below), which every real frame
-  //      view's `starCutFor` then reads — so the walk runs exactly once per
-  //      frame regardless of how many views the rig draws.
-  //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below,
-  //      which `shouldKeepTicking` reads.
-  // `null` when the star pass isn't live (renderer null / master off) — that
-  // maps to `starFadeAnimating: false` below. `computeStarCut`'s own header
-  // states its `views[0]`-is-anchor contract; a rig that wants a particular
-  // eye to anchor the walk must list that view first.
-  const starCut = computeStarCut(state, views, true);
-  state.gpu.starCatalogRenderer?.setFrameCut(starCut);
+  // A planner peer of the disk/label planners above: `advanceStarFades` is the
+  // ONLY call in a real frame that steps the survey-star fade ramps, and its
+  // vote feeds the keep-ticking predicate below. The cut itself is handed to
+  // the renderer as a value (`setFrameCut`, mirrors `surfaceTiles.setLastCut`),
+  // so every rig view's `starCutFor` reads the one cut. `computeStarCut`'s
+  // header states the `views[0]`-is-anchor contract both calls share.
+  const starFadeAnimating = advanceStarFades(state, views);
+  state.gpu.starCatalogRenderer?.setFrameCut(computeStarCut(state, views));
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {
@@ -381,7 +376,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // without it awaited fade-outs (catalog visibility, tier swaps) hang forever.
   state.subsystems.fades.tick(nowMs);
   const keepTicking = shouldKeepTicking(state, rootState, nowMs, {
-    starFadeAnimating: starCut?.anyNodeFading ?? false,
+    starFadeAnimating,
     surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,

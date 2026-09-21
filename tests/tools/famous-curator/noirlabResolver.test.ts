@@ -39,8 +39,7 @@ const LARGE_JPEG_BLOCK_RE =
 const ALL_ARCHIVE_DOWNLOAD_BLOCKS_RE =
   /<div class="archive_download">[\s\S]*?<\/div><\/span><\/div>/g;
 
-const OG_IMAGE_SECURE_META_RE =
-  /<meta property="og:image:secure_url"[^>]*\/>/;
+const OG_IMAGE_SECURE_META_RE = /<meta property="og:image:secure_url"[^>]*\/>/;
 
 // The credit div's INNER HTML — leaves the wrapping tag in place so the
 // resolver still sees a `<div class="credit"></div>` (empty author),

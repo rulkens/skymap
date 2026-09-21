@@ -1,4 +1,3 @@
-// src/components/DebugPanel/MilkyWayTuningSection.tsx
 /**
  * MilkyWayTuningSection — DebugPanel subsection exposing the Milky-Way star
  * cloud's tuning knobs (look + the perf levers that trade against it),

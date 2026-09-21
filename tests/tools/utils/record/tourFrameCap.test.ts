@@ -5,7 +5,7 @@ import type { BeatData } from '../../../../src/@types/animation/tour/BeatData';
 import type { ClipData } from '../../../../src/@types/animation/ClipData';
 
 // Narration clip: empty timeline, no id-bearing cues — matches the fixture
-// shape guidedTourSaga.test.ts builds its beats from, so an enter clip's
+// shape tourBody.test.ts builds its beats from, so an enter clip's
 // duration is exactly its authored `wait`/`hold` total with nothing to stub.
 const NARRATION_CLIP: ClipData = {
   start: 'live',

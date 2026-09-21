@@ -1,4 +1,3 @@
-// src/components/SettingsPanel/StarsSection.tsx
 /**
  * StarsSection — presentational component for the star-catalogs thematic group
  * inside the SettingsPanel.

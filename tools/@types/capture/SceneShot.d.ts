@@ -1,4 +1,5 @@
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
+import type { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 
 /**
  * One framed shot of the scene: where to look, when, and where the file lands.
@@ -6,8 +7,10 @@ import type { CameraPose } from '../../../src/@types/camera/CameraPose';
  * their own data onto this.
  */
 export type SceneShot = {
-  /** `#focus=` id to fly to. */
-  focusId: string;
+  /** `#focus=` id to fly to; omit to boot with no selection (a view's own frame). */
+  focusId?: string;
+  /** Merged in before the pose settles, e.g. a view's `settings` snapshot. */
+  settings?: Parameters<typeof mergeSnapshot>[0];
   /** ISO instant, pinned via `#t=` (the same string `#t=` takes). */
   t: string;
   /** Re-applied once the fly-in settles. Exclusive with `phaseDeg`. */

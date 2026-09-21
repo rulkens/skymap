@@ -94,9 +94,10 @@ export const Source = {
    */
   Group: 15,
   /**
-   * Procedural Milky-Way galactic-disk overlay. Registry-key-only code (not
-   * persisted, not pickable); the entry carries the default-visible master
-   * toggle. Appended at 16.
+   * Procedural Milky-Way galactic-disk overlay. Not persisted, but PICKABLE:
+   * `milkyWayPickRenderer` stamps this code and `milkyWaySelectionRow` resolves
+   * it to the singleton ref, so it spends a pick code. The entry carries the
+   * default-visible master toggle. Appended at 16.
    */
   MilkyWay: 16,
   /**

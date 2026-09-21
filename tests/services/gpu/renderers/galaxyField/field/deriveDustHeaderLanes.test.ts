@@ -134,15 +134,27 @@ describe('deriveDustHeaderLanes — live gate', () => {
 
 describe('deriveDustHeaderLanes — noise.contrastExp', () => {
   it('inverts textureContrast: a higher slider value yields a SMALLER exponent', () => {
-    const soft = deriveDustHeaderLanes(GEOMETRY, { ...DUST, cloud: { ...DUST.cloud, textureContrast: 2 } }, true);
-    const hard = deriveDustHeaderLanes(GEOMETRY, { ...DUST, cloud: { ...DUST.cloud, textureContrast: 4 } }, true);
+    const soft = deriveDustHeaderLanes(
+      GEOMETRY,
+      { ...DUST, cloud: { ...DUST.cloud, textureContrast: 2 } },
+      true,
+    );
+    const hard = deriveDustHeaderLanes(
+      GEOMETRY,
+      { ...DUST, cloud: { ...DUST.cloud, textureContrast: 4 } },
+      true,
+    );
     expect(soft.noise.contrastExp).toBe(0.5);
     expect(hard.noise.contrastExp).toBe(0.25);
     expect(hard.noise.contrastExp).toBeLessThan(soft.noise.contrastExp);
   });
 
   it('floors the divisor at 1e-3 so a zero/negative textureContrast cannot reach an infinite exponent', () => {
-    const zero = deriveDustHeaderLanes(GEOMETRY, { ...DUST, cloud: { ...DUST.cloud, textureContrast: 0 } }, true);
+    const zero = deriveDustHeaderLanes(
+      GEOMETRY,
+      { ...DUST, cloud: { ...DUST.cloud, textureContrast: 0 } },
+      true,
+    );
     const negative = deriveDustHeaderLanes(
       GEOMETRY,
       { ...DUST, cloud: { ...DUST.cloud, textureContrast: -5 } },

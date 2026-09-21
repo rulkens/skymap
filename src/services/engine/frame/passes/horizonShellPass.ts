@@ -7,7 +7,7 @@
  * A fullscreen ray-march of an analytic sphere centred at the world
  * origin, with a Fresnel-rim fragment shader, so the silhouette reads
  * as a soft glowing shell.  The shell radius is fixed at construction
- * time (see `HORIZON_RADIUS_MPC` in `horizonShellRenderer.ts`); only
+ * time (see `HORIZON_RADIUS_MPC` in `data/rendering/`); only
  * the per-frame camera pose updates the uniform block.
  *
  * ### When it draws
@@ -44,10 +44,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { horizonShellFadeAlpha } from '../../../../utils/math/horizonShellFadeAlpha';
-import { HORIZON_RADIUS_GPC } from '../../../gpu/renderers/horizonShell/horizonShellRenderer';
-
-/** Shell radius in Mpc — the fade band is a fraction of this. */
-const HORIZON_RADIUS_MPC = HORIZON_RADIUS_GPC * 1000;
+import { HORIZON_RADIUS_MPC } from '../../../../data/rendering/horizonRadiusMpc';
 
 export const horizonShellPass: ContentPass = {
   name: 'horizon-shell',

@@ -37,6 +37,7 @@
 import { createAppStore, type PreloadedState } from '../../src/store/createAppStore';
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
 import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
+import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { ReconcileEffects } from '../../src/store/effects/ReconcileEffects';
 import type { SagaContext } from '../../src/store/types';
 import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
@@ -79,7 +80,10 @@ export const NOOP_SAGA_CONTEXT: SagaContext = {
   // a catalog-backed id (galaxy) still resolves to null with no engine
   // resource in the path — the pre-branch behaviour `resolveFocusId` gave
   // for free before it was folded into the composed resolver (Ruling 4).
-  selection: composeSelectionRows(() => coreSelectionRows(() => EMPTY_RESOLVE_DEPS)),
+  selection: composeSelectionRows(
+    () => coreSelectionRows(() => EMPTY_RESOLVE_DEPS),
+    () => ALL_KINDS_ENABLED,
+  ),
   // Null is the same answer the engine gives pre-bootstrap and post-destroy, and
   // both camera sagas already handle it by no-opping.
   cameraRuntime: () => null,

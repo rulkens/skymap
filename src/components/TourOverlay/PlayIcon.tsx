@@ -1,4 +1,3 @@
-// src/components/TourOverlay/PlayIcon.tsx
 /**
  * PlayIcon — solid right-pointing triangle shown inside the dwell ring while
  * the tour is paused (clicking it resumes). The path is nudged right of the

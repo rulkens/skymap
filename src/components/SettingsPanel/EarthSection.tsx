@@ -1,4 +1,3 @@
-// src/components/SettingsPanel/EarthSection.tsx
 /**
  * EarthSection — presentational component for the "Earth" settings subgroup
  * inside the SettingsPanel's Display section.

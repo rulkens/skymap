@@ -1,9 +1,8 @@
 /**
  * watchTakeoverSaga tests — integration tests over a real store + saga
- * middleware, exercising the tour half of the watcher (the only start-request
- * wired up until `openView` lands).
+ * middleware, exercising both start-request kinds the watcher handles.
  *
- * `watchTakeoverSaga` is the `startTour`/`openView` watcher: for a tour it
+ * `watchTakeoverSaga` is the `startTour`/`openExhibit` watcher: for a tour it
  * resolves the dispatched `TourId` against `tourRegistry` and runs `tourBody`
  * under `runTakeover`. The registry is MOCKED here with two controlled tours —
  * a `demo` tour whose single narration beat auto-advances, and a `webShowcase`
@@ -29,6 +28,8 @@
  *    snapshots — the watcher's whole reason to wait on the cancelled bracket.
  * 3. The optional `BeatRange` on the action reaches `tourBody`: a ranged
  *    start lands on the window's first beat, not beat 0.
+ * 4. `openExhibit` reaches the watcher and an exhibit supersedes a running tour with
+ *    the same restore-before-snapshot ordering as 2b.
  *
  * ### Timing
  *
@@ -86,8 +87,10 @@ vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
 import { rootReducer } from '../../../src/store/rootReducer';
 import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
 import { startTour } from '../../../src/state/tour/tourActions';
+import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { selectTourActive } from '../../../src/state/tour/selectors';
+import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
@@ -102,6 +105,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 
@@ -221,6 +225,37 @@ describe('watchTakeoverSaga', () => {
     // Each successor must snapshot the user's pre-takeover baseline, not the
     // mid-run mutation: snapshotting before the outgoing run's restore lands
     // strands the user at volumes-off once the last run exits.
+    store.dispatch(exitTakeover());
+    await flush();
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+  });
+
+  // ── (4) openExhibit reaches the watcher; an exhibit supersedes a running tour ────
+
+  it('openExhibit supersedes a running tour, restoring its scene before the exhibit snapshots', async () => {
+    const playClip = makeAutoFlyStub();
+    const { store } = buildHarness({ playClip });
+    store.dispatch(setVolumesEnabled(true));
+
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+
+    // Stand-in for an in-clip scene cue mutating settings mid-run.
+    store.dispatch(setVolumesEnabled(false));
+    await flush();
+
+    store.dispatch(openExhibit('cosmicWeb'));
+    await flush();
+    await flush();
+
+    // (a) openExhibit reached the watcher and started the exhibit.
+    expect(selectTakeoverSource(store.getState())).toEqual({ kind: 'exhibit', id: 'cosmicWeb' });
+
+    // (b) the outgoing tour's mid-run mutation was wound back before the exhibit
+    // snapshotted: exiting the exhibit must restore volumes to the pre-takeover
+    // baseline (true), not the mid-tour mutation (false) a premature snapshot
+    // would have captured as "the" baseline to return to.
     store.dispatch(exitTakeover());
     await flush();
     expect(store.getState().settings.volumes.enabled).toBe(true);

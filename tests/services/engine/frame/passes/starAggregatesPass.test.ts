@@ -11,6 +11,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
 import { starCatalogPass } from '../../../../../src/services/engine/frame/passes/starCatalogPass';
 import { computeStarCut } from '../../../../../src/services/gpu/renderers/starCatalog/cut/computeStarCut';
+import { advanceStarFades } from '../../../../../src/services/gpu/renderers/starCatalog/cut/advanceStarFades';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -92,10 +93,11 @@ function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[
   };
 }
 
-/** Mirrors `runFrame`'s `computeStarCut(…, true)` → `setFrameCut` sequence
- *  for a non-capture ctx, so `starCutFor` has a frame cut to read. */
+/** Mirrors `runFrame`'s `advanceStarFades` → `computeStarCut` → `setFrameCut`
+ *  sequence for a non-capture ctx, so `starCutFor` has a frame cut to read. */
 function primeFrameCut(state: EngineState, ctx: FrameView): void {
-  const cut = computeStarCut(state, [ctx], true);
+  advanceStarFades(state, [ctx]);
+  const cut = computeStarCut(state, [ctx]);
   state.gpu.starCatalogRenderer!.setFrameCut(cut);
 }
 

@@ -14,7 +14,7 @@
  * again as it swells back into frame. No enter clip — the rush IS the beat,
  * and the caption's invitation to explore rides it the whole way down.
  *
- * On the settle the tour ends and `guidedTourSaga`'s snapshot restore winds
+ * On the settle the tour ends and `runTakeover`'s snapshot restore winds
  * every scene cue back — the layers lit and hidden along the way revert to
  * the viewer's pre-tour settings, with the camera left on the home framing.
  */

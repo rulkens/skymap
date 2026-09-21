@@ -13,6 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { GalaxyRowFixture } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
+import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 import { Source } from '../../../../src/data/sources';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -397,7 +398,10 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
   it('a claiming row is authoritative even when its decode is null', () => {
     const decodeY = vi.fn(() => ({ type: 'y' }));
     const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'y-', decodeY)];
-    const composed = composeSelectionRows(() => rows);
+    const composed = composeSelectionRows(
+      () => rows,
+      () => ALL_KINDS_ENABLED,
+    );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(decodeY).not.toHaveBeenCalled();
   });
@@ -405,25 +409,99 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
   it('an unclaimed id resolves to null without consulting any decode', () => {
     const decode = vi.fn(() => ({ type: 'x' }));
     const rows = [stubRow('x', 'x-', decode)];
-    const composed = composeSelectionRows(() => rows);
+    const composed = composeSelectionRows(
+      () => rows,
+      () => ALL_KINDS_ENABLED,
+    );
     expect(composed.resolveFocusId('z-1')).toBeNull();
     expect(decode).not.toHaveBeenCalled();
   });
 
   it('two rows claiming the same id throw, naming the id and both rows', () => {
     const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'x-', () => null)];
-    const composed = composeSelectionRows(() => rows);
+    const composed = composeSelectionRows(
+      () => rows,
+      () => ALL_KINDS_ENABLED,
+    );
     expect(() => composed.resolveFocusId('x-1')).toThrow(/x-1/);
   });
 
   it('rowsOf is read on every call', () => {
     let calls = 0;
-    const composed = composeSelectionRows(() => {
-      calls++;
-      return calls === 1 ? [] : [stubRow('x', 'x-', () => ({ type: 'x' }))];
-    });
+    const composed = composeSelectionRows(
+      () => {
+        calls++;
+        return calls === 1 ? [] : [stubRow('x', 'x-', () => ({ type: 'x' }))];
+      },
+      () => ALL_KINDS_ENABLED,
+    );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(composed.resolveFocusId('x-1')).toEqual({ type: 'x' });
     expect(calls).toBe(2);
+  });
+});
+
+// ─── kindsEnabled gate (resolvePick only) ───────────────────────────────────
+
+describe('composeSelectionRows — picking gate', () => {
+  const structureRow: SelectionKindRow = {
+    type: 'structure',
+    pickSources: [Source.Cluster],
+    resolvePick: () => ({ type: 'structure', id: 'virgo' }),
+    extractRow: () => virgo,
+    focusId: {
+      claims: (id) => id.startsWith('cluster-'),
+      decode: () => ({ type: 'structure', id: 'virgo' }),
+      encode: () => 'cluster-virgo',
+    },
+  };
+
+  it('resolvePick returns null for a disabled kind and the ref for an enabled one', () => {
+    const pick = { sourceCode: Source.Cluster, localIdx: 0 };
+    const allEnabled = composeSelectionRows(
+      () => [structureRow],
+      () => ({
+        galaxyCatalog: true,
+        structure: true,
+        milkyWay: true,
+        zoneOfAvoidance: true,
+        body: true,
+        star: true,
+      }),
+    );
+    expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
+
+    const structureDisabled = composeSelectionRows(
+      () => [structureRow],
+      () => ({
+        galaxyCatalog: true,
+        structure: false,
+        milkyWay: true,
+        zoneOfAvoidance: true,
+        body: true,
+        star: true,
+      }),
+    );
+    expect(structureDisabled.resolvePick(pick)).toBeNull();
+  });
+
+  it('extractRow and resolveFocusId ignore the gate — a disabled kind still resolves', () => {
+    const structureDisabled = composeSelectionRows(
+      () => [structureRow],
+      () => ({
+        galaxyCatalog: true,
+        structure: false,
+        milkyWay: true,
+        zoneOfAvoidance: true,
+        body: true,
+        star: true,
+      }),
+    );
+    expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);
+    expect(structureDisabled.resolveFocusId('cluster-virgo')).toEqual({
+      type: 'structure',
+      id: 'virgo',
+    });
+    expect(structureDisabled.focusIdOf({ type: 'structure', id: 'virgo' })).toBe('cluster-virgo');
   });
 });

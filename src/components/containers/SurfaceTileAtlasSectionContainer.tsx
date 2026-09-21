@@ -1,4 +1,3 @@
-// src/components/containers/SurfaceTileAtlasSectionContainer.tsx
 /**
  * SurfaceTileAtlasSectionContainer — engine-handle + store boundary for the
  * surface tile atlas debug readout. `surfaceTileDebug` still comes off

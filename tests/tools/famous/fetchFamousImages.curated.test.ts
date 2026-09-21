@@ -20,7 +20,10 @@ function fixtureRepo(): string {
   const root = mkdtempSync(join(tmpdir(), 'famous-curated-test-'));
   mkdirSync(resolve(root, 'public/images/famous'), { recursive: true });
   mkdirSync(resolve(root, 'public/images/famous-curated/m31'), { recursive: true });
-  writeFileSync(resolve(root, 'public/images/famous-curated/m31/atlas.webp'), Buffer.from([1, 2, 3, 4]));
+  writeFileSync(
+    resolve(root, 'public/images/famous-curated/m31/atlas.webp'),
+    Buffer.from([1, 2, 3, 4]),
+  );
   return root;
 }
 

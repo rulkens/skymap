@@ -18,7 +18,7 @@
  * foreground distance gate AND the whole-layer sub-pixel bound (per REGION: the
  * largest of that region's orbits at the camera's nearest possible approach to
  * it — the conservative envelope of the per-orbit cull), and `draw` no-ops on a
- * null handle. The conic table is a static module-level seed.
+ * null handle. The roster is `state.orbitTrailRows`, composed at boot.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -31,6 +31,7 @@ import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
+import { CORE_TRAIL_ELEMENTS } from '../../../../../src/data/bodies/coreTrailElements';
 import { deriveBodyStates } from '../../../../../src/services/engine/frame/deriveBodyStates';
 import { propagateElements } from '../../../../../src/utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../../src/utils/orbit/keplerianEllipse';
@@ -228,11 +229,12 @@ function makeState(
       fades: { opacityOf: () => layerOpacity },
       clipPlayer: { clipOpacityOf: () => 1 },
     },
+    orbitTrailRows: CORE_TRAIL_ELEMENTS,
   } as unknown as EngineState;
 }
 
 describe('orbitTrailsPass.enabled', () => {
-  it('gates on the renderer handle + the foreground distance — conics are static seeds', () => {
+  it('gates on the renderer handle + the foreground distance over the boot-composed roster', () => {
     const state = makeState(makeRendererSpy());
     const view = makeNear0View();
     // Null handle (pre-bootstrap): the handle check short-circuits before the
