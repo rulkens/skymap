@@ -1,11 +1,8 @@
 /**
- * takeoverActions — the three signals `runTakeover`'s bracket threads through
- * Redux. `takeoverStarted`/`takeoverEnded` are dispatched by `runTakeover`
- * itself, defined here rather than as `takeoverSlice` reducers (mirroring
- * `requestFocus`/`requestSelect` beside `selectionSlice`) so the slice stays
- * free for state a component might dispatch directly. `exitTakeover` is the
- * reducer-less signal a tour's Esc/nav and a view's overlay both raise to ask
- * the running body to end.
+ * takeoverActions — `runTakeover` dispatches started/ended itself; `exitTakeover`
+ * is the reducer-less signal a tour's Esc/nav and a view's overlay raise to ask
+ * the running body to end. Not slice reducers: the slice stays free for state a
+ * component dispatches directly (mirroring `requestFocus` beside `selectionSlice`).
  */
 import { createAction } from '@reduxjs/toolkit';
 

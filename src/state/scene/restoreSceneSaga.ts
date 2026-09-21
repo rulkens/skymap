@@ -38,9 +38,10 @@
  * but that context lives in the watcher, not here — same split as the fade
  * pass, reached by `watchFadesSaga` rather than by this saga.
  *
- * All three `put`s block until their effect lands (true even inside a `finally`
- * driven by a cancelling dispatch), so on a supersede the restore completes
- * before the successor run's snapshot reads the store.
+ * All three `put`s block until their effect lands, true even inside a `finally`
+ * driven by a cancelling dispatch. `watchTakeoverSaga` waits for the cancelled
+ * bracket to settle, so on a supersede this restore is complete before the
+ * successor run's snapshot reads the store.
  *
  * `clipOpacity` is already reset to 1 at clip end by the clip runner, so
  * transient fade-to-black effects need no undo here.

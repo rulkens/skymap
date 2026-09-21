@@ -23,8 +23,10 @@
  *
  * 1. `tourBody` ran under `runTakeover`: `selectTourActive` is true
  *    synchronously on startTour.
- * 2. A second startTour supersedes a first run (takeLatest): the tour stays
- *    active under the new run and a fresh beat fly fires.
+ * 2. A second startTour supersedes a first run: the tour stays active under
+ *    the new run and a fresh beat fly fires.
+ * 2b. A supersede restores the outgoing run's scene BEFORE the successor
+ *    snapshots — the watcher's whole reason to wait on the cancelled bracket.
  * 3. The optional `BeatRange` on the action reaches `tourBody`: a ranged
  *    start lands on the window's first beat, not beat 0.
  *
@@ -187,6 +189,41 @@ describe('watchTakeoverSaga', () => {
     // The second run is live and a fresh beat fly fired for it.
     expect(selectTourActive(store.getState())).toBe(true);
     expect(playClip.mock.calls.length).toBeGreaterThan(fliesAfterFirst);
+  });
+
+  // ── (2b) supersede restores before the successor snapshots ───────────────
+
+  it('a superseding startTour restores the outgoing run before the successor snapshots', async () => {
+    const playClip = makeAutoFlyStub();
+    const { store } = buildHarness({ playClip });
+    store.dispatch(setVolumesEnabled(true));
+
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+
+    // Stand-in for an in-clip scene cue mutating settings mid-run.
+    store.dispatch(setVolumesEnabled(false));
+    await flush();
+
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+
+    // A third start proves the watcher itself outlived the supersede: waiting
+    // on the cancelled run via `join` would have cancelled the watcher here,
+    // leaving nothing to fork this run.
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+    expect(selectTourActive(store.getState())).toBe(true);
+
+    // Each successor must snapshot the user's pre-takeover baseline, not the
+    // mid-run mutation: snapshotting before the outgoing run's restore lands
+    // strands the user at volumes-off once the last run exits.
+    store.dispatch(exitTakeover());
+    await flush();
+    expect(store.getState().settings.volumes.enabled).toBe(true);
   });
 
   // ── (3) the beat range on the action reaches tourBody ─────────────────────

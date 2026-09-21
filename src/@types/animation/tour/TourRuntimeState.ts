@@ -4,7 +4,10 @@
  * label, beat count, the active caption, the dwell duration) is DERIVED by
  * selectors from `tourId` + `beatIndex` through `tourRegistry` — storing it
  * would duplicate the registry and risk drift. Whether a tour is active at
- * all lives on the `takeover` slice (`selectTourActive` derives it), not here.
+ * all lives on the `takeover` slice (`selectTourActive` derives it), not here —
+ * and the two part company during teardown: `tourEnded` resets this slice before
+ * the takeover's restore and `takeoverEnded` run, so a window exists where
+ * `selectTourActive` is true over `tourId === ''` and `beatIndex === 0`.
  *
  * Fields:
  *   - `tourId`     — the registry key of the active tour ('' when inactive).

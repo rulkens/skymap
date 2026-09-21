@@ -1,17 +1,9 @@
 /**
- * runTakeover — snapshot → start → body → restore → end: the bracket tours
- * and views share, lifted wholesale out of the old `guidedTourSaga` (now
- * `tourBody`, which owns only the beat loop). `body` is caller-supplied and
- * arbitrary, so this file never imports anything tour- or view-specific —
- * neither feature knows the other exists.
- *
- * The `cancelled()` guard on `takeoverEnded` is the subtle part: on a
- * `takeLatest` supersede the incoming run's `takeoverStarted` has already
- * landed by the time this `finally` runs (the finally's own restore yields
- * give it room to), so an unconditional `takeoverEnded` here would clobber
- * it. `cancelled()` is true only on that external-cancel path — a natural
- * finish or an `exitTakeover`-won race inside `body` completes normally, so
- * it stays false and the takeover ends as it should.
+ * runTakeover — the snapshot → start → body → restore → end bracket tours and
+ * views share. `body` is caller-supplied and arbitrary, so this file imports
+ * nothing tour- or view-specific: neither feature knows the other exists.
+ * `cancelled()` is true only when the run was superseded from outside, where
+ * the takeover passes to a successor rather than ending — so no `takeoverEnded`.
  */
 import { call, cancelled, put, select } from 'typed-redux-saga';
 

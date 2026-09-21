@@ -5,10 +5,12 @@
  *
  * `body` is a plain stub here — `runTakeover` is generic over its caller, so
  * these tests drive it directly with synthetic `TakeoverSource` values rather
- * than through the real tour/view registries or `watchTakeoverSaga`'s
- * `takeLatest` (which only tours wire up before Task 6 lands `openView`).
- * Supersede is driven by cancelling the outgoing `Task` directly — the same
- * mechanism `takeLatest` uses internally.
+ * than through the real tour/view registries.
+ *
+ * Supersede ORDERING is not testable at this level: cancelling a `Task` from
+ * plain test code runs the restore's `put`s synchronously, which a real
+ * supersede does not. That ordering is owned by `watchTakeoverSaga` and tested
+ * against the real watcher in `watchTakeoverSaga.test.ts`.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -40,33 +42,6 @@ function* waitingBody(): Generator {
 }
 
 describe('runTakeover', () => {
-  it('starting a view cancels a running tour and restores its settings before the new snapshot', async () => {
-    const { store, sagaMiddleware } = buildStore();
-    store.dispatch(setVolumesEnabled(true));
-
-    const tourTask = sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'tour', id: 'demo' }, waitingBody);
-    });
-    await flush();
-
-    // Stand-in for an in-tour scene cue mutating settings.
-    store.dispatch(setVolumesEnabled(false));
-    await flush();
-
-    tourTask.cancel();
-    sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'view', id: 'solarSystem' }, waitingBody);
-    });
-    await flush();
-
-    // If the view's snapshot had been taken before the tour's restore landed,
-    // exiting the view would leave volumes off (the mid-tour mutation). It
-    // must instead come back on — the tour's own restored baseline.
-    store.dispatch(exitTakeover());
-    await flush();
-    expect(store.getState().settings.volumes.enabled).toBe(true);
-  });
-
   it('a view restores its settings and toggle changes on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
     store.dispatch(setVolumesEnabled(true));
