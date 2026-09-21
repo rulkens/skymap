@@ -2,36 +2,38 @@
  * viewRegistry — the palette's four takeover views. Hand-edited, like
  * `featuredTabs.ts`: nothing generates or rewrites it. Settings clusters are
  * whole-object replacements (`mergeSettingsSnapshot`), so each entry spreads a
- * slice's own `getInitialState()` rather than restating its defaults — the
- * slice stays the single source of truth for what "off" leaves untouched.
+ * Layer's own `initialState` rather than restating its defaults — the Layer
+ * stays the single source of truth for what "off" leaves untouched.
  */
 
-import { flowSlice } from '../../layers/flow/settings/flowSlice';
-import { galaxyCatalogsSlice } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
-import { milkyWaySlice } from '../../layers/milkyWay/settings/milkyWaySlice';
+import { initialState as flowInitialState } from '../../layers/flow/state/flow/initialState';
+import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
+import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
+import type { GalaxyCatalogId } from '../../@types/data/galaxyCatalog/GalaxyCatalogId';
+import type { GalaxyCatalogItemSettings } from '../../@types/settings/GalaxyCatalogItemSettings';
 import type { View } from '../../@types/views/View';
 import type { ViewId } from '../../@types/views/ViewId';
 
 // `galaxyCatalogs` has no cluster-level master gate (GalaxyCatalogSettings.d.ts),
 // so "galaxies off" means every item row disabled, not a single flag.
 const GALAXIES_OFF = {
-  ...galaxyCatalogsSlice.getInitialState(),
+  ...galaxyCatalogsInitialState,
   items: Object.fromEntries(
-    Object.entries(galaxyCatalogsSlice.getInitialState().items).map(([id, item]) => [
+    Object.entries(galaxyCatalogsInitialState.items).map(([id, item]) => [
       id,
       { ...item, enabled: false },
     ]),
-  ) as ReturnType<typeof galaxyCatalogsSlice.getInitialState>['items'],
+  ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
 };
 
-const MILKY_WAY_OFF = { ...milkyWaySlice.getInitialState(), enabled: false, labelEnabled: false };
+const MILKY_WAY_OFF = { ...milkyWayInitialState, enabled: false, labelEnabled: false };
 
 export const viewRegistry: Record<ViewId, View> = {
   cosmicFlows: {
     id: 'cosmicFlows',
     label: 'Cosmic Flows',
     settings: {
-      flow: { ...flowSlice.getInitialState(), enabled: true },
+      flow: { ...flowInitialState, enabled: true },
       galaxyCatalogs: GALAXIES_OFF,
       milkyWay: MILKY_WAY_OFF,
     },

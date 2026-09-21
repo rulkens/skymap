@@ -16,14 +16,14 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { viewBody } from '../../../src/state/views/viewBody';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import { flowSlice } from '../../../src/layers/flow/settings/flowSlice';
+import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import type { View } from '../../../src/@types/views/View';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
 
 const VIEW: View = {
   id: 'cosmicFlows',
   label: 'Cosmic Flows',
-  settings: { flow: { ...flowSlice.getInitialState(), enabled: true } },
+  settings: { flow: { ...flowInitialState, enabled: true } },
   pose: { target: [0, -0.01, 0], yaw: -1.7455, pitch: -0.3589, distance: 0.14 },
   body: [{ heading: 'Cosmic Flows', text: 'test' }],
 };
