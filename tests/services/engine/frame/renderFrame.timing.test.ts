@@ -241,10 +241,9 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
 
-  // Frame-owned fields (`ReadyFrameContext`). Spread onto `ctx` BELOW as well
-  // as nested under `snapshot`: this file exercises real `ContentPass`es Task
-  // 8 hasn't swept onto `ctx.snapshot.x` yet, so both must resolve to the
-  // same value until that sweep lands (see renderFrame.test.ts's fixture).
+  // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
+  // `ContentPass` in this file reads `ctx.snapshot.x` (see renderFrame.test.ts's
+  // fixture).
   const snapshotFields = {
     isReady: true as const,
     nowMs: 0,
@@ -254,7 +253,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     renderTargets,
   };
   const ctx = {
-    ...snapshotFields,
     snapshot: snapshotFields,
     // executor populates this as targets render; a later pass reads which rendered this frame.
     renderedTargets: new Set<string>(),

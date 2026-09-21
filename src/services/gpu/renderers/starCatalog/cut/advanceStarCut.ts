@@ -12,7 +12,7 @@ import { starCutOncePerCtx } from './starCutOncePerCtx';
  * BEFORE any layer calls `readStarCut` — that ordering plus the shared
  * `starCutOncePerCtx` is what makes "advance runs once" hold. Its result
  * carries the frame's `anyNodeFading` keep-ticking vote, which only this path
- * sets.
+ * sets. `views` must be non-empty — `views[0]` is the walk's origin.
  */
 export function advanceStarCut(
   state: PassState,

@@ -1,9 +1,9 @@
 /**
  * cubemapCaptureFrame — the frame a cubemap capture row derives ONCE, before
  * its six faces (`cubemapFaceContext`) turn it. The synthetic camera looks
- * along the `axes` frame's −Z with +Y up (the same convention `FACE_BASES`
- * encodes per face) — `FACE_VIEW_ROTATIONS` (Task 2) is defined relative to
- * exactly that camera, so this and `faceViewSpec` must never drift apart.
+ * along the `axes` frame's −Z with +Y up — `cubeFaceBases`'s
+ * `FACE_VIEW_ROTATIONS` are defined relative to exactly that camera, so this
+ * and `faceViewSpec` must never drift apart.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';
@@ -27,9 +27,8 @@ export function cubemapCaptureFrame(input: {
 }): FrameContext {
   const { state, eyeMpc, nearMpc, nowMs, axes } = input;
   const basis = (axes ?? IDENTITY_MAT3) as Mat3;
-  // `updatePosition` decodes local +Z through poseBasis's THIRD column (the
-  // `FACE_BASES` convention), so the capture camera's world forward is that
-  // column negated.
+  // `updatePosition` decodes local +Z through poseBasis's THIRD column, so
+  // the capture camera's world forward is that column negated.
   const forward: Vec3 = [-basis[6], -basis[7], -basis[8]];
   const target: Vec3 = [
     eyeMpc[0] + forward[0] * nearMpc,

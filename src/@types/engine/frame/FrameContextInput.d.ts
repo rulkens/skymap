@@ -10,13 +10,8 @@ import type { AssembledOrbitCamera } from '../../camera/AssembledOrbitCamera';
 import type { FramedCameraPose } from '../../camera/FramedCameraPose';
 
 export type FrameContextInput = {
-  /**
-   * The frame's one camera, pose-true. `poseBasis` (the committed
-   * `ORIENTATION_FRAMES[orientation]`, which does not move during a roll)
-   * decoded its eye position; `upBasis` (the live, possibly mid-slerp
-   * `resolveFrameBasis` result) decodes screen-up. The split is what makes an
-   * orientation-frame switch roll the horizon instead of sweeping the view.
-   */
+  /** The frame's one camera, pose-true — see `assembleOrbitCamera` for the
+   *  `poseBasis`/`upBasis` split. */
   readonly cam: AssembledOrbitCamera;
   /**
    * The SAME framed pose `cam`'s pose was folded from (`foldToWorld`, called

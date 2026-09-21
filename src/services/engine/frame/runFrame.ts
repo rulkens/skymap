@@ -143,7 +143,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
 
   const { displayed: renderPose, projection, upBasis } = next.outputs;
   const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
-  const pivotFocus = stored.selectionRows.focus;
+  const pivotFocus = state.selectionRows.focus;
 
   // The debug panel's Δ/peak columns, at FRAME rate: its 4 Hz poll averages
   // ~15 frames into one reading, which is precisely how a per-frame decay
@@ -164,8 +164,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // Eye→pivot-surface range NEAR0's bracket is sized from — the scale bar's
-  // `snap.distance` and `FrameContextInput.altitudeMpc` are the SAME line
-  // (`frameContext.ts` used to recompute it), so one call feeds both.
+  // `snap.distance` and `FrameContextInput.altitudeMpc` are the SAME line,
+  // so one call feeds both.
   const altitudeMpc = pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus);
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`

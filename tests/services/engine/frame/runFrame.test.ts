@@ -262,6 +262,9 @@ function makeState(): EngineState {
     // The ready-frame fixtures below (makeReadyState, makeLayerState) reach
     // `runLabel3DProducers`, which iterates this — empty is the boot value.
     label3DProducers: [],
+    // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
+    // ready gate.
+    selectionRows: { focus: null },
   } as unknown as EngineState;
 }
 

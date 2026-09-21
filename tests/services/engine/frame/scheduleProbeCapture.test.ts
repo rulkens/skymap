@@ -45,11 +45,9 @@ const PETUNIAS = SCENE_MESH_BODIES.find((body) => body.id === 'petunias')!;
 function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   const positionMpc = deriveBodyStates(SIM_DAYS).get(bodyId)!.positionMpc;
   return {
-    // Frame-owned: `scheduleProbeCapture` reads these off `ctx.snapshot.x`.
-    // Also flat: `sceneBodyPartition`/`sceneBodyStates` (Task 8) still read
-    // `ctx.simDays` directly, so both must resolve until that sweep lands.
+    // Frame-owned: `scheduleProbeCapture` and `sceneBodyStates` both read
+    // these off `ctx.snapshot.x`.
     snapshot: { simDays: SIM_DAYS, nowMs },
-    simDays: SIM_DAYS,
     drawCamPos: positionMpc,
     canvasSize: { width: 800, height: 600 },
     fovYRad: 1,

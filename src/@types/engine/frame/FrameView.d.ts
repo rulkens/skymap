@@ -30,7 +30,7 @@ export type FrameView = {
   /** `snapshot.bodyPose` turned and offset by this view's spec
    *  (`viewBodyPose`) — the SAME closure `slabs` was built from. */
   bodyPose: BodyPoseProvider;
-  /** THIS view's target size in backing-store pixels. (Name kept: 37 read sites.) */
+  /** THIS view's target size in backing-store pixels. */
   canvasSize: Size;
   /** This view's eye: the camera's, plus the spec's rotated eye offset. */
   drawCamPos: Readonly<Vec3>;

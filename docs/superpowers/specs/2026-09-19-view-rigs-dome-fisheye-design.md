@@ -80,7 +80,7 @@ height / (tanUp − tanDown)`. The camera's own `CameraProjection` stays the
 
 ```ts
 VIEW_RIGS = {
-  mono: { views: (m) => [mainViewSpec(m)], program: [PRELUDE, SCENE, POST, OVERLAYS] },
+  mono: { views: (canvas) => [canvas], program: [PRELUDE, SCENE, POST, OVERLAYS] },
   dome: { views: domeFaceSpecs, program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST] },
   // vr (later): { views: xrEyeSpecs, program: [PRELUDE, { ...SCENE+POST+OVERLAYS, scope: 'perView' }] }
 };
@@ -100,7 +100,7 @@ frusta**, and every view draws that one result:
   carries its own `originMpc` (draws rebase about it, never about
   `view.camPos`), and advances fades once.
 - Captures keep their own per-face cut with no fades. The discriminant is
-  explicit: `ReadyFrameContext.viewKind: 'frame' | 'capture'`, replacing
+  explicit: `FrameView.viewKind: 'frame' | 'capture'`, replacing
   the `viewSlot !== 0` tests in `starCatalogPass` and `starAggregatesPass`.
 
 ### Photometry

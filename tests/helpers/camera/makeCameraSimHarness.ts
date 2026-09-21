@@ -79,6 +79,12 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
     cubemapCaptures: makeCubemapCaptureRuntimes(),
+    // Live off the store, same as `engine.ts`'s own getter: `runFrame` reads
+    // this post-dispatch, so a fixed snapshot would go stale the instant a
+    // test dispatches a focus change.
+    get selectionRows() {
+      return store.getState().selectionRows;
+    },
   } as unknown as EngineState;
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({

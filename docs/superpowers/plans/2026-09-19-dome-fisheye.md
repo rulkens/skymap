@@ -191,14 +191,14 @@ export function domeFaceViews(canvas: FrameView, state: EngineState): readonly F
 
 **What `domeFaceViews` builds.** One `ViewSpec` per layer i, passed to `deriveView(snapshot, spec)`. A null result is dropped (pre-bootstrap only).
 
-| ViewSpec field | value                                                 |
-| -------------- | ----------------------------------------------------- |
-| `rotation`     | `domeFaceRotations(DOME_PARAMS.tiltDeg)[i]`           |
-| `eyeOffsetMpc` | `[0, 0, 0]`                                           |
-| `frustum`      | `symmetricFrustum(Math.PI / 2, 1)`                    |
-| `sizePx`       | `main.canvasSize` (the dome canvas is square: Task 5) |
-| `slot`         | `DOME_PARAMS.viewSlotBase + i`                        |
-| `output`       | `main.renderTargets.layerViewOf('dome-cube', i)`      |
+| ViewSpec field | value                                                        |
+| -------------- | ------------------------------------------------------------ |
+| `rotation`     | `domeFaceRotations(DOME_PARAMS.tiltDeg)[i]`                  |
+| `eyeOffsetMpc` | `[0, 0, 0]`                                                  |
+| `frustum`      | `symmetricFrustum(Math.PI / 2, 1)`                           |
+| `sizePx`       | `canvas.canvasSize` (the dome canvas is square: Task 5)      |
+| `slot`         | `DOME_PARAMS.viewSlotBase + i`                               |
+| `output`       | `canvas.snapshot.renderTargets.layerViewOf('dome-cube', i)`  |
 
 **How the rig runs:**
 

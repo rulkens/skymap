@@ -50,15 +50,13 @@ function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, capture = false): FrameView 
     },
   };
   return {
-    // Frame-owned (`ReadyFrameContext`): nested for `computeStarCut`, and
-    // ALSO flat — `starAggregatesPass.ts` still reads `ctx.renderTargets`
-    // directly until Task 8 sweeps it onto `ctx.snapshot.renderTargets`.
+    // Frame-owned (`ReadyFrameContext`), nested for `computeStarCut` and
+    // `starAggregatesPass.ts`'s `ctx.snapshot.renderTargets` read.
     snapshot: { nowMs, renderTargets },
     drawCamPos: camPos,
     viewSlot: capture ? 1 : 0,
     viewKind: capture ? 'capture' : 'frame',
     canvasSize: capture ? { width: 256, height: 256 } : { width: 1280, height: 720 },
-    renderTargets,
   } as unknown as FrameView;
 }
 

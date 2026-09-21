@@ -1,7 +1,6 @@
 /**
- * cubeFaceBases — the six cube faces' axes, in the two forms the capture path
- * needs: world-space bases (`cubemapFaceContext`'s cube-view bind) and the
- * `ViewSpec` rotations `faceViewSpec` hands `deriveView`.
+ * cubeFaceBases — the six cube faces' axes, as the `ViewSpec` rotations
+ * `faceViewSpec` hands `deriveView` per capture face.
  */
 
 import type { Mat3 } from '../../@types/math/Mat3';
@@ -11,9 +10,9 @@ import { cross3 } from '../../utils/math/cross3';
 
 /**
  * Forward axis per `CubeFace` (±X/±Y/±Z) and the `texture_cube` convention's
- * per-face up — the ±Y faces borrow world ±Z. The cube-view bind relies on both.
+ * per-face up — the ±Y faces borrow world ±Z.
  */
-export const FACE_FORWARD: readonly Vec3[] = [
+const FACE_FORWARD: readonly Vec3[] = [
   [1, 0, 0],
   [-1, 0, 0],
   [0, 1, 0],
@@ -29,17 +28,6 @@ const FACE_UP: readonly Vec3[] = [
   [0, -1, 0],
   [0, -1, 0],
 ];
-
-/**
- * One basis per face, serving as both `poseBasis` and `upBasis` so the two cannot
- * drift. `updatePosition` decodes local +Z through the THIRD column, so that column
- * is `-forward`; `frameUp` reads the MIDDLE for screen-up, so it carries `FACE_UP`.
- */
-export const FACE_BASES: readonly Mat3[] = FACE_FORWARD.map((forward, i): Mat3 => {
-  const up = FACE_UP[i]!;
-  const back: Vec3 = [-forward[0], -forward[1], -forward[2]];
-  return mat3FromColumns(cross3(up, back), up, back);
-});
 
 /**
  * A face's right | up | forward as columns, expressed in the CAPTURE CAMERA's

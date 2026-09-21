@@ -397,10 +397,8 @@ function makeInput(
   const cosmoSlab: Slab = makeCosmoSlab({
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
-  // Frame-owned fields (`ReadyFrameContext`). Spread onto `ctx` BELOW as well
-  // as nested under `snapshot`: this file exercises real `ContentPass`es
-  // Task 8 hasn't swept onto `ctx.snapshot.x` yet, so both must resolve to
-  // the same value until that sweep lands.
+  // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
+  // `ContentPass` in this file reads `ctx.snapshot.x`.
   const snapshotFields = {
     isReady: true as const,
     cam,
@@ -429,7 +427,6 @@ function makeInput(
     renderTargets,
   };
   const ctx = {
-    ...snapshotFields,
     snapshot: snapshotFields,
     viewSlot: 0,
     viewKind: 'frame' as const,
