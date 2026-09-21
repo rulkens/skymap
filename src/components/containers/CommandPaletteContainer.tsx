@@ -20,10 +20,8 @@ import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
-import { SCENE_EARTH } from '../../data/bodies/sceneEarth';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { AppDispatch } from '../../store/types';
-import type { BodyId } from '../../@types/data/body/BodyId';
 
 const RUN_ACTION: Record<
   PaletteAction['kind'],
@@ -42,7 +40,7 @@ const RUN_ACTION: Record<
       flyToLonLat({
         lonDeg: action.lonDeg,
         latDeg: action.latDeg,
-        body: SCENE_EARTH.id as BodyId,
+        body: 'earth',
         altKm: action.altKm,
       }),
     );
