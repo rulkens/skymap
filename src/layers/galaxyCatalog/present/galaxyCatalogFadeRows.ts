@@ -9,7 +9,7 @@ import { GALAXY_CATALOG_IDS } from '../../../data/galaxyCatalog/galaxyCatalogIds
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { GalaxyCatalogRuntime } from '../types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../@types/GalaxyCatalogRuntime';
 
 export function galaxyCatalogFadeRows(
   runtime: GalaxyCatalogRuntime,

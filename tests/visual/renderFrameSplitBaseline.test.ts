@@ -13,7 +13,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { BiasMode } from '../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../src/data/toneMapCurve';
-import { DEFAULT_GALAXY_PROVENANCE } from '../../src/data/defaults';
+import { DEFAULT_GALAXY_PROVENANCE } from '../../src/layers/galaxyCatalog/settings/defaults';
 import { renderFrame } from '../../src/services/engine/frame/renderFrame';
 import { createDisabledGpuTimingService } from '../../src/services/gpu/timing/gpuTimingService';
 import { makeCosmoSlab } from '../fixtures/makeCosmoSlab';
@@ -32,8 +32,8 @@ import { galaxyPointSpritesPass } from '../../src/layers/galaxyCatalog/passes/ga
 import { proceduralDisksPass } from '../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../src/layers/galaxyCatalog/passes/texturedDisksPass';
 import { filamentsPass } from '../../src/layers/filaments/passes/filamentsPass';
-import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
-import type { FilamentsRuntime } from '../../src/layers/filaments/types/FilamentsRuntime';
+import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
+import type { FilamentsRuntime } from '../../src/layers/filaments/@types/FilamentsRuntime';
 
 // ── Recording harness ──────────────────────────────────────────────────────
 //

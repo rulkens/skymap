@@ -2,7 +2,7 @@
 
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 
-import { DEFAULT_FLOW } from '../../../data/defaults';
+import { DEFAULT_FLOW } from './defaults';
 import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefaults';
 import type { FlowSettings } from '../../../@types/settings/FlowSettings';
 

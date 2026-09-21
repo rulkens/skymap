@@ -80,7 +80,7 @@
  * 'chromium' channel installed.
  */
 
-import { chromium, type Browser, type Page } from '@playwright/test';
+import type { Browser, Page } from '@playwright/test';
 import { spawn, type ChildProcess } from 'node:child_process';
 import {
   existsSync,
@@ -103,6 +103,8 @@ import type { Clip } from '../../src/@types/animation/Clip';
 import type { ClipId } from '../../src/@types/animation/ClipId';
 import type { RecorderWindow } from '../../src/@types/recorder/RecorderWindow';
 import { grantAndAwaitExpiry } from './grantAndAwaitExpiry';
+import { launchChromium } from '../utils/browser/launchChromium';
+import { bootHookedPage } from '../utils/browser/bootHookedPage';
 import { parseBeatRange } from '../utils/record/parseBeatRange';
 import { parseSize } from '../utils/record/parseSize';
 import { parsePreviewUrl } from '../utils/record/parsePreviewUrl';
@@ -114,15 +116,6 @@ import { clipFrameCap } from '../utils/record/clipFrameCap';
 import { clipDurationSec } from '../utils/animation/clipDurationSec';
 import { loopCycleFrameCount } from '../utils/record/loopCycleFrameCount';
 
-// How long to wait for window.__skymapRecorder to appear after load — it is
-// installed synchronously during app bootstrap, so a miss means the wrong
-// page, not a slow one.
-const HOOK_TIMEOUT_MS = 15_000;
-// How many mid-boot navigations to absorb before giving up. One is expected
-// on a cold cache (Vite's dependency-optimization reload, see
-// awaitCaptureReady); more than a couple means the page is reload-looping,
-// not optimizing.
-const MAX_BOOT_NAVIGATIONS = 2;
 // Progress cadence: one 'frame N / cap' line per this many frames.
 const PROGRESS_EVERY_FRAMES = 60;
 // ffmpeg is chatty on stderr; keep only the tail for the failure report.
@@ -303,28 +296,6 @@ function parseArgs(argv: readonly string[]): RecordOptions {
     );
   }
   return options;
-}
-
-/**
- * Launch pattern per the Task 1 ledger: the 'chromium' channel first (full
- * build, WebGPU with no flags), falling back to the headless shell with the
- * WebGPU flags only if the channel is not installed. The fallback prints a
- * warning rather than failing outright so a machine without the channel can
- * still record, but the fix worth making is 'npx playwright install chromium'.
- */
-async function launchChromium(): Promise<Browser> {
-  try {
-    return await chromium.launch({ channel: 'chromium' });
-  } catch (err) {
-    console.warn(
-      `chromium channel launch failed (${err instanceof Error ? err.message.split('\n')[0] : String(err)})`,
-    );
-    console.warn(
-      "falling back to the headless shell with '--enable-unsafe-webgpu --use-angle=metal'; " +
-        "prefer 'npx playwright install chromium' for the proven full-build path",
-    );
-    return chromium.launch({ args: ['--enable-unsafe-webgpu', '--use-angle=metal'] });
-  }
 }
 
 // Virtual-time stepping: grantAndAwaitExpiry.ts carries the CDP invariants.
@@ -549,58 +520,6 @@ async function spawnPreviewServer(dir: string, port: number): Promise<PreviewHan
 }
 
 /**
- * Did an evaluate/wait die because the page navigated out from under it?
- * Playwright reports that as 'Execution context was destroyed, most likely
- * because of a navigation' (waitForFunction variants mention the navigation
- * too). Only the boot phase treats this as retryable — see awaitCaptureReady.
- */
-function isNavigationInterruption(err: unknown): boolean {
-  return (
-    err instanceof Error &&
-    /execution context was destroyed|because of a navigation/i.test(err.message)
-  );
-}
-
-/**
- * One attempt at the real-time boot wait: the recorder hook appears, then its
- * `ready` promise resolves. `ready` already debounces "engine ready + loads
- * settled" over a ~1 s stability window, and a cold catalog fetch can
- * legitimately take tens of seconds, so the ready evaluate carries no
- * harness-side timeout.
- *
- * The whole wait is retryable by the caller because it runs BEFORE virtual
- * time is paused: a navigation here just means booting again in real time.
- * The known trigger is Vite's one-time dependency optimization — the first
- * ever page load against a fresh worktree/cold cache discovers new deps,
- * re-bundles them, and force-reloads the page mid-boot, destroying the
- * execution context these waits live in. A navigation error must reach the
- * caller unwrapped (the hook-timeout rewrite below is only for genuine
- * timeouts) so the retry loop can recognize it.
- */
-async function awaitCaptureReady(page: Page, captureUrl: string): Promise<void> {
-  try {
-    await page.waitForFunction(
-      () => (window as unknown as RecorderWindow).__skymapRecorder !== undefined,
-      undefined,
-      { timeout: HOOK_TIMEOUT_MS, polling: 100 },
-    );
-  } catch (err) {
-    if (isNavigationInterruption(err)) throw err;
-    throw new Error(
-      `window.__skymapRecorder never appeared within ${HOOK_TIMEOUT_MS} ms at ` +
-        `${captureUrl} — the hook installs only in cinema mode, on a build that ` +
-        'includes installRecorderHook. Is the dev server running this branch?',
-    );
-  }
-  console.log('waiting for capture-ready (engine ready + loads settled, real time) ...');
-  await page.evaluate(() => {
-    const hook = (window as unknown as RecorderWindow).__skymapRecorder;
-    if (hook === undefined) throw new Error('__skymapRecorder missing');
-    return hook.ready;
-  });
-}
-
-/**
  * The capture side of the pipeline, decoupled from encoding: boot the cinema
  * page in real time, pause virtual time, kick the take, then step
  * grant → captureScreenshot → writeFrame until the in-page status flag reports
@@ -667,7 +586,7 @@ async function captureTake(
   // needs exactly that path during boot. A forced repro (touching
   // tsconfig.json mid-take pushes `full-reload`) shows the SAME message,
   // arriving mid-take instead of at boot, produces the exact vanish. Below, a
-  // page-side flag armed only AFTER `awaitCaptureReady` (never during boot)
+  // page-side flag armed only AFTER `bootHookedPage` resolves (never during boot)
   // drops `full-reload` payloads specifically — every other message type,
   // and the boot-time path before the flag is armed, is untouched.
   await context.addInitScript(() => {
@@ -759,27 +678,15 @@ async function captureTake(
   });
 
   console.log(`loading ${captureUrl} ...`);
-  await page.goto(captureUrl, { waitUntil: 'load' });
-
-  // Bounded retry around the boot wait: safe ONLY here, in real time before
+  // bootHookedPage's retry tolerance is safe ONLY here, in real time before
   // the pause — the reloaded page reinstalls the hook and boots again, and no
   // virtual-time or take state exists yet to lose. Once virtual time is
   // paused (below), a navigation destroys the virtual clock and the running
   // take with it, so the capture loop deliberately has no such tolerance.
-  // The suppression flag below is NOT armed yet during this loop — cold-start
+  // The suppression flag below is NOT armed yet during this wait — cold-start
   // full-reload recovery must keep working here.
-  for (let navigations = 0; ; navigations++) {
-    try {
-      await awaitCaptureReady(page, captureUrl);
-      break;
-    } catch (err) {
-      if (!isNavigationInterruption(err) || navigations >= MAX_BOOT_NAVIGATIONS) throw err;
-      console.warn(
-        '[boot] page navigated during the ready wait (expected once on a cold cache: ' +
-          "Vite's dependency-optimization reload) — retrying the wait",
-      );
-    }
-  }
+  await bootHookedPage(page, captureUrl, '__skymapRecorder');
+  console.log('capture-ready (engine ready + loads settled, real time)');
 
   // Arm the mid-take full-reload suppression only now that boot has settled —
   // see the addInitScript comment above for why this can't be armed earlier.

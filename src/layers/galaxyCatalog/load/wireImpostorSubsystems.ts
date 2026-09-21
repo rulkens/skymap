@@ -10,10 +10,10 @@ import { createProceduralDiskSubsystem } from '../subsystems/proceduralDiskSubsy
 import { createTexturedDiskSubsystem } from '../subsystems/texturedDiskSubsystem';
 import { createDiskPlannerWalk } from '../subsystems/diskPlannerWalk';
 
-import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
-import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
+import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
 
 export function wireImpostorSubsystems(deps: {

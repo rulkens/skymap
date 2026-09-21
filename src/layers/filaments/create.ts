@@ -6,7 +6,7 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { FilamentsRuntime } from './types/FilamentsRuntime';
+import type { FilamentsRuntime } from './@types/FilamentsRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createFilamentRenderer } from './render/filamentRenderer';

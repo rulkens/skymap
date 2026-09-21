@@ -14,7 +14,7 @@ import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';
 import type { HiResFamousReq } from '../../../@types/loading/HiResFamousReq';
 import type { TexturedDiskRenderer } from '../../../@types/rendering/TexturedDiskRenderer';
-import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
 
 export function wireHiResFamousSlot(deps: {
   readonly device: GPUDevice;

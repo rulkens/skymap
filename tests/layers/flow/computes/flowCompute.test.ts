@@ -4,7 +4,7 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { flowCompute } from '../../../../src/layers/flow/computes/flowCompute';
-import type { FlowRuntime } from '../../../../src/layers/flow/types/FlowRuntime';
+import type { FlowRuntime } from '../../../../src/layers/flow/@types/FlowRuntime';
 import type { FlowFieldRenderer } from '../../../../src/@types/rendering/FlowFieldRenderer';
 import type { FlowSettings } from '../../../../src/@types/settings/FlowSettings';
 import type { PassState } from '../../../../src/@types/engine/frame/PassState';

@@ -14,7 +14,7 @@ A WebGPU 3D galaxy renderer: three real catalogs (SDSS, 2MRS, GLADE) parsed at b
 src/@types/  one type per file; deep relative imports, no barrels
 src/compositions/  build-time engine compositions (app; reference engines later)
 src/layers/  self-contained Layers, colocated (galaxyCatalog shipped in (d)/(e);
-             sources/, settings/, load/, render/, passes/, present/, sagas/, ui/, types/)
+             sources/, settings/, load/, render/, passes/, present/, sagas/, ui/, @types/)
 src/services/engine/galaxyGenerator/  v1/ sprite stars (to be deleted),
                                       v2/ analytic field, shared/ — READMEs in each
 src/state/  RTK slices/selectors/sagas per domain; forbids react-redux (see store/)
@@ -30,7 +30,7 @@ tests/  Vitest suite — mirrors src/ tree
 - **Didactic but budgeted comments**: explain _why_ (landmines, units, derivations, cross-file contracts), never _what_, within **module header ≤ 5 lines, comment lines ≤ half the code lines** — overrides the default no-comments rule, see [`comments.md`](docs/superpowers/conventions/comments.md).
 - **`type` aliases, never `interface`**: `export type X = { ... }` for all TS shapes.
 - **No barrel exports for components**: import React components directly from their `.tsx`; no `index.ts` re-export files.
-- **One symbol per file** in `utils/` and `@types/` (`src/` and `tools/` alike): one function per `utils/` file, one type per `@types/` file, filename = the symbol's name; a generic helper growing inside another file gets extracted to `utils/<area>/<fn>.ts` with a focused test. Deep relative imports, no barrels. Types never live inline in implementation files (a React component's own `Props` is the one exception); inside a Layer, its own `types/` folder is this convention's home — not a second `@types/` — for the Layer's own contract types (e.g. `src/layers/galaxyCatalog/types/GalaxyCatalogRuntime.ts`), while types shared with core or with a sibling subsystem still live under `src/@types/`.
+- **One symbol per file** in `utils/` and `@types/` (`src/` and `tools/` alike): one function per `utils/` file, one type per `@types/` file, filename = the symbol's name; a generic helper growing inside another file gets extracted to `utils/<area>/<fn>.ts` with a focused test. Deep relative imports, no barrels. Types never live inline in implementation files (a React component's own `Props` is the one exception); inside a Layer, its own `@types/` folder is this convention's home for the Layer's own contract types (e.g. `src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime.ts`), while types shared with core or with a sibling subsystem still live under `src/@types/`. Under `tools/`, a tool app owns its types in `tools/<tool>/@types/` (the same pattern) and shared-helper types live in `tools/@types/<area>/` (the `src/@types/` analogue) — never loose beside the implementation.
 - **Frame files declare only their own symbol**: files in `src/services/engine/frame/` (incl. `timing/`, `passes/`) export the one symbol they are named for and nothing else — helpers to `src/utils/` or `frame/`, constants to `src/data/`; ratchet test `tests/services/engine/frame/frameFilePurity.test.ts` allow-lists today's offenders and only ever shrinks.
 - **Dev server stays running**: `npm run dev` is left running in the background for HMR visual checks. Don't kill it. To verify a UI change, ask the user to look.
 - **Plans coexist**: multiple in-flight plans is normal — check `docs/BACKLOG.md` and the plans file list before starting work, to reuse what exists and avoid stomping on it.
@@ -57,11 +57,13 @@ npm test            # vitest run (single pass)
 npm run test:watch  # vitest watch mode
 npm run build-all   # regenerate public/data/*.bin from raw catalogs
 npm run build-tiers # alias for build-all — emits per-tier .bin variants
-npm run format      # prettier
+npm run format      # prettier, only files this branch touches (format:all = whole repo)
 npm run move-files  # move/rename TS files, imports auto-rewritten (see .claude/skills/refactor)
 npm run refactor    # ts-morph refactoring CLI (rename/extract/inline/delete/refs/move) → .claude/skills/refactor/SKILL.md
 npm run record-tour # offline 4K tour recorder → tools/record/README.md
 npm run perf        # headless GPU-timing harness → tools/perf/README.md
+npm run capture-featured # palette-card thumbnails → tools/capture/README.md
+npm run structure-audit  # import matrix + structure/quality audits page → tools/structure-audit/README.md
 ```
 
 `typecheck:fast` is the tsgo inner loop; `tsc` stays the gate for `npm run build` and CI — treat a `:fast`-only failure as a tsgo bug.

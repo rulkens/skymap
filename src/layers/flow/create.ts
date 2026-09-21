@@ -6,7 +6,7 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { FlowRuntime } from './types/FlowRuntime';
+import type { FlowRuntime } from './@types/FlowRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createFlowFieldRenderer } from './render/flowFieldRenderer';

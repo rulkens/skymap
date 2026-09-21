@@ -8,7 +8,7 @@
 import type { LonLatBounds } from '../../src/@types/scene/LonLatBounds';
 import { featherWeight } from '../utils/textures/featherWeight';
 import { heightLatticeStepDeg } from '../utils/textures/heightLatticeStepDeg';
-import type { HeightSource } from './HeightSource';
+import type { HeightSource } from './@types/HeightSource';
 
 /** Lattice indices of `extent`'s edges are integers whenever the edge sits on
  *  a coarser tile line, but float division can land a hair either side. */

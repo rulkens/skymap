@@ -15,7 +15,7 @@ import { join } from 'node:path';
 
 import sharp from 'sharp';
 
-import type { SurfaceImagerySource } from '../../../tools/textures/SurfaceImagerySource';
+import type { SurfaceImagerySource } from '../../../tools/textures/@types/SurfaceImagerySource';
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import { colourMatchedImagerySource } from '../../../tools/textures/colourMatchedImagerySource';
 

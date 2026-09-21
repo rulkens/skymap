@@ -21,21 +21,11 @@ two of the three mechanically and left this one, by design, for the
   `src/services/gpu/renderers/starCatalog/cut/`, sharing one `ctx`-keyed memo
   (`starCutOncePerCtx`) across all three star-catalog layers.
 
-## Also carried by the Layer PR: the star defaults move
-
-The eight `DEFAULT_STAR_*` constants in `src/data/defaults.ts` (`sizePx`,
-`brightness`, `glowOverlap`, `refineThreshold`, the three exposure anchors, and
-the aggregate intensity cap) belong in
-**`src/layers/starCatalog/settings/defaults.ts`** — the Layer already owns the
-slice that seeds them, and after the 2026-09-20 extraction nothing in core reads
-them: `walkStarOctreeCut`'s `refineThreshold` is a required argument precisely so
-that walk stays ignorant of the slider's default, and the only remaining external
-reader is `tools/perf/starCutCpuBench.mts`, which is a tool, not core.
-
-Not done in the extraction PR because galaxyCatalog, zoneOfAvoidance and body all
-still read their defaults from `data/defaults.ts`; moving star's alone makes it
-the first Layer to own them, which is a change of pattern that belongs with the
-Layer work rather than bolted onto a refactor.
+- **The star defaults** — the eight `DEFAULT_STAR_*` constants now live in
+  `src/layers/starCatalog/settings/defaults.ts`. They were deferred here only
+  because moving star's alone would have made it the first Layer to own its
+  defaults; the 2026-09-20 defaults sweep moved all seven Layers' at once, so
+  the objection is gone.
 
 ## What's left
 

@@ -1,4 +1,4 @@
-import type { HiResFamousPerGalaxyState } from '../../../@types/engine/subsystems/HiResFamousSubsystem';
+import type { HiResFamousPerGalaxyState } from '../../../@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
 
 /** Sentinel: no hi-res layer assigned — the shader's `hiResLayerIdx >= 0` gate skips the LOD-3 sample. */
 const NO_HI_RES: HiResFamousPerGalaxyState = { hiResLayerIdx: -1, hiResCrossfadeAlpha: 0 };

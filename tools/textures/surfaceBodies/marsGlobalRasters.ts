@@ -8,7 +8,7 @@
 
 import type { LonLatBounds } from '../../../src/@types/scene/LonLatBounds';
 import { rawDataPath } from '../../utils/io/rawDataRegistry';
-import type { GeoTiffGrid } from '../GeoTiffGrid';
+import type { GeoTiffGrid } from '../@types/GeoTiffGrid';
 
 const WHOLE_GLOBE: LonLatBounds = { west: -180, east: 180, south: -90, north: 90 };
 

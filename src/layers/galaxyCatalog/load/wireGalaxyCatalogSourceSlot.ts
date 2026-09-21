@@ -14,7 +14,7 @@ import type { LayerCoreDeps } from '../../../@types/engine/layer/LayerCoreDeps';
 import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq';
 import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';
-import type { GalaxyCatalogFacts } from '../types/GalaxyCatalogFacts';
+import type { GalaxyCatalogFacts } from '../@types/GalaxyCatalogFacts';
 
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import { countEstimatedProvenance } from '../../../utils/countEstimatedProvenance';

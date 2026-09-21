@@ -1,6 +1,6 @@
 import sharp from 'sharp';
 
-import type { HeightTile } from '../../textures/HeightTile';
+import type { HeightTile } from '../../textures/@types/HeightTile';
 import {
   HEIGHT_CODE_BYTES,
   HEIGHT_GRID_POSTS_PER_EDGE,

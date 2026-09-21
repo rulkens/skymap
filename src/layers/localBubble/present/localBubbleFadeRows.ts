@@ -8,7 +8,7 @@
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { LocalBubbleRuntime } from '../types/LocalBubbleRuntime';
+import type { LocalBubbleRuntime } from '../@types/LocalBubbleRuntime';
 
 export function localBubbleFadeRows(runtime: LocalBubbleRuntime): readonly FadeLayer<unknown>[] {
   return [

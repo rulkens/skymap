@@ -1,7 +1,7 @@
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
 import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
-import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 import type { SelectionResolver } from '../../src/@types/engine/selection/SelectionResolver';
 

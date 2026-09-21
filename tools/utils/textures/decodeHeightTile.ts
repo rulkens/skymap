@@ -1,5 +1,5 @@
-import type { DecodedPixels } from '../../textures/DecodedPixels';
-import type { HeightTile } from '../../textures/HeightTile';
+import type { DecodedPixels } from '../../textures/@types/DecodedPixels';
+import type { HeightTile } from '../../textures/@types/HeightTile';
 import {
   HEIGHT_CODE_BYTES,
   HEIGHT_POSTS_PER_TILE,

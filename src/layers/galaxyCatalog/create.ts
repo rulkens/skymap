@@ -12,8 +12,8 @@ import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
 import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMetaEntry';
 import type { GalaxyCatalogReq } from '../../@types/loading/GalaxyCatalogReq';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
-import type { GalaxyCatalogFacts } from './types/GalaxyCatalogFacts';
-import type { GalaxyCatalogRuntime } from './types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
+import type { GalaxyCatalogRuntime } from './@types/GalaxyCatalogRuntime';
 
 import { GALAXY_CATALOG_SOURCES, SOURCE_REGISTRY } from '../../data/sources';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';

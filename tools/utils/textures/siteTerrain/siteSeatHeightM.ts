@@ -1,4 +1,4 @@
-import type { GroundSample } from '../../../textures/GroundSample';
+import type { GroundSample } from '../../../textures/@types/GroundSample';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { SurfaceFixedSite } from '../../../../src/@types/scene/SurfaceFixedSite';
 import type { SurfaceTileManifest } from '../../../../src/@types/scene/SurfaceTileManifest';

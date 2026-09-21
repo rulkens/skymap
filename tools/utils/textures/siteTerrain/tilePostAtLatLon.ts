@@ -1,4 +1,4 @@
-import type { TilePostPosition } from '../../../textures/TilePostPosition';
+import type { TilePostPosition } from '../../../textures/@types/TilePostPosition';
 import { SURFACE_TILE_PX } from '../../../../src/data/bodies/surfaceTileParams';
 import { TEXTURE_PRIME_MERIDIAN_U } from '../../../../src/data/bodies/texturePrimeMeridianU';
 import { degToRad } from '../../../../src/utils/math/degToRad';
