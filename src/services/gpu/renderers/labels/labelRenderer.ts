@@ -130,6 +130,14 @@ const LABEL_DATA_BYTES = 80;
  */
 const GLYPH_INSTANCE_BYTES = 40;
 
+// ─── capacity constants ───────────────────────────────────────────────────
+
+// Starting label-storage size; `setLabels` grows it in power-of-two steps
+// once the roster outgrows it (see `allocate`).
+const INITIAL_LABEL_CAPACITY = 64;
+// Per-label glyph budget for the SHARED glyph pool (`capacity * MAX_GLYPHS_PER_LABEL`).
+const MAX_GLYPHS_PER_LABEL = 64;
+
 // ─── corner buffer ────────────────────────────────────────────────────────
 
 // The unit-quad corners + their slot-0 layout come from `lib/unitQuad.ts`,
@@ -152,13 +160,14 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * target is legible at the construction site (the same one-idiom rule every
  * renderer follows).
  *
- * `maxLabels` is the INITIAL capacity, not a ceiling: `setLabels` grows the
- * CPU scratch arrays and, with a device, reallocates the GPU storage/instance
- * buffers and bind group in power-of-two steps whenever the roster outgrows
- * them. `maxGlyphsPerLabel` sizes a glyph pool SHARED across all labels
- * (`capacity * maxGlyphsPerLabel`); growth scales that pool with capacity, but
- * a roster of unusually long labels can still exhaust it and have glyphs
- * silently dropped (the `currentGlyphCount >= maxGlyphs` break in `setLabels`).
+ * `INITIAL_LABEL_CAPACITY` is a starting size, not a ceiling: `setLabels`
+ * grows the CPU scratch arrays and, with a device, reallocates the GPU
+ * storage/instance buffers and bind group in power-of-two steps whenever
+ * the roster outgrows them. `MAX_GLYPHS_PER_LABEL` sizes a glyph pool SHARED
+ * across all labels (`capacity * MAX_GLYPHS_PER_LABEL`); growth scales that
+ * pool with capacity, but a roster of unusually long labels can still
+ * exhaust it and have glyphs silently dropped (the `currentGlyphCount >=
+ * maxGlyphs` break in `setLabels`).
  *
  * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
  * behind the solar-system bodies.  When set, the pipeline gains a group(1)
@@ -175,8 +184,6 @@ export function createLabelRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
   atlases: LoadedFontAtlases,
-  maxLabels = 64,
-  maxGlyphsPerLabel = 64,
   opts?: { occludeAgainstScene?: boolean; clipScale?: number },
 ): LabelRenderer {
   const clipScale = opts?.clipScale ?? 1;
@@ -264,7 +271,7 @@ export function createLabelRenderer(
    */
   function allocate(newCapacity: number): void {
     capacity = newCapacity;
-    maxGlyphs = capacity * maxGlyphsPerLabel;
+    maxGlyphs = capacity * MAX_GLYPHS_PER_LABEL;
     glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
     glyphF32 = new Float32Array(glyphBuf);
     glyphU32 = new Uint32Array(glyphBuf);
@@ -491,7 +498,7 @@ export function createLabelRenderer(
 
   // Sizes the CPU scratch arrays and, with a device, the GPU buffers above —
   // the same path `setLabels` re-enters on growth.
-  allocate(maxLabels);
+  allocate(INITIAL_LABEL_CAPACITY);
 
   // ── public methods (closures over the locals above) ────────────────────
 

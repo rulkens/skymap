@@ -89,7 +89,7 @@ describe('LabelRenderer occlusion variant', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, 64, 64, {
+    createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, {
       occludeAgainstScene: true,
     });
     return { bindGroupLayouts, pipelineLayouts, renderPipelines };
@@ -205,29 +205,34 @@ describe('LabelRenderer capacity growth', () => {
       },
       'rgba16float',
       FIXTURE_ATLASES,
-      4,
     );
 
-    r.setLabels([1, 2, 3, 4, 5].map((n) => makeLabel(`l${n}`)));
+    // 65 crosses INITIAL_LABEL_CAPACITY (64) — the real growth boundary,
+    // not an artificially small one.
+    const labels = Array.from({ length: 65 }, (_, i) => makeLabel(`l${i}`));
+    r.setLabels(labels);
 
-    expect(r.labelCount()).toBe(5);
-    expect(r.packedLabels()).toHaveLength(5);
+    expect(r.labelCount()).toBe(65);
+    expect(r.packedLabels()).toHaveLength(65);
   });
 
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
     const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
-    const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, 4, 4);
+    const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES);
     const bindGroupCallsAtConstruction = createBindGroupCalls.length;
 
-    r.setLabels([1, 2, 3, 4, 5].map((n) => makeLabel(`l${n}`)));
+    // 65 crosses INITIAL_LABEL_CAPACITY (64); the next power of two is 128,
+    // so both buffers must exactly double.
+    const labels = Array.from({ length: 65 }, (_, i) => makeLabel(`l${i}`));
+    r.setLabels(labels);
 
     expect(createBindGroupCalls.length).toBeGreaterThan(bindGroupCallsAtConstruction);
     const storageBuffers = createdBuffers.filter((b) => b.desc.label === 'label-storage');
     expect(storageBuffers).toHaveLength(2);
-    expect(storageBuffers[1]!.desc.size).toBeGreaterThan(storageBuffers[0]!.desc.size);
+    expect(storageBuffers[1]!.desc.size).toBe(storageBuffers[0]!.desc.size * 2);
     const instanceBuffers = createdBuffers.filter((b) => b.desc.label === 'label-instances');
     expect(instanceBuffers).toHaveLength(2);
-    expect(instanceBuffers[1]!.desc.size).toBeGreaterThan(instanceBuffers[0]!.desc.size);
+    expect(instanceBuffers[1]!.desc.size).toBe(instanceBuffers[0]!.desc.size * 2);
 
     // The landmine this test exists for: binding 1 must point at the NEW
     // storage buffer, not a bind group rebuilt against the destroyed one.

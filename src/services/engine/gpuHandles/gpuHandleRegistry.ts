@@ -102,7 +102,7 @@ export const GPU_HANDLE_ROWS = [
     key: 'labelRenderer',
     rebuildOnSwapFormat: true,
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, undefined, undefined, {
+      createLabelRenderer(deps.ctx, deps.ctx.format, deps.fontAtlases, {
         occludeAgainstScene: true,
       }),
   },
@@ -142,12 +142,9 @@ export const GPU_HANDLE_ROWS = [
         deps.ctx,
         deps.ctx.format,
         deps.fontAtlases,
-        undefined,
-        undefined,
         // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
         // packs must be in those clip units too — the pair the vertex stage
-        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`. The default initial
-        // capacity (64) is fine — `setLabels` grows it as the roster does.
+        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
         { occludeAgainstScene: true, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
       ),
   },
