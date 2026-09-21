@@ -395,7 +395,10 @@ export function createEngine(
   // it lazily (never rebuilds a list), so a deep link resolving during the
   // boot window — before createLayers has run — still sees the core rows.
   state.selectionKindRows = coreSelectionRows(resolveDeps);
-  const selection = composeSelectionRows(() => state.selectionKindRows);
+  const selection = composeSelectionRows(
+    () => state.selectionKindRows,
+    () => state.settings.picking.kinds,
+  );
   const bootstrapDeps: BootstrapDeps = {
     canvas,
     cb,
@@ -437,6 +440,7 @@ export function createEngine(
         ? {
             from: liveWorldPose(state),
             fovYRad: state.cameraRuntime.outputs.projection.fovYRad,
+            aspect: state.cameraRuntime.outputs.projection.aspect,
             upBasisQuat: liveUpBasisQuat(state.cameraRuntime),
           }
         : null,

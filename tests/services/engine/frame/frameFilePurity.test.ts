@@ -59,7 +59,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/passes/cloudShellPass': 1,
   'frame/passes/earthPass': 4,
   'frame/passes/fieldStarSpherePass': 6,
-  'frame/passes/horizonShellPass': 1,
+  'frame/passes/horizonShellPass': 0,
   'frame/passes/milkyWayPass': 1,
   'frame/passes/orbitTrailsPass': 1,
   'frame/passes/planetsPass': 1,

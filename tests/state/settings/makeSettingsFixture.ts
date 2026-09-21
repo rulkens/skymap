@@ -58,6 +58,7 @@ import { initialState as orbitTrailsInitialState } from '../../../src/layers/bod
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/volume/state/volumes/initialState';
+import { pickingInitialState } from '../../../src/state/settings/core/pickingSlice';
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
 import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/initialState';
@@ -133,6 +134,7 @@ export function makeSettingsFixture(
     volumes: { ...volumesInitialState, items: seedVolumeFields() },
     flow: { ...flowInitialState },
     labels: { focusedOnly: false },
+    picking: { ...pickingInitialState },
     debug: {
       overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<
         DebugOverlayKey,

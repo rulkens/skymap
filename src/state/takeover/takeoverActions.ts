@@ -1,7 +1,7 @@
 /**
  * takeoverActions — `runTakeover` dispatches started/ended itself; `exitTakeover`
- * is the reducer-less signal a tour's Esc/nav and a view's overlay raise to ask
- * the running body to end. Not slice reducers: the slice stays free for state a
+ * is the reducer-less signal a tour's Esc/nav and an exhibit's overlay raise to
+ * ask the running body to end. Not slice reducers: the slice stays free for state a
  * component dispatches directly (mirroring `requestFocus` beside `selectionSlice`).
  */
 import { createAction } from '@reduxjs/toolkit';

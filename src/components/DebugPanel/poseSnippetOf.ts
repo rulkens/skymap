@@ -1,7 +1,7 @@
 /**
- * Paste-ready `viewRegistry.ts` pose field, full JS precision like `copyTextOf`
- * — a view's framing is Mpc-scale, and a rounded target reads as a different
- * galaxy than the one the curator actually stood at.
+ * Paste-ready `exhibitRegistry.ts` pose field, full JS precision like
+ * `copyTextOf` — an exhibit's framing is Mpc-scale, and a rounded target reads
+ * as a different galaxy than the one the curator actually stood at.
  */
 
 import type { CameraPose } from '../../@types/camera/CameraPose';

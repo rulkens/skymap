@@ -166,6 +166,38 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
+  // Exhibit row — letter glyph like the Milky Way (no atlas thumb: an exhibit
+  // is a scene takeover, not a picturable object).
+  exhibit: (m) => {
+    if (m.kind !== 'exhibit') return EMPTY_ROW_VIEW;
+    return {
+      key: `exhibit:${m.exhibit.id}`,
+      testid: `exhibit-row-${m.exhibit.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {m.exhibit.label[0] ?? '·'}
+        </span>
+      ),
+      primary: m.exhibit.label,
+      secondary: <span className={styles.source}>Exhibit</span>,
+    };
+  },
+  // Tour row — same glyph treatment as an exhibit; a tour is a beat sequence,
+  // not a picturable object either.
+  tour: (m) => {
+    if (m.kind !== 'tour') return EMPTY_ROW_VIEW;
+    return {
+      key: `tour:${m.tour.id}`,
+      testid: `tour-row-${m.tour.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {m.tour.label[0] ?? '·'}
+        </span>
+      ),
+      primary: m.tour.label,
+      secondary: <span className={styles.source}>Tour</span>,
+    };
+  },
   // Earth-place row — letter glyph (no captured shot for these) + a fixed
   // 'Earth' chip, since every row here is on the one body.
   place: (m) => {

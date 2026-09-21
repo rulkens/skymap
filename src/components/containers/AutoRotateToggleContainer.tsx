@@ -1,4 +1,3 @@
-// src/components/containers/AutoRotateToggleContainer.tsx
 /**
  * AutoRotateToggleContainer — store boundary for the auto-rotate pill.
  *

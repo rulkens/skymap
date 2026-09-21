@@ -28,6 +28,7 @@ import {
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { resolveStarRecord } from '../../../src/services/engine/helpers/resolveStarRecord';
 import { coreSelectionRows } from '../../../src/services/engine/selection/coreSelectionRows';
+import { ALL_KINDS_ENABLED } from '../../support/allKindsEnabled';
 import { composeSelectionRows } from '../../../src/services/engine/selection/composeSelectionRows';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
@@ -94,10 +95,13 @@ describe('watchFocusTweenSaga', () => {
     const mw = createSagaMiddleware({ onError: (error) => sagaErrors.push(error) });
     const s = configureStore({ reducer: rootReducer, middleware: (g) => g().concat(mw) });
     mw.run(watchFocusTweenSaga);
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     mw.setContext({
       resolveDeps,
-      selection: composeSelectionRows(() => coreSelectionRows(resolveDeps)),
+      selection: composeSelectionRows(
+        () => coreSelectionRows(resolveDeps),
+        () => ALL_KINDS_ENABLED,
+      ),
       cameraRuntime: () => cameraRuntime(),
     });
     return s;
@@ -163,7 +167,7 @@ describe('watchFocusTweenSaga', () => {
 
     // The camera comes online during wireInput; the engine then emits a status
     // pulse as the first catalog arrives (or the synthetic fallback fires).
-    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, upBasisQuat: [0, 0, 0, 1] });
+    cameraRuntime = () => ({ from: FROM, fovYRad: 0.8, aspect: 16 / 9, upBasisQuat: [0, 0, 0, 1] });
     store.dispatch(engineStatusChanged({ kind: 'ready', count: 1 }));
     await flush();
 

@@ -11,14 +11,21 @@ import { selectCaptureTargets } from './selectCaptureTargets';
 import { parseArgs } from './parseFeaturedArgs';
 import { DEFAULT_CAPTURE_T, OUTPUT_DIR } from './featuredDefaults';
 import { FEATURED_TABS } from '../../src/data/palette/featuredTabs';
+import { exhibitRegistry } from '../../src/data/exhibits/exhibitRegistry';
 import type { CaptureTarget } from './@types/CaptureTarget';
 import type { SceneShot } from '../@types/capture/SceneShot';
 
 function shotFor(target: CaptureTarget): SceneShot {
+  // An exhibit card carries its own settings + pose in the registry — no
+  // takeover, no `#focus=`; a focus card falls to the existing focus-fly-in
+  // path. A pose card (a tour) has neither, so `capture.pose` below is its
+  // only framing.
+  const exhibit = target.kind === 'exhibit' ? exhibitRegistry[target.exhibitId] : undefined;
   return {
-    focusId: target.focusId,
+    focusId: target.kind === 'focus' ? target.focusId : undefined,
+    settings: target.capture.settings ?? exhibit?.settings,
     t: target.capture.t ?? DEFAULT_CAPTURE_T,
-    pose: target.capture.pose,
+    pose: target.capture.pose ?? exhibit?.pose,
     phaseDeg: target.capture.phaseDeg,
     keepFocus: target.capture.keepFocus,
     hideGalaxyField: target.capture.hideGalaxyField,

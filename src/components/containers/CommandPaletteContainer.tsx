@@ -1,4 +1,3 @@
-// src/components/containers/CommandPaletteContainer.tsx
 /**
  * CommandPaletteContainer — store boundary for the command palette: the
  * famous/alias/structure index reads, the `paletteOpen`/`paletteTab` slice
@@ -18,6 +17,8 @@ import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
 import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
+import { openExhibit } from '../../state/exhibits/exhibitActions';
+import { startTour } from '../../state/tour/tourActions';
 import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
@@ -32,8 +33,14 @@ const RUN_ACTION: Record<
     dispatch(requestSelect(action.focusId));
     dispatch(requestFocus(action.focusId));
   },
-  // Placeholder until PR3, which dispatches `openView` here.
-  view: () => {},
+  exhibit: (dispatch, action) => {
+    if (action.kind !== 'exhibit') return;
+    dispatch(openExhibit(action.exhibitId));
+  },
+  tour: (dispatch, action) => {
+    if (action.kind !== 'tour') return;
+    dispatch(startTour(action.tourId));
+  },
   flyTo: (dispatch, action) => {
     if (action.kind !== 'flyTo') return;
     dispatch(

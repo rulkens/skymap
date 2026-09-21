@@ -141,9 +141,7 @@ export function usePaletteSearch({
       if (e.key === 'Enter') {
         e.preventDefault();
         const card = cards[activeCard];
-        // Placeholder card until PR3 — its button is `disabled`, so route
-        // Enter the same way a click would be ignored.
-        if (card && card.action.kind !== 'view') dispatchAction(card.action);
+        if (card) dispatchAction(card.action);
       }
       return;
     }

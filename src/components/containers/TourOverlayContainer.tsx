@@ -1,4 +1,3 @@
-// src/components/containers/TourOverlayContainer.tsx
 /**
  * TourOverlayContainer — store boundary for the guided-tour overlay.
  *

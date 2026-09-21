@@ -12,8 +12,8 @@
  *
  * The home-scene strip lives IN this clip (not a tour-level setup list):
  * one authoring surface, and stepping back to beat 1 re-establishes its
- * scene. Everything hidden here is a later beat's reveal; the
- * guidedTourSaga snapshot/restore winds it all back on exit.
+ * scene. Everything hidden here is a later beat's reveal; `runTakeover`'s
+ * snapshot/restore winds it all back on exit.
  */
 
 import type { ClipData } from '../../../../@types/animation/ClipData';

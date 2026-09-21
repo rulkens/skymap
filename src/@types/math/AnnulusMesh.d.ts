@@ -25,6 +25,6 @@
 
 export type AnnulusMesh = {
   readonly positions: Float32Array; // 3 per vertex, z = 0, outer radius = 1
-  readonly uvs: Float32Array;       // 2 per vertex, u = normalized radius, v = 0.5
-  readonly indices: Uint16Array;    // triangle list
+  readonly uvs: Float32Array; // 2 per vertex, u = normalized radius, v = 0.5
+  readonly indices: Uint16Array; // triangle list
 };

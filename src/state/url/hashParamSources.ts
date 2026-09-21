@@ -235,11 +235,14 @@ const orientationSource: HashParamSource = {
   // `orientation` lives on `SceneSnapshot`, not `SettingsSnapshot` (see that
   // type's header), so the bulk settings restore (`mergeSnapshot`) provably
   // cannot move it — a raw settings patch of that shape has no `orientation`
-  // key to carry. The tour's own restore (`restoreSceneSaga`) and its
-  // beat-boundary reconstruction (`guidedTourSaga`) both go through
-  // `requestOrientationChange` → `setOrientation` instead, which IS covered
-  // below. If `orientation` ever moves back onto `SettingsSnapshot`, this
-  // list must grow to include `mergeSnapshot`.
+  // key to carry. `computeSceneEntering`'s beat-boundary fold excludes
+  // `frameTo` for the same reason (see its header): orientation carries
+  // forward live instead. The tour's own restore (`restoreSceneSaga`, via
+  // `requestOrientationChange`) and a beat's live `frameTo` cue (dispatched
+  // directly by `applySceneEffect` as the clip plays) both reach
+  // `setOrientation` by those other paths, covered below. If `orientation`
+  // ever moves back onto `SettingsSnapshot`, this list must grow to include
+  // `mergeSnapshot`.
   writesOn: [setOrientation.match],
   write: (state) => {
     const orientation = selectOrientation(state);

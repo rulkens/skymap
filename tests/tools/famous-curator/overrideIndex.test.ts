@@ -68,12 +68,18 @@ describe('overrideIndex', () => {
   it('preserves other entries when upserting one id', () => {
     const path = tmpIndexPath();
     upsertOverrideEntry(path, 'm31', {
-      dir: 'famous-curated/m31', sourceUrl: 'https://example.com/a',
-      license: 'CC-BY', author: 'Alice', processedAt: '2026-05-18T00:00:00Z',
+      dir: 'famous-curated/m31',
+      sourceUrl: 'https://example.com/a',
+      license: 'CC-BY',
+      author: 'Alice',
+      processedAt: '2026-05-18T00:00:00Z',
     });
     upsertOverrideEntry(path, 'm33', {
-      dir: 'famous-curated/m33', sourceUrl: 'https://example.com/c',
-      license: 'CC-BY', author: 'Carol', processedAt: '2026-05-18T02:00:00Z',
+      dir: 'famous-curated/m33',
+      sourceUrl: 'https://example.com/c',
+      license: 'CC-BY',
+      author: 'Carol',
+      processedAt: '2026-05-18T02:00:00Z',
     });
     const onDisk = JSON.parse(readFileSync(path, 'utf8'));
     expect(Object.keys(onDisk.entries).sort()).toEqual(['m31', 'm33']);

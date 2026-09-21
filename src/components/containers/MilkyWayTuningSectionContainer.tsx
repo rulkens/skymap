@@ -1,4 +1,3 @@
-// src/components/containers/MilkyWayTuningSectionContainer.tsx
 /**
  * MilkyWayTuningSectionContainer — store boundary for the DebugPanel's
  * Milky-Way star-cloud tuning knobs. `selectMilkyWay` returns the whole

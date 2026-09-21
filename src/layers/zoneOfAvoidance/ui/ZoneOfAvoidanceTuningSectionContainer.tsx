@@ -1,4 +1,3 @@
-// src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSectionContainer.tsx
 /**
  * ZoneOfAvoidanceTuningSectionContainer — store boundary for the DebugPanel's
  * Zone-of-Avoidance guide-band tuning knobs. `selectZoneOfAvoidance` returns

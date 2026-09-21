@@ -44,6 +44,8 @@ import vsCode from '../../shaders/horizonShell/vertex.wesl?static';
 import fsCode from '../../shaders/horizonShell/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import { HORIZON_RADIUS_GPC } from '../../../../data/rendering/horizonRadiusGpc';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { HorizonShellRenderer } from '../../../../@types/rendering/HorizonShellRenderer';
 import type { OrbitCamera } from '../../../../@types/camera/OrbitCamera';
@@ -61,18 +63,6 @@ type Init = {
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
 const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 64;
-
-/**
- * Comoving radius to the cosmic particle horizon, in GIGAPARSECS.
- *
- * Standard flat-ΛCDM Planck-2018 cosmology gives ~14.3 Gpc for the
- * limit of light propagation since the Big Bang — also roughly where
- * the CMB last-scattering surface sits (z ≈ 1100, ~14.0 Gpc).
- */
-export const HORIZON_RADIUS_GPC = 14.3;
-
-/** Mpc → Gpc scale. */
-const MPC_PER_GPC = 1000;
 
 export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
   const { device, targetFormat } = init;
@@ -181,9 +171,9 @@ export function createHorizonShellRenderer(init: Init): HorizonShellRenderer {
     f32[10] = up[2];
     f32[11] = HORIZON_RADIUS_GPC;
     // cameraPosGpc (floats 12..14) + fadeAlpha (float 15).
-    f32[12] = cam.position[0]! / MPC_PER_GPC;
-    f32[13] = cam.position[1]! / MPC_PER_GPC;
-    f32[14] = cam.position[2]! / MPC_PER_GPC;
+    f32[12] = cam.position[0]! / SCALE_UNITS.GPC_TO_MPC;
+    f32[13] = cam.position[1]! / SCALE_UNITS.GPC_TO_MPC;
+    f32[14] = cam.position[2]! / SCALE_UNITS.GPC_TO_MPC;
     f32[15] = fadeAlpha;
     device.queue.writeBuffer(uniformBuffer, 0, uniforms);
 

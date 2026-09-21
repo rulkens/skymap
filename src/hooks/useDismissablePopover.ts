@@ -1,4 +1,3 @@
-// src/hooks/useDismissablePopover.ts
 /**
  * useDismissablePopover — shared Esc + outside-click dismissal for the
  * TimeBar's popovers (DateEntryPopover, RateSelectorPopover).

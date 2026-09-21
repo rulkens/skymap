@@ -46,7 +46,10 @@ test('cf4-density slot fires and field appears in Volumes panel', async ({ page 
     for (const l of consoleLogs) console.log(l);
     console.log('--- end logs ---');
   }
-  expect(cf4ReadyLine, 'expected engine to log [engine] cf4Density: <dims> cube, min=…, max=…').toBeDefined();
+  expect(
+    cf4ReadyLine,
+    'expected engine to log [engine] cf4Density: <dims> cube, min=…, max=…',
+  ).toBeDefined();
   expect(cf4ReadyLine).toMatch(/128x128x128 cube/);
 
   await page.screenshot({ path: join(SCREENSHOT_DIR, 'step1-initial-toggle-off.png') });
@@ -100,5 +103,8 @@ test('toggling cf4-density on changes the rendered scene', async ({ page }) => {
   // assert that no JS errors fired during the toggle, since a bad
   // shader recompile or missing uniform would surface as a pageerror.
   const pageErrors = consoleLogs.filter((l) => l.startsWith('[pageerror]'));
-  expect(pageErrors, `unexpected pageerror(s) after toggling cf4-density:\n${pageErrors.join('\n')}`).toEqual([]);
+  expect(
+    pageErrors,
+    `unexpected pageerror(s) after toggling cf4-density:\n${pageErrors.join('\n')}`,
+  ).toEqual([]);
 });

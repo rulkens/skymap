@@ -16,13 +16,13 @@
  *
  * ### Constants
  *
- *   - `FAR_CLIP_MPC = 50000` — far-clip plane.  Sized so the entire
+ *   - `FAR_CLIP_MPC = 80000` — far-clip plane.  Sized so the entire
  *     observable-universe horizon shell (radius 14 300 Mpc, drawn by
  *     `horizonShellRenderer`) stays inside the frustum at every
- *     reachable camera distance: max_cam 30 000 + shell 14 300 =
- *     44 300 Mpc, plus headroom.  Visual pass uses additive blending
+ *     reachable camera distance: max_cam 60 000 + shell 14 300 =
+ *     74 300 Mpc, plus headroom.  Visual pass uses additive blending
  *     with no depth test, so depth precision is not a concern; the
- *     pick pass uses depth32float, which handles the 0.01 : 50 000
+ *     pick pass uses depth32float, which handles the 0.01 : 80 000
  *     ratio fine.
  *   - `NEAR_CLIP_MPC = 0.01` (10 kpc) — well inside the focus-on tween's
  *     end distance (0.12 Mpc, see `galaxyFocusDistance.ts`).
@@ -47,7 +47,7 @@ export const INITIAL_DISTANCE_MPC = 0.14;
 export const NEAR_CLIP_MPC = 0.01;
 
 /** Far-clip plane in Mpc — keeps the horizon shell in-frustum at max camera distance. */
-export const FAR_CLIP_MPC = 50000;
+export const FAR_CLIP_MPC = 80000;
 
 /** Bootstrap lens in radians — derived from the `settings.camera.fovDeg` default so boot and slider rest position can't drift apart. */
 export const DEFAULT_FOV_Y_RAD = (Math.PI / 180) * DEFAULT_FOV_DEG;

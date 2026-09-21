@@ -25,7 +25,9 @@ describe('keepStar (supplement taper)', () => {
     // Barnard's Star — hash01 ≈ 0.4735 < 0.5 → kept.
     expect(keepStar({ sourceId: 4472832130942575872n, distPc: 85, isSupplement: true })).toBe(true);
     // Ross 154 — hash01 ≈ 0.9589 ≥ 0.5 → dropped.
-    expect(keepStar({ sourceId: 4075141768785646848n, distPc: 85, isSupplement: true })).toBe(false);
+    expect(keepStar({ sourceId: 4075141768785646848n, distPc: 85, isSupplement: true })).toBe(
+      false,
+    );
   });
 
   it('never taper-drops a main-catalog star, even near the shell', () => {

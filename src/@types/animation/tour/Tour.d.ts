@@ -4,10 +4,10 @@
  *
  * `id` is the durable handle `startTour(id)` resolves against `tourRegistry`;
  * `label` is the human-readable name a launcher button shows. The `beats` are
- * the itinerary `guidedTourSaga` plays in order. Scene preparation (the
+ * the itinerary `tourBody` plays in order. Scene preparation (the
  * establishing strip) is authored INSIDE the first beat's clip as `hide()` /
  * `scene()` cues — one authoring surface; the snapshot/restore pair in
- * `guidedTourSaga` winds every in-tour mutation back on exit regardless of
+ * `runTakeover` winds every in-tour mutation back on exit regardless of
  * which beat made it. Carrying `id` on the object (redundant with the registry
  * key) lets a whole `Tour` be passed around and still know its own identity —
  * same shape as a `Clip`.
@@ -25,4 +25,11 @@ export type Tour = {
   readonly id: TourId;
   readonly label: string;
   readonly beats: readonly BeatData[];
+  /**
+   * A harness for exercising the tour machinery, not a thing to show anyone.
+   * Dev tours stay out of user-facing surfaces — today the palette's search
+   * rows — while still being launchable from the debug panel and by id.
+   * Absent means user-facing, so a new tour is public unless it says otherwise.
+   */
+  readonly dev?: boolean;
 };

@@ -1,4 +1,3 @@
-// src/components/containers/LabelsAndGuidesSectionContainer.tsx
 /**
  * LabelsAndGuidesSectionContainer — store boundary for the Labels & Guides
  * settings section.

@@ -1,4 +1,3 @@
-// src/components/TourOverlay/TourCaption.tsx
 /**
  * TourCaption — the per-beat caption column, in the splash's typographic
  * register (mono kicker + Cormorant-Garamond title + mono markdown body).

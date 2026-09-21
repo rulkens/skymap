@@ -1,6 +1,7 @@
 import { composeSelectionRows } from '../../src/services/engine/selection/composeSelectionRows';
 import { coreSelectionRows } from '../../src/services/engine/selection/coreSelectionRows';
 import { galaxyCatalogSelectionRow } from '../../src/layers/galaxyCatalog/present/galaxyCatalogSelectionRow';
+import { ALL_KINDS_ENABLED } from './allKindsEnabled';
 import type { GalaxyCatalogRuntime } from '../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { ResolveDeps } from '../../src/@types/engine/ResolveDeps';
 import type { SelectionResolver } from '../../src/@types/engine/selection/SelectionResolver';
@@ -20,8 +21,11 @@ export function selectionResolverOver(
   deps: ResolveDeps,
   galaxies?: GalaxyRowFixture,
 ): SelectionResolver {
-  return composeSelectionRows(() => [
-    ...coreSelectionRows(() => deps),
-    ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxies)]),
-  ]);
+  return composeSelectionRows(
+    () => [
+      ...coreSelectionRows(() => deps),
+      ...(galaxies === undefined ? [] : [galaxyCatalogSelectionRow(galaxies)]),
+    ],
+    () => ALL_KINDS_ENABLED,
+  );
 }

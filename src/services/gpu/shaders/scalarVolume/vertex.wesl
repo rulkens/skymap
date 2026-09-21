@@ -1,5 +1,3 @@
-// src/services/gpu/shaders/scalarVolume/vertex.wesl
-//
 // Vertex stage for the scalar volume renderer.  Draws a unit cube
 // (corners at 0..1) transformed by the per-field model matrix and the
 // shared camera viewProj.  The fragment shader will reconstruct the

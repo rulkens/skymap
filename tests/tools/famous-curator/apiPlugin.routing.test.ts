@@ -27,16 +27,30 @@ type FakeRes = {
 };
 function fakeRes(): FakeRes {
   return {
-    statusCode: 200, headers: {}, body: '', ended: false,
-    setHeader(k, v) { this.headers[k] = v; },
-    end(chunk) { if (chunk !== undefined) this.body += chunk; this.ended = true; },
+    statusCode: 200,
+    headers: {},
+    body: '',
+    ended: false,
+    setHeader(k, v) {
+      this.headers[k] = v;
+    },
+    end(chunk) {
+      if (chunk !== undefined) this.body += chunk;
+      this.ended = true;
+    },
   };
 }
 
 async function dispatch(req: FakeReq): Promise<FakeRes> {
   const plugin = apiPlugin();
   const mws: Array<(req: unknown, res: unknown, next: () => void) => unknown> = [];
-  const server = { middlewares: { use(h: typeof mws[number]) { mws.push(h); } } };
+  const server = {
+    middlewares: {
+      use(h: (typeof mws)[number]) {
+        mws.push(h);
+      },
+    },
+  };
   const cfg = plugin.configureServer;
   if (typeof cfg !== 'function') throw new Error('cfg fn');
   // configureServer is typed with `this: MinimalPluginContextWithoutEnvironment`
@@ -74,7 +88,7 @@ describe('apiPlugin routing', () => {
     ['POST', '/api/process'],
     ['POST', '/api/process/alpha-only'],
     ['POST', '/api/export'],
-    ['GET',  '/api/galaxies'],
+    ['GET', '/api/galaxies'],
   ] as const)('dispatches %s %s (status != 404)', async (method, url) => {
     // We expect the handler to either succeed or fail with a 4xx/5xx
     // due to a missing body — what we're guarding against is "route
@@ -89,10 +103,7 @@ describe('apiPlugin routing', () => {
     // closure calls fetch() directly — same shape as imageFetcher in
     // /api/fetch — so swapping the global is the smallest seam.
     beforeEach(() => {
-      const html = readFileSync(
-        join(__dirname, 'fixtures', 'noirlab-noao-m94.html'),
-        'utf-8',
-      );
+      const html = readFileSync(join(__dirname, 'fixtures', 'noirlab-noao-m94.html'), 'utf-8');
       vi.stubGlobal('fetch', async () => ({
         ok: true,
         status: 200,
@@ -100,7 +111,9 @@ describe('apiPlugin routing', () => {
         text: async () => html,
       }));
     });
-    afterEach(() => { vi.unstubAllGlobals(); });
+    afterEach(() => {
+      vi.unstubAllGlobals();
+    });
 
     it('returns 200 for a NOIRLab URL with stub fetcher', async () => {
       // Build a request with a JSON body the plugin's readJsonBody helper

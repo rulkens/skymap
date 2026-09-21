@@ -1,15 +1,11 @@
 /**
  * tourBody tests — the beat loop, run under `runTakeover` exactly as
- * `watchTakeoverSaga` runs it for a real tour, so the snapshot/restore
- * round-trip and the `takeoverEnded`/`tour.active` reporting stay observable
- * from this suite even though `tourBody` itself no longer owns them.
+ * `watchTakeoverSaga` composes them for a real tour, so the snapshot/restore
+ * round-trip and the `takeoverEnded`/`tour.active` reporting — bracket-owned
+ * facts `tourBody` itself never touches — stay observable from this suite.
  *
  * `runTour` below is the test-local composition `watchTakeoverSaga` performs
  * in production: `runTakeover({kind:'tour', id}, () => tourBody(tour, range))`.
- * Everything downstream of that line is unchanged from the pre-split
- * `guidedTourSaga` suite — same fixtures, same assertions, same timing idiom —
- * only the run call, the active-flag read, and `exitTour` → `exitTakeover`
- * changed, because those are exactly the bracket-owned facts that moved.
  *
  * Beat fixtures use narration clips (empty timeline, no id-bearing cues) so
  * `waitUntil(clipFociReady)` exits synchronously on the first predicate check.
@@ -59,6 +55,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 
