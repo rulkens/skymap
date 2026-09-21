@@ -21,8 +21,8 @@ import type { FlowFieldDefaults } from '../data/flow/FlowFieldDefaults';
 
 /**
  * The live flow slice = the master `enabled` gate plus the eight look/motion
- * knobs. The knob shape + per-field docs live on `FlowFieldDefaults`, shared
- * with the SOURCE_REGISTRY flow row that seeds them.
+ * knobs. The knob shape + per-field docs live on `FlowFieldDefaults`, which is
+ * the `setFlow` patch bound — so a tuning slider can never smuggle the gate.
  */
 export type FlowSettings = {
   /** Master layer gate (default-off; the cube demand-loads on first enable). */
