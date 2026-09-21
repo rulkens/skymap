@@ -10,6 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
 import { starCatalogPass } from '../../../../../src/services/engine/frame/passes/starCatalogPass';
+import { advanceStarCut } from '../../../../../src/services/gpu/renderers/starCatalog/cut/advanceStarCut';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -76,12 +77,26 @@ function makeAggregateCatalog(): StarCatalog {
   };
 }
 
+/** A spy renderer whose `setFrameCut`/`getFrameCut` are a real in-memory pair —
+ *  `starCutFor` reads the frame cut off exactly these for a non-capture ctx. */
 function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[]) {
+  let frameCut: unknown = null;
   return {
     upload: vi.fn(),
     loadedCatalogs: vi.fn(() => loaded[Symbol.iterator]()),
     draw: vi.fn<(pass: GPURenderPassEncoder, args: StarCatalogDrawArgs) => void>(),
+    setFrameCut: vi.fn((cut: unknown) => {
+      frameCut = cut;
+    }),
+    getFrameCut: vi.fn(() => frameCut),
   };
+}
+
+/** Mirrors `runFrame`'s `advanceStarCut` → `setFrameCut` sequence for a
+ *  non-capture ctx, so `starCutFor` has a frame cut to read. */
+function primeFrameCut(state: EngineState, ctx: FrameView): void {
+  const cut = advanceStarCut(state, [ctx]);
+  state.gpu.starCatalogRenderer!.setFrameCut(cut);
 }
 
 function makeState(renderer: unknown): EngineState {
@@ -115,7 +130,10 @@ describe('starAggregatesPass', () => {
   it('records the AGGREGATE stream (stream tag, isAggregate all 1) into its pass', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
-    starAggregatesPass.draw(PASS_STUB, makeNear0View(camPos), makeCtx(camPos), makeState(renderer));
+    const state = makeState(renderer);
+    const ctx = makeCtx(camPos);
+    primeFrameCut(state, ctx);
+    starAggregatesPass.draw(PASS_STUB, makeNear0View(camPos), ctx, state);
 
     expect(renderer.draw).toHaveBeenCalledTimes(1);
     const args = renderer.draw.mock.calls[0]![1];
@@ -129,7 +147,10 @@ describe('starAggregatesPass', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const camPos = camAtPcVec(FAR_PC);
     const view = makeNear0View(camPos);
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos), makeState(renderer));
+    const state = makeState(renderer);
+    const ctx = makeCtx(camPos);
+    primeFrameCut(state, ctx);
+    starAggregatesPass.draw(PASS_STUB, view, ctx, state);
 
     const args = renderer.draw.mock.calls[0]![1];
     expect(args.viewportPx).toEqual([640, 360]);
@@ -157,8 +178,10 @@ describe('starAggregatesPass', () => {
     const camPos = camAtPcVec(FAR_PC);
     const view = makeNear0View(camPos);
     const state = makeState(renderer);
+    const ctx = makeCtx(camPos);
+    primeFrameCut(state, ctx);
 
-    starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos), state);
+    starAggregatesPass.draw(PASS_STUB, view, ctx, state);
     expect(renderer.draw.mock.calls[0]![1].knee).toBe(false);
 
     starAggregatesPass.draw(PASS_STUB, view, makeCtx(camPos, 0, true), state);

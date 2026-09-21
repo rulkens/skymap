@@ -12,11 +12,11 @@
  * (`starCatalogPass`).
  *
  * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
- * ALL shared with the other two star layers via `readStarCut` (memoised on
- * `ctx`): this layer draws first in program order (its `star-aggregates` render
- * step precedes the hdr NEAR0 step), so its `draw` typically triggers the walk,
- * and the leaf + upsample layers read the cached result. This layer records
- * ONLY the aggregate sub-stream, via the shared `drawStarStream` helper with
+ * ALL shared with the other star layers via `starCutFor`: `advanceStarCut`
+ * walks once in `runFrame` and sets the result on `state.gpu.starCatalogRenderer`
+ * before either draws, so this layer and `starCatalogPass` both read that one
+ * cut rather than each triggering their own walk. This layer records ONLY the
+ * aggregate sub-stream, via the shared `drawStarStream` helper with
  * `stream: 'aggregate'` — the renderer's `fsLinear` pipeline into the offscreen.
  *
  * ### Why `enabled` shares `starCatalogVisible`
@@ -32,7 +32,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { NEAR0 } from '../slabs';
 import { starCatalogVisible } from '../../../gpu/renderers/starCatalog/cut/starCatalogVisible';
-import { readStarCut } from '../../../gpu/renderers/starCatalog/cut/readStarCut';
+import { starCutFor } from '../../../gpu/renderers/starCatalog/cut/starCutFor';
 import { drawStarStream } from '../../../gpu/renderers/starCatalog/cut/drawStarStream';
 
 export const starAggregatesPass: ContentPass = {
@@ -43,7 +43,7 @@ export const starAggregatesPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.starCatalogRenderer;
     if (renderer === null) return;
-    const prep = readStarCut(state, ctx);
+    const prep = starCutFor(state, ctx);
     if (prep === null) return;
 
     // Viewport is the DESTINATION target's allocated size, not the canvas:

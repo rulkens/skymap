@@ -54,10 +54,15 @@ import { pushStarNode } from './starNodeStream';
  * A sky-cubemap capture face (`view.viewKind === 'capture'`) shares no temporal
  * state with the main view's fade: every one of its cut nodes draws at opacity
  * 1, and `anyNodeFading` is left untouched.
+ *
+ * `views[0]` is the anchor: its eye becomes `originMpc`, its `viewSlot` picks
+ * the CPU stream pair, its `viewKind` decides the capture path, its
+ * `snapshot.nowMs` stamps the fades. `views` is the frusta to union for the
+ * off-screen prune. Both callers pass the same list for both — a lone view
+ * anchors itself; a rig's `advanceStarCut` anchors on its canvas view.
  */
 export function computeStarCut(
   state: PassState,
-  view: FrameView,
   views: readonly FrameView[],
   advanceFades: boolean,
 ): PreparedStarCut | null {
@@ -65,6 +70,7 @@ export function computeStarCut(
   if (renderer === null) return null;
   if (!state.settings.starCatalogs.enabled) return null;
 
+  const view = views[0]!;
   // `view.drawCamPos` equals the NEAR0 view origin.
   const camPos: Vec3 = [view.drawCamPos[0], view.drawCamPos[1], view.drawCamPos[2]];
   const camPosPc: Vec3 = [

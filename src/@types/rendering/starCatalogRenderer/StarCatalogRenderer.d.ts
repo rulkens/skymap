@@ -38,6 +38,7 @@ import type { SourceType } from '../../data/SourceType';
 import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
 import type { StarCatalogPickResources } from './StarCatalogPickResources';
 import type { StarCatalogDrawArgs } from './StarCatalogDrawArgs';
+import type { PreparedStarCut } from '../PreparedStarCut';
 
 export type StarCatalogRenderer = Renderer & {
   /**
@@ -65,4 +66,13 @@ export type StarCatalogRenderer = Renderer & {
    * over already-constructed resources — no per-frame cost.
    */
   pickResources(): StarCatalogPickResources;
+  /**
+   * The frame's one star cut — set once by `runFrame` right after
+   * `advanceStarCut`, read by every real frame view's leaf/aggregate draw
+   * (`starCutFor`). Mirrors `SurfaceTileSubsystem.setLastCut`/`getLastCut`: a
+   * view that owns its own cut (a capture face, the pick path) computes
+   * independently via `readStarCut` instead of reading this.
+   */
+  setFrameCut(cut: PreparedStarCut | null): void;
+  getFrameCut(): PreparedStarCut | null;
 };

@@ -125,6 +125,7 @@ import {
 import type { StarDrawStream } from '../../../../@types/rendering/starCatalogRenderer/StarDrawStream';
 import type { StarCatalogPickResources } from '../../../../@types/rendering/starCatalogRenderer/StarCatalogPickResources';
 import type { StarCatalogDrawArgs } from '../../../../@types/rendering/starCatalogRenderer/StarCatalogDrawArgs';
+import type { PreparedStarCut } from '../../../../@types/rendering/PreparedStarCut';
 
 /**
  * One draw stream's per-source, per-view-slot storage buffers: the
@@ -173,6 +174,12 @@ export function createStarCatalogRenderer(
   device: GPUDevice,
   targetFormat: GPUTextureFormat,
 ): StarCatalogRenderer {
+  // The frame's one star cut (see `setFrameCut`'s doc) — written once by
+  // `runFrame` right after `advanceStarCut`, read by every real frame view's
+  // draw. Plain closure state, not a WeakMap: unlike `readStarCut`'s per-ctx
+  // memo this is ONE fact for the whole frame, so it needs no key at all.
+  let frameCut: PreparedStarCut | null = null;
+
   // ── Camera uniform (shared across sources — see the module header) ────────
   // Sized to STAR_UNIFORM_BYTES: the 80-byte CameraUniforms prefix plus the
   // source-independent `sizePx` + `brightness` + `glowOverlap` scalars, matching
@@ -590,6 +597,10 @@ export function createStarCatalogRenderer(
     loadedCatalogs,
     draw,
     pickResources,
+    setFrameCut: (cut) => {
+      frameCut = cut;
+    },
+    getFrameCut: () => frameCut,
     destroy,
   };
   renderer satisfies Renderer;

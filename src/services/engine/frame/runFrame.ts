@@ -339,9 +339,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // the disk/label planners above — the ONLY call in a real frame that mutates
   // the fade ramps (see `advanceStarCut`'s own doc). Two reasons it lives at
   // frame-body level rather than only inside the star draw:
-  //   1. The three star layers (leaf / aggregate / upsample) call the READ-ONLY
-  //      `readStarCut` during the GPU dispatch, which hits the memo this
-  //      primes under EVERY view — so the walk runs exactly once per frame.
+  //   1. Its result is handed to the renderer as a value (`setFrameCut`,
+  //      mirrors `surfaceTiles.setLastCut` below), which every real frame
+  //      view's `starCutFor` then reads — so the walk runs exactly once per
+  //      frame regardless of how many views the rig draws.
   //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
   //      wake vote used to fire from inside the pass (a `requestRender` scattered
   //      away from the single authority); now the pass computes the vote and
@@ -351,6 +352,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // `views[0]` is `canvas` itself (mono; every rig's views are derived off it),
   // so the walk's origin is the canvas view with no separate argument needed.
   const starCut = advanceStarCut(state, views);
+  state.gpu.starCatalogRenderer?.setFrameCut(starCut);
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
   if (state.gpu.structureMarkerRenderer !== null) {
