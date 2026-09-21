@@ -1,8 +1,8 @@
 // atmosphere/aerialPerspective/bake.wesl — the per-frame camera-local aerial
 // bake. One invocation per (x, y) screen texel marches that pixel's view ray to
 // its end, storing the running in-scatter + throughput at every slice and the
-// whole ray in the last. That end is the RELIEF FLOOR, so past the slices a
-// terrain pixel standing short of the floor is over-fogged by the remainder.
+// whole ray in the last: the RELIEF FLOOR when the ray hits one, else its
+// PERIGEE — a limb ray's only terrain sits near its closest approach, not the top.
 
 import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceStartKm;
 import package::atmosphere::scattering::ScatteringParams;
@@ -134,12 +134,28 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let lastSlice = dims.z - 1u;
   let boundKm = froxelSliceStartKm(dims.z, u.froxelSliceKm);
   if (endKm > boundKm) {
+    // A ray with no floor ahead only has a terrain pixel in the relief band
+    // around its PERIGEE (the ray's closest approach to the planet centre, at
+    // 't = -dot(camPosLocal, dir)' in this camera-local, planet-centred frame):
+    // marching on to the top exit hands that pixel its floor-hitting neighbour's
+    // whole limb chord instead — the same approximation the shell makes
+    // clamping a band ray to the sky-view LUT's horizon row. Only a perigee
+    // already past the baked slices moves the end; low-altitude perigees (a
+    // rover's horizon) keep today's top-exit remainder untouched.
+    var remainderEndKm = endKm;
+    if (ground.x <= 0.0) {
+      let perigeeKm = -dot(u.camPosLocal, dir) * kmPerLocal;
+      if (perigeeKm > boundKm) {
+        remainderEndKm = perigeeKm;
+      }
+    }
+
     let stepKm = u.froxelSliceKm * REMAINDER_STEP_SLICES;
     var t0 = boundKm;
     var k: u32 = 0u;
     loop {
-      if (k >= MAX_REMAINDER_STEPS || t0 >= endKm) { break; }
-      let t1 = min(t0 + stepKm, endKm);
+      if (k >= MAX_REMAINDER_STEPS || t0 >= remainderEndKm) { break; }
+      let t1 = min(t0 + stepKm, remainderEndKm);
       march = marchSegment(march, originKm, dir, cosTheta, t0, t1);
       t0 = t1;
       k = k + 1u;

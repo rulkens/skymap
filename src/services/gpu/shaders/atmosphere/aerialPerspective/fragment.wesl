@@ -62,13 +62,20 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
     return out;
   }
 
-  // GEOMETRY — cut at the depth sample, and at the atmosphere top for anything
-  // beyond it (a mesh in orbit, a farther body): past the top there is no
-  // medium left, so the exit IS the answer.
-  var tEnd = sceneRayDistance(in.uv, depth, u.invMvp, u.camPosLocal);
+  // GEOMETRY — depth beyond the atmosphere top (the Moon rising at the limb, a
+  // mesh in orbit) takes the SKY answer, not the froxel volume: past the top
+  // there is no medium, so that body sees the same integral as the sky beside
+  // it. Without this, the bake's floor-missing remainder (task 12) would hand
+  // it a perigee-stopped, half-length march instead. The froxel branch below
+  // only ever runs for 'tEnd < top.y'.
+  let tEnd = sceneRayDistance(in.uv, depth, u.invMvp, u.camPosLocal);
   let top = raySphere(u.camPosLocal, dir, PLANET_CENTER, 1.0);
-  if (top.y >= 0.0) {
-    tEnd = min(tEnd, top.y);
+  if (top.y >= 0.0 && tEnd >= top.y) {
+    let s = sampleShellRay(dir);
+    out.transmit = vec4<f32>(s.transmit, 1.0);
+    out.emission = vec4<f32>(s.emission, 0.0);
+    out.hit = s.hit;
+    return out;
   }
 
   // The shell frame puts the atmosphere TOP at radius 1 and the volume is
