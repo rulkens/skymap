@@ -18,6 +18,7 @@ import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
 import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
+import { flyToLonLat } from '../../state/camera/flyToLonLatActions';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { AppDispatch } from '../../store/types';
@@ -33,6 +34,17 @@ const RUN_ACTION: Record<
   },
   // Placeholder until PR3, which dispatches `openView` here.
   view: () => {},
+  flyTo: (dispatch, action) => {
+    if (action.kind !== 'flyTo') return;
+    dispatch(
+      flyToLonLat({
+        lonDeg: action.lonDeg,
+        latDeg: action.latDeg,
+        body: 'earth',
+        altKm: action.altKm,
+      }),
+    );
+  },
 };
 
 function CommandPaletteContainer(): React.ReactElement {

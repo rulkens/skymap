@@ -18,10 +18,37 @@ import type { ReactNode } from 'react';
 import { SOURCE_REGISTRY } from '../../data/sources';
 import { CATEGORY_DISPLAY_INFO } from '../../data/structure/categoryDisplayInfo';
 import { BODY_SEARCH_NAMES } from '../../data/bodies/bodySearchNames';
+import { CARD_IMAGE_DIR } from '../../data/palette/cardImageDir';
+import { SHOT_CARD_IDS } from '../../data/palette/shotCardIds';
 import { bodyRowChip } from './utils/bodyRowChip';
+import { actionForRow } from './utils/actionForRow';
 import { MILKY_WAY_NAMES } from './paletteRowModel';
 import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
+
+/**
+ * A milkyWay/body/structure row's leading visual: the captured card shot
+ * when `actionForRow` resolves to a focus id in `SHOT_CARD_IDS` (the same id
+ * grammar the URL deep-link layer uses), else today's letter glyph.
+ */
+function shotOrGlyph(row: ScoredRow, label: string): ReactNode {
+  const action = actionForRow(row);
+  if (action.kind === 'focus' && SHOT_CARD_IDS.has(action.focusId)) {
+    return (
+      <img
+        className={styles.thumb}
+        src={`${CARD_IMAGE_DIR}/${action.focusId}.webp`}
+        alt=""
+        loading="lazy"
+      />
+    );
+  }
+  return (
+    <span className={styles.glyph} aria-hidden="true">
+      {label[0] ?? '·'}
+    </span>
+  );
+}
 
 /** What InfoCard's row renderer needs, computed per row kind. */
 type RowView = {
@@ -62,16 +89,12 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
             ) : null,
         }
       : EMPTY_ROW_VIEW,
-  // The Milky Way is a procedural backdrop with no atlas WebP, so it renders a
-  // first-letter glyph like an alias row, but it is its own row kind.
-  milkyWay: () => ({
+  // The Milky Way is a procedural backdrop with no atlas WebP; it renders its
+  // captured card shot (see `shotOrGlyph`) or falls back to a letter glyph.
+  milkyWay: (m) => ({
     key: 'milkyWay',
     testid: 'milky-way-row',
-    leading: (
-      <span className={styles.glyph} aria-hidden="true">
-        {MILKY_WAY_NAMES[0][0]}
-      </span>
-    ),
+    leading: shotOrGlyph(m, MILKY_WAY_NAMES[0]),
     primary: MILKY_WAY_NAMES[0],
     secondary: <span className={styles.secondary}>{MILKY_WAY_NAMES.slice(1).join(' · ')}</span>,
   }),
@@ -100,10 +123,10 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
-  // Scene-body row — letter glyph like the Milky Way (no atlas thumb for a
-  // procedurally-rendered sphere). Aliases come from the same lookup the ranker
-  // scores over, so a row shows exactly the names it can be found by; the chip
-  // is the body's constellation or, failing that, its scale regime (e.g.
+  // Scene-body row — captured card shot when one exists (see `shotOrGlyph`),
+  // else a letter glyph. Aliases come from the same lookup the ranker scores
+  // over, so a row shows exactly the names it can be found by; the chip is
+  // the body's constellation or, failing that, its scale regime (e.g.
   // "Alpha Canis Majoris · … · Canis Major", or "Sagittarius A* · Galactic
   // Centre").
   body: (m) => {
@@ -113,11 +136,7 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
     return {
       key: `body:${m.body.id}`,
       testid: `body-row-${m.body.id}`,
-      leading: (
-        <span className={styles.glyph} aria-hidden="true">
-          {m.body.label[0] ?? '·'}
-        </span>
-      ),
+      leading: shotOrGlyph(m, m.body.label),
       primary: m.body.label,
       secondary: (
         <>
@@ -127,25 +146,45 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
-  // Structure row — glyph placeholder like an alias (no atlas thumb) + a
-  // category chip (Cluster / Supercluster / Void / Group) from the per-category
-  // display copy, plus the Abell designation as a secondary name when present.
+  // Structure row — captured card shot when one exists (see `shotOrGlyph`),
+  // else a glyph placeholder, + a category chip (Cluster / Supercluster /
+  // Void / Group) from the per-category display copy, plus the Abell
+  // designation as a secondary name when present.
   structure: (m) => {
     if (m.kind !== 'structure') return EMPTY_ROW_VIEW;
     const { id, name, category, abell } = m.entry;
     return {
       key: `structure:${id}`,
       testid: `structure-row-${id}`,
-      leading: (
-        <span className={styles.glyph} aria-hidden="true">
-          {name[0] ?? '·'}
-        </span>
-      ),
+      leading: shotOrGlyph(m, name),
       primary: name,
       secondary: (
         <>
           {abell !== null && abell !== name && <span className={styles.secondary}>{abell}</span>}
           <span className={styles.source}>{CATEGORY_DISPLAY_INFO[category].shortLabel}</span>
+        </>
+      ),
+    };
+  },
+  // Earth-place row — letter glyph (no captured shot for these) + a fixed
+  // 'Earth' chip, since every row here is on the one body.
+  place: (m) => {
+    if (m.kind !== 'place') return EMPTY_ROW_VIEW;
+    const primary = m.entry.names[0] ?? '(unnamed)';
+    const aliases = m.entry.names.slice(1);
+    return {
+      key: `place:${m.entry.id}`,
+      testid: `place-row-${m.entry.id}`,
+      leading: (
+        <span className={styles.glyph} aria-hidden="true">
+          {primary[0] ?? '·'}
+        </span>
+      ),
+      primary,
+      secondary: (
+        <>
+          {aliases.length > 0 && <span className={styles.secondary}>{aliases.join(' · ')}</span>}
+          <span className={styles.source}>Earth</span>
         </>
       ),
     };
