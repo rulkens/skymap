@@ -38,10 +38,11 @@ export type OrbitTrailRenderer = Renderer & {
    *
    * `depthView` is the depth of the target the caller's step samples, and
    * `depthFrame` the frame to unproject it in — the row that stamped it. A
-   * `null` frame is the no-body-row case, where every texel still holds the
-   * far-plane clear and the spheres are the only occluders; the renderer
-   * packs an identity placeholder the shader never reads. The bind group
-   * holding `depthView` is rebuilt only when that view's identity changes.
+   * `null` frame arrives only together with the far-cleared placeholder
+   * view, never the real target's view, so every texel reads "nothing in
+   * front" and the spheres are the only occluders; the renderer packs an
+   * identity placeholder the shader never reads. The bind group holding
+   * `depthView` is rebuilt only when that view's identity changes.
    *
    * `showImpostor` (default `false`, the
    * `debug.overlays['orbit-trail-impostor']` toggle) issues one ADDITIONAL

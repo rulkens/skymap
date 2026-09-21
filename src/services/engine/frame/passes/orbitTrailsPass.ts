@@ -163,7 +163,8 @@ export const orbitTrailsPass: ContentPass = {
       // cleared the sampled depth. Its own f64 `vp` (the invariant above), scaled
       // by metres-per-km so the fragment's reconstructed distances land in the
       // same km as the eye-relative orbit points it compares them against.
-      const row = view.sampledDepth?.row ?? null;
+      const sampledDepth = view.sampledDepth!;
+      const row = sampledDepth.row;
       const pose =
         row !== null && row.frame.kind === 'body-m' ? ctx.bodyPose(row.frame.bodyId) : null;
       const depthFrame: OrbitTrailDepthFrame | null =
@@ -181,7 +182,11 @@ export const orbitTrailsPass: ContentPass = {
         count,
         sceneOccluderSpheres(state, ctx),
         depthFrame,
-        view.sampledDepth!.view,
+        // A null frame must arrive with the far placeholder, never the real
+        // view — that is what makes the shader's FAR_DEPTH early-out (not an
+        // assumption about who last cleared this target) the thing keeping
+        // an unresolved frame safe.
+        depthFrame === null ? ctx.renderTargets.farDepthView() : sampledDepth.view,
         state.settings.debug.overlays['orbit-trail-impostor'],
       );
     }

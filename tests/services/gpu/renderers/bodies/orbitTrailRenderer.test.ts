@@ -17,6 +17,7 @@ import {
   createOrbitTrailRenderer,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
+  OCCLUDER_VIEWPORT_OFFSET,
 } from '../../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 import {
   MAX_ORBIT_OCCLUDERS,
@@ -214,12 +215,30 @@ describe('createOrbitTrailRenderer', () => {
     ]);
   });
 
+  it('packs the occluder uniform viewport from the instance record, not a re-derived value', () => {
+    // `occluderViewport.set(instances.subarray(18, 20))` is a hand-written
+    // index into a foreign record — nothing else in this suite reads the
+    // packed bytes back, so a drifted offset or a wrong slice would pass
+    // silently.
+    const device = mockDevice();
+    const renderer = createOrbitTrailRenderer(device, 'rgba16float');
+    const pass = mockPass();
+    const instances = new Float32Array(1 * INSTANCE_FLOATS);
+    instances[18] = 1920;
+    instances[19] = 1080;
+
+    const writeMock = device.queue.writeBuffer as ReturnType<typeof vi.fn>;
+    renderer.draw(pass, instances, 1, NO_OCCLUDERS, NO_DEPTH_FRAME, mockDepthView());
+
+    const occluderScratch = writeMock.mock.calls[1]![2] as ArrayBuffer;
+    const viewport = new Float32Array(occluderScratch, OCCLUDER_VIEWPORT_OFFSET, 2);
+    expect(Array.from(viewport)).toEqual([1920, 1080]);
+  });
+
   it('rebuilds the bind group only when the depth view identity changes', () => {
-    // `depthViewOf('foreground:0')` hands back a NEW view once the row
-    // reallocates, and a group over the destroyed texture is a validation
-    // error — on iOS a silently dropped frame. Identity, not size, is the key:
-    // it is the only thing that always changes on a reallocation. Rebuilding
-    // every frame instead would be pure per-frame garbage.
+    // Same bind-group-cache-by-view-identity pattern as the source's
+    // `bindGroup` local — see its comment for why. Rebuilding every frame
+    // instead would be pure per-frame garbage.
     const bindGroups: GPUBindGroupDescriptor[] = [];
     const device = mockDevice({ bindGroups });
     const renderer = createOrbitTrailRenderer(device, 'rgba16float');

@@ -14,6 +14,7 @@
 import type { OrbitTrailDepthFrame } from '../../../../@types/rendering/OrbitTrailDepthFrame';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { OrbitTrailRenderer } from '../../../../@types/rendering/OrbitTrailRenderer';
+import type { Vec3 } from '../../../../@types/math/Vec3';
 import vsCode from '../../shaders/bodies/orbitTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -74,12 +75,17 @@ export const OCCLUDER_COUNT_OFFSET = 0;
 export const OCCLUDER_SPHERES_OFFSET = 16;
 export const OCCLUDER_INV_MVP_OFFSET = OCCLUDER_SPHERES_OFFSET + MAX_ORBIT_OCCLUDERS * 16;
 export const OCCLUDER_CAM_POS_OFFSET = OCCLUDER_INV_MVP_OFFSET + 64; // mat4x4<f32>
-export const OCCLUDER_VIEWPORT_OFFSET = OCCLUDER_CAM_POS_OFFSET + 16; // vec3<f32> + pad
+export const OCCLUDER_VIEWPORT_OFFSET = OCCLUDER_CAM_POS_OFFSET + 16; // camPosKm (vec3) ends at 348; vec2 aligns to 8 → 352
 export const OCCLUDER_UNIFORM_BYTES = OCCLUDER_VIEWPORT_OFFSET + 16; // vec2<f32> + pad
 
-/** Column-major identity, packed when no depth frame resolved (never read:
- *  the far placeholder leaves every texel at the shader's FAR_DEPTH). */
+/** Column-major identity, packed when the caller hands a null depth frame —
+ *  always alongside the far-cleared placeholder view, so this matrix is
+ *  never actually read by the shader. */
 const IDENTITY_MAT4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+
+/** Packed alongside `IDENTITY_MAT4` for the same null-frame draw — hoisted
+ *  so a null frame allocates nothing. */
+const ZERO_VEC3: Vec3 = [0, 0, 0];
 
 /** Float slot of `viewportPx.x` in an instance record (location 5's `.zw`).
  *  Taking the viewport from the record the vertex stage divides by is what
@@ -219,7 +225,7 @@ export function createOrbitTrailRenderer(
     occluderCount[0] = spheres;
     occluderSpheres.set(occluders.spheresKm.subarray(0, spheres * 4));
     occluderInvMvp.set(depthFrame === null ? IDENTITY_MAT4 : depthFrame.invMvp);
-    occluderCamPos.set(depthFrame === null ? [0, 0, 0] : depthFrame.camPosKm);
+    occluderCamPos.set(depthFrame === null ? ZERO_VEC3 : depthFrame.camPosKm);
     occluderViewport.set(instances.subarray(INSTANCE_VIEWPORT_FLOAT, INSTANCE_VIEWPORT_FLOAT + 2));
     device.queue.writeBuffer(occluderBuffer, 0, occluderScratch);
 

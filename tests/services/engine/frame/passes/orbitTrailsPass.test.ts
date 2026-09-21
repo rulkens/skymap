@@ -128,6 +128,9 @@ function makeDrawCtx(): ReadyFrameContext {
     simDays: CONST_J2000,
     focusBlend: 0,
     nowMs: 0,
+    // Distinct from `sampledDepth.view` so a null-frame draw's depthView is
+    // pinned to THIS, never the sampled row's texture.
+    renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
   } as unknown as ReadyFrameContext;
 }
 
@@ -137,6 +140,10 @@ const DEPTH_ROW_EYE_M: Vec3 = [6.6e6, -1.2e6, 3.4e5];
 
 // The depth texture the sampled row stamped; identity is all the layer forwards.
 const DEPTH_VIEW_STUB = {} as GPUTextureView;
+
+// `ctx.renderTargets.farDepthView()`'s stand-in — what a null depth frame
+// must arrive bound to, never `DEPTH_VIEW_STUB`.
+const FAR_DEPTH_VIEW_STUB = {} as GPUTextureView;
 
 /**
  * The `body-m` row that last cleared `foreground:0`'s depth. Its f64 vp is
@@ -435,19 +442,24 @@ describe('orbitTrailsPass.draw', () => {
     expect(depthFrame!.camPosKm).toEqual([6600, -1200, 340]);
   });
 
-  it('hands a null depth frame when no body row cleared the depth', () => {
+  it('hands the far placeholder, not the sampled view, when no body row cleared the depth', () => {
     // The far-cleared placeholder case (`sampledDepth.row === null`), and the
-    // `world-mpc` row case: neither carries a body pose to unproject through,
-    // so the trails fall back to the analytic occluder spheres alone.
+    // `world-mpc` row case: neither carries a body pose to unproject through.
+    // A null depth frame must arrive bound to `ctx.renderTargets.farDepthView()`
+    // — never `sampledDepth.view` — so the shader's FAR_DEPTH early-out, not an
+    // assumption about that texture's contents, is what makes it safe. The
+    // converse (a body-m row hands the sampled view) is pinned above, in
+    // 'derives the depth frame from the sampled row...'.
     const renderer = makeRendererSpy();
 
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(null), makeDrawCtx(), makeState(renderer));
     expect(renderer.draw.mock.calls[0]![4]).toBeNull();
-    expect(renderer.draw.mock.calls[0]![5]).toBe(DEPTH_VIEW_STUB);
+    expect(renderer.draw.mock.calls[0]![5]).toBe(FAR_DEPTH_VIEW_STUB);
 
     renderer.draw.mockClear();
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(makeSlab()), makeDrawCtx(), makeState(renderer));
     expect(renderer.draw.mock.calls[0]![4]).toBeNull();
+    expect(renderer.draw.mock.calls[0]![5]).toBe(FAR_DEPTH_VIEW_STUB);
   });
 
   it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
@@ -490,6 +502,7 @@ describe('orbitTrailsPass.draw', () => {
       simDays,
       focusBlend: 0,
       nowMs: 0,
+      renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
     } as unknown as ReadyFrameContext;
 
     orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));
@@ -563,6 +576,7 @@ describe('orbitTrailsPass.draw', () => {
       simDays,
       focusBlend: 0,
       nowMs: 0,
+      renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
     } as unknown as ReadyFrameContext;
 
     orbitTrailsPass.draw(PASS_STUB, view, ctx, makeState(renderer));

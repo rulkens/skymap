@@ -182,8 +182,8 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       return view;
     },
     // What a `{ sample }` step reads: no row in this fixture clears depth, so
-    // every sampling step gets the far-cleared placeholder.
-    depthViewOf: (id: string) => ({ __id: `${id}-depth-view` }) as unknown as GPUTextureView,
+    // every sampling step gets the far-cleared placeholder — `depthViewOf`
+    // is unreachable here and deliberately absent.
     farDepthView: () => FAR_DEPTH_VIEW,
     destroy: vi.fn(),
   } as any;

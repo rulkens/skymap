@@ -245,10 +245,8 @@ export function createAerialPerspectiveRenderer(
   function draw(pass: GPURenderPassEncoder, bodyId: string, depthView: GPUTextureView): void {
     const binding = bindingFor(bodyId);
 
-    // `depthViewOf('foreground:0')` hands back a NEW view once `reconcile`
-    // reallocates the row, and a bind group over the destroyed texture is a
-    // validation error — on iOS a silently dropped frame. Identity, not size,
-    // is the key: it is the only thing that always changes on a reallocation.
+    // Same bind-group-cache-by-view-identity pattern as orbitTrailRenderer.ts's
+    // `bindGroup` local — see its comment for why.
     if (binding.applyGroup === null || binding.applyGroup.depthView !== depthView) {
       binding.applyGroup = {
         depthView,
