@@ -2,6 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { actionForRow } from '../../../../src/components/CommandPalette/utils/actionForRow';
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
+import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
+import { viewRegistry } from '../../../../src/data/views/viewRegistry';
+import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
@@ -29,6 +32,13 @@ const COMA: StructureSearchEntry = {
 };
 
 describe('actionForRow', () => {
+  it('a famous row → its curated seed id', () => {
+    expect(actionForRow({ kind: 'famous', entry: M31, score: 0 })).toEqual({
+      kind: 'focus',
+      focusId: 'm31',
+    });
+  });
+
   it('an alias row → the shared galaxy-id ladder pgc- rung', () => {
     expect(actionForRow({ kind: 'alias', entry: NGC4565, score: 0 })).toEqual({
       kind: 'focus',
@@ -40,6 +50,36 @@ describe('actionForRow', () => {
     expect(actionForRow({ kind: 'structure', entry: COMA, score: 0 })).toEqual({
       kind: 'focus',
       focusId: 'cluster-coma',
+    });
+  });
+
+  it('the milkyWay row → the fixed singleton focus id', () => {
+    expect(actionForRow({ kind: 'milkyWay', score: 0 })).toEqual({
+      kind: 'focus',
+      focusId: MILKY_WAY_FOCUS_ID,
+    });
+  });
+
+  it('a body row → the seed id under the body focus prefix', () => {
+    expect(actionForRow({ kind: 'body', body: SCENE_EARTH, score: 0 })).toEqual({
+      kind: 'focus',
+      focusId: `body-${SCENE_EARTH.id}`,
+    });
+  });
+
+  it('a view row → a view action carrying the registry id, not a focus', () => {
+    const view = viewRegistry.cosmicWeb;
+    expect(actionForRow({ kind: 'view', view, score: 0 })).toEqual({
+      kind: 'view',
+      viewId: view.id,
+    });
+  });
+
+  it('a tour row → a tour action carrying the registry id, not a focus', () => {
+    const tour = tourRegistry.grandTour;
+    expect(actionForRow({ kind: 'tour', tour, score: 0 })).toEqual({
+      kind: 'tour',
+      tourId: tour.id,
     });
   });
 });

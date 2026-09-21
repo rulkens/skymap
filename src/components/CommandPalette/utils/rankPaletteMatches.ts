@@ -21,6 +21,8 @@ import { scoreAliasMatch } from './scoreAliasMatch';
 import { MILKY_WAY_NAMES } from '../paletteRowModel';
 import { SCENE_BODIES } from '../../../data/bodies/sceneBodies';
 import { BODY_SEARCH_NAMES } from '../../../data/bodies/bodySearchNames';
+import { viewRegistry } from '../../../data/views/viewRegistry';
+import { tourRegistry } from '../../../data/animation/tours/tourRegistry';
 import type { ScoredRow } from '../paletteRowModel';
 import type { FamousGalaxyMetaEntry } from '../../../@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../@types/engine/AliasIndexEntry';
@@ -90,11 +92,32 @@ export function rankPaletteMatches(
     return { kind: 'body', body, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
   }).filter((s) => s.score > 0);
 
-  // Famous rows and scene bodies are one class of primary named object: merge
-  // and sort together so an exact body match ("earth") outranks a famous row
-  // that only matched "earth" in its description. The sort is stable, so a
-  // famous row stays ahead of a body on an exact score tie (famous listed first).
-  const primaryScored = [...famousScored, ...bodyScored].sort((a, b) => b.score - a.score);
+  // Views and tours are scored on their registry label alone — only a
+  // registry row gets a search row (spec §7.4), so a focus card never
+  // duplicates the object it takes over to. `tourRegistry` includes `demo`,
+  // a developer-only tour; there is no "user-facing" flag on `Tour` to gate
+  // it out, so it gets a row like any other until one exists.
+  const viewScored: ScoredRow[] = Object.values(viewRegistry)
+    .map<ScoredRow>((view) => {
+      const raw = scoreFamousMatch({ id: view.id, names: [view.label], description: '' }, query);
+      return { kind: 'view', view, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+    })
+    .filter((s) => s.score > 0);
+
+  const tourScored: ScoredRow[] = Object.values(tourRegistry)
+    .map<ScoredRow>((tour) => {
+      const raw = scoreFamousMatch({ id: tour.id, names: [tour.label], description: '' }, query);
+      return { kind: 'tour', tour, score: raw > 0 ? raw + PRIMARY_TIEBREAK : 0 };
+    })
+    .filter((s) => s.score > 0);
+
+  // Famous rows, scene bodies, views and tours are one class of primary named
+  // object: merge and sort together so an exact body match ("earth") outranks
+  // a famous row that only matched "earth" in its description. The sort is
+  // stable, so earlier arrays stay ahead on an exact score tie.
+  const primaryScored = [...famousScored, ...bodyScored, ...viewScored, ...tourScored].sort(
+    (a, b) => b.score - a.score,
+  );
 
   const aliasScored: ScoredRow[] = (aliasIndex ?? [])
     .map<ScoredRow>((entry) => ({
