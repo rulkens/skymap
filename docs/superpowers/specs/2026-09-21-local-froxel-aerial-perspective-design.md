@@ -47,6 +47,10 @@ declared frame joint and adds the second.
   (tier `reconcile` destroys the sky-view texture the apply binds; the owner rebinds).
 - **Orbit trails IN scope:** the second consumer of sampled scene depth. Analytic sphere
   occluders STAY for every body the depth does not hold.
+- **Two consumers added in execution:** the scene-body captions and their leader lines
+  (task 10), and the outside-shell atmosphere (task 11), which classifies each ray by that
+  depth instead of by the relief-floor sphere — the limb band fix. The joint is five rows
+  now, and only the shell's own draw moved: the inside froxel path is untouched.
 - **Mars density altitude-zero OUT of scope** (own item, §8).
 - **Not touched:** the daytime-stars inside-sky bug (known, separate).
 

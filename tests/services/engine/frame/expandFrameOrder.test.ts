@@ -348,6 +348,20 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     ]);
   });
 
+  it('the real body roster samples depth after every opaque row and both shells', () => {
+    // The two rows in the marker READ that depth: the contact decals project
+    // onto it, and the atmosphere shell classifies each ray by it. Anything
+    // that stamps depth must therefore be listed before them, and only the
+    // meshes — which want the shell already drawn behind them — after.
+    const steps = program({ foregroundChain: [3] });
+    const first = steps.findIndex(
+      (step) => step.kind === 'render' && step.target === 'foreground:0',
+    );
+    expect(namesOf(steps[first]).at(-1)).toBe('rings');
+    expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
+    expect(namesOf(steps[first + 2])).toEqual(['mesh-bodies']);
+  });
+
   it('refuses a body roster with a second marker', () => {
     expect(() =>
       foreground([3], ['a', { sampleDepth: ['d'] }, 'b', { sampleDepth: ['d'] }]),

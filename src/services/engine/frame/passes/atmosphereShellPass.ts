@@ -12,6 +12,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { atmosphereDrawList } from '../atmosphereDrawList';
 import { atmosphereShellUniforms } from '../atmosphereShellUniforms';
+import { sampledDepthKmFrame } from '../../../../utils/camera/sampledDepthKmFrame';
 
 export const atmosphereShellPass: ContentPass = {
   name: 'atmosphere-shell',
@@ -32,6 +33,20 @@ export const atmosphereShellPass: ContentPass = {
     const bodyId = view.slab.frame.bodyId;
     const entry = atmosphereDrawList(state, ctx).find((e) => e.body.id === bodyId);
     if (entry === undefined) return;
-    renderer.draw(pass, entry.body.id, atmosphereShellUniforms(entry, view.slab, ctx, state));
+    // The depth this row's opaque passes stamped: every ray the fragment
+    // classifies ends at it, in the sampled row's own frame scaled to km.
+    const sampledDepth = view.sampledDepth;
+    const frame =
+      sampledDepth === undefined ? null : sampledDepthKmFrame(sampledDepth.row, ctx.bodyPose);
+    renderer.draw(pass, entry.body.id, atmosphereShellUniforms(entry, view.slab, ctx, state), {
+      frame,
+      // A null frame must arrive with the far placeholder, never the real view —
+      // that is what makes the shader's FAR_DEPTH arm, not an assumption about
+      // who last cleared this target, the thing keeping it safe.
+      view: frame === null ? ctx.renderTargets.farDepthView() : sampledDepth!.view,
+      viewportPx: view.viewportPx,
+      // The fragment marches in atmosphere-top units; the depth reconstructs km.
+      kmToLocal: 1 / entry.params.atmosphereTopKm,
+    });
   },
 };

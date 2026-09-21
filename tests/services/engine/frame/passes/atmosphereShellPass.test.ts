@@ -27,6 +27,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { makeSlab } from '../../../../fixtures/makeSlab';
+import type { AtmosphereShellDepth } from '../../../../../src/@types/rendering/AtmosphereShellDepth';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
@@ -131,8 +132,12 @@ function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext 
     bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
     fovYRad: (60 * Math.PI) / 180,
+    renderTargets: { farDepthView: () => FAR_DEPTH_VIEW },
   } as unknown as ReadyFrameContext;
 }
+
+const FAR_DEPTH_VIEW = { label: 'far-placeholder' } as unknown as GPUTextureView;
+const ROW_DEPTH_VIEW = { label: 'foreground:0-depth' } as unknown as GPUTextureView;
 
 const CTX_STUB = {} as ReadyFrameContext;
 
@@ -238,6 +243,42 @@ describe('atmosphereShellPass.draw', () => {
     expect(earthUniforms[19]).toBeCloseTo(expectedEarthBottom);
     expect(marsUniforms[19]).toBeCloseTo(expectedMarsBottom);
     expect(earthUniforms[19]).not.toBeCloseTo(marsUniforms[19]!, 3);
+  });
+
+  it('hands the row’s sampled depth over with the frame that unprojects it, scaled to this body', () => {
+    // The fragment ends every ray at this depth, in atmosphere-top units — so
+    // a `kmToLocal` taken from the wrong body (or dropped) would cut the march
+    // at a distance that is right in km and wrong by a factor of the radius.
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const state = makeState({ draw: drawSpy });
+    const view = makeBodyView('mars' as BodyId);
+
+    atmosphereShellPass.draw(
+      PASS_STUB,
+      { ...view, sampledDepth: { view: ROW_DEPTH_VIEW, row: view.slab } },
+      makeCtx(),
+      state,
+    );
+
+    const depth = drawSpy.mock.calls[0]![3] as AtmosphereShellDepth;
+    expect(depth.view).toBe(ROW_DEPTH_VIEW);
+    expect(depth.frame).not.toBeNull();
+    expect(depth.viewportPx).toBe(view.viewportPx);
+    expect(depth.kmToLocal).toBeCloseTo(1 / ATMOSPHERE_PARAMS.mars!.atmosphereTopKm);
+  });
+
+  it('binds the far placeholder, never the real view, when no depth row resolves', () => {
+    // A step with no `{ sample }` marker (a capture face) leaves `sampledDepth`
+    // undefined; pairing a null frame with the real texture would let the
+    // fragment unproject live depth through an identity matrix.
+    const drawSpy = vi.fn<(...args: unknown[]) => void>();
+    const state = makeState({ draw: drawSpy });
+
+    atmosphereShellPass.draw(PASS_STUB, makeBodyView('earth' as BodyId), makeCtx(), state);
+
+    const depth = drawSpy.mock.calls[0]![3] as AtmosphereShellDepth;
+    expect(depth.frame).toBeNull();
+    expect(depth.view).toBe(FAR_DEPTH_VIEW);
   });
 });
 

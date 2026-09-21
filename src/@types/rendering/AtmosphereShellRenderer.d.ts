@@ -29,21 +29,17 @@
  * passes in the same encoder (the two-pass ordering `flowFieldRenderer` and
  * `createGenerationPipelines` document). This is the on-device bake of spec §8.2.
  *
- * ### Two-sided draw + front_facing duty split + depth test, no branch
+ * ### Two-sided draw + front_facing duty split, against SAMPLED depth
  *
  * The shell pipeline draws BOTH walls (`cullMode: 'none'`) and the fragment splits
- * duty by `@builtin(front_facing)`: the NEAR (front) wall carries the over-disc
- * aerial perspective (haze on the lit disc), the FAR (back) wall carries the limb
- * + sky. Depth-testing EACH wall against the already-stamped opaque scene
- * (`depthCompare: 'greater-equal'`, `depthWriteEnabled: false`) keeps cross-body
- * occlusion for both — a nearer body occludes the disc haze via the near wall's
- * depth and the limb via the far wall's — with no branch. Under the NEAR0 slab's
- * reversed-Z convention (clear `0.0`, greater-z-wins) the compare is GREATER-equal,
- * not less-equal: the EQUAL half lets the shell that hugs a body's own surface
- * still pass against the depth that surface stamped, so the atmosphere is not
- * culled by the very sphere it wraps. `cloudShellRenderer`
- * back-culls (`cullMode: 'back'`); this shell and `ringRenderer` share
- * `cullMode: 'none'`.
+ * duty by `@builtin(front_facing)`: the NEAR (front) wall carries every pixel whose
+ * sampled scene depth is finite (the over-disc haze, and the terrain at the limb),
+ * the FAR (back) wall the FAR-depth rest (limb over space, and sky). The pipeline
+ * declares NO depth state at all — its step samples `foreground:0`'s depth rather
+ * than attaching it, and a pipeline naming a depth format is rejected by a pass
+ * that has none — so a body in front of the shell is dropped in the fragment, by a
+ * sampled depth nearer than the shell entry. `cloudShellRenderer` back-culls
+ * (`cullMode: 'back'`); this shell and `ringRenderer` share `cullMode: 'none'`.
  *
  * ### One bundle per `paramsById` row
  *
@@ -66,6 +62,7 @@
  * Extends `Renderer` for the shared `label` + `destroy` contract.
  */
 
+import type { AtmosphereShellDepth } from './AtmosphereShellDepth';
 import type { Renderer } from './Renderer';
 
 export type AtmosphereShellRenderer = Renderer & {
@@ -131,8 +128,18 @@ export type AtmosphereShellRenderer = Renderer & {
    * `packAtmosphereUniforms` (MVP + inverse MVP + body-local sun dir +
    * bottomRadius + camPosLocal + exposure + ring ratios). THROWS on an unknown
    * `bodyId` (a programming error — callers only pass `atmosphereDrawList` ids).
+   *
+   * `depth` is the sampled scene depth the fragment classifies its rays by. Its
+   * `view` is what the body's bind group is keyed on, so handing a new view
+   * (after a `renderTargets` reallocation) rebuilds that group rather than
+   * leaving it pointed at a destroyed texture.
    */
-  draw(pass: GPURenderPassEncoder, bodyId: string, uniforms: Float32Array): void;
+  draw(
+    pass: GPURenderPassEncoder,
+    bodyId: string,
+    uniforms: Float32Array,
+    depth: AtmosphereShellDepth,
+  ): void;
 
   /**
    * Bake body `bodyId`'s camera-local froxel volumes into the caller's compute

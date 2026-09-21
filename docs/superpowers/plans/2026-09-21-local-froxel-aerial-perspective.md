@@ -16,6 +16,11 @@ existing analytic-sphere clearance.
 
 **Tech Stack:** WebGPU compute + storage 3D textures, WESL shaders, Vitest.
 
+**Added during execution (tasks 9–11, briefs in `.superpowers/sdd/2026-09-21-local-froxel-aerial-perspective/`):**
+the last froxel slice carries the ray to its end; scene-body captions and leader lines take the same
+sampled depth; and the OUTSIDE-shell atmosphere becomes its fifth consumer, classifying each ray by
+that depth instead of by the relief-floor sphere (the bright limb band).
+
 **Spec:** `docs/superpowers/specs/2026-09-21-local-froxel-aerial-perspective-design.md` (§4 design,
 §6 verification). Ground preparation (§3) is DONE: prep 1 merged in #790, prep 2+3 are commits
 d5c8675d4 and add7029d8 on this branch. Port source for the bake and volume plumbing: the abandoned

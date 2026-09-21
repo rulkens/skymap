@@ -420,13 +420,7 @@ export const GPU_HANDLE_ROWS = [
   {
     key: 'atmosphereShellRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
-      createAtmosphereShellRenderer(
-        deps.ctx.device,
-        HDR_TARGET_FORMAT,
-        FOREGROUND_DEPTH_FORMAT,
-        SLAB_REVERSED_Z[NEAR0]!,
-        ATMOSPHERE_PARAMS,
-      ),
+      createAtmosphereShellRenderer(deps.ctx.device, HDR_TARGET_FORMAT, ATMOSPHERE_PARAMS),
   },
 
   // ── wireInput.ts-phase rows, declared LAST ───────────────────────────────

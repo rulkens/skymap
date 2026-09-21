@@ -62,23 +62,17 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // (a sub-pixel Sun would smear through the prefilter into a false highlight);
   // `body-glints` / `orbit-trails` because neither is environment a surface
   // reflects. The NEAR0 roster is empty on purpose — the blit rides COSMO — so
-  // a probe face opens two steps, not three. `atmosphere-shell` here reads the
-  // sky-view LUT the prelude baked for the MAIN camera last frame (compute steps
-  // submit after the faces): near-identical geometry, so leave the order be.
+  // a probe face opens two steps, not three. `atmosphere-shell` is excluded
+  // because it classifies its rays by a sampled scene depth, which a capture
+  // face never resolves, and its pipeline carries no depth state to draw into
+  // a face's depth-attached step with: a probe reflects the body and its sky,
+  // not that body's limb glow.
   {
     kind: 'capture',
     captures: ['probe'],
     cosmoPasses: ['sky-cubemap-blit'],
     near0Passes: [],
-    bodyPasses: [
-      'earth',
-      'surface-tiles',
-      'cloud-shell',
-      'planets',
-      'textured-bodies',
-      'rings',
-      'atmosphere-shell',
-    ],
+    bodyPasses: ['earth', 'surface-tiles', 'cloud-shell', 'planets', 'textured-bodies', 'rings'],
   },
   // The half-res scalar-volume raymarch into its own offscreen. It is merged
   // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,
@@ -199,16 +193,13 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   //
   // TWO rosters because the chain interleaves the NEAR0 row — the star spheres,
   // the Sun's own — with the body rows. Within each, order is depth-tested
-  // opaque and so a listing choice, with two deliberate exceptions at the end:
-  // `rings` and `atmosphere-shell` are the group's translucent shells. Both
-  // write no depth and blend straight-alpha OVER, so they must follow every
-  // opaque sphere already stamped there — the far ring half and the over-disc
-  // atmosphere are then occluded, while the limb over space passes.
-  // `atmosphere-shell` trails `rings` because it is the outermost of the two.
+  // opaque and so a listing choice, with two deliberate exceptions: `rings`
+  // writes no depth and blends straight-alpha OVER, so it must follow every
+  // opaque sphere already stamped there — the far ring half is then occluded.
   // `cloud-shell` is the same exception placed early, immediately after the
   // `earth` surface it depth-tests against.
   //
-  // `mesh-bodies` draws LAST, after both shells, and that is NOT the
+  // `mesh-bodies` draws LAST, after the depth marker, and that is NOT the
   // depth-tested listing choice the rest of this roster is. The shells write no
   // depth, so a mesh drawn last still depth-tests correctly against every opaque
   // sphere and only the shells' own fragments are overdrawn — which is also what
@@ -226,13 +217,18 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
       // cuts the ground is the reading. Not in the probe roster above — a
       // cursor has no meaning on a capture face.
       'terrain-pick-marker',
-      // Depth now holds the ground; the rover and the haze over it come after.
-      { sampleDepth: ['contact-shadows'] },
       'cloud-shell',
       'planets',
       'textured-bodies',
       'rings',
-      'atmosphere-shell',
+      // Depth now holds every opaque surface of this row, which is what both
+      // of these READ: the contact decals project onto it, and the atmosphere
+      // shell ends each ray at it — the classification that makes terrain
+      // standing above the relief floor at the limb hazy rather than bare.
+      // The decals also now draw over `cloud-shell`'s colour, so a footprint
+      // paints on a cloud deck in front of it. Accepted: the alternative costs
+      // the shell the depth it exists to read (one marker per roster).
+      { sampleDepth: ['contact-shadows', 'atmosphere-shell'] },
       'mesh-bodies',
     ],
   },
