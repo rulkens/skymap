@@ -26,11 +26,11 @@
 Decided 2026-09-21. The cuts are the dependency seams, and the order front-loads
 the pose helper because the user cannot frame two of the four views without it.
 
-| PR                        | Tasks              | Lands                                                                     |
-| ------------------------- | ------------------ | ------------------------------------------------------------------------- |
-| **3a** — the bracket      | 10, 1, 2, 3        | Pure refactor, no user-visible change. `#781`.                            |
-| **3b** — views live       | 4, 5, 6, 8         | View cards stop being inert; placeholder copy, two placeholder poses.      |
-| **3c** — the rest         | 7, 9, 11, 12       | Tours tab, search rows, capture change, six thumbnails, copy, smoke.      |
+| PR                   | Tasks        | Lands                                                                 |
+| -------------------- | ------------ | --------------------------------------------------------------------- |
+| **3a** — the bracket | 10, 1, 2, 3  | Pure refactor, no user-visible change. `#781`.                        |
+| **3b** — views live  | 4, 5, 6, 8   | View cards stop being inert; placeholder copy, two placeholder poses. |
+| **3c** — the rest    | 7, 9, 11, 12 | Tours tab, search rows, capture change, six thumbnails, copy, smoke.  |
 
 Task 10 rides 3a despite being a views task: it is ~20 lines against the debug
 panel, touches nothing else, and merging it first lets the user frame the
@@ -52,7 +52,7 @@ The snapshot is about the scene, not about tours; views are about to take it too
 - Move: `src/state/tour/{captureScene,captureSettings,restoreSceneSaga}.ts` → `src/state/scene/`
 - The `tests/` mirror moves with them (the tool does this).
 
-- [ ] Run the move, dry first:
+- [x] Run the move, dry first:
 
 ```bash
 npm run move-files -- --manifest moves.json --dry
@@ -69,9 +69,9 @@ with `moves.json`:
 ]
 ```
 
-- [ ] Grep for the old paths afterwards — the tool misses string literals and `.md`: `grep -rn "tour/captureScene\|tour/captureSettings\|tour/restoreSceneSaga" src tools tests docs`.
-- [ ] **No new tests.** This is a move; the existing `tests/state/scene/*.test.ts` (carried over) are the proof.
-- [ ] `npm run typecheck` silent, `npm test` green, commit as its own prep commit.
+- [x] Grep for the old paths afterwards — the tool misses string literals and `.md`: `grep -rn "tour/captureScene\|tour/captureSettings\|tour/restoreSceneSaga" src tools tests docs`.
+- [x] **No new tests.** This is a move; the existing `tests/state/scene/*.test.ts` (carried over) are the proof.
+- [x] `npm run typecheck` silent, `npm test` green, commit as its own prep commit.
 
 ---
 
@@ -90,9 +90,9 @@ export type PerfPose = CameraPose & {
 };
 ```
 
-- [ ] Rewrite `PerfPose` as above, dropping the four duplicated fields and the now-unused `Vec3` import.
-- [ ] **No new test.** A type change the compiler proves; `npm run typecheck` is the gate. Note that `CameraPose.roll?` becomes reachable on `PerfPose` — confirm no perf-hook code branches on key presence in a way that breaks.
-- [ ] `npm run typecheck` silent, `npm test` green, commit.
+- [x] Rewrite `PerfPose` as above, dropping the four duplicated fields and the now-unused `Vec3` import.
+- [x] **No new test.** A type change the compiler proves; `npm run typecheck` is the gate. Note that `CameraPose.roll?` becomes reachable on `PerfPose` — confirm no perf-hook code branches on key presence in a way that breaks.
+- [x] `npm run typecheck` silent, `npm test` green, commit.
 
 ---
 
@@ -137,19 +137,19 @@ export const selectTakeoverSource: (state: RootState) => TakeoverSource | null;
 
 **`selectTourActive` is preserved, not deleted** — it becomes `selectTakeoverSource(state)?.kind === 'tour'`, and `tour.active` is deleted from `tourSlice`. Its seven read sites (`keyboardShortcuts.ts:80-82`, `installRecorderHook.ts:80,88`, `App.tsx:84`, plus three doc comments) keep working untouched.
 
-- [ ] Add the two types and the slice (`active: TakeoverSource | null`, reducers for `takeoverStarted`/`takeoverEnded`).
-- [ ] Write `tests/state/takeover/runTakeover.test.ts` with exactly these four names, which are the acceptance criteria:
+- [x] Add the two types and the slice (`active: TakeoverSource | null`, reducers for `takeoverStarted`/`takeoverEnded`).
+- [x] Write `tests/state/takeover/runTakeover.test.ts` with exactly these four names, which are the acceptance criteria:
   - `starting a view cancels a running tour and restores its settings before the new snapshot`
   - `a view restores its settings and toggle changes on exit`
   - `a superseded run does not dispatch takeoverEnded`
   - `selectTourActive is still true for a running tour`
-- [ ] Move the bracket out of `guidedTourSaga` into `runTakeover`; what remains becomes `tourBody(tour, range)` — the `while` loop at `:110-163` and its `exitTour` race, with `exitTour` becoming `exitTakeover`.
-- [ ] Replace `watchTourSaga` with `watchTakeoverSaga` (wire it wherever `watchTourSaga` was registered; grep for it).
-- [ ] `keyboardShortcuts.ts:54`: swap `exitTour()` for `exitTakeover()`. The list stays three long — consolidating it is a separate backlog item (spec §3.7), not this task.
-- [ ] `App.tsx:130`: the hide expression is already `uiHidden || splashVisible || tourActive` — **swap `tourActive` for `takeoverActive`**, don't add a fourth term. Keep `tourOverlay` (`App.tsx:102`) and `TourBeatRailContainer` (`:165`) gated on `tourActive`, since they are tour chrome, not takeover chrome.
-- [ ] `TourOverlayContainer.tsx:57`: `exitTour()` → `exitTakeover()`.
-- [ ] Update the existing tour tests that read `tour.active` or dispatch `exitTour`. Everything else in `tests/state/tour/` must stay green **unmodified** — that is the behaviour-preservation proof.
-- [ ] `npm run typecheck` silent, `npm test` green, commit as its own prep commit.
+- [x] Move the bracket out of `guidedTourSaga` into `runTakeover`; what remains becomes `tourBody(tour, range)` — the `while` loop at `:110-163` and its `exitTour` race, with `exitTour` becoming `exitTakeover`.
+- [x] Replace `watchTourSaga` with `watchTakeoverSaga` (wire it wherever `watchTourSaga` was registered; grep for it).
+- [x] `keyboardShortcuts.ts:54`: swap `exitTour()` for `exitTakeover()`. The list stays three long — consolidating it is a separate backlog item (spec §3.7), not this task.
+- [x] `App.tsx:130`: the hide expression is already `uiHidden || splashVisible || tourActive` — **swap `tourActive` for `takeoverActive`**, don't add a fourth term. Keep `tourOverlay` (`App.tsx:102`) and `TourBeatRailContainer` (`:165`) gated on `tourActive`, since they are tour chrome, not takeover chrome.
+- [x] `TourOverlayContainer.tsx:57`: `exitTour()` → `exitTakeover()`.
+- [x] Update the existing tour tests that read `tour.active` or dispatch `exitTour`. Everything else in `tests/state/tour/` must stay green **unmodified** — that is the behaviour-preservation proof.
+- [x] `npm run typecheck` silent, `npm test` green, commit as its own prep commit.
 
 ---
 
@@ -297,9 +297,9 @@ This is what the user frames `solarSystem` and `observableUniverse` with, so it 
 
 **Behaviour:** a button writing a paste-ready `pose: { target: [...], yaw: …, pitch: …, distance: … }` snippet for the live camera to the clipboard, in `CameraPose` units (Mpc, radians) — pasteable straight into `viewRegistry.ts`.
 
-- [ ] Match the existing precedent in the same file: the "copy all" button at `CameraStateSection.tsx:254-268`, which assembles a **fresh** snapshot rather than the stale 4 Hz poll (`POLL_MS = 250`, `:29`) — read the comment at `:255`, it exists because of that exact bug. Alternatively reuse `src/components/common/CopyButton/CopyButton.tsx`; pick one and say which in the commit.
-- [ ] **No tests** — a clipboard button behind the debug panel.
-- [ ] `npm run typecheck` silent, commit.
+- [x] Match the existing precedent in the same file: the "copy all" button at `CameraStateSection.tsx:254-268`, which assembles a **fresh** snapshot rather than the stale 4 Hz poll (`POLL_MS = 250`, `:29`) — read the comment at `:255`, it exists because of that exact bug. Alternatively reuse `src/components/common/CopyButton/CopyButton.tsx`; pick one and say which in the commit.
+- [x] **No tests** — a clipboard button behind the debug panel.
+- [x] `npm run typecheck` silent, commit.
 
 ---
 
