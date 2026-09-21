@@ -72,4 +72,18 @@ describe('decodeFramedPose', () => {
   it('rejects an empty value', () => {
     expect(decodeFramedPose('')).toBeNull();
   });
+
+  it('rejects a world arm with empty fields rather than reading them as 0', () => {
+    // `Number('')` is 0, so a naive parse would accept this as a degenerate
+    // but "valid" pose sitting at the origin with zero distance.
+    expect(decodeFramedPose('a,1,2,3,,,,')).toBeNull();
+  });
+
+  it('rejects a site arm with a negative range', () => {
+    expect(decodeFramedPose('s,curiosity,1.2,0.3,-12.5')).toBeNull();
+  });
+
+  it('rejects a world arm with zero distance', () => {
+    expect(decodeFramedPose('a,1,2,3,0.7,-0.2,0,0')).toBeNull();
+  });
 });
