@@ -52,7 +52,7 @@ type ViewRig = {
 };
 ```
 
-- `deriveView(frame, spec): FrameView` builds one view (vp, slabs,
+- `deriveView(snapshot, spec): FrameView` builds one view (vp, slabs,
   `drawPxPerRad`, `canvasSize`, body-frustum gate, star partition) from the
   frame's one camera pose **and arm** plus the spec, so a surface camera keeps
   its metre-native body path in every view (P6; was `deriveViewContext`).
@@ -166,10 +166,10 @@ keys.
 - **P5** Photometry by `pxPerRad` (WGSL only; a TS twin would only restate the formula).
 
 - **P6** (added 2026-09-20 after P1–P5 landed) Frame / view split — the
-  greenfield shape P2 had deferred. `deriveFrameContext(state, camera, clock)`
+  greenfield shape P2 had deferred. `deriveFrameContext(state, input: FrameContextInput)`
   derives the frame (orbit camera, arm, body states, un-turned pose provider,
   clock, targets, the one `renderedTargets` set, `runFrame`'s stamps);
-  `deriveView(frame, spec: ViewSpec)` derives one `FrameView` (turned `cam`,
+  `deriveView(snapshot, spec: ViewSpec)` derives one `FrameView` (turned `cam`,
   `vp`, `slabs`, turned `bodyPose`, `canvasSize`, `drawCamPos`, `drawPxPerRad`,
   `fovYRad`, `viewSlot`, `viewKind`, `output?`, its own `renderedTargets`)
   holding the frame context by reference as `snapshot` (not `frame`: that

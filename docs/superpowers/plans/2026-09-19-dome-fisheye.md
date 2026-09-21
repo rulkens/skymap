@@ -8,7 +8,7 @@
 
 **Tech stack:** TypeScript, WebGPU, WGSL/WESL, Vitest, Playwright + ffmpeg (recorder).
 
-**Spec:** `docs/superpowers/specs/2026-09-19-view-rigs-dome-fisheye-design.md`, sections "Dome rig (feature PR)", "Testing" (fisheye twin) and "Risks and eye-checks". **Builds on:** PR 1, `docs/superpowers/plans/2026-09-19-view-rigs-prep.md`. This plan assumes all of PR 1's contracts exist: `FrameSection`, `PRELUDE/SCENE/POST/OVERLAYS` (in `src/data/rendering/frameSections.ts`), `ViewRig`/`ViewRigKey`, `VIEW_RIGS.mono`, `state.viewRig`, `RenderFrameInput.views`, `ReadyFrameContext.output?`/`viewKind`, `ViewFrustum` + `symmetricFrustum`, `ViewSpec`, `deriveViewContext`, `cutSurfaceTiles` over `viewProjsLocal`, `PreparedStarCut.originMpc` and `toRefPx` by `pxPerRad`.
+**Spec:** `docs/superpowers/specs/2026-09-19-view-rigs-dome-fisheye-design.md`, sections "Dome rig (feature PR)", "Testing" (fisheye twin) and "Risks and eye-checks". **Builds on:** PR 1, `docs/superpowers/plans/2026-09-19-view-rigs-prep.md`. This plan assumes all of PR 1's contracts exist: `FrameSection`, `PRELUDE/SCENE/POST/OVERLAYS` (in `src/data/rendering/frameSections.ts`), `ViewRig`/`ViewRigKey`, `VIEW_RIGS.mono`, `state.viewRig`, `FrameContextInput`, `FrameView`, `deriveView`, `mainViewSpec`/`faceViewSpec`, `{ canvas, views }`, `ViewFrustum` + `symmetricFrustum`, `ViewSpec`, `ViewSpec.kind`, `cutSurfaceTiles` over `viewProjsLocal`, `PreparedStarCut.originMpc` and `toRefPx` by `pxPerRad`.
 
 ## Global constraints
 
@@ -186,10 +186,10 @@ export const DOME_RESAMPLE: FrameSection = { scope: 'once', steps: [{ kind: 'ren
 mono: { views: (m) => [m], program: [PRELUDE, SCENE, POST, OVERLAYS], pickable: true },
 dome: { views: domeFaceViews, program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST], pickable: false },
 // services/engine/frame/domeFaceViews.ts
-export function domeFaceViews(main: ReadyFrameContext, state: EngineState): readonly ReadyFrameContext[];
+export function domeFaceViews(canvas: FrameView, state: EngineState): readonly FrameView[];
 ```
 
-**What `domeFaceViews` builds.** One `ViewSpec` per layer i, passed to `deriveViewContext(state, main, spec)`. A null result is dropped (pre-bootstrap only).
+**What `domeFaceViews` builds.** One `ViewSpec` per layer i, passed to `deriveView(snapshot, spec)`. A null result is dropped (pre-bootstrap only).
 
 | ViewSpec field | value                                                 |
 | -------------- | ----------------------------------------------------- |
@@ -217,7 +217,7 @@ export function domeFaceViews(main: ReadyFrameContext, state: EngineState): read
 
 Today's single-order check (`checkFrameOrder.ts` loop and throws) would reject `dome-resample` under mono, and would reject `SCENE` once it is listed by both rigs.
 
-- [ ] Test `domeFaceViews derives five views on slots 19–23, each writing its dome-cube layer`: use a stub `layerViewOf`, and reuse the ready-context fixture PR 1's `deriveViewContext.test.ts` builds.
+- [ ] Test `domeFaceViews derives five views on slots 19–23, each writing its dome-cube layer`: use a stub `layerViewOf`, and reuse the ready-context fixture PR 1's `deriveView.test.ts` builds.
 - [ ] Test `a direction projected through each dome view's vp lands where domeFaceUv says`. This is the twin ↔ render contract, the only test that catches a flipped axis or a swapped face order.
   - For each face, take directions at the face centre and 0.9 of the way to each edge, in dome coordinates.
   - Carry each one to world space with `domeBasis` and the main camera's world axes, which you decode from `main`'s view matrix as PR 1's test decodes forward.
