@@ -1,9 +1,9 @@
 /**
  * watchTakeoverSaga — the single mutual-exclusion point for every takeover
- * source (today `startTour`; `openView` joins `startRequests` in a later task).
- * A superseding request cancels the running takeover and waits for the whole
- * cancelled bracket to settle before the successor starts, so the successor
- * snapshots the user's pre-takeover scene and not a mid-takeover one.
+ * source (`startTour`, `openView`). A superseding request cancels the running
+ * takeover and waits for the whole cancelled bracket to settle before the
+ * successor starts, so the successor snapshots the user's pre-takeover scene
+ * and not a mid-takeover one.
  */
 
 import { call, cancel, fork, take } from 'typed-redux-saga';
@@ -12,10 +12,13 @@ import type { Task } from 'redux-saga';
 import { runTakeover } from './runTakeover';
 import { tourBody } from '../tour/tourBody';
 import { startTour } from '../tour/tourActions';
+import { viewBody } from '../views/viewBody';
+import { openView } from '../views/viewActions';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { viewRegistry } from '../../data/views/viewRegistry';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
-const startRequests = [startTour];
+const startRequests = [startTour, openView];
 
 export function* watchTakeoverSaga() {
   let running: Task | undefined;
@@ -34,9 +37,22 @@ export function* watchTakeoverSaga() {
       yield* call(() => settled);
     }
 
-    const tour = tourRegistry[action.payload.id];
-    const source: TakeoverSource = { kind: 'tour', id: tour.id };
-    const body = () => tourBody(tour, action.payload.beats);
+    // Branch on the incoming action to build this run's `TakeoverSource` and
+    // body — `runTakeover` itself stays generic over both (see its header).
+    let source: TakeoverSource;
+    let body: () => Generator;
+    if (startTour.match(action)) {
+      const tour = tourRegistry[action.payload.id];
+      source = { kind: 'tour', id: tour.id };
+      body = () => tourBody(tour, action.payload.beats);
+    } else if (openView.match(action)) {
+      const view = viewRegistry[action.payload];
+      source = { kind: 'view', id: view.id };
+      body = () => viewBody(view);
+    } else {
+      // `startRequests` is exhaustive over `[startTour, openView]`; unreachable.
+      continue;
+    }
 
     let markSettled = () => {};
     settled = new Promise<void>((resolve) => {

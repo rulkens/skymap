@@ -18,6 +18,7 @@ import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
 import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
+import { openView } from '../../state/views/viewActions';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
 import type { AppDispatch } from '../../store/types';
@@ -31,8 +32,10 @@ const RUN_ACTION: Record<
     dispatch(requestSelect(action.focusId));
     dispatch(requestFocus(action.focusId));
   },
-  // Placeholder until PR3, which dispatches `openView` here.
-  view: () => {},
+  view: (dispatch, action) => {
+    if (action.kind !== 'view') return;
+    dispatch(openView(action.viewId));
+  },
 };
 
 function CommandPaletteContainer(): React.ReactElement {
