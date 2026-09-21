@@ -51,7 +51,7 @@ import { createTestStore as createAppStore } from '../../support/createTestStore
 import { selectStructureItems } from '../../../src/layers/structure/state/structures/selectors';
 import { selectGalaxyCatalogItems } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { selectMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/state/milkyWay/selectors';
-import { selectOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/selectors';
+import { selectOrbitTrailsEnabled } from '../../../src/state/settings/core/orbitTrails/selectors';
 import { selectZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/selectors';
 import { zoneOfAvoidanceSettingsRow } from '../../../src/layers/zoneOfAvoidance/ui/zoneOfAvoidanceSettingsRow';
 import { constellationsSettingsRow } from '../../../src/layers/constellations/ui/constellationsSettingsRow';

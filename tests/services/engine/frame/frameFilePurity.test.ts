@@ -34,8 +34,8 @@ const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYE
 // Files that still inline helpers, with their current count. `slabs.ts` is the
 // slab vocabulary itself — a genuine multi-symbol module whose split is its own
 // piece of work, not a stray-helper row to trim in passing. `orbitTrailsPass`'s
-// row is its cross-frame `staging` scratch — sized from the elements table,
-// owned by that pass alone, so it has nowhere else to live.
+// row is its cross-frame `staging` scratch — grown on demand from the roster
+// length, owned by that pass alone, so it has nowhere else to live.
 const ALLOWED: Readonly<Record<string, number>> = {
   'frame/checkFrameOrder': 2,
   'frame/cosmoLabelProjection': 1,

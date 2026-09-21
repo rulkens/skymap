@@ -58,8 +58,8 @@ import { selectGalaxyCatalogItems } from '../../layers/galaxyCatalog/state/galax
 import { selectStarCatalogItems } from '../../layers/starCatalog/state/starCatalogs/selectors';
 import { selectBodyItems } from '../../layers/body/state/bodies/selectors';
 import { selectMilkyWayLabelEnabled } from '../../layers/milkyWay/state/milkyWay/selectors';
-import { selectOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/selectors';
-import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
+import { selectOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/selectors';
+import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
 import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../../data/labels/sourceTypeByLabelCategory';

@@ -1171,6 +1171,7 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
       fades: [],
       screenLabels: [],
       worldLabels: [],
+      orbitTrails: [],
       selection: [],
       frame,
       destroy: () => {},

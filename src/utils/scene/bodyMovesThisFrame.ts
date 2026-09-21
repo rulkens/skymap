@@ -1,4 +1,5 @@
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
+import { focusDriverId } from '../camera/focusDriverId';
 import { bodyFollowsSimClock } from './bodyFollowsSimClock';
 
 /**
@@ -8,6 +9,6 @@ import { bodyFollowsSimClock } from './bodyFollowsSimClock';
  * `liveBodyPosition(...) !== null` answers "has a position", not "moves".
  */
 export function bodyMovesThisFrame(focusRow: SelectionRow | null): boolean {
-  if (focusRow === null || focusRow.type !== 'body') return false;
-  return bodyFollowsSimClock(focusRow.id);
+  const id = focusDriverId(focusRow);
+  return id !== null && bodyFollowsSimClock(id);
 }

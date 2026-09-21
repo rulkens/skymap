@@ -22,7 +22,7 @@ import {
 } from '../../layers/milkyWay/state/milkyWay/slice';
 import { setFilamentsEnabled } from '../../layers/filaments/state/filaments/slice';
 import { setLocalBubbleEnabled } from '../../layers/localBubble/state/localBubble/slice';
-import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
+import { setOrbitTrailsEnabled } from '../../state/settings/core/orbitTrails/slice';
 import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/state/volumes/slice';
 import { setFlowEnabled } from '../../layers/flow/state/flow/slice';
 import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';

@@ -4,7 +4,7 @@
  * vantage; the scene it wants is the app's own default scene.
  */
 
-import { initialState as orbitTrailsInitialState } from '../../layers/body/state/orbitTrails/initialState';
+import { initialState as orbitTrailsInitialState } from '../../state/settings/core/orbitTrails/initialState';
 import { initialState as starCatalogsInitialState } from '../../layers/starCatalog/state/starCatalogs/initialState';
 import { SCALE_UNITS } from '../scaleUnits';
 import type { Exhibit } from '../../@types/exhibits/Exhibit';
