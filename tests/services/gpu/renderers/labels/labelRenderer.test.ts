@@ -155,8 +155,13 @@ describe('LabelRenderer capacity growth', () => {
   // Tracks descriptors by their `label` field so an assertion can tell the
   // construction-time buffer/bind-group apart from a growth-time one without
   // hardcoding byte sizes derived from private constants.
+  // Each createBuffer call returns a DISTINCT object (never a shared stub) so
+  // growth assertions can tell the pre- and post-reallocation buffer apart by
+  // identity — the thing the bind group must reference correctly.
+  type TrackedBuffer = { desc: GPUBufferDescriptor; buffer: { destroy: ReturnType<typeof vi.fn> } };
+
   function buildTrackingDevice() {
-    const createBufferCalls: GPUBufferDescriptor[] = [];
+    const createdBuffers: TrackedBuffer[] = [];
     const createBindGroupCalls: GPUBindGroupDescriptor[] = [];
     const device = {
       createBindGroupLayout: vi.fn(() => ({})),
@@ -166,8 +171,9 @@ describe('LabelRenderer capacity growth', () => {
       createPipelineLayout: vi.fn(() => ({})),
       createRenderPipeline: vi.fn(() => ({})),
       createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
-        createBufferCalls.push(desc);
-        return { destroy: vi.fn() };
+        const buffer = { destroy: vi.fn() };
+        createdBuffers.push({ desc, buffer });
+        return buffer;
       }),
       createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
       createSampler: vi.fn(() => ({})),
@@ -185,7 +191,7 @@ describe('LabelRenderer capacity growth', () => {
       canvas: null as unknown as HTMLCanvasElement,
       hdrCapable: false,
     };
-    return { ctx, createBufferCalls, createBindGroupCalls };
+    return { ctx, createdBuffers, createBindGroupCalls };
   }
 
   it('grows the CPU roster past its initial capacity with no truncation', () => {
@@ -209,18 +215,28 @@ describe('LabelRenderer capacity growth', () => {
   });
 
   it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
-    const { ctx, createBufferCalls, createBindGroupCalls } = buildTrackingDevice();
+    const { ctx, createdBuffers, createBindGroupCalls } = buildTrackingDevice();
     const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, 4, 4);
     const bindGroupCallsAtConstruction = createBindGroupCalls.length;
 
     r.setLabels([1, 2, 3, 4, 5].map((n) => makeLabel(`l${n}`)));
 
     expect(createBindGroupCalls.length).toBeGreaterThan(bindGroupCallsAtConstruction);
-    const storageCalls = createBufferCalls.filter((d) => d.label === 'label-storage');
-    expect(storageCalls).toHaveLength(2);
-    expect(storageCalls[1]!.size).toBeGreaterThan(storageCalls[0]!.size);
-    const instanceCalls = createBufferCalls.filter((d) => d.label === 'label-instances');
-    expect(instanceCalls).toHaveLength(2);
-    expect(instanceCalls[1]!.size).toBeGreaterThan(instanceCalls[0]!.size);
+    const storageBuffers = createdBuffers.filter((b) => b.desc.label === 'label-storage');
+    expect(storageBuffers).toHaveLength(2);
+    expect(storageBuffers[1]!.desc.size).toBeGreaterThan(storageBuffers[0]!.desc.size);
+    const instanceBuffers = createdBuffers.filter((b) => b.desc.label === 'label-instances');
+    expect(instanceBuffers).toHaveLength(2);
+    expect(instanceBuffers[1]!.desc.size).toBeGreaterThan(instanceBuffers[0]!.desc.size);
+
+    // The landmine this test exists for: binding 1 must point at the NEW
+    // storage buffer, not a bind group rebuilt against the destroyed one.
+    const lastBindGroup = createBindGroupCalls[createBindGroupCalls.length - 1]!;
+    const entries = Array.from(lastBindGroup.entries) as GPUBindGroupEntry[];
+    const binding1 = entries.find((e) => e.binding === 1)!;
+    expect((binding1.resource as GPUBufferBinding).buffer).toBe(storageBuffers[1]!.buffer);
+
+    expect(storageBuffers[0]!.buffer.destroy).toHaveBeenCalled();
+    expect(instanceBuffers[0]!.buffer.destroy).toHaveBeenCalled();
   });
 });

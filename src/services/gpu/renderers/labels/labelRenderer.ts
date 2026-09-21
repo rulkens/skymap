@@ -155,8 +155,10 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * `maxLabels` is the INITIAL capacity, not a ceiling: `setLabels` grows the
  * CPU scratch arrays and, with a device, reallocates the GPU storage/instance
  * buffers and bind group in power-of-two steps whenever the roster outgrows
- * them. `maxGlyphsPerLabel` stays fixed — a per-label glyph ceiling, not a
- * label-count one.
+ * them. `maxGlyphsPerLabel` sizes a glyph pool SHARED across all labels
+ * (`capacity * maxGlyphsPerLabel`); growth scales that pool with capacity, but
+ * a roster of unusually long labels can still exhaust it and have glyphs
+ * silently dropped (the `currentGlyphCount >= maxGlyphs` break in `setLabels`).
  *
  * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
  * behind the solar-system bodies.  When set, the pipeline gains a group(1)
@@ -503,6 +505,8 @@ export function createLabelRenderer(
     currentGlyphCount = 0;
     currentLabelCount = 0;
 
+    // Aliases the caller's array — packedLabels() is the pick path's
+    // authority, so the caller must not retain or mutate it after this call.
     currentLabels = labels;
     for (let li = 0; li < labels.length; li++) {
       const label = labels[li]!;
