@@ -3,6 +3,7 @@ import { vec4 } from 'wgpu-matrix';
 import type { Vec4 } from '../../../src/@types/math/Vec4';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 
 describe('orbit camera', () => {
   it('places the camera at +z when yaw=0 pitch=0', () => {
@@ -32,7 +33,7 @@ describe('orbit camera', () => {
       near: 0.1,
       far: 100,
     });
-    const vp = computeViewProj(cam);
+    const vp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
     const p: Vec4 = [0, 0, 0, 1];
     vec4.transformMat4(p, vp, p);
     expect(Math.abs(p[0] / p[3])).toBeLessThan(1e-5);
@@ -62,8 +63,11 @@ describe('orbit camera', () => {
       far: 100,
       roll: 0,
     });
-    const vpNoRoll = computeViewProj(camNoRoll);
-    const vpRoll0 = computeViewProj(camRoll0);
+    const vpNoRoll = computeViewProj(
+      camNoRoll,
+      symmetricFrustum(camNoRoll.fovYRad, camNoRoll.aspect),
+    );
+    const vpRoll0 = computeViewProj(camRoll0, symmetricFrustum(camRoll0.fovYRad, camRoll0.aspect));
     for (let i = 0; i < 16; i++) {
       expect(vpRoll0[i] as number).toBeCloseTo(vpNoRoll[i] as number, 6);
     }
@@ -90,7 +94,7 @@ describe('orbit camera', () => {
       far: 100,
       roll: Math.PI / 2,
     });
-    const vp = computeViewProj(cam);
+    const vp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
 
     // The view matrix is the upper-left 3×3 of the view part.  Since
     // computeViewProj returns proj*view we can instead transform unit

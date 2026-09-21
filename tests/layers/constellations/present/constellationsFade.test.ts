@@ -11,18 +11,19 @@ import { constellationsBand } from '../../../../src/layers/constellations/presen
 import { constellationsFade } from '../../../../src/layers/constellations/present/constellationsFade';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const BAND = SCALE_FADE_BANDS.constellations;
 const MID_BAND_DIST_MPC = (BAND.fullAt + BAND.goneAt) / 2;
 
-function makeCtx(
-  camDistMpc: number,
-): Pick<ReadyFrameContext, 'drawCamPos' | 'focusBlend' | 'nowMs'> {
+function makeCtx(camDistMpc: number): FrameView {
   const camPos: Vec3 = [camDistMpc, 0, 0];
-  return { drawCamPos: camPos, focusBlend: 0, nowMs: 0 };
+  return {
+    drawCamPos: camPos,
+    snapshot: { focusBlend: 0, nowMs: 0 },
+  } as unknown as FrameView;
 }
 
 // `focusRecession` and the clip factor are both neutral (1) for the

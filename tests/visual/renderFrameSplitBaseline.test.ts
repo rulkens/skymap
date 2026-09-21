@@ -366,11 +366,23 @@ describe('renderFrame visual baseline', () => {
       texturedDisks: texturedDisksSubsystem,
     } as unknown as GalaxyCatalogRuntime;
 
+    // Shared by identity with the `renderFrame()` call's own `renderedTargets` below.
+    const renderedTargets = new Set<string>();
     const ctx = {
-      isReady: true as const,
-      layersSettling: false,
-      // executor populates this as targets render; a later pass reads which rendered this frame.
-      renderedTargets: new Set<string>(),
+      snapshot: {
+        isReady: true as const,
+        layersSettling: false,
+        nowMs: 0,
+        // resolveLayerOpacity's recession factor lerps on this; production
+        // seeds it to 0 in frameContext, and an absent one yields NaN alphas.
+        focusBlend: 0,
+        // The executor resolves hdr/volume attachments — and
+        // volumeUpsamplePass its source texture — via ctx.snapshot.renderTargets.viewOf(id).
+        renderTargets,
+        // Frame-wide: which targets hold this frame's content — the executor
+        // unions into this as it opens each render step; a later pass reads it.
+        renderedTargets,
+      },
       cam,
       vp: viewProj,
       slabs: [cosmoSlab, cosmoSlab],
@@ -379,14 +391,6 @@ describe('renderFrame visual baseline', () => {
         [number, number, number]
       >,
       drawPxPerRad,
-      nowMs: 0,
-      // resolveLayerOpacity's recession factor lerps on this; production seeds
-      // it to 0 in frameContext, and an absent one yields NaN alphas here.
-      focusBlend: 0,
-      fovYRad: FIXTURE_FOV_Y_RAD,
-      // The executor resolves hdr/volume attachments — and volumeUpsamplePass
-      // its source texture — via ctx.renderTargets.viewOf(id).
-      renderTargets,
     } as never;
 
     const settings = {
@@ -409,10 +413,14 @@ describe('renderFrame visual baseline', () => {
     };
 
     renderFrame({
-      ctx,
+      canvas: ctx,
+      // Mono's own contract: the frame's one view is the canvas itself.
+      views: [ctx],
       // Engine state with every optional renderer wired in — this is what
       // makes all eight HDR passes fire.
       state: {
+        // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+        viewRig: 'mono',
         gpu: {
           labelRenderer,
           markerLineRenderer,
@@ -526,6 +534,7 @@ describe('renderFrame visual baseline', () => {
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),
+      renderedTargets,
     });
 
     // The hash payload — only renderer-level draws, with the order they

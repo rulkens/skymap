@@ -4,7 +4,7 @@
  * states its place in the prelude, so a row and the order cannot disagree.
  */
 
-import type { ReadyFrameContext } from './ReadyFrameContext';
+import type { FrameView } from './FrameView';
 import type { PassState } from './PassState';
 import type { ClaimTimestampWrites } from '../../gpu/timing/ClaimTimestampWrites';
 
@@ -19,7 +19,7 @@ export type ContentCompute = {
    */
   encode(
     encoder: GPUCommandEncoder,
-    ctx: ReadyFrameContext,
+    ctx: FrameView,
     state: PassState,
     claimTimestampWrites: ClaimTimestampWrites,
   ): void;

@@ -49,6 +49,7 @@ import {
   GLOW_OVERLAP_FLOAT_INDEX,
   PICK_PASS_U32_INDEX,
   AGG_INTENSITY_CAP_FLOAT_INDEX,
+  PX_PER_RAD_FLOAT_INDEX,
 } from '../../../../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -193,6 +194,7 @@ describe('StarUniforms CPU/WESL layout parity', () => {
     expect(GLOW_OVERLAP_FLOAT_INDEX).toBe(offsetOf('glowOverlap') / 4);
     expect(PICK_PASS_U32_INDEX).toBe(offsetOf('pickPass') / 4);
     expect(AGG_INTENSITY_CAP_FLOAT_INDEX).toBe(offsetOf('aggregateIntensityCap') / 4);
+    expect(PX_PER_RAD_FLOAT_INDEX).toBe(offsetOf('pxPerRad') / 4);
     // pickPass is a u32 in WESL; the TS renderer writes it via a Uint32 view at
     // the same word — pin the kind so a WESL f32/u32 retype surfaces here.
     expect(writes.find((x) => x.field === 'pickPass')?.kind).toBe('uint');

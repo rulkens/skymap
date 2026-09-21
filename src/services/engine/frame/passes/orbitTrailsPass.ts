@@ -40,7 +40,7 @@ export const orbitTrailsPass: ContentPass = {
     // (hdr, NEAR0) pass drops — opacity 0 ⇒ no render.
     if (
       !state.settings.orbitTrails.enabled &&
-      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.nowMs) <= 0
+      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.snapshot.nowMs) <= 0
     ) {
       return false;
     }
@@ -60,8 +60,7 @@ export const orbitTrailsPass: ContentPass = {
       const maxDiameterPx = apparentSizePx({
         diameterKpc: 2 * reachMpc * 1000,
         distanceMpc: nearestMpc,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (maxDiameterPx >= CULL_PX) return true;
     }
@@ -76,7 +75,6 @@ export const orbitTrailsPass: ContentPass = {
     const states = sceneBodyStates(state, ctx);
     const limit = TRAIL_ELEMENTS.length;
     const camPos = ctx.drawCamPos;
-    const viewportHeightPx = view.viewportPx[1];
 
     // Multiplied into every orbit's apparent-size alpha below, so a hide dissolves
     // the layer rather than popping it.
@@ -96,7 +94,7 @@ export const orbitTrailsPass: ContentPass = {
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place focus fold below cannot alias a
       // shared scratch across orbits.
-      const propagated = propagateElements(elements, ctx.simDays);
+      const propagated = propagateElements(elements, ctx.snapshot.simDays);
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
       // The snapshot seeds anchors (the Sun) alongside every element row, so a
       // heliocentric focus and a moving parent are the same lookup.
@@ -114,8 +112,7 @@ export const orbitTrailsPass: ContentPass = {
       const diameterPx = apparentSizePx({
         diameterKpc: 2 * semiMajorLenMpc * 1000,
         distanceMpc,
-        viewportHeightPx,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;

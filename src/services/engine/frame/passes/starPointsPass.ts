@@ -81,7 +81,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { BodyRegionId } from '../../../../@types/data/BodyRegionId';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -129,7 +129,7 @@ const GALACTIC_CENTRE_REGION_ID: BodyRegionId = 'galactic-centre';
  * The shared foreground gate rides alongside it: past that the whole NEAR0 group
  * is skipped, so a stamp there could never be rasterised anyway.
  */
-function sgrAStarCaptionPickable(state: PassState, ctx: ReadyFrameContext): boolean {
+function sgrAStarCaptionPickable(state: PassState, ctx: FrameView): boolean {
   if (ctx.cam.distance >= FOREGROUND_MAX_DISTANCE_MPC) return false;
   return sgrAStarCaptionTarget(state.settings, ctx.drawCamPos, ctx.cam.distance) > 0;
 }
@@ -137,7 +137,7 @@ function sgrAStarCaptionPickable(state: PassState, ctx: ReadyFrameContext): bool
 export const starPointsPass: ContentPass = {
   name: 'star-points',
   // Deliberately OFF the sky-cubemap capture roster: the capture face pose
-  // carries a placeholder `distance: 1` Mpc (`cubemapFaceContext.ts`)
+  // carries a placeholder `distance: 1` Mpc (`cubemapCaptureFrame.ts`'s pose)
   // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew
   // anything. The S-stars need finite-distance lensing rather than an
   // at-infinity cubemap — see `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.
@@ -164,8 +164,7 @@ export const starPointsPass: ContentPass = {
         stars: positionedVisibleStars(state, ctx),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       }).points.length > 0
     );
   },
@@ -192,8 +191,7 @@ export const starPointsPass: ContentPass = {
       stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: view.viewportPx[1],
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     // Rebase into the camera-relative frame in f64 so the f32 upload carries no
@@ -265,7 +263,15 @@ export const starPointsPass: ContentPass = {
         state.settings.starCatalogs.exposureMidX,
         state.settings.starCatalogs.exposureFarX,
       );
-    renderer.draw(pass, rebasedVp, view.viewportPx, { sizePx, brightness, viewSlot: ctx.viewSlot });
+    renderer.draw(pass, rebasedVp, view.viewportPx, {
+      sizePx,
+      brightness,
+      // This row draws straight into `hdr` at the view's own size (the NEAR0
+      // slab's viewport is `ctx.canvasSize`), so the view's `drawPxPerRad`
+      // already is the target's — no offscreen-height rescale needed here.
+      pxPerRad: ctx.drawPxPerRad,
+      viewSlot: ctx.viewSlot,
+    });
   },
 
   // Pick aspect — stamps the POINT-partition scene stars into the NEAR0 r32uint
@@ -299,8 +305,7 @@ export const starPointsPass: ContentPass = {
       stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: view.viewportPx[1],
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     const camPos = view.camPos;

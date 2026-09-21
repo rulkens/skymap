@@ -16,7 +16,7 @@ import { scalarVolumePass } from '../../../../../src/services/engine/frame/passe
 import { COSMO, slabViewOf } from '../../../../../src/services/engine/frame/slabs';
 import { makeCosmoSlab } from '../../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 
 const PASS_STUB = {
@@ -31,47 +31,45 @@ const PASS_STUB = {
 // it here, mirroring the production table's scale: 3.
 const VOLUME_SCALE = 3;
 
-function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(over: { canvasSize?: { width: number; height: number } } = {}): FrameView {
   const vp = new Float32Array(16) as unknown as Mat4;
   const canvasSize = over.canvasSize ?? { width: 1280, height: 720 };
   const cosmoSlab: Slab = makeCosmoSlab({ vp: Float64Array.from(vp as unknown as Float32Array) });
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      focusBlend: 0,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: {
+        specs: [
+          { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+          { id: 'volume', format: 'rgba16float', depth: null, scale: VOLUME_SCALE },
+        ],
+        sizeOf: (id: string) => {
+          if (id !== 'volume') throw new Error(`fixture renderTargets: no size for '${id}'`);
+          return {
+            width: Math.max(1, Math.floor(canvasSize.width / VOLUME_SCALE)),
+            height: Math.max(1, Math.floor(canvasSize.height / VOLUME_SCALE)),
+          };
+        },
+        viewOf: () => ({}) as GPUTextureView,
+        destroy: vi.fn(),
+      } as never,
+    },
     cam: {} as never,
     vp,
     slabs: [cosmoSlab, cosmoSlab],
     canvasSize,
     drawCamPos: [1, 2, 3] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    nowMs: 0,
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    galaxyPointRenderer: {} as never,
-    renderTargets: {
-      specs: [
-        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-        { id: 'volume', format: 'rgba16float', depth: null, scale: VOLUME_SCALE },
-      ],
-      sizeOf: (id: string) => {
-        if (id !== 'volume') throw new Error(`fixture renderTargets: no size for '${id}'`);
-        return {
-          width: Math.max(1, Math.floor(canvasSize.width / VOLUME_SCALE)),
-          height: Math.max(1, Math.floor(canvasSize.height / VOLUME_SCALE)),
-        };
-      },
-      viewOf: () => ({}) as GPUTextureView,
-      destroy: vi.fn(),
-    } as never,
-    texturedDisks: {} as never,
-    ...over,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** A live-volume state: renderer with active fields, master on. */

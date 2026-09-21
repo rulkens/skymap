@@ -43,9 +43,10 @@ export type StarPointRenderer = Renderer & {
    * `viewportPx` feeds the pixel-size-to-clip-offset conversion. `opts` carries
    * the shared star appearance the survey stage also reads — `sizePx` (base
    * dot radius, the `starCatalogs.sizePx` slider) and `brightness` (the exposure
-   * trim, already folded with the camera-distance ramp by the layer) — so a
+   * trim, already folded with the camera-distance ramp by the layer) and
+   * `pxPerRad` (the target's pixels per radian, `toRefPx`'s normaliser) — so a
    * famous leaf and a survey leaf render pixel-identically. `viewSlot` is
-   * `ReadyFrameContext.viewSlot` (Task 13b) — which view-slot buffer this
+   * `FrameView.viewSlot` (Task 13b) — which view-slot buffer this
    * call's camera uniform lands in, so a sky-cubemap capture sweep's several
    * `draw()` calls (different cameras, one submit) don't overwrite each
    * other's bytes (see `createViewSlotUniformRing`'s doc). No-op until
@@ -55,6 +56,6 @@ export type StarPointRenderer = Renderer & {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
-    opts: { sizePx: number; brightness: number; viewSlot: number },
+    opts: { sizePx: number; brightness: number; pxPerRad: number; viewSlot: number },
   ): void;
 };

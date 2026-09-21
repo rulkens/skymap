@@ -12,7 +12,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { labelsPass } from '../../../../../src/services/engine/frame/passes/labelsPass';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
@@ -40,11 +40,13 @@ function makeCtx(
   renderedTargets: ReadonlySet<string>,
   viewOf: (id: string) => GPUTextureView,
   depthViewOf: (id: string) => GPUTextureView,
-): ReadyFrameContext {
+): FrameView {
   return {
-    renderedTargets,
-    renderTargets: { viewOf, depthViewOf } as unknown as ReadyFrameContext['renderTargets'],
-  } as unknown as ReadyFrameContext;
+    snapshot: {
+      renderTargets: { viewOf, depthViewOf } as unknown as FrameView['snapshot']['renderTargets'],
+      renderedTargets,
+    },
+  } as unknown as FrameView;
 }
 
 describe('labelsPass.enabled', () => {

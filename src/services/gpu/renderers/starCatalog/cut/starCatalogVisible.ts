@@ -1,5 +1,5 @@
 import type { PassState } from '../../../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../@types/engine/frame/FrameView';
 import { starSourceDrawOpacity } from '../../../../../utils/star/starSourceDrawOpacity';
 import { SOURCE_REGISTRY } from '../../../../../data/sources';
 import { SCALE_UNITS } from '../../../../../data/scaleUnits';
@@ -11,7 +11,7 @@ import { SCALE_UNITS } from '../../../../../data/scaleUnits';
  * `enabled` here so the aggregate producer and its upsample consumer never
  * disagree.
  */
-export function starCatalogVisible(state: PassState, ctx: ReadyFrameContext): boolean {
+export function starCatalogVisible(state: PassState, ctx: FrameView): boolean {
   const renderer = state.gpu.starCatalogRenderer;
   if (renderer === null) return false;
   if (!state.settings.starCatalogs.enabled) return false;

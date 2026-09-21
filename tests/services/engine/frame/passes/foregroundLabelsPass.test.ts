@@ -17,7 +17,7 @@ import { FOREGROUND_LABEL_DIRECTOR } from '../../../../../src/data/labels/foregr
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { LabelRenderer } from '../../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../../src/@types/rendering/MarkerLineRenderer';
@@ -87,16 +87,18 @@ function makeState(
 // tests (which don't animate); the gate test below steps it explicitly, and
 // builds a FRESH ctx object per frame — `near0LabelProjection` memoises per
 // ctx identity, matching how `runFrame` mints a new ctx every frame for real.
-function makeCtx(nowMs = 0): ReadyFrameContext {
+function makeCtx(nowMs = 0): FrameView {
   const slab: Slab = makeSlab();
   return {
+    snapshot: {
+      nowMs,
+      renderTargets: { viewOf: () => ({}) as GPUTextureView },
+      renderedTargets: new Set(['foreground:0']),
+    },
     slabs: [slab],
     drawCamPos: [2, 3, 5],
     canvasSize: { width: 1280, height: 720 },
-    nowMs,
-    renderTargets: { viewOf: () => ({}) as GPUTextureView },
-    renderedTargets: new Set(['foreground:0']),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 describe('foregroundLabelsPass.enabled', () => {

@@ -29,7 +29,7 @@
  * alpha-scaled descriptors so the fade-out tail draws to completion.
  */
 
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Vec4 } from '../../../@types/math/Vec4';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
@@ -39,7 +39,7 @@ import { structureIdOf } from '../helpers/structureIdOf';
 
 export function produceStructureMarkers(
   state: EngineState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];
   const pxPerRad = ctx.drawPxPerRad;
@@ -55,7 +55,7 @@ export function produceStructureMarkers(
   // FadeRegistry; unregistered handles fail-safe to 1.0. Snapshot the frame
   // clock once so every category reads the same instant.
   const fades = state.subsystems.fades;
-  const now = ctx.nowMs;
+  const now = ctx.snapshot.nowMs;
 
   // Clip-owned transient opacity for structure rings — hoisted outside the loop
   // because ALL structure sources map to the same `'structureRing'` key, so the
@@ -133,14 +133,14 @@ export function produceStructureMarkers(
     const weightedFade = fadeAlpha * sigWeight * catOpacity * clipFactor;
 
     // Cluster focus mode: while some structure is FOCUSED, every OTHER marker
-    // smoothly recedes toward MARKER_RECESSION as ctx.focusBlend ramps 0→1. The
+    // smoothly recedes toward MARKER_RECESSION as ctx.snapshot.focusBlend ramps 0→1. The
     // focused structure is exempt (factor 1) — a faded ring never carries a
     // bright label/marker. A bare select does NOT recede. At rest (blend 0): 1.
     const isSelected = p.id === selectedStructureId;
     const recession =
       p.id === focusedStructureId
         ? 1
-        : focusRecession({ kind: 'structure', id: p.category }, ctx.focusBlend);
+        : focusRecession({ kind: 'structure', id: p.category }, ctx.snapshot.focusBlend);
 
     // Halo: style at-rest alpha × per-frame fade × recession baked into alpha.
     const haloColor: Vec4 = [

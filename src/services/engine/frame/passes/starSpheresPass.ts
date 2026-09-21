@@ -87,8 +87,7 @@ export const starSpheresPass: ContentPass = {
         stars: positionedVisibleStars(state, ctx),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       }).spheres.length > 0
     );
   },
@@ -101,8 +100,7 @@ export const starSpheresPass: ContentPass = {
       stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: view.viewportPx[1],
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     // Compose each resolved star's MVP from the slab's f64 vp — see the
@@ -151,8 +149,7 @@ export const starSpheresPass: ContentPass = {
       stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: view.viewportPx[1],
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     for (const star of spheres) {

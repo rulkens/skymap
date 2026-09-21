@@ -9,7 +9,7 @@
 import type { AtmosphereDrawEntry } from '../../../@types/engine/frame/AtmosphereDrawEntry';
 import type { BodyId } from '../../../@types/data/body/BodyId';
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import { mat4d } from 'wgpu-matrix';
 import { SCENE_RINGS } from '../../../data/bodies/sceneRings';
@@ -20,7 +20,7 @@ import { narrowMat4 } from '../../../utils/math/narrowMat4';
 export function atmosphereShellUniforms(
   entry: AtmosphereDrawEntry,
   slab: Slab,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   state: PassState,
 ): Float32Array {
   const { body, params, atmosphereTopM, camLocal, sunLocal } = entry;

@@ -170,7 +170,7 @@ export const near0SelectionRingPass: ContentPass = {
     // while the body pass has written this frame's `foreground:0` (else the
     // colour is stale and would blank the whole ring).
     const occluded =
-      ctx.renderedTargets.has('foreground:0') &&
+      ctx.snapshot.renderedTargets.has('foreground:0') &&
       subjectOccludedByBodies({
         subjectMpc: centreWorld,
         camPosMpc: view.camPos,
@@ -182,7 +182,7 @@ export const near0SelectionRingPass: ContentPass = {
       rebasedVp,
       view.viewportPx,
       { worldPos: clampedCentre, ringRadiusPx, alpha },
-      occluded ? ctx.renderTargets.viewOf('foreground:0') : undefined,
+      occluded ? ctx.snapshot.renderTargets.viewOf('foreground:0') : undefined,
     );
   },
 };

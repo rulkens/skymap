@@ -13,7 +13,7 @@ import { clampVolumeIntensity } from '../../../../src/utils/clampVolumeIntensity
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { fadeBand } from '../../../../src/utils/math/fadeBand';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { VolumeFieldId } from '../../../../src/@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../../src/@types/settings/VolumeFieldSettings';
 
@@ -43,17 +43,18 @@ function rawSettings(over: Partial<VolumeFieldSettings> = {}): VolumeFieldSettin
  * `nowMs`, `focusBlend`, and `drawCamPos` (the survey-fade key; the 5 Mpc
  * default sits far outside the band so it is factor 1 unless overridden).
  */
-function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(
+  over: { focusBlend?: number; drawCamPos?: Readonly<[number, number, number]> } = {},
+): FrameView {
+  const { focusBlend = 0, ...viewOver } = over;
   return {
-    isReady: true,
-    nowMs: 0,
-    focusBlend: 0,
+    snapshot: { isReady: true, nowMs: 0, focusBlend },
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
-    ...over,
-  } as unknown as ReadyFrameContext;
+    ...viewOver,
+  } as unknown as FrameView;
 }
 
 type StateInit = {

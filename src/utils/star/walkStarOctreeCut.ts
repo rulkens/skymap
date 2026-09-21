@@ -29,8 +29,9 @@
  * running instance count are unchanged, so the cut is byte-identical to
  * routing every node through the heap — just far cheaper.
  *
- * OPTIONAL FRUSTUM CULL: given a `StarCutFrustum`, the walk drops any node
- * whose slack-grown bounding sphere is fully outside it — pruning an interior
+ * OPTIONAL FRUSTUM CULL: given a `StarCutFrustum` (six planes PER VIEW), the
+ * walk drops any node whose slack-grown bounding sphere is fully outside
+ * EVERY view's frustum — pruning an interior
  * node drops its whole subtree unvisited, turning a ~44k-node star-field walk
  * into a ~12k one (roughly halving wall time). The slack is deliberately
  * loose (sized to the widest downstream footprint — the pick pass's 3.5px
@@ -117,8 +118,8 @@ export function walkStarOctreeCut(
     cutCount++;
   };
 
-  // True when node `i`'s slack-grown bounding sphere is fully outside a
-  // frustum plane. Hoisted so the `frustum === null` fast path pays nothing.
+  // True when node `i`'s slack-grown bounding sphere is outside the UNION of
+  // the views' frusta. Hoisted so the `frustum === null` path pays nothing.
   const outsideFrustum = (i: number): boolean => {
     const planes = frustum!.planesPc;
     const edge = boxEdgePc[i]!;
@@ -131,11 +132,19 @@ export function walkStarOctreeCut(
     // conservative, only ever enlarges the sphere.
     const radius = edge * 0.8660254 * frustum!.worldSpread + dist * frustum!.angularMarginRad;
     const negR = -radius;
-    for (let b = 0; b < 24; b += 4) {
-      if (planes[b]! * cx + planes[b + 1]! * cy + planes[b + 2]! * cz + planes[b + 3]! < negR)
-        return true;
+    // Outside the union: outside SOME plane of EVERY view. `planes.length` IS
+    // the live view count × 24 — a `subarray`, not a grow-only buffer read past.
+    for (let f = 0; f < planes.length; f += 24) {
+      let outsideView = false;
+      for (let b = f; b < f + 24; b += 4) {
+        if (planes[b]! * cx + planes[b + 1]! * cy + planes[b + 2]! * cz + planes[b + 3]! < negR) {
+          outsideView = true;
+          break;
+        }
+      }
+      if (!outsideView) return false;
     }
-    return false;
+    return true;
   };
 
   // Off-screen box pruned outright; leaf or sub-pixel box commits

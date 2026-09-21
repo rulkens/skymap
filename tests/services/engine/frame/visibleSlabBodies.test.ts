@@ -15,9 +15,16 @@ import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { AnchorPointBody } from '../../../../src/@types/scene/AnchorPointBody';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const FORWARD_X: Vec3 = [1, 0, 0];
+const SQUARE_90 = symmetricFrustum(Math.PI / 2, 1);
+// pxPerRad = viewportHeightPx / (tanUp − tanDown), the canonical form
+// `visibleSlabBodies` reads directly off the view.
+const PX_PER_RAD_90 = 1000 / (SQUARE_90.tanUp - SQUARE_90.tanDown);
+const FRUSTUM_60_16_9 = symmetricFrustum(Math.PI / 3, 16 / 9);
+const PX_PER_RAD_60 = 1000 / (FRUSTUM_60_16_9.tanUp - FRUSTUM_60_16_9.tanDown);
 
 function makeState(positionMpc: Vec3 = [1000, 0, 0]): BodyState {
   return { positionMpc, orientation: [...IDENTITY], meanAnomalyRad: 0 };
@@ -61,9 +68,8 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      frustum: SQUARE_90,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((body) => body.id)).toEqual(['above']);
@@ -88,9 +94,8 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [1000, 0, 0], // camera AT earth's stored position ⇒ distance 0 ⇒ inside its own shell, always kept
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      frustum: SQUARE_90,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((body) => body.id)).toEqual(['earth']);
@@ -115,9 +120,8 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      frustum: SQUARE_90,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((b) => b.id)).toEqual(['saturn']);
@@ -145,9 +149,8 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
       });
     }
 
@@ -187,9 +190,8 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
       });
 
       expect(visible.map((b) => b.id)).toEqual(['straddling']);
@@ -215,12 +217,29 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: (1000 * 16) / 9,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 3,
+        frustum: FRUSTUM_60_16_9,
+        pxPerRad: PX_PER_RAD_60,
       });
 
       expect(visible.map((b) => b.id)).toEqual(['saturn']);
+    });
+
+    it('keeps a body just inside the long edge of an off-axis frustum', () => {
+      // tanRight = 3 puts the right edge at atan(3) ≈ 71.6° off-axis. A
+      // symmetric reading of the same fovY/aspect (90°, 1.5) culls past
+      // ≈ 70.1°; the far-edge half-diagonal (≈ 72.5°, ×1.15) keeps it.
+      const bodyStates = new Map<string, BodyState>([
+        ['wide', makeState(offAxisPositionMpc(71, 1000))],
+      ]);
+      const visible = visibleSlabBodies({
+        bodies: [wideBody],
+        bodyStates,
+        camPosMpc: [0, 0, 0],
+        camForwardMpc: FORWARD_X,
+        frustum: { tanLeft: 0, tanRight: 3, tanDown: -1, tanUp: 1 },
+        pxPerRad: PX_PER_RAD_90,
+      });
+      expect(visible.map((b) => b.id)).toEqual(['wide']);
     });
   });
 
@@ -245,9 +264,8 @@ describe('visibleSlabBodies', () => {
       bodyStates,
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
-      viewportWidthPx: 1000,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      frustum: SQUARE_90,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((body) => body.id)).toEqual(['visible-anchor']);
@@ -276,9 +294,8 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        viewportWidthPx: 1000,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        frustum: SQUARE_90,
+        pxPerRad: PX_PER_RAD_90,
       });
       expect(visible.map((body) => body.id)).toEqual(expected);
     }

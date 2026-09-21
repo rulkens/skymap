@@ -14,14 +14,14 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { PositionedStar } from '../../../@types/scene/PositionedStar';
 import { sceneBodyStates } from './sceneBodyStates';
 import { visibleStars } from './visibleStars';
 
 export function positionedVisibleStars(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): readonly PositionedStar[] {
   const states = sceneBodyStates(state, ctx);
   return visibleStars(state).map((star) => ({

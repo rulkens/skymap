@@ -23,11 +23,13 @@ export function drawStarPick(
   pass: GPURenderPassEncoder,
   view: SlabView,
   prep: PreparedStarCut,
-  fovYRad: number,
+  pxPerRad: number,
 ): void {
-  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, view.camPos));
+  // About the CUT's origin, as `drawStarStream` does — the pick cull must
+  // agree with the visual one, node for node.
+  const rebasedVp = narrowMat4(rebaseViewProj(view.slab.vp, prep.originMpc));
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
-  const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], fovYRad).pick;
+  const glowMarginAngleRad = starCullMargins(prep.sizePx, pxPerRad).pick;
   for (const d of starPickLeafDraws(prep)) {
     pickRenderer.draw(pass, {
       source: d.source,

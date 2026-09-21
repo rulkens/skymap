@@ -15,7 +15,7 @@ export function createUpsamplePass(row: UpsamplePassRow): ContentPass {
     draw(pass, view, ctx, state) {
       const handle = row.handleOf(state);
       if (handle !== null) {
-        handle.draw(pass, ctx.renderTargets.viewOf(row.sourceTargetId));
+        handle.draw(pass, ctx.snapshot.renderTargets.viewOf(row.sourceTargetId));
       }
       row.postBlit?.(pass, view, ctx, state);
     },

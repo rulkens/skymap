@@ -23,7 +23,7 @@ export function constellationsPass(runtime: ConstellationsRuntime): ContentPass 
       // also empties the (hdr, NEAR0) step for this row.
       if (constellationsBand(ctx) === 0) return false;
       if (state.settings.constellations.enabled) return true;
-      return state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.nowMs) > 0;
+      return state.subsystems.fades.opacityOf({ kind: 'constellations' }, ctx.snapshot.nowMs) > 0;
     },
 
     draw(pass, view, ctx, state) {

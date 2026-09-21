@@ -37,12 +37,15 @@ import { PROXY_SCALE } from '../../../../src/utils/scene/proxyScale';
 import { RENDER_ORIGIN_MPC } from '../../../../src/data/renderOrigin';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyRelativePose } from '../../../../src/@types/engine/camera/BodyRelativePose';
 import type { PlanetBody } from '../../../../src/@types/scene/PlanetBody';
 import type { Vec2 } from '../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
+import { frustumPerspectiveF64 } from '../../../../src/utils/camera/frustumPerspectiveF64';
 
 function makeCam(distance: number): OrbitCamera {
   return createOrbitCamera({
@@ -85,6 +88,7 @@ function baseInput(
   const cam = overrides.cam ?? makeCam(100);
   return {
     cam,
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
     cosmoVp: makeCosmoVp(),
     altitudeMpc: cam.distance,
     pose: NO_POSE,
@@ -160,8 +164,7 @@ describe('deriveSlabs', () => {
       ],
       up: [0, 1, 0],
       renderOrigin: RENDER_ORIGIN_MPC,
-      fovYRad: cam.fovYRad,
-      aspect: cam.aspect,
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
       near,
       far,
       // NEAR0 is reversed-Z (`SLAB_REVERSED_Z[NEAR0] === true`), so the derived
@@ -276,8 +279,8 @@ describe('deriveSlabs', () => {
     // header's "partial flip impossible" claim is false. `computeForegroundViewProj`
     // pins the identical NEAR0-side coupling by rebuilding the expected
     // matrix from the same util this test rebuilds by hand for the body row
-    // (no shared "foreground" util exists for body rows, so the two mat4d
-    // calls are inlined here).
+    // (no shared "foreground" util exists for body rows, so the lookAt and
+    // projection are inlined here).
     const body = makePlanet({ id: 'flip-body', surface: { datumRadiusM: 1e5, reliefM: [0, 0] } });
     const pose: BodyPoseProvider = () => ({
       eyeRelBodyM: [0, 0, -1e9],
@@ -294,7 +297,11 @@ describe('deriveSlabs', () => {
       const view = mat4d.lookAt([0, 0, 0], [0, 0, 1], [0, 1, 0]);
       const dM = 1e9;
       const rMaxM = 1e5; // no atmosphere/ring/cloud widens a bare radiusM body.
-      const expectedProj = mat4d.perspective(cam.fovYRad, cam.aspect, row.near, dM + rMaxM);
+      const expectedProj = frustumPerspectiveF64(
+        symmetricFrustum(cam.fovYRad, cam.aspect),
+        row.near,
+        dM + rMaxM,
+      );
       const expectedVp = mat4d.multiply(expectedProj, view);
       expect(Array.from(row.vp)).toEqual(Array.from(expectedVp));
     } finally {
@@ -427,7 +434,7 @@ describe('deriveSlabs', () => {
       far: 10000,
       roll,
     });
-    const cosmoVp = computeViewProj(cam);
+    const cosmoVp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
     const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
 
     // An off-axis point: 20 Mpc lateral of the target at 100 Mpc range
@@ -524,8 +531,7 @@ describe('bodySlabRow attachedBodies widening', () => {
     return bodySlabRow({
       body,
       pose,
-      fovYRad: 1,
-      aspect: 16 / 9,
+      frustum: symmetricFrustum(1, 16 / 9),
       viewportPx: [1920, 1080] as Vec2,
       attachedBodies,
     })!;
@@ -620,34 +626,35 @@ describe('foregroundChainOrder', () => {
 });
 
 describe('slabViewOf', () => {
-  function makeReadyCtx(overrides: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
-    const cam = makeCam(100);
+  function makeReadyCtx(overrides: { cam?: OrbitCamera } = {}): FrameView {
+    const cam = overrides.cam ?? makeCam(100);
     const cosmoVp = makeCosmoVp();
     const slabs = deriveSlabs(baseInput({ cam, cosmoVp }));
     return {
-      isReady: true,
+      snapshot: {
+        isReady: true,
+        nowMs: 0,
+        simDays: 0,
+        focusBlend: 0,
+        layersSettling: false,
+        visibleSourceMask: 0xffffffff,
+        focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
+        renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
+        cursorTexPx: null,
+        renderedTargets: new Set<string>(),
+      },
       viewSlot: 0,
-      renderedTargets: new Set<string>(),
+      viewKind: 'frame',
       cam,
       vp: cosmoVp,
       canvasSize: { width: 1920, height: 1080 },
-      cursorTexPx: null,
       drawCamPos: [cam.position[0], cam.position[1], cam.position[2]],
       drawPxPerRad: 1000,
-      nowMs: 0,
-      simDays: 0,
-      fovYRad: cam.fovYRad,
-      focusBlend: 0,
-      layersSettling: false,
-      visibleSourceMask: 0xffffffff,
-      focus: { blend: 0 } as unknown as ReadyFrameContext['focus'],
-      renderTargets: {} as unknown as ReadyFrameContext['renderTargets'],
       slabs,
       // Nothing in this file reads bodyPose — a stub that never resolves a
-      // body is a safe default, overridable like every other field.
+      // body is a safe default.
       bodyPose: () => null,
-      ...overrides,
-    };
+    } as unknown as FrameView;
   }
 
   it('slabViewOf(ctx, COSMO).vp is byte-equal to ctx.vp', () => {

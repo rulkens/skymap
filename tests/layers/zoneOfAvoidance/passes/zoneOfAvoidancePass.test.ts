@@ -11,7 +11,7 @@ import { zoneOfAvoidancePass } from '../../../../src/layers/zoneOfAvoidance/pass
 import { ZONE_OF_AVOIDANCE_SHELL } from '../../../../src/data/zoneOfAvoidance/zoneOfAvoidanceShell';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime';
 
@@ -29,32 +29,39 @@ const ZOA_SCALE = 5;
 /** Inside the visibility window: both bands saturate to 1 here. */
 const INSIDE_CAM_DIST = SCALE_FADE_BANDS.zoneOfAvoidance.fullAt;
 
-function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(
+  over: {
+    canvasSize?: { width: number; height: number };
+    drawCamPos?: Readonly<[number, number, number]>;
+  } = {},
+): FrameView {
   const canvasSize = over.canvasSize ?? { width: 1280, height: 720 };
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      focusBlend: 0,
+      renderTargets: {
+        specs: [
+          { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
+          { id: 'zoa', format: 'rgba16float', depth: null, scale: ZOA_SCALE },
+        ],
+        sizeOf: (id: string) => {
+          if (id !== 'zoa') throw new Error(`fixture renderTargets: no size for '${id}'`);
+          return {
+            width: Math.max(1, Math.floor(canvasSize.width / ZOA_SCALE)),
+            height: Math.max(1, Math.floor(canvasSize.height / ZOA_SCALE)),
+          };
+        },
+        viewOf: () => ({}) as GPUTextureView,
+        destroy: vi.fn(),
+      } as never,
+    },
     cam: { position: [0, 0, INSIDE_CAM_DIST] } as never,
     canvasSize,
     drawCamPos: [0, 0, INSIDE_CAM_DIST] as Readonly<[number, number, number]>,
-    nowMs: 0,
-    focusBlend: 0,
-    renderTargets: {
-      specs: [
-        { id: 'hdr', format: 'rgba16float', depth: null, scale: 1 },
-        { id: 'zoa', format: 'rgba16float', depth: null, scale: ZOA_SCALE },
-      ],
-      sizeOf: (id: string) => {
-        if (id !== 'zoa') throw new Error(`fixture renderTargets: no size for '${id}'`);
-        return {
-          width: Math.max(1, Math.floor(canvasSize.width / ZOA_SCALE)),
-          height: Math.max(1, Math.floor(canvasSize.height / ZOA_SCALE)),
-        };
-      },
-      viewOf: () => ({}) as GPUTextureView,
-      destroy: vi.fn(),
-    } as never,
     ...over,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** A live state: toggle opacity 1. */

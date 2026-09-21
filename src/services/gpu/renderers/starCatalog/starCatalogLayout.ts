@@ -46,15 +46,15 @@ export const PREFIX_BYTES = 4;
 /**
  * Byte size of the star `StarUniforms` @group(0) buffer: the shared
  * `CameraUniforms` prefix + `sizePx` f32 + `brightness` f32 + `glowOverlap` f32
- * + `pickPass` u32 + `aggregateIntensityCap` f32, rounded up to the prefix's
- * 16-byte alignment = 112 (mirrors `struct StarUniforms` in
+ * + `pickPass` u32 + `aggregateIntensityCap` f32 + `pxPerRad` f32, rounded up
+ * to the prefix's 16-byte alignment = 112 (mirrors `struct StarUniforms` in
  * shaders/starCatalog/io.wesl). The first four appended scalars fill one 16-byte
- * tail (80 + 16 → 96); `aggregateIntensityCap` opens a second, so 12 bytes at
- * 100..111 are pad and the buffer rounds to 112. Derived from
+ * tail (80 + 16 → 96); the last two open a second, so 8 bytes at 104..111 are
+ * pad and the buffer rounds to 112. Derived from
  * `CAMERA_UNIFORM_BYTES` so the prefix size stays single-sourced, the way the
  * galaxy points `Uniforms` struct appends its own scalars.
  */
-export const STAR_UNIFORM_BYTES = roundUpToMultiple(CAMERA_UNIFORM_BYTES + 20, 16);
+export const STAR_UNIFORM_BYTES = roundUpToMultiple(CAMERA_UNIFORM_BYTES + 24, 16);
 
 /**
  * Float index of `sizePx` in the `StarUniforms` scratch: byte 80 (right after
@@ -92,6 +92,13 @@ export const PICK_PASS_U32_INDEX = (CAMERA_UNIFORM_BYTES + 12) / 4;
  * leaves only, and the cap clamps aggregate peaks only).
  */
 export const AGG_INTENSITY_CAP_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 16) / 4;
+
+/**
+ * Float index of `pxPerRad` in the `StarUniforms` scratch: byte 100 / 4 = 25 —
+ * the drawn target's pixels per radian, which `toRefPx` normalises glow radii
+ * by. The pick renderer leaves it zero-init: its fragment ignores intensity.
+ */
+export const PX_PER_RAD_FLOAT_INDEX = (CAMERA_UNIFORM_BYTES + 20) / 4;
 
 /**
  * Pack one `NodeParams` block at byte `base` of `view`, in the field order the

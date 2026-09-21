@@ -10,9 +10,10 @@ import type { Mat4 } from 'wgpu-matrix';
 import { mat4d } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
+import type { ViewFrustum } from '../../../@types/camera/ViewFrustum';
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { Vec2 } from '../../../@types/math/Vec2';
@@ -24,6 +25,7 @@ import type { SceneBody } from '../../../@types/scene/SceneBody';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { computeForegroundViewProj } from '../../../utils/camera/computeForegroundViewProj';
+import { frustumPerspectiveF64 } from '../../../utils/camera/frustumPerspectiveF64';
 import { foregroundFrustum, MIN_NEAR_M, NEAR_RATIO } from '../../../utils/camera/foregroundFrustum';
 import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
 import { frameUp } from '../../../utils/camera/frameUp';
@@ -138,8 +140,7 @@ const NEAR_MARGIN_EPS = 1e-3;
 export function bodySlabRow(input: {
   readonly body: SceneBody;
   readonly pose: BodyPoseProvider;
-  readonly fovYRad: number;
-  readonly aspect: number;
+  readonly frustum: ViewFrustum;
   readonly viewportPx: Readonly<Vec2>;
   /**
    * Mesh bodies riding THIS row's slab (see `meshBodiesAttachedTo.ts`):
@@ -148,6 +149,8 @@ export function bodySlabRow(input: {
    * the nearest such face when it undercuts the host's own margin.
    */
   readonly attachedBodies?: readonly HostFrameSphere[];
+  /** A capture view's `ViewSpec.clipYFlip` — see `frustumPerspectiveF64`. */
+  readonly clipYFlip?: boolean;
 }): {
   // Narrowed back to non-null: nullability on `Slab` exists for NEAR0 alone.
   readonly slab: Omit<Slab, 'index' | 'distanceRangeM'> & {
@@ -156,7 +159,7 @@ export function bodySlabRow(input: {
   readonly chainRow: Omit<ChainRow, 'index'>;
   readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the drawn radius)
 } | null {
-  const { body, pose, fovYRad, aspect, viewportPx, attachedBodies } = input;
+  const { body, pose, frustum, viewportPx, attachedBodies, clipYFlip } = input;
   const relPose = pose(body.id as BodyId);
   if (relPose === null) return null;
   const { eyeRelBodyM, basisM } = relPose;
@@ -198,9 +201,7 @@ export function bodySlabRow(input: {
   // hard-coding the reversed branch is what keeps a flip from half-landing.
   const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
   const view = mat4d.lookAt([0, 0, 0], forward, up);
-  const proj = reversedZ
-    ? mat4d.perspectiveReverseZ(fovYRad, aspect, near)
-    : mat4d.perspective(fovYRad, aspect, near, dM + rMaxM);
+  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : dM + rMaxM, clipYFlip);
   const vp = mat4d.multiply(proj, view) as Float64Array;
 
   // DEV-only, like the §7.2 scan that reads it — a prod frame skips both.
@@ -213,8 +214,8 @@ export function bodySlabRow(input: {
         positionMpc: [dM * SCALE_UNITS.M_TO_MPC, 0, 0],
         radiusM: rMaxM,
         camPosMpc: [0, 0, 0],
-        viewportHeightPx: viewportPx[1],
-        fovYRad,
+        // Straight off the tangents — no fovYRad round trip needed at all.
+        pxPerRad: viewportPx[1] / (frustum.tanUp - frustum.tanDown),
       }) / 2
     : 0;
 
@@ -244,6 +245,10 @@ export function bodySlabRow(input: {
  */
 export function deriveSlabs(input: {
   readonly cam: OrbitCamera;
+  readonly frustum: ViewFrustum;
+  /** A rig view's eye transform for NEAR0 (`viewFromCameraEye`); body rows get
+   * theirs through `pose`, already turned and offset. Omitted = the camera's view. */
+  readonly viewFromCamEye?: Float64Array;
   readonly cosmoVp: Mat4;
   /**
    * Range from the eye to the pivot's surface, or raw orbit distance when the
@@ -260,9 +265,22 @@ export function deriveSlabs(input: {
    * host's frame — see `bodySlabRow`'s `attachedBodies` param. Only
    * Earth has an entry today; every other host's row is unaffected. */
   readonly attachedBodiesByHostId?: ReadonlyMap<string, readonly HostFrameSphere[]>;
+  /** A capture view's `ViewSpec.clipYFlip`, applied to NEAR0's and every
+   * body row's projection alike — see `frustumPerspectiveF64`. */
+  readonly clipYFlip?: boolean;
 }): readonly Slab[] {
-  const { cam, cosmoVp, altitudeMpc, pose, visibleBodies, viewportPx, attachedBodiesByHostId } =
-    input;
+  const {
+    cam,
+    frustum,
+    viewFromCamEye,
+    cosmoVp,
+    altitudeMpc,
+    pose,
+    visibleBodies,
+    viewportPx,
+    attachedBodiesByHostId,
+    clipYFlip,
+  } = input;
   const { near, far } = foregroundFrustum(altitudeMpc);
   orbitForwardOf(cam, forwardScratch);
   const { rolledUp } = imagePlaneBasis(
@@ -281,11 +299,12 @@ export function deriveSlabs(input: {
     ],
     up: rolledUp,
     renderOrigin: RENDER_ORIGIN_MPC,
-    fovYRad: cam.fovYRad,
-    aspect: cam.aspect,
+    frustum,
     near,
     far,
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
+    viewFromCamEye,
+    clipYFlip,
   });
 
   const near0: Slab = {
@@ -320,10 +339,10 @@ export function deriveSlabs(input: {
       bodySlabRow({
         body,
         pose,
-        fovYRad: cam.fovYRad,
-        aspect: cam.aspect,
+        frustum,
         viewportPx,
         attachedBodies: attachedBodiesByHostId?.get(body.id),
+        clipYFlip,
       }),
     )
     .filter((row): row is NonNullable<typeof row> => row !== null)
@@ -375,7 +394,7 @@ function nearestM(slab: Slab): number {
  * `ctx.slabs` is indexed by array position === `Slab.index`, so this is a direct
  * lookup rather than a scan.
  */
-export function slabViewOf(ctx: ReadyFrameContext, slabIndex: number): SlabView {
+export function slabViewOf(ctx: FrameView, slabIndex: number): SlabView {
   const slab = ctx.slabs[slabIndex];
   if (!slab) {
     throw new Error(`slabViewOf: no slab at index ${slabIndex}`);
