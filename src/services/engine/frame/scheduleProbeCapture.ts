@@ -16,8 +16,9 @@ import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { ALL_CUBE_FACES, CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { PROBE_REFRESH_INTERVAL_MS } from '../../../data/rendering/probeRefreshIntervalMs';
 import { meshBodySlabHostId } from '../../../utils/meshBodies/meshBodySlabHostId';
+import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
-import { cubemapFaceContext } from './cubemapFaceContext';
+import { deriveView } from './deriveView';
 import { sceneBodyPartition } from './sceneBodyPartition';
 import { sceneBodyStates } from './sceneBodyStates';
 
@@ -66,12 +67,10 @@ export function scheduleProbeCapture(input: {
   if (!capture.isReady) return null;
   const faces = new Map<CubeFace, CaptureFace>();
   for (const face of ALL_CUBE_FACES) {
-    const faceCtx = cubemapFaceContext(
+    const faceCtx = deriveView(
       capture.snapshot,
       capture.cam,
-      face,
-      row.faceSizePx,
-      row.viewSlotBase,
+      faceViewSpec(face, row.faceSizePx, row.viewSlotBase),
     );
     // The host's row is looked up in the FACE's own slab table — its painter
     // index there has nothing to do with the frame's. A face the host falls

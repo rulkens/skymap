@@ -216,7 +216,7 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // per-step value below — slab view, enable gate, draw ctx — from ITS
         // OWN camera (`scheduleCubemapCaptures`'s per-face derivation), not
         // the frame-wide `ctx`. A missing map entry (that face's
-        // `cubemapFaceContext` returned null — e.g. a pre-bootstrap frame)
+        // that row's bake was skipped — e.g. a pre-bootstrap frame)
         // skips the step cleanly, the same outcome an empty group already
         // produces below. For every ordinary step `step.capture` is undefined and
         // `stepCtx` is just `ctx` — a no-op passthrough.

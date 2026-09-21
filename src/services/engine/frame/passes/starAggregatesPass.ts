@@ -53,8 +53,8 @@ export const starAggregatesPass: ContentPass = {
     // brightness — `toRefPx` normalises by this target's own `pxPerRad`, so
     // the photometry holds per solid angle at any target size and fov).
     // `viewKind === 'capture'` marks a capture draw (see `FrameView.viewKind`),
-    // whose destination is the capture face: `cubemapFaceContext` builds the
-    // synthetic ctx at the row's declared face size, so `canvasSize` already IS
+    // whose destination is the capture face: `deriveView(faceViewSpec(...))`
+    // builds the synthetic ctx at the row's declared face size, so `canvasSize` already IS
     // that size. The view is COPIED rather than mutated: one `SlabView` is
     // shared by every pass in the render step.
     const { width: vw, height: vh } =

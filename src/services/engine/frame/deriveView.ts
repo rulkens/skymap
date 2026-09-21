@@ -39,7 +39,7 @@ export function deriveView(
   const { rotation, eyeOffsetMpc, frustum, sizePx } = spec;
 
   const viewFromCamEye = viewFromCameraEye(rotation, eyeOffsetMpc);
-  const vp = computeViewProj(cam, frustum, viewFromCamEye);
+  const vp = computeViewProj(cam, frustum, viewFromCamEye, spec.clipYFlip);
 
   const viewBasisWorld = multiply3x3(snapshot.camBasisWorld, rotation);
   const viewForward: Vec3 = [viewBasisWorld[6], viewBasisWorld[7], viewBasisWorld[8]];
@@ -143,6 +143,7 @@ export function deriveView(
     viewportPx: [sizePx.width, sizePx.height] as Vec2,
     starSphereRangeM: starRangeM,
     attachedBodiesByHostId,
+    clipYFlip: spec.clipYFlip,
   });
 
   return {

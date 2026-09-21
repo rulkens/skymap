@@ -1,9 +1,9 @@
 /**
  * cubemapCaptureFrame — the frame a cubemap capture row derives ONCE, before
- * its six faces (`cubemapFaceContext`) turn it. The synthetic camera looks
- * along the `axes` frame's −Z with +Y up — `cubeFaceBases`'s
- * `FACE_VIEW_ROTATIONS` are defined relative to exactly that camera, so this
- * and `faceViewSpec` must never drift apart.
+ * its six faces turn it (`deriveView(snapshot, cam, faceViewSpec(face, ...))`).
+ * The synthetic camera looks along the `axes` frame's −Z with +Y up — the
+ * binding to `cubeFaceBases`'s `FACE_VIEW_ROTATIONS` is `faceViewSpec.test.ts`'s
+ * parity test, not this comment.
  */
 
 import type { Vec3 } from '../../../@types/math/Vec3';

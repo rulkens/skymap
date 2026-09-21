@@ -18,5 +18,6 @@ export function faceViewSpec(face: CubeFace, faceSizePx: number, viewSlotBase: n
     sizePx: { width: faceSizePx, height: faceSizePx },
     slot: viewSlotBase + face,
     kind: 'capture',
+    clipYFlip: true,
   };
 }

@@ -2,7 +2,7 @@
  * turnedOrbitCamera — a rig view's camera as an `OrbitCamera`, so every
  * `ctx.cam` reader (ray-marched shells, billboard axes) draws that view. The
  * basis rides `poseBasis`/`upBasis` at yaw = pitch = roll = 0, the trick
- * `cubemapFaceContext` uses; `distance` stays the orbit's so distance gates agree.
+ * a capture face's basis uses; `distance` stays the orbit's so distance gates agree.
  */
 
 import type { OrbitCamera } from '../../@types/camera/OrbitCamera';

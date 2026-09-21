@@ -8,7 +8,12 @@
 import { describe, it, expect } from 'vitest';
 
 import { faceViewSpec } from '../../../src/utils/camera/faceViewSpec';
+import { cameraBasisWorld } from '../../../src/utils/camera/cameraBasisWorld';
+import { multiply3x3 } from '../../../src/utils/math/multiply3x3';
+import { cross3 } from '../../../src/utils/math/cross3';
+import { IDENTITY_MAT3 } from '../../../src/utils/math/identityMat3';
 import type { CubeFace } from '../../../src/@types/rendering/CubeFace';
+import type { Vec3 } from '../../../src/@types/math/Vec3';
 
 const FACES: readonly CubeFace[] = [0, 1, 2, 3, 4, 5];
 
@@ -24,4 +29,46 @@ describe('faceViewSpec', () => {
       expect(sum([0, 1, 2].map((c) => Math.abs(rotation[c * 3 + k]!))), `row ${k}`).toBe(1);
     }
   });
+
+  // The GL/WebGPU `texture_cube` sampling convention (table 8.19), stated
+  // independently of `cubeFaceBases.ts`'s table — the binding under test —
+  // so a shared bug in both can't hide from this.
+  const FACE_FORWARD: readonly Vec3[] = [
+    [1, 0, 0],
+    [-1, 0, 0],
+    [0, 1, 0],
+    [0, -1, 0],
+    [0, 0, 1],
+    [0, 0, -1],
+  ];
+  const FACE_UP: readonly Vec3[] = [
+    [0, -1, 0],
+    [0, -1, 0],
+    [0, 0, 1],
+    [0, 0, -1],
+    [0, -1, 0],
+    [0, -1, 0],
+  ];
+
+  it.each(FACES)(
+    "face %i's rotation, applied to the capture camera's own basis, IS that face's world basis",
+    (face) => {
+      // The capture camera under identity `axes` (`cubemapCaptureFrame`'s
+      // convention `FACE_VIEW_ROTATIONS` is defined relative to): looking
+      // along world −Z with +Y up. Binding this to `faceViewSpec`'s table
+      // is what used to be a module-header comment ("must never drift
+      // apart") — now it is this test.
+      const captureBasis = cameraBasisWorld([0, 0, -1], 0, IDENTITY_MAT3);
+      const worldBasis = multiply3x3(captureBasis, faceViewSpec(face, 1, 0).rotation);
+      const right: Vec3 = [worldBasis[0]!, worldBasis[1]!, worldBasis[2]!];
+      const up: Vec3 = [worldBasis[3]!, worldBasis[4]!, worldBasis[5]!];
+      const forward: Vec3 = [worldBasis[6]!, worldBasis[7]!, worldBasis[8]!];
+      const expectClose = (got: Readonly<Vec3>, want: Readonly<Vec3>): void => {
+        for (let i = 0; i < 3; i++) expect(got[i]).toBeCloseTo(want[i]!, 12);
+      };
+      expectClose(forward, FACE_FORWARD[face]!);
+      expectClose(up, FACE_UP[face]!);
+      expectClose(right, cross3(FACE_FORWARD[face]!, FACE_UP[face]!));
+    },
+  );
 });

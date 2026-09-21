@@ -39,7 +39,6 @@ const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYE
 const ALLOWED: Readonly<Record<string, number>> = {
   'frame/checkFrameOrder': 2,
   'frame/cosmoLabelProjection': 1,
-  'frame/cubemapFaceContext': 1,
   'frame/deriveBodyStates': 3,
   'frame/executeFrame': 5,
   'frame/expandFrameOrder': 5,

@@ -38,8 +38,8 @@ function camAtPcVec(pc: Readonly<Vec3>): Vec3 {
 // The layer reads its viewport via `sizeOf('star-aggregates')` — the fixture
 // hardcodes the size the production table's scale: 2 implies for the 1280x720
 // canvas below (floor(1280 / 2), floor(720 / 2)). During a capture draw
-// (`viewKind: 'capture'`) the ctx IS the synthetic face camera `cubemapFaceContext`
-// builds, whose `canvasSize` is the row's 256 px face; `sizeOf` has no row for
+// (`viewKind: 'capture'`) the ctx IS the synthetic face camera
+// `deriveView(faceViewSpec(...))` builds, whose `canvasSize` is the row's 256 px face; `sizeOf` has no row for
 // it, so a layer that reached for the capture target instead would throw here.
 function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, capture = false): FrameView {
   const renderTargets = {

@@ -21,7 +21,7 @@ export const skyCubemapBlitPass: ContentPass = {
   draw(pass, _view, ctx, state) {
     const renderer = state.gpu.cubeFaceBlitRenderer;
     if (renderer === null) return;
-    // A face ctx always carries `cubemapFaceContext`'s basis; optional on the type.
+    // A face view always carries `deriveView`'s turned basis; optional on the type.
     const basis = ctx.cam.poseBasis;
     if (basis === undefined) {
       throw new Error('skyCubemapBlitPass: the face context carries no poseBasis');

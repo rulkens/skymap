@@ -24,4 +24,9 @@ export type ViewSpec = {
   readonly kind: ViewKind;
   /** Where this view's `swap` resolves; absent = the canvas. */
   readonly output?: GPUTextureView;
+  /** WebGPU rasterizes top-left; a capture face's basis table is the GL
+   *  bottom-left convention, which no rotation can absorb — only a capture
+   *  sets this. `deriveView` applies it at every projection it builds (the
+   *  view's own vp and each slab's), so nothing post-mutates its output. */
+  readonly clipYFlip?: true;
 };

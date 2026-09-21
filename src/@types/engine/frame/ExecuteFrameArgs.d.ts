@@ -7,7 +7,7 @@
  * `capture` resolves its `SlabView`/`ctx` from THIS map's `CaptureFace.ctx`,
  * not the frame-wide `ctx`. `scheduleCubemapCaptures` derives it on a bake;
  * `FRAME_ORDER` stays static and never sees it. Absent/missing-face ⇒ the step
- * is skipped cleanly, as when `cubemapFaceContext` returns `null` pre-bootstrap.
+ * is skipped cleanly, as when a bake finds `cubemapCaptureFrame` not ready pre-bootstrap.
  */
 
 import type { CaptureFaceContexts } from './CaptureFaceContexts';

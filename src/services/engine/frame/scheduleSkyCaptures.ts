@@ -18,8 +18,9 @@ import {
   CUBEMAP_CAPTURES,
   SKY_CAPTURE_KEYS,
 } from '../../../data/rendering/cubemapCaptures';
+import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
 import { cubemapCaptureFrame } from './cubemapCaptureFrame';
-import { cubemapFaceContext } from './cubemapFaceContext';
+import { deriveView } from './deriveView';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
@@ -87,12 +88,10 @@ export function scheduleSkyCaptures(input: {
       for (const face of ALL_CUBE_FACES) {
         // A sky face draws no body: the roster is the sky alone.
         faces.set(face, {
-          ctx: cubemapFaceContext(
+          ctx: deriveView(
             capture.snapshot,
             capture.cam,
-            face,
-            faceSizePx,
-            row.viewSlotBase,
+            faceViewSpec(face, faceSizePx, row.viewSlotBase),
           ),
           bodySlabs: [],
         });

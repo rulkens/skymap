@@ -1,23 +1,23 @@
 /**
  * scheduleProbeCapture — the one-subject-per-frame pick and its face hand-off.
  *
- * `cubemapCaptureFrame` and `cubemapFaceContext` are mocked
- * (`renderFrame.cubemapCaptures.test.ts`'s style): the faces here are about
- * WHICH body, WHERE the eye sits and WHICH body row rides each face — not the
- * synthetic camera itself.
+ * `cubemapCaptureFrame` and `deriveView` are mocked
+ * (`renderFrame.cubemapCaptures.test.ts`'s style; `faceViewSpec` stays real):
+ * the faces here are about WHICH body, WHERE the eye sits and WHICH body row
+ * rides each face — not the synthetic camera itself.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-const { cubemapCaptureFrameMock, cubemapFaceContextMock } = vi.hoisted(() => ({
+const { cubemapCaptureFrameMock, deriveViewMock } = vi.hoisted(() => ({
   cubemapCaptureFrameMock: vi.fn(),
-  cubemapFaceContextMock: vi.fn(),
+  deriveViewMock: vi.fn(),
 }));
 vi.mock('../../../../src/services/engine/frame/cubemapCaptureFrame', () => ({
   cubemapCaptureFrame: cubemapCaptureFrameMock,
 }));
-vi.mock('../../../../src/services/engine/frame/cubemapFaceContext', () => ({
-  cubemapFaceContext: cubemapFaceContextMock,
+vi.mock('../../../../src/services/engine/frame/deriveView', () => ({
+  deriveView: deriveViewMock,
 }));
 
 import { scheduleProbeCapture } from '../../../../src/services/engine/frame/scheduleProbeCapture';
@@ -31,6 +31,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { CubeFace } from '../../../../src/@types/rendering/CubeFace';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
+import type { ViewSpec } from '../../../../src/@types/engine/frame/ViewSpec';
 
 const SIM_DAYS = 0;
 const NOW_MS = 100_000;
@@ -79,13 +80,19 @@ function marsSlab(index: number) {
   return makeSlab({ index, frame: { kind: 'body-m', bodyId: 'mars' as BodyId } });
 }
 
+/** `faceViewSpec` is real here — a mocked `deriveView` recovers the face it
+ *  turned from the spec's slot, the probe row's only per-face distinguisher. */
+function faceOf(spec: ViewSpec): CubeFace {
+  return (spec.slot - CUBEMAP_CAPTURES.probe.viewSlotBase) as CubeFace;
+}
+
 describe('scheduleProbeCapture', () => {
   beforeEach(() => {
     cubemapCaptureFrameMock.mockReset();
     cubemapCaptureFrameMock.mockReturnValue({ isReady: true } as unknown as FrameView);
-    cubemapFaceContextMock.mockReset();
-    cubemapFaceContextMock.mockImplementation((_snapshot: unknown, _cam: unknown, face: CubeFace) =>
-      faceCtxWithMarsRow(face),
+    deriveViewMock.mockReset();
+    deriveViewMock.mockImplementation((_snapshot: unknown, _cam: unknown, spec: ViewSpec) =>
+      faceCtxWithMarsRow(faceOf(spec)),
     );
   });
 
@@ -105,7 +112,7 @@ describe('scheduleProbeCapture', () => {
     state.cubemapCaptures.probe.refreshedAtMs.set('curiosity', NOW_MS - 100_000);
     expect(scheduleProbeCapture({ state, ctx: ctxAt('voyager1') })).not.toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBe('voyager1');
-    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(12);
+    expect(deriveViewMock).toHaveBeenCalledTimes(12);
   });
 
   it('votes to keep ticking while a second body resolved in the same tick is still due', () => {
@@ -133,7 +140,7 @@ describe('scheduleProbeCapture', () => {
 
     expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBeNull();
-    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
+    expect(deriveViewMock).not.toHaveBeenCalled();
 
     // One millisecond later the interval has elapsed.
     expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity', NOW_MS + 1) })).not.toBeNull();
@@ -159,10 +166,11 @@ describe('scheduleProbeCapture', () => {
     });
 
     // Six faces off that one frame, each stamped with the row's slot base and size.
-    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(6);
-    for (const call of cubemapFaceContextMock.mock.calls) {
-      expect(call[3]).toBe(row.faceSizePx);
-      expect(call[4]).toBe(row.viewSlotBase);
+    expect(deriveViewMock).toHaveBeenCalledTimes(6);
+    for (const call of deriveViewMock.mock.calls) {
+      const spec = call[2] as ViewSpec;
+      expect(spec.sizePx).toEqual({ width: row.faceSizePx, height: row.faceSizePx });
+      expect(spec.slot - row.viewSlotBase).toBeGreaterThanOrEqual(0);
     }
     for (const face of ALL_CUBE_FACES) {
       const scheduled = faces!.get(face)!;
@@ -176,16 +184,16 @@ describe('scheduleProbeCapture', () => {
     const state = makeState(['curiosity']);
     scheduleProbeCapture({ state, ctx: ctxAt('curiosity') });
     expect(cubemapCaptureFrameMock).toHaveBeenCalledTimes(1);
-    expect(cubemapFaceContextMock).toHaveBeenCalledTimes(ALL_CUBE_FACES.length);
+    expect(deriveViewMock).toHaveBeenCalledTimes(ALL_CUBE_FACES.length);
   });
 
   it("a hostless body's faces carry no body slab", () => {
     // Even a face whose table carries a row for the body itself: the subject
     // must not draw into its own probe.
-    cubemapFaceContextMock.mockImplementation(
-      (_snapshot: unknown, _cam: unknown, face: CubeFace) =>
+    deriveViewMock.mockImplementation(
+      (_snapshot: unknown, _cam: unknown, spec: ViewSpec) =>
         ({
-          __face: face,
+          __face: faceOf(spec),
           slabs: [
             makeSlab(),
             makeSlab({ index: 1 }),
@@ -208,6 +216,6 @@ describe('scheduleProbeCapture', () => {
     expect(scheduleProbeCapture({ state, ctx: ctxAt('curiosity') })).toBeNull();
     expect(state.cubemapCaptures.probe.subject).toBeNull();
     expect(state.cubemapCaptures.probe.refreshedAtMs.has('curiosity')).toBe(false);
-    expect(cubemapFaceContextMock).not.toHaveBeenCalled();
+    expect(deriveViewMock).not.toHaveBeenCalled();
   });
 });

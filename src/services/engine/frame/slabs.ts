@@ -149,6 +149,8 @@ export function bodySlabRow(input: {
    * the nearest such face when it undercuts the host's own margin.
    */
   readonly attachedBodies?: readonly HostFrameSphere[];
+  /** A capture view's `ViewSpec.clipYFlip` — see `frustumPerspectiveF64`. */
+  readonly clipYFlip?: boolean;
 }): {
   // Narrowed back to non-null: nullability on `Slab` exists for NEAR0 alone.
   readonly slab: Omit<Slab, 'index' | 'distanceRangeM'> & {
@@ -157,7 +159,7 @@ export function bodySlabRow(input: {
   readonly chainRow: Omit<ChainRow, 'index'>;
   readonly signedNearM: number; // dM − rMaxM, UNCLAMPED (negative inside the drawn radius)
 } | null {
-  const { body, pose, frustum, viewportPx, attachedBodies } = input;
+  const { body, pose, frustum, viewportPx, attachedBodies, clipYFlip } = input;
   const relPose = pose(body.id as BodyId);
   if (relPose === null) return null;
   const { eyeRelBodyM, basisM } = relPose;
@@ -199,7 +201,7 @@ export function bodySlabRow(input: {
   // hard-coding the reversed branch is what keeps a flip from half-landing.
   const reversedZ = SLAB_REVERSED_Z[NEAR0]!;
   const view = mat4d.lookAt([0, 0, 0], forward, up);
-  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : dM + rMaxM);
+  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : dM + rMaxM, clipYFlip);
   const vp = mat4d.multiply(proj, view) as Float64Array;
 
   // DEV-only, like the §7.2 scan that reads it — a prod frame skips both.
@@ -263,6 +265,9 @@ export function deriveSlabs(input: {
    * host's frame — see `bodySlabRow`'s `attachedBodies` param. Only
    * Earth has an entry today; every other host's row is unaffected. */
   readonly attachedBodiesByHostId?: ReadonlyMap<string, readonly HostFrameSphere[]>;
+  /** A capture view's `ViewSpec.clipYFlip`, applied to NEAR0's and every
+   * body row's projection alike — see `frustumPerspectiveF64`. */
+  readonly clipYFlip?: boolean;
 }): readonly Slab[] {
   const {
     cam,
@@ -274,6 +279,7 @@ export function deriveSlabs(input: {
     visibleBodies,
     viewportPx,
     attachedBodiesByHostId,
+    clipYFlip,
   } = input;
   const { near, far } = foregroundFrustum(altitudeMpc);
   orbitForwardOf(cam, forwardScratch);
@@ -298,6 +304,7 @@ export function deriveSlabs(input: {
     far,
     reversedZ: SLAB_REVERSED_Z[NEAR0]!,
     viewFromCamEye,
+    clipYFlip,
   });
 
   const near0: Slab = {
@@ -335,6 +342,7 @@ export function deriveSlabs(input: {
         frustum,
         viewportPx,
         attachedBodies: attachedBodiesByHostId?.get(body.id),
+        clipYFlip,
       }),
     )
     .filter((row): row is NonNullable<typeof row> => row !== null)

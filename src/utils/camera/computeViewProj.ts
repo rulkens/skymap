@@ -77,12 +77,14 @@ const basisScratch: ImagePlaneBasis = { rolledUp: [0, 0, 0], right: [0, 0, 0], u
  *                 `symmetricFrustum(cam.fovYRad, cam.aspect)`.
  * @param viewFromCamEye  A rig view's turn + eye offset (`viewFromCameraEye`);
  *                 omitted = the camera's own view, with no extra multiply.
+ * @param clipYFlip  A capture view's `ViewSpec.clipYFlip` — see `frustumPerspectiveF64`.
  * @returns A new `Mat4` representing the combined view-projection transform.
  */
 export function computeViewProj(
   cam: OrbitCamera,
   frustum: ViewFrustum,
   viewFromCamEye?: Float64Array,
+  clipYFlip?: boolean,
 ): Mat4 {
   // ── View matrix ──────────────────────────────────────────────────────────
   //
@@ -125,7 +127,7 @@ export function computeViewProj(
 
   // ── Projection matrix ────────────────────────────────────────────────────
   // Depth maps to [0, 1] — required for WebGPU.
-  const proj = frustumPerspective(frustum, cam.near, cam.far);
+  const proj = frustumPerspective(frustum, cam.near, cam.far, clipYFlip);
 
   // ── Combined view-projection ─────────────────────────────────────────────
   // mat4.multiply(a, b) computes a * b.

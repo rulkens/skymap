@@ -137,7 +137,7 @@ function sgrAStarCaptionPickable(state: PassState, ctx: FrameView): boolean {
 export const starPointsPass: ContentPass = {
   name: 'star-points',
   // Deliberately OFF the sky-cubemap capture roster: the capture face pose
-  // carries a placeholder `distance: 1` Mpc (`cubemapFaceContext.ts`)
+  // carries a placeholder `distance: 1` Mpc (`cubemapCaptureFrame.ts`'s pose)
   // that `FOREGROUND_MAX_DISTANCE_MPC` below rejects, so the flag never drew
   // anything. The S-stars need finite-distance lensing rather than an
   // at-infinity cubemap — see `docs/backlog/2026-09-03-s-star-analytic-lensing.md`.

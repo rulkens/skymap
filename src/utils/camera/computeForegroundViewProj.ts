@@ -105,6 +105,8 @@ import { frustumPerspectiveF64 } from './frustumPerspectiveF64';
  * @param input.reversedZ     When true, build an infinite-far reversed-Z
  *                            projection (near→1, ∞→0) and ignore `far`;
  *                            otherwise the finite ZO-depth `mat4d.perspective`.
+ * @param input.clipYFlip     A capture view's `ViewSpec.clipYFlip` — see
+ *                            `frustumPerspectiveF64`.
  * @returns  A `Float64Array` of 16 values (column-major) representing the
  *           combined proj·view transform.  Narrow via `narrowMat4` before
  *           writing to a GPU uniform buffer.
@@ -119,9 +121,20 @@ export function computeForegroundViewProj(input: {
   readonly far: number;
   readonly reversedZ: boolean;
   readonly viewFromCamEye?: Float64Array;
+  readonly clipYFlip?: boolean;
 }): Float64Array {
-  const { eyeMpc, targetMpc, up, renderOrigin, frustum, near, far, reversedZ, viewFromCamEye } =
-    input;
+  const {
+    eyeMpc,
+    targetMpc,
+    up,
+    renderOrigin,
+    frustum,
+    near,
+    far,
+    reversedZ,
+    viewFromCamEye,
+    clipYFlip,
+  } = input;
 
   // Subtract renderOrigin from eye and target in f64 before lookAt.
   // This keeps the view-matrix translation small regardless of where the
@@ -148,7 +161,7 @@ export function computeForegroundViewProj(input: {
   // Non-reversed: finite ZO depth [0, 1] — matches the f32 path and WebGPU's
   // NDC range. Reversed: infinite-far reversed-Z (zFar omitted; near→1, ∞→0),
   // which ignores `far`. See the '### Projection matrix' docblock section.
-  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : far);
+  const proj = frustumPerspectiveF64(frustum, near, reversedZ ? null : far, clipYFlip);
 
   // ── Combined view-projection ─────────────────────────────────────────────
   // mat4d.multiply(a, b) computes a * b (column-major: view applied first).

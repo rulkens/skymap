@@ -8,6 +8,11 @@ import type { Mat4 } from 'wgpu-matrix';
 import type { ViewFrustum } from '../../@types/camera/ViewFrustum';
 import { frustumPerspectiveF64 } from './frustumPerspectiveF64';
 
-export function frustumPerspective(frustum: ViewFrustum, near: number, far: number): Mat4 {
-  return Float32Array.from(frustumPerspectiveF64(frustum, near, far));
+export function frustumPerspective(
+  frustum: ViewFrustum,
+  near: number,
+  far: number,
+  clipYFlip?: boolean,
+): Mat4 {
+  return Float32Array.from(frustumPerspectiveF64(frustum, near, far, clipYFlip));
 }
