@@ -2,9 +2,9 @@ import { describe, it, expect } from 'vitest';
 import {
   buildConstellationInstances,
   FLOATS_PER_SEGMENT,
-} from '../../../../../src/services/gpu/renderers/constellations/buildConstellationInstances';
-import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import type { ConstellationsArtifact } from '../../../../../src/@types/loading/ConstellationsArtifact';
+} from '../../../../src/layers/constellations/render/buildConstellationInstances';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import type { ConstellationsArtifact } from '../../../../src/@types/loading/ConstellationsArtifact';
 
 /**
  * The instance builder is the TS half of the byte-layout parity with

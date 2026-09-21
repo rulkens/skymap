@@ -130,6 +130,14 @@ const LABEL_DATA_BYTES = 80;
  */
 const GLYPH_INSTANCE_BYTES = 40;
 
+// ─── capacity constants ───────────────────────────────────────────────────
+
+// Starting label-storage size; `setLabels` grows it in power-of-two steps
+// once the roster outgrows it (see `allocate`).
+const INITIAL_LABEL_CAPACITY = 64;
+// Per-label glyph budget for the SHARED glyph pool (`capacity * MAX_GLYPHS_PER_LABEL`).
+const MAX_GLYPHS_PER_LABEL = 64;
+
 // ─── corner buffer ────────────────────────────────────────────────────────
 
 // The unit-quad corners + their slot-0 layout come from `lib/unitQuad.ts`,
@@ -152,9 +160,14 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * target is legible at the construction site (the same one-idiom rule every
  * renderer follows).
  *
- * `maxLabels` and `maxGlyphsPerLabel` size the static GPU buffers; the
- * defaults (64 × 64 = 4096 glyphs) cover the "you are here" + a few
- * future tagged-galaxy markers without a follow-up resize.
+ * `INITIAL_LABEL_CAPACITY` is a starting size, not a ceiling: `setLabels`
+ * grows the CPU scratch arrays and, with a device, reallocates the GPU
+ * storage/instance buffers and bind group in power-of-two steps whenever
+ * the roster outgrows them. `MAX_GLYPHS_PER_LABEL` sizes a glyph pool SHARED
+ * across all labels (`capacity * MAX_GLYPHS_PER_LABEL`); growth scales that
+ * pool with capacity, but a roster of unusually long labels can still
+ * exhaust it and have glyphs silently dropped (the `currentGlyphCount >=
+ * maxGlyphs` break in `setLabels`).
  *
  * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
  * behind the solar-system bodies.  When set, the pipeline gains a group(1)
@@ -171,8 +184,6 @@ export function createLabelRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
   atlases: LoadedFontAtlases,
-  maxLabels = 64,
-  maxGlyphsPerLabel = 64,
   opts?: { occludeAgainstScene?: boolean; clipScale?: number },
 ): LabelRenderer {
   const clipScale = opts?.clipScale ?? 1;
@@ -181,7 +192,6 @@ export function createLabelRenderer(
   // factory's call site.  Runtime code below null-checks before each use.
   const device = ctx.device as GPUDevice | null;
   const format = targetFormat;
-  const maxGlyphs = maxLabels * maxGlyphsPerLabel;
 
   // Per-font metrics record + pre-computed layer index lookup.  Built
   // once at construction time so the per-glyph pack loop in setLabels
@@ -207,24 +217,25 @@ export function createLabelRenderer(
   const firstFontId = FONT_IDS[0]!;
   const firstMetrics: FontMetrics = metricsByFont[firstFontId];
 
-  // ── CPU scratch buffers — always allocated, safe to use with null device ─
-  //
-  // The Float32Array and Uint32Array share a single ArrayBuffer so we can
-  // write f32 fields and the u32 labelIndex into the same memory region
-  // without any copies.
-  const glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
-  const glyphF32 = new Float32Array(glyphBuf);
-  const glyphU32 = new Uint32Array(glyphBuf);
-  const labelBuf = new Float32Array((maxLabels * LABEL_DATA_BYTES) / 4);
+  // ── CPU scratch buffers — (re)built by `allocate` below, safe to use with
+  // a null device. The Float32Array and Uint32Array share a single
+  // ArrayBuffer so f32 fields and the u32 labelIndex write into the same
+  // memory region without any copies. Placeholder sizes here; `allocate`
+  // replaces them before construction returns.
+  let capacity = 0;
+  let maxGlyphs = 0;
+  let glyphBuf = new ArrayBuffer(0);
+  let glyphF32 = new Float32Array(glyphBuf);
+  let glyphU32 = new Uint32Array(glyphBuf);
+  let labelBuf = new Float32Array(0);
 
   // Closure-scoped mutable counters — replace the `this.currentGlyphCount`
   // / `this.currentLabelCount` fields the class form used.  Updated only
   // by `setLabels`; read by `draw`, `glyphCount`, `labelCount`.
   let currentGlyphCount = 0;
   let currentLabelCount = 0;
-  // The rows `setLabels` actually packed, retained so the pick path can derive
-  // its hit rects from exactly what is on screen — `maxLabels`-truncated tail
-  // included, since a dropped row draws nothing and must not be clickable.
+  // The rows `setLabels` actually packed, retained so the pick path can
+  // derive its hit rects from exactly what is on screen.
   let currentLabels: readonly Label2D[] = [];
 
   // ── GPU resources (null when device is null) ─────────────────────────────
@@ -241,6 +252,8 @@ export function createLabelRenderer(
   let cornerBuffer: GPUBuffer | null = null;
   let atlasTexture: GPUTexture | null = null;
   let bindGroup: GPUBindGroup | null = null;
+  let bindGroupLayout: GPUBindGroupLayout | null = null;
+  let sampler: GPUSampler | null = null;
   // Retained only on the occlusion path — the group(1) coverage BGL that
   // `draw` rebuilds a per-frame bind group against.  Null on the plain
   // path (and whenever device is null), which is what gates `draw`'s
@@ -248,6 +261,53 @@ export function createLabelRenderer(
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
 
   const occludesScene = opts?.occludeAgainstScene === true;
+
+  /**
+   * (Re)size the CPU scratch arrays for `newCapacity` labels and, with a
+   * device, destroy + recreate the GPU storage/instance buffers and rebuild
+   * the bind group — binding 1 pins `storageBuffer`, so a stale bind group
+   * would keep reading the destroyed buffer. Runs once at construction and
+   * again whenever `setLabels` outgrows `capacity`.
+   */
+  function allocate(newCapacity: number): void {
+    capacity = newCapacity;
+    maxGlyphs = capacity * MAX_GLYPHS_PER_LABEL;
+    glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
+    glyphF32 = new Float32Array(glyphBuf);
+    glyphU32 = new Uint32Array(glyphBuf);
+    labelBuf = new Float32Array((capacity * LABEL_DATA_BYTES) / 4);
+
+    if (!device || !bindGroupLayout || !atlasTexture || !sampler || !uniformBuffer) return;
+
+    // WebGPU defers a destroyed buffer's reclaim past queued GPU work reading it.
+    storageBuffer?.destroy();
+    instanceBuffer?.destroy();
+
+    storageBuffer = device.createBuffer({
+      label: 'label-storage',
+      size: capacity * LABEL_DATA_BYTES,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    instanceBuffer = device.createBuffer({
+      label: 'label-instances',
+      size: maxGlyphs * GLYPH_INSTANCE_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+
+    bindGroup = device.createBindGroup({
+      label: 'label-bg',
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: { buffer: storageBuffer } },
+        // Explicit '2d-array' view dimension — matches the BGL entry and
+        // shader binding; spelled out so it survives a future FONTS
+        // shrink-to-one-entry edit.
+        { binding: 2, resource: atlasTexture.createView({ dimension: '2d-array' }) },
+        { binding: 3, resource: sampler },
+      ],
+    });
+  }
 
   if (device) {
     // ── Bind group layout ────────────────────────────────────────────────
@@ -257,7 +317,7 @@ export function createLabelRenderer(
     //   1 → read-only storage buffer (LabelData[], vertex-visible)
     //   2 → atlas texture   (fragment-visible)
     //   3 → atlas sampler   (fragment-visible)
-    const bindGroupLayout = device.createBindGroupLayout({
+    bindGroupLayout = device.createBindGroupLayout({
       label: 'label-bgl',
       entries: [
         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
@@ -372,18 +432,6 @@ export function createLabelRenderer(
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
-    storageBuffer = device.createBuffer({
-      label: 'label-storage',
-      size: maxLabels * LABEL_DATA_BYTES,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-
-    instanceBuffer = device.createBuffer({
-      label: 'label-instances',
-      size: maxGlyphs * GLYPH_INSTANCE_BYTES,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-    });
-
     // The corner buffer is tiny (32 bytes, 4 × vec2) and static — upload once
     // at construction and reuse across every frame.
     cornerBuffer = device.createBuffer({
@@ -439,44 +487,35 @@ export function createLabelRenderer(
     // No mipmaps: MSDF handles multi-scale rendering internally via the
     // median3 + fwidth technique. Mip-filtering would blur the signed-distance
     // channels and corrupt the glyph edge reconstruction.
-    const sampler = device.createSampler({
+    sampler = device.createSampler({
       label: 'label-sampler',
       magFilter: 'linear',
       minFilter: 'linear',
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
     });
-
-    // ── Bind group ───────────────────────────────────────────────────────
-    bindGroup = device.createBindGroup({
-      label: 'label-bg',
-      layout: bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: { buffer: storageBuffer } },
-        {
-          binding: 2,
-          // Explicit '2d-array' view dimension matches the
-          // bind-group-layout entry and the shader binding.  Spelling
-          // it out (rather than letting the default pick) makes the
-          // intent visible at the bind site and survives any future
-          // FONTS shrink-to-one-entry edit.
-          resource: atlasTexture.createView({ dimension: '2d-array' }),
-        },
-        { binding: 3, resource: sampler },
-      ],
-    });
   }
+
+  // Sizes the CPU scratch arrays and, with a device, the GPU buffers above —
+  // the same path `setLabels` re-enters on growth.
+  allocate(INITIAL_LABEL_CAPACITY);
 
   // ── public methods (closures over the locals above) ────────────────────
 
   function setLabels(labels: readonly Label2D[]): void {
+    // A roster crossing a power-of-two boundary is rare — a handful of times
+    // per session, never per frame — so a full buffer rebuild here is cheap.
+    if (labels.length > capacity) {
+      allocate(2 ** Math.ceil(Math.log2(labels.length)));
+    }
+
     currentGlyphCount = 0;
     currentLabelCount = 0;
 
-    const count = Math.min(labels.length, maxLabels);
-    currentLabels = count === labels.length ? labels : labels.slice(0, count);
-    for (let li = 0; li < count; li++) {
+    // Aliases the caller's array — packedLabels() is the pick path's
+    // authority, so the caller must not retain or mutate it after this call.
+    currentLabels = labels;
+    for (let li = 0; li < labels.length; li++) {
       const label = labels[li]!;
       // Each label specifies its own font; layout reads the font's
       // metrics from the FontId-keyed record built at construction

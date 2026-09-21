@@ -6,6 +6,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
+import { COSMO } from '../../services/engine/frame/slabs';
 import { galaxyCatalogLayerSettings } from './state/slices';
 import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
@@ -24,8 +25,6 @@ import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
   name: 'galaxyCatalog',
-  // A fragment listed here may not also sit in `UNFORMED_SETTINGS_FRAGMENTS`:
-  // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: galaxyCatalogLayerSettings,
   sources: GALAXY_CATALOG_SOURCE_ROWS,
   facts: {
@@ -45,7 +44,9 @@ export const galaxyCatalogLayer = defineLayer({
   sagas: [watchPaletteWakeSaga],
   fades: galaxyCatalogFadeRows,
   labels: (runtime) => ({
-    screen: [{ id: 'famousLabels', produceLabels: produceFamousGalaxyLabels(runtime) }],
+    screen: [
+      { id: 'famousLabels', slab: COSMO, produceLabels: produceFamousGalaxyLabels(runtime) },
+    ],
   }),
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   frame,

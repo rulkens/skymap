@@ -6,12 +6,12 @@ import {
   CONSTELLATION_HALFWIDTH_F32,
   CONSTELLATION_INTENSITY_F32,
   CONSTELLATION_COLOR_F32,
-} from '../../../../../src/services/gpu/renderers/constellations/constellationRenderer';
-import { CAMERA_UNIFORM_BYTES } from '../../../../../src/services/gpu/lib/cameraUniforms';
-import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
-import type { ConstellationsArtifact } from '../../../../../src/@types/loading/ConstellationsArtifact';
-import type { FadeUniformsBgl } from '../../../../../src/@types/rendering/FadeUniformsBgl';
-import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+} from '../../../../src/layers/constellations/render/constellationRenderer';
+import { CAMERA_UNIFORM_BYTES } from '../../../../src/services/gpu/lib/cameraUniforms';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import type { ConstellationsArtifact } from '../../../../src/@types/loading/ConstellationsArtifact';
+import type { FadeUniformsBgl } from '../../../../src/@types/rendering/FadeUniformsBgl';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 /** Minimal GPUDevice mock — same shape as the filamentRenderer test. */
 function mockDevice(renderPipelines?: GPURenderPipelineDescriptor[]): GPUDevice {

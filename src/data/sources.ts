@@ -19,7 +19,7 @@ import { SUPERCLUSTER_ENTRY } from './sources/supercluster';
 import { VOID_ENTRY } from './sources/void';
 import { GROUP_ENTRY } from './sources/group';
 import { FILAMENTS_SOURCE_ROWS } from '../layers/filaments/sources/filamentsSourceRows';
-import { CONSTELLATIONS_ENTRY } from './sources/constellations';
+import { CONSTELLATIONS_SOURCE_ROWS } from '../layers/constellations/sources/constellationsSourceRows';
 import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
 import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
@@ -88,7 +88,6 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,
   [Source.GaiaStars]: GAIA_STARS_ENTRY,
-  [Source.Constellations]: CONSTELLATIONS_ENTRY,
   [Source.Sun]: SUN_ENTRY,
   [Source.SgrAStar]: SGR_A_STAR_ENTRY,
   [Source.SStar]: S_STAR_ENTRY,
@@ -103,6 +102,7 @@ export const SOURCE_REGISTRY = {
   ...sourceRecordOf(FILAMENTS_SOURCE_ROWS),
   ...sourceRecordOf(FLOW_SOURCE_ROWS),
   ...sourceRecordOf(ZONE_OF_AVOIDANCE_SOURCE_ROWS),
+  ...sourceRecordOf(CONSTELLATIONS_SOURCE_ROWS),
 } as const satisfies Readonly<Record<SourceType, SourceEntry>>;
 // `sourceRecordOf`'s element type narrows `SourceType` to the rows tuple's
 // code union, so `SOURCE_REGISTRY[code]` narrows to a galaxy entry at every

@@ -43,7 +43,7 @@ the registry to produce or check it.
 This is smaller than it looks, though: `CaptionKind` was never a 1:1 shadow of
 `bearsLabel` rows to begin with, and still isn't now that the fade-rule consolidation
 is done. `constellation` carries a `CaptionKind` but its source row
-(`data/sources/constellations.ts`) is `bearsLabel: false`; conversely `cluster`,
+(`src/layers/constellations/sources/constellations.ts`) is `bearsLabel: false`; conversely `cluster`,
 `supercluster`, `void`, `group`, `milky-way`, and `famous-galaxy` are all
 `bearsLabel: true` but have no `CaptionKind` — their captions ride the COSMO
 `labelsPass` / structure-label path entirely, a different pipeline from the NEAR0

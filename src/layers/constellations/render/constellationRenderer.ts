@@ -43,18 +43,21 @@
  * bindings the upload mutates.
  */
 
-import vsCode from '../../shaders/constellations/vertex.wesl?static';
-import fsCode from '../../shaders/constellations/fragment.wesl?static';
-import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { ConstellationRenderer } from '../../../../@types/rendering/ConstellationRenderer';
-import type { ConstellationsArtifact } from '../../../../@types/loading/ConstellationsArtifact';
-import type { FadeUniformsBgl } from '../../../../@types/rendering/FadeUniformsBgl';
-import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
-import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
-import { writeCameraPrefix } from '../../lib/cameraUniforms';
-import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
-import { ADDITIVE_BLEND } from '../../lib/blendStates';
+import vsCode from '../../../services/gpu/shaders/constellations/vertex.wesl?static';
+import fsCode from '../../../services/gpu/shaders/constellations/fragment.wesl?static';
+import type { Renderer } from '../../../@types/rendering/Renderer';
+import type { ConstellationRenderer } from '../../../@types/rendering/ConstellationRenderer';
+import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { FadeUniformsBgl } from '../../../@types/rendering/FadeUniformsBgl';
+import type { Vec2 } from '../../../@types/math/Vec2';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { createShaderModuleWithDevLog } from '../../../services/gpu/shaderCompileLogger';
+import { writeCameraPrefix } from '../../../services/gpu/lib/cameraUniforms';
+import {
+  UNIT_QUAD_STRIP_CORNERS,
+  UNIT_QUAD_VERTEX_LAYOUT,
+} from '../../../services/gpu/lib/unitQuad';
+import { ADDITIVE_BLEND } from '../../../services/gpu/lib/blendStates';
 import { buildConstellationInstances, FLOATS_PER_SEGMENT } from './buildConstellationInstances';
 
 // Uniform block layout, mirroring 'struct Uniforms' in
