@@ -1,23 +1,19 @@
 /**
- * guidedTourSaga — the outer tour loop: play every beat in order, sandwiched in
- * a snapshot/restore pair.
+ * tourBody — the beat loop `runTakeover` runs as a tour's takeover body:
+ * play every beat in order, racing `exitTakeover` the whole time.
  *
- * ### Why a saga and why only exitTour aborts
+ * ### Why a saga and why only exitTakeover aborts
  *
- * The outer loop must restore the scene (settings + camera focus) whether the
- * tour finishes naturally or is cut short by the user. A `try/finally` in a
- * generator gives that guarantee unconditionally — a pure-data sequencer that
- * drives beats from outside a saga cannot bind a teardown to its own
- * cancellation. `exitTour` is the only abort signal because the tour's clip@95
- * camera driver swallows drag input: a stray `beginDrag` or `commitCameraPose`
- * should NOT stop the show — the user must dispatch `exitTour` explicitly.
+ * `exitTakeover` is the only abort signal because the tour's clip@95 camera
+ * driver swallows drag input: a stray `beginDrag` or `commitCameraPose`
+ * should NOT stop the show — the user must dispatch `exitTakeover` explicitly.
  *
  * ### Scene preparation is the first beat's job
  *
  * There is no tour-level setup list: the establishing strip is authored inside
  * the first beat's clip as `hide()`/`scene()` cues, so a tour has one authoring
- * surface. The snapshot here is taken before any beat plays, so the restore in
- * the finally winds back every in-tour mutation regardless of which beat made it.
+ * surface. `runTakeover`'s snapshot is taken before this body ever runs, so its
+ * restore winds back every in-tour mutation regardless of which beat made it.
  *
  * ### Every beat entry reconstructs its derived scene
  *
@@ -28,75 +24,62 @@
  * unwind) it is the correction. The invariant: the scene at beat i is a pure
  * function of i, never of the navigation path that led there.
  *
- * ### Why no setUiHidden here
+ * ### tourStarted/tourEnded stay local, guarded the same way `runTakeover` is
  *
- * HUD-hidden-during-tour is DERIVED from `tour.active`, not toggled imperatively:
- * the App hides the HUD stack while a tour is active and mounts the overlay from
- * the same flag. A separate `setUiHidden(true/false)` would be a second write to
- * coordinate. With a single lifecycle write (`tourStarted` / `tourEnded`) there is
- * nothing to desync, and the finally guards its `tourEnded` behind `cancelled()`
- * (see below) so a superseding run's `tourStarted` is never clobbered by the
- * outgoing run's teardown.
- *
- * ### Capture is a selector, restore is a saga
- *
- * The snapshot is a pure store read — `yield* select(captureScene)` — so capture
- * needs no engine context here. The matching restore DISPATCHES (settings merge +
- * orientation restore + focus revert), so it lives in `restoreSceneSaga`. This
- * saga therefore reaches no `getContext` itself.
+ * `runTakeover` (generic over tour and view) owns the takeover-wide
+ * start/restore/end bracket; it knows nothing about `tour.tourId`/`beatIndex`
+ * bookkeeping, so this body dispatches its OWN `tourStarted`/`tourEnded` around
+ * the beat loop. The `cancelled()` guard on `tourEnded` mirrors `runTakeover`'s
+ * for the same reason: on a tour-to-tour `takeLatest` supersede the incoming
+ * run's `tourStarted` may already have landed by the time this finally runs,
+ * and an unconditional `tourEnded` here would clobber its `tourId` back to ''.
  */
 
 import { call, put, select, take, race, cancelled, delay } from 'typed-redux-saga';
 
 import { visitBeatSaga } from './visitBeatSaga';
 import { FOLD_SETTLE_MS } from './foldSettleMs';
-import { captureScene } from '../scene/captureScene';
-import { restoreSceneSaga } from '../scene/restoreSceneSaga';
 import { computeSceneEntering } from './computeSceneEntering';
-import { exitTour } from './tourActions';
+import { exitTakeover } from '../takeover/takeoverActions';
 import { tourStarted, tourEnded } from './tourSlice';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../settings/mergeSettingsSnapshot';
+import { captureSettings } from '../scene/captureSettings';
 import type { RootState } from '../../store/types';
 import type { Tour } from '../../@types/animation/tour/Tour';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
 
 /**
- * Play all beats in order, sandwiched in a snapshot/restore pair. An optional
- * `range` windows the run to a contiguous slice of beats (the recorder passes
- * one so a single-beat take doesn't replay the whole tour); omitted means the
- * full tour.
+ * Play all beats in order. An optional `range` windows the run to a
+ * contiguous slice of beats (the recorder passes one so a single-beat take
+ * doesn't replay the whole tour); omitted means the full tour.
  *
  * This is a saga — not a plain async function — because `try/finally` in a
  * generator runs on BOTH natural completion (all beats finish) and
- * cancellation (exitTour wins the race and redux-saga cancels the `run`
- * arm). A plain async function whose Promise is externally rejected has no
- * equivalent guarantee: the caller must set up a separate teardown path.
- * Here the finally handles both paths with one clause.
+ * cancellation (exitTakeover wins the race, or a superseding takeover
+ * cancels this body from outside). A plain async function whose Promise is
+ * externally rejected has no equivalent guarantee: the caller must set up a
+ * separate teardown path. Here the finally handles both paths with one clause.
  *
- * Only exitTour stops the tour. Camera-input actions (`beginDrag`,
+ * Only exitTakeover stops the tour. Camera-input actions (`beginDrag`,
  * `commitCameraPose`, …) must NOT abort the run — the clip@95 driver owns
  * the camera during playback and input actions arrive but have no effect on
  * tour progression. Adding a camera-input `take` here would incorrectly end
  * the tour on any background orbit-controls event.
  */
-export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
-  // Snapshot the ten settings clusters + selection.focus BEFORE any beat plays
-  // so restore winds back to the user's pre-tour state including the first
-  // beat's establishing strip. A pure store read — no engine context needed.
-  const snapshot = yield* select(captureScene);
-
-  // Activate the tour runtime slice — the App derives HUD-hidden + mounts the
-  // overlay from `tour.active`.
+export function* tourBody(tour: Tour, range?: BeatRange): Generator {
+  // Activate the tour's own bookkeeping (id + beat position). `runTakeover`
+  // already captured the pre-takeover snapshot and marked the takeover source
+  // before calling this body.
   yield* put(tourStarted({ tourId: tour.id }));
 
   // Clear any pre-tour selection: the beats only ever write the `focus` slot,
   // so a clicked halo would otherwise float on screen through the whole run.
-  // Focus is cleared with it — the snapshot above already holds the user's
-  // value for the exit restore, and beat 1's own focus() re-establishes the
-  // tour's. `select` is deliberately NOT restored: like `hover`, it is
-  // ephemeral UI state (see captureScene).
+  // Focus is cleared with it — `runTakeover`'s snapshot already holds the
+  // user's value for the exit restore, and beat 1's own focus() re-establishes
+  // the tour's. `select` is deliberately NOT restored: like `hover`, it is
+  // ephemeral UI state (see `captureScene`).
   yield* put(clearSelection());
 
   try {
@@ -104,7 +87,7 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
       // `run` sequences the beats by INDEX (not a forward-only for-of), so a
       // `'prev'` outcome can step the index back and re-play the previous beat's
       // establishing fly. Advancing off the window's last beat ends the run
-      // naturally. An exitTour that wins the outer race cancels this arm
+      // naturally. An exitTakeover that wins the outer race cancels this arm
       // mid-visitBeatSaga — redux-saga propagates the cancellation into the
       // in-flight playClip call.
       run: call(function* () {
@@ -119,6 +102,12 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
         const from = range ? Math.min(Math.max(range.from, 0), Math.max(last, 0)) : 0;
         const to = range ? Math.min(Math.max(range.to, 0), last) : last;
 
+        // The fold's baseline is the settings half of the pre-takeover
+        // snapshot — the same read `captureScene` (via `captureSettings`)
+        // takes, re-read here rather than threaded from `runTakeover` so
+        // this body stays a single self-contained saga.
+        const baselineSettings = yield* select(captureSettings);
+
         let i = from;
         let firstEntry = true;
         while (i <= to) {
@@ -128,7 +117,7 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
           // range the fold is also what makes a mid-tour take faithful: it
           // applies the scene cues of beats 0..i-1 even though they never played.
           const live = yield* select((s: RootState) => s.settings);
-          const baseline = mergeSettingsSnapshot(live, snapshot.settings);
+          const baseline = mergeSettingsSnapshot(live, baselineSettings);
           yield* put(mergeSnapshot(computeSceneEntering(baseline, tour.beats, i)));
 
           // A windowed take opening mid-tour (from > 0) has just re-created
@@ -163,20 +152,11 @@ export function* guidedTourSaga(tour: Tour, range?: BeatRange): Generator {
       }),
       // `exit` is the only abort: an explicit user/system dispatch, not a
       // stray camera-input action.
-      exit: take(exitTour),
+      exit: take(exitTakeover),
     });
   } finally {
-    // Runs on natural completion, exitTour, AND supersede cancellation — always
-    // restore the captured scene.
-    yield* call(restoreSceneSaga, snapshot);
-
-    // Emit the lifecycle `tourEnded` only when THIS run is the one ending. On a
-    // takeLatest supersede the incoming run has already put its own `tourStarted`
-    // (the finally yields, so the successor runs in between), and a late
-    // `tourEnded` from this cancelled finally would clobber it — leaving the HUD
-    // shown while the new tour plays. `cancelled()` is true ONLY on an external
-    // cancel (supersede); a natural finish or an exitTour-won race completes the
-    // try normally, so it stays false there and the tour ends as it should.
+    // See the module header: guarded the same way `runTakeover` guards
+    // `takeoverEnded`, for the same clobber reason, one level down.
     if (!(yield* cancelled())) {
       yield* put(tourEnded());
     }

@@ -6,7 +6,7 @@
  * signal dispatch.
  *
  * The four controls dispatch reducer-less signals (`prevBeat` / `advanceTour` /
- * `togglePause` / `exitTour`) that only the tour sagas act on — so state does
+ * `togglePause` / `exitTakeover`) that only the tour sagas act on — so state does
  * not change on click. We assert the dispatch directly via a `store.dispatch`
  * spy installed AFTER seeding (so the seed dispatches are excluded) and BEFORE
  * render (so `useAppDispatch` hands the component the spy).
@@ -23,7 +23,8 @@ import { Provider } from 'react-redux';
 import TourOverlayContainer from '../../../src/components/containers/TourOverlayContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { tourStarted, beatChanged } from '../../../src/state/tour/tourSlice';
-import { prevBeat, advanceTour, togglePause, exitTour } from '../../../src/state/tour/tourActions';
+import { prevBeat, advanceTour, togglePause } from '../../../src/state/tour/tourActions';
+import { exitTakeover, takeoverStarted } from '../../../src/state/takeover/takeoverActions';
 
 type Store = ReturnType<typeof createAppStore>['store'];
 
@@ -33,8 +34,11 @@ function makeWrapper(store: Store) {
 
 // Seed an active tour parked on beat index 1, so `canPrev` is true and every
 // nav button is enabled. `webShowcase` is a real registry tour (3 beats).
+// `takeoverStarted` is what `selectTourActive` (and so `selectTourCanPrev`)
+// actually reads now — `tourStarted` alone only seeds the beat bookkeeping.
 function seedActiveTour(store: Store): void {
   store.dispatch(tourStarted({ tourId: 'webShowcase' }));
+  store.dispatch(takeoverStarted({ kind: 'tour', id: 'webShowcase' }));
   store.dispatch(beatChanged(1));
 }
 
@@ -81,13 +85,13 @@ describe('TourOverlayContainer', () => {
     expect(spy).toHaveBeenCalledWith(togglePause());
   });
 
-  it('dispatches exitTour when Exit is clicked', () => {
+  it('dispatches exitTakeover when Exit is clicked', () => {
     const { store } = createAppStore();
     seedActiveTour(store);
     const spy = vi.spyOn(store, 'dispatch');
     const { container } = renderContainer(store);
     fireEvent.click(container.querySelector('[aria-label="Exit tour"]')!);
-    expect(spy).toHaveBeenCalledWith(exitTour());
+    expect(spy).toHaveBeenCalledWith(exitTakeover());
   });
 
   it('disables Previous on the first beat (canPrev false at index 0)', () => {

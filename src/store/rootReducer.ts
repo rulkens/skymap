@@ -2,7 +2,7 @@
  * rootReducer — the Redux store's single combine point.
  *
  * The store combines slices — `settings`, `ui`, `tier`, `camera`,
- * `selection`, `selectionRows`, `tour`, `engine`, and `time` — via
+ * `selection`, `selectionRows`, `tour`, `takeover`, `engine`, and `time` — via
  * `combineReducers`.
  * This forward-compatible shape derives `RootState` from the combine and makes
  * new sibling routes additive edits here rather than structural migrations
@@ -35,6 +35,7 @@ import {
   selectionRoute,
   selectionRowsRoute,
   tourRoute,
+  takeoverRoute,
   engineRoute,
   timeRoute,
 } from './constants';
@@ -45,6 +46,7 @@ import cameraReducer from '../state/camera/cameraSlice';
 import selectionReducer from '../state/selection/selectionSlice';
 import selectionRowsReducer from '../state/selectionRows/selectionRowsSlice';
 import tourReducer from '../state/tour/tourSlice';
+import takeoverReducer from '../state/takeover/takeoverSlice';
 import engineReducer from '../state/engine/engineSlice';
 import timeReducer from '../state/time/timeSlice';
 
@@ -56,6 +58,7 @@ export const rootReducer = combineReducers({
   [selectionRoute]: selectionReducer,
   [selectionRowsRoute]: selectionRowsReducer,
   [tourRoute]: tourReducer,
+  [takeoverRoute]: takeoverReducer,
   [engineRoute]: engineReducer,
   [timeRoute]: timeReducer,
 });

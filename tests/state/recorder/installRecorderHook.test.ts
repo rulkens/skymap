@@ -4,10 +4,10 @@
  * harness drives through.
  *
  * The store is the REAL `rootReducer` behind a plain `configureStore` (the
- * guidedTourSaga suite's buildStore pattern) — no saga middleware, because
- * these tests drive the tour slice directly (`tourStarted` / `tourEnded`
- * stand in for the saga's writes) and running the real root saga would need
- * the whole engine context. A recording middleware captures dispatched
+ * tourBody suite's buildStore pattern) — no saga middleware, because these
+ * tests drive the takeover slice directly (`takeoverStarted` / `takeoverEnded`
+ * stand in for `runTakeover`'s writes) and running the real root saga would
+ * need the whole engine context. A recording middleware captures dispatched
  * actions so the `startTour` payload contract (`{ id, beats }`) is asserted
  * on the actual action, not on state.
  *
@@ -29,7 +29,7 @@ import { rootReducer } from '../../../src/store/rootReducer';
 import { installRecorderHook } from '../../../src/state/recorder/installRecorderHook';
 import { READY_STABLE_MS } from '../../../src/state/lifecycle/whenStablyReady';
 import { startTour } from '../../../src/state/tour/tourActions';
-import { tourStarted, tourEnded } from '../../../src/state/tour/tourSlice';
+import { takeoverStarted, takeoverEnded } from '../../../src/state/takeover/takeoverActions';
 import { startClip } from '../../../src/state/camera/clipActions';
 import { clipStarted, clipEnded } from '../../../src/state/camera/cameraSlice';
 import {
@@ -151,13 +151,13 @@ describe('installRecorderHook', () => {
     expect(dispatched).toBeDefined();
     expect(dispatched?.payload).toEqual({ id: 'demo', beats: { from: 1, to: 2 } });
 
-    // The saga's writes, driven directly: activation must not resolve it...
-    store.dispatch(tourStarted({ tourId: 'demo' }));
+    // The bracket's writes, driven directly: activation must not resolve it...
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'demo' }));
     await Promise.resolve();
     expect(settled).toBe(false);
 
-    // ...the tour-ended signal must.
-    store.dispatch(tourEnded());
+    // ...the takeover-ended signal must.
+    store.dispatch(takeoverEnded());
     await expect(done).resolves.toBeUndefined();
   });
 
@@ -168,11 +168,11 @@ describe('installRecorderHook', () => {
     const hook = getHook();
     if (!hook) throw new Error('hook not installed');
 
-    // Tour A is running (the saga's activation write, driven directly). A
-    // takeLatest supersede never emits tourEnded for the cancelled run, so an
-    // overlapping call could not attribute the eventual end — the hook is
+    // Tour A is running (the bracket's activation write, driven directly). A
+    // takeLatest supersede never emits takeoverEnded for the cancelled run, so
+    // an overlapping call could not attribute the eventual end — the hook is
     // single-flight and must refuse loudly instead of resolving on tour B.
-    store.dispatch(tourStarted({ tourId: 'demo' }));
+    store.dispatch(takeoverStarted({ kind: 'tour', id: 'demo' }));
     const dispatchedBefore = actions.filter((action) => action.type === startTour.type).length;
 
     await expect(hook.startTour('webShowcase')).rejects.toThrow(

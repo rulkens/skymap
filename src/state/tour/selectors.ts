@@ -3,15 +3,19 @@
  * `RootState`, mirroring the camera/selection slice conventions (one read
  * surface per slice).
  *
- * The slice stores only `active / tourId / beatIndex / paused / dwellNonce /
- * dwellSec`; everything else the overlay renders — the kicker label, the beat
- * count, the active caption — is DERIVED here by resolving the active tour from
+ * The slice stores only `tourId / beatIndex / paused / dwellNonce / dwellSec`;
+ * everything else the overlay renders — the kicker label, the beat count, the
+ * active caption — is DERIVED here by resolving the active tour from
  * `tourRegistry` and indexing its beats. This is the whole reason the runtime
  * state can stay so small: the registry is already the single source of truth
  * for tour content, so duplicating any of it into the slice would only invite
  * drift. (`dwellSec` is the one exception: the compiled duration of the beat's
  * RESOLVED dwellClip isn't derivable from the registry alone, so the saga
  * records it at dwell start.)
+ *
+ * `selectTourActive` derives from `selectTakeoverSource` (the `takeover`
+ * slice) rather than a boolean here — see that slice's header for why a
+ * tour's "is it running" fact moved there.
  *
  * Every selector is `RootState`-scoped, so each drops unchanged into both the
  * React side (`useAppSelector(...)`) and the saga/engine side
@@ -21,6 +25,7 @@
 import { createSelector } from '@reduxjs/toolkit';
 import { tourRoute } from '../../store/constants';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
+import { selectTakeoverSource } from '../takeover/selectors';
 import type { RootState } from '../../store/types';
 import type { TourRuntimeState } from '../../@types/animation/tour/TourRuntimeState';
 import type { Tour } from '../../@types/animation/tour/Tour';
@@ -29,7 +34,8 @@ import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 
 export const selectTourRuntime = (state: RootState): TourRuntimeState => state[tourRoute];
 
-export const selectTourActive = (state: RootState): boolean => selectTourRuntime(state).active;
+export const selectTourActive = (state: RootState): boolean =>
+  selectTakeoverSource(state)?.kind === 'tour';
 
 export const selectTourPaused = (state: RootState): boolean => selectTourRuntime(state).paused;
 
@@ -39,10 +45,11 @@ export const selectTourDwellNonce = (state: RootState): number =>
   selectTourRuntime(state).dwellNonce;
 
 // Resolve the active tour from the registry. Indexed by a plain string (the
-// slice stores `tourId` as a string); a stale or empty id resolves to null.
+// slice stores `tourId` as a string); a stale or empty id resolves to null,
+// as does a `tourId` left over from a run the takeover has since moved past.
 export const selectActiveTour = (state: RootState): Tour | null => {
+  if (!selectTourActive(state)) return null;
   const runtime = selectTourRuntime(state);
-  if (!runtime.active) return null;
   return (tourRegistry as Record<string, Tour>)[runtime.tourId] ?? null;
 };
 

@@ -3,9 +3,9 @@
  * settings, then orientation, then selection focus. Pure Intent — three
  * dispatches, no engine context of its own.
  *
- * This is the close of the tour's capture → play → restore round-trip
- * (`captureScene` is the open). `guidedTourSaga` runs it in its `finally`, so it
- * fires on BOTH a natural tour finish and an `exitTour`/supersede cancellation.
+ * This is the close of a takeover's capture → play → restore round-trip
+ * (`captureScene` is the open). `runTakeover` runs it in its `finally`, so it
+ * fires on BOTH a natural finish and an `exitTakeover`/supersede cancellation.
  *
  *   1. `put(mergeSnapshot(settings))` — the ten clusters land in ONE merge
  *      dispatch (one transition, one store notification — what wakes React's

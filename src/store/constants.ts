@@ -26,10 +26,14 @@ export const tierRoute = 'tier' as const;
 export const cameraRoute = 'camera' as const;
 export const selectionRoute = 'selection' as const;
 export const selectionRowsRoute = 'selectionRows' as const;
-// `tourRoute` is the guided-tour runtime slice (active / tourId / beatIndex /
-// paused / dwellNonce) — the single-writer state the tour sagas drive and the
+// `tourRoute` is the guided-tour runtime slice (tourId / beatIndex / paused /
+// dwellNonce) — the single-writer state the tour sagas drive and the
 // TourOverlay reads; everything else it shows derives from the registry.
+// Whether a tour is ACTIVE lives on `takeoverRoute` now, not here.
 export const tourRoute = 'tour' as const;
+// `takeoverRoute` is the mutual-exclusion slice `runTakeover` writes: which
+// source (tour or view), if any, currently owns the scene.
+export const takeoverRoute = 'takeover' as const;
 // `engineRoute` is the engine runtime slice — lifecycle status, per-source and
 // per-structure counts, load progress, and the scale-bar descriptor. Written
 // by the engine via action dispatches; read by React UI components.
