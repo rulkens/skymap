@@ -19,7 +19,7 @@
 import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 
 import { updateSelectionFocus } from './selectionSlice';
-import { startCameraTween } from '../camera/cameraSlice';
+import { startCameraTween, spendUrlPose } from '../camera/cameraSlice';
 import { selectUrlPose } from '../camera/selectors';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
@@ -39,15 +39,25 @@ export function* watchFocusTweenSaga() {
   yield* takeLatest(
     updateSelectionFocus,
     suspendDuringClip(function* (action) {
-      // A parked `#pose=` link IS the destination — flying there would land the
-      // tween on top of it. Checked before the deferral loop below: a star or
-      // structure ref can defer past the seed's moment, and the pose is spent by
-      // then, so a check placed after the wait would already read null.
-      if ((yield* select(selectUrlPose)) !== null) return;
-
       const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
+
+      // A body/milkyWay id resolves synchronously off the hash read, before
+      // `wireInput` runs — waiting for the camera first keeps the urlPose
+      // check below from reading a park the boot commit hasn't landed yet.
+      while (cameraRuntime() === null) {
+        yield* take(engineStatusChanged);
+      }
+
+      // A parked `#pose=` link IS the destination — flying there would land the
+      // tween on top of it. This, the arrival focus, is what spends the park.
+      // Accepted edge: a home-less boot or a junk id that never resolves still
+      // spends here, so the user's first focus after it does not fly, once.
+      if ((yield* select(selectUrlPose)) !== null) {
+        yield* put(spendUrlPose());
+        return;
+      }
 
       // A star or structure deep link resolves its ref statically at bootstrap
       // (index-based / a durable id), before its backing store is fed, so the
@@ -118,18 +128,9 @@ export function* watchFocusTweenSaga() {
       // neither mechanism honours.
       if (bodyMovesThisFrame(row)) return;
 
-      // A focus that resolves during bootstrap can outrun the camera: the ref is
-      // known but the camera (hence `cameraRuntime()`) isn't seeded until wireInput
-      // runs. Defer on the engine-status pulse — the first one past bootstrap fires
-      // after the camera exists — re-reading the live Resources each time, so the
-      // tween lands once the camera is ready instead of being dropped. `takeLatest`
-      // discards this waiting worker if a newer focus supersedes it.
-      let runtime = cameraRuntime();
-      while (runtime === null) {
-        yield* take(engineStatusChanged);
-        runtime = cameraRuntime();
-      }
-
+      // Known ready since the wait above; re-read rather than reuse, since a
+      // long catalog defer can move `from`/`fovYRad` in the meantime.
+      const runtime = cameraRuntime()!;
       const frame = yield* select(selectOrientation);
       yield* put(startCameraTween(focusTweenDescriptor(row, runtime.from, runtime.fovYRad, frame)));
     }),

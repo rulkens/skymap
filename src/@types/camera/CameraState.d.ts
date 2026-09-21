@@ -24,7 +24,7 @@ export type CameraState = {
   dragging: boolean;
   clip: { data: ClipData; frame: OrientationFrameId } | null;
   frameTween: FrameTween | null;
-  /** A `#pose=` link parked between the hash read and the engine's seed; the seed spends it. */
+  /** A `#pose=` link, parked by the hash read; spent when the arrival focus lands. */
   urlPose: FramedCameraPose | null;
   /** The band edges the camera math is threaded with; session-only, never serialized. `readonly`: always replaced whole. */
   readonly tuning: CameraTuning;

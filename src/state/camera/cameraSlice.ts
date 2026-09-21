@@ -65,15 +65,19 @@ const cameraSlice = createSlice({
     // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
-      // A commit is the new truth, so any outside commit spends a pending
-      // `#pose=` link — the seed (its normal spender) included.
-      camera.urlPose = null;
     },
 
-    // A `#pose=` deep link, parked until the seed (or another outside commit)
-    // spends it. Reducer-only: no effect fires off this write.
+    // A `#pose=` deep link, parked until the arrival focus (or the home focus)
+    // spends it via `spendUrlPose` — see `watchFocusTweenSaga`.
     applyUrlPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.urlPose = action.payload;
+    },
+
+    // The one spender: `watchFocusTweenSaga` calls this for the first
+    // `updateSelectionFocus` after a parked link, whether or not that focus
+    // itself tweens.
+    spendUrlPose: (camera) => {
+      camera.urlPose = null;
     },
 
     startCameraTween: (camera, action: PayloadAction<CameraTweenDescriptor>) => {
@@ -126,6 +130,7 @@ export const {
   endDrag,
   commitCameraPose,
   applyUrlPose,
+  spendUrlPose,
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,

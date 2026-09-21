@@ -23,7 +23,7 @@ import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { applyUrlPose } from '../../../src/state/camera/cameraSlice';
+import { applyUrlPose, commitCameraPose } from '../../../src/state/camera/cameraSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -63,16 +63,6 @@ function focusedOn(row: SelectionRow): RootState {
 
 afterEach(() => {
   vi.useRealTimers();
-});
-
-describe('table order', () => {
-  it('reads pose before focus — the fly-to tween must see a parked urlPose', () => {
-    // Cross-file contract with watchFocusTweenSaga's stand-down check: a
-    // `#focus=…&pose=…` link only works if applyUrlPose lands first.
-    const poseIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'pose');
-    const focusIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'focus');
-    expect(poseIndex).toBeLessThan(focusIndex);
-  });
 });
 
 describe('focus row', () => {
@@ -167,8 +157,19 @@ describe('pose row', () => {
     pose: { target: [1, 2, 3], yaw: 0.7, pitch: -0.2, distance: 5.5, roll: 0.42 },
   };
 
-  it('reads a valid value as applyUrlPose', () => {
-    expect(poseSource.read(encodeFramedPose(WORLD_ARM))).toEqual([applyUrlPose(WORLD_ARM)]);
+  it('reads a valid value as a park AND a commit, park first', () => {
+    expect(poseSource.read(encodeFramedPose(WORLD_ARM))).toEqual([
+      applyUrlPose(WORLD_ARM),
+      commitCameraPose(WORLD_ARM),
+    ]);
+  });
+
+  it('reads before focus — the fly-to tween must see a parked urlPose', () => {
+    // Cross-file contract with watchFocusTweenSaga's stand-down check: a
+    // `#focus=…&pose=…` link only works if applyUrlPose lands first.
+    const poseIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'pose');
+    const focusIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'focus');
+    expect(poseIndex).toBeLessThan(focusIndex);
   });
 
   it('reads a malformed value as no change at all', () => {

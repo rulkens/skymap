@@ -154,25 +154,23 @@ describe('watchHashReadSaga', () => {
     expect(recorded.map((action) => action.type)).not.toContain(requestFocus.type);
   });
 
-  it('parks an arrival pose for the seed, but commits a navigation pose itself', () => {
+  it('applies AND parks a pose the same way on arrival and on a later navigation', () => {
     // The codec round-trips an explicit `roll`, which `absoluteArm` leaves off.
     const pose = absoluteArm({ target: [1, 2, 3], yaw: 0.5, pitch: -0.25, distance: 4, roll: 0 });
     const { recorded, emit } = buildHarness(`pose=${encodeFramedPose(pose)}`);
 
-    // At boot the camera does not exist: the pose is parked and nothing else
-    // fires, so `wireInput` finds it and seeds from it.
-    expect(recorded).toEqual([applyUrlPose(pose), hashArrivalApplied()]);
+    // Both actions fire at boot too — the camera doesn't exist yet, but a
+    // commit lands in the store regardless (the seed re-commits the same
+    // object) and the park is what the arrival focus later spends.
+    expect(recorded).toEqual([applyUrlPose(pose), commitCameraPose(pose), hashArrivalApplied()]);
     recorded.length = 0;
 
     emit(`pose=${encodeFramedPose(pose)}`);
 
-    // After boot nobody else will spend a parked pose — the seed has run — so
-    // the navigation pass commits it, or an address-bar edit would silently do
-    // nothing and every later focus fly-to would stand down against it. The
-    // commit is LAST: the other rows' absent arms (focus, t, orientation) fire
-    // in between, and a focus fly-to must see the pose still parked.
+    // Same row order on a hashchange: pose is read first (table order), so it
+    // applies before the other rows' absent arms (focus, t, orientation) fire.
     expect(recorded[0]).toEqual(applyUrlPose(pose));
-    expect(recorded.at(-1)).toEqual(commitCameraPose(pose));
+    expect(recorded[1]).toEqual(commitCameraPose(pose));
   });
 
   it('detaches the channel subscriber when cancelled', () => {

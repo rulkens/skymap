@@ -86,7 +86,7 @@ import { setOrientation } from '../settings/core/orientationSlice';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
-import { applyUrlPose } from '../camera/cameraSlice';
+import { applyUrlPose, commitCameraPose } from '../camera/cameraSlice';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
@@ -254,14 +254,16 @@ const orientationSource: HashParamSource = {
  * (`hashBodyFor` never composes a `pose` param): the rendered pose lands a
  * `commitCameraPose` every frame of a drag, and a row that tried to keep up
  * would fight `watchHashWriteSaga`'s own coalescing for no reader anyone
- * shares. Absence means "leave the camera alone" — at boot (the engine's own
- * seed stands) and on a Back/Forward across the entry alike, which is why
- * `readAbsent` also returns nothing.
+ * shares. Absence means "leave the camera alone", boot and navigation alike.
  *
- * `read` parks the pose in `camera.urlPose` (`applyUrlPose`) rather than
- * committing it directly — the store exists here but the camera doesn't yet
- * — and it must run BEFORE `focusSource`'s row (table order below) so a
- * `#focus=…&pose=…` link's fly-to tween sees the parked pose and stands down.
+ * `read` both commits the pose (so it draws immediately) and parks it in
+ * `camera.urlPose` — the link owns the camera until the arrival focus spends
+ * the park (`spendUrlPose`, in `watchFocusTweenSaga`). Must run BEFORE
+ * `focusSource` (table order below) so a `#focus=…&pose=…` link's fly-to
+ * tween sees the park and stands down. The commit gets its OWN object, not
+ * `framed` by reference: `wireInput`'s boot re-commit depends on seeing a
+ * different `base` reference than whatever it seeded from (B2), which this
+ * early commit would silently defeat by aliasing the park.
  */
 const poseSource: HashParamSource = {
   key: 'pose',
@@ -274,13 +276,11 @@ const poseSource: HashParamSource = {
       console.warn(`hashParamSources: malformed pose param, ignoring: ${value}`);
       return [];
     }
-    return [applyUrlPose(framed)];
+    return [applyUrlPose(framed), commitCameraPose({ ...framed })];
   },
   readAbsent: () => [],
 };
 
-// `poseSource` reads first — see its docblock — so the rest keep their
-// original relative order.
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   poseSource,
   focusSource,

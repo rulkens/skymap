@@ -116,17 +116,18 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // camera jump on frame one.
   //
   // The URL orientation frame — and, the same gap, a `#pose=` link's
-  // `camera.urlPose` — are already in the store here because `createEngine`
-  // dispatches `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE
-  // this phase runs inside. Registration-before-bootstrap is the load-bearing
-  // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
-  // synchronous with engine construction, silently regresses both.
+  // `camera.urlPose` — are already in the store: `createEngine` dispatches
+  // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE this
+  // phase runs inside; moving that dispatch into a phase regresses both.
   //
-  // A parked `urlPose` IS the boot pose — the `l`-key's own committed output —
-  // so it wins outright over the computed home framing. `computeInitialCamera`
-  // still runs unconditionally: its fov/near/far feed the projection below
-  // either way. `target` is COPIED: `initialCam.target` is mutable and a fresh
-  // pose outlives this seed.
+  // A parked `urlPose` IS the boot pose — a `#pose=` deep link's exact camera
+  // — and wins outright over the computed home framing (`target` COPIED, as
+  // `initialCam.target` is mutable); the park itself stays put, spent by the
+  // arrival focus, not this seed.
+  //
+  // Seeded BEFORE the commit below, off the still-placeholder store — the one
+  // exception to `seedCameraRuntime`'s own "dispatch first" contract — so
+  // frame one reads the boot pose as an OUTSIDE commit, adopted settled.
   const urlPose = selectUrlPose(store.getState());
   const committed =
     urlPose ??
@@ -136,7 +137,6 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       pitch: initialCam.pitch,
       distance: initialCam.distance,
     });
-  store.dispatch(commitCameraPose(committed));
   state.cameraRuntime = seedCameraRuntime({
     state: store.getState(),
     projection: {
@@ -146,6 +146,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       far: initialCam.far,
     },
   });
+  store.dispatch(commitCameraPose(committed));
 
   // Boot IS the home state: the sim clock boots live, so Earth moves from the
   // first frame and a bare pose would let the globe slide out of frame.

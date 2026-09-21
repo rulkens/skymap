@@ -241,7 +241,7 @@ describe('wireInput', () => {
     expect(state.booted).toBe(true);
   });
 
-  it('seeds a parked #pose= link as the boot pose, and spends it', async () => {
+  it('seeds a parked #pose= link as the boot pose, without spending the park', async () => {
     const state = makeState();
     const deps = makeDeps();
     const urlPose = absoluteArm({ target: [7, 8, 9], yaw: 1.1, pitch: -0.4, distance: 12 });
@@ -250,25 +250,38 @@ describe('wireInput', () => {
     await wireInput(state, deps);
 
     const root = deps.cb.store.getState();
-    // The link IS the boot pose — it wins outright over the computed home
-    // framing (`computeInitialCameraSpy` never influences `base` here).
+    // The link wins outright over the computed home framing, but the park
+    // stands — the arrival focus spends it, not the seed.
     expect(selectCameraBase(root)).toEqual(urlPose);
-    // `commitCameraPose` spends the parked link; a later outside commit must
-    // not still find it pending.
-    expect(selectUrlPose(root)).toBeNull();
+    expect(selectUrlPose(root)).toEqual(urlPose);
   });
 
-  it('seeds the register with a COPY of the framing target, not the live array', async () => {
+  it('commits a COPY of the framing target to the store, not the live array', async () => {
     const state = makeState();
     const deps = makeDeps();
 
     await wireInput(state, deps);
 
-    // The seeded pose outlives the framing result that made it, so a shared
-    // array would drag the boot commit along with whoever mutates it next.
+    // The committed pose outlives the framing result that made it, so a
+    // shared array would drag the boot commit along with whoever mutates it
+    // next.
     computeInitialCameraSpy.mock.results[0]!.value.target[0] = 99;
 
-    expect(worldArmOf(state.cameraRuntime.register.pose).target[0]).toBe(0);
+    const root = deps.cb.store.getState();
+    expect(worldArmOf(selectCameraBase(root)).target[0]).toBe(0);
+  });
+
+  it('seeds the runtime off the PRE-commit store, so frame one reads the boot commit as outside', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+
+    await wireInput(state, deps);
+
+    // B2: `stepCameraRuntime`'s `external` check is `prev.base !== store.base`
+    // by reference — true here because the seed ran before the commit below
+    // it, off the still-placeholder store, so the boot pose lands settled
+    // rather than through an eased follow approach.
+    expect(state.cameraRuntime.base).not.toBe(deps.cb.store.getState().camera.base);
   });
 
   it('seeds the home selection: select + focus pinned to Earth at boot', async () => {

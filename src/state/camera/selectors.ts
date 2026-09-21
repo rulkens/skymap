@@ -22,8 +22,6 @@ export const selectCameraTuning = (state: RootState): CameraTuning =>
 export const selectCameraBase = (state: RootState): FramedCameraPose =>
   selectCameraIntent(state).base;
 
-// The `#pose=` link parked by the hash read, ahead of the engine's seed —
-// non-null only in that boot window (see `CameraState.urlPose`).
 export const selectUrlPose = (state: RootState): FramedCameraPose | null =>
   selectCameraIntent(state).urlPose;
 

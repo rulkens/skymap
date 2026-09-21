@@ -9,6 +9,7 @@ import {
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
 import { applyUrlPose, clipStarted } from '../../../src/state/camera/cameraSlice';
+import { selectUrlPose } from '../../../src/state/camera/selectors';
 import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
@@ -120,11 +121,18 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.to.yaw).toBe(FROM.yaw);
   });
 
-  it('stands down when a #pose= link is pending — the link IS the destination', async () => {
+  it('stands down when a #pose= link is pending, and spends the park — the link IS the destination', async () => {
     store.dispatch(applyUrlPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 })));
     store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
     await flush();
     expect(store.getState()[cameraRoute].tween).toBeNull();
+    expect(selectUrlPose(store.getState())).toBeNull();
+
+    // The park is spent, so a SECOND focus tweens normally rather than
+    // standing down forever.
+    store.dispatch(updateSelectionFocus({ type: 'body', id: 'sirius' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).not.toBeNull();
   });
 
   it('a select (non-focus) write does NOT start a tween', async () => {
