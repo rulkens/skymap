@@ -29,6 +29,19 @@
     -->
 
     <!--
+      Sora Thin (100) — ViewOverlay's body-text voice only (spec §4.3). A
+      Google Fonts link, unlike Cormorant, since only one component uses it;
+      self-hosting is worth revisiting if the body-font token rollout (a
+      separate PR) makes Sora load on every page.
+    -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Sora:wght@100&display=swap"
+      rel="stylesheet"
+    />
+
+    <!--
       ── Discovery & indexing metadata ──────────────────────────────────────
       Three audiences read what's below:
         • search engines (Google, Bing, DuckDuckGo) → snippet + sitelinks

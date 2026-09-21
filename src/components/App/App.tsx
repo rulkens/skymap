@@ -23,8 +23,9 @@
  * Store reach: App itself keeps only shell-level reach. `selectSelectedFocusable`
  * drives the `uiStack` "has a pinned mobile selection" className;
  * `selectPaletteOpen`, `selectUiHidden`,
- * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX; and
- * `selectTourActive` picks the tour-overlay/beat-rail branch. Everything
+ * `selectDebugPanelOpen`, `selectSplashVisible` gate App's own JSX;
+ * `selectTourActive` picks the tour-overlay/beat-rail branch; and
+ * `selectTakeoverSource` picks the view-overlay branch the same way. Everything
  * else — hover/selection detail, engine status/scale/load-progress, settings,
  * navigation, the top-pill row's dispatches — is owned by the container it
  * feeds, not App.
@@ -49,9 +50,10 @@ import { selectSelectedFocusable } from '../../state/selection/selectors';
 import DebugPanel from '../DebugPanel/DebugPanel';
 import TourOverlayContainer from '../containers/TourOverlayContainer';
 import TourBeatRailContainer from '../containers/TourBeatRailContainer';
+import ViewOverlayContainer from '../containers/ViewOverlayContainer';
 import { isCinemaMode } from '../../utils/url/isCinemaMode';
 import { selectTourActive } from '../../state/tour/selectors';
-import { selectTakeoverActive } from '../../state/takeover/selectors';
+import { selectTakeoverActive, selectTakeoverSource } from '../../state/takeover/selectors';
 import {
   selectPaletteOpen,
   selectUiHidden,
@@ -88,6 +90,12 @@ export function App(): React.ReactElement {
   const tourActive = useAppSelector(selectTourActive);
   const takeoverActive = useAppSelector(selectTakeoverActive);
 
+  // View takeover mirrors the tour branch above: App resolves which view (if
+  // any) owns the scene and hands the id down, so ViewOverlayContainer does
+  // not re-derive `kind` from the takeover slice itself.
+  const takeoverSource = useAppSelector(selectTakeoverSource);
+  const viewId = takeoverSource?.kind === 'view' ? takeoverSource.id : null;
+
   // The full splash state surface lives in `SplashContainer` so its churn
   // re-renders only that subtree. App needs just one fact: whether the splash
   // is up (to hide the HUD stack / gate TimeBar / mark the canvas inert).
@@ -105,6 +113,9 @@ export function App(): React.ReactElement {
   // normal branch it sits as a SIBLING of the HUD stack, not inside it, so the
   // `uiStackHidden` fade (which the tour triggers) doesn't also fade it.
   const tourOverlay = tourActive && <TourOverlayContainer />;
+  // View overlay — mounted only while a view owns the scene. Not part of the
+  // cinema-mode capture surface below: the recorder only ever plays tours.
+  const viewOverlay = viewId && <ViewOverlayContainer id={viewId} />;
 
   // Cinema mode (`?cinema`) — the recorder's capture surface: the canvas plus
   // the tour overlay (captions + nav), nothing else. The recorder harness
@@ -164,6 +175,7 @@ export function App(): React.ReactElement {
         )}
       </div>
       {tourOverlay}
+      {viewOverlay}
       {/* Beat rail rides the interactive session only — it is progress
           chrome, so the cinema branch (captions-only film frames) omits it
           just like TourNav and the beat counter. */}
