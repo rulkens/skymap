@@ -10,10 +10,10 @@ function vpAt(eye: readonly [number, number, number]): Float32Array {
 
 describe('buildStarCutFrustum', () => {
   it("a narrower call's planesPc is bounded by its own length — a wider earlier call on the same grow-only scratch leaves no stale planes reachable", () => {
-    // K9: `viewCount` used to be the only thing telling a consumer where the
-    // live data ends on the shared grow-only buffer; a walk that read
-    // `planesPc.length` instead would union against a previous, wider call's
-    // leftover planes. The `subarray` view makes `length` the truth directly.
+    // `planesPc` is a `subarray` sized to exactly this call's plane count, so
+    // `length` is the truth directly — a walk bounding on it can never union
+    // against a previous, wider call's leftover planes on the shared
+    // grow-only buffer.
     const wide = buildStarCutFrustum(
       [vpAt([0, 0, 0]), vpAt([1, 0, 0]), vpAt([2, 0, 0])],
       1000,

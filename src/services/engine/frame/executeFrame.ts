@@ -171,28 +171,37 @@ type Destination = {
 };
 
 export function executeFrame(args: ExecuteFrameArgs): void {
-  const { encoder, ctx, state, program, strategy, timing, swapView, captureContexts } = args;
+  const {
+    encoder,
+    ctx,
+    state,
+    program,
+    strategy,
+    timing,
+    swapView,
+    captureContexts,
+    renderedTargets: frameRendered,
+  } = args;
 
   // Per-`executeFrame` first-touch bookkeeping: a target id enters this set the
   // first time a pass is opened against it THIS PROGRAM RUN, flipping
   // subsequent passes from 'clear' to 'load'. Private to this call — mono's
-  // one call spans the whole frame, so this is unobservably the same lifetime
-  // as before the frame/snapshot split; a future rig whose program for one
-  // view splits across several `executeFrame` calls is out of scope here.
+  // one call spans the whole frame; a future rig whose program for one view
+  // splits across several `executeFrame` calls is out of scope here.
   const touched = new Set<string>();
   // Capture steps' own first-touch bookkeeping, keyed `<capture key>:<face>` —
   // see the module header. The key is what keeps two capture rows' face 0
   // apart. Private to this call for the same reason `touched` is.
   const touchedFaces = new Set<string>();
   // The FRAME-WIDE fact `touched` is not: which targets hold THIS FRAME's
-  // content, read by five overlay passes as `ctx.snapshot.renderedTargets` to
+  // content, read by five overlay passes as `ctx.snapshot.renderedTargets`
+  // (the SAME object as `frameRendered` above, there typed `ReadonlySet`) to
   // decide whether `foreground:0` is sampleable. One object for the whole
-  // frame (minted by `frameContext.ts`), unioned into below by every ordinary
+  // frame, owned by `renderFrame` and unioned into below by every ordinary
   // render step's group, regardless of which view's program it belongs to —
   // never by a capture step (its row no overlay read or composite ever
   // sources) and never by a composite step (its gate is `touched`, a
   // per-program-run question about ITS OWN view's content, not the frame's).
-  const frameRendered = ctx.snapshot.renderedTargets as Set<string>;
   // TARGET id → the slab whose depth-clearing step wrote it last this frame.
   // Keyed by target alone, not `(target, slab)`: the depth texture is one
   // buffer per target, so it only ever holds the most recent row's contents
@@ -226,11 +235,11 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         // The runtime hand-off: a step carrying `capture` resolves EVERY
         // per-step value below — slab view, enable gate, draw ctx — from ITS
         // OWN camera (`scheduleCubemapCaptures`'s per-face derivation), not
-        // the frame-wide `ctx`. A missing map entry (that face's
-        // that row's bake was skipped — e.g. a pre-bootstrap frame)
-        // skips the step cleanly, the same outcome an empty group already
-        // produces below. For every ordinary step `step.capture` is undefined and
-        // `stepCtx` is just `ctx` — a no-op passthrough.
+        // the frame-wide `ctx`. A missing map entry — that row's bake was
+        // skipped, e.g. a pre-bootstrap frame — skips the step cleanly, the
+        // same outcome an empty group already produces below. For every
+        // ordinary step `step.capture` is undefined and `stepCtx` is just
+        // `ctx` — a no-op passthrough.
         const stepCtx =
           step.capture === undefined
             ? ctx

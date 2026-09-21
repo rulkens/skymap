@@ -58,6 +58,7 @@ function makeArgs(program: readonly FrameStep[], state: EngineState, timing?: Gp
     strategy: 'merged',
     timing: timing ?? makeTiming(),
     swapView: {} as GPUTextureView,
+    renderedTargets: new Set<string>(),
   };
   return args;
 }

@@ -650,7 +650,6 @@ describe('slabViewOf', () => {
       canvasSize: { width: 1920, height: 1080 },
       drawCamPos: [cam.position[0], cam.position[1], cam.position[2]],
       drawPxPerRad: 1000,
-      fovYRad: cam.fovYRad,
       slabs,
       // Nothing in this file reads bodyPose — a stub that never resolves a
       // body is a safe default.

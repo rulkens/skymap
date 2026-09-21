@@ -36,7 +36,7 @@ import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
 import { baseLevelForTier } from '../../../utils/surfaceTiles/baseLevelForTier';
 import { surfaceTilesEngaged } from '../../../utils/surfaceTiles/surfaceTilesEngaged';
 import { SURFACE_TILE_REGISTRY } from '../../../data/bodies/surfaceTileRegistry';
-import { advanceStarCut } from '../../gpu/renderers/starCatalog/cut/advanceStarCut';
+import { computeStarCut } from '../../gpu/renderers/starCatalog/cut/computeStarCut';
 import { prepareBodySurfaceFrame } from './passes/earthPass';
 import { slabViewOf } from './slabs';
 import { cutSurfaceTiles } from '../../../utils/surfaceTiles/cutSurfaceTiles';
@@ -161,15 +161,16 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
-  // The camera assembly + altitude line, shared with `pickFrameContext` (K7):
-  // `nowMs`/`visibleSourceMask`/`upBasis`/`simDays` are the only fields the two
-  // callers vary on purpose; everything else reads off `state` identically —
-  // safe to call here because `state.cameraRuntime = next` above already made
-  // `state`'s view of the runtime THIS frame's.
+  // The camera assembly + altitude line, shared with `pickFrameContext`:
+  // `nowMs`/`visibleSourceMask`/`poseBasis`/`upBasis`/`simDays` are the only
+  // fields the two callers vary on purpose; everything else reads off `state`
+  // identically — safe to call here because `state.cameraRuntime = next` above
+  // already made `state`'s view of the runtime THIS frame's.
   const { input, cam } = frameContextInputOf(state, {
     worldPose,
     nowMs,
     visibleSourceMask: masks.draw,
+    poseBasis,
     upBasis,
     simDays,
   });
@@ -187,8 +188,12 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
+  // This frame's one `renderedTargets` fact — minted here so `runFrame` can
+  // hand the SAME mutable `Set` to `renderFrame` below, while every pass sees
+  // only the narrower `ReadonlySet` riding `snapshot.renderedTargets`.
+  const renderedTargets = new Set<string>();
   // The 'not ready' branch is the window before cam + GPU handles populate.
-  const snapshot = deriveFrameContext(state, input);
+  const snapshot = deriveFrameContext(state, input, renderedTargets);
   if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
@@ -337,21 +342,19 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   //
   // Advance the survey-star per-node LOD fades ONCE here, as a planner peer of
   // the disk/label planners above — the ONLY call in a real frame that mutates
-  // the fade ramps (see `advanceStarCut`'s own doc). Two reasons it lives at
-  // frame-body level rather than only inside the star draw:
+  // the fade ramps (`computeStarCut`'s `advanceFades` doc). Two reasons it
+  // lives at frame-body level rather than only inside the star draw:
   //   1. Its result is handed to the renderer as a value (`setFrameCut`,
   //      mirrors `surfaceTiles.setLastCut` below), which every real frame
   //      view's `starCutFor` then reads — so the walk runs exactly once per
   //      frame regardless of how many views the rig draws.
-  //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below. The
-  //      wake vote used to fire from inside the pass (a `requestRender` scattered
-  //      away from the single authority); now the pass computes the vote and
-  //      `shouldKeepTicking` decides.
-  // `advanceStarCut` is a no-op returning null when the star pass isn't live
-  // (renderer null / master off) — that maps to `starFadeAnimating: false` below.
-  // `views[0]` is `canvas` itself (mono; every rig's views are derived off it),
-  // so the walk's origin is the canvas view with no separate argument needed.
-  const starCut = advanceStarCut(state, views);
+  //   2. It surfaces `anyNodeFading` for the keep-ticking predicate below,
+  //      which `shouldKeepTicking` reads.
+  // `null` when the star pass isn't live (renderer null / master off) — that
+  // maps to `starFadeAnimating: false` below. `computeStarCut`'s own header
+  // states its `views[0]`-is-anchor contract; a rig that wants a particular
+  // eye to anchor the walk must list that view first.
+  const starCut = computeStarCut(state, views, true);
   state.gpu.starCatalogRenderer?.setFrameCut(starCut);
 
   // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
@@ -366,6 +369,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     device: deps.device,
     context: deps.context,
     timingService: deps.timingService,
+    renderedTargets,
   });
 
   // After the submit as a latency choice only; it owns its own encoder with

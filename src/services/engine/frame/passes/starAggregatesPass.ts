@@ -12,7 +12,7 @@
  * (`starCatalogPass`).
  *
  * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
- * ALL shared with the other star layers via `starCutFor`: `advanceStarCut`
+ * ALL shared with the other star layers via `starCutFor`: `computeStarCut`
  * walks once in `runFrame` and sets the result on `state.gpu.starCatalogRenderer`
  * before either draws, so this layer and `starCatalogPass` both read that one
  * cut rather than each triggering their own walk. This layer records ONLY the
@@ -30,7 +30,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { NEAR0 } from '../slabs';
 import { starCatalogVisible } from '../../../gpu/renderers/starCatalog/cut/starCatalogVisible';
 import { starCutFor } from '../../../gpu/renderers/starCatalog/cut/starCutFor';
 import { drawStarStream } from '../../../gpu/renderers/starCatalog/cut/drawStarStream';

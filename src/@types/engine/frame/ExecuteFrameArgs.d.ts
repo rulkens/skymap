@@ -21,7 +21,8 @@ export type ExecuteFrameArgs = {
   /** The single per-frame command encoder every step records into. */
   encoder: GPUCommandEncoder;
   /** This view — slab table, camera; frame-wide facts (render targets,
-   *  clock, which targets hold this frame's content) are `ctx.snapshot.*`. */
+   *  clock) are `ctx.snapshot.*` — except `renderedTargets`, whose mutable
+   *  twin rides `renderedTargets` below. */
   ctx: FrameView;
   /** Live engine state — layers read their renderers/gates off `state.*`. */
   state: EngineState;
@@ -35,4 +36,11 @@ export type ExecuteFrameArgs = {
   swapView: GPUTextureView;
   /** Per-face override for this frame's capture steps; see above. */
   captureContexts?: CaptureFaceContexts;
+  /**
+   * The mutable `Set` `renderFrame` owns, backing `ctx.snapshot.renderedTargets`
+   * (there typed `ReadonlySet`) — which render-target ids hold THIS FRAME's
+   * content. `executeFrame` unions into this directly, never through a cast
+   * of the snapshot's read-only field.
+   */
+  renderedTargets: Set<string>;
 };

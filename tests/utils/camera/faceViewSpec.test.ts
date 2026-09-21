@@ -55,9 +55,9 @@ describe('faceViewSpec', () => {
     (face) => {
       // The capture camera under identity `axes` (`cubemapCaptureFrame`'s
       // convention `FACE_VIEW_ROTATIONS` is defined relative to): looking
-      // along world −Z with +Y up. Binding this to `faceViewSpec`'s table
-      // is what used to be a module-header comment ("must never drift
-      // apart") — now it is this test.
+      // along world −Z with +Y up. This test is the binding between that
+      // convention and `faceViewSpec`'s table — the two must never drift
+      // apart.
       const captureBasis = cameraBasisWorld([0, 0, -1], 0, IDENTITY_MAT3);
       const worldBasis = multiply3x3(captureBasis, faceViewSpec(face, 1, 0).rotation);
       const right: Vec3 = [worldBasis[0]!, worldBasis[1]!, worldBasis[2]!];

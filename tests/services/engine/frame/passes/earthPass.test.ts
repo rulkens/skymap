@@ -191,7 +191,6 @@ function makeCtx(distance: number): FrameView {
     drawCamPos,
     bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
     canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
     drawPxPerRad: 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
   } as unknown as FrameView;
 }
@@ -585,7 +584,6 @@ describe('earthPass.draw', () => {
       drawCamPos,
       bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
     } as unknown as FrameView;
 
     earthPass.draw(PASS_STUB, view, closeCtx, state);
@@ -741,7 +739,6 @@ describe('earthPass.draw — the base globe is always drawn', () => {
       drawCamPos,
       bodyPose: makeBodyPose(drawCamPos, SEEDED_EARTH.positionMpc),
       canvasSize: { width: 1280, height: 720 },
-      fovYRad: (60 * Math.PI) / 180,
     } as unknown as FrameView;
   }
 

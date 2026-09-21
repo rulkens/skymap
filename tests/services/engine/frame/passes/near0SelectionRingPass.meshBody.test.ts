@@ -122,7 +122,6 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     canvasSize: { width: VIEWPORT[0], height: VIEWPORT[1] },
     drawCamPos: [cam.position[0], cam.position[1], cam.position[2]] as Vec3,
     drawPxPerRad: VIEWPORT[1] / (2 * Math.tan(cam.fovYRad / 2)),
-    fovYRad: cam.fovYRad,
   } as unknown as FrameView;
 
   const row = {

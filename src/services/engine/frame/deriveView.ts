@@ -1,10 +1,9 @@
 /**
  * deriveView — one view of a frame: the frame camera (pose-true, passed in
- * beside the snapshot — never read off `snapshot.cam`, which no longer
- * exists), turned and offset by a `ViewSpec`, through that view's own frustum
- * and size. The frame context rides along by reference as `snapshot`, so
- * every view of a frame shares its clock, body states and stamps. A view's
- * frustum never feeds the camera path: framing reads state.
+ * beside the snapshot — never read off `snapshot.cam`), turned and offset by
+ * a `ViewSpec`, through that view's own frustum and size. The frame context
+ * rides along by reference as `snapshot`, so every view of a frame shares its
+ * clock, body states and stamps.
  */
 
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
@@ -53,8 +52,6 @@ export function deriveView(
   // all turn through `viewFromCamEye` — but the view carries its own camera,
   // so no `ctx.cam` reader draws the frame's orientation instead of this view's.
   const viewCam = turnedOrbitCamera(cam, viewBasisWorld, drawCamPos, frustum);
-  const { fovYRad } = viewCam;
-  // Symmetric: `tanUp − tanDown` is exactly `2·tan(fovY/2)`, the pre-rig form.
   // Canonical form — every downstream gate reads THIS, never a
   // `(viewportHeightPx, fovYRad)` reconstruction, which is only ulp-accurate
   // for a symmetric frustum.
@@ -156,7 +153,6 @@ export function deriveView(
     drawCamPos,
     frustum,
     drawPxPerRad: pxPerRad,
-    fovYRad,
     viewSlot: spec.slot,
     viewKind: spec.kind,
     output: spec.output,

@@ -24,10 +24,9 @@ import { pushStarNode } from './starNodeStream';
  *
  * Walk every loaded catalog's octree and partition the cut into a leaf
  * stream (real-star nodes) and an aggregate stream (flux-mip nodes), reading
- * each node's current LOD-fade opacity — pure when `advanceFades` is false,
- * and the only place that advances the fade ramp when true (see
- * `readStarCut` / `advanceStarCut`, its two callers). `null` when the
- * star pass is not live (no renderer, master off).
+ * each node's current LOD-fade opacity — see `advanceFades` below for the
+ * read/write split. `null` when the star pass is not live (no renderer,
+ * master off).
  *
  * NEAR0 + the f64 rebase seam (catastrophic cancellation, same trap
  * `starPointsPass` documents): COSMO's near plane (0.01 Mpc) would clip the
@@ -59,11 +58,14 @@ import { pushStarNode } from './starNodeStream';
  * the CPU stream pair, its `viewKind` decides the capture path, its
  * `snapshot.nowMs` stamps the fades. `views` is the frusta to union for the
  * off-screen prune. Both callers pass the same list for both — a lone view
- * anchors itself; a rig's `advanceStarCut` anchors on its canvas view.
+ * anchors itself; `runFrame`'s call anchors on its canvas view.
  */
 export function computeStarCut(
   state: PassState,
   views: readonly FrameView[],
+  /** `true` ticks the fade ramp — `runFrame` is the ONLY call site that
+   *  passes it, once per real frame; every other caller (`readStarCut`, the
+   *  pick path) passes `false` and reads the ramp as-is. */
   advanceFades: boolean,
 ): PreparedStarCut | null {
   const renderer = state.gpu.starCatalogRenderer;
@@ -183,9 +185,9 @@ export function computeStarCut(
     const fadeState = fadeStateFor(catalog);
 
     if (!advanceFades) {
-      // Read-only: emits at whatever opacity `advanceStarCut` left this
-      // frame's ONE call at, so the pick path's fresh post-frame ctx can
-      // recompute the cut without perturbing the ramps.
+      // Read-only: emits at whatever opacity this frame's ONE `advanceFades`
+      // call left the ramp at, so the pick path's fresh post-frame ctx can
+      // recompute the cut without perturbing it.
       const { opacity } = fadeState;
       for (let i = 0; i < cut.count; i++) {
         const idx = cut.nodeIndex[i]!;

@@ -49,6 +49,8 @@ export function cubemapCaptureFrame(input: {
     basis,
     basis,
   );
+  // A capture face's own `renderedTargets` defaults empty — capture steps
+  // never union into the frame-wide fact (`executeFrame`'s header).
   const snapshot = deriveFrameContext(state, {
     cam,
     // The capture pose is synthetic and world-absolute, so the pose-provider

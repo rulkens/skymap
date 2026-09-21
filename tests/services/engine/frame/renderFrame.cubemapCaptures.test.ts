@@ -172,6 +172,9 @@ function makeInput(ctx: FrameView, state: EngineState) {
       getCurrentTexture: () => ({ createView: () => ({}) as GPUTextureView }),
     } as unknown as GPUCanvasContext,
     timingService: createDisabledGpuTimingService(),
+    // `executeFrame` is mocked in this file, so no real union ever happens —
+    // a fresh set just satisfies `RenderFrameInput`'s shape.
+    renderedTargets: new Set<string>(),
   };
 }
 

@@ -68,7 +68,7 @@ export type StarCatalogRenderer = Renderer & {
   pickResources(): StarCatalogPickResources;
   /**
    * The frame's one star cut — set once by `runFrame` right after
-   * `advanceStarCut`, read by every real frame view's leaf/aggregate draw
+   * `computeStarCut`, read by every real frame view's leaf/aggregate draw
    * (`starCutFor`). Mirrors `SurfaceTileSubsystem.setLastCut`/`getLastCut`: a
    * view that owns its own cut (a capture face, the pick path) computes
    * independently via `readStarCut` instead of reading this.

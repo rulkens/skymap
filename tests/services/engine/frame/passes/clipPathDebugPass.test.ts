@@ -75,7 +75,7 @@ function makeCtx(): FrameView {
     canvasSize: { width: 1280, height: 720 },
     drawCamPos: CAM_POS as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    fovYRad: (60 * Math.PI) / 180,
+    frustum: symmetricFrustum((60 * Math.PI) / 180, 1280 / 720),
   } as unknown as FrameView;
 }
 

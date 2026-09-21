@@ -21,8 +21,8 @@ export type FrameView = {
   /** The frame context, BY REFERENCE — every view shares it. NOT `frame`:
    *  that word already means a rung tag and a coordinate frame elsewhere. */
   snapshot: ReadyFrameContext;
-  /** THIS view's camera — always `turnedOrbitCamera(snapshot.cam, …)`; the
-   *  true pose is `snapshot.cam`, never fed back to the camera path. */
+  /** THIS view's camera — the frame camera `deriveView` was handed, turned by
+   *  this view's spec; the pose-true camera never rides the snapshot. */
   cam: OrbitCamera;
   /** Combined view-projection matrix, computed once per view. */
   vp: Mat4;
@@ -36,13 +36,10 @@ export type FrameView = {
   /** This view's eye: the camera's, plus the spec's rotated eye offset. */
   drawCamPos: Readonly<Vec3>;
   /** This view's projection as tangents of the half-angles from the view axis
-   *  (`spec.frustum`) — the view's definition; `drawPxPerRad` and `fovYRad`
-   *  both derive from it. */
+   *  (`spec.frustum`) — the view's definition; `drawPxPerRad` derives from it. */
   frustum: ViewFrustum;
   /** `canvasSize.height / (tanUp − tanDown)` of this view's frustum — pinhole radian→pixel conversion. */
   drawPxPerRad: number;
-  /** This view's vertical field of view in radians — its frustum's extents. */
-  fovYRad: number;
   /** Which physical GPU destination this view's draws land in: `0` = the
    *  canvas, a capture row's six faces claim `viewSlotBase … +5`. A roster
    *  renderer keys per-frame writes on this (RENDERER.md #1's write-before-

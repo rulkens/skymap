@@ -51,7 +51,7 @@ There is no bottom face: for θ ≤ 90° the bottom face never wins the argmax b
 
 **Equidistant fisheye.** r = √(x² + y²), and r > 1 → none (black). θ = r·π/2 is the angle from the zenith. The image is a zenith-pointing camera with the front at the bottom edge, so image-right = dome right and image-up = back (−z). That gives d = (sin θ · x/r, cos θ, −sin θ · y/r), with r = 0 → (0, 1, 0). Consequences: the bottom edge (0, −1) is the front horizon, and the camera forward lands at (0, −2/3), i.e. r = 2/3 below the centre.
 
-**Direction → face + uv:** face = argmax over layers of d·forwardᵢ (ties go to the lower layer). Then s = d·rightᵢ / d·forwardᵢ, t = d·upᵢ / d·forwardᵢ, u = (s + 1)/2 and v = (1 − t)/2. uv has a top-left origin, which is how a normal (un-flipped) WebGPU render lays out a face. Dome faces must **not** apply `cubemapFaceContext`'s `flipClipY` (`cubemapFaceContext.ts:63-68`), because that flip exists only for the `texture_cube` convention.
+**Direction → face + uv:** face = argmax over layers of d·forwardᵢ (ties go to the lower layer). Then s = d·rightᵢ / d·forwardᵢ, t = d·upᵢ / d·forwardᵢ, u = (s + 1)/2 and v = (1 − t)/2. uv has a top-left origin, which is how a normal (un-flipped) WebGPU render lays out a face. Dome faces leave `ViewSpec.clipYFlip` unset, because that flip exists only for the `texture_cube` convention.
 
 ---
 

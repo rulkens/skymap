@@ -37,4 +37,11 @@ export type RenderFrameInput = {
    * commands via `endFrame` on the same encoder.
    */
   timingService: GpuTimingService;
+  /**
+   * The SAME `Set` backing `canvas.snapshot.renderedTargets` (there typed
+   * `ReadonlySet`), owned by `runFrame` and threaded to `executeFrame` on
+   * `ExecuteFrameArgs` so the executor never has to cast the readonly field
+   * back to a mutable one to union into it.
+   */
+  renderedTargets: Set<string>;
 };

@@ -50,7 +50,6 @@ function makeCtx(camPos: Readonly<Vec3>, nowMs = 0): FrameView {
   return {
     snapshot: { nowMs },
     drawCamPos: camPos,
-    fovYRad: DEFAULT_FOV_Y_RAD,
     viewKind: 'capture',
     canvasSize: { width: 1280, height: 720 },
     drawPxPerRad: 623.5,

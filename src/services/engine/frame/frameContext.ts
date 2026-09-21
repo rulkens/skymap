@@ -29,7 +29,15 @@ import { deriveBodyStates } from './deriveBodyStates';
 import { SCENE_ANCHOR_POINT_BODIES } from '../../../data/bodies/sceneAnchorPointBodies';
 import { visibleStars } from './visibleStars';
 
-export function deriveFrameContext(state: EngineState, input: FrameContextInput): FrameContext {
+export function deriveFrameContext(
+  state: EngineState,
+  input: FrameContextInput,
+  /** The frame's one `renderedTargets` fact, owned by the caller so it can
+   *  hand the SAME mutable `Set` to `renderFrame` (`runFrame`'s call);
+   *  defaulted for every other caller, which never runs a view through
+   *  `executeFrame` and so never needs the identity preserved. */
+  renderedTargets: Set<string> = new Set(),
+): FrameContext {
   if (!isEngineReady(state)) {
     return { isReady: false };
   }
@@ -117,10 +125,11 @@ export function deriveFrameContext(state: EngineState, input: FrameContextInput)
     // Forwarded by reference, not copied: the listener allocates a fresh pair
     // per pointermove and only while the debug overlay that reads it is on.
     cursorTexPx: state.picking.cursorTexPx,
-    // Fresh and empty: nothing has drawn yet this frame. `executeFrame` holds
-    // the mutable reference and unions into it as every view's program opens
-    // a pass — see its own doc for why this is a SEPARATE fact from a view's
-    // per-program first-touch clear decision.
-    renderedTargets: new Set<string>(),
+    // Fresh and empty: nothing has drawn yet this frame. `renderFrame` holds
+    // the mutable reference (threaded to `executeFrame` on `ExecuteFrameArgs`)
+    // and unions into it as every view's program opens a pass — see its own
+    // doc for why this is a SEPARATE fact from a view's per-program
+    // first-touch clear decision.
+    renderedTargets,
   };
 }

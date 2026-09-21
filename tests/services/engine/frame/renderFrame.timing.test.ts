@@ -241,6 +241,8 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
 
+  // Shared by identity with `input.renderedTargets` below.
+  const renderedTargets = new Set<string>();
   // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
   // `ContentPass` in this file reads `ctx.snapshot.x` (see renderFrame.test.ts's
   // fixture).
@@ -253,7 +255,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     renderTargets,
     // Frame-wide: which targets hold this frame's content — the executor
     // unions into this as it opens each render step; a later pass reads it.
-    renderedTargets: new Set<string>(),
+    renderedTargets,
   };
   const ctx = {
     snapshot: snapshotFields,
@@ -265,7 +267,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
-    fovYRad: FIXTURE_FOV_Y_RAD,
   } as never;
 
   const settings = {
@@ -399,6 +400,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     device,
     context,
     timingService,
+    renderedTargets,
   };
 
   return {

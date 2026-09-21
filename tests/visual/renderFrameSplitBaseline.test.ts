@@ -366,6 +366,8 @@ describe('renderFrame visual baseline', () => {
       texturedDisks: texturedDisksSubsystem,
     } as unknown as GalaxyCatalogRuntime;
 
+    // Shared by identity with the `renderFrame()` call's own `renderedTargets` below.
+    const renderedTargets = new Set<string>();
     const ctx = {
       snapshot: {
         isReady: true as const,
@@ -379,7 +381,7 @@ describe('renderFrame visual baseline', () => {
         renderTargets,
         // Frame-wide: which targets hold this frame's content — the executor
         // unions into this as it opens each render step; a later pass reads it.
-        renderedTargets: new Set<string>(),
+        renderedTargets,
       },
       cam,
       vp: viewProj,
@@ -389,7 +391,6 @@ describe('renderFrame visual baseline', () => {
         [number, number, number]
       >,
       drawPxPerRad,
-      fovYRad: FIXTURE_FOV_Y_RAD,
     } as never;
 
     const settings = {
@@ -533,6 +534,7 @@ describe('renderFrame visual baseline', () => {
       // Disabled stub forces the single-pass path.  The split-pass
       // (timing-on) shape is exercised in `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),
+      renderedTargets,
     });
 
     // The hash payload — only renderer-level draws, with the order they

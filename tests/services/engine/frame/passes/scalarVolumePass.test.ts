@@ -69,7 +69,6 @@ function makeCtx(over: { canvasSize?: { width: number; height: number } } = {}):
     canvasSize,
     drawCamPos: [1, 2, 3] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    fovYRad: (60 * Math.PI) / 180,
   } as unknown as FrameView;
 }
 

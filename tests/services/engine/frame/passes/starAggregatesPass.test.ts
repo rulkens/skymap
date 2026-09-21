@@ -1,6 +1,6 @@
 /**
  * starAggregatesPass — the survey-star AGGREGATE stream into the half-res
- * offscreen. Its walk/partition is `readStarCut`, fed by `advanceStarCut`
+ * offscreen. Its walk/partition is `readStarCut`, fed by `computeStarCut`
  * (both tested in `readStarCut.test.ts`); here we pin only that it shares
  * the star gate and records the AGGREGATE sub-stream (never the leaf one)
  * into its pass.
@@ -10,7 +10,7 @@ import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregatesPass } from '../../../../../src/services/engine/frame/passes/starAggregatesPass';
 import { starCatalogPass } from '../../../../../src/services/engine/frame/passes/starCatalogPass';
-import { advanceStarCut } from '../../../../../src/services/gpu/renderers/starCatalog/cut/advanceStarCut';
+import { computeStarCut } from '../../../../../src/services/gpu/renderers/starCatalog/cut/computeStarCut';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { Source } from '../../../../../src/data/source';
 import { makeSlab } from '../../../../fixtures/makeSlab';
@@ -92,10 +92,10 @@ function makeRenderer(loaded: readonly { source: number; catalog: StarCatalog }[
   };
 }
 
-/** Mirrors `runFrame`'s `advanceStarCut` → `setFrameCut` sequence for a
- *  non-capture ctx, so `starCutFor` has a frame cut to read. */
+/** Mirrors `runFrame`'s `computeStarCut(…, true)` → `setFrameCut` sequence
+ *  for a non-capture ctx, so `starCutFor` has a frame cut to read. */
 function primeFrameCut(state: EngineState, ctx: FrameView): void {
-  const cut = advanceStarCut(state, [ctx]);
+  const cut = computeStarCut(state, [ctx], true);
   state.gpu.starCatalogRenderer!.setFrameCut(cut);
 }
 

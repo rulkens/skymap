@@ -97,7 +97,6 @@ function makeCtx(camPos: Readonly<Vec3>): FrameView {
     snapshot: { simDays: CONST_J2000 },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
-    fovYRad: Math.PI / 3,
     canvasSize: { width: 1280, height: 720 },
     // The drawPick radius floor (`minPickRadiusMpc`) reads this pinhole
     // radian→pixel conversion: 720 / (2·tan(30°)).

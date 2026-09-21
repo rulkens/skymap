@@ -89,7 +89,6 @@ function makeCtx(overrides: { drawCamPos?: Readonly<[number, number, number]> } 
     canvasSize: { width: 1280, height: 720 },
     drawCamPos,
     drawPxPerRad: 720 / (2 * Math.tan(cam.fovYRad / 2)),
-    fovYRad: (60 * Math.PI) / 180,
     // Nothing in this file reads bodyPose — a stub that never resolves a
     // body is a safe default.
     bodyPose: () => null,

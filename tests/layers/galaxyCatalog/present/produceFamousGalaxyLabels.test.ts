@@ -104,7 +104,6 @@ function makeCtx(over: { focusBlend?: number } = {}): FrameView {
     vp: VP,
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
-    fovYRad: (60 * Math.PI) / 180,
   } as unknown as FrameView;
 }
 

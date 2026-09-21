@@ -23,7 +23,7 @@ import { scheduleCubemapCaptures } from './scheduleCubemapCaptures';
 import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 
 export function renderFrame(input: RenderFrameInput): void {
-  const { canvas, views, state, device, context, timingService } = input;
+  const { canvas, views, state, device, context, timingService, renderedTargets } = input;
 
   // The shared cluster-focus uniform, before any pass or the later pick submit
   // reads it; blend=0 at rest makes the per-vertex multiplier a no-op.
@@ -66,7 +66,14 @@ export function renderFrame(input: RenderFrameInput): void {
         [key, [...faces].map(([face, { bodySlabs }]) => ({ face, bodySlabs }))] as const,
     ),
   );
-  const shared = { state, strategy, timing: timingService, swapView, captureContexts };
+  const shared = {
+    state,
+    strategy,
+    timing: timingService,
+    swapView,
+    captureContexts,
+    renderedTargets,
+  };
 
   /** One section's steps, expanded from `viewCtx` — captures/bloom/tone are frame-wide, the rest view-derived. */
   const expand = (steps: readonly FrameStepSpec[], viewCtx: FrameView): readonly FrameStep[] =>

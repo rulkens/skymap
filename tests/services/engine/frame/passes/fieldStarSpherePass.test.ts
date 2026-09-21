@@ -83,7 +83,6 @@ function camAt(starPos: Readonly<Vec3>, distMpc: number): Vec3 {
 function makeCtx(camPos: Vec3): FrameView {
   return {
     drawCamPos: camPos,
-    fovYRad: FOV,
     canvasSize: { width: 1280, height: VIEWPORT_H },
     drawPxPerRad: VIEWPORT_H / (2 * Math.tan(FOV / 2)),
   } as unknown as FrameView;

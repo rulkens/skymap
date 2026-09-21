@@ -404,6 +404,10 @@ function makeInput(
   const cosmoSlab: Slab = makeCosmoSlab({
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
+  // Shared by identity with `input.renderedTargets` below — the same object
+  // `executeFrame` unions into and the five overlay passes read back off
+  // `ctx.snapshot.renderedTargets`.
+  const renderedTargets = new Set<string>();
   // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
   // `ContentPass` in this file reads `ctx.snapshot.x`.
   const snapshotFields = {
@@ -436,7 +440,7 @@ function makeInput(
     renderTargets,
     // Frame-wide: which targets hold this frame's content, unioned into by
     // `executeFrame` as it opens each pass — see `ReadyFrameContext`'s doc.
-    renderedTargets: new Set<string>(),
+    renderedTargets,
   };
   const ctx = {
     snapshot: snapshotFields,
@@ -453,7 +457,6 @@ function makeInput(
     >,
     frustum,
     drawPxPerRad: canvasHeight / (frustum.tanUp - frustum.tanDown),
-    fovYRad: FIXTURE_FOV_Y_RAD,
   };
 
   return {
@@ -623,6 +626,7 @@ function makeInput(
       // the single-pass branch. Active-mode behaviour lives in
       // `renderFrame.timing.test.ts`.
       timingService: createDisabledGpuTimingService(),
+      renderedTargets,
     },
   };
 }
@@ -639,7 +643,7 @@ describe('renderFrame', () => {
   it('creates exactly one command encoder on a frame with no capture faces', () => {
     // Mono's rig hands every section the same view (`ctx` itself), so
     // PRELUDE/SCENE/POST/OVERLAYS all accumulate into the one running batch —
-    // one encoder for the whole frame, same as before the rig split.
+    // one encoder for the whole frame.
     renderFrame(fx.input);
     expect(fx.device.createCommandEncoder).toHaveBeenCalledTimes(1);
   });
@@ -965,18 +969,28 @@ describe('renderFrame', () => {
     expect(VIEW_RIGS.mono.views(fx.input.canvas, fx.input.state as any)).toBeNull();
   });
 
-  it('a rig returning two specs yields two views sharing the frame snapshot', () => {
-    // The shared-snapshot invariant used to rest on a rig author deriving
-    // every view off the same `snapshot` by hand; now it is structural —
-    // `ViewSpec`s carry no snapshot of their own, so whatever a rig returns,
-    // running it through `deriveView(canvas.snapshot, cam, spec)` can only
-    // ever produce views of THIS canvas's snapshot.
-    const specA = faceViewSpec(0, 64, 0);
-    const specB = faceViewSpec(1, 64, 1);
-    const viewA = deriveView(fx.input.canvas.snapshot, fx.cam, specA);
-    const viewB = deriveView(fx.input.canvas.snapshot, fx.cam, specB);
-    expect(viewA.snapshot).toBe(fx.input.canvas.snapshot);
-    expect(viewB.snapshot).toBe(fx.input.canvas.snapshot);
+  it('a registered rig returning two specs yields two views sharing the frame snapshot', () => {
+    // The shared-snapshot invariant is structural: `ViewSpec`s carry no
+    // snapshot of their own, so a rig's specs, derived exactly as `runFrame`
+    // derives them (`rig.views(canvas, state)` → `deriveView` per spec), can
+    // only ever produce views of THIS canvas's snapshot.
+    (VIEW_RIGS as any).__snapshotIdentityTest = {
+      views: () => [faceViewSpec(0, 64, 0), faceViewSpec(1, 64, 1)],
+      program: [],
+    };
+    (fx.input.state as any).viewRig = '__snapshotIdentityTest';
+    try {
+      const specs = (VIEW_RIGS as any).__snapshotIdentityTest.views(
+        fx.input.canvas,
+        fx.input.state,
+      );
+      const views = specs.map((spec: any) => deriveView(fx.input.canvas.snapshot, fx.cam, spec));
+      renderFrame({ ...fx.input, views } as any);
+      expect(views[0].snapshot).toBe(fx.input.canvas.snapshot);
+      expect(views[1].snapshot).toBe(fx.input.canvas.snapshot);
+    } finally {
+      delete (VIEW_RIGS as any).__snapshotIdentityTest;
+    }
   });
 
   it('a perView section with two views submits twice, each expanded from its own view', () => {
@@ -1026,15 +1040,13 @@ describe('renderFrame', () => {
   });
 
   it('a once section sees the frame-wide content fact across views, while each view still clears its own first touch (radar K4)', () => {
-    // The regression K4 fixes: `renderedTargets` used to be a per-VIEW set
-    // (minted fresh by `deriveView`), so a `once` section against `canvas`
-    // could never see what a DIFFERENT view's `perView` section drew — the
-    // five overlay passes would silently read "not rendered". Now the
-    // content question is frame-wide (`ctx.snapshot.renderedTargets`), read
-    // here through a stub overlay pass, while the executor's per-call
-    // `touched` set — which decides clear-vs-load — stays private: view B's
-    // own first touch of `hdr` still CLEARS, even though view A already
-    // drew into it moments earlier in the same frame.
+    // A `once` section against `canvas` sees what a DIFFERENT view's
+    // `perView` section drew: the content question is frame-wide
+    // (`ctx.snapshot.renderedTargets`), read here through a stub overlay
+    // pass, while the executor's per-call `touched` set — which decides
+    // clear-vs-load — stays private: view B's own first touch of `hdr`
+    // still CLEARS, even though view A already drew into it moments
+    // earlier in the same frame.
     const stubHdrPass = { name: 'stub-hdr', enabled: () => true, draw: vi.fn() };
     const seenContentFact: boolean[] = [];
     const overlayPass = {

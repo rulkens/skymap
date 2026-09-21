@@ -303,6 +303,7 @@ function makeArgs(over: {
     strategy: over.strategy ?? 'merged',
     timing: over.timing ?? makeNoTiming(),
     swapView: SWAP_VIEW,
+    renderedTargets: new Set<string>(),
     captureContexts:
       over.captureContexts ??
       (over.faceContexts &&

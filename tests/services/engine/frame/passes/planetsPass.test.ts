@@ -112,7 +112,6 @@ function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 3,
     drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
   } as unknown as FrameView;
 }

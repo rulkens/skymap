@@ -108,12 +108,13 @@ export type ReadyFrameContext = {
   /**
    * Which render-target ids hold THIS FRAME's content — a target first-touched
    * in any view of this frame holds it, regardless of which view's program did
-   * the touching. Minted once per frame (`frameContext.ts`) and unioned into by
-   * `executeFrame` as it opens each pass; the type here is read-only for a pass
-   * (only the executor holds the mutable reference). Distinct from a view's own
-   * per-program first-touch clear decision (`executeFrame`'s private `touched`),
-   * which resets per program run and answers a different question — see
-   * `executeFrame`'s header for both.
+   * the touching. Minted once per frame by `runFrame`, which hands the SAME
+   * `Set` to `renderFrame` (`ExecuteFrameArgs.renderedTargets`) for
+   * `executeFrame` to union into as it opens each pass; the type here is
+   * read-only for a pass. Distinct from a view's own per-program first-touch
+   * clear decision (`executeFrame`'s private `touched`), which resets per
+   * program run and answers a different question — see `executeFrame`'s
+   * header for both.
    */
   renderedTargets: ReadonlySet<string>;
 };

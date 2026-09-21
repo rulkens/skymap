@@ -17,6 +17,9 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 
 export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement): FrameView | null {
   const nowMs = performance.now();
+  // One read of the committed orientation for this call — `poseBasis` and the
+  // at-rest `upBasis` are the SAME frame, unlike `runFrame`'s live mid-slerp one.
+  const poseBasis = ORIENTATION_FRAMES[state.settings.orientation];
   const { input, cam } = frameContextInputOf(state, {
     worldPose: liveWorldPose(state),
     nowMs,
@@ -25,12 +28,14 @@ export function pickFrameContext(state: EngineState, canvas: HTMLCanvasElement):
     // matters for `.draw` — passed anyway so this call site never relies on
     // the registry's stale last-ticked clock.
     visibleSourceMask: deriveSourceMasks(state, nowMs).pick,
-    // A demand read at rest, where the live upBasis equals the steady frame.
-    upBasis: ORIENTATION_FRAMES[state.settings.orientation],
+    poseBasis,
+    upBasis: poseBasis,
     // The instant the last frame derived its bodies at, so pickable body sprites
     // are re-derived exactly where they were drawn.
     simDays: state.cameraRuntime.outputs.simDays,
   });
+  // Pick never runs a view through `executeFrame` (see `pickProgram.ts`'s
+  // header), so the default `renderedTargets` is fine here.
   const snapshot = deriveFrameContext(state, input);
   if (!snapshot.isReady) return null;
   return deriveView(

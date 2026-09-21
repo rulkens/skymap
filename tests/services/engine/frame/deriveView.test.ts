@@ -57,7 +57,7 @@ const BACK: Mat3 = [-1, 0, 0, 0, 1, 0, 0, 0, -1];
 const UP: Mat3 = [1, 0, 0, 0, 0, -1, 0, 1, 0];
 // The frame's pose-true camera: a pure function of the constants above, so
 // every fixture below can pass this SAME value rather than reading it off
-// `snapshot.cam`, which K2 removed.
+// the frame context, which carries no `cam` field.
 const CAM = assembleOrbitCamera(POSE, PROJECTION, BASIS, BASIS);
 
 function makeState(): EngineState {
@@ -191,7 +191,6 @@ describe('deriveView', () => {
     expect(ndc(0, frustum.tanDown)[1]).toBeCloseTo(-1, 4);
     expect(ndc(0, frustum.tanUp)[1]).toBeCloseTo(1, 4);
     expect(v.drawPxPerRad).toBe(600 / 0.9);
-    expect(v.fovYRad).toBeCloseTo(Math.atan(0.4) + Math.atan(0.5), 12);
     expect(v.canvasSize).toEqual({ width: 800, height: 600 });
   });
 
@@ -309,10 +308,8 @@ describe('deriveView — the canvas view is the pre-split one', () => {
   });
 });
 
-// A capture face is now `deriveView(capture.snapshot, capture.cam,
-// faceViewSpec(face, size, slotBase))` and nothing else (K6) — folded from
-// the deleted `cubemapFaceContext.ts`'s own test file, which existed only to
-// cover that composition.
+// A capture face is `deriveView(capture.snapshot, capture.cam,
+// faceViewSpec(face, size, slotBase))` and nothing else.
 describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpec)', () => {
   const CAPTURE_LAST_POSE: CameraPose = { target: [1, 2, 3], yaw: 0.5, pitch: 0.1, distance: 50 };
   const CAPTURE_PROJECTION: CameraProjection = {
@@ -409,13 +406,13 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   }
 
   it('derives a FrameView with the eye at the anchor position, looking along the requested face axis', () => {
-    const snapshot = captureFrame(makeCaptureState());
-    expect(snapshot).not.toBeNull();
-    if (snapshot === null) return;
+    const capture = captureFrame(makeCaptureState());
+    expect(capture).not.toBeNull();
+    if (capture === null) return;
     for (let face = 0; face < 6; face++) {
       const view = deriveView(
-        snapshot.snapshot,
-        snapshot.cam,
+        capture.snapshot,
+        capture.cam,
         faceViewSpec(face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
       );
 
@@ -469,10 +466,10 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
 
   it('carries the draw mask, not the pick mask, as visibleSourceMask', () => {
     const state = makeCaptureState();
-    const snapshot = captureFrame(state);
-    expect(snapshot).not.toBeNull();
-    if (snapshot === null) return;
-    expect(snapshot.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).draw);
+    const capture = captureFrame(state);
+    expect(capture).not.toBeNull();
+    if (capture === null) return;
+    expect(capture.snapshot.visibleSourceMask).toBe(deriveSourceMasks(state, 0).draw);
   });
 
   it('renders a cube-axis direction to the exact (s,t) the WGSL cube sampler computes for it, under world and host axes', () => {
@@ -498,9 +495,9 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     for (const axes of [undefined, hostAxes]) {
       // Not CAPTURE_NEAR_MPC: at a 66 Mpc eye a rotated basis rounds its
       // sub-AU eye-to-target offset past this 5-place check.
-      const snapshot = captureFrame(state, { nearMpc: 0.01, axes });
-      expect(snapshot).not.toBeNull();
-      if (snapshot === null) continue;
+      const capture = captureFrame(state, { nearMpc: 0.01, axes });
+      expect(capture).not.toBeNull();
+      if (capture === null) continue;
 
       for (const d of directions) {
         // Cube-face selection + (s,t) per the GL table 8.19 / WGSL rules.
@@ -532,8 +529,8 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
         const t = (tc / ma + 1) / 2;
 
         const view = deriveView(
-          snapshot.snapshot,
-          snapshot.cam,
+          capture.snapshot,
+          capture.cam,
           faceViewSpec(face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
         );
 
@@ -564,12 +561,12 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     // at hundreds of AU — reusing the live projection's near (0.01 Mpc /
     // 10 kpc, CAPTURE_PROJECTION above) would clip it all invisible, so the
     // given `nearMpc` has to reach the camera rather than the live one.
-    const snapshot = captureFrame(makeCaptureState());
-    expect(snapshot).not.toBeNull();
-    if (snapshot === null) return;
+    const capture = captureFrame(makeCaptureState());
+    expect(capture).not.toBeNull();
+    if (capture === null) return;
     const view = deriveView(
-      snapshot.snapshot,
-      snapshot.cam,
+      capture.snapshot,
+      capture.cam,
       faceViewSpec(0, 256, CAPTURE_VIEW_SLOT_BASE),
     );
     expect(view.cam.near).toBe(CAPTURE_NEAR_MPC);
@@ -578,12 +575,12 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   it("places the synthetic orbit distance at the row's near plane, under the foreground gate", () => {
     // Body passes gate on `ctx.cam.distance` against the foreground reach, so
     // a capture posed 1 Mpc out would draw a face with no body in it.
-    const snapshot = captureFrame(makeCaptureState());
-    expect(snapshot).not.toBeNull();
-    if (snapshot === null) return;
+    const capture = captureFrame(makeCaptureState());
+    expect(capture).not.toBeNull();
+    if (capture === null) return;
     const view = deriveView(
-      snapshot.snapshot,
-      snapshot.cam,
+      capture.snapshot,
+      capture.cam,
       faceViewSpec(0, 256, CAPTURE_VIEW_SLOT_BASE),
     );
     expect(view.cam.distance).toBe(CAPTURE_NEAR_MPC);
@@ -597,10 +594,10 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     const faceAt = (focus: unknown) => {
       const state = makeCaptureState();
       (state as unknown as { selectionRows: { focus: unknown } }).selectionRows.focus = focus;
-      const snapshot = captureFrame(state);
-      return snapshot === null
+      const capture = captureFrame(state);
+      return capture === null
         ? null
-        : deriveView(snapshot.snapshot, snapshot.cam, faceViewSpec(0, 256, CAPTURE_VIEW_SLOT_BASE));
+        : deriveView(capture.snapshot, capture.cam, faceViewSpec(0, 256, CAPTURE_VIEW_SLOT_BASE));
     };
     // A star half the capture distance across: the subtraction, if applied,
     // halves the altitude and with it the bracket.
@@ -628,18 +625,18 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
     // face's forward is the bare cube axis.
     const bodyStates = deriveBodyStates(CAPTURE_LAST_SIM_DAYS);
     const voyager = bodyStates.get('voyager1')!;
-    const snapshot = cubemapCaptureFrame({
+    const capture = cubemapCaptureFrame({
       state: makeCaptureState(),
       eyeMpc: voyager.positionMpc,
       nearMpc: CUBEMAP_CAPTURES.probe.nearMpc,
       nowMs: 0,
       axes: voyager.orientation,
     });
-    expect(snapshot.isReady).toBe(true);
-    if (!snapshot.isReady) return;
+    expect(capture.isReady).toBe(true);
+    if (!capture.isReady) return;
     const view = deriveView(
-      snapshot.snapshot,
-      snapshot.cam,
+      capture.snapshot,
+      capture.cam,
       faceViewSpec(4, 256, CAPTURE_VIEW_SLOT_BASE),
     );
     expect(Array.from(view.vp).every(Number.isFinite)).toBe(true);
@@ -651,10 +648,10 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
   });
 
   it("stamps viewSlot from the given base, so a second capture cannot share the first's slots", () => {
-    const snapshot = captureFrame(makeCaptureState());
-    expect(snapshot).not.toBeNull();
-    if (snapshot === null) return;
-    const view = deriveView(snapshot.snapshot, snapshot.cam, faceViewSpec(2, 256, 7));
+    const capture = captureFrame(makeCaptureState());
+    expect(capture).not.toBeNull();
+    if (capture === null) return;
+    const view = deriveView(capture.snapshot, capture.cam, faceViewSpec(2, 256, 7));
     expect(view.viewSlot).toBe(9);
   });
 
@@ -693,13 +690,13 @@ describe('deriveView — a captured cube face (cubemapCaptureFrame + faceViewSpe
       else expect(actual).toBe(expected);
     };
 
-    const snapshot = captureFrame(makeCaptureState());
-    expect(snapshot).not.toBeNull();
-    if (snapshot === null) return;
+    const capture = captureFrame(makeCaptureState());
+    expect(capture).not.toBeNull();
+    if (capture === null) return;
     for (let face = 0; face < 6; face++) {
       const view = deriveView(
-        snapshot.snapshot,
-        snapshot.cam,
+        capture.snapshot,
+        capture.cam,
         faceViewSpec(face as CubeFace, 256, CAPTURE_VIEW_SLOT_BASE),
       );
       for (let i = 0; i < 16; i++) pin(view.vp[i]!, VP[face]![i]!);

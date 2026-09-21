@@ -175,9 +175,9 @@ export function createStarCatalogRenderer(
   targetFormat: GPUTextureFormat,
 ): StarCatalogRenderer {
   // The frame's one star cut (see `setFrameCut`'s doc) — written once by
-  // `runFrame` right after `advanceStarCut`, read by every real frame view's
-  // draw. Plain closure state, not a WeakMap: unlike `readStarCut`'s per-ctx
-  // memo this is ONE fact for the whole frame, so it needs no key at all.
+  // `runFrame` right after `computeStarCut`, read by every real frame view's
+  // draw. Plain closure state, not a WeakMap keyed per ctx: this is ONE fact
+  // for the whole frame, so it needs no key at all.
   let frameCut: PreparedStarCut | null = null;
 
   // ── Camera uniform (shared across sources — see the module header) ────────
