@@ -2,7 +2,7 @@
 
 Decisions ledger: [`docs/grill-sessions/star-catalog-layer-2026-09-21.md`](../../grill-sessions/star-catalog-layer-2026-09-21.md) (Q1–Q12 plus the refactor-ground checkpoint, signed off 2026-09-21). This spec does not re-litigate those calls; it specifies how they land in code. Cited below as "grill Qn".
 
-Parent: [`2026-09-09-layer-composition-design.md`](2026-09-09-layer-composition-design.md), step (e) of §10, the last stub Layer. This is an addendum to that spec: everything it says about the `Layer` contract, `createLayers`, facts, selection rows and focus ids holds here unless a section below says otherwise. One parent decision is reversed (D6'3, §7 below) and one contract member is replaced (`labels` → `guides`, §3.1).
+Parent: [`2026-09-09-layer-composition-design.md`](2026-09-09-layer-composition-design.md), step (e) of §10, the last stub Layer. This is an addendum to that spec: everything it says about the `Layer` contract, `createLayers`, facts, selection rows and focus ids holds here unless a section below says otherwise. One parent decision is reversed (D6'3, §7 below) and one contract member is replaced (`labels` → `guides`, §2.4).
 
 ## 1. What this is
 
