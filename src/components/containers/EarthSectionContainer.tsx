@@ -23,7 +23,7 @@ import {
   selectAtmosphereExposure,
   selectAmbientLight,
   selectOceanRoughness,
-} from '../../state/settings/selectors';
+} from '../../layers/body/state/earth/selectors';
 import {
   setAtmosphereExposure,
   setAmbientLight,

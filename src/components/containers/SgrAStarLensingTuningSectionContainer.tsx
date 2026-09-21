@@ -10,7 +10,7 @@
 import { memo, useCallback } from 'react';
 import { SgrAStarLensingTuningSection } from '../DebugPanel/SgrAStarLensingTuningSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectSgrAStarLensingTuning } from '../../state/settings/selectors';
+import { selectSgrAStarLensingTuning } from '../../layers/body/state/sgrAStarLensingTuning/selectors';
 import { setSgrAStarLensingTuning } from '../../layers/body/state/sgrAStarLensingTuning/slice';
 import type { SgrAStarLensingTuning } from '../../@types/settings/SgrAStarLensingTuning';
 

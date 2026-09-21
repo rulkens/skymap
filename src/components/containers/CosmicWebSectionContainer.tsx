@@ -33,9 +33,11 @@ import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import {
   selectVolumesEnabled,
   selectVolumeFieldItems,
+} from '../../layers/volume/state/volumes/selectors';
+import {
   selectFilamentsEnabled,
   selectFilamentIntensity,
-} from '../../state/settings/selectors';
+} from '../../layers/filaments/state/filaments/selectors';
 import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/state/volumes/slice';
 import {
   setFilamentsEnabled,

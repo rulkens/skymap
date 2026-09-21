@@ -1,5 +1,5 @@
 import type { LayerSettingsRow } from '../../../@types/engine/layer/LayerSettingsRow';
-import { selectZoneOfAvoidanceEnabled } from '../../../state/settings/selectors';
+import { selectZoneOfAvoidanceEnabled } from '../state/zoneOfAvoidance/selectors';
 import { setZoneOfAvoidanceEnabled } from '../state/zoneOfAvoidance/slice';
 
 /** The zone-of-avoidance band's on/off row in the shared "Labels & guides" section. */

@@ -55,15 +55,13 @@ import { memo, useCallback, useMemo } from 'react';
 import { shallowEqual } from 'react-redux';
 import LabelsAndGuidesSection from '../SettingsPanel/LabelsAndGuidesSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import {
-  selectStructureItems,
-  selectGalaxyCatalogItems,
-  selectStarCatalogItems,
-  selectBodyItems,
-  selectMilkyWayLabelEnabled,
-  selectConstellationsEnabled,
-  selectOrbitTrailsEnabled,
-} from '../../state/settings/selectors';
+import { selectStructureItems } from '../../layers/structure/state/structures/selectors';
+import { selectGalaxyCatalogItems } from '../../layers/galaxyCatalog/state/galaxyCatalogs/selectors';
+import { selectStarCatalogItems } from '../../layers/starCatalog/state/starCatalogs/selectors';
+import { selectBodyItems } from '../../layers/body/state/bodies/selectors';
+import { selectMilkyWayLabelEnabled } from '../../layers/milkyWay/state/milkyWay/selectors';
+import { selectConstellationsEnabled } from '../../layers/constellations/state/constellations/selectors';
+import { selectOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/selectors';
 import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';
 import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';

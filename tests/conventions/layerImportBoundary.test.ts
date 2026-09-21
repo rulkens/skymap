@@ -49,14 +49,13 @@ function specifiersUnder(file: string, prefixes: readonly string[]): string[] {
     });
 }
 
-/** One `it` per sweep: collects every file whose count is off its ALLOWED row into `offenders`, each entry carrying the same per-file diagnosis `assertRow` used to print alone. */
-function assertSweep(
+/** Collects every file whose count is off its ALLOWED row, without asserting. */
+function sweepOffenders(
   files: readonly string[],
   prefixes: readonly string[],
   allowed: Readonly<Record<string, number>>,
-  adviceForOverBudget: string,
-) {
-  const offenders = files.flatMap((file) => {
+): string[] {
+  return files.flatMap((file) => {
     const offending = specifiersUnder(file, prefixes);
     const key = keyOf(file);
     const budget = allowed[key] ?? 0;
@@ -66,6 +65,16 @@ function assertSweep(
         `('${key}': ${budget}): ${offending.join(', ') || 'none'}.`,
     ];
   });
+}
+
+/** One `it` per sweep: asserts `sweepOffenders` came back empty. */
+function assertSweep(
+  files: readonly string[],
+  prefixes: readonly string[],
+  allowed: Readonly<Record<string, number>>,
+  adviceForOverBudget: string,
+) {
+  const offenders = sweepOffenders(files, prefixes, allowed);
   expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
 }
 
@@ -107,6 +116,30 @@ describe('engine and state files import nothing from src/layers beyond their ALL
 // outbound seam below for the dispatch sweep).
 const LAYER_STORE_REACH_DIRS = ['/ui/', '/sagas/'];
 
+// A Layer's own `state/<slice>/selectors.ts` may import exactly `selectSettings`
+// from `state/settings/selectSettings.ts` — that chain stops at `store/constants.ts`
+// and never reaches `rootReducer`/`combinedSettingsReducer`/`appSettingsSlices`, so it
+// can't reopen D1's module-init cycle. A rule, not 16 ALLOWED rows, so a new Layer is covered.
+const SLICE_SELECTORS_FILE = /^src\/layers\/[^/]+\/state\/[^/]+\/selectors\.ts$/;
+const SELECT_SETTINGS_MODULE = 'src/state/settings/selectSettings';
+
+function selectorsCarveOutOffenders(files: readonly string[]): string[] {
+  return files.flatMap((file) => {
+    const specifiers = specifiersUnder(file, ['src/state/', 'src/store/']);
+    const fromDir = dirname(file);
+    const resolvedOk =
+      specifiers.length === 1 &&
+      relative(process.cwd(), resolve(fromDir, specifiers[0]!)).replace(/\\/g, '/') ===
+        SELECT_SETTINGS_MODULE;
+    return resolvedOk
+      ? []
+      : [
+          `${file} must import exactly '${SELECT_SETTINGS_MODULE}' from src/state or ` +
+            `src/store; found: ${specifiers.join(', ') || 'none'}.`,
+        ];
+  });
+}
+
 describe('no file under src/layers imports src/state or src/store (outside ui/sagas)', () => {
   const files = walk('src/layers').filter(
     (file) => !LAYER_STORE_REACH_DIRS.some((dir) => file.includes(dir)),
@@ -114,15 +147,22 @@ describe('no file under src/layers imports src/state or src/store (outside ui/sa
   expect(files.length).toBeGreaterThan(0);
 
   it('every file matches its ALLOWED row', () => {
-    assertSweep(
-      files,
-      ['src/state/', 'src/store/'],
-      {},
-      'A Layer contributes a fact, a dep field or nothing — see the no-dispatch ' +
-        "sweep below; importing state/settings from a Layer module also closes D1's " +
-        "module-init cycle (this Layer's own slice -> appSettingsSlices -> " +
-        'combinedSettingsReducer -> this Layer -> its slice).',
-    );
+    const sliceSelectorsFiles = files.filter((file) => SLICE_SELECTORS_FILE.test(file));
+    const otherFiles = files.filter((file) => !SLICE_SELECTORS_FILE.test(file));
+    const offenders = [
+      ...selectorsCarveOutOffenders(sliceSelectorsFiles),
+      ...sweepOffenders(otherFiles, ['src/state/', 'src/store/'], {}),
+    ];
+    expect(
+      offenders,
+      [
+        ...offenders,
+        'A Layer contributes a fact, a dep field or nothing — see the no-dispatch ' +
+          "sweep below; importing state/settings from a Layer module also closes D1's " +
+          "module-init cycle (this Layer's own slice -> appSettingsSlices -> " +
+          'combinedSettingsReducer -> this Layer -> its slice).',
+      ].join('\n'),
+    ).toEqual([]);
   });
 });
 

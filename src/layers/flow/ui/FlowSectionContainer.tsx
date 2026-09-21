@@ -23,7 +23,7 @@
 import { memo, useCallback } from 'react';
 import FlowSection from './FlowSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectFlow } from '../../../state/settings/selectors';
+import { selectFlow } from '../state/flow/selectors';
 import { setFlow, setFlowEnabled } from '../state/flow/slice';
 import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefaults';
 

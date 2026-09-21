@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 
-import { selectVisibleSourceMask } from '../../../src/state/settings/selectors';
-import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
-import { settingsRoute } from '../../../src/store/constants';
-import { deriveSourceMasks } from '../../../src/services/engine/frame/deriveSourceMasks';
-import type { RootState } from '../../../src/store/types';
-import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
-import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
+import { selectVisibleSourceMask } from '../../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
+import { INITIAL_SETTINGS } from '../../../../../src/state/settings/initialSettings';
+import { settingsRoute } from '../../../../../src/store/constants';
+import { deriveSourceMasks } from '../../../../../src/services/engine/frame/deriveSourceMasks';
+import type { RootState } from '../../../../../src/store/types';
+import type { EngineSettingsState } from '../../../../../src/@types/settings/EngineSettingsState';
+import type { GalaxyCatalogId } from '../../../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 
 // Every test builds a RootState by mounting a fresh boot-settings literal at the
 // settings route, optionally patched. The selectors are RootState-scoped, so
@@ -62,9 +62,23 @@ describe('selectVisibleSourceMask', () => {
     expect(selectVisibleSourceMask(state)).not.toBe(draw);
   });
 
-  it('memoizes on the settings reference (same state → same call result)', () => {
+  it('same state → same result', () => {
     const state = makeRoot();
 
     expect(selectVisibleSourceMask(state)).toBe(selectVisibleSourceMask(state));
+  });
+
+  it('memoizes on galaxyCatalogs alone — an unrelated-cluster write returns the same mask value', () => {
+    const state = makeRoot();
+    const mask = selectVisibleSourceMask(state);
+
+    const stateWithUnrelatedWrite = makeRoot({
+      tonemap: {
+        ...state[settingsRoute].tonemap,
+        exposure: state[settingsRoute].tonemap.exposure + 1,
+      },
+    });
+
+    expect(selectVisibleSourceMask(stateWithUnrelatedWrite)).toBe(mask);
   });
 });

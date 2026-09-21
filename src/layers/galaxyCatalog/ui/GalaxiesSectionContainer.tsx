@@ -14,12 +14,11 @@ import {
   selectVisibleSourceMask,
   selectGalaxyCatalogSize,
   selectDepthFade,
-  selectBiasMode,
-  selectAbsMagLimit,
   selectGalaxySbScale,
   selectGalaxySbMax,
   selectGalaxyFalloffStrength,
-} from '../../../state/settings/selectors';
+} from '../state/galaxyCatalogs/selectors';
+import { selectBiasMode, selectAbsMagLimit } from '../state/bias/selectors';
 import { selectSourceCounts } from '../../../state/engine/selectors';
 import {
   setGalaxyCatalogVisible,

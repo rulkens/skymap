@@ -12,7 +12,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import GalaxyProvenanceSection from '../DebugPanel/GalaxyProvenanceSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectGalaxyProvenance } from '../../state/settings/selectors';
+import { selectGalaxyProvenance } from '../../layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { selectProvenanceCounts } from '../../state/engine/selectors';
 import {
   setProvenanceHighlight,

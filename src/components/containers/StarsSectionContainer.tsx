@@ -43,7 +43,7 @@
 import { memo, useCallback, useMemo } from 'react';
 import StarsSection from '../SettingsPanel/StarsSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
-import { selectStarCatalogs } from '../../state/settings/selectors';
+import { selectStarCatalogs } from '../../layers/starCatalog/state/starCatalogs/selectors';
 import { selectSourceCounts } from '../../state/engine/selectors';
 import {
   setStarCatalogEnabled,

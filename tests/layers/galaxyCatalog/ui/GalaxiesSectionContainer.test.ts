@@ -36,7 +36,7 @@ import { createTestStore as createAppStore } from '../../../support/createTestSt
 import {
   selectGalaxyCatalogSize,
   selectVisibleSourceMask,
-} from '../../../../src/state/settings/selectors';
+} from '../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/selectors';
 import { setGalaxyCatalogSize } from '../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { Source } from '../../../../src/data/source';
 import type { AppStore } from '../../../../src/store/types';
