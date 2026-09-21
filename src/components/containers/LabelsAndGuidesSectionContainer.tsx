@@ -64,8 +64,8 @@ import {
   selectConstellationsEnabled,
   selectOrbitTrailsEnabled,
 } from '../../state/settings/selectors';
-import { setConstellationsEnabled } from '../../layers/constellations/settings/constellationsSlice';
-import { setOrbitTrailsEnabled } from '../../layers/body/settings/orbitTrailsSlice';
+import { setConstellationsEnabled } from '../../layers/constellations/state/constellations/slice';
+import { setOrbitTrailsEnabled } from '../../layers/body/state/orbitTrails/slice';
 import { projectLabelCategoryVisibility } from '../../state/settings/projectLabelCategoryVisibility';
 import { LABEL_HOME_BY_SOURCE_TYPE } from '../../data/labels/labelHomeBySourceType';
 import { SOURCE_TYPE_BY_LABEL_CATEGORY } from '../../data/labels/sourceTypeByLabelCategory';

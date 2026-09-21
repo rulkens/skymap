@@ -56,7 +56,7 @@ import {
   setStarCatalogExposureFarX,
   setStarCatalogAggregateIntensityCap,
   setStarCatalogVisible,
-} from '../../layers/starCatalog/settings/starCatalogsSlice';
+} from '../../layers/starCatalog/state/starCatalogs/slice';
 import { STAR_CATALOG_IDS } from '../../data/starCatalog/starCatalogIds';
 import { SOURCE_ENTRIES } from '../../data/sourceEntries';
 import type { StarCatalogId } from '../../@types/data/starCatalog/StarCatalogId';

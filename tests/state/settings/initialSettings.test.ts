@@ -14,14 +14,14 @@ import { INITIAL_SETTINGS } from '../../../src/state/settings/initialSettings';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { SOURCE_ENTRIES } from '../../../src/data/sourceEntries';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
-import { DEFAULT_FLOW } from '../../../src/layers/flow/settings/defaults';
-import { DEFAULT_POINT_SIZE_PX } from '../../../src/layers/galaxyCatalog/settings/defaults';
+import { DEFAULT_FLOW } from '../../../src/layers/flow/state/defaults';
+import { DEFAULT_POINT_SIZE_PX } from '../../../src/layers/galaxyCatalog/state/defaults';
 import {
   DEFAULT_STAR_REFINE_THRESHOLD,
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
   DEFAULT_STAR_SIZE_PX,
-} from '../../../src/layers/starCatalog/settings/defaults';
+} from '../../../src/layers/starCatalog/state/defaults';
 
 describe('INITIAL_SETTINGS', () => {
   it('derives one galaxy-catalog item row per id, enabled from registry visible', () => {

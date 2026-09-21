@@ -17,7 +17,7 @@ import { selectProvenanceCounts } from '../../state/engine/selectors';
 import {
   setProvenanceHighlight,
   setProvenanceFilter,
-} from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+} from '../../layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { sumProvenanceCounts } from '../../utils/sumProvenanceCounts';
 import type { ProvenanceAxisId } from '../../@types/settings/ProvenanceAxisId';
 import type { ProvenanceFilter } from '../../@types/settings/ProvenanceFilter';

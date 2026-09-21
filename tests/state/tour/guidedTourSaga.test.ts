@@ -36,7 +36,7 @@ import { exitTour, advanceTour, prevBeat } from '../../../src/state/tour/tourAct
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { hide } from '../../../src/services/engine/animation/effectHelpers';
-import { setVolumesEnabled } from '../../../src/layers/volume/settings/volumesSlice';
+import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import { dwellDrift } from '../../../src/state/tour/dwellDrift';

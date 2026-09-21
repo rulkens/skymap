@@ -9,7 +9,7 @@ import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSectio
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
 import { selectSettings } from '../../../state/settings/selectors';
 import { LOCAL_BUBBLE_SLIDER_FIELDS } from '../../../data/localBubble/localBubbleSliderFields';
-import { setLocalBubbleIntensity } from '../settings/localBubbleSlice';
+import { setLocalBubbleIntensity } from '../state/localBubble/slice';
 
 function LocalBubbleTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();

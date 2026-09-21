@@ -40,8 +40,8 @@ import {
 import {
   setVolumesEnabled,
   addVolumeField,
-} from '../../../src/layers/volume/settings/volumesSlice';
-import { setFilamentsEnabled } from '../../../src/layers/filaments/settings/filamentsSlice';
+} from '../../../src/layers/volume/state/volumes/slice';
+import { setFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/slice';
 import type { AppStore } from '../../../src/store/types';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 

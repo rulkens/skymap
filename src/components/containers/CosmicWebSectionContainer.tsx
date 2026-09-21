@@ -36,11 +36,11 @@ import {
   selectFilamentsEnabled,
   selectFilamentIntensity,
 } from '../../state/settings/selectors';
-import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/settings/volumesSlice';
+import { setVolumesEnabled, writeVolumeField } from '../../layers/volume/state/volumes/slice';
 import {
   setFilamentsEnabled,
   setFilamentIntensity,
-} from '../../layers/filaments/settings/filamentsSlice';
+} from '../../layers/filaments/state/filaments/slice';
 import { projectVolumeFieldRows } from '../../state/settings/projectVolumeFieldRows';
 import type { VolumeFieldId } from '../../@types/data/volume/VolumeFieldId';
 import type { ScalarFieldPaletteId } from '../../@types/data/volume/ScalarFieldPaletteId';

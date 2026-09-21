@@ -42,7 +42,7 @@ import {
   selectStarCatalogs,
   selectStarCatalogBrightness,
 } from '../../../src/state/settings/selectors';
-import { setStarCatalogBrightness } from '../../../src/layers/starCatalog/settings/starCatalogsSlice';
+import { setStarCatalogBrightness } from '../../../src/layers/starCatalog/state/starCatalogs/slice';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {

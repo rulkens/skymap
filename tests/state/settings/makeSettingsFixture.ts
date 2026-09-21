@@ -54,18 +54,18 @@ import {
   DEFAULT_ORIENTATION,
   DEFAULT_TONE_MAP_CURVE,
 } from '../../../src/data/defaults';
-import { DEFAULT_ORBIT_TRAILS_ENABLED } from '../../../src/layers/body/settings/defaults';
-import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from '../../../src/layers/body/settings/defaults';
-import { DEFAULT_FLOW } from '../../../src/layers/flow/settings/defaults';
-import { DEFAULT_VOLUMES_ENABLED } from '../../../src/layers/volume/settings/defaults';
+import { DEFAULT_ORBIT_TRAILS_ENABLED } from '../../../src/layers/body/state/defaults';
+import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from '../../../src/layers/body/state/defaults';
+import { DEFAULT_FLOW } from '../../../src/layers/flow/state/defaults';
+import { DEFAULT_VOLUMES_ENABLED } from '../../../src/layers/volume/state/defaults';
 import {
   DEFAULT_MILKY_WAY_ENABLED,
   DEFAULT_MILKY_WAY_LABEL_ENABLED,
-} from '../../../src/layers/milkyWay/settings/defaults';
+} from '../../../src/layers/milkyWay/state/defaults';
 import {
   DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
   DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
-} from '../../../src/layers/zoneOfAvoidance/settings/defaults';
+} from '../../../src/layers/zoneOfAvoidance/state/defaults';
 import {
   DEFAULT_ABS_MAG_LIMIT,
   DEFAULT_BIAS_MODE,
@@ -77,7 +77,7 @@ import {
   DEFAULT_GALAXY_SB_SCALE,
   DEFAULT_GALAXY_TEXTURES_ENABLED,
   DEFAULT_POINT_SIZE_PX,
-} from '../../../src/layers/galaxyCatalog/settings/defaults';
+} from '../../../src/layers/galaxyCatalog/state/defaults';
 import {
   DEFAULT_STAR_BRIGHTNESS,
   DEFAULT_STAR_GLOW_OVERLAP,
@@ -87,7 +87,7 @@ import {
   DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
   DEFAULT_STAR_SIZE_PX,
   DEFAULT_STAR_REFINE_THRESHOLD,
-} from '../../../src/layers/starCatalog/settings/defaults';
+} from '../../../src/layers/starCatalog/state/defaults';
 import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
 import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';

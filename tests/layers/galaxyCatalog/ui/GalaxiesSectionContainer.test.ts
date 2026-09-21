@@ -37,7 +37,7 @@ import {
   selectGalaxyCatalogSize,
   selectVisibleSourceMask,
 } from '../../../../src/state/settings/selectors';
-import { setGalaxyCatalogSize } from '../../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import { setGalaxyCatalogSize } from '../../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { Source } from '../../../../src/data/source';
 import type { AppStore } from '../../../../src/store/types';
 

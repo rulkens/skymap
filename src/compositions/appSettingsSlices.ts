@@ -1,43 +1,32 @@
 /**
- * The Layer settings clusters this app composes in. `UNFORMED_SETTINGS_SLICES`
- * is what still predates `Layer.settings`; each Layer's own tuple is folded in
- * beside it, imported from that Layer's settings module rather than off
+ * The Layer settings clusters this app composes in — one tuple per Layer,
+ * imported from that Layer's own `state/slices.ts` rather than off
  * `APP_COMPOSITION` (see `galaxyCatalogLayerSettings` for the circular-type-alias
- * reason). A cluster lives in one list or the other, never both.
+ * reason).
  */
 
-import { bodiesSlice } from '../layers/body/settings/bodiesSlice';
-import { constellationsSlice } from '../layers/constellations/settings/constellationsSlice';
-import { earthSlice } from '../layers/body/settings/earthSlice';
-import { milkyWaySlice } from '../layers/milkyWay/settings/milkyWaySlice';
-import { orbitTrailsSlice } from '../layers/body/settings/orbitTrailsSlice';
-import { sgrAStarLensingTuningSlice } from '../layers/body/settings/sgrAStarLensingTuningSlice';
-import { starCatalogsSlice } from '../layers/starCatalog/settings/starCatalogsSlice';
-import { structuresSlice } from '../layers/structure/settings/structuresSlice';
-import { volumesSlice } from '../layers/volume/settings/volumesSlice';
-import { filamentsLayerSettings } from '../layers/filaments/settings/filamentsLayerSettings';
-import { flowLayerSettings } from '../layers/flow/settings/flowLayerSettings';
-import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/settings/galaxyCatalogLayerSettings';
-import { localBubbleLayerSettings } from '../layers/localBubble/settings/localBubbleLayerSettings';
-import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/settings/zoneOfAvoidanceLayerSettings';
-
-const UNFORMED_SETTINGS_SLICES = [
-  starCatalogsSlice,
-  structuresSlice,
-  volumesSlice,
-  bodiesSlice,
-  earthSlice,
-  orbitTrailsSlice,
-  sgrAStarLensingTuningSlice,
-  milkyWaySlice,
-  constellationsSlice,
-] as const;
+import { bodyLayerSettings } from '../layers/body/state/slices';
+import { constellationsLayerSettings } from '../layers/constellations/state/slices';
+import { filamentsLayerSettings } from '../layers/filaments/state/slices';
+import { flowLayerSettings } from '../layers/flow/state/slices';
+import { galaxyCatalogLayerSettings } from '../layers/galaxyCatalog/state/slices';
+import { localBubbleLayerSettings } from '../layers/localBubble/state/slices';
+import { milkyWayLayerSettings } from '../layers/milkyWay/state/slices';
+import { starCatalogLayerSettings } from '../layers/starCatalog/state/slices';
+import { structureLayerSettings } from '../layers/structure/state/slices';
+import { volumeLayerSettings } from '../layers/volume/state/slices';
+import { zoneOfAvoidanceLayerSettings } from '../layers/zoneOfAvoidance/state/slices';
 
 export const APP_SETTINGS_SLICES = [
-  ...UNFORMED_SETTINGS_SLICES,
-  ...galaxyCatalogLayerSettings,
+  ...bodyLayerSettings,
+  ...constellationsLayerSettings,
   ...filamentsLayerSettings,
   ...flowLayerSettings,
-  ...zoneOfAvoidanceLayerSettings,
+  ...galaxyCatalogLayerSettings,
   ...localBubbleLayerSettings,
+  ...milkyWayLayerSettings,
+  ...starCatalogLayerSettings,
+  ...structureLayerSettings,
+  ...volumeLayerSettings,
+  ...zoneOfAvoidanceLayerSettings,
 ] as const;

@@ -11,7 +11,7 @@ import { memo, useCallback } from 'react';
 import { MilkyWayTuningSection } from '../DebugPanel/MilkyWayTuningSection';
 import { useAppDispatch, useAppSelector } from '../../store/hooks';
 import { selectMilkyWay } from '../../state/settings/selectors';
-import { setMilkyWayTuning } from '../../layers/milkyWay/settings/milkyWaySlice';
+import { setMilkyWayTuning } from '../../layers/milkyWay/state/milkyWay/slice';
 import type { MilkyWayTuning } from '../../@types/settings/MilkyWayTuning';
 
 function MilkyWayTuningSectionContainer(): React.ReactElement {

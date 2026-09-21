@@ -28,8 +28,8 @@ import {
   setGalaxySbScale,
   setGalaxySbMax,
   setGalaxyFalloffStrength,
-} from '../settings/galaxyCatalogsSlice';
-import { setBiasMode, setAbsMagLimit } from '../settings/biasSlice';
+} from '../state/galaxyCatalogs/slice';
+import { setBiasMode, setAbsMagLimit } from '../state/bias/slice';
 import { galaxyCatalogIdOf } from '../../../utils/galaxyCatalogIdOf';
 import type { SourceType } from '../../../@types/data/SourceType';
 import type { BiasMode as BiasModeT } from '../../../@types/data/galaxyCatalog/BiasMode';

@@ -7,8 +7,8 @@
  * ALL catalogs, and the tour's opening strips just milliquas.
  */
 
-import type { setFlow, setFlowEnabled } from '../../layers/flow/settings/flowSlice';
-import type { setGalaxyCatalogVisible } from '../../layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import type { setFlow, setFlowEnabled } from '../../layers/flow/state/flow/slice';
+import type { setGalaxyCatalogVisible } from '../../layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import type { setLabelsFocusedOnly } from '../../state/settings/core/labelsSlice';
 
 export type SettingsAction =
