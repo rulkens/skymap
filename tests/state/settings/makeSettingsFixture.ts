@@ -133,6 +133,16 @@ export function makeSettingsFixture(
     volumes: { ...volumesInitialState, items: seedVolumeFields() },
     flow: { ...flowInitialState },
     labels: { focusedOnly: false },
+    picking: {
+      kinds: {
+        galaxyCatalog: true,
+        structure: true,
+        milkyWay: true,
+        zoneOfAvoidance: true,
+        body: true,
+        star: true,
+      },
+    },
     debug: {
       overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<
         DebugOverlayKey,

@@ -36,9 +36,24 @@ export const solarSystem: View = {
   label: 'Solar System',
   // The trails are the view: a viewer who switched them off in the panel still
   // gets them here, and `runTakeover`'s snapshot hands their choice back on exit.
+  // Only bodies stay pickable — at 42 AU the subject is the orrery, so the
+  // survey stars, the galaxy field, and the dust band shouldn't take clicks.
+  // `body` also covers the famous stars: the Sun's own dot picks as
+  // `Source.FamousStar` (see `src/data/source.ts` code 21/26), and the two
+  // aren't separable at pick level.
   settings: {
     orbitTrails: { ...orbitTrailsInitialState, enabled: true },
     starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
+    picking: {
+      kinds: {
+        body: true,
+        star: false,
+        galaxyCatalog: false,
+        structure: false,
+        milkyWay: false,
+        zoneOfAvoidance: false,
+      },
+    },
   },
   pose: {
     target: [0, 0, 0],

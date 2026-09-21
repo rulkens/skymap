@@ -5,13 +5,30 @@
  * is visible immediately. Focus ids resolve by claim-then-decode: the one
  * claiming row is authoritative even when its `decode` returns null; two or
  * more claims is a boot-shape bug and throws rather than picking a winner.
+ *
+ * `kindsEnabled` gates `resolvePick` ONLY — a deep link, a command-palette
+ * row, or a restored URL selection must still resolve a kind a scene click
+ * cannot reach, so `extractRow`/`resolveFocusId`/`focusIdOf` stay ungated.
  */
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
+import type { SelectionKind } from '../../../@types/engine/SelectionKind';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
 
-export function composeSelectionRows(rowsOf: () => readonly SelectionKindRow[]): SelectionResolver {
+const ALL_KINDS_ENABLED: Record<SelectionKind, boolean> = {
+  galaxyCatalog: true,
+  structure: true,
+  milkyWay: true,
+  zoneOfAvoidance: true,
+  body: true,
+  star: true,
+};
+
+export function composeSelectionRows(
+  rowsOf: () => readonly SelectionKindRow[],
+  kindsEnabled: () => Record<SelectionKind, boolean> = () => ALL_KINDS_ENABLED,
+): SelectionResolver {
   return {
     resolvePick(pick) {
       if (pick === null) return null;
@@ -20,6 +37,7 @@ export function composeSelectionRows(rowsOf: () => readonly SelectionKindRow[]):
         console.warn(`resolvePick: source code ${pick.sourceCode} is not a pickable surface`);
         return null;
       }
+      if (!kindsEnabled()[row.type]) return null;
       return row.resolvePick(SOURCE_REGISTRY[pick.sourceCode], pick);
     },
 

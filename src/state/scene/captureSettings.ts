@@ -1,5 +1,5 @@
 /**
- * captureSettings — take a detached snapshot of the ten tour-owned
+ * captureSettings — take a detached snapshot of the eleven tour-owned
  * settings clusters off the live store state.
  *
  * The cinematic tour captures the user's settings, plays an effect that
@@ -50,6 +50,7 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
     starCatalogs,
     bodies,
     labels,
+    picking,
   } = state.settings;
   return structuredClone({
     galaxyCatalogs,
@@ -62,5 +63,6 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
     starCatalogs,
     bodies,
     labels,
+    picking,
   });
 }

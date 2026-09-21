@@ -1,12 +1,12 @@
 /**
  * captureScene — unit tests for the widened tour scene-snapshot capture.
  *
- * A tour beat may mutate the ten settings clusters, `settings.orientation`
+ * A tour beat may mutate the eleven settings clusters, `settings.orientation`
  * (via a `frameTo` cue), AND `selection.focus`; restore must wind all three
  * back. These tests pin the properties that make the scene-level capture
  * sound:
  *
- *   1. *Scope* — the snapshot carries all ten settings clusters (via
+ *   1. *Scope* — the snapshot carries all eleven settings clusters (via
  *      `snap.settings`), `orientation` as a SIBLING of `settings` (not inside
  *      it — see `SceneSnapshot`'s header for why), AND the focus ref from
  *      `state.selection.focus`.
@@ -29,6 +29,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
   'labels',
   'milkyWay',
   'orbitTrails',
+  'picking',
   'starCatalogs',
   'structures',
   'volumes',
@@ -37,7 +38,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
 
 /**
- * A minimal state carrying the ten tour-owned settings clusters plus a
+ * A minimal state carrying the eleven tour-owned settings clusters plus a
  * non-null `selection.focus`. Cast through `unknown` rather than building
  * full cluster shapes — only the fields assertions touch are needed.
  */
@@ -61,11 +62,11 @@ function makeState(focus: SelectionRef | null = FOCUS_REF) {
 }
 
 describe('captureScene', () => {
-  it('captures the ten settings clusters + orientation + selection.focus', () => {
+  it('captures the eleven settings clusters + orientation + selection.focus', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state);
 
-    // Settings half carries exactly the ten tour-owned clusters — orientation
+    // Settings half carries exactly the eleven tour-owned clusters — orientation
     // is NOT among them.
     expect(Object.keys(snap.settings).sort()).toEqual(SNAPSHOT_SETTINGS_KEYS);
     expect(snap.settings).not.toHaveProperty('orientation');

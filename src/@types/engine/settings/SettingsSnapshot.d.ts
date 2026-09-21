@@ -2,7 +2,7 @@
  * SettingsSnapshot — the whole-cluster capture the cinematic tour takes
  * before it plays an effect, and restores afterwards.
  *
- * ### Why these ten clusters and not the whole settings bag
+ * ### Why these eleven clusters and not the whole settings bag
  *
  * The tour captures, mutates, and restores the user's settings around a
  * playback. Only the clusters that carry user-visible *visibility* and
@@ -18,6 +18,9 @@
  *   - `starCatalogs`   — star-catalog gates + per-catalog caption toggles.
  *   - `bodies`         — per-body visibility + caption toggles.
  *   - `labels`         — cross-cutting label-presentation mode (focusedOnly).
+ *   - `picking`        — which selection kinds a scene click or hover may
+ *                         resolve; a takeover drives it and the bracket must
+ *                         restore it, exactly what this type is for.
  *
  * `starCatalogs` brings its shared look knobs (`sizePx`, `brightness`, the
  * exposure anchors) into the capture along with the gates — this module
@@ -62,5 +65,6 @@ export type SettingsSnapshot = Readonly<
     | 'starCatalogs'
     | 'bodies'
     | 'labels'
+    | 'picking'
   >
 >;

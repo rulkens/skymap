@@ -427,3 +427,76 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
     expect(calls).toBe(2);
   });
 });
+
+// ─── kindsEnabled gate (resolvePick only) ───────────────────────────────────
+
+describe('composeSelectionRows — picking gate', () => {
+  const structureRow: SelectionKindRow = {
+    type: 'structure',
+    pickSources: [Source.Cluster],
+    resolvePick: () => ({ type: 'structure', id: 'virgo' }),
+    extractRow: () => virgo,
+    focusId: {
+      claims: (id) => id.startsWith('cluster-'),
+      decode: () => ({ type: 'structure', id: 'virgo' }),
+      encode: () => 'cluster-virgo',
+    },
+  };
+
+  it('resolvePick returns null for a disabled kind and the ref for an enabled one', () => {
+    const pick = { sourceCode: Source.Cluster, localIdx: 0 };
+    const allEnabled = composeSelectionRows(
+      () => [structureRow],
+      () => ({
+        galaxyCatalog: true,
+        structure: true,
+        milkyWay: true,
+        zoneOfAvoidance: true,
+        body: true,
+        star: true,
+      }),
+    );
+    expect(allEnabled.resolvePick(pick)).toEqual({ type: 'structure', id: 'virgo' });
+
+    const structureDisabled = composeSelectionRows(
+      () => [structureRow],
+      () => ({
+        galaxyCatalog: true,
+        structure: false,
+        milkyWay: true,
+        zoneOfAvoidance: true,
+        body: true,
+        star: true,
+      }),
+    );
+    expect(structureDisabled.resolvePick(pick)).toBeNull();
+  });
+
+  it('extractRow and resolveFocusId ignore the gate — a disabled kind still resolves', () => {
+    const structureDisabled = composeSelectionRows(
+      () => [structureRow],
+      () => ({
+        galaxyCatalog: true,
+        structure: false,
+        milkyWay: true,
+        zoneOfAvoidance: true,
+        body: true,
+        star: true,
+      }),
+    );
+    expect(structureDisabled.extractRow({ type: 'structure', id: 'virgo' }, SIM_DAYS)).toBe(virgo);
+    expect(structureDisabled.resolveFocusId('cluster-virgo')).toEqual({
+      type: 'structure',
+      id: 'virgo',
+    });
+    expect(structureDisabled.focusIdOf({ type: 'structure', id: 'virgo' })).toBe('cluster-virgo');
+  });
+
+  it('omitting kindsEnabled defaults every kind to enabled', () => {
+    const noGate = composeSelectionRows(() => [structureRow]);
+    expect(noGate.resolvePick({ sourceCode: Source.Cluster, localIdx: 0 })).toEqual({
+      type: 'structure',
+      id: 'virgo',
+    });
+  });
+});
