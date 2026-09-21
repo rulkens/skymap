@@ -56,9 +56,7 @@ implementation as the template. Shape:
 2. Update every consuming layer's `enabled()` and `draw()` to read the
    memoised result off `ctx` instead of recomputing.
 3. Sequencing: `sceneBodyPartition` and `partitionStarsByResolution` touch
-   the same layer files `starCatalogPass`'s god-layer split
-   ([companion orphan item](2026-08-20-star-catalog-layer-god-layer-split.md))
-   would also touch — worth checking whether either lands first to avoid
-   re-doing the other's diff.
+   the same layer files the `starCatalog` Layer split also touches — worth
+   checking whether either lands first to avoid re-doing the other's diff.
 4. Not gated on any ladder rung — decisions.md #7 names it as long-tail work
    independent of the umbrella `SubsystemBundle` reassessment.

@@ -1,20 +1,20 @@
 /**
- * readStarCut / computeStarCut / starCutFor — the per-frame star cut that
- * feeds BOTH survey-star streams. `computeStarCut(…, true)` walks the octree
- * once over a rig's views, advancing the per-node LOD fades by one frame step;
- * `runFrame` hands its result to `state.gpu.starCatalogRenderer.setFrameCut`,
- * and every real frame view's draw reads it back via `starCutFor` →
- * `getFrameCut` — a plain value, not a per-view memo, so a view the advance
- * call never saw still gets the one frame cut with no second walk (the
- * perf-cliff regression a fan-out-by-identity scheme invites). `readStarCut`
- * is the other half: a view that owns its own cut (a capture face, the pick
- * path) computes independently via `computeStarCut(…, false)`, memoised on ITS
- * OWN ctx object only — it never shares the advance call's walk or ticks a
- * ramp, called any number of times (the pick-path double-advance bug class
- * this file also guards against). Both PARTITION each drawn node into the leaf
- * stream (childless real-star nodes) or the aggregate stream (interior
- * flux-mip nodes) by `childMask`. These tests pin the behaviours no compiler
- * check catches:
+ * advanceStarFades / readStarCut / computeStarCut / starCutFor — the per-frame
+ * star cut that feeds BOTH survey-star streams, split in two halves.
+ * `advanceStarFades` is the WRITE half: `runFrame` calls it once per real
+ * frame, it walks the octree once over the rig's views and steps every per-node
+ * LOD fade, and returns the keep-ticking vote. `computeStarCut` is PURE — it
+ * emits each catalog's active list at its current opacity, so `runFrame`'s
+ * `setFrameCut` value and every real frame view's `starCutFor` → `getFrameCut`
+ * read one cut with no second walk (the perf-cliff regression a
+ * fan-out-by-identity scheme invites). `readStarCut` memoises the pure result
+ * on ITS OWN ctx object only, for a view that owns its cut (a capture face —
+ * which walks fresh, sharing no temporal state — or the pick path), and can be
+ * called any number of times without nudging a ramp (the pick-path
+ * double-advance bug class this file also guards against). Every drawn node is
+ * PARTITIONED into the leaf stream (childless real-star nodes) or the aggregate
+ * stream (interior flux-mip nodes) by `childMask`. These tests pin the
+ * behaviours no compiler check catches:
  *
  *   1. The partition — every drawn node lands in exactly one stream, and the
  *      stream is chosen by `childMask` (0 ⇒ leaf) NOT `level` (a fat leaf sits
@@ -22,8 +22,8 @@
  *      `subtreeStarCount` match its species.
  *   2. The per-node LOD fade — a node fades in over ~250 ms as it enters the
  *      cut and out as it leaves, its opacity the crossfade × its own fade, and
- *      a mid-fade frame reports `anyNodeFading` (the keep-ticking vote runFrame
- *      forwards to `shouldKeepTicking`). ONLY `advanceFades: true` ticks a ramp.
+ *      a mid-fade `advanceStarFades` returns the keep-ticking vote runFrame
+ *      forwards to `shouldKeepTicking`. ONLY `advanceStarFades` ticks a ramp.
  */
 
 import { describe, it, expect, vi } from 'vitest';
@@ -31,6 +31,7 @@ import { mat4d } from 'wgpu-matrix';
 
 import { readStarCut } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/readStarCut';
 import { computeStarCut } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/computeStarCut';
+import { advanceStarFades } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/advanceStarFades';
 import { starCutFor } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/starCutFor';
 import { starCatalogVisible } from '../../../../../../src/services/gpu/renderers/starCatalog/cut/starCatalogVisible';
 import { starCatalogPass } from '../../../../../../src/services/engine/frame/passes/starCatalogPass';
@@ -76,9 +77,10 @@ function makeCtx(camPos: Readonly<Vec3>, nowMs = 0, viewSlot = 0): FrameView {
   } as unknown as FrameView;
 }
 
-/** A mono frame: the main ctx is its one view. */
+/** A mono frame: the main ctx is its one view, advanced then read. */
 function advance(state: EngineState, ctx: FrameView): PreparedStarCut | null {
-  return computeStarCut(state, [ctx], true);
+  advanceStarFades(state, [ctx]);
+  return readStarCut(state, ctx);
 }
 
 /** A spy renderer whose `setFrameCut`/`getFrameCut` are a real in-memory pair —
@@ -232,7 +234,9 @@ describe('readStarCut liveness', () => {
 
   it('forwards the source-independent shader scalars', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
-    const prep = readStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5)));
+    const state = makeState(renderer);
+    const ctx = makeCtx(camAtPc(inner + (outer - inner) * 0.5));
+    const prep = advance(state, ctx);
     expect(prep!.sizePx).toBe(2.5);
     expect(prep!.glowOverlap).toBe(1.0);
     expect(prep!.aggregateIntensityCap).toBe(0.06);
@@ -245,7 +249,7 @@ describe('readStarCut partition', () => {
   it('routes a leaf to the leaf stream only, with isAggregate 0 and multiplier 1', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const { leaf, aggregate } = onlySource(
-      readStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5))),
+      advance(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5))),
     );
     expect(leaf.count).toBe(1);
     expect(aggregate.count).toBe(0);
@@ -256,7 +260,7 @@ describe('readStarCut partition', () => {
   it('routes a fat leaf (level > 0, childMask 0) to the leaf stream, not aggregate', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeFatLeafCatalog() }]);
     const { leaf, aggregate } = onlySource(
-      readStarCut(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5))),
+      advance(makeState(renderer), makeCtx(camAtPc(inner + (outer - inner) * 0.5))),
     );
     expect(aggregate.count).toBe(0);
     const i = soleIndex(leaf);
@@ -268,7 +272,7 @@ describe('readStarCut partition', () => {
   it('routes an aggregate to the aggregate stream only, with isAggregate 1 and its subtree count', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeAggregateCatalog() }]);
     const { leaf, aggregate } = onlySource(
-      readStarCut(makeState(renderer), makeCtx(camAtPcVec(FAR_PC), 0)),
+      advance(makeState(renderer), makeCtx(camAtPcVec(FAR_PC), 0)),
     );
     expect(leaf.count).toBe(0);
     const i = soleIndex(aggregate);
@@ -281,8 +285,8 @@ describe('readStarCut partition', () => {
 describe('readStarCut per-node LOD fades', () => {
   // Every test builds a FRESH catalog: fade state is keyed by catalog, so a
   // fresh catalog starts empty and its first frame snaps to the steady state.
-  // Each simulated frame advances via `computeStarCut(…, true)` — the one
-  // call that ticks a ramp — mirroring runFrame's real call.
+  // Each simulated frame advances via `advanceStarFades` — the one call that
+  // ticks a ramp — then reads, mirroring runFrame's real pair.
 
   it('fades a leaf IN over ~250 ms as it enters the cut, and out as it leaves', () => {
     const catalog = makeTwoLevelCatalog();
@@ -309,19 +313,35 @@ describe('readStarCut per-node LOD fades', () => {
     expect(soleOpacity(f3.aggregate)).toBeUndefined();
   });
 
-  it('reports anyNodeFading while a node fade is in flight (the keep-ticking vote)', () => {
+  it('advanceStarFades returns the keep-ticking vote while a node fade is in flight', () => {
     const catalog = makeTwoLevelCatalog();
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
     const state = makeState(renderer);
 
     // Frame 1: snap (first paint) — nothing mid-fade, so the vote is false.
-    const f1 = advance(state, makeCtx(camAtPcVec(FAR_PC), 0));
-    expect(f1!.anyNodeFading).toBe(false);
+    expect(advanceStarFades(state, [makeCtx(camAtPcVec(FAR_PC), 0)])).toBe(false);
 
     // Frame 2: the cut flips → nodes mid-fade → the vote is true, so runFrame's
     // shouldKeepTicking keeps the loop ticking to finish the dissolve.
-    const f2 = advance(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
-    expect(f2!.anyNodeFading).toBe(true);
+    expect(advanceStarFades(state, [makeCtx(camAtPcVec(CLOSE_PC), 50)])).toBe(true);
+  });
+
+  it('advanceStarFades steps a ramp once per call, whatever readStarCut does around it', () => {
+    const catalog = makeTwoLevelCatalog();
+    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
+    const state = makeState(renderer);
+
+    advanceStarFades(state, [makeCtx(camAtPcVec(FAR_PC), 0)]); // snap
+    advanceStarFades(state, [makeCtx(camAtPcVec(CLOSE_PC), 50)]);
+    // Two reads on fresh ctxs, as the pick path issues between frames.
+    readStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
+    readStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
+    advanceStarFades(state, [makeCtx(camAtPcVec(CLOSE_PC), 100)]);
+
+    // Two 50 ms steps of the one ramp, the reads contributing none: a read
+    // path that stepped on a clock of its own would land the leaf past this.
+    const read = onlySource(readStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 100)));
+    expect(soleOpacity(read.leaf)).toBeCloseTo(crossfadeAt(CLOSE_PC) * (100 / 250), 6);
   });
 
   it('readStarCut alone never advances a ramp — two different ctx objects at the same nowMs leave opacity unchanged', () => {
@@ -364,7 +384,7 @@ describe('readStarCut stream aliasing across views (regression)', () => {
     const state = makeState(renderer);
 
     // Main view (viewSlot 0) close in → its cut is the leaf alone.
-    const main = onlySource(readStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 0)));
+    const main = onlySource(advance(state, makeCtx(camAtPcVec(CLOSE_PC), 0)));
     expect(main.leaf.count).toBe(1);
     expect(main.leaf.firstRecord[0]).toBe(0);
 
@@ -442,19 +462,6 @@ describe('readStarCut capture views (viewKind capture)', () => {
     expect(testAgg3Count).toBe(controlAgg3Count);
     expect(controlAgg3Count).toBe(0);
   });
-
-  it('a capture result reports anyNodeFading === false even while the main view is mid-fade', () => {
-    const catalog = makeTwoLevelCatalog();
-    const renderer = makeRenderer([{ source: Source.GaiaStars, catalog }]);
-    const state = makeState(renderer);
-
-    advance(state, makeCtx(camAtPcVec(FAR_PC), 0));
-    const mainMidFade = advance(state, makeCtx(camAtPcVec(CLOSE_PC), 50));
-    expect(mainMidFade!.anyNodeFading).toBe(true);
-
-    const capture = readStarCut(state, makeCtx(camAtPcVec(CLOSE_PC), 50, 1));
-    expect(capture!.anyNodeFading).toBe(false);
-  });
 });
 
 describe('the frame star cut over several views', () => {
@@ -484,18 +491,19 @@ describe('the frame star cut over several views', () => {
   it('a star node visible only in the second view is in the frame cut', () => {
     // A frame of one view looking away: the walk prunes the star's box.
     const away = viewCtx(EYE, AWAY);
-    const awayOnly = computeStarCut(
-      makeState(makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }])),
-      [away],
-      true,
+    const awayState = makeState(
+      makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]),
     );
-    expect(onlySource(awayOnly).leaf.count).toBe(0);
+    advanceStarFades(awayState, [away]);
+    expect(onlySource(computeStarCut(awayState, [away])).leaf.count).toBe(0);
 
     // A fresh frame (fresh contexts — the cut memoises on the main one) whose
     // rig adds a view looking AT the box: the union of the frusta keeps it.
     const main = viewCtx(EYE, AWAY);
+    const rig = [main, viewCtx(EYE, TOWARD)];
     const state = makeState(makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]));
-    const both = onlySource(computeStarCut(state, [main, viewCtx(EYE, TOWARD)], true));
+    advanceStarFades(state, rig);
+    const both = onlySource(computeStarCut(state, rig));
     expect(both.leaf.count).toBe(1);
   });
 
@@ -507,7 +515,8 @@ describe('the frame star cut over several views', () => {
 
     const main = makeCtx(camAtPcVec(CLOSE_PC), 50);
     const second = makeCtx(camAtPcVec(CLOSE_PC), 50);
-    const cut = computeStarCut(state, [main, second], true);
+    advanceStarFades(state, [main, second]);
+    const cut = computeStarCut(state, [main, second]);
     // One 50 ms step, not two.
     expect(soleOpacity(onlySource(cut).leaf)).toBeCloseTo(crossfadeAt(CLOSE_PC) * (50 / 250), 6);
 
@@ -522,23 +531,26 @@ describe('the frame star cut over several views', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const state = makeState(renderer);
     const main = makeCtx(camAtPc(inner + (outer - inner) * 0.5));
-    const advanced = computeStarCut(state, [main], true);
+    advanceStarFades(state, [main]);
+    const advanced = computeStarCut(state, [main]);
     renderer.setFrameCut(advanced);
 
     // A second view the rig derives AFTER the advance call — e.g. a dome face
     // or an XR eye — never passed to the advance call's `views` list.
     const second = makeCtx(camAtPc(inner + (outer - inner) * 0.5));
     expect(starCutFor(state, second)).toBe(advanced);
-    // The ONE walk the advance call did — `starCutFor` reads the stored value
-    // for a view outside the advance list rather than re-walking the octree.
-    expect(renderer.loadedCatalogs).toHaveBeenCalledTimes(1);
+    // Still just the frame's own pair of source passes (advance, then emit):
+    // `starCutFor` reads the stored value for a view outside the advance list
+    // rather than walking the octree again for it.
+    expect(renderer.loadedCatalogs).toHaveBeenCalledTimes(2);
   });
 
   it('a star cut prepared at origin A and drawn with a view at B rebases about A', () => {
     const renderer = makeRenderer([{ source: Source.GaiaStars, catalog: makeCatalog() }]);
     const state = makeState(renderer);
     const a = viewCtx(EYE, TOWARD);
-    const cut = computeStarCut(state, [a], true);
+    advanceStarFades(state, [a]);
+    const cut = computeStarCut(state, [a]);
     expect(onlySource(cut).leaf.count).toBe(1);
     renderer.setFrameCut(cut);
 

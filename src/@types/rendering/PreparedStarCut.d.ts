@@ -18,6 +18,4 @@ export type PreparedStarCut = {
   brightness: number;
   glowOverlap: number;
   aggregateIntensityCap: number;
-  /** Render-on-demand wake vote — see `shouldKeepTicking`, the sole authority. */
-  anyNodeFading: boolean;
 };

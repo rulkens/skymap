@@ -12,10 +12,10 @@
  * (`starCatalogPass`).
  *
  * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
- * ALL shared with the other star layers via `starCutFor`: `computeStarCut`
- * walks once in `runFrame` and sets the result on `state.gpu.starCatalogRenderer`
- * before either draws, so this layer and `starCatalogPass` both read that one
- * cut rather than each triggering their own walk. This layer records ONLY the
+ * ALL shared with the other star layers via `starCutFor`: `advanceStarFades`
+ * walks once in `runFrame`, whose `computeStarCut` result is set on
+ * `state.gpu.starCatalogRenderer` before either draws, so this layer and
+ * `starCatalogPass` both read that one cut rather than each walking again. This layer records ONLY the
  * aggregate sub-stream, via the shared `drawStarStream` helper with
  * `stream: 'aggregate'` — the renderer's `fsLinear` pipeline into the offscreen.
  *
