@@ -241,8 +241,10 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   },
   // The aerial-perspective apply, on the enclosing body's own painter row — the
   // row that stamped the depth it samples, since `deriveSlabs`' deepest-inside
-  // tie-break puts that row last in the chain. AFTER the chain so every opaque
-  // row has stamped that depth; BEFORE the composite so the fog rides one curve.
+  // tie-break puts that row last in the chain. It reads a froxel volume the
+  // compute prelude baked from THIS row's uniform record, so the two unproject
+  // through one `slab.vp`. AFTER the chain so every opaque row has stamped that
+  // depth; BEFORE the composite so the fog rides one curve.
   // Never `foreground:0`'s first step: it attaches no depth yet marks the target
   // touched, which would cost the chain its colour clear.
   // `slot` keeps its timing row apart from the chain step for that same row.
