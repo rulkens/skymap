@@ -18,7 +18,8 @@ import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camer
 import { frameKey } from '../../services/engine/camera/rungs/frameKey';
 import { selectCameraTuning } from '../../state/camera/selectors';
 import { selectTerrainPickMarkerRadiusM } from '../../state/settings/selectors';
-import { useAppSelector } from '../../store/hooks';
+import { shareUrlFor } from '../../state/url/shareUrlFor';
+import { useAppSelector, useAppStore } from '../../store/hooks';
 import DebugSection from './DebugSection';
 import OrientationTuning from './OrientationTuning';
 import styles from './CameraStateSection.module.css';
@@ -166,10 +167,14 @@ function copyTextOf(model: PanelModel): string {
 function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElement {
   const [snap, setSnap] = useState<CameraDebugSnapshot>(cameraDebug);
   const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   // The ONE reader of the live tuning: two readers at two rates (here and the
   // 4 Hz snapshot) would be a 250 ms mirror of the value the sliders write.
   const tuning = useAppSelector(selectCameraTuning);
   const markerRadiusM = useAppSelector(selectTerrainPickMarkerRadiusM);
+  // Read at click time only, never subscribed: a `useAppSelector((s) => s)`
+  // here would re-render this section on every store change.
+  const store = useAppStore();
 
   useEffect(() => {
     // This mount is what turns the frame loop's Δ/peak record on.
@@ -253,6 +258,24 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
         </div>
       </details>
 
+      <button
+        type="button"
+        className={styles.copyButton}
+        onClick={() => {
+          // A fresh snapshot, not the 4 Hz-stale one, so the link is current.
+          const fresh = cameraDebug();
+          void navigator.clipboard
+            .writeText(
+              shareUrlFor(store.getState(), fresh.framed, fresh.lastRenderedSimDays, location),
+            )
+            .then(() => {
+              setCopiedUrl(true);
+              setTimeout(() => setCopiedUrl(false), 1200);
+            });
+        }}
+      >
+        {copiedUrl ? 'copied ✓' : 'copy URL'}
+      </button>
       <button
         type="button"
         className={styles.copyButton}

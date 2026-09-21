@@ -17,12 +17,14 @@ import { Provider } from 'react-redux';
 import CameraStateSection from '../../../src/components/DebugPanel/CameraStateSection';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { setCameraTuning } from '../../../src/state/camera/cameraSlice';
+import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import { QUIET_CAMERA_DEBUG_SNAPSHOT } from '../../fixtures/camera/quietCameraDebugSnapshot';
 
 afterEach(() => {
   delete (navigator as { clipboard?: unknown }).clipboard;
+  vi.unstubAllGlobals();
 });
 
 /** 0.5235987755982988 rad = 30.0°: the degrees column and the radian dump differ visibly. */
@@ -71,6 +73,23 @@ describe('CameraStateSection', () => {
     expect(dump).toContain(`peak=${HEADING_RAD}`);
     // Degrees are a screen affordance only — a pasted report must not carry them.
     expect(dump).not.toContain('30.0°');
+  });
+
+  it('copies the same share URL the l-key logs, independent of the copy-all feedback', async () => {
+    vi.stubGlobal('location', { origin: 'https://skymap.test', pathname: '/' });
+    const writeText = vi.fn((_text: string) => Promise.resolve());
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    const { getByText, findByText } = renderSection();
+    fireEvent.click(getByText('copy URL'));
+
+    const url = writeText.mock.calls[0]![0] as string;
+    expect(url.startsWith('https://skymap.test/#')).toBe(true);
+    expect(url).toContain(`pose=${encodeFramedPose(SNAP.framed)}`);
+    // The click resolves the clipboard promise on a microtask; findByText waits for it.
+    expect(await findByText('copied ✓')).toBeTruthy();
+    // The other button's own feedback is untouched by this click.
+    expect(getByText('copy all')).toBeTruthy();
   });
 
   it('keeps the heading/roll targets on the row, marked, while north-up is off', () => {

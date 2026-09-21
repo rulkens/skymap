@@ -1,4 +1,5 @@
 import type { CameraDofAngles } from './CameraDofAngles';
+import type { FramedCameraPose } from './FramedCameraPose';
 import type { OrientDeltas } from './OrientDeltas';
 import type { PoseFrame } from './PoseFrame';
 import type { SitePose } from './SitePose';
@@ -10,6 +11,8 @@ export type CameraDebugSnapshot = {
   readonly storedFrame: PoseFrame;
   /** `cameraRuntime.register.pose.frame` — the arm actually drawn last frame. */
   readonly renderedFrame: PoseFrame;
+  /** The exact pose drawn last frame — the share-URL / `commitCameraPose` restore payload. */
+  readonly framed: FramedCameraPose;
   readonly armMismatch: boolean;
   /** h/R for `dofs.bodyId`; null when no scene body resolved this instant. */
   readonly hOverR: number | null;

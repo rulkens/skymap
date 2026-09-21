@@ -147,6 +147,7 @@ export function cameraDebugSnapshotOf(input: {
   return {
     storedFrame,
     renderedFrame,
+    framed: renderedPose,
     armMismatch: !sameFrame(storedFrame, renderedFrame),
     hOverR: hr,
     altitudeM: hr !== null && datumRadiusM !== undefined ? hr * datumRadiusM - terrainM : null,

@@ -5,6 +5,7 @@
  */
 
 import type { CameraDebugSnapshot } from '../../../src/@types/camera/CameraDebugSnapshot';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 
 const ABSENT_DOF = { currentRad: null, targetRad: null, residualRad: null };
 const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0 };
@@ -12,6 +13,7 @@ const QUIET_DELTA = { deltaRad: 0, peakAbsRad: 0 };
 export const QUIET_CAMERA_DEBUG_SNAPSHOT: CameraDebugSnapshot = {
   storedFrame: 'absolute',
   renderedFrame: 'absolute',
+  framed: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 }),
   armMismatch: false,
   hOverR: null,
   altitudeM: null,
