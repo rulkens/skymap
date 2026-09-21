@@ -70,10 +70,12 @@
  * the write half's question to answer, and it is the only half that can.
  */
 
-import { take, call, put } from 'typed-redux-saga';
+import { take, call, put, select } from 'typed-redux-saga';
 
 import { HASH_PARAM_SOURCES } from './hashParamSources';
 import { hashArrivalApplied } from './hashArrivalApplied';
+import { commitCameraPose } from '../camera/cameraSlice';
+import { selectUrlPose } from '../camera/selectors';
 import { createHashChangeChannel } from '../../services/url/createHashChangeChannel';
 import { readHashBody } from '../../services/url/readHashBody';
 import { parseHashParams } from '../../utils/url/parseHashParams';
@@ -111,6 +113,14 @@ function* applyHash(body: string, isInitial: boolean) {
     const actions = value ? source.read(value) : isInitial ? [] : source.readAbsent();
     for (const action of actions) yield* put(action);
   }
+
+  // A `pose` the boot read parks is spent by `wireInput`'s seed — the camera
+  // does not exist yet. A navigation lands after the seed, so the pass spends
+  // its own, as the outside commit the camera already honours; left parked it
+  // would never apply and would stand every later focus fly-to down.
+  if (isInitial) return;
+  const parked = yield* select(selectUrlPose);
+  if (parked !== null) yield* put(commitCameraPose(parked));
 }
 
 export function* watchHashReadSaga() {
