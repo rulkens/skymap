@@ -693,14 +693,16 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'grandTour',
         label: 'The Long Way Out',
-        blurb: 'Coming soon',
+        blurb:
+          'Fourteen stops from the Milky Way to the edge of the observable universe, and home again. Andromeda, Virgo, Laniakea, the cosmic web, the voids.',
         action: { kind: 'tour', tourId: 'grandTour' },
         capture: GRAND_TOUR_CAPTURE,
       },
       {
         id: 'webShowcase',
         label: 'Named Cosmic Web',
-        blurb: 'Coming soon',
+        blurb:
+          'Clusters and superclusters with their names on, over the bare galaxy field. Three stops, ending on M87 at the heart of Virgo.',
         action: { kind: 'tour', tourId: 'webShowcase' },
         capture: WEB_SHOWCASE_CAPTURE,
       },
