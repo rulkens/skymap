@@ -6,6 +6,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
+import { COSMO } from '../../services/engine/frame/slabs';
 import { galaxyCatalogLayerSettings } from './state/slices';
 import { GALAXY_CATALOG_SOURCE_ROWS } from './sources/galaxyCatalogSourceRows';
 import { create } from './create';
@@ -45,7 +46,9 @@ export const galaxyCatalogLayer = defineLayer({
   sagas: [watchPaletteWakeSaga],
   fades: galaxyCatalogFadeRows,
   labels: (runtime) => ({
-    screen: [{ id: 'famousLabels', produceLabels: produceFamousGalaxyLabels(runtime) }],
+    screen: [
+      { id: 'famousLabels', slab: COSMO, produceLabels: produceFamousGalaxyLabels(runtime) },
+    ],
   }),
   selection: (runtime) => [galaxyCatalogSelectionRow(runtime)],
   frame,
