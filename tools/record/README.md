@@ -63,6 +63,8 @@ positional tour id and with `--beats` — see [Clip takes](#clip-takes) below:
 | `--url`      | `http://localhost:5173`                             | trailing slash stripped; must carry NO query or hash of its own — the harness appends `?cinema#t=<ISO>` itself and throws if `--url` already has either; rejected alongside `--serve` |
 | `--serve`    | off                                                 | self-host a production build instead of `--url` — see [Serving a production build (`--serve`)](#serving-a-production-build---serve); rejected alongside `--url`                       |
 | `--rebuild`  | off                                                 | with `--serve`, force a fresh build even if `tools/record/.build/` already has one                                                                                                    |
+| `--dome`     | off                                                 | fulldome fisheye take — see [Fulldome (Wisdome)](#fulldome-wisdome); implies `--size 4096x4096 --dpr 1 --fps 30`, encodes with `libx264` at level 6.1 instead of VideoToolbox         |
+| `--frames`   | none — plays to the take's natural end              | stop after this many CAPTURED frames (positive integer); the take ends at min(natural end, a looping clip's cycle, `--frames`) — never a way to run a loop twice                      |
 | positional   | `grandTour`                                         | tour id, must exist in `tourRegistry`; rejected alongside `--clip`                                                                                                                    |
 
 `--size` always means the pixels that land in the mp4; `--dpr` only chooses
@@ -128,6 +130,37 @@ the same way the rest of the recorder logs its ffmpeg/Chromium steps; the
 served URL is read back from `vite preview`'s own stdout banner rather than
 assumed, since `vite preview --port` bumps to the next free port when the
 requested one is busy.
+
+## Fulldome (Wisdome)
+
+```bash
+npm run record-tour -- --beats 4..6 --dome --frames 150 --out recordings/dome-smoke.mp4
+```
+
+`--dome` records the fulldome fisheye rig (`?dome`, `VIEW_RIGS.dome`) instead
+of the flat main view: a single equidistant-fisheye disc composited from five
+face renders, square by construction. It implies `--size 4096x4096 --dpr 1
+--fps 30`, the delivery format for the Wisdome dome; an explicit `--size` may
+still override it, but only to another square (`--size 1024x1024` is a fast
+pipeline check, `--size 1920x1080` is rejected), and an explicit `--dpr` or
+`--fps` that disagrees with the pinned value throws rather than silently
+recording a take the venue can't play.
+
+A 4096×4096 frame is 65 536 macroblocks — over H.264 level 5.2's limit — so
+`--dome` encodes with software `libx264` (`-profile:v main -level 6.1 -crf
+20`) instead of the VideoToolbox path the rest of this tool uses; there is no
+hardware encoder available at level 6.1. A full-size dome take is
+correspondingly slow to encode; use `--frames` (below) to check the pipeline
+at a fraction of the frame count before committing to a multi-hour render.
+
+Expected `ffprobe` report for a dome take: `4096x4096`, `profile Main`,
+`level 61`, `pix_fmt yuv420p`, `r_frame_rate 30/1`.
+
+`--frames N` stops the take after N captured frames, closing the file
+cleanly rather than erroring — useful for any take, not just `--dome`, to
+check a pipeline change cheaply: a full dome frame renders five faces, so an
+early smoke test at `--frames 150` (5 s of film) costs minutes instead of the
+full take's hour-plus.
 
 ## Clip takes
 

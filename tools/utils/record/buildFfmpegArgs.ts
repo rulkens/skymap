@@ -25,8 +25,38 @@
  * making before/after comparisons across the tour's evolution unreliable.
  * `-y` overwrites the output path unprompted, since the recorder is a batch
  * tool with no one at the terminal to answer ffmpeg's "overwrite?" prompt.
+ *
+ * `dome` switches to a separate, pinned libx264 argv: a 4096² dome frame is
+ * 65 536 macroblocks, over H.264 level 5.2's limit, so it needs level 6.1 —
+ * which VideoToolbox does not support, hence software `libx264` here instead
+ * of the hardware encoder above. `-r 30` is the pinned Wisdome delivery rate,
+ * not `opts.fps` (record.ts's `--dome` validation already requires them equal).
  */
-export function buildFfmpegArgs(opts: { fps: number; out: string }): string[] {
+export function buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[] {
+  if (opts.dome) {
+    return [
+      '-f',
+      'image2pipe',
+      '-framerate',
+      String(opts.fps),
+      '-i',
+      '-',
+      '-c:v',
+      'libx264',
+      '-profile:v',
+      'main',
+      '-level',
+      '6.1',
+      '-crf',
+      '20',
+      '-pix_fmt',
+      'yuv420p',
+      '-r',
+      '30',
+      '-y',
+      opts.out,
+    ];
+  }
   return [
     '-f',
     'image2pipe',
