@@ -42,16 +42,8 @@
  *     `B(t)` captured at fire time (symmetric with the interactive
  *     `watchOrientationChangeSaga`'s roll), so a `frameTo` firing mid-roll
  *     continues from wherever the pole is rather than snapping back to a
- *     steady pole.
- *
- *     `commitCameraPose` is not dispatched here: the LOOP re-encodes
- *     `camera.base` into the new frame itself, on whatever frame it sees
- *     `settings.orientation` differ from its own record (`stepCameraRuntime`)
- *     — the same mechanism that backs the interactive switch
- *     (`watchOrientationChangeSaga`), now triggered by this cue's own
- *     `setOrientation` dispatch. The clip driver (priority 95) renders from
- *     `settings.orientation` directly while it wins, so `base` sits inert
- *     either way until the clip hands off.
+ *     steady pole. `commitCameraPose` is not dispatched here — see
+ *     `stepCameraRuntime`, the loop stage that re-encodes `base` itself.
  *
  * ### `layers` are `VisibilityLayerKey`s; `scoped` are per-item entries
  *

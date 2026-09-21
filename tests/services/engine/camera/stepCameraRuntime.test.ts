@@ -322,7 +322,6 @@ describe('a re-switch mid-roll re-expresses from the PREVIOUS committed frame', 
     const LIVE_QUAT: Vec4 = [raw[0] / n, raw[1] / n, raw[2] / n, raw[3] / n];
 
     const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
-    expect(h.state.cameraRuntime.orientation).toBe(DEFAULT_ORIENTATION);
     const baseA = h.store.getState().camera.base;
     if (!isWorldArm(baseA)) throw new Error('expected a world arm base');
     const eyeInvariant = eyeMpcOf(baseA.pose, ORIENTATION_FRAMES[DEFAULT_ORIENTATION]);

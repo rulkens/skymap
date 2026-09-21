@@ -143,6 +143,9 @@ export function stepCameraRuntime(
     },
   );
   const actions: UnknownAction[] = [...orientationActions, ...drained.actions];
+  // Where `next.base`'s fold picks up below — everything before this index is
+  // already folded into `rootState.camera`.
+  const tailStart = actions.length;
   // The drivers must see this frame's commits (`endDrag` above all, or
   // `orbitDrag` wins one frame too long). Identity on a steady frame, so a
   // memoised selector keyed on the root object keeps its cache.
@@ -269,15 +272,9 @@ export function stepCameraRuntime(
   return {
     next: {
       register: { pose: projected.register, winner: winnerId },
-      // The camera the store will hold once `runFrame` dispatches `actions`;
-      // reduce only the TAIL after `orientationActions`+`drained.actions` —
-      // both are already folded into `rootState.camera`, so re-reducing them
-      // would apply them twice. By identity on an idle frame (empty tail,
-      // `rootState.camera` is `stored.camera` is `rawStored.camera`), which
-      // is what `winnerLastFrame` above compares against next frame.
-      base: actions
-        .slice(orientationActions.length + drained.actions.length)
-        .reduce(cameraReducer, rootState.camera).base,
+      // Reduce only the tail past `tailStart` — the rest is already folded
+      // into `rootState.camera`; identity on an idle frame (empty tail).
+      base: actions.slice(tailStart).reduce(cameraReducer, rootState.camera).base,
       // Tracks the frame `base` is now valid in, whatever this frame did with
       // it — a body arm sees no re-encode above but the switch still lands.
       orientation: stored.settings.orientation,

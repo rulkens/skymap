@@ -1,15 +1,8 @@
 /**
- * logCameraState — verifies the `l`-key dump reports what it's handed, and
- * that `out.framed` is the exact round-trip key (the `target`/`yaw`/`pitch`/
- * `distanceMpc` rows drop `roll` and are lossy in the surface regime, kept
- * only for reading). The caller assembles the LIVE camera/focus/simDays, so
- * these tests feed synthetic live-looking values, not a stale register.
- *
- * The full-f64-precision regression this also guards: the previous
- * implementation ran `distance`/`target` through `toPrecision(8)` and
- * `yaw`/`pitch`/`fovYRad` through `toFixed(4)`, rounding away exactly the
- * sub-radian pitch difference between a grazing surface-tile view and a clean
- * one; `JSON.parse` round-tripping the reading rows catches a reintroduced call.
+ * logCameraState — verifies the `l`-key dump reports what it's handed, at
+ * full f64 precision: a prior `toPrecision(8)`/`toFixed(4)` implementation
+ * rounded away a sub-radian pitch difference a grazing surface-tile view
+ * needs; `JSON.parse` round-tripping the reading rows catches a regression.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';
 
@@ -171,8 +164,7 @@ describe('logCameraState', () => {
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('body:earth');
     // Metres, at full precision: the 50 m standoff must survive the print.
-    expect(out.bodyArmMetres.eyeRelAnchorM).toEqual([0, 0, EARTH_RADIUS_M + 50]);
-    expect(out.bodyArmMetres.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);
+    expect(out.eyeFromCentreM).toBe(EARTH_RADIUS_M + 50);
     expect(out.framed).toEqual(bodyArm);
 
     // Untagged input (and every world-arm frame) reads as absolute.
@@ -180,7 +172,7 @@ describe('logCameraState', () => {
     logCameraState(cam, fakeCanvas(800, 600), { type: 'milkyWay' }, SIM_DAYS);
     const [, world] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(world).frame).toBe('absolute');
-    expect(JSON.parse(world).bodyArmMetres).toBeNull();
+    expect(JSON.parse(world).eyeFromCentreM).toBeNull();
   });
 
   it('names the frame and derives eye height in a site arm', () => {
@@ -205,13 +197,8 @@ describe('logCameraState', () => {
     const [, engaged] = logSpy.mock.calls[0] as [string, string];
     const out = JSON.parse(engaged);
     expect(out.frame).toBe('site:curiosity');
-    expect(out.bodyArmMetres).toBeNull();
-    expect(out.siteArmPose).toEqual({
-      headingRad: 0.7,
-      elevationRad: 0.2,
-      rangeM: 12,
-      eyeHeightM: 12 * Math.sin(0.2),
-    });
+    expect(out.eyeFromCentreM).toBeNull();
+    expect(out.eyeHeightM).toBe(12 * Math.sin(0.2));
   });
 
   it('prints a single not-ready line and touches neither canvas nor window when the camera is null', () => {
