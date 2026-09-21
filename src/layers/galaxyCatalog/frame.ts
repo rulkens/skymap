@@ -1,9 +1,9 @@
 /**
  * frame — the Layer's per-frame prelude, in order: the aliasIndex reconcile,
  * the structureMemberCount reconcile, the bias-mode reconcile, the hi-res
- * famous planner, then the ONE catalog walk feeding both disk planners. The
- * two frame votes read different halves of the textured planner's thumbnail
- * work — see the vote at the tail.
+ * famous planner, then the ONE catalog walk feeding both disk planners. Both
+ * frame votes are the textured planner's LANDED thumbnail work — never its
+ * outstanding fetches; see the vote at the tail.
  */
 
 import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
@@ -121,14 +121,15 @@ export function frame(
       }),
     );
 
-    // The two votes are NOT the same predicate. An outstanding fetch is motion
-    // to keep ticking for, but only a thumbnail that LANDED is content a sky
-    // capture must re-bake for: a hung thumbnail host holds `hasInFlightWork`
-    // true for its ~30 s timeout, and voting that as `settling` re-bakes six
-    // faces every frame of it while nothing on screen changes.
-    return {
-      awake: runtime.texturedDisks.hasInFlightWork(),
-      settling: runtime.texturedDisks.hasFadingContent(),
-    };
+    // An OUTSTANDING fetch is deliberately not a vote: `tileStream` calls
+    // `requestRender()` on every settle, success or failure, so an arrival
+    // wakes its own frame and the walk that frame runs enqueues the next
+    // batch. Voting it instead holds the loop open for the fetch's whole
+    // duration — 30 s per request against a thumbnail host that hangs, with
+    // nothing on screen changing. Only the 400 ms load fade of a bitmap that
+    // LANDED is real motion, and it is the same content a sky capture must
+    // re-bake for, so both votes read it.
+    const fading = runtime.texturedDisks.hasFadingContent();
+    return { awake: fading, settling: fading };
   };
 }

@@ -32,19 +32,15 @@ export type TexturedDiskSubsystem = Destroyable & {
   readonly lastOutput: TexturedDiskFrameOutput;
 
   /**
-   * OR'd into the engine's render-on-demand predicate.  True while any
-   * bitmap is mid-fetch OR a recently-landed bitmap is still in its
-   * 400 ms load-fade window.
-   */
-  hasInFlightWork(): boolean;
-
-  /**
-   * The LANDED half of `hasInFlightWork` alone: true only while a bitmap that
-   * actually arrived is inside its 400 ms load-fade window. What the Layer's
-   * `settling` vote reads, and through it every sky capture's per-frame
-   * re-bake — an outstanding fetch is NOT content, and a thumbnail host that
-   * hangs for ~30 s would otherwise re-bake six faces per frame for its whole
-   * duration while nothing on screen changed.
+   * True only while a bitmap that actually ARRIVED is inside its 400 ms
+   * load-fade window — the Layer's whole per-frame work vote, feeding both
+   * the render-on-demand predicate and every sky capture's re-bake gate.
+   *
+   * An outstanding fetch is deliberately absent: the atlas wakes a frame via
+   * `requestRender()` on every settle, so a pending request needs no vote,
+   * and voting one let a thumbnail host that hangs for its 30 s deadline both
+   * spin the loop and re-bake six cubemap faces per frame while nothing on
+   * screen changed.
    */
   hasFadingContent(): boolean;
 
