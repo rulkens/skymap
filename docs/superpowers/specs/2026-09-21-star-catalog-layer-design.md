@@ -113,12 +113,12 @@ Orbit-trail rows are static `OrbitalElements`, as `worldLabels` producers are st
 ### 2.5 The camera joint
 
 ```ts
-// src/utils/camera/focusDriverId.ts — replaces five `row.type === 'body'` gates
+// src/utils/camera/focusDriverId.ts — replaces the `row.type === 'body'` camera gates
 export function focusDriverId(row: SelectionRow | null): string | null;
 // body → row.id; starCatalog → row.id (null for Gaia); every other arm → null
 ```
 
-`liveBodyPosition`, `bodyMovesThisFrame`, the follow driver in `cameraDrivers`, `approachTiltedPose` and `focusFraming` ask "does this row carry an id the position table drives", which is what each of them meant. Pivot radius and framing keep reading `radiusM`. Focusing S2 keeps following its orbit through the existing body-state map (grill Q11). Greenfield's `sampleMpc` closure on the row is the end state when the body Layer forms and positions compose at boot; a stars-only sampler now would be a second path beside the body one.
+`liveBodyPosition`, `bodyMovesThisFrame`, the follow driver in `cameraDrivers`, `approachTiltedPose`, `runFrame`'s focused-body distance publish and `stepCameraRuntime`'s `focusBodyId` ask "does this row carry an id the position table drives", which is what each of them meant. `focusFraming` and `pivotFraming` read the seed table for a size, so they keep switching on the arm; the star arm's case reads `radiusM` off the row. Focusing S2 keeps following its orbit through the existing body-state map (grill Q11). Greenfield's `sampleMpc` closure on the row is the end state when the body Layer forms and positions compose at boot; a stars-only sampler now would be a second path beside the body one.
 
 ## 3. Ground preparation — PR 1
 
@@ -128,7 +128,7 @@ Refactor-ground checkpoint ran 2026-09-21 with a greenfield cross-check (fresh s
 |---|---|---|---|
 | Orbit trails walk a static table | bolt-on | `orbitTrailsPass.ts` loops `TRAIL_ELEMENTS` | composed `state.orbitTrailRows` |
 | Labels contract has no orbit slot | bolt-on | `Layer.d.ts` `labels` only | `Layer.guides` |
-| Camera gates on ref type | bolt-on | five files gate on `row.type === 'body'` | `focusDriverId` |
+| Camera gates on ref type | bolt-on | six sites gate on `row.type === 'body'` (§2.5) | `focusDriverId` |
 | `computeStarCut` pure/mutating by flag | bolt-on | `computeStarCut.ts` `advanceFades: boolean` | pure walk + separate advance |
 | `orbitTrails` settings in the body Layer | misplaced | `layers/body/state/orbitTrails/` | core cluster |
 | Registry row, selection row, fade row, facts, captions, InfoCard arm, pick rows, targets | growth | seams exist | none |
@@ -138,9 +138,9 @@ Two existing bolt-ons are **deleted by the feature**, not prepped: the body sele
 **Four commits, in this order, each behaviour-neutral and pixel-identical:**
 
 1. **`Layer.guides` replaces `labels`.** `LayerGuides` lands, `LayerLabels` is deleted, `galaxyCatalog` / `zoneOfAvoidance` / `constellations` rename their member and declaration file. `createLayers` composes `state.orbitTrailRows` from core's rows plus every Layer's `guides.orbitTrails`; `orbitTrailsPass` walks the roster instead of `TRAIL_ELEMENTS`. With no Layer contributing yet the roster equals the table.
-2. **`orbitTrails` settings cluster and its fade row move from `layers/body/state/` to core**, because the machinery is core. Settings root unchanged in shape.
-3. **`focusDriverId`** lands and the five camera gates call it. Only body rows have a driver id yet, so nothing changes.
-4. **`computeStarCut` splits** into the pure walk and `advanceStarFades`, called from `runFrame` where `advanceStarCut` is called today. The `advanceFades` flag and `advanceStarCut` go; `readStarCut` and every capture-face read stay pure via the per-ctx memo.
+2. **`orbitTrails` settings cluster moves from `layers/body/state/` to core**, because the machinery (pass, renderer, fade row in `wiring/fadeLayers.ts`) is core. Settings root unchanged in shape.
+3. **`focusDriverId`** lands and the six camera gates call it. Only body rows have a driver id yet, so nothing changes.
+4. **`computeStarCut` splits** into a pure read and `advanceStarFades`, called from `runFrame` where `advanceStarCut` is called today. `advanceStarFades` walks the octree and steps every catalog's ramps, leaving each catalog's active list as the frame's drawn set; the pure `computeStarCut` emits that list for the main view and walks fresh, at full opacity, only for a capture face. The `advanceFades` flag, `advanceStarCut` and `PreparedStarCut.anyNodeFading` go (the vote is `advanceStarFades`'s return); `readStarCut` and every capture-face read stay pure via the per-ctx memo.
 
 No deletion audit on PR 1 (prep-PR rule); the audit runs once at PR 2's `/feature-done`.
 
@@ -196,7 +196,7 @@ Everything else is pixel-identical. The user-visible changes, all ruled:
 
 Judged by "fails on a real bug nothing else catches":
 
-- PR 1: `createLayers` composes `orbitTrailRows` in order and throws on nothing new; `focusDriverId` per arm; `computeStarCut` is pure across two calls with the same ctx (the memo test) and `advanceStarFades` advances exactly once per frame (the double-advance class the flag guarded against). The two reference-identity tests for `starCatalogVisible` are deleted with the coupling they pinned.
+- PR 1: `createLayers` composes `orbitTrailRows` in order and throws on nothing new; `focusDriverId` per arm; `computeStarCut` is pure across two calls with the same ctx (the memo test) and `advanceStarFades` advances exactly once per frame (the double-advance class the flag guarded against). The `starCatalogVisible` delegation tests in the pass tests are untouched by PR 1 and leave with PR 2, when the passes move into the Layer.
 - PR 2: focus-id claim/decode/encode round-trips per source plus the all-digits boot assert; `visibleStars` per-source gating with no exemption; `StarInfo.detail` shape per source; the selection row's `pickSources` disjointness at boot (existing assert); `selectFamousStarsMeta` before and after the fact publishes.
 
 Gates: `npm run build` on both compositions, the suite green, a visual pass on the main app (stars, trails, captions, the four cards, the three deep links). Perf gate: not needed; no renderer path changes.
