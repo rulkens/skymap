@@ -59,6 +59,9 @@ const cameraSlice = createSlice({
     // CONSTRUCTION at three sites — the pin's stamp (projectFramePose), the gesture
     // folds (replayInput), and the fold's disengage retarget — never by a bake
     // here. Break any of them and the teleport re-enters through this reducer.
+    // `stepCameraRuntime` treats `base` reference inequality as an outside
+    // commit and relies on `cameraReducer` being the store's reducer; a
+    // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
     },

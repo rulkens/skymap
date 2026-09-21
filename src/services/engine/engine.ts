@@ -43,7 +43,7 @@ import { FRAME_ORDER_PASS_NAMES } from './frame/frameOrderPassNames';
 import { computeTimingSlotName } from './frame/timing/computeTimingSlotName';
 import { liveWorldPose } from './helpers/liveWorldPose';
 import { deriveBodyStates } from './frame/deriveBodyStates';
-import { cameraDebugSnapshotOf } from '../../utils/camera/cameraDebugSnapshotOf';
+import { cameraDebugSnapshotOf } from './camera/cameraDebugSnapshotOf';
 import { readOrientDeltas } from './camera/orientDeltas';
 import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';

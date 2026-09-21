@@ -245,9 +245,7 @@ function makeState(): EngineState {
         winner: 'resting',
       },
       base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
-      // Must match the store's actual orientation (`settings.orientation`'s
-      // default), or the loop reads a phantom frame switch on frame one and
-      // re-encodes `base` through an undefined outgoing basis.
+      // Must match the store's orientation, or frame one reads a phantom switch.
       orientation: DEFAULT_ORIENTATION,
       epochs: UNSTARTED_EPOCHS,
       follow: null,

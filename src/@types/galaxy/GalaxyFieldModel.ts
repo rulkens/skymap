@@ -5,8 +5,8 @@
  * invalidation site.
  */
 import type { Derived } from '../gpu/Derived';
-import type { DigVeilBudget } from '../../services/gpu/renderers/galaxyField/ismMap/computeDigVeilBudget';
-import type { PlaceDustBudget } from '../../services/gpu/renderers/galaxyField/ismMap/computePlaceDustBudget';
+import type { DigVeilBudget } from './DigVeilBudget';
+import type { PlaceDustBudget } from './PlaceDustBudget';
 import type { DustHeaderLanes } from './DustHeaderLanes';
 import type { FieldSliceCounts } from './FieldSliceCounts';
 import type { GalaxyFieldMixtureResult } from './GalaxyFieldMixtureResult';

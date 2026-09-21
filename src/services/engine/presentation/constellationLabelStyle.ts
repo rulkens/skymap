@@ -20,7 +20,7 @@
 import type { Vec4 } from '../../../@types/math/Vec4';
 
 /** Style fields the constellation label producer reads. */
-export type ConstellationLabelStyle = {
+type ConstellationLabelStyle = {
   /** Label glyph fill (straight RGBA — renderer premultiplies). */
   readonly labelColor: Vec4;
   /** Label world-space em height (Mpc) — the near-field, parsec-scale anchor. */

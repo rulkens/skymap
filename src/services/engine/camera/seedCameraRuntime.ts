@@ -3,9 +3,7 @@
  * boot placeholder and `wireInput`'s first real pose both come through here, so
  * no seed site can leave a half-built bag. Displayed = authored at the seed:
  * nothing has been projected yet (`projectFramePose` splits them thereafter).
- * `base` and `orientation` are read off the STORE — a caller dispatches first,
- * then seeds, so the runtime starts already reconciled against what it will
- * compare itself to next frame (`stepCameraRuntime`'s outside-commit check).
+ * A caller dispatches first, then seeds, so the runtime starts reconciled.
  */
 
 import type { CameraProjection } from '../../../@types/camera/CameraProjection';
@@ -20,7 +18,8 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { CONST_J2000 } from '../../../data/time/constJ2000';
 
 export function seedCameraRuntime(args: {
-  readonly state: RootState;
+  /** Only the two slices the seed reads; call sites still hand over `store.getState()`. */
+  readonly state: Pick<RootState, 'camera' | 'settings'>;
   readonly projection: CameraProjection;
 }): CameraRuntime {
   const { camera, settings } = args.state;

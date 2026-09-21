@@ -1,11 +1,9 @@
 /**
- * watchOrientationChangeSaga — the two effects of an orientation switch.
- *
- * `requestOrientationChange(frame)` becomes: persist the frame, then roll the
- * up-basis toward it. Re-expressing `camera.base` into the new frame is the
- * LOOP's job now (`stepCameraRuntime`, on the frame it sees `settings.orientation`
- * differ from the runtime's own record) — the saga fires before `wireInput`
- * seeds the camera on some paths, where a direct commit here would be overwritten.
+ * watchOrientationChangeSaga — the two effects of an orientation switch:
+ * persist the frame, then roll the up-basis toward it. Re-expressing
+ * `camera.base` is the LOOP's job now (`stepCameraRuntime`, on the frame it
+ * sees `settings.orientation` differ) — the saga fires before `wireInput`
+ * seeds the camera on some paths, where a direct commit here would be lost.
  */
 import { takeLatest, getContext, put } from 'typed-redux-saga';
 

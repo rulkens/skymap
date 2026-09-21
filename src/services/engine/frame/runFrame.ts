@@ -20,7 +20,7 @@ import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
 import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
-import { cameraDofAnglesOf } from '../../../utils/camera/cameraDofAnglesOf';
+import { cameraDofAnglesOf } from '../camera/cameraDofAnglesOf';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';

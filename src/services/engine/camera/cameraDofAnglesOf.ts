@@ -1,0 +1,132 @@
+/**
+ * cameraDofAnglesOf — heading / tilt / roll as current-target-residual rows,
+ * derived through the SAME helpers the live settle uses so the readout cannot
+ * drift from the mechanism: heading in the band-blended reference the engaged
+ * settle converges against (its target is 0 — north), tilt against ruling 12's
+ * `remembered × w(h/R)` mapping, roll against the band's ride target. Targets
+ * are field properties and stay derived while `tuning.northUp` is off: a target
+ * moving under a still pose is the reference-frame bug. ONE derivation home —
+ * the 4 Hz debug snapshot and `runFrame`'s delta record both read THIS.
+ */
+
+import type { BodyId } from '../../../@types/data/body/BodyId';
+import type { BodyState } from '../../../@types/scene/BodyState';
+import type { CameraDofAngles } from '../../../@types/camera/CameraDofAngles';
+import type { CameraDofRow } from '../../../@types/camera/CameraDofRow';
+import type { CameraPose } from '../../../@types/camera/CameraPose';
+import type { CameraTuning } from '../../../@types/camera/CameraTuning';
+import type { Mat3 } from '../../../@types/math/Mat3';
+import type { PoseFrame } from '../../../@types/camera/PoseFrame';
+import type { Vec3 } from '../../../@types/math/Vec3';
+import { hOverR } from './hOverR';
+import { nearestBodyHR } from './nearestBodyHR';
+import { bandRollTarget } from './frameAlignedRoll';
+import { bodyRelativePose } from './bodyRelativePose';
+import { hostOf } from './rungs/hostOf';
+import { rungKindOf } from './rungs/rungKindOf';
+import { blendedEnuAt } from '../../../utils/camera/blendedEnuAt';
+import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
+import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
+import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
+import { frameUp } from '../../../utils/camera/frameUp';
+import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
+import { refAzimuthOf } from '../../../utils/camera/refAzimuthOf';
+import { tiltFromNadirRad } from '../../../utils/camera/tiltFromNadirRad';
+import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
+import { normalize3 } from '../../../utils/math/normalize3';
+import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
+import { wrapRad } from '../../../utils/math/wrapRad';
+
+const ABSENT: CameraDofRow = { currentRad: null, targetRad: null, residualRad: null };
+
+function rowOf(currentRad: number | null, targetRad: number | null): CameraDofRow {
+  if (currentRad === null || targetRad === null)
+    return { currentRad, targetRad, residualRad: null };
+  return { currentRad, targetRad, residualRad: wrapRad(currentRad - targetRad) };
+}
+
+export function cameraDofAnglesOf(input: {
+  readonly storedFrame: PoseFrame;
+  readonly worldPose: CameraPose;
+  readonly poseBasis: Readonly<Mat3>;
+  readonly upBasis: Readonly<Mat3>;
+  readonly bodyStates: ReadonlyMap<BodyId, BodyState>;
+  readonly rememberedTiltRad: number;
+  readonly tuning: CameraTuning;
+}): CameraDofAngles {
+  const { storedFrame, worldPose, poseBasis, upBasis, bodyStates, rememberedTiltRad, tuning } =
+    input;
+  const eyeMpc = eyeMpcOf(worldPose, poseBasis);
+
+  // Engaged body wins outright (spec's own regime predicate: `storedFrame` IS
+  // the regime); the roster-wide nearest is only a stand-in for the "where's
+  // the hysteresis band?" question while flying free in the absolute arm.
+  const engaged = hostOf(storedFrame, {
+    bodies: bodyStates,
+    poseBasis,
+    upBasis,
+    terrainHeightAt: datumOnlyTerrainHeight,
+  });
+  let bodyId: BodyId | null = engaged?.id ?? null;
+  let hr: number | null = engaged === null ? null : hOverR(eyeMpc, engaged.state, engaged.radiusM);
+  if (rungKindOf(storedFrame) === 'absolute') {
+    const nearest = nearestBodyHR(eyeMpc, bodyStates);
+    if (nearest !== null) {
+      bodyId = nearest.bodyId;
+      hr = nearest.hr;
+    }
+  }
+
+  const rollRad = worldPose.roll ?? 0;
+  const forwardRaw: Vec3 = [
+    worldPose.target[0] - eyeMpc[0],
+    worldPose.target[1] - eyeMpc[1],
+    worldPose.target[2] - eyeMpc[2],
+  ];
+  const degenerate = Math.hypot(...forwardRaw) === 0;
+  const bodyState = bodyId !== null ? bodyStates.get(bodyId) : undefined;
+
+  let heading = ABSENT;
+  let tilt = ABSENT;
+  if (!degenerate && bodyState !== undefined) {
+    const forward = normalize3(forwardRaw);
+    const upRef = frameUp(upBasis);
+    const { right, up } = imagePlaneBasis(forward, rollRad, upRef);
+    const { eyeRelBodyM, basisM } = bodyRelativePose({
+      camPosMpc: eyeMpc,
+      camBasisWorld: mat3FromColumns(right, up, forward),
+      bodyState,
+    });
+    const localUp = normalize3(eyeRelBodyM);
+    // A pole-frame heading here showed non-zero for a camera converged inside
+    // the window, misleading the capture: measure in the SAME band-blended
+    // reference the engaged settle converges against, with the pose's own up as
+    // the carry, exactly as `eyeFrameOf` passes it.
+    const sceneUpLocalBody = rotateVec3ByTightMat3T(upRef, bodyState.orientation);
+    const forwardLocal: Vec3 = [basisM[6], basisM[7], basisM[8]];
+    const upLocal: Vec3 = [basisM[3], basisM[4], basisM[5]];
+    const { east, north } = blendedEnuAt(
+      localUp,
+      hr !== null ? bodyUpWeight(hr, tuning) : 1,
+      sceneUpLocalBody,
+      upLocal,
+    );
+    heading = rowOf(refAzimuthOf(localUp, forwardLocal, upLocal, east, north), 0);
+    tilt = rowOf(
+      tiltFromNadirRad(forwardLocal, eyeRelBodyM),
+      hr !== null ? mappedTiltRad(rememberedTiltRad, hr, tuning) : null,
+    );
+  }
+
+  return {
+    bodyId,
+    hOverR: hr,
+    heading,
+    tilt,
+    roll: rowOf(
+      rollRad,
+      degenerate ? null : bandRollTarget(worldPose, bodyStates, poseBasis, upBasis, tuning),
+    ),
+  };
+}

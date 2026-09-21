@@ -9,7 +9,7 @@
  * entry list is a validation error, not a no-op.
  */
 import type { HiiTier } from '../../../../../@types/galaxy/HiiTier';
-import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
+import type { IsmMapGenerator } from '../../../../../@types/galaxy/IsmMapGenerator';
 
 import { mapHiiTiers } from '../../../../../data/hiiTiers';
 import { ADDITIVE_BLEND } from '../../../lib/blendStates';
@@ -25,7 +25,7 @@ import dustMapFsWgsl from '../../../shaders/milkyWay/field/dustMap/fragment.wesl
 import dustPresentVsWgsl from '../../../shaders/milkyWay/field/dustPresent/vertex.wesl?static';
 import dustPresentFsWgsl from '../../../shaders/milkyWay/field/dustPresent/fragment.wesl?static';
 
-export type FieldPipelineDeps = {
+type FieldPipelineDeps = {
   readonly device: GPUDevice;
   readonly makeShader: (code: string, label: string) => GPUShaderModule;
   readonly hdrFormat: GPUTextureFormat;
@@ -49,7 +49,7 @@ export type FieldPipelineDeps = {
 };
 
 /** The identity-bearing inputs every bind group in this module is built against. */
-export type FieldBindGroupResources = {
+type FieldBindGroupResources = {
   readonly fieldComps: GPUBuffer;
   readonly hiiComps: GPUBuffer;
   readonly dustMap: GPUTexture;
@@ -63,7 +63,7 @@ export type FieldBindGroups = {
   tier(kind: HiiTier): GPUBindGroup;
 };
 
-export type FieldPipelines = {
+type FieldPipelines = {
   readonly fieldSplatPipe: GPURenderPipeline;
   readonly hiiYoungPipe: GPURenderPipeline;
   readonly hiiErosionPipe: GPURenderPipeline;

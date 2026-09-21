@@ -28,7 +28,7 @@ import type { FieldHeaderRenderLanes } from '../../../../../@types/galaxy/FieldH
  * `spurCloudReservation`); `ismMapSeeding`/`youngStars` are the two the host
  * still owns, derived from the CPU-side ISM-map readback.
  */
-export type FieldHeaderModelLanes = {
+type FieldHeaderModelLanes = {
   readonly fieldCounts: FieldSliceCounts;
   readonly dustHeaderLanes: DustHeaderLanes;
   readonly ismMapSeeding: IsmMapSeedingLanes;
@@ -41,13 +41,13 @@ export type FieldHeaderModelLanes = {
 };
 
 /** Each pass's own target resolution, derived from the target texture's own `.width`/`.height` at `encode` time (this module never touches the texture itself). */
-export type FieldHeaderTargetSizes = {
+type FieldHeaderTargetSizes = {
   readonly field: Vec2;
   readonly dustMapHeightPx: number;
   readonly hii: Vec2;
   readonly tiers: Readonly<Record<HiiTier, Vec2>>;
 };
-export type FieldHeaderInputsDeps = {
+type FieldHeaderInputsDeps = {
   readonly eye: Vec3;
   readonly fov: number;
   readonly shiftX: number;
@@ -57,7 +57,7 @@ export type FieldHeaderInputsDeps = {
   readonly targetSizes: FieldHeaderTargetSizes;
 };
 
-export type FieldHeaderInputs = {
+type FieldHeaderInputs = {
   readonly field: FieldHeaderInput;
   readonly hii: FieldHeaderInput;
   readonly tiers: Readonly<Record<HiiTier, FieldHeaderInput>>;

@@ -24,7 +24,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildPathTrack } from '../../../../src/services/engine/animation/buildPathTrack';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
-import type { PathSample } from '../../../../src/@types/animation/CompiledClip';
+import type { PathSample } from '../../../../src/@types/animation/compiledClip/PathSample';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import type { PassByConfig } from '../../../../src/@types/animation/PassByConfig';

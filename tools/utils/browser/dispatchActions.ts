@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import type { UnknownAction } from '@reduxjs/toolkit';
-import type { SkymapPerfHook } from '../../../src/@types/perf/SkymapPerfHook';
+import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
 
 /** Dispatches actions into the running app's store, in order, through the perf hook. */
 export async function dispatchActions(page: Page, actions: UnknownAction[]): Promise<void> {

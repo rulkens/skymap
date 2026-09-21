@@ -15,9 +15,9 @@ import type { GalaxyCatalogReq } from '../../../@types/loading/GalaxyCatalogReq'
 import type { HiResFamousReq } from '../../../@types/loading/HiResFamousReq';
 import type { HiResFamousPair } from '../../../@types/engine/subsystems/HiResFamousPair';
 import type { PgcAliasMap } from '../../../@types/loading/PgcAliasMap';
-import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
-import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/ProceduralDiskSubsystem';
-import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/TexturedDiskSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
+import type { ProceduralDiskSubsystem } from '../../../@types/engine/subsystems/proceduralDiskSubsystem/ProceduralDiskSubsystem';
+import type { TexturedDiskSubsystem } from '../../../@types/engine/subsystems/texturedDiskSubsystem/TexturedDiskSubsystem';
 import type { DiskPlannerWalk } from '../../../@types/engine/subsystems/DiskPlannerWalk';
 import type { BiasCorrectionSubsystem } from '../../../@types/engine/subsystems/BiasCorrectionSubsystem';
 import type { GalaxyPointRenderer } from '../../../@types/rendering/GalaxyPointRenderer';

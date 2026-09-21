@@ -30,7 +30,7 @@ import type { SurfaceTileDebugSnapshot } from '../../../@types/scene/SurfaceTile
 import type { HeightTileImage } from '../../../@types/scene/HeightTileImage';
 import type { SurfaceCutTile } from '../../../@types/scene/SurfaceCutTile';
 import type { SurfaceTileSubsystem } from '../../../@types/engine/subsystems/SurfaceTileSubsystem';
-import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { Destroyable } from '../../../@types/rendering/Destroyable';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ResidentHeightLookup } from '../../../@types/scene/ResidentHeightLookup';
@@ -92,7 +92,7 @@ type ResidentTile = {
   readonly gridCodes: Uint8Array | null;
 };
 
-export type SurfaceTileDeps = {
+type SurfaceTileDeps = {
   readonly device: GPUDevice;
   /** Wakes the render loop; passed through to the stream subsystem. This file
    *  surfaces its own state through `isAnimating()` instead. */

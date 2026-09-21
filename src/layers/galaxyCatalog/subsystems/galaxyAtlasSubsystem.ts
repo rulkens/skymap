@@ -10,7 +10,7 @@
 
 import { createTileStreamSubsystem } from '../../../services/engine/subsystems/tileStreamSubsystem';
 import { GALAXY_ATLAS_SLOT_SIDE } from '../../../data/galaxyCatalog/galaxyAtlasSlotSide';
-import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/TileStreamSubsystem';
+import type { TileStreamSubsystem } from '../../../@types/engine/subsystems/tileStreamSubsystem/TileStreamSubsystem';
 import type { GalaxyAtlasDeps } from '../../../@types/engine/subsystems/GalaxyAtlasDeps';
 import { uploadBitmapToAtlas } from '../../../utils/gpu/uploadBitmapToAtlas';
 import { closeBitmap } from '../../../utils/gpu/closeBitmap';
