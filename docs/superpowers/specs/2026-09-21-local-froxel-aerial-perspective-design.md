@@ -34,7 +34,8 @@ declared frame joint and adds the second.
 - **B, the local regime.** A camera-frustum-aligned volume of fixed 4 km slices, 64 deep
   (the slices reach 256 km); past the last slice the apply hands the pixel to the outside
   shell's per-pixel segment answer, so the fog reaches the terminator without a
-  column-dependent total at the limb. The gate
+  column-dependent total at the limb, cross-faded against the froxel answer by a horizon-distance
+  weight so the hand-off draws no line on the ground. The gate
   (4 km-slab emulation, 1 km sub-steps, linear lerp at the hit, vs the 16-step march at
   Everest 07:43 UTC) measured mean |diff| 0.04/255, max 2, against a fog signal of mean
   14.7, max 105. Bruneton tables remain the all-altitude answer, parked.

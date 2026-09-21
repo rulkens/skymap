@@ -39,6 +39,16 @@ fn vs(@builtin(vertex_index) vi: u32) -> FullscreenOut {
 
 const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 
+// Ratios of horizon distance to the froxel far bound, not km: whether the
+// hard seam at the bound would land on visible terrain depends on the body's
+// size and the bound together, and the ratio is exactly that comparison.
+// Below START the seam is still below the horizon (nothing to fade); above
+// END the shell alone reaches far enough to answer every visible pixel.
+// Everest, 7 km up, ratio ~1.2 (8% shell); Mars, 73 km up, ratio ~2.8 (shell
+// alone); Earth, 121 km up, shell alone.
+const HANDOFF_HORIZON_START: f32 = 1.0;
+const HANDOFF_HORIZON_END: f32 = 2.0;
+
 // Both blend passes' contributions from ONE evaluation, so the pair can never
 // disagree about which branch a pixel took.
 struct AerialSample {
@@ -85,6 +95,27 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
     return out;
   }
 
+  // Same altitude every pixel this frame sees, but nothing in the bound
+  // uniforms carries it as its own field: it is cheaper to re-derive from
+  // 'u.camPosLocal'/'u.bottomRadius' per fragment than to grow the record for
+  // one per-frame scalar. Below 'HANDOFF_HORIZON_START' the horizon is still
+  // short of the froxel bound, so no ray can see the seam; above
+  // 'HANDOFF_HORIZON_END' the shell alone reaches every geometry ray in
+  // frame, so the froxel reads below are skipped outright.
+  let viewHeight = length(u.camPosLocal);
+  let horizonKm = sqrt(max(viewHeight * viewHeight - u.bottomRadius * u.bottomRadius, 0.0)) *
+    params.atmosphereTopKm;
+  let shellWeight =
+    smoothstep(HANDOFF_HORIZON_START, HANDOFF_HORIZON_END, horizonKm / boundKm);
+
+  if (shellWeight >= 1.0) {
+    let s = sampleShellSegment(dir, tEnd, true);
+    out.transmit = vec4<f32>(s.transmit, 1.0);
+    out.emission = vec4<f32>(s.emission, 0.0);
+    out.hit = s.hit;
+    return out;
+  }
+
   // The shell frame puts the atmosphere TOP at radius 1 and the volume is
   // indexed in km, so 'atmosphereTopKm' is the one scale between them. Below
   // one slice no texel exists, and 'identityMix' fades back to no medium.
@@ -95,10 +126,18 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
   let transmittance =
     mix(textureSampleLevel(froxelTransmittance, lutSamp, p, 0.0).rgb, vec3<f32>(1.0), c.identityMix);
 
+  var transmit = transmittance;
+  var emission = inScatter * u.exposure;
+  if (shellWeight > 0.0) {
+    let s = sampleShellSegment(dir, tEnd, true);
+    transmit = mix(transmit, s.transmit, shellWeight);
+    emission = mix(emission, s.emission, shellWeight);
+  }
+
   // Alpha passes through untouched (multiply by 1, add 0): opaque ground must
   // stay opaque for the compositor.
-  out.transmit = vec4<f32>(transmittance, 1.0);
-  out.emission = vec4<f32>(inScatter * u.exposure, 0.0);
+  out.transmit = vec4<f32>(transmit, 1.0);
+  out.emission = vec4<f32>(emission, 0.0);
   out.hit = true;
   return out;
 }

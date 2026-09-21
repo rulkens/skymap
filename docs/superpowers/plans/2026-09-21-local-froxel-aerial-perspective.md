@@ -374,7 +374,8 @@ cover every other body.
 
 - [ ] `docs/RENDERER.md`: one paragraph after the sampled-depth sentence: the aerial bake compute
       row (volume pair, 4 km slices, past the last the apply reads the outside shell's segment
-      answer, why the bake owns the shell
+      answer cross-faded against the froxel answer by a horizon-distance weight, why the bake owns
+      the shell
       record write) and the
       two sampled-depth consumers (aerial apply, orbit trails). No history.
 - [ ] `frameOrder.ts:235-241`: the aerial-line comment no longer mentions a march; say the volume was
