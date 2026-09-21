@@ -22,17 +22,12 @@
  * carrying a WESL twin of the unit constant.
  */
 
-import type { ConstellationsArtifact } from '../../../../@types/loading/ConstellationsArtifact';
-import { SCALE_UNITS } from '../../../../data/scaleUnits';
+import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
+import type { ConstellationInstances } from '../@types/ConstellationInstances';
+import { SCALE_UNITS } from '../../../data/scaleUnits';
 
 /** f32 per instance — mirrors the 32-byte stride in `constellations/io.wesl`. */
 export const FLOATS_PER_SEGMENT = 8;
-
-/** The flattened instance buffer plus its segment count (== instance count). */
-type ConstellationInstances = {
-  readonly data: Float32Array;
-  readonly segmentCount: number;
-};
 
 export function buildConstellationInstances(
   artifact: ConstellationsArtifact,

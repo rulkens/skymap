@@ -146,7 +146,6 @@ function makeProgressState(): EngineState {
     mcpm: stubSlot('mcpm'),
     polyphorm2Mrs: stubSlot('polyphorm-2mrs'),
     mcpmWorkbench: stubSlot('mcpm-workbench'),
-    constellations: stubSlot('constellations'),
     bodyTextureAtlas: stubSlot('body-texture-atlas'),
     // Empty keyed families: installLoadProgress walks them like starCatalogs.
     bodyTextures: new Map(),

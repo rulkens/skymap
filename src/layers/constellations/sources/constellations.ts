@@ -1,5 +1,5 @@
-import type { ConstellationsSourceEntry } from '../../@types/data/constellations/ConstellationsSourceEntry';
-import { Source } from '../source';
+import type { ConstellationsSourceEntry } from '../../../@types/data/constellations/ConstellationsSourceEntry';
+import { Source } from '../../../data/source';
 
 export const CONSTELLATIONS_ENTRY = {
   type: 'constellations',

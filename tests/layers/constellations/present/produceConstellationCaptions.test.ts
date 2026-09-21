@@ -10,13 +10,14 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { produceConstellationCaptions } from '../../../../src/services/engine/presentation/produceConstellationCaptions';
+import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const PC = SCALE_UNITS.PC_TO_MPC;
@@ -48,22 +49,23 @@ function makeCtx(camPos: Vec3, distance: number): ReadyFrameContext {
   } as unknown as ReadyFrameContext;
 }
 
-function makeState(opts: { layerFade: number; ready?: boolean; reloading?: boolean }): EngineState {
+// The producer only ever reads `runtime.slot.committed()` — never `.state()` —
+// so the stub carries just that one method.
+function makeRuntime(): ConstellationsRuntime {
   return {
-    assetSlots: {
-      constellations:
-        (opts.ready ?? true)
-          ? {
-              state: () => ({ kind: opts.reloading ? ('loading' as const) : ('ready' as const) }),
-              committed: () => ({
-                kind: 'ready' as const,
-                req: undefined,
-                value: CONSTELLATION_ARTIFACT,
-                loadedAtMs: 0,
-              }),
-            }
-          : null,
+    slot: {
+      committed: () => ({
+        kind: 'ready' as const,
+        req: undefined,
+        value: CONSTELLATION_ARTIFACT,
+        loadedAtMs: 0,
+      }),
     },
+  } as unknown as ConstellationsRuntime;
+}
+
+function makeState(opts: { layerFade: number }): EngineState {
+  return {
     subsystems: {
       fades: { opacityOf: () => opts.layerFade },
       clipPlayer: { clipOpacityOf: () => 1 },
@@ -85,7 +87,7 @@ describe('produceConstellationCaptions', () => {
     // row on its own. With the toggle opacity at 0 the product is 0 despite
     // the distance band being favourable — every figure is still EMITTED
     // (the zero-target landmine), just at target 0.
-    const out = produceConstellationCaptions(
+    const out = produceConstellationCaptions(makeRuntime())(
       makeState({ layerFade: 0 }),
       makeCtx([pastBodyGate, 0, 0], pastBodyGate),
     );
@@ -97,7 +99,10 @@ describe('produceConstellationCaptions', () => {
     // Eye inside the full-alpha band edge so the distance factor is 1 and the
     // target reduces to the fade-registry opacity alone.
     const camPos: Vec3 = [5e-4, 0, 0];
-    const out = produceConstellationCaptions(makeState({ layerFade: 0.5 }), makeCtx(camPos, 5e-4));
+    const out = produceConstellationCaptions(makeRuntime())(
+      makeState({ layerFade: 0.5 }),
+      makeCtx(camPos, 5e-4),
+    );
 
     const orion = out.labels.find((l) => l.id === 'Orion')!;
     expect(orion).toBeDefined();
@@ -112,20 +117,23 @@ describe('produceConstellationCaptions', () => {
     // A `pickId` here would stamp a click box over the star field the figure
     // spans, stealing clicks from the stars it connects. The absence IS the
     // opt-out (`labelPickQuads` skips any label without one).
-    const out = produceConstellationCaptions(
+    const out = produceConstellationCaptions(makeRuntime())(
       makeState({ layerFade: 1 }),
       makeCtx([5e-4, 0, 0], 5e-4),
     );
     for (const l of out.labels) expect(l.pickId).toBeUndefined();
   });
 
-  it('keeps emitting captions from the committed artifact while the slot reloads', () => {
-    // The live `state()` drops to `loading` on a reload; the producer must read
-    // `committed()` instead, or the figures would vanish for the fetch's duration.
-    const out = produceConstellationCaptions(
-      makeState({ layerFade: 1, reloading: true }),
-      makeCtx([5e-4, 0, 0], 5e-4),
-    );
+  it('memoizes the caption set on the artifact identity, one producer instance', () => {
+    // The memo lets live inside the factory closure (moved off module scope so
+    // two engine instances never share a cache) — this pins that a SECOND call
+    // through the SAME producer instance still emits the full figure set,
+    // proving the memo re-derives on read rather than going stale/empty.
+    const produce = produceConstellationCaptions(makeRuntime());
+    const state = makeState({ layerFade: 1 });
+    const ctx = makeCtx([5e-4, 0, 0], 5e-4);
+    produce(state, ctx);
+    const out = produce(state, ctx);
     expect(out.labels.length).toBe(CONSTELLATION_ARTIFACT.constellations.length);
   });
 });

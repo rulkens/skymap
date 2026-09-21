@@ -14,7 +14,6 @@
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { PickProgram } from '../frame/PickProgram';
 import type { MilkyWayPickRenderer } from '../../rendering/MilkyWayPickRenderer';
-import type { ConstellationRenderer } from '../../rendering/ConstellationRenderer';
 import type { LabelRenderer } from '../../rendering/LabelRenderer';
 import type { LabelPickRenderer } from '../../rendering/LabelPickRenderer';
 import type { MarkerLineRenderer } from '../../rendering/MarkerLineRenderer';
@@ -130,16 +129,6 @@ export type EngineGpuHandles = {
    * cached pipelines' uniform buffers.
    */
   compositor: Compositor | null;
-  /**
-   * True-3D constellation stick-figure renderer. Constructed unconditionally
-   * during GPU init (the pipeline is cheap), stays empty until the
-   * `constellations` slot's commit uploads the ready `constellations.json`
-   * artifact once on artifact-ready (flipping `hasData()` true and kicking the
-   * demand-loaded fade); the pass thereafter only draws. Nullable + excluded
-   * from `isEngineReady`: the overlay is an optional demand-loaded asset the
-   * `constellationsPass` null-checks at point of use.
-   */
-  constellationRenderer: ConstellationRenderer | null;
   /**
    * The decoded MSDF font atlas (BMFont JSON + bitmap), retained here (not a
    * local in `initGpu`) so `buildSwapRenderers` can re-run the label

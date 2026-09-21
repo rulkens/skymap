@@ -32,7 +32,7 @@
 
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
 import type { Vec3 } from '../../../@types/math/Vec3';
-import type { ForegroundCaption } from './foregroundCaption';
+import type { ForegroundCaption } from '../../../services/engine/presentation/foregroundCaption';
 import { CONSTELLATION_LABEL_STYLE } from './constellationLabelStyle';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
