@@ -18,7 +18,8 @@ import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames'
 import { CONST_J2000 } from '../../../data/time/constJ2000';
 
 export function seedCameraRuntime(args: {
-  readonly state: RootState;
+  /** Only the two slices the seed reads; call sites still hand over `store.getState()`. */
+  readonly state: Pick<RootState, 'camera' | 'settings'>;
   readonly projection: CameraProjection;
 }): CameraRuntime {
   const { camera, settings } = args.state;
