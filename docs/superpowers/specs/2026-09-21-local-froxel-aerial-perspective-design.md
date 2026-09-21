@@ -32,7 +32,8 @@ declared frame joint and adds the second.
 ## 2. Ratified decisions
 
 - **B, the local regime.** A camera-frustum-aligned volume of fixed 4 km slices, 64 deep
-  (far bound 256 km); beyond the far bound the lookup clamps to the last slice. The gate
+  (the slices reach 256 km); the last slice carries the march to the ray's end, which is
+  where the lookup clamps, so the fog reaches the terminator rather than the slices. The gate
   (4 km-slab emulation, 1 km sub-steps, linear lerp at the hit, vs the 16-step march at
   Everest 07:43 UTC) measured mean |diff| 0.04/255, max 2, against a fog signal of mean
   14.7, max 105. Bruneton tables remain the all-altitude answer, parked.
@@ -161,8 +162,12 @@ to `[identity, last]`. The slice↔km mapping lives in ONE module,
 **Bake** (`aerialPerspective/bake.wesl`, `@workgroup_size(8, 8, 1)`, one invocation per
 ray): march the shared `scatterStep` integrand at `FROXEL_SLICE_KM / 4` (1 km) sub-steps,
 writing each slice's running totals to the two `texture_storage_3d<rgba16float>` textures.
-A ray that exits the atmosphere top before the far bound copies its exit totals into the
-remaining slices (no medium past the top). Reads: the body's `ScatteringParams`,
+A ray that ends (atmosphere top, or the relief floor) inside the slices copies its exit
+totals into the remaining ones; a ray that runs past them is marched on at half-slice steps
+to that end and the totals overwrite the LAST slice, which is where the apply's clamped
+lookup lands. Residual: past the slices the end is the relief floor, not the pixel's own
+terrain hit, so a grazing ray whose terrain stands short of the floor is over-fogged by the
+difference — inside the slices the pixel's depth still rules. Reads: the body's `ScatteringParams`,
 `SkyViewParams` (twilight knobs), transmittance and multi-scatter LUTs, the uniform record.
 
 **Apply** (`aerialPerspective/fragment.wesl`, spike file, geometry branch rewritten):

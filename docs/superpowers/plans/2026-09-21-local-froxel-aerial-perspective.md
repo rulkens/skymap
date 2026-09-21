@@ -7,7 +7,8 @@
 froxel volume baked once per frame, and let orbit trails hide behind terrain by sampling the same depth.
 
 **Architecture:** A compute prelude marches the shared `scatterStep` integrand once per volume ray into
-two `32×32×64` `rgba16float` storage textures (fixed 4 km slices, 256 km far bound). The spike's apply
+two `32×32×64` `rgba16float` storage textures (fixed 4 km slices reaching 256 km, the last slice
+carrying the march to the ray's end). The spike's apply
 pass keeps its sky branch and swaps its 16-step march for two linear 3D lookups. The bake is the frame's
 only write of the inside body's shell uniform record, so bake and apply unproject with one `invMvp`.
 Orbit trails declare `depth: { sample: 'foreground:0' }` and multiply a depth clearance into the
@@ -367,7 +368,8 @@ cover every other body.
 `src/services/engine/frame/frameOrder.ts:235-241`.
 
 - [ ] `docs/RENDERER.md`: one paragraph after the sampled-depth sentence: the aerial bake compute
-      row (volume pair, 4 km slices, 256 km far bound, why the bake owns the shell record write) and the
+      row (volume pair, 4 km slices, the last carrying the ray's remainder, why the bake owns the shell
+      record write) and the
       two sampled-depth consumers (aerial apply, orbit trails). No history.
 - [ ] `frameOrder.ts:235-241`: the aerial-line comment no longer mentions a march; say the volume was
       baked from this row's record in the prelude.

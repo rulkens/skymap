@@ -22,7 +22,7 @@ struct FroxelCoord {
 
 // Texel i sits at continuous index 'f = distanceKm / sliceKm - 1', so a linear
 // sampler lerps between the two neighbouring slices. Past the last slice 'w'
-// clamps: the volume's reach is the fog's reach.
+// clamps onto it, and the bake put the whole ray's totals there.
 fn froxelCoord(distanceKm: f32, sliceKm: f32, sliceCount: u32) -> FroxelCoord {
   let n = f32(sliceCount);
   let f = distanceKm / sliceKm - 1.0;

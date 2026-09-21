@@ -1,8 +1,8 @@
 // atmosphere/aerialPerspective/bake.wesl — the per-frame camera-local aerial
-// bake. One invocation per (x, y) screen texel marches that pixel's view ray
-// once and stores the running in-scatter + throughput at every slice, so the
-// apply reads two texels instead of re-marching. Ray + slice arithmetic are
-// LOCAL units (atmosphere top = 1); 'scatterStep' integrates in km.
+// bake. One invocation per (x, y) screen texel marches that pixel's view ray to
+// its end, storing the running in-scatter + throughput at every slice and the
+// whole ray in the last. That end is the RELIEF FLOOR, so past the slices a
+// terrain pixel standing short of the floor is over-fogged by the remainder.
 
 import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceEndKm;
 import package::atmosphere::scattering::ScatteringParams;
@@ -40,6 +40,40 @@ const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 // samples wide rather than one.
 const SUB_STEPS: u32 = 4u;
 
+// The remainder crosses air the slices already proved thin, so it takes half a
+// slice per step — a quarter of the in-volume sampling rate.
+const REMAINDER_STEP_SLICES: f32 = 0.5;
+
+// 1024 half-slices is 2048 km at 4 km slices; only a ray near-tangent at the
+// top of the shell runs longer, and it keeps the totals it has.
+const MAX_REMAINDER_STEPS: u32 = 1024u;
+
+// The running totals along one ray.
+struct March {
+  inScatter: vec3<f32>,
+  throughput: vec3<f32>,
+};
+
+// One quadrature sample over [t0Km, t1Km]. The slices and the remainder past
+// them fold through this, so the two step sizes cannot integrate differently.
+fn marchSegment(
+  state: March, originKm: vec3<f32>, dir: vec3<f32>, cosTheta: f32,
+  t0Km: f32, t1Km: f32,
+) -> March {
+  var out = state;
+  if (t1Km > t0Km) {
+    let len = t1Km - t0Km;
+    let s = scatterStep(
+      params, transmittanceLut, multiScatterLut, lutSamp,
+      originKm + dir * (t0Km + len * 0.5), u.sunDirLocal, cosTheta, len,
+      view.twilightSoftness, view.twilightIntensity,
+    );
+    out.inScatter = state.inScatter + state.throughput * s.inScatter;
+    out.throughput = state.throughput * s.transmittance;
+  }
+  return out;
+}
+
 @compute @workgroup_size(8, 8, 1)
 fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let dims = textureDimensions(outInScatter);
@@ -51,6 +85,8 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let uv = (vec2<f32>(f32(gid.x), f32(gid.y)) + vec2<f32>(0.5)) / vec2<f32>(dims.xy);
   let dir = sceneRayDir(uv, u.invMvp, u.camPosLocal);
 
+  // Ray + sphere arithmetic is in LOCAL units (atmosphere top = 1); every
+  // distance the march carries is km, which is what 'scatterStep' integrates.
   let kmPerLocal = params.atmosphereTopKm;
   let originKm = u.camPosLocal * kmPerLocal;
   // Constant along the ray, so it is hoisted out of the march.
@@ -67,8 +103,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   }
 
   let dtKm = u.froxelSliceKm / f32(SUB_STEPS);
-  var inScatter = vec3<f32>(0.0);
-  var throughput = vec3<f32>(1.0);
+  var march: March;
+  march.inScatter = vec3<f32>(0.0);
+  march.throughput = vec3<f32>(1.0);
 
   var i: u32 = 0u;
   loop {
@@ -82,23 +119,35 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
       // The step is CLIPPED to the end rather than skipped whole: a skip at the
       // midpoint would step the stored value by half a sub-step and draw
       // iso-distance rings across the ground.
-      let t1 = min(t0 + dtKm, endKm);
-      if (t1 > t0) {
-        let len = t1 - t0;
-        let s = scatterStep(
-          params, transmittanceLut, multiScatterLut, lutSamp,
-          originKm + dir * (t0 + len * 0.5), u.sunDirLocal, cosTheta, len,
-          view.twilightSoftness, view.twilightIntensity,
-        );
-        inScatter = inScatter + throughput * s.inScatter;
-        throughput = throughput * s.transmittance;
-      }
+      march = marchSegment(march, originKm, dir, cosTheta, t0, min(t0 + dtKm, endKm));
       j = j + 1u;
     }
 
     let texel = vec3<u32>(gid.x, gid.y, i);
-    textureStore(outInScatter, texel, vec4<f32>(inScatter, 1.0));
-    textureStore(outTransmittance, texel, vec4<f32>(throughput, 1.0));
+    textureStore(outInScatter, texel, vec4<f32>(march.inScatter, 1.0));
+    textureStore(outTransmittance, texel, vec4<f32>(march.throughput, 1.0));
     i = i + 1u;
+  }
+
+  // The last texel is where the apply's clamped lookup lands, so it carries the
+  // rest of the ray: from tens of km up, a ray toward the horizon crosses the
+  // slices in thin air and only meets the dense layer near its ground hit.
+  let lastSlice = dims.z - 1u;
+  let boundKm = froxelSliceEndKm(lastSlice, u.froxelSliceKm);
+  if (endKm > boundKm) {
+    let stepKm = u.froxelSliceKm * REMAINDER_STEP_SLICES;
+    var t0 = boundKm;
+    var k: u32 = 0u;
+    loop {
+      if (k >= MAX_REMAINDER_STEPS || t0 >= endKm) { break; }
+      let t1 = min(t0 + stepKm, endKm);
+      march = marchSegment(march, originKm, dir, cosTheta, t0, t1);
+      t0 = t1;
+      k = k + 1u;
+    }
+
+    let texel = vec3<u32>(gid.x, gid.y, lastSlice);
+    textureStore(outInScatter, texel, vec4<f32>(march.inScatter, 1.0));
+    textureStore(outTransmittance, texel, vec4<f32>(march.throughput, 1.0));
   }
 }
