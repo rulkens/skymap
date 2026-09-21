@@ -86,10 +86,10 @@ export function applySceneEffect(
       // B(t), not the destination's steady pole, so a frameTo firing mid-slerp
       // composes continuously instead of snapping back.
       //
-      // Deliberately NO third `commitCameraPose(reencodePose(...))` dispatch: the
-      // clip driver necessarily active here re-derives its pose every frame from
-      // the current `settings.orientation`, so `camera.base` is neither rendered
-      // nor baked while a clip is winning.
+      // No explicit `commitCameraPose` here: the loop re-encodes `base` itself
+      // the frame it sees `settings.orientation` change (`stepCameraRuntime`),
+      // and the clip driver active here renders from `settings.orientation`
+      // directly anyway, never from `base`.
       const fromQuat = liveUpBasisQuat(state.cameraRuntime);
       store.dispatch(setOrientation(effect.frame));
       store.dispatch(
