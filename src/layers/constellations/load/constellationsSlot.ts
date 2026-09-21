@@ -12,18 +12,19 @@
  * `installSlotReadyWake`'s job, not the factory's; this subscriber only warns.
  */
 
-import { createAssetSlot } from '../AssetSlot';
-import { constellationsFetcher } from '../fetchers/constellationsFetcher';
+import { createAssetSlot } from '../../../services/loading/AssetSlot';
+import { constellationsFetcher } from './constellationsFetcher';
+import type { AssetSlot } from '../../../@types/loading/AssetSlot';
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { SlotFactory } from '../../../@types/loading/SlotFactory';
+import type { ConstellationRenderer } from '../../../@types/rendering/ConstellationRenderer';
 
-export const createConstellationsSlot: SlotFactory<ConstellationsArtifact, void> = (state, _cb) => {
+export function createConstellationsSlot(
+  renderer: ConstellationRenderer,
+): AssetSlot<ConstellationsArtifact, void> {
   const slot = createAssetSlot({
     name: 'constellations',
     fetch: constellationsFetcher,
     commit: async (artifact) => {
-      const renderer = state.gpu.constellationRenderer;
-      if (!renderer) return;
       // Build the per-instance buffer on the GPU (once — the segment set is a
       // static, tier-agnostic artifact). This flips the fade guard's
       // `hasData()` true, which is the arrival edge core fades on.
@@ -36,4 +37,4 @@ export const createConstellationsSlot: SlotFactory<ConstellationsArtifact, void>
     }
   });
   return slot;
-};
+}

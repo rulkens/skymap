@@ -12,9 +12,9 @@
 import { describe, it, expect } from 'vitest';
 
 import { produceSceneBodyCaptions } from '../../../../src/services/engine/presentation/produceSceneBodyCaptions';
-import { produceConstellationCaptions } from '../../../../src/services/engine/presentation/produceConstellationCaptions';
+import { produceConstellationCaptions } from '../../../../src/layers/constellations/present/produceConstellationCaptions';
 import { CAPTION_FADE_RULES } from '../../../../src/services/engine/presentation/captionFadeRules';
-import { constellationLayerOpacity } from '../../../../src/services/engine/presentation/constellationLayerOpacity';
+import { constellationLayerOpacity } from '../../../../src/layers/constellations/present/constellationLayerOpacity';
 import {
   sceneBodyLabels,
   sceneBodyLabelId,
@@ -34,6 +34,7 @@ import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
+import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
@@ -442,20 +443,20 @@ describe('produceSceneBodyCaptions', () => {
 
     const layerFade = 0.5;
     const camPos: Vec3 = [5e-4, 0, 0];
-    const state = {
-      assetSlots: {
-        constellations: {
-          committed: () => ({
-            kind: 'ready' as const,
-            req: undefined,
-            loadedAtMs: 0,
-            value: {
-              version: 1 as const,
-              constellations: [{ name: 'Orion', labelAnchorPc: [1, 2, 3] as Vec3, segments: [] }],
-            },
-          }),
-        },
+    const runtime = {
+      slot: {
+        committed: () => ({
+          kind: 'ready' as const,
+          req: undefined,
+          loadedAtMs: 0,
+          value: {
+            version: 1 as const,
+            constellations: [{ name: 'Orion', labelAnchorPc: [1, 2, 3] as Vec3, segments: [] }],
+          },
+        }),
       },
+    } as unknown as ConstellationsRuntime;
+    const state = {
       subsystems: {
         fades: { opacityOf: () => layerFade },
         clipPlayer: { clipOpacityOf: () => 1 },
@@ -468,7 +469,7 @@ describe('produceSceneBodyCaptions', () => {
       nowMs: 0,
     } as unknown as ReadyFrameContext;
 
-    const out = produceConstellationCaptions(state, ctx);
+    const out = produceConstellationCaptions(runtime)(state, ctx);
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);
     expect(out.labels[0]!.fadeAlpha).toBeCloseTo(constellationLayerOpacity(camDistMpc, layerFade));
   });

@@ -24,15 +24,13 @@
  * toggling `milkyWay` flips `selectMilkyWayLabelEnabled`; toggling
  * `famousGalaxy` flips the galaxy catalog item's `labelEnabled` flag.
  *
- * The master tri-state folds TWO non-category rows (constellations, orbit
- * trails) on top of the label categories the registry derives — star names
- * and body names are registry-derived categories themselves now, not
- * hand-authored rows, so only the two flat singleton guides sit outside that
- * derivation. `constellations` defaults off and every other row defaults on,
- * so the default-state master stays indeterminate whether the row count is
- * one or two; that scenario alone wouldn't catch a miscounted row.
- * `orbitTrailsEnabled` defaults on, so a store-seeded off is what actually
- * pins the second row into the tri-state arithmetic.
+ * The master tri-state folds the hand-authored orbit-trails row and every
+ * `layerRows` entry on top of the label categories the registry derives —
+ * star names and body names are registry-derived categories themselves now,
+ * not hand-authored rows. `orbitTrailsEnabled` defaults on; the constellations
+ * Layer row (passed in via `layerRows`, like the ZoA row below) defaults off,
+ * so together they pin the default-state master into the indeterminate case —
+ * catching a miscounted row that a single off row alone wouldn't.
  *
  * Tests assert on `store.getState()` via selectors — RTK dispatch is
  * synchronous so the store reflects the new value immediately after the
@@ -56,6 +54,7 @@ import { selectMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/state/m
 import { selectOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/selectors';
 import { selectZoneOfAvoidanceEnabled } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/selectors';
 import { zoneOfAvoidanceSettingsRow } from '../../../src/layers/zoneOfAvoidance/ui/zoneOfAvoidanceSettingsRow';
+import { constellationsSettingsRow } from '../../../src/layers/constellations/ui/constellationsSettingsRow';
 import type { AppStore } from '../../../src/store/types';
 
 function makeWrapper(store: AppStore) {
@@ -66,7 +65,7 @@ describe('LabelsAndGuidesSectionContainer', () => {
   it('renders with default store state: constellations off, rest on → master indeterminate', () => {
     const { store } = createAppStore();
     const { container } = render(
-      createElement(LabelsAndGuidesSectionContainer, { layerRows: [] }),
+      createElement(LabelsAndGuidesSectionContainer, { layerRows: [constellationsSettingsRow] }),
       {
         wrapper: makeWrapper(store),
       },

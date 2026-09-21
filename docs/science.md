@@ -88,7 +88,7 @@ Three kinds of content share the scene; this section says which is which.
 
 ### Large-scale overlays
 
-- **Filaments and constellations**: instanced screen-aligned quad segments blended additively, since native line primitives are locked to one pixel ([filamentRenderer.ts](../src/layers/filaments/render/filamentRenderer.ts), [constellationRenderer.ts](../src/services/gpu/renderers/constellations/constellationRenderer.ts)); constellation endpoints resolve to real catalogue stars at build time.
+- **Filaments and constellations**: instanced screen-aligned quad segments blended additively, since native line primitives are locked to one pixel ([filamentRenderer.ts](../src/layers/filaments/render/filamentRenderer.ts), [constellationRenderer.ts](../src/layers/constellations/render/constellationRenderer.ts)); constellation endpoints resolve to real catalogue stars at build time.
 - **Structure markers**: world-sized halo-plus-ring billboards scaled by each structure's physical radius; voids draw only the ring, a halo would imply matter where the structure is defined by absence ([structureMarkerRenderer.ts](../src/services/gpu/renderers/structureMarker/structureMarkerRenderer.ts)).
 - **Zone of avoidance**: a reduced-resolution analytic raymarch of a galactic-latitude wedge, captioned in curved MSDF lettering ([band.wesl](../src/services/gpu/shaders/zoneOfAvoidance/band.wesl)).
 - **Horizon shell**: the particle horizon at 14.3 Gpc, a Fresnel-rimmed sphere evaluated analytically per fragment ([horizonShellRenderer.ts](../src/services/gpu/renderers/horizonShell/horizonShellRenderer.ts)).
