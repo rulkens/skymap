@@ -9,7 +9,7 @@
  */
 
 import type { Renderer } from './Renderer';
-import type { AerialBundleResources } from '../../services/gpu/renderers/atmosphere/aerialPerspectiveRenderer';
+import type { AerialBundleResources } from './AerialBundleResources';
 
 export type AerialPerspectiveRenderer = Renderer & {
   /**

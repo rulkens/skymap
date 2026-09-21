@@ -6,19 +6,10 @@
  * consumers. Design rationale lives on the `AerialPerspectiveRenderer` type.
  */
 
+import type { AerialBundleResources } from '../../../../@types/rendering/AerialBundleResources';
 import type { AerialPerspectiveRenderer } from '../../../../@types/rendering/AerialPerspectiveRenderer';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
 import applyCode from '../../shaders/atmosphere/aerialPerspective/fragment.wesl?static';
-
-/** The GPU resources the apply borrows from each `atmosphereShellRenderer` bundle. */
-export type AerialBundleResources = {
-  readonly scatteringBuffer: GPUBuffer;
-  readonly skyViewParamsBuffer: GPUBuffer;
-  readonly shellUniformBuffer: GPUBuffer;
-  readonly transmittanceTex: GPUTexture;
-  readonly multiScatterTex: GPUTexture;
-  readonly skyViewTex: GPUTexture;
-};
 
 export function createAerialPerspectiveRenderer(
   device: GPUDevice,
