@@ -17,6 +17,8 @@
  *                         Zone-of-Avoidance view drives it, and a viewer who
  *                         switched the band off must get that choice back.
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
+ *   - `localBubble`    — the Local Bubble shell's gate.
+ *   - `constellations` — constellation figures + their lettering.
  *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate.
  *   - `starCatalogs`   — star-catalog gates + per-catalog caption toggles.
  *   - `bodies`         — per-body visibility + caption toggles.
@@ -37,11 +39,19 @@
  * `galaxyCatalogs` does the same today, so pulling the look knobs along for
  * the ride is consistent with existing policy rather than a new one.
  *
- * The remaining clusters (`tonemap`, `bloom`, `bias`, `thumbnails`, `debug`)
- * are deliberately excluded: the tour neither drives nor restores them, so
- * capturing them would invite a restore that stomps a value the tour never
- * meant to own. That test is what admitted `camera` — it was excluded on the
- * same grounds until the bracket started pinning the FOV.
+ * The remaining clusters (`tonemap`, `bloom`, `hdr`, `bias`, `earth`,
+ * `sgrAStarLensingTuning`, `thumbnails`, `debug`) are deliberately excluded:
+ * the tour neither drives nor restores them, so capturing them would invite a
+ * restore that stomps a value the tour never meant to own. That test is what
+ * admitted `camera` — excluded on the same grounds until the bracket started
+ * pinning the FOV.
+ *
+ * The standing invariant, and the reason `localBubble` and `constellations`
+ * are here: every key in `VISIBILITY_LAYER_ROWS` is addressable by a clip's
+ * `hide()`/`show()` cue, which writes visibility INTENT into settings. So each
+ * of those 19 keys must resolve to a cluster in this list, or a tour that
+ * hides that layer leaves it hidden after the restore. Those two Layers landed
+ * after this list was written and were missed; a new Layer must not repeat it.
  *
  * `orientation` is deliberately NOT here, even though it is a `mergeSnapshot`
  * payload's sibling concern conceptually: it rides on `SceneSnapshot` instead,
@@ -72,6 +82,8 @@ export type SettingsSnapshot = Readonly<
     | 'milkyWay'
     | 'zoneOfAvoidance'
     | 'flow'
+    | 'localBubble'
+    | 'constellations'
     | 'orbitTrails'
     | 'starCatalogs'
     | 'bodies'

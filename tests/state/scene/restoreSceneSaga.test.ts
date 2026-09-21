@@ -41,6 +41,8 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
       milkyWay: { ...f.milkyWay, enabled: !f.milkyWay.enabled },
       zoneOfAvoidance: { ...f.zoneOfAvoidance, enabled: !f.zoneOfAvoidance.enabled },
       flow: { ...f.flow, flowSpeed: 7 },
+      localBubble: { ...f.localBubble, enabled: !f.localBubble.enabled },
+      constellations: { ...f.constellations, enabled: !f.constellations.enabled },
       orbitTrails: { ...f.orbitTrails, enabled: !f.orbitTrails.enabled },
       starCatalogs: { ...f.starCatalogs, enabled: !f.starCatalogs.enabled },
       bodies: { ...f.bodies },
