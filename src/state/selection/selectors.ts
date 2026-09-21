@@ -58,10 +58,6 @@ const selectSelection = (state: RootState): SelectionState => state[selectionRou
 const selectSelectionRows = (state: RootState): SelectionRowsState => state[selectionRowsRoute];
 
 // --- selection ref slot reads (raw Intent) ------------------------------------
-
-export const selectHoverRef = (state: RootState): SelectionRef | null =>
-  selectSelection(state).hover;
-
 export const selectSelectedRef = (state: RootState): SelectionRef | null =>
   selectSelection(state).select;
 
@@ -76,7 +72,7 @@ export const selectFocusRef = (state: RootState): SelectionRef | null =>
  * during the resolve window — a request defers until its catalog lands — take
  * the pending id first and fall back to the resolved ref.
  */
-export const selectPendingSelectId = (state: RootState): string | null =>
+const selectPendingSelectId = (state: RootState): string | null =>
   selectSelection(state).pending.select;
 
 export const selectPendingFocusId = (state: RootState): string | null =>
@@ -84,10 +80,9 @@ export const selectPendingFocusId = (state: RootState): string | null =>
 
 // --- selectionRows slot reads (resolved display cache) ------------------------
 
-export const selectHoverRow = (state: RootState): SelectionRow | null =>
-  selectSelectionRows(state).hover;
+const selectHoverRow = (state: RootState): SelectionRow | null => selectSelectionRows(state).hover;
 
-export const selectSelectRow = (state: RootState): SelectionRow | null =>
+const selectSelectRow = (state: RootState): SelectionRow | null =>
   selectSelectionRows(state).select;
 
 export const selectFocusRow = (state: RootState): SelectionRow | null =>

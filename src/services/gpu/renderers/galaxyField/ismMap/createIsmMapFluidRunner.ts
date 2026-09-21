@@ -14,7 +14,7 @@ import {
   ISM_MAP_RINGS,
   ISM_MAP_WORKGROUP_SIZE,
 } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
-import type { GalaxyIsmMapGridRadius } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
+import type { GalaxyIsmMapGridRadius } from '../../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 import { buildGalaxyIsmMapFluidEvents } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';
 import { ISM_MAP_FLUID_MAX_EVENTS } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapFluidEvents';
 import type { GalaxyDescription } from '../../../../../@types/galaxy/GalaxyDescription';
@@ -32,7 +32,7 @@ import ismMapFluidVelocityWgsl from '../../../shaders/milkyWay/ismMap/ismMapFlui
 import ismMapFluidStepWgsl from '../../../shaders/milkyWay/ismMap/ismMapFluidStep.wesl?static';
 import ismMapFluidPackWgsl from '../../../shaders/milkyWay/ismMap/ismMapFluidPack.wesl?static';
 
-export type IsmMapFluidRunner = {
+type IsmMapFluidRunner = {
   /** Dispatch the fluid's N advection steps, its own straight repack into `output.texture`, and `output`'s dust-blur pass — one encoder, one submit. Caller has already checked `enabled`/`steps > 0` and written `output`'s grid. */
   rebuild(input: {
     readonly geometry: GalaxyDescription;

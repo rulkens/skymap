@@ -12,69 +12,12 @@ import placeDustWgsl from '../../../shaders/milkyWay/ismMap/placeDust.wesl?stati
 
 import { packPlaceDustParams, PLACE_DUST_PARAMS_BUFFER_SIZE } from './packPlaceDustParams';
 import type { PlaceDustParamsInput } from './packPlaceDustParams';
-import type { PlaceDustBudget } from './computePlaceDustBudget';
 import { FIELD_COMPONENT_FLOATS } from '../field/packFieldUniforms';
 import { MAX_PARTICLE_COUNT } from '../../../../engine/galaxyGenerator/v2/dustParticleCloud';
+import type { PlaceDustDispatchInput } from '../../../../../@types/galaxy/PlaceDustDispatchInput';
+import type { IsmMapPlaceDust } from '../../../../../@types/galaxy/IsmMapPlaceDust';
 
 const PLACE_DUST_WORKGROUP_SIZE = 256;
-
-export type PlaceDustGrid = {
-  readonly rings: number;
-  readonly az: number;
-  readonly rMin: number;
-  readonly rMax: number;
-};
-
-export type PlaceDustWarp = {
-  readonly warpStrength: number;
-  readonly warpTwist: number;
-  readonly warpStartRadius: number;
-  readonly outerRadius: number;
-};
-
-export type PlaceDustDispatchInput = {
-  readonly seed: number;
-  readonly budget: PlaceDustBudget;
-  readonly dustOffset: number;
-  readonly generatorIsFluid: boolean;
-  readonly grid: PlaceDustGrid;
-  readonly warp: PlaceDustWarp;
-  /** The CDF scan output over the dust channel — see createIsmMapDustCdfScan.ts. */
-  readonly prefixBuffer: GPUBuffer;
-  /** ismMapGenerator.ringMeansBuffer — ringReduce.wesl's per-ring dust means. */
-  readonly ringMeansBuffer: GPUBuffer;
-  readonly ismMapTexture: GPUTexture;
-  readonly orientationTexture: GPUTexture;
-  readonly fieldCompsBuffer: GPUBuffer;
-};
-
-export type IsmMapPlaceDust = {
-  /** Encode into the CALLER's encoder/pass — no submit here (one-encoder-one-submit discipline). */
-  dispatchPlaceDust(enc: GPUCommandEncoder, input: PlaceDustDispatchInput): void;
-  /**
-   * Debug-only: dispatch in its own encoder/submit and map the dust slot
-   * range straight back — the probe's determinism/survival-floor exception,
-   * no production caller. `mass` is `massBuffer`'s own `[0, count)` slice,
-   * read back alongside `records` so the probe can independently recompute
-   * `sumR2` off the SAME dispatch rather than a second, potentially
-   * different one.
-   */
-  dispatchAndReadbackDust(
-    input: PlaceDustDispatchInput,
-  ): Promise<{ readonly records: Float32Array; readonly mass: Float32Array }>;
-  /**
-   * `massOut` (placeDust.wesl binding 6) — the survivor-sum input,
-   * MAX_PARTICLE_COUNT floats, one per particle slot, zeroed on a
-   * survival-floor miss (mirrors `comps`' amplitude-as-liveness). Exposed so
-   * `ringReduce.wesl`'s csSurvivorSum kernel (dispatched separately, off
-   * `createGalaxyFieldRenderer.ts`'s own `ringReduce` instance) can bind the SAME
-   * buffer this dispatch just filled — producer-owns-the-buffer, same
-   * ownership shape `ismMapGenerator.ringMeansBuffer` already establishes
-   * for `placeDust.wesl`'s own CONSUMED input.
-   */
-  readonly massBuffer: GPUBuffer;
-  dispose(): void;
-};
 
 function toUniformInput(input: PlaceDustDispatchInput): PlaceDustParamsInput {
   const { budget } = input;

@@ -18,7 +18,7 @@ import { focusInSubtree } from '../../../../utils/camera/focusInSubtree';
 import { frameUp } from '../../../../utils/camera/frameUp';
 import { hostedFocusOverHorizon } from '../../../../utils/camera/hostedFocusOverHorizon';
 import { hostedFocusPivotM } from '../../../../utils/camera/hostedFocusPivotM';
-import { toBodyFixedChannels } from '../../../../utils/camera/toBodyFixedChannels';
+import { toBodyFixedChannels } from '../toBodyFixedChannels';
 import { rotateVec3ByTightMat3T } from '../../../../utils/math/rotateVec3ByTightMat3T';
 import { surfaceGestureEdge } from '../../../../utils/camera/surfaceGestureEdge';
 import { innerBoundRadiusM } from '../../../../utils/occlusion/innerBoundRadiusM';

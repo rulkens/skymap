@@ -4,7 +4,7 @@
  * convention (cell row r, column c at `m[c*3 + r]`).
  */
 
-import type { Mat3 } from '../../@types/math/Mat3';
+import type { Mat3 } from '../../../src/@types/math/Mat3';
 
 export function rotYMat3(rad: number): Mat3 {
   const c = Math.cos(rad);

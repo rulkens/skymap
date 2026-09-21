@@ -67,7 +67,7 @@ import { selectEngineStatus, selectLoadProgress } from '../state/engine/selector
 import { dismissSplash, reopenSplash } from '../state/ui/uiSlice';
 
 /** Milliseconds before the "Continue anyway" escape appears. */
-export const CONTINUE_ANYWAY_DELAY_MS = 8_000;
+const CONTINUE_ANYWAY_DELAY_MS = 8_000;
 
 export function useSplash(): UseSplashReturn {
   // ── Engine state from the Redux slice ────────────────────────────────────

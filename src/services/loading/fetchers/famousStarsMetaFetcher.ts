@@ -24,7 +24,7 @@ import { HttpError, dataUrl } from '../fetchWithProgress';
  * Parse `famous_stars_meta.json` content. Throws on schema mismatch. Public
  * to allow unit testing without hitting the network.
  */
-export function parseFamousStarsMeta(rawJson: string): FamousStarMetaEntry[] {
+function parseFamousStarsMeta(rawJson: string): FamousStarMetaEntry[] {
   const parsed = JSON.parse(rawJson);
   if (!Array.isArray(parsed)) {
     throw new Error('famous_stars_meta.json: root must be an array');

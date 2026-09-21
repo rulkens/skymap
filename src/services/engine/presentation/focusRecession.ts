@@ -20,7 +20,7 @@ import { fadeIdToVisibilityKey } from './fadeIdToVisibilityKey';
 // The opacity each tagged layer settles to at full focus (blend = 1): markers and
 // labels dim moderately, the large diffuse fields recede harder. Eye-tuned.
 export const FILAMENT_RECESSION = 0.15;
-export const VOLUME_RECESSION = 0.15;
+const VOLUME_RECESSION = 0.15;
 export const MARKER_RECESSION = 0.25;
 export const LABEL_RECESSION = 0.25;
 
@@ -63,7 +63,7 @@ const RECESSION_BY_KIND = {
   zoneOfAvoidance: undefined, // a guide overlay, not scenery — stays put under focus
 } satisfies Record<Exclude<FadeId['kind'], 'labelLayer'>, number | undefined>;
 
-export function recessionTargetFor(h: FadeId): number | undefined {
+function recessionTargetFor(h: FadeId): number | undefined {
   return h.kind === 'labelLayer' ? RECESSION_BY_LABEL_LAYER[h.layer] : RECESSION_BY_KIND[h.kind];
 }
 

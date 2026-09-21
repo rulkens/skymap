@@ -92,7 +92,7 @@ type ResidentTile = {
   readonly gridCodes: Uint8Array | null;
 };
 
-export type SurfaceTileDeps = {
+type SurfaceTileDeps = {
   readonly device: GPUDevice;
   /** Wakes the render loop; passed through to the stream subsystem. This file
    *  surfaces its own state through `isAnimating()` instead. */

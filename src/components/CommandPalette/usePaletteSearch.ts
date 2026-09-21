@@ -22,7 +22,7 @@ import type { PaletteCard } from '../../@types/palette/PaletteCard';
 
 const GRID_KEYS: readonly string[] = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'];
 
-export type UsePaletteSearchInput = {
+type UsePaletteSearchInput = {
   entries: readonly FamousGalaxyMetaEntry[];
   aliasIndex?: readonly AliasIndexEntry[];
   structures?: readonly StructureSearchEntry[];
@@ -36,7 +36,7 @@ export type UsePaletteSearchInput = {
   onSelect: (action: PaletteAction) => void;
 };
 
-export type UsePaletteSearch = {
+type UsePaletteSearch = {
   query: string;
   setQuery: (q: string) => void;
   activeIdx: number;

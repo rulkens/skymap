@@ -27,7 +27,7 @@
 import type { GpuContext } from '../../@types/rendering/GpuContext';
 
 /** Extra device-request hints beyond the `timestamp-query` mirror — see Step 2 below. */
-export type InitGpuOptions = {
+type InitGpuOptions = {
   /** Requested in addition to timestamp-query; silently dropped if the adapter lacks one. */
   readonly requiredFeatures?: readonly GPUFeatureName[];
   /** Clamped per-key to the adapter's advertised maximum; unrecognized keys are dropped. */
