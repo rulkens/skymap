@@ -125,3 +125,15 @@ describe('rankPaletteMatches — scene-body rows', () => {
     expect(rows.some((r) => r.kind === 'body' && r.body.id === 'sgr-a-star')).toBe(true);
   });
 });
+
+describe('rankPaletteMatches — Earth place rows', () => {
+  it("surfaces Paris for the query 'paris'", () => {
+    const rows = rankPaletteMatches([], [], [], 'paris');
+    expect(rows.some((r) => r.kind === 'place' && r.entry.id === 'paris')).toBe(true);
+  });
+
+  it("surfaces Søndermarken for the query 'sondermarken' (no diacritic)", () => {
+    const rows = rankPaletteMatches([], [], [], 'sondermarken');
+    expect(rows.some((r) => r.kind === 'place' && r.entry.id === 'sondermarken')).toBe(true);
+  });
+});

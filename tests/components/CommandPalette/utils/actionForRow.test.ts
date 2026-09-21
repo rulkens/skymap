@@ -5,6 +5,7 @@ import { Source } from '../../../../src/data/sources';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../../../src/@types/engine/StructureSearchEntry';
+import type { EarthPlace } from '../../../../src/@types/palette/EarthPlace';
 
 const M31: FamousGalaxyMetaEntry = {
   id: 'm31',
@@ -40,6 +41,22 @@ describe('actionForRow', () => {
     expect(actionForRow({ kind: 'structure', entry: COMA, score: 0 })).toEqual({
       kind: 'focus',
       focusId: 'cluster-coma',
+    });
+  });
+
+  it('a place row → a flyTo action with its lon/lat/alt, verbatim', () => {
+    const GIZA: EarthPlace = {
+      id: 'giza',
+      names: ['Giza', 'Pyramids of Giza'],
+      lonDeg: 31.1342,
+      latDeg: 29.9792,
+      altKm: 3,
+    };
+    expect(actionForRow({ kind: 'place', entry: GIZA, score: 0 })).toEqual({
+      kind: 'flyTo',
+      lonDeg: 31.1342,
+      latDeg: 29.9792,
+      altKm: 3,
     });
   });
 });

@@ -2,4 +2,7 @@
 
 import type { ViewId } from '../views/ViewId';
 
-export type PaletteAction = { kind: 'focus'; focusId: string } | { kind: 'view'; viewId: ViewId };
+export type PaletteAction =
+  | { kind: 'focus'; focusId: string }
+  | { kind: 'view'; viewId: ViewId }
+  | { kind: 'flyTo'; lonDeg: number; latDeg: number; altKm: number };
