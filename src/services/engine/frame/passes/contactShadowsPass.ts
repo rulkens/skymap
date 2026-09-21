@@ -1,8 +1,9 @@
 /**
  * contactShadowsPass — each seated mesh body's baked contact shadow, projected
- * as a box decal onto whatever the row's depth holds (the terrain). Runs in the
- * body row's depth-SAMPLING step: it reads `foreground:0`'s depth, so that
- * depth is bound as a texture, never attached. Poses as in `meshBodiesPass`.
+ * as a box decal onto whatever the row's depth holds (the terrain). It reads
+ * the depth its step declared (`view.sampledDepth`), and only when its OWN row
+ * wrote it — a `{ sample }` step's passes never see a stranger's terrain.
+ * Poses as in `meshBodiesPass`.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
@@ -17,9 +18,12 @@ import { sceneBodyStates } from '../sceneBodyStates';
 export const contactShadowsPass: ContentPass = {
   name: 'contact-shadows',
 
-  // A row with a decal and a resident mesh has its texture too: the fetcher
-  // loads the mask in the same batch as the mesh.
+  // Gates on the step's own row before the mesh scan: a `{ sample }` step
+  // that runs before anything has cleared its source, or that samples a
+  // DIFFERENT row than the one it draws, must not project onto stale or
+  // unrelated depth.
   enabled(state, ctx, view) {
+    if (view.sampledDepth?.row !== view.slab) return false;
     if (view.slab.frame.kind !== 'body-m') return false;
     return drawableMeshBodies(state, ctx, view.slab.frame.bodyId).some(
       (body) => MESH_ASSETS[body.meshKey]?.contactDecal !== undefined,
@@ -35,7 +39,7 @@ export const contactShadowsPass: ContentPass = {
     if (hostState === undefined) return;
     const hostPose = ctx.bodyPose(hostId);
     if (hostPose === null) return;
-    const depthView = ctx.renderTargets.depthViewOf('foreground:0');
+    const depthView = view.sampledDepth!.view;
 
     for (const body of drawableMeshBodies(state, ctx, hostId)) {
       const decal = MESH_ASSETS[body.meshKey]?.contactDecal;

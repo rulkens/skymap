@@ -11,6 +11,7 @@
 import type { CaptureFaceRef } from './CaptureFaceRef';
 import type { CompositeStep } from './CompositeStep';
 import type { ContentPass } from './ContentPass';
+import type { DepthSampleSource } from './DepthSampleSource';
 
 export type FrameStep =
   | { kind: 'compute'; name: string }
@@ -23,10 +24,11 @@ export type FrameStep =
        * attachment's first-touch rule (clear on the frame's first pass against
        * the target, load after). `'clear'` restarts depth mid-frame, for
        * successive slabs drawn back-to-front into one foreground row.
-       * `'sample'` attaches no depth at all — WebGPU forbids binding a view as
-       * a texture while it is attached to the same pass.
+       * `{ sample }` names the row whose depth this step reads as a texture and
+       * attaches none of its own — WebGPU forbids binding a view as a texture
+       * while it is attached to the same pass.
        */
-      depth?: 'clear' | 'load' | 'sample';
+      depth?: 'clear' | 'load' | DepthSampleSource;
       /**
        * Authored GPU-timing slot suffix (`RenderStepSpec.slot`); a merged step
        * keeps the FIRST line's. Absent ⇒ bills the bare `groupKeyOf(step)`.

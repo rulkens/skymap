@@ -1,12 +1,9 @@
 /**
- * logCameraState — debug aid for the `l` key: dumps the RENDERED frame's pose
- * as ONE lossless JSON blob for reconstructing a failing pose. `cam` and
- * `focusRow` must be the LIVE values the caller assembled this frame
- * (`liveRenderCamera` / `liveFocusRow`) — this module trusts them as-is.
- * `JSON.stringify`'s default formatting only — no `toFixed`/`toPrecision` —
- * because scales span ~1e2 Mpc down to a body's surface (a 50 m altitude at
- * Earth's radius is a ~1e-6 relative offset on `distance`), which digit-limited
- * formatting rounds to zero.
+ * logCameraState — debug aid for the `l` key: dumps the RENDERED frame's pose.
+ * `out.framed` is the round-trip key — `commitCameraPose(dump.framed)` restores
+ * it exactly; the `target`/`yaw`/`pitch`/`distanceMpc` rows below drop `roll`
+ * and are lossy in the surface regime, kept for reading only. Full
+ * `JSON.stringify` precision, not `toFixed`, or a metre-scale altitude rounds away.
  */
 
 import type { FramedCameraPose } from '../../../@types/camera/FramedCameraPose';
@@ -51,34 +48,19 @@ export function logCameraState(
     };
   }
 
-  // The stored arm, named (spec §8): a body arm's numbers are body-FIXED
-  // metres, so reading the Mpc rows above as the whole truth would mislead.
-  // Absent ⇒ absolute, the same rule untagged serialized input parses under.
-  const bodyArm = framed !== null && isBodyArm(framed) ? framed.pose : null;
-  const siteArm = framed !== null && isSiteArm(framed) ? framed.pose : null;
-
   const out = {
+    // The whole restore: `dispatch(commitCameraPose(out.framed))`.
+    framed,
     frame: framed === null ? 'absolute' : frameKey(framed.frame),
-    bodyArmMetres:
-      bodyArm === null
-        ? null
-        : {
-            anchorLocalM: bodyArm.anchorLocalM,
-            eyeRelAnchorM: bodyArm.eyeRelAnchorM,
-            eyeFromCentreM: Math.hypot(...bodyFixedEyeM(bodyArm)),
-            basisLocal: bodyArm.basisLocal,
-          },
-    // `eyeHeightM` is metres above the site's tangent plane (spec §4.9) — the
-    // one number that shows whether `clampedSitePose`'s floor is doing its job.
-    siteArmPose:
-      siteArm === null
-        ? null
-        : {
-            headingRad: siteArm.headingRad,
-            elevationRad: siteArm.elevationRad,
-            rangeM: siteArm.rangeM,
-            eyeHeightM: siteArm.rangeM * Math.sin(siteArm.elevationRad),
-          },
+    // The two numbers `framed` doesn't already print, null off the arm not in
+    // play — a body arm's metres (spec §8) and a site arm's height above the
+    // tangent plane (spec §4.9).
+    eyeFromCentreM:
+      framed !== null && isBodyArm(framed) ? Math.hypot(...bodyFixedEyeM(framed.pose)) : null,
+    eyeHeightM:
+      framed !== null && isSiteArm(framed)
+        ? framed.pose.rangeM * Math.sin(framed.pose.elevationRad)
+        : null,
     target: cam.target,
     yaw: cam.yaw,
     pitch: cam.pitch,

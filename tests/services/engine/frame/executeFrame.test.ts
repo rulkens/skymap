@@ -138,6 +138,7 @@ const HDR_VIEW = { __id: 'hdr-view' } as unknown as GPUTextureView;
 const VOLUME_VIEW = { __id: 'volume-view' } as unknown as GPUTextureView;
 const FG_VIEW = { __id: 'foreground-view' } as unknown as GPUTextureView;
 const FG_DEPTH_VIEW = { __id: 'foreground-depth-view' } as unknown as GPUTextureView;
+const FAR_VIEW = { __id: 'far-depth-placeholder-view' } as unknown as GPUTextureView;
 const SWAP_VIEW = { __id: 'swap-view' } as unknown as GPUTextureView;
 const SKY_CUBEMAP_VIEW = { __id: 'sky-cubemap-view' } as unknown as GPUTextureView;
 // One distinct view per capture face — proves `layerViewOf` (not the shared
@@ -227,6 +228,7 @@ function makeCtx(): ReadyFrameContext {
         if (id === 'foreground:0') return FG_DEPTH_VIEW;
         throw new Error(`mock renderTargets: no depth view for '${id}'`);
       },
+      farDepthView: vi.fn(() => FAR_VIEW),
     },
   } as unknown as ReadyFrameContext;
 }
@@ -279,11 +281,16 @@ function makeArgs(over: {
   faceContexts?: ReadonlyMap<CubeFace, ReadyFrameContext>;
   /** The whole keyed map, for a row whose faces draw body rows. */
   captureContexts?: CaptureFaceContexts;
-}): { args: ExecuteFrameArgs; env: ReturnType<typeof makeEncoderEnv> } {
+}): {
+  args: ExecuteFrameArgs;
+  env: ReturnType<typeof makeEncoderEnv>;
+  renderTargets: ReadyFrameContext['renderTargets'];
+} {
   const env = over.env ?? makeEncoderEnv();
+  const ctx = over.ctx ?? makeCtx();
   const args: ExecuteFrameArgs = {
     encoder: env.encoder,
-    ctx: over.ctx ?? makeCtx(),
+    ctx,
     state: over.state ?? makeState(),
     program: over.program,
     strategy: over.strategy ?? 'merged',
@@ -299,7 +306,7 @@ function makeArgs(over: {
           ],
         ])),
   };
-  return { args, env };
+  return { args, env, renderTargets: ctx.renderTargets };
 }
 
 /** The recorded attachment of the pass a given layer.draw spy's `callIndex` call drew into. */
@@ -629,18 +636,62 @@ describe('executeFrame', () => {
     expect(depthOpOf(env, after)).toBe('clear');
   });
 
-  it("skips a 'sample' step whose row's clearing step drew nothing", () => {
+  it('hands a sampling step the far placeholder and row null when nothing cleared its source', () => {
+    const sampler = makeContentPass({ name: 'sampler' });
+    const program: FrameStep[] = [
+      {
+        kind: 'render',
+        target: 'hdr',
+        slab: NEAR0,
+        depth: { sample: 'foreground:0' },
+        passes: [sampler],
+      },
+    ];
+    const { args, renderTargets } = makeArgs({ program });
+    executeFrame(args);
+    const view = sampler.draw.mock.calls[0]![1] as SlabView;
+    expect(view.sampledDepth).toEqual({ view: renderTargets.farDepthView(), row: null });
+  });
+
+  it("hands a sampling step the source's depth and the row that last cleared it", () => {
     const mars = makeContentPass({ name: 'mars' });
     const off = makeContentPass({ name: 'off', enabled: false });
     const sampler = makeContentPass({ name: 'sampler' });
     const program: FrameStep[] = [
       { kind: 'render', target: 'foreground:0', slab: 2, depth: 'clear', passes: [mars] },
       { kind: 'render', target: 'foreground:0', slab: 3, depth: 'clear', passes: [off] },
-      { kind: 'render', target: 'foreground:0', slab: 3, depth: 'sample', passes: [sampler] },
+      {
+        kind: 'render',
+        target: 'foreground:0',
+        slab: 3,
+        depth: { sample: 'foreground:0' },
+        passes: [sampler],
+      },
     ];
-    const { args } = makeArgs({ program, ctx: makeBodyCtx(['mars', 'venus']) });
+    const ctx = makeBodyCtx(['mars', 'venus']);
+    const { args, renderTargets } = makeArgs({ program, ctx });
     executeFrame(args);
-    expect(sampler.draw).not.toHaveBeenCalled();
+    const view = sampler.draw.mock.calls[0]![1] as SlabView;
+    expect(view.sampledDepth!.view).toBe(renderTargets.depthViewOf('foreground:0'));
+    expect(view.sampledDepth!.row).toBe(ctx.slabs[2]); // Mars's row, not the sampler's own
+  });
+
+  it('opens a sampling step with no depth attachment even on a depth-bearing target', () => {
+    const env = makeEncoderEnv();
+    const sampler = makeContentPass({ name: 'sampler' });
+    const program: FrameStep[] = [
+      { kind: 'render', target: 'foreground:0', slab: COSMO, passes: [sampler] },
+      {
+        kind: 'render',
+        target: 'foreground:0',
+        slab: COSMO,
+        depth: { sample: 'foreground:0' },
+        passes: [sampler],
+      },
+    ];
+    const { args } = makeArgs({ program, env });
+    executeFrame(args);
+    expect('depthStencilAttachment' in env.passes[1]!.desc).toBe(false);
   });
 
   it('opens no depthStencilAttachment for depthless targets', () => {

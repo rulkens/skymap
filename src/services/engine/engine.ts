@@ -101,7 +101,7 @@ export function createEngine(
   // exists. The register seeds from the camera slice's initial `base` — the
   // single home for the pre-bootstrap placeholder pose, arm tag included.
   const cameraRuntime = seedCameraRuntime({
-    committed: cb.store.getState().camera.base,
+    state: cb.store.getState(),
     projection: { fovYRad: 0, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
   });
 
