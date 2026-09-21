@@ -8,12 +8,13 @@
  * than the container re-deriving it from the takeover slice itself.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import ViewOverlay from '../ViewOverlay/ViewOverlay';
 import { useAppDispatch } from '../../store/hooks';
 import { exitTakeover } from '../../state/takeover/takeoverActions';
 import { viewRegistry } from '../../data/views/viewRegistry';
 import type { ViewId } from '../../@types/views/ViewId';
+import type { ViewToggle } from '../../@types/views/ViewToggle';
 
 export type ViewOverlayContainerProps = {
   readonly id: ViewId;
@@ -21,10 +22,35 @@ export type ViewOverlayContainerProps = {
 
 function ViewOverlayContainer({ id }: ViewOverlayContainerProps): React.ReactElement {
   const dispatch = useAppDispatch();
-  const onExit = useCallback(() => dispatch(exitTakeover()), [dispatch]);
   const view = viewRegistry[id];
 
-  return <ViewOverlay label={view.label} body={view.body} onExit={onExit} />;
+  // The switch is honest as local state: during a takeover nothing else writes
+  // what its arms touch, and `runTakeover`'s snapshot rewinds them on exit.
+  // Holding the switched-on view's id rather than a boolean is what resets it
+  // when the takeover passes to another view.
+  const [toggledId, setToggledId] = useState<ViewId | null>(null);
+  const toggleOn = toggledId === id;
+
+  const onToggle = useCallback(
+    (toggle: ViewToggle, on: boolean) => {
+      setToggledId(on ? id : null);
+      for (const action of on ? toggle.on : toggle.off) dispatch(action);
+    },
+    [dispatch, id],
+  );
+
+  const onExit = useCallback(() => dispatch(exitTakeover()), [dispatch]);
+
+  return (
+    <ViewOverlay
+      label={view.label}
+      lede={view.lede}
+      body={view.body}
+      toggleOn={toggleOn}
+      onToggle={onToggle}
+      onExit={onExit}
+    />
+  );
 }
 
 export default ViewOverlayContainer;

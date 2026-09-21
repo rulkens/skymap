@@ -59,6 +59,14 @@
   src: url('/fonts/CormorantGaramond-SemiBold.woff2') format('woff2');
 }
 
+/* ViewOverlay's body voice, self-hosted on the same terms as Cormorant. */
+@font-face {
+  font-family: 'Sora';
+  font-weight: 100;
+  font-display: swap;
+  src: url('/fonts/Sora-Thin.woff2') format('woff2');
+}
+
 :root {
   /* ── Color palette ──────────────────────────────────────────────────────
    *

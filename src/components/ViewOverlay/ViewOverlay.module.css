@@ -1,10 +1,9 @@
 /* src/components/ViewOverlay/ViewOverlay.module.css */
 /*
  * Spec §4.2: full-screen takeover, no card — text over the live field, held
- * legible by two BOUNDED scrims (an unsized radial-gradient reads as a global
- * dim, see TourOverlay.module.css's vignette comment; the same landmine
- * applies here for the tall right-side notes column, so it's a sized
- * linear-gradient box rather than a radial ellipse).
+ * legible by two scrims. Both are radial gradients with an EXPLICIT ellipse
+ * size and a transparent stop inside the box; an unsized one falls back to
+ * farthest-corner and reads as a global dim (see TourOverlay's vignette).
  */
 
 .root {
@@ -17,7 +16,6 @@
 .vignetteCaption {
   position: absolute;
   inset: 0;
-  pointer-events: none;
   background: radial-gradient(
     ellipse 58% 52% at 16% 88%,
     rgba(0, 0, 0, 0.82) 0%,
@@ -29,12 +27,14 @@
 
 .vignetteNotes {
   position: absolute;
-  top: 0;
-  right: 0;
-  width: 480px;
-  height: 100%;
-  pointer-events: none;
-  background: linear-gradient(to left, rgba(0, 0, 0, 0.55) 0%, transparent 70%);
+  inset: 0;
+  background: radial-gradient(
+    ellipse 46% 85% at 90% 45%,
+    rgba(0, 0, 0, 0.88) 0%,
+    rgba(0, 0, 0, 0.66) 45%,
+    rgba(0, 0, 0, 0.2) 75%,
+    transparent 92%
+  );
 }
 
 /* ── Caption (bottom-left) ──────────────────────────────────────────── */
@@ -47,7 +47,6 @@
   flex-direction: column;
   gap: 14px;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
-  pointer-events: none;
 }
 
 .kicker {
@@ -56,6 +55,7 @@
   gap: 13px;
   font-family: var(--font-family-mono);
   font-size: 10px;
+  line-height: 1;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   color: var(--color-fg-label);
@@ -69,12 +69,37 @@
 }
 
 .title {
+  position: relative;
   margin: 0;
+  padding-bottom: 8px;
   font-family: var(--font-family-display);
   font-weight: 600;
   font-size: 48px;
-  line-height: 1.05;
+  line-height: 1.04;
+  letter-spacing: 0.005em;
   color: #ffffff;
+}
+/* The short rule hangs off the title rather than sitting in the column's
+ * gap, so it tracks the title's baseline at any font size. */
+.title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 72px;
+  height: 1px;
+  background: var(--color-accent);
+}
+
+.lede {
+  margin: 0;
+  font-family: var(--font-family-display);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 22px;
+  line-height: 1.3;
+  color: var(--color-fg);
+  text-wrap: pretty;
 }
 
 /* ── Notes (top-right) ──────────────────────────────────────────────── */
@@ -86,11 +111,13 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
 }
 
 .section {
   display: flex;
   flex-direction: column;
+  gap: 12px;
 }
 
 .sectionHeading {
@@ -102,22 +129,184 @@
   color: #ffffff;
 }
 
-/* Sora Thin (100) — loaded in index.html for this component only (spec
- * §4.3); the body-font token rollout to InfoCard/tour captions is a
- * separate PR, so this weight/family pair is not tokenized. */
+/* Sora Thin (100) — self-hosted in global.css for this component only (spec
+ * §4.3); the body-font token rollout to InfoCard/tour captions is a separate
+ * PR, so this weight/family pair is not tokenized. */
 .sectionBody {
-  margin: 12px 0 0;
-  font-family:
-    'Sora',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
+  margin: 0;
+  font-family: 'Sora', system-ui, sans-serif;
   font-weight: 100;
   font-size: 13.5px;
   line-height: 1.6;
   color: var(--color-fg-base);
   text-wrap: pretty;
+}
+
+/* A hairline fading out to the right, ruled above each data block. */
+.rule {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(160, 200, 255, 0.28), rgba(160, 200, 255, 0));
+}
+
+/* ── Key ────────────────────────────────────────────────────────────── */
+.key {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* The gradient itself comes from the section's `ramp` stops, inline. */
+.ramp {
+  height: 5px;
+  border-radius: 3px;
+}
+
+.rampEnds {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  line-height: 1;
+  color: var(--color-fg-tertiary);
+}
+
+.toggleRow {
+  margin-top: 4px;
+  padding: 0;
+  width: 100%;
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+.toggleRow:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 3px;
+}
+
+.toggleLabel {
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-fg);
+}
+
+.toggleState {
+  color: var(--color-fg-tertiary);
+}
+
+.track {
+  position: relative;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(160, 200, 255, 0.25);
+  background: var(--surface-control);
+}
+.trackOn {
+  background: rgba(168, 208, 255, 0.45);
+}
+
+.knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--color-fg);
+}
+.knobOn {
+  left: 16px;
+}
+
+/* ── Facts ──────────────────────────────────────────────────────────── */
+.facts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 16px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.factLabel {
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  line-height: 1;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-fg-tertiary);
+}
+
+.factValue {
+  font-family: var(--font-family-display);
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 1.1;
+  color: var(--color-fg);
+}
+
+/* ── Sources ────────────────────────────────────────────────────────── */
+.sourceList {
+  display: flex;
+  flex-direction: column;
+}
+
+.source {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr);
+  gap: 10px;
+  padding: 5px 0;
+  pointer-events: auto;
+  text-decoration: none;
+}
+.source:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.sourceRole {
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  line-height: 1.6;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--color-fg-tertiary);
+}
+
+.sourceText {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.sourceTitle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-family-mono);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-accent);
+}
+.source:hover .sourceTitle {
+  text-decoration: underline;
+}
+
+.sourceCitation {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  line-height: 1.4;
+  color: var(--color-fg-tertiary);
 }
 
 /* ── Exit pill (bottom-center) ─────────────────────────────────────── */
@@ -127,17 +316,15 @@
   bottom: 20px;
   transform: translateX(-50%);
   pointer-events: auto;
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
+  gap: 10px;
+  padding: 6px 14px 6px 6px;
   background: none;
-  border: 1px solid var(--border-default);
+  border: 2px solid rgba(168, 208, 255, 0.18);
   border-radius: 999px;
   cursor: pointer;
-  font-family: var(--font-family-mono);
-  font-size: 12px;
-  color: var(--color-fg-muted);
+  color: var(--color-fg-tertiary);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
 }
 .exitPill:hover,
@@ -150,8 +337,31 @@
   outline-offset: 2px;
 }
 
+.exitIcon {
+  display: flex;
+  width: 24px;
+  height: 24px;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-fg-label);
+}
+
+.exitLabel {
+  font-family: var(--font-family-mono);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
 .exitKey {
-  color: var(--color-fg-tertiary);
+  padding: 2px 5px;
+  border: 1px solid var(--border-default);
+  border-radius: 3px;
+  font-family: var(--font-family-mono);
+  font-size: 9px;
+  line-height: 1;
+  color: var(--color-fg-dim);
 }
 
 /* ── Mobile ────────────────────────────────────────────────────────── */
@@ -164,6 +374,9 @@
   .title {
     font-size: 32px;
   }
+  .lede {
+    font-size: 18px;
+  }
   .notes {
     top: 24px;
     right: 24px;
@@ -171,6 +384,6 @@
     width: auto;
   }
   .vignetteNotes {
-    width: 100%;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 70%);
   }
 }

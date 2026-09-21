@@ -23,23 +23,12 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
     <!--
-      Cormorant Garamond SemiBold is self-hosted (public/fonts/, @font-face
-      in src/styles/global.css) rather than loaded from Google Fonts — no
-      third-party request, and it works offline for the Electron build.
+      Cormorant Garamond SemiBold and Sora Thin (100) — ViewOverlay's body
+      voice, spec §4.3 — are both self-hosted (public/fonts/, @font-face in
+      src/styles/global.css) rather than loaded from Google Fonts. A
+      third-party stylesheet would block first paint on a page that otherwise
+      fetches nothing off-origin, and it works offline for the Electron build.
     -->
-
-    <!--
-      Sora Thin (100) — ViewOverlay's body-text voice only (spec §4.3). A
-      Google Fonts link, unlike Cormorant, since only one component uses it;
-      self-hosting is worth revisiting if the body-font token rollout (a
-      separate PR) makes Sora load on every page.
-    -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Sora:wght@100&display=swap"
-      rel="stylesheet"
-    />
 
     <!--
       ── Discovery & indexing metadata ──────────────────────────────────────
