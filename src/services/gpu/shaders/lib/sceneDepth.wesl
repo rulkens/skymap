@@ -1,13 +1,13 @@
 // lib/sceneDepth.wesl — how much of an overlay drawn AFTER the solar-system
-// bodies survives the foreground in front of it.
-//
-// Not depth: every 'foreground:0' row clears its OWN depth (spec §7.3), so that
-// buffer holds only the last row's value, and metre-frame depths don't compare
-// across rows anyway. Alpha survives — the target LOADS between rows.
+// bodies survives the foreground in front of it, for an overlay spanning
+// several 'foreground:0' rows (each clears its OWN depth, so the depth buffer
+// only ever holds the LAST row's value). A step that instead declares
+// 'depth: { sample: <row> }' reads that row's depth directly — see
+// 'atmosphere/aerialPerspective/fragment.wesl' and the contact-shadow decal.
 //
 // A factor, never a threshold: this alpha is the weight the 'foreground:0 →
-// hdr' OVER composite already multiplies the foreground by, so any cutoff over
-// it gives one number two meanings.
+// hdr' OVER composite already multiplies the foreground by, so any cutoff
+// over it gives one number two meanings.
 
 import package::lib::math::saturate;
 
