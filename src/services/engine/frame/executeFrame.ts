@@ -78,6 +78,8 @@ import type { RenderStrategy } from '../../../@types/engine/frame/RenderStrategy
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import type { GpuTimingService } from '../../../@types/gpu/timing/GpuTimingService';
 import type { CaptureFaceRef } from '../../../@types/engine/frame/CaptureFaceRef';
+import type { DepthSampleSource } from '../../../@types/engine/frame/DepthSampleSource';
+import type { Slab } from '../../../@types/engine/frame/Slab';
 import {
   slabViewOf,
   groupKeyOf,
@@ -88,6 +90,7 @@ import {
 import { computeTimingSlotName } from './timing/computeTimingSlotName';
 import { captureFaceAttachment } from './captureFaceAttachment';
 import { runBloom } from './runBloom';
+import { sampledDepthFor } from './sampledDepthFor';
 import { depthClearValueFor } from '../../../utils/gpu/depthClearValueFor';
 import { timestampSpread } from '../../../utils/gpu/timestampSpread';
 
@@ -120,16 +123,16 @@ function colorAttachment(
  * a depth target clears, later passes load and so preserve the occlusion
  * already written. A step that declares one overrides that — depth is the only
  * attachment where sharing a target must not imply sharing its contents.
- * `'sample'` gets none at all, so it neither clears the target's depth nor
- * preserves it.
+ * `{ sample }` gets none at all, so it neither clears the target's depth nor
+ * preserves it — see `sampledDepthFor` for what it gets instead.
  */
 function depthLoadOpFor(
-  depth: 'clear' | 'load' | 'sample' | undefined,
+  depth: 'clear' | 'load' | DepthSampleSource | undefined,
   touched: boolean,
 ): GPULoadOp | undefined {
-  if (depth === 'sample') return undefined;
   if (depth === 'clear' || depth === 'load') return depth;
-  return touched ? 'load' : 'clear';
+  if (depth === undefined) return touched ? 'load' : 'clear';
+  return undefined;
 }
 
 /** The depth attachment a step's destination resolved — a target row's or a capture row's. */
@@ -174,8 +177,11 @@ export function executeFrame(args: ExecuteFrameArgs): void {
   // apart. Private to this call because `renderedTargets` is a public consumer
   // surface keyed by bare target id.
   const touchedFaces = new Set<string>();
-  // `<target>:<slab>` rows whose depth an opened step has cleared this frame.
-  const depthClearedRows = new Set<string>();
+  // TARGET id → the slab whose depth-clearing step wrote it last this frame.
+  // Keyed by target alone, not `(target, slab)`: the depth texture is one
+  // buffer per target, so it only ever holds the most recent row's contents
+  // regardless of how many slabs share the target — this map mirrors that.
+  const lastDepthClear = new Map<string, Slab>();
 
   for (const step of program) {
     switch (step.kind) {
@@ -221,8 +227,20 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         const disabledPasses = state.settings.debug.disabledPasses;
         // The frame's ONLY slab resolution — one SlabView per render step,
         // threaded into every pass in the group. Resolved BEFORE the gate: a
-        // body-row pass's `enabled` reads `view.slab.frame.bodyId` off it.
-        const view = slabViewOf(stepCtx, step.slab);
+        // body-row pass's `enabled` reads `view.slab.frame.bodyId` off it, and
+        // a `{ sample }` step's `sampledDepth` must be on `view` before the
+        // gate too — `contactShadowsPass.enabled` reads it to tell "my row"
+        // from some other row sampling the same texture. Capture rosters
+        // carry no sample marker (`bodyRowSteps`'s module header), so a
+        // capture step never takes this branch.
+        const slab = slabViewOf(stepCtx, step.slab);
+        const view: SlabView =
+          step.capture === undefined && typeof step.depth === 'object'
+            ? {
+                ...slab,
+                sampledDepth: sampledDepthFor(step.depth.sample, lastDepthClear, ctx.renderTargets),
+              }
+            : slab;
         const group = step.passes.filter(
           (l) => l.enabled(state, stepCtx, view) && disabledPasses[l.name] !== true,
         );
@@ -248,15 +266,15 @@ export function executeFrame(args: ExecuteFrameArgs): void {
         let destination: Destination;
         if (step.capture === undefined) {
           // A split row's `'clear'` segment is skipped when its group is empty
-          // (a body with no terrain): its `'load'` must not inherit the previous
-          // row's depth, and its `'sample'` has no ground to project onto.
-          const row = `${step.target}:${step.slab}`;
-          const rowCleared = depthClearedRows.has(row);
-          if (step.depth === 'sample' && !rowCleared) break;
+          // (a body with no terrain): its `'load'` must not inherit the
+          // previous row's depth. Its `{ sample }` segment has no such guard
+          // any more — an empty source row reads the far placeholder via
+          // `sampledDepthFor` above, same as a source no row has cleared yet.
+          const rowCleared = lastDepthClear.get(step.target) === view.slab;
           const depth = step.depth === 'load' && !rowCleared ? 'clear' : step.depth;
           const spec = ctx.renderTargets.specOf(step.target);
           const loadOp = depthLoadOpFor(depth, touched.has(step.target));
-          if (loadOp === 'clear') depthClearedRows.add(row);
+          if (loadOp === 'clear') lastDepthClear.set(step.target, view.slab);
           destination = {
             label: step.target,
             dest: { view: viewFor(step.target, ctx, swapView), clearValue: spec.clearValue },
