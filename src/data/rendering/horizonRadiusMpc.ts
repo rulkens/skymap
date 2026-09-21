@@ -1,12 +1,11 @@
 /**
- * HORIZON_RADIUS_MPC — the observable-universe horizon shell's radius in Mpc,
- * derived from `horizonShellRenderer`'s Gpc-space source of truth so the
- * fade band (`horizonShellPass`) and the Observable Universe view's fit
- * radius (`observableUniverse`) share one number instead of each re-deriving
- * `14.3 * 1000`.
+ * HORIZON_RADIUS_MPC — the horizon shell's radius in the Mpc the rest of the
+ * scene is measured in, so the fade band (`horizonShellPass`) and the
+ * Observable Universe view's fit radius share one number rather than each
+ * re-deriving `14.3 * 1000`.
  */
 
-import { HORIZON_RADIUS_GPC } from '../../services/gpu/renderers/horizonShell/horizonShellRenderer';
+import { HORIZON_RADIUS_GPC } from './horizonRadiusGpc';
 
 /** Mpc → Gpc scale. */
 const MPC_PER_GPC = 1000;
