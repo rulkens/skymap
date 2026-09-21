@@ -49,14 +49,13 @@ export const SURFACE_STANDOFF_RADII = 1.0000024;
 /**
  * Maximum allowed `cam.distance` in Mpc.
  *
- * 30 Gpc keeps the wheel zoom in sync with `FAR_CLIP_MPC` so the user
- * can pull the camera out far enough to see the full Milliquas tail
- * (linear-Hubble distance `4282.75 · z`, z ≈ 7 → ~30 Gpc).  Beyond
- * this the cloud is a single dot and the user has lost all spatial
- * intuition, so we stop the wheel here rather than letting the camera
- * drift into the lonely abyss.
+ * 60 Gpc is set by the Observable Universe view's worst case: fitting the
+ * 14.3-Gpc horizon shell's whole sphere on a portrait phone needs the camera
+ * back to ~55.5 Gpc (`sphereFitDistance.ts`, limited by the horizontal FOV at
+ * aspect < 1) — comfortably under the ceiling, with the same headroom
+ * `FAR_CLIP_MPC` keeps beyond it.
  */
-export const MAX_DISTANCE_MPC = 30000;
+export const MAX_DISTANCE_MPC = 60000;
 
 /**
  * Clamp a candidate distance to the zoom envelope: ceiling `MAX_DISTANCE_MPC`,

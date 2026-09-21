@@ -21,6 +21,7 @@ import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import type { View } from '../../../src/@types/views/View';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
+import type { LiveCameraRuntime } from '../../../src/store/types';
 
 const VIEW: View = {
   id: 'cosmicFlows',
@@ -31,13 +32,20 @@ const VIEW: View = {
   body: [{ kind: 'prose', heading: 'Cosmic Flows', text: 'test' }],
 };
 
-function buildStore(playClip: (clip: ClipData) => Promise<void>) {
+// Pre-bootstrap by default (`cameraRuntime` returns null), matching production
+// before `wireInput` has built a camera — `viewBody` must fall through to the
+// authored pose rather than throw. Tests exercising the fit-radius path pass
+// their own `cameraRuntime`.
+function buildStore(
+  playClip: (clip: ClipData) => Promise<void>,
+  cameraRuntime: () => LiveCameraRuntime | null = () => null,
+) {
   const sagaMiddleware = createSagaMiddleware();
   const store = configureStore({
     reducer: rootReducer,
     middleware: (getDefault) => getDefault().concat(sagaMiddleware),
   });
-  sagaMiddleware.setContext({ playClip });
+  sagaMiddleware.setContext({ playClip, cameraRuntime });
   return { store, sagaMiddleware };
 }
 
@@ -149,6 +157,55 @@ describe('viewBody', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(store.getState().camera.autoRotate).toEqual(before);
+  });
+
+  it('re-derives pose.distance from fitRadiusMpc against the live runtime', async () => {
+    // A landscape aspect and a known FOV make the expected distance
+    // computable by hand: sphereFitDistance's own tests own the formula, this
+    // only asserts viewBody actually threads the live runtime into it instead
+    // of flying the authored fallback.
+    const fitView: View = { ...VIEW, fitRadiusMpc: 14300 };
+    let flownDistance: number | undefined;
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation((clip) => {
+      const dolly = clip.timeline[0] as { children: { to: number }[] };
+      flownDistance = dolly.children[0]!.to;
+      return Promise.resolve();
+    });
+    const cameraRuntime = (): LiveCameraRuntime => ({
+      from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 },
+      fovYRad: (Math.PI / 180) * 60,
+      aspect: 16 / 9,
+      upBasisQuat: [0, 0, 0, 1],
+    });
+    const { sagaMiddleware } = buildStore(playClip, cameraRuntime);
+
+    sagaMiddleware.run(function* () {
+      yield* viewBody(fitView);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(flownDistance).not.toBe(fitView.pose.distance);
+    // The whole shell must clear the frustum: distance is well beyond the
+    // authored 0.14 Mpc fallback for a 14 300 Mpc fit radius.
+    expect(flownDistance).toBeGreaterThan(1000);
+  });
+
+  it('falls through to the authored pose.distance when the runtime is not ready', async () => {
+    const fitView: View = { ...VIEW, fitRadiusMpc: 14300 };
+    let flownDistance: number | undefined;
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation((clip) => {
+      const dolly = clip.timeline[0] as { children: { to: number }[] };
+      flownDistance = dolly.children[0]!.to;
+      return Promise.resolve();
+    });
+    const { sagaMiddleware } = buildStore(playClip); // default cameraRuntime returns null
+
+    sagaMiddleware.run(function* () {
+      yield* viewBody(fitView);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(flownDistance).toBe(fitView.pose.distance);
   });
 
   it('exits during the fly-in without waiting for it to land', async () => {

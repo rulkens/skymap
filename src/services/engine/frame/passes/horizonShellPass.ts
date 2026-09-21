@@ -44,10 +44,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { horizonShellFadeAlpha } from '../../../../utils/math/horizonShellFadeAlpha';
-import { HORIZON_RADIUS_GPC } from '../../../gpu/renderers/horizonShell/horizonShellRenderer';
-
-/** Shell radius in Mpc — the fade band is a fraction of this. */
-const HORIZON_RADIUS_MPC = HORIZON_RADIUS_GPC * 1000;
+import { HORIZON_RADIUS_MPC } from '../../../../data/rendering/horizonRadiusMpc';
 
 export const horizonShellPass: ContentPass = {
   name: 'horizon-shell',

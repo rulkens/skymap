@@ -74,6 +74,7 @@ function setup(): { h: CameraSimHarness; fly: (p: FlyToLonLatPayload) => void } 
       cameraRuntime: () => ({
         from: liveWorldPose(h.state),
         fovYRad: h.state.cameraRuntime.outputs.projection.fovYRad,
+        aspect: h.state.cameraRuntime.outputs.projection.aspect,
         upBasisQuat: liveUpBasisQuat(h.state.cameraRuntime),
       }),
       selection: {

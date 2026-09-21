@@ -15,6 +15,9 @@ export type View = {
   /** Applied through `mergeSnapshot`; the takeover bracket restores it on exit. */
   settings: Partial<SettingsSnapshot>;
   pose: CameraPose;
+  /** When set, `pose.distance` is re-derived at fly time so a sphere of this
+   *  radius fits the live viewport — see `sphereFitDistance`. */
+  fitRadiusMpc?: number;
   /** The italic line under the title — the view's one-sentence claim. */
   lede: string;
   body: readonly ViewSection[];

@@ -55,6 +55,7 @@ const flush = () => new Promise((r) => setTimeout(r, 0));
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 

@@ -13,6 +13,7 @@ import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { setAutoRotate } from '../camera/cameraSlice';
 import { exitTakeover } from '../takeover/takeoverActions';
 import { selectOrientation } from '../settings/selectors';
+import { sphereFitDistance } from '../../utils/camera/sphereFitDistance';
 import type { RootState } from '../../store/types';
 import type { View } from '../../@types/views/View';
 import type { SagaContext } from '../../store/types';
@@ -42,8 +43,20 @@ export function* viewBody(view: View): Generator {
   const playClip = yield* getContext<SagaContext['playClip']>('playClip');
   const orientation = yield* select(selectOrientation);
 
+  // `fitRadiusMpc` re-derives `pose.distance` against the LIVE lens + aspect,
+  // not the authored fallback — a static distance can't fit a sphere at every
+  // viewport shape (see `sphereFitDistance`). No wait: pre-bootstrap the
+  // runtime is null and the authored `pose.distance` flies instead, same as
+  // any other view.
+  const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');
+  const rt = cameraRuntime();
+  const pose =
+    view.fitRadiusMpc !== undefined && rt !== null
+      ? { ...view.pose, distance: sphereFitDistance(view.fitRadiusMpc, rt.fovYRad, rt.aspect) }
+      : view.pose;
+
   const { exit } = yield* race({
-    landed: call(playClip, flyToPoseClip(view.pose), orientation),
+    landed: call(playClip, flyToPoseClip(pose), orientation),
     exit: take(exitTakeover),
   });
   if (exit) return;

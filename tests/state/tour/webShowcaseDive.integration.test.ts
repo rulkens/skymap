@@ -135,6 +135,7 @@ const DIVE_SELECTION = selectionResolverOver(DIVE_DEPS, DIVE_GALAXIES);
 const CAMERA_RUNTIME: LiveCameraRuntime = {
   from: { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 10 },
   fovYRad: 0.8,
+  aspect: 16 / 9,
   upBasisQuat: [0, 0, 0, 1],
 };
 
