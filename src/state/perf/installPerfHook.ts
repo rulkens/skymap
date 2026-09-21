@@ -12,7 +12,6 @@
 import { isPerfMode } from '../../utils/url/isPerfMode';
 import { whenStablyReady } from '../lifecycle/whenStablyReady';
 import { cancelCameraTween, commitCameraPose, setAutoRotate } from '../camera/cameraSlice';
-import { absoluteArm } from '../../utils/camera/absoluteArm';
 import { clearSelection } from '../selection/selectionSlice';
 import { setRenderStrategy } from '../settings/core/debugSlice';
 import { requestTier } from '../tier/requestTier';
@@ -46,23 +45,16 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
   TIMED_SLOT_GROUPS.flatMap((group) => group.rows.map((row) => [row.name, row.groupKey])),
 );
 
-// Hard-cut the camera to `pose`: a benchmark wants an exact vantage, and the
-// re-armed auto-rotate keeps the render-on-demand loop awake for the whole window.
+// Hard-cut the camera to `pose.framed`: a benchmark wants an exact vantage, and
+// the arm is committed as authored — re-spelling a body-parented pose on the
+// world arm lands the right coordinates in the wrong frame (wrong host body,
+// wrong atmosphere).
 function setPose(store: AppStore, pose: PerfPose): Promise<void> {
   if (pose.clearFocus === true) {
     store.dispatch(clearSelection());
   }
   store.dispatch(cancelCameraTween());
-  store.dispatch(
-    commitCameraPose(
-      absoluteArm({
-        target: pose.target,
-        yaw: pose.yaw,
-        pitch: pose.pitch,
-        distance: pose.distance,
-      }),
-    ),
-  );
+  store.dispatch(commitCameraPose(pose.framed));
   store.dispatch(setAutoRotate({ active: true, rate: pose.rate ?? PERF_AUTO_ROTATE_RATE }));
   return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
 }
@@ -83,6 +75,10 @@ function collectTimings(engine: EngineHandle, frames: number): Promise<PerfSampl
     let delivered = 0;
     let measured = 0;
     const unsubscribe = engine.debug.timingService.subscribe((frame) => {
+      // Sampling pumps its own window: auto-rotate wakes the render-on-demand
+      // loop on the world arm only, so a body- or site-arm hold would deliver
+      // no further frames and this promise would never settle.
+      engine.debug.requestRender();
       delivered += 1;
       if (delivered <= PERF_WARMUP_FRAMES) return;
       // `frame` is the 0-based MEASURED-frame ordinal (post-warmup), the tag
