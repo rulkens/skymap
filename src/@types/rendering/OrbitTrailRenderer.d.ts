@@ -20,7 +20,7 @@
  * they are per FRAME, written once per draw.
  */
 
-import type { OrbitTrailDepthFrame } from './OrbitTrailDepthFrame';
+import type { SampledDepthKmFrame } from './SampledDepthKmFrame';
 import type { Renderer } from './Renderer';
 
 export type OrbitTrailRenderer = Renderer & {
@@ -57,7 +57,7 @@ export type OrbitTrailRenderer = Renderer & {
     instances: Float32Array,
     count: number,
     occluders: { readonly count: number; readonly spheresKm: Float32Array },
-    depthFrame: OrbitTrailDepthFrame | null,
+    depthFrame: SampledDepthKmFrame | null,
     depthView: GPUTextureView,
     showImpostor?: boolean,
   ): void;

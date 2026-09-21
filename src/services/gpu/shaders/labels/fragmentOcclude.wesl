@@ -13,6 +13,11 @@
 // spheres) mixes it in: 1 keeps it, 0 lets the caption paint over the disc its
 // subject floats in front of.
 //
+// Those spheres stop at the relief FLOOR, so every ray above a mountain's limb
+// reports 'not occluded' and a caption paints over the peak. 'sceneDepthOccludes'
+// is the second channel that sees it, per pixel, off the row that stamped the
+// sampled depth; either channel firing restores the attenuation.
+//
 // Because 'shadeMsdf' returns PREMULTIPLIED rgba, one scalar multiply dims the
 // colour and drops the coverage together — no separate alpha handling.
 //
@@ -21,10 +26,12 @@
 
 import package::labels::io::VsOut;
 import package::lib::msdf::shadeMsdf;
+import package::lib::sceneDepth::sceneDepthOccludes;
 import package::lib::sceneDepth::sceneTransmittance;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
   let shaded = shadeMsdf(input.uv, input.fontIndex, input.color, input.outlineColor, input.outlineSdf);
-  return shaded * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight);
+  let weight = max(input.occludeWeight, sceneDepthOccludes(input.pos.xy, input.occludeNearKm));
+  return shaded * mix(1.0, sceneTransmittance(input.pos.xy), weight);
 }

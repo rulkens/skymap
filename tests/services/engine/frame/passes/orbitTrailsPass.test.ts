@@ -39,7 +39,7 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
-import type { OrbitTrailDepthFrame } from '../../../../../src/@types/rendering/OrbitTrailDepthFrame';
+import type { SampledDepthKmFrame } from '../../../../../src/@types/rendering/SampledDepthKmFrame';
 import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
 import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
@@ -182,7 +182,7 @@ function makeRendererSpy() {
         instances: Float32Array,
         count: number,
         occluders: { readonly count: number; readonly spheresKm: Float32Array },
-        depthFrame: OrbitTrailDepthFrame | null,
+        depthFrame: SampledDepthKmFrame | null,
         depthView: GPUTextureView,
         showImpostor?: boolean,
       ) => void

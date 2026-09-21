@@ -43,12 +43,13 @@ struct Uniforms {
 // Two-buffer vertex layout matching filaments': location 0 is
 // per-quad-vertex (the unit-quad UV), locations 1..3 are per-instance.
 // The CPU writer in `markerLineRenderer.ts` packs each instance into
-// 52 bytes (three vec4s + a scalar):
+// 56 bytes (three vec4s + two scalars):
 //
 //   [0..15]  fromAndWidth   vec4<f32>  (fromWorld.xyz, pixelWidth)
 //   [16..31] toAndAlpha     vec4<f32>  (toWorld.xyz, fadeAlpha)
 //   [32..47] color          vec4<f32>  (rgba premultiplied)
 //   [48..51] occludeWeight  f32
+//   [52..55] occludeNearKm  f32
 //
 // Packing pixelWidth and fadeAlpha into the trailing slot of the
 // world-position vec3s saves 16 bytes per instance versus carrying
@@ -74,6 +75,9 @@ struct VsIn {
   // applies (1 = fully, 0 = draw over the bodies).  Mirrors the owning
   // caption's weight so connector and text agree.
   @location(4) occludeWeight: f32,
+  // Eye to the subject's NEAR surface, km — the sampled-depth channel's
+  // cutoff, copied from the caption for the same reason.
+  @location(5) occludeNearKm: f32,
 };
 
 // ── vertex-to-fragment interface ──────────────────────────────────
@@ -90,4 +94,5 @@ struct VsOut {
   @location(0) uv: vec2<f32>,
   @location(1) color: vec4<f32>,
   @location(2) occludeWeight: f32,
+  @location(3) occludeNearKm: f32,
 };

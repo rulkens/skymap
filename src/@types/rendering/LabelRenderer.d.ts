@@ -7,6 +7,7 @@
 import type { Label2D } from './Label2D';
 import type { LabelBBox } from './LabelBBox';
 import type { Vec2 } from '../math/Vec2';
+import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
 
 export type LabelRenderer = {
   /**
@@ -45,17 +46,18 @@ export type LabelRenderer = {
    * implementation.  The pass's render target format must match the
    * `targetFormat` passed to `createLabelRenderer`.
    *
-   * `sceneColorView` is consumed only by an instance created with
-   * `occludeAgainstScene: true`, where it feeds the group(1) coverage joint so
+   * `scene` is consumed only by an instance created with
+   * `occludeAgainstScene: true`, where it fills the group(1) coverage joint so
    * fragments are attenuated by how much of the background the foreground
-   * bodies already cover (read from that target's alpha — see
-   * lib/sceneDepth.wesl).  A plain instance ignores it.
+   * bodies already cover (that target's alpha) and by whether the sampled
+   * scene depth stands in front of the subject — see lib/sceneDepth.wesl.
+   * A plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneColorView?: GPUTextureView,
+    scene?: OverlaySceneOcclusion,
   ): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */
   glyphCount(): number;

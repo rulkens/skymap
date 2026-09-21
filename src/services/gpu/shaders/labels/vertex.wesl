@@ -119,5 +119,6 @@ fn vs(input: VsIn) -> VsOut {
     outOutlineColor,
     outlineSdf,
     label.occludeWeight,
+    label.occludeNearKm,
   );
 }

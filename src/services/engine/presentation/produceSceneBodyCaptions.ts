@@ -135,6 +135,10 @@ export function produceSceneBodyCaptions(
       })
         ? 1
         : 0,
+      // The second channel's cutoff. The subject's NEAR surface, not its
+      // centre, so self-occlusion falls out: a body's own front face sits AT
+      // this distance and so never passes the shader's strict `<`.
+      occludeNearKm: (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
       prominencePx,
       lift: {
         subjectSizePx,

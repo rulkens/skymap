@@ -11,7 +11,7 @@
  * @module
  */
 
-import type { OrbitTrailDepthFrame } from '../../../../@types/rendering/OrbitTrailDepthFrame';
+import type { SampledDepthKmFrame } from '../../../../@types/rendering/SampledDepthKmFrame';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { OrbitTrailRenderer } from '../../../../@types/rendering/OrbitTrailRenderer';
 import type { Vec3 } from '../../../../@types/math/Vec3';
@@ -191,7 +191,7 @@ export function createOrbitTrailRenderer(
     instances: Float32Array,
     count: number,
     occluders: { readonly count: number; readonly spheresKm: Float32Array },
-    depthFrame: OrbitTrailDepthFrame | null,
+    depthFrame: SampledDepthKmFrame | null,
     depthView: GPUTextureView,
     showImpostor = false,
   ): void {

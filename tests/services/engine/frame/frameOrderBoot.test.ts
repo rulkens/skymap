@@ -17,6 +17,8 @@ import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 
+import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
+
 describe('checkFrameOrder — boot', () => {
   it('the app’s FRAME_ORDER passes the boot check', () => {
     // The swap format only decides the swap ROW's format, never an id, so any
@@ -29,5 +31,18 @@ describe('checkFrameOrder — boot', () => {
     expect(() =>
       checkFrameOrder(FRAME_ORDER, CONTENT_PASSES, CORE_COMPUTES, targets),
     ).not.toThrow();
+  });
+
+  // Dropping the declaration costs the overlays nothing loud: `sampledDepth`
+  // goes undefined, every pipeline binds the far placeholder, and the captions
+  // simply stop hiding behind terrain. Pinned here rather than eye-checked.
+  it('both swap-overlay lines sample foreground:0’s depth', () => {
+    const swapLines = FRAME_ORDER.filter(
+      (step): step is RenderStepSpec => step.kind === 'render' && step.target === 'swap',
+    );
+    expect(swapLines).toHaveLength(2);
+    for (const line of swapLines) {
+      expect(line.depth).toEqual({ sample: 'foreground:0' });
+    }
   });
 });

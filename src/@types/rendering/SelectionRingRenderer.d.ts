@@ -13,6 +13,7 @@
 
 import type { Vec2 } from '../math/Vec2';
 import type { Vec3 } from '../math/Vec3';
+import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
 
 export type SelectionRingRenderer = {
   /** Human-readable identifier (`'selectionRingRenderer'`). */
@@ -27,18 +28,19 @@ export type SelectionRingRenderer = {
    * Must be called inside a `beginRenderPass`
    * block on the swap-chain texture (premultiplied-OVER expects an LDR target).
    *
-   * `sceneColorView` is consumed only by an instance created with
-   * `occludeAgainstScene: true`, where it feeds the group(1) coverage joint so
+   * `scene` is consumed only by an instance created with
+   * `occludeAgainstScene: true`, where it fills the group(1) coverage joint so
    * fragments are attenuated by how much of the background the foreground
-   * bodies already cover (read from that target's alpha — see
-   * lib/sceneDepth.wesl).  A plain instance ignores it.
+   * bodies already cover (that target's alpha) and by whether the sampled
+   * scene depth stands in front of the subject — see lib/sceneDepth.wesl.
+   * A plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
-    sceneColorView?: GPUTextureView,
+    scene?: OverlaySceneOcclusion,
   ): void;
   /** Release all GPU resources. No-op if constructed with a null device. */
   destroy(): void;

@@ -10,15 +10,19 @@
 // one scalar multiply dims colour and coverage together). 'occludeWeight' mixes
 // that rule in per instance for the same reason the captions carry one: a
 // connector whose subject is in FRONT of a body must not fade into its disc.
+// 'sceneDepthOccludes' is the second channel, seeing the terrain the analytic
+// spheres stop short of (labels/fragmentOcclude.wesl has the derivation).
 //
 // In the fragment stage the VsOut builtin-position field 'input.pos' holds the
 // framebuffer position: '.xy' is window pixels.
 
 import package::markerLines::io::VsOut;
 import package::markerLines::fragment::shadeLine;
+import package::lib::sceneDepth::sceneDepthOccludes;
 import package::lib::sceneDepth::sceneTransmittance;
 
 @fragment
 fn fs(input: VsOut) -> @location(0) vec4<f32> {
-  return shadeLine(input) * mix(1.0, sceneTransmittance(input.pos.xy), input.occludeWeight);
+  let weight = max(input.occludeWeight, sceneDepthOccludes(input.pos.xy, input.occludeNearKm));
+  return shadeLine(input) * mix(1.0, sceneTransmittance(input.pos.xy), weight);
 }

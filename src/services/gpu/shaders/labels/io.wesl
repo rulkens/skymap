@@ -65,10 +65,13 @@ struct LabelData {
   // collapses the outline band regardless of outlineEmFrac.
   outlineColor: vec4<f32>,
   // How much per-pixel scene attenuation the occlusion fragment variant
-  // applies (1 = fully, 0 = draw over the bodies).  Bytes 64..67; the array
-  // element stride rounds UP to 80 on the struct's vec4 alignment, so
-  // 'LABEL_DATA_BYTES' in labelRenderer.ts is 80, not 68.
+  // applies (1 = fully, 0 = draw over the bodies).  Bytes 64..67.
   occludeWeight: f32,
+  // Eye to the subject's NEAR surface, km: the sampled-depth channel's cutoff
+  // (lib/sceneDepth.wesl).  Bytes 68..71, taken out of the padding the struct's
+  // vec4 alignment already held, so 'LABEL_DATA_BYTES' in labelRenderer.ts
+  // stays 80.
+  occludeNearKm: f32,
 };
 
 struct VsIn {
@@ -113,4 +116,6 @@ struct VsOut {
   // because labels[] is bound to the VERTEX stage only.  Constant per
   // label, so interpolating it is exact.
   @location(5) occludeWeight: f32,
+  // The sampled-depth channel's cutoff, forwarded for the same reason.
+  @location(6) occludeNearKm: f32,
 };

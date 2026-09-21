@@ -299,10 +299,18 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // order — which is what frees these overlays to sit after the body composite.
   // `selection-ring` leads so the marker lines and labels composite over its
   // stroke.
+  //
+  // `depth` names the texture the overlays SAMPLE — swap is depthless, so it
+  // attaches nothing — and behind it a caption clips along the silhouette of
+  // the last body row to clear that depth. Declared on BOTH swap lines, not
+  // only the NEAR0 one that needs the verdict: the overlays share one group(1)
+  // joint, so every pipeline binding it must fill its depth entries, and a
+  // placeholder on one line only would be a rule with an exception.
   {
     kind: 'render',
     target: 'swap',
     slab: COSMO,
+    depth: { sample: 'foreground:0' },
     passes: ['selection-ring', 'marker-lines', 'labels'],
   },
   // The near-field overlays, last, so the scene-body captions land on top of
@@ -316,6 +324,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     kind: 'render',
     target: 'swap',
     slab: NEAR0,
+    depth: { sample: 'foreground:0' },
     passes: ['near0-selection-ring', 'foreground-labels', 'clip-path-debug'],
   },
 ];

@@ -60,5 +60,6 @@ fn vs(input: VsIn) -> VsOut {
   // extra varying for the alpha gate.
   out.color = input.color * fadeAlpha;
   out.occludeWeight = input.occludeWeight;
+  out.occludeNearKm = input.occludeNearKm;
   return out;
 }

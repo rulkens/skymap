@@ -99,6 +99,14 @@ export type Label2D = {
    */
   readonly occludeWeight?: number;
   /**
+   * Eye to the subject's NEAR surface (centre distance minus its radius), in
+   * km: the cutoff of the SECOND occluder channel, which reads the sampled
+   * scene depth and so sees the terrain the body spheres stop short of. The
+   * fragment takes whichever channel fires. Default 0 leaves it inert — right
+   * for every producer whose `occludeWeight` is already 1.
+   */
+  readonly occludeNearKm?: number;
+  /**
    * Horizontal alignment of the text relative to `worldPos`.
    * Default 'left' (text extends rightward from the anchor).
    * 'center' centers the text horizontally on the anchor — the
