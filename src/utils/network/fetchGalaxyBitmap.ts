@@ -8,7 +8,8 @@
  *      footprint (mostly northern); galaxies there get a sharp colour
  *      JPEG with stars + galaxy structure visible.
  *   2. On 404 / non-2xx / non-image response, fall back to DSS POSS-II
- *      red plate (full-sky, lower quality, monochrome).
+ *      red plate (full-sky, lower quality, monochrome). A host that has
+ *      stopped answering is skipped rather than waited out — `deadHosts`.
  *   3. Decode whichever we got into an ImageBitmap, resizing to
  *      GALAXY_ATLAS_SLOT_SIDE × GALAXY_ATLAS_SLOT_SIDE in one step.
  *
@@ -27,25 +28,26 @@ import { sdssThumbnailUrl, dssThumbnailUrl } from '../math';
 import { GALAXY_ATLAS_SLOT_SIDE } from '../../data/galaxyCatalog/galaxyAtlasSlotSide';
 import { dataUrl } from '../../services/loading/fetchWithProgress';
 import type { FetchGalaxyBitmapInput } from '../../@types/loading/FetchGalaxyBitmapInput';
+import type { DeadHostSet } from '../../@types/network/DeadHostSet';
 
-// A `fetch()` promise that never settles leaks more than a browser socket:
-// the thumbnail PriorityQueue (utils/concurrency/priorityQueue.ts) marks the
-// key "in flight" until its fetcher promise resolves or rejects, and the
-// engine's render-on-demand loop treats `inFlightCount() > 0` as "keep
-// ticking, more work is coming." A cutout endpoint that stalls (SDSS
-// ImgCutout or CDS hips2fits under load) therefore never settles, the
-// in-flight entry never clears, and the RAF loop spins forever even though
-// nothing is visibly happening. The queue itself can't fix this: it's generic over any
-// fetcher and has no opinion on what "too long" means for a given task.
-// Settlement is the fetcher's contract, so the deadline lives here. 30 s is
-// generous — hips2fits legitimately takes 5-15 s under load — the goal is
-// "eventually settles", not "fast".
+// A `fetch()` promise that never settles holds a PriorityQueue slot
+// (utils/concurrency/priorityQueue.ts) forever, and there are only
+// MAX_CONCURRENT_FETCHES of them — a stalled endpoint (SDSS ImgCutout or CDS
+// hips2fits under load) starves every other thumbnail behind it. The queue
+// can't fix this: it's generic over any fetcher and has no opinion on what
+// "too long" means for a given task, so settlement is the fetcher's contract
+// and the deadline lives here. 30 s is generous — hips2fits legitimately takes
+// 5-15 s under load — because the goal is "eventually settles", not "fast".
+//
+// The deadline bounds ONE request; `DeadHostSet` is what stops a host that is
+// down from costing this much per galaxy. Both are needed: measured at boot,
+// alasky connects and then sends nothing, so each request ran the full 30 s.
 const FETCH_DEADLINE_MS = 30_000;
 
 export async function fetchGalaxyBitmap(
   input: FetchGalaxyBitmapInput,
 ): Promise<ImageBitmap | null> {
-  const { ra, dec, famousId, fetchHiRes, hiResTargetDim } = input;
+  const { ra, dec, famousId, fetchHiRes, hiResTargetDim, deadHosts } = input;
 
   // One deadline signal covers the whole call, composed with the caller's
   // optional cancellation signal when given. AbortSignal.timeout and
@@ -67,7 +69,7 @@ export async function fetchGalaxyBitmap(
   // at the wrong angular scale.
   if (fetchHiRes && famousId) {
     const url = dataUrl(`images/famous-hires/${famousId}.webp`);
-    const blob = await tryFetch(url, signal);
+    const blob = await tryHost(url, undefined, signal, input.signal);
     if (!blob) return null;
     const dim = hiResTargetDim ?? GALAXY_ATLAS_SLOT_SIDE;
     try {
@@ -89,7 +91,7 @@ export async function fetchGalaxyBitmap(
   // caught before deploy, not a silent runtime 404 we should fall back from).
   if (famousId) {
     const url = `/images/famous/${famousId}.webp`;
-    const blob = await tryFetch(url, signal);
+    const blob = await tryHost(url, undefined, signal, input.signal);
     if (!blob) return null;
     try {
       return await createImageBitmap(blob, {
@@ -105,7 +107,12 @@ export async function fetchGalaxyBitmap(
   // SDSS footprint when SDSS is the loaded source; for non-SDSS galaxy catalogs
   // (2MRS, GLADE) the SDSS attempt will fail more often, but it's cheap
   // and worth trying because SDSS images are sharper than DSS.
-  const sdssBlob = await tryFetch(sdssThumbnailUrl(ra, dec, GALAXY_ATLAS_SLOT_SIDE), signal);
+  const sdssBlob = await tryHost(
+    sdssThumbnailUrl(ra, dec, GALAXY_ATLAS_SLOT_SIDE),
+    deadHosts,
+    signal,
+    input.signal,
+  );
   if (sdssBlob) {
     try {
       return await createImageBitmap(sdssBlob, {
@@ -119,7 +126,7 @@ export async function fetchGalaxyBitmap(
 
   // DSS fallback (full-sky coverage).  2 arcmin ≈ matches the field SDSS
   // gives at scale=0.396 arcsec/pixel for a 128-pixel cutout.
-  const dssBlob = await tryFetch(dssThumbnailUrl(ra, dec, 2), signal);
+  const dssBlob = await tryHost(dssThumbnailUrl(ra, dec, 2), deadHosts, signal, input.signal);
   if (dssBlob) {
     try {
       return await createImageBitmap(dssBlob, {
@@ -134,18 +141,43 @@ export async function fetchGalaxyBitmap(
 }
 
 /**
- * Returns a Blob on 2xx + image content-type, otherwise undefined.
- * Network errors and aborts collapse to undefined too — the caller
- * just falls through to the next source or returns null.
+ * Returns the blob on 2xx + image content-type; otherwise says WHY, because
+ * the two failures mean opposite things to `DeadHostSet`. A 404 or an HTML
+ * error page is the host answering "not here" — ordinary for a galaxy outside
+ * the SDSS footprint. Only the throw means nothing answered at all.
  */
-async function tryFetch(url: string, signal?: AbortSignal): Promise<Blob | undefined> {
+async function tryFetch(
+  url: string,
+  signal?: AbortSignal,
+): Promise<{ blob?: Blob; hostAnswered: boolean }> {
   try {
     const res = await fetch(url, { signal, mode: 'cors' });
-    if (!res.ok) return undefined;
+    if (!res.ok) return { hostAnswered: true };
     const ct = res.headers.get('content-type') ?? '';
-    if (!ct.startsWith('image/')) return undefined;
-    return await res.blob();
+    if (!ct.startsWith('image/')) return { hostAnswered: true };
+    return { blob: await res.blob(), hostAnswered: true };
   } catch {
-    return undefined;
+    return { hostAnswered: false };
   }
+}
+
+/**
+ * One source leg: skip the host outright if it's retired, otherwise attempt it
+ * and record what happened. A SKIPPED leg records nothing — noting it would
+ * make a retired host look like it kept failing.
+ *
+ * A caller-cancelled fetch is not the host's fault, so it isn't recorded
+ * either. No production caller passes a signal today, but the guard stops a
+ * future one from retiring a healthy host by navigating away mid-fetch.
+ */
+async function tryHost(
+  url: string,
+  deadHosts: DeadHostSet | undefined,
+  signal?: AbortSignal,
+  callerSignal?: AbortSignal,
+): Promise<Blob | undefined> {
+  if (deadHosts?.isDead(url)) return undefined;
+  const { blob, hostAnswered } = await tryFetch(url, signal);
+  if (!callerSignal?.aborted) deadHosts?.note(url, hostAnswered);
+  return blob;
 }
