@@ -234,7 +234,7 @@ function makeState(
 }
 
 describe('orbitTrailsPass.enabled', () => {
-  it('gates on the renderer handle + the foreground distance — conics are static seeds', () => {
+  it('gates on the renderer handle + the foreground distance over the boot-composed roster', () => {
     const state = makeState(makeRendererSpy());
     const view = makeNear0View();
     // Null handle (pre-bootstrap): the handle check short-circuits before the

@@ -2,9 +2,9 @@
  * createLayers — bootstrap phase, between `initGpu` and `wireSlots` (D8).
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
- * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows` /
- * `.label3DProducers` / `.orbitTrailRows`, asserting the composed sets stay disjoint (D5) — a bad
- * composition throws at boot.
+ * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows`,
+ * asserting the keyed sets stay disjoint (D5) — a bad composition throws at boot.
+ * `.label3DProducers` and `.orbitTrailRows` are unkeyed concatenations instead.
  */
 
 import type { Task } from 'redux-saga';

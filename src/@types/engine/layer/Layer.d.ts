@@ -78,7 +78,7 @@ export type Layer<
   /** Rows join `FADE_LAYERS` in `createLayers`. Declares only: core owns the arrival
    * edge (`installFadeOnArrival`), so never drive a fade from `create`. */
   fades?(runtime: Runtime): readonly FadeLayer<unknown>[];
-  /** Three halves, each composed in `createLayers`: `screenLabels` rows register
+  /** Three independent row sets, each composed in `createLayers`: `screenLabels` rows register
    * with the director of the slab they name, then poll once a frame like any
    * other screen-space producer; `worldLabels` rows join
    * `state.label3DProducers`, walked by `runLabel3DProducers`; `orbitTrails` rows

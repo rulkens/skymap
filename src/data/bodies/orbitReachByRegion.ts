@@ -1,10 +1,12 @@
 /**
  * ORBIT_REACH_BY_REGION — the seeded scene's orbital reach per region, derived
  * once so the orbit-trail cull costs one comparison per region rather than a
- * table walk per frame. Conservative: it never drops a visible orbit.
+ * table walk per frame. Conservative: it never drops a visible CORE orbit.
  *
- * Over `CORE_TRAIL_ELEMENTS`, not `ORBITAL_ELEMENTS`: only those rows draw a trail
+ * Over `CORE_TRAIL_ELEMENTS`, not `ORBITAL_ELEMENTS`: a mesh body draws no trail
  * to cull, and a hyperbolic row has no apoapsis to contribute a reach from.
+ * Layer-contributed trail rows lie outside this reach — none exist yet; PR 2
+ * extends it.
  */
 
 import type { BodyRegion } from '../../@types/scene/BodyRegion';
