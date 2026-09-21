@@ -73,14 +73,14 @@ writes `froxelSliceKm` at f32 index 27 (byte 108), the slot `packAtmosphereUnifo
 `_pad0`. WGSL twin `sphere.wesl:462`: `_pad0` → `froxelSliceKm: f32`. `atmosphereShellUniforms`
 passes `FROXEL_SLICE_KM`.
 
-- [ ] Add the two constants (one file, two exports is fine under `src/data/`).
-- [ ] Extend the packer and the WGSL struct; update the layout comment at `packAtmosphereUniforms.ts:35-46`.
-- [ ] `packAtmosphereUniforms.test.ts:95`: the `rec[27] === 0` pin becomes
+- [x] Add the two constants (one file, two exports is fine under `src/data/`).
+- [x] Extend the packer and the WGSL struct; update the layout comment at `packAtmosphereUniforms.ts:35-46`.
+- [x] `packAtmosphereUniforms.test.ts:95`: the `rec[27] === 0` pin becomes
       `packs froxelSliceKm at byte 108` asserting `rec[27] === <the value passed>`.
-- [ ] `atmosphereUniformsLayout.parity.test.ts`: add `froxelSliceKm` to the sentinel table so the
+- [x] `atmosphereUniformsLayout.parity.test.ts`: add `froxelSliceKm` to the sentinel table so the
       parity test covers it (it fails if the WESL field and the packer index ever disagree).
-- [ ] `npx vitest run tests/utils/gpu tests/services/engine/frame/passes/atmosphereShellPass.test.ts`.
-- [ ] Commit: `feat(atmosphere): froxelSliceKm rides the shell uniform record`.
+- [x] `npx vitest run tests/utils/gpu tests/services/engine/frame/passes/atmosphereShellPass.test.ts`.
+- [x] Commit: `feat(atmosphere): froxelSliceKm rides the shell uniform record`.
 
 ---
 
@@ -107,10 +107,10 @@ Definition to hit, for `s = sliceKm`, `N = sliceCount`, `d = distanceKm`:
 `identityMix = 1 − saturate(d / s)` (1 at `d = 0`, 0 from `d = s` on). With a linear sampler this
 lerps between the two neighbouring slices exactly as spec §4.1 states.
 
-- [ ] Write the module with a ≤ 5-line header naming the two consumers (bake, apply).
-- [ ] No TS test: the mapping is exercised by Task 3's bake and Task 4's apply, whose eye-checks
+- [x] Write the module with a ≤ 5-line header naming the two consumers (bake, apply).
+- [x] No TS test: the mapping is exercised by Task 3's bake and Task 4's apply, whose eye-checks
       (DoD) are the only thing that can catch an off-by-one-slice here. Say so in the commit body.
-- [ ] Commit: `feat(atmosphere): froxel slice mapping module`.
+- [x] Commit: `feat(atmosphere): froxel slice mapping module`.
 
 ---
 
@@ -153,8 +153,8 @@ one invocation per `(x, y)` ray; bounds from `textureDimensions(outInScatter)`; 
   HEAD add7029d8): `inScatter += T * step.inScatter`, `T *= step.transmittance`.
 - Twilight knobs from `view` exactly as the spike's `marchAerial` passes them.
 
-- [ ] Write the shader; header ≤ 5 lines.
-- [ ] Commit: `feat(atmosphere): froxel bake compute shader`.
+- [x] Write the shader; header ≤ 5 lines.
+- [x] Commit: `feat(atmosphere): froxel bake compute shader`.
 
 ---
 
@@ -182,8 +182,8 @@ Deleted: `multiScatterLut`, `view`, the local `SkyViewParams` struct, `AERIAL_ST
 `transmittance = mix(textureSampleLevel(froxelTransmittance, lutSamp, p, 0).rgb, vec3f(1), c.identityMix)`;
 then the same `transmit`/`emission` packing the spike's geometry branch does today from `AerialMarch`.
 
-- [ ] Rewrite; keep the header's binding-hoist warning (`fragment.wesl:8-11`).
-- [ ] Commit: `feat(atmosphere): aerial apply reads the froxel volume`.
+- [x] Rewrite; keep the header's binding-hoist warning (`fragment.wesl:8-11`).
+- [x] Commit: `feat(atmosphere): aerial apply reads the froxel volume`.
 
 ---
 
@@ -236,8 +236,8 @@ storage-3D descriptor precedent `galaxyField/gpu/bakeVolumeTexture.ts:36-42`):
 - `rebind rebuilds the bake bind group for that body`.
 - `atmosphereShellRenderer.test.ts:160-190` `reconcile` test: assert `rebind` still reaches the aerial renderer.
 
-- [ ] Implement, tests, `npx vitest run tests/services/gpu/renderers/atmosphere`, `npm run typecheck:fast`.
-- [ ] Commit: `feat(atmosphere): aerial renderer bakes the froxel volumes`.
+- [x] Implement, tests, `npx vitest run tests/services/gpu/renderers/atmosphere`, `npm run typecheck:fast`.
+- [x] Commit: `feat(atmosphere): aerial renderer bakes the froxel volumes`.
 
 ---
 
@@ -288,8 +288,8 @@ as the render line, so bake and apply share one `slab.vp` (spec §3.4 prep 4 is 
 - Existing: `frameFilePurity.test.ts` must pass without a new allow-list row (both new files are pure).
   `timedSlots.test.ts` unchanged (uniqueness holds).
 
-- [ ] Implement, tests, `npx vitest run tests/services/engine/frame`, `npm run typecheck:fast`.
-- [ ] Commit: `feat(atmosphere): froxel bake compute row ahead of the foreground chain`.
+- [x] Implement, tests, `npx vitest run tests/services/engine/frame`, `npm run typecheck:fast`.
+- [x] Commit: `feat(atmosphere): froxel bake compute row ahead of the foreground chain`.
 
 ---
 
@@ -362,8 +362,8 @@ cover every other body.
   via `composeBodySlabMvp(row.vp, …, 1000)`, and add `hands a null depth frame when no body row cleared the depth`.
 - `expandFrameOrder.test.ts` / `checkFrameOrder.test.ts`: no new test; the boot check covers the new source.
 
-- [ ] Implement, tests, `npx vitest run tests/services/gpu/shaders tests/services/gpu/renderers/bodies tests/services/engine/frame`, `npm run typecheck:fast`.
-- [ ] Commit: `feat(orbit-trails): trails hide behind sampled scene depth`.
+- [x] Implement, tests, `npx vitest run tests/services/gpu/shaders tests/services/gpu/renderers/bodies tests/services/engine/frame`, `npm run typecheck:fast`.
+- [x] Commit: `feat(orbit-trails): trails hide behind sampled scene depth`.
 
 ---
 
@@ -372,16 +372,16 @@ cover every other body.
 **Files:** modify `docs/RENDERER.md` (FRAME_ORDER paragraph, the sampled-depth sentence added by #790),
 `src/services/engine/frame/frameOrder.ts:235-241`.
 
-- [ ] `docs/RENDERER.md`: one paragraph after the sampled-depth sentence: the aerial bake compute
+- [x] `docs/RENDERER.md`: one paragraph after the sampled-depth sentence: the aerial bake compute
       row (volume pair, 4 km slices, past the last the apply reads the outside shell's segment
       answer cross-faded against the froxel answer by a horizon-distance weight, why the bake owns
       the shell
       record write) and the
       two sampled-depth consumers (aerial apply, orbit trails). No history.
-- [ ] `frameOrder.ts:235-241`: the aerial-line comment no longer mentions a march; say the volume was
+- [x] `frameOrder.ts:235-241`: the aerial-line comment no longer mentions a march; say the volume was
       baked from this row's record in the prelude.
-- [ ] Grep `src` for `marchAerial|AERIAL_STEPS|encodeFroxel|froxelLut` → zero hits.
-- [ ] Commit: `docs(renderer): froxel aerial perspective and sampled-depth consumers`.
+- [x] Grep `src` for `marchAerial|AERIAL_STEPS|encodeFroxel|froxelLut` → zero hits.
+- [x] Commit: `docs(renderer): froxel aerial perspective and sampled-depth consumers`.
 
 ---
 
