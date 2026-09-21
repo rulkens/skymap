@@ -20,8 +20,8 @@
 
 import type { Fetcher } from '../../../@types/loading/Fetcher';
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import { makeJsonFetcher } from './jsonFetcher';
-import { dataUrl } from '../fetchWithProgress';
+import { makeJsonFetcher } from '../../../services/loading/fetchers/jsonFetcher';
+import { dataUrl } from '../../../services/loading/fetchWithProgress';
 
 const CONSTELLATIONS_FILE = 'constellations.json';
 

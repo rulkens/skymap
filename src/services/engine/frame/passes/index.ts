@@ -34,7 +34,6 @@ import { bodyGlintsPass } from './bodyGlintsPass';
 import { starCatalogPass } from './starCatalogPass';
 import { starAggregatesPass } from './starAggregatesPass';
 import { starAggregateUpsamplePass } from './starAggregateUpsamplePass';
-import { constellationsPass } from './constellationsPass';
 import { orbitTrailsPass } from './orbitTrailsPass';
 import { foregroundLabelsPass } from './foregroundLabelsPass';
 import { atmosphereShellPass } from './atmosphereShellPass';
@@ -57,7 +56,6 @@ export const CONTENT_PASSES: readonly ContentPass[] = [
   starAggregatesPass,
   starCatalogPass,
   starAggregateUpsamplePass,
-  constellationsPass,
   sgrAStarLensingPass,
   orbitTrailsPass,
   bodyGlintsPass,

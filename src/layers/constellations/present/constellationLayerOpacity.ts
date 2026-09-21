@@ -22,7 +22,7 @@
  */
 
 import { fadeBand } from '../../../utils/math/fadeBand';
-import { SCALE_FADE_BANDS } from './scaleFadeBands';
+import { SCALE_FADE_BANDS } from '../../../services/engine/presentation/scaleFadeBands';
 
 export function constellationLayerOpacity(camDistMpc: number, layerFadeOpacity: number): number {
   return fadeBand(SCALE_FADE_BANDS.constellations, camDistMpc) * layerFadeOpacity;

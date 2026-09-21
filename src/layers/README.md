@@ -13,30 +13,30 @@ The contract is `Layer` (`src/@types/engine/layer/Layer.d.ts`), built with
 **The folder layout is the contract, spelled out.** A contract member that is one
 function is a root file named for it; a member that is a collection is a folder.
 
-| Contract member | Lives in                                      | Notes                                                                                                                 |
-| --------------- | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `name`          | `layer.ts`                                    | The whole `defineLayer` call, nothing else                                                                            |
-| `create`        | `create.ts`                                   | Mints the Runtime — the Layer's private guts                                                                          |
-| `destroy`       | `destroy.ts`                                  | Releases exactly what `create` took                                                                                   |
-| `frame?`        | `frame.ts`                                    | Per-frame prelude; returns the awake vote                                                                             |
-| `settings?`     | `state/`                                      | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional |
-| `sources?`      | `sources/`                                    | One `SOURCE_REGISTRY` row per file, + the rows array                                                                  |
-| `sagas?`        | `sagas/`                                      | One saga per file                                                                                                     |
-| `ui?`           | `ui/`                                         | The SettingsPanel section, hand-written                                                                               |
-| `passes`        | `passes/`                                     | One `ContentPass` factory per file                                                                                    |
-| `assets?`       | `load/`                                       | The asset-row declaration, beside its slots                                                                           |
-| `fades?`        | `present/`                                    |                                                                                                                       |
-| `labels?`       | `present/`                                    |                                                                                                                       |
-| `selection?`    | `present/`                                    |                                                                                                                       |
-| `facts?`        | type in `types/`, initial value in `layer.ts` |                                                                                                                       |
-| `targets?`      | `layer.ts`                                    | Appended after core's rows; core allocates and resizes them                                                           |
+| Contract member | Lives in                                       | Notes                                                                                                                 |
+| --------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `name`          | `layer.ts`                                     | The whole `defineLayer` call, nothing else                                                                            |
+| `create`        | `create.ts`                                    | Mints the Runtime — the Layer's private guts                                                                          |
+| `destroy`       | `destroy.ts`                                   | Releases exactly what `create` took                                                                                   |
+| `frame?`        | `frame.ts`                                     | Per-frame prelude; returns the awake vote                                                                             |
+| `settings?`     | `state/`                                       | `state/<slice>/{slice,initialState,selectors}.ts` per cluster + `state/slices.ts` tuple; `state/defaults.ts` optional |
+| `sources?`      | `sources/`                                     | One `SOURCE_REGISTRY` row per file, + the rows array                                                                  |
+| `sagas?`        | `sagas/`                                       | One saga per file                                                                                                     |
+| `ui?`           | `ui/`                                          | The SettingsPanel section, hand-written                                                                               |
+| `passes`        | `passes/`                                      | One `ContentPass` factory per file                                                                                    |
+| `assets?`       | `load/`                                        | The asset-row declaration, beside its slots                                                                           |
+| `fades?`        | `present/`                                     |                                                                                                                       |
+| `labels?`       | `present/`                                     |                                                                                                                       |
+| `selection?`    | `present/`                                     |                                                                                                                       |
+| `facts?`        | type in `@types/`, initial value in `layer.ts` |                                                                                                                       |
+| `targets?`      | `layer.ts`                                     | Appended after core's rows; core allocates and resizes them                                                           |
 
 Three more folders hold the Runtime's private machinery — core never sees these:
 
 - **`load/`** — fetchers, `AssetSlot`s and the wiring that binds them.
 - **`render/`** — GPU pipeline objects: renderers, vertex layouts, uniform packers.
-- **`types/`** — the Layer's **own** contract types, one per file, filename = the
-  type. `<Name>Runtime.ts` is always here. Types shared with core or with a sibling
+- **`@types/`** — the Layer's **own** contract types, one per file, filename = the
+  type. `<Name>Runtime.d.ts` is always here. Types shared with core or with a sibling
   Layer stay under `src/@types/` instead.
 
 ## Rules
@@ -83,5 +83,7 @@ and expect both to be ruled on when the Layer structure is cleaned up:
 
 ## Status
 
-`galaxyCatalog` and `filaments` are formed. The other eight folders are
-settings-only stubs from prep step (c) and are filled in one Layer at a time.
+`galaxyCatalog`, `filaments`, `flow`, `zoneOfAvoidance`, `localBubble`, and
+`constellations` are formed. The other five folders (`body`, `milkyWay`,
+`starCatalog`, `structure`, `volume`) are settings-only stubs from prep step (c)
+and are filled in one Layer at a time.
