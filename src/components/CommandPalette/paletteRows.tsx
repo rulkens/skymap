@@ -150,24 +150,24 @@ export const ROW_VIEW: Record<ScoredRow['kind'], (m: ScoredRow) => RowView> = {
       ),
     };
   },
-  // View row — letter glyph like the Milky Way (no atlas thumb: a view is a
-  // scene takeover, not a picturable object).
-  view: (m) => {
-    if (m.kind !== 'view') return EMPTY_ROW_VIEW;
+  // Exhibit row — letter glyph like the Milky Way (no atlas thumb: an exhibit
+  // is a scene takeover, not a picturable object).
+  exhibit: (m) => {
+    if (m.kind !== 'exhibit') return EMPTY_ROW_VIEW;
     return {
-      key: `view:${m.view.id}`,
-      testid: `view-row-${m.view.id}`,
+      key: `exhibit:${m.exhibit.id}`,
+      testid: `exhibit-row-${m.exhibit.id}`,
       leading: (
         <span className={styles.glyph} aria-hidden="true">
-          {m.view.label[0] ?? '·'}
+          {m.exhibit.label[0] ?? '·'}
         </span>
       ),
-      primary: m.view.label,
-      secondary: <span className={styles.source}>View</span>,
+      primary: m.exhibit.label,
+      secondary: <span className={styles.source}>Exhibit</span>,
     };
   },
-  // Tour row — same glyph treatment as a view; a tour is a beat sequence, not
-  // a picturable object either.
+  // Tour row — same glyph treatment as an exhibit; a tour is a beat sequence,
+  // not a picturable object either.
   tour: (m) => {
     if (m.kind !== 'tour') return EMPTY_ROW_VIEW;
     return {

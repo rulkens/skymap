@@ -1,6 +1,6 @@
 /**
  * watchTakeoverSaga — the single mutual-exclusion point for every takeover
- * source (`startTour`, `openView`). A superseding request cancels the running
+ * source (`startTour`, `openExhibit`). A superseding request cancels the running
  * takeover and waits for the whole cancelled bracket to settle before the
  * successor starts, so the successor snapshots the user's pre-takeover scene
  * and not a mid-takeover one.
@@ -12,13 +12,13 @@ import type { Task } from 'redux-saga';
 import { runTakeover } from './runTakeover';
 import { tourBody } from '../tour/tourBody';
 import { startTour } from '../tour/tourActions';
-import { viewBodySaga } from '../views/viewBodySaga';
-import { openView } from '../views/viewActions';
+import { exhibitBodySaga } from '../exhibits/exhibitBodySaga';
+import { openExhibit } from '../exhibits/exhibitActions';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
-import { viewRegistry } from '../../data/views/viewRegistry';
+import { exhibitRegistry } from '../../data/exhibits/exhibitRegistry';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
-const startRequests = [startTour, openView];
+const startRequests = [startTour, openExhibit];
 
 export function* watchTakeoverSaga() {
   let running: Task | undefined;
@@ -45,10 +45,10 @@ export function* watchTakeoverSaga() {
       const tour = tourRegistry[action.payload.id];
       source = { kind: 'tour', id: tour.id };
       body = () => tourBody(tour, action.payload.beats);
-    } else if (openView.match(action)) {
-      const view = viewRegistry[action.payload];
-      source = { kind: 'view', id: view.id };
-      body = () => viewBodySaga(view);
+    } else if (openExhibit.match(action)) {
+      const exhibit = exhibitRegistry[action.payload];
+      source = { kind: 'exhibit', id: exhibit.id };
+      body = () => exhibitBodySaga(exhibit);
     } else {
       // `take(startRequests)` widens `action` to `any` — typed-redux-saga
       // can't narrow a `take` over a mixed-creator array — so this branch is

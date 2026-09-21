@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 
 /**
- * CommandPaletteContainer — regression coverage for the `view` action kind
- * reaching `openView`. PR1 shipped three interlocking placeholders for view
- * cards (a disabled button, an Enter-key guard, and a container stub); the
- * first two survived a PR3 cleanup pass unnoticed because nothing asserted a
- * view card is actually activatable. Pattern mirrors
+ * CommandPaletteContainer — regression coverage for the `exhibit` action kind
+ * reaching `openExhibit`. PR1 shipped three interlocking placeholders for
+ * exhibit cards (a disabled button, an Enter-key guard, and a container
+ * stub); the first two survived a PR3 cleanup pass unnoticed because nothing
+ * asserted an exhibit card is actually activatable. Pattern mirrors
  * `TourOverlayContainer.test.ts`: store-backed via `createAppStore()` +
  * `<Provider>`, dispatch spy installed after seeding, before render.
  */
@@ -17,7 +17,7 @@ import { Provider } from 'react-redux';
 import CommandPaletteContainer from '../../../src/components/containers/CommandPaletteContainer';
 import { createAppStore } from '../../../src/store/createAppStore';
 import { setPaletteOpen } from '../../../src/state/ui/uiSlice';
-import { openView } from '../../../src/state/views/viewActions';
+import { openExhibit } from '../../../src/state/exhibits/exhibitActions';
 
 type Store = ReturnType<typeof createAppStore>['store'];
 
@@ -26,7 +26,7 @@ function makeWrapper(store: Store) {
 }
 
 describe('CommandPaletteContainer', () => {
-  it('dispatches openView when a view card is activated', () => {
+  it('dispatches openExhibit when an exhibit card is activated', () => {
     const { store } = createAppStore();
     store.dispatch(setPaletteOpen(true));
     const spy = vi.spyOn(store, 'dispatch');
@@ -34,6 +34,6 @@ describe('CommandPaletteContainer', () => {
       wrapper: makeWrapper(store),
     });
     fireEvent.click(getByRole('button', { name: 'Solar System' }));
-    expect(spy).toHaveBeenCalledWith(openView('solarSystem'));
+    expect(spy).toHaveBeenCalledWith(openExhibit('solarSystem'));
   });
 });

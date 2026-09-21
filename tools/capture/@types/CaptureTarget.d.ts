@@ -1,5 +1,5 @@
 import type { PaletteCardCapture } from '../../../src/@types/palette/PaletteCardCapture';
-import type { ViewId } from '../../../src/@types/views/ViewId';
+import type { ExhibitId } from '../../../src/@types/exhibits/ExhibitId';
 
 /**
  * One card `capture.ts` will shoot: its output filename and how to frame it.
@@ -8,5 +8,5 @@ import type { ViewId } from '../../../src/@types/views/ViewId';
  */
 export type CaptureTarget =
   | { cardId: string; kind: 'focus'; focusId: string; capture: PaletteCardCapture }
-  | { cardId: string; kind: 'view'; viewId: ViewId; capture: PaletteCardCapture }
+  | { cardId: string; kind: 'exhibit'; exhibitId: ExhibitId; capture: PaletteCardCapture }
   | { cardId: string; kind: 'pose'; capture: PaletteCardCapture };

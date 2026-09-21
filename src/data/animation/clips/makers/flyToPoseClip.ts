@@ -1,8 +1,8 @@
 /**
- * flyToPoseClip — a view's pose-addressed establishing move, the sibling of
- * `flyToClip.ts`'s `FocusId`-addressed builder. A focus has no bearing (the
- * camera keeps whatever it had); a view's pose is hand-framed, so yaw/pitch
- * ride along here where `flyToClip` has none.
+ * flyToPoseClip — an exhibit's pose-addressed establishing move, the sibling
+ * of `flyToClip.ts`'s `FocusId`-addressed builder. A focus has no bearing (the
+ * camera keeps whatever it had); an exhibit's pose is hand-framed, so
+ * yaw/pitch ride along here where `flyToClip` has none.
  *
  * ### Two legs, because `target` cannot move in log space
  *
@@ -45,10 +45,10 @@ import {
   wait,
 } from '../../../../services/engine/animation/effectHelpers';
 
-/** Leg 1: the log pull-back from wherever the viewer was to the view's scale. */
+/** Leg 1: the log pull-back from wherever the viewer was to the exhibit's scale. */
 const PULL_BACK_SEC = 7;
 
-/** Leg 2: the pivot slide and bearing settle, mostly at the view's scale. */
+/** Leg 2: the pivot slide and bearing settle, mostly at the exhibit's scale. */
 const REFRAME_SEC = 5;
 
 /** Where leg 2 joins leg 1, as a fraction of the pull-back — see the header. */
@@ -56,7 +56,7 @@ const REFRAME_JOIN = 0.85;
 
 /**
  * The whole fly, in seconds. Leg 2 outlasts leg 1, so it sets the end — the
- * view's copy waits on this (`ViewOverlayContainer`).
+ * exhibit's copy waits on this (`ExhibitOverlayContainer`).
  */
 export const FLY_TO_POSE_SEC = PULL_BACK_SEC * REFRAME_JOIN + REFRAME_SEC;
 

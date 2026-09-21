@@ -1,8 +1,8 @@
 /**
  * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the
  * container dispatches on. Five kinds resolve to a focus id via the same
- * scheme the URL deep-link layer uses; `view` and `tour` resolve to their own
- * action kinds instead, since picking one is a takeover, not a focus.
+ * scheme the URL deep-link layer uses; `exhibit` and `tour` resolve to their
+ * own action kinds instead, since picking one is a takeover, not a focus.
  *
  * The five focus kinds route through the ONE selection command, `requestFocus`,
  * whose saga (`watchRequestFocusSaga`) resolves a durable id to a `SelectionRef`
@@ -23,7 +23,7 @@
  *   - milkyWay → the fixed singleton literal `MILKY_WAY_FOCUS_ID`.
  *   - body     → the seed id under the shared `BODY_FOCUS_PREFIX` (`body-earth`),
  *                which the resolver's `resolveFocusId` strips back to a body ref.
- *   - view     → `{ kind: 'view', viewId }`, the row's own registry id.
+ *   - exhibit  → `{ kind: 'exhibit', exhibitId }`, the row's own registry id.
  *   - tour     → `{ kind: 'tour', tourId }`, the row's own registry id.
  *
  * TABLE-DISPATCH on `row.kind` (simplicity convention item 7): a new row kind is
@@ -37,8 +37,8 @@ import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
 import type { ScoredRow } from '../paletteRowModel';
 import type { PaletteAction } from '../../../@types/palette/PaletteAction';
 
-// `view`/`tour` carry a closed-union id (ViewId/TourId), unlike the other
-// kinds' plain-string focusId, so their unreachable fallback can't be ''
+// `exhibit`/`tour` carry a closed-union id (ExhibitId/TourId), unlike the
+// other kinds' plain-string focusId, so their unreachable fallback can't be ''
 // — it has to be a real narrowing failure instead.
 function unreachableRow(): never {
   throw new Error('actionForRow: row.kind did not match its own table entry');
@@ -70,7 +70,8 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
     kind: 'focus',
     focusId: row.kind === 'body' ? `${BODY_FOCUS_PREFIX}${row.body.id}` : '',
   }),
-  view: (row) => (row.kind === 'view' ? { kind: 'view', viewId: row.view.id } : unreachableRow()),
+  exhibit: (row) =>
+    row.kind === 'exhibit' ? { kind: 'exhibit', exhibitId: row.exhibit.id } : unreachableRow(),
   tour: (row) => (row.kind === 'tour' ? { kind: 'tour', tourId: row.tour.id } : unreachableRow()),
 };
 

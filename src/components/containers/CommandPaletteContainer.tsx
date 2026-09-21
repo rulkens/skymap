@@ -17,7 +17,7 @@ import { selectPaletteOpen, selectPaletteTab } from '../../state/ui/selectors';
 import { setPaletteOpen, setPaletteTab } from '../../state/ui/uiSlice';
 import { requestFocus } from '../../state/selection/requestFocus';
 import { requestSelect } from '../../state/selection/requestSelect';
-import { openView } from '../../state/views/viewActions';
+import { openExhibit } from '../../state/exhibits/exhibitActions';
 import { startTour } from '../../state/tour/tourActions';
 import { FEATURED_TABS } from '../../data/palette/featuredTabs';
 import type { PaletteAction } from '../../@types/palette/PaletteAction';
@@ -32,9 +32,9 @@ const RUN_ACTION: Record<
     dispatch(requestSelect(action.focusId));
     dispatch(requestFocus(action.focusId));
   },
-  view: (dispatch, action) => {
-    if (action.kind !== 'view') return;
-    dispatch(openView(action.viewId));
+  exhibit: (dispatch, action) => {
+    if (action.kind !== 'exhibit') return;
+    dispatch(openExhibit(action.exhibitId));
   },
   tour: (dispatch, action) => {
     if (action.kind !== 'tour') return;

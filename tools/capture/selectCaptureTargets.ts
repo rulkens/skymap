@@ -12,7 +12,9 @@ function targetFor(
   capture: PaletteCardCapture,
 ): CaptureTarget {
   if (action.kind === 'focus') return { cardId, kind: 'focus', focusId: action.focusId, capture };
-  if (action.kind === 'view') return { cardId, kind: 'view', viewId: action.viewId, capture };
+  if (action.kind === 'exhibit') {
+    return { cardId, kind: 'exhibit', exhibitId: action.exhibitId, capture };
+  }
   return { cardId, kind: 'pose', capture };
 }
 
@@ -58,9 +60,9 @@ export function selectCaptureTargets(
       if (resolved.has(card.id)) continue;
       if (!isCapturableCopy(card)) continue;
       // A tour card has nothing to fly to: its beats carry clips, not a focus
-      // id, and it has no registry pose the way a view card does. So its own
-      // `capture.pose` is the whole framing, and a tour card without one is a
-      // curator error — the same call `shotPose` makes for a poseless shot.
+      // id, and it has no registry pose the way an exhibit card does. So its
+      // own `capture.pose` is the whole framing, and a tour card without one
+      // is a curator error — the same call `shotPose` makes for a poseless shot.
       if (card.action.kind === 'tour' && card.capture?.pose === undefined) {
         throw new Error(`tour card '${card.id}' needs a capture.pose — it has nothing to fly to`);
       }

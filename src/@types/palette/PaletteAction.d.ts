@@ -1,9 +1,9 @@
 /** PaletteAction — what a palette row or card asks the container to do on selection, discriminated on `kind`. */
 
-import type { ViewId } from '../views/ViewId';
+import type { ExhibitId } from '../exhibits/ExhibitId';
 import type { TourId } from '../animation/tour/TourId';
 
 export type PaletteAction =
   | { kind: 'focus'; focusId: string }
-  | { kind: 'view'; viewId: ViewId }
+  | { kind: 'exhibit'; exhibitId: ExhibitId }
   | { kind: 'tour'; tourId: TourId };

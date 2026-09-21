@@ -5,7 +5,7 @@
  * unless `image` overrides it, which only the Galaxies tab's cards do.
  */
 import { MILKY_WAY_FOCUS_ID } from '../../services/url/milkyWayFocusId';
-import { VOLUMES_OFF } from '../views/utils/volumesOff';
+import { VOLUMES_OFF } from '../exhibits/utils/volumesOff';
 import type { PaletteTab } from '../../@types/palette/PaletteTab';
 import type { PaletteCardCapture } from '../../@types/palette/PaletteCardCapture';
 
@@ -139,7 +139,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Solar System',
         blurb:
           'Eight planets on their real orbits, seen from above the ecliptic. Mercury goes round in 88 days; Neptune takes 165 years.',
-        action: { kind: 'view', viewId: 'solarSystem' },
+        action: { kind: 'exhibit', exhibitId: 'solarSystem' },
       },
       {
         id: 'body-voyager1',
@@ -193,21 +193,21 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Cosmic Flows',
         blurb:
           'What galaxies do besides expand apart: fall towards the mass nearest them, at hundreds of kilometres a second.',
-        action: { kind: 'view', viewId: 'cosmicFlows' },
+        action: { kind: 'exhibit', exhibitId: 'cosmicFlows' },
       },
       {
         id: 'cosmicWeb',
         label: 'Cosmic Web',
         blurb:
           'The largest structure there is: filaments and knots of galaxies around empty voids, hundreds of millions of light-years across.',
-        action: { kind: 'view', viewId: 'cosmicWeb' },
+        action: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
       },
       {
         id: 'observableUniverse',
         label: 'Observable Universe',
         blurb:
           'Everything whose light has had time to reach us: a sphere reaching some 46 billion light-years in every direction.',
-        action: { kind: 'view', viewId: 'observableUniverse' },
+        action: { kind: 'exhibit', exhibitId: 'observableUniverse' },
       },
     ],
   },
@@ -412,7 +412,7 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Zone of Avoidance',
         blurb:
           'The strip of sky our own galaxy hides. Dust and stars in the Milky Way’s disc block about a fifth of the extragalactic sky, and the catalogues stop at its edge.',
-        action: { kind: 'view', viewId: 'zoneOfAvoidance' },
+        action: { kind: 'exhibit', exhibitId: 'zoneOfAvoidance' },
       },
       {
         id: 'body-sgr-a-star',
@@ -668,21 +668,21 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         label: 'Cosmic Flows',
         blurb:
           'What galaxies do besides expand apart: fall towards the mass nearest them, at hundreds of kilometres a second.',
-        action: { kind: 'view', viewId: 'cosmicFlows' },
+        action: { kind: 'exhibit', exhibitId: 'cosmicFlows' },
       },
       {
         id: 'cosmicWeb',
         label: 'Cosmic Web',
         blurb:
           'The largest structure there is: filaments and knots of galaxies around empty voids, hundreds of millions of light-years across.',
-        action: { kind: 'view', viewId: 'cosmicWeb' },
+        action: { kind: 'exhibit', exhibitId: 'cosmicWeb' },
       },
       {
         id: 'observableUniverse',
         label: 'Observable Universe',
         blurb:
           'Everything whose light has had time to reach us: a sphere reaching some 46 billion light-years in every direction.',
-        action: { kind: 'view', viewId: 'observableUniverse' },
+        action: { kind: 'exhibit', exhibitId: 'observableUniverse' },
       },
     ],
   },

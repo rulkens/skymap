@@ -14,12 +14,12 @@ function focusCard(id: string, overrides: Partial<PaletteCard> = {}): PaletteCar
   };
 }
 
-function viewCard(id: string, overrides: Partial<PaletteCard> = {}): PaletteCard {
+function exhibitCard(id: string, overrides: Partial<PaletteCard> = {}): PaletteCard {
   return {
     id,
     label: id,
     blurb: id,
-    action: { kind: 'view', viewId: 'solarSystem' },
+    action: { kind: 'exhibit', exhibitId: 'solarSystem' },
     ...overrides,
   };
 }
@@ -46,15 +46,15 @@ describe('selectCaptureTargets', () => {
     expect(selectCaptureTargets(tabs, new Set(), [])).toEqual([]);
   });
 
-  it('targets a view card, mapped onto its viewId', () => {
-    const tabs: PaletteTab[] = [tab('t1', [viewCard('a')])];
+  it('targets an exhibit card, mapped onto its exhibitId', () => {
+    const tabs: PaletteTab[] = [tab('t1', [exhibitCard('a')])];
     expect(selectCaptureTargets(tabs, new Set(), [])).toEqual([
-      { cardId: 'a', kind: 'view', viewId: 'solarSystem', capture: {} },
+      { cardId: 'a', kind: 'exhibit', exhibitId: 'solarSystem', capture: {} },
     ]);
   });
 
-  it('never targets a view card with an image override', () => {
-    const tabs: PaletteTab[] = [tab('t1', [viewCard('a', { image: '/images/famous/a.webp' })])];
+  it('never targets an exhibit card with an image override', () => {
+    const tabs: PaletteTab[] = [tab('t1', [exhibitCard('a', { image: '/images/famous/a.webp' })])];
     expect(selectCaptureTargets(tabs, new Set(), [])).toEqual([]);
   });
 

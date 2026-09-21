@@ -1,6 +1,6 @@
 /**
- * flyToPoseClip — pins that a view's pose reaches the compiled clip without
- * a `FocusId`/catalog lookup, the property that distinguishes it from
+ * flyToPoseClip — pins that an exhibit's pose reaches the compiled clip
+ * without a `FocusId`/catalog lookup, the property that distinguishes it from
  * `flyToClip`.
  */
 
@@ -11,7 +11,7 @@ import { FLY_TO_POSE_SEC, flyToPoseClip } from '../../../../../src/data/animatio
 describe('flyToPoseClip', () => {
   it('targets the pose, including its bearing, without a focus lookup', () => {
     // Arbitrary numbers, not a registry pose — this must not break when the
-    // user re-frames a real view's pose.
+    // user re-frames a real exhibit's pose.
     const pose: CameraPose = {
       target: [12, -34, 56],
       yaw: 1.25,

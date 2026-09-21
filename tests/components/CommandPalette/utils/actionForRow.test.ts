@@ -3,7 +3,7 @@ import { actionForRow } from '../../../../src/components/CommandPalette/utils/ac
 import { SCENE_EARTH } from '../../../../src/data/bodies/sceneEarth';
 import { Source } from '../../../../src/data/sources';
 import { MILKY_WAY_FOCUS_ID } from '../../../../src/services/url/milkyWayFocusId';
-import { viewRegistry } from '../../../../src/data/views/viewRegistry';
+import { exhibitRegistry } from '../../../../src/data/exhibits/exhibitRegistry';
 import { tourRegistry } from '../../../../src/data/animation/tours/tourRegistry';
 import type { FamousGalaxyMetaEntry } from '../../../../src/@types/loading/FamousGalaxyMetaEntry';
 import type { AliasIndexEntry } from '../../../../src/@types/engine/AliasIndexEntry';
@@ -67,11 +67,11 @@ describe('actionForRow', () => {
     });
   });
 
-  it('a view row → a view action carrying the registry id, not a focus', () => {
-    const view = viewRegistry.cosmicWeb;
-    expect(actionForRow({ kind: 'view', view, score: 0 })).toEqual({
-      kind: 'view',
-      viewId: view.id,
+  it('an exhibit row → an exhibit action carrying the registry id, not a focus', () => {
+    const exhibit = exhibitRegistry.cosmicWeb;
+    expect(actionForRow({ kind: 'exhibit', exhibit, score: 0 })).toEqual({
+      kind: 'exhibit',
+      exhibitId: exhibit.id,
     });
   });
 

@@ -11,7 +11,7 @@ import type { FamousGalaxyMetaEntry } from '../../@types/loading/FamousGalaxyMet
 import type { AliasIndexEntry } from '../../@types/engine/AliasIndexEntry';
 import type { StructureSearchEntry } from '../../@types/engine/StructureSearchEntry';
 import type { SceneBody } from '../../@types/scene/SceneBody';
-import type { View } from '../../@types/views/View';
+import type { Exhibit } from '../../@types/exhibits/Exhibit';
 import type { Tour } from '../../@types/animation/tour/Tour';
 
 /**
@@ -33,9 +33,9 @@ export const MILKY_WAY_NAMES = [MILKY_WAY_PRIMARY_NAME, 'Galaxy', 'Home'] as con
  * FocusableTarget, resolved by the saga.  `body` carries a seeded scene body
  * (Earth, the stars, the planets — the `SceneBody` union; the row only reads
  * the shared `id`/`label` fields); it's scored and ranked in like a famous
- * row (see `rankPaletteMatches`).  `view` and `tour` carry a registry row each
- * (`viewRegistry`, `tourRegistry`); unlike every other kind they resolve to a
- * `view`/`tour` action rather than a focus.
+ * row (see `rankPaletteMatches`).  `exhibit` and `tour` carry a registry row each
+ * (`exhibitRegistry`, `tourRegistry`); unlike every other kind they resolve to
+ * an `exhibit`/`tour` action rather than a focus.
  */
 export type ScoredRow =
   | { kind: 'famous'; entry: FamousGalaxyMetaEntry; score: number }
@@ -43,5 +43,5 @@ export type ScoredRow =
   | { kind: 'structure'; entry: StructureSearchEntry; score: number }
   | { kind: 'milkyWay'; score: number }
   | { kind: 'body'; body: SceneBody; score: number }
-  | { kind: 'view'; view: View; score: number }
+  | { kind: 'exhibit'; exhibit: Exhibit; score: number }
   | { kind: 'tour'; tour: Tour; score: number };

@@ -1,11 +1,11 @@
 /**
- * runTakeover tests — the shared bracket tours and views both run under:
+ * runTakeover tests — the shared bracket tours and exhibits both run under:
  * snapshot → start → body → restore → end, with `takeoverEnded` suppressed on
  * a superseded (externally cancelled) run.
  *
  * `body` is a plain stub here — `runTakeover` is generic over its caller, so
  * these tests drive it directly with synthetic `TakeoverSource` values rather
- * than through the real tour/view registries.
+ * than through the real tour/exhibit registries.
  *
  * Supersede ORDERING is not testable at this level: cancelling a `Task` from
  * plain test code runs the restore's `put`s synchronously, which a real
@@ -36,18 +36,18 @@ function buildStore() {
   return { store, sagaMiddleware };
 }
 
-// Stands in for a real tour/view body: parks until exitTakeover.
+// Stands in for a real tour/exhibit body: parks until exitTakeover.
 function* waitingBody(): Generator {
   yield* take(exitTakeover);
 }
 
 describe('runTakeover', () => {
-  it('a view restores its settings changes on exit', async () => {
+  it('an exhibit restores its settings changes on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
     store.dispatch(setVolumesEnabled(true));
 
     sagaMiddleware.run(function* () {
-      yield* runTakeover({ kind: 'view', id: 'solarSystem' }, function* () {
+      yield* runTakeover({ kind: 'exhibit', id: 'solarSystem' }, function* () {
         yield* put(setVolumesEnabled(false));
         yield* take(exitTakeover);
       });

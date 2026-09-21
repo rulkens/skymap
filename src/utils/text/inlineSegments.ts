@@ -1,14 +1,14 @@
 /**
- * inlineSegments — split authored view copy into tagged runs on the two tags
- * that copy may use: `<i>…</i>` and `<a href="…">…</a>`. Everything else stays
- * literal text, so a stray `<b>` reads as the characters it is rather than
- * silently vanishing. The caller renders real elements per run, never
- * `dangerouslySetInnerHTML` — the copy is authored in `viewRegistry.ts`, but
- * routing it through an HTML sink would make the next author's typo an
+ * inlineSegments — split authored exhibit copy into tagged runs on the two
+ * tags that copy may use: `<i>…</i>` and `<a href="…">…</a>`. Everything else
+ * stays literal text, so a stray `<b>` reads as the characters it is rather
+ * than silently vanishing. The caller renders real elements per run, never
+ * `dangerouslySetInnerHTML` — the copy is authored in `exhibitRegistry.ts`,
+ * but routing it through an HTML sink would make the next author's typo an
  * injection site.
  */
 
-import type { InlineSegment } from '../../@types/views/InlineSegment';
+import type { InlineSegment } from '../../@types/exhibits/InlineSegment';
 
 // One alternation, so the two tags cannot nest or interleave wrongly: whichever
 // opens first wins the run. Non-greedy bodies, since two links in one sentence
