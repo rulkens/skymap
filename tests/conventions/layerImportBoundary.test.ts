@@ -49,6 +49,18 @@ function specifiersUnder(file: string, prefixes: readonly string[]): string[] {
     });
 }
 
+/** Like `specifiersUnder`, but matches a resolved-path predicate rather than a prefix. */
+function specifiersMatching(file: string, matches: (resolved: string) => boolean): string[] {
+  const sourceFile = project.addSourceFileAtPath(file);
+  const fromDir = dirname(file);
+  return [...sourceFile.getImportDeclarations(), ...sourceFile.getExportDeclarations()]
+    .map((decl) => decl.getModuleSpecifierValue())
+    .filter((specifier): specifier is string => specifier?.startsWith('.') ?? false)
+    .filter((specifier) =>
+      matches(relative(process.cwd(), resolve(fromDir, specifier)).replace(/\\/g, '/')),
+    );
+}
+
 /** Collects every file whose count is off its ALLOWED row, without asserting. */
 function sweepOffenders(
   files: readonly string[],
@@ -186,5 +198,26 @@ describe('no file under src/layers dispatches (outside ui/sagas)', () => {
         'through a `deps` callback core owns (reportSourceCount) or publishes a ' +
         'fact (deps.publish) — core decides what the pulse means.',
     ).toEqual([]);
+  });
+});
+
+// selectors.ts reaches RootState's type through selectSettings, and RootState is
+// DERIVED from these very files (layer.ts -> APP_COMPOSITION, slices.ts ->
+// appSettingsSlices), so importing a selectors module here reopens that cycle
+// (a real module-init cycle for slice.ts). Selectors are read by ui/, sagas/, core.
+const REVERSE_IMPORT_TARGET_RE =
+  /^src\/layers\/[^/]+\/(layer\.ts|state\/slices\.ts|state\/[^/]+\/slice\.ts|sources\/.+)$/;
+const SELECTORS_MODULE_RE = /^src\/layers\/[^/]+\/state\/[^/]+\/selectors$/;
+
+describe('layer.ts, slices.ts, slice.ts and sources/ never import a selectors module', () => {
+  const files = walk('src/layers').filter((file) => REVERSE_IMPORT_TARGET_RE.test(file));
+  expect(files.length).toBeGreaterThan(0);
+
+  it('every file is free of a selectors import', () => {
+    const offenders = files.flatMap((file) => {
+      const hits = specifiersMatching(file, (resolved) => SELECTORS_MODULE_RE.test(resolved));
+      return hits.length === 0 ? [] : [`${file} imports a selectors module: ${hits.join(', ')}.`];
+    });
+    expect(offenders).toEqual([]);
   });
 });
