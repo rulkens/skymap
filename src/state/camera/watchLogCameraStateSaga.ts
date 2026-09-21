@@ -1,10 +1,9 @@
 /**
- * watchLogCameraStateSaga — handles the reducer-less `logCameraState` command
- * by calling the engine's pose-printing effect, then logs the share URL
- * `shareUrlFor` composes from it. getContext is read PER ACTION, inside the
- * worker — not once at fork — because the engine registers its saga context
- * AFTER the root saga forks (the same reason watchGoHomeSaga reads
- * cameraRuntime lazily).
+ * watchLogCameraStateSaga — handles the reducer-less `logCameraState` command:
+ * calls the engine's pose-printing effect, then logs the share URL
+ * `shareUrlFor` composes from it. `getContext` is read PER ACTION, inside the
+ * worker rather than once at fork, because the engine registers its saga
+ * context AFTER the root saga forks (as `watchGoHomeSaga` also must).
  */
 import { takeEvery, getContext, select } from 'typed-redux-saga';
 

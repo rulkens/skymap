@@ -1,9 +1,8 @@
 /**
  * shareUrlFor — the one composer of a share URL: the current hash body with
- * `t` overridden from the rendered frame's sim instant (not the clock anchor,
- * so a live clock still yields a reproducible link) and `pose` appended. Used
- * by both the `l`-key log and the DebugPanel's copy-URL button, so the two
- * never drift apart.
+ * `t` overridden from the rendered frame's sim instant (not the clock
+ * anchor, so a live clock still yields a reproducible link) and `pose`
+ * appended. Used by the `l`-key log and the DebugPanel's copy-URL button.
  */
 
 import { hashBodyFor } from './hashBodyFor';
