@@ -235,6 +235,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 - [ ] **Repo is not prettier-clean** `needs-verification` — `prettier --write` over `tests/tools/` alone reformatted ~20 untouched files (2026-09-18); sweep once or narrow the format script.
 - [ ] **Split the repo into workspace packages** `needs-design` — web app, `tools/`, and each workbench into `packages/*` after the desktop app; gated on a shared-code package for `src/`. → [details](backlog/2026-09-19-packages-split.md)
 - [ ] **Comment prune to the 5-line budget** `ready` — script-listed files only; landmine memories + RENDERER.md protected. → [details](backlog/2026-09-15-comment-prune.md)
+- [ ] **Convention sweeps report one test per source file** `ready` — four `it.each(everyFile)` sweeps are 5,214 of 13,413 tests, so the headline tracks file count not coverage; adopt `layerImportBoundary`'s `assertSweep` shape. → [details](backlog/2026-09-21-convention-sweeps-inflate-test-count.md)
 
 ## External / blocked
 
