@@ -16,6 +16,8 @@ import { configureStore } from '@reduxjs/toolkit';
 import { rootReducer } from '../../../src/store/rootReducer';
 import { viewBody } from '../../../src/state/views/viewBody';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
+import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
+import { EARTH_REF } from '../../../src/data/selection/earthRef';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import type { View } from '../../../src/@types/views/View';
 import type { ClipData } from '../../../src/@types/animation/ClipData';
@@ -55,6 +57,29 @@ describe('viewBody', () => {
 
     expect(playClip).toHaveBeenCalledTimes(1);
     expect(flowEnabledAtPlay).toBe(true);
+  });
+
+  it('clears the focus slot before the fly starts', async () => {
+    // The boot home seeds Earth into focus, and Earth is a body the sim clock
+    // moves — so `followApproach`@55 stays live under the clip@95 driver and
+    // wins the frame the clip ends on, easing the camera off the view's pose.
+    // Clearing AFTER the clip started would be too late: the follow row reads
+    // the slot every frame, so the assert is taken at play time.
+    let focusAtPlay: unknown;
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
+      focusAtPlay = store.getState().selection.focus;
+      return new Promise<void>(() => {});
+    });
+    const { store, sagaMiddleware } = buildStore(playClip);
+    store.dispatch(updateSelectionFocus(EARTH_REF));
+    expect(store.getState().selection.focus).toEqual(EARTH_REF);
+
+    sagaMiddleware.run(function* () {
+      yield* viewBody(VIEW);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(focusAtPlay).toBeNull();
   });
 
   it('waits for exitTakeover and does not restore on its own', async () => {
