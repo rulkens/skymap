@@ -1,6 +1,6 @@
 /**
  * Format a live `ZoneOfAvoidanceTuning` as a paste-ready object-literal body
- * for `DEFAULT_ZONE_OF_AVOIDANCE_TUNING` in this Layer's `settings/defaults.ts`.
+ * for `DEFAULT_ZONE_OF_AVOIDANCE_TUNING` in this Layer's `state/defaults.ts`.
  *
  * Emits the WHOLE cluster (unlike `formatMilkyWayTuningDefaults`'s diff) —
  * few enough knobs that a full literal beats a partial diff. Rounds to 4

@@ -1,9 +1,10 @@
 /**
- * Ratchet: every `src/layers/<name>/state/` folder matches the shape D1–D3
- * landed — `slices.ts` (+ optional `defaults.ts`) at the root, each slice
- * folder holding exactly `slice.ts`, `initialState.ts`, `selectors.ts`.
- * Layers are discovered dynamically, so one added tomorrow is swept with
- * nobody remembering. `LAYER_STATE_SHAPE_PENDING` is a shrink-only ratchet.
+ * Ratchet: every EXISTING `src/layers/<name>/state/` folder matches the shape
+ * D1–D3 landed — `slices.ts` (+ optional `defaults.ts`) at the root, each
+ * slice folder holding exactly `slice.ts`, `initialState.ts`, `selectors.ts`.
+ * A Layer with no `state/` conforms (`Layer.settings` is optional). Layers
+ * are discovered dynamically, so one added tomorrow is swept with nobody
+ * remembering. `LAYER_STATE_SHAPE_PENDING` is a shrink-only ratchet.
  */
 import { existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -22,7 +23,7 @@ const SLICE_FILES_REQUIRED = ['slice.ts', 'initialState.ts', 'selectors.ts'];
 /** Every way `src/layers/<name>/state/` can diverge from the shape, or `[]` if it matches. */
 function shapeViolations(layerName: string): string[] {
   const stateDir = join('src/layers', layerName, 'state');
-  if (!existsSync(stateDir)) return [`${layerName}: missing state/`];
+  if (!existsSync(stateDir)) return [];
 
   const violations: string[] = [];
   const rootEntries = readdirSync(stateDir, { withFileTypes: true });

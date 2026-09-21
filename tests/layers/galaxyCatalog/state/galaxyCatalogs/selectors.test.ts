@@ -62,15 +62,11 @@ describe('selectVisibleSourceMask', () => {
     expect(selectVisibleSourceMask(state)).not.toBe(draw);
   });
 
-  it('same state → same result', () => {
+  it('memoizes on galaxyCatalogs alone — recomputes only when that cluster changes', () => {
+    selectVisibleSourceMask.resetRecomputations();
     const state = makeRoot();
-
-    expect(selectVisibleSourceMask(state)).toBe(selectVisibleSourceMask(state));
-  });
-
-  it('memoizes on galaxyCatalogs alone — an unrelated-cluster write returns the same mask value', () => {
-    const state = makeRoot();
-    const mask = selectVisibleSourceMask(state);
+    selectVisibleSourceMask(state);
+    const baseline = selectVisibleSourceMask.recomputations();
 
     const stateWithUnrelatedWrite = makeRoot({
       tonemap: {
@@ -78,7 +74,19 @@ describe('selectVisibleSourceMask', () => {
         exposure: state[settingsRoute].tonemap.exposure + 1,
       },
     });
+    selectVisibleSourceMask(stateWithUnrelatedWrite);
+    expect(selectVisibleSourceMask.recomputations()).toBe(baseline);
 
-    expect(selectVisibleSourceMask(stateWithUnrelatedWrite)).toBe(mask);
+    const stateWithGalaxyCatalogsWrite = makeRoot({
+      galaxyCatalogs: {
+        ...state[settingsRoute].galaxyCatalogs,
+        items: {
+          ...state[settingsRoute].galaxyCatalogs.items,
+          sdss: { ...state[settingsRoute].galaxyCatalogs.items.sdss, enabled: false },
+        },
+      },
+    });
+    selectVisibleSourceMask(stateWithGalaxyCatalogsWrite);
+    expect(selectVisibleSourceMask.recomputations()).toBe(baseline + 1);
   });
 });

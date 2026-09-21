@@ -5,13 +5,13 @@
  * Every reducer / selector / store / action test needs a full, type-faithful
  * `EngineSettingsState`. Rather than re-inline the ~30-line literal in each
  * file (where it would drift the moment a cluster gains a field), they all
- * build it here. The body mirrors the engine's boot value
- * (`INITIAL_SETTINGS`): each Layer cluster spreads that slice's own
- * `initialState`, item rows re-DERIVED from `GALAXY_CATALOG_IDS` /
- * `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`, volume items from a
- * fresh `seedVolumeFields()` call.
- * Deriving the item keys (rather than hand-listing them) means adding a
- * catalog or category can't silently leave the fixture stale.
+ * build it here. This IS the engine's boot value (`INITIAL_SETTINGS`) plus
+ * overrides, not an independent mirror: each Layer cluster spreads that
+ * slice's own production `initialState`, with item rows re-DERIVED from
+ * `GALAXY_CATALOG_IDS` / `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`
+ * and volume items from a fresh `seedVolumeFields()` call. Deriving the item
+ * keys (rather than hand-listing them) means adding a catalog or category
+ * can't silently leave the fixture stale.
  *
  * One deliberate divergence from the boot value: every galaxy catalog row is
  * `enabled: true` here, whereas `INITIAL_SETTINGS` derives `enabled` from each
@@ -56,7 +56,6 @@ import {
 import { initialState as sgrAStarLensingTuningInitialState } from '../../../src/layers/body/state/sgrAStarLensingTuning/initialState';
 import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
-import { initialState as bodiesInitialState } from '../../../src/layers/body/state/bodies/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/volume/state/volumes/initialState';
 import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
@@ -68,7 +67,6 @@ import { initialState as starCatalogsInitialState } from '../../../src/layers/st
 import { initialState as filamentsInitialState } from '../../../src/layers/filaments/state/filaments/initialState';
 import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
 import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
-import { initialState as structuresInitialState } from '../../../src/layers/structure/state/structures/initialState';
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 
@@ -128,7 +126,6 @@ export function makeSettingsFixture(
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
     },
     bodies: {
-      ...bodiesInitialState,
       items: Object.fromEntries(
         BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<BodyId, BodyItemSettings>,
@@ -166,7 +163,6 @@ export function makeSettingsFixture(
       },
     },
     structures: {
-      ...structuresInitialState,
       items: Object.fromEntries(
         STRUCTURE_IDS.map((c) => [c, { enabled: true, labelEnabled: true }]),
       ) as Record<StructureId, StructureItemSettings>,

@@ -1,16 +1,9 @@
 /**
- * The Sgr A* lens pass's DebugPanel tuning defaults.
- *
- * Tier 1 (`innerRs`..`flickerTimescaleS`) seeds from `BLACK_HOLES`'s Sgr A*
- * row — that registry is the single source of truth for those.
- *
- * Tier 2 (`diskScaleHeightRs` / `edgeFadeStartFraction` / `dopplerStrength` /
- * `emissionStrength` / `emissionTint`) has no other home: this literal IS
- * their source of truth, and the shader reads them off the uniform.
- *
- * `cubemapResolutionPx` seeds the `sky-cubemap` render-target row's declared
- * size (`renderTargets.ts`) — 1024, per a live-view judgment; the knob's
- * option set is 256/512/1024/2048.
+ * The Sgr A* lens pass's DebugPanel tuning defaults. Tier 1 (`innerRs`..
+ * `flickerTimescaleS`) seeds from `BLACK_HOLES`'s Sgr A* row, the single
+ * source of truth for those; tier 2 (`diskScaleHeightRs` onward) has no
+ * other home — this literal IS their source of truth. `cubemapResolutionPx`
+ * seeds the `sky-cubemap` render-target row's declared size (1024).
  */
 
 import { BLACK_HOLES } from '../../../../data/blackHoles';

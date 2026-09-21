@@ -31,25 +31,12 @@ const project = new Project({ useInMemoryFileSystem: false });
 
 /**
  * Every specifier this file imports OR re-exports (type-only included — the
- * boundary is about knowledge, not bundles) that resolves under any of
- * `prefixes`, relative to the repo root. A re-export (`export { x } from '…'`)
+ * boundary is about knowledge, not bundles) whose resolved path (relative to
+ * the repo root) satisfies `matches`. A re-export (`export { x } from '…'`)
  * carries the same knowledge as an import — a barrel forwarding a Layer's
  * action creators would otherwise dodge this sweep entirely. Non-relative
  * specifiers (package imports) never resolve under `src/`, so they never match.
  */
-function specifiersUnder(file: string, prefixes: readonly string[]): string[] {
-  const sourceFile = project.addSourceFileAtPath(file);
-  const fromDir = dirname(file);
-  return [...sourceFile.getImportDeclarations(), ...sourceFile.getExportDeclarations()]
-    .map((decl) => decl.getModuleSpecifierValue())
-    .filter((specifier): specifier is string => specifier?.startsWith('.') ?? false)
-    .filter((specifier) => {
-      const resolved = relative(process.cwd(), resolve(fromDir, specifier)).replace(/\\/g, '/');
-      return prefixes.some((prefix) => resolved.startsWith(prefix));
-    });
-}
-
-/** Like `specifiersUnder`, but matches a resolved-path predicate rather than a prefix. */
 function specifiersMatching(file: string, matches: (resolved: string) => boolean): string[] {
   const sourceFile = project.addSourceFileAtPath(file);
   const fromDir = dirname(file);
@@ -59,6 +46,11 @@ function specifiersMatching(file: string, matches: (resolved: string) => boolean
     .filter((specifier) =>
       matches(relative(process.cwd(), resolve(fromDir, specifier)).replace(/\\/g, '/')),
     );
+}
+
+/** Like `specifiersMatching`, but matches a prefix rather than an arbitrary predicate. */
+function specifiersUnder(file: string, prefixes: readonly string[]): string[] {
+  return specifiersMatching(file, (r) => prefixes.some((p) => r.startsWith(p)));
 }
 
 /** Collects every file whose count is off its ALLOWED row, without asserting. */
@@ -79,15 +71,19 @@ function sweepOffenders(
   });
 }
 
-/** One `it` per sweep: asserts `sweepOffenders` came back empty. */
+/** Every sweep's `it` body: fails with `offenders` plus `advice` appended, once empty passes. */
+function assertNoOffenders(offenders: readonly string[], advice: string) {
+  expect(offenders, [...offenders, advice].join('\n')).toEqual([]);
+}
+
+/** One `it` per prefix/ALLOWED-row sweep: asserts `sweepOffenders` came back empty. */
 function assertSweep(
   files: readonly string[],
   prefixes: readonly string[],
   allowed: Readonly<Record<string, number>>,
   adviceForOverBudget: string,
 ) {
-  const offenders = sweepOffenders(files, prefixes, allowed);
-  expect(offenders, [...offenders, adviceForOverBudget].join('\n')).toEqual([]);
+  assertNoOffenders(sweepOffenders(files, prefixes, allowed), adviceForOverBudget);
 }
 
 // Both dispatch an action creator a Layer owns — core writing INTO a Layer's
@@ -204,12 +200,14 @@ describe('no file under src/layers dispatches (outside ui/sagas)', () => {
 // selectors.ts reaches RootState's type through selectSettings, and RootState is
 // DERIVED from these very files (layer.ts -> APP_COMPOSITION, slices.ts ->
 // appSettingsSlices), so importing a selectors module here reopens that cycle
-// (a real module-init cycle for slice.ts). Selectors are read by ui/, sagas/, core.
+// (a real module-init cycle for slice.ts). `initialState.ts` and `defaults.ts`
+// are transitive deps of `slice.ts` (it imports them to seed itself), so they
+// reopen the same cycle and are swept too. Selectors are read by ui/, sagas/, core.
 const REVERSE_IMPORT_TARGET_RE =
-  /^src\/layers\/[^/]+\/(layer\.ts|state\/slices\.ts|state\/[^/]+\/slice\.ts|sources\/.+)$/;
+  /^src\/layers\/[^/]+\/(layer\.ts|state\/slices\.ts|state\/defaults\.ts|state\/[^/]+\/slice\.ts|state\/[^/]+\/initialState\.ts|sources\/.+)$/;
 const SELECTORS_MODULE_RE = /^src\/layers\/[^/]+\/state\/[^/]+\/selectors$/;
 
-describe('layer.ts, slices.ts, slice.ts and sources/ never import a selectors module', () => {
+describe('layer.ts, slices.ts, slice.ts, initialState.ts, defaults.ts and sources/ never import a selectors module', () => {
   const files = walk('src/layers').filter((file) => REVERSE_IMPORT_TARGET_RE.test(file));
   expect(files.length).toBeGreaterThan(0);
 
@@ -218,6 +216,6 @@ describe('layer.ts, slices.ts, slice.ts and sources/ never import a selectors mo
       const hits = specifiersMatching(file, (resolved) => SELECTORS_MODULE_RE.test(resolved));
       return hits.length === 0 ? [] : [`${file} imports a selectors module: ${hits.join(', ')}.`];
     });
-    expect(offenders).toEqual([]);
+    assertNoOffenders(offenders, "A reverse import here reopens D1's module-init cycle.");
   });
 });
