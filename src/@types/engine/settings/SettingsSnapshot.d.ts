@@ -24,6 +24,12 @@
  *   - `picking`        — which selection kinds a scene click or hover may
  *                         resolve; a takeover drives it and the bracket must
  *                         restore it, exactly what this type is for.
+ *   - `camera`         — the FOV. `runTakeover` pins it, because a takeover's
+ *                         poses are authored at one lens and a viewer who left
+ *                         the slider narrow would otherwise get a framing that
+ *                         silently clamps (`sphereFitDistance` → the
+ *                         `MAX_DISTANCE_MPC` ceiling), worst at portrait
+ *                         aspect. Driven ⇒ captured.
  *
  * `starCatalogs` brings its shared look knobs (`sizePx`, `brightness`, the
  * exposure anchors) into the capture along with the gates — this module
@@ -31,10 +37,11 @@
  * `galaxyCatalogs` does the same today, so pulling the look knobs along for
  * the ride is consistent with existing policy rather than a new one.
  *
- * The remaining clusters (`tonemap`, `bloom`, `camera`, `bias`, `thumbnails`,
- * `debug`) are deliberately excluded: the tour neither drives nor restores
- * them, so capturing them would invite a restore that stomps a value the
- * tour never meant to own.
+ * The remaining clusters (`tonemap`, `bloom`, `bias`, `thumbnails`, `debug`)
+ * are deliberately excluded: the tour neither drives nor restores them, so
+ * capturing them would invite a restore that stomps a value the tour never
+ * meant to own. That test is what admitted `camera` — it was excluded on the
+ * same grounds until the bracket started pinning the FOV.
  *
  * `orientation` is deliberately NOT here, even though it is a `mergeSnapshot`
  * payload's sibling concern conceptually: it rides on `SceneSnapshot` instead,
@@ -70,5 +77,6 @@ export type SettingsSnapshot = Readonly<
     | 'bodies'
     | 'labels'
     | 'picking'
+    | 'camera'
   >
 >;

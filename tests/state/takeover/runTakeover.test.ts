@@ -24,6 +24,8 @@ import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
+import { setFovDeg } from '../../../src/state/settings/core/cameraSettingsSlice';
+import { DEFAULT_FOV_DEG } from '../../../src/data/defaults';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 
@@ -42,6 +44,25 @@ function* waitingBody(): Generator {
 }
 
 describe('runTakeover', () => {
+  // The poses every takeover flies to are authored at the default lens, and a
+  // fit-derived distance clamps silently at MAX_DISTANCE_MPC once the FOV
+  // narrows — so a viewer who left the slider narrow must not carry it in.
+  it('pins the FOV to the default and gives the viewer theirs back on exit', async () => {
+    const { store, sagaMiddleware } = buildStore();
+    const narrowed = DEFAULT_FOV_DEG / 3;
+    store.dispatch(setFovDeg(narrowed));
+
+    sagaMiddleware.run(function* () {
+      yield* runTakeover({ kind: 'tour', id: 'grandTour' }, waitingBody);
+    });
+    await flush();
+    expect(store.getState().settings.camera.fovDeg).toBe(DEFAULT_FOV_DEG);
+
+    store.dispatch(exitTakeover());
+    await flush();
+    expect(store.getState().settings.camera.fovDeg).toBe(narrowed);
+  });
+
   it('an exhibit restores its settings changes on exit', async () => {
     const { store, sagaMiddleware } = buildStore();
     store.dispatch(setVolumesEnabled(true));

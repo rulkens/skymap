@@ -10,12 +10,23 @@ import { call, cancelled, put, select } from 'typed-redux-saga';
 
 import { captureScene } from '../scene/captureScene';
 import { restoreSceneSaga } from '../scene/restoreSceneSaga';
+import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { takeoverStarted, takeoverEnded } from './takeoverActions';
+import { DEFAULT_FOV_DEG } from '../../data/defaults';
 import type { TakeoverSource } from '../../@types/takeover/TakeoverSource';
 
 export function* runTakeover(source: TakeoverSource, body: () => Generator): Generator {
   const snapshot = yield* select(captureScene);
   yield* put(takeoverStarted(source));
+
+  // Every beat pose and exhibit pose is authored against the default lens, and
+  // a fit-derived distance (`sphereFitDistance`) silently clamps at
+  // `MAX_DISTANCE_MPC` once the FOV narrows — on a portrait phone the
+  // Observable Universe shell overflows the frame below ~59°, barely under the
+  // 60° default. So the lens is takeover-owned, not viewer-owned, and the
+  // snapshot above carries `camera` back out on exit. A body that wants a
+  // different lens merges its own after this.
+  yield* put(mergeSnapshot({ camera: { fovDeg: DEFAULT_FOV_DEG } }));
 
   try {
     yield* body();

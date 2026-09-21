@@ -46,6 +46,7 @@ function makeSnapshot(focus: SelectionRef | null = FOCUS_REF): SceneSnapshot {
       bodies: { ...f.bodies },
       labels: { ...f.labels, focusedOnly: !f.labels.focusedOnly },
       picking: { ...f.picking },
+      camera: { ...f.camera, fovDeg: f.camera.fovDeg + 13 },
     },
     orientation: f.orientation,
     focus,

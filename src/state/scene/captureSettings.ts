@@ -52,6 +52,7 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
     bodies,
     labels,
     picking,
+    camera,
   } = state.settings;
   return structuredClone({
     galaxyCatalogs,
@@ -66,5 +67,6 @@ export function captureSettings(state: Pick<RootState, 'settings'>): SettingsSna
     bodies,
     labels,
     picking,
+    camera,
   });
 }
