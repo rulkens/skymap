@@ -19,7 +19,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
@@ -38,13 +38,13 @@ function camAtAuFromSgrAStar(au: number): Vec3 {
 /** `drawCamPos`, `simDays` and `slabs` for the lens row; `cam.distance` is what
  *  short-circuits `atmosphereDrawList`, the OTHER source resolved here — past
  *  the foreground cull there is no inside body to find and nothing else loads. */
-function makeCtx(camPos: Vec3, slabs: readonly Slab[]): ReadyFrameContext {
+function makeCtx(camPos: Vec3, slabs: readonly Slab[]): FrameView {
   return {
+    snapshot: { simDays: SIM_DAYS },
     drawCamPos: camPos,
-    simDays: SIM_DAYS,
     slabs,
     cam: { distance: 1 },
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 const STATE = {} as unknown as EngineState;

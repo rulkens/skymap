@@ -7,7 +7,7 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { atmosphereDrawList } from './atmosphereDrawList';
 import { atmosphereShellUniforms } from './atmosphereShellUniforms';
@@ -15,7 +15,7 @@ import { bodyRowSlabs } from './bodyRowSlabs';
 
 export function encodeAtmosphereAerialPerspective(
   encoder: GPUCommandEncoder,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   state: PassState,
   claimTimestampWrites?: ClaimTimestampWrites,
 ): void {

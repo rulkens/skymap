@@ -39,13 +39,14 @@
 import type { Store } from '../@types/state/Store';
 import type { AppState } from '../@types/state/AppState';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { Mat4 } from '../../../src/@types/math/Mat4';
 import type { Vec2 } from '../../../src/@types/math/Vec2';
 import { initGpu, resizeCanvasToDisplay } from '../../../src/services/gpu/device';
 import { createOrbitCamera } from '../../../src/utils/camera/createOrbitCamera';
 import { updatePosition } from '../../../src/utils/camera/updatePosition';
 import { computeViewProj } from '../../../src/utils/camera/computeViewProj';
+import { symmetricFrustum } from '../../../src/utils/camera/symmetricFrustum';
 import { createFlowFieldRenderer } from '../../../src/layers/flow/render/flowFieldRenderer';
 import { flowCompute } from '../../../src/layers/flow/computes/flowCompute';
 import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
@@ -144,7 +145,7 @@ export async function createFlowHarness(
     cam.distance = s.camera.distance;
     cam.aspect = canvas.width / canvas.height || 1;
     updatePosition(cam);
-    const viewProj = computeViewProj(cam);
+    const viewProj = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
 
     resizeCanvasToDisplay(canvas);
     renderGraph.resize(canvas.width, canvas.height);
@@ -159,7 +160,7 @@ export async function createFlowHarness(
     // the layer is off or the cube hasn't loaded.
     flowComputeRow.encode(
       encoder,
-      { nowMs: now } as unknown as ReadyFrameContext,
+      { snapshot: { nowMs: now } } as unknown as FrameView,
       { settings: { flow: s.flow } } as unknown as PassState,
       () => ({}),
     );

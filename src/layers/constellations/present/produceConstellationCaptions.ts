@@ -13,7 +13,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducer } from '../../../@types/engine/subsystems/Label2DProducer';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
@@ -55,7 +55,7 @@ export function produceConstellationCaptions(
     return cachedCaptions;
   }
 
-  return (state: EngineState, ctx: ReadyFrameContext): Label2DProducerOutput => {
+  return (state: EngineState, ctx: FrameView): Label2DProducerOutput => {
     const artifact = runtime.slot.committed()?.value;
     const captions = captionsFor(artifact);
     if (captions.length === 0) return { labels: [], awake: false };

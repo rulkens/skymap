@@ -9,7 +9,7 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { VolumeFieldId } from '../../../@types/data/volume/VolumeFieldId';
 import type { VolumeFieldSettings } from '../../../@types/settings/VolumeFieldSettings';
 import { resolveLayerOpacity } from '../presentation/focusRecession';
@@ -21,7 +21,7 @@ import { SCALE_FADE_BANDS } from '../presentation/scaleFadeBands';
 // no field active.
 export function deriveVolumeLiveness(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): {
   settingsOf: (id: VolumeFieldId) => VolumeFieldSettings | undefined;
   fadeOpacityOf: (id: VolumeFieldId) => number;
@@ -29,7 +29,7 @@ export function deriveVolumeLiveness(
   const renderer = state.gpu.volumeFieldRenderer;
   if (renderer === null) return null;
 
-  const nowMs = ctx.nowMs;
+  const nowMs = ctx.snapshot.nowMs;
   const masterOpacity = state.subsystems.fades.opacityOf({ kind: 'volumesMaster' }, nowMs);
   if (!state.settings.volumes.enabled && masterOpacity <= 0) return null;
 

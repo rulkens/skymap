@@ -31,7 +31,7 @@ import type { AtmosphereShellDepth } from '../../../../../src/@types/rendering/A
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { EarthBody } from '../../../../../src/@types/scene/EarthBody';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
@@ -125,21 +125,23 @@ const PASS_STUB = {
  * is mocked, so the pose's actual geometry never matters, only that it is
  * non-null and gets forwarded.
  */
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext {
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
-    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
-    renderTargets: { farDepthView: () => FAR_DEPTH_VIEW },
-  } as unknown as ReadyFrameContext;
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+    snapshot: { renderTargets: { farDepthView: () => FAR_DEPTH_VIEW } },
+  } as unknown as FrameView;
 }
 
 const FAR_DEPTH_VIEW = { label: 'far-placeholder' } as unknown as GPUTextureView;
 const ROW_DEPTH_VIEW = { label: 'foreground:0-depth' } as unknown as GPUTextureView;
 
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
 function makeBodyView(bodyId: BodyId): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);

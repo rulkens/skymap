@@ -50,7 +50,7 @@ import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { StarBody } from '../../../../../src/@types/scene/StarBody';
 import type { PositionedStar } from '../../../../../src/@types/scene/PositionedStar';
@@ -79,26 +79,27 @@ const PASS_STUB = {
 
 // Bare ctx for the null-renderer cases only: the handle check must
 // short-circuit BEFORE any ctx (or state.data) read.
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
 /**
  * The gate + partition inputs a layer reads off the frame context: the orbit
  * distance (the shared foreground gate reads `ctx.cam.distance`), the
- * absolute camera position, the vertical fov, and the viewport height.
- * 60° fov + 720-px viewport matches the SlabView fixture below. The orbit
- * distance is |camPos| — these fixtures orbit the heliocentric origin, so
- * the two coincide.
+ * absolute camera position, and `drawPxPerRad`. 60° fov + 720-px viewport
+ * matches the SlabView fixture below. The orbit distance is |camPos| — these
+ * fixtures orbit the heliocentric origin, so the two coincide.
  */
-function makeCtx(camPos: Readonly<Vec3>): ReadyFrameContext {
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+
+function makeCtx(camPos: Readonly<Vec3>): FrameView {
   return {
-    cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
-    drawCamPos: camPos,
-    fovYRad: Math.PI / 3,
-    canvasSize: { width: 1280, height: 720 },
     // The instant the star layers resolve their positions at; a star anchor is
     // static, so any instant gives the same roster.
-    simDays: CONST_J2000,
-  } as unknown as ReadyFrameContext;
+    snapshot: { simDays: CONST_J2000 },
+    cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
+    drawCamPos: camPos,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 // A below-gate camera 5 kpc down +z: well inside FOREGROUND_MAX_DISTANCE_MPC
@@ -294,7 +295,7 @@ describe('the (hdr, NEAR0) render group above the foreground gate', () => {
     const hdrNear0 = FRAME_ORDER.flatMap((step) =>
       step.kind === 'render' && step.target === 'hdr' && step.slab === NEAR0 ? step.passes : [],
     );
-    const groupAt = (ctx: ReadyFrameContext) =>
+    const groupAt = (ctx: FrameView) =>
       CONTENT_PASSES.filter(
         (pass) => hdrNear0.includes(pass.name) && pass.enabled(state, ctx, VIEW_STUB),
       );

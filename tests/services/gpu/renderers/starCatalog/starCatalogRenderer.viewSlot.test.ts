@@ -48,6 +48,7 @@ function oneNodeArgs(viewSlot: number): StarCatalogDrawArgs {
     knee: true,
     vp: new Float32Array(16),
     viewportPx: [1280, 720],
+    pxPerRad: 623.5,
     drawCount: 1,
     firstRecord: new Uint32Array([0]),
     recordCount: new Uint32Array([2]),

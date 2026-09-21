@@ -14,7 +14,7 @@ import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 import type { BodyRelativePose } from '../../../../../src/@types/engine/camera/BodyRelativePose';
@@ -44,20 +44,22 @@ vi.mock('../../../../../src/services/engine/frame/sceneBodyStates', () => ({
     ]),
 }));
 
+// 720-px viewport, 60° fovY, tangent-exact — the apparent-size gate's scale.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+
 const STUB_POSE: BodyRelativePose = {
   eyeRelBodyM: [1, 2, 3],
   basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] as unknown as BodyRelativePose['basisM'],
 };
 
 /** A fresh ctx per call: `atmosphereDrawList` memoises on the ctx object. */
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   return {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
     drawCamPos: [0, 0, 0],
-    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
-  } as unknown as ReadyFrameContext;
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
+  } as unknown as FrameView;
 }
 
 function makeBodyView(bodyId: BodyId): SlabView {
@@ -94,7 +96,7 @@ describe('aerialPerspectivePass.enabled', () => {
     expect(
       aerialPerspectivePass.enabled(
         makeState(null),
-        {} as ReadyFrameContext,
+        {} as FrameView,
         makeBodyView('earth' as BodyId),
       ),
     ).toBe(false);

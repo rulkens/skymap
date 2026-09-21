@@ -9,10 +9,10 @@
  * divisor, and the allocated size is the one the taps land in.
  */
 
-import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 
-export function bloomSrcTexelSize(ctx: ReadyFrameContext, srcId: string): Vec2 {
-  const { width, height } = ctx.renderTargets.sizeOf(srcId);
+export function bloomSrcTexelSize(ctx: FrameView, srcId: string): Vec2 {
+  const { width, height } = ctx.snapshot.renderTargets.sizeOf(srcId);
   return [1 / width, 1 / height];
 }

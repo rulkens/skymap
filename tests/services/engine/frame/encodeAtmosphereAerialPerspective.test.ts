@@ -20,11 +20,14 @@ import { ATMOSPHERE_PARAMS } from '../../../../src/data/bodies/atmosphereParams'
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/foregroundMaxDistance';
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { BodyPoseProvider } from '../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { EarthBody } from '../../../../src/@types/scene/EarthBody';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
+
+// 720-px viewport, 60° fovY, tangent-exact — the apparent-size gate's scale.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
 
 // A camLocal magnitude of 0.5 sits well inside the shell's ~1.005 entry ratio
 // — `atmosphereDrawList` reads `inside: true` off it for every body.
@@ -82,9 +85,9 @@ function makeBodyPose(): BodyPoseProvider {
 
 /** A ctx comfortably inside the shared foreground gate, carrying the one
  *  body-m slab `bodyRowSlabs` resolves `insideAtmosphere` against. Array
- *  position matches the slab's own `index` field (the `ReadyFrameContext.slabs`
+ *  position matches the slab's own `index` field (the `FrameView.slabs`
  *  invariant), so indexing `ctx.slabs` by that field lands on this row. */
-function makeCtx(withEarthSlab: boolean): ReadyFrameContext {
+function makeCtx(withEarthSlab: boolean): FrameView {
   const slabs = withEarthSlab
     ? [makeSlab({ index: 0, frame: { kind: 'body-m', bodyId: 'earth' } })]
     : [];
@@ -92,10 +95,9 @@ function makeCtx(withEarthSlab: boolean): ReadyFrameContext {
     bodyPose: makeBodyPose(),
     drawCamPos: [0, 0, 0],
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
     slabs,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function makeState(init: { renderer: unknown; earth?: EarthBody | null }): EngineState {
@@ -144,7 +146,7 @@ describe('encodeAtmosphereAerialPerspective', () => {
   it('short-circuits on a null renderer before touching a bare ctx’s body inputs', () => {
     beginComputePass.mockClear();
     const claim = vi.fn(() => ({}));
-    const bareCtx = {} as ReadyFrameContext;
+    const bareCtx = {} as FrameView;
 
     expect(() =>
       encodeAtmosphereAerialPerspective(encoder, bareCtx, makeState({ renderer: null }), claim),

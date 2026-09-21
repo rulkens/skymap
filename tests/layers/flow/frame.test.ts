@@ -7,7 +7,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { frame } from '../../../src/layers/flow/frame';
 import type { FlowRuntime } from '../../../src/layers/flow/@types/FlowRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
 function committedSlot(loaded: boolean) {
   return { committed: () => (loaded ? { kind: 'ready', value: undefined } : null) };
@@ -21,7 +21,7 @@ function stateStub(enabled: boolean): PassState {
   return { settings: { flow: { enabled, mode: 'advect', count: 4 } } } as unknown as PassState;
 }
 
-const ctxStub = {} as ReadyFrameContext;
+const ctxStub = {} as FrameView;
 
 describe('flow frame', () => {
   it('calls reconcile once with the live flow settings', () => {

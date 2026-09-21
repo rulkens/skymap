@@ -59,7 +59,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { PassState } from '../../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../@types/engine/frame/FrameView';
 import type { PlanetBody } from '../../../../@types/scene/PlanetBody';
 import type { RingSpec } from '../../../../@types/scene/RingSpec';
 import type { BodyId } from '../../../../@types/data/body/BodyId';
@@ -85,7 +85,7 @@ import { sceneBodyStates } from '../sceneBodyStates';
  */
 function ringDrawForBody(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   bodyId: BodyId,
 ): { readonly ring: RingSpec; readonly body: PlanetBody; readonly pose: BodyRelativePose } | null {
   const ring = SCENE_RINGS.find((r) => r.bodyId === bodyId);
@@ -114,8 +114,7 @@ function ringDrawForBody(
     const diameterPx = apparentSizePx({
       diameterKpc: outerDiameterKpc,
       distanceMpc: dM * SCALE_UNITS.M_TO_MPC,
-      viewportHeightPx: ctx.canvasSize.height,
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
     if (diameterPx < SUB_PIXEL_BODY_CULL_PX) return null;
   }

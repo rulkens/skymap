@@ -4,10 +4,10 @@
  * draws its subject's host, so the probe sees the body it lights.
  */
 
-import type { ReadyFrameContext } from './ReadyFrameContext';
+import type { FrameView } from './FrameView';
 
 export type CaptureFace = {
-  readonly ctx: ReadyFrameContext;
+  readonly ctx: FrameView;
   /** Body-m slab indices IN `ctx.slabs` to expand `bodyPasses` over; `[]` for a sky row. */
   readonly bodySlabs: readonly number[];
 };

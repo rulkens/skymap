@@ -15,7 +15,7 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import { SOLAR_SYSTEM_LABEL_MAX_DISTANCE_MPC } from '../../../../src/services/engine/frame/solarSystemLabelMaxDistance';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
@@ -40,13 +40,12 @@ const CONSTELLATION_ARTIFACT = {
   ],
 };
 
-function makeCtx(camPos: Vec3, distance: number): ReadyFrameContext {
+function makeCtx(camPos: Vec3, distance: number): FrameView {
   return {
+    snapshot: { focusBlend: 0, nowMs: 0 },
     cam: { distance },
     drawCamPos: camPos,
-    focusBlend: 0,
-    nowMs: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 // The producer only ever reads `runtime.slot.committed()` — never `.state()` —

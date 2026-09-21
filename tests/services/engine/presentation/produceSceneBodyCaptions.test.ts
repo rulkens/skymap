@@ -32,7 +32,7 @@ import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
@@ -56,15 +56,17 @@ function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
 }
 
-function makeCtx(camPos: Vec3, distance = 5e-4): ReadyFrameContext {
+// 720-px viewport, fovY 1 rad, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
+
+function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
+    snapshot: { simDays: CONST_J2000, nowMs: 0 },
     cam: { distance },
     drawCamPos: camPos,
-    fovYRad: 1,
-    simDays: CONST_J2000,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
     canvasSize: { width: 1280, height: 720 },
-    nowMs: 0,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /**
@@ -463,11 +465,10 @@ describe('produceSceneBodyCaptions', () => {
       },
     } as unknown as EngineState;
     const ctx = {
+      snapshot: { focusBlend: 0, nowMs: 0 },
       cam: { distance: 5e-4 },
       drawCamPos: camPos,
-      focusBlend: 0,
-      nowMs: 0,
-    } as unknown as ReadyFrameContext;
+    } as unknown as FrameView;
 
     const out = produceConstellationCaptions(runtime)(state, ctx);
     const camDistMpc = Math.hypot(camPos[0], camPos[1], camPos[2]);

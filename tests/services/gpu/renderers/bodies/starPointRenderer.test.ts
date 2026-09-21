@@ -61,7 +61,7 @@ const SIRIUS: PositionedStar = {
 };
 
 describe('createStarPointRenderer', () => {
-  const DRAW_OPTS = { sizePx: 2.5, brightness: 1, viewSlot: 0 };
+  const DRAW_OPTS = { sizePx: 2.5, brightness: 1, pxPerRad: 935, viewSlot: 0 };
 
   it('draw is a no-op before setStars, draws 6×N after, and clears on empty upload', () => {
     const renderer = createStarPointRenderer(mockDevice(), 'rgba16float');
@@ -87,7 +87,7 @@ describe('createStarPointRenderer', () => {
     expect(cleared.draw).not.toHaveBeenCalled();
   });
 
-  it('writes sizePx / brightness into the uniform tail at floats 20 / 21, buffer sized 96', () => {
+  it('writes sizePx / brightness / pxPerRad into the uniform tail at floats 20..22, buffer sized 96', () => {
     const device = mockDevice();
     const renderer = createStarPointRenderer(device, 'rgba16float');
     const createBuffer = device.createBuffer as unknown as ReturnType<typeof vi.fn>;
@@ -105,6 +105,7 @@ describe('createStarPointRenderer', () => {
     renderer.draw(mockPass(), new Float32Array(16), [1920, 1080], {
       sizePx: 3.5,
       brightness: 42,
+      pxPerRad: 777,
       viewSlot: 0,
     });
 
@@ -116,7 +117,7 @@ describe('createStarPointRenderer', () => {
     // floats 22..23 stay zero.
     expect(scratch[20]).toBe(3.5);
     expect(scratch[21]).toBe(42);
-    expect(scratch[22]).toBe(0);
+    expect(scratch[22]).toBe(777);
     expect(scratch[23]).toBe(0);
   });
 
@@ -159,11 +160,13 @@ describe('createStarPointRenderer', () => {
     renderer.draw(mockPass(), new Float32Array(16), [256, 256], {
       sizePx: 2.5,
       brightness: 1,
+      pxPerRad: 222,
       viewSlot: 1,
     });
     renderer.draw(mockPass(), new Float32Array(16), [256, 256], {
       sizePx: 2.5,
       brightness: 1,
+      pxPerRad: 222,
       viewSlot: 2,
     });
 

@@ -43,7 +43,7 @@ export const atmosphereShellPass: ContentPass = {
       // A null frame must arrive with the far placeholder, never the real view —
       // that is what makes the shader's FAR_DEPTH arm, not an assumption about
       // who last cleared this target, the thing keeping it safe.
-      view: frame === null ? ctx.renderTargets.farDepthView() : sampledDepth!.view,
+      view: frame === null ? ctx.snapshot.renderTargets.farDepthView() : sampledDepth!.view,
       viewportPx: view.viewportPx,
       // The fragment marches in atmosphere-top units; the depth reconstructs km.
       kmToLocal: 1 / entry.params.atmosphereTopKm,

@@ -6,24 +6,24 @@
  */
 
 import type { OverlaySceneOcclusion } from '../../../@types/rendering/OverlaySceneOcclusion';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { SlabView } from '../../../@types/engine/frame/SlabView';
 import { sampledDepthKmFrame } from '../../../utils/camera/sampledDepthKmFrame';
 
 export function overlaySceneOcclusion(
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   view: SlabView,
 ): OverlaySceneOcclusion | undefined {
-  if (!ctx.renderedTargets.has('foreground:0')) return undefined;
+  if (!ctx.snapshot.renderedTargets.has('foreground:0')) return undefined;
   const sampledDepth = view.sampledDepth;
   const frame =
     sampledDepth === undefined ? null : sampledDepthKmFrame(sampledDepth.row, ctx.bodyPose);
   return {
-    colorView: ctx.renderTargets.viewOf('foreground:0'),
+    colorView: ctx.snapshot.renderTargets.viewOf('foreground:0'),
     // An unresolved frame must arrive with the far placeholder, never the real
     // view — that is what makes the shader's FAR_DEPTH early-out, not an
     // assumption about who last cleared the target, the thing keeping it safe.
-    depthView: frame === null ? ctx.renderTargets.farDepthView() : sampledDepth!.view,
+    depthView: frame === null ? ctx.snapshot.renderTargets.farDepthView() : sampledDepth!.view,
     frame,
   };
 }

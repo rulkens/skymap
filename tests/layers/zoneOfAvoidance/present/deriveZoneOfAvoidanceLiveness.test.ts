@@ -8,19 +8,17 @@ import { describe, it, expect, vi } from 'vitest';
 import { deriveZoneOfAvoidanceLiveness } from '../../../../src/layers/zoneOfAvoidance/present/deriveZoneOfAvoidanceLiveness';
 import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 /** Inside the visibility window: both bands saturate to 1 here. */
 const INSIDE_CAM_DIST = SCALE_FADE_BANDS.zoneOfAvoidance.fullAt;
 
-function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(over: { drawCamPos?: Readonly<[number, number, number]> } = {}): FrameView {
   return {
-    isReady: true,
-    nowMs: 0,
-    focusBlend: 0,
+    snapshot: { isReady: true, nowMs: 0, focusBlend: 0 },
     drawCamPos: [0, 0, INSIDE_CAM_DIST] as Readonly<[number, number, number]>,
     ...over,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function makeState({ toggleOpacity = 1 }: { toggleOpacity?: number } = {}): EngineState {

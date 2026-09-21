@@ -16,13 +16,13 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { ClaimTimestampWrites } from '../../../@types/gpu/timing/ClaimTimestampWrites';
 import { atmosphereDrawList } from './atmosphereDrawList';
 
 export function encodeAtmosphereSkyView(
   encoder: GPUCommandEncoder,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
   state: PassState,
   claimTimestampWrites?: ClaimTimestampWrites,
 ): void {

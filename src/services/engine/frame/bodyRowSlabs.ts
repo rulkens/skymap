@@ -7,14 +7,14 @@
 
 import type { BodyRowSource } from '../../../@types/engine/frame/BodyRowSource';
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { SGR_A_STAR } from '../../../data/bodies/sceneSgrAStar';
 import { atmosphereDrawList } from './atmosphereDrawList';
 import { skyCaptureBandAlpha } from './skyCaptureBandAlpha';
 
 export function bodyRowSlabs(
   state: PassState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): Record<BodyRowSource, readonly number[]> {
   const sgrAStar =
     skyCaptureBandAlpha('sgrAStar', state, ctx) <= 0

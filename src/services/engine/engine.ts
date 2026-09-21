@@ -286,6 +286,8 @@ export function createEngine(
     cameraRuntime,
     cubemapCaptures,
     contentVersion: 0,
+    // The only rig today; `renderFrame`/`runFrame` look it up via VIEW_RIGS.
+    viewRig: 'mono',
     // The Maps are declared up-front so consumers can reach a slot without a null
     // check, but the slots themselves are minted in `wireSlots`: their commit
     // closures re-read GPU handles at call time and null-guard, rather than assuming

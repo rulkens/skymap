@@ -12,27 +12,30 @@ import type { CaptureFaceContexts } from '../../../@types/engine/frame/CaptureFa
 import type { CubemapCaptureKey } from '../../../@types/rendering/CubemapCaptureKey';
 import type { CubeFace } from '../../../@types/rendering/CubeFace';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import {
   ALL_CUBE_FACES,
   CUBEMAP_CAPTURES,
   SKY_CAPTURE_KEYS,
 } from '../../../data/rendering/cubemapCaptures';
-import { cubemapFaceContext } from './cubemapFaceContext';
+import { faceViewSpec } from '../../../utils/camera/faceViewSpec';
+import { cubemapCaptureFrame } from './cubemapCaptureFrame';
+import { deriveView } from './deriveView';
 import { fadeBand } from '../../../utils/math/fadeBand';
 import { regionRelativeDistanceMpc } from '../../../utils/regions/regionRelativeDistanceMpc';
 import { sceneBodyStates } from './sceneBodyStates';
 
 export function scheduleSkyCaptures(input: {
   readonly state: EngineState;
-  readonly ctx: ReadyFrameContext;
+  readonly ctx: FrameView;
 }): CaptureFaceContexts {
   const { state, ctx } = input;
   const bodyStates = sceneBodyStates(state, ctx);
   // Two roster inputs move with no settings write: a source-visibility ramp
   // (the write fires at its START) and a Layer still settling — a thumbnail's
   // async 400 ms load fade is the one that motivated this.
-  const rosterSettling = state.subsystems.fades.isAnyAnimating(ctx.nowMs) || ctx.layersSettling;
+  const rosterSettling =
+    state.subsystems.fades.isAnyAnimating(ctx.snapshot.nowMs) || ctx.snapshot.layersSettling;
 
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
   for (const key of SKY_CAPTURE_KEYS) {
@@ -49,7 +52,7 @@ export function scheduleSkyCaptures(input: {
     // for the sweep. `bakedSettings` is null while shut, so entry always bakes.
     if (bandActive !== runtime.lastBandActive) {
       runtime.lastBandActive = bandActive;
-      ctx.renderTargets.reconcile(state, ctx.canvasSize);
+      ctx.snapshot.renderTargets.reconcile(state, ctx.canvasSize);
       if (!bandActive) {
         runtime.bakedSettings = null;
         runtime.bakedContentVersion = null;
@@ -73,22 +76,29 @@ export function scheduleSkyCaptures(input: {
     // `faceSizePx` (its knob IS a settings write, reconciled above first),
     // `selection` (a stale halo in the lensed sky is accepted).
     const faces = new Map<CubeFace, CaptureFace>();
-    const faceSizePx = ctx.renderTargets.sizeOf(row.target).width;
-    for (const face of ALL_CUBE_FACES) {
-      const faceCtx = cubemapFaceContext({
-        state,
-        eyeMpc: ctx.drawCamPos,
-        face,
-        faceSizePx,
-        nearMpc: row.nearMpc,
-        viewSlotBase: row.viewSlotBase,
-        nowMs: ctx.nowMs,
-      });
-      // A sky face draws no body: the roster is the sky alone.
-      if (faceCtx !== null) faces.set(face, { ctx: faceCtx, bodySlabs: [] });
+    const faceSizePx = ctx.snapshot.renderTargets.sizeOf(row.target).width;
+    // One frame for the whole row (world axes: no host to rotate into).
+    const capture = cubemapCaptureFrame({
+      state,
+      eyeMpc: ctx.drawCamPos,
+      nearMpc: row.nearMpc,
+      nowMs: ctx.snapshot.nowMs,
+    });
+    if (capture.isReady) {
+      for (const face of ALL_CUBE_FACES) {
+        // A sky face draws no body: the roster is the sky alone.
+        faces.set(face, {
+          ctx: deriveView(
+            capture.snapshot,
+            capture.cam,
+            faceViewSpec(face, faceSizePx, row.viewSlotBase),
+          ),
+          bodySlabs: [],
+        });
+      }
     }
-    // A face's context comes back null pre-bootstrap: schedule nothing and leave
-    // `bakedSettings` untouched, so the next frame retries the whole sweep.
+    // Pre-bootstrap, `snapshot` comes back not-ready: schedule nothing and
+    // leave `bakedSettings` untouched, so the next frame retries the whole sweep.
     if (faces.size !== ALL_CUBE_FACES.length) continue;
     scheduled.set(key, faces);
     // Only a settled bake is recorded: while the roster moves, null keeps the

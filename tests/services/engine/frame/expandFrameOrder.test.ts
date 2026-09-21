@@ -19,6 +19,7 @@ import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameSte
 import type { FrameInputs } from '../../../../src/services/engine/frame/expandFrameOrder';
 import type { ToneMap } from '../../../../src/@types/rendering/ToneMap';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 const TONE: ToneMap = { exposure: 1.5, curve: 4, hdrKnee: 0, hdrHeadroom: 0 };
 
@@ -453,6 +454,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     const cam = makeCam();
     const slabs = deriveSlabs({
       cam,
+      frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
       cosmoVp: new Float32Array(16) as unknown as Mat4,
       altitudeMpc: cam.distance,
       pose: () => null,

@@ -6,7 +6,7 @@
  * outstanding fetches; see the vote at the tail.
  */
 
-import type { ReadyFrameContext } from '../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../@types/engine/frame/FrameView';
 import type { PassState } from '../../@types/engine/frame/PassState';
 import type { SourceType } from '../../@types/data/SourceType';
 import type { SelectionRow } from '../../@types/engine/SelectionRow';
@@ -20,7 +20,7 @@ import { structureMemberCount } from '../../utils/structure/structureMemberCount
 
 export function frame(
   runtime: GalaxyCatalogRuntime,
-): (ctx: ReadyFrameContext, state: PassState) => LayerFrameVote {
+): (ctx: FrameView, state: PassState) => LayerFrameVote {
   // Tracks the `catalogsVersion` the alias index was last built against, so a
   // fresh publish fires only on a genuine catalog change (or the pgcAlias
   // sidecar's first arrival), never once per frame.
@@ -48,11 +48,11 @@ export function frame(
     const selectRow = state.selectionRows.select;
     if (
       selectRow !== memberCountRow ||
-      ctx.visibleSourceMask !== memberCountMask ||
+      ctx.snapshot.visibleSourceMask !== memberCountMask ||
       runtime.catalogsVersion !== memberCountVersion
     ) {
       memberCountRow = selectRow;
-      memberCountMask = ctx.visibleSourceMask;
+      memberCountMask = ctx.snapshot.visibleSourceMask;
       memberCountVersion = runtime.catalogsVersion;
       runtime.publish({
         // Narrowed on the row's own tag, never a structural sniff — only the
@@ -62,7 +62,7 @@ export function frame(
             ? structureMemberCount(
                 selectRow,
                 (source) => runtime.catalogs.get(source),
-                ctx.visibleSourceMask,
+                ctx.snapshot.visibleSourceMask,
               )
             : null,
       });
@@ -84,7 +84,7 @@ export function frame(
       pair.subsystem.runFrame({
         cam: ctx.cam,
         catalogs: runtime.catalogs,
-        visibleSourceMask: ctx.visibleSourceMask,
+        visibleSourceMask: ctx.snapshot.visibleSourceMask,
         pxPerRad: ctx.drawPxPerRad,
         famousGalaxiesMeta: runtime.famousMeta,
       });
@@ -95,7 +95,7 @@ export function frame(
     const sharedInput = {
       cam: ctx.cam,
       catalogs: runtime.catalogs,
-      visibleSourceMask: ctx.visibleSourceMask,
+      visibleSourceMask: ctx.snapshot.visibleSourceMask,
       pxPerRad: ctx.drawPxPerRad,
       // Both LOD disk bodies fold this into their emitted alpha/brightness so a
       // hidden catalog's disks fade out with the point sprites instead of
@@ -103,7 +103,7 @@ export function frame(
       sourceOpacity: (source: SourceType) =>
         state.subsystems.fades.opacityOf(
           { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(source) },
-          ctx.nowMs,
+          ctx.snapshot.nowMs,
         ),
     };
     runtime.diskPlannerWalk.runFrame(
@@ -117,7 +117,7 @@ export function frame(
       runtime.texturedDisks.beginFrame({
         ...sharedInput,
         famousGalaxiesMeta: runtime.famousMeta,
-        nowMs: ctx.nowMs,
+        nowMs: ctx.snapshot.nowMs,
       }),
     );
 

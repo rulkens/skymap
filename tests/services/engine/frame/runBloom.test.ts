@@ -15,7 +15,7 @@
 import { describe, it, expect, vi } from 'vitest';
 
 import { runBloom } from '../../../../src/services/engine/frame/runBloom';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
 import type { BloomPyramid } from '../../../../src/@types/rendering/BloomPyramid';
@@ -95,33 +95,35 @@ const BLOOM_SPECS = [
   })),
 ];
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   // A view whose `id` echoes the target — the pyramid recorder reads it back to
   // prove which level each draw sampled.
   const viewOf = (id: string) => ({ id }) as unknown as GPUTextureView;
   return {
-    canvasSize: { width: 1920, height: 1080 },
-    renderTargets: {
-      viewOf,
-      specs: BLOOM_SPECS,
-      specOf: (id: string) => {
-        const spec = BLOOM_SPECS.find((s) => s.id === id);
-        if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
-        return spec;
-      },
-      // `bloomSrcTexelSize` reads the ALLOCATED size of the source level, so
-      // every pass in the sequence throws without this — the fixture mirrors
-      // production's `floor(canvas / scale)` over the table declared above.
-      sizeOf: (id: string) => {
-        const spec = BLOOM_SPECS.find((s) => s.id === id);
-        if (!spec) throw new Error(`mock renderTargets: no size for '${id}'`);
-        return {
-          width: Math.max(1, Math.floor(1920 / spec.scale)),
-          height: Math.max(1, Math.floor(1080 / spec.scale)),
-        };
+    snapshot: {
+      renderTargets: {
+        viewOf,
+        specs: BLOOM_SPECS,
+        specOf: (id: string) => {
+          const spec = BLOOM_SPECS.find((s) => s.id === id);
+          if (!spec) throw new Error(`mock renderTargets: no spec row for '${id}'`);
+          return spec;
+        },
+        // `bloomSrcTexelSize` reads the ALLOCATED size of the source level, so
+        // every pass in the sequence throws without this — the fixture mirrors
+        // production's `floor(canvas / scale)` over the table declared above.
+        sizeOf: (id: string) => {
+          const spec = BLOOM_SPECS.find((s) => s.id === id);
+          if (!spec) throw new Error(`mock renderTargets: no size for '${id}'`);
+          return {
+            width: Math.max(1, Math.floor(1920 / spec.scale)),
+            height: Math.max(1, Math.floor(1080 / spec.scale)),
+          };
+        },
       },
     },
-  } as unknown as ReadyFrameContext;
+    canvasSize: { width: 1920, height: 1080 },
+  } as unknown as FrameView;
 }
 
 function makeState(pyramid: BloomPyramid | null): EngineState {

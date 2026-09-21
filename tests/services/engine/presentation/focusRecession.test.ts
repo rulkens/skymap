@@ -58,9 +58,9 @@ describe('resolveLayerOpacity', () => {
 
     const state = makeState(fades, makeClipPlayer(1));
     // toggle 0.5 × recession (full focus → FILAMENT_RECESSION) × clip 1.
-    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(
-      0.5 * FILAMENT_RECESSION,
-    );
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 1, nowMs: 0 } } as never, handle),
+    ).toBe(0.5 * FILAMENT_RECESSION);
   });
 
   it('returns 0 when the toggle is 0 regardless of blend', () => {
@@ -70,8 +70,12 @@ describe('resolveLayerOpacity', () => {
 
     const state = makeState(fades, makeClipPlayer(1));
     // 0 × anything = 0, at any blend.
-    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0);
-    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(0);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 1, nowMs: 0 } } as never, handle),
+    ).toBe(0);
   });
 
   // ── Clip factor tests (Task 12) ─────────────────────────────────────────
@@ -84,7 +88,9 @@ describe('resolveLayerOpacity', () => {
 
     const state = makeState(fades, makeClipPlayer(0.5));
     // Hand-computed: toggle 0.8 × recession(filament, blend 0) 1 × clip 0.5 = 0.4.
-    expect(resolveLayerOpacity(state, { focusBlend: 0, nowMs: 0 }, handle)).toBe(0.4);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 0, nowMs: 0 } } as never, handle),
+    ).toBe(0.4);
   });
 
   it('returns the bare toggle opacity for an unmapped (overlay) id', () => {
@@ -98,6 +104,8 @@ describe('resolveLayerOpacity', () => {
 
     const state = makeState(fades, makeClipPlayer(0.3));
     // Hand-computed: toggle 0.7 × recession 1 × clip 1 (unmapped) = 0.7.
-    expect(resolveLayerOpacity(state, { focusBlend: 1, nowMs: 0 }, handle)).toBe(0.7);
+    expect(
+      resolveLayerOpacity(state, { snapshot: { focusBlend: 1, nowMs: 0 } } as never, handle),
+    ).toBe(0.7);
   });
 });

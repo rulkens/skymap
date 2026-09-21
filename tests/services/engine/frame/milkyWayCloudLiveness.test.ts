@@ -15,7 +15,7 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const PC = SCALE_UNITS.PC_TO_MPC;
@@ -26,6 +26,7 @@ const SGR_A_STAR_POS = deriveBodyStates(CONST_J2000).get('sgr-a-star')!.position
 // approach band under test.
 const FOV_Y_RAD = (60 * Math.PI) / 180;
 const CANVAS = { width: 1280, height: 720 };
+const PX_PER_RAD = CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2));
 
 function makeState(): EngineState {
   return {
@@ -37,16 +38,13 @@ function makeState(): EngineState {
   } as unknown as EngineState;
 }
 
-function makeCtx(camPosMpc: Vec3): ReadyFrameContext {
+function makeCtx(camPosMpc: Vec3): FrameView {
   return {
-    nowMs: 0,
-    focusBlend: 0,
-    simDays: CONST_J2000,
+    snapshot: { nowMs: 0, focusBlend: 0, simDays: CONST_J2000 },
     drawCamPos: camPosMpc,
-    fovYRad: FOV_Y_RAD,
-    canvasSize: CANVAS,
+    drawPxPerRad: PX_PER_RAD,
     vp: new Float32Array(16) as unknown as Mat4,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** A point `distMpc` from Sgr A*, offset along its own local x-axis. */

@@ -20,10 +20,10 @@ vi.mock('../../../../src/services/gpu/device', () => ({
   resizeCanvasToDisplay: () => false,
 }));
 
-// A crossing frame's SAME-simDays pre-flip world (arg 2) vs its post-flip
-// displayed pose (arg 3) is the only continuity comparison an accelerated
-// clock cannot contaminate with legitimate orbital motion between frames —
-// so the probe records both, per frame, like `poseFold.test.ts`'s.
+// A crossing frame's SAME-simDays pre-flip world (`input.cam`) vs its
+// post-flip displayed pose (`input.arm`) is the only continuity comparison an
+// accelerated clock cannot contaminate with legitimate orbital motion between
+// frames — so the probe records both, per frame, like `poseFold.test.ts`'s.
 const probe = vi.hoisted(() => ({
   worldPose: [] as unknown[],
   renderPose: [] as unknown[],
@@ -34,8 +34,10 @@ vi.mock('../../../../src/services/engine/frame/frameContext', async (importOrigi
   return {
     ...actual,
     deriveFrameContext: (...args: Parameters<typeof actual.deriveFrameContext>) => {
-      probe.worldPose.push(args[2]);
-      probe.renderPose.push(args[3]);
+      // The caller now assembles `cam` itself, off the same world pose that
+      // used to arrive as the 3rd positional; `arm` is the 4th's replacement.
+      probe.worldPose.push(args[1].cam);
+      probe.renderPose.push(args[1].arm);
       return actual.deriveFrameContext(...args);
     },
   };
@@ -155,9 +157,10 @@ describe('engaged-arm clock invariance (spec §14)', () => {
 
     expect(crossing).toBeGreaterThan(-1);
     // Both eyes come from THIS ONE frame's probe entries — the pre-flip world
-    // (arg 2, the old arm resolved off the frame's own bodyState) and the
-    // post-flip displayed pose (arg 3) — so a racing clock cannot leak a
-    // legitimate orbital shift into the comparison; only the flip itself can.
+    // (`input.cam`, the old arm resolved off the frame's own bodyState) and
+    // the post-flip displayed pose (`input.arm`) — so a racing clock cannot
+    // leak a legitimate orbital shift into the comparison; only the flip
+    // itself can.
     // Bound: poseFold's crossing tests hold the same conversion to ~5e-5 m at
     // the same heliocentric magnitude with the clock frozen; a clock-dependent
     // leak here would be decades above it at any clock speed.

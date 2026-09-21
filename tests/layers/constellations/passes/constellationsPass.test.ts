@@ -11,37 +11,37 @@ import { SCALE_FADE_BANDS } from '../../../../src/services/engine/presentation/s
 import { makeSlab } from '../../../fixtures/makeSlab';
 import type { ConstellationsRuntime } from '../../../../src/layers/constellations/@types/ConstellationsRuntime';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 
-function makeCtx(camPos: readonly [number, number, number]): ReadyFrameContext {
+function makeCtx(camPos: readonly [number, number, number]): FrameView {
   const near0Slab: Slab = makeSlab();
   return {
-    isReady: true,
     viewSlot: 0,
-    renderedTargets: new Set<string>(),
     bodyPose: () => null,
-    cam: {} as never,
     vp: new Float32Array(16),
     slabs: [near0Slab, near0Slab],
     canvasSize: { width: 1280, height: 720 },
-    cursorTexPx: null,
     drawCamPos: camPos,
     drawPxPerRad: 720,
-    nowMs: 0,
-    simDays: 0,
     fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersSettling: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
+    snapshot: {
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      layersSettling: false,
+      visibleSourceMask: 0xffffffff,
+      cursorTexPx: null,
+      renderedTargets: new Set<string>(),
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: {} as never,
     },
-    renderTargets: {} as never,
-  };
+  } as unknown as FrameView;
 }
 
 function makeState(enabled: boolean, fadeOpacity = 0): EngineState {

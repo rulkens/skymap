@@ -21,7 +21,7 @@ export type SkyCapture = {
    * one clips every S-star away.
    */
   readonly nearMpc: number;
-  /** First `ReadyFrameContext.viewSlot` this capture's faces claim (base … base+5). */
+  /** First `FrameView.viewSlot` this capture's faces claim (base … base+5). */
   readonly viewSlotBase: number;
   /** false ⇒ one bake per band entry (settings writes are ignored once baked). */
   readonly rebakeOnSettings: boolean;

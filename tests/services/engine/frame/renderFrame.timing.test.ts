@@ -245,10 +245,24 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     vp: Float64Array.from(viewProj as unknown as Float32Array),
   });
 
-  const ctx = {
+  // Shared by identity with `input.renderedTargets` below.
+  const renderedTargets = new Set<string>();
+  // Frame-owned fields (`ReadyFrameContext`), nested under `snapshot` — every
+  // `ContentPass` in this file reads `ctx.snapshot.x` (see renderFrame.test.ts's
+  // fixture).
+  const snapshotFields = {
     isReady: true as const,
-    // executor populates this as targets render; a later pass reads which rendered this frame.
-    renderedTargets: new Set<string>(),
+    nowMs: 0,
+    // resolveLayerOpacity's recession factor lerps on this; production seeds it
+    // to 0 in frameContext, and an absent one yields NaN alphas here.
+    focusBlend: 0,
+    renderTargets,
+    // Frame-wide: which targets hold this frame's content — the executor
+    // unions into this as it opens each render step; a later pass reads it.
+    renderedTargets,
+  };
+  const ctx = {
+    snapshot: snapshotFields,
     cam,
     vp: viewProj,
     slabs: [cosmoSlab, cosmoSlab],
@@ -257,12 +271,6 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
       [number, number, number]
     >,
     drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
-    nowMs: 0,
-    // resolveLayerOpacity's recession factor lerps on this; production seeds it
-    // to 0 in frameContext, and an absent one yields NaN alphas here.
-    focusBlend: 0,
-    fovYRad: FIXTURE_FOV_Y_RAD,
-    renderTargets,
   } as never;
 
   const settings = {
@@ -285,8 +293,12 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   };
 
   const input: RenderFrameInput = {
-    ctx,
+    canvas: ctx,
+    // Mono's own contract: the frame's one view is the canvas itself.
+    views: [ctx],
     state: {
+      // renderFrame looks up VIEW_RIGS[viewRig] for the program to walk.
+      viewRig: 'mono',
       gpu: {
         labelRenderer: null,
         markerLineRenderer: null,
@@ -392,6 +404,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     device,
     context,
     timingService,
+    renderedTargets,
   };
 
   return {

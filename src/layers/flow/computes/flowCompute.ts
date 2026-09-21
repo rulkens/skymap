@@ -16,7 +16,7 @@ export function flowCompute(runtime: FlowRuntime): ContentCompute {
     encode(encoder, ctx, state, claimTimestampWrites) {
       const flow = state.settings.flow;
       if (!flow.enabled || !slotReady(runtime.slot)) return;
-      runtime.renderer.encodeCompute(encoder, flow, ctx.nowMs, claimTimestampWrites);
+      runtime.renderer.encodeCompute(encoder, flow, ctx.snapshot.nowMs, claimTimestampWrites);
     },
   };
 }

@@ -60,9 +60,9 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const store = configureStore({ reducer: rootReducer });
   store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
   store.dispatch(pause({ nowMs: 0 }));
-  // Dispatched before the seed below, so the runtime's placeholder `base`
-  // starts identity-equal to the store's — same contract production's boot
-  // seed relies on.
+  // Dispatched before the seed below, matching production's boot order —
+  // `seedCameraRuntime` copies `base`, so the runtime's first frame reads
+  // this commit as an outside one (see its header).
   store.dispatch(commitCameraPose(absoluteArm(neutralPose)));
 
   const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
@@ -83,6 +83,12 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
     cubemapCaptures: makeCubemapCaptureRuntimes(),
+    // Live off the store, same as `engine.ts`'s own getter: `runFrame` reads
+    // this post-dispatch, so a fixed snapshot would go stale the instant a
+    // test dispatches a focus change.
+    get selectionRows() {
+      return store.getState().selectionRows;
+    },
   } as unknown as EngineState;
   if (realClipPlayer) {
     state.subsystems.clipPlayer = createClipPlayer({
