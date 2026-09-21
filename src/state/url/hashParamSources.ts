@@ -260,10 +260,9 @@ const orientationSource: HashParamSource = {
  * `camera.urlPose` — the link owns the camera until the arrival focus spends
  * the park (`spendUrlPose`, in `watchFocusTweenSaga`). Must run BEFORE
  * `focusSource` (table order below) so a `#focus=…&pose=…` link's fly-to
- * tween sees the park and stands down. The commit gets its OWN object, not
- * `framed` by reference: `wireInput`'s boot re-commit depends on seeing a
- * different `base` reference than whatever it seeded from (B2), which this
- * early commit would silently defeat by aliasing the park.
+ * tween sees the park and stands down. The commit gets its OWN object: the
+ * loop detects `wireInput`'s boot commit by `base` identity, and a commit
+ * aliasing the park would make that boot commit invisible to frame one.
  */
 const poseSource: HashParamSource = {
   key: 'pose',
