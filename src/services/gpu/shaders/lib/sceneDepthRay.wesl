@@ -1,8 +1,8 @@
-// lib/sceneDepthRay.wesl — reconstruct a camera ray, and the distance along
-// it to a sampled scene-depth texel, from a caller's own 'invMvp' and camera
-// position: 'invMvp' maps clip space to the CALLER's local frame, 'camPos' is
-// the camera in that frame, and returned distances are in that frame's units.
-// 'FAR_DEPTH' is reversed-Z's far clear value; CPU twin 'depthClearValueFor(true)'.
+// lib/sceneDepthRay.wesl — three functions of pure f32/reversed-Z landmine, so
+// it runs over the comment ratio: reconstruct a camera ray, and the distance
+// along it to a scene-depth texel, from a caller's own 'invMvp' (clip space to
+// the CALLER's frame) and 'camPos' in that frame; distances share its units.
+// 'FAR_DEPTH' is reversed-Z's far clear; CPU twin 'depthClearValueFor(true)'.
 
 // The body slab's reversed-Z far-plane clear value; a texel still holding it
 // has no geometry in front of it.
@@ -31,12 +31,10 @@ fn sceneRayDir(uv: vec2<f32>, invMvp: mat4x4<f32>, camPos: vec3<f32>) -> vec3<f3
 }
 
 // Distance from the camera to the depth sample at 'uv', in the caller's frame.
-// Dividing by 'w' is safe HERE and only here: the caller reaches this only for
-// a depth that differs from the far-plane clear value, so w is bounded away
-// from zero. 'p.xyz - cam * p.w' cancels catastrophically near the camera —
-// one f32 ulp of a unit coordinate is ~0.6 m at Earth's top — so this carries a
-// metre-scale ABSOLUTE error floor. Do not trade it for divide-then-subtract:
-// that swaps the floor for the far-plane blow-up above.
+// Dividing by 'w' is safe HERE only: callers reach this for a depth away from
+// the far clear, so w is bounded off zero. The subtraction cancels near the
+// camera (one f32 ulp is ~0.6 m at Earth's top) — a metre-scale ABSOLUTE floor,
+// cheaper than divide-then-subtract's blow-up.
 fn sceneRayDistance(uv: vec2<f32>, depth: f32, invMvp: mat4x4<f32>, camPos: vec3<f32>) -> f32 {
   let p = sceneRayUnproject(uv, depth, invMvp, camPos);
   return length(p.xyz) / abs(p.w);

@@ -181,15 +181,24 @@ describe('createAerialPerspectiveRenderer — bake and apply share one uniform w
 });
 
 describe('rebind', () => {
-  it('rebuilds the bake bind group for that body', () => {
-    // The bake group holds the bundle's LUT VIEWS, not the variables, so the
-    // shell's tier `reconcile` leaves it pointing at a destroyed texture.
-    const { renderer, bindGroups } = build();
-    const replacement = bundle();
+  it('binds the replacement sky-view view on the next apply draw', () => {
+    // The shell's tier `reconcile` DESTROYS `skyViewTex`; an apply group still
+    // holding a view of it binds a destroyed texture — a validation error, and
+    // on iOS a whole dropped frame. Binding 2 is that view.
+    const { renderer, descOf, bindGroups } = build();
+    const replacementView = {} as GPUTextureView;
+    const replacement = {
+      ...bundle(),
+      skyViewTex: { createView: () => replacementView } as unknown as GPUTexture,
+    };
 
     renderer.rebind('earth', replacement);
+    renderer.draw(mockRenderPass([], descOf), 'earth', {} as GPUTextureView);
 
-    const rebuilt = bindGroups.filter((desc) => desc.label === 'atmosphere-froxel-bg-earth');
-    expect(rebuilt).toHaveLength(2);
+    const applied = bindGroups
+      .filter((desc) => desc.label === 'atmosphere-aerial-bg-earth')
+      .at(-1)!;
+    const skyView = Array.from(applied.entries).find((entry) => entry.binding === 2)!;
+    expect(skyView.resource).toBe(replacementView);
   });
 });

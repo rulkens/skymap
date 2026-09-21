@@ -44,9 +44,11 @@ import type { Vec3 } from '../../../../../src/@types/math/Vec3';
 // real so the packed bottomRadius reveals which ATMOSPHERE_PARAMS row fed it.
 const MOCK_MVP = new Float64Array(16);
 // OUTSIDE the atmosphere top (radius 1 in this frame): this layer is the
-// outside-only half now, and a camLocal inside the shell routes every row to
+// outside-only half, and a camLocal inside the shell routes every row to
 // `aerialPerspectivePass` instead.
 const MOCK_CAM_LOCAL: Vec3 = [1.0, 2.0, 3.0];
+/** Well under `isInsideAtmosphereShell`'s 1.005 ratio — `aerial-perspective`'s camera. */
+const MOCK_CAM_LOCAL_INSIDE: Vec3 = [0.0, 0.0, 0.5];
 vi.mock('../../../../../src/utils/camera/composeBodySlabMvp', () => ({
   composeBodySlabMvp: vi.fn<() => Float64Array>(() => MOCK_MVP),
 }));
@@ -156,6 +158,20 @@ describe('atmosphereShellPass.enabled', () => {
     expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('earth' as BodyId))).toBe(true);
     expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('mars' as BodyId))).toBe(true);
     expect(atmosphereShellPass.enabled(state, ctx, makeBodyView('moon' as BodyId))).toBe(false);
+  });
+
+  it('is false for a camera the shell encloses — that row is aerialPerspectivePass’s', () => {
+    // Both draws on one body would double its in-scatter, and the proxy mesh
+    // loses its near wall from inside; the two passes split on this one flag.
+    camLocalMock.mockImplementation(() => MOCK_CAM_LOCAL_INSIDE);
+    try {
+      const state = makeState({ draw: vi.fn() });
+      expect(atmosphereShellPass.enabled(state, makeCtx(), makeBodyView('earth' as BodyId))).toBe(
+        false,
+      );
+    } finally {
+      camLocalMock.mockImplementation(() => MOCK_CAM_LOCAL);
+    }
   });
 
   it('is false while the atmosphereShellRenderer handle is null, even for a bare ctx (handle short-circuits first)', () => {

@@ -371,7 +371,8 @@ export function createAtmosphereShellRenderer(
   // TEXTURE binding — STORAGE lets the bake compute pass write via `textureStore`,
   // TEXTURE lets downstream passes + the shell fragment SAMPLE), its three uniform
   // buffers (ScatteringParams written once from the body's params; SkyViewParams
-  // rewritten per frame; AtmosphereUniforms rewritten per draw), and the four bind
+  // rewritten per frame; AtmosphereUniforms per outside draw, per inside bake),
+  // and the four bind
   // groups wiring those to the shared pipelines. Built here, stored by id.
   const bundles = new Map<string, AtmosphereBundle>();
 

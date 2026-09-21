@@ -22,11 +22,8 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // toggles under it (`computeTimingSlotName`); the suffix is what keeps `flow`
   // here apart from the ribbon pass of that name.
   //
-  // `aerial-perspective` FOLLOWS `sky-view`, and that is load-bearing twice
-  // over: this bake writes the enclosing body's shell uniform record that
-  // `aerial-perspective`'s apply row (`foreground:0`, below) reads with no
-  // other writer, and the apply's sky branch reads the LUT `sky-view` just
-  // baked — so both orderings resolve the same way, sky-view first.
+  // `aerial-perspective` bakes the froxel volume its apply row reads; its order
+  // among the computes is immaterial, so it sits beside its sibling.
   { kind: 'compute', name: 'flow' },
   { kind: 'compute', name: 'sky-view' },
   { kind: 'compute', name: 'aerial-perspective' },

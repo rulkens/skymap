@@ -3,15 +3,11 @@
 // depth the foreground row stamped. A sky ray keeps the whole-column sky-view
 // answer; a geometry ray reads 'bake.wesl''s froxel volume at its own
 // depth-buffer distance — two samples, no march.
-//
-// Bindings 0-4 are the SHELL's, hoisted by importing 'sampleShellRay';
-// declaring any of them here again is a duplicate-binding error, and NAMING
-// one that was hoisted without being imported ('skyViewLut') fails
-// 'unresolved identifier'. Hence the by-name imports of 'u' and 'lutSamp'.
-//
-// Units: the shell frame has the atmosphere TOP at radius 1, while the volume
-// is indexed in km. 'params.atmosphereTopKm' is the one scale between them.
 
+// Bindings 0-4 are the SHELL's, hoisted by importing 'sampleShellRay';
+// redeclaring any of them is a duplicate-binding error, and naming one hoisted
+// without being imported ('skyViewLut') fails 'unresolved identifier' — hence
+// the by-name imports of 'u' and 'lutSamp'.
 import package::atmosphere::aerialPerspective::froxelSlices::froxelCoord;
 import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::shell::fragment::lutSamp;
@@ -75,8 +71,9 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
     tEnd = min(tEnd, top.y);
   }
 
-  // The volume holds no texel below one slice, so 'identityMix' fades the
-  // lookup back to no-medium (zero in-scatter, unit transmittance) there.
+  // The shell frame puts the atmosphere TOP at radius 1 and the volume is
+  // indexed in km, so 'atmosphereTopKm' is the one scale between them. Below
+  // one slice no texel exists, and 'identityMix' fades back to no medium.
   let c = froxelCoord(tEnd * params.atmosphereTopKm, u.froxelSliceKm,
                       textureDimensions(froxelInScatter).z);
   let p = vec3<f32>(in.uv, c.w);

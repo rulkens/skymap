@@ -12,7 +12,6 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import type { OrbitTrailDepthFrame } from '../../../../@types/rendering/OrbitTrailDepthFrame';
 import { mat4d } from 'wgpu-matrix';
-import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { TRAIL_ELEMENTS } from '../../../../data/bodies/trailElements';
 import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';

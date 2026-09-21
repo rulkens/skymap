@@ -1,6 +1,6 @@
 /**
  * encodeAtmosphereAerialPerspective — the per-frame froxel-volume bake for the
- * one body whose shell encloses the camera (spec §3.4 prep 4): the frame's
+ * one body whose shell encloses the camera: the frame's
  * ONLY write of that body's shell uniform record, sharing `bodyRowSlabs`'
  * `insideAtmosphere` row and so the same `slab.vp` the apply draw reads. No
  * inside body ⇒ no pass, no timing claim (mirrors `encodeAtmosphereSkyView`).

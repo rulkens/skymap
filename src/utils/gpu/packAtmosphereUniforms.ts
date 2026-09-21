@@ -52,10 +52,9 @@
  * opacity by the ring's blocking alpha). `ringOuterRatio == 0` is the no-ring
  * sentinel — the same data-gate `packTexturedBodyUniforms` uses.
  *
- * `invMvp` is the inverse of `mvp`, read only by the inside-shell fragment
- * entry points (unprojecting a screen position back into the shell's local
- * frame) but packed for every body regardless — one struct, one packer, no
- * inside-only second buffer.
+ * `invMvp` is the inverse of `mvp`, read by the froxel bake and its apply
+ * (unprojecting a screen position back into the shell's local frame) but packed
+ * for every body regardless — one struct, one packer, no second buffer.
  *
  * @param mvp            16-element column-major MVP (from `composeBodySlabMvp`, narrowed).
  * @param invMvp         16-element column-major inverse of `mvp` (narrowed).

@@ -119,7 +119,7 @@ export function createAerialPerspectiveRenderer(
     bindGroupLayouts: [applyBgl],
   });
 
-  // No `depthStencil` state: the step declares `depth: 'sample'` and opens the
+  // No `depthStencil` state: the step declares `depth: { sample }` and opens the
   // pass with NO depth attachment (WebGPU forbids sampling a view attached to
   // the same pass), and a pipeline carrying a depth state is invalid against an
   // attachment-less pass. Scene depth arrives at binding 8 instead.
@@ -156,7 +156,8 @@ export function createAerialPerspectiveRenderer(
 
   type BodyBinding = {
     readonly shellUniformBuffer: GPUBuffer;
-    bakeGroup: GPUBindGroup;
+    /** Binds nothing `reconcile` replaces — the startup LUTs and three buffers. */
+    readonly bakeGroup: GPUBindGroup;
     /** Bindings 0-7; only binding 8, the depth view, varies. */
     applyEntries: readonly GPUBindGroupEntry[];
     /** Last built apply group, keyed on the depth view it was built over. */
@@ -222,11 +223,11 @@ export function createAerialPerspectiveRenderer(
   }
 
   // The shell's tier `reconcile` DESTROYS and recreates `skyViewTex`, and a
-  // bind group holds the view, not the variable — so it must tell us too.
+  // bind group holds the view, not the variable — so it must tell us too. Only
+  // the apply reads that texture; the bake group survives untouched.
   function rebind(bodyId: string, bundle: AerialBundleResources): void {
     const binding = perBody.get(bodyId);
     if (binding === undefined) return;
-    binding.bakeGroup = bakeGroupFor(bodyId, bundle);
     binding.applyEntries = applyEntriesFor(bundle);
     binding.applyGroup = null;
   }

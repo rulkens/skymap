@@ -98,6 +98,15 @@ function build() {
   return { ...h, renderer };
 }
 
+/** Enough of a render pass for the aerial apply's two full-screen draws. */
+function aerialRenderPass(): GPURenderPassEncoder {
+  return {
+    setPipeline: vi.fn(),
+    setBindGroup: vi.fn(),
+    draw: vi.fn(),
+  } as unknown as GPURenderPassEncoder;
+}
+
 /** Classify a shell pipeline by what its colour blend DOES, not by its label —
  *  `dst *= src` is the multiply pass, `dst += src` the add pass. */
 function blendRole(desc: GPURenderPipelineDescriptor): string {
@@ -178,6 +187,10 @@ describe('reconcile — tier-switchable sky-view LUT size', () => {
   it('recreates skyViewTex and rebuilds every bind group that references it, the aerial renderer included', () => {
     const { renderer, texturesByLabel, bindGroupLabels } = build();
     const before = texturesByLabel.get('atmosphere-skyview-lut-earth')!;
+    const depthView = { label: 'depth' } as unknown as GPUTextureView;
+    // The aerial apply caches its group over that depth view, so it rebuilds
+    // after `reconcile` only if `rebind` reached it.
+    renderer.drawAerialPerspective(aerialRenderPass(), 'earth', depthView);
     const bindGroupsBefore = bindGroupLabels.length;
 
     renderer.reconcile({ skyViewLutSize: [64, 36] });
@@ -188,13 +201,13 @@ describe('reconcile — tier-switchable sky-view LUT size', () => {
     const after = texturesByLabel.get('atmosphere-skyview-lut-earth');
     expect(after).not.toBe(before);
     // skyViewBindGroup (binding 5, storage output) and shellBindGroup
-    // (binding 2, sampled) reference the resized texture; the aerial renderer
-    // holds views of the same bundle, so `rebind` must reach it too — its apply
-    // entries are rebuilt lazily, its bake group here.
+    // (binding 2, sampled) reference the resized texture; the aerial apply
+    // samples it too, so `rebind` must reach it — lazily, at its next draw.
+    renderer.drawAerialPerspective(aerialRenderPass(), 'earth', depthView);
     expect(bindGroupLabels.slice(bindGroupsBefore)).toEqual([
       'atmosphere-skyview-bg-earth',
       'atmosphere-shell-bg-earth',
-      'atmosphere-froxel-bg-earth',
+      'atmosphere-aerial-bg-earth',
     ]);
   });
 });

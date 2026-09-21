@@ -3,9 +3,7 @@
  * exactly one of the two draws per body per frame, or the in-scatter doubles.
  * Its `FRAME_ORDER` line samples `foreground:0`'s depth and it hands the
  * renderer that texture (`view.sampledDepth`, the apply fragment's binding 8),
- * which is what lets the fog key on scene distance rather than the analytic
- * ground sphere alone. Argued elsewhere: this row's order in `frameOrder.ts`,
- * the froxel volumes it reads in `aerialPerspectiveRenderer`.
+ * so the fog keys on scene distance, not the analytic ground sphere alone.
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';

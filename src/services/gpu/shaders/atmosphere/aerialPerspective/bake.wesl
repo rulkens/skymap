@@ -4,7 +4,7 @@
 // whole ray in the last. That end is the RELIEF FLOOR, so past the slices a
 // terrain pixel standing short of the floor is over-fogged by the remainder.
 
-import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceEndKm;
+import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceStartKm;
 import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::scattering::scatterStep;
 import package::lib::sceneDepthRay::sceneRayDir;
@@ -22,9 +22,6 @@ struct SkyViewParams {
   twilightIntensity: f32,
 };
 
-// The volume's DIMENSIONS are not restated here — they derive from
-// 'textureDimensions(outInScatter)', so the renderer's createTexture size is
-// their single home (the sky-view bake's convention).
 @group(0) @binding(0) var<uniform> params: ScatteringParams;
 @group(0) @binding(1) var<uniform> view: SkyViewParams;
 @group(0) @binding(2) var transmittanceLut: texture_2d<f32>;
@@ -98,7 +95,9 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   let top = raySphere(u.camPosLocal, dir, PLANET_CENTER, 1.0);
   var endKm = max(top.y, 0.0) * kmPerLocal;
   let ground = raySphere(u.camPosLocal, dir, PLANET_CENTER, u.bottomRadius);
-  if (ground.x >= 0.0) {
+  // '> 0', never '>= 0': 'raySphere' hands back a 0 root for a camera exactly on
+  // the floor, and that would clamp 'endKm' to 0 — the whole column at identity.
+  if (ground.x > 0.0) {
     endKm = min(endKm, ground.x * kmPerLocal);
   }
 
@@ -110,7 +109,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   var i: u32 = 0u;
   loop {
     if (i >= dims.z) { break; }
-    let sliceStartKm = froxelSliceEndKm(i, u.froxelSliceKm) - u.froxelSliceKm;
+    let sliceStartKm = froxelSliceStartKm(i, u.froxelSliceKm);
 
     var j: u32 = 0u;
     loop {
@@ -133,7 +132,7 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
   // rest of the ray: from tens of km up, a ray toward the horizon crosses the
   // slices in thin air and only meets the dense layer near its ground hit.
   let lastSlice = dims.z - 1u;
-  let boundKm = froxelSliceEndKm(lastSlice, u.froxelSliceKm);
+  let boundKm = froxelSliceStartKm(dims.z, u.froxelSliceKm);
   if (endKm > boundKm) {
     let stepKm = u.froxelSliceKm * REMAINDER_STEP_SLICES;
     var t0 = boundKm;
