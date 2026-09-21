@@ -19,8 +19,12 @@ export const PRELUDE: FrameSection = {
     // write before the later fragment read. Each step bills `<name>-compute` and
     // toggles under it (`computeTimingSlotName`); the suffix is what keeps `flow`
     // here apart from the ribbon pass of that name.
+    //
+    // `aerial-perspective` bakes the froxel volume its apply row reads; its order
+    // among the computes is immaterial, so it sits beside its sibling.
     { kind: 'compute', name: 'flow' },
     { kind: 'compute', name: 'sky-view' },
+    { kind: 'compute', name: 'aerial-perspective' },
     // The sky captures, in the compute prelude's wake and ahead of every
     // other render step so a same-frame lensing draw can sample a cubemap this
     // frame actually wrote. The frame's face list for a key is empty most
@@ -56,23 +60,17 @@ export const PRELUDE: FrameSection = {
     // (a sub-pixel Sun would smear through the prefilter into a false highlight);
     // `body-glints` / `orbit-trails` because neither is environment a surface
     // reflects. The NEAR0 roster is empty on purpose — the blit rides COSMO — so
-    // a probe face opens two steps, not three. `atmosphere-shell` here reads the
-    // sky-view LUT the prelude baked for the MAIN camera last frame (compute steps
-    // submit after the faces): near-identical geometry, so leave the order be.
+    // a probe face opens two steps, not three. `atmosphere-shell` is excluded
+    // because it classifies its rays by a sampled scene depth, which a capture
+    // face never resolves, and its pipeline carries no depth state to draw into
+    // a face's depth-attached step with: a probe reflects the body and its sky,
+    // not that body's limb glow.
     {
       kind: 'capture',
       captures: ['probe'],
       cosmoPasses: ['sky-cubemap-blit'],
       near0Passes: [],
-      bodyPasses: [
-        'earth',
-        'surface-tiles',
-        'cloud-shell',
-        'planets',
-        'textured-bodies',
-        'rings',
-        'atmosphere-shell',
-      ],
+      bodyPasses: ['earth', 'surface-tiles', 'cloud-shell', 'planets', 'textured-bodies', 'rings'],
     },
   ],
 };
@@ -199,29 +197,18 @@ export const SCENE: FrameSection = {
     //
     // TWO rosters because the chain interleaves the NEAR0 row — the star spheres,
     // the Sun's own — with the body rows. Within each, order is depth-tested
-    // opaque and so a listing choice, with two deliberate exceptions at the end:
-    // `rings` and `atmosphere-shell` are the group's translucent shells. Both
-    // write no depth and blend straight-alpha OVER, so they must follow every
-    // opaque sphere already stamped there — the far ring half and the over-disc
-    // atmosphere are then occluded, while the limb over space passes.
-    // `atmosphere-shell` trails `rings` because it is the outermost of the two.
+    // opaque and so a listing choice, with two deliberate exceptions: `rings`
+    // writes no depth and blends straight-alpha OVER, so it must follow every
+    // opaque sphere already stamped there — the far ring half is then occluded.
     // `cloud-shell` is the same exception placed early, immediately after the
     // `earth` surface it depth-tests against.
     //
-    // `mesh-bodies` draws LAST, after both shells, and that is NOT the
-    // depth-tested listing choice the rest of this roster is. Inside an
-    // atmosphere the shell abandons its proxy mesh for a full-screen pass with
-    // `depthCompare: 'always'` (`atmosphereShellRenderer`), and its ray
-    // terminates on the analytic ground sphere — so an opaque mesh standing ON
-    // that ground is invisible to it, and a rover silhouetted against Mars sky
-    // was drawn over with the full camera-to-space in-scatter. Ordering after
-    // the shell is the stopgap: the shells write no depth, so a mesh drawn last
-    // still depth-tests correctly against every opaque sphere, and only the
-    // shells' own fragments are overdrawn. The cost is that mesh bodies take no
-    // aerial perspective at all — negligible at the metres-to-km range a rover
-    // is ever framed from, wrong for a mesh genuinely behind a limb (the whale's
-    // 400 km orbit crossing Earth's). The real fix is the froxel LUT, which
-    // gives the inside path scene depth and lets this line move back.
+    // `mesh-bodies` draws LAST, after the depth marker, and that is NOT the
+    // depth-tested listing choice the rest of this roster is. The shells write no
+    // depth, so a mesh drawn last still depth-tests correctly against every opaque
+    // sphere and only the shells' own fragments are overdrawn — which is also what
+    // leaves the mesh's own distance in the depth the aerial line below samples,
+    // so a rover silhouetted against Mars sky is fogged at its range, not space's.
     {
       kind: 'foreground',
       target: 'foreground:0',
@@ -234,15 +221,37 @@ export const SCENE: FrameSection = {
         // cuts the ground is the reading. Not in the probe roster above — a
         // cursor has no meaning on a capture face.
         'terrain-pick-marker',
-        // Depth now holds the ground; the rover and the haze over it come after.
-        { sampleDepth: ['contact-shadows'] },
         'cloud-shell',
         'planets',
         'textured-bodies',
         'rings',
-        'atmosphere-shell',
+        // Depth now holds every opaque surface of this row, which is what both
+        // of these READ: the contact decals project onto it, and the atmosphere
+        // shell ends each ray at it — the classification that makes terrain
+        // standing above the relief floor at the limb hazy rather than bare.
+        // The decals also now draw over `cloud-shell`'s colour, so a footprint
+        // paints on a cloud deck in front of it. Accepted: the alternative costs
+        // the shell the depth it exists to read (one marker per roster).
+        { sampleDepth: ['contact-shadows', 'atmosphere-shell'] },
         'mesh-bodies',
       ],
+    },
+    // The aerial-perspective apply, on the enclosing body's own painter row — the
+    // row that stamped the depth it samples, since `deriveSlabs`' deepest-inside
+    // tie-break puts that row last in the chain. It reads a froxel volume the
+    // compute prelude baked from THIS row's uniform record, so the two unproject
+    // through one `slab.vp`. AFTER the chain so every opaque row has stamped that
+    // depth; BEFORE the composite so the fog rides one curve.
+    // Never `foreground:0`'s first step: it attaches no depth yet marks the target
+    // touched, which would cost the chain its colour clear.
+    // `slot` keeps its timing row apart from the chain step for that same row.
+    {
+      kind: 'render',
+      target: 'foreground:0',
+      slab: 'insideAtmosphere',
+      depth: { sample: 'foreground:0' },
+      passes: ['aerial-perspective'],
+      slot: 'AERIAL',
     },
     // The bodies join the HDR accumulator in LINEAR space, before the tone-map,
     // so they ride the SAME single tone curve as the stars and galaxies — there
@@ -253,10 +262,15 @@ export const SCENE: FrameSection = {
     // passes in front of its host. Still HDR and still ahead of bloom and the one
     // tone-map, so it rides the same curve as everything else. The composite
     // above always emits, so this line never merges back into the roster.
+    // `depth` names the texture the trails SAMPLE — hdr is depthless, so it
+    // attaches nothing — and behind it a trail hides in the terrain and meshes of
+    // the last body row to clear that depth; the analytic occluder spheres still
+    // cover every other body.
     {
       kind: 'render',
       target: 'hdr',
       slab: NEAR0,
+      depth: { sample: 'foreground:0' },
       passes: ['orbit-trails'],
       slot: 'POST_FOREGROUND',
     },
@@ -297,10 +311,18 @@ export const OVERLAYS: FrameSection = {
     // order — which is what frees these overlays to sit after the body composite.
     // `selection-ring` leads so the marker lines and labels composite over its
     // stroke.
+    //
+    // `depth` names the texture the overlays SAMPLE — swap is depthless, so it
+    // attaches nothing — and behind it a caption clips along the silhouette of
+    // the last body row to clear that depth. Declared on BOTH swap lines, not
+    // only the NEAR0 one that needs the verdict: the overlays share one group(1)
+    // joint, so every pipeline binding it must fill its depth entries, and a
+    // placeholder on one line only would be a rule with an exception.
     {
       kind: 'render',
       target: 'swap',
       slab: COSMO,
+      depth: { sample: 'foreground:0' },
       passes: ['selection-ring', 'marker-lines', 'labels'],
     },
     // The near-field overlays, last, so the scene-body captions land on top of
@@ -314,6 +336,7 @@ export const OVERLAYS: FrameSection = {
       kind: 'render',
       target: 'swap',
       slab: NEAR0,
+      depth: { sample: 'foreground:0' },
       passes: ['near0-selection-ring', 'foreground-labels', 'clip-path-debug'],
     },
   ],

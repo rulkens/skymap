@@ -22,12 +22,12 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
+import { mat4d } from 'wgpu-matrix';
 
 import { orbitTrailsPass } from '../../../../../src/services/engine/frame/passes/orbitTrailsPass';
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../../../../../src/services/engine/frame/foregroundMaxDistance';
 import { SCENE_ORBIT_CONICS } from '../../../../../src/data/bodies/sceneOrbitConics';
 import { RENDER_ORIGIN_MPC } from '../../../../../src/data/renderOrigin';
-import { NEAR0 } from '../../../../../src/services/engine/frame/slabs';
 import { makeSlab } from '../../../../fixtures/makeSlab';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import { ORBITAL_ELEMENTS } from '../../../../../src/data/bodies/orbitalElements';
@@ -39,6 +39,9 @@ import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import type { SampledDepthKmFrame } from '../../../../../src/@types/rendering/SampledDepthKmFrame';
+import { composeBodySlabMvp } from '../../../../../src/utils/camera/composeBodySlabMvp';
+import { narrowMat4 } from '../../../../../src/utils/math/narrowMat4';
 import { SCENE_EARTH } from '../../../../../src/data/bodies/sceneEarth';
 import { SCENE_PLANETS } from '../../../../../src/data/bodies/scenePlanets';
 import { SCENE_STARS } from '../../../../../src/data/bodies/sceneStars';
@@ -112,7 +115,20 @@ function makeCtx(distance: number): FrameView {
 // SCENE_ORBIT_CONICS[0], always visible here).
 function makeDrawCtx(): FrameView {
   return {
-    snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0 },
+    snapshot: {
+      simDays: CONST_J2000,
+      focusBlend: 0,
+      nowMs: 0,
+      // Distinct from `sampledDepth.view` so a null-frame draw's depthView is
+      // pinned to THIS, never the sampled row's texture.
+      renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+    },
+    // The sampled depth row's body: only Earth resolves, so a layer reading the
+    // wrong row's body id gets a null pose and no depth frame.
+    bodyPose: (bodyId: string) =>
+      bodyId === 'earth'
+        ? { eyeRelBodyM: DEPTH_ROW_EYE_M, basisM: [1, 0, 0, 0, 1, 0, 0, 0, 1] }
+        : null,
     drawCamPos: [1e-13, 0, 0],
     // Matches makeNear0View's viewportPx: the occluder binder reads the canvas
     // (like its sibling body binders) while the per-orbit cull reads the view.
@@ -121,12 +137,35 @@ function makeDrawCtx(): FrameView {
   } as unknown as FrameView;
 }
 
+// The eye in Earth's fixed frame for the sampled depth row below — metres, and
+// asymmetric so a dropped or swapped axis in the km conversion shows up.
+const DEPTH_ROW_EYE_M: Vec3 = [6.6e6, -1.2e6, 3.4e5];
+
+// The depth texture the sampled row stamped; identity is all the layer forwards.
+const DEPTH_VIEW_STUB = {} as GPUTextureView;
+
+// `ctx.renderTargets.farDepthView()`'s stand-in — what a null depth frame
+// must arrive bound to, never `DEPTH_VIEW_STUB`.
+const FAR_DEPTH_VIEW_STUB = {} as GPUTextureView;
+
+/**
+ * The `body-m` row that last cleared `foreground:0`'s depth. Its f64 vp is
+ * INVERTIBLE (makeSlab's default ramp is singular) — the layer inverts it.
+ */
+function makeDepthRow(): Slab {
+  return makeSlab({
+    vp: Float64Array.from([2, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 5, 6, 7, 1]),
+    frame: { kind: 'body-m', bodyId: 'earth' },
+  });
+}
+
 /**
  * A SlabView whose f64 `slab.vp` and f32 `vp` are deliberately DIFFERENT
  * arrays, so a first-arg identity check unambiguously reveals which one the
- * layer fed to composeOrbitConic.
+ * layer fed to composeOrbitConic. `sampledDepth` carries a THIRD vp for the
+ * same reason: the depth frame must ride the sampled row, not this view.
  */
-function makeNear0View(): SlabView {
+function makeNear0View(sampledRow: Slab | null = makeDepthRow()): SlabView {
   const f64Vp = Float64Array.from({ length: 16 }, (_, i) => i + 0.5);
   const f32Vp = new Float32Array(16);
   const slab: Slab = makeSlab({ vp: f64Vp });
@@ -135,6 +174,7 @@ function makeNear0View(): SlabView {
     vp: f32Vp,
     camPos: [0, 0, 5],
     viewportPx: [1280, 720],
+    sampledDepth: { view: DEPTH_VIEW_STUB, row: sampledRow },
   };
 }
 
@@ -146,6 +186,8 @@ function makeRendererSpy() {
         instances: Float32Array,
         count: number,
         occluders: { readonly count: number; readonly spheresKm: Float32Array },
+        depthFrame: SampledDepthKmFrame | null,
+        depthView: GPUTextureView,
         showImpostor?: boolean,
       ) => void
     >(),
@@ -380,6 +422,48 @@ describe('orbitTrailsPass.draw', () => {
     expect(occluders.spheresKm[3]).toBeCloseTo(sunRadiusM * SCALE_UNITS.M_TO_KM, 0);
   });
 
+  it('derives the depth frame from the sampled row, km-scaled, and forwards its view', () => {
+    // The second occluder channel: the row that last cleared `foreground:0`'s
+    // depth. Its f64 `vp` — NOT this view's — scaled by 1000 puts the
+    // reconstructed scene distance in the same km the trail points already use.
+    const renderer = makeRendererSpy();
+    const view = makeNear0View();
+    orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer));
+
+    const [, , , , depthFrame, depthView] = renderer.draw.mock.calls[0]!;
+    expect(depthView).toBe(DEPTH_VIEW_STUB);
+    expect(depthFrame).not.toBeNull();
+
+    const row = view.sampledDepth!.row!;
+    expect(row.vp).not.toEqual(view.slab.vp); // the two sources are distinguishable
+    const expectedInvMvp = narrowMat4(
+      mat4d.inverse(composeBodySlabMvp(row.vp, DEPTH_ROW_EYE_M, 1000)) as Float64Array,
+    );
+    expect(Array.from(depthFrame!.invMvp)).toEqual(Array.from(expectedInvMvp));
+    // Metres ÷ 1000: the eye in the same km frame `invMvp` unprojects into.
+    expect(depthFrame!.camPosKm).toEqual([6600, -1200, 340]);
+  });
+
+  it('hands the far placeholder, not the sampled view, when no body row cleared the depth', () => {
+    // The far-cleared placeholder case (`sampledDepth.row === null`), and the
+    // `world-mpc` row case: neither carries a body pose to unproject through.
+    // A null depth frame must arrive bound to `ctx.renderTargets.farDepthView()`
+    // — never `sampledDepth.view` — so the shader's FAR_DEPTH early-out, not an
+    // assumption about that texture's contents, is what makes it safe. The
+    // converse (a body-m row hands the sampled view) is pinned above, in
+    // 'derives the depth frame from the sampled row...'.
+    const renderer = makeRendererSpy();
+
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(null), makeDrawCtx(), makeState(renderer));
+    expect(renderer.draw.mock.calls[0]![4]).toBeNull();
+    expect(renderer.draw.mock.calls[0]![5]).toBe(FAR_DEPTH_VIEW_STUB);
+
+    renderer.draw.mockClear();
+    orbitTrailsPass.draw(PASS_STUB, makeNear0View(makeSlab()), makeDrawCtx(), makeState(renderer));
+    expect(renderer.draw.mock.calls[0]![4]).toBeNull();
+    expect(renderer.draw.mock.calls[0]![5]).toBe(FAR_DEPTH_VIEW_STUB);
+  });
+
   it('multiplies the whole-layer fade opacity into each per-orbit alpha', () => {
     // A mid-fade hide (layer opacity 0.5) scales every packed per-orbit alpha:
     // Mercury's apparent-size alpha saturates at 1 from the Sun, so its packed
@@ -412,7 +496,13 @@ describe('orbitTrailsPass.draw', () => {
     // at the far-off Sun) also compose; the Moon is singled out below by being
     // the one conic whose centre rides ~1 AU out on Earth.
     const ctx = {
-      snapshot: { simDays, focusBlend: 0, nowMs: 0 },
+      snapshot: {
+        simDays,
+        focusBlend: 0,
+        nowMs: 0,
+        renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+      },
+      bodyPose: () => null,
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1e-13 },
@@ -481,7 +571,13 @@ describe('orbitTrailsPass.draw', () => {
     const simDays = CONST_J2000 + 100;
     const earthPos = deriveBodyStates(simDays).get('earth')!.positionMpc;
     const ctx = {
-      snapshot: { simDays, focusBlend: 0, nowMs: 0 },
+      snapshot: {
+        simDays,
+        focusBlend: 0,
+        nowMs: 0,
+        renderTargets: { farDepthView: () => FAR_DEPTH_VIEW_STUB },
+      },
+      bodyPose: () => null,
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
       drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1e-13 },
@@ -576,12 +672,12 @@ describe('orbitTrailsPass.draw', () => {
   it('the layer forwards the debug flag to the renderer', () => {
     // `enabled()` never forces the layer on for this flag — draw() just reads
     // it alongside settings.orbitTrails.enabled and passes it straight through
-    // as renderer.draw's fifth argument.
+    // as renderer.draw's last argument.
     const renderer = makeRendererSpy();
     const view = makeNear0View();
 
     orbitTrailsPass.draw(PASS_STUB, view, makeDrawCtx(), makeState(renderer, { impostorOn: true }));
-    expect(renderer.draw.mock.calls[0]![4]).toBe(true);
+    expect(renderer.draw.mock.calls[0]![6]).toBe(true);
 
     renderer.draw.mockClear();
     orbitTrailsPass.draw(
@@ -590,6 +686,6 @@ describe('orbitTrailsPass.draw', () => {
       makeDrawCtx(),
       makeState(renderer, { impostorOn: false }),
     );
-    expect(renderer.draw.mock.calls[0]![4]).toBe(false);
+    expect(renderer.draw.mock.calls[0]![6]).toBe(false);
   });
 });

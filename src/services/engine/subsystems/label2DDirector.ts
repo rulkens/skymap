@@ -381,9 +381,11 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
         pixelWidth: leader.pixelWidth,
         color: leader.color,
         fadeAlpha: label.fadeAlpha ?? 1,
-        // Same subject, same depth verdict: a connector must not fade into a
-        // disc its caption is allowed to paint over.
+        // Same subject, same depth verdict — both channels — so a connector
+        // never fades into a disc its caption is allowed to paint over, nor
+        // survives a ridge its caption clips against.
         occludeWeight: label.occludeWeight,
+        occludeNearKm: label.occludeNearKm,
       });
     }
     return lines;
@@ -692,6 +694,10 @@ export function createLabel2DDirector(config: Label2DDirectorConfig): Label2DDir
       out.push({
         ...label,
         worldPos: placement.labelWorldPos,
+        // The depth-occlusion verdict must be judged where the SUBJECT is,
+        // not at the lifted caption's own worldPos above — 'anchor' is the
+        // pre-lift point, the same one 'leader.fromWorld' lerps from.
+        occludeSubjectPos: anchor,
         worldEmMpc: liftEmMpc,
         leader:
           placement.line === null

@@ -9,6 +9,7 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { near0LabelProjection } from '../near0LabelProjection';
+import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
 
@@ -38,18 +39,17 @@ export const foregroundLabelsPass: ContentPass = {
 
     const { vpF32, viewportPx } = near0LabelProjection(ctx);
 
-    // Valid only when the body pass ran this frame — else `foreground:0`'s
-    // colour is stale/uninitialised and would blank every caption.
-    const colorView = ctx.snapshot.renderedTargets.has('foreground:0')
-      ? ctx.snapshot.renderTargets.viewOf('foreground:0')
-      : undefined;
+    // The joint both renderers bind: the coverage alpha AND the sampled depth
+    // these captions clip their glyphs against, since their `occludeNearKm`
+    // and the depth frame measure the same eye-relative km.
+    const scene = overlaySceneOcclusion(ctx, view);
 
     // Lines before captions, so the glyphs composite OVER the connector where
     // they meet. A null line renderer (bootstrap gap) just skips them.
     if (lineRenderer !== null) {
-      lineRenderer.draw(pass, vpF32, viewportPx, colorView);
+      lineRenderer.draw(pass, vpF32, viewportPx, scene);
     }
-    renderer.draw(pass, vpF32, viewportPx, colorView);
+    renderer.draw(pass, vpF32, viewportPx, scene);
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn captions, stamped with

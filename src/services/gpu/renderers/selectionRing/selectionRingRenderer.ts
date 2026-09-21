@@ -43,10 +43,13 @@ import vsCode from '../../shaders/selectionRing/vertex.wesl?static';
 import fsCode from '../../shaders/selectionRing/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/selectionRing/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
 import {
   OCCLUSION_COVERAGE_GROUP_INDEX,
   OCCLUSION_COVERAGE_LAYOUT_DESC,
   createOcclusionCoverageBindGroup,
+  createOcclusionDepthFrameBuffer,
+  writeOcclusionDepthFrame,
 } from '../labels/occlusionCoverageGroup';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
@@ -68,9 +71,9 @@ const SELECTION_UNIFORM_BYTES = 32;
  * behind the solar-system bodies. When set, the pipeline gains a group(1)
  * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
  * `fragmentOcclude.wesl` alongside the plain entry; `draw` then selects the
- * occlude pipeline on any frame handed a scene colour view. The default (init
- * omitted) keeps the plain single-BGL pipeline the NEAR0 selection ring relies
- * on — byte-for-byte unchanged, since that sibling passes no colour view.
+ * occlude pipeline on any frame handed an `OverlaySceneOcclusion`. The default
+ * (init omitted) keeps the plain single-BGL pipeline the NEAR0 selection ring
+ * relies on — byte-for-byte unchanged, since that sibling passes nothing.
  */
 export function createSelectionRingRenderer(
   ctx: GpuContext,
@@ -94,10 +97,13 @@ export function createSelectionRingRenderer(
   let bindGroup: GPUBindGroup | null = null;
   // Retained only on the occlusion path — the group(1) coverage BGL that
   // `draw` rebuilds a per-frame bind group against (the colour view changes
-  // on every resize — see occlusionCoverageGroup.ts). Null on the plain path
-  // (and whenever device is null), which is what gates `draw`'s occlusion
-  // branch.
+  // on every resize — see occlusionCoverageGroup.ts), and the depth-frame
+  // uniform that joint's binding 2 reads. The ring has no per-subject weight,
+  // so it fills those two entries without reading them: it attenuates
+  // unconditionally wherever it draws occluded. Null on the plain path (and
+  // whenever device is null), which is what gates `draw`'s occlusion branch.
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
+  let occlusionDepthFrameBuffer: GPUBuffer | null = null;
 
   const occludesScene = init?.occludeAgainstScene === true;
 
@@ -115,6 +121,10 @@ export function createSelectionRingRenderer(
     // bind group from the resize-recreated colour view.
     if (occludesScene) {
       occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
+      occlusionDepthFrameBuffer = createOcclusionDepthFrameBuffer(
+        device,
+        'selection-ring-depth-frame',
+      );
     }
 
     const vsModule = createShaderModuleWithDevLog(device, vsCode, 'selectionRing.vertex');
@@ -182,7 +192,7 @@ export function createSelectionRingRenderer(
     viewProj: Float32Array,
     viewportSize: Vec2,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
-    sceneColorView?: GPUTextureView,
+    scene?: OverlaySceneOcclusion,
   ): void {
     if (!device || !plainPipeline || !bindGroup || !cameraBuffer || !selectionBuffer) return;
     if (selection === null) return;
@@ -202,20 +212,21 @@ export function createSelectionRingRenderer(
     device.queue.writeBuffer(selectionBuffer, 0, selUni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion
-    // pipeline only when a scene colour view is supplied THIS frame, binding the
-    // group(1) coverage joint rebuilt from that view. With no colour view (e.g.
-    // the NEAR0 sibling, or a COSMO frame in which no foreground body
-    // rendered), it falls back to the plain pipeline and draws the ring
-    // un-occluded — a valid draw, NOT an occlusion draw with group(1) left
-    // unbound. A non-occlusion instance (occludePipeline null) always takes
-    // the plain path.
-    if (occlusionCoverageBGL && occludePipeline && sceneColorView) {
+    // pipeline only when the scene views are supplied THIS frame, binding the
+    // group(1) coverage joint rebuilt from them. With none (e.g. the NEAR0
+    // sibling, or a COSMO frame in which no foreground body rendered), it falls
+    // back to the plain pipeline and draws the ring un-occluded — a valid draw,
+    // NOT an occlusion draw with group(1) left unbound. A non-occlusion
+    // instance (occludePipeline null) always takes the plain path.
+    if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
+      writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, viewportSize);
       const coverageBindGroup = createOcclusionCoverageBindGroup(
         device,
         occlusionCoverageBGL,
-        sceneColorView,
+        scene,
+        occlusionDepthFrameBuffer,
       );
       pass.setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, coverageBindGroup);
     } else {
@@ -228,6 +239,7 @@ export function createSelectionRingRenderer(
   function destroy(): void {
     cameraBuffer?.destroy();
     selectionBuffer?.destroy();
+    occlusionDepthFrameBuffer?.destroy();
   }
 
   const renderer: SelectionRingRenderer = {

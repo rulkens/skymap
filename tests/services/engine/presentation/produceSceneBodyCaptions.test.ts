@@ -513,6 +513,30 @@ describe('produceSceneBodyCaptions occlude weight', () => {
     expect(occludeWeightOf(camPos, WHALE_LABEL_ID)).toBe(0);
   });
 
+  it('carries the subject’s NEAR-surface distance in km as the depth channel’s cutoff', () => {
+    // The sampled-depth channel compares a scene texel's distance against this.
+    // The subject's own front surface sits exactly AT it, so a body never
+    // occludes its own caption — which is why it is centre MINUS radius.
+    const moon = worldPosOf(MOON_LABEL_ID);
+    const camPos = step(EARTH_POS, direction(moon, EARTH_POS), 20000);
+    const label = produceSceneBodyCaptions(makeState(), makeCtx(camPos)).labels.find(
+      (l) => l.id === MOON_LABEL_ID,
+    )!;
+    const base = BASE.find((l) => l.id === MOON_LABEL_ID)!;
+    const centreMpc = Math.hypot(
+      base.worldPos[0] - camPos[0],
+      base.worldPos[1] - camPos[1],
+      base.worldPos[2] - camPos[2],
+    );
+    expect(label.occludeNearKm).toBeCloseTo(
+      (centreMpc - base.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
+      0,
+    );
+    // A subject the sphere test calls occluded keeps weight 1 — the two
+    // channels are independent, and the fragment takes whichever fires.
+    expect(label.occludeWeight).toBe(1);
+  });
+
   it('keeps the per-pixel rule for a subject Earth really hides', () => {
     // Eye on the anti-Moon side of Earth, well clear of the surface: the Moon
     // is behind the disc and must still sink into the limb.

@@ -215,7 +215,8 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     // sample a cubemap this frame actually wrote.
     expect(steps[0]).toEqual({ kind: 'compute', name: 'flow' });
     expect(steps[1]).toEqual({ kind: 'compute', name: 'sky-view' });
-    expect(steps[2]).toBe(capture[0]);
+    expect(steps[2]).toEqual({ kind: 'compute', name: 'aerial-perspective' });
+    expect(steps[3]).toBe(capture[0]);
   });
 
   it("expands a face's body slabs into depth-clearing capture steps after its COSMO/NEAR0 pair", () => {
@@ -346,6 +347,19 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       [['d'], { sample: 'foreground:0' }, 'SAMPLE_DEPTH', 3],
       [['b'], 'load', 'AFTER_DEPTH', 3],
     ]);
+  });
+
+  it('the real body roster samples depth after every opaque row and both shells', () => {
+    // The two rows in the marker READ that depth: the contact decals project
+    // onto it, and the atmosphere shell classifies each ray by it. Anything
+    // that stamps depth must therefore be listed before them, and only the
+    // meshes — which want the shell already drawn behind them — after.
+    const steps = program({ foregroundChain: [3] });
+    const first = steps.findIndex(
+      (step) => step.kind === 'render' && step.target === 'foreground:0',
+    );
+    expect(namesOf(steps[first + 1])).toEqual(['contact-shadows', 'atmosphere-shell']);
+    expect(namesOf(steps[first + 2])).toEqual(['mesh-bodies']);
   });
 
   it('refuses a body roster with a second marker', () => {

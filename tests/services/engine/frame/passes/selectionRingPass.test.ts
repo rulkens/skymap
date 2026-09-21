@@ -273,21 +273,27 @@ describe('selectionRingPass.draw', () => {
     expect(rendererSpy.draw.mock.calls[0]![2]).toEqual([1280, 720]);
   });
 
-  // Cross-file contract (Task 12): the occlusion joint now reads
-  // 'foreground:0's COLOUR view (its alpha, via lib/sceneDepth.wesl), not its
+  // Cross-file contract (Task 12): the occlusion joint's COVERAGE half reads
+  // 'foreground:0's colour view (its alpha, via lib/sceneDepth.wesl), not its
   // depth view — each painter-chain row clears its own depth (spec §7.3), so
-  // the depth buffer can no longer back a coverage test. This fails if the
-  // layer is ever pointed back at `depthViewOf`.
-  it('passes the foreground colour view (not the depth view) to the renderer as the 5th arg', () => {
+  // the depth buffer can no longer back a coverage test. Its depth half comes
+  // from the step's own `view.sampledDepth`, so this still fails if the layer
+  // is ever pointed back at `depthViewOf`.
+  it('passes the foreground colour view (not a depthViewOf lookup) in the joint', () => {
     const state = makeStateWithSizePx(galaxyRow(), 4);
     const sentinelColorView = {} as GPUTextureView;
+    const farDepthView = {} as GPUTextureView;
     const viewOf = vi.fn<(id: string) => GPUTextureView>(() => sentinelColorView);
     const depthViewOf = vi.fn<(id: string) => GPUTextureView>(() => ({}) as GPUTextureView);
     const ctx = {
       ...makeCtx(),
       snapshot: {
         ...makeCtx().snapshot,
-        renderTargets: { viewOf, depthViewOf } as unknown as FrameView['snapshot']['renderTargets'],
+        renderTargets: {
+          viewOf,
+          depthViewOf,
+          farDepthView: () => farDepthView,
+        } as unknown as FrameView['snapshot']['renderTargets'],
         renderedTargets: new Set(['foreground:0']),
       },
     };
@@ -299,6 +305,10 @@ describe('selectionRingPass.draw', () => {
     const rendererSpy = state.gpu.selectionRingRenderer as unknown as ReturnType<
       typeof makeRendererSpy
     >;
-    expect(rendererSpy.draw.mock.calls[0]![4]).toBe(sentinelColorView);
+    expect(rendererSpy.draw.mock.calls[0]![4]).toEqual({
+      colorView: sentinelColorView,
+      depthView: farDepthView,
+      frame: null,
+    });
   });
 });

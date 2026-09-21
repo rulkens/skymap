@@ -83,6 +83,7 @@ import { near0OverlayVpF32 } from '../near0OverlayVpF32';
 import { clampVec3Length } from '../../../../utils/math/clampVec3Length';
 import { NEAR0_FAR_CLAMP_FRACTION } from '../../../../utils/camera/foregroundFrustum';
 import { subjectOccludedByBodies } from '../../../../utils/occlusion/subjectOccludedByBodies';
+import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { pinInsideNearPlane } from '../../../../utils/camera/pinInsideNearPlane';
 
 export const near0SelectionRingPass: ContentPass = {
@@ -164,13 +165,15 @@ export const near0SelectionRingPass: ContentPass = {
       view.slab.near * NEAR0_OVERLAY_CLIP_SCALE,
     );
 
-    // The per-pixel occlusion variant is selected by HANDING the renderer a
-    // scene colour view, so the depth verdict is made here: only a ring whose
-    // subject an opaque body actually hides gets attenuated, and then only
-    // while the body pass has written this frame's `foreground:0` (else the
-    // colour is stale and would blank the whole ring).
+    // The per-pixel occlusion variant is selected by HANDING the renderer the
+    // scene joint, so the depth verdict is made here: only a ring whose subject
+    // an opaque body actually hides gets attenuated. `overlaySceneOcclusion` is
+    // undefined until the body pass has written this frame's `foreground:0`
+    // (else the colour is stale and would blank the whole ring), and being the
+    // first conjunct it keeps the body partition off those frames entirely.
+    const scene = overlaySceneOcclusion(ctx, view);
     const occluded =
-      ctx.snapshot.renderedTargets.has('foreground:0') &&
+      scene !== undefined &&
       subjectOccludedByBodies({
         subjectMpc: centreWorld,
         camPosMpc: view.camPos,
@@ -182,7 +185,7 @@ export const near0SelectionRingPass: ContentPass = {
       rebasedVp,
       view.viewportPx,
       { worldPos: clampedCentre, ringRadiusPx, alpha },
-      occluded ? ctx.snapshot.renderTargets.viewOf('foreground:0') : undefined,
+      occluded ? scene : undefined,
     );
   },
 };

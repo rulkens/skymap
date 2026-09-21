@@ -6,13 +6,17 @@
 // Kepler, f32 safety, discard-vs-zero) live in
 // docs/references/orbit-trail-fragment-math.md.
 
+import package::bodies::orbitTrail::constants::DEPTH_CLEARANCE_REL;
 import package::bodies::orbitTrail::constants::MAX_OCCLUDERS;
 import package::bodies::orbitTrail::constants::STROKE_PX;
 import package::bodies::orbitTrail::io::VSOut;
 import package::lib::math::TAU;
+import package::lib::sceneDepthRay::FAR_DEPTH;
+import package::lib::sceneDepthRay::sceneRayDistance;
 
 // The frame's opaque bodies as eye-relative spheres (centre.xyz, radius.w, km),
-// 'count' live entries — orbitTrailRenderer.ts mirrors this layout, pinned by
+// 'count' live entries, then the km-scaled frame of the row that stamped
+// 'sceneDepth' — orbitTrailRenderer.ts mirrors this layout, pinned by
 // orbitTrailConstants.parity.test.ts.
 struct OcclusionUniforms {
   count: u32,
@@ -20,9 +24,15 @@ struct OcclusionUniforms {
   pad1: u32,
   pad2: u32,
   spheres: array<vec4<f32>, MAX_OCCLUDERS>,
+  invMvp: mat4x4<f32>,
+  camPosKm: vec3<f32>,
+  viewportPx: vec2<f32>,
 };
 
 @group(0) @binding(0) var<uniform> occ: OcclusionUniforms;
+// 'foreground:0's depth, sampled not attached (the hdr target is depthless);
+// every texel holds FAR_DEPTH until some row clears it.
+@group(0) @binding(1) var sceneDepth: texture_depth_2d;
 
 // TRAIL_FLOOR keeps the far arc legible instead of fading to black.
 const TRAIL_DECAY: f32 = 1.2;
@@ -88,6 +98,20 @@ fn fs(in: VSOut) -> @location(0) vec4<f32> {
   for (var i = 0u; i < occ.count; i++) {
     clear *= sphereClearance(x, occ.spheres[i]);
   }
+
+  // The spheres cover every body; this covers ONE row's terrain and meshes. The
+  // depth texture need not match the viewport (the far placeholder is 1x1), so
+  // the texel is rescaled while the ray keeps the fragment's own uv.
+  let texel = vec2<i32>(in.clip.xy * vec2<f32>(textureDimensions(sceneDepth)) / occ.viewportPx);
+  let depth = textureLoad(sceneDepth, texel, 0);
+  if (depth != FAR_DEPTH) {
+    let sceneKm = sceneRayDistance(in.clip.xy / occ.viewportPx, depth, occ.invMvp, occ.camPosKm);
+    let trailKm = length(x);
+    // Symmetric, so a grazing trail fades instead of stippling along the depth staircase.
+    let tol = DEPTH_CLEARANCE_REL * trailKm;
+    clear *= smoothstep(-tol, tol, sceneKm - trailKm);
+  }
+
   if (clear <= 0.0) {
     discard;
   }

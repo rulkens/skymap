@@ -65,10 +65,19 @@ struct LabelData {
   // collapses the outline band regardless of outlineEmFrac.
   outlineColor: vec4<f32>,
   // How much per-pixel scene attenuation the occlusion fragment variant
-  // applies (1 = fully, 0 = draw over the bodies).  Bytes 64..67; the array
-  // element stride rounds UP to 80 on the struct's vec4 alignment, so
-  // 'LABEL_DATA_BYTES' in labelRenderer.ts is 80, not 68.
+  // applies (1 = fully, 0 = draw over the bodies).  Bytes 64..67.
   occludeWeight: f32,
+  // Eye to the subject's NEAR surface, km: the sampled-depth channel's cutoff
+  // (lib/sceneDepth.wesl).  Bytes 68..71, taken out of the padding the struct's
+  // vec4 alignment already held.
+  occludeNearKm: f32,
+  // World position the sampled-depth channel judges instead of 'worldPos':
+  // a LIFTED label's own worldPos sits screen-up over OTHER terrain than its
+  // subject (label2DDirector's applyLift), so occlusion is judged here
+  // instead.  xyz = world Mpc, same frame as worldPos; w unused (zero).
+  // Bytes 80..95 — bytes 72..79 are now genuine alignment padding ahead of
+  // this vec4, not slack; 'LABEL_DATA_BYTES' in labelRenderer.ts is 96.
+  subjectPos: vec4<f32>,
 };
 
 struct VsIn {
@@ -109,8 +118,9 @@ struct VsOut {
   // Converted CPU-side at the vertex stage so the fragment shader has
   // the value ready without re-deriving from per-label data.
   @location(4) outlineSdf: f32,
-  // Per-label share of the scene attenuation, forwarded from LabelData
-  // because labels[] is bound to the VERTEX stage only.  Constant per
-  // label, so interpolating it is exact.
+  // Per-label share of the scene attenuation.  'vsOcclude' resolves this to
+  // 'max(LabelData.occludeWeight, the anchor-depth verdict)' before writing
+  // it here; 'vs' forwards LabelData's own value unchanged.  Constant per
+  // label either way, so interpolating it is exact.
   @location(5) occludeWeight: f32,
 };

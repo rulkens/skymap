@@ -69,13 +69,17 @@ import type { MarkerLine } from '../../../../@types/rendering/MarkerLine';
 import type { MarkerLineRenderer } from '../../../../@types/rendering/MarkerLineRenderer';
 import type { Vec2 } from '../../../../@types/math/Vec2';
 import vsCode from '../../shaders/markerLines/vertex.wesl?static';
+import vsOccludeCode from '../../shaders/markerLines/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/markerLines/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/markerLines/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
 import {
   OCCLUSION_COVERAGE_GROUP_INDEX,
   OCCLUSION_COVERAGE_LAYOUT_DESC,
   createOcclusionCoverageBindGroup,
+  createOcclusionDepthFrameBuffer,
+  writeOcclusionDepthFrame,
 } from './occlusionCoverageGroup';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { UNIT_QUAD_STRIP_CORNERS, UNIT_QUAD_VERTEX_LAYOUT } from '../../lib/unitQuad';
@@ -84,22 +88,23 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
 // ─── buffer constants ──────────────────────────────────────────────────────
 
 /**
- * Per-instance vertex buffer stride, matching `VsIn` attributes 1–3 in io.wesl:
+ * Per-instance vertex buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
  *
  *   bytes  0..15  fromAndWidth  vec4<f32> — fromWorld.xyz, pixelWidth
  *   bytes 16..31  toAndAlpha    vec4<f32> — toWorld.xyz, fadeAlpha
  *   bytes 32..47  color         vec4<f32> — rgba premultiplied
  *   bytes 48..51  occludeWeight f32       — share of the scene attenuation
+ *   bytes 52..55  occludeNearKm f32       — the sampled-depth channel's cutoff
  *
- * 3 × vec4 + a scalar = 52 bytes/instance.  A vertex-buffer stride only has to
- * be a multiple of 4, so the scalar rides alone rather than costing a padded
+ * 3 × vec4 + two scalars = 56 bytes/instance.  A vertex-buffer stride only has
+ * to be a multiple of 4, so the scalars ride alone rather than costing a padded
  * vec4.
  *
  * Packing pixelWidth and fadeAlpha into the trailing slot of the world-position
  * vec3s saves 16 bytes per instance versus carrying them as separate vec4
  * attributes — same trick as the filament renderer's density field.
  */
-const LINE_INSTANCE_BYTES = 52;
+const LINE_INSTANCE_BYTES = 56;
 
 // ─── corner buffer ────────────────────────────────────────────────────────
 
@@ -132,9 +137,9 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * behind the solar-system bodies.  When set, the pipeline gains a group(1)
  * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
  * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
- * consumes a per-frame scene colour view.  The default (opts omitted) keeps
- * the plain single-BGL pipeline the Milky Way + structure leader lines rely
- * on — byte-for-byte unchanged.
+ * consumes a per-frame `OverlaySceneOcclusion`.  The default (opts omitted)
+ * keeps the plain single-BGL pipeline the Milky Way + structure leader lines
+ * rely on — byte-for-byte unchanged.
  */
 export function createMarkerLineRenderer(
   ctx: GpuContext,
@@ -150,7 +155,7 @@ export function createMarkerLineRenderer(
 
   // ── CPU scratch buffer — always allocated, safe to use with null device ──
   //
-  // 13 floats per instance × 4 bytes = 52 bytes = LINE_INSTANCE_BYTES.
+  // 14 floats per instance × 4 bytes = 56 bytes = LINE_INSTANCE_BYTES.
   // All fields are f32 so a single Float32Array suffices — no u32 fields
   // unlike the label renderer's glyph instance buffer.
   const instanceBuf = new Float32Array(maxLines * (LINE_INSTANCE_BYTES / 4));
@@ -173,10 +178,11 @@ export function createMarkerLineRenderer(
   let cornerBuffer: GPUBuffer | null = null;
   let bindGroup: GPUBindGroup | null = null;
   // Retained only on the occlusion path — the group(1) coverage BGL that
-  // `draw` rebuilds a per-frame bind group against.  Null on the plain
-  // path (and whenever device is null), which is what gates `draw`'s
-  // occlusion branch.
+  // `draw` rebuilds a per-frame bind group against, and the depth-frame
+  // uniform that joint's binding 2 reads.  Null on the plain path (and
+  // whenever device is null), which is what gates `draw`'s occlusion branch.
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
+  let occlusionDepthFrameBuffer: GPUBuffer | null = null;
 
   const occludesScene = opts?.occludeAgainstScene === true;
 
@@ -203,6 +209,10 @@ export function createMarkerLineRenderer(
     // occlusionCoverageGroup.ts).
     if (occludesScene) {
       occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
+      occlusionDepthFrameBuffer = createOcclusionDepthFrameBuffer(
+        device,
+        'marker-line-depth-frame',
+      );
     }
 
     // ── Pipelines ─────────────────────────────────────────────────────────
@@ -225,15 +235,17 @@ export function createMarkerLineRenderer(
       // uv.x selects endpoint (from vs to); uv.y selects side (±half-width).
       UNIT_QUAD_VERTEX_LAYOUT,
       // Buffer 1: per-instance line data, stepMode 'instance'.
-      // Provides fromAndWidth, toAndAlpha, color, occludeWeight to locations 1–4.
+      // Provides fromAndWidth, toAndAlpha, color, occludeWeight,
+      // occludeNearKm to locations 1–5.
       {
-        arrayStride: LINE_INSTANCE_BYTES, // 52 bytes = 3 × vec4 + f32
+        arrayStride: LINE_INSTANCE_BYTES, // 56 bytes = 3 × vec4 + 2 × f32
         stepMode: 'instance',
         attributes: [
           { shaderLocation: 1, offset: 0, format: 'float32x4' }, // fromAndWidth
           { shaderLocation: 2, offset: 16, format: 'float32x4' }, // toAndAlpha
           { shaderLocation: 3, offset: 32, format: 'float32x4' }, // color
           { shaderLocation: 4, offset: 48, format: 'float32' }, // occludeWeight
+          { shaderLocation: 5, offset: 52, format: 'float32' }, // occludeNearKm
         ],
       },
     ];
@@ -266,6 +278,16 @@ export function createMarkerLineRenderer(
         fsOccludeCode,
         'markerLines.fragmentOcclude',
       );
+      // A SEPARATE vertex module, not 'vsModule' + a different entry point:
+      // vertexOcclude.wesl imports lib::sceneDepth, which statically pulls in
+      // group(1) bindings — vertex.wesl's 'vs' must stay clear of those for
+      // the plain pipeline's group(1)-less layout to accept it (see
+      // vertexOcclude.wesl's header).
+      const vsOccludeModule = createShaderModuleWithDevLog(
+        device,
+        vsOccludeCode,
+        'markerLines.vertexOcclude',
+      );
       occludePipeline = device.createRenderPipeline({
         label: 'marker-line-pipeline-occlude',
         layout: device.createPipelineLayout({
@@ -273,7 +295,7 @@ export function createMarkerLineRenderer(
           // group 0 = the marker-line BGL; group 1 = the shared coverage joint.
           bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
-        vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+        vertex: { module: vsOccludeModule, entryPoint: 'vsOcclude', buffers: vertexBuffers },
         fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
         primitive: { topology: 'triangle-strip' },
       });
@@ -318,7 +340,7 @@ export function createMarkerLineRenderer(
     for (let i = 0; i < count; i++) {
       const line = lines[i]!;
 
-      // Pack 13 floats into the CPU scratch buffer at stride 13 (52 bytes):
+      // Pack 14 floats into the CPU scratch buffer at stride 14 (56 bytes):
       //
       //   [0..2]  fromWorld.xyz  — line start in world Mpc
       //   [3]     pixelWidth     — full line width in CSS pixels
@@ -326,11 +348,12 @@ export function createMarkerLineRenderer(
       //   [7]     fadeAlpha      — multiplied into colour by vertex stage
       //   [8..11] color          — premultiplied rgba
       //   [12]    occludeWeight  — 1 = take the per-pixel scene attenuation
+      //   [13]    occludeNearKm  — eye to the subject's near surface, km
       //
       // All fields are f32 so we write directly through the Float32Array —
       // no Uint32Array aliasing needed (unlike labelRenderer's glyph buffer
       // which carries a u32 labelIndex at offset 8).
-      const base = i * (LINE_INSTANCE_BYTES / 4); // 13 f32s per instance
+      const base = i * (LINE_INSTANCE_BYTES / 4); // 14 f32s per instance
       instanceBuf[base + 0] = line.fromWorld[0];
       instanceBuf[base + 1] = line.fromWorld[1];
       instanceBuf[base + 2] = line.fromWorld[2];
@@ -344,6 +367,7 @@ export function createMarkerLineRenderer(
       instanceBuf[base + 10] = line.color[2]!;
       instanceBuf[base + 11] = line.color[3]!;
       instanceBuf[base + 12] = line.occludeWeight ?? 1;
+      instanceBuf[base + 13] = line.occludeNearKm ?? 0;
 
       currentLineCount++;
     }
@@ -366,7 +390,7 @@ export function createMarkerLineRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneColorView?: GPUTextureView,
+    scene?: OverlaySceneOcclusion,
   ): void {
     if (
       !device ||
@@ -388,19 +412,21 @@ export function createMarkerLineRenderer(
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion
-    // pipeline only when a scene colour view is supplied THIS frame, binding the
-    // group(1) coverage joint rebuilt from that view. With no colour view (e.g.
-    // no foreground body rendered this frame), it falls back to the plain
-    // pipeline and draws the connectors un-occluded — a valid draw, NOT an
-    // occlusion draw with group(1) left unbound. A non-occlusion instance
-    // (occludePipeline null) always takes the plain path.
-    if (occlusionCoverageBGL && occludePipeline && sceneColorView) {
+    // pipeline only when the scene views are supplied THIS frame, binding the
+    // group(1) coverage joint rebuilt from them. With none (e.g. no foreground
+    // body rendered this frame), it falls back to the plain pipeline and draws
+    // the connectors un-occluded — a valid draw, NOT an occlusion draw with
+    // group(1) left unbound. A non-occlusion instance (occludePipeline null)
+    // always takes the plain path.
+    if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
+      writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, viewportSize);
       const coverageBindGroup = createOcclusionCoverageBindGroup(
         device,
         occlusionCoverageBGL,
-        sceneColorView,
+        scene,
+        occlusionDepthFrameBuffer,
       );
       pass.setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, coverageBindGroup);
     } else {
@@ -423,6 +449,7 @@ export function createMarkerLineRenderer(
     uniformBuffer?.destroy();
     gpuInstanceBuffer?.destroy();
     cornerBuffer?.destroy();
+    occlusionDepthFrameBuffer?.destroy();
   }
 
   const renderer: MarkerLineRenderer = {

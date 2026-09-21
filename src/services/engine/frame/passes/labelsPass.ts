@@ -39,6 +39,7 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import { overlaySceneOcclusion } from '../overlaySceneOcclusion';
 import { cosmoLabelProjection } from '../cosmoLabelProjection';
 import { hasPickableLabel } from '../../../../utils/labels/hasPickableLabel';
 import { labelPickQuads } from '../../../../utils/labels/labelPickQuads';
@@ -62,15 +63,11 @@ export const labelsPass: ContentPass = {
   },
 
   draw(pass, view, ctx, state) {
-    // Occlude the captions per-pixel behind an opaque body ONLY when the body
-    // pass actually ran this frame — else the `foreground:0` colour is
-    // stale/uninitialised and would spuriously blank every caption. When
-    // undefined, the occlusion renderer falls back to its plain pipeline and
-    // draws the captions un-occluded. Mirrors `foregroundLabelsPass`'s guard.
-    const colorView = ctx.snapshot.renderedTargets.has('foreground:0')
-      ? ctx.snapshot.renderTargets.viewOf('foreground:0')
-      : undefined;
-    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, colorView);
+    // Every COSMO label carries occludeWeight 1, so only the coverage half of
+    // the joint decides anything here — the depth half is bound because the
+    // pipeline layout demands it, and reads as a no-op against the labels'
+    // zero cutoff.
+    state.gpu.labelRenderer!.draw(pass, view.vp, view.viewportPx, overlaySceneOcclusion(ctx, view));
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn labels, stamped with
