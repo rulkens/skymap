@@ -87,8 +87,7 @@ export function atmosphereDrawList(
       diameterKpc:
         (2 * outerBoundRadiusM(body.surface) * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
       distanceMpc,
-      viewportHeightPx: ctx.canvasSize.height,
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
     if (diameterPx >= SUB_PIXEL_BODY_CULL_PX) entries.push(entry);
   }

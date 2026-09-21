@@ -84,11 +84,13 @@ const CTX_STUB = {} as FrameView;
 /**
  * The gate + partition inputs a layer reads off the frame context: the orbit
  * distance (the shared foreground gate reads `ctx.cam.distance`), the
- * absolute camera position, the vertical fov, and the viewport height.
- * 60° fov + 720-px viewport matches the SlabView fixture below. The orbit
- * distance is |camPos| — these fixtures orbit the heliocentric origin, so
- * the two coincide.
+ * absolute camera position, and `drawPxPerRad`. 60° fov + 720-px viewport
+ * matches the SlabView fixture below. The orbit distance is |camPos| — these
+ * fixtures orbit the heliocentric origin, so the two coincide.
  */
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+
 function makeCtx(camPos: Readonly<Vec3>): FrameView {
   return {
     // The instant the star layers resolve their positions at; a star anchor is
@@ -96,8 +98,7 @@ function makeCtx(camPos: Readonly<Vec3>): FrameView {
     snapshot: { simDays: CONST_J2000 },
     cam: { distance: Math.hypot(camPos[0], camPos[1], camPos[2]) },
     drawCamPos: camPos,
-    fovYRad: Math.PI / 3,
-    canvasSize: { width: 1280, height: 720 },
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

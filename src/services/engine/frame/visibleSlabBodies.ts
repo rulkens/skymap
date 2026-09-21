@@ -49,18 +49,9 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
   readonly camPosMpc: Readonly<Vec3>;
   readonly camForwardMpc: Readonly<Vec3>;
   readonly frustum: ViewFrustum;
-  readonly viewportHeightPx: number;
-  readonly fovYRad: number;
+  readonly pxPerRad: number;
 }): readonly T[] {
-  const {
-    bodies: candidates,
-    bodyStates,
-    camPosMpc,
-    camForwardMpc,
-    frustum,
-    viewportHeightPx,
-    fovYRad,
-  } = input;
+  const { bodies: candidates, bodyStates, camPosMpc, camForwardMpc, frustum, pxPerRad } = input;
 
   // Half-diagonal (corner, not edge — the widest off-axis angle a fully
   // on-screen body can have), padded by FRUSTUM_CULL_MARGIN_FACTOR: this is
@@ -95,8 +86,7 @@ export function visibleSlabBodies<T extends SceneBody>(input: {
       positionMpc: state.positionMpc,
       radiusM: rEffM,
       camPosMpc,
-      viewportHeightPx,
-      fovYRad,
+      pxPerRad,
     });
     if (diameterPx < SUB_PIXEL_BODY_CULL_PX) return false;
 

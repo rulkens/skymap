@@ -5,7 +5,7 @@
  *
  * The set is read off the partitions the `foreground:0` sphere layers
  * themselves consume, bound exactly as those binders bind them
- * (`ctx.drawCamPos`, `ctx.canvasSize.height`, `ctx.fovYRad`). "Drawn" would be
+ * (`ctx.drawCamPos`, `ctx.drawPxPerRad`). "Drawn" would be
  * the wrong fact: a 1–3 px planet is drawn, as an additive glint, and occludes
  * nothing. Radii are the INNER bound — an occluder must under-occlude; an
  * atmosphere, ring or lens quad is not opaque. For a mesh body it is the bake's
@@ -33,8 +33,7 @@ export function sceneOccluderBodies(
     stars: positionedVisibleStars(state, ctx),
     camPosMpc: ctx.drawCamPos,
     thresholdPx: STAR_RESOLVE_PX,
-    viewportHeightPx: ctx.canvasSize.height,
-    fovYRad: ctx.fovYRad,
+    pxPerRad: ctx.drawPxPerRad,
   });
 
   const occluders: { positionMpc: Readonly<Vec3>; radiusM: number }[] = [];
@@ -77,8 +76,7 @@ export function sceneOccluderBodies(
       positionMpc,
       radiusM,
       camPosMpc: ctx.drawCamPos,
-      viewportHeightPx: ctx.canvasSize.height,
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
     if (diameterPx >= BODY_GLINT_MAX_PX) occluders.push({ positionMpc, radiusM });
   }

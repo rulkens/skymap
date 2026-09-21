@@ -101,13 +101,15 @@ const PASS_STUB = {
 
 const CTX_STUB = {} as FrameView;
 
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+
 function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 3,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

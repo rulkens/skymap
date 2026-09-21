@@ -31,6 +31,7 @@ import {
   MILKY_WAY_RADIUS_MPC,
 } from '../../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
 import type { OrbitCamera } from '../../../../src/@types/camera/OrbitCamera';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 import type { Mat4 } from 'wgpu-matrix';
 import type { SelectionRef } from '../../../../src/@types/engine/SelectionRef';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
@@ -390,6 +391,7 @@ function makeInput(
   // forwards a single struct. The test mirrors that wiring.
   const canvasWidth = 1280;
   const canvasHeight = FIXTURE_CANVAS_HEIGHT_PX;
+  const frustum = symmetricFrustum(FIXTURE_FOV_Y_RAD, canvasWidth / canvasHeight);
   const viewProj = new Float32Array(16) as unknown as Mat4;
   // The HDR encoders resolve one SlabView (COSMO) before the layer loop
   // via `slabViewOf(ctx, COSMO)`, which indexes `ctx.slabs[COSMO]`
@@ -440,7 +442,8 @@ function makeInput(
     drawCamPos: [cam.position[0]!, cam.position[1]!, cam.position[2]!] as Readonly<
       [number, number, number]
     >,
-    drawPxPerRad: canvasHeight / (2 * Math.tan(cam.fovYRad / 2)),
+    frustum,
+    drawPxPerRad: canvasHeight / (frustum.tanUp - frustum.tanDown),
     fovYRad: FIXTURE_FOV_Y_RAD,
   };
 

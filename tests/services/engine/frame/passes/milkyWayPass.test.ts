@@ -32,6 +32,9 @@ const STATE = {
   },
 } as unknown as EngineState;
 
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 3 / 2));
+
 function makeCtx(camDistMpc: number): FrameView {
   const camPos: Vec3 = [0, 0, camDistMpc];
   return {
@@ -40,8 +43,7 @@ function makeCtx(camDistMpc: number): FrameView {
     snapshot: { nowMs: 0, focusBlend: 0 },
     cam: { distance: camDistMpc },
     drawCamPos: camPos,
-    fovYRad: Math.PI / 3,
-    canvasSize: { width: 1280, height: 720 },
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

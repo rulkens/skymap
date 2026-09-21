@@ -22,8 +22,8 @@
  * base drawn body — not the feature kinds.
  *
  * The apparent-size inputs are read off the frame context the same way in
- * `enabled` and `draw`: `ctx.drawCamPos` for the camera, `ctx.canvasSize.height`
- * for the viewport, `ctx.fovYRad` for the projection. Both call sites of both
+ * `enabled` and `draw`: `ctx.drawCamPos` for the camera, `ctx.drawPxPerRad`
+ * for the projection. Both call sites of both
  * layers therefore see the identical partition, which is the whole point — one
  * partition, consumed on opposite branches, is what keeps the descent handoff
  * seamless with no threshold-crossing double-draw or drop.
@@ -50,8 +50,7 @@ export function sceneBodyPartition(
     bodies: [...state.data.bodies.planets, ...state.data.bodies.meshBodies],
     bodyStates: sceneBodyStates(state, ctx),
     camPosMpc: ctx.drawCamPos,
-    viewportHeightPx: ctx.canvasSize.height,
-    fovYRad: ctx.fovYRad,
+    pxPerRad: ctx.drawPxPerRad,
     // Resident iff the renderer has a real SURFACE map bound for the body. The
     // id is a plain string on the body record while the renderer is keyed by
     // `BodyTextureId`; a non-registry body simply misses that Map (→ not

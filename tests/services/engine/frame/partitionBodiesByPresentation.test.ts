@@ -33,6 +33,7 @@ type SeededMesh = MeshBody & Pick<BodyState, 'positionMpc' | 'orientation'>;
 
 const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
+const PX_PER_RAD = VIEWPORT_HEIGHT_PX / (2 * Math.tan(FOV_Y_RAD / 2));
 const CAM: Vec3 = [0, 0, 0];
 
 /**
@@ -86,8 +87,7 @@ function partition(
     bodies,
     bodyStates,
     camPosMpc: CAM,
-    viewportHeightPx: VIEWPORT_HEIGHT_PX,
-    fovYRad: FOV_Y_RAD,
+    pxPerRad: PX_PER_RAD,
     isTextureResident: resident,
   });
 }

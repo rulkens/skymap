@@ -77,8 +77,7 @@ export function partitionBodiesByPresentation(input: {
   bodies: readonly (PlanetBody | MeshBody)[];
   bodyStates: ReadonlyMap<string, BodyState>;
   camPosMpc: Readonly<Vec3>;
-  viewportHeightPx: number;
-  fovYRad: number;
+  pxPerRad: number;
   isTextureResident: (id: string) => boolean;
 }): {
   glints: readonly (PlanetBody | MeshBody)[];
@@ -86,7 +85,7 @@ export function partitionBodiesByPresentation(input: {
   textured: readonly PlanetBody[];
   meshes: readonly MeshBody[];
 } {
-  const { bodies, bodyStates, camPosMpc, viewportHeightPx, fovYRad, isTextureResident } = input;
+  const { bodies, bodyStates, camPosMpc, pxPerRad, isTextureResident } = input;
   const glints: (PlanetBody | MeshBody)[] = [];
   const flat: PlanetBody[] = [];
   const textured: PlanetBody[] = [];
@@ -102,8 +101,7 @@ export function partitionBodiesByPresentation(input: {
       positionMpc: bodyStates.get(body.id)!.positionMpc,
       radiusM: bodyFootprintRadiusM(body),
       camPosMpc,
-      viewportHeightPx,
-      fovYRad,
+      pxPerRad,
     });
     const resolved = diameterPx >= BODY_GLINT_MAX_PX;
 

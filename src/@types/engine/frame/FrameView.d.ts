@@ -9,6 +9,7 @@
 import type { Mat4 } from 'wgpu-matrix';
 
 import type { OrbitCamera } from '../../camera/OrbitCamera';
+import type { ViewFrustum } from '../../camera/ViewFrustum';
 import type { Vec3 } from '../../math/Vec3';
 import type { Size } from '../../rendering/Size';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
@@ -34,6 +35,10 @@ export type FrameView = {
   canvasSize: Size;
   /** This view's eye: the camera's, plus the spec's rotated eye offset. */
   drawCamPos: Readonly<Vec3>;
+  /** This view's projection as tangents of the half-angles from the view axis
+   *  (`spec.frustum`) — the view's definition; `drawPxPerRad` and `fovYRad`
+   *  both derive from it. */
+  frustum: ViewFrustum;
   /** `canvasSize.height / (tanUp − tanDown)` of this view's frustum — pinhole radian→pixel conversion. */
   drawPxPerRad: number;
   /** This view's vertical field of view in radians — its frustum's extents. */

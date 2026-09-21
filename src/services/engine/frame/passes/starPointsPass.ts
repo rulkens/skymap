@@ -164,8 +164,7 @@ export const starPointsPass: ContentPass = {
         stars: positionedVisibleStars(state, ctx),
         camPosMpc: ctx.drawCamPos,
         thresholdPx: STAR_RESOLVE_PX,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       }).points.length > 0
     );
   },
@@ -192,8 +191,7 @@ export const starPointsPass: ContentPass = {
       stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: view.viewportPx[1],
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     // Rebase into the camera-relative frame in f64 so the f32 upload carries no
@@ -307,8 +305,7 @@ export const starPointsPass: ContentPass = {
       stars: positionedVisibleStars(state, ctx),
       camPosMpc: view.camPos,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: view.viewportPx[1],
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     const camPos = view.camPos;

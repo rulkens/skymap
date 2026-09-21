@@ -26,6 +26,7 @@ const SGR_A_STAR_POS = deriveBodyStates(CONST_J2000).get('sgr-a-star')!.position
 // approach band under test.
 const FOV_Y_RAD = (60 * Math.PI) / 180;
 const CANVAS = { width: 1280, height: 720 };
+const PX_PER_RAD = CANVAS.height / (2 * Math.tan(FOV_Y_RAD / 2));
 
 function makeState(): EngineState {
   return {
@@ -41,8 +42,7 @@ function makeCtx(camPosMpc: Vec3): FrameView {
   return {
     snapshot: { nowMs: 0, focusBlend: 0, simDays: CONST_J2000 },
     drawCamPos: camPosMpc,
-    fovYRad: FOV_Y_RAD,
-    canvasSize: CANVAS,
+    drawPxPerRad: PX_PER_RAD,
     vp: new Float32Array(16) as unknown as Mat4,
   } as unknown as FrameView;
 }

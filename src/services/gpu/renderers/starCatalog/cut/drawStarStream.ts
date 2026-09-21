@@ -37,11 +37,11 @@ export function drawStarStream(
   // Same rebased vp the GPU clips against, so the CPU cull is visually
   // lossless; source-independent, forwarded identically to every draw.
   const frustumPlanes = frustumPlanesFromViewProj(rebasedVp, frustumScratch);
-  const glowMarginAngleRad = starCullMargins(prep.sizePx, view.viewportPx[1], ctx.fovYRad).leaf;
   // This view's own pixels per radian: `drawPxPerRad` holds for the view's own
   // size, and a target spanning the same frustum in fewer rows (the aggregate
   // stream's half-res offscreen) scales with its height.
   const pxPerRad = ctx.drawPxPerRad * (view.viewportPx[1] / ctx.canvasSize.height);
+  const glowMarginAngleRad = starCullMargins(prep.sizePx, pxPerRad).leaf;
   // A sky-cubemap capture face has no `star-upsample` pass behind it to carry
   // the aggregate knee, so the aggregate quads knee themselves here instead —
   // else a captured glow reads brighter/more saturated than the same star in

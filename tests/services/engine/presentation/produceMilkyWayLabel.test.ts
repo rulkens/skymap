@@ -79,7 +79,7 @@ function makeCtx(
     drawCamPos: [camDistMpc, 0, 0],
     vp,
     canvasSize: { width, height },
-    fovYRad,
+    drawPxPerRad: height / (2 * Math.tan(fovYRad / 2)),
   } as unknown as FrameView;
 }
 

@@ -107,6 +107,9 @@ function makeBodyView(bodyId: BodyId): SlabView {
  * the shared foreground gate and comfortably resolved (not sub-pixel) — so
  * every test here isolates the descent-fade gate from the OTHER gates.
  */
+// 720-px viewport, 60° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan((60 * Math.PI) / 180 / 2));
+
 function ctxAtAltitude(altitudeRadii: number): FrameView {
   const radiusMpc = EARTH.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC;
   const distanceMpc = radiusMpc * (1 + altitudeRadii);
@@ -114,8 +117,7 @@ function ctxAtAltitude(altitudeRadii: number): FrameView {
     cam: { distance: FOREGROUND_MAX_DISTANCE_MPC / 2 },
     drawCamPos: [EARTH.positionMpc[0] - distanceMpc, EARTH.positionMpc[1], EARTH.positionMpc[2]],
     bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: (60 * Math.PI) / 180,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

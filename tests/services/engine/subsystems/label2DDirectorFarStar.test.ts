@@ -145,6 +145,11 @@ function makeRealNear0Slab(eye: Vec3, target: Vec3): Slab {
   };
 }
 
+// Matches the NEAR0 slab's own frustum (`symmetricFrustum(1, 1280 / 720)`
+// above) — tangent-exact, so `drawPxPerRad` and the slab's projection agree.
+const FIXTURE_FRUSTUM = symmetricFrustum(1, 1280 / 720);
+const FIXTURE_PX_PER_RAD = 720 / (FIXTURE_FRUSTUM.tanUp - FIXTURE_FRUSTUM.tanDown);
+
 function makeCtx(eye: Vec3, slab: Slab): FrameView {
   return {
     snapshot: { nowMs: 0, simDays: CONST_J2000 },
@@ -152,7 +157,7 @@ function makeCtx(eye: Vec3, slab: Slab): FrameView {
     drawCamPos: eye,
     canvasSize: { width: 1280, height: 720 },
     cam: { distance: 1e-13 },
-    fovYRad: 1,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

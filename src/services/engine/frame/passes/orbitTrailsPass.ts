@@ -60,8 +60,7 @@ export const orbitTrailsPass: ContentPass = {
       const maxDiameterPx = apparentSizePx({
         diameterKpc: 2 * reachMpc * 1000,
         distanceMpc: nearestMpc,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (maxDiameterPx >= CULL_PX) return true;
     }
@@ -76,7 +75,6 @@ export const orbitTrailsPass: ContentPass = {
     const states = sceneBodyStates(state, ctx);
     const limit = TRAIL_ELEMENTS.length;
     const camPos = ctx.drawCamPos;
-    const viewportHeightPx = view.viewportPx[1];
 
     // Multiplied into every orbit's apparent-size alpha below, so a hide dissolves
     // the layer rather than popping it.
@@ -114,8 +112,7 @@ export const orbitTrailsPass: ContentPass = {
       const diameterPx = apparentSizePx({
         diameterKpc: 2 * semiMajorLenMpc * 1000,
         distanceMpc,
-        viewportHeightPx,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;

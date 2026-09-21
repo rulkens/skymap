@@ -114,8 +114,7 @@ function ringDrawForBody(
     const diameterPx = apparentSizePx({
       diameterKpc: outerDiameterKpc,
       distanceMpc: dM * SCALE_UNITS.M_TO_MPC,
-      viewportHeightPx: ctx.canvasSize.height,
-      fovYRad: ctx.fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
     if (diameterPx < SUB_PIXEL_BODY_CULL_PX) return null;
   }

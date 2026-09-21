@@ -131,8 +131,7 @@ function cloudShellDraw(state: PassState, ctx: FrameView, bodyId: BodyId): Cloud
   const diameterPx = apparentSizePx({
     diameterKpc: (2 * earth.surface.datumRadiusM * SCALE_UNITS.M_TO_MPC) / SCALE_UNITS.KPC_TO_MPC,
     distanceMpc,
-    viewportHeightPx: ctx.canvasSize.height,
-    fovYRad: ctx.fovYRad,
+    pxPerRad: ctx.drawPxPerRad,
   });
   return diameterPx >= SUB_PIXEL_BODY_CULL_PX ? { earth, deckFade, insideShell } : null;
 }

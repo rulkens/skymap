@@ -82,6 +82,10 @@ const PASS_STUB = {
 // (renderFrame fixtures carry null handles and a bare ctx).
 const CTX_STUB = {} as FrameView;
 
+// 720-px viewport, 45° fovY, tangent-exact — every ctx fixture below reads
+// this instead of restating (canvasSize, fovYRad).
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
+
 // Beyond the handle check, enabled reads ctx.cam.distance (the shared
 // foreground gate) and the camera POSITION + projection knobs (the
 // whole-layer sub-pixel cull). The fixture camera sits AT the origin —
@@ -92,12 +96,11 @@ function makeCtx(distance: number): FrameView {
     snapshot: { nowMs: 0 },
     cam: { distance },
     drawCamPos: [0, 0, 0],
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 4,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 
-// draw reads ctx.drawCamPos + ctx.fovYRad for the per-orbit apparent-size
+// draw reads ctx.drawCamPos + ctx.drawPxPerRad for the per-orbit apparent-size
 // cull/fade, and ctx.simDays to re-derive each conic. Evaluate at CONST_J2000 so
 // the propagated elements equal their tabulated values and the derived conics
 // reproduce SCENE_ORBIT_CONICS (the zero-change point). Park the camera a hair
@@ -113,8 +116,7 @@ function makeDrawCtx(): FrameView {
     drawCamPos: [1e-13, 0, 0],
     // Matches makeNear0View's viewportPx: the occluder binder reads the canvas
     // (like its sibling body binders) while the per-orbit cull reads the view.
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 4,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
     cam: { distance: 1e-13 },
   } as unknown as FrameView;
 }
@@ -250,8 +252,7 @@ describe('orbitTrailsPass.enabled', () => {
       snapshot: { simDays: CONST_J2000 },
       cam: { distance: 1e-6 },
       drawCamPos: [1e-6, 0, 0],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: Math.PI / 4,
+      drawPxPerRad: FIXTURE_PX_PER_RAD,
     } as unknown as FrameView;
     expect(orbitTrailsPass.enabled(state, ctx, makeNear0View())).toBe(false);
   });
@@ -265,8 +266,7 @@ describe('orbitTrailsPass.enabled', () => {
       snapshot: { simDays: CONST_J2000 },
       cam: { distance: 8.178e-3 },
       drawCamPos: [8.178e-3, 0, 0],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: Math.PI / 4,
+      drawPxPerRad: FIXTURE_PX_PER_RAD,
     } as unknown as FrameView;
     expect(ctx.cam.distance).toBeLessThan(FOREGROUND_MAX_DISTANCE_MPC);
     expect(orbitTrailsPass.enabled(state, ctx, makeNear0View())).toBe(false);
@@ -414,8 +414,7 @@ describe('orbitTrailsPass.draw', () => {
     const ctx = {
       snapshot: { simDays, focusBlend: 0, nowMs: 0 },
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: Math.PI / 4,
+      drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1e-13 },
     } as unknown as FrameView;
 
@@ -484,8 +483,7 @@ describe('orbitTrailsPass.draw', () => {
     const ctx = {
       snapshot: { simDays, focusBlend: 0, nowMs: 0 },
       drawCamPos: [earthPos[0], earthPos[1], earthPos[2]],
-      canvasSize: { width: 1280, height: 720 },
-      fovYRad: Math.PI / 4,
+      drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1e-13 },
     } as unknown as FrameView;
 
@@ -537,7 +535,7 @@ describe('orbitTrailsPass.draw', () => {
     const farCtx = {
       snapshot: { simDays: CONST_J2000, focusBlend: 0, nowMs: 0 },
       drawCamPos: [1, 0, 0],
-      fovYRad: Math.PI / 4,
+      drawPxPerRad: FIXTURE_PX_PER_RAD,
       cam: { distance: 1 },
     } as unknown as FrameView;
     orbitTrailsPass.draw(PASS_STUB, makeNear0View(), farCtx, makeState(renderer));

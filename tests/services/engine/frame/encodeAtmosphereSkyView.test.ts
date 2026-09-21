@@ -108,11 +108,14 @@ function makeBodyPose(eyeRelBodyM: Vec3): BodyPoseProvider {
     bodyId === 'earth' ? { eyeRelBodyM, basisM: [...IDENTITY_MAT3] as Mat3 } : null;
 }
 
+// 1080-px viewport, fovYRad π/4, tangent-exact.
+const FIXTURE_PX_PER_RAD = 1080 / (2 * Math.tan(Math.PI / 4 / 2));
+
 /**
  * The minimal FrameView the encode reads: `bodyPose` (the M1 seam the
  * camera altitude now derives from), `drawCamPos` + `cam.distance` (still read
  * by `atmosphereDrawList`'s OWN near-field + sub-pixel disc culls, decoupled
- * from the sky-view math itself), and `canvasSize` + `fovYRad` (that same
+ * from the sky-view math itself), and `drawPxPerRad` (that same
  * cull). `camDistance` defaults to 0 — inside the near-field edge, the common
  * Earth-framed path. `drawCamPos` is sized so Earth's disc resolves well above
  * sub-pixel, clearing the cull the bake shares with the draw.
@@ -126,8 +129,7 @@ function makeCtx(input: {
     bodyPose: input.bodyPose,
     drawCamPos: input.drawCamPos ?? DRAW_CAM_POS,
     cam: { distance: input.camDistance ?? 0 },
-    canvasSize: { width: 1920, height: 1080 },
-    fovYRad: Math.PI / 4,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

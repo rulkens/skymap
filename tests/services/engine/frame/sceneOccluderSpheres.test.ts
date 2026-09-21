@@ -40,6 +40,9 @@ function makeState(meshBodies: readonly MeshBody[], meshResident = true): Engine
 
 const STATE = makeState([]);
 
+// 720-px viewport, 45° fovY, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(Math.PI / 4 / 2));
+
 /** Eye `offsetKm` along +x from `bodyId`, on a 1280×720 viewport at fovY 45°. */
 function makeCtx(bodyId: string, offsetKm: number): FrameView {
   const p = STATES.get(bodyId)!.positionMpc;
@@ -47,8 +50,7 @@ function makeCtx(bodyId: string, offsetKm: number): FrameView {
   return {
     snapshot: { simDays: CONST_J2000 },
     drawCamPos,
-    canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 4,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

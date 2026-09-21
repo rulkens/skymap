@@ -48,14 +48,18 @@ export function deriveView(snapshot: ReadyFrameContext, spec: ViewSpec): FrameVi
   // `ctx.cam` reader draws the frame's orientation instead of this view's.
   const viewCam = turnedOrbitCamera(cam, viewBasisWorld, drawCamPos, frustum);
   const { fovYRad } = viewCam;
+  // Symmetric: `tanUp − tanDown` is exactly `2·tan(fovY/2)`, the pre-rig form.
+  // Canonical form — every downstream gate reads THIS, never a
+  // `(viewportHeightPx, fovYRad)` reconstruction, which is only ulp-accurate
+  // for a symmetric frustum.
+  const pxPerRad = sizePx.height / (frustum.tanUp - frustum.tanDown);
 
   const slabGate = {
     bodyStates,
     camPosMpc: drawCamPos,
     camForwardMpc: viewForward,
     frustum,
-    viewportHeightPx: sizePx.height,
-    fovYRad,
+    pxPerRad,
   };
   const gatedBodies = visibleSlabBodies({ ...slabGate, bodies: slabBodyCandidates });
   // A hosted mesh body owns no slab row — it rides its host's
@@ -107,8 +111,7 @@ export function deriveView(snapshot: ReadyFrameContext, spec: ViewSpec): FrameVi
     stars: positionedStars,
     camPosMpc: drawCamPos,
     thresholdPx: STAR_RESOLVE_PX,
-    viewportHeightPx: sizePx.height,
-    fovYRad,
+    pxPerRad,
   });
   const starRangeM = starSphereRangeM({
     // Outer: distanceRangeM is the painter-sort interval and must SPAN the row's
@@ -144,8 +147,8 @@ export function deriveView(snapshot: ReadyFrameContext, spec: ViewSpec): FrameVi
     bodyPose,
     canvasSize: sizePx,
     drawCamPos,
-    // Symmetric: `tanUp − tanDown` is exactly `2·tan(fovY/2)`, the pre-rig form.
-    drawPxPerRad: sizePx.height / (frustum.tanUp - frustum.tanDown),
+    frustum,
+    drawPxPerRad: pxPerRad,
     fovYRad,
     viewSlot: spec.slot,
     viewKind: spec.kind,

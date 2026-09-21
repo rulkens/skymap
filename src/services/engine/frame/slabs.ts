@@ -212,8 +212,8 @@ export function bodySlabRow(input: {
         positionMpc: [dM * SCALE_UNITS.M_TO_MPC, 0, 0],
         radiusM: rMaxM,
         camPosMpc: [0, 0, 0],
-        viewportHeightPx: viewportPx[1],
-        fovYRad: Math.atan(frustum.tanUp) - Math.atan(frustum.tanDown),
+        // Straight off the tangents — no fovYRad round trip needed at all.
+        pxPerRad: viewportPx[1] / (frustum.tanUp - frustum.tanDown),
       }) / 2
     : 0;
 

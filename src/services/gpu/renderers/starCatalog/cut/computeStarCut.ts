@@ -98,19 +98,17 @@ export function computeStarCut(
   // walk's boxes live in. `slabs?.[NEAR0]` is absent only for a hand-built
   // test ctx — then there is nothing to prune against at all.
   const rebasedVps: Float32Array[] = [];
-  // The widest view drives the angular slack (see `buildStarCutFrustum`).
-  let canvasHeightPx = 1;
-  let fovYRad = 0;
+  // The widest view drives the angular slack (see `buildStarCutFrustum`): the
+  // SMALLEST `drawPxPerRad` — fewer pixels per radian means more radians per
+  // pixel, so that view needs the most slack.
+  let pxPerRad = Infinity;
   if (views.every((rigView) => rigView.slabs?.[NEAR0] !== undefined)) {
     for (const rigView of views) {
       rebasedVps.push(narrowMat4(rebaseViewProj(rigView.slabs[NEAR0]!.vp, camPos)));
-      if (rigView.fovYRad / rigView.canvasSize.height > fovYRad / canvasHeightPx) {
-        fovYRad = rigView.fovYRad;
-        canvasHeightPx = rigView.canvasSize.height;
-      }
+      if (rigView.drawPxPerRad < pxPerRad) pxPerRad = rigView.drawPxPerRad;
     }
   }
-  const cutFrustum = buildStarCutFrustum(rebasedVps, fovYRad, canvasHeightPx, sizePx, glowOverlap);
+  const cutFrustum = buildStarCutFrustum(rebasedVps, pxPerRad, sizePx, glowOverlap);
 
   const sources: PreparedStarSource[] = [];
   // Render-on-demand wake vote across all sources this frame (see the header).

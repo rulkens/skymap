@@ -20,6 +20,11 @@ import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum'
 const IDENTITY = [1, 0, 0, 0, 1, 0, 0, 0, 1] as const;
 const FORWARD_X: Vec3 = [1, 0, 0];
 const SQUARE_90 = symmetricFrustum(Math.PI / 2, 1);
+// pxPerRad = viewportHeightPx / (tanUp − tanDown), the canonical form
+// `visibleSlabBodies` reads directly off the view.
+const PX_PER_RAD_90 = 1000 / (SQUARE_90.tanUp - SQUARE_90.tanDown);
+const FRUSTUM_60_16_9 = symmetricFrustum(Math.PI / 3, 16 / 9);
+const PX_PER_RAD_60 = 1000 / (FRUSTUM_60_16_9.tanUp - FRUSTUM_60_16_9.tanDown);
 
 function makeState(positionMpc: Vec3 = [1000, 0, 0]): BodyState {
   return { positionMpc, orientation: [...IDENTITY], meanAnomalyRad: 0 };
@@ -64,8 +69,7 @@ describe('visibleSlabBodies', () => {
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
       frustum: SQUARE_90,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((body) => body.id)).toEqual(['above']);
@@ -91,8 +95,7 @@ describe('visibleSlabBodies', () => {
       camPosMpc: [1000, 0, 0], // camera AT earth's stored position ⇒ distance 0 ⇒ inside its own shell, always kept
       camForwardMpc: FORWARD_X,
       frustum: SQUARE_90,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((body) => body.id)).toEqual(['earth']);
@@ -118,8 +121,7 @@ describe('visibleSlabBodies', () => {
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
       frustum: SQUARE_90,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((b) => b.id)).toEqual(['saturn']);
@@ -148,8 +150,7 @@ describe('visibleSlabBodies', () => {
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
         frustum: SQUARE_90,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        pxPerRad: PX_PER_RAD_90,
       });
     }
 
@@ -190,8 +191,7 @@ describe('visibleSlabBodies', () => {
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
         frustum: SQUARE_90,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        pxPerRad: PX_PER_RAD_90,
       });
 
       expect(visible.map((b) => b.id)).toEqual(['straddling']);
@@ -217,9 +217,8 @@ describe('visibleSlabBodies', () => {
         bodyStates,
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
-        frustum: symmetricFrustum(Math.PI / 3, 16 / 9),
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 3,
+        frustum: FRUSTUM_60_16_9,
+        pxPerRad: PX_PER_RAD_60,
       });
 
       expect(visible.map((b) => b.id)).toEqual(['saturn']);
@@ -238,8 +237,7 @@ describe('visibleSlabBodies', () => {
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
         frustum: { tanLeft: 0, tanRight: 3, tanDown: -1, tanUp: 1 },
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        pxPerRad: PX_PER_RAD_90,
       });
       expect(visible.map((b) => b.id)).toEqual(['wide']);
     });
@@ -267,8 +265,7 @@ describe('visibleSlabBodies', () => {
       camPosMpc: [0, 0, 0],
       camForwardMpc: FORWARD_X,
       frustum: SQUARE_90,
-      viewportHeightPx: 1000,
-      fovYRad: Math.PI / 2,
+      pxPerRad: PX_PER_RAD_90,
     });
 
     expect(visible.map((body) => body.id)).toEqual(['visible-anchor']);
@@ -298,8 +295,7 @@ describe('visibleSlabBodies', () => {
         camPosMpc: [0, 0, 0],
         camForwardMpc: FORWARD_X,
         frustum: SQUARE_90,
-        viewportHeightPx: 1000,
-        fovYRad: Math.PI / 2,
+        pxPerRad: PX_PER_RAD_90,
       });
       expect(visible.map((body) => body.id)).toEqual(expected);
     }

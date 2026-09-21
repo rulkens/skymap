@@ -53,9 +53,7 @@ export function produceSceneBodyCaptions(
   // Orbit distance, NOT `|camPos|`: the bound the solar-system-reach kinds
   // ride, which diverges from origin distance once focus leaves the origin.
   const camOrbitDistanceMpc = ctx.cam.distance;
-  const viewportHeightPx = ctx.canvasSize.height;
-  const viewportShortSidePx = Math.min(ctx.canvasSize.width, viewportHeightPx);
-  const fovYRad = ctx.fovYRad;
+  const viewportShortSidePx = Math.min(ctx.canvasSize.width, ctx.canvasSize.height);
 
   const fades = state.subsystems.fades;
   const now = ctx.snapshot.nowMs;
@@ -85,8 +83,7 @@ export function produceSceneBodyCaptions(
     const subjectSizePx = apparentSizePx({
       diameterKpc: (2 * label.worldEmMpc) / SCALE_UNITS.KPC_TO_MPC,
       distanceMpc,
-      viewportHeightPx,
-      fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     const rule = CAPTION_FADE_RULES[label.kind];

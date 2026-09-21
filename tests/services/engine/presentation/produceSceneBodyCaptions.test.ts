@@ -55,12 +55,15 @@ function worldPosOf(id: string): Vec3 {
   return [...BASE.find((l) => l.id === id)!.worldPos] as Vec3;
 }
 
+// 720-px viewport, fovY 1 rad, tangent-exact.
+const FIXTURE_PX_PER_RAD = 720 / (2 * Math.tan(1 / 2));
+
 function makeCtx(camPos: Vec3, distance = 5e-4): FrameView {
   return {
     snapshot: { simDays: CONST_J2000, nowMs: 0 },
     cam: { distance },
     drawCamPos: camPos,
-    fovYRad: 1,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
     canvasSize: { width: 1280, height: 720 },
   } as unknown as FrameView;
 }

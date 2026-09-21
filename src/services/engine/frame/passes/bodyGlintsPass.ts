@@ -248,8 +248,7 @@ export const bodyGlintsPass: ContentPass = {
         positionMpc,
         radiusM: bodyFootprintRadiusM(body),
         camPosMpc: camPos,
-        viewportHeightPx: view.viewportPx[1],
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       // brightness (size x albedo x phase) x the descent cross-fade band.
       const raw = bodyGlintBrightness({
@@ -442,8 +441,7 @@ export const bodyGlintsPass: ContentPass = {
         positionMpc,
         radiusM: bodyFootprintRadiusM(body),
         camPosMpc: camPos,
-        viewportHeightPx: view.viewportPx[1],
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       const brightness =
         bodyGlintBrightness({

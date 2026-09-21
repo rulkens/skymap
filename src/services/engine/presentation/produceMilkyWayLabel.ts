@@ -97,8 +97,7 @@ export function produceMilkyWayLabel(state: EngineState, ctx: FrameView): Label2
   const sizePx = apparentSizePx({
     diameterKpc: MILKY_WAY_DIAMETER_KPC,
     distanceMpc: camDist,
-    viewportHeightPx: ctx.canvasSize.height,
-    fovYRad: ctx.fovYRad,
+    pxPerRad: ctx.drawPxPerRad,
   });
   const viewportPx: Vec2 = [ctx.canvasSize.width, ctx.canvasSize.height];
   const placement = liftedLabelPlacement({

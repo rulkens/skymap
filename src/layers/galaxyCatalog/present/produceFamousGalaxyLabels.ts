@@ -195,7 +195,6 @@ export function produceFamousGalaxyLabels(
 
     const labels: Label2D[] = [];
 
-    const fovYRad = ctx.fovYRad;
     const [cx, cy, cz] = ctx.drawCamPos;
     const style = FAMOUS_LABEL_STYLE;
     // Hoisted once — every label this frame lifts through the same vp/viewport.
@@ -236,8 +235,7 @@ export function produceFamousGalaxyLabels(
       const sizePx = apparentSizePx({
         diameterKpc: p.apparentDiameterKpc,
         distanceMpc,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (sizePx < p.minApparentSizePx) continue;
       const prominencePx = sizePx;

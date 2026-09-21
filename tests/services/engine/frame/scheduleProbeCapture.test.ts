@@ -41,6 +41,9 @@ const VOYAGER = SCENE_MESH_BODIES.find((body) => body.id === 'voyager1')!;
 const WHALE = SCENE_MESH_BODIES.find((body) => body.id === 'whale')!;
 const PETUNIAS = SCENE_MESH_BODIES.find((body) => body.id === 'petunias')!;
 
+// 600-px viewport, fovY 1 rad, tangent-exact.
+const FIXTURE_PX_PER_RAD = 600 / (2 * Math.tan(1 / 2));
+
 /** The camera parked at a body: the partition then resolves it as a mesh. */
 function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
   const positionMpc = deriveBodyStates(SIM_DAYS).get(bodyId)!.positionMpc;
@@ -49,8 +52,7 @@ function ctxAt(bodyId: string, nowMs = NOW_MS): FrameView {
     // these off `ctx.snapshot.x`.
     snapshot: { simDays: SIM_DAYS, nowMs },
     drawCamPos: positionMpc,
-    canvasSize: { width: 800, height: 600 },
-    fovYRad: 1,
+    drawPxPerRad: FIXTURE_PX_PER_RAD,
   } as unknown as FrameView;
 }
 

@@ -21,9 +21,9 @@ const cutFrustumScratch = {
  * it. No vps (no resolvable NEAR0 slab — a hand-built test context) returns
  * `null`, and `walkStarOctreeCut` falls back to its full, un-pruned walk.
  *
- * `fovYRad` / `canvasHeightPx` are the rig's WIDEST view's (largest
- * `fovYRad / canvasHeightPx`): the margin is monotonic in that ratio, so the
- * widest view's slack covers every other view's.
+ * `pxPerRad` is the rig's WIDEST view's (the SMALLEST `drawPxPerRad`): the
+ * margin is monotonic in radians-per-pixel, so the widest view's slack covers
+ * every other view's.
  *
  * THE PICK-SLACK FLOOR: the returned slack is sized to the WIDEST downstream
  * footprint so this coarse prune can never wrong-drop a node an exact
@@ -36,8 +36,7 @@ const cutFrustumScratch = {
  */
 export function buildStarCutFrustum(
   rebasedVps: readonly Float32Array[],
-  fovYRad: number,
-  canvasHeightPx: number,
+  pxPerRad: number,
   sizePx: number,
   glowOverlap: number,
 ): StarCutFrustum | null {
@@ -63,7 +62,7 @@ export function buildStarCutFrustum(
   });
   // Pick, not leaf: this prune must never wrong-drop a node the pick pass
   // would still floor to the clickable radius (see the header's PICK-SLACK FLOOR).
-  cutFrustumScratch.angularMarginRad = starCullMargins(sizePx, canvasHeightPx, fovYRad).pick;
+  cutFrustumScratch.angularMarginRad = starCullMargins(sizePx, pxPerRad).pick;
   cutFrustumScratch.worldSpread = Math.max(1, (sizePx / STAR_SIZE_REF_PX) * glowOverlap);
   return cutFrustumScratch;
 }
