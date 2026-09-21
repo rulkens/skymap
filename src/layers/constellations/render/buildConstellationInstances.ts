@@ -1,25 +1,18 @@
 /**
- * buildConstellationInstances — flatten a `ConstellationsArtifact` into the flat
- * per-instance vertex buffer the constellation vertex shader reads.
- *
- * One instance per line segment across ALL figures (the shader composes the
- * per-figure identity from nothing — a segment carries only geometry + the two
- * endpoint magnitudes). Each instance is 8 f32 / 32 bytes, matching the pinned
- * stride in `shaders/constellations/io.wesl`:
+ * buildConstellationInstances — flattens a `ConstellationsArtifact` into the
+ * per-instance vertex buffer for `constellations/io.wesl`. Byte-layout
+ * contract, over budget by convention — must match the shader's stride
+ * exactly, one instance (32 bytes) per segment across all figures:
  *
  *   [0..2] aWorld  vec3<f32>  endpoint A, world Mpc   (bytes  0..11)
  *   [3]    aAppMag f32        endpoint A apparent mag (bytes 12..15)
  *   [4..6] bWorld  vec3<f32>  endpoint B, world Mpc   (bytes 16..27)
  *   [7]    bAppMag f32        endpoint B apparent mag (bytes 28..31)
  *
- * ### Parsecs → Mpc here, not in the shader
- *
- * The artifact ships endpoints in PARSECS (the near-field stellar neighbourhood
- * scale); the NEAR0 view-projection the shader multiplies by is in Mpc. Scaling
- * on the CPU at upload — through the single `SCALE_UNITS.PC_TO_MPC` source of
- * truth — keeps the vertex stage a pure geometry shader that receives world Mpc
- * like every other world-space renderer (filaments, markerLines), rather than
- * carrying a WESL twin of the unit constant.
+ * Parsecs → Mpc conversion happens here through the single
+ * `SCALE_UNITS.PC_TO_MPC` source, not in the shader — the vertex stage stays
+ * a plain geometry shader receiving world Mpc, like every other world-space
+ * renderer.
  */
 
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';

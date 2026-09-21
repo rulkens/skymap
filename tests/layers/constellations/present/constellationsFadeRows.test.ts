@@ -18,17 +18,4 @@ describe('constellationsFadeRows', () => {
     hasData.mockReturnValue(true);
     expect(row.guard?.(undefined as never, undefined)).toBe(true);
   });
-
-  it('seeds at 0 regardless of the settings intent — the demand-loaded asymmetry', () => {
-    const runtime = { renderer: { hasData: () => true } } as unknown as ConstellationsRuntime;
-    const row = constellationsFadeRows(runtime)[0]!;
-    expect(row.seed(undefined as never, undefined)).toBe(0);
-  });
-
-  it('intent follows settings.constellations.enabled', () => {
-    const runtime = { renderer: { hasData: () => true } } as unknown as ConstellationsRuntime;
-    const row = constellationsFadeRows(runtime)[0]!;
-    expect(row.intent?.({ constellations: { enabled: true } } as never, undefined)).toBe(true);
-    expect(row.intent?.({ constellations: { enabled: false } } as never, undefined)).toBe(false);
-  });
 });

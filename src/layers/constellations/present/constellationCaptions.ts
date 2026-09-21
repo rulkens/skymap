@@ -1,33 +1,8 @@
 /**
- * constellationCaptions — the foreground-caption source for the true-3D
- * constellation stick figures: one Latin name per figure at its
- * `labelAnchorPc`.
- *
- * ### Why a foreground caption, not a main-director label
- *
- * The figure anchors sit at parsec distances from the origin (~1e-5 to ~1.5e-3
- * Mpc). The main `cosmoLabelDirector` projects its labels through the COSMO slab,
- * whose near plane is pinned at `COSMO_NEAR_MPC = 0.01` Mpc — so at every camera
- * distance where the constellation band is visible (it fades out by 0.01 Mpc)
- * every anchor sits INSIDE that near plane and gets GPU-clipped. A director
- * label for these names could therefore never draw. This is the same reason the
- * scene-body captions (Earth, the planets, the star map) route through
- * `foregroundLabelsPass` on the NEAR0 slab instead — see that layer's header
- * and `sceneBodyLabels`. So these are built as `ForegroundCaption`s and merged
- * into the layer's near-field declutter + envelope pass beside the body
- * captions.
- *
- * ### A pure builder — the layer owns fade, gating, and memoization
- *
- * This produces the STATIC caption set from the artifact: positions, name,
- * style, `kind`. It reads no camera and no toggle, so it has nothing to
- * recompute per frame. `foregroundLabelsPass` memoizes the result on the
- * artifact's identity (it is static once the slot lands), derives each
- * caption's per-frame fade TARGET from `constellationLayerOpacity`, and runs it
- * through the shared declutter + temporal envelope. Keeping the fade in the
- * layer means the names dissolve in lock-step with the stick figures (both
- * read the one `constellationLayerOpacity` home) and a toggle flip fades via the
- * envelope rather than popping.
+ * constellationCaptions — one Latin name caption per stick-figure. Anchors
+ * sit at parsec distances (~1e-5–1.5e-3 Mpc), inside COSMO's fixed 0.01 Mpc
+ * near plane, so a main-director label would be GPU-clipped; these route as
+ * `ForegroundCaption`s on the NEAR0 slab instead.
  */
 
 import type { ConstellationsArtifact } from '../../../@types/loading/ConstellationsArtifact';
@@ -37,11 +12,6 @@ import { CONSTELLATION_LABEL_STYLE } from './constellationLabelStyle';
 import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 
-/**
- * Build one name caption per figure from the demand-loaded artifact. Pure: no
- * camera, no toggle, no fade — the layer applies all three. The artifact is
- * static once loaded, so the layer memoizes this on the artifact's identity.
- */
 export function constellationCaptions(artifact: ConstellationsArtifact): ForegroundCaption[] {
   const style = CONSTELLATION_LABEL_STYLE;
   const pcToMpc = SCALE_UNITS.PC_TO_MPC;

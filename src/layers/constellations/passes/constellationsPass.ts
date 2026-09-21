@@ -1,11 +1,8 @@
 /**
  * constellationsPass — the 88 classical asterisms as additive lines between
- * their real member stars, so flying away shears the figures apart.
- *
- * The odd row out among the HDR layers: the endpoints sit at parsec-to-
- * kiloparsec scale, which COSMO's fixed 0.01 Mpc near plane would clip, so this
- * row projects through NEAR0 while still accumulating into the HDR target and
- * riding the same tone-map as the stars it connects.
+ * their real member stars, so flying away shears the figures apart. Endpoints
+ * sit at parsec-to-kiloparsec scale, which COSMO's fixed 0.01 Mpc near plane
+ * would clip, so this row projects through NEAR0 instead, still on the HDR tone-map.
  */
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
