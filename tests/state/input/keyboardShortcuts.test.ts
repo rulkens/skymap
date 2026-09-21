@@ -16,7 +16,7 @@ import {
   toggleUiHidden,
 } from '../../../src/state/ui/uiSlice';
 import { goLive, setRate, pause, resume } from '../../../src/state/time/timeSlice';
-import { exitTour, advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
+import { advanceTour, prevBeat, togglePause } from '../../../src/state/tour/tourActions';
 import { stopClip } from '../../../src/state/camera/clipActions';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
@@ -60,12 +60,18 @@ const time = (rateIndex: number, paused: boolean): TimeState => ({
 });
 
 const tour = (active: boolean): TourRuntimeState => ({
-  active,
   tourId: active ? 'webShowcase' : '',
   beatIndex: 0,
   paused: false,
   dwellNonce: 0,
   dwellSec: 0,
+});
+
+// `selectTourActive` now reads the `takeover` slice, not a `tour.active`
+// boolean — the shortcut table's `run`s read it indirectly via
+// `selectTourActive`, so this fixture's "active" knob has to land there too.
+const takeover = (active: boolean) => ({
+  active: active ? { kind: 'tour' as const, id: 'webShowcase' as const } : null,
 });
 
 describe('KEYBOARD_SHORTCUTS', () => {
@@ -119,8 +125,8 @@ describe('KEYBOARD_SHORTCUTS', () => {
 
     for (const { keys, action } of cases) {
       const run = byKeys(keys).run;
-      expect(run(stateWith({ tour: tour(false) }))).toBeNull();
-      expect(run(stateWith({ tour: tour(true) }))).toEqual(action());
+      expect(run(stateWith({ tour: tour(false), takeover: takeover(false) }))).toBeNull();
+      expect(run(stateWith({ tour: tour(true), takeover: takeover(true) }))).toEqual(action());
     }
   });
 });

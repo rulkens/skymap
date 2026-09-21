@@ -1,15 +1,18 @@
 /**
- * watchTourSaga tests — integration tests over a real store + saga middleware.
+ * watchTakeoverSaga tests — integration tests over a real store + saga
+ * middleware, exercising the tour half of the watcher (the only start-request
+ * wired up until `openView` lands).
  *
- * `watchTourSaga` is the startTour watcher: it resolves the dispatched `TourId`
- * against `tourRegistry` and launches `guidedTourSaga` with the resolved tour.
- * The registry is MOCKED here with two controlled tours — a `demo` tour whose
- * single narration beat auto-advances, and a `webShowcase` tour whose beat dwells
- * effectively forever — so each test drives timing deterministically without
- * depending on the real (catalog-resolving) tour definitions. The capture →
- * restore round-trip is made OBSERVABLE in the store by each test: seed
- * `volumes.enabled = true` first, dispatch the flip to off mid-run (standing in
- * for an in-clip scene cue), and the finally winds it back on.
+ * `watchTakeoverSaga` is the `startTour`/`openView` watcher: for a tour it
+ * resolves the dispatched `TourId` against `tourRegistry` and runs `tourBody`
+ * under `runTakeover`. The registry is MOCKED here with two controlled tours —
+ * a `demo` tour whose single narration beat auto-advances, and a `webShowcase`
+ * tour whose beat dwells effectively forever — so each test drives timing
+ * deterministically without depending on the real (catalog-resolving) tour
+ * definitions. The capture → restore round-trip is made OBSERVABLE in the
+ * store by each test: seed `volumes.enabled = true` first, dispatch the flip
+ * to off mid-run (standing in for an in-clip scene cue), and the finally winds
+ * it back on.
  *
  * Capture is a pure `select(captureScene)` and restore is `restoreSceneSaga`
  * (two `put`s), so neither watcher nor tour needs a `reconcile` stub — the
@@ -18,12 +21,13 @@
  *
  * ### What we assert
  *
- * 1. `guidedTourSaga` ran: `tour.active` is true synchronously on startTour.
- * 2. The captured baseline is restored after natural completion (volumes back on).
- * 3. The baseline is restored when exitTour cancels a mid-dwell run.
- * 4. A second startTour supersedes a first run (takeLatest): the tour stays active
- *    under the new run and a fresh beat fly fires.
- * 5. The optional `BeatRange` on the action reaches `guidedTourSaga`: a ranged
+ * 1. `tourBody` ran under `runTakeover`: `selectTourActive` is true
+ *    synchronously on startTour.
+ * 2. A second startTour supersedes a first run: the tour stays active under
+ *    the new run and a fresh beat fly fires.
+ * 2b. A supersede restores the outgoing run's scene BEFORE the successor
+ *    snapshots — the watcher's whole reason to wait on the cancelled bracket.
+ * 3. The optional `BeatRange` on the action reaches `tourBody`: a ranged
  *    start lands on the window's first beat, not beat 0.
  *
  * ### Timing
@@ -38,7 +42,7 @@ import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 // Controlled registry: `demo` auto-advances (tiny dwell), `webShowcase` has two
-// beats that each dwell forever, so a run stays live until exitTour / a
+// beats that each dwell forever, so a run stays live until exitTakeover / a
 // superseding startTour (an unranged run never leaves beat 0; the second beat
 // exists so a BeatRange starting at 1 is observable). The narration beats
 // mutate no settings; restore tests dispatch a volumes flip mid-run (standing
@@ -80,8 +84,10 @@ vi.mock('../../../src/data/animation/tours/tourRegistry', async () => {
 });
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { watchTourSaga } from '../../../src/state/tour/watchTourSaga';
-import { startTour, exitTour } from '../../../src/state/tour/tourActions';
+import { watchTakeoverSaga } from '../../../src/state/takeover/watchTakeoverSaga';
+import { startTour } from '../../../src/state/tour/tourActions';
+import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
+import { selectTourActive } from '../../../src/state/tour/selectors';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { setVolumesEnabled } from '../../../src/layers/volume/settings/volumesSlice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
@@ -126,7 +132,7 @@ function buildHarness(opts: { playClip?: PlayClipStub } = {}) {
     playClip: (clip: ClipData) => playClipFn(clip),
   });
 
-  sagaMiddleware.run(watchTourSaga);
+  sagaMiddleware.run(watchTakeoverSaga);
 
   return { store, sagaMiddleware, playClipFn };
 }
@@ -143,29 +149,25 @@ function makeAutoFlyStub(): PlayClipStub {
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe('watchTourSaga', () => {
+describe('watchTakeoverSaga', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.useRealTimers();
   });
 
-  // ── (1) guidedTourSaga actually ran (tour marked active) ─────────────────
+  // ── (1) tourBody actually ran (tour marked active) ───────────────────────
 
-  it('guidedTourSaga runs: the tour is marked active on startTour', () => {
+  it('runs tourBody under runTakeover: the tour is marked active on startTour', () => {
     const { store } = buildHarness();
 
     store.dispatch(startTour('demo'));
 
-    // tourStarted is dispatched synchronously inside guidedTourSaga before the
+    // takeoverStarted is dispatched synchronously inside runTakeover before the
     // first beat's async work begins (the App derives HUD-hidden from it).
-    expect(store.getState().tour.active).toBe(true);
+    expect(selectTourActive(store.getState())).toBe(true);
   });
 
-  // ── (2) restore fires on natural completion ──────────────────────────────
-
-  // ── (3) restore fires when exitTour cancels the run ──────────────────────
-
-  // ── (4) second startTour supersedes first (takeLatest) ───────────────────
+  // ── (2) second startTour supersedes first (takeLatest) ───────────────────
 
   it('a second startTour supersedes the first run, staying active under the new run', async () => {
     const playClip = makeAutoFlyStub();
@@ -185,28 +187,63 @@ describe('watchTourSaga', () => {
     await flush();
 
     // The second run is live and a fresh beat fly fired for it.
-    expect(store.getState().tour.active).toBe(true);
+    expect(selectTourActive(store.getState())).toBe(true);
     expect(playClip.mock.calls.length).toBeGreaterThan(fliesAfterFirst);
   });
 
-  // ── (5) the beat range on the action reaches guidedTourSaga ──────────────
+  // ── (2b) supersede restores before the successor snapshots ───────────────
 
-  it('the beat range on the action reaches guidedTourSaga', async () => {
+  it('a superseding startTour restores the outgoing run before the successor snapshots', async () => {
+    const playClip = makeAutoFlyStub();
+    const { store } = buildHarness({ playClip });
+    store.dispatch(setVolumesEnabled(true));
+
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+
+    // Stand-in for an in-clip scene cue mutating settings mid-run.
+    store.dispatch(setVolumesEnabled(false));
+    await flush();
+
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+
+    // A third start proves the watcher itself outlived the supersede: waiting
+    // on the cancelled run via `join` would have cancelled the watcher here,
+    // leaving nothing to fork this run.
+    store.dispatch(startTour('webShowcase'));
+    await flush();
+    await flush();
+    expect(selectTourActive(store.getState())).toBe(true);
+
+    // Each successor must snapshot the user's pre-takeover baseline, not the
+    // mid-run mutation: snapshotting before the outgoing run's restore lands
+    // strands the user at volumes-off once the last run exits.
+    store.dispatch(exitTakeover());
+    await flush();
+    expect(store.getState().settings.volumes.enabled).toBe(true);
+  });
+
+  // ── (3) the beat range on the action reaches tourBody ─────────────────────
+
+  it('the beat range on the action reaches tourBody', async () => {
     vi.useFakeTimers();
     const { store } = buildHarness({ playClip: makeAutoFlyStub() });
 
     // webShowcase has two beats; the range selects only the second. The
-    // window reaching guidedTourSaga is observable as the first beatChanged:
-    // index 1 — an unranged run would sit at beat 0. Windowed from > 0 runs
-    // hold the beat behind the FOLD_SETTLE_MS reconstruction settle, so the
-    // index lands only once that delay has elapsed.
+    // window reaching tourBody is observable as the first beatChanged: index
+    // 1 — an unranged run would sit at beat 0. Windowed from > 0 runs hold
+    // the beat behind the FOLD_SETTLE_MS reconstruction settle, so the index
+    // lands only once that delay has elapsed.
     store.dispatch(startTour('webShowcase', { from: 1, to: 1 }));
     await vi.advanceTimersByTimeAsync(FOLD_SETTLE_MS);
     await vi.advanceTimersByTimeAsync(0);
     expect(store.getState().tour.beatIndex).toBe(1);
 
-    store.dispatch(exitTour());
+    store.dispatch(exitTakeover());
     await vi.advanceTimersByTimeAsync(0);
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 });

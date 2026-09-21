@@ -3,9 +3,9 @@
  * settings, then orientation, then selection focus. Pure Intent — three
  * dispatches, no engine context of its own.
  *
- * This is the close of the tour's capture → play → restore round-trip
- * (`captureScene` is the open). `guidedTourSaga` runs it in its `finally`, so it
- * fires on BOTH a natural tour finish and an `exitTour`/supersede cancellation.
+ * This is the close of a takeover's capture → play → restore round-trip
+ * (`captureScene` is the open). `runTakeover` runs it in its `finally`, so it
+ * fires on BOTH a natural finish and an `exitTakeover`/supersede cancellation.
  *
  *   1. `put(mergeSnapshot(settings))` — the ten clusters land in ONE merge
  *      dispatch (one transition, one store notification — what wakes React's
@@ -39,9 +39,10 @@
  * but that context lives in the watcher, not here — same split as the fade
  * pass, reached by `watchFadesSaga` rather than by this saga.
  *
- * All three `put`s block until their effect lands (true even inside a `finally`
- * driven by a cancelling dispatch), so on a supersede the restore completes
- * before the successor run's snapshot reads the store.
+ * All three `put`s block until their effect lands, true even inside a `finally`
+ * driven by a cancelling dispatch. `watchTakeoverSaga` waits for the cancelled
+ * bracket to settle, so on a supersede this restore is complete before the
+ * successor run's snapshot reads the store.
  *
  * `clipOpacity` is already reset to 1 at clip end by the clip runner, so
  * transient fade-to-black effects need no undo here.

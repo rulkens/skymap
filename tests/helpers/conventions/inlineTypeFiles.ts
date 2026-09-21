@@ -12,7 +12,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/components/CommandPalette/utils/scoreAliasMatch.ts',
   'src/components/CommandPalette/utils/scoreFamousMatch.ts',
   'src/components/DebugPanel/CameraBandBar.tsx',
-  'src/components/DebugPanel/CameraStateSection.tsx',
   'src/components/DebugPanel/GpuTimingsSection.tsx',
   'src/components/InfoCard/detailCardTable.ts',
   'src/components/InfoCard/tooltips.tsx',
