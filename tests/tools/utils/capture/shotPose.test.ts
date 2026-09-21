@@ -38,4 +38,8 @@ describe('shotPose', () => {
   it('refuses a shot that sets both', () => {
     expect(() => shotPose(shot({ pose: POSE, phaseDeg: 315 }))).toThrow(/sets both/);
   });
+
+  it('refuses a phaseDeg shot with no focusId', () => {
+    expect(() => shotPose(shot({ focusId: undefined, phaseDeg: 315 }))).toThrow(/no 'focusId'/);
+  });
 });

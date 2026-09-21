@@ -11,14 +11,19 @@ import { selectCaptureTargets } from './selectCaptureTargets';
 import { parseArgs } from './parseFeaturedArgs';
 import { DEFAULT_CAPTURE_T, OUTPUT_DIR } from './featuredDefaults';
 import { FEATURED_TABS } from '../../src/data/palette/featuredTabs';
+import { viewRegistry } from '../../src/data/views/viewRegistry';
 import type { CaptureTarget } from './@types/CaptureTarget';
 import type { SceneShot } from '../@types/capture/SceneShot';
 
 function shotFor(target: CaptureTarget): SceneShot {
+  // A view card carries its own settings + pose in the registry — no takeover,
+  // no `#focus=`; a focus card falls to the existing focus-fly-in path.
+  const view = target.kind === 'view' ? viewRegistry[target.viewId] : undefined;
   return {
-    focusId: target.focusId,
+    focusId: target.kind === 'focus' ? target.focusId : undefined,
+    settings: view?.settings,
     t: target.capture.t ?? DEFAULT_CAPTURE_T,
-    pose: target.capture.pose,
+    pose: target.capture.pose ?? view?.pose,
     phaseDeg: target.capture.phaseDeg,
     keepFocus: target.capture.keepFocus,
     hideGalaxyField: target.capture.hideGalaxyField,

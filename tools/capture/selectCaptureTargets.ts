@@ -35,9 +35,7 @@ export function selectCaptureTargets(
   for (const id of force) {
     if (!knownId.has(id)) throw new Error(`--force '${id}' matches no card`);
     if (!capturableCard.has(id)) {
-      throw new Error(
-        `--force '${id}' is not capturable — every copy is a view card or has an image override`,
-      );
+      throw new Error(`--force '${id}' is not capturable — every copy has an image override`);
     }
   }
 
@@ -49,11 +47,21 @@ export function selectCaptureTargets(
       if (!isCapturableCopy(card)) continue;
       resolved.add(card.id);
       if (existing.has(card.id) && !force.includes(card.id)) continue;
-      targets.push({
-        cardId: card.id,
-        focusId: (card.action as { kind: 'focus'; focusId: string }).focusId,
-        capture: card.capture ?? {},
-      });
+      targets.push(
+        card.action.kind === 'focus'
+          ? {
+              cardId: card.id,
+              kind: 'focus',
+              focusId: card.action.focusId,
+              capture: card.capture ?? {},
+            }
+          : {
+              cardId: card.id,
+              kind: 'view',
+              viewId: card.action.viewId,
+              capture: card.capture ?? {},
+            },
+      );
     }
   }
   return targets;

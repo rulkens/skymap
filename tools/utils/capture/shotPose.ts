@@ -16,5 +16,10 @@ export function shotPose(shot: SceneShot): CameraPose | undefined {
     throw new Error(`'${shot.label}' sets both 'pose' and 'phaseDeg' — phaseDeg computes one`);
   }
   if (shot.phaseDeg === undefined) return shot.pose;
+  if (shot.focusId === undefined) {
+    throw new Error(
+      `'${shot.label}' sets 'phaseDeg' with no 'focusId' — there is no body to phase`,
+    );
+  }
   return bodyPhasePose(shot.focusId, shot.t, shot.phaseDeg, DEFAULT_FOV_Y_RAD);
 }

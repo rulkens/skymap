@@ -10,11 +10,13 @@ import { dispatchActions } from '../browser/dispatchActions';
 import { waitSettled } from '../browser/waitSettled';
 import { applyPose } from '../browser/applyPose';
 import { readLiveCameraState } from '../browser/readLiveCameraState';
-import { declutterActions } from './declutterActions';
+import { labelDeclutterActions } from './labelDeclutterActions';
+import { sceneDeclutterActions } from './sceneDeclutterActions';
 import { poseMismatch } from './poseMismatch';
 import { shotPose } from './shotPose';
 import { writeThumbnail } from './writeThumbnail';
 import { POST_ESC_WAIT_MS, VIEWPORT } from './shotDefaults';
+import { mergeSnapshot } from '../../../src/state/settings/mergeSnapshotAction';
 import type { SceneShot } from '../../@types/capture/SceneShot';
 import type { ShotOutcome } from '../../@types/capture/ShotOutcome';
 
@@ -28,13 +30,20 @@ export async function captureScene(
   const pageErrors = collectPageErrors(page);
   try {
     const pose = shotPose(shot);
-    await bootHookedPage(
-      page,
-      `${base}/?perf&cinema#focus=${shot.focusId}&t=${shot.t}`,
-      '__skymapPerf',
-    );
+    const hash = shot.focusId !== undefined ? `focus=${shot.focusId}&t=${shot.t}` : `t=${shot.t}`;
+    await bootHookedPage(page, `${base}/?perf&cinema#${hash}`, '__skymapPerf');
 
-    await dispatchActions(page, declutterActions(shot.hideGalaxyField === true));
+    // Scene first, labels last, and the order is load-bearing: a snapshot is a
+    // whole-cluster replacement, so a view's `galaxyCatalogs` carries its
+    // Layer's default `labelEnabled: true` and would switch the labels back on
+    // if it landed after them. Only a FOCUS shot strips scene content — a
+    // view's subject is the scene itself, so its settings are the last word on
+    // what belongs in the frame.
+    await dispatchActions(page, [
+      ...(shot.focusId !== undefined ? sceneDeclutterActions(shot.hideGalaxyField === true) : []),
+      ...(shot.settings !== undefined ? [mergeSnapshot(shot.settings)] : []),
+      ...labelDeclutterActions(),
+    ]);
     await waitSettled(page, shot.label);
 
     if (pose !== undefined) {
@@ -42,25 +51,29 @@ export async function captureScene(
       await waitSettled(page, shot.label);
     }
 
-    if (shot.keepFocus !== true) {
-      await page.keyboard.press('Escape');
-      await page.waitForTimeout(POST_ESC_WAIT_MS);
-    }
+    // A view boots with no selection: nothing to clear and no fly-in to
+    // re-settle off of, so the pose applied above is trusted as-is.
+    if (shot.focusId !== undefined) {
+      if (shot.keepFocus !== true) {
+        await page.keyboard.press('Escape');
+        await page.waitForTimeout(POST_ESC_WAIT_MS);
+      }
 
-    if (pose !== undefined) {
-      // Clearing the focus re-settles the camera off the pose, so it is applied
-      // again and re-read rather than trusted.
-      let live = await readLiveCameraState(page);
-      if (poseMismatch(pose, live).length > 0) {
-        await applyPose(page, pose);
-        await waitSettled(page, shot.label);
-        live = await readLiveCameraState(page);
-        const mismatches = poseMismatch(pose, live);
-        if (mismatches.length > 0) {
-          throw new Error(
-            `'${shot.label}' pose mismatch on [${mismatches.join(', ')}] — ` +
-              `requested ${JSON.stringify(pose)}, live ${JSON.stringify(live)}`,
-          );
+      if (pose !== undefined) {
+        // Clearing the focus re-settles the camera off the pose, so it is applied
+        // again and re-read rather than trusted.
+        let live = await readLiveCameraState(page);
+        if (poseMismatch(pose, live).length > 0) {
+          await applyPose(page, pose);
+          await waitSettled(page, shot.label);
+          live = await readLiveCameraState(page);
+          const mismatches = poseMismatch(pose, live);
+          if (mismatches.length > 0) {
+            throw new Error(
+              `'${shot.label}' pose mismatch on [${mismatches.join(', ')}] — ` +
+                `requested ${JSON.stringify(pose)}, live ${JSON.stringify(live)}`,
+            );
+          }
         }
       }
     }

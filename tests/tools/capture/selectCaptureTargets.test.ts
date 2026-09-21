@@ -14,6 +14,16 @@ function focusCard(id: string, overrides: Partial<PaletteCard> = {}): PaletteCar
   };
 }
 
+function viewCard(id: string, overrides: Partial<PaletteCard> = {}): PaletteCard {
+  return {
+    id,
+    label: id,
+    blurb: id,
+    action: { kind: 'view', viewId: 'solarSystem' },
+    ...overrides,
+  };
+}
+
 function tab(id: string, cards: readonly PaletteCard[]): PaletteTab {
   return { id: id as PaletteTab['id'], label: id, cards };
 }
@@ -27,7 +37,7 @@ describe('selectCaptureTargets', () => {
   it('--force recaptures a card whose webp exists', () => {
     const tabs: PaletteTab[] = [tab('t1', [focusCard('a')])];
     expect(selectCaptureTargets(tabs, new Set(['a']), ['a'])).toEqual([
-      { cardId: 'a', focusId: 'a', capture: {} },
+      { cardId: 'a', kind: 'focus', focusId: 'a', capture: {} },
     ]);
   });
 
@@ -36,12 +46,15 @@ describe('selectCaptureTargets', () => {
     expect(selectCaptureTargets(tabs, new Set(), [])).toEqual([]);
   });
 
-  it('never targets a view card', () => {
-    const tabs: PaletteTab[] = [
-      tab('t1', [
-        { id: 'a', label: 'a', blurb: 'a', action: { kind: 'view', viewId: 'solarSystem' } },
-      ]),
-    ];
+  it('targets a view card, mapped onto its viewId', () => {
+    const tabs: PaletteTab[] = [tab('t1', [viewCard('a')])];
+    expect(selectCaptureTargets(tabs, new Set(), [])).toEqual([
+      { cardId: 'a', kind: 'view', viewId: 'solarSystem', capture: {} },
+    ]);
+  });
+
+  it('never targets a view card with an image override', () => {
+    const tabs: PaletteTab[] = [tab('t1', [viewCard('a', { image: '/images/famous/a.webp' })])];
     expect(selectCaptureTargets(tabs, new Set(), [])).toEqual([]);
   });
 
@@ -59,7 +72,7 @@ describe('selectCaptureTargets', () => {
       tab('t2', [focusCard('m31', { image: '/images/famous/m31.webp' })]),
     ];
     expect(selectCaptureTargets(tabs, new Set(), [])).toEqual([
-      { cardId: 'm31', focusId: 'm31', capture: {} },
+      { cardId: 'm31', kind: 'focus', focusId: 'm31', capture: {} },
     ]);
   });
 
