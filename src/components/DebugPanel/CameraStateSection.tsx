@@ -3,7 +3,7 @@
  * CameraStateSection — the camera-pivot readout, organised by the question it
  * answers (grill 2026-09-10): who is driving (header), is each DOF where it
  * should be (three rows), and where in the band are we (the drawn ruler). One
- * model feeds the degrees on screen AND the full-precision radians `copy all`
+ * model feeds the degrees on screen AND the full-precision radians `copy JSON`
  * dumps, so a pasted bug report is the thing that was looked at. Polls at 4 Hz
  * like every textual DebugPanel readout — Δ and peak are measured in the frame
  * loop, so the poll rate cannot blur them.
@@ -15,7 +15,8 @@ import { clearOrientPeaks, watchOrientDeltas } from '../../services/engine/camer
 import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import { selectCameraBase, selectCameraTuning } from '../../state/camera/selectors';
 import { selectTerrainPickMarkerRadiusM } from '../../state/settings/selectors';
-import { useAppSelector } from '../../store/hooks';
+import { shareUrlFor } from '../../state/url/shareUrlFor';
+import { useAppSelector, useAppStore } from '../../store/hooks';
 import { deg } from '../../utils/format/deg';
 import CopyButton from '../common/CopyButton/CopyButton';
 import { copyTextOf } from './copyTextOf';
@@ -34,10 +35,14 @@ const POLL_MS = 250;
 function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElement {
   const [snap, setSnap] = useState<CameraDebugSnapshot>(cameraDebug);
   const [copied, setCopied] = useState(false);
+  const [copiedUrl, setCopiedUrl] = useState(false);
   // The ONE reader of the live tuning: two readers at two rates (here and the
   // 4 Hz snapshot) would be a 250 ms mirror of the value the sliders write.
   const tuning = useAppSelector(selectCameraTuning);
   const markerRadiusM = useAppSelector(selectTerrainPickMarkerRadiusM);
+  // Read at click time only, never subscribed: a `useAppSelector((s) => s)`
+  // here would re-render this section on every store change.
+  const store = useAppStore();
   // `camera.base` (not the 4 Hz snap) so this is never behind the poll; a
   // view's pose is only meaningful in the absolute/world arm — body- and
   // site-anchored poses carry no `target`/`yaw`/`pitch` to paste.
@@ -58,6 +63,41 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
 
   return (
     <DebugSection title="Camera">
+      {/* Both buttons take a fresh snapshot, not the 4 Hz-stale one, so the copy is current. */}
+      <div className={styles.copyRow}>
+        <button
+          type="button"
+          className={styles.copyButton}
+          onClick={() => {
+            const fresh = cameraDebug();
+            void navigator.clipboard
+              .writeText(
+                shareUrlFor(store.getState(), fresh.framed, fresh.lastRenderedSimDays, location),
+              )
+              .then(() => {
+                setCopiedUrl(true);
+                setTimeout(() => setCopiedUrl(false), 1200);
+              });
+          }}
+        >
+          {copiedUrl ? 'copied ✓' : 'copy URL'}
+        </button>
+        <button
+          type="button"
+          className={styles.copyButton}
+          onClick={() => {
+            void navigator.clipboard
+              .writeText(copyTextOf(modelOf(cameraDebug(), tuning, markerRadiusM)))
+              .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              });
+          }}
+        >
+          {copied ? 'copied ✓' : 'copy JSON'}
+        </button>
+      </div>
+
       <div className={styles.headerLine}>
         <span>{model.header}</span>
         {model.badge === null ? null : <span className={styles.badge}>⚠ {model.badge}</span>}
@@ -126,21 +166,6 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
         </div>
       </details>
 
-      <button
-        type="button"
-        className={styles.copyButton}
-        onClick={() => {
-          // A fresh snapshot, not the 4 Hz-stale one, so the paste is current.
-          void navigator.clipboard
-            .writeText(copyTextOf(modelOf(cameraDebug(), tuning, markerRadiusM)))
-            .then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1200);
-            });
-        }}
-      >
-        {copied ? 'copied ✓' : 'copy all'}
-      </button>
       <CopyButton
         text={viewPoseText}
         label="copy view pose"

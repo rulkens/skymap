@@ -15,7 +15,7 @@ export function modelOf(
   const { dofs, deltas } = snap;
   const off = !tuning.northUp;
   return {
-    header: `${frameKey(snap.renderedFrame)} · ${snap.activeDriverId} · gesture: ${snap.gestureMode ?? 'none'}`,
+    header: `${frameKey(snap.framed.frame)} · ${snap.activeDriverId} · gesture: ${snap.gestureMode ?? 'none'}`,
     badge: snap.armMismatch ? 'ARM MISMATCH' : snap.epochMismatch ? 'EPOCH MISMATCH' : null,
     dofs: [
       { name: 'heading', off, row: dofs.heading, delta: deltas.heading },
@@ -66,7 +66,7 @@ export function modelOf(
           ],
     raw: [
       { key: 'stored_regime', value: frameKey(snap.storedFrame) },
-      { key: 'rendered_arm', value: frameKey(snap.renderedFrame) },
+      { key: 'rendered_arm', value: frameKey(snap.framed.frame) },
       { key: 'scene_frame', value: snap.orientationFrame },
       { key: 'distance_mpc', value: num(snap.distanceMpc) },
       {

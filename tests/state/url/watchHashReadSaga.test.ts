@@ -46,6 +46,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { hashArrivalApplied } from '../../../src/state/url/hashArrivalApplied';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 
 /**
@@ -98,10 +99,13 @@ describe('watchHashReadSaga', () => {
   it('turns an arrival deep link into a select plus a fly', () => {
     const { recorded } = buildHarness('focus=m31');
 
-    // Both actions, because arriving by URL is meant to look like a scene click
-    // (pins the InfoCard) plus a fly (moves the camera) — a `read` that lost
-    // one of them would still navigate, or still pin, and look almost right.
-    expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31')]);
+    // The select + fly, because arriving by URL is meant to look like a scene
+    // click (pins the InfoCard) plus a fly (moves the camera) — a `read` that
+    // lost one of them would still navigate, or still pin, and look almost
+    // right. `hashArrivalApplied` follows: the boot read's own signal that it
+    // applied a non-empty URL, which the write half takes to canonicalize its
+    // first settled publish instead of pushing (`hashHistoryIntegrity`).
+    expect(recorded).toEqual([requestSelect('m31'), requestFocus('m31'), hashArrivalApplied()]);
   });
 
   it('dispatches nothing at all on a bare arrival URL', () => {

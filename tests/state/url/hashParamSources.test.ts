@@ -23,14 +23,18 @@ import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
+import { applyUrlPose } from '../../../src/state/camera/applyUrlPose';
+import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
 import type { StructureInfo } from '../../../src/@types/data/structure/StructureInfo';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
+import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 
 const focusSource = HASH_PARAM_SOURCES.find((source) => source.key === 'focus')!;
 const timeSource = HASH_PARAM_SOURCES.find((source) => source.key === 't')!;
 const orientationSource = HASH_PARAM_SOURCES.find((source) => source.key === 'orientation')!;
+const poseSource = HASH_PARAM_SOURCES.find((source) => source.key === 'pose')!;
 
 /** JD 2451545.0 — the J2000.0 epoch, and the instant it names. */
 const J2000_ISO = '2000-01-01T12:00:00.000Z';
@@ -144,5 +148,28 @@ describe('orientation row', () => {
     // Back/forward off an `#orientation=…` entry must return the pole to the
     // default, not leave the previous entry's frame in place.
     expect(orientationSource.readAbsent()).toEqual([setOrientation(DEFAULT_ORIENTATION)]);
+  });
+});
+
+describe('pose row', () => {
+  const WORLD_ARM: FramedCameraPose = {
+    frame: 'absolute',
+    pose: { target: [1, 2, 3], yaw: 0.7, pitch: -0.2, distance: 5.5, roll: 0.42 },
+  };
+
+  it('reads a valid value as applyUrlPose', () => {
+    expect(poseSource.read(encodeFramedPose(WORLD_ARM))).toEqual([applyUrlPose(WORLD_ARM)]);
+  });
+
+  it('reads a malformed value as no change at all', () => {
+    expect(poseSource.read('not,a,pose')).toEqual([]);
+  });
+
+  it('reads an absent value as no change at all — the camera is left alone', () => {
+    expect(poseSource.readAbsent()).toEqual([]);
+  });
+
+  it('writes nothing: the rendered pose changes every frame of a drag, so this row never publishes', () => {
+    expect(poseSource.write(stateAfter())).toBeNull();
   });
 });

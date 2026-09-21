@@ -83,11 +83,13 @@ import { setOrientation } from '../settings/core/orientationSlice';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
+import { applyUrlPose } from '../camera/applyUrlPose';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
 import { julianDaysToUnixMs } from '../../utils/time/julianDaysToUnixMs';
 import { isOrientationFrameId } from '../../utils/url/isOrientationFrameId';
+import { decodeFramedPose } from '../../utils/url/decodeFramedPose';
 
 /**
  * The `focus` row's third trigger: the derived-cache write, narrowed to the ONE
@@ -247,8 +249,34 @@ const orientationSource: HashParamSource = {
   readAbsent: () => [setOrientation(DEFAULT_ORIENTATION)],
 };
 
+/**
+ * `pose` — the `l`-key share URL's exact camera, read-only. It writes nothing
+ * (`hashBodyFor` never composes a `pose` param): the rendered pose lands a
+ * `commitCameraPose` every frame of a drag, and a row that tried to keep up
+ * would fight `watchHashWriteSaga`'s own coalescing for no reader anyone
+ * shares. Absence means "leave the camera alone" — at boot (the engine's own
+ * seed stands) and on a Back/Forward across the entry alike, which is why
+ * `readAbsent` also returns nothing.
+ */
+const poseSource: HashParamSource = {
+  key: 'pose',
+  deepLink: true,
+  writesOn: [],
+  write: () => null,
+  read: (value) => {
+    const framed = decodeFramedPose(value);
+    if (framed === null) {
+      console.warn(`hashParamSources: malformed pose param, ignoring: ${value}`);
+      return [];
+    }
+    return [applyUrlPose(framed)];
+  },
+  readAbsent: () => [],
+};
+
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
   focusSource,
   timeSource,
   orientationSource,
+  poseSource,
 ];
