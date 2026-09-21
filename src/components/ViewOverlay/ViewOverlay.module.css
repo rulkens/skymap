@@ -13,9 +13,36 @@
   pointer-events: none;
 }
 
+/*
+ * The overlay mounts when the takeover starts, but the copy is about where
+ * the camera ENDS up, so nothing appears until `--view-enter-delay` (the
+ * fly-in's near-landing, set inline by the container off the clip's own
+ * duration). `both` holds the from-state through the wait; every group then
+ * adds its own offset so the page assembles instead of switching on.
+ */
+@keyframes viewEnterRise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes viewEnterFade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .vignetteCaption {
   position: absolute;
   inset: 0;
+  animation: viewEnterFade 1.8s ease-out var(--view-enter-delay) both;
   background: radial-gradient(
     ellipse 58% 52% at 16% 88%,
     rgba(0, 0, 0, 0.82) 0%,
@@ -28,6 +55,7 @@
 .vignetteNotes {
   position: absolute;
   inset: 0;
+  animation: viewEnterFade 1.8s ease-out var(--view-enter-delay) both;
   background: radial-gradient(
     ellipse 46% 85% at 90% 45%,
     rgba(0, 0, 0, 0.88) 0%,
@@ -47,6 +75,20 @@
   flex-direction: column;
   gap: 14px;
   text-shadow: 0 2px 16px rgba(0, 0, 0, 0.85);
+}
+
+/* Kicker, title, lede arrive in reading order, a beat apart. */
+.caption > * {
+  animation: viewEnterRise 0.9s ease-out both;
+}
+.caption > *:nth-child(1) {
+  animation-delay: calc(var(--view-enter-delay) + 0.1s);
+}
+.caption > *:nth-child(2) {
+  animation-delay: calc(var(--view-enter-delay) + 0.24s);
+}
+.caption > *:nth-child(3) {
+  animation-delay: calc(var(--view-enter-delay) + 0.4s);
 }
 
 .kicker {
@@ -114,6 +156,16 @@
   text-shadow: 0 1px 12px rgba(0, 0, 0, 0.9);
 }
 
+/* One section and the hairline above it enter together, `--i` beats after the
+   caption — the column fills top-down while the camera settles. */
+.sectionGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  animation: viewEnterRise 0.9s ease-out calc(var(--view-enter-delay) + 0.55s + var(--i) * 0.13s)
+    both;
+}
+
 .section {
   display: flex;
   flex-direction: column;
@@ -146,6 +198,9 @@
    which are whole clickable blocks — here the link is a few words inside a
    sentence and needs to read as one without a hover. */
 .inlineLink {
+  /* The root is click-through so the field stays orbitable; every interactive
+     element inside it has to opt back in, links included. */
+  pointer-events: auto;
   color: inherit;
   text-decoration: underline;
   text-decoration-color: var(--color-accent);
@@ -343,6 +398,8 @@
   cursor: pointer;
   color: var(--color-fg-tertiary);
   text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8);
+  /* Fade only — the pill is centred by its own transform. */
+  animation: viewEnterFade 0.9s ease-out calc(var(--view-enter-delay) + 0.9s) both;
 }
 .exitPill:hover,
 .exitPill:focus-visible {
@@ -379,6 +436,16 @@
   font-size: 9px;
   line-height: 1;
   color: var(--color-fg-dim);
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────── */
+/* The slide goes, the wait does not: the copy is still about where the camera
+ * ends up, so it still arrives with the landing — just by fading. */
+@media (prefers-reduced-motion: reduce) {
+  .caption > *,
+  .sectionGroup {
+    animation-name: viewEnterFade;
+  }
 }
 
 /* ── Mobile ────────────────────────────────────────────────────────── */
