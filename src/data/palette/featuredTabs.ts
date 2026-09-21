@@ -121,7 +121,8 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'solarSystem',
         label: 'Solar System',
-        blurb: 'Coming soon',
+        blurb:
+          'Eight planets on their real orbits, seen from above the ecliptic. Mercury goes round in 88 days; Neptune takes 165 years.',
         action: { kind: 'view', viewId: 'solarSystem' },
       },
       {
@@ -188,7 +189,8 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'observableUniverse',
         label: 'Observable Universe',
-        blurb: 'Coming soon',
+        blurb:
+          'Everything whose light has had time to reach us: a sphere reaching some 46 billion light-years in every direction.',
         action: { kind: 'view', viewId: 'observableUniverse' },
       },
     ],
@@ -662,7 +664,8 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'observableUniverse',
         label: 'Observable Universe',
-        blurb: 'Coming soon',
+        blurb:
+          'Everything whose light has had time to reach us: a sphere reaching some 46 billion light-years in every direction.',
         action: { kind: 'view', viewId: 'observableUniverse' },
       },
     ],
