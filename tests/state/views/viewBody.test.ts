@@ -121,9 +121,10 @@ describe('viewBody', () => {
     const held = store.getState().camera.autoRotate;
     expect(held.active).toBe(true);
     // Slower than the slice default, or it is a spin the viewer asked for
-    // rather than the view's own ambient drift.
-    expect(held.rate).toBeLessThan(before.rate);
-    expect(held.rate).toBeGreaterThan(0);
+    // rather than the view's own ambient drift. Magnitude, not sign: the view
+    // drifts the way the fly-in's pivot was already going, which is negative.
+    expect(Math.abs(held.rate)).toBeLessThan(Math.abs(before.rate));
+    expect(held.rate).not.toBe(0);
 
     store.dispatch(exitTakeover());
     await new Promise((r) => setTimeout(r, 0));

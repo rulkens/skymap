@@ -22,9 +22,11 @@ import type { SagaContext } from '../../store/types';
  * (`spinAutoRotate`'s unit) — about 1 deg/s, a full turn in six minutes. Far
  * slower than the slice default (0.000873, ~3 deg/s), which is authored for a
  * viewer who asked for a spin; here it is ambient, meant to be noticed only
- * after a few seconds of looking.
+ * after a few seconds of looking. NEGATIVE so the drift continues the
+ * direction the fly-in's pivot slide was already travelling, instead of
+ * reversing it the moment the camera lands.
  */
-const VIEW_SPIN_RATE = 0.0003;
+const VIEW_SPIN_RATE = -0.0003;
 
 export function* viewBody(view: View): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBody` does. The boot
