@@ -2,7 +2,7 @@
  * observableUniverse — the whole horizon shell in frame, everything catalogued
  * reduced to the knot at its centre. Copy is hand-written and user-owned;
  * nothing generates this file. `fitRadiusMpc` re-derives `pose.distance` at fly
- * time (`viewBody.ts`) so the sphere fits the live viewport at any aspect;
+ * time (`viewBodySaga.ts`) so the sphere fits the live viewport at any aspect;
  * `pose.distance` below is only the pre-runtime fallback — the landscape answer
  * at the default 60° FOV (`R / sin(fovY/2)`).
  */

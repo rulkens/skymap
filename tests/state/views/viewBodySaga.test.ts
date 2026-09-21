@@ -1,20 +1,20 @@
 /**
- * viewBody tests — settings, then a fly racing `exitTakeover`, then a steady
+ * viewBodySaga tests — settings, then a fly racing `exitTakeover`, then a steady
  * wait for it — run directly (not through `runTakeover`, which Task 3's suite
- * already covers) so these assert only what `viewBody` itself is responsible
+ * already covers) so these assert only what `viewBodySaga` itself is responsible
  * for.
  *
  * A `task.cancel()` call from test code proves nothing about supersede
  * ordering (the scheduler semaphore is 0 there, so queued `put`s flush
  * synchronously against broken code too) — these tests never do that; they
- * only dispatch `exitTakeover`, the real signal `viewBody` waits on.
+ * only dispatch `exitTakeover`, the real signal `viewBodySaga` waits on.
  */
 import { describe, it, expect, vi } from 'vitest';
 import createSagaMiddleware from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { viewBody } from '../../../src/state/views/viewBody';
+import { viewBodySaga } from '../../../src/state/views/viewBodySaga';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { updateSelectionFocus } from '../../../src/state/selection/selectionSlice';
 import { EARTH_REF } from '../../../src/data/selection/earthRef';
@@ -33,7 +33,7 @@ const VIEW: View = {
 };
 
 // Pre-bootstrap by default (`cameraRuntime` returns null), matching production
-// before `wireInput` has built a camera — `viewBody` must fall through to the
+// before `wireInput` has built a camera — `viewBodySaga` must fall through to the
 // authored pose rather than throw. Tests exercising the fit-radius path pass
 // their own `cameraRuntime`.
 function buildStore(
@@ -49,7 +49,7 @@ function buildStore(
   return { store, sagaMiddleware };
 }
 
-describe('viewBody', () => {
+describe('viewBodySaga', () => {
   it('applies the view settings before playing the clip', async () => {
     let flowEnabledAtPlay: boolean | undefined;
     const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockImplementation(() => {
@@ -59,7 +59,7 @@ describe('viewBody', () => {
     const { store, sagaMiddleware } = buildStore(playClip);
 
     sagaMiddleware.run(function* () {
-      yield* viewBody(VIEW);
+      yield* viewBodySaga(VIEW);
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -83,7 +83,7 @@ describe('viewBody', () => {
     expect(store.getState().selection.focus).toEqual(EARTH_REF);
 
     sagaMiddleware.run(function* () {
-      yield* viewBody(VIEW);
+      yield* viewBodySaga(VIEW);
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -95,11 +95,11 @@ describe('viewBody', () => {
     const { store, sagaMiddleware } = buildStore(playClip);
 
     const task = sagaMiddleware.run(function* () {
-      yield* viewBody(VIEW);
+      yield* viewBodySaga(VIEW);
     });
     await new Promise((r) => setTimeout(r, 0));
 
-    // The clip already resolved — viewBody must still be parked on exitTakeover,
+    // The clip already resolved — viewBodySaga must still be parked on exitTakeover,
     // not returned.
     expect(task.isRunning()).toBe(true);
     expect(store.getState().settings.flow.enabled).toBe(true);
@@ -108,7 +108,7 @@ describe('viewBody', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     expect(task.isRunning()).toBe(false);
-    // viewBody itself never restores — no reason for the setting to flip back
+    // viewBodySaga itself never restores — no reason for the setting to flip back
     // as a side effect of exitTakeover; runTakeover (untested here) owns that.
     expect(store.getState().settings.flow.enabled).toBe(true);
   });
@@ -122,7 +122,7 @@ describe('viewBody', () => {
     expect(before.active).toBe(false);
 
     sagaMiddleware.run(function* () {
-      yield* viewBody(VIEW);
+      yield* viewBodySaga(VIEW);
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -148,7 +148,7 @@ describe('viewBody', () => {
     const before = store.getState().camera.autoRotate;
 
     const task = sagaMiddleware.run(function* () {
-      yield* viewBody(VIEW);
+      yield* viewBodySaga(VIEW);
     });
     await new Promise((r) => setTimeout(r, 0));
     expect(store.getState().camera.autoRotate.active).toBe(true);
@@ -162,7 +162,7 @@ describe('viewBody', () => {
   it('re-derives pose.distance from fitRadiusMpc against the live runtime', async () => {
     // A landscape aspect and a known FOV make the expected distance
     // computable by hand: sphereFitDistance's own tests own the formula, this
-    // only asserts viewBody actually threads the live runtime into it instead
+    // only asserts viewBodySaga actually threads the live runtime into it instead
     // of flying the authored fallback.
     const fitView: View = { ...VIEW, fitRadiusMpc: 14300 };
     let flownDistance: number | undefined;
@@ -180,7 +180,7 @@ describe('viewBody', () => {
     const { sagaMiddleware } = buildStore(playClip, cameraRuntime);
 
     sagaMiddleware.run(function* () {
-      yield* viewBody(fitView);
+      yield* viewBodySaga(fitView);
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -201,7 +201,7 @@ describe('viewBody', () => {
     const { sagaMiddleware } = buildStore(playClip); // default cameraRuntime returns null
 
     sagaMiddleware.run(function* () {
-      yield* viewBody(fitView);
+      yield* viewBodySaga(fitView);
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -209,7 +209,7 @@ describe('viewBody', () => {
   });
 
   it('exits during the fly-in without waiting for it to land', async () => {
-    // The fly never lands — against the sequential shape, `viewBody` would be
+    // The fly never lands — against the sequential shape, `viewBodySaga` would be
     // stuck inside `yield* call(playClip, ...)` forever, and the exitTakeover
     // dispatch below would find nothing listening yet.
     const playClip = vi
@@ -218,7 +218,7 @@ describe('viewBody', () => {
     const { store, sagaMiddleware } = buildStore(playClip);
 
     const task = sagaMiddleware.run(function* () {
-      yield* viewBody(VIEW);
+      yield* viewBodySaga(VIEW);
     });
     await new Promise((r) => setTimeout(r, 0));
 
@@ -229,7 +229,7 @@ describe('viewBody', () => {
     await new Promise((r) => setTimeout(r, 0));
 
     // Fails against the sequential shape: the never-resolving fly call means
-    // `viewBody` never reaches a `take(exitTakeover)` to catch this dispatch,
+    // `viewBodySaga` never reaches a `take(exitTakeover)` to catch this dispatch,
     // so the task would still be running here.
     expect(task.isRunning()).toBe(false);
   });

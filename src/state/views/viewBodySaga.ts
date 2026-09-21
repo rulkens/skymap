@@ -1,5 +1,5 @@
 /**
- * viewBody — a view's takeover body: apply its settings, fly to its pose,
+ * viewBodySaga — a view's takeover body: apply its settings, fly to its pose,
  * then hold, turning slowly, until the viewer exits. `runTakeover` owns the
  * snapshot/start/restore/end bracket; this only decides when the body
  * returns. `exitTakeover` is the only abort arm — a view has no beat loop,
@@ -29,7 +29,7 @@ import type { SagaContext } from '../../store/types';
  */
 const VIEW_SPIN_RATE = -0.0003;
 
-export function* viewBody(view: View): Generator {
+export function* viewBodySaga(view: View): Generator {
   // Clear the focus slot BEFORE the fly, exactly as `tourBody` does. The boot
   // home seeds Earth into it (`EARTH_HOME`), and Earth is a body the sim clock
   // moves — so `followApproach`@55 is live the whole time and outranks

@@ -12,7 +12,7 @@ import type { Task } from 'redux-saga';
 import { runTakeover } from './runTakeover';
 import { tourBody } from '../tour/tourBody';
 import { startTour } from '../tour/tourActions';
-import { viewBody } from '../views/viewBody';
+import { viewBodySaga } from '../views/viewBodySaga';
 import { openView } from '../views/viewActions';
 import { tourRegistry } from '../../data/animation/tours/tourRegistry';
 import { viewRegistry } from '../../data/views/viewRegistry';
@@ -48,7 +48,7 @@ export function* watchTakeoverSaga() {
     } else if (openView.match(action)) {
       const view = viewRegistry[action.payload];
       source = { kind: 'view', id: view.id };
-      body = () => viewBody(view);
+      body = () => viewBodySaga(view);
     } else {
       // `take(startRequests)` widens `action` to `any` — typed-redux-saga
       // can't narrow a `take` over a mixed-creator array — so this branch is
