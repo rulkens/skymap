@@ -18,10 +18,8 @@ import type { Slab } from '../../../@types/engine/frame/Slab';
 import type { SlabFrame } from '../../../@types/engine/frame/SlabFrame';
 import type { Vec2 } from '../../../@types/math/Vec2';
 
-import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
-import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
 import { cameraDofAnglesOf } from '../camera/cameraDofAnglesOf';
 import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
@@ -31,6 +29,7 @@ import { runMarkerProducers } from './runMarkerProducers';
 import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
+import { frameContextInputOf } from './frameContextInputOf';
 import { deriveBodyStates } from './deriveBodyStates';
 import { sceneBodyStates } from './sceneBodyStates';
 import { bodySurfaceTier } from '../../../utils/bodyTextures/bodySurfaceTier';
@@ -141,9 +140,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   for (const action of actions) deps.cb.store.dispatch(action);
   if (requestRender) state.subsystems.scheduler.requestRender();
 
-  const { displayed: renderPose, projection, upBasis } = next.outputs;
+  const upBasis = next.outputs.upBasis;
   const poseBasis = ORIENTATION_FRAMES[stored.settings.orientation];
-  const pivotFocus = state.selectionRows.focus;
 
   // The debug panel's Δ/peak columns, at FRAME rate: its 4 Hz poll averages
   // ~15 frames into one reading, which is precisely how a per-frame decay
@@ -163,16 +161,24 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     );
   }
 
-  // Eye→pivot-surface range NEAR0's bracket is sized from — the scale bar's
-  // `snap.distance` and `FrameContextInput.altitudeMpc` are the SAME line,
-  // so one call feeds both.
-  const altitudeMpc = pivotSurfaceRangeMpc(renderPose, worldPose.distance, pivotFocus);
+  // The camera assembly + altitude line, shared with `pickFrameContext` (K7):
+  // `nowMs`/`visibleSourceMask`/`upBasis`/`simDays` are the only fields the two
+  // callers vary on purpose; everything else reads off `state` identically —
+  // safe to call here because `state.cameraRuntime = next` above already made
+  // `state`'s view of the runtime THIS frame's.
+  const { input, cam } = frameContextInputOf(state, {
+    worldPose,
+    nowMs,
+    visibleSourceMask: masks.draw,
+    upBasis,
+    simDays,
+  });
 
   // `clientWidth`/`clientHeight` are CSS px; backing-store `width`/`height`
   // silently breaks the bar on retina.
   if (state.booted) {
     const scaleInfo = computeScaleInfo({
-      cam: { distance: altitudeMpc, fovYRad: projection.fovYRad },
+      cam: { distance: input.altitudeMpc, fovYRad: cam.fovYRad },
       canvasSize: { width: deps.canvas.clientWidth, height: deps.canvas.clientHeight },
       targetPx: SCALE_TARGET_PX,
     });
@@ -181,17 +187,8 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     }
   }
 
-  const cam = assembleOrbitCamera(worldPose, projection, poseBasis, upBasis);
-
   // The 'not ready' branch is the window before cam + GPU handles populate.
-  const snapshot = deriveFrameContext(state, {
-    cam,
-    arm: renderPose,
-    altitudeMpc,
-    nowMs,
-    simDays,
-    visibleSourceMask: masks.draw,
-  });
+  const snapshot = deriveFrameContext(state, input);
   if (!snapshot.isReady) {
     // Bootstrap populates the handles without waking any channel: keep polling.
     state.subsystems.scheduler.requestRender();
