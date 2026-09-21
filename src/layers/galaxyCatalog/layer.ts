@@ -43,8 +43,8 @@ export const galaxyCatalogLayer = defineLayer({
   assets: galaxyCatalogAssetRows,
   sagas: [watchPaletteWakeSaga],
   fades: galaxyCatalogFadeRows,
-  labels: (runtime) => ({
-    screen: [
+  guides: (runtime) => ({
+    screenLabels: [
       { id: 'famousLabels', slab: COSMO, produceLabels: produceFamousGalaxyLabels(runtime) },
     ],
   }),

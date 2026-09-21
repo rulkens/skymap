@@ -7,6 +7,7 @@ import type { CompanionAssetRow } from '../../loading/CompanionAssetRow';
 import type { FadeLayer } from '../../animation/FadeLayer';
 import type { LayerScreenLabel } from './LayerScreenLabel';
 import type { Label3DProducer } from '../subsystems/Label3DProducer';
+import type { OrbitalElements } from '../../scene/OrbitalElements';
 import type { FrameView } from '../frame/FrameView';
 import type { PassState } from '../frame/PassState';
 
@@ -20,6 +21,7 @@ export type LayerInstance = {
   readonly fades: readonly FadeLayer<unknown>[];
   readonly screenLabels: readonly LayerScreenLabel[];
   readonly worldLabels: readonly Label3DProducer[];
+  readonly orbitTrails: readonly OrbitalElements[];
   readonly selection: readonly SelectionKindRow[];
   readonly frame: ((ctx: FrameView, state: PassState) => LayerFrameVote) | null;
   destroy(): void;

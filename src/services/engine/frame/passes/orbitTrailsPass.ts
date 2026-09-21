@@ -11,7 +11,6 @@
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
-import { TRAIL_ELEMENTS } from '../../../../data/bodies/trailElements';
 import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';
 import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
@@ -27,9 +26,10 @@ import { INSTANCE_FLOATS } from '../../../gpu/renderers/bodies/orbitTrailRendere
 import { FOREGROUND_MAX_DISTANCE_MPC } from '../foregroundMaxDistance';
 import { resolveLayerOpacity } from '../../presentation/focusRecession';
 
-// Reused across frames so the hot path allocates nothing. Sized from the
-// compile-time elements table — a fixed size, not a cap.
-const staging = new Float32Array(TRAIL_ELEMENTS.length * INSTANCE_FLOATS);
+// Reused across frames so the hot path allocates nothing. The roster is composed
+// at boot (core's rows plus every Layer's `guides.orbitTrails`), so the buffer is
+// grown on the first frame that needs more room rather than sized once here.
+let staging = new Float32Array(0);
 
 export const orbitTrailsPass: ContentPass = {
   name: 'orbit-trails',
@@ -73,7 +73,11 @@ export const orbitTrailsPass: ContentPass = {
     // Reading the shared snapshot — never re-deriving — is what welds each trail
     // to the exact instant its body is drawn at.
     const states = sceneBodyStates(state, ctx);
-    const limit = TRAIL_ELEMENTS.length;
+    const rows = state.orbitTrailRows;
+    const limit = rows.length;
+    if (staging.length < limit * INSTANCE_FLOATS) {
+      staging = new Float32Array(limit * INSTANCE_FLOATS);
+    }
     const camPos = ctx.drawCamPos;
 
     // Multiplied into every orbit's apparent-size alpha below, so a hide dissolves
@@ -90,7 +94,7 @@ export const orbitTrailsPass: ContentPass = {
     //   floats 34..45 — eye-relative 3D basis, km (loc10/11/12 at byte 136/152/168)
     let count = 0;
     for (let i = 0; i < limit; i++) {
-      const elements = TRAIL_ELEMENTS[i]!;
+      const elements = rows[i]!;
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place focus fold below cannot alias a
       // shared scratch across orbits.

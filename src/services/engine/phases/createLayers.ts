@@ -3,7 +3,7 @@
  * `create`s every composed Layer, seeding its facts key first (D6, Ruling 6),
  * then composes each instance's contributions onto core's `state.passes` /
  * `.computes` / `.assetRows` / `.fadeRows` / `.layerSlots` / `.selectionKindRows` /
- * `.label3DProducers`, asserting the composed sets stay disjoint (D5) — a bad
+ * `.label3DProducers` / `.orbitTrailRows`, asserting the composed sets stay disjoint (D5) — a bad
  * composition throws at boot.
  */
 
@@ -27,6 +27,7 @@ import {
 import { assertSelectionRowsDisjoint } from '../../../utils/selection/assertSelectionRowsDisjoint';
 import { expandCompanionRows } from '../../../utils/loading/expandCompanionRows';
 import { concatUniqueRows } from '../../../utils/object/concatUniqueRows';
+import { CORE_TRAIL_ELEMENTS } from '../../../data/bodies/coreTrailElements';
 import { CONTENT_PASSES } from '../frame/passes';
 import { CORE_COMPUTES } from '../frame/computes';
 import { ASSET_WIRING } from '../wiring/assetWiring';
@@ -144,9 +145,13 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   );
   state.fadeRows = [...FADE_LAYERS, ...instances.flatMap((instance) => instance.fades)];
   state.label3DProducers = instances.flatMap((instance) => instance.worldLabels);
+  state.orbitTrailRows = [
+    ...CORE_TRAIL_ELEMENTS,
+    ...instances.flatMap((instance) => instance.orbitTrails),
+  ];
 
   // Two directors, each owning one slab's screen-space projection — a
-  // producer names the slab whose director it registers on (`LayerLabels`'s
+  // producer names the slab whose director it registers on (`LayerGuides`'s
   // header explains why NEAR0 vs COSMO matters).
   const screenLabelDirectors: Readonly<Record<number, Label2DDirector>> = {
     [NEAR0]: state.subsystems.foregroundLabelDirector,

@@ -38,8 +38,10 @@ export const zoneOfAvoidanceLayer = defineLayer({
   destroy,
   passes: (runtime) => [zoneOfAvoidancePass(runtime), zoneOfAvoidanceUpsamplePass(runtime)],
   fades: zoneOfAvoidanceFadeRows,
-  labels: () => ({
-    world: [{ id: 'zoneOfAvoidanceLettering', produceLabels3D: produceZoneOfAvoidanceLettering }],
+  guides: () => ({
+    worldLabels: [
+      { id: 'zoneOfAvoidanceLettering', produceLabels3D: produceZoneOfAvoidanceLettering },
+    ],
   }),
   selection: () => [zoneOfAvoidanceSelectionRow()],
   ui: [
