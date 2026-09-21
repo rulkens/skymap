@@ -170,7 +170,7 @@ export const domeResamplePass: ContentPass; // name 'dome-resample'
 
 **review: yes** (frame orchestration; camera/view derivation)
 
-**Files:** `src/@types/engine/frame/ViewRigKey.d.ts`, `src/@types/engine/frame/ViewRig.d.ts`, `src/data/rendering/viewRigs.ts`, `src/data/rendering/frameSections.ts`, `src/services/engine/frame/domeFaceViews.ts` (create), `src/services/engine/frame/checkFrameOrder.ts`, `src/services/engine/phases/startLoop.ts:27-33`, `tests/services/engine/frame/domeFaceViews.test.ts` (create), `tests/services/engine/frame/checkFrameOrder.test.ts`
+**Files:** `src/@types/engine/frame/ViewRigKey.d.ts`, `src/@types/engine/frame/ViewRig.d.ts`, `src/data/rendering/viewRigs.ts`, `src/data/rendering/frameSections.ts`, `src/utils/camera/domeFaceSpecs.ts` (create), `src/services/engine/frame/checkFrameOrder.ts`, `src/services/engine/phases/startLoop.ts:27-33`, `tests/utils/camera/domeFaceSpecs.test.ts` (create), `tests/services/engine/frame/checkFrameOrder.test.ts`
 
 **Contract:**
 
@@ -183,13 +183,13 @@ readonly pickable: boolean;
 export const SCENE_TO_DOME_CUBE: FrameSection = { scope: 'perView', steps: [...SCENE.steps, { kind: 'copy', source: 'hdr' }] };
 export const DOME_RESAMPLE: FrameSection = { scope: 'once', steps: [{ kind: 'render', target: 'hdr', slab: COSMO, passes: ['dome-resample'] }] };
 // viewRigs.ts:
-mono: { views: (m) => [m], program: [PRELUDE, SCENE, POST, OVERLAYS], pickable: true },
-dome: { views: domeFaceViews, program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST], pickable: false },
-// services/engine/frame/domeFaceViews.ts
-export function domeFaceViews(canvas: FrameView, state: EngineState): readonly FrameView[];
+mono: { views: () => null, program: [PRELUDE, SCENE, POST, OVERLAYS], pickable: true },
+dome: { views: domeFaceSpecs, program: [PRELUDE, SCENE_TO_DOME_CUBE, DOME_RESAMPLE, POST], pickable: false },
+// utils/camera/domeFaceSpecs.ts
+export function domeFaceSpecs(canvas: FrameView, state: EngineState): readonly ViewSpec[];
 ```
 
-**What `domeFaceViews` builds.** One `ViewSpec` per layer i, passed to `deriveView(snapshot, spec)`. A null result is dropped (pre-bootstrap only).
+**What `domeFaceSpecs` builds.** One `ViewSpec` per layer i; `runFrame` derives each into a view via `deriveView(canvas.snapshot, cam, spec)`.
 
 | ViewSpec field | value                                                        |
 | -------------- | ------------------------------------------------------------ |
@@ -217,7 +217,7 @@ export function domeFaceViews(canvas: FrameView, state: EngineState): readonly F
 
 Today's single-order check (`checkFrameOrder.ts` loop and throws) would reject `dome-resample` under mono, and would reject `SCENE` once it is listed by both rigs.
 
-- [ ] Test `domeFaceViews derives five views on slots 19–23, each writing its dome-cube layer`: use a stub `layerViewOf`, and reuse the ready-context fixture PR 1's `deriveView.test.ts` builds.
+- [ ] Test `domeFaceSpecs returns five specs on slots 19–23, each targeting its dome-cube layer`: use a stub `layerViewOf`.
 - [ ] Test `a direction projected through each dome view's vp lands where domeFaceUv says`. This is the twin ↔ render contract, the only test that catches a flipped axis or a swapped face order.
   - For each face, take directions at the face centre and 0.9 of the way to each edge, in dome coordinates.
   - Carry each one to world space with `domeBasis` and the main camera's world axes, which you decode from `main`'s view matrix as PR 1's test decodes forward.
@@ -325,7 +325,7 @@ buildFfmpegArgs(opts: { fps: number; out: string; dome: boolean }): string[]
 
 - Data: `DOME_PARAMS`, `DOME_FACES`/`DOME_FACE_COUNT`.
 - Utilities: `domeBasis`, `domeFaceRotations`, `fisheyeDirection`, `domeFaceUv`.
-- Frame and rig: `RenderTargetSpec.layers`, the `dome-cube` row, `VIEW_SLOT_COUNT = 24`, `CopyStepSpec` and the executor `copy` case, `ViewRigKey 'dome'`, `ViewRig.pickable`, `SCENE_TO_DOME_CUBE`/`DOME_RESAMPLE`, `VIEW_RIGS.dome`, `domeFaceViews`, and `checkFrameOrder` over every rig.
+- Frame and rig: `RenderTargetSpec.layers`, the `dome-cube` row, `VIEW_SLOT_COUNT = 24`, `CopyStepSpec` and the executor `copy` case, `ViewRigKey 'dome'`, `ViewRig.pickable`, `SCENE_TO_DOME_CUBE`/`DOME_RESAMPLE`, `VIEW_RIGS.dome`, `domeFaceSpecs`, and `checkFrameOrder` over every rig.
 - Resample: `domeResample.wesl`, `domeResampleRenderer`, `domeResamplePass`.
 - Boot and input: `?dome` seeding plus the square-canvas CSS, and the pick and cursor gates.
 - Recorder: `record-clip --dome`, and `--frames N` on every take.

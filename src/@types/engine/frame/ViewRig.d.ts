@@ -7,9 +7,13 @@
 import type { EngineState } from '../state/EngineState';
 import type { FrameSection } from './FrameSection';
 import type { FrameView } from './FrameView';
+import type { ViewSpec } from './ViewSpec';
 
 export type ViewRig = {
-  /** The frame's views, derived off its canvas view; mono returns `[canvas]` itself. */
-  readonly views: (canvas: FrameView, state: EngineState) => readonly FrameView[];
+  /** `null`/empty ⇒ the canvas view alone (mono; one derivation, one submit —
+   *  see `renderFrame`'s view-identity batching). Otherwise `runFrame` derives
+   *  each via `deriveView(canvas.snapshot, cam, spec)`, REPLACING the canvas
+   *  view: a rig with no canvas draw (dome) lists none of its own. */
+  readonly views: (canvas: FrameView, state: EngineState) => readonly ViewSpec[] | null;
   readonly program: readonly FrameSection[];
 };

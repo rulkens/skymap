@@ -11,6 +11,10 @@ import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { deriveView } from '../../../../src/services/engine/frame/deriveView';
+import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
+import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
 import { expandFrameOrder } from '../../../../src/services/engine/frame/expandFrameOrder';
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
@@ -405,7 +409,9 @@ function makeInput(
     isReady: true as const,
     cam,
     arm: null as unknown as never,
-    camBasisWorld: null as unknown as never,
+    // Only `deriveView`'s basis product reads this; a real identity keeps
+    // that call well-defined for the view-rig test below.
+    camBasisWorld: [...IDENTITY_MAT3] as Mat3,
     bodyStates: new Map(),
     // Nothing in this file reads bodyPose (frame or view level).
     bodyPose: () => null,
@@ -951,7 +957,23 @@ describe('renderFrame', () => {
       expandFrameOrder(section.steps, passes, options),
     );
     expect(bySections).toEqual(whole);
-    expect(VIEW_RIGS.mono.views(fx.input.canvas, fx.input.state as any)).toEqual([fx.input.canvas]);
+    // mono returns null, never its own spec — see `ViewRig.views`'s doc: a
+    // spec would derive the canvas view a second time and split the submit.
+    expect(VIEW_RIGS.mono.views(fx.input.canvas, fx.input.state as any)).toBeNull();
+  });
+
+  it('a rig returning two specs yields two views sharing the frame snapshot', () => {
+    // The shared-snapshot invariant used to rest on a rig author deriving
+    // every view off the same `snapshot` by hand; now it is structural —
+    // `ViewSpec`s carry no snapshot of their own, so whatever a rig returns,
+    // running it through `deriveView(canvas.snapshot, cam, spec)` can only
+    // ever produce views of THIS canvas's snapshot.
+    const specA = faceViewSpec(0, 64, 0);
+    const specB = faceViewSpec(1, 64, 1);
+    const viewA = deriveView(fx.input.canvas.snapshot, fx.cam, specA);
+    const viewB = deriveView(fx.input.canvas.snapshot, fx.cam, specB);
+    expect(viewA.snapshot).toBe(fx.input.canvas.snapshot);
+    expect(viewB.snapshot).toBe(fx.input.canvas.snapshot);
   });
 
   it('a perView section with two views submits twice, each expanded from its own view', () => {

@@ -206,7 +206,15 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     cam,
     mainViewSpec(cam, { width: deps.canvas.width, height: deps.canvas.height }),
   );
-  const views = VIEW_RIGS[state.viewRig].views(canvas, state);
+  // The rig hands back specs, not views (`ViewRig.views`'s doc): deriving them
+  // HERE, off the one `snapshot` every other view already shares, is what
+  // makes the shared-snapshot invariant structural rather than a rig author's
+  // promise.
+  const viewSpecs = VIEW_RIGS[state.viewRig].views(canvas, state);
+  const views =
+    viewSpecs === null || viewSpecs.length === 0
+      ? [canvas]
+      : viewSpecs.map((spec) => deriveView(snapshot, cam, spec));
 
   // `produceFocusUniforms(nowMs)` TICKS the focus fade, so it runs EXACTLY ONCE
   // per frame, before every consumer of the blend (label director, markers,
