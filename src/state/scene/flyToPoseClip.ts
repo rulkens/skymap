@@ -7,16 +7,27 @@
  * ### Two legs, because `target` cannot move in log space
  *
  * `distance` interpolates logarithmically (`CHANNEL_SPACE`), so a pull-back
- * across eleven decades is perceptually even. `target` is a Vec3 and can only
- * move LINEARLY in world Mpc — log space is undefined for signed values. Run
- * the two in one parallel block and the pivot crosses a hundred Mpc while the
- * eye is still micro-parsecs from it: the world slews past at an absurd rate
- * in the first second and barely moves in the last. `grandTour/cosmicWeb.ts`
- * never does this — it turns, holds, and only then travels, by which point
- * the camera is already out at ~16 Mpc and the pivot move is a few orbit
- * radii rather than a billion. Same phrasing here: pull back to the view's
- * scale first, then move the pivot and settle the bearing, when a hundred Mpc
- * of travel is a fraction of the orbit radius.
+ * across seventeen decades is perceptually even. `target` is a Vec3 and can
+ * only move LINEARLY in world Mpc — log space is undefined for signed values.
+ * Run the two in one parallel block and the pivot crosses a hundred Mpc while
+ * the eye is still micro-parsecs from it: the world slews past at an absurd
+ * rate in the first second and barely moves in the last.
+ * `grandTour/cosmicWeb.ts` never does this — it turns, holds, and only then
+ * travels, by which point the camera is already far out and the pivot move is
+ * a few orbit radii rather than a billion.
+ *
+ * ### Why the legs overlap, and by how little
+ *
+ * Two legs butted end to end meet at zero velocity — the dolly eases out, the
+ * pivot eases in, and the join reads as a stall. Overlapping them fixes that,
+ * but only barely: the pull-back's distance grows EXPONENTIALLY in eased
+ * time, so the pivot's angular rate (travel over distance) explodes if it
+ * starts early. From the boot home at Earth (~1e-15 Mpc) to the Cosmic Web's
+ * 251 Mpc the ramp spans ~17.6 decades, and the camera is still inside the
+ * Galaxy at 80% of it. At `REFRAME_JOIN` the camera is out past ~30 Mpc and
+ * the pivot's opening degrees cost ~0.1 rad/s; a tenth earlier they cost
+ * 0.5 rad/s and the field lurches. So the overlap is the dolly's last sixth:
+ * enough that its tail covers the pivot's slow start, not enough to slew.
  *
  * `easeInOutSine`, not the `easeInOutCubic` default: its peak rate is ~1.57x
  * the mean where cubic's is 2x, so the middle of the pull-back — the part
@@ -25,22 +36,43 @@
 
 import type { CameraPose } from '../../@types/camera/CameraPose';
 import type { ClipData } from '../../@types/animation/ClipData';
-import { aimAt, all, dollyTo, moveTarget } from '../../services/engine/animation/effectHelpers';
+import {
+  aimAt,
+  all,
+  dollyTo,
+  moveTarget,
+  seq,
+  wait,
+} from '../../services/engine/animation/effectHelpers';
 
 /** Leg 1: the log pull-back from wherever the viewer was to the view's scale. */
-const PULL_BACK_SEC = 6;
+const PULL_BACK_SEC = 7;
 
-/** Leg 2: the pivot slide and bearing settle, both at the view's scale. */
-const REFRAME_SEC = 4;
+/** Leg 2: the pivot slide and bearing settle, mostly at the view's scale. */
+const REFRAME_SEC = 5;
+
+/** Where leg 2 joins leg 1, as a fraction of the pull-back — see the header. */
+const REFRAME_JOIN = 0.85;
+
+/**
+ * The whole fly, in seconds. Leg 2 outlasts leg 1, so it sets the end — the
+ * view's copy waits on this (`ViewOverlayContainer`).
+ */
+export const FLY_TO_POSE_SEC = PULL_BACK_SEC * REFRAME_JOIN + REFRAME_SEC;
 
 export function flyToPoseClip(pose: CameraPose): ClipData {
   return {
     start: 'live',
     timeline: [
-      dollyTo(pose.distance, PULL_BACK_SEC, 'easeInOutSine'),
       all([
-        moveTarget(pose.target, REFRAME_SEC, 'easeInOutSine'),
-        aimAt({ yaw: pose.yaw, pitch: pose.pitch }, REFRAME_SEC, 'easeInOutSine'),
+        dollyTo(pose.distance, PULL_BACK_SEC, 'easeInOutSine'),
+        seq([
+          wait(PULL_BACK_SEC * REFRAME_JOIN),
+          all([
+            moveTarget(pose.target, REFRAME_SEC, 'easeInOutSine'),
+            aimAt({ yaw: pose.yaw, pitch: pose.pitch }, REFRAME_SEC, 'easeInOutSine'),
+          ]),
+        ]),
       ]),
     ],
   };
