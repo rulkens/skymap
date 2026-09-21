@@ -13,6 +13,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { selectionResolverOver } from '../../../support/selectionResolverOver';
 import type { GalaxyRowFixture } from '../../../support/selectionResolverOver';
 import { composeSelectionRows } from '../../../../src/services/engine/selection/composeSelectionRows';
+import { ALL_KINDS_ENABLED } from '../../../support/allKindsEnabled';
 import { Source } from '../../../../src/data/sources';
 import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
@@ -397,7 +398,10 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
   it('a claiming row is authoritative even when its decode is null', () => {
     const decodeY = vi.fn(() => ({ type: 'y' }));
     const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'y-', decodeY)];
-    const composed = composeSelectionRows(() => rows);
+    const composed = composeSelectionRows(
+      () => rows,
+      () => ALL_KINDS_ENABLED,
+    );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(decodeY).not.toHaveBeenCalled();
   });
@@ -405,23 +409,32 @@ describe('composeSelectionRows — claim-then-decode contract', () => {
   it('an unclaimed id resolves to null without consulting any decode', () => {
     const decode = vi.fn(() => ({ type: 'x' }));
     const rows = [stubRow('x', 'x-', decode)];
-    const composed = composeSelectionRows(() => rows);
+    const composed = composeSelectionRows(
+      () => rows,
+      () => ALL_KINDS_ENABLED,
+    );
     expect(composed.resolveFocusId('z-1')).toBeNull();
     expect(decode).not.toHaveBeenCalled();
   });
 
   it('two rows claiming the same id throw, naming the id and both rows', () => {
     const rows = [stubRow('x', 'x-', () => null), stubRow('y', 'x-', () => null)];
-    const composed = composeSelectionRows(() => rows);
+    const composed = composeSelectionRows(
+      () => rows,
+      () => ALL_KINDS_ENABLED,
+    );
     expect(() => composed.resolveFocusId('x-1')).toThrow(/x-1/);
   });
 
   it('rowsOf is read on every call', () => {
     let calls = 0;
-    const composed = composeSelectionRows(() => {
-      calls++;
-      return calls === 1 ? [] : [stubRow('x', 'x-', () => ({ type: 'x' }))];
-    });
+    const composed = composeSelectionRows(
+      () => {
+        calls++;
+        return calls === 1 ? [] : [stubRow('x', 'x-', () => ({ type: 'x' }))];
+      },
+      () => ALL_KINDS_ENABLED,
+    );
     expect(composed.resolveFocusId('x-1')).toBeNull();
     expect(composed.resolveFocusId('x-1')).toEqual({ type: 'x' });
     expect(calls).toBe(2);
@@ -490,13 +503,5 @@ describe('composeSelectionRows — picking gate', () => {
       id: 'virgo',
     });
     expect(structureDisabled.focusIdOf({ type: 'structure', id: 'virgo' })).toBe('cluster-virgo');
-  });
-
-  it('omitting kindsEnabled defaults every kind to enabled', () => {
-    const noGate = composeSelectionRows(() => [structureRow]);
-    expect(noGate.resolvePick({ sourceCode: Source.Cluster, localIdx: 0 })).toEqual({
-      type: 'structure',
-      id: 'virgo',
-    });
   });
 });

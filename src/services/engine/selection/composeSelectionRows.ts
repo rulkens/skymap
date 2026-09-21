@@ -8,7 +8,11 @@
  *
  * `kindsEnabled` gates `resolvePick` ONLY — a deep link, a command-palette
  * row, or a restored URL selection must still resolve a kind a scene click
- * cannot reach, so `extractRow`/`resolveFocusId`/`focusIdOf` stay ungated.
+ * cannot reach, so `extractRow`/`resolveFocusId`/`focusIdOf` stay ungated. It
+ * is required rather than defaulting to all-true: a caller that forgot it
+ * would silently ignore every view's pick restriction, which no test or type
+ * would catch. Tests that do not exercise the gate pass
+ * `tests/support/allKindsEnabled`.
  */
 
 import { SOURCE_REGISTRY } from '../../../data/sources';
@@ -16,18 +20,9 @@ import type { SelectionKind } from '../../../@types/engine/SelectionKind';
 import type { SelectionKindRow } from '../../../@types/engine/layer/SelectionKindRow';
 import type { SelectionResolver } from '../../../@types/engine/selection/SelectionResolver';
 
-const ALL_KINDS_ENABLED: Record<SelectionKind, boolean> = {
-  galaxyCatalog: true,
-  structure: true,
-  milkyWay: true,
-  zoneOfAvoidance: true,
-  body: true,
-  star: true,
-};
-
 export function composeSelectionRows(
   rowsOf: () => readonly SelectionKindRow[],
-  kindsEnabled: () => Record<SelectionKind, boolean> = () => ALL_KINDS_ENABLED,
+  kindsEnabled: () => Record<SelectionKind, boolean>,
 ): SelectionResolver {
   return {
     resolvePick(pick) {
