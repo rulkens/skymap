@@ -20,6 +20,7 @@ import { takeLatest, take, getContext, put, select } from 'typed-redux-saga';
 
 import { updateSelectionFocus } from './selectionSlice';
 import { startCameraTween } from '../camera/cameraSlice';
+import { selectUrlPose } from '../camera/selectors';
 import { focusTweenDescriptor } from '../camera/focusTweenDescriptor';
 import { ROW_FOCUSABLE } from '../../services/engine/helpers/rowFocusable';
 import { bodyMovesThisFrame } from '../../utils/scene/bodyMovesThisFrame';
@@ -38,6 +39,12 @@ export function* watchFocusTweenSaga() {
   yield* takeLatest(
     updateSelectionFocus,
     suspendDuringClip(function* (action) {
+      // A parked `#pose=` link IS the destination — flying there would land the
+      // tween on top of it. Checked before the deferral loop below: a star or
+      // structure ref can defer past the seed's moment, and the pose is spent by
+      // then, so a check placed after the wait would already read null.
+      if ((yield* select(selectUrlPose)) !== null) return;
+
       const resolveDeps = yield* getContext<SagaContext['resolveDeps']>('resolveDeps');
       const selection = yield* getContext<SagaContext['selection']>('selection');
       const cameraRuntime = yield* getContext<SagaContext['cameraRuntime']>('cameraRuntime');

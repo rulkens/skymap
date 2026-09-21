@@ -17,6 +17,7 @@ import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
+import { selectUrlPose } from '../../../state/camera/selectors';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import {
   updateSelectionSelect,
@@ -114,19 +115,27 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // (yaw 0, distance 0.43) rather than the computed framing pose — a visible
   // camera jump on frame one.
   //
-  // The URL orientation frame is already committed here because `createEngine`
+  // The URL orientation frame — and, the same gap, a `#pose=` link's
+  // `camera.urlPose` — are already in the store here because `createEngine`
   // dispatches `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE
   // this phase runs inside. Registration-before-bootstrap is the load-bearing
   // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
-  // synchronous with engine construction, silently regresses the boot frame to
-  // the default orientation.
-  // `target` is COPIED: `initialCam.target` is mutable and this pose outlives the seed.
-  const committed = absoluteArm({
-    target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
-    yaw: initialCam.yaw,
-    pitch: initialCam.pitch,
-    distance: initialCam.distance,
-  });
+  // synchronous with engine construction, silently regresses both.
+  //
+  // A parked `urlPose` IS the boot pose — the `l`-key's own committed output —
+  // so it wins outright over the computed home framing. `computeInitialCamera`
+  // still runs unconditionally: its fov/near/far feed the projection below
+  // either way. `target` is COPIED: `initialCam.target` is mutable and a fresh
+  // pose outlives this seed.
+  const urlPose = selectUrlPose(store.getState());
+  const committed =
+    urlPose ??
+    absoluteArm({
+      target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
+      yaw: initialCam.yaw,
+      pitch: initialCam.pitch,
+      distance: initialCam.distance,
+    });
   store.dispatch(commitCameraPose(committed));
   state.cameraRuntime = seedCameraRuntime({
     state: store.getState(),

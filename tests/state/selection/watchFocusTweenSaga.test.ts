@@ -8,7 +8,8 @@ import {
   updateSelectionFocus,
   updateSelectionSelect,
 } from '../../../src/state/selection/selectionSlice';
-import { clipStarted } from '../../../src/state/camera/cameraSlice';
+import { applyUrlPose, clipStarted } from '../../../src/state/camera/cameraSlice';
+import { absoluteArm } from '../../../src/utils/camera/absoluteArm';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
 import {
   engineStatusChanged,
@@ -117,6 +118,13 @@ describe('watchFocusTweenSaga', () => {
     expect(tween!.from).toEqual(FROM);
     expect(tween!.to.distance).toBe(MILKY_WAY_VIEW_DISTANCE_MPC);
     expect(tween!.to.yaw).toBe(FROM.yaw);
+  });
+
+  it('stands down when a #pose= link is pending — the link IS the destination', async () => {
+    store.dispatch(applyUrlPose(absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 })));
+    store.dispatch(updateSelectionFocus({ type: 'milkyWay' }));
+    await flush();
+    expect(store.getState()[cameraRoute].tween).toBeNull();
   });
 
   it('a select (non-focus) write does NOT start a tween', async () => {

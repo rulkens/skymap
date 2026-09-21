@@ -90,7 +90,9 @@ import {
 import { requestFocus } from '../../../../src/state/selection/requestFocus';
 import { EARTH_REF } from '../../../../src/data/selection/earthRef';
 import { createInputAggregator } from '../../../../src/services/engine/subsystems/inputAggregator';
-import { startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { applyUrlPose, startCameraTween } from '../../../../src/state/camera/cameraSlice';
+import { selectCameraBase, selectUrlPose } from '../../../../src/state/camera/selectors';
+import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import type { InputGestureEvent } from '../../../../src/@types/camera/InputGestureEvent';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { worldArmOf } from '../../../fixtures/worldArmOf';
@@ -237,6 +239,23 @@ describe('wireInput', () => {
       frameBasis: ORIENTATION_FRAMES.ecliptic,
     });
     expect(state.booted).toBe(true);
+  });
+
+  it('seeds a parked #pose= link as the boot pose, and spends it', async () => {
+    const state = makeState();
+    const deps = makeDeps();
+    const urlPose = absoluteArm({ target: [7, 8, 9], yaw: 1.1, pitch: -0.4, distance: 12 });
+    deps.cb.store.dispatch(applyUrlPose(urlPose));
+
+    await wireInput(state, deps);
+
+    const root = deps.cb.store.getState();
+    // The link IS the boot pose — it wins outright over the computed home
+    // framing (`computeInitialCameraSpy` never influences `base` here).
+    expect(selectCameraBase(root)).toEqual(urlPose);
+    // `commitCameraPose` spends the parked link; a later outside commit must
+    // not still find it pending.
+    expect(selectUrlPose(root)).toBeNull();
   });
 
   it('seeds the register with a COPY of the framing target, not the live array', async () => {
