@@ -352,7 +352,7 @@ Not an implementation task — the checkpoint PR1 had as its step 7.
 
 - Picking a view card flies to its pose and shows the overlay; the scene's settings change to the view's.
 - Orbiting inside a view does **not** end it; Esc and the overlay's Exit both do, and both restore the pre-view scene.
-- Starting a tour while a view is open ends the view first, and the view's settings are restored before the tour's snapshot is taken — and the reverse.
+- ~~Starting a tour while a view is open ends the view first~~ — **not manually observable; ruled 2026-09-21.** A view hides the palette exactly as a tour does (`App.tsx`'s hide term is `takeoverActive`), and every other `startTour` site is behind that same hidden HUD, with the recorder hook single-flighting. So no UI gesture can supersede a running takeover. The ordering still holds and is pinned by `tests/state/takeover/watchTakeoverSaga.test.ts` against the real watcher — it is a unit-tested invariant, not a smoke item.
 - A tour still runs exactly as before: beats, captions, the beat rail, prev/next/pause.
 - Typing a view or tour name in the palette produces a row that launches it, and the Tours tab shows its two cards.
 - The overlay's Sora 100 body text is legible over bright filaments.
