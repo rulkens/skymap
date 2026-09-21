@@ -26,10 +26,10 @@
  * keeps the recorder a plain observer of state the app already maintains.
  *
  * SINGLE-FLIGHT: `startTour` rejects synchronously when a tour is already
- * active. The watcher is `takeLatest`, and a superseding start deliberately
- * skips `takeoverEnded` in the cancelled run's finally — `selectTourActive`
- * never flips false during the handoff — so a boolean latch cannot attribute
- * a later end to the earlier caller: the first promise would silently resolve
+ * active. A superseding start deliberately skips `takeoverEnded` in the
+ * cancelled run's finally — `selectTourActive` never flips false during the
+ * handoff — so a boolean latch cannot attribute a later end to the earlier
+ * caller: the first promise would silently resolve
  * when the SECOND tour finished. Rejecting loudly beats reporting the wrong
  * tour as done; the harness records takes strictly one at a time anyway.
  *
