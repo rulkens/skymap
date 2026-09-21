@@ -49,7 +49,6 @@ import {
   OCCLUSION_COVERAGE_LAYOUT_DESC,
   createOcclusionCoverageBindGroup,
   createOcclusionDepthFrameBuffer,
-  writeOcclusionDepthFrame,
 } from '../labels/occlusionCoverageGroup';
 import { CAMERA_UNIFORM_BYTES, writeCameraPrefix } from '../../lib/cameraUniforms';
 import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
@@ -98,10 +97,10 @@ export function createSelectionRingRenderer(
   // Retained only on the occlusion path — the group(1) coverage BGL that
   // `draw` rebuilds a per-frame bind group against (the colour view changes
   // on every resize — see occlusionCoverageGroup.ts), and the depth-frame
-  // uniform that joint's binding 2 reads. The ring has no per-subject weight,
-  // so it fills those two entries without reading them: it attenuates
-  // unconditionally wherever it draws occluded. Null on the plain path (and
-  // whenever device is null), which is what gates `draw`'s occlusion branch.
+  // buffer the shared layout's binding 2 requires. The ring shader reads only
+  // the coverage colour, so that buffer is created once and never written.
+  // Null on the plain path (and whenever device is null), which is what gates
+  // `draw`'s occlusion branch.
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
   let occlusionDepthFrameBuffer: GPUBuffer | null = null;
 
@@ -221,7 +220,6 @@ export function createSelectionRingRenderer(
     if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
-      writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, viewportSize);
       const coverageBindGroup = createOcclusionCoverageBindGroup(
         device,
         occlusionCoverageBGL,
