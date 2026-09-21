@@ -5,8 +5,7 @@
  *
  * Over `CORE_TRAIL_ELEMENTS`, not `ORBITAL_ELEMENTS`: a mesh body draws no trail
  * to cull, and a hyperbolic row has no apoapsis to contribute a reach from.
- * Layer-contributed trail rows lie outside this reach — none exist yet; PR 2
- * extends it.
+ * Rows a Layer contributes are outside this reach.
  */
 
 import type { BodyRegion } from '../../@types/scene/BodyRegion';

@@ -8,10 +8,10 @@ import { buildStarCutFrustum } from '../../../../../utils/star/buildStarCutFrust
 
 /**
  * The off-screen prune frustum a star-octree walk clips against, shared by the
- * fade advance and the capture-face walk: one plane set per view, each rebased
- * about the CUT's origin rather than the view's own eye, so every view prunes in
- * the frame the walk's boxes live in. `null` when any view has no resolvable
- * NEAR0 slab (a hand-built test context) — then nothing is pruned at all.
+ * fade advance and the capture-face walk: one plane set per view, rebased about
+ * the CUT's origin — in f64, narrowed only after, the cancellation discipline
+ * `computeStarCut` keeps for node origins — so every view prunes in the frame
+ * the walk's boxes live in. No NEAR0 slab (a test ctx) ⇒ `null`, no prune.
  */
 export function frameStarCutFrustum(
   views: readonly FrameView[],

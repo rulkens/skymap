@@ -9,7 +9,9 @@ import type { OrbitalElements } from '../../scene/OrbitalElements';
 export type LayerGuides = {
   readonly screenLabels?: readonly LayerScreenLabel[];
   readonly worldLabels?: readonly Label3DProducer[];
-  /** Static conics the orbit-trails pass propagates per frame; `focusId` must be a
-   * body-state anchor. */
+  /** Static conics the orbit-trails pass propagates per frame. Both `id` and
+   * `focusId` must resolve in the body-state snapshot, so a row here must also be
+   * an `ORBITAL_ELEMENTS` row (`deriveBodyStates`' source); `orbitTrailsPass`
+   * asserts both non-null. */
   readonly orbitTrails?: readonly OrbitalElements[];
 };

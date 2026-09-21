@@ -1,7 +1,7 @@
 /**
  * focusDriverId — the arm→driver-id table the six camera sites share. A wrong
  * arm mapping is invisible to the compiler (every arm returns `string | null`),
- * so the table is asserted row by row; PR 2 extends it with the star Layer arm.
+ * so the table is asserted row by row, arm by arm.
  */
 
 import { describe, it, expect } from 'vitest';

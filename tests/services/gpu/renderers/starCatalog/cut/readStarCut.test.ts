@@ -3,8 +3,9 @@
  * star cut that feeds BOTH survey-star streams, split in two halves.
  * `advanceStarFades` is the WRITE half: `runFrame` calls it once per real
  * frame, it walks the octree once over the rig's views and steps every per-node
- * LOD fade, and returns the keep-ticking vote. `computeStarCut` is PURE — it
- * emits each catalog's active list at its current opacity, so `runFrame`'s
+ * LOD fade, and returns the keep-ticking vote. `computeStarCut` reads those
+ * ramps and never writes them — it emits each catalog's active list at its
+ * current opacity into the CPU streams, so `runFrame`'s
  * `setFrameCut` value and every real frame view's `starCutFor` → `getFrameCut`
  * read one cut with no second walk (the perf-cliff regression a
  * fan-out-by-identity scheme invites). `readStarCut` memoises the pure result

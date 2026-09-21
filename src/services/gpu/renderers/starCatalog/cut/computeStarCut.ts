@@ -15,42 +15,36 @@ import { streamsFor } from './starCatalogStreams';
 import { pushStarNode } from './starNodeStream';
 
 /**
- * Runs long by design: this is the sole owner of the NEAR0/f64-rebase
- * catastrophic-cancellation landmine (see below).
+ * Pure with respect to the fade ramps — it reads each node's current LOD-fade
+ * opacity and never writes one (`advanceStarFades` is their one writer), so the
+ * pick path's fresh post-frame ctx can recompute freely. It does fill the
+ * per-`viewSlot` CPU stream buffers: partitioning every loaded catalog's drawn
+ * set into a leaf stream (real-star nodes) and an aggregate stream (flux-mip
+ * nodes) IS its output. `null` when the star pass is not live (no renderer,
+ * master off).
  *
- * PURE: partition every loaded catalog's drawn set into a leaf stream
- * (real-star nodes) and an aggregate stream (flux-mip nodes), at each node's
- * current LOD-fade opacity — never touching a ramp or a stamp, so the pick
- * path's fresh post-frame ctx can recompute freely. `null` when the star pass
- * is not live (no renderer, master off).
- *
- * NEAR0 + the f64 rebase seam (catastrophic cancellation, same trap
- * `starPointsPass` documents): COSMO's near plane (0.01 Mpc) would clip the
- * parsec-scale star anchors, so this walk projects through NEAR0. An octree
- * node's box origin is a parsec-scale coordinate near-equal to the NEAR0 view
- * translation during the local-map approach — subtracting them in f32 first
- * cancels catastrophically and the sprite jitters onto a coarse grid. So the
- * camera subtraction stays in f64 (JS number) below and narrows to f32 only
+ * Sole owner of the node-origin half of the NEAR0/f64-rebase
+ * catastrophic-cancellation landmine — `frameStarCutFrustum` owns the frustum
+ * half; same trap `starPointsPass` documents. COSMO's near plane (0.01 Mpc)
+ * would clip the parsec-scale star anchors, so this projects through NEAR0. An
+ * octree node's box origin is a parsec-scale coordinate near-equal to the NEAR0
+ * view translation during the local-map approach — subtracting them in f32
+ * first cancels catastrophically and the sprite jitters onto a coarse grid. So
+ * the camera subtraction stays in f64 (JS number) below and narrows to f32 only
  * on the array write in `pushStarNode`; this mirrors `starNodeOriginRelCamMpc`
  * (the standalone home `resolveStarRecord` reuses), kept in lockstep with it.
- * The capture face's own walk prunes against the SAME rebased vps, via
- * `frameStarCutFrustum` — all rebased about THIS cut's origin.
  *
- * Per-node LOD fades (see `starFadeState` for the bookkeeping, the two-stamp
- * scheme, the double buffer, and why the ramp is linear; `advanceStarFades` is
- * their one writer) dissolve the cut's view-dependent pop as nodes enter/leave
- * the walk's budget-limited best-first result. A real frame view therefore
- * draws the active list that advance left, with no walk of its own.
- *
- * A sky-cubemap capture face (`view.viewKind === 'capture'`) shares no temporal
- * state with the main view's fade: it walks fresh and every cut node draws at
- * opacity 1.
+ * The fades themselves (`starFadeState`: the bookkeeping, the two-stamp scheme,
+ * the double buffer, why the ramp is linear) dissolve the cut's view-dependent
+ * pop as nodes enter/leave the walk's budget-limited best-first result — so a
+ * real frame view draws the active list the advance left, with no walk at all.
+ * A sky-cubemap capture face (`viewKind === 'capture'`) shares none of that
+ * temporal state: it walks fresh and every cut node draws at opacity 1.
  *
  * `views[0]` is the anchor: its eye becomes `originMpc`, its `viewSlot` picks
- * the CPU stream pair, its `viewKind` decides the capture path. `views` is the
- * frusta to union for that capture walk's off-screen prune. Both callers pass
- * the same list for both — a lone view anchors itself; `runFrame`'s call
- * anchors on its canvas view.
+ * the CPU stream pair, its `viewKind` decides the capture path; `views` is the
+ * frusta to union for that capture walk's prune. Both callers pass the same
+ * list for both — a lone view anchors itself, `runFrame` on its canvas view.
  */
 export function computeStarCut(
   state: PassState,
@@ -86,8 +80,8 @@ export function computeStarCut(
   const glowOverlap = state.settings.starCatalogs.glowOverlap;
   const aggregateIntensityCap = state.settings.starCatalogs.aggregateIntensityCap;
 
-  // Only the capture path walks, so only it needs a prune frustum — built once
-  // here rather than per source, which it is independent of.
+  // Only the capture path walks, so only it needs a prune frustum, and it is
+  // source-independent — hence once here rather than per source.
   const isCapture = view.viewKind === 'capture';
   const cutFrustum = isCapture ? frameStarCutFrustum(views, camPos, sizePx, glowOverlap) : null;
 
@@ -156,9 +150,8 @@ export function computeStarCut(
       continue;
     }
 
-    // The active list `advanceStarFades` left after its swap — the drawn set,
-    // in its emission order, fade-outs included. Empty for a catalog no
-    // advance has reached yet.
+    // The active list `advanceStarFades` left after its swap — the drawn set in
+    // emission order, fade-outs included; empty until an advance reaches it.
     const { opacity, prevActiveList, prevActiveCount } = fadeStateFor(catalog);
     for (let i = 0; i < prevActiveCount; i++) {
       const idx = prevActiveList[i]!;

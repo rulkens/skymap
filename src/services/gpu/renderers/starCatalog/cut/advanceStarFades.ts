@@ -14,7 +14,7 @@ import { fadeStateFor } from './starFadeState';
  * ramps (`starFadeState` owns the scheme): `runFrame` calls it once per real
  * frame, before the passes, and `computeStarCut` then reads what it left.
  * Returns the render-on-demand wake vote — a node still mid-fade — which
- * `shouldKeepTicking` consumes. Never touches a node stream.
+ * `shouldKeepTicking` consumes. Writes ramps only, never a node stream.
  */
 export function advanceStarFades(state: PassState, views: readonly FrameView[]): boolean {
   const renderer = state.gpu.starCatalogRenderer;
