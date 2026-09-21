@@ -11,9 +11,9 @@
  * @module
  */
 
-import type { SampledDepthKmFrame } from '../../../../@types/rendering/SampledDepthKmFrame';
+import type { OrbitTrailDrawArgs } from '../../../../@types/rendering/orbitTrailRenderer/OrbitTrailDrawArgs';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type { OrbitTrailRenderer } from '../../../../@types/rendering/OrbitTrailRenderer';
+import type { OrbitTrailRenderer } from '../../../../@types/rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import vsCode from '../../shaders/bodies/orbitTrail/vertex.wesl?static';
 import fsCode from '../../shaders/bodies/orbitTrail/fragment.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
@@ -176,15 +176,9 @@ export function createOrbitTrailRenderer(
 
   // ── draw ──────────────────────────────────────────────────────────────────
 
-  function draw(
-    pass: GPURenderPassEncoder,
-    instances: Float32Array,
-    count: number,
-    occluders: { readonly count: number; readonly spheresKm: Float32Array },
-    depthFrame: SampledDepthKmFrame | null,
-    depthView: GPUTextureView,
-    showImpostor = false,
-  ): void {
+  function draw(pass: GPURenderPassEncoder, args: OrbitTrailDrawArgs): void {
+    const { instances, count, occluders, depth, showImpostor = false } = args;
+
     // Zero is a whole-call no-op — no upload, no draw.
     if (count === 0) return;
 
@@ -214,24 +208,24 @@ export function createOrbitTrailRenderer(
     const spheres = Math.min(occluders.count, MAX_ORBIT_OCCLUDERS);
     occluderCount[0] = spheres;
     occluderSpheres.set(occluders.spheresKm.subarray(0, spheres * 4));
-    // A null depthFrame always arrives with the far-cleared placeholder view,
+    // A null depth.frame always arrives with the far-cleared placeholder view,
     // so the fragment never reads invMvp/camPosKm in that case — skip them.
-    if (depthFrame !== null) {
-      occluderInvMvp.set(depthFrame.invMvp);
-      occluderCamPos.set(depthFrame.camPosKm);
+    if (depth.frame !== null) {
+      occluderInvMvp.set(depth.frame.invMvp);
+      occluderCamPos.set(depth.frame.camPosKm);
     }
     occluderViewport.set(instances.subarray(INSTANCE_VIEWPORT_FLOAT, INSTANCE_VIEWPORT_FLOAT + 2));
     device.queue.writeBuffer(occluderBuffer, 0, occluderScratch);
 
-    if (bindGroup === null || bindGroup.depthView !== depthView) {
+    if (bindGroup === null || bindGroup.depthView !== depth.view) {
       bindGroup = {
-        depthView,
+        depthView: depth.view,
         group: device.createBindGroup({
           label: 'orbit-trail-bg',
           layout: bindGroupLayout,
           entries: [
             { binding: 0, resource: { buffer: occluderBuffer } },
-            { binding: 1, resource: depthView },
+            { binding: 1, resource: depth.view },
           ],
         }),
       };

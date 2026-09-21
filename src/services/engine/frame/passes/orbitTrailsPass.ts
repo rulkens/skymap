@@ -18,7 +18,7 @@ import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelat
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
-import { sampledDepthKmFrame } from '../../../../utils/camera/sampledDepthKmFrame';
+import { sampledDepthBinding } from '../sampledDepthBinding';
 import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -154,21 +154,13 @@ export const orbitTrailsPass: ContentPass = {
       // cleared the sampled depth. Its own f64 `vp` (the invariant above), scaled
       // by metres-per-km so the fragment's reconstructed distances land in the
       // same km as the eye-relative orbit points it compares them against.
-      const sampledDepth = view.sampledDepth!;
-      const depthFrame = sampledDepthKmFrame(sampledDepth.row, ctx.bodyPose);
-      renderer.draw(
-        pass,
-        staging,
+      renderer.draw(pass, {
+        instances: staging,
         count,
-        sceneOccluderSpheres(state, ctx),
-        depthFrame,
-        // A null frame must arrive with the far placeholder, never the real
-        // view — that is what makes the shader's FAR_DEPTH early-out (not an
-        // assumption about who last cleared this target) the thing keeping
-        // an unresolved frame safe.
-        depthFrame === null ? ctx.snapshot.renderTargets.farDepthView() : sampledDepth.view,
-        state.settings.debug.overlays['orbit-trail-impostor'],
-      );
+        occluders: sceneOccluderSpheres(state, ctx),
+        depth: sampledDepthBinding(view.sampledDepth, ctx.bodyPose, ctx.snapshot.renderTargets),
+        showImpostor: state.settings.debug.overlays['orbit-trail-impostor'],
+      });
     }
   },
 };
