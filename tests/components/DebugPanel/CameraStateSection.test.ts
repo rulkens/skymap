@@ -2,7 +2,7 @@
 
 /**
  * CameraStateSection — the two contracts the rebuild is built on: degrees on
- * screen but full-precision RADIANS in `copy all` off the SAME model (a paste
+ * screen but full-precision RADIANS in `copy JSON` off the SAME model (a paste
  * that disagrees with the screen is worse than no paste), and grill Q8's
  * north-up-off rule — the field's target stays on the row, marked, rather than
  * blanking to an em-dash.
@@ -67,7 +67,7 @@ describe('CameraStateSection', () => {
     expect(container.textContent).toContain('30.0°');
     expect(container.textContent).not.toContain(String(HEADING_RAD));
 
-    fireEvent.click(getByText('copy all'));
+    fireEvent.click(getByText('copy JSON'));
     const dump = writeText.mock.calls[0]![0];
     expect(dump).toContain(`heading: current=${HEADING_RAD}`);
     expect(dump).toContain(`peak=${HEADING_RAD}`);
@@ -89,7 +89,7 @@ describe('CameraStateSection', () => {
     // The click resolves the clipboard promise on a microtask; findByText waits for it.
     expect(await findByText('copied ✓')).toBeTruthy();
     // The other button's own feedback is untouched by this click.
-    expect(getByText('copy all')).toBeTruthy();
+    expect(getByText('copy JSON')).toBeTruthy();
   });
 
   it('keeps the heading/roll targets on the row, marked, while north-up is off', () => {

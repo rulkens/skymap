@@ -3,7 +3,7 @@
  * CameraStateSection — the camera-pivot readout, organised by the question it
  * answers (grill 2026-09-10): who is driving (header), is each DOF where it
  * should be (three rows), and where in the band are we (the drawn ruler). One
- * model feeds the degrees on screen AND the full-precision radians `copy all`
+ * model feeds the degrees on screen AND the full-precision radians `copy JSON`
  * dumps, so a pasted bug report is the thing that was looked at. Polls at 4 Hz
  * like every textual DebugPanel readout — Δ and peak are measured in the frame
  * loop, so the poll rate cannot blur them.
@@ -190,6 +190,42 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
 
   return (
     <DebugSection title="Camera">
+      <div className={styles.copyRow}>
+        <button
+          type="button"
+          className={styles.copyButton}
+          onClick={() => {
+            // A fresh snapshot, not the 4 Hz-stale one, so the link is current.
+            const fresh = cameraDebug();
+            void navigator.clipboard
+              .writeText(
+                shareUrlFor(store.getState(), fresh.framed, fresh.lastRenderedSimDays, location),
+              )
+              .then(() => {
+                setCopiedUrl(true);
+                setTimeout(() => setCopiedUrl(false), 1200);
+              });
+          }}
+        >
+          {copiedUrl ? 'copied ✓' : 'copy URL'}
+        </button>
+        <button
+          type="button"
+          className={styles.copyButton}
+          onClick={() => {
+            // A fresh snapshot, not the 4 Hz-stale one, so the paste is current.
+            void navigator.clipboard
+              .writeText(copyTextOf(modelOf(cameraDebug(), tuning, markerRadiusM)))
+              .then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 1200);
+              });
+          }}
+        >
+          {copied ? 'copied ✓' : 'copy JSON'}
+        </button>
+      </div>
+
       <div className={styles.headerLine}>
         <span>{model.header}</span>
         {model.badge === null ? null : <span className={styles.badge}>⚠ {model.badge}</span>}
@@ -257,40 +293,6 @@ function CameraStateSection({ cameraDebug }: CameraStateSectionProps): ReactElem
           ))}
         </div>
       </details>
-
-      <button
-        type="button"
-        className={styles.copyButton}
-        onClick={() => {
-          // A fresh snapshot, not the 4 Hz-stale one, so the link is current.
-          const fresh = cameraDebug();
-          void navigator.clipboard
-            .writeText(
-              shareUrlFor(store.getState(), fresh.framed, fresh.lastRenderedSimDays, location),
-            )
-            .then(() => {
-              setCopiedUrl(true);
-              setTimeout(() => setCopiedUrl(false), 1200);
-            });
-        }}
-      >
-        {copiedUrl ? 'copied ✓' : 'copy URL'}
-      </button>
-      <button
-        type="button"
-        className={styles.copyButton}
-        onClick={() => {
-          // A fresh snapshot, not the 4 Hz-stale one, so the paste is current.
-          void navigator.clipboard
-            .writeText(copyTextOf(modelOf(cameraDebug(), tuning, markerRadiusM)))
-            .then(() => {
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1200);
-            });
-        }}
-      >
-        {copied ? 'copied ✓' : 'copy all'}
-      </button>
     </DebugSection>
   );
 }
