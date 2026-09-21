@@ -38,16 +38,6 @@ import { SCALE_UNITS } from '../../../data/scaleUnits';
 import { RENDER_ORIGIN_MPC } from '../../../data/renderOrigin';
 
 /**
- * The fixed IAU count of classical constellations — 88. Reserved on top of the
- * scene-body roster when the foreground caption renderer's buffer capacity is
- * derived (`FOREGROUND_LABEL_CAPACITY`), so a full artifact never silently
- * clamps names off (`setLabels` drops anything past capacity with no error). A
- * named constant, not a bare 88, so the reservation reads as "every
- * constellation" at the derivation site.
- */
-export const CONSTELLATION_COUNT = 88;
-
-/**
  * Build one name caption per figure from the demand-loaded artifact. Pure: no
  * camera, no toggle, no fade — the layer applies all three. The artifact is
  * static once loaded, so the layer memoizes this on the artifact's identity.

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createLabelRenderer } from '../../../../../src/services/gpu/renderers/labels/labelRenderer';
 import { parseFontMetrics } from '../../../../../src/services/gpu/labelLayout/fontMetrics';
 import type { LoadedFontAtlases } from '../../../../../src/@types/rendering/LoadedFontAtlases';
+import type { Label2D } from '../../../../../src/@types/rendering/Label2D';
 
 // Minimal BMFont fixture: just the uppercase A (codepoint 65) so we can
 // test that the renderer counts known glyphs and silently drops
@@ -143,5 +144,83 @@ describe('LabelRenderer (CPU state)', () => {
     r.setLabels([{ id: 'b', worldPos: [0, 0, 0], text: 'AAA', pixelSize: 24, font: 'cormorant' }]);
     expect(r.labelCount()).toBe(1);
     expect(r.glyphCount()).toBe(3);
+  });
+});
+
+function makeLabel(id: string): Label2D {
+  return { id, worldPos: [0, 0, 0], text: 'A', pixelSize: 0, font: 'cormorant' };
+}
+
+describe('LabelRenderer capacity growth', () => {
+  // Tracks descriptors by their `label` field so an assertion can tell the
+  // construction-time buffer/bind-group apart from a growth-time one without
+  // hardcoding byte sizes derived from private constants.
+  function buildTrackingDevice() {
+    const createBufferCalls: GPUBufferDescriptor[] = [];
+    const createBindGroupCalls: GPUBindGroupDescriptor[] = [];
+    const device = {
+      createBindGroupLayout: vi.fn(() => ({})),
+      createShaderModule: vi.fn(() => ({
+        getCompilationInfo: () => Promise.resolve({ messages: [] }),
+      })),
+      createPipelineLayout: vi.fn(() => ({})),
+      createRenderPipeline: vi.fn(() => ({})),
+      createBuffer: vi.fn((desc: GPUBufferDescriptor) => {
+        createBufferCalls.push(desc);
+        return { destroy: vi.fn() };
+      }),
+      createTexture: vi.fn(() => ({ createView: vi.fn(() => ({})), destroy: vi.fn() })),
+      createSampler: vi.fn(() => ({})),
+      createBindGroup: vi.fn((desc: GPUBindGroupDescriptor) => {
+        createBindGroupCalls.push(desc);
+        return {};
+      }),
+      queue: { writeBuffer: vi.fn(), copyExternalImageToTexture: vi.fn() },
+    } as unknown as GPUDevice;
+
+    const ctx = {
+      device,
+      context: null as unknown as GPUCanvasContext,
+      format: 'rgba16float' as GPUTextureFormat,
+      canvas: null as unknown as HTMLCanvasElement,
+      hdrCapable: false,
+    };
+    return { ctx, createBufferCalls, createBindGroupCalls };
+  }
+
+  it('grows the CPU roster past its initial capacity with no truncation', () => {
+    const r = createLabelRenderer(
+      {
+        device: null as unknown as GPUDevice,
+        context: null as unknown as GPUCanvasContext,
+        format: 'rgba16float' as GPUTextureFormat,
+        canvas: null as unknown as HTMLCanvasElement,
+        hdrCapable: false,
+      },
+      'rgba16float',
+      FIXTURE_ATLASES,
+      4,
+    );
+
+    r.setLabels([1, 2, 3, 4, 5].map((n) => makeLabel(`l${n}`)));
+
+    expect(r.labelCount()).toBe(5);
+    expect(r.packedLabels()).toHaveLength(5);
+  });
+
+  it('reallocates the GPU storage/instance buffers and rebinds when the roster outgrows capacity', () => {
+    const { ctx, createBufferCalls, createBindGroupCalls } = buildTrackingDevice();
+    const r = createLabelRenderer(ctx, ctx.format, FIXTURE_ATLASES, 4, 4);
+    const bindGroupCallsAtConstruction = createBindGroupCalls.length;
+
+    r.setLabels([1, 2, 3, 4, 5].map((n) => makeLabel(`l${n}`)));
+
+    expect(createBindGroupCalls.length).toBeGreaterThan(bindGroupCallsAtConstruction);
+    const storageCalls = createBufferCalls.filter((d) => d.label === 'label-storage');
+    expect(storageCalls).toHaveLength(2);
+    expect(storageCalls[1]!.size).toBeGreaterThan(storageCalls[0]!.size);
+    const instanceCalls = createBufferCalls.filter((d) => d.label === 'label-instances');
+    expect(instanceCalls).toHaveLength(2);
+    expect(instanceCalls[1]!.size).toBeGreaterThan(instanceCalls[0]!.size);
   });
 });

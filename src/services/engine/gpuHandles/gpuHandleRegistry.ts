@@ -54,7 +54,6 @@ import { createMarkerLineRenderer } from '../../gpu/renderers/labels/markerLineR
 import { createDebugLineRenderer } from '../../gpu/renderers/devTools/debugLineRenderer';
 import { createSelectionRingRenderer } from '../../gpu/renderers/selectionRing/selectionRingRenderer';
 import { createPickDebugOverlay } from '../../gpu/passes/pickDebugOverlay';
-import { FOREGROUND_LABEL_CAPACITY } from '../presentation/sceneBodyLabels';
 import { createPickProgram, pickDepthFormat } from '../frame/pickProgram';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../../data/renderTargetFormats';
 
@@ -144,11 +143,12 @@ export const GPU_HANDLE_ROWS = [
         deps.ctx,
         deps.ctx.format,
         deps.fontAtlases,
-        FOREGROUND_LABEL_CAPACITY,
+        undefined,
         undefined,
         // Drawn with `near0LabelProjection`'s rescaled matrix, so the em it
         // packs must be in those clip units too — the pair the vertex stage
-        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`.
+        // divides. See `NEAR0_OVERLAY_CLIP_SCALE`. The default initial
+        // capacity (64) is fine — `setLabels` grows it as the roster does.
         { occludeAgainstScene: true, clipScale: NEAR0_OVERLAY_CLIP_SCALE },
       ),
   },
