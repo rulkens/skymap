@@ -12,8 +12,14 @@ import { COSMO, NEAR0 } from '../../../../src/services/engine/frame/slabs';
 import type { ContentPass } from '../../../../src/@types/engine/frame/ContentPass';
 import type { ContentCompute } from '../../../../src/@types/engine/frame/ContentCompute';
 import type { FrameStepSpec } from '../../../../src/@types/engine/frame/FrameStepSpec';
+import type { RenderTargetSpec } from '../../../../src/@types/engine/frame/RenderTargetSpec';
 
-const TARGETS = ['hdr', 'sky-cubemap', 'foreground:0', 'swap'];
+const TARGETS: readonly Pick<RenderTargetSpec, 'id' | 'depth'>[] = [
+  { id: 'hdr', depth: null },
+  { id: 'sky-cubemap', depth: null },
+  { id: 'foreground:0', depth: 'depth32float' },
+  { id: 'swap', depth: null },
+];
 const NO_COMPUTES: readonly ContentCompute[] = [];
 
 function fakePass(name: string): ContentPass {
@@ -126,5 +132,21 @@ describe('checkFrameOrder', () => {
     expect(() =>
       checkFrameOrder(order, [fakePass('flow')], [fakeCompute('flow')], TARGETS),
     ).not.toThrow();
+  });
+
+  it('throws naming a sampled depth source that is not a declared row', () => {
+    const order: FrameStepSpec[] = [
+      { kind: 'render', target: 'hdr', slab: 0, depth: { sample: 'forground:0' }, passes: ['a'] },
+    ];
+    expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).toThrow(
+      /forground:0/,
+    );
+  });
+
+  it('throws naming a sampled depth source row that has no depth', () => {
+    const order: FrameStepSpec[] = [
+      { kind: 'render', target: 'hdr', slab: 0, depth: { sample: 'hdr' }, passes: ['a'] },
+    ];
+    expect(() => checkFrameOrder(order, [fakePass('a')], NO_COMPUTES, TARGETS)).toThrow(/'hdr'/);
   });
 });
