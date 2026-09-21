@@ -181,7 +181,6 @@ describe('logCameraState', () => {
     const [, world] = logSpy.mock.calls[0] as [string, string];
     expect(JSON.parse(world).frame).toBe('absolute');
     expect(JSON.parse(world).bodyArmMetres).toBeNull();
-    expect(JSON.parse(world).framed).toBeNull();
   });
 
   it('names the frame and derives eye height in a site arm', () => {

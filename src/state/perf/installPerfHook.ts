@@ -48,7 +48,7 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
 
 // Hard-cut the camera to `pose`: a benchmark wants an exact vantage, and the
 // re-armed auto-rotate keeps the render-on-demand loop awake for the whole window.
-async function setPose(store: AppStore, pose: PerfPose): Promise<void> {
+function setPose(store: AppStore, pose: PerfPose): Promise<void> {
   if (pose.clearFocus === true) {
     store.dispatch(clearSelection());
   }
