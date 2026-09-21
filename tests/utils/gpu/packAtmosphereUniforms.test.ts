@@ -43,6 +43,7 @@ const BOTTOM_RADIUS = 0.96875; // planetRadiusKm / atmosphereTopKm ∈ (0,1)
 const EXPOSURE = 0.625;
 const RING_INNER = 1.203125; // ring inner / atmosphere top (> 1: outside the shell)
 const RING_OUTER = 2.28125; // ring outer / atmosphere top
+const FROXEL_SLICE_KM = 3.5625; // aerial froxel slice depth, km
 
 describe('AtmosphereUniforms byte offsets', () => {
   it('packs a 176-byte / 44-f32 record with invMvp at offset 112', () => {
@@ -55,6 +56,7 @@ describe('AtmosphereUniforms byte offsets', () => {
       EXPOSURE,
       RING_INNER,
       RING_OUTER,
+      FROXEL_SLICE_KM,
     );
     expect(rec.length).toBe(ATMOSPHERE_UNIFORM_FLOATS);
     expect(rec.length).toBe(44); // 176 bytes
@@ -90,8 +92,8 @@ describe('AtmosphereUniforms byte offsets', () => {
     expect(rec[25]).toBe(RING_INNER); // byte 100
     expect(rec[26]).toBe(RING_OUTER); // byte 104
 
-    // Trailing pad zeroed — rounds the struct to 112 / 16-byte alignment.
-    expect(rec[27]).toBe(0); // byte 108
+    // froxelSliceKm — a real field in the slot that rounds the prefix to 112.
+    expect(rec[27]).toBe(FROXEL_SLICE_KM); // byte 108
 
     // invMvp — all 16 floats verbatim at bytes 112..175, distinct from MVP's
     // sentinel so a swap of the two matrix blocks is caught.

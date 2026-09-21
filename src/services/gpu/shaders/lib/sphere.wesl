@@ -436,7 +436,7 @@ struct CloudShellUniforms {
 //   offset  96..99:   exposure       (f32 -- in-scatter intensity scale)
 //   offset 100..103:  ringInnerRatio (f32 -- ring inner / atmosphere top; 0 = none)
 //   offset 104..107:  ringOuterRatio (f32 -- ring outer / atmosphere top; 0 = none)
-//   offset 108..111:  _pad0          (f32 -- rounds the 112-byte prefix to 16-byte)
+//   offset 108..111:  froxelSliceKm  (f32 -- aerial froxel slice depth, km)
 //   offset 112..175:  invMvp         (mat4x4<f32>, column-major, 16-byte aligned)
 //   total: 176 bytes.
 //
@@ -459,7 +459,7 @@ struct AtmosphereUniforms {
   exposure: f32,
   ringInnerRatio: f32,
   ringOuterRatio: f32,
-  _pad0: f32,
+  froxelSliceKm: f32,
   invMvp: mat4x4<f32>,
 };
 

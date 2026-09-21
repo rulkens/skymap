@@ -42,7 +42,7 @@
  *   f32 24     (byte  96..99):  exposure
  *   f32 25     (byte 100..103): ringInnerRatio (ring inner / atmosphere top; 0 = none)
  *   f32 26     (byte 104..107): ringOuterRatio (ring outer / atmosphere top; 0 = none)
- *   f32 27     (byte 108..111): _pad0 (zeroed; rounds the 112-byte prefix to 16-byte)
+ *   f32 27     (byte 108..111): froxelSliceKm (aerial froxel slice depth, km)
  *   f32 28..43 (byte 112..175): invMvp (column-major mat4x4, 16-byte aligned)
  *
  * The ring ratios express the host body's ring annulus in the proxy's LOCAL
@@ -65,6 +65,7 @@
  * @param exposure       In-scatter intensity scale.
  * @param ringInnerRatio Ring inner radius / atmosphere-top radius (0 when no ring).
  * @param ringOuterRatio Ring outer radius / atmosphere-top radius; 0 ⇒ no ring.
+ * @param froxelSliceKm  Distance one aerial froxel z-slice integrates over (`FROXEL_SLICE_KM`).
  */
 
 import type { Vec3 } from '../../@types/math/Vec3';
@@ -83,6 +84,7 @@ export function packAtmosphereUniforms(
   exposure: number,
   ringInnerRatio: number,
   ringOuterRatio: number,
+  froxelSliceKm: number,
 ): Float32Array {
   const out = new Float32Array(ATMOSPHERE_UNIFORM_FLOATS);
   // Reuse the 80-byte lit prefix (mvp + sunDirLocal); no re-derivation.
@@ -95,7 +97,7 @@ export function packAtmosphereUniforms(
   out[24] = exposure; // byte 96
   out[25] = ringInnerRatio; // byte 100
   out[26] = ringOuterRatio; // byte 104
-  // out[27] (bytes 108..111) stays zero — the tail pad rounding to 112.
+  out[27] = froxelSliceKm; // byte 108 — a real field in the slot rounding the prefix to 112
   out.set(invMvp.subarray(0, 16), 28); // f32 28..43, byte 112..175
   return out;
 }

@@ -12,6 +12,7 @@ import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../@types/engine/frame/Slab';
 import { mat4d } from 'wgpu-matrix';
+import { FROXEL_SLICE_KM } from '../../../data/atmosphere/froxelVolume';
 import { SCENE_RINGS } from '../../../data/bodies/sceneRings';
 import { composeBodySlabMvp } from '../../../utils/camera/composeBodySlabMvp';
 import { packAtmosphereUniforms } from '../../../utils/gpu/packAtmosphereUniforms';
@@ -52,5 +53,6 @@ export function atmosphereShellUniforms(
     exposure,
     ringInnerRatio,
     ringOuterRatio,
+    FROXEL_SLICE_KM,
   );
 }
