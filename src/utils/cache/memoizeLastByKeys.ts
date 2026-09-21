@@ -7,7 +7,7 @@
  * forcing field) — sound under any interleaving since a key miss just
  * rebuilds, so a wrong hit can only cost performance, never correctness.
  */
-export type LastByKeysMemo<T> = {
+type LastByKeysMemo<T> = {
   get(key: readonly unknown[], build: () => T): T;
 };
 

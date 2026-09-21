@@ -16,7 +16,7 @@ import type { GalaxyFieldTuning } from '../../../../../@types/galaxy/GalaxyField
 /** Float count of one `SpurRecord` — 2 vec4 rows. */
 export const ARM_SPUR_CLOUD_RECORD_FLOATS = 8;
 
-export type ArmSpurCloudRecords = {
+type ArmSpurCloudRecords = {
   readonly buffer: Float32Array;
   /** Sum of every spur's own weight — `packPlaceArmSpurCloudParams.ts`'s `weightSum` input. */
   readonly weightSum: number;

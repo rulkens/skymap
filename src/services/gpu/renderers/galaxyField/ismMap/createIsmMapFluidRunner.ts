@@ -32,7 +32,7 @@ import ismMapFluidVelocityWgsl from '../../../shaders/milkyWay/ismMap/ismMapFlui
 import ismMapFluidStepWgsl from '../../../shaders/milkyWay/ismMap/ismMapFluidStep.wesl?static';
 import ismMapFluidPackWgsl from '../../../shaders/milkyWay/ismMap/ismMapFluidPack.wesl?static';
 
-export type IsmMapFluidRunner = {
+type IsmMapFluidRunner = {
   /** Dispatch the fluid's N advection steps, its own straight repack into `output.texture`, and `output`'s dust-blur pass — one encoder, one submit. Caller has already checked `enabled`/`steps > 0` and written `output`'s grid. */
   rebuild(input: {
     readonly geometry: GalaxyDescription;

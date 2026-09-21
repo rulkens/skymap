@@ -20,7 +20,7 @@ import { DIG_MAX_COUNT } from '../../../../engine/galaxyGenerator/v2/hiiRegions'
 
 const PLACE_DIG_VEIL_WORKGROUP_SIZE = 256;
 
-export type PlaceDigVeilWarp = {
+type PlaceDigVeilWarp = {
   readonly warpStrength: number;
   readonly warpTwist: number;
   readonly warpStartRadius: number;

@@ -15,7 +15,7 @@ import ringReduceWgsl from '../../../shaders/milkyWay/ismMap/ringReduce.wesl?sta
 const SURVIVOR_SUM_PARAMS_BUFFER_SIZE = 16; // count: u32, totalMass: f32, 2x pad — ringReduce.wesl's SurvivorSumParams
 const FLUX_WEIGHT_SUM_PARAMS_BUFFER_SIZE = 16; // count: u32, 3x pad — ringReduce.wesl's FluxWeightSumParams
 
-export type DispatchSurvivorSumInput = {
+type DispatchSurvivorSumInput = {
   /** placeDust.wesl's own massOut buffer (`IsmMapPlaceDust.massBuffer`) — producer-owned, passed in fresh each call since its identity never changes but this module has no constructor-time reference to it. */
   readonly massBuffer: GPUBuffer;
   /** This rebuild's dust particle count — `PlaceDustBudget.count`, NOT `MAX_PARTICLE_COUNT`: massBuffer beyond it holds a previous dispatch's stale values. */
@@ -25,7 +25,7 @@ export type DispatchSurvivorSumInput = {
 };
 
 /** Shared shape for the two flux-weight-sum dispatches below — `fluxWeightBuffer` is the producer's own `fluxWeightOut`, `count` its reservation's live count. */
-export type DispatchFluxWeightSumInput = {
+type DispatchFluxWeightSumInput = {
   readonly fluxWeightBuffer: GPUBuffer;
   readonly count: number;
 };

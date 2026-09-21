@@ -12,7 +12,7 @@ import { ismMapAzIndexForAngle } from './ismMapAzIndexForAngle';
 import { ismMapRingIndexForSample } from './ismMapRingIndexForSample';
 import type { GalaxyIsmMapOrientation } from '../../@types/galaxy/GalaxyIsmMapOrientation';
 
-export type GalaxyIsmMapOrientationSample = {
+type GalaxyIsmMapOrientationSample = {
   readonly angle: number;
   readonly coherence: number;
 };

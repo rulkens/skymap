@@ -23,7 +23,7 @@ import { hexToGl } from '../../../utils/color/hexToGl';
  * set a halo tint (famous galaxies — which opted out of the halo with a null
  * tint — live in `famousLabelStyle.ts`), so `haloColor` is a plain `Vec4`.
  */
-export type StructureMarkerStyle = {
+type StructureMarkerStyle = {
   /** Label glyph fill. */
   readonly labelColor: Vec4;
   /** Floor clamp on projected em height in screen pixels. */

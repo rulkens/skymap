@@ -20,7 +20,7 @@ import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
-import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
+import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { mat3FromColumns } from '../../../../src/utils/math/mat3FromColumns';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import type { Mat3 } from '../../../../src/@types/math/Mat3';

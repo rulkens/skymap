@@ -64,7 +64,7 @@ function sceneBodyForId(state: PassState, bodyId: BodyId): CelestialBody | null 
  * `ctx`, because a single ctx now serves every body-slab row and a `ctx`-only
  * memo would return Earth's frame for any other body sharing the same frame.
  */
-export type PreparedBodySurfaceFrame = {
+type PreparedBodySurfaceFrame = {
   readonly body: CelestialBody;
   readonly bodyState: BodyState;
   readonly pose: BodyRelativePose;
