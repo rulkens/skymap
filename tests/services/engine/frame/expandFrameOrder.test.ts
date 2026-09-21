@@ -305,10 +305,10 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
     ).toEqual([
       [NEAR0, 'clear'],
       [3, 'clear'],
-      [3, 'sample'],
+      [3, { sample: 'foreground:0' }],
       [3, 'load'],
       [2, 'clear'],
-      [2, 'sample'],
+      [2, { sample: 'foreground:0' }],
       [2, 'load'],
     ]);
     expect(steps[first + 7]).toEqual({
@@ -342,7 +342,7 @@ describe('expandFrameOrder — the per-frame fan-outs', () => {
       ),
     ).toEqual([
       [['a'], 'clear', undefined, 3],
-      [['d'], 'sample', 'SAMPLE_DEPTH', 3],
+      [['d'], { sample: 'foreground:0' }, 'SAMPLE_DEPTH', 3],
       [['b'], 'load', 'AFTER_DEPTH', 3],
     ]);
   });

@@ -37,7 +37,7 @@ import { grandTour } from '../../../../../src/data/animation/tours/grandTour';
 import { mergeSnapshot } from '../../../../../src/state/settings/mergeSnapshotAction';
 import { mergeSettingsSnapshot } from '../../../../../src/state/settings/mergeSettingsSnapshot';
 import { computeSceneEntering } from '../../../../../src/state/tour/computeSceneEntering';
-import { captureScene } from '../../../../../src/state/tour/captureScene';
+import { captureScene } from '../../../../../src/state/scene/captureScene';
 import { applySceneEffect } from '../../../../../src/services/animation/applySceneEffect';
 import type { ClipData } from '../../../../../src/@types/animation/ClipData';
 import type { Effect } from '../../../../../src/@types/animation/Effect';

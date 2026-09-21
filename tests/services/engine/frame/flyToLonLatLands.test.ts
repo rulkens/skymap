@@ -1,8 +1,7 @@
 /**
  * flyToLonLatLands — the `camera/flyToLonLat` command, saga and real runFrame
  * together: the camera must still stand where it was sent frames after the
- * flight ends. A plain commit under a followed focus was lost the next frame
- * (the commit-on-edge bake handed the frame straight back to `followHold`).
+ * flight ends, whatever focus or follow row is active when it lands.
  */
 
 import { describe, it, expect, vi } from 'vitest';

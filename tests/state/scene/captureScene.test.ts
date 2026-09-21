@@ -19,7 +19,7 @@
 import { describe, it, expect } from 'vitest';
 import type { RootState } from '../../../src/store/types';
 import type { SelectionRef } from '../../../src/@types/engine/SelectionRef';
-import { captureScene } from '../../../src/state/tour/captureScene';
+import { captureScene } from '../../../src/state/scene/captureScene';
 
 const SNAPSHOT_SETTINGS_KEYS = [
   'bodies',

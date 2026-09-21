@@ -12,6 +12,7 @@
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { ContentCompute } from '../../../@types/engine/frame/ContentCompute';
 import type { FrameStepSpec } from '../../../@types/engine/frame/FrameStepSpec';
+import type { RenderTargetSpec } from '../../../@types/engine/frame/RenderTargetSpec';
 import { CUBEMAP_CAPTURES } from '../../../data/rendering/cubemapCaptures';
 import { rosterPassNames } from '../../../utils/render/rosterPassNames';
 
@@ -23,9 +24,11 @@ type StepFacts = {
   /** Names this line draws into a capture — outside the "exactly once" domain. */
   readonly captured: readonly string[];
   readonly targets: readonly string[];
+  /** A `render` line's declared `{ sample }` source id, when it has one. */
+  readonly sampled: readonly string[];
 };
 
-const NONE: StepFacts = { drawn: [], computed: [], captured: [], targets: [] };
+const NONE: StepFacts = { drawn: [], computed: [], captured: [], targets: [], sampled: [] };
 
 // A table rather than a switch, for the reason `expandFrameOrder` gives.
 const STEP_FACTS: {
@@ -43,7 +46,12 @@ const STEP_FACTS: {
       return row.kind === 'sky' ? [row.target] : [];
     }),
   }),
-  render: (spec) => ({ ...NONE, drawn: spec.passes, targets: [spec.target] }),
+  render: (spec) => ({
+    ...NONE,
+    drawn: spec.passes,
+    targets: [spec.target],
+    sampled: typeof spec.depth === 'object' ? [spec.depth.sample] : [],
+  }),
   foreground: (spec) => ({
     ...NONE,
     drawn: [...spec.near0Passes, ...rosterPassNames(spec.bodyPasses)],
@@ -58,14 +66,15 @@ export function checkFrameOrder(
   order: readonly FrameStepSpec[],
   passes: readonly ContentPass[],
   computes: readonly ContentCompute[],
-  targetIds: readonly string[],
+  targets: readonly Pick<RenderTargetSpec, 'id' | 'depth'>[],
 ): void {
   const drawCount = new Map<string, number>();
   // Separate from `drawCount`: a pass and a compute row may share a name on
   // purpose (`'flow'` is both), which one map would misread as "listed twice".
   const computeCount = new Map<string, number>();
   const captured = new Set<string>();
-  const targets: string[] = [];
+  const touchedTargets: string[] = [];
+  const sampled: string[] = [];
   const present = new Set(passes.map((pass) => pass.name));
   for (const spec of order) {
     const factsOf = STEP_FACTS[spec.kind] as (s: FrameStepSpec) => StepFacts;
@@ -76,7 +85,10 @@ export function checkFrameOrder(
     for (const name of facts.drawn) drawCount.set(name, (drawCount.get(name) ?? 0) + 1);
     for (const name of facts.computed) computeCount.set(name, (computeCount.get(name) ?? 0) + 1);
     for (const name of facts.captured) captured.add(name);
-    if (!drops) targets.push(...facts.targets);
+    if (!drops) {
+      touchedTargets.push(...facts.targets);
+      sampled.push(...facts.sampled);
+    }
   }
 
   for (const pass of passes) {
@@ -105,11 +117,19 @@ export function checkFrameOrder(
     }
   }
 
-  const declared = new Set(targetIds);
-  for (const target of targets) {
+  const declared = new Map(targets.map((row) => [row.id, row.depth]));
+  for (const target of touchedTargets) {
     if (!declared.has(target)) {
       throw new Error(
         `checkFrameOrder: step target '${target}' is not a declared render-target id`,
+      );
+    }
+  }
+
+  for (const source of sampled) {
+    if (!declared.has(source) || declared.get(source) === null) {
+      throw new Error(
+        `checkFrameOrder: step samples depth of '${source}', which is not a depth-bearing render-target row`,
       );
     }
   }

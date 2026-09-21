@@ -17,6 +17,7 @@ import type { ToneMap } from '../../../@types/rendering/ToneMap';
 import { bodyRowSteps } from './bodyRowSteps';
 import { resolvePassNames } from './resolvePassNames';
 import { COSMO, NEAR0, isBodySlabIndex } from './slabs';
+import { depthKeyOf } from '../../../utils/render/depthKeyOf';
 
 export type FrameInputs = {
   readonly tone: ToneMap;
@@ -117,8 +118,11 @@ function draws(step: FrameStep): boolean {
 /**
  * Two render steps a merge may fold together: everything the pass descriptor is
  * built from must agree, so only the roster differs. `depth` is in the key
- * because folding two depth-CLEARING foreground rows would drop a clear, and
- * folding across `'sample'` would attach a depth the step must not have.
+ * (via `depthKeyOf`, since a `{ sample }` object has no `===` identity across
+ * two independently-authored steps) because folding two depth-CLEARING
+ * foreground rows would drop a clear, and folding a `{ sample }` step into a
+ * clearing/loading one — or into a `{ sample }` of a DIFFERENT source — would
+ * attach a depth the step must not have, or read the wrong row.
  */
 function sameGroup(a: FrameStep, b: FrameStep): boolean {
   return (
@@ -128,7 +132,7 @@ function sameGroup(a: FrameStep, b: FrameStep): boolean {
     a.slab === b.slab &&
     a.capture?.key === b.capture?.key &&
     a.capture?.face === b.capture?.face &&
-    a.depth === b.depth
+    depthKeyOf(a.depth) === depthKeyOf(b.depth)
   );
 }
 

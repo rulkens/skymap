@@ -1,9 +1,7 @@
 /**
- * watchFlyToLonLatSaga — the effect of `camera/flyToLonLat`: focus the body, then
- * TWEEN (the goHome pattern) to a centre-looking pose over the lon/lat. A plain
- * commit is lost under a followed focus: its winner edge bakes last frame's pose
- * back into `base` and `followHold` wins again. The tween delivers the framing,
- * so the follow row adopts where it lands.
+ * watchFlyToLonLatSaga — the effect of `camera/flyToLonLat`: focus the body,
+ * then TWEEN (the goHome pattern) to a centre-looking pose over the lon/lat —
+ * the tween delivers the framing, and the follow row adopts where it lands.
  */
 import { takeLatest, select, put, getContext } from 'typed-redux-saga';
 

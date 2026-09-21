@@ -7,6 +7,7 @@
 
 import type { ContentPass } from '../../../@types/engine/frame/ContentPass';
 import type { DepthSampledPasses } from '../../../@types/engine/frame/DepthSampledPasses';
+import type { DepthSampleSource } from '../../../@types/engine/frame/DepthSampleSource';
 import type { ForegroundStepSpec } from '../../../@types/engine/frame/ForegroundStepSpec';
 import type { FrameStep } from '../../../@types/engine/frame/FrameStep';
 import { resolvePassNames } from './resolvePassNames';
@@ -19,7 +20,7 @@ export function bodyRowSteps(
   // Empty segments are left to `expandFrameOrder`'s `draws` filter.
   const step = (
     entries: readonly (string | DepthSampledPasses)[],
-    depth: 'clear' | 'load' | 'sample',
+    depth: 'clear' | 'load' | DepthSampleSource,
     slot?: string,
   ): FrameStep => {
     if (entries.some((entry) => typeof entry !== 'string')) {
@@ -39,7 +40,7 @@ export function bodyRowSteps(
   if (at === -1) return [step(roster, 'clear')];
   return [
     step(roster.slice(0, at), 'clear'),
-    step((roster[at] as DepthSampledPasses).sampleDepth, 'sample', 'SAMPLE_DEPTH'),
+    step((roster[at] as DepthSampledPasses).sampleDepth, { sample: spec.target }, 'SAMPLE_DEPTH'),
     step(roster.slice(at + 1), 'load', 'AFTER_DEPTH'),
   ];
 }

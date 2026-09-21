@@ -3,9 +3,9 @@
  * settings, then orientation, then selection focus. Pure Intent — three
  * dispatches, no engine context of its own.
  *
- * This is the close of the tour's capture → play → restore round-trip
- * (`captureScene` is the open). `guidedTourSaga` runs it in its `finally`, so it
- * fires on BOTH a natural tour finish and an `exitTour`/supersede cancellation.
+ * This is the close of a takeover's capture → play → restore round-trip
+ * (`captureScene` is the open). `runTakeover` runs it in its `finally`, so it
+ * fires on BOTH a natural finish and an `exitTakeover`/supersede cancellation.
  *
  *   1. `put(mergeSnapshot(settings))` — the ten clusters land in ONE merge
  *      dispatch (one transition, one store notification — what wakes React's
@@ -17,13 +17,14 @@
  *      cannot ride this dispatch even by accident — see `SceneSnapshot`'s
  *      header. A raw write to `orientation` would leave `camera.base`
  *      expressed in the OLD basis while the pole flips under it — the same
- *      "eye jumps" landmine `watchOrientationChangeSaga` re-expresses `base`
- *      to avoid on every interactive switch.
+ *      "eye jumps" landmine the LOOP re-expresses `base` to avoid on every
+ *      orientation switch (`stepCameraRuntime`).
  *
  *   2. `put(requestOrientationChange(orientation))` — the captured pre-tour
  *      frame restores through the SAME request path an interactive switch
- *      uses, so `watchOrientationChangeSaga` re-expresses `camera.base` into it
- *      and rolls the up-basis, rather than snapping only the setting.
+ *      uses: `watchOrientationChangeSaga` rolls the up-basis, and the LOOP
+ *      re-expresses `camera.base` into the frame the same way it does for
+ *      any other orientation switch, rather than snapping only the setting.
  *
  *   3. `put(updateSelectionFocus(focus))` — focus reverts through the same
  *      production action a user interaction or a `focus()` beat uses. Routing
@@ -38,9 +39,10 @@
  * but that context lives in the watcher, not here — same split as the fade
  * pass, reached by `watchFadesSaga` rather than by this saga.
  *
- * All three `put`s block until their effect lands (true even inside a `finally`
- * driven by a cancelling dispatch), so on a supersede the restore completes
- * before the successor run's snapshot reads the store.
+ * All three `put`s block until their effect lands, true even inside a `finally`
+ * driven by a cancelling dispatch. `watchTakeoverSaga` waits for the cancelled
+ * bracket to settle, so on a supersede this restore is complete before the
+ * successor run's snapshot reads the store.
  *
  * `clipOpacity` is already reset to 1 at clip end by the clip runner, so
  * transient fade-to-black effects need no undo here.

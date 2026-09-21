@@ -244,6 +244,9 @@ function makeState(): EngineState {
         pose: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
         winner: 'resting',
       },
+      base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 100 }),
+      // Must match the store's orientation, or frame one reads a phantom switch.
+      orientation: DEFAULT_ORIENTATION,
       epochs: UNSTARTED_EPOCHS,
       follow: null,
       gesture: EMPTY_SURFACE_GESTURE_MEMORY,

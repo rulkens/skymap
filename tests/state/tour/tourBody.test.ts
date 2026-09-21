@@ -1,15 +1,15 @@
 /**
- * guidedTourSaga tests — the outer tour loop: snapshot/restore sandwich and the
- * race between `run` (beat sequence) and `exit` (exitTour).
+ * tourBody tests — the beat loop, run under `runTakeover` exactly as
+ * `watchTakeoverSaga` runs it for a real tour, so the snapshot/restore
+ * round-trip and the `takeoverEnded`/`tour.active` reporting stay observable
+ * from this suite even though `tourBody` itself no longer owns them.
  *
- * Capture is now a pure `select(captureScene)` and restore is `restoreSceneSaga`
- * (two `put`s), so the saga touches no `reconcile` context — these tests run it
- * against a REAL `rootReducer` store and assert the scene round-trip BEHAVIOURALLY:
- * a settings mutation dispatched mid-run (standing in for an in-clip `scene()` /
- * `hide()` cue — the beats here are narration stubs, so the test dispatches it
- * directly) is wound back to the captured baseline on every exit path. (The
- * restore's reactive fade is watchFadesSaga's concern, tested there; this suite
- * doesn't run that watcher.)
+ * `runTour` below is the test-local composition `watchTakeoverSaga` performs
+ * in production: `runTakeover({kind:'tour', id}, () => tourBody(tour, range))`.
+ * Everything downstream of that line is unchanged from the pre-split
+ * `guidedTourSaga` suite — same fixtures, same assertions, same timing idiom —
+ * only the run call, the active-flag read, and `exitTour` → `exitTakeover`
+ * changed, because those are exactly the bracket-owned facts that moved.
  *
  * Beat fixtures use narration clips (empty timeline, no id-bearing cues) so
  * `waitUntil(clipFociReady)` exits synchronously on the first predicate check.
@@ -27,12 +27,15 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import createSagaMiddleware from 'redux-saga';
+import createSagaMiddleware, { type Task } from 'redux-saga';
 import { configureStore } from '@reduxjs/toolkit';
 
 import { rootReducer } from '../../../src/store/rootReducer';
-import { guidedTourSaga } from '../../../src/state/tour/guidedTourSaga';
-import { exitTour, advanceTour, prevBeat } from '../../../src/state/tour/tourActions';
+import { runTakeover } from '../../../src/state/takeover/runTakeover';
+import { tourBody } from '../../../src/state/tour/tourBody';
+import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
+import { advanceTour, prevBeat } from '../../../src/state/tour/tourActions';
+import { selectTourActive } from '../../../src/state/tour/selectors';
 import { updateSelectionSelect } from '../../../src/state/selection/selectionSlice';
 import { beginDrag } from '../../../src/state/camera/cameraSlice';
 import { hide } from '../../../src/services/engine/animation/effectHelpers';
@@ -43,6 +46,7 @@ import { dwellDrift } from '../../../src/state/tour/dwellDrift';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { BeatData } from '../../../src/@types/animation/tour/BeatData';
+import type { BeatRange } from '../../../src/@types/animation/tour/BeatRange';
 import type { Tour } from '../../../src/@types/animation/tour/Tour';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { LiveCameraRuntime } from '../../../src/store/types';
@@ -73,6 +77,7 @@ const NARRATION_CLIP: ClipData = {
 };
 
 type PlayClipStub = ReturnType<typeof vi.fn<(clip: ClipData) => Promise<void>>>;
+type SagaMiddleware = ReturnType<typeof createSagaMiddleware>;
 
 function buildStore(opts: {
   playClip?: PlayClipStub;
@@ -109,9 +114,18 @@ function makeTour(beats: readonly BeatData[]): Tour {
   return { id: 'demo', label: 'Demo', beats };
 }
 
+// What `watchTakeoverSaga` does for a real `startTour` — reproduced here so
+// this suite still observes the bracket (snapshot/restore, active reporting)
+// around the beat loop under test, even though `tourBody` no longer owns it.
+function runTour(sagaMiddleware: SagaMiddleware, tour: Tour, range?: BeatRange): Task {
+  return sagaMiddleware.run(function* () {
+    yield* runTakeover({ kind: 'tour', id: tour.id }, () => tourBody(tour, range));
+  });
+}
+
 // ─── Tests ───────────────────────────────────────────────────────────────────
 
-describe('guidedTourSaga', () => {
+describe('tourBody', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -133,7 +147,7 @@ describe('guidedTourSaga', () => {
 
   // ── (1) activates the tour for the duration and ends it after completion ──
 
-  it('guidedTourSaga marks the tour active for the duration and ends it after', async () => {
+  it('marks the tour active for the duration and ends it after', async () => {
     vi.useFakeTimers();
 
     // Very short dwell so the beat completes without a manual advanceTour.
@@ -151,16 +165,16 @@ describe('guidedTourSaga', () => {
     });
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
-    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+    runTour(sagaMiddleware, makeTour([beat]));
 
-    // tourStarted must be in the store already (the App derives HUD-hidden from it).
-    expect(store.getState().tour.active).toBe(true);
+    // takeoverStarted must be in the store already (the App derives HUD-hidden from it).
+    expect(selectTourActive(store.getState())).toBe(true);
 
     // Advance timers so the dwell timeout fires and the beat + loop complete.
     await vi.runAllTimersAsync();
 
     // After natural completion the finally must end the tour.
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
   // ── (1b) clears any pre-tour selection at start ────────────────────────────
@@ -180,7 +194,7 @@ describe('guidedTourSaga', () => {
     store.dispatch(updateSelectionSelect({ type: 'structure', id: 'cluster-virgo' }));
     expect(store.getState().selection.select).not.toBeNull();
 
-    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+    runTour(sagaMiddleware, makeTour([beat]));
 
     // Cleared synchronously at tour start — before any beat plays.
     expect(store.getState().selection.select).toBeNull();
@@ -190,7 +204,7 @@ describe('guidedTourSaga', () => {
 
   // ── (2) runs every beat in order ─────────────────────────────────────────
 
-  it('guidedTourSaga runs every beat in order', async () => {
+  it('runs every beat in order', async () => {
     vi.useFakeTimers();
 
     const beat1: BeatData = {
@@ -208,7 +222,7 @@ describe('guidedTourSaga', () => {
     const stub = makeAutoFlyStub();
     const { store, sagaMiddleware } = buildStore({ playClip: stub });
 
-    sagaMiddleware.run(guidedTourSaga, makeTour([beat1, beat2]));
+    runTour(sagaMiddleware, makeTour([beat1, beat2]));
 
     // Run all timers — each beat's 0.001 s dwell fires the timeout and advances.
     await vi.runAllTimersAsync();
@@ -216,7 +230,7 @@ describe('guidedTourSaga', () => {
     // Both beats must have flown (≥ 2 fly calls — calls 1 and 3 in the parity
     // stub) and the loop ran off the end (tour no longer active).
     expect(stub.mock.calls.length).toBeGreaterThanOrEqual(3);
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
   // ── (2b) every beat entry reconstructs the derived scene ──────────────────
@@ -239,7 +253,7 @@ describe('guidedTourSaga', () => {
 
     const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
     store.dispatch(setVolumesEnabled(true));
-    const task = sagaMiddleware.run(guidedTourSaga, makeTour([cueBeat, plainBeat]));
+    const task = runTour(sagaMiddleware, makeTour([cueBeat, plainBeat]));
 
     await flush();
     await flush();
@@ -258,7 +272,7 @@ describe('guidedTourSaga', () => {
     // Back at beat 0: the prefix is empty again — baseline restored.
     expect(store.getState().settings.volumes.enabled).toBe(true);
 
-    store.dispatch(exitTour());
+    store.dispatch(exitTakeover());
     await task.toPromise();
   });
 
@@ -276,7 +290,7 @@ describe('guidedTourSaga', () => {
 
     const stub = makeAutoFlyStub();
     const { store, sagaMiddleware } = buildStore({ playClip: stub });
-    sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 1, to: 1 });
+    runTour(sagaMiddleware, makeTour(beats), { from: 1, to: 1 });
 
     // The run starts at the window's `from` in GLOBAL indices — beatChanged(1)
     // corrects the 0 that tourStarted reset once the opening settle delay
@@ -291,7 +305,7 @@ describe('guidedTourSaga', () => {
     // 0 and 2 never reached playClip, and the loop ended naturally after the
     // window (tour no longer active).
     expect(stub.mock.calls.length).toBe(2);
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
   it('clamps an out-of-range beat range to the tour bounds', async () => {
@@ -308,14 +322,14 @@ describe('guidedTourSaga', () => {
     // `to: 99` reaches past the end — it must clamp to the last beat, not
     // throw or play nothing: a saved recording command survives an authoring
     // change that shortens the tour.
-    sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 0, to: 99 });
+    runTour(sagaMiddleware, makeTour(beats), { from: 0, to: 99 });
 
     await vi.runAllTimersAsync();
 
     // All three beats flew (calls 1, 3, 5 in the parity stub) and the run
     // completed naturally.
     expect(stub.mock.calls.length).toBeGreaterThanOrEqual(5);
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
   it('a range take still applies the scene cues of the skipped prefix', async () => {
@@ -337,10 +351,7 @@ describe('guidedTourSaga', () => {
     vi.useFakeTimers();
     const { store, sagaMiddleware } = buildStore({ playClip: makeAutoFlyStub() });
     store.dispatch(setVolumesEnabled(true));
-    const task = sagaMiddleware.run(guidedTourSaga, makeTour([cueBeat, plainBeat]), {
-      from: 1,
-      to: 1,
-    });
+    const task = runTour(sagaMiddleware, makeTour([cueBeat, plainBeat]), { from: 1, to: 1 });
 
     // The reconstruction fold dispatches synchronously on entry — beat 0's
     // hide cue is applied before the settle delay even starts ticking.
@@ -351,7 +362,7 @@ describe('guidedTourSaga', () => {
     await vi.advanceTimersByTimeAsync(0);
     expect(store.getState().tour.beatIndex).toBe(1);
 
-    store.dispatch(exitTour());
+    store.dispatch(exitTakeover());
     await task.toPromise();
     // The exit restore winds the cue's effect back to the captured baseline.
     expect(store.getState().settings.volumes.enabled).toBe(true);
@@ -370,7 +381,7 @@ describe('guidedTourSaga', () => {
 
     const stub = makeAutoFlyStub();
     const { store, sagaMiddleware } = buildStore({ playClip: stub });
-    sagaMiddleware.run(guidedTourSaga, makeTour(beats), { from: 1, to: 1 });
+    runTour(sagaMiddleware, makeTour(beats), { from: 1, to: 1 });
 
     // The fold's mergeSnapshot lands synchronously, but the visibility bridge
     // and label-fade envelope animate that diff — the beat's fly must wait
@@ -385,7 +396,7 @@ describe('guidedTourSaga', () => {
     expect(stub).toHaveBeenCalled();
 
     await vi.runAllTimersAsync();
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
   it('a full run reaches the first fly with no settle delay added', async () => {
@@ -399,7 +410,7 @@ describe('guidedTourSaga', () => {
 
     const stub = makeAutoFlyStub();
     const { store, sagaMiddleware } = buildStore({ playClip: stub });
-    sagaMiddleware.run(guidedTourSaga, makeTour(beats));
+    runTour(sagaMiddleware, makeTour(beats));
 
     // Zero-length advances flush 0 ms macrotasks but can never fire a
     // FOLD_SETTLE_MS timer — the first fly must already be through: beat 0's
@@ -409,7 +420,7 @@ describe('guidedTourSaga', () => {
     expect(stub).toHaveBeenCalled();
 
     await vi.runAllTimersAsync();
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
   // ── (3) natural completion restores the captured scene ────────────────────
@@ -432,7 +443,7 @@ describe('guidedTourSaga', () => {
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
     // Seed a known baseline so the mid-run flip (→ false) is observable.
     store.dispatch(setVolumesEnabled(true));
-    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+    runTour(sagaMiddleware, makeTour([beat]));
 
     // Mutate settings mid-run — the stand-in for an in-clip scene cue.
     store.dispatch(setVolumesEnabled(false));
@@ -442,12 +453,12 @@ describe('guidedTourSaga', () => {
 
     // finally restored the captured baseline (volumes back on) and ended the tour.
     expect(store.getState().settings.volumes.enabled).toBe(true);
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
-  // ── (4) exitTour cancels mid-beat and the finally restores the scene ─────
+  // ── (4) exitTakeover cancels mid-beat and the finally restores the scene ──
 
-  it('exitTour cancels mid-beat and the finally restores the captured baseline', async () => {
+  it('exitTakeover cancels mid-beat and the finally restores the captured baseline', async () => {
     // Long dwell — we will interrupt before it auto-advances.
     const beat: BeatData = {
       enterClip: NARRATION_CLIP,
@@ -463,7 +474,7 @@ describe('guidedTourSaga', () => {
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
     store.dispatch(setVolumesEnabled(true));
-    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+    runTour(sagaMiddleware, makeTour([beat]));
 
     // Mutate settings mid-run — the stand-in for an in-clip scene cue.
     store.dispatch(setVolumesEnabled(false));
@@ -473,13 +484,13 @@ describe('guidedTourSaga', () => {
     await flush();
     expect(store.getState().settings.volumes.enabled).toBe(false);
 
-    // Dispatch exitTour — the exit arm wins the outer race and cancels run.
-    store.dispatch(exitTour());
+    // Dispatch exitTakeover — the exit arm wins the outer race and cancels run.
+    store.dispatch(exitTakeover());
     await flush();
 
     // finally must have executed: baseline restored and tour ended.
     expect(store.getState().settings.volumes.enabled).toBe(true);
-    expect(store.getState().tour.active).toBe(false);
+    expect(selectTourActive(store.getState())).toBe(false);
   });
 
   // ── (5) camera-input action does not abort the tour ──────────────────────
@@ -500,10 +511,10 @@ describe('guidedTourSaga', () => {
 
     const { store, sagaMiddleware } = buildStore({ playClip: playClipMock });
     store.dispatch(setVolumesEnabled(true));
-    sagaMiddleware.run(guidedTourSaga, makeTour([beat]));
+    runTour(sagaMiddleware, makeTour([beat]));
 
     // Mutate settings mid-run — must survive the camera-input action below
-    // (only exitTour triggers the restore).
+    // (only exitTakeover triggers the restore).
     store.dispatch(setVolumesEnabled(false));
 
     // Advance to the dwell race inside beat 1.
@@ -516,13 +527,13 @@ describe('guidedTourSaga', () => {
 
     // The tour is still running: not restored (volumes still off), still active.
     expect(store.getState().settings.volumes.enabled).toBe(false);
-    expect(store.getState().tour.active).toBe(true);
+    expect(selectTourActive(store.getState())).toBe(true);
   });
 
   // ── (6) beat-boundary reconstruction never raw-writes orientation ────────
 
   it('does not carry orientation in a beat-boundary mergeSnapshot payload, and does not revert a live-set frame', async () => {
-    // Two beats so entering beat 1 fires the reconstruction fold guidedTourSaga
+    // Two beats so entering beat 1 fires the reconstruction fold tourBody
     // dispatches at the top of every loop iteration
     // (`mergeSnapshot(computeSceneEntering(...))`) — the exact site of the
     // Critical this test guards: a raw write there used to sweep
@@ -556,7 +567,7 @@ describe('guidedTourSaga', () => {
       playClip: makeAutoFlyStub(),
     });
 
-    sagaMiddleware.run(guidedTourSaga, makeTour([beat1, beat2]));
+    runTour(sagaMiddleware, makeTour([beat1, beat2]));
 
     // Advance to beat 0's dwell (fly resolved, drift blocking).
     await flush();
@@ -587,7 +598,7 @@ describe('guidedTourSaga', () => {
     // have it reverted the instant the next beat starts.
     expect(store.getState().settings.orientation).toBe('galactic');
 
-    store.dispatch(exitTour());
+    store.dispatch(exitTakeover());
     await flush();
   });
 });

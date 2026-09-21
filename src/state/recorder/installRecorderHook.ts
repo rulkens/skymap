@@ -19,17 +19,17 @@
  * ### `startTour` — dispatch the existing action, observe the slice
  *
  * No recorder-specific action exists: the hook dispatches the same
- * `startTour` creator the UI uses and resolves on the `tour.active`
- * true → false transition, which `guidedTourSaga`'s finally guarantees on
- * both natural completion and exit. Watching the slice (rather than adding a
- * "tourFinished" callback seam) keeps the recorder a plain observer of state
- * the app already maintains.
+ * `startTour` creator the UI uses and resolves on `selectTourActive`'s
+ * true → false transition (derived from the `takeover` slice), which
+ * `runTakeover`'s finally guarantees on both natural completion and exit.
+ * Watching the slice (rather than adding a "tourFinished" callback seam)
+ * keeps the recorder a plain observer of state the app already maintains.
  *
  * SINGLE-FLIGHT: `startTour` rejects synchronously when a tour is already
- * active. The watcher is `takeLatest`, and a superseding start deliberately
- * skips `tourEnded` in the cancelled run's finally — `tour.active` never
- * flips false during the handoff — so a boolean latch cannot attribute a
- * later end to the earlier caller: the first promise would silently resolve
+ * active. A superseding start deliberately skips `takeoverEnded` in the
+ * cancelled run's finally — `selectTourActive` never flips false during the
+ * handoff — so a boolean latch cannot attribute a later end to the earlier
+ * caller: the first promise would silently resolve
  * when the SECOND tour finished. Rejecting loudly beats reporting the wrong
  * tour as done; the harness records takes strictly one at a time anyway.
  *
@@ -71,7 +71,7 @@ import type { TourId } from '../../@types/animation/tour/TourId';
 import type { BeatRange } from '../../@types/animation/tour/BeatRange';
 import type { ClipId } from '../../@types/animation/ClipId';
 
-// Dispatch the tour and resolve on the `tour.active` true → false transition.
+// Dispatch the tour and resolve on `selectTourActive`'s true → false transition.
 // Tracking "seen active" (instead of resolving on any false reading) makes
 // the wait immune to store changes that land before the saga flips the flag.
 // Single-flight: reject up front when a tour is already running — see the

@@ -26,13 +26,15 @@ import { EMPTY_TILT_MEMORY } from '../../../../src/data/camera/emptyTiltMemory';
 import { EMPTY_SURFACE_GESTURE_MEMORY } from '../../../../src/services/camera/surfaceStep';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { foldToWorld } from '../../../../src/services/engine/camera/rungs/foldToWorld';
+import { isWorldArm } from '../../../../src/services/engine/camera/rungs/isWorldArm';
 import { deriveSimDays } from '../../../../src/utils/time/deriveSimDays';
 import { selectTimeState } from '../../../../src/state/time/selectors';
 import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadiusMpc';
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startFrameTween } from '../../../../src/state/camera/cameraSlice';
+import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -47,6 +49,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
@@ -215,5 +218,167 @@ describe('stepCameraRuntime', () => {
       near: NEAR_CLIP_MPC,
       far: FAR_CLIP_MPC,
     });
+  });
+});
+
+describe('a commit from outside the loop is authoritative', () => {
+  it('a body-arm commit under a followed focus renders and stays, unbaked', () => {
+    // A real body arm, reached the way the app reaches one (engage on close approach).
+    const engaged = makeCameraSimHarness({ bootHR: 0.1 });
+    engaged.frame(2);
+    const bodyArm = engaged.store.getState().camera.base;
+    expect(bodyArm.frame).toEqual({ body: 'earth' });
+
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+
+    h.store.dispatch(commitCameraPose(bodyArm));
+    h.frame(1);
+
+    // Nothing baked over the commit: `followHold` is arm-gated out by the body
+    // arm and `resting` (not `followHold`) reads as last frame's author, so
+    // `commitOnEdge` sees no departure to bake.
+    expect(h.store.getState().camera.base).toBe(bodyArm);
+    expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
+    expect(h.state.cameraRuntime.register.winner).toBe('resting');
+
+    h.frame(1);
+    expect(h.store.getState().camera.base).toBe(bodyArm);
+  });
+
+  it('a world-arm commit under a followed focus is adopted, distance included', () => {
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    const before = h.store.getState().camera.base;
+    if (!isWorldArm(before)) throw new Error('expected a world arm base');
+
+    h.store.dispatch(
+      commitCameraPose(absoluteArm({ ...before.pose, distance: before.pose.distance * 2 })),
+    );
+    h.frame(1);
+
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+    const world = foldToWorld(h.state.cameraRuntime.outputs.displayed, {
+      bodies: BODIES,
+      poseBasis: B,
+      upBasis: B,
+      terrainHeightAt: datumOnlyTerrainHeight,
+    });
+    expect(world.distance).toBeCloseTo(before.pose.distance * 2, 5);
+  });
+});
+
+describe('the loop re-encodes base on an orientation switch', () => {
+  it('holds the eye and keeps a wheel zoom across the switch', () => {
+    const h = makeCameraSimHarness();
+    h.frame(60);
+    expect(h.state.cameraRuntime.register.winner).toBe('followHold');
+
+    const worldOf = (basis: typeof B) =>
+      foldToWorld(h.state.cameraRuntime.outputs.displayed, {
+        bodies: BODIES,
+        poseBasis: basis,
+        upBasis: basis,
+        terrainHeightAt: datumOnlyTerrainHeight,
+      });
+    const distanceBeforeZoom = worldOf(B).distance;
+
+    h.wheel(-100);
+    h.wheel(-100);
+    h.wheel(-100);
+
+    const zoomed = worldOf(B);
+    expect(zoomed.distance).toBeLessThan(distanceBeforeZoom);
+    const eyeBefore = eyeMpcOf(zoomed, B);
+
+    // Production dispatches only `setOrientation` (the saga's other effect is
+    // the up-basis roll, irrelevant here): the LOOP re-encodes `base` itself,
+    // on the frame it sees `settings.orientation` differ from its own record.
+    const GAL = ORIENTATION_FRAMES.galactic;
+    h.store.dispatch(setOrientation('galactic'));
+    h.frame(2);
+
+    const after = worldOf(GAL);
+    expect(Math.abs(after.distance - zoomed.distance) / zoomed.distance).toBeLessThan(1e-6);
+    const eyeAfter = eyeMpcOf(after, GAL);
+    const eyeDelta = Math.hypot(
+      eyeAfter[0] - eyeBefore[0],
+      eyeAfter[1] - eyeBefore[1],
+      eyeAfter[2] - eyeBefore[2],
+    );
+    expect(eyeDelta / zoomed.distance).toBeLessThan(1e-6);
+  });
+});
+
+describe('a re-switch mid-roll re-expresses from the PREVIOUS committed frame', () => {
+  it('not the live up-basis', () => {
+    // A synthetic unit quaternion distinct from all four registered frame
+    // poles — the shape a genuinely interrupted roll's live basis takes, so a
+    // wrong re-encode source (the live up-basis) is unmistakable below.
+    const raw: Vec4 = [0.2, 0.3, 0.4, 0.5];
+    const n = Math.hypot(raw[0], raw[1], raw[2], raw[3]);
+    const LIVE_QUAT: Vec4 = [raw[0] / n, raw[1] / n, raw[2] / n, raw[3] / n];
+
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    const baseA = h.store.getState().camera.base;
+    if (!isWorldArm(baseA)) throw new Error('expected a world arm base');
+    const eyeInvariant = eyeMpcOf(baseA.pose, ORIENTATION_FRAMES[DEFAULT_ORIENTATION]);
+
+    // Switch to galactic: the loop re-encodes `base` this same frame, and the
+    // roll starts from the synthetic live basis above — mid-slerp.
+    h.store.dispatch(setOrientation('galactic'));
+    h.store.dispatch(
+      startFrameTween({
+        fromQuat: LIVE_QUAT,
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'easeInOutCubic',
+      }),
+    );
+    h.frame(1);
+
+    expect(h.state.cameraRuntime.orientation).toBe('galactic');
+    // The roll hasn't settled — the output basis is nowhere near galactic's.
+    expect(h.state.cameraRuntime.outputs.upBasis).not.toEqual(ORIENTATION_FRAMES.galactic);
+
+    // A second switch fires WHILE that roll is still mid-flight.
+    h.store.dispatch(setOrientation('supergalactic'));
+    h.frame(1);
+
+    const baseC = h.store.getState().camera.base;
+    if (!isWorldArm(baseC)) throw new Error('expected a world arm base');
+    const eyeC = eyeMpcOf(baseC.pose, ORIENTATION_FRAMES.supergalactic);
+    // Correct: re-encoded from the COMMITTED galactic frame, eye unmoved (up
+    // to float32 slop, same tolerance the sibling switch test above uses).
+    // Read from `prev.outputs.upBasis` (the synthetic live basis) instead,
+    // and this diverges by O(1) — nowhere near this tolerance.
+    const eyeDelta = Math.hypot(
+      eyeC[0] - eyeInvariant[0],
+      eyeC[1] - eyeInvariant[1],
+      eyeC[2] - eyeInvariant[2],
+    );
+    expect(eyeDelta / baseA.pose.distance).toBeLessThan(1e-6);
+  });
+});
+
+describe('a commit mid-approach', () => {
+  it('lands: the loop stops flying and adopts it', () => {
+    const engaged = makeCameraSimHarness({ bootHR: 0.1 });
+    engaged.frame(2);
+    const bodyArm = engaged.store.getState().camera.base;
+    expect(bodyArm.frame).toEqual({ body: 'earth' });
+
+    const h = makeCameraSimHarness();
+    h.frame(5);
+    expect(h.state.cameraRuntime.register.winner).toBe('followApproach');
+
+    h.store.dispatch(commitCameraPose(bodyArm));
+    h.frame(1);
+
+    expect(h.store.getState().camera.base).toBe(bodyArm);
+    expect(h.state.cameraRuntime.outputs.displayed).toEqual(bodyArm);
+    expect(h.state.cameraRuntime.register.winner).not.toBe('followApproach');
   });
 });
