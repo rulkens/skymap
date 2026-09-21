@@ -216,6 +216,7 @@ export function createEngine(
       bodyGlintRenderer: null,
       sgrAStarLensingRenderer: null,
       cubeFaceBlitRenderer: null,
+      domeResampleRenderer: null,
       starCatalogRenderer: null,
       starCatalogPickRenderer: null,
       bodyPickRenderer: null,

@@ -37,6 +37,7 @@ import { createStarPointRenderer } from '../../gpu/renderers/bodies/starPointRen
 import { createBodyGlintRenderer } from '../../gpu/renderers/bodies/bodyGlintRenderer';
 import { createSgrAStarLensingRenderer } from '../../gpu/renderers/bodies/sgrAStarLensingRenderer';
 import { createCubeFaceBlitRenderer } from '../../gpu/renderers/cubeFaceBlit/cubeFaceBlitRenderer';
+import { createDomeResampleRenderer } from '../../gpu/renderers/domeResample/domeResampleRenderer';
 import { createStarCatalogRenderer } from '../../gpu/renderers/starCatalog/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from '../../gpu/renderers/starCatalog/starCatalogPickRenderer';
 import { createBodyPickRenderer } from '../../gpu/renderers/bodies/bodyPickRenderer';
@@ -304,6 +305,13 @@ export const GPU_HANDLE_ROWS = [
     key: 'cubeFaceBlitRenderer',
     construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
       createCubeFaceBlitRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
+  },
+  {
+    // Boot-eager like every other renderer row; `dome-cube` itself is the lazy
+    // one (`allocateWhen: state.viewRig === 'dome'`).
+    key: 'domeResampleRenderer',
+    construct: (_state: EngineState, deps: GpuHandleConstructDeps) =>
+      createDomeResampleRenderer({ device: deps.ctx.device, targetFormat: HDR_TARGET_FORMAT }),
   },
   {
     key: 'starCatalogRenderer',

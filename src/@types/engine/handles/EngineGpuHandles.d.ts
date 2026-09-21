@@ -44,6 +44,7 @@ import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { SgrAStarLensingRenderer } from '../../rendering/SgrAStarLensingRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
+import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
 import type { StarCatalogRenderer } from '../../rendering/starCatalogRenderer/StarCatalogRenderer';
 import type { StarCatalogPickRenderer } from '../../rendering/starCatalogPickRenderer/StarCatalogPickRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
@@ -523,6 +524,12 @@ export type EngineGpuHandles = {
    * null-checked at use.
    */
   cubeFaceBlitRenderer: CubeFaceBlitRenderer | null;
+  /**
+   * The fisheye resample `domeResamplePass` draws with: the five `dome-cube`
+   * faces into one image, once per frame. Null until `initGpu` constructs it;
+   * excluded from `isEngineReady` and null-checked at use.
+   */
+  domeResampleRenderer: DomeResampleRenderer | null;
   /**
    * The survey (Gaia bin) stars as additive point sprites into the depthless
    * HDR target — the wide-field twin of `starPointRenderer`, fed from an
