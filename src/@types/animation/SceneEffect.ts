@@ -44,22 +44,14 @@
  *     continues from wherever the pole is rather than snapping back to a
  *     steady pole.
  *
- *     Only TWO of the interactive switch's three effects fire here —
- *     `watchOrientationChangeSaga` also re-encodes `camera.base` into the new
- *     frame (`commitCameraPose(reencodePose(...))`); this cue does not. That
- *     is not a missing step: `frameTo` only ever fires while the clip driver
- *     (priority 95, `cameraDrivers.ts`) is the active pose author, and that
- *     driver re-derives its pose from scratch EVERY frame — `evaluateClip`
- *     against the pinned `clip.frame`, re-encoded into the CURRENT
- *     `settings.orientation` — so `base` is not what's on screen and is not
- *     what commit-on-edge reads either: it bakes the driver's own
- *     already-current-frame pose (the register) when the clip ends, never a
- *     stale `base`. The interactive path needs the explicit re-encode because
- *     THERE `base` (or a driver derived from it) is what renders immediately;
- *     inside a clip it never is until the clip is already gone. Re-derive
- *     this from `cameraDrivers.ts`'s `clip` row before assuming a
- *     `commitCameraPose` belongs here — it would double-write nothing, but it
- *     would be motivated by a symmetry that doesn't hold in this direction.
+ *     `commitCameraPose` is not dispatched here: the LOOP re-encodes
+ *     `camera.base` into the new frame itself, on whatever frame it sees
+ *     `settings.orientation` differ from its own record (`stepCameraRuntime`)
+ *     — the same mechanism that backs the interactive switch
+ *     (`watchOrientationChangeSaga`), now triggered by this cue's own
+ *     `setOrientation` dispatch. The clip driver (priority 95) renders from
+ *     `settings.orientation` directly while it wins, so `base` sits inert
+ *     either way until the clip hands off.
  *
  * ### `layers` are `VisibilityLayerKey`s; `scoped` are per-item entries
  *

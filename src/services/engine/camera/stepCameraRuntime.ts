@@ -269,11 +269,15 @@ export function stepCameraRuntime(
   return {
     next: {
       register: { pose: projected.register, winner: winnerId },
-      // The camera the store will hold once `runFrame` dispatches these
-      // `actions`; by identity on an idle frame (empty `actions`, `reduce`
-      // returns `stored.camera` itself), which is what `winnerLastFrame` above
-      // compares against next frame.
-      base: actions.reduce(cameraReducer, stored.camera).base,
+      // The camera the store will hold once `runFrame` dispatches `actions`;
+      // reduce only the TAIL after `orientationActions`+`drained.actions` —
+      // both are already folded into `rootState.camera`, so re-reducing them
+      // would apply them twice. By identity on an idle frame (empty tail,
+      // `rootState.camera` is `stored.camera` is `rawStored.camera`), which
+      // is what `winnerLastFrame` above compares against next frame.
+      base: actions
+        .slice(orientationActions.length + drained.actions.length)
+        .reduce(cameraReducer, rootState.camera).base,
       // Tracks the frame `base` is now valid in, whatever this frame did with
       // it — a body arm sees no re-encode above but the switch still lands.
       orientation: stored.settings.orientation,

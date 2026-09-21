@@ -33,7 +33,7 @@ import { pivotFraming } from '../../../../src/services/engine/camera/pivotRadius
 import { absoluteArm } from '../../../../src/utils/camera/absoluteArm';
 import { eyeMpcOf } from '../../../../src/utils/camera/eyeMpcOf';
 import { datumOnlyTerrainHeight } from '../../../../src/utils/camera/datumOnlyTerrainHeight';
-import { commitCameraPose } from '../../../../src/state/camera/cameraSlice';
+import { commitCameraPose, startFrameTween } from '../../../../src/state/camera/cameraSlice';
 import { setOrientation } from '../../../../src/state/settings/core/orientationSlice';
 import { ORIENTATION_FRAMES } from '../../../../src/data/orientation/orientationFrames';
 import { DEFAULT_ORIENTATION } from '../../../../src/data/defaults';
@@ -49,6 +49,7 @@ import type { BodyId } from '../../../../src/@types/data/body/BodyId';
 import type { BodyState } from '../../../../src/@types/scene/BodyState';
 import type { SelectionRow } from '../../../../src/@types/engine/SelectionRow';
 import type { StepInputs } from '../../../../src/@types/engine/camera/StepInputs';
+import type { Vec4 } from '../../../../src/@types/math/Vec4';
 
 const B = ORIENTATION_FRAMES[DEFAULT_ORIENTATION];
 const BODIES = deriveBodyStates(CONST_J2000) as ReadonlyMap<BodyId, BodyState>;
@@ -308,6 +309,58 @@ describe('the loop re-encodes base on an orientation switch', () => {
       eyeAfter[2] - eyeBefore[2],
     );
     expect(eyeDelta / zoomed.distance).toBeLessThan(1e-6);
+  });
+});
+
+describe('a re-switch mid-roll re-expresses from the PREVIOUS committed frame', () => {
+  it('not the live up-basis', () => {
+    // A synthetic unit quaternion distinct from all four registered frame
+    // poles — the shape a genuinely interrupted roll's live basis takes, so a
+    // wrong re-encode source (the live up-basis) is unmistakable below.
+    const raw: Vec4 = [0.2, 0.3, 0.4, 0.5];
+    const n = Math.hypot(raw[0], raw[1], raw[2], raw[3]);
+    const LIVE_QUAT: Vec4 = [raw[0] / n, raw[1] / n, raw[2] / n, raw[3] / n];
+
+    const h = makeCameraSimHarness({ focusBody: null, bootHR: null });
+    expect(h.state.cameraRuntime.orientation).toBe(DEFAULT_ORIENTATION);
+    const baseA = h.store.getState().camera.base;
+    if (!isWorldArm(baseA)) throw new Error('expected a world arm base');
+    const eyeInvariant = eyeMpcOf(baseA.pose, ORIENTATION_FRAMES[DEFAULT_ORIENTATION]);
+
+    // Switch to galactic: the loop re-encodes `base` this same frame, and the
+    // roll starts from the synthetic live basis above — mid-slerp.
+    h.store.dispatch(setOrientation('galactic'));
+    h.store.dispatch(
+      startFrameTween({
+        fromQuat: LIVE_QUAT,
+        to: 'galactic',
+        durationMs: 1000,
+        easing: 'easeInOutCubic',
+      }),
+    );
+    h.frame(1);
+
+    expect(h.state.cameraRuntime.orientation).toBe('galactic');
+    // The roll hasn't settled — the output basis is nowhere near galactic's.
+    expect(h.state.cameraRuntime.outputs.upBasis).not.toEqual(ORIENTATION_FRAMES.galactic);
+
+    // A second switch fires WHILE that roll is still mid-flight.
+    h.store.dispatch(setOrientation('supergalactic'));
+    h.frame(1);
+
+    const baseC = h.store.getState().camera.base;
+    if (!isWorldArm(baseC)) throw new Error('expected a world arm base');
+    const eyeC = eyeMpcOf(baseC.pose, ORIENTATION_FRAMES.supergalactic);
+    // Correct: re-encoded from the COMMITTED galactic frame, eye unmoved (up
+    // to float32 slop, same tolerance the sibling switch test above uses).
+    // Read from `prev.outputs.upBasis` (the synthetic live basis) instead,
+    // and this diverges by O(1) — nowhere near this tolerance.
+    const eyeDelta = Math.hypot(
+      eyeC[0] - eyeInvariant[0],
+      eyeC[1] - eyeInvariant[1],
+      eyeC[2] - eyeInvariant[2],
+    );
+    expect(eyeDelta / baseA.pose.distance).toBeLessThan(1e-6);
   });
 });
 

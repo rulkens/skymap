@@ -17,13 +17,14 @@
  *      cannot ride this dispatch even by accident — see `SceneSnapshot`'s
  *      header. A raw write to `orientation` would leave `camera.base`
  *      expressed in the OLD basis while the pole flips under it — the same
- *      "eye jumps" landmine `watchOrientationChangeSaga` re-expresses `base`
- *      to avoid on every interactive switch.
+ *      "eye jumps" landmine the LOOP re-expresses `base` to avoid on every
+ *      orientation switch (`stepCameraRuntime`).
  *
  *   2. `put(requestOrientationChange(orientation))` — the captured pre-tour
  *      frame restores through the SAME request path an interactive switch
- *      uses, so `watchOrientationChangeSaga` re-expresses `camera.base` into it
- *      and rolls the up-basis, rather than snapping only the setting.
+ *      uses: `watchOrientationChangeSaga` rolls the up-basis, and the LOOP
+ *      re-expresses `camera.base` into the frame the same way it does for
+ *      any other orientation switch, rather than snapping only the setting.
  *
  *   3. `put(updateSelectionFocus(focus))` — focus reverts through the same
  *      production action a user interaction or a `focus()` beat uses. Routing
