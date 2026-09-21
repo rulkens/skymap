@@ -27,7 +27,7 @@ import type { Tour } from '../../@types/animation/tour/Tour';
 import type { BeatData } from '../../@types/animation/tour/BeatData';
 import type { BeatCaption } from '../../@types/animation/tour/BeatCaption';
 
-export const selectTourRuntime = (state: RootState): TourRuntimeState => state[tourRoute];
+const selectTourRuntime = (state: RootState): TourRuntimeState => state[tourRoute];
 
 export const selectTourActive = (state: RootState): boolean => selectTourRuntime(state).active;
 
@@ -52,7 +52,7 @@ export const selectTourLabel = (state: RootState): string | null =>
 export const selectTourTotal = (state: RootState): number =>
   selectActiveTour(state)?.beats.length ?? 0;
 
-export const selectCurrentBeat = (state: RootState): BeatData | null => {
+const selectCurrentBeat = (state: RootState): BeatData | null => {
   const tour = selectActiveTour(state);
   if (!tour) return null;
   return tour.beats[selectTourBeatIndex(state)] ?? null;

@@ -24,7 +24,7 @@ import type { Tier } from '../../@types/data/Tier';
  * `source` is carried so the consumer can filter the count pulse to the right
  * source and avoid waiting for an unrelated catalog's load event.
  */
-export type GalaxyReanchor = {
+type GalaxyReanchor = {
   readonly slot: SelectionSlot;
   readonly source: GalaxyCatalogSourceType;
   readonly focusId: string;

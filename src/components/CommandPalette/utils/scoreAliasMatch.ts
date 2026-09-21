@@ -27,7 +27,7 @@
  * to enforce the "famous wins ties" rule.
  */
 
-export type ScorableAliasEntry = {
+type ScorableAliasEntry = {
   /** All human-typable names for this entry (e.g. ["NGC 4565", "UGC 7772"]). */
   names: readonly string[];
 };

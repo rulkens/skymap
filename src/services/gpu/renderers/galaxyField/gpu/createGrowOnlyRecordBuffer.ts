@@ -8,7 +8,7 @@ import type { GrowOnlyRecordBuffer } from '../../../../../@types/galaxy/GrowOnly
  * `getBuffer()` afresh rather than caching it.
  */
 
-export type GrowOnlyRecordBufferSpec = {
+type GrowOnlyRecordBufferSpec = {
   readonly device: GPUDevice;
   readonly label: string;
   readonly usage: GPUBufferUsageFlags;

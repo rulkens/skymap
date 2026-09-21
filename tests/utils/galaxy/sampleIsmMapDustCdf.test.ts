@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildIsmMapDustCdf } from '../../../src/utils/galaxy/buildIsmMapDustCdf';
 import { sampleIsmMapDustCdf } from '../../../src/utils/galaxy/sampleIsmMapDustCdf';
-import { ismMapDustDensity } from '../../../src/utils/galaxy/ismMapDustDensity';
+import { ismMapDustDensity } from './ismMapDustDensity';
 import { ismMapDustRingEdges } from '../../../src/utils/galaxy/ismMapDustRingEdges';
 import { mulberry32 } from '../../../src/utils/random/mulberry32';
 import type { GalaxyIsmMap } from '../../../src/@types/galaxy/GalaxyIsmMap';
