@@ -263,10 +263,15 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
   // passes in front of its host. Still HDR and still ahead of bloom and the one
   // tone-map, so it rides the same curve as everything else. The composite
   // above always emits, so this line never merges back into the roster.
+  // `depth` names the texture the trails SAMPLE — hdr is depthless, so it
+  // attaches nothing — and behind it a trail hides in the terrain and meshes of
+  // the last body row to clear that depth; the analytic occluder spheres still
+  // cover every other body.
   {
     kind: 'render',
     target: 'hdr',
     slab: NEAR0,
+    depth: { sample: 'foreground:0' },
     passes: ['orbit-trails'],
     slot: 'POST_FOREGROUND',
   },

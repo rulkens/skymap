@@ -10,6 +10,8 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
+import type { OrbitTrailDepthFrame } from '../../../../@types/rendering/OrbitTrailDepthFrame';
+import { mat4d } from 'wgpu-matrix';
 import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { TRAIL_ELEMENTS } from '../../../../data/bodies/trailElements';
@@ -18,7 +20,11 @@ import { CULL_PX, FULL_PX } from '../../../../data/bodies/orbitTrailConstants';
 import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelativeDistanceMpc';
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
+import { composeBodySlabMvp } from '../../../../utils/camera/composeBodySlabMvp';
+import { bodySlabCamLocal } from '../../../../utils/camera/bodySlabCamLocal';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
+import { narrowMat4 } from '../../../../utils/math/narrowMat4';
+import { SCALE_UNITS } from '../../../../data/scaleUnits';
 import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -153,11 +159,29 @@ export const orbitTrailsPass: ContentPass = {
       );
     }
     if (count > 0) {
+      // The second occluder channel: the terrain and meshes of the row that last
+      // cleared the sampled depth. Its own f64 `vp` (the invariant above), scaled
+      // by metres-per-km so the fragment's reconstructed distances land in the
+      // same km as the eye-relative orbit points it compares them against.
+      const row = view.sampledDepth?.row ?? null;
+      const pose =
+        row !== null && row.frame.kind === 'body-m' ? ctx.bodyPose(row.frame.bodyId) : null;
+      const depthFrame: OrbitTrailDepthFrame | null =
+        row === null || pose === null
+          ? null
+          : {
+              invMvp: narrowMat4(
+                mat4d.inverse(composeBodySlabMvp(row.vp, pose.eyeRelBodyM, SCALE_UNITS.KM_TO_M)),
+              ),
+              camPosKm: bodySlabCamLocal(pose.eyeRelBodyM, SCALE_UNITS.KM_TO_M),
+            };
       renderer.draw(
         pass,
         staging,
         count,
         sceneOccluderSpheres(state, ctx),
+        depthFrame,
+        view.sampledDepth!.view,
         state.settings.debug.overlays['orbit-trail-impostor'],
       );
     }

@@ -7,10 +7,11 @@
  * fallback pipeline for the behind-camera case. Same profile as
  * `planetRenderer` otherwise — additive, depthless, cull-none. Every per-orbit
  * quantity rides the instance record; the one bind group is the frame's
- * occluder spheres, written once per draw.
+ * occluder spheres plus the sampled scene depth, written once per draw.
  * @module
  */
 
+import type { OrbitTrailDepthFrame } from '../../../../@types/rendering/OrbitTrailDepthFrame';
 import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { OrbitTrailRenderer } from '../../../../@types/rendering/OrbitTrailRenderer';
 import vsCode from '../../shaders/bodies/orbitTrail/vertex.wesl?static';
@@ -62,14 +63,28 @@ export const INSTANCE_ATTRIBUTES: readonly GPUVertexAttribute[] = [
 
 /**
  * The occluder uniform's layout: `count` (u32) + three pad words, then
- * MAX_ORBIT_OCCLUDERS vec4s. The ONE TS home for the byte offsets, mirroring
- * `OcclusionUniforms` in orbitTrail/fragment.wesl — pinned against that struct
- * by orbitTrailConstants.parity.test.ts, since a silent drift here writes the
- * spheres where the shader reads padding.
+ * MAX_ORBIT_OCCLUDERS vec4s, then the sampled depth row's frame — its inverse
+ * MVP, its camera (vec3, padded to 16), and the viewport the fragment divides
+ * its pixel by (vec2, padded to 16). The ONE TS home for the byte offsets,
+ * mirroring `OcclusionUniforms` in orbitTrail/fragment.wesl — pinned against
+ * that struct by orbitTrailConstants.parity.test.ts, since a silent drift here
+ * writes the spheres where the shader reads padding.
  */
 export const OCCLUDER_COUNT_OFFSET = 0;
 export const OCCLUDER_SPHERES_OFFSET = 16;
-export const OCCLUDER_UNIFORM_BYTES = OCCLUDER_SPHERES_OFFSET + MAX_ORBIT_OCCLUDERS * 16;
+export const OCCLUDER_INV_MVP_OFFSET = OCCLUDER_SPHERES_OFFSET + MAX_ORBIT_OCCLUDERS * 16;
+export const OCCLUDER_CAM_POS_OFFSET = OCCLUDER_INV_MVP_OFFSET + 64; // mat4x4<f32>
+export const OCCLUDER_VIEWPORT_OFFSET = OCCLUDER_CAM_POS_OFFSET + 16; // vec3<f32> + pad
+export const OCCLUDER_UNIFORM_BYTES = OCCLUDER_VIEWPORT_OFFSET + 16; // vec2<f32> + pad
+
+/** Column-major identity, packed when no depth frame resolved (never read:
+ *  the far placeholder leaves every texel at the shader's FAR_DEPTH). */
+const IDENTITY_MAT4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+
+/** Float slot of `viewportPx.x` in an instance record (location 5's `.zw`).
+ *  Taking the viewport from the record the vertex stage divides by is what
+ *  keeps the two stages' idea of the viewport from ever diverging. */
+const INSTANCE_VIEWPORT_FLOAT = 18;
 
 export function createOrbitTrailRenderer(
   device: GPUDevice,
@@ -88,15 +103,20 @@ export function createOrbitTrailRenderer(
   });
   const occluderScratch = new ArrayBuffer(OCCLUDER_UNIFORM_BYTES);
   const occluderCount = new Uint32Array(occluderScratch, OCCLUDER_COUNT_OFFSET, 1);
-  const occluderSpheres = new Float32Array(occluderScratch, OCCLUDER_SPHERES_OFFSET);
+  const occluderSpheres = new Float32Array(
+    occluderScratch,
+    OCCLUDER_SPHERES_OFFSET,
+    MAX_ORBIT_OCCLUDERS * 4,
+  );
+  const occluderInvMvp = new Float32Array(occluderScratch, OCCLUDER_INV_MVP_OFFSET, 16);
+  const occluderCamPos = new Float32Array(occluderScratch, OCCLUDER_CAM_POS_OFFSET, 3);
+  const occluderViewport = new Float32Array(occluderScratch, OCCLUDER_VIEWPORT_OFFSET, 2);
   const bindGroupLayout = device.createBindGroupLayout({
     label: 'orbit-trail-bgl',
-    entries: [{ binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
-  });
-  const bindGroup = device.createBindGroup({
-    label: 'orbit-trail-bg',
-    layout: bindGroupLayout,
-    entries: [{ binding: 0, resource: { buffer: occluderBuffer } }],
+    entries: [
+      { binding: 0, visibility: GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },
+      { binding: 1, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'depth' } },
+    ],
   });
   const pipelineLayout = device.createPipelineLayout({
     label: 'orbit-trail-pipeline-layout',
@@ -151,6 +171,13 @@ export function createOrbitTrailRenderer(
   let instanceBuffer: GPUBuffer | null = null;
   let capacitySlots = 0;
 
+  // Keyed on the depth view it was built over: `depthViewOf('foreground:0')`
+  // hands back a NEW view once that row reallocates, and a bind group holding
+  // the destroyed texture is a validation error — on iOS a silently dropped
+  // frame. Identity, not size, is the key: it is the only thing that always
+  // changes on a reallocation. Hence built at the first draw, not here.
+  let bindGroup: { readonly depthView: GPUTextureView; readonly group: GPUBindGroup } | null = null;
+
   // ── draw ──────────────────────────────────────────────────────────────────
 
   function draw(
@@ -158,6 +185,8 @@ export function createOrbitTrailRenderer(
     instances: Float32Array,
     count: number,
     occluders: { readonly count: number; readonly spheresKm: Float32Array },
+    depthFrame: OrbitTrailDepthFrame | null,
+    depthView: GPUTextureView,
     showImpostor = false,
   ): void {
     // Zero is a whole-call no-op — no upload, no draw.
@@ -189,8 +218,25 @@ export function createOrbitTrailRenderer(
     const spheres = Math.min(occluders.count, MAX_ORBIT_OCCLUDERS);
     occluderCount[0] = spheres;
     occluderSpheres.set(occluders.spheresKm.subarray(0, spheres * 4));
+    occluderInvMvp.set(depthFrame === null ? IDENTITY_MAT4 : depthFrame.invMvp);
+    occluderCamPos.set(depthFrame === null ? [0, 0, 0] : depthFrame.camPosKm);
+    occluderViewport.set(instances.subarray(INSTANCE_VIEWPORT_FLOAT, INSTANCE_VIEWPORT_FLOAT + 2));
     device.queue.writeBuffer(occluderBuffer, 0, occluderScratch);
-    pass.setBindGroup(0, bindGroup);
+
+    if (bindGroup === null || bindGroup.depthView !== depthView) {
+      bindGroup = {
+        depthView,
+        group: device.createBindGroup({
+          label: 'orbit-trail-bg',
+          layout: bindGroupLayout,
+          entries: [
+            { binding: 0, resource: { buffer: occluderBuffer } },
+            { binding: 1, resource: depthView },
+          ],
+        }),
+      };
+    }
+    pass.setBindGroup(0, bindGroup.group);
 
     pass.setPipeline(ribbonPipeline);
     pass.draw(RIBBON_SEGMENTS * 6, count, 0, 0);

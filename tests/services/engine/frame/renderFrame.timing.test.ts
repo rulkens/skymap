@@ -169,6 +169,10 @@ function makeRenderTargets(views: Record<string, GPUTextureView>) {
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
+    // What a `{ sample }` step reads: no row here clears depth, so every
+    // sampling step gets the far-cleared placeholder.
+    depthViewOf: (id: string) => ({ __id: `${id}-depth-view` }) as unknown as GPUTextureView,
+    farDepthView: () => ({ __id: 'far-depth-view' }) as unknown as GPUTextureView,
     destroy: vi.fn(),
   };
 }

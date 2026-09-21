@@ -112,6 +112,9 @@ function makeFakeHdrView(): GPUTextureView {
   return { __id: 'hdr-view' } as unknown as GPUTextureView;
 }
 
+/** The 1×1 far-cleared depth every `{ sample }` step falls back to here. */
+const FAR_DEPTH_VIEW = { __id: 'far-depth-view' } as unknown as GPUTextureView;
+
 /**
  * Mock the offscreen render-target table. Executor + layers resolve views
  * via `viewOf(id)`; the backing `views` record is handed in by reference so
@@ -178,6 +181,10 @@ function makeMockRenderTargets(views: Record<string, GPUTextureView>) {
       if (!view) throw new Error(`mock renderTargets: no view for '${id}'`);
       return view;
     },
+    // What a `{ sample }` step reads: no row in this fixture clears depth, so
+    // every sampling step gets the far-cleared placeholder.
+    depthViewOf: (id: string) => ({ __id: `${id}-depth-view` }) as unknown as GPUTextureView,
+    farDepthView: () => FAR_DEPTH_VIEW,
     destroy: vi.fn(),
   } as any;
 }

@@ -12,6 +12,13 @@ const SEGMENTS: u32 = 96u;    // E-steps around the ribbon; 6 verts each
 const MARGIN_PX: f32 = 2.0;   // f32 vertex noise + per-vertex-normal slack ONLY (see Task 4)
 const MAX_OCCLUDERS: u32 = 16u; // occluder-sphere uniform capacity (fragment)
 
+// Scene-depth clearance tolerance, as a FRACTION of the trail point's own
+// distance: sceneRayDistance carries a metre-scale absolute error floor
+// ('lib/sceneDepthRay.wesl') and the trail point a projection error that both
+// grow with range, so an absolute tolerance would either crawl at the limb or
+// eat the near arc.
+const DEPTH_CLEARANCE_REL: f32 = 0.01;
+
 // Radians of eccentric anomaly E within TAU counted as "closed". Unrelated to
 // composeOrbitConic's epsW (a relative clip-w fraction) despite the same 1e-4.
 const CLOSED_SPAN_EPS: f32 = 1e-4;
