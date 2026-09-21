@@ -54,7 +54,7 @@ import {
   DEFAULT_TONE_MAP_CURVE,
 } from '../../../src/data/defaults';
 import { initialState as sgrAStarLensingTuningInitialState } from '../../../src/layers/body/state/sgrAStarLensingTuning/initialState';
-import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
+import { initialState as orbitTrailsInitialState } from '../../../src/state/settings/core/orbitTrails/initialState';
 import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
 import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
 import { initialState as volumesInitialState } from '../../../src/layers/volume/state/volumes/initialState';

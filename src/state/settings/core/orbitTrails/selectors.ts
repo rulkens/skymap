@@ -1,6 +1,6 @@
 import { createSelector } from '@reduxjs/toolkit';
 
-import { selectSettings } from '../../../../state/settings/selectSettings';
+import { selectSettings } from '../../selectSettings';
 import type { OrbitTrailsSettings } from '../../../../@types/settings/OrbitTrailsSettings';
 
 /** The one root hop for this slice, spelled `selectRoute` in every slice. */
