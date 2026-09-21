@@ -243,7 +243,7 @@ export const FRAME_ORDER: readonly FrameStepSpec[] = [
     kind: 'render',
     target: 'foreground:0',
     slab: 'insideAtmosphere',
-    depth: 'sample',
+    depth: { sample: 'foreground:0' },
     passes: ['aerial-perspective'],
     slot: 'AERIAL',
   },

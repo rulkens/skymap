@@ -1,10 +1,10 @@
 /**
  * aerialPerspectivePass — the inside-the-shell sibling of `atmosphere-shell`:
  * exactly one of the two draws per body per frame, or the in-scatter doubles.
- * Its `FRAME_ORDER` line declares `depth: 'sample'` and it hands the renderer
- * `foreground:0`'s depth as a texture instead (why: the apply fragment's
- * binding 8), which is what lets the fog key on scene distance rather than the
- * analytic ground sphere alone. Argued elsewhere: this row's order in
+ * Its `FRAME_ORDER` line samples `foreground:0`'s depth and it hands the
+ * renderer that texture (`view.sampledDepth`, the apply fragment's binding 8),
+ * which is what lets the fog key on scene distance rather than the analytic
+ * ground sphere alone. Argued elsewhere: this row's order in
  * `frameOrder.ts`, the march in `aerialPerspectiveRenderer`, the uniform record
  * in `atmosphereShellUniforms`.
  */
@@ -34,7 +34,7 @@ export const aerialPerspectivePass: ContentPass = {
       pass,
       entry.body.id,
       atmosphereShellUniforms(entry, view.slab, ctx, state),
-      ctx.renderTargets.depthViewOf('foreground:0'),
+      view.sampledDepth!.view,
     );
   },
 };
