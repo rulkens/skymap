@@ -1,8 +1,8 @@
 // atmosphere/aerialPerspective/bake.wesl — the per-frame camera-local aerial
-// bake. One invocation per (x, y) screen texel marches that pixel's view ray to
-// its end, storing the running in-scatter + throughput at every slice and the
-// whole ray in the last: the RELIEF FLOOR when the ray hits one, else its
-// PERIGEE — a limb ray's only terrain sits near its closest approach, not the top.
+// bake. One invocation per (x, y) screen texel marches that pixel's view ray
+// through the slices, storing the running in-scatter + throughput at each;
+// past the last slice the apply reads the shell instead (task 13), so the
+// volume never holds a column-dependent total.
 
 import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceStartKm;
 import package::atmosphere::scattering::ScatteringParams;
@@ -37,22 +37,13 @@ const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 // samples wide rather than one.
 const SUB_STEPS: u32 = 4u;
 
-// The remainder crosses air the slices already proved thin, so it takes half a
-// slice per step — a quarter of the in-volume sampling rate.
-const REMAINDER_STEP_SLICES: f32 = 0.5;
-
-// 1024 half-slices is 2048 km at 4 km slices; only a ray near-tangent at the
-// top of the shell runs longer, and it keeps the totals it has.
-const MAX_REMAINDER_STEPS: u32 = 1024u;
-
 // The running totals along one ray.
 struct March {
   inScatter: vec3<f32>,
   throughput: vec3<f32>,
 };
 
-// One quadrature sample over [t0Km, t1Km]. The slices and the remainder past
-// them fold through this, so the two step sizes cannot integrate differently.
+// One quadrature sample over [t0Km, t1Km], run once per sub-step of a slice.
 fn marchSegment(
   state: March, originKm: vec3<f32>, dir: vec3<f32>, cosTheta: f32,
   t0Km: f32, t1Km: f32,
@@ -126,43 +117,5 @@ fn cs(@builtin(global_invocation_id) gid: vec3<u32>) {
     textureStore(outInScatter, texel, vec4<f32>(march.inScatter, 1.0));
     textureStore(outTransmittance, texel, vec4<f32>(march.throughput, 1.0));
     i = i + 1u;
-  }
-
-  // The last texel is where the apply's clamped lookup lands, so it carries the
-  // rest of the ray: from tens of km up, a ray toward the horizon crosses the
-  // slices in thin air and only meets the dense layer near its ground hit.
-  let lastSlice = dims.z - 1u;
-  let boundKm = froxelSliceStartKm(dims.z, u.froxelSliceKm);
-  if (endKm > boundKm) {
-    // A ray with no floor ahead only has a terrain pixel in the relief band
-    // around its PERIGEE (the ray's closest approach to the planet centre, at
-    // 't = -dot(camPosLocal, dir)' in this camera-local, planet-centred frame):
-    // marching on to the top exit hands that pixel its floor-hitting neighbour's
-    // whole limb chord instead — the same approximation the shell makes
-    // clamping a band ray to the sky-view LUT's horizon row. Only a perigee
-    // already past the baked slices moves the end; low-altitude perigees (a
-    // rover's horizon) keep today's top-exit remainder untouched.
-    var remainderEndKm = endKm;
-    if (ground.x <= 0.0) {
-      let perigeeKm = -dot(u.camPosLocal, dir) * kmPerLocal;
-      if (perigeeKm > boundKm) {
-        remainderEndKm = perigeeKm;
-      }
-    }
-
-    let stepKm = u.froxelSliceKm * REMAINDER_STEP_SLICES;
-    var t0 = boundKm;
-    var k: u32 = 0u;
-    loop {
-      if (k >= MAX_REMAINDER_STEPS || t0 >= remainderEndKm) { break; }
-      let t1 = min(t0 + stepKm, remainderEndKm);
-      march = marchSegment(march, originKm, dir, cosTheta, t0, t1);
-      t0 = t1;
-      k = k + 1u;
-    }
-
-    let texel = vec3<u32>(gid.x, gid.y, lastSlice);
-    textureStore(outInScatter, texel, vec4<f32>(march.inScatter, 1.0));
-    textureStore(outTransmittance, texel, vec4<f32>(march.throughput, 1.0));
   }
 }

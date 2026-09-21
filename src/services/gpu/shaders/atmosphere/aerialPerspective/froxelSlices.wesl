@@ -15,9 +15,10 @@ struct FroxelCoord {
 
 // Texel i holds the march over [0, (i + 1) * sliceKm], so it sits at continuous
 // index 'f = distanceKm / sliceKm - 1' and a linear sampler lerps between two
-// slices. Past the last, 'w' clamps onto it, where the bake put the whole ray.
-// 'identityMix' is how much of the no-medium identity (zero in-scatter, unit
-// transmittance) the caller mixes in: no texel covers below one slice.
+// slices. Past the last, 'w' clamps onto it; the apply never reads past the
+// bound (it hands those pixels to the shell instead), so the clamp is only a
+// guard. 'identityMix' is how much of the no-medium identity (zero in-scatter,
+// unit transmittance) the caller mixes in: no texel covers below one slice.
 fn froxelCoord(distanceKm: f32, sliceKm: f32, sliceCount: u32) -> FroxelCoord {
   let n = f32(sliceCount);
   let f = distanceKm / sliceKm - 1.0;

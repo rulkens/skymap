@@ -9,9 +9,11 @@
 // without being imported ('skyViewLut') fails 'unresolved identifier' — hence
 // the by-name imports of 'u' and 'lutSamp'.
 import package::atmosphere::aerialPerspective::froxelSlices::froxelCoord;
+import package::atmosphere::aerialPerspective::froxelSlices::froxelSliceStartKm;
 import package::atmosphere::scattering::ScatteringParams;
 import package::atmosphere::shell::fragment::lutSamp;
 import package::atmosphere::shell::fragment::sampleShellRay;
+import package::atmosphere::shell::fragment::sampleShellSegment;
 import package::atmosphere::shell::fragment::u;
 import package::lib::fullscreenTri::FullscreenOut;
 import package::lib::fullscreenTri::fullscreenVertex;
@@ -62,16 +64,21 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
     return out;
   }
 
-  // GEOMETRY — depth beyond the atmosphere top (the Moon rising at the limb, a
-  // mesh in orbit) takes the SKY answer, not the froxel volume: past the top
-  // there is no medium, so that body sees the same integral as the sky beside
-  // it. Without this, the bake's floor-missing remainder (task 12) would hand
-  // it a perigee-stopped, half-length march instead. The froxel branch below
-  // only ever runs for 'tEnd < top.y'.
+  // GEOMETRY past the froxel far bound (or past the atmosphere top): the
+  // volume is 32x32 texels across the screen, so a column-dependent total
+  // there would blend across the limb silhouette (task 13). The shell's
+  // segment is per pixel and is what the outside limb already draws, so
+  // handing it this ray renders the inside limb like the outside one — its
+  // in-scatter is the sky-view LUT's whole-ray answer, its transmittance is to
+  // the pixel's own depth ('skyUv' in shell/fragment.wesl). 'tNear' is 0
+  // inside the shell, so the segment's front-body discard never fires here.
+  // The froxel branch below only ever runs for 'tEndKm < boundKm'.
   let tEnd = sceneRayDistance(in.uv, depth, u.invMvp, u.camPosLocal);
   let top = raySphere(u.camPosLocal, dir, PLANET_CENTER, 1.0);
-  if (top.y >= 0.0 && tEnd >= top.y) {
-    let s = sampleShellRay(dir);
+  let tEndKm = tEnd * params.atmosphereTopKm;
+  let boundKm = froxelSliceStartKm(textureDimensions(froxelInScatter).z, u.froxelSliceKm);
+  if (tEndKm >= boundKm || tEnd >= top.y) {
+    let s = sampleShellSegment(dir, tEnd, true);
     out.transmit = vec4<f32>(s.transmit, 1.0);
     out.emission = vec4<f32>(s.emission, 0.0);
     out.hit = s.hit;
@@ -81,8 +88,7 @@ fn aerialSample(in: FullscreenOut) -> AerialSample {
   // The shell frame puts the atmosphere TOP at radius 1 and the volume is
   // indexed in km, so 'atmosphereTopKm' is the one scale between them. Below
   // one slice no texel exists, and 'identityMix' fades back to no medium.
-  let c = froxelCoord(tEnd * params.atmosphereTopKm, u.froxelSliceKm,
-                      textureDimensions(froxelInScatter).z);
+  let c = froxelCoord(tEndKm, u.froxelSliceKm, textureDimensions(froxelInScatter).z);
   let p = vec3<f32>(in.uv, c.w);
   let inScatter =
     mix(textureSampleLevel(froxelInScatter, lutSamp, p, 0.0).rgb, vec3<f32>(0.0), c.identityMix);

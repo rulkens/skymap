@@ -373,7 +373,8 @@ cover every other body.
 `src/services/engine/frame/frameOrder.ts:235-241`.
 
 - [ ] `docs/RENDERER.md`: one paragraph after the sampled-depth sentence: the aerial bake compute
-      row (volume pair, 4 km slices, the last carrying the ray's remainder, why the bake owns the shell
+      row (volume pair, 4 km slices, past the last the apply reads the outside shell's segment
+      answer, why the bake owns the shell
       record write) and the
       two sampled-depth consumers (aerial apply, orbit trails). No history.
 - [ ] `frameOrder.ts:235-241`: the aerial-line comment no longer mentions a march; say the volume was
