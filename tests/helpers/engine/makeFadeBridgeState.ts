@@ -9,7 +9,7 @@ import { vi } from 'vitest';
 
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
-import { BODY_IDS } from '../../fixtures/bodyIds';
+import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { FADE_LAYERS } from '../../../src/services/engine/wiring/fadeLayers';
 import { filamentsFadeRows } from '../../../src/layers/filaments/present/filamentsFadeRows';

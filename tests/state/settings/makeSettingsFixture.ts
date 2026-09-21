@@ -28,7 +28,7 @@
 import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
-import { BODY_IDS } from '../../fixtures/bodyIds';
+import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import { STRUCTURE_IDS } from '../../../src/data/structure/structureIds';
 import { seedVolumeFields } from '../../../src/data/volume/volumeFieldDefaults';
 import {

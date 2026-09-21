@@ -12,7 +12,7 @@
  * a single bit flip it off that baseline.
  */
 
-import { BODY_IDS } from './bodyIds';
+import { BODY_IDS } from '../../src/data/bodies/bodyIds';
 
 import type { BodyItemSettings } from '../../src/@types/settings/BodyItemSettings';
 

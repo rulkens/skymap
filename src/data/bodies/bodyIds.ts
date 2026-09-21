@@ -1,4 +1,4 @@
-import { SOURCE_ENTRIES } from '../../src/data/sourceEntries';
+import { SOURCE_ENTRIES } from '../sourceEntries';
 
 /**
  * BODY_IDS — the body-only id list, the tight key domain for
