@@ -1,4 +1,3 @@
-// src/components/ViewOverlay/ViewOverlay.tsx
 /**
  * ViewOverlay — "notes on the scene": a full-screen takeover for a curated
  * view (spec §4.2), sibling to TourOverlay under the same `runTakeover`

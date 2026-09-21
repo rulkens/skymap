@@ -1,4 +1,3 @@
-// src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx
 /**
  * Zone of Avoidance tuning subsection; look knobs from `ZONE_OF_AVOIDANCE_SLIDER_FIELDS`.
  * Color pickers (LINEAR RGB values) convert via sRGB↔linear for the widget.

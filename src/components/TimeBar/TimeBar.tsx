@@ -1,4 +1,3 @@
-// src/components/TimeBar/TimeBar.tsx
 /**
  * TimeBar — the sim clock's transport instrument.
  *
@@ -235,12 +234,7 @@ function TimeBar({
             {/* A disabled stepper renders bare (no CompactInfoTip) so its hint
                 can't surface at the ladder end — see the module header. */}
             {slowerDisabled ? (
-              <Button
-                className={styles.step}
-                {...slowerHold}
-                disabled
-                aria-label="Slower"
-              >
+              <Button className={styles.step} {...slowerHold} disabled aria-label="Slower">
                 <span aria-hidden="true">‹</span>
               </Button>
             ) : (
@@ -263,12 +257,7 @@ function TimeBar({
             </CompactInfoTip>
 
             {fasterDisabled ? (
-              <Button
-                className={styles.step}
-                {...fasterHold}
-                disabled
-                aria-label="Faster"
-              >
+              <Button className={styles.step} {...fasterHold} disabled aria-label="Faster">
                 <span aria-hidden="true">›</span>
               </Button>
             ) : (

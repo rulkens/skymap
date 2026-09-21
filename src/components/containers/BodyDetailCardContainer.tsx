@@ -1,4 +1,3 @@
-// src/components/containers/BodyDetailCardContainer.tsx
 /**
  * BodyDetailCardContainer — store boundary for the focused-body detail card.
  *

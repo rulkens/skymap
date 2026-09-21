@@ -1,4 +1,3 @@
-// src/components/containers/CommandPaletteContainer.tsx
 /**
  * CommandPaletteContainer — store boundary for the command palette: the
  * famous/alias/structure index reads, the `paletteOpen`/`paletteTab` slice

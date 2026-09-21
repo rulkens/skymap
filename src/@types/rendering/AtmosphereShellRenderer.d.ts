@@ -102,11 +102,7 @@ export type AtmosphereShellRenderer = Renderer & {
    *           alongside `twilightSoftness`, likewise sourced from the body's
    *           `AtmosphereParams` row.
    */
-  dispatchSkyView(
-    pass: GPUComputePassEncoder,
-    bodyId: string,
-    skyViewUniforms: Float32Array,
-  ): void;
+  dispatchSkyView(pass: GPUComputePassEncoder, bodyId: string, skyViewUniforms: Float32Array): void;
 
   /**
    * Upload the host body's ring-alpha strip and rebind it at the shell's

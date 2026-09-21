@@ -1,4 +1,3 @@
-// src/layers/flow/ui/FlowSectionContainer.tsx
 /**
  * FlowSectionContainer — store boundary for the Flow settings section.
  *

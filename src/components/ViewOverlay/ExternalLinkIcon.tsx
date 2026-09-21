@@ -1,4 +1,3 @@
-// src/components/ViewOverlay/ExternalLinkIcon.tsx
 /**
  * ExternalLinkIcon — the arrow-out-of-box glyph trailing a source title, so a
  * link that leaves the app reads as one before it is clicked. Inherits

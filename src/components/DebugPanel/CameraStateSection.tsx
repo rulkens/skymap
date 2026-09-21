@@ -1,4 +1,3 @@
-// src/components/DebugPanel/CameraStateSection.tsx
 /**
  * CameraStateSection — the camera-pivot readout, organised by the question it
  * answers (grill 2026-09-10): who is driving (header), is each DOF where it

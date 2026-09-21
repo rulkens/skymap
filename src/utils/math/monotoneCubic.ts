@@ -25,10 +25,7 @@
  * SIAM J. Numer. Anal. 17 (1980).
  */
 
-export function monotoneCubic(
-  xs: readonly number[],
-  ys: readonly number[],
-): (x: number) => number {
+export function monotoneCubic(xs: readonly number[], ys: readonly number[]): (x: number) => number {
   const n = xs.length;
 
   // Secant slopes between consecutive knots.

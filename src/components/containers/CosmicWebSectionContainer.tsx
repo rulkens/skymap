@@ -1,4 +1,3 @@
-// src/components/containers/CosmicWebSectionContainer.tsx
 /**
  * CosmicWebSectionContainer — store boundary for the Cosmic web settings section.
  *

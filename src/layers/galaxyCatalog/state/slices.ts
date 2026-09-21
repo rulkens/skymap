@@ -10,4 +10,8 @@ import { biasSlice } from './bias/slice';
 import { galaxyCatalogsSlice } from './galaxyCatalogs/slice';
 import { thumbnailsSlice } from './thumbnails/slice';
 
-export const galaxyCatalogLayerSettings = [galaxyCatalogsSlice, biasSlice, thumbnailsSlice] as const;
+export const galaxyCatalogLayerSettings = [
+  galaxyCatalogsSlice,
+  biasSlice,
+  thumbnailsSlice,
+] as const;

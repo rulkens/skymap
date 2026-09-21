@@ -1,4 +1,3 @@
-// src/components/DebugPanel/SgrAStarLensingTuningSection.tsx
 /**
  * Sgr A* lens pass tuning subsection (see `SgrAStarLensingTuning`'s own
  * docblock). Structural precedent: `src/layers/zoneOfAvoidance/ui/ZoneOfAvoidanceTuningSection.tsx`.

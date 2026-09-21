@@ -1,4 +1,3 @@
-// src/components/ViewOverlay/ViewNoteSection.tsx
 /**
  * ViewNoteSection — one block of a view's notes column, drawn per `kind`
  * (spec §4.2). The four kinds are structurally different, so each gets its own

@@ -165,7 +165,14 @@ describe('composeOrbitConic — visible arc', () => {
     // every orbit point sits behind the eye along the view direction.
     const eye: Vec3 = [C[0] + 5 * A[0], C[1] + 5 * A[1], C[2] + 5 * A[2]];
     const target: Vec3 = [eye[0] + A[0], eye[1] + A[1], eye[2] + A[2]];
-    const { arc } = composeOrbitConic(perspectiveLookAt(eye, target), C, A, B, viewportPx, renderOrigin);
+    const { arc } = composeOrbitConic(
+      perspectiveLookAt(eye, target),
+      C,
+      A,
+      B,
+      viewportPx,
+      renderOrigin,
+    );
     expect(arc[1]).toBe(0);
   });
 
@@ -207,4 +214,3 @@ describe('composeOrbitConic — visible arc', () => {
     expect(wAt(clipBasis, eStart + eSpan + delta)).toBeLessThanOrEqual(0);
   });
 });
-

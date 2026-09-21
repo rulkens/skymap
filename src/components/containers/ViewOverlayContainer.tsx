@@ -1,4 +1,3 @@
-// src/components/containers/ViewOverlayContainer.tsx
 /**
  * ViewOverlayContainer — store boundary for the view overlay.
  *

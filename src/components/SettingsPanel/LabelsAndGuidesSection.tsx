@@ -1,4 +1,3 @@
-// src/components/SettingsPanel/LabelsAndGuidesSection.tsx
 /**
  * LabelsAndGuidesSection — presentational component for the Labels & Guides
  * thematic group inside the SettingsPanel.

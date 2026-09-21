@@ -1,4 +1,3 @@
-// src/components/DebugPanel/DebugOverlayToggles.tsx
 /**
  * DebugOverlayToggles — the labelled checkbox rows for a slice of
  * `DEBUG_OVERLAY_ROWS`. Every `section` value routes its rows to a different

@@ -1,4 +1,3 @@
-// src/components/TourOverlay/TourNav.tsx
 /**
  * TourNav — the centered navigation cluster at bottom-center: prev, the
  * pause button wrapping a live dwell-countdown ring, the stop button, and

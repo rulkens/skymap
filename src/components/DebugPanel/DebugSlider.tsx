@@ -1,4 +1,3 @@
-// src/components/DebugPanel/DebugSlider.tsx
 /**
  * DebugSlider — one labelled range row for a DebugPanel tuning section.
  *

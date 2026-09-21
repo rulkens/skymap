@@ -1,4 +1,3 @@
-// src/layers/flow/ui/FlowSection.tsx
 /**
  * FlowSection — presentational component for the CF4++ flow-field overlay
  * section inside the SettingsPanel.
