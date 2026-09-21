@@ -18,7 +18,6 @@ import type { Renderer } from '../../../../@types/rendering/Renderer';
 import type { AtmosphereShellDepth } from '../../../../@types/rendering/AtmosphereShellDepth';
 import type { AtmosphereShellRenderer } from '../../../../@types/rendering/AtmosphereShellRenderer';
 import type { AtmosphereParams } from '../../../../@types/scene/AtmosphereParams';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 import { uvSphereMesh } from '../../../../utils/math/uvSphereMesh';
 import { ATMOSPHERE_UNIFORM_FLOATS } from '../../../../utils/gpu/packAtmosphereUniforms';
 import {
@@ -82,14 +81,6 @@ export const SHELL_DEPTH_CAM_POS_OFFSET = 64; // mat4x4<f32>
 export const SHELL_DEPTH_VIEWPORT_OFFSET = 80;
 export const SHELL_DEPTH_KM_TO_LOCAL_OFFSET = 88;
 export const SHELL_DEPTH_UNIFORM_BYTES = 96;
-
-/** Column-major identity, packed when the caller hands a null depth frame —
- *  always alongside the far-cleared placeholder view, so the shader's
- *  `FAR_DEPTH` arm is what keeps this matrix from ever being read. */
-const IDENTITY_MAT4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-
-/** Its companion for that same draw, hoisted so a null frame allocates nothing. */
-const ZERO_VEC3: Vec3 = [0, 0, 0];
 
 /** Ceil-divide a LUT dimension into 8×8 workgroups. */
 function dispatchCount(px: number): number {
@@ -706,8 +697,12 @@ export function createAtmosphereShellRenderer(
     // shared buffer for a later body's write to race (see the module header).
     const bundle = bundleFor(bodyId);
     device.queue.writeBuffer(bundle.shellUniformBuffer, 0, uniforms);
-    depthInvMvp.set(depth.frame === null ? IDENTITY_MAT4 : depth.frame.invMvp);
-    depthCamPosKm.set(depth.frame === null ? ZERO_VEC3 : depth.frame.camPosKm);
+    // A null frame always arrives with the far-cleared placeholder view, so
+    // the fragment's FAR_DEPTH arm never reads invMvp/camPosKm — skip them.
+    if (depth.frame !== null) {
+      depthInvMvp.set(depth.frame.invMvp);
+      depthCamPosKm.set(depth.frame.camPosKm);
+    }
     depthViewportPx.set(depth.viewportPx);
     depthKmToLocal[0] = depth.kmToLocal;
     device.queue.writeBuffer(bundle.depthFrameBuffer, 0, depthScratch);

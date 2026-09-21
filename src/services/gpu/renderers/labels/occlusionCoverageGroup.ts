@@ -36,7 +36,6 @@
 import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
 import type { SampledDepthKmFrame } from '../../../../@types/rendering/SampledDepthKmFrame';
 import type { Vec2 } from '../../../../@types/math/Vec2';
-import type { Vec3 } from '../../../../@types/math/Vec3';
 
 // The group index the overlay pipelines bind this joint at. Named once here
 // so the TS `setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, ...)` and the WESL
@@ -86,14 +85,6 @@ export const OCCLUSION_DEPTH_CAM_POS_OFFSET = 64; // mat4x4<f32>
 export const OCCLUSION_DEPTH_VIEWPORT_OFFSET = 80;
 export const OCCLUSION_DEPTH_UNIFORM_BYTES = 96;
 
-/** Column-major identity, packed alongside the far-cleared placeholder view
- *  when the frame is unresolved — the shader's FAR_DEPTH arm never reads it. */
-const IDENTITY_MAT4 = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-
-/** Its companion for the same unresolved-frame draw, hoisted so that draw
- *  allocates nothing. */
-const ZERO_VEC3: Vec3 = [0, 0, 0];
-
 // One scratch for all three overlay renderers: `writeBuffer` copies at call
 // time, so nothing outlives the call that filled it.
 const frameScratch = new ArrayBuffer(OCCLUSION_DEPTH_UNIFORM_BYTES);
@@ -101,16 +92,19 @@ const frameInvMvp = new Float32Array(frameScratch, OCCLUSION_DEPTH_INV_MVP_OFFSE
 const frameCamPosKm = new Float32Array(frameScratch, OCCLUSION_DEPTH_CAM_POS_OFFSET, 3);
 const frameViewportPx = new Float32Array(frameScratch, OCCLUSION_DEPTH_VIEWPORT_OFFSET, 2);
 
-/** Upload the binding-2 record. A null frame zeroes the camera and packs the
- *  identity, which pairs only with the far-cleared placeholder view. */
+/** Upload the binding-2 record. A null frame always arrives with the
+ *  far-cleared placeholder view, so the shader never reads invMvp/camPosKm
+ *  in that case — skip writing them rather than fill in an unread value. */
 export function writeOcclusionDepthFrame(
   device: GPUDevice,
   buffer: GPUBuffer,
   frame: SampledDepthKmFrame | null,
   viewportPx: Readonly<Vec2>,
 ): void {
-  frameInvMvp.set(frame === null ? IDENTITY_MAT4 : frame.invMvp);
-  frameCamPosKm.set(frame === null ? ZERO_VEC3 : frame.camPosKm);
+  if (frame !== null) {
+    frameInvMvp.set(frame.invMvp);
+    frameCamPosKm.set(frame.camPosKm);
+  }
   frameViewportPx.set(viewportPx);
   device.queue.writeBuffer(buffer, 0, frameScratch);
 }
