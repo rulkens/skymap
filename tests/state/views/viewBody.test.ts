@@ -105,6 +105,51 @@ describe('viewBody', () => {
     expect(store.getState().settings.flow.enabled).toBe(true);
   });
 
+  it('drifts during the hold and hands the spin back on exit', async () => {
+    // `camera.autoRotate` is NOT in runTakeover's scene snapshot, so a leak
+    // here leaves the viewer's camera turning for the rest of the session.
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { store, sagaMiddleware } = buildStore(playClip);
+    const before = store.getState().camera.autoRotate;
+    expect(before.active).toBe(false);
+
+    sagaMiddleware.run(function* () {
+      yield* viewBody(VIEW);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+
+    const held = store.getState().camera.autoRotate;
+    expect(held.active).toBe(true);
+    // Slower than the slice default, or it is a spin the viewer asked for
+    // rather than the view's own ambient drift.
+    expect(held.rate).toBeLessThan(before.rate);
+    expect(held.rate).toBeGreaterThan(0);
+
+    store.dispatch(exitTakeover());
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(store.getState().camera.autoRotate).toEqual(before);
+  });
+
+  it('hands the spin back when the takeover is superseded mid-hold', async () => {
+    // Supersede cancels the body from outside rather than dispatching
+    // exitTakeover — the restore rides a `finally` so both paths wind back.
+    const playClip = vi.fn<(clip: ClipData) => Promise<void>>().mockResolvedValue(undefined);
+    const { store, sagaMiddleware } = buildStore(playClip);
+    const before = store.getState().camera.autoRotate;
+
+    const task = sagaMiddleware.run(function* () {
+      yield* viewBody(VIEW);
+    });
+    await new Promise((r) => setTimeout(r, 0));
+    expect(store.getState().camera.autoRotate.active).toBe(true);
+
+    task.cancel();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(store.getState().camera.autoRotate).toEqual(before);
+  });
+
   it('exits during the fly-in without waiting for it to land', async () => {
     // The fly never lands — against the sequential shape, `viewBody` would be
     // stuck inside `yield* call(playClip, ...)` forever, and the exitTakeover
