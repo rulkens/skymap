@@ -41,7 +41,7 @@ import ZoneOfAvoidanceDetailCard from './ZoneOfAvoidanceDetailCard/ZoneOfAvoidan
 import CompactZoneOfAvoidanceCard from './CompactZoneOfAvoidanceCard/CompactZoneOfAvoidanceCard';
 
 /** Props InfoCard passes to a detail-card variant, identical across arms. */
-export type DetailCardProps = {
+type DetailCardProps = {
   target: FocusableTarget;
   pinned: boolean;
   /**
@@ -60,9 +60,9 @@ export type DetailCardProps = {
 };
 
 /** Props InfoCard passes to a compact (hover-preview) variant. */
-export type CompactCardProps = { target: FocusableTarget };
+type CompactCardProps = { target: FocusableTarget };
 
-export type DetailCardEntry = {
+type DetailCardEntry = {
   readonly Detail: (props: DetailCardProps) => ReactNode;
   readonly Compact: (props: CompactCardProps) => ReactNode;
 };

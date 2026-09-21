@@ -30,9 +30,9 @@ import { deriveDustHeaderLanes } from '../field/deriveDustHeaderLanes';
 import { packFieldSlices } from '../field/packFieldSlices';
 import { packHiiSlices } from '../field/packHiiSlices';
 import { computeDigVeilBudget } from '../ismMap/computeDigVeilBudget';
-import type { DigVeilBudget } from '../ismMap/computeDigVeilBudget';
+import type { DigVeilBudget } from '../../../../../@types/galaxy/DigVeilBudget';
 import { computePlaceDustBudget } from '../ismMap/computePlaceDustBudget';
-import type { PlaceDustBudget } from '../ismMap/computePlaceDustBudget';
+import type { PlaceDustBudget } from '../../../../../@types/galaxy/PlaceDustBudget';
 
 export function createGalaxyFieldModel(deps: {
   readonly input: () => GalaxyFieldMixtureInput;

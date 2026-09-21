@@ -41,7 +41,7 @@ const SGR_A_STAR_R0_MPC = Math.hypot(...SGR_A_STAR_ANCHOR.positionMpc);
 const BACKDROP_FULL_AT_EXTENT_MULTIPLE = 2;
 const BACKDROP_GONE_AT_EXTENT_MULTIPLE = 10;
 
-export const backdropBand = (regionExtentMpc: number): FadeBand => ({
+const backdropBand = (regionExtentMpc: number): FadeBand => ({
   fullAt: regionExtentMpc * BACKDROP_FULL_AT_EXTENT_MULTIPLE,
   goneAt: regionExtentMpc * BACKDROP_GONE_AT_EXTENT_MULTIPLE,
 });

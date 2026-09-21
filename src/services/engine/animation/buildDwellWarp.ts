@@ -53,7 +53,7 @@
 
 import { smoothstep } from '../../../utils/math/smoothstep';
 
-export type DwellWarp = {
+type DwellWarp = {
   /** Wall-clock length of the dwelled take (`over` when there is no dwell). */
   readonly totalSec: number;
   /** Map a wall-clock second to its base (cruise) time in `[0, over]`. */

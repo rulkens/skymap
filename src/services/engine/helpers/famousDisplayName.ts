@@ -24,7 +24,7 @@
  * consume `FamousEntry`) can pass their own seed shape too.
  */
 
-export type FamousNamedEntry = {
+type FamousNamedEntry = {
   readonly id: string;
   readonly names: readonly string[];
   readonly commonName?: string;

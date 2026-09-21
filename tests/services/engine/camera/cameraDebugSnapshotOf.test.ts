@@ -7,17 +7,17 @@
 
 import { describe, it, expect } from 'vitest';
 
-import { cameraDebugSnapshotOf } from '../../../src/utils/camera/cameraDebugSnapshotOf';
-import { SCALE_UNITS } from '../../../src/data/scaleUnits';
-import { DEFAULT_CAMERA_TUNING } from '../../../src/data/camera/cameraTuning';
-import type { BodyFixedPose } from '../../../src/@types/camera/BodyFixedPose';
-import type { BodyId } from '../../../src/@types/data/body/BodyId';
-import type { BodyState } from '../../../src/@types/scene/BodyState';
-import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
-import type { Mat3 } from '../../../src/@types/math/Mat3';
-import type { TimeState } from '../../../src/@types/time/TimeState';
-import type { Vec3 } from '../../../src/@types/math/Vec3';
+import { cameraDebugSnapshotOf } from '../../../../src/services/engine/camera/cameraDebugSnapshotOf';
+import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
+import { DEFAULT_CAMERA_TUNING } from '../../../../src/data/camera/cameraTuning';
+import type { BodyFixedPose } from '../../../../src/@types/camera/BodyFixedPose';
+import type { BodyId } from '../../../../src/@types/data/body/BodyId';
+import type { BodyState } from '../../../../src/@types/scene/BodyState';
+import type { CameraPose } from '../../../../src/@types/camera/CameraPose';
+import type { FramedCameraPose } from '../../../../src/@types/camera/FramedCameraPose';
+import type { Mat3 } from '../../../../src/@types/math/Mat3';
+import type { TimeState } from '../../../../src/@types/time/TimeState';
+import type { Vec3 } from '../../../../src/@types/math/Vec3';
 
 const EARTH_RADIUS_M = 6371000;
 const MOON_RADIUS_M = 1737000;

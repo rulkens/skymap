@@ -17,7 +17,7 @@ import { CUBEMAP_CAPTURES } from '../../../../src/data/rendering/cubemapCaptures
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
 import { multiply3x3 } from '../../../../src/utils/math/multiply3x3';
 import { rotXMat3 } from '../../../../src/utils/math/rotXMat3';
-import { rotYMat3 } from '../../../../src/utils/math/rotYMat3';
+import { rotYMat3 } from '../../../helpers/camera/rotYMat3';
 import { rotateVec3ByTightMat3 } from '../../../../src/utils/math/rotateVec3ByTightMat3';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { CameraPose } from '../../../../src/@types/camera/CameraPose';

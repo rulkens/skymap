@@ -18,7 +18,7 @@ import type { SceneBody } from '../../@types/scene/SceneBody';
  * "milky way", "galaxy", or "home" all surface the command.  The first is
  * what renders in the row.
  */
-export const MILKY_WAY_PRIMARY_NAME = 'Milky Way';
+const MILKY_WAY_PRIMARY_NAME = 'Milky Way';
 // `as const` (readonly tuple, not `readonly string[]`) so `MILKY_WAY_NAMES[0]`
 // and `[0][0]` are `string` under `noUncheckedIndexedAccess` — the row view
 // indexes them directly.
