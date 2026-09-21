@@ -19,7 +19,7 @@ import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { SCENE_EARTH } from '../../../src/data/bodies/sceneEarth';
 import { makeSlab } from '../../fixtures/makeSlab';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../src/@types/engine/frame/SlabView';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { Vec3 } from '../../../src/@types/math/Vec3';
@@ -37,7 +37,7 @@ const EARTH_VIEW: SlabView = {
 /** A ctx whose camera sits `distanceMpc` from the origin, looking at Earth, with
  *  a real `bodyPose` (mirrors `frameContext.ts`'s own construction) so
  *  `prepareBodySurfaceFrame`'s pose lookup resolves for real rather than by mock. */
-function makeCtx(distanceMpc: number): ReadyFrameContext {
+function makeCtx(distanceMpc: number): FrameView {
   const camPosMpc: Vec3 = [
     EARTH_STATE.positionMpc[0] + 1e-13,
     EARTH_STATE.positionMpc[1],
@@ -51,13 +51,14 @@ function makeCtx(distanceMpc: number): ReadyFrameContext {
   const { right, up } = imagePlaneBasis(camForward, 0, frameUp(undefined));
   const camBasisWorld = mat3FromColumns(right, up, camForward);
   return {
+    snapshot: { simDays: CONST_J2000 },
     cam: { distance: distanceMpc, position: camPosMpc, target: EARTH_STATE.positionMpc },
     drawCamPos: camPosMpc,
     bodyPose: (bodyId: BodyId) =>
       bodyId === 'earth'
         ? bodyRelativePose({ camPosMpc, camBasisWorld, bodyState: EARTH_STATE })
         : null,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 /** State with Earth's catalog data seeded, `earthRenderer` deliberately

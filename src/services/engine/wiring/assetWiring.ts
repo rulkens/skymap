@@ -17,7 +17,6 @@ import { createStructureCatalogSlot } from '../../loading/slots/structureCatalog
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createPolyphorm2MrsSlot } from '../../loading/slots/polyphorm2MrsSlot';
 import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
-import { createConstellationsSlot } from '../../loading/slots/constellationsSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
 import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
@@ -244,16 +243,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     req: () => undefined,
     demand: (ctx) => ctx.settings.volumes.items[MCPM_WORKBENCH_FIELD]?.enabled === true,
     priority: 82, // same rung as cf4Density/polyphorm2Mrs; default-off, so it rarely competes at boot
-  },
-
-  // ── Constellation stick-figure overlay ───────────────────────────
-  // Master-gate demand, per the singleton-overlay convention.
-  {
-    key: 'constellations',
-    factory: (deps) => createConstellationsSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: (ctx) => ctx.settings.constellations.enabled,
-    priority: 31, // small JSON on the near-sky rung, right behind the marker catalog
   },
 
   // ── Cluster/supercluster bulk coverage ───────────────────────────

@@ -48,11 +48,8 @@ import {
 } from '../../src/services/gpu/renderers/starCatalog/starCatalogLayout';
 import { SCALE_UNITS } from '../../src/data/scaleUnits';
 import { initialState as STAR_CATALOGS } from '../../src/layers/starCatalog/state/starCatalogs/initialState';
-import {
-  STAR_SIZE_REF_PX,
-  STAR_GLOW_MIN_PX,
-  STAR_PICK_MIN_RADIUS_PX,
-} from '../../src/data/starCullSlack';
+import { STAR_SIZE_REF_PX } from '../../src/data/starCullSlack';
+import { starCullMargins } from '../../src/utils/star/starCullMargins';
 import { NODE_FADE_MS } from '../../src/data/starNodeFade';
 import type { StarCatalog } from '../../src/@types/data/starCatalog/StarCatalog';
 
@@ -101,11 +98,13 @@ function frustumFor(camPosPc: readonly [number, number, number]): StarCutFrustum
   const vp = mat4.multiply(proj, view) as Float32Array;
   const planesPc = Float64Array.from(frustumPlanesFromViewProj(vp));
   const sizeScale = SIZE_PX / STAR_SIZE_REF_PX;
-  const radiansPerPx = FOV_Y / VIEWPORT_H;
-  // Pick-covering leaf slack (3.5px floor) + aggregate glow spread — mirrors the
-  // layer's buildCutFrustum, so the harness prunes exactly what the app prunes.
-  const angularMarginRad =
-    Math.max(STAR_GLOW_MIN_PX * sizeScale, STAR_PICK_MIN_RADIUS_PX) * radiansPerPx;
+  // Tangent-exact — this bench's camera is always symmetric, so this is the
+  // one legitimate site left computing pxPerRad from a bare fovY.
+  const pxPerRad = VIEWPORT_H / (2 * Math.tan(FOV_Y / 2));
+  // Pick-covering leaf slack (3.5px floor) + aggregate glow spread — calls the
+  // SAME layer helper the app uses, so the harness prunes exactly what the
+  // app prunes.
+  const angularMarginRad = starCullMargins(SIZE_PX, pxPerRad).pick;
   const worldSpread = Math.max(1, sizeScale * GLOW_OVERLAP);
   return { planesPc, angularMarginRad, worldSpread };
 }

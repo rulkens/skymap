@@ -29,11 +29,10 @@ import { bodyUpWeight } from '../../../utils/camera/bodyUpWeight';
 import { datumOnlyTerrainHeight } from '../../../utils/camera/datumOnlyTerrainHeight';
 import { eyeMpcOf } from '../../../utils/camera/eyeMpcOf';
 import { frameUp } from '../../../utils/camera/frameUp';
-import { imagePlaneBasis } from '../../../utils/camera/imagePlaneBasis';
+import { cameraBasisWorld } from '../../../utils/camera/cameraBasisWorld';
 import { mappedTiltRad } from '../../../utils/camera/mappedTiltRad';
 import { refAzimuthOf } from '../../../utils/camera/refAzimuthOf';
 import { tiltFromNadirRad } from '../../../utils/camera/tiltFromNadirRad';
-import { mat3FromColumns } from '../../../utils/math/mat3FromColumns';
 import { normalize3 } from '../../../utils/math/normalize3';
 import { rotateVec3ByTightMat3T } from '../../../utils/math/rotateVec3ByTightMat3T';
 import { wrapRad } from '../../../utils/math/wrapRad';
@@ -92,10 +91,9 @@ export function cameraDofAnglesOf(input: {
   if (!degenerate && bodyState !== undefined) {
     const forward = normalize3(forwardRaw);
     const upRef = frameUp(upBasis);
-    const { right, up } = imagePlaneBasis(forward, rollRad, upRef);
     const { eyeRelBodyM, basisM } = bodyRelativePose({
       camPosMpc: eyeMpc,
-      camBasisWorld: mat3FromColumns(right, up, forward),
+      camBasisWorld: cameraBasisWorld(forward, rollRad, upBasis),
       bodyState,
     });
     const localUp = normalize3(eyeRelBodyM);

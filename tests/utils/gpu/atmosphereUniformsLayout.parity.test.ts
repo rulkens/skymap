@@ -93,6 +93,7 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
     const exposure = 402;
     const ringInnerRatio = 403;
     const ringOuterRatio = 404;
+    const froxelSliceKm = 405;
 
     const rec = packAtmosphereUniforms(
       mvp,
@@ -103,6 +104,7 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
       exposure,
       ringInnerRatio,
       ringOuterRatio,
+      froxelSliceKm,
     );
 
     const matrixByField: Record<string, Float32Array> = { mvp, invMvp };
@@ -112,8 +114,9 @@ describe('AtmosphereUniforms WESL/packer parity', () => {
       exposure,
       ringInnerRatio,
       ringOuterRatio,
+      froxelSliceKm,
     };
-    const zeroPadFields = new Set(['_pad1', '_pad0']);
+    const zeroPadFields = new Set(['_pad1']);
 
     for (const field of layout) {
       if (field.lanes === 0) {

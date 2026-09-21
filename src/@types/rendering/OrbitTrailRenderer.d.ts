@@ -20,6 +20,7 @@
  * they are per FRAME, written once per draw.
  */
 
+import type { SampledDepthKmFrame } from './SampledDepthKmFrame';
 import type { Renderer } from './Renderer';
 
 export type OrbitTrailRenderer = Renderer & {
@@ -35,6 +36,14 @@ export type OrbitTrailRenderer = Renderer & {
    * xyz + radius, km, four floats each), `count` live entries, at most
    * `MAX_ORBIT_OCCLUDERS`.
    *
+   * `depthView` is the depth of the target the caller's step samples, and
+   * `depthFrame` the frame to unproject it in — the row that stamped it. A
+   * `null` frame arrives only together with the far-cleared placeholder
+   * view, never the real target's view, so every texel reads "nothing in
+   * front" and the spheres are the only occluders; the renderer packs an
+   * identity placeholder the shader never reads. The bind group holding
+   * `depthView` is rebuilt only when that view's identity changes.
+   *
    * `showImpostor` (default `false`, the
    * `debug.overlays['orbit-trail-impostor']` toggle) issues one ADDITIONAL
    * debug draw — the ribbon hull's flat fill —
@@ -48,6 +57,8 @@ export type OrbitTrailRenderer = Renderer & {
     instances: Float32Array,
     count: number,
     occluders: { readonly count: number; readonly spheresKm: Float32Array },
+    depthFrame: SampledDepthKmFrame | null,
+    depthView: GPUTextureView,
     showImpostor?: boolean,
   ): void;
 };

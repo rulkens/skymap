@@ -13,7 +13,7 @@ import type { ExecuteFrameArgs } from '../../../../src/@types/engine/frame/Execu
 import type { FrameStep } from '../../../../src/@types/engine/frame/FrameStep';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GpuTimingService } from '../../../../src/@types/gpu/timing/GpuTimingService';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 /**
  * A stand-in row named for the one Layer case that matters here (`flow` also
@@ -32,8 +32,10 @@ function fakeCompute(encodeCompute: () => void, dispatches: boolean): ContentCom
   };
 }
 
-function makeCtx(): ReadyFrameContext {
-  return { renderedTargets: new Set<string>(), nowMs: 12345 } as unknown as ReadyFrameContext;
+function makeCtx(): FrameView {
+  return {
+    snapshot: { nowMs: 12345, renderedTargets: new Set<string>() },
+  } as unknown as FrameView;
 }
 
 function makeTiming(descriptorFor: ReturnType<typeof vi.fn> = vi.fn(() => undefined)) {
@@ -56,6 +58,7 @@ function makeArgs(program: readonly FrameStep[], state: EngineState, timing?: Gp
     strategy: 'merged',
     timing: timing ?? makeTiming(),
     swapView: {} as GPUTextureView,
+    renderedTargets: new Set<string>(),
   };
   return args;
 }

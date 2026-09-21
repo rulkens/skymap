@@ -7,14 +7,11 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { resolveLayerOpacity } from '../../../services/engine/presentation/focusRecession';
 import { zoneOfAvoidanceLayerOpacity } from './zoneOfAvoidanceLayerOpacity';
 
-export function deriveZoneOfAvoidanceLiveness(
-  state: PassState,
-  ctx: ReadyFrameContext,
-): number | null {
+export function deriveZoneOfAvoidanceLiveness(state: PassState, ctx: FrameView): number | null {
   const camDistMpc = Math.hypot(ctx.drawCamPos[0], ctx.drawCamPos[1], ctx.drawCamPos[2]);
   const opacity = zoneOfAvoidanceLayerOpacity(
     camDistMpc,

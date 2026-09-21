@@ -32,7 +32,7 @@ if (BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id) === undefined) {
 
 const SCHWARZSCHILD_RADIUS_M = schwarzschildRadiusM(SGR_A_STAR_MASS_SOLAR);
 
-/** `ctx.simDays` is Julian days; `flickerTimescaleS` is seconds. */
+/** `ctx.snapshot.simDays` is Julian days; `flickerTimescaleS` is seconds. */
 const SECONDS_PER_DAY = 86_400;
 
 export const sgrAStarLensingPass: ContentPass = {
@@ -78,7 +78,7 @@ export const sgrAStarLensingPass: ContentPass = {
     // in f64: the raw phase is ~1e9 rad at J2000 epochs, which an f32 uniform
     // could not resolve to a fraction of a cycle.
     const tuning = state.settings.sgrAStarLensingTuning;
-    const simSeconds = ctx.simDays * SECONDS_PER_DAY;
+    const simSeconds = ctx.snapshot.simDays * SECONDS_PER_DAY;
     const flickerPhase = ((2 * Math.PI * simSeconds) / tuning.flickerTimescaleS) % (2 * Math.PI);
 
     // Where the escape fade must reach zero: weak-field deflection is 2/b rad
@@ -126,7 +126,7 @@ export const sgrAStarLensingPass: ContentPass = {
 
     // Named by the CAPTURE the lens samples, not by the texture that capture
     // happens to own.
-    const capturedSky = ctx.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.sgrAStar.target);
+    const capturedSky = ctx.snapshot.renderTargets.cubeViewOf(CUBEMAP_CAPTURES.sgrAStar.target);
     renderer.draw(pass, uniforms, capturedSky);
   },
 };

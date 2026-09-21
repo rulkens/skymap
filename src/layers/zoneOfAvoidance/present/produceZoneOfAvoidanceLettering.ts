@@ -7,7 +7,7 @@
  */
 
 import type { EngineState } from '../../../@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { Label3DProducerOutput } from '../../../@types/engine/subsystems/Label3DProducerOutput';
 import type { Label3D } from '../../../@types/rendering/Label3D';
 import { deriveZoneOfAvoidanceLiveness } from './deriveZoneOfAvoidanceLiveness';
@@ -33,7 +33,7 @@ const LABEL_EM_MPC = 2;
 
 export function produceZoneOfAvoidanceLettering(
   state: EngineState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): Label3DProducerOutput {
   const fadeAlpha = deriveZoneOfAvoidanceLiveness(state, ctx);
   if (fadeAlpha === null) return { labels: [], awake: false };

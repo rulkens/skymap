@@ -29,6 +29,7 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
 const initialState: CameraState = {
   base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 }),
   tween: null,
+  urlPose: null,
   autoRotate: {
     active: DEFAULT_AUTO_ROTATE,
     // Per-frame yaw advance in radians at an assumed 60 fps (~0.05°/frame), the
@@ -64,6 +65,19 @@ const cameraSlice = createSlice({
     // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
+    },
+
+    // A `#pose=` deep link, parked until the arrival focus (or the home focus)
+    // spends it via `spendUrlPose` — see `watchFocusTweenSaga`.
+    applyUrlPose: (camera, action: PayloadAction<FramedCameraPose>) => {
+      camera.urlPose = action.payload;
+    },
+
+    // The one spender: `watchFocusTweenSaga` calls this for the first
+    // `updateSelectionFocus` after a parked link, whether or not that focus
+    // itself tweens.
+    spendUrlPose: (camera) => {
+      camera.urlPose = null;
     },
 
     startCameraTween: (camera, action: PayloadAction<CameraTweenDescriptor>) => {
@@ -115,6 +129,8 @@ export const {
   beginDrag,
   endDrag,
   commitCameraPose,
+  applyUrlPose,
+  spendUrlPose,
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,

@@ -30,42 +30,36 @@ function distForApparentPx(px: number): number {
 
 describe('milkyWayFadeAlpha', () => {
   it('returns 1.0 at close range (disc larger than the FULL threshold)', () => {
-    expect(milkyWayFadeAlpha(0.15, FOV_Y_RAD, VIEWPORT_H_PX)).toBe(1.0);
-    expect(
-      milkyWayFadeAlpha(
-        distForApparentPx(MILKY_WAY_FADE_FULL_PX) * 0.999,
-        FOV_Y_RAD,
-        VIEWPORT_H_PX,
-      ),
-    ).toBe(1.0);
+    expect(milkyWayFadeAlpha(0.15, PX_PER_RAD)).toBe(1.0);
+    expect(milkyWayFadeAlpha(distForApparentPx(MILKY_WAY_FADE_FULL_PX) * 0.999, PX_PER_RAD)).toBe(
+      1.0,
+    );
   });
 
   it('returns 0.0 once the disc shrinks to the GONE threshold and beyond', () => {
     const goneDist = distForApparentPx(MILKY_WAY_FADE_GONE_PX) * 1.001;
-    expect(milkyWayFadeAlpha(goneDist, FOV_Y_RAD, VIEWPORT_H_PX)).toBe(0.0);
-    expect(milkyWayFadeAlpha(goneDist * 10, FOV_Y_RAD, VIEWPORT_H_PX)).toBe(0.0);
+    expect(milkyWayFadeAlpha(goneDist, PX_PER_RAD)).toBe(0.0);
+    expect(milkyWayFadeAlpha(goneDist * 10, PX_PER_RAD)).toBe(0.0);
   });
 
   it('returns 0.5 at the band midpoint (smoothstep symmetry)', () => {
     // Smoothstep at t=0.5 evaluates to 0.5 exactly: 3·0.5² − 2·0.5³ = 0.5.
     const midPx = (MILKY_WAY_FADE_GONE_PX + MILKY_WAY_FADE_FULL_PX) / 2;
-    expect(milkyWayFadeAlpha(distForApparentPx(midPx), FOV_Y_RAD, VIEWPORT_H_PX)).toBeCloseTo(
-      0.5,
-      5,
-    );
+    expect(milkyWayFadeAlpha(distForApparentPx(midPx), PX_PER_RAD)).toBeCloseTo(0.5, 5);
   });
 
   it('adapts the band to viewport height — the same distance can be visible on a tall screen and gone on a short one', () => {
     // Pick a distance where a 720-px viewport sees just under the GONE
     // threshold: alpha 0 there, but a 4x-taller viewport sees 4x the pixels
-    // (well back inside the band), so alpha is positive.
+    // (well back inside the band), so alpha is positive. pxPerRad scales
+    // linearly with viewport height at a fixed fov.
     const d = distForApparentPx(MILKY_WAY_FADE_GONE_PX) * 1.001;
-    expect(milkyWayFadeAlpha(d, FOV_Y_RAD, VIEWPORT_H_PX)).toBe(0.0);
-    expect(milkyWayFadeAlpha(d, FOV_Y_RAD, VIEWPORT_H_PX * 4)).toBeGreaterThan(0.0);
+    expect(milkyWayFadeAlpha(d, PX_PER_RAD)).toBe(0.0);
+    expect(milkyWayFadeAlpha(d, PX_PER_RAD * 4)).toBeGreaterThan(0.0);
   });
 
   it('clamps non-positive distance to full visibility (camera inside the disc, defensive)', () => {
-    expect(milkyWayFadeAlpha(0, FOV_Y_RAD, VIEWPORT_H_PX)).toBe(1.0);
-    expect(milkyWayFadeAlpha(-5, FOV_Y_RAD, VIEWPORT_H_PX)).toBe(1.0);
+    expect(milkyWayFadeAlpha(0, PX_PER_RAD)).toBe(1.0);
+    expect(milkyWayFadeAlpha(-5, PX_PER_RAD)).toBe(1.0);
   });
 });

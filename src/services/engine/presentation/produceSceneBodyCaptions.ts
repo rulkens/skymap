@@ -14,7 +14,7 @@
 import type { Label2D } from '../../../@types/rendering/Label2D';
 import type { Vec3 } from '../../../@types/math/Vec3';
 import type { BodyState } from '../../../@types/scene/BodyState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { EngineState } from '../../../@types/engine/state/EngineState';
 import type { Label2DProducerOutput } from '../../../@types/engine/subsystems/Label2DProducerOutput';
 import { sceneBodyLabels } from './sceneBodyLabels';
@@ -46,19 +46,17 @@ function baseLabelsFor(
 
 export function produceSceneBodyCaptions(
   state: EngineState,
-  ctx: ReadyFrameContext,
+  ctx: FrameView,
 ): Label2DProducerOutput {
   const settings = state.settings;
   const camPos = ctx.drawCamPos;
   // Orbit distance, NOT `|camPos|`: the bound the solar-system-reach kinds
   // ride, which diverges from origin distance once focus leaves the origin.
   const camOrbitDistanceMpc = ctx.cam.distance;
-  const viewportHeightPx = ctx.canvasSize.height;
-  const viewportShortSidePx = Math.min(ctx.canvasSize.width, viewportHeightPx);
-  const fovYRad = ctx.fovYRad;
+  const viewportShortSidePx = Math.min(ctx.canvasSize.width, ctx.canvasSize.height);
 
   const fades = state.subsystems.fades;
-  const now = ctx.nowMs;
+  const now = ctx.snapshot.nowMs;
   // Hoisted, not resolved per-caption: every 'star' kind shares the
   // starCatalogLabel clip key and every other kind shares bodyLabel, so each
   // is a single frame-constant literal (the `produceStructureMarkers.ts:65` /
@@ -85,8 +83,7 @@ export function produceSceneBodyCaptions(
     const subjectSizePx = apparentSizePx({
       diameterKpc: (2 * label.worldEmMpc) / SCALE_UNITS.KPC_TO_MPC,
       distanceMpc,
-      viewportHeightPx,
-      fovYRad,
+      pxPerRad: ctx.drawPxPerRad,
     });
 
     const rule = CAPTION_FADE_RULES[label.kind];
@@ -135,6 +132,10 @@ export function produceSceneBodyCaptions(
       })
         ? 1
         : 0,
+      // The second channel's cutoff. The subject's NEAR surface, not its
+      // centre, so self-occlusion falls out: a body's own front face sits AT
+      // this distance and so never passes the shader's strict `<`.
+      occludeNearKm: (distanceMpc - label.worldEmMpc) * SCALE_UNITS.MPC_TO_M * SCALE_UNITS.M_TO_KM,
       prominencePx,
       lift: {
         subjectSizePx,

@@ -34,8 +34,8 @@ export const MAX_FRAME_INPUTS: FrameInputs = {
     ]),
   ),
   bodyRowSlabs: {
-    // Every capacity index: Sgr A*'s painter-order row moves with the live bodies.
+    // Every capacity index, for both: the two rows move with the live bodies.
     lens: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
-    insideAtmosphere: [],
+    insideAtmosphere: Array.from({ length: BODY_SLAB_CAPACITY }, (_, k) => k + 2),
   },
 };

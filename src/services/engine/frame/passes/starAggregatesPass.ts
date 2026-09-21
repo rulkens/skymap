@@ -12,11 +12,11 @@
  * (`starCatalogPass`).
  *
  * The per-frame octree walk, LOD-fade advance, and leaf/aggregate partition are
- * ALL shared with the other two star layers via `readStarCut` (memoised on
- * `ctx`): this layer draws first in program order (its `star-aggregates` render
- * step precedes the hdr NEAR0 step), so its `draw` typically triggers the walk,
- * and the leaf + upsample layers read the cached result. This layer records
- * ONLY the aggregate sub-stream, via the shared `drawStarStream` helper with
+ * ALL shared with the other star layers via `starCutFor`: `computeStarCut`
+ * walks once in `runFrame` and sets the result on `state.gpu.starCatalogRenderer`
+ * before either draws, so this layer and `starCatalogPass` both read that one
+ * cut rather than each triggering their own walk. This layer records ONLY the
+ * aggregate sub-stream, via the shared `drawStarStream` helper with
  * `stream: 'aggregate'` — the renderer's `fsLinear` pipeline into the offscreen.
  *
  * ### Why `enabled` shares `starCatalogVisible`
@@ -30,9 +30,8 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { NEAR0 } from '../slabs';
 import { starCatalogVisible } from '../../../gpu/renderers/starCatalog/cut/starCatalogVisible';
-import { readStarCut } from '../../../gpu/renderers/starCatalog/cut/readStarCut';
+import { starCutFor } from '../../../gpu/renderers/starCatalog/cut/starCutFor';
 import { drawStarStream } from '../../../gpu/renderers/starCatalog/cut/drawStarStream';
 
 export const starAggregatesPass: ContentPass = {
@@ -43,30 +42,25 @@ export const starAggregatesPass: ContentPass = {
   draw(pass, view, ctx, state) {
     const renderer = state.gpu.starCatalogRenderer;
     if (renderer === null) return;
-    const prep = readStarCut(state, ctx);
+    const prep = starCutFor(state, ctx);
     if (prep === null) return;
 
     // Viewport is the DESTINATION target's allocated size, not the canvas:
     // STAR_GLOW_MIN_PX floors the glow radius in pixels OF THE TARGET BEING
     // RASTERISED, so the canvas size would make the floor 0.75 texels here and
     // land floor-clamped aggregates sub-texel (dropout and flicker, not wrong
-    // brightness — `toRefPx` keeps the photometry viewport-independent).
-    // `viewSlot !== 0` marks a capture draw (see `ReadyFrameContext.viewSlot`),
-    // whose destination is the capture face: `cubemapFaceContext` builds the
-    // synthetic ctx at the row's declared face size, so `canvasSize` already IS
+    // brightness — `toRefPx` normalises by this target's own `pxPerRad`, so
+    // the photometry holds per solid angle at any target size and fov).
+    // `viewKind === 'capture'` marks a capture draw (see `FrameView.viewKind`),
+    // whose destination is the capture face: `deriveView(faceViewSpec(...))`
+    // builds the synthetic ctx at the row's declared face size, so `canvasSize` already IS
     // that size. The view is COPIED rather than mutated: one `SlabView` is
     // shared by every pass in the render step.
     const { width: vw, height: vh } =
-      ctx.viewSlot !== 0 ? ctx.canvasSize : ctx.renderTargets.sizeOf('star-aggregates');
+      ctx.viewKind === 'capture'
+        ? ctx.canvasSize
+        : ctx.snapshot.renderTargets.sizeOf('star-aggregates');
 
-    drawStarStream(
-      renderer,
-      pass,
-      { ...view, viewportPx: [vw, vh] },
-      prep,
-      'aggregate',
-      ctx.fovYRad,
-      ctx.viewSlot,
-    );
+    drawStarStream(renderer, pass, { ...view, viewportPx: [vw, vh] }, prep, 'aggregate', ctx);
   },
 };

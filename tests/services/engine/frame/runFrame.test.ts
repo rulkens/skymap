@@ -130,6 +130,7 @@ import { readFollowMemory } from '../../../helpers/camera/readFollowMemory';
 import { makeCubemapCaptureRuntimes } from '../../../helpers/engine/makeCubemapCaptureRuntimes';
 import GOLDEN from '../../../fixtures/camera/driverGoldenTrace.json';
 import type { RootState } from '../../../../src/store/types';
+import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
 /** Build a real Redux store from the production root reducer. */
 function makeStore() {
@@ -231,6 +232,8 @@ function makeState(): EngineState {
       loadProgress: null,
     },
     booted: false,
+    // runFrame looks up VIEW_RIGS[viewRig].views(canvas, state) once, ready-gated.
+    viewRig: 'mono',
     assetSlots: {
       points: new Map(),
       filaments: null,
@@ -262,6 +265,9 @@ function makeState(): EngineState {
     // The ready-frame fixtures below (makeReadyState, makeLayerState) reach
     // `runLabel3DProducers`, which iterates this — empty is the boot value.
     label3DProducers: [],
+    // Read unconditionally by `runFrame`'s NEAR0 altitude line, before the
+    // ready gate.
+    selectionRows: { focus: null },
   } as unknown as EngineState;
 }
 
@@ -686,7 +692,7 @@ describe('runFrame — orientation-frame roll', () => {
       for (const c of cam.position) expect(Number.isFinite(c)).toBe(true);
       // The view-projection is where a degenerate near-pole lookAt would surface
       // NaN; assert every entry is finite.
-      const vp = computeViewProj(cam);
+      const vp = computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect));
       for (const m of vp) expect(Number.isFinite(m)).toBe(true);
     }
   });
@@ -1096,9 +1102,9 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
   /**
    * A fully READY fixture, mirroring the label-director block's shape, plus
    * a spy'd `structureFocus` whose `produceFocusUniforms` returns a distinct
-   * sentinel object — so a hook's captured `ctx.focus` can be checked for
-   * reference equality against it, proving the hook runs AFTER the
-   * `ctx.focus = focusUniforms` assignment, not before.
+   * sentinel object — so a hook's captured `ctx.snapshot.focus` can be checked
+   * for reference equality against it, proving the hook runs AFTER the
+   * `snapshot.focus = focusUniforms` assignment, not before.
    */
   const SENTINEL_FOCUS: FocusUniformsValue = {
     center: [1, 2, 3],
@@ -1176,7 +1182,7 @@ describe('runFrame — Layer frame hooks (D2, 04b Task 12)', () => {
     const focusSeenByA: { current: unknown } = { current: undefined };
     const layerA = makeLayer('a', (ctx) => {
       order.push('a');
-      focusSeenByA.current = ctx.focus;
+      focusSeenByA.current = ctx.snapshot.focus;
       return AT_REST;
     });
     const layerB = makeLayer('b', () => {

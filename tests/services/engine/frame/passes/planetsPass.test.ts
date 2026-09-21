@@ -31,7 +31,7 @@ import { makeSlab } from '../../../../fixtures/makeSlab';
 import type { SlabView } from '../../../../../src/@types/engine/frame/SlabView';
 import type { Slab } from '../../../../../src/@types/engine/frame/Slab';
 import type { BodyId } from '../../../../../src/@types/data/body/BodyId';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
 import type { PlanetBody } from '../../../../../src/@types/scene/PlanetBody';
 import type { BodyState } from '../../../../../src/@types/scene/BodyState';
@@ -103,18 +103,17 @@ const PASS_STUB = {
   drawIndexed: vi.fn(),
 } as unknown as GPURenderPassEncoder;
 
-const CTX_STUB = {} as ReadyFrameContext;
+const CTX_STUB = {} as FrameView;
 
 /** A ctx comfortably inside the shared foreground gate, with a fixed pose for every body. */
-function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): ReadyFrameContext {
+function makeCtx(distance = FOREGROUND_MAX_DISTANCE_MPC / 2): FrameView {
   return {
     cam: { distance },
     drawCamPos: [0, 0, 0],
-    bodyPose: (() => STUB_POSE) as ReadyFrameContext['bodyPose'],
+    bodyPose: (() => STUB_POSE) as FrameView['bodyPose'],
     canvasSize: { width: 1280, height: 720 },
-    fovYRad: Math.PI / 3,
     drawPxPerRad: 720 / (2 * Math.tan(Math.PI / 6)),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 function makeBodyView(bodyId: BodyId): SlabView {
@@ -347,7 +346,7 @@ describe('planetsPass.drawPick', () => {
     } as unknown as EngineState;
     const ctx = {
       ...makeCtx(),
-      bodyPose: (() => pose) as ReadyFrameContext['bodyPose'],
+      bodyPose: (() => pose) as FrameView['bodyPose'],
       drawPxPerRad: pxPerRad,
     };
 

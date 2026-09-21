@@ -34,11 +34,12 @@ import { SCENE_BODIES } from '../../../../../src/data/bodies/sceneBodies';
 import { SCALE_UNITS } from '../../../../../src/data/scaleUnits';
 import { CONST_J2000 } from '../../../../../src/data/time/constJ2000';
 import type { EngineState } from '../../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../../src/@types/engine/frame/FrameView';
 import type { SelectionRow } from '../../../../../src/@types/engine/SelectionRow';
 import type { BodyPoseProvider } from '../../../../../src/@types/engine/camera/BodyPoseProvider';
 import type { Vec2 } from '../../../../../src/@types/math/Vec2';
 import type { Vec3 } from '../../../../../src/@types/math/Vec3';
+import { symmetricFrustum } from '../../../../../src/utils/camera/symmetricFrustum';
 
 const VIEWPORT: Vec2 = [1000, 1000];
 const SIM_DAYS = CONST_J2000 + 10.25;
@@ -90,7 +91,8 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
 
   const slabs = deriveSlabs({
     cam,
-    cosmoVp: computeViewProj(cam),
+    frustum: symmetricFrustum(cam.fovYRad, cam.aspect),
+    cosmoVp: computeViewProj(cam, symmetricFrustum(cam.fovYRad, cam.aspect)),
     // Altitude over the hull — what NEAR0's near-plane floor is being tested
     // against, and what a real frame would key off at this standoff.
     altitudeMpc: (radiiFromCentre - 1) * body.boundingRadiusM * SCALE_UNITS.M_TO_MPC,
@@ -109,17 +111,18 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     ]),
   });
   const ctx = {
-    simDays: SIM_DAYS,
+    snapshot: {
+      simDays: SIM_DAYS,
+      // No body row has drawn into `foreground:0` in this fixture, so the
+      // ring takes its un-occluded pipeline — the axis these cases are about.
+      renderedTargets: new Set<string>(),
+    },
     slabs,
     bodyPose,
     canvasSize: { width: VIEWPORT[0], height: VIEWPORT[1] },
     drawCamPos: [cam.position[0], cam.position[1], cam.position[2]] as Vec3,
     drawPxPerRad: VIEWPORT[1] / (2 * Math.tan(cam.fovYRad / 2)),
-    fovYRad: cam.fovYRad,
-    // No body row has drawn into `foreground:0` in this fixture, so the ring
-    // takes its un-occluded pipeline — the axis these cases are about.
-    renderedTargets: new Set<string>(),
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 
   const row = {
     type: 'body',

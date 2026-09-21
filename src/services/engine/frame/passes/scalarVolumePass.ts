@@ -16,7 +16,7 @@
  *
  * `volumeFieldRenderer.draw` takes `viewportPx` to normalise its per-fragment
  * jitter-dither spatial frequency. The volume target is smaller than the
- * canvas (`ctx.renderTargets.sizeOf('volume')`), so passing the canvas size
+ * canvas (`ctx.snapshot.renderTargets.sizeOf('volume')`), so passing the canvas size
  * would shift the dither frequency and make it appear finer on the upsampled
  * output.
  *
@@ -51,7 +51,7 @@ export const scalarVolumePass: ContentPass = {
     if (renderer === null) return;
 
     // Viewport is the volume target's allocated size (see `sizeOf`).
-    const { width: vw, height: vh } = ctx.renderTargets.sizeOf('volume');
+    const { width: vw, height: vh } = ctx.snapshot.renderTargets.sizeOf('volume');
     renderer.draw(
       pass,
       view.vp,

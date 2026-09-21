@@ -17,7 +17,7 @@ import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import { makeBodyItems } from '../../../fixtures/makeBodyItems';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 
 const MOVING_STAR = {
   id: 'earth',
@@ -37,7 +37,7 @@ const STATE = {
   },
 } as unknown as EngineState;
 
-const ctxAt = (simDays: number) => ({ simDays }) as unknown as ReadyFrameContext;
+const ctxAt = (simDays: number) => ({ snapshot: { simDays } }) as unknown as FrameView;
 
 describe('positionedVisibleStars', () => {
   it('pairs each visible star with the snapshot’s position, not a baked one', () => {

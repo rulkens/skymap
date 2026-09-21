@@ -52,7 +52,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
         pointSizePx: state.settings.galaxyCatalogs.sizePx,
         brightness: state.settings.galaxyCatalogs.brightness,
         selectedPacked,
-        visibleSourceMask: ctx.visibleSourceMask,
+        visibleSourceMask: ctx.snapshot.visibleSourceMask,
         camPosWorld: view.camPos,
         pxPerRad: drawPxPerRad,
         provenance: state.settings.galaxyCatalogs.provenance,
@@ -81,7 +81,7 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
       });
     },
 
-    // `ctx.visibleSourceMask` is the PICK mask here (`deriveSourceMasks(state).pick`),
+    // `ctx.snapshot.visibleSourceMask` is the PICK mask here (`deriveSourceMasks(state).pick`),
     // and the opacity filter extends the mask on the INTENT fade only — picking
     // follows intent, not pixels (`deriveSourceMasks.ts:25-27`, #18 D8), so a clip
     // `fade()` dims these points without revoking their click target.
@@ -90,10 +90,12 @@ export function galaxyPointSpritesPass(runtime: GalaxyCatalogRuntime): ContentPa
       const surveyFade = fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc);
       const fades = state.subsystems.fades;
       const sources = Array.from(runtime.pointRenderer.loadedSources()).filter((s) => {
-        if (((ctx.visibleSourceMask >> s.source) & 1) === 0) return false;
+        if (((ctx.snapshot.visibleSourceMask >> s.source) & 1) === 0) return false;
         const opacity =
-          fades.opacityOf({ kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) }, ctx.nowMs) *
-          (s.source === Source.FamousGalaxy ? 1 : surveyFade);
+          fades.opacityOf(
+            { kind: 'galaxyCatalog', id: galaxyCatalogIdOf(s.source) },
+            ctx.snapshot.nowMs,
+          ) * (s.source === Source.FamousGalaxy ? 1 : surveyFade);
         return opacity !== 0;
       });
       runtime.pickRenderer.drawPoints(pass, sources, pickUniformBytesOf(view, ctx, state));

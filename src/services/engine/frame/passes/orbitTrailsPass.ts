@@ -10,7 +10,6 @@
  */
 
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
-import { NEAR0 } from '../slabs';
 import { RENDER_ORIGIN_MPC } from '../../../../data/renderOrigin';
 import { TRAIL_ELEMENTS } from '../../../../data/bodies/trailElements';
 import { ORBIT_REACH_BY_REGION } from '../../../../data/bodies/orbitReachByRegion';
@@ -19,6 +18,7 @@ import { regionRelativeDistanceMpc } from '../../../../utils/regions/regionRelat
 import { propagateElements } from '../../../../utils/orbit/propagateElements';
 import { keplerianEllipse } from '../../../../utils/orbit/keplerianEllipse';
 import { composeOrbitConic } from '../../../../utils/camera/composeOrbitConic';
+import { sampledDepthKmFrame } from '../../../../utils/camera/sampledDepthKmFrame';
 import { eyeRelativeOrbitBasisKm } from '../../../../utils/orbit/eyeRelativeOrbitBasisKm';
 import { apparentSizePx } from '../../../../utils/math/apparentSizePx';
 import { sceneBodyStates } from '../sceneBodyStates';
@@ -40,7 +40,7 @@ export const orbitTrailsPass: ContentPass = {
     // (hdr, NEAR0) pass drops — opacity 0 ⇒ no render.
     if (
       !state.settings.orbitTrails.enabled &&
-      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.nowMs) <= 0
+      state.subsystems.fades.opacityOf({ kind: 'orbitTrails' }, ctx.snapshot.nowMs) <= 0
     ) {
       return false;
     }
@@ -60,8 +60,7 @@ export const orbitTrailsPass: ContentPass = {
       const maxDiameterPx = apparentSizePx({
         diameterKpc: 2 * reachMpc * 1000,
         distanceMpc: nearestMpc,
-        viewportHeightPx: ctx.canvasSize.height,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (maxDiameterPx >= CULL_PX) return true;
     }
@@ -76,7 +75,6 @@ export const orbitTrailsPass: ContentPass = {
     const states = sceneBodyStates(state, ctx);
     const limit = TRAIL_ELEMENTS.length;
     const camPos = ctx.drawCamPos;
-    const viewportHeightPx = view.viewportPx[1];
 
     // Multiplied into every orbit's apparent-size alpha below, so a hide dissolves
     // the layer rather than popping it.
@@ -96,7 +94,7 @@ export const orbitTrailsPass: ContentPass = {
       // Re-derived at the frame instant, never baked. `keplerianEllipse` returns
       // FRESH vectors per call, so the in-place focus fold below cannot alias a
       // shared scratch across orbits.
-      const propagated = propagateElements(elements, ctx.simDays);
+      const propagated = propagateElements(elements, ctx.snapshot.simDays);
       const { centerOffsetMpc, semiMajorMpc, semiMinorMpc } = keplerianEllipse(propagated);
       // The snapshot seeds anchors (the Sun) alongside every element row, so a
       // heliocentric focus and a moving parent are the same lookup.
@@ -114,8 +112,7 @@ export const orbitTrailsPass: ContentPass = {
       const diameterPx = apparentSizePx({
         diameterKpc: 2 * semiMajorLenMpc * 1000,
         distanceMpc,
-        viewportHeightPx,
-        fovYRad: ctx.fovYRad,
+        pxPerRad: ctx.drawPxPerRad,
       });
       if (diameterPx < CULL_PX) continue; // deep sub-pixel — do not render
       const alpha = Math.min(1, (diameterPx - CULL_PX) / (FULL_PX - CULL_PX)) * layerOpacity;
@@ -153,11 +150,23 @@ export const orbitTrailsPass: ContentPass = {
       );
     }
     if (count > 0) {
+      // The second occluder channel: the terrain and meshes of the row that last
+      // cleared the sampled depth. Its own f64 `vp` (the invariant above), scaled
+      // by metres-per-km so the fragment's reconstructed distances land in the
+      // same km as the eye-relative orbit points it compares them against.
+      const sampledDepth = view.sampledDepth!;
+      const depthFrame = sampledDepthKmFrame(sampledDepth.row, ctx.bodyPose);
       renderer.draw(
         pass,
         staging,
         count,
         sceneOccluderSpheres(state, ctx),
+        depthFrame,
+        // A null frame must arrive with the far placeholder, never the real
+        // view — that is what makes the shader's FAR_DEPTH early-out (not an
+        // assumption about who last cleared this target) the thing keeping
+        // an unresolved frame safe.
+        depthFrame === null ? ctx.snapshot.renderTargets.farDepthView() : sampledDepth.view,
         state.settings.debug.overlays['orbit-trail-impostor'],
       );
     }

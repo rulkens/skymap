@@ -11,26 +11,22 @@
 //
 // ## Two walls, one duty each ('front_facing' split)
 //
-// The pipeline draws both walls; the fragment splits duty by facing so the two
-// are exhaustive AND mutually exclusive:
-//   - NEAR wall (front-facing): carries the OVER-DISC aerial perspective. It
-//     renders ONLY ground-hitting rays -- a ray past the limb belongs to the far
-//     wall, so a front face there discards (else the limb double-counts: both
-//     walls pass the depth test at the limb).
-//   - FAR wall (back-facing): carries the LIMB + SKY. It renders ONLY
-//     ground-missing rays -- a back face over the disc discards. Today those disc
-//     rays are depth-culled anyway (the far wall sits behind the planet), but the
-//     explicit discard keeps the split exhaustive whatever the depth state.
-// Depth-testing EACH wall against the opaque scene keeps cross-body occlusion for
-// both: a nearer body occludes the disc haze via the near wall's depth and the
-// limb via the far wall's.
+// The pipeline draws both walls; the fragment splits duty by facing against the
+// SAMPLED scene depth, so the two are exhaustive AND mutually exclusive:
+//   - NEAR wall (front-facing): the OVER-DISC aerial perspective, on every pixel
+//     whose depth is finite -- the body, its terrain, a mesh seated on it.
+//   - FAR wall (back-facing): the LIMB + SKY, on every FAR-depth pixel.
+// The floor SPHERE classified rays until the depth did, and terrain standing
+// above that relief floor at the limb misses it: the near wall discarded those
+// pixels and the far wall's depth test hid them, leaving a band of bare tile
+// with neither extinction nor in-scatter, brightest toward the terminator.
+// The step attaches no depth (it samples it), so the pipeline test is gone with
+// it -- a depth nearer than the shell entry is what now drops a fragment an
+// opaque body sits in front of.
 //
-// Case analysis: camera OUTSIDE the shell -> disc = near wall, limb = far wall.
-// Camera INSIDE the shell -> only back faces are geometrically visible, so the
-// sky/limb still renders and down-looking (ground) rays lose their haze
-// (acceptable: the in-atmosphere descent regime is the deferred froxel's job).
-// In practice this proxy never reaches that regime: the layer hands off to the
-// full-screen inside path slightly above the top (see 'isInsideAtmosphereShell').
+// Camera INSIDE the shell -> only back faces are geometrically visible; the
+// layer hands off to the full-screen inside path slightly above the top
+// ('isInsideAtmosphereShell'), so this fragment never serves that regime.
 //
 // ## The analytic march bound (WESL mirror of 'atmosphereShellBound')
 //
@@ -38,10 +34,12 @@
 // truth for this clamp; this is its GPU twin, reusing the SAME shared quadratic
 // ('lib/util.wesl::raySphere') that the CPU's 'raySphereRoots' mirrors. In this
 // mesh's local frame the atmosphere top is the UNIT sphere (topRadius == 1) and
-// the ground is 'u.bottomRadius' in (0, 1). Two sphere tests + the clamp:
+// the ground is 'u.bottomRadius' in (0, 1). Two sphere tests + the clamps:
 //   - Top sphere gives the entry/exit; miss or wholly-behind -> discard.
 //   - 'tNear -> 0' when the camera is inside the shell (near root negative).
 //   - Ground-hit far clamp: the opaque surface caps the visible atmosphere.
+//   - Depth far clamp: the pixel's OWN scene distance, which at the limb cuts
+//     the march shorter than the floor sphere ever does.
 // Modeled on 'horizonShell/fragment.wesl' (the select/discard shape).
 //
 // ## The two LUT lookups
@@ -54,7 +52,7 @@
 //     transmittance of the segment itself (the Bruneton ratio identity), which is
 //     the multiply pass's per-channel blend factor. For the FAR wall's limb +
 //     sky rays (which continue to the top) the ratio 'T(near)/T(far)' reads with
-//     (r, mu) as-is. For the NEAR wall's ground-hitting rays the endpoints look
+//     (r, mu) as-is. For the NEAR wall's ground-ENDING rays the endpoints look
 //     DOWN, off the LUT's covered domain (its d-range ends at the horizon-grazing
 //     ray), so the segment is read in the REVERSED direction (both endpoints then
 //     look 'up' and land inside the LUT) -- see the direction-flip identity at
@@ -89,9 +87,21 @@
 
 import package::lib::sphere::AtmosphereUniforms;
 import package::lib::util::raySphere;
+import package::lib::sceneDepthRay::FAR_DEPTH;
+import package::lib::sceneDepthRay::sceneRayDistance;
 import package::atmosphere::scattering::sampleTransmittanceToTop;
 import package::atmosphere::scattering::skyViewLutParamsToUv;
-import package::lib::fullscreenTri::FullscreenOut;
+
+// The sampled row's own km-scaled frame ('sampledDepthKmFrame'), the viewport
+// the fragment divides its pixel by, and the 1/topRadiusKm that lands the
+// reconstructed km distance in this mesh's local units. Mirrored by the byte
+// offsets in 'atmosphereShellRenderer.ts', pinned by a parity test.
+struct ShellDepthFrame {
+  invMvp: mat4x4<f32>,
+  camPosKm: vec3<f32>,
+  viewportPx: vec2<f32>,
+  kmToLocal: f32,
+};
 
 @group(0) @binding(0) var<uniform> u: AtmosphereUniforms;
 @group(0) @binding(1) var lutSamp: sampler;
@@ -102,6 +112,13 @@ import package::lib::fullscreenTri::FullscreenOut;
 // ring-in-front branch, which 'ringOuterRatio == 0' short-circuits (the same
 // every-body-binds pattern 'texturedBody/fragment.wesl' binding 3 uses).
 @group(0) @binding(4) var ringTexture: texture_2d<f32>;
+// 'foreground:0's depth, sampled not attached. An UNRESOLVED frame arrives as
+// the 1x1 far-cleared placeholder, never the real view -- that is what makes
+// the FAR_DEPTH arm, not an assumption about who cleared the target, the thing
+// keeping it safe. Reached only from 'sampleShell': the inside path imports
+// 'sampleShellSegment', and would hoist these on top of its own 5 and 6.
+@group(0) @binding(5) var sceneDepth: texture_depth_2d;
+@group(0) @binding(6) var<uniform> depthFrame: ShellDepthFrame;
 
 // The atmosphere top is the unit sphere in this mesh's local frame.
 const TOP_RADIUS: f32 = 1.0;
@@ -113,6 +130,9 @@ const PLANET_CENTER = vec3<f32>(0.0, 0.0, 0.0);
 const LUMINANCE: vec3<f32> = vec3<f32>(0.2126, 0.7152, 0.0722);
 
 struct FsIn {
+  // Framebuffer pixel position (y-down, half-pixel centres) -- the uv and texel
+  // the sampled depth is read at, as the trails read theirs.
+  @builtin(position) clip: vec4<f32>,
   // Unit-atmosphere-top local-space position (see vertex.wesl VsOut.localPos).
   @location(0) localPos: vec3<f32>,
   // Which wall this fragment belongs to (the pipeline draws both). True on the
@@ -122,8 +142,9 @@ struct FsIn {
 };
 
 // Everything both passes need, from ONE evaluation of the shared geometry + LUT
-// work. 'hit' false means this fragment is off the shell or on the wrong wall;
-// both entry points discard on it, so the two draws cover identical pixels.
+// work. 'hit' false means this fragment is off the shell, hidden by an opaque
+// body in front of it, or on the wrong wall; both entry points discard on it,
+// so the two draws cover identical pixels.
 struct ShellSample {
   // Per-channel background multiplier: the segment transmittance, ring-blended.
   transmit: vec3<f32>,
@@ -132,18 +153,14 @@ struct ShellSample {
   // 1 - luminance(transmit) — the compositor's single background weight.
   coverage: f32,
   hit: bool,
-  // Does this ray hit the ground sphere ahead of the shell entry? Carried out
-  // so callers can run their OWN wall-duty test against it -- the outside path
-  // needs the front_facing split below; the inside full-screen pass has no
-  // "wrong wall" and skips it entirely.
-  intersectsGround: bool,
 };
 
 // Shared core: the analytic march bound, the two LUT lookups, and the ring
 // occlusion -- everything 'sampleShell' used to do EXCEPT deriving 'dir' from
 // the proxy mesh's interpolated localPos and the front_facing wall-duty split.
-// 'ro' is always 'u.camPosLocal'; callers pass 'dir' already normalized.
-fn sampleShellRay(dir: vec3<f32>) -> ShellSample {
+// 'ro' is always 'u.camPosLocal'; callers pass 'dir' already normalized and
+// 'tDepth' in LOCAL units ('hasDepth' false leaves it unread).
+fn sampleShellSegment(dir: vec3<f32>, tDepth: f32, hasDepth: bool) -> ShellSample {
   // Off-shell / wrong-wall default, returned early below: the caller owns the
   // discard, and the LUT work never runs on a ray that missed. The values are
   // each blend's IDENTITY (multiply by 1, add 0), so a fragment that somehow
@@ -153,7 +170,6 @@ fn sampleShellRay(dir: vec3<f32>) -> ShellSample {
   out.emission = vec3<f32>(0.0);
   out.coverage = 0.0;
   out.hit = false;
-  out.intersectsGround = false;
 
   let ro = u.camPosLocal;
 
@@ -166,14 +182,26 @@ fn sampleShellRay(dir: vec3<f32>) -> ShellSample {
   let tNear = max(0.0, top.x);
   var tFar = top.y;
 
+  // An opaque body in FRONT of the shell hides the whole segment -- the duty
+  // the pipeline depth test carried until this step gave up its attachment.
+  if (hasDepth && tDepth < tNear) {
+    return out;
+  }
+
   // Ground occlusion: the opaque surface caps the visible atmosphere at the
-  // first ground crossing when it lies ahead of tNear.
+  // first ground crossing when it lies ahead of tNear, and the pixel's own
+  // scene distance caps it again wherever terrain stands above that floor.
   let ground = raySphere(ro, dir, PLANET_CENTER, u.bottomRadius);
-  let intersectsGround = ground.x > 0.0;
-  if (intersectsGround && ground.x > tNear) {
+  let floorHit = ground.x > 0.0;
+  if (floorHit && ground.x > tNear) {
     tFar = min(tFar, ground.x);
   }
-  out.intersectsGround = intersectsGround;
+  if (hasDepth) {
+    tFar = min(tFar, tDepth);
+  }
+  // Ends on ground, by the floor sphere or by its own depth short of the top
+  // exit: the sky-view LUT's half and the transmittance direction below.
+  let intersectsGround = floorHit || (hasDepth && tDepth < top.y);
 
   // ── Sky-view LUT lookup for the in-scattered radiance ──────────────
   let viewHeight = length(u.camPosLocal);
@@ -193,6 +221,11 @@ fn sampleShellRay(dir: vec3<f32>) -> ShellSample {
     lightViewCos = dot(viewPerp / viewPerpLen, sunPerp / sunPerpLen);
   }
 
+  // A ray that ends on TERRAIN without reaching the floor sphere -- the limb
+  // band -- looks just above the horizon, past where the ground half stops, so
+  // this uv and the reversed endpoints below both clamp to that horizon row.
+  // Such a ray grazes by construction, where the row is right to within its own
+  // texel; the alternative is a LUT axis nothing else would use.
   let skyUv = skyViewLutParamsToUv(u.bottomRadius, viewHeight, viewZenithCos, lightViewCos, intersectsGround);
   let inScatter = textureSampleLevel(skyViewLut, lutSamp, skyUv, 0.0).rgb;
 
@@ -262,31 +295,43 @@ fn sampleShellRay(dir: vec3<f32>) -> ShellSample {
   return out;
 }
 
-// Outside path (proxy mesh): derives 'dir' from the interpolated localPos,
-// delegates the shared work to 'sampleShellRay', then applies the wall-duty
-// discard that only makes sense for a two-sided proxy mesh (see the
-// front_facing header comment above).
+// Outside path (proxy mesh): derives 'dir' from the interpolated localPos and
+// the ray's end from the sampled scene depth, delegates the shared work, then
+// applies the wall-duty discard that only makes sense for a two-sided proxy
+// mesh (see the front_facing header comment above).
 fn sampleShell(in: FsIn) -> ShellSample {
   // View ray in the local frame. Renormalize AFTER the implicit model transform
   // (the proxy is a scaled sphere) -- the house trap; an un-normalized dir
-  // breaks every dot product in 'sampleShellRay'.
+  // breaks every dot product in 'sampleShellSegment'.
   let dir = normalize(in.localPos - u.camPosLocal);
-  var out = sampleShellRay(dir);
+
+  // The depth texture need not match the viewport (the placeholder is 1x1), so
+  // the texel is rescaled while the ray keeps the fragment's own uv. The
+  // reconstruction runs in the SAMPLED row's km frame, not this mesh's: that
+  // row's near/far planes are what its depth values were written through.
+  let uv = in.clip.xy / depthFrame.viewportPx;
+  let texel = vec2<i32>(in.clip.xy * vec2<f32>(textureDimensions(sceneDepth)) / depthFrame.viewportPx);
+  let depth = textureLoad(sceneDepth, texel, 0);
+  let hasDepth = depth != FAR_DEPTH;
+  var tDepth = 0.0;
+  if (hasDepth) {
+    tDepth = sceneRayDistance(uv, depth, depthFrame.invMvp, depthFrame.camPosKm) * depthFrame.kmToLocal;
+  }
+
+  var out = sampleShellSegment(dir, tDepth, hasDepth);
   if (!out.hit) {
     return out;
   }
 
   // ── Wall-duty split (front_facing) ─────────────────────────────────
   //
-  // The near wall (front-facing) renders ONLY ground-hitting rays (the disc
-  // haze); the far wall (back-facing) renders ONLY ground-missing rays (the limb
-  // + sky). Discard the other half on each so the pair is exhaustive AND mutually
-  // exclusive whatever the depth state (incl. the camera-inside case). Without
-  // the near-wall guard the limb would double-count -- both walls pass the depth
-  // test past the limb.
-  // Wrong wall <=> facing and ground-hit disagree (the front wall owns ground
-  // rays, the far wall owns the rest) -- one XOR covers both rejections.
-  if (in.frontFacing != out.intersectsGround) {
+  // The near wall (front-facing) renders ONLY the finite-depth pixels (the disc
+  // haze and the terrain at the limb); the far wall (back-facing) renders ONLY
+  // the FAR-depth ones (the limb over space, and the sky). Discard the other
+  // half on each so the pair is exhaustive AND mutually exclusive; without it
+  // the limb double-counts, both walls being untested against depth now.
+  // Wrong wall <=> facing and finite depth disagree -- one XOR covers both.
+  if (in.frontFacing != hasDepth) {
     out.hit = false;
     out.transmit = vec3<f32>(1.0);
     out.emission = vec3<f32>(0.0);
@@ -314,55 +359,6 @@ fn fsMultiply(in: FsIn) -> @location(0) vec4<f32> {
 @fragment
 fn fsAdd(in: FsIn) -> @location(0) vec4<f32> {
   let s = sampleShell(in);
-  if (!s.hit) {
-    discard;
-  }
-  return vec4<f32>(s.emission, s.coverage);
-}
-
-// ── Inside-shell path (full-screen pass) ────────────────────────────────
-//
-// Camera inside the atmosphere shell: there is no proxy mesh to interpolate a
-// local position from, so the view ray is reconstructed by unprojecting the
-// full-screen triangle's screen position through 'u.invMvp'. No wall split --
-// a full-screen pass has no "wrong wall" (spec §4.2).
-
-// Recover the view ray for 'uv' by inverting fullscreenVertex's own mapping
-// ('uv = ((xy+1)*0.5, (1-xy)*0.5)') back to clip-space xy, unprojecting
-// through 'u.invMvp', and renormalizing (the house trap after a non-uniformly
-// scaled model transform -- same reason 'sampleShell's dir derivation does).
-fn insideRayDir(uv: vec2<f32>) -> vec3<f32> {
-  let xy = vec2<f32>(uv.x * 2.0 - 1.0, 1.0 - uv.y * 2.0);
-  // Homogeneous far-point form -- never divide by w, never subtract camPos
-  // from a divided point. Under reversed-Z, z = 0 is the FAR plane: dividing
-  // there blows up (w -> 0, the uniform grey veil), and any finite z puts the
-  // unprojected point a few near-plane distances from the camera, so
-  // 'p - camPosLocal' is a metres-scale difference of unit-scale f32 vectors
-  // that shimmers as the near plane shrinks on descent. Algebra instead:
-  // p - cam = (P.xyz - cam * P.w) / P.w for P = invMvp * clip, so the
-  // direction is normalize(P.xyz - cam * P.w) with P.w's sign folded in --
-  // and at w -> 0 it degrades gracefully to normalize(P.xyz), the ray's own
-  // point at infinity.
-  let hp = u.invMvp * vec4<f32>(xy, 0.0, 1.0);
-  var v = hp.xyz - u.camPosLocal * hp.w;
-  if (hp.w < 0.0) { v = -v; }
-  return normalize(v);
-}
-
-@fragment
-fn fsInsideMultiply(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let dir = insideRayDir(in.uv);
-  let s = sampleShellRay(dir);
-  if (!s.hit) {
-    discard;
-  }
-  return vec4<f32>(s.transmit, 1.0 - s.coverage);
-}
-
-@fragment
-fn fsInsideAdd(in: FullscreenOut) -> @location(0) vec4<f32> {
-  let dir = insideRayDir(in.uv);
-  let s = sampleShellRay(dir);
   if (!s.hit) {
     discard;
   }

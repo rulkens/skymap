@@ -17,7 +17,7 @@ export function flowFieldPass(runtime: FlowRuntime): ContentPass {
       // No cube committed → nothing to draw, even mid-fade.
       if (!slotReady(runtime.slot)) return false;
       if (state.settings.flow.enabled) return true;
-      return state.subsystems.fades.opacityOf({ kind: 'flow' }, ctx.nowMs) > 0;
+      return state.subsystems.fades.opacityOf({ kind: 'flow' }, ctx.snapshot.nowMs) > 0;
     },
 
     draw(pass, view, ctx, state) {

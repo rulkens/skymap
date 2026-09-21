@@ -17,7 +17,7 @@
  */
 
 import type { SlabView } from './SlabView';
-import type { ReadyFrameContext } from './ReadyFrameContext';
+import type { FrameView } from './FrameView';
 import type { PassState } from './PassState';
 
 export type ContentPass = {
@@ -28,13 +28,13 @@ export type ContentPass = {
    * step's already-resolved `SlabView` — a pass on a body roster reads
    * `view.slab.frame.bodyId` to gate its own row. Pure: no side effects.
    */
-  enabled(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  enabled(state: PassState, ctx: FrameView, view: SlabView): boolean;
   /**
    * Issue draw calls into the open render pass for this step. Called only when
    * `enabled` returned `true`. Must not call `pass.end()` — the pass lifetime
    * is owned by the executor's render step.
    */
-  draw(pass: GPURenderPassEncoder, view: SlabView, ctx: ReadyFrameContext, state: PassState): void;
+  draw(pass: GPURenderPassEncoder, view: SlabView, ctx: FrameView, state: PassState): void;
   /**
    * Where this pass's pick stamp composites, when that is NOT the pick
    * target its `FRAME_ORDER` slab derives. `'overlay'` is the pick-side twin
@@ -83,16 +83,11 @@ export type ContentPass = {
    * When absent the pick program falls back to `enabled`. Pure: no side
    * effects.
    */
-  pickEnabled?(state: PassState, ctx: ReadyFrameContext, view: SlabView): boolean;
+  pickEnabled?(state: PassState, ctx: FrameView, view: SlabView): boolean;
   /**
    * Issue pick-ID draw calls for this pass, into the parallel pick
    * program's render pass. Optional: passes that don't participate in
    * picking simply omit it.
    */
-  drawPick?(
-    pass: GPURenderPassEncoder,
-    view: SlabView,
-    ctx: ReadyFrameContext,
-    state: PassState,
-  ): void;
+  drawPick?(pass: GPURenderPassEncoder, view: SlabView, ctx: FrameView, state: PassState): void;
 };

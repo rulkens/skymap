@@ -14,7 +14,7 @@ import { ATLAS_FONT_SIZE } from '../../../../src/data/fonts';
 import { Source } from '../../../../src/data/sources';
 import { unpackPick } from '../../../../src/data/selectionEncoding';
 import type { FadeRegistry } from '../../../../src/@types/animation/FadeRegistry';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
@@ -97,17 +97,14 @@ function screenOf(p: readonly number[]): [number, number] {
   return [(clipX / clipW / 2 + 0.5) * 1920, (1 - (clipY / clipW / 2 + 0.5)) * 1080];
 }
 
-function makeCtx(over: Partial<ReadyFrameContext> = {}): ReadyFrameContext {
+function makeCtx(over: { focusBlend?: number } = {}): FrameView {
   return {
+    snapshot: { focusBlend: over.focusBlend ?? 0, nowMs: 0 },
     drawCamPos: [0, 0, 0],
     vp: VP,
     canvasSize: { width: 1920, height: 1080 },
     drawPxPerRad: 1080 / (2 * Math.tan((60 * Math.PI) / 180 / 2)),
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    nowMs: 0,
-    ...over,
-  } as unknown as ReadyFrameContext;
+  } as unknown as FrameView;
 }
 
 // pxPerRad the producer derives from the ctx above (= drawPxPerRad).

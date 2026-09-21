@@ -53,13 +53,15 @@ import package::lib::camera::CameraUniforms;
 //   offset 88  glowOverlap           f32             (aggregate glow spread; 1.0 = identity)
 //   offset 92  pickPass              u32             (0 = visual, 1 = pick)
 //   offset 96  aggregateIntensityCap f32             (peak ceiling for aggregates)
-//   struct size 112 (rounded up to the prefix's 16-byte alignment; the five
+//   offset 100 pxPerRad              f32             (target px per radian, toRefPx)
+//   struct size 112 (rounded up to the prefix's 16-byte alignment; the six
 //   scalars overflow the first 16-byte tail, so 'aggregateIntensityCap' opens a
-//   second one and 12 bytes at 100..111 are pure pad).
+//   second one and 8 bytes at 104..111 are pure pad).
 //
 // 'pickPass' (float index 23, byte 92) is written only by the pick pipeline. The
 // VISUAL draw never writes it -- the renderer's per-source camera write stops at
-// 'glowOverlap' (float 22) plus 'aggregateIntensityCap' (float 24) and the
+// 'glowOverlap' (float 22) plus floats 24-25 ('aggregateIntensityCap',
+// 'pxPerRad') and the
 // scratch is zero-init -- so the visual pipeline reads pickPass == 0 and takes
 // the visual path. Only the sibling 'starCatalogPickRenderer' writes it = 1 into
 // its OWN uniform buffer, which flips the vertex stage's ~3 px
@@ -72,7 +74,8 @@ import package::lib::camera::CameraUniforms;
 // 'aggregateIntensityCap' is the user's 'Fog cap' knob: the vertex stage clamps
 // an AGGREGATE record's peak intensity to it (leaves stay uncapped), taming the
 // box-filling glow a near sub-threshold aggregate deposits as fog around the
-// Sun. The pick pipeline draws leaves only, so it leaves this slot zero-init.
+// Sun. The pick pipeline draws leaves only, so it leaves this slot zero-init --
+// and 'pxPerRad' too: the pick fragment ignores the intensity it feeds.
 struct StarUniforms {
   cam: CameraUniforms,
   sizePx: f32,
@@ -80,6 +83,7 @@ struct StarUniforms {
   glowOverlap: f32,
   pickPass: u32,
   aggregateIntensityCap: f32,
+  pxPerRad: f32,
 };
 
 struct VSOut {

@@ -43,6 +43,7 @@ const SIRIUS = byId('sirius');
 
 const VIEWPORT_HEIGHT_PX = 720;
 const FOV_Y_RAD = Math.PI / 3;
+const PX_PER_RAD = VIEWPORT_HEIGHT_PX / (2 * Math.tan(FOV_Y_RAD / 2));
 
 /**
  * A camera half an AU from the given position: a sphere the size of the near
@@ -63,8 +64,7 @@ describe('partitionStarsByResolution', () => {
       stars: [SIRIUS, PROXIMA],
       camPosMpc: halfAuFrom(SIRIUS.positionMpc),
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: VIEWPORT_HEIGHT_PX,
-      fovYRad: FOV_Y_RAD,
+      pxPerRad: PX_PER_RAD,
     });
 
     expect(spheres.map((star) => star.id)).toEqual(['sirius']);
@@ -84,8 +84,7 @@ describe('partitionStarsByResolution', () => {
       stars: [SUN, PROXIMA, SIRIUS],
       camPosMpc: halfAuFrom(SIRIUS.positionMpc),
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: VIEWPORT_HEIGHT_PX,
-      fovYRad: FOV_Y_RAD,
+      pxPerRad: PX_PER_RAD,
     });
 
     expect(points.map((star) => star.id)).toEqual(['sun', 'proxima-centauri']);
@@ -100,8 +99,7 @@ describe('partitionStarsByResolution', () => {
       stars: POSITIONED,
       camPosMpc: SUN.positionMpc,
       thresholdPx: STAR_RESOLVE_PX,
-      viewportHeightPx: VIEWPORT_HEIGHT_PX,
-      fovYRad: FOV_Y_RAD,
+      pxPerRad: PX_PER_RAD,
     });
 
     expect(spheres).toEqual([SUN]);

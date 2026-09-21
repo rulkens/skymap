@@ -7,6 +7,7 @@
 import type { Label2D } from './Label2D';
 import type { LabelBBox } from './LabelBBox';
 import type { Vec2 } from '../math/Vec2';
+import type { OverlaySceneOcclusion } from './OverlaySceneOcclusion';
 
 export type LabelRenderer = {
   /**
@@ -45,27 +46,28 @@ export type LabelRenderer = {
    * implementation.  The pass's render target format must match the
    * `targetFormat` passed to `createLabelRenderer`.
    *
-   * `sceneColorView` is consumed only by an instance created with
-   * `occludeAgainstScene: true`, where it feeds the group(1) coverage joint so
+   * `scene` is consumed only by an instance created with
+   * `occludeAgainstScene: true`, where it fills the group(1) coverage joint so
    * fragments are attenuated by how much of the background the foreground
-   * bodies already cover (read from that target's alpha — see
-   * lib/sceneDepth.wesl).  A plain instance ignores it.
+   * bodies already cover (that target's alpha) and by whether the sampled
+   * scene depth stands in front of the subject — see lib/sceneDepth.wesl.
+   * A plain instance ignores it.
    */
   draw(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneColorView?: GPUTextureView,
+    scene?: OverlaySceneOcclusion,
   ): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */
   glyphCount(): number;
   /** Number of labels last passed to setLabels. Used by tests + debug HUD. */
   labelCount(): number;
   /**
-   * The label rows `setLabels` actually packed — the drawn set, `maxLabels`
-   * truncation applied. The pick path derives its hit rects from this so a
-   * label is clickable exactly where it is legible; nothing else should read
-   * it (the GPU buffers hold the authoritative copy).
+   * The label rows `setLabels` last packed. The pick path derives its hit
+   * rects from this so a label is clickable exactly where it is legible;
+   * nothing else should read it (the GPU buffers hold the authoritative
+   * copy).
    */
   packedLabels(): readonly Label2D[];
   /** Release all GPU resources. No-op if constructed with a null device. */

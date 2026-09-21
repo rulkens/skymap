@@ -10,7 +10,7 @@
  */
 
 import type { PassState } from '../../../@types/engine/frame/PassState';
-import type { ReadyFrameContext } from '../../../@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import { milkyWayVisible } from '../helpers/milkyWayVisible';
 import { milkyWayFadeAlpha } from '../galaxyGenerator/v1/milkyWayFadeAlpha';
 import { fadeBand } from '../../../utils/math/fadeBand';
@@ -22,8 +22,8 @@ import { regionById } from '../../../utils/regions/regionById';
 
 const GALACTIC_CENTRE_REGION = regionById('galactic-centre');
 
-export function deriveMilkyWayCloudAlpha(state: PassState, ctx: ReadyFrameContext): number | null {
-  if (!milkyWayVisible(state, ctx.drawCamPos, ctx.fovYRad, ctx.canvasSize.height, ctx.nowMs)) {
+export function deriveMilkyWayCloudAlpha(state: PassState, ctx: FrameView): number | null {
+  if (!milkyWayVisible(state, ctx.drawCamPos, ctx.drawPxPerRad, ctx.snapshot.nowMs)) {
     return null;
   }
 
@@ -40,7 +40,7 @@ export function deriveMilkyWayCloudAlpha(state: PassState, ctx: ReadyFrameContex
   if (approach <= 0) return null;
 
   const alpha =
-    milkyWayFadeAlpha(camDistMpc, ctx.fovYRad, ctx.canvasSize.height) *
+    milkyWayFadeAlpha(camDistMpc, ctx.drawPxPerRad) *
     approach *
     resolveLayerOpacity(state, ctx, { kind: 'milkyWay' });
 

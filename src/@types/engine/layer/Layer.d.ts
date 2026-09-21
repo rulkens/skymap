@@ -21,7 +21,7 @@ import type { LayerLabels } from './LayerLabels';
 import type { LayerUiEntry } from './LayerUiEntry';
 import type { SagaFactory } from './SagaFactory';
 import type { SelectionKindRow } from './SelectionKindRow';
-import type { ReadyFrameContext } from '../frame/ReadyFrameContext';
+import type { FrameView } from '../frame/FrameView';
 import type { PassState } from '../frame/PassState';
 
 export type Layer<
@@ -91,5 +91,5 @@ export type Layer<
    * Returns two independent votes — keep the loop awake, and hold off sky captures;
    * see `LayerFrameVote` for why answering one with the other is a defect.
    */
-  frame?(runtime: Runtime): (ctx: ReadyFrameContext, state: PassState) => LayerFrameVote;
+  frame?(runtime: Runtime): (ctx: FrameView, state: PassState) => LayerFrameVote;
 };

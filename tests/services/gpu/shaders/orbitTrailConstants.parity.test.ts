@@ -25,9 +25,12 @@ import {
   INSTANCE_ATTRIBUTES,
   INSTANCE_FLOATS,
   INSTANCE_STRIDE,
+  OCCLUDER_CAM_POS_OFFSET,
   OCCLUDER_COUNT_OFFSET,
+  OCCLUDER_INV_MVP_OFFSET,
   OCCLUDER_SPHERES_OFFSET,
   OCCLUDER_UNIFORM_BYTES,
+  OCCLUDER_VIEWPORT_OFFSET,
 } from '../../../../src/services/gpu/renderers/bodies/orbitTrailRenderer';
 
 /**
@@ -189,15 +192,27 @@ function occlusionUniformLayout(): { offsets: Map<string, number>; size: number 
   if (!structMatch) throw new Error('OcclusionUniforms struct not found in fragment.wesl');
   const maxOccluders = parseWeslConstants().get('MAX_OCCLUDERS')!;
 
+  // WGSL's uniform-address-space align/size pair per type. An array's size
+  // depends on MAX_OCCLUDERS, so it is resolved below rather than tabulated.
+  const LAYOUT: Record<string, { align: number; size: number }> = {
+    u32: { align: 4, size: 4 },
+    f32: { align: 4, size: 4 },
+    'vec2<f32>': { align: 8, size: 8 },
+    'vec3<f32>': { align: 16, size: 12 },
+    'vec4<f32>': { align: 16, size: 16 },
+    'mat4x4<f32>': { align: 16, size: 64 },
+  };
+
   const offsets = new Map<string, number>();
   let offset = 0;
   let maxAlign = 1;
-  const re = /(\w+)\s*:\s*(u32|f32|vec4<f32>|array<vec4<f32>,\s*MAX_OCCLUDERS>)\s*,/g;
+  const re =
+    /(\w+)\s*:\s*(u32|f32|vec2<f32>|vec3<f32>|vec4<f32>|mat4x4<f32>|array<vec4<f32>,\s*MAX_OCCLUDERS>)\s*,/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(structMatch[1]!)) !== null) {
     const type = m[2]!;
-    const align = type === 'u32' || type === 'f32' ? 4 : 16;
-    const size = type.startsWith('array') ? 16 * maxOccluders : align;
+    const align = type.startsWith('array') ? 16 : LAYOUT[type]!.align;
+    const size = type.startsWith('array') ? 16 * maxOccluders : LAYOUT[type]!.size;
     offset = Math.ceil(offset / align) * align;
     offsets.set(m[1]!, offset);
     offset += size;
@@ -213,8 +228,25 @@ describe('orbitTrail/fragment.wesl OcclusionUniforms ↔ orbitTrailRenderer occl
   // padding: every trail then draws unoccluded, or none draws at all.
   it('the struct lays out where the TS offsets say it does', () => {
     const { offsets, size } = occlusionUniformLayout();
+    // The field set first: a dropped or renamed field would otherwise compare
+    // an undefined offset against an undefined TS constant and pass.
+    expect([...offsets.keys()]).toEqual([
+      'count',
+      'pad0',
+      'pad1',
+      'pad2',
+      'spheres',
+      'invMvp',
+      'camPosKm',
+      'viewportPx',
+    ]);
     expect(offsets.get('count')).toBe(OCCLUDER_COUNT_OFFSET);
     expect(offsets.get('spheres')).toBe(OCCLUDER_SPHERES_OFFSET);
+    // The depth-clearance record: the sampled row's inverse MVP, its camera,
+    // and the viewport the fragment divides its pixel by.
+    expect(offsets.get('invMvp')).toBe(OCCLUDER_INV_MVP_OFFSET);
+    expect(offsets.get('camPosKm')).toBe(OCCLUDER_CAM_POS_OFFSET);
+    expect(offsets.get('viewportPx')).toBe(OCCLUDER_VIEWPORT_OFFSET);
     expect(size).toBe(OCCLUDER_UNIFORM_BYTES);
   });
 });

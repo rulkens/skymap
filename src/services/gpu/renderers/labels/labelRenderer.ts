@@ -79,13 +79,17 @@ import { layoutLabel } from '../../labelLayout/labelLayout';
 import { measureLabel } from '../../labelLayout/measureLabel';
 import type { LabelBBox } from '../../../../@types/rendering/LabelBBox';
 import vsCode from '../../shaders/labels/vertex.wesl?static';
+import vsOccludeCode from '../../shaders/labels/vertexOcclude.wesl?static';
 import fsCode from '../../shaders/labels/fragment.wesl?static';
 import fsOccludeCode from '../../shaders/labels/fragmentOcclude.wesl?static';
 import { createShaderModuleWithDevLog } from '../../shaderCompileLogger';
+import type { OverlaySceneOcclusion } from '../../../../@types/rendering/OverlaySceneOcclusion';
 import {
   OCCLUSION_COVERAGE_GROUP_INDEX,
   OCCLUSION_COVERAGE_LAYOUT_DESC,
   createOcclusionCoverageBindGroup,
+  createOcclusionDepthFrameBuffer,
+  writeOcclusionDepthFrame,
 } from './occlusionCoverageGroup';
 import {
   LABEL_MAX_PX_DEFAULT,
@@ -106,14 +110,18 @@ import { PREMULTIPLIED_OVER_BLEND } from '../../lib/blendStates';
  *   bytes 32..47  sizing        vec4<f32>  — outlineEmFrac, minPx, maxPx, fadeAlpha
  *   bytes 48..63  outlineColor  vec4<f32>  — premultiplied rgba (outline stroke)
  *   bytes 64..67  occludeWeight f32        — share of the scene attenuation
+ *   bytes 68..71  occludeNearKm f32        — the sampled-depth channel's cutoff
+ *   bytes 80..95  subjectPos    vec4<f32>  — xyz = the depth verdict's own
+ *                                             world point (falls back to
+ *                                             worldPos), w unused
  *
- * The struct's vec4 members give it 16-byte alignment, so the array element
- * stride rounds 68 UP to 80 — the 12 trailing bytes are padding the CPU never
- * writes.  `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the
- * shader since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a
- * fresh vec4 for one scalar.
+ * The trailing vec4 needs 16-byte alignment, so bytes 72..79 are now genuine
+ * padding ahead of it (not slack) and the stride is 96, not 72 rounded up.
+ * `sizing.x` repurposes the legacy `pixelSize` slot (ignored by the shader
+ * since the worldEmMpc migration) to carry `outlineEmFrac`, sparing a fresh
+ * vec4 for one scalar.
  */
-const LABEL_DATA_BYTES = 80;
+const LABEL_DATA_BYTES = 96;
 
 /**
  * Per-glyph instance buffer stride, matching `VsIn` attributes 1–5 in io.wesl:
@@ -129,6 +137,14 @@ const LABEL_DATA_BYTES = 80;
  * buffer with `stepMode: 'vertex'`, not from this instance buffer.
  */
 const GLYPH_INSTANCE_BYTES = 40;
+
+// ─── capacity constants ───────────────────────────────────────────────────
+
+// Starting label-storage size; `setLabels` grows it in power-of-two steps
+// once the roster outgrows it (see `allocate`).
+const INITIAL_LABEL_CAPACITY = 64;
+// Per-label glyph budget for the SHARED glyph pool (`capacity * MAX_GLYPHS_PER_LABEL`).
+const MAX_GLYPHS_PER_LABEL = 64;
 
 // ─── corner buffer ────────────────────────────────────────────────────────
 
@@ -152,16 +168,21 @@ const CORNER_BYTES = UNIT_QUAD_STRIP_CORNERS.byteLength; // 32 bytes (4 × 2 × 
  * target is legible at the construction site (the same one-idiom rule every
  * renderer follows).
  *
- * `maxLabels` and `maxGlyphsPerLabel` size the static GPU buffers; the
- * defaults (64 × 64 = 4096 glyphs) cover the "you are here" + a few
- * future tagged-galaxy markers without a follow-up resize.
+ * `INITIAL_LABEL_CAPACITY` is a starting size, not a ceiling: `setLabels`
+ * grows the CPU scratch arrays and, with a device, reallocates the GPU
+ * storage/instance buffers and bind group in power-of-two steps whenever
+ * the roster outgrows them. `MAX_GLYPHS_PER_LABEL` sizes a glyph pool SHARED
+ * across all labels (`capacity * MAX_GLYPHS_PER_LABEL`); growth scales that
+ * pool with capacity, but a roster of unusually long labels can still
+ * exhaust it and have glyphs silently dropped (the `currentGlyphCount >=
+ * maxGlyphs` break in `setLabels`).
  *
  * `opts.occludeAgainstScene` opts this instance into per-pixel attenuation
  * behind the solar-system bodies.  When set, the pipeline gains a group(1)
  * coverage binding (`OCCLUSION_COVERAGE_LAYOUT_DESC`) and compiles
  * `fragmentOcclude.wesl` instead of the plain `fragment.wesl`; `draw` then
- * consumes a per-frame scene colour view.  The default (opts omitted) keeps
- * the plain single-BGL pipeline — byte-for-byte unchanged.
+ * consumes a per-frame `OverlaySceneOcclusion`.  The default (opts omitted)
+ * keeps the plain single-BGL pipeline — byte-for-byte unchanged.
  *
  * `opts.clipScale` states the clip units of the matrices this instance will be
  * drawn with, so the em it packs is divisible by their `clip.w` — the NEAR0
@@ -171,8 +192,6 @@ export function createLabelRenderer(
   ctx: GpuContext,
   targetFormat: GPUTextureFormat,
   atlases: LoadedFontAtlases,
-  maxLabels = 64,
-  maxGlyphsPerLabel = 64,
   opts?: { occludeAgainstScene?: boolean; clipScale?: number },
 ): LabelRenderer {
   const clipScale = opts?.clipScale ?? 1;
@@ -181,7 +200,6 @@ export function createLabelRenderer(
   // factory's call site.  Runtime code below null-checks before each use.
   const device = ctx.device as GPUDevice | null;
   const format = targetFormat;
-  const maxGlyphs = maxLabels * maxGlyphsPerLabel;
 
   // Per-font metrics record + pre-computed layer index lookup.  Built
   // once at construction time so the per-glyph pack loop in setLabels
@@ -207,24 +225,25 @@ export function createLabelRenderer(
   const firstFontId = FONT_IDS[0]!;
   const firstMetrics: FontMetrics = metricsByFont[firstFontId];
 
-  // ── CPU scratch buffers — always allocated, safe to use with null device ─
-  //
-  // The Float32Array and Uint32Array share a single ArrayBuffer so we can
-  // write f32 fields and the u32 labelIndex into the same memory region
-  // without any copies.
-  const glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
-  const glyphF32 = new Float32Array(glyphBuf);
-  const glyphU32 = new Uint32Array(glyphBuf);
-  const labelBuf = new Float32Array((maxLabels * LABEL_DATA_BYTES) / 4);
+  // ── CPU scratch buffers — (re)built by `allocate` below, safe to use with
+  // a null device. The Float32Array and Uint32Array share a single
+  // ArrayBuffer so f32 fields and the u32 labelIndex write into the same
+  // memory region without any copies. Placeholder sizes here; `allocate`
+  // replaces them before construction returns.
+  let capacity = 0;
+  let maxGlyphs = 0;
+  let glyphBuf = new ArrayBuffer(0);
+  let glyphF32 = new Float32Array(glyphBuf);
+  let glyphU32 = new Uint32Array(glyphBuf);
+  let labelBuf = new Float32Array(0);
 
   // Closure-scoped mutable counters — replace the `this.currentGlyphCount`
   // / `this.currentLabelCount` fields the class form used.  Updated only
   // by `setLabels`; read by `draw`, `glyphCount`, `labelCount`.
   let currentGlyphCount = 0;
   let currentLabelCount = 0;
-  // The rows `setLabels` actually packed, retained so the pick path can derive
-  // its hit rects from exactly what is on screen — `maxLabels`-truncated tail
-  // included, since a dropped row draws nothing and must not be clickable.
+  // The rows `setLabels` actually packed, retained so the pick path can
+  // derive its hit rects from exactly what is on screen.
   let currentLabels: readonly Label2D[] = [];
 
   // ── GPU resources (null when device is null) ─────────────────────────────
@@ -241,13 +260,63 @@ export function createLabelRenderer(
   let cornerBuffer: GPUBuffer | null = null;
   let atlasTexture: GPUTexture | null = null;
   let bindGroup: GPUBindGroup | null = null;
+  let bindGroupLayout: GPUBindGroupLayout | null = null;
+  let sampler: GPUSampler | null = null;
   // Retained only on the occlusion path — the group(1) coverage BGL that
-  // `draw` rebuilds a per-frame bind group against.  Null on the plain
-  // path (and whenever device is null), which is what gates `draw`'s
-  // occlusion branch.
+  // `draw` rebuilds a per-frame bind group against, and the depth-frame
+  // uniform that joint's binding 2 reads.  Null on the plain path (and
+  // whenever device is null), which is what gates `draw`'s occlusion branch.
   let occlusionCoverageBGL: GPUBindGroupLayout | null = null;
+  let occlusionDepthFrameBuffer: GPUBuffer | null = null;
 
   const occludesScene = opts?.occludeAgainstScene === true;
+
+  /**
+   * (Re)size the CPU scratch arrays for `newCapacity` labels and, with a
+   * device, destroy + recreate the GPU storage/instance buffers and rebuild
+   * the bind group — binding 1 pins `storageBuffer`, so a stale bind group
+   * would keep reading the destroyed buffer. Runs once at construction and
+   * again whenever `setLabels` outgrows `capacity`.
+   */
+  function allocate(newCapacity: number): void {
+    capacity = newCapacity;
+    maxGlyphs = capacity * MAX_GLYPHS_PER_LABEL;
+    glyphBuf = new ArrayBuffer(maxGlyphs * GLYPH_INSTANCE_BYTES);
+    glyphF32 = new Float32Array(glyphBuf);
+    glyphU32 = new Uint32Array(glyphBuf);
+    labelBuf = new Float32Array((capacity * LABEL_DATA_BYTES) / 4);
+
+    if (!device || !bindGroupLayout || !atlasTexture || !sampler || !uniformBuffer) return;
+
+    // WebGPU defers a destroyed buffer's reclaim past queued GPU work reading it.
+    storageBuffer?.destroy();
+    instanceBuffer?.destroy();
+
+    storageBuffer = device.createBuffer({
+      label: 'label-storage',
+      size: capacity * LABEL_DATA_BYTES,
+      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+    });
+    instanceBuffer = device.createBuffer({
+      label: 'label-instances',
+      size: maxGlyphs * GLYPH_INSTANCE_BYTES,
+      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+    });
+
+    bindGroup = device.createBindGroup({
+      label: 'label-bg',
+      layout: bindGroupLayout,
+      entries: [
+        { binding: 0, resource: { buffer: uniformBuffer } },
+        { binding: 1, resource: { buffer: storageBuffer } },
+        // Explicit '2d-array' view dimension — matches the BGL entry and
+        // shader binding; spelled out so it survives a future FONTS
+        // shrink-to-one-entry edit.
+        { binding: 2, resource: atlasTexture.createView({ dimension: '2d-array' }) },
+        { binding: 3, resource: sampler },
+      ],
+    });
+  }
 
   if (device) {
     // ── Bind group layout ────────────────────────────────────────────────
@@ -257,7 +326,7 @@ export function createLabelRenderer(
     //   1 → read-only storage buffer (LabelData[], vertex-visible)
     //   2 → atlas texture   (fragment-visible)
     //   3 → atlas sampler   (fragment-visible)
-    const bindGroupLayout = device.createBindGroupLayout({
+    bindGroupLayout = device.createBindGroupLayout({
       label: 'label-bgl',
       entries: [
         { binding: 0, visibility: GPUShaderStage.VERTEX, buffer: { type: 'uniform' } },
@@ -290,6 +359,7 @@ export function createLabelRenderer(
     // occlusionCoverageGroup.ts).
     if (occludesScene) {
       occlusionCoverageBGL = device.createBindGroupLayout(OCCLUSION_COVERAGE_LAYOUT_DESC);
+      occlusionDepthFrameBuffer = createOcclusionDepthFrameBuffer(device, 'label-depth-frame');
     }
 
     // ── Pipelines ────────────────────────────────────────────────────────
@@ -352,6 +422,16 @@ export function createLabelRenderer(
         fsOccludeCode,
         'labels.fragmentOcclude',
       );
+      // A SEPARATE vertex module, not 'vsModule' + a different entry point:
+      // vertexOcclude.wesl imports lib::sceneDepth, which statically pulls in
+      // group(1) bindings — vertex.wesl's 'vs' must stay clear of those for
+      // the plain pipeline's group(1)-less layout to accept it (see
+      // vertexOcclude.wesl's header).
+      const vsOccludeModule = createShaderModuleWithDevLog(
+        device,
+        vsOccludeCode,
+        'labels.vertexOcclude',
+      );
       occludePipeline = device.createRenderPipeline({
         label: 'label-pipeline-occlude',
         layout: device.createPipelineLayout({
@@ -359,7 +439,7 @@ export function createLabelRenderer(
           // group 0 = the label BGL; group 1 = the shared coverage joint.
           bindGroupLayouts: [bindGroupLayout, occlusionCoverageBGL],
         }),
-        vertex: { module: vsModule, entryPoint: 'vs', buffers: vertexBuffers },
+        vertex: { module: vsOccludeModule, entryPoint: 'vsOcclude', buffers: vertexBuffers },
         fragment: { module: fsOccludeModule, entryPoint: 'fs', targets: colorTargets },
         primitive: { topology: 'triangle-strip' },
       });
@@ -370,18 +450,6 @@ export function createLabelRenderer(
       label: 'label-uniforms',
       size: CAMERA_UNIFORM_BYTES,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-    });
-
-    storageBuffer = device.createBuffer({
-      label: 'label-storage',
-      size: maxLabels * LABEL_DATA_BYTES,
-      usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
-    });
-
-    instanceBuffer = device.createBuffer({
-      label: 'label-instances',
-      size: maxGlyphs * GLYPH_INSTANCE_BYTES,
-      usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
     });
 
     // The corner buffer is tiny (32 bytes, 4 × vec2) and static — upload once
@@ -439,44 +507,35 @@ export function createLabelRenderer(
     // No mipmaps: MSDF handles multi-scale rendering internally via the
     // median3 + fwidth technique. Mip-filtering would blur the signed-distance
     // channels and corrupt the glyph edge reconstruction.
-    const sampler = device.createSampler({
+    sampler = device.createSampler({
       label: 'label-sampler',
       magFilter: 'linear',
       minFilter: 'linear',
       addressModeU: 'clamp-to-edge',
       addressModeV: 'clamp-to-edge',
     });
-
-    // ── Bind group ───────────────────────────────────────────────────────
-    bindGroup = device.createBindGroup({
-      label: 'label-bg',
-      layout: bindGroupLayout,
-      entries: [
-        { binding: 0, resource: { buffer: uniformBuffer } },
-        { binding: 1, resource: { buffer: storageBuffer } },
-        {
-          binding: 2,
-          // Explicit '2d-array' view dimension matches the
-          // bind-group-layout entry and the shader binding.  Spelling
-          // it out (rather than letting the default pick) makes the
-          // intent visible at the bind site and survives any future
-          // FONTS shrink-to-one-entry edit.
-          resource: atlasTexture.createView({ dimension: '2d-array' }),
-        },
-        { binding: 3, resource: sampler },
-      ],
-    });
   }
+
+  // Sizes the CPU scratch arrays and, with a device, the GPU buffers above —
+  // the same path `setLabels` re-enters on growth.
+  allocate(INITIAL_LABEL_CAPACITY);
 
   // ── public methods (closures over the locals above) ────────────────────
 
   function setLabels(labels: readonly Label2D[]): void {
+    // A roster crossing a power-of-two boundary is rare — a handful of times
+    // per session, never per frame — so a full buffer rebuild here is cheap.
+    if (labels.length > capacity) {
+      allocate(2 ** Math.ceil(Math.log2(labels.length)));
+    }
+
     currentGlyphCount = 0;
     currentLabelCount = 0;
 
-    const count = Math.min(labels.length, maxLabels);
-    currentLabels = count === labels.length ? labels : labels.slice(0, count);
-    for (let li = 0; li < count; li++) {
+    // Aliases the caller's array — packedLabels() is the pick path's
+    // authority, so the caller must not retain or mutate it after this call.
+    currentLabels = labels;
+    for (let li = 0; li < labels.length; li++) {
       const label = labels[li]!;
       // Each label specifies its own font; layout reads the font's
       // metrics from the FontId-keyed record built at construction
@@ -500,7 +559,9 @@ export function createLabelRenderer(
       //   [4..7]   color        (r*a, g*a, b*a, a — premultiplied)
       //   [8..11]  sizing       (outlineEmFrac, minPx, maxPx, fadeAlpha)
       //   [12..15] outlineColor (r*a, g*a, b*a, a)
-      //   [16]     occludeWeight        ([17..19] are struct padding)
+      //   [16]     occludeWeight
+      //   [17]     occludeNearKm        ([18..19] are struct padding)
+      //   [20..23] subjectPos   (x, y, z, 0 — the depth verdict's own point)
       const labelBase = li * (LABEL_DATA_BYTES / 4);
       labelBuf[labelBase + 0] = label.worldPos[0];
       labelBuf[labelBase + 1] = label.worldPos[1];
@@ -539,6 +600,17 @@ export function createLabelRenderer(
       // Default 1 = today's per-pixel rule, so a producer that says nothing
       // about its subject's depth keeps the behaviour it had.
       labelBuf[labelBase + 16] = label.occludeWeight ?? 1;
+      // Default 0 leaves the sampled-depth channel inert: no scene texel is
+      // nearer than the eye, and at weight 1 the `max` already saturates.
+      labelBuf[labelBase + 17] = label.occludeNearKm ?? 0;
+
+      // Falls back to worldPos when unset (every label the director never
+      // lifts, where the two already coincide) — see Label2D.occludeSubjectPos.
+      const subjectPos = label.occludeSubjectPos ?? label.worldPos;
+      labelBuf[labelBase + 20] = subjectPos[0];
+      labelBuf[labelBase + 21] = subjectPos[1];
+      labelBuf[labelBase + 22] = subjectPos[2];
+      labelBuf[labelBase + 23] = 0; // w unused
 
       // Resolve the label's font to its GPU texture-array layer index
       // ONCE per label, outside the inner glyph loop — every glyph in
@@ -599,7 +671,7 @@ export function createLabelRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
-    sceneColorView?: GPUTextureView,
+    scene?: OverlaySceneOcclusion,
   ): void {
     if (
       !device ||
@@ -621,19 +693,21 @@ export function createLabelRenderer(
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Pipeline selection: an occlusion instance draws through its occlusion
-    // pipeline only when a scene colour view is supplied THIS frame, binding the
-    // group(1) coverage joint rebuilt from that view. With no colour view (e.g.
-    // no foreground body rendered this frame), it falls back to the plain
-    // pipeline and draws the captions un-occluded — a valid draw, NOT an
-    // occlusion draw with group(1) left unbound. A non-occlusion instance
-    // (occludePipeline null) always takes the plain path.
-    if (occlusionCoverageBGL && occludePipeline && sceneColorView) {
+    // pipeline only when the scene views are supplied THIS frame, binding the
+    // group(1) coverage joint rebuilt from them. With none (e.g. no foreground
+    // body rendered this frame), it falls back to the plain pipeline and draws
+    // the captions un-occluded — a valid draw, NOT an occlusion draw with
+    // group(1) left unbound. A non-occlusion instance (occludePipeline null)
+    // always takes the plain path.
+    if (occlusionCoverageBGL && occludePipeline && occlusionDepthFrameBuffer && scene) {
       pass.setPipeline(occludePipeline);
       pass.setBindGroup(0, bindGroup);
+      writeOcclusionDepthFrame(device, occlusionDepthFrameBuffer, scene.frame, viewportSize);
       const coverageBindGroup = createOcclusionCoverageBindGroup(
         device,
         occlusionCoverageBGL,
-        sceneColorView,
+        scene,
+        occlusionDepthFrameBuffer,
       );
       pass.setBindGroup(OCCLUSION_COVERAGE_GROUP_INDEX, coverageBindGroup);
     } else {
@@ -681,6 +755,7 @@ export function createLabelRenderer(
     instanceBuffer?.destroy();
     cornerBuffer?.destroy();
     atlasTexture?.destroy();
+    occlusionDepthFrameBuffer?.destroy();
   }
 
   const renderer: LabelRenderer = {

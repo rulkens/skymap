@@ -39,7 +39,6 @@ const LAYER_PASS_DIRS: readonly (readonly [string, string])[] = readdirSync(LAYE
 const ALLOWED: Readonly<Record<string, number>> = {
   'frame/checkFrameOrder': 2,
   'frame/cosmoLabelProjection': 1,
-  'frame/cubemapFaceContext': 4,
   'frame/deriveBodyStates': 3,
   'frame/executeFrame': 5,
   'frame/expandFrameOrder': 5,
@@ -58,7 +57,6 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/visibleStars': 1,
   'frame/passes/bodyGlintsPass': 8,
   'frame/passes/cloudShellPass': 1,
-  'frame/passes/constellationsPass': 2,
   'frame/passes/earthPass': 4,
   'frame/passes/fieldStarSpherePass': 6,
   'frame/passes/horizonShellPass': 1,

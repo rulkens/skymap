@@ -8,38 +8,40 @@ import { flowFieldPass } from '../../../../src/layers/flow/passes/flowFieldPass'
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { FlowRuntime } from '../../../../src/layers/flow/@types/FlowRuntime';
-import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
+import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { SlabView } from '../../../../src/@types/engine/frame/SlabView';
 import type { Mat4 } from 'wgpu-matrix';
 
-function makeCtx(): ReadyFrameContext {
+function makeCtx(): FrameView {
   return {
-    isReady: true,
+    snapshot: {
+      isReady: true,
+      nowMs: 0,
+      simDays: 0,
+      focusBlend: 0,
+      layersSettling: false,
+      visibleSourceMask: 0xffffffff,
+      focus: {
+        center: [0, 0, 0] as Readonly<[number, number, number]>,
+        apparentRadiusMpc: 1,
+        physicalRadiusMpc: 0,
+        blend: 0,
+      },
+      renderTargets: {} as never,
+      cursorTexPx: null,
+      renderedTargets: new Set<string>(),
+    },
     viewSlot: 0,
-    renderedTargets: new Set<string>(),
+    viewKind: 'frame',
     // Nothing in this file reads bodyPose.
     bodyPose: () => null,
     cam: {} as never,
     vp: new Float32Array(16) as unknown as Mat4,
     slabs: [],
     canvasSize: { width: 1280, height: 720 },
-    cursorTexPx: null,
     drawCamPos: [0, 0, 5] as Readonly<[number, number, number]>,
     drawPxPerRad: 720,
-    nowMs: 0,
-    simDays: 0,
-    fovYRad: (60 * Math.PI) / 180,
-    focusBlend: 0,
-    layersSettling: false,
-    visibleSourceMask: 0xffffffff,
-    focus: {
-      center: [0, 0, 0] as Readonly<[number, number, number]>,
-      apparentRadiusMpc: 1,
-      physicalRadiusMpc: 0,
-      blend: 0,
-    },
-    renderTargets: {} as never,
-  };
+  } as unknown as FrameView;
 }
 
 /** Minimal SlabView matching the ctx above. `slab` is unused by this layer. */

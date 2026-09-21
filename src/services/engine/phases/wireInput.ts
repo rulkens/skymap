@@ -17,6 +17,7 @@ import { seedCameraRuntime } from '../camera/seedCameraRuntime';
 import { cssToTexPx } from '../helpers/cssToTexPx';
 import { unixMsToJulianDays } from '../../../utils/time/unixMsToJulianDays';
 import { commitCameraPose, beginDrag, cancelCameraTween } from '../../../state/camera/cameraSlice';
+import { selectUrlPose } from '../../../state/camera/selectors';
 import { absoluteArm } from '../../../utils/camera/absoluteArm';
 import {
   updateSelectionSelect,
@@ -114,20 +115,28 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
   // (yaw 0, distance 0.43) rather than the computed framing pose — a visible
   // camera jump on frame one.
   //
-  // The URL orientation frame is already committed here because `createEngine`
-  // dispatches `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE
-  // this phase runs inside. Registration-before-bootstrap is the load-bearing
-  // gap: moving `setSagaContext` into a bootstrap phase, or making bootstrap
-  // synchronous with engine construction, silently regresses the boot frame to
-  // the default orientation.
-  // `target` is COPIED: `initialCam.target` is mutable and this pose outlives the seed.
-  const committed = absoluteArm({
-    target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
-    yaw: initialCam.yaw,
-    pitch: initialCam.pitch,
-    distance: initialCam.distance,
-  });
-  store.dispatch(commitCameraPose(committed));
+  // The URL orientation frame — and, the same gap, a `#pose=` link's
+  // `camera.urlPose` — are already in the store: `createEngine` dispatches
+  // `setSagaContext` SYNCHRONOUSLY, before the async bootstrap IIFE this
+  // phase runs inside; moving that dispatch into a phase regresses both.
+  //
+  // A parked `urlPose` IS the boot pose — a `#pose=` deep link's exact camera
+  // — and wins outright over the computed home framing (`target` COPIED, as
+  // `initialCam.target` is mutable); the park itself stays put, spent by the
+  // arrival focus, not this seed.
+  //
+  // Seeded BEFORE the commit below, off the still-placeholder store — the one
+  // exception to `seedCameraRuntime`'s own "dispatch first" contract — so
+  // frame one reads the boot pose as an OUTSIDE commit, adopted settled.
+  const urlPose = selectUrlPose(store.getState());
+  const committed =
+    urlPose ??
+    absoluteArm({
+      target: [initialCam.target[0], initialCam.target[1], initialCam.target[2]],
+      yaw: initialCam.yaw,
+      pitch: initialCam.pitch,
+      distance: initialCam.distance,
+    });
   state.cameraRuntime = seedCameraRuntime({
     state: store.getState(),
     projection: {
@@ -137,6 +146,7 @@ export async function wireInput(state: EngineState, deps: BootstrapDeps): Promis
       far: initialCam.far,
     },
   });
+  store.dispatch(commitCameraPose(committed));
 
   // Boot IS the home state: the sim clock boots live, so Earth moves from the
   // first frame and a bare pose would let the globe slide out of frame.
