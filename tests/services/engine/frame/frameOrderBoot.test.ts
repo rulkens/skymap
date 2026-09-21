@@ -20,14 +20,14 @@ import { APP_COMPOSITION } from '../../../../src/compositions/app';
 describe('checkFrameOrder — boot', () => {
   it('the app’s FRAME_ORDER passes the boot check', () => {
     // The swap format only decides the swap ROW's format, never an id, so any
-    // valid format yields the same id list `startLoop` reads off the assembled
-    // rows.
-    const targetIds = composeRenderTargetRows(
+    // valid format yields the same rows `startLoop` reads off the assembled
+    // table.
+    const targets = composeRenderTargetRows(
       'bgra8unorm',
       APP_COMPOSITION.layers.map((layer) => layer.targets ?? []),
-    ).map((row) => row.id);
+    );
     expect(() =>
-      checkFrameOrder(FRAME_ORDER, CONTENT_PASSES, CORE_COMPUTES, targetIds),
+      checkFrameOrder(FRAME_ORDER, CONTENT_PASSES, CORE_COMPUTES, targets),
     ).not.toThrow();
   });
 });
