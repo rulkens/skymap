@@ -5,7 +5,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { flowLayerSettings } from './settings/flowLayerSettings';
+import { flowLayerSettings } from './state/slices';
 import { FLOW_SOURCE_ROWS } from './sources/flowSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';

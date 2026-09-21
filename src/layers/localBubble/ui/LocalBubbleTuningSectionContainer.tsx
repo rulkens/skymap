@@ -7,13 +7,13 @@
 import { memo, useCallback } from 'react';
 import DebugTuningSection from '../../../components/DebugPanel/DebugTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectSettings } from '../../../state/settings/selectors';
+import { selectLocalBubble } from '../state/localBubble/selectors';
 import { LOCAL_BUBBLE_SLIDER_FIELDS } from '../../../data/localBubble/localBubbleSliderFields';
-import { setLocalBubbleIntensity } from '../settings/localBubbleSlice';
+import { setLocalBubbleIntensity } from '../state/localBubble/slice';
 
 function LocalBubbleTuningSectionContainer(): React.ReactElement {
   const dispatch = useAppDispatch();
-  const localBubble = useAppSelector((state) => selectSettings(state).localBubble);
+  const localBubble = useAppSelector(selectLocalBubble);
   const onSliderChange = useCallback(
     (_key: 'intensity', value: number) => dispatch(setLocalBubbleIntensity(value)),
     [dispatch],

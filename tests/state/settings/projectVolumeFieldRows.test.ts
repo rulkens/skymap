@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { projectVolumeFieldRows } from '../../../src/state/settings/projectVolumeFieldRows';
 import reducer from '../../../src/state/settings/settingsReducer';
-import { addVolumeField } from '../../../src/layers/volume/settings/volumesSlice';
+import { addVolumeField } from '../../../src/layers/volume/state/volumes/slice';
 import { getVolumeFieldDefaults } from '../../../src/data/volume/volumeFieldDefaults';
 import { makeSettingsFixture } from './makeSettingsFixture';
 

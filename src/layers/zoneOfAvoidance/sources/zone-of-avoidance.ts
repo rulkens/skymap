@@ -10,9 +10,9 @@ export const ZONE_OF_AVOIDANCE_ENTRY = {
   // other non-catalog overlays (the coverage-mask logic only consults this
   // for galaxy-catalog patches).
   allSky: true,
-  // On by default — not what actually seeds the settings default (that's
-  // DEFAULT_ZONE_OF_AVOIDANCE_ENABLED, a plain literal); set true here for
-  // internal consistency with the row it mirrors.
+  // On by default — not what actually seeds the settings default (that's a
+  // plain `true` literal in `state/zoneOfAvoidance/initialState.ts`); set
+  // true here for internal consistency with the row it mirrors.
   visible: true,
   // The curved "Zone of Avoidance" lettering rides the band's own toggle
   // and fade layer (zoneOfAvoidancePass.ts), not the label subsystem — so

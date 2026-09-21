@@ -25,7 +25,7 @@ import { skyCaptureBandAlpha } from '../skyCaptureBandAlpha';
 // `BLACK_HOLES` is authored data guaranteed to carry a Sgr A* row; a missing
 // row is a wiring bug worth failing loudly on, not a silent no-op layer. The
 // row's VALUES are not read here: `state.settings.sgrAStarLensingTuning` is
-// what packs (seeded from this same row — `DEFAULT_SGR_A_STAR_LENSING_TUNING`).
+// what packs (seeded from this same row — see `sgrAStarLensingTuning/initialState.ts`).
 if (BLACK_HOLES.find((row) => row.bodyId === SGR_A_STAR.id) === undefined) {
   throw new Error(`sgrAStarLensingPass: BLACK_HOLES carries no row for '${SGR_A_STAR.id}'`);
 }

@@ -89,7 +89,7 @@ import { startTour } from '../../../src/state/tour/tourActions';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { FOLD_SETTLE_MS } from '../../../src/state/tour/foldSettleMs';
-import { setVolumesEnabled } from '../../../src/layers/volume/settings/volumesSlice';
+import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
 import type { LiveCameraRuntime } from '../../../src/store/types';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';

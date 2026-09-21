@@ -33,15 +33,10 @@ import { createElement, type ReactNode } from 'react';
 import { Provider } from 'react-redux';
 import CosmicWebSectionContainer from '../../../src/components/containers/CosmicWebSectionContainer';
 import { createTestStore as createAppStore } from '../../support/createTestStore';
-import {
-  selectVolumesEnabled,
-  selectFilamentsEnabled,
-} from '../../../src/state/settings/selectors';
-import {
-  setVolumesEnabled,
-  addVolumeField,
-} from '../../../src/layers/volume/settings/volumesSlice';
-import { setFilamentsEnabled } from '../../../src/layers/filaments/settings/filamentsSlice';
+import { selectVolumesEnabled } from '../../../src/layers/volume/state/volumes/selectors';
+import { selectFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/selectors';
+import { setVolumesEnabled, addVolumeField } from '../../../src/layers/volume/state/volumes/slice';
+import { setFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/slice';
 import type { AppStore } from '../../../src/store/types';
 import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 

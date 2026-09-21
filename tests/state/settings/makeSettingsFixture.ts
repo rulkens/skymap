@@ -5,13 +5,13 @@
  * Every reducer / selector / store / action test needs a full, type-faithful
  * `EngineSettingsState`. Rather than re-inline the ~30-line literal in each
  * file (where it would drift the moment a cluster gains a field), they all
- * build it here. The body mirrors the engine's boot value
- * (`INITIAL_SETTINGS`) so the fixture stays a true shape: defaults
- * from `data/defaults.ts`, item rows DERIVED from `GALAXY_CATALOG_IDS` /
- * `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`, volume items from
- * `seedVolumeFields()`.
- * Deriving the item keys (rather than hand-listing them) means adding a
- * catalog or category can't silently leave the fixture stale.
+ * build it here. This IS the engine's boot value (`INITIAL_SETTINGS`) plus
+ * overrides, not an independent mirror: each Layer cluster spreads that
+ * slice's own production `initialState`, with item rows re-DERIVED from
+ * `GALAXY_CATALOG_IDS` / `STAR_CATALOG_IDS` / `BODY_IDS` / `STRUCTURE_IDS`
+ * and volume items from a fresh `seedVolumeFields()` call. Deriving the item
+ * keys (rather than hand-listing them) means adding a catalog or category
+ * can't silently leave the fixture stale.
  *
  * One deliberate divergence from the boot value: every galaxy catalog row is
  * `enabled: true` here, whereas `INITIAL_SETTINGS` derives `enabled` from each
@@ -25,7 +25,6 @@
  * fixture and assert on the result of the transition.
  */
 
-import { Source, SOURCE_REGISTRY } from '../../../src/data/sources';
 import { GALAXY_CATALOG_IDS } from '../../../src/data/galaxyCatalog/galaxyCatalogIds';
 import { STAR_CATALOG_IDS } from '../../../src/data/starCatalog/starCatalogIds';
 import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
@@ -54,55 +53,32 @@ import {
   DEFAULT_ORIENTATION,
   DEFAULT_TONE_MAP_CURVE,
 } from '../../../src/data/defaults';
-import { DEFAULT_ORBIT_TRAILS_ENABLED } from '../../../src/layers/body/settings/defaults';
-import { DEFAULT_SGR_A_STAR_LENSING_TUNING } from '../../../src/layers/body/settings/defaults';
-import { DEFAULT_FLOW } from '../../../src/layers/flow/settings/defaults';
-import { DEFAULT_VOLUMES_ENABLED } from '../../../src/layers/volume/settings/defaults';
-import {
-  DEFAULT_MILKY_WAY_ENABLED,
-  DEFAULT_MILKY_WAY_LABEL_ENABLED,
-} from '../../../src/layers/milkyWay/settings/defaults';
-import {
-  DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
-  DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
-} from '../../../src/layers/zoneOfAvoidance/settings/defaults';
-import {
-  DEFAULT_ABS_MAG_LIMIT,
-  DEFAULT_BIAS_MODE,
-  DEFAULT_BRIGHTNESS,
-  DEFAULT_DEPTH_FADE_ENABLED,
-  DEFAULT_GALAXY_FALLOFF_STRENGTH,
-  DEFAULT_GALAXY_PROVENANCE,
-  DEFAULT_GALAXY_SB_MAX,
-  DEFAULT_GALAXY_SB_SCALE,
-  DEFAULT_GALAXY_TEXTURES_ENABLED,
-  DEFAULT_POINT_SIZE_PX,
-} from '../../../src/layers/galaxyCatalog/settings/defaults';
-import {
-  DEFAULT_STAR_BRIGHTNESS,
-  DEFAULT_STAR_GLOW_OVERLAP,
-  DEFAULT_STAR_EXPOSURE_NEAR_X,
-  DEFAULT_STAR_EXPOSURE_MID_X,
-  DEFAULT_STAR_EXPOSURE_FAR_X,
-  DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
-  DEFAULT_STAR_SIZE_PX,
-  DEFAULT_STAR_REFINE_THRESHOLD,
-} from '../../../src/layers/starCatalog/settings/defaults';
-import { MILKY_WAY_TUNING_DEFAULTS } from '../../../src/services/engine/galaxyGenerator/v1/milkyWayCalibration';
-import { ATMOSPHERE_PARAMS } from '../../../src/data/bodies/atmosphereParams';
-import { EARTH_SURFACE_PARAMS } from '../../../src/data/bodies/earthSurfaceParams';
+import { initialState as sgrAStarLensingTuningInitialState } from '../../../src/layers/body/state/sgrAStarLensingTuning/initialState';
+import { initialState as orbitTrailsInitialState } from '../../../src/layers/body/state/orbitTrails/initialState';
+import { initialState as earthInitialState } from '../../../src/layers/body/state/earth/initialState';
+import { initialState as flowInitialState } from '../../../src/layers/flow/state/flow/initialState';
+import { initialState as volumesInitialState } from '../../../src/layers/volume/state/volumes/initialState';
+import { initialState as milkyWayInitialState } from '../../../src/layers/milkyWay/state/milkyWay/initialState';
+import { initialState as zoneOfAvoidanceInitialState } from '../../../src/layers/zoneOfAvoidance/state/zoneOfAvoidance/initialState';
+import { initialState as galaxyCatalogsInitialState } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/initialState';
+import { initialState as biasInitialState } from '../../../src/layers/galaxyCatalog/state/bias/initialState';
+import { initialState as thumbnailsInitialState } from '../../../src/layers/galaxyCatalog/state/thumbnails/initialState';
+import { initialState as starCatalogsInitialState } from '../../../src/layers/starCatalog/state/starCatalogs/initialState';
+import { initialState as filamentsInitialState } from '../../../src/layers/filaments/state/filaments/initialState';
+import { initialState as localBubbleInitialState } from '../../../src/layers/localBubble/state/localBubble/initialState';
+import { initialState as constellationsInitialState } from '../../../src/layers/constellations/state/constellations/initialState';
 import { TERRAIN_PICK_MARKER_DEFAULT_RADIUS_M } from '../../../src/data/debug/terrainPickMarkerSliderFields';
 import { DEBUG_OVERLAY_ROWS } from '../../../src/data/debug/debugOverlayRows';
 
 import type { EngineSettingsState } from '../../../src/@types/settings/EngineSettingsState';
 import type { DebugOverlayKey } from '../../../src/@types/data/debug/DebugOverlayKey';
 import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
-import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { GalaxyCatalogItemSettings } from '../../../src/@types/settings/GalaxyCatalogItemSettings';
 import type { StarCatalogId } from '../../../src/@types/data/starCatalog/StarCatalogId';
 import type { StarCatalogItemSettings } from '../../../src/@types/settings/StarCatalogItemSettings';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 import type { BodyItemSettings } from '../../../src/@types/settings/BodyItemSettings';
+import type { StructureId } from '../../../src/@types/data/structure/StructureId';
 import type { StructureItemSettings } from '../../../src/@types/settings/StructureItemSettings';
 
 export function makeSettingsFixture(
@@ -114,13 +90,7 @@ export function makeSettingsFixture(
       fovDeg: DEFAULT_FOV_DEG,
     },
     galaxyCatalogs: {
-      sizePx: DEFAULT_POINT_SIZE_PX,
-      brightness: DEFAULT_BRIGHTNESS,
-      depthFade: DEFAULT_DEPTH_FADE_ENABLED,
-      provenance: DEFAULT_GALAXY_PROVENANCE,
-      sbScale: DEFAULT_GALAXY_SB_SCALE,
-      sbMax: DEFAULT_GALAXY_SB_MAX,
-      falloffStrength: DEFAULT_GALAXY_FALLOFF_STRENGTH,
+      ...galaxyCatalogsInitialState,
       items: Object.fromEntries(
         GALAXY_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<GalaxyCatalogId, GalaxyCatalogItemSettings>,
@@ -139,48 +109,18 @@ export function makeSettingsFixture(
       strength: DEFAULT_BLOOM_STRENGTH,
       threshold: DEFAULT_BLOOM_THRESHOLD,
     },
-    bias: { mode: DEFAULT_BIAS_MODE, absMagLimit: DEFAULT_ABS_MAG_LIMIT },
-    thumbnails: { enabled: DEFAULT_GALAXY_TEXTURES_ENABLED },
-    milkyWay: {
-      enabled: DEFAULT_MILKY_WAY_ENABLED,
-      labelEnabled: DEFAULT_MILKY_WAY_LABEL_ENABLED,
-      ...MILKY_WAY_TUNING_DEFAULTS,
-    },
-    zoneOfAvoidance: {
-      enabled: DEFAULT_ZONE_OF_AVOIDANCE_ENABLED,
-      ...DEFAULT_ZONE_OF_AVOIDANCE_TUNING,
-    },
-    // Mirrors sgrAStarLensingTuningSettings.ts's boot value.
-    sgrAStarLensingTuning: DEFAULT_SGR_A_STAR_LENSING_TUNING,
-    filaments: {
-      enabled: SOURCE_REGISTRY[Source.Filaments].visible,
-      intensity: SOURCE_REGISTRY[Source.Filaments].intensity,
-    },
-    // Mirrors localBubbleSlice.ts's boot value — no registry entry to derive
-    // a default off of (see that slice's header).
-    localBubble: { enabled: false, intensity: 1 },
-    constellations: {
-      enabled: SOURCE_REGISTRY[Source.Constellations].visible,
-      intensity: SOURCE_REGISTRY[Source.Constellations].intensity,
-    },
-    orbitTrails: { enabled: DEFAULT_ORBIT_TRAILS_ENABLED },
-    earth: {
-      // `earth` is a definitional row in the atmosphere table, so the indexed
-      // read is non-null (see `earthSettings.ts` — the index signature widens it).
-      atmosphereExposure: ATMOSPHERE_PARAMS.earth!.exposure,
-      ambientLight: EARTH_SURFACE_PARAMS.ambientLight,
-      oceanRoughness: EARTH_SURFACE_PARAMS.oceanRoughness,
-    },
+    bias: { ...biasInitialState },
+    thumbnails: { ...thumbnailsInitialState },
+    milkyWay: { ...milkyWayInitialState },
+    zoneOfAvoidance: { ...zoneOfAvoidanceInitialState },
+    sgrAStarLensingTuning: { ...sgrAStarLensingTuningInitialState },
+    filaments: { ...filamentsInitialState },
+    localBubble: { ...localBubbleInitialState },
+    constellations: { ...constellationsInitialState },
+    orbitTrails: { ...orbitTrailsInitialState },
+    earth: { ...earthInitialState },
     starCatalogs: {
-      enabled: true,
-      sizePx: DEFAULT_STAR_SIZE_PX,
-      brightness: DEFAULT_STAR_BRIGHTNESS,
-      refineThreshold: DEFAULT_STAR_REFINE_THRESHOLD,
-      glowOverlap: DEFAULT_STAR_GLOW_OVERLAP,
-      exposureNearX: DEFAULT_STAR_EXPOSURE_NEAR_X,
-      exposureMidX: DEFAULT_STAR_EXPOSURE_MID_X,
-      exposureFarX: DEFAULT_STAR_EXPOSURE_FAR_X,
-      aggregateIntensityCap: DEFAULT_STAR_AGGREGATE_INTENSITY_CAP,
+      ...starCatalogsInitialState,
       items: Object.fromEntries(
         STAR_CATALOG_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<StarCatalogId, StarCatalogItemSettings>,
@@ -190,8 +130,8 @@ export function makeSettingsFixture(
         BODY_IDS.map((id) => [id, { enabled: true, labelEnabled: true }]),
       ) as Record<BodyId, BodyItemSettings>,
     },
-    volumes: { enabled: DEFAULT_VOLUMES_ENABLED, items: seedVolumeFields() },
-    flow: { ...DEFAULT_FLOW },
+    volumes: { ...volumesInitialState, items: seedVolumeFields() },
+    flow: { ...flowInitialState },
     labels: { focusedOnly: false },
     debug: {
       overlays: Object.fromEntries(DEBUG_OVERLAY_ROWS.map((row) => [row.key, false])) as Record<

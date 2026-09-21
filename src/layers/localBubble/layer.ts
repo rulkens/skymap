@@ -5,7 +5,7 @@
  */
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
-import { localBubbleLayerSettings } from './settings/localBubbleLayerSettings';
+import { localBubbleLayerSettings } from './state/slices';
 import { create } from './create';
 import { destroy } from './destroy';
 import { localBubbleAssetRows } from './load/localBubbleAssetRows';
