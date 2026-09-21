@@ -8,8 +8,8 @@ import { initialState as flowInitialState } from '../../layers/flow/state/flow/i
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
-import { GALAXIES_OFF } from './galaxiesOff';
-import { VOLUMES_OFF } from './volumesOff';
+import { GALAXIES_OFF } from './utils/galaxiesOff';
+import { VOLUMES_OFF } from './utils/volumesOff';
 import type { View } from '../../@types/views/View';
 
 // The Milky Way stays ON here, label included: that label IS the "you are

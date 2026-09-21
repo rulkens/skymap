@@ -4,6 +4,6 @@
  * explicitly or the filaments read as part of it.
  */
 
-import { initialState as volumesInitialState } from '../../layers/volume/state/volumes/initialState';
+import { initialState as volumesInitialState } from '../../../layers/volume/state/volumes/initialState';
 
 export const VOLUMES_OFF = { ...volumesInitialState, enabled: false };

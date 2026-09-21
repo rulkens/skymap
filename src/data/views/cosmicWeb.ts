@@ -8,7 +8,7 @@ import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyC
 import { initialState as volumesInitialState } from '../../layers/volume/state/volumes/initialState';
 import { buildVolumeFieldSettings } from '../volume/volumeFieldDefaults';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
-import { GALAXIES_OFF } from './galaxiesOff';
+import { GALAXIES_OFF } from './utils/galaxiesOff';
 import type { View } from '../../@types/views/View';
 
 // The 2MRS Polyphorm run rides with MCPM here: same quantity, but an all-sky
