@@ -6,15 +6,15 @@ import { BODY_IDS } from '../../../src/data/bodies/bodyIds';
 import {
   setGalaxyCatalogLabelEnabled,
   setGalaxyCatalogVisible,
-} from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
-import { setStarCatalogLabelEnabled } from '../../../src/layers/starCatalog/settings/starCatalogsSlice';
+} from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
+import { setStarCatalogLabelEnabled } from '../../../src/layers/starCatalog/state/starCatalogs/slice';
 import {
   setStructureItemEnabled,
   setStructureLabelEnabled,
-} from '../../../src/layers/structure/settings/structuresSlice';
-import { setBodyLabelEnabled } from '../../../src/layers/body/settings/bodiesSlice';
-import { setMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/settings/milkyWaySlice';
-import { setOrbitTrailsEnabled } from '../../../src/layers/body/settings/orbitTrailsSlice';
+} from '../../../src/layers/structure/state/structures/slice';
+import { setBodyLabelEnabled } from '../../../src/layers/body/state/bodies/slice';
+import { setMilkyWayLabelEnabled } from '../../../src/layers/milkyWay/state/milkyWay/slice';
+import { setOrbitTrailsEnabled } from '../../../src/layers/body/state/orbitTrails/slice';
 import type { GalaxyCatalogId } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalogId';
 import { setPassDisabled } from '../../../src/state/settings/core/debugSlice';
 import { CAPTURE_HIDDEN_PASSES } from './hiddenPasses';

@@ -23,7 +23,7 @@ import { runTakeover } from '../../../src/state/takeover/runTakeover';
 import { selectTakeoverSource } from '../../../src/state/takeover/selectors';
 import { selectTourActive } from '../../../src/state/tour/selectors';
 import { exitTakeover } from '../../../src/state/takeover/takeoverActions';
-import { setVolumesEnabled } from '../../../src/layers/volume/settings/volumesSlice';
+import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
 
 const flush = () => new Promise((r) => setTimeout(r, 0));
 

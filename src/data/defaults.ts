@@ -1,7 +1,7 @@
 /**
  * The defaults CORE owns — display and camera settings belonging to no Layer.
  * A Layer's own seeds live beside its slice, in
- * `src/layers/<name>/settings/defaults.ts`; only what core itself reads is here.
+ * `src/layers/<name>/state/defaults.ts`; only what core itself reads is here.
  */
 
 import { ToneMapCurve, toneMapCurveSaturation } from './toneMapCurve';
