@@ -2,72 +2,78 @@
 
 ## The problem
 
-`src/components/` has no per-file purity gate, so helpers and types accumulate
-inside component files where nothing objects. The convention they violate is
-CLAUDE.md's: one symbol per file in `utils/`, one type per `@types/` file, and
-"types never live inline in implementation files (a React component's own
-`Props` is the one exception)".
+A component file's **inline types** are already ratcheted (`noInlineTypes.test.ts`
++ the `INLINE_TYPE_FILES` ledger). Its **module-private helper functions** are
+not gated anywhere, so they accumulate where nothing objects. The convention
+they violate is CLAUDE.md's "one symbol per file… a generic helper growing
+inside another file gets extracted to `utils/<area>/<fn>.ts`".
 
 This surfaced when `src/components/DebugPanel/CameraStateSection.tsx` was found
 carrying five module-private helpers (`num`, `deg`, `modelOf`, `copyTextOf`,
-`poseSnippetOf`) and three inline types (`DofModel`, `RawRow`, `PanelModel`).
-One of those helpers had been added the same week by an agent, with no check
-objecting — which is the argument for a ratchet over a review note.
+`poseSnippetOf`). One had been added that week by an agent with nothing
+objecting — the argument for a ratchet over a review note. (Its three inline
+types were on the `INLINE_TYPE_FILES` allow-list, i.e. already ledgered debt;
+clearing them shrank that list, as its ratchet requires.)
 
 ## Why the existing sweeps miss it
 
-Three convention tests exist and none reaches a component file:
+Six convention tests exist in `tests/conventions/`. For a private helper in a
+component, all six pass:
 
-| sweep | covers | why it misses this |
+| sweep | covers | why it misses a component's private helper |
 | --- | --- | --- |
-| `tests/conventions/oneSymbolPerFile.test.ts` | `src/utils/` | counts only **exported** function-shaped declarations; these helpers are module-private |
-| `tests/services/engine/frame/frameFilePurity.test.ts` | `src/services/engine/frame/`, `timing/`, `passes/`, and every Layer's `passes/` | right shape — it does catch private helpers — but `src/components/` is not a sweep root |
-| `typeFilesAreDeclarations` / `inlineTypeFiles` | `@types/` | types only |
+| `oneSymbolPerFile.test.ts` | `src/utils/` | counts only **exported** function-shaped declarations; these are module-private, and components are not a sweep root |
+| `frameFilePurity.test.ts` | `src/services/engine/frame/`, `timing/`, `passes/`, every Layer's `passes/` | exactly the right shape — it *does* catch private helpers — but `src/components/` is not a sweep root |
+| `noInlineTypes.test.ts` | inline `type`/`interface` anywhere outside a types home | **types only** — this is the one that already covers components |
+| `typeFilesAreDeclarations` · `filenameMatchesExport` · `layerImportBoundary` | `@types/`, filenames, Layer imports | orthogonal |
 
-`frameFilePurity.test.ts`'s own header states the rationale that applies here
-verbatim: helpers inlined beside a symbol "are invisible to the rest of the
+So the gap is precisely: **`frameFilePurity`'s rule, applied to
+`src/components/`**. `frameFilePurity.test.ts`'s own header states the rationale
+verbatim — helpers inlined beside a symbol "are invisible to the rest of the
 codebase and untestable alone, and agents keep re-adding them — hence a ratchet
 rather than a review note."
 
-## Verified current state (2026-09-21)
+## Verified current state (2026-09-21, after `CameraStateSection` was cleared)
 
-A read-only ts-morph sweep over `src/components/`, counting top-level
-function-shaped declarations and type aliases whose name is neither the file's
-own symbol nor its `Props`:
+Read-only ts-morph sweep over `src/components/` (146 files), counting top-level
+function-shaped declarations whose name is not the file's own symbol:
 
-- **146 files scanned, 25 offenders, 46 stray symbols.**
-- **14 of the 25 have exactly one stray symbol** — the tail is shallow, so over
-  half the allow-list could be cleared by extraction rather than exempted.
+- **15 offender files, 22 stray functions.**
+- **11 of the 15 have exactly one** — the tail is shallow, so most of the
+  allow-list could be cleared by extraction rather than permanently exempted.
 
-Worst offenders:
-
-| file | stray |
+| file | stray functions |
 | --- | --- |
-| `DebugPanel/CameraStateSection.tsx` | 5 fns + 3 types |
-| `InfoCard/detailCardTable.ts` | 3 types |
-| `TimeBar/DateEntryPopover/DateEntryPopover.tsx` | 3 fns |
-| `common/Slider/Slider.tsx` | 3 fns |
-| `containers/TimeBarContainer.tsx` | 3 fns |
+| `TimeBar/DateEntryPopover/DateEntryPopover.tsx` | `pad2`, `toDatetimeLocalUtc`, `parseDatetimeLocalUtc` |
+| `common/Slider/Slider.tsx` | `decimalsForStep`, `clamp`, `snapToStep` |
+| `containers/TimeBarContainer.tsx` | `readoutInstant`, `formatReadout`, `useTimeReadout` |
+| `DebugPanel/SlotRow.tsx` | `describe`, `timing` |
+| 11 more | one each — `percentOf`, `deriveCosmicWebStyle`, `LabelledSlider`, `useHoldRepeat`, `earliestStartMs`, `hysteresisReadoutOf`, `formatLonLat`, `metres`, `SearchIcon`, `formatEv`, `formatMB` |
 
-(`CameraStateSection.tsx` is being cleared separately, on the search-palette-tabs
-PR3a branch — re-run the sweep before seeding the allow-list.)
+`Slider.tsx`'s `clamp` and `DebugPanel`'s `metres`/`formatLonLat`/`formatEv`/
+`formatMB` are the strongest extraction candidates — generic enough that
+duplicates may already exist under `src/utils/`. Check before creating siblings.
 
 ## The design question that must be answered first
 
 **Not every hit is an offender**, and a sweep that does not carve these out will
 generate busywork:
 
-1. **A function's own input/output shape beside it.** `usePaletteSearch.ts`
-   declaring `UsePaletteSearchInput`/`UsePaletteSearch`;
-   `scoreFamousMatch.ts` declaring `ScorableEntry`;
-   `scoreAliasMatch.ts` declaring `ScorableAliasEntry`. `oneSymbolPerFile`'s
-   header already blesses exactly this for `src/utils/` — "co-located
-   `export const` sizing constants and `export type` input shapes beside the one
-   function are likewise fine." The components sweep should inherit that rule,
-   not contradict it.
-2. **Component-local hooks.** `useHoldRepeat` in `TimeBar.tsx`,
+1. **Component-local hooks.** `useHoldRepeat` in `TimeBar.tsx`,
    `useTimeReadout` in `TimeBarContainer.tsx`. Arguably legitimate co-residents
-   of their one consumer rather than helpers to evict. Needs a ruling.
+   of their one consumer rather than helpers to evict — a hook is not a generic
+   helper, and moving it to `utils/` would be wrong. Needs a ruling.
+2. **Component-local sub-components.** `LabelledSlider` in `VolumeFieldRow.tsx`,
+   `SearchIcon` in `SearchTrigger.tsx`. Function-shaped, but they are components,
+   and the convention's home for a component is its own `.tsx`, not `utils/`.
+   Either exempt them by shape (returns JSX) or evict them to sibling `.tsx`
+   files; the sweep must not push them into `utils/`.
+
+A sweep that ignores both would generate busywork and wrong moves, so settle
+them before writing it. Note the type-side carve-out `oneSymbolPerFile`'s header
+already grants — "co-located `export const` sizing constants and `export type`
+input shapes beside the one function are likewise fine" — is the precedent to
+reason from.
 
 ## Approach
 
