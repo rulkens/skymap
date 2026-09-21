@@ -5,10 +5,13 @@
  * value, how to write that value out of the store, and how to read a present or
  * absent value back into actions.
  *
- * Table order fixes the on-URL layout — the body is composed in this order — so
- * two identical states always produce byte-identical hashes, and the table is
- * APPEND-ONLY: a new row goes at the end so links already in the wild keep
- * parsing to the same bytes they were shared as.
+ * Table order fixes the on-URL layout — the body is composed in this order —
+ * so two identical states always produce byte-identical hashes. That binds
+ * rows that WRITE: a new writing row is APPEND-ONLY, going at the end so links
+ * already in the wild keep parsing to the same bytes they were shared as. A
+ * read-only row (`write: () => null`, `pose` today) composes nothing into the
+ * body, so this rule says nothing about its position — its place in the table
+ * is fixed by READ order instead (below).
  *
  * ### The `writesOn` completeness contract
  *
@@ -83,7 +86,7 @@ import { setOrientation } from '../settings/core/orientationSlice';
 import { manualPausedAtActions } from '../time/enterManualPausedAt';
 import { goLiveNowAction } from '../time/goLiveNowAction';
 import { selectTimeState } from '../time/selectors';
-import { applyUrlPose } from '../camera/applyUrlPose';
+import { applyUrlPose } from '../camera/cameraSlice';
 import { timeRoute } from '../../store/constants';
 import { DEFAULT_ORIENTATION } from '../../data/defaults';
 import { EARTH_REF } from '../../data/selection/earthRef';
@@ -254,6 +257,11 @@ const orientationSource: HashParamSource = {
  * shares. Absence means "leave the camera alone" — at boot (the engine's own
  * seed stands) and on a Back/Forward across the entry alike, which is why
  * `readAbsent` also returns nothing.
+ *
+ * `read` parks the pose in `camera.urlPose` (`applyUrlPose`) rather than
+ * committing it directly — the store exists here but the camera doesn't yet
+ * — and it must run BEFORE `focusSource`'s row (table order below) so a
+ * `#focus=…&pose=…` link's fly-to tween sees the parked pose and stands down.
  */
 const poseSource: HashParamSource = {
   key: 'pose',
@@ -271,9 +279,11 @@ const poseSource: HashParamSource = {
   readAbsent: () => [],
 };
 
+// `poseSource` reads first — see its docblock — so the rest keep their
+// original relative order.
 export const HASH_PARAM_SOURCES: readonly HashParamSource[] = [
+  poseSource,
   focusSource,
   timeSource,
   orientationSource,
-  poseSource,
 ];

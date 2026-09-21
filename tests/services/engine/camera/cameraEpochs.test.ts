@@ -68,6 +68,7 @@ function makeCameraState(overrides?: Partial<CameraState>): CameraState {
     dragging: false,
     clip: null,
     frameTween: null,
+    urlPose: null,
     tuning: DEFAULT_CAMERA_TUNING,
     ...overrides,
   };

@@ -29,6 +29,7 @@ import type { OrientationFrameId } from '../../@types/camera/OrientationFrameId'
 const initialState: CameraState = {
   base: absoluteArm({ target: [0, 0, 0], yaw: 0, pitch: 0, distance: 0.43 }),
   tween: null,
+  urlPose: null,
   autoRotate: {
     active: DEFAULT_AUTO_ROTATE,
     // Per-frame yaw advance in radians at an assumed 60 fps (~0.05°/frame), the
@@ -64,6 +65,15 @@ const cameraSlice = createSlice({
     // defensive `{ ...action.payload }` here would misread every loop commit.
     commitCameraPose: (camera, action: PayloadAction<FramedCameraPose>) => {
       camera.base = action.payload;
+      // A commit is the new truth, so any outside commit spends a pending
+      // `#pose=` link — the seed (its normal spender) included.
+      camera.urlPose = null;
+    },
+
+    // A `#pose=` deep link, parked until the seed (or another outside commit)
+    // spends it. Reducer-only: no effect fires off this write.
+    applyUrlPose: (camera, action: PayloadAction<FramedCameraPose>) => {
+      camera.urlPose = action.payload;
     },
 
     startCameraTween: (camera, action: PayloadAction<CameraTweenDescriptor>) => {
@@ -115,6 +125,7 @@ export const {
   beginDrag,
   endDrag,
   commitCameraPose,
+  applyUrlPose,
   startCameraTween,
   cancelCameraTween,
   setAutoRotate,

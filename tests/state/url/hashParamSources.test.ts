@@ -23,7 +23,7 @@ import { requestSelect } from '../../../src/state/selection/requestSelect';
 import { clearSelection } from '../../../src/state/selection/selectionSlice';
 import { setSelectionRow } from '../../../src/state/selectionRows/selectionRowsSlice';
 import { setOrientation } from '../../../src/state/settings/core/orientationSlice';
-import { applyUrlPose } from '../../../src/state/camera/applyUrlPose';
+import { applyUrlPose } from '../../../src/state/camera/cameraSlice';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import { CONST_J2000 } from '../../../src/data/time/constJ2000';
 import { DEFAULT_ORIENTATION } from '../../../src/data/defaults';
@@ -63,6 +63,16 @@ function focusedOn(row: SelectionRow): RootState {
 
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe('table order', () => {
+  it('reads pose before focus — the fly-to tween must see a parked urlPose', () => {
+    // Cross-file contract with watchFocusTweenSaga's stand-down check: a
+    // `#focus=…&pose=…` link only works if applyUrlPose lands first.
+    const poseIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'pose');
+    const focusIndex = HASH_PARAM_SOURCES.findIndex((source) => source.key === 'focus');
+    expect(poseIndex).toBeLessThan(focusIndex);
+  });
 });
 
 describe('focus row', () => {
