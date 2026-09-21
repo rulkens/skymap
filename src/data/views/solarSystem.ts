@@ -24,12 +24,13 @@ const STARFIELD_BRIGHTNESS = 0.3;
 const FRAMING_AU = 42;
 
 /**
- * Looking DOWN on the ecliptic, about 34°. Negative because pitch is the aim
- * direction's component along the frame's up axis (`orbitAnglesLookingAlong`),
- * so a camera above the plane aims below it. Yaw is arbitrary — the system is
- * near enough symmetric about its pole that no bearing is the right one.
+ * Looking DOWN on the ecliptic, about 34°. POSITIVE: `orbitAnglesLookingAlong`
+ * solves `pitch = asin(-forward.y)`, and `-forward` points from the target
+ * toward the EYE, so a camera above the plane has positive pitch. Yaw is
+ * arbitrary — the system is near enough symmetric about its pole that no
+ * bearing is the right one.
  */
-const ECLIPTIC_TILT_RAD = -0.6;
+const ECLIPTIC_TILT_RAD = 0.6;
 
 export const solarSystem: View = {
   id: 'solarSystem',
