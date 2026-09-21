@@ -18,10 +18,10 @@ export function shareUrlFor(
   state: RootState,
   framed: FramedCameraPose,
   simDays: number,
-  base: { readonly origin: string; readonly pathname: string },
+  base: { readonly origin: string; readonly pathname: string; readonly search: string },
 ): string {
   const params = new Map(parseHashParams(hashBodyFor(state)));
   params.set('t', new Date(julianDaysToUnixMs(simDays)).toISOString());
   params.set('pose', encodeFramedPose(framed));
-  return `${base.origin}${base.pathname}#${composeHashParams(params)}`;
+  return `${base.origin}${base.pathname}${base.search}#${composeHashParams(params)}`;
 }

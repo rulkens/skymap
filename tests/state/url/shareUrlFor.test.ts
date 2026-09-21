@@ -19,7 +19,7 @@ import { julianDaysToUnixMs } from '../../../src/utils/time/julianDaysToUnixMs';
 
 const FRAMED = absoluteArm({ target: [1, 2, 3], yaw: 0.7, pitch: -0.2, distance: 5.5 });
 const SIM_DAYS = 2461304.571778822;
-const BASE = { origin: 'https://skymap.test', pathname: '/' };
+const BASE = { origin: 'https://skymap.test', pathname: '/', search: '' };
 
 describe('shareUrlFor', () => {
   it('composes origin + pathname + hash, with `t` from the given simDays and `pose` appended', () => {
@@ -57,5 +57,17 @@ describe('shareUrlFor', () => {
     expect(params.get('orientation')).toBe('galactic');
     expect(params.get('t')).toBe(new Date(julianDaysToUnixMs(SIM_DAYS)).toISOString());
     expect(params.get('pose')).toBe(encodeFramedPose(FRAMED));
+  });
+
+  it('keeps the `?` gates (?tour, ?perf, …) alive, as writeHashBody does', () => {
+    // `writeHashBody` rebuilds its base from `pathname + search` so a tour or
+    // perf gate survives a hash write; a share link composed without it would
+    // silently drop whichever gate the visitor was under.
+    const store = configureStore({ reducer: rootReducer });
+    const base = { ...BASE, search: '?tour=x' };
+
+    const url = shareUrlFor(store.getState(), FRAMED, SIM_DAYS, base);
+
+    expect(url.startsWith('https://skymap.test/?tour=x#')).toBe(true);
   });
 });

@@ -63,7 +63,7 @@ describe('watchLogCameraStateSaga', () => {
   });
 
   it('logs a share URL carrying the rendered pose and the rendered frame’s instant', async () => {
-    vi.stubGlobal('location', { origin: 'https://skymap.test', pathname: '/' });
+    vi.stubGlobal('location', { origin: 'https://skymap.test', pathname: '/', search: '' });
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     const store = build(vi.fn(() => ({ framed: FRAMED, simDays: SIM_DAYS })));
 

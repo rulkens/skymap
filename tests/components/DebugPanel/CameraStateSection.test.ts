@@ -76,7 +76,7 @@ describe('CameraStateSection', () => {
   });
 
   it('copies the same share URL the l-key logs, independent of the copy-all feedback', async () => {
-    vi.stubGlobal('location', { origin: 'https://skymap.test', pathname: '/' });
+    vi.stubGlobal('location', { origin: 'https://skymap.test', pathname: '/', search: '' });
     const writeText = vi.fn((_text: string) => Promise.resolve());
     Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
 
