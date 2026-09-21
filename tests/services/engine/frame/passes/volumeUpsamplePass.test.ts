@@ -57,6 +57,9 @@ function makeCtx(offscreenView: GPUTextureView = {} as GPUTextureView): FrameVie
     depthViewOf: (id: string): GPUTextureView => {
       throw new Error(`fixture renderTargets: no depth view for '${id}'`);
     },
+    farDepthView: (): GPUTextureView => {
+      throw new Error('fixture renderTargets: no far-depth placeholder');
+    },
     reconcile: vi.fn(),
     setSwapFormat: vi.fn(),
     destroy: vi.fn(),

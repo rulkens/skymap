@@ -9,14 +9,8 @@ import { isWorldArm } from '../../services/engine/camera/rungs/isWorldArm';
 import type { RootState } from '../../store/types';
 import type { CameraState } from '../../@types/camera/CameraState';
 import type { CameraTuning } from '../../@types/camera/CameraTuning';
-import type { FramedCameraPose } from '../../@types/camera/FramedCameraPose';
 
 const selectCameraIntent = (state: RootState): CameraState => state[cameraRoute];
-
-// The FRAMED base (spec §9): world-arm readers resolve it through
-// `foldToWorld` / `liveWorldPose` rather than assuming the absolute arm.
-export const selectCameraBase = (state: RootState): FramedCameraPose =>
-  selectCameraIntent(state).base;
 
 export const selectCameraTuning = (state: RootState): CameraTuning =>
   selectCameraIntent(state).tuning;

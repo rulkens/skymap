@@ -1,7 +1,7 @@
 import type { ConsoleMessage, Page } from '@playwright/test';
 import { logCameraState } from '../../../src/state/camera/logCameraState';
 import type { CameraPose } from '../../../src/@types/camera/CameraPose';
-import type { SkymapPerfHook } from '../../../src/@types/perf/SkymapPerfHook';
+import type { SkymapPerfHook } from '../../../src/state/perf/@types/SkymapPerfHook';
 
 const CAMERA_LOG_TIMEOUT_MS = 15_000;
 

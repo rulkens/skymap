@@ -30,7 +30,7 @@ import type { OrbitCamera } from '../../../@types/camera/OrbitCamera';
 import type { Vec2 } from '../../../@types/math/Vec2';
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
-export const ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE = 112;
+const ZONE_OF_AVOIDANCE_UNIFORM_BUFFER_SIZE = 112;
 
 export function createZoneOfAvoidanceRenderer(
   device: GPUDevice,

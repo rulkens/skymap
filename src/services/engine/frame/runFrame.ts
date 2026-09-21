@@ -22,7 +22,7 @@ import { pivotSurfaceRangeMpc } from '../camera/pivotSurfaceRangeMpc';
 import { orientDeltasWatched, recordOrientDeltas } from '../camera/orientDeltas';
 import { stepCameraRuntime } from '../camera/stepCameraRuntime';
 import { assembleOrbitCamera } from '../camera/assembleOrbitCamera';
-import { cameraDofAnglesOf } from '../../../utils/camera/cameraDofAnglesOf';
+import { cameraDofAnglesOf } from '../camera/cameraDofAnglesOf';
 import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';

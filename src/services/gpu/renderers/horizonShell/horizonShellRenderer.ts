@@ -60,7 +60,7 @@ type Init = {
 };
 
 /** On-the-wire uniform-buffer size; must match the WESL `Uniforms` struct. */
-export const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 64;
+const HORIZON_SHELL_UNIFORM_BUFFER_SIZE = 64;
 
 /**
  * Comoving radius to the cosmic particle horizon, in GIGAPARSECS.

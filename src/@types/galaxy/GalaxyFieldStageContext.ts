@@ -4,8 +4,8 @@
  * a value rather than a getter: `setMixture` reassigns the renderer's own
  * record, and a stage that closed over the old one would key on a stale galaxy.
  */
-import type { GrowOnlyRecordBuffer } from '../../services/gpu/renderers/galaxyField/gpu/createGrowOnlyRecordBuffer';
-import type { IsmMapChain } from '../../services/gpu/renderers/galaxyField/ismMap/createIsmMapChain';
+import type { GrowOnlyRecordBuffer } from './GrowOnlyRecordBuffer';
+import type { IsmMapChain } from './IsmMapChain';
 import type { GalaxyFieldMixtureInput } from './GalaxyFieldMixtureInput';
 import type { GalaxyFieldModel } from './GalaxyFieldModel';
 import type { GalaxyFieldRendererDeps } from './GalaxyFieldRendererDeps';

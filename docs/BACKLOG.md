@@ -35,6 +35,7 @@ Items with a **→ details** link have a full write-up in [`backlog/`](backlog/)
 
 ## Engine & State
 
+- [ ] **`DeadHostSet` browser check — a 404 must not retire SDSS** `manual` — #778 retires a thumbnail host after 3 dead connections; a 404 is the host ANSWERING, and miscounting it would silently drop every northern galaxy to a mono DSS plate. Unit-tested only; unreachable headlessly. → [details](backlog/2026-09-21-dead-host-set-browser-check.md)
 - [ ] **Camera floor clips through sharp peaks** `ready` — the floor reads the 17×17 decimated grid while the shader draws 129×129 posts, so a summit narrower than the grid spacing passes over the chord; `geometricResidualM` already bounds the error and is decoded then dropped. → [details](backlog/2026-09-17-camera-floor-clips-sharp-peaks.md)
 - [ ] **Rover-site camera eye floor** `ready` — the site-arm eye can sink under sloped terrain; floor it on the live ground under the eye (design ruled). → [details](backlog/2026-09-17-site-arm-eye-terrain-floor.md)
 - [ ] **Mars terrain follow-ups** `needs-design` — cut step-3 peak cull, Mars atmosphere shell shift, feather-ring NaN, Tharsis refine lag. → [details](backlog/2026-09-17-mars-terrain-followups.md)

@@ -20,8 +20,8 @@ import { selectTier } from '../tier/selectors';
 import { TIMED_SLOT_GROUPS } from '../../services/engine/frame/timing/timedSlotGroups';
 import type { AppStore } from '../../store/types';
 import type { EngineHandle } from '../../@types/engine/EngineHandle';
-import type { SkymapPerfHook } from '../../@types/perf/SkymapPerfHook';
-import type { PerfWindow } from '../../@types/perf/PerfWindow';
+import type { SkymapPerfHook } from './@types/SkymapPerfHook';
+import type { PerfWindow } from './@types/PerfWindow';
 import type { PerfPose } from '../../@types/perf/PerfPose';
 import type { PerfSample } from '../../@types/perf/PerfSample';
 import type { RenderStrategy } from '../../@types/engine/frame/RenderStrategy';
@@ -48,13 +48,9 @@ const SLOT_GROUPS: Readonly<Record<string, string>> = Object.fromEntries(
 
 // Hard-cut the camera to `pose`: a benchmark wants an exact vantage, and the
 // re-armed auto-rotate keeps the render-on-demand loop awake for the whole window.
-async function setPose(store: AppStore, pose: PerfPose): Promise<void> {
+function setPose(store: AppStore, pose: PerfPose): Promise<void> {
   if (pose.clearFocus === true) {
     store.dispatch(clearSelection());
-    // Let one frame elapse first: the deactivating follow driver's commit-on-edge
-    // bake writes its stale last pose into `camera.base` on the next produce, and
-    // must land BEFORE the commit below or it overwrites this pose's target.
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
   }
   store.dispatch(cancelCameraTween());
   store.dispatch(

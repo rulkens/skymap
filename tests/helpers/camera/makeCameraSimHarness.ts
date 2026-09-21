@@ -50,20 +50,24 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   } = options;
   const fovYRad = (fovDeg * Math.PI) / 180;
 
-  const store = configureStore({ reducer: rootReducer });
-  store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
-  store.dispatch(pause({ nowMs: 0 }));
-
-  const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
-  const radiusM = (id: SimBodyId): number =>
-    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
-
   const neutralPose: CameraPose = {
     target: [0, 0, 0],
     yaw: 0,
     pitch: 0,
     distance: neutralDistance,
   };
+
+  const store = configureStore({ reducer: rootReducer });
+  store.dispatch(setSimDays({ simDays: CONST_J2000, nowMs: 0 }));
+  store.dispatch(pause({ nowMs: 0 }));
+  // Dispatched before the seed below, so the runtime's placeholder `base`
+  // starts identity-equal to the store's — same contract production's boot
+  // seed relies on.
+  store.dispatch(commitCameraPose(absoluteArm(neutralPose)));
+
+  const bodies: ReadonlyMap<string, BodyState> = deriveBodyStates(CONST_J2000);
+  const radiusM = (id: SimBodyId): number =>
+    SCENE_CELESTIAL_BODIES.find((b) => b.id === id)!.surface.datumRadiusM;
 
   const state = {
     settings: { camera: { fovDeg }, orientation: DEFAULT_ORIENTATION },
@@ -75,7 +79,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
     },
     booted: true,
     cameraRuntime: seedCameraRuntime({
-      committed: absoluteArm(neutralPose),
+      state: store.getState(),
       projection: { fovYRad, aspect: 1, near: NEAR_CLIP_MPC, far: FAR_CLIP_MPC },
     }),
     cubemapCaptures: makeCubemapCaptureRuntimes(),
@@ -112,7 +116,7 @@ export function makeCameraSimHarness(options: CameraSimHarnessOptions = {}) {
   const seedPose = (framed: FramedCameraPose): void => {
     store.dispatch(commitCameraPose(framed));
     state.cameraRuntime = seedCameraRuntime({
-      committed: framed,
+      state: store.getState(),
       projection: state.cameraRuntime.outputs.projection,
     });
     deepFreeze(state.cameraRuntime);

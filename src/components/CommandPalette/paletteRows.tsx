@@ -24,7 +24,7 @@ import type { ScoredRow } from './paletteRowModel';
 import styles from './ResultsList.module.css';
 
 /** What InfoCard's row renderer needs, computed per row kind. */
-export type RowView = {
+type RowView = {
   readonly key: string;
   readonly testid?: string;
   readonly leading: ReactNode;

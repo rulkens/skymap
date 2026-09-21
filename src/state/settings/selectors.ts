@@ -88,10 +88,6 @@ export const selectFovDeg = (state: RootState): number => selectSettings(state).
 
 export const selectGalaxyCatalogSize = (state: RootState): number =>
   selectSettings(state).galaxyCatalogs.sizePx;
-
-export const selectBrightness = (state: RootState): number =>
-  selectSettings(state).galaxyCatalogs.brightness;
-
 export const selectDepthFade = (state: RootState): boolean =>
   selectSettings(state).galaxyCatalogs.depthFade;
 
@@ -160,15 +156,7 @@ export const selectAbsMagLimit = (state: RootState): number =>
   selectSettings(state).bias.absMagLimit;
 
 // --- thumbnails cluster -------------------------------------------------------
-
-export const selectThumbnailsEnabled = (state: RootState): boolean =>
-  selectSettings(state).thumbnails.enabled;
-
 // --- milkyWay cluster ---------------------------------------------------------
-
-export const selectMilkyWayEnabled = (state: RootState): boolean =>
-  selectSettings(state).milkyWay.enabled;
-
 export const selectMilkyWayLabelEnabled = (state: RootState): boolean =>
   selectSettings(state).milkyWay.labelEnabled;
 
@@ -207,10 +195,6 @@ export const selectFilamentIntensity = (state: RootState): number =>
 
 export const selectConstellationsEnabled = (state: RootState): boolean =>
   selectSettings(state).constellations.enabled;
-
-export const selectConstellationIntensity = (state: RootState): number =>
-  selectSettings(state).constellations.intensity;
-
 // --- orbitTrails cluster -------------------------------------------------------
 
 export const selectOrbitTrailsEnabled = (state: RootState): boolean =>
@@ -337,14 +321,6 @@ export const selectStarCatalogItems = (
  */
 export const selectBodyItems = (state: RootState): Record<BodyId, BodyItemSettings> =>
   selectSettings(state).bodies.items;
-
-/**
- * Star-billboard pixel radius — the star-catalog twin of
- * `selectGalaxyCatalogSize`. A primitive read, so no memoization.
- */
-export const selectStarCatalogSize = (state: RootState): number =>
-  selectSettings(state).starCatalogs.sizePx;
-
 /**
  * Star-brightness trim — the star-catalog twin of `selectBrightness`. A
  * primitive read, so no memoization. The renderer multiplies the flux-glow
@@ -352,59 +328,6 @@ export const selectStarCatalogSize = (state: RootState): number =>
  */
 export const selectStarCatalogBrightness = (state: RootState): number =>
   selectSettings(state).starCatalogs.brightness;
-
-/**
- * Octree-cut refine threshold — the "Detail" knob. A primitive read, so no
- * memoization. Unlike the size/brightness twins this is NOT a GPU uniform: the
- * layer feeds it to `walkStarOctreeCut`. Lower ⇒ boxes split earlier.
- */
-export const selectStarCatalogRefineThreshold = (state: RootState): number =>
-  selectSettings(state).starCatalogs.refineThreshold;
-
-/**
- * Aggregate glow-overlap spread — the "Glow overlap" knob. A primitive read, so
- * no memoization. The vertex stage multiplies an aggregate's radius by it (and
- * divides the peak by the square, so total luminance is conserved); 1.0 =
- * identity.
- */
-export const selectStarCatalogGlowOverlap = (state: RootState): number =>
-  selectSettings(state).starCatalogs.glowOverlap;
-
-/**
- * Near-anchor star display exposure — the "Exposure (near)" tuning knob. A
- * primitive read, so no memoization. The layer feeds it (with `exposureFarX`) to
- * `starExposureRamp` each frame; it is the absolute exposure the ramp targets at
- * its near (solar-system) anchor.
- */
-export const selectStarCatalogExposureNearX = (state: RootState): number =>
-  selectSettings(state).starCatalogs.exposureNearX;
-
-/**
- * Middle-anchor star display exposure — the "Exposure (mid)" tuning knob. A
- * primitive read, so no memoization. The absolute exposure `starExposureRamp`
- * targets at its middle (few-kpc) anchor; pulling it down darkens the
- * intermediate zone without touching either end.
- */
-export const selectStarCatalogExposureMidX = (state: RootState): number =>
-  selectSettings(state).starCatalogs.exposureMidX;
-
-/**
- * Far-anchor star display exposure — the "Exposure (far)" tuning knob. A
- * primitive read, so no memoization. The absolute exposure `starExposureRamp`
- * targets at its far (whole-galaxy) anchor.
- */
-export const selectStarCatalogExposureFarX = (state: RootState): number =>
-  selectSettings(state).starCatalogs.exposureFarX;
-
-/**
- * Aggregate surface-brightness cap — the "Fog cap" tuning knob. A primitive
- * read, so no memoization. The ceiling on an AGGREGATE record's per-pixel peak
- * intensity (leaves uncapped); the renderer writes it into the shared star
- * uniform and the vertex stage clamps aggregate peaks to it.
- */
-export const selectStarCatalogAggregateIntensityCap = (state: RootState): number =>
-  selectSettings(state).starCatalogs.aggregateIntensityCap;
-
 // --- derived ------------------------------------------------------------------
 
 /**

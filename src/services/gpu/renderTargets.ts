@@ -95,10 +95,13 @@
  * by depth-test, and WebGPU runs a depth-test only against a bound depth
  * attachment — so a row that declares depth gets a second texture allocated
  * and resized in lockstep with its colour texture. The depth texture is also
- * `TEXTURE_BINDING`, but only a `sampleDepth` step INSIDE a row reads it
- * (`contactShadowsPass`): each painter-chain row clears its own depth (spec
- * §7.3), so it never holds more than the current row and can't back a
- * cross-row occlusion test. The caption occlusion pass
+ * `TEXTURE_BINDING`, so any `{ sample }` step (`executeFrame`) can bind it as
+ * a texture and hand it to its passes as `view.sampledDepth` — today that is
+ * `contactShadowsPass` alone, reading its OWN row's depth (it compares
+ * `sampledDepth.row` against its slab before drawing): each painter-chain row
+ * clears its own depth (spec §7.3), so the buffer never holds more than the
+ * last-cleared row and can't back a cross-row occlusion test. The caption
+ * occlusion pass
  * (`foregroundLabelsPass` and the other overlay layers, via
  * `lib/sceneDepth.wesl`) instead reads the COLOUR texture's alpha, which
  * accumulates across rows under OVER compositing. It renders at full
@@ -133,6 +136,7 @@ import { BLOOM_LEVELS, bloomScale } from '../../data/bloomConstants';
 import { HDR_TARGET_FORMAT, FOREGROUND_DEPTH_FORMAT } from '../../data/renderTargetFormats';
 import { reducedTargetSize } from '../../utils/gpu/reducedTargetSize';
 import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
+import { depthClearValueFor } from '../../utils/gpu/depthClearValueFor';
 
 /**
  * Downsample divisor for the half-res `star-aggregates` row — total fragment
@@ -141,6 +145,9 @@ import { captureRowAllocateWhen } from '../../utils/gpu/captureRowAllocateWhen';
  * to 4 to shed more fill is a one-line change.
  */
 const STAR_AGGREGATE_DIVISOR = 2;
+
+/** `farDepthView`'s placeholder texture — 1 texel is enough, every read is the same far value. */
+const FAR_DEPTH_PLACEHOLDER_PX = 1;
 
 /** A row's divisor for this state — constant rows ignore the state entirely. */
 function resolveScale(spec: RenderTargetSpec, state: EngineState): number {
@@ -322,6 +329,38 @@ export function createRenderTargets(
   // width directly — test doubles for `RenderTargets` stub textures without
   // real dimensions (see `renderTargets.test.ts`'s `mockDevice`).
   const sizes = new Map<string, Size>();
+
+  // A `{ sample }` step's stand-in when nothing has cleared its source yet
+  // this frame — outside the spec table (no `reconcile` entry, no resize) so
+  // its identity is good for the owner's whole lifetime. Cleared here, once,
+  // via its own encoder: no `FrameStep` exists yet to carry that clear.
+  const farDepthTexture = device.createTexture({
+    label: 'render-target-far-depth-placeholder',
+    format: FOREGROUND_DEPTH_FORMAT,
+    dimension: '2d',
+    size: {
+      width: FAR_DEPTH_PLACEHOLDER_PX,
+      height: FAR_DEPTH_PLACEHOLDER_PX,
+      depthOrArrayLayers: 1,
+    },
+    usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING,
+  });
+  const farDepthTextureView = farDepthTexture.createView();
+  {
+    const clearEncoder = device.createCommandEncoder();
+    clearEncoder
+      .beginRenderPass({
+        colorAttachments: [],
+        depthStencilAttachment: {
+          view: farDepthTextureView,
+          depthClearValue: depthClearValueFor(true),
+          depthLoadOp: 'clear',
+          depthStoreOp: 'store',
+        },
+      })
+      .end();
+    device.queue.submit([clearEncoder.finish()]);
+  }
 
   function allocate(spec: RenderTargetSpec, width: number, height: number): void {
     sizes.set(spec.id, { width, height });
@@ -505,6 +544,9 @@ export function createRenderTargets(
       }
       return view;
     },
+    farDepthView(): GPUTextureView {
+      return farDepthTextureView;
+    },
     reconcile,
     setSwapFormat(next: GPUTextureFormat): void {
       specs = specs.map((s) => (s.id === 'swap' ? { ...s, format: next } : s));
@@ -512,6 +554,7 @@ export function createRenderTargets(
     destroy(): void {
       for (const texture of textures.values()) texture.destroy();
       for (const texture of depthTextures.values()) texture.destroy();
+      farDepthTexture.destroy();
       textures.clear();
       views.clear();
       cubeViews.clear();

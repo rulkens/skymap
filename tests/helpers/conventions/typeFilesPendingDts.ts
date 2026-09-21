@@ -112,8 +112,6 @@ export const TYPE_FILES_PENDING_DTS: ReadonlySet<string> = new Set([
   'src/@types/gpu/StagePhase.ts',
   'src/@types/perf/PerfPose.ts',
   'src/@types/perf/PerfSample.ts',
-  'src/@types/perf/PerfWindow.ts',
-  'src/@types/perf/SkymapPerfHook.ts',
   'src/@types/recorder/RecorderWindow.ts',
   'src/@types/recorder/SkymapRecorderHook.ts',
   'src/@types/rendering/MilkyWayCloudDrawArgs.ts',
