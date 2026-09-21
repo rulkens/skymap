@@ -151,52 +151,73 @@ Per site:
 
 **review: yes** (a landmine-owning file: the NEAR0/f64-rebase seam)
 
+Why v2: main's #769 ("several views per frame") reshaped the star cut before this branch landed. The intent is unchanged (spec §3 commit 4: the `advanceFades` flag, `PreparedStarCut.anyNodeFading` go; one WRITE half called from `runFrame`, one pure READ half), the shapes now follow main's multi-view contract. Everything below names main's code as it is after the rebase.
+
 **Files:**
 
 - Create: `src/services/gpu/renderers/starCatalog/cut/advanceStarFades.ts`, `src/services/gpu/renderers/starCatalog/cut/frameStarCutFrustum.ts`
-- Modify: `src/services/gpu/renderers/starCatalog/cut/computeStarCut.ts`, `src/services/gpu/renderers/starCatalog/cut/readStarCut.ts` (header), `src/services/gpu/renderers/starCatalog/cut/starCutOncePerCtx.ts` (header), `src/services/gpu/renderers/starCatalog/cut/starFadeState.ts` (header, if it names `advanceStarCut`)
-- Delete: `src/services/gpu/renderers/starCatalog/cut/advanceStarCut.ts`
-- Modify: `src/@types/rendering/PreparedStarCut.d.ts` (drop `anyNodeFading`), `src/services/engine/frame/runFrame.ts:36,296-312,336`
-- Test: `tests/services/gpu/renderers/starCatalog/cut/readStarCut.test.ts`, `tests/services/gpu/renderers/starCatalog/cut/starPickLeafDraws.test.ts:69`; grep `advanceStarCut` in `tests/` for comments to reword (`starAggregatesPass.test.ts`, `shouldKeepTicking.test.ts`)
+- Modify: `src/services/gpu/renderers/starCatalog/cut/computeStarCut.ts` (drops the flag; pure), `src/services/gpu/renderers/starCatalog/cut/readStarCut.ts` (call + header), `src/services/gpu/renderers/starCatalog/cut/starCutFor.ts` (header only if it names the flag), `src/services/gpu/renderers/starCatalog/cut/starFadeState.ts` (header only if it names `advanceFades`/`computeStarCut` as the writer)
+- Modify: `src/@types/rendering/PreparedStarCut.d.ts` (drop `anyNodeFading`), `src/services/engine/frame/runFrame.ts` (the "Star-cut planner" block, ~lines 341-358, and `starFadeAnimating` ~line 384)
+- Test: `tests/services/gpu/renderers/starCatalog/cut/readStarCut.test.ts`, `tests/services/engine/frame/passes/starAggregatesPass.test.ts` (the helper at ~95-98 that mirrors `runFrame`), `tests/services/gpu/renderers/starCatalog/cut/starPickLeafDraws.test.ts` (~line 70, `anyNodeFading: false` in a fixture); grep `advanceFades` and `anyNodeFading` in `src/` and `tests/` → zero hits when done
 - Backlog: delete `docs/backlog/2026-08-20-star-catalog-layer-god-layer-split.md` and its `docs/BACKLOG.md` index line (this task consumes it)
 
 **Interfaces:**
 
 ```ts
-// cut/advanceStarFades.ts — the WRITE half. runFrame calls it once per real frame,
-// before any pass reads the cut. Returns the keep-ticking vote (a node mid-fade).
-export function advanceStarFades(state: PassState, ctx: ReadyFrameContext): boolean;
+// cut/advanceStarFades.ts — the WRITE half and the ONLY writer of the per-node
+// LOD fade ramps. runFrame calls it once per real frame with the frame's views
+// (views[0] is the anchor: its eye, its viewSlot, its snapshot.nowMs; the
+// union of every view's frustum prunes the walk — main's views[0]-is-anchor
+// contract, unchanged). Returns the keep-ticking vote (a node mid-fade).
+// runFrame's views are never capture faces.
+export function advanceStarFades(state: PassState, views: readonly FrameView[]): boolean;
 
-// cut/computeStarCut.ts — pure: never touches a ramp or a stamp
-export function computeStarCut(state: PassState, ctx: ReadyFrameContext): PreparedStarCut | null;
+// cut/computeStarCut.ts — PURE: never touches a ramp or a stamp.
+export function computeStarCut(state: PassState, views: readonly FrameView[]): PreparedStarCut | null;
 
-// cut/frameStarCutFrustum.ts — the NEAR0-rebased prune frustum both halves share
-// (today's computeStarCut.ts:99-110 block); null with no NEAR0 slab (a hand-built test ctx)
-export function frameStarCutFrustum(state: PassState, ctx: ReadyFrameContext): StarCutFrustum | null;
+// cut/frameStarCutFrustum.ts — main's inline "rebasedVps + smallest drawPxPerRad
+// → buildStarCutFrustum" block (computeStarCut.ts ~lines 103-119), shared by the
+// advance walk and the capture-face walk. null with no NEAR0 slab on some view
+// (a hand-built test ctx), exactly as today.
+export function frameStarCutFrustum(
+  views: readonly FrameView[],
+  camPos: Readonly<Vec3>,
+  sizePx: number,
+  glowOverlap: number,
+): StarCutFrustum | null;
 
 // PreparedStarCut — `anyNodeFading` removed; the vote is advanceStarFades's return
 ```
 
-**Behaviour (pixel-identical):**
+**Behaviour (pixel-identical for every real frame view):**
 
-- `advanceStarFades` is today's advancing branch minus emission: per loaded source with crossfade > 0 it walks the octree (`walkStarOctreeCut`), stamps `inCutFrame`, seeds newcomers at 0, steps every cut node toward 1 and every previously-active node outside the cut toward 0, rebuilds the active list and swaps the double buffer. The active list after the swap (`prevActiveList[0..prevActiveCount)`) is exactly the set today's advance emitted, in the same order. Skips the walk entirely when the renderer is null or the master toggle is off (returns `false`).
-- `computeStarCut`, main view (`viewSlot === 0`): per source with crossfade > 0, emits each node on the catalog's active list at `opacity[idx] × sourceCrossfade` — no walk. Capture face (`viewSlot !== 0`): walks fresh and emits every cut node at `1 × sourceCrossfade`, as today. Shader scalars (`sizePx`, `brightness`, `glowOverlap`, `aggregateIntensityCap`) unchanged. A fresh catalog read before any advance draws nothing, which is what today's opacity-0 records drew.
-- `runFrame`: `const starFadeAnimating = advanceStarFades(state, ctx);` replaces the `advanceStarCut` call; feeds `shouldKeepTicking` directly. The planner comment block (`runFrame.ts:296-311`) is rewritten to the new names in ≤ 6 lines: once per frame, before the passes, sole ramp writer, the read half is memoised per ctx.
-- The per-ctx memo is unchanged: `readStarCut` still wraps `computeStarCut`; the pick path's fresh post-frame ctx now reads the drawn set (active list) instead of re-walking, which is the same set for the same camera and cheaper.
-- `computeStarCut.ts`'s header: keep the NEAR0/f64 landmine paragraph (the capture-face walk still owns it), drop the `advanceFades` sentences, point the fade scheme at `advanceStarFades` / `starFadeState`.
+- `advanceStarFades` is main's advancing branch minus emission: renderer null or master off → `false`, no walk. Per loaded source with crossfade > 0 (same two gates as today), walk (`walkStarOctreeCut` with the frame frustum), stamp `inCutFrame`, seed newcomers at 0, step every cut node toward 1 and every previously-active node outside the cut toward 0, rebuild the active list, swap the double buffer. The active list after the swap (`prevActiveList[0..prevActiveCount)`) is exactly the set main's advance emitted, in the same order (main's `advanceNode` pushes to `activeList` and emits in one place — keep the push, drop the emit). No streams are touched.
+- `computeStarCut(state, views)`: `views[0].viewKind === 'capture'` → build the frustum, walk fresh, emit every cut node at `1 × sourceCrossfade` (as today). Otherwise → per source with crossfade > 0, emit each node on the catalog's active list at `opacity[idx] × sourceCrossfade`; NO walk and NO frustum build. Shader scalars (`sizePx`, `brightness`, `glowOverlap`, `aggregateIntensityCap`) unchanged. A catalog no advance has reached yet has an empty list and draws nothing, which is what today's opacity-0 records drew. `streamsFor(catalog, views[0].viewSlot)` as today.
+- `runFrame` planner block becomes, with the comment rewritten to ≤ 6 lines (once per frame, before the passes, sole ramp writer; the cut is handed to the renderer as a value via `setFrameCut` so every rig view's `starCutFor` reads one cut; the vote feeds `shouldKeepTicking`):
+  ```ts
+  const starFadeAnimating = advanceStarFades(state, views);
+  state.gpu.starCatalogRenderer?.setFrameCut(computeStarCut(state, views));
+  ```
+  and `starFadeAnimating,` replaces `starFadeAnimating: starCut?.anyNodeFading ?? false,`.
+- `readStarCut` keeps its per-ctx WeakMap memo and calls `computeStarCut(state, [ctx])`. `starCutFor` unchanged. The pick path's fresh post-frame ctx (a `'frame'` view) now emits the drawn set without a walk — the one sanctioned observable delta (spec §3 commit 4).
+- `computeStarCut.ts`'s header: keep the NEAR0/f64 landmine paragraph (the capture-face walk still owns it), drop the `advanceFades` sentences, keep the `views[0]`-is-anchor paragraph, point the fade scheme at `advanceStarFades` / `starFadeState`. `advanceStarFades.ts` header ≤ 5 lines.
 
-- [ ] Add `frameStarCutFrustum.ts` by extracting the block; `computeStarCut` calls it (no behaviour change). Run `npm test -- readStarCut starCatalogPass` → green before the split.
-- [ ] Rework `readStarCut.test.ts` (its describe blocks and fixtures at lines 24-70 stay):
-  - every `advanceStarCut(state, ctx)` frame becomes `advanceStarFades(state, ctx); readStarCut(state, ctx)` on the same ctx, and `f.anyNodeFading` assertions read the boolean `advanceStarFades` returned;
-  - the three `readStarCut partition` tests and `forwards the source-independent shader scalars` gain a single `advanceStarFades(state, ctx)` before the read (the first frame snaps to steady state, so `leaf.count` / `aggregate.count` are unchanged);
-  - `advanceStarCut populates the SAME memo…` becomes `it('advanceStarFades never primes the memo; the first readStarCut on a ctx walks nothing and emits the active list')` — assert `renderer.loadedCatalogs` called twice (once by the advance, once by the read) and the read's `leaf.count` equals the advanced set;
-  - keep `readStarCut alone never advances a ramp — two different ctx objects at the same nowMs leave opacity unchanged` verbatim in intent: it is the double-advance-class guard the spec names;
-  - add `it('advanceStarFades steps a ramp once per call, whatever readStarCut does around it')` — advance at 0 ms (snap), advance at 50 ms, read twice on fresh ctxs, advance at 100 ms; assert the leaf opacity after the third advance is `crossfade × 100/250`, i.e. two steps not four;
-  - the `starCatalogVisible agrees with the cut it gates` block stays as is (`sources.length > 0` is unaffected by the split); it leaves with PR 2, not here.
-- [ ] Implement `advanceStarFades.ts` and the reduced `computeStarCut.ts`; delete `advanceStarCut.ts`; drop `anyNodeFading` from `PreparedStarCut` and from `starPickLeafDraws.test.ts:69`; rewire `runFrame.ts`.
-- [ ] Reword the `advanceStarCut` mentions in `readStarCut.ts`, `starCutOncePerCtx.ts`, `starFadeState.ts`, `starAggregatesPass.test.ts`, `shouldKeepTicking.test.ts`. Grep `advanceStarCut` → zero hits.
+**Steps:**
+
+- [ ] Extract `frameStarCutFrustum.ts` from main's inline block; `computeStarCut` calls it (no behaviour change). `npx vitest run tests/services/gpu/renderers/starCatalog tests/services/engine/frame/passes/starAggregatesPass.test.ts` → green before the split.
+- [ ] Rework `readStarCut.test.ts` (fixtures at ~36-82 stay; `makeCtx` unchanged):
+  - the `advance(state, ctx)` helper (~line 80) becomes `advanceStarFades(state, [ctx]); return readStarCut(state, ctx);` — every simulated frame keeps its fresh ctx;
+  - `f.anyNodeFading` assertions (~312-324, ~446-456) read the boolean `advanceStarFades` returned; the capture test at ~446 ("a capture result reports anyNodeFading === false…") is DELETED — its subject is the removed field;
+  - the three `readStarCut partition` tests and `forwards the source-independent shader scalars` gain one `advanceStarFades(state, [ctx])` before the read (the first frame snaps to steady state, so counts are unchanged);
+  - `memoises on the ctx object so the walk runs once per frame` (~221) keeps its intent: two reads on the same ctx call `renderer.loadedCatalogs` once;
+  - keep `readStarCut alone never advances a ramp — two different ctx objects at the same nowMs leave opacity unchanged` verbatim in intent (the double-advance-class guard the spec names);
+  - add `it('advanceStarFades steps a ramp once per call, whatever readStarCut does around it')` — advance at 0 ms (snap), advance at 50 ms, read twice on fresh ctxs, advance at 100 ms; assert the leaf opacity after the third advance is `crossfade × 100/250`, i.e. two steps, not four;
+  - the `the frame star cut over several views` block (~460-545): `computeStarCut(state, [a, b], true)` frames become `advanceStarFades(state, [a, b]); computeStarCut(state, [a, b])`; the perf-cliff regression (~521, "a frame view NOT in the advance list still reads the frame cut, with no second walk") keeps its assertion shape against `setFrameCut`/`starCutFor`;
+  - the `starCatalogVisible agrees with the cut it gates` tests, if present, stay as is (they leave with PR 2).
+- [ ] Implement `advanceStarFades.ts` and the reduced `computeStarCut.ts`; drop `anyNodeFading` from `PreparedStarCut` and from `starPickLeafDraws.test.ts`; rewire `runFrame.ts`; update the `starAggregatesPass.test.ts` helper to `advanceStarFades(state, [ctx]); const cut = computeStarCut(state, [ctx]); …setFrameCut(cut)`.
+- [ ] Reword any `advanceFades` / "the one advancing call" mentions in `readStarCut.ts`, `starCutFor.ts`, `starFadeState.ts`. Grep `advanceFades` and `anyNodeFading` → zero hits in `src/` and `tests/`.
 - [ ] Delete the backlog detail file and its `docs/BACKLOG.md` line.
-- [ ] `npm run typecheck:fast && npm test -- starCatalog readStarCut starPick shouldKeepTicking runFrame frameFilePurity` → green.
+- [ ] `npm run typecheck:fast` (src clean) and `npx vitest run` (full suite) → green.
 - [ ] Commit: `refactor(stars): computeStarCut is pure; advanceStarFades steps the LOD ramps from runFrame`.
 
 ---
@@ -209,7 +230,7 @@ export function frameStarCutFrustum(state: PassState, ctx: ReadyFrameContext): S
 - `EngineState.orbitTrailRows` composed by `createLayers`; `orbitTrailsPass` has no static-table import; `CORE_TRAIL_ELEMENTS` is the only name for core's rows.
 - `src/state/settings/core/orbitTrails/` holds the cluster; `src/layers/body/state/orbitTrails/` does not exist; `bodyLayerSettings` has three slices.
 - `src/utils/camera/focusDriverId.ts` exists and is the only body-arm test in the six listed sites.
-- `advanceStarFades.ts` and `frameStarCutFrustum.ts` exist; `advanceStarCut.ts` does not; `computeStarCut` takes two arguments; `PreparedStarCut` has no `anyNodeFading`.
+- `advanceStarFades.ts` and `frameStarCutFrustum.ts` exist; `computeStarCut` has no `advanceFades` flag (two arguments: state, views); `PreparedStarCut` has no `anyNodeFading`.
 - `docs/backlog/2026-08-20-star-catalog-layer-god-layer-split.md` deleted with its index line.
 
 **Observable behaviours (manual pass on the main app, user's eyes)**
@@ -223,4 +244,4 @@ export function frameStarCutFrustum(state: PassState, ctx: ReadyFrameContext): S
 
 - Nothing star-Layer-shaped lands here: no `starCatalog` selection arm, no `StarInfo`, no Sun/S-star retyping, no `guides.orbitTrails` contributor. Those are PR 2.
 - Adjacent findings stay out: `SCENE_BODIES` mixing stars, `ORBIT_REACH_BY_REGION` derived from the static table (a harmless superset once Layers contribute), `starRenderer`'s single-uniform caveat, the two `starCatalogVisible` reference-identity tests.
-- No perf gate: no renderer path changes.
+- Perf gate on Task 4 (user ruling): CPU bench over the production entry points against `stars-large.bin`, plus `npm run perf` on `star-field` and `milky-way` at 60 frames, before and after; a regression outside run-to-run noise halts the landing.
