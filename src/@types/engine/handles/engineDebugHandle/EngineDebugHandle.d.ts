@@ -34,6 +34,13 @@ export type EngineDebugHandle = {
    * either no `?gpuTimings` or an adapter without `timestamp-query`.
    */
   readonly timingService: GpuTimingService;
+  /**
+   * Mark the scene dirty on the render-on-demand scheduler (coalesced). The
+   * perf harness pumps its own sampling window through this: no camera arm
+   * animates by itself, so without it a measurement of a static vantage stalls
+   * after the loop goes back to sleep.
+   */
+  readonly requestRender: () => void;
   /** Rolling CPU-side frame stats (fps + JS-body ms + idle) — no GPU query. */
   readonly frameStats: () => FrameStats;
   readonly passOverrides: PassOverridesHandle;

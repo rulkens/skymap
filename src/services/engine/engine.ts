@@ -526,6 +526,7 @@ export function createEngine(
       get timingService() {
         return state.gpu.timingService;
       },
+      requestRender: () => state.subsystems.scheduler.requestRender(),
       // `idle` is derived, not stored, from the wall-clock gap since the last frame,
       // so a sleeping render-on-demand loop reads "idle" rather than a stale fps.
       frameStats: (): FrameStats => ({

@@ -24,7 +24,7 @@ what does each pass cost, is a pass fragment- or vertex-bound, what does a catal
 ## Usage
 
 ```bash
-npm run perf                                        # all 8 scenarios, 30 frames, dpr 2
+npm run perf                                        # all 11 scenarios, 30 frames, dpr 2
 npm run perf -- --scenario solar-system --frames 60 # one scenario (repeatable flag)
 npm run perf -- --tier large                        # measure at a specific catalog tier
 npm run perf -- --compare-tiers                     # each scenario at small/medium/large
@@ -65,10 +65,24 @@ Progress goes to stderr in both modes, so stdout is pure JSON.
 
 ## Scenarios
 
-Poses live in `tools/perf/perfScenarios.ts` — eight regimes from `earth-surface` to `full-survey`,
-captured from real flights via the in-app `l` (logState) key. To add one: fly there, press `l`,
-copy the dumped pose into a new entry. Keep poses stable — the value of the harness is comparing
-runs across commits, which dies if the poses drift.
+Poses live in `tools/perf/perfScenarios.ts` — eleven regimes from `earth-surface` to
+`full-survey`, all captured from real flights. Each scenario's `framed` is a camera **arm**: the
+world arm via `absoluteArm({ target, yaw, pitch, distance })`, or a body/site arm as its own
+literal. Keep poses stable — the value of the harness is comparing runs across commits, which
+dies if the poses drift.
+
+Two ways to author one:
+
+- **From the `l` (logState) key** — fly there, press `l`, copy the dumped target/yaw/pitch/
+  distance into `absoluteArm(...)`. World arm only; `fovYRad` in the dump is the 60° default and
+  not part of a pose.
+- **From a share URL** — copy a `#pose=…` value and run it through `decodeFramedPose`
+  (`src/utils/url/decodeFramedPose.ts`); paste the decoded OBJECT, not the string, so the
+  scenario reads as coordinates rather than an opaque blob. This is the route for a body- or
+  site-arm vantage (`mars-jezero-146km` came from one), which no logState dump spells.
+
+A body- or site-arm scenario is parented to its body, so it frames the same ground whatever the
+sim clock reads — the harness sets no time and none is needed.
 
 ## CPU-side star-cut bench (`starCutCpuBench.mts`)
 
