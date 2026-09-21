@@ -1,3 +1,5 @@
+import type { GrowOnlyRecordBuffer } from '../../../../../@types/galaxy/GrowOnlyRecordBuffer';
+
 /**
  * createGrowOnlyRecordBuffer — a GPU buffer of fixed-stride records that
  * grows to fit and never shrinks (`setFieldTuning` fires every frame of a
@@ -14,15 +16,6 @@ type GrowOnlyRecordBufferSpec = {
   readonly floatsPerRecord: number;
   /** Starting capacity in RECORDS. Size it at the caller's own admission ceiling so the common case never regrows. */
   readonly initialCapacity: number;
-};
-
-export type GrowOnlyRecordBuffer = {
-  getBuffer(): GPUBuffer;
-  /** Records in the last `write`. NOT the capacity, which only ever grows. */
-  readonly count: number;
-  /** Grow to fit `records`, then upload. */
-  write(records: Float32Array): void;
-  destroy(): void;
 };
 
 export function createGrowOnlyRecordBuffer(spec: GrowOnlyRecordBufferSpec): GrowOnlyRecordBuffer {

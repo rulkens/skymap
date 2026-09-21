@@ -11,66 +11,10 @@
 import { ISM_MAP_RINGS } from '../../../../engine/galaxyGenerator/v2/galaxyIsmMapArmForcing';
 
 import ringReduceWgsl from '../../../shaders/milkyWay/ismMap/ringReduce.wesl?static';
+import type { IsmMapRingReduce } from '../../../../../@types/galaxy/IsmMapRingReduce';
 
 const SURVIVOR_SUM_PARAMS_BUFFER_SIZE = 16; // count: u32, totalMass: f32, 2x pad — ringReduce.wesl's SurvivorSumParams
 const FLUX_WEIGHT_SUM_PARAMS_BUFFER_SIZE = 16; // count: u32, 3x pad — ringReduce.wesl's FluxWeightSumParams
-
-type DispatchSurvivorSumInput = {
-  /** placeDust.wesl's own massOut buffer (`IsmMapPlaceDust.massBuffer`) — producer-owned, passed in fresh each call since its identity never changes but this module has no constructor-time reference to it. */
-  readonly massBuffer: GPUBuffer;
-  /** This rebuild's dust particle count — `PlaceDustBudget.count`, NOT `MAX_PARTICLE_COUNT`: massBuffer beyond it holds a previous dispatch's stale values. */
-  readonly count: number;
-  /** `PlaceDustBudget.totalMass` — dustParticleCloud.ts:287's own totalMass, pure geometry/tau function computed CPU-side. */
-  readonly totalMass: number;
-};
-
-/** Shared shape for the two flux-weight-sum dispatches below — `fluxWeightBuffer` is the producer's own `fluxWeightOut`, `count` its reservation's live count. */
-type DispatchFluxWeightSumInput = {
-  readonly fluxWeightBuffer: GPUBuffer;
-  readonly count: number;
-};
-
-export type IsmMapRingReduce = {
-  /** Encode the ring-means pass into the CALLER's encoder — no submit here, same one-encoder-one-submit contract `IsmMapOutput`'s encode*Pass methods use. */
-  dispatchRingMeans(enc: GPUCommandEncoder): void;
-  /**
-   * Encode the survivor-sum + Larson renorm pass into the CALLER's encoder,
-   * same no-submit contract. Must be encoded AFTER whatever `placeDust`
-   * dispatch filled `input.massBuffer` for THIS rebuild, in the same
-   * encoder/submit — cross-pass ordering within one submit is what
-   * guarantees this reads fresh data with no readback of its own
-   * (`createGalaxyFieldRenderer.ts`'s `place:dust` stage row is the production
-   * caller). Writes `dustRenormBuffer[0]`.
-   */
-  dispatchSurvivorSum(enc: GPUCommandEncoder, input: DispatchSurvivorSumInput): void;
-  /**
-   * `dustRenorm` (dustMap/fragment.wesl binding 14) — the Larson massPerR2
-   * scale `dispatchSurvivorSum` writes and the dust splat pass reads, as a
-   * storage buffer bound BOTH ways (read_write here, read-only there): no
-   * uniform round trip, since the CPU never learns this value.
-   */
-  readonly dustRenormBuffer: GPUBuffer;
-  /** Debug-only: maps `dustRenormBuffer[0]` back to the CPU — the probe's own numeric-validation exception (`readback:placeDust`'s survivor-sum assertion), no production caller. */
-  readDustRenormScale(): Promise<number>;
-  /**
-   * The arm-cloud twin of `dispatchSurvivorSum` — encodes
-   * `ringReduce.wesl`'s `csArmCloudFluxWeightSum` into the CALLER's encoder,
-   * same no-submit/must-run-after-the-producer-dispatch contract. Writes
-   * `armCloudRenormBuffer[0]`.
-   */
-  dispatchArmCloudFluxWeightSum(enc: GPUCommandEncoder, input: DispatchFluxWeightSumInput): void;
-  /** `armCloudRenorm` (fieldSplat/fragment.wesl binding 15) — the reciprocal weightSum scale, read_write here, read-only there. */
-  readonly armCloudRenormBuffer: GPUBuffer;
-  /** Debug-only: maps `armCloudRenormBuffer[0]` back to the CPU — the probe's own numeric-validation exception, no production caller. */
-  readArmCloudRenormScale(): Promise<number>;
-  /** The spur-cloud twin of `dispatchArmCloudFluxWeightSum` — same shape, `csArmSpurFluxWeightSum`. */
-  dispatchArmSpurFluxWeightSum(enc: GPUCommandEncoder, input: DispatchFluxWeightSumInput): void;
-  /** `spurCloudRenorm` (fieldSplat/fragment.wesl binding 16) — the spur-cloud twin of `armCloudRenormBuffer`. */
-  readonly spurCloudRenormBuffer: GPUBuffer;
-  /** Debug-only twin of `readArmCloudRenormScale`. */
-  readArmSpurRenormScale(): Promise<number>;
-  dispose(): void;
-};
 
 export function createIsmMapRingReduce(
   device: GPUDevice,

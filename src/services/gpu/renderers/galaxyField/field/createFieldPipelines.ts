@@ -9,7 +9,7 @@
  * entry list is a validation error, not a no-op.
  */
 import type { HiiTier } from '../../../../../@types/galaxy/HiiTier';
-import type { IsmMapGenerator } from '../ismMap/createIsmMapGenerator';
+import type { IsmMapGenerator } from '../../../../../@types/galaxy/IsmMapGenerator';
 
 import { mapHiiTiers } from '../../../../../data/hiiTiers';
 import { ADDITIVE_BLEND } from '../../../lib/blendStates';

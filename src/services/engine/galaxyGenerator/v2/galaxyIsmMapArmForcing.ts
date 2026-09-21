@@ -15,6 +15,7 @@ import { memoizeLastByKeys } from '../../../../utils/cache/memoizeLastByKeys';
 import type { GalaxyDescription } from '../../../../@types/galaxy/GalaxyDescription';
 import type { GalaxyFieldArmRecord } from '../../../../@types/galaxy/GalaxyFieldArmRecord';
 import type { GalaxyFieldTuning } from '../../../../@types/galaxy/GalaxyFieldTuning';
+import type { GalaxyIsmMapGridRadius } from '../../../../@types/galaxy/GalaxyIsmMapGridRadius';
 
 /** Grid extent; sizes the ismMap textures. Every WGSL pass reads its own texture's `textureDimensions`, so there's no mirrored copy to drift. */
 export const ISM_MAP_AZ = 1536;
@@ -22,9 +23,6 @@ export const ISM_MAP_RINGS = 512;
 
 /** WGSL hard-codes `@workgroup_size(16, 16)` as a compile-time literal, so unlike ISM_MAP_AZ/ISM_MAP_RINGS this stays mirrored — see `constants.parity.test.ts`'s ismMap block. */
 export const ISM_MAP_WORKGROUP_SIZE = 16;
-
-export type GalaxyIsmMapGridRadius = { readonly rMin: number; readonly rMax: number };
-
 /** Forcing is zero below `armStartRadius` (this file's own skip), so this margin only lets percolation leak inward instead of hard-stopping there. */
 const ISM_MAP_INNER_MARGIN_FRAC = 0.6;
 

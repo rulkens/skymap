@@ -13,7 +13,7 @@ import {
   packIsmMapCdfArmEnvelope,
   ISM_MAP_CDF_ARM_ENVELOPE_FLOATS_PER_ENTRY,
 } from '../../../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapCdfArmEnvelope';
-import type { IsmMapCdfArmEnvelopeEntry } from '../../../../../../src/services/gpu/renderers/galaxyField/ismMap/packIsmMapCdfArmEnvelope';
+import type { IsmMapCdfArmEnvelopeEntry } from '../../../../../../src/@types/galaxy/IsmMapCdfArmEnvelopeEntry';
 import { layoutWgslStruct } from '../../../../../../tools/utils/wgsl/layoutWgslStruct';
 import { parseWgslStructFields } from '../../../../../../tools/utils/wgsl/parseWgslStructFields';
 import { readShaderSource } from '../../../../../../tools/utils/wgsl/readShaderSource';

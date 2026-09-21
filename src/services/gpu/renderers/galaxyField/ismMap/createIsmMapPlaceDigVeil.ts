@@ -14,41 +14,12 @@ import {
   PLACE_DIG_VEIL_PARAMS_BUFFER_SIZE,
 } from './packPlaceDigVeilParams';
 import type { PlaceDigVeilParamsInput } from './packPlaceDigVeilParams';
-import type { DigVeilBudget } from './computeDigVeilBudget';
 import { FIELD_COMPONENT_FLOATS } from '../field/packFieldUniforms';
 import { DIG_MAX_COUNT } from '../../../../engine/galaxyGenerator/v2/hiiRegions';
+import type { PlaceDigVeilDispatchInput } from '../../../../../@types/galaxy/PlaceDigVeilDispatchInput';
+import type { IsmMapPlaceDigVeil } from '../../../../../@types/galaxy/IsmMapPlaceDigVeil';
 
 const PLACE_DIG_VEIL_WORKGROUP_SIZE = 256;
-
-type PlaceDigVeilWarp = {
-  readonly warpStrength: number;
-  readonly warpTwist: number;
-  readonly warpStartRadius: number;
-  readonly outerRadius: number;
-};
-
-export type PlaceDigVeilDispatchInput = {
-  readonly seed: number;
-  readonly budget: DigVeilBudget;
-  readonly reservationOffset: number;
-  readonly generatorIsFluid: boolean;
-  readonly cdfRings: number;
-  readonly cdfAz: number;
-  readonly cdfRMin: number;
-  readonly cdfRMax: number;
-  readonly warp: PlaceDigVeilWarp;
-  /** The DIG-dedicated arm-biased CDF scan's output — see `createGalaxyFieldRenderer.ts`'s `digCdfScan`. Own instance/buffer from dust's, never shared (two weight tables writing the same buffer would race across the two tiers' own deferred dispatches). */
-  readonly prefixBuffer: GPUBuffer;
-  readonly hiiCompsBuffer: GPUBuffer;
-};
-
-export type IsmMapPlaceDigVeil = {
-  /** Encode into the CALLER's encoder/pass — no submit here (one-encoder-one-submit discipline). */
-  dispatchPlaceDigVeil(enc: GPUCommandEncoder, input: PlaceDigVeilDispatchInput): void;
-  /** Debug-only: dispatch in its own encoder/submit and map the DIG slot range straight back — the probe's determinism/liveness/flux-parity exception, no production caller. */
-  dispatchAndReadbackDigVeil(input: PlaceDigVeilDispatchInput): Promise<Float32Array>;
-  dispose(): void;
-};
 
 function toUniformInput(input: PlaceDigVeilDispatchInput): PlaceDigVeilParamsInput {
   const { budget } = input;
