@@ -29,7 +29,7 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
     state.passes,
     state.computes,
     // Non-null: `runBootstrapPhases` awaits `initGpu`, which assigns it, first.
-    state.gpu.renderTargets!.specs.map((spec) => spec.id),
+    state.gpu.renderTargets!.specs,
   );
 
   // Renderers are absent by design: each `ContentPass.draw` reads its own off

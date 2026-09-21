@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 
 import { createAppStore } from '../../src/store/createAppStore';
 import { NOOP_SAGA_CONTEXT } from '../support/createTestStore';
-import { setBrightness } from '../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import { setBrightness } from '../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { INITIAL_SETTINGS } from '../../src/state/settings/initialSettings';
 import { settingsRoute, tierRoute, uiRoute } from '../../src/store/constants';
 import type { UiState } from '../../src/@types/ui/UiState';

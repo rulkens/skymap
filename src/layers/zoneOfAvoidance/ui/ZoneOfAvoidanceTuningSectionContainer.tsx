@@ -11,8 +11,8 @@
 import { memo, useCallback } from 'react';
 import { ZoneOfAvoidanceTuningSection } from './ZoneOfAvoidanceTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectZoneOfAvoidance } from '../../../state/settings/selectors';
-import { setZoneOfAvoidanceTuning } from '../settings/zoneOfAvoidanceSlice';
+import { selectZoneOfAvoidance } from '../state/zoneOfAvoidance/selectors';
+import { setZoneOfAvoidanceTuning } from '../state/zoneOfAvoidance/slice';
 import type { ZoneOfAvoidanceTuning } from '../../../@types/settings/ZoneOfAvoidanceTuning';
 
 function ZoneOfAvoidanceTuningSectionContainer(): React.ReactElement {

@@ -11,7 +11,7 @@
  */
 
 import settingsReducer from '../settings/settingsReducer';
-import { captureSettings } from './captureSettings';
+import { captureSettings } from '../scene/captureSettings';
 import { VISIBILITY_ACTION_ROW } from '../../services/animation/visibilityActionRow';
 import { scopedVisibilityActions } from '../../services/animation/scopedVisibilityActions';
 import type { Action } from '@reduxjs/toolkit';

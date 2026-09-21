@@ -10,8 +10,8 @@
 import { memo, useCallback } from 'react';
 import { FlowTuningSection } from './FlowTuningSection';
 import { useAppDispatch, useAppSelector } from '../../../store/hooks';
-import { selectFlow } from '../../../state/settings/selectors';
-import { setFlow } from '../settings/flowSlice';
+import { selectFlow } from '../state/flow/selectors';
+import { setFlow } from '../state/flow/slice';
 import type { FlowFieldDefaults } from '../../../@types/data/flow/FlowFieldDefaults';
 
 function FlowTuningSectionContainer(): React.ReactElement {

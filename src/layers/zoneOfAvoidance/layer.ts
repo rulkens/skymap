@@ -7,7 +7,7 @@
 
 import { defineLayer } from '../../services/engine/layer/defineLayer';
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
-import { zoneOfAvoidanceLayerSettings } from './settings/zoneOfAvoidanceLayerSettings';
+import { zoneOfAvoidanceLayerSettings } from './state/slices';
 import { ZONE_OF_AVOIDANCE_SOURCE_ROWS } from './sources/zoneOfAvoidanceSourceRows';
 import { create } from './create';
 import { destroy } from './destroy';

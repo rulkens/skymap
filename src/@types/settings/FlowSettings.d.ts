@@ -10,7 +10,7 @@
  * Named (rather than inlined into `EngineSettingsState`) because three
  * consumers reference the same shape and would otherwise re-spell it: the
  * settings bag itself (`EngineSettingsState.flow`), the `DEFAULT_FLOW` seed in
- * `layers/flow/settings/defaults.ts`, and the flow renderer's per-frame param
+ * `layers/flow/state/defaults.ts`, and the flow renderer's per-frame param
  * argument (`flowFieldRenderer.encodeCompute` / `draw` / `isAnimating`). One
  * type, one source of truth.
  *

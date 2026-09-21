@@ -30,7 +30,8 @@ import { goHome } from '../selection/goHome';
 import { selectSelectedRef } from '../selection/selectors';
 import { clearSelection, updateSelectionFocus } from '../selection/selectionSlice';
 import { selectTourActive } from '../tour/selectors';
-import { advanceTour, exitTour, prevBeat, togglePause } from '../tour/tourActions';
+import { advanceTour, prevBeat, togglePause } from '../tour/tourActions';
+import { exitTakeover } from '../takeover/takeoverActions';
 import { stopClip } from '../camera/clipActions';
 import { selectPaletteOpen } from '../ui/selectors';
 import { setPaletteOpen, toggleDebugPanelOpen, toggleUiHidden } from '../ui/uiSlice';
@@ -46,12 +47,12 @@ export const KEYBOARD_SHORTCUTS: readonly KeyboardShortcut[] = [
     run: (s) => (selectPaletteOpen(s) ? null : setPaletteOpen(true)),
     preventDefault: true,
   },
-  // `stopClip` alongside `exitTour`: a tour beat's clip plays via a direct
+  // `stopClip` alongside `exitTakeover`: a tour beat's clip plays via a direct
   // `playClip` call (see `visitBeatSaga`), never through `startClip`, so the
   // two stops target disjoint playback paths and can't fight over the same
   // clip. Both are no-ops when their respective thing isn't running (same as
-  // `exitTour` already was), so no precedence check is needed here.
-  { keys: 'escape', run: () => [clearSelection(), exitTour(), stopClip()] },
+  // `exitTakeover` already was), so no precedence check is needed here.
+  { keys: 'escape', run: () => [clearSelection(), exitTakeover(), stopClip()] },
   {
     keys: 'f',
     run: (s) => {

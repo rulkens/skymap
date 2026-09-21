@@ -21,6 +21,14 @@ function mockDevice(): GPUDevice {
       createView: vi.fn(() => ({})),
       destroy: vi.fn(),
     })),
+    // The far-depth placeholder is cleared at construction via its own
+    // encoder — every test below constructs `createRenderTargets` at least
+    // once, so this needs a real stub, not an afterthought.
+    createCommandEncoder: vi.fn(() => ({
+      beginRenderPass: vi.fn(() => ({ end: vi.fn() })),
+      finish: vi.fn(),
+    })),
+    queue: { submit: vi.fn() },
   } as unknown as GPUDevice;
 }
 
@@ -104,10 +112,11 @@ describe('createRenderTargets', () => {
     // volume @ scale 3 (colour), star-aggregates @ scale 2 (colour),
     // mw-aggregate @ scale 2 (colour), foreground:0 @ scale 1 (colour +
     // depth), the five bloom-pyramid mips bloom0..bloom4 @ scale 2/4/8/16/32
-    // (colour only), and sky-cubemap @ fixedSizePx (colour)
-    // → 12 textures. hdr at full size, volume at floor(size/3),
-    // star-aggregates and mw-aggregate at floor(size/2).
-    expect(create.mock.calls).toHaveLength(12);
+    // (colour only), and sky-cubemap @ fixedSizePx (colour) → 12 textures,
+    // plus the far-depth placeholder (outside the spec table, never resized)
+    // → 13. hdr at full size, volume at floor(size/3), star-aggregates and
+    // mw-aggregate at floor(size/2).
+    expect(create.mock.calls).toHaveLength(13);
     const hdrDesc = create.mock.calls.find((c) => c[0].label === 'render-target-hdr')![0];
     const volDesc = create.mock.calls.find((c) => c[0].label === 'render-target-volume')![0];
     const aggDesc = create.mock.calls.find(
@@ -127,8 +136,8 @@ describe('createRenderTargets', () => {
 
     // Each SCALE-driven offscreen row reallocated at the new canvas size → 11
     // more textures; sky-cubemap's fixedSizePx row holds its declared size
-    // and is not one of them.
-    expect(create.mock.calls).toHaveLength(23);
+    // and is not one of them, nor is the far-depth placeholder.
+    expect(create.mock.calls).toHaveLength(24);
     const hdrResized = create.mock.calls
       .filter((c) => c[0].label === 'render-target-hdr')
       .at(-1)![0];
@@ -486,5 +495,23 @@ describe('createRenderTargets', () => {
       const clearValue = spec.clearValue as GPUColorDict;
       expect(clearValue.a).toBe(expectedAlpha);
     }
+  });
+
+  it('creates and clears the far-depth placeholder once, and farDepthView is stable across reconcile', () => {
+    const device = mockDevice();
+    const state = stateWithDivisor(MW_DIVISOR);
+    // Same size handed to construction and to reconcile below: every row's
+    // held size already matches, so reconcile allocates NOTHING — isolating
+    // the assertion to the placeholder alone, which `reconcile` never touches.
+    const size = { width: 640, height: 480 };
+    const targets = createRenderTargets(device, renderTargetRows(SWAP_FORMAT), size, state);
+    const before = (device.createTexture as ReturnType<typeof vi.fn>).mock.calls.length;
+    const a = targets.farDepthView();
+    targets.reconcile(state, size);
+    expect(targets.farDepthView()).toBe(a);
+    expect((device.createTexture as ReturnType<typeof vi.fn>).mock.calls.length).toBe(before);
+    const submit = (device as unknown as { queue: { submit: ReturnType<typeof vi.fn> } }).queue
+      .submit;
+    expect(submit).toHaveBeenCalledTimes(1);
   });
 });

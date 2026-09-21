@@ -10,7 +10,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 
 import { buildStore, type ReconcileSpies } from './reconcileSagaHarness';
-import { setGalaxyCatalogSize } from '../../../src/layers/galaxyCatalog/settings/galaxyCatalogsSlice';
+import { setGalaxyCatalogSize } from '../../../src/layers/galaxyCatalog/state/galaxyCatalogs/slice';
 import { beginDrag, setAutoRotate } from '../../../src/state/camera/cameraSlice';
 import { setTier } from '../../../src/state/tier/tierSlice';
 import { pause, resume } from '../../../src/state/time/timeSlice';
