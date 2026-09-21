@@ -34,8 +34,8 @@
  * that reads as rushed — is materially gentler for the same duration.
  */
 
-import type { CameraPose } from '../../@types/camera/CameraPose';
-import type { ClipData } from '../../@types/animation/ClipData';
+import type { CameraPose } from '../../../../@types/camera/CameraPose';
+import type { ClipData } from '../../../../@types/animation/ClipData';
 import {
   aimAt,
   all,
@@ -43,7 +43,7 @@ import {
   moveTarget,
   seq,
   wait,
-} from '../../services/engine/animation/effectHelpers';
+} from '../../../../services/engine/animation/effectHelpers';
 
 /** Leg 1: the log pull-back from wherever the viewer was to the view's scale. */
 const PULL_BACK_SEC = 7;

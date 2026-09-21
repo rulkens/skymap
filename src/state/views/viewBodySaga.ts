@@ -7,7 +7,7 @@
  */
 import { call, getContext, put, race, select, take } from 'typed-redux-saga';
 
-import { flyToPoseClip } from '../scene/flyToPoseClip';
+import { flyToPoseClip } from '../../data/animation/clips/makers/flyToPoseClip';
 import { clearSelection } from '../selection/selectionSlice';
 import { mergeSnapshot } from '../settings/mergeSnapshotAction';
 import { setAutoRotate } from '../camera/cameraSlice';

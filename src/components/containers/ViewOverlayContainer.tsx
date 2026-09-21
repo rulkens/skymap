@@ -12,7 +12,7 @@ import ViewOverlay from '../ViewOverlay/ViewOverlay';
 import { useAppDispatch } from '../../store/hooks';
 import { exitTakeover } from '../../state/takeover/takeoverActions';
 import { viewRegistry } from '../../data/views/viewRegistry';
-import { FLY_TO_POSE_SEC } from '../../state/scene/flyToPoseClip';
+import { FLY_TO_POSE_SEC } from '../../data/animation/clips/makers/flyToPoseClip';
 import type { ViewId } from '../../@types/views/ViewId';
 import type { ViewToggle } from '../../@types/views/ViewToggle';
 
