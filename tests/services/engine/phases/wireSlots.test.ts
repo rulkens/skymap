@@ -155,7 +155,7 @@ import { wireSlots } from '../../../../src/services/engine/phases/wireSlots';
 import { ASSET_WIRING } from '../../../../src/services/engine/wiring/assetWiring';
 import { galaxyCatalogAssetRows } from '../../../../src/layers/galaxyCatalog/load/galaxyCatalogAssetRows';
 import { galaxyCatalogFadeRows } from '../../../../src/layers/galaxyCatalog/present/galaxyCatalogFadeRows';
-import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/types/GalaxyCatalogRuntime';
+import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { AssetKey } from '../../../../src/@types/loading/AssetKey';
 import { FADE_LAYERS } from '../../../../src/services/engine/wiring/fadeLayers';
 import { expandCompanionRows } from '../../../../src/utils/loading/expandCompanionRows';

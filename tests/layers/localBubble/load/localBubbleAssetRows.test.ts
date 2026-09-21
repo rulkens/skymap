@@ -9,7 +9,7 @@ import { localBubbleAssetRows } from '../../../../src/layers/localBubble/load/lo
 import { CONST_J2000 } from '../../../../src/data/time/constJ2000';
 import type { DemandCtx } from '../../../../src/@types/loading/DemandCtx';
 import type { EngineSettingsState } from '../../../../src/@types/settings/EngineSettingsState';
-import type { LocalBubbleRuntime } from '../../../../src/layers/localBubble/types/LocalBubbleRuntime';
+import type { LocalBubbleRuntime } from '../../../../src/layers/localBubble/@types/LocalBubbleRuntime';
 import type { UiState } from '../../../../src/@types/ui/UiState';
 
 // The row reads neither the renderer nor the slot — only `factory` closes

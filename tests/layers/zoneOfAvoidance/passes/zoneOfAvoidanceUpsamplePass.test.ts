@@ -17,7 +17,7 @@ import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
 import type { ReadyFrameContext } from '../../../../src/@types/engine/frame/ReadyFrameContext';
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
-import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/types/ZoneOfAvoidanceRuntime';
+import type { ZoneOfAvoidanceRuntime } from '../../../../src/layers/zoneOfAvoidance/@types/ZoneOfAvoidanceRuntime';
 
 const PASS_STUB = {
   setPipeline: vi.fn(),

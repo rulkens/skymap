@@ -24,8 +24,8 @@
 
 import { describe, it, expect } from 'vitest';
 import { structureCatalogToStructures } from '../../../../src/services/engine/wiring/structureCatalogToStructures';
-import type { StructureCatalogPayload } from '../../../../src/@types/loading/StructureCatalogPayload';
-import type { StructureMetaEntry } from '../../../../src/@types/loading/StructureCatalogPayload';
+import type { StructureCatalogPayload } from '../../../../src/@types/loading/structureCatalogPayload/StructureCatalogPayload';
+import type { StructureMetaEntry } from '../../../../src/@types/loading/structureCatalogPayload/StructureMetaEntry';
 
 /**
  * Build a payload from per-record specs.  `significance` is the RAW

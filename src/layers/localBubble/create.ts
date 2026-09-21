@@ -6,7 +6,7 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { LocalBubbleRuntime } from './types/LocalBubbleRuntime';
+import type { LocalBubbleRuntime } from './@types/LocalBubbleRuntime';
 
 import { HDR_TARGET_FORMAT } from '../../data/renderTargetFormats';
 import { createLocalBubbleRenderer } from './render/localBubbleRenderer';

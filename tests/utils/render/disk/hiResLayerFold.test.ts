@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { hiResLayerFold } from '../../../../src/utils/render/disk/hiResLayerFold';
-import type { HiResFamousPerGalaxyState } from '../../../../src/@types/engine/subsystems/HiResFamousSubsystem';
+import type { HiResFamousPerGalaxyState } from '../../../../src/@types/engine/subsystems/hiResFamousSubsystem/HiResFamousPerGalaxyState';
 
 describe('hiResLayerFold', () => {
   it('folds the -1/0 sentinel when the map is undefined (no hi-res planner)', () => {

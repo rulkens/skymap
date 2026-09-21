@@ -8,7 +8,7 @@
 import { fadeLayerRow } from '../../../utils/animation/fadeLayerRow';
 
 import type { FadeLayer } from '../../../@types/animation/FadeLayer';
-import type { FilamentsRuntime } from '../types/FilamentsRuntime';
+import type { FilamentsRuntime } from '../@types/FilamentsRuntime';
 
 export function filamentsFadeRows(runtime: FilamentsRuntime): readonly FadeLayer<unknown>[] {
   return [

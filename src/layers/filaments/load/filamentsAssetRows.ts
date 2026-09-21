@@ -5,7 +5,7 @@
  */
 
 import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
-import type { FilamentsRuntime } from '../types/FilamentsRuntime';
+import type { FilamentsRuntime } from '../@types/FilamentsRuntime';
 
 export function filamentsAssetRows(runtime: FilamentsRuntime): readonly AssetWiringRow[] {
   return [

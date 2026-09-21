@@ -44,11 +44,8 @@
  */
 
 import type { Renderer } from '../../../../@types/rendering/Renderer';
-import type {
-  StarCatalogPickRenderer,
-  StarCatalogPickDrawArgs,
-} from '../../../../@types/rendering/StarCatalogPickRenderer';
-import type { StarCatalogPickResources } from '../../../../@types/rendering/StarCatalogRenderer';
+import type { StarCatalogPickRenderer } from '../../../../@types/rendering/starCatalogPickRenderer/StarCatalogPickRenderer';
+import type { StarCatalogPickResources } from '../../../../@types/rendering/starCatalogRenderer/StarCatalogPickResources';
 import type { SourceType } from '../../../../@types/data/SourceType';
 import vsCode from '../../shaders/starCatalog/vertex.wesl?static';
 import pickFsCode from '../../shaders/starCatalog/pickFragment.wesl?static';
@@ -72,6 +69,7 @@ import {
   PICK_PASS_U32_INDEX,
   writeStarNodeParams,
 } from './starCatalogLayout';
+import type { StarCatalogPickDrawArgs } from '../../../../@types/rendering/starCatalogPickRenderer/StarCatalogPickDrawArgs';
 
 /**
  * One source's per-source pick buffers: the contiguous NodeParams block and its

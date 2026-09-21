@@ -21,7 +21,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import type { SourceType } from '../../../../src/@types/data/SourceType';
 import { createCatalogStore } from '../../../../src/layers/galaxyCatalog/render/catalogStore';
-import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/types/BuildRunner';
+import type { BuildRunner } from '../../../../src/layers/galaxyCatalog/@types/BuildRunner';
 import { buildPointInterleavedBuffer } from '../../../../src/services/engine/bake/buildPointInterleavedBuffer';
 import { Source, SOURCE_REGISTRY } from '../../../../src/data/sources';
 import type { GalaxyCatalog } from '../../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
