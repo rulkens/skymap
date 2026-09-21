@@ -28,4 +28,20 @@ describe('flyToPoseClip', () => {
     expect(flat).toContain(String(pose.yaw));
     expect(flat).toContain(String(pose.pitch));
   });
+
+  // The whole reason the builder is two legs: `distance` interpolates in log
+  // space and `target` cannot, so folding them into one parallel block sends
+  // the pivot across a hundred Mpc while the eye is still micro-parsecs from
+  // it. See the module header.
+  it('pulls back in its own leg, before the pivot moves', () => {
+    const pose: CameraPose = { target: [12, -34, 56], yaw: 1.25, pitch: -0.5, distance: 78 };
+
+    const [pullBack, reframe, ...rest] = flyToPoseClip(pose).timeline;
+
+    expect(rest).toEqual([]);
+    expect(JSON.stringify(pullBack)).toContain(String(pose.distance));
+    expect(JSON.stringify(pullBack)).not.toContain(JSON.stringify(pose.target));
+    expect(JSON.stringify(reframe)).toContain(JSON.stringify(pose.target));
+    expect(JSON.stringify(reframe)).toContain(String(pose.yaw));
+  });
 });
