@@ -9,6 +9,7 @@ import { cosmicFlows } from './cosmicFlows';
 import { cosmicWeb } from './cosmicWeb';
 import { observableUniverse } from './observableUniverse';
 import { solarSystem } from './solarSystem';
+import { zoneOfAvoidance } from './zoneOfAvoidance';
 import type { View } from '../../@types/views/View';
 import type { ViewId } from '../../@types/views/ViewId';
 
@@ -16,5 +17,6 @@ export const viewRegistry: Record<ViewId, View> = {
   cosmicFlows,
   cosmicWeb,
   solarSystem,
+  zoneOfAvoidance,
   observableUniverse,
 };

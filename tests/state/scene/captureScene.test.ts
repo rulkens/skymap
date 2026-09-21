@@ -33,6 +33,7 @@ const SNAPSHOT_SETTINGS_KEYS = [
   'starCatalogs',
   'structures',
   'volumes',
+  'zoneOfAvoidance',
 ].sort();
 
 const FOCUS_REF: SelectionRef = { type: 'structure', id: 'virgo-cluster' };
@@ -66,7 +67,7 @@ describe('captureScene', () => {
     const state = makeState(FOCUS_REF);
     const snap = captureScene(state);
 
-    // Settings half carries exactly the eleven tour-owned clusters — orientation
+    // Settings half carries exactly the tour-owned clusters — orientation
     // is NOT among them.
     expect(Object.keys(snap.settings).sort()).toEqual(SNAPSHOT_SETTINGS_KEYS);
     expect(snap.settings).not.toHaveProperty('orientation');

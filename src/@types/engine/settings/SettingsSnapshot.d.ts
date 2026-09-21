@@ -2,7 +2,7 @@
  * SettingsSnapshot — the whole-cluster capture the cinematic tour takes
  * before it plays an effect, and restores afterwards.
  *
- * ### Why these eleven clusters and not the whole settings bag
+ * ### Why these clusters and not the whole settings bag
  *
  * The tour captures, mutates, and restores the user's settings around a
  * playback. Only the clusters that carry user-visible *visibility* and
@@ -13,6 +13,9 @@
  *   - `volumes`        — scalar-volume master gate + per-field params.
  *   - `filaments`      — filament-skeleton master gate + intensity.
  *   - `milkyWay`       — Milky-Way disk + label axes.
+ *   - `zoneOfAvoidance` — galactic-plane dust band + its lettering; the
+ *                         Zone-of-Avoidance view drives it, and a viewer who
+ *                         switched the band off must get that choice back.
  *   - `flow`           — CF4++ flow-field overlay gate + look/motion knobs.
  *   - `orbitTrails`    — near-field Keplerian orbit-trails master gate.
  *   - `starCatalogs`   — star-catalog gates + per-catalog caption toggles.
@@ -60,6 +63,7 @@ export type SettingsSnapshot = Readonly<
     | 'volumes'
     | 'filaments'
     | 'milkyWay'
+    | 'zoneOfAvoidance'
     | 'flow'
     | 'orbitTrails'
     | 'starCatalogs'

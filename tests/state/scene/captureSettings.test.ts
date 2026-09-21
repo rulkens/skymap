@@ -35,10 +35,11 @@ const SNAPSHOT_KEYS = [
   'starCatalogs',
   'structures',
   'volumes',
+  'zoneOfAvoidance',
 ].sort();
 
 /**
- * A minimal `state` carrying the eleven tour-owned clusters plus one
+ * A minimal `state` carrying the tour-owned clusters plus one
  * deliberately-excluded cluster (`tonemap`) to prove it's dropped. Only
  * the fields the assertions touch are populated; the rest of each cluster
  * is irrelevant to capture's whole-cluster clone, so we cast through

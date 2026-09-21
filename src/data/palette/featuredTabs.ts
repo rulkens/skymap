@@ -390,6 +390,13 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
         capture: MILKY_WAY_CAPTURE,
       },
       {
+        id: 'zoneOfAvoidance',
+        label: 'Zone of Avoidance',
+        blurb:
+          'The strip of sky our own galaxy hides. Dust and stars in the Milky Way’s disc block about a fifth of the extragalactic sky, and the catalogues stop at its edge.',
+        action: { kind: 'view', viewId: 'zoneOfAvoidance' },
+      },
+      {
         id: 'body-sgr-a-star',
         label: 'Sgr A*',
         blurb:

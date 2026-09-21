@@ -7,21 +7,15 @@
 import { initialState as flowInitialState } from '../../layers/flow/state/flow/initialState';
 import { initialState as galaxyCatalogsInitialState } from '../../layers/galaxyCatalog/state/galaxyCatalogs/initialState';
 import { initialState as milkyWayInitialState } from '../../layers/milkyWay/state/milkyWay/initialState';
-import { initialState as volumesInitialState } from '../../layers/volume/state/volumes/initialState';
 import { mergeSnapshot } from '../../state/settings/mergeSnapshotAction';
 import { GALAXIES_OFF } from './galaxiesOff';
+import { VOLUMES_OFF } from './volumesOff';
 import type { View } from '../../@types/views/View';
 
 // The Milky Way stays ON here, label included: that label IS the "you are
 // here" marker (`MilkyWaySettings.labelEnabled`), and a view about which way
 // we are being carried is unreadable without the "we".
 const MILKY_WAY_WITH_MARKER = { ...milkyWayInitialState, enabled: true, labelEnabled: true };
-
-// No volumes: the density fields are the Cosmic Web view's subject, and MCPM
-// is default-on, so a viewer arriving from there would otherwise read the
-// filaments as part of this view. The master gate is the honest lever — it
-// says "no volume in this shot" without enumerating today's field list.
-const VOLUMES_OFF = { ...volumesInitialState, enabled: false };
 
 // The ribbons' own cool→warm speed ramp, sampled at five points from
 // `shaders/flow/vertex.wesl`: `mix(COOL, WARM, t) + t²·GLOW`, t = speed /
