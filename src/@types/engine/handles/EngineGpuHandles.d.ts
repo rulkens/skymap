@@ -161,11 +161,11 @@ export type EngineGpuHandles = {
   /**
    * MSDF text label renderer.  Null until `initGpu` completes the
    * `loadFontAtlas()` fetch and constructs the renderer against the
-   * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate
-   * — same rationale as `constellationRenderer`: the atlas load is async and
-   * optional from the engine's perspective; the `labelsPass` null-checks
-   * this field at point of use.  Stored here so `destroy()` can release
-   * the GPU buffers (uniform + storage + instance + corner + atlas texture).
+   * decoded atlas bitmap.  Excluded from the `isEngineReady` predicate:
+   * the atlas load is async and optional from the engine's perspective;
+   * the `labelsPass` null-checks this field at point of use.  Stored here
+   * so `destroy()` can release the GPU buffers (uniform + storage +
+   * instance + corner + atlas texture).
    */
   labelRenderer: LabelRenderer | null;
   /**

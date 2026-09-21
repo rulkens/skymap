@@ -16,8 +16,6 @@ import { localBubbleSettingsRow } from './ui/localBubbleSettingsRow';
 
 export const localBubbleLayer = defineLayer({
   name: 'localBubble',
-  // A fragment listed here may not also sit in `UNFORMED_SETTINGS_FRAGMENTS`:
-  // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: localBubbleLayerSettings,
   create,
   destroy,

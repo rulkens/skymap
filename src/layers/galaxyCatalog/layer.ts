@@ -25,8 +25,6 @@ import type { GalaxyCatalogFacts } from './@types/GalaxyCatalogFacts';
 
 export const galaxyCatalogLayer = defineLayer({
   name: 'galaxyCatalog',
-  // A fragment listed here may not also sit in `UNFORMED_SETTINGS_FRAGMENTS`:
-  // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: galaxyCatalogLayerSettings,
   sources: GALAXY_CATALOG_SOURCE_ROWS,
   facts: {

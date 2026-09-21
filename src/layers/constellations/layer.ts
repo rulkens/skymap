@@ -18,8 +18,6 @@ import { constellationsSettingsRow } from './ui/constellationsSettingsRow';
 
 export const constellationsLayer = defineLayer({
   name: 'constellations',
-  // A fragment listed here may not also sit in `UNFORMED_SETTINGS_FRAGMENTS`:
-  // the reducer-key uniqueness assert throws at import (Ruling 15).
   settings: constellationsLayerSettings,
   sources: CONSTELLATIONS_SOURCE_ROWS,
   create,
