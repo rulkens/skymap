@@ -174,13 +174,15 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'cosmicFlows',
         label: 'Cosmic Flows',
-        blurb: 'Coming soon',
+        blurb:
+          'What galaxies do besides expand apart: fall towards the mass nearest them, at hundreds of kilometres a second.',
         action: { kind: 'view', viewId: 'cosmicFlows' },
       },
       {
         id: 'cosmicWeb',
         label: 'Cosmic Web',
-        blurb: 'Coming soon',
+        blurb:
+          'The largest structure there is: filaments and knots of galaxies around empty voids, hundreds of millions of light-years across.',
         action: { kind: 'view', viewId: 'cosmicWeb' },
       },
       {
@@ -639,13 +641,15 @@ export const FEATURED_TABS: readonly PaletteTab[] = [
       {
         id: 'cosmicFlows',
         label: 'Cosmic Flows',
-        blurb: 'Coming soon',
+        blurb:
+          'What galaxies do besides expand apart: fall towards the mass nearest them, at hundreds of kilometres a second.',
         action: { kind: 'view', viewId: 'cosmicFlows' },
       },
       {
         id: 'cosmicWeb',
         label: 'Cosmic Web',
-        blurb: 'Coming soon',
+        blurb:
+          'The largest structure there is: filaments and knots of galaxies around empty voids, hundreds of millions of light-years across.',
         action: { kind: 'view', viewId: 'cosmicWeb' },
       },
       {
