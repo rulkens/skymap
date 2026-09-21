@@ -105,7 +105,10 @@ describe('CameraStateSection', () => {
     const store = configureStore({ reducer: rootReducer });
     const siteSnap: CameraDebugSnapshot = {
       ...SNAP,
-      renderedFrame: { site: 'curiosity' as BodyId },
+      framed: {
+        frame: { site: 'curiosity' as BodyId },
+        pose: { siteId: 'curiosity' as BodyId, headingRad: 0.7, elevationRad: 0.2, rangeM: 12 },
+      },
       sitePose: {
         siteId: 'curiosity' as BodyId,
         headingRad: 0.7,

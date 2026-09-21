@@ -4,44 +4,18 @@ import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 import type { BodyId } from '../../../src/@types/data/body/BodyId';
 
-// The Everest body arm from a real `l`-key dump (earth-everest.json).
-const EVEREST_ARM: FramedCameraPose = {
-  frame: { body: 'earth' },
-  pose: {
-    bodyId: 'earth',
-    anchorLocalM: [0, 0, 0],
-    eyeRelAnchorM: [316016.6033591605, 5626973.168880969, 2985072.170314569],
-    basisLocal: [
-      -0.9985872887863048, 0.05276735314422709, 0.006247648883378639, 0.04057759866030342,
-      0.6813767450970997, 0.7308072178952844, -0.03430575988636451, -0.7300283129324743,
-      0.6825553290068026,
-    ],
-  },
-};
-
 describe('encodeFramedPose', () => {
   it('serializes a body arm as the b-tagged, comma-joined form', () => {
-    expect(encodeFramedPose(EVEREST_ARM)).toBe(
-      [
-        'b',
-        'earth',
-        0,
-        0,
-        0,
-        316016.6033591605,
-        5626973.168880969,
-        2985072.170314569,
-        -0.9985872887863048,
-        0.05276735314422709,
-        0.006247648883378639,
-        0.04057759866030342,
-        0.6813767450970997,
-        0.7308072178952844,
-        -0.03430575988636451,
-        -0.7300283129324743,
-        0.6825553290068026,
-      ].join(','),
-    );
+    const arm: FramedCameraPose = {
+      frame: { body: 'earth' },
+      pose: {
+        bodyId: 'earth',
+        anchorLocalM: [1, 2, 3],
+        eyeRelAnchorM: [4, 5, 6],
+        basisLocal: [1, 0, 0, 0, 1, 0, 0, 0, 1],
+      },
+    };
+    expect(encodeFramedPose(arm)).toBe('b,earth,1,2,3,4,5,6,1,0,0,0,1,0,0,0,1');
   });
 
   it('serializes a site arm as the s-tagged form', () => {

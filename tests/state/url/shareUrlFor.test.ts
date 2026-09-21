@@ -22,17 +22,6 @@ const SIM_DAYS = 2461304.571778822;
 const BASE = { origin: 'https://skymap.test', pathname: '/', search: '' };
 
 describe('shareUrlFor', () => {
-  it('composes origin + pathname + hash, with `t` from the given simDays and `pose` appended', () => {
-    const store = configureStore({ reducer: rootReducer });
-
-    const url = shareUrlFor(store.getState(), FRAMED, SIM_DAYS, BASE);
-
-    expect(url.startsWith('https://skymap.test/#')).toBe(true);
-    const params = parseHashParams(url.slice(url.indexOf('#') + 1));
-    expect(params.get('t')).toBe(new Date(julianDaysToUnixMs(SIM_DAYS)).toISOString());
-    expect(params.get('pose')).toBe(encodeFramedPose(FRAMED));
-  });
-
   it('overrides `t` from simDays rather than the clock anchor, even in manual mode', () => {
     const store = configureStore({ reducer: rootReducer });
     // A paused manual clock would otherwise write its OWN anchor into `t` via
@@ -53,6 +42,7 @@ describe('shareUrlFor', () => {
 
     const url = shareUrlFor(store.getState(), FRAMED, SIM_DAYS, BASE);
 
+    expect(url.startsWith('https://skymap.test/#')).toBe(true);
     const params = parseHashParams(url.slice(url.indexOf('#') + 1));
     expect(params.get('orientation')).toBe('galactic');
     expect(params.get('t')).toBe(new Date(julianDaysToUnixMs(SIM_DAYS)).toISOString());

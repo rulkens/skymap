@@ -34,16 +34,16 @@ describe('writeHashBody', () => {
   });
 
   it('skips the push when the URL already carries the body', () => {
-    writeHashBody('focus=m31');
-    writeHashBody('focus=m31');
+    writeHashBody('focus=m31', 'push');
+    writeHashBody('focus=m31', 'push');
 
     expect(pushState).toHaveBeenCalledTimes(1);
     expect(window.location.hash).toBe('#focus=m31');
   });
 
   it("drops the '#' entirely for an empty body", () => {
-    writeHashBody('focus=m31');
-    writeHashBody('');
+    writeHashBody('focus=m31', 'push');
+    writeHashBody('', 'push');
 
     expect(pushState).toHaveBeenLastCalledWith(null, '', '/');
     expect(window.location.href).not.toContain('#');
@@ -55,7 +55,7 @@ describe('writeHashBody', () => {
     // alone would end a tour the moment the visitor focused something.
     window.history.replaceState(null, '', '/?tour');
 
-    writeHashBody('focus=m31');
+    writeHashBody('focus=m31', 'push');
 
     expect(window.location.search).toBe('?tour');
     expect(window.location.hash).toBe('#focus=m31');
@@ -70,7 +70,7 @@ describe('writeHashBody', () => {
   });
 
   it("still skips a redundant write under mode 'replace'", () => {
-    writeHashBody('focus=m31');
+    writeHashBody('focus=m31', 'push');
     writeHashBody('focus=m31', 'replace');
 
     expect(replaceState).not.toHaveBeenCalled();

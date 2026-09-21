@@ -83,12 +83,7 @@ import { requestFocus } from '../../../src/state/selection/requestFocus';
 import { encodeFramedPose } from '../../../src/utils/url/encodeFramedPose';
 import type { FramedCameraPose } from '../../../src/@types/camera/FramedCameraPose';
 
-/**
- * A body arm fixture for the `#pose=` arrival case below — `earth` rather
- * than `mars` so `bodyId` needs no `BodyId` cast (see `decodeFramedPose`'s
- * header on why most scene body ids do); the numbers are otherwise arbitrary,
- * only the shape (a valid `b`-tagged, 17-field encode) matters.
- */
+/** A valid `b`-tagged, 17-field arm for the `#pose=` arrival case below; the numbers are arbitrary. */
 const EARTH_ARM: FramedCameraPose = {
   frame: { body: 'earth' },
   pose: {

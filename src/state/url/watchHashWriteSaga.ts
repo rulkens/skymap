@@ -75,16 +75,6 @@
  * action creators, or a bare predicate); collapsing them into the one form both
  * can spell (`.match` already is a predicate) deleted the fork and let a single
  * row mix named actions with a computed test, which `focus` now does.
- *
- * ### Canonicalizing an arrival instead of pushing over it
- *
- * A row that never writes (`pose`) can still arrive on the URL, so the boot
- * read's settled body can differ from what the visitor followed in even
- * though nothing is stale — pushing there would be a Back trap. The forked
- * one-shot listener arms `canonicalizeArrival` from `hashArrivalApplied`
- * (`watchHashReadSaga`, dispatched only for a non-empty boot read) and the
- * NEXT debounce firing — whichever burst that turns out to be — spends it on
- * one `replaceState` rather than a `pushState`.
  */
 
 import { debounce, call, select, fork, take } from 'typed-redux-saga';
@@ -119,9 +109,7 @@ export function* watchHashWriteSaga() {
     const mode = canonicalizeArrival ? 'replace' : 'push';
     canonicalizeArrival = false;
     const body = hashBodyFor(state);
-    // Wrapped rather than `call(writeHashBody, body, mode)`: typed-redux-saga's
-    // `call` overload resolution rejects a 2-arg target whose second parameter
-    // has a default, so a zero-arg closure sidesteps the inference entirely.
+    // Wrapped: typed-redux-saga's `call` overload resolution still rejects the direct 3-arg form here.
     yield* call(() => writeHashBody(body, mode));
   });
 }

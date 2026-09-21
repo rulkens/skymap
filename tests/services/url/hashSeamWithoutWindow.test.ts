@@ -33,7 +33,7 @@ describe('the hash seam without a window', () => {
   });
 
   it('writeHashBody does nothing instead of dereferencing window.history', () => {
-    expect(() => writeHashBody('focus=m31')).not.toThrow();
+    expect(() => writeHashBody('focus=m31', 'push')).not.toThrow();
   });
 
   it('createHashChangeChannel yields a channel that closes cleanly', () => {

@@ -59,14 +59,13 @@
  * ### `mode`
  *
  * `'replace'` is for exactly one caller: the write saga's first settled
- * publish after a boot read that applied a non-empty URL, which canonicalizes
- * an arrival (see `hashArrivalApplied`) in place instead of pushing over it.
- * Every other write is `'push'`, unchanged from before this parameter existed.
+ * publish after a boot read that applied a non-empty URL, canonicalizing an
+ * arrival (see `hashArrivalApplied`) in place instead of pushing over it.
  */
 
 import { readHashBody } from './readHashBody';
 
-export function writeHashBody(body: string, mode: 'push' | 'replace' = 'push'): void {
+export function writeHashBody(body: string, mode: 'push' | 'replace'): void {
   if (typeof window === 'undefined') return;
   if (readHashBody() === body) return;
   const base = window.location.pathname + window.location.search;
