@@ -5,8 +5,16 @@
  */
 
 import { initialState as orbitTrailsInitialState } from '../../layers/body/state/orbitTrails/initialState';
+import { initialState as starCatalogsInitialState } from '../../layers/starCatalog/state/starCatalogs/initialState';
 import { SCALE_UNITS } from '../scaleUnits';
 import type { View } from '../../@types/views/View';
+
+/**
+ * Exposure trim on the starfield (1.0 is the shader baseline). Held down so
+ * the orbit rings read against the sky rather than through it — at this
+ * framing the background is far brighter than the thin conics drawn over it.
+ */
+const STARFIELD_BRIGHTNESS = 0.3;
 
 /**
  * Far enough out that Neptune's 30 AU orbit clears the frame edge. The pose is
@@ -28,7 +36,10 @@ export const solarSystem: View = {
   label: 'Solar System',
   // The trails are the view: a viewer who switched them off in the panel still
   // gets them here, and `runTakeover`'s snapshot hands their choice back on exit.
-  settings: { orbitTrails: { ...orbitTrailsInitialState, enabled: true } },
+  settings: {
+    orbitTrails: { ...orbitTrailsInitialState, enabled: true },
+    starCatalogs: { ...starCatalogsInitialState, brightness: STARFIELD_BRIGHTNESS },
+  },
   pose: {
     target: [0, 0, 0],
     yaw: 0,
