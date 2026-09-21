@@ -39,6 +39,7 @@ import { liveBodyPosition } from './liveBodyPosition';
 import { bodyMovesThisFrame } from '../../../utils/scene/bodyMovesThisFrame';
 import { easeOutCubic } from '../../../utils/math/easeOutCubic';
 import { isFollowDriverId } from '../../../utils/camera/isFollowDriverId';
+import { focusDriverId } from '../../../utils/camera/focusDriverId';
 import { lerp } from '../../../utils/math/lerp';
 import { wrapRad } from '../../../utils/math/wrapRad';
 import { EASE } from '../animation/ease';
@@ -107,8 +108,9 @@ function followPose(
   const s = ctx.state;
   const focus = s.selectionRows.focus;
   const livePos = liveBodyPosition(focus, ctx.bodies);
+  const focusId = focusDriverId(focus);
   // Null-guard keeps the arm total; isActive already proved a moving body.
-  if (focus === null || focus.type !== 'body' || livePos === null) {
+  if (focusId === null || livePos === null) {
     return { pose: s.camera.base, memory: mem };
   }
   // The pose eased TOWARD, in world terms whatever arm the regime is in — by
@@ -161,7 +163,7 @@ function followPose(
     distanceTarget = memory.saturated
       ? committed.distance
       : bodyFocusDistance(
-          bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, focus.id, 'cameraDrivers')) *
+          bodyFootprintRadiusM(findByIdOrThrow(SCENE_BODIES, focusId, 'cameraDrivers')) *
             SCALE_UNITS.M_TO_MPC,
           ctx.projection.fovYRad,
         );
