@@ -19,7 +19,25 @@ import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 
+import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
+
+// Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
+// optional (Global Constraints), so PRELUDE's two Layer-owned rows need a
+// stand-in here — this file checks core's artifacts alone, never the full
+// `createLayers` composition.
+const LAYER_PLANNER_STUBS: readonly ContentPlanner<unknown>[] = [
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+];
 
 describe('checkFrameOrder — boot', () => {
   it('the app’s FRAME_ORDER passes the boot check', () => {
@@ -35,7 +53,7 @@ describe('checkFrameOrder — boot', () => {
         VIEW_RIGS.mono.program,
         CONTENT_PASSES,
         CORE_COMPUTES,
-        CORE_PLANNERS,
+        [...CORE_PLANNERS, ...LAYER_PLANNER_STUBS],
         targets,
       ),
     ).not.toThrow();

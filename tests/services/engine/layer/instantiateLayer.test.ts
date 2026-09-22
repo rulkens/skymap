@@ -1,23 +1,24 @@
 import { describe, it, expect, vi } from 'vitest';
 import { instantiateLayer } from '../../../../src/services/engine/layer/instantiateLayer';
+import { planOnce } from '../../../helpers/engine/planOnce';
 import type { Layer } from '../../../../src/@types/engine/layer/Layer';
 import type { LayerCoreDeps } from '../../../../src/@types/engine/layer/LayerCoreDeps';
 
 const STUB_DEPS = {} as LayerCoreDeps<undefined>;
 
 describe('instantiateLayer', () => {
-  it('binds frame and selection to the runtime create returned', () => {
+  it('binds planners and selection to the runtime create returned', () => {
     const runtime = { tag: 'stub-runtime' };
-    const frameSpy = vi.fn(() => ({ awake: true, settling: false }));
+    const plannerSpy = vi.fn(() => ({ value: undefined, awake: true, settling: false }));
     const layer: Layer<'stub', typeof runtime, readonly [], readonly [], undefined> = {
       name: 'stub',
       create: () => runtime,
       destroy: vi.fn(),
       passes: () => [],
       selection: () => [{ type: 'milkyWay' } as never],
-      frame: (r) => {
+      planners: (r) => {
         expect(r).toBe(runtime);
-        return frameSpy;
+        return [{ name: 'stub-planner', scope: 'once', plan: plannerSpy }];
       },
     };
 
@@ -25,9 +26,15 @@ describe('instantiateLayer', () => {
 
     expect(instance.name).toBe('stub');
     expect(instance.selection).toHaveLength(1);
-    const ctx = {} as never;
+    expect(instance.planners).toHaveLength(1);
+    const snapshot = {} as never;
+    const views = [] as never;
     const passState = {} as never;
-    expect(instance.frame?.(ctx, passState)).toEqual({ awake: true, settling: false });
-    expect(frameSpy).toHaveBeenCalledWith(ctx, passState);
+    expect(planOnce(instance.planners[0]!, snapshot, views, passState)).toEqual({
+      value: undefined,
+      awake: true,
+      settling: false,
+    });
+    expect(plannerSpy).toHaveBeenCalledWith(snapshot, views, passState);
   });
 });

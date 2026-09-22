@@ -252,6 +252,16 @@ const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
   },
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
 ];
 
 const FIXTURE_FOV_Y_RAD = (60 * Math.PI) / 180;
@@ -387,7 +397,6 @@ describe('renderFrame visual baseline', () => {
     const ctx = {
       snapshot: {
         isReady: true as const,
-        layersSettling: false,
         plans: createPlans(),
         nowMs: 0,
         // resolveLayerOpacity's recession factor lerps on this; production

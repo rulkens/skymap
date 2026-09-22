@@ -11,6 +11,12 @@ import { COSMO, NEAR0 } from '../../services/engine/frame/slabs';
 export const PRELUDE: FrameSection = {
   scope: 'once',
   steps: [
+    // The section's plan rows, always first (`checkFrameOrder`'s boot rule):
+    // the galaxy catalog's disk-planner walk and the flow renderer's
+    // reconcile-and-vote, before any GPU step reads what they publish
+    // (`runPlanSteps`).
+    { kind: 'plan', name: 'galaxy-catalog' },
+    { kind: 'plan', name: 'flow' },
     // The compute prelude. `flow` integrates the peculiar-velocity particles;
     // `sky-view` bakes its LUT, which folds in this frame's camera altitude + sun
     // direction and so re-bakes every frame (unlike the once-baked transmittance

@@ -50,7 +50,6 @@ describe('renderFrame — plan rows', () => {
       focusBlend: 0,
       renderTargets: { viewOf: () => ({}), specOf: () => ({ format: 'bgra8unorm' }) },
       renderedTargets: new Set<string>(),
-      layersSettling: false,
       plans: createPlans(),
     };
     const makeView = (viewSlot: number): FrameView =>

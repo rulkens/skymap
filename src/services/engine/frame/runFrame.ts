@@ -202,7 +202,7 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   }
 
   // The frame's views, once — mono is `[canvas]` itself. `deriveView` reads
-  // no stamp: focus/focusBlend/layersSettling live only on `snapshot`, reached
+  // no stamp: focus/focusBlend/plans live only on `snapshot`, reached
   // by reference from every view, so this can run ahead of them. It must
   // still run ahead of the view-dependent planners below (surface cut, star
   // cut) so they can walk every view's frustum without re-deriving this per
@@ -231,22 +231,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   const focusUniforms = state.subsystems.structureFocus.produceFocusUniforms(nowMs);
   snapshot.focusBlend = focusUniforms.blend;
   snapshot.focus = focusUniforms;
-
-  // Each Layer's `frame` hook, in tuple order, right after the focus uniform
-  // and before any planner. No short-circuit: every hook runs every frame, so a
-  // later Layer's vote is never skipped by an earlier `true`.
-  let layersAwake = false;
-  let layersSettling = false;
-  for (const layer of state.layers) {
-    if (layer.frame === null) continue;
-    const vote = layer.frame(canvas, state);
-    // `settling` is folded into `awake` here rather than trusted to each Layer,
-    // so the implication holds structurally: content too unsettled to bake is
-    // by definition still changing.
-    if (vote.awake || vote.settling) layersAwake = true;
-    if (vote.settling) layersSettling = true;
-  }
-  snapshot.layersSettling = layersSettling;
 
   // Camera→focused-body distance for the InfoCard (the store-boundary rule:
   // React never reads the engine snapshot). Null unless an orbital body in this
@@ -374,7 +358,10 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
     surfaceTilesAnimating,
     labelsAnimating,
     probeDue: state.cubemapCaptures.probe.due,
-    layersAwake,
+    // Read AFTER `renderFrame`: every planner row — core's and every Layer's
+    // — ran inside it, so this is this frame's whole OR-fold, not a stale
+    // pre-render snapshot.
+    layersAwake: snapshot.plans.awake,
   });
 
   if (keepTicking) {

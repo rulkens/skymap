@@ -1,15 +1,17 @@
 /**
- * The Layer's `frame` bias reconcile. `setMode` never resolves here, standing in
- * for the ~200 ms worker bake: a compare written against the subsystem's own
- * lagging mode would re-fire every frame for its duration, which no other test
- * would see.
+ * The Layer's `galaxyCatalogPlanner` bias reconcile. `setMode` never resolves
+ * here, standing in for the ~200 ms worker bake: a compare written against
+ * the subsystem's own lagging mode would re-fire every frame for its
+ * duration, which no other test would see.
  */
 import { describe, it, expect, vi } from 'vitest';
 
-import { frame } from '../../../src/layers/galaxyCatalog/frame';
+import { galaxyCatalogPlanner } from '../../../src/layers/galaxyCatalog/frame';
+import { planOnce } from '../../helpers/engine/planOnce';
 import type { BiasMode } from '../../../src/@types/data/galaxyCatalog/BiasMode';
 import type { GalaxyCatalogRuntime } from '../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import type { PassState } from '../../../src/@types/engine/frame/PassState';
+import type { ReadyFrameContext } from '../../../src/@types/engine/frame/ReadyFrameContext';
 import type { FrameView } from '../../../src/@types/engine/frame/FrameView';
 
 // The reconcile runs early in `frame`, ahead of the hi-res/disk-walk limbs —
@@ -49,21 +51,18 @@ function makeState(mode: BiasMode): PassState {
   } as unknown as PassState;
 }
 
-const CTX = {
-  snapshot: { visibleSourceMask: 0xffffffff, nowMs: 0 },
-  cam: {},
-  drawPxPerRad: 100,
-} as unknown as FrameView;
+const SNAPSHOT = { visibleSourceMask: 0xffffffff, nowMs: 0 } as unknown as ReadyFrameContext;
+const VIEWS = [{ cam: {}, drawPxPerRad: 100 } as unknown as FrameView];
 
 describe('galaxyCatalog frame — bias reconcile', () => {
   it('re-bakes once per bias-mode change, not once per frame', () => {
     const { runtime, setMode } = makeRuntime(0);
-    const tick = frame(runtime);
+    const tick = galaxyCatalogPlanner(runtime);
 
-    for (let i = 0; i < 3; i += 1) tick(CTX, makeState(0));
+    for (let i = 0; i < 3; i += 1) planOnce(tick, SNAPSHOT, VIEWS, makeState(0));
     expect(setMode).not.toHaveBeenCalled();
 
-    for (let i = 0; i < 2; i += 1) tick(CTX, makeState(3));
+    for (let i = 0; i < 2; i += 1) planOnce(tick, SNAPSHOT, VIEWS, makeState(3));
     expect(setMode).toHaveBeenCalledTimes(1);
     expect(setMode).toHaveBeenCalledWith(3);
   });

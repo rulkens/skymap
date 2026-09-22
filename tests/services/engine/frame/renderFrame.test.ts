@@ -337,6 +337,16 @@ const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
   },
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
 ];
 
 function makeInput(
@@ -445,7 +455,6 @@ function makeInput(
     meshBodies: [] as never[],
     positionedStars: [] as never[],
     // `runFrame` stamps this after every Layer's frame hook has voted.
-    layersSettling: false,
     plans: createPlans(),
     cursorTexPx: null,
     nowMs: 0,

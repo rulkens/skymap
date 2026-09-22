@@ -121,8 +121,6 @@ export function deriveFrameContext(
     renderTargets: state.gpu.renderTargets,
     focus: ZERO_FOCUS,
     focusBlend: 0,
-    // Stamped by `runFrame` once every Layer's frame hook has voted.
-    layersSettling: false,
     // Fresh and empty: `runPlanSteps` fills it in as each section's plan rows
     // run, ahead of every GPU step and every other planner reader this frame.
     plans: createPlans(),

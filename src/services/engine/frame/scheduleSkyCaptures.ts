@@ -35,7 +35,7 @@ export function scheduleSkyCaptures(input: {
   // (the write fires at its START) and a Layer still settling — a thumbnail's
   // async 400 ms load fade is the one that motivated this.
   const rosterSettling =
-    state.subsystems.fades.isAnyAnimating(ctx.snapshot.nowMs) || ctx.snapshot.layersSettling;
+    state.subsystems.fades.isAnyAnimating(ctx.snapshot.nowMs) || ctx.snapshot.plans.settling;
 
   const scheduled = new Map<CubemapCaptureKey, ReadonlyMap<CubeFace, CaptureFace>>();
   for (const key of SKY_CAPTURE_KEYS) {

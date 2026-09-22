@@ -135,6 +135,7 @@ export async function createLayers(state: EngineState, deps: BootstrapDeps): Pro
   ]);
   state.planners = concatUniqueRows('createLayers: planner rows', (planner) => planner.name, [
     CORE_PLANNERS,
+    ...instances.map((instance) => instance.planners),
   ]);
   // Two maps answer "the slot for key K", and `slotFor` consults the Layer one
   // first — so a duplicate would silently SHADOW the other rather than surface,

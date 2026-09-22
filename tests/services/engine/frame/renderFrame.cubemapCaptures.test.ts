@@ -71,13 +71,25 @@ import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureK
 /** Every sky row's target id, so the mock serves whichever row bakes. */
 const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
 
-// SCENE's `plan` row names 'structure-markers' by string — a stub with an
-// empty result satisfies `runPlanSteps` without the marker producers' state.
+// PRELUDE/SCENE's `plan` rows name these by string — inert stubs satisfy
+// `runPlanSteps` without either Layer's own state; the "a Layer still
+// settling/awake" cases below seed their vote straight into `ctx.snapshot.plans`
+// instead (`makeCtx`), which OR-folds with these no-op votes fine.
 const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
   {
     name: 'structure-markers',
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
+  },
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
   },
 ];
 
@@ -151,10 +163,23 @@ function makeCtx(
       throw new Error(`mock renderTargets: no allocated size for '${id}'`);
     },
   };
+  // A Layer's vote, seeded straight into the store the way `runPlanSteps`
+  // would fold a real planner's `PlanResult` in — `scheduleSkyCaptures` reads
+  // the OR-fold (`plans.settling`), not any one planner's own row.
+  const plans = createPlans();
+  const layerVotePlanner: ContentPlanner<void> = {
+    name: '__test-layer-vote',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  };
+  plans.put(layerVotePlanner, undefined, {
+    value: undefined,
+    awake: layers.awake ?? false,
+    settling: layers.settling ?? false,
+  });
   return {
     snapshot: {
       isReady: true,
-      layersSettling: layers.settling ?? false,
       simDays: 0,
       nowMs: 1000,
       focus: {},
@@ -162,7 +187,7 @@ function makeCtx(
       // Frame-wide: which targets hold this frame's content — the executor
       // unions into this as it opens each render step.
       renderedTargets: new Set<string>(),
-      plans: createPlans(),
+      plans,
     },
     drawCamPos,
     // Past the foreground cull, so `bodyRowSlabs`' insideAtmosphere lookup
@@ -448,7 +473,8 @@ describe('renderFrame — cubemap-capture hand-off', () => {
         ({ __face: spec.slot }) as unknown as FrameView,
     );
 
-    // A Layer still settling — the vote `runFrame` stamps on the ctx.
+    // A Layer still settling — seeded straight into `ctx.snapshot.plans` the
+    // way a real planner's vote would OR-fold in.
     const state = makeState({
       subsystems: { fades: { isAnyAnimating: () => false } },
     } as unknown as Partial<EngineState>);

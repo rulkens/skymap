@@ -221,6 +221,16 @@ const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
     scope: 'perView',
     plan: () => ({ value: [], awake: false, settling: false }),
   },
+  {
+    name: 'galaxy-catalog',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
 ];
 
 function makeMinimalInputWithTiming(timingService: GpuTimingService): {

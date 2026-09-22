@@ -25,7 +25,6 @@ function makeCtx(focusBlend: number): FrameView {
       nowMs: 0,
       simDays: 0,
       focusBlend,
-      layersSettling: false,
       visibleSourceMask: 0xffffffff,
       focus: {
         center: [0, 0, 0] as Readonly<[number, number, number]>,

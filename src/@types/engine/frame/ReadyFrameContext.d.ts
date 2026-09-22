@@ -94,12 +94,6 @@ export type ReadyFrameContext = {
   /** Structure-focus recession blend 0→1, from structureFocus.produceFocusUniforms (ticked once/frame). */
   focusBlend: number;
   /**
-   * The Layer `frame` votes of this frame, OR-folded by `runFrame` right after
-   * the hooks run, so core asks the question without reaching into a Layer's
-   * own subsystems: the sky-capture scheduler reads this. See `LayerFrameVote`.
-   */
-  layersSettling: boolean;
-  /**
    * This frame's `plan` rows' answers, one store shared by every `FrameView`
    * (`createPlans()`, minted once by `deriveFrameContext`). `runPlanSteps`
    * writes it before any GPU step of its target reads it; a miss throws.
