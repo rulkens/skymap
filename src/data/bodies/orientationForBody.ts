@@ -45,7 +45,7 @@ export function orientationForBody(
   if (!row) return [...IDENTITY_MAT3] as Mat3;
 
   switch (row.kind) {
-    // The 21 authored rows predate the union and carry no discriminant.
+    // The authored IAU-pole rows predate the union and carry no discriminant.
     case undefined:
     case 'iau-pole': {
       const primeMeridianDeg =
