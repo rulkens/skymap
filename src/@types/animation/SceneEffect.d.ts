@@ -48,7 +48,7 @@
  * ### `layers` are `VisibilityLayerKey`s; `scoped` are per-item entries
  *
  * The keys in `show`/`hide`/`fade` are the same intent-addressing vocabulary the
- * UI and `syncVisibilityFades` use: `'flow'`, `'survey'`, `'filaments'`,
+ * UI and `syncVisibilityFades` use: `'flow'`, `'survey'`, `'cosmicWebFilaments'`,
  * `'structureRing'`, `'milkyWayDisk'`, etc. A cue on a multi-item layer (e.g.
  * `'survey'`) sets the cluster gate; the bridge expands to individual items.
  * See `src/@types/animation/VisibilityLayerKey.d.ts` for the full set.

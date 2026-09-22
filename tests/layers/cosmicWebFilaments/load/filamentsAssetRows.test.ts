@@ -28,9 +28,9 @@ function makeCtx(settings: unknown): DemandCtx {
 }
 
 describe('filamentsAssetRows', () => {
-  it('demand follows settings.filaments.enabled (bug-fix pin)', () => {
-    expect(ROW.demand(makeCtx({ filaments: { enabled: true } }))).toBe(true);
-    expect(ROW.demand(makeCtx({ filaments: { enabled: false } }))).toBe(false);
+  it('demand follows settings.cosmicWebFilaments.enabled (bug-fix pin)', () => {
+    expect(ROW.demand(makeCtx({ cosmicWebFilaments: { enabled: true } }))).toBe(true);
+    expect(ROW.demand(makeCtx({ cosmicWebFilaments: { enabled: false } }))).toBe(false);
   });
 
   it('the request drifts only across the small boundary', () => {

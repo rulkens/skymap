@@ -208,7 +208,7 @@ not settle or dress a clip's opening the way it settles a windowed tour take
 `scene()` / `show()` / `hide()` cues placed at t=0 on the clip's OWN timeline,
 authored with `over: 0` so they fire as a single instant rather than a fade.
 `cosmicFlows` (`src/data/animation/clips/cosmicFlows.ts`) shows the cue
-shape — `hide(['volumesMaster', 'filaments', 'surveyLabel'], 0)`,
+shape — `hide(['cosmicWebDensity', 'cosmicWebFilaments', 'surveyLabel'], 0)`,
 `fade(['flow'], 0, 0)`, and `scene(setFlowEnabled(true))` are all instant
 cues — though in that clip they land 2 s into the timeline, after a leading
 `wait(2)` lead-in, not at literal t=0: a clip whose dressing must be visible

@@ -272,7 +272,7 @@ export function createVolumeFieldRenderer(
         fields.delete(id);
       }
       // Per-cube STATIC presentation config read once from the registry.
-      // The id is a `VolumeFieldId` (the registry-derived field union),
+      // The id is a `CosmicWebDensityFieldId` (the registry-derived field union),
       // so the lookup needs no cast.  The user-tunable knobs (enabled,
       // intensity, contrast, densityScale, palette, trim, exposure) are NOT
       // seeded here — they live in settings and are read per frame in `draw`.

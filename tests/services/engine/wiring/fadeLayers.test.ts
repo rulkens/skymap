@@ -57,7 +57,7 @@ function makeState(
     milkyWayEnabled?: boolean;
     milkyWayLabelEnabled?: boolean;
     surveyLabelEnabled?: boolean;
-    volumesMasterEnabled?: boolean;
+    cosmicWebDensityEnabled?: boolean;
     orbitTrailsEnabled?: boolean;
     ringVisibility?: Partial<Record<string, boolean>>;
     labelVisibility?: Partial<Record<string, boolean>>;
@@ -76,7 +76,7 @@ function makeState(
         enabled: opts.milkyWayEnabled ?? true,
         labelEnabled: opts.milkyWayLabelEnabled ?? true,
       },
-      cosmicWebDensity: { enabled: opts.volumesMasterEnabled ?? true },
+      cosmicWebDensity: { enabled: opts.cosmicWebDensityEnabled ?? true },
       // The orbitTrails fade row seeds from settings.orbitTrails.enabled, so
       // seedFades indexes this leaf (default on, like the live scene).
       orbitTrails: { enabled: opts.orbitTrailsEnabled ?? true },
@@ -156,8 +156,6 @@ describe('seedFades', () => {
     seedFades(state);
     expect(state.subsystems.fades.opacityOf({ kind: 'milkyWay' })).toBe(0);
   });
-
-  // ── volumesMaster gating ─────────────────────────────────────────
 
   // ── label-layer handles ──────────────────────────────────────────
 

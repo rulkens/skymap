@@ -5,7 +5,7 @@
  * ### Two vocabularies, one bridge
  *
  * `FadeId` is the registry vocabulary — shaped for the renderer, with
- * discriminators (`GalaxyCatalogId`, `StructureId`, `VolumeFieldId`) where
+ * discriminators (`GalaxyCatalogId`, `StructureId`, `CosmicWebDensityFieldId`) where
  * a subsystem owns many controllers. `VisibilityLayerKey` is the
  * intent-addressing vocabulary — the friendly names a cinematic-tour cue
  * thinks in, intentionally finer-grained (e.g. `milkyWayDisk` vs

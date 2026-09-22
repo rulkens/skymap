@@ -51,8 +51,8 @@ function makeCtx(focusBlend: number): FrameView {
 
 /**
  * Build a state whose filament fade reports `opacity` and whose
- * `settings.filaments` matches the supplied overrides.  `opacityOf` is a
- * single stub returning the same value regardless of handle/now — the
+ * `settings.cosmicWebFilaments` matches the supplied overrides.  `opacityOf`
+ * is a single stub returning the same value regardless of handle/now — the
  * filaments layer only ever asks for the `{kind:'filament'}` handle, so a
  * constant stub faithfully models "the filament layer is at `opacity`".
  */
@@ -63,7 +63,7 @@ function makeState(
   return {
     subsystems: { fades: { opacityOf: () => opacity }, clipPlayer: { clipOpacityOf: () => 1 } },
     settings: {
-      filaments: {
+      cosmicWebFilaments: {
         enabled: true,
         intensity: 1,
         ...filamentsOverrides,

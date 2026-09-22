@@ -7,7 +7,7 @@
  *   - `FadeId` kinds are the *registry* vocabulary. They key the fade
  *     controller map and are shaped for the renderer: one `kind` per
  *     subsystem, with discriminators (`GalaxyCatalogId`, `StructureId`,
- *     `VolumeFieldId`) where a subsystem owns many controllers.
+ *     `CosmicWebDensityFieldId`) where a subsystem owns many controllers.
  *
  *   - `VisibilityLayerKey` (this type) is the *intent-addressing*
  *     vocabulary. These are the friendly names a caller reaches for when

@@ -588,7 +588,7 @@ describe('wireSlots', () => {
     expect(hasHandle({ kind: 'milkyWay' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'proceduralDisks' })).toBe(true);
     expect(hasHandle({ kind: 'overlay', id: 'texturedDisks' })).toBe(true);
-    expect(hasHandle({ kind: 'volumesMaster' })).toBe(true);
+    expect(hasHandle({ kind: 'cosmicWebDensity' })).toBe(true);
     expect(hasHandle({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(true);
     // No item-less structure handle: structure labels use per-item handles,
     // and produceStructureLabels fires each category's load-in.
@@ -602,7 +602,7 @@ describe('wireSlots', () => {
       return call?.[1] as number | undefined;
     };
     expect(opacityFor({ kind: 'milkyWay' })).toBe(1);
-    expect(opacityFor({ kind: 'volumesMaster' })).toBe(1);
+    expect(opacityFor({ kind: 'cosmicWebDensity' })).toBe(1);
     // The milkyWay label layer is seeded from settings.milkyWay.labelEnabled
     // (default true), rather than registered at 0 for a producer to ramp.
     expect(opacityFor({ kind: 'labelLayer', layer: 'milkyWay' })).toBe(1);

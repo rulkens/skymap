@@ -115,7 +115,7 @@ export const SCENE: FrameSection = {
         'point-sprites',
         'procedural-disks',
         'textured-disks',
-        'filaments',
+        'cosmic-web-filaments',
         'flow',
         'volume-upsample',
         'zone-of-avoidance-upsample',

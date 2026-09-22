@@ -1,14 +1,13 @@
 /**
  * Per-volume-field presentation defaults — palette, contrast, densityScale,
- * envelope, exposure, trim — keyed by `VolumeFieldId`.
+ * envelope, exposure, trim — keyed by `CosmicWebDensityFieldId`.
  *
  * All volumes live in `SOURCE_REGISTRY` with `type: 'cosmicWebDensity'`, so
- * this module is a thin
- * lookup helper rather than a separate registry.  Keeping the helpers
- * here lets call sites stay decoupled from the registry's iteration
- * shape and gives a single place to add cross-cutting fallbacks if a
- * future producer wants to ship a brand-new field without registering
- * it first.
+ * this module is a thin lookup helper rather than a separate registry.
+ * Keeping the helpers here lets call sites stay decoupled from the
+ * registry's iteration shape and gives a single place to add cross-cutting
+ * fallbacks if a future producer wants to ship a brand-new field without
+ * registering it first.
  *
  * Three exports, layered:
  *   - `getVolumeFieldDefaults`  — presentation defaults for one id.
