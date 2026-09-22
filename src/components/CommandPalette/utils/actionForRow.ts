@@ -1,12 +1,12 @@
 /**
  * actionForRow — map a selected `ScoredRow` to the `PaletteAction` the
- * container dispatches on. Five kinds resolve to a focus id via the same
+ * container dispatches on. Six kinds resolve to a focus id via the same
  * scheme the URL deep-link layer uses. Three do not: `exhibit` and `tour`
  * resolve to their own action kinds, since picking one is a takeover rather
  * than a focus, and `place` to a `flyTo` — an Earth place is a camera command,
  * not a focusable ref.
  *
- * The five focus kinds route through the ONE selection command, `requestFocus`,
+ * The six focus kinds route through the ONE selection command, `requestFocus`,
  * whose saga (`watchRequestFocusSaga`) resolves a durable id to a `SelectionRef`
  * — deferring on the catalog-landed count pulse until the cloud is in. The palette therefore
  * never resolves a ref itself; it only names the thing. That keeps React on the
@@ -25,6 +25,8 @@
  *   - milkyWay → the fixed singleton literal `MILKY_WAY_FOCUS_ID`.
  *   - body     → the seed id under the shared `BODY_FOCUS_PREFIX` (`body-earth`),
  *                which the resolver's `resolveFocusId` strips back to a body ref.
+ *   - starCatalog → `star-<seedId>` via the shared encoder, which the resolver
+ *                strips back to a star ref.
  *   - exhibit  → `{ kind: 'exhibit', exhibitId }`, the row's own registry id.
  *   - tour     → `{ kind: 'tour', tourId }`, the row's own registry id.
  *   - place    → the entry's own lon/lat/alt, verbatim, as a `flyTo`.
@@ -37,6 +39,7 @@
 import { encodeGalaxyId } from '../../../services/url/encodeGalaxyId';
 import { MILKY_WAY_FOCUS_ID } from '../../../services/url/milkyWayFocusId';
 import { BODY_FOCUS_PREFIX } from '../../../services/url/bodyFocusId';
+import { encodeStarFocusId } from '../../../services/url/encodeStarFocusId';
 import type { ScoredRow } from '../paletteRowModel';
 import type { PaletteAction } from '../../../@types/palette/PaletteAction';
 
@@ -72,6 +75,13 @@ const ACTION_FOR_ROW: Record<ScoredRow['kind'], (row: ScoredRow) => PaletteActio
   body: (row) => ({
     kind: 'focus',
     focusId: row.kind === 'body' ? `${BODY_FOCUS_PREFIX}${row.body.id}` : '',
+  }),
+  starCatalog: (row) => ({
+    kind: 'focus',
+    focusId:
+      row.kind === 'starCatalog'
+        ? encodeStarFocusId({ type: 'starCatalog', source: row.source, index: row.index })
+        : '',
   }),
   exhibit: (row) =>
     row.kind === 'exhibit' ? { kind: 'exhibit', exhibitId: row.exhibit.id } : unreachableRow(),

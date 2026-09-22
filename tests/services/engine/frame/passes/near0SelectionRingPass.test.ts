@@ -23,11 +23,12 @@ function makeRendererSpy() {
 
 // The star arm — a self-contained display projection of a picked survey star.
 const STAR_ROW: SelectionRow = {
-  type: 'star',
+  type: 'starCatalog',
+  source: Source.GaiaStars,
   index: 7,
+  id: null,
+  label: 'Field star',
   positionMpc: [0.001, -0.002, 0.0005],
-  absMag: 4.8,
-  bpRp: 0.65,
   radiusM: 696340000,
 };
 
@@ -90,11 +91,12 @@ describe('near0SelectionRingPass.enabled', () => {
 // distance, and the un-clamped ring quad frustum-clips away while the star
 // sprite (which clamps clip-z) survives.
 const FAR_STAR_ROW: SelectionRow = {
-  type: 'star',
+  type: 'starCatalog',
+  source: Source.GaiaStars,
   index: 3,
+  id: null,
+  label: 'Field star',
   positionMpc: [3e-5, 4e-5, 0], // camera at origin ⇒ camDist 5e-5 Mpc
-  absMag: 4.8,
-  bpRp: 0.65,
   radiusM: 696340000,
 };
 

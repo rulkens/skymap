@@ -2,7 +2,7 @@
  * positionedVisibleStars — the seeded stars this frame's star layers draw, each
  * paired with the position the body snapshot resolves for it.
  *
- * `visibleStars` answers WHICH stars (the two registry gates) and
+ * `visibleStars` answers WHICH stars (the per-source gates) and
  * `sceneBodyStates` answers WHERE (one map, one instant, shared by every pass).
  * Joining them once here is what lets `partitionStarsByResolution` and the
  * renderer keep reading `star.positionMpc` — the alternative was threading the
@@ -24,7 +24,7 @@ export function positionedVisibleStars(
   ctx: FrameView,
 ): readonly PositionedStar[] {
   const states = sceneBodyStates(state, ctx);
-  return visibleStars(state).map((star) => ({
+  return visibleStars(state.settings.starCatalogs).map((star) => ({
     ...star,
     positionMpc: states.get(star.id)!.positionMpc,
   }));

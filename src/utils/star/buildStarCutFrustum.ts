@@ -1,4 +1,4 @@
-import type { StarCutFrustum } from '../../@types/rendering/StarCutFrustum';
+import type { StarCutFrustum } from '../../layers/starCatalog/@types/StarCutFrustum';
 import { frustumPlanesFromViewProj } from '../camera/frustumPlanesFromViewProj';
 import { starCullMargins } from './starCullMargins';
 import { STAR_SIZE_REF_PX } from '../../data/starCullSlack';

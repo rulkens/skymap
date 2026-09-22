@@ -40,7 +40,6 @@ const base = (): CoreEngineSliceState => ({
   structureCounts: {},
   loadProgress: null,
   structureSearchList: [],
-  meta: { famousStars: [] },
 });
 
 describe('engineSlice — engineSourceCountReported', () => {

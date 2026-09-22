@@ -13,8 +13,7 @@ import { SCALE_UNITS } from '../scaleUnits';
 import { orbiter } from './makers/orbiter';
 import { probe } from './makers/probe';
 import { satellite } from './makers/satellite';
-import { sStar } from './makers/sStar';
-import { S_STAR_SEEDS } from './sStarElements';
+import { S_STAR_ORBITAL_ELEMENTS } from './sStarOrbitalElements';
 import { SCENE_EARTH } from './sceneEarth';
 import { moonRatesFromSiderealPeriods } from '../../utils/orbit/moonRatesFromSiderealPeriods';
 import { periodDaysFromSemiMajorKm } from '../../utils/orbit/periodDaysFromSemiMajorKm';
@@ -706,8 +705,8 @@ export const ORBITAL_ELEMENTS: readonly OrbitalElements[] = [
     color: HUBBLE_SILVER,
   }),
 
-  // The 39 bound S-stars are mapped rather than spelled out: their per-row facts live in
-  // `sStarElements.ts` beside the verbatim Gillessen lines. Their focus is `sgr-a-star`, so
-  // they join the `galactic-centre` region by existing.
-  ...S_STAR_SEEDS.map(sStar),
+  // The 39 bound S-stars: their per-row facts live in `sStarElements.ts` beside the verbatim
+  // Gillessen lines, converted once in `sStarOrbitalElements.ts` (also the star Layer's trail
+  // roster). Their focus is `sgr-a-star`, so they join the `galactic-centre` region by existing.
+  ...S_STAR_ORBITAL_ELEMENTS,
 ];

@@ -31,7 +31,6 @@ const STATES = deriveBodyStates(CONST_J2000);
 // nothing off the live engine resources, so there is no catalog to stub.
 const resolver = selectionResolverOver({
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 });
 
 describe('Sgr A*', () => {

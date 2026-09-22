@@ -1,6 +1,6 @@
 /**
  * isSurfaceSiteId — is `id` one of `SURFACE_FIXED_SITES`' own ids. The
- * `decodeFramedPose` counterpart to `isSceneBodyId`, for a `#pose=` site arm.
+ * `decodeFramedPose` counterpart to `isRegistryBodyId`, for a `#pose=` site arm.
  */
 import { SURFACE_FIXED_SITES } from '../../data/bodies/surfaceFixedSites';
 

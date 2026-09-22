@@ -47,11 +47,9 @@ import { sceneBodyStates } from '../sceneBodyStates';
  * (missing ⇒ `null`, never a crash) rather than assuming Earth.
  */
 function sceneBodyForId(state: PassState, bodyId: BodyId): CelestialBody | null {
-  const { earth, planets, stars } = state.data.bodies;
+  const { earth, planets } = state.data.bodies;
   if (earth !== null && earth.id === bodyId) return earth;
-  const planet = planets.find((p) => p.id === bodyId);
-  if (planet !== undefined) return planet;
-  return stars.find((s) => s.id === bodyId) ?? null;
+  return planets.find((p) => p.id === bodyId) ?? null;
 }
 
 /**
@@ -59,7 +57,7 @@ function sceneBodyForId(state: PassState, bodyId: BodyId): CelestialBody | null 
  * `runFrame`'s tile planner — the three sites that each used to
  * independently look up the body's state and recompute the same body-local
  * MVP + camera. Memoised per `(ctx, bodyId)` (mirrors `readStarCut` in
- * `renderers/starCatalog/cut/readStarCut.ts`), so whichever call site reaches it first in a frame
+ * `layers/starCatalog/render/cut/readStarCut.ts`), so whichever call site reaches it first in a frame
  * does the work and the rest read the cache — keyed on `bodyId`, not just
  * `ctx`, because a single ctx now serves every body-slab row and a `ctx`-only
  * memo would return Earth's frame for any other body sharing the same frame.

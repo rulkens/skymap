@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { sceneBodyLabels } from '../../../../src/services/engine/presentation/sceneBodyLabels';
+import {
+  sceneBodyLabels,
+  sceneBodyLabelId,
+} from '../../../../src/services/engine/presentation/sceneBodyLabels';
 import { FAMOUS_LABEL_STYLE } from '../../../../src/services/engine/presentation/famousLabelStyle';
-import { SCENE_BODIES } from '../../../../src/data/bodies/sceneBodies';
-import { SCENE_STARS } from '../../../../src/data/bodies/sceneStars';
 import { SCENE_PLANETS } from '../../../../src/data/bodies/scenePlanets';
-import { SCENE_S_STARS } from '../../../../src/data/bodies/sceneSStars';
 import { SCENE_MESH_BODIES } from '../../../../src/data/bodies/sceneMeshBodies';
 import { SGR_A_STAR_ENTRY } from '../../../../src/data/sources/sgr-a-star';
 import { deriveBodyStates } from '../../../../src/services/engine/frame/deriveBodyStates';
@@ -19,16 +19,11 @@ const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 describe('sceneBodyLabels', () => {
   const labels = sceneBodyLabels(J2000_STATES);
 
-  it('emits one label per CAPTION-BEARING scene body (Earth + stars + planets + Sgr A*)', () => {
-    // Not one per SCENE_BODIES row: the S-stars are drawn scene bodies that
-    // caption nothing (39 names inside a few arcseconds would be a smear), so
-    // the registry is deliberately wider than the emission. Spelled out per
-    // producer as well, so a body that joins SCENE_BODIES and DOES want a name
-    // still fails here rather than agreeing with itself.
-    expect(labels).toHaveLength(SCENE_BODIES.length - SCENE_S_STARS.length);
-    expect(labels).toHaveLength(
-      1 + SCENE_STARS.length + SCENE_PLANETS.length + 1 + SCENE_MESH_BODIES.length,
-    );
+  it('emits one label per core scene body (Earth + planets + Sgr A* + mesh bodies)', () => {
+    // The seeded stars and the Sun caption from the star Layer's own producer
+    // (`produceStarCaptions`) now, not here — core keeps only the bodies whose
+    // identity core owns.
+    expect(labels).toHaveLength(1 + SCENE_PLANETS.length + 1 + SCENE_MESH_BODIES.length);
   });
 
   it("gives the Galactic Centre its own caption kind, not the star map's", () => {
@@ -46,8 +41,6 @@ describe('sceneBodyLabels', () => {
   it('anchors each label at its body position (renderOrigin is the Sun, so == positionMpc)', () => {
     // RENDER_ORIGIN_MPC is [0,0,0], so the renderOrigin-relative worldPos
     // equals the absolute body position.
-    const sun = labels.find((label) => label.text === 'Sun')!;
-    expect(sun.worldPos).toEqual([0, 0, 0]);
     const earth = labels.find((label) => label.text === 'Earth')!;
     expect(earth.worldPos).toEqual([...EARTH_POS]);
   });
@@ -55,8 +48,8 @@ describe('sceneBodyLabels', () => {
   it('a body caption position tracks the snapshot when simDays changes', () => {
     // Earth + planets read their anchor from the passed snapshot, so a DIFFERENT
     // sim instant (Earth swept ~120 days along its orbit) moves the Earth caption
-    // to the new world position — the label FOLLOWS the body. Stars carry no
-    // orbital element, so their caption anchor is identical across instants.
+    // to the new world position — the label FOLLOWS the body. Sgr A* is a fixed
+    // anchor, so its caption anchor is identical across instants.
     const laterStates = deriveBodyStates(CONST_J2000 + 120);
     const laterLabels = sceneBodyLabels(laterStates);
 
@@ -66,15 +59,14 @@ describe('sceneBodyLabels', () => {
     expect(earthLater.worldPos).toEqual([...laterStates.get('earth')!.positionMpc]);
     expect(earthLater.worldPos).not.toEqual(earthNow.worldPos);
 
-    const vegaNow = labels.find((label) => label.id === 'sceneBody-vega')!;
-    const vegaLater = laterLabels.find((label) => label.id === 'sceneBody-vega')!;
-    expect(vegaLater.worldPos).toEqual(vegaNow.worldPos);
+    const sgrANow = labels.find((label) => label.id === sceneBodyLabelId(SGR_A_STAR_ENTRY.id))!;
+    const sgrALater = laterLabels.find(
+      (label) => label.id === sceneBodyLabelId(SGR_A_STAR_ENTRY.id),
+    )!;
+    expect(sgrALater.worldPos).toEqual(sgrANow.worldPos);
   });
 
-  it('tints each label from its body record (spectral colour / albedo / Earth blue)', () => {
-    const vega = SCENE_STARS.find((star) => star.id === 'vega')!;
-    const vegaLabel = labels.find((label) => label.id === 'sceneBody-vega')!;
-    expect(vegaLabel.color).toEqual([...vega.color, 1]);
+  it('tints each label from its body record (albedo / Earth blue)', () => {
     const moon = SCENE_PLANETS.find((planet) => planet.id === 'moon')!;
     const moonLabel = labels.find((label) => label.id === 'sceneBody-moon')!;
     expect(moonLabel.color).toEqual([...moon.albedo, 1]);
@@ -82,13 +74,11 @@ describe('sceneBodyLabels', () => {
     expect(earthLabel.color).toEqual([0.5, 0.72, 1, 1]);
   });
 
-  it('staggers the co-located captions vertically (Sun below, Earth above, Moon below)', () => {
+  it('staggers the co-located captions vertically (Earth above, Moon below)', () => {
     const byId = new Map(labels.map((label) => [label.id, label]));
-    expect(byId.get('sceneBody-sun')!.alignY).toBe('top');
     expect(byId.get('sceneBody-earth')!.alignY).toBe('bottom');
     expect(byId.get('sceneBody-moon')!.alignY).toBe('top');
     expect(byId.get('sceneBody-jupiter')!.alignY).toBe('baseline');
-    expect(byId.get('sceneBody-vega')!.alignY).toBe('baseline');
   });
 
   it('sizes captions comparably to famous labels (shares the famous pixel clamps)', () => {

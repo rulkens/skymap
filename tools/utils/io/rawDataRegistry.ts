@@ -153,7 +153,14 @@ export const RAW_DATA = {
     kind: 'file',
     source: 'committed',
     description:
-      'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, the Sun, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+      'Hand-authored seed list of well-known stars (Sirius, Betelgeuse, Proxima, …). Drives the famous-stars build (generated render table + meta sidecar) and the Gaia dedup.',
+  },
+  'sun.seed': {
+    path: 'data/seeds/sun.seed.json',
+    kind: 'file',
+    source: 'committed',
+    description:
+      'The Sun, in the same schema as the famous-stars seed: its own catalog, so "famous stars off" cannot take the descent\'s aim point with it. Drives the same build (generated render table + the shared meta sidecar).',
   },
   'planet-facts.seed': {
     path: 'data/seeds/planet_facts.seed.json',

@@ -63,7 +63,6 @@ const CAMERA_RUNTIME: LiveCameraRuntime = {
 // true and waitUntil exits on the first synchronous check.
 const immediateDeps: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 
 // Narration clip: empty timeline, no focus ids. clipFociReady returns true

@@ -23,7 +23,7 @@ import type { FrameContentPlanner } from '../../../../src/@types/engine/frame/Fr
 import type { RenderStepSpec } from '../../../../src/@types/engine/frame/RenderStepSpec';
 
 // Unlike `CONTENT_PASSES`/`CORE_COMPUTES`, a `plan` line's planner is never
-// optional (Global Constraints), so PRELUDE's two Layer-owned rows need a
+// optional (Global Constraints), so PRELUDE's three Layer-owned rows need a
 // stand-in here — this file checks core's artifacts alone, never the full
 // `createLayers` composition. The names mirror PRELUDE's plan lines in
 // `frameSections.ts`, where a rename shows up first.
@@ -35,6 +35,11 @@ const LAYER_PLANNER_STUBS: readonly FrameContentPlanner<unknown>[] = [
   },
   {
     name: 'flow',
+    scope: 'once',
+    plan: () => ({ value: undefined, awake: false, settling: false }),
+  },
+  {
+    name: 'star-catalog',
     scope: 'once',
     plan: () => ({ value: undefined, awake: false, settling: false }),
   },

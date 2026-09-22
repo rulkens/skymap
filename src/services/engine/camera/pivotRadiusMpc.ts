@@ -18,7 +18,7 @@ import type { PivotFraming } from '../../../@types/camera/PivotFraming';
 
 export function pivotRadiusMpc(row: SelectionRow | null): number | null {
   if (row === null) return null;
-  if (row.type === 'star') return row.radiusM * SCALE_UNITS.M_TO_MPC;
+  if (row.type === 'starCatalog') return row.radiusM * SCALE_UNITS.M_TO_MPC;
   if (row.type !== 'body') return null;
   // A mesh body has nothing to report here (see MeshBody.boundingRadiusM).
   const body = findByIdOrThrow(SCENE_BODIES, row.id, 'pivotRadiusMpc');

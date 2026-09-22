@@ -22,7 +22,6 @@ import type { SelectionRingRenderer } from '../../rendering/SelectionRingRendere
 import type { StructureMarkerRenderer } from '../../rendering/StructureMarkerRenderer';
 import type { VolumeFieldRenderer } from '../../rendering/VolumeFieldRenderer';
 import type { AdditiveUpsample } from '../../rendering/AdditiveUpsample';
-import type { StarAggregateUpsample } from '../../rendering/StarAggregateUpsample';
 import type { BloomPyramid } from '../../rendering/BloomPyramid';
 import type { PickDebugOverlay } from '../../rendering/PickDebugOverlay';
 import type { MilkyWayCloud } from '../../galaxy/MilkyWayCloud';
@@ -33,20 +32,16 @@ import type { GpuTimingService } from '../../gpu/timing/GpuTimingService';
 import type { EarthRenderer } from '../../rendering/EarthRenderer';
 import type { SurfaceTileRenderer } from '../../rendering/surfaceTileRenderer/SurfaceTileRenderer';
 import type { TerrainPickMarkerRenderer } from '../../rendering/TerrainPickMarkerRenderer';
-import type { StarRenderer } from '../../rendering/StarRenderer';
 import type { PlanetRenderer } from '../../rendering/PlanetRenderer';
 import type { TexturedBodyRenderer } from '../../rendering/TexturedBodyRenderer';
 import type { MeshBodyRenderer } from '../../rendering/MeshBodyRenderer';
 import type { RingRenderer } from '../../rendering/RingRenderer';
 import type { CloudShellRenderer } from '../../rendering/CloudShellRenderer';
 import type { AtmosphereShellRenderer } from '../../rendering/AtmosphereShellRenderer';
-import type { StarPointRenderer } from '../../rendering/StarPointRenderer';
 import type { BodyGlintRenderer } from '../../rendering/BodyGlintRenderer';
 import type { SgrAStarLensingRenderer } from '../../rendering/SgrAStarLensingRenderer';
 import type { CubeFaceBlitRenderer } from '../../rendering/CubeFaceBlitRenderer';
 import type { DomeResampleRenderer } from '../../rendering/DomeResampleRenderer';
-import type { StarCatalogRenderer } from '../../rendering/starCatalogRenderer/StarCatalogRenderer';
-import type { StarCatalogPickRenderer } from '../../rendering/starCatalogPickRenderer/StarCatalogPickRenderer';
 import type { BodyPickRenderer } from '../../rendering/bodyPickRenderer/BodyPickRenderer';
 import type { OrbitTrailRenderer } from '../../rendering/orbitTrailRenderer/OrbitTrailRenderer';
 import type { FadeUniformsBgl } from '../../rendering/FadeUniformsBgl';
@@ -175,9 +170,10 @@ export type EngineGpuHandles = {
    * captions project through the NEAR0 slab view — whose near plane scales
    * with `cam.distance` so it always contains the bodies — rather than the
    * galaxy-scale `vp` the main labels use, and one renderer draws with one
-   * view-projection.  Seeded at construction with the `sceneBodyLabels(<body
-   * snapshot>)` caption set (Earth, the local star map, the planets), which
-   * `foregroundLabelsPass` then re-uploads camera-relative each frame.  Null until
+   * view-projection.  Shared by core's `sceneBodyLabels` set (Earth, the
+   * planets, Sgr A*, the mesh bodies) and the star Layer's own producer (the
+   * curated map, the Sun); `foregroundLabelsPass` re-uploads both, merged,
+   * camera-relative each frame.  Null until
    * `initGpu` builds it against the font atlas; excluded from
    * `isEngineReady` and null-checked at use, like `labelRenderer`.
    * Released and re-nulled by `destroy()`.
@@ -322,21 +318,10 @@ export type EngineGpuHandles = {
    */
   milkyWayAggregateUpsample: AdditiveUpsample | null;
   /**
-   * Half-res-to-HDR survey-star aggregate upsample composite. Reads the
-   * `star-aggregates` offscreen the aggregate stream drew LINEAR into,
-   * re-applies the star pass's hue-preserving knee to the summed field, and
-   * additively blends the result into HDR (the LOD-symmetry fix). Null until
-   * `initGpu` constructs it (same phase as `volumeUpsample`). Excluded from
-   * `isEngineReady` — when null, `starAggregateUpsamplePass` skips its draw, so
-   * a null handle is a silent no-op. Stored here so `destroy()` can release the
-   * pipeline + sampler + bind-group-layout via the pass's no-op destroy method.
-   */
-  starAggregateUpsample: StarAggregateUpsample | null;
-  /**
    * Dual-filter bloom mip pyramid — owns the bright / downsample / upsample /
    * fold pipelines that drive the `bloom0..bloom4` render-target rows and the
    * strength-scaled fold back into HDR. Null until `initGpu` constructs it
-   * (same phase as `volumeUpsample` / `starAggregateUpsample`). Excluded from
+   * (same phase as `volumeUpsample`). Excluded from
    * `isEngineReady` — every bloom content layer's `enabled` gate is exactly the
    * `bloomPyramid !== null` handle-ready check, so a null handle silently drops
    * the whole bloom sub-program. The `settings.bloom.enabled` toggle gates at
@@ -390,21 +375,6 @@ export type EngineGpuHandles = {
    * constructs it; nothing reads it unless that toggle is on.
    */
   terrainPickMarkerRenderer: TerrainPickMarkerRenderer | null;
-  /**
-   * Flat-emissive resolved stars (the `spheres` branch of
-   * `partitionStarsByResolution` — any star whose apparent size crosses
-   * `STAR_RESOLVE_PX`, the Sun included) drawn into the `foreground:0`
-   * render-target row.  Same `foreground:0` format invariant as
-   * `earthRenderer` (see `renderTargetFormats.ts`).  Owns a single
-   * non-dynamic uniform buffer, so same-frame draws through it clobber
-   * each other's uniforms (last write wins) — a known gap should two
-   * stars ever resolve at once;
-   * see `starSpheresPass`'s module header for why the case is out of
-   * reach today and what the real fix is.
-   * Excluded from `isEngineReady` and null-checked at use.  Null until
-   * `initGpu` constructs it; released and re-nulled by `destroy()`.
-   */
-  starRenderer: StarRenderer | null;
   /**
    * Flat-lit albedo planets — a SINGLE renderer instance, drawn one body-m
    * slab row at a time: `planetsPass` packs each row's MVP + albedo into a
@@ -477,29 +447,15 @@ export type EngineGpuHandles = {
    */
   atmosphereShellRenderer: AtmosphereShellRenderer | null;
   /**
-   * The unresolved stars (the `points` branch of
-   * `partitionStarsByResolution`) as additive point sprites into the
-   * depthless HDR target — the far half of the star LOD (`star-points`
-   * layer, drawn by the frame program's dedicated `(hdr, NEAR0)` render
-   * step).  No depth format: the hdr row has no depth attachment.  Star
-   * instances are seeded in `initGpu` via `setStars` (the full star list —
-   * at the galaxy-scale boot camera every star is a sub-pixel point) and
-   * re-uploaded by `starPointsPass` per frame from the
-   * apparent-size partition.  Excluded from
-   * `isEngineReady` and null-checked at use.  Null until `initGpu`
-   * constructs it; released and re-nulled by `destroy()` (releases the
-   * instance + uniform buffers).
-   */
-  starPointRenderer: StarPointRenderer | null;
-  /**
    * The sub-pixel scene bodies (the `glints` branch of
    * `partitionBodiesByPresentation`) as brightness-scaled additive point sprites
    * into the depthless HDR target — the far half of the body LOD (`body-glints`
    * layer, sharing the frame program's `(hdr, NEAR0)` render step with
    * `star-points`).  Its brightness encodes apparent size x albedo x phase, and
    * cross-fades with the resolved mesh over 1-3 px so bodies stop popping in/out
-   * on descent.  The close sibling of `starPointRenderer` — a separate renderer
-   * for this feature by design (the fold candidate is deferred, spec §14).  No
+   * on descent.  The close sibling of the starCatalog Layer's point renderer —
+   * a separate renderer for this feature by design (the fold candidate is
+   * deferred, spec §14).  No
    * depth format: the hdr row has no depth attachment.  Needs no data-delivery
    * step: `bodyGlintsPass` packs and hands the whole batch every frame.
    * Excluded from `isEngineReady` and null-checked at use.  Null until `initGpu`
@@ -531,43 +487,16 @@ export type EngineGpuHandles = {
    */
   domeResampleRenderer: DomeResampleRenderer | null;
   /**
-   * The survey (Gaia bin) stars as additive point sprites into the depthless
-   * HDR target — the wide-field twin of `starPointRenderer`, fed from an
-   * in-file octree of cell-quantized records rather than a flat seed list.
-   * Records upload once per source (`upload`); the star layer walks each
-   * octree per frame (`loadedCatalogs`) and draws the per-frame cut.  No depth
-   * format: the hdr row has no depth attachment.  Excluded from
-   * `isEngineReady` and null-checked at use.  Null until `initGpu` constructs
-   * it; released and re-nulled by `destroy()` (releases the per-source records
-   * + node-params buffers and the shared camera uniform).
-   */
-  starCatalogRenderer: StarCatalogRenderer | null;
-  /**
-   * The r32uint pick provider for the survey (Gaia bin) stars — the pick twin
-   * of `starCatalogRenderer`, making a catalogued star clickable.  Records one
-   * source's leaf cut into the pick program's r32uint pass, stamping the picked
-   * star's packed identity.  Shares the visual renderer's records bind group
-   * (via its `pickResources()`) but owns its own `pickPass = 1` uniform + per-
-   * source node-params/prefix buffers (the writeBuffer/submit ordering fix).
-   * Depth-tested so the nearest star wins the pixel, unlike the depthless
-   * additive visual star pass.  Constructed in `initGpu` right after
-   * `starCatalogRenderer` (it depends on that renderer's exposed BGLs); null
-   * until then.  Excluded from `isEngineReady` and null-checked at use.  Released
-   * and re-nulled by `destroy()` (its own uniform + per-source pick buffers; the
-   * shared records buffers belong to the visual renderer).
-   */
-  starCatalogPickRenderer: StarCatalogPickRenderer | null;
-  /**
    * The r32uint pick provider for the NEAR0 foreground bodies (Earth, the
    * planets, and the ~25 seeded scene stars incl. the Sun) — the body-family
-   * analogue of `starCatalogPickRenderer`.  Records ONE body sphere per
-   * `drawSphere` call (via a 256-byte-aligned dynamic-offset uniform whose
+   * analogue of the starCatalog Layer's pick renderer.  Records ONE body sphere
+   * per `drawSphere` call (via a 256-byte-aligned dynamic-offset uniform whose
    * per-SUBMIT cursor sidesteps the writeBuffer/submit race — see
    * `bodyPickRenderer`'s header) and the sub-pixel scene-star POINT partition
    * as one instanced pick-billboard draw.  Depth-tested (`depth32float`,
    * 'greater', the NEAR0 reversed-Z convention) so overlapping bodies resolve
-   * nearest-wins.  Constructed in `initGpu` alongside `starCatalogPickRenderer`;
-   * the body layers' `drawPick` rows (Task 11) drive it.  Excluded from
+   * nearest-wins.  Constructed in `initGpu`; the body layers' `drawPick` rows
+   * (Task 11) drive it.  Excluded from
    * `isEngineReady` and null-checked at use.  Released and re-nulled by
    * `destroy()` (its sphere mesh VBO/IBO, the sphere dynamic-offset + point
    * camera uniforms, and the grow-only point instance buffer).

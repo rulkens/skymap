@@ -1,5 +1,6 @@
 import type { GalaxyRow } from './GalaxyRow';
 import type { StructureInfo } from '../data/structure/StructureInfo';
+import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
 import type { Vec3 } from '../math/Vec3';
 
 /**
@@ -30,20 +31,25 @@ export type SelectionRow =
       readonly label: string;
       readonly positionMpc: Vec3;
     }
-  // Star arm — the self-contained display projection of a picked star, its
-  // physical fields (`positionMpc`/`absMag`/`bpRp`) snapshotted off the loaded
-  // StarCatalog at extract time so framing/card read them directly. It also
-  // carries `index` (from the ref) so `buildFocusable` can rebuild the ref /
-  // the `star-<index>` URL, mirroring how GalaxyRow carries its index.
+  // Star arm — the self-contained display projection of a picked star from any
+  // of the four catalogs, its physical fields snapshotted at extract time so
+  // framing and card read them directly. `source` + `index` come from the ref
+  // (so `buildFocusable` can rebuild it, as GalaxyRow's index does); `id` is the
+  // durable seed id the `star-<seedId>` URL and the camera's driver lookup need,
+  // null for a survey star, which has no identity of its own.
   | {
-      readonly type: 'star';
+      readonly type: 'starCatalog';
+      readonly source: StarCatalogSourceType;
       readonly index: number;
+      readonly id: string | null;
+      readonly label: string;
       readonly positionMpc: Vec3;
-      readonly absMag: number;
-      readonly bpRp: number;
-      // Nominal solar radius (km), stamped by the extractor. The bin quantises
-      // position + photometry only, so a field star carries no measured size;
-      // this representative radius is the one framing (bodyLikeFraming) and the
-      // sphere gate read for a discrete near-field star.
+      // A seeded star's photosphere; for a survey star the nominal solar radius,
+      // since the bin quantises position + photometry only and carries no size.
+      // The one radius framing (bodyLikeFraming), the halo and the sphere gate read.
       readonly radiusM: number;
+      // Survey-only catalogued photometry — a seeded star's card reads its
+      // curated sidecar or its orbit instead.
+      readonly absMag?: number;
+      readonly bpRp?: number;
     };

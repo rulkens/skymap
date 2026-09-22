@@ -12,15 +12,12 @@ import type { AssetWiringRow } from '../../../@types/loading/AssetWiringRow';
 import type { CompanionAssetRow } from '../../../@types/loading/CompanionAssetRow';
 import type { StructureId } from '../../../@types/data/structure/StructureId';
 import { Source, SOURCE_REGISTRY } from '../../../data/sources';
-import { createFamousStarsMetaSlot } from '../../loading/slots/famousStarsMetaSlot';
 import { createStructureCatalogSlot } from '../../loading/slots/structureCatalogSlot';
 import { createCf4DensitySlot } from '../../loading/slots/cf4DensitySlot';
 import { createPolyphorm2MrsSlot } from '../../loading/slots/polyphorm2MrsSlot';
 import { createMcpmWorkbenchSlot } from '../../loading/slots/mcpmWorkbenchSlot';
 import { createMcpmSlot } from '../../loading/slots/mcpmSlot';
-import { createStarCatalogSlot } from '../../loading/slots/starCatalogSlot';
 import { createBodyTextureAtlasSlot } from '../../loading/slots/bodyTextureAtlasSlot';
-import { SOURCE_ENTRIES } from '../../../data/sourceEntries';
 import { ALL_BODY_TEXTURE_KEYS } from '../../../data/bodies/bodyTextureKeys';
 import { SCENE_MESH_BODIES } from '../../../data/bodies/sceneMeshBodies';
 import { BODY_TEXTURE_REGISTRY } from '../../../data/bodies/bodyTextureRegistry';
@@ -33,7 +30,6 @@ import { loadRadiusMpc } from '../frame/bodyTextureLoadRadius';
 import { loadRadiusMpc as meshBodyLoadRadiusMpc } from '../frame/meshBodyLoadRadius';
 import { meshBodySlotKey } from '../../../utils/meshBodies/meshBodySlotKey';
 import type { SourceType } from '../../../@types/data/SourceType';
-import type { StarCatalogId } from '../../../@types/data/starCatalog/StarCatalogId';
 import type { BodyTextureId } from '../../../@types/data/BodyTextureId';
 import type { RingTextureId } from '../../../@types/data/RingTextureId';
 import type { BodyTextureKey } from '../../../@types/data/BodyTextureKey';
@@ -64,32 +60,6 @@ const externalFactory = (): never => {
     'assetWiring: externally-built rows (built: "external" — body textures, mesh bodies) are minted outside this registry; the construction pass must not build them',
   );
 };
-
-/**
- * Star-catalog sources that actually ship an asset. A SEEDED catalog
- * (`binBaseName: null`) is built in code, so including it would have the fetcher
- * request a filename assembled from a null stem. The cast re-narrows `code`.
- */
-const STAR_CATALOG_SOURCES: readonly SourceType[] = SOURCE_ENTRIES.filter(
-  (e) => e.type === 'starCatalog' && e.binBaseName !== null,
-).map((e) => e.code);
-
-/**
- * One demand+req row for a star catalog. Registry-built, unlike the galaxy
- * `pointRow` family: `createStarCatalogSlot` null-guards the renderer handle at
- * commit time, so the slot needs no external co-minting.
- */
-function starCatalogRow(source: SourceType): AssetWiringRow {
-  const id = SOURCE_REGISTRY[source].id as StarCatalogId;
-  return {
-    key: source,
-    factory: (deps) => createStarCatalogSlot(source, deps.state, deps.cb),
-    req: (tier) => ({ source, tier }),
-    demand: (ctx) =>
-      ctx.settings.starCatalogs.enabled && ctx.settings.starCatalogs.items[id]?.enabled === true,
-    priority: 50, // one rank for every star catalog: the Earth boot view's own scale rung
-  };
-}
 
 /**
  * The host body's world position at the frame's LIVE sim instant — every host
@@ -183,18 +153,6 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
     priority: 0,
   },
 
-  // ── Famous-star meta sidecar ──────────────────────────────────────
-  // Unconditional rather than a companion join: the famous stars are a seeded
-  // catalog compiled into the bundle, so there is no sibling `.bin` to key demand off,
-  // and no tier to embed in the request either.
-  {
-    key: 'famousStarsMeta',
-    factory: (deps) => createFamousStarsMetaSlot(deps.state, deps.cb),
-    req: () => undefined,
-    demand: () => true,
-    priority: 22, // right behind famousGalaxiesMeta; both are tiny and wanted early
-  },
-
   // ── Volume overlays: mcpm / cf4Density / polyphorm2Mrs / mcpmWorkbench ──
   // All four are load-once and deliberately declare no `release`: adding one
   // requires an `onRelease` that calls `volumeFieldRenderer.unload(id)`, or the
@@ -266,8 +224,4 @@ export const ASSET_WIRING: readonly (AssetWiringRow | CompanionAssetRow)[] = [
 
   // ── Mesh bodies (whale, petunias, …) ─────────────────────────────
   ...SCENE_MESH_BODIES.map(meshBodyRow),
-
-  // ── Survey star catalogs ─────────────────────────────────────────
-  // One row per `type: 'starCatalog'` entry, so a new catalog joins with no edit here.
-  ...STAR_CATALOG_SOURCES.map(starCatalogRow),
 ];

@@ -45,7 +45,7 @@ import {
   decodeStarCatalog,
 } from '../../../src/data/starCatalog/starCatalogFormat';
 import { selectionResolverOver } from '../../support/selectionResolverOver';
-import type { GalaxyRowFixture } from '../../support/selectionResolverOver';
+import type { GalaxyRowFixture, StarRowFixture } from '../../support/selectionResolverOver';
 import type { ResolveDeps } from '../../../src/@types/engine/ResolveDeps';
 import type { GalaxyCatalog } from '../../../src/@types/data/galaxyCatalog/GalaxyCatalog';
 import type { StarCatalog } from '../../../src/@types/data/starCatalog/StarCatalog';
@@ -106,12 +106,21 @@ describe('watchSelectionRowsSaga', () => {
     } as unknown as GalaxyRowFixture;
     const deps: ResolveDeps = {
       structures: { byId: () => structure, byCategory: () => [] },
-      stars: { current: () => starCatalog },
     };
+    // The starCatalog Layer's slice of the composed resolver, read LIVE like
+    // `galaxies` above so the deferral case can land the bin mid-test.
+    const stars = {
+      renderer: {
+        loadedCatalogs: () =>
+          (starCatalog ? [{ source: Source.GaiaStars, catalog: starCatalog }] : [])[
+            Symbol.iterator
+          ](),
+      },
+    } as unknown as StarRowFixture;
     sagaMiddleware.run(watchSelectionRowsSaga);
     sagaMiddleware.setContext({
       resolveDeps: () => deps,
-      selection: selectionResolverOver(deps, galaxies),
+      selection: selectionResolverOver(deps, galaxies, stars),
     });
     return s;
   }
@@ -174,7 +183,9 @@ describe('watchSelectionRowsSaga', () => {
     // that pulse or the star focus row stays null forever (the camera arrives
     // via watchFocusTweenSaga, but no InfoCard/body).
     starCatalog = null;
-    store.dispatch(updateSelectionFocus({ type: 'star', index: 0 }));
+    store.dispatch(
+      updateSelectionFocus({ type: 'starCatalog', source: Source.GaiaStars, index: 0 }),
+    );
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toBeNull();
 
@@ -182,7 +193,7 @@ describe('watchSelectionRowsSaga', () => {
     store.dispatch(engineSourceCountReported({ source: Source.GaiaStars, count: 2 }));
     await flush();
     expect(store.getState()[selectionRowsRoute].focus).toMatchObject({
-      type: 'star',
+      type: 'starCatalog',
       index: 0,
     });
   });

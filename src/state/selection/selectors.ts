@@ -44,6 +44,7 @@ import { createSelector } from '@reduxjs/toolkit';
 
 import { selectionRoute, selectionRowsRoute } from '../../store/constants';
 import { buildFocusable } from '../../services/engine/helpers/buildFocusable';
+import { selectFamousStarsMeta } from '../engine/selectors';
 import type { RootState } from '../../store/types';
 import type { SelectionState } from '../../@types/store/SelectionState';
 import type { SelectionRowsState } from '../../@types/store/SelectionRowsState';
@@ -93,13 +94,14 @@ export const selectFocusRow = (state: RootState): SelectionRow | null =>
 /**
  * selectHoveredFocusable — builds a `FocusableTarget` from the hover
  * `SelectionRow`, or null when the hover slot is empty. Memoized on the hover
- * row reference: `buildFocusable` builds a fresh `GalaxyInfo` object for
- * galaxy rows, so this selector gates that work behind a `createSelector`
- * stable-reference check.
+ * row reference and the famous-star sidecar: `buildFocusable` builds a fresh
+ * `GalaxyInfo`/`StarInfo` object per call, so this selector gates that work
+ * behind a `createSelector` stable-reference check. The sidecar is an input
+ * rather than a card read, so a star's curated rows fill in the moment it lands.
  */
 export const selectHoveredFocusable = createSelector(
-  selectHoverRow,
-  (row): FocusableTarget | null => buildFocusable(row),
+  [selectHoverRow, selectFamousStarsMeta],
+  (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
 );
 
 /**
@@ -108,8 +110,8 @@ export const selectHoveredFocusable = createSelector(
  * select row reference for the same reason as `selectHoveredFocusable`.
  */
 export const selectSelectedFocusable = createSelector(
-  selectSelectRow,
-  (row): FocusableTarget | null => buildFocusable(row),
+  [selectSelectRow, selectFamousStarsMeta],
+  (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
 );
 
 /**
@@ -118,8 +120,8 @@ export const selectSelectedFocusable = createSelector(
  * focus row reference for the same reason as `selectHoveredFocusable`.
  */
 export const selectFocusedFocusable = createSelector(
-  selectFocusRow,
-  (row): FocusableTarget | null => buildFocusable(row),
+  [selectFocusRow, selectFamousStarsMeta],
+  (row, famousStarsMeta): FocusableTarget | null => buildFocusable(row, famousStarsMeta),
 );
 
 /**

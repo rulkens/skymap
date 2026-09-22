@@ -22,8 +22,6 @@ import type { CubemapCaptureRuntimes } from '../../@types/engine/state/CubemapCa
 import { CUBEMAP_CAPTURES } from '../../data/rendering/cubemapCaptures';
 import { ORIENTATION_FRAMES } from '../../data/orientation/orientationFrames';
 import { createEngineData } from './data/createEngineData';
-import { SCENE_STARS } from '../../data/bodies/sceneStars';
-import { Source } from '../../data/source';
 import { createRenderScheduler } from './subsystems/renderScheduler';
 import { createFadeRegistry } from '../animation/fadeRegistry';
 import { createLabel2DDirector } from './subsystems/label2DDirector';
@@ -48,7 +46,7 @@ import { deriveSimDays } from '../../utils/time/deriveSimDays';
 import { selectTimeState } from '../../state/time/selectors';
 import type { BodyId } from '../../@types/data/body/BodyId';
 import type { BodyState } from '../../@types/scene/BodyState';
-import { engineStatusChanged, engineSourceCountReported } from '../../state/engine/engineSlice';
+import { engineStatusChanged } from '../../state/engine/engineSlice';
 import type { AssetSlot } from '../../@types/loading/AssetSlot';
 
 import { runBootstrapPhases } from './phases/bootstrap';
@@ -125,13 +123,7 @@ export function createEngine(
 
   const store = cb.store;
 
-  // Famous stars are seeded at construction, not fetched, so there is no async slot
-  // commit to carry the usual `engineSourceCountReported` pulse — report it here so
-  // the Stars panel's count chip lights up for the curated row too.
   const engineData = createEngineData();
-  store.dispatch(
-    engineSourceCountReported({ source: Source.FamousStar, count: SCENE_STARS.length }),
-  );
 
   const state: EngineState = {
     // These getters delegate straight to the store: sagas and sub-handle
@@ -196,7 +188,6 @@ export function createEngine(
       volumeFieldRenderer: null,
       volumeUpsample: null,
       milkyWayAggregateUpsample: null,
-      starAggregateUpsample: null,
       // Every bloom content layer's enable gate is exactly `bloomPyramid !== null`,
       // so a null handle silently drops the whole bloom sub-program.
       bloomPyramid: null,
@@ -204,7 +195,6 @@ export function createEngine(
       earthRenderer: null,
       surfaceTileRenderer: null,
       terrainPickMarkerRenderer: null,
-      starRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,
       // Lit triangle-mesh bodies attached to a host body's slab;
@@ -213,13 +203,10 @@ export function createEngine(
       ringRenderer: null,
       cloudShellRenderer: null,
       atmosphereShellRenderer: null,
-      starPointRenderer: null,
       bodyGlintRenderer: null,
       sgrAStarLensingRenderer: null,
       cubeFaceBlitRenderer: null,
       domeResampleRenderer: null,
-      starCatalogRenderer: null,
-      starCatalogPickRenderer: null,
       bodyPickRenderer: null,
       orbitTrailRenderer: null,
       // The one exception to the null rule: always non-null, a no-op stub until
@@ -296,8 +283,6 @@ export function createEngine(
     // closures re-read GPU handles at call time and null-guard, rather than assuming
     // `initGpu` already assigned them.
     assetSlots: {
-      starCatalogs: new Map(),
-      famousStarsMeta: null,
       structureCatalog: null,
       cf4Density: null,
       // Tier-aware (unlike cf4Density): the demand loop's drift edge reloads it
@@ -386,16 +371,6 @@ export function createEngine(
       byId: (id) => state.data.structures.byId(id),
       byCategory: (cat) => state.data.structures.byCategory(cat),
       loaded: () => state.data.structures.loaded(),
-    },
-    // The first (only, in v1) committed Gaia catalog, or null before the star cloud
-    // lands and after the GPU tears down.
-    stars: {
-      current: () => {
-        const renderer = state.gpu.starCatalogRenderer;
-        if (!renderer) return null;
-        for (const { catalog } of renderer.loadedCatalogs()) return catalog;
-        return null;
-      },
     },
   });
 

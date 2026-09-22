@@ -7,6 +7,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { focusDriverId } from '../../../src/utils/camera/focusDriverId';
+import { Source } from '../../../src/data/sources';
 import { makeGalaxyRow } from '../../fixtures/makeGalaxyRow';
 import type { SelectionRow } from '../../../src/@types/engine/SelectionRow';
 
@@ -29,8 +30,29 @@ const ROWS: readonly (readonly [string, SelectionRow | null, string | null])[] =
   ['zoneOfAvoidance', { type: 'zoneOfAvoidance' }, null],
   ['body', { type: 'body', id: 'earth', label: 'Earth', positionMpc: [0, 0, 0] }, 'earth'],
   [
-    'star',
-    { type: 'star', index: 7, positionMpc: [0, 0, 0], absMag: 4, bpRp: 0.8, radiusM: 7e8 },
+    'starCatalog seeded',
+    {
+      type: 'starCatalog',
+      source: Source.FamousStar,
+      index: 2,
+      id: 'sirius',
+      label: 'Sirius',
+      positionMpc: [0, 0, 0],
+      radiusM: 7e8,
+    },
+    'sirius',
+  ],
+  [
+    'starCatalog survey',
+    {
+      type: 'starCatalog',
+      source: Source.GaiaStars,
+      index: 7,
+      id: null,
+      label: 'Field star',
+      positionMpc: [0, 0, 0],
+      radiusM: 7e8,
+    },
     null,
   ],
   ['null', null, null],

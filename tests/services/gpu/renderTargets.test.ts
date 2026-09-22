@@ -10,6 +10,8 @@
  */
 import { describe, it, expect, vi } from 'vitest';
 import { createRenderTargets, renderTargetRows } from '../../../src/services/gpu/renderTargets';
+import { composeRenderTargetRows } from '../../../src/services/engine/layer/composeRenderTargetRows';
+import { STAR_AGGREGATES_TARGET } from '../../../src/layers/starCatalog/render/starAggregatesTarget';
 import { SCALE_FADE_BANDS } from '../../../src/services/engine/presentation/scaleFadeBands';
 import type { EngineState } from '../../../src/@types/engine/state/EngineState';
 import type { RenderTargetSpec } from '../../../src/@types/engine/frame/RenderTargetSpec';
@@ -101,9 +103,12 @@ describe('createRenderTargets', () => {
   it('reconcile reallocates every offscreen row when the canvas size changes', () => {
     const device = mockDevice();
     const create = device.createTexture as ReturnType<typeof vi.fn>;
+    // `star-aggregates` is the starCatalog Layer's own target now — composed
+    // in exactly as `composeRenderTargetRows` does at boot, so this test
+    // still exercises its scale/divisor math against the real row.
     const targets = createRenderTargets(
       device,
-      renderTargetRows(SWAP_FORMAT),
+      composeRenderTargetRows(SWAP_FORMAT, [[STAR_AGGREGATES_TARGET]]),
       { width: 900, height: 600 },
       stateWithDivisor(MW_DIVISOR),
     );

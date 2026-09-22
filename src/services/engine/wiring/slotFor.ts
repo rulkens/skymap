@@ -4,12 +4,11 @@
  *
  * Core stores its own slots in structurally different places:
  *
- *   - Per-source star-catalog slots live in `state.assetSlots.starCatalogs`,
- *     keyed by the numeric `Source` code.
  *   - The keyed body-texture and mesh-body families live in their own maps.
  *   - The auxiliary assets named by `AssetKey` (the cluster catalog, the
  *     scalar-volume cubes) are named fields on `state.assetSlots`.
- *   - A Layer's own slots live in `state.layerSlots`, consulted first.
+ *   - A Layer's own slots (incl. every per-source star/galaxy catalog) live in
+ *     `state.layerSlots`, consulted first.
  *
  * `AssetKey` is the union of the key spaces — a numeric `SourceType` OR one of
  * the string keys. A single `slotFor(state, key)` lets demand predicates and
@@ -17,10 +16,9 @@
  * re-deriving the branch. Single-sourcing it here keeps the mapping in one
  * place rather than duplicated at each call site.
  *
- * A numeric key that is not a star catalog resolves to `undefined` here: its
- * slot, if any, is a Layer's and was already returned above. Slots covered by
- * no home resolve to `undefined` too, which callers treat as "idle / not
- * minted".
+ * A numeric key resolves to `undefined` here: every per-source catalog slot is
+ * a Layer's and was already returned above. Slots covered by no home resolve
+ * to `undefined` too, which callers treat as "idle / not minted".
  *
  * Returns `AssetSlot<unknown, unknown> | undefined`: the slot's payload and
  * request types are erased because callers here only consult `state().kind`
@@ -28,7 +26,6 @@
  * of slot types, which TS widens to the erased shape on return.
  */
 
-import { SOURCE_REGISTRY } from '../../../data/sources';
 import { isBodyTextureKey } from '../../../utils/bodyTextures/isBodyTextureKey';
 import { isMeshBodyKey } from '../../../utils/meshBodies/isMeshBodyKey';
 import { isCoreSlotFieldKey } from '../../../utils/loading/isCoreSlotFieldKey';
@@ -44,18 +41,12 @@ export function slotFor(
   // `createLayers` throws on a key core also claims, so this cannot shadow.
   const layerSlot = state.layerSlots.get(key);
   if (layerSlot !== undefined) return layerSlot;
-  // Numeric = Source code. Only star catalogs have a core per-source map; a
-  // galaxy source's slot is its Layer's and was returned above.
-  if (typeof key === 'number') {
-    const slot =
-      SOURCE_REGISTRY[key].type === 'starCatalog'
-        ? state.assetSlots.starCatalogs.get(key)
-        : undefined;
-    return (slot ?? undefined) as AssetSlot<unknown, unknown> | undefined;
-  }
+  // Numeric = Source code. Every per-source catalog is a Layer's and was
+  // already returned above; core keeps no numeric-keyed slot map of its own.
+  if (typeof key === 'number') return undefined;
   // A body-texture family key routes through the keyed `bodyTextures` Map (the
-  // fourth slot home, alongside points / starCatalogs / named sidecar fields).
-  // The guard narrows `key` so the else-branch below can index the named
+  // third slot home, alongside per-Layer slots / named sidecar fields). The
+  // guard narrows `key` so the else-branch below can index the named
   // sidecar fields without a cast.
   if (isBodyTextureKey(key)) {
     return (state.assetSlots.bodyTextures.get(key) ?? undefined) as

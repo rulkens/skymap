@@ -10,31 +10,18 @@
  */
 
 import type { AssetSlot } from '../../loading/AssetSlot';
-import type { FamousStarsPayload } from '../../loading/FamousStarsPayload';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
 import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { Polyphorm2MRSReq } from '../../loading/Polyphorm2MRSReq';
 import type { StructureCatalogPayload } from '../../loading/structureCatalogPayload/StructureCatalogPayload';
 import type { StructureCatalogReq } from '../../loading/StructureCatalogReq';
-import type { StarCatalog } from '../../data/starCatalog/StarCatalog';
-import type { StarCatalogReq } from '../../loading/StarCatalogReq';
-import type { SourceType } from '../../data/SourceType';
 import type { BodyTextureReq } from '../../loading/BodyTextureReq';
 import type { BodyTextureSlotKey } from '../../data/BodyTextureSlotKey';
 import type { MeshAsset } from '../../data/mesh/MeshAsset';
 import type { MeshReq } from '../../loading/MeshReq';
 
 export type EngineAssetSlots = {
-  /**
-   * The per-source star slots. Registry-built: `installSlots` routes numeric keys
-   * whose entry is `type: 'starCatalog'` here, so the commit null-guards
-   * `state.gpu.starCatalogRenderer` instead of closing over it. Its galaxy twin
-   * lives on the galaxyCatalog Layer's runtime.
-   */
-  starCatalogs: Map<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
-  /** Eager because famous stars are a seeded catalog — no sibling `.bin`, and no tier, to key demand off. */
-  famousStarsMeta: AssetSlot<FamousStarsPayload, void> | null;
   /** Eager at boot; `wireStructureProjection` turns the ready value into structure-store records. */
   structureCatalog: AssetSlot<StructureCatalogPayload, StructureCatalogReq> | null;
   /** Valade 2024 256³ HAMLET cube, ~32 MB decoded — default-off, so that cost is opt-in only. */

@@ -60,7 +60,6 @@ export const NOOP_RECONCILE: ReconcileEffects = {
 // and a TypeError that cancels the root saga.
 const EMPTY_RESOLVE_DEPS: ResolveDeps = {
   structures: { byId: () => null, byCategory: () => [] },
-  stars: { current: () => null },
 };
 
 /**
