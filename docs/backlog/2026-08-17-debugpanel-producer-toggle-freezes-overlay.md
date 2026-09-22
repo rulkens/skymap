@@ -2,17 +2,23 @@
 
 **Area:** rendering / frame passes · **Readiness:** ready
 
-Three offscreen-producer/consumer pairs share one shape, and the DebugPanel
-renderer-toggle list breaks all three the same way:
+Four offscreen-producer/consumer pairs share one shape, and the DebugPanel
+renderer-toggle list breaks all four the same way:
 
 - producer `zone-of-avoidance` (target `zoa`) → consumer
   `zoneOfAvoidanceUpsamplePass`
 - producer `star-aggregates` → consumer `starAggregateUpsamplePass`
 - producer `mw-aggregate` → consumer `milkyWayUpsamplePass`
+- producer `cosmic-web-density` (target `cosmic-web-density`) → consumer
+  `cosmicWebDensityUpsamplePass`
 
-`engine.ts:1002` builds the DebugPanel's toggle list as
-`CONTENT_PASSES.filter((l) => l.target !== 'volume').map((p) => p.name)` —
-every producer layer except the scalar-volume one gets a toggle row.
+`engine.ts`'s `passOverrides.allNames` builds the DebugPanel's toggle list
+from `FRAME_ORDER_PASS_NAMES` with no target filter — every producer layer,
+`cosmic-web-density` included, gets a toggle row. (Earlier, a
+`CONTENT_PASSES.filter((l) => l.target !== 'volume')` excluded the
+scalar-volume producer from the list entirely, so unchecking its own removal
+wasn't covered by this entry; the `cosmicWebDensity` Layer refactor dropped
+that filter, so it now reproduces the same freeze as the other three.)
 `executeFrame.ts:184-192` applies the toggle by dropping a layer from its
 render group when `disabledPasses[l.name] === true`, and
 `if (group.length === 0) break` skips the whole `{ kind: 'render', target }`
@@ -27,15 +33,9 @@ freezes in **screen space**" — since the producer stopped updating the
 buffer, and the consumer keeps additively re-compositing the stale contents,
 the frozen frame visibly smears as the camera orbits.
 
-`scalar-volume` is the one producer excluded from the toggle list (the
-`target !== 'volume'` filter), so it does not exhibit this — checking its
-own removal is not covered by this entry.
-
 ## Fix
 
-One `target` predicate change to `engine.ts:1002`'s filter (excluding all
-three aggregate/zoa producer targets, matching how `volume` is already
-excluded), or a `renderedTargets.has(target)`-style guard added to each of
-the three upsample/consumer layers so a consumer skips compositing when its
-producer didn't run this frame. Either fix is local to the three consumer
-layers plus the one filter line; no renderer restructuring needed.
+A `renderedTargets.has(target)`-style guard added to each of the four
+upsample/consumer layers, so a consumer skips compositing when its producer
+didn't run this frame. Local to the four consumer layers; no renderer
+restructuring needed.
