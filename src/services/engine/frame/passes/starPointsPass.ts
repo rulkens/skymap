@@ -372,6 +372,7 @@ export const starPointsPass: ContentPass = {
     pickRenderer.drawPoints(pass, {
       vp: rebasedVp,
       viewportPx: view.viewportPx,
+      pxPerRad: ctx.drawPxPerRad,
       points: pickPoints,
     });
   },

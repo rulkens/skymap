@@ -57,6 +57,7 @@ export type LabelRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    pxPerRad: number,
     scene?: OverlaySceneOcclusion,
   ): void;
   /** Total glyph count across all active labels. Used by tests + debug HUD. */

@@ -239,10 +239,10 @@ async function applyTier(page: Page, tier: Tier | null): Promise<string> {
 /**
  * sampleStrategy — flip the encode strategy, hard-cut to `pose`, and collect
  * `frames` frames of per-pass timings. The evaluate body is the app-seam
- * protocol: setStrategy (next-frame flip) → setPose (hard-cut + arm auto-rotate,
- * resolves on the next rAF) → collectTimings (subscribe, accumulate, resolve).
- * Auto-rotate keeps the render-on-demand loop awake for the whole sampling
- * window with no manual pump. Shared by both measurement paths.
+ * protocol: setStrategy (next-frame flip) → setPose (hard-cut, resolves on the
+ * next rAF) → collectTimings (subscribe, accumulate, resolve). `collectTimings`
+ * keeps the render-on-demand loop awake itself, so a static vantage on any
+ * camera arm samples the full window. Shared by both measurement paths.
  */
 async function sampleStrategy(
   page: Page,

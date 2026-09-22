@@ -31,7 +31,7 @@ import package::lib::camera::CameraUniforms;
 //
 // The first 80 bytes are the shared 'CameraUniforms' prefix from
 // 'lib/camera.wesl' (viewProj at offset 0, viewportPx at offset 64,
-// two reserved-pad f32s at 72/76). The next two f32 slots at offsets
+// pxPerRad at 72, one reserved-pad f32 at 76). The next two f32 slots at
 // 80 and 84 hold this renderer's two scalar parameters; offsets
 // 88..95 are an 8-byte pad carrying the first vec3 tint to its
 // required 16-byte boundary. 'baseTint' occupies 96..107 and 'hotTint'

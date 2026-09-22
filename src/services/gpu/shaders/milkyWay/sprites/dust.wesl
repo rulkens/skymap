@@ -1,4 +1,4 @@
-// milkyWay/sprites/dust.wesl — the dust-lane pass. Same camera-facing billboard
+// milkyWay/sprites/dust.wesl — the dust-lane pass. Same eye-facing billboard
 // as stars.wesl, but shaded and blended completely differently: dust does not
 // EMIT light, it ABSORBS it. Each dust sprite outputs a per-channel
 // transmittance and is drawn with a src*dst (multiplicative) blend so it
@@ -26,6 +26,7 @@
 // consumers.
 
 import package::milkyWay::sprites::io::u;
+import package::milkyWay::sprites::io::spriteBillboardOffset;
 import package::lib::camera::worldToClip;
 import package::lib::cloudSprite::dustTransmittance;
 
@@ -52,12 +53,18 @@ fn vs(@location(0) corner: vec2<f32>,
   let worldHalfExtent = inSize * modelScale;
 
   // Place the particle center through the model transform, then push the
-  // billboard corner out along the camera-facing basis in world space.
+  // billboard corner out along this instance's own eye-facing basis.
   let center = (u.model * vec4<f32>(inPos, 1.0)).xyz;
-  let cornerWorld = center + (u.camRight.xyz * corner.x + u.camUp.xyz * corner.y) * worldHalfExtent;
+  let offsetWorld = spriteBillboardOffset(u.model, u.camPosModel.xyz, inPos, corner) * worldHalfExtent;
 
   let cClip = worldToClip(u.cam, center);
-  var kClip = worldToClip(u.cam, cornerWorld);
+  // The quad is tilted against the view plane, so its corners sit at
+  // different depths; projecting them independently draws a trapezoid
+  // and spikes a corner that crosses behind the eye across the screen.
+  // Sharing the centre's depth keeps the image a parallelogram on the
+  // centre and a corner is behind the eye only when the sprite is.
+  let dClip = u.cam.viewProj * vec4<f32>(offsetWorld, 0.0);
+  var kClip = vec4<f32>(cClip.xy + dClip.xy, cClip.z, cClip.w);
 
   // 0.16-NDC screen-size clamp, ported verbatim from the tool's dust pass.
   if (cClip.w > 0.0 && kClip.w > 0.0) {

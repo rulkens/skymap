@@ -190,16 +190,17 @@ export function createSelectionRingRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    pxPerRad: number,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
     scene?: OverlaySceneOcclusion,
   ): void {
     if (!device || !plainPipeline || !bindGroup || !cameraBuffer || !selectionBuffer) return;
     if (selection === null) return;
 
-    // Camera UBO: viewProj at [0..15], viewportPx at [16..17], pads zero
-    // by virtue of Float32Array zero-init.
+    // Camera UBO: viewProj at [0..15], viewportPx at [16..17], pxPerRad at
+    // [18], the pad zero by virtue of Float32Array zero-init.
     const camUni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(camUni, viewProj, viewportSize);
+    writeCameraPrefix(camUni, viewProj, viewportSize, pxPerRad);
     device.queue.writeBuffer(cameraBuffer, 0, camUni);
 
     const selUni = new Float32Array(SELECTION_UNIFORM_BYTES / 4);

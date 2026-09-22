@@ -501,6 +501,7 @@ export function createStructureMarkerRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    pxPerRad: number,
     fadeOpacity: number,
   ): void {
     if (
@@ -517,9 +518,9 @@ export function createStructureMarkerRenderer(
     if (currentMarkerCount === 0) return;
 
     // Write the 80-byte CameraUniforms prefix.  Same shape as markerLineRenderer.
-    // The two reserved pads (floats 18..19) stay zero via Float32Array zero-init.
+    // The reserved pad (float 19) stays zero via Float32Array zero-init.
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportSize);
+    writeCameraPrefix(uni, viewProj, viewportSize, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uni);
 
     // Per-frame fade.opacity write — same pattern as filamentRenderer.
@@ -598,14 +599,15 @@ export function createStructureMarkerRenderer(
     passEncoder: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    pxPerRad: number,
   ): void {
     if (!device || !ringPickPipeline || !instanceBuffer || !pickDummyFadeBindGroup) return;
     if (!pickCameraBuffer || !pickCameraBindGroup) return;
     if (currentMarkerCount === 0) return;
-    // Same prefix write as `draw`, into the pick buffer: the pads (floats
-    // 18..19) stay zero via Float32Array zero-init.
+    // Same prefix write as `draw`, into the pick buffer: the pad (float 19)
+    // stays zero via Float32Array zero-init.
     const uni = new Float32Array(CAMERA_UNIFORM_BYTES / 4);
-    writeCameraPrefix(uni, viewProj, viewportPx);
+    writeCameraPrefix(uni, viewProj, viewportPx, pxPerRad);
     device.queue.writeBuffer(pickCameraBuffer, 0, uni);
     passEncoder.setPipeline(ringPickPipeline);
     passEncoder.setBindGroup(0, pickCameraBindGroup);

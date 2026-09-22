@@ -325,6 +325,7 @@ export function createEngine(
     // phase before it reads any of these (`pickProgram` is `wireInput`).
     passes: [],
     computes: [],
+    planners: [],
     assetRows: [],
     fadeRows: [],
     label3DProducers: [],
@@ -528,6 +529,7 @@ export function createEngine(
       get timingService() {
         return state.gpu.timingService;
       },
+      requestRender: () => state.subsystems.scheduler.requestRender(),
       // `idle` is derived, not stored, from the wall-clock gap since the last frame,
       // so a sleeping render-on-demand loop reads "idle" rather than a stale fps.
       frameStats: (): FrameStats => ({
@@ -542,8 +544,9 @@ export function createEngine(
       // order is what says which pass that is.
       passOverrides: {
         allNames: [
+          // 'canvas': mono's only rig view — see timedSlotRowsOf.ts's identical note.
           ...FRAME_ORDER.filter((step) => step.kind === 'compute').map((step) =>
-            computeTimingSlotName(step.name),
+            computeTimingSlotName(step.name, 'canvas'),
           ),
           ...FRAME_ORDER_PASS_NAMES.filter(
             (name) =>

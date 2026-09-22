@@ -178,7 +178,7 @@ describe('StructureMarkerRenderer pick camera', () => {
       draw: vi.fn(),
     } as unknown as GPURenderPassEncoder;
 
-    renderer.pickRing(passEncoder, viewProj, viewportPx);
+    renderer.pickRing(passEncoder, viewProj, viewportPx, 1000);
 
     const pickCameraBuffer = buffersByLabel.get('structure-marker-pick-camera');
     const drawTimeBuffer = buffersByLabel.get('structure-marker-uniforms');

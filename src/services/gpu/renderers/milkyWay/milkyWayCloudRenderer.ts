@@ -226,27 +226,28 @@ export function createMilkyWayCloudRenderer(init: Init): MilkyWayCloudRenderer {
   // passes read the identical struct; only the viewport differs (the star pass
   // is sized to the reduced-resolution aggregate target).
   function writeUniforms(target: GPUBuffer, args: MilkyWayCloudDrawArgs): void {
-    const { vp, viewportPx, camRight, camUp, model, fadeAlpha, tuning } = args;
+    const { vp, viewportPx, pxPerRad, camPosModel, model, fadeAlpha, tuning } = args;
     const f32 = uniformScratch;
 
     // Pack io.wesl's Uniforms (byte offsets in the io.wesl header):
-    // viewProj 0..15, viewportPx 16..17, pad 18..19, model 20..35,
-    // camRight 36..39, camUp 40..43, params0 44..47,
+    // viewProj 0..15, viewportPx 16..17, pxPerRad 18, pad 19, model 20..35,
+    // camPosModel 36..39, reserved 40..43, params0 44..47,
     // params1 48..51 (starPxMin, starPxMax, starSizeScale, lodApparent).
-    writeCameraPrefix(f32, vp, viewportPx);
+    writeCameraPrefix(f32, vp, viewportPx, pxPerRad);
     // Explicit pad zeroing — this scratch is reused across frames, so the
-    // pads can't rely on zero-init the way a fresh Float32Array can.
-    f32[18] = 0;
+    // pad can't rely on zero-init the way a fresh Float32Array can.
     f32[19] = 0;
     f32.set(model, 20);
-    // camRight/camUp are vec4 (xyz + 0 pad) so each lands on a clean 16-byte slot.
-    f32[36] = camRight[0];
-    f32[37] = camRight[1];
-    f32[38] = camRight[2];
+    // camPosModel is a vec4 (the eye point + an unused w) so it lands on a
+    // clean 16-byte slot; 40..43 is the reserved slot the second basis vector
+    // used to hold, written zero because this scratch is reused across frames.
+    f32[36] = camPosModel[0];
+    f32[37] = camPosModel[1];
+    f32[38] = camPosModel[2];
     f32[39] = 0;
-    f32[40] = camUp[0];
-    f32[41] = camUp[1];
-    f32[42] = camUp[2];
+    f32[40] = 0;
+    f32[41] = 0;
+    f32[42] = 0;
     f32[43] = 0;
     // The look knobs are the caller's live `settings.milkyWay` values, so a
     // DebugPanel slider drag lands on the very next frame. Only the model

@@ -11,7 +11,7 @@
 //
 //   offset   0 : cam: CameraUniforms      (80 B shared prefix — viewProj
 //                                           0..63, viewportPx 64..71,
-//                                           _pad0 72..75, _pad1 76..79)
+//                                           pxPerRad 72..75, _pad0 76..79)
 //   offset  80 : schwarzschildRadiusM     f32  — r_s in metres
 //   offset  84 : innerRs                  f32  — emission annulus inner edge, r_s units
 //   offset  88 : outerRs                  f32  — emission annulus outer edge, r_s units

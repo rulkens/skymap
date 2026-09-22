@@ -182,15 +182,16 @@ export function createBodyGlintRenderer(
     count: number,
     viewProj: Float32Array,
     viewportPx: Vec2,
+    pxPerRad: number,
   ): void {
     // Clamp to the cap so an over-count caller draws MAX_GLINTS rather than off
     // the end of the buffer. Nothing to do for a zero-length batch.
     const n = Math.min(Math.max(count, 0), MAX_GLINTS);
     if (n === 0) return;
 
-    // uniformScratch[18..19] are CameraUniforms' named pads — never written, so
-    // they hold their construction-time zeros across frames.
-    writeCameraPrefix(uniformScratch, viewProj, viewportPx);
+    // uniformScratch[19] is CameraUniforms' named pad — never written, so it
+    // holds its construction-time zero across frames.
+    writeCameraPrefix(uniformScratch, viewProj, viewportPx, pxPerRad);
     device.queue.writeBuffer(uniformBuffer, 0, uniformScratch);
 
     // One upload of exactly the first `n` records (typed-array overload takes

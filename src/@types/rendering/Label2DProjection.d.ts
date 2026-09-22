@@ -16,4 +16,6 @@ export type Label2DProjection = {
    */
   readonly vpF32: Float32Array;
   readonly viewportPx: Vec2;
+  /** The drawn view's pixels per radian — the label shader's `cam.pxPerRad`. */
+  readonly pxPerRad: number;
 };

@@ -253,7 +253,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
   });
 
   // ── Scene-star / body-glint point pick pipeline (instanced billboards) ─────
-  // 20-float scratch: writeCameraPrefix fills [0..17]; [18..19] stay 0 pads.
+  // 20-float scratch: writeCameraPrefix fills [0..18]; [19] stays a 0 pad.
   // Shared across per-submit slots — writeBuffer copies it immediately, so
   // reusing the CPU scratch between slot uploads is safe.
   const pointUniformScratch = new Float32Array(POINT_UNIFORM_BYTES / 4);
@@ -403,7 +403,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
   }
 
   function drawPoints(pass: GPURenderPassEncoder, args: BodyPointPickArgs): void {
-    const { vp, viewportPx, points } = args;
+    const { vp, viewportPx, pxPerRad, points } = args;
     const n = points.length;
     if (n === 0) return;
 
@@ -413,7 +413,7 @@ export function createBodyPickRenderer(device: GPUDevice, reversedZ: boolean): B
     pointCursor += 1;
 
     // Own per-frame uniform (camera prefix only), written into this slot's buffer.
-    writeCameraPrefix(pointUniformScratch, vp, viewportPx);
+    writeCameraPrefix(pointUniformScratch, vp, viewportPx, pxPerRad);
     device.queue.writeBuffer(slot.uniformBuffer, 0, pointUniformScratch);
 
     // The glint variant carries a third `bandClass` u32 per instance (stride 20);

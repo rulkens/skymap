@@ -39,6 +39,7 @@ export type SelectionRingRenderer = {
     pass: GPURenderPassEncoder,
     viewProj: Float32Array,
     viewportSize: Vec2,
+    pxPerRad: number,
     selection: { worldPos: Readonly<Vec3>; ringRadiusPx: number; alpha: number } | null,
     scene?: OverlaySceneOcclusion,
   ): void;

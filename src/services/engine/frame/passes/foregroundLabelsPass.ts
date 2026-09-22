@@ -47,9 +47,9 @@ export const foregroundLabelsPass: ContentPass = {
     // Lines before captions, so the glyphs composite OVER the connector where
     // they meet. A null line renderer (bootstrap gap) just skips them.
     if (lineRenderer !== null) {
-      lineRenderer.draw(pass, vpF32, viewportPx, scene);
+      lineRenderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, scene);
     }
-    renderer.draw(pass, vpF32, viewportPx, scene);
+    renderer.draw(pass, vpF32, viewportPx, ctx.drawPxPerRad, scene);
   },
 
   // Pick aspect — grace-padded ink boxes for the drawn captions, stamped with

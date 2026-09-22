@@ -61,7 +61,8 @@ import { buildSegmentInstances, FLOATS_PER_SEGMENT } from './buildSegmentInstanc
 //
 //   offset  0..63 : viewProj       mat4x4<f32>   (CameraUniforms.viewProj)
 //   offset 64..71 : viewportPx     vec2<f32>     (CameraUniforms.viewportPx)
-//   offset 72..79 : _pad0, _pad1   2 × f32       (CameraUniforms reserved)
+//   offset 72..75 : pxPerRad       f32           (CameraUniforms focal term)
+//   offset 76..79 : _pad0          f32           (CameraUniforms reserved)
 //   offset 80..83 : halfWidthPx    f32
 //   offset 84..87 : intensityScale f32
 //   offset 88..95 : _pad0, _pad1   2 × f32       (vec3 alignment pad)
@@ -241,6 +242,7 @@ export function createFilamentRenderer(
     pass: GPURenderPassEncoder,
     viewProj: Mat4,
     viewportPx: Vec2,
+    pxPerRad: number,
     halfWidthPx: number,
     intensityScale: number,
     fadeOpacity: number,
@@ -258,12 +260,12 @@ export function createFilamentRenderer(
     // Pack the 128-byte Uniforms struct. Byte layout is documented on
     // the UNIFORM_BYTES const at module top — keep slot indices here
     // in sync with that table (mat4 occupies f32[0..15]; viewportPx at
-    // 16..17; the two reserved pads at 18..19; halfWidthPx at 20;
+    // 16..17; pxPerRad at 18 and the reserved pad at 19; halfWidthPx at 20;
     // intensityScale at 21; the alignment pads at 22..23; baseTint at
     // 24..26; hotTint at 28..30).
     const buf = new ArrayBuffer(UNIFORM_BYTES);
     const f32 = new Float32Array(buf);
-    writeCameraPrefix(f32, viewProj, viewportPx);
+    writeCameraPrefix(f32, viewProj, viewportPx, pxPerRad);
     f32[20] = halfWidthPx;
     // Clamp to [0,1] at point of use: a negative value would drive a negative
     // additive-blend alpha (undefined). The store holds raw intent.

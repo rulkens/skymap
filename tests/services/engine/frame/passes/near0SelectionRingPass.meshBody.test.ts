@@ -166,7 +166,13 @@ function drawAt(bodyId: string, radiiFromCentre: number) {
     // The mesh's origin under its own MVP (the first 16 floats of the packed
     // uniforms) — where the body is actually drawn.
     meshClip: clipOf((meshCall[2] as Float32Array).subarray(0, 16), [0, 0, 0]),
-    ringCall: ringCall as [unknown, Float32Array, unknown, { worldPos: Vec3; alpha: number }],
+    ringCall: ringCall as [
+      unknown,
+      Float32Array,
+      unknown,
+      unknown,
+      { worldPos: Vec3; alpha: number },
+    ],
     captionClip: clipOf(near0LabelProjection(ctx).vpF32, camRelAnchor),
   };
 }
@@ -195,7 +201,7 @@ describe('near0SelectionRingPass over a mesh body', () => {
     // any real divergence here is a broken seam, not rounding.
     it(`centres the ${id}'s ring and caption on the pixel the mesh draws its origin at`, () => {
       const { meshClip, ringCall, captionClip } = drawAt(id, RING_VISIBLE_RADII);
-      expect(offsetPx(clipOf(ringCall[1], ringCall[3].worldPos), meshClip)).toBeLessThan(1);
+      expect(offsetPx(clipOf(ringCall[1], ringCall[4].worldPos), meshClip)).toBeLessThan(1);
       expect(offsetPx(captionClip, meshClip)).toBeLessThan(1);
     });
 
@@ -205,7 +211,7 @@ describe('near0SelectionRingPass over a mesh body', () => {
     // ring is discarded.
     it(`keeps the ${id}'s ring centre inside the NEAR0 frustum`, () => {
       const { ringCall } = drawAt(id, RING_VISIBLE_RADII);
-      const ringClip = clipOf(ringCall[1], ringCall[3].worldPos);
+      const ringClip = clipOf(ringCall[1], ringCall[4].worldPos);
       expect(ringClip[2]).toBeGreaterThanOrEqual(0);
       expect(ringClip[2]).toBeLessThanOrEqual(ringClip[3]);
     });
@@ -217,7 +223,7 @@ describe('near0SelectionRingPass over a mesh body', () => {
     it(`draws no ring at the ${id}'s own standoff, where the body overflows the screen`, () => {
       const body = SCENE_MESH_BODIES.find((b) => b.id === id)!;
       expect(drawAt(id, body.standoffRadii).ringCall).toBeUndefined();
-      expect(drawAt(id, RING_VISIBLE_RADII).ringCall[3].alpha).toBe(1);
+      expect(drawAt(id, RING_VISIBLE_RADII).ringCall[4].alpha).toBe(1);
     });
   }
 });

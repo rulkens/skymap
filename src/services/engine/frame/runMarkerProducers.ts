@@ -5,13 +5,13 @@
  * `@builtin(instance_index)` through `byCategory(cat)[structureIndex]`).
  */
 
-import type { EngineState } from '../../../@types/engine/state/EngineState';
+import type { PassState } from '../../../@types/engine/frame/PassState';
 import type { FrameView } from '../../../@types/engine/frame/FrameView';
 import type { StructureMarkerDescriptor } from '../../../@types/rendering/StructureMarkerDescriptor';
 import { MARKER_PRODUCERS } from '../presentation/markerProducers';
 
 export function runMarkerProducers(
-  state: EngineState,
+  state: PassState,
   ctx: FrameView,
 ): readonly StructureMarkerDescriptor[] {
   const out: StructureMarkerDescriptor[] = [];

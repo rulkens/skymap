@@ -6,12 +6,20 @@
  */
 
 import type { CubeFace } from '../../@types/rendering/CubeFace';
+import type { CubemapCaptureKey } from '../../@types/rendering/CubemapCaptureKey';
 import type { ViewSpec } from '../../@types/engine/frame/ViewSpec';
 import { FACE_VIEW_ROTATIONS } from '../../data/rendering/cubeFaceBases';
+import { captureFaceViewId } from './captureFaceViewId';
 import { symmetricFrustum } from './symmetricFrustum';
 
-export function faceViewSpec(face: CubeFace, faceSizePx: number, viewSlotBase: number): ViewSpec {
+export function faceViewSpec(
+  key: CubemapCaptureKey,
+  face: CubeFace,
+  faceSizePx: number,
+  viewSlotBase: number,
+): ViewSpec {
   return {
+    id: captureFaceViewId(key, face),
     rotation: FACE_VIEW_ROTATIONS[face]!,
     eyeOffsetMpc: [0, 0, 0],
     frustum: symmetricFrustum(Math.PI / 2, 1),

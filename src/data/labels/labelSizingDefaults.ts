@@ -9,3 +9,14 @@
 export const LABEL_WORLD_EM_MPC_DEFAULT = 0.01;
 export const LABEL_MIN_PX_DEFAULT = 8;
 export const LABEL_MAX_PX_DEFAULT = 64;
+
+/**
+ * `tan(30°)`, folded into the em-to-pixel projection so a label keeps the size
+ * it had before `worldLenToPx` gained the camera prefix's `pxPerRad` focal
+ * term — every producer's `worldEmMpc` was tuned by eye against the old
+ * fov-blind conversion, and `worldEmMpc` is a physical length elsewhere
+ * (`produceSceneBodyCaptions` derives a diameter from it), so the factor
+ * belongs here rather than in the producers. Mirrored as `EM_PX_RETUNE` in
+ * `labels/vertex.wesl` — the two must stay equal.
+ */
+export const LABEL_EM_PX_RETUNE = 0.57735;
