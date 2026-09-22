@@ -17,6 +17,7 @@ import type { SceneBody } from '../../scene/SceneBody';
 import type { RenderTargets } from '../../rendering/RenderTargets';
 import type { FocusUniformsValue } from '../../rendering/FocusUniformsValue';
 import type { BodyPoseProvider } from '../camera/BodyPoseProvider';
+import type { Plans } from './Plans';
 
 /** The ready case: every per-frame derived value is non-null. */
 export type ReadyFrameContext = {
@@ -98,6 +99,12 @@ export type ReadyFrameContext = {
    * own subsystems: the sky-capture scheduler reads this. See `LayerFrameVote`.
    */
   layersSettling: boolean;
+  /**
+   * This frame's `plan` rows' answers, one store shared by every `FrameView`
+   * (`createPlans()`, minted once by `deriveFrameContext`). `runPlanSteps`
+   * writes it before any GPU step of its target reads it; a miss throws.
+   */
+  plans: Plans;
   /**
    * Live pointer position in texture pixels — `state.picking.cursorTexPx`
    * forwarded, so a pass never reaches back into the picking bag `PassState`

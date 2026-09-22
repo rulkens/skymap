@@ -11,6 +11,7 @@ import { packSelection } from '../../../../src/data/selectionEncoding';
 import { BiasMode } from '../../../../src/data/galaxyCatalog/biasMode';
 import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { createPlans } from '../../../../src/services/engine/frame/createPlans';
 import { deriveView } from '../../../../src/services/engine/frame/deriveView';
 import { faceViewSpec } from '../../../../src/utils/camera/faceViewSpec';
 import { IDENTITY_MAT3 } from '../../../../src/utils/math/identityMat3';
@@ -22,6 +23,7 @@ import { foregroundChainOrder } from '../../../../src/services/engine/frame/slab
 import { bodyRowSlabs } from '../../../../src/services/engine/frame/bodyRowSlabs';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
+import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import { proceduralDisksPass } from '../../../../src/layers/galaxyCatalog/passes/proceduralDisksPass';
 import { texturedDisksPass } from '../../../../src/layers/galaxyCatalog/passes/texturedDisksPass';
@@ -325,6 +327,18 @@ function makeCam(): OrbitCamera {
 }
 
 /** Build a complete RenderFrameInput fixture with sensible defaults. */
+// SCENE's `plan` row names 'structure-markers' by string, not by object
+// identity (`Plans` keys on `planner.name`) — a stub with an empty result is
+// enough to satisfy `runPlanSteps`'s "every plan row names a registered
+// planner" check without dragging in `produceStructureMarkers`'s own state.
+const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
+  {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: () => ({ value: [], awake: false, settling: false }),
+  },
+];
+
 function makeInput(
   overrides: { settings?: Partial<any>; disabledPasses?: Record<string, boolean> } = {},
 ) {
@@ -432,6 +446,7 @@ function makeInput(
     positionedStars: [] as never[],
     // `runFrame` stamps this after every Layer's frame hook has voted.
     layersSettling: false,
+    plans: createPlans(),
     cursorTexPx: null,
     nowMs: 0,
     simDays: 0,
@@ -626,6 +641,7 @@ function makeInput(
           texturedDisksPass(galaxyRuntime),
         ],
         computes: CORE_COMPUTES,
+        planners: STUB_PLANNERS,
       } as never,
       device,
       context,

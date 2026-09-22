@@ -24,6 +24,7 @@ import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 function fakeCompute(encodeCompute: () => void, dispatches: boolean): ContentCompute {
   return {
     name: 'flow',
+    scope: 'once',
     encode: (_encoder, _ctx, _state, claimTimestampWrites) => {
       if (!dispatches) return;
       claimTimestampWrites();

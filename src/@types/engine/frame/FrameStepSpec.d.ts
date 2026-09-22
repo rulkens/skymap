@@ -12,10 +12,12 @@ import type { CaptureStepSpec } from './CaptureStepSpec';
 import type { CompositeStepSpec } from './CompositeStepSpec';
 import type { ComputeStepSpec } from './ComputeStepSpec';
 import type { ForegroundStepSpec } from './ForegroundStepSpec';
+import type { PlanStepSpec } from './PlanStepSpec';
 import type { RenderStepSpec } from './RenderStepSpec';
 import type { TonemapStepSpec } from './TonemapStepSpec';
 
 export type FrameStepSpec =
+  | PlanStepSpec
   | ComputeStepSpec
   | CaptureStepSpec
   | RenderStepSpec

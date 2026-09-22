@@ -15,8 +15,10 @@ import { ToneMapCurve } from '../../../../src/data/toneMapCurve';
 import { DEFAULT_GALAXY_PROVENANCE } from '../../../../src/layers/galaxyCatalog/state/defaults';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { createPlans } from '../../../../src/services/engine/frame/createPlans';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
+import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
 import { galaxyPointSpritesPass } from '../../../../src/layers/galaxyCatalog/passes/galaxyPointSpritesPass';
 import type { GalaxyCatalogRuntime } from '../../../../src/layers/galaxyCatalog/@types/GalaxyCatalogRuntime';
 import { makeCosmoSlab } from '../../../fixtures/makeCosmoSlab';
@@ -210,6 +212,17 @@ function makeCam(): OrbitCamera {
  * Milky-Way cloud's three rows are enabled.  Every other optional
  * renderer / slot is null so its pass's `enabled()` gate reports false.
  */
+// SCENE's `plan` row names 'structure-markers' by string, not by object
+// identity — a stub with an empty result satisfies `runPlanSteps` without
+// dragging in `produceStructureMarkers`'s own state (see renderFrame.test.ts).
+const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
+  {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: () => ({ value: [], awake: false, settling: false }),
+  },
+];
+
 function makeMinimalInputWithTiming(timingService: GpuTimingService): {
   input: RenderFrameInput;
   beginCalls: Beg[];
@@ -260,6 +273,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
     // Frame-wide: which targets hold this frame's content — the executor
     // unions into this as it opens each render step; a later pass reads it.
     renderedTargets,
+    plans: createPlans(),
   };
   const ctx = {
     snapshot: snapshotFields,
@@ -400,6 +414,7 @@ function makeMinimalInputWithTiming(timingService: GpuTimingService): {
         } as unknown as GalaxyCatalogRuntime),
       ],
       computes: CORE_COMPUTES,
+      planners: STUB_PLANNERS,
     } as never,
     device,
     context,

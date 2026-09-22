@@ -26,6 +26,7 @@
 import type { ContentPass } from '../../../../@types/engine/frame/ContentPass';
 import { fadeBand } from '../../../../utils/math/fadeBand';
 import { SCALE_FADE_BANDS } from '../../presentation/scaleFadeBands';
+import { structureMarkersPlanner } from '../planners/structureMarkersPlanner';
 
 export const structureMarkersPass: ContentPass = {
   name: 'structure-markers',
@@ -40,7 +41,7 @@ export const structureMarkersPass: ContentPass = {
     return fadeBand(SCALE_FADE_BANDS.surveyDeepZoom, camDistMpc) > 0;
   },
 
-  draw(pass, view, _ctx, state) {
+  draw(pass, view, ctx, state) {
     // fadeOpacity is the deep-zoom survey fade: marker rings + halos ride
     // the same surveyDeepZoom band as the survey points, dissolving on the
     // descent into the solar system so cosmic-scale annotations (all
@@ -57,6 +58,13 @@ export const structureMarkersPass: ContentPass = {
     // the additive target: pure GPU cost for zero contribution, and the
     // fade reaches 0 continuously before the skip engages, so no pop.
     if (surveyFade === 0) return;
+    // Upload THIS view's planned markers before the draw — one instance
+    // buffer is correct only because a `perView` section is its own submit
+    // (`renderFrame`'s view-identity batching), the same contract the
+    // compositor's per-key uniform rides.
+    state.gpu.structureMarkerRenderer!.setMarkers(
+      ctx.snapshot.plans.get(structureMarkersPlanner, ctx),
+    );
     state.gpu.structureMarkerRenderer!.draw(pass, view.vp, view.viewportPx, surveyFade);
   },
 

@@ -8,7 +8,7 @@
 
 import { runFrame } from '../frame/runFrame';
 import { checkFrameOrder } from '../frame/checkFrameOrder';
-import { FRAME_ORDER } from '../frame/frameOrder';
+import { VIEW_RIGS } from '../../../data/rendering/viewRigs';
 import { CAMERA_DRIVERS } from '../camera/cameraDrivers';
 import { goLiveNowAction } from '../../../state/time/goLiveNowAction';
 import { selectTimeState } from '../../../state/time/selectors';
@@ -25,9 +25,10 @@ export async function startLoop(state: EngineState, deps: BootstrapDeps): Promis
 
   // Against the ASSEMBLED rows: a freshly derived table would be a second answer.
   checkFrameOrder(
-    FRAME_ORDER,
+    VIEW_RIGS[state.viewRig].program,
     state.passes,
     state.computes,
+    state.planners,
     // Non-null: `runBootstrapPhases` awaits `initGpu`, which assigns it, first.
     state.gpu.renderTargets!.specs,
   );

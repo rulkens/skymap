@@ -325,6 +325,7 @@ export function createEngine(
     // phase before it reads any of these (`pickProgram` is `wireInput`).
     passes: [],
     computes: [],
+    planners: [],
     assetRows: [],
     fadeRows: [],
     label3DProducers: [],

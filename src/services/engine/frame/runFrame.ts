@@ -25,7 +25,6 @@ import { mainViewSpec } from '../../../utils/camera/mainViewSpec';
 import { ORIENTATION_FRAMES } from '../../../data/orientation/orientationFrames';
 import { resizeCanvasToDisplay } from '../../gpu/device';
 import { shouldKeepTicking } from '../helpers/shouldKeepTicking';
-import { runMarkerProducers } from './runMarkerProducers';
 import { runLabel3DProducers } from './runLabel3DProducers';
 import { deriveFrameContext } from './frameContext';
 import { deriveView } from './deriveView';
@@ -351,11 +350,6 @@ export function runFrame(state: EngineState, deps: RunFrameDeps, nowMs: number):
   // header states the `views[0]`-is-anchor contract both calls share.
   const starFadeAnimating = advanceStarFades(state, views);
   state.gpu.starCatalogRenderer?.setFrameCut(computeStarCut(state, views));
-
-  // Before the GPU dispatch: uploads the instance buffer `structureMarkersPass` reads.
-  if (state.gpu.structureMarkerRenderer !== null) {
-    state.gpu.structureMarkerRenderer.setMarkers(runMarkerProducers(state, canvas));
-  }
 
   renderFrame({
     canvas,

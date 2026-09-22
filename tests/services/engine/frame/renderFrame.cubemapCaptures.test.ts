@@ -47,8 +47,10 @@ vi.mock('../../../../src/services/engine/frame/finishCubemapCapture', () => ({
 }));
 
 import { renderFrame } from '../../../../src/services/engine/frame/renderFrame';
+import { createPlans } from '../../../../src/services/engine/frame/createPlans';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { createDisabledGpuTimingService } from '../../../../src/services/gpu/timing/gpuTimingService';
+import type { ContentPlanner } from '../../../../src/@types/engine/frame/ContentPlanner';
 import { SGR_A_STAR_ANCHOR } from '../../../../src/data/bodies/sceneSgrAStar';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import {
@@ -68,6 +70,16 @@ import type { SkyCaptureKey } from '../../../../src/@types/rendering/SkyCaptureK
 
 /** Every sky row's target id, so the mock serves whichever row bakes. */
 const CAPTURE_TARGET_IDS = SKY_CAPTURE_KEYS.map((key) => CUBEMAP_CAPTURES[key].target);
+
+// SCENE's `plan` row names 'structure-markers' by string — a stub with an
+// empty result satisfies `runPlanSteps` without the marker producers' state.
+const STUB_PLANNERS: readonly ContentPlanner<unknown>[] = [
+  {
+    name: 'structure-markers',
+    scope: 'perView',
+    plan: () => ({ value: [], awake: false, settling: false }),
+  },
+];
 
 /** Every program `executeFrame` walked this frame: one per scheduled face, then the frame's own. */
 function programs(): readonly (readonly FrameStep[])[] {
@@ -112,6 +124,7 @@ function makeState(overrides: Partial<EngineState> = {}): EngineState {
     cubemapCaptures: makeCubemapCaptureRuntimes(),
     contentVersion: 0,
     passes: CONTENT_PASSES,
+    planners: STUB_PLANNERS,
     ...overrides,
   } as unknown as EngineState;
 }
@@ -149,6 +162,7 @@ function makeCtx(
       // Frame-wide: which targets hold this frame's content — the executor
       // unions into this as it opens each render step.
       renderedTargets: new Set<string>(),
+      plans: createPlans(),
     },
     drawCamPos,
     // Past the foreground cull, so `bodyRowSlabs`' insideAtmosphere lookup

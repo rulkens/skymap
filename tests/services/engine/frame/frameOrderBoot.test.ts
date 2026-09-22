@@ -14,6 +14,8 @@ import { checkFrameOrder } from '../../../../src/services/engine/frame/checkFram
 import { FRAME_ORDER } from '../../../../src/services/engine/frame/frameOrder';
 import { CONTENT_PASSES } from '../../../../src/services/engine/frame/passes';
 import { CORE_COMPUTES } from '../../../../src/services/engine/frame/computes';
+import { CORE_PLANNERS } from '../../../../src/services/engine/frame/planners';
+import { VIEW_RIGS } from '../../../../src/data/rendering/viewRigs';
 import { composeRenderTargetRows } from '../../../../src/services/engine/layer/composeRenderTargetRows';
 import { APP_COMPOSITION } from '../../../../src/compositions/app';
 
@@ -29,7 +31,13 @@ describe('checkFrameOrder — boot', () => {
       APP_COMPOSITION.layers.map((layer) => layer.targets ?? []),
     );
     expect(() =>
-      checkFrameOrder(FRAME_ORDER, CONTENT_PASSES, CORE_COMPUTES, targets),
+      checkFrameOrder(
+        VIEW_RIGS.mono.program,
+        CONTENT_PASSES,
+        CORE_COMPUTES,
+        CORE_PLANNERS,
+        targets,
+      ),
     ).not.toThrow();
   });
 

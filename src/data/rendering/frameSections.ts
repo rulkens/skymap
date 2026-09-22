@@ -78,6 +78,10 @@ export const PRELUDE: FrameSection = {
 export const SCENE: FrameSection = {
   scope: 'perView',
   steps: [
+    // The section's plan row, always first (`checkFrameOrder`'s boot rule):
+    // this view's markers, sized and culled from its own eye, before its
+    // first GPU step opens (`runPlanSteps`).
+    { kind: 'plan', name: 'structure-markers' },
     // The half-res scalar-volume raymarch into its own offscreen. It is merged
     // into HDR by the `volume-upsample` LAYER inside the hdr COSMO step below,
     // never by a whole-texture composite — so there is no `volume→hdr` line here,
