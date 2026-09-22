@@ -23,8 +23,8 @@ export function decodeStarFocusId(
       ? { type: 'starCatalog', source: Source.GaiaStars, index: Number(rest) }
       : null;
   }
-  for (const [source, seeds] of SEEDED_STAR_CATALOGS_BY_SOURCE) {
-    const index = seedIndexOfBody(rest, seeds);
+  for (const [source, row] of SEEDED_STAR_CATALOGS_BY_SOURCE) {
+    const index = seedIndexOfBody(rest, row.stars);
     if (index >= 0) return { type: 'starCatalog', source, index };
   }
   return null;

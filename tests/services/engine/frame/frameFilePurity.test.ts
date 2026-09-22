@@ -54,7 +54,7 @@ const ALLOWED: Readonly<Record<string, number>> = {
   'frame/sceneOccluderSpheres': 1,
   'frame/slabs': 18,
   'frame/visibleSlabBodies': 3,
-  'frame/visibleStars': 1,
+  'frame/visibleStars': 0,
   'frame/passes/bodyGlintsPass': 8,
   'frame/passes/cloudShellPass': 1,
   'frame/passes/earthPass': 4,

@@ -50,10 +50,10 @@ import {
   PICK_PASS_U32_INDEX,
   AGG_INTENSITY_CAP_FLOAT_INDEX,
   PX_PER_RAD_FLOAT_INDEX,
-} from '../../../../../src/layers/starCatalog/render/starCatalogLayout';
+} from '../../../../src/layers/starCatalog/render/starCatalogLayout';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(here, '../../../../..');
+const repoRoot = resolve(here, '../../../..');
 const ioWeslPath = resolve(repoRoot, 'src/services/gpu/shaders/starCatalog/io.wesl');
 const layoutPath = resolve(repoRoot, 'src/layers/starCatalog/render/starCatalogLayout.ts');
 

@@ -16,6 +16,8 @@ import { ORBITAL_ELEMENTS } from './orbitalElements';
 import { SCENE_ANCHORS } from './sceneAnchors';
 import { SCENE_MESH_BODIES } from './sceneMeshBodies';
 
+// Re-derives the same id set `coreTrailElements.ts` computes; both are leaf
+// data modules, so sharing would add an edge rather than remove duplication.
 const MESH_BODY_IDS = new Set(SCENE_MESH_BODIES.map((body) => body.id));
 const NON_MESH_ORBITAL_ELEMENTS = ORBITAL_ELEMENTS.filter((el) => !MESH_BODY_IDS.has(el.id));
 

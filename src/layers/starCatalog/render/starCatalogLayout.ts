@@ -16,7 +16,7 @@
  * loop, so growing a `NodeParams` field meant editing three sites in lockstep
  * with nothing to catch a drift — the exact bug-class `selectionEncoding`'s
  * parity test guards against, applied to the star layout here (see
- * `tests/services/gpu/renderers/starCatalog/nodeParamsLayout.test.ts`).
+ * `tests/layers/starCatalog/render/nodeParamsLayout.test.ts`).
  *
  * Both renderers now import the constants and `writeStarNodeParams` from here and
  * keep their own buffers; only the layout knowledge is shared.

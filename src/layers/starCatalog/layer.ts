@@ -46,10 +46,8 @@ export const starCatalogLayer = defineLayer({
   ],
   assets: starCatalogAssetRows,
   fades: starCatalogFadeRows,
-  guides: (runtime) => ({
-    screenLabels: [
-      { slab: NEAR0, id: 'starCaptions', produceLabels: produceStarCaptions(runtime) },
-    ],
+  guides: () => ({
+    screenLabels: [{ slab: NEAR0, id: 'starCaptions', produceLabels: produceStarCaptions() }],
     orbitTrails: S_STAR_ORBITAL_ELEMENTS,
   }),
   selection: (runtime) => [starCatalogSelectionRow(runtime)],

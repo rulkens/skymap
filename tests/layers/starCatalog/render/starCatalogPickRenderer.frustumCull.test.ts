@@ -23,11 +23,11 @@
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
-import { createStarCatalogPickRenderer } from '../../../../../src/layers/starCatalog/render/starCatalogPickRenderer';
-import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
-import { Source } from '../../../../../src/data/sources';
-import type { StarCatalogPickResources } from '../../../../../src/layers/starCatalog/@types/StarCatalogPickResources';
-import type { StarCatalogPickDrawArgs } from '../../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
+import { createStarCatalogPickRenderer } from '../../../../src/layers/starCatalog/render/starCatalogPickRenderer';
+import { frustumPlanesFromViewProj } from '../../../../src/utils/camera/frustumPlanesFromViewProj';
+import { Source } from '../../../../src/data/sources';
+import type { StarCatalogPickResources } from '../../../../src/layers/starCatalog/@types/StarCatalogPickResources';
+import type { StarCatalogPickDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogPickDrawArgs';
 
 // A GPU device stub: every `create*` returns a plausibly-shaped stand-in and
 // `queue.writeBuffer` is spied. Buffers carry their `label` so a test can prove

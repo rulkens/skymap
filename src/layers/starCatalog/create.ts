@@ -8,7 +8,6 @@
  */
 
 import type { LayerCoreDeps } from '../../@types/engine/layer/LayerCoreDeps';
-import type { SeededStarCatalogId } from '../../@types/data/starCatalog/SeededStarCatalogId';
 import type { StarCatalogFacts } from './@types/StarCatalogFacts';
 import type { StarCatalogRuntime } from './@types/StarCatalogRuntime';
 
@@ -18,6 +17,7 @@ import { CONST_J2000 } from '../../data/time/constJ2000';
 import { deriveBodyStates } from '../../services/engine/frame/deriveBodyStates';
 import { visibleStars } from '../../services/engine/frame/visibleStars';
 import { SEEDED_STAR_CATALOGS } from '../../data/bodies/seededStarCatalogs';
+import { SEEDED_STAR_CATALOGS_BY_SOURCE } from '../../data/bodies/seededStarCatalogsBySource';
 
 import { createStarCatalogRenderer } from './render/starCatalogRenderer';
 import { createStarCatalogPickRenderer } from './render/starCatalogPickRenderer';
@@ -84,9 +84,8 @@ export function create(deps: LayerCoreDeps<StarCatalogFacts>): StarCatalogRuntim
   // The seeded catalogs ship no `.bin`, so there is no async commit to carry
   // the usual count pulse — report each here so the Stars panel's count
   // chips light up for them too.
-  for (const [source, entry] of STAR_CATALOG_SOURCE_ROWS) {
-    if (entry.binBaseName !== null) continue;
-    deps.reportSourceCount(source, SEEDED_STAR_CATALOGS[entry.id as SeededStarCatalogId].length);
+  for (const [source, row] of SEEDED_STAR_CATALOGS_BY_SOURCE) {
+    deps.reportSourceCount(source, row.stars.length);
   }
 
   const famousStarsMeta = createFamousStarsMetaSlot(deps);

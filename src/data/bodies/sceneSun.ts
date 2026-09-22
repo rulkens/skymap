@@ -1,11 +1,9 @@
 /**
- * sceneSun — the Sun as a drawn record: its own one-row seed table, the
- * `SEEDED_STAR_CATALOGS` entry its registry row indexes into.
- *
- * Hand-authored rather than derived from the famous-star seed table, because
- * the Sun is its own source: sharing the map's table is what made every gate
- * the table touched need an `id === 'sun'` exemption. Its position is not here
- * — `SCENE_ANCHORS` roots it at the heliocentric origin, like every other star.
+ * sceneSun — the Sun's own one-row seed table (the `SEEDED_STAR_CATALOGS`
+ * entry its registry row indexes into), hand-authored rather than merged
+ * into the famous-star table — sharing it once forced every gate the table
+ * touched to carry an `id === 'sun'` exemption. Position lives in
+ * `SCENE_ANCHORS` (heliocentric origin), not here.
  */
 
 import { SCALE_UNITS } from '../scaleUnits';

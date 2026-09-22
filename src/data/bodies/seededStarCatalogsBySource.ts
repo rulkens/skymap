@@ -1,28 +1,24 @@
 /**
- * SEEDED_STAR_CATALOGS_BY_SOURCE — each seeded star catalog's table keyed by the
- * source code a pick and a `starCatalog` ref name it with.
- *
- * One table per source, NEVER merged: a ref's `index` indexes ONE of them, so
- * concatenating would renumber every famous star and break every saved `star-`
- * link. The single place a star's source code and its seed table meet — the
- * Layer's selection row and both `star-` URL helpers read it.
+ * SEEDED_STAR_CATALOGS_BY_SOURCE — the single place a seeded star's source
+ * code, seed-table id and star table meet. One row per source, NEVER merged:
+ * a ref's `index` indexes ONE table, so concatenating would renumber every
+ * famous star and break every saved `star-` link.
  */
 
 import { SEEDED_STAR_CATALOGS } from './seededStarCatalogs';
 import { SOURCE_ENTRIES } from '../sourceEntries';
 import type { SeededStarCatalogId } from '../../@types/data/starCatalog/SeededStarCatalogId';
+import type { SeededStarCatalogRow } from '../../@types/data/starCatalog/SeededStarCatalogRow';
 import type { StarCatalogSourceType } from '../../@types/data/starCatalog/StarCatalogSourceType';
-import type { StarBody } from '../../@types/scene/StarBody';
 
 export const SEEDED_STAR_CATALOGS_BY_SOURCE: ReadonlyMap<
   StarCatalogSourceType,
-  readonly StarBody[]
+  SeededStarCatalogRow
 > = new Map(
   SOURCE_ENTRIES.filter((entry) => entry.type === 'starCatalog' && entry.binBaseName === null).map(
-    (entry) =>
-      [
-        entry.code as StarCatalogSourceType,
-        SEEDED_STAR_CATALOGS[entry.id as SeededStarCatalogId],
-      ] as const,
+    (entry) => {
+      const id = entry.id as SeededStarCatalogId;
+      return [entry.code as StarCatalogSourceType, { id, stars: SEEDED_STAR_CATALOGS[id] }] as const;
+    },
   ),
 );

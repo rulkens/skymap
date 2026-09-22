@@ -1,18 +1,9 @@
 /**
- * starCatalogSlot — factory for one survey star-catalog's asset slot.
- *
- * ONE factory serves EVERY `starCatalog` row of the registry, parameterized
- * by `source` — the same reuse seam the fetcher (`starCatalogFetcher`) and the
- * request (`StarCatalogReq`) draw along their `source` dimension. `create`
- * builds `renderer` before minting any slot, so commit needs no null-guard.
- *
- * On commit, hands the decoded `StarCatalog` to `renderer.upload`, keyed by
- * the source code. The renderer commits the records blob to a per-source GPU
- * storage buffer once and keeps the octree CPU-side; the star layer walks
- * each committed catalog's octree per frame (`loadedCatalogs`). No fade
- * replay: unlike the volume/galaxy layers, the star layer owns its own
- * distance-crossfade band (registry `crossfadePc`) rather than the
- * intent → fade bridge, so the commit registers data and nothing else.
+ * starCatalogSlot — factory for one survey star-catalog's asset slot, reused
+ * across every `starCatalog` registry row (parameterized by `source`).
+ * Commit hands the decoded `StarCatalog` to `renderer.upload`; unlike the
+ * volume/galaxy layers there is no fade replay — the star layer's own
+ * distance crossfade (registry `crossfadePc`) already covers that.
  */
 import { createAssetSlot } from '../../../services/loading/AssetSlot';
 import { starCatalogFetcher } from './starCatalogFetcher';
@@ -34,9 +25,8 @@ export function createStarCatalogSlot(
     name: `starCatalog:${id}`,
     fetch: starCatalogFetcher,
     commit: async (catalog) => {
-      // Per-source records buffer committed once; the octree stays CPU-side for
-      // the star layer to walk each frame. Replaces any previous upload for the
-      // same source (a tier reload re-commits the new-resolution catalog).
+      // Replaces any previous upload for this source — a tier reload
+      // re-commits the new-resolution catalog.
       renderer.upload(source, catalog);
     },
   });

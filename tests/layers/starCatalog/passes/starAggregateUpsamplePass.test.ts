@@ -1,17 +1,14 @@
 /**
  * starAggregateUpsamplePass — the HDR composite that reads the half-res
- * `star-aggregates` offscreen and adds the knee'd result into HDR. Mirrors
- * `volumeUpsamplePass.test.ts`: the gate delegates to `starCatalogVisible`
- * (shared with the aggregate producer, so no stale-offscreen composite), and
+ * `star-aggregates` offscreen and adds the knee'd result into HDR. Pins that
  * `draw` calls `starAggregateUpsample.draw` with the HDR pass + the
- * 'star-aggregates' offscreen view.
+ * 'star-aggregates' offscreen view; the shared gate is `starSourcesInBand`'s
+ * coverage (`starSourcesInBand.test.ts`).
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregateUpsamplePass } from '../../../../src/layers/starCatalog/passes/starAggregateUpsamplePass';
-import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starCatalogPass';
-import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
 import { Source } from '../../../../src/data/source';
 import { GAIA_STARS_ENTRY } from '../../../../src/layers/starCatalog/sources/gaia-stars';
@@ -87,26 +84,6 @@ function makePassState(): PassState {
 const inBand: Vec3 = [0, 0, (inner + (outer - inner) * 0.5) * PC_TO_MPC];
 
 describe('starAggregateUpsamplePass', () => {
-  it('shares the star visibility gate outcome with star-catalog', () => {
-    const runtime = makeRuntime({ draw: vi.fn(), destroy: vi.fn() });
-    const upsamplePass = starAggregateUpsamplePass(runtime);
-    const catalogPass = starCatalogPass(runtime);
-    const ctx = makeCtx({} as GPUTextureView, inBand);
-    expect(upsamplePass.enabled(makePassState(), ctx, VIEW_STUB)).toBe(
-      catalogPass.enabled(makePassState(), ctx, VIEW_STUB),
-    );
-  });
-
-  it('shares ONE visibility gate outcome with its aggregate producer, so a frame can never composite a stale offscreen', () => {
-    const runtime = makeRuntime({ draw: vi.fn(), destroy: vi.fn() });
-    const upsamplePass = starAggregateUpsamplePass(runtime);
-    const aggregatesPass = starAggregatesPass(runtime);
-    const ctx = makeCtx({} as GPUTextureView, inBand);
-    expect(upsamplePass.enabled(makePassState(), ctx, VIEW_STUB)).toBe(
-      aggregatesPass.enabled(makePassState(), ctx, VIEW_STUB),
-    );
-  });
-
   it('calls starAggregateUpsample.draw with the HDR pass and the offscreen view', () => {
     const offscreenView = {} as GPUTextureView;
     const drawSpy = vi.fn();

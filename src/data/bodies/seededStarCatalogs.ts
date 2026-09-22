@@ -1,12 +1,9 @@
 /**
- * SEEDED_STAR_CATALOGS — the drawn rows behind every star catalog that ships no
- * `.bin`, keyed by its registry id. Total over `SeededStarCatalogId`, so a new
- * seeded row is a compile error until it has a table.
- *
- * Lives in `data/` rather than in the Layer because core's slab and occluder
- * seam (`frameContext`, `deriveView`, `sceneOccluderBodies`) reads the drawn
- * seeded set. The tables stay separate: a packed pick id is an index into ONE
- * of them, so concatenating would renumber saved selections.
+ * SEEDED_STAR_CATALOGS — the drawn rows behind every star catalog that ships
+ * no `.bin`, keyed by registry id; total over `SeededStarCatalogId`, so a new
+ * row is a compile error until it has a table. Lives in `data/`, not the
+ * Layer, because core's slab/occluder seam reads the drawn seeded set.
+ * Tables stay separate: a packed pick id indexes ONE, never merged.
  */
 
 import { SCENE_STARS } from './sceneStars';

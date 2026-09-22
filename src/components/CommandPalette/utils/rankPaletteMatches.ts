@@ -105,8 +105,8 @@ export function rankPaletteMatches(
   // The seeded stars, scored the same way off the same alias map — the row that
   // results carries the source + seed index its `starCatalog` ref needs.
   const starScored: ScoredRow[] = [...SEEDED_STAR_CATALOGS_BY_SOURCE]
-    .flatMap<ScoredRow>(([source, stars]) =>
-      stars.map((star, index) => {
+    .flatMap<ScoredRow>(([source, row]) =>
+      row.stars.map((star, index) => {
         const names = BODY_SEARCH_NAMES.get(star.id) ?? [star.label];
         const raw = scoreFamousMatch({ id: star.id, names, description: '' }, query);
         return {

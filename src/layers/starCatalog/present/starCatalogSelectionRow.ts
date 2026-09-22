@@ -2,8 +2,8 @@
  * starCatalogSelectionRow — one selection kind for all four star catalogs. A
  * seeded pick names its table row (durable id, live position); a survey pick is
  * positional (the bin-stable record index), and a stale index after a tier swap
- * warns+nulls in `resolveStarRecord` rather than mis-resolving. TWO seed tables,
- * never merged: `ref.index` is a stable index into ONE of `SEEDED_STAR_CATALOGS_BY_SOURCE`.
+ * warns+nulls in `resolveStarRecord` rather than mis-resolving. THREE seed
+ * tables (famousStar, sun, sStar), never merged — `ref.index` indexes ONE.
  */
 
 import { SOLAR_RADIUS_KM } from '../../../data/bodies/solarRadiusKm';
@@ -43,9 +43,9 @@ export function starCatalogSelectionRow(
       index: pick.localIdx,
     }),
     extractRow: (ref, simDays) => {
-      const seeds = SEEDED_STAR_CATALOGS_BY_SOURCE.get(ref.source);
-      if (seeds) {
-        const star = seeds[ref.index];
+      const seededRow = SEEDED_STAR_CATALOGS_BY_SOURCE.get(ref.source);
+      if (seededRow) {
+        const star = seededRow.stars[ref.index];
         if (!star) return null;
         // The S-stars orbit, so a seeded star's position is the caller's instant,
         // never cached; the famous stars and the Sun are static anchors in it.

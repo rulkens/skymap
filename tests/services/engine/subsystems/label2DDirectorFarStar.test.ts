@@ -50,7 +50,6 @@ import { bodyFootprintRadiusM } from '../../../../src/utils/scene/bodyFootprintR
 import type { Slab } from '../../../../src/@types/engine/frame/Slab';
 import type { FrameView } from '../../../../src/@types/engine/frame/FrameView';
 import type { EngineState } from '../../../../src/@types/engine/state/EngineState';
-import type { StarCatalogRuntime } from '../../../../src/layers/starCatalog/@types/StarCatalogRuntime';
 import type { LabelRenderer } from '../../../../src/@types/rendering/LabelRenderer';
 import type { MarkerLineRenderer } from '../../../../src/@types/rendering/MarkerLineRenderer';
 import type { Label2D } from '../../../../src/@types/rendering/Label2D';
@@ -58,9 +57,6 @@ import type { MarkerLine } from '../../../../src/@types/rendering/MarkerLine';
 import type { Vec3 } from '../../../../src/@types/math/Vec3';
 import { symmetricFrustum } from '../../../../src/utils/camera/symmetricFrustum';
 
-// `produceStarCaptions` never reads its `runtime` (see its header) — an empty
-// stub proves nothing on it is dereferenced.
-const RUNTIME = {} as unknown as StarCatalogRuntime;
 const J2000_STATES = deriveBodyStates(CONST_J2000);
 const EARTH_POS = J2000_STATES.get('earth')!.positionMpc;
 
@@ -214,7 +210,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions(RUNTIME) });
+    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     const state = makeState();
 
     dir.runFrame(state, makeCtx(eyeA, makeRealNear0Slab(eyeA, star.worldPos)));
@@ -254,7 +250,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions(RUNTIME) });
+    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     dir.runFrame(makeState(), makeCtx(eye, slab));
 
     const cap = emittedCaption(labelStub, star.id);
@@ -296,7 +292,7 @@ describe('label2DDirector — far-star caption/leader stability at Earth zoom', 
     const lineStub = makeLineStub();
     const dir = createLabel2DDirector(FOREGROUND_LABEL_DIRECTOR);
     dir.attachRenderers(labelStub, lineStub);
-    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions(RUNTIME) });
+    dir.registerProducer({ id: 'starCaptions', produceLabels: produceStarCaptions() });
     dir.runFrame(makeState(), makeCtx(eye, slab));
     const cap = emittedCaption(labelStub, star.id)!;
     expect(cap).toBeDefined();

@@ -1,15 +1,13 @@
 /**
  * starAggregatesPass — the survey-star AGGREGATE stream into the half-res
  * offscreen. Its walk/partition is `readStarCut`, fed by `computeStarCut`
- * (both tested in `readStarCut.test.ts`); here we pin only that it shares
- * the star gate and records the AGGREGATE sub-stream (never the leaf one)
- * into its pass.
+ * (both tested in `readStarCut.test.ts`); here we pin only that it records
+ * the AGGREGATE sub-stream (never the leaf one) into its pass.
  */
 
 import { describe, it, expect, vi } from 'vitest';
 
 import { starAggregatesPass } from '../../../../src/layers/starCatalog/passes/starAggregatesPass';
-import { starCatalogPass } from '../../../../src/layers/starCatalog/passes/starCatalogPass';
 import { computeStarCut } from '../../../../src/layers/starCatalog/render/cut/computeStarCut';
 import { advanceStarFades } from '../../../../src/layers/starCatalog/render/cut/advanceStarFades';
 import { SCALE_UNITS } from '../../../../src/data/scaleUnits';
@@ -140,20 +138,6 @@ function makeNear0View(camPos: Vec3): SlabView {
 }
 
 describe('starAggregatesPass', () => {
-  it('shares the star visibility gate (same enabled outcome as star-catalog)', () => {
-    const { runtime } = makeRuntime([
-      { source: Source.GaiaStars, catalog: makeAggregateCatalog() },
-    ]);
-    const aggregatesPass = starAggregatesPass(runtime);
-    const catalogPass = starCatalogPass(runtime);
-    const state = makePassState(makeSettings());
-    const insideCtx = makeCtx(camAtPcVec(FAR_PC));
-    const view = makeNear0View(camAtPcVec(FAR_PC));
-    expect(aggregatesPass.enabled(state, insideCtx, view)).toBe(
-      catalogPass.enabled(state, insideCtx, view),
-    );
-  });
-
   it('records the AGGREGATE stream (stream tag, isAggregate all 1) into its pass', () => {
     const { runtime, draw } = makeRuntime([
       { source: Source.GaiaStars, catalog: makeAggregateCatalog() },

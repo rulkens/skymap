@@ -21,10 +21,10 @@ export type StarCatalogRuntime = {
   /** One slot per survey source (today `EngineAssetSlots.starCatalogs`). */
   readonly catalogs: ReadonlyMap<SourceType, AssetSlot<StarCatalog, StarCatalogReq>>;
   readonly famousStarsMeta: AssetSlot<FamousStarsPayload, void>;
-  readonly renderer: StarCatalogRenderer; // was state.gpu.starCatalogRenderer
-  readonly pickRenderer: StarCatalogPickRenderer; // was state.gpu.starCatalogPickRenderer
+  readonly renderer: StarCatalogRenderer;
+  readonly pickRenderer: StarCatalogPickRenderer;
   readonly starRenderer: StarRenderer; // spheres (starSpheresPass, fieldStarSpherePass)
   readonly starPointRenderer: StarPointRenderer; // starPointsPass
-  readonly aggregateUpsample: StarAggregateUpsample; // was state.gpu.starAggregateUpsample
+  readonly aggregateUpsample: StarAggregateUpsample;
   readonly publish: (patch: Partial<StarCatalogFacts>) => void;
 };

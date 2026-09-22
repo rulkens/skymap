@@ -25,8 +25,6 @@ type Stub = {
   upload: ReturnType<typeof vi.fn>;
   setBiasMode: ReturnType<typeof vi.fn>;
   setLabels: ReturnType<typeof vi.fn>;
-  setStars: ReturnType<typeof vi.fn>;
-  pickResources: ReturnType<typeof vi.fn>;
 };
 
 const stubs: Record<string, Stub> = {};
@@ -42,21 +40,6 @@ function makeStub(name: string): Stub {
     // shape because other stubbed renderers built from the same factory
     // expose the method.
     setLabels: vi.fn(),
-    // The `starPointRenderer` row's construct closure (gpuHandleRegistry.ts)
-    // calls `setStars(<the seeded star list>)` synchronously right after
-    // constructing the renderer.
-    setStars: vi.fn(),
-    // The `starCatalogPickRenderer` row's construct closure calls
-    // `starCatalogRenderer.pickResources()` synchronously to hand the pick
-    // twin its shared BGLs + the per-source records bind-group lookup. The
-    // pick factory is itself mocked here, so this only needs to be a
-    // callable returning the resource shape.
-    pickResources: vi.fn(() => ({
-      cameraBgl: { __mockStarCameraBgl: true },
-      drawBgl: { __mockStarDrawBgl: true },
-      recordsBgl: { __mockStarRecordsBgl: true },
-      recordsBindGroup: () => null,
-    })),
   };
   stubs[name] = stub;
   return stub;
@@ -201,10 +184,6 @@ vi.mock('../../../../src/services/gpu/passes/additiveUpsample', () => ({
   createAdditiveUpsample: vi.fn(() => makeStub('additiveUpsample')),
 }));
 
-vi.mock('../../../../src/services/gpu/passes/starAggregateUpsample', () => ({
-  createStarAggregateUpsample: vi.fn(() => makeStub('starAggregateUpsample')),
-}));
-
 vi.mock('../../../../src/services/gpu/passes/pickDebugOverlay', () => ({
   createPickDebugOverlay: vi.fn(() => makeStub('pickDebugOverlay')),
 }));
@@ -222,9 +201,6 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/earthRenderer', () => ({
 // JSDOM. createPlanetRenderer is called ONCE — a single dynamic-offset
 // renderer draws every seeded planet (see EngineGpuHandles) — so the shared
 // `stubs.planetRenderer` key is the constructed instance.
-vi.mock('../../../../src/services/gpu/renderers/bodies/starRenderer', () => ({
-  createStarRenderer: vi.fn(() => makeStub('starRenderer')),
-}));
 // The shared textured-body renderer keeps its `?static` WESL imports out of
 // JSDOM; mock it so the `texturedBodyRenderer` row's construct closure
 // lands a stub on `state.gpu.texturedBodyRenderer`.
@@ -261,9 +237,6 @@ vi.mock('../../../../src/services/gpu/renderers/bodies/planetRenderer', async (i
   >()),
   createPlanetRenderer: vi.fn(() => makeStub('planetRenderer')),
 }));
-vi.mock('../../../../src/services/gpu/renderers/bodies/starPointRenderer', () => ({
-  createStarPointRenderer: vi.fn(() => makeStub('starPointRenderer')),
-}));
 // Partial mock, same rationale as planetRenderer's below: bodyGlintsPass.ts
 // (loaded transitively via the frame program's registry import) reads the real
 // MAX_GLINTS / INSTANCE_FLOATS constants at module scope to size its staging
@@ -289,20 +262,6 @@ vi.mock(
     createSgrAStarLensingRenderer: vi.fn(() => makeStub('sgrAStarLensingRenderer')),
   }),
 );
-// The survey star-catalog renderer's constructor uses the full device API
-// (limits + createBuffer + bind groups + pipeline), so a `limits` patch on
-// the plain stub device wouldn't survive the next line — mock the factory
-// like every other renderer here.
-vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogRenderer', () => ({
-  createStarCatalogRenderer: vi.fn(() => makeStub('starCatalogRenderer')),
-}));
-// The pick twin borrows the visual renderer's BGLs + records bind group and
-// builds its OWN r32uint pick pipeline against them — a full device pipeline
-// dance the plain stub device can't service, so mock the factory like every
-// other renderer. `initGpu` calls it with `starCatalogRenderer.pickResources()`.
-vi.mock('../../../../src/services/gpu/renderers/starCatalog/starCatalogPickRenderer', () => ({
-  createStarCatalogPickRenderer: vi.fn(() => makeStub('starCatalogPickRenderer')),
-}));
 // The body pick renderer builds two r32uint pick pipelines (a dynamic-offset
 // sphere path + an instanced point path) against the full device API the plain
 // stub device can't service, so mock the factory like the other pick providers.
@@ -351,11 +310,8 @@ import { engineHdrCapabilityChanged } from '../../../../src/state/engine/engineS
 // to prove `deps.phaseLocals.unwatchHdrCapability` survives a throw that
 // happens AFTER the listener is registered but before `initGpu` returns.
 import { loadFontAtlases } from '../../../../src/services/gpu/labelLayout/loadFontAtlases';
-// The real seeded data bag: the starPointRenderer row's construct closure
-// reads `state.data.bodies` (the far-star partition for setStars; the seeded
-// planet list drives planetsPass), so the state fixture carries the real
-// construction-time seeds.
-import { INITIAL_SETTINGS } from '../../../../src/state/settings/initialSettings';
+// The real seeded data bag: the seeded planet list drives planetsPass, so
+// the state fixture carries the real construction-time seeds.
 import { createEngineData } from '../../../../src/services/engine/data/createEngineData';
 // The registry itself: derives the expected non-null / null key sets for the
 // phase-split assertion below, rather than a hand-written key list that
@@ -391,16 +347,13 @@ function makeState(): EngineState {
       horizonShellRenderer: null,
       volumeFieldRenderer: null,
       volumeUpsample: null,
-      starAggregateUpsample: null,
       pickDebugOverlay: null,
       earthRenderer: null,
-      starRenderer: null,
       planetRenderer: null,
       texturedBodyRenderer: null,
       ringRenderer: null,
       cloudShellRenderer: null,
       atmosphereShellRenderer: null,
-      starPointRenderer: null,
       bodyPickRenderer: null,
       bodyGlintRenderer: null,
       orbitTrailRenderer: null,
@@ -430,8 +383,6 @@ function makeState(): EngineState {
         requestRender: vi.fn(),
       },
     },
-    // The star-point boot seed walks the seeded catalogs behind these gates.
-    settings: { starCatalogs: INITIAL_SETTINGS.starCatalogs },
     // Both families are minted in wireSlots, not initGpu; declared here (empty,
     // untouched by this phase) only because EngineState requires them.
     assetSlots: {

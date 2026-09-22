@@ -21,11 +21,11 @@
 import { describe, it, expect, vi, type Mock } from 'vitest';
 import { mat4 } from 'wgpu-matrix';
 
-import { createStarCatalogRenderer } from '../../../../../src/layers/starCatalog/render/starCatalogRenderer';
-import { frustumPlanesFromViewProj } from '../../../../../src/utils/camera/frustumPlanesFromViewProj';
-import { Source } from '../../../../../src/data/sources';
-import type { StarCatalog } from '../../../../../src/@types/data/starCatalog/StarCatalog';
-import type { StarCatalogDrawArgs } from '../../../../../src/layers/starCatalog/@types/StarCatalogDrawArgs';
+import { createStarCatalogRenderer } from '../../../../src/layers/starCatalog/render/starCatalogRenderer';
+import { frustumPlanesFromViewProj } from '../../../../src/utils/camera/frustumPlanesFromViewProj';
+import { Source } from '../../../../src/data/sources';
+import type { StarCatalog } from '../../../../src/@types/data/starCatalog/StarCatalog';
+import type { StarCatalogDrawArgs } from '../../../../src/layers/starCatalog/@types/StarCatalogDrawArgs';
 
 // A GPU device stub: every `create*` returns a plausibly-shaped stand-in and
 // `queue.writeBuffer` is spied. Buffers carry their `label` so a test can prove

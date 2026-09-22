@@ -40,8 +40,8 @@ describe('the S-star source row', () => {
   it('stays out of the label domain, so nothing budgets it a caption', () => {
     // `bearsLabel: false` is what keeps 39 names out of `LABEL_CATEGORIES` — the
     // set the SettingsPanel's label rows, `projectLabelCategoryVisibility` and
-    // the `bodyLabel` fade row all iterate. Flipping the flag would register a
-    // caption handle for a caption `sceneBodyLabels` never emits.
+    // the `starCatalogLabel` fade row all iterate. Flipping the flag would
+    // register a caption handle for a caption `produceStarCaptions` never emits.
     expect(LABEL_CATEGORIES).not.toContain(S_STAR_ENTRY.id);
   });
 

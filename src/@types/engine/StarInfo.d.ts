@@ -1,15 +1,9 @@
 /**
- * StarInfo — a selected star as a resolved focusable target, the one arm of the
- * `FocusableTarget` union every star reaches, survey or seeded.
- *
- * Like `MilkyWayInfo` (and unlike the galaxy arm's engine-baked `GalaxyInfo`)
- * this is a small self-derived view-model: `buildFocusable` computes it purely
- * from the stored `SelectionRow` plus the famous-star sidecar, so React can build
- * it inside a memoized selector without reaching the engine.
- *
- * Core, not the star Layer's `@types/`: `FocusableTarget`'s core-wide union names
- * it as a member and core's `buildFocusable`/`refOf` produce and consume it, so
- * shelving it under `layers/` would make core import back into a Layer.
+ * StarInfo — a selected star as a resolved focusable target, the one arm of
+ * `FocusableTarget` every star reaches, survey or seeded; `buildFocusable`
+ * derives it from the stored `SelectionRow` plus the famous-star sidecar.
+ * Core, not the star Layer's `@types/`: core's `FocusableTarget`/`refOf`
+ * name and produce it, so shelving it under `layers/` would import a Layer.
  */
 
 import type { StarCatalogSourceType } from '../data/starCatalog/StarCatalogSourceType';
