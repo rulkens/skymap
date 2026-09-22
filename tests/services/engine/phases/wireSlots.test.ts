@@ -125,17 +125,6 @@ vi.mock('../../../../src/services/loading/dataManifest', () => ({
   loadDataManifest: vi.fn(async () => {}),
 }));
 
-vi.mock('../../../../src/services/loading/fetchers/syntheticVolumeFetcher', () => ({
-  syntheticVolumeFetcher: vi.fn(async () => ({
-    dims: [4, 4, 4],
-    voxels: new Float32Array(64),
-    valueMin: 0,
-    valueMax: 1,
-    frame: 'supergalactic',
-    boundsKpc: { min: [0, 0, 0], max: [1, 1, 1] },
-  })),
-}));
-
 // Load-progress emitter: keep the real factory (so the slot registry
 // gets walked) but spy on it so we can assert the Map size at the
 // moment wireSlots hands the registry off.
@@ -366,7 +355,7 @@ function makeState(
     gpu: {
       // Renderers are stubs — the slot commits we mint inside wireSlots
       // optional-chain through them.  The scalar volume renderer is stubbed so
-      // CF-4 and synthetic commits can land.
+      // CF-4 commits can land.
       renderTargets: null,
       labelRenderer: null,
       markerLineRenderer: null,
@@ -704,9 +693,8 @@ describe('wireSlots', () => {
 
     // Registry includes the Layer's slots (the per-source point slots and its
     // two sidecars, by `.name`) plus the sidecars wireSlots itself mints
-    // (structure catalog, CF-4, MCPM) plus synthetic fixtures (DEV-only —
-    // vitest runs as DEV). Asserted as a superset so additive changes don't
-    // break the test for the wrong reason.
+    // (structure catalog, CF-4, MCPM). Asserted as a superset so additive
+    // changes don't break the test for the wrong reason.
     const names = new Set(capturedRegistry.keys());
     expect(names.has('sdss-points')).toBe(true);
     expect(names.has('2mrs-points')).toBe(true);

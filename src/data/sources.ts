@@ -24,9 +24,6 @@ import { CF4_DENSITY_ENTRY } from './sources/cf4-density';
 import { MCPM_ENTRY } from './sources/mcpm';
 import { POLYPHORM_2MRS_ENTRY } from './sources/polyphorm-2mrs';
 import { MCPM_WORKBENCH_ENTRY } from './sources/mcpm-workbench';
-import { DEBUG_GAUSSIAN_ENTRY } from './sources/debug-gaussian';
-import { DEBUG_CARTESIAN_ENTRY } from './sources/debug-cartesian';
-import { DEBUG_SPHERICAL_ENTRY } from './sources/debug-spherical';
 import { MILKY_WAY_ENTRY } from './sources/milky-way';
 import { FLOW_SOURCE_ROWS } from '../layers/flow/sources/flowSourceRows';
 import { PLANET_ENTRY } from './sources/planet';
@@ -77,9 +74,6 @@ const UNFORMED_SOURCE_REGISTRY = {
   [Source.Group]: GROUP_ENTRY,
   [Source.Cf4Density]: CF4_DENSITY_ENTRY,
   [Source.Mcpm]: MCPM_ENTRY,
-  [Source.DebugGaussian]: DEBUG_GAUSSIAN_ENTRY,
-  [Source.DebugCartesian]: DEBUG_CARTESIAN_ENTRY,
-  [Source.DebugSpherical]: DEBUG_SPHERICAL_ENTRY,
   [Source.MilkyWay]: MILKY_WAY_ENTRY,
   [Source.Planet]: PLANET_ENTRY,
   [Source.Earth]: EARTH_ENTRY,

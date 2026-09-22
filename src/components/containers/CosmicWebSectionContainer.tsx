@@ -11,11 +11,9 @@
  * `selectVolumeFieldItems` returns the raw `state.settings.volumes.items`
  * Record — a referentially stable Immer snapshot that only changes when a
  * field is actually added, removed, or modified. The `useMemo` projection
- * (filter + shape) is keyed on that stable `volumeFieldItems` reference:
- * the projected array is rebuilt only when the items Record changes, not on
- * every unrelated store write. `debug-*` synthetic fixtures are excluded here
- * rather than inside the projection, so the panel shows only real science
- * volumes while the items Record itself stays complete.
+ * (shape only) is keyed on that stable `volumeFieldItems` reference: the
+ * projected array is rebuilt only when the items Record changes, not on
+ * every unrelated store write.
  *
  * ### Handler stability
  *
@@ -55,13 +53,9 @@ function CosmicWebSectionContainer(): React.ReactElement {
   const filamentIntensity = useAppSelector(selectFilamentIntensity);
 
   // Project the raw items Record into the display shape the section renders.
-  // debug-* fixture fields are dropped so the panel only shows real science
-  // volumes. Keyed on the stable volumeFieldItems reference — the array is
-  // rebuilt only when the items Record actually changes.
-  const volumeFields = useMemo(
-    () => projectVolumeFieldRows(volumeFieldItems).filter((f) => !f.id.startsWith('debug-')),
-    [volumeFieldItems],
-  );
+  // Keyed on the stable volumeFieldItems reference — the array is rebuilt
+  // only when the items Record actually changes.
+  const volumeFields = useMemo(() => projectVolumeFieldRows(volumeFieldItems), [volumeFieldItems]);
 
   const onVolumesEnabledChange = useCallback(
     (enabled: boolean) => dispatch(setVolumesEnabled(enabled)),

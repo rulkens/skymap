@@ -11,7 +11,6 @@
 
 import type { AssetSlot } from '../../loading/AssetSlot';
 import type { ScalarCube } from '../../data/volume/ScalarCube';
-import type { SyntheticVolumeReq } from '../../loading/SyntheticVolumeReq';
 import type { MCPMReq } from '../../loading/MCPMReq';
 import type { Polyphorm2MRSReq } from '../../loading/Polyphorm2MRSReq';
 import type { StructureCatalogPayload } from '../../loading/structureCatalogPayload/StructureCatalogPayload';
@@ -64,10 +63,4 @@ export type EngineAssetSlots = {
    * in either order with no check.
    */
   bodyTextureAtlas: AssetSlot<ImageBitmap, void> | null;
-  /**
-   * Dev-only synthetic test cubes, keyed by the in-engine handle the commit
-   * registers. `undefined` rather than null in production: `wireSlots` mints them
-   * only under `import.meta.env.DEV`, so the generators tree-shake out entirely.
-   */
-  syntheticVolumes?: Record<string, AssetSlot<ScalarCube, SyntheticVolumeReq>>;
 };

@@ -166,10 +166,9 @@ describe('applyIntent', () => {
   });
 
   it('a held target still runs guard and post', () => {
-    // This is the lazy-volume re-arm, pinned: `maybeLazyLoadDebugVolume` (the
-    // volumeField row's `post`) must re-run every sync even when the fade
-    // write itself is skipped, or a volume that idled back out under
-    // unchanged settings never gets re-armed.
+    // A row's `post` side effect must re-run every sync even when the fade
+    // write itself is skipped, so a demand-loaded layer that idled back out
+    // under unchanged settings still gets re-armed.
     const { state, targetOf } = makeState();
     targetOf.mockReturnValue(1);
     const post = vi.fn<(state: EngineState, item: undefined) => void>();

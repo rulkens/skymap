@@ -91,8 +91,7 @@ const EXPOSURE_STEP = 0.5;
 
 /**
  * Density (per-cube `densityScale`) slider bounds.  Registry defaults
- * sit in the [4, 20] range (mcpm = 4; debug-cartesian = 4;
- * debug-gaussian = 10; cf4-density = 20), so the slider needs to span
+ * sit in the [4, 20] range (mcpm = 4; cf4-density = 20), so the slider needs to span
  * well past those for tuning headroom.  0..60 with 0.1 step gives 3x
  * the CF-4 default at the right end and "fully invisible" (0) at the
  * left for quick A/B against a no-volume baseline.  Bumped from 30

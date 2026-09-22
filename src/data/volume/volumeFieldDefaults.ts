@@ -88,18 +88,11 @@ export function buildVolumeFieldSettings(id: VolumeFieldId): VolumeFieldSettings
  * (`settings.galaxyCatalogs.items[id]?.enabled`). Without this, a
  * default-on volume (MCPM) never triggers its initial demand-driven
  * load because its field entry didn't exist yet.
- *
- * DEV-only debug fixtures (`binBaseName: null`) are excluded: they have
- * no on-disk payload, register only under `import.meta.env.DEV`, and
- * would clutter production state with ids that never load.
  */
 export function seedVolumeFields(): Partial<Record<VolumeFieldId, VolumeFieldSettings>> {
-  // Partial, not total: DEV-only debug ids are skipped below, so they
-  // are absent from the result — the type reflects that rather than lying
-  // about a complete mapping.
   const seeded: Partial<Record<VolumeFieldId, VolumeFieldSettings>> = {};
   for (const entry of Object.values(SOURCE_REGISTRY)) {
-    if (entry.type !== 'volume' || entry.binBaseName === null) continue;
+    if (entry.type !== 'volume') continue;
     seeded[entry.id] = buildVolumeFieldSettings(entry.id);
   }
   return seeded;

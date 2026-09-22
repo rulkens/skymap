@@ -210,14 +210,11 @@ describe('seedFades', () => {
 
   // ── demand-loaded sets (seed 0 so first-load fade-in isn't lost) ──
 
-  it('seeds EVERY volume field at 0, including DEV debug fixtures', () => {
+  it('seeds EVERY volume field at 0', () => {
     const state = makeState();
     seedFades(state);
-    // Derive the expected set from the registry — every type:'volume' entry,
-    // INCLUDING the binBaseName:null debug fixtures. Not hardcoded. The
-    // inclusion of the debug ids is load-bearing: setVolumeFieldEnabled +
-    // the debug slot commit both fadeTo these handles, and fadeTo throws on
-    // an unregistered id, so a missing debug handle breaks the DEV toggle.
+    // Derive the expected set from the registry — every type:'volume' entry.
+    // Not hardcoded.
     const volumeIds = Object.values(SOURCE_REGISTRY)
       .filter((e) => e.type === 'volume')
       .map((e) => e.id);
@@ -226,19 +223,6 @@ describe('seedFades', () => {
       expect(
         state.subsystems.fades.opacityOf({ kind: 'volumeField', id }),
         `volumeField{${id}} should seed at 0`,
-      ).toBe(0);
-    }
-    // Regression lock: at least one binBaseName:null debug fixture is present
-    // in the iterated set and seeds at 0. This is the gap Part C fixed — before
-    // it, debug fixtures were excluded and their fadeTo threw under DEV.
-    const debugIds = Object.values(SOURCE_REGISTRY)
-      .filter((e) => e.type === 'volume' && e.binBaseName === null)
-      .map((e) => e.id);
-    expect(debugIds.length).toBeGreaterThan(0);
-    for (const id of debugIds) {
-      expect(
-        state.subsystems.fades.opacityOf({ kind: 'volumeField', id }),
-        `debug volumeField{${id}} should seed at 0`,
       ).toBe(0);
     }
   });
@@ -263,7 +247,7 @@ describe('FADE_LAYERS intent subset', () => {
     // are populated (volumeField's fan-out needs at least one item id).
     const settings = makeSettings();
     settings.volumes.items = {
-      'debug-gaussian': { enabled: true },
+      mcpm: { enabled: true },
     } as unknown as EngineSettingsState['volumes']['items'];
     for (const row of [
       ...FADE_LAYERS,
@@ -286,29 +270,7 @@ describe('FADE_LAYERS intent subset', () => {
     expect(row.guard).toBeUndefined();
   });
 
-  it('volume-field row post lazy-loads debug volumes on enable only', () => {
-    const load = vi.fn<(req: unknown) => void>();
-    const slot = {
-      state: () => ({ kind: 'idle' }) as const,
-      load,
-    };
-    function makeVolumeState(enabled: boolean): EngineState {
-      return {
-        assetSlots: { syntheticVolumes: { 'debug-gaussian': slot } },
-        settings: { volumes: { items: { 'debug-gaussian': { enabled } } } },
-      } as unknown as EngineState;
-    }
-    const row = rowFor('volumeField');
-
-    row.post?.(makeVolumeState(true), 'debug-gaussian');
-    expect(load).toHaveBeenCalledTimes(1);
-
-    load.mockClear();
-    row.post?.(makeVolumeState(false), 'debug-gaussian');
-    expect(load).not.toHaveBeenCalled();
-  });
-
-  it('volume-field row guard gates on the renderer holding the field; debug fixtures exempt', () => {
+  it('volume-field row guard gates on the renderer holding the field', () => {
     const row = rowFor('volumeField');
     const state = {
       gpu: { volumeFieldRenderer: { listIds: () => ['cf4-density'] } },
@@ -316,12 +278,8 @@ describe('FADE_LAYERS intent subset', () => {
     // Not in the renderer's map → suppressed; present → fades.
     expect(row.guard?.(state, 'mcpm')).toBe(false);
     expect(row.guard?.(state, 'cf4-density')).toBe(true);
-    // Debug fixtures are loaded BY this row's own post (maybeLazyLoadDebugVolume),
-    // and a guard skips post — so they are never suppressed.
-    expect(row.guard?.(state, 'debug-gaussian')).toBe(true);
-    // No renderer yet (mid-bootstrap): demand-loaded ids suppressed, debug exempt.
+    // No renderer yet (mid-bootstrap): demand-loaded ids suppressed.
     const bare = { gpu: {} } as unknown as EngineState;
     expect(row.guard?.(bare, 'mcpm')).toBe(false);
-    expect(row.guard?.(bare, 'debug-gaussian')).toBe(true);
   });
 });

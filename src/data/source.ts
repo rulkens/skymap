@@ -14,6 +14,8 @@
  *
  * Codes ≥ 9 (filaments, volumes) are not persisted anywhere, but the
  * same "append, never renumber" discipline applies for consistency.
+ * Codes 12-14 are likewise retired (the deleted DEV-only synthetic
+ * volume fixtures) and stay unassigned.
  */
 export const Source = {
   /** Sloan Digital Sky Galaxy catalog — deep optical spectroscopic galaxy catalog. */
@@ -73,17 +75,6 @@ export const Source = {
    * its presentation defaults.
    */
   Mcpm: 11,
-  /**
-   * DEV-only synthetic Gaussian-blob volume — verifies "is anything
-   * visible at the cube origin?". Procedurally generated; no on-disk
-   * payload. Bundled out of production builds via `import.meta.env.DEV`
-   * gating at the slot-registration site.
-   */
-  DebugGaussian: 12,
-  /** DEV-only Cartesian-grid volume for axis-alignment verification. */
-  DebugCartesian: 13,
-  /** DEV-only spherical-shell-and-spoke volume for radial-symmetry verification. */
-  DebugSpherical: 14,
   /**
    * Nearby galaxy-group anchors (Local Group, M81, Cen A, ...). Picks
    * against a group's marker ring return source code 15 in the upper 6

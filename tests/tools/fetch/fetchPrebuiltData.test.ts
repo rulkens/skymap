@@ -10,7 +10,7 @@ import type { DataManifest } from '../../../src/@types/data/DataManifest';
 /** Narrow fixture carrying only the fields `volumeVisibilityByFileName` reads. */
 function volumeEntry(opts: {
   visible: boolean;
-  binBaseName: string | null;
+  binBaseName: string;
   tiered: boolean;
 }): SourceEntry {
   return { type: 'volume', ...opts } as unknown as SourceEntry;
@@ -42,13 +42,6 @@ describe('volumeVisibilityByFileName', () => {
       flowEntry({ visible: false, binBaseName: 'flowfield' }),
     ]);
     expect(map.get('flowfield.scfd')).toBe(false);
-  });
-
-  it('skips a procedural fixture with no on-disk file (binBaseName null)', () => {
-    const map = volumeVisibilityByFileName([
-      volumeEntry({ visible: false, binBaseName: null, tiered: false }),
-    ]);
-    expect(map.size).toBe(0);
   });
 
   it('ignores non-volume, non-flow entries entirely', () => {

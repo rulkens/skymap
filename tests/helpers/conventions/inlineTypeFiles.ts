@@ -111,7 +111,6 @@ export const INLINE_TYPE_FILES: ReadonlySet<string> = new Set([
   'src/services/gpu/resources/hiResFamousTexture.ts',
   'src/services/gpu/resources/loadEnvBrdfLut.ts',
   'src/services/gpu/resources/textureAtlas.ts',
-  'src/services/loading/slots/syntheticVolumeSlots.ts',
   'src/state/camera/flyToLonLatActions.ts',
   'src/state/selection/captureGalaxyFocusIds.ts',
   'src/state/selectionRows/selectionRowsSlice.ts',

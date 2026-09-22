@@ -76,8 +76,7 @@ export function makeFadeBridgeState(): {
     milkyWay: { enabled: true, labelEnabled: true },
     zoneOfAvoidance: { enabled: true },
     // Empty volume items: the volumeField intent reads items[id]?.enabled (→
-    // false here) and its post no-ops because assetSlots.syntheticVolumes is
-    // absent — neither throws, which is all this fixture needs.
+    // false here), which is all this fixture needs.
     volumes: { enabled: true, items: {} },
     filaments: { enabled: true },
     flow: { enabled: true },
@@ -88,7 +87,10 @@ export function makeFadeBridgeState(): {
     settings,
     gpu: {
       galaxyPointRenderer: { hasCatalog: () => true },
-      volumeFieldRenderer: { listIds: () => [] },
+      // MCPM is default-on and loads first, so by the time a real sync runs
+      // the renderer already holds it — the volumeField row's guard needs at
+      // least one resident id for the fan-out to have anything to fade.
+      volumeFieldRenderer: { listIds: () => ['mcpm'] },
     },
     subsystems: {
       fades: { fadeTo, setImmediate, targetOf },

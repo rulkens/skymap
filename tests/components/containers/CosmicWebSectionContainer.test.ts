@@ -13,9 +13,6 @@
  *    `selectFilamentsEnabled` reflect the new values.
  *  - Toggling the master checkbox from ON dispatches both
  *    `setVolumesEnabled(false)` and `setFilamentsEnabled(false)`.
- *  - `debug-*` fields are filtered out of the rendered rows: seed a
- *    `debug-gaussian` field via `addVolumeField`, verify its row is absent from
- *    the rendered output while a real cf4-density row still renders when present.
  *
  * Why assert on `store.getState()` rather than re-reading the DOM: RTK
  * `dispatch` is synchronous, so the store reflects the new value immediately.
@@ -35,10 +32,9 @@ import CosmicWebSectionContainer from '../../../src/components/containers/Cosmic
 import { createTestStore as createAppStore } from '../../support/createTestStore';
 import { selectVolumesEnabled } from '../../../src/layers/volume/state/volumes/selectors';
 import { selectFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/selectors';
-import { setVolumesEnabled, addVolumeField } from '../../../src/layers/volume/state/volumes/slice';
+import { setVolumesEnabled } from '../../../src/layers/volume/state/volumes/slice';
 import { setFilamentsEnabled } from '../../../src/layers/filaments/state/filaments/slice';
 import type { AppStore } from '../../../src/store/types';
-import type { VolumeFieldId } from '../../../src/@types/data/volume/VolumeFieldId';
 
 function makeWrapper(store: AppStore) {
   return ({ children }: { children: ReactNode }) => createElement(Provider, { store, children });
@@ -88,37 +84,6 @@ describe('CosmicWebSectionContainer', () => {
 
       expect(selectVolumesEnabled(store.getState())).toBe(false);
       expect(selectFilamentsEnabled(store.getState())).toBe(false);
-    });
-  });
-
-  describe('debug-* field filtering', () => {
-    it('does not render a row for a debug-gaussian field added to the store', () => {
-      const { store } = createAppStore();
-      // Seed a debug field — addVolumeField is a no-op for already-seeded ids,
-      // but debug-gaussian is not in seedVolumeFields() (binBaseName: null exclusion),
-      // so this adds a genuine new row to volumes.items.
-      store.dispatch(addVolumeField('debug-gaussian' as VolumeFieldId));
-
-      const { container } = render(createElement(CosmicWebSectionContainer, null), {
-        wrapper: makeWrapper(store),
-      });
-
-      // The debug row's label would be "Gaussian (debug)" — should be absent
-      expect(container.textContent).not.toContain('Gaussian (debug)');
-    });
-
-    it('renders a real cf4-density row when volumesEnabled is true and items are seeded', () => {
-      const { store } = createAppStore();
-      // cf4-density is seeded by INITIAL_SETTINGS via seedVolumeFields.
-      // Enable it and enable the volumes master so the section renders the rows.
-      store.dispatch(setVolumesEnabled(true));
-
-      const { container } = render(createElement(CosmicWebSectionContainer, null), {
-        wrapper: makeWrapper(store),
-      });
-
-      // cf4-density label from volumeFieldDefaults is "CF-4 DM density"
-      expect(container.textContent).toContain('CF-4 DM density');
     });
   });
 });

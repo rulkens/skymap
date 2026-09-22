@@ -47,7 +47,6 @@ export function volumeVisibilityByFileName(entries: readonly SourceEntry[]): Map
   for (const entry of entries) {
     if (entry.type !== 'volume' && entry.type !== 'flow') continue;
     const base = entry.binBaseName;
-    if (base == null) continue; // procedural debug fixtures have no on-disk file
     const fileNames =
       entry.type === 'volume' && entry.tiered
         ? TIER_LADDER.map((tier) => `${base}-${tier}.scfd`)

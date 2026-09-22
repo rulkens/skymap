@@ -11,15 +11,13 @@
  *   3. The keyed families — `bodyTextures` (`wireBodyTextureSlots`) and
  *      `meshBodies` (`wireMeshBodySlots`) — minted here, not by
  *      `buildSlotsFromRegistry` (their rows carry `built: 'external'`).
- *   4. DEV synthetic-volume fixtures — minted + installed here (not a wiring
- *      row; tree-shaken from production).
- *   5. `createSurfaceTileSubsystem` / `seedFades` / `wireStructureProjection` —
+ *   4. `createSurfaceTileSubsystem` / `seedFades` / `wireStructureProjection` —
  *      Earth's surface virtual texture, the whole fade-ownership manifest
  *      (every composed fade handle, seeded), and the structure-store anchor +
  *      bulk projection.
- *   6. `installLoadProgress` — the flat `allSlots` registry + load-progress
+ *   5. `installLoadProgress` — the flat `allSlots` registry + load-progress
  *      emitter, over core's slots and every Layer's.
- *   7. `installSlotReadyWake` — one subscription per slot wakes the render
+ *   6. `installSlotReadyWake` — one subscription per slot wakes the render
  *      scheduler on `ready`; the single channel-mouth enforcement point.
  *      `installFadeOnArrival` shares that mouth for the arrival fade: a fade
  *      row's `guard` opening on a slot's `ready` is what fades a demand-loaded
@@ -29,7 +27,7 @@
  *      `cause: 'format-version'` status AND `reopenSplash()` — a returning
  *      visitor's `seenVersion` already hid the splash, so the alert needs
  *      both to actually reach them.
- *   8. `reevaluateDemand` — the single place loads start, awaited on
+ *   7. `reevaluateDemand` — the single place loads start, awaited on
  *      `loadDataManifest` immediately before it so no fetch can race the
  *      manifest. It walks every wiring row and triggers each demanded slot
  *      with its tier-derived request. The same loop re-runs on every state
@@ -44,7 +42,7 @@
  *
  *   - `state.assetSlots.{structureCatalog,cf4Density,mcpm,flow,…}`
  *     (via `installSlots`) + `.bodyTextures` (via `wireBodyTextureSlots`) +
- *     `.meshBodies` (via `wireMeshBodySlots`) + `.syntheticVolumes` (DEV).
+ *     `.meshBodies` (via `wireMeshBodySlots`).
  *   - `state.subsystems.{loadProgress, structures, surfaceTiles}`.
  *   - `engineStatusChanged({ kind: 'loading' })` dispatched synchronously.
  *   - Each slot in `deps.allSlots` gains an `installSlotReadyWake` and an
@@ -65,7 +63,6 @@ import { installFadeOnArrival } from '../wiring/installFadeOnArrival';
 import { installFormatVersionAlert } from '../wiring/installFormatVersionAlert';
 import { wireBodyTextureSlots } from '../wiring/bodyTextureSlotRegistry';
 import { wireMeshBodySlots } from '../wiring/meshSlotRegistry';
-import { createSyntheticVolumeSlots } from '../../loading/slots/syntheticVolumeSlots';
 import { createSurfaceTileSubsystem } from '../subsystems/surfaceTileSubsystem';
 import { seedFades } from '../wiring/fadeLayers';
 import { wireStructureProjection } from '../wiring/wireStructureProjection';
@@ -93,13 +90,6 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   wireBodyTextureSlots(state);
   wireMeshBodySlots(state);
 
-  // DEV-only synthetic volume fixtures — axis-verification debug cubes.  Not a
-  // wiring row (kept out so Vite tree-shakes the procedural generators from
-  // production); minted + installed at the call site under DEV.
-  if (import.meta.env.DEV) {
-    state.assetSlots.syntheticVolumes = createSyntheticVolumeSlots(state, cb);
-  }
-
   // Earth's surface virtual texture. A subsystem, not a renderer — it owns
   // residency and streaming — so it's constructed here, not in `initGpu`.
   // Construction is free (no GPU memory, no fetch until the tile planner
@@ -121,7 +111,7 @@ export async function wireSlots(state: EngineState, deps: BootstrapDeps): Promis
   wireStructureProjection(state, cb);
 
   // Build the flat `allSlots` registry + load-progress emitter over every
-  // installed slot (core, Layer-owned, and DEV synthetic).
+  // installed slot (core and Layer-owned).
   installLoadProgress(state, deps);
 
   // Channel-mouth render wake.  After installLoadProgress (allSlots fully
